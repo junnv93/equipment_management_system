@@ -10,9 +10,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import type { TeamDetail as TeamDetailType, TeamMember } from '@/lib/api/teams-api';
-import { SITE_CONFIG } from '@/lib/api/teams-api';
+import { SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { TeamTypeIcon, TeamTypeBadge } from './TeamTypeIcon';
 import { TeamMemberList } from './TeamMemberList';
+import { SITE_PANEL_TOKENS } from '@/lib/design-tokens';
 
 // 삭제 모달은 dynamic import로 지연 로딩
 const DeleteTeamModal = dynamic(
@@ -50,6 +51,9 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const siteInfo = team.site ? SITE_CONFIG[team.site as keyof typeof SITE_CONFIG] : null;
+  const clsConfig =
+    (team.classification && CLASSIFICATION_CONFIG[team.classification]) ||
+    CLASSIFICATION_CONFIG.fcc_emc_rf;
 
   // 권한 확인
   const canEdit = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
@@ -99,9 +103,14 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
         </div>
       </div>
 
-      {/* 팀 정보 배너 (축약) */}
-      <Card>
-        <CardContent className="py-4">
+      {/* 팀 정보 배너 — 분류 accent line으로 목록 ↔ 상세 시각 identity 연결 */}
+      <Card className="relative overflow-hidden">
+        <div
+          className={SITE_PANEL_TOKENS.accentBar}
+          style={{ background: clsConfig.color }}
+          aria-hidden="true"
+        />
+        <CardContent className="py-4 pt-5">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <TeamTypeBadge classification={team.classification || team.id} />
             {siteInfo && (

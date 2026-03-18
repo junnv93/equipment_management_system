@@ -21,6 +21,7 @@ import {
   SITE_PANEL_TOKENS,
   TEAM_ROW_TOKENS,
   CLS_PILL_TOKENS,
+  TEAM_SEARCH_TOKENS,
   getStaggerDelay,
   MOTION_PRIMITIVES,
   TRANSITION_PRESETS,
@@ -130,16 +131,13 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
       <div className="flex items-center gap-2 flex-wrap">
         {/* 검색 */}
         <div className="relative flex-shrink-0">
-          <Search
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <Search className={TEAM_SEARCH_TOKENS.iconPositioned} aria-hidden="true" />
           <Input
             type="search"
             placeholder={t('listContent.searchPlaceholder')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-8 h-8 text-sm w-64"
+            className={cn('pl-8 w-64', TEAM_SEARCH_TOKENS.input)}
             aria-label={t('listContent.searchAriaLabel')}
           />
         </div>
@@ -367,7 +365,7 @@ function SitePanel({
             <Fragment key={team.id}>
               {index > 0 && <div className={TEAM_ROW_TOKENS.divider} />}
               <div
-                className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 fill-mode-forwards"
+                className={TEAM_ROW_TOKENS.staggerSlideUp}
                 style={{
                   animationDelay: getStaggerDelay(index, 'list'),
                   animationDuration: `${MOTION_PRIMITIVES.duration.fast}ms`,

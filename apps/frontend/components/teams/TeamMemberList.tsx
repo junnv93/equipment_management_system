@@ -4,7 +4,12 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Search, User, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
-import { getStaggerDelay, MOTION_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
+import {
+  getStaggerDelay,
+  MOTION_TOKENS,
+  TRANSITION_PRESETS,
+  TEAM_SEARCH_TOKENS,
+} from '@/lib/design-tokens';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -202,16 +207,13 @@ export function TeamMemberList({
         <div className="flex gap-2.5 flex-1 w-full sm:w-auto">
           {/* 검색 */}
           <div className="relative max-w-xs flex-1">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
-              aria-hidden="true"
-            />
+            <Search className={TEAM_SEARCH_TOKENS.iconPositioned} aria-hidden="true" />
             <Input
               type="search"
               placeholder={t('member.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-8 h-9 text-sm"
+              className={cn('pl-9 pr-8', TEAM_SEARCH_TOKENS.input)}
               aria-label={t('member.searchAriaLabel')}
             />
             {search && (
@@ -232,7 +234,7 @@ export function TeamMemberList({
           {/* 역할 필터 */}
           <Select value={roleFilter} onValueChange={setRoleFilter}>
             <SelectTrigger
-              className="w-[140px] h-9 text-sm"
+              className={cn('w-[140px]', TEAM_SEARCH_TOKENS.input)}
               aria-label={t('member.roleFilterAriaLabel')}
             >
               <SelectValue placeholder={t('member.allRoles')} />
@@ -303,7 +305,7 @@ export function TeamMemberList({
                     className={cn(
                       TEAM_MEMBER_GROUP_TOKENS.memberRow,
                       member.isActive === false && 'opacity-50',
-                      'motion-safe:animate-in motion-safe:fade-in motion-safe:fill-mode-forwards'
+                      TEAM_MEMBER_GROUP_TOKENS.staggerFade
                     )}
                     style={{
                       animationDelay: getStaggerDelay(index, 'list'),

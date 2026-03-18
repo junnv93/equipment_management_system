@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { ANIMATION_PRESETS } from '@/lib/design-tokens';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -79,45 +80,52 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
       <AlertDialogContent
         role="alertdialog"
         aria-modal="true"
-        className="animate-in zoom-in-95 fade-in duration-200"
+        className={ANIMATION_PRESETS.dialogEnter}
       >
         <AlertDialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
               <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
-            <AlertDialogTitle>팀 삭제</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteModal.title')}</AlertDialogTitle>
           </div>
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-left">
               <p>
-                <strong className="text-foreground">{team.name}</strong> 팀을 삭제하시겠습니까?
+                {t.rich('deleteModal.confirmMessage', {
+                  name: team.name,
+                  bold: (chunks) => <strong className="text-foreground">{chunks}</strong>,
+                })}
               </p>
 
               {hasRelatedData && (
                 <div className="p-3 rounded-lg bg-brand-warning/10 border border-brand-warning/20">
                   <p className="text-sm text-brand-warning font-medium mb-2">
-                    연관된 데이터가 있습니다:
+                    {t('deleteModal.relatedDataWarning')}
                   </p>
                   <ul className="text-sm text-brand-warning list-disc list-inside space-y-1">
-                    {team.memberCount && team.memberCount > 0 && <li>팀원 {team.memberCount}명</li>}
+                    {team.memberCount && team.memberCount > 0 && (
+                      <li>{t('deleteModal.relatedMembers', { count: team.memberCount })}</li>
+                    )}
                     {team.equipmentCount && team.equipmentCount > 0 && (
-                      <li>장비 {team.equipmentCount}개</li>
+                      <li>{t('deleteModal.relatedEquipment', { count: team.equipmentCount })}</li>
                     )}
                   </ul>
                   <p className="text-xs text-brand-warning mt-2">
-                    삭제 전 팀원과 장비를 다른 팀으로 이동해주세요.
+                    {t('deleteModal.relatedDataHint')}
                   </p>
                 </div>
               )}
 
-              <p className="text-sm text-muted-foreground">이 작업은 되돌릴 수 없습니다.</p>
+              <p className="text-sm text-muted-foreground">{t('deleteModal.irreversible')}</p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleteMutation.isPending}>취소</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleteMutation.isPending}>
+            {t('deleteModal.cancel')}
+          </AlertDialogCancel>
           <Button
             variant="destructive"
             onClick={() => deleteMutation.mutate()}
@@ -126,10 +134,10 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
             {deleteMutation.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                삭제 중...
+                {t('deleteModal.deleting')}
               </>
             ) : (
-              '삭제'
+              t('deleteModal.confirm')
             )}
           </Button>
         </AlertDialogFooter>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, UserCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { AlertTriangle, Check, Minus, UserCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Team } from '@/lib/api/teams-api';
@@ -26,6 +27,7 @@ interface TeamCardProps {
  */
 export function TeamCard({ team, className }: TeamCardProps) {
   const router = useRouter();
+  const t = useTranslations('teams');
   const siteInfo = team.site ? SITE_CONFIG[team.site as keyof typeof SITE_CONFIG] : null;
   const clsConfig =
     (team.classification && CLASSIFICATION_CONFIG[team.classification]) ||
@@ -87,25 +89,30 @@ export function TeamCard({ team, className }: TeamCardProps) {
         )}
 
         {/* KPI 3열 */}
-        <div className={TEAM_CARD_TOKENS.kpiGrid} aria-label="팀 현황">
+        <div className={TEAM_CARD_TOKENS.kpiGrid} aria-label={t('card.kpiAriaLabel')}>
           <div className={TEAM_CARD_TOKENS.kpiItem}>
             <div className={TEAM_CARD_TOKENS.kpiValue}>{memberCount}</div>
-            <div className={TEAM_CARD_TOKENS.kpiLabel}>팀원</div>
+            <div className={TEAM_CARD_TOKENS.kpiLabel}>{t('card.kpiMembers')}</div>
           </div>
           <div className={TEAM_CARD_TOKENS.kpiItem}>
             <div className={TEAM_CARD_TOKENS.kpiValue}>{equipmentCount}</div>
-            <div className={TEAM_CARD_TOKENS.kpiLabel}>장비</div>
+            <div className={TEAM_CARD_TOKENS.kpiLabel}>{t('card.kpiEquipment')}</div>
           </div>
           <div className={TEAM_CARD_TOKENS.kpiItem}>
             <div
               className={cn(
                 TEAM_CARD_TOKENS.kpiValue,
+                'flex items-center justify-center',
                 team.leaderName ? 'text-brand-ok' : 'text-brand-warning'
               )}
             >
-              {team.leaderName ? '✓' : '−'}
+              {team.leaderName ? (
+                <Check className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Minus className="h-5 w-5" aria-hidden="true" />
+              )}
             </div>
-            <div className={TEAM_CARD_TOKENS.kpiLabel}>팀장</div>
+            <div className={TEAM_CARD_TOKENS.kpiLabel}>{t('card.kpiLeader')}</div>
           </div>
         </div>
 
@@ -119,7 +126,7 @@ export function TeamCard({ team, className }: TeamCardProps) {
           ) : (
             <span className={TEAM_CARD_TOKENS.noLeaderBadge}>
               <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-              팀장 미지정
+              {t('card.leaderNotAssigned')}
             </span>
           )}
 

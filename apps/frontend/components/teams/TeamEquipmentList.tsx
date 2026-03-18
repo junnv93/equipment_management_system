@@ -14,7 +14,12 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import equipmentApi from '@/lib/api/equipment-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { cn } from '@/lib/utils';
-import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+import {
+  TRANSITION_PRESETS,
+  TEAM_SEARCH_TOKENS,
+  TEAM_ROW_TOKENS,
+  MOTION_PRIMITIVES,
+} from '@/lib/design-tokens';
 
 interface TeamEquipmentListProps {
   teamId: string;
@@ -87,16 +92,13 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
       {/* 검색 및 전체 장비 보기 */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="relative max-w-md flex-1">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <Search className={TEAM_SEARCH_TOKENS.iconPositioned} aria-hidden="true" />
           <Input
             type="search"
             placeholder={t('teamEquipmentList.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className={cn('pl-9', TEAM_SEARCH_TOKENS.input)}
             aria-label={t('search.ariaLabel')}
           />
         </div>
@@ -167,11 +169,11 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                         key={item.id}
                         className={cn(
                           `border-b last:border-0 hover:bg-muted/30 ${TRANSITION_PRESETS.fastColor}`,
-                          'animate-in fade-in fill-mode-forwards'
+                          TEAM_ROW_TOKENS.staggerFade
                         )}
                         style={{
                           animationDelay: `${index * 30}ms`,
-                          animationDuration: '200ms',
+                          animationDuration: `${MOTION_PRIMITIVES.duration.fast}ms`,
                         }}
                       >
                         <td className="p-4">

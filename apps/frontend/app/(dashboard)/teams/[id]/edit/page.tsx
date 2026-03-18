@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getTranslations } from 'next-intl/server';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 /**
  * Next.js 16 PageProps 타입
@@ -51,15 +51,15 @@ async function EditTeamContentAsync({ paramsPromise }: { paramsPromise: Promise<
   return (
     <>
       {/* 헤더 */}
-      <div className="flex items-center gap-4">
+      <div className={SUB_PAGE_HEADER_TOKENS.container}>
         <Button variant="outline" size="icon" asChild>
           <Link href={`/teams/${id}`} aria-label={t('edit.backToDetail')}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{t('edit.title')}</h1>
-          <p className="text-muted-foreground">{t('edit.description')}</p>
+        <div className={SUB_PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('edit.title')}</h1>
+          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{t('edit.description')}</p>
         </div>
       </div>
 

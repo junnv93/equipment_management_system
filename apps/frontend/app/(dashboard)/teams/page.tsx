@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { TeamListContent, TeamListSkeleton } from '@/components/teams/TeamListContent';
+import { TeamPageHeader } from '@/components/teams/TeamPageHeader';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { buildTeamsPageRedirectUrl } from '@/lib/utils/role-filter-utils';
 import {
@@ -19,17 +20,14 @@ type PageProps = {
 /**
  * 팀 목록 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Static Shell: 헤더 (즉시 렌더링)
+ * ✅ Static Shell: 헤더 (즉시 렌더링, Client Component로 i18n)
  * ✅ Dynamic Hole: 팀 목록 (Suspense로 서버 스트리밍)
  */
 export default function TeamsPage(props: PageProps) {
   return (
     <div className={getPageContainerClasses()}>
-      {/* Static Shell: 페이지 헤더 */}
-      <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">팀 관리</h1>
-        <p className="text-muted-foreground">시험소 팀을 관리하고 팀원 및 장비 현황을 확인합니다</p>
-      </div>
+      {/* Static Shell: 페이지 헤더 (Client Component, i18n 사용) */}
+      <TeamPageHeader />
 
       {/* Dynamic Hole: 팀 목록 */}
       <Suspense fallback={<TeamListSkeleton />}>
