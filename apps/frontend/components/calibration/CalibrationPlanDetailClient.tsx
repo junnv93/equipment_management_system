@@ -297,8 +297,9 @@ export function CalibrationPlanDetailClient({
               </Badge>
             </div>
             <p className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.meta}>
-              {t('planDetail.header.author')}: {plan.createdBy} | {t('planDetail.header.createdAt')}
-              : <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
+              {t('planDetail.header.author')}: {plan.authorName || plan.createdBy} |{' '}
+              {t('planDetail.header.createdAt')}:{' '}
+              <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
             </p>
           </div>
         </div>

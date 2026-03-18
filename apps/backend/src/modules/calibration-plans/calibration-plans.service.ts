@@ -365,12 +365,19 @@ export class CalibrationPlansService {
     return this.cacheService.getOrSet<CalibrationPlanDetail>(
       cacheKey,
       async () => {
-        const [plan] = await this.db
-          .select()
+        // LEFT JOIN으로 작성자 이름/팀 이름 포함 (findAll과 동일 패턴)
+        const [row] = await this.db
+          .select({
+            plan: calibrationPlans,
+            authorName: users.name,
+            teamName: teams.name,
+          })
           .from(calibrationPlans)
+          .leftJoin(users, eq(calibrationPlans.createdBy, users.id))
+          .leftJoin(teams, eq(calibrationPlans.teamId, teams.id))
           .where(eq(calibrationPlans.id, uuid));
 
-        if (!plan) {
+        if (!row) {
           throw new NotFoundException({
             code: 'CALIBRATION_PLAN_NOT_FOUND',
             message: `Calibration plan UUID ${uuid} not found`,
@@ -396,14 +403,16 @@ export class CalibrationPlansService {
           })
           .from(calibrationPlanItems)
           .innerJoin(equipment, eq(calibrationPlanItems.equipmentId, equipment.id))
-          .where(eq(calibrationPlanItems.planId, plan.id))
+          .where(eq(calibrationPlanItems.planId, row.plan.id))
           .orderBy(calibrationPlanItems.sequenceNumber);
 
         return {
-          ...plan,
-          items: items.map((row) => ({
-            ...row.item,
-            equipment: row.equipment,
+          ...row.plan,
+          authorName: row.authorName,
+          teamName: row.teamName,
+          items: items.map((r) => ({
+            ...r.item,
+            equipment: r.equipment,
           })),
         };
       },

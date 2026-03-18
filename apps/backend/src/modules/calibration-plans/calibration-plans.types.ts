@@ -69,6 +69,8 @@ export type CalibrationPlanItemDetail = typeof calibrationPlanItems.$inferSelect
 
 /** 교정계획서 상세 — findOne() 반환 타입 */
 export type CalibrationPlanDetail = typeof calibrationPlans.$inferSelect & {
+  authorName: string | null;
+  teamName: string | null;
   items: CalibrationPlanItemDetail[];
 };
 

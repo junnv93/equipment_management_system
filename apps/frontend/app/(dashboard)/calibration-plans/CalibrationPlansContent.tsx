@@ -392,26 +392,21 @@ export default function CalibrationPlansContent({
             {/* 데이터 행 */}
             {plans.map((plan: CalibrationPlan, index: number) => {
               const key = plan.id || `plan-fallback-${plan.year}-${plan.siteId}-${index}`;
+              const teamName =
+                plan.teamName ||
+                (plan.teamId ? teams.find((tm) => tm.id === plan.teamId)?.name : null);
 
               return (
-                <div
+                <Link
                   key={key}
+                  href={plan.id ? `/calibration-plans/${plan.id}` : '#'}
                   className={cn(
                     CALIBRATION_PLAN_LIST_TOKENS.container.base,
                     CALIBRATION_PLAN_LIST_TOKENS.container.desktop,
                     CALIBRATION_PLAN_LIST_TOKENS.container.mobile,
                     CALIBRATION_PLAN_LIST_TOKENS.hover,
-                    'cursor-pointer'
+                    'cursor-pointer no-underline text-inherit'
                   )}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => plan.id && router.push(`/calibration-plans/${plan.id}`)}
-                  onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ' ') && plan.id) {
-                      e.preventDefault();
-                      router.push(`/calibration-plans/${plan.id}`);
-                    }
-                  }}
                 >
                   {/* 연도 */}
                   <div className={CALIBRATION_PLAN_LIST_TOKENS.yearCell}>
@@ -426,11 +421,7 @@ export default function CalibrationPlansContent({
                   </div>
 
                   {/* 팀 */}
-                  <div className={CALIBRATION_PLAN_LIST_TOKENS.teamCell}>
-                    {plan.teamId
-                      ? teams.find((tm) => tm.id === plan.teamId)?.name || plan.teamId
-                      : '-'}
-                  </div>
+                  <div className={CALIBRATION_PLAN_LIST_TOKENS.teamCell}>{teamName || '-'}</div>
 
                   {/* 상태 배지 — Design Token 사용 */}
                   <div>
@@ -439,33 +430,19 @@ export default function CalibrationPlansContent({
                     </Badge>
                   </div>
 
-                  {/* 작성자 */}
-                  <div className={CALIBRATION_PLAN_LIST_TOKENS.authorCell}>{plan.createdBy}</div>
+                  {/* 작성자 — authorName 우선, UUID 폴백 */}
+                  <div className={cn(CALIBRATION_PLAN_LIST_TOKENS.authorCell, 'truncate')}>
+                    {plan.authorName || plan.createdBy}
+                  </div>
 
                   {/* 작성일 */}
                   <div className={CALIBRATION_PLAN_LIST_TOKENS.dateCell}>
                     {format(new Date(plan.createdAt), 'yyyy-MM-dd')}
                   </div>
 
-                  {/* 액션 */}
-                  <div
-                    className={cn(CALIBRATION_PLAN_LIST_TOKENS.actions.container, 'justify-end')}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={CALIBRATION_PLAN_LIST_TOKENS.actions.iconButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (plan.id) router.push(`/calibration-plans/${plan.id}`);
-                      }}
-                      disabled={!plan.id}
-                      aria-label={t('plansList.detail')}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                  {/* 빈 셀 (그리드 정렬 유지) */}
+                  <div />
+                </Link>
               );
             })}
           </>
