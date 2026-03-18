@@ -38,16 +38,14 @@ import {
 /**
  * 부적합 상태 전이 규칙 (State Machine)
  *
- * open → analyzing: 원인분석 시작
- * open → corrected: 즉시 조치 완료 (markCorrected)
- * analyzing → corrected: 조치 완료 (update status or markCorrected)
+ * 3단계 워크플로우: open → corrected → closed
+ * open → corrected: 조치 완료
  * corrected → closed: 기술책임자 승인 종료
- * corrected → analyzing: 기술책임자 반려 (재작업 요청)
+ * corrected → open: 기술책임자 반려 (처음으로 되돌림)
  */
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  [NonConformanceStatus.OPEN]: [NonConformanceStatus.ANALYZING, NonConformanceStatus.CORRECTED],
-  [NonConformanceStatus.ANALYZING]: [NonConformanceStatus.CORRECTED],
-  [NonConformanceStatus.CORRECTED]: [NonConformanceStatus.CLOSED, NonConformanceStatus.ANALYZING],
+  [NonConformanceStatus.OPEN]: [NonConformanceStatus.CORRECTED],
+  [NonConformanceStatus.CORRECTED]: [NonConformanceStatus.CLOSED, NonConformanceStatus.OPEN],
   [NonConformanceStatus.CLOSED]: [], // 종료 상태 — 전이 불가
 };
 
@@ -373,7 +371,6 @@ export class NonConformancesService extends VersionedBaseService {
 
       summary = {
         open: 0,
-        analyzing: 0,
         corrected: 0,
         closed: 0,
       };
@@ -737,7 +734,7 @@ export class NonConformancesService extends VersionedBaseService {
 
   /**
    * 부적합 조치 반려 (기술책임자)
-   * corrected → analyzing 상태로 되돌림 (재작업 요청)
+   * corrected → open 상태로 되돌림 (재작업 요청)
    */
   async rejectCorrection(
     id: string,
@@ -747,7 +744,7 @@ export class NonConformancesService extends VersionedBaseService {
     const nonConformance = await this.findOne(id);
 
     // 중앙화된 상태 전이 검증
-    this.validateTransition(nonConformance.status, NonConformanceStatus.ANALYZING);
+    this.validateTransition(nonConformance.status, NonConformanceStatus.OPEN);
 
     try {
       const updated = await this.updateWithVersion<NonConformance>(
@@ -755,7 +752,7 @@ export class NonConformancesService extends VersionedBaseService {
         id,
         dto.version,
         {
-          status: NonConformanceStatus.ANALYZING,
+          status: NonConformanceStatus.OPEN,
           rejectedBy,
           rejectedAt: new Date(),
           rejectionReason: dto.rejectionReason,
@@ -866,7 +863,7 @@ export class NonConformancesService extends VersionedBaseService {
   ): Promise<void> {
     const nc = await this.findOne(id);
 
-    // 중앙화된 상태 전이 검증 (open/analyzing → corrected)
+    // 중앙화된 상태 전이 검증 (open → corrected)
     this.validateTransition(nc.status, NonConformanceStatus.CORRECTED);
 
     // damage/malfunction 유형은 수리 연결 필수

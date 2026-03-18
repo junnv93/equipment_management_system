@@ -166,7 +166,7 @@ export class CacheInvalidationHelper {
   /**
    * 부적합(NC) 상태 변경 시 캐시 무효화
    *
-   * 반려(corrected→analyzing), 종료(corrected→closed) 시:
+   * 반려(corrected→open), 종료(corrected→closed) 시:
    * - 장비 상세/목록 캐시 무효화 (장비 상태가 변경될 수 있음)
    *
    * Note: NC detail 캐시는 서비스 레벨에서 개별 삭제됨 (buildCacheKey)

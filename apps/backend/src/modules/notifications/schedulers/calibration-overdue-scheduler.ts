@@ -10,10 +10,13 @@ import {
   EquipmentStatusEnum,
   NonConformanceStatusEnum,
   NonConformanceTypeEnum,
+  IncidentTypeEnum,
   ResolutionTypeEnum,
+  DEFAULT_LOCALE,
 } from '@equipment-management/schemas';
 import { NotificationsService } from '../notifications.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { I18nService } from '../../../common/i18n/i18n.service';
 import { getUtcStartOfDay } from '../../../common/utils';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
@@ -55,7 +58,8 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
     private readonly db: AppDatabase,
     private readonly notificationsService: NotificationsService,
     private readonly cacheInvalidationHelper: CacheInvalidationHelper,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly i18n: I18nService
   ) {}
 
   /**
@@ -165,10 +169,7 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
             inArray(nonConformances.equipmentId, overdueIds),
             eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
             isNull(nonConformances.deletedAt),
-            inArray(nonConformances.status, [
-              NonConformanceStatusEnum.enum.open,
-              NonConformanceStatusEnum.enum.analyzing,
-            ])
+            eq(nonConformances.status, NonConformanceStatusEnum.enum.open)
           )
         );
       const existingNcSet = new Set(existingNcRows.map((r) => r.equipmentId));
@@ -203,9 +204,14 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
                 equipmentId: equip.id,
                 discoveryDate,
                 discoveredBy: null, // 시스템 자동 생성
-                cause: `교정 기한 초과 (다음 교정일: ${equip.nextCalibrationDate?.toISOString().split('T')[0]})`,
+                cause: this.i18n.t('system.calibrationOverdue.ncCause', DEFAULT_LOCALE, {
+                  nextCalibrationDate: equip.nextCalibrationDate?.toISOString().split('T')[0] ?? '',
+                }),
                 ncType: NonConformanceTypeEnum.enum.calibration_overdue,
-                actionPlan: '교정 수행 필요',
+                actionPlan: this.i18n.t(
+                  'system.calibrationOverdue.defaultActionPlan',
+                  DEFAULT_LOCALE
+                ),
                 status: NonConformanceStatusEnum.enum.open,
               })
               .returning();
@@ -224,9 +230,10 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
             await tx.insert(equipmentIncidentHistory).values({
               equipmentId: equip.id,
               occurredAt: today,
-              incidentType: NonConformanceTypeEnum.enum.calibration_overdue,
-              content: `교정 기한 초과로 인한 자동 부적합 전환 (부적합 ID: ${nc.id})`,
+              incidentType: IncidentTypeEnum.enum.calibration_overdue,
+              content: this.i18n.t('system.calibrationOverdue.incidentContent', DEFAULT_LOCALE),
               reportedBy: null, // 시스템 자동
+              nonConformanceId: nc.id, // 구조적 FK로 부적합 연결
             });
 
             this.logger.log(
@@ -318,10 +325,7 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
           eq(nonConformances.equipmentId, equipmentId),
           eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
           isNull(nonConformances.deletedAt),
-          inArray(nonConformances.status, [
-            NonConformanceStatusEnum.enum.open,
-            NonConformanceStatusEnum.enum.analyzing,
-          ])
+          eq(nonConformances.status, NonConformanceStatusEnum.enum.open)
         )
       )
       .limit(1);
@@ -356,7 +360,10 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
         status: NonConformanceStatusEnum.enum.corrected,
         resolutionType: ResolutionTypeEnum.enum.recalibration,
         calibrationId,
-        correctionContent: '교정 완료로 인한 자동 조치 완료',
+        correctionContent: this.i18n.t(
+          'system.calibrationOverdue.correctionContent',
+          DEFAULT_LOCALE
+        ),
         correctionDate: today.toISOString().split('T')[0],
         correctedBy,
         updatedAt: today,

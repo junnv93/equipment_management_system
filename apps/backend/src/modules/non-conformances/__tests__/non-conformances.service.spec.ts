@@ -195,8 +195,8 @@ describe('NonConformancesService', () => {
     it('should update non-conformance via updateWithVersion', async () => {
       const updateDto = {
         version: 1,
-        analysisContent: '원인 분석 내용',
-        status: 'analyzing' as const,
+        correctionContent: '시정 조치 내용',
+        status: 'corrected' as const,
       };
 
       // Mock findOne via cache → factory → DB
@@ -209,7 +209,7 @@ describe('NonConformancesService', () => {
       const result = await service.update('nc-uuid', updateDto);
 
       expect(result).toBeDefined();
-      expect(result.analysisContent).toBe(updateDto.analysisContent);
+      expect(result.correctionContent).toBe(updateDto.correctionContent);
       expect(mockCacheService.delete).toHaveBeenCalled();
     });
 
@@ -220,7 +220,7 @@ describe('NonConformancesService', () => {
       mockCacheService.getOrSet.mockResolvedValueOnce(closedNc);
 
       await expect(
-        service.update('nc-uuid', { version: 1, analysisContent: 'test' })
+        service.update('nc-uuid', { version: 1, correctionContent: 'test' })
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -233,7 +233,7 @@ describe('NonConformancesService', () => {
       // Mock existence check (entity exists but version mismatch)
       mockDb.limit.mockResolvedValueOnce([{ id: 'nc-uuid', version: 2 }]);
 
-      await expect(service.update('nc-uuid', { version: 1, status: 'analyzing' })).rejects.toThrow(
+      await expect(service.update('nc-uuid', { version: 1, status: 'corrected' })).rejects.toThrow(
         ConflictException
       );
       // Stale cache should be deleted
@@ -317,7 +317,7 @@ describe('NonConformancesService', () => {
   });
 
   describe('rejectCorrection', () => {
-    it('should reject correction and revert to analyzing', async () => {
+    it('should reject correction and revert to open', async () => {
       const correctedNc = {
         id: 'nc-uuid',
         status: NonConformanceStatus.CORRECTED,
@@ -330,12 +330,12 @@ describe('NonConformancesService', () => {
       mockCacheService.getOrSet.mockResolvedValueOnce(correctedNc);
 
       // Mock updateWithVersion success
-      const updatedNc = { ...correctedNc, status: NonConformanceStatus.ANALYZING, version: 2 };
+      const updatedNc = { ...correctedNc, status: NonConformanceStatus.OPEN, version: 2 };
       mockDb.returning.mockResolvedValueOnce([updatedNc]);
 
       const result = await service.rejectCorrection('nc-uuid', dto, 'rejector-uuid');
 
-      expect(result.status).toBe(NonConformanceStatus.ANALYZING);
+      expect(result.status).toBe(NonConformanceStatus.OPEN);
       expect(mockCacheService.delete).toHaveBeenCalled();
       expect(
         mockCacheInvalidationHelper.invalidateAfterNonConformanceStatusChange

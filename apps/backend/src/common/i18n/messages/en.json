@@ -70,5 +70,10 @@
   "validation.invalidUuid": "Invalid UUID format.",
   "validation.invalidDate": "Invalid date format.",
   "validation.required": "This field is required.",
-  "validation.invalidFormat": "Invalid format."
+  "validation.invalidFormat": "Invalid format.",
+
+  "system.calibrationOverdue.incidentContent": "Auto non-conformance transition due to calibration overdue",
+  "system.calibrationOverdue.ncCause": "Calibration overdue (next calibration date: {nextCalibrationDate})",
+  "system.calibrationOverdue.defaultActionPlan": "Calibration required",
+  "system.calibrationOverdue.correctionContent": "Auto-corrected due to calibration completion"
 }

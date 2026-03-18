@@ -23,7 +23,7 @@ export const nonConformanceQuerySchema = z.object({
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
   status: z
     .enum(NON_CONFORMANCE_STATUS_VALUES, {
-      message: '유효하지 않은 상태입니다 (open, analyzing, corrected, closed)',
+      message: '유효하지 않은 상태입니다 (open, corrected, closed)',
     })
     .optional(),
   ncType: z

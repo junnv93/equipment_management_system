@@ -48,9 +48,8 @@ export const nonConformances = pgTable(
     repairHistoryId: uuid('repair_history_id'), // 수리 기록 ID (1:1 관계)
     calibrationId: uuid('calibration_id'), // 교정 기록 ID (향후 확장용)
 
-    // 조치 계획 및 분석
+    // 조치 계획
     actionPlan: text('action_plan'), // 조치 계획
-    analysisContent: text('analysis_content'), // 원인 분석 내용
 
     // 조치 완료 정보
     correctionContent: text('correction_content'), // 조치 내용
@@ -61,7 +60,7 @@ export const nonConformances = pgTable(
     status: varchar('status', { length: 20 })
       .$type<NonConformanceStatus>()
       .notNull()
-      .default('open'), // 'open' | 'analyzing' | 'corrected' | 'closed'
+      .default('open'), // 'open' | 'corrected' | 'closed'
 
     // 종료 정보 (기술책임자)
     closedBy: uuid('closed_by'), // 종료 승인자 ID (기술책임자)

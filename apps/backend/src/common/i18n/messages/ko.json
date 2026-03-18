@@ -70,5 +70,10 @@
   "validation.invalidUuid": "유효한 UUID 형식이 아닙니다.",
   "validation.invalidDate": "유효한 날짜 형식이 아닙니다.",
   "validation.required": "필수 항목입니다.",
-  "validation.invalidFormat": "형식이 올바르지 않습니다."
+  "validation.invalidFormat": "형식이 올바르지 않습니다.",
+
+  "system.calibrationOverdue.incidentContent": "교정 기한 초과로 인한 자동 부적합 전환",
+  "system.calibrationOverdue.ncCause": "교정 기한 초과 (다음 교정일: {nextCalibrationDate})",
+  "system.calibrationOverdue.defaultActionPlan": "교정 수행 필요",
+  "system.calibrationOverdue.correctionContent": "교정 완료로 인한 자동 조치 완료"
 }

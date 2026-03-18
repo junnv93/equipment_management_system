@@ -106,6 +106,13 @@ export { CACHE_TTL, type CacheTTLTier } from './cache-config';
 // 승인 KPI 상수 (긴급 임계값 등)
 export { APPROVAL_KPI } from './approval-kpi';
 
+// 공용장비 소유처 옵션
+export {
+  EQUIPMENT_OWNER_OPTIONS,
+  type EquipmentOwnerOption,
+  type EquipmentOwnerValue,
+} from './equipment-owner-options';
+
 // 데이터 스코프 정책 (역할별 접근 범위)
 export {
   type DataScopeType,

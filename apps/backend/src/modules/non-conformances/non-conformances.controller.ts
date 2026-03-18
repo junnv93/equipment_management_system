@@ -162,6 +162,12 @@ export class NonConformancesController {
   ): Promise<NonConformance> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
     enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
+
+    // Rule 2: correctedBy는 서버에서 JWT로 추출 (클라이언트 body 신뢰 금지)
+    if (updateDto.status === 'corrected') {
+      updateDto.correctedBy = extractUserId(req);
+    }
+
     return this.nonConformancesService.update(uuid, updateDto);
   }
 
@@ -203,7 +209,7 @@ export class NonConformancesController {
   @Patch(':uuid/reject-correction')
   @ApiOperation({
     summary: '부적합 조치 반려',
-    description: '기술책임자가 조치 완료된 부적합을 반려합니다. 상태가 analyzing으로 되돌아갑니다.',
+    description: '기술책임자가 조치 완료된 부적합을 반려합니다. 상태가 open으로 되돌아갑니다.',
   })
   @ApiParam({ name: 'uuid', description: '부적합 ID (UUID)' })
   @ApiResponse({ status: HttpStatus.OK, description: '부적합 반려 성공' })

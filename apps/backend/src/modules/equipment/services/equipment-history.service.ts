@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { eq, desc, and, isNull, inArray, sql } from 'drizzle-orm';
+import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -14,6 +14,7 @@ import {
   EquipmentStatusEnum,
   NonConformanceStatusEnum,
   NonConformanceTypeEnum,
+  DEFAULT_LOCALE,
 } from '@equipment-management/schemas';
 import {
   CreateLocationHistoryDto,
@@ -25,13 +26,15 @@ import {
 } from '../dto/equipment-history.dto';
 import { getUtcStartOfDay } from '../../../common/utils';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { I18nService } from '../../../common/i18n/i18n.service';
 
 @Injectable()
 export class EquipmentHistoryService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
-    private readonly cacheInvalidationHelper: CacheInvalidationHelper
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
+    private readonly i18n: I18nService
   ) {}
 
   /**
@@ -211,6 +214,7 @@ export class EquipmentHistoryService {
       content: record.content,
       reportedBy: record.reportedBy ?? undefined,
       createdAt: record.createdAt,
+      nonConformanceId: record.nonConformanceId ?? undefined,
     }));
   }
 
@@ -258,7 +262,7 @@ export class EquipmentHistoryService {
 
       // 2-A. 교정 기한 초과는 자동으로 부적합 생성 (중복 방지)
       if (dto.incidentType === NonConformanceTypeEnum.enum.calibration_overdue) {
-        // 2-A-1. 이미 open/analyzing 상태의 calibration_overdue 부적합이 있는지 확인
+        // 2-A-1. 이미 open 상태의 calibration_overdue 부적합이 있는지 확인
         const existingNc = await tx
           .select()
           .from(nonConformances)
@@ -267,10 +271,7 @@ export class EquipmentHistoryService {
               eq(nonConformances.equipmentId, equipmentUuid),
               eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
               isNull(nonConformances.deletedAt),
-              inArray(nonConformances.status, [
-                NonConformanceStatusEnum.enum.open,
-                NonConformanceStatusEnum.enum.analyzing,
-              ])
+              eq(nonConformances.status, NonConformanceStatusEnum.enum.open)
             )
           )
           .limit(1);
@@ -285,7 +286,9 @@ export class EquipmentHistoryService {
               discoveredBy: validatedUserId,
               cause: dto.content,
               ncType: NonConformanceTypeEnum.enum.calibration_overdue,
-              actionPlan: dto.actionPlan || '교정 수행 필요',
+              actionPlan:
+                dto.actionPlan ||
+                this.i18n.t('system.calibrationOverdue.defaultActionPlan', DEFAULT_LOCALE),
               status: NonConformanceStatusEnum.enum.open,
             })
             .returning();
@@ -380,7 +383,15 @@ export class EquipmentHistoryService {
         }
       }
 
-      // 4. 응답 반환
+      // 4. 부적합 생성된 경우 사고이력에 FK 연결
+      if (nonConformanceId) {
+        await tx
+          .update(equipmentIncidentHistory)
+          .set({ nonConformanceId })
+          .where(eq(equipmentIncidentHistory.id, record.id));
+      }
+
+      // 5. 응답 반환
       return {
         id: record.id,
         equipmentId: record.equipmentId,

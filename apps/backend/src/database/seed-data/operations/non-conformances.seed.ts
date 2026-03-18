@@ -73,30 +73,28 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     }
   ),
 
-  // Analyzing NC (분석 중)
+  // Open NC #2 (발견됨, 조치 대기)
   createNC(
     NC_002_ID,
     EQUIP_SIGNAL_INT_SUW_R_ID,
     daysAgo(10),
     'malfunction',
     '신호 왜곡 현상',
-    'analyzing',
+    'open',
     {
-      analysisContent: '임피던스 불일치로 인한 신호 반사 분석 진행 중',
       actionPlan: '임피던스 보정 또는 부품 교체 검토',
     }
   ),
 
-  // Analyzing NC #2
+  // Open NC #3 (발견됨, 조치 대기)
   createNC(
     NC_003_ID,
     EQUIP_MEASUREMENT_STAND_SUW_S_ID,
     daysAgo(15),
     'damage',
     'Z축 스테이지 이동 불량',
-    'analyzing',
+    'open',
     {
-      analysisContent: '모터 베어링 마모 확인',
       actionPlan: '베어링 교체 또는 모터 재수리',
     }
   ),
@@ -113,7 +111,6 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     {
       resolutionType: 'repair',
       repairHistoryId: REPAIR_001_ID,
-      analysisContent: '내부 연결부 산화 확인',
       actionPlan: '내부 연결부 교체',
       correctionContent: '내부 연결부 교체 및 재교정 완료',
       correctionDate: toDateString(daysAgo(5)),
@@ -133,7 +130,6 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     {
       resolutionType: 'repair',
       repairHistoryId: REPAIR_002_ID,
-      analysisContent: '커넥터 핀 손상 발견',
       correctionContent: 'BNC 커넥터 교체',
       correctionDate: toDateString(daysAgo(8)),
       correctedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -151,7 +147,6 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     'corrected',
     {
       resolutionType: 'recalibration',
-      analysisContent: '내부 필터 특성 변화 분석',
       correctionContent: '필터 보정 및 게인 재조정',
       correctionDate: toDateString(daysAgo(6)),
       correctedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -171,7 +166,6 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     {
       resolutionType: 'replacement',
       repairHistoryId: REPAIR_003_ID,
-      analysisContent: 'RF 증폭 스테이지 손상 확인',
       correctionContent: 'RF 앰프 모듈 전체 교체',
       correctionDate: toDateString(daysAgo(4)),
       correctedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -181,7 +175,6 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
   // Closed (종료됨, 기술책임자 승인)
   createNC(NC_004_ID, EQUIP_BCI_SUW_A_ID, daysAgo(40), 'malfunction', '주입 효율 저하', 'closed', {
     repairHistoryId: REPAIR_004_ID,
-    analysisContent: '클램프 접촉 불량',
     correctionContent: '클램프 접촉면 정제 및 재조립',
     correctionDate: toDateString(daysAgo(18)),
     correctedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -200,7 +193,6 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     '주파수 응답 편차',
     'closed',
     {
-      analysisContent: '교정 커브 드리프트 확인',
       correctionContent: '주파수 응답 재조정 및 교정',
       correctionDate: toDateString(daysAgo(28)),
       correctedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -220,7 +212,6 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     '전력 출력 불안정',
     'closed',
     {
-      analysisContent: '전원 공급 회로 노화',
       correctionContent: '전체 전원부 재설계 및 수리',
       correctionDate: toDateString(daysAgo(22)),
       correctedBy: USER_TECHNICAL_MANAGER_SUWON_ID,

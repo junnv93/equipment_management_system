@@ -487,16 +487,14 @@ export type CalibrationFactorApprovalStatus = z.infer<typeof CalibrationFactorAp
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH: 부적합 상태 열거형
  *
- * 표준 상태값 (소문자 + 언더스코어):
+ * 3단계 워크플로우: open → corrected → closed
  * - open: 부적합 등록 (발견됨)
- * - analyzing: 원인 분석 중
- * - corrected: 조치 완료 (종료 승인 대기)
+ * - corrected: 조치 완료 (종결 승인 대기)
  * - closed: 종료됨 (기술책임자 승인)
  */
 export const NON_CONFORMANCE_STATUS_VALUES = [
   'open', // 부적합 등록 (발견됨)
-  'analyzing', // 원인 분석 중
-  'corrected', // 조치 완료 (종료 승인 대기)
+  'corrected', // 조치 완료 (종결 승인 대기)
   'closed', // 종료됨 (기술책임자 승인)
 ] as const;
 
@@ -1156,7 +1154,6 @@ export const CHECKOUT_PURPOSE_LABELS: Record<CheckoutPurpose, string> = {
  */
 export const NON_CONFORMANCE_STATUS_LABELS: Record<NonConformanceStatus, string> = {
   open: '등록됨',
-  analyzing: '분석 중',
   corrected: '조치 완료',
   closed: '종료됨',
 };
@@ -1486,7 +1483,6 @@ export const NonConformanceTypeValues = {
  */
 export const NonConformanceStatusValues = {
   OPEN: 'open',
-  ANALYZING: 'analyzing',
   CORRECTED: 'corrected',
   CLOSED: 'closed',
 } as const;
