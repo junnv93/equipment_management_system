@@ -36,6 +36,7 @@ import {
   isLabManager as checkIsLabManager,
   APPROVAL_KPI,
 } from '@equipment-management/shared-constants';
+import { toSafeInt } from '../../common/utils';
 
 /**
  * 역할별 승인 카테고리 매핑
@@ -305,9 +306,9 @@ export class ApprovalsService {
     ]);
 
     return {
-      todayProcessed: todayResult[0]?.value ?? 0,
-      urgentCount: categoryKpi.urgentCount,
-      avgWaitDays: categoryKpi.avgWaitDays,
+      todayProcessed: toSafeInt(todayResult[0]?.value),
+      urgentCount: toSafeInt(categoryKpi.urgentCount),
+      avgWaitDays: toSafeInt(categoryKpi.avgWaitDays),
     };
   }
 
@@ -420,9 +421,9 @@ export class ApprovalsService {
     const r = regular[0];
     const v = vendor[0];
 
-    const totalUrgent = (r?.urgent ?? 0) + (v?.urgent ?? 0);
-    const totalCount = (r?.total ?? 0) + (v?.total ?? 0);
-    const totalSumDays = (r?.sumDays ?? 0) + (v?.sumDays ?? 0);
+    const totalUrgent = toSafeInt(r?.urgent) + toSafeInt(v?.urgent);
+    const totalCount = toSafeInt(r?.total) + toSafeInt(v?.total);
+    const totalSumDays = toSafeInt(r?.sumDays) + toSafeInt(v?.sumDays);
 
     return {
       urgentCount: totalUrgent,
@@ -450,7 +451,7 @@ export class ApprovalsService {
         .select({
           total: count(),
           urgent:
-            sql<number>`count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate})`.as(
+            sql<number>`(count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate}))::int`.as(
               'urgent'
             ),
           sumDays:
@@ -466,7 +467,7 @@ export class ApprovalsService {
       .select({
         total: count(),
         urgent:
-          sql<number>`count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         sumDays:
@@ -523,9 +524,9 @@ export class ApprovalsService {
     const rn = rentalResult[0];
     const sh = sharedResult[0];
 
-    const totalUrgent = (r?.urgent ?? 0) + (rn?.urgent ?? 0) + (sh?.urgent ?? 0);
-    const totalCount = (r?.total ?? 0) + (rn?.total ?? 0) + (sh?.total ?? 0);
-    const totalSumDays = (r?.sumDays ?? 0) + (rn?.sumDays ?? 0) + (sh?.sumDays ?? 0);
+    const totalUrgent = toSafeInt(r?.urgent) + toSafeInt(rn?.urgent) + toSafeInt(sh?.urgent);
+    const totalCount = toSafeInt(r?.total) + toSafeInt(rn?.total) + toSafeInt(sh?.total);
+    const totalSumDays = toSafeInt(r?.sumDays) + toSafeInt(rn?.sumDays) + toSafeInt(sh?.sumDays);
 
     return {
       urgentCount: totalUrgent,
@@ -548,7 +549,7 @@ export class ApprovalsService {
       .select({
         total: count(),
         urgent:
-          sql<number>`count(*) filter (where ${schema.equipmentImports.createdAt} <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.equipmentImports.createdAt} <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         sumDays:
@@ -577,7 +578,7 @@ export class ApprovalsService {
         return this.db
           .select({
             urgent:
-              sql<number>`count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate})`.as(
+              sql<number>`(count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate}))::int`.as(
                 'urgent'
               ),
             avgDays:
@@ -592,7 +593,7 @@ export class ApprovalsService {
       return this.db
         .select({
           urgent:
-            sql<number>`count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate})`.as(
+            sql<number>`(count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate}))::int`.as(
               'urgent'
             ),
           avgDays:
@@ -605,7 +606,7 @@ export class ApprovalsService {
     })();
 
     const [result] = await query;
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
@@ -625,7 +626,7 @@ export class ApprovalsService {
         return this.db
           .select({
             urgent:
-              sql<number>`count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate})`.as(
+              sql<number>`(count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate}))::int`.as(
                 'urgent'
               ),
             avgDays:
@@ -640,7 +641,7 @@ export class ApprovalsService {
       return this.db
         .select({
           urgent:
-            sql<number>`count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate})`.as(
+            sql<number>`(count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate}))::int`.as(
               'urgent'
             ),
           avgDays:
@@ -653,7 +654,7 @@ export class ApprovalsService {
     })();
 
     const [result] = await query;
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
@@ -668,7 +669,7 @@ export class ApprovalsService {
     const [result] = await this.db
       .select({
         urgent:
-          sql<number>`count(*) filter (where ${schema.calibrations.intermediateCheckDate}::timestamp <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.calibrations.intermediateCheckDate}::timestamp <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         avgDays:
@@ -684,7 +685,7 @@ export class ApprovalsService {
         )
       );
 
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
@@ -715,7 +716,7 @@ export class ApprovalsService {
     const [result] = await this.db
       .select({
         urgent:
-          sql<number>`count(*) filter (where ${schema.nonConformances.createdAt} <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.nonConformances.createdAt} <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         avgDays:
@@ -727,7 +728,7 @@ export class ApprovalsService {
       .innerJoin(schema.equipment, eq(schema.nonConformances.equipmentId, schema.equipment.id))
       .where(and(...conditions));
 
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
@@ -750,7 +751,7 @@ export class ApprovalsService {
     const [result] = await this.db
       .select({
         urgent:
-          sql<number>`count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         avgDays:
@@ -762,7 +763,7 @@ export class ApprovalsService {
       .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
       .where(and(...conditions));
 
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
@@ -784,7 +785,7 @@ export class ApprovalsService {
     const [result] = await this.db
       .select({
         urgent:
-          sql<number>`count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         avgDays:
@@ -796,7 +797,7 @@ export class ApprovalsService {
       .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
       .where(and(...conditions));
 
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
@@ -811,7 +812,7 @@ export class ApprovalsService {
     const [result] = await this.db
       .select({
         urgent:
-          sql<number>`count(*) filter (where ${schema.calibrationPlans.createdAt} <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.calibrationPlans.createdAt} <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         avgDays:
@@ -827,7 +828,7 @@ export class ApprovalsService {
         )
       );
 
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
@@ -841,7 +842,7 @@ export class ApprovalsService {
     const [result] = await this.db
       .select({
         urgent:
-          sql<number>`count(*) filter (where ${schema.softwareHistory.createdAt} <= ${thresholdDate})`.as(
+          sql<number>`(count(*) filter (where ${schema.softwareHistory.createdAt} <= ${thresholdDate}))::int`.as(
             'urgent'
           ),
         avgDays:
@@ -852,7 +853,7 @@ export class ApprovalsService {
       .from(schema.softwareHistory)
       .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING));
 
-    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
