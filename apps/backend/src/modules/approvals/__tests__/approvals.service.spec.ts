@@ -112,8 +112,8 @@ describe('ApprovalsService', () => {
     });
 
     it('lab_manager 역할은 disposal_final과 plan_final을 조회한다', async () => {
-      // site=null → getDisposalFinalCount/getCalibrationPlanFinalCount가 no-site 경로 사용
-      mockDb.query.users.findFirst.mockResolvedValue({ ...MOCK_USER, site: null });
+      // lab_manager: DISPOSAL_DATA_SCOPE=site → site 필터 적용
+      mockDb.query.users.findFirst.mockResolvedValue({ ...MOCK_USER, site: 'SUW' });
       tableCounts.set(schema.disposalRequests, 3);
       tableCounts.set(schema.calibrationPlans, 1);
 

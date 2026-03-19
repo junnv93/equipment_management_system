@@ -15,10 +15,7 @@ import {
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { ApprovalsService } from '../approvals/approvals.service';
-import {
-  CACHE_TTL,
-  isLabManager as checkIsLabManager,
-} from '@equipment-management/shared-constants';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 import {
   DashboardSummaryDto,
   EquipmentByTeamDto,
@@ -555,12 +552,11 @@ export class DashboardService {
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const isLabManager = checkIsLabManager(userRole);
-        const counts = await this.approvalsService.getApprovalCountsByScope(
-          teamId ?? null,
-          site ?? null,
-          isLabManager
-        );
+        const counts = await this.approvalsService.getApprovalCountsByScope({
+          role: userRole,
+          site: site ?? undefined,
+          teamId: teamId ?? undefined,
+        });
 
         const equipment = counts.equipment;
         const calibration = counts.calibration;

@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   eq,
@@ -7,6 +7,7 @@ import {
   ne,
   gte,
   lt,
+  lte,
   inArray,
   notInArray,
   isNull,
@@ -31,10 +32,20 @@ import {
   type UserRole,
   type CheckoutStatus,
   type CalibrationPlanStatus,
+  type DisposalReviewStatus,
 } from '@equipment-management/schemas';
 import {
-  isLabManager as checkIsLabManager,
   APPROVAL_KPI,
+  resolveDataScope,
+  NON_CONFORMANCE_DATA_SCOPE,
+  CHECKOUT_DATA_SCOPE,
+  INTERMEDIATE_CHECK_DATA_SCOPE,
+  CALIBRATION_DATA_SCOPE,
+  EQUIPMENT_IMPORT_DATA_SCOPE,
+  DISPOSAL_DATA_SCOPE,
+  EQUIPMENT_REQUEST_DATA_SCOPE,
+  type FeatureScopePolicy,
+  type UserScopeContext,
 } from '@equipment-management/shared-constants';
 import { toSafeInt } from '../../common/utils';
 
@@ -139,18 +150,15 @@ export class ApprovalsService {
       });
     }
 
-    const isLabManager = checkIsLabManager(userRole);
-
     // Role gating: 해당 역할이 접근 불가한 카테고리는 쿼리 자체를 생략
     const allowedCategories = ROLE_CATEGORIES[userRole] ?? new Set();
-    const rawCounts = await this.getApprovalCountsByScope(
-      user.teamId,
-      user.site,
-      isLabManager,
-      allowedCategories
-    );
+    const userCtx: UserScopeContext = {
+      role: userRole,
+      site: user.site ?? undefined,
+      teamId: user.teamId ?? undefined,
+    };
 
-    return rawCounts;
+    return this.getApprovalCountsByScope(userCtx, allowedCategories);
   }
 
   /**
@@ -160,15 +168,14 @@ export class ApprovalsService {
    * allowedCategories가 주어지면 해당 카테고리만 쿼리하고 나머지는 0을 반환합니다.
    * 생략 시 전체 카테고리를 쿼리합니다 (Dashboard용).
    *
-   * @param userTeamId - 사용자 팀 ID (team-scoped 필터링)
-   * @param userSite - 사용자 사이트 (site-scoped 필터링)
-   * @param isLabManager - lab_manager 여부 (cross-site visibility)
+   * 스코프 해석: data-scope.ts의 SSOT 정책 + resolveDataScope()를 사용.
+   * SiteScopeInterceptor와 동일한 해석기를 공유하여 카운트/목록 불일치를 방지합니다.
+   *
+   * @param userCtx - 사용자 역할/사이트/팀 컨텍스트 (정책 해석에 사용)
    * @param allowedCategories - 쿼리할 카테고리 제한 (없으면 전체)
    */
   async getApprovalCountsByScope(
-    userTeamId: string | null,
-    userSite: string | null,
-    isLabManager: boolean,
+    userCtx: UserScopeContext,
     allowedCategories?: ReadonlySet<string>
   ): Promise<PendingCountsByCategory> {
     const shouldQuery = (category: string): boolean =>
@@ -190,13 +197,12 @@ export class ApprovalsService {
       planFinalCount,
       softwareCount,
     ] = await Promise.all([
-      // === Outgoing (반출) ===
+      // === Outgoing (반출) — SSOT: CHECKOUT_DATA_SCOPE ===
       shouldQuery('outgoing')
         ? this.getCheckoutCount(
             CheckoutStatusValues.PENDING,
+            userCtx,
             undefined,
-            userTeamId,
-            isLabManager,
             CheckoutPurposeValues.RETURN_TO_VENDOR
           )
         : Promise.resolve(0),
@@ -204,22 +210,21 @@ export class ApprovalsService {
       shouldQuery('outgoing')
         ? this.getCheckoutCount(
             CheckoutStatusValues.PENDING,
-            CheckoutPurposeValues.RETURN_TO_VENDOR,
-            userTeamId,
-            isLabManager
+            userCtx,
+            CheckoutPurposeValues.RETURN_TO_VENDOR
           )
         : Promise.resolve(0),
 
-      // === Incoming (반입) ===
+      // === Incoming (반입) — SSOT: CHECKOUT_DATA_SCOPE / EQUIPMENT_IMPORT_DATA_SCOPE ===
       shouldQuery('incoming')
-        ? this.getCheckoutCount(CheckoutStatusValues.RETURNED, undefined, userTeamId, isLabManager)
+        ? this.getCheckoutCount(CheckoutStatusValues.RETURNED, userCtx)
         : Promise.resolve(0),
 
       shouldQuery('incoming')
         ? this.getEquipmentImportCount(
             EquipmentImportStatusValues.PENDING,
             EquipmentImportSourceEnum.enum.rental,
-            userSite
+            userCtx
           )
         : Promise.resolve(0),
 
@@ -227,21 +232,21 @@ export class ApprovalsService {
         ? this.getEquipmentImportCount(
             EquipmentImportStatusValues.PENDING,
             EquipmentImportSourceEnum.enum.internal_shared,
-            userSite
+            userCtx
           )
         : Promise.resolve(0),
 
-      // === Specialized ===
-      shouldQuery('equipment') ? this.getEquipmentRequestCount(userSite) : Promise.resolve(0),
-      shouldQuery('calibration') ? this.getCalibrationCount(userSite) : Promise.resolve(0),
-      shouldQuery('inspection') ? this.getIntermediateCheckCount() : Promise.resolve(0),
-      shouldQuery('nonconformity')
-        ? this.getNonConformanceCount(userTeamId, isLabManager)
-        : Promise.resolve(0),
+      // === Specialized — 각 메서드가 자신의 SSOT 정책으로 스코프 해석 ===
+      shouldQuery('equipment') ? this.getEquipmentRequestCount(userCtx) : Promise.resolve(0),
+      shouldQuery('calibration') ? this.getCalibrationCount(userCtx) : Promise.resolve(0),
+      shouldQuery('inspection') ? this.getIntermediateCheckCount(userCtx) : Promise.resolve(0),
+      shouldQuery('nonconformity') ? this.getNonConformanceCount(userCtx) : Promise.resolve(0),
       shouldQuery('disposal_review')
-        ? this.getDisposalReviewCount('', isLabManager, userTeamId)
+        ? this.getDisposalCount(DisposalReviewStatusValues.PENDING, userCtx)
         : Promise.resolve(0),
-      shouldQuery('disposal_final') ? this.getDisposalFinalCount(userSite) : Promise.resolve(0),
+      shouldQuery('disposal_final')
+        ? this.getDisposalCount(DisposalReviewStatusValues.REVIEWED, userCtx)
+        : Promise.resolve(0),
       shouldQuery('plan_review') ? this.getCalibrationPlanReviewCount() : Promise.resolve(0),
       shouldQuery('plan_final') ? this.getCalibrationPlanFinalCount() : Promise.resolve(0),
       shouldQuery('software') ? this.getSoftwareCount() : Promise.resolve(0),
@@ -327,7 +332,12 @@ export class ApprovalsService {
       columns: { teamId: true, site: true },
     });
 
-    return this.getCategoryKpi(user?.teamId ?? null, user?.site ?? null, userRole, category);
+    const userCtx: UserScopeContext = {
+      role: userRole,
+      site: user?.site ?? undefined,
+      teamId: user?.teamId ?? undefined,
+    };
+    return this.getCategoryKpi(userCtx, category);
   }
 
   /**
@@ -339,32 +349,29 @@ export class ApprovalsService {
    * user 정보를 파라미터로 받아 중복 DB 조회를 방지.
    */
   private async getCategoryKpi(
-    userTeamId: string | null,
-    userSite: string | null,
-    userRole: UserRole,
+    userCtx: UserScopeContext,
     category: string
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
-    const isLabManager = checkIsLabManager(userRole);
     const thresholdDays = APPROVAL_KPI.URGENT_THRESHOLD_DAYS;
 
     try {
       switch (category) {
         case 'outgoing':
-          return this.getOutgoingKpi(userTeamId, isLabManager, thresholdDays);
+          return this.getOutgoingKpi(userCtx, thresholdDays);
         case 'incoming':
-          return this.getIncomingKpi(userTeamId, userSite, isLabManager, thresholdDays);
+          return this.getIncomingKpi(userCtx, thresholdDays);
         case 'equipment':
-          return this.getEquipmentRequestKpi(userSite, thresholdDays);
+          return this.getEquipmentRequestKpi(userCtx, thresholdDays);
         case 'calibration':
-          return this.getCalibrationKpi(userSite, thresholdDays);
+          return this.getCalibrationKpi(userCtx, thresholdDays);
         case 'inspection':
-          return this.getInspectionKpi(thresholdDays);
+          return this.getInspectionKpi(userCtx, thresholdDays);
         case 'nonconformity':
-          return this.getNonConformanceKpi(userTeamId, isLabManager, thresholdDays);
+          return this.getNonConformanceKpi(userCtx, thresholdDays);
         case 'disposal_review':
-          return this.getDisposalReviewKpi(userTeamId, isLabManager, thresholdDays);
+          return this.getDisposalKpi(DisposalReviewStatusValues.PENDING, userCtx, thresholdDays);
         case 'disposal_final':
-          return this.getDisposalFinalKpi(userSite, thresholdDays);
+          return this.getDisposalKpi(DisposalReviewStatusValues.REVIEWED, userCtx, thresholdDays);
         case 'plan_review':
           return this.getCalibrationPlanKpi(
             CalibrationPlanStatusValues.PENDING_REVIEW,
@@ -393,8 +400,7 @@ export class ApprovalsService {
    * - 벤더 반환: status=PENDING, purpose = RETURN_TO_VENDOR
    */
   private async getOutgoingKpi(
-    userTeamId: string | null,
-    isLabManager: boolean,
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
@@ -402,8 +408,7 @@ export class ApprovalsService {
     // 일반 반출 (purpose ≠ RETURN_TO_VENDOR)
     const regularQuery = this.getCheckoutKpiQuery(
       CheckoutStatusValues.PENDING,
-      userTeamId,
-      isLabManager,
+      userCtx,
       thresholdDate,
       { excludePurpose: CheckoutPurposeValues.RETURN_TO_VENDOR }
     );
@@ -411,8 +416,7 @@ export class ApprovalsService {
     // 벤더 반환 (purpose = RETURN_TO_VENDOR)
     const vendorQuery = this.getCheckoutKpiQuery(
       CheckoutStatusValues.PENDING,
-      userTeamId,
-      isLabManager,
+      userCtx,
       thresholdDate,
       { purpose: CheckoutPurposeValues.RETURN_TO_VENDOR }
     );
@@ -433,11 +437,12 @@ export class ApprovalsService {
 
   /**
    * 반출 KPI 쿼리 빌더 — COUNT + urgent + sumDays
+   *
+   * SSOT: CHECKOUT_DATA_SCOPE 정책 기반 스코프 필터링
    */
   private getCheckoutKpiQuery(
     status: CheckoutStatus,
-    userTeamId: string | null,
-    isLabManager: boolean,
+    userCtx: UserScopeContext,
     thresholdDate: Date,
     filter?: { purpose?: string; excludePurpose?: string }
   ): Promise<{ total: number; urgent: number; sumDays: number }[]> {
@@ -446,35 +451,32 @@ export class ApprovalsService {
     if (filter?.excludePurpose)
       conditions.push(ne(schema.checkouts.purpose, filter.excludePurpose));
 
-    if (!isLabManager && userTeamId) {
+    const kpiSelect = {
+      total: count(),
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      sumDays:
+        sql<number>`coalesce(sum(extract(epoch from (now() - ${schema.checkouts.createdAt})) / 86400)::int, 0)`.as(
+          'sum_days'
+        ),
+    };
+
+    const scopeCondition = this.buildScopeCondition(CHECKOUT_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.users.site, s),
+      team: (t) => eq(schema.users.teamId, t),
+    });
+
+    if (scopeCondition) {
       return this.db
-        .select({
-          total: count(),
-          urgent:
-            sql<number>`(count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate}))::int`.as(
-              'urgent'
-            ),
-          sumDays:
-            sql<number>`coalesce(sum(extract(epoch from (now() - ${schema.checkouts.createdAt})) / 86400)::int, 0)`.as(
-              'sum_days'
-            ),
-        })
+        .select(kpiSelect)
         .from(schema.checkouts)
         .innerJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
-        .where(and(...conditions, eq(schema.users.teamId, userTeamId)));
+        .where(and(...conditions, scopeCondition));
     }
     return this.db
-      .select({
-        total: count(),
-        urgent:
-          sql<number>`(count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate}))::int`.as(
-            'urgent'
-          ),
-        sumDays:
-          sql<number>`coalesce(sum(extract(epoch from (now() - ${schema.checkouts.createdAt})) / 86400)::int, 0)`.as(
-            'sum_days'
-          ),
-      })
+      .select(kpiSelect)
       .from(schema.checkouts)
       .where(and(...conditions));
   }
@@ -485,32 +487,29 @@ export class ApprovalsService {
    * 3개 소스를 각각 쿼리 후 가중 평균 계산
    */
   private async getIncomingKpi(
-    userTeamId: string | null,
-    userSite: string | null,
-    isLabManager: boolean,
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
 
-    // 반입 반환 건 — createdAt 기준 (요청 시점부터 전체 대기 기간)
+    // 반입 반환 건 — SSOT: CHECKOUT_DATA_SCOPE 정책 기반
     const returnQuery = this.getCheckoutKpiQuery(
       CheckoutStatusValues.RETURNED,
-      userTeamId,
-      isLabManager,
+      userCtx,
       thresholdDate
     );
 
-    // 렌탈 임포트
+    // 렌탈 임포트 — SSOT: EQUIPMENT_IMPORT_DATA_SCOPE 정책 기반
     const rentalQuery = this.getImportKpiQuery(
       EquipmentImportSourceEnum.enum.rental,
-      userSite,
+      userCtx,
       thresholdDate
     );
 
     // 공유 임포트
     const sharedQuery = this.getImportKpiQuery(
       EquipmentImportSourceEnum.enum.internal_shared,
-      userSite,
+      userCtx,
       thresholdDate
     );
 
@@ -536,14 +535,17 @@ export class ApprovalsService {
 
   private getImportKpiQuery(
     sourceType: string,
-    userSite: string | null,
+    userCtx: UserScopeContext,
     thresholdDate: Date
   ): Promise<{ total: number; urgent: number; sumDays: number }[]> {
     const conditions: SQL[] = [
       eq(schema.equipmentImports.status, EquipmentImportStatusValues.PENDING),
       eq(schema.equipmentImports.sourceType, sourceType),
     ];
-    if (userSite) conditions.push(eq(schema.equipmentImports.site, userSite));
+    const scopeCondition = this.buildScopeCondition(EQUIPMENT_IMPORT_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.equipmentImports.site, s),
+    });
+    if (scopeCondition) conditions.push(scopeCondition);
 
     return this.db
       .select({
@@ -562,128 +564,123 @@ export class ApprovalsService {
   }
 
   /**
-   * 장비 등록 승인 KPI
+   * 장비 등록 승인 KPI — SSOT: EQUIPMENT_REQUEST_DATA_SCOPE
    */
   private async getEquipmentRequestKpi(
-    userSite: string | null,
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
     const conditions: SQL[] = [
       eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval),
     ];
+    const kpiSelect = {
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      avgDays:
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.equipmentRequests.createdAt})) / 86400))::int, 0)`.as(
+          'avg_days'
+        ),
+    };
+    const scopeCondition = this.buildScopeCondition(EQUIPMENT_REQUEST_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.users.site, s),
+      team: (t) => eq(schema.users.teamId, t),
+    });
 
-    const query = (() => {
-      if (userSite) {
-        return this.db
-          .select({
-            urgent:
-              sql<number>`(count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate}))::int`.as(
-                'urgent'
-              ),
-            avgDays:
-              sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.equipmentRequests.createdAt})) / 86400))::int, 0)`.as(
-                'avg_days'
-              ),
-          })
+    const [result] = scopeCondition
+      ? await this.db
+          .select(kpiSelect)
           .from(schema.equipmentRequests)
           .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
-          .where(and(...conditions, eq(schema.users.site, userSite)));
-      }
-      return this.db
-        .select({
-          urgent:
-            sql<number>`(count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate}))::int`.as(
-              'urgent'
-            ),
-          avgDays:
-            sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.equipmentRequests.createdAt})) / 86400))::int, 0)`.as(
-              'avg_days'
-            ),
-        })
-        .from(schema.equipmentRequests)
-        .where(and(...conditions));
-    })();
+          .where(and(...conditions, scopeCondition))
+      : await this.db
+          .select(kpiSelect)
+          .from(schema.equipmentRequests)
+          .where(and(...conditions));
 
-    const [result] = await query;
     return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
-   * 교정 기록 승인 KPI
+   * 교정 기록 승인 KPI — SSOT: CALIBRATION_DATA_SCOPE
    */
   private async getCalibrationKpi(
-    userSite: string | null,
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
     const conditions: SQL[] = [
       eq(schema.calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval),
     ];
+    const kpiSelect = {
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      avgDays:
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.createdAt})) / 86400))::int, 0)`.as(
+          'avg_days'
+        ),
+    };
+    const scopeCondition = this.buildScopeCondition(CALIBRATION_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.equipment.site, s),
+      team: (t) => eq(schema.equipment.teamId, t),
+    });
 
-    const query = (() => {
-      if (userSite) {
-        return this.db
-          .select({
-            urgent:
-              sql<number>`(count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate}))::int`.as(
-                'urgent'
-              ),
-            avgDays:
-              sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.createdAt})) / 86400))::int, 0)`.as(
-                'avg_days'
-              ),
-          })
+    const [result] = scopeCondition
+      ? await this.db
+          .select(kpiSelect)
           .from(schema.calibrations)
           .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
-          .where(and(...conditions, eq(schema.equipment.site, userSite)));
-      }
-      return this.db
-        .select({
-          urgent:
-            sql<number>`(count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate}))::int`.as(
-              'urgent'
-            ),
-          avgDays:
-            sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.createdAt})) / 86400))::int, 0)`.as(
-              'avg_days'
-            ),
-        })
-        .from(schema.calibrations)
-        .where(and(...conditions));
-    })();
+          .where(and(...conditions, scopeCondition))
+      : await this.db
+          .select(kpiSelect)
+          .from(schema.calibrations)
+          .where(and(...conditions));
 
-    const [result] = await query;
     return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
-   * 중간점검 KPI
+   * 중간점검 KPI — SSOT: INTERMEDIATE_CHECK_DATA_SCOPE
    */
   private async getInspectionKpi(
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const today = new Date().toISOString().split('T')[0];
     const thresholdDate = this.getThresholdDate(thresholdDays);
+    const conditions: SQL[] = [
+      isNotNull(schema.calibrations.intermediateCheckDate),
+      lt(schema.calibrations.intermediateCheckDate, today),
+    ];
+    const kpiSelect = {
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.calibrations.intermediateCheckDate}::timestamp <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      avgDays:
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.intermediateCheckDate}::timestamp)) / 86400))::int, 0)`.as(
+          'avg_days'
+        ),
+    };
+    const scopeCondition = this.buildScopeCondition(INTERMEDIATE_CHECK_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.equipment.site, s),
+      team: (t) => eq(schema.equipment.teamId, t),
+    });
 
-    const [result] = await this.db
-      .select({
-        urgent:
-          sql<number>`(count(*) filter (where ${schema.calibrations.intermediateCheckDate}::timestamp <= ${thresholdDate}))::int`.as(
-            'urgent'
-          ),
-        avgDays:
-          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.intermediateCheckDate}::timestamp)) / 86400))::int, 0)`.as(
-            'avg_days'
-          ),
-      })
-      .from(schema.calibrations)
-      .where(
-        and(
-          isNotNull(schema.calibrations.intermediateCheckDate),
-          lt(schema.calibrations.intermediateCheckDate, today)
-        )
-      );
+    const [result] = scopeCondition
+      ? await this.db
+          .select(kpiSelect)
+          .from(schema.calibrations)
+          .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+          .where(and(...conditions, scopeCondition))
+      : await this.db
+          .select(kpiSelect)
+          .from(schema.calibrations)
+          .where(and(...conditions));
 
     return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
@@ -692,8 +689,7 @@ export class ApprovalsService {
    * 부적합 종료 승인 KPI
    */
   private async getNonConformanceKpi(
-    userTeamId: string | null,
-    isLabManager: boolean,
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
@@ -709,9 +705,12 @@ export class ApprovalsService {
       )!,
     ];
 
-    if (!isLabManager && userTeamId) {
-      conditions.push(eq(schema.equipment.teamId, userTeamId));
-    }
+    // SSOT: NON_CONFORMANCE_DATA_SCOPE 정책 기반 스코프 필터링
+    const scopeCondition = this.buildScopeCondition(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.equipment.site, s),
+      team: (t) => eq(schema.equipment.teamId, t),
+    });
+    if (scopeCondition) conditions.push(scopeCondition);
 
     const [result] = await this.db
       .select({
@@ -732,70 +731,42 @@ export class ApprovalsService {
   }
 
   /**
-   * 폐기 검토 KPI
+   * 폐기 승인 KPI — SSOT: DISPOSAL_DATA_SCOPE
+   *
+   * review/final 통합: reviewStatus로 단계 구분, 정책으로 스코프 자동 해석.
    */
-  private async getDisposalReviewKpi(
-    userTeamId: string | null,
-    isLabManager: boolean,
+  private async getDisposalKpi(
+    reviewStatus: DisposalReviewStatus,
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
-    const conditions: SQL[] = [
-      eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING),
-    ];
+    const conditions: SQL[] = [eq(schema.disposalRequests.reviewStatus, reviewStatus)];
+    const kpiSelect = {
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      avgDays:
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.disposalRequests.createdAt})) / 86400))::int, 0)`.as(
+          'avg_days'
+        ),
+    };
+    const scopeCondition = this.buildScopeCondition(DISPOSAL_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.equipment.site, s),
+      team: (t) => eq(schema.equipment.teamId, t),
+    });
 
-    if (!isLabManager && userTeamId) {
-      conditions.push(eq(schema.equipment.teamId, userTeamId));
-    }
-
-    const [result] = await this.db
-      .select({
-        urgent:
-          sql<number>`(count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate}))::int`.as(
-            'urgent'
-          ),
-        avgDays:
-          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.disposalRequests.createdAt})) / 86400))::int, 0)`.as(
-            'avg_days'
-          ),
-      })
-      .from(schema.disposalRequests)
-      .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
-      .where(and(...conditions));
-
-    return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
-  }
-
-  /**
-   * 폐기 최종 승인 KPI
-   */
-  private async getDisposalFinalKpi(
-    userSite: string | null,
-    thresholdDays: number
-  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
-    const thresholdDate = this.getThresholdDate(thresholdDays);
-    const conditions: SQL[] = [
-      eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED),
-    ];
-
-    if (userSite) {
-      conditions.push(eq(schema.equipment.site, userSite));
-    }
-
-    const [result] = await this.db
-      .select({
-        urgent:
-          sql<number>`(count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate}))::int`.as(
-            'urgent'
-          ),
-        avgDays:
-          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.disposalRequests.createdAt})) / 86400))::int, 0)`.as(
-            'avg_days'
-          ),
-      })
-      .from(schema.disposalRequests)
-      .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
-      .where(and(...conditions));
+    const [result] = scopeCondition
+      ? await this.db
+          .select(kpiSelect)
+          .from(schema.disposalRequests)
+          .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
+          .where(and(...conditions, scopeCondition))
+      : await this.db
+          .select(kpiSelect)
+          .from(schema.disposalRequests)
+          .where(and(...conditions));
 
     return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
@@ -867,15 +838,86 @@ export class ApprovalsService {
   }
 
   /**
+   * 정책 기반 스코프 SQL 조건 생성 (SSOT)
+   *
+   * SiteScopeInterceptor와 동일한 resolveDataScope()를 사용하여
+   * COUNT/KPI 쿼리에서도 SSOT 정책 기반 필터링을 보장합니다.
+   *
+   * 콜백 패턴으로 테이블 독립적 — 호출자가 자신의 JOIN 컬럼을 지정합니다.
+   *
+   * @example
+   * // NC: equipment.site 기반
+   * buildScopeCondition(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
+   *   site: (s) => eq(schema.equipment.site, s),
+   *   team: (t) => eq(schema.equipment.teamId, t),
+   * });
+   * // Checkout: users 테이블 기반
+   * buildScopeCondition(CHECKOUT_DATA_SCOPE, userCtx, {
+   *   site: (s) => eq(schema.users.site, s),
+   *   team: (t) => eq(schema.users.teamId, t),
+   * });
+   */
+  private buildScopeCondition(
+    policy: FeatureScopePolicy,
+    userCtx: UserScopeContext,
+    scopeFilters: {
+      site?: (siteValue: string) => SQL;
+      team?: (teamIdValue: string) => SQL;
+    }
+  ): SQL | undefined {
+    const scope = resolveDataScope(userCtx, policy);
+
+    switch (scope.type) {
+      case 'all':
+        return undefined;
+      case 'site':
+        if (!scope.site) {
+          throw new ForbiddenException(
+            '사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
+          );
+        }
+        if (!scopeFilters.site) {
+          throw new ForbiddenException('이 리소스에 대한 사이트 스코프 필터를 적용할 수 없습니다.');
+        }
+        return scopeFilters.site(scope.site);
+      case 'team':
+        // SiteScopeInterceptor와 동일: teamId 없으면 site 폴백, 둘 다 없으면 차단
+        if (!scope.teamId) {
+          if (scope.site && scopeFilters.site) {
+            return scopeFilters.site(scope.site);
+          }
+          throw new ForbiddenException(
+            '팀 또는 사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
+          );
+        }
+        // team 콜백 있으면 사용, 없으면 site로 폴백 (team ⊂ site)
+        if (scopeFilters.team) {
+          return scopeFilters.team(scope.teamId);
+        }
+        if (scope.site && scopeFilters.site) {
+          return scopeFilters.site(scope.site);
+        }
+        throw new ForbiddenException(
+          '이 리소스에 대한 팀/사이트 스코프 필터를 적용할 수 없습니다.'
+        );
+      case 'none':
+        // ROLE_CATEGORIES gating에서 이미 제외 — 안전장치
+        return sql`false`;
+    }
+  }
+
+  /**
    * 반출 승인 대기 개수 조회
    *
-   * N+1 제거: findMany + client-side filter → COUNT + JOIN WHERE
+   * SSOT: CHECKOUT_DATA_SCOPE 정책 기반 스코프 필터링
+   * - TM: team (requesterId → users.teamId)
+   * - QM/LM: site (requesterId → users.site)
+   * - all: 필터 없음 (users JOIN 생략 → 성능)
    */
   private async getCheckoutCount(
     status: CheckoutStatus,
+    userCtx: UserScopeContext,
     purpose?: string,
-    userTeamId?: string | null,
-    isLabManager?: boolean,
     excludePurpose?: string
   ): Promise<number> {
     try {
@@ -883,13 +925,18 @@ export class ApprovalsService {
       if (purpose) conditions.push(eq(schema.checkouts.purpose, purpose));
       if (excludePurpose) conditions.push(ne(schema.checkouts.purpose, excludePurpose));
 
-      // Team filter: DB-level JOIN + WHERE (client-side filter 제거)
-      if (!isLabManager && userTeamId) {
+      const scopeCondition = this.buildScopeCondition(CHECKOUT_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.users.site, s),
+        team: (t) => eq(schema.users.teamId, t),
+      });
+
+      // 스코프 필터 있으면 users JOIN 필요, 없으면 (all) JOIN 생략
+      if (scopeCondition) {
         const [result] = await this.db
           .select({ count: count() })
           .from(schema.checkouts)
           .innerJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
-          .where(and(...conditions, eq(schema.users.teamId, userTeamId)));
+          .where(and(...conditions, scopeCondition));
         return result?.count ?? 0;
       }
 
@@ -904,21 +951,22 @@ export class ApprovalsService {
   }
 
   /**
-   * 장비 반입 승인 대기 개수 조회
-   *
-   * findMany + .length → COUNT (데이터 전송 제거)
+   * 장비 반입 승인 대기 개수 — SSOT: EQUIPMENT_IMPORT_DATA_SCOPE
    */
   private async getEquipmentImportCount(
     status: string,
     sourceType: string,
-    userSite?: string | null
+    userCtx: UserScopeContext
   ): Promise<number> {
     try {
       const conditions: SQL[] = [
         eq(schema.equipmentImports.status, status),
         eq(schema.equipmentImports.sourceType, sourceType),
       ];
-      if (userSite) conditions.push(eq(schema.equipmentImports.site, userSite));
+      const scopeCondition = this.buildScopeCondition(EQUIPMENT_IMPORT_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.equipmentImports.site, s),
+      });
+      if (scopeCondition) conditions.push(scopeCondition);
 
       const [result] = await this.db
         .select({ count: count() })
@@ -931,32 +979,33 @@ export class ApprovalsService {
   }
 
   /**
-   * 장비 등록/수정/삭제 승인 대기 개수
+   * 장비 등록/수정/삭제 승인 대기 개수 — SSOT: EQUIPMENT_REQUEST_DATA_SCOPE
    *
-   * select + .length → COUNT
+   * JOIN 경로: equipmentRequests → users (requestedBy) → users.teamId/site
    */
-  private async getEquipmentRequestCount(userSite?: string | null): Promise<number> {
+  private async getEquipmentRequestCount(userCtx: UserScopeContext): Promise<number> {
     try {
-      if (userSite) {
+      const conditions: SQL[] = [
+        eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval),
+      ];
+      const scopeCondition = this.buildScopeCondition(EQUIPMENT_REQUEST_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.users.site, s),
+        team: (t) => eq(schema.users.teamId, t),
+      });
+
+      if (scopeCondition) {
         const [result] = await this.db
           .select({ count: count() })
           .from(schema.equipmentRequests)
           .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
-          .where(
-            and(
-              eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval),
-              eq(schema.users.site, userSite)
-            )
-          );
+          .where(and(...conditions, scopeCondition));
         return result?.count ?? 0;
       }
 
       const [result] = await this.db
         .select({ count: count() })
         .from(schema.equipmentRequests)
-        .where(
-          eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval)
-        );
+        .where(and(...conditions));
       return result?.count ?? 0;
     } catch {
       return 0;
@@ -964,38 +1013,31 @@ export class ApprovalsService {
   }
 
   /**
-   * 교정 기록 승인 대기 개수
-   *
-   * select + .length → COUNT
+   * 교정 기록 승인 대기 개수 — SSOT: CALIBRATION_DATA_SCOPE
    */
-  private async getCalibrationCount(userSite?: string | null): Promise<number> {
+  private async getCalibrationCount(userCtx: UserScopeContext): Promise<number> {
     try {
-      if (userSite) {
+      const conditions: SQL[] = [
+        eq(schema.calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval),
+      ];
+      const scopeCondition = this.buildScopeCondition(CALIBRATION_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.equipment.site, s),
+        team: (t) => eq(schema.equipment.teamId, t),
+      });
+
+      if (scopeCondition) {
         const [result] = await this.db
           .select({ count: count() })
           .from(schema.calibrations)
           .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
-          .where(
-            and(
-              eq(
-                schema.calibrations.approvalStatus,
-                CalibrationApprovalStatusEnum.enum.pending_approval
-              ),
-              eq(schema.equipment.site, userSite)
-            )
-          );
+          .where(and(...conditions, scopeCondition));
         return result?.count ?? 0;
       }
 
       const [result] = await this.db
         .select({ count: count() })
         .from(schema.calibrations)
-        .where(
-          eq(
-            schema.calibrations.approvalStatus,
-            CalibrationApprovalStatusEnum.enum.pending_approval
-          )
-        );
+        .where(and(...conditions));
       return result?.count ?? 0;
     } catch {
       return 0;
@@ -1003,23 +1045,33 @@ export class ApprovalsService {
   }
 
   /**
-   * 중간점검 처리 대기 개수
-   *
-   * intermediateCheckDate가 오늘 이전인 교정 건수를 반환합니다.
-   * 기술책임자가 completeIntermediateCheck()로 완료 처리해야 할 항목입니다.
+   * 중간점검 처리 대기 개수 — SSOT: INTERMEDIATE_CHECK_DATA_SCOPE
    */
-  private async getIntermediateCheckCount(): Promise<number> {
+  private async getIntermediateCheckCount(userCtx: UserScopeContext): Promise<number> {
     try {
       const today = new Date().toISOString().split('T')[0];
+      const conditions: SQL[] = [
+        isNotNull(schema.calibrations.intermediateCheckDate),
+        lte(schema.calibrations.intermediateCheckDate, today),
+      ];
+      const scopeCondition = this.buildScopeCondition(INTERMEDIATE_CHECK_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.equipment.site, s),
+        team: (t) => eq(schema.equipment.teamId, t),
+      });
+
+      if (scopeCondition) {
+        const [result] = await this.db
+          .select({ count: count() })
+          .from(schema.calibrations)
+          .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+          .where(and(...conditions, scopeCondition));
+        return result?.count ?? 0;
+      }
+
       const [result] = await this.db
         .select({ count: count() })
         .from(schema.calibrations)
-        .where(
-          and(
-            isNotNull(schema.calibrations.intermediateCheckDate),
-            lt(schema.calibrations.intermediateCheckDate, today)
-          )
-        );
+        .where(and(...conditions));
       return result?.count ?? 0;
     } catch {
       return 0;
@@ -1033,10 +1085,7 @@ export class ApprovalsService {
    * - technical_manager: Only non-conformances from their own team
    * - lab_manager: All non-conformances (cross-site visibility)
    */
-  private async getNonConformanceCount(
-    userTeamId?: string | null,
-    isLabManager?: boolean
-  ): Promise<number> {
+  private async getNonConformanceCount(userCtx: UserScopeContext): Promise<number> {
     try {
       // N+1 제거: findMany + 2중 client-side filter → COUNT + SQL WHERE 푸시다운
       const conditions: SQL[] = [
@@ -1052,9 +1101,12 @@ export class ApprovalsService {
         )!,
       ];
 
-      if (!isLabManager && userTeamId) {
-        conditions.push(eq(schema.equipment.teamId, userTeamId));
-      }
+      // SSOT: NON_CONFORMANCE_DATA_SCOPE 정책 기반 스코프 필터링
+      const scopeCondition = this.buildScopeCondition(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.equipment.site, s),
+        team: (t) => eq(schema.equipment.teamId, t),
+      });
+      if (scopeCondition) conditions.push(scopeCondition);
 
       const [result] = await this.db
         .select({ count: count() })
@@ -1068,64 +1120,37 @@ export class ApprovalsService {
   }
 
   /**
-   * 폐기 검토 대기 개수 (기술책임자)
+   * 폐기 승인 대기 개수 — SSOT: DISPOSAL_DATA_SCOPE
+   *
+   * review/final 통합: reviewStatus 파라미터로 단계 구분.
+   * - PENDING (검토 대기): TM → team 스코프
+   * - REVIEWED (최종 승인 대기): LM → site 스코프
+   * 단일 정책으로 역할별 스코프가 자동 해석됩니다.
    */
-  private async getDisposalReviewCount(
-    _userId: string,
-    isLabManager: boolean,
-    userTeamId?: string | null
+  private async getDisposalCount(
+    reviewStatus: DisposalReviewStatus,
+    userCtx: UserScopeContext
   ): Promise<number> {
     try {
-      // N+1 제거: findMany + client-side filter → COUNT + JOIN WHERE
-      if (!isLabManager && userTeamId) {
+      const conditions: SQL[] = [eq(schema.disposalRequests.reviewStatus, reviewStatus)];
+      const scopeCondition = this.buildScopeCondition(DISPOSAL_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.equipment.site, s),
+        team: (t) => eq(schema.equipment.teamId, t),
+      });
+
+      if (scopeCondition) {
         const [result] = await this.db
           .select({ count: count() })
           .from(schema.disposalRequests)
           .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
-          .where(
-            and(
-              eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING),
-              eq(schema.equipment.teamId, userTeamId)
-            )
-          );
+          .where(and(...conditions, scopeCondition));
         return result?.count ?? 0;
       }
 
       const [result] = await this.db
         .select({ count: count() })
         .from(schema.disposalRequests)
-        .where(eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING));
-      return result?.count ?? 0;
-    } catch {
-      return 0;
-    }
-  }
-
-  /**
-   * 폐기 최종 승인 대기 개수 (시험소장)
-   *
-   * Site filtering: JOIN equipment, filter by equipment.site
-   */
-  private async getDisposalFinalCount(userSite?: string | null): Promise<number> {
-    try {
-      if (userSite) {
-        const [result] = await this.db
-          .select({ count: count() })
-          .from(schema.disposalRequests)
-          .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
-          .where(
-            and(
-              eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED),
-              eq(schema.equipment.site, userSite)
-            )
-          );
-        return result?.count ?? 0;
-      }
-
-      const [result] = await this.db
-        .select({ count: count() })
-        .from(schema.disposalRequests)
-        .where(eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED));
+        .where(and(...conditions));
       return result?.count ?? 0;
     } catch {
       return 0;
