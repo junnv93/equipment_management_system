@@ -7,6 +7,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
@@ -31,7 +32,7 @@ test.describe('Group 2: NC Creation - Seed Setup', () => {
 
     const data = await response.json();
     expect(data).toHaveProperty('access_token');
-    expect(data.user.role).toBe('lab_manager');
+    expect(data.user.role).toBe(URVal.LAB_MANAGER);
     console.log('✅ Test login successful for lab_manager');
   });
 

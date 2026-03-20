@@ -15,7 +15,7 @@ import { AuthenticatedRequest } from '../../../types/common.types';
 
 // 테스트용 mock request 타입 (AuthenticatedRequest의 부분 구현)
 type MockRequest = Partial<AuthenticatedRequest> & {
-  user: { roles: string[]; userId: string };
+  user: { roles: string[]; userId: string; site?: string };
 };
 
 describe('EquipmentController', () => {
@@ -315,8 +315,10 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'findOne').mockResolvedValue(mockEquipment);
       jest.spyOn(equipmentService, 'update').mockResolvedValue(updatedEquipment);
 
-      // Act - admin user로 직접 승인
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      // Act - admin user로 직접 승인 (site 필수: enforceSiteAccess 검증)
+      const mockReq = {
+        user: { roles: ['lab_manager'], userId: 'admin-uuid', site: 'suwon' },
+      } as MockRequest;
       const result = await controller.update(
         uuid,
         updateEquipmentDto,
@@ -362,8 +364,10 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'findOne').mockResolvedValue(mockEquipment);
       jest.spyOn(equipmentService, 'remove').mockResolvedValue(mockEquipment);
 
-      // Act - admin user로 직접 삭제
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      // Act - admin user로 직접 삭제 (site 필수: enforceSiteAccess 검증)
+      const mockReq = {
+        user: { roles: ['lab_manager'], userId: 'admin-uuid', site: 'suwon' },
+      } as MockRequest;
       const result = await controller.remove(uuid, mockReq as AuthenticatedRequest);
 
       // Assert

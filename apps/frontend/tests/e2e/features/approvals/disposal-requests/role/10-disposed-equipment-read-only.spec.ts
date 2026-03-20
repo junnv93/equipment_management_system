@@ -15,6 +15,10 @@ import {
   DISP_REQ_A6_ID,
 } from '../../../../../../../backend/src/database/utils/uuid-constants';
 import { Pool } from 'pg';
+import {
+  EquipmentStatusValues as ESVal,
+  DisposalReviewStatusValues as DRSVal,
+} from '@equipment-management/schemas';
 
 /**
  * Database setup helper
@@ -52,7 +56,7 @@ async function ensureDisposedEquipment() {
     // Force updated_at to current time to bust any caches
     await pool.query(
       'UPDATE equipment SET status = $1, is_active = $2, updated_at = NOW() WHERE id = $3',
-      ['disposed', true, EQUIP_DISPOSAL_PERM_A6]
+      [ESVal.DISPOSED, true, EQUIP_DISPOSAL_PERM_A6]
     );
 
     // Verify disposal request exists and is approved
@@ -68,11 +72,11 @@ async function ensureDisposedEquipment() {
     }
 
     const disposalRequest = disposalResult.rows[0];
-    if (disposalRequest.review_status !== 'approved') {
+    if (disposalRequest.review_status !== DRSVal.APPROVED) {
       // Reset disposal request to approved state
       await pool.query(
         'UPDATE disposal_requests SET review_status = $1, updated_at = NOW() WHERE id = $2',
-        ['approved', DISP_REQ_A6_ID]
+        [DRSVal.APPROVED, DISP_REQ_A6_ID]
       );
     }
 

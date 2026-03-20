@@ -16,7 +16,11 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
-import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
+import {
+  CALIBRATION_METHOD_LABELS,
+  CalibrationMethodValues as CMVal,
+  type CalibrationMethod,
+} from '@equipment-management/schemas';
 
 test.describe('Group A: Calibration Method Filter', () => {
   test.describe('5.1. Calibration method filter shows all options', () => {
@@ -78,7 +82,7 @@ test.describe('Group A: Calibration Method Filter', () => {
       // 3. 비즈니스 로직 검증: API 호출하여 데이터 확인
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.get('calibrationMethod')).toBe('external_calibration');
+      expect(urlObj.searchParams.get('calibrationMethod')).toBe(CMVal.EXTERNAL_CALIBRATION);
 
       // Verify equipment rows are displayed
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');
@@ -112,7 +116,7 @@ test.describe('Group A: Calibration Method Filter', () => {
       // 3. 비즈니스 로직 검증: URL 파라미터 확인
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.get('calibrationMethod')).toBe('self_inspection');
+      expect(urlObj.searchParams.get('calibrationMethod')).toBe(CMVal.SELF_INSPECTION);
 
       // Verify equipment rows are displayed (if data exists)
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');

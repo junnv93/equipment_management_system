@@ -131,8 +131,12 @@ describe('CalibrationPlansService', () => {
         }),
       };
       mockDb.insert = jest.fn().mockReturnValue(insertChain);
-      // findOne 최종 조회: MOCK_PLAN 반환 (transaction 후 findOne 호출)
-      mockDb.select.mockReturnValue(createSelectChain([MOCK_PLAN]));
+      // findOne: select({plan, authorName, teamName}) 형태 반환
+      const findOneRow = { plan: MOCK_PLAN, authorName: 'test-user', teamName: 'test-team' };
+      // findOne 내부: 1) plan 조회 → [findOneRow], 2) items 조회 → []
+      const planChain = createSelectChain([findOneRow]);
+      const itemsChain = createSelectChain([]);
+      mockDb.select.mockReturnValueOnce(planChain).mockReturnValueOnce(itemsChain);
 
       // transaction mock: 계획서 id 반환
       mockDb.transaction.mockResolvedValue({ ...MOCK_PLAN, id: 'new-plan-id' });
@@ -161,15 +165,19 @@ describe('CalibrationPlansService', () => {
     it('draft 상태 계획서 검토 요청 시 이벤트를 발행한다', async () => {
       // findOneBasic: draft 상태 반환
       const draftChain = createSelectChain([MOCK_PLAN]);
-      mockDb.select.mockReturnValue(draftChain);
       // updatePlanWithCAS: returning → [updated plan]
-      const updateChain = createUpdateChain({
-        ...MOCK_PLAN,
-        status: 'pending_review',
-        casVersion: 2,
-      });
+      const updatedPlan = { ...MOCK_PLAN, status: 'pending_review', casVersion: 2 };
+      const updateChain = createUpdateChain(updatedPlan);
       mockDb.update.mockReturnValue(updateChain);
-      // findOne (최종 반환): getOrSet → limit → [plan]
+      // findOne: select({plan, authorName, teamName}) 형태 반환 + items 조회
+      const findOneRow = { plan: updatedPlan, authorName: 'test-user', teamName: 'test-team' };
+      const planChain = createSelectChain([findOneRow]);
+      const itemsChain = createSelectChain([]);
+      // 순서: findOneBasic(select#1) → findOne plan(select#2) → findOne items(select#3)
+      mockDb.select
+        .mockReturnValueOnce(draftChain) // findOneBasic
+        .mockReturnValueOnce(planChain) // findOne: plan 조회
+        .mockReturnValueOnce(itemsChain); // findOne: items 조회
       mockCacheService.getOrSet.mockImplementation((_k: unknown, f: () => unknown) => f());
 
       await service.submitForReview('plan-uuid-1', { casVersion: 1, submittedBy: 'user-1' });

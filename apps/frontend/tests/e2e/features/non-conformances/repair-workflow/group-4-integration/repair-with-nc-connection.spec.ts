@@ -17,6 +17,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { RepairResultValues as RRVal } from '@equipment-management/schemas';
 
 test.describe('Full Workflow Integration', () => {
   let testEquipmentId: string;
@@ -86,7 +87,7 @@ test.describe('Full Workflow Integration', () => {
 
     // 6. Select repair result as 'completed'
     const repairResultSelect = testOperatorPage.locator('select').last();
-    await repairResultSelect.selectOption('completed');
+    await repairResultSelect.selectOption(RRVal.COMPLETED);
 
     // 7. Submit the form
     const registerButton = testOperatorPage.getByRole('button', { name: /^등록$|^Register$/i });

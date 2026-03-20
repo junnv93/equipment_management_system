@@ -18,6 +18,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 
 test.describe('Group C: Sorting Functionality', () => {
   test.describe('5.1. Name sorting (asc/desc)', () => {
@@ -238,7 +239,7 @@ test.describe('Group C: Sorting Functionality', () => {
 
       // Verify URL parameters
       const currentUrl = new URL(testOperatorPage.url());
-      expect(currentUrl.searchParams.get('status')).toBe('available');
+      expect(currentUrl.searchParams.get('status')).toBe(ESVal.AVAILABLE);
       expect(currentUrl.searchParams.get('sortBy')).toBe('name');
       expect(currentUrl.searchParams.get('sortOrder')).toBe('asc');
 

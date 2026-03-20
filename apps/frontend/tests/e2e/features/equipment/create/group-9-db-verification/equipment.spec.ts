@@ -12,6 +12,11 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import {
+  EquipmentStatusValues as ESVal,
+  CalibrationMethodValues as CMVal,
+  UnifiedApprovalStatusValues as UASVal,
+} from '@equipment-management/schemas';
 import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
 test.describe('DB 검증 통합 테스트', () => {
@@ -44,12 +49,12 @@ test.describe('DB 검증 통합 테스트', () => {
         .split('T')[0],
       calibrationAgency: 'KOLAS',
       needsIntermediateCheck: false,
-      calibrationMethod: 'external_calibration',
+      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
       teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // FCC EMC/RF team (SUW)
       site: 'suwon',
       technicalManager: 'test_tech_manager_uuid', // Placeholder - backend should handle this
-      status: 'available',
-      approvalStatus: 'approved', // lab_manager can auto-approve
+      status: ESVal.AVAILABLE,
+      approvalStatus: UASVal.APPROVED, // lab_manager can auto-approve
     };
 
     console.log('✓ Test data prepared');
@@ -178,7 +183,7 @@ test.describe('DB 검증 통합 테스트', () => {
     console.log('✓ location matches');
 
     // calibrationMethod === 'external_calibration'
-    expect(equipment.calibrationMethod).toBe('external_calibration');
+    expect(equipment.calibrationMethod).toBe(CMVal.EXTERNAL_CALIBRATION);
     console.log('✓ calibrationMethod matches');
 
     // calibrationCycle === 12
@@ -190,7 +195,7 @@ test.describe('DB 검증 통합 테스트', () => {
     console.log('✓ calibrationAgency matches');
 
     // status === 'available'
-    expect(equipment.status).toBe('available');
+    expect(equipment.status).toBe(ESVal.AVAILABLE);
     console.log('✓ status matches (default value)');
 
     // Verify management number format: SUW-E9001

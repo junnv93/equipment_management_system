@@ -37,6 +37,13 @@ import {
   NonConformanceStatus,
   IncidentType,
 } from '@equipment-management/schemas';
+import {
+  EquipmentStatusValues as ESVal,
+  NonConformanceStatusValues as NCSVal,
+  NonConformanceTypeValues as NCTVal,
+  IncidentTypeValues as ITVal,
+  CalibrationMethodValues as CMVal,
+} from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
@@ -89,7 +96,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: equipmentData.calibrationRequired || 'required',
-      calibrationMethod: 'external_calibration',
+      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
       nextCalibrationDate: equipmentData.nextCalibrationDate?.toISOString(),
       isActive: equipmentData.isActive ?? true,
       manufacturer: 'Test Manufacturer',
@@ -277,7 +284,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment = await createTestEquipment(request, token, {
       managementNumber: `TEST-NC-${Date.now()}`,
       name: 'Test Equipment for NC Creation',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
     });
@@ -297,8 +304,8 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     expect(nc).toBeDefined();
 
     // Expected Results: Verify NC fields
-    expect(nc!.ncType).toBe('calibration_overdue');
-    expect(nc!.status).toBe('open');
+    expect(nc!.ncType).toBe(NCTVal.CALIBRATION_OVERDUE);
+    expect(nc!.status).toBe(NCSVal.OPEN);
     expect(nc!.cause).toMatch(/교정 기한 초과|Calibration overdue/i);
     expect(nc!.cause).toContain(yesterday.toISOString().split('T')[0]);
     expect(nc!.actionPlan).toBe('교정 수행 필요');
@@ -318,13 +325,13 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment = await createTestEquipment(request, token, {
       managementNumber: `TEST-STATUS-${Date.now()}`,
       name: 'Test Equipment for Status Change',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
     });
 
     expect(equipment).toHaveProperty('id');
-    const initialStatus = 'available';
+    const initialStatus = ESVal.AVAILABLE;
 
     // 3. Login as Lab Manager
     // (already logged in)
@@ -336,7 +343,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const updatedEquipment = await getEquipmentById(request, token, equipment.id);
 
     // Expected Results
-    expect(updatedEquipment.status).toBe('non_conforming');
+    expect(updatedEquipment.status).toBe(ESVal.NON_CONFORMING);
     expect(updatedEquipment.updatedAt).toBeTruthy();
 
     console.log(`✅ Equipment status changed from ${initialStatus} to non_conforming`);
@@ -351,7 +358,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment = await createTestEquipment(request, token, {
       managementNumber: `TEST-INCIDENT-${Date.now()}`,
       name: 'Test Equipment for Incident History',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
     });
@@ -366,11 +373,11 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const incidentHistory = await getIncidentHistoryForEquipment(request, token, equipment.id);
     expect(incidentHistory.length).toBeGreaterThanOrEqual(1);
 
-    const incident = incidentHistory.find((h) => h.incidentType === 'calibration_overdue');
+    const incident = incidentHistory.find((h) => h.incidentType === ITVal.CALIBRATION_OVERDUE);
     expect(incident).toBeDefined();
 
     // Expected Results
-    expect(incident!.incidentType).toBe('calibration_overdue');
+    expect(incident!.incidentType).toBe(ITVal.CALIBRATION_OVERDUE);
     expect(incident!.content).toMatch(/자동 부적합 전환|Auto non-conformance transition/i);
     // Content should contain NC ID (UUID pattern)
     expect(incident!.content).toMatch(
@@ -391,7 +398,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment = await createTestEquipment(request, token, {
       managementNumber: `TEST-NOTIF-${Date.now()}`,
       name: 'Test Equipment for Notification',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
     });
@@ -438,7 +445,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment = await createTestEquipment(request, token, {
       managementNumber: `TEST-TXN-${Date.now()}`,
       name: 'Test Equipment for Transaction',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
     });
@@ -462,12 +469,12 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     // Expected Results: All operations completed together
     const nc = nonConformances.find((nc) => nc.equipmentId === equipment.id);
     expect(nc).toBeDefined();
-    expect(nc!.ncType).toBe('calibration_overdue');
-    expect(nc!.status).toBe('open');
+    expect(nc!.ncType).toBe(NCTVal.CALIBRATION_OVERDUE);
+    expect(nc!.status).toBe(NCSVal.OPEN);
 
-    expect(updatedEquipment.status).toBe('non_conforming');
+    expect(updatedEquipment.status).toBe(ESVal.NON_CONFORMING);
 
-    const incident = incidentHistory.find((h) => h.incidentType === 'calibration_overdue');
+    const incident = incidentHistory.find((h) => h.incidentType === ITVal.CALIBRATION_OVERDUE);
     expect(incident).toBeDefined();
 
     console.log('✅ All database operations executed atomically');
@@ -488,7 +495,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment1 = await createTestEquipment(request, token, {
       managementNumber: `TEST-MULTI-1-${timestamp}`,
       name: 'Test Equipment Multi 1',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
       isActive: true,
@@ -497,7 +504,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment2 = await createTestEquipment(request, token, {
       managementNumber: `TEST-MULTI-2-${timestamp}`,
       name: 'Test Equipment Multi 2',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
       isActive: true,
@@ -506,7 +513,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     const equipment3 = await createTestEquipment(request, token, {
       managementNumber: `TEST-MULTI-3-${timestamp}`,
       name: 'Test Equipment Multi 3',
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: yesterday,
       calibrationRequired: 'required',
       isActive: true,
@@ -546,9 +553,9 @@ test.describe('Backend API - Non-Conformance Creation', () => {
       getIncidentHistoryForEquipment(request, token, equipment3.id),
     ]);
 
-    expect(history1.some((h) => h.incidentType === 'calibration_overdue')).toBeTruthy();
-    expect(history2.some((h) => h.incidentType === 'calibration_overdue')).toBeTruthy();
-    expect(history3.some((h) => h.incidentType === 'calibration_overdue')).toBeTruthy();
+    expect(history1.some((h) => h.incidentType === ITVal.CALIBRATION_OVERDUE)).toBeTruthy();
+    expect(history2.some((h) => h.incidentType === ITVal.CALIBRATION_OVERDUE)).toBeTruthy();
+    expect(history3.some((h) => h.incidentType === ITVal.CALIBRATION_OVERDUE)).toBeTruthy();
 
     console.log('✅ Multiple overdue equipment processed in single API call');
     console.log(`  - Equipment 1: ${equipment1.managementNumber} → NC created`);

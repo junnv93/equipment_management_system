@@ -21,6 +21,10 @@ import {
   USER_TEST_ENGINEER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
 } from '../../../../../../../backend/src/database/utils/uuid-constants';
+import {
+  DisposalReviewStatusValues as DRSVal,
+  EquipmentStatusValues as ESVal,
+} from '@equipment-management/schemas';
 
 test.describe('Database State Verification', () => {
   // Database pool instance
@@ -101,7 +105,7 @@ test.describe('Database State Verification', () => {
     const disposalRequest = disposalResult.rows[0];
 
     // 10. Verify review_status = 'approved'
-    expect(disposalRequest.review_status).toBe('approved');
+    expect(disposalRequest.review_status).toBe(DRSVal.APPROVED);
 
     // 11. Verify approved_by = lab_manager user ID
     expect(disposalRequest.approved_by).toBe(USER_LAB_MANAGER_SUWON_ID);
@@ -127,7 +131,7 @@ test.describe('Database State Verification', () => {
     const equipment = equipmentResult.rows[0];
 
     // 14. Verify equipment.status = 'disposed' (final state after approval)
-    expect(equipment.status).toBe('disposed');
+    expect(equipment.status).toBe(ESVal.DISPOSED);
 
     console.log('✅ Database verification complete');
     console.log(`   - review_status: ${disposalRequest.review_status}`);

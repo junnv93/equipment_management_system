@@ -23,6 +23,7 @@
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 import { EQUIP_DISPOSAL_PERM_A8 } from '../../../../../../../backend/src/database/utils/uuid-constants';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 import { resetEquipmentToShared, cleanupPool } from '../helpers/db-cleanup';
 import { Pool } from 'pg';
 
@@ -72,7 +73,7 @@ test.describe('Permissions - Group A', () => {
       const result = await pool.query('SELECT status, is_shared FROM equipment WHERE id = $1', [
         EQUIP_DISPOSAL_PERM_A8,
       ]);
-      expect(result.rows[0].status).toBe('available');
+      expect(result.rows[0].status).toBe(ESVal.AVAILABLE);
       expect(result.rows[0].is_shared).toBe(true);
     } finally {
       await pool.end();

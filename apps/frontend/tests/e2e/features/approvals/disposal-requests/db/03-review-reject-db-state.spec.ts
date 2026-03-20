@@ -21,6 +21,10 @@ import {
   USER_TECHNICAL_MANAGER_SUWON_ID,
   USER_TEST_ENGINEER_SUWON_ID,
 } from '../../../../../../../backend/src/database/utils/uuid-constants';
+import {
+  DisposalReviewStatusValues as DRSVal,
+  EquipmentStatusValues as ESVal,
+} from '@equipment-management/schemas';
 
 test.describe('Database State Verification', () => {
   // Database pool instance
@@ -116,7 +120,7 @@ test.describe('Database State Verification', () => {
     const disposalRequest = disposalResult.rows[0];
 
     // 13. Verify review_status = 'rejected'
-    expect(disposalRequest.review_status).toBe('rejected');
+    expect(disposalRequest.review_status).toBe(DRSVal.REJECTED);
 
     // 14. Verify rejected_by = technical_manager user ID
     expect(disposalRequest.rejected_by).toBe(USER_TECHNICAL_MANAGER_SUWON_ID);
@@ -146,7 +150,7 @@ test.describe('Database State Verification', () => {
     const equipment = equipmentResult.rows[0];
 
     // 18. Verify equipment.status is NOT 'pending_disposal' (reverted to previous status)
-    expect(equipment.status).not.toBe('pending_disposal');
+    expect(equipment.status).not.toBe(ESVal.PENDING_DISPOSAL);
     console.log(`✅ Equipment status reverted to: ${equipment.status}`);
 
     console.log('✅ Database verification complete');

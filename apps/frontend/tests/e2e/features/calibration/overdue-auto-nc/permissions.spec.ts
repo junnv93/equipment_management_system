@@ -26,7 +26,12 @@
 
 import { test, expect, APIRequestContext } from '@playwright/test';
 import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { EquipmentStatus } from '@equipment-management/schemas';
+import {
+  EquipmentStatus,
+  EquipmentStatusValues as ESVal,
+  CalibrationMethodValues as CMVal,
+  IncidentTypeValues as ITVal,
+} from '@equipment-management/schemas';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
 // Backend configuration
@@ -76,7 +81,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: 'required',
-      calibrationMethod: 'external_calibration',
+      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
       isActive: true,
       manufacturer: 'Test Manufacturer',
       modelNumber: 'TEST-PERM-001',
@@ -109,7 +114,7 @@ async function createIncidentHistory(
         'Content-Type': 'application/json',
       },
       data: {
-        incidentType: 'damage',
+        incidentType: ITVal.DAMAGE,
         occurredAt: today,
         content: 'Test incident for permission testing',
       },
@@ -257,7 +262,7 @@ test.describe('Permission Tests', () => {
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber,
       name: `Permission Test Equipment 7.4 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
     });
 
     // 1. Login as Test Engineer
@@ -289,7 +294,7 @@ test.describe('Permission Tests', () => {
           'Content-Type': 'application/json',
         },
         data: {
-          incidentType: 'calibration_overdue',
+          incidentType: ITVal.CALIBRATION_OVERDUE,
           occurredAt: new Date().toISOString().split('T')[0],
           content: '교정 기한 7일 초과됨',
           createNonConformance: true,
@@ -344,7 +349,7 @@ test.describe('Permission Tests', () => {
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber,
       name: `Permission Test Equipment 7.5 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
     });
 
     const incident = await createIncidentHistory(request, labManagerToken, equipment.id);

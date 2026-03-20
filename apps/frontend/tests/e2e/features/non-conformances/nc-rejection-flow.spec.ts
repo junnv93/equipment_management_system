@@ -15,6 +15,7 @@
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 import { BASE_URLS } from '../../shared/constants/shared-test-data';
+import { NonConformanceStatusValues as NCSVal } from '@equipment-management/schemas';
 
 const TEST_NC_ID = 'aaaa0006-0006-0006-0006-000000000006';
 const TEST_EQUIPMENT_ID = 'eeee4001-0001-4001-8001-000000000001';
@@ -76,7 +77,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     );
     expect(ncResponse.ok()).toBeTruthy();
     const ncData = await ncResponse.json();
-    expect(ncData.status).toBe('corrected');
+    expect(ncData.status).toBe(NCSVal.CORRECTED);
 
     const rejectResponse = await techManagerPage.request.patch(
       `${BACKEND_URL}/api/non-conformances/${TEST_NC_ID}/reject-correction`,
@@ -91,7 +92,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     expect(rejectResponse.ok()).toBeTruthy();
 
     const rejectedNc = await rejectResponse.json();
-    expect(rejectedNc.status).toBe('open');
+    expect(rejectedNc.status).toBe(NCSVal.OPEN);
     expect(rejectedNc.rejectionReason).toBe(REJECTION_REASON);
     expect(rejectedNc.rejectedBy).toBeTruthy();
     expect(rejectedNc.rejectedAt).toBeTruthy();
@@ -129,7 +130,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     );
     expect(ncResponse.ok()).toBeTruthy();
     const ncData = await ncResponse.json();
-    expect(ncData.status).toBe('open');
+    expect(ncData.status).toBe(NCSVal.OPEN);
 
     const updateResponse = await testOperatorPage.request.patch(
       `${BACKEND_URL}/api/non-conformances/${TEST_NC_ID}`,
@@ -139,14 +140,14 @@ test.describe('부적합 반려 전체 프로세스', () => {
           version: ncData.version,
           correctionContent: '내부 연결부 교체 및 재교정 완료. 성적서 번호: CAL-2026-0312',
           correctionDate: '2026-02-12',
-          status: 'corrected',
+          status: NCSVal.CORRECTED,
         },
       }
     );
     expect(updateResponse.ok()).toBeTruthy();
 
     const updatedNc = await updateResponse.json();
-    expect(updatedNc.status).toBe('corrected');
+    expect(updatedNc.status).toBe(NCSVal.CORRECTED);
     expect(updatedNc.version).toBe(ncData.version + 1);
     // 이전 반려 사유가 보존되어야 함
     expect(updatedNc.rejectionReason).toBe(REJECTION_REASON);
@@ -164,7 +165,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     );
     expect(ncResponse.ok()).toBeTruthy();
     const ncData = await ncResponse.json();
-    expect(ncData.status).toBe('corrected');
+    expect(ncData.status).toBe(NCSVal.CORRECTED);
     // 이전 반려 사유가 보존되어 있는지 확인
     expect(ncData.rejectionReason).toBe(REJECTION_REASON);
     expect(ncData.rejectedBy).toBeTruthy();
@@ -183,7 +184,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     expect(closeResponse.ok()).toBeTruthy();
 
     const closedNc = await closeResponse.json();
-    expect(closedNc.status).toBe('closed');
+    expect(closedNc.status).toBe(NCSVal.CLOSED);
     expect(closedNc.closedBy).toBeTruthy();
     expect(closedNc.closedAt).toBeTruthy();
     // 반려 이력이 종료 후에도 보존됨
@@ -223,7 +224,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     expect(ncResponse.ok()).toBeTruthy();
     const ncData = await ncResponse.json();
 
-    expect(ncData.status).toBe('closed');
+    expect(ncData.status).toBe(NCSVal.CLOSED);
     expect(ncData.rejectionReason).toBe(REJECTION_REASON);
     expect(ncData.closedBy).toBeTruthy();
     expect(ncData.closedAt).toBeTruthy();
@@ -284,7 +285,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
       { headers: { Authorization: `Bearer ${tmToken}` } }
     );
     const nc = await ncRes.json();
-    expect(nc.status).toBe('corrected');
+    expect(nc.status).toBe(NCSVal.CORRECTED);
     expect(nc.version).toBe(1);
 
     const rejectRes = await techManagerPage.request.patch(
@@ -296,7 +297,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
     );
     expect(rejectRes.ok()).toBeTruthy();
     const rejected = await rejectRes.json();
-    expect(rejected.status).toBe('open');
+    expect(rejected.status).toBe(NCSVal.OPEN);
     expect(rejected.rejectionReason).toBe(REASON_1);
     expect(rejected.version).toBe(2);
     console.log('✅ D-1: 첫 번째 반려 성공, version:', rejected.version);
@@ -310,7 +311,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
       { headers: { Authorization: `Bearer ${teToken}` } }
     );
     const nc = await ncRes.json();
-    expect(nc.status).toBe('open');
+    expect(nc.status).toBe(NCSVal.OPEN);
     expect(nc.version).toBe(2);
 
     const updateRes = await testOperatorPage.request.patch(
@@ -321,13 +322,13 @@ test.describe('이중 반려 후 종료 프로세스', () => {
           version: nc.version,
           correctionContent: 'BNC 커넥터 N-type 50ohm으로 교체 완료. 교체 사진 첨부.',
           correctionDate: '2026-02-12',
-          status: 'corrected',
+          status: NCSVal.CORRECTED,
         },
       }
     );
     expect(updateRes.ok()).toBeTruthy();
     const updated = await updateRes.json();
-    expect(updated.status).toBe('corrected');
+    expect(updated.status).toBe(NCSVal.CORRECTED);
     expect(updated.version).toBe(3);
     expect(updated.rejectionReason).toBe(REASON_1); // 이전 반려 사유 보존
     console.log('✅ D-2: 첫 번째 재제출 성공, version:', updated.version);
@@ -341,7 +342,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
       { headers: { Authorization: `Bearer ${tmToken}` } }
     );
     const nc = await ncRes.json();
-    expect(nc.status).toBe('corrected');
+    expect(nc.status).toBe(NCSVal.CORRECTED);
     expect(nc.version).toBe(3);
     expect(nc.rejectionReason).toBe(REASON_1); // 아직 첫 번째 반려 사유
 
@@ -354,7 +355,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
     );
     expect(rejectRes.ok()).toBeTruthy();
     const rejected = await rejectRes.json();
-    expect(rejected.status).toBe('open');
+    expect(rejected.status).toBe(NCSVal.OPEN);
     expect(rejected.rejectionReason).toBe(REASON_2); // 두 번째 반려 사유로 덮어씀
     expect(rejected.version).toBe(4);
     console.log('✅ D-3: 두 번째 반려 성공 (사유 덮어쓰기 확인), version:', rejected.version);
@@ -392,13 +393,13 @@ test.describe('이중 반려 후 종료 프로세스', () => {
           version: nc.version,
           correctionContent: 'N-type 50ohm 커넥터 교체 완료. 사양서: SPEC-BNC-2026-001 첨부.',
           correctionDate: '2026-02-12',
-          status: 'corrected',
+          status: NCSVal.CORRECTED,
         },
       }
     );
     expect(updateRes.ok()).toBeTruthy();
     const updated = await updateRes.json();
-    expect(updated.status).toBe('corrected');
+    expect(updated.status).toBe(NCSVal.CORRECTED);
     expect(updated.version).toBe(5);
     console.log('✅ D-4: 두 번째 재제출 성공, version:', updated.version);
   });
@@ -411,7 +412,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
       { headers: { Authorization: `Bearer ${tmToken}` } }
     );
     const nc = await ncRes.json();
-    expect(nc.status).toBe('corrected');
+    expect(nc.status).toBe(NCSVal.CORRECTED);
     expect(nc.version).toBe(5);
 
     const closeRes = await techManagerPage.request.patch(
@@ -426,7 +427,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
     );
     expect(closeRes.ok()).toBeTruthy();
     const closed = await closeRes.json();
-    expect(closed.status).toBe('closed');
+    expect(closed.status).toBe(NCSVal.CLOSED);
     expect(closed.version).toBe(6); // v1→v2→v3→v4→v5→v6 (6 operations)
     expect(closed.closedBy).toBeTruthy();
     expect(closed.closedAt).toBeTruthy();

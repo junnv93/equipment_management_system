@@ -17,6 +17,7 @@
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
+import { NonConformanceStatusValues as NCSVal } from '@equipment-management/schemas';
 
 test.describe('Full Workflow Integration', () => {
   let testEquipmentId: string;
@@ -121,7 +122,7 @@ test.describe('Full Workflow Integration', () => {
     console.log('✓ NC closed successfully');
 
     // Verify NC status changed to 'closed'
-    expect(closedNC.status).toBe('closed');
+    expect(closedNC.status).toBe(NCSVal.CLOSED);
     console.log('✓ NC status is "closed"');
 
     // Verify closedBy field is set

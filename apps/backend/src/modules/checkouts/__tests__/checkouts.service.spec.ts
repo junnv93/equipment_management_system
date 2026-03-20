@@ -27,46 +27,63 @@ describe('CheckoutsService', () => {
 
   beforeEach(async () => {
     // 매 테스트마다 새로운 mock 객체 생성
-    mockDrizzle = {
-      select: jest.fn(),
-      from: jest.fn(),
-      where: jest.fn(),
-      limit: jest.fn(),
-      offset: jest.fn(),
-      orderBy: jest.fn(),
-      insert: jest.fn(),
-      values: jest.fn(),
-      returning: jest.fn(),
-      update: jest.fn(),
-      set: jest.fn(),
-      delete: jest.fn(),
-      execute: jest.fn(),
-      transaction: jest.fn().mockImplementation((cb) => cb(mockDrizzle)),
-      leftJoin: jest.fn(),
-    };
+    // chain: 체이닝 + thenable (await 시 빈 배열 반환) — DI value와 분리
+    const chain: Record<string, jest.Mock> = {};
+    const chainMethods = [
+      'select',
+      'from',
+      'where',
+      'limit',
+      'offset',
+      'orderBy',
+      'insert',
+      'values',
+      'returning',
+      'update',
+      'set',
+      'delete',
+      'execute',
+      'leftJoin',
+      'innerJoin',
+    ];
+    for (const m of chainMethods) {
+      chain[m] = jest.fn().mockReturnValue(chain);
+    }
+    // chain은 thenable: await 시 빈 배열 반환 (where/orderBy가 마지막인 쿼리 지원)
+    (chain as Record<string, unknown>).then = jest.fn((resolve: (v: unknown[]) => void) =>
+      resolve([])
+    );
 
-    // 체인 메서드 설정 - 각 메서드가 mockDrizzle을 반환
-    // mockDrizzle은 thenable: await 시 빈 배열 반환 (select...where() 패턴 지원)
-    mockDrizzle.then = jest.fn((resolve: (v: unknown[]) => void) => resolve([]));
-    mockDrizzle.select.mockReturnValue(mockDrizzle);
-    mockDrizzle.from.mockReturnValue(mockDrizzle);
-    mockDrizzle.where.mockReturnValue(mockDrizzle);
-    mockDrizzle.offset.mockReturnValue(mockDrizzle);
-    mockDrizzle.orderBy.mockReturnValue(mockDrizzle);
-    mockDrizzle.insert.mockReturnValue(mockDrizzle);
-    mockDrizzle.values.mockReturnValue(mockDrizzle);
-    mockDrizzle.update.mockReturnValue(mockDrizzle);
-    mockDrizzle.set.mockReturnValue(mockDrizzle);
-    mockDrizzle.delete.mockReturnValue(mockDrizzle);
-    mockDrizzle.leftJoin.mockReturnValue(mockDrizzle);
-    mockDrizzle.innerJoin = jest.fn().mockReturnValue(mockDrizzle);
+    // mockDrizzle: NestJS DI에 주입되는 객체 (thenable이 아님!)
+    // select/insert/update/delete/transaction 진입점만 제공
+    mockDrizzle = {
+      select: jest.fn().mockReturnValue(chain),
+      insert: jest.fn().mockReturnValue(chain),
+      update: jest.fn().mockReturnValue(chain),
+      delete: jest.fn().mockReturnValue(chain),
+      transaction: jest.fn().mockImplementation((cb) => cb(mockDrizzle)),
+      // chain의 terminal 메서드도 mockDrizzle에 노출 (테스트에서 mockResolvedValueOnce 사용)
+      from: chain.from,
+      where: chain.where,
+      limit: chain.limit,
+      offset: chain.offset,
+      orderBy: chain.orderBy,
+      values: chain.values,
+      returning: chain.returning,
+      set: chain.set,
+      execute: chain.execute,
+      leftJoin: chain.leftJoin,
+      innerJoin: chain.innerJoin,
+    };
 
     mockCacheService = {
       get: jest.fn(),
       set: jest.fn(),
       delete: jest.fn(),
       deleteByPattern: jest.fn(),
-      getOrSet: jest.fn(),
+      getOrSet: jest
+        .fn()
+        .mockImplementation((_key: string, factory: () => Promise<unknown>) => factory()),
     };
 
     mockEquipmentService = {
@@ -299,6 +316,10 @@ describe('CheckoutsService', () => {
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([mockPendingCheckout]); // findOne
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
       mockDrizzle.returning.mockResolvedValue([mockRejectedCheckout]);
       // getAffectedTeamIds: select().from().where().limit(1)
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
@@ -314,7 +335,11 @@ describe('CheckoutsService', () => {
       const emptyReasonDto = { version: 1, reason: '', approverId: approverId };
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
-      mockDrizzle.limit.mockResolvedValueOnce([mockPendingCheckout]);
+      mockDrizzle.limit.mockResolvedValueOnce([mockPendingCheckout]); // findOne
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
 
       await expect(service.reject(checkoutId, emptyReasonDto, mockReq)).rejects.toThrow(
         BadRequestException
@@ -352,6 +377,10 @@ describe('CheckoutsService', () => {
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([mockCheckedOutCheckout]); // findOne
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
       mockDrizzle.returning.mockResolvedValue([mockReturnedCheckout]);
       // getAffectedTeamIds: select().from().where().limit(1)
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
@@ -367,7 +396,11 @@ describe('CheckoutsService', () => {
       const notCheckedOut = { ...mockCheckedOutCheckout, status: 'pending' };
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
-      mockDrizzle.limit.mockResolvedValueOnce([notCheckedOut]);
+      mockDrizzle.limit.mockResolvedValueOnce([notCheckedOut]); // findOne
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
 
       await expect(
         service.returnCheckout(checkoutId, mockReturnDto, returnerId, mockReq)
@@ -399,7 +432,11 @@ describe('CheckoutsService', () => {
       const notReturnedCheckout = { ...mockReturnedCheckout, status: 'checked_out' };
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
-      mockDrizzle.limit.mockResolvedValueOnce([notReturnedCheckout]);
+      mockDrizzle.limit.mockResolvedValueOnce([notReturnedCheckout]); // findOne
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
 
       await expect(
         service.approveReturn(checkoutId, mockApproveReturnDto, mockReq)

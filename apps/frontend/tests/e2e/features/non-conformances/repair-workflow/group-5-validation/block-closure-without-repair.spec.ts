@@ -2,6 +2,7 @@
 // seed: tests/e2e/fixtures/auth.fixture.ts
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { NonConformanceStatusValues as NCSVal } from '@equipment-management/schemas';
 
 test.describe('Group E: Data Integrity and Business Rules', () => {
   test('E-2. should block NC closure without repair for damage/malfunction', async ({
@@ -45,7 +46,7 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
       await dialog.dismiss();
     });
 
-    await statusSelect.selectOption('corrected');
+    await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // 5. Verify dialog appears
     // Wait for dialog to be handled
@@ -80,7 +81,7 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
       await dialog.accept();
     });
 
-    await statusSelect.selectOption('corrected');
+    await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // Wait for navigation to repair history page
     await expect(page).toHaveURL(/\/repair-history/);

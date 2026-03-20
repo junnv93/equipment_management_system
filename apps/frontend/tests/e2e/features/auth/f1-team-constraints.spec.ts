@@ -19,6 +19,7 @@
  */
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 
 test.describe('Group F1: Team Constraints', () => {
   /**
@@ -234,7 +235,7 @@ test.describe('Group F1: Team Constraints', () => {
         `/api/checkouts/${testCheckoutId}`
       );
       const checkoutData = await checkStatusResponse.json();
-      expect(checkoutData.status).toBe('pending');
+      expect(checkoutData.status).toBe(CSVal.PENDING);
     }
   );
 

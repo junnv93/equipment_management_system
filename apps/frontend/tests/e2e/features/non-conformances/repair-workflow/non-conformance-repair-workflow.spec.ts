@@ -14,6 +14,12 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import {
+  EquipmentStatusValues as ESVal,
+  NonConformanceTypeValues as NCTVal,
+  UnifiedApprovalStatusValues as UASVal,
+  RepairResultValues as RRVal,
+} from '@equipment-management/schemas';
 
 test.describe('Non-Conformance and Repair Workflow Integration', () => {
   // 테스트용 장비 ID (각 테스트에서 생성)
@@ -125,7 +131,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
       await registerButton.click();
 
       // ncType 선택
-      await testOperatorPage.locator('select').first().selectOption('damage');
+      await testOperatorPage.locator('select').first().selectOption(NCTVal.DAMAGE);
 
       // 부적합 원인 입력
       await testOperatorPage
@@ -195,10 +201,10 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
           modelName: 'Test Model',
           manufacturer: 'Test Manufacturer',
           serialNumber: `SN-WF-${Date.now()}`,
-          status: 'available',
+          status: ESVal.AVAILABLE,
           location: 'Test Location',
           site: 'suwon',
-          approvalStatus: 'approved',
+          approvalStatus: UASVal.APPROVED,
         },
       }
     );
@@ -222,7 +228,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     await registerButton.click();
 
     // ncType 선택 (damage)
-    await testOperatorPage.locator('select').first().selectOption('damage');
+    await testOperatorPage.locator('select').first().selectOption(NCTVal.DAMAGE);
 
     // 부적합 원인 입력
     await testOperatorPage.locator('textarea').first().fill('E2E 워크플로우 테스트: 센서 파손');
@@ -264,7 +270,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
           repairDate: new Date().toISOString(),
           repairDescription: 'E2E 테스트: 센서 교체 완료',
           repairedBy: '홍길동',
-          repairResult: 'completed',
+          repairResult: RRVal.COMPLETED,
           nonConformanceId: testNonConformanceId,
         },
       }

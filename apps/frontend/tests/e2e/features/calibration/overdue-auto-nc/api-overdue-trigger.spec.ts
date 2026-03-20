@@ -25,7 +25,13 @@
  */
 
 import { test, expect, APIRequestContext } from '@playwright/test';
-import { EquipmentStatus } from '@equipment-management/schemas';
+import {
+  EquipmentStatus,
+  EquipmentStatusValues as ESVal,
+  NonConformanceStatusValues as NCSVal,
+  NonConformanceTypeValues as NCTVal,
+  CalibrationMethodValues as CMVal,
+} from '@equipment-management/schemas';
 import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
@@ -78,7 +84,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: equipmentData.calibrationRequired || 'required',
-      calibrationMethod: 'external_calibration',
+      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
       nextCalibrationDate: equipmentData.nextCalibrationDate?.toISOString(),
       isActive: equipmentData.isActive ?? true,
       manufacturer: 'Test Manufacturer',
@@ -226,7 +232,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const equipment = await createTestEquipment(request, token, {
       managementNumber,
       name: `Test Equipment 1.3 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
@@ -278,7 +284,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     await createTestEquipment(request, token, {
       managementNumber,
       name: `Test Equipment 1.4 ${timestamp}`,
-      status: 'non_conforming',
+      status: ESVal.NON_CONFORMING,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
@@ -325,14 +331,20 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const equipment = await createTestEquipment(request, token, {
       managementNumber,
       name: `Test Equipment 1.5 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
     });
 
     // 2. Create existing non-conformance with ncType='calibration_overdue' and status='open'
-    await createNonConformance(request, token, equipment.id, 'calibration_overdue', 'open');
+    await createNonConformance(
+      request,
+      token,
+      equipment.id,
+      NCTVal.CALIBRATION_OVERDUE,
+      NCSVal.OPEN
+    );
 
     // 3. Login as Lab Manager
     // Already logged in
@@ -383,7 +395,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     await createTestEquipment(request, token, {
       managementNumber,
       name: `Test Equipment 1.6 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'not_required',
       isActive: true,
@@ -428,9 +440,9 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     // 1. Create 4 test equipment with status values: 'disposed', 'retired', 'pending_disposal', 'inactive'
     // 2. All have overdue calibration dates and calibrationRequired = 'required'
     const testEquipment = [
-      { status: 'disposed' as EquipmentStatus, label: 'DISPOSED' },
-      { status: 'retired' as EquipmentStatus, label: 'RETIRED' },
-      { status: 'pending_disposal' as EquipmentStatus, label: 'PENDING' },
+      { status: ESVal.DISPOSED as EquipmentStatus, label: 'DISPOSED' },
+      { status: ESVal.RETIRED as EquipmentStatus, label: 'RETIRED' },
+      { status: ESVal.PENDING_DISPOSAL as EquipmentStatus, label: 'PENDING' },
       { status: 'inactive' as EquipmentStatus, label: 'INACTIVE' },
     ];
 

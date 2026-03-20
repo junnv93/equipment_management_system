@@ -22,6 +22,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 
 test.describe('Group C: Search Functionality', () => {
   test.describe('11.1. Search input with debounce and URL update', () => {
@@ -119,7 +120,7 @@ test.describe('Group C: Search Functionality', () => {
 
       // Verify both filters in URL
       const currentUrl = new URL(testOperatorPage.url());
-      expect(currentUrl.searchParams.get('status')).toBe('available');
+      expect(currentUrl.searchParams.get('status')).toBe(ESVal.AVAILABLE);
       expect(currentUrl.searchParams.get('search')).toBe('분석기');
 
       // 필터 뱃지 확인
@@ -135,7 +136,7 @@ test.describe('Group C: Search Functionality', () => {
 
       // 🔥 SSOT 검증: URL에서 3개 필터 모두 확인
       const currentUrl = new URL(testOperatorPage.url());
-      expect(currentUrl.searchParams.get('status')).toBe('available');
+      expect(currentUrl.searchParams.get('status')).toBe(ESVal.AVAILABLE);
       expect(currentUrl.searchParams.get('classification')).toBe('E');
       expect(currentUrl.searchParams.get('search')).toBe('장비');
 
@@ -188,7 +189,7 @@ test.describe('Group C: Search Functionality', () => {
       // 🔥 SSOT 검증: search는 제거, status는 유지
       const currentUrl = new URL(testOperatorPage.url());
       expect(currentUrl.searchParams.has('search')).toBe(false);
-      expect(currentUrl.searchParams.get('status')).toBe('available');
+      expect(currentUrl.searchParams.get('status')).toBe(ESVal.AVAILABLE);
 
       // 상태 필터 뱃지는 유지
       await expect(testOperatorPage.getByText(/상태:.*사용 가능/)).toBeVisible();

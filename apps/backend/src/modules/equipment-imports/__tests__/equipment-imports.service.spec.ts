@@ -6,6 +6,7 @@ import { CheckoutsService } from '../../checkouts/checkouts.service';
 import { createMockEventEmitter } from '../../../common/testing/mock-providers';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 
 const MOCK_IMPORT = {
   id: 'import-uuid-1',
@@ -117,7 +118,23 @@ describe('EquipmentImportsService', () => {
         { provide: EventEmitter2, useValue: mockEventEmitter },
         {
           provide: SimpleCacheService,
-          useValue: { get: jest.fn(), set: jest.fn(), delete: jest.fn(), getOrSet: jest.fn() },
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            delete: jest.fn(),
+            deleteByPattern: jest.fn(),
+            getOrSet: jest
+              .fn()
+              .mockImplementation((_key: string, factory: () => Promise<unknown>) => factory()),
+          },
+        },
+        {
+          provide: CacheInvalidationHelper,
+          useValue: {
+            invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
+            invalidateAfterCheckoutStatusChange: jest.fn().mockResolvedValue(undefined),
+            invalidateAllDashboard: jest.fn().mockResolvedValue(undefined),
+          },
         },
       ],
     }).compile();

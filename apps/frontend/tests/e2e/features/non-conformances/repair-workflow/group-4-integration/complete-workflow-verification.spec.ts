@@ -19,6 +19,14 @@
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
+import {
+  NonConformanceStatusValues as NCSVal,
+  NonConformanceTypeValues as NCTVal,
+  EquipmentStatusValues as ESVal,
+  ResolutionTypeValues as RTVal,
+  UnifiedApprovalStatusValues as UASVal,
+  RepairResultValues as RRVal,
+} from '@equipment-management/schemas';
 
 test.describe('Full Workflow Integration', () => {
   let testEquipmentId: string;
@@ -45,10 +53,10 @@ test.describe('Full Workflow Integration', () => {
           modelName: 'Workflow Test Model',
           manufacturer: 'Test Manufacturer',
           serialNumber: `SN-CW-${Date.now()}`,
-          status: 'available',
+          status: ESVal.AVAILABLE,
           location: 'Test Lab',
           site: 'suwon',
-          approvalStatus: 'approved',
+          approvalStatus: UASVal.APPROVED,
         },
       }
     );
@@ -64,7 +72,7 @@ test.describe('Full Workflow Integration', () => {
     console.log(`✓ Created test equipment: ${testEquipmentId}`);
 
     // 1. Verify equipment was initially available
-    expect(equipmentData.status).toBe('available');
+    expect(equipmentData.status).toBe(ESVal.AVAILABLE);
     console.log('✓ Step 1: Equipment initially available');
 
     // 2. Create NC with correct type and status
@@ -75,7 +83,7 @@ test.describe('Full Workflow Integration', () => {
     await registerButton.click();
 
     const ncTypeSelect = testOperatorPage.locator('select').first();
-    await ncTypeSelect.selectOption('damage');
+    await ncTypeSelect.selectOption(NCTVal.DAMAGE);
 
     const causeTextarea = testOperatorPage.locator('textarea').first();
     await causeTextarea.fill('E2E Complete Workflow Test: Sensor damage');
@@ -98,8 +106,8 @@ test.describe('Full Workflow Integration', () => {
     }
 
     testNonConformanceId = createdNC.id;
-    expect(createdNC.ncType).toBe('damage');
-    expect(createdNC.status).toBe('open');
+    expect(createdNC.ncType).toBe(NCTVal.DAMAGE);
+    expect(createdNC.status).toBe(NCSVal.OPEN);
     console.log('✓ Step 2: NC created with type=damage, status=open');
 
     // 3. Register repair with NC connection
@@ -110,7 +118,7 @@ test.describe('Full Workflow Integration', () => {
           repairDate: new Date().toISOString(),
           repairDescription: 'E2E Test: Sensor replacement completed',
           repairedBy: 'E2E Test Engineer',
-          repairResult: 'completed',
+          repairResult: RRVal.COMPLETED,
           nonConformanceId: testNonConformanceId,
         },
       }
@@ -132,8 +140,8 @@ test.describe('Full Workflow Integration', () => {
     );
     const updatedNC = await updatedNCResponse.json();
 
-    expect(updatedNC.status).toBe('corrected');
-    expect(updatedNC.resolutionType).toBe('repair');
+    expect(updatedNC.status).toBe(NCSVal.CORRECTED);
+    expect(updatedNC.resolutionType).toBe(RTVal.REPAIR);
     expect(updatedNC.repairHistoryId).toBe(testRepairId);
     console.log('✓ Step 4: NC auto-transitioned to corrected with resolutionType=repair');
 
@@ -154,7 +162,7 @@ test.describe('Full Workflow Integration', () => {
     }
 
     const closedNC = await closeResponse.json();
-    expect(closedNC.status).toBe('closed');
+    expect(closedNC.status).toBe(NCSVal.CLOSED);
     expect(closedNC.closedBy).toBeTruthy();
     expect(closedNC.closedAt).toBeTruthy();
     console.log('✓ Step 5: NC closed by authorized manager');
@@ -165,7 +173,7 @@ test.describe('Full Workflow Integration', () => {
     );
     const finalEquipment = await finalEquipmentResponse.json();
 
-    expect(finalEquipment.status).toBe('available');
+    expect(finalEquipment.status).toBe(ESVal.AVAILABLE);
     console.log('✓ Step 6: Equipment status restored to available');
 
     // 7. Verify complete audit trail is maintained

@@ -81,7 +81,39 @@ describe('SiteScopeInterceptor', () => {
       expect(callHandler.handle).toHaveBeenCalledTimes(1);
     });
 
-    it('lab_manager는 CALIBRATION_PLAN_DATA_SCOPE에서 all → query 변경 없이 통과한다', () => {
+    it('test_engineer는 EQUIPMENT_DATA_SCOPE에서 all → query 변경 없이 통과한다', () => {
+      const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE });
+      const { context, request } = createMockContext({
+        userId: 'u1',
+        roles: ['test_engineer'],
+        site: 'suwon',
+      });
+      const callHandler = createCallHandler();
+
+      interceptor.intercept(context as never, callHandler as never);
+
+      expect(request.query).toEqual({});
+      expect(callHandler.handle).toHaveBeenCalledTimes(1);
+    });
+
+    it('test_engineer는 EQUIPMENT_DATA_SCOPE에서 all → site 없어도 통과한다', () => {
+      const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE });
+      const { context, request } = createMockContext({
+        userId: 'u1',
+        roles: ['test_engineer'],
+        // site 없음 — all 스코프이므로 무관
+      });
+      const callHandler = createCallHandler();
+
+      interceptor.intercept(context as never, callHandler as never);
+
+      expect(request.query).toEqual({});
+      expect(callHandler.handle).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('policy 모드 — scope=site', () => {
+    it('lab_manager는 CALIBRATION_PLAN_DATA_SCOPE에서 site → query.siteId에 user.site를 주입한다', () => {
       const interceptor = createInterceptor({
         policy: CALIBRATION_PLAN_DATA_SCOPE,
         siteField: 'siteId',
@@ -95,16 +127,14 @@ describe('SiteScopeInterceptor', () => {
 
       interceptor.intercept(context as never, callHandler as never);
 
-      expect(request.query).toEqual({});
+      expect(request.query.siteId).toBe('uiwang');
     });
-  });
 
-  describe('policy 모드 — scope=site', () => {
-    it('test_engineer는 EQUIPMENT_DATA_SCOPE에서 site → query.site에 user.site를 주입한다', () => {
+    it('lab_manager는 EQUIPMENT_DATA_SCOPE에서 site → query.site에 user.site를 주입한다', () => {
       const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE });
       const { context, request } = createMockContext({
         userId: 'u1',
-        roles: ['test_engineer'],
+        roles: ['lab_manager'],
         site: 'suwon',
       });
       const callHandler = createCallHandler();
@@ -114,29 +144,11 @@ describe('SiteScopeInterceptor', () => {
       expect(request.query.site).toBe('suwon');
     });
 
-    it('siteField 커스텀 옵션이 있으면 해당 필드에 주입한다', () => {
-      const interceptor = createInterceptor({
-        policy: CALIBRATION_PLAN_DATA_SCOPE,
-        siteField: 'siteId',
-      });
-      const { context, request } = createMockContext({
-        userId: 'u1',
-        roles: ['test_engineer'],
-        site: 'uiwang',
-      });
-      const callHandler = createCallHandler();
-
-      interceptor.intercept(context as never, callHandler as never);
-
-      expect(request.query.siteId).toBe('uiwang');
-      expect(request.query.site).toBeUndefined();
-    });
-
     it('scope=site이고 user.site가 없으면 ForbiddenException을 던진다', () => {
       const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE });
       const { context } = createMockContext({
         userId: 'u1',
-        roles: ['test_engineer'],
+        roles: ['lab_manager'],
         // site 없음
       });
       const callHandler = createCallHandler();
@@ -182,20 +194,19 @@ describe('SiteScopeInterceptor', () => {
       expect(request.query.teamId).toBeUndefined();
     });
 
-    it('teamId가 없고 site가 있으면 siteField로 폴백한다', () => {
+    it('teamId가 없으면 resolveDataScope가 none을 반환하여 ForbiddenException을 던진다', () => {
       const interceptor = createInterceptor({ policy: CHECKOUT_DATA_SCOPE });
-      const { context, request } = createMockContext({
+      const { context } = createMockContext({
         userId: 'u1',
         roles: ['test_engineer'],
         site: 'pyeongtaek',
-        // teamId 없음
+        // teamId 없음 → resolveDataScope returns 'none' (팀 미배정)
       });
       const callHandler = createCallHandler();
 
-      interceptor.intercept(context as never, callHandler as never);
-
-      expect(request.query.site).toBe('pyeongtaek');
-      expect(request.query.teamId).toBeUndefined();
+      expect(() => interceptor.intercept(context as never, callHandler as never)).toThrow(
+        ForbiddenException
+      );
     });
 
     it('teamId도 site도 없으면 ForbiddenException을 던진다', () => {

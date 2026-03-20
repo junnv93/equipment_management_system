@@ -18,6 +18,7 @@ import {
   USER_TEST_ENGINEER_SUWON_ID,
 } from '../../../../../../../backend/src/database/utils/uuid-constants';
 import { resetEquipmentToPendingDisposal, cleanupPool } from '../helpers/db-cleanup';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 import { Pool } from 'pg';
 
 const DATABASE_URL =
@@ -101,7 +102,7 @@ test.describe('Exceptions - Group D', () => {
       );
 
       // Verify equipment status is 'available' in DB
-      expect(equipmentResult.rows[0].status).toBe('available');
+      expect(equipmentResult.rows[0].status).toBe(ESVal.AVAILABLE);
 
       // Verify disposal request was deleted from DB
       expect(disposalResult.rows.length).toBe(0);

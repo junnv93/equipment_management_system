@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 
 test.describe('Group F: Loading States', () => {
   /**
@@ -82,7 +83,7 @@ test.describe('Group F: Loading States', () => {
                   id: 'equipment-1',
                   name: '장비 1',
                   managementNumber: 'SUW-E0001',
-                  status: 'available',
+                  status: ESVal.AVAILABLE,
                   site: 'SUW',
                   classification: 'E',
                   team: { id: 'team-1', name: '팀 A' },
@@ -119,7 +120,7 @@ test.describe('Group F: Loading States', () => {
                   id: 'equipment-1',
                   name: '장비 1',
                   managementNumber: 'SUW-E0001',
-                  status: 'available',
+                  status: ESVal.AVAILABLE,
                   site: 'SUW',
                   classification: 'E',
                   team: { id: 'team-1', name: '팀 A' },
@@ -199,7 +200,7 @@ test.describe('Group F: Loading States', () => {
                 id: 'equipment-1',
                 name: '멀티미터',
                 managementNumber: 'SUW-E0001',
-                status: 'available',
+                status: ESVal.AVAILABLE,
                 site: 'SUW',
                 classification: 'E',
                 team: { id: 'team-1', name: '팀 A' },
@@ -208,7 +209,7 @@ test.describe('Group F: Loading States', () => {
                 id: 'equipment-2',
                 name: '오실로스코프',
                 managementNumber: 'SUW-E0002',
-                status: 'available',
+                status: ESVal.AVAILABLE,
                 site: 'SUW',
                 classification: 'E',
                 team: { id: 'team-1', name: '팀 A' },
@@ -236,7 +237,7 @@ test.describe('Group F: Loading States', () => {
                 id: 'equipment-1',
                 name: '멀티미터',
                 managementNumber: 'SUW-E0001',
-                status: 'available',
+                status: ESVal.AVAILABLE,
                 site: 'SUW',
                 classification: 'E',
                 team: { id: 'team-1', name: '팀 A' },

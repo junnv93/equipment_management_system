@@ -19,7 +19,16 @@
  */
 
 import { test, expect, APIRequestContext, Page } from '@playwright/test';
-import { EquipmentStatus, NonConformanceStatus } from '@equipment-management/schemas';
+import {
+  EquipmentStatus,
+  NonConformanceStatus,
+  EquipmentStatusValues as ESVal,
+  NonConformanceStatusValues as NCSVal,
+  NonConformanceTypeValues as NCTVal,
+  IncidentTypeValues as ITVal,
+  CalibrationMethodValues as CMVal,
+  ResolutionTypeValues as RTVal,
+} from '@equipment-management/schemas';
 import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
@@ -73,7 +82,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: equipmentData.calibrationRequired || 'required',
-      calibrationMethod: 'external_calibration',
+      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
       nextCalibrationDate: equipmentData.nextCalibrationDate?.toISOString(),
       isActive: equipmentData.isActive ?? true,
       manufacturer: 'Test Manufacturer',
@@ -310,7 +319,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber: equipmentId,
       name: `Test Equipment E1 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
@@ -334,7 +343,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
 
     // 4. Verify equipment status changed to `non_conforming`
     const updatedEquipment = await getEquipment(request, labManagerToken, equipment.id);
-    expect(updatedEquipment.status).toBe('non_conforming');
+    expect(updatedEquipment.status).toBe(ESVal.NON_CONFORMING);
     console.log('Equipment status changed to non_conforming');
 
     // 5. Navigate to equipment detail page in UI
@@ -361,10 +370,12 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
 
     // 9. Verify non-conformance status changed to 'corrected'
     const ncs = await getNonConformances(request, techManagerToken, equipment.id);
-    const calibrationOverdueNC = ncs.data.find((nc: any) => nc.ncType === 'calibration_overdue');
+    const calibrationOverdueNC = ncs.data.find(
+      (nc: any) => nc.ncType === NCTVal.CALIBRATION_OVERDUE
+    );
     expect(calibrationOverdueNC).toBeDefined();
-    expect(calibrationOverdueNC.status).toBe('corrected');
-    expect(calibrationOverdueNC.resolutionType).toBe('recalibration');
+    expect(calibrationOverdueNC.status).toBe(NCSVal.CORRECTED);
+    expect(calibrationOverdueNC.resolutionType).toBe(RTVal.RECALIBRATION);
     console.log('Non-conformance auto-corrected:', calibrationOverdueNC);
 
     // Verify equipment calibration dates updated
@@ -388,7 +399,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     const equipmentA = await createTestEquipment(request, labManagerToken, {
       managementNumber: `equip-e2a-${timestamp}`,
       name: `Test Equipment E2A ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
@@ -399,7 +410,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     const equipmentB = await createTestEquipment(request, labManagerToken, {
       managementNumber: `equip-e2b-${timestamp}`,
       name: `Test Equipment E2B ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
@@ -408,8 +419,8 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
       request,
       labManagerToken,
       equipmentB.id,
-      'calibration_overdue',
-      'open'
+      NCTVal.CALIBRATION_OVERDUE,
+      NCSVal.OPEN
     );
     console.log('Created Equipment B with existing NC:', equipmentB.id);
 
@@ -417,12 +428,12 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     const equipmentC = await createTestEquipment(request, labManagerToken, {
       managementNumber: `equip-e2c-${timestamp}`,
       name: `Test Equipment E2C ${timestamp}`,
-      status: 'non_conforming',
+      status: ESVal.NON_CONFORMING,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
     });
-    await createNonConformance(request, labManagerToken, equipmentC.id, 'damage', 'open');
+    await createNonConformance(request, labManagerToken, equipmentC.id, 'damage', NCSVal.OPEN);
     console.log('Created Equipment C (non_conforming):', equipmentC.id);
 
     // 2. Trigger manual overdue check
@@ -439,28 +450,28 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     // 3. Verify each equipment processed correctly
     // Equipment A: processed, NC created, status = `non_conforming`
     const updatedEquipmentA = await getEquipment(request, labManagerToken, equipmentA.id);
-    expect(updatedEquipmentA.status).toBe('non_conforming');
+    expect(updatedEquipmentA.status).toBe(ESVal.NON_CONFORMING);
     const ncsA = await getNonConformances(request, labManagerToken, equipmentA.id);
-    const ncA = ncsA.data.find((nc: any) => nc.ncType === 'calibration_overdue');
+    const ncA = ncsA.data.find((nc: any) => nc.ncType === NCTVal.CALIBRATION_OVERDUE);
     expect(ncA).toBeDefined();
-    expect(ncA.status).toBe('open');
+    expect(ncA.status).toBe(NCSVal.OPEN);
     console.log('Equipment A: processed, NC created');
 
     // Equipment B: skipped (existing NC), status unchanged
     const updatedEquipmentB = await getEquipment(request, labManagerToken, equipmentB.id);
     const ncsB = await getNonConformances(request, labManagerToken, equipmentB.id);
     const openNCs = ncsB.data.filter(
-      (nc: any) => nc.ncType === 'calibration_overdue' && nc.status === 'open'
+      (nc: any) => nc.ncType === NCTVal.CALIBRATION_OVERDUE && nc.status === NCSVal.OPEN
     );
     expect(openNCs.length).toBe(1); // Only one NC should exist
     console.log('Equipment B: skipped (existing NC)');
 
     // Equipment C: skipped (already `non_conforming`), no new NC
     const updatedEquipmentC = await getEquipment(request, labManagerToken, equipmentC.id);
-    expect(updatedEquipmentC.status).toBe('non_conforming');
+    expect(updatedEquipmentC.status).toBe(ESVal.NON_CONFORMING);
     const ncsC = await getNonConformances(request, labManagerToken, equipmentC.id);
     const calibrationOverdueNCs = ncsC.data.filter(
-      (nc: any) => nc.ncType === 'calibration_overdue'
+      (nc: any) => nc.ncType === NCTVal.CALIBRATION_OVERDUE
     );
     expect(calibrationOverdueNCs.length).toBe(0); // No calibration_overdue NC should be created
     console.log('Equipment C: skipped (already non_conforming)');
@@ -495,7 +506,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber: `equip-e3-${timestamp}`,
       name: `Test Equipment E3 ${timestamp}`,
-      status: 'non_conforming',
+      status: ESVal.NON_CONFORMING,
       calibrationRequired: 'required',
       isActive: true,
     });
@@ -506,8 +517,8 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
       request,
       labManagerToken,
       equipment.id,
-      'calibration_overdue',
-      'open'
+      NCTVal.CALIBRATION_OVERDUE,
+      NCSVal.OPEN
     );
     console.log('Created calibration_overdue NC:', calibrationOverdueNC.id);
 
@@ -517,7 +528,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
       labManagerToken,
       equipment.id,
       'damage',
-      'open'
+      NCSVal.OPEN
     );
     console.log('Created damage NC:', damageNC.id);
 
@@ -545,14 +556,14 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
       (nc: any) => nc.id === calibrationOverdueNC.id
     );
     expect(updatedCalibrationOverdueNC).toBeDefined();
-    expect(updatedCalibrationOverdueNC.status).toBe('corrected');
-    expect(updatedCalibrationOverdueNC.resolutionType).toBe('recalibration');
+    expect(updatedCalibrationOverdueNC.status).toBe(NCSVal.CORRECTED);
+    expect(updatedCalibrationOverdueNC.resolutionType).toBe(RTVal.RECALIBRATION);
     console.log('calibration_overdue NC auto-corrected');
 
     // Damage NC remains in 'open' status
     const updatedDamageNC = ncs.data.find((nc: any) => nc.id === damageNC.id);
     expect(updatedDamageNC).toBeDefined();
-    expect(updatedDamageNC.status).toBe('open');
+    expect(updatedDamageNC.status).toBe(NCSVal.OPEN);
     console.log('damage NC remains in open status');
 
     // Equipment may still have `non_conforming` status if other NC is open
@@ -586,7 +597,7 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber: equipmentId,
       name: `Test Equipment E4 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
@@ -668,7 +679,7 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber: equipmentId,
       name: `Test Equipment E5 ${timestamp}`,
-      status: 'available',
+      status: ESVal.AVAILABLE,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,
@@ -705,7 +716,9 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const ncs = await getNonConformances(request, labManagerToken, equipment.id);
 
     // First call creates NC successfully
-    const calibrationOverdueNCs = ncs.data.filter((nc: any) => nc.ncType === 'calibration_overdue');
+    const calibrationOverdueNCs = ncs.data.filter(
+      (nc: any) => nc.ncType === NCTVal.CALIBRATION_OVERDUE
+    );
     expect(calibrationOverdueNCs.length).toBe(1); // Only one NC should exist
     console.log('Only one NC record exists (no duplicates)');
 
@@ -736,7 +749,7 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     if (incidentHistoryResponse.ok()) {
       const incidentHistory = await incidentHistoryResponse.json();
       const calibrationOverdueIncidents = incidentHistory.data.filter(
-        (incident: any) => incident.incidentType === 'calibration_overdue'
+        (incident: any) => incident.incidentType === ITVal.CALIBRATION_OVERDUE
       );
       expect(calibrationOverdueIncidents.length).toBe(1);
       console.log('Only one incident history record exists');

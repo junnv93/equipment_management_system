@@ -22,6 +22,10 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import {
+  EquipmentStatusValues as ESVal,
+  CalibrationMethodValues as CMVal,
+} from '@equipment-management/schemas';
 
 test.describe('Group G: SSOT Filter Utils Verification', () => {
   test.describe('22.1. Server and client filter parsing produces same result', () => {
@@ -30,8 +34,8 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
     }) => {
       // 복잡한 필터 조합으로 URL 직접 입력
       const filterParams = new URLSearchParams({
-        status: 'available',
-        calibrationMethod: 'external_calibration',
+        status: ESVal.AVAILABLE,
+        calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
         classification: 'fcc_emc_rf',
         isShared: 'shared',
         calibrationDueFilter: 'due_soon',

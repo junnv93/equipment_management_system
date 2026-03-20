@@ -10,6 +10,7 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BACKEND_URL, EQUIP } from '../helpers/checkout-constants';
 import { getBackendToken } from '../helpers/checkout-helpers';
+import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 
 test.describe('Suite 02: 반출 생성 폼 검증', () => {
   test('S02-01: 필수 필드 미입력 시 제출 불가', async ({ testOperatorPage: page }) => {
@@ -36,7 +37,7 @@ test.describe('Suite 02: 반출 생성 폼 검증', () => {
       },
       data: {
         equipmentIds: [EQUIP.SPECTRUM_ANALYZER_SUW_E],
-        purpose: 'calibration',
+        purpose: CPVal.CALIBRATION,
         destination: '한국교정시험연구원',
         reason: '정기 교정',
         expectedReturnDate: '2020-01-01T00:00:00.000Z',
@@ -57,7 +58,7 @@ test.describe('Suite 02: 반출 생성 폼 검증', () => {
       },
       data: {
         equipmentIds: [EQUIP.EMC_RECEIVER_SUW_E], // in_use status
-        purpose: 'calibration',
+        purpose: CPVal.CALIBRATION,
         destination: '한국교정시험연구원',
         reason: '교정 시도',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',

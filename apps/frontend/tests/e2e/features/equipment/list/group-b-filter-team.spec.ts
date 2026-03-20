@@ -14,6 +14,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 
 test.describe('Group B: Team Filter', () => {
   test.describe('8.1. Team filter loads options dynamically from API', () => {
@@ -215,7 +216,7 @@ test.describe('Group B: Team Filter', () => {
         // URL 검증: 두 필터 모두 적용
         const currentUrl = siteAdminPage.url();
         const urlObj = new URL(currentUrl);
-        expect(urlObj.searchParams.get('status')).toBe('available');
+        expect(urlObj.searchParams.get('status')).toBe(ESVal.AVAILABLE);
         expect(urlObj.searchParams.has('teamId')).toBe(true);
 
         console.log('[Test] ✅ Team filter combined with status filter');

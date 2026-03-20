@@ -23,6 +23,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 
 test.describe('Group C: Pagination', () => {
   test.describe('12.1. Navigate to next page', () => {
@@ -460,7 +461,7 @@ test.describe('Group C: Pagination', () => {
       const currentUrl = new URL(testOperatorPage.url());
       const pageParam = currentUrl.searchParams.get('page');
       expect(pageParam === null || pageParam === '1').toBe(true);
-      expect(currentUrl.searchParams.get('status')).toBe('available');
+      expect(currentUrl.searchParams.get('status')).toBe(ESVal.AVAILABLE);
 
       console.log('[Test] ✅ Page reset to 1 when applying status filter');
     });
@@ -625,7 +626,7 @@ test.describe('Group C: Pagination', () => {
       // Verify filters are maintained
       const currentUrl = new URL(testOperatorPage.url());
       expect(currentUrl.searchParams.get('page')).toBe('2');
-      expect(currentUrl.searchParams.get('status')).toBe('available');
+      expect(currentUrl.searchParams.get('status')).toBe(ESVal.AVAILABLE);
 
       console.log('[Test] ✅ Filters maintained when navigating pages');
     });

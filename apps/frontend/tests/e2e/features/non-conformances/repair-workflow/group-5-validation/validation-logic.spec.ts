@@ -20,6 +20,7 @@ import {
   UI_CLASSES,
 } from '../constants/test-data';
 import { openIncidentDialog, selectShadcnOption } from '../helpers/dialog-helper';
+import { NonConformanceStatusValues as NCSVal } from '@equipment-management/schemas';
 
 test.describe.serial('Group E: 비즈니스 로직 검증', () => {
   let testEquipmentId: string;
@@ -71,7 +72,7 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
 
     // Try to change status to corrected
     const statusSelect = ncCard.locator('select');
-    await statusSelect.selectOption('corrected');
+    await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // Set up dialog handler
     let dialogShown = false;
@@ -117,7 +118,7 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     await techManagerPage.fill('textarea[placeholder*="조치"]', '임시 조치 2');
 
     const statusSelect = ncCard.locator('select');
-    await statusSelect.selectOption('corrected');
+    await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // Accept dialog to navigate
     techManagerPage.on('dialog', async (dialog) => {

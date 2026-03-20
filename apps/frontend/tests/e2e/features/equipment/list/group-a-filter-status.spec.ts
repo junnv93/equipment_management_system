@@ -21,6 +21,7 @@ import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
   EQUIPMENT_STATUS_FILTER_OPTIONS,
   EQUIPMENT_STATUS_LABELS,
+  EquipmentStatusValues as ESVal,
   type EquipmentStatus,
 } from '@equipment-management/schemas';
 
@@ -86,7 +87,7 @@ test.describe('Group A: Status Filter', () => {
       // 2. 비즈니스 로직 검증: URL 파라미터 확인
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.get('status')).toBe('available');
+      expect(urlObj.searchParams.get('status')).toBe(ESVal.AVAILABLE);
 
       // 3. UI 검증: 필터 뱃지 표시
       const filterBadge = testOperatorPage.getByText(/상태:\s*사용 가능/);
@@ -132,7 +133,7 @@ test.describe('Group A: Status Filter', () => {
       // 3. 비즈니스 로직 검증: URL 파라미터 확인
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.get('status')).toBe('calibration_overdue');
+      expect(urlObj.searchParams.get('status')).toBe(ESVal.CALIBRATION_OVERDUE);
 
       // 4. D+N 뱃지 검증: 교정 기한 초과 장비는 D+N 형식의 뱃지를 표시해야 함
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');

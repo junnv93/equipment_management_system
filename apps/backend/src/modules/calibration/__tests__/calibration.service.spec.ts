@@ -7,6 +7,7 @@ import {
   createMockEventEmitter,
 } from '../../../common/testing/mock-providers';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { I18nService } from '../../../common/i18n/i18n.service';
 
 /** Drizzle select 체인 mock 빌더 */
 const createSelectChain = (finalValue: unknown): Record<string, jest.Mock> => {
@@ -84,6 +85,7 @@ describe('CalibrationService', () => {
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: I18nService, useValue: { t: jest.fn().mockReturnValue('') } },
       ],
     }).compile();
 

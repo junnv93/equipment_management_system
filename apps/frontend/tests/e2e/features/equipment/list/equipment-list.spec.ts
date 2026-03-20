@@ -1,4 +1,5 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 
 /**
  * 장비 목록/검색 UI 개선 E2E 테스트
@@ -401,7 +402,7 @@ test.describe('Equipment List - Calibration Due Filters', () => {
     id: string,
     name: string,
     nextCalibrationDate: string | null,
-    status: string = 'available'
+    status: string = ESVal.AVAILABLE
   ) => ({
     id,
     uuid: id,
@@ -446,7 +447,7 @@ test.describe('Equipment List - Calibration Due Filters', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             data: [
-              createMockEquipment('1', '교정 임박 장비 1', in15Days.toISOString(), 'available'),
+              createMockEquipment('1', '교정 임박 장비 1', in15Days.toISOString(), ESVal.AVAILABLE),
               createMockEquipment(
                 '2',
                 '교정 임박 장비 2',
@@ -492,7 +493,7 @@ test.describe('Equipment List - Calibration Due Filters', () => {
       const url = new URL(route.request().url());
       const status = url.searchParams.get('status');
 
-      if (status === 'calibration_overdue') {
+      if (status === ESVal.CALIBRATION_OVERDUE) {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -502,13 +503,13 @@ test.describe('Equipment List - Calibration Due Filters', () => {
                 '1',
                 '기한 초과 장비 1',
                 yesterday.toISOString(),
-                'calibration_overdue'
+                ESVal.CALIBRATION_OVERDUE
               ),
               createMockEquipment(
                 '2',
                 '기한 초과 장비 2',
                 lastWeek.toISOString(),
-                'calibration_overdue'
+                ESVal.CALIBRATION_OVERDUE
               ),
             ],
             meta: { pagination: { total: 2, totalPages: 1, currentPage: 1 } },
@@ -697,7 +698,7 @@ test.describe('Equipment List - Calibration Due Date Display', () => {
               name: '임박 장비',
               managementNumber: 'MGT-001',
               modelName: 'Test Model',
-              status: 'available',
+              status: ESVal.AVAILABLE,
               nextCalibrationDate: in7Days.toISOString(),
               location: '테스트 랩',
               isShared: false,
@@ -709,7 +710,7 @@ test.describe('Equipment List - Calibration Due Date Display', () => {
               name: '초과 장비',
               managementNumber: 'MGT-002',
               modelName: 'Test Model',
-              status: 'calibration_overdue',
+              status: ESVal.CALIBRATION_OVERDUE,
               nextCalibrationDate: overdue5Days.toISOString(),
               location: '테스트 랩',
               isShared: false,
@@ -742,7 +743,7 @@ test.describe('Equipment List - Calibration Due Date Display', () => {
               name: '교정 비대상 장비',
               managementNumber: 'MGT-001',
               modelName: 'Test Model',
-              status: 'available',
+              status: ESVal.AVAILABLE,
               nextCalibrationDate: null,
               location: '테스트 랩',
               isShared: false,

@@ -2,6 +2,10 @@
 // seed: tests/e2e/fixtures/auth.fixture.ts
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import {
+  NonConformanceStatusValues as NCSVal,
+  ResolutionTypeValues as RTVal,
+} from '@equipment-management/schemas';
 
 test.describe('Group E: Data Integrity and Business Rules', () => {
   test('E-6. should not require repair for calibration_failure or measurement_error types', async ({
@@ -46,7 +50,7 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     });
 
     // Change status to corrected
-    await statusSelect.selectOption('corrected');
+    await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // Wait a moment to ensure no dialog appears
     await page.waitForTimeout(500);
@@ -57,7 +61,7 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
 
     // Verify status change is allowed
     const selectedValue = await statusSelect.inputValue();
-    expect(selectedValue).toBe('corrected');
+    expect(selectedValue).toBe(NCSVal.CORRECTED);
   });
 
   test('E-6. should allow recalibration as resolution type instead of repair', async ({
@@ -84,10 +88,10 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     await expect(recalibrationOption).toBeVisible();
 
     // Select recalibration
-    await resolutionTypeSelect.selectOption('recalibration');
+    await resolutionTypeSelect.selectOption(RTVal.RECALIBRATION);
 
     const selectedValue = await resolutionTypeSelect.inputValue();
-    expect(selectedValue).toBe('recalibration');
+    expect(selectedValue).toBe(RTVal.RECALIBRATION);
   });
 
   test('E-6. should allow technical_manager to close calibration_failure without repair', async ({
@@ -125,7 +129,7 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
       await dialog.dismiss();
     });
 
-    await statusSelect.selectOption('closed');
+    await statusSelect.selectOption(NCSVal.CLOSED);
     await page.waitForTimeout(500);
 
     expect(dialogTriggered).toBe(false);
@@ -155,12 +159,12 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     await editButton.click();
 
     const statusSelect = page.getByLabel(/상태/i);
-    await statusSelect.selectOption('corrected');
+    await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // No dialog should appear
     await page.waitForTimeout(500);
 
     const selectedValue = await statusSelect.inputValue();
-    expect(selectedValue).toBe('corrected');
+    expect(selectedValue).toBe(NCSVal.CORRECTED);
   });
 });

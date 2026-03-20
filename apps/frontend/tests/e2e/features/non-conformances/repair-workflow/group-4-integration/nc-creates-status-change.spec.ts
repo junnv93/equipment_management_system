@@ -15,6 +15,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { NonConformanceTypeValues as NCTVal } from '@equipment-management/schemas';
 
 test.describe('Full Workflow Integration', () => {
   let testEquipmentId: string;
@@ -77,7 +78,7 @@ test.describe('Full Workflow Integration', () => {
 
     // 6. Select incident type 'damage' from dropdown
     const typeSelect = testOperatorPage.locator('select').first();
-    await typeSelect.selectOption('damage');
+    await typeSelect.selectOption(NCTVal.DAMAGE);
 
     // 7. Enter incident content with detailed description (min 10 chars)
     const contentTextarea = testOperatorPage.locator('textarea').first();

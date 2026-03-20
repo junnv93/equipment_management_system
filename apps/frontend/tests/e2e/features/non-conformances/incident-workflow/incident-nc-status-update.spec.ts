@@ -8,6 +8,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { NonConformanceStatusValues as NCSVal } from '@equipment-management/schemas';
 
 test.describe('Incident → Non-Conformance → Equipment Status Update', () => {
   // 테스트 데이터에서 알려진 장비 UUID (seed-test.ts에서 생성된 스펙트럼 분석기)
@@ -243,7 +244,7 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     // 상태를 "조치 완료"로 변경
     const statusSelect = techManagerPage.locator('select').last();
     if ((await statusSelect.count()) > 0) {
-      await statusSelect.selectOption('corrected');
+      await statusSelect.selectOption(NCSVal.CORRECTED);
     }
 
     // 저장

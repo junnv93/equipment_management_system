@@ -15,6 +15,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 
 test.describe('Group B: Combined Filters', () => {
   test.describe('9.1. Multiple filters can be applied simultaneously', () => {
@@ -195,7 +196,7 @@ test.describe('Group B: Combined Filters', () => {
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
       expect(urlObj.searchParams.has('search')).toBe(false);
-      expect(urlObj.searchParams.get('status')).toBe('available');
+      expect(urlObj.searchParams.get('status')).toBe(ESVal.AVAILABLE);
 
       // 검색 입력창 비어있음
       await expect(searchInput).toHaveValue('');

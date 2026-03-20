@@ -17,7 +17,10 @@
  */
 
 import { test, expect, Page } from '../../shared/fixtures/auth.fixture';
-import { EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
+import {
+  EQUIPMENT_STATUS_LABELS,
+  NonConformanceTypeValues as NCTVal,
+} from '@equipment-management/schemas';
 
 // Test equipment from seed data (SUW-E0002 - Signal Generator)
 // UUID: eeee1002-0002-4002-8002-000000000002
@@ -132,7 +135,7 @@ async function createNonConformance(
 
   if (selects.length > 0) {
     // Use 'calibration_failure' as it's most relevant for calibration issues
-    await selects[0].selectOption('calibration_failure');
+    await selects[0].selectOption(NCTVal.CALIBRATION_FAILURE);
   }
 
   // Find discovery date input

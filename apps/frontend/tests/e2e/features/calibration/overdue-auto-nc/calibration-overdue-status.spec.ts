@@ -10,6 +10,11 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 
+import {
+  EquipmentStatusValues as ESVal,
+  NonConformanceStatusValues as NCSVal,
+  NonConformanceTypeValues as NCTVal,
+} from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 // Backend API base URL (direct access, bypassing Next.js rewrites)
@@ -81,7 +86,7 @@ test.describe('교정기한 초과 자동 부적합 전환', () => {
     const equipment = await equipmentResponse.json();
     console.log(`🔍 장비 상태: ${equipment.status}`);
 
-    expect(equipment.status).toBe('non_conforming');
+    expect(equipment.status).toBe(ESVal.NON_CONFORMING);
 
     // 4. 프론트엔드에서 "부적합" 배지 표시 확인
     await page.goto(`/equipment/${equipmentId}`);
@@ -107,10 +112,10 @@ test.describe('교정기한 초과 자동 부적합 전환', () => {
     expect(ncResult.items.length).toBeGreaterThanOrEqual(1);
 
     const calibrationOverdueNc = ncResult.items.find(
-      (nc: { ncType: string }) => nc.ncType === 'calibration_overdue'
+      (nc: { ncType: string }) => nc.ncType === NCTVal.CALIBRATION_OVERDUE
     );
     expect(calibrationOverdueNc).toBeDefined();
-    expect(calibrationOverdueNc.status).toBe('open');
+    expect(calibrationOverdueNc.status).toBe(NCSVal.OPEN);
 
     console.log('✅ 교정기한 초과 부적합 기록 자동 생성 확인');
   });
