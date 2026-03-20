@@ -10,6 +10,7 @@ import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
 import { BACKEND_URL, EQUIP, USERS } from '../helpers/checkout-constants';
 import {
@@ -116,7 +117,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
       }
     );
     const equipData = await equipResponse.json();
-    expect(equipData.status).toBe('checked_out');
+    expect(equipData.status).toBe(ESVal.CHECKED_OUT);
   });
 
   test('S08-R04: 수리 반입 처리 → returned (repairChecked 필수)', async ({
@@ -207,6 +208,6 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
       }
     );
     const equipData = await equipResponse.json();
-    expect(equipData.status).toBe('available');
+    expect(equipData.status).toBe(ESVal.AVAILABLE);
   });
 });

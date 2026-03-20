@@ -18,6 +18,7 @@ import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
 import { BACKEND_URL, EQUIP, USERS } from '../helpers/checkout-constants';
 import {
@@ -141,7 +142,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
       }
     );
     const equipData = await equipResponse.json();
-    expect(equipData.status).toBe('checked_out');
+    expect(equipData.status).toBe(ESVal.CHECKED_OUT);
   });
 
   test('S08-04: Step 4 - 반입 처리 → returned (교정 확인)', async ({ techManagerPage: page }) => {
@@ -189,7 +190,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
       }
     );
     const equipCheck = await equipCheckResponse.json();
-    expect(equipCheck.status).toBe('checked_out'); // 반입 승인 전까지는 checked_out
+    expect(equipCheck.status).toBe(ESVal.CHECKED_OUT); // 반입 승인 전까지는 checked_out
   });
 
   test('S08-05: Step 5 - 반입 최종 승인 → return_approved + ★equipment=available', async ({
@@ -242,6 +243,6 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
       }
     );
     const equipData = await equipResponse.json();
-    expect(equipData.status).toBe('available');
+    expect(equipData.status).toBe(ESVal.AVAILABLE);
   });
 });
