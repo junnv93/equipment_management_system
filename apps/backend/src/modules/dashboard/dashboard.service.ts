@@ -8,7 +8,6 @@ import {
   CheckoutStatusEnum,
   CalibrationRequiredEnum,
   CheckoutPurposeValues as CPVal,
-  UserRoleValues as URVal,
   AUDIT_TO_ACTIVITY_TYPE,
   RENTAL_ACTIVITY_TYPE_OVERRIDES,
   AUDIT_ACTION_LABELS,
@@ -37,14 +36,9 @@ import {
 /**
  * 대시보드 서비스
  *
- * 역할별 맞춤형 대시보드 데이터를 제공합니다.
- * - test_engineer: 본인 관련 데이터만
- * - technical_manager: 팀 내 데이터
- * - lab_manager: 시험소 데이터
- * - SYSTEM_ADMIN: 전체 데이터
- *
- * site 파라미터가 주어지면 해당 사이트 소속 장비/요청만 반환합니다.
- * site가 undefined(system_admin 등)이면 전체 데이터를 반환합니다.
+ * 역할별 데이터 스코프는 Controller의 resolveDashboardScope()가
+ * DASHBOARD_DATA_SCOPE 정책으로 사전 해석한 site/teamId 파라미터로 제공됩니다.
+ * 서비스는 순수 데이터 접근 레이어로, 정책 해석을 하지 않습니다.
  *
  * 모든 조회 메서드는 SimpleCacheService로 캐싱됩니다 (30s TTL).
  * 캐시 무효화: CacheInvalidationHelper.invalidateAllDashboard()
@@ -60,12 +54,7 @@ export class DashboardService {
   /**
    * 대시보드 요약 정보 조회
    */
-  async getSummary(
-    _userId: string,
-    _userRole: UserRole,
-    teamId?: string,
-    site?: string
-  ): Promise<DashboardSummaryDto> {
+  async getSummary(teamId?: string, site?: string): Promise<DashboardSummaryDto> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}summary:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
@@ -124,12 +113,7 @@ export class DashboardService {
   /**
    * 팀별 장비 현황 조회
    */
-  async getEquipmentByTeam(
-    _userId: string,
-    _userRole: UserRole,
-    teamId?: string,
-    site?: string
-  ): Promise<EquipmentByTeamDto[]> {
+  async getEquipmentByTeam(teamId?: string, site?: string): Promise<EquipmentByTeamDto[]> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}equipmentByTeam:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
@@ -164,8 +148,6 @@ export class DashboardService {
    * 교정 지연 장비 조회
    */
   async getOverdueCalibrations(
-    _userId: string,
-    _userRole: UserRole,
     teamId?: string,
     site?: string
   ): Promise<{ items: OverdueCalibrationDto[]; hasMore: boolean }> {
@@ -226,8 +208,6 @@ export class DashboardService {
    * 교정 예정 장비 조회 (다음 N일 이내)
    */
   async getUpcomingCalibrations(
-    _userId: string,
-    _userRole: UserRole,
     days: number,
     teamId?: string,
     site?: string
@@ -290,8 +270,6 @@ export class DashboardService {
    * 반출 지연 조회 (checkouts + checkout_items 테이블 사용 - 대여/교정/수리 포함)
    */
   async getOverdueCheckouts(
-    _userId: string,
-    _userRole: UserRole,
     teamId?: string,
     site?: string
   ): Promise<{ items: OverdueCheckoutDto[]; hasMore: boolean }> {
@@ -377,8 +355,6 @@ export class DashboardService {
    * 반납 예정 반출 조회 (달력용, 다음 N일 이내)
    */
   async getUpcomingCheckoutReturns(
-    _userId: string,
-    _userRole: UserRole,
     days: number = 30,
     teamId?: string,
     site?: string
@@ -446,40 +422,37 @@ export class DashboardService {
    * 최근 활동 내역 조회
    *
    * 감사 로그(audit_logs)를 기반으로 7일 이내 활동을 조회합니다.
-   * - entityType: equipment, calibration, checkout만 표시 (대시보드 관련)
-   * - action: create, approve, reject만 표시 (update는 너무 빈번/모호)
+   * - entityType: equipment, calibration, checkout 등 대시보드 관련
+   * - action: create, update, approve, reject
    * - checkout LEFT JOIN으로 purpose 기반 rental/checkout 분기
-   * - RBAC: 역할별로 본인/팀/사이트/전체 스코프 필터링
+   *
+   * 스코프 필터링: Controller의 resolveDashboardScope()가 DASHBOARD_DATA_SCOPE로
+   * 해석한 site/teamId를 그대로 사용합니다. 서비스 내부에 역할별 분기 없음.
+   * - teamId 설정 → auditLogs.userTeamId 필터 (TE/TM)
+   * - site 설정 → auditLogs.userSite 필터 (LM)
+   * - 둘 다 미설정 → 전체 조회 (QM/SA)
    */
   async getRecentActivities(
-    userId: string,
-    userRole: UserRole,
     limit = DASHBOARD_ACTIVITIES_LIMIT,
     teamId?: string,
     site?: string
   ): Promise<RecentActivityDto[]> {
-    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}recentActivities:${userRole}:${site || 'all'}:${teamId || 'all'}:${userId}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}recentActivities:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        // RBAC 조건 빌드
-        const rbacConditions: SQL[] = [];
-        if (userRole === URVal.TEST_ENGINEER) {
-          // test_engineer: 본인 활동만
-          rbacConditions.push(eq(schema.auditLogs.userId, userId));
-        } else if (userRole === URVal.TECHNICAL_MANAGER && teamId) {
-          // technical_manager: 팀 내 활동
-          rbacConditions.push(eq(schema.auditLogs.userTeamId, teamId));
-        } else if ((userRole === URVal.QUALITY_MANAGER || userRole === URVal.LAB_MANAGER) && site) {
-          // quality_manager/lab_manager: 사이트 내 활동
-          rbacConditions.push(eq(schema.auditLogs.userSite, site));
+        // 스코프 조건: Controller에서 정책 해석 완료된 site/teamId 사용
+        const scopeConditions: SQL[] = [];
+        if (teamId) {
+          scopeConditions.push(eq(schema.auditLogs.userTeamId, teamId));
         }
-        // system_admin: 조건 없음 (전체 조회)
+        if (site) {
+          scopeConditions.push(eq(schema.auditLogs.userSite, site));
+        }
 
-        // audit_logs 쿼리 (checkouts LEFT JOIN으로 purpose 추출)
         const results = await this.db
           .select({
             id: schema.auditLogs.id,
@@ -512,7 +485,7 @@ export class DashboardService {
                 'calibration_plan',
               ]),
               inArray(schema.auditLogs.action, ['create', 'update', 'approve', 'reject']),
-              ...rbacConditions
+              ...scopeConditions
             )
           )
           .orderBy(desc(schema.auditLogs.timestamp))
@@ -573,7 +546,6 @@ export class DashboardService {
    * Dashboard DTO 형식으로 매핑만 담당합니다.
    */
   async getPendingApprovalCounts(
-    _userId: string,
     userRole: UserRole,
     teamId?: string,
     site?: string
@@ -610,12 +582,7 @@ export class DashboardService {
   /**
    * 장비 상태별 통계 조회
    */
-  async getEquipmentStatusStats(
-    _userId: string,
-    _userRole: UserRole,
-    teamId?: string,
-    site?: string
-  ): Promise<EquipmentStatusStatsDto> {
+  async getEquipmentStatusStats(teamId?: string, site?: string): Promise<EquipmentStatusStatsDto> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}equipmentStatusStats:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
@@ -656,7 +623,6 @@ export class DashboardService {
    * 집계 메서드 자체의 추가 캐시는 불필요합니다.
    */
   async getAggregate(
-    userId: string,
     userRole: UserRole,
     site: string | undefined,
     teamId?: string,
@@ -673,14 +639,14 @@ export class DashboardService {
       recentActivitiesResult,
       upcomingCheckoutReturnsResult,
     ] = await Promise.allSettled([
-      this.getSummary(userId, userRole, teamId, site),
-      this.getEquipmentByTeam(userId, userRole, teamId, site),
-      this.getOverdueCalibrations(userId, userRole, teamId, site),
-      this.getUpcomingCalibrations(userId, userRole, days, teamId, site),
-      this.getOverdueCheckouts(userId, userRole, teamId, site),
-      this.getEquipmentStatusStats(userId, userRole, teamId, site),
-      this.getRecentActivities(userId, userRole, activitiesLimit, teamId, site),
-      this.getUpcomingCheckoutReturns(userId, userRole, days, teamId, site),
+      this.getSummary(teamId, site),
+      this.getEquipmentByTeam(teamId, site),
+      this.getOverdueCalibrations(teamId, site),
+      this.getUpcomingCalibrations(days, teamId, site),
+      this.getOverdueCheckouts(teamId, site),
+      this.getEquipmentStatusStats(teamId, site),
+      this.getRecentActivities(activitiesLimit, teamId, site),
+      this.getUpcomingCheckoutReturns(days, teamId, site),
     ]);
 
     return {
