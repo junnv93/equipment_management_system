@@ -106,12 +106,10 @@ export class DashboardController {
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number = 30,
     @Query('activitiesLimit', new DefaultValuePipe(20), ParseIntPipe) activitiesLimit: number = 20
   ): Promise<DashboardAggregateDto> {
-    const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
     return this.dashboardService.getAggregate(
-      userId,
       userRole,
       site,
       resolvedTeamId,
@@ -141,11 +139,8 @@ export class DashboardController {
     @Req() req: AuthenticatedRequest,
     @Query('teamId') teamId?: string
   ): Promise<DashboardSummaryDto> {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
-
-    return this.dashboardService.getSummary(userId, userRole, resolvedTeamId, site);
+    return this.dashboardService.getSummary(resolvedTeamId, site);
   }
 
   @Get('equipment-by-team')
@@ -168,11 +163,8 @@ export class DashboardController {
     @Req() req: AuthenticatedRequest,
     @Query('teamId') teamId?: string
   ): Promise<EquipmentByTeamDto[]> {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
-
-    return this.dashboardService.getEquipmentByTeam(userId, userRole, resolvedTeamId, site);
+    return this.dashboardService.getEquipmentByTeam(resolvedTeamId, site);
   }
 
   @Get('overdue-calibrations')
@@ -192,11 +184,8 @@ export class DashboardController {
     type: [OverdueCalibrationDto],
   })
   async getOverdueCalibrations(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
-
-    return this.dashboardService.getOverdueCalibrations(userId, userRole, resolvedTeamId, site);
+    return this.dashboardService.getOverdueCalibrations(resolvedTeamId, site);
   }
 
   @Get('upcoming-calibrations')
@@ -226,17 +215,8 @@ export class DashboardController {
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
     @Query('teamId') teamId?: string
   ) {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
-
-    return this.dashboardService.getUpcomingCalibrations(
-      userId,
-      userRole,
-      days,
-      resolvedTeamId,
-      site
-    );
+    return this.dashboardService.getUpcomingCalibrations(days, resolvedTeamId, site);
   }
 
   @Get('overdue-rentals')
@@ -256,11 +236,8 @@ export class DashboardController {
     type: [OverdueCheckoutDto],
   })
   async getOverdueCheckouts(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
-
-    return this.dashboardService.getOverdueCheckouts(userId, userRole, resolvedTeamId, site);
+    return this.dashboardService.getOverdueCheckouts(resolvedTeamId, site);
   }
 
   @Get('recent-activities')
@@ -284,11 +261,8 @@ export class DashboardController {
     @Req() req: AuthenticatedRequest,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number
   ): Promise<RecentActivityDto[]> {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId } = this.resolveDashboardScope(req);
-
-    return this.dashboardService.getRecentActivities(userId, userRole, limit, teamId, site);
+    return this.dashboardService.getRecentActivities(limit, teamId, site);
   }
 
   @Get('pending-approval-counts')
@@ -305,11 +279,9 @@ export class DashboardController {
   async getPendingApprovalCounts(
     @Req() req: AuthenticatedRequest
   ): Promise<PendingApprovalCountsDto> {
-    const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId } = this.resolveDashboardScope(req);
-
-    return this.dashboardService.getPendingApprovalCounts(userId, userRole, teamId, site);
+    return this.dashboardService.getPendingApprovalCounts(userRole, teamId, site);
   }
 
   @Get('equipment-status-stats')
@@ -336,10 +308,7 @@ export class DashboardController {
     @Req() req: AuthenticatedRequest,
     @Query('teamId') teamId?: string
   ): Promise<EquipmentStatusStatsDto> {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
-
-    return this.dashboardService.getEquipmentStatusStats(userId, userRole, resolvedTeamId, site);
+    return this.dashboardService.getEquipmentStatusStats(resolvedTeamId, site);
   }
 }
