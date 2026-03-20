@@ -6,7 +6,12 @@
  * - Client bundle 분리를 통해 컴파일 성능 개선
  */
 
-import CreateCheckoutContent from './CreateCheckoutContent';
+import dynamic from 'next/dynamic';
+import { RouteLoading } from '@/components/layout/RouteLoading';
+
+const CreateCheckoutContent = dynamic(() => import('./CreateCheckoutContent'), {
+  loading: () => <RouteLoading variant="detail" />,
+});
 
 export default function CreateCheckoutPage() {
   return <CreateCheckoutContent />;
