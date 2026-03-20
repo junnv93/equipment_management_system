@@ -24,6 +24,8 @@ const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
 /** 캐시 키 상수 */
 const CACHE_KEYS = {
   REGISTRY: `${CACHE_KEY_PREFIXES.SOFTWARE}registry`,
+  DETAIL: (id: string) => `${CACHE_KEY_PREFIXES.SOFTWARE}detail:${id}`,
+  LIST: (query: object) => `${CACHE_KEY_PREFIXES.SOFTWARE}list:${JSON.stringify(query)}`,
 } as const;
 
 /**
@@ -45,6 +47,16 @@ export class SoftwareService extends VersionedBaseService {
     private readonly cacheService: SimpleCacheService
   ) {
     super();
+  }
+
+  /** 소프트웨어 캐시 통합 무효화 (상태 변경 시 호출) */
+  private invalidateCache(id?: string): void {
+    if (id) {
+      this.cacheService.delete(CACHE_KEYS.DETAIL(id));
+    }
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.SOFTWARE}list:*`);
+    this.invalidateCache(id);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
   }
 
   /**
@@ -89,6 +101,7 @@ export class SoftwareService extends VersionedBaseService {
       })
       .returning();
 
+    this.invalidateCache();
     return newRecord;
   }
 
@@ -96,6 +109,24 @@ export class SoftwareService extends VersionedBaseService {
    * 소프트웨어 변경 이력 조회 (필터: equipmentId, softwareName)
    */
   async findHistory(query: SoftwareHistoryQueryDto): Promise<{
+    items: schema.SoftwareHistory[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
+    return this.cacheService.getOrSet(
+      CACHE_KEYS.LIST(query),
+      () => this.findHistoryUncached(query),
+      CACHE_TTL.LONG
+    );
+  }
+
+  /** findHistory 내부 구현 (캐시 팩토리) */
+  private async findHistoryUncached(query: SoftwareHistoryQueryDto): Promise<{
     items: schema.SoftwareHistory[];
     meta: {
       totalItems: number;
@@ -212,20 +243,26 @@ export class SoftwareService extends VersionedBaseService {
    * 단일 소프트웨어 변경 이력 조회
    */
   async findOne(id: string): Promise<schema.SoftwareHistory> {
-    const [record] = await this.db
-      .select()
-      .from(schema.softwareHistory)
-      .where(eq(schema.softwareHistory.id, id))
-      .limit(1);
+    return this.cacheService.getOrSet(
+      CACHE_KEYS.DETAIL(id),
+      async () => {
+        const [record] = await this.db
+          .select()
+          .from(schema.softwareHistory)
+          .where(eq(schema.softwareHistory.id, id))
+          .limit(1);
 
-    if (!record) {
-      throw new NotFoundException({
-        code: 'SOFTWARE_HISTORY_NOT_FOUND',
-        message: `Software change history UUID ${id} not found`,
-      });
-    }
+        if (!record) {
+          throw new NotFoundException({
+            code: 'SOFTWARE_HISTORY_NOT_FOUND',
+            message: `Software change history UUID ${id} not found`,
+          });
+        }
 
-    return record;
+        return record;
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 
   /**
@@ -471,13 +508,13 @@ export class SoftwareService extends VersionedBaseService {
       );
     } catch (error) {
       if (error instanceof ConflictException) {
-        this.cacheService.delete(CACHE_KEYS.REGISTRY);
+        this.invalidateCache(id);
       }
       throw error;
     }
 
     // 승인 후 레지스트리 캐시 무효화 (새 승인 레코드 반영)
-    this.cacheService.delete(CACHE_KEYS.REGISTRY);
+    this.invalidateCache(id);
 
     return updated;
   }
@@ -518,7 +555,7 @@ export class SoftwareService extends VersionedBaseService {
       return updated;
     } catch (error) {
       if (error instanceof ConflictException) {
-        this.cacheService.delete(CACHE_KEYS.REGISTRY);
+        this.invalidateCache(id);
       }
       throw error;
     }
