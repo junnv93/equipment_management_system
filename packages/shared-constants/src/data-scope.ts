@@ -172,6 +172,21 @@ export const DISPOSAL_DATA_SCOPE: FeatureScopePolicy = {
 };
 
 /**
+ * 대시보드: 복합 엔티티(장비/교정/반출) 중 가장 제한적 스코프 적용
+ *
+ * 대시보드는 장비(TE=all), 교정(TE=team), 반출(TE=team) 데이터를 혼합 표시.
+ * 클라이언트 teamId 파라미터 검증에 사용 — 가장 제한적 정책(team)을 기준으로 함.
+ * TE/TM=team이므로 자기 팀 데이터만, LM=site이므로 사이트 내 데이터만 표시.
+ */
+export const DASHBOARD_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'team', label: '소속 팀 대시보드' },
+  technical_manager: { type: 'team', label: '소속 팀 대시보드' },
+  quality_manager: { type: 'all', label: '전체 대시보드' },
+  lab_manager: { type: 'site', label: '소속 사이트 대시보드' },
+  system_admin: { type: 'all', label: '전체 대시보드' },
+};
+
+/**
  * 장비 요청: 장비 등록/수정/삭제 요청의 승인 워크플로우
  *
  * ⚠️ EQUIPMENT_DATA_SCOPE(장비 목록 조회)와 별개.

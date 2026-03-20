@@ -23,6 +23,8 @@ import type {
 } from './return-condition';
 import type { DisposalReviewStatus } from './disposal';
 import type { UserStatus } from './shared';
+import type { CalibrationMethod } from './equipment';
+import type { ResolutionType } from './non-conformance';
 
 // ============================================================================
 // CONST VALUE OBJECTS (TypeScript enum 스타일 접근용)
@@ -69,6 +71,28 @@ export const UserStatusValues = {
   INACTIVE: 'inactive',
   PENDING: 'pending',
 } as const;
+
+/**
+ * 교정 방법 값 객체 (dot-notation 접근용)
+ * @example CalibrationMethodValues.EXTERNAL_CALIBRATION // 'external_calibration'
+ */
+export const CalibrationMethodValues = {
+  EXTERNAL_CALIBRATION: 'external_calibration',
+  SELF_INSPECTION: 'self_inspection',
+  NOT_APPLICABLE: 'not_applicable',
+} as const satisfies Record<string, CalibrationMethod>;
+
+/**
+ * 해결 유형 값 객체 (dot-notation 접근용)
+ * @example ResolutionTypeValues.REPAIR // 'repair'
+ */
+export const ResolutionTypeValues = {
+  REPAIR: 'repair',
+  RECALIBRATION: 'recalibration',
+  REPLACEMENT: 'replacement',
+  DISPOSAL: 'disposal',
+  OTHER: 'other',
+} as const satisfies Record<string, ResolutionType>;
 
 /**
  * 반출 상태 값 객체 (dot-notation 접근용)
