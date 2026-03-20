@@ -159,15 +159,116 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_AUDIT_LOGS,
   ],
 
-  // 시험소장: 모든 권한 (단, 교정 기록 등록, 시스템 설정 관리 제외)
-  // 교정 기록은 시험실무자만 등록 가능 (UL-QP-18 등록/승인 완전 분리 정책)
-  lab_manager: Object.values(Permission).filter(
-    (p) => p !== Permission.CREATE_CALIBRATION && p !== Permission.MANAGE_SYSTEM_SETTINGS
-  ),
+  // 시험소장: 명시적 화이트리스트 (UL-QP-18 등록/승인 완전 분리)
+  // ⚠️ 새 권한 추가 시 의도적으로 여기에도 추가해야 함 (블랙리스트 자동 부여 방지)
+  // 제외: CREATE_CALIBRATION (시험실무자 전용), MANAGE_SYSTEM_SETTINGS (시스템관리자 전용)
+  // 제외: DEPRECATED 권한 (VIEW_RENTAL_IMPORTS 등)
+  lab_manager: [
+    // 장비 관리
+    Permission.VIEW_EQUIPMENT,
+    Permission.CREATE_EQUIPMENT,
+    Permission.UPDATE_EQUIPMENT,
+    Permission.DELETE_EQUIPMENT,
+    Permission.APPROVE_EQUIPMENT,
+    Permission.REJECT_EQUIPMENT,
+    Permission.VIEW_EQUIPMENT_REQUESTS,
+    // 반출 관리
+    Permission.VIEW_CHECKOUTS,
+    Permission.CREATE_CHECKOUT,
+    Permission.UPDATE_CHECKOUT,
+    Permission.DELETE_CHECKOUT,
+    Permission.APPROVE_CHECKOUT,
+    Permission.REJECT_CHECKOUT,
+    Permission.START_CHECKOUT,
+    Permission.COMPLETE_CHECKOUT,
+    Permission.CANCEL_CHECKOUT,
+    // 교정 관리 (CREATE_CALIBRATION 제외 — UL-QP-18 직무분리)
+    Permission.VIEW_CALIBRATIONS,
+    Permission.UPDATE_CALIBRATION,
+    Permission.DELETE_CALIBRATION,
+    Permission.APPROVE_CALIBRATION,
+    Permission.VIEW_CALIBRATION_REQUESTS,
+    // 보정계수
+    Permission.VIEW_CALIBRATION_FACTORS,
+    Permission.CREATE_CALIBRATION_FACTOR,
+    Permission.APPROVE_CALIBRATION_FACTOR,
+    Permission.VIEW_CALIBRATION_FACTOR_REQUESTS,
+    // 부적합
+    Permission.VIEW_NON_CONFORMANCES,
+    Permission.CREATE_NON_CONFORMANCE,
+    Permission.UPDATE_NON_CONFORMANCE,
+    Permission.CLOSE_NON_CONFORMANCE,
+    // 소프트웨어
+    Permission.VIEW_SOFTWARE,
+    Permission.CREATE_SOFTWARE_CHANGE,
+    Permission.APPROVE_SOFTWARE_CHANGE,
+    Permission.VIEW_SOFTWARE_REQUESTS,
+    // 팀 관리
+    Permission.VIEW_TEAMS,
+    Permission.CREATE_TEAMS,
+    Permission.UPDATE_TEAMS,
+    Permission.DELETE_TEAMS,
+    // 사용자 관리
+    Permission.VIEW_USERS,
+    Permission.UPDATE_USERS,
+    Permission.MANAGE_ROLES,
+    // 알림
+    Permission.VIEW_NOTIFICATIONS,
+    Permission.CREATE_NOTIFICATION,
+    Permission.UPDATE_NOTIFICATION,
+    Permission.DELETE_NOTIFICATION,
+    Permission.CREATE_SYSTEM_NOTIFICATION,
+    Permission.MANAGE_NOTIFICATION_SETTINGS,
+    // 통계/보고서
+    Permission.VIEW_STATISTICS,
+    Permission.EXPORT_REPORTS,
+    Permission.CREATE_DASHBOARD,
+    Permission.MANAGE_REPORTS,
+    // 교정계획서 (최종 승인)
+    Permission.VIEW_CALIBRATION_PLANS,
+    Permission.CREATE_CALIBRATION_PLAN,
+    Permission.UPDATE_CALIBRATION_PLAN,
+    Permission.DELETE_CALIBRATION_PLAN,
+    Permission.SUBMIT_CALIBRATION_PLAN,
+    Permission.REVIEW_CALIBRATION_PLAN,
+    Permission.APPROVE_CALIBRATION_PLAN,
+    Permission.REJECT_CALIBRATION_PLAN,
+    Permission.CONFIRM_CALIBRATION_PLAN_ITEM,
+    // 감사 로그
+    Permission.VIEW_AUDIT_LOGS,
+    // 폐기 (최종 승인)
+    Permission.REQUEST_DISPOSAL,
+    Permission.REVIEW_DISPOSAL,
+    Permission.APPROVE_DISPOSAL,
+    Permission.VIEW_DISPOSAL_REQUESTS,
+    // 장비 반입
+    Permission.VIEW_EQUIPMENT_IMPORTS,
+    Permission.CREATE_EQUIPMENT_IMPORT,
+    Permission.APPROVE_EQUIPMENT_IMPORT,
+    Permission.COMPLETE_EQUIPMENT_IMPORT,
+    Permission.CANCEL_EQUIPMENT_IMPORT,
+    // 시스템 설정 (조회만, 관리 제외)
+    Permission.VIEW_SYSTEM_SETTINGS,
+  ],
 
-  // 시스템 관리자: lab_manager의 모든 권한 + 시스템 설정 관리
-  // UL-QP-18 직무분리: 교정 등록(CREATE_CALIBRATION) 제외
-  system_admin: Object.values(Permission).filter((p) => p !== Permission.CREATE_CALIBRATION),
+  // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION - deprecated
+  // ⚠️ 의도적 블랙리스트: 새 Permission 추가 시 system_admin에 자동 부여됨
+  // (lab_manager는 화이트리스트이므로 새 권한을 수동 추가해야 함)
+  system_admin: [
+    ...(() => {
+      // 모든 비-deprecated 권한에서 CREATE_CALIBRATION만 제외
+      const deprecated = new Set([
+        Permission.VIEW_RENTAL_IMPORTS,
+        Permission.CREATE_RENTAL_IMPORT,
+        Permission.APPROVE_RENTAL_IMPORT,
+        Permission.COMPLETE_RENTAL_IMPORT,
+        Permission.CANCEL_RENTAL_IMPORT,
+      ]);
+      return Object.values(Permission).filter(
+        (p) => p !== Permission.CREATE_CALIBRATION && !deprecated.has(p)
+      );
+    })(),
+  ],
 };
 
 /**

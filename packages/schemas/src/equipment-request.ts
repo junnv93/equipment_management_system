@@ -5,16 +5,25 @@ import { SoftDeleteEntity } from './common/base';
 export const ApprovalStatusEnum = z.enum(['pending_approval', 'approved', 'rejected']);
 export type ApprovalStatus = z.infer<typeof ApprovalStatusEnum>;
 
+/**
+ * 승인 상태 값 상수 — 하드코딩 문자열 리터럴 대신 사용
+ * @example ApprovalStatusValues.APPROVED // 'approved'
+ */
+export const ApprovalStatusValues = {
+  PENDING_APPROVAL: 'pending_approval',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const satisfies Record<string, ApprovalStatus>;
+
 // 요청 타입 enum
 export const RequestTypeEnum = z.enum(['create', 'update', 'delete']);
 export type RequestType = z.infer<typeof RequestTypeEnum>;
 
-// 장비 요청 스키마
+// 장비 요청 스키마 (DB: equipment_requests 테이블 — UUID PK)
 export const equipmentRequestSchema = z.object({
-  id: z.number().int().positive(),
-  uuid: z.string().uuid(),
+  id: z.string().uuid(),
   requestType: RequestTypeEnum,
-  equipmentId: z.number().int().positive().nullable().optional(),
+  equipmentId: z.string().uuid().nullable().optional(),
   requestedBy: z.string().uuid(),
   requestedAt: z.coerce.date(),
   approvalStatus: ApprovalStatusEnum,
@@ -22,6 +31,7 @@ export const equipmentRequestSchema = z.object({
   approvedAt: z.coerce.date().nullable().optional(),
   rejectionReason: z.string().nullable().optional(),
   requestData: z.string().nullable().optional(), // JSON stringified equipment data
+  version: z.number().int().positive(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -29,7 +39,7 @@ export const equipmentRequestSchema = z.object({
 // 장비 요청 생성 스키마
 export const createEquipmentRequestSchema = z.object({
   requestType: RequestTypeEnum,
-  equipmentId: z.number().int().positive().optional(), // 수정/삭제 시 필수
+  equipmentId: z.string().uuid().optional(), // 수정/삭제 시 기존 장비 UUID
   requestData: z.string().optional(), // 장비 데이터 (JSON string)
   attachments: z.array(z.string().uuid()).optional(), // 첨부 파일 UUID 목록
 });

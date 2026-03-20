@@ -9,15 +9,12 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { ATTACHMENT_TYPE_VALUES } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { equipmentRequests } from './equipment-requests';
 
-// 첨부 파일 타입 enum
-export const attachmentTypeEnum = pgEnum('attachment_type', [
-  'inspection_report', // 검수보고서 (신규 장비 등록 시)
-  'history_card', // 이력카드 (기존 장비 등록 시)
-  'other', // 기타
-]);
+// 첨부 파일 타입 enum — SSOT: @equipment-management/schemas
+export const attachmentTypeEnum = pgEnum('attachment_type', ATTACHMENT_TYPE_VALUES);
 
 // 장비 첨부 파일 테이블
 // ✅ UUID 통일: serial(integer) id를 uuid id로 변경

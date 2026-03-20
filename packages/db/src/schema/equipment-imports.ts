@@ -9,6 +9,7 @@ import {
   integer,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import type { EquipmentImportSource, EquipmentImportStatus } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
 import { teams } from './teams';
@@ -41,7 +42,10 @@ export const equipmentImports = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 출처 타입 (discriminator)
-    sourceType: varchar('source_type', { length: 30 }).notNull().default('rental'), // 'rental' | 'internal_shared'
+    sourceType: varchar('source_type', { length: 30 })
+      .$type<EquipmentImportSource>()
+      .notNull()
+      .default('rental'),
 
     // 신청자 정보
     requesterId: uuid('requester_id')
@@ -78,7 +82,10 @@ export const equipmentImports = pgTable(
     reason: text('reason').notNull(),
 
     // 상태
-    status: varchar('status', { length: 30 }).notNull().default('pending'),
+    status: varchar('status', { length: 30 })
+      .$type<EquipmentImportStatus>()
+      .notNull()
+      .default('pending'),
 
     // 승인 정보
     approverId: uuid('approver_id').references(() => users.id, { onDelete: 'restrict' }),

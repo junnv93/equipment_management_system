@@ -84,6 +84,9 @@ export const disposalRequests = pgTable(
 
       // 날짜별 조회
       requestedAtIdx: index('disposal_requests_requested_at_idx').on(table.requestedAt),
+
+      // CAS 최적화: updateWithVersion WHERE id = ? AND version = ?
+      idVersionIdx: index('disposal_requests_id_version_idx').on(table.id, table.version),
     };
   }
 );

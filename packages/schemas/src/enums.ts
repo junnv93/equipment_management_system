@@ -441,7 +441,7 @@ export const CHECKOUT_TYPE_VALUES = [
   'rental', // 대여 목적 반출
 ] as const;
 
-export const CheckoutTypeEnum = z.enum(CHECKOUT_TYPE_VALUES as unknown as [string, ...string[]]);
+export const CheckoutTypeEnum = z.enum(CHECKOUT_TYPE_VALUES as readonly [string, ...string[]]);
 export type CheckoutType = z.infer<typeof CheckoutTypeEnum>;
 
 /**
@@ -515,7 +515,7 @@ export const SHARED_SOURCE_VALUES = [
   'internal_shared', // 내부 공용장비 (통합 반입 프로세스용)
 ] as const;
 
-export const SharedSourceEnum = z.enum(SHARED_SOURCE_VALUES as unknown as [string, ...string[]]);
+export const SharedSourceEnum = z.enum(SHARED_SOURCE_VALUES as readonly [string, ...string[]]);
 export type SharedSource = z.infer<typeof SharedSourceEnum>;
 
 /**
@@ -534,7 +534,7 @@ export const SOFTWARE_TYPE_VALUES = [
   'other', // 기타
 ] as const;
 
-export const SoftwareTypeEnum = z.enum(SOFTWARE_TYPE_VALUES as unknown as [string, ...string[]]);
+export const SoftwareTypeEnum = z.enum(SOFTWARE_TYPE_VALUES as readonly [string, ...string[]]);
 export type SoftwareType = z.infer<typeof SoftwareTypeEnum>;
 
 /**
@@ -636,7 +636,7 @@ export const AUDIT_ACTION_VALUES = [
   'reject_correction', // 조치 반려
 ] as const;
 
-export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES as unknown as [string, ...string[]]);
+export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES as readonly [string, ...string[]]);
 export type AuditAction = z.infer<typeof AuditActionEnum>;
 
 /**
@@ -697,7 +697,7 @@ export const INCIDENT_TYPE_VALUES = [
   'calibration_overdue', // 교정 기한 초과
 ] as const;
 
-export const IncidentTypeEnum = z.enum(INCIDENT_TYPE_VALUES as unknown as [string, ...string[]]);
+export const IncidentTypeEnum = z.enum(INCIDENT_TYPE_VALUES as readonly [string, ...string[]]);
 export type IncidentType = z.infer<typeof IncidentTypeEnum>;
 
 /**
@@ -712,8 +712,14 @@ export const SPEC_MATCH_VALUES = [
   'mismatch', // 불일치
 ] as const;
 
-export const SpecMatchEnum = z.enum(SPEC_MATCH_VALUES as unknown as [string, ...string[]]);
+export const SpecMatchEnum = z.enum(SPEC_MATCH_VALUES as readonly [string, ...string[]]);
 export type SpecMatch = z.infer<typeof SpecMatchEnum>;
+
+/** @example SpecMatchValues.MATCH // 'match' */
+export const SpecMatchValues = {
+  MATCH: 'match',
+  MISMATCH: 'mismatch',
+} as const satisfies Record<string, SpecMatch>;
 
 /**
  * SINGLE SOURCE OF TRUTH: 교정 필요 여부 열거형
@@ -730,8 +736,44 @@ export const CALIBRATION_REQUIRED_VALUES = [
 export const CalibrationRequiredEnum = z.enum(CALIBRATION_REQUIRED_VALUES);
 export type CalibrationRequired = z.infer<typeof CalibrationRequiredEnum>;
 
+/** @example CalibrationRequiredValues.REQUIRED // 'required' */
+export const CalibrationRequiredValues = {
+  REQUIRED: 'required',
+  NOT_REQUIRED: 'not_required',
+} as const satisfies Record<string, CalibrationRequired>;
+
 // NOTE: CalibrationStatusEnum/CalibrationStatus는 calibration.ts에서 정의 (SSOT)
 // 여기서 재정의 금지 — 중복 export 충돌 발생
+
+/**
+ * SINGLE SOURCE OF TRUTH: 중간점검 상태 열거형
+ *
+ * 중간점검 필터링 및 UI 표시에 사용:
+ * - pending: 대기 (점검 필요)
+ * - completed: 완료
+ * - overdue: 기한 초과
+ * - due: 점검 예정 (곧 도래)
+ */
+export const INTERMEDIATE_CHECK_STATUS_VALUES = [
+  'pending', // 대기
+  'completed', // 완료
+  'overdue', // 기한 초과
+  'due', // 점검 예정
+] as const;
+
+export const IntermediateCheckStatusEnum = z.enum(INTERMEDIATE_CHECK_STATUS_VALUES);
+export type IntermediateCheckStatus = z.infer<typeof IntermediateCheckStatusEnum>;
+
+/**
+ * 중간점검 상태 값 상수 — 하드코딩 문자열 리터럴 대신 사용
+ * @example IntermediateCheckStatusValues.PENDING // 'pending'
+ */
+export const IntermediateCheckStatusValues = {
+  PENDING: 'pending',
+  COMPLETED: 'completed',
+  OVERDUE: 'overdue',
+  DUE: 'due',
+} as const satisfies Record<string, IntermediateCheckStatus>;
 
 /**
  * 위치 값 배열 (LocationEnum SSOT — 중복 선언 금지)
@@ -765,6 +807,17 @@ export const NonConformanceTypeEnum = z.enum(NON_CONFORMANCE_TYPE_VALUES);
 export type NonConformanceType = z.infer<typeof NonConformanceTypeEnum>;
 
 /**
+ * SINGLE SOURCE OF TRUTH: 수리 기록이 필수인 부적합 유형
+ *
+ * damage(손상), malfunction(오작동) 유형은 종결 전 수리 이력 연결 필수
+ * (UL-QP-18: 손상/오작동은 수리 완료 후에만 시정 조치 인정)
+ */
+export const REPAIR_REQUIRING_NC_TYPES: readonly NonConformanceType[] = [
+  'damage',
+  'malfunction',
+] as const;
+
+/**
  * SINGLE SOURCE OF TRUTH: 해결 유형 열거형
  *
  * 표준 유형값 (소문자 + 언더스코어):
@@ -795,7 +848,7 @@ export type ResolutionType = z.infer<typeof ResolutionTypeEnum>;
  */
 export const USER_STATUS_VALUES = ['active', 'inactive', 'pending'] as const;
 
-export const UserStatusEnum = z.enum(USER_STATUS_VALUES as unknown as [string, ...string[]]);
+export const UserStatusEnum = z.enum(USER_STATUS_VALUES as readonly [string, ...string[]]);
 export type UserStatus = z.infer<typeof UserStatusEnum>;
 
 /**
@@ -808,7 +861,7 @@ export type UserStatus = z.infer<typeof UserStatusEnum>;
  */
 export const REPAIR_RESULT_VALUES = ['completed', 'partial', 'failed'] as const;
 
-export const RepairResultEnum = z.enum(REPAIR_RESULT_VALUES as unknown as [string, ...string[]]);
+export const RepairResultEnum = z.enum(REPAIR_RESULT_VALUES as readonly [string, ...string[]]);
 export type RepairResult = z.infer<typeof RepairResultEnum>;
 
 /**
@@ -1823,6 +1876,20 @@ export type SortOrder = z.infer<typeof SortOrderEnum>;
 export const CHECKOUT_DIRECTION_VALUES = ['outbound', 'inbound'] as const;
 export const CheckoutDirectionEnum = z.enum(CHECKOUT_DIRECTION_VALUES);
 export type CheckoutDirection = z.infer<typeof CheckoutDirectionEnum>;
+
+// NOTE: AttachmentTypeEnum/AttachmentType는 equipment-attachment.ts에서 정의 (SSOT)
+// 여기서 재정의 금지 — 중복 export 충돌 발생
+
+export const ATTACHMENT_TYPE_VALUES = ['inspection_report', 'history_card', 'other'] as const;
+
+// AttachmentType re-import for LABELS 참조만 가능
+import type { AttachmentType as _AttachmentType } from './equipment-attachment';
+
+export const ATTACHMENT_TYPE_LABELS: Record<_AttachmentType, string> = {
+  inspection_report: '검수보고서',
+  history_card: '이력카드',
+  other: '기타',
+};
 
 // ============================================================================
 // DEPRECATED: Legacy rental import types (backward compatibility)

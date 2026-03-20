@@ -45,25 +45,5 @@ export * from './errors';
 
 export * from './api-response';
 
-// ============================================================
-// Legacy Compatibility Types (TODO: 점진적 제거 예정)
-// ============================================================
-
-import type { User } from './user';
-import type { Team } from './team';
-
-export type UserListResponse = {
-  items: User[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
-
-export type TeamListResponse = {
-  items: Team[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-};
+// Common base types
+export type { PaginatedResponseType, PaginatedResponse, SoftDeleteEntity } from './common/base';

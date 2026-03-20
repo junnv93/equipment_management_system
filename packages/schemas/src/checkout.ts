@@ -6,22 +6,22 @@ import { CheckoutStatusEnum, CheckoutStatus, CheckoutPurposeEnum, CheckoutPurpos
  * CheckoutStatusEnum과 CheckoutPurposeEnum은 enums.ts에서 import하여 사용
  */
 
-// 반출 스키마
+// 반출 스키마 (DB: checkouts 테이블 필드명과 일치)
 export const CheckoutSchema = z.object({
   id: z.string().uuid(),
-  userId: z.string().uuid(),
+  requesterId: z.string().uuid(),
   approverId: z.string().uuid().optional(),
-  destinationName: z.string(),
-  destinationAddress: z.string(),
-  destinationContact: z.string(),
+  destination: z.string(),
   purpose: CheckoutPurposeEnum,
-  startDate: z.string().or(z.date()),
-  expectedEndDate: z.string().or(z.date()),
-  actualEndDate: z.string().or(z.date()).optional(),
+  reason: z.string(),
+  checkoutDate: z.coerce.date().nullable().optional(),
+  expectedReturnDate: z.coerce.date(),
+  actualReturnDate: z.coerce.date().nullable().optional(),
   notes: z.string().optional(),
   status: CheckoutStatusEnum,
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  version: z.number().int().positive(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 
 export type Checkout = z.infer<typeof CheckoutSchema>;

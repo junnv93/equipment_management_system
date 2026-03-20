@@ -27,6 +27,8 @@ export const CACHE_TTL = {
   VERY_LONG: 600_000,
   /** 30분 — 참조 데이터 (팀, 상태 코드) */
   REFERENCE: 1_800_000,
+  /** 24시간 — 거의 변경되지 않는 데이터 (반출 목적지 목록 등) */
+  DAY: 86_400_000,
 } as const;
 
 export type CacheTTLTier = keyof typeof CACHE_TTL;

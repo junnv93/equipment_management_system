@@ -81,6 +81,11 @@ export const auditLogs = pgTable(
       table.userTeamId,
       table.timestamp
     ),
+    // 특정 엔티티 이력 조회 최적화 (WHERE entity_type = ? AND entity_id = ?)
+    entityTypeEntityIdIdx: index('audit_logs_entity_type_entity_id_idx').on(
+      table.entityType,
+      table.entityId
+    ),
   })
 );
 

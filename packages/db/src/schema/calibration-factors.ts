@@ -39,8 +39,12 @@ export const calibrationFactors = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 장비 및 교정 관계
-    equipmentId: uuid('equipment_id').notNull(),
-    calibrationId: uuid('calibration_id'), // nullable - 교정 기록과 연결 (선택)
+    equipmentId: uuid('equipment_id')
+      .notNull()
+      .references(() => equipment.id, { onDelete: 'restrict' }),
+    calibrationId: uuid('calibration_id').references(() => calibrations.id, {
+      onDelete: 'set null',
+    }), // nullable - 교정 기록과 연결 (선택)
 
     // 보정계수 정보
     factorType: varchar('factor_type', { length: 50 }).notNull(), // 'antenna_gain' | 'cable_loss' | 'path_loss' | 'amplifier_gain' | 'other'
@@ -88,6 +92,8 @@ export const calibrationFactors = pgTable(
       ),
       // 유효 기간 조회 최적화
       effectiveDateIdx: index('calibration_factors_effective_date_idx').on(table.effectiveDate),
+      // 소프트 삭제 필터링 최적화
+      deletedAtIdx: index('calibration_factors_deleted_at_idx').on(table.deletedAt),
     };
   }
 );

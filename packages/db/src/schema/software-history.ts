@@ -28,7 +28,9 @@ export const softwareHistory = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 장비 관계
-    equipmentId: uuid('equipment_id').notNull(),
+    equipmentId: uuid('equipment_id')
+      .notNull()
+      .references(() => equipment.id, { onDelete: 'restrict' }),
 
     // 소프트웨어 정보
     softwareName: varchar('software_name', { length: 200 }).notNull(), // 소프트웨어명
@@ -74,8 +76,6 @@ export const softwareHistory = pgTable(
         table.softwareName,
         table.changedAt
       ),
-      // Optimistic locking 조회 최적화
-      versionIdx: index('software_history_version_idx').on(table.version),
     };
   }
 );

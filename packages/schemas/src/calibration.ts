@@ -14,6 +14,15 @@ export const CalibrationStatusEnum = z.enum([
 export type CalibrationStatus = z.infer<typeof CalibrationStatusEnum>;
 export const CALIBRATION_STATUS_VALUES = CalibrationStatusEnum.options;
 
+/** 교정 상태 한국어 레이블 — 리포트/UI 공유 SSOT */
+export const CALIBRATION_STATUS_LABELS: Record<CalibrationStatus, string> = {
+  scheduled: '예정됨',
+  in_progress: '진행 중',
+  completed: '완료됨',
+  failed: '실패',
+  cancelled: '취소됨',
+};
+
 // 기본 교정 스키마 (공통 필드)
 export const baseCalibrationSchema = z.object({
   equipmentId: z.string().uuid(),

@@ -55,6 +55,7 @@ export const users = pgTable(
     teamIdIdx: index('users_team_id_idx').on(table.teamId),
     isActiveIdx: index('users_is_active_idx').on(table.isActive),
     roleSiteIdx: index('users_role_site_idx').on(table.role, table.site),
+    azureAdIdIdx: index('users_azure_ad_id_idx').on(table.azureAdId),
   })
 );
 

@@ -7,24 +7,23 @@ import {
   index,
   uuid,
   integer,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { ApprovalStatusEnum, RequestTypeEnum } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
 
-// 승인 상태 enum
-export const approvalStatusEnum = pgEnum('approval_status', [
-  'pending_approval', // 승인 대기
-  'approved', // 승인됨
-  'rejected', // 반려됨
-]);
+// SSOT: schemas 패키지에서 값 참조 (하드코딩 방지)
+export const approvalStatusEnum = pgEnum(
+  'approval_status',
+  ApprovalStatusEnum.options as unknown as [string, ...string[]]
+);
 
-// 요청 타입 enum
-export const requestTypeEnum = pgEnum('request_type', [
-  'create', // 등록
-  'update', // 수정
-  'delete', // 삭제
-]);
+export const requestTypeEnum = pgEnum(
+  'request_type',
+  RequestTypeEnum.options as unknown as [string, ...string[]]
+);
 
 // 장비 요청 테이블 (승인 프로세스용)
 // ✅ UUID 통일: serial(integer) id를 uuid id로 변경
@@ -50,7 +49,7 @@ export const equipmentRequests = pgTable(
     rejectionReason: text('rejection_reason'), // 반려 사유
 
     // 요청 데이터 (JSON 형태로 저장)
-    requestData: text('request_data'), // JSON stringified equipment data
+    requestData: jsonb('request_data'), // 장비 데이터 (JSON 구조 — 유효성 검증 + 인덱스 활용 가능)
 
     // Optimistic locking version
     version: integer('version').notNull().default(1),

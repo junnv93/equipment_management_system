@@ -23,7 +23,7 @@ export const teams = pgTable(
     site: varchar('site', { length: 20 }).notNull(), // ✅ 필수 필드: 'suwon' | 'uiwang' | 'pyeongtaek'
     classificationCode: varchar('classification_code', { length: 1 }), // ✅ 분류코드: E, R, W, S, A, P
     description: varchar('description', { length: 255 }),
-    leaderId: uuid('leader_id'),
+    leaderId: uuid('leader_id').references(() => users.id, { onDelete: 'set null' }),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

@@ -33,7 +33,9 @@ export const nonConformances = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 장비 관계
-    equipmentId: uuid('equipment_id').notNull(),
+    equipmentId: uuid('equipment_id')
+      .notNull()
+      .references(() => equipment.id, { onDelete: 'restrict' }),
 
     // 부적합 발견 정보
     discoveryDate: date('discovery_date').notNull(), // 발견일
@@ -99,6 +101,10 @@ export const nonConformances = pgTable(
       resolutionTypeIdx: index('non_conformances_resolution_type_idx').on(table.resolutionType),
       // 수리 기록 연결 조회 최적화
       repairHistoryIdIdx: index('non_conformances_repair_history_id_idx').on(table.repairHistoryId),
+      // 소프트 삭제 필터링 최적화
+      deletedAtIdx: index('non_conformances_deleted_at_idx').on(table.deletedAt),
+      // 목록 정렬 최적화 (ORDER BY created_at DESC)
+      createdAtIdx: index('non_conformances_created_at_idx').on(table.createdAt),
     };
   }
 );

@@ -232,8 +232,16 @@ export function resolveDataScope(
 
   switch (p.type) {
     case 'team':
+      // 팀 미배정 사용자는 데이터 접근 차단 (전체 노출 방지)
+      if (!user.teamId) {
+        return { type: 'none', label: '팀 미배정 — 접근 불가' };
+      }
       return { type: 'team', teamId: user.teamId, label: p.label };
     case 'site':
+      // 사이트 미배정 사용자는 데이터 접근 차단
+      if (!user.site) {
+        return { type: 'none', label: '사이트 미배정 — 접근 불가' };
+      }
       return { type: 'site', site: user.site, label: p.label };
     case 'all':
       return { type: 'all', label: p.label };

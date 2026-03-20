@@ -13,7 +13,11 @@ import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import { EQUIPMENT_STATUS_VALUES, CALIBRATION_METHOD_VALUES } from '@equipment-management/schemas';
-import type { EquipmentStatus } from '@equipment-management/schemas';
+import type {
+  EquipmentStatus,
+  SpecMatch,
+  CalibrationRequired,
+} from '@equipment-management/schemas';
 import { teams } from './teams';
 
 /** @see packages/schemas/src/enums.ts - EquipmentStatusEnum (SSOT) */
@@ -50,8 +54,10 @@ export const equipment = pgTable(
     location: varchar('location', { length: 100 }),
 
     // 시방일치 여부 및 교정필요 여부
-    specMatch: varchar('spec_match', { length: 20 }), // 'match' | 'mismatch'
-    calibrationRequired: varchar('calibration_required', { length: 20 }), // 'required' | 'not_required'
+    specMatch: varchar('spec_match', { length: 20 }).$type<SpecMatch>(), // SSOT: SpecMatchEnum
+    calibrationRequired: varchar('calibration_required', {
+      length: 20,
+    }).$type<CalibrationRequired>(), // SSOT: CalibrationRequiredEnum
 
     // 위치 및 설치 정보
     initialLocation: varchar('initial_location', { length: 100 }), // 최초 설치 위치
@@ -72,7 +78,7 @@ export const equipment = pgTable(
 
     // 관리 정보
     teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
-    managerId: varchar('manager_id', { length: 36 }),
+    managerId: uuid('manager_id').references(() => users.id, { onDelete: 'set null' }),
     site: varchar('site', { length: 20 }).notNull(), // ✅ 사이트별 권한 관리: 필수 필드 'suwon' | 'uiwang'
     purchaseYear: integer('purchase_year'), // 구입년도 (연도 정수, 예: 2026)
     price: integer('price'),
@@ -109,7 +115,7 @@ export const equipment = pgTable(
     calibrationResult: text('calibration_result'), // 교정 결과
     correctionFactor: varchar('correction_factor', { length: 50 }), // 보정계수
     intermediateCheckSchedule: timestamp('intermediate_check_schedule'), // 중간점검일정
-    repairHistory: text('repair_history'), // 장비 수리 내역
+    repairHistory: text('repair_history'), // @deprecated — repair_history 테이블 사용. 마이그레이션 후 제거 예정
 
     // 공용장비 필드 (프롬프트 8-1)
     // @see packages/schemas/src/enums.ts - SharedSourceEnum
@@ -160,8 +166,6 @@ export const equipment = pgTable(
       classificationCodeIdx: index('equipment_classification_code_idx').on(
         table.classificationCode
       ),
-      // Optimistic locking 인덱스
-      versionIdx: index('equipment_version_idx').on(table.version),
     };
   }
 );

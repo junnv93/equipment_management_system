@@ -37,6 +37,8 @@ export {
   ROLE_HIERARCHY,
   hasEqualOrHigherRole,
   isTechnicalManagerOrAbove,
+  isQualityManagerOrAbove,
+  isQualityManager,
   isLabManager,
   isLabManagerOrAbove,
   isSystemAdmin,
@@ -103,6 +105,19 @@ export { ENTITY_ROUTES, getEntityRoute, hasEntityRoute } from './entity-routes';
 // 캐시 TTL (Backend SimpleCacheService + Frontend React Query 공유)
 export { CACHE_TTL, type CacheTTLTier } from './cache-config';
 
+// 페이지네이션 (Backend 서비스 기본값 + Frontend 목록 컴포넌트 공유)
+export {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  PAGE_SIZE_OPTIONS,
+  DASHBOARD_ITEM_LIMIT,
+  SELECTOR_PAGE_SIZE,
+  type PageSizeOption,
+} from './pagination';
+
+// 검증 규칙 (Backend DTO + Frontend Form 공유)
+export { VALIDATION_RULES } from './validation-rules';
+
 // 승인 KPI 상수 (긴급 임계값 등)
 export { APPROVAL_KPI } from './approval-kpi';
 
@@ -112,6 +127,9 @@ export {
   type EquipmentOwnerOption,
   type EquipmentOwnerValue,
 } from './equipment-owner-options';
+
+// 로케일/타임존 (날짜 포맷팅, 리포트 출력 등 공유)
+export { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from './locale';
 
 // 데이터 스코프 정책 (역할별 접근 범위)
 export {

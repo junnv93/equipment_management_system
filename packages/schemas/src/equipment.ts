@@ -10,6 +10,7 @@ import {
   SpecMatchEnum,
   CalibrationRequiredEnum,
 } from './enums';
+import { ApprovalStatusEnum } from './equipment-request';
 import { SoftDeleteEntity, PaginatedResponse } from './common/base';
 
 /**
@@ -103,7 +104,7 @@ export const baseEquipmentSchema = z.object({
   installationDate: z.coerce.date().optional(), // 설치 일시
 
   // 승인 프로세스 필드
-  approvalStatus: z.enum(['pending_approval', 'approved', 'rejected']).optional(),
+  approvalStatus: ApprovalStatusEnum.optional(),
   requestedBy: z.string().uuid().optional(),
   approvedBy: z.string().uuid().optional(),
 

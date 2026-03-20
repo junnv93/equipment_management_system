@@ -38,8 +38,10 @@ export const calibrations = pgTable(
   'calibrations',
   {
     id: uuid('id').primaryKey().defaultRandom().notNull(),
-    equipmentId: uuid('equipment_id').notNull(),
-    technicianId: uuid('technician_id'),
+    equipmentId: uuid('equipment_id')
+      .notNull()
+      .references(() => equipment.id, { onDelete: 'restrict' }),
+    technicianId: uuid('technician_id').references(() => users.id, { onDelete: 'set null' }),
     status: varchar('status', { length: 50 })
       .$type<CalibrationStatus>()
       .notNull()
