@@ -573,7 +573,7 @@ export class DisposalService extends VersionedBaseService {
    *
    * @param userId - 현재 사용자 ID (팀 필터링용)
    */
-  async getPendingReviewRequests(userId: string): Promise<unknown[]> {
+  async getPendingReviewRequests(userId: string, site?: string): Promise<unknown[]> {
     // 1. 현재 사용자 조회 (역할 및 팀 확인)
     const currentUser = await this.db.query.users.findFirst({
       where: eq(users.id, userId),
@@ -609,19 +609,25 @@ export class DisposalService extends VersionedBaseService {
       limit: DASHBOARD_ITEM_LIMIT,
     });
 
-    // 3. lab_manager가 아니면 같은 팀 장비만 필터링
-    if (!isLabManager && currentUser.teamId) {
-      return requests.filter((request) => request.equipment.teamId === currentUser.teamId);
+    // 3. 사이트 필터링 (SiteScopeInterceptor가 주입한 site)
+    let filtered = requests;
+    if (site) {
+      filtered = filtered.filter((request) => request.equipment.site === site);
     }
 
-    return requests;
+    // 4. lab_manager가 아니면 같은 팀 장비만 필터링
+    if (!isLabManager && currentUser.teamId) {
+      filtered = filtered.filter((request) => request.equipment.teamId === currentUser.teamId);
+    }
+
+    return filtered;
   }
 
   /**
    * 최종 승인 대기 중인 폐기 요청 목록 조회 (시험소장용)
    * reviewStatus='reviewed'인 요청들을 최신순으로 반환
    */
-  async getPendingApprovalRequests(): Promise<unknown[]> {
+  async getPendingApprovalRequests(site?: string): Promise<unknown[]> {
     const requests = await this.db.query.disposalRequests.findMany({
       where: eq(disposalRequests.reviewStatus, DRVal.REVIEWED),
       with: {
@@ -652,6 +658,11 @@ export class DisposalService extends VersionedBaseService {
       orderBy: (disposalRequests, { desc }) => [desc(disposalRequests.reviewedAt)],
       limit: DASHBOARD_ITEM_LIMIT,
     });
+
+    // 사이트 필터링 (SiteScopeInterceptor가 주입한 site)
+    if (site) {
+      return requests.filter((request) => request.equipment.site === site);
+    }
 
     return requests;
   }

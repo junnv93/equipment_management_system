@@ -11,10 +11,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import {
   CreateLocationHistoryDto,
@@ -46,8 +47,11 @@ export class EquipmentHistoryController {
     type: [LocationHistoryResponseDto],
   })
   async getLocationHistory(
-    @Param('uuid', ParseUUIDPipe) equipmentUuid: string
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest
   ): Promise<LocationHistoryResponseDto[]> {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.equipmentHistoryService.getLocationHistory(equipmentUuid);
   }
 
@@ -70,6 +74,8 @@ export class EquipmentHistoryController {
     @Body(CreateLocationHistoryValidationPipe) dto: CreateLocationHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<LocationHistoryResponseDto> {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.equipmentHistoryService.createLocationHistory(equipmentUuid, dto, userId);
   }
@@ -80,7 +86,13 @@ export class EquipmentHistoryController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
   @RequirePermissions(Permission.DELETE_EQUIPMENT)
   @AuditLog({ action: 'delete', entityType: 'location_history', entityIdPath: 'params.historyId' })
-  async deleteLocationHistory(@Param('historyId', ParseUUIDPipe) historyId: string): Promise<void> {
+  async deleteLocationHistory(
+    @Param('historyId', ParseUUIDPipe) historyId: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<void> {
+    const info =
+      await this.equipmentHistoryService.getEquipmentSiteInfoByLocationHistoryId(historyId);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.equipmentHistoryService.deleteLocationHistory(historyId);
   }
 
@@ -96,8 +108,11 @@ export class EquipmentHistoryController {
     type: [MaintenanceHistoryResponseDto],
   })
   async getMaintenanceHistory(
-    @Param('uuid', ParseUUIDPipe) equipmentUuid: string
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest
   ): Promise<MaintenanceHistoryResponseDto[]> {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.equipmentHistoryService.getMaintenanceHistory(equipmentUuid);
   }
 
@@ -120,6 +135,8 @@ export class EquipmentHistoryController {
     @Body(CreateMaintenanceHistoryValidationPipe) dto: CreateMaintenanceHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<MaintenanceHistoryResponseDto> {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.equipmentHistoryService.createMaintenanceHistory(equipmentUuid, dto, userId);
   }
@@ -135,8 +152,12 @@ export class EquipmentHistoryController {
     entityIdPath: 'params.historyId',
   })
   async deleteMaintenanceHistory(
-    @Param('historyId', ParseUUIDPipe) historyId: string
+    @Param('historyId', ParseUUIDPipe) historyId: string,
+    @Request() req: AuthenticatedRequest
   ): Promise<void> {
+    const info =
+      await this.equipmentHistoryService.getEquipmentSiteInfoByMaintenanceHistoryId(historyId);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.equipmentHistoryService.deleteMaintenanceHistory(historyId);
   }
 
@@ -152,8 +173,11 @@ export class EquipmentHistoryController {
     type: [IncidentHistoryResponseDto],
   })
   async getIncidentHistory(
-    @Param('uuid', ParseUUIDPipe) equipmentUuid: string
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest
   ): Promise<IncidentHistoryResponseDto[]> {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.equipmentHistoryService.getIncidentHistory(equipmentUuid);
   }
 
@@ -176,6 +200,8 @@ export class EquipmentHistoryController {
     @Body(CreateIncidentHistoryValidationPipe) dto: CreateIncidentHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<IncidentHistoryResponseDto> {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.equipmentHistoryService.createIncidentHistory(equipmentUuid, dto, userId);
   }
@@ -186,7 +212,13 @@ export class EquipmentHistoryController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
   @RequirePermissions(Permission.DELETE_EQUIPMENT)
   @AuditLog({ action: 'delete', entityType: 'incident_history', entityIdPath: 'params.historyId' })
-  async deleteIncidentHistory(@Param('historyId', ParseUUIDPipe) historyId: string): Promise<void> {
+  async deleteIncidentHistory(
+    @Param('historyId', ParseUUIDPipe) historyId: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<void> {
+    const info =
+      await this.equipmentHistoryService.getEquipmentSiteInfoByIncidentHistoryId(historyId);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.equipmentHistoryService.deleteIncidentHistory(historyId);
   }
 }

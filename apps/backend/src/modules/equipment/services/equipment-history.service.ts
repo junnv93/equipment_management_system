@@ -37,6 +37,81 @@ export class EquipmentHistoryService {
   ) {}
 
   /**
+   * 장비 사이트 정보 조회 (enforceSiteAccess용 경량 조회)
+   */
+  async getEquipmentSiteInfo(
+    equipmentId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const item = await this.db.query.equipment.findFirst({
+      where: eq(equipment.id, equipmentId),
+      columns: { site: true, teamId: true },
+    });
+
+    if (!item) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentId})`,
+      });
+    }
+
+    return { site: item.site, teamId: item.teamId };
+  }
+
+  /**
+   * 이력 ID로 장비 사이트 정보 역추적 (삭제 등 historyId만 있는 엔드포인트용)
+   */
+  async getEquipmentSiteInfoByLocationHistoryId(
+    historyId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: equipment.site, teamId: equipment.teamId })
+      .from(equipmentLocationHistory)
+      .innerJoin(equipment, eq(equipmentLocationHistory.equipmentId, equipment.id))
+      .where(eq(equipmentLocationHistory.id, historyId))
+      .limit(1);
+    if (!result)
+      throw new NotFoundException({
+        code: 'HISTORY_NOT_FOUND',
+        message: `Location history ${historyId} not found.`,
+      });
+    return result;
+  }
+
+  async getEquipmentSiteInfoByMaintenanceHistoryId(
+    historyId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: equipment.site, teamId: equipment.teamId })
+      .from(equipmentMaintenanceHistory)
+      .innerJoin(equipment, eq(equipmentMaintenanceHistory.equipmentId, equipment.id))
+      .where(eq(equipmentMaintenanceHistory.id, historyId))
+      .limit(1);
+    if (!result)
+      throw new NotFoundException({
+        code: 'HISTORY_NOT_FOUND',
+        message: `Maintenance history ${historyId} not found.`,
+      });
+    return result;
+  }
+
+  async getEquipmentSiteInfoByIncidentHistoryId(
+    historyId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: equipment.site, teamId: equipment.teamId })
+      .from(equipmentIncidentHistory)
+      .innerJoin(equipment, eq(equipmentIncidentHistory.equipmentId, equipment.id))
+      .where(eq(equipmentIncidentHistory.id, historyId))
+      .limit(1);
+    if (!result)
+      throw new NotFoundException({
+        code: 'HISTORY_NOT_FOUND',
+        message: `Incident history ${historyId} not found.`,
+      });
+    return result;
+  }
+
+  /**
    * 사용자가 데이터베이스에 존재하는지 확인
    * 사용자가 존재하면 userId를 반환하고, 존재하지 않으면 null을 반환합니다.
    */

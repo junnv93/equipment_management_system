@@ -22,10 +22,11 @@ import {
   UpdateRepairHistoryValidationPipe,
 } from './dto/repair-history.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 
 @ApiTags('수리 이력')
 @ApiBearerAuth()
@@ -45,7 +46,8 @@ export class RepairHistoryController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async findByEquipment(
     @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
-    @Query() query: RepairHistoryQueryDto
+    @Query() query: RepairHistoryQueryDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<{
     items: RepairHistoryRecord[];
     meta: {
@@ -55,6 +57,8 @@ export class RepairHistoryController {
       totalPages: number;
     };
   }> {
+    const info = await this.repairHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.repairHistoryService.findByEquipment(equipmentUuid, query);
   }
 
@@ -76,6 +80,8 @@ export class RepairHistoryController {
     @Body() createDto: CreateRepairHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<RepairHistoryRecord> {
+    const info = await this.repairHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const createdBy = extractUserId(req);
     return this.repairHistoryService.create(equipmentUuid, createDto, createdBy);
   }
@@ -92,8 +98,11 @@ export class RepairHistoryController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async getRecent(
     @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
-    @Query('limit') limit: number = 5
+    @Query('limit') limit: number = 5,
+    @Request() req: AuthenticatedRequest
   ): Promise<RepairHistoryRecord[]> {
+    const info = await this.repairHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.repairHistoryService.getRecentRepairs(equipmentUuid, limit);
   }
 
@@ -108,7 +117,12 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<RepairHistoryRecord> {
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<RepairHistoryRecord> {
+    const info = await this.repairHistoryService.getEquipmentSiteInfoByRepairHistoryId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.repairHistoryService.findOne(uuid);
   }
 
@@ -128,8 +142,11 @@ export class RepairHistoryController {
   @UsePipes(UpdateRepairHistoryValidationPipe)
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateDto: UpdateRepairHistoryDto
+    @Body() updateDto: UpdateRepairHistoryDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<RepairHistoryRecord> {
+    const info = await this.repairHistoryService.getEquipmentSiteInfoByRepairHistoryId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.repairHistoryService.update(uuid, updateDto);
   }
 
@@ -149,6 +166,8 @@ export class RepairHistoryController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
   ): Promise<{ deleted: boolean; id: string }> {
+    const info = await this.repairHistoryService.getEquipmentSiteInfoByRepairHistoryId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const deletedBy = extractUserId(req);
     return this.repairHistoryService.remove(uuid, deletedBy);
   }
