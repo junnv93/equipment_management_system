@@ -5,6 +5,10 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 import { BACKEND_URL, EQUIP } from '../helpers/checkout-constants';
 import {
   getBackendToken,
@@ -40,7 +44,7 @@ test.describe('Suite 09: 반출 취소', () => {
       },
       data: {
         equipmentIds: [EQUIP.NETWORK_ANALYZER_SUW_E],
-        purpose: 'calibration',
+        purpose: CPVal.CALIBRATION,
         destination: '교정 기관',
         reason: 'E2E 취소 테스트',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',
@@ -50,7 +54,7 @@ test.describe('Suite 09: 반출 취소', () => {
     expect(createResponse.status()).toBe(201);
     const createData = await createResponse.json();
     pendingCheckoutId = createData.id;
-    expect(createData.status).toBe('pending');
+    expect(createData.status).toBe(CSVal.PENDING);
 
     // 취소 (technical_manager 권한 필요)
     const managerToken = await getBackendToken(page, 'technical_manager');
@@ -63,7 +67,7 @@ test.describe('Suite 09: 반출 취소', () => {
 
     expect(cancelResponse.ok()).toBeTruthy();
     const cancelData = await cancelResponse.json();
-    expect(cancelData.status).toBe('canceled');
+    expect(cancelData.status).toBe(CSVal.CANCELED);
   });
 
   test('S09-02: approved 이후 취소 불가 (API 400)', async ({ testOperatorPage: page }) => {
@@ -77,7 +81,7 @@ test.describe('Suite 09: 반출 취소', () => {
       },
       data: {
         equipmentIds: [EQUIP.NETWORK_ANALYZER_SUW_E],
-        purpose: 'repair',
+        purpose: CPVal.REPAIR,
         destination: '서비스센터',
         reason: 'E2E 취소 불가 테스트',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',

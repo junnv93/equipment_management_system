@@ -15,6 +15,10 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 import { BACKEND_URL, EQUIP, USERS } from '../helpers/checkout-constants';
 import {
   getBackendToken,
@@ -61,7 +65,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
       },
       data: {
         equipmentIds: [testEquipmentId],
-        purpose: 'calibration',
+        purpose: CPVal.CALIBRATION,
         destination: 'KRISS 한국표준과학연구원',
         reason: 'E2E 전체 라이프사이클 테스트 - 정기 교정',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',
@@ -71,8 +75,8 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
     expect(response.status()).toBe(201);
     const data = await response.json();
     checkoutId = data.id;
-    expect(data.status).toBe('pending');
-    expect(data.purpose).toBe('calibration');
+    expect(data.status).toBe(CSVal.PENDING);
+    expect(data.purpose).toBe(CPVal.CALIBRATION);
     expect(data.requesterId).toBeTruthy();
   });
 
@@ -95,7 +99,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('approved');
+    expect(data.status).toBe(CSVal.APPROVED);
     expect(data.approverId).toBe(USERS.TECHNICAL_MANAGER_SUWON);
     expect(data.approvedAt).toBeTruthy();
   });
@@ -125,7 +129,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('checked_out');
+    expect(data.status).toBe(CSVal.CHECKED_OUT);
     expect(data.checkoutDate).toBeTruthy();
 
     // ★ 장비 상태 검증: checked_out
@@ -155,7 +159,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
     );
     expect(beforeReturnResponse.ok()).toBeTruthy();
     const beforeReturn = await beforeReturnResponse.json();
-    expect(beforeReturn.status).toBe('checked_out'); // ← 여기서 실패하면 Step 3 문제
+    expect(beforeReturn.status).toBe(CSVal.CHECKED_OUT); // ← 여기서 실패하면 Step 3 문제
 
     const response = await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/return`, {
       headers: {
@@ -171,7 +175,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('returned');
+    expect(data.status).toBe(CSVal.RETURNED);
     expect(data.calibrationChecked).toBe(true);
     expect(data.workingStatusChecked).toBe(true);
     expect(data.actualReturnDate).toBeTruthy();
@@ -206,7 +210,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
     expect(beforeApproveResponse.ok()).toBeTruthy();
     const beforeApprove = await beforeApproveResponse.json();
     console.log('Step 5 pre-check - checkout status:', beforeApprove.status);
-    expect(beforeApprove.status).toBe('returned'); // ← 여기서 실패하면 Step 4 문제
+    expect(beforeApprove.status).toBe(CSVal.RETURNED); // ← 여기서 실패하면 Step 4 문제
 
     const response = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${checkoutId}/approve-return`,
@@ -225,7 +229,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
     }
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('return_approved');
+    expect(data.status).toBe(CSVal.RETURN_APPROVED);
     expect(data.returnApprovedBy).toBeTruthy();
     expect(data.returnApprovedAt).toBeTruthy();
 

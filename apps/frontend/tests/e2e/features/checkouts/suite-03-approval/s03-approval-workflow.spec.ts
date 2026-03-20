@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 import { SUITE_03, BACKEND_URL, USERS } from '../helpers/checkout-constants';
 import {
   resetCheckoutToPending,
@@ -54,13 +55,13 @@ test.describe('Suite 03: 반출 승인 워크플로우', () => {
 
     // PATCH 응답 body 직접 검증 (mutation 결과 - 캐싱 영향 없음)
     const responseBody = await approveResponse.json();
-    expect(responseBody.status).toBe('approved');
+    expect(responseBody.status).toBe(CSVal.APPROVED);
     expect(responseBody.approverId).toBe(USERS.TECHNICAL_MANAGER_SUWON);
 
     // 백엔드 캐시 클리어 후 GET 검증
     await clearBackendCache();
     const data = await apiGet(page, `/api/checkouts/${SUITE_03.CALIBRATION}`);
-    expect(data.status).toBe('approved');
+    expect(data.status).toBe(CSVal.APPROVED);
     expect(data.approverId).toBeTruthy();
     expect(data.approvedAt).toBeTruthy();
   });
@@ -78,7 +79,7 @@ test.describe('Suite 03: 반출 승인 워크플로우', () => {
     expect(approveResponse.ok()).toBeTruthy();
 
     const responseBody = await approveResponse.json();
-    expect(responseBody.status).toBe('approved');
+    expect(responseBody.status).toBe(CSVal.APPROVED);
   });
 
   test('S03-03: 대여 승인', async ({ techManagerPage: page }) => {
@@ -96,7 +97,7 @@ test.describe('Suite 03: 반출 승인 워크플로우', () => {
       expect(approveResponse.ok()).toBeTruthy();
 
       const responseBody = await approveResponse.json();
-      expect(responseBody.status).toBe('approved');
+      expect(responseBody.status).toBe(CSVal.APPROVED);
     }
   });
 
@@ -120,7 +121,7 @@ test.describe('Suite 03: 반출 승인 워크플로우', () => {
     await navigateToCheckoutDetail(page, SUITE_03.PERSISTENCE);
 
     const data = await apiGet(page, `/api/checkouts/${SUITE_03.PERSISTENCE}`);
-    expect(data.status).toBe('approved');
+    expect(data.status).toBe(CSVal.APPROVED);
     expect(data.approvedAt).toBeTruthy();
 
     // UI: 승인 버튼이 더 이상 보이지 않아야 함

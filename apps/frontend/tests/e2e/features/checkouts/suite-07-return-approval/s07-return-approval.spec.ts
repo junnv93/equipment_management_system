@@ -10,6 +10,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 import { SUITE_07, BACKEND_URL } from '../helpers/checkout-constants';
 import {
   resetCheckoutToReturned,
@@ -38,7 +39,7 @@ test.describe('Suite 07: 반입 승인', () => {
   }) => {
     await clearBackendCache();
     const beforeData = await apiGet(page, `/api/checkouts/${SUITE_07.CALIBRATION}`);
-    expect(beforeData.status).toBe('returned');
+    expect(beforeData.status).toBe(CSVal.RETURNED);
 
     // UI: 반입 승인
     await navigateToCheckoutDetail(page, SUITE_07.CALIBRATION);
@@ -57,7 +58,7 @@ test.describe('Suite 07: 반입 승인', () => {
 
     // PATCH 응답 body 직접 검증
     const responseBody = await approveResponse.json();
-    expect(responseBody.status).toBe('return_approved');
+    expect(responseBody.status).toBe(CSVal.RETURN_APPROVED);
     expect(responseBody.returnApprovedBy).toBeTruthy();
     expect(responseBody.returnApprovedAt).toBeTruthy();
   });
@@ -104,7 +105,7 @@ test.describe('Suite 07: 반입 승인', () => {
       expect(approveResponse.ok()).toBeTruthy();
 
       const responseBody = await approveResponse.json();
-      expect(responseBody.status).toBe('return_approved');
+      expect(responseBody.status).toBe(CSVal.RETURN_APPROVED);
     }
   });
 });

@@ -8,6 +8,10 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BACKEND_URL, EQUIP } from '../helpers/checkout-constants';
 import { getBackendToken } from '../helpers/checkout-helpers';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 
 const createdCheckoutIds: string[] = [];
 
@@ -39,7 +43,7 @@ test.describe('Suite 02: 반출 생성 성공', () => {
       },
       data: {
         equipmentIds: [EQUIP.SIGNAL_GEN_SUW_E],
-        purpose: 'calibration',
+        purpose: CPVal.CALIBRATION,
         destination: '한국교정시험연구원',
         reason: 'E2E 테스트 - 교정 반출',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',
@@ -48,8 +52,8 @@ test.describe('Suite 02: 반출 생성 성공', () => {
 
     expect(response.status()).toBe(201);
     const data = await response.json();
-    expect(data.status).toBe('pending');
-    expect(data.purpose).toBe('calibration');
+    expect(data.status).toBe(CSVal.PENDING);
+    expect(data.purpose).toBe(CPVal.CALIBRATION);
     expect(data.id).toBeTruthy();
     createdCheckoutIds.push(data.id);
   });
@@ -64,7 +68,7 @@ test.describe('Suite 02: 반출 생성 성공', () => {
       },
       data: {
         equipmentIds: [EQUIP.NETWORK_ANALYZER_SUW_E],
-        purpose: 'repair',
+        purpose: CPVal.REPAIR,
         destination: '키사이트 서비스센터',
         reason: 'E2E 테스트 - 수리 반출',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',
@@ -73,8 +77,8 @@ test.describe('Suite 02: 반출 생성 성공', () => {
 
     expect(response.status()).toBe(201);
     const data = await response.json();
-    expect(data.status).toBe('pending');
-    expect(data.purpose).toBe('repair');
+    expect(data.status).toBe(CSVal.PENDING);
+    expect(data.purpose).toBe(CPVal.REPAIR);
     createdCheckoutIds.push(data.id);
   });
 
@@ -90,7 +94,7 @@ test.describe('Suite 02: 반출 생성 성공', () => {
       },
       data: {
         equipmentIds: [EQUIP.SAR_PROBE_SUW_S], // S팀 장비 (다른 팀이므로 대여 가능)
-        purpose: 'rental',
+        purpose: CPVal.RENTAL,
         destination: '수원 FCC EMC/RF 시험소',
         reason: 'E2E 테스트 - 대여 반출',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',
@@ -100,8 +104,8 @@ test.describe('Suite 02: 반출 생성 성공', () => {
     // 대여 생성이 성공하거나 설정에 따라 400/403 가능
     if (response.status() === 201) {
       const data = await response.json();
-      expect(data.status).toBe('pending');
-      expect(data.purpose).toBe('rental');
+      expect(data.status).toBe(CSVal.PENDING);
+      expect(data.purpose).toBe(CPVal.RENTAL);
       createdCheckoutIds.push(data.id);
     } else {
       // 팀/사이트 설정에 따라 차단될 수 있음 (정상 동작)

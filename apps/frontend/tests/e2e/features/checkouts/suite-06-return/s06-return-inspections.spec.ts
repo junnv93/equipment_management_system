@@ -9,6 +9,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 import { SUITE_06, BACKEND_URL } from '../helpers/checkout-constants';
 import {
   resetCheckoutToCheckedOut,
@@ -68,7 +69,7 @@ test.describe('Suite 06: 반입 처리', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('returned');
+    expect(data.status).toBe(CSVal.RETURNED);
     expect(data.calibrationChecked).toBe(true);
     expect(data.workingStatusChecked).toBe(true);
     expect(data.actualReturnDate).toBeTruthy();
@@ -104,7 +105,7 @@ test.describe('Suite 06: 반입 처리', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('returned');
+    expect(data.status).toBe(CSVal.RETURNED);
     expect(data.repairChecked).toBe(true);
     expect(data.workingStatusChecked).toBe(true);
   });
@@ -132,7 +133,7 @@ test.describe('Suite 06: 반입 처리', () => {
     // 상태 변경 안됨 확인 (캐시 클리어 후)
     await clearBackendCache();
     const checkData = await apiGet(page, `/api/checkouts/${SUITE_06.MISSING_CHECK}`);
-    expect(checkData.status).toBe('checked_out');
+    expect(checkData.status).toBe(CSVal.CHECKED_OUT);
   });
 
   test('S06-04: rejected 상태 반입 차단 (API 400)', async ({ techManagerPage: page }) => {

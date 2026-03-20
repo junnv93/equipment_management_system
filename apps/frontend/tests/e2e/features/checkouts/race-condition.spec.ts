@@ -17,6 +17,10 @@ import { test as base, expect } from '@playwright/test';
 import { test as authTest } from '../../shared/fixtures/auth.fixture';
 import { TEST_EQUIPMENT_IDS, BASE_URLS } from '../../shared/constants/shared-test-data';
 import { getBackendToken, apiPost, apiPatch, apiGet } from './helpers/checkout-helpers';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 
 // Backend API URL
 const BACKEND_URL = BASE_URLS.BACKEND;
@@ -47,7 +51,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
           equipmentIds: [TEST_EQUIPMENT_IDS.EQUIPMENT_1],
           destination: 'Race Condition Test Lab',
           phoneNumber: '010-1234-5678',
-          purpose: 'calibration',
+          purpose: CPVal.CALIBRATION,
           reason: 'Testing concurrent operations',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
@@ -115,7 +119,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
       });
       const finalCheckout = await finalResponse.json();
 
-      expect(['approved', 'rejected']).toContain(finalCheckout.status);
+      expect([CSVal.APPROVED, CSVal.REJECTED]).toContain(finalCheckout.status);
       expect(finalCheckout.version).toBe(initialVersion + 1);
 
       console.log(`Final state: status=${finalCheckout.status}, version=${finalCheckout.version}`);
@@ -134,7 +138,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
           equipmentIds: [TEST_EQUIPMENT_IDS.EQUIPMENT_2],
           destination: 'Double Approval Test',
           phoneNumber: '010-5678-1234',
-          purpose: 'repair',
+          purpose: CPVal.REPAIR,
           reason: 'Testing double approval prevention',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
@@ -171,7 +175,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
       });
       const finalCheckout = await finalResponse.json();
 
-      expect(finalCheckout.status).toBe('approved');
+      expect(finalCheckout.status).toBe(CSVal.APPROVED);
       expect(finalCheckout.version).toBe(initialVersion + 1);
     }
   );
@@ -188,7 +192,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
           equipmentIds: [TEST_EQUIPMENT_IDS.EQUIPMENT_3],
           destination: 'Sequential Operations Test',
           phoneNumber: '010-9999-8888',
-          purpose: 'calibration',
+          purpose: CPVal.CALIBRATION,
           reason: 'Testing sequential version updates',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
@@ -209,7 +213,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
       expect(approveResponse.ok()).toBeTruthy();
 
       const approved = await approveResponse.json();
-      expect(approved.status).toBe('approved');
+      expect(approved.status).toBe(CSVal.APPROVED);
       expect(approved.version).toBe(currentVersion + 1);
       currentVersion = approved.version;
 
@@ -224,7 +228,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
       expect(startResponse.ok()).toBeTruthy();
 
       const started = await startResponse.json();
-      expect(started.status).toBe('checked_out');
+      expect(started.status).toBe(CSVal.CHECKED_OUT);
       expect(started.version).toBe(currentVersion + 1);
       currentVersion = started.version;
 
@@ -245,7 +249,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
       expect(returnResponse.ok()).toBeTruthy();
 
       const returned = await returnResponse.json();
-      expect(returned.status).toBe('returned');
+      expect(returned.status).toBe(CSVal.RETURNED);
       expect(returned.version).toBe(currentVersion + 1);
       currentVersion = returned.version;
 
@@ -260,7 +264,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
       expect(approveReturnResponse.ok()).toBeTruthy();
 
       const completed = await approveReturnResponse.json();
-      expect(completed.status).toBe('return_approved');
+      expect(completed.status).toBe(CSVal.RETURN_APPROVED);
       expect(completed.version).toBe(currentVersion + 1);
 
       console.log(`Sequential flow completed successfully. Final version: ${completed.version}`);
@@ -278,7 +282,7 @@ authTest.describe('Checkout Race Condition Prevention', () => {
         equipmentIds: [TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E], // Same team
         destination: 'Stale Version Test',
         phoneNumber: '010-7777-6666',
-        purpose: 'repair',
+        purpose: CPVal.REPAIR,
         reason: 'Testing stale version rejection',
         expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
@@ -339,7 +343,7 @@ authTest.describe('Checkout UI Auto-Retry', () => {
           equipmentIds: [TEST_EQUIPMENT_IDS.EQUIPMENT_5],
           destination: 'UI Auto-Retry Test',
           phoneNumber: '010-5555-4444',
-          purpose: 'calibration',
+          purpose: CPVal.CALIBRATION,
           reason: 'Testing UI auto-retry',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
@@ -406,7 +410,7 @@ authTest.describe('Checkout UI Auto-Retry', () => {
           equipmentIds: [TEST_EQUIPMENT_IDS.EQUIPMENT_6],
           destination: 'Error Display Test',
           phoneNumber: '010-3333-2222',
-          purpose: 'repair',
+          purpose: CPVal.REPAIR,
           reason: 'Testing error display',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
@@ -457,7 +461,7 @@ authTest.describe('Checkout Version Propagation', () => {
         equipmentIds: [TEST_EQUIPMENT_IDS.EQUIPMENT_7],
         destination: 'Version Increment Test',
         phoneNumber: '010-1111-2222',
-        purpose: 'calibration',
+        purpose: CPVal.CALIBRATION,
         reason: 'Testing version increments',
         expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },

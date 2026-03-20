@@ -5,6 +5,10 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 import { BACKEND_URL, SUITE_03, USERS } from '../helpers/checkout-constants';
 import { getBackendToken, apiGet } from '../helpers/checkout-helpers';
 
@@ -93,7 +97,7 @@ test.describe('Suite 11: 역할 기반 권한 검증', () => {
       },
       data: {
         equipmentIds: ['eeee3001-0001-4001-8001-000000000001'], // SAR_PROBE_SUW_S
-        purpose: 'calibration',
+        purpose: CPVal.CALIBRATION,
         destination: '교정기관',
         reason: 'E2E lab_manager 자가 승인 테스트',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',
@@ -119,7 +123,7 @@ test.describe('Suite 11: 역할 기반 권한 검증', () => {
 
       expect(approveResponse.ok()).toBeTruthy();
       const approveData = await approveResponse.json();
-      expect(approveData.status).toBe('approved');
+      expect(approveData.status).toBe(CSVal.APPROVED);
       // lab_manager의 userId가 approverId
       expect(approveData.approverId).toBe(USERS.LAB_MANAGER_SUWON);
 

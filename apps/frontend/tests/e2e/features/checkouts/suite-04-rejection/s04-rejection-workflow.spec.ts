@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 import { SUITE_04, BACKEND_URL } from '../helpers/checkout-constants';
 import {
   resetCheckoutToPending,
@@ -60,13 +61,13 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
 
     // PATCH 응답 body 직접 검증
     const responseBody = await rejectResponse.json();
-    expect(responseBody.status).toBe('rejected');
+    expect(responseBody.status).toBe(CSVal.REJECTED);
     expect(responseBody.rejectionReason).toBe(rejectionReason);
 
     // 캐시 클리어 후 GET 검증
     await clearBackendCache();
     const data = await apiGet(page, `/api/checkouts/${SUITE_04.CALIBRATION}`);
-    expect(data.status).toBe('rejected');
+    expect(data.status).toBe(CSVal.REJECTED);
     expect(data.rejectionReason).toBe(rejectionReason);
   });
 
@@ -89,7 +90,7 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
     expect(rejectResponse.ok()).toBeTruthy();
 
     const responseBody = await rejectResponse.json();
-    expect(responseBody.status).toBe('rejected');
+    expect(responseBody.status).toBe(CSVal.REJECTED);
   });
 
   test('S04-03: 반려 사유 필수 (빈 사유 → API 400)', async ({ techManagerPage: page }) => {
@@ -119,7 +120,7 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
     // 상태 변경 안됨 확인
     await clearBackendCache();
     const data = await apiGet(page, `/api/checkouts/${SUITE_04.EMPTY_REASON}`);
-    expect(data.status).toBe('pending');
+    expect(data.status).toBe(CSVal.PENDING);
   });
 
   test('S04-04: 대여 반려 (워크플로우 종료 확인)', async ({ techManagerPage: page }) => {
@@ -143,7 +144,7 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
       expect(rejectResponse.ok()).toBeTruthy();
 
       const responseBody = await rejectResponse.json();
-      expect(responseBody.status).toBe('rejected');
+      expect(responseBody.status).toBe(CSVal.REJECTED);
     }
   });
 

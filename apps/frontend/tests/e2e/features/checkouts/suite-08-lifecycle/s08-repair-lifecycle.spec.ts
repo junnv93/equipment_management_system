@@ -7,6 +7,10 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 import { BACKEND_URL, EQUIP, USERS } from '../helpers/checkout-constants';
 import {
   getBackendToken,
@@ -41,7 +45,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
       },
       data: {
         equipmentIds: [testEquipmentId],
-        purpose: 'repair',
+        purpose: CPVal.REPAIR,
         destination: '키사이트 서비스센터',
         reason: 'E2E 수리 라이프사이클 테스트',
         expectedReturnDate: '2026-12-31T00:00:00.000Z',
@@ -51,8 +55,8 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
     expect(response.status()).toBe(201);
     const data = await response.json();
     checkoutId = data.id;
-    expect(data.status).toBe('pending');
-    expect(data.purpose).toBe('repair');
+    expect(data.status).toBe(CSVal.PENDING);
+    expect(data.purpose).toBe(CPVal.REPAIR);
   });
 
   test('S08-R02: 수리 반출 승인 → approved', async ({ techManagerPage: page }) => {
@@ -74,7 +78,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('approved');
+    expect(data.status).toBe(CSVal.APPROVED);
   });
 
   test('S08-R03: 수리 반출 시작 → checked_out + equipment=checked_out', async ({
@@ -102,7 +106,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('checked_out');
+    expect(data.status).toBe(CSVal.CHECKED_OUT);
 
     await clearBackendCache();
     const equipResponse = await page.request.get(
@@ -162,7 +166,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('returned');
+    expect(data.status).toBe(CSVal.RETURNED);
     expect(data.repairChecked).toBe(true);
   });
 
@@ -193,7 +197,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
 
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
-    expect(data.status).toBe('return_approved');
+    expect(data.status).toBe(CSVal.RETURN_APPROVED);
 
     await clearBackendCache();
     const equipResponse = await page.request.get(

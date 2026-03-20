@@ -8,6 +8,10 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BACKEND_URL } from '../helpers/checkout-constants';
 import { navigateToCheckoutList, getBackendToken } from '../helpers/checkout-helpers';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 
 test.describe('Suite 01: 반출 목록 조회', () => {
   test('S01-01: 목록 페이지 로드 + API totalItems > 0', async ({ techManagerPage: page }) => {
@@ -37,7 +41,7 @@ test.describe('Suite 01: 반출 목록 조회', () => {
 
     // 모든 결과가 pending 상태
     for (const item of data.items) {
-      expect(item.status).toBe('pending');
+      expect(item.status).toBe(CSVal.PENDING);
     }
   });
 
@@ -51,7 +55,7 @@ test.describe('Suite 01: 반출 목록 조회', () => {
     const data = await response.json();
 
     for (const item of data.items) {
-      expect(item.purpose).toBe('calibration');
+      expect(item.purpose).toBe(CPVal.CALIBRATION);
     }
   });
 

@@ -7,6 +7,7 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { SUITE_01 } from '../helpers/checkout-constants';
 import { navigateToCheckoutDetail, apiGet } from '../helpers/checkout-helpers';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 
 test.describe('Suite 01: 반출 상세 조회', () => {
   test('S01-05: return_approved 상세 (action 버튼 없음)', async ({ techManagerPage: page }) => {
@@ -14,7 +15,7 @@ test.describe('Suite 01: 반출 상세 조회', () => {
 
     // API 검증: return_approved 상태
     const data = await apiGet(page, `/api/checkouts/${SUITE_01.RETURN_APPROVED}`);
-    expect(data.status).toBe('return_approved');
+    expect(data.status).toBe(CSVal.RETURN_APPROVED);
     expect(data.returnApprovedBy).not.toBeNull();
     expect(data.returnApprovedAt).not.toBeNull();
 
@@ -28,7 +29,7 @@ test.describe('Suite 01: 반출 상세 조회', () => {
 
     // API 검증: rejected 상태 + rejectionReason 존재
     const data = await apiGet(page, `/api/checkouts/${SUITE_01.REJECTED}`);
-    expect(data.status).toBe('rejected');
+    expect(data.status).toBe(CSVal.REJECTED);
     expect(data.rejectionReason).toBeTruthy();
 
     // UI: 거절 사유가 화면에 표시
@@ -42,7 +43,7 @@ test.describe('Suite 01: 반출 상세 조회', () => {
     // API 검증
     const data = await apiGet(page, `/api/checkouts/${SUITE_01.OVERDUE}`);
     // overdue 또는 checked_out 상태
-    expect(['overdue', 'checked_out']).toContain(data.status);
+    expect([CSVal.OVERDUE, CSVal.CHECKED_OUT]).toContain(data.status);
   });
 
   test('S01-08: canceled 상세 (취소 표시)', async ({ techManagerPage: page }) => {
@@ -50,7 +51,7 @@ test.describe('Suite 01: 반출 상세 조회', () => {
 
     // API 검증: canceled 상태
     const data = await apiGet(page, `/api/checkouts/${SUITE_01.CANCELED}`);
-    expect(data.status).toBe('canceled');
+    expect(data.status).toBe(CSVal.CANCELED);
 
     // UI: action 버튼 없음
     await expect(page.getByRole('button', { name: '승인' })).not.toBeVisible();

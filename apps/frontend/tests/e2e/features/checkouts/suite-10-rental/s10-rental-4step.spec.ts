@@ -15,6 +15,10 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 import { SUITE_10, BACKEND_URL } from '../helpers/checkout-constants';
 import {
   resetCheckoutToApproved,
@@ -75,8 +79,8 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     // 현재 상태 확인
     await clearBackendCache();
     const before = await apiGet(page, `/api/checkouts/${SUITE_10.STEP1_LENDER}`);
-    expect(before.status).toBe('approved');
-    expect(before.purpose).toBe('rental');
+    expect(before.status).toBe(CSVal.APPROVED);
+    expect(before.purpose).toBe(CPVal.RENTAL);
 
     // condition-check API 호출 (CAS: version 필드 필수)
     const response = await page.request.post(
@@ -102,7 +106,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     // 반출 상태 전이 확인 (캐시 클리어 후)
     await clearBackendCache();
     const after = await apiGet(page, `/api/checkouts/${SUITE_10.STEP1_LENDER}`);
-    expect(after.status).toBe('lender_checked');
+    expect(after.status).toBe(CSVal.LENDER_CHECKED);
     expect(after.checkoutDate).toBeTruthy(); // ① 단계에서 checkoutDate 설정
   });
 
@@ -113,7 +117,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
 
     await clearBackendCache();
     const before = await apiGet(page, `/api/checkouts/${SUITE_10.STEP2_BORROWER}`);
-    expect(before.status).toBe('lender_checked');
+    expect(before.status).toBe(CSVal.LENDER_CHECKED);
 
     const response = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${SUITE_10.STEP2_BORROWER}/condition-check`,
@@ -136,7 +140,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
 
     await clearBackendCache();
     const after = await apiGet(page, `/api/checkouts/${SUITE_10.STEP2_BORROWER}`);
-    expect(after.status).toBe('borrower_received');
+    expect(after.status).toBe(CSVal.BORROWER_RECEIVED);
   });
 
   test('S10-03: borrower_received → borrower_returned (step: borrower_return)', async ({
@@ -146,7 +150,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
 
     await clearBackendCache();
     const before = await apiGet(page, `/api/checkouts/${SUITE_10.STEP3_RETURN}`);
-    expect(before.status).toBe('borrower_received');
+    expect(before.status).toBe(CSVal.BORROWER_RECEIVED);
 
     const response = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${SUITE_10.STEP3_RETURN}/condition-check`,
@@ -169,7 +173,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
 
     await clearBackendCache();
     const after = await apiGet(page, `/api/checkouts/${SUITE_10.STEP3_RETURN}`);
-    expect(after.status).toBe('borrower_returned');
+    expect(after.status).toBe(CSVal.BORROWER_RETURNED);
   });
 
   test('S10-04: borrower_returned → lender_received (step: lender_return) + 장비→available', async ({
@@ -179,7 +183,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
 
     await clearBackendCache();
     const before = await apiGet(page, `/api/checkouts/${SUITE_10.STEP4_FINAL}`);
-    expect(before.status).toBe('borrower_returned');
+    expect(before.status).toBe(CSVal.BORROWER_RETURNED);
 
     const response = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${SUITE_10.STEP4_FINAL}/condition-check`,
@@ -204,7 +208,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     // 상태 전이 확인
     await clearBackendCache();
     const after = await apiGet(page, `/api/checkouts/${SUITE_10.STEP4_FINAL}`);
-    expect(after.status).toBe('lender_received');
+    expect(after.status).toBe(CSVal.LENDER_RECEIVED);
     expect(after.actualReturnDate).toBeTruthy(); // ④ 단계에서 actualReturnDate 설정
   });
 
@@ -234,7 +238,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     // 상태 변경 없음 확인
     await clearBackendCache();
     const data = await apiGet(page, `/api/checkouts/${SUITE_10.ORDER_VIOLATION}`);
-    expect(data.status).toBe('approved');
+    expect(data.status).toBe(CSVal.APPROVED);
   });
 
   test('S10-06: condition-check 이력 조회 (GET /condition-checks)', async ({
