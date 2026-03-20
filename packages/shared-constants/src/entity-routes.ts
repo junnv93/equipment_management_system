@@ -31,6 +31,7 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   maintenance_history: (id) => `/equipment/${id}?tab=maintenance`,
   incident_history: (id) => `/equipment/${id}?tab=incident`,
   settings: (id) => `/settings/${id}`,
+  notification: (id) => `/notifications?selected=${id}`,
 };
 
 /**

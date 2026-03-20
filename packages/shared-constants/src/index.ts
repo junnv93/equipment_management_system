@@ -111,6 +111,7 @@ export {
   MAX_PAGE_SIZE,
   PAGE_SIZE_OPTIONS,
   DASHBOARD_ITEM_LIMIT,
+  DASHBOARD_ACTIVITIES_LIMIT,
   SELECTOR_PAGE_SIZE,
   type PageSizeOption,
 } from './pagination';
@@ -120,6 +121,30 @@ export { VALIDATION_RULES } from './validation-rules';
 
 // 승인 KPI 상수 (긴급 임계값 등)
 export { APPROVAL_KPI } from './approval-kpi';
+
+// 승인 카테고리 (역할별 매핑 — Backend/Frontend SSOT)
+export {
+  type ApprovalCategory,
+  APPROVAL_CATEGORY_VALUES,
+  ROLE_APPROVAL_CATEGORIES,
+  hasApprovalCategory,
+} from './approval-categories';
+
+// 비즈니스 규칙 상수 (리포트, 모니터링, 알림 등)
+export {
+  REPORT_CONSTANTS,
+  MONITORING_THRESHOLDS,
+  NOTIFICATION_RETENTION_DAYS,
+  BATCH_QUERY_LIMITS,
+  UTILIZATION_THRESHOLDS,
+  REPORT_UTILIZATION_THRESHOLDS,
+} from './business-rules';
+
+// 보안 상수 (로그인 제한, 잠금 정책)
+export { SECURITY } from './security';
+
+// 알림 설정 (TTL 등)
+export { NOTIFICATION_CONFIG } from './notification-config';
 
 // 공용장비 소유처 옵션
 export {

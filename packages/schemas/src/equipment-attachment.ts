@@ -2,15 +2,15 @@ import { z } from 'zod';
 import { SoftDeleteEntity } from './common/base';
 
 // 첨부 파일 타입 enum
-export const AttachmentTypeEnum = z.enum(['inspection_report', 'history_card', 'other']);
+export const ATTACHMENT_TYPE_ENUM_VALUES = ['inspection_report', 'history_card', 'other'] as const;
+export const AttachmentTypeEnum = z.enum(ATTACHMENT_TYPE_ENUM_VALUES);
 export type AttachmentType = z.infer<typeof AttachmentTypeEnum>;
 
-// 장비 첨부 파일 스키마
+// 장비 첨부 파일 스키마 (✅ UUID 통일: DB schema와 일치)
 export const equipmentAttachmentSchema = z.object({
-  id: z.number().int().positive(),
-  uuid: z.string().uuid(),
-  equipmentId: z.number().int().positive().nullable().optional(),
-  requestId: z.number().int().positive().nullable().optional(),
+  id: z.string().uuid(),
+  equipmentId: z.string().uuid().nullable().optional(),
+  requestId: z.string().uuid().nullable().optional(),
   attachmentType: AttachmentTypeEnum,
   fileName: z.string().max(255),
   originalFileName: z.string().max(255),
@@ -25,8 +25,8 @@ export const equipmentAttachmentSchema = z.object({
 
 // 장비 첨부 파일 생성 스키마
 export const createEquipmentAttachmentSchema = z.object({
-  equipmentId: z.number().int().positive().optional(),
-  requestId: z.number().int().positive().optional(),
+  equipmentId: z.string().uuid().optional(),
+  requestId: z.string().uuid().optional(),
   attachmentType: AttachmentTypeEnum,
   fileName: z.string().max(255),
   originalFileName: z.string().max(255),

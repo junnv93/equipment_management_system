@@ -274,6 +274,20 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/api/notifications/${id}`,
     SETTINGS: '/api/notifications/settings',
     STREAM: '/api/notifications/stream',
+    ADMIN: '/api/notifications/admin',
+    TRIGGER_OVERDUE_CHECK: '/api/notifications/trigger-overdue-check',
+    TRIGGER_CHECKOUT_OVERDUE_CHECK: '/api/notifications/trigger-checkout-overdue-check',
+  },
+
+  // ============================================================================
+  // 모니터링
+  // ============================================================================
+  MONITORING: {
+    HEALTH: '/api/monitoring/health',
+    METRICS: '/api/monitoring/metrics',
+    DIAGNOSTICS: '/api/monitoring/diagnostics',
+    STATUS: '/api/monitoring/status',
+    HTTP_STATS: '/api/monitoring/http-stats',
   },
 
   // ============================================================================

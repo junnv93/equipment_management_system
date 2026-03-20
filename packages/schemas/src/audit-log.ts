@@ -110,6 +110,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   maintenance_history: '유지보수 이력',
   incident_history: '사고 이력',
   settings: '설정',
+  notification: '알림',
 };
 
 // ============================================================================

@@ -675,6 +675,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'maintenance_history', // 유지보수 이력
   'incident_history', // 사고 이력
   'settings', // 설정
+  'notification', // 알림
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);
@@ -1782,6 +1783,15 @@ export const EQUIPMENT_IMPORT_SOURCE_LABELS: Record<EquipmentImportSource, strin
 };
 
 /**
+ * 장비 반입 출처 값 객체 (dot-notation 접근용)
+ * @example EquipmentImportSourceValues.RENTAL // 'rental'
+ */
+export const EquipmentImportSourceValues = {
+  RENTAL: 'rental',
+  INTERNAL_SHARED: 'internal_shared',
+} as const;
+
+/**
  * SINGLE SOURCE OF TRUTH: 장비 반입 상태 열거형
  *
  * 통합 반입 워크플로우 상태 (렌탈 + 내부 공용):
@@ -1890,6 +1900,67 @@ export const ATTACHMENT_TYPE_LABELS: Record<_AttachmentType, string> = {
   history_card: '이력카드',
   other: '기타',
 };
+
+// ============================================================================
+// 중간점검 필터 상태 (Backend calibration.service 쿼리용)
+// ============================================================================
+
+export const INTERMEDIATE_CHECK_FILTER_STATUS_VALUES = ['overdue', 'due', 'pending'] as const;
+
+export type IntermediateCheckFilterStatus =
+  (typeof INTERMEDIATE_CHECK_FILTER_STATUS_VALUES)[number];
+
+export const IntermediateCheckFilterStatusValues = {
+  OVERDUE: 'overdue',
+  DUE: 'due',
+  PENDING: 'pending',
+} as const satisfies Record<string, IntermediateCheckFilterStatus>;
+
+// ============================================================================
+// 승인 카테고리 (Approval Category)
+// ============================================================================
+
+export const APPROVAL_CATEGORY_VALUES = [
+  'outgoing',
+  'incoming',
+  'equipment',
+  'calibration',
+  'inspection',
+  'nonconformity',
+  'disposal_review',
+  'disposal_final',
+  'plan_review',
+  'plan_final',
+  'software',
+] as const;
+
+export type ApprovalCategory = (typeof APPROVAL_CATEGORY_VALUES)[number];
+
+export const ApprovalCategoryValues = {
+  OUTGOING: 'outgoing',
+  INCOMING: 'incoming',
+  EQUIPMENT: 'equipment',
+  CALIBRATION: 'calibration',
+  INSPECTION: 'inspection',
+  NONCONFORMITY: 'nonconformity',
+  DISPOSAL_REVIEW: 'disposal_review',
+  DISPOSAL_FINAL: 'disposal_final',
+  PLAN_REVIEW: 'plan_review',
+  PLAN_FINAL: 'plan_final',
+  SOFTWARE: 'software',
+} as const satisfies Record<string, ApprovalCategory>;
+
+// ============================================================================
+// 사고이력/수리이력에서 수리 필요 표시가 필요한 부적합 유형
+// ============================================================================
+
+/** REPAIR_REQUIRING_NC_TYPES(2개)의 확장 — 사고이력/수리이력 탭에서 "수리 필요" 아이콘 표시 대상 */
+export const INCIDENT_REPAIR_NC_TYPES: readonly NonConformanceType[] = [
+  'damage',
+  'malfunction',
+  'calibration_failure',
+  'measurement_error',
+] as const;
 
 // ============================================================================
 // DEPRECATED: Legacy rental import types (backward compatibility)

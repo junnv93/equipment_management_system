@@ -29,10 +29,6 @@ export * from './field-labels';
 
 export * from './enums';
 
-// Enums 네임스페이스 (선택적 사용을 위해)
-import * as Enums from './enums';
-export { Enums };
-
 // ============================================================
 // Error Handling
 // ============================================================

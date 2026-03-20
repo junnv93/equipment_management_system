@@ -13,6 +13,15 @@
  * - reject: 반려
  */
 
+/**
+ * Permission enum — TypeScript enum 사용 (Zod enum이 아닌 이유)
+ *
+ * 1. Permission은 순수 백엔드 인가 로직용 (Zod 검증 불필요)
+ * 2. enum은 역방향 매핑 지원 (Permission[value] → key name)
+ * 3. NestJS @RequirePermissions() 데코레이터와 호환성
+ *
+ * ⚠️ 다른 도메인 enum은 Zod enum 패턴 사용 (packages/schemas/src/enums.ts)
+ */
 export enum Permission {
   // ============================================================================
   // 장비 관련 권한
