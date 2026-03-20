@@ -12,6 +12,8 @@ import {
   CHECKOUT_PURPOSE_VALUES,
   CHECKOUT_PURPOSE_LABELS,
   CheckoutPurposeValues as CPVal,
+  CheckoutStatusValues as CSVal,
+  EquipmentStatusValues as ESVal,
   type CheckoutPurpose,
 } from '@equipment-management/schemas';
 
@@ -49,8 +51,9 @@ export function getCheckoutPool(): Pool {
  */
 export async function resetEquipmentToAvailable(equipmentId: string): Promise<void> {
   const pool = getCheckoutPool();
-  await pool.query(`UPDATE equipment SET status = 'available', updated_at = NOW() WHERE id = $1`, [
+  await pool.query(`UPDATE equipment SET status = $2, updated_at = NOW() WHERE id = $1`, [
     equipmentId,
+    ESVal.AVAILABLE,
   ]);
 }
 
@@ -99,7 +102,7 @@ export async function resetCheckoutToPending(checkoutId: string): Promise<void> 
   const pool = getCheckoutPool();
   await pool.query(
     `UPDATE checkouts
-     SET status = 'pending',
+     SET status = $2,
          approver_id = NULL,
          approved_at = NULL,
          rejection_reason = NULL,
@@ -117,7 +120,7 @@ export async function resetCheckoutToPending(checkoutId: string): Promise<void> 
          lender_confirm_notes = NULL,
          updated_at = NOW()
      WHERE id = $1`,
-    [checkoutId]
+    [checkoutId, CSVal.PENDING]
   );
 }
 
@@ -134,7 +137,7 @@ export async function resetCheckoutToApproved(
   const pool = getCheckoutPool();
   await pool.query(
     `UPDATE checkouts
-     SET status = 'approved',
+     SET status = $3,
          approver_id = $2,
          approved_at = NOW(),
          rejection_reason = NULL,
@@ -149,7 +152,7 @@ export async function resetCheckoutToApproved(
          return_approved_at = NULL,
          updated_at = NOW()
      WHERE id = $1`,
-    [checkoutId, approverId]
+    [checkoutId, approverId, CSVal.APPROVED]
   );
 }
 
@@ -166,7 +169,7 @@ export async function resetCheckoutToCheckedOut(
   const pool = getCheckoutPool();
   await pool.query(
     `UPDATE checkouts
-     SET status = 'checked_out',
+     SET status = $3,
          approver_id = $2,
          approved_at = NOW() - INTERVAL '1 day',
          checkout_date = NOW(),
@@ -181,7 +184,7 @@ export async function resetCheckoutToCheckedOut(
          return_approved_at = NULL,
          updated_at = NOW()
      WHERE id = $1`,
-    [checkoutId, approverId]
+    [checkoutId, approverId, CSVal.CHECKED_OUT]
   );
 }
 
@@ -198,7 +201,7 @@ export async function resetCheckoutToReturned(
   const pool = getCheckoutPool();
   await pool.query(
     `UPDATE checkouts
-     SET status = 'returned',
+     SET status = $3,
          approver_id = $2,
          approved_at = NOW() - INTERVAL '2 days',
          checkout_date = NOW() - INTERVAL '1 day',
@@ -211,7 +214,7 @@ export async function resetCheckoutToReturned(
          return_approved_at = NULL,
          updated_at = NOW()
      WHERE id = $1`,
-    [checkoutId, approverId]
+    [checkoutId, approverId, CSVal.RETURNED]
   );
 }
 
@@ -1026,9 +1029,9 @@ export async function fullCheckoutCleanup(): Promise<void> {
   await pool.query(`DELETE FROM checkouts WHERE id LIKE '10000000-%'`);
 
   // Step 4: Reset all test equipment to available status
-  await pool.query(
-    `UPDATE equipment SET status = 'available', updated_at = NOW() WHERE id LIKE 'eeee%'`
-  );
+  await pool.query(`UPDATE equipment SET status = $1, updated_at = NOW() WHERE id LIKE 'eeee%'`, [
+    ESVal.AVAILABLE,
+  ]);
 }
 
 // ============================================================================

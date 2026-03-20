@@ -1,8 +1,8 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import type { RepairResult } from '@equipment-management/schemas';
 
-// 수리 결과 타입
-export type RepairResult = 'completed' | 'partial' | 'failed';
+export type { RepairResult };
 
 // 수리 이력 인터페이스
 export interface RepairHistory {

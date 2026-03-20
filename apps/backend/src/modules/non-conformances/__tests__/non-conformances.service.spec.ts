@@ -9,56 +9,75 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 describe('NonConformancesService', () => {
   let service: NonConformancesService;
 
-  // Mock DB — flat chain where every method returns the mockDb itself
-  const mockDb = {
-    select: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    offset: jest.fn().mockReturnThis(),
-    orderBy: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    values: jest.fn().mockReturnThis(),
-    set: jest.fn().mockReturnThis(),
-    returning: jest.fn(),
-    transaction: jest.fn(),
-  };
+  // beforeEach에서 매 테스트마다 fresh 생성 (checkouts.service.spec.ts와 동일 패턴)
+  const chainMethods = [
+    'select',
+    'from',
+    'where',
+    'limit',
+    'offset',
+    'orderBy',
+    'insert',
+    'update',
+    'values',
+    'set',
+    'returning',
+    'leftJoin',
+    'innerJoin',
+  ];
 
-  const mockCacheInvalidationHelper = {
-    invalidateAfterNonConformanceCreation: jest.fn().mockResolvedValue(undefined),
-    invalidateAfterNonConformanceStatusChange: jest.fn().mockResolvedValue(undefined),
-    invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
-  };
-
-  const mockCacheService = {
-    get: jest.fn().mockReturnValue(undefined),
-    set: jest.fn(),
-    delete: jest.fn(),
-    deleteByPattern: jest.fn(),
-    // Default: bypass cache, call factory
-    getOrSet: jest
-      .fn()
-      .mockImplementation((_key: string, factory: () => Promise<unknown>) => factory()),
-  };
+  let chain: Record<string, jest.Mock>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockDb: any;
+  let mockCacheInvalidationHelper: Record<string, jest.Mock>;
+  let mockCacheService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
-
-    // Re-apply implementations after clearAllMocks
-    mockDb.select.mockReturnThis();
-    mockDb.from.mockReturnThis();
-    mockDb.where.mockReturnThis();
-    mockDb.limit.mockReturnThis();
-    mockDb.offset.mockReturnThis();
-    mockDb.orderBy.mockReturnThis();
-    mockDb.insert.mockReturnThis();
-    mockDb.update.mockReturnThis();
-    mockDb.values.mockReturnThis();
-    mockDb.set.mockReturnThis();
-    mockCacheService.getOrSet.mockImplementation((_key: string, factory: () => Promise<unknown>) =>
-      factory()
+    // 매 테스트마다 새로운 chain 객체 생성
+    chain = {} as Record<string, jest.Mock>;
+    for (const m of chainMethods) {
+      chain[m] = jest.fn().mockReturnValue(chain);
+    }
+    // chain은 thenable: await 시 빈 배열 반환
+    (chain as Record<string, unknown>).then = jest.fn((resolve: (v: unknown[]) => void) =>
+      resolve([])
     );
+
+    mockDb = {
+      select: jest.fn().mockReturnValue(chain),
+      insert: jest.fn().mockReturnValue(chain),
+      update: jest.fn().mockReturnValue(chain),
+      from: chain.from,
+      where: chain.where,
+      limit: chain.limit,
+      offset: chain.offset,
+      orderBy: chain.orderBy,
+      values: chain.values,
+      set: chain.set,
+      returning: chain.returning,
+      transaction: jest.fn(),
+      query: {
+        nonConformances: {
+          findFirst: jest.fn(),
+        },
+      },
+    };
+
+    mockCacheInvalidationHelper = {
+      invalidateAfterNonConformanceCreation: jest.fn().mockResolvedValue(undefined),
+      invalidateAfterNonConformanceStatusChange: jest.fn().mockResolvedValue(undefined),
+      invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockCacheService = {
+      get: jest.fn().mockReturnValue(undefined),
+      set: jest.fn(),
+      delete: jest.fn(),
+      deleteByPattern: jest.fn(),
+      getOrSet: jest
+        .fn()
+        .mockImplementation((_key: string, factory: () => Promise<unknown>) => factory()),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -112,7 +131,7 @@ describe('NonConformancesService', () => {
       mockDb.limit.mockResolvedValueOnce([mockEquipment]);
 
       // Mock transaction
-      mockDb.transaction.mockImplementation(async (callback) => {
+      mockDb.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const tx = {
           insert: jest.fn().mockReturnThis(),
           values: jest.fn().mockReturnThis(),
@@ -152,8 +171,8 @@ describe('NonConformancesService', () => {
         equipmentId: 'eq-uuid',
       };
 
-      // Mock: getOrSet calls factory → select().from().where() → [nc]
-      mockDb.where.mockResolvedValueOnce([mockNonConformance]);
+      // findOne uses db.query.nonConformances.findFirst()
+      mockDb.query.nonConformances.findFirst.mockResolvedValueOnce(mockNonConformance);
 
       const result = await service.findOne('nc-uuid');
 
@@ -162,7 +181,7 @@ describe('NonConformancesService', () => {
     });
 
     it('should throw NotFoundException when not found', async () => {
-      mockDb.where.mockResolvedValueOnce([]);
+      mockDb.query.nonConformances.findFirst.mockResolvedValueOnce(null);
 
       await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException);
     });
@@ -255,7 +274,7 @@ describe('NonConformancesService', () => {
       mockCacheService.getOrSet.mockResolvedValueOnce(correctedNc);
 
       // Mock transaction
-      mockDb.transaction.mockImplementation(async (callback) => {
+      mockDb.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const txWhere = jest.fn();
         // First where: CAS update returning → success
         txWhere.mockReturnValueOnce({
@@ -361,21 +380,19 @@ describe('NonConformancesService', () => {
     it('should soft delete a non-conformance', async () => {
       const mockNc = { id: 'nc-uuid', status: 'open', equipmentId: 'eq-uuid' };
 
-      // Mock findOne
-      mockCacheService.getOrSet.mockResolvedValueOnce(mockNc);
-
-      // Mock update (soft delete): update().set().where()
-      mockDb.where.mockResolvedValueOnce(undefined);
+      // Mock findOne (via getOrSet → db.query.nonConformances.findFirst)
+      mockDb.query.nonConformances.findFirst.mockResolvedValueOnce(mockNc);
 
       const result = await service.remove('nc-uuid');
 
       expect(result).toEqual({ id: 'nc-uuid', deleted: true });
+      expect(mockDb.update).toHaveBeenCalled();
       expect(mockCacheService.delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when removing non-existent', async () => {
       // Mock findOne → not found
-      mockDb.where.mockResolvedValueOnce([]);
+      mockDb.query.nonConformances.findFirst.mockResolvedValueOnce(null);
 
       await expect(service.remove('non-existent')).rejects.toThrow(NotFoundException);
     });

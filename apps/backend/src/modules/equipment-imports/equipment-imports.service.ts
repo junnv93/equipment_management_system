@@ -12,6 +12,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import {
@@ -59,7 +60,8 @@ export class EquipmentImportsService extends VersionedBaseService {
     @Inject(forwardRef(() => CheckoutsService))
     private readonly checkoutsService: CheckoutsService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper
   ) {
     super();
   }
@@ -322,6 +324,10 @@ export class EquipmentImportsService extends VersionedBaseService {
       throw error;
     }
 
+    // 승인 후 목록 + 대시보드/승인카운트 캐시 무효화
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
+
     this.logger.log(`Equipment import approved: ${id} (sourceType: ${updated.sourceType})`);
 
     // 📢 알림 이벤트 발행 (장비 반입 승인)
@@ -379,6 +385,10 @@ export class EquipmentImportsService extends VersionedBaseService {
       }
       throw error;
     }
+
+    // 반려 후 목록 + 대시보드/승인카운트 캐시 무효화
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     // 📢 알림 이벤트 발행 (장비 반입 거절)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_REJECTED, {
@@ -519,6 +529,11 @@ export class EquipmentImportsService extends VersionedBaseService {
       throw error;
     }
 
+    // 수령 후 목록 + 장비 + 대시보드 캐시 무효화 (장비 생성 포함)
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT + '*');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
+
     return updated;
   }
 
@@ -623,6 +638,11 @@ export class EquipmentImportsService extends VersionedBaseService {
       throw error;
     }
 
+    // 반납 시작 후 목록 + 장비 + 대시보드 캐시 무효화 (checkout 생성 + 장비 상태 변경)
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT + '*');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
+
     return updated;
   }
 
@@ -656,6 +676,10 @@ export class EquipmentImportsService extends VersionedBaseService {
       })
       .where(eq(equipmentImports.id, id))
       .returning();
+
+    // 취소 후 목록 + 대시보드/승인카운트 캐시 무효화 (pending 감소)
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     return updated;
   }
@@ -704,6 +728,11 @@ export class EquipmentImportsService extends VersionedBaseService {
           .where(eq(equipment.id, equipmentImport.equipmentId));
       }
     });
+
+    // 반납 완료 후 장비 + 대시보드 캐시 무효화 (장비 비활성화 반영)
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT + '*');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
   }
 
   /**

@@ -14,10 +14,14 @@ export class HelmetConfigService {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          styleSrc: isProduction
+            ? ["'self'", 'https://fonts.googleapis.com']
+            : ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com'],
           imgSrc: ["'self'", 'data:', 'blob:'],
-          connectSrc: ["'self'", isProduction ? this.configService.get('FRONTEND_URL') : '*'],
+          connectSrc: isProduction
+            ? ["'self'", this.configService.get('FRONTEND_URL') ?? "'none'"]
+            : ["'self'", '*'],
         },
       },
       crossOriginEmbedderPolicy: false,

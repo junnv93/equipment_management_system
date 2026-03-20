@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { UserSelectableCheckoutPurposeEnum } from '@equipment-management/schemas';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,7 +62,7 @@ import { STATUS_NOT_ALLOWED_FOR_CHECKOUT } from '@/lib/constants/equipment-statu
 // 반출 신청 스키마
 const checkoutSchema = z.object({
   destination: z.string().min(1, '반출 장소를 입력하세요').max(200),
-  purpose: z.enum(['calibration', 'repair', 'rental']),
+  purpose: UserSelectableCheckoutPurposeEnum,
   reason: z.string().min(1, '반출 사유를 입력하세요').max(500),
   expectedReturnDate: z.string().min(1, '반입 예정일을 입력하세요'),
   phoneNumber: z.string().optional(),
@@ -149,10 +150,6 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
 
   const handleSubmit = (data: CheckoutFormData) => {
     // 부적합/교정기한초과 장비의 외부 대여 방지
-    const STATUS_ONLY_CALIBRATION_REPAIR: string[] = [
-      ESVal.NON_CONFORMING,
-      ESVal.CALIBRATION_OVERDUE,
-    ];
     const equipmentStatus = equipment.status || ESVal.AVAILABLE;
     if (STATUS_ONLY_CALIBRATION_REPAIR.includes(equipmentStatus) && data.purpose === CPVal.RENTAL) {
       toast({
@@ -449,13 +446,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <FileOutput className="h-5 w-5 text-brand-info" />
-          반출 이력
+          {t('checkoutHistoryTab.title')}
         </CardTitle>
         {canCreate && (
           <div className="flex items-center gap-2">
             {!isEquipmentAvailable && (
               <span className="text-sm text-muted-foreground">
-                장비가 사용 가능 상태가 아닙니다
+                {t('checkoutHistoryTab.notAvailable')}
               </span>
             )}
             {RegisterDialog}

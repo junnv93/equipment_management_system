@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { RepairResultEnum } from '@equipment-management/schemas';
+import { RepairResultEnum, RepairResultValues as RRVal } from '@equipment-management/schemas';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDeleteMutation } from '@/hooks/use-mutation-with-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -458,13 +458,13 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="completed">
+                        <SelectItem value={RRVal.COMPLETED}>
                           {t('incidentHistoryTab.repair.resultCompleted')}
                         </SelectItem>
-                        <SelectItem value="partial">
+                        <SelectItem value={RRVal.PARTIAL}>
                           {t('incidentHistoryTab.repair.resultPartial')}
                         </SelectItem>
-                        <SelectItem value="failed">
+                        <SelectItem value={RRVal.FAILED}>
                           {t('incidentHistoryTab.repair.resultFailed')}
                         </SelectItem>
                       </SelectContent>

@@ -155,10 +155,12 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   });
 
   const handleSubmit = (data: LocationHistoryFormData) => {
-    console.log('[LocationHistoryTab] 위치 변동 등록 요청:', {
-      equipmentId,
-      data,
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[LocationHistoryTab] 위치 변동 등록 요청:', {
+        equipmentId,
+        data,
+      });
+    }
     createMutation.mutate({
       changedAt: data.changedAt,
       newLocation: data.newLocation,
@@ -325,7 +327,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5 text-brand-info" />
-          위치 변동 이력
+          {t('locationHistoryTab.title')}
         </CardTitle>
         {canCreate && RegisterDialog}
       </CardHeader>

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { RepairResultEnum, RepairResultValues as RRVal } from '@equipment-management/schemas';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
@@ -74,7 +75,7 @@ function createRepairHistoryFormSchema(t: (key: string) => string) {
   return z.object({
     repairDate: z.string().min(1, t('validationRepairDate')),
     repairDescription: z.string().min(10, t('validationDescriptionMin')),
-    repairResult: z.enum(['completed', 'partial', 'failed']).optional(),
+    repairResult: RepairResultEnum.optional(),
     notes: z.string().optional(),
     nonConformanceId: z.string().uuid().optional(),
   });
@@ -425,9 +426,9 @@ export function RepairHistoryClient({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="completed">{t('resultCompleted')}</SelectItem>
-                          <SelectItem value="partial">{t('resultPartial')}</SelectItem>
-                          <SelectItem value="failed">{t('resultFailed')}</SelectItem>
+                          <SelectItem value={RRVal.COMPLETED}>{t('resultCompleted')}</SelectItem>
+                          <SelectItem value={RRVal.PARTIAL}>{t('resultPartial')}</SelectItem>
+                          <SelectItem value={RRVal.FAILED}>{t('resultFailed')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -581,9 +582,9 @@ export function RepairHistoryClient({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="completed">{t('resultCompleted')}</SelectItem>
-                          <SelectItem value="partial">{t('resultPartial')}</SelectItem>
-                          <SelectItem value="failed">{t('resultFailed')}</SelectItem>
+                          <SelectItem value={RRVal.COMPLETED}>{t('resultCompleted')}</SelectItem>
+                          <SelectItem value={RRVal.PARTIAL}>{t('resultPartial')}</SelectItem>
+                          <SelectItem value={RRVal.FAILED}>{t('resultFailed')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

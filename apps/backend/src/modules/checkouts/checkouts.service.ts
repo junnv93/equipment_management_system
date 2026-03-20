@@ -552,17 +552,28 @@ export class CheckoutsService extends VersionedBaseService {
             .limit(numericPageSize)
             .offset(numericOffset);
 
-          const totalItems = Number(idsWithCount[0]?.totalCount || 0);
+          // COUNT(*) OVER()는 결과가 0건이면 totalCount를 알 수 없음
+          // offset 초과 시(예: 3페이지 요청인데 데이터 1페이지분만 존재) 별도 count 쿼리 폴백
+          let totalItems: number;
+          if (idsWithCount.length > 0) {
+            totalItems = Number(idsWithCount[0].totalCount);
+          } else {
+            const [countRow] = await this.db
+              .select({ count: sql<number>`COUNT(*)` })
+              .from(checkouts)
+              .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+            totalItems = Number(countRow?.count || 0);
+          }
           const totalPages = Math.ceil(totalItems / numericPageSize);
 
           if (idsWithCount.length === 0) {
             return {
               items: [],
               meta: {
-                totalItems: 0,
+                totalItems,
                 itemCount: 0,
                 itemsPerPage: numericPageSize,
-                totalPages: 0,
+                totalPages,
                 currentPage: Number(page),
               },
             };
