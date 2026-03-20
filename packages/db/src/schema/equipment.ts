@@ -20,7 +20,15 @@ import type {
 } from '@equipment-management/schemas';
 import { teams } from './teams';
 
-/** @see packages/schemas/src/enums.ts - EquipmentStatusEnum (SSOT) */
+/**
+ * PostgreSQL enum 타입 선언 (DB 레벨)
+ *
+ * 테이블에서는 varchar.$type<EquipmentStatus>()를 사용하지만,
+ * DB에 equipment_status enum 타입이 존재하므로 Drizzle 스키마에서 선언을 유지합니다.
+ * 삭제 시 마이그레이션 생성 시 DROP TYPE이 발생할 수 있습니다.
+ *
+ * @see packages/schemas/src/enums.ts - EquipmentStatusEnum (SSOT)
+ */
 export const equipmentStatusEnum = pgEnum('equipment_status', [...EQUIPMENT_STATUS_VALUES] as [
   string,
   ...string[],

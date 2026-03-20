@@ -352,6 +352,15 @@ catch (error) {
 
 ## Backend Patterns
 
+### DB Enum Column Policy
+
+| Pattern | Use When | Tables |
+|---|---|---|
+| `pgEnum` | 값이 거의 변경되지 않는 핵심 enum | equipment_status, attachment_type, approval_status, request_type |
+| `varchar + $type<>()` | 값이 자주 변경/확장되는 enum | checkout status/purpose, NC type, calibration status 등 |
+
+두 패턴 모두 `@equipment-management/schemas`의 enum 값 배열을 SSOT로 참조합니다.
+
 ### Validation: Zod Pipeline (NOT class-validator)
 
 글로벌 ValidationPipe 없음. 엔드포인트별 `ZodValidationPipe` 사용.
