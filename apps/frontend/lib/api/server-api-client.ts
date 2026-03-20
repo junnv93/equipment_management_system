@@ -35,7 +35,7 @@ import {
   getServerAuthSession,
   getServerAuthHeaders as getAuthHeaders,
 } from '@/lib/auth/server-session';
-import { API_BASE_URL } from '../config/api-config';
+import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 import { getInternalApiKeyHeaders } from '../config/internal-headers';
 
 /**
@@ -66,7 +66,7 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
   // Axios 인스턴스 생성
   const client = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 15000, // 15초 타임아웃 (Server Component SSR 렌더링 시간 고려)
+    timeout: API_TIMEOUTS.SERVER_SIDE,
     headers: {
       'Content-Type': 'application/json',
       // ✅ NextAuth 세션에서 가져온 토큰 설정

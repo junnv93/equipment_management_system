@@ -30,6 +30,7 @@ import {
   EquipmentErrorCode,
   httpStatusToErrorCode,
   mapBackendErrorCode,
+  ERROR_CODE_TO_HTTP_STATUS,
 } from '../errors/equipment-errors';
 
 /**
@@ -159,32 +160,13 @@ export function toApiError(error: unknown): ApiError | null {
 
 /**
  * 에러 코드에서 HTTP 상태 코드 추론
+ *
+ * SSOT: equipment-errors.ts의 ERROR_CODE_TO_HTTP_STATUS 참조
+ * 백엔드 code 문자열 → mapBackendErrorCode → EquipmentErrorCode → HTTP status
  */
 function getStatusFromCode(code: string): number {
-  const codeToStatus: Record<string, number> = {
-    NOT_FOUND: 404,
-    EQUIPMENT_NOT_FOUND: 404,
-    UNAUTHORIZED: 401,
-    SESSION_EXPIRED: 401,
-    PERMISSION_DENIED: 403,
-    FORBIDDEN: 403,
-    VALIDATION_ERROR: 400,
-    BAD_REQUEST: 400,
-    REQUIRED_FIELD_MISSING: 400,
-    INVALID_FORMAT: 400,
-    INVALID_DATE: 400,
-    DUPLICATE_ERROR: 409,
-    DUPLICATE_MANAGEMENT_NUMBER: 409,
-    DUPLICATE_SERIAL_NUMBER: 409,
-    CONFLICT: 409,
-    VERSION_CONFLICT: 409,
-    SERVER_ERROR: 500,
-    NETWORK_ERROR: 0,
-    TIMEOUT_ERROR: 408,
-    FILE_TOO_LARGE: 413,
-    INVALID_FILE_TYPE: 415,
-  };
-  return codeToStatus[code] ?? 500;
+  const errorCode = mapBackendErrorCode(code);
+  return ERROR_CODE_TO_HTTP_STATUS[errorCode] ?? 500;
 }
 
 /**

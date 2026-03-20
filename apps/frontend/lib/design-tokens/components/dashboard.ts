@@ -11,6 +11,7 @@
  * SSOT: 대시보드의 모든 스타일은 여기서만 정의
  */
 
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { INTERACTIVE_TOKENS, FOCUS_TOKENS } from '../semantic';
 import { toTailwindSize } from '../primitives';
 import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
@@ -82,34 +83,31 @@ export function getStatsIconClasses(variant: StatsVariant = 'default'): string {
  * - lab_manager: UL Midnight (#122C49)
  * - system_admin: UL Orange (#FF9D55)
  */
+const _FALLBACK_BADGE = {
+  color: 'text-muted-foreground',
+  bgColor: 'bg-muted',
+} as const;
+
 export const DASHBOARD_ROLE_BADGES = {
-  test_engineer: {
+  [URVal.TEST_ENGINEER]: {
     color: 'text-brand-info',
     bgColor: 'bg-brand-info/10',
   },
-  technical_manager: {
+  [URVal.TECHNICAL_MANAGER]: {
     color: 'text-brand-ok',
     bgColor: 'bg-brand-ok/10',
   },
-  quality_manager: {
+  [URVal.QUALITY_MANAGER]: {
     color: 'text-ul-fog dark:text-brand-info',
     bgColor: 'bg-ul-fog/10 dark:bg-ul-fog/20',
   },
-  lab_manager: {
+  [URVal.LAB_MANAGER]: {
     color: 'text-ul-midnight dark:text-brand-info',
     bgColor: 'bg-ul-midnight/10 dark:bg-ul-midnight/20',
   },
-  system_admin: {
+  [URVal.SYSTEM_ADMIN]: {
     color: 'text-brand-warning',
     bgColor: 'bg-brand-warning/10',
-  },
-  admin: {
-    color: 'text-brand-critical',
-    bgColor: 'bg-brand-critical/10',
-  },
-  user: {
-    color: 'text-muted-foreground',
-    bgColor: 'bg-muted',
   },
 } as const;
 
@@ -120,7 +118,7 @@ export type DashboardRole = keyof typeof DASHBOARD_ROLE_BADGES;
  */
 export function getRoleBadgeClasses(role: string): { color: string; bgColor: string } {
   const key = role.toLowerCase() as DashboardRole;
-  return DASHBOARD_ROLE_BADGES[key] || DASHBOARD_ROLE_BADGES.user;
+  return DASHBOARD_ROLE_BADGES[key] || _FALLBACK_BADGE;
 }
 
 // ============================================================================

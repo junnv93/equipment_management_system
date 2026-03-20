@@ -6,7 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { User, Shield, ShieldCheck, Crown } from 'lucide-react';
-import { DASHBOARD_ROLE_BADGES, DASHBOARD_WELCOME_TOKENS as T } from '@/lib/design-tokens';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { DASHBOARD_WELCOME_TOKENS as T, getRoleBadgeClasses } from '@/lib/design-tokens';
 
 interface WelcomeHeaderProps {
   className?: string;
@@ -19,15 +20,19 @@ interface RoleInfo {
   icon: React.ElementType;
 }
 
-const roleInfo: Record<string, RoleInfo> = {
-  test_engineer: { ...DASHBOARD_ROLE_BADGES.test_engineer, icon: User },
-  technical_manager: { ...DASHBOARD_ROLE_BADGES.technical_manager, icon: Shield },
-  quality_manager: { ...DASHBOARD_ROLE_BADGES.quality_manager, icon: ShieldCheck },
-  lab_manager: { ...DASHBOARD_ROLE_BADGES.lab_manager, icon: ShieldCheck },
-  system_admin: { ...DASHBOARD_ROLE_BADGES.system_admin, icon: Crown },
-  admin: { ...DASHBOARD_ROLE_BADGES.admin, icon: Crown },
-  user: { ...DASHBOARD_ROLE_BADGES.user, icon: User },
+const ROLE_ICONS: Record<string, React.ElementType> = {
+  [URVal.TEST_ENGINEER]: User,
+  [URVal.TECHNICAL_MANAGER]: Shield,
+  [URVal.QUALITY_MANAGER]: ShieldCheck,
+  [URVal.LAB_MANAGER]: ShieldCheck,
+  [URVal.SYSTEM_ADMIN]: Crown,
 };
+
+function getRoleInfo(role: string): RoleInfo {
+  const badge = getRoleBadgeClasses(role);
+  const icon = ROLE_ICONS[role] || User;
+  return { ...badge, icon };
+}
 
 function getGreetingKey(): string {
   const hour = new Date().getHours();
@@ -58,7 +63,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
 
   const userName = session?.user?.name || t('defaultUser');
   const userRole = session?.user?.role?.toLowerCase() || 'user';
-  const role = roleInfo[userRole] || roleInfo['user'];
+  const role = getRoleInfo(userRole);
   const RoleIcon = role.icon;
 
   const greetingKey = getGreetingKey();

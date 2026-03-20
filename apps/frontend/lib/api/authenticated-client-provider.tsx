@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, ReactNode } from 'react';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { useSession, getSession } from 'next-auth/react';
 import { createApiError } from './utils/response-transformers';
-import { API_BASE_URL } from '../config/api-config';
+import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 
 /**
  * ============================================================================
@@ -49,7 +49,7 @@ export function AuthenticatedClientProvider({ children }: AuthenticatedClientPro
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000, // 30초
+      timeout: API_TIMEOUTS.CLIENT_SIDE,
     });
 
     // ✅ 요청 인터셉터: 세션이 있으면 모든 요청에 Authorization 헤더 자동 추가

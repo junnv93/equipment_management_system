@@ -16,3 +16,14 @@
  * - NextAuth 콜백: 동일 변수 (Node.js 환경)
  */
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+/**
+ * API 타임아웃 설정 (ms)
+ *
+ * - SERVER_SIDE: Server Component SSR 렌더링 시간 고려 (짧게)
+ * - CLIENT_SIDE: 브라우저 환경, 느린 네트워크 고려 (길게)
+ */
+export const API_TIMEOUTS = {
+  SERVER_SIDE: 15_000,
+  CLIENT_SIDE: 30_000,
+} as const;

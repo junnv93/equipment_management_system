@@ -430,6 +430,33 @@ export function httpStatusToErrorCode(status: number): EquipmentErrorCode {
 }
 
 /**
+ * ErrorCode → HTTP Status 매핑 (getStatusFromCode의 SSOT)
+ *
+ * httpStatusToErrorCode()의 역매핑. error.ts에서 참조.
+ */
+export const ERROR_CODE_TO_HTTP_STATUS: Partial<Record<EquipmentErrorCode, number>> = {
+  [EquipmentErrorCode.NOT_FOUND]: 404,
+  [EquipmentErrorCode.EQUIPMENT_NOT_FOUND]: 404,
+  [EquipmentErrorCode.UNAUTHORIZED]: 401,
+  [EquipmentErrorCode.SESSION_EXPIRED]: 401,
+  [EquipmentErrorCode.PERMISSION_DENIED]: 403,
+  [EquipmentErrorCode.SCOPE_ACCESS_DENIED]: 403,
+  [EquipmentErrorCode.VALIDATION_ERROR]: 400,
+  [EquipmentErrorCode.REQUIRED_FIELD_MISSING]: 400,
+  [EquipmentErrorCode.INVALID_FORMAT]: 400,
+  [EquipmentErrorCode.INVALID_DATE]: 400,
+  [EquipmentErrorCode.DUPLICATE_ERROR]: 409,
+  [EquipmentErrorCode.DUPLICATE_MANAGEMENT_NUMBER]: 409,
+  [EquipmentErrorCode.DUPLICATE_SERIAL_NUMBER]: 409,
+  [EquipmentErrorCode.VERSION_CONFLICT]: 409,
+  [EquipmentErrorCode.SERVER_ERROR]: 500,
+  [EquipmentErrorCode.NETWORK_ERROR]: 0,
+  [EquipmentErrorCode.TIMEOUT_ERROR]: 408,
+  [EquipmentErrorCode.FILE_TOO_LARGE]: 413,
+  [EquipmentErrorCode.INVALID_FILE_TYPE]: 415,
+};
+
+/**
  * 백엔드 에러 코드를 프론트엔드 에러 코드로 매핑
  */
 export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
