@@ -27,7 +27,6 @@ import {
   CalibrationApprovalStatusValues as CASVal,
   CheckoutStatusValues as CSVal,
   CalibrationPlanStatusValues as CPSVal,
-  DisposalReviewStatusValues as DRSVal,
   EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';

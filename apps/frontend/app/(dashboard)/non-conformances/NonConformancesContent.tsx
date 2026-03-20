@@ -94,10 +94,10 @@ interface NonConformancesContentProps {
 
 export default function NonConformancesContent({
   initialData,
-  initialFilters,
+  initialFilters: _initialFilters,
 }: NonConformancesContentProps) {
-  const router = useRouter();
-  const t = useTranslations('common');
+  const _router = useRouter();
+  const _t = useTranslations('common');
 
   // ✅ SSOT: URL-driven 필터 (useState 제거)
   const {
@@ -114,7 +114,11 @@ export default function NonConformancesContent({
 
   // ✅ TanStack Query — 서버 초기 데이터를 placeholderData로 사용
   const queryFilters = { ...apiFilters, includeSummary: true };
-  const { data, isLoading, isFetching } = useQuery({
+  const {
+    data,
+    isLoading: _isLoading,
+    isFetching,
+  } = useQuery({
     queryKey: queryKeys.nonConformances.list(queryFilters),
     queryFn: () => nonConformancesApi.getNonConformances(queryFilters),
     placeholderData: initialData,

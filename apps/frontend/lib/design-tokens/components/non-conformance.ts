@@ -21,12 +21,7 @@
  */
 
 import type { SemanticColorKey } from '../brand';
-import {
-  getSemanticBadgeClasses,
-  getSemanticContainerColorClasses,
-  getSemanticContainerTextClasses,
-  getSemanticLeftBorderClasses,
-} from '../brand';
+import { getSemanticContainerColorClasses, getSemanticLeftBorderClasses } from '../brand';
 import { TRANSITION_PRESETS } from '../motion';
 import { FOCUS_TOKENS } from '../semantic';
 import {

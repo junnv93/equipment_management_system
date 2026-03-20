@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -95,6 +95,11 @@ export function CalibrationRegisterContent() {
     ? equipmentData?.data?.find((item: Equipment) => item.id === selectedEquipmentId)
     : null;
 
+  // 폼 데이터 업데이트
+  const updateFormData = useCallback((field: keyof typeof formData, value: string | number) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
   // URL에서 장비 ID가 제공되었다면 해당 장비의 상세 정보 가져오기
   useEffect(() => {
     if (selectedEquipmentId && selectedEquipment) {
@@ -114,7 +119,13 @@ export function CalibrationRegisterContent() {
         format(addMonths(new Date(formData.calibrationDate), Math.floor(cycle / 2)), 'yyyy-MM-dd')
       );
     }
-  }, [selectedEquipmentId, selectedEquipment, formData.calibrationDate, formData.calibrationCycle]);
+  }, [
+    selectedEquipmentId,
+    selectedEquipment,
+    formData.calibrationDate,
+    formData.calibrationCycle,
+    updateFormData,
+  ]);
 
   // 필터링된 장비 목록
   const filteredEquipment =
@@ -163,11 +174,6 @@ export function CalibrationRegisterContent() {
         format(addMonths(new Date(formData.calibrationDate), Math.floor(cycle / 2)), 'yyyy-MM-dd')
       );
     }
-  };
-
-  // 폼 데이터 업데이트
-  const updateFormData = (field: keyof typeof formData, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   // ✅ 교정 등록 mutation - Optimistic Update 패턴

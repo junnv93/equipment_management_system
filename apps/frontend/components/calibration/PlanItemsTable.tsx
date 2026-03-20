@@ -70,7 +70,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
 
   const isDraft = plan.status === CPStatus.DRAFT;
   const isApproved = plan.status === CPStatus.APPROVED;
-  const items = plan.items || [];
+  const items = useMemo(() => plan.items || [], [plan.items]);
 
   // W-1: 진행률 계산
   const { confirmedCount, progressPercent } = useMemo(() => {

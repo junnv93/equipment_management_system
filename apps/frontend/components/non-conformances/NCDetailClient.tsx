@@ -18,7 +18,6 @@ import {
   Check,
   X,
   Pencil,
-  Trash2,
 } from 'lucide-react';
 import nonConformancesApi, {
   type NonConformance,
@@ -108,7 +107,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   // State for dialogs
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [_showDeleteDialog, _setShowDeleteDialog] = useState(false);
   const [closureNotes, setClosureNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -128,19 +127,8 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     ...QUERY_CONFIG.NON_CONFORMANCES_DETAIL,
   });
 
-  if (!nc) return null;
-
-  const currentStepIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
-  const elapsedDays = nc.discoveryDate
-    ? differenceInDays(new Date(), new Date(nc.discoveryDate))
-    : 0;
-  const longOverdue = isNCLongOverdue(elapsedDays);
-  const isClosed = nc.status === NCVal.CLOSED;
-  const needsRepair =
-    (REPAIR_REQUIRING_NC_TYPES as readonly string[]).includes(nc.ncType) && !nc.repairHistoryId;
-
   // ============================================================================
-  // Mutations
+  // Mutations (must be called unconditionally before early returns)
   // ============================================================================
 
   // 상태 변경 (open→corrected)
@@ -151,7 +139,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   >({
     mutationFn: (vars) =>
       nonConformancesApi.updateNonConformance(ncId, {
-        version: nc.version,
+        version: nc!.version,
         status: vars.status,
         correctionContent: vars.correctionContent,
         correctionDate:
@@ -167,7 +155,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
         ncId,
-        nc.equipmentId
+        nc!.equipmentId
       );
     },
   });
@@ -180,7 +168,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   >({
     mutationFn: (vars) =>
       nonConformancesApi.updateNonConformance(ncId, {
-        version: nc.version,
+        version: nc!.version,
         ...vars,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
@@ -201,7 +189,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   >({
     mutationFn: (vars) =>
       nonConformancesApi.closeNonConformance(ncId, {
-        version: nc.version,
+        version: nc!.version,
         closureNotes: vars.closureNotes,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
@@ -215,7 +203,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
         ncId,
-        nc.equipmentId
+        nc!.equipmentId
       );
     },
   });
@@ -228,7 +216,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   >({
     mutationFn: (vars) =>
       nonConformancesApi.rejectCorrection(ncId, {
-        version: nc.version,
+        version: nc!.version,
         rejectionReason: vars.rejectionReason,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
@@ -242,10 +230,21 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
         ncId,
-        nc.equipmentId
+        nc!.equipmentId
       );
     },
   });
+
+  if (!nc) return null;
+
+  const currentStepIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
+  const elapsedDays = nc.discoveryDate
+    ? differenceInDays(new Date(), new Date(nc.discoveryDate))
+    : 0;
+  const longOverdue = isNCLongOverdue(elapsedDays);
+  const isClosed = nc.status === NCVal.CLOSED;
+  const needsRepair =
+    (REPAIR_REQUIRING_NC_TYPES as readonly string[]).includes(nc.ncType) && !nc.repairHistoryId;
 
   /** 조치 편집 시작 */
   const startEditCorrection = () => {

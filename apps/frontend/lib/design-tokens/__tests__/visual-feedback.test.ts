@@ -55,7 +55,7 @@ describe('getUrgencyFeedbackClasses()', () => {
   it('모든 urgency 레벨에서 transition 클래스 포함', () => {
     (['info', 'warning', 'critical', 'emergency'] as const).forEach((urgency) => {
       const classes = getUrgencyFeedbackClasses(urgency);
-      expect(classes).toContain('transition-transform');
+      expect(classes).toContain('motion-safe:transition-[transform]');
     });
   });
 
