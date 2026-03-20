@@ -868,14 +868,16 @@ export async function resetRentalCheckoutToState(
   };
 
   // Add dates based on progression
-  if (
-    ['lender_checked', 'borrower_received', 'borrower_returned', 'lender_received'].includes(
-      targetStatus
-    )
-  ) {
+  const RENTAL_STATUSES = [
+    CSVal.LENDER_CHECKED,
+    CSVal.BORROWER_RECEIVED,
+    CSVal.BORROWER_RETURNED,
+    CSVal.LENDER_RECEIVED,
+  ];
+  if (RENTAL_STATUSES.includes(targetStatus as (typeof RENTAL_STATUSES)[number])) {
     baseFields.checkout_date = "NOW() - INTERVAL '2 days'";
   }
-  if (['lender_received'].includes(targetStatus)) {
+  if (targetStatus === CSVal.LENDER_RECEIVED) {
     baseFields.actual_return_date = 'NOW()';
   }
 
@@ -889,12 +891,12 @@ export async function resetRentalCheckoutToState(
          approver_id = $3,
          approved_at = NOW() - INTERVAL '3 days',
          checkout_date = CASE
-           WHEN $4 IN ('lender_checked','borrower_received','borrower_returned','lender_received')
+           WHEN $4 IN ('${CSVal.LENDER_CHECKED}','${CSVal.BORROWER_RECEIVED}','${CSVal.BORROWER_RETURNED}','${CSVal.LENDER_RECEIVED}')
            THEN NOW() - INTERVAL '2 days'
            ELSE NULL
          END,
          actual_return_date = CASE
-           WHEN $5 = 'lender_received' THEN NOW()
+           WHEN $5 = '${CSVal.LENDER_RECEIVED}' THEN NOW()
            ELSE NULL
          END,
          updated_at = NOW()

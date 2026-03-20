@@ -4,6 +4,7 @@ import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { auditLogs, NewAuditLog, AuditLog, AuditLogDetails } from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_TYPE_LABELS,
@@ -109,7 +110,7 @@ export class AuditService {
     pagination: PaginationOptions
   ): Promise<{ items: AuditLog[]; meta: PaginationMeta; summary: AuditActionCounts }> {
     // 캐시 키 생성 (필터와 페이지네이션 포함)
-    const cacheKey = `audit-logs:list:${JSON.stringify(filter)}:${pagination.page}:${pagination.limit}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}list:${JSON.stringify(filter)}:${pagination.page}:${pagination.limit}`;
 
     return this.cacheService.getOrSet(
       cacheKey,
@@ -202,7 +203,7 @@ export class AuditService {
    */
   async findOne(id: string, scope?: ResolvedDataScope): Promise<AuditLog> {
     const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
-    const cacheKey = `audit-logs:detail:${id}:${scopeKey}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}detail:${id}:${scopeKey}`;
 
     return this.cacheService.getOrSet(
       cacheKey,
@@ -242,7 +243,7 @@ export class AuditService {
     scope?: ResolvedDataScope
   ): Promise<AuditLog[]> {
     const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
-    const cacheKey = `audit-logs:entity:${entityType}:${entityId}:${scopeKey}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}entity:${entityType}:${entityId}:${scopeKey}`;
 
     return this.cacheService.getOrSet(
       cacheKey,
@@ -275,7 +276,7 @@ export class AuditService {
    */
   async findByUser(userId: string, limit = 100, scope?: ResolvedDataScope): Promise<AuditLog[]> {
     const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
-    const cacheKey = `audit-logs:user:${userId}:${scopeKey}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:${scopeKey}`;
 
     return this.cacheService.getOrSet(
       cacheKey,

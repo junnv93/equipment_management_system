@@ -49,6 +49,9 @@ export const CACHE_KEY_PREFIXES = {
 
   /** approvals.service.ts */
   APPROVALS: 'approvals:',
+
+  /** jwt.strategy.ts — 사용자 활성 상태 캐시 */
+  USER_ACTIVE: 'user_active:',
 } as const;
 
 export type CacheKeyPrefix = (typeof CACHE_KEY_PREFIXES)[keyof typeof CACHE_KEY_PREFIXES];

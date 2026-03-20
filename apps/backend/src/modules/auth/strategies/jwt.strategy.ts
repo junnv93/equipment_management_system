@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import type { JwtUser } from '../../../types/auth';
 import { TOKEN_BLACKLIST, TokenBlacklistProvider } from '../blacklist/token-blacklist.interface';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { UsersService } from '../../users/users.service';
 
 /**
@@ -81,7 +82,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // 2. 사용자 활성화 상태 확인 (캐시 기반, 60초 TTL)
     const userId = payload.sub;
-    const cacheKey = `user_active:${userId}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.USER_ACTIVE}${userId}`;
 
     const isActive = await this.cacheService.getOrSet(
       cacheKey,

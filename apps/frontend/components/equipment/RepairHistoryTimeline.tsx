@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Wrench, CheckCircle, AlertTriangle, Clock, Trash2, Edit } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { RepairResultValues as RRVal } from '@equipment-management/schemas';
 import type { RepairHistory } from '@/lib/api/repair-history-api';
 import { getTransitionClasses } from '@/lib/design-tokens';
 
@@ -18,9 +19,9 @@ interface RepairHistoryTimelineProps {
 
 // 수리 결과 색상 (dark mode 지원)
 const REPAIR_RESULT_COLORS: Record<string, string> = {
-  completed: 'bg-brand-ok/10 text-brand-ok',
-  partial: 'bg-brand-warning/10 text-brand-warning',
-  failed: 'bg-brand-critical/10 text-brand-critical',
+  [RRVal.COMPLETED]: 'bg-brand-ok/10 text-brand-ok',
+  [RRVal.PARTIAL]: 'bg-brand-warning/10 text-brand-warning',
+  [RRVal.FAILED]: 'bg-brand-critical/10 text-brand-critical',
 };
 
 export default function RepairHistoryTimeline({
@@ -45,11 +46,11 @@ export default function RepairHistoryTimeline({
 
   const getResultIcon = (result?: string) => {
     switch (result) {
-      case 'completed':
+      case RRVal.COMPLETED:
         return <CheckCircle className="h-5 w-5 text-brand-ok" aria-hidden="true" />;
-      case 'partial':
+      case RRVal.PARTIAL:
         return <Clock className="h-5 w-5 text-brand-warning" aria-hidden="true" />;
-      case 'failed':
+      case RRVal.FAILED:
         return <AlertTriangle className="h-5 w-5 text-brand-critical" aria-hidden="true" />;
       default:
         return <Wrench className="h-5 w-5 text-muted-foreground" aria-hidden="true" />;
