@@ -201,23 +201,30 @@ export class CalibrationFactorsService extends VersionedBaseService {
     factors: CalibrationFactorRecord[];
     count: number;
   }> {
-    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = `${this.CACHE_PREFIX}equipment:${equipmentUuid}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const today = new Date().toISOString().split('T')[0];
 
-    const records = await this.db
-      .select()
-      .from(calibrationFactors)
-      .where(
-        and(
-          eq(calibrationFactors.equipmentId, equipmentUuid),
-          eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
-          isNull(calibrationFactors.deletedAt),
-          lte(calibrationFactors.effectiveDate, today),
-          or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))
-        )
-      );
+        const records = await this.db
+          .select()
+          .from(calibrationFactors)
+          .where(
+            and(
+              eq(calibrationFactors.equipmentId, equipmentUuid),
+              eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
+              isNull(calibrationFactors.deletedAt),
+              lte(calibrationFactors.effectiveDate, today),
+              or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))
+            )
+          );
 
-    const factors = records.map(this.normalize.bind(this));
-    return { equipmentId: equipmentUuid, factors, count: factors.length };
+        const factors = records.map(this.normalize.bind(this));
+        return { equipmentId: equipmentUuid, factors, count: factors.length };
+      },
+      CACHE_TTL.LONG
+    );
   }
 
   // 보정계수 대장 조회 (전체 장비의 현재 보정계수)

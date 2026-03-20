@@ -20,6 +20,7 @@ import {
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { EquipmentFilters } from '@/hooks/useEquipmentFilters';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
+import { usePrefetchDetail } from '@/hooks/use-prefetch-detail';
 import { HighlightText } from '@/components/shared/HighlightText';
 import {
   CALIBRATION_BADGE_TOKENS,
@@ -193,6 +194,7 @@ const EquipmentRow = memo(function EquipmentRow({
 }) {
   const t = useTranslations('equipment');
   const router = useRouter();
+  const { prefetchEquipment } = usePrefetchDetail();
   const calStatus = useMemo(
     () =>
       calculateCalibrationStatus(
@@ -330,6 +332,7 @@ const EquipmentRow = memo(function EquipmentRow({
           <Link
             href={`/equipment/${equipment.id}`}
             aria-label={t('card.viewDetailAriaLabel', { name: equipment.name || '' })}
+            onMouseEnter={() => prefetchEquipment(String(equipment.id))}
           >
             <Eye className="h-4 w-4" />
             <span className="hidden sm:inline ml-1">{t('detail.viewDetailShort')}</span>
