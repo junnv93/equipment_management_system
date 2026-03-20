@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NotificationFrequencyEnum } from '@equipment-management/schemas';
+import { NotificationFrequencyEnum, VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 export const updateNotificationSettingsSchema = z
@@ -18,7 +18,7 @@ export const updateNotificationSettingsSchema = z
     digestTime: z
       .string()
       .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-        message: '시간은 HH:MM 형식이어야 합니다 (예: 09:00)',
+        message: VM.notification.timeFormat,
       })
       .optional(),
   })

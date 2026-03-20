@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
+import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 정의 ==========
@@ -9,7 +10,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * ⚠️ submittedBy는 서버에서 JWT로 추출 (클라이언트 전송 금지)
  */
 export const submitForReviewSchema = z.object({
-  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
+  casVersion: z.number().int().positive(VM.number.positive('casVersion')),
   memo: z.string().optional(),
 });
 
@@ -23,7 +24,7 @@ export const SubmitForReviewValidationPipe = new ZodValidationPipe(submitForRevi
  * ⚠️ reviewedBy는 서버에서 JWT로 추출
  */
 export const reviewCalibrationPlanSchema = z.object({
-  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
+  casVersion: z.number().int().positive(VM.number.positive('casVersion')),
   reviewComment: z.string().optional(),
 });
 
@@ -39,7 +40,7 @@ export const ReviewCalibrationPlanValidationPipe = new ZodValidationPipe(
  * ⚠️ approvedBy는 서버에서 JWT로 추출
  */
 export const approveCalibrationPlanSchema = z.object({
-  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
+  casVersion: z.number().int().positive(VM.number.positive('casVersion')),
 });
 
 export type ApproveCalibrationPlanInput = z.infer<typeof approveCalibrationPlanSchema>;
@@ -54,8 +55,8 @@ export const ApproveCalibrationPlanValidationPipe = new ZodValidationPipe(
  * ⚠️ rejectedBy는 서버에서 JWT로 추출
  */
 export const rejectCalibrationPlanSchema = z.object({
-  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
-  rejectionReason: z.string().min(1, '반려 사유는 필수입니다'),
+  casVersion: z.number().int().positive(VM.number.positive('casVersion')),
+  rejectionReason: z.string().min(1, VM.approval.rejectReason.required),
 });
 
 export type RejectCalibrationPlanInput = z.infer<typeof rejectCalibrationPlanSchema>;
@@ -83,7 +84,7 @@ export const SubmitCalibrationPlanValidationPipe = new ZodValidationPipe(
  * ⚠️ confirmedBy는 서버에서 JWT로 추출
  */
 export const confirmPlanItemSchema = z.object({
-  casVersion: z.number().int().positive('casVersion은 양수여야 합니다').optional(),
+  casVersion: z.number().int().positive(VM.number.positive('casVersion')).optional(),
 });
 
 export type ConfirmPlanItemInput = z.infer<typeof confirmPlanItemSchema>;

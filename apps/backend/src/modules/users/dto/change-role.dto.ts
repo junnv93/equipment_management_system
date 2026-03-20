@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { UserRoleEnum } from '@equipment-management/schemas';
+import { UserRoleEnum, VM } from '@equipment-management/schemas';
 
 /**
  * 역할 변경 스키마 (Zod)
@@ -21,10 +21,10 @@ const CHANGEABLE_ROLES = UserRoleEnum.options.filter(
 
 export const changeRoleSchema = z.object({
   newRole: z.enum(CHANGEABLE_ROLES as ['test_engineer', 'technical_manager'], {
-    message: 'test_engineer 또는 technical_manager만 지정할 수 있습니다.',
+    message: VM.user.role.invalid,
   }),
   currentRole: z.enum(CHANGEABLE_ROLES as ['test_engineer', 'technical_manager'], {
-    message: '현재 역할이 올바르지 않습니다.',
+    message: VM.user.currentRole.invalid,
   }),
   reason: z.string().min(1).max(500).optional(),
 });

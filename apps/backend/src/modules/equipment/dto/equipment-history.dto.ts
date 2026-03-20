@@ -5,6 +5,7 @@ import {
   IncidentTypeEnum,
   INCIDENT_TYPE_VALUES,
   type IncidentType,
+  VM,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -23,7 +24,7 @@ const dateStringSchema = z.string().refine(
     const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
     return isoDateTimeRegex.test(val) && !isNaN(Date.parse(val));
   },
-  { message: '유효한 날짜 형식이 아닙니다 (YYYY-MM-DD 또는 ISO 8601)' }
+  { message: VM.date.invalid }
 );
 
 /**
@@ -31,10 +32,7 @@ const dateStringSchema = z.string().refine(
  */
 export const createLocationHistorySchema = z.object({
   changedAt: dateStringSchema,
-  newLocation: z
-    .string()
-    .min(1, '위치를 입력해주세요')
-    .max(100, '위치는 최대 100자까지 입력 가능합니다'),
+  newLocation: z.string().min(1, VM.required('위치')).max(100, VM.string.max('위치', 100)),
   notes: z.string().optional(),
 });
 

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
+import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 정의 ==========
@@ -8,8 +9,11 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 교정계획서 수정 스키마
  */
 export const updateCalibrationPlanSchema = z.object({
-  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
-  teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
+  casVersion: z.number().int().positive(VM.number.positive('casVersion')),
+  teamId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('팀') })
+    .optional(),
 });
 
 export type UpdateCalibrationPlanInput = z.infer<typeof updateCalibrationPlanSchema>;

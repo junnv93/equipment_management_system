@@ -4,6 +4,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   NotificationPriorityEnum,
   NOTIFICATION_PRIORITY_VALUES,
+  VM,
   type NotificationPriority,
 } from '@equipment-management/schemas';
 
@@ -16,20 +17,29 @@ import {
 export const updateNotificationSchema = z.object({
   title: z
     .string()
-    .min(1, '알림 제목을 입력해주세요')
-    .max(100, '알림 제목은 100자 이하여야 합니다')
+    .min(1, VM.notification.title.required)
+    .max(100, VM.string.max('알림 제목', 100))
     .optional(),
   content: z
     .string()
-    .min(1, '알림 내용을 입력해주세요')
-    .max(500, '알림 내용은 500자 이하여야 합니다')
+    .min(1, VM.notification.content.required)
+    .max(500, VM.string.max('알림 내용', 500))
     .optional(),
   priority: NotificationPriorityEnum.optional(),
   isTeamNotification: z.boolean().optional(),
-  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
-  calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
-  rentalId: z.string().uuid({ message: '유효한 대여 UUID가 아닙니다' }).optional(),
-  linkUrl: z.string().max(200, '링크 URL은 200자 이하여야 합니다').optional(),
+  equipmentId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('장비') })
+    .optional(),
+  calibrationId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('교정') })
+    .optional(),
+  rentalId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('대여') })
+    .optional(),
+  linkUrl: z.string().max(200, VM.string.max('링크 URL', 200)).optional(),
   isRead: z.boolean().optional(),
 });
 

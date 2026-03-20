@@ -10,6 +10,7 @@ import {
   type CalibrationRegisteredByRole,
   CalibrationResultEnum,
   type CalibrationResult,
+  VM,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -18,13 +19,13 @@ import {
  * 교정 기본 스키마 (refinement 없음 - omit/pick 등을 위한 base)
  */
 export const calibrationBaseSchema = z.object({
-  equipmentId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
-  calibrationManagerId: z.string().uuid('유효한 UUID 형식이 아닙니다').optional(), // FE 미전송 시 registeredBy 폴백
-  calibrationDate: z.coerce.date({ message: '유효한 날짜 형식이 아닙니다' }),
-  nextCalibrationDate: z.coerce.date({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
+  equipmentId: z.string().uuid(VM.uuid.generic),
+  calibrationManagerId: z.string().uuid(VM.uuid.generic).optional(), // FE 미전송 시 registeredBy 폴백
+  calibrationDate: z.coerce.date({ message: VM.date.invalid }),
+  nextCalibrationDate: z.coerce.date({ message: VM.date.invalid }).optional(),
   calibrationMethod: CalibrationMethodEnum.optional().default('external_calibration'),
   status: CalibrationStatusEnum.default(CalibrationStatusEnum.enum.scheduled),
-  calibrationAgency: z.string().min(1, '교정 기관을 입력해주세요').max(100),
+  calibrationAgency: z.string().min(1, VM.calibration.agency.required).max(100),
   certificateNumber: z.string().max(100).optional(),
   certificatePath: z.string().max(500).optional(),
   result: CalibrationResultEnum.optional(),
@@ -47,7 +48,7 @@ export const createCalibrationSchema = calibrationBaseSchema.refine(
     }
     return true;
   },
-  { message: '기술책임자는 등록자 코멘트를 반드시 입력해야 합니다.', path: ['registrarComment'] }
+  { message: VM.calibration.techManagerComment, path: ['registrarComment'] }
 );
 
 export type CreateCalibrationInput = z.infer<typeof createCalibrationSchema>;

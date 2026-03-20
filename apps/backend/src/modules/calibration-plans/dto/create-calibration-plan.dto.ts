@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
-import { SiteEnum, type Site } from '@equipment-management/schemas';
+import { SiteEnum, type Site, VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 정의 ==========
@@ -11,11 +11,14 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 export const createCalibrationPlanSchema = z.object({
   year: z
     .number()
-    .int({ message: '연도는 정수여야 합니다' })
-    .min(2020, { message: '연도는 2020 이상이어야 합니다' })
-    .max(2100, { message: '연도는 2100 이하여야 합니다' }),
+    .int({ message: VM.number.int('연도') })
+    .min(2020, { message: VM.number.min('연도', 2020) })
+    .max(2100, { message: VM.number.max('연도', 2100) }),
   siteId: SiteEnum,
-  teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
+  teamId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('팀') })
+    .optional(),
 });
 
 /** 서비스 내부용 (controller가 createdBy 주입) */

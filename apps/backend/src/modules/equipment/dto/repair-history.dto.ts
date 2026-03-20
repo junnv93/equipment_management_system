@@ -5,6 +5,7 @@ import {
   RepairResultEnum,
   REPAIR_RESULT_VALUES,
   type RepairResult,
+  VM,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -23,7 +24,7 @@ const dateStringSchema = z.string().refine(
     const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
     return isoDateTimeRegex.test(val) && !isNaN(Date.parse(val));
   },
-  { message: '유효한 날짜 형식이 아닙니다 (YYYY-MM-DD 또는 ISO 8601)' }
+  { message: VM.date.invalid }
 );
 
 /**
@@ -31,11 +32,14 @@ const dateStringSchema = z.string().refine(
  */
 export const createRepairHistorySchema = z.object({
   repairDate: dateStringSchema,
-  repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
+  repairDescription: z.string().min(10, VM.string.min('수리 내용', 10)),
   repairResult: RepairResultEnum.optional(),
   notes: z.string().optional(),
   attachmentPath: z.string().optional(),
-  nonConformanceId: z.string().uuid({ message: '유효한 부적합 UUID가 아닙니다' }).optional(),
+  nonConformanceId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('부적합') })
+    .optional(),
 });
 
 export type CreateRepairHistoryInput = z.infer<typeof createRepairHistorySchema>;

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { VM } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -12,11 +13,14 @@ import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 export const markCorrectedSchema = z.object({
   correctionContent: z
     .string()
-    .min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH, '조치 내용은 최소 10자 이상이어야 합니다'),
+    .min(
+      VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+      VM.string.min('조치 내용', VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+    ),
   correctionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
+    message: VM.date.invalidYMD,
   }),
-  correctedBy: z.string().uuid({ message: '유효한 조치자 UUID가 아닙니다' }),
+  correctedBy: z.string().uuid({ message: VM.uuid.invalid('조치자') }),
 });
 
 export type MarkCorrectedInput = z.infer<typeof markCorrectedSchema>;

@@ -6,6 +6,7 @@ import {
   type Classification,
   EQUIPMENT_IMPORT_SOURCE_VALUES,
   type EquipmentImportSource,
+  VM,
 } from '@equipment-management/schemas';
 
 const classificationValues = Object.keys(CLASSIFICATION_LABELS) as [string, ...string[]];
@@ -18,23 +19,23 @@ const classificationValues = Object.keys(CLASSIFICATION_LABELS) as [string, ...s
  * - internal_shared: ownerDepartment 필수
  */
 const baseImportSchema = z.object({
-  equipmentName: z.string().min(1, '장비명을 입력해주세요').max(100),
+  equipmentName: z.string().min(1, VM.equipmentImport.name.required).max(100),
   modelName: z.string().max(100).optional(),
   manufacturer: z.string().max(100).optional(),
   serialNumber: z.string().max(100).optional(),
   description: z.string().optional(),
   classification: z.enum(classificationValues, {
-    message: '유효하지 않은 분류입니다.',
+    message: VM.equipmentImport.classification.invalid,
   }),
-  usagePeriodStart: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
-  usagePeriodEnd: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
-  reason: z.string().min(1, '반입 사유를 입력해주세요'),
+  usagePeriodStart: z.string().datetime({ message: VM.date.invalid }),
+  usagePeriodEnd: z.string().datetime({ message: VM.date.invalid }),
+  reason: z.string().min(1, VM.equipmentImport.reason.required),
 });
 
 // Rental import schema (외부 렌탈 업체)
 const rentalImportSchema = baseImportSchema.extend({
   sourceType: z.literal('rental'),
-  vendorName: z.string().min(1, '렌탈 업체명을 입력해주세요').max(100),
+  vendorName: z.string().min(1, VM.equipmentImport.rentalCompany.required).max(100),
   vendorContact: z.string().max(100).optional(),
   externalIdentifier: z.string().max(100).optional(),
   // Internal shared fields should be undefined for rental
@@ -46,7 +47,7 @@ const rentalImportSchema = baseImportSchema.extend({
 // Internal shared import schema (내부 공용장비)
 const internalSharedImportSchema = baseImportSchema.extend({
   sourceType: z.literal('internal_shared'),
-  ownerDepartment: z.string().min(1, '소유 부서를 입력해주세요').max(100),
+  ownerDepartment: z.string().min(1, VM.equipmentImport.ownerDepartment.required).max(100),
   internalContact: z.string().max(100).optional(),
   borrowingJustification: z.string().optional(),
   // Vendor fields should be undefined for internal shared

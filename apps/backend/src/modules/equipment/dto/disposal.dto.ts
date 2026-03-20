@@ -4,6 +4,7 @@ import {
   APPROVAL_ACTION_VALUES,
   DisposalReasonEnum,
   type ApprovalAction,
+  VM,
 } from '@equipment-management/schemas';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { ApiProperty } from '@nestjs/swagger';
@@ -21,7 +22,10 @@ export const requestDisposalSchema = z.object({
   reason: DisposalReasonEnum,
   reasonDetail: z
     .string()
-    .min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH, '폐기 사유는 10자 이상 입력해주세요'),
+    .min(
+      VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH,
+      VM.disposal.reason.min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH)
+    ),
 });
 
 export type RequestDisposalInput = z.infer<typeof requestDisposalSchema>;
@@ -33,7 +37,7 @@ export const RequestDisposalPipe = new ZodValidationPipe(requestDisposalSchema);
 export const reviewDisposalSchema = z.object({
   ...versionedSchema,
   decision: ApprovalActionEnum,
-  opinion: z.string().min(1, '검토 의견을 입력해주세요'),
+  opinion: z.string().min(1, VM.required('검토 의견')),
 });
 
 export type ReviewDisposalInput = z.infer<typeof reviewDisposalSchema>;

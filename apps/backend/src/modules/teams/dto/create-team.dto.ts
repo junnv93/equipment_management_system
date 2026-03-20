@@ -7,6 +7,7 @@ import {
   CLASSIFICATION_TO_CODE,
   type Classification, // ← TeamType → Classification
   type ClassificationCode,
+  VM,
   type Site,
 } from '@equipment-management/schemas';
 
@@ -19,7 +20,7 @@ import {
  * ✅ Best Practice: 팀은 반드시 하나의 사이트에 소속됨
  */
 export const createTeamSchema = z.object({
-  name: z.string().min(1, '팀 이름을 입력해주세요').max(100),
+  name: z.string().min(1, VM.team.name.required).max(100),
   classification: ClassificationEnum, // ← type → classification
   site: SiteEnum,
   classificationCode: z

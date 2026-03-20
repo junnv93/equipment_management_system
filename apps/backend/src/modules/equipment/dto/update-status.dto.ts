@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { type EquipmentStatus, EquipmentStatusEnum } from '@equipment-management/schemas';
+import { type EquipmentStatus, EquipmentStatusEnum, VM } from '@equipment-management/schemas';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
@@ -14,7 +14,7 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const updateStatusSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  status: EquipmentStatusEnum.describe('유효한 장비 상태가 아닙니다.'),
+  status: EquipmentStatusEnum.describe(VM.enumInvalid('장비 상태')),
 });
 
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;

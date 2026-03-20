@@ -10,6 +10,7 @@ import {
   CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
   type CalibrationFactorType,
   type CalibrationFactorApprovalStatus,
+  VM,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -25,7 +26,10 @@ export {
  * 보정계수 조회 쿼리 스키마
  */
 export const calibrationFactorQuerySchema = z.object({
-  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
+  equipmentId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('장비') })
+    .optional(),
   approvalStatus: CalibrationFactorApprovalStatusEnum.optional(),
   factorType: CalibrationFactorTypeEnum.optional(),
   search: z.string().optional(),

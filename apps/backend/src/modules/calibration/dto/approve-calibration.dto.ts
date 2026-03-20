@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
+import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
@@ -24,7 +25,7 @@ export const ApproveCalibrationValidationPipe = new ZodValidationPipe(approveCal
  */
 export const rejectCalibrationSchema = z.object({
   ...versionedSchema,
-  rejectionReason: z.string().min(1, '반려 사유는 필수입니다.'),
+  rejectionReason: z.string().min(1, VM.approval.rejectReason.required),
 });
 
 export type RejectCalibrationInput = z.infer<typeof rejectCalibrationSchema>;

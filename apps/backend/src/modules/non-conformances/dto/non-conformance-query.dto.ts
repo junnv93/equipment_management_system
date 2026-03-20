@@ -10,6 +10,7 @@ import {
   SiteEnum,
   type NonConformanceStatus as NCStatus,
   type NonConformanceType as NCType,
+  VM,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility (service, tests에서 사용)
@@ -21,15 +22,18 @@ export const NonConformanceStatus = NonConformanceStatusValues;
  * 부적합 조회 쿼리 스키마
  */
 export const nonConformanceQuerySchema = z.object({
-  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
+  equipmentId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('장비') })
+    .optional(),
   status: z
     .enum(NON_CONFORMANCE_STATUS_VALUES, {
-      message: '유효하지 않은 상태입니다 (open, corrected, closed)',
+      message: VM.nonConformance.status.invalid,
     })
     .optional(),
   ncType: z
     .enum(NON_CONFORMANCE_TYPE_VALUES, {
-      message: '유효하지 않은 유형입니다',
+      message: VM.nonConformance.type.invalid,
     })
     .optional(),
   site: SiteEnum.optional(),

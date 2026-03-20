@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
+import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
@@ -11,7 +12,7 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
 export const approveSoftwareChangeSchema = z.object({
   ...versionedSchema, // ✅ Include version field
   // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
-  approverComment: z.string().min(1, '승인 시 승인자 코멘트는 필수입니다'),
+  approverComment: z.string().min(1, VM.approval.approverComment.required),
 });
 
 export type ApproveSoftwareChangeInput = z.infer<typeof approveSoftwareChangeSchema>;
@@ -25,7 +26,7 @@ export const ApproveSoftwareChangeValidationPipe = new ZodValidationPipe(
 export const rejectSoftwareChangeSchema = z.object({
   ...versionedSchema, // ✅ Include version field
   // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
-  rejectionReason: z.string().min(1, '반려 사유는 필수입니다'),
+  rejectionReason: z.string().min(1, VM.approval.rejectReason.required),
 });
 
 export type RejectSoftwareChangeInput = z.infer<typeof rejectSoftwareChangeSchema>;

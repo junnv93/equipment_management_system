@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: enums.ts에서 import
-import { CheckoutPurpose, CHECKOUT_PURPOSE_VALUES } from '@equipment-management/schemas';
+import { CheckoutPurpose, CHECKOUT_PURPOSE_VALUES, VM } from '@equipment-management/schemas';
 import { CHECKOUT_MAX_EQUIPMENT_COUNT } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
@@ -12,20 +12,17 @@ import { CHECKOUT_MAX_EQUIPMENT_COUNT } from '@equipment-management/shared-const
  */
 export const createCheckoutSchema = z.object({
   equipmentIds: z
-    .array(z.string().uuid('유효한 UUID 형식이 아닙니다'))
-    .min(1, '최소 1개의 장비를 선택해야 합니다')
-    .max(
-      CHECKOUT_MAX_EQUIPMENT_COUNT,
-      `최대 ${CHECKOUT_MAX_EQUIPMENT_COUNT}개까지 선택 가능합니다`
-    ),
+    .array(z.string().uuid(VM.uuid.generic))
+    .min(1, VM.array.min('장비', 1))
+    .max(CHECKOUT_MAX_EQUIPMENT_COUNT, VM.array.max('장비', CHECKOUT_MAX_EQUIPMENT_COUNT)),
   purpose: z.enum(CHECKOUT_PURPOSE_VALUES, {
-    message: '유효하지 않은 반출 목적입니다.',
+    message: VM.checkout.purpose.invalid,
   }),
-  destination: z.string().min(1, '반출 장소를 입력해주세요'),
+  destination: z.string().min(1, VM.checkout.destination.required),
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
-  reason: z.string().min(1, '반출 사유를 입력해주세요'),
-  expectedReturnDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  reason: z.string().min(1, VM.checkout.reason.required),
+  expectedReturnDate: z.string().datetime({ message: VM.date.invalid }),
   notes: z.string().optional(),
   lenderTeamId: z.string().uuid().optional(),
   lenderSiteId: z.string().optional(),

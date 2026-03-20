@@ -6,6 +6,7 @@ import {
   LocationEnum,
   type UserRole,
   type Site,
+  VM,
   type Location,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
@@ -17,11 +18,11 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  */
 export const createUserSchema = z.object({
   id: z.string().uuid().optional(),
-  email: z.string().email({ message: '유효한 이메일 주소를 입력해주세요.' }),
+  email: z.string().email({ message: VM.email.invalid }),
   name: z
-    .string({ message: '이름은 필수입니다.' })
-    .min(1, { message: '이름을 입력해주세요.' })
-    .max(100, { message: '이름은 100자 이내로 입력해주세요.' }),
+    .string({ message: VM.string.nonempty('이름') })
+    .min(1, { message: VM.user.name.required })
+    .max(100, { message: VM.string.max('이름', 100) }),
   role: UserRoleEnum,
   site: SiteEnum.optional(),
   location: LocationEnum.optional(),

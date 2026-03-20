@@ -6,6 +6,7 @@ import {
   CONDITION_STATUS_VALUES,
   ACCESSORIES_STATUS_VALUES,
   type ConditionCheckStep,
+  VM,
 } from '@equipment-management/schemas';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
@@ -18,13 +19,13 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
 export const createConditionCheckSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
   step: z.enum(CONDITION_CHECK_STEP_VALUES, {
-    message: '유효하지 않은 상태 확인 단계입니다.',
+    message: VM.checkout.conditionCheck.step.invalid,
   }),
   appearanceStatus: z.enum(CONDITION_STATUS_VALUES, {
-    message: '유효하지 않은 외관 상태입니다.',
+    message: VM.checkout.conditionCheck.appearance.invalid,
   }),
   operationStatus: z.enum(CONDITION_STATUS_VALUES, {
-    message: '유효하지 않은 작동 상태입니다.',
+    message: VM.checkout.conditionCheck.operation.invalid,
   }),
   accessoriesStatus: z.enum(ACCESSORIES_STATUS_VALUES).optional(),
   abnormalDetails: z.string().optional(),

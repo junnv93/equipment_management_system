@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES } from '@equipment-management/schemas';
+import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES, VM } from '@equipment-management/schemas';
 
 /**
  * 감사 로그 목록 조회 쿼리 스키마
@@ -11,13 +11,13 @@ export const auditLogQuerySchema = z.object({
   userId: z.string().uuid().optional(),
   entityType: z
     .enum(AUDIT_ENTITY_TYPE_VALUES, {
-      message: '유효하지 않은 엔티티 타입입니다.',
+      message: VM.audit.entityType.invalid,
     })
     .optional(),
   entityId: z.string().uuid().optional(),
   action: z
     .enum(AUDIT_ACTION_VALUES, {
-      message: '유효하지 않은 액션입니다.',
+      message: VM.audit.action.invalid,
     })
     .optional(),
   startDate: z.string().optional(),

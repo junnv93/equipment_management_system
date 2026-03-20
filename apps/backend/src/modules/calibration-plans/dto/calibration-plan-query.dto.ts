@@ -2,7 +2,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
-import { SiteEnum, type Site, CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import {
+  SiteEnum,
+  type Site,
+  CALIBRATION_PLAN_STATUS_VALUES,
+  VM,
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -28,13 +33,16 @@ export const calibrationPlanQuerySchema = z.object({
   ),
   siteId: z
     .enum(siteIdValues, {
-      message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang, pyeongtaek)',
+      message: VM.calibrationPlan.site.invalid,
     })
     .optional(),
-  teamId: z.string().uuid({ message: '유효하지 않은 팀 ID입니다 (UUID 형식)' }).optional(),
+  teamId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('팀') })
+    .optional(),
   status: z
     .enum(calibrationPlanStatusValues, {
-      message: '유효하지 않은 상태입니다',
+      message: VM.calibrationPlan.status.invalid,
     })
     .optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
@@ -61,10 +69,13 @@ export const externalEquipmentQuerySchema = z.object({
   ),
   siteId: z
     .enum(siteIdValues, {
-      message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang, pyeongtaek)',
+      message: VM.calibrationPlan.site.invalid,
     })
     .optional(),
-  teamId: z.string().uuid({ message: '유효하지 않은 팀 ID입니다 (UUID 형식)' }).optional(),
+  teamId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('팀') })
+    .optional(),
 });
 
 export type ExternalEquipmentQueryInput = z.infer<typeof externalEquipmentQuerySchema>;

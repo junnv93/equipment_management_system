@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
+import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 정의 ==========
@@ -8,14 +9,17 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 소프트웨어 변경 등록 스키마
  */
 export const createSoftwareChangeSchema = z.object({
-  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }),
+  equipmentId: z.string().uuid({ message: VM.uuid.invalid('장비') }),
   softwareName: z
     .string()
-    .min(1, '소프트웨어명을 입력해주세요')
-    .max(200, '소프트웨어명은 200자 이하여야 합니다'),
-  previousVersion: z.string().max(50, '이전 버전은 50자 이하여야 합니다').optional(),
-  newVersion: z.string().min(1, '새 버전을 입력해주세요').max(50, '새 버전은 50자 이하여야 합니다'),
-  verificationRecord: z.string().min(1, '검증 기록은 필수입니다'),
+    .min(1, VM.software.name.required)
+    .max(200, VM.string.max('소프트웨어명', 200)),
+  previousVersion: z.string().max(50, VM.string.max('이전 버전', 50)).optional(),
+  newVersion: z
+    .string()
+    .min(1, VM.software.newVersion.required)
+    .max(50, VM.string.max('새 버전', 50)),
+  verificationRecord: z.string().min(1, VM.software.verificationRecord.required),
   // changedBy는 서버에서 req.user.userId로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
 });
 

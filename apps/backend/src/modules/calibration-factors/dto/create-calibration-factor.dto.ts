@@ -6,6 +6,7 @@ import {
   CalibrationFactorTypeValues,
   CALIBRATION_FACTOR_TYPE_VALUES,
   type CalibrationFactorType,
+  VM,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -22,27 +23,33 @@ export {
  * 보정계수 생성 스키마
  */
 export const createCalibrationFactorSchema = z.object({
-  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }),
-  calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
+  equipmentId: z.string().uuid({ message: VM.uuid.invalid('장비') }),
+  calibrationId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('교정') })
+    .optional(),
   factorType: CalibrationFactorTypeEnum,
   factorName: z
     .string()
-    .min(1, '보정계수 이름을 입력해주세요')
-    .max(200, '보정계수 이름은 200자 이하여야 합니다'),
-  factorValue: z.number({ message: '보정계수 값은 숫자여야 합니다' }),
-  unit: z.string().min(1, '단위를 입력해주세요').max(20, '단위는 20자 이하여야 합니다'),
+    .min(1, VM.calibrationFactor.name.required)
+    .max(200, VM.string.max('보정계수 이름', 200)),
+  factorValue: z.number({ message: VM.calibrationFactor.value.invalid }),
+  unit: z.string().min(1, VM.calibrationFactor.unit.required).max(20, VM.string.max('단위', 20)),
   parameters: z.record(z.string(), z.unknown()).optional(),
   effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
+    message: VM.date.invalidYMD,
   }),
   expiryDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, {
-      message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
+      message: VM.date.invalidYMD,
     })
     .optional(),
   // 서버에서 JWT를 통해 추출하므로 클라이언트 전송 불필요 (하위 호환성을 위해 optional 유지)
-  requestedBy: z.string().uuid({ message: '유효한 요청자 UUID가 아닙니다' }).optional(),
+  requestedBy: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('요청자') })
+    .optional(),
 });
 
 export type CreateCalibrationFactorInput = z.infer<typeof createCalibrationFactorSchema>;

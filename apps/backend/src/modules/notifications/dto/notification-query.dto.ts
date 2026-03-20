@@ -6,6 +6,7 @@ import {
   NotificationPriorityEnum,
   NOTIFICATION_TYPE_VALUES,
   NOTIFICATION_PRIORITY_VALUES,
+  VM,
   type NotificationType,
   type NotificationPriority,
 } from '@equipment-management/schemas';
@@ -34,13 +35,28 @@ const NotificationCategoryEnum = z.enum(NOTIFICATION_CATEGORIES);
 
 export const notificationQuerySchema = z.object({
   category: NotificationCategoryEnum.optional(),
-  recipientId: z.string().uuid({ message: '유효한 수신자 UUID가 아닙니다' }).optional(),
-  teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
+  recipientId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('수신자') })
+    .optional(),
+  teamId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('팀') })
+    .optional(),
   // @SiteScoped 인터셉터가 관리자 엔드포인트에서 주입하는 필드
   recipientSite: z.string().optional(),
-  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
-  calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
-  rentalId: z.string().uuid({ message: '유효한 대여 UUID가 아닙니다' }).optional(),
+  equipmentId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('장비') })
+    .optional(),
+  calibrationId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('교정') })
+    .optional(),
+  rentalId: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('대여') })
+    .optional(),
   isRead: z.preprocess(
     (val) => (val === 'true' ? true : val === 'false' ? false : undefined),
     z.boolean().optional()
@@ -51,8 +67,8 @@ export const notificationQuerySchema = z.object({
     (val) => toArray<string>(val),
     z.array(NotificationPriorityEnum).optional()
   ),
-  fromDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
-  toDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
+  fromDate: z.string().datetime({ message: VM.date.invalid }).optional(),
+  toDate: z.string().datetime({ message: VM.date.invalid }).optional(),
   sort: z.string().default('createdAt.desc'),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(

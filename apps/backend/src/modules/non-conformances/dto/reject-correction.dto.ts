@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { VM } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -11,7 +12,7 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const rejectCorrectionSchema = z.object({
   ...versionedSchema,
-  rejectionReason: z.string().min(1, '반려 사유를 입력해주세요'),
+  rejectionReason: z.string().min(1, VM.approval.rejectReason.required),
 });
 
 export type RejectCorrectionInput = z.infer<typeof rejectCorrectionSchema>;

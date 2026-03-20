@@ -8,6 +8,7 @@ import {
   SiteEnum,
   type CheckoutDirection,
   type Site,
+  VM,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -24,7 +25,7 @@ export const checkoutQuerySchema = z.object({
   direction: CheckoutDirectionEnum.optional(),
   purpose: z
     .enum(CHECKOUT_PURPOSE_VALUES, {
-      message: '유효하지 않은 반출 목적입니다.',
+      message: VM.checkout.purpose.invalid,
     })
     .optional(),
   statuses: z.string().optional(),

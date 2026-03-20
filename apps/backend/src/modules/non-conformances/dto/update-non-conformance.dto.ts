@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
-import { NonConformanceStatusEnum } from '@equipment-management/schemas';
+import { NonConformanceStatusEnum, VM } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -20,10 +20,13 @@ export const updateNonConformanceSchema = z.object({
   correctionDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, {
-      message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
+      message: VM.date.invalidYMD,
     })
     .optional(),
-  correctedBy: z.string().uuid({ message: '유효한 조치자 UUID가 아닙니다' }).optional(),
+  correctedBy: z
+    .string()
+    .uuid({ message: VM.uuid.invalid('조치자') })
+    .optional(),
   status: UpdatableNonConformanceStatusEnum.optional(),
 });
 

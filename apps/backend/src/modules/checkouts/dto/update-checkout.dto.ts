@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: enums.ts에서 import
-import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '@equipment-management/schemas';
+import { CheckoutStatus, CHECKOUT_STATUS_VALUES, VM } from '@equipment-management/schemas';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
@@ -19,7 +19,7 @@ export const updateCheckoutSchema = z.object({
   reason: z.string().min(1).optional(),
   status: z
     .enum(CHECKOUT_STATUS_VALUES, {
-      message: '유효하지 않은 반출 상태값입니다.',
+      message: VM.checkout.status.invalid,
     })
     .optional(),
   expectedReturnDate: z.string().datetime().optional(),

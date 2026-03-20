@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiProperty } from '@nestjs/swagger';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VM } from '@equipment-management/schemas';
 
 /**
  * 로그인 스키마 (Zod)
@@ -9,12 +10,10 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 이를 통해 Single Source of Truth를 유지할 수 있습니다.
  */
 export const loginSchema = z.object({
-  email: z
-    .string({ message: '이메일은 필수입니다.' })
-    .email({ message: '유효한 이메일 주소를 입력해주세요.' }),
+  email: z.string({ message: VM.string.nonempty('이메일') }).email({ message: VM.email.invalid }),
   password: z
-    .string({ message: '비밀번호는 필수입니다.' })
-    .min(1, { message: '비밀번호를 입력해주세요.' }),
+    .string({ message: VM.string.nonempty('비밀번호') })
+    .min(1, { message: VM.required('비밀번호') }),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

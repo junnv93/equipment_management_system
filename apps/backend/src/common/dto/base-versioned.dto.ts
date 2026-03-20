@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
+import { VM } from '@equipment-management/schemas';
 
 /**
  * Optimistic Locking용 Base DTO
@@ -38,5 +39,5 @@ export abstract class VersionedDto {
  * });
  */
 export const versionedSchema = {
-  version: z.number().int('version은 정수여야 합니다').positive('version은 양수여야 합니다'),
+  version: z.number().int(VM.version.int).positive(VM.version.positive),
 };
