@@ -1,9 +1,22 @@
-import { Controller, Get, Query, Req, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  Req,
+  ParseIntPipe,
+  DefaultValuePipe,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { DashboardService } from './dashboard.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  DASHBOARD_DATA_SCOPE,
+  resolveDataScope,
+  type UserScopeContext,
+} from '@equipment-management/shared-constants';
 import { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import {
@@ -31,6 +44,38 @@ import {
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
+
+  /**
+   * DASHBOARD_DATA_SCOPE 정책으로 teamId/site를 강제화
+   *
+   * - all: 클라이언트 teamId 허용 (관리자 드릴다운)
+   * - site: site 강제 + 클라이언트 teamId 허용 (사이트 내 드릴다운)
+   * - team: teamId를 사용자 소속 팀으로 강제 (클라이언트 값 무시)
+   * - none: ForbiddenException
+   */
+  private resolveDashboardScope(
+    req: AuthenticatedRequest,
+    clientTeamId?: string
+  ): { site?: string; teamId?: string } {
+    const userRole = req.user.roles?.[0] as UserRole;
+    const userCtx: UserScopeContext = {
+      role: userRole,
+      site: req.user.site,
+      teamId: req.user.teamId,
+    };
+    const scope = resolveDataScope(userCtx, DASHBOARD_DATA_SCOPE);
+
+    switch (scope.type) {
+      case 'all':
+        return { teamId: clientTeamId };
+      case 'site':
+        return { site: scope.site, teamId: clientTeamId };
+      case 'team':
+        return { site: scope.site, teamId: scope.teamId };
+      case 'none':
+        throw new ForbiddenException('대시보드 접근 권한이 없습니다.');
+    }
+  }
 
   /**
    * 대시보드 전체 집계 (SSR 단일 요청용)
@@ -63,13 +108,13 @@ export class DashboardController {
   ): Promise<DashboardAggregateDto> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const site = req.user.site;
+    const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
     return this.dashboardService.getAggregate(
       userId,
       userRole,
       site,
-      teamId,
+      resolvedTeamId,
       days,
       activitiesLimit
     );
@@ -98,9 +143,9 @@ export class DashboardController {
   ): Promise<DashboardSummaryDto> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const site = req.user.site;
+    const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
-    return this.dashboardService.getSummary(userId, userRole, teamId, site);
+    return this.dashboardService.getSummary(userId, userRole, resolvedTeamId, site);
   }
 
   @Get('equipment-by-team')
@@ -125,9 +170,9 @@ export class DashboardController {
   ): Promise<EquipmentByTeamDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const site = req.user.site;
+    const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
-    return this.dashboardService.getEquipmentByTeam(userId, userRole, teamId, site);
+    return this.dashboardService.getEquipmentByTeam(userId, userRole, resolvedTeamId, site);
   }
 
   @Get('overdue-calibrations')
@@ -149,9 +194,9 @@ export class DashboardController {
   async getOverdueCalibrations(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const site = req.user.site;
+    const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
-    return this.dashboardService.getOverdueCalibrations(userId, userRole, teamId, site);
+    return this.dashboardService.getOverdueCalibrations(userId, userRole, resolvedTeamId, site);
   }
 
   @Get('upcoming-calibrations')
@@ -183,9 +228,15 @@ export class DashboardController {
   ) {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const site = req.user.site;
+    const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
-    return this.dashboardService.getUpcomingCalibrations(userId, userRole, days, teamId, site);
+    return this.dashboardService.getUpcomingCalibrations(
+      userId,
+      userRole,
+      days,
+      resolvedTeamId,
+      site
+    );
   }
 
   @Get('overdue-rentals')
@@ -207,9 +258,9 @@ export class DashboardController {
   async getOverdueCheckouts(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const site = req.user.site;
+    const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
-    return this.dashboardService.getOverdueCheckouts(userId, userRole, teamId, site);
+    return this.dashboardService.getOverdueCheckouts(userId, userRole, resolvedTeamId, site);
   }
 
   @Get('recent-activities')
@@ -235,8 +286,7 @@ export class DashboardController {
   ): Promise<RecentActivityDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
-    const site = req.user.site;
+    const { site, teamId } = this.resolveDashboardScope(req);
 
     return this.dashboardService.getRecentActivities(userId, userRole, limit, teamId, site);
   }
@@ -257,8 +307,7 @@ export class DashboardController {
   ): Promise<PendingApprovalCountsDto> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
-    const site = req.user.site;
+    const { site, teamId } = this.resolveDashboardScope(req);
 
     return this.dashboardService.getPendingApprovalCounts(userId, userRole, teamId, site);
   }
@@ -289,8 +338,8 @@ export class DashboardController {
   ): Promise<EquipmentStatusStatsDto> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const site = req.user.site;
+    const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
 
-    return this.dashboardService.getEquipmentStatusStats(userId, userRole, teamId, site);
+    return this.dashboardService.getEquipmentStatusStats(userId, userRole, resolvedTeamId, site);
   }
 }

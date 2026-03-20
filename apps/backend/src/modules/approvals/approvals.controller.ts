@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedRequest } from '../../types/auth';
 import { UserRole } from '@equipment-management/schemas';
+import type { UserScopeContext } from '@equipment-management/shared-constants';
 import {
   ApprovalsService,
   PendingCountsByCategory,
@@ -50,7 +51,6 @@ export class ApprovalsController {
     const userId = req.user?.userId;
     const userRole = req.user?.roles?.[0] as UserRole;
 
-    // ✅ userId 검증: JWT Guard를 통과했지만 userId가 없는 경우 방어
     if (!userId) {
       throw new UnauthorizedException({
         code: 'AUTH_INVALID_SESSION',
@@ -58,7 +58,13 @@ export class ApprovalsController {
       });
     }
 
-    return this.approvalsService.getPendingCountsByRole(userId, userRole);
+    const userCtx: UserScopeContext = {
+      role: userRole,
+      site: req.user.site ?? undefined,
+      teamId: req.user.teamId ?? undefined,
+    };
+
+    return this.approvalsService.getPendingCountsByRole(userCtx);
   }
 
   /**
@@ -89,6 +95,12 @@ export class ApprovalsController {
       });
     }
 
-    return this.approvalsService.getKpi(userId, userRole, category);
+    const userCtx: UserScopeContext = {
+      role: userRole,
+      site: req.user.site ?? undefined,
+      teamId: req.user.teamId ?? undefined,
+    };
+
+    return this.approvalsService.getKpi(userId, userCtx, category);
   }
 }

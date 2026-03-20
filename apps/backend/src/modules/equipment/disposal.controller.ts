@@ -202,8 +202,11 @@ export class DisposalController {
   })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async getCurrentDisposalRequest(
-    @Param('equipmentId', ParseUUIDPipe) equipmentId: string
+    @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
+    @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
+    enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     return this.disposalService.getCurrentDisposalRequest(equipmentId);
   }
 }

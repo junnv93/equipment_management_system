@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, Logger, ForbiddenException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   eq,
@@ -124,40 +124,15 @@ export class ApprovalsService {
    *
    * getApprovalCountsByScope() 결과에 ROLE_CATEGORIES gating을 적용합니다.
    * 역할에 해당하지 않는 카테고리는 DB 쿼리 자체를 생략합니다.
+   *
+   * @param userCtx - Controller에서 JWT 기반으로 구성한 스코프 컨텍스트 (DB 재조회 불필요)
    */
-  async getPendingCountsByRole(
-    userId: string,
-    userRole: UserRole
-  ): Promise<PendingCountsByCategory> {
-    const cacheKey = `approvals:counts:${userId}:${userRole}`;
+  async getPendingCountsByRole(userCtx: UserScopeContext): Promise<PendingCountsByCategory> {
+    const cacheKey = `approvals:counts:${userCtx.role}:${userCtx.site || 'all'}:${userCtx.teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        // Get user's team and site for filtering
-        const user = await this.db.query.users.findFirst({
-          where: eq(schema.users.id, userId),
-          columns: {
-            id: true,
-            teamId: true,
-            site: true,
-          },
-        });
-
-        if (!user) {
-          throw new NotFoundException({
-            code: 'USER_NOT_FOUND',
-            message: `User not found (userId: ${userId}). Session may be expired or account deleted.`,
-          });
-        }
-
-        // Role gating: 해당 역할이 접근 불가한 카테고리는 쿼리 자체를 생략
-        const allowedCategories = ROLE_CATEGORIES[userRole] ?? new Set();
-        const userCtx: UserScopeContext = {
-          role: userRole,
-          site: user.site ?? undefined,
-          teamId: user.teamId ?? undefined,
-        };
-
+        const allowedCategories = ROLE_CATEGORIES[userCtx.role] ?? new Set();
         return this.getApprovalCountsByScope(userCtx, allowedCategories);
       },
       CACHE_TTL.SHORT
@@ -278,16 +253,15 @@ export class ApprovalsService {
    * - urgentCount: 지정 카테고리에서 URGENT_THRESHOLD_DAYS 이상 경과한 건수
    * - avgWaitDays: 지정 카테고리 평균 대기일
    *
-   * @param userId - JWT에서 추출된 사용자 ID
-   * @param userRole - 사용자 역할
+   * @param userId - JWT에서 추출된 사용자 ID (todayProcessed 조회에 필요)
+   * @param userCtx - Controller에서 JWT 기반으로 구성한 스코프 컨텍스트
    * @param category - 카테고리 (없으면 urgentCount/avgWaitDays = 0)
    */
   async getKpi(
     userId: string,
-    userRole: UserRole,
+    userCtx: UserScopeContext,
     category?: string
   ): Promise<ApprovalKpiResponse> {
-    // 1. todayProcessed: 오늘 처리 건수 (audit_logs 기반)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -302,10 +276,8 @@ export class ApprovalsService {
         )
       );
 
-    // 2. 카테고리별 urgentCount + avgWaitDays (SQL 집계)
-    // user 조회를 getKpi에서 1회만 수행 (getCategoryKpi 내부 중복 제거)
     const categoryKpiPromise = category
-      ? this.getCategoryKpiWithUser(userId, userRole, category)
+      ? this.getCategoryKpi(userCtx, category)
       : Promise.resolve({ urgentCount: 0, avgWaitDays: 0 });
 
     const [todayResult, categoryKpi] = await Promise.all([
@@ -318,29 +290,6 @@ export class ApprovalsService {
       urgentCount: toSafeInt(categoryKpi.urgentCount),
       avgWaitDays: toSafeInt(categoryKpi.avgWaitDays),
     };
-  }
-
-  /**
-   * 카테고리별 KPI 집계 — user 조회 포함 래퍼
-   *
-   * getKpi()에서 호출. user 조회 + 카테고리 라우팅을 담당.
-   */
-  private async getCategoryKpiWithUser(
-    userId: string,
-    userRole: UserRole,
-    category: string
-  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
-    const user = await this.db.query.users.findFirst({
-      where: eq(schema.users.id, userId),
-      columns: { teamId: true, site: true },
-    });
-
-    const userCtx: UserScopeContext = {
-      role: userRole,
-      site: user?.site ?? undefined,
-      teamId: user?.teamId ?? undefined,
-    };
-    return this.getCategoryKpi(userCtx, category);
   }
 
   /**
