@@ -740,7 +740,7 @@ export class EquipmentService extends VersionedBaseService {
    * @param userSite 사용자 사이트 (시험실무자는 자신의 사이트만 조회)
    */
   async findAll(queryParams: EquipmentQueryDto, userSite?: string): Promise<EquipmentListResponse> {
-    const { page = 1, pageSize = 20 } = queryParams;
+    const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = queryParams;
 
     // 캐시 키 생성
     // ✅ Best Practice: 모든 쿼리 파라미터를 자동으로 포함 (SSOT)

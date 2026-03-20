@@ -270,6 +270,7 @@ export class CheckoutsService extends VersionedBaseService {
    * 예: 반출 생성 시 신청자 팀과 대여 팀의 캐시만 무효화
    */
   private async invalidateCache(teamIds?: string[], checkoutId?: string): Promise<void> {
+    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
     // ✅ SSOT: 개별 checkout의 detail 캐시 무효화 (optimistic locking 지원)
     if (checkoutId) {
       const detailCacheKey = this.buildCacheKey('detail', { uuid: checkoutId });
@@ -1352,13 +1353,15 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
-      const affectedTeams = await this.getAffectedTeamIds(checkout);
+      // ✅ 캐시 무효화 + 알림 데이터를 병렬로 가져오기 (순차 → 병렬)
+      const [affectedTeams, { items: rejectItems, firstEquipment: rejectFirstEquip }] =
+        await Promise.all([
+          this.getAffectedTeamIds(checkout),
+          this.getCheckoutItemsWithFirstEquipment(uuid),
+        ]);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행 — JOIN 헬퍼 사용 (1 query)
-      const { items: rejectItems, firstEquipment: rejectFirstEquip } =
-        await this.getCheckoutItemsWithFirstEquipment(uuid);
+      // 📢 알림 이벤트 발행
       if (rejectItems.length > 0 && rejectFirstEquip) {
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_REJECTED, {
           checkoutId: uuid,
@@ -1751,16 +1754,16 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ 팀별 권한 체크 (크로스 사이트 워크플로우 — approve와 동일 배치 패턴)
+      // ✅ items + equipment 일괄 조회 (권한 체크 + 알림에서 재사용)
       const items = await this.db
         .select()
         .from(checkoutItems)
         .where(eq(checkoutItems.checkoutId, uuid));
 
-      if (rejectReturnDto.approverTeamId) {
-        const equipmentIds = items.map((item) => item.equipmentId);
-        const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
+      const equipmentIds = items.map((item) => item.equipmentId);
+      const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
 
+      if (rejectReturnDto.approverTeamId) {
         // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0)
         const firstEquip = equipmentMap.values().next().value;
         if (firstEquip) {
@@ -1808,19 +1811,19 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      // ✅ 캐시 무효화
+      // ✅ 캐시 무효화 — items/equipmentMap은 이미 보유, 팀 ID만 추가 조회
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행 — JOIN 헬퍼 사용 (1 query)
-      const { firstEquipment: rejectReturnEquip } =
-        await this.getCheckoutItemsWithFirstEquipment(uuid);
-      if (items.length > 0 && rejectReturnEquip) {
+      // 📢 알림 이벤트 발행 — 이미 조회한 items + equipmentMap 재사용 (추가 쿼리 0)
+      const firstEquipId = items[0]?.equipmentId;
+      const rejectReturnEquip = firstEquipId ? equipmentMap.get(firstEquipId) : undefined;
+      if (items.length > 0) {
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED, {
           checkoutId: uuid,
-          equipmentId: items[0].equipmentId,
-          equipmentName: rejectReturnEquip.name,
-          managementNumber: rejectReturnEquip.managementNumber,
+          equipmentId: firstEquipId,
+          equipmentName: rejectReturnEquip?.name ?? null,
+          managementNumber: rejectReturnEquip?.managementNumber ?? null,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           reason: rejectReturnDto.reason,

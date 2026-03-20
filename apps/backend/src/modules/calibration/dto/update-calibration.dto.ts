@@ -18,11 +18,16 @@ export const updateCalibrationSchema = calibrationBaseSchema
   .partial()
   .extend({
     status: CalibrationStatusEnum.optional(),
-    version: versionedSchema.version.optional(),
+    version: versionedSchema.version,
   });
 
 export type UpdateCalibrationInput = z.infer<typeof updateCalibrationSchema>;
 export const UpdateCalibrationValidationPipe = new ZodValidationPipe(updateCalibrationSchema);
+
+export const internalUpdateCalibrationSchema = updateCalibrationSchema.extend({
+  version: versionedSchema.version.optional(),
+});
+export type InternalUpdateCalibrationInput = z.infer<typeof internalUpdateCalibrationSchema>;
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 

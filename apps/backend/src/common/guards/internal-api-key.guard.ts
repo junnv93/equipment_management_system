@@ -1,6 +1,19 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { timingSafeEqual } from 'crypto';
+
+/**
+ * Timing-safe 문자열 비교
+ *
+ * crypto.timingSafeEqual은 동일 길이 Buffer만 비교 가능하므로,
+ * 길이가 다를 때 상수 시간 내에 false를 반환합니다.
+ * 길이 차이 자체는 노출되지만, 키 내용의 각 바이트 위치는 노출되지 않습니다.
+ */
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 /**
  * Internal API Key Guard with Dual-Key Rotation Support
@@ -17,6 +30,9 @@ import { Request } from 'express';
  * 2. INTERNAL_API_KEY를 새 키로 교체
  * 3. 이전 키를 INTERNAL_API_KEY_PREVIOUS로 설정
  * 4. 모든 클라이언트가 새 키로 전환된 후 PREVIOUS 제거
+ *
+ * 보안:
+ * - timingSafeEqual 사용으로 타이밍 사이드채널 공격 방어
  *
  * 헤더 형식:
  * X-Internal-Api-Key: <api-key>
@@ -45,7 +61,7 @@ export class InternalApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('Missing X-Internal-Api-Key header');
     }
 
-    if (!this.validKeys.includes(apiKey as string)) {
+    if (!this.validKeys.some((key) => safeCompare(key, apiKey as string))) {
       throw new UnauthorizedException('Invalid API key');
     }
 

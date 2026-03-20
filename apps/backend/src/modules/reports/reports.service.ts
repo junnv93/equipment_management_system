@@ -15,6 +15,8 @@ import {
   AUDIT_ENTITY_TYPE_LABELS,
   EQUIPMENT_STATUS_LABELS,
   CALIBRATION_STATUS_LABELS,
+  CALIBRATION_APPROVAL_STATUS_LABELS,
+  REPAIR_RESULT_LABELS,
   EquipmentStatusValues as ESVal,
   CheckoutStatusValues as CSVal,
   CalibrationStatusEnum,
@@ -28,6 +30,7 @@ import {
   USER_ROLE_LABELS,
   DEFAULT_LOCALE,
   DEFAULT_TIMEZONE,
+  REPORT_UTILIZATION_THRESHOLDS,
   type UserRole,
 } from '@equipment-management/shared-constants';
 import type { ReportColumn, ReportData } from './report-export.service';
@@ -378,8 +381,12 @@ export class ReportsService {
       period,
       summary: {
         averageUtilization: Math.round(avg * 10) / 10,
-        highUtilizationCount: withRate.filter((r) => r.utilizationRate >= 80).length,
-        lowUtilizationCount: withRate.filter((r) => r.utilizationRate <= 20).length,
+        highUtilizationCount: withRate.filter(
+          (r) => r.utilizationRate >= REPORT_UTILIZATION_THRESHOLDS.HIGH
+        ).length,
+        lowUtilizationCount: withRate.filter(
+          (r) => r.utilizationRate <= REPORT_UTILIZATION_THRESHOLDS.LOW
+        ).length,
         totalEquipmentCount: withRate.length,
       },
       utilizationByCategory: [],
@@ -558,11 +565,8 @@ export class ReportsService {
       .where(and(...conditions))
       .orderBy(desc(calibrationsTable.calibrationDate));
 
-    const APPROVAL_LABELS: Record<string, string> = {
-      pending_approval: '승인대기',
-      approved: '승인됨',
-      rejected: '반려됨',
-    };
+    // SSOT: @equipment-management/schemas
+    const APPROVAL_LABELS = CALIBRATION_APPROVAL_STATUS_LABELS as Record<string, string>;
     const fmtDate = (d: Date | null | undefined): string =>
       d ? new Date(d).toLocaleDateString(DEFAULT_LOCALE) : '-';
 
@@ -761,11 +765,8 @@ export class ReportsService {
       .where(and(...conditions))
       .orderBy(desc(repairHistoryTable.repairDate));
 
-    const RESULT_LABELS: Record<string, string> = {
-      completed: '완료',
-      partial: '부분완료',
-      failed: '실패',
-    };
+    // SSOT: @equipment-management/schemas
+    const RESULT_LABELS = REPAIR_RESULT_LABELS as Record<string, string>;
 
     return {
       title: '수리 및 점검 이력 보고서',

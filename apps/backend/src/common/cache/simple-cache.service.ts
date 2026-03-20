@@ -153,9 +153,9 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
     this.logger.debug(`Cache miss for key: ${key}, fetching data...`);
     const promise = factory()
       .then((value) => {
-        if (value !== undefined && value !== null) {
-          this.set(key, value, ttl);
-        }
+        // Cache both positive and negative results (negative cache with shorter TTL to prevent stampede)
+        const effectiveTtl = value === undefined || value === null ? Math.min(ttl, 10_000) : ttl;
+        this.set(key, value, effectiveTtl);
         return value;
       })
       .catch((error) => {

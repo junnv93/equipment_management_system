@@ -28,6 +28,7 @@ import {
   DEFAULT_LOCALE,
   type IntermediateCheckStatus,
   CalibrationRequiredEnum,
+  IntermediateCheckFilterStatusValues,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -114,6 +115,7 @@ export class CalibrationService extends VersionedBaseService {
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}list:*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}intermediate-checks:*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
   }
 
   // ============================================================================
@@ -1357,11 +1359,11 @@ export class CalibrationService extends VersionedBaseService {
     if (query?.equipmentId) {
       whereConditions.push(eq(schema.calibrations.equipmentId, query.equipmentId));
     }
-    if (query?.status === 'overdue') {
+    if (query?.status === IntermediateCheckFilterStatusValues.OVERDUE) {
       whereConditions.push(sql`${schema.calibrations.intermediateCheckDate} < ${todayStr}`);
-    } else if (query?.status === 'due') {
+    } else if (query?.status === IntermediateCheckFilterStatusValues.DUE) {
       whereConditions.push(sql`${schema.calibrations.intermediateCheckDate} <= ${todayStr}`);
-    } else if (query?.status === 'pending') {
+    } else if (query?.status === IntermediateCheckFilterStatusValues.PENDING) {
       whereConditions.push(sql`${schema.calibrations.intermediateCheckDate} >= ${todayStr}`);
     }
 

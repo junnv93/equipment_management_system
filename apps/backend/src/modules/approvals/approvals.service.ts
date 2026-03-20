@@ -38,6 +38,7 @@ import {
 } from '@equipment-management/schemas';
 import {
   APPROVAL_KPI,
+  ROLE_APPROVAL_CATEGORIES,
   resolveDataScope,
   NON_CONFORMANCE_DATA_SCOPE,
   CHECKOUT_DATA_SCOPE,
@@ -48,34 +49,22 @@ import {
   EQUIPMENT_REQUEST_DATA_SCOPE,
   type FeatureScopePolicy,
   type UserScopeContext,
+  CACHE_TTL,
 } from '@equipment-management/shared-constants';
+import { ApprovalCategoryValues } from '@equipment-management/schemas';
 import { toSafeInt } from '../../common/utils';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+
+/** 승인 카테고리 축약 (SSOT: @equipment-management/schemas) */
+const AC = ApprovalCategoryValues;
 
 /**
- * 역할별 승인 카테고리 매핑
- *
- * SSOT: 프론트엔드 ROLE_TABS (approvals-api.ts)와 동기화
- *
- * 역할에 해당하지 않는 카테고리는 DB 쿼리 생략 (0 반환)
+ * 역할별 승인 카테고리 (Set 변환 — O(1) lookup)
+ * SSOT: @equipment-management/shared-constants ROLE_APPROVAL_CATEGORIES
  */
-const ROLE_CATEGORIES: Record<UserRole, ReadonlySet<string>> = {
-  test_engineer: new Set(),
-  technical_manager: new Set([
-    'outgoing',
-    'incoming',
-    'equipment',
-    'calibration',
-    'inspection',
-    'nonconformity',
-    'disposal_review',
-    'software',
-  ]),
-  quality_manager: new Set(['plan_review']),
-  lab_manager: new Set(['disposal_final', 'plan_final', 'incoming']),
-  system_admin: new Set(),
-};
+const ROLE_CATEGORIES = Object.fromEntries(
+  Object.entries(ROLE_APPROVAL_CATEGORIES).map(([role, cats]) => [role, new Set(cats)])
+) as unknown as Record<UserRole, ReadonlySet<string>>;
 
 /**
  * 카테고리별 승인 대기 개수
@@ -212,7 +201,7 @@ export class ApprovalsService {
       softwareCount,
     ] = await Promise.all([
       // === Outgoing (반출) — SSOT: CHECKOUT_DATA_SCOPE ===
-      shouldQuery('outgoing')
+      shouldQuery(AC.OUTGOING)
         ? this.getCheckoutCount(
             CheckoutStatusValues.PENDING,
             userCtx,
@@ -221,7 +210,7 @@ export class ApprovalsService {
           )
         : Promise.resolve(0),
 
-      shouldQuery('outgoing')
+      shouldQuery(AC.OUTGOING)
         ? this.getCheckoutCount(
             CheckoutStatusValues.PENDING,
             userCtx,
@@ -230,11 +219,11 @@ export class ApprovalsService {
         : Promise.resolve(0),
 
       // === Incoming (반입) — SSOT: CHECKOUT_DATA_SCOPE / EQUIPMENT_IMPORT_DATA_SCOPE ===
-      shouldQuery('incoming')
+      shouldQuery(AC.INCOMING)
         ? this.getCheckoutCount(CheckoutStatusValues.RETURNED, userCtx)
         : Promise.resolve(0),
 
-      shouldQuery('incoming')
+      shouldQuery(AC.INCOMING)
         ? this.getEquipmentImportCount(
             EquipmentImportStatusValues.PENDING,
             EquipmentImportSourceEnum.enum.rental,
@@ -242,7 +231,7 @@ export class ApprovalsService {
           )
         : Promise.resolve(0),
 
-      shouldQuery('incoming')
+      shouldQuery(AC.INCOMING)
         ? this.getEquipmentImportCount(
             EquipmentImportStatusValues.PENDING,
             EquipmentImportSourceEnum.enum.internal_shared,
@@ -251,19 +240,19 @@ export class ApprovalsService {
         : Promise.resolve(0),
 
       // === Specialized — 각 메서드가 자신의 SSOT 정책으로 스코프 해석 ===
-      shouldQuery('equipment') ? this.getEquipmentRequestCount(userCtx) : Promise.resolve(0),
-      shouldQuery('calibration') ? this.getCalibrationCount(userCtx) : Promise.resolve(0),
-      shouldQuery('inspection') ? this.getIntermediateCheckCount(userCtx) : Promise.resolve(0),
-      shouldQuery('nonconformity') ? this.getNonConformanceCount(userCtx) : Promise.resolve(0),
-      shouldQuery('disposal_review')
+      shouldQuery(AC.EQUIPMENT) ? this.getEquipmentRequestCount(userCtx) : Promise.resolve(0),
+      shouldQuery(AC.CALIBRATION) ? this.getCalibrationCount(userCtx) : Promise.resolve(0),
+      shouldQuery(AC.INSPECTION) ? this.getIntermediateCheckCount(userCtx) : Promise.resolve(0),
+      shouldQuery(AC.NONCONFORMITY) ? this.getNonConformanceCount(userCtx) : Promise.resolve(0),
+      shouldQuery(AC.DISPOSAL_REVIEW)
         ? this.getDisposalCount(DisposalReviewStatusValues.PENDING, userCtx)
         : Promise.resolve(0),
-      shouldQuery('disposal_final')
+      shouldQuery(AC.DISPOSAL_FINAL)
         ? this.getDisposalCount(DisposalReviewStatusValues.REVIEWED, userCtx)
         : Promise.resolve(0),
-      shouldQuery('plan_review') ? this.getCalibrationPlanReviewCount() : Promise.resolve(0),
-      shouldQuery('plan_final') ? this.getCalibrationPlanFinalCount() : Promise.resolve(0),
-      shouldQuery('software') ? this.getSoftwareCount() : Promise.resolve(0),
+      shouldQuery(AC.PLAN_REVIEW) ? this.getCalibrationPlanReviewCount() : Promise.resolve(0),
+      shouldQuery(AC.PLAN_FINAL) ? this.getCalibrationPlanFinalCount() : Promise.resolve(0),
+      shouldQuery(AC.SOFTWARE) ? this.getSoftwareCount() : Promise.resolve(0),
     ]);
 
     return {
@@ -370,33 +359,33 @@ export class ApprovalsService {
 
     try {
       switch (category) {
-        case 'outgoing':
+        case AC.OUTGOING:
           return this.getOutgoingKpi(userCtx, thresholdDays);
-        case 'incoming':
+        case AC.INCOMING:
           return this.getIncomingKpi(userCtx, thresholdDays);
-        case 'equipment':
+        case AC.EQUIPMENT:
           return this.getEquipmentRequestKpi(userCtx, thresholdDays);
-        case 'calibration':
+        case AC.CALIBRATION:
           return this.getCalibrationKpi(userCtx, thresholdDays);
-        case 'inspection':
+        case AC.INSPECTION:
           return this.getInspectionKpi(userCtx, thresholdDays);
-        case 'nonconformity':
+        case AC.NONCONFORMITY:
           return this.getNonConformanceKpi(userCtx, thresholdDays);
-        case 'disposal_review':
+        case AC.DISPOSAL_REVIEW:
           return this.getDisposalKpi(DisposalReviewStatusValues.PENDING, userCtx, thresholdDays);
-        case 'disposal_final':
+        case AC.DISPOSAL_FINAL:
           return this.getDisposalKpi(DisposalReviewStatusValues.REVIEWED, userCtx, thresholdDays);
-        case 'plan_review':
+        case AC.PLAN_REVIEW:
           return this.getCalibrationPlanKpi(
             CalibrationPlanStatusValues.PENDING_REVIEW,
             thresholdDays
           );
-        case 'plan_final':
+        case AC.PLAN_FINAL:
           return this.getCalibrationPlanKpi(
             CalibrationPlanStatusValues.PENDING_APPROVAL,
             thresholdDays
           );
-        case 'software':
+        case AC.SOFTWARE:
           return this.getSoftwareKpi(thresholdDays);
         default:
           return { urgentCount: 0, avgWaitDays: 0 };

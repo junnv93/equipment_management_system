@@ -4,7 +4,11 @@ import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import type { SQL } from 'drizzle-orm';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  NOTIFICATION_RETENTION_DAYS,
+} from '@equipment-management/shared-constants';
+import { NotificationTypeValues } from '@equipment-management/schemas';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 /**
@@ -315,7 +319,14 @@ export class NotificationsService {
     pageSize: number;
     totalPages: number;
   }> {
-    const { category, isRead, search, recipientSite, page = 1, pageSize = 20 } = query;
+    const {
+      category,
+      isRead,
+      search,
+      recipientSite,
+      page = 1,
+      pageSize = DEFAULT_PAGE_SIZE,
+    } = query;
 
     const conditions: SQL[] = [];
 
@@ -467,14 +478,14 @@ export class NotificationsService {
     title: string,
     content: string,
     priority: string = 'medium',
-    retentionDays: number = 90
+    retentionDays: number = NOTIFICATION_RETENTION_DAYS
   ): Promise<NotificationRecord> {
     const [created] = await this.db
       .insert(schema.notifications)
       .values({
         title,
         content,
-        type: 'system_announcement',
+        type: NotificationTypeValues.SYSTEM_ANNOUNCEMENT,
         category: 'system',
         priority,
         isSystemWide: true,

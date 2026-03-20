@@ -29,6 +29,7 @@ import {
 import { RejectCorrectionDto, RejectCorrectionValidationPipe } from './dto/reject-correction.dto';
 import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { type NonConformance } from '@equipment-management/db/schema/non-conformances';
+import { NonConformanceStatusValues as NCStatusVal } from '@equipment-management/schemas';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { Permission, NON_CONFORMANCE_DATA_SCOPE } from '@equipment-management/shared-constants';
@@ -164,7 +165,7 @@ export class NonConformancesController {
     enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
 
     // Rule 2: correctedBy는 서버에서 JWT로 추출 (클라이언트 body 신뢰 금지)
-    if (updateDto.status === 'corrected') {
+    if (updateDto.status === NCStatusVal.CORRECTED) {
       updateDto.correctedBy = extractUserId(req);
     }
 

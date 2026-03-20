@@ -4,6 +4,7 @@ import * as process from 'process';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { getErrorStack } from '../../common/utils/error';
+import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
 
 @Injectable()
 export class MonitoringService {
@@ -321,9 +322,9 @@ export class MonitoringService {
     this.logger.log('애플리케이션 건강 상태 조회');
 
     // 임계치 설정
-    const cpuThreshold = 90;
-    const memoryThreshold = 85;
-    const errorRateThreshold = 5; // 5%
+    const cpuThreshold = MONITORING_THRESHOLDS.CPU_PERCENT;
+    const memoryThreshold = MONITORING_THRESHOLDS.MEMORY_PERCENT;
+    const errorRateThreshold = MONITORING_THRESHOLDS.ERROR_RATE_PERCENT;
 
     // 현재 상태에 따른 건강 상태 판단
     const isCpuCritical = this.metrics.cpu.usage > cpuThreshold;

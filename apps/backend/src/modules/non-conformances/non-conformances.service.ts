@@ -6,7 +6,7 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { eq, and, isNull, SQL, ne, sql, inArray } from 'drizzle-orm';
+import { eq, and, isNull, SQL, ne, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   nonConformances,
@@ -26,6 +26,7 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import { equipmentBelongsToSite } from '../../common/utils/site-filter';
 import {
   EquipmentStatusEnum,
   NonConformanceStatusValues as NonConformanceStatus,
@@ -253,36 +254,15 @@ export class NonConformancesService extends VersionedBaseService {
     // buildListConditions()로 data/count 쿼리 필터 일관성 보장
     const filterParams = { equipmentId, status, ncType, search };
 
-    // site 필터: equipment 테이블 JOIN으로 처리 (correlated subquery 대신)
-    // relational query에서는 equipment 테이블을 직접 참조할 수 없으므로
-    // 사전 조회한 equipmentId 목록으로 IN 조건 적용
-    let siteEquipmentIds: string[] | undefined;
-    if (site) {
-      const siteEquipment = await this.db
-        .select({ id: equipment.id })
-        .from(equipment)
-        .where(eq(equipment.site, site));
-      siteEquipmentIds = siteEquipment.map((e) => e.id);
-      if (siteEquipmentIds.length === 0) {
-        return {
-          items: [],
-          meta: {
-            totalItems: 0,
-            itemCount: 0,
-            itemsPerPage: pageSize,
-            totalPages: 0,
-            currentPage: page,
-          },
-        };
-      }
-    }
+    // site 필터: equipmentBelongsToSite() 서브쿼리로 단일 쿼리 처리
+    // 별도 사전 조회 없이 DB 레벨에서 IN (SELECT ...) 적용
 
     // Use Drizzle relational query to include user→team relations
     const items = await this.db.query.nonConformances.findMany({
       where: () => {
         const conditions = this.buildListConditions(filterParams);
-        if (siteEquipmentIds) {
-          conditions.push(inArray(nonConformances.equipmentId, siteEquipmentIds));
+        if (site) {
+          conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, site));
         }
         return and(...conditions);
       },
@@ -584,8 +564,8 @@ export class NonConformancesService extends VersionedBaseService {
    * 장비가 부적합 상태인지 확인
    */
   async isEquipmentNonConforming(equipmentId: string): Promise<boolean> {
-    const openNonConformances = await this.db
-      .select()
+    const [row] = await this.db
+      .select({ exists: sql<number>`1` })
       .from(nonConformances)
       .where(
         and(
@@ -596,7 +576,7 @@ export class NonConformancesService extends VersionedBaseService {
       )
       .limit(1);
 
-    return openNonConformances.length > 0;
+    return !!row;
   }
 
   /**

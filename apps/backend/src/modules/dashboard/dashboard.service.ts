@@ -17,7 +17,11 @@ import {
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { ApprovalsService } from '../approvals/approvals.service';
-import { CACHE_TTL, DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  DASHBOARD_ITEM_LIMIT,
+  DASHBOARD_ACTIVITIES_LIMIT,
+} from '@equipment-management/shared-constants';
 import {
   DashboardSummaryDto,
   EquipmentByTeamDto,
@@ -450,7 +454,7 @@ export class DashboardService {
   async getRecentActivities(
     userId: string,
     userRole: UserRole,
-    limit = 20,
+    limit = DASHBOARD_ACTIVITIES_LIMIT,
     teamId?: string,
     site?: string
   ): Promise<RecentActivityDto[]> {

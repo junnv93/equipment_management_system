@@ -16,6 +16,8 @@ import {
 } from '@equipment-management/db/schema';
 import { UserRoleValues, ApprovalStatusValues } from '@equipment-management/schemas';
 import { DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import type { AppDatabase } from '@equipment-management/db';
 import { EquipmentService } from '../equipment.service';
 import type { CreateEquipmentDto } from '../dto/create-equipment.dto';
@@ -49,7 +51,8 @@ export class EquipmentApprovalService {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
     private readonly equipmentService: EquipmentService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly cacheService: SimpleCacheService
   ) {}
 
   /**
@@ -459,6 +462,7 @@ export class EquipmentApprovalService {
         timestamp: new Date(),
       });
 
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
       this.logger.log(`Request approved: ${requestUuid}`);
       return updated;
     } catch (error) {
@@ -557,6 +561,7 @@ export class EquipmentApprovalService {
         timestamp: new Date(),
       });
 
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
       this.logger.log(`Request rejected: ${requestUuid}`);
       return updated;
     } catch (error) {

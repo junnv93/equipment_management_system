@@ -7,6 +7,7 @@ import {
   ACCESS_TOKEN_TTL_SECONDS,
   ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_TOKEN_EXPIRES_IN,
+  SECURITY,
 } from '@equipment-management/shared-constants';
 import {
   type SiteCode,
@@ -94,10 +95,8 @@ export interface TestUser {
 // 토큰 라이프사이클 상수는 @equipment-management/shared-constants/auth-token에서 import
 // ABSOLUTE_SESSION_MAX_AGE_SECONDS, ACCESS_TOKEN_TTL_SECONDS, ACCESS_TOKEN_EXPIRES_IN, REFRESH_TOKEN_EXPIRES_IN
 
-/** 로그인 실패 제한 (dev/test 전용) */
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_DURATION_MS = 15 * 60 * 1000; // 15분
-const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15분 윈도우
+/** 로그인 실패 제한 — SSOT: @equipment-management/shared-constants */
+const { MAX_LOGIN_ATTEMPTS, LOCK_DURATION_MS, ATTEMPT_WINDOW_MS } = SECURITY;
 
 @Injectable()
 export class AuthService {

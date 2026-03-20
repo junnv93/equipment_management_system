@@ -1,4 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
+import type { AuditAction, AuditEntityType } from '@equipment-management/schemas';
 
 /**
  * 감사 로그 메타데이터 키
@@ -9,37 +10,8 @@ export const AUDIT_LOG_KEY = 'auditLog';
  * 감사 로그 메타데이터 인터페이스
  */
 export interface AuditLogMetadata {
-  action:
-    | 'create'
-    | 'update'
-    | 'delete'
-    | 'approve'
-    | 'reject'
-    | 'checkout'
-    | 'return'
-    | 'cancel'
-    | 'login'
-    | 'logout'
-    | 'close'
-    | 'reject_correction';
-  entityType:
-    | 'equipment'
-    | 'calibration'
-    | 'checkout'
-    | 'rental'
-    | 'user'
-    | 'team'
-    | 'calibration_factor'
-    | 'non_conformance'
-    | 'software'
-    | 'calibration_plan'
-    | 'repair_history'
-    | 'equipment_import'
-    | 'location_history'
-    | 'maintenance_history'
-    | 'incident_history'
-    | 'settings'
-    | 'notification';
+  action: AuditAction;
+  entityType: AuditEntityType;
   /**
    * 엔티티 ID를 추출하는 함수 또는 파라미터 경로
    * - 함수: (request, response) => entityId

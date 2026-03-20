@@ -46,6 +46,9 @@ export const CACHE_KEY_PREFIXES = {
 
   /** notifications.service.ts */
   NOTIFICATION: 'notification:',
+
+  /** approvals.service.ts */
+  APPROVALS: 'approvals:',
 } as const;
 
 export type CacheKeyPrefix = (typeof CACHE_KEY_PREFIXES)[keyof typeof CACHE_KEY_PREFIXES];

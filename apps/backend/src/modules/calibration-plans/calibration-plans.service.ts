@@ -43,7 +43,7 @@ import type {
   ExternalCalibrationEquipment,
   CalibrationPlanVersionHistoryItem,
 } from './calibration-plans.types';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 @Injectable()
 export class CalibrationPlansService extends VersionedBaseService {
@@ -247,7 +247,15 @@ export class CalibrationPlansService extends VersionedBaseService {
    * - 캐시: CACHE_TTL.MEDIUM
    */
   async findAll(query: CalibrationPlanQueryInput): Promise<CalibrationPlanListResult> {
-    const { year, siteId, teamId, status, page = 1, pageSize = 20, includeSummary } = query;
+    const {
+      year,
+      siteId,
+      teamId,
+      status,
+      page = 1,
+      pageSize = DEFAULT_PAGE_SIZE,
+      includeSummary,
+    } = query;
 
     const conditions: SQL[] = [];
 
@@ -866,10 +874,13 @@ export class CalibrationPlansService extends VersionedBaseService {
         .where(inArray(calibrationPlanItems.id, itemIds));
 
       // 영향받은 plan 캐시 일괄 무효화 (중복 제거)
+      // detail 캐시는 planId별로, list/summary 캐시는 1회만 무효화
       const planIds = [...new Set(items.map((row) => row.plan.id))];
       for (const planId of planIds) {
-        this.invalidatePlanCache(planId);
+        this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planId}`);
       }
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:*`);
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:*`);
     }
 
     return items.length;

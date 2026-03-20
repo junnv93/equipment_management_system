@@ -12,6 +12,7 @@ import { EmailTemplateService } from './email-template.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { NotificationSseService, SseNotificationPayload } from '../sse/notification-sse.service';
 import { SettingsService } from '../../settings/settings.service';
+import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
 
 /**
  * 알림 디스패처 (배치 인식)
@@ -20,8 +21,8 @@ import { SettingsService } from '../../settings/settings.service';
  * 전체 파이프라인을 오케스트레이션한다.
  */
 
-// 기본 90일 만료 (DB 설정 조회 실패 시 폴백)
-const DEFAULT_NOTIFICATION_TTL_DAYS = 90;
+// SSOT: @equipment-management/shared-constants
+const DEFAULT_NOTIFICATION_TTL_DAYS = NOTIFICATION_CONFIG.DEFAULT_TTL_DAYS;
 
 @Injectable()
 export class NotificationDispatcher {

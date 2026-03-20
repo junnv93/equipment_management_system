@@ -8,6 +8,13 @@ import {
   getStorageToken,
 } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
+import { timingSafeEqual } from 'crypto';
+
+/** Timing-safe 문자열 비교 (타이밍 사이드채널 방어) */
+function safeTimingCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 /**
  * Internal API Throttler Guard
@@ -50,8 +57,8 @@ export class InternalApiThrottlerGuard extends ThrottlerGuard {
     const { req } = this.getRequestResponse(context);
     const apiKey = req.headers['x-internal-api-key'] as string | undefined;
 
-    // 유효한 내부 API 키 → throttle 완전 bypass
-    if (apiKey && this.validInternalKeys.includes(apiKey)) {
+    // 유효한 내부 API 키 → throttle 완전 bypass (timing-safe 비교)
+    if (apiKey && this.validInternalKeys.some((key) => safeTimingCompare(key, apiKey))) {
       return true;
     }
 

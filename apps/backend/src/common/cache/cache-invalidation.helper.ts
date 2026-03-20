@@ -35,8 +35,22 @@ export class CacheInvalidationHelper {
    * 영향: 모든 대시보드 통계, 팀별 현황, 교정 현황, 승인 카운트 캐시
    */
   async invalidateAllDashboard(): Promise<void> {
-    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.DASHBOARD}*`);
-    this.logger.debug('✓ Invalidated all dashboard caches');
+    await Promise.all([
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.DASHBOARD}*`),
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`),
+    ]);
+    this.logger.debug('✓ Invalidated all dashboard + approval caches');
+  }
+
+  /**
+   * 승인 카운트 캐시 무효화
+   *
+   * 사용 시점: 승인/반려 처리 후, 새 승인 요청 생성 후
+   * 패턴: approvals:*
+   */
+  async invalidateApprovalCounts(): Promise<void> {
+    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+    this.logger.debug('✓ Invalidated all approval count caches');
   }
 
   /**

@@ -89,6 +89,14 @@ export class TestAuthController {
   @Post('test-cache-clear')
   @Public()
   testCacheClear(): { cleared: boolean; message: string } {
+    // staging 환경 보호: development/test에서만 캐시 클리어 허용
+    const env = process.env.NODE_ENV;
+    if (env !== 'development' && env !== 'test') {
+      throw new ForbiddenException(
+        'Cache clear is only available in development/test environments'
+      );
+    }
+
     const size = this.cacheService.size();
     this.cacheService.clear();
 

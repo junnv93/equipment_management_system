@@ -5,7 +5,7 @@ import { tap } from 'rxjs/operators';
 import { AUDIT_LOG_KEY, AuditLogMetadata } from '../decorators/audit-log.decorator';
 import { SKIP_AUDIT_KEY } from '../decorators/skip-audit.decorator';
 import { AuditService } from '../../modules/audit/audit.service';
-import type { CreateAuditLogDto } from '@equipment-management/schemas';
+import type { AuditAction, CreateAuditLogDto } from '@equipment-management/schemas';
 import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
 import { AuditLogDetails } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
@@ -117,10 +117,7 @@ export class AuditInterceptor implements NestInterceptor {
     const entityType = segments[segments.length - 1]?.replace(/^api$/, 'unknown') || 'unknown';
 
     // HTTP 메서드를 액션으로 변환
-    const actionMap: Record<
-      string,
-      'create' | 'update' | 'delete' | 'approve' | 'reject' | 'login' | 'logout'
-    > = {
+    const actionMap: Record<string, AuditAction> = {
       POST: 'create',
       PATCH: 'update',
       DELETE: 'delete',
