@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { repairHistory, RepairHistory, equipment } from '@equipment-management/db/schema';

@@ -73,7 +73,7 @@ describe('DashboardService', () => {
 
   describe('getSummary()', () => {
     it('캐시 서비스를 통해 데이터를 조회한다', async () => {
-      await service.getSummary('user-1', 'test_engineer', 'team-1', 'SUW');
+      await service.getSummary('team-1', 'SUW');
 
       expect(mockCacheService.getOrSet).toHaveBeenCalledWith(
         expect.stringContaining('dashboard:summary'),
@@ -83,7 +83,7 @@ describe('DashboardService', () => {
     });
 
     it('site와 teamId가 캐시 키에 포함된다', async () => {
-      await service.getSummary('user-1', 'test_engineer', 'team-abc', 'UIW');
+      await service.getSummary('team-abc', 'UIW');
 
       const cacheKey = mockCacheService.getOrSet.mock.calls[0][0] as string;
       expect(cacheKey).toContain('UIW');
@@ -91,7 +91,7 @@ describe('DashboardService', () => {
     });
 
     it('site와 teamId 없이 호출 시 전체 데이터 키를 사용한다', async () => {
-      await service.getSummary('user-1', 'system_admin');
+      await service.getSummary();
 
       const cacheKey = mockCacheService.getOrSet.mock.calls[0][0] as string;
       expect(cacheKey).toContain('all');
@@ -105,7 +105,7 @@ describe('DashboardService', () => {
         .mockReturnValueOnce(createCountChain(2)) // checkedOut
         .mockReturnValue(createCountChain(0)); // 나머지
 
-      const result = await service.getSummary('user-1', 'lab_manager', undefined, 'SUW');
+      const result = await service.getSummary(undefined, 'SUW');
 
       expect(result).toHaveProperty('totalEquipment');
       expect(result).toHaveProperty('availableEquipment');

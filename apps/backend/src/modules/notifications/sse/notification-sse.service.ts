@@ -143,7 +143,7 @@ export class NotificationSseService implements OnModuleDestroy {
     const activeCount = this.connections.size;
     if (activeCount === 0) return;
 
-    for (const [userId, subject] of this.connections) {
+    for (const [_userId, subject] of this.connections) {
       if (!subject.closed) {
         // approval-changed 이벤트는 SseNotificationPayload와 다른 형태이므로
         // Subject.next 대신 직접 MessageEvent를 사용자에게 전달할 수 없다.
