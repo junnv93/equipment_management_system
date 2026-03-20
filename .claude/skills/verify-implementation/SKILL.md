@@ -32,11 +32,12 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 1   | `verify-cas`            | CAS(Optimistic Locking) 패턴 — version 필드, VersionedBaseService, 캐시 무효화           |
 | 2   | `verify-auth`           | 서버 사이드 인증/인가 — req.user.userId, @RequirePermissions, @AuditLog                  |
 | 3   | `verify-zod`            | Zod 검증 패턴 — ZodValidationPipe, class-validator 금지, Query targets                   |
-| 4   | `verify-ssot`           | SSOT 임포트 — 타입/enum 패키지 임포트, 로컬 재정의 금지                                  |
+| 4   | `verify-ssot`           | SSOT 임포트 소스 — 타입/enum 패키지 임포트, 로컬 재정의 금지                             |
+| 4b  | `verify-hardcoding`     | SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑    |
 | 5   | `verify-frontend-state` | 프론트엔드 상태 관리 — TanStack Query, onSuccess setQueryData 금지                       |
 | 6   | `verify-nextjs`         | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                            |
 | 7   | `verify-filters`        | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱         |
-| 8   | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙 |
+| 8   | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙  |
 | 9   | `verify-security`       | 보안 설정 — Helmet CSP 프로덕션 강화, Next.js Security Headers, @Public 남용 검사        |
 | 10  | `verify-i18n`           | i18n 번역 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조 일관성                     |
 | 11  | `verify-sql-safety`     | SQL 안전성 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지                              |

@@ -128,6 +128,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CANCEL_EQUIPMENT_IMPORT,
     // 감사 로그 (소속 팀 스코프)
     Permission.VIEW_AUDIT_LOGS,
+    // 시스템 설정 (조회만)
+    Permission.VIEW_SYSTEM_SETTINGS,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)
@@ -247,8 +249,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.APPROVE_EQUIPMENT_IMPORT,
     Permission.COMPLETE_EQUIPMENT_IMPORT,
     Permission.CANCEL_EQUIPMENT_IMPORT,
-    // 시스템 설정 (조회만, 관리 제외)
+    // 시스템 설정
     Permission.VIEW_SYSTEM_SETTINGS,
+    Permission.MANAGE_SYSTEM_SETTINGS,
   ],
 
   // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION - deprecated

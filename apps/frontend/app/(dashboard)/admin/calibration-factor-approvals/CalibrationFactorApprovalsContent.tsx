@@ -25,7 +25,7 @@ import calibrationFactorsApi, {
   CalibrationFactor,
   FACTOR_TYPE_LABELS,
   APPROVAL_STATUS_LABELS,
-  APPROVAL_STATUS_COLORS,
+  FACTOR_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
@@ -204,7 +204,7 @@ export default function CalibrationFactorApprovalsContent() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center gap-4">
-                          <Badge className={APPROVAL_STATUS_COLORS[factor.approvalStatus]}>
+                          <Badge className={FACTOR_APPROVAL_STATUS_COLORS[factor.approvalStatus]}>
                             {APPROVAL_STATUS_LABELS[factor.approvalStatus]}
                           </Badge>
                           <Badge variant="outline">{FACTOR_TYPE_LABELS[factor.factorType]}</Badge>

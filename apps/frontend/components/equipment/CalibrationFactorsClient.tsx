@@ -38,7 +38,7 @@ import calibrationFactorsApi, {
   CalibrationFactorType,
   FACTOR_TYPE_LABELS,
   APPROVAL_STATUS_LABELS,
-  APPROVAL_STATUS_COLORS,
+  FACTOR_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
@@ -341,7 +341,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                     <TableCell>{formatDate(factor.effectiveDate, 'yyyy-MM-dd')}</TableCell>
                     <TableCell>{formatDate(factor.requestedAt, 'yyyy-MM-dd HH:mm')}</TableCell>
                     <TableCell>
-                      <Badge className={APPROVAL_STATUS_COLORS[factor.approvalStatus]}>
+                      <Badge className={FACTOR_APPROVAL_STATUS_COLORS[factor.approvalStatus]}>
                         {APPROVAL_STATUS_LABELS[factor.approvalStatus]}
                       </Badge>
                     </TableCell>

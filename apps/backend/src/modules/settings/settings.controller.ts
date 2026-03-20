@@ -30,7 +30,7 @@ export class SettingsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '교정 알림 설정 조회 성공' })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
-  @RequirePermissions(Permission.APPROVE_CALIBRATION)
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   async getCalibrationSettings(@Query('site') site?: string): Promise<unknown> {
     const alertDays = await this.settingsService.getCalibrationAlertDays(site);
     return { alertDays };
@@ -42,7 +42,7 @@ export class SettingsController {
     description: '교정 알림 발송 시점을 변경합니다. 사이트별 오버라이드를 지원합니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '교정 알림 설정 변경 성공' })
-  @RequirePermissions(Permission.APPROVE_CALIBRATION)
+  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @AuditLog({ action: 'update', entityType: 'settings', entityIdPath: 'query.site' })
   @UsePipes(UpdateCalibrationSettingsValidationPipe)

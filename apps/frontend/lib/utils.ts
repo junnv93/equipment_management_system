@@ -39,24 +39,6 @@ export function truncateString(str: string, maxLength: number): string {
 }
 
 /**
- * 대여 상태에 따른 배지 색상 반환
- *
- * SSOT: brand.ts의 getSemanticStatusClasses() 사용
- */
-export function getRentalStatusColor(status: string): string {
-  const statusColorMap: Record<string, string> = {
-    pending: 'bg-brand-warning/10 text-brand-warning',
-    approved: 'bg-brand-ok/10 text-brand-ok',
-    rejected: 'bg-brand-critical/10 text-brand-critical',
-    borrowed: 'bg-brand-info/10 text-brand-info',
-    returned: 'bg-brand-neutral/10 text-brand-neutral',
-    overdue: 'bg-brand-repair/10 text-brand-repair',
-    return_requested: 'bg-brand-purple/10 text-brand-purple',
-  };
-  return statusColorMap[status] ?? 'bg-brand-neutral/10 text-brand-neutral';
-}
-
-/**
  * 현재 날짜로부터 지정된 일수만큼 이후의 날짜 계산
  */
 export function addDays(date: Date, days: number): Date {

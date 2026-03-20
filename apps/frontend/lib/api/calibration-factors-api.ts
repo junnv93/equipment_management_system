@@ -94,7 +94,7 @@ export const FACTOR_TYPE_LABELS = CALIBRATION_FACTOR_TYPE_LABELS;
 export const APPROVAL_STATUS_LABELS = CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS;
 
 // 승인 상태 색상 — BRAND_CLASS_MATRIX에서 파생 (SSOT)
-export const APPROVAL_STATUS_COLORS: Record<CalibrationFactorApprovalStatus, string> = {
+export const FACTOR_APPROVAL_STATUS_COLORS: Record<CalibrationFactorApprovalStatus, string> = {
   pending: getSemanticStatusClasses('warning'),
   approved: getSemanticStatusClasses('ok'),
   rejected: getSemanticStatusClasses('critical'),
