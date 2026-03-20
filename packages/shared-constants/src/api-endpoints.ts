@@ -355,6 +355,7 @@ export const API_ENDPOINTS = {
   APPROVALS: {
     COUNTS: '/api/approvals/counts',
     KPI: '/api/approvals/kpi',
+    STREAM: '/api/approvals/stream',
   },
 
   // ============================================================================

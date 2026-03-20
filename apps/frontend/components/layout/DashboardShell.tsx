@@ -131,12 +131,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
   useNotificationStream();
 
   // 승인 대기 카운트 조회 (권한이 있는 경우에만)
+  // SSE를 통해 실시간 무효화됨 (useNotificationStream에서 approval-changed 이벤트 처리)
+  // refetchInterval은 SSE 연결 끊김 시 안전망 (10분)
   const { data: pendingCounts } = useQuery<PendingCountsByCategory>({
     queryKey: queryKeys.approvals.counts(userRole),
     queryFn: () => approvalsApi.getPendingCounts(),
     enabled: !!userRole && hasApprovalPermissions(userRole),
     staleTime: CACHE_TIMES.SHORT,
-    refetchInterval: REFETCH_INTERVALS.NEAR_REALTIME,
+    refetchInterval: REFETCH_INTERVALS.SSE_FALLBACK,
   });
 
   // SSOT: nav-config.ts에서 필터링된 섹션 조회

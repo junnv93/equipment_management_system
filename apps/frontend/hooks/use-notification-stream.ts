@@ -92,6 +92,14 @@ export function useNotificationStream() {
                 const data = line.slice(6); // "data: " 제거
                 const notification = JSON.parse(data);
 
+                // 승인 변경 이벤트: approval counts 쿼리만 무효화 (toast 미표시)
+                if (notification.title === '__approval_changed__') {
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.approvals.countsAll,
+                  });
+                  continue;
+                }
+
                 // 1. 캐시 무효화 (unreadCount + list)
                 queryClient.invalidateQueries({
                   queryKey: queryKeys.notifications.all,

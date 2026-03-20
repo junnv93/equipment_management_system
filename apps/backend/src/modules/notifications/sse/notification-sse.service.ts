@@ -8,6 +8,7 @@ import { Subject, Observable, map, finalize, interval, merge } from 'rxjs';
  * - createStream(userId): SSE Observable 생성 + 30초 heartbeat
  * - pushToUser(userId, data): 특정 사용자에게 알림 전송
  * - pushToUsers(userIds, data): 다수 사용자에게 배치 전송
+ * - broadcastApprovalChanged(): 모든 연결된 사용자에게 approval-changed 이벤트 전송
  *
  * 다중 탭 지원: 같은 userId → 같은 Subject 재사용 (push 1번 → 모든 탭 수신)
  * 수명 관리: Reference Counting — 마지막 구독 해제 시 Subject 자동 정리
@@ -129,6 +130,40 @@ export class NotificationSseService implements OnModuleDestroy {
     for (const userId of userIds) {
       this.pushToUser(userId, notification);
     }
+  }
+
+  /**
+   * 모든 연결된 사용자에게 approval-changed 이벤트 브로드캐스트
+   *
+   * 승인 관련 도메인 이벤트 발생 시 호출하여 프론트엔드의
+   * approval counts 쿼리를 무효화하게 한다.
+   * 2분 폴링 → SSE 실시간 갱신으로 전환.
+   */
+  broadcastApprovalChanged(triggerEvent: string): void {
+    const activeCount = this.connections.size;
+    if (activeCount === 0) return;
+
+    for (const [userId, subject] of this.connections) {
+      if (!subject.closed) {
+        // approval-changed 이벤트는 SseNotificationPayload와 다른 형태이므로
+        // Subject.next 대신 직접 MessageEvent를 사용자에게 전달할 수 없다.
+        // 대신 특수한 notification payload로 승인 변경을 알린다.
+        subject.next({
+          id: `approval-changed-${Date.now()}`,
+          title: '__approval_changed__',
+          content: triggerEvent,
+          category: 'approval',
+          priority: 'low',
+          linkUrl: null,
+          entityType: 'approval',
+          entityId: null,
+          equipmentId: null,
+          createdAt: new Date(),
+        });
+      }
+    }
+
+    this.logger.debug(`승인 변경 브로드캐스트: ${activeCount}명 사용자, trigger=${triggerEvent}`);
   }
 
   /**

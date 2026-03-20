@@ -37,6 +37,8 @@ export const REFETCH_INTERVALS = {
   NEAR_REALTIME: 2 * 60 * 1000,
   /** 5분 - 주기적 갱신 (모니터링) */
   PERIODIC: 5 * 60 * 1000,
+  /** 10분 - SSE 폴백 (SSE 연결 끊김 시 안전망) */
+  SSE_FALLBACK: 10 * 60 * 1000,
   /** 없음 - 사용자 인터랙션 기반 갱신 */
   NONE: undefined,
 } as const;
