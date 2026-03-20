@@ -212,7 +212,25 @@ grep -rn "import.*SECURITY\b" apps/backend/src apps/frontend --include="*.ts" --
 
 **PASS 기준:** 0개 결과.
 
-### Step 9: REJECTION_STAGE_VALUES SSOT 사용 확인
+### Step 9: DB Enum 배열 SSOT 참조 확인
+
+`pgEnum`과 `varchar + $type<>()` 모두 enum 값 배열을 `@equipment-management/schemas`에서 import해야 합니다. DB 스키마에 하드코딩된 enum 배열이 있으면 SSOT 불일치가 발생합니다.
+
+```bash
+# DB 스키마에서 하드코딩된 enum 배열 탐지 (schemas import 없이 직접 선언)
+grep -rn "pgEnum\|varchar.*\$type" packages/db/src/schema --include="*.ts" -B 2 | grep "const.*=\s*\[" | grep -v "@equipment-management/schemas\|import\|// "
+```
+
+```bash
+# DB 스키마 파일에서 schemas 패키지 import 확인
+grep -rn "from '@equipment-management/schemas'" packages/db/src/schema --include="*.ts"
+```
+
+**PASS 기준:** 모든 DB enum 배열(`pgEnum` 인자, `$type<>()` 체크 값)이 `@equipment-management/schemas`의 enum 값 배열을 참조.
+
+**FAIL 기준:** DB 스키마에 `['available', 'in_use', ...]` 같은 하드코딩 배열 → schemas enum 값 변경 시 DB와 불일치.
+
+### Step 10: REJECTION_STAGE_VALUES SSOT 사용 확인
 
 ```bash
 grep -rn "rejectionStage\s*=\s*\[" packages/db/src apps/backend/src --include="*.ts" | grep -v "node_modules\|// "
@@ -242,7 +260,8 @@ grep -rn "REJECTION_STAGE_VALUES" packages/db/src apps/backend/src --include="*.
 | 6   | ApiResponse 로컬 재정의       | PASS/FAIL | packages/ 외 ApiResponse 정의 위치     |
 | 7   | APPROVAL_KPI 임계값           | PASS/FAIL | 하드코딩 임계값/잘못된 import 위치     |
 | 8   | 신규 shared-constants SSOT    | PASS/FAIL | APPROVAL_CATEGORIES/BUSINESS_RULES 등  |
-| 9   | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
+| 9   | DB Enum 배열 SSOT 참조        | PASS/FAIL | 하드코딩 enum 배열 위치                |
+| 10  | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
 ```
 
 ## Exceptions

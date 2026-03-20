@@ -1,6 +1,6 @@
 ---
 name: nextjs-16
-description: Next.js 16 App Router development guide with latest patterns (params Promise, PageProps helpers, useActionState, Server Components, Cache Components, Proxy). Use when creating pages, layouts, routes, Server Actions, or working with Next.js 16 projects.
+description: "Next.js 16 App Router 레퍼런스 가이드 (검증 스킬 아님 — 검증은 /verify-nextjs 사용). 새 페이지/레이아웃/라우트/Server Action 작성 시, Next.js 16 패턴(params Promise, PageProps, useActionState, Server Components, Cache Components) 참조용. Use when creating pages, layouts, routes, Server Actions, or working with Next.js 16 projects."
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

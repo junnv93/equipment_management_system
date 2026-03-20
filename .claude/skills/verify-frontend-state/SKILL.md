@@ -56,6 +56,9 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx`                              | NC 목록 콘텐츠 (useQuery + KPI 참조)                        |
 | `apps/frontend/components/teams/LeaderCombobox.tsx`                                                      | setQueryData 캐시 프라이밍 참조 (이벤트 핸들러)             |
 | `apps/frontend/components/teams/TeamForm.tsx`                                                            | form.watch 연동 + 조건부 props 전달 참조                    |
+| `apps/frontend/components/equipment/RepairHistoryClient.tsx`                                             | 수리 이력 CRUD direct useMutation + onSettled 참조          |
+| `apps/frontend/components/equipment/CheckoutHistoryTab.tsx`                                              | 반출 이력 조회 + 반출 신청 direct useMutation 참조          |
+| `apps/frontend/components/equipment/LocationHistoryTab.tsx`                                              | 위치 변동 이력 CRUD direct useMutation + onSettled 참조     |
 
 ## Workflow
 

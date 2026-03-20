@@ -2,7 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/claude-code) when working with this repository.
 **UL-QP-18 (장비 관리 절차서)** 기반 장비 관리 시스템의 프로덕션급 개발 가이드입니다.
-답변은 한국어로 해주세요.
+
+> 답변은 한국어로 해주세요.
+
 ## Build/Lint/Test Commands
 
 ```bash
@@ -50,7 +52,7 @@ equipment_management_system/
 ├── apps/
 │   ├── backend/                 # NestJS API (Port 3001)
 │   │   ├── src/
-│   │   │   ├── modules/         # 17 Feature modules
+│   │   │   ├── modules/         # 18 Feature modules
 │   │   │   ├── common/          # Shared: guards, pipes, filters, interceptors, decorators, cache
 │   │   │   └── database/        # Drizzle ORM setup
 │   │   └── test/                # E2E tests
@@ -74,7 +76,7 @@ equipment_management_system/
     └── development/             # Development guides
 ```
 
-### Backend Modules (17)
+### Backend Modules (18)
 
 | Module | Path | Description |
 |---|---|---|
@@ -92,6 +94,7 @@ equipment_management_system/
 | `non-conformances` | `modules/non-conformances/` | 부적합 관리 |
 | `notifications` | `modules/notifications/` | 알림 서비스 |
 | `reports` | `modules/reports/` | 리포트 생성 |
+| `settings` | `modules/settings/` | 시스템/교정 설정 관리 |
 | `software` | `modules/software/` | 소프트웨어 관리 |
 | `teams` | `modules/teams/` | 팀 관리 |
 | `users` | `modules/users/` | 사용자 관리 |
@@ -561,49 +564,19 @@ await DashboardCacheInvalidation.invalidateAll(queryClient);
 | `quality_manager` | 품질책임자 | 3 | 교정계획 검토 (대부분 읽기 전용) |
 | `lab_manager` | 시험소장 | 4 | 전체 권한 (단, 교정 등록 불가 — UL-QP-18 직무분리) |
 
-### Equipment Status (12개)
+### Equipment Status (12개) / Checkout Status (13개)
 
-```typescript
-enum EquipmentStatus {
-  available = 'available',                       // 사용가능
-  in_use = 'in_use',                             // 사용중
-  checked_out = 'checked_out',                   // 반출중
-  calibration_scheduled = 'calibration_scheduled', // 교정예정 (→ "사용 가능" + D-day 배지)
-  calibration_overdue = 'calibration_overdue',   // 교정기한초과 (→ "부적합" 빨간 배지)
-  non_conforming = 'non_conforming',             // 부적합
-  spare = 'spare',                               // 여분
-  retired = 'retired',                           // 폐기
-  pending_disposal = 'pending_disposal',         // 폐기 대기
-  disposed = 'disposed',                         // 폐기 완료
-  temporary = 'temporary',                       // 임시
-  inactive = 'inactive',                         // 비활성
-}
-```
+SSOT: `@equipment-management/schemas`의 `EquipmentStatus`, `CheckoutStatus`. 전체 값은 코드 참조.
 
-### Checkout Status (13개)
+**프론트엔드에서 주의할 상태 전이 규칙:**
 
-```typescript
-enum CheckoutStatus {
-  // 표준 플로우 (교정/수리)
-  pending = 'pending',             // 대기 → 승인/반려 버튼
-  approved = 'approved',           // 승인됨 → 반출 시작 버튼
-  rejected = 'rejected',           // 반려됨 → 액션 버튼 없음
-  checked_out = 'checked_out',     // 반출중 → 반입 처리 링크 + "반출 중" 텍스트
-  returned = 'returned',           // 반입됨
-  return_approved = 'return_approved', // 반입 승인
+| 상태 | 표시 | UI 동작 |
+|---|---|---|
+| `calibration_scheduled` | "사용 가능" + D-day 배지 | `retired`, `non_conforming`, `spare`, `disposed`에서는 배지 숨김 |
+| `calibration_overdue` | **"부적합"** (빨간 배지) | 스케줄러가 자동으로 `non_conforming` 전환 |
+| `overdue` (checkout) | "기한 초과" | 승인/반려 버튼 없음 — 승인 테스트에 사용 금지 |
 
-  // 렌탈 4-Step 플로우
-  lender_checked = 'lender_checked',       // 대여처 확인
-  borrower_received = 'borrower_received', // 차용처 수령
-  borrower_returned = 'borrower_returned', // 차용처 반납
-  lender_received = 'lender_received',     // 대여처 수령
-
-  // 공통
-  in_use = 'in_use',               // 사용중
-  overdue = 'overdue',             // 기한 초과 (승인/반려 버튼 없음!)
-  canceled = 'canceled',           // 취소
-}
-```
+**Checkout 플로우:** 표준(교정/수리) 6단계 + 렌탈 4-Step + 공통 3개 = 13개 상태
 
 ### Approval Workflows
 
@@ -779,6 +752,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-security**: 보안 설정 검증 — Helmet CSP 프로덕션 강화, Next.js Security Headers, PermissionsGuard DENY 모드, @Public 남용
 - **verify-i18n**: i18n 번역 일관성 검증 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조
 - **verify-sql-safety**: SQL 안전성 검증 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지
+- **verify-filters**: URL-driven 필터 SSOT 검증 — filter-utils 필수 export, hook 존재, page.tsx 서버 파싱
 - **verify-implementation**: 모든 verify 스킬 통합 실행
 - **manage-skills**: 검증 스킬 유지보수 (커버리지 갭 분석, 스킬 생성/업데이트)
 
