@@ -41,5 +41,11 @@ export * from './errors';
 
 export * from './api-response';
 
+// ============================================================
+// Validation Messages - SSOT
+// ============================================================
+
+export * from './validation';
+
 // Common base types
 export type { PaginatedResponseType, PaginatedResponse, SoftDeleteEntity } from './common/base';
