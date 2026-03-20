@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); const f=d.tool_response?.filePath || d.tool_input?.file_path || ''; if(f) console.log(f);\" | { read -r f; [ -n \"$f\" ] && npx prettier --write --ignore-unknown \"$f\" 2>/dev/null || true; }",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

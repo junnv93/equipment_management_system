@@ -46,6 +46,10 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                                                          |
 | `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 + 세션 동작 상수 (TTL, idle timeout, session sync)                            |
 | `packages/shared-constants/src/approval-kpi.ts`                              | SSOT 승인 KPI 임계값 (URGENT_THRESHOLD_DAYS, WARNING_THRESHOLD_DAYS)                                      |
+| `packages/shared-constants/src/approval-categories.ts`                       | SSOT 승인 카테고리 및 역할별 매핑 (APPROVAL_CATEGORIES, ROLE_APPROVAL_SCOPES)                             |
+| `packages/shared-constants/src/business-rules.ts`                            | SSOT 비즈니스 규칙 상수 (UL-QP-18 절차서 기반 운영 규칙)                                                  |
+| `packages/shared-constants/src/notification-config.ts`                       | SSOT 알림 설정 상수 (NOTIFICATION_CONFIG — 만료, 배치 처리 등)                                            |
+| `packages/shared-constants/src/security.ts`                                  | SSOT 보안 상수 (SECURITY — 로그인 제한, 잠금 정책 등)                                                     |
 | `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리 (countsAll prefix 키 포함)                                                               |
 | `apps/frontend/lib/api/cache-invalidation.ts`                                | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등)                                                           |
 | `packages/schemas/src/api-response.ts`                                       | ApiResponse 타입 SSOT (로컬 재정의 금지)                                                                  |
@@ -588,7 +592,52 @@ grep -rn "APPROVAL_KPI" apps/backend/src apps/frontend --include="*.ts" --includ
 
 **FAIL 기준:** `approval-kpi.ts` 외 파일에서 `URGENT_THRESHOLD_DAYS = 8` 등 직접 선언, 또는 `APPROVAL_KPI`를 잘못된 경로에서 import.
 
-### Step 11f: REJECTION_STAGE_VALUES SSOT 사용 확인
+### Step 11f: 신규 shared-constants SSOT 사용 확인
+
+신규 추가된 SSOT 상수(`APPROVAL_CATEGORIES`, `BUSINESS_RULES`, `NOTIFICATION_CONFIG`, `SECURITY`)가 로컬에서 재정의되지 않고 `@equipment-management/shared-constants`에서 임포트되는지 확인합니다.
+
+```bash
+# APPROVAL_CATEGORIES 로컬 재정의 탐지
+grep -rn "APPROVAL_CATEGORIES\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|approval-categories\.ts\|@equipment-management\|import\|re-export\|// "
+```
+
+```bash
+# BUSINESS_RULES 로컬 재정의 탐지
+grep -rn "BUSINESS_RULES\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|business-rules\.ts\|@equipment-management\|import\|re-export\|// "
+```
+
+```bash
+# NOTIFICATION_CONFIG 로컬 재정의 탐지
+grep -rn "NOTIFICATION_CONFIG\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|notification-config\.ts\|@equipment-management\|import\|re-export\|// "
+```
+
+```bash
+# SECURITY 상수 로컬 재정의 탐지 (MAX_LOGIN_ATTEMPTS, LOCK_DURATION_MS 등)
+grep -rn "MAX_LOGIN_ATTEMPTS\s*=\|LOCK_DURATION_MS\s*=\|ATTEMPT_WINDOW_MS\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|security\.ts\|@equipment-management\|import\|re-export\|// "
+```
+
+```bash
+# SECURITY import 소스 확인 (shared-constants에서 import해야 함)
+grep -rn "import.*SECURITY\b" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "@equipment-management/shared-constants\|node_modules\|// "
+```
+
+**PASS 기준:** 0개 결과 (모든 상수가 `@equipment-management/shared-constants`에서 import).
+
+**FAIL 기준:** `approval-categories.ts`/`business-rules.ts`/`notification-config.ts`/`security.ts` 외 파일에서 직접 선언 시 위반.
+
+**수정 패턴:**
+
+```typescript
+// ❌ WRONG — 로컬 하드코딩
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+
+// ✅ CORRECT — shared-constants에서 import
+import { SECURITY } from '@equipment-management/shared-constants';
+const { MAX_LOGIN_ATTEMPTS, LOCK_DURATION_MS, ATTEMPT_WINDOW_MS } = SECURITY;
+```
+
+### Step 11g: REJECTION_STAGE_VALUES SSOT 사용 확인
 
 DB 스키마의 `rejectionStage` 배열이 `@equipment-management/schemas`의 `REJECTION_STAGE_VALUES`에서 임포트되는지 확인합니다. 로컬 배열 선언은 SSOT 위반입니다.
 
@@ -617,7 +666,7 @@ import { REJECTION_STAGE_VALUES } from '@equipment-management/schemas';
 export const rejectionStage = REJECTION_STAGE_VALUES;
 ```
 
-### Step 11g: ErrorCode ↔ 프론트엔드 mapBackendErrorCode 매핑 완전성 확인
+### Step 11h: ErrorCode ↔ 프론트엔드 mapBackendErrorCode 매핑 완전성 확인
 
 백엔드 `ErrorCode` enum에 정의된 에러 코드가 프론트엔드 `mapBackendErrorCode`에 매핑되어 있는지 확인합니다. 특히 새로 추가된 에러 코드(`SCOPE_ACCESS_DENIED` 등)가 누락되지 않았는지 검증합니다.
 
@@ -724,8 +773,9 @@ import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/config/pagination';
 | 11c | CheckoutCacheInvalidation     | PASS/FAIL | 직접 queryKeys 조합 무효화 위치        |
 | 11d | countsAll prefix 키 사용      | PASS/FAIL | approvals.counts() 무효화 위치         |
 | 11e | APPROVAL_KPI 임계값           | PASS/FAIL | 하드코딩 임계값/잘못된 import 위치     |
-| 11f | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
-| 11g | ErrorCode↔프론트엔드 매핑    | PASS/FAIL | 누락된 ErrorCode 매핑 목록             |
+| 11f | 신규 shared-constants SSOT    | PASS/FAIL | APPROVAL_CATEGORIES/BUSINESS_RULES/NOTIFICATION_CONFIG/SECURITY 로컬 재정의 |
+| 11g | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
+| 11h | ErrorCode↔프론트엔드 매핑    | PASS/FAIL | 누락된 ErrorCode 매핑 목록             |
 | 12  | DTO→Entity 동적 매핑 SSOT     | PASS/FAIL | 하드코딩 필드 목록 위치                |
 | 13  | requestData 코덱 사용         | PASS/FAIL | 직접 JSON.parse 위치                   |
 ```

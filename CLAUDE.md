@@ -64,11 +64,11 @@ equipment_management_system/
 │       ├── hooks/               # Custom React hooks
 │       └── lib/                 # API clients, errors, utilities
 │
-├── packages/                    # Dependency chain: shared-constants → schemas → db
+├── packages/                    # Dependency chain: schemas ← shared-constants, schemas ← db
 │   ├── db/                      # Shared Drizzle schema
 │   ├── schemas/                 # Shared Zod schemas + enums (SSOT)
-│   ├── shared-constants/        # Permissions, API endpoints
-│   └── ui/                      # Shared UI components
+│   └── shared-constants/        # Permissions, API endpoints
+│                                # Note: Shared UI components use shadcn/ui directly in apps/frontend/components/ui/
 │
 └── docs/
     └── development/             # Development guides

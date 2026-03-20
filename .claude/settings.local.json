@@ -17,11 +17,14 @@
       "mcp__context7__get-library-docs",
       "mcp__playwright-test__browser_navigate",
       "mcp__playwright-test__planner_setup_page",
-      "mcp__playwright-test__browser_snapshot"
+      "mcp__playwright-test__browser_snapshot",
+      "Skill(update-config)"
     ],
     "deny": [],
     "ask": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": ["playwright"]
+  "enabledMcpjsonServers": [
+    "playwright"
+  ]
 }

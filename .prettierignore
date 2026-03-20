@@ -32,3 +32,6 @@ yarn.lock
 # Generated files
 *.tsbuildinfo
 coverage
+
+# Claude Code configuration
+.claude
