@@ -9,11 +9,16 @@
  */
 
 import { apiClient } from './api-client';
-import { API_ENDPOINTS, VALIDATION_RULES } from '@equipment-management/shared-constants';
+import {
+  API_ENDPOINTS,
+  VALIDATION_RULES,
+  ROLE_APPROVAL_CATEGORIES,
+} from '@equipment-management/shared-constants';
 import {
   type UserRole,
   type UnifiedApprovalStatus,
   type NonConformanceType,
+  type ApprovalCategory,
   UNIFIED_APPROVAL_STATUS_LABELS,
   SITE_LABELS,
   REPAIR_REQUIRING_NC_TYPES,
@@ -23,6 +28,7 @@ import {
   CheckoutStatusValues as CSVal,
   CalibrationPlanStatusValues as CPSVal,
   DisposalReviewStatusValues as DRSVal,
+  EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
@@ -60,43 +66,16 @@ export { UNIFIED_APPROVAL_STATUS_LABELS };
  * Specialized categories (non-movement):
  * - equipment, calibration, inspection, nonconformity, disposal, plans, software
  */
-export type ApprovalCategory =
-  // Direction-based (movement of equipment)
-  | 'outgoing' // 반출 (장비가 시설을 떠남)
-  | 'incoming' // 반입 (장비가 시설로 들어옴)
-
-  // Specialized approvals (non-movement)
-  | 'equipment' // 장비 등록/수정/삭제
-  | 'calibration' // 교정 기록
-  | 'inspection' // 중간점검
-  | 'nonconformity' // 부적합 장비 사용 재개
-  | 'disposal_review' // 장비 폐기 (기술책임자 검토)
-  | 'disposal_final' // 장비 폐기 (시험소장 최종)
-  | 'plan_review' // 교정계획서 (품질책임자 검토)
-  | 'plan_final' // 교정계획서 (시험소장 최종)
-  | 'software'; // 소프트웨어 유효성
+// ✅ SSOT: ApprovalCategory는 @equipment-management/schemas에서 import (위 import 참조)
+export type { ApprovalCategory };
 
 /**
  * 역할별 탭 설정
  *
  * SSOT: 백엔드 ApprovalsService의 getPendingCountsByRole과 동기화
  */
-export const ROLE_TABS: Record<UserRole, ApprovalCategory[]> = {
-  test_engineer: [], // 시험실무자는 승인 권한 없음
-  technical_manager: [
-    'outgoing', // ← Consolidated: checkout + vendor returns
-    'incoming', // ← Consolidated: return + rental imports + shared imports
-    'equipment',
-    'calibration',
-    'inspection',
-    'nonconformity',
-    'disposal_review',
-    'software', // ← ADD: TM has APPROVE_SOFTWARE_CHANGE (role-permissions.ts:105)
-  ],
-  quality_manager: ['plan_review'], // ← REMOVE software: QM only has VIEW_SOFTWARE (read-only)
-  lab_manager: ['disposal_final', 'plan_final', 'incoming'], // lab_manager also sees incoming (rental imports)
-  system_admin: [], // 시스템 관리자는 설정 관리 전용, 승인 워크플로우 미참여
-};
+// ✅ SSOT: ROLE_APPROVAL_CATEGORIES는 shared-constants에서 import (위 import 참조)
+export const ROLE_TABS: Record<UserRole, readonly ApprovalCategory[]> = ROLE_APPROVAL_CATEGORIES;
 
 /**
  * 탭 메타 정보
@@ -320,6 +299,17 @@ export interface BulkActionResult {
   success: string[];
   failed: string[];
 }
+
+// ============================================================================
+// 장비 요청 유형 라벨 (SSOT)
+// ============================================================================
+
+/** 장비 등록/수정/삭제 요청 유형 → 한국어 라벨 */
+export const REQUEST_TYPE_LABELS: Record<string, string> = {
+  create: '등록',
+  update: '수정',
+  delete: '삭제',
+};
 
 // ============================================================================
 // 승인 관리 API
@@ -1255,11 +1245,7 @@ class ApprovalsApi {
     const equipment = item.equipment as Record<string, unknown> | undefined;
     const requestType = String(item.requestType || 'create');
 
-    const requestTypeLabels: Record<string, string> = {
-      create: '등록',
-      update: '수정',
-      delete: '삭제',
-    };
+    const requestTypeLabels = REQUEST_TYPE_LABELS;
 
     // requestData에서 장비명 추출 시도
     let equipmentName = '';
@@ -1373,7 +1359,7 @@ class ApprovalsApi {
     const team = requester?.team as Record<string, unknown> | undefined;
 
     // Summary varies by source type
-    const isRental = item.sourceType === 'rental';
+    const isRental = item.sourceType === EISrcVal.RENTAL;
     const summary = isRental
       ? `${item.equipmentName} 렌탈 반입 (${item.vendorName})`
       : `${item.equipmentName} 공용장비 반입 (${item.ownerDepartment})`;

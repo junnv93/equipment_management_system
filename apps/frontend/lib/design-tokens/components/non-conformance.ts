@@ -29,7 +29,10 @@ import {
 } from '../brand';
 import { TRANSITION_PRESETS } from '../motion';
 import { FOCUS_TOKENS } from '../semantic';
-import type { NonConformanceStatus } from '@equipment-management/schemas';
+import {
+  type NonConformanceStatus,
+  NON_CONFORMANCE_STATUS_VALUES,
+} from '@equipment-management/schemas';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
 
 // ============================================================================
@@ -131,7 +134,7 @@ export const NC_DETAIL_HEADER_TOKENS = {
 /**
  * KPI variant 타입
  */
-export type NCKpiVariant = 'open' | 'corrected' | 'closed';
+export type NCKpiVariant = NonConformanceStatus;
 
 /**
  * KPI 전용 라벨 (SSOT)
@@ -411,7 +414,7 @@ export const NC_WORKFLOW_TOKENS = {
  * 리스트(MiniWorkflow) + 상세(WorkflowTimeline) 양쪽에서 재사용.
  * 스텝 순서 변경 시 이 배열만 수정하면 됩니다.
  */
-export const NC_WORKFLOW_STEPS = ['open', 'corrected', 'closed'] as const;
+export const NC_WORKFLOW_STEPS = NON_CONFORMANCE_STATUS_VALUES;
 
 /** 상태 → 워크플로우 스텝 인덱스 매핑 */
 export const NC_STATUS_STEP_INDEX: Record<string, number> = {

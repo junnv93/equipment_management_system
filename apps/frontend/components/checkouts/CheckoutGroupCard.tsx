@@ -27,7 +27,10 @@ import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 import {
   CHECKOUT_MOTION,
   CHECKOUT_PURPOSE_TOKENS,
@@ -173,9 +176,9 @@ function CheckoutGroupCard({
   );
 
   // 렌탈 그룹 감지 + 현재 렌탈 상태
-  const isRentalGroup = group.purposes.includes('rental' as never);
+  const isRentalGroup = group.purposes.includes(CPVal.RENTAL as never);
   const rentalStatus = isRentalGroup
-    ? (group.checkouts.find((co) => co.purpose === 'rental')?.status ?? '')
+    ? (group.checkouts.find((co) => co.purpose === CPVal.RENTAL)?.status ?? '')
     : '';
 
   // ──────────────────────────────────────────────

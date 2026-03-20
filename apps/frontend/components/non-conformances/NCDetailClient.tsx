@@ -146,7 +146,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   // 상태 변경 (open→corrected)
   const updateMutation = useOptimisticMutation<
     NonConformance,
-    { status: NonConformanceStatus; correctionContent?: string },
+    { status: Exclude<NonConformanceStatus, 'closed'>; correctionContent?: string },
     NonConformance
   >({
     mutationFn: (vars) =>
@@ -527,7 +527,7 @@ function WorkflowTimeline({
       )}
     >
       <div className={NC_WORKFLOW_TOKENS.stepsLayout}>
-        {NC_WORKFLOW_STEPS.map((stepKey, idx) => {
+        {NC_WORKFLOW_STEPS.map((stepKey: NonConformanceStatus, idx: number) => {
           const config = NC_STEP_CONFIG[stepKey];
           const Icon = config.icon;
           return (

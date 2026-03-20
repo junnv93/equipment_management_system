@@ -37,11 +37,12 @@ import {
   NonConformanceStatus,
   IncidentType,
 } from '@equipment-management/schemas';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
 // Backend configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
-const TRIGGER_ENDPOINT = `${BACKEND_URL}/api/notifications/trigger-overdue-check`;
+const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
 
 /**
  * Helper: Login and get JWT token via backend test-login endpoint

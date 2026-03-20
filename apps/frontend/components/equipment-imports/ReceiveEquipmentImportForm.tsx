@@ -37,6 +37,7 @@ import {
   CALIBRATION_METHOD_LABELS,
   CALIBRATION_METHOD_VALUES,
   EQUIPMENT_IMPORT_SOURCE_LABELS,
+  EquipmentImportSourceValues as EISrcVal,
   type CalibrationMethod,
 } from '@equipment-management/schemas';
 import { addMonths, format as formatDate } from 'date-fns';
@@ -165,7 +166,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
 
   const sourceLabel = EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType];
   const ownerLabel =
-    equipmentImport.sourceType === 'rental'
+    equipmentImport.sourceType === EISrcVal.RENTAL
       ? equipmentImport.vendorName
       : equipmentImport.ownerDepartment;
 

@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, User, Building2, Package } from 'lucide-react';
@@ -274,7 +275,7 @@ export default function ReturnApprovalsContent() {
                                   : t('inspection.incomplete')}
                               </span>
                             </div>
-                            {checkout.purpose === 'calibration' && (
+                            {checkout.purpose === CPVal.CALIBRATION && (
                               <div className="flex items-center gap-2">
                                 <CheckCircle2
                                   className={`h-4 w-4 ${checkout.calibrationChecked ? 'text-brand-ok' : 'text-muted-foreground'}`}
@@ -287,7 +288,7 @@ export default function ReturnApprovalsContent() {
                                 </span>
                               </div>
                             )}
-                            {checkout.purpose === 'repair' && (
+                            {checkout.purpose === CPVal.REPAIR && (
                               <div className="flex items-center gap-2">
                                 <CheckCircle2
                                   className={`h-4 w-4 ${checkout.repairChecked ? 'text-brand-ok' : 'text-muted-foreground'}`}

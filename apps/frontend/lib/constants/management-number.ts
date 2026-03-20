@@ -35,6 +35,7 @@ export {
 } from '@equipment-management/schemas';
 
 import type { Site, SiteCode, Classification } from '@equipment-management/schemas';
+import { MANAGEMENT_NUMBER_PATTERN as _MNP } from '@equipment-management/schemas';
 
 // ============================================================================
 // 프론트엔드 전용: UI 선택 옵션
@@ -109,8 +110,7 @@ export const CLASSIFICATION_OPTIONS: Array<{
  * @returns 유효 여부
  */
 export function isValidManagementNumber(managementNumber: string): boolean {
-  const { MANAGEMENT_NUMBER_PATTERN } = require('@equipment-management/schemas');
-  return MANAGEMENT_NUMBER_PATTERN.test(managementNumber);
+  return _MNP.test(managementNumber);
 }
 
 /**

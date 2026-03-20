@@ -10,6 +10,7 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 // Backend API base URL (direct access, bypassing Next.js rewrites)
 // Backend uses app.setGlobalPrefix('api'), so all routes are /api/*
@@ -63,7 +64,7 @@ test.describe('교정기한 초과 자동 부적합 전환', () => {
 
     // 2. 교정기한 초과 스케줄러 수동 트리거 (API 호출)
     const triggerResponse = await page.request.post(
-      `${BACKEND_URL}/notifications/trigger-overdue-check`
+      `${BASE_URLS.BACKEND}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`
     );
     expect(triggerResponse.ok()).toBeTruthy();
 
@@ -170,7 +171,7 @@ test.describe('교정기한 초과 자동 부적합 전환', () => {
 
       // 2. 스케줄러 재실행
       const triggerResponse = await page.request.post(
-        `${BACKEND_URL}/notifications/trigger-overdue-check`
+        `${BASE_URLS.BACKEND}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`
       );
       expect(triggerResponse.ok()).toBeTruthy();
 

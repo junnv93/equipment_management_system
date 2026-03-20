@@ -4,7 +4,11 @@ import ConditionCheckClient from './ConditionCheckClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
-import { CheckoutStatus, ConditionCheckStep } from '@equipment-management/schemas';
+import {
+  CheckoutStatus,
+  ConditionCheckStep,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
@@ -93,7 +97,7 @@ async function ConditionCheckAsync({ paramsPromise }: { paramsPromise: Promise<{
   }
 
   // 대여 목적이 아닌 경우
-  if (checkout.purpose !== 'rental') {
+  if (checkout.purpose !== CPVal.RENTAL) {
     notFound();
   }
 

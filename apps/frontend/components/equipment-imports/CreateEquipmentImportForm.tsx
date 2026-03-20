@@ -37,6 +37,7 @@ import {
   CLASSIFICATION_LABELS,
   type Classification,
   type EquipmentImportSource,
+  EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
@@ -138,7 +139,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
     let dto: CreateEquipmentImportDto;
 
-    if (sourceType === 'rental') {
+    if (sourceType === EISrcVal.RENTAL) {
       if (!form.vendorName) {
         toast({
           title: t('equipmentImport.toasts.vendorRequired'),
@@ -149,7 +150,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
       dto = {
         ...baseDto,
-        sourceType: 'rental',
+        sourceType: EISrcVal.RENTAL,
         vendorName: form.vendorName,
         vendorContact: form.vendorContact || undefined,
         externalIdentifier: form.externalIdentifier || undefined,
@@ -166,7 +167,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
       dto = {
         ...baseDto,
-        sourceType: 'internal_shared',
+        sourceType: EISrcVal.INTERNAL_SHARED,
         ownerDepartment: form.ownerDepartment,
         internalContact: form.internalContact || undefined,
         borrowingJustification: form.borrowingJustification || undefined,
@@ -180,8 +181,8 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
     router.push('/checkouts?view=inbound');
   };
 
-  const isRental = sourceType === 'rental';
-  const isInternalShared = sourceType === 'internal_shared';
+  const isRental = sourceType === EISrcVal.RENTAL;
+  const isInternalShared = sourceType === EISrcVal.INTERNAL_SHARED;
 
   return (
     <form onSubmit={handleSubmit} className={getPageContainerClasses('detail')}>

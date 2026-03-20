@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, DASHBOARD_ACTIVITIES_LIMIT } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import { transformArrayResponse } from './utils/response-transformers';
 
@@ -210,7 +210,10 @@ class DashboardApi {
    * - technical_manager: 팀 내 활동
    * - lab_manager/system_admin: 전체 활동
    */
-  async getRecentActivitiesByRole(role?: string, limit = 20): Promise<RecentActivity[]> {
+  async getRecentActivitiesByRole(
+    role?: string,
+    limit = DASHBOARD_ACTIVITIES_LIMIT
+  ): Promise<RecentActivity[]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITIES, {
         params: { role, limit },

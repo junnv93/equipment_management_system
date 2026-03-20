@@ -52,7 +52,7 @@ import { addDays } from 'date-fns';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 import teamsApi, { type Site } from '@/lib/api/teams-api';
-import { SITE_LABELS } from '@equipment-management/schemas';
+import { SITE_LABELS, CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
@@ -89,11 +89,11 @@ export default function CreateCheckoutContent() {
   const { data: teamsData } = useQuery({
     queryKey: queryKeys.teams.bySite(selectedSite),
     queryFn: () => teamsApi.getTeams({ site: selectedSite as Site, pageSize: 50 }),
-    enabled: purpose === 'rental' && !!selectedSite,
+    enabled: purpose === CPVal.RENTAL && !!selectedSite,
   });
 
   // 장비 목록 조회 - 상태 필터 없이 전체 조회 (목적별 선택 가능 여부는 클라이언트에서 판단)
-  const equipmentTeamId = purpose === 'rental' ? selectedTeamId : userTeamId;
+  const equipmentTeamId = purpose === CPVal.RENTAL ? selectedTeamId : userTeamId;
   const { data: equipmentsData, isLoading: equipmentsLoading } = useQuery({
     queryKey: queryKeys.equipment.checkoutSearch(searchTerm, purpose, equipmentTeamId),
     queryFn: async () => {
@@ -104,7 +104,7 @@ export default function CreateCheckoutContent() {
       });
       return response;
     },
-    enabled: purpose !== 'rental' || !!selectedTeamId,
+    enabled: purpose !== CPVal.RENTAL || !!selectedTeamId,
   });
 
   // 운영 종료된 장비(retired, disposed 등) 필터링
@@ -242,7 +242,7 @@ export default function CreateCheckoutContent() {
       purpose,
       reason: reason.trim(),
       expectedReturnDate: expectedReturnDate.toISOString(),
-      ...(purpose === 'rental' && {
+      ...(purpose === CPVal.RENTAL && {
         lenderTeamId: selectedTeamId || undefined,
         lenderSiteId: selectedSite || undefined,
       }),
@@ -296,7 +296,7 @@ export default function CreateCheckoutContent() {
           <CardContent className="pt-4">
             <div className="space-y-3">
               {/* 목적 선택 (장비 목록 필터링) */}
-              {purpose === 'rental' && (
+              {purpose === CPVal.RENTAL && (
                 <div
                   className={`p-3 border rounded-md ${getSemanticContainerColorClasses('warning')}`}
                 >
@@ -315,7 +315,7 @@ export default function CreateCheckoutContent() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 h-10"
-                  disabled={purpose === 'rental' && !selectedTeamId}
+                  disabled={purpose === CPVal.RENTAL && !selectedTeamId}
                 />
               </div>
 
@@ -349,7 +349,7 @@ export default function CreateCheckoutContent() {
                             ) : (
                               <div>
                                 <p className="font-medium">{t('create.noEquipment')}</p>
-                                {purpose === 'rental' && !selectedTeamId && (
+                                {purpose === CPVal.RENTAL && !selectedTeamId && (
                                   <p className="text-sm mt-1">{t('create.selectTeamHint')}</p>
                                 )}
                               </div>
@@ -600,7 +600,7 @@ export default function CreateCheckoutContent() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                {purpose === 'rental' && (
+                {purpose === CPVal.RENTAL && (
                   <p className="text-xs text-muted-foreground flex items-start gap-1">
                     <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
                     {t('create.rentalSiteTeamHint')}
@@ -609,7 +609,7 @@ export default function CreateCheckoutContent() {
               </div>
 
               {/* 사이트/팀 선택 (외부 대여 시에만 표시) */}
-              {purpose === 'rental' && (
+              {purpose === CPVal.RENTAL && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="site" className="text-sm font-medium">

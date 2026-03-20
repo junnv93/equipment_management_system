@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 
 export interface InspectionFormData {
   calibrationChecked: boolean;
@@ -37,8 +38,8 @@ export default function ReturnInspectionForm({
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // 필수 검사 항목 결정
-  const isCalibrationRequired = purpose === 'calibration';
-  const isRepairRequired = purpose === 'repair';
+  const isCalibrationRequired = purpose === CPVal.CALIBRATION;
+  const isRepairRequired = purpose === CPVal.REPAIR;
 
   // 유효성 검증
   const validate = (): boolean => {

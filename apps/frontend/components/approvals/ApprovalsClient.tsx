@@ -58,7 +58,7 @@ export function ApprovalsClient({
   const { toast } = useToast();
 
   // 현재 역할에서 사용 가능한 탭 (useMemo로 안정화)
-  const availableTabs = useMemo(() => ROLE_TABS[userRole] || [], [userRole]);
+  const availableTabs = useMemo(() => [...(ROLE_TABS[userRole] || [])], [userRole]);
   const defaultTab = initialTab || availableTabs[0] || 'equipment';
 
   // URL이 SSOT — tab 파라미터에서 직접 도출

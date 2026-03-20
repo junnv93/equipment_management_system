@@ -17,6 +17,7 @@ import {
   CHECKOUT_PURPOSE_LABELS,
   CHECKOUT_STATUS_LABELS,
   CONDITION_CHECK_STEP_LABELS,
+  CheckoutPurposeValues as CPVal,
 } from '@equipment-management/schemas';
 import ReturnInspectionForm, {
   InspectionFormData,
@@ -185,7 +186,7 @@ export default function ReturnCheckoutClient({
       </Card>
 
       {/* 대여 목적: 상태 확인 이력 */}
-      {checkout.purpose === 'rental' && conditionChecks.length > 0 && (
+      {checkout.purpose === CPVal.RENTAL && conditionChecks.length > 0 && (
         <>
           <Card>
             <CardHeader>

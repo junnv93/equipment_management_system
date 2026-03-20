@@ -39,6 +39,7 @@ import {
   type Classification,
   UserRoleValues as URVal,
   EquipmentImportStatusValues as EISVal,
+  EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -195,8 +196,8 @@ export default function EquipmentImportDetail({ id }: Props) {
     userRole === URVal.LAB_MANAGER ||
     userRole === URVal.SYSTEM_ADMIN;
 
-  const isRental = equipmentImport.sourceType === 'rental';
-  const isInternalShared = equipmentImport.sourceType === 'internal_shared';
+  const isRental = equipmentImport.sourceType === EISrcVal.RENTAL;
+  const isInternalShared = equipmentImport.sourceType === EISrcVal.INTERNAL_SHARED;
 
   return (
     <div className={getPageContainerClasses('detail')}>

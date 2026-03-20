@@ -25,10 +25,11 @@ import { DisposalApprovalDialog } from './disposal/DisposalApprovalDialog';
 import {
   EquipmentStatusValues as ESVal,
   DisposalReviewStatusValues as DRSVal,
+  NonConformanceStatusValues as NCStatusVal,
   type DisposalRequest,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { ANIMATION_PRESETS } from '@/lib/design-tokens';
 
 interface EquipmentDetailClientProps {
@@ -118,7 +119,7 @@ export function EquipmentDetailClient({
     queryKey: queryKeys.equipment.detail(equipmentId), // ✅ 표준화된 키
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     placeholderData: initialEquipment, // Server Component에서 전달받은 초기 데이터
-    staleTime: 0, // 캐시 무효화 시 즉시 stale 처리하여 refetch
+    staleTime: CACHE_TIMES.SHORT, // 백엔드 캐시와 협력하여 불필요한 재호출 방지
     refetchOnMount: (query) => {
       // ✅ 스마트 refetch: 캐시가 1시간 이상 오래되면 refetch
       // CalibrationOverdueScheduler 간격(1시간)과 동기화
@@ -131,13 +132,13 @@ export function EquipmentDetailClient({
 
   // ✅ 폐기 요청 데이터를 React Query로 관리하여 실시간 동기화
   // - placeholderData로 Server Component에서 받은 데이터 즉시 표시 + 백그라운드 refetch
-  // - staleTime: 0 으로 캐시 무효화 시 즉시 refetch
+  // - staleTime: SHORT — 백엔드 캐시와 협력하여 불필요한 재호출 방지
   // - enabled: 장비가 pending_disposal 또는 disposed 상태일 때만 활성화
   const { data: disposalRequest } = useQuery({
     queryKey: queryKeys.equipment.currentDisposalRequest(equipmentId),
     queryFn: () => disposalApi.getCurrentDisposalRequest(equipmentId),
     placeholderData: initialDisposalRequest,
-    staleTime: 0,
+    staleTime: CACHE_TIMES.SHORT,
     enabled:
       !!equipmentId &&
       (equipment?.status === ESVal.PENDING_DISPOSAL || equipment?.status === ESVal.DISPOSED),
@@ -151,7 +152,8 @@ export function EquipmentDetailClient({
   });
 
   // 열린 부적합 확인
-  const openNonConformances = nonConformances?.filter((nc) => nc.status !== 'closed') || [];
+  const openNonConformances =
+    nonConformances?.filter((nc) => nc.status !== NCStatusVal.CLOSED) || [];
 
   // 폐기 진행 단계 계산
   // pending: step 1 (요청) is current

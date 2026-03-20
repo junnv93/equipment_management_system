@@ -11,6 +11,7 @@ import {
   createEquipmentSchema,
   updateEquipmentSchema,
   UserRoleValues as URVal,
+  CalibrationApprovalStatusValues,
 } from '@equipment-management/schemas';
 import { EQUIPMENT_OWNER_OPTIONS } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -669,7 +670,7 @@ export function EquipmentForm({
         calibrationAgency: data.calibrationAgency,
         result: data.result,
         status: 'completed',
-        approvalStatus: 'approved',
+        approvalStatus: CalibrationApprovalStatusValues.APPROVED,
       };
       setCalibrationHistory((prev) => [tempItem, ...prev]);
       setPendingCalibrationHistory((prev) => [...prev, { tempId, data }]);

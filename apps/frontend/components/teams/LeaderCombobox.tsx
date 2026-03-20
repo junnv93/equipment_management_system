@@ -69,8 +69,8 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
   })();
 
   const handleSelect = (user: TeamMember) => {
-    // 선택한 사용자 데이터를 캐시에 즉시 반영 → displayName 깜빡임 방지
-    queryClient.setQueryData(queryKeys.users.detail(user.id), user);
+    // invalidateQueries로 서버 데이터와 동기화 (setQueryData는 TData≠TCachedData 불일치 위험)
+    void queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(user.id) });
     onChange(user.id);
     setSearch('');
     setOpen(false);

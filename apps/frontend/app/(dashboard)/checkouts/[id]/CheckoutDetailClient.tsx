@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { format } from 'date-fns';
@@ -54,6 +54,7 @@ import {
 import {
   CheckoutStatus,
   CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
   UserRoleValues as URVal,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
@@ -93,7 +94,7 @@ export default function CheckoutDetailClient({
     queryKey: queryKeys.checkouts.detail(initialCheckout.id),
     queryFn: () => checkoutApi.getCheckout(initialCheckout.id),
     placeholderData: initialCheckout,
-    staleTime: 0,
+    staleTime: CACHE_TIMES.SHORT, // 백엔드 캐시와 협력하여 불필요한 재호출 방지
     refetchOnMount: false, // Server Component이 이미 최신 데이터 제공
   });
 
@@ -284,7 +285,7 @@ export default function CheckoutDetailClient({
 
     // 승인됨 상태 - 교정/수리만 반출 시작 가능 (대여는 상태 확인으로 진행)
     // technical_manager, lab_manager만 반출 시작 가능
-    if (checkout.status === CSVal.APPROVED && checkout.purpose !== 'rental' && canApprove) {
+    if (checkout.status === CSVal.APPROVED && checkout.purpose !== CPVal.RENTAL && canApprove) {
       buttons.push(
         <Button
           key="start"
@@ -298,7 +299,7 @@ export default function CheckoutDetailClient({
     }
 
     // 반출 중 상태 - 교정/수리만 반입 처리 가능 (대여는 4단계 상태 확인으로 진행)
-    if (checkout.status === CSVal.CHECKED_OUT && checkout.purpose !== 'rental') {
+    if (checkout.status === CSVal.CHECKED_OUT && checkout.purpose !== CPVal.RENTAL) {
       buttons.push(
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
@@ -311,7 +312,7 @@ export default function CheckoutDetailClient({
 
     // 대여 목적 특수 상태 - 상태 확인 필요
     if (
-      checkout.purpose === 'rental' &&
+      checkout.purpose === CPVal.RENTAL &&
       (
         [
           CSVal.APPROVED,
@@ -332,7 +333,7 @@ export default function CheckoutDetailClient({
     }
 
     // 대여 목적 최종 단계 - lender_received 상태에서 반입 처리
-    if (checkout.status === CSVal.LENDER_RECEIVED && checkout.purpose === 'rental') {
+    if (checkout.status === CSVal.LENDER_RECEIVED && checkout.purpose === CPVal.RENTAL) {
       buttons.push(
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
@@ -574,7 +575,7 @@ export default function CheckoutDetailClient({
       </Card>
 
       {/* 대여 목적: 상태 확인 기록 */}
-      {checkout.purpose === 'rental' && conditionChecks.length > 0 && (
+      {checkout.purpose === CPVal.RENTAL && conditionChecks.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">{t('detail.conditionHistory')}</CardTitle>
@@ -635,7 +636,7 @@ export default function CheckoutDetailClient({
       )}
 
       {/* 대여 목적: 전후 비교 */}
-      {checkout.purpose === 'rental' && conditionChecks.length >= 2 && (
+      {checkout.purpose === CPVal.RENTAL && conditionChecks.length >= 2 && (
         <ConditionComparisonCard conditionChecks={conditionChecks} />
       )}
 
@@ -647,7 +648,7 @@ export default function CheckoutDetailClient({
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              {checkout.purpose === 'calibration' && (
+              {checkout.purpose === CPVal.CALIBRATION && (
                 <div className="flex items-center gap-2">
                   {checkout.calibrationChecked ? (
                     <CheckCircle2 className="h-5 w-5 text-brand-ok" />
@@ -657,7 +658,7 @@ export default function CheckoutDetailClient({
                   <span>{t('detail.calibrationCheck')}</span>
                 </div>
               )}
-              {checkout.purpose === 'repair' && (
+              {checkout.purpose === CPVal.REPAIR && (
                 <div className="flex items-center gap-2">
                   {checkout.repairChecked ? (
                     <CheckCircle2 className="h-5 w-5 text-brand-ok" />

@@ -7,7 +7,7 @@ import {
   NON_CONFORMANCE_TYPE_LABELS,
   DISPOSAL_REASON_LABELS,
 } from '@equipment-management/schemas';
-import { TAB_META, type ApprovalCategory } from '@/lib/api/approvals-api';
+import { TAB_META, REQUEST_TYPE_LABELS, type ApprovalCategory } from '@/lib/api/approvals-api';
 import { formatDate } from '@/lib/utils/date';
 import { Badge } from '@/components/ui/badge';
 import { APPROVAL_TIMELINE_TOKENS } from '@/lib/design-tokens';
@@ -72,11 +72,12 @@ export function CategoryBadge({ category }: { category: ApprovalCategory }) {
 
 /** 장비 등록/수정/삭제 */
 function renderEquipmentDetails(details: Record<string, unknown>, t: TFunc) {
-  const requestTypeLabels: Record<string, string> = {
-    create: t('requestTypes.create'),
-    update: t('requestTypes.update'),
-    delete: t('requestTypes.delete'),
-  };
+  const requestTypeLabels = Object.fromEntries(
+    Object.keys(REQUEST_TYPE_LABELS).map((key) => [
+      key,
+      t(`requestTypes.${key}` as Parameters<typeof t>[0]),
+    ])
+  );
 
   const requestType = String(details.requestType || '');
 

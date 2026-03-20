@@ -10,6 +10,7 @@
 import { FullConfig } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from './shared/constants/shared-test-data';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
@@ -80,7 +81,7 @@ async function globalSetup(config: FullConfig) {
   console.log(`  🌐 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 
   // 3. Health checks (Backend 5회 재시도 — 필수, Frontend 3회 — 필수)
-  await checkHealth(`${apiURL}/api/monitoring/health`, 'Backend API', 5, 3000, true);
+  await checkHealth(`${apiURL}${API_ENDPOINTS.MONITORING.HEALTH}`, 'Backend API', 5, 3000, true);
   await checkHealth(`${baseURL}/login`, 'Frontend', 3, 2000, true);
 
   // 4. 테스트 시드 데이터 로딩

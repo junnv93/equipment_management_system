@@ -48,6 +48,7 @@ import { getErrorMessage } from '@/lib/api/error';
 import {
   EquipmentStatusValues as ESVal,
   UserRoleValues as URVal,
+  CheckoutPurposeValues as CPVal,
 } from '@equipment-management/schemas';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import {
@@ -153,7 +154,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       ESVal.CALIBRATION_OVERDUE,
     ];
     const equipmentStatus = equipment.status || ESVal.AVAILABLE;
-    if (STATUS_ONLY_CALIBRATION_REPAIR.includes(equipmentStatus) && data.purpose === 'rental') {
+    if (STATUS_ONLY_CALIBRATION_REPAIR.includes(equipmentStatus) && data.purpose === CPVal.RENTAL) {
       toast({
         title: t('checkoutHistoryTab.toasts.rentalNotAllowed'),
         description: t('checkoutHistoryTab.toasts.rentalNotAllowedDesc'),

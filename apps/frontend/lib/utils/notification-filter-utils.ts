@@ -29,7 +29,7 @@
  */
 
 import type { NotificationCategory } from '@equipment-management/shared-constants';
-import { NOTIFICATION_CATEGORIES } from '@equipment-management/shared-constants';
+import { NOTIFICATION_CATEGORIES, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
@@ -66,7 +66,7 @@ export const DEFAULT_UI_FILTERS: UINotificationFilters = {
   page: 1,
 };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
 /**
  * URLSearchParams에서 UI 필터 객체로 변환

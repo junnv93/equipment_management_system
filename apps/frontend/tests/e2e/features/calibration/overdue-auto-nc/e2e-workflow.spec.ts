@@ -20,13 +20,13 @@
 
 import { test, expect, APIRequestContext, Page } from '@playwright/test';
 import { EquipmentStatus, NonConformanceStatus } from '@equipment-management/schemas';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
 // Test configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
 const FRONTEND_URL = BASE_URLS.FRONTEND;
-const TRIGGER_ENDPOINT = `${BACKEND_URL}/api/notifications/trigger-overdue-check`;
+const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
 
 /**
  * Helper: Login and get JWT token via backend test-login endpoint

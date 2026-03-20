@@ -56,6 +56,10 @@ import RepairHistoryTimeline from '@/components/equipment/RepairHistoryTimeline'
 import { formatDate } from '@/lib/utils/date';
 import { Plus, Wrench, Hash, Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import {
+  NonConformanceStatusValues as NCStatusVal,
+  INCIDENT_REPAIR_NC_TYPES,
+} from '@equipment-management/schemas';
 import { getErrorMessage } from '@/lib/api/error';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
 import {
@@ -165,8 +169,8 @@ export function RepairHistoryClient({
       }
       return data.data.filter(
         (nc) =>
-          ['open', 'corrected'].includes(nc.status) &&
-          ['damage', 'malfunction', 'calibration_failure', 'measurement_error'].includes(nc.ncType)
+          ([NCStatusVal.OPEN, NCStatusVal.CORRECTED] as string[]).includes(nc.status) &&
+          (INCIDENT_REPAIR_NC_TYPES as readonly string[]).includes(nc.ncType)
       );
     },
     enabled: !!equipmentId,

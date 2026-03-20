@@ -14,17 +14,18 @@ import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkele
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import type { RequestType, ApprovalStatus } from '@equipment-management/schemas';
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
 interface EquipmentRequest {
   id: string;
-  requestType: 'create' | 'update' | 'delete';
+  requestType: RequestType;
   equipmentId?: number;
   requestedBy: string;
   requestedAt: string;
-  approvalStatus: 'pending_approval' | 'approved' | 'rejected';
+  approvalStatus: ApprovalStatus;
   approvedBy?: string;
   approvedAt?: string;
   rejectionReason?: string;

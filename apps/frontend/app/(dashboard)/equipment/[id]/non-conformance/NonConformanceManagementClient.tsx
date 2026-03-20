@@ -31,7 +31,10 @@ import {
   NC_REPAIR_LINKED_TOKENS,
   TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
-import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
+import {
+  EquipmentStatusValues as ESVal,
+  NonConformanceStatusValues as NCStatusVal,
+} from '@equipment-management/schemas';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
@@ -222,7 +225,7 @@ export default function NonConformanceManagementClient({
     if (
       ['damage', 'malfunction'].includes(nc.ncType) &&
       !nc.repairHistoryId &&
-      updateForm.status === 'corrected'
+      updateForm.status === NCStatusVal.CORRECTED
     ) {
       const userChoice = window.confirm(t('nonConformanceManagement.confirm.repairRequired'));
 
@@ -513,7 +516,7 @@ export default function NonConformanceManagementClient({
                 </div>
 
                 {/* 반려 사유 배너 */}
-                {nc.status === 'open' && nc.rejectionReason && (
+                {nc.status === NCStatusVal.OPEN && nc.rejectionReason && (
                   <div className={getSemanticContainerClasses('critical')}>
                     <div className="flex items-start gap-3">
                       <XCircle

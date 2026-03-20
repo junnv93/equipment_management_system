@@ -175,12 +175,12 @@ export const DASHBOARD_CALIBRATION_STATUS_COLORS = {
   },
 } as const;
 
-export type CalibrationStatus = keyof typeof DASHBOARD_CALIBRATION_STATUS_COLORS;
+export type DashboardCalibrationUrgency = keyof typeof DASHBOARD_CALIBRATION_STATUS_COLORS;
 
 /**
  * 교정 상태별 색상 가져오기
  */
-export function getCalibrationStatusClasses(status: CalibrationStatus) {
+export function getCalibrationStatusClasses(status: DashboardCalibrationUrgency) {
   return DASHBOARD_CALIBRATION_STATUS_COLORS[status];
 }
 

@@ -81,7 +81,7 @@ export function useEquipmentWithInitialData(initialData: Equipment) {
     queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     placeholderData: initialData,
-    staleTime: 0, // 항상 fresh하게 유지하여 캐시 갱신 즉시 반영
+    staleTime: CACHE_TIMES.SHORT, // 백엔드 캐시와 협력하여 불필요한 재호출 방지
   });
 
   // placeholderData는 타입상 data가 undefined일 수 있으므로,

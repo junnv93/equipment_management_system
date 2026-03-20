@@ -81,7 +81,7 @@ async function ReturnCheckoutAsync({ paramsPromise }: { paramsPromise: Promise<{
     checkout = await getCheckoutCached(id);
 
     // 대여 목적인 경우 상태 확인 기록도 조회
-    if (checkout.purpose === 'rental') {
+    if (checkout.purpose === CPVal.RENTAL) {
       conditionChecks = await getConditionChecksCached(id);
     }
   } catch (error: unknown) {

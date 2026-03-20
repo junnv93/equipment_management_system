@@ -7,11 +7,12 @@
  * - Referrer-Policy: 리퍼러 정보 누출 방지
  */
 import { test, expect } from '../../shared/fixtures/auth.fixture';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../shared/constants/shared-test-data';
 
 test.describe('Security Headers', () => {
   test('SH-01: Backend API 보안 헤더 검증', async ({ request }) => {
-    const response = await request.get(`${BASE_URLS.BACKEND}/api/monitoring/health`);
+    const response = await request.get(`${BASE_URLS.BACKEND}${API_ENDPOINTS.MONITORING.HEALTH}`);
 
     const headers = response.headers();
 

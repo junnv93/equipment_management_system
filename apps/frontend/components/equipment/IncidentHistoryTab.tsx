@@ -52,6 +52,8 @@ import {
   UserRoleValues as URVal,
   IncidentTypeValues as ITVal,
   IncidentTypeEnum,
+  NonConformanceStatusValues as NCStatusVal,
+  INCIDENT_REPAIR_NC_TYPES,
 } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
@@ -176,8 +178,8 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
       }
       return data.data.filter(
         (nc) =>
-          ['open', 'corrected'].includes(nc.status) &&
-          ['damage', 'malfunction', 'calibration_failure', 'measurement_error'].includes(nc.ncType)
+          ([NCStatusVal.OPEN, NCStatusVal.CORRECTED] as string[]).includes(nc.status) &&
+          (INCIDENT_REPAIR_NC_TYPES as readonly string[]).includes(nc.ncType)
       );
     },
     enabled: !!equipmentId,

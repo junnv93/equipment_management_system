@@ -68,14 +68,14 @@ function StatusMiniCard({
 
   // 표시할 상위 4개 상태 (건수 내림차순, 0 제외)
   const topStatuses = useMemo(() => {
-    const statusOrder = [
-      'available',
-      'in_use',
-      'checked_out',
-      'calibration_scheduled',
-      'calibration_overdue',
-      'non_conforming',
-      'spare',
+    const statusOrder: string[] = [
+      EquipmentStatusValues.AVAILABLE,
+      EquipmentStatusValues.IN_USE,
+      EquipmentStatusValues.CHECKED_OUT,
+      EquipmentStatusValues.CALIBRATION_SCHEDULED,
+      EquipmentStatusValues.CALIBRATION_OVERDUE,
+      EquipmentStatusValues.NON_CONFORMING,
+      EquipmentStatusValues.SPARE,
     ];
     return statusOrder
       .filter((s) => (equipmentStatusStats[s] ?? 0) > 0)

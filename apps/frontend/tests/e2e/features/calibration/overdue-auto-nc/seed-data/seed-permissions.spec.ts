@@ -11,7 +11,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
 const BACKEND_URL = BASE_URLS.BACKEND;
@@ -47,11 +47,14 @@ test.describe('Group 7: Permission Tests - Seed Setup', () => {
     const loginResponse = await request.get(`${BACKEND_URL}/api/auth/test-login?role=lab_manager`);
     const { access_token } = await loginResponse.json();
 
-    const response = await request.post(`${BACKEND_URL}/api/notifications/trigger-overdue-check`, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    });
+    const response = await request.post(
+      `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
+      {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      }
+    );
 
     expect(response.ok()).toBeTruthy();
 

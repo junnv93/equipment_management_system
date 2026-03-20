@@ -3,7 +3,11 @@ import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
 import { RouteLoading } from '@/components/layout/RouteLoading';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
-import { CHECKOUT_PURPOSE_LABELS, type CheckoutPurpose } from '@equipment-management/schemas';
+import {
+  CHECKOUT_PURPOSE_LABELS,
+  type CheckoutPurpose,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
@@ -54,7 +58,7 @@ async function CheckoutDetailAsync({ paramsPromise }: { paramsPromise: Promise<{
     checkout = await getCheckoutCached(id);
 
     // 대여 목적인 경우 상태 확인 기록도 조회
-    if (checkout.purpose === 'rental') {
+    if (checkout.purpose === CPVal.RENTAL) {
       try {
         conditionChecks = await getConditionChecksServer(id);
       } catch {

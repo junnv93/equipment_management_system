@@ -195,7 +195,7 @@ export {
   DASHBOARD_EMPTY_STATE_TOKENS,
   type StatsVariant,
   type DashboardRole,
-  type CalibrationStatus,
+  type DashboardCalibrationUrgency,
 } from './components/dashboard';
 
 // Equipment

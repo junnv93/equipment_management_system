@@ -99,7 +99,7 @@ export interface UpdateNonConformanceDto {
   correctionContent?: string;
   correctionDate?: string;
   correctedBy?: string;
-  status?: 'open' | 'corrected';
+  status?: Exclude<NonConformanceStatus, 'closed'>;
 }
 
 // 부적합 종료 DTO (closedBy는 서버에서 JWT로 추출)

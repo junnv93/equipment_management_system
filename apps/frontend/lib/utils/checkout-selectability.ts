@@ -5,7 +5,11 @@
  * 이 파일은 프론트엔드 전용 UI 로직(Equipment 객체 처리, 날짜 포맷팅)만 담당
  */
 import type { EquipmentStatus, CheckoutPurpose } from '@equipment-management/schemas';
-import { EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
+import {
+  EQUIPMENT_STATUS_LABELS,
+  CheckoutPurposeValues as CPVal,
+  EquipmentStatusValues as ESVal,
+} from '@equipment-management/schemas';
 import {
   getAllowedStatusesForPurpose,
   getBlockedReason,
@@ -53,7 +57,7 @@ export function getEquipmentSelectability(
   // 허용 상태에 포함되면 선택 가능
   if (allowedStatuses.includes(status)) {
     // 대여 + calibration_scheduled: 선택 가능하지만 교정 만료일 경고
-    if (purpose === 'rental' && status === 'calibration_scheduled') {
+    if (purpose === CPVal.RENTAL && status === ESVal.CALIBRATION_SCHEDULED) {
       const nextCalDate = equipment.nextCalibrationDate;
       if (nextCalDate) {
         const formatted = format(new Date(nextCalDate), 'yyyy.MM.dd');

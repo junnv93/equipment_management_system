@@ -22,7 +22,10 @@ import nonConformancesApi, {
   NON_CONFORMANCE_STATUS_LABELS,
   NON_CONFORMANCE_TYPE_LABELS,
 } from '@/lib/api/non-conformances-api';
-import type { NonConformanceType } from '@equipment-management/schemas';
+import {
+  type NonConformanceType,
+  NonConformanceStatusValues as NCStatusVal,
+} from '@equipment-management/schemas';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useNCFilters } from '@/hooks/use-nc-filters';
@@ -395,7 +398,7 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
   const elapsedDays = computeElapsedDays(nc);
   const longOverdue = isNCLongOverdue(elapsedDays);
   const statusIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
-  const hasRejection = !!nc.rejectionReason && nc.status === 'open';
+  const hasRejection = !!nc.rejectionReason && nc.status === NCStatusVal.OPEN;
 
   return (
     <Link
@@ -469,7 +472,7 @@ function MiniWorkflow({
 }) {
   return (
     <div className={NC_MINI_WORKFLOW_TOKENS.container}>
-      {NC_WORKFLOW_STEPS.map((_, stepIdx) => (
+      {NC_WORKFLOW_STEPS.map((_: string, stepIdx: number) => (
         <div key={stepIdx} className="flex items-center">
           {stepIdx > 0 && (
             <div className={getNCMiniConnectorClasses(stepIdx - 1, currentStepIndex)} />

@@ -20,7 +20,7 @@ import {
 import { StatusSummaryStrip } from '@/components/equipment/StatusSummaryStrip';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import { EQUIPMENT_TOOLBAR_TOKENS, EQUIPMENT_STATS_STRIP_TOKENS } from '@/lib/design-tokens';
 
@@ -215,14 +215,14 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   } = useEquipmentFilters();
 
   // 장비 목록 쿼리
-  // ⚠️ staleTime: 0 is intentional — 상태 변경(부적합, 교정기한초과 등)에 실시간 반응 필요
+  // ✅ staleTime: SHORT — 포커스 복귀 시 불필요한 재호출 방지 (백엔드 캐시와 협력)
   // ✅ refetchOnMount: 'always' — 상세 페이지에서 변경 후 목록 복귀 시 최신 상태 보장
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.equipment.list(queryFilters),
     queryFn: () => equipmentApi.getEquipmentList(queryFilters),
     placeholderData: initialData,
     retry: 3,
-    staleTime: 0,
+    staleTime: CACHE_TIMES.SHORT,
     refetchOnMount: 'always',
   });
 
