@@ -92,7 +92,7 @@ test.describe('Group F: Loading States', () => {
                   id: 'equipment-2',
                   name: '장비 2',
                   managementNumber: 'SUW-E0002',
-                  status: 'in_use',
+                  status: ESVal.IN_USE,
                   site: 'SUW',
                   classification: 'E',
                   team: { id: 'team-1', name: '팀 A' },

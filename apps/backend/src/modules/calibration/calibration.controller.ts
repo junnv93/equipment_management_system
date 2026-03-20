@@ -145,7 +145,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_REQUESTS)
-  findPendingApprovals() {
+  findPendingApprovals(): ReturnType<CalibrationService['findPendingApprovals']> {
     return this.calibrationService.findPendingApprovals();
   }
 
@@ -186,7 +186,7 @@ export class CalibrationController {
     @Query('managerId') managerId?: string,
     @Query('teamId') teamId?: string,
     @Query('site') site?: string
-  ) {
+  ): ReturnType<CalibrationService['findAllIntermediateChecks']> {
     // status 파라미터 유효성 검증
     let validatedStatus: IntermediateCheckStatus | undefined;
     if (status) {

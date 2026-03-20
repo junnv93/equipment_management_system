@@ -35,9 +35,9 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
   test.beforeAll(async () => {
     // 각 단계에 맞는 초기 상태로 설정
     await resetCheckoutToApproved(SUITE_10.STEP1_LENDER);
-    await resetRentalCheckoutToState(SUITE_10.STEP2_BORROWER, 'lender_checked');
-    await resetRentalCheckoutToState(SUITE_10.STEP3_RETURN, 'borrower_received');
-    await resetRentalCheckoutToState(SUITE_10.STEP4_FINAL, 'borrower_returned');
+    await resetRentalCheckoutToState(SUITE_10.STEP2_BORROWER, CSVal.LENDER_CHECKED);
+    await resetRentalCheckoutToState(SUITE_10.STEP3_RETURN, CSVal.BORROWER_RECEIVED);
+    await resetRentalCheckoutToState(SUITE_10.STEP4_FINAL, CSVal.BORROWER_RETURNED);
     await resetCheckoutToApproved(SUITE_10.ORDER_VIOLATION);
 
     // ✅ Suite 10용 장비 교정 기한 연장 (available 상태 복원 가능하도록)

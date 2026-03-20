@@ -40,11 +40,11 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
     // ★ Reset equipment to available with future calibration date
     await pool.query(
       `UPDATE equipment
-       SET status = 'available',
+       SET status = $2,
            next_calibration_date = NOW() + INTERVAL '365 days',
            updated_at = NOW()
        WHERE id = $1`,
-      [testEquipmentId]
+      [testEquipmentId, ESVal.AVAILABLE]
     );
 
     await clearBackendCache();

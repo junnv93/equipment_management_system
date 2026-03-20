@@ -915,7 +915,7 @@ export async function resetRentalCheckoutToApproved(
   checkoutId: string,
   approverId: string = '00000000-0000-0000-0000-000000000002'
 ): Promise<void> {
-  await resetRentalCheckoutToState(checkoutId, 'approved', approverId);
+  await resetRentalCheckoutToState(checkoutId, CSVal.APPROVED, approverId);
 }
 
 /**
