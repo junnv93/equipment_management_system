@@ -537,69 +537,43 @@ export class CheckoutsService extends VersionedBaseService {
         try {
           const { whereConditions, orderBy } = this.buildQueryConditions(queryParams);
 
-          const countCacheKey = this.buildCacheKey('count', {
-            equipmentId: queryParams.equipmentId,
-            requesterId: queryParams.requesterId,
-            approverId: queryParams.approverId,
-            teamId: queryParams.teamId,
-            site: queryParams.site,
-            purpose: queryParams.purpose,
-            statuses: queryParams.statuses,
-            checkoutFrom: queryParams.checkoutFrom,
-            checkoutTo: queryParams.checkoutTo,
-            returnFrom: queryParams.returnFrom,
-            returnTo: queryParams.returnTo,
-            search: queryParams.search,
-          });
-
-          const totalItems = await this.cacheService.getOrSet(
-            countCacheKey,
-            async () => {
-              const countResult = await this.db
-                .select({ count: sql<number>`COUNT(*)` })
-                .from(checkouts)
-                .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
-              return Number(countResult[0]?.count || 0);
-            },
-            CACHE_TTL.LONG
-          );
-
-          const totalPages = Math.ceil(totalItems / pageSize);
-          const offset = (page - 1) * pageSize;
           const numericPageSize = Number(pageSize);
-          const numericOffset = Number(offset);
+          const numericOffset = Number((page - 1) * pageSize);
 
-          // ✅ N+1 Query Fix: Use Drizzle relational query API with JOIN
-          // This replaces 41 queries (1 + 20×2) with a single optimized JOIN query
-          // Query builder for manual sorting (relational API doesn't support complex ORDER BY)
-          const checkoutIds = await this.db
-            .select({ id: checkouts.id })
+          // ✅ CTE 최적화: COUNT(*) OVER() + ID 페치를 단일 쿼리로 합침 (3쿼리 → 2쿼리)
+          const idsWithCount = await this.db
+            .select({
+              id: checkouts.id,
+              totalCount: sql<number>`COUNT(*) OVER()`,
+            })
             .from(checkouts)
             .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
             .orderBy(...(orderBy.length > 0 ? orderBy : [desc(checkouts.createdAt)]))
             .limit(numericPageSize)
             .offset(numericOffset);
 
-          if (checkoutIds.length === 0) {
+          const totalItems = Number(idsWithCount[0]?.totalCount || 0);
+          const totalPages = Math.ceil(totalItems / numericPageSize);
+
+          if (idsWithCount.length === 0) {
             return {
               items: [],
               meta: {
-                totalItems,
+                totalItems: 0,
                 itemCount: 0,
                 itemsPerPage: numericPageSize,
-                totalPages,
+                totalPages: 0,
                 currentPage: Number(page),
               },
             };
           }
 
-          // Fetch checkouts with relations using Drizzle's relational API
-          // This performs efficient JOINs thanks to the indexes we created
+          // 관계 데이터 페치 (Drizzle relational API로 효율적 JOIN)
           const itemsWithRelations = await this.db.query.checkouts.findMany({
             where: (checkouts, { inArray }) =>
               inArray(
                 checkouts.id,
-                checkoutIds.map((c) => c.id)
+                idsWithCount.map((c) => c.id)
               ),
             with: {
               items: {
@@ -626,8 +600,8 @@ export class CheckoutsService extends VersionedBaseService {
             },
           });
 
-          // Transform to match expected response format
-          const sortedItems = checkoutIds
+          // 정렬 순서 유지하며 응답 형식으로 변환
+          const sortedItems = idsWithCount
             .map((idObj) => {
               const item = itemsWithRelations.find((c) => c.id === idObj.id);
               if (!item) return null;
@@ -655,7 +629,6 @@ export class CheckoutsService extends VersionedBaseService {
             },
           };
 
-          // ✅ 성능 최적화: includeSummary=true 시 단일 쿼리로 요약 정보 포함
           if (includeSummary) {
             response.summary = await this.getSummary(queryParams.teamId);
           }
@@ -2191,41 +2164,39 @@ export class CheckoutsService extends VersionedBaseService {
   async getCheckoutScopeContext(
     checkoutId: string
   ): Promise<{ site: string; teamId: string | null }> {
-    const [checkout] = await this.db
+    // ✅ CTE 최적화: checkout + users를 LEFT JOIN + CASE로 단일 쿼리 (2쿼리 → 1쿼리)
+    // rental → lender 기준, calibration/repair → requester 기준
+    const [result] = await this.db
       .select({
-        purpose: checkouts.purpose,
-        requesterId: checkouts.requesterId,
-        lenderSiteId: checkouts.lenderSiteId,
-        lenderTeamId: checkouts.lenderTeamId,
+        site: sql<string>`CASE
+          WHEN ${checkouts.purpose} = ${CPVal.RENTAL} AND ${checkouts.lenderSiteId} IS NOT NULL
+          THEN ${checkouts.lenderSiteId}
+          ELSE ${schema.users.site}
+        END`,
+        teamId: sql<string | null>`CASE
+          WHEN ${checkouts.purpose} = ${CPVal.RENTAL} AND ${checkouts.lenderSiteId} IS NOT NULL
+          THEN ${checkouts.lenderTeamId}
+          ELSE ${schema.users.teamId}
+        END`,
       })
       .from(checkouts)
+      .leftJoin(schema.users, eq(schema.users.id, checkouts.requesterId))
       .where(eq(checkouts.id, checkoutId));
 
-    if (!checkout) {
+    if (!result) {
       throw new NotFoundException({
         code: 'CHECKOUT_NOT_FOUND',
         message: `Checkout ${checkoutId} not found.`,
       });
     }
 
-    // rental + lender 정보 → lender 기준 (장비 JOIN 불필요)
-    if (checkout.purpose === CPVal.RENTAL && checkout.lenderSiteId) {
-      return { site: checkout.lenderSiteId, teamId: checkout.lenderTeamId };
-    }
-
-    // calibration/repair → 요청자의 사이트/팀 기준
-    const [requester] = await this.db
-      .select({ site: schema.users.site, teamId: schema.users.teamId })
-      .from(schema.users)
-      .where(eq(schema.users.id, checkout.requesterId));
-
-    if (!requester?.site) {
+    if (!result.site) {
       throw new NotFoundException({
         code: 'CHECKOUT_NOT_FOUND',
         message: `Checkout ${checkoutId} requester not found.`,
       });
     }
 
-    return { site: requester.site, teamId: requester.teamId };
+    return { site: result.site, teamId: result.teamId };
   }
 }

@@ -377,6 +377,12 @@ export const CheckoutPurposeEnum = z.enum(CHECKOUT_PURPOSE_VALUES);
 export type CheckoutPurpose = z.infer<typeof CheckoutPurposeEnum>;
 
 /**
+ * 사용자가 반출 신청 시 선택 가능한 목적 (return_to_vendor는 시스템 전용)
+ */
+export const USER_SELECTABLE_CHECKOUT_PURPOSES = ['calibration', 'repair', 'rental'] as const;
+export const UserSelectableCheckoutPurposeEnum = z.enum(USER_SELECTABLE_CHECKOUT_PURPOSES);
+
+/**
  * SINGLE SOURCE OF TRUTH: 교정 승인 상태 열거형
  *
  * 표준 상태값 (소문자 + 언더스코어):
@@ -862,7 +868,7 @@ export type UserStatus = z.infer<typeof UserStatusEnum>;
  */
 export const REPAIR_RESULT_VALUES = ['completed', 'partial', 'failed'] as const;
 
-export const RepairResultEnum = z.enum(REPAIR_RESULT_VALUES as readonly [string, ...string[]]);
+export const RepairResultEnum = z.enum(REPAIR_RESULT_VALUES);
 export type RepairResult = z.infer<typeof RepairResultEnum>;
 
 /**
@@ -1959,6 +1965,11 @@ export const NC_CREATING_INCIDENT_TYPES: readonly IncidentType[] = [
   'damage',
   'malfunction',
 ] as const;
+
+/** 주어진 사고 유형이 NC 생성 가능한 유형인지 확인하는 타입 가드 */
+export function isNcCreatingIncidentType(type: string): type is IncidentType {
+  return (NC_CREATING_INCIDENT_TYPES as readonly string[]).includes(type);
+}
 
 // ============================================================================
 // 사고이력/수리이력에서 수리 필요 표시가 필요한 부적합 유형

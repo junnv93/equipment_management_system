@@ -6,6 +6,10 @@
  */
 
 import { Pool } from 'pg';
+import {
+  EquipmentStatusValues as ESVal,
+  DisposalReviewStatusValues as DRSVal,
+} from '@equipment-management/schemas';
 
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
@@ -74,10 +78,10 @@ export async function resetEquipmentToAvailable(equipmentId: string): Promise<vo
          approval_status = $3,
          updated_at = NOW() - INTERVAL '2 hours'
      WHERE id = $4`,
-    ['available', false, 'approved', equipmentId]
+    [ESVal.AVAILABLE, false, 'approved', equipmentId]
   );
 
-  console.log(`✅ Database updated: equipment ${equipmentId} reset to available`);
+  console.log(`✅ Database updated: equipment ${equipmentId} reset to ${ESVal.AVAILABLE}`);
   console.log(`⚠️  Backend cache may still contain old data (TTL: 1 hour)`);
 
   // Wait for DB transaction to fully commit
@@ -105,7 +109,7 @@ export async function resetEquipmentToReviewedDisposal(
 
   // Update equipment status
   await pool.query('UPDATE equipment SET status = $1, updated_at = NOW() WHERE id = $2', [
-    'pending_disposal',
+    ESVal.PENDING_DISPOSAL,
     equipmentId,
   ]);
 
@@ -118,11 +122,11 @@ export async function resetEquipmentToReviewedDisposal(
       created_at, updated_at
     ) VALUES (
       $1, $2, 'obsolete', 'DB 시드 데이터 - 검토 완료 상태',
-      $3, 'reviewed', $4, NOW(), 'DB 시드 데이터 - 검토 의견',
+      $3, $5, $4, NOW(), 'DB 시드 데이터 - 검토 의견',
       NOW(), NOW()
     )
     ON CONFLICT (id) DO UPDATE SET
-      review_status = 'reviewed',
+      review_status = $5,
       reviewed_by = $4,
       reviewed_at = NOW(),
       review_opinion = 'DB 시드 데이터 - 검토 의견',
@@ -134,7 +138,7 @@ export async function resetEquipmentToReviewedDisposal(
       rejection_reason = NULL,
       updated_at = NOW()
   `,
-    [disposalRequestId, equipmentId, requesterId, reviewerId]
+    [disposalRequestId, equipmentId, requesterId, reviewerId, DRSVal.REVIEWED]
   );
 }
 
@@ -161,7 +165,7 @@ export async function resetEquipmentToPendingDisposal(
 
   // Update equipment status
   await pool.query('UPDATE equipment SET status = $1, updated_at = NOW() WHERE id = $2', [
-    'pending_disposal',
+    ESVal.PENDING_DISPOSAL,
     equipmentId,
   ]);
 
@@ -173,10 +177,10 @@ export async function resetEquipmentToPendingDisposal(
       review_status, created_at, updated_at
     ) VALUES (
       $1, $2, 'obsolete', 'DB 시드 데이터 - 검토 대기 상태',
-      $3, 'pending', NOW(), NOW()
+      $3, $4, NOW(), NOW()
     )
   `,
-    [disposalRequestId, equipmentId, requesterId]
+    [disposalRequestId, equipmentId, requesterId, DRSVal.PENDING]
   );
 }
 
@@ -200,7 +204,7 @@ export async function resetEquipmentToShared(equipmentId: string): Promise<void>
   // Reset equipment to shared state with approved approval_status
   await pool.query(
     'UPDATE equipment SET status = $1, is_shared = $2, approval_status = $3, updated_at = NOW() WHERE id = $4',
-    ['available', true, 'approved', equipmentId]
+    [ESVal.AVAILABLE, true, 'approved', equipmentId]
   );
 }
 
@@ -226,7 +230,7 @@ export async function resetEquipmentToDisposed(
 
   // Update equipment status
   await pool.query('UPDATE equipment SET status = $1, updated_at = NOW() WHERE id = $2', [
-    'disposed',
+    ESVal.DISPOSED,
     equipmentId,
   ]);
 
@@ -240,12 +244,12 @@ export async function resetEquipmentToDisposed(
       created_at, updated_at
     ) VALUES (
       $1, $2, 'obsolete', 'DB 시드 데이터 - 승인 완료 상태',
-      $3, 'approved', $4, NOW() - INTERVAL '2 days', 'DB 시드 데이터 - 검토 의견',
+      $3, $6, $4, NOW() - INTERVAL '2 days', 'DB 시드 데이터 - 검토 의견',
       $5, NOW() - INTERVAL '1 day', 'DB 시드 데이터 - 승인 코멘트',
       NOW() - INTERVAL '3 days', NOW()
     )
     ON CONFLICT (id) DO UPDATE SET
-      review_status = 'approved',
+      review_status = $6,
       reviewed_by = $4,
       reviewed_at = NOW() - INTERVAL '2 days',
       review_opinion = 'DB 시드 데이터 - 검토 의견',
@@ -257,7 +261,7 @@ export async function resetEquipmentToDisposed(
       rejection_reason = NULL,
       updated_at = NOW()
   `,
-    [disposalRequestId, equipmentId, requesterId, reviewerId, approverId]
+    [disposalRequestId, equipmentId, requesterId, reviewerId, approverId, DRSVal.APPROVED]
   );
 }
 
@@ -270,18 +274,19 @@ export async function clearAllPendingDisposalRequests(): Promise<void> {
 
   // Get all equipment IDs with pending disposal requests
   const equipmentResult = await pool.query(
-    `SELECT DISTINCT equipment_id FROM disposal_requests WHERE review_status = 'pending'`
+    `SELECT DISTINCT equipment_id FROM disposal_requests WHERE review_status = $1`,
+    [DRSVal.PENDING]
   );
 
   // Delete all pending disposal requests
-  await pool.query(`DELETE FROM disposal_requests WHERE review_status = 'pending'`);
+  await pool.query(`DELETE FROM disposal_requests WHERE review_status = $1`, [DRSVal.PENDING]);
 
   // Reset status of all affected equipment to 'available'
   if (equipmentResult.rows.length > 0) {
     const equipmentIds = equipmentResult.rows.map((row) => row.equipment_id);
     await pool.query(
-      `UPDATE equipment SET status = 'available', updated_at = NOW() WHERE id = ANY($1::uuid[])`,
-      [equipmentIds]
+      `UPDATE equipment SET status = $1, updated_at = NOW() WHERE id = ANY($2::uuid[])`,
+      [ESVal.AVAILABLE, equipmentIds]
     );
   }
 

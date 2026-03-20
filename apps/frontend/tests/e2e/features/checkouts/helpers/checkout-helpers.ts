@@ -11,6 +11,8 @@ import {
   CHECKOUT_STATUS_LABELS,
   CHECKOUT_PURPOSE_VALUES,
   CHECKOUT_PURPOSE_LABELS,
+  CheckoutPurposeValues as CPVal,
+  type CheckoutPurpose,
 } from '@equipment-management/schemas';
 
 // ============================================================================
@@ -219,7 +221,7 @@ export async function resetCheckoutToReturned(
 
 export interface CreateCheckoutOptions {
   equipmentIds: string[];
-  purpose: 'calibration' | 'repair' | 'rental';
+  purpose: CheckoutPurpose;
   destination: string;
   reason: string;
   expectedReturnDate: string;
@@ -271,7 +273,7 @@ export async function createCheckoutRequest(
   await page.getByLabel('반출 사유').fill(options.reason);
   await page.getByLabel('예상 반입 일시').fill(options.expectedReturnDate);
 
-  if (options.purpose === 'rental') {
+  if (options.purpose === CPVal.RENTAL) {
     // Rental-specific fields
     if (!options.lenderTeamId || !options.lenderSiteId) {
       throw new Error('lenderTeamId and lenderSiteId are required for rental checkouts');
@@ -691,7 +693,7 @@ export async function searchCheckoutsByRequester(page: Page, requesterName: stri
  */
 export async function filterCheckoutsByPurpose(
   page: Page,
-  purpose: 'calibration' | 'repair' | 'rental'
+  purpose: CheckoutPurpose
 ): Promise<void> {
   const label = CHECKOUT_PURPOSE_LABELS[purpose];
   await page.getByLabel('목적 필터').selectOption(label);

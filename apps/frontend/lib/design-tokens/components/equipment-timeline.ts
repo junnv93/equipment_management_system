@@ -9,6 +9,7 @@
  */
 
 import { TRANSITION_PRESETS } from '../motion';
+import { IncidentTypeValues as ITVal, type IncidentType } from '@equipment-management/schemas';
 
 /**
  * 타임라인 스타일
@@ -89,13 +90,13 @@ export const TIMELINE_SKELETON_TOKENS = {
   line: 'h-4 rounded',
 } as const;
 
-/** 사고 유형 → 시멘틱 배경색 매핑 (SSOT) */
-const INCIDENT_TYPE_COLOR_MAP: Record<string, string> = {
-  damage: 'bg-brand-critical',
-  malfunction: 'bg-brand-repair',
-  change: 'bg-brand-info',
-  repair: 'bg-brand-ok',
-  calibration_overdue: 'bg-brand-purple',
+/** 사고 유형 → 시멘틱 배경색 매핑 (SSOT: IncidentTypeValues 키 사용) */
+const INCIDENT_TYPE_COLOR_MAP: Record<IncidentType, string> = {
+  [ITVal.DAMAGE]: 'bg-brand-critical',
+  [ITVal.MALFUNCTION]: 'bg-brand-repair',
+  [ITVal.CHANGE]: 'bg-brand-info',
+  [ITVal.REPAIR]: 'bg-brand-ok',
+  [ITVal.CALIBRATION_OVERDUE]: 'bg-brand-purple',
 };
 
 /**
@@ -105,21 +106,24 @@ const INCIDENT_TYPE_COLOR_MAP: Record<string, string> = {
  * TIMELINE_TOKENS.node.container + text-white shadow-lg와 함께 사용.
  */
 export function getIncidentTypeNodeColor(incidentType: string): string {
-  return INCIDENT_TYPE_COLOR_MAP[incidentType] ?? 'bg-brand-neutral';
+  return INCIDENT_TYPE_COLOR_MAP[incidentType as IncidentType] ?? 'bg-brand-neutral';
 }
 
-/** 사고 유형 배지 색상 매핑 */
-const INCIDENT_TYPE_BADGE_MAP: Record<string, string> = {
-  damage: 'bg-brand-critical/10 text-brand-critical',
-  malfunction: 'bg-brand-repair/10 text-brand-repair',
-  change: 'bg-brand-info/10 text-brand-info',
-  repair: 'bg-brand-ok/10 text-brand-ok',
-  calibration_overdue: 'bg-brand-purple/10 text-brand-purple',
+/** 사고 유형 배지 색상 매핑 (SSOT: IncidentTypeValues 키 사용) */
+const INCIDENT_TYPE_BADGE_MAP: Record<IncidentType, string> = {
+  [ITVal.DAMAGE]: 'bg-brand-critical/10 text-brand-critical',
+  [ITVal.MALFUNCTION]: 'bg-brand-repair/10 text-brand-repair',
+  [ITVal.CHANGE]: 'bg-brand-info/10 text-brand-info',
+  [ITVal.REPAIR]: 'bg-brand-ok/10 text-brand-ok',
+  [ITVal.CALIBRATION_OVERDUE]: 'bg-brand-purple/10 text-brand-purple',
 };
 
 /**
  * 사고 유형 배지 스타일 (IncidentHistorySection Badge용)
  */
 export function getIncidentTypeBadgeClasses(incidentType: string): string {
-  return INCIDENT_TYPE_BADGE_MAP[incidentType] ?? 'bg-brand-neutral/10 text-brand-neutral';
+  return (
+    INCIDENT_TYPE_BADGE_MAP[incidentType as IncidentType] ??
+    'bg-brand-neutral/10 text-brand-neutral'
+  );
 }

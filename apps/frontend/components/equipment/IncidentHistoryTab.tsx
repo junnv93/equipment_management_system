@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { RepairResultEnum } from '@equipment-management/schemas';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDeleteMutation } from '@/hooks/use-mutation-with-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +55,7 @@ import {
   IncidentTypeEnum,
   NonConformanceStatusValues as NCStatusVal,
   INCIDENT_REPAIR_NC_TYPES,
-  NC_CREATING_INCIDENT_TYPES,
+  isNcCreatingIncidentType,
 } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
@@ -87,7 +88,7 @@ type IncidentHistoryFormData = z.infer<typeof incidentHistorySchema>;
 const repairHistorySchema = z.object({
   repairDate: z.string().min(1, '수리 일자를 입력하세요'),
   repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
-  repairResult: z.enum(['completed', 'partial', 'failed']).optional(),
+  repairResult: RepairResultEnum.optional(),
   notes: z.string().optional(),
   nonConformanceId: z.string().uuid('부적합을 선택해주세요'), // 필수
 });
@@ -146,7 +147,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   // damage/malfunction이 아니면 체크박스 자동 해제
   // 백엔드 검증: 부적합은 손상 또는 오작동 유형에서만 생성 가능
   useEffect(() => {
-    if (incidentType && !(NC_CREATING_INCIDENT_TYPES as readonly string[]).includes(incidentType)) {
+    if (incidentType && !isNcCreatingIncidentType(incidentType)) {
       form.setValue('createNonConformance', false);
     }
   }, [incidentType, form]);
@@ -615,76 +616,74 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
               )}
 
               {/* 부적합 등록 체크박스 (damage/malfunction만) */}
-              {incidentType &&
-                (NC_CREATING_INCIDENT_TYPES as readonly string[]).includes(incidentType) && (
-                  <div className="space-y-3">
-                    <FormField
-                      control={form.control}
-                      name="createNonConformance"
-                      render={({ field }) => (
-                        <FormItem
-                          className={`flex flex-row items-start space-x-3 space-y-0 ${getSemanticContainerClasses('warning')}`}
-                        >
-                          <FormControl>
-                            <input
-                              type="checkbox"
-                              checked={field.value}
-                              onChange={field.onChange}
-                              className="h-4 w-4 mt-1 rounded border-border"
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none flex-1">
-                            <FormLabel className="font-medium cursor-pointer">
-                              {t('incidentHistoryTab.nonConformance.registerAsNc')}
-                            </FormLabel>
-                            <p className="text-sm text-muted-foreground">
-                              {t('incidentHistoryTab.nonConformance.ncWillBeCreated')}
-                              {!isPastIncident &&
-                                t('incidentHistoryTab.calibrationOverdue.statusChangeNote')}{' '}
-                              <Link
-                                href={`/equipment/${equipmentId}/repair-history`}
-                                className="underline text-brand-info hover:text-brand-info/80"
-                              >
-                                {t('incidentHistoryTab.nonConformance.repairHistoryLink')}
-                              </Link>
-                              {t('incidentHistoryTab.nonConformance.connectRepairGuide')}
-                            </p>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* 워크플로우 안내 */}
-                    {createNonConformance &&
-                      (NC_CREATING_INCIDENT_TYPES as readonly string[]).includes(incidentType) && (
-                        <div className={getSemanticContainerClasses('info')}>
-                          <h4 className="font-medium text-brand-info mb-2 flex items-center gap-2">
-                            <Info className="h-4 w-4" />
-                            {t('incidentHistoryTab.nonConformance.workflowTitle')}
-                          </h4>
-                          <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside ml-1">
-                            <li>{t('incidentHistoryTab.nonConformance.workflowStep1')}</li>
-                            <li>{t('incidentHistoryTab.nonConformance.workflowStep2')}</li>
-                            <li>{t('incidentHistoryTab.nonConformance.workflowStep3')}</li>
-                            <li>{t('incidentHistoryTab.nonConformance.workflowStep4')}</li>
-                          </ol>
+              {incidentType && isNcCreatingIncidentType(incidentType) && (
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="createNonConformance"
+                    render={({ field }) => (
+                      <FormItem
+                        className={`flex flex-row items-start space-x-3 space-y-0 ${getSemanticContainerClasses('warning')}`}
+                      >
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="h-4 w-4 mt-1 rounded border-border"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none flex-1">
+                          <FormLabel className="font-medium cursor-pointer">
+                            {t('incidentHistoryTab.nonConformance.registerAsNc')}
+                          </FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            {t('incidentHistoryTab.nonConformance.ncWillBeCreated')}
+                            {!isPastIncident &&
+                              t('incidentHistoryTab.calibrationOverdue.statusChangeNote')}{' '}
+                            <Link
+                              href={`/equipment/${equipmentId}/repair-history`}
+                              className="underline text-brand-info hover:text-brand-info/80"
+                            >
+                              {t('incidentHistoryTab.nonConformance.repairHistoryLink')}
+                            </Link>
+                            {t('incidentHistoryTab.nonConformance.connectRepairGuide')}
+                          </p>
                         </div>
-                      )}
+                      </FormItem>
+                    )}
+                  />
 
-                    {/* 과거 이력 경고 (부적합 체크 시만 표시) */}
-                    {isPastIncident && createNonConformance && (
-                      <div className={getSemanticContainerClasses('info')}>
-                        <div className="flex items-start gap-2">
-                          <Calendar className="h-4 w-4 text-brand-info mt-0.5" />
-                          <div className="text-sm text-muted-foreground">
-                            <strong>{t('common.pastIncidentTitle')}</strong>{' '}
-                            {t('incidentHistoryTab.calibrationOverdue.pastIncidentNote')}
-                          </div>
+                  {/* 워크플로우 안내 */}
+                  {createNonConformance && isNcCreatingIncidentType(incidentType) && (
+                    <div className={getSemanticContainerClasses('info')}>
+                      <h4 className="font-medium text-brand-info mb-2 flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        {t('incidentHistoryTab.nonConformance.workflowTitle')}
+                      </h4>
+                      <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside ml-1">
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep1')}</li>
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep2')}</li>
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep3')}</li>
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep4')}</li>
+                      </ol>
+                    </div>
+                  )}
+
+                  {/* 과거 이력 경고 (부적합 체크 시만 표시) */}
+                  {isPastIncident && createNonConformance && (
+                    <div className={getSemanticContainerClasses('info')}>
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-4 w-4 text-brand-info mt-0.5" />
+                        <div className="text-sm text-muted-foreground">
+                          <strong>{t('common.pastIncidentTitle')}</strong>{' '}
+                          {t('incidentHistoryTab.calibrationOverdue.pastIncidentNote')}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 조치 계획 (부적합 생성 시) */}
               {(createNonConformance || incidentType === ITVal.CALIBRATION_OVERDUE) && (
