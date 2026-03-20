@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, User, Building2, Package } from 'lucide-react';
@@ -73,7 +74,9 @@ export default function ReturnApprovalsContent() {
       if (!old)
         return {
           data: [],
-          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+          meta: {
+            pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 0 },
+          },
         };
       return {
         ...old,
@@ -110,7 +113,9 @@ export default function ReturnApprovalsContent() {
       if (!old)
         return {
           data: [],
-          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+          meta: {
+            pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 0 },
+          },
         };
       return {
         ...old,

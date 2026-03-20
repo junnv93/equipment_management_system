@@ -237,16 +237,10 @@ export function EquipmentForm({
   // 사용자 역할 결정 - useMemo 내부에서 직접 roles 접근하여 의존성 안정화
   const userRole = useMemo(() => {
     const roles = (user as { roles?: string[] })?.roles || [];
-    if (roles.some((r) => [URVal.SYSTEM_ADMIN, 'SYSTEM_ADMIN'].includes(r)))
-      return URVal.SYSTEM_ADMIN;
-    if (roles.some((r) => [URVal.LAB_MANAGER, 'LAB_MANAGER', 'admin', 'ADMIN'].includes(r)))
-      return URVal.LAB_MANAGER;
-    if (
-      roles.some((r) =>
-        [URVal.TECHNICAL_MANAGER, 'TECHNICAL_MANAGER', 'manager', 'MANAGER'].includes(r)
-      )
-    )
-      return URVal.TECHNICAL_MANAGER;
+    // SSOT: UserRoleValues만 사용 (존재하지 않는 역할 폴백 제거)
+    if (roles.includes(URVal.SYSTEM_ADMIN)) return URVal.SYSTEM_ADMIN;
+    if (roles.includes(URVal.LAB_MANAGER)) return URVal.LAB_MANAGER;
+    if (roles.includes(URVal.TECHNICAL_MANAGER)) return URVal.TECHNICAL_MANAGER;
     return URVal.TEST_ENGINEER;
   }, [user]);
 

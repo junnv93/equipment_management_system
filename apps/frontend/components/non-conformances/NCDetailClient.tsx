@@ -30,7 +30,11 @@ import { NonConformanceCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { formatDate } from '@/lib/utils/date';
-import type { NonConformanceStatus } from '@equipment-management/schemas';
+import {
+  type NonConformanceStatus,
+  NonConformanceStatusValues as NCVal,
+  REPAIR_REQUIRING_NC_TYPES,
+} from '@equipment-management/schemas';
 import {
   getSemanticBadgeClasses,
   ncStatusToSemantic,
@@ -131,8 +135,9 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     ? differenceInDays(new Date(), new Date(nc.discoveryDate))
     : 0;
   const longOverdue = isNCLongOverdue(elapsedDays);
-  const isClosed = nc.status === 'closed';
-  const needsRepair = ['damage', 'malfunction'].includes(nc.ncType) && !nc.repairHistoryId;
+  const isClosed = nc.status === NCVal.CLOSED;
+  const needsRepair =
+    (REPAIR_REQUIRING_NC_TYPES as readonly string[]).includes(nc.ncType) && !nc.repairHistoryId;
 
   // ============================================================================
   // Mutations
@@ -147,10 +152,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     mutationFn: (vars) =>
       nonConformancesApi.updateNonConformance(ncId, {
         version: nc.version,
-        status: vars.status as 'open' | 'corrected',
+        status: vars.status,
         correctionContent: vars.correctionContent,
         correctionDate:
-          vars.status === 'corrected' ? new Date().toISOString().split('T')[0] : undefined,
+          vars.status === NCVal.CORRECTED ? new Date().toISOString().split('T')[0] : undefined,
         // correctedBy는 서버에서 JWT로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
@@ -200,7 +205,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         closureNotes: vars.closureNotes,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old) => ({ ...old!, status: 'closed' as NonConformanceStatus }),
+    optimisticUpdate: (old) => ({ ...old!, status: NCVal.CLOSED as NonConformanceStatus }),
     invalidateKeys: [queryKeys.nonConformances.lists()],
     successMessage: '부적합이 종결되었습니다',
     errorMessage: '종결에 실패했습니다',
@@ -227,7 +232,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         rejectionReason: vars.rejectionReason,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old) => ({ ...old!, status: 'open' as NonConformanceStatus }),
+    optimisticUpdate: (old) => ({ ...old!, status: NCVal.OPEN as NonConformanceStatus }),
     invalidateKeys: [queryKeys.nonConformances.lists()],
     successMessage: '조치가 반려되었습니다',
     errorMessage: '반려에 실패했습니다',
@@ -301,7 +306,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       </div>
 
       {/* 반려 알림 */}
-      {nc.rejectionReason && nc.status === 'open' && (
+      {nc.rejectionReason && nc.status === NCVal.OPEN && (
         <div className={NC_REJECTION_ALERT_TOKENS.container}>
           <XCircle className={NC_REJECTION_ALERT_TOKENS.icon} />
           <div>
@@ -355,7 +360,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         title="🔧 시정 조치"
         isOpen={correctionOpen}
         onToggle={() => setCorrectionOpen(!correctionOpen)}
-        canEdit={nc.status === 'open' && !isClosed}
+        canEdit={nc.status === NCVal.OPEN && !isClosed}
         isEditing={editingCorrection}
         onEdit={startEditCorrection}
       >
@@ -423,9 +428,8 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         <ActionBar
           nc={nc}
           isManager={isManager()}
-          onMarkCorrected={() =>
-            updateMutation.mutate({ status: 'corrected' as NonConformanceStatus })
-          }
+          needsRepair={needsRepair}
+          onMarkCorrected={() => updateMutation.mutate({ status: NCVal.CORRECTED })}
           onClose={() => setShowCloseDialog(true)}
           onReject={() => setShowRejectDialog(true)}
           isUpdating={updateMutation.isPending}
@@ -566,15 +570,15 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
   let actor: string | null = null;
 
   switch (stepKey) {
-    case 'open':
+    case NCVal.OPEN:
       dateStr = nc.discoveryDate;
       actor = nc.discoverer?.name ?? null;
       break;
-    case 'corrected':
+    case NCVal.CORRECTED:
       dateStr = nc.correctionDate;
       actor = nc.corrector?.name ?? null;
       break;
-    case 'closed':
+    case NCVal.CLOSED:
       dateStr = nc.closedAt;
       actor = nc.closer?.name ?? null;
       break;
@@ -777,6 +781,7 @@ function CollapsibleSection({
 function ActionBar({
   nc,
   isManager,
+  needsRepair,
   onMarkCorrected,
   onClose,
   onReject,
@@ -784,6 +789,7 @@ function ActionBar({
 }: {
   nc: NonConformance;
   isManager: boolean;
+  needsRepair: boolean;
   onMarkCorrected: () => void;
   onClose: () => void;
   onReject: () => void;
@@ -793,19 +799,29 @@ function ActionBar({
     <div className={NC_ACTION_BAR_TOKENS.container}>
       <div className={NC_ACTION_BAR_TOKENS.left}>
         {/* 시험실무자 액션 */}
-        {nc.status === 'open' && (
-          <Button size="sm" onClick={onMarkCorrected} disabled={isUpdating}>
+        {nc.status === NCVal.OPEN && (
+          <Button
+            size="sm"
+            onClick={onMarkCorrected}
+            disabled={isUpdating || needsRepair}
+            title={needsRepair ? '수리 이력을 먼저 등록해야 합니다' : undefined}
+          >
             조치 완료
           </Button>
         )}
         <span className={NC_ACTION_BAR_TOKENS.roleHint}>
-          {nc.status === 'open' && '조치를 완료하면 기술책임자의 종결 승인이 필요합니다'}
-          {nc.status === 'corrected' && !isManager && '기술책임자의 종결 승인을 기다리고 있습니다'}
+          {nc.status === NCVal.OPEN &&
+            (needsRepair
+              ? '수리 이력을 등록한 후 조치 완료할 수 있습니다'
+              : '조치를 완료하면 기술책임자의 종결 승인이 필요합니다')}
+          {nc.status === NCVal.CORRECTED &&
+            !isManager &&
+            '기술책임자의 종결 승인을 기다리고 있습니다'}
         </span>
       </div>
       <div className={NC_ACTION_BAR_TOKENS.right}>
         {/* 기술책임자 액션 (corrected 상태만) */}
-        {isManager && nc.status === 'corrected' && (
+        {isManager && nc.status === NCVal.CORRECTED && (
           <>
             <Button variant="outline" size="sm" onClick={onReject} disabled={isUpdating}>
               <X className="h-3.5 w-3.5 mr-1" />
@@ -815,7 +831,8 @@ function ActionBar({
               size="sm"
               className={NC_APPROVE_BUTTON_TOKENS.approve}
               onClick={onClose}
-              disabled={isUpdating}
+              disabled={isUpdating || needsRepair}
+              title={needsRepair ? '수리 이력을 먼저 등록해야 합니다' : undefined}
             >
               <Check className="h-3.5 w-3.5 mr-1" />
               종결 승인

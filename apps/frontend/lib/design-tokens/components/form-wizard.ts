@@ -163,7 +163,7 @@ export const FORM_WIZARD_NAVIGATION_TOKENS = {
 // Utility Functions
 // ============================================================================
 
-type WizardStepStatus = 'completed' | 'current' | 'pending' | 'error';
+export type WizardStepStatus = 'completed' | 'current' | 'pending' | 'error';
 
 /**
  * 위저드 스테퍼 노드 상태 클래스 반환

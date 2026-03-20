@@ -34,7 +34,7 @@ import { ArrowLeft, Save, AlertCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
+import { TEAM_RESTRICTED_ROLES, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import type { UserRole, Site } from '@equipment-management/schemas';
 import {
   CALIBRATION_PLAN_CREATE_TOKENS,
@@ -73,7 +73,11 @@ export default function CreateCalibrationPlanContent() {
   // 팀 목록 조회 (사이트 선택 시)
   const { data: teamsData } = useQuery({
     queryKey: queryKeys.teams.list({ site: selectedSite || undefined }),
-    queryFn: () => teamsApi.getTeams({ site: (selectedSite as Site) || undefined, pageSize: 100 }),
+    queryFn: () =>
+      teamsApi.getTeams({
+        site: (selectedSite as Site) || undefined,
+        pageSize: SELECTOR_PAGE_SIZE,
+      }),
     enabled: !!selectedSite,
   });
 

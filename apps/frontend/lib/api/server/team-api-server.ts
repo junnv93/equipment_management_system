@@ -8,7 +8,7 @@
  */
 import type { Team, TeamDetail, TeamQuery } from '../teams-api';
 import { API_BASE_URL } from '../../config/api-config';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { getServerAuthHeaders as getAuthHeaders } from '@/lib/auth/server-session';
 
 /**
@@ -66,10 +66,10 @@ export async function getTeams(query: TeamQuery = {}): Promise<{
     meta: {
       pagination: {
         total: data.meta?.pagination?.total || data.length || 0,
-        pageSize: query.pageSize || 20,
+        pageSize: query.pageSize || DEFAULT_PAGE_SIZE,
         currentPage: query.page || 1,
         totalPages: Math.ceil(
-          (data.meta?.pagination?.total || data.length || 0) / (query.pageSize || 20)
+          (data.meta?.pagination?.total || data.length || 0) / (query.pageSize || DEFAULT_PAGE_SIZE)
         ),
       },
     },

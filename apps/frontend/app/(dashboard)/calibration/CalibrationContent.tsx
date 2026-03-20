@@ -33,7 +33,7 @@ import calibrationApi, {
   type IntermediateChecksResponse,
 } from '@/lib/api/calibration-api';
 import { apiClient } from '@/lib/api/api-client';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -58,12 +58,19 @@ import CalibrationListTable from '@/components/calibration/CalibrationListTable'
 import CalibrationAlertBanners from '@/components/calibration/CalibrationAlertBanners';
 
 // ✅ 탭 컴포넌트는 dynamic import: 초기 번들 제외, 사용자 인터랙션 후 로드
+const TabSkeleton = () => (
+  <div className="space-y-4 p-4">
+    <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+    <div className="h-64 w-full animate-pulse rounded bg-muted" />
+  </div>
+);
 const IntermediateChecksTab = dynamic(
   () => import('@/components/calibration/IntermediateChecksTab'),
-  { ssr: false }
+  { ssr: false, loading: () => <TabSkeleton /> }
 );
 const SelfInspectionTab = dynamic(() => import('@/components/calibration/SelfInspectionTab'), {
   ssr: false,
+  loading: () => <TabSkeleton />,
 });
 
 interface CalibrationContentProps {
@@ -132,7 +139,7 @@ export default function CalibrationContent({
     ),
     queryFn: () =>
       calibrationApi.getCalibrationHistory({
-        pageSize: 100,
+        pageSize: SELECTOR_PAGE_SIZE,
         teamId: defaultTeamId,
         site: defaultSite,
       }),

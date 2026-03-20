@@ -50,7 +50,12 @@
     "disposal_final": { "label": "Disposal Approval", "action": "Approve" },
     "plan_review": { "label": "Plan Review", "action": "Complete Review" },
     "plan_final": { "label": "Plan Approval", "action": "Approve" },
-    "software": { "label": "Software", "action": "Complete Review" }
+    "software": {
+      "label": "Software",
+      "action": "Complete Review",
+      "commentDialogTitle": "Software Change Review Comment",
+      "commentPlaceholder": "Enter review comment"
+    }
   },
   "toasts": {
     "approveSuccess": "Approval completed successfully.",

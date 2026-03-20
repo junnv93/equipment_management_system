@@ -27,42 +27,42 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 ## Related Files
 
-| File                                                                         | Purpose                                                                                        |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `packages/db/src/schema/audit-logs.ts`                                       | DB enum 배열 (auditAction, auditEntityType — schemas와 동기화 필수)                            |
-| `packages/db/src/index.ts`                                                   | AppDatabase SSOT 타입 (NodePgDatabase 직접 import 금지)                                        |
-| `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                                            |
-| `packages/schemas/src/errors.ts`                                             | SSOT ErrorCode enum + errorCodeToStatusCode 매핑                                               |
-| `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                                             |
-| `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)                                     |
-| `packages/schemas/src/audit-log.ts`                                          | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)                            |
-| `packages/schemas/src/field-labels.ts`                                       | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                                                   |
-| `packages/schemas/src/index.ts`                                              | schemas 패키지 내보내기                                                                        |
-| `packages/shared-constants/src/permissions.ts`                               | Permission enum 정의                                                                           |
-| `packages/shared-constants/src/api-endpoints.ts`                             | API_ENDPOINTS 상수                                                                             |
-| `packages/shared-constants/src/entity-routes.ts`                             | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                                             |
-| `packages/shared-constants/src/data-scope.ts`                                | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, AUDIT_LOG_SCOPE)                          |
-| `packages/shared-constants/src/permission-categories.ts`                     | SSOT 권한 카테고리 그룹핑 (PERMISSION_CATEGORIES, PERMISSION_CATEGORY_KEYS)                    |
-| `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                                               |
-| `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 + 세션 동작 상수 (TTL, idle timeout, session sync)                 |
-| `packages/shared-constants/src/approval-kpi.ts`                              | SSOT 승인 KPI 임계값 (URGENT_THRESHOLD_DAYS, WARNING_THRESHOLD_DAYS)                           |
-| `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리 (countsAll prefix 키 포함)                                                    |
-| `apps/frontend/lib/api/cache-invalidation.ts`                                | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등)                                                |
-| `packages/schemas/src/api-response.ts`                                       | ApiResponse 타입 SSOT (로컬 재정의 금지)                                                       |
-| `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)                           |
-| `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)                                |
-| `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)                              |
-| `apps/frontend/lib/navigation/nav-config.ts`                                 | SSOT 네비게이션 설정 (NavItemConfig, FRONTEND_ROUTES, Permission 기반 필터링)                  |
-| `apps/frontend/lib/config/pagination.ts`                                     | SSOT 페이지네이션 상수 (PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE — 로컬 재정의 금지)               |
-| `apps/backend/src/common/cache/cache-key-prefixes.ts`                        | SSOT 캐시 키 프리픽스 (CACHE_KEY_PREFIXES — 서비스/레지스트리/헬퍼 공유)                       |
-| `apps/frontend/lib/utils/dashboard-scope.ts`                                 | SSOT 대시보드 스코프 유틸리티 (DashboardScope, resolveDashboardScope, buildScopedEquipmentUrl) |
-| `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                                            |
-| `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등)                          |
-| `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                                                     |
-| `apps/frontend/lib/errors/equipment-errors.ts`                               | 프론트엔드 에러 코드 매핑 (ErrorCode ↔ EquipmentErrorCode, mapBackendErrorCode)               |
-| `packages/db/src/schema/calibration-plans.ts`                                | DB 스키마 rejectionStage (REJECTION_STAGE_VALUES SSOT import 필수)                             |
-| `apps/backend/src/modules/equipment/utils/request-data-codec.ts`             | requestData 직렬화/역직렬화 코덱 (JSON↔DTO 변환 SSOT)                                         |
-| `apps/backend/src/modules/equipment/equipment.service.ts`                    | DTO→Entity 매핑 (getTableColumns 기반 동적 컬럼 추출)                                          |
+| File                                                                         | Purpose                                                                                                   |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `packages/db/src/schema/audit-logs.ts`                                       | DB enum 배열 (auditAction, auditEntityType — schemas와 동기화 필수)                                       |
+| `packages/db/src/index.ts`                                                   | AppDatabase SSOT 타입 (NodePgDatabase 직접 import 금지)                                                   |
+| `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                                                       |
+| `packages/schemas/src/errors.ts`                                             | SSOT ErrorCode enum + errorCodeToStatusCode 매핑                                                          |
+| `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                                                        |
+| `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)                                                |
+| `packages/schemas/src/audit-log.ts`                                          | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)                                       |
+| `packages/schemas/src/field-labels.ts`                                       | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                                                              |
+| `packages/schemas/src/index.ts`                                              | schemas 패키지 내보내기                                                                                   |
+| `packages/shared-constants/src/permissions.ts`                               | Permission enum 정의                                                                                      |
+| `packages/shared-constants/src/api-endpoints.ts`                             | API_ENDPOINTS 상수                                                                                        |
+| `packages/shared-constants/src/entity-routes.ts`                             | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                                                        |
+| `packages/shared-constants/src/data-scope.ts`                                | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, \*\_DATA_SCOPE 정책 + INTERMEDIATE_CHECK_DATA_SCOPE) |
+| `packages/shared-constants/src/permission-categories.ts`                     | SSOT 권한 카테고리 그룹핑 (PERMISSION_CATEGORIES, PERMISSION_CATEGORY_KEYS)                               |
+| `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                                                          |
+| `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 + 세션 동작 상수 (TTL, idle timeout, session sync)                            |
+| `packages/shared-constants/src/approval-kpi.ts`                              | SSOT 승인 KPI 임계값 (URGENT_THRESHOLD_DAYS, WARNING_THRESHOLD_DAYS)                                      |
+| `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리 (countsAll prefix 키 포함)                                                               |
+| `apps/frontend/lib/api/cache-invalidation.ts`                                | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등)                                                           |
+| `packages/schemas/src/api-response.ts`                                       | ApiResponse 타입 SSOT (로컬 재정의 금지)                                                                  |
+| `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)                                      |
+| `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)                                           |
+| `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)                                         |
+| `apps/frontend/lib/navigation/nav-config.ts`                                 | SSOT 네비게이션 설정 (NavItemConfig, FRONTEND_ROUTES, Permission 기반 필터링)                             |
+| `apps/frontend/lib/config/pagination.ts`                                     | SSOT 페이지네이션 상수 (PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE — 로컬 재정의 금지)                          |
+| `apps/backend/src/common/cache/cache-key-prefixes.ts`                        | SSOT 캐시 키 프리픽스 (CACHE_KEY_PREFIXES — 서비스/레지스트리/헬퍼 공유)                                  |
+| `apps/frontend/lib/utils/dashboard-scope.ts`                                 | SSOT 대시보드 스코프 유틸리티 (DashboardScope, resolveDashboardScope, buildScopedEquipmentUrl)            |
+| `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                                                       |
+| `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등)                                     |
+| `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                                                                |
+| `apps/frontend/lib/errors/equipment-errors.ts`                               | 프론트엔드 에러 코드 매핑 (ErrorCode ↔ EquipmentErrorCode, mapBackendErrorCode)                          |
+| `packages/db/src/schema/calibration-plans.ts`                                | DB 스키마 rejectionStage (REJECTION_STAGE_VALUES SSOT import 필수)                                        |
+| `apps/backend/src/modules/equipment/utils/request-data-codec.ts`             | requestData 직렬화/역직렬화 코덱 (JSON↔DTO 변환 SSOT)                                                    |
+| `apps/backend/src/modules/equipment/equipment.service.ts`                    | DTO→Entity 매핑 (getTableColumns 기반 동적 컬럼 추출)                                                     |
 
 ## Workflow
 

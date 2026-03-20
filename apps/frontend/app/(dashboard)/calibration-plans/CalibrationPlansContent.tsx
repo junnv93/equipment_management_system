@@ -43,6 +43,7 @@ import {
   TEAM_RESTRICTED_ROLES,
   CALIBRATION_PLAN_DATA_SCOPE,
   resolveDataScope,
+  SELECTOR_PAGE_SIZE,
 } from '@equipment-management/shared-constants';
 import {
   CALIBRATION_PLAN_KPI_TOKENS,
@@ -97,7 +98,10 @@ export default function CalibrationPlansContent({
   const { data: teamsData } = useQuery({
     queryKey: queryKeys.teams.list({ site: filters.siteId || undefined }),
     queryFn: () =>
-      teamsApi.getTeams({ site: (filters.siteId as Site) || undefined, pageSize: 100 }),
+      teamsApi.getTeams({
+        site: (filters.siteId as Site) || undefined,
+        pageSize: SELECTOR_PAGE_SIZE,
+      }),
     enabled: !!filters.siteId,
   });
 

@@ -50,7 +50,12 @@
     "disposal_final": { "label": "폐기 승인", "action": "승인" },
     "plan_review": { "label": "교정계획서 검토", "action": "검토완료" },
     "plan_final": { "label": "교정계획서 승인", "action": "승인" },
-    "software": { "label": "소프트웨어", "action": "검토완료" }
+    "software": {
+      "label": "소프트웨어",
+      "action": "검토완료",
+      "commentDialogTitle": "소프트웨어 변경 검토 코멘트",
+      "commentPlaceholder": "검토 완료 내용을 입력하세요"
+    }
   },
   "toasts": {
     "approveSuccess": "승인 처리가 완료되었습니다.",

@@ -39,6 +39,7 @@ import type {
   CalibrationMethod,
   Classification,
 } from '@equipment-management/schemas';
+import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
@@ -92,7 +93,7 @@ export const DEFAULT_UI_FILTERS: UIEquipmentFilters = {
   sortBy: 'managementNumber',
   sortOrder: 'asc',
   page: 1,
-  pageSize: 20,
+  pageSize: DEFAULT_PAGE_SIZE,
 };
 
 /**

@@ -57,6 +57,7 @@
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage, isConflictError } from '@/lib/api/error';
+import { ERROR_MESSAGES, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 
 /**
  * Optimistic Mutation 옵션
@@ -223,9 +224,10 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
     onError: (error, variables) => {
       // 1. 에러 토스트 표시 (409 충돌은 전용 메시지)
       if (isConflictError(error)) {
+        const conflictInfo = ERROR_MESSAGES[EquipmentErrorCode.VERSION_CONFLICT];
         toast({
-          title: '데이터 충돌',
-          description: '다른 사용자가 이 데이터를 수정했습니다. 최신 데이터로 자동 새로고침됩니다.',
+          title: conflictInfo.title,
+          description: conflictInfo.message,
           variant: 'destructive',
         });
       } else {
@@ -233,10 +235,10 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
           ? typeof errorMessage === 'function'
             ? errorMessage(error)
             : errorMessage
-          : getErrorMessage(error, '작업 중 오류가 발생했습니다.');
+          : getErrorMessage(error, ERROR_MESSAGES[EquipmentErrorCode.UNKNOWN_ERROR].message);
 
         toast({
-          title: '오류',
+          title: ERROR_MESSAGES[EquipmentErrorCode.UNKNOWN_ERROR].title,
           description: message,
           variant: 'destructive',
         });

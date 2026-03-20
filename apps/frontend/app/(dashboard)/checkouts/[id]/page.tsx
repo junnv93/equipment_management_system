@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
 import { RouteLoading } from '@/components/layout/RouteLoading';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
+import { CHECKOUT_PURPOSE_LABELS, type CheckoutPurpose } from '@equipment-management/schemas';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
@@ -84,12 +85,8 @@ export async function generateMetadata(props: PageProps) {
 
   try {
     const checkout = await getCheckoutCached(id);
-    const purposeLabels: Record<string, string> = {
-      calibration: '교정',
-      repair: '수리',
-      rental: '대여',
-    };
-    const purposeLabel = purposeLabels[checkout.purpose] || checkout.purpose;
+    const purposeLabel =
+      CHECKOUT_PURPOSE_LABELS[checkout.purpose as CheckoutPurpose] || checkout.purpose;
 
     return {
       title: `${purposeLabel} 반출 상세 - ${checkout.destination}`,

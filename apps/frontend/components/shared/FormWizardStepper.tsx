@@ -8,6 +8,7 @@ import {
   getWizardConnectorClasses,
   FOCUS_TOKENS,
   getTransitionClasses,
+  type WizardStepStatus,
 } from '@/lib/design-tokens';
 
 export interface WizardStep {
@@ -31,14 +32,12 @@ interface FormWizardStepperProps {
   className?: string;
 }
 
-type StepStatus = 'completed' | 'current' | 'pending' | 'error';
-
 function getStepStatus(
   index: number,
   currentStep: number,
   completedSteps: Set<number>,
   errorSteps: Set<number>
-): StepStatus {
+): WizardStepStatus {
   if (errorSteps.has(index)) return 'error';
   if (completedSteps.has(index)) return 'completed';
   if (index === currentStep) return 'current';

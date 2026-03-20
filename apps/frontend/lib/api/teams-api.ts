@@ -12,6 +12,7 @@ import type {
   Team as SchemaTeam,
   CreateTeamInput,
   UpdateTeamInput,
+  Site,
 } from '@equipment-management/schemas';
 import {
   transformPaginatedResponse,
@@ -121,7 +122,7 @@ export const SITE_CONFIG = {
   pyeongtaek: { label: '평택', code: 'PYT', color: '#00A451' },
 } as const;
 
-export type Site = keyof typeof SITE_CONFIG;
+export type { Site };
 
 /**
  * 팀 조회 쿼리 파라미터
@@ -234,17 +235,28 @@ const teamsApi = {
   },
 
   /**
+   * 사용자 단건 조회 (LeaderCombobox 초기값 해석용)
+   */
+  getUser: async (id: string): Promise<TeamMember> => {
+    const response = await apiClient.get(API_ENDPOINTS.USERS.GET(id));
+    return transformSingleResponse<TeamMember>(response);
+  },
+
+  /**
    * 사용자 검색 (LeaderCombobox용)
+   *
+   * - Edit 모드: teams 파라미터만 전달 (site는 팀에 이미 내포)
+   * - Create 모드: site 파라미터로 필터링
    */
   searchUsers: async (params: {
     search?: string;
     site?: string;
-    teams?: string; // Comma-separated team IDs
+    teams?: string;
   }): Promise<TeamMember[]> => {
     const qs = new URLSearchParams();
     if (params.search) qs.set('search', params.search);
     if (params.site) qs.set('site', params.site);
-    if (params.teams) qs.set('teams', params.teams); // NEW: Filter by teams
+    if (params.teams) qs.set('teams', params.teams);
     qs.set('pageSize', '20');
     const response = await apiClient.get(`${API_ENDPOINTS.USERS.LIST}?${qs.toString()}`);
     return transformArrayResponse<TeamMember>(response);

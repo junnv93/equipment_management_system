@@ -8,6 +8,7 @@ import { Search, Package, Calendar, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
@@ -56,7 +57,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
   // 팀 장비 목록 조회
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.equipment.list({ teamId }),
-    queryFn: () => equipmentApi.getEquipmentList({ teamId, pageSize: 100 }),
+    queryFn: () => equipmentApi.getEquipmentList({ teamId, pageSize: SELECTOR_PAGE_SIZE }),
     ...QUERY_CONFIG.EQUIPMENT_LIST,
   });
 

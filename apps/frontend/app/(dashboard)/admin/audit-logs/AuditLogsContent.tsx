@@ -42,6 +42,7 @@ import {
   resolveDataScope,
   AUDIT_LOG_SCOPE,
   API_ENDPOINTS,
+  DEFAULT_PAGE_SIZE,
 } from '@equipment-management/shared-constants';
 import {
   AUDIT_MOTION,
@@ -161,7 +162,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   const logs = data?.data ?? [];
   const pagination = data?.meta?.pagination ?? {
     total: 0,
-    pageSize: 20,
+    pageSize: DEFAULT_PAGE_SIZE,
     currentPage: 1,
     totalPages: 1,
   };

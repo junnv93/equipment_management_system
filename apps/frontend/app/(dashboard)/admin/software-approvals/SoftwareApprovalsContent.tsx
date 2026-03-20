@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { RejectReasonDialog } from '@/components/admin/RejectReasonDialog';
 import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkeleton';
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
@@ -66,7 +67,9 @@ export default function SoftwareApprovalsContent() {
       if (!old)
         return {
           data: [],
-          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+          meta: {
+            pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 0 },
+          },
         };
       return {
         ...old,
@@ -103,7 +106,9 @@ export default function SoftwareApprovalsContent() {
       if (!old)
         return {
           data: [],
-          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+          meta: {
+            pagination: { total: 0, pageSize: DEFAULT_PAGE_SIZE, currentPage: 1, totalPages: 0 },
+          },
         };
       return {
         ...old,

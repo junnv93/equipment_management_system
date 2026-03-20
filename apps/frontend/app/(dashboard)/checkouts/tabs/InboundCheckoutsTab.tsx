@@ -26,7 +26,7 @@ import {
   type Classification,
   type EquipmentImportStatus,
 } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
@@ -74,7 +74,7 @@ export default function InboundCheckoutsTab({
     queryFn: async () => {
       const query: CheckoutQuery = {
         page: filters.page,
-        pageSize: 20,
+        pageSize: DEFAULT_PAGE_SIZE,
         search: searchTerm || undefined,
         teamId,
         direction: 'inbound',

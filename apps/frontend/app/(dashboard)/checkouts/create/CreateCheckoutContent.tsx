@@ -53,7 +53,7 @@ import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 import teamsApi, { type Site } from '@/lib/api/teams-api';
 import { SITE_LABELS } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -100,7 +100,7 @@ export default function CreateCheckoutContent() {
       const response = await equipmentApi.getEquipmentList({
         search: searchTerm || undefined,
         teamId: equipmentTeamId || undefined,
-        pageSize: 100,
+        pageSize: SELECTOR_PAGE_SIZE,
       });
       return response;
     },
@@ -133,7 +133,6 @@ export default function CreateCheckoutContent() {
         description: getErrorMessage(error, t('toasts.createError')),
         variant: 'destructive',
       });
-      console.error(error);
     },
   });
 

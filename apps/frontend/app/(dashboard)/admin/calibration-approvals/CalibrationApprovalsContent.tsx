@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { isConflictError } from '@/lib/errors/equipment-errors';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -101,7 +102,7 @@ export default function CalibrationApprovalsContent() {
         description: errorMessage,
         variant: 'destructive',
       });
-      if (errorMessage.includes('VERSION_CONFLICT')) {
+      if (isConflictError(error)) {
         queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
       }
     },
@@ -138,7 +139,7 @@ export default function CalibrationApprovalsContent() {
         description: errorMessage,
         variant: 'destructive',
       });
-      if (errorMessage.includes('VERSION_CONFLICT')) {
+      if (isConflictError(error)) {
         queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
       }
     },

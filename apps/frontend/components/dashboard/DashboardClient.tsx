@@ -29,6 +29,7 @@ import { dashboardApi } from '@/lib/api/dashboard-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import type {
   DashboardSummary,
+  DashboardPaginatedList,
   EquipmentByTeam,
   OverdueCalibration,
   UpcomingCalibration,
@@ -45,12 +46,12 @@ import { getPageContainerClasses } from '@/lib/design-tokens';
 export interface DashboardClientProps {
   initialSummary?: DashboardSummary;
   initialEquipmentByTeam?: EquipmentByTeam[];
-  initialOverdueCalibrations?: OverdueCalibration[];
-  initialUpcomingCalibrations?: UpcomingCalibration[];
-  initialOverdueCheckouts?: OverdueCheckout[];
+  initialOverdueCalibrations?: DashboardPaginatedList<OverdueCalibration>;
+  initialUpcomingCalibrations?: DashboardPaginatedList<UpcomingCalibration>;
+  initialOverdueCheckouts?: DashboardPaginatedList<OverdueCheckout>;
   initialRecentActivities?: RecentActivity[];
   initialEquipmentStatusStats?: Record<string, number>;
-  initialUpcomingCheckoutReturns?: UpcomingCheckoutReturn[];
+  initialUpcomingCheckoutReturns?: DashboardPaginatedList<UpcomingCheckoutReturn>;
 }
 
 function DashboardClientComponent({
@@ -115,12 +116,12 @@ function DashboardClientComponent({
     upcomingCalibrations: 0,
   };
   const equipmentByTeam = aggregate?.equipmentByTeam ?? [];
-  const overdueCalibrations = aggregate?.overdueCalibrations ?? [];
-  const upcomingCalibrations = aggregate?.upcomingCalibrations ?? [];
-  const overdueCheckouts = aggregate?.overdueCheckouts ?? [];
+  const overdueCalibrations = aggregate?.overdueCalibrations?.items ?? [];
+  const upcomingCalibrations = aggregate?.upcomingCalibrations?.items ?? [];
+  const overdueCheckouts = aggregate?.overdueCheckouts?.items ?? [];
   const recentActivities = aggregate?.recentActivities ?? [];
   const equipmentStatusStats = aggregate?.equipmentStatusStats ?? {};
-  const upcomingCheckoutReturns = aggregate?.upcomingCheckoutReturns ?? [];
+  const upcomingCheckoutReturns = aggregate?.upcomingCheckoutReturns?.items ?? [];
 
   return (
     <div className={getPageContainerClasses('list', 'space-y-4')}>

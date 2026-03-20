@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
 import type { UserRole } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
 import {
@@ -54,12 +55,19 @@ export function ApprovalsClient({
   const searchParams = useSearchParams();
   const approvalsApi = useApprovalsApi();
   const t = useTranslations('approvals');
+  const { toast } = useToast();
 
   // 현재 역할에서 사용 가능한 탭 (useMemo로 안정화)
   const availableTabs = useMemo(() => ROLE_TABS[userRole] || [], [userRole]);
   const defaultTab = initialTab || availableTabs[0] || 'equipment';
 
-  const [activeTab, setActiveTab] = useState<ApprovalCategory>(defaultTab as ApprovalCategory);
+  // URL이 SSOT — tab 파라미터에서 직접 도출
+  const tabParam = searchParams.get('tab');
+  const activeTab: ApprovalCategory =
+    tabParam && availableTabs.includes(tabParam as ApprovalCategory)
+      ? (tabParam as ApprovalCategory)
+      : (defaultTab as ApprovalCategory);
+
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [detailModalItem, setDetailModalItem] = useState<ApprovalItem | null>(null);
   const [rejectModalItem, setRejectModalItem] = useState<ApprovalItem | null>(null);
@@ -75,18 +83,9 @@ export function ApprovalsClient({
   const [isBulkApproveCommentOpen, setIsBulkApproveCommentOpen] = useState(false);
   const [bulkApproveComment, setBulkApproveComment] = useState('');
 
-  // URL 쿼리 파라미터 동기화
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam && availableTabs.includes(tabParam as ApprovalCategory)) {
-      setActiveTab(tabParam as ApprovalCategory);
-    }
-  }, [searchParams, availableTabs]);
-
   // 탭 변경 핸들러
   const handleTabChange = useCallback(
     (tab: string) => {
-      setActiveTab(tab as ApprovalCategory);
       setSelectedItems([]);
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', tab);
@@ -141,6 +140,7 @@ export function ApprovalsClient({
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
       queryKeys.approvals.kpi(activeTab),
+      queryKeys.calibrations.intermediateChecks(),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
     ],
     successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
@@ -263,19 +263,39 @@ export function ApprovalsClient({
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
       queryKeys.approvals.kpi(activeTab),
+      queryKeys.calibrations.intermediateChecks(),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
     ],
-    successMessage: (result) => {
-      if (result.failed.length > 0) {
-        return t('toasts.bulkApproveResult', {
-          success: result.success.length,
-          failed: result.failed.length,
+    // successMessage 생략 — 부분 실패 시 토스트 title/variant를 분기해야 하므로 onSuccessCallback에서 직접 처리
+    errorMessage: t('toasts.bulkApproveError'),
+    onSuccessCallback: (result, { ids }) => {
+      // 결과에 따라 적절한 토스트 표시
+      if (result.failed.length > 0 && result.success.length === 0) {
+        // 전체 실패
+        toast({
+          title: t('toasts.bulkApproveError'),
+          description: t('toasts.bulkApproveResult', {
+            success: 0,
+            failed: result.failed.length,
+          }),
+          variant: 'destructive',
+        });
+      } else if (result.failed.length > 0) {
+        // 부분 성공
+        toast({
+          title: t('toasts.bulkApproveResult', {
+            success: result.success.length,
+            failed: result.failed.length,
+          }),
+          variant: 'destructive',
+        });
+      } else {
+        // 전체 성공
+        toast({
+          title: t('toasts.bulkApproveAll', { count: result.success.length }),
         });
       }
-      return t('toasts.bulkApproveAll', { count: result.success.length });
-    },
-    errorMessage: t('toasts.bulkApproveError'),
-    onSuccessCallback: (_, { ids }) => {
+
       setProcessingIds((prev) => {
         const s = new Set(prev);
         ids.forEach((id) => s.delete(id));
@@ -340,17 +360,33 @@ export function ApprovalsClient({
       queryKeys.approvals.kpi(activeTab),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
     ],
-    successMessage: (result) => {
-      if (result.failed.length > 0) {
-        return t('toasts.bulkRejectResult', {
-          success: result.success.length,
-          failed: result.failed.length,
+    // successMessage 생략 — 부분 실패 시 토스트 title/variant를 분기해야 하므로 onSuccessCallback에서 직접 처리
+    errorMessage: t('toasts.bulkRejectError'),
+    onSuccessCallback: (result, { ids }) => {
+      // 결과에 따라 적절한 토스트 표시
+      if (result.failed.length > 0 && result.success.length === 0) {
+        toast({
+          title: t('toasts.bulkRejectError'),
+          description: t('toasts.bulkRejectResult', {
+            success: 0,
+            failed: result.failed.length,
+          }),
+          variant: 'destructive',
+        });
+      } else if (result.failed.length > 0) {
+        toast({
+          title: t('toasts.bulkRejectResult', {
+            success: result.success.length,
+            failed: result.failed.length,
+          }),
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('toasts.bulkRejectAll', { count: result.success.length }),
         });
       }
-      return t('toasts.bulkRejectAll', { count: result.success.length });
-    },
-    errorMessage: t('toasts.bulkRejectError'),
-    onSuccessCallback: (_, { ids }) => {
+
       setProcessingIds((prev) => {
         const s = new Set(prev);
         ids.forEach((id) => s.delete(id));

@@ -105,15 +105,21 @@ export type { UserRole };
  * SSR(dashboard-api-server.ts)과 CSC 모두 사용하는 공유 타입.
  * null = 해당 데이터 조회 실패 (백엔드 Promise.allSettled 부분 실패 허용).
  */
+/** Paginated list with hasMore indicator for dashboard items */
+export interface DashboardPaginatedList<T> {
+  items: T[];
+  hasMore: boolean;
+}
+
 export interface DashboardAggregate {
   summary: DashboardSummary | null;
   equipmentByTeam: EquipmentByTeam[] | null;
-  overdueCalibrations: OverdueCalibration[] | null;
-  upcomingCalibrations: UpcomingCalibration[] | null;
-  overdueCheckouts: OverdueCheckout[] | null;
+  overdueCalibrations: DashboardPaginatedList<OverdueCalibration> | null;
+  upcomingCalibrations: DashboardPaginatedList<UpcomingCalibration> | null;
+  overdueCheckouts: DashboardPaginatedList<OverdueCheckout> | null;
   equipmentStatusStats: Record<string, number> | null;
   recentActivities: RecentActivity[] | null;
-  upcomingCheckoutReturns: UpcomingCheckoutReturn[] | null;
+  upcomingCheckoutReturns: DashboardPaginatedList<UpcomingCheckoutReturn> | null;
 }
 
 class DashboardApi {

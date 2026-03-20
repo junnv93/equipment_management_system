@@ -13,6 +13,7 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTeamFilters } from '@/hooks/use-team-filters';
 import type { UITeamFilters } from '@/lib/utils/team-filter-utils';
 import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
@@ -61,12 +62,7 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
 
   // 검색어 디바운스 (300ms)
   const [searchInput, setSearchInput] = useState(filters.search);
-  const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchInput), 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
 
   useEffect(() => {
     if (debouncedSearch !== filters.search) updateSearch(debouncedSearch);
@@ -85,7 +81,6 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
 
   const handleClearFilters = () => {
     setSearchInput('');
-    setDebouncedSearch('');
     clearFilters();
   };
 

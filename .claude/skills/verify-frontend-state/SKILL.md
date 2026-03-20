@@ -54,6 +54,8 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/hooks/use-debounced-value.ts`                                                             | 디바운스 훅 (UI 입력 지연 — 서버 상태 아님, 재사용 유틸)    |
 | `apps/frontend/components/non-conformances/NCDetailClient.tsx`                                           | NC 상세 클라이언트 (useOptimisticMutation 참조)             |
 | `apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx`                              | NC 목록 콘텐츠 (useQuery + KPI 참조)                        |
+| `apps/frontend/components/teams/LeaderCombobox.tsx`                                                      | setQueryData 캐시 프라이밍 참조 (이벤트 핸들러)             |
+| `apps/frontend/components/teams/TeamForm.tsx`                                                            | form.watch 연동 + 조건부 props 전달 참조                    |
 
 ## Workflow
 
@@ -233,3 +235,4 @@ const { data } = useQuery({
 11. **refetchInterval 직접 설정 (특수 케이스)** — QUERY_CONFIG 프리셋으로 커버되지 않는 특수한 polling 요구사항이 있을 때 직접 설정 가능. 단, 주석으로 이유를 명시해야 함
 12. **use-sidebar-state.ts의 localStorage useState** — 사이드바 접기/펼치기 상태는 UI 로컬 상태 (서버 상태 아님). localStorage에서 읽는 SSR 안전 패턴은 정상 (useState false 초기화 → useEffect로 복원)
 13. **use-idle-timeout.ts의 useState** — `isWarningVisible(boolean)`, `secondsRemaining(number)`는 UI 타이머 상태 (서버 상태 아님). `setInterval` 기반 카운트다운 로직이므로 TanStack Query 대상 아님
+14. **이벤트 핸들러 내 setQueryData 캐시 프라이밍** — `LeaderCombobox.tsx`의 `handleSelect`에서 `queryClient.setQueryData(queryKeys.users.detail(user.id), user)` 호출은 mutation onSuccess가 아닌 이벤트 핸들러에서의 캐시 프라이밍. 이미 가용한 데이터(목록에서 선택된 항목)를 detail 캐시에 즉시 반영하여 후속 useQuery의 네트워크 왕복을 제거하는 성능 최적화 패턴. `onSuccess setQueryData 금지` 규칙과 무관

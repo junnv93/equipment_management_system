@@ -7,6 +7,8 @@ import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  CHECKOUT_PURPOSE_LABELS,
+  type CheckoutPurpose,
 } from '@equipment-management/schemas';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 
@@ -108,12 +110,8 @@ export async function generateMetadata(props: PageProps) {
 
   try {
     const checkout = await getCheckoutCached(id);
-    const purposeLabels: Record<string, string> = {
-      calibration: '교정',
-      repair: '수리',
-      rental: '대여',
-    };
-    const purposeLabel = purposeLabels[checkout.purpose] || checkout.purpose;
+    const purposeLabel =
+      CHECKOUT_PURPOSE_LABELS[checkout.purpose as CheckoutPurpose] || checkout.purpose;
 
     return {
       title: `반입 처리 - ${purposeLabel}`,

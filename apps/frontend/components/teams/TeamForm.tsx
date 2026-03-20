@@ -252,7 +252,16 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t('form.siteLabel')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onValueChange={(newSite) => {
+                      field.onChange(newSite);
+                      // 사이트 변경 시 팀장 초기화 (다른 사이트 사용자가 팀장으로 남는 것 방지)
+                      if (newSite !== field.value) {
+                        form.setValue('leaderId', '', { shouldDirty: true });
+                      }
+                    }}
+                    value={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger aria-describedby="site-description">
                         <SelectValue placeholder={t('form.sitePlaceholder')} />
@@ -302,22 +311,30 @@ export function TeamForm({ team, mode }: TeamFormProps) {
             <FormField
               control={form.control}
               name="leaderId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('form.leaderLabel')}</FormLabel>
-                  <FormControl>
-                    <LeaderCombobox
-                      value={field.value || undefined}
-                      onChange={(val) => field.onChange(val || '')}
-                      site={form.watch('site')}
-                      teamId={team?.id}
-                      disabled={isPending}
-                    />
-                  </FormControl>
-                  <FormDescription>{t('form.leaderDescription')}</FormDescription>
-                  <FormMessage role="alert" />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const currentSite = form.watch('site');
+                // Edit 모드: site가 원래 팀 site와 동일할 때만 teamId 필터 적용
+                // site 변경 시 teamId 필터 무효 → site 기반 검색으로 전환
+                const effectiveTeamId =
+                  isEditMode && team?.site === currentSite ? team?.id : undefined;
+
+                return (
+                  <FormItem>
+                    <FormLabel>{t('form.leaderLabel')}</FormLabel>
+                    <FormControl>
+                      <LeaderCombobox
+                        value={field.value || undefined}
+                        onChange={(val) => field.onChange(val || '')}
+                        site={currentSite}
+                        teamId={effectiveTeamId}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>{t('form.leaderDescription')}</FormDescription>
+                    <FormMessage role="alert" />
+                  </FormItem>
+                );
+              }}
             />
           </CardContent>
         </Card>

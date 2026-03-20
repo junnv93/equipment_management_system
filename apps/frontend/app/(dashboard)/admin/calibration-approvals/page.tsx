@@ -6,10 +6,12 @@
  * - Client bundle 분리를 통해 컴파일 성능 개선
  */
 
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { hasPermission, Permission } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
+import { TablePageSkeleton } from '@/components/ui/list-page-skeleton';
 import CalibrationApprovalsContent from './CalibrationApprovalsContent';
 
 export default async function CalibrationApprovalsPage() {
@@ -24,5 +26,9 @@ export default async function CalibrationApprovalsPage() {
     redirect('/dashboard');
   }
 
-  return <CalibrationApprovalsContent />;
+  return (
+    <Suspense fallback={<TablePageSkeleton />}>
+      <CalibrationApprovalsContent />
+    </Suspense>
+  );
 }

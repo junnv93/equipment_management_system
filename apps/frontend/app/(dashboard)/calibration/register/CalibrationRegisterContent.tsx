@@ -21,11 +21,16 @@ import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import calibrationApi, { CreateCalibrationDto, Calibration } from '@/lib/api/calibration-api';
 import { format, addMonths } from 'date-fns';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
-import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
+import {
+  type UserRole,
+  UserRoleValues as URVal,
+  EquipmentStatusValues as ESVal,
+} from '@equipment-management/schemas';
 import {
   getEquipmentSelectionClasses,
   CALIBRATION_SELECTION,
@@ -77,10 +82,10 @@ export function CalibrationRegisterContent() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: queryKeys.equipment.lists(),
+    queryKey: queryKeys.equipment.list({ pageSize: SELECTOR_PAGE_SIZE }),
     queryFn: () =>
       equipmentApi.getEquipmentList({
-        pageSize: 100,
+        pageSize: SELECTOR_PAGE_SIZE,
       }),
     ...QUERY_CONFIG.EQUIPMENT_LIST,
   });
@@ -93,29 +98,23 @@ export function CalibrationRegisterContent() {
   // URL에서 장비 ID가 제공되었다면 해당 장비의 상세 정보 가져오기
   useEffect(() => {
     if (selectedEquipmentId && selectedEquipment) {
+      const cycle = selectedEquipment.calibrationCycle || formData.calibrationCycle;
       if (selectedEquipment.calibrationCycle) {
         updateFormData('calibrationCycle', selectedEquipment.calibrationCycle);
       }
 
       updateFormData(
         'nextCalibrationDate',
-        format(
-          addMonths(new Date(formData.calibrationDate), formData.calibrationCycle),
-          'yyyy-MM-dd'
-        )
+        format(addMonths(new Date(formData.calibrationDate), cycle), 'yyyy-MM-dd')
       );
 
       // 중간점검일 자동 계산 (교정 주기의 절반)
       updateFormData(
         'intermediateCheckDate',
-        format(
-          addMonths(new Date(formData.calibrationDate), Math.floor(formData.calibrationCycle / 2)),
-          'yyyy-MM-dd'
-        )
+        format(addMonths(new Date(formData.calibrationDate), Math.floor(cycle / 2)), 'yyyy-MM-dd')
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 장비 선택 시에만 초기값 설정, formData 변경 시 재실행 방지
-  }, [selectedEquipmentId, selectedEquipment]);
+  }, [selectedEquipmentId, selectedEquipment, formData.calibrationDate, formData.calibrationCycle]);
 
   // 필터링된 장비 목록
   const filteredEquipment =
@@ -192,7 +191,7 @@ export function CalibrationRegisterContent() {
         ...oldEquipment,
         lastCalibrationDate: data.calibrationDate,
         nextCalibrationDate: data.nextCalibrationDate,
-        status: 'available', // 교정 완료 후 사용 가능 상태로
+        status: ESVal.AVAILABLE, // 교정 완료 후 사용 가능 상태로
       } as unknown as Equipment;
     },
     invalidateKeys: [
@@ -329,7 +328,7 @@ export function CalibrationRegisterContent() {
                         </div>
                         <div className={CALIBRATION_SELECTION.infoText}>
                           {t('register.equipmentSelection.currentStatus')}:{' '}
-                          {equipment.status === 'available'
+                          {equipment.status === ESVal.AVAILABLE
                             ? t('register.equipmentSelection.statusAvailable')
                             : t('register.equipmentSelection.statusInUse')}
                         </div>

@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { isConflictError } from '@/lib/errors/equipment-errors';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -95,6 +96,7 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
     },
     onError: (error) => {
       const errorMessage = getErrorMessage(error);
@@ -103,7 +105,7 @@ export default function EquipmentImportDetail({ id }: Props) {
         description: errorMessage,
         variant: 'destructive',
       });
-      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+      if (isConflictError(error)) {
         queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
       }
     },
@@ -117,6 +119,7 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
     },
     onError: (error) => {
       const errorMessage = getErrorMessage(error);
@@ -125,7 +128,7 @@ export default function EquipmentImportDetail({ id }: Props) {
         description: errorMessage,
         variant: 'destructive',
       });
-      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+      if (isConflictError(error)) {
         queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
       }
     },
@@ -138,6 +141,7 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
     },
     onError: (error) => {
       toast({
@@ -156,6 +160,7 @@ export default function EquipmentImportDetail({ id }: Props) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
     },
     onError: (error) => {
       toast({

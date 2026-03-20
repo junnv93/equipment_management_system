@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { createServerApiClient } from '@/lib/api/server-api-client';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import PendingChecksClient from './PendingChecksClient';
 import { RouteLoading } from '@/components/layout/RouteLoading';
@@ -43,7 +43,7 @@ async function PendingChecksAsync() {
       meta: {
         pagination: {
           total: 0,
-          pageSize: 20,
+          pageSize: DEFAULT_PAGE_SIZE,
           currentPage: 1,
           totalPages: 0,
         },

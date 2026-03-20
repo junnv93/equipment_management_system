@@ -344,12 +344,14 @@ const equipmentApi = {
 
   // 교정 예정 장비 조회
   getCalibrationDueEquipment: async (days: number = 30): Promise<Equipment[]> => {
-    return apiClient.get(`${API_ENDPOINTS.EQUIPMENT.CALIBRATION_DUE}?days=${days}`);
+    const response = await apiClient.get(`${API_ENDPOINTS.EQUIPMENT.CALIBRATION_DUE}?days=${days}`);
+    return transformArrayResponse<Equipment>(response);
   },
 
   // 팀별 장비 조회
   getTeamEquipment: async (teamId: string): Promise<Equipment[]> => {
-    return apiClient.get(API_ENDPOINTS.EQUIPMENT.TEAM(teamId));
+    const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.TEAM(teamId));
+    return transformArrayResponse<Equipment>(response);
   },
 
   // ========== 승인 프로세스 API ==========

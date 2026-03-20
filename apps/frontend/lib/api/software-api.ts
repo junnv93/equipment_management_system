@@ -2,12 +2,14 @@ import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
-import type { SoftwareApprovalStatus } from '@equipment-management/schemas';
+import {
+  SOFTWARE_APPROVAL_STATUS_LABELS,
+  SOFTWARE_TYPE_LABELS,
+  type SoftwareApprovalStatus,
+  type SoftwareType,
+} from '@equipment-management/schemas';
 
-// 소프트웨어 타입
-export type SoftwareType = 'measurement' | 'analysis' | 'control' | 'other';
-
-export type { SoftwareApprovalStatus };
+export type { SoftwareApprovalStatus, SoftwareType };
 
 export interface SoftwareHistory {
   id: string;
@@ -88,20 +90,8 @@ export interface EquipmentBySoftware {
   count: number;
 }
 
-// 소프트웨어 타입 라벨
-export const SOFTWARE_TYPE_LABELS: Record<SoftwareType, string> = {
-  measurement: '측정 소프트웨어',
-  analysis: '분석 소프트웨어',
-  control: '제어 소프트웨어',
-  other: '기타',
-};
-
-// 승인 상태 라벨
-export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, string> = {
-  pending: '승인 대기',
-  approved: '승인됨',
-  rejected: '반려됨',
-};
+// 라벨 상수 — SSOT: @equipment-management/schemas
+export { SOFTWARE_TYPE_LABELS, SOFTWARE_APPROVAL_STATUS_LABELS };
 
 // 소프트웨어 API 객체
 const softwareApi = {

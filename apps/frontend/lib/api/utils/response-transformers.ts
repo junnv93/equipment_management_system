@@ -12,6 +12,7 @@ import type {
   SingleResourceResponse,
 } from '@equipment-management/schemas';
 import { AxiosResponse } from 'axios';
+import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import {
   ApiError,
   EquipmentErrorCode,
@@ -83,7 +84,7 @@ export function transformPaginatedResponse<T, TSummary = Record<string, number>>
     meta: {
       pagination: {
         total: 0,
-        pageSize: 20,
+        pageSize: DEFAULT_PAGE_SIZE,
         currentPage: 1,
         totalPages: 0,
       },

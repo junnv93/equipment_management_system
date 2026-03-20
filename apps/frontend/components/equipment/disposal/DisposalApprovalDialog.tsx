@@ -33,6 +33,7 @@ import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { isConflictError } from '@/lib/errors/equipment-errors';
 import {
   DISPOSAL_BUTTON_TOKENS,
   DISPOSAL_INFO_CARD_TOKENS,
@@ -93,7 +94,7 @@ export function DisposalApprovalDialog({
         variant: 'destructive',
       });
       // ✅ 409 Conflict 시 자동 새로고침
-      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+      if (isConflictError(error)) {
         await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
       }
     },

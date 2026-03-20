@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, X, User, Check, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,69 +12,71 @@ import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { USER_ROLE_LABELS } from '@equipment-management/shared-constants';
 import { ROLE_BADGE_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
 interface LeaderComboboxProps {
   value?: string;
   onChange: (userId: string | undefined) => void;
   site?: string;
-  teamId?: string; // Filter candidates by team (edit mode only)
+  teamId?: string;
   disabled?: boolean;
 }
 
+/**
+ * 팀장 선택 Combobox
+ *
+ * 필터링 전략:
+ * - Edit 모드 (teamId 존재): teamId로만 필터링 (site는 팀에 내포)
+ *   → 팝오버 열면 해당 팀원 즉시 표시, 검색으로 추가 필터링
+ * - Create 모드 (teamId 없음): site로 필터링
+ *   → 검색어 1글자 이상 입력 시 해당 사이트 사용자 표시
+ */
 export function LeaderCombobox({ value, onChange, site, teamId, disabled }: LeaderComboboxProps) {
   const t = useTranslations('teams');
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 300);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  // 필터 전략: Edit 모드는 teamId만, Create 모드는 site만
+  const searchParams = teamId
+    ? { search: debouncedSearch || undefined, teams: teamId }
+    : { search: debouncedSearch || undefined, site };
 
-  // Query for user search
+  // 쿼리 활성화 조건: Edit 모드는 팝오버 열면 즉시, Create 모드는 검색어 필요
+  const isQueryEnabled = open && (!!teamId || debouncedSearch.length >= 1);
+
   const { data: users, isLoading } = useQuery({
-    queryKey: queryKeys.users.search({ search: debouncedSearch, site, teams: teamId }),
-    queryFn: () => teamsApi.searchUsers({ search: debouncedSearch, site, teams: teamId }),
-    enabled: open && debouncedSearch.length >= 1,
+    queryKey: queryKeys.users.search(searchParams),
+    queryFn: () => teamsApi.searchUsers(searchParams),
+    enabled: isQueryEnabled,
     staleTime: CACHE_TIMES.SHORT,
   });
 
-  // Resolve initial value to user name
+  // 초기값 해석: 단건 조회 API로 효율적 처리
   const { data: initialUser } = useQuery({
-    queryKey: queryKeys.users.search({ search: '', site: '', id: value }),
-    queryFn: () => teamsApi.searchUsers({ search: '' }),
-    enabled: !!value && !selectedUser,
+    queryKey: queryKeys.users.detail(value!),
+    queryFn: () => teamsApi.getUser(value!),
+    enabled: !!value,
     staleTime: CACHE_TIMES.LONG,
-    select: (data) => data.find((u) => u.id === value),
   });
 
-  // Set selected user from initial value
-  useEffect(() => {
-    if (initialUser && !selectedUser) {
-      setSelectedUser(initialUser);
-    }
-  }, [initialUser, selectedUser]);
-
-  // Reset selected user when value is cleared externally
-  useEffect(() => {
-    if (!value) {
-      setSelectedUser(null);
-    }
-  }, [value]);
+  // 표시할 사용자 이름 결정
+  const displayName = (() => {
+    if (initialUser && initialUser.id === value) return initialUser.name;
+    return undefined;
+  })();
 
   const handleSelect = (user: TeamMember) => {
-    setSelectedUser(user);
+    // 선택한 사용자 데이터를 캐시에 즉시 반영 → displayName 깜빡임 방지
+    queryClient.setQueryData(queryKeys.users.detail(user.id), user);
     onChange(user.id);
     setSearch('');
     setOpen(false);
   };
 
   const handleClear = () => {
-    setSelectedUser(null);
     onChange(undefined);
     setSearch('');
   };
@@ -93,15 +95,13 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
             disabled={disabled}
             className={cn(
               'w-full justify-start text-left font-normal h-10',
-              !selectedUser && 'text-muted-foreground'
+              !value && 'text-muted-foreground'
             )}
           >
             <User className="h-4 w-4 mr-2 shrink-0" aria-hidden="true" />
-            <span className="truncate">
-              {selectedUser ? selectedUser.name : t('leaderCombobox.placeholder')}
-            </span>
+            <span className="truncate">{displayName || t('leaderCombobox.placeholder')}</span>
           </Button>
-          {selectedUser && !disabled && (
+          {value && !disabled && (
             <button
               type="button"
               onClick={(e) => {
@@ -144,7 +144,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 motion-safe:animate-spin text-muted-foreground" />
             </div>
-          ) : !debouncedSearch ? (
+          ) : !isQueryEnabled ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               {t('leaderCombobox.typeToSearch')}
             </p>

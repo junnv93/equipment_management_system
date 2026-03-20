@@ -136,6 +136,9 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
       }
 
       queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.byEquipment(equipmentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.detail(equipmentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
       setIsOpen(false);
       setCertificateFile(null);
       form.reset(getDefaultValues());

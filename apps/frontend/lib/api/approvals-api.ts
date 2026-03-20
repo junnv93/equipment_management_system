@@ -9,12 +9,14 @@
  */
 
 import { apiClient } from './api-client';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, VALIDATION_RULES } from '@equipment-management/shared-constants';
 import {
   type UserRole,
   type UnifiedApprovalStatus,
+  type NonConformanceType,
   UNIFIED_APPROVAL_STATUS_LABELS,
   SITE_LABELS,
+  REPAIR_REQUIRING_NC_TYPES,
   UserRoleValues as URVal,
   UnifiedApprovalStatusValues as UASVal,
   CalibrationApprovalStatusValues as CASVal,
@@ -26,6 +28,7 @@ import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
 import nonConformancesApi, { type NonConformance } from './non-conformances-api';
 import equipmentImportApi, { type EquipmentImport } from './equipment-import-api';
+import softwareApi from './software-api';
 import { reviewDisposal, approveDisposal, getCurrentDisposalRequest } from './disposal-api';
 import { transformArrayResponse } from './utils/response-transformers';
 
@@ -141,8 +144,8 @@ export const APPROVAL_SECTIONS = {
 // 매직넘버 상수화
 // ============================================================================
 
-/** 반려 사유 최소 글자 수 — BulkActionBar, RejectModal에서 공유 */
-export const REJECTION_MIN_LENGTH = 10;
+/** 반려 사유 최소 글자 수 — SSOT: shared-constants/validation-rules */
+export const REJECTION_MIN_LENGTH = VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH;
 
 export const TAB_META: Record<ApprovalCategory, TabMeta> = {
   // Direction-based (checkout section)
@@ -225,6 +228,9 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     labelKey: 'tabMeta.software.label',
     icon: 'Code',
     actionKey: 'tabMeta.software.action',
+    commentRequired: true,
+    commentDialogTitleKey: 'tabMeta.software.commentDialogTitle',
+    commentPlaceholderKey: 'tabMeta.software.commentPlaceholder',
     section: 'management',
   },
 };
@@ -337,7 +343,7 @@ class ApprovalsApi {
       case 'calibration':
         return this.getPendingCalibrations(teamId);
       case 'inspection':
-        return this.getPendingInspections();
+        return this.getPendingInspections(teamId);
       case 'nonconformity':
         return this.getPendingNonConformities();
       case 'disposal_review':
@@ -547,7 +553,9 @@ class ApprovalsApi {
       return items
         .filter((item: NonConformance) => {
           // damage/malfunction 유형은 수리 기록이 필요
-          const requiresRepair = ['damage', 'malfunction'].includes(item.ncType);
+          const requiresRepair = REPAIR_REQUIRING_NC_TYPES.includes(
+            item.ncType as NonConformanceType
+          );
           if (requiresRepair && !item.repairHistoryId) {
             console.warn(`부적합 ${item.id}는 수리 기록이 없어 승인할 수 없습니다.`);
             return false; // 목록에서 제외
@@ -562,16 +570,18 @@ class ApprovalsApi {
 
   /**
    * 중간점검 승인 대기 목록 조회
+   * 서버에서 status=due (checkDate <= today) 필터링 — 클라이언트 날짜 로직 없음
    */
-  private async getPendingInspections(): Promise<ApprovalItem[]> {
+  private async getPendingInspections(teamId?: string): Promise<ApprovalItem[]> {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL);
+      const params = new URLSearchParams({ status: 'due' });
+      if (teamId) params.set('teamId', teamId);
+      const response = await apiClient.get(
+        `${API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL}?${params.toString()}`
+      );
       const items = transformArrayResponse<Record<string, unknown>>(response);
 
-      // 완료되지 않은 중간점검만 필터링
-      const pendingItems = items.filter((item) => !item.completed);
-
-      return pendingItems.map((item) => this.mapInspectionToApprovalItem(item));
+      return items.map((item) => this.mapInspectionToApprovalItem(item));
     } catch {
       return [];
     }
@@ -800,9 +810,21 @@ class ApprovalsApi {
       case 'plan_final':
         await apiClient.patch(API_ENDPOINTS.CALIBRATION_PLANS.APPROVE(id), { comment });
         break;
-      case 'software':
-        await apiClient.patch(API_ENDPOINTS.SOFTWARE.APPROVE(id), { comment });
+      case 'software': {
+        if (!comment?.trim()) {
+          throw new Error(
+            'Software approval requires a comment (commentRequired: true in TAB_META)'
+          );
+        }
+        const softwareVersion =
+          this.extractVersion(originalData) ??
+          (await softwareApi.getSoftwareHistoryDetail(id)).version;
+        await softwareApi.approveSoftwareChange(id, {
+          version: softwareVersion,
+          approverComment: comment,
+        });
         break;
+      }
       default:
         throw new Error(`Unsupported category: ${category}`);
     }
@@ -901,11 +923,16 @@ class ApprovalsApi {
           reason,
         });
         break;
-      case 'software':
-        await apiClient.patch(API_ENDPOINTS.SOFTWARE.REJECT(id), {
-          reason,
+      case 'software': {
+        const softwareVersion =
+          this.extractVersion(originalData) ??
+          (await softwareApi.getSoftwareHistoryDetail(id)).version;
+        await softwareApi.rejectSoftwareChange(id, {
+          version: softwareVersion,
+          rejectionReason: reason,
         });
         break;
+      }
       default:
         throw new Error(`Unsupported category: ${category}`);
     }
@@ -926,13 +953,14 @@ class ApprovalsApi {
     const success: string[] = [];
     const failed: string[] = [];
 
-    // For disposal categories and consolidated categories, fetch items first
+    // For categories that need originalData (version, equipmentId), fetch items first
     let itemsMap: Map<string, ApprovalItem> | undefined;
     if (
       category === 'disposal_review' ||
       category === 'disposal_final' ||
       category === 'outgoing' ||
-      category === 'incoming'
+      category === 'incoming' ||
+      category === 'software'
     ) {
       const items = await this.getPendingItems(category);
       itemsMap = new Map(items.map((item) => [item.id, item]));
@@ -972,13 +1000,14 @@ class ApprovalsApi {
     const success: string[] = [];
     const failed: string[] = [];
 
-    // For disposal categories and consolidated categories, fetch items first
+    // For categories that need originalData (version, equipmentId), fetch items first
     let itemsMap: Map<string, ApprovalItem> | undefined;
     if (
       category === 'disposal_review' ||
       category === 'disposal_final' ||
       category === 'outgoing' ||
-      category === 'incoming'
+      category === 'incoming' ||
+      category === 'software'
     ) {
       const items = await this.getPendingItems(category);
       itemsMap = new Map(items.map((item) => [item.id, item]));

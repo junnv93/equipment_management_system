@@ -57,6 +57,9 @@ export enum EquipmentErrorCode {
   MAINTENANCE_HISTORY_SAVE_FAILED = 'MAINTENANCE_HISTORY_SAVE_FAILED',
   INCIDENT_HISTORY_SAVE_FAILED = 'INCIDENT_HISTORY_SAVE_FAILED',
 
+  // 부적합 관련
+  NC_REPAIR_RECORD_REQUIRED = 'NC_REPAIR_RECORD_REQUIRED',
+
   // 기타
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
 }
@@ -279,6 +282,17 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     severity: 'warning',
   },
 
+  // 부적합 관련
+  [EquipmentErrorCode.NC_REPAIR_RECORD_REQUIRED]: {
+    title: '수리 기록 필요',
+    message: '손상/오작동 유형의 부적합은 수리 기록이 등록되어야 합니다.',
+    solutions: [
+      '장비 상세 페이지에서 수리 이력을 먼저 등록해주세요',
+      '수리 이력 등록 후 부적합에 연결한 뒤 다시 시도해주세요',
+    ],
+    severity: 'warning',
+  },
+
   // 기타
   [EquipmentErrorCode.UNKNOWN_ERROR]: {
     title: '알 수 없는 오류',
@@ -457,6 +471,9 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     // 서버 에러
     INTERNAL_SERVER_ERROR: EquipmentErrorCode.SERVER_ERROR,
     SERVER_ERROR: EquipmentErrorCode.SERVER_ERROR,
+
+    // 부적합 에러
+    NC_REPAIR_RECORD_REQUIRED: EquipmentErrorCode.NC_REPAIR_RECORD_REQUIRED,
   };
 
   return mappings[normalizedCode] || EquipmentErrorCode.UNKNOWN_ERROR;

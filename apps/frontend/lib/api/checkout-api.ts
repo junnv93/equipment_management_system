@@ -178,7 +178,7 @@ export interface UpdateCheckoutDto {
   startDate?: string;
   expectedReturnDate?: string;
   notes?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'returned' | 'overdue';
+  status?: CheckoutStatus;
 }
 
 export interface ReturnCheckoutDto {

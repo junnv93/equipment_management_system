@@ -23,6 +23,7 @@ import {
   useUnreadCount,
 } from '@/hooks/use-notifications';
 import { useNotificationFilters } from '@/hooks/use-notification-filters';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { NOTIFICATION_CATEGORIES } from '@equipment-management/shared-constants';
 import type { UINotificationFilters } from '@/lib/utils/notification-filter-utils';
 import {
@@ -57,6 +58,14 @@ export default function NotificationsListContent() {
     })),
   ];
 
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
+
+  useEffect(() => {
+    if (debouncedSearch !== filters.search) {
+      updateFilters({ search: debouncedSearch });
+    }
+  }, [debouncedSearch, filters.search, updateFilters]);
+
   const { data: unreadCount = 0 } = useUnreadCount();
   const { data: notificationData, isLoading } = useNotificationList(apiFilters);
 
@@ -67,15 +76,6 @@ export default function NotificationsListContent() {
   const notifications = notificationData?.items ?? [];
   const total = notificationData?.total ?? 0;
   const totalPages = notificationData?.totalPages ?? 1;
-
-  // Debounced search (300ms delay)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      updateFilters({ search: searchInput });
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchInput, updateFilters]);
 
   const handleMarkAsRead = (id: string) => {
     markAsReadMutation.mutate(id);

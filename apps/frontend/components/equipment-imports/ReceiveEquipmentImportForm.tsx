@@ -136,6 +136,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
     },
     onError: (error) => {
       toast({

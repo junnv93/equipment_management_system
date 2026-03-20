@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -64,6 +65,7 @@ export function MaintenanceHistorySection({
   disabled = false,
 }: MaintenanceHistorySectionProps) {
   const t = useTranslations('equipment');
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -85,7 +87,11 @@ export function MaintenanceHistorySection({
       form.reset();
       setIsDialogOpen(false);
     } catch (error) {
-      console.error('Failed to add maintenance history:', error);
+      toast({
+        title: t('formSections.maintenance.addError', { fallback: '정비 이력 추가 실패' }),
+        description: error instanceof Error ? error.message : String(error),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -96,7 +102,11 @@ export function MaintenanceHistorySection({
       try {
         await onDelete(historyId);
       } catch (error) {
-        console.error('Failed to delete maintenance history:', error);
+        toast({
+          title: t('formSections.maintenance.deleteError', { fallback: '정비 이력 삭제 실패' }),
+          description: error instanceof Error ? error.message : String(error),
+          variant: 'destructive',
+        });
       }
     }
   };

@@ -27,6 +27,7 @@ import {
 import {
   EQUIPMENT_DATA_SCOPE,
   resolveDataScope,
+  SELECTOR_PAGE_SIZE,
   type UserRole,
 } from '@equipment-management/shared-constants';
 import type {
@@ -199,7 +200,7 @@ function EquipmentFiltersComponent({
     queryFn: () =>
       teamsApi.getTeams({
         site: teamQuerySite,
-        pageSize: 100,
+        pageSize: SELECTOR_PAGE_SIZE,
       }),
     staleTime: CACHE_TIMES.LONG,
     gcTime: CACHE_TIMES.VERY_LONG,

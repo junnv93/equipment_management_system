@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -65,9 +66,9 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 
-// ✅ 코드 분할
-const OutboundCheckoutsTab = lazy(() => import('./tabs/OutboundCheckoutsTab'));
-const InboundCheckoutsTab = lazy(() => import('./tabs/InboundCheckoutsTab'));
+// ✅ 코드 분할 (Next.js dynamic import)
+const OutboundCheckoutsTab = dynamic(() => import('./tabs/OutboundCheckoutsTab'), { ssr: false });
+const InboundCheckoutsTab = dynamic(() => import('./tabs/InboundCheckoutsTab'), { ssr: false });
 
 // 반출 목적 필터 옵션
 const PURPOSE_OPTIONS = ['calibration', 'repair', 'rental'] as const;

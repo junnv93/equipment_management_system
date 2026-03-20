@@ -24,6 +24,7 @@ import { DisposalReviewDialog } from './disposal/DisposalReviewDialog';
 import { DisposalApprovalDialog } from './disposal/DisposalApprovalDialog';
 import {
   EquipmentStatusValues as ESVal,
+  DisposalReviewStatusValues as DRSVal,
   type DisposalRequest,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
@@ -157,9 +158,9 @@ export function EquipmentDetailClient({
   // reviewed: step 2 (검토) is complete, step 3 (승인) is current
   // approved: step 3 (승인) is complete
   const currentStep = disposalRequest
-    ? disposalRequest.reviewStatus === 'pending'
+    ? disposalRequest.reviewStatus === DRSVal.PENDING
       ? 1
-      : disposalRequest.reviewStatus === 'reviewed'
+      : disposalRequest.reviewStatus === DRSVal.REVIEWED
         ? 3
         : 4
     : 0;

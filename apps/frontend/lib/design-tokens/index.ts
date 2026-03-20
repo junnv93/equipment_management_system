@@ -494,6 +494,7 @@ export {
   getWizardStepperNodeClasses,
   getWizardStepperLabelClasses,
   getWizardConnectorClasses,
+  type WizardStepStatus,
 } from './components/form-wizard';
 
 // Sidebar & Layout Z-Index

@@ -6,8 +6,14 @@
  * - Client bundle 분리를 통해 컴파일 성능 개선
  */
 
+import { Suspense } from 'react';
+import { TablePageSkeleton } from '@/components/ui/list-page-skeleton';
 import CalibrationFactorApprovalsContent from './CalibrationFactorApprovalsContent';
 
 export default function CalibrationFactorApprovalsPage() {
-  return <CalibrationFactorApprovalsContent />;
+  return (
+    <Suspense fallback={<TablePageSkeleton />}>
+      <CalibrationFactorApprovalsContent />
+    </Suspense>
+  );
 }
