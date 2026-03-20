@@ -68,9 +68,13 @@ async function bootstrap(): Promise<void> {
   // CORS 설정
   const nodeEnv = configService.get('NODE_ENV');
   const frontendUrl = configService.get('FRONTEND_URL');
+
+  if (nodeEnv === 'production' && !frontendUrl) {
+    throw new Error('[SECURITY] FRONTEND_URL environment variable must be set in production');
+  }
+
   app.enableCors({
-    origin:
-      nodeEnv === 'production' && !frontendUrl ? false : frontendUrl || 'http://localhost:3000',
+    origin: frontendUrl || 'http://localhost:3000',
     credentials: true,
   });
 

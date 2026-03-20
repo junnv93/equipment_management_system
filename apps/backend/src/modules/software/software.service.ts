@@ -55,7 +55,6 @@ export class SoftwareService extends VersionedBaseService {
       this.cacheService.delete(CACHE_KEYS.DETAIL(id));
     }
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.SOFTWARE}list:*`);
-    this.invalidateCache(id);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
   }
 
@@ -551,6 +550,9 @@ export class SoftwareService extends VersionedBaseService {
         },
         'Software change history'
       );
+
+      // 반려 후 캐시 무효화 (approve와 동일 패턴)
+      this.invalidateCache(id);
 
       return updated;
     } catch (error) {

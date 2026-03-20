@@ -677,9 +677,9 @@ export class EquipmentImportsService extends VersionedBaseService {
       .where(eq(equipmentImports.id, id))
       .returning();
 
-    // 취소 후 목록 + 대시보드/승인카운트 캐시 무효화 (pending 감소)
+    // 취소 후 목록 + 승인카운트 캐시 무효화 (pending 감소, 대시보드 통계 불변)
     this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
-    await this.cacheInvalidationHelper.invalidateAllDashboard();
+    await this.cacheInvalidationHelper.invalidateApprovalCounts();
 
     return updated;
   }
