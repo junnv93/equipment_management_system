@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, desc, or, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CreateSoftwareChangeInput } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
@@ -14,7 +14,7 @@ import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve
 import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 
@@ -113,7 +113,7 @@ export class SoftwareService extends VersionedBaseService {
       site,
       sort = 'changedAt.desc',
       page = 1,
-      pageSize = 20,
+      pageSize = DEFAULT_PAGE_SIZE,
     } = query;
 
     // Build WHERE conditions
@@ -270,44 +270,48 @@ export class SoftwareService extends VersionedBaseService {
     totalSoftwareTypes: number;
     generatedAt: Date;
   }> {
-    // 최신 승인 레코드만 조회 (장비-소프트웨어 쌍 기준 최신 1건)
-    const latestApproved = await this.db
-      .select({
-        equipmentId: schema.softwareHistory.equipmentId,
-        softwareName: schema.softwareHistory.softwareName,
-        newVersion: schema.softwareHistory.newVersion,
-        approvedAt: schema.softwareHistory.approvedAt,
-        equipmentName: schema.equipment.name,
-      })
-      .from(schema.softwareHistory)
-      .leftJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
-      .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatus.APPROVED))
-      .orderBy(desc(schema.softwareHistory.approvedAt));
-
-    // 장비-소프트웨어 쌍 기준 최신 레코드만 추출
-    const seen = new Set<string>();
-    const registry: {
-      equipmentId: string;
-      equipmentName: string;
-      softwareName: string | null;
-      softwareVersion: string | null;
-      softwareType: string | null;
-      lastUpdated: Date | null;
-    }[] = [];
-
-    for (const r of latestApproved) {
-      const key = `${r.equipmentId}:${r.softwareName}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      registry.push({
-        equipmentId: r.equipmentId,
-        equipmentName: r.equipmentName || '',
-        softwareName: r.softwareName,
-        softwareVersion: r.newVersion,
-        softwareType: null,
-        lastUpdated: r.approvedAt,
-      });
+    // ✅ DISTINCT ON: 장비-소프트웨어 쌍 기준 최신 승인 레코드 1건을 DB에서 직접 추출
+    interface LatestApprovedRow {
+      equipment_id: string;
+      software_name: string;
+      new_version: string;
+      approved_at: Date | null;
     }
+    const result = await this.db.execute(sql`
+      SELECT DISTINCT ON (equipment_id, software_name)
+        equipment_id, software_name, new_version, approved_at
+      FROM software_history
+      WHERE approval_status = 'approved'
+      ORDER BY equipment_id, software_name, approved_at DESC
+    `);
+    const latestApproved = result.rows as unknown as LatestApprovedRow[];
+
+    // equipment 이름을 일괄 조회 (N+1 방지)
+    const equipmentIds = [...new Set(latestApproved.map((r) => r.equipment_id))];
+    const equipNameMap = new Map<string, string>();
+    if (equipmentIds.length > 0) {
+      const equipRows = await this.db
+        .select({ id: schema.equipment.id, name: schema.equipment.name })
+        .from(schema.equipment)
+        .where(
+          sql`${schema.equipment.id} IN (${sql.join(
+            equipmentIds.map((id) => sql`${id}`),
+            sql`, `
+          )})`
+        );
+      for (const row of equipRows) {
+        equipNameMap.set(row.id, row.name);
+      }
+    }
+
+    const registry = latestApproved.map((r) => ({
+      equipmentId: r.equipment_id,
+      equipmentName: equipNameMap.get(r.equipment_id) || '',
+      softwareName: r.software_name,
+      softwareVersion: r.new_version,
+      softwareType: null,
+      lastUpdated: r.approved_at,
+    }));
 
     // 소프트웨어별 요약 집계
     const summaryMap = new Map<
@@ -359,15 +363,17 @@ export class SoftwareService extends VersionedBaseService {
     }[];
     count: number;
   }> {
-    // Query software_history for latest approved records
+    // Single JOIN query: software_history + equipment
     const records = await this.db
       .select({
         equipmentId: schema.softwareHistory.equipmentId,
         softwareName: schema.softwareHistory.softwareName,
         newVersion: schema.softwareHistory.newVersion,
         approvedAt: schema.softwareHistory.approvedAt,
+        equipmentName: schema.equipment.name,
       })
       .from(schema.softwareHistory)
+      .leftJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
       .where(
         and(
           safeIlike(schema.softwareHistory.softwareName, likeContains(softwareName)),
@@ -383,25 +389,19 @@ export class SoftwareService extends VersionedBaseService {
       });
     }
 
-    // Get unique equipment IDs
-    const uniqueEquipmentIds = [...new Set(records.map((r) => r.equipmentId))];
-
-    // Fetch equipment names
-    const equipments = await this.db
-      .select({
-        id: schema.equipment.id,
-        name: schema.equipment.name,
-      })
-      .from(schema.equipment)
-      .where(inArray(schema.equipment.id, uniqueEquipmentIds));
-
-    const equipmentMap = new Map(equipments.map((e) => [e.id, e.name]));
-
-    // Map latest version for each equipment
+    // Build Maps in a single pass (records sorted by approvedAt DESC,
+    // so first occurrence per equipmentId is the latest)
+    const uniqueEquipmentIds: string[] = [];
     const latestVersionMap = new Map<string, string>();
+    const lastUpdatedMap = new Map<string, Date | null>();
+    const equipmentNameMap = new Map<string, string>();
+
     for (const record of records) {
       if (!latestVersionMap.has(record.equipmentId)) {
+        uniqueEquipmentIds.push(record.equipmentId);
         latestVersionMap.set(record.equipmentId, record.newVersion);
+        lastUpdatedMap.set(record.equipmentId, record.approvedAt);
+        equipmentNameMap.set(record.equipmentId, record.equipmentName ?? '');
       }
     }
 
@@ -409,10 +409,10 @@ export class SoftwareService extends VersionedBaseService {
       softwareName,
       equipments: uniqueEquipmentIds.map((equipmentId) => ({
         equipmentId,
-        equipmentName: equipmentMap.get(equipmentId) || 'Unknown',
+        equipmentName: equipmentNameMap.get(equipmentId) ?? '',
         softwareVersion: latestVersionMap.get(equipmentId) || null,
         softwareType: null, // TODO: Add software type to schema
-        lastUpdated: records.find((r) => r.equipmentId === equipmentId)?.approvedAt || null,
+        lastUpdated: lastUpdatedMap.get(equipmentId) || null,
       })),
       count: uniqueEquipmentIds.length,
     };

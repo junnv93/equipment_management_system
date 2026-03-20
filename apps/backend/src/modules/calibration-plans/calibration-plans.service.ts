@@ -8,6 +8,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, desc, sql, inArray, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import {
   calibrationPlans,
   calibrationPlanItems,
@@ -45,13 +46,18 @@ import type {
 import { CACHE_TTL } from '@equipment-management/shared-constants';
 
 @Injectable()
-export class CalibrationPlansService {
+export class CalibrationPlansService extends VersionedBaseService {
+  protected readonly db: AppDatabase;
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase,
+    db: AppDatabase,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: SimpleCacheService
-  ) {}
+  ) {
+    super();
+    this.db = db;
+  }
 
   // ──────────────────────────────────────────────
   //  Private helpers
@@ -59,7 +65,11 @@ export class CalibrationPlansService {
 
   /**
    * CAS 패턴으로 교정계획서 업데이트
-   * WHERE cas_version = expected → 0 rows → ConflictException
+   *
+   * ⚠️ VersionedBaseService.updateWithVersion()을 사용하지 않는 이유:
+   *   calibration_plans 테이블은 `version`(계획서 개정 번호)과 `casVersion`(CAS 동시 수정 방지)을
+   *   별도 컬럼으로 분리합니다. 베이스 클래스는 `version` 컬럼을 CAS 키로 사용하므로,
+   *   여기서는 `casVersion` 컬럼 기반의 커스텀 CAS를 유지합니다.
    */
   private async updatePlanWithCAS(
     uuid: string,

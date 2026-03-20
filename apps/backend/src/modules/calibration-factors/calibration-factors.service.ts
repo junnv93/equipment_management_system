@@ -10,7 +10,10 @@ import {
   RejectCalibrationFactorDto,
 } from './dto/approve-calibration-factor.dto';
 import { CalibrationFactorApprovalStatusValues } from '@equipment-management/schemas';
+import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 
 const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
@@ -40,11 +43,18 @@ export interface CalibrationFactorRecord {
 
 @Injectable()
 export class CalibrationFactorsService extends VersionedBaseService {
+  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION_FACTORS;
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: AppDatabase
+    protected readonly db: AppDatabase,
+    private readonly cacheService: SimpleCacheService
   ) {
     super();
+  }
+
+  private buildCacheKey(type: string, id: string): string {
+    return `${this.CACHE_PREFIX}${type}:${id}`;
   }
 
   /**
@@ -81,6 +91,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
       })
       .returning();
 
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX);
+
     return this.normalize(newFactor);
   }
 
@@ -102,67 +114,85 @@ export class CalibrationFactorsService extends VersionedBaseService {
       search,
       sort = 'effectiveDate.desc',
       page = 1,
-      pageSize = 20,
+      pageSize = DEFAULT_PAGE_SIZE,
     } = query;
 
-    const conditions = [isNull(calibrationFactors.deletedAt)];
-    if (equipmentId) conditions.push(eq(calibrationFactors.equipmentId, equipmentId));
-    if (approvalStatus) conditions.push(eq(calibrationFactors.approvalStatus, approvalStatus));
-    if (factorType) conditions.push(eq(calibrationFactors.factorType, factorType));
-    if (search) conditions.push(safeIlike(calibrationFactors.factorName, likeContains(search)));
+    const cacheKey = this.buildCacheKey(
+      'list',
+      `${equipmentId ?? ''}_${approvalStatus ?? ''}_${factorType ?? ''}_${search ?? ''}_${sort}_${page}_${pageSize}`
+    );
 
-    const [sortField, sortOrder] = sort.split('.');
-    const sortColumn =
-      sortField === 'effectiveDate'
-        ? calibrationFactors.effectiveDate
-        : sortField === 'requestedAt'
-          ? calibrationFactors.requestedAt
-          : calibrationFactors.createdAt;
-    const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const conditions = [isNull(calibrationFactors.deletedAt)];
+        if (equipmentId) conditions.push(eq(calibrationFactors.equipmentId, equipmentId));
+        if (approvalStatus) conditions.push(eq(calibrationFactors.approvalStatus, approvalStatus));
+        if (factorType) conditions.push(eq(calibrationFactors.factorType, factorType));
+        if (search) conditions.push(safeIlike(calibrationFactors.factorName, likeContains(search)));
 
-    const [items, [{ count }]] = await Promise.all([
-      this.db
-        .select()
-        .from(calibrationFactors)
-        .where(and(...conditions))
-        .orderBy(orderBy)
-        .limit(pageSize)
-        .offset((page - 1) * pageSize),
-      this.db
-        .select({ count: sql<number>`count(*)` })
-        .from(calibrationFactors)
-        .where(and(...conditions)),
-    ]);
+        const [sortField, sortOrder] = sort.split('.');
+        const sortColumn =
+          sortField === 'effectiveDate'
+            ? calibrationFactors.effectiveDate
+            : sortField === 'requestedAt'
+              ? calibrationFactors.requestedAt
+              : calibrationFactors.createdAt;
+        const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
-    const totalItems = Number(count);
-    return {
-      items: items.map(this.normalize.bind(this)),
-      meta: {
-        totalItems,
-        itemCount: items.length,
-        itemsPerPage: pageSize,
-        totalPages: Math.ceil(totalItems / pageSize),
-        currentPage: page,
+        const [items, [{ count }]] = await Promise.all([
+          this.db
+            .select()
+            .from(calibrationFactors)
+            .where(and(...conditions))
+            .orderBy(orderBy)
+            .limit(pageSize)
+            .offset((page - 1) * pageSize),
+          this.db
+            .select({ count: sql<number>`count(*)` })
+            .from(calibrationFactors)
+            .where(and(...conditions)),
+        ]);
+
+        const totalItems = Number(count);
+        return {
+          items: items.map(this.normalize.bind(this)),
+          meta: {
+            totalItems,
+            itemCount: items.length,
+            itemsPerPage: pageSize,
+            totalPages: Math.ceil(totalItems / pageSize),
+            currentPage: page,
+          },
+        };
       },
-    };
+      CACHE_TTL.LONG
+    );
   }
 
-  // 단일 보정계수 조회
+  // 단일 보정계수 조회 (cache-aside)
   async findOne(id: string): Promise<CalibrationFactorRecord> {
-    const [factor] = await this.db
-      .select()
-      .from(calibrationFactors)
-      .where(and(eq(calibrationFactors.id, id), isNull(calibrationFactors.deletedAt)))
-      .limit(1);
+    const cacheKey = this.buildCacheKey('detail', id);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const [factor] = await this.db
+          .select()
+          .from(calibrationFactors)
+          .where(and(eq(calibrationFactors.id, id), isNull(calibrationFactors.deletedAt)))
+          .limit(1);
 
-    if (!factor) {
-      throw new NotFoundException({
-        code: 'CALIBRATION_FACTOR_NOT_FOUND',
-        message: `Calibration factor ID ${id} not found.`,
-      });
-    }
+        if (!factor) {
+          throw new NotFoundException({
+            code: 'CALIBRATION_FACTOR_NOT_FOUND',
+            message: `Calibration factor ID ${id} not found.`,
+          });
+        }
 
-    return this.normalize(factor);
+        return this.normalize(factor);
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 
   // 장비별 현재 적용 중인 보정계수 조회 (승인됨 + 유효 기간 내)
@@ -278,6 +308,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
       '보정계수'
     );
 
+    this.cacheService.delete(this.buildCacheKey('detail', id));
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
+
     return this.normalize(updated);
   }
 
@@ -308,6 +341,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
       '보정계수'
     );
 
+    this.cacheService.delete(this.buildCacheKey('detail', id));
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
+
     return this.normalize(updated);
   }
 
@@ -322,6 +358,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
       { deletedAt: new Date() },
       '보정계수'
     );
+
+    this.cacheService.delete(this.buildCacheKey('detail', id));
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
 
     return { id, deleted: true };
   }

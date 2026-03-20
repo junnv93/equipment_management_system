@@ -8,7 +8,8 @@ import {
   equipment as equipmentTable,
 } from '@equipment-management/db/schema';
 import { CreateTeamDto, UpdateTeamDto, TeamQueryDto } from './dto';
-import { Team, TeamListResponse } from '@equipment-management/schemas';
+import { Team, type PaginatedResponseType } from '@equipment-management/schemas';
+import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 @Injectable()
 export class TeamsService {
@@ -17,7 +18,7 @@ export class TeamsService {
     private readonly db: AppDatabase
   ) {}
 
-  async findAll(query: TeamQueryDto): Promise<TeamListResponse> {
+  async findAll(query: TeamQueryDto): Promise<PaginatedResponseType<Team>> {
     // 필터 조건 수집
     const conditions: SQL[] = [];
 
@@ -45,7 +46,7 @@ export class TeamsService {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const pageSize = query.pageSize || DEFAULT_PAGE_SIZE;
     const offset = (page - 1) * pageSize;
 
     // 1) Count 쿼리 (JOIN 없이 teams 테이블만 — 정확한 팀 수)
@@ -68,7 +69,7 @@ export class TeamsService {
         updatedAt: teamsTable.updatedAt,
         // COUNT(DISTINCT ...) to avoid double-counting with multiple JOINs
         memberCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${usersTable.isActive} = true THEN ${usersTable.id} END), 0)::int`,
-        equipmentCount: sql<number>`COALESCE(COUNT(DISTINCT ${equipmentTable.id}), 0)::int`,
+        equipmentCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${equipmentTable.isActive} = true THEN ${equipmentTable.id} END), 0)::int`,
         // MAX() for leaderName since we're grouping - all rows will have same value
         leaderName: sql<
           string | null
@@ -119,7 +120,7 @@ export class TeamsService {
         updatedAt: teamsTable.updatedAt,
         // Same JOIN + GROUP BY pattern as findAll
         memberCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${usersTable.isActive} = true THEN ${usersTable.id} END), 0)::int`,
-        equipmentCount: sql<number>`COALESCE(COUNT(DISTINCT ${equipmentTable.id}), 0)::int`,
+        equipmentCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${equipmentTable.isActive} = true THEN ${equipmentTable.id} END), 0)::int`,
         leaderName: sql<
           string | null
         >`MAX(CASE WHEN ${usersTable.id} = ${teamsTable.leaderId} THEN ${usersTable.name} END)`,
@@ -158,6 +159,11 @@ export class TeamsService {
       });
     }
 
+    // leaderId 사이트 소속 검증
+    if (createTeamDto.leaderId) {
+      await this.validateLeaderSite(createTeamDto.leaderId, createTeamDto.site);
+    }
+
     const [createdTeam] = await this.db
       .insert(teamsTable)
       .values({
@@ -182,6 +188,12 @@ export class TeamsService {
 
     if (!existing) return null;
 
+    // leaderId 사이트 소속 검증 (site 변경과 동시 수정 시 새 site 기준)
+    if (updateTeamDto.leaderId) {
+      const effectiveSite = updateTeamDto.site || existing.site;
+      await this.validateLeaderSite(updateTeamDto.leaderId, effectiveSite);
+    }
+
     const [updatedTeam] = await this.db
       .update(teamsTable)
       .set({
@@ -199,6 +211,31 @@ export class TeamsService {
     const result = await this.db.delete(teamsTable).where(eq(teamsTable.id, id)).returning();
 
     return result.length > 0;
+  }
+
+  /**
+   * 팀장 후보의 사이트 소속 검증
+   * 팀의 site와 사용자의 site가 일치하지 않으면 400 에러
+   */
+  private async validateLeaderSite(leaderId: string, teamSite: string): Promise<void> {
+    const leader = await this.db.query.users.findFirst({
+      where: eq(usersTable.id, leaderId),
+      columns: { id: true, site: true, name: true },
+    });
+
+    if (!leader) {
+      throw new BadRequestException({
+        code: 'LEADER_NOT_FOUND',
+        message: `User with id '${leaderId}' not found.`,
+      });
+    }
+
+    if (leader.site !== teamSite) {
+      throw new BadRequestException({
+        code: 'LEADER_SITE_MISMATCH',
+        message: `User '${leader.name}' belongs to site '${leader.site}', not '${teamSite}'.`,
+      });
+    }
   }
 
   /**

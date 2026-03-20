@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -9,7 +10,9 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 수리 완료 시 자동으로 호출됨
  */
 export const markCorrectedSchema = z.object({
-  correctionContent: z.string().min(10, '조치 내용은 최소 10자 이상이어야 합니다'),
+  correctionContent: z
+    .string()
+    .min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH, '조치 내용은 최소 10자 이상이어야 합니다'),
   correctionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
   }),

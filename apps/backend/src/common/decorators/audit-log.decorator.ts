@@ -38,7 +38,8 @@ export interface AuditLogMetadata {
     | 'location_history'
     | 'maintenance_history'
     | 'incident_history'
-    | 'settings';
+    | 'settings'
+    | 'notification';
   /**
    * 엔티티 ID를 추출하는 함수 또는 파라미터 경로
    * - 함수: (request, response) => entityId

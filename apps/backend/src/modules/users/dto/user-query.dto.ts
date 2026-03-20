@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { SiteEnum, type Site } from '@equipment-management/schemas';
 
 /**
@@ -19,7 +20,7 @@ export const userQuerySchema = z.object({
   search: z.string().optional(),
   sort: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional().default(DEFAULT_PAGE_SIZE),
 });
 
 export type UserQueryInput = z.infer<typeof userQuerySchema>;
@@ -95,7 +96,7 @@ export class UserQueryDto {
     description: '페이지 크기',
     default: 20,
   })
-  pageSize?: number = 20;
+  pageSize?: number = DEFAULT_PAGE_SIZE;
 }
 
 // Zod 검증 파이프 생성

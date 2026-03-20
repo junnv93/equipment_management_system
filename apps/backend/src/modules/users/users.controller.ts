@@ -32,7 +32,7 @@ import {
   UpdatePreferencesValidationPipe,
   DEFAULT_DISPLAY_PREFERENCES,
 } from './dto/user-preferences.dto';
-import type { User, UserListResponse, UserRole } from '@equipment-management/schemas';
+import type { User, PaginatedResponseType, UserRole } from '@equipment-management/schemas';
 import { AuthenticatedRequest } from '../../types/auth';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
@@ -84,7 +84,7 @@ export class UsersController {
     description: '사용자 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다.',
   })
   @ApiResponse({ status: 200, description: '사용자 목록 조회 성공' })
-  async findAll(@Query() query: UserQueryDto): Promise<UserListResponse> {
+  async findAll(@Query() query: UserQueryDto): Promise<PaginatedResponseType<User>> {
     return this.usersService.findAll(query);
   }
 

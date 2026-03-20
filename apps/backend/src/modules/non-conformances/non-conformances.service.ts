@@ -6,7 +6,7 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { eq, and, isNull, SQL, ne, sql } from 'drizzle-orm';
+import { eq, and, isNull, SQL, ne, sql, inArray } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   nonConformances,
@@ -23,15 +23,16 @@ import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
-import { equipmentBelongsToSite } from '../../common/utils/site-filter';
 import {
   EquipmentStatusEnum,
   NonConformanceStatusValues as NonConformanceStatus,
   type NonConformanceStatus as NonConformanceStatusType,
   type NonConformanceType,
+  REPAIR_REQUIRING_NC_TYPES,
+  ResolutionTypeEnum,
 } from '@equipment-management/schemas';
 import type { NonConformanceDetail } from './non-conformances.types';
 
@@ -77,7 +78,6 @@ export class NonConformancesService extends VersionedBaseService {
     equipmentId?: string;
     status?: string;
     ncType?: string;
-    site?: string;
     search?: string;
   }): SQL[] {
     const conditions: SQL[] = [isNull(nonConformances.deletedAt)];
@@ -90,9 +90,6 @@ export class NonConformancesService extends VersionedBaseService {
     }
     if (params.ncType) {
       conditions.push(eq(nonConformances.ncType, params.ncType as NonConformanceType));
-    }
-    if (params.site) {
-      conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, params.site));
     }
     if (params.search) {
       conditions.push(safeIlike(nonConformances.cause, likeContains(params.search)));
@@ -250,16 +247,43 @@ export class NonConformancesService extends VersionedBaseService {
       sort = 'discoveryDate.desc',
       includeSummary = false,
       page = 1,
-      pageSize = 20,
+      pageSize = DEFAULT_PAGE_SIZE,
     } = query;
 
     // buildListConditions()로 data/count 쿼리 필터 일관성 보장
-    const filterParams = { equipmentId, status, ncType, site, search };
+    const filterParams = { equipmentId, status, ncType, search };
+
+    // site 필터: equipment 테이블 JOIN으로 처리 (correlated subquery 대신)
+    // relational query에서는 equipment 테이블을 직접 참조할 수 없으므로
+    // 사전 조회한 equipmentId 목록으로 IN 조건 적용
+    let siteEquipmentIds: string[] | undefined;
+    if (site) {
+      const siteEquipment = await this.db
+        .select({ id: equipment.id })
+        .from(equipment)
+        .where(eq(equipment.site, site));
+      siteEquipmentIds = siteEquipment.map((e) => e.id);
+      if (siteEquipmentIds.length === 0) {
+        return {
+          items: [],
+          meta: {
+            totalItems: 0,
+            itemCount: 0,
+            itemsPerPage: pageSize,
+            totalPages: 0,
+            currentPage: page,
+          },
+        };
+      }
+    }
 
     // Use Drizzle relational query to include user→team relations
     const items = await this.db.query.nonConformances.findMany({
       where: () => {
         const conditions = this.buildListConditions(filterParams);
+        if (siteEquipmentIds) {
+          conditions.push(inArray(nonConformances.equipmentId, siteEquipmentIds));
+        }
         return and(...conditions);
       },
       with: {
@@ -341,12 +365,17 @@ export class NonConformancesService extends VersionedBaseService {
     });
 
     // Count 쿼리 — buildListConditions()로 data 쿼리와 동일한 필터 보장
+    // site 필터 시 innerJoin으로 equipment.site 조건 적용
     const countConditions = this.buildListConditions(filterParams);
+    if (site) {
+      countConditions.push(eq(equipment.site, site));
+    }
 
-    const [{ total: totalItems }] = await this.db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(nonConformances)
-      .where(and(...countConditions));
+    const countQuery = this.db.select({ total: sql<number>`count(*)::int` }).from(nonConformances);
+    if (site) {
+      countQuery.innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id));
+    }
+    const [{ total: totalItems }] = await countQuery.where(and(...countConditions));
 
     // Summary 집계 (includeSummary=true일 때만)
     // ✅ status 필터 제외한 기본 조건으로 전체 상태별 건수 반환
@@ -355,24 +384,29 @@ export class NonConformancesService extends VersionedBaseService {
       const summaryConditions = this.buildListConditions({
         equipmentId,
         ncType,
-        site,
         search,
-        // status 제외 — 전체 상태별 건수를 얻기 위해
       });
+      if (site) {
+        summaryConditions.push(eq(equipment.site, site));
+      }
 
-      const summaryRows = await this.db
+      const summaryQuery = this.db
         .select({
           status: nonConformances.status,
           count: sql<number>`count(*)::int`,
         })
-        .from(nonConformances)
+        .from(nonConformances);
+      if (site) {
+        summaryQuery.innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id));
+      }
+      const summaryRows = await summaryQuery
         .where(and(...summaryConditions))
         .groupBy(nonConformances.status);
 
       summary = {
-        open: 0,
-        corrected: 0,
-        closed: 0,
+        [NonConformanceStatus.OPEN]: 0,
+        [NonConformanceStatus.CORRECTED]: 0,
+        [NonConformanceStatus.CLOSED]: 0,
       };
       for (const row of summaryRows) {
         summary[row.status] = row.count;
@@ -574,6 +608,18 @@ export class NonConformancesService extends VersionedBaseService {
     // 상태 변경이 요청된 경우 중앙화된 전이 검증
     if (updateDto.status && updateDto.status !== nonConformance.status) {
       this.validateTransition(nonConformance.status, updateDto.status);
+
+      // corrected 전이 시 수리 기록 필수 검증 (damage/malfunction)
+      if (
+        updateDto.status === NonConformanceStatus.CORRECTED &&
+        this.requiresRepair(nonConformance.ncType as string) &&
+        !nonConformance.repairHistoryId
+      ) {
+        throw new BadRequestException({
+          code: 'NC_REPAIR_RECORD_REQUIRED',
+          message: 'Damage/malfunction type requires a repair record',
+        });
+      }
     } else if (nonConformance.status === NonConformanceStatus.CLOSED) {
       throw new BadRequestException({
         code: 'NC_CLOSED_CANNOT_UPDATE',
@@ -685,15 +731,21 @@ export class NonConformancesService extends VersionedBaseService {
           )
           .limit(1);
 
-        // 다른 열린 부적합이 없으면 장비 상태 복원
+        // 다른 열린 부적합이 없으면 장비 상태 복원 (CAS: version 검증)
         if (otherOpenNonConformances.length === 0) {
           await tx
             .update(equipment)
             .set({
               status: EquipmentStatusEnum.enum.available,
+              version: sql`version + 1`,
               updatedAt: new Date(),
             })
-            .where(eq(equipment.id, nonConformance.equipmentId));
+            .where(
+              and(
+                eq(equipment.id, nonConformance.equipmentId),
+                eq(equipment.status, EquipmentStatusEnum.enum.non_conforming)
+              )
+            );
         }
 
         return { updated, equipmentStatusRestored: otherOpenNonConformances.length === 0 };
@@ -835,13 +887,14 @@ export class NonConformancesService extends VersionedBaseService {
       });
     }
 
-    // 연결
+    // 연결 (version 원자 증가 — 다른 CAS 경로와의 충돌 감지 보장)
     await this.db
       .update(nonConformances)
       .set({
         repairHistoryId: repairId,
-        resolutionType: 'repair',
+        resolutionType: ResolutionTypeEnum.enum.repair,
         updatedAt: new Date(),
+        version: sql`${nonConformances.version} + 1`,
       })
       .where(eq(nonConformances.id, ncId));
 
@@ -882,6 +935,7 @@ export class NonConformancesService extends VersionedBaseService {
         correctionDate: correctionData.correctionDate.toISOString().split('T')[0],
         correctedBy: correctionData.correctedBy,
         updatedAt: new Date(),
+        version: sql`${nonConformances.version} + 1`,
       })
       .where(eq(nonConformances.id, id));
 
@@ -918,6 +972,6 @@ export class NonConformancesService extends VersionedBaseService {
    * 부적합 유형이 수리를 필요로 하는지 확인
    */
   private requiresRepair(ncType: string): boolean {
-    return ['damage', 'malfunction'].includes(ncType);
+    return (REPAIR_REQUIRING_NC_TYPES as readonly string[]).includes(ncType);
   }
 }

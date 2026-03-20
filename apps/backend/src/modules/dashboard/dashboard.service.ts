@@ -6,6 +6,8 @@ import {
   UserRole,
   EquipmentStatusEnum,
   CheckoutStatusEnum,
+  CalibrationRequiredEnum,
+  CheckoutPurposeValues as CPVal,
   UserRoleValues as URVal,
   AUDIT_TO_ACTIVITY_TYPE,
   RENTAL_ACTIVITY_TYPE_OVERRIDES,
@@ -15,7 +17,7 @@ import {
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { ApprovalsService } from '../approvals/approvals.service';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
 import {
   DashboardSummaryDto,
   EquipmentByTeamDto,
@@ -80,7 +82,7 @@ export class DashboardService {
             .select({
               total: count(),
               available: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = ${EquipmentStatusEnum.enum.available}) as integer)`,
-              upcomingCalibrations: sql<number>`cast(count(*) filter (where ${schema.equipment.calibrationRequired} = 'required' and ${schema.equipment.nextCalibrationDate} >= ${today} and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater}) as integer)`,
+              upcomingCalibrations: sql<number>`cast(count(*) filter (where ${schema.equipment.calibrationRequired} = ${CalibrationRequiredEnum.enum.required} and ${schema.equipment.nextCalibrationDate} >= ${today} and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater}) as integer)`,
             })
             .from(schema.equipment)
             .where(siteTeamFilter),
@@ -162,7 +164,7 @@ export class DashboardService {
     _userRole: UserRole,
     teamId?: string,
     site?: string
-  ): Promise<OverdueCalibrationDto[]> {
+  ): Promise<{ items: OverdueCalibrationDto[]; hasMore: boolean }> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}overdueCalibrations:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
@@ -181,30 +183,36 @@ export class DashboardService {
           .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
           .where(
             and(
-              eq(schema.equipment.calibrationRequired, 'required'),
+              eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
               lte(schema.equipment.nextCalibrationDate, today),
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
               site ? eq(schema.equipment.site, site) : undefined
             )
           )
           .orderBy(schema.equipment.nextCalibrationDate)
-          .limit(50);
+          .limit(DASHBOARD_ITEM_LIMIT + 1);
 
-        return results.map((r) => {
-          const dueDate = r.nextCalibrationDate ? new Date(r.nextCalibrationDate) : today;
-          const daysOverdue = Math.floor(
-            (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
-          );
+        const hasMore = results.length > DASHBOARD_ITEM_LIMIT;
+        const items = hasMore ? results.slice(0, DASHBOARD_ITEM_LIMIT) : results;
 
-          return {
-            id: r.id,
-            name: r.name,
-            managementNumber: r.managementNumber,
-            dueDate: r.nextCalibrationDate ? r.nextCalibrationDate.toISOString() : '',
-            daysOverdue,
-            teamName: r.teamName || undefined,
-          };
-        });
+        return {
+          items: items.map((r) => {
+            const dueDate = r.nextCalibrationDate ? new Date(r.nextCalibrationDate) : today;
+            const daysOverdue = Math.floor(
+              (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            return {
+              id: r.id,
+              name: r.name,
+              managementNumber: r.managementNumber,
+              dueDate: r.nextCalibrationDate ? r.nextCalibrationDate.toISOString() : '',
+              daysOverdue,
+              teamName: r.teamName || undefined,
+            };
+          }),
+          hasMore,
+        };
       },
       CACHE_TTL.SHORT
     );
@@ -219,7 +227,7 @@ export class DashboardService {
     days: number,
     teamId?: string,
     site?: string
-  ): Promise<UpcomingCalibrationDto[]> {
+  ): Promise<{ items: UpcomingCalibrationDto[]; hasMore: boolean }> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}upcomingCalibrations:${days}:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
@@ -238,7 +246,7 @@ export class DashboardService {
           .from(schema.equipment)
           .where(
             and(
-              eq(schema.equipment.calibrationRequired, 'required'),
+              eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
               gte(schema.equipment.nextCalibrationDate, today),
               lte(schema.equipment.nextCalibrationDate, futureDate),
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
@@ -246,23 +254,29 @@ export class DashboardService {
             )
           )
           .orderBy(schema.equipment.nextCalibrationDate)
-          .limit(50);
+          .limit(DASHBOARD_ITEM_LIMIT + 1);
 
-        return results.map((r) => {
-          const dueDate = r.nextCalibrationDate ? new Date(r.nextCalibrationDate) : today;
-          const daysUntilDue = Math.floor(
-            (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-          );
+        const hasMore = results.length > DASHBOARD_ITEM_LIMIT;
+        const items = hasMore ? results.slice(0, DASHBOARD_ITEM_LIMIT) : results;
 
-          return {
-            id: r.id,
-            equipmentId: r.id,
-            equipmentName: r.name,
-            managementNumber: r.managementNumber,
-            dueDate: r.nextCalibrationDate ? r.nextCalibrationDate.toISOString() : '',
-            daysUntilDue,
-          };
-        });
+        return {
+          items: items.map((r) => {
+            const dueDate = r.nextCalibrationDate ? new Date(r.nextCalibrationDate) : today;
+            const daysUntilDue = Math.floor(
+              (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            return {
+              id: r.id,
+              equipmentId: r.id,
+              equipmentName: r.name,
+              managementNumber: r.managementNumber,
+              dueDate: r.nextCalibrationDate ? r.nextCalibrationDate.toISOString() : '',
+              daysUntilDue,
+            };
+          }),
+          hasMore,
+        };
       },
       CACHE_TTL.SHORT
     );
@@ -276,7 +290,7 @@ export class DashboardService {
     _userRole: UserRole,
     teamId?: string,
     site?: string
-  ): Promise<OverdueCheckoutDto[]> {
+  ): Promise<{ items: OverdueCheckoutDto[]; hasMore: boolean }> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}overdueCheckouts:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
@@ -314,36 +328,42 @@ export class DashboardService {
             )
           )
           .orderBy(schema.checkouts.expectedReturnDate)
-          .limit(50);
+          .limit(DASHBOARD_ITEM_LIMIT + 1);
 
-        return results.map((r) => {
-          const expectedDate = r.expectedReturnDate ? new Date(r.expectedReturnDate) : today;
-          const daysOverdue = Math.floor(
-            (today.getTime() - expectedDate.getTime()) / (1000 * 60 * 60 * 24)
-          );
+        const hasMore = results.length > DASHBOARD_ITEM_LIMIT;
+        const items = hasMore ? results.slice(0, DASHBOARD_ITEM_LIMIT) : results;
 
-          return {
-            id: r.id,
-            checkoutItemId: r.checkoutItemId,
-            equipmentId: r.equipmentId,
-            equipment: {
-              id: r.equipmentId,
-              name: r.equipmentName || '',
-              managementNumber: r.equipmentManagementNumber || '',
-            },
-            userId: r.userId,
-            user: {
-              id: r.userId,
-              name: r.userName || '',
-              email: r.userEmail || '',
-            },
-            expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',
-            startDate: r.checkoutDate ? r.checkoutDate.toISOString() : '',
-            status: r.status || '',
-            daysOverdue,
-            teamName: r.teamName || undefined,
-          };
-        });
+        return {
+          items: items.map((r) => {
+            const expectedDate = r.expectedReturnDate ? new Date(r.expectedReturnDate) : today;
+            const daysOverdue = Math.floor(
+              (today.getTime() - expectedDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            return {
+              id: r.id,
+              checkoutItemId: r.checkoutItemId,
+              equipmentId: r.equipmentId,
+              equipment: {
+                id: r.equipmentId,
+                name: r.equipmentName || '',
+                managementNumber: r.equipmentManagementNumber || '',
+              },
+              userId: r.userId,
+              user: {
+                id: r.userId,
+                name: r.userName || '',
+                email: r.userEmail || '',
+              },
+              expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',
+              startDate: r.checkoutDate ? r.checkoutDate.toISOString() : '',
+              status: r.status || '',
+              daysOverdue,
+              teamName: r.teamName || undefined,
+            };
+          }),
+          hasMore,
+        };
       },
       CACHE_TTL.SHORT
     );
@@ -358,7 +378,7 @@ export class DashboardService {
     days: number = 30,
     teamId?: string,
     site?: string
-  ): Promise<UpcomingCheckoutReturnDto[]> {
+  ): Promise<{ items: UpcomingCheckoutReturnDto[]; hasMore: boolean }> {
     const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}upcomingCheckoutReturns:${days}:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
@@ -389,24 +409,30 @@ export class DashboardService {
             )
           )
           .orderBy(schema.checkouts.expectedReturnDate)
-          .limit(30);
+          .limit(DASHBOARD_ITEM_LIMIT + 1);
 
-        return results.map((r) => {
-          const expectedDate = r.expectedReturnDate ? new Date(r.expectedReturnDate) : today;
-          const daysUntilReturn = Math.floor(
-            (expectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-          );
+        const hasMore = results.length > DASHBOARD_ITEM_LIMIT;
+        const items = hasMore ? results.slice(0, DASHBOARD_ITEM_LIMIT) : results;
 
-          return {
-            id: r.id,
-            checkoutItemId: r.checkoutItemId,
-            equipmentName: r.equipmentName || '',
-            managementNumber: r.managementNumber || '',
-            expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',
-            daysUntilReturn,
-            purpose: r.purpose || '',
-          };
-        });
+        return {
+          items: items.map((r) => {
+            const expectedDate = r.expectedReturnDate ? new Date(r.expectedReturnDate) : today;
+            const daysUntilReturn = Math.floor(
+              (expectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            return {
+              id: r.id,
+              checkoutItemId: r.checkoutItemId,
+              equipmentName: r.equipmentName || '',
+              managementNumber: r.managementNumber || '',
+              expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',
+              daysUntilReturn,
+              purpose: r.purpose || '',
+            };
+          }),
+          hasMore,
+        };
       },
       CACHE_TTL.SHORT
     );
@@ -494,7 +520,7 @@ export class DashboardService {
           let activityType = AUDIT_TO_ACTIVITY_TYPE[actionKey] || 'unknown';
 
           // rental purpose면 오버라이드
-          if (row.entityType === 'checkout' && row.checkoutPurpose === 'rental') {
+          if (row.entityType === 'checkout' && row.checkoutPurpose === CPVal.RENTAL) {
             activityType = RENTAL_ACTIVITY_TYPE_OVERRIDES[activityType] || activityType;
           }
 

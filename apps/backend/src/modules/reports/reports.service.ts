@@ -13,6 +13,8 @@ import {
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_TYPE_LABELS,
+  EQUIPMENT_STATUS_LABELS,
+  CALIBRATION_STATUS_LABELS,
   EquipmentStatusValues as ESVal,
   CheckoutStatusValues as CSVal,
   CalibrationStatusEnum,
@@ -22,7 +24,12 @@ import {
   type CalibrationStatus,
   type EquipmentStatus,
 } from '@equipment-management/schemas';
-import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
+import {
+  USER_ROLE_LABELS,
+  DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
+  type UserRole,
+} from '@equipment-management/shared-constants';
 import type { ReportColumn, ReportData } from './report-export.service';
 import type {
   EquipmentUsageReport,
@@ -69,29 +76,7 @@ function resolveDateRange(
   return { start, end };
 }
 
-// ─── 상태 레이블 (한국어) ────────────────────────────────────────────────────
-
-const EQUIPMENT_STATUS_LABELS: Record<string, string> = {
-  available: '사용가능',
-  in_use: '사용중',
-  checked_out: '반출중',
-  calibration_scheduled: '교정예정',
-  calibration_overdue: '교정기한초과',
-  non_conforming: '부적합',
-  spare: '여분',
-  retired: '폐기',
-  pending_disposal: '폐기대기',
-  disposed: '폐기완료',
-  temporary: '임시',
-  inactive: '비활성',
-};
-
-const CALIBRATION_STATUS_LABELS: Record<string, string> = {
-  scheduled: '예정됨',
-  in_progress: '진행중',
-  completed: '완료됨',
-  failed: '실패',
-};
+// ─── 상태 레이블: @equipment-management/schemas SSOT 사용 ─────────────────
 
 @Injectable()
 export class ReportsService {
@@ -517,7 +502,7 @@ export class ReportsService {
     ];
 
     const fmtDate = (d: Date | null | undefined): string =>
-      d ? new Date(d).toLocaleDateString('ko-KR') : '-';
+      d ? new Date(d).toLocaleDateString(DEFAULT_LOCALE) : '-';
 
     return {
       title: '장비 현황 보고서',
@@ -579,7 +564,7 @@ export class ReportsService {
       rejected: '반려됨',
     };
     const fmtDate = (d: Date | null | undefined): string =>
-      d ? new Date(d).toLocaleDateString('ko-KR') : '-';
+      d ? new Date(d).toLocaleDateString(DEFAULT_LOCALE) : '-';
 
     return {
       title: '교정 현황 보고서',
@@ -607,7 +592,7 @@ export class ReportsService {
         statusLabel: CALIBRATION_STATUS_LABELS[r.status] ?? r.status,
         approvalStatus: APPROVAL_LABELS[r.approvalStatus] ?? r.approvalStatus,
         result: r.result ?? '-',
-        costStr: r.cost ? `${Number(r.cost).toLocaleString('ko-KR')}원` : '-',
+        costStr: r.cost ? `${Number(r.cost).toLocaleString(DEFAULT_LOCALE)}원` : '-',
         nextCalibrationStr: fmtDate(r.nextCalibrationDate),
       })),
     };
@@ -715,7 +700,7 @@ export class ReportsService {
       .orderBy(teamsTable.name, equipmentTable.managementNumber);
 
     const fmtDate = (d: Date | null | undefined): string =>
-      d ? new Date(d).toLocaleDateString('ko-KR') : '-';
+      d ? new Date(d).toLocaleDateString(DEFAULT_LOCALE) : '-';
 
     return {
       title: '팀별 장비 현황 보고서',
@@ -799,7 +784,9 @@ export class ReportsService {
         managementNumber: r.managementNumber ?? '-',
         equipmentName: r.equipmentName ?? '-',
         teamName: r.teamName ?? '-',
-        repairDateStr: r.repairDate ? new Date(r.repairDate).toLocaleDateString('ko-KR') : '-',
+        repairDateStr: r.repairDate
+          ? new Date(r.repairDate).toLocaleDateString(DEFAULT_LOCALE)
+          : '-',
         repairDescription: r.repairDescription,
         repairResult: RESULT_LABELS[r.repairResult ?? ''] ?? r.repairResult ?? '-',
         costStr: '-',
@@ -858,7 +845,7 @@ export class ReportsService {
     ];
 
     const fmtTs = (d: Date | string): string =>
-      new Date(d).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+      new Date(d).toLocaleString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE });
 
     return {
       title: '감사 로그 보고서',

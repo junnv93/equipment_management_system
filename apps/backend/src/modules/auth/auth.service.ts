@@ -19,6 +19,12 @@ import { UserRoleValues, type UserRole } from './rbac/roles.enum';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
 import { TOKEN_BLACKLIST, TokenBlacklistProvider } from './blacklist/token-blacklist.interface';
+import {
+  TEAM_FCC_EMC_RF_SUWON_ID,
+  TEAM_SAR_SUWON_ID,
+  TEAM_GENERAL_EMC_SUWON_ID,
+  TEAM_AUTOMOTIVE_EMC_SUWON_ID,
+} from '../../database/utils/uuid-constants';
 
 // 인터페이스 추가
 export interface UserDto {
@@ -123,6 +129,7 @@ export class AuthService {
     // 계정 잠금 확인
     const lockUntil = this.loginLocks.get(loginDto.email);
     if (lockUntil && Date.now() < lockUntil) {
+      const lockMinutes = LOCK_DURATION_MS / (60 * 1000);
       this.eventEmitter.emit('audit.auth.failed', {
         event: 'login_failed',
         email: loginDto.email,
@@ -131,7 +138,7 @@ export class AuthService {
       });
       throw new UnauthorizedException({
         code: 'AUTH_ACCOUNT_LOCKED',
-        message: 'Account is temporarily locked. Please try again in 15 minutes.',
+        message: `Account is temporarily locked. Please try again in ${lockMinutes} minutes.`,
       });
     }
 
@@ -163,6 +170,7 @@ export class AuthService {
       if (newCount >= MAX_LOGIN_ATTEMPTS) {
         this.loginLocks.set(loginDto.email, now + LOCK_DURATION_MS);
         this.loginAttempts.delete(loginDto.email);
+        const lockMinutes = LOCK_DURATION_MS / (60 * 1000);
         this.eventEmitter.emit('audit.auth.failed', {
           event: 'login_failed',
           email: loginDto.email,
@@ -171,7 +179,7 @@ export class AuthService {
         });
         throw new UnauthorizedException({
           code: 'AUTH_ACCOUNT_LOCKED',
-          message: 'Account is temporarily locked. Please try again in 15 minutes.',
+          message: `Account is temporarily locked. Please try again in ${lockMinutes} minutes.`,
         });
       }
 
@@ -281,11 +289,10 @@ export class AuthService {
     const cfg = this.configService;
     const teamMapping: Record<Site, Record<string, string>> = {
       suwon: {
-        RF: cfg.get<string>('AZURE_TEAM_ID_SUW_RF') ?? '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
-        SAR: cfg.get<string>('AZURE_TEAM_ID_SUW_SAR') ?? '7fd28076-fd5e-4d36-b051-bbf8a97b82db',
-        EMC: cfg.get<string>('AZURE_TEAM_ID_SUW_EMC') ?? 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
-        Automotive:
-          cfg.get<string>('AZURE_TEAM_ID_SUW_AUTO') ?? 'f0a32655-00f9-4ecd-b43c-af4faed499b6',
+        RF: cfg.get<string>('AZURE_TEAM_ID_SUW_RF') ?? TEAM_FCC_EMC_RF_SUWON_ID,
+        SAR: cfg.get<string>('AZURE_TEAM_ID_SUW_SAR') ?? TEAM_SAR_SUWON_ID,
+        EMC: cfg.get<string>('AZURE_TEAM_ID_SUW_EMC') ?? TEAM_GENERAL_EMC_SUWON_ID,
+        Automotive: cfg.get<string>('AZURE_TEAM_ID_SUW_AUTO') ?? TEAM_AUTOMOTIVE_EMC_SUWON_ID,
       },
       uiwang: {
         RF: cfg.get<string>('AZURE_TEAM_ID_UIW_RF') ?? '',

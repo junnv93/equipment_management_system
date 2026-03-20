@@ -20,6 +20,9 @@ export const CACHE_KEY_PREFIXES = {
   /** calibration.service.ts */
   CALIBRATION: 'calibration:',
 
+  /** calibration-factors.service.ts */
+  CALIBRATION_FACTORS: 'calibration-factors:',
+
   /** calibration-plans.service.ts */
   CALIBRATION_PLANS: 'calibration-plans:',
 

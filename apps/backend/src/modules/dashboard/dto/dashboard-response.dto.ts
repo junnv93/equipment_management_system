@@ -247,23 +247,20 @@ export class DashboardAggregateDto {
   @ApiProperty({
     description: '교정 지연 장비 (null = 조회 실패)',
     nullable: true,
-    type: () => [OverdueCalibrationDto],
   })
-  overdueCalibrations: OverdueCalibrationDto[] | null;
+  overdueCalibrations: { items: OverdueCalibrationDto[]; hasMore: boolean } | null;
 
   @ApiProperty({
     description: '교정 예정 장비 (null = 조회 실패)',
     nullable: true,
-    type: () => [UpcomingCalibrationDto],
   })
-  upcomingCalibrations: UpcomingCalibrationDto[] | null;
+  upcomingCalibrations: { items: UpcomingCalibrationDto[]; hasMore: boolean } | null;
 
   @ApiProperty({
     description: '반출 지연 목록 (null = 조회 실패)',
     nullable: true,
-    type: () => [OverdueCheckoutDto],
   })
-  overdueCheckouts: OverdueCheckoutDto[] | null;
+  overdueCheckouts: { items: OverdueCheckoutDto[]; hasMore: boolean } | null;
 
   @ApiProperty({ description: '장비 상태별 통계 (null = 조회 실패)', nullable: true })
   equipmentStatusStats: EquipmentStatusStatsDto | null;
@@ -278,7 +275,6 @@ export class DashboardAggregateDto {
   @ApiProperty({
     description: '반납 예정 반출 목록 (null = 조회 실패)',
     nullable: true,
-    type: () => [UpcomingCheckoutReturnDto],
   })
-  upcomingCheckoutReturns: UpcomingCheckoutReturnDto[] | null;
+  upcomingCheckoutReturns: { items: UpcomingCheckoutReturnDto[]; hasMore: boolean } | null;
 }

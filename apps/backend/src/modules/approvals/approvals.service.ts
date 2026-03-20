@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   eq,
@@ -33,6 +33,8 @@ import {
   type CheckoutStatus,
   type CalibrationPlanStatus,
   type DisposalReviewStatus,
+  type EquipmentImportSource,
+  type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import {
   APPROVAL_KPI,
@@ -48,6 +50,8 @@ import {
   type UserScopeContext,
 } from '@equipment-management/shared-constants';
 import { toSafeInt } from '../../common/utils';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 
 /**
  * 역할별 승인 카테고리 매핑
@@ -118,9 +122,12 @@ export interface PendingCountsByCategory {
  */
 @Injectable()
 export class ApprovalsService {
+  private readonly logger = new Logger(ApprovalsService.name);
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
+    private readonly db: AppDatabase,
+    private readonly cacheService: SimpleCacheService
   ) {}
 
   /**
@@ -133,32 +140,39 @@ export class ApprovalsService {
     userId: string,
     userRole: UserRole
   ): Promise<PendingCountsByCategory> {
-    // Get user's team and site for filtering
-    const user = await this.db.query.users.findFirst({
-      where: eq(schema.users.id, userId),
-      columns: {
-        id: true,
-        teamId: true,
-        site: true,
+    const cacheKey = `approvals:counts:${userId}:${userRole}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        // Get user's team and site for filtering
+        const user = await this.db.query.users.findFirst({
+          where: eq(schema.users.id, userId),
+          columns: {
+            id: true,
+            teamId: true,
+            site: true,
+          },
+        });
+
+        if (!user) {
+          throw new NotFoundException({
+            code: 'USER_NOT_FOUND',
+            message: `User not found (userId: ${userId}). Session may be expired or account deleted.`,
+          });
+        }
+
+        // Role gating: 해당 역할이 접근 불가한 카테고리는 쿼리 자체를 생략
+        const allowedCategories = ROLE_CATEGORIES[userRole] ?? new Set();
+        const userCtx: UserScopeContext = {
+          role: userRole,
+          site: user.site ?? undefined,
+          teamId: user.teamId ?? undefined,
+        };
+
+        return this.getApprovalCountsByScope(userCtx, allowedCategories);
       },
-    });
-
-    if (!user) {
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: `User not found (userId: ${userId}). Session may be expired or account deleted.`,
-      });
-    }
-
-    // Role gating: 해당 역할이 접근 불가한 카테고리는 쿼리 자체를 생략
-    const allowedCategories = ROLE_CATEGORIES[userRole] ?? new Set();
-    const userCtx: UserScopeContext = {
-      role: userRole,
-      site: user.site ?? undefined,
-      teamId: user.teamId ?? undefined,
-    };
-
-    return this.getApprovalCountsByScope(userCtx, allowedCategories);
+      CACHE_TTL.SHORT
+    );
   }
 
   /**
@@ -387,7 +401,11 @@ export class ApprovalsService {
         default:
           return { urgentCount: 0, avgWaitDays: 0 };
       }
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        `KPI 조회 실패 (${category}):`,
+        error instanceof Error ? error.message : error
+      );
       return { urgentCount: 0, avgWaitDays: 0 };
     }
   }
@@ -534,7 +552,7 @@ export class ApprovalsService {
   }
 
   private getImportKpiQuery(
-    sourceType: string,
+    sourceType: EquipmentImportSource,
     userCtx: UserScopeContext,
     thresholdDate: Date
   ): Promise<{ total: number; urgent: number; sumDays: number }[]> {
@@ -945,7 +963,11 @@ export class ApprovalsService {
         .from(schema.checkouts)
         .where(and(...conditions));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        '반출 승인 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
       return 0;
     }
   }
@@ -954,8 +976,8 @@ export class ApprovalsService {
    * 장비 반입 승인 대기 개수 — SSOT: EQUIPMENT_IMPORT_DATA_SCOPE
    */
   private async getEquipmentImportCount(
-    status: string,
-    sourceType: string,
+    status: EquipmentImportStatus,
+    sourceType: EquipmentImportSource,
     userCtx: UserScopeContext
   ): Promise<number> {
     try {
@@ -973,7 +995,11 @@ export class ApprovalsService {
         .from(schema.equipmentImports)
         .where(and(...conditions));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        '장비 반입 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
       return 0;
     }
   }
@@ -1007,7 +1033,11 @@ export class ApprovalsService {
         .from(schema.equipmentRequests)
         .where(and(...conditions));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        '장비 요청 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
       return 0;
     }
   }
@@ -1039,7 +1069,8 @@ export class ApprovalsService {
         .from(schema.calibrations)
         .where(and(...conditions));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error('교정 카운트 조회 실패:', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -1073,7 +1104,11 @@ export class ApprovalsService {
         .from(schema.calibrations)
         .where(and(...conditions));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        '중간점검 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
       return 0;
     }
   }
@@ -1114,7 +1149,8 @@ export class ApprovalsService {
         .innerJoin(schema.equipment, eq(schema.nonConformances.equipmentId, schema.equipment.id))
         .where(and(...conditions));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error('부적합 카운트 조회 실패:', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -1152,7 +1188,8 @@ export class ApprovalsService {
         .from(schema.disposalRequests)
         .where(and(...conditions));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error('폐기 카운트 조회 실패:', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -1172,7 +1209,11 @@ export class ApprovalsService {
           )
         );
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        '교정계획서 검토 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
       return 0;
     }
   }
@@ -1192,7 +1233,11 @@ export class ApprovalsService {
           )
         );
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        '교정계획서 최종승인 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
       return 0;
     }
   }
@@ -1207,7 +1252,11 @@ export class ApprovalsService {
         .from(schema.softwareHistory)
         .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING));
       return result?.count ?? 0;
-    } catch {
+    } catch (error) {
+      this.logger.error(
+        '소프트웨어 카운트 조회 실패:',
+        error instanceof Error ? error.message : error
+      );
       return 0;
     }
   }

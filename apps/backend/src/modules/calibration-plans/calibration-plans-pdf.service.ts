@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CalibrationPlansService } from './calibration-plans.service';
 import { CALIBRATION_PLAN_STATUS_LABELS, SITE_LABELS } from '@equipment-management/schemas';
+import { DEFAULT_LOCALE } from '@equipment-management/shared-constants';
 
 /**
  * 교정계획 아이템 (PDF 생성용 간소화 타입)
@@ -41,7 +42,7 @@ export class CalibrationPlansPdfService {
     const formatDate = (dateVal: Date | string | null | undefined): string => {
       if (!dateVal) return '-';
       const date = typeof dateVal === 'string' ? new Date(dateVal) : dateVal;
-      return date.toLocaleDateString('ko-KR');
+      return date.toLocaleDateString(DEFAULT_LOCALE);
     };
 
     // HTML 생성

@@ -17,16 +17,20 @@ import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calib
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import {
-  CalibrationStatus,
+  CalibrationStatusEnum,
+  type CalibrationStatus,
   type CalibrationApprovalStatus,
   CalibrationApprovalStatusEnum,
   NonConformanceStatusValues as NCStatusVal,
   NonConformanceTypeValues as NCTypeVal,
   EquipmentStatusValues as ESVal,
+  ResolutionTypeEnum,
   DEFAULT_LOCALE,
+  type IntermediateCheckStatus,
+  CalibrationRequiredEnum,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import {
   getUtcStartOfDay,
   getUtcEndOfDay,
@@ -109,6 +113,7 @@ export class CalibrationService extends VersionedBaseService {
     }
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}list:*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}intermediate-checks:*`);
   }
 
   // ============================================================================
@@ -181,7 +186,7 @@ export class CalibrationService extends VersionedBaseService {
       technicianId,
       calibrationDate: dto.calibrationDate,
       nextCalibrationDate: dto.nextCalibrationDate,
-      status: dto.status || 'scheduled',
+      status: dto.status || CalibrationStatusEnum.enum.scheduled,
       agencyName: dto.calibrationAgency || null,
       certificateNumber: dto.certificateNumber || null,
       certificatePath: dto.certificatePath || null,
@@ -250,15 +255,22 @@ export class CalibrationService extends VersionedBaseService {
     const approvalStatus = CalibrationApprovalStatusEnum.enum.pending_approval;
 
     // SSOT: nextCalibrationDate는 장비의 calibrationCycle 기반으로 백엔드에서 계산
-    const [equip] = await this.db
-      .select({ calibrationCycle: schema.equipment.calibrationCycle })
+    // 알림에도 필요한 필드를 한 번에 조회 (이중 DB 호출 방지)
+    const [equipForCreate] = await this.db
+      .select({
+        calibrationCycle: schema.equipment.calibrationCycle,
+        name: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        teamId: schema.equipment.teamId,
+        site: schema.equipment.site,
+      })
       .from(schema.equipment)
       .where(eq(schema.equipment.id, createCalibrationDto.equipmentId))
       .limit(1);
 
     const computedNextDate = calculateNextCalibrationDate(
       createCalibrationDto.calibrationDate,
-      equip?.calibrationCycle ?? undefined
+      equipForCreate?.calibrationCycle ?? undefined
     );
 
     const dtoWithComputedDate = {
@@ -280,28 +292,22 @@ export class CalibrationService extends VersionedBaseService {
     this.invalidateCalibrationCache();
 
     // 📢 알림 이벤트 발행 (교정 등록 → 승인자에게 알림)
+    // equipForCreate 재사용 (이중 DB 조회 방지)
     try {
-      const [equip] = await this.db
-        .select({
-          name: schema.equipment.name,
-          managementNumber: schema.equipment.managementNumber,
-          teamId: schema.equipment.teamId,
-        })
-        .from(schema.equipment)
-        .where(eq(schema.equipment.id, inserted.equipmentId))
-        .limit(1);
       this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_CREATED, {
         calibrationId: inserted.id,
         equipmentId: inserted.equipmentId,
-        equipmentName: equip?.name ?? '',
-        managementNumber: equip?.managementNumber ?? '',
-        teamId: equip?.teamId ?? '',
+        equipmentName: equipForCreate?.name ?? '',
+        managementNumber: equipForCreate?.managementNumber ?? '',
+        teamId: equipForCreate?.teamId ?? '',
+        site: equipForCreate?.site ?? '',
         actorId: inserted.registeredBy ?? '',
         actorName: '',
         timestamp: new Date(),
       });
-    } catch {
-      // 알림 발행 실패가 비즈니스 로직을 차단하지 않음
+    } catch (error) {
+      // 알림 발행 실패가 비즈니스 로직을 차단하지 않음 — 운영 모니터링용 로그
+      this.logger.warn(`교정 등록 알림 발행 실패 (calibrationId: ${inserted.id}): ${error}`);
     }
 
     return this.transformDbToRecord(inserted);
@@ -432,7 +438,7 @@ export class CalibrationService extends VersionedBaseService {
     // 공통 기본 조건
     const baseConditions: SQL<unknown>[] = [
       eq(schema.equipment.isActive, true),
-      eq(schema.equipment.calibrationRequired, 'required'),
+      eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
     ];
     if (teamId) baseConditions.push(eq(schema.equipment.teamId, teamId));
     if (site) baseConditions.push(eq(schema.equipment.site, site));
@@ -496,7 +502,7 @@ export class CalibrationService extends VersionedBaseService {
 
     const whereConditions: SQL<unknown>[] = [
       eq(schema.equipment.isActive, true),
-      eq(schema.equipment.calibrationRequired, 'required'),
+      eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
       sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
       sql`${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`,
     ];
@@ -560,7 +566,7 @@ export class CalibrationService extends VersionedBaseService {
 
     const whereConditions: SQL<unknown>[] = [
       eq(schema.equipment.isActive, true),
-      eq(schema.equipment.calibrationRequired, 'required'),
+      eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
       sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
       sql`${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp`,
       sql`${schema.equipment.nextCalibrationDate} <= ${futureDate.toISOString()}::timestamp`,
@@ -622,7 +628,7 @@ export class CalibrationService extends VersionedBaseService {
       search,
       sort = 'calibrationDate.desc',
       page = 1,
-      pageSize = 20,
+      pageSize = DEFAULT_PAGE_SIZE,
       approvalStatus,
       teamId,
       site,
@@ -797,12 +803,16 @@ export class CalibrationService extends VersionedBaseService {
       currentPage: number;
     };
   }> {
-    return this.findAll({ fromDate, toDate, statuses: 'scheduled' });
+    return this.findAll({ fromDate, toDate, statuses: CalibrationStatusEnum.enum.scheduled });
   }
 
-  // 교정 상태 변경
-  async updateStatus(id: string, status: CalibrationStatus): Promise<CalibrationRecord> {
-    return this.update(id, { status });
+  // 교정 상태 변경 (CAS 보호)
+  async updateStatus(
+    id: string,
+    status: CalibrationStatus,
+    version: number
+  ): Promise<CalibrationRecord> {
+    return this.update(id, { status, version });
   }
 
   // 예정된 교정 완료 처리
@@ -812,7 +822,10 @@ export class CalibrationService extends VersionedBaseService {
   ): Promise<CalibrationRecord> {
     const calibration = await this.findOne(id);
 
-    if (calibration.status !== 'scheduled' && calibration.status !== 'in_progress') {
+    if (
+      calibration.status !== CalibrationStatusEnum.enum.scheduled &&
+      calibration.status !== CalibrationStatusEnum.enum.in_progress
+    ) {
       throw new BadRequestException({
         code: 'CALIBRATION_INVALID_STATUS_FOR_COMPLETE',
         message: 'Only scheduled or in-progress calibrations can be completed.',
@@ -821,7 +834,7 @@ export class CalibrationService extends VersionedBaseService {
 
     return this.update(id, {
       ...updateDto,
-      status: 'completed',
+      status: CalibrationStatusEnum.enum.completed,
     });
   }
 
@@ -867,7 +880,10 @@ export class CalibrationService extends VersionedBaseService {
    *
    * ✅ version 필드 포함 (프론트엔드 CAS 버전 추출용)
    */
-  async findPendingApprovals(): Promise<{
+  async findPendingApprovals(
+    page = 1,
+    pageSize: number = DEFAULT_PAGE_SIZE
+  ): Promise<{
     items: (CalibrationRecord & {
       registeredByUser?: {
         id: string;
@@ -885,6 +901,17 @@ export class CalibrationService extends VersionedBaseService {
       currentPage: number;
     };
   }> {
+    // Count total pending approvals
+    const [{ count: totalItems }] = await this.db
+      .select({ count: count() })
+      .from(schema.calibrations)
+      .where(
+        eq(schema.calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval)
+      );
+
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const offset = (page - 1) * pageSize;
+
     // Use Drizzle relational query to include user→team relations
     const items = await this.db.query.calibrations.findMany({
       where: (calibrations, { eq: eqFn }) =>
@@ -907,7 +934,8 @@ export class CalibrationService extends VersionedBaseService {
         },
       },
       orderBy: (calibrations, { desc: descFn }) => [descFn(calibrations.createdAt)],
-      limit: 500,
+      limit: pageSize,
+      offset,
     });
 
     // ✅ Phase 4: transformDbToRecord 기반 정규화
@@ -923,11 +951,11 @@ export class CalibrationService extends VersionedBaseService {
     return {
       items: transformedItems,
       meta: {
-        totalItems: transformedItems.length,
+        totalItems,
         itemCount: transformedItems.length,
-        itemsPerPage: 20,
-        totalPages: 1,
-        currentPage: 1,
+        itemsPerPage: pageSize,
+        totalPages,
+        currentPage: page,
       },
     };
   }
@@ -976,27 +1004,29 @@ export class CalibrationService extends VersionedBaseService {
     // 캐시 무효화 (성공)
     this.invalidateCalibrationCache(id);
 
-    // 장비 교정일 자동 업데이트 및 교정 기한 초과 부적합 자동 조치
-    await this.updateEquipmentCalibrationDates(
-      calibration.equipmentId,
-      calibration.calibrationDate,
-      id,
-      approveDto.approverId
-    );
-
-    // 📢 알림 이벤트 발행 (교정 승인)
-    // equipment JOIN으로 이벤트 페이로드 enrichment (findOne은 calibrations만 조회)
+    // 장비 정보 1회 조회 — 교정일 업데이트 + 알림 이벤트 공용 (이중 DB 호출 방지)
     const [approvedEquip] = await this.db
       .select({
         name: schema.equipment.name,
         managementNumber: schema.equipment.managementNumber,
         teamId: schema.equipment.teamId,
         site: schema.equipment.site,
+        calibrationCycle: schema.equipment.calibrationCycle,
       })
       .from(schema.equipment)
       .where(eq(schema.equipment.id, calibration.equipmentId))
       .limit(1);
 
+    // 장비 교정일 자동 업데이트 및 교정 기한 초과 부적합 자동 조치
+    await this.updateEquipmentCalibrationDates(
+      calibration.equipmentId,
+      calibration.calibrationDate,
+      id,
+      approveDto.approverId,
+      approvedEquip?.calibrationCycle ?? undefined
+    );
+
+    // 📢 알림 이벤트 발행 (교정 승인) — approvedEquip 재사용
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_APPROVED, {
       calibrationId: id,
       equipmentId: calibration.equipmentId,
@@ -1023,20 +1053,25 @@ export class CalibrationService extends VersionedBaseService {
     equipmentId: string,
     calibrationDate: Date,
     calibrationId?: string,
-    approverId?: string
+    approverId?: string,
+    /** 호출자가 이미 조회한 calibrationCycle (DB 이중 조회 방지) */
+    preloadedCycle?: number
   ): Promise<void> {
     try {
-      // 장비의 교정 주기 조회
-      const [equip] = await this.db
-        .select({ calibrationCycle: schema.equipment.calibrationCycle })
-        .from(schema.equipment)
-        .where(eq(schema.equipment.id, equipmentId))
-        .limit(1);
+      // 장비의 교정 주기: 호출자가 전달하면 재사용, 아니면 조회
+      let cycle = preloadedCycle;
+      if (cycle === undefined) {
+        const [equip] = await this.db
+          .select({ calibrationCycle: schema.equipment.calibrationCycle })
+          .from(schema.equipment)
+          .where(eq(schema.equipment.id, equipmentId))
+          .limit(1);
+        cycle = equip?.calibrationCycle ?? undefined;
+      }
 
       // 차기 교정일 = 교정일 + 교정주기(개월) — SSOT 유틸리티 사용
       const nextCalibrationDate =
-        calculateNextCalibrationDate(calibrationDate, equip?.calibrationCycle ?? undefined) ??
-        calibrationDate;
+        calculateNextCalibrationDate(calibrationDate, cycle) ?? calibrationDate;
 
       await this.db
         .update(schema.equipment)
@@ -1100,7 +1135,7 @@ export class CalibrationService extends VersionedBaseService {
           .update(nonConformances)
           .set({
             status: NCStatusVal.CORRECTED,
-            resolutionType: 'recalibration',
+            resolutionType: ResolutionTypeEnum.enum.recalibration,
             calibrationId,
             correctionContent: this.i18n.t(
               'system.calibrationOverdue.correctionContent',
@@ -1109,6 +1144,7 @@ export class CalibrationService extends VersionedBaseService {
             correctionDate: today.toISOString().split('T')[0],
             correctedBy: correctedBy || null,
             updatedAt: today,
+            version: sql`${nonConformances.version} + 1`,
           })
           .where(eq(nonConformances.id, nc.id));
 
@@ -1117,6 +1153,7 @@ export class CalibrationService extends VersionedBaseService {
           .set({
             status: ESVal.AVAILABLE,
             updatedAt: today,
+            version: sql`${schema.equipment.version} + 1`,
           })
           .where(eq(schema.equipment.id, equipmentId));
 
@@ -1259,8 +1296,18 @@ export class CalibrationService extends VersionedBaseService {
     }
 
     const now = new Date();
+
+    // 장비별 중간점검 주기를 DB에서 조회 (기본값 6개월)
+    const DEFAULT_INTERMEDIATE_CHECK_CYCLE_MONTHS = 6;
+    const [equip] = await this.db
+      .select({ intermediateCheckCycle: schema.equipment.intermediateCheckCycle })
+      .from(schema.equipment)
+      .where(eq(schema.equipment.id, calibration.equipmentId))
+      .limit(1);
+    const cycleMonths = equip?.intermediateCheckCycle ?? DEFAULT_INTERMEDIATE_CHECK_CYCLE_MONTHS;
+
     const nextIntermediateCheckDate = new Date(now);
-    nextIntermediateCheckDate.setMonth(nextIntermediateCheckDate.getMonth() + 6);
+    nextIntermediateCheckDate.setMonth(nextIntermediateCheckDate.getMonth() + cycleMonths);
 
     // DB 기존 notes에 중간점검 기록 추가
     const existingNotes = calibration.notes || '';
@@ -1278,6 +1325,8 @@ export class CalibrationService extends VersionedBaseService {
       .where(eq(schema.calibrations.id, id))
       .returning();
 
+    this.invalidateCalibrationCache(id);
+
     return {
       calibration: this.transformDbToRecord(updated),
       message: '중간점검이 완료되었습니다.',
@@ -1289,116 +1338,84 @@ export class CalibrationService extends VersionedBaseService {
    * ✅ 이미 DB 기반 (변경 없음)
    */
   async findAllIntermediateChecks(query?: {
-    status?: 'pending' | 'completed' | 'overdue';
+    status?: IntermediateCheckStatus;
     equipmentId?: string;
     managerId?: string;
     teamId?: string;
     site?: string;
   }): Promise<{
     items: CalibrationRecord[];
-    meta: { totalItems: number; overdueCount: number; pendingCount: number };
+    meta: { totalItems: number; overdueCount: number; pendingCount: number; dueCount: number };
   }> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getUtcStartOfDay();
+    const todayStr = today.toISOString().split('T')[0];
 
-    const items = await this.db.query.calibrations.findMany({
-      where: (calibrations, { isNotNull, eq: eqFn, and: andFn }) => {
-        const conditions = [isNotNull(calibrations.intermediateCheckDate)];
+    // ✅ JOIN 기반 쿼리: teamId/site를 DB 레벨에서 필터링 (post-filter 제거)
+    // Drizzle relational query는 nested where를 지원하지 않으므로 select+join 사용
+    const whereConditions: SQL[] = [sql`${schema.calibrations.intermediateCheckDate} IS NOT NULL`];
 
-        if (query?.equipmentId) {
-          conditions.push(eqFn(calibrations.equipmentId, query.equipmentId));
-        }
-
-        return andFn(...conditions);
-      },
-      with: {
-        equipment: {
-          columns: {
-            id: true,
-            name: true,
-            managementNumber: true,
-            teamId: true,
-            site: true,
-          },
-          with: {
-            team: true,
-          },
-        },
-      },
-      orderBy: (calibrations, { asc: ascFn }) => [ascFn(calibrations.intermediateCheckDate)],
-      limit: 500,
-    });
-
-    let results = items;
-
-    // status 필터
-    if (query?.status) {
-      results = results.filter((cal) => {
-        if (!cal.intermediateCheckDate) return false;
-        const checkDate = new Date(cal.intermediateCheckDate);
-        checkDate.setHours(0, 0, 0, 0);
-
-        if (query.status === 'overdue') return checkDate < today;
-        if (query.status === 'pending') return checkDate >= today;
-        return true;
-      });
+    if (query?.equipmentId) {
+      whereConditions.push(eq(schema.calibrations.equipmentId, query.equipmentId));
+    }
+    if (query?.status === 'overdue') {
+      whereConditions.push(sql`${schema.calibrations.intermediateCheckDate} < ${todayStr}`);
+    } else if (query?.status === 'due') {
+      whereConditions.push(sql`${schema.calibrations.intermediateCheckDate} <= ${todayStr}`);
+    } else if (query?.status === 'pending') {
+      whereConditions.push(sql`${schema.calibrations.intermediateCheckDate} >= ${todayStr}`);
     }
 
-    // teamId/site 필터 (post-filter: Drizzle relational query 제한)
+    // 크로스사이트 워크플로우: teamId/site 필터를 DB 레벨에서 처리
     if (query?.teamId) {
-      results = results.filter(
-        (cal) =>
-          (cal as unknown as { equipment?: { teamId?: string | null } }).equipment?.teamId ===
-          query.teamId
-      );
+      whereConditions.push(eq(schema.equipment.teamId, query.teamId));
     }
     if (query?.site) {
-      results = results.filter(
-        (cal) =>
-          (cal as unknown as { equipment?: { site?: string | null } }).equipment?.site ===
-          query.site
-      );
+      whereConditions.push(eq(schema.equipment.site, query.site));
     }
 
-    // ✅ 플래튼: nested equipment/team → CalibrationRecord 조인 필드
-    const flattenedItems: CalibrationRecord[] = results.map((item) => {
-      const equip = (
-        item as unknown as {
-          equipment?: {
-            id: string;
-            name: string;
-            managementNumber: string;
-            teamId: string | null;
-            site?: string | null;
-            team?: { id: string; name: string } | null;
-          };
-        }
-      ).equipment;
-      return {
-        ...this.transformDbToRecord(item as unknown as CalibrationRow),
-        equipmentName: equip?.name || undefined,
-        managementNumber: equip?.managementNumber || undefined,
-        team: equip?.team?.name || undefined,
-        teamId: equip?.teamId || undefined,
-        teamName: equip?.team?.name || undefined,
-      };
-    });
+    const rows = await this.db
+      .select({
+        calibration: schema.calibrations,
+        equipmentName: schema.equipment.name,
+        equipmentMgmtNo: schema.equipment.managementNumber,
+        equipmentTeamId: schema.equipment.teamId,
+        equipmentSite: schema.equipment.site,
+        teamName: schema.teams.name,
+      })
+      .from(schema.calibrations)
+      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+      .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+      .where(and(...whereConditions))
+      .orderBy(asc(schema.calibrations.intermediateCheckDate));
+
+    // 플래튼: JOIN 결과 → CalibrationRecord
+    const flattenedItems: CalibrationRecord[] = rows.map((row) => ({
+      ...this.transformDbToRecord(row.calibration),
+      equipmentName: row.equipmentName || undefined,
+      managementNumber: row.equipmentMgmtNo || undefined,
+      team: row.teamName || undefined,
+      teamId: row.equipmentTeamId || undefined,
+      teamName: row.teamName || undefined,
+    }));
 
     return {
       items: flattenedItems,
       meta: {
         totalItems: flattenedItems.length,
-        overdueCount: items.filter((cal) => {
+        overdueCount: flattenedItems.filter((cal) => {
           if (!cal.intermediateCheckDate) return false;
-          const checkDate = new Date(cal.intermediateCheckDate);
-          checkDate.setHours(0, 0, 0, 0);
-          return checkDate < today;
+          const d = getUtcStartOfDay(new Date(cal.intermediateCheckDate));
+          return d.getTime() < today.getTime();
         }).length,
-        pendingCount: items.filter((cal) => {
+        pendingCount: flattenedItems.filter((cal) => {
           if (!cal.intermediateCheckDate) return false;
-          const checkDate = new Date(cal.intermediateCheckDate);
-          checkDate.setHours(0, 0, 0, 0);
-          return checkDate >= today;
+          const d = getUtcStartOfDay(new Date(cal.intermediateCheckDate));
+          return d.getTime() >= today.getTime();
+        }).length,
+        dueCount: flattenedItems.filter((cal) => {
+          if (!cal.intermediateCheckDate) return false;
+          const d = getUtcStartOfDay(new Date(cal.intermediateCheckDate));
+          return d.getTime() <= today.getTime();
         }).length,
       },
     };

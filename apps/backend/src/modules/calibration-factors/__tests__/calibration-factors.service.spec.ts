@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CalibrationFactorsService } from '../calibration-factors.service';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import {
   CalibrationFactorTypeValues,
   CalibrationFactorApprovalStatusValues,
@@ -71,8 +72,18 @@ describe('CalibrationFactorsService', () => {
       update: jest.fn().mockReturnValue(chain),
     };
 
+    const mockCacheService = {
+      getOrSet: jest.fn().mockImplementation((_key: string, fn: () => unknown) => fn()),
+      delete: jest.fn(),
+      deleteByPattern: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CalibrationFactorsService, { provide: 'DRIZZLE_INSTANCE', useValue: mockDb }],
+      providers: [
+        CalibrationFactorsService,
+        { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
+        { provide: SimpleCacheService, useValue: mockCacheService },
+      ],
     }).compile();
 
     service = module.get<CalibrationFactorsService>(CalibrationFactorsService);

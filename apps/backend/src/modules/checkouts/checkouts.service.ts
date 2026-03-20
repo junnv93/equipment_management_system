@@ -29,6 +29,7 @@ import {
 import {
   CACHE_TTL,
   CHECKOUT_DATA_SCOPE,
+  DEFAULT_PAGE_SIZE,
   getAllowedStatusesForPurpose,
   Permission,
 } from '@equipment-management/shared-constants';
@@ -334,14 +335,13 @@ export class CheckoutsService extends VersionedBaseService {
     }
 
     // 사이트 필터링 (신청자의 사이트 OR 대여 시 빌려주는 사이트)
+    // EXISTS로 크로스사이트 렌탈 지원 — uncorrelated subquery보다 옵티마이저 힌트 명확
     if (site) {
-      const usersAtSite = this.db
-        .select({ id: schema.users.id })
-        .from(schema.users)
-        .where(eq(schema.users.site, site));
-
       whereConditions.push(
-        or(sql`${checkouts.requesterId} IN (${usersAtSite})`, eq(checkouts.lenderSiteId, site))!
+        or(
+          sql`EXISTS (SELECT 1 FROM ${schema.users} WHERE ${schema.users.id} = ${checkouts.requesterId} AND ${schema.users.site} = ${site})`,
+          eq(checkouts.lenderSiteId, site)
+        )!
       );
     }
 
@@ -509,7 +509,7 @@ export class CheckoutsService extends VersionedBaseService {
     queryParams: CheckoutQueryDto,
     includeSummary = false
   ): Promise<CheckoutListResponse> {
-    const { page = 1, pageSize = 20 } = queryParams;
+    const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = queryParams;
 
     const cacheKey = this.buildCacheKey('list', {
       equipmentId: queryParams.equipmentId,
@@ -680,7 +680,6 @@ export class CheckoutsService extends VersionedBaseService {
    */
   async getDistinctDestinations(): Promise<string[]> {
     const cacheKey = `${this.CACHE_PREFIX}.destinations`;
-    const TTL_24H = 24 * 60 * 60 * 1000; // 24시간
 
     const cached = await this.cacheService.get<string[]>(cacheKey);
     if (cached) return cached;
@@ -692,7 +691,7 @@ export class CheckoutsService extends VersionedBaseService {
       .orderBy(asc(checkouts.destination));
 
     const destinations = results.map((r) => r.destination).filter(Boolean) as string[];
-    await this.cacheService.set(cacheKey, destinations, TTL_24H);
+    await this.cacheService.set(cacheKey, destinations, CACHE_TTL.DAY);
 
     return destinations;
   }
@@ -1414,43 +1413,54 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ Optimistic locking: CAS를 사용한 상태 전환 (version 검증 포함)
-      const updated = await this.updateWithVersion<Checkout>(
-        checkouts,
-        uuid,
-        dto.version,
-        {
-          status: CSVal.CHECKED_OUT as CheckoutStatus,
-          checkoutDate: new Date(),
-        },
-        '반출'
-      );
-
-      // 반출된 장비들의 상태를 배치로 'checked_out'으로 변경
+      // ✅ 트랜잭션: checkout 상태 변경 + 장비 상태 변경 + 상태 기록을 원자적으로 처리
       const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
-
       const equipmentIds = items.map((item) => item.equipmentId);
-      await this.equipmentService.updateStatusBatch(equipmentIds, ESVal.CHECKED_OUT);
 
-      // 장비별 반출 전 상태 기록 (Phase 3) — 배치 업데이트로 N+1 방지
-      if (dto.itemConditions && dto.itemConditions.length > 0) {
-        const conditionCases = dto.itemConditions.map(
-          (cond) =>
-            sql`WHEN ${checkoutItems.equipmentId} = ${cond.equipmentId} THEN ${cond.conditionBefore}`
+      const updated = await this.db.transaction(async (tx) => {
+        // 1. CAS를 사용한 checkout 상태 전환 (version 검증 포함)
+        const result = await this.updateWithVersion<Checkout>(
+          checkouts,
+          uuid,
+          dto.version,
+          {
+            status: CSVal.CHECKED_OUT as CheckoutStatus,
+            checkoutDate: new Date(),
+          },
+          '반출',
+          tx
         );
-        const equipmentIdsForCondition = dto.itemConditions.map((c) => c.equipmentId);
-        await this.db
-          .update(checkoutItems)
-          .set({
-            conditionBefore: sql`CASE ${sql.join(conditionCases, sql` `)} END`,
-          })
-          .where(
-            and(
-              eq(checkoutItems.checkoutId, uuid),
-              inArray(checkoutItems.equipmentId, equipmentIdsForCondition)
-            )
+
+        // 2. 반출된 장비들의 상태를 배치로 'checked_out'으로 변경
+        await this.equipmentService.updateStatusBatch(
+          equipmentIds,
+          ESVal.CHECKED_OUT,
+          undefined,
+          tx
+        );
+
+        // 3. 장비별 반출 전 상태 기록 (Phase 3) — 배치 업데이트로 N+1 방지
+        if (dto.itemConditions && dto.itemConditions.length > 0) {
+          const conditionCases = dto.itemConditions.map(
+            (cond) =>
+              sql`WHEN ${checkoutItems.equipmentId} = ${cond.equipmentId} THEN ${cond.conditionBefore}`
           );
-      }
+          const equipmentIdsForCondition = dto.itemConditions.map((c) => c.equipmentId);
+          await tx
+            .update(checkoutItems)
+            .set({
+              conditionBefore: sql`CASE ${sql.join(conditionCases, sql` `)} END`,
+            })
+            .where(
+              and(
+                eq(checkoutItems.checkoutId, uuid),
+                inArray(checkoutItems.equipmentId, equipmentIdsForCondition)
+              )
+            );
+        }
+
+        return result;
+      });
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1633,26 +1643,35 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ Optimistic locking: CAS를 사용한 상태 전환
-      const updated = await this.updateCheckoutStatus(
-        uuid,
-        checkout,
-        CSVal.RETURN_APPROVED as CheckoutStatus,
-        {
-          returnApprovedBy: approveReturnDto.approverId,
-          returnApprovedAt: new Date(),
-        }
-      );
-
-      // ✅ 반입 승인 후 장비 상태를 배치로 'available'로 복원
+      // ✅ 트랜잭션: checkout 상태 변경 + 장비 상태 복원을 원자적으로 처리
       const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
-
       const equipmentIds = items.map((item) => item.equipmentId);
-      await this.equipmentService.updateStatusBatch(
-        equipmentIds,
-        ESVal.AVAILABLE,
-        ESVal.CHECKED_OUT
-      );
+
+      const updated = await this.db.transaction(async (tx) => {
+        // 1. CAS를 사용한 checkout 상태 전환
+        const result = await this.updateWithVersion<Checkout>(
+          checkouts,
+          uuid,
+          checkout.version,
+          {
+            status: CSVal.RETURN_APPROVED as CheckoutStatus,
+            returnApprovedBy: approveReturnDto.approverId,
+            returnApprovedAt: new Date(),
+          },
+          '반출',
+          tx
+        );
+
+        // 2. 장비 상태를 배치로 'available'로 복원
+        await this.equipmentService.updateStatusBatch(
+          equipmentIds,
+          ESVal.AVAILABLE,
+          ESVal.CHECKED_OUT,
+          tx
+        );
+
+        return result;
+      });
 
       // 렌탈 반납 목적 checkout일 경우 rental import 완료 콜백
       if (checkout.purpose === CPVal.RETURN_TO_VENDOR) {
@@ -1686,6 +1705,11 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
+      // ✅ CAS 실패 시 stale cache 방지
+      if (error instanceof ConflictException) {
+        const detailCacheKey = this.buildCacheKey('detail', { uuid });
+        await this.cacheService.delete(detailCacheKey);
+      }
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
@@ -1881,58 +1905,74 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // condition_checks에 INSERT
-      const [conditionCheck] = await this.db
-        .insert(conditionChecks)
-        .values({
-          checkoutId: uuid,
-          step: dto.step as ConditionCheckStep,
-          checkedBy: checkerId,
-          checkedAt: new Date(),
-          appearanceStatus: dto.appearanceStatus,
-          operationStatus: dto.operationStatus,
-          accessoriesStatus: dto.accessoriesStatus || null,
-          abnormalDetails: dto.abnormalDetails || null,
-          comparisonWithPrevious: dto.comparisonWithPrevious || null,
-          notes: dto.notes || null,
-        })
-        .returning();
+      // ✅ 트랜잭션: condition_check 삽입 + checkout 상태 전환 + 장비 상태 변경을 원자적으로 처리
+      const needsEquipmentStatusChange =
+        dto.step === 'lender_checkout' || dto.step === 'lender_return';
+      let equipmentIds: string[] = [];
 
-      // 반출 상태 자동 전이
-      const checkoutUpdateData: Partial<Checkout> = {
-        status: transition.nextStatus as CheckoutStatus,
-        updatedAt: new Date(),
-      };
-
-      // 단계별 날짜 및 장비 상태 업데이트
-      if (dto.step === 'lender_checkout') {
-        // ① 반출 전 확인 → checkoutDate 설정, 장비 status → checked_out
-        checkoutUpdateData.checkoutDate = new Date();
+      if (needsEquipmentStatusChange) {
         const items = await this.db
-          .select()
+          .select({ equipmentId: checkoutItems.equipmentId })
           .from(checkoutItems)
           .where(eq(checkoutItems.checkoutId, uuid));
-        const equipmentIds = items.map((item) => item.equipmentId);
-        await this.equipmentService.updateStatusBatch(equipmentIds, ESVal.CHECKED_OUT);
-      } else if (dto.step === 'lender_return') {
-        // ④ 반입 확인 → actualReturnDate 설정, 장비 status → available
-        checkoutUpdateData.actualReturnDate = new Date();
-        const items = await this.db
-          .select()
-          .from(checkoutItems)
-          .where(eq(checkoutItems.checkoutId, uuid));
-        const equipmentIds = items.map((item) => item.equipmentId);
-        await this.equipmentService.updateStatusBatch(equipmentIds, ESVal.AVAILABLE);
+        equipmentIds = items.map((item) => item.equipmentId);
       }
 
-      // ✅ Optimistic locking: CAS를 사용한 상태 전환
-      await this.updateWithVersion<Checkout>(
-        checkouts,
-        uuid,
-        checkout.version,
-        checkoutUpdateData,
-        '반출'
-      );
+      const conditionCheck = await this.db.transaction(async (tx) => {
+        // 1. condition_checks에 INSERT
+        const [check] = await tx
+          .insert(conditionChecks)
+          .values({
+            checkoutId: uuid,
+            step: dto.step as ConditionCheckStep,
+            checkedBy: checkerId,
+            checkedAt: new Date(),
+            appearanceStatus: dto.appearanceStatus,
+            operationStatus: dto.operationStatus,
+            accessoriesStatus: dto.accessoriesStatus || null,
+            abnormalDetails: dto.abnormalDetails || null,
+            comparisonWithPrevious: dto.comparisonWithPrevious || null,
+            notes: dto.notes || null,
+          })
+          .returning();
+
+        // 2. 반출 상태 자동 전이
+        const checkoutUpdateData: Partial<Checkout> = {
+          status: transition.nextStatus as CheckoutStatus,
+          updatedAt: new Date(),
+        };
+
+        // 3. 단계별 날짜 및 장비 상태 업데이트
+        if (dto.step === 'lender_checkout') {
+          checkoutUpdateData.checkoutDate = new Date();
+          await this.equipmentService.updateStatusBatch(
+            equipmentIds,
+            ESVal.CHECKED_OUT,
+            undefined,
+            tx
+          );
+        } else if (dto.step === 'lender_return') {
+          checkoutUpdateData.actualReturnDate = new Date();
+          await this.equipmentService.updateStatusBatch(
+            equipmentIds,
+            ESVal.AVAILABLE,
+            undefined,
+            tx
+          );
+        }
+
+        // 4. CAS를 사용한 checkout 상태 전환
+        await this.updateWithVersion<Checkout>(
+          checkouts,
+          uuid,
+          checkout.version,
+          checkoutUpdateData,
+          '반출',
+          tx
+        );
+
+        return check;
+      });
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);

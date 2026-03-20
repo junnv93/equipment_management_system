@@ -1,14 +1,10 @@
 /**
  * RequestDataCodec — equipment_requests.requestData 직렬화/역직렬화 SSOT
  *
- * 문제:
- *   JSON.stringify(dto) → DB TEXT → JSON.parse() 과정에서
- *   Date 객체가 ISO 문자열로 변환된 뒤 복원되지 않는다.
- *   Drizzle ORM은 Date.toISOString()을 호출하므로 문자열이 들어오면 TypeError 발생.
+ * DB 컬럼이 jsonb이므로 Drizzle ORM이 JS 객체 ↔ JSON 변환을 자동 처리합니다.
+ * 이 코덱은 Zod 스키마 기반 타입 변환(Date 복원 등)만 담당합니다.
  *
- * 해결:
- *   requestType별 Zod 스키마를 통한 역직렬화 → z.coerce.date()가 자동 복원.
- *   모든 requestData 읽기/쓰기는 반드시 이 코덱을 통해야 한다.
+ * 모든 requestData 읽기/쓰기는 반드시 이 코덱을 통해야 한다.
  */
 import { createEquipmentSchema, updateEquipmentSchema } from '@equipment-management/schemas';
 import { z } from 'zod';
@@ -45,33 +41,37 @@ interface RequestDataTypeMap {
 }
 
 // ---------------------------------------------------------------------------
-// 2. 직렬화 (DTO → JSON string)
+// 2. 직렬화 (DTO → jsonb 호환 객체)
 // ---------------------------------------------------------------------------
 
 /**
- * DTO를 JSON 문자열로 직렬화.
- * Date 필드는 JSON.stringify가 자동으로 ISO 문자열로 변환한다.
+ * DTO를 jsonb 호환 plain object로 변환.
+ * jsonb 컬럼에서는 Drizzle ORM이 자동으로 JSON 직렬화하므로
+ * JSON.stringify 대신 plain object를 반환합니다.
  */
-export function serializeRequestData(data: Record<string, unknown>): string {
-  return JSON.stringify(data);
+export function serializeRequestData(data: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
-// 3. 역직렬화 (JSON string → typed DTO)
+// 3. 역직렬화 (jsonb → typed DTO)
 // ---------------------------------------------------------------------------
 
 /**
- * JSON 문자열을 requestType에 맞는 Zod 스키마로 파싱.
+ * jsonb에서 읽은 객체를 requestType에 맞는 Zod 스키마로 파싱.
  *
  * - z.coerce.date()가 ISO 문자열 → Date 객체 자동 변환
  * - .passthrough()로 version 등 추가 필드 보존
  * - 스키마 검증 실패 시 ZodError throw
+ *
+ * jsonb 컬럼은 Drizzle ORM이 자동 파싱하여 객체를 전달하지만,
+ * 하위 호환성을 위해 문자열도 처리합니다.
  */
 export function deserializeRequestData<T extends RequestType>(
   requestType: T,
-  jsonString: string | null
+  data: unknown
 ): RequestDataTypeMap[T] {
-  const raw = JSON.parse(jsonString || '{}');
+  const raw = typeof data === 'string' ? JSON.parse(data) : (data ?? {});
   const schema = REQUEST_DATA_SCHEMAS[requestType];
   return schema.parse(raw) as RequestDataTypeMap[T];
 }
@@ -89,11 +89,14 @@ interface RequestDataDisplayInfo {
 
 /**
  * 알림 이벤트, UI 목록 등에서 name/managementNumber만 필요한 경우.
- * Zod 검증 없이 JSON.parse만 수행. 실패 시 빈 객체 반환.
+ * Zod 검증 없이 객체를 직접 반환. 실패 시 빈 객체 반환.
  */
-export function parseRequestDataForDisplay(jsonString: string | null): RequestDataDisplayInfo {
+export function parseRequestDataForDisplay(data: unknown): RequestDataDisplayInfo {
   try {
-    return JSON.parse(jsonString || '{}') as RequestDataDisplayInfo;
+    if (typeof data === 'string') {
+      return JSON.parse(data) as RequestDataDisplayInfo;
+    }
+    return (data ?? {}) as RequestDataDisplayInfo;
   } catch {
     return {};
   }

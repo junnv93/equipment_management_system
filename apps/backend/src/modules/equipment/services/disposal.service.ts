@@ -26,6 +26,7 @@ import {
   EquipmentStatusValues as ESVal,
   UserRoleValues as URVal,
 } from '@equipment-management/schemas';
+import { DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
 import type { DisposalRequestWithRelations } from './disposal.types';
 
 /**
@@ -605,6 +606,7 @@ export class DisposalService extends VersionedBaseService {
         },
       },
       orderBy: (disposalRequests, { desc }) => [desc(disposalRequests.requestedAt)],
+      limit: DASHBOARD_ITEM_LIMIT,
     });
 
     // 3. lab_manager가 아니면 같은 팀 장비만 필터링
@@ -648,6 +650,7 @@ export class DisposalService extends VersionedBaseService {
         },
       },
       orderBy: (disposalRequests, { desc }) => [desc(disposalRequests.reviewedAt)],
+      limit: DASHBOARD_ITEM_LIMIT,
     });
 
     return requests;

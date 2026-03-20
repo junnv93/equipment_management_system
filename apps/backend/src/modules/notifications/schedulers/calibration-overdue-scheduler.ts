@@ -12,6 +12,7 @@ import {
   IncidentTypeEnum,
   ResolutionTypeEnum,
   DEFAULT_LOCALE,
+  CalibrationRequiredEnum,
 } from '@equipment-management/schemas';
 import { NotificationsService } from '../notifications.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
@@ -145,7 +146,7 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
         .where(
           and(
             eq(equipment.isActive, true),
-            eq(equipment.calibrationRequired, 'required'),
+            eq(equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
             sql`${equipment.nextCalibrationDate} IS NOT NULL`,
             sql`${equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`,
             notInArray(equipment.status, this.EXCLUDED_STATUSES)

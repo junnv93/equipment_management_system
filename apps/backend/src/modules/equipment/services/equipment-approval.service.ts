@@ -14,7 +14,8 @@ import {
   equipment,
   users,
 } from '@equipment-management/db/schema';
-import { UserRoleValues } from '@equipment-management/schemas';
+import { UserRoleValues, ApprovalStatusValues } from '@equipment-management/schemas';
+import { DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
 import type { AppDatabase } from '@equipment-management/db';
 import { EquipmentService } from '../equipment.service';
 import type { CreateEquipmentDto } from '../dto/create-equipment.dto';
@@ -78,7 +79,7 @@ export class EquipmentApprovalService {
         .values({
           requestType: 'create',
           requestedBy,
-          approvalStatus: 'pending_approval',
+          approvalStatus: ApprovalStatusValues.PENDING_APPROVAL,
           requestData: serializeRequestData(createDto as unknown as Record<string, unknown>),
         })
         .returning();
@@ -153,7 +154,7 @@ export class EquipmentApprovalService {
           requestType: 'update',
           equipmentId: existingEquipment.id,
           requestedBy,
-          approvalStatus: 'pending_approval',
+          approvalStatus: ApprovalStatusValues.PENDING_APPROVAL,
           requestData: serializeRequestData(updateDto as unknown as Record<string, unknown>),
         })
         .returning();
@@ -216,7 +217,7 @@ export class EquipmentApprovalService {
           requestType: 'delete',
           equipmentId: existingEquipment.id,
           requestedBy,
-          approvalStatus: 'pending_approval',
+          approvalStatus: ApprovalStatusValues.PENDING_APPROVAL,
         })
         .returning();
 
@@ -255,8 +256,9 @@ export class EquipmentApprovalService {
       }
 
       const requests = await this.db.query.equipmentRequests.findMany({
-        where: eq(equipmentRequests.approvalStatus, 'pending_approval'),
+        where: eq(equipmentRequests.approvalStatus, ApprovalStatusValues.PENDING_APPROVAL),
         orderBy: [desc(equipmentRequests.requestedAt)],
+        limit: DASHBOARD_ITEM_LIMIT,
         with: {
           requester: {
             with: {
@@ -380,7 +382,7 @@ export class EquipmentApprovalService {
       const request = await this.findRequestByUuid(requestUuid);
 
       // 이미 처리된 요청인지 확인
-      if (request.approvalStatus !== 'pending_approval') {
+      if (request.approvalStatus !== ApprovalStatusValues.PENDING_APPROVAL) {
         throw new BadRequestException({
           code: 'EQUIPMENT_REQUEST_ALREADY_PROCESSED',
           message: 'This request has already been processed.',
@@ -436,7 +438,7 @@ export class EquipmentApprovalService {
       const [updated] = await this.db
         .update(equipmentRequests)
         .set({
-          approvalStatus: 'approved',
+          approvalStatus: ApprovalStatusValues.APPROVED,
           approvedBy,
           approvedAt: new Date(),
         })
@@ -509,7 +511,7 @@ export class EquipmentApprovalService {
       const request = await this.findRequestByUuid(requestUuid);
 
       // 이미 처리된 요청인지 확인
-      if (request.approvalStatus !== 'pending_approval') {
+      if (request.approvalStatus !== ApprovalStatusValues.PENDING_APPROVAL) {
         throw new BadRequestException({
           code: 'EQUIPMENT_REQUEST_ALREADY_PROCESSED',
           message: 'This request has already been processed.',
@@ -532,7 +534,7 @@ export class EquipmentApprovalService {
       const [updated] = await this.db
         .update(equipmentRequests)
         .set({
-          approvalStatus: 'rejected',
+          approvalStatus: ApprovalStatusValues.REJECTED,
           approvedBy,
           approvedAt: new Date(),
           rejectionReason,

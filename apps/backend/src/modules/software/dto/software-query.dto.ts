@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
 import {
   SoftwareApprovalStatusEnum,
   SOFTWARE_APPROVAL_STATUS_VALUES,
@@ -27,8 +28,8 @@ export const softwareHistoryQuerySchema = z.object({
   site: SiteEnum.optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
-    (val) => (val ? Number(val) : 20),
-    z.number().int().min(1).max(100).default(20)
+    (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),
+    z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE)
   ),
 });
 
@@ -92,5 +93,5 @@ export class SoftwareHistoryQueryDto {
     default: 20,
     required: false,
   })
-  pageSize?: number = 20;
+  pageSize?: number = DEFAULT_PAGE_SIZE;
 }

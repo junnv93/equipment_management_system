@@ -14,6 +14,8 @@ import {
   UsePipes,
   Request,
   ParseUUIDPipe,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -44,7 +46,12 @@ import {
 } from './dto/approve-calibration.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared-constants';
-import { SiteEnum, type CalibrationRegisteredByRole } from '@equipment-management/schemas';
+import {
+  SiteEnum,
+  IntermediateCheckStatusEnum,
+  type CalibrationRegisteredByRole,
+  type IntermediateCheckStatus,
+} from '@equipment-management/schemas';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { FileUploadService } from '../equipment/services/file-upload.service';
 import type { MulterFile } from '../../types/common.types';
@@ -138,7 +145,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_REQUESTS)
-  findPendingApprovals(): Promise<unknown> {
+  findPendingApprovals() {
     return this.calibrationService.findPendingApprovals();
   }
 
@@ -151,7 +158,9 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findUpcomingIntermediateChecks(@Query('days') days: number = 7): Promise<CalibrationRecord[]> {
+  findUpcomingIntermediateChecks(
+    @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number
+  ): Promise<CalibrationRecord[]> {
     return this.calibrationService.findUpcomingIntermediateChecks(days);
   }
 
@@ -164,16 +173,35 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: IntermediateCheckStatusEnum.options,
+    description: '중간점검 상태 필터',
+  })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   findAllIntermediateChecks(
-    @Query('status') status?: 'pending' | 'overdue',
+    @Query('status') status?: string,
     @Query('equipmentId') equipmentId?: string,
     @Query('managerId') managerId?: string,
     @Query('teamId') teamId?: string,
     @Query('site') site?: string
-  ): Promise<unknown> {
+  ) {
+    // status 파라미터 유효성 검증
+    let validatedStatus: IntermediateCheckStatus | undefined;
+    if (status) {
+      const parsed = IntermediateCheckStatusEnum.safeParse(status);
+      if (!parsed.success) {
+        throw new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          message: `Invalid status value: ${status}. Allowed values: ${IntermediateCheckStatusEnum.options.join(', ')}`,
+        });
+      }
+      validatedStatus = parsed.data;
+    }
+
     return this.calibrationService.findAllIntermediateChecks({
-      status,
+      status: validatedStatus,
       equipmentId,
       managerId,
       teamId,
@@ -237,7 +265,9 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findDueCalibrations(@Query('days') days: number = 30): Promise<{
+  findDueCalibrations(
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number
+  ): Promise<{
     items: CalibrationRecord[];
     meta: {
       totalItems: number;
@@ -283,8 +313,8 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findScheduled(
-    @Query('fromDate') fromDate: string = new Date().toISOString(),
-    @Query('toDate') toDate: string
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string
   ): Promise<{
     items: CalibrationRecord[];
     meta: {
@@ -295,9 +325,27 @@ export class CalibrationController {
       currentPage: number;
     };
   }> {
-    const fromDateObj = new Date(fromDate);
-    const toDateObj = toDate ? new Date(toDate) : new Date(fromDateObj);
-    toDateObj.setMonth(toDateObj.getMonth() + 3);
+    const fromDateObj = fromDate ? new Date(fromDate) : new Date();
+    if (isNaN(fromDateObj.getTime())) {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: `Invalid fromDate value: ${fromDate}. Must be a valid ISO date string.`,
+      });
+    }
+
+    let toDateObj: Date;
+    if (toDate) {
+      toDateObj = new Date(toDate);
+      if (isNaN(toDateObj.getTime())) {
+        throw new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          message: `Invalid toDate value: ${toDate}. Must be a valid ISO date string.`,
+        });
+      }
+    } else {
+      toDateObj = new Date(fromDateObj);
+      toDateObj.setMonth(toDateObj.getMonth() + 3);
+    }
 
     return this.calibrationService.findScheduled(fromDateObj, toDateObj);
   }
@@ -350,7 +398,7 @@ export class CalibrationController {
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   getUpcomingCalibrations(
-    @Query('days') days: number = 30,
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
     @Query('teamId') teamId?: string,
     @Query('site') site?: string
   ): Promise<
@@ -409,7 +457,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @UseInterceptors(FileInterceptor('file'))
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadCertificate(
     @Param('uuid', ParseUUIDPipe) uuid: string,
@@ -503,7 +551,7 @@ export class CalibrationController {
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
     await this.enforceCalibrationAccess(uuid, req);
-    return this.calibrationService.updateStatus(uuid, dto.status);
+    return this.calibrationService.updateStatus(uuid, dto.status, dto.version);
   }
 
   @Patch(':uuid/complete')

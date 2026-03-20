@@ -33,6 +33,7 @@ import {
   CreateSystemNotificationPipe,
   type CreateSystemNotificationDto,
 } from './dto/create-system-notification.dto';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 /**
  * 알림 API 컨트롤러
@@ -142,6 +143,7 @@ export class NotificationsController {
     description: '모든 사용자에게 전송되는 시스템 알림을 생성합니다.',
   })
   @RequirePermissions(Permission.CREATE_SYSTEM_NOTIFICATION)
+  @AuditLog({ action: 'create', entityType: 'notification' })
   createSystemNotification(
     @Body(CreateSystemNotificationPipe) dto: CreateSystemNotificationDto
   ): Promise<unknown> {
@@ -153,7 +155,10 @@ export class NotificationsController {
     summary: '교정 기한 초과 장비 점검 (수동)',
     description: '교정 기한이 초과된 장비를 점검하고 자동으로 부적합으로 전환합니다.',
   })
+  // UPDATE_EQUIPMENT 사용 이유: 전용 시스템 권한이 없으며,
+  // 이 작업은 장비 상태를 non_conforming으로 변경하므로 장비 수정 권한이 의미적으로 적절함
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'update', entityType: 'equipment' })
   async triggerOverdueCheck(): Promise<unknown> {
     return this.calibrationOverdueScheduler.handleCalibrationOverdueCheck();
   }
@@ -163,7 +168,10 @@ export class NotificationsController {
     summary: '반출 기한 초과 점검 (수동)',
     description: '반출 기한이 초과된 반출을 점검하고 overdue 상태로 전환합니다.',
   })
+  // UPDATE_EQUIPMENT 사용 이유: 전용 시스템 권한이 없으며,
+  // 이 작업은 반출 상태를 overdue로 변경하는 장비 관련 시스템 작업임
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'update', entityType: 'checkout' })
   async triggerCheckoutOverdueCheck(): Promise<unknown> {
     return this.checkoutOverdueScheduler.checkOverdueCheckouts();
   }

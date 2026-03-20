@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ApprovalsService } from '../approvals.service';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import * as schema from '@equipment-management/db/schema';
 
 describe('ApprovalsService', () => {
@@ -48,8 +49,16 @@ describe('ApprovalsService', () => {
       }),
     };
 
+    const mockCacheService = {
+      getOrSet: jest.fn().mockImplementation((_key: string, fn: () => Promise<unknown>) => fn()),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ApprovalsService, { provide: 'DRIZZLE_INSTANCE', useValue: mockDb }],
+      providers: [
+        ApprovalsService,
+        { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
+        { provide: SimpleCacheService, useValue: mockCacheService },
+      ],
     }).compile();
 
     service = module.get<ApprovalsService>(ApprovalsService);

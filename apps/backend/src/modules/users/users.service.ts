@@ -16,11 +16,15 @@ import {
 import { CreateUserDto, UpdateUserDto, UserQueryDto, ChangeRoleInput } from './dto';
 import {
   User,
-  UserListResponse,
+  type PaginatedResponseType,
   type UserRole,
   UserRoleValues as URVal,
 } from '@equipment-management/schemas';
-import { getPermissions, Permission } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  getPermissions,
+  Permission,
+} from '@equipment-management/shared-constants';
 import { parseSortString } from '../../common/utils/sort';
 
 interface JwtPayload {
@@ -64,7 +68,7 @@ export class UsersService {
     }
   }
 
-  async findAll(query: UserQueryDto): Promise<UserListResponse> {
+  async findAll(query: UserQueryDto): Promise<PaginatedResponseType<User>> {
     // 필터 조건들을 수집
     const conditions: SQL[] = [];
 
@@ -104,7 +108,7 @@ export class UsersService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
+    const pageSize = query.pageSize || DEFAULT_PAGE_SIZE;
     const offset = (page - 1) * pageSize;
 
     // 1) Count 쿼리

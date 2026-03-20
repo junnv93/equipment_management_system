@@ -4,6 +4,7 @@ import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import type { SQL } from 'drizzle-orm';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 /**
@@ -115,7 +116,7 @@ export class NotificationsService {
       fromDate,
       toDate,
       page = 1,
-      pageSize = 20,
+      pageSize = DEFAULT_PAGE_SIZE,
     } = query;
 
     const conditions = [buildOwnershipCondition(userId, userTeamId)];

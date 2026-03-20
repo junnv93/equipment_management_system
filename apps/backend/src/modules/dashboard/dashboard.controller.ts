@@ -146,10 +146,7 @@ export class DashboardController {
     description: '교정 지연 장비 목록',
     type: [OverdueCalibrationDto],
   })
-  async getOverdueCalibrations(
-    @Req() req: AuthenticatedRequest,
-    @Query('teamId') teamId?: string
-  ): Promise<OverdueCalibrationDto[]> {
+  async getOverdueCalibrations(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
     const site = req.user.site;
@@ -183,7 +180,7 @@ export class DashboardController {
     @Req() req: AuthenticatedRequest,
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
     @Query('teamId') teamId?: string
-  ): Promise<UpcomingCalibrationDto[]> {
+  ) {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
     const site = req.user.site;
@@ -207,10 +204,7 @@ export class DashboardController {
     description: '반출 지연 목록',
     type: [OverdueCheckoutDto],
   })
-  async getOverdueCheckouts(
-    @Req() req: AuthenticatedRequest,
-    @Query('teamId') teamId?: string
-  ): Promise<OverdueCheckoutDto[]> {
+  async getOverdueCheckouts(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
     const site = req.user.site;

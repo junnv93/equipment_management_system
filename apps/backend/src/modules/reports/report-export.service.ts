@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import type { ReportFormat } from '@equipment-management/schemas';
+import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 
 export type { ReportFormat };
 
@@ -90,7 +91,7 @@ export class ReportExportService {
     sheet.mergeCells(2, 1, 2, data.columns.length);
     const subCell = sheet.getCell(2, 1);
     const generatedAt = data.generatedAt ?? new Date();
-    subCell.value = `생성일시: ${generatedAt.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`;
+    subCell.value = `생성일시: ${generatedAt.toLocaleString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE })}`;
     subCell.font = { color: { argb: 'FF666666' }, size: 10 };
     subCell.alignment = { horizontal: 'right' };
 
@@ -196,7 +197,7 @@ export class ReportExportService {
         .fontSize(9)
         .fillColor('#666666')
         .text(
-          `생성일시: ${(data.generatedAt ?? new Date()).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`,
+          `생성일시: ${(data.generatedAt ?? new Date()).toLocaleString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE })}`,
           { align: 'right' }
         )
         .fillColor('#000000')

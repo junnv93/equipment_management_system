@@ -56,7 +56,11 @@ import {
   SiteEnum,
   AttachmentTypeEnum,
 } from '@equipment-management/schemas';
-import { type UserRole, ApprovalStatusEnum } from '@equipment-management/schemas';
+import {
+  type UserRole,
+  ApprovalStatusEnum,
+  ApprovalStatusValues,
+} from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
@@ -165,7 +169,7 @@ export class EquipmentController {
     // 시험소 관리자(lab_manager)는 자체 승인 가능 (UL-QP-18 Section 4)
     if (isLabManager) {
       // DTO에 approvalStatus가 없어도 자동으로 approved 처리
-      const approvedDto = { ...createEquipmentDto, approvalStatus: 'approved' as const };
+      const approvedDto = { ...createEquipmentDto, approvalStatus: ApprovalStatusValues.APPROVED };
       return this.equipmentService.create(approvedDto);
     }
 
@@ -491,23 +495,37 @@ export class EquipmentController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async findByTeam(
     @Param('teamId') teamId: string,
-    @Req() req: AuthenticatedRequest
-  ): Promise<Equipment[]> {
-    const equipmentList = await this.equipmentService.findByTeam(teamId);
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Req() req?: AuthenticatedRequest
+  ): Promise<unknown> {
+    const result = await this.equipmentService.findByTeam(
+      teamId,
+      page ? Number(page) : undefined,
+      pageSize ? Number(pageSize) : undefined
+    );
 
     // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
-    const userRole = req.user?.roles?.[0] as UserRole | undefined;
+    const userRole = req?.user?.roles?.[0] as UserRole | undefined;
     if (userRole) {
       const scope = resolveDataScope(
-        { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
+        { role: userRole, site: req?.user?.site, teamId: req?.user?.teamId },
         EQUIPMENT_DATA_SCOPE
       );
       if (scope.type === 'site' && scope.site) {
-        return equipmentList.filter((e) => e.site === scope.site);
+        const filteredItems = result.items.filter((e) => e.site === scope.site);
+        return {
+          items: filteredItems,
+          meta: {
+            ...result.meta,
+            totalItems: filteredItems.length,
+            itemCount: filteredItems.length,
+          },
+        };
       }
     }
 
-    return equipmentList;
+    return result;
   }
 
   @Get('calibration/due')

@@ -15,6 +15,7 @@ import {
   EquipmentStatus,
   EquipmentStatusEnum,
   ApprovalStatusEnum,
+  ApprovalStatusValues,
   parseManagementNumber,
   CLASSIFICATION_TO_CODE,
 } from '@equipment-management/schemas';
@@ -23,7 +24,7 @@ import { eq, and, or, desc, asc, sql, SQL, inArray, getTableColumns } from 'driz
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
-import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
@@ -438,7 +439,7 @@ export class EquipmentService extends VersionedBaseService {
       needsIntermediateCheck: dto.needsIntermediateCheck ?? false,
       status: dto.status ?? EquipmentStatusEnum.enum.available,
       isActive: true,
-      approvalStatus: dto.approvalStatus ?? 'approved',
+      approvalStatus: dto.approvalStatus ?? ApprovalStatusValues.APPROVED,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -988,16 +989,19 @@ export class EquipmentService extends VersionedBaseService {
   async updateStatusBatch(
     uuids: string[],
     newStatus: EquipmentStatus,
-    expectedStatus?: EquipmentStatus
+    expectedStatus?: EquipmentStatus,
+    tx?: AppDatabase
   ): Promise<Array<{ id: string; teamId: string | null }>> {
     if (uuids.length === 0) return [];
+
+    const executor = tx ?? this.db;
 
     const whereConditions = [inArray(equipment.id, uuids), eq(equipment.isActive, true)];
     if (expectedStatus) {
       whereConditions.push(eq(equipment.status, expectedStatus));
     }
 
-    const updated = await this.db
+    const updated = await executor
       .update(equipment)
       .set({
         status: newStatus,
@@ -1007,7 +1011,7 @@ export class EquipmentService extends VersionedBaseService {
       .where(and(...whereConditions))
       .returning({ id: equipment.id, teamId: equipment.teamId });
 
-    // 캐시 무효화
+    // 캐시 무효화 (트랜잭션 외부에서 실행해도 안전 — 최악의 경우 cache miss)
     for (const row of updated) {
       await this.invalidateCache(row.id, row.teamId ?? undefined);
     }
@@ -1281,24 +1285,66 @@ export class EquipmentService extends VersionedBaseService {
   }
 
   /**
-   * 팀별 장비 조회
+   * 팀별 장비 조회 (페이지네이션 지원)
    */
-  async findByTeam(teamId: string): Promise<Equipment[]> {
+  async findByTeam(
+    teamId: string,
+    page = 1,
+    pageSize: number = DEFAULT_PAGE_SIZE
+  ): Promise<{
+    items: Equipment[];
+    meta: PaginationMeta;
+  }> {
     const normalizedTeamId = this.normalizeTeamId(teamId);
     if (normalizedTeamId === undefined) {
-      return [];
+      return {
+        items: [],
+        meta: {
+          totalItems: 0,
+          itemCount: 0,
+          itemsPerPage: pageSize,
+          totalPages: 0,
+          currentPage: page,
+        },
+      };
     }
 
-    const cacheKey = this.buildCacheKey('team', { teamId: normalizedTeamId });
+    const cacheKey = this.buildCacheKey('team', { teamId: normalizedTeamId, page, pageSize });
 
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         try {
-          return await this.db.query.equipment.findMany({
-            where: and(eq(equipment.teamId, normalizedTeamId), eq(equipment.isActive, true)),
-            limit: 1000,
+          const whereClause = and(
+            eq(equipment.teamId, normalizedTeamId),
+            eq(equipment.isActive, true)
+          );
+
+          const [{ count: totalItems }] = await this.db
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(equipment)
+            .where(whereClause);
+
+          const total = Number(totalItems || 0);
+          const totalPages = Math.ceil(total / pageSize);
+          const offset = (page - 1) * pageSize;
+
+          const items = await this.db.query.equipment.findMany({
+            where: whereClause,
+            limit: pageSize,
+            offset,
           });
+
+          return {
+            items,
+            meta: {
+              totalItems: total,
+              itemCount: items.length,
+              itemsPerPage: pageSize,
+              totalPages,
+              currentPage: page,
+            },
+          };
         } catch (error) {
           this.logger.error(
             `팀 장비 조회 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`

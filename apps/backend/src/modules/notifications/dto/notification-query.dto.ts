@@ -10,6 +10,8 @@ import {
   type NotificationPriority,
 } from '@equipment-management/schemas';
 import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
   NOTIFICATION_CATEGORIES,
   type NotificationCategory,
 } from '@equipment-management/shared-constants';
@@ -54,8 +56,8 @@ export const notificationQuerySchema = z.object({
   sort: z.string().default('createdAt.desc'),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
-    (val) => (val ? Number(val) : 20),
-    z.number().int().min(1).max(100).default(20)
+    (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),
+    z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE)
   ),
 });
 
@@ -132,5 +134,5 @@ export class NotificationQueryDto {
     maximum: 100,
     default: 20,
   })
-  pageSize?: number = 20;
+  pageSize?: number = DEFAULT_PAGE_SIZE;
 }

@@ -18,6 +18,7 @@ import {
   EquipmentImportStatus,
   EquipmentImportStatusValues as EIVal,
   EquipmentStatusValues as ESVal,
+  CheckoutPurposeValues,
   generateTemporaryManagementNumber,
   SITE_TO_CODE,
   TEMPORARY_EQUIPMENT_PREFIX,
@@ -43,6 +44,7 @@ import {
   type EquipmentImportListResult,
 } from './types/equipment-import.types';
 import { likeContains, likeStartsWith, safeIlike } from '../../common/utils/like-escape';
+import { DEFAULT_PAGE_SIZE, VALIDATION_RULES } from '@equipment-management/shared-constants';
 
 type EquipmentImport = typeof equipmentImports.$inferSelect;
 
@@ -153,7 +155,7 @@ export class EquipmentImportsService extends VersionedBaseService {
    */
   async findAll(query: EquipmentImportQueryDto): Promise<EquipmentImportListResult> {
     const page = query.page || 1;
-    const limit = query.limit || 20;
+    const limit = query.limit || DEFAULT_PAGE_SIZE;
     const offset = (page - 1) * limit;
 
     const whereConditions: SQL<unknown>[] = [];
@@ -570,10 +572,12 @@ export class EquipmentImportsService extends VersionedBaseService {
       newCheckout = await this.checkoutsService.create(
         {
           equipmentIds: [equipmentImport.equipmentId],
-          purpose: 'return_to_vendor',
+          purpose: CheckoutPurposeValues.RETURN_TO_VENDOR,
           destination,
           reason: `${sourceTypeLabel} equipment return (import request #${equipmentImport.id.substring(0, 8)})`,
-          expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
+          expectedReturnDate: new Date(
+            Date.now() + VALIDATION_RULES.DEFAULT_RETURN_DAYS * 24 * 60 * 60 * 1000
+          ).toISOString(),
         } as Parameters<typeof this.checkoutsService.create>[0],
         requesterId,
         userTeamId

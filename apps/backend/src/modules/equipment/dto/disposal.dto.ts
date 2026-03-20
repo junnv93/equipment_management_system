@@ -5,6 +5,7 @@ import {
   DisposalReasonEnum,
   type ApprovalAction,
 } from '@equipment-management/schemas';
+import { VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { ApiProperty } from '@nestjs/swagger';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
@@ -18,7 +19,9 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  */
 export const requestDisposalSchema = z.object({
   reason: DisposalReasonEnum,
-  reasonDetail: z.string().min(10, '폐기 사유는 10자 이상 입력해주세요'),
+  reasonDetail: z
+    .string()
+    .min(VALIDATION_RULES.REJECTION_REASON_MIN_LENGTH, '폐기 사유는 10자 이상 입력해주세요'),
 });
 
 export type RequestDisposalInput = z.infer<typeof requestDisposalSchema>;
