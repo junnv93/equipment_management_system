@@ -170,6 +170,13 @@ export const equipmentFilterSchema = z.object({
     }, z.boolean())
     .optional(), // 교정 기한 초과 필터 (true: 기한 초과된 장비만) - status와 독립적으로 작동
   sort: z.string().optional(), // 정렬 기준 (예: 'name.asc')
+  showRetired: z
+    .preprocess((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return val;
+    }, z.boolean())
+    .optional(), // 퇴역/폐기 장비 표시 여부 (false: retired/disposed 제외)
   isShared: z
     .preprocess((val) => {
       if (val === 'true') return true;

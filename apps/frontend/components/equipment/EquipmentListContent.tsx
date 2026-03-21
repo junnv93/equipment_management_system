@@ -215,6 +215,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   } = useEquipmentFilters();
 
   // 장비 목록 쿼리
+  // ✅ queryFilters에 showRetired가 useEquipmentFilters에서 자동 주입됨 (useUserPreferences 연동)
   // ✅ staleTime: SHORT — 포커스 복귀 시 불필요한 재호출 방지 (백엔드 캐시와 협력)
   // ✅ refetchOnMount: 'always' — 상세 페이지에서 변경 후 목록 복귀 시 최신 상태 보장
   const { data, isLoading, isFetching, error, refetch } = useQuery({

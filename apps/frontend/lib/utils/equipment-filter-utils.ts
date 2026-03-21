@@ -43,6 +43,10 @@ import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
+ *
+ * ⚠️ showRetired는 URL 필터가 아닌 사용자 설정(DisplayPreferences)입니다.
+ * → 서버: getDisplayPreferences() → withPreferences()로 주입
+ * → 클라이언트: useUserPreferences() → useEquipmentFilters()에서 자동 주입
  */
 export interface UIEquipmentFilters {
   search: string;
@@ -74,6 +78,7 @@ export interface ApiEquipmentFilters {
   calibrationOverdue?: boolean;
   teamId?: string;
   sort?: string;
+  showRetired?: boolean;
   page: number;
   pageSize: number;
 }
@@ -240,4 +245,21 @@ export function countActiveFilters(filters: UIEquipmentFilters): number {
   if (filters.calibrationDueFilter !== 'all') count++;
   if (filters.teamId) count++;
   return count;
+}
+
+/**
+ * API 파라미터에 사용자 표시 설정(preference)을 병합
+ *
+ * showRetired는 URL 필터가 아닌 사용자 설정이므로 별도로 주입합니다.
+ * - 서버: page.tsx에서 getDisplayPreferences() 결과로 호출
+ * - 클라이언트: useEquipmentFilters에서 useUserPreferences() 결과로 자동 주입
+ *
+ * @param apiParams - convertFiltersToApiParams()의 결과
+ * @param preferences - showRetiredEquipment 값 (DisplayPreferences에서 추출)
+ */
+export function withPreferences(
+  apiParams: ApiEquipmentFilters,
+  preferences: { showRetiredEquipment: boolean }
+): ApiEquipmentFilters {
+  return { ...apiParams, showRetired: preferences.showRetiredEquipment };
 }

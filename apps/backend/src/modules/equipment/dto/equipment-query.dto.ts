@@ -114,6 +114,12 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
   pageSize?: number;
 
   @ApiPropertyOptional({
+    description: '퇴역/폐기 장비 표시 여부 (false: retired/disposed 제외)',
+    example: false,
+  })
+  showRetired?: boolean;
+
+  @ApiPropertyOptional({
     description: '공용장비 필터 (true: 공용장비만, false: 일반장비만)',
     example: true,
   })

@@ -12,9 +12,14 @@ import * as equipmentApiServer from '@/lib/api/equipment-api-server';
 import {
   parseEquipmentFiltersFromSearchParams,
   convertFiltersToApiParams,
+  withPreferences,
 } from '@/lib/utils/equipment-filter-utils';
 import { getServerAuthSession } from '@/lib/auth/server-session';
-import { buildRoleBasedRedirectUrl } from '@/lib/utils/role-filter-utils';
+import {
+  buildRoleBasedRedirectUrl,
+  buildPreferencesRedirectUrl,
+} from '@/lib/utils/role-filter-utils';
+import { getDisplayPreferences } from '@/lib/api/preferences-server';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 
 // Next.js 16 PageProps 타입 정의
@@ -72,9 +77,19 @@ async function EquipmentListAsync({
     if (redirectUrl) redirect(redirectUrl);
   }
 
+  // ✅ 사용자 표시 설정 기반 기본값 적용 (서버 사이드 redirect)
+  const preferences = await getDisplayPreferences();
+  const preferencesRedirectUrl = buildPreferencesRedirectUrl(
+    '/equipment',
+    searchParams,
+    preferences
+  );
+  if (preferencesRedirectUrl) redirect(preferencesRedirectUrl);
+
   // 🔴 SSOT: 직접 searchParams 파싱 금지! equipment-filter-utils.ts 사용
   const uiFilters = parseEquipmentFiltersFromSearchParams(searchParams);
-  const initialQuery = convertFiltersToApiParams(uiFilters);
+  // ✅ URL 필터 + 사용자 설정(showRetiredEquipment) 합성
+  const initialQuery = withPreferences(convertFiltersToApiParams(uiFilters), preferences);
 
   // Server에서 초기 데이터 fetch
   let initialData;

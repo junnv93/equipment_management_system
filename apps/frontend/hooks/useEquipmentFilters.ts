@@ -11,10 +11,12 @@ import type {
 import {
   parseEquipmentFiltersFromSearchParams,
   convertFiltersToApiParams,
+  withPreferences,
   countActiveFilters,
   DEFAULT_UI_FILTERS,
   type UIEquipmentFilters,
 } from '@/lib/utils/equipment-filter-utils';
+import { useUserPreferences } from '@/hooks/use-user-preferences';
 
 /**
  * 교정 기한 필터 타입
@@ -68,7 +70,7 @@ export type ViewType = 'table' | 'card';
  * localStorage 키
  */
 const VIEW_STORAGE_KEY = 'equipment-list-view';
-const PAGE_SIZE_STORAGE_KEY = 'equipment-list-page-size';
+// pageSize SSOT: URL 파라미터 (현재 세션) + DB preferences (기본값, page.tsx에서 redirect로 적용)
 
 /**
  * 장비 목록 필터 훅
@@ -108,6 +110,9 @@ export function useEquipmentFilters() {
       // Private Browsing, 스토리지 비활성화 등 예외 무시
     }
   }, []);
+
+  // ✅ 사용자 표시 설정 (showRetiredEquipment → queryFilters에 자동 주입)
+  const preferences = useUserPreferences();
 
   // ✅ 역할별 기본 필터는 서버 컴포넌트(page.tsx)에서 처리
   // - SSOT 원칙: 서버 사이드에서 한 곳에서만 필터 적용
@@ -292,15 +297,8 @@ export function useEquipmentFilters() {
   const setPageSize = useCallback(
     (pageSize: number) => {
       updateURL({ pageSize, page: 1 }); // 페이지 크기 변경 시 페이지 초기화
-      if (isClient) {
-        try {
-          localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(pageSize));
-        } catch {
-          // QuotaExceededError, 스토리지 비활성화 등 예외 무시
-        }
-      }
     },
-    [updateURL, isClient]
+    [updateURL]
   );
 
   // 뷰 변경 (localStorage 저장)
@@ -333,11 +331,11 @@ export function useEquipmentFilters() {
   const hasActiveFilters = activeFilterCount > 0;
 
   // API 쿼리용 필터 객체 생성
-  // ✅ SSOT: convertFiltersToApiParams 유틸리티 사용
+  // ✅ SSOT: convertFiltersToApiParams (URL 필터) + withPreferences (사용자 설정) 합성
   // @see lib/utils/equipment-filter-utils.ts
   const queryFilters = useMemo(() => {
-    return convertFiltersToApiParams(filters as UIEquipmentFilters);
-  }, [filters]);
+    return withPreferences(convertFiltersToApiParams(filters as UIEquipmentFilters), preferences);
+  }, [filters, preferences]);
 
   return {
     // 필터 상태

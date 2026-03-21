@@ -14,13 +14,25 @@ import { EquipmentQueryDto } from './dto/equipment-query.dto';
 import {
   EquipmentStatus,
   EquipmentStatusEnum,
+  EquipmentStatusValues as ESVal,
   ApprovalStatusEnum,
   ApprovalStatusValues,
   parseManagementNumber,
   CLASSIFICATION_TO_CODE,
 } from '@equipment-management/schemas';
 import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
-import { eq, and, or, desc, asc, sql, SQL, inArray, getTableColumns } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  or,
+  desc,
+  asc,
+  sql,
+  SQL,
+  inArray,
+  notInArray,
+  getTableColumns,
+} from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
@@ -175,6 +187,7 @@ export class EquipmentService extends VersionedBaseService {
       isShared,
       calibrationMethod,
       classification,
+      showRetired,
     } = queryParams;
 
     // 🔍 디버그: 교정 필터 파라미터 로깅
@@ -206,6 +219,11 @@ export class EquipmentService extends VersionedBaseService {
     // 인덱스를 활용할 수 있는 조건을 먼저 추가 (성능 최적화)
     if (status) {
       whereConditions.push(eq(equipment.status, status));
+    }
+
+    // 퇴역/폐기 장비 숨기기 (showRetired=false이고 특정 상태 필터가 없을 때)
+    if (showRetired === false && !status) {
+      whereConditions.push(notInArray(equipment.status, [ESVal.RETIRED, ESVal.DISPOSED]));
     }
 
     if (teamId) {
