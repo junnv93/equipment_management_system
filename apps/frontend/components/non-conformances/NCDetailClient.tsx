@@ -107,7 +107,6 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   // State for dialogs
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [_showDeleteDialog, _setShowDeleteDialog] = useState(false);
   const [closureNotes, setClosureNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 

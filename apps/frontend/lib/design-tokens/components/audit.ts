@@ -2,7 +2,7 @@
  * Audit Component Tokens (Layer 3: Component-Specific)
  *
  * 감사로그 컴포넌트의 모든 디자인 값을 정의하는 SSOT
- * - 12개 액션별 배지 스타일 (brand CSS 변수 기반 → 다크모드 자동 지원)
+ * - 13개 액션별 배지 스타일 (brand CSS 변수 기반 → 다크모드 자동 지원)
  * - 테이블/상세/Diff/엔티티 링크/빈 상태/페이지네이션 스타일
  * - 필터 바 / 헤더 토큰 (Layer 3 확장)
  * - Motion system (specific property transitions, no transition-all)
@@ -47,6 +47,7 @@ export const AUDIT_ACTION_BADGE_TOKENS: Record<AuditAction, string> = {
   logout: getSemanticBadgeClasses('neutral'),
   close: getSemanticBadgeClasses('neutral'),
   reject_correction: getSemanticBadgeClasses('critical'),
+  export: getSemanticBadgeClasses('ok'),
 };
 
 /**
@@ -412,6 +413,7 @@ export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
   logout: 'bg-brand-text-muted',
   close: 'bg-brand-text-muted',
   reject_correction: 'bg-brand-critical',
+  export: 'bg-brand-ok',
 };
 
 // ============================================================================

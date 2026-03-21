@@ -2,15 +2,12 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery } from '@tanstack/react-query';
-import dashboardApi from '@/lib/api/dashboard-api';
 import {
   EQUIPMENT_STATUS_TOKENS,
   EQUIPMENT_STATUS_DISPLAY_ORDER,
   EQUIPMENT_CRITICAL_STATUSES,
   EQUIPMENT_STATS_STRIP_TOKENS,
 } from '@/lib/design-tokens';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import { cn } from '@/lib/utils';
 
@@ -23,47 +20,39 @@ interface StatusSummaryStripProps {
   activeStatus?: EquipmentStatus | '';
   /** 상태 클릭 시 필터 변경 콜백 (없으면 표시 전용) */
   onStatusChange?: (status: EquipmentStatus | '') => void;
-  /** teamId — 통계 API scope 결정 */
-  teamId?: string;
+  /** 장비 목록 API에서 동일 필터로 집계한 상태별 카운트 */
+  statusCounts?: Record<string, number>;
 }
 
 /**
  * 장비 상태 분포 요약 스트립
  *
- * - Dashboard API 재활용 (GET /api/dashboard/equipment-status-stats)
+ * - 장비 목록 API 응답의 summary(statusCounts)를 사용하여 필터 스코프 일치 보장
  * - 클릭 → 상태 필터 즉시 적용 (onStatusChange 연결 시)
  * - 위기 상태(calibration_overdue, non_conforming) 카운트 빨간 강조
  * - 수평 스크롤 gradient 인디케이터 (스크롤 가능성 힌트)
- *
- * scope 설계:
- * - teamId 있음 → 팀 범위 통계
- * - teamId 없음 → site 전체 통계 (백엔드 @SiteScoped 자동 격리)
  */
 export function StatusSummaryStrip({
   isTeamScoped,
   totalItems,
   activeStatus,
   onStatusChange,
-  teamId,
+  statusCounts,
 }: StatusSummaryStripProps) {
   const t = useTranslations('equipment');
 
-  const { data: stats } = useQuery({
-    queryKey: queryKeys.dashboard.equipmentStatusStats(undefined, teamId),
-    queryFn: () => dashboardApi.getEquipmentStatusStats(teamId),
-    staleTime: CACHE_TIMES.SHORT,
-  });
-
   const visibleStats = useMemo(() => {
-    if (!stats) return [];
-    return EQUIPMENT_STATUS_DISPLAY_ORDER.filter((key) => (stats[key] || 0) > 0).map((key) => ({
-      key,
-      count: stats[key] || 0,
-      statusBarColor: EQUIPMENT_STATUS_TOKENS[key]?.card.statusBarColor || 'bg-brand-neutral',
-      label: t(`status.${key}` as Parameters<typeof t>[0]),
-      isCritical: EQUIPMENT_CRITICAL_STATUSES.has(key),
-    }));
-  }, [stats, t]);
+    if (!statusCounts) return [];
+    return EQUIPMENT_STATUS_DISPLAY_ORDER.filter((key) => (statusCounts[key] || 0) > 0).map(
+      (key) => ({
+        key,
+        count: statusCounts[key] || 0,
+        statusBarColor: EQUIPMENT_STATUS_TOKENS[key]?.card.statusBarColor || 'bg-brand-neutral',
+        label: t(`status.${key}` as Parameters<typeof t>[0]),
+        isCritical: EQUIPMENT_CRITICAL_STATUSES.has(key),
+      })
+    );
+  }, [statusCounts, t]);
 
   const totalLabel = isTeamScoped ? t('filters.teamEquipment') : t('filters.allEquipment');
   const isInteractive = !!onStatusChange;

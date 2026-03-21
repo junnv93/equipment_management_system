@@ -285,7 +285,7 @@ module.exports = {
         'slide-down': 'slide-down 0.3s ease-out forwards',
         'scale-in': 'scale-in 0.5s ease-out forwards',
         // Notification animations
-        'badge-pulse': 'badge-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'badge-pulse': 'badge-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 3',
         'checkmark-pop': 'checkmark-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'gentle-bounce': 'gentle-bounce 2s ease-in-out infinite',
         // Auth animations

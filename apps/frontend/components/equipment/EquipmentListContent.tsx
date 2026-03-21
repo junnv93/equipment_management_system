@@ -234,6 +234,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   }, [data, filters.page]);
 
   const items = data?.data || [];
+  const statusCounts = data?.meta?.summary;
 
   if (error) {
     return <ErrorAlert error={error} title={t('list.loadError')} onRetry={() => refetch()} />;
@@ -267,7 +268,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         totalItems={paginationInfo.totalItems}
         activeStatus={filters.status as EquipmentStatus | ''}
         onStatusChange={setStatus}
-        teamId={filters.teamId || undefined}
+        statusCounts={statusCounts}
       />
 
       {/* Unified Command Bar: 검색 + 필터 + 뷰 토글 통합 */}

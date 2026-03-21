@@ -131,13 +131,17 @@ export const NOTIFICATION_DROPDOWN_SHADOW = ELEVATION_TOKENS.shadow.prominent;
 
 /**
  * 읽지 않은 알림 강조
+ *
+ * 미읽음 = 상태(state) 구분 → 정적 시각 신호로 표현
+ * Visual Feedback System SSOT: 무한 애니메이션은 emergency urgency에만 허용
+ * @see ../visual-feedback.ts
  */
 export const UNREAD_NOTIFICATION_STYLES = {
   /** 배경색 */
   background: 'bg-card',
 
-  /** 펄스 애니메이션 (주목) */
-  animation: 'motion-safe:animate-[pulseGlow_3s_ease-in-out_infinite]',
+  /** 애니메이션: 상태 구분에는 사용하지 않음 (indicator dot + bg 차이로 충분) */
+  animation: '',
 
   /** 인디케이터 점 */
   indicator: {
@@ -230,11 +234,14 @@ export const NOTIFICATION_LIST_ITEM_TOKENS = {
       TRANSITION_PRESETS.moderateShadowTransform,
       'motion-safe:hover:shadow-lg motion-safe:hover:scale-[1.01] motion-safe:hover:-translate-y-0.5',
     ].join(' '),
-    unread: 'bg-card motion-safe:animate-[pulseGlow_3s_ease-in-out_infinite]',
+    /** 미읽음 = 상태(state) 구분이지 긴급도(urgency)가 아님 → 정적 시각 신호로 표현
+     *  Visual Feedback System SSOT: pulse는 emergency urgency에만 허용 (@see visual-feedback.ts) */
+    unread: 'bg-card',
     read: 'bg-muted/80 opacity-60',
   },
 
   indicator: {
+    /** 미읽음 도트: 마운트 시 3회 pulse 후 정지 (무한 X) — 주의 환기 후 시각 피로 방지 */
     dot: 'absolute right-3 top-3 h-2 w-2 rounded-full bg-primary motion-safe:animate-badge-pulse',
   },
 
