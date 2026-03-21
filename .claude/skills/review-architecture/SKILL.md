@@ -204,65 +204,31 @@ git diff --name-only
 - 이슈가 있으면: 우선순위별 수정 권장 및 검증 명령어
 ```
 
-### Step 9: 자체 개선 (Self-Improvement)
+### Step 9: 자체 학습
 
-리뷰를 마친 후, 이번 리뷰에서 **스킬 자체를 개선할 수 있는 학습**이 있었는지 점검합니다. 이 단계는 리뷰 보고서를 사용자에게 전달한 뒤 실행합니다.
+리뷰를 마친 후, 이번 리뷰에서 **이 스킬의 체크리스트나 예외를 개선할 학습**이 있었는지 점검합니다.
 
 먼저 [references/review-learnings.md](references/review-learnings.md)를 읽어 기존 학습 기록을 확인합니다.
 
-#### 9a: 새로운 패턴 탐지
+다음 3가지를 확인합니다:
 
-이번 리뷰에서 체크리스트에 없던 새로운 프로젝트 패턴을 발견했는가?
+**9a: 체크리스트에 없던 검사를 수행했는가?**
 
-발견 기준:
-- Step 2-7에서 확인한 내용 중 **체크리스트(review-checklist.md)에 명시되지 않은** 검사 항목
-- 기존 모듈과 다른 **새로운 아키텍처 패턴**이 도입된 경우
-- 골드 스탠다드 모듈 비교 시 **새로운 비교 대상**이 필요한 경우
+Step 2-7에서 체크리스트에 명시되지 않은 항목을 확인한 경우, `review-checklist.md` 해당 섹션에 추가하고 `review-learnings.md`에 기록합니다.
 
-새로운 패턴이 발견되면:
-1. `review-checklist.md`의 해당 섹션에 검사 항목 추가
-2. `review-learnings.md`의 "발견된 패턴" 섹션에 기록
+**9b: 사용자가 이슈를 의도된 설계로 확인했는가?**
 
-#### 9b: 예외 후보 식별
+사용자가 "이건 의도적이야", "이건 괜찮아" 등으로 응답한 이슈가 있으면, Exceptions 섹션에 추가하고 `review-learnings.md`에 기록합니다.
 
-이번 리뷰에서 이슈로 보고했지만 사용자가 **의도된 설계**라고 확인한 케이스가 있는가?
+**9c: 반복 발견 안티패턴이 있는가?**
 
-사용자 피드백 확인:
-- 사용자가 "이건 의도적이야", "이건 괜찮아", "이건 설계 결정이야" 등으로 응답한 이슈
-- 사용자가 이슈를 무시하고 수정하지 않기로 한 항목
+`review-learnings.md`에 이미 기록된 안티패턴이 다시 발견되면(2회 이상), `review-checklist.md`에 명시적 검사 항목으로 승격합니다. 처음 발견된 안티패턴은 `review-learnings.md`에만 기록합니다.
 
-새로운 예외가 확인되면:
-1. 이 파일(SKILL.md)의 **Exceptions** 섹션에 번호를 매겨 추가
-2. `review-learnings.md`의 "추가된 예외" 섹션에 기록 (사유 포함)
-
-#### 9c: 안티패턴 축적
-
-이번 리뷰에서 발견된 안티패턴이 `review-learnings.md`에 이미 기록된 적이 있는가?
-
-- **2회 이상 발견**된 안티패턴: `review-checklist.md`에 명시적 검사 항목으로 승격
-- **처음 발견**된 안티패턴: `review-learnings.md`에 기록 (다음 리뷰에서 재발 여부 추적)
-
-#### 9d: 골드 스탠다드 모듈 업데이트
-
-리뷰 대상 코드가 기존 골드 스탠다드보다 더 나은 패턴을 사용하는 경우, 비교 대상 테이블을 업데이트합니다.
-
-#### 9e: 학습 보고
-
-개선 사항이 있으면 리뷰 보고서 하단에 추가합니다:
+개선 사항이 있으면 보고서 하단에 한 줄로 표시합니다:
 
 ```markdown
-### 스킬 자체 개선
-
-| 유형 | 변경 | 반영 파일 |
-|---|---|---|
-| 새 패턴 | {설명} | review-checklist.md 섹션 N |
-| 새 예외 | {설명} | SKILL.md Exceptions #N |
-| 안티패턴 승격 | {설명} | review-checklist.md 섹션 N |
-
-> 이 리뷰를 통해 스킬이 업데이트되었습니다. 다음 리뷰부터 반영됩니다.
+> 이 리뷰를 통해 체크리스트 N개 항목, 예외 M개가 업데이트되었습니다.
 ```
-
-개선 사항이 없으면 이 섹션을 생략합니다.
 
 ## 심각도 기준
 
@@ -298,7 +264,7 @@ git diff --name-only
 | File | Purpose |
 |---|---|
 | [references/review-checklist.md](references/review-checklist.md) | 도메인별 상세 체크리스트 |
-| [references/review-learnings.md](references/review-learnings.md) | 리뷰 학습 기록 (자체 개선 데이터) |
+| [references/review-learnings.md](references/review-learnings.md) | 리뷰 학습 기록 (패턴, 예외, 안티패턴 축적) |
 | `CLAUDE.md` | 프로젝트 전체 지침 |
 | `.claude/skills/verify-implementation/SKILL.md` | 규칙 기반 통합 검증 (상호보완) |
 | `apps/backend/src/common/base/versioned-base.service.ts` | CAS 기본 클래스 |
