@@ -36,7 +36,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Wrench } from 'lucide-react';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type {
   MaintenanceHistoryItem,
   CreateMaintenanceHistoryInput,
@@ -65,6 +65,7 @@ export function MaintenanceHistorySection({
   disabled = false,
 }: MaintenanceHistorySectionProps) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +73,7 @@ export function MaintenanceHistorySection({
   const form = useForm<z.infer<typeof maintenanceHistorySchema>>({
     resolver: zodResolver(maintenanceHistorySchema),
     defaultValues: {
-      performedAt: formatDate(new Date(), 'yyyy-MM-dd'),
+      performedAt: fmtDate(new Date()),
       content: '',
     },
   });
@@ -207,7 +208,7 @@ export function MaintenanceHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.performedAt, 'yyyy-MM-dd')}</TableCell>
+                  <TableCell>{fmtDate(item.performedAt)}</TableCell>
                   <TableCell className="max-w-[300px] truncate">{item.content}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.performedByName || '-'}

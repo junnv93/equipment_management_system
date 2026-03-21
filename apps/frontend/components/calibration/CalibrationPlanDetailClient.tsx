@@ -25,7 +25,7 @@ import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import {
   ArrowLeft,
@@ -83,6 +83,7 @@ export function CalibrationPlanDetailClient({
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const t = useTranslations('calibration');
   const tEquip = useTranslations('equipment');
+  const { fmtDate, fmtDateTime } = useDateFormatter();
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
@@ -304,7 +305,7 @@ export function CalibrationPlanDetailClient({
             <p className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.meta}>
               {t('planDetail.header.author')}: {resolveDisplayName(plan.authorName, plan.createdBy)}{' '}
               | {t('planDetail.header.createdAt')}:{' '}
-              <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
+              <time dateTime={plan.createdAt}>{fmtDate(plan.createdAt)}</time>
             </p>
           </div>
         </div>
@@ -405,9 +406,7 @@ export function CalibrationPlanDetailClient({
               </span>
               <span>
                 {t('planDetail.approvalInfo.approvedAt')}:{' '}
-                <time dateTime={plan.approvedAt}>
-                  {formatDate(plan.approvedAt, 'yyyy-MM-dd HH:mm')}
-                </time>
+                <time dateTime={plan.approvedAt}>{fmtDateTime(plan.approvedAt)}</time>
               </span>
             </div>
           </CardContent>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { MapPin, Package, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
 import {
   getManagementNumberClasses,
@@ -25,6 +25,7 @@ interface BasicInfoTabProps {
  */
 export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
 
   /** 서류 양식 스타일 수평 라벨-값 행 */
   const InfoRow = ({
@@ -124,7 +125,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
             <InfoRow label={t('fields.location')} value={equipment.location} />
             <InfoRow
               label={t('fields.installationDate')}
-              value={formatDate(equipment.installationDate)}
+              value={fmtDate(equipment.installationDate)}
               valueClassName={getTimestampClasses()}
             />
           </dl>
@@ -154,12 +155,12 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
             />
             <InfoRow
               label={t('basicInfoTab.lastCalibrationDate')}
-              value={formatDate(equipment.lastCalibrationDate)}
+              value={fmtDate(equipment.lastCalibrationDate)}
               valueClassName={getTimestampClasses()}
             />
             <InfoRow
               label={t('basicInfoTab.nextCalibrationDate')}
-              value={formatDate(equipment.nextCalibrationDate)}
+              value={fmtDate(equipment.nextCalibrationDate)}
               valueClassName={getTimestampClasses()}
             />
             <InfoRow

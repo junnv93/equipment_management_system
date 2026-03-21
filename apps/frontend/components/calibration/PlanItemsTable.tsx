@@ -21,7 +21,7 @@ import calibrationPlansApi, {
 } from '@/lib/api/calibration-plans-api';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   CheckCircle2,
   Edit2,
@@ -62,6 +62,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const t = useTranslations('calibration');
+  const { fmtDate } = useDateFormatter();
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingAgency, setEditingAgency] = useState('');
@@ -310,9 +311,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                           'font-mono text-sm'
                         )}
                       >
-                        {item.snapshotValidityDate
-                          ? formatDate(item.snapshotValidityDate, 'yyyy-MM-dd')
-                          : '-'}
+                        {item.snapshotValidityDate ? fmtDate(item.snapshotValidityDate) : '-'}
                       </TableCell>
                       <TableCell className={colGroup.snapshot.cell}>
                         {item.snapshotCalibrationCycle
@@ -333,9 +332,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                           'font-mono text-sm'
                         )}
                       >
-                        {item.plannedCalibrationDate
-                          ? formatDate(item.plannedCalibrationDate, 'yyyy-MM-dd')
-                          : '-'}
+                        {item.plannedCalibrationDate ? fmtDate(item.plannedCalibrationDate) : '-'}
                       </TableCell>
                       <TableCell className={colGroup.plan.cell}>
                         {editingItemId === item.id ? (
@@ -374,7 +371,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                         ) : (
                           <>
                             {item.actualCalibrationDate
-                              ? formatDate(item.actualCalibrationDate, 'yyyy-MM-dd')
+                              ? fmtDate(item.actualCalibrationDate)
                               : item.notes || <span className="text-muted-foreground">—</span>}
                           </>
                         )}

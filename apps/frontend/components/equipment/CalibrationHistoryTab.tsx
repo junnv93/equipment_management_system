@@ -23,7 +23,7 @@ import {
   getCalibrationRowClasses,
 } from '@/lib/design-tokens';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import {
   UserRoleValues as URVal,
@@ -47,6 +47,7 @@ interface CalibrationHistoryTabProps {
 export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps) {
   const t = useTranslations('equipment');
   const { hasRole } = useAuth();
+  const { fmtDate } = useDateFormatter();
 
   const equipmentId = String(equipment.id);
 
@@ -137,10 +138,10 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                         .join(' ')}
                     >
                       <TableCell className={CONTENT_TOKENS.numeric.tabular}>
-                        {formatDate(cal.calibrationDate, 'yyyy-MM-dd')}
+                        {fmtDate(cal.calibrationDate)}
                       </TableCell>
                       <TableCell className={CONTENT_TOKENS.numeric.tabular}>
-                        {formatDate(cal.nextCalibrationDate, 'yyyy-MM-dd')}
+                        {fmtDate(cal.nextCalibrationDate)}
                       </TableCell>
                       <TableCell>{cal.calibrationAgency}</TableCell>
                       <TableCell>

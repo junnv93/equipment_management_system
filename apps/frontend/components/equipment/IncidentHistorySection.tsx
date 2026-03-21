@@ -43,7 +43,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { getIncidentTypeBadgeClasses } from '@/lib/design-tokens';
 import type {
   IncidentHistoryItem,
@@ -84,13 +84,14 @@ export function IncidentHistorySection({
   disabled = false,
 }: IncidentHistorySectionProps) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof incidentHistorySchema>>({
     resolver: zodResolver(incidentHistorySchema),
     defaultValues: {
-      occurredAt: formatDate(new Date(), 'yyyy-MM-dd'),
+      occurredAt: fmtDate(new Date()),
       incidentType: undefined,
       content: '',
     },
@@ -251,7 +252,7 @@ export function IncidentHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.occurredAt, 'yyyy-MM-dd')}</TableCell>
+                  <TableCell>{fmtDate(item.occurredAt)}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"

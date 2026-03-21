@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { queryKeys } from '@/lib/api/query-config';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import calibrationPlansApi, { CalibrationPlanVersion } from '@/lib/api/calibration-plans-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ interface VersionHistoryProps {
  */
 export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps) {
   const t = useTranslations('calibration');
+  const { fmtDate, fmtDateTime } = useDateFormatter();
   const {
     data: versions,
     isLoading,
@@ -128,13 +129,13 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {t(`${vh}.createdAt`, {
-                      date: formatDate(version.createdAt, 'yyyy-MM-dd HH:mm'),
+                      date: fmtDateTime(version.createdAt),
                     })}
                     {version.approvedAt && (
                       <>
                         {' · '}
                         {t(`${vh}.approvedAt`, {
-                          date: formatDate(version.approvedAt, 'yyyy-MM-dd'),
+                          date: fmtDate(version.approvedAt),
                         })}
                       </>
                     )}

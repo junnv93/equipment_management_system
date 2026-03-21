@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatDateTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Clock, Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -49,6 +49,7 @@ const ActivityItem = memo(function ActivityItem({
   userActionText: string;
   viewDetailText: string;
 }) {
+  const { fmtDateTime } = useDateFormatter();
   const activityInfo = ACTIVITY_TYPES[activity.type] || DEFAULT_ACTIVITY_META;
   const Icon = activityInfo.icon;
 
@@ -82,7 +83,7 @@ const ActivityItem = memo(function ActivityItem({
           </Badge>
           <time dateTime={activity.timestamp} className={RA.meta}>
             <Clock className="inline-block h-3 w-3 mr-1" aria-hidden="true" />
-            {formatDateTime(activity.timestamp)}
+            {fmtDateTime(activity.timestamp)}
           </time>
         </div>
         <p className="text-sm truncate">

@@ -33,7 +33,7 @@ import { Plus, MapPin, Calendar, User, FileText } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipment-api';
 import { useTranslations } from 'next-intl';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
@@ -71,6 +71,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
 
   // 개발 환경에서만 세션 디버그 출력
   if (process.env.NODE_ENV === 'development') {
@@ -87,7 +88,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   const form = useForm<LocationHistoryFormData>({
     resolver: zodResolver(locationHistorySchema),
     defaultValues: {
-      changedAt: formatDate(new Date(), 'yyyy-MM-dd'),
+      changedAt: fmtDate(new Date()),
       newLocation: '',
       notes: '',
     },
@@ -110,7 +111,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     onSuccess: () => {
       setIsDialogOpen(false);
       form.reset({
-        changedAt: formatDate(new Date(), 'yyyy-MM-dd'),
+        changedAt: fmtDate(new Date()),
         newLocation: '',
         notes: '',
       });
@@ -365,7 +366,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            <span>{formatDate(item.changedAt, 'yyyy-MM-dd')}</span>
+                            <span>{fmtDate(item.changedAt)}</span>
                           </div>
                           <h4 className="text-lg font-semibold text-foreground">
                             {item.newLocation}

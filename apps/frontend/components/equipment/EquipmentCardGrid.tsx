@@ -3,7 +3,7 @@
 import { memo, useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Calendar, MapPin, Tag, Package, ArrowRight, Wrench } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,6 +84,7 @@ const EquipmentCard = memo(function EquipmentCard({
   searchTerm?: string;
 }) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
   // design token SSOT: 실시간 교정기한 초과 체크 포함
   const style = getEquipmentStatusTokenStyle(equipment.status, equipment.nextCalibrationDate);
 
@@ -215,7 +216,7 @@ const EquipmentCard = memo(function EquipmentCard({
               <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <dd>
                 {t('card.calibrationPrefix')}
-                {formatDate(equipment.lastCalibrationDate)}
+                {fmtDate(equipment.lastCalibrationDate)}
               </dd>
             </div>
           )}

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { useEquipmentKpiData } from '@/hooks/use-equipment-kpi';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EQUIPMENT_KPI_STRIP_TOKENS, type KpiColorVariant } from '@/lib/design-tokens';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 interface EquipmentKpiStripProps {
   equipment: Equipment;
@@ -82,6 +82,7 @@ function KpiCard({
  */
 export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
   const router = useRouter();
   const pathname = usePathname();
   const equipmentId = String(equipment.id);
@@ -110,13 +111,13 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
     if (diffDays < 0) {
       return {
         value: t('kpiStrip.overdue', { days: Math.abs(diffDays) }),
-        sub: formatDate(equipment.nextCalibrationDate) ?? undefined,
+        sub: fmtDate(equipment.nextCalibrationDate) ?? undefined,
         variant: 'warn',
       };
     }
     return {
       value: diffDays === 0 ? 'D-0' : t('kpiStrip.dday', { days: diffDays }),
-      sub: formatDate(equipment.nextCalibrationDate) ?? undefined,
+      sub: fmtDate(equipment.nextCalibrationDate) ?? undefined,
       variant: diffDays <= 7 ? 'warn' : 'ok',
     };
   };
@@ -133,7 +134,7 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
   const formatLastDate = (date?: string | Date | null) => {
     if (!date) return undefined;
     const dateStr = date instanceof Date ? date.toISOString() : date;
-    return t('kpiStrip.lastDate', { date: formatDate(dateStr) ?? dateStr });
+    return t('kpiStrip.lastDate', { date: fmtDate(dateStr) ?? dateStr });
   };
 
   return (

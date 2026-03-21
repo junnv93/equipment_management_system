@@ -3,7 +3,8 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { isAfter, differenceInDays } from 'date-fns';
-import { toDate, formatDate } from '@/lib/utils/date';
+import { toDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 interface CalibrationValidityCheckerProps {
   nextCalibrationDate: string;
@@ -29,6 +30,7 @@ export function CalibrationValidityChecker({
   nextCalibrationDate,
   usagePeriodEnd,
 }: CalibrationValidityCheckerProps) {
+  const { fmtDate } = useDateFormatter();
   // 빈 값 체크
   if (!nextCalibrationDate || !usagePeriodEnd) {
     return null;
@@ -48,9 +50,8 @@ export function CalibrationValidityChecker({
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>교정 유효기간 부족</AlertTitle>
         <AlertDescription>
-          차기교정일({formatDate(nextCalDate, 'yyyy-MM-dd')})이 사용 종료일(
-          {formatDate(endDate, 'yyyy-MM-dd')}) 이후여야 합니다. 교정성적서를 확인하거나 사용 기간을
-          조정해주세요.
+          차기교정일({fmtDate(nextCalDate)})이 사용 종료일(
+          {fmtDate(endDate)}) 이후여야 합니다. 교정성적서를 확인하거나 사용 기간을 조정해주세요.
         </AlertDescription>
       </Alert>
     );

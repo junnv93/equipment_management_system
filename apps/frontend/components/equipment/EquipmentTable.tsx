@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { toDate, formatDate } from '@/lib/utils/date';
+import { toDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -193,6 +194,7 @@ const EquipmentRow = memo(function EquipmentRow({
   searchTerm?: string;
 }) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
   const router = useRouter();
   const { prefetchEquipment } = usePrefetchDetail();
   const calStatus = useMemo(
@@ -231,11 +233,7 @@ const EquipmentRow = memo(function EquipmentRow({
     if (!dueDate) return '-';
 
     if (!calStatus) {
-      return (
-        <span className={EQUIPMENT_TABLE_TOKENS.numericColumn}>
-          {formatDate(dueDate, 'yyyy-MM-dd')}
-        </span>
-      );
+      return <span className={EQUIPMENT_TABLE_TOKENS.numericColumn}>{fmtDate(dueDate)}</span>;
     }
 
     const badgeStyle = CALIBRATION_BADGE_TOKENS[calStatus.severity].table;
@@ -249,7 +247,7 @@ const EquipmentRow = memo(function EquipmentRow({
     return (
       <div className="flex flex-col gap-0.5">
         <span className={`font-semibold text-sm ${EQUIPMENT_TABLE_TOKENS.numericColumn}`}>
-          {formatDate(dueDate, 'yyyy-MM-dd')}
+          {fmtDate(dueDate)}
         </span>
         <span className={`text-xs ${badgeStyle} px-1.5 py-0.5 rounded w-fit font-medium`}>
           {calStatus.label}

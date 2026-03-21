@@ -41,7 +41,7 @@ import calibrationFactorsApi, {
   FACTOR_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CalibrationFactorApprovalStatusValues as CFASVal } from '@equipment-management/schemas';
 import { Plus, Calculator, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -73,6 +73,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const t = useTranslations('equipment.calibrationFactorsClient');
+  const { fmtDate, fmtDateTime } = useDateFormatter();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newFactor, setNewFactor] = useState({
@@ -338,8 +339,8 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                     <TableCell>
                       {factor.factorValue} {factor.unit}
                     </TableCell>
-                    <TableCell>{formatDate(factor.effectiveDate, 'yyyy-MM-dd')}</TableCell>
-                    <TableCell>{formatDate(factor.requestedAt, 'yyyy-MM-dd HH:mm')}</TableCell>
+                    <TableCell>{fmtDate(factor.effectiveDate)}</TableCell>
+                    <TableCell>{fmtDateTime(factor.requestedAt)}</TableCell>
                     <TableCell>
                       <Badge className={FACTOR_APPROVAL_STATUS_COLORS[factor.approvalStatus]}>
                         {APPROVAL_STATUS_LABELS[factor.approvalStatus]}
@@ -403,10 +404,10 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                       )}
                     </TableCell>
                     <TableCell>
-                      {formatDate(factor.effectiveDate, 'yyyy-MM-dd')}
-                      {factor.expiryDate && <> ~ {formatDate(factor.expiryDate, 'yyyy-MM-dd')}</>}
+                      {fmtDate(factor.effectiveDate)}
+                      {factor.expiryDate && <> ~ {fmtDate(factor.expiryDate)}</>}
                     </TableCell>
-                    <TableCell>{formatDate(factor.approvedAt, 'yyyy-MM-dd')}</TableCell>
+                    <TableCell>{fmtDate(factor.approvedAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

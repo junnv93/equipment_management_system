@@ -42,7 +42,7 @@ import type { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { type CreateCheckoutDto, type Checkout } from '@/lib/api/checkout-api';
 import { addDays } from 'date-fns';
 import { useTranslations } from 'next-intl';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -91,6 +91,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
 
   // 폼 설정
   const form = useForm<CheckoutFormData>({
@@ -99,7 +100,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       destination: '',
       purpose: undefined,
       reason: '',
-      expectedReturnDate: formatDate(addDays(new Date(), 7), 'yyyy-MM-dd'),
+      expectedReturnDate: fmtDate(addDays(new Date(), 7)),
       phoneNumber: '',
       address: '',
       notes: '',
@@ -125,7 +126,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         destination: '',
         purpose: undefined,
         reason: '',
-        expectedReturnDate: formatDate(addDays(new Date(), 7), 'yyyy-MM-dd'),
+        expectedReturnDate: fmtDate(addDays(new Date(), 7)),
         phoneNumber: '',
         address: '',
         notes: '',
@@ -514,7 +515,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                             <Calendar className="h-4 w-4" />
                             <span>
                               {t('checkoutHistoryTab.dates.checkout', {
-                                date: formatDate(checkout.checkoutDate, 'yyyy-MM-dd'),
+                                date: fmtDate(checkout.checkoutDate),
                               })}
                             </span>
                           </div>
@@ -523,7 +524,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                           <ArrowRight className="h-4 w-4" />
                           <span>
                             {t('checkoutHistoryTab.dates.expectedReturn', {
-                              date: formatDate(checkout.expectedReturnDate, 'yyyy-MM-dd'),
+                              date: fmtDate(checkout.expectedReturnDate),
                             })}
                           </span>
                         </div>
@@ -532,7 +533,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                             <Calendar className="h-4 w-4" />
                             <span>
                               {t('checkoutHistoryTab.dates.actualReturn', {
-                                date: formatDate(checkout.actualReturnDate, 'yyyy-MM-dd'),
+                                date: fmtDate(checkout.actualReturnDate),
                               })}
                             </span>
                           </div>

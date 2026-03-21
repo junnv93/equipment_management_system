@@ -3,7 +3,7 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle2 } from 'lucide-react';
 import type { DisposalRequest } from '@equipment-management/schemas';
-import { formatDateTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { DISPOSAL_BANNER_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
@@ -14,6 +14,7 @@ interface DisposedBannerProps {
 export function DisposedBanner({ disposalRequest }: DisposedBannerProps) {
   const t = useTranslations('disposal');
   const tReason = useTranslations('disposal.reason');
+  const { fmtDateTime } = useDateFormatter();
 
   return (
     <Alert className={DISPOSAL_BANNER_TOKENS.container} role="status">
@@ -28,7 +29,7 @@ export function DisposedBanner({ disposalRequest }: DisposedBannerProps) {
           {disposalRequest.approvedByName && disposalRequest.approvedAt && (
             <p>
               <span className="font-medium">{t('banner.approver')}</span>{' '}
-              {disposalRequest.approvedByName} | {formatDateTime(disposalRequest.approvedAt)}
+              {disposalRequest.approvedByName} | {fmtDateTime(disposalRequest.approvedAt)}
             </p>
           )}
         </div>

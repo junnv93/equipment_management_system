@@ -33,6 +33,7 @@ import {
 import { Plus, CalendarCheck, ExternalLink, Trash2, AlertCircle } from 'lucide-react';
 import { addMonths, isAfter } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/lib/errors/equipment-errors';
@@ -117,6 +118,7 @@ export function CalibrationHistorySection({
   isCreateMode = false,
 }: CalibrationHistorySectionProps) {
   const t = useTranslations('equipment.calibrationHistorySection');
+  const { fmtDate } = useDateFormatter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<CreateCalibrationHistoryInput>({
@@ -311,7 +313,7 @@ export function CalibrationHistorySection({
                 const isTempItem = item.id.startsWith('temp-');
                 return (
                   <TableRow key={item.id}>
-                    <TableCell>{formatDate(item.calibrationDate, 'yyyy-MM-dd')}</TableCell>
+                    <TableCell>{fmtDate(item.calibrationDate)}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -331,7 +333,7 @@ export function CalibrationHistorySection({
                           : '-'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDate(item.nextCalibrationDate, 'yyyy-MM-dd')}</TableCell>
+                    <TableCell>{fmtDate(item.nextCalibrationDate)}</TableCell>
                     <TableCell>{item.calibrationAgency || '-'}</TableCell>
                     <TableCell>
                       <Badge

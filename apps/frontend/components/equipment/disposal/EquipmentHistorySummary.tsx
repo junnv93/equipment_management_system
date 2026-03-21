@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Calendar, Wrench, AlertTriangle, Clock } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { differenceInDays } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
@@ -16,6 +16,7 @@ interface EquipmentHistorySummaryProps {
 export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const t = useTranslations('disposal.historySummary');
+  const { fmtDate } = useDateFormatter();
 
   const purchaseDate = equipment.purchaseYear ? new Date(equipment.purchaseYear, 0, 1) : null;
   const usagePeriod = purchaseDate ? differenceInDays(new Date(), purchaseDate) : 0;
@@ -49,7 +50,7 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
                 <p className="text-xs text-muted-foreground">{t('lastCalibration')}</p>
                 <p className="text-sm font-medium">
                   {equipment.lastCalibrationDate
-                    ? formatDate(equipment.lastCalibrationDate)
+                    ? fmtDate(equipment.lastCalibrationDate)
                     : t('noRecord')}
                 </p>
               </div>

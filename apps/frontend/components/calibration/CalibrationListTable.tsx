@@ -16,7 +16,7 @@ import {
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { differenceInDays } from 'date-fns';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   CALIBRATION_TABLE,
   CALIBRATION_EMPTY_STATE,
@@ -35,6 +35,7 @@ interface Props {
 export default function CalibrationListTable({ data, isLoading }: Props) {
   const t = useTranslations('calibration');
   const router = useRouter();
+  const { fmtDate } = useDateFormatter();
 
   // map 밖에서 한 번만 계산 (row마다 반복 방지)
   const today = useMemo(() => {
@@ -108,10 +109,10 @@ export default function CalibrationListTable({ data, isLoading }: Props) {
                 </TableCell>
                 <TableCell>{item.teamName || item.team || '-'}</TableCell>
                 <TableCell className={CALIBRATION_TABLE.numericColumn}>
-                  {formatDate(item.calibrationDate, 'yyyy-MM-dd')}
+                  {fmtDate(item.calibrationDate)}
                 </TableCell>
                 <TableCell className={CALIBRATION_TABLE.numericColumn}>
-                  {formatDate(item.nextCalibrationDate, 'yyyy-MM-dd')}
+                  {fmtDate(item.nextCalibrationDate)}
                 </TableCell>
                 <TableCell>{item.calibrationAgency}</TableCell>
                 <TableCell>

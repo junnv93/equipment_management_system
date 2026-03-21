@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDateTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   type AuditLog,
   type AuditLogFilter,
@@ -47,6 +47,8 @@ export function PrintableAuditReport({
   filters,
   generatedBy,
 }: PrintableAuditReportProps) {
+  const { fmtDateTime } = useDateFormatter();
+
   /**
    * 필터 정보 포맷팅
    */
@@ -87,7 +89,7 @@ export function PrintableAuditReport({
         <h1 className="text-3xl font-bold mb-2">감사 로그 보고서</h1>
         {title && <h2 className="text-xl text-muted-foreground mb-4">{title}</h2>}
         <div className="mt-4 text-sm text-muted-foreground space-y-1">
-          <p>출력 일시: {formatDateTime(new Date())}</p>
+          <p>출력 일시: {fmtDateTime(new Date())}</p>
           {generatedBy && <p>출력자: {generatedBy}</p>}
           {filters && <p>필터: {formatFilters(filters)}</p>}
         </div>
@@ -113,7 +115,7 @@ export function PrintableAuditReport({
             >
               <td className="p-3 align-top">
                 <div className="font-mono text-xs whitespace-nowrap">
-                  {formatDateTime(log.timestamp)}
+                  {fmtDateTime(log.timestamp)}
                 </div>
               </td>
               <td className="p-3 align-top">

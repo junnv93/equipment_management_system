@@ -1,7 +1,7 @@
 'use client';
 
-import { formatDate } from '@/lib/utils/date';
 import { daysBetween } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, FileText, Download, MousePointerClick } from 'lucide-react';
@@ -44,6 +44,7 @@ export function ApprovalDetailPanel({
   isProcessing = false,
 }: ApprovalDetailPanelProps) {
   const t = useTranslations('approvals');
+  const { fmtDateTime } = useDateFormatter();
   const tokens = APPROVAL_DETAIL_PANEL_TOKENS;
 
   // 빈 상태 (항목 미선택)
@@ -93,7 +94,7 @@ export function ApprovalDetailPanel({
             <div>
               <div className={tokens.header.metaLabel}>{t('detail.requestDate')}</div>
               <div className={cn(tokens.header.metaValue, 'font-mono tabular-nums text-xs')}>
-                {formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}
+                {fmtDateTime(item.requestedAt)}
               </div>
             </div>
             <div>

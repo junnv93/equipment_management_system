@@ -28,7 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { approveDisposal } from '@/lib/api/disposal-api';
 import { type DisposalRequest } from '@equipment-management/schemas';
-import { formatDateTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
 import type { Equipment } from '@/lib/api/equipment-api';
@@ -62,6 +62,7 @@ export function DisposalApprovalDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const t = useTranslations('disposal');
+  const { fmtDateTime } = useDateFormatter();
   const tReason = useTranslations('disposal.reason');
 
   const mutation = useMutation({
@@ -160,7 +161,7 @@ export function DisposalApprovalDialog({
                 </div>
                 <div>
                   <span className="font-medium text-foreground">{t('common.requester')}</span>{' '}
-                  {disposalRequest.requestedByName} | {formatDateTime(disposalRequest.requestedAt)}
+                  {disposalRequest.requestedByName} | {fmtDateTime(disposalRequest.requestedAt)}
                 </div>
                 <div>
                   <span className="font-medium text-foreground">{t('common.disposalReason')}</span>{' '}

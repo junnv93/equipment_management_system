@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { CheckCircle2, XCircle, Eye } from 'lucide-react';
-import { formatDate, daysBetween } from '@/lib/utils/date';
+import { daysBetween } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { TAB_META, UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
 import {
@@ -51,6 +52,7 @@ export function ApprovalRow({
   actionLabel,
 }: ApprovalRowProps) {
   const t = useTranslations('approvals');
+  const { fmtDate } = useDateFormatter();
   const elapsedDays = daysBetween(item.requestedAt);
   const urgency = getElapsedDaysUrgency(elapsedDays);
   const tokens = APPROVAL_ROW_TOKENS;
@@ -115,7 +117,7 @@ export function ApprovalRow({
             </>
           )}
           <span aria-hidden="true">·</span>
-          <time dateTime={item.requestedAt}>{formatDate(item.requestedAt, 'yyyy-MM-dd')}</time>
+          <time dateTime={item.requestedAt}>{fmtDate(item.requestedAt)}</time>
         </div>
       </div>
 
@@ -128,7 +130,7 @@ export function ApprovalRow({
       {/* 5. Date — desktop only */}
       <div className="hidden lg:block">
         <time dateTime={item.requestedAt} className={cn('text-sm', FONT.mono)}>
-          {formatDate(item.requestedAt, 'MM-dd')}
+          {fmtDate(item.requestedAt, 'MM-dd')}
         </time>
       </div>
 

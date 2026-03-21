@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Check, XCircle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ApprovalHistoryEntry } from '@/lib/api/approvals-api';
@@ -19,6 +19,7 @@ const ACTION_ICONS: Record<string, React.ElementType> = {
 
 export function ApprovalHistoryCard({ history }: ApprovalHistoryCardProps) {
   const t = useTranslations('approvals');
+  const { fmtDateTime } = useDateFormatter();
 
   const actionLabels: Record<string, string> = {
     review: t('history.reviewCompleted'),
@@ -68,9 +69,7 @@ export function ApprovalHistoryCard({ history }: ApprovalHistoryCardProps) {
                 <span className="font-medium text-sm">
                   {actionLabels[entry.action] || entry.action}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatDate(entry.actionAt, 'yyyy-MM-dd HH:mm')}
-                </span>
+                <span className="text-xs text-muted-foreground">{fmtDateTime(entry.actionAt)}</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 {entry.actorName} ({entry.actorRole})

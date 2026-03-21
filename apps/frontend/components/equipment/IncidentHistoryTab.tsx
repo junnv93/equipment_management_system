@@ -51,7 +51,8 @@ import equipmentApi, {
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { isBefore, startOfDay } from 'date-fns';
-import { formatDate, toDate } from '@/lib/utils/date';
+import { toDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import {
   UserRoleValues as URVal,
@@ -117,12 +118,13 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
 
   // 사고 이력 폼 설정
   const form = useForm<IncidentHistoryFormData>({
     resolver: zodResolver(incidentHistorySchema),
     defaultValues: {
-      occurredAt: formatDate(new Date(), 'yyyy-MM-dd'),
+      occurredAt: fmtDate(new Date()),
       incidentType: undefined,
       content: '',
       createNonConformance: false,
@@ -135,7 +137,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const repairForm = useForm<RepairHistoryFormData>({
     resolver: zodResolver(repairHistorySchema),
     defaultValues: {
-      repairDate: formatDate(new Date(), 'yyyy-MM-dd'),
+      repairDate: fmtDate(new Date()),
       repairDescription: '',
       repairResult: undefined,
       notes: '',
@@ -198,7 +200,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     onSuccess: () => {
       setIsDialogOpen(false);
       form.reset({
-        occurredAt: formatDate(new Date(), 'yyyy-MM-dd'),
+        occurredAt: fmtDate(new Date()),
         incidentType: undefined,
         content: '',
         createNonConformance: false,
@@ -500,8 +502,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                         {openNonConformances?.map((nc) => (
                           <SelectItem key={nc.id} value={nc.id}>
                             [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
-                            {nc.cause.length > 30 ? '...' : ''} (
-                            {formatDate(nc.discoveryDate, 'yyyy-MM-dd')})
+                            {nc.cause.length > 30 ? '...' : ''} ({fmtDate(nc.discoveryDate)})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -822,7 +823,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                               </Badge>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Calendar className="h-4 w-4" />
-                                <span>{formatDate(item.occurredAt, 'yyyy-MM-dd')}</span>
+                                <span>{fmtDate(item.occurredAt)}</span>
                               </div>
                             </div>
                             <h4 className="text-lg font-semibold text-foreground">

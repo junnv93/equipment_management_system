@@ -6,7 +6,7 @@ import { useInfiniteLoader } from 'react-window-infinite-loader';
 import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Equipment } from '@/lib/api/equipment-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
@@ -26,6 +26,7 @@ interface VirtualizedEquipmentListProps {
 // 각 장비 행을 표시하는 메모이제이션된 컴포넌트
 const EquipmentRow = memo(
   ({ equipment, onClick }: { equipment: Equipment; onClick?: (item: Equipment) => void }) => {
+    const { fmtDate } = useDateFormatter();
     // 상태에 따른 뱃지 스타일 (SSOT: equipment-status-styles.ts)
     // 실시간 교정기한 초과 체크 포함
     const getStatusBadge = (status: string, nextCalibrationDate?: string | Date | null) => {
@@ -52,7 +53,7 @@ const EquipmentRow = memo(
           {getStatusBadge(equipment.status || 'available', equipment.nextCalibrationDate)}
         </TableCell>
         <TableCell className="hidden md:table-cell">
-          {formatDate(
+          {fmtDate(
             equipment.lastCalibrationDate ? String(equipment.lastCalibrationDate) : undefined
           )}
         </TableCell>

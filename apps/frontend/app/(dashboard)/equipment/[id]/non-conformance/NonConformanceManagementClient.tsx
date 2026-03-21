@@ -22,7 +22,7 @@ import nonConformancesApi, {
   NonConformance,
   NonConformanceType,
 } from '@/lib/api/non-conformances-api';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   getSemanticBadgeClasses,
   getSemanticContainerClasses,
@@ -73,6 +73,7 @@ export default function NonConformanceManagementClient({
   const { isManager } = useAuth();
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
   // 현재 로그인한 사용자 ID (세션에서 가져옴)
@@ -484,7 +485,7 @@ export default function NonConformanceManagementClient({
                 </div>
                 <time dateTime={nc.discoveryDate} className="text-sm text-muted-foreground">
                   {t('nonConformanceManagement.discoveryDate', {
-                    date: formatDate(nc.discoveryDate, 'yyyy-MM-dd'),
+                    date: fmtDate(nc.discoveryDate),
                   })}
                 </time>
               </div>
@@ -536,7 +537,7 @@ export default function NonConformanceManagementClient({
                             className={`text-xs ${getSemanticContainerTextClasses('critical')} mt-1 block`}
                           >
                             {t('nonConformanceManagement.rejectionDate', {
-                              date: formatDate(nc.rejectedAt, 'yyyy-MM-dd'),
+                              date: fmtDate(nc.rejectedAt),
                             })}
                           </time>
                         )}
@@ -573,7 +574,7 @@ export default function NonConformanceManagementClient({
                         className="text-sm text-muted-foreground mt-1 block"
                       >
                         {t('nonConformanceManagement.correctionDate', {
-                          date: formatDate(nc.correctionDate, 'yyyy-MM-dd'),
+                          date: fmtDate(nc.correctionDate),
                         })}
                       </time>
                     )}
@@ -592,7 +593,7 @@ export default function NonConformanceManagementClient({
                         className="text-sm text-muted-foreground mt-1 block"
                       >
                         {t('nonConformanceManagement.closureDate', {
-                          date: formatDate(nc.closedAt, 'yyyy-MM-dd'),
+                          date: fmtDate(nc.closedAt),
                         })}
                       </time>
                     )}

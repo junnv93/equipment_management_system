@@ -30,7 +30,7 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useNCFilters } from '@/hooks/use-nc-filters';
 import type { UINonConformancesFilters } from '@/lib/utils/non-conformances-filter-utils';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { SITE_LABELS, type NonConformanceStatus, type Site } from '@equipment-management/schemas';
 import {
   getSemanticBadgeClasses,
@@ -399,6 +399,7 @@ export default function NonConformancesContent({
  * 리스트 행 컴포넌트
  */
 function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
+  const { fmtDate } = useDateFormatter();
   const elapsedDays = computeElapsedDays(nc);
   const longOverdue = isNCLongOverdue(elapsedDays);
   const statusIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
@@ -442,7 +443,7 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
 
       {/* 발견일 */}
       <div>
-        <span className={NC_LIST_TOKENS.date}>{formatDate(nc.discoveryDate)}</span>
+        <span className={NC_LIST_TOKENS.date}>{fmtDate(nc.discoveryDate)}</span>
       </div>
 
       {/* 경과일 */}

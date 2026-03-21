@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration-plans-api';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CheckCircle2, Circle, XCircle, Loader2, Plus, ChevronUp, Check } from 'lucide-react';
 import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
@@ -43,6 +43,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const t = useTranslations('calibration');
+  const { fmtDate } = useDateFormatter();
 
   const [reviewComment, setReviewComment] = useState('');
   const [showReviewComment, setShowReviewComment] = useState(false);
@@ -243,7 +244,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
                     dateTime={step.timestamp}
                     className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
                   >
-                    {formatDate(step.timestamp, 'MM/dd HH:mm')}
+                    {fmtDate(step.timestamp, 'MM/dd HH:mm')}
                   </time>
                 )}
                 {idx === 1 && reviewActions}
@@ -281,7 +282,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
                       dateTime={step.timestamp}
                       className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
                     >
-                      {formatDate(step.timestamp, 'MM/dd HH:mm')}
+                      {fmtDate(step.timestamp, 'MM/dd HH:mm')}
                     </time>
                   )}
                   {idx === 1 && reviewActions}

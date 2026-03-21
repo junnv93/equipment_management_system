@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,7 @@ export default function ApprovalDetailModal({
   actionLabel,
 }: ApprovalDetailModalProps) {
   const t = useTranslations('approvals');
+  const { fmtDateTime } = useDateFormatter();
 
   // 다단계 승인 여부 확인
   const isMultiStep =
@@ -78,7 +79,7 @@ export default function ApprovalDetailModal({
                 </div>
                 <div>
                   <p className="text-muted-foreground">{t('detail.requestDate')}</p>
-                  <p className="font-medium">{formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}</p>
+                  <p className="font-medium">{fmtDateTime(item.requestedAt)}</p>
                 </div>
               </div>
             </div>

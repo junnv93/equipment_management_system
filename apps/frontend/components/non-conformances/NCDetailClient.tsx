@@ -28,7 +28,7 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { NonConformanceCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   type NonConformanceStatus,
   NonConformanceStatusValues as NCVal,
@@ -103,6 +103,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const queryClient = useQueryClient();
   const { isManager } = useAuth();
   const { toast } = useToast();
+  const { fmtDate } = useDateFormatter();
 
   // State for dialogs
   const [showCloseDialog, setShowCloseDialog] = useState(false);
@@ -277,7 +278,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               </Link>
             )}
             <span>·</span>
-            <span>발견일: {formatDate(nc.discoveryDate)}</span>
+            <span>발견일: {fmtDate(nc.discoveryDate)}</span>
             {!isClosed && (
               <>
                 <span>·</span>
@@ -312,7 +313,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             <p className={NC_REJECTION_ALERT_TOKENS.description}>{nc.rejectionReason}</p>
             {nc.rejectedAt && (
               <p className={NC_REJECTION_ALERT_TOKENS.date}>
-                반려일: {formatDate(nc.rejectedAt)}
+                반려일: {fmtDate(nc.rejectedAt)}
                 {nc.rejector && ` · 반려자: ${nc.rejector.name}`}
               </p>
             )}
@@ -389,7 +390,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.correctionContent}</p>
             {nc.correctionDate && (
               <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
-                조치일: {formatDate(nc.correctionDate)}
+                조치일: {fmtDate(nc.correctionDate)}
                 {nc.corrector && ` · 조치자: ${nc.corrector.name}`}
               </p>
             )}
@@ -410,7 +411,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.closureNotes}</p>
               {nc.closedAt && (
                 <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
-                  종결일: {formatDate(nc.closedAt)}
+                  종결일: {fmtDate(nc.closedAt)}
                   {nc.closer && ` · 종결자: ${nc.closer.name}`}
                 </p>
               )}
@@ -564,6 +565,7 @@ function WorkflowTimeline({
 
 /** 스텝별 날짜 표시 */
 function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformanceStatus }) {
+  const { fmtDate } = useDateFormatter();
   let dateStr: string | null = null;
   let actor: string | null = null;
 
@@ -586,7 +588,7 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
 
   return (
     <>
-      {dateStr && <span className={NC_WORKFLOW_TOKENS.date}>{formatDate(dateStr)}</span>}
+      {dateStr && <span className={NC_WORKFLOW_TOKENS.date}>{fmtDate(dateStr)}</span>}
       {actor && <span className={NC_WORKFLOW_TOKENS.actor}>{actor}</span>}
     </>
   );
@@ -596,6 +598,7 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
  * 정보 카드 (2-column)
  */
 function InfoCards({ nc }: { nc: NonConformance }) {
+  const { fmtDate } = useDateFormatter();
   const hasRepairLink = !!nc.repairHistoryId;
   const needsRepair = ['damage', 'malfunction'].includes(nc.ncType);
 
@@ -606,7 +609,7 @@ function InfoCards({ nc }: { nc: NonConformance }) {
         <h3 className={NC_INFO_CARD_TOKENS.cardTitle}>기본 정보</h3>
         <InfoRow label="부적합 유형" value={NON_CONFORMANCE_TYPE_LABELS[nc.ncType] ?? nc.ncType} />
         <InfoRow label="발견자" value={nc.discoverer?.name ?? nc.discoveredBy} />
-        <InfoRow label="발견일" value={formatDate(nc.discoveryDate)} />
+        <InfoRow label="발견일" value={fmtDate(nc.discoveryDate)} />
         <div className={NC_INFO_CARD_TOKENS.infoRowVertical}>
           <span className={NC_INFO_CARD_TOKENS.infoLabel}>원인</span>
           <p className={NC_INFO_CARD_TOKENS.infoValueMultiline}>{nc.cause}</p>
@@ -667,8 +670,8 @@ function InfoCards({ nc }: { nc: NonConformance }) {
 
         {/* 추가 메타 */}
         <div className="mt-4 pt-3 border-t border-border/40">
-          <InfoRow label="등록일" value={formatDate(nc.createdAt)} />
-          <InfoRow label="최종 수정" value={formatDate(nc.updatedAt)} />
+          <InfoRow label="등록일" value={fmtDate(nc.createdAt)} />
+          <InfoRow label="최종 수정" value={fmtDate(nc.updatedAt)} />
           <InfoRow label="버전" value={String(nc.version)} />
         </div>
       </div>
@@ -678,6 +681,7 @@ function InfoCards({ nc }: { nc: NonConformance }) {
 
 /** 수리 이력 상세 */
 function RepairDetail({ nc }: { nc: NonConformance }) {
+  const { fmtDate } = useDateFormatter();
   const rh = nc.repairHistory;
   if (!rh) {
     return (
@@ -698,7 +702,7 @@ function RepairDetail({ nc }: { nc: NonConformance }) {
     <div className="py-2 space-y-1">
       <div className={NC_REPAIR_DETAIL_TOKENS.row}>
         <span className={NC_REPAIR_DETAIL_TOKENS.label}>수리일</span>
-        <span className={NC_REPAIR_DETAIL_TOKENS.value}>{formatDate(rh.repairDate)}</span>
+        <span className={NC_REPAIR_DETAIL_TOKENS.value}>{fmtDate(rh.repairDate)}</span>
       </div>
       {rh.repairResult && resultBadgeClass && (
         <div className={NC_REPAIR_DETAIL_TOKENS.row}>

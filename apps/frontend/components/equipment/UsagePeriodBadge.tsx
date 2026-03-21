@@ -2,7 +2,8 @@
 
 import { Badge } from '@/components/ui/badge';
 import { differenceInDays, isBefore } from 'date-fns';
-import { toDate, formatDate } from '@/lib/utils/date';
+import { toDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useTranslations } from 'next-intl';
 
 interface UsagePeriodBadgeProps {
@@ -29,6 +30,7 @@ interface UsagePeriodBadgeProps {
  */
 export function UsagePeriodBadge({ startDate, endDate, className }: UsagePeriodBadgeProps) {
   const t = useTranslations('equipment.usagePeriodBadge');
+  const { fmtDate } = useDateFormatter();
   const now = new Date();
   const start = toDate(startDate);
   const end = toDate(endDate);
@@ -40,7 +42,7 @@ export function UsagePeriodBadge({ startDate, endDate, className }: UsagePeriodB
   if (isBefore(now, start)) {
     return (
       <Badge variant="outline" className={className} aria-label={t('beforeStart')}>
-        {t('startDate', { date: formatDate(start, 'MM/dd') })}
+        {t('startDate', { date: fmtDate(start, 'MM/dd') })}
       </Badge>
     );
   }

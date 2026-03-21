@@ -9,7 +9,7 @@ import {
 } from '@equipment-management/schemas';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
-import { formatDateTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { DISPOSAL_PROGRESS_CARD_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
@@ -29,6 +29,7 @@ export function DisposalProgressCard({
   canCancel,
 }: DisposalProgressCardProps) {
   const t = useTranslations('disposal');
+  const { fmtDateTime } = useDateFormatter();
 
   const getCurrentStageText = () => {
     if (disposalRequest.reviewStatus === DRSVal.PENDING) {
@@ -54,7 +55,7 @@ export function DisposalProgressCard({
             <p className="font-medium">{getCurrentStageText()}</p>
             <p className={`${DISPOSAL_PROGRESS_CARD_TOKENS.subtext} mt-1`}>
               {t('common.requester')} {disposalRequest.requestedByName} |{' '}
-              {formatDateTime(disposalRequest.requestedAt)}
+              {fmtDateTime(disposalRequest.requestedAt)}
             </p>
           </div>
 

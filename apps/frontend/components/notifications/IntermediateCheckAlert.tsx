@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { CheckCircle2, AlertTriangle, Clock, X } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
@@ -83,6 +83,7 @@ export function IntermediateCheckAlert({
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const t = useTranslations('notifications.alerts.intermediateCheck');
+  const { fmtDate } = useDateFormatter();
 
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [completionNotes, setCompletionNotes] = useState('');
@@ -229,7 +230,7 @@ export function IntermediateCheckAlert({
             {managementNumber && (
               <span className="text-muted-foreground"> ({managementNumber})</span>
             )}
-            {t('checkDateMessage', { date: formatDate(check.intermediateCheckDate, 'yyyy-MM-dd') })}
+            {t('checkDateMessage', { date: fmtDate(check.intermediateCheckDate) })}
           </p>
           <div className="flex gap-2 mt-3">
             <Button size="sm" onClick={() => setIsCompleteDialogOpen(true)}>
@@ -258,8 +259,7 @@ export function IntermediateCheckAlert({
           <div className="space-y-4 py-4">
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm">
-                <strong>{t('dialog.scheduledDate')}</strong>{' '}
-                {formatDate(check.intermediateCheckDate, 'yyyy-MM-dd')}
+                <strong>{t('dialog.scheduledDate')}</strong> {fmtDate(check.intermediateCheckDate)}
               </p>
             </div>
             <div className="space-y-2">

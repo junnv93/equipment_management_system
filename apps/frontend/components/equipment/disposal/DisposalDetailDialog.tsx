@@ -14,7 +14,7 @@ import {
   type DisposalRequest,
   DisposalReviewStatusValues as DRSVal,
 } from '@equipment-management/schemas';
-import { formatDateTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { DISPOSAL_TIMELINE_TOKENS, DISPOSAL_FILE_LINK_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
@@ -47,6 +47,7 @@ export function DisposalDetailDialog({
   const t = useTranslations('disposal');
   const tReason = useTranslations('disposal.reason');
   const tStatus = useTranslations('disposal.status');
+  const { fmtDateTime } = useDateFormatter();
 
   const stages: TimelineStage[] = [
     {
@@ -202,8 +203,7 @@ export function DisposalDetailDialog({
                         </h3>
                         {stage.data && (
                           <p className="text-xs text-muted-foreground">
-                            {stage.data.person} |{' '}
-                            {stage.data.time && formatDateTime(stage.data.time)}
+                            {stage.data.person} | {stage.data.time && fmtDateTime(stage.data.time)}
                           </p>
                         )}
                       </div>

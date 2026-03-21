@@ -35,7 +35,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, MapPin } from 'lucide-react';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { LocationHistoryItem, CreateLocationHistoryInput } from '@/lib/api/equipment-api';
 
 const locationHistorySchema = z.object({
@@ -62,13 +62,14 @@ export function LocationHistorySection({
   disabled = false,
 }: LocationHistorySectionProps) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof locationHistorySchema>>({
     resolver: zodResolver(locationHistorySchema),
     defaultValues: {
-      changedAt: formatDate(new Date(), 'yyyy-MM-dd'),
+      changedAt: fmtDate(new Date()),
       newLocation: '',
       notes: '',
     },
@@ -211,7 +212,7 @@ export function LocationHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{formatDate(item.changedAt, 'yyyy-MM-dd')}</TableCell>
+                  <TableCell>{fmtDate(item.changedAt)}</TableCell>
                   <TableCell>{item.newLocation}</TableCell>
                   <TableCell className="text-muted-foreground">{item.notes || '-'}</TableCell>
                   <TableCell>

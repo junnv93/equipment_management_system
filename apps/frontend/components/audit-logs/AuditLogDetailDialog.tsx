@@ -14,7 +14,7 @@ import { Printer, User, Server, MapPin } from 'lucide-react';
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import { AuditLogDiffViewer } from '@/components/ui/audit-log-diff-viewer';
 import { PrintableAuditReport } from './PrintableAuditReport';
-import { formatDateTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { type AuditLog, type AuditAction } from '@equipment-management/schemas';
 import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
 import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
@@ -55,6 +55,7 @@ interface AuditLogDetailDialogProps {
 export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetailDialogProps) {
   const t = useTranslations('audit');
   const tc = useTranslations('common');
+  const { fmtDateTime } = useDateFormatter();
   const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(t);
   const handlePrint = () => {
     window.print();
@@ -95,7 +96,7 @@ export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetail
               >
                 {getActionLabel(log.action)}
               </Badge>
-              <span className="text-sm text-muted-foreground">{formatDateTime(log.timestamp)}</span>
+              <span className="text-sm text-muted-foreground">{fmtDateTime(log.timestamp)}</span>
             </div>
 
             {/* 사용자 정보 */}
@@ -204,7 +205,7 @@ export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetail
                 </div>
                 <div>
                   <span>{t('detail.createdAt')}</span>
-                  <span className="ml-2">{formatDateTime(log.createdAt)}</span>
+                  <span className="ml-2">{fmtDateTime(log.createdAt)}</span>
                 </div>
                 {log.details?.requestId && (
                   <div>

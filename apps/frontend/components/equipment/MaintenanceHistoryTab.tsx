@@ -33,7 +33,7 @@ import { Plus, Wrench, Calendar, User } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateMaintenanceHistoryInput } from '@/lib/api/equipment-api';
 import { useTranslations } from 'next-intl';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
@@ -65,12 +65,13 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
 
   // 폼 설정
   const form = useForm<MaintenanceHistoryFormData>({
     resolver: zodResolver(maintenanceHistorySchema),
     defaultValues: {
-      performedAt: formatDate(new Date(), 'yyyy-MM-dd'),
+      performedAt: fmtDate(new Date()),
       content: '',
     },
   });
@@ -92,7 +93,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     onSuccess: () => {
       setIsDialogOpen(false);
       form.reset({
-        performedAt: formatDate(new Date(), 'yyyy-MM-dd'),
+        performedAt: fmtDate(new Date()),
         content: '',
       });
       toast({
@@ -308,7 +309,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            <span>{formatDate(item.performedAt, 'yyyy-MM-dd')}</span>
+                            <span>{fmtDate(item.performedAt)}</span>
                           </div>
                           <h4 className="text-lg font-semibold text-foreground">{item.content}</h4>
                         </div>

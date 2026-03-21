@@ -8,7 +8,7 @@ import {
   DISPOSAL_REASON_LABELS,
 } from '@equipment-management/schemas';
 import { TAB_META, REQUEST_TYPE_LABELS, type ApprovalCategory } from '@/lib/api/approvals-api';
-import { formatDate } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Badge } from '@/components/ui/badge';
 import { APPROVAL_TIMELINE_TOKENS } from '@/lib/design-tokens';
 
@@ -26,9 +26,17 @@ function DetailRow({ label, value }: { label: string; value?: unknown }) {
   );
 }
 
-function DateRow({ label, value }: { label: string; value?: unknown }) {
+function DateRow({
+  label,
+  value,
+  fmtDate,
+}: {
+  label: string;
+  value?: unknown;
+  fmtDate: (date: string | Date) => string;
+}) {
   if (!value || typeof value !== 'string') return null;
-  return <DetailRow label={label} value={formatDate(value, 'yyyy-MM-dd')} />;
+  return <DetailRow label={label} value={fmtDate(value)} />;
 }
 
 /**
@@ -51,6 +59,7 @@ function LabeledRow({
 
 // Translation function type
 type TFunc = (key: string) => string;
+type FmtDate = (date: string | Date) => string;
 
 /**
  * 카테고리 배지 컴포넌트
@@ -120,12 +129,20 @@ function renderEquipmentDetails(details: Record<string, unknown>, t: TFunc) {
 }
 
 /** 교정 기록 */
-function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc) {
+function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
   return (
     <>
       <DetailRow label={t('detailRows.equipmentId')} value={details.equipmentId} />
-      <DateRow label={t('detailRows.calibrationDate')} value={details.calibrationDate} />
-      <DateRow label={t('detailRows.nextCalibrationDate')} value={details.nextCalibrationDate} />
+      <DateRow
+        label={t('detailRows.calibrationDate')}
+        value={details.calibrationDate}
+        fmtDate={fmtDate}
+      />
+      <DateRow
+        label={t('detailRows.nextCalibrationDate')}
+        value={details.nextCalibrationDate}
+        fmtDate={fmtDate}
+      />
       <LabeledRow
         label={t('detailRows.calibrationResult')}
         value={details.result}
@@ -141,7 +158,7 @@ function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc) {
 }
 
 /** 반출 / 반입 / 공용장비 */
-function renderCheckoutDetails(details: Record<string, unknown>, t: TFunc) {
+function renderCheckoutDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
   // equipment 배열에서 장비 이름 목록 추출
   const equipmentList = details.equipment as Array<Record<string, unknown>> | undefined;
   const equipmentNames = equipmentList
@@ -158,13 +175,17 @@ function renderCheckoutDetails(details: Record<string, unknown>, t: TFunc) {
         labels={CHECKOUT_PURPOSE_LABELS}
       />
       <DetailRow label={t('detailRows.destination')} value={details.destination} />
-      <DateRow label={t('detailRows.expectedReturnDate')} value={details.expectedReturnDate} />
+      <DateRow
+        label={t('detailRows.expectedReturnDate')}
+        value={details.expectedReturnDate}
+        fmtDate={fmtDate}
+      />
     </>
   );
 }
 
 /** 부적합 재개 */
-function renderNonConformityDetails(details: Record<string, unknown>, t: TFunc) {
+function renderNonConformityDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
   return (
     <>
       <DetailRow label={t('detailRows.equipmentId')} value={details.equipmentId} />
@@ -175,7 +196,11 @@ function renderNonConformityDetails(details: Record<string, unknown>, t: TFunc) 
       />
       <DetailRow label={t('detailRows.cause')} value={details.cause} />
       <DetailRow label={t('detailRows.correctionContent')} value={details.correctionContent} />
-      <DateRow label={t('detailRows.correctionDate')} value={details.correctionDate} />
+      <DateRow
+        label={t('detailRows.correctionDate')}
+        value={details.correctionDate}
+        fmtDate={fmtDate}
+      />
       <DetailRow label={t('detailRows.actionPlan')} value={details.actionPlan} />
       {details.rejectionReason && (
         <div className={`mt-2 pt-2 ${APPROVAL_TIMELINE_TOKENS.rejectionBorder}`}>
@@ -183,7 +208,11 @@ function renderNonConformityDetails(details: Record<string, unknown>, t: TFunc) 
             label={t('detailRows.previousRejectionReason')}
             value={details.rejectionReason}
           />
-          <DateRow label={t('detailRows.rejectionDate')} value={details.rejectedAt} />
+          <DateRow
+            label={t('detailRows.rejectionDate')}
+            value={details.rejectedAt}
+            fmtDate={fmtDate}
+          />
         </div>
       )}
     </>
@@ -191,7 +220,12 @@ function renderNonConformityDetails(details: Record<string, unknown>, t: TFunc) 
 }
 
 /** 폐기 검토 / 최종 승인 */
-function renderDisposalDetails(details: Record<string, unknown>, isFinal: boolean, t: TFunc) {
+function renderDisposalDetails(
+  details: Record<string, unknown>,
+  isFinal: boolean,
+  t: TFunc,
+  fmtDate: FmtDate
+) {
   const eq = details.equipment as Record<string, unknown> | undefined;
   const equipmentLabel = eq
     ? `${eq.name || ''}${eq.managementNumber ? ` (${eq.managementNumber})` : ''}`
@@ -210,7 +244,7 @@ function renderDisposalDetails(details: Record<string, unknown>, isFinal: boolea
         <DetailRow label={t('detailRows.reviewOpinion')} value={details.reviewOpinion} />
       )}
       {isFinal && details.reviewedAt && (
-        <DateRow label={t('detailRows.reviewDate')} value={details.reviewedAt} />
+        <DateRow label={t('detailRows.reviewDate')} value={details.reviewedAt} fmtDate={fmtDate} />
       )}
     </>
   );
@@ -243,14 +277,18 @@ function renderSoftwareDetails(details: Record<string, unknown>, t: TFunc) {
 }
 
 /** 중간점검 */
-function renderInspectionDetails(details: Record<string, unknown>, t: TFunc) {
+function renderInspectionDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
   const equipment = details.equipment as Record<string, unknown> | undefined;
   const equipmentName = equipment?.name;
 
   return (
     <>
       {equipmentName && <DetailRow label={t('detailRows.equipment')} value={equipmentName} />}
-      <DateRow label={t('detailRows.inspectionDate')} value={details.nextIntermediateCheckDate} />
+      <DateRow
+        label={t('detailRows.inspectionDate')}
+        value={details.nextIntermediateCheckDate}
+        fmtDate={fmtDate}
+      />
     </>
   );
 }
@@ -273,28 +311,29 @@ export function CategoryDetails({
   details: Record<string, unknown>;
 }) {
   const t = useTranslations('approvals');
+  const { fmtDate } = useDateFormatter();
 
   switch (category) {
     case 'equipment':
       return renderEquipmentDetails(details, t);
     case 'calibration':
-      return renderCalibrationDetails(details, t);
+      return renderCalibrationDetails(details, t, fmtDate);
     case 'outgoing':
     case 'incoming':
-      return renderCheckoutDetails(details, t);
+      return renderCheckoutDetails(details, t, fmtDate);
     case 'nonconformity':
-      return renderNonConformityDetails(details, t);
+      return renderNonConformityDetails(details, t, fmtDate);
     case 'disposal_review':
-      return renderDisposalDetails(details, false, t);
+      return renderDisposalDetails(details, false, t, fmtDate);
     case 'disposal_final':
-      return renderDisposalDetails(details, true, t);
+      return renderDisposalDetails(details, true, t, fmtDate);
     case 'plan_review':
     case 'plan_final':
       return renderPlanDetails(details, t);
     case 'software':
       return renderSoftwareDetails(details, t);
     case 'inspection':
-      return renderInspectionDetails(details, t);
+      return renderInspectionDetails(details, t, fmtDate);
     default:
       // 알 수 없는 카테고리: fallback으로 기본 Object.entries 렌더링
       return (
