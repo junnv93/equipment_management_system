@@ -27,8 +27,12 @@ interface JwtPayload {
   roles: string[];
   /** 부서 */
   department?: string;
-  /** 사이트 코드 (suwon | uiwang) */
+  /** 사이트 코드 (suwon | uiwang | pyeongtaek) */
   site?: string;
+  /** 위치 (수원랩 | 의왕랩 | 평택랩) */
+  location?: string;
+  /** 직책 */
+  position?: string;
   /** 팀 ID */
   teamId?: string;
   /** 토큰 발급 시간 (Unix timestamp) */
@@ -108,6 +112,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       roles: payload.roles,
       department: payload.department,
       site: payload.site,
+      location: payload.location,
+      position: payload.position,
       teamId: payload.teamId,
     };
   }

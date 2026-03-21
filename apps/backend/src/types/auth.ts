@@ -16,6 +16,8 @@ export interface JwtUser {
   permissions?: string[]; // ✅ Phase 2: Server-Driven UI를 위한 권한 목록
   department?: string;
   site?: string;
+  location?: string;
+  position?: string;
   teamId?: string;
   // 레거시 호환성을 위한 optional 필드
   sub?: string;

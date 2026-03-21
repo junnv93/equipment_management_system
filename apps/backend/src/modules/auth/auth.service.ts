@@ -13,6 +13,7 @@ import {
   type SiteCode,
   type Site,
   type Location,
+  type User,
   CODE_TO_SITE,
   SITE_TO_LOCATION,
 } from '@equipment-management/schemas';
@@ -200,29 +201,9 @@ export class AuthService {
     this.loginLocks.delete(loginDto.email);
 
     // DB에서 사용자 정보 조회하여 site, teamId 등 보강
-    // DB row에는 site/location 컬럼이 있지만 User 스키마 타입에는 미포함
-    const dbUser = (await this.usersService.findByEmail(loginDto.email)) as
-      | (Record<string, unknown> & {
-          id: string;
-          email: string;
-          name: string;
-          role: string;
-          teamId?: string | null;
-          position?: string | null;
-        })
-      | null;
+    const dbUser = await this.usersService.findByEmail(loginDto.email);
     if (dbUser) {
-      return this.generateToken({
-        id: dbUser.id,
-        email: dbUser.email,
-        name: dbUser.name,
-        roles: [dbUser.role as UserRole],
-        department: undefined,
-        site: (dbUser.site as UserDto['site']) ?? undefined,
-        location: (dbUser.location as UserDto['location']) ?? undefined,
-        position: dbUser.position ?? undefined,
-        teamId: dbUser.teamId ?? undefined,
-      });
+      return this.generateToken(this.toAuthUser(dbUser));
     }
 
     // DB에 없으면 최소 정보로 폴백 (site/teamId 없음)
@@ -358,29 +339,9 @@ export class AuthService {
    */
   async generateTestToken(testUser: TestUser): Promise<AuthResponse> {
     // DB에서 실제 사용자 정보 조회
-    // DB row에는 site/location 컬럼이 있지만 User 스키마 타입에는 미포함
-    const dbUser = (await this.usersService.findByEmail(testUser.email)) as
-      | (Record<string, unknown> & {
-          id: string;
-          email: string;
-          name: string;
-          role: string;
-          teamId?: string | null;
-          position?: string | null;
-        })
-      | null;
+    const dbUser = await this.usersService.findByEmail(testUser.email);
     if (dbUser) {
-      return this.generateToken({
-        id: dbUser.id,
-        email: dbUser.email,
-        name: dbUser.name,
-        roles: [testUser.role as UserRole],
-        department: undefined,
-        site: (dbUser.site as UserDto['site']) ?? undefined,
-        location: (dbUser.location as UserDto['location']) ?? undefined,
-        position: dbUser.position ?? undefined,
-        teamId: dbUser.teamId ?? undefined,
-      });
+      return this.generateToken(this.toAuthUser(dbUser, testUser.role as UserRole));
     }
 
     // DB에 없으면 전달된 정보로 폴백
@@ -408,16 +369,7 @@ export class AuthService {
    * @returns JWT 토큰을 포함한 인증 정보
    */
   async generateTestTokenByEmail(email: string): Promise<AuthResponse> {
-    const dbUser = (await this.usersService.findByEmail(email)) as
-      | (Record<string, unknown> & {
-          id: string;
-          email: string;
-          name: string;
-          role: string;
-          teamId?: string | null;
-          position?: string | null;
-        })
-      | null;
+    const dbUser = await this.usersService.findByEmail(email);
 
     if (!dbUser) {
       throw new UnauthorizedException({
@@ -426,17 +378,7 @@ export class AuthService {
       });
     }
 
-    return this.generateToken({
-      id: dbUser.id,
-      email: dbUser.email,
-      name: dbUser.name,
-      roles: [dbUser.role as UserRole],
-      department: undefined,
-      site: (dbUser.site as UserDto['site']) ?? undefined,
-      location: (dbUser.location as UserDto['location']) ?? undefined,
-      position: dbUser.position ?? undefined,
-      teamId: dbUser.teamId ?? undefined,
-    });
+    return this.generateToken(this.toAuthUser(dbUser));
   }
 
   /**
@@ -511,16 +453,7 @@ export class AuthService {
       }
 
       // DB에서 최신 사용자 정보 조회 (역할 변경 즉시 반영)
-      const dbUser = (await this.usersService.findOne(userId)) as
-        | (Record<string, unknown> & {
-            id: string;
-            email: string;
-            name: string;
-            role: string;
-            teamId?: string | null;
-            position?: string | null;
-          })
-        | null;
+      const dbUser = await this.usersService.findOne(userId);
 
       if (!dbUser) {
         throw new UnauthorizedException({
@@ -530,20 +463,7 @@ export class AuthService {
       }
 
       // sessionStartedAt 전파: 기존 값 유지 (세션 시작 시점 보존)
-      return this.generateToken(
-        {
-          id: dbUser.id,
-          email: dbUser.email as string,
-          name: dbUser.name as string,
-          roles: [dbUser.role as UserRole],
-          department: undefined,
-          site: (dbUser.site as UserDto['site']) ?? undefined,
-          location: (dbUser.location as UserDto['location']) ?? undefined,
-          position: dbUser.position ?? undefined,
-          teamId: dbUser.teamId ?? undefined,
-        },
-        payload.sessionStartedAt
-      );
+      return this.generateToken(this.toAuthUser(dbUser), payload.sessionStartedAt);
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -602,6 +522,29 @@ export class AuthService {
    */
   isTokenBlacklisted(token: string): Promise<boolean> {
     return this.blacklist.isBlacklisted(token);
+  }
+
+  /**
+   * DB User → AuthResponse UserDto 변환
+   *
+   * User 타입(schemas)의 단일 role → roles 배열 변환,
+   * null → undefined 정규화를 수행합니다.
+   *
+   * @param user - DB에서 조회된 User 객체
+   * @param roleOverride - 역할 오버라이드 (테스트 토큰 등에서 사용)
+   */
+  private toAuthUser(user: User, roleOverride?: UserRole): UserDto {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      roles: [roleOverride ?? user.role],
+      department: user.department ?? undefined,
+      site: user.site ?? undefined,
+      location: (user.location as Location) ?? undefined,
+      position: user.position ?? undefined,
+      teamId: user.teamId ?? undefined,
+    };
   }
 
   /**
