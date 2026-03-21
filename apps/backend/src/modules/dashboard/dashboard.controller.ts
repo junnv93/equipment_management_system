@@ -183,7 +183,10 @@ export class DashboardController {
     description: '교정 지연 장비 목록',
     type: [OverdueCalibrationDto],
   })
-  async getOverdueCalibrations(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
+  async getOverdueCalibrations(
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string
+  ): Promise<{ items: OverdueCalibrationDto[]; hasMore: boolean }> {
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
     return this.dashboardService.getOverdueCalibrations(resolvedTeamId, site);
   }
@@ -214,7 +217,7 @@ export class DashboardController {
     @Req() req: AuthenticatedRequest,
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
     @Query('teamId') teamId?: string
-  ) {
+  ): Promise<{ items: UpcomingCalibrationDto[]; hasMore: boolean }> {
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
     return this.dashboardService.getUpcomingCalibrations(days, resolvedTeamId, site);
   }
@@ -235,7 +238,10 @@ export class DashboardController {
     description: '반출 지연 목록',
     type: [OverdueCheckoutDto],
   })
-  async getOverdueCheckouts(@Req() req: AuthenticatedRequest, @Query('teamId') teamId?: string) {
+  async getOverdueCheckouts(
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string
+  ): Promise<{ items: OverdueCheckoutDto[]; hasMore: boolean }> {
     const { site, teamId: resolvedTeamId } = this.resolveDashboardScope(req, teamId);
     return this.dashboardService.getOverdueCheckouts(resolvedTeamId, site);
   }

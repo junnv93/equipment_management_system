@@ -563,16 +563,14 @@ export class DashboardService {
         const equipment = counts.equipment;
         const calibration = counts.calibration;
         const checkout = counts.outgoing;
-        const calibrationFactor = 0;
         const software = counts.software;
 
         return {
           equipment,
           calibration,
           checkout,
-          calibrationFactor,
           software,
-          total: equipment + calibration + checkout + calibrationFactor + software,
+          total: equipment + calibration + checkout + software,
         };
       },
       CACHE_TTL.SHORT

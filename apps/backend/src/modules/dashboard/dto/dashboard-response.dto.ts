@@ -208,9 +208,6 @@ export class PendingApprovalCountsDto {
   @ApiProperty({ description: '반출 승인 대기 수 (대여 포함)' })
   checkout: number;
 
-  @ApiProperty({ description: '보정계수 승인 대기 수' })
-  calibrationFactor: number;
-
   @ApiProperty({ description: '소프트웨어 승인 대기 수' })
   software: number;
 
