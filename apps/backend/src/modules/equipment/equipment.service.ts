@@ -52,6 +52,8 @@ interface QueryConditions {
 export interface EquipmentListResponse {
   items: Equipment[];
   meta: PaginationMeta;
+  /** 동일 필터 조건(status 제외)으로 집계한 상태별 장비 수 */
+  summary: Record<string, number>;
 }
 
 /**
@@ -759,28 +761,68 @@ export class EquipmentService extends VersionedBaseService {
           // 쿼리 조건 빌드
           const { whereConditions, orderBy } = this.buildQueryConditions(queryParams, userSite);
 
-          // 총 아이템 수 계산 — 페이지 간 공유 캐시
-          // 설계 의도: page=1,2,3 요청 시 COUNT 쿼리는 1회만 실행 (count 캐시 공유)
-          // TTL 불일치(count가 list보다 오래 남을 수 있음)는 pagination UX에서 허용 가능하며,
-          // invalidateCache()가 양쪽 모두 삭제하므로 실질적 stale 문제 없음.
-          // Thundering herd 방지(inflight dedup)로 동시 요청 시에도 안전.
-          const { page: _, pageSize: __, sort: ___, ...countParams } = queryParams;
+          // 상태별 카운트 조건: status 필터만 제외한 WHERE 조건 재구축
+          // 동일한 site/teamId/search/classification 등 필터를 적용하되
+          // status 조건만 빼서 GROUP BY status로 전체 분포를 조회
+          const {
+            status: _excludeStatus,
+            page: _,
+            pageSize: __,
+            sort: ___,
+            ...baseParams
+          } = queryParams;
+          const { whereConditions: statusCountWhere } = this.buildQueryConditions(
+            { ...baseParams } as EquipmentQueryDto,
+            userSite
+          );
+
+          // 총 아이템 수 + 상태별 카운트 병렬 조회
+          const { page: _p, pageSize: _ps, sort: _s, ...countParams } = queryParams;
           const countCacheKey = this.buildCacheKey('count', {
             ...countParams,
             userSite,
           });
 
-          const totalItems = await this.cacheService.getOrSet(
-            countCacheKey,
-            async () => {
-              const countResult = await this.db
-                .select({ count: sql<number>`COUNT(*)` })
-                .from(equipment)
-                .where(and(...whereConditions));
-              return Number(countResult[0]?.count || 0);
-            },
-            CACHE_TTL.LONG
-          );
+          const statusCountCacheKey = this.buildCacheKey('statusCounts', {
+            ...baseParams,
+            userSite,
+          });
+
+          const [totalItems, summary] = await Promise.all([
+            // 총 아이템 수 계산 — 페이지 간 공유 캐시
+            this.cacheService.getOrSet(
+              countCacheKey,
+              async () => {
+                const countResult = await this.db
+                  .select({ count: sql<number>`COUNT(*)` })
+                  .from(equipment)
+                  .where(and(...whereConditions));
+                return Number(countResult[0]?.count || 0);
+              },
+              CACHE_TTL.LONG
+            ),
+            // 상태별 카운트 — status 필터 제외, 나머지 필터 동일
+            this.cacheService.getOrSet(
+              statusCountCacheKey,
+              async () => {
+                const statusResults = await this.db
+                  .select({
+                    status: equipment.status,
+                    count: sql<number>`cast(count(*) as integer)`,
+                  })
+                  .from(equipment)
+                  .where(and(...statusCountWhere))
+                  .groupBy(equipment.status);
+
+                const counts: Record<string, number> = {};
+                statusResults.forEach((r) => {
+                  if (r.status) counts[r.status] = r.count;
+                });
+                return counts;
+              },
+              CACHE_TTL.LONG
+            ),
+          ]);
 
           // 페이지네이션 계산
           const totalPages = Math.ceil(totalItems / pageSize);
@@ -849,6 +891,7 @@ export class EquipmentService extends VersionedBaseService {
               totalPages,
               currentPage: Number(page),
             },
+            summary,
           };
         } catch (error) {
           this.logger.error(
@@ -1118,8 +1161,10 @@ export class EquipmentService extends VersionedBaseService {
 
     // 전체 집계/필터 없는 캐시는 항상 무효화 (calibration, all-ids 등)
     await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}(calibration|all-ids)`);
-    // 팀 필터링이 없는 전체 목록도 무효화
-    await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}(list|count):(?!.*teamId)`);
+    // 팀 필터링이 없는 전체 목록/카운트도 무효화
+    await this.cacheService.deleteByPattern(
+      `${this.CACHE_PREFIX}(list|count|statusCounts):(?!.*teamId)`
+    );
   }
 
   /**

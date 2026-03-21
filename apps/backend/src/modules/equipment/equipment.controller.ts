@@ -68,6 +68,7 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.dto';
+import { ApproveRequestBodyPipe, type ApproveRequestBodyDto } from './dto/approve-request-body.dto';
 import type {
   EquipmentCreateOrRequestResult,
   SharedEquipmentCreateResult,
@@ -495,9 +496,9 @@ export class EquipmentController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async findByTeam(
     @Param('teamId') teamId: string,
+    @Req() req: AuthenticatedRequest,
     @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-    @Req() req?: AuthenticatedRequest
+    @Query('pageSize') pageSize?: string
   ): Promise<unknown> {
     const result = await this.equipmentService.findByTeam(
       teamId,
@@ -506,10 +507,10 @@ export class EquipmentController {
     );
 
     // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
-    const userRole = req?.user?.roles?.[0] as UserRole | undefined;
+    const userRole = req.user?.roles?.[0] as UserRole | undefined;
     if (userRole) {
       const scope = resolveDataScope(
-        { role: userRole, site: req?.user?.site, teamId: req?.user?.teamId },
+        { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
         EQUIPMENT_DATA_SCOPE
       );
       if (scope.type === 'site' && scope.site) {
@@ -611,11 +612,12 @@ export class EquipmentController {
   })
   async approveRequest(
     @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
+    @Body(ApproveRequestBodyPipe) dto: ApproveRequestBodyDto,
     @Req() req: AuthenticatedRequest
   ): Promise<EquipmentRequest> {
     const userRoles = req.user?.roles ?? [];
     const userId = extractUserId(req);
-    return this.approvalService.approveRequest(requestUuid, userId, userRoles);
+    return this.approvalService.approveRequest(requestUuid, userId, userRoles, dto.version);
   }
 
   @Post('requests/:requestUuid/reject')
@@ -642,7 +644,13 @@ export class EquipmentController {
   ): Promise<EquipmentRequest> {
     const userRoles = req.user?.roles ?? [];
     const userId = extractUserId(req);
-    return this.approvalService.rejectRequest(requestUuid, userId, dto.rejectionReason, userRoles);
+    return this.approvalService.rejectRequest(
+      requestUuid,
+      userId,
+      dto.rejectionReason,
+      userRoles,
+      dto.version
+    );
   }
 
   // ========== 파일 업로드 엔드포인트 ==========

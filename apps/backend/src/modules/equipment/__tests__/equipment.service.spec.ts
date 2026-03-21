@@ -49,6 +49,7 @@ describe('EquipmentService', () => {
       orderBy: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       offset: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockResolvedValue([]),
       insert: jest.fn().mockReturnThis(),
       values: jest.fn().mockReturnThis(),
       returning: jest.fn(),

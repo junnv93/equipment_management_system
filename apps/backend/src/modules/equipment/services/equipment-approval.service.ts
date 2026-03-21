@@ -3,11 +3,12 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
   Logger,
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import {
   equipmentRequests,
   equipmentAttachments,
@@ -366,7 +367,8 @@ export class EquipmentApprovalService {
   async approveRequest(
     requestUuid: string,
     approvedBy: string,
-    userRoles: string[]
+    userRoles: string[],
+    expectedVersion: number
   ): Promise<EquipmentRequest> {
     try {
       // 권한 확인: 기술책임자 또는 관리자만 승인 가능
@@ -392,7 +394,42 @@ export class EquipmentApprovalService {
         });
       }
 
-      // 요청 타입에 따라 처리
+      // 승인자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
+      const approver = await this.db.query.users.findFirst({
+        where: eq(users.id, approvedBy),
+      });
+
+      if (!approver) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
+
+      // CAS 선점: 요청 상태를 먼저 업데이트하여 동시 승인 방지
+      // 장비 작업보다 CAS를 먼저 실행해야 중복 장비 생성/수정/삭제를 방지할 수 있음
+      const [updated] = await this.db
+        .update(equipmentRequests)
+        .set({
+          approvalStatus: ApprovalStatusValues.APPROVED,
+          approvedBy,
+          approvedAt: new Date(),
+          version: sql`version + 1`,
+        } as Record<string, unknown>)
+        .where(
+          and(eq(equipmentRequests.id, requestUuid), eq(equipmentRequests.version, expectedVersion))
+        )
+        .returning();
+
+      if (!updated) {
+        this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+        throw new ConflictException({
+          code: 'VERSION_CONFLICT',
+          message: 'The request has been modified by another user. Please refresh and try again.',
+        });
+      }
+
+      // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
       if (request.requestType === 'create') {
         const requestData = deserializeRequestData('create', request.requestData);
         await this.equipmentService.create(requestData);
@@ -425,29 +462,6 @@ export class EquipmentApprovalService {
         await this.equipmentService.remove(currentEquipment.id);
       }
 
-      // 승인자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
-      const approver = await this.db.query.users.findFirst({
-        where: eq(users.id, approvedBy),
-      });
-
-      if (!approver) {
-        throw new NotFoundException({
-          code: 'USER_NOT_FOUND',
-          message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
-        });
-      }
-
-      // 요청 상태 업데이트
-      const [updated] = await this.db
-        .update(equipmentRequests)
-        .set({
-          approvalStatus: ApprovalStatusValues.APPROVED,
-          approvedBy,
-          approvedAt: new Date(),
-        })
-        .where(eq(equipmentRequests.id, requestUuid))
-        .returning();
-
       // 📢 알림 이벤트 발행
       const displayData = parseRequestDataForDisplay(request.requestData);
       this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_APPROVED, {
@@ -469,7 +483,8 @@ export class EquipmentApprovalService {
       if (
         error instanceof ForbiddenException ||
         error instanceof NotFoundException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
       ) {
         throw error;
       }
@@ -488,7 +503,8 @@ export class EquipmentApprovalService {
     requestUuid: string,
     approvedBy: string,
     rejectionReason: string,
-    userRoles: string[]
+    userRoles: string[],
+    expectedVersion: number
   ): Promise<EquipmentRequest> {
     try {
       // 권한 확인
@@ -534,7 +550,7 @@ export class EquipmentApprovalService {
         });
       }
 
-      // 요청 상태 업데이트
+      // 요청 상태 업데이트 (CAS: version 체크로 동시 수정 방지)
       const [updated] = await this.db
         .update(equipmentRequests)
         .set({
@@ -542,9 +558,20 @@ export class EquipmentApprovalService {
           approvedBy,
           approvedAt: new Date(),
           rejectionReason,
-        })
-        .where(eq(equipmentRequests.id, requestUuid))
+          version: sql`version + 1`,
+        } as Record<string, unknown>)
+        .where(
+          and(eq(equipmentRequests.id, requestUuid), eq(equipmentRequests.version, expectedVersion))
+        )
         .returning();
+
+      if (!updated) {
+        this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+        throw new ConflictException({
+          code: 'VERSION_CONFLICT',
+          message: 'The request has been modified by another user. Please refresh and try again.',
+        });
+      }
 
       // 📢 알림 이벤트 발행
       const rejectDisplayData = parseRequestDataForDisplay(request.requestData);
@@ -568,7 +595,8 @@ export class EquipmentApprovalService {
       if (
         error instanceof ForbiddenException ||
         error instanceof NotFoundException ||
-        error instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
       ) {
         throw error;
       }

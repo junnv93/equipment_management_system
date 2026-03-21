@@ -69,6 +69,7 @@ describe('EquipmentController', () => {
       totalPages: 1,
       currentPage: 1,
     },
+    summary: { available: 1 },
   };
 
   beforeEach(async () => {
