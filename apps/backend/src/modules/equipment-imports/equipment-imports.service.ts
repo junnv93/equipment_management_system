@@ -650,7 +650,7 @@ export class EquipmentImportsService extends VersionedBaseService {
    * 취소
    * pending/approved → canceled
    */
-  async cancel(id: string, userId: string): Promise<EquipmentImport> {
+  async cancel(id: string, userId: string, version: number): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== EIVal.PENDING && equipmentImport.status !== EIVal.APPROVED) {
@@ -668,14 +668,24 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
-    const [updated] = await this.db
-      .update(equipmentImports)
-      .set({
-        status: EIVal.CANCELED as EquipmentImportStatus,
-        updatedAt: new Date(),
-      })
-      .where(eq(equipmentImports.id, id))
-      .returning();
+    // ✅ CAS: optimistic locking — approved 상태에서 receive()와의 경합 방어
+    let updated: EquipmentImport;
+    try {
+      updated = await this.updateWithVersion<EquipmentImport>(
+        equipmentImports,
+        id,
+        version,
+        {
+          status: EIVal.CANCELED as EquipmentImportStatus,
+        },
+        'Equipment import'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+      }
+      throw error;
+    }
 
     // 취소 후 목록 + 승인카운트 캐시 무효화 (pending 감소, 대시보드 통계 불변)
     this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');

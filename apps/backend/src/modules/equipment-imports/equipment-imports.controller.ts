@@ -14,6 +14,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { EquipmentImportsService } from './equipment-imports.service';
+import type { EquipmentImportListResult } from './types/equipment-import.types';
+import type { equipmentImports as equipmentImportsTable } from '@equipment-management/db/schema';
+
+type EquipmentImport = typeof equipmentImportsTable.$inferSelect;
 import {
   CreateEquipmentImportInput,
   CreateEquipmentImportValidationPipe,
@@ -23,6 +27,8 @@ import {
   RejectEquipmentImportValidationPipe,
   ReceiveEquipmentImportDto,
   ReceiveEquipmentImportValidationPipe,
+  CancelEquipmentImportDto,
+  CancelEquipmentImportValidationPipe,
   EquipmentImportQueryDto,
   EquipmentImportQueryValidationPipe,
 } from './dto';
@@ -55,7 +61,7 @@ export class EquipmentImportsController {
   async create(
     @Body() dto: CreateEquipmentImportInput,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<EquipmentImport> {
     if (!req.user.site) {
       throw new BadRequestException(
         '사용자 사이트 정보가 설정되지 않았습니다. 관리자에게 문의하세요.'
@@ -78,7 +84,7 @@ export class EquipmentImportsController {
     description: 'sourceType 필터로 렌탈/내부공용 구분 조회 가능',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '목록 조회 성공' })
-  async findAll(@Query() query: EquipmentImportQueryDto): Promise<unknown> {
+  async findAll(@Query() query: EquipmentImportQueryDto): Promise<EquipmentImportListResult> {
     return this.equipmentImportsService.findAll(query);
   }
 
@@ -87,7 +93,7 @@ export class EquipmentImportsController {
   @ApiOperation({ summary: '장비 반입 상세 조회' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '상세 조회 성공' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<unknown> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<EquipmentImport> {
     return this.equipmentImportsService.findOne(id);
   }
 
@@ -102,7 +108,7 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApproveEquipmentImportDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<EquipmentImport> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
     enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.approve(id, req.user.userId, dto);
@@ -119,7 +125,7 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectEquipmentImportDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<EquipmentImport> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
     enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.reject(id, req.user.userId, dto);
@@ -142,7 +148,7 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body(ReceiveEquipmentImportValidationPipe) dto: ReceiveEquipmentImportDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<EquipmentImport> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
     enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.receive(id, req.user.userId, dto);
@@ -164,7 +170,7 @@ export class EquipmentImportsController {
   async initiateReturn(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<EquipmentImport> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
     enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.initiateReturn(id, req.user.userId, req.user.teamId);
@@ -173,15 +179,18 @@ export class EquipmentImportsController {
   @Patch(':id/cancel')
   @RequirePermissions(Permission.CANCEL_EQUIPMENT_IMPORT)
   @AuditLog({ action: 'update', entityType: 'equipment_import', entityIdPath: 'params.id' })
+  @UsePipes(CancelEquipmentImportValidationPipe)
   @ApiOperation({ summary: '장비 반입 취소' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '취소 성공' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: '동시 수정 충돌 (Version Conflict)' })
   async cancel(
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelEquipmentImportDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<EquipmentImport> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
     enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
-    return this.equipmentImportsService.cancel(id, req.user.userId);
+    return this.equipmentImportsService.cancel(id, req.user.userId, dto.version);
   }
 }
