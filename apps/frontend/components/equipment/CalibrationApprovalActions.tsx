@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { RejectReasonDialog } from '@/components/admin/RejectReasonDialog';
 import { queryKeys } from '@/lib/api/query-config';
+import { CalibrationCacheInvalidation } from '@/lib/api/cache-invalidation';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { useAuth } from '@/hooks/use-auth';
@@ -14,13 +15,6 @@ import {
   CalibrationApprovalStatusValues as CASVal,
 } from '@equipment-management/schemas';
 import { getCalibrationActionButtonClasses } from '@/lib/design-tokens';
-
-// 승인/반려 후 무효화할 쿼리 키 목록 (equipmentId 의존 없는 공통 키)
-// — 모듈 상수로 분리해 렌더링마다 새 배열 생성 방지
-const APPROVAL_INVALIDATE_KEYS = [
-  queryKeys.calibrations.pending(),
-  queryKeys.calibrations.all,
-] as const;
 
 interface CalibrationApprovalActionsProps {
   calibration: Calibration;
@@ -51,7 +45,7 @@ export function CalibrationApprovalActions({
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     optimisticUpdate: (old, { id }) =>
       (old ?? []).map((cal) => (cal.id === id ? { ...cal, approvalStatus: CASVal.APPROVED } : cal)),
-    invalidateKeys: [...APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [...CalibrationCacheInvalidation.APPROVE_KEYS],
     successMessage: t('calibrationHistoryTab.approval.approveSuccess'),
   });
 
@@ -65,7 +59,7 @@ export function CalibrationApprovalActions({
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     optimisticUpdate: (old, { id }) =>
       (old ?? []).map((cal) => (cal.id === id ? { ...cal, approvalStatus: CASVal.REJECTED } : cal)),
-    invalidateKeys: [...APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [...CalibrationCacheInvalidation.REJECT_KEYS],
     successMessage: t('calibrationHistoryTab.approval.rejectSuccess'),
   });
 

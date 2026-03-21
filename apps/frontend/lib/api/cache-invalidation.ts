@@ -378,6 +378,33 @@ export class CalibrationPlansCacheInvalidation {
 }
 
 /**
+ * 교정 캐시 무효화 헬퍼
+ *
+ * 교정 승인/반려 후 관련 캐시를 무효화.
+ * 승인 시 장비(교정일 업데이트) + NC(overdue 자동 조치) + 대시보드에 교차 영향.
+ * 반려 시 대시보드 승인 카운트만 영향 (장비 상태 변경 없음).
+ */
+export class CalibrationCacheInvalidation {
+  /** 교정 승인 후 무효화 대상 키 — 장비/NC/대시보드 교차 무효화 */
+  static readonly APPROVE_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.calibrations.all,
+    queryKeys.equipment.all,
+    queryKeys.nonConformances.all,
+    queryKeys.dashboard.all,
+    queryKeys.approvals.countsAll,
+    queryKeys.notifications.all,
+  ];
+
+  /** 교정 반려 후 무효화 대상 키 — 장비 상태 변경 없으므로 대시보드만 */
+  static readonly REJECT_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.calibrations.all,
+    queryKeys.dashboard.all,
+    queryKeys.approvals.countsAll,
+    queryKeys.notifications.all,
+  ];
+}
+
+/**
  * 체크아웃 캐시 무효화 헬퍼
  *
  * 체크아웃 승인/반려/반입 후 관련 캐시를 무효화.

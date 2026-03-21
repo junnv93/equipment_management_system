@@ -1,12 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/api/error';
-import { isConflictError } from '@/lib/errors/equipment-errors';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { CalibrationApprovalStatusValues as CASVal } from '@equipment-management/schemas';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +23,7 @@ import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkele
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { queryKeys } from '@/lib/api/query-config';
+import { CalibrationCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, User, Building2 } from 'lucide-react';
 import { CALIBRATION_RESULT_LABELS, type CalibrationResult } from '@equipment-management/schemas';
@@ -56,9 +55,6 @@ import {
 import { PageHeader } from '@/components/shared/PageHeader';
 
 export default function CalibrationApprovalsContent() {
-  const _router = useRouter();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const t = useTranslations('approvals.calibrationApprovals');
   const tActions = useTranslations('approvals.actions');
   const tCommon = useTranslations('common.actions');
@@ -74,77 +70,48 @@ export default function CalibrationApprovalsContent() {
     },
   });
 
-  const approveMutation = useMutation({
-    mutationFn: async ({
-      id,
-      version,
-      approverComment,
-    }: {
-      id: string;
-      version: number;
-      approverComment?: string;
-    }) => {
-      return calibrationApi.approveCalibration(id, { version, approverComment });
-    },
-    onSuccess: () => {
-      toast({
-        title: t('toasts.approveSuccess'),
-        description: t('toasts.approveSuccessDesc'),
-      });
+  const approveMutation = useOptimisticMutation<
+    Calibration,
+    { id: string; version: number; approverComment?: string },
+    { items: Calibration[] }
+  >({
+    mutationFn: ({ id, version, approverComment }) =>
+      calibrationApi.approveCalibration(id, { version, approverComment }),
+    queryKey: queryKeys.calibrations.pending(),
+    optimisticUpdate: (old, { id }) => ({
+      ...old,
+      items: (old?.items ?? []).map((cal) =>
+        cal.id === id ? { ...cal, approvalStatus: CASVal.APPROVED } : cal
+      ),
+    }),
+    invalidateKeys: [...CalibrationCacheInvalidation.APPROVE_KEYS],
+    successMessage: t('toasts.approveSuccess'),
+    onSuccessCallback: () => {
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedRequest(null);
     },
-    onError: (error: unknown) => {
-      const errorMessage = getErrorMessage(error, t('toasts.approveError'));
-      toast({
-        title: t('toasts.approveError'),
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      if (isConflictError(error)) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.historyList() });
-    },
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: async ({
-      id,
-      version,
-      rejectionReason,
-    }: {
-      id: string;
-      version: number;
-      rejectionReason: string;
-    }) => {
-      return calibrationApi.rejectCalibration(id, { version, rejectionReason });
-    },
-    onSuccess: () => {
-      toast({
-        title: t('toasts.rejectSuccess'),
-        description: t('toasts.rejectSuccessDesc'),
-      });
+  const rejectMutation = useOptimisticMutation<
+    Calibration,
+    { id: string; version: number; rejectionReason: string },
+    { items: Calibration[] }
+  >({
+    mutationFn: ({ id, version, rejectionReason }) =>
+      calibrationApi.rejectCalibration(id, { version, rejectionReason }),
+    queryKey: queryKeys.calibrations.pending(),
+    optimisticUpdate: (old, { id }) => ({
+      ...old,
+      items: (old?.items ?? []).map((cal) =>
+        cal.id === id ? { ...cal, approvalStatus: CASVal.REJECTED } : cal
+      ),
+    }),
+    invalidateKeys: [...CalibrationCacheInvalidation.REJECT_KEYS],
+    successMessage: t('toasts.rejectSuccess'),
+    onSuccessCallback: () => {
       setIsRejectDialogOpen(false);
       setSelectedRequest(null);
-    },
-    onError: (error: unknown) => {
-      const errorMessage = getErrorMessage(error, t('toasts.rejectError'));
-      toast({
-        title: t('toasts.rejectError'),
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      if (isConflictError(error)) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
     },
   });
 

@@ -116,8 +116,10 @@ export default function CheckoutDetailClient({
     reject: false,
     start: false,
     approveReturn: false,
+    rejectReturn: false,
   });
   const [rejectReason, setRejectReason] = useState('');
+  const [returnRejectReason, setReturnRejectReason] = useState('');
 
   // 장비별 반출 전 상태 기록 (Phase 3)
   const [itemConditionsBefore, setItemConditionsBefore] = useState<Record<string, string>>({});
@@ -219,6 +221,30 @@ export default function CheckoutDetailClient({
     },
   });
 
+  // 반입 반려 mutation
+  const rejectReturnMutation = useOptimisticMutation<Checkout, string, Checkout>({
+    mutationFn: (reason: string) =>
+      checkoutApi.rejectReturn(checkout.id, { version: checkout.version, reason }),
+    queryKey: queryKeys.checkouts.detail(checkout.id),
+    optimisticUpdate: (old, _reason): Checkout =>
+      ({
+        ...old,
+        status: CSVal.CHECKED_OUT as CheckoutStatus,
+        version: (old?.version ?? checkout.version) + 1,
+      }) as Checkout,
+    invalidateKeys: CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
+    successMessage: t('toasts.returnRejectSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.returnRejectError')),
+    onSuccessCallback: () => {
+      setDialogState((prev) => ({ ...prev, rejectReturn: false }));
+      setReturnRejectReason('');
+      router.refresh();
+    },
+    onErrorCallback: () => {
+      setDialogState((prev) => ({ ...prev, rejectReturn: false }));
+    },
+  });
+
   // 목적 배지 렌더링
   const renderPurposeBadge = (purpose: string) => {
     return (
@@ -253,6 +279,12 @@ export default function CheckoutDetailClient({
   // 반입 승인 처리
   const handleApproveReturn = () => {
     approveReturnMutation.mutate();
+  };
+
+  // 반입 반려 처리
+  const handleRejectReturn = () => {
+    if (!returnRejectReason.trim()) return;
+    rejectReturnMutation.mutate(returnRejectReason);
   };
 
   // 액션 버튼 결정 (역할 기반)
@@ -344,7 +376,7 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // 반입 완료 상태 - 최종 승인 가능 (technical_manager, lab_manager만)
+    // 반입 완료 상태 - 최종 승인/반려 가능 (technical_manager, lab_manager만)
     if (checkout.status === CSVal.RETURNED && canApprove) {
       buttons.push(
         <Button
@@ -355,6 +387,15 @@ export default function CheckoutDetailClient({
         >
           <CheckCircle2 className="mr-2 h-4 w-4" />
           {t('actions.returnApprove')}
+        </Button>,
+        <Button
+          key="reject-return"
+          variant="destructive"
+          onClick={() => setDialogState((prev) => ({ ...prev, rejectReturn: true }))}
+          disabled={rejectReturnMutation.isPending}
+        >
+          <XCircle className="mr-2 h-4 w-4" />
+          {t('actions.returnReject')}
         </Button>
       );
     }
@@ -766,6 +807,55 @@ export default function CheckoutDetailClient({
             </Button>
             <Button onClick={handleApproveReturn} disabled={approveReturnMutation.isPending}>
               {approveReturnMutation.isPending ? t('actions.processing') : t('actions.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 반입 반려 다이얼로그 */}
+      <Dialog
+        open={dialogState.rejectReturn}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, rejectReturn: open }))}
+      >
+        <DialogContent
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            setTimeout(() => {
+              document.getElementById('returnRejectReason')?.focus();
+            }, 0);
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{t('dialogs.returnRejectTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs.returnRejectDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="returnRejectReason">{t('dialogs.returnRejectReasonLabel')}</Label>
+              <Textarea
+                id="returnRejectReason"
+                placeholder={t('dialogs.returnRejectReasonPlaceholder')}
+                value={returnRejectReason}
+                onChange={(e) => setReturnRejectReason(e.target.value)}
+                rows={4}
+                aria-required="true"
+                aria-invalid={!returnRejectReason.trim()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDialogState((prev) => ({ ...prev, rejectReturn: false }))}
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectReturn}
+              disabled={!returnRejectReason.trim() || rejectReturnMutation.isPending}
+            >
+              {rejectReturnMutation.isPending ? t('actions.processing') : t('actions.returnReject')}
             </Button>
           </DialogFooter>
         </DialogContent>
