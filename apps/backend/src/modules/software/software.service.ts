@@ -12,11 +12,13 @@ import { CreateSoftwareChangeInput } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
 import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve-software.dto';
 import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 
 // Backward compatibility alias
 const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
@@ -44,7 +46,8 @@ export class SoftwareService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly eventEmitter: EventEmitter2
   ) {
     super();
   }
@@ -515,6 +518,14 @@ export class SoftwareService extends VersionedBaseService {
     // 승인 후 레지스트리 캐시 무효화 (새 승인 레코드 반영)
     this.invalidateCache(id);
 
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_APPROVED, {
+      softwareHistoryId: id,
+      equipmentId: updated.equipmentId,
+      actorId: approveDto.approverId,
+      actorName: '',
+      timestamp: new Date(),
+    });
+
     return updated;
   }
 
@@ -553,6 +564,15 @@ export class SoftwareService extends VersionedBaseService {
 
       // 반려 후 캐시 무효화 (approve와 동일 패턴)
       this.invalidateCache(id);
+
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_REJECTED, {
+        softwareHistoryId: id,
+        equipmentId: record.equipmentId,
+        actorId: rejectDto.approverId,
+        actorName: '',
+        timestamp: new Date(),
+        reason: rejectDto.rejectionReason,
+      });
 
       return updated;
     } catch (error) {

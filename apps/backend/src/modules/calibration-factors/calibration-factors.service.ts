@@ -11,9 +11,11 @@ import {
 } from './dto/approve-calibration-factor.dto';
 import { CalibrationFactorApprovalStatusValues } from '@equipment-management/schemas';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 
 const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
@@ -48,7 +50,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly eventEmitter: EventEmitter2
   ) {
     super();
   }
@@ -318,6 +321,14 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
 
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
+      factorId: id,
+      equipmentId: factor.equipmentId,
+      actorId: approveDto.approverId,
+      actorName: '',
+      timestamp: new Date(),
+    });
+
     return this.normalize(updated);
   }
 
@@ -350,6 +361,15 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
+
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
+      factorId: id,
+      equipmentId: factor.equipmentId,
+      actorId: rejectDto.approverId,
+      actorName: '',
+      timestamp: new Date(),
+      reason: rejectDto.rejectionReason,
+    });
 
     return this.normalize(updated);
   }

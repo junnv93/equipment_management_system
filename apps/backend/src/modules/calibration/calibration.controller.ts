@@ -37,7 +37,7 @@ import {
   UpdateCalibrationDto,
   UpdateCalibrationValidationPipe,
 } from './dto/update-calibration.dto';
-import { CalibrationQueryDto } from './dto/calibration-query.dto';
+import { CalibrationQueryDto, CalibrationQueryValidationPipe } from './dto/calibration-query.dto';
 import {
   ApproveCalibrationDto,
   RejectCalibrationDto,
@@ -123,7 +123,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  findAll(@Query() query: CalibrationQueryDto): Promise<{
+  findAll(@Query(CalibrationQueryValidationPipe) query: CalibrationQueryDto): Promise<{
     items: CalibrationRecord[];
     meta: {
       totalItems: number;
@@ -567,6 +567,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
+  @UsePipes(UpdateCalibrationValidationPipe)
   async completeCalibration(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateCalibrationDto: UpdateCalibrationDto,

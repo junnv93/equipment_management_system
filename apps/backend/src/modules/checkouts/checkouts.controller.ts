@@ -22,7 +22,12 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { CheckoutsService, CheckoutWithMeta, type CheckoutListResponse } from './checkouts.service';
+import {
+  CheckoutsService,
+  CheckoutWithMeta,
+  type CheckoutListResponse,
+  type Checkout,
+} from './checkouts.service';
 import {
   CreateCheckoutDto,
   CreateCheckoutValidationPipe,
@@ -499,7 +504,7 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectReturnDto: RejectReturnDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<Checkout> {
     const approverId = extractUserId(req);
     const approverTeamId = req.user?.teamId;
     return this.checkoutsService.rejectReturn(

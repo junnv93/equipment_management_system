@@ -6,7 +6,7 @@
  */
 
 // ============================================================================
-// 이벤트 상수 (27개 + batch variants)
+// 이벤트 상수 (32개 + batch variants)
 // ============================================================================
 
 export const NOTIFICATION_EVENTS = {
@@ -54,6 +54,17 @@ export const NOTIFICATION_EVENTS = {
   IMPORT_CREATED: 'equipmentImport.created',
   IMPORT_APPROVED: 'equipmentImport.approved',
   IMPORT_REJECTED: 'equipmentImport.rejected',
+
+  // ─── 소프트웨어 (Software) ───
+  SOFTWARE_APPROVED: 'software.approved',
+  SOFTWARE_REJECTED: 'software.rejected',
+
+  // ─── 중간점검 (Intermediate Check) ───
+  INTERMEDIATE_CHECK_COMPLETED: 'intermediateCheck.completed',
+
+  // ─── 보정계수 (Calibration Factor) ───
+  CALIBRATION_FACTOR_APPROVED: 'calibrationFactor.approved',
+  CALIBRATION_FACTOR_REJECTED: 'calibrationFactor.rejected',
 
   // ─── 시스템 ───
   SYSTEM_ANNOUNCEMENT: 'system.announcement',
@@ -148,6 +159,20 @@ export interface CalibrationPlanNotificationEvent extends BaseNotificationEvent 
   reason?: string;
 }
 
+/** 소프트웨어 관련 이벤트 페이로드 */
+export interface SoftwareNotificationEvent extends BaseNotificationEvent {
+  softwareHistoryId: string;
+  equipmentId: string;
+  reason?: string;
+}
+
+/** 보정계수 관련 이벤트 페이로드 */
+export interface CalibrationFactorNotificationEvent extends BaseNotificationEvent {
+  factorId: string;
+  equipmentId: string;
+  reason?: string;
+}
+
 /** 시스템 공지 페이로드 */
 export interface SystemNotificationEvent extends BaseNotificationEvent {
   title: string;
@@ -164,4 +189,6 @@ export type NotificationEventPayload =
   | DisposalNotificationEvent
   | ImportNotificationEvent
   | EquipmentRequestNotificationEvent
+  | SoftwareNotificationEvent
+  | CalibrationFactorNotificationEvent
   | SystemNotificationEvent;

@@ -44,6 +44,8 @@ import {
   CHECKOUT_DATA_SCOPE,
   INTERMEDIATE_CHECK_DATA_SCOPE,
   CALIBRATION_DATA_SCOPE,
+  CALIBRATION_PLAN_DATA_SCOPE,
+  SOFTWARE_DATA_SCOPE,
   EQUIPMENT_IMPORT_DATA_SCOPE,
   DISPOSAL_DATA_SCOPE,
   EQUIPMENT_REQUEST_DATA_SCOPE,
@@ -225,9 +227,11 @@ export class ApprovalsService {
       shouldQuery(AC.DISPOSAL_FINAL)
         ? this.getDisposalCount(DisposalReviewStatusValues.REVIEWED, userCtx)
         : Promise.resolve(0),
-      shouldQuery(AC.PLAN_REVIEW) ? this.getCalibrationPlanReviewCount() : Promise.resolve(0),
-      shouldQuery(AC.PLAN_FINAL) ? this.getCalibrationPlanFinalCount() : Promise.resolve(0),
-      shouldQuery(AC.SOFTWARE) ? this.getSoftwareCount() : Promise.resolve(0),
+      shouldQuery(AC.PLAN_REVIEW)
+        ? this.getCalibrationPlanReviewCount(userCtx)
+        : Promise.resolve(0),
+      shouldQuery(AC.PLAN_FINAL) ? this.getCalibrationPlanFinalCount(userCtx) : Promise.resolve(0),
+      shouldQuery(AC.SOFTWARE) ? this.getSoftwareCount(userCtx) : Promise.resolve(0),
     ]);
 
     return {
@@ -327,15 +331,17 @@ export class ApprovalsService {
         case AC.PLAN_REVIEW:
           return this.getCalibrationPlanKpi(
             CalibrationPlanStatusValues.PENDING_REVIEW,
+            userCtx,
             thresholdDays
           );
         case AC.PLAN_FINAL:
           return this.getCalibrationPlanKpi(
             CalibrationPlanStatusValues.PENDING_APPROVAL,
+            userCtx,
             thresholdDays
           );
         case AC.SOFTWARE:
-          return this.getSoftwareKpi(thresholdDays);
+          return this.getSoftwareKpi(userCtx, thresholdDays);
         default:
           return { urgentCount: 0, avgWaitDays: 0 };
       }
@@ -728,58 +734,87 @@ export class ApprovalsService {
   }
 
   /**
-   * 교정계획서 KPI (검토/최종 공용)
+   * 교정계획서 KPI (검토/최종 공용) — SSOT: CALIBRATION_PLAN_DATA_SCOPE
    */
   private async getCalibrationPlanKpi(
     status: CalibrationPlanStatus,
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
 
+    const kpiSelect = {
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.calibrationPlans.createdAt} <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      avgDays:
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrationPlans.createdAt})) / 86400))::int, 0)`.as(
+          'avg_days'
+        ),
+    };
+
+    const conditions: SQL[] = [
+      eq(schema.calibrationPlans.status, status),
+      eq(schema.calibrationPlans.isLatestVersion, true),
+    ];
+
+    const scopeCondition = this.buildScopeCondition(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.calibrationPlans.siteId, s),
+      team: (t) => eq(schema.calibrationPlans.teamId, t),
+    });
+    if (scopeCondition) conditions.push(scopeCondition);
+
     const [result] = await this.db
-      .select({
-        urgent:
-          sql<number>`(count(*) filter (where ${schema.calibrationPlans.createdAt} <= ${thresholdDate}))::int`.as(
-            'urgent'
-          ),
-        avgDays:
-          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrationPlans.createdAt})) / 86400))::int, 0)`.as(
-            'avg_days'
-          ),
-      })
+      .select(kpiSelect)
       .from(schema.calibrationPlans)
-      .where(
-        and(
-          eq(schema.calibrationPlans.status, status),
-          eq(schema.calibrationPlans.isLatestVersion, true)
-        )
-      );
+      .where(and(...conditions));
 
     return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 
   /**
-   * 소프트웨어 검증 KPI
+   * 소프트웨어 검증 KPI — SSOT: SOFTWARE_DATA_SCOPE (equipment JOIN)
    */
   private async getSoftwareKpi(
+    userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
 
-    const [result] = await this.db
-      .select({
-        urgent:
-          sql<number>`(count(*) filter (where ${schema.softwareHistory.createdAt} <= ${thresholdDate}))::int`.as(
-            'urgent'
-          ),
-        avgDays:
-          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.softwareHistory.createdAt})) / 86400))::int, 0)`.as(
-            'avg_days'
-          ),
-      })
-      .from(schema.softwareHistory)
-      .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING));
+    const kpiSelect = {
+      urgent:
+        sql<number>`(count(*) filter (where ${schema.softwareHistory.createdAt} <= ${thresholdDate}))::int`.as(
+          'urgent'
+        ),
+      avgDays:
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.softwareHistory.createdAt})) / 86400))::int, 0)`.as(
+          'avg_days'
+        ),
+    };
 
+    const conditions: SQL[] = [
+      eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING),
+    ];
+
+    const scopeCondition = this.buildScopeCondition(SOFTWARE_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.equipment.site, s),
+      team: (t) => eq(schema.equipment.teamId, t),
+    });
+
+    if (scopeCondition) {
+      const [result] = await this.db
+        .select(kpiSelect)
+        .from(schema.softwareHistory)
+        .innerJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
+        .where(and(...conditions, scopeCondition));
+      return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
+    }
+
+    const [result] = await this.db
+      .select(kpiSelect)
+      .from(schema.softwareHistory)
+      .where(and(...conditions));
     return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
 

@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Query, ForbiddenException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { UserRoleValues } from '@equipment-management/schemas';
 import { THROTTLE_PRESETS } from '../../common/config/throttle.constants';
 import { AuthService, AuthResponse, TestUser } from './auth.service';
 import { Public } from './decorators/public.decorator';
@@ -45,38 +46,37 @@ export class TestAuthController {
     }
 
     const testUsers: Record<string, TestUser> = {
-      test_engineer: {
+      [UserRoleValues.TEST_ENGINEER]: {
         email: 'test.engineer@example.com',
         name: '시험실무자 (Suwon)',
-        role: 'test_engineer',
+        role: UserRoleValues.TEST_ENGINEER,
       },
-      technical_manager: {
+      [UserRoleValues.TECHNICAL_MANAGER]: {
         email: 'tech.manager@example.com',
         name: '기술책임자 (Suwon)',
-        role: 'technical_manager',
+        role: UserRoleValues.TECHNICAL_MANAGER,
       },
-      quality_manager: {
+      [UserRoleValues.QUALITY_MANAGER]: {
         email: 'quality.manager@example.com',
         name: '품질책임자 (Suwon)',
-        role: 'quality_manager',
+        role: UserRoleValues.QUALITY_MANAGER,
       },
-      lab_manager: {
+      [UserRoleValues.LAB_MANAGER]: {
         email: 'lab.manager@example.com',
         name: '시험소장 (Suwon)',
-        role: 'lab_manager',
+        role: UserRoleValues.LAB_MANAGER,
       },
-      system_admin: {
+      [UserRoleValues.SYSTEM_ADMIN]: {
         email: 'system.admin@example.com',
         name: '시스템 관리자',
-        role: 'system_admin',
+        role: UserRoleValues.SYSTEM_ADMIN,
       },
     };
 
     const testUser = testUsers[role];
     if (!testUser) {
-      throw new ForbiddenException(
-        `Invalid role: ${role}. Valid roles: test_engineer, technical_manager, quality_manager, lab_manager, system_admin`
-      );
+      const validRoles = Object.values(UserRoleValues).join(', ');
+      throw new ForbiddenException(`Invalid role: ${role}. Valid roles: ${validRoles}`);
     }
 
     return this.authService.generateTestToken(testUser);

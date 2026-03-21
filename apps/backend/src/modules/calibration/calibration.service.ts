@@ -10,6 +10,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
@@ -92,6 +93,7 @@ export class CalibrationService extends VersionedBaseService {
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly eventEmitter: EventEmitter2,
     private readonly i18n: I18nService
   ) {
@@ -116,6 +118,26 @@ export class CalibrationService extends VersionedBaseService {
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}intermediate-checks:*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+  }
+
+  /**
+   * 교정 승인 후 교차 엔티티 캐시 무효화
+   *
+   * 승인 시 equipment(교정일 업데이트) + NC(overdue 자동 조치) + dashboard에 영향.
+   * SSOT: CacheInvalidationHelper의 장비/NC/대시보드 메서드 위임
+   */
+  private async invalidateAfterCalibrationApproval(equipmentId: string): Promise<void> {
+    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentId, true);
+  }
+
+  /**
+   * 교정 반려 후 교차 엔티티 캐시 무효화
+   *
+   * 반려 시 equipment 상태 변경 없음 — 대시보드 승인 카운트만 영향.
+   * SSOT: CacheInvalidationHelper.invalidateAllDashboard()
+   */
+  private async invalidateAfterCalibrationRejection(): Promise<void> {
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
   }
 
   // ============================================================================
@@ -1003,7 +1025,7 @@ export class CalibrationService extends VersionedBaseService {
       throw error;
     }
 
-    // 캐시 무효화 (성공)
+    // 캐시 무효화 (교정 자체)
     this.invalidateCalibrationCache(id);
 
     // 장비 정보 1회 조회 — 교정일 업데이트 + 알림 이벤트 공용 (이중 DB 호출 방지)
@@ -1041,6 +1063,9 @@ export class CalibrationService extends VersionedBaseService {
       actorName: '',
       timestamp: new Date(),
     });
+
+    // 교차 엔티티 캐시 무효화: 승인 시 equipment(교정일) + NC(overdue 조치) + dashboard
+    await this.invalidateAfterCalibrationApproval(calibration.equipmentId);
 
     // ✅ 승인 완료된 최신 데이터 반환 (DB 재조회)
     return this.findOne(id);
@@ -1216,8 +1241,10 @@ export class CalibrationService extends VersionedBaseService {
       throw error;
     }
 
-    // 캐시 무효화 (성공)
+    // 캐시 무효화 (교정 자체)
     this.invalidateCalibrationCache(id);
+    // 교차 엔티티: 반려는 equipment 상태 변경 없음 — 대시보드 승인 카운트만 영향
+    await this.invalidateAfterCalibrationRejection();
 
     // 📢 알림 이벤트 발행 (교정 반려)
     // equipment JOIN으로 이벤트 페이로드 enrichment (findOne은 calibrations만 조회)
@@ -1328,6 +1355,17 @@ export class CalibrationService extends VersionedBaseService {
       .returning();
 
     this.invalidateCalibrationCache(id);
+
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED, {
+      calibrationId: id,
+      equipmentId: calibration.equipmentId,
+      equipmentName: '',
+      managementNumber: '',
+      teamId: '',
+      actorId: completedBy,
+      actorName: '',
+      timestamp: new Date(),
+    });
 
     return {
       calibration: this.transformDbToRecord(updated),

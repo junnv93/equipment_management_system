@@ -52,7 +52,7 @@ import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import type { AuthenticatedRequest } from '../../types/auth';
 import type { PaginationMeta } from '../../common/types/api-response';
 // Drizzle에서 자동 추론되는 타입 사용
-type Checkout = typeof checkouts.$inferSelect;
+export type Checkout = typeof checkouts.$inferSelect;
 
 /**
  * ✅ Phase 2: Server-Driven UI
@@ -1824,7 +1824,7 @@ export class CheckoutsService extends VersionedBaseService {
       }
       if (error instanceof ConflictException) {
         // ✅ CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
-        const detailCacheKey = `checkouts:detail:${JSON.stringify({ uuid })}`;
+        const detailCacheKey = this.buildCacheKey('detail', { uuid });
         this.cacheService.delete(detailCacheKey);
         throw error;
       }
@@ -1961,9 +1961,9 @@ export class CheckoutsService extends VersionedBaseService {
         return check;
       });
 
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return conditionCheck;
     } catch (error) {
