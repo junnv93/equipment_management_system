@@ -249,6 +249,121 @@ export class EquipmentCacheInvalidation {
 }
 
 /**
+ * 장비 반입 캐시 무효화 헬퍼
+ *
+ * 장비 반입(equipment-imports) 상태 변경 후 관련 캐시를 무효화.
+ * 반입 상태 변경은 승인 카운트, 장비 목록, 대시보드 통계에도 영향하므로 교차 무효화 포함.
+ *
+ * 교차 엔티티 영향:
+ * - approve/reject: 승인 카운트 변동
+ * - receive: 장비 자동 생성 → 장비 목록 + 대시보드
+ * - initiateReturn: checkout 생성 → checkout 목록 + 장비 상태
+ * - cancel: 승인 카운트 변동
+ */
+export class EquipmentImportCacheInvalidation {
+  /**
+   * 모든 장비 반입 캐시 무효화 (목록 + 상세)
+   */
+  static async invalidateAll(queryClient: QueryClient): Promise<void> {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.equipmentImports.all,
+      exact: false,
+    });
+  }
+
+  /**
+   * 특정 장비 반입 상세 + 목록 무효화
+   */
+  static async invalidateImport(queryClient: QueryClient, importId: string): Promise<void> {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipmentImports.detail(importId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipmentImports.lists(),
+        exact: false,
+      }),
+    ]);
+  }
+
+  /**
+   * 승인/반려 후 무효화 (승인 카운트 + 알림 포함)
+   *
+   * 사용 시점:
+   * - approve: pending → approved (승인 카운트 감소)
+   * - reject: pending → rejected (승인 카운트 감소)
+   */
+  static async invalidateAfterApprovalAction(
+    queryClient: QueryClient,
+    importId: string
+  ): Promise<void> {
+    await Promise.all([
+      this.invalidateImport(queryClient, importId),
+      DashboardCacheInvalidation.invalidateAll(queryClient),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.approvals.countsAll,
+        exact: false,
+      }),
+      NotificationCacheInvalidation.invalidateAll(queryClient),
+    ]);
+  }
+
+  /**
+   * 수령 확인 후 무효화 (장비 자동 생성 → 장비 + 대시보드 교차 무효화)
+   *
+   * 사용 시점:
+   * - receive: approved → received (장비 자동 등록됨)
+   */
+  static async invalidateAfterReceive(queryClient: QueryClient, importId: string): Promise<void> {
+    await Promise.all([
+      this.invalidateImport(queryClient, importId),
+      // 장비 자동 생성 → 장비 목록 무효화
+      EquipmentCacheInvalidation.invalidateAll(queryClient),
+      DashboardCacheInvalidation.invalidateAll(queryClient),
+    ]);
+  }
+
+  /**
+   * 반납 시작 후 무효화 (checkout 생성 + 장비 상태 변경)
+   *
+   * 사용 시점:
+   * - initiateReturn: received → return_requested (checkout 자동 생성)
+   */
+  static async invalidateAfterInitiateReturn(
+    queryClient: QueryClient,
+    importId: string
+  ): Promise<void> {
+    await Promise.all([
+      this.invalidateImport(queryClient, importId),
+      // checkout 자동 생성 → checkout 목록 무효화
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.checkouts.all,
+        exact: false,
+      }),
+      // 장비 상태 변경 → 장비 목록 무효화
+      EquipmentCacheInvalidation.invalidateAll(queryClient),
+      DashboardCacheInvalidation.invalidateAll(queryClient),
+    ]);
+  }
+
+  /**
+   * 취소 후 무효화 (승인 카운트 변동)
+   *
+   * 사용 시점:
+   * - cancel: pending/approved → canceled
+   */
+  static async invalidateAfterCancel(queryClient: QueryClient, importId: string): Promise<void> {
+    await Promise.all([
+      this.invalidateImport(queryClient, importId),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.approvals.countsAll,
+        exact: false,
+      }),
+    ]);
+  }
+}
+
+/**
  * 부적합 관리 캐시 무효화 헬퍼
  *
  * NC 상태 변경, 종결, 반려 후 관련 캐시를 무효화.

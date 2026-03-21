@@ -126,8 +126,12 @@ export interface EquipmentApiMethods {
   // 승인 프로세스
   getPendingRequests: () => Promise<unknown[]>;
   getRequestByUuid: (requestUuid: string) => Promise<unknown>;
-  approveRequest: (requestUuid: string) => Promise<unknown>;
-  rejectRequest: (requestUuid: string, rejectionReason: string) => Promise<unknown>;
+  approveRequest: (requestUuid: string, version: number) => Promise<unknown>;
+  rejectRequest: (
+    requestUuid: string,
+    rejectionReason: string,
+    version: number
+  ) => Promise<unknown>;
 
   // 이력 관리
   getLocationHistory: (equipmentUuid: string) => Promise<LocationHistoryItem[]>;
@@ -236,14 +240,21 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
       return response.data;
     },
 
-    approveRequest: async (requestUuid: string): Promise<unknown> => {
-      const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid));
+    approveRequest: async (requestUuid: string, version: number): Promise<unknown> => {
+      const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid), {
+        version,
+      });
       return response.data;
     },
 
-    rejectRequest: async (requestUuid: string, rejectionReason: string): Promise<unknown> => {
+    rejectRequest: async (
+      requestUuid: string,
+      rejectionReason: string,
+      version: number
+    ): Promise<unknown> => {
       const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(requestUuid), {
         rejectionReason,
+        version,
       });
       return response.data;
     },

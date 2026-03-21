@@ -371,19 +371,23 @@ const equipmentApi = {
     return response.data;
   },
 
-  // 요청 승인
-  approveRequest: async (requestUuid: string): Promise<EquipmentRequest> => {
-    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid));
+  // 요청 승인 (CAS: version 필수)
+  approveRequest: async (requestUuid: string, version: number): Promise<EquipmentRequest> => {
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid), {
+      version,
+    });
     return response.data;
   },
 
-  // 요청 반려
+  // 요청 반려 (CAS: version 필수)
   rejectRequest: async (
     requestUuid: string,
-    rejectionReason: string
+    rejectionReason: string,
+    version: number
   ): Promise<EquipmentRequest> => {
     const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(requestUuid), {
       rejectionReason,
+      version,
     });
     return response.data;
   },

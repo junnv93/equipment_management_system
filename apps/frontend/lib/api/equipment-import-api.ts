@@ -345,8 +345,8 @@ class EquipmentImportApi {
    * @param id - Equipment import UUID
    * @returns Created checkout ID for return tracking
    */
-  async initiateReturn(id: string): Promise<{ checkoutId: string }> {
-    const response = await apiClient.post<{ checkoutId: string }>(
+  async initiateReturn(id: string): Promise<EquipmentImport> {
+    const response = await apiClient.post<EquipmentImport>(
       API_ENDPOINTS.EQUIPMENT_IMPORTS.INITIATE_RETURN(id)
     );
     return response.data;
@@ -355,17 +355,18 @@ class EquipmentImportApi {
   /**
    * Cancel an equipment import
    *
-   * Only allowed for 'pending' status.
+   * Only allowed for 'pending' or 'approved' status.
    * Works for both rental and internal shared imports.
    *
    * @param id - Equipment import UUID
-   * @param reason - Cancellation reason (required)
+   * @param version - Version for optimistic locking (CAS)
+   * @param reason - Cancellation reason (optional)
    * @returns Updated equipment import
    */
-  async cancel(id: string, reason: string): Promise<EquipmentImport> {
-    const response = await apiClient.post<EquipmentImport>(
+  async cancel(id: string, version: number, reason?: string): Promise<EquipmentImport> {
+    const response = await apiClient.patch<EquipmentImport>(
       API_ENDPOINTS.EQUIPMENT_IMPORTS.CANCEL(id),
-      { reason }
+      { version, reason }
     );
     return response.data;
   }

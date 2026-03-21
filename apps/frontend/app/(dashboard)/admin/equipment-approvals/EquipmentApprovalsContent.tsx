@@ -30,6 +30,7 @@ interface EquipmentRequest {
   approvedAt?: string;
   rejectionReason?: string;
   requestData?: string;
+  version: number;
   requester?: {
     name: string;
     email: string;
@@ -83,10 +84,10 @@ export default function EquipmentApprovalsContent() {
     enabled: !!selectedRequest,
   });
 
-  // 승인 뮤테이션
+  // 승인 뮤테이션 (CAS: version 전달로 동시 승인 방지)
   const approveMutation = useMutation({
-    mutationFn: async (requestId: string) => {
-      return apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestId));
+    mutationFn: async ({ requestId, version }: { requestId: string; version: number }) => {
+      return apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestId), { version });
     },
     onSuccess: () => {
       toast({
@@ -108,11 +109,20 @@ export default function EquipmentApprovalsContent() {
     },
   });
 
-  // 반려 뮤테이션
+  // 반려 뮤테이션 (CAS: version 전달로 동시 반려 방지)
   const rejectMutation = useMutation({
-    mutationFn: async ({ requestId, reason }: { requestId: string; reason: string }) => {
+    mutationFn: async ({
+      requestId,
+      reason,
+      version,
+    }: {
+      requestId: string;
+      reason: string;
+      version: number;
+    }) => {
       return apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(requestId), {
         rejectionReason: reason,
+        version,
       });
     },
     onSuccess: () => {
@@ -137,7 +147,7 @@ export default function EquipmentApprovalsContent() {
 
   const handleApprove = (request: EquipmentRequest) => {
     if (confirm(t('confirm.approveDescription'))) {
-      approveMutation.mutate(request.id);
+      approveMutation.mutate({ requestId: request.id, version: request.version });
     }
   };
 
@@ -151,6 +161,7 @@ export default function EquipmentApprovalsContent() {
     rejectMutation.mutate({
       requestId: selectedRequest.id,
       reason,
+      version: selectedRequest.version,
     });
   };
 
