@@ -118,7 +118,7 @@ export class IntermediateCheckScheduler {
   async handleIntermediateCheckNotifications(
     days: number = 30
   ): Promise<{ success: boolean; processed: number; sent: number; skipped: number }> {
-    const alertDays = await this.settingsService.getCalibrationAlertDays();
+    const { alertDays } = await this.settingsService.getCalibrationAlertDays();
     this.logger.log(`중간점검 알림 스케줄러 실행 시작 (알림 주기: D-${alertDays.join(', D-')})`);
 
     try {
@@ -235,7 +235,7 @@ export class IntermediateCheckScheduler {
   async handleCombinedCalibrationNotifications(
     days: number = 30
   ): Promise<{ success: boolean; processed: number; sent: number; skipped: number }> {
-    const alertDays = await this.settingsService.getCalibrationAlertDays();
+    const { alertDays } = await this.settingsService.getCalibrationAlertDays();
     this.logger.log(
       `통합 교정/중간점검 알림 스케줄러 실행 시작 (알림 주기: D-${alertDays.join(', D-')})`
     );

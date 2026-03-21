@@ -1,4 +1,4 @@
-import { Module, forwardRef, OnModuleInit, Logger } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationsController } from './notifications.controller';
@@ -74,31 +74,7 @@ import { SettingsModule } from '../settings/settings.module';
     CheckoutOverdueScheduler,
   ],
 })
-export class NotificationsModule implements OnModuleInit {
-  private readonly logger = new Logger(NotificationsModule.name);
-
-  constructor(
-    private readonly calibrationOverdueScheduler: CalibrationOverdueScheduler,
-    private readonly checkoutOverdueScheduler: CheckoutOverdueScheduler
-  ) {}
-
-  /**
-   * 애플리케이션 시작 시 교정/반출 기한 초과 점검 즉시 실행
-   */
-  async onModuleInit(): Promise<void> {
-    this.logger.log('애플리케이션 시작 시 교정 기한 초과 점검 실행...');
-    try {
-      const result = await this.calibrationOverdueScheduler.handleCalibrationOverdueCheck();
-      this.logger.log(
-        `초기 교정 기한 초과 점검 완료: 처리 ${result.processed}건, 생성 ${result.created}건, 건너뜀 ${result.skipped}건`
-      );
-    } catch (error) {
-      this.logger.error(
-        '초기 교정 기한 초과 점검 실패',
-        error instanceof Error ? error.stack : String(error)
-      );
-    }
-
-    // CheckoutOverdueScheduler는 자체 onModuleInit에서 실행됨 (별도 호출 불필요)
-  }
+export class NotificationsModule {
+  // CalibrationOverdueScheduler, CheckoutOverdueScheduler는
+  // 각자의 onModuleInit에서 초기 점검을 실행함 (중복 호출 방지)
 }

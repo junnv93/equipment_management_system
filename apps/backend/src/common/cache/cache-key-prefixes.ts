@@ -44,11 +44,17 @@ export const CACHE_KEY_PREFIXES = {
   /** audit.service.ts */
   AUDIT_LOGS: 'audit-logs:',
 
-  /** notifications.service.ts */
+  /** notifications.service.ts, notification-dispatcher.ts */
   NOTIFICATION: 'notification:',
+
+  /** notification-dispatcher.ts — actorName 캐시 (5분 TTL) */
+  ACTOR_NAME: 'actor:name:',
 
   /** approvals.service.ts */
   APPROVALS: 'approvals:',
+
+  /** settings.service.ts */
+  SETTINGS: 'settings:',
 
   /** jwt.strategy.ts — 사용자 활성 상태 캐시 */
   USER_ACTIVE: 'user_active:',

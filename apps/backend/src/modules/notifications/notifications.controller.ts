@@ -13,7 +13,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { NotificationsService } from './notifications.service';
+import { NotificationsService, type NotificationRecord } from './notifications.service';
 import { NotificationPreferencesService } from './services/notification-preferences.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, NOTIFICATION_DATA_SCOPE } from '@equipment-management/shared-constants';
@@ -46,6 +46,15 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
  *   반드시 먼저 선언해야 합니다. 그렇지 않으면 :id가 'settings' 등을 가로챕니다.
  */
 
+/** 페이지네이션 포함 목록 응답 */
+interface PaginatedNotificationResponse {
+  items: NotificationRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 @ApiTags('알림 관리')
 @ApiBearerAuth()
 @Controller('notifications')
@@ -70,7 +79,7 @@ export class NotificationsController {
   findAll(
     @Request() req: AuthenticatedRequest,
     @Query() query: NotificationQueryInput
-  ): Promise<unknown> {
+  ): Promise<PaginatedNotificationResponse> {
     const userId = req.user.userId;
     const userTeamId = req.user.teamId ?? null;
 
@@ -92,7 +101,7 @@ export class NotificationsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '미읽음 알림 개수 조회 성공' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  countUnread(@Request() req: AuthenticatedRequest): Promise<unknown> {
+  countUnread(@Request() req: AuthenticatedRequest): Promise<{ count: number }> {
     const userId = req.user.userId;
     const userTeamId = req.user.teamId ?? null;
     return this.notificationsService.countUnread(userId, userTeamId);
@@ -104,7 +113,9 @@ export class NotificationsController {
     description: '인증된 사용자의 알림 설정을 조회합니다.',
   })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  getSettings(@Request() req: AuthenticatedRequest): Promise<unknown> {
+  getSettings(
+    @Request() req: AuthenticatedRequest
+  ): ReturnType<NotificationPreferencesService['getOrCreate']> {
     return this.preferencesService.getOrCreate(req.user.userId);
   }
 
@@ -114,11 +125,12 @@ export class NotificationsController {
     description: '인증된 사용자의 알림 설정을 업데이트합니다.',
   })
   @RequirePermissions(Permission.UPDATE_NOTIFICATION)
+  @AuditLog({ action: 'update', entityType: 'settings' })
   @UsePipes(UpdateNotificationSettingsPipe)
   updateSettings(
     @Request() req: AuthenticatedRequest,
     @Body() dto: UpdateNotificationSettingsDto
-  ): Promise<unknown> {
+  ): ReturnType<NotificationPreferencesService['update']> {
     return this.preferencesService.update(req.user.userId, dto);
   }
 
@@ -129,7 +141,9 @@ export class NotificationsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '모든 알림 읽음 표시 성공' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  markAllAsRead(@Request() req: AuthenticatedRequest): Promise<unknown> {
+  markAllAsRead(
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ success: boolean; count: number }> {
     const userId = req.user.userId;
     const userTeamId = req.user.teamId ?? null;
     return this.notificationsService.markAllAsRead(userId, userTeamId);
@@ -146,7 +160,7 @@ export class NotificationsController {
   @AuditLog({ action: 'create', entityType: 'notification' })
   createSystemNotification(
     @Body(CreateSystemNotificationPipe) dto: CreateSystemNotificationDto
-  ): Promise<unknown> {
+  ): Promise<NotificationRecord> {
     return this.notificationsService.createSystemNotification(dto.title, dto.content, dto.priority);
   }
 
@@ -159,7 +173,7 @@ export class NotificationsController {
   // 이 작업은 장비 상태를 non_conforming으로 변경하므로 장비 수정 권한이 의미적으로 적절함
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
   @AuditLog({ action: 'update', entityType: 'equipment' })
-  async triggerOverdueCheck(): Promise<unknown> {
+  triggerOverdueCheck(): ReturnType<CalibrationOverdueScheduler['handleCalibrationOverdueCheck']> {
     return this.calibrationOverdueScheduler.handleCalibrationOverdueCheck();
   }
 
@@ -172,7 +186,7 @@ export class NotificationsController {
   // 이 작업은 반출 상태를 overdue로 변경하는 장비 관련 시스템 작업임
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
   @AuditLog({ action: 'update', entityType: 'checkout' })
-  async triggerCheckoutOverdueCheck(): Promise<unknown> {
+  triggerCheckoutOverdueCheck(): ReturnType<CheckoutOverdueScheduler['checkOverdueCheckouts']> {
     return this.checkoutOverdueScheduler.checkOverdueCheckouts();
   }
 
@@ -187,7 +201,7 @@ export class NotificationsController {
   @RequirePermissions(Permission.CREATE_SYSTEM_NOTIFICATION)
   @SiteScoped({ policy: NOTIFICATION_DATA_SCOPE, siteField: 'recipientSite' })
   @UsePipes(NotificationQueryValidationPipe)
-  findAllAdmin(@Query() query: NotificationQueryInput): Promise<unknown> {
+  findAllAdmin(@Query() query: NotificationQueryInput): Promise<PaginatedNotificationResponse> {
     return this.notificationsService.findAllAdmin(query);
   }
 
@@ -205,7 +219,7 @@ export class NotificationsController {
   findOne(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<NotificationRecord> {
     return this.notificationsService.findOne(id, req.user.userId, req.user.teamId ?? null);
   }
 
@@ -220,7 +234,7 @@ export class NotificationsController {
   markAsRead(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<NotificationRecord> {
     return this.notificationsService.markAsRead(id, req.user.userId);
   }
 
@@ -232,10 +246,11 @@ export class NotificationsController {
   @ApiParam({ name: 'id', description: '알림 UUID', format: 'uuid' })
   @ApiResponse({ status: HttpStatus.OK, description: '알림 삭제 성공' })
   @RequirePermissions(Permission.DELETE_NOTIFICATION)
+  @AuditLog({ action: 'delete', entityType: 'notification', entityIdPath: 'params.id' })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<{ id: string; deleted: boolean }> {
     return this.notificationsService.remove(id, req.user.userId);
   }
 }

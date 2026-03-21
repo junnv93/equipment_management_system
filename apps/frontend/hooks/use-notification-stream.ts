@@ -6,7 +6,10 @@ import { useSession } from 'next-auth/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { queryKeys } from '@/lib/api/query-config';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import {
+  API_ENDPOINTS,
+  SSE_APPROVAL_CHANGED_SENTINEL,
+} from '@equipment-management/shared-constants';
 import { API_BASE_URL } from '@/lib/config/api-config';
 
 /**
@@ -93,7 +96,7 @@ export function useNotificationStream() {
                 const notification = JSON.parse(data);
 
                 // 승인 변경 이벤트: approval counts 쿼리만 무효화 (toast 미표시)
-                if (notification.title === '__approval_changed__') {
+                if (notification.title === SSE_APPROVAL_CHANGED_SENTINEL) {
                   queryClient.invalidateQueries({
                     queryKey: queryKeys.approvals.countsAll,
                   });

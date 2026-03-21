@@ -4,6 +4,7 @@ import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import type { SQL } from 'drizzle-orm';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import {
   DEFAULT_PAGE_SIZE,
   NOTIFICATION_RETENTION_DAYS,
@@ -189,7 +190,7 @@ export class NotificationsService {
    * 미읽음 알림 개수 (15초 캐시)
    */
   async countUnread(userId: string, userTeamId: string | null): Promise<{ count: number }> {
-    const cacheKey = `notification:unread:${userId}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.NOTIFICATION}unread:${userId}`;
 
     const count = await this.cacheService.getOrSet(
       cacheKey,
@@ -255,7 +256,7 @@ export class NotificationsService {
       });
     }
 
-    this.cacheService.delete(`notification:unread:${userId}`);
+    this.cacheService.delete(`${CACHE_KEY_PREFIXES.NOTIFICATION}unread:${userId}`);
     return updated as NotificationRecord;
   }
 
@@ -280,7 +281,7 @@ export class NotificationsService {
       )
       .returning({ id: schema.notifications.id });
 
-    this.cacheService.delete(`notification:unread:${userId}`);
+    this.cacheService.delete(`${CACHE_KEY_PREFIXES.NOTIFICATION}unread:${userId}`);
 
     return { success: true, count: result.length };
   }
@@ -301,7 +302,7 @@ export class NotificationsService {
       });
     }
 
-    this.cacheService.delete(`notification:unread:${userId}`);
+    this.cacheService.delete(`${CACHE_KEY_PREFIXES.NOTIFICATION}unread:${userId}`);
     return { id, deleted: true };
   }
 

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Subject, Observable, map, finalize, interval, merge } from 'rxjs';
+import { SSE_APPROVAL_CHANGED_SENTINEL } from '@equipment-management/shared-constants';
 
 /**
  * SSE 알림 실시간 푸시 서비스
@@ -150,7 +151,7 @@ export class NotificationSseService implements OnModuleDestroy {
         // 대신 특수한 notification payload로 승인 변경을 알린다.
         subject.next({
           id: `approval-changed-${Date.now()}`,
-          title: '__approval_changed__',
+          title: SSE_APPROVAL_CHANGED_SENTINEL,
           content: triggerEvent,
           category: 'approval',
           priority: 'low',

@@ -223,6 +223,17 @@ export class CacheInvalidationHelper {
   }
 
   /**
+   * 설정 변경 후 캐시 무효화
+   *
+   * 사용 시점: 교정 알림 설정, 시스템 설정 변경 후
+   * 패턴: settings:*
+   */
+  async invalidateSettings(): Promise<void> {
+    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.SETTINGS}*`);
+    this.logger.debug('✓ Invalidated all settings caches');
+  }
+
+  /**
    * 교정계획서 업데이트 후 캐시 무효화
    *
    * 무효화 대상:

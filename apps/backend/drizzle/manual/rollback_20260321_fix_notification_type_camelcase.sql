@@ -1,0 +1,12 @@
+-- Rollback: 알림 type 컬럼 snake_case → camelCase 복원
+-- Date: 2026-03-21
+--
+-- 주의: 이 롤백은 정확한 원본 복원이 불가능합니다.
+-- camelCase → snake_case는 정보 손실 변환이 아니지만,
+-- 어떤 레코드가 원래 camelCase였는지 구분할 수 없습니다.
+-- 롤백이 필요한 경우 백업에서 복원하는 것을 권장합니다.
+--
+-- 이 파일은 롤백 파일 존재 규칙을 충족하기 위한 placeholder입니다.
+
+-- No automated rollback available.
+-- Restore from backup if needed: scripts/restore-database.sh

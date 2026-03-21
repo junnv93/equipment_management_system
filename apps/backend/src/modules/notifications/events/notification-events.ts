@@ -5,6 +5,8 @@
  * 이벤트명 포맷: {domain}.{action} (예: checkout.created)
  */
 
+import { NOTIFICATION_TYPE_VALUES } from '@equipment-management/schemas';
+
 // ============================================================================
 // 이벤트 상수 (32개 + batch variants)
 // ============================================================================
@@ -71,6 +73,51 @@ export const NOTIFICATION_EVENTS = {
 } as const;
 
 export type NotificationEventName = (typeof NOTIFICATION_EVENTS)[keyof typeof NOTIFICATION_EVENTS];
+
+// ============================================================================
+// 이벤트명 → 알림 타입 변환 (SSOT 교차 검증)
+// ============================================================================
+
+/**
+ * 이벤트명을 notification type (snake_case)으로 변환
+ *
+ * 변환 규칙:
+ *   1. '.' → '_' (도메인 구분자 변환)
+ *   2. camelCase → snake_case (NOTIFICATION_TYPE_VALUES 형식에 맞춤)
+ *
+ * 예시:
+ *   'checkout.returnApproved' → 'checkout_return_approved'
+ *   'calibrationPlan.submitted' → 'calibration_plan_submitted'
+ *   'checkout.created' → 'checkout_created'
+ */
+function toNotificationType(eventName: string): string {
+  return eventName
+    .replace(/\./g, '_')
+    .replace(/([A-Z])/g, '_$1')
+    .toLowerCase();
+}
+
+/**
+ * 사전 검증된 이벤트명 → 알림 타입 매핑
+ *
+ * 모듈 로드 시점에 NOTIFICATION_TYPE_VALUES(SSOT)와 교차 검증.
+ * 불일치 시 즉시 에러 → CI/서버 시작에서 탐지.
+ */
+export const EVENT_TO_NOTIFICATION_TYPE: Readonly<Record<NotificationEventName, string>> =
+  Object.freeze(
+    Object.fromEntries(Object.values(NOTIFICATION_EVENTS).map((e) => [e, toNotificationType(e)]))
+  ) as Readonly<Record<NotificationEventName, string>>;
+
+// SSOT 교차 검증: 모든 이벤트의 변환 결과가 NOTIFICATION_TYPE_VALUES에 존재하는지 확인
+const _validTypes = new Set<string>(NOTIFICATION_TYPE_VALUES);
+for (const [event, type] of Object.entries(EVENT_TO_NOTIFICATION_TYPE)) {
+  if (!_validTypes.has(type)) {
+    throw new Error(
+      `SSOT 불일치: 이벤트 '${event}' → 타입 '${type}'이 NOTIFICATION_TYPE_VALUES에 없음. ` +
+        `packages/schemas/src/enums/notification.ts에 '${type}'을 추가하세요.`
+    );
+  }
+}
 
 // ============================================================================
 // 페이로드 타입

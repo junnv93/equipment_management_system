@@ -3,13 +3,14 @@ import type { AppDatabase } from '@equipment-management/db';
 import { eq, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { NOTIFICATION_REGISTRY } from '../config/notification-registry';
-import { NOTIFICATION_EVENTS } from '../events/notification-events';
+import { NOTIFICATION_EVENTS, EVENT_TO_NOTIFICATION_TYPE } from '../events/notification-events';
 import { NotificationRecipientResolver } from './notification-recipient-resolver';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationTemplateService } from './notification-template.service';
 import { EmailService } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { NotificationSseService, SseNotificationPayload } from '../sse/notification-sse.service';
 import { SettingsService } from '../../settings/settings.service';
 import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
@@ -50,7 +51,7 @@ export class NotificationDispatcher {
   private async resolveActorName(actorId: string): Promise<string | null> {
     if (!actorId || actorId === 'system') return '시스템';
 
-    const cacheKey = `actor:name:${actorId}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.ACTOR_NAME}${actorId}`;
     const cached = this.cacheService.get<string>(cacheKey);
     if (cached) return cached;
 
@@ -160,7 +161,7 @@ export class NotificationDispatcher {
         this.logger.warn('시스템 설정 조회 실패, 기본 보관 기간 사용');
       }
       const expiresAt = new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
-      const type = eventName.replace(/\./g, '_');
+      const type = EVENT_TO_NOTIFICATION_TYPE[eventName as keyof typeof EVENT_TO_NOTIFICATION_TYPE];
 
       const records = enabledIds.map((userId) => ({
         title: notification.title,
@@ -196,7 +197,7 @@ export class NotificationDispatcher {
 
       // === Stage 5: 캐시 무효화 + SSE 푸시 (개별 사용자별 격리) ===
       for (const userId of enabledIds) {
-        this.cacheService.delete(`notification:unread:${userId}`);
+        this.cacheService.delete(`${CACHE_KEY_PREFIXES.NOTIFICATION}unread:${userId}`);
       }
 
       for (const record of created) {
