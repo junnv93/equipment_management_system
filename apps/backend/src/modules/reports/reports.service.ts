@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { and, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, avg, count, desc, eq, gte, isNotNull, lte, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   equipment as equipmentTable,
@@ -30,8 +31,11 @@ import {
   USER_ROLE_LABELS,
   DEFAULT_LOCALE,
   DEFAULT_TIMEZONE,
+  REPORT_CONSTANTS,
+  REPORT_EXPORT_ROW_LIMIT,
   REPORT_UTILIZATION_THRESHOLDS,
   type UserRole,
+  type ResolvedDataScope,
 } from '@equipment-management/shared-constants';
 import type { ReportColumn, ReportData } from './report-export.service';
 import type {
@@ -41,6 +45,13 @@ import type {
   UtilizationRateReport,
   EquipmentDowntimeReport,
 } from './reports.types';
+import type {
+  EquipmentUsageQueryInput,
+  CalibrationStatusQueryInput,
+  CheckoutStatisticsQueryInput,
+  UtilizationRateQueryInput,
+  EquipmentDowntimeQueryInput,
+} from './dto/report-query.dto';
 
 // ─── 공통 날짜 유틸 ───────────────────────────────────────────────────────────
 
@@ -79,6 +90,26 @@ function resolveDateRange(
   return { start, end };
 }
 
+// ─── RBAC 스코프 → Drizzle 조건 변환 ─────────────────────────────────────────
+
+/**
+ * ResolvedDataScope를 장비 테이블 기준 Drizzle WHERE 조건으로 변환합니다.
+ * 보고서의 모든 쿼리는 equipment 테이블을 JOIN하므로 여기서 통일 적용.
+ */
+function scopeToEquipmentConditions(scope: ResolvedDataScope): SQL[] {
+  switch (scope.type) {
+    case 'team':
+      return scope.teamId ? [eq(equipmentTable.teamId, scope.teamId)] : [sql`FALSE`];
+    case 'site':
+      return scope.site ? [eq(equipmentTable.siteCode, scope.site)] : [sql`FALSE`];
+    case 'all':
+      return [];
+    case 'none':
+      // none 스코프는 빈 결과를 보장하는 불가능 조건
+      return [sql`FALSE`];
+  }
+}
+
 // ─── 상태 레이블: @equipment-management/schemas SSOT 사용 ─────────────────
 
 @Injectable()
@@ -89,75 +120,79 @@ export class ReportsService {
   ) {}
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 통계 집계 API (JSON 응답 — 기존 엔드포인트)
+  // 통계 집계 API (JSON 응답)
   // ══════════════════════════════════════════════════════════════════════════
 
   /**
    * 장비 사용(반출) 통계
    */
   async getEquipmentUsage(
-    startDate?: string,
-    endDate?: string,
-    equipmentId?: string,
-    _departmentId?: string
+    query: EquipmentUsageQueryInput,
+    scope: ResolvedDataScope
   ): Promise<EquipmentUsageReport> {
-    const { start, end } = resolveDateRange('last_month', startDate, endDate);
+    const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
-    // checkouts ←→ checkoutItems ←→ equipment ←→ teams
     const dateConditions = [
       gte(checkoutsTable.createdAt, start),
       lte(checkoutsTable.createdAt, end),
     ];
-    const equipCondition = equipmentId
-      ? eq(checkoutItemsTable.equipmentId, equipmentId)
+    const equipCondition = query.equipmentId
+      ? eq(checkoutItemsTable.equipmentId, query.equipmentId)
       : undefined;
+
+    const allConditions = [
+      ...dateConditions,
+      ...(equipCondition ? [equipCondition] : []),
+      ...scopeConditions,
+    ];
 
     const teamRows = await this.db
       .select({
         teamName: teamsTable.name,
-        checkoutCount: count(checkoutsTable.id),
+        checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
         equipmentCount: sql<number>`COUNT(DISTINCT ${checkoutItemsTable.equipmentId})`,
       })
       .from(checkoutsTable)
-      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
-      .leftJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
       .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
-      .where(and(...dateConditions, ...(equipCondition ? [equipCondition] : [])))
+      .where(and(...allConditions))
       .groupBy(teamsTable.id, teamsTable.name);
 
     const topRows = await this.db
       .select({
         equipmentId: checkoutItemsTable.equipmentId,
         name: equipmentTable.name,
-        checkoutCount: count(checkoutsTable.id),
+        checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
       })
       .from(checkoutsTable)
-      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
-      .leftJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
-      .where(and(...dateConditions, ...(equipCondition ? [equipCondition] : [])))
+      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .where(and(...allConditions))
       .groupBy(checkoutItemsTable.equipmentId, equipmentTable.name)
-      .orderBy(desc(count(checkoutsTable.id)))
-      .limit(5);
+      .orderBy(desc(sql`COUNT(DISTINCT ${checkoutsTable.id})`))
+      .limit(REPORT_CONSTANTS.TOP_N_LIMIT);
 
     const totalCheckouts = teamRows.reduce((acc, r) => acc + Number(r.checkoutCount), 0);
 
     return {
       timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
-      totalUsageHours: totalCheckouts * 8,
+      totalUsageHours: totalCheckouts * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
       totalEquipmentCount: topRows.length,
       departmentDistribution: teamRows.map((r) => ({
         departmentId: r.teamName ?? '미배정',
         departmentName: r.teamName ?? '미배정',
-        usageHours: Number(r.checkoutCount) * 8,
+        usageHours: Number(r.checkoutCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
         equipmentCount: Number(r.equipmentCount),
       })),
       topEquipment: topRows.map((r) => ({
         equipmentId: r.equipmentId ?? '',
         name: r.name ?? '',
-        usageHours: Number(r.checkoutCount) * 8,
+        usageHours: Number(r.checkoutCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
         usageCount: Number(r.checkoutCount),
       })),
-      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end),
+      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end, scopeConditions),
     };
   }
 
@@ -165,16 +200,20 @@ export class ReportsService {
    * 교정 상태 통계
    */
   async getCalibrationStatus(
-    status?: string,
-    timeframe?: string
+    query: CalibrationStatusQueryInput,
+    scope: ResolvedDataScope
   ): Promise<CalibrationStatusReport> {
-    const { start, end } = resolveDateRange(timeframe ?? 'last_month');
+    const { start, end } = resolveDateRange(query.timeframe ?? 'last_month');
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const calConditions = [
+    // 교정 쿼리: calibrations → equipment JOIN으로 스코프 적용
+    const calConditions: SQL[] = [
       gte(calibrationsTable.calibrationDate, start),
       lte(calibrationsTable.calibrationDate, end),
+      ...scopeConditions,
     ];
-    if (status) calConditions.push(eq(calibrationsTable.status, status as CalibrationStatus));
+    if (query.status)
+      calConditions.push(eq(calibrationsTable.status, query.status as CalibrationStatus));
 
     const statusRows = await this.db
       .select({
@@ -182,6 +221,7 @@ export class ReportsService {
         statusCount: count(calibrationsTable.id),
       })
       .from(calibrationsTable)
+      .innerJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
       .where(and(...calConditions))
       .groupBy(calibrationsTable.status);
 
@@ -190,16 +230,17 @@ export class ReportsService {
     const [overdueRow] = await this.db
       .select({ cnt: count(equipmentTable.id) })
       .from(equipmentTable)
-      .where(eq(equipmentTable.status, ESVal.CALIBRATION_OVERDUE));
+      .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_OVERDUE), ...scopeConditions));
 
     const [dueRow] = await this.db
       .select({ cnt: count(equipmentTable.id) })
       .from(equipmentTable)
-      .where(eq(equipmentTable.status, ESVal.CALIBRATION_SCHEDULED));
+      .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_SCHEDULED), ...scopeConditions));
 
     const [totalEquipRow] = await this.db
       .select({ cnt: count(equipmentTable.id) })
-      .from(equipmentTable);
+      .from(equipmentTable)
+      .where(scopeConditions.length > 0 ? and(...scopeConditions) : undefined);
 
     return {
       summary: {
@@ -219,7 +260,7 @@ export class ReportsService {
             ? Math.round((Number(r.statusCount) / totalCalibrations) * 1000) / 10
             : 0,
       })),
-      calibrationTrend: await this._getMonthlyCalibrationTrend(start, end),
+      calibrationTrend: await this._getMonthlyCalibrationTrend(start, end, scopeConditions),
     };
   }
 
@@ -227,48 +268,50 @@ export class ReportsService {
    * @deprecated Use getCheckoutStatistics. 메서드 이름 호환성 유지.
    */
   async getRentalStatistics(
-    startDate?: string,
-    endDate?: string,
-    departmentId?: string
+    query: CheckoutStatisticsQueryInput,
+    scope: ResolvedDataScope
   ): Promise<CheckoutStatisticsReport> {
-    return this.getCheckoutStatistics(startDate, endDate, departmentId);
+    return this.getCheckoutStatistics(query, scope);
   }
 
   /**
    * 반출 통계 (대여/교정/수리 포함)
    */
   async getCheckoutStatistics(
-    startDate?: string,
-    endDate?: string,
-    _departmentId?: string
+    query: CheckoutStatisticsQueryInput,
+    scope: ResolvedDataScope
   ): Promise<CheckoutStatisticsReport> {
-    const { start, end } = resolveDateRange('last_month', startDate, endDate);
+    const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const dateConditions = [
+    const dateConditions: SQL[] = [
       gte(checkoutsTable.createdAt, start),
       lte(checkoutsTable.createdAt, end),
     ];
 
+    // 스코프 적용을 위해 equipment JOIN 필요 — COUNT(DISTINCT)로 item fan-out 방지
     const statusRows = await this.db
       .select({
         status: checkoutsTable.status,
-        statusCount: count(checkoutsTable.id),
+        statusCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
       })
       .from(checkoutsTable)
-      .where(and(...dateConditions))
+      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .where(and(...dateConditions, ...scopeConditions))
       .groupBy(checkoutsTable.status);
 
     const teamRows = await this.db
       .select({
         teamName: teamsTable.name,
         teamId: teamsTable.id,
-        checkoutCount: count(checkoutsTable.id),
+        checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
       })
       .from(checkoutsTable)
-      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
-      .leftJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
       .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
-      .where(and(...dateConditions))
+      .where(and(...dateConditions, ...scopeConditions))
       .groupBy(teamsTable.id, teamsTable.name);
 
     const totalCount = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
@@ -292,12 +335,15 @@ export class ReportsService {
       .filter((r) => returnedStatuses.has(r.status))
       .reduce((acc, r) => acc + Number(r.statusCount), 0);
 
+    // 실제 평균 대여 기간 계산 (반환된 checkout의 actualReturnDate - createdAt)
+    const avgDurationResult = await this._computeAvgCheckoutDuration(start, end, scopeConditions);
+
     return {
       timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
       summary: {
         totalCheckouts: totalCount,
         activeCheckouts: activeCount,
-        avgCheckoutDuration: 4.5,
+        avgCheckoutDuration: avgDurationResult,
         returnRate: totalCount > 0 ? Math.round((returnedCount / totalCount) * 1000) / 10 : 0,
       },
       checkoutsByDepartment: teamRows.map((r) => ({
@@ -313,7 +359,7 @@ export class ReportsService {
         percentage:
           totalCount > 0 ? Math.round((Number(r.statusCount) / totalCount) * 1000) / 10 : 0,
       })),
-      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end),
+      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end, scopeConditions),
     };
   }
 
@@ -321,17 +367,20 @@ export class ReportsService {
    * 장비 활용률 통계
    */
   async getUtilizationRate(
-    period: 'week' | 'month' | 'quarter' | 'year' = 'month',
-    equipmentId?: string,
-    _categoryId?: string
+    query: UtilizationRateQueryInput,
+    scope: ResolvedDataScope
   ): Promise<UtilizationRateReport> {
+    const period = query.period;
     const { start, end } = resolveDateRange(`last_${period}`);
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
     const checkoutDateConditions = [
       gte(checkoutsTable.createdAt, start),
       lte(checkoutsTable.createdAt, end),
     ];
-    const itemCondition = equipmentId ? eq(checkoutItemsTable.equipmentId, equipmentId) : undefined;
+    const itemCondition = query.equipmentId
+      ? eq(checkoutItemsTable.equipmentId, query.equipmentId)
+      : undefined;
 
     const rows = await this.db
       .select({
@@ -348,7 +397,7 @@ export class ReportsService {
         checkoutsTable,
         and(eq(checkoutsTable.id, checkoutItemsTable.checkoutId), ...checkoutDateConditions)
       )
-      .where(itemCondition)
+      .where(and(...(itemCondition ? [itemCondition] : []), ...scopeConditions))
       .groupBy(
         equipmentTable.id,
         equipmentTable.name,
@@ -390,14 +439,14 @@ export class ReportsService {
         totalEquipmentCount: withRate.length,
       },
       utilizationByCategory: [],
-      topUtilized: sorted.slice(0, 5).map((r) => ({
+      topUtilized: sorted.slice(0, REPORT_CONSTANTS.TOP_N_LIMIT).map((r) => ({
         equipmentId: r.equipmentId,
         name: `${r.name} (${r.managementNumber})`,
         utilizationRate: r.utilizationRate,
         department: r.teamName ?? '-',
       })),
       lowUtilized: sorted
-        .slice(-5)
+        .slice(-REPORT_CONSTANTS.TOP_N_LIMIT)
         .reverse()
         .map((r) => ({
           equipmentId: r.equipmentId,
@@ -412,17 +461,18 @@ export class ReportsService {
    * 장비 가동 중단(수리) 통계
    */
   async getEquipmentDowntime(
-    startDate?: string,
-    endDate?: string,
-    equipmentId?: string
+    query: EquipmentDowntimeQueryInput,
+    scope: ResolvedDataScope
   ): Promise<EquipmentDowntimeReport> {
-    const { start, end } = resolveDateRange('last_month', startDate, endDate);
+    const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const conditions = [
+    const conditions: SQL[] = [
       gte(repairHistoryTable.repairDate, start),
       lte(repairHistoryTable.repairDate, end),
+      ...scopeConditions,
     ];
-    if (equipmentId) conditions.push(eq(repairHistoryTable.equipmentId, equipmentId));
+    if (query.equipmentId) conditions.push(eq(repairHistoryTable.equipmentId, query.equipmentId));
 
     const repairRows = await this.db
       .select({
@@ -432,27 +482,48 @@ export class ReportsService {
         incidentCount: count(repairHistoryTable.id),
       })
       .from(repairHistoryTable)
-      .leftJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
+      .innerJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
       .where(and(...conditions))
       .groupBy(equipmentTable.id, equipmentTable.name, equipmentTable.managementNumber)
       .orderBy(desc(count(repairHistoryTable.id)))
-      .limit(10);
+      .limit(REPORT_CONSTANTS.TOP_N_LIMIT * 2);
 
     const totalIncidents = repairRows.reduce((acc, r) => acc + Number(r.incidentCount), 0);
+
+    // 수리 결과별 실제 그룹핑
+    const reasonRows = await this.db
+      .select({
+        repairResult: repairHistoryTable.repairResult,
+        incidentCount: count(repairHistoryTable.id),
+      })
+      .from(repairHistoryTable)
+      .innerJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
+      .where(and(...conditions))
+      .groupBy(repairHistoryTable.repairResult)
+      .orderBy(desc(count(repairHistoryTable.id)));
+
+    const RESULT_LABELS = REPAIR_RESULT_LABELS as Record<string, string>;
 
     return {
       timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
       summary: {
-        totalDowntimeHours: totalIncidents * 8,
+        totalDowntimeHours: totalIncidents * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
         totalIncidents,
-        avgDowntimeDuration: totalIncidents > 0 ? 8 : 0,
+        avgDowntimeDuration: totalIncidents > 0 ? REPORT_CONSTANTS.HOURS_PER_CHECKOUT : 0,
         affectedEquipmentCount: repairRows.length,
       },
-      downtimeReasons: [{ reason: '고장 수리', hours: totalIncidents * 8, percentage: 100 }],
-      topDowntimeEquipment: repairRows.slice(0, 3).map((r) => ({
+      downtimeReasons: reasonRows.map((r) => ({
+        reason: RESULT_LABELS[r.repairResult ?? ''] ?? r.repairResult ?? '미분류',
+        hours: Number(r.incidentCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
+        percentage:
+          totalIncidents > 0
+            ? Math.round((Number(r.incidentCount) / totalIncidents) * 1000) / 10
+            : 0,
+      })),
+      topDowntimeEquipment: repairRows.slice(0, REPORT_CONSTANTS.BOTTOM_N_LIMIT).map((r) => ({
         equipmentId: r.equipmentId ?? '',
         name: `${r.name ?? ''} (${r.managementNumber ?? ''})`,
-        downtimeHours: Number(r.incidentCount) * 8,
+        downtimeHours: Number(r.incidentCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
         incidents: Number(r.incidentCount),
       })),
       monthlyTrend: [],
@@ -463,12 +534,12 @@ export class ReportsService {
   // 내보내기 데이터 조회 (export endpoints에서 파일 생성용)
   // ══════════════════════════════════════════════════════════════════════════
 
-  async getEquipmentInventoryData(filters: {
-    site?: string;
-    status?: string;
-    teamId?: string;
-  }): Promise<ReportData> {
-    const conditions = [];
+  async getEquipmentInventoryData(
+    filters: { site?: string; status?: string; teamId?: string },
+    scope: ResolvedDataScope
+  ): Promise<ReportData> {
+    const scopeConditions = scopeToEquipmentConditions(scope);
+    const conditions: SQL[] = [...scopeConditions];
     if (filters.site) conditions.push(eq(equipmentTable.siteCode, filters.site));
     if (filters.status)
       conditions.push(eq(equipmentTable.status, filters.status as EquipmentStatus));
@@ -492,7 +563,8 @@ export class ReportsService {
       .from(equipmentTable)
       .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(equipmentTable.managementNumber);
+      .orderBy(equipmentTable.managementNumber)
+      .limit(REPORT_EXPORT_ROW_LIMIT);
 
     const columns: ReportColumn[] = [
       { header: '관리번호', key: 'managementNumber', width: 16 },
@@ -532,16 +604,17 @@ export class ReportsService {
     };
   }
 
-  async getCalibrationStatusData(filters: {
-    startDate?: string;
-    endDate?: string;
-    status?: string;
-  }): Promise<ReportData> {
+  async getCalibrationStatusData(
+    filters: { startDate?: string; endDate?: string; status?: string },
+    scope: ResolvedDataScope
+  ): Promise<ReportData> {
     const { start, end } = resolveDateRange('last_year', filters.startDate, filters.endDate);
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const conditions = [
+    const conditions: SQL[] = [
       gte(calibrationsTable.calibrationDate, start),
       lte(calibrationsTable.calibrationDate, end),
+      ...scopeConditions,
     ];
     if (filters.status)
       conditions.push(eq(calibrationsTable.status, filters.status as CalibrationStatus));
@@ -561,9 +634,10 @@ export class ReportsService {
         nextCalibrationDate: calibrationsTable.nextCalibrationDate,
       })
       .from(calibrationsTable)
-      .leftJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
+      .innerJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
       .where(and(...conditions))
-      .orderBy(desc(calibrationsTable.calibrationDate));
+      .orderBy(desc(calibrationsTable.calibrationDate))
+      .limit(REPORT_EXPORT_ROW_LIMIT);
 
     // SSOT: @equipment-management/schemas
     const APPROVAL_LABELS = CALIBRATION_APPROVAL_STATUS_LABELS as Record<string, string>;
@@ -602,12 +676,10 @@ export class ReportsService {
     };
   }
 
-  async getUtilizationData(filters: {
-    startDate?: string;
-    endDate?: string;
-    period?: string;
-    site?: string;
-  }): Promise<ReportData> {
+  async getUtilizationData(
+    filters: { startDate?: string; endDate?: string; period?: string; site?: string },
+    scope: ResolvedDataScope
+  ): Promise<ReportData> {
     const { start, end } = resolveDateRange(
       filters.period ?? 'last_month',
       filters.startDate,
@@ -617,11 +689,15 @@ export class ReportsService {
       1,
       Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
     );
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
     const checkoutDateConditions = [
       gte(checkoutsTable.createdAt, start),
       lte(checkoutsTable.createdAt, end),
     ];
+
+    const equipConditions: SQL[] = [...scopeConditions];
+    if (filters.site) equipConditions.push(eq(equipmentTable.siteCode, filters.site));
 
     const rows = await this.db
       .select({
@@ -638,7 +714,7 @@ export class ReportsService {
         checkoutsTable,
         and(eq(checkoutsTable.id, checkoutItemsTable.checkoutId), ...checkoutDateConditions)
       )
-      .where(filters.site ? eq(equipmentTable.siteCode, filters.site) : undefined)
+      .where(equipConditions.length > 0 ? and(...equipConditions) : undefined)
       .groupBy(
         equipmentTable.id,
         equipmentTable.managementNumber,
@@ -646,11 +722,12 @@ export class ReportsService {
         teamsTable.name,
         equipmentTable.siteCode
       )
-      .orderBy(desc(sql`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`));
+      .orderBy(desc(sql`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`))
+      .limit(REPORT_EXPORT_ROW_LIMIT);
 
     const getGrade = (rate: number): string => {
-      if (rate >= 80) return '고활용';
-      if (rate >= 40) return '보통';
+      if (rate >= REPORT_UTILIZATION_THRESHOLDS.HIGH) return '고활용';
+      if (rate >= REPORT_UTILIZATION_THRESHOLDS.LOW) return '보통';
       return '저활용';
     };
 
@@ -681,8 +758,12 @@ export class ReportsService {
     };
   }
 
-  async getTeamEquipmentData(filters: { site?: string; teamId?: string }): Promise<ReportData> {
-    const conditions = [];
+  async getTeamEquipmentData(
+    filters: { site?: string; teamId?: string },
+    scope: ResolvedDataScope
+  ): Promise<ReportData> {
+    const scopeConditions = scopeToEquipmentConditions(scope);
+    const conditions: SQL[] = [...scopeConditions];
     if (filters.site) conditions.push(eq(equipmentTable.siteCode, filters.site));
     if (filters.teamId) conditions.push(eq(equipmentTable.teamId, filters.teamId));
 
@@ -701,7 +782,8 @@ export class ReportsService {
       .from(equipmentTable)
       .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(teamsTable.name, equipmentTable.managementNumber);
+      .orderBy(teamsTable.name, equipmentTable.managementNumber)
+      .limit(REPORT_EXPORT_ROW_LIMIT);
 
     const fmtDate = (d: Date | null | undefined): string =>
       d ? new Date(d).toLocaleDateString(DEFAULT_LOCALE) : '-';
@@ -734,16 +816,17 @@ export class ReportsService {
     };
   }
 
-  async getMaintenanceData(filters: {
-    startDate?: string;
-    endDate?: string;
-    equipmentId?: string;
-  }): Promise<ReportData> {
+  async getMaintenanceData(
+    filters: { startDate?: string; endDate?: string; equipmentId?: string },
+    scope: ResolvedDataScope
+  ): Promise<ReportData> {
     const { start, end } = resolveDateRange('last_year', filters.startDate, filters.endDate);
+    const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const conditions = [
+    const conditions: SQL[] = [
       gte(repairHistoryTable.repairDate, start),
       lte(repairHistoryTable.repairDate, end),
+      ...scopeConditions,
     ];
     if (filters.equipmentId) {
       conditions.push(eq(repairHistoryTable.equipmentId, filters.equipmentId));
@@ -760,10 +843,11 @@ export class ReportsService {
         notes: repairHistoryTable.notes,
       })
       .from(repairHistoryTable)
-      .leftJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
+      .innerJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
       .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
       .where(and(...conditions))
-      .orderBy(desc(repairHistoryTable.repairDate));
+      .orderBy(desc(repairHistoryTable.repairDate))
+      .limit(REPORT_EXPORT_ROW_LIMIT);
 
     // SSOT: @equipment-management/schemas
     const RESULT_LABELS = REPAIR_RESULT_LABELS as Record<string, string>;
@@ -800,10 +884,10 @@ export class ReportsService {
    * 감사 로그 내보내기 데이터 조회
    *
    * RBAC 스코프 필터(userSite/userTeamId)는 컨트롤러에서 resolveDataScope()로 주입됨.
-   * 최대 10,000건 제한 — 대용량 데이터는 날짜 범위 필터로 분할 내보내기 권장.
+   * REPORT_EXPORT_ROW_LIMIT 적용 — 대용량 데이터는 날짜 범위 필터로 분할 내보내기 권장.
    */
   async getAuditLogExportData(filter: AuditLogFilter): Promise<ReportData> {
-    const conditions = [];
+    const conditions: SQL[] = [];
 
     if (filter.userId) conditions.push(eq(auditLogsTable.userId, filter.userId));
     if (filter.entityType) conditions.push(eq(auditLogsTable.entityType, filter.entityType));
@@ -831,7 +915,7 @@ export class ReportsService {
       .from(auditLogsTable)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(auditLogsTable.timestamp))
-      .limit(10_000);
+      .limit(REPORT_EXPORT_ROW_LIMIT);
 
     const columns: ReportColumn[] = [
       { header: '시간', key: 'timestampStr', width: 22 },
@@ -870,30 +954,100 @@ export class ReportsService {
   // Private 집계 헬퍼
   // ══════════════════════════════════════════════════════════════════════════
 
-  private async _getMonthlyCheckoutTrend(
+  /**
+   * 실제 평균 대여 기간 계산 (일 단위)
+   * actualReturnDate가 있는 반환된 checkout의 (actualReturnDate - createdAt) 평균
+   */
+  private async _computeAvgCheckoutDuration(
     start: Date,
-    end: Date
-  ): Promise<{ month: string; checkouts: number; returns: number }[]> {
-    const rows = await this.db
+    end: Date,
+    scopeConditions: SQL[]
+  ): Promise<number> {
+    const result = await this.db
       .select({
-        month: sql<string>`TO_CHAR(${checkoutsTable.createdAt}, 'YYYY-MM')`,
-        checkouts: count(checkoutsTable.id),
+        avgDays: avg(
+          sql<number>`EXTRACT(EPOCH FROM (${checkoutsTable.actualReturnDate} - ${checkoutsTable.createdAt})) / 86400`
+        ),
       })
       .from(checkoutsTable)
-      .where(and(gte(checkoutsTable.createdAt, start), lte(checkoutsTable.createdAt, end)))
+      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .where(
+        and(
+          gte(checkoutsTable.createdAt, start),
+          lte(checkoutsTable.createdAt, end),
+          isNotNull(checkoutsTable.actualReturnDate),
+          ...scopeConditions
+        )
+      );
+
+    const avgDays = result[0]?.avgDays;
+    return avgDays ? Math.round(Number(avgDays) * 10) / 10 : 0;
+  }
+
+  /**
+   * 월별 반출/반환 추이 — 실제 반환 상태 카운트
+   */
+  private async _getMonthlyCheckoutTrend(
+    start: Date,
+    end: Date,
+    scopeConditions: SQL[]
+  ): Promise<{ month: string; checkouts: number; returns: number }[]> {
+    // 전체 checkout 월별 카운트 — INNER JOIN + COUNT(DISTINCT)로 fan-out 방지
+    const checkoutRows = await this.db
+      .select({
+        month: sql<string>`TO_CHAR(${checkoutsTable.createdAt}, 'YYYY-MM')`,
+        checkouts: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
+      })
+      .from(checkoutsTable)
+      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .where(
+        and(
+          gte(checkoutsTable.createdAt, start),
+          lte(checkoutsTable.createdAt, end),
+          ...scopeConditions
+        )
+      )
       .groupBy(sql`TO_CHAR(${checkoutsTable.createdAt}, 'YYYY-MM')`)
       .orderBy(sql`TO_CHAR(${checkoutsTable.createdAt}, 'YYYY-MM')`);
 
-    return rows.map((r) => ({
-      month: r.month,
-      checkouts: Number(r.checkouts),
-      returns: Math.round(Number(r.checkouts) * 0.95),
+    // 반환된 checkout 월별 카운트 (actualReturnDate 기준) — INNER JOIN + COUNT(DISTINCT)
+    const returnRows = await this.db
+      .select({
+        month: sql<string>`TO_CHAR(${checkoutsTable.actualReturnDate}, 'YYYY-MM')`,
+        returns: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
+      })
+      .from(checkoutsTable)
+      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .where(
+        and(
+          isNotNull(checkoutsTable.actualReturnDate),
+          gte(checkoutsTable.actualReturnDate, start),
+          lte(checkoutsTable.actualReturnDate, end),
+          ...scopeConditions
+        )
+      )
+      .groupBy(sql`TO_CHAR(${checkoutsTable.actualReturnDate}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${checkoutsTable.actualReturnDate}, 'YYYY-MM')`);
+
+    // 양쪽 월을 합집합으로 병합 — 반환 전용 월도 포함
+    const checkoutMap = new Map(checkoutRows.map((r) => [r.month, Number(r.checkouts)]));
+    const returnMap = new Map(returnRows.map((r) => [r.month, Number(r.returns)]));
+    const allMonths = new Set([...checkoutMap.keys(), ...returnMap.keys()]);
+
+    return [...allMonths].sort().map((month) => ({
+      month,
+      checkouts: checkoutMap.get(month) ?? 0,
+      returns: returnMap.get(month) ?? 0,
     }));
   }
 
   private async _getMonthlyCalibrationTrend(
     start: Date,
-    end: Date
+    end: Date,
+    scopeConditions: SQL[]
   ): Promise<{ month: string; completed: number; due: number; overdue: number }[]> {
     const rows = await this.db
       .select({
@@ -902,10 +1056,12 @@ export class ReportsService {
         cnt: count(calibrationsTable.id),
       })
       .from(calibrationsTable)
+      .innerJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
       .where(
         and(
           gte(calibrationsTable.calibrationDate, start),
-          lte(calibrationsTable.calibrationDate, end)
+          lte(calibrationsTable.calibrationDate, end),
+          ...scopeConditions
         )
       )
       .groupBy(

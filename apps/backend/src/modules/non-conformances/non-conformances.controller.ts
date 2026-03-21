@@ -27,7 +27,10 @@ import {
   CloseNonConformanceValidationPipe,
 } from './dto/close-non-conformance.dto';
 import { RejectCorrectionDto, RejectCorrectionValidationPipe } from './dto/reject-correction.dto';
-import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
+import {
+  NonConformanceQueryDto,
+  NonConformanceQueryValidationPipe,
+} from './dto/non-conformance-query.dto';
 import { type NonConformance } from '@equipment-management/db/schema/non-conformances';
 import { NonConformanceStatusValues as NCStatusVal } from '@equipment-management/schemas';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -84,6 +87,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
   @SiteScoped({ policy: NON_CONFORMANCE_DATA_SCOPE })
+  @UsePipes(NonConformanceQueryValidationPipe)
   findAll(@Query() query: NonConformanceQueryDto): Promise<{
     items: NonConformance[];
     meta: {

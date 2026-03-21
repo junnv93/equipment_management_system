@@ -3,6 +3,8 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   REPORT_FORMAT_VALUES,
   REPORT_PERIOD_VALUES,
+  AUDIT_ACTION_VALUES,
+  AUDIT_ENTITY_TYPE_VALUES,
   SiteEnum,
   optionalUuid,
 } from '@equipment-management/schemas';
@@ -132,8 +134,8 @@ export const ExportMaintenanceQueryPipe = new ZodValidationPipe(exportMaintenanc
 export const exportAuditLogsQuerySchema = z.object({
   format: z.enum(REPORT_FORMAT_VALUES),
   userId: optionalUuid(),
-  entityType: z.string().optional(),
-  action: z.string().optional(),
+  entityType: z.enum(AUDIT_ENTITY_TYPE_VALUES).optional(),
+  action: z.enum(AUDIT_ACTION_VALUES as readonly [string, ...string[]]).optional(),
   ...dateRangeFields,
 });
 export type ExportAuditLogsQueryInput = z.infer<typeof exportAuditLogsQuerySchema>;

@@ -75,7 +75,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     uuid: string,
     expectedCasVersion: number,
     updateData: Record<string, unknown>
-  ): Promise<unknown> {
+  ): Promise<typeof calibrationPlans.$inferSelect> {
     const [updated] = await this.db
       .update(calibrationPlans)
       .set({

@@ -163,13 +163,14 @@ export class NonConformancesService extends VersionedBaseService {
         })
         .returning();
 
-      // 2. 장비 상태를 non_conforming으로 변경
+      // 2. 장비 상태를 non_conforming으로 변경 (version bump: close와 일관성 유지)
       await tx
         .update(equipment)
         .set({
           status: EquipmentStatusEnum.enum.non_conforming,
+          version: sql`version + 1`,
           updatedAt: new Date(),
-        })
+        } as Record<string, unknown>)
         .where(eq(equipment.id, createDto.equipmentId));
 
       return nonConformance;
@@ -404,30 +405,6 @@ export class NonConformancesService extends VersionedBaseService {
       },
       ...(summary && { summary }),
     };
-  }
-
-  /**
-   * 정렬 필드에 해당하는 컬럼 반환
-   */
-  private getSortColumn(
-    sortField: string
-  ):
-    | typeof nonConformances.discoveryDate
-    | typeof nonConformances.status
-    | typeof nonConformances.createdAt
-    | typeof nonConformances.updatedAt {
-    switch (sortField) {
-      case 'discoveryDate':
-        return nonConformances.discoveryDate;
-      case 'status':
-        return nonConformances.status;
-      case 'createdAt':
-        return nonConformances.createdAt;
-      case 'updatedAt':
-        return nonConformances.updatedAt;
-      default:
-        return nonConformances.discoveryDate;
-    }
   }
 
   /**
@@ -848,9 +825,11 @@ export class NonConformancesService extends VersionedBaseService {
   /**
    * 수리 기록을 부적합에 연결 (1:1 관계)
    * RepairHistoryService에서 호출됨
+   *
+   * CAS: findOne에서 읽은 version으로 updateWithVersion 적용
+   * → 다른 경로(update, close, rejectCorrection)와의 동시 수정 충돌 감지
    */
   async linkRepair(ncId: string, repairId: string): Promise<void> {
-    // 부적합 존재 확인
     const nc = await this.findOne(ncId);
 
     if (nc.status === NonConformanceStatus.CLOSED) {
@@ -867,24 +846,35 @@ export class NonConformancesService extends VersionedBaseService {
       });
     }
 
-    // 연결 (version 원자 증가 — 다른 CAS 경로와의 충돌 감지 보장)
-    await this.db
-      .update(nonConformances)
-      .set({
-        repairHistoryId: repairId,
-        resolutionType: ResolutionTypeEnum.enum.repair,
-        updatedAt: new Date(),
-        version: sql`${nonConformances.version} + 1`,
-      })
-      .where(eq(nonConformances.id, ncId));
+    try {
+      await this.updateWithVersion<NonConformance>(
+        nonConformances,
+        ncId,
+        nc.version,
+        {
+          repairHistoryId: repairId,
+          resolutionType: ResolutionTypeEnum.enum.repair,
+        },
+        'Non-conformance',
+        undefined,
+        'NC_NOT_FOUND'
+      );
 
-    // detail 캐시 무효화
-    this.cacheService.delete(this.buildCacheKey('detail', ncId));
+      this.cacheService.delete(this.buildCacheKey('detail', ncId));
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', ncId));
+      }
+      throw error;
+    }
   }
 
   /**
    * 부적합을 'corrected' 상태로 변경
    * 수리 완료 시 자동 호출됨
+   *
+   * CAS: findOne에서 읽은 version으로 updateWithVersion 적용
+   * → 다른 경로(update, linkRepair)와의 동시 수정 충돌 감지
    */
   async markCorrected(
     id: string,
@@ -907,20 +897,29 @@ export class NonConformancesService extends VersionedBaseService {
       });
     }
 
-    await this.db
-      .update(nonConformances)
-      .set({
-        status: NonConformanceStatus.CORRECTED,
-        correctionContent: correctionData.correctionContent,
-        correctionDate: correctionData.correctionDate.toISOString().split('T')[0],
-        correctedBy: correctionData.correctedBy,
-        updatedAt: new Date(),
-        version: sql`${nonConformances.version} + 1`,
-      })
-      .where(eq(nonConformances.id, id));
+    try {
+      await this.updateWithVersion<NonConformance>(
+        nonConformances,
+        id,
+        nc.version,
+        {
+          status: NonConformanceStatus.CORRECTED,
+          correctionContent: correctionData.correctionContent,
+          correctionDate: correctionData.correctionDate.toISOString().split('T')[0],
+          correctedBy: correctionData.correctedBy,
+        },
+        'Non-conformance',
+        undefined,
+        'NC_NOT_FOUND'
+      );
 
-    // detail 캐시 무효화
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+      this.cacheService.delete(this.buildCacheKey('detail', id));
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
 
     // 📢 알림 이벤트 발행 (조치 완료 — 승인 요청)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTED, {
