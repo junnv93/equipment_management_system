@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { SiteEnum, ClassificationEnum, ClassificationCodeEnum } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
+import { uuidString, optionalUuid } from './utils/fields';
 
 /**
  * ⚠️ SSOT 준수: ClassificationEnum, ClassificationCodeEnum은 enums.ts에서 import
@@ -21,7 +22,7 @@ export const baseTeamSchema = z.object({
   site: SiteEnum, // ✅ 필수 필드: 팀 소속 사이트
   classificationCode: ClassificationCodeEnum.optional(), // ✅ SSOT: enums.ts에서 import
   description: z.string().max(500).optional(),
-  leaderId: z.string().uuid().optional(),
+  leaderId: optionalUuid(),
 });
 
 // 팀 생성 스키마
@@ -32,7 +33,7 @@ export const updateTeamSchema = baseTeamSchema.partial();
 
 // 팀 조회용 스키마
 export const teamSchema = baseTeamSchema.extend({
-  id: z.string().uuid(), // ✅ DB와 동기화: uuid 타입
+  id: uuidString(), // ✅ DB와 동기화: uuid 타입
   equipmentCount: z.number().nonnegative().optional(),
   memberCount: z.number().nonnegative().optional(),
   createdAt: z.coerce.date(),
@@ -42,8 +43,9 @@ export const teamSchema = baseTeamSchema.extend({
 
 // 팀 스키마에서 추출된 타입
 export type BaseTeam = z.infer<typeof baseTeamSchema>;
-export type CreateTeamInput = z.infer<typeof createTeamSchema>;
-export type UpdateTeamInput = z.infer<typeof updateTeamSchema>;
+// ✅ z.input: DTO implements 호환 (transform 전 입력 타입 — optional key 유지)
+export type CreateTeamInput = z.input<typeof createTeamSchema>;
+export type UpdateTeamInput = z.input<typeof updateTeamSchema>;
 export type Team = z.infer<typeof teamSchema> & SoftDeleteEntity;
 
 // 팀 목록 조회를 위한 응답 스키마

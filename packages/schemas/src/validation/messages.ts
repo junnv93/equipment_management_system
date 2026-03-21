@@ -12,7 +12,7 @@
  *
  * @example
  * import { VM } from '@equipment-management/schemas';
- * z.string().uuid(VM.uuid.invalid('장비'))
+ * uuidString(VM.uuid.invalid('장비'))
  * z.string().min(1, VM.required('반출 사유'))
  */
 
@@ -195,7 +195,7 @@ const audit = {
  * import { VM } from '@equipment-management/schemas';
  *
  * // Universal
- * z.string().uuid(VM.uuid.invalid('장비'))
+ * uuidString(VM.uuid.invalid('장비'))
  * z.string().min(1, VM.required('반출 사유'))
  * z.string().max(100, VM.string.max('이름', 100))
  * z.array(...).min(1, VM.array.min('장비', 1))

@@ -47,5 +47,11 @@ export * from './api-response';
 
 export * from './validation';
 
+// ============================================================
+// Shared Field Utilities (Form-safe validators)
+// ============================================================
+
+export { uuidString, optionalUuid, nullableOptionalUuid } from './utils/fields';
+
 // Common base types
 export type { PaginatedResponseType, PaginatedResponse, SoftDeleteEntity } from './common/base';

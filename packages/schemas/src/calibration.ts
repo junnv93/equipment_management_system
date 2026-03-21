@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CalibrationMethodEnum } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
+import { uuidString } from './utils/fields';
 
 // 교정 상태 열거형
 export const CalibrationStatusEnum = z.enum([
@@ -25,8 +26,8 @@ export const CALIBRATION_STATUS_LABELS: Record<CalibrationStatus, string> = {
 
 // 기본 교정 스키마 (공통 필드)
 export const baseCalibrationSchema = z.object({
-  equipmentId: z.string().uuid(),
-  calibrationManagerId: z.string().uuid(),
+  equipmentId: uuidString(),
+  calibrationManagerId: uuidString(),
   calibrationDate: z.date(),
   nextCalibrationDate: z.date(),
   calibrationMethod: CalibrationMethodEnum,
@@ -47,7 +48,7 @@ export const updateCalibrationSchema = baseCalibrationSchema.partial();
 
 // 교정 조회용 스키마
 export const calibrationSchema = baseCalibrationSchema.extend({
-  id: z.string().uuid(),
+  id: uuidString(),
   createdAt: z.date(),
   updatedAt: z.date(),
   deletedAt: z.date().nullable(),

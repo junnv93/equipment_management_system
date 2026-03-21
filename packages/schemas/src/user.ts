@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { UserRoleEnum, TeamIdSchema, SiteEnum } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
+import { uuidString } from './utils/fields';
 
 // 기본 사용자 스키마 (공통 필드)
 export const baseUserSchema = z.object({
@@ -31,7 +32,7 @@ export const updateUserSchema = baseUserSchema.partial().extend({
 
 // 사용자 조회용 스키마
 export const userSchema = baseUserSchema.extend({
-  id: z.string().uuid(),
+  id: uuidString(),
   isActive: z.boolean(),
   lastLogin: z.date().nullable(),
   equipmentCount: z.number().nonnegative().optional(),
@@ -54,7 +55,7 @@ export type UserListResponse = z.infer<typeof userListResponseSchema>;
 // API 응답 전용 UserProfile (GET /api/users/me)
 // baseUserSchema에서 파생 — DB 전체 컬럼이 아닌 API 응답 형태
 export const userProfileSchema = baseUserSchema.extend({
-  id: z.string().uuid(),
+  id: uuidString(),
   teamName: z.string().optional(),
   isActive: z.boolean(),
   lastLogin: z.coerce.date().nullable().optional(),

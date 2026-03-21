@@ -12,6 +12,7 @@ import {
 } from './enums';
 import { ApprovalStatusEnum } from './equipment-request';
 import { SoftDeleteEntity, PaginatedResponse } from './common/base';
+import { uuidString, nullableOptionalUuid, optionalUuid } from './utils/fields';
 
 /**
  * 장비 스키마
@@ -79,7 +80,7 @@ export const baseEquipmentSchema = z.object({
   // 관리 정보
   purchaseYear: z.number().int().min(1990).max(2100).optional().nullable(), // 구입년도 (연도 정수)
   price: z.number().int().positive().nullable().optional(), // DB와 동기화: price (integer)
-  teamId: z.string().uuid().optional().nullable(), // ✅ 스키마 일치화: uuid 타입으로 변경
+  teamId: nullableOptionalUuid(), // ✅ 스키마 일치화: uuid 타입 + HTML 폼 빈 문자열 안전
   site: SiteEnum, // ✅ 사이트별 권한 관리: 필수 필드로 변경
 
   // 추가 정보
@@ -105,8 +106,8 @@ export const baseEquipmentSchema = z.object({
 
   // 승인 프로세스 필드
   approvalStatus: ApprovalStatusEnum.optional(),
-  requestedBy: z.string().uuid().optional(),
-  approvedBy: z.string().uuid().optional(),
+  requestedBy: optionalUuid(),
+  approvedBy: optionalUuid(),
 
   // 추가 필드 (정리됨)
   calibrationResult: z.string().optional(), // 교정 결과
@@ -136,7 +137,7 @@ export const updateEquipmentSchema = baseEquipmentSchema.partial();
 // 장비 조회용 스키마
 // DB 스키마 (packages/db/src/schema/equipment.ts)와 동기화
 export const equipmentSchema = baseEquipmentSchema.extend({
-  id: z.string().uuid(), // DB와 동기화: uuid로 변경 (serial에서 변경됨)
+  id: uuidString(), // DB와 동기화: uuid로 변경 (serial에서 변경됨)
   description: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
   createdAt: z.coerce.date(),
@@ -152,7 +153,7 @@ export const equipmentSchema = baseEquipmentSchema.extend({
 export const equipmentFilterSchema = z.object({
   search: z.string().optional(),
   status: EquipmentStatusEnum.optional(),
-  teamId: z.string().uuid().optional(),
+  teamId: optionalUuid(), // ✅ URL 쿼리 파라미터 빈 문자열 안전
   location: z.string().optional(),
   manufacturer: z.string().optional(),
   site: SiteEnum.optional(),
@@ -183,10 +184,11 @@ export const equipmentFilterSchema = z.object({
 
 // 타입 정의
 export type BaseEquipment = z.infer<typeof baseEquipmentSchema>;
-export type CreateEquipmentInput = z.infer<typeof createEquipmentSchema>;
-export type UpdateEquipmentInput = z.infer<typeof updateEquipmentSchema>;
+// ✅ z.input: DTO implements 호환 (transform 전 입력 타입 — optional key 유지)
+export type CreateEquipmentInput = z.input<typeof createEquipmentSchema>;
+export type UpdateEquipmentInput = z.input<typeof updateEquipmentSchema>;
 export type Equipment = z.infer<typeof equipmentSchema> & SoftDeleteEntity;
-export type EquipmentFilter = z.infer<typeof equipmentFilterSchema>;
+export type EquipmentFilter = z.input<typeof equipmentFilterSchema>;
 
 /**
  * ✅ API 응답용 장비 타입 (팀 이름 포함)

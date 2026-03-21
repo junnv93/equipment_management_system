@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SoftDeleteEntity } from './common/base';
+import { uuidString, optionalUuid, nullableOptionalUuid } from './utils/fields';
 
 // 승인 상태 enum
 export const ApprovalStatusEnum = z.enum(['pending_approval', 'approved', 'rejected']);
@@ -21,13 +22,13 @@ export type RequestType = z.infer<typeof RequestTypeEnum>;
 
 // 장비 요청 스키마 (DB: equipment_requests 테이블 — UUID PK)
 export const equipmentRequestSchema = z.object({
-  id: z.string().uuid(),
+  id: uuidString(),
   requestType: RequestTypeEnum,
-  equipmentId: z.string().uuid().nullable().optional(),
-  requestedBy: z.string().uuid(),
+  equipmentId: nullableOptionalUuid(),
+  requestedBy: uuidString(),
   requestedAt: z.coerce.date(),
   approvalStatus: ApprovalStatusEnum,
-  approvedBy: z.string().uuid().nullable().optional(),
+  approvedBy: nullableOptionalUuid(),
   approvedAt: z.coerce.date().nullable().optional(),
   rejectionReason: z.string().nullable().optional(),
   requestData: z.string().nullable().optional(), // JSON stringified equipment data
@@ -39,14 +40,14 @@ export const equipmentRequestSchema = z.object({
 // 장비 요청 생성 스키마
 export const createEquipmentRequestSchema = z.object({
   requestType: RequestTypeEnum,
-  equipmentId: z.string().uuid().optional(), // 수정/삭제 시 기존 장비 UUID
+  equipmentId: optionalUuid(), // 수정/삭제 시 기존 장비 UUID
   requestData: z.string().optional(), // 장비 데이터 (JSON string)
-  attachments: z.array(z.string().uuid()).optional(), // 첨부 파일 UUID 목록
+  attachments: z.array(uuidString()).optional(), // 첨부 파일 UUID 목록
 });
 
 // 장비 요청 승인/반려 스키마
 export const approveEquipmentRequestSchema = z.object({
-  requestId: z.string().uuid(),
+  requestId: uuidString(),
   action: z.enum(['approve', 'reject']),
   rejectionReason: z.string().optional(), // 반려 시 필수
 });

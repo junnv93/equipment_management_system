@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CheckoutStatusEnum, CheckoutStatus, CheckoutPurposeEnum, CheckoutPurpose } from './enums';
+import { uuidString, optionalUuid } from './utils/fields';
 
 /**
  * ✅ Single Source of Truth 준수
@@ -8,9 +9,9 @@ import { CheckoutStatusEnum, CheckoutStatus, CheckoutPurposeEnum, CheckoutPurpos
 
 // 반출 스키마 (DB: checkouts 테이블 필드명과 일치)
 export const CheckoutSchema = z.object({
-  id: z.string().uuid(),
-  requesterId: z.string().uuid(),
-  approverId: z.string().uuid().optional(),
+  id: uuidString(),
+  requesterId: uuidString(),
+  approverId: optionalUuid(),
   destination: z.string(),
   purpose: CheckoutPurposeEnum,
   reason: z.string(),
@@ -28,9 +29,9 @@ export type Checkout = z.infer<typeof CheckoutSchema>;
 
 // 반출 장비 스키마
 export const CheckoutEquipmentSchema = z.object({
-  id: z.string().uuid(),
-  checkoutId: z.string().uuid(),
-  equipmentId: z.string().uuid(),
+  id: uuidString(),
+  checkoutId: uuidString(),
+  equipmentId: uuidString(),
   condition: z.string().optional(),
   notes: z.string().optional(),
   createdAt: z.date(),

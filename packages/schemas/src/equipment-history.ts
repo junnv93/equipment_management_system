@@ -1,16 +1,17 @@
 import { z } from 'zod';
 import { IncidentTypeEnum } from './enums';
+import { uuidString, optionalUuid } from './utils/fields';
 
 /**
  * 장비 위치 변동 이력 스키마
  */
 export const locationHistorySchema = z.object({
-  id: z.string().uuid(),
-  equipmentId: z.string().uuid(),
+  id: uuidString(),
+  equipmentId: uuidString(),
   changedAt: z.coerce.date(),
   newLocation: z.string().max(100),
   notes: z.string().optional(),
-  changedBy: z.string().uuid().optional(),
+  changedBy: optionalUuid(),
   createdAt: z.coerce.date(),
 });
 
@@ -27,11 +28,11 @@ export type CreateLocationHistoryInput = z.infer<typeof createLocationHistorySch
  * 장비 유지보수 내역 스키마
  */
 export const maintenanceHistorySchema = z.object({
-  id: z.string().uuid(),
-  equipmentId: z.string().uuid(),
+  id: uuidString(),
+  equipmentId: uuidString(),
   performedAt: z.coerce.date(),
   content: z.string(),
-  performedBy: z.string().uuid().optional(),
+  performedBy: optionalUuid(),
   performedByName: z.string().optional(), // 조회 시 조인된 데이터
   createdAt: z.coerce.date(),
 });
@@ -48,12 +49,12 @@ export type CreateMaintenanceHistoryInput = z.infer<typeof createMaintenanceHist
  * 장비 손상/오작동/변경/수리 내역 스키마
  */
 export const incidentHistorySchema = z.object({
-  id: z.string().uuid(),
-  equipmentId: z.string().uuid(),
+  id: uuidString(),
+  equipmentId: uuidString(),
   occurredAt: z.coerce.date(),
   incidentType: IncidentTypeEnum,
   content: z.string(),
-  reportedBy: z.string().uuid().optional(),
+  reportedBy: optionalUuid(),
   reportedByName: z.string().optional(), // 조회 시 조인된 데이터
   createdAt: z.coerce.date(),
 });

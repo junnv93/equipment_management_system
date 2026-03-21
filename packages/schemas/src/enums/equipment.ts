@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalUuid } from '../utils/fields';
 
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH: 장비 상태 열거형
@@ -323,8 +324,8 @@ export function isTemporaryManagementNumber(managementNumber: string): boolean {
 }
 
 // 팀 ID 스키마 (UUID 형식)
-// ✅ 팀 ID는 UUID 형식의 문자열
-export const TeamIdSchema = z.string().uuid().optional();
+// ✅ 팀 ID는 UUID 형식의 문자열 (HTML 폼 빈 문자열 안전)
+export const TeamIdSchema = optionalUuid();
 
 export type TeamId = z.infer<typeof TeamIdSchema>;
 

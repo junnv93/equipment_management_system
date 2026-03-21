@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { uuidString } from '../utils/fields';
 
 // 기본 엔티티 스키마
 export const baseEntitySchema = z.object({
-  id: z.string().uuid(),
+  id: uuidString(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -40,4 +41,4 @@ export type PaginatedResponseType<T> = {
   page: number;
   pageSize: number;
   totalPages: number;
-}; 
+};
