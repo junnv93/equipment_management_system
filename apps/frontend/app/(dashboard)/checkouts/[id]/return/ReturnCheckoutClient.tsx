@@ -52,16 +52,11 @@ export default function ReturnCheckoutClient({
   const returnMutation = useMutation({
     mutationFn: (data: ReturnCheckoutDto) => checkoutApi.returnCheckout(checkout.id, data),
     onSuccess: () => {
-      router.push(`/checkouts/${checkout.id}`);
-      router.refresh();
-    },
-    onSettled: () => {
-      Promise.all(
-        CheckoutCacheInvalidation.RETURN_KEYS.map((key) =>
-          queryClient.invalidateQueries({ queryKey: key })
-        )
+      CheckoutCacheInvalidation.RETURN_KEYS.forEach((key) =>
+        queryClient.invalidateQueries({ queryKey: key })
       );
       queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.detail(checkout.id) });
+      router.push(`/checkouts/${checkout.id}`);
     },
   });
 

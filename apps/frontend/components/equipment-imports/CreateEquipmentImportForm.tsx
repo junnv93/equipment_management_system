@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -40,6 +40,7 @@ import {
   EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { queryKeys } from '@/lib/api/query-config';
 
 const classificationOptions = Object.entries(CLASSIFICATION_LABELS) as [Classification, string][];
 
@@ -63,6 +64,7 @@ interface CreateEquipmentImportFormProps {
  */
 export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmentImportFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const t = useTranslations('equipment');
 
@@ -90,6 +92,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
   const createMutation = useMutation({
     mutationFn: (data: CreateEquipmentImportDto) => equipmentImportApi.create(data),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
       toast({
         title: t('equipmentImport.toasts.createSuccess'),
         description: t('equipmentImport.toasts.createSuccessDesc'),

@@ -19,12 +19,13 @@
  *   ↓
  * API 요청 (백그라운드)
  *   ↓
- * onSuccess → 성공 토스트 + 콜백
- * onError   → 에러 토스트 + 콜백
+ * onSuccess → 성공 토스트 + onSuccessCallback (모달 닫기 등 비-네비게이션)
+ * onError   → 에러 토스트 + onErrorCallback
  *   ↓
  * onSettled (항상 실행)
  *   - queryKey 무효화 → 서버에서 최신 데이터 조회 (SSOT)
  *   - invalidateKeys 무효화 → 관련 쿼리 백그라운드 재조회
+ *   - onSettledCallback → 캐시 무효화 완료 후 실행 (네비게이션에 적합)
  * ```
  *
  * ## ⚠️ 타입 안전 주의사항 (TData vs TCachedData)
@@ -139,9 +140,14 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
   /**
    * 성공 시 추가 콜백 (선택사항)
    *
+   * ⚠️ 네비게이션(router.push)은 여기서 사용하지 마세요.
+   * onSuccessCallback은 캐시 무효화(onSettled) 전에 실행되므로,
+   * 대상 페이지에서 stale 캐시가 표시될 수 있습니다.
+   * 네비게이션이 필요하면 onSettledCallback을 사용하세요.
+   *
    * @example
-   * onSuccessCallback: () => router.push('/approvals')
    * onSuccessCallback: (data) => setDetailModalItem(null)
+   * onSuccessCallback: (data) => setIsDialogOpen(false)
    */
   onSuccessCallback?: (data: TData, variables: TVariables) => void;
 
@@ -152,6 +158,19 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
    * onErrorCallback: (error) => console.error('Mutation failed:', error)
    */
   onErrorCallback?: (error: Error, variables: TVariables) => void;
+
+  /**
+   * 캐시 무효화 완료 후 실행되는 콜백 (선택사항)
+   *
+   * onSettled에서 queryKey + invalidateKeys 무효화가 완료된 후 실행됩니다.
+   * 네비게이션(router.push)은 반드시 여기서 실행해야 stale 캐시 문제를 방지합니다.
+   * 성공 시에만 실행됩니다 (error가 null일 때).
+   *
+   * @example
+   * onSettledCallback: () => router.push('/calibration')
+   * onSettledCallback: () => router.push(`/equipment/${id}`)
+   */
+  onSettledCallback?: (data: TData, variables: TVariables) => void;
 }
 
 /**
@@ -180,6 +199,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
   errorMessage,
   onSuccessCallback,
   onErrorCallback,
+  onSettledCallback,
 }: OptimisticMutationOptions<TData, TVariables, TCachedData>) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -289,7 +309,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
      *
      * @see https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates
      */
-    onSettled: async () => {
+    onSettled: async (data, error, variables) => {
       // 1. 주 쿼리 무효화 → 서버 최신 데이터로 동기화
       await queryClient.invalidateQueries({ queryKey });
 
@@ -298,6 +318,11 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
         await Promise.all(
           invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
         );
+      }
+
+      // 3. 캐시 무효화 완료 후 콜백 (성공 시에만 — 네비게이션에 적합)
+      if (!error && data !== undefined && onSettledCallback) {
+        onSettledCallback(data, variables);
       }
     },
   });

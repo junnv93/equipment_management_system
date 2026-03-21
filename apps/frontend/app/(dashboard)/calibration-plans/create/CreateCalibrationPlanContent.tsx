@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
@@ -44,6 +44,7 @@ import {
 
 export default function CreateCalibrationPlanContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: session } = useSession();
   const t = useTranslations('calibration');
@@ -103,6 +104,7 @@ export default function CreateCalibrationPlanContent() {
   const createMutation = useMutation({
     mutationFn: calibrationPlansApi.createCalibrationPlan,
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationPlans.lists() });
       toast({
         title: t('planCreate.toasts.createSuccess'),
         description: t('planCreate.toasts.createSuccessDesc', {

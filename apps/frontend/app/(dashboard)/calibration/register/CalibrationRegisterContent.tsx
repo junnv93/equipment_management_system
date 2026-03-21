@@ -208,7 +208,7 @@ export function CalibrationRegisterContent() {
     ],
     successMessage: t('toasts.registerSuccess'),
     errorMessage: t('toasts.registerError'),
-    onSuccessCallback: () => router.push('/calibration'),
+    onSettledCallback: () => router.push('/calibration'),
   });
 
   // 폼 제출 처리

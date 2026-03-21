@@ -117,15 +117,13 @@ export default function CreateCheckoutContent() {
   const createCheckoutMutation = useMutation({
     mutationFn: (data: CreateCheckoutDto) => checkoutApi.createCheckout(data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
       toast({
         title: t('toasts.createSuccessTitle'),
         description: t('toasts.createSuccessDescription'),
         variant: 'default',
       });
       router.push(FRONTEND_ROUTES.CHECKOUTS.LIST);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
     },
     onError: (error: unknown) => {
       toast({

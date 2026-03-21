@@ -17,7 +17,7 @@ import { Loader2, Check, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/api-client';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
   DEFAULT_CALIBRATION_ALERT_DAYS,
@@ -58,10 +58,12 @@ export default function CalibrationSettingsContent() {
   const { data, isLoading } = useQuery<CalibrationAlertSettingsResponse>({
     queryKey: queryKeys.settings.calibration(),
     queryFn: async () => {
-      const res = await apiClient.get<CalibrationSettings>(API_ENDPOINTS.SETTINGS.CALIBRATION);
+      const res = await apiClient.get<CalibrationAlertSettingsResponse>(
+        API_ENDPOINTS.SETTINGS.CALIBRATION
+      );
       return res.data;
     },
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.SETTINGS,
   });
 
   if (isLoading) {

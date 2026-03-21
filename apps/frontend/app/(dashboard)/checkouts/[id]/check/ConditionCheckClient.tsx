@@ -49,12 +49,9 @@ export default function ConditionCheckClient({
     mutationFn: (data: CreateConditionCheckDto) =>
       checkoutApi.submitConditionCheck(checkout.id, data),
     onSuccess: () => {
-      router.push(`/checkouts/${checkout.id}`);
-      router.refresh();
-    },
-    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.detail(checkout.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
+      router.push(`/checkouts/${checkout.id}`);
     },
   });
 

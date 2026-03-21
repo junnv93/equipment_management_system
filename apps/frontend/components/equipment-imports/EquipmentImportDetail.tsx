@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { queryKeys } from '@/lib/api/query-config';
-import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/api/error';
-import { isConflictError } from '@/lib/errors/equipment-errors';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { EquipmentImportCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +29,7 @@ import {
 import { PageHeader } from '@/components/shared/PageHeader';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import equipmentImportApi from '@/lib/api/equipment-import-api';
+import equipmentImportApi, { type EquipmentImport } from '@/lib/api/equipment-import-api';
 import { EquipmentImportStatusBadge } from './EquipmentImportStatusBadge';
 import {
   CLASSIFICATION_LABELS,
@@ -59,7 +58,6 @@ interface Props {
  */
 export default function EquipmentImportDetail({ id }: Props) {
   const router = useRouter();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
@@ -90,85 +88,57 @@ export default function EquipmentImportDetail({ id }: Props) {
     };
   }, [equipmentImport, id, setDynamicLabel, clearDynamicLabel]);
 
-  const approveMutation = useMutation({
+  const approveMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
     mutationFn: () => equipmentImportApi.approve(id, equipmentImport?.version || 1),
-    onSuccess: () => {
-      toast({ title: t('equipmentImport.toasts.approveSuccess') });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
-    },
-    onError: (error) => {
-      const errorMessage = getErrorMessage(error);
-      toast({
-        title: t('equipmentImport.toasts.approveFailed'),
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      if (isConflictError(error)) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
-      }
+    queryKey: queryKeys.equipmentImports.detail(id),
+    optimisticUpdate: (old) => ({ ...old!, status: EISVal.APPROVED as EquipmentImportStatus }),
+    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    successMessage: t('equipmentImport.toasts.approveSuccess'),
+    errorMessage: t('equipmentImport.toasts.approveFailed'),
+    onSuccessCallback: () => {
+      EquipmentImportCacheInvalidation.invalidateAfterApprovalAction(queryClient, id);
     },
   });
 
-  const rejectMutation = useMutation({
+  const rejectMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
     mutationFn: () => equipmentImportApi.reject(id, equipmentImport?.version || 1, rejectionReason),
-    onSuccess: () => {
-      toast({ title: t('equipmentImport.toasts.rejectSuccess') });
+    queryKey: queryKeys.equipmentImports.detail(id),
+    optimisticUpdate: (old) => ({ ...old!, status: EISVal.REJECTED as EquipmentImportStatus }),
+    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    successMessage: t('equipmentImport.toasts.rejectSuccess'),
+    errorMessage: t('equipmentImport.toasts.rejectFailed'),
+    onSuccessCallback: () => {
       setShowRejectDialog(false);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
-    },
-    onError: (error) => {
-      const errorMessage = getErrorMessage(error);
-      toast({
-        title: t('equipmentImport.toasts.rejectFailed'),
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      if (isConflictError(error)) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
-      }
+      EquipmentImportCacheInvalidation.invalidateAfterApprovalAction(queryClient, id);
     },
   });
 
-  const initiateReturnMutation = useMutation({
+  const initiateReturnMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
     mutationFn: () => equipmentImportApi.initiateReturn(id),
-    onSuccess: () => {
-      toast({ title: t('equipmentImport.toasts.returnStarted') });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
-    },
-    onError: (error) => {
-      toast({
-        title: t('equipmentImport.toasts.returnFailed'),
-        description: getErrorMessage(error),
-        variant: 'destructive',
-      });
+    queryKey: queryKeys.equipmentImports.detail(id),
+    optimisticUpdate: (old) => ({
+      ...old!,
+      status: EISVal.RETURN_REQUESTED as EquipmentImportStatus,
+    }),
+    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    successMessage: t('equipmentImport.toasts.returnStarted'),
+    errorMessage: t('equipmentImport.toasts.returnFailed'),
+    onSuccessCallback: () => {
+      EquipmentImportCacheInvalidation.invalidateAfterInitiateReturn(queryClient, id);
     },
   });
 
-  const cancelMutation = useMutation({
-    mutationFn: () => equipmentImportApi.cancel(id, cancelReason),
-    onSuccess: () => {
-      toast({ title: t('equipmentImport.toasts.cancelSuccess') });
+  const cancelMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
+    mutationFn: () =>
+      equipmentImportApi.cancel(id, equipmentImport?.version || 1, cancelReason || undefined),
+    queryKey: queryKeys.equipmentImports.detail(id),
+    optimisticUpdate: (old) => ({ ...old!, status: EISVal.CANCELED as EquipmentImportStatus }),
+    invalidateKeys: [queryKeys.equipmentImports.lists()],
+    successMessage: t('equipmentImport.toasts.cancelSuccess'),
+    errorMessage: t('equipmentImport.toasts.cancelFailed'),
+    onSuccessCallback: () => {
       setShowCancelDialog(false);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
-    },
-    onError: (error) => {
-      toast({
-        title: t('equipmentImport.toasts.cancelFailed'),
-        description: getErrorMessage(error),
-        variant: 'destructive',
-      });
+      EquipmentImportCacheInvalidation.invalidateAfterCancel(queryClient, id);
     },
   });
 

@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { EquipmentImportCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -129,15 +130,12 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
       return equipmentImportApi.receive(id, payload as unknown as ReceiveEquipmentImportDto);
     },
     onSuccess: () => {
+      EquipmentImportCacheInvalidation.invalidateAfterReceive(queryClient, id);
       toast({
         title: t('receiveEquipmentImport.toasts.success'),
         description: t('receiveEquipmentImport.toasts.successDesc'),
       });
       router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(id));
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
     },
     onError: (error) => {
       toast({

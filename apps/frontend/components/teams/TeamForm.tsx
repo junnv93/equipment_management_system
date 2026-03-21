@@ -111,14 +111,12 @@ export function TeamForm({ team, mode }: TeamFormProps) {
         leaderId: data.leaderId || undefined,
       }),
     onSuccess: (newTeam) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.lists() });
       toast({
         title: t('form.createSuccess'),
         description: t('form.createSuccessDesc', { name: newTeam.name }),
       });
       router.push(`/teams/${newTeam.id}`);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.lists() });
     },
     onError: (error: Error) => {
       toast({
@@ -140,15 +138,13 @@ export function TeamForm({ team, mode }: TeamFormProps) {
         leaderId: data.leaderId || undefined,
       }),
     onSuccess: (updatedTeam) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.detail(team!.id) });
       toast({
         title: t('form.updateSuccess'),
         description: t('form.updateSuccessDesc', { name: updatedTeam.name }),
       });
       router.push(`/teams/${team!.id}`);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.detail(team!.id) });
     },
     onError: (error: Error) => {
       toast({
