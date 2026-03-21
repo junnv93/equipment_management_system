@@ -144,7 +144,7 @@ export {
 export { SECURITY } from './security';
 
 // 알림 설정 (TTL 등)
-export { NOTIFICATION_CONFIG } from './notification-config';
+export { NOTIFICATION_CONFIG, SSE_APPROVAL_CHANGED_SENTINEL } from './notification-config';
 
 // 공용장비 소유처 옵션
 export {

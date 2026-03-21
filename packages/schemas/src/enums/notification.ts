@@ -14,6 +14,7 @@ export const NOTIFICATION_TYPE_VALUES = [
   'checkout_started', // 반출 시작
   'checkout_returned', // 반입 요청
   'checkout_return_approved', // 반입 승인됨
+  'checkout_return_rejected', // 반입 반려됨
   'checkout_overdue', // 반출 기한 초과
 
   // ─── 교정 (Calibration) ───
@@ -22,6 +23,12 @@ export const NOTIFICATION_TYPE_VALUES = [
   'calibration_rejected', // 교정 반려됨
   'calibration_due_soon', // 교정 예정 (D-day 알림)
   'calibration_overdue', // 교정 기한 초과
+
+  // ─── 교정계획 (Calibration Plan) ───
+  'calibration_plan_submitted', // 교정계획서 제출
+  'calibration_plan_reviewed', // 교정계획서 검토 완료
+  'calibration_plan_approved', // 교정계획서 최종 승인
+  'calibration_plan_rejected', // 교정계획서 반려
 
   // ─── 부적합 (Non-Conformance) ───
   'non_conformance_created', // 부적합 등록
@@ -44,6 +51,17 @@ export const NOTIFICATION_TYPE_VALUES = [
   'equipment_import_created', // 반입 요청
   'equipment_import_approved', // 반입 승인됨
   'equipment_import_rejected', // 반입 반려됨
+
+  // ─── 소프트웨어 (Software) ───
+  'software_approved', // 소프트웨어 승인
+  'software_rejected', // 소프트웨어 반려
+
+  // ─── 중간점검 (Intermediate Check) ───
+  'intermediate_check_completed', // 중간점검 완료
+
+  // ─── 보정계수 (Calibration Factor) ───
+  'calibration_factor_approved', // 보정계수 승인
+  'calibration_factor_rejected', // 보정계수 반려
 
   // ─── 시스템 ───
   'system_announcement', // 시스템 공지

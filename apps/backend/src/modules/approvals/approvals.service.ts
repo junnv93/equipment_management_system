@@ -1168,19 +1168,25 @@ export class ApprovalsService {
   }
 
   /**
-   * 교정계획서 검토 대기 개수 (품질책임자)
+   * 교정계획서 검토 대기 개수 (품질책임자) — SSOT: CALIBRATION_PLAN_DATA_SCOPE
    */
-  private async getCalibrationPlanReviewCount(): Promise<number> {
+  private async getCalibrationPlanReviewCount(userCtx: UserScopeContext): Promise<number> {
     try {
+      const conditions: SQL[] = [
+        eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.PENDING_REVIEW),
+        eq(schema.calibrationPlans.isLatestVersion, true),
+      ];
+
+      const scopeCondition = this.buildScopeCondition(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.calibrationPlans.siteId, s),
+        team: (t) => eq(schema.calibrationPlans.teamId, t),
+      });
+      if (scopeCondition) conditions.push(scopeCondition);
+
       const [result] = await this.db
         .select({ count: count() })
         .from(schema.calibrationPlans)
-        .where(
-          and(
-            eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.PENDING_REVIEW),
-            eq(schema.calibrationPlans.isLatestVersion, true)
-          )
-        );
+        .where(and(...conditions));
       return result?.count ?? 0;
     } catch (error) {
       this.logger.error(
@@ -1192,19 +1198,25 @@ export class ApprovalsService {
   }
 
   /**
-   * 교정계획서 최종 승인 대기 개수 (시험소장)
+   * 교정계획서 최종 승인 대기 개수 (시험소장) — SSOT: CALIBRATION_PLAN_DATA_SCOPE
    */
-  private async getCalibrationPlanFinalCount(): Promise<number> {
+  private async getCalibrationPlanFinalCount(userCtx: UserScopeContext): Promise<number> {
     try {
+      const conditions: SQL[] = [
+        eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.PENDING_APPROVAL),
+        eq(schema.calibrationPlans.isLatestVersion, true),
+      ];
+
+      const scopeCondition = this.buildScopeCondition(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.calibrationPlans.siteId, s),
+        team: (t) => eq(schema.calibrationPlans.teamId, t),
+      });
+      if (scopeCondition) conditions.push(scopeCondition);
+
       const [result] = await this.db
         .select({ count: count() })
         .from(schema.calibrationPlans)
-        .where(
-          and(
-            eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.PENDING_APPROVAL),
-            eq(schema.calibrationPlans.isLatestVersion, true)
-          )
-        );
+        .where(and(...conditions));
       return result?.count ?? 0;
     } catch (error) {
       this.logger.error(
@@ -1216,14 +1228,32 @@ export class ApprovalsService {
   }
 
   /**
-   * 소프트웨어 검증 승인 대기 개수
+   * 소프트웨어 검증 승인 대기 개수 — SSOT: SOFTWARE_DATA_SCOPE (equipment JOIN)
    */
-  private async getSoftwareCount(): Promise<number> {
+  private async getSoftwareCount(userCtx: UserScopeContext): Promise<number> {
     try {
+      const conditions: SQL[] = [
+        eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING),
+      ];
+
+      const scopeCondition = this.buildScopeCondition(SOFTWARE_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.equipment.site, s),
+        team: (t) => eq(schema.equipment.teamId, t),
+      });
+
+      if (scopeCondition) {
+        const [result] = await this.db
+          .select({ count: count() })
+          .from(schema.softwareHistory)
+          .innerJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
+          .where(and(...conditions, scopeCondition));
+        return result?.count ?? 0;
+      }
+
       const [result] = await this.db
         .select({ count: count() })
         .from(schema.softwareHistory)
-        .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING));
+        .where(and(...conditions));
       return result?.count ?? 0;
     } catch (error) {
       this.logger.error(
