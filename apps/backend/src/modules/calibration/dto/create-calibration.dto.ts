@@ -11,6 +11,8 @@ import {
   CalibrationResultEnum,
   type CalibrationResult,
   VM,
+  optionalUuid,
+  uuidString,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -19,8 +21,8 @@ import {
  * 교정 기본 스키마 (refinement 없음 - omit/pick 등을 위한 base)
  */
 export const calibrationBaseSchema = z.object({
-  equipmentId: z.string().uuid(VM.uuid.generic),
-  calibrationManagerId: z.string().uuid(VM.uuid.generic).optional(), // FE 미전송 시 registeredBy 폴백
+  equipmentId: uuidString(VM.uuid.generic),
+  calibrationManagerId: optionalUuid(), // FE 미전송 시 registeredBy 폴백
   calibrationDate: z.coerce.date({ message: VM.date.invalid }),
   nextCalibrationDate: z.coerce.date({ message: VM.date.invalid }).optional(),
   calibrationMethod: CalibrationMethodEnum.optional().default('external_calibration'),
@@ -32,7 +34,7 @@ export const calibrationBaseSchema = z.object({
   cost: z.number().min(0).optional(),
   notes: z.string().optional(),
   intermediateCheckDate: z.coerce.date().optional(),
-  registeredBy: z.string().uuid().optional(),
+  registeredBy: optionalUuid(),
   registeredByRole: CalibrationRegisteredByRoleEnum.optional(),
   registrarComment: z.string().optional(),
 });

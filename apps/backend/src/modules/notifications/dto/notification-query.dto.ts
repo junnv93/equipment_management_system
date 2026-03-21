@@ -7,6 +7,7 @@ import {
   NOTIFICATION_TYPE_VALUES,
   NOTIFICATION_PRIORITY_VALUES,
   VM,
+  uuidString,
   type NotificationType,
   type NotificationPriority,
 } from '@equipment-management/schemas';
@@ -35,28 +36,13 @@ const NotificationCategoryEnum = z.enum(NOTIFICATION_CATEGORIES);
 
 export const notificationQuerySchema = z.object({
   category: NotificationCategoryEnum.optional(),
-  recipientId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('수신자') })
-    .optional(),
-  teamId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('팀') })
-    .optional(),
+  recipientId: uuidString(VM.uuid.invalid('수신자')).optional(),
+  teamId: uuidString(VM.uuid.invalid('팀')).optional(),
   // @SiteScoped 인터셉터가 관리자 엔드포인트에서 주입하는 필드
   recipientSite: z.string().optional(),
-  equipmentId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('장비') })
-    .optional(),
-  calibrationId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('교정') })
-    .optional(),
-  rentalId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('대여') })
-    .optional(),
+  equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
+  calibrationId: uuidString(VM.uuid.invalid('교정')).optional(),
+  rentalId: uuidString(VM.uuid.invalid('대여')).optional(),
   isRead: z.preprocess(
     (val) => (val === 'true' ? true : val === 'false' ? false : undefined),
     z.boolean().optional()

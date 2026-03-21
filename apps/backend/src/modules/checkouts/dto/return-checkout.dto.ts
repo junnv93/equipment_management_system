@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { uuidString, VM } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -18,7 +19,7 @@ export const returnCheckoutSchema = z.object({
   itemConditions: z
     .array(
       z.object({
-        equipmentId: z.string().uuid(),
+        equipmentId: uuidString(VM.uuid.invalid('장비')),
         conditionAfter: z.string().min(1),
       })
     )

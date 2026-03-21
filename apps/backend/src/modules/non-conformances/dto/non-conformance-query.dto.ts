@@ -11,6 +11,7 @@ import {
   type NonConformanceStatus as NCStatus,
   type NonConformanceType as NCType,
   VM,
+  uuidString,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility (service, tests에서 사용)
@@ -22,10 +23,7 @@ export const NonConformanceStatus = NonConformanceStatusValues;
  * 부적합 조회 쿼리 스키마
  */
 export const nonConformanceQuerySchema = z.object({
-  equipmentId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('장비') })
-    .optional(),
+  equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
   status: z
     .enum(NON_CONFORMANCE_STATUS_VALUES, {
       message: VM.nonConformance.status.invalid,

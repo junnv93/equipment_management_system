@@ -2,7 +2,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
-import { CalibrationApprovalStatusEnum, SiteEnum, type Site } from '@equipment-management/schemas';
+import {
+  CalibrationApprovalStatusEnum,
+  SiteEnum,
+  type Site,
+  optionalUuid,
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -10,8 +15,8 @@ import { CalibrationApprovalStatusEnum, SiteEnum, type Site } from '@equipment-m
  * 교정 조회 쿼리 스키마
  */
 export const calibrationQuerySchema = z.object({
-  equipmentId: z.string().uuid().optional(),
-  calibrationManagerId: z.string().uuid().optional(),
+  equipmentId: optionalUuid(),
+  calibrationManagerId: optionalUuid(),
   statuses: z.string().optional(),
   methods: z.string().optional(),
   calibrationAgency: z.string().optional(),
@@ -22,14 +27,11 @@ export const calibrationQuerySchema = z.object({
   isPassed: z.string().optional(),
   search: z.string().optional(),
   approvalStatus: CalibrationApprovalStatusEnum.optional(),
-  teamId: z.string().uuid().optional(),
+  teamId: optionalUuid(),
   site: SiteEnum.optional(),
   sort: z.string().default('calibrationDate.desc'),
-  page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
-  pageSize: z.preprocess(
-    (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),
-    z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE)
-  ),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional().default(DEFAULT_PAGE_SIZE),
 });
 
 export type CalibrationQueryInput = z.infer<typeof calibrationQuerySchema>;

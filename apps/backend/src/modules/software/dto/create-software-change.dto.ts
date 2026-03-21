@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
-import { VM } from '@equipment-management/schemas';
+import { VM, uuidString } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 정의 ==========
@@ -9,7 +9,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 소프트웨어 변경 등록 스키마
  */
 export const createSoftwareChangeSchema = z.object({
-  equipmentId: z.string().uuid({ message: VM.uuid.invalid('장비') }),
+  equipmentId: uuidString(VM.uuid.invalid('장비')),
   softwareName: z
     .string()
     .min(1, VM.software.name.required)

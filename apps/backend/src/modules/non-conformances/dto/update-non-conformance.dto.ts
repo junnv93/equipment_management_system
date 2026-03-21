@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
-import { NonConformanceStatusEnum, VM } from '@equipment-management/schemas';
+import { NonConformanceStatusEnum, VM, uuidString } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -23,10 +23,7 @@ export const updateNonConformanceSchema = z.object({
       message: VM.date.invalidYMD,
     })
     .optional(),
-  correctedBy: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('조치자') })
-    .optional(),
+  correctedBy: uuidString(VM.uuid.invalid('조치자')).optional(),
   status: UpdatableNonConformanceStatusEnum.optional(),
 });
 

@@ -5,6 +5,7 @@ import {
   NotificationPriorityEnum,
   NOTIFICATION_PRIORITY_VALUES,
   VM,
+  uuidString,
   type NotificationPriority,
 } from '@equipment-management/schemas';
 
@@ -27,18 +28,9 @@ export const updateNotificationSchema = z.object({
     .optional(),
   priority: NotificationPriorityEnum.optional(),
   isTeamNotification: z.boolean().optional(),
-  equipmentId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('장비') })
-    .optional(),
-  calibrationId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('교정') })
-    .optional(),
-  rentalId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('대여') })
-    .optional(),
+  equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
+  calibrationId: uuidString(VM.uuid.invalid('교정')).optional(),
+  rentalId: uuidString(VM.uuid.invalid('대여')).optional(),
   linkUrl: z.string().max(200, VM.string.max('링크 URL', 200)).optional(),
   isRead: z.boolean().optional(),
 });

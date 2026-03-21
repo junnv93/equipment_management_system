@@ -8,6 +8,7 @@ import {
   type Site,
   VM,
   type Location,
+  optionalUuid,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -17,7 +18,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * Best Practice: class-validator 대신 Zod를 사용하여 검증과 타입 정의를 통합합니다.
  */
 export const createUserSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: optionalUuid(),
   email: z.string().email({ message: VM.email.invalid }),
   name: z
     .string({ message: VM.string.nonempty('이름') })
@@ -26,7 +27,7 @@ export const createUserSchema = z.object({
   role: UserRoleEnum,
   site: SiteEnum.optional(),
   location: LocationEnum.optional(),
-  teamId: z.string().uuid().optional(), // UUID 형식
+  teamId: optionalUuid(), // UUID 형식 + HTML 폼 빈 문자열 안전
   department: z.string().max(100).optional(),
   position: z.string().max(100).optional(),
   phoneNumber: z.string().max(20).optional(),

@@ -6,6 +6,7 @@ import {
   REPAIR_RESULT_VALUES,
   type RepairResult,
   VM,
+  uuidString,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -36,10 +37,7 @@ export const createRepairHistorySchema = z.object({
   repairResult: RepairResultEnum.optional(),
   notes: z.string().optional(),
   attachmentPath: z.string().optional(),
-  nonConformanceId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('부적합') })
-    .optional(),
+  nonConformanceId: uuidString(VM.uuid.invalid('부적합')).optional(),
 });
 
 export type CreateRepairHistoryInput = z.infer<typeof createRepairHistorySchema>;

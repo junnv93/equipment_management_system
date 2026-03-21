@@ -7,6 +7,7 @@ import {
   type Site,
   CALIBRATION_PLAN_STATUS_VALUES,
   VM,
+  uuidString,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -36,10 +37,7 @@ export const calibrationPlanQuerySchema = z.object({
       message: VM.calibrationPlan.site.invalid,
     })
     .optional(),
-  teamId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('팀') })
-    .optional(),
+  teamId: uuidString(VM.uuid.invalid('팀')).optional(),
   status: z
     .enum(calibrationPlanStatusValues, {
       message: VM.calibrationPlan.status.invalid,
@@ -72,10 +70,7 @@ export const externalEquipmentQuerySchema = z.object({
       message: VM.calibrationPlan.site.invalid,
     })
     .optional(),
-  teamId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('팀') })
-    .optional(),
+  teamId: uuidString(VM.uuid.invalid('팀')).optional(),
 });
 
 export type ExternalEquipmentQueryInput = z.infer<typeof externalEquipmentQuerySchema>;

@@ -2,7 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: enums.ts에서 import
-import { CheckoutPurpose, CHECKOUT_PURPOSE_VALUES, VM } from '@equipment-management/schemas';
+import {
+  CheckoutPurpose,
+  CHECKOUT_PURPOSE_VALUES,
+  VM,
+  optionalUuid,
+  uuidString,
+} from '@equipment-management/schemas';
 import { CHECKOUT_MAX_EQUIPMENT_COUNT } from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
@@ -12,7 +18,7 @@ import { CHECKOUT_MAX_EQUIPMENT_COUNT } from '@equipment-management/shared-const
  */
 export const createCheckoutSchema = z.object({
   equipmentIds: z
-    .array(z.string().uuid(VM.uuid.generic))
+    .array(uuidString(VM.uuid.generic))
     .min(1, VM.array.min('장비', 1))
     .max(CHECKOUT_MAX_EQUIPMENT_COUNT, VM.array.max('장비', CHECKOUT_MAX_EQUIPMENT_COUNT)),
   purpose: z.enum(CHECKOUT_PURPOSE_VALUES, {
@@ -24,7 +30,7 @@ export const createCheckoutSchema = z.object({
   reason: z.string().min(1, VM.checkout.reason.required),
   expectedReturnDate: z.string().datetime({ message: VM.date.invalid }),
   notes: z.string().optional(),
-  lenderTeamId: z.string().uuid().optional(),
+  lenderTeamId: optionalUuid(VM.uuid.invalid('대여 팀')),
   lenderSiteId: z.string().optional(),
 });
 

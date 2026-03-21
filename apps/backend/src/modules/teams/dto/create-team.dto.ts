@@ -9,6 +9,7 @@ import {
   type ClassificationCode,
   VM,
   type Site,
+  optionalUuid,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -27,7 +28,7 @@ export const createTeamSchema = z.object({
     .enum(Object.values(CLASSIFICATION_TO_CODE) as [string, ...string[]])
     .optional(),
   description: z.string().max(500).optional(),
-  leaderId: z.string().uuid().optional(),
+  leaderId: optionalUuid(VM.uuid.invalid('팀장')),
 });
 
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;

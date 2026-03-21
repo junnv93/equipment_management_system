@@ -9,6 +9,7 @@ import {
   type CheckoutDirection,
   type Site,
   VM,
+  optionalUuid,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -17,10 +18,10 @@ import {
  * 반출 조회 쿼리 스키마
  */
 export const checkoutQuerySchema = z.object({
-  equipmentId: z.string().uuid().optional(),
-  requesterId: z.string().uuid().optional(),
-  approverId: z.string().uuid().optional(),
-  teamId: z.string().uuid().optional(),
+  equipmentId: optionalUuid(),
+  requesterId: optionalUuid(),
+  approverId: optionalUuid(),
+  teamId: optionalUuid(),
   site: SiteEnum.optional(),
   direction: CheckoutDirectionEnum.optional(),
   purpose: z

@@ -6,6 +6,7 @@ import {
   NON_CONFORMANCE_TYPE_VALUES,
   type NonConformanceType,
   VM,
+  uuidString,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -17,11 +18,11 @@ export { NonConformanceTypeEnum, NON_CONFORMANCE_TYPE_VALUES, type NonConformanc
  * 부적합 생성 스키마
  */
 export const createNonConformanceSchema = z.object({
-  equipmentId: z.string().uuid({ message: VM.uuid.invalid('장비') }),
+  equipmentId: uuidString(VM.uuid.invalid('장비')),
   discoveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: VM.date.invalidYMD,
   }),
-  discoveredBy: z.string().uuid({ message: VM.uuid.invalid('발견자') }),
+  discoveredBy: uuidString(VM.uuid.invalid('발견자')),
   cause: z.string().min(1, VM.nonConformance.cause.required),
   ncType: NonConformanceTypeEnum,
   actionPlan: z.string().optional(),

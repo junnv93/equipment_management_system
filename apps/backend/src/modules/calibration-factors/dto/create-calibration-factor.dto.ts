@@ -7,6 +7,7 @@ import {
   CALIBRATION_FACTOR_TYPE_VALUES,
   type CalibrationFactorType,
   VM,
+  uuidString,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -23,11 +24,8 @@ export {
  * 보정계수 생성 스키마
  */
 export const createCalibrationFactorSchema = z.object({
-  equipmentId: z.string().uuid({ message: VM.uuid.invalid('장비') }),
-  calibrationId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('교정') })
-    .optional(),
+  equipmentId: uuidString(VM.uuid.invalid('장비')),
+  calibrationId: uuidString(VM.uuid.invalid('교정')).optional(),
   factorType: CalibrationFactorTypeEnum,
   factorName: z
     .string()
@@ -46,10 +44,7 @@ export const createCalibrationFactorSchema = z.object({
     })
     .optional(),
   // 서버에서 JWT를 통해 추출하므로 클라이언트 전송 불필요 (하위 호환성을 위해 optional 유지)
-  requestedBy: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('요청자') })
-    .optional(),
+  requestedBy: uuidString(VM.uuid.invalid('요청자')).optional(),
 });
 
 export type CreateCalibrationFactorInput = z.infer<typeof createCalibrationFactorSchema>;

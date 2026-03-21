@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VALIDATION_RULES } from '@equipment-management/shared-constants';
-import { VM } from '@equipment-management/schemas';
+import { VM, uuidString } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -20,7 +20,7 @@ export const markCorrectedSchema = z.object({
   correctionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: VM.date.invalidYMD,
   }),
-  correctedBy: z.string().uuid({ message: VM.uuid.invalid('조치자') }),
+  correctedBy: uuidString(VM.uuid.invalid('조치자')),
 });
 
 export type MarkCorrectedInput = z.infer<typeof markCorrectedSchema>;

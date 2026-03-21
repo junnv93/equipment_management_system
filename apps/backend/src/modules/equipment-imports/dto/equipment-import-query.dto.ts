@@ -10,6 +10,7 @@ import {
   type EquipmentImportSource,
   type Site,
   type SortOrder,
+  optionalUuid,
 } from '@equipment-management/schemas';
 
 export const equipmentImportQuerySchema = z.object({
@@ -18,7 +19,7 @@ export const equipmentImportQuerySchema = z.object({
   status: z.enum(EQUIPMENT_IMPORT_STATUS_VALUES).optional(),
   sourceType: z.enum(EQUIPMENT_IMPORT_SOURCE_VALUES).optional(),
   site: SiteEnum.optional(),
-  teamId: z.string().uuid().optional(),
+  teamId: optionalUuid(),
   search: z.string().optional(),
   sortBy: z
     .enum(['createdAt', 'usagePeriodStart', 'usagePeriodEnd', 'status'])

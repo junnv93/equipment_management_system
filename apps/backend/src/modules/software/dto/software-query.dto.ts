@@ -7,6 +7,7 @@ import {
   SOFTWARE_APPROVAL_STATUS_VALUES,
   SiteEnum,
   VM,
+  uuidString,
   type SoftwareApprovalStatus,
   type Site,
 } from '@equipment-management/schemas';
@@ -20,10 +21,7 @@ export { SoftwareApprovalStatusEnum, SOFTWARE_APPROVAL_STATUS_VALUES, type Softw
  * 소프트웨어 이력 조회 쿼리 스키마
  */
 export const softwareHistoryQuerySchema = z.object({
-  equipmentId: z
-    .string()
-    .uuid({ message: VM.uuid.invalid('장비') })
-    .optional(),
+  equipmentId: uuidString(VM.uuid.invalid('장비')).optional(),
   softwareName: z.string().optional(),
   approvalStatus: SoftwareApprovalStatusEnum.optional(),
   search: z.string().optional(),
