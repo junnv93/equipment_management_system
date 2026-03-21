@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { RepairResultEnum, RepairResultValues as RRVal } from '@equipment-management/schemas';
+import {
+  RepairResultEnum,
+  RepairResultValues as RRVal,
+  uuidString,
+} from '@equipment-management/schemas';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDeleteMutation } from '@/hooks/use-mutation-with-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -90,7 +94,7 @@ const repairHistorySchema = z.object({
   repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
   repairResult: RepairResultEnum.optional(),
   notes: z.string().optional(),
-  nonConformanceId: z.string().uuid('부적합을 선택해주세요'), // 필수
+  nonConformanceId: uuidString('부적합을 선택해주세요'), // 필수
 });
 
 type RepairHistoryFormData = z.infer<typeof repairHistorySchema>;

@@ -4,7 +4,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { RepairResultEnum, RepairResultValues as RRVal } from '@equipment-management/schemas';
+import {
+  RepairResultEnum,
+  RepairResultValues as RRVal,
+  optionalUuid,
+} from '@equipment-management/schemas';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
@@ -77,7 +81,7 @@ function createRepairHistoryFormSchema(t: (key: string) => string) {
     repairDescription: z.string().min(10, t('validationDescriptionMin')),
     repairResult: RepairResultEnum.optional(),
     notes: z.string().optional(),
-    nonConformanceId: z.string().uuid().optional(),
+    nonConformanceId: optionalUuid(),
   });
 }
 type RepairHistoryFormValues = z.infer<ReturnType<typeof createRepairHistoryFormSchema>>;

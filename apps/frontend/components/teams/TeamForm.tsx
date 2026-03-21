@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { ClassificationEnum, SiteEnum } from '@equipment-management/schemas';
+import { ClassificationEnum, SiteEnum, optionalUuid } from '@equipment-management/schemas';
 import teamsApi, { type Team, SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { LeaderCombobox } from './LeaderCombobox';
@@ -81,7 +81,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
         classification: ClassificationEnum,
         description: z.string().max(500, t('form.validation.descMaxLength')).optional(),
         site: SiteEnum,
-        leaderId: z.string().uuid(t('form.validation.invalidUserId')).optional().or(z.literal('')),
+        leaderId: optionalUuid(t('form.validation.invalidUserId')),
       }),
     [t]
   );
