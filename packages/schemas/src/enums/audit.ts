@@ -33,7 +33,7 @@ export const AUDIT_ACTION_VALUES = [
   'export', // 내보내기 (보고서 파일 다운로드)
 ] as const;
 
-export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES as readonly [string, ...string[]]);
+export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES);
 export type AuditAction = z.infer<typeof AuditActionEnum>;
 
 /**

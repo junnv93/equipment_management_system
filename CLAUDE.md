@@ -751,7 +751,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-design-tokens**: Design Token 3-Layer 아키텍처 검증 — transition-all 금지, focus-visible 우선, import 경로, Layer 참조
 - **verify-security**: 보안 설정 검증 — Helmet CSP 프로덕션 강화, Next.js Security Headers, PermissionsGuard DENY 모드, @Public 남용
 - **verify-i18n**: i18n 번역 일관성 검증 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조
-- **verify-sql-safety**: SQL 안전성 검증 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지
+- **verify-sql-safety**: SQL 안전성 검증 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out JOIN, RBAC INNER JOIN
 - **verify-filters**: URL-driven 필터 SSOT 검증 — filter-utils 필수 export, hook 존재, page.tsx 서버 파싱
 - **verify-implementation**: 모든 verify 스킬 통합 실행
 - **review-architecture**: 아키텍처 레벨 코드 리뷰 — 계층 관통 추적, CAS 일관성, 캐시 코히어런스, 모듈 간 패턴 일관성, 성능/보안

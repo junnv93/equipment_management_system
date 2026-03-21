@@ -60,6 +60,16 @@
 - **체크리스트 반영**: review-checklist.md 섹션 N에 추가됨
 -->
 
+### [2026-03-21] RBAC scope JOIN 유형 선택 (INNER vs LEFT)
+- **발견 위치**: `apps/backend/src/modules/reports/reports.service.ts` 전체
+- **설명**: RBAC scope 조건이 equipment 테이블 컬럼(`siteCode`, `teamId`)을 통해 적용되는 경우, `LEFT JOIN`은 NULL 행이 scope 조건을 우회할 수 있으므로 `INNER JOIN` 사용이 올바름. 단, equipment 기준 쿼리(활용률 등)에서 반출 없는 장비도 0%로 표시하려면 `LEFT JOIN`이 의도적. 또한 `teamsTable` JOIN은 팀 미배정 장비 표시를 위해 항상 `LEFT JOIN`.
+- **체크리스트 반영**: review-checklist.md 섹션 5 "성능 안티패턴"에 추가 고려
+
+### [2026-03-21] COUNT(DISTINCT) + fan-out JOIN
+- **발견 위치**: `apps/backend/src/modules/reports/reports.service.ts:153,296,308,1000`
+- **설명**: checkouts → checkoutItems 다:1 관계에서 `count(checkoutsTable.id)`만 사용하면 item 수만큼 카운트 뻥튀기. `COUNT(DISTINCT checkoutsTable.id)` 필수. 활용률 쿼리에서도 `COALESCE(COUNT(DISTINCT ...), 0)` 패턴 사용.
+- **체크리스트 반영**: review-checklist.md 섹션 5 "성능 안티패턴"에 추가 고려
+
 ### [2026-03-21] Zod v4 `z.string().uuid()` 직접 사용
 - **발견 빈도**: 1회 (frontend: IncidentHistoryTab.tsx) — 마이그레이션 누락
 - **설명**: `z.string().uuid()` 직접 호출은 Zod v4에서 시드 UUID를 거부함. 반드시 `uuidString()` SSOT 유틸리티 사용 필요.
@@ -69,6 +79,21 @@
 - **발견 빈도**: 1회 (notifications: eventName→type camelCase 불일치)
 - **설명**: 이벤트명→DB type 변환 결과가 SSOT enum에 없어도 런타임 에러가 발생하지 않던 문제. 배치 삽입이 Zod 검증을 우회하므로 불일치가 DB에 잘못된 값으로 저장됨. 모듈 로드 시점 교차 검증으로 해결.
 - **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md에 명시적 항목으로 승격
+
+### [2026-03-21] CAS 선점 순서 — 작업보다 CAS 체크가 먼저
+- **발견 빈도**: 1회 (equipment: approveRequest)
+- **설명**: `approveRequest`에서 장비 create/update/delete 작업이 CAS 체크(version WHERE) **이전에** 실행되어, 동시 승인 시 장비 중복 생성 가능. CAS 선점(요청 상태 업데이트)을 장비 작업 이전으로 이동하여 해결. `initiateReturn()`과 동일한 "CAS 선점 → 작업 → 보상" 패턴.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 2 "CAS 계층 일관성"에 명시적 항목으로 승격
+
+### [2026-03-21] DB nullable → DTO optional 정규화 (null → undefined)
+- **발견 빈도**: 1회 (auth: toAuthUser)
+- **설명**: DB varchar nullable 컬럼은 `string | null`을 반환하지만, DTO/JWT 타입은 `string | undefined`를 기대. `teamId`만 `?? undefined`가 적용되고 `department`, `position`, `site`는 누락. JWT payload에 `null`이 들어가면 JSON 직렬화에서 `undefined`와 다르게 동작하여 `=== undefined` 체크 실패.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 1 "계층 관통 추적"에 명시적 항목으로 승격
+
+### [2026-03-21] Mutation 네비게이션 전 캐시 무효화 필수 (Navigate-Before-Invalidate 안티패턴)
+- **발견 빈도**: 1회 (시스템 전반 — 9개 파일에서 동시 발견)
+- **설명**: `useMutation`의 `onSuccess`에서 `router.push()`로 네비게이션한 뒤, `onSettled`에서 캐시를 무효화하면 대상 페이지에서 stale 데이터가 표시됨. 특히 STATIC 프리셋(`refetchOnMount: false`)에서 심각. `useFormSubmission` 훅의 패턴(invalidation → navigation in onSuccess)이 올바른 참조 구현. `useOptimisticMutation`에는 `onSettledCallback` 옵션을 추가하여 캐시 무효화 완료 후 네비게이션 실행 보장.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 3 "캐시 코히어런스"에 명시적 항목으로 승격
 
 ---
 
@@ -81,3 +106,8 @@
 | 2026-03-21 | 안티패턴 | `z.string().uuid()` 직접 사용 → 시드 UUID 실패 | review-learnings.md |
 | 2026-03-21 | 새 패턴 | 모듈 로드 시점 SSOT 교차 검증 (enum↔변환 결과) | review-learnings.md |
 | 2026-03-21 | 안티패턴 | SSOT enum↔변환 불일치 런타임 미탐지 | review-learnings.md |
+| 2026-03-21 | 새 패턴 | RBAC scope JOIN 유형 선택 (INNER vs LEFT) | review-learnings.md |
+| 2026-03-21 | 새 패턴 | COUNT(DISTINCT) + fan-out JOIN 필수 | review-learnings.md |
+| 2026-03-21 | 안티패턴 | CAS 선점 순서 — 작업보다 CAS 체크가 먼저 | review-learnings.md |
+| 2026-03-21 | 안티패턴 | DB nullable → DTO optional 정규화 누락 | review-learnings.md |
+| 2026-03-21 | 안티패턴 | Mutation Navigate-Before-Invalidate (9개 파일) | review-learnings.md |

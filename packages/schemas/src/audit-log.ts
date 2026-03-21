@@ -81,6 +81,7 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   logout: 'bg-slate-100 text-slate-800',
   close: 'bg-teal-100 text-teal-800',
   reject_correction: 'bg-rose-100 text-rose-800',
+  export: 'bg-emerald-100 text-emerald-800',
 };
 
 // ============================================================================

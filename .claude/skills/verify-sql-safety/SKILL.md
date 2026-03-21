@@ -159,6 +159,34 @@ const withRelated = await this.db
   .where(conditions);
 ```
 
+### Step 5: COUNT(DISTINCT) fan-out JOIN 탐지
+
+다:다 관계 JOIN(예: checkouts → checkoutItems) 시 `count()` 사용은 item 수만큼 카운트 뻥튀기. `COUNT(DISTINCT)` 필수.
+
+```bash
+# count() + JOIN 조합 탐지 — COUNT(DISTINCT)가 아닌 count() 사용
+grep -rn "count(" apps/backend/src/modules --include="*.service.ts" -B 5 | grep -E "Join.*Items|Join.*checkoutItems|Join.*checkout_items"
+```
+
+**PASS 기준:** fan-out JOIN이 있는 쿼리에서 `COUNT(DISTINCT table.id)` 또는 `sql<number>\`COUNT(DISTINCT ...)\`` 사용.
+
+**FAIL 기준:** `count(table.id)` (drizzle `count()` 함수)를 다:다 JOIN과 함께 사용하면 카운트 뻥튀기.
+
+### Step 6: RBAC scope 적용 시 INNER JOIN 사용 확인
+
+RBAC scope 조건이 equipment 테이블 컬럼(`siteCode`, `teamId`)을 통해 적용되는 경우, `LEFT JOIN`은 NULL 행이 scope 필터를 우회할 수 있음. scope 적용 대상 테이블은 `INNER JOIN` 사용 필요.
+
+**예외:** equipment 기준 쿼리(활용률 등)에서 반출 없는 장비도 표시하려면 `LEFT JOIN` 의도적 사용 가능. `teamsTable` JOIN은 팀 미배정 장비 표시를 위해 항상 `LEFT JOIN` 허용.
+
+```bash
+# LEFT JOIN + scopeConditions 조합 탐지
+grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules --include="*.service.ts" -B 3 | grep -v "teamsTable\|node_modules"
+```
+
+**PASS 기준:** scope 적용 대상 테이블(calibrations→equipment, repairHistory→equipment, checkouts→checkoutItems→equipment)은 `innerJoin` 사용. `teamsTable`과 활용률 쿼리의 `checkoutItems`/`checkouts` LEFT JOIN은 면제.
+
+**FAIL 기준:** scope 조건이 적용되는 equipment 테이블에 `leftJoin` 사용 시 RBAC 우회 가능.
+
 ## Output Format
 
 ```markdown
@@ -168,6 +196,8 @@ const withRelated = await this.db
 | 2   | SSOT 유틸리티 존재         | PASS/FAIL | 유틸리티 존재 여부     |
 | 3   | SSOT import 확인           | PASS/FAIL | 누락 import 서비스     |
 | 4   | N+1 쿼리 패턴              | PASS/FAIL | N+1 패턴 위치 목록     |
+| 5   | COUNT(DISTINCT) fan-out    | PASS/FAIL | 뻥튀기 카운트 위치     |
+| 6   | RBAC INNER JOIN            | PASS/FAIL | scope 우회 위치        |
 ```
 
 ## Exceptions

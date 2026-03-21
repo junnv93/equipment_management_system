@@ -42,7 +42,8 @@
     "login": "Login",
     "logout": "Logout",
     "close": "Close",
-    "reject_correction": "Reject Correction"
+    "reject_correction": "Reject Correction",
+    "export": "Export"
   },
   "entityTypes": {
     "equipment": "Equipment",
@@ -61,7 +62,9 @@
     "location_history": "Location History",
     "maintenance_history": "Maintenance History",
     "incident_history": "Incident History",
-    "settings": "Settings"
+    "settings": "Settings",
+    "notification": "Notification",
+    "report": "Report"
   },
   "timeline": {
     "today": "Today",

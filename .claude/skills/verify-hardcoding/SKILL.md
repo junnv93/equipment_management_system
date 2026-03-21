@@ -190,6 +190,17 @@ grep -rn "URGENT_THRESHOLD_DAYS\s*=\|WARNING_THRESHOLD_DAYS\s*=" apps/backend/sr
 
 **PASS 기준:** `approval-kpi.ts` 외 파일에서 직접 선언 없음.
 
+### Step 9b: 리포트 상수 하드코딩 탐지 (REPORT_CONSTANTS, REPORT_EXPORT_ROW_LIMIT)
+
+```bash
+# 리포트 관련 매직넘버 탐지: 8(시간/일), 10000(export 제한)을 직접 사용하는 경우
+grep -rn "\.limit(10[_0]*00)\|* 8[^0-9]\|\.slice(0, [0-9])" apps/backend/src/modules/reports --include="*.ts" | grep -v "REPORT_CONSTANTS\|REPORT_EXPORT_ROW_LIMIT\|node_modules\|// "
+```
+
+**PASS 기준:** `REPORT_CONSTANTS.HOURS_PER_CHECKOUT`, `REPORT_CONSTANTS.TOP_N_LIMIT`, `REPORT_CONSTANTS.BOTTOM_N_LIMIT`, `REPORT_EXPORT_ROW_LIMIT`이 `@equipment-management/shared-constants`에서 import되어 사용.
+
+**FAIL 기준:** `.limit(10000)`, `* 8`, `.slice(0, 5)` 등 매직넘버가 직접 사용되면 위반. `REPORT_UTILIZATION_THRESHOLDS.HIGH/LOW`도 하드코딩 금지.
+
 ### Step 10: ErrorCode ↔ 프론트엔드 mapBackendErrorCode 매핑 완전성
 
 ```bash

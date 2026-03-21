@@ -234,6 +234,7 @@ const { data } = useQuery({
 7. **필터 훅 내부의 useMemo/useCallback** — `use-*-filters.ts` 훅 내부의 메모이제이션은 정상
 8. **CreateCheckoutContent의 selectedEquipments** — 폼에서 선택된 장비 목록 관리는 UI 상태
 9. **1-step 승인/완료 워크플로우의 direct useMutation** — `admin/*-approvals/`, `IntermediateCheckAlert`, `CalibrationFactorsClient`, `CalibrationPlanDetailClient`, `ApprovalTimeline`, `PlanItemsTable` 등은 optimistic update 불필요 (비동기 확인 플로우). `onSettled` 또는 `onSuccess`에서 `invalidateQueries` 호출 패턴 준수 시 정상
+15. **direct useMutation + 네비게이션 시 onSuccess 내 invalidateQueries** — `useMutation`(비-optimistic)에서 `router.push()`로 네비게이션하는 경우, `onSuccess`에서 invalidation → navigation 순서로 호출하는 것이 올바른 패턴 (`useFormSubmission` 훅 참조). `onSettled`에서 invalidation하면 네비게이션 후에 실행되어 대상 페이지에서 stale 캐시가 표시됨. 단, `useOptimisticMutation` 사용 시에는 `onSettledCallback`을 통해 캐시 무효화 완료 후 네비게이션해야 함
 10. **SoftwareHistoryClient의 direct useMutation** — 소프트웨어 변경 요청은 신규 생성이므로 optimistic update 불필요
 11. **refetchInterval 직접 설정 (특수 케이스)** — QUERY_CONFIG 프리셋으로 커버되지 않는 특수한 polling 요구사항이 있을 때 직접 설정 가능. 단, 주석으로 이유를 명시해야 함
 12. **use-sidebar-state.ts의 localStorage useState** — 사이드바 접기/펼치기 상태는 UI 로컬 상태 (서버 상태 아님). localStorage에서 읽는 SSR 안전 패턴은 정상 (useState false 초기화 → useEffect로 복원)

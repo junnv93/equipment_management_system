@@ -42,7 +42,8 @@
     "login": "로그인",
     "logout": "로그아웃",
     "close": "종료",
-    "reject_correction": "조치 반려"
+    "reject_correction": "조치 반려",
+    "export": "내보내기"
   },
   "entityTypes": {
     "equipment": "장비",
@@ -61,7 +62,9 @@
     "location_history": "위치 이력",
     "maintenance_history": "유지보수 이력",
     "incident_history": "사고 이력",
-    "settings": "설정"
+    "settings": "설정",
+    "notification": "알림",
+    "report": "보고서"
   },
   "timeline": {
     "today": "오늘",
