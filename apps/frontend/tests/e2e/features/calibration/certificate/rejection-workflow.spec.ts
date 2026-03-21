@@ -81,9 +81,9 @@ test.describe('교정 반려 워크플로우', () => {
     await testOperatorPage.waitForURL(/\/calibration(?!\/register)/, { timeout: 20000 });
 
     // 2. 기술책임자로 승인 대기 목록 이동
-    await techManagerPage.goto('/admin/calibration-approvals');
+    await techManagerPage.goto('/admin/approvals?tab=calibration');
 
-    const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
+    const pageHeading = techManagerPage.getByRole('heading', { name: /승인 관리/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
     // 방금 등록한 기록 찾기 (individual card: border-l-brand-warning)
@@ -117,9 +117,9 @@ test.describe('교정 반려 워크플로우', () => {
     techManagerPage,
   }) => {
     // 1. 승인 대기 목록 이동
-    await techManagerPage.goto('/admin/calibration-approvals');
+    await techManagerPage.goto('/admin/approvals?tab=calibration');
 
-    const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
+    const pageHeading = techManagerPage.getByRole('heading', { name: /승인 관리/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
     // 2. 해당 기록의 '반려' 버튼 클릭 (individual card: border-l-brand-warning)

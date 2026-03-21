@@ -5,10 +5,10 @@ import { test } from '../../../../shared/fixtures/auth.fixture';
  * 승인 대기 목록 페이지 준비
  */
 test('setup - 승인 대기 목록 페이지 준비', async ({ techManagerPage: page }) => {
-  await page.goto('/admin/calibration-approvals');
+  await page.goto('/admin/approvals?tab=calibration');
 
   // 승인 대기 목록 로드 확인
   await page
-    .getByRole('heading', { name: '교정 승인' })
+    .getByRole('heading', { name: '승인 관리' })
     .waitFor({ state: 'visible', timeout: 15000 });
 });

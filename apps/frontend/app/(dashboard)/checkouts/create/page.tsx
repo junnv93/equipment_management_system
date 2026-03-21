@@ -11,6 +11,7 @@ import { RouteLoading } from '@/components/layout/RouteLoading';
 
 const CreateCheckoutContent = dynamic(() => import('./CreateCheckoutContent'), {
   loading: () => <RouteLoading variant="detail" />,
+  ssr: false,
 });
 
 export default function CreateCheckoutPage() {

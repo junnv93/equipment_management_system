@@ -102,10 +102,10 @@ test.describe('등록→승인→장비 업데이트 통합 플로우', () => {
     await testOperatorPage.waitForURL(/\/calibration(?!\/register)/, { timeout: 20000 });
 
     // 6. Navigate to approval list as technical manager
-    await techManagerPage.goto('/admin/calibration-approvals');
+    await techManagerPage.goto('/admin/approvals?tab=calibration');
 
     // 7. Verify the approval page loads
-    const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
+    const pageHeading = techManagerPage.getByRole('heading', { name: /승인 관리/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
     // 8. Find the newly registered record in approval list (individual card: border-l-brand-warning)
@@ -127,9 +127,9 @@ test.describe('등록→승인→장비 업데이트 통합 플로우', () => {
     techManagerPage,
   }) => {
     // 1. Navigate to approval list
-    await techManagerPage.goto('/admin/calibration-approvals');
+    await techManagerPage.goto('/admin/approvals?tab=calibration');
 
-    const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
+    const pageHeading = techManagerPage.getByRole('heading', { name: /승인 관리/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
     // 2. Find the approval item from previous test (individual card: border-l-brand-warning)

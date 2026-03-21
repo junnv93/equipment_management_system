@@ -30,13 +30,12 @@ test.describe('권한 검증 및 에러 처리', () => {
     }
   );
 
-  // fixme: /admin/calibration-approvals 페이지에 역할 기반 접근 제어가 없음.
-  // Server Component에서 세션 역할 확인 + redirect가 구현되어야 합니다.
-  // (참고: /admin/approvals 페이지는 APPROVAL_ROLES 기반 redirect가 있음)
+  // fixme: /admin/approvals 통합 승인 페이지는 APPROVAL_ROLES 기반 redirect가 있으나,
+  // 시험실무자(test_engineer)가 직접 URL로 접근 시 동작을 확인해야 합니다.
   test.fixme(
     '7.2. 시험실무자는 승인 페이지에 접근할 수 없다',
     async ({ testOperatorPage: page }) => {
-      await page.goto('/admin/calibration-approvals');
+      await page.goto('/admin/approvals?tab=calibration');
       // Expected: redirect to /dashboard — but page renders with approve/reject buttons
     }
   );
@@ -56,9 +55,9 @@ test.describe('권한 검증 및 에러 처리', () => {
   test('7.4. CAS 버전 충돌 시 자동 캐시 무효화 및 서버 재검증이 수행된다', async ({
     techManagerPage: page,
   }) => {
-    // 1. techManagerPage로 /admin/calibration-approvals 이동
-    await page.goto('/admin/calibration-approvals');
-    await expect(page.getByRole('heading', { name: '교정 승인 관리' })).toBeVisible({
+    // 1. techManagerPage로 통합 승인 페이지(교정 탭) 이동
+    await page.goto('/admin/approvals?tab=calibration');
+    await expect(page.getByRole('heading', { name: '승인 관리' })).toBeVisible({
       timeout: 30000,
     });
 

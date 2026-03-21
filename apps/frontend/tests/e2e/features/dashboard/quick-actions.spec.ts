@@ -99,8 +99,8 @@ test.describe('Quick Action Buttons', () => {
       const quickActionsNav = siteAdminPage.getByRole('navigation', { name: '빠른 액션' });
       await quickActionsNav.getByRole('link', { name: '승인 관리' }).click();
 
-      // 4. Verify navigation to /admin/equipment-approvals
-      await expect(siteAdminPage).toHaveURL('/admin/equipment-approvals');
+      // 4. Verify navigation to /admin/approvals (통합 승인 페이지)
+      await expect(siteAdminPage).toHaveURL('/admin/approvals');
 
       // 5. Go back to dashboard
       await siteAdminPage.goto('/');
@@ -164,8 +164,8 @@ test.describe('Quick Action Buttons', () => {
       // 7. Press Enter on focused button
       await siteAdminPage.keyboard.press('Enter');
 
-      // 8. Verify navigation occurs
-      await expect(siteAdminPage).toHaveURL('/admin/equipment-approvals');
+      // 8. Verify navigation occurs (통합 승인 페이지)
+      await expect(siteAdminPage).toHaveURL('/admin/approvals');
     });
   });
 

@@ -206,19 +206,19 @@ test.describe('Calibration Registration and Approval Workflow', () => {
     test('기술책임자는 교정 승인 대기 목록 페이지에 접근할 수 있다', async ({
       techManagerPage,
     }) => {
-      await techManagerPage.goto('/admin/calibration-approvals');
+      await techManagerPage.goto('/admin/approvals?tab=calibration');
       await techManagerPage.waitForLoadState('domcontentloaded');
 
       // 페이지 제목 확인
-      await expect(techManagerPage.getByRole('heading', { name: /교정 승인/i })).toBeVisible();
+      await expect(techManagerPage.getByRole('heading', { name: /승인 관리/i })).toBeVisible();
     });
 
     test('시험소장도 교정 승인 대기 목록 페이지에 접근할 수 있다', async ({ siteAdminPage }) => {
-      await siteAdminPage.goto('/admin/calibration-approvals');
+      await siteAdminPage.goto('/admin/approvals?tab=calibration');
       await siteAdminPage.waitForLoadState('domcontentloaded');
 
       // 페이지 제목 확인
-      await expect(siteAdminPage.getByRole('heading', { name: /교정 승인/i })).toBeVisible();
+      await expect(siteAdminPage.getByRole('heading', { name: /승인 관리/i })).toBeVisible();
     });
   });
 
@@ -226,11 +226,11 @@ test.describe('Calibration Registration and Approval Workflow', () => {
     test('기술책임자는 교정 승인 페이지에서 승인/반려 버튼 또는 빈 상태를 볼 수 있다', async ({
       techManagerPage,
     }) => {
-      await techManagerPage.goto('/admin/calibration-approvals');
+      await techManagerPage.goto('/admin/approvals?tab=calibration');
       await techManagerPage.waitForLoadState('domcontentloaded');
 
       // 페이지 제목 확인
-      await expect(techManagerPage.getByRole('heading', { name: /교정 승인/i })).toBeVisible();
+      await expect(techManagerPage.getByRole('heading', { name: /승인 관리/i })).toBeVisible();
 
       // 승인 대기 항목이 있거나 빈 상태 메시지가 있어야 함
       // 빈 상태 메시지: "승인 대기 중인 교정 요청이 없습니다"
