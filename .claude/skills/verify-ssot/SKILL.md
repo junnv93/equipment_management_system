@@ -32,7 +32,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 | Package / Layer | Key Files | SSOT 항목 |
 |---|---|---|
-| `packages/schemas/` | `enums.ts`, `user.ts`, `errors.ts`, `settings.ts`, `audit-log.ts`, `field-labels.ts` | Enum, 타입, ErrorCode, 설정 기본값 |
+| `packages/schemas/` | `enums.ts`, `user.ts`, `errors.ts`, `settings.ts`, `audit-log.ts`, `field-labels.ts`, `validation/messages.ts` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지 |
 | `packages/shared-constants/` | `permissions.ts`, `api-endpoints.ts`, `data-scope.ts`, `auth-token.ts`, `approval-categories.ts`, `business-rules.ts`, `security.ts` | Permission, API 경로, 스코프 정책, 비즈니스 규칙 |
 | `packages/db/` | `schema/audit-logs.ts`, `index.ts` | DB enum 배열, AppDatabase 타입 |
 
@@ -242,6 +242,24 @@ grep -rn "REJECTION_STAGE_VALUES" packages/db/src apps/backend/src --include="*.
 
 **PASS 기준:** `rejectionStage` 배열이 `REJECTION_STAGE_VALUES`를 참조 (직접 `['review', 'approval']` 선언 없음).
 
+### Step 11: VM (Validation Messages) 임포트 소스 확인
+
+DTO 파일에서 `VM` 상수가 올바른 패키지(`@equipment-management/schemas`)에서 import 되는지 확인합니다.
+
+```bash
+# VM import 중 @equipment-management/schemas가 아닌 소스 탐지
+grep -rn "import.*\bVM\b" apps/backend/src/modules --include="*.dto.ts" | grep -v "@equipment-management/schemas\|node_modules\|// "
+```
+
+```bash
+# VM 로컬 재정의 탐지
+grep -rn "const VM\s*=\|export const VM\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|validation/messages\.ts\|// "
+```
+
+**PASS 기준:** 모든 `VM` import가 `@equipment-management/schemas`에서 유래. 로컬 재정의 0개.
+
+**FAIL 기준:** VM을 로컬에서 재정의하거나 잘못된 패키지에서 import → SSOT 불일치.
+
 ## Output Format
 
 ```markdown
@@ -262,6 +280,7 @@ grep -rn "REJECTION_STAGE_VALUES" packages/db/src apps/backend/src --include="*.
 | 8   | 신규 shared-constants SSOT    | PASS/FAIL | APPROVAL_CATEGORIES/BUSINESS_RULES 등  |
 | 9   | DB Enum 배열 SSOT 참조        | PASS/FAIL | 하드코딩 enum 배열 위치                |
 | 10  | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
+| 11  | VM 임포트 소스                | PASS/FAIL | 잘못된 VM import 위치                  |
 ```
 
 ## Exceptions

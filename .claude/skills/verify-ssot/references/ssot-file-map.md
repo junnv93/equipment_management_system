@@ -13,6 +13,8 @@
 | `packages/schemas/src/audit-log.ts`                                          | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)                                       |
 | `packages/schemas/src/field-labels.ts`                                       | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                                                              |
 | `packages/schemas/src/index.ts`                                              | schemas 패키지 내보내기                                                                                   |
+| `packages/schemas/src/validation/messages.ts`                                | VM (Validation Messages) SSOT — 전체 DTO 검증 메시지 중앙 관리                                            |
+| `packages/schemas/src/utils/fields.ts`                                       | SSOT 폼 안전 UUID 유틸리티 (optionalUuid, nullableOptionalUuid — HTML 빈 문자열 변환)                     |
 | `packages/schemas/src/api-response.ts`                                       | ApiResponse 타입 SSOT (로컬 재정의 금지)                                                                  |
 | `packages/shared-constants/src/permissions.ts`                               | Permission enum 정의                                                                                      |
 | `packages/shared-constants/src/api-endpoints.ts`                             | API_ENDPOINTS 상수                                                                                        |
