@@ -275,7 +275,7 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
                 </span>
               </div>
               <ChevronDown
-                className={`${SETTINGS_PERMISSIONS_CARD_TOKENS.chevron.base} ${SETTINGS_PERMISSIONS_CARD_TOKENS.chevron.transition} transition-transform ${permissionsOpen ? 'rotate-180' : ''}`}
+                className={`${SETTINGS_PERMISSIONS_CARD_TOKENS.chevron.base} ${SETTINGS_PERMISSIONS_CARD_TOKENS.chevron.transition} ${permissionsOpen ? 'rotate-180' : ''}`}
                 aria-hidden="true"
               />
             </button>

@@ -19,6 +19,10 @@ import {
   TEAMS_SITE_RESTRICTED_ROLES,
   type UserRole,
 } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_DISPLAY_PREFERENCES,
+  type DisplayPreferences,
+} from '@equipment-management/schemas';
 
 /**
  * 역할별 기본 필터 리다이렉트 URL 생성
@@ -109,6 +113,58 @@ export function buildTeamsPageRedirectUrl(
   }
 
   params.set('site', user.site!);
+
+  return `${basePath}?${params.toString()}`;
+}
+
+/**
+ * 사용자 표시 설정 기반 기본 필터 리다이렉트 URL 생성
+ *
+ * URL에 명시적 파라미터가 없을 때만 사용자 설정값을 적용합니다.
+ * 기본값(DEFAULT_DISPLAY_PREFERENCES)과 동일한 경우 리다이렉트하지 않습니다.
+ *
+ * 적용 항목:
+ * - sortBy: 사용자 기본 정렬 (managementNumber/name/updatedAt)
+ * - pageSize: 사용자 기본 페이지 크기 (10/20/50)
+ *
+ * 무한 리다이렉트 방지:
+ * - 이미 URL에 해당 파라미터가 있으면 건드리지 않음
+ * - 사용자 설정이 시스템 기본값과 같으면 리다이렉트 불필요
+ */
+export function buildPreferencesRedirectUrl(
+  basePath: string,
+  searchParams: Record<string, string | string[] | undefined>,
+  preferences: DisplayPreferences
+): string | null {
+  const hasSortBy = searchParams.sortBy !== undefined;
+  const hasPageSize = searchParams.pageSize !== undefined;
+
+  // 사용자 설정이 시스템 기본값과 다른 항목만 리다이렉트 대상
+  const shouldApplySort =
+    !hasSortBy &&
+    preferences.defaultEquipmentSort !== DEFAULT_DISPLAY_PREFERENCES.defaultEquipmentSort;
+
+  const shouldApplyPageSize =
+    !hasPageSize && preferences.itemsPerPage !== DEFAULT_DISPLAY_PREFERENCES.itemsPerPage;
+
+  if (!shouldApplySort && !shouldApplyPageSize) return null;
+
+  const params = new URLSearchParams();
+
+  // 기존 파라미터 유지
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value !== undefined && value !== null) {
+      params.set(key, Array.isArray(value) ? value[0] : String(value));
+    }
+  }
+
+  if (shouldApplySort) {
+    params.set('sortBy', preferences.defaultEquipmentSort);
+    // 정렬 방향은 기본값(asc) 유지
+  }
+  if (shouldApplyPageSize) {
+    params.set('pageSize', preferences.itemsPerPage);
+  }
 
   return `${basePath}?${params.toString()}`;
 }

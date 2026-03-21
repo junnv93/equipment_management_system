@@ -13,8 +13,12 @@
  * - entityType / entityIdField: 엔티티 연결 정보
  */
 
-import { Permission, type NotificationCategory } from '@equipment-management/shared-constants';
-import type { UserRole } from '@equipment-management/schemas';
+import {
+  Permission,
+  type NotificationCategory,
+  getApprovalPageUrl,
+} from '@equipment-management/shared-constants';
+import { type UserRole, ApprovalCategoryValues as AC } from '@equipment-management/schemas';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
 // ============================================================================
@@ -82,7 +86,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       // lab_manager: 소속 사이트 전체 반출 감독, system_admin: 전사 모니터링
       roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
-    linkTemplate: '/admin/checkout-approvals',
+    linkTemplate: getApprovalPageUrl(AC.OUTGOING),
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
@@ -206,7 +210,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       scope: 'team',
       roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
-    linkTemplate: '/admin/calibration-approvals',
+    linkTemplate: getApprovalPageUrl(AC.CALIBRATION),
     entityType: 'calibration',
     entityIdField: 'calibrationId',
     equipmentIdField: 'equipmentId',
@@ -362,7 +366,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       scope: 'team',
       roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
-    linkTemplate: '/admin/non-conformance-approvals',
+    linkTemplate: getApprovalPageUrl(AC.NONCONFORMITY),
     entityType: 'non_conformance',
     entityIdField: 'ncId',
     equipmentIdField: 'equipmentId',
@@ -406,7 +410,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       scope: 'team',
       roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
-    linkTemplate: '/admin/equipment-approvals',
+    linkTemplate: getApprovalPageUrl(AC.EQUIPMENT),
     entityType: 'equipment_request',
     entityIdField: 'requestId',
     equipmentIdField: 'equipmentId',
@@ -451,7 +455,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       scope: 'team',
       roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
-    linkTemplate: '/admin/disposal-approvals',
+    linkTemplate: getApprovalPageUrl(AC.DISPOSAL_REVIEW),
     entityType: 'disposal',
     entityIdField: 'disposalId',
     equipmentIdField: 'equipmentId',
@@ -469,7 +473,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       scope: 'site',
       roleScopes: { system_admin: 'all' },
     },
-    linkTemplate: '/admin/disposal-approvals',
+    linkTemplate: getApprovalPageUrl(AC.DISPOSAL_FINAL),
     entityType: 'disposal',
     entityIdField: 'disposalId',
     equipmentIdField: 'equipmentId',
@@ -513,7 +517,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       scope: 'team',
       roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
-    linkTemplate: '/admin/equipment-import-approvals',
+    linkTemplate: getApprovalPageUrl(AC.INCOMING),
     entityType: 'equipment_import',
     entityIdField: 'importId',
     equipmentIdField: 'equipmentId',

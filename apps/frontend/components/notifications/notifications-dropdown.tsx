@@ -85,7 +85,7 @@ export function NotificationsDropdown() {
                 getNotificationBadgeClasses(unreadCount)
               )}
             >
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadCount > 99 ? '99+' : unreadCount}
             </Badge>
           )}
         </Button>

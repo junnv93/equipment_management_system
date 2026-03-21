@@ -69,7 +69,7 @@ export {
 export { API_ENDPOINTS, type ApiEndpoints } from './api-endpoints';
 
 // 프론트엔드 라우트
-export { FRONTEND_ROUTES, type FrontendRoutes } from './frontend-routes';
+export { FRONTEND_ROUTES, type FrontendRoutes, getApprovalPageUrl } from './frontend-routes';
 
 // 반출 목적별 장비 선택 가능성 규칙
 export {

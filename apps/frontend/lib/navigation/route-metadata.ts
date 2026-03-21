@@ -327,48 +327,7 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/',
     icon: Shield,
   },
-  '/admin/equipment-approvals': {
-    label: '장비 등록 승인',
-    labelKey: 'navigation.adminEquipmentApprovals',
-    parent: '/',
-    icon: Shield,
-  },
-  '/admin/calibration-approvals': {
-    label: '교정 승인',
-    labelKey: 'navigation.adminCalibrationApprovals',
-    parent: '/',
-    icon: Shield,
-  },
-  '/admin/calibration-plan-approvals': {
-    label: '교정계획서 승인',
-    labelKey: 'navigation.adminCalibrationPlanApprovals',
-    parent: '/',
-    icon: Shield,
-  },
-  '/admin/calibration-factor-approvals': {
-    label: '보정계수 승인',
-    labelKey: 'navigation.adminCalibrationFactorApprovals',
-    parent: '/',
-    icon: Shield,
-  },
-  '/admin/return-approvals': {
-    label: '반입 승인',
-    labelKey: 'navigation.adminReturnApprovals',
-    parent: '/',
-    icon: Shield,
-  },
-  '/admin/non-conformance-approvals': {
-    label: '부적합 승인',
-    labelKey: 'navigation.adminNonConformanceApprovals',
-    parent: '/',
-    icon: AlertTriangle,
-  },
-  '/admin/software-approvals': {
-    label: '소프트웨어 승인',
-    labelKey: 'navigation.adminSoftwareApprovals',
-    parent: '/',
-    icon: Shield,
-  },
+  // Legacy individual approval routes removed — all redirect to /admin/approvals?tab=xxx
   '/admin/audit-logs': {
     label: '감사 로그',
     labelKey: 'navigation.adminAuditLogs',

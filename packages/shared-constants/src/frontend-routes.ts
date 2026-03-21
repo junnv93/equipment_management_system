@@ -10,6 +10,8 @@
  * - 특수 페이지: MANAGE, PENDING_CHECKS 등
  */
 
+import type { ApprovalCategory } from '@equipment-management/schemas';
+
 export const FRONTEND_ROUTES = {
   // ============================================================================
   // 대시보드
@@ -83,7 +85,6 @@ export const FRONTEND_ROUTES = {
   // 관리자
   // ============================================================================
   ADMIN: {
-    EQUIPMENT_APPROVALS: '/admin/equipment-approvals',
     APPROVALS: '/admin/approvals',
     AUDIT_LOGS: '/admin/audit-logs',
     USERS: '/admin/users',
@@ -134,3 +135,19 @@ export const FRONTEND_ROUTES = {
  * 프론트엔드 라우트 타입 (IDE 자동완성용)
  */
 export type FrontendRoutes = typeof FRONTEND_ROUTES;
+
+/**
+ * 통합 승인 페이지 URL 생성
+ *
+ * ⚠️ SSOT: 승인 탭 딥링크 생성 시 이 함수를 사용
+ * - FRONTEND_ROUTES.ADMIN.APPROVALS (경로)
+ * - ApprovalCategory (탭 식별자, @equipment-management/schemas)
+ * 두 SSOT를 조합하여 URL을 생성합니다.
+ *
+ * @example
+ * getApprovalPageUrl('outgoing')     // → '/admin/approvals?tab=outgoing'
+ * getApprovalPageUrl('disposal_final') // → '/admin/approvals?tab=disposal_final'
+ */
+export function getApprovalPageUrl(tab: ApprovalCategory): string {
+  return `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=${tab}`;
+}
