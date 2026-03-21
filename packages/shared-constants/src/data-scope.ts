@@ -202,6 +202,20 @@ export const EQUIPMENT_REQUEST_DATA_SCOPE: FeatureScopePolicy = {
 };
 
 /**
+ * 보고서/통계: 대시보드와 동일 기준 (복합 엔티티 표시)
+ *
+ * 보고서는 장비·교정·반출 데이터를 혼합 집계하므로 대시보드와 동일 스코프 적용.
+ * TE/TM=team(소속 팀), LM=site(소속 사이트), QM/SA=all(전체).
+ */
+export const REPORT_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'team', label: '소속 팀 보고서' },
+  technical_manager: { type: 'team', label: '소속 팀 보고서' },
+  quality_manager: { type: 'all', label: '전체 보고서' },
+  lab_manager: { type: 'site', label: '소속 사이트 보고서' },
+  system_admin: { type: 'all', label: '전체 보고서' },
+};
+
+/**
  * 사용자 스코프 컨텍스트 (해석기 입력)
  */
 export interface UserScopeContext {

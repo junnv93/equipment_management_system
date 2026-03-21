@@ -57,6 +57,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   logout: '로그아웃',
   close: '종료',
   reject_correction: '조치 반려',
+  export: '내보내기',
 };
 
 /**
@@ -111,6 +112,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   incident_history: '사고 이력',
   settings: '설정',
   notification: '알림',
+  report: '보고서',
 };
 
 // ============================================================================

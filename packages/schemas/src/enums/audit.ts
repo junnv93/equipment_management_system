@@ -30,6 +30,7 @@ export const AUDIT_ACTION_VALUES = [
   'logout', // 로그아웃
   'close', // 종료 (부적합 종결)
   'reject_correction', // 조치 반려
+  'export', // 내보내기 (보고서 파일 다운로드)
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES as readonly [string, ...string[]]);
@@ -72,6 +73,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'incident_history', // 사고 이력
   'settings', // 설정
   'notification', // 알림
+  'report', // 보고서
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);

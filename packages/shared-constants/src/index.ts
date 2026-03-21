@@ -133,6 +133,7 @@ export {
 // 비즈니스 규칙 상수 (리포트, 모니터링, 알림 등)
 export {
   REPORT_CONSTANTS,
+  REPORT_EXPORT_ROW_LIMIT,
   MONITORING_THRESHOLDS,
   NOTIFICATION_RETENTION_DAYS,
   BATCH_QUERY_LIMITS,
@@ -177,5 +178,6 @@ export {
   DISPOSAL_DATA_SCOPE,
   DASHBOARD_DATA_SCOPE,
   EQUIPMENT_REQUEST_DATA_SCOPE,
+  REPORT_DATA_SCOPE,
   resolveDataScope,
 } from './data-scope';

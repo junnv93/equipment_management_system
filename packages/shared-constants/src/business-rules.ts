@@ -61,6 +61,12 @@ export const UTILIZATION_THRESHOLDS = {
  * 리포트 가동률 분석 임계값 — 장비 활용 리포트 전용
  * (대시보드 KPI UTILIZATION_THRESHOLDS와 별도 기준)
  */
+/**
+ * 리포트 내보내기 최대 행 수 제한 — OOM 방지
+ * 감사 로그·장비 현황·교정 현황 등 모든 내보내기 엔드포인트 공통 적용
+ */
+export const REPORT_EXPORT_ROW_LIMIT = 10_000;
+
 export const REPORT_UTILIZATION_THRESHOLDS = {
   /** 고가동률 기준 (%) */
   HIGH: 80,

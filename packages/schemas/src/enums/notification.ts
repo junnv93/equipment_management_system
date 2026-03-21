@@ -4,7 +4,10 @@ import { z } from 'zod';
  * SINGLE SOURCE OF TRUTH: 알림 유형 열거형
  *
  * 표준 유형값 (소문자 + 언더스코어):
- * 이벤트명 기반 (eventName.replace(/\./g, '_'))
+ * 이벤트명 기반 ('.' → '_' + camelCase → snake_case)
+ *
+ * 변환 SSOT: notification-events.ts의 EVENT_TO_NOTIFICATION_TYPE에서
+ * 이 배열과 교차 검증하여 불일치 시 서버 시작 에러 발생.
  */
 export const NOTIFICATION_TYPE_VALUES = [
   // ─── 반출 (Checkout) ───

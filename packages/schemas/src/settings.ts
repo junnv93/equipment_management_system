@@ -73,3 +73,9 @@ export const DEFAULT_CALIBRATION_ALERT_DAYS = [30, 7, 1, 0];
 // 교정 D-day 선택 가능 옵션 (SSOT)
 // 프론트엔드 캘리브레이션 설정 칩 선택지와 동일해야 함
 export const CALIBRATION_ALERT_DAYS_OPTIONS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
+
+// ─── Settings API Response Types ────────────────────────────────────────────
+
+export interface CalibrationAlertSettingsResponse {
+  alertDays: number[];
+}
