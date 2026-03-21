@@ -47,6 +47,8 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/components/teams/TeamDetail.tsx`                                                          | 팀 상세 컴포넌트 (useQuery 참조)                            |
 | `apps/frontend/components/calibration/PlanItemsTable.tsx`                                                | 교정계획 항목 테이블 direct useMutation 참조                |
 | `apps/frontend/components/calibration/VersionHistory.tsx`                                                | 교정계획 버전 이력 useQuery 참조                            |
+| `apps/frontend/hooks/use-user-preferences.ts`                                                            | 사용자 설정 조회 훅 (STATIC 캐시, 날짜/필터 기본값 소스)    |
+| `apps/frontend/hooks/use-date-formatter.ts`                                                              | 사용자 dateFormat 적용 날짜 포맷 훅 (useDateFormatter)       |
 | `apps/frontend/hooks/use-equipment-kpi.ts`                                                               | 장비 KPI 계산 훅 (TanStack Query 참조)                      |
 | `apps/frontend/hooks/use-approval-kpi.ts`                                                                | 승인 KPI 계산 훅 (TanStack Query 참조)                      |
 | `apps/frontend/hooks/use-sidebar-state.ts`                                                               | 사이드바 상태 훅 (localStorage UI 상태, 서버 상태 아님)     |
@@ -206,6 +208,21 @@ const { data } = useQuery({
 - `REFETCH_STRATEGIES.NORMAL` — window focus만 (폴링 없음)
 - `REFETCH_STRATEGIES.STATIC` — 수동 갱신 (refetchOnMount/focus 모두 false)
 
+### Step 7: useDateFormatter 사용 컨벤션
+
+사용자에게 표시되는 날짜가 `useDateFormatter()` 훅을 통해 포맷되는지 확인합니다. 직접 `formatDate()` 호출은 사용자 `dateFormat` 설정을 무시합니다.
+
+```bash
+# 컴포넌트에서 formatDate 직접 import 탐지
+grep -rn "import.*formatDate.*from.*lib/utils/date" apps/frontend/components --include="*.tsx" | grep -v "// "
+```
+
+**PASS 기준:** 사용자에게 표시되는 날짜는 `useDateFormatter().fmtDate` 또는 `fmtDateTime` 사용.
+
+**FAIL 기준:** 컴포넌트에서 `formatDate(value, 'yyyy-MM-dd')` 직접 호출은 사용자 dateFormat 설정 무시.
+
+**예외:** `<input type="date">` value 생성 등 HTML spec이 요구하는 고정 포맷(`'yyyy-MM-dd'`)은 직접 `formatDate` 사용이 정당. 폼 필드 초기값, 내부 계산용 날짜 포맷은 사용자 설정과 무관.
+
 ## Output Format
 
 ```markdown
@@ -219,6 +236,7 @@ const { data } = useQuery({
 | 5b  | countsAll prefix 무효화    | PASS/FAIL | approvals.counts() 사용 위치  |
 | 5c  | CheckoutCacheInvalidation  | PASS/FAIL | 직접 queryKeys 조합 위치      |
 | 6   | REFETCH_STRATEGIES 사용    | PASS/INFO | refetchInterval 하드코딩 위치 |
+| 7   | useDateFormatter 컨벤션    | PASS/FAIL | 직접 formatDate import 위치   |
 ```
 
 ## Exceptions
@@ -239,4 +257,5 @@ const { data } = useQuery({
 11. **refetchInterval 직접 설정 (특수 케이스)** — QUERY_CONFIG 프리셋으로 커버되지 않는 특수한 polling 요구사항이 있을 때 직접 설정 가능. 단, 주석으로 이유를 명시해야 함
 12. **use-sidebar-state.ts의 localStorage useState** — 사이드바 접기/펼치기 상태는 UI 로컬 상태 (서버 상태 아님). localStorage에서 읽는 SSR 안전 패턴은 정상 (useState false 초기화 → useEffect로 복원)
 13. **use-idle-timeout.ts의 useState** — `isWarningVisible(boolean)`, `secondsRemaining(number)`는 UI 타이머 상태 (서버 상태 아님). `setInterval` 기반 카운트다운 로직이므로 TanStack Query 대상 아님
-14. **이벤트 핸들러 내 setQueryData 캐시 프라이밍** — `LeaderCombobox.tsx`의 `handleSelect`에서 `queryClient.setQueryData(queryKeys.users.detail(user.id), user)` 호출은 mutation onSuccess가 아닌 이벤트 핸들러에서의 캐시 프라이밍. 이미 가용한 데이터(목록에서 선택된 항목)를 detail 캐시에 즉시 반영하여 후속 useQuery의 네트워크 왕복을 제거하는 성능 최적화 패턴. `onSuccess setQueryData 금지` 규칙과 무관
+14. **폼/내부 계산용 formatDate 직접 사용** — `CalibrationRegisterDialog`, `CalibrationHistorySection`, `CalibrationInfoSection`, `EquipmentForm` 등에서 `<input type="date">` value 생성을 위해 `formatDate(date, 'yyyy-MM-dd')` 직접 사용은 HTML spec 요구사항. 사용자에게 표시되는 날짜가 아닌 내부 form value이므로 `useDateFormatter` 불필요
+15. **이벤트 핸들러 내 setQueryData 캐시 프라이밍** — `LeaderCombobox.tsx`의 `handleSelect`에서 `queryClient.setQueryData(queryKeys.users.detail(user.id), user)` 호출은 mutation onSuccess가 아닌 이벤트 핸들러에서의 캐시 프라이밍. 이미 가용한 데이터(목록에서 선택된 항목)를 detail 캐시에 즉시 반영하여 후속 useQuery의 네트워크 왕복을 제거하는 성능 최적화 패턴. `onSuccess setQueryData 금지` 규칙과 무관
