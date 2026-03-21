@@ -320,7 +320,7 @@ export class SoftwareService extends VersionedBaseService {
       SELECT DISTINCT ON (equipment_id, software_name)
         equipment_id, software_name, new_version, approved_at
       FROM software_history
-      WHERE approval_status = 'approved'
+      WHERE approval_status = ${SoftwareApprovalStatus.APPROVED}
       ORDER BY equipment_id, software_name, approved_at DESC
     `);
     const latestApproved = result.rows as unknown as LatestApprovedRow[];

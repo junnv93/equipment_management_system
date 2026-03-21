@@ -56,6 +56,7 @@ import {
 import { ApprovalCategoryValues } from '@equipment-management/schemas';
 import { toSafeInt } from '../../common/utils';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 
 /** 승인 카테고리 축약 (SSOT: @equipment-management/schemas) */
 const AC = ApprovalCategoryValues;
@@ -130,7 +131,7 @@ export class ApprovalsService {
    * @param userCtx - Controller에서 JWT 기반으로 구성한 스코프 컨텍스트 (DB 재조회 불필요)
    */
   async getPendingCountsByRole(userCtx: UserScopeContext): Promise<PendingCountsByCategory> {
-    const cacheKey = `approvals:counts:${userCtx.role}:${userCtx.site || 'all'}:${userCtx.teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.APPROVALS}counts:${userCtx.role}:${userCtx.site || 'all'}:${userCtx.teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -276,7 +277,7 @@ export class ApprovalsService {
         and(
           eq(schema.auditLogs.userId, userId),
           gte(schema.auditLogs.timestamp, todayStart),
-          inArray(schema.auditLogs.action, ['approve', 'reject', 'review'])
+          inArray(schema.auditLogs.action, [...APPROVAL_KPI.PROCESSED_ACTIONS])
         )
       );
 

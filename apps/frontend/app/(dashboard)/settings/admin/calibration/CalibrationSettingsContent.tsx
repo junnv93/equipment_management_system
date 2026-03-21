@@ -22,6 +22,7 @@ import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
   DEFAULT_CALIBRATION_ALERT_DAYS,
   CALIBRATION_ALERT_DAYS_OPTIONS,
+  type CalibrationAlertSettingsResponse,
 } from '@equipment-management/schemas';
 import {
   SETTINGS_CARD_HEADER_TOKENS,
@@ -47,10 +48,6 @@ const calibrationSettingsFormSchema = z.object({
 
 type CalibrationSettingsForm = z.infer<typeof calibrationSettingsFormSchema>;
 
-interface CalibrationSettings {
-  alertDays: number[];
-}
-
 /**
  * CalibrationSettingsContent — 데이터 페칭 레이어 (부모)
  *
@@ -58,7 +55,7 @@ interface CalibrationSettings {
  * useEffect + isDirty guard 패턴 제거 → defaultValues만 사용
  */
 export default function CalibrationSettingsContent() {
-  const { data, isLoading } = useQuery<CalibrationSettings>({
+  const { data, isLoading } = useQuery<CalibrationAlertSettingsResponse>({
     queryKey: queryKeys.settings.calibration(),
     queryFn: async () => {
       const res = await apiClient.get<CalibrationSettings>(API_ENDPOINTS.SETTINGS.CALIBRATION);

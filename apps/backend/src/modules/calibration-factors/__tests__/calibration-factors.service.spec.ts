@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CalibrationFactorsService } from '../calibration-factors.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import {
@@ -83,6 +84,7 @@ describe('CalibrationFactorsService', () => {
         CalibrationFactorsService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 

@@ -27,6 +27,19 @@ export const createMockConfigService = (): Record<string, jest.Mock> => ({
   get: jest.fn().mockReturnValue('AUDIT'),
 });
 
+export const createMockCacheInvalidationHelper = (): Record<string, jest.Mock> => ({
+  invalidateAllDashboard: jest.fn().mockResolvedValue(undefined),
+  invalidateApprovalCounts: jest.fn().mockResolvedValue(undefined),
+  invalidateAllEquipment: jest.fn().mockResolvedValue(undefined),
+  invalidateEquipmentDetail: jest.fn().mockResolvedValue(undefined),
+  invalidateEquipmentLists: jest.fn().mockResolvedValue(undefined),
+  invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
+  invalidateAfterNonConformanceCreation: jest.fn().mockResolvedValue(undefined),
+  invalidateAfterNonConformanceStatusChange: jest.fn().mockResolvedValue(undefined),
+  invalidateAfterDisposal: jest.fn().mockResolvedValue(undefined),
+  invalidateAfterCalibrationPlanUpdate: jest.fn().mockResolvedValue(undefined),
+});
+
 export const createMockEquipmentImportsService = (): Record<string, jest.Mock> => ({
   findOne: jest.fn(),
   findAll: jest.fn(),

@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
 import { eq, and, asc, desc, sql, isNull, or, lte, gte } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
@@ -305,18 +311,26 @@ export class CalibrationFactorsService extends VersionedBaseService {
       });
     }
 
-    const updated = await this.updateWithVersion<CalibrationFactor>(
-      calibrationFactors,
-      id,
-      approveDto.version,
-      {
-        approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
-        approvedBy: approveDto.approverId,
-        approvedAt: new Date(),
-        approverComment: approveDto.approverComment,
-      },
-      '보정계수'
-    );
+    let updated: CalibrationFactor;
+    try {
+      updated = await this.updateWithVersion<CalibrationFactor>(
+        calibrationFactors,
+        id,
+        approveDto.version,
+        {
+          approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
+          approvedBy: approveDto.approverId,
+          approvedAt: new Date(),
+          approverComment: approveDto.approverComment,
+        },
+        '보정계수'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
@@ -346,18 +360,26 @@ export class CalibrationFactorsService extends VersionedBaseService {
       });
     }
 
-    const updated = await this.updateWithVersion<CalibrationFactor>(
-      calibrationFactors,
-      id,
-      rejectDto.version,
-      {
-        approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
-        approvedBy: rejectDto.approverId,
-        approvedAt: new Date(),
-        approverComment: rejectDto.rejectionReason,
-      },
-      '보정계수'
-    );
+    let updated: CalibrationFactor;
+    try {
+      updated = await this.updateWithVersion<CalibrationFactor>(
+        calibrationFactors,
+        id,
+        rejectDto.version,
+        {
+          approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
+          approvedBy: rejectDto.approverId,
+          approvedAt: new Date(),
+          approverComment: rejectDto.rejectionReason,
+        },
+        '보정계수'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');

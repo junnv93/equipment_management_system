@@ -5,7 +5,9 @@ import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import {
   createMockCacheService,
   createMockEventEmitter,
+  createMockCacheInvalidationHelper,
 } from '../../../common/testing/mock-providers';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { I18nService } from '../../../common/i18n/i18n.service';
 
@@ -84,6 +86,7 @@ describe('CalibrationService', () => {
         CalibrationService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        { provide: CacheInvalidationHelper, useValue: createMockCacheInvalidationHelper() },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: I18nService, useValue: { t: jest.fn().mockReturnValue('') } },
       ],
