@@ -37,6 +37,7 @@ export const nonConformanceQuerySchema = z.object({
   site: SiteEnum.optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
+  pendingClose: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
   includeSummary: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -82,6 +83,12 @@ export class NonConformanceQueryDto {
     default: 'discoveryDate.desc',
   })
   sort?: string;
+
+  @ApiPropertyOptional({
+    description: '종료 승인 대기 목록 필터 (수리 필요 유형은 수리 이력 필수)',
+    default: false,
+  })
+  pendingClose?: boolean = false;
 
   @ApiPropertyOptional({
     description: 'KPI 요약 포함 여부 (상태별 건수)',

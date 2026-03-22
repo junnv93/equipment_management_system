@@ -106,7 +106,7 @@
     "warning": "System settings affect the entire system. Please review carefully before making changes.",
     "warningPrefix": "Warning:",
     "auditLogRetention": "Audit Log Retention Period",
-    "auditLogRetentionDescription": "How long to keep audit logs. {code} means unlimited retention.",
+    "auditLogRetentionDescription": "How long to keep audit logs. <code>0</code> means unlimited retention.",
     "notificationRetention": "Notification Retention Period",
     "notificationRetentionDescription": "Expired notifications are automatically cleaned up. Set an appropriate period for optimal system performance.",
     "maintenanceMessage": "System Announcement",

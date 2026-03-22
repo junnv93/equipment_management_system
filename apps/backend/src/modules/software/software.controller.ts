@@ -29,6 +29,7 @@ import {
 } from './dto/approve-software.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, SOFTWARE_DATA_SCOPE } from '@equipment-management/shared-constants';
+import type { Site } from '@equipment-management/schemas';
 import { SoftwareHistory } from '@equipment-management/db/schema';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -97,13 +98,15 @@ export class SoftwareController {
   @Get('pending')
   @ApiOperation({
     summary: '승인 대기 소프트웨어 변경 요청 목록 조회',
-    description: '승인 대기 상태인 소프트웨어 변경 요청 목록을 조회합니다.',
+    description:
+      '승인 대기 상태인 소프트웨어 변경 요청 목록을 조회합니다. 사이트 스코프가 자동 적용됩니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '승인 대기 목록 조회 성공' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE_REQUESTS)
-  findPendingApprovals(): Promise<{
+  @SiteScoped({ policy: SOFTWARE_DATA_SCOPE })
+  findPendingApprovals(@Query() query: { site?: Site; teamId?: string }): Promise<{
     items: SoftwareHistory[];
     meta: {
       totalItems: number;
@@ -113,7 +116,7 @@ export class SoftwareController {
       currentPage: number;
     };
   }> {
-    return this.softwareService.findPendingApprovals();
+    return this.softwareService.findPendingApprovals(query.site, query.teamId);
   }
 
   @Get('registry')

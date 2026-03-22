@@ -17,11 +17,9 @@ import {
 import {
   type UserRole,
   type UnifiedApprovalStatus,
-  type NonConformanceType,
   type ApprovalCategory,
   UNIFIED_APPROVAL_STATUS_LABELS,
   SITE_LABELS,
-  REPAIR_REQUIRING_NC_TYPES,
   UserRoleValues as URVal,
   UnifiedApprovalStatusValues as UASVal,
   CalibrationApprovalStatusValues as CASVal,
@@ -36,6 +34,7 @@ import equipmentImportApi, { type EquipmentImport } from './equipment-import-api
 import softwareApi from './software-api';
 import calibrationPlansApi from './calibration-plans-api';
 import { reviewDisposal, approveDisposal, getCurrentDisposalRequest } from './disposal-api';
+import equipmentApi from './equipment-api';
 import { transformArrayResponse } from './utils/response-transformers';
 
 // ============================================================================
@@ -540,19 +539,8 @@ class ApprovalsApi {
       // PaginatedResponse uses 'data' field
       const items = response.data || [];
 
-      return items
-        .filter((item: NonConformance) => {
-          // damage/malfunction 유형은 수리 기록이 필요
-          const requiresRepair = REPAIR_REQUIRING_NC_TYPES.includes(
-            item.ncType as NonConformanceType
-          );
-          if (requiresRepair && !item.repairHistoryId) {
-            console.warn(`부적합 ${item.id}는 수리 기록이 없어 승인할 수 없습니다.`);
-            return false; // 목록에서 제외
-          }
-          return true;
-        })
-        .map((item: NonConformance) => this.mapNonConformanceToApprovalItem(item));
+      // 수리 필터는 백엔드에서 pendingClose=true로 적용 (카운트 쿼리와 동일 조건)
+      return items.map((item: NonConformance) => this.mapNonConformanceToApprovalItem(item));
     } catch {
       return [];
     }
@@ -705,6 +693,12 @@ class ApprovalsApi {
 
   /**
    * 승인 처리
+   *
+   * ⚠️ CAS 버전 정책: 항상 최신 detail을 조회하여 CAS 버전을 사용합니다.
+   * 이유: 승인/반려는 상태 전이(status transition) 액션으로, 사용자 편집 데이터가 없습니다.
+   * 리스트 캐시의 stale 버전을 사용하면 다단계 승인(3-step 등)에서 VERSION_CONFLICT가 발생합니다.
+   * (예: plan submit→review→approve 과정에서 casVersion이 단계마다 증가하지만,
+   *  리스트 캐시는 최초 로딩 시점의 stale 버전을 보유)
    */
   async approve(
     category: ApprovalCategory,
@@ -717,10 +711,8 @@ class ApprovalsApi {
     switch (category) {
       // Direction-based (consolidated)
       case 'outgoing': {
-        // ✅ Optimized: use version from originalData, fallback to fetch
-        const outgoingVersion =
-          this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
-        await checkoutApi.approveCheckout(id, outgoingVersion, comment);
+        const { version } = await checkoutApi.getCheckout(id);
+        await checkoutApi.approveCheckout(id, version, comment);
         break;
       }
 
@@ -728,25 +720,24 @@ class ApprovalsApi {
         // Incoming can be: checkout return OR equipment import
         // Determine type from originalData
         if (this.isCheckout(originalData)) {
-          const incomingVersion =
-            this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
-          await checkoutApi.approveReturn(id, { version: incomingVersion, comment });
+          const { version } = await checkoutApi.getCheckout(id);
+          await checkoutApi.approveReturn(id, { version, comment });
         } else if (this.isEquipmentImport(originalData)) {
-          const importVersion =
-            this.extractVersion(originalData) ?? (await equipmentImportApi.getOne(id)).version;
-          await equipmentImportApi.approve(id, importVersion, comment);
+          const { version } = await equipmentImportApi.getOne(id);
+          await equipmentImportApi.approve(id, version, comment);
         } else {
           throw new Error('Unknown incoming item type');
         }
         break;
 
       // Specialized
-      case 'equipment':
-        await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(id));
+      case 'equipment': {
+        const { version: eqVersion } = await equipmentApi.getRequestByUuid(id);
+        await equipmentApi.approveRequest(id, eqVersion);
         break;
+      }
       case 'calibration': {
-        const calVersion =
-          this.extractVersion(originalData) ?? (await calibrationApi.getCalibration(id)).version;
+        const { version: calVersion } = await calibrationApi.getCalibration(id);
         await calibrationApi.approveCalibration(id, {
           version: calVersion,
           approverComment: comment || undefined,
@@ -759,9 +750,7 @@ class ApprovalsApi {
         });
         break;
       case 'nonconformity': {
-        const ncVersion =
-          this.extractVersion(originalData) ??
-          (await nonConformancesApi.getNonConformance(id)).version;
+        const { version: ncVersion } = await nonConformancesApi.getNonConformance(id);
         await nonConformancesApi.closeNonConformance(id, {
           version: ncVersion,
           closureNotes: comment,
@@ -770,12 +759,10 @@ class ApprovalsApi {
       }
       case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
-        const reviewVersion =
-          this.extractVersion(originalData) ??
-          (await getCurrentDisposalRequest(equipmentId))?.version;
-        if (reviewVersion === undefined) throw new Error('Disposal request not found');
+        const disposalReview = await getCurrentDisposalRequest(equipmentId);
+        if (disposalReview?.version === undefined) throw new Error('Disposal request not found');
         await reviewDisposal(equipmentId, {
-          version: reviewVersion,
+          version: disposalReview.version,
           decision: 'approve',
           opinion: comment || '승인합니다',
         });
@@ -783,21 +770,17 @@ class ApprovalsApi {
       }
       case 'disposal_final': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
-        const finalVersion =
-          this.extractVersion(originalData) ??
-          (await getCurrentDisposalRequest(equipmentId))?.version;
-        if (finalVersion === undefined) throw new Error('Disposal request not found');
+        const disposalFinal = await getCurrentDisposalRequest(equipmentId);
+        if (disposalFinal?.version === undefined) throw new Error('Disposal request not found');
         await approveDisposal(equipmentId, {
-          version: finalVersion,
+          version: disposalFinal.version,
           decision: 'approve',
           comment: comment || '승인합니다',
         });
         break;
       }
       case 'plan_review': {
-        const reviewCasVersion =
-          this.extractVersion(originalData) ??
-          (await calibrationPlansApi.getCalibrationPlan(id)).casVersion;
+        const { casVersion: reviewCasVersion } = await calibrationPlansApi.getCalibrationPlan(id);
         await calibrationPlansApi.reviewCalibrationPlan(id, {
           casVersion: reviewCasVersion,
           reviewComment: comment || undefined,
@@ -805,9 +788,7 @@ class ApprovalsApi {
         break;
       }
       case 'plan_final': {
-        const approveCasVersion =
-          this.extractVersion(originalData) ??
-          (await calibrationPlansApi.getCalibrationPlan(id)).casVersion;
+        const { casVersion: approveCasVersion } = await calibrationPlansApi.getCalibrationPlan(id);
         await calibrationPlansApi.approveCalibrationPlan(id, {
           casVersion: approveCasVersion,
         });
@@ -819,9 +800,7 @@ class ApprovalsApi {
             'Software approval requires a comment (commentRequired: true in TAB_META)'
           );
         }
-        const softwareVersion =
-          this.extractVersion(originalData) ??
-          (await softwareApi.getSoftwareHistoryDetail(id)).version;
+        const { version: softwareVersion } = await softwareApi.getSoftwareHistoryDetail(id);
         await softwareApi.approveSoftwareChange(id, {
           version: softwareVersion,
           approverComment: comment,
@@ -847,35 +826,31 @@ class ApprovalsApi {
     switch (category) {
       // Direction-based (consolidated)
       case 'outgoing': {
-        const outgoingVersion =
-          this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
-        await checkoutApi.rejectCheckout(id, outgoingVersion, reason);
+        const { version } = await checkoutApi.getCheckout(id);
+        await checkoutApi.rejectCheckout(id, version, reason);
         break;
       }
 
       case 'incoming':
         if (this.isCheckout(originalData)) {
-          const incomingVersion =
-            this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
-          await checkoutApi.rejectReturn(id, { version: incomingVersion, reason });
+          const { version } = await checkoutApi.getCheckout(id);
+          await checkoutApi.rejectReturn(id, { version, reason });
         } else if (this.isEquipmentImport(originalData)) {
-          const importVersion =
-            this.extractVersion(originalData) ?? (await equipmentImportApi.getOne(id)).version;
-          await equipmentImportApi.reject(id, importVersion, reason);
+          const { version } = await equipmentImportApi.getOne(id);
+          await equipmentImportApi.reject(id, version, reason);
         } else {
           throw new Error('Unknown incoming item type');
         }
         break;
 
       // Specialized
-      case 'equipment':
-        await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(id), {
-          rejectionReason: reason,
-        });
+      case 'equipment': {
+        const { version: eqRejectVersion } = await equipmentApi.getRequestByUuid(id);
+        await equipmentApi.rejectRequest(id, reason, eqRejectVersion);
         break;
+      }
       case 'calibration': {
-        const calVersion =
-          this.extractVersion(originalData) ?? (await calibrationApi.getCalibration(id)).version;
+        const { version: calVersion } = await calibrationApi.getCalibration(id);
         await calibrationApi.rejectCalibration(id, {
           version: calVersion,
           rejectionReason: reason,
@@ -885,9 +860,7 @@ class ApprovalsApi {
       case 'inspection':
         throw new Error('중간점검은 반려할 수 없습니다.');
       case 'nonconformity': {
-        const ncRejectVersion =
-          this.extractVersion(originalData) ??
-          (await nonConformancesApi.getNonConformance(id)).version;
+        const { version: ncRejectVersion } = await nonConformancesApi.getNonConformance(id);
         await nonConformancesApi.rejectCorrection(id, {
           version: ncRejectVersion,
           rejectionReason: reason,
@@ -896,12 +869,10 @@ class ApprovalsApi {
       }
       case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
-        const reviewVersion =
-          this.extractVersion(originalData) ??
-          (await getCurrentDisposalRequest(equipmentId))?.version;
-        if (reviewVersion === undefined) throw new Error('Disposal request not found');
+        const disposalReview = await getCurrentDisposalRequest(equipmentId);
+        if (disposalReview?.version === undefined) throw new Error('Disposal request not found');
         await reviewDisposal(equipmentId, {
-          version: reviewVersion,
+          version: disposalReview.version,
           decision: 'reject',
           opinion: reason || '반려합니다',
         });
@@ -909,12 +880,10 @@ class ApprovalsApi {
       }
       case 'disposal_final': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
-        const finalVersion =
-          this.extractVersion(originalData) ??
-          (await getCurrentDisposalRequest(equipmentId))?.version;
-        if (finalVersion === undefined) throw new Error('Disposal request not found');
+        const disposalFinal = await getCurrentDisposalRequest(equipmentId);
+        if (disposalFinal?.version === undefined) throw new Error('Disposal request not found');
         await approveDisposal(equipmentId, {
-          version: finalVersion,
+          version: disposalFinal.version,
           decision: 'reject',
           comment: reason || '반려합니다',
         });
@@ -922,9 +891,7 @@ class ApprovalsApi {
       }
       case 'plan_review':
       case 'plan_final': {
-        const rejectCasVersion =
-          this.extractVersion(originalData) ??
-          (await calibrationPlansApi.getCalibrationPlan(id)).casVersion;
+        const { casVersion: rejectCasVersion } = await calibrationPlansApi.getCalibrationPlan(id);
         await calibrationPlansApi.rejectCalibrationPlan(id, {
           casVersion: rejectCasVersion,
           rejectionReason: reason,
@@ -932,9 +899,7 @@ class ApprovalsApi {
         break;
       }
       case 'software': {
-        const softwareVersion =
-          this.extractVersion(originalData) ??
-          (await softwareApi.getSoftwareHistoryDetail(id)).version;
+        const { version: softwareVersion } = await softwareApi.getSoftwareHistoryDetail(id);
         await softwareApi.rejectSoftwareChange(id, {
           version: softwareVersion,
           rejectionReason: reason,
@@ -950,7 +915,7 @@ class ApprovalsApi {
    * 일괄 승인 처리
    *
    * Note: For disposal categories and consolidated categories (outgoing/incoming),
-   * we need to fetch the items first to get equipmentId or originalData
+   * we need to fetch the items first to get equipmentId or originalData for type discrimination
    */
   async bulkApprove(
     category: ApprovalCategory,
@@ -961,7 +926,7 @@ class ApprovalsApi {
     const success: string[] = [];
     const failed: string[] = [];
 
-    // For categories that need originalData (version/casVersion, equipmentId), fetch items first
+    // incoming 타입 판별, disposal equipmentId 추출에 originalData 필요
     const itemsMap = await this.fetchItemsMapIfNeeded(category);
 
     for (const id of ids) {
@@ -987,7 +952,7 @@ class ApprovalsApi {
    * 일괄 반려 처리
    *
    * Note: For disposal categories and consolidated categories (outgoing/incoming),
-   * we need to fetch the items first to get equipmentId or originalData
+   * we need to fetch the items first to get equipmentId or originalData for type discrimination
    */
   async bulkReject(
     category: ApprovalCategory,
@@ -998,7 +963,7 @@ class ApprovalsApi {
     const success: string[] = [];
     const failed: string[] = [];
 
-    // For categories that need originalData (version/casVersion, equipmentId), fetch items first
+    // incoming 타입 판별, disposal equipmentId 추출에 originalData 필요
     const itemsMap = await this.fetchItemsMapIfNeeded(category);
 
     for (const id of ids) {
@@ -1024,48 +989,28 @@ class ApprovalsApi {
   // 헬퍼 메서드
   // ============================================================================
 
-  /** CAS version이 필요한 카테고리 — bulk 처리 시 originalData를 사전 fetch */
-  private static readonly VERSION_REQUIRED_CATEGORIES = new Set<ApprovalCategory>([
-    'outgoing',
+  /**
+   * originalData가 bulk 처리 시 필요한 카테고리
+   *
+   * CAS 버전은 approve/reject 내부에서 항상 최신 detail을 조회하므로 여기서 불필요.
+   * originalData는 타입 판별(incoming: checkout vs import)과
+   * equipmentId 추출(disposal)에만 사용됩니다.
+   */
+  private static readonly ORIGINAL_DATA_REQUIRED_CATEGORIES = new Set<ApprovalCategory>([
     'incoming',
-    'calibration',
-    'nonconformity',
     'disposal_review',
     'disposal_final',
-    'plan_review',
-    'plan_final',
-    'software',
   ]);
 
   /**
-   * bulk approve/reject 시 CAS version이 필요한 카테고리에 대해 items를 사전 fetch
+   * bulk approve/reject 시 타입 판별 또는 equipmentId가 필요한 카테고리에 대해 items를 사전 fetch
    */
   private async fetchItemsMapIfNeeded(
     category: ApprovalCategory
   ): Promise<Map<string, ApprovalItem> | undefined> {
-    if (!ApprovalsApi.VERSION_REQUIRED_CATEGORIES.has(category)) return undefined;
+    if (!ApprovalsApi.ORIGINAL_DATA_REQUIRED_CATEGORIES.has(category)) return undefined;
     const items = await this.getPendingItems(category);
     return new Map(items.map((item) => [item.id, item]));
-  }
-
-  /**
-   * Extract version from originalData (avoids extra fetch when version is already available)
-   *
-   * 대부분의 엔티티는 `version` 필드를 사용하지만,
-   * CalibrationPlan은 `casVersion` 필드를 사용합니다 (계획서 개정 이력 vs CAS 분리).
-   */
-  private extractVersion(data: unknown): number | undefined {
-    if (!data || typeof data !== 'object') return undefined;
-    const record = data as Record<string, unknown>;
-    // Standard CAS field (equipment, checkouts, calibrations, etc.)
-    if ('version' in record && typeof record.version === 'number') {
-      return record.version;
-    }
-    // CalibrationPlan uses casVersion (의도적 설계: 계획서 개정 이력과 CAS 분리)
-    if ('casVersion' in record && typeof record.casVersion === 'number') {
-      return record.casVersion;
-    }
-    return undefined;
   }
 
   /**

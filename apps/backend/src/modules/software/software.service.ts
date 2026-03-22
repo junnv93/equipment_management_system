@@ -11,7 +11,7 @@ import * as schema from '@equipment-management/db/schema';
 import { CreateSoftwareChangeInput } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
 import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve-software.dto';
-import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
+import { SoftwareApprovalStatusValues, type Site } from '@equipment-management/schemas';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -144,6 +144,7 @@ export class SoftwareService extends VersionedBaseService {
       approvalStatus,
       search,
       site,
+      teamId,
       sort = 'changedAt.desc',
       page = 1,
       pageSize = DEFAULT_PAGE_SIZE,
@@ -177,6 +178,11 @@ export class SoftwareService extends VersionedBaseService {
     // @SiteScoped가 주입한 site 필터 — equipment JOIN 경유
     if (site) {
       conditions.push(eq(schema.equipment.site, site));
+    }
+
+    // @SiteScoped가 주입한 teamId 필터 — equipment JOIN 경유
+    if (teamId) {
+      conditions.push(eq(schema.equipment.teamId, teamId));
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -460,7 +466,10 @@ export class SoftwareService extends VersionedBaseService {
   /**
    * 승인 대기 목록 조회
    */
-  async findPendingApprovals(): Promise<{
+  async findPendingApprovals(
+    site?: Site,
+    teamId?: string
+  ): Promise<{
     items: schema.SoftwareHistory[];
     meta: {
       totalItems: number;
@@ -472,6 +481,8 @@ export class SoftwareService extends VersionedBaseService {
   }> {
     return this.findHistory({
       approvalStatus: SoftwareApprovalStatus.PENDING,
+      site,
+      teamId,
     });
   }
 

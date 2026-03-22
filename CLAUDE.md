@@ -755,6 +755,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-filters**: URL-driven 필터 SSOT 검증 — filter-utils 필수 export, hook 존재, page.tsx 서버 파싱
 - **verify-implementation**: 모든 verify 스킬 통합 실행
 - **review-architecture**: 아키텍처 레벨 코드 리뷰 — 계층 관통 추적, CAS 일관성, 캐시 코히어런스, 모듈 간 패턴 일관성, 성능/보안
+- **review-design**: 디자인 품질 리뷰 + 와이어프레임 HTML 생성 — 10가지 Anti-AI 안티패턴 분석, 점수화 보고서, 참조용 HTML 와이어프레임
 - **manage-skills**: 검증 스킬 유지보수 (커버리지 갭 분석, 스킬 생성/업데이트)
 
 Reference these skills when working on related features.

@@ -139,14 +139,17 @@ export class CalibrationController {
   @Get('pending')
   @ApiOperation({
     summary: '승인 대기 교정 목록 조회',
-    description: '승인 대기 상태인 교정 일정을 조회합니다.',
+    description: '승인 대기 상태인 교정 일정을 조회합니다. 사이트/팀 스코프가 자동 적용됩니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '승인 대기 교정 목록 조회 성공' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_REQUESTS)
-  findPendingApprovals(): ReturnType<CalibrationService['findPendingApprovals']> {
-    return this.calibrationService.findPendingApprovals();
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
+  findPendingApprovals(
+    @Query() query: { site?: string; teamId?: string }
+  ): ReturnType<CalibrationService['findPendingApprovals']> {
+    return this.calibrationService.findPendingApprovals(1, 20, query.site, query.teamId);
   }
 
   @Get('intermediate-checks')

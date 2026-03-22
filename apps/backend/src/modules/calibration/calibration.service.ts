@@ -40,7 +40,20 @@ import {
   calculateNextCalibrationDate,
 } from '../../common/utils';
 import * as schema from '@equipment-management/db/schema';
-import { and, eq, gte, lte, count, sql, or, desc, asc, SQL, isNull } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  gte,
+  lte,
+  count,
+  sql,
+  or,
+  desc,
+  asc,
+  SQL,
+  isNull,
+  aliasedTable,
+} from 'drizzle-orm';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { I18nService } from '../../common/i18n/i18n.service';
 
@@ -906,7 +919,9 @@ export class CalibrationService extends VersionedBaseService {
    */
   async findPendingApprovals(
     page = 1,
-    pageSize: number = DEFAULT_PAGE_SIZE
+    pageSize: number = DEFAULT_PAGE_SIZE,
+    site?: string,
+    teamId?: string
   ): Promise<{
     items: (CalibrationRecord & {
       registeredByUser?: {
@@ -925,51 +940,83 @@ export class CalibrationService extends VersionedBaseService {
       currentPage: number;
     };
   }> {
-    // Count total pending approvals
+    // ========== 1. Build WHERE conditions (findAll 패턴 준수) ==========
+    const whereConditions: SQL<unknown>[] = [
+      eq(schema.calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval),
+    ];
+    if (site) {
+      whereConditions.push(eq(schema.equipment.site, site));
+    }
+    if (teamId) {
+      whereConditions.push(eq(schema.equipment.teamId, teamId));
+    }
+
+    // ========== 2. Count (equipment JOIN 항상 포함 — findAll과 동일) ==========
     const [{ count: totalItems }] = await this.db
       .select({ count: count() })
       .from(schema.calibrations)
-      .where(
-        eq(schema.calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval)
-      );
+      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+      .where(and(...whereConditions));
 
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
 
-    // Use Drizzle relational query to include user→team relations
-    const items = await this.db.query.calibrations.findMany({
-      where: (calibrations, { eq: eqFn }) =>
-        eqFn(calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval),
-      with: {
-        equipment: {
-          columns: {
-            id: true,
-            name: true,
-            managementNumber: true,
-            teamId: true,
-          },
-        },
-        registeredByUser: {
-          columns: { id: true, name: true, email: true },
-          with: { team: true },
-        },
-        approvedByUser: {
-          columns: { id: true, name: true, email: true },
-        },
-      },
-      orderBy: (calibrations, { desc: descFn }) => [descFn(calibrations.createdAt)],
-      limit: pageSize,
-      offset,
-    });
+    // ========== 3. Fetch data with JOINs (DB-level 필터링 + 페이지네이션) ==========
+    // aliasedTable로 users를 두 번 JOIN (registeredBy, approvedBy)
+    const registrar = aliasedTable(schema.users, 'registrar');
+    const approver = aliasedTable(schema.users, 'approver');
+    const registrarTeam = aliasedTable(schema.teams, 'registrar_team');
 
-    // ✅ Phase 4: transformDbToRecord 기반 정규화
-    const transformedItems = items.map((item) => ({
-      ...this.transformDbToRecord(item as unknown as CalibrationRow),
-      equipmentName: item.equipment?.name || undefined,
-      managementNumber: item.equipment?.managementNumber || undefined,
-      teamId: item.equipment?.teamId || undefined,
-      registeredByUser: item.registeredByUser || null,
-      approvedByUser: item.approvedByUser || null,
+    const rows = await this.db
+      .select({
+        calibration: schema.calibrations,
+        equipmentName: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        equipmentTeamId: schema.equipment.teamId,
+        // registeredByUser
+        registrarId: registrar.id,
+        registrarName: registrar.name,
+        registrarEmail: registrar.email,
+        registrarTeamId: registrarTeam.id,
+        registrarTeamName: registrarTeam.name,
+        // approvedByUser
+        approverId: approver.id,
+        approverName: approver.name,
+        approverEmail: approver.email,
+      })
+      .from(schema.calibrations)
+      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+      .leftJoin(registrar, eq(schema.calibrations.registeredBy, registrar.id))
+      .leftJoin(registrarTeam, eq(registrar.teamId, registrarTeam.id))
+      .leftJoin(approver, eq(schema.calibrations.approvedBy, approver.id))
+      .where(and(...whereConditions))
+      .orderBy(desc(schema.calibrations.createdAt))
+      .limit(pageSize)
+      .offset(offset);
+
+    // ========== 4. Transform (findAll 패턴 + user relations) ==========
+    const transformedItems = rows.map((row) => ({
+      ...this.transformDbToRecord(row.calibration),
+      equipmentName: row.equipmentName || undefined,
+      managementNumber: row.managementNumber || undefined,
+      teamId: row.equipmentTeamId || undefined,
+      registeredByUser: row.registrarId
+        ? {
+            id: row.registrarId,
+            name: row.registrarName ?? '',
+            email: row.registrarEmail ?? '',
+            team: row.registrarTeamId
+              ? { id: row.registrarTeamId, name: row.registrarTeamName ?? '' }
+              : null,
+          }
+        : null,
+      approvedByUser: row.approverId
+        ? {
+            id: row.approverId,
+            name: row.approverName ?? '',
+            email: row.approverEmail ?? '',
+          }
+        : null,
     }));
 
     return {

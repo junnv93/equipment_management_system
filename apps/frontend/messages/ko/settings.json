@@ -106,7 +106,7 @@
     "warning": "시스템 설정은 전체 시스템에 영향을 미칩니다. 변경 시 신중하게 검토하세요.",
     "warningPrefix": "주의:",
     "auditLogRetention": "감사 로그 보관 기간",
-    "auditLogRetentionDescription": "감사 로그를 보관할 기간입니다. {code}은 무제한 보관을 의미합니다.",
+    "auditLogRetentionDescription": "감사 로그를 보관할 기간입니다. <code>0</code>은 무제한 보관을 의미합니다.",
     "notificationRetention": "알림 보관 기간",
     "notificationRetentionDescription": "만료된 알림은 자동으로 정리됩니다. 시스템 성능 최적화를 위해 적절한 기간을 설정하세요.",
     "maintenanceMessage": "시스템 공지 메시지",

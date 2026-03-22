@@ -28,6 +28,8 @@ export const softwareHistoryQuerySchema = z.object({
   sort: z.string().optional(),
   /** @SiteScoped에 의해 자동 주입 — 직접 설정 금지 */
   site: SiteEnum.optional(),
+  /** @SiteScoped(team 스코프)에 의해 자동 주입 — 직접 설정 금지 */
+  teamId: uuidString(VM.uuid.invalid('팀')).optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : DEFAULT_PAGE_SIZE),
@@ -82,6 +84,12 @@ export class SoftwareHistoryQueryDto {
     required: false,
   })
   site?: Site;
+
+  @ApiProperty({
+    description: '팀 필터 (@SiteScoped team 스코프 자동 주입)',
+    required: false,
+  })
+  teamId?: string;
 
   @ApiProperty({
     description: '페이지 번호',

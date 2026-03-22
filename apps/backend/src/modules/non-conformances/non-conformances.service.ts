@@ -6,7 +6,7 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { eq, and, isNull, SQL, ne, sql } from 'drizzle-orm';
+import { eq, and, isNull, SQL, ne, sql, or, notInArray, isNotNull } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   nonConformances,
@@ -80,6 +80,7 @@ export class NonConformancesService extends VersionedBaseService {
     status?: string;
     ncType?: string;
     search?: string;
+    pendingClose?: boolean;
   }): SQL[] {
     const conditions: SQL[] = [isNull(nonConformances.deletedAt)];
 
@@ -94,6 +95,16 @@ export class NonConformancesService extends VersionedBaseService {
     }
     if (params.search) {
       conditions.push(safeIlike(nonConformances.cause, likeContains(params.search)));
+    }
+    // 종료 승인 대기: 수리 필요 유형(DAMAGE/MALFUNCTION)은 수리 이력 필수
+    // approvals.service.ts의 getNonConformanceCount()와 동일한 조건
+    if (params.pendingClose) {
+      conditions.push(
+        or(
+          notInArray(nonConformances.ncType, [...REPAIR_REQUIRING_NC_TYPES]),
+          isNotNull(nonConformances.repairHistoryId)
+        )!
+      );
     }
 
     return conditions;
@@ -246,6 +257,7 @@ export class NonConformancesService extends VersionedBaseService {
       ncType,
       site,
       search,
+      pendingClose = false,
       sort = 'discoveryDate.desc',
       includeSummary = false,
       page = 1,
@@ -253,7 +265,7 @@ export class NonConformancesService extends VersionedBaseService {
     } = query;
 
     // buildListConditions()로 data/count 쿼리 필터 일관성 보장
-    const filterParams = { equipmentId, status, ncType, search };
+    const filterParams = { equipmentId, status, ncType, search, pendingClose };
 
     // site 필터: equipmentBelongsToSite() 서브쿼리로 단일 쿼리 처리
     // 별도 사전 조회 없이 DB 레벨에서 IN (SELECT ...) 적용

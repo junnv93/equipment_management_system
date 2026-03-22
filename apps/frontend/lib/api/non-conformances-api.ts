@@ -177,10 +177,10 @@ const nonConformancesApi = {
     return apiClient.delete(API_ENDPOINTS.NON_CONFORMANCES.DELETE(id)).then((res) => res.data);
   },
 
-  // 종료 대기 중인 부적합 목록 (corrected 상태)
+  // 종료 대기 중인 부적합 목록 (corrected 상태 + 수리 필터 적용)
   getPendingCloseNonConformances: async (): Promise<PaginatedResponse<NonConformance>> => {
     return apiClient
-      .get(`${API_ENDPOINTS.NON_CONFORMANCES.LIST}?status=corrected`)
+      .get(`${API_ENDPOINTS.NON_CONFORMANCES.LIST}?status=corrected&pendingClose=true`)
       .then((res) => transformPaginatedResponse<NonConformance>(res));
   },
 };

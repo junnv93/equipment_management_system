@@ -95,6 +95,21 @@
 - **설명**: `useMutation`의 `onSuccess`에서 `router.push()`로 네비게이션한 뒤, `onSettled`에서 캐시를 무효화하면 대상 페이지에서 stale 데이터가 표시됨. 특히 STATIC 프리셋(`refetchOnMount: false`)에서 심각. `useFormSubmission` 훅의 패턴(invalidation → navigation in onSuccess)이 올바른 참조 구현. `useOptimisticMutation`에는 `onSettledCallback` 옵션을 추가하여 캐시 무효화 완료 후 네비게이션 실행 보장.
 - **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 3 "캐시 코히어런스"에 명시적 항목으로 승격
 
+### [2026-03-22] Stale CAS 버전 사용 — extractVersion(originalData) 우선 패턴
+- **발견 빈도**: 2회 (1차: 전체 카테고리 extractVersion 우선, 2차: equipment 카테고리 version 미전송)
+- **설명**: 승인/반려 리스트 페이지에서 `extractVersion(originalData)`로 리스트 캐시의 CAS 버전을 우선 사용하면, 다단계 승인(3-step 교정계획서 등)에서 각 단계마다 casVersion이 증가하지만 리스트 캐시는 stale 값을 보유하여 VERSION_CONFLICT 발생. 또한 equipment 카테고리는 apiClient 직접 호출로 version 자체를 전송하지 않아 400 에러 발생. 상태 전이 액션(사용자 편집 데이터 없음)에서는 항상 최신 detail을 조회해야 함.
+- **체크리스트 반영**: ✅ 2회 발견 → review-checklist.md 섹션 2 "Frontend 계층"에 명시적 항목으로 승격 완료
+
+### [2026-03-22] aliasedTable 패턴 — 동일 테이블 다중 FK JOIN
+- **발견 빈도**: 1회 (calibration: findPendingApprovals)
+- **설명**: users 테이블을 registeredBy/approvedBy 두 FK로 동시 JOIN 시 `aliasedTable(schema.users, 'registrar')` 패턴 사용. Drizzle ORM에서 동일 테이블을 서로 다른 alias로 참조하여 SELECT/WHERE에서 구분. 프로젝트 최초 도입 사례.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 6 "모듈 간 패턴 일관성"에 참고 패턴으로 추가
+
+### [2026-03-22] Pending 승인 목록 엔드포인트의 @SiteScoped 누락
+- **발견 빈도**: 1회 (calibration, software 2개 모듈 동시)
+- **설명**: `findAll()`에는 `@SiteScoped`가 적용되어 있지만, `GET /pending` 엔드포인트에는 누락되어 전 사이트/팀의 승인 대기 건이 노출. 사용자가 승인 시도 시 `enforceSiteAccess`에서 403 거부. 목록 단계에서 필터하지 않으면 사용자가 승인 불가 항목을 보게 되어 혼란 유발.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 4 "보안 계층"에 명시적 항목으로 승격
+
 ---
 
 ## 업데이트 이력
@@ -111,3 +126,6 @@
 | 2026-03-21 | 안티패턴 | CAS 선점 순서 — 작업보다 CAS 체크가 먼저 | review-learnings.md |
 | 2026-03-21 | 안티패턴 | DB nullable → DTO optional 정규화 누락 | review-learnings.md |
 | 2026-03-21 | 안티패턴 | Mutation Navigate-Before-Invalidate (9개 파일) | review-learnings.md |
+| 2026-03-22 | 안티패턴 | Stale CAS 버전 사용 — extractVersion(originalData) 우선 패턴 | review-learnings.md |
+| 2026-03-22 | 새 패턴 | aliasedTable — 동일 테이블 다중 FK JOIN (calibration) | review-learnings.md |
+| 2026-03-22 | 안티패턴 | Pending 승인 목록 @SiteScoped 누락 (calibration, software) | review-learnings.md |

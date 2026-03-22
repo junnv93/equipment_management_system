@@ -66,6 +66,7 @@ equipment, checkouts, calibrations, non_conformances, disposal_requests, equipme
 - `useOptimisticMutation` 사용?
 - `onSuccess`에서 `setQueryData` 미사용? (TData ≠ TCachedData)
 - VERSION_CONFLICT 에러 시 `invalidateQueries`로 서버 재검증?
+- 승인/반려 등 상태 전이 액션에서 CAS version은 **항상 최신 detail을 조회**하여 사용? (리스트 캐시의 stale version 사용 금지 — 다단계 승인에서 VERSION_CONFLICT 유발)
 
 ### CalibrationPlans 특이사항
 
