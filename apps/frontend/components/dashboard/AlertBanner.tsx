@@ -14,17 +14,25 @@ import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DASHBOARD_ALERT_BANNER_TOKENS as T } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { EquipmentStatusValues } from '@equipment-management/schemas';
+import {
+  buildScopedEquipmentUrl,
+  buildScopedUrl,
+  type DashboardScope,
+} from '@/lib/utils/dashboard-scope';
 
 interface AlertBannerProps {
   overdueCalibrationCount: number;
   overdueCheckoutCount: number;
   nonConformingCount: number;
+  scope: DashboardScope;
 }
 
 export function AlertBanner({
   overdueCalibrationCount,
   overdueCheckoutCount,
   nonConformingCount,
+  scope,
 }: AlertBannerProps) {
   const t = useTranslations('dashboard.alertBanner');
 
@@ -68,19 +76,29 @@ export function AlertBanner({
       <div className={T.chips}>
         {nonConformingCount > 0 && (
           <Link
-            href={`${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=non_conforming`}
+            href={buildScopedEquipmentUrl(
+              scope,
+              FRONTEND_ROUTES.EQUIPMENT.LIST,
+              EquipmentStatusValues.NON_CONFORMING
+            )}
             className={T.chipUrgent}
           >
             {t('nonConforming', { count: nonConformingCount })}
           </Link>
         )}
         {overdueCalibrationCount > 0 && (
-          <Link href={FRONTEND_ROUTES.CALIBRATION.LIST} className={T.chipWarning}>
+          <Link
+            href={buildScopedUrl(scope, FRONTEND_ROUTES.CALIBRATION.LIST)}
+            className={T.chipWarning}
+          >
             {t('overdueCalibrations', { count: overdueCalibrationCount })}
           </Link>
         )}
         {overdueCheckoutCount > 0 && (
-          <Link href={FRONTEND_ROUTES.CHECKOUTS.LIST} className={T.chipWarning}>
+          <Link
+            href={buildScopedUrl(scope, FRONTEND_ROUTES.CHECKOUTS.LIST)}
+            className={T.chipWarning}
+          >
             {t('overdueCheckouts', { count: overdueCheckoutCount })}
           </Link>
         )}

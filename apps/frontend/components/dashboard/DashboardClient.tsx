@@ -3,11 +3,16 @@
 /**
  * 대시보드 클라이언트 컴포넌트 — Command Center (Alert-First Layout)
  *
- * Row 0: WelcomeHeader + QuickActionBar (flex row)
- * Row 1: AlertBanner (긴급 조치 요약, 1 줄)
- * Row 2: KPI 5카드 (독립 행)
- * Row 3: 3컬럼 — 승인대기 | 반출현황(탭) | 교정현황
- * Row 4: 하단 2컬럼 — 최근활동(2fr) | 팀분포+달력(1fr)
+ * Row 0: WelcomeHeader + QuickActionBar (flex row)        — animate-fade-in-up
+ * Row 1: AlertBanner (긴급 조치 요약, 1 줄)               — animate-slide-left
+ * Row 2: KPI 4카드 (독립 행)                              — animate-scale-in-subtle
+ * Row 3: 액션 행 — [승인대기+반출현황 | 교정현황]          — animate-fade-in-up
+ * Row 4: 하단 — 최근활동(2fr) | [팀분포+]달력(1fr)        — animate-fade-in
+ *
+ * v3 개선사항 (와이어프레임 dashboard-redesign-v3-test-engineer):
+ * - AP-01: Row 3 좌측 서브그리드 — 아이템 1개일 때 grid-cols-1로 풀너비
+ * - AP-01: Row 4 — showTeamDistribution=false여도 [2fr_1fr] 가로 배치
+ * - AP-06: Row별 다른 진입 애니메이션 (fade-up, slide-left, scale-in-subtle, fade-in)
  */
 
 import { useMemo, memo } from 'react';
@@ -138,19 +143,23 @@ function DashboardClientComponent({
         )}
       </div>
 
-      {/* Row 1: AlertBanner — AP-02: Welcome→Alert 넓은 간격 (mt-6) */}
+      {/* Row 1: AlertBanner — AP-02: Welcome→Alert 넓은 간격 (mt-6), AP-06: slide-left */}
       {controlCenter.showAlertBanner && (
-        <div className="mt-6 motion-safe:animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+        <div className="mt-6 motion-safe:animate-slide-left" style={{ animationDelay: '80ms' }}>
           <AlertBanner
             overdueCalibrationCount={overdueCalibrations.length}
             overdueCheckoutCount={overdueCheckouts.length}
             nonConformingCount={equipmentStatusStats.non_conforming ?? 0}
+            scope={scope}
           />
         </div>
       )}
 
-      {/* Row 2: KPI 4카드 — AP-02: Alert→KPI 넓은 간격, KPI→액션 최대 간격 */}
-      <div className="mt-7 mb-8 motion-safe:animate-fade-in-up" style={{ animationDelay: '160ms' }}>
+      {/* Row 2: KPI 4카드 — AP-02: Alert→KPI 넓은 간격, KPI→액션 최대 간격, AP-06: scale-in-subtle */}
+      <div
+        className="mt-7 mb-8 motion-safe:animate-scale-in-subtle"
+        style={{ animationDelay: '160ms' }}
+      >
         <KpiStatusGrid
           summary={summary}
           equipmentStatusStats={equipmentStatusStats}
@@ -164,6 +173,8 @@ function DashboardClientComponent({
        *
        * CalibrationDday를 항상 우측 280px 고정 컬럼에 배치하기 위해
        * 외부를 [1fr_280px]로 분리하고, 내부에서 승인대기/반출현황을 서브그리드로 처리.
+       *
+       * v3 개선 (AP-01): 좌측 아이템이 1개뿐이면 grid-cols-1로 풀너비 차지
        */}
       {(controlCenter.showPendingApprovals ||
         controlCenter.showCheckoutOverdue ||
@@ -172,9 +183,16 @@ function DashboardClientComponent({
           className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start mb-8 motion-safe:animate-fade-in-up"
           style={{ animationDelay: '240ms' }}
         >
-          {/* 좌측: 승인대기 + 반출현황 서브그리드 */}
+          {/* 좌측: 승인대기 + 반출현황 서브그리드 — 아이템 수에 따라 컬럼 분기 */}
           {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              className={cn(
+                'grid gap-4',
+                controlCenter.showPendingApprovals && controlCenter.showCheckoutOverdue
+                  ? 'grid-cols-1 md:grid-cols-2'
+                  : 'grid-cols-1'
+              )}
+            >
               {controlCenter.showPendingApprovals && <PendingApprovalCard compact />}
               {controlCenter.showCheckoutOverdue && (
                 <OverdueCheckoutsCard
@@ -191,6 +209,7 @@ function DashboardClientComponent({
             <CalibrationDdayList
               overdueCalibrations={overdueCalibrations}
               upcomingCalibrations={upcomingCalibrations}
+              scope={scope}
               loading={isLoading}
             />
           )}
@@ -198,35 +217,22 @@ function DashboardClientComponent({
       )}
 
       {/*
-       * Row 4: 하단 — 팀 분포 유무에 따라 레이아웃 분기
+       * Row 4: 하단 — AP-06: animate-fade-in
+       *
+       * v3 개선 (AP-01): showTeamDistribution 유무와 무관하게
+       * 항상 [2fr_1fr] 가로 배치 유지 — 세로 스택 단조로움 해소
        */}
-      {controlCenter.showTeamDistribution ? (
-        <div
-          className={cn(DASHBOARD_GRID.bottomRow, 'motion-safe:animate-fade-in-up')}
-          style={{ animationDelay: '320ms' }}
-        >
-          <section aria-label={t('srOnly.recentActivity')}>
-            <RecentActivities data={recentActivities} loading={isLoading} />
-          </section>
-          <div className="flex flex-col gap-4">
+      <div
+        className={cn(DASHBOARD_GRID.bottomRow, 'motion-safe:animate-fade-in')}
+        style={{ animationDelay: '320ms' }}
+      >
+        <section aria-label={t('srOnly.recentActivity')}>
+          <RecentActivities data={recentActivities} loading={isLoading} />
+        </section>
+        <div className="flex flex-col gap-4">
+          {controlCenter.showTeamDistribution && (
             <TeamEquipmentDistribution equipmentByTeam={equipmentByTeam} loading={isLoading} />
-            {controlCenter.showMiniCalendar && (
-              <MiniCalendar
-                upcomingCalibrations={upcomingCalibrations}
-                upcomingCheckoutReturns={upcomingCheckoutReturns}
-                overdueCalibrations={overdueCalibrations}
-              />
-            )}
-          </div>
-        </div>
-      ) : (
-        <div
-          className="space-y-4 motion-safe:animate-fade-in-up"
-          style={{ animationDelay: '320ms' }}
-        >
-          <section aria-label={t('srOnly.recentActivity')}>
-            <RecentActivities data={recentActivities} loading={isLoading} />
-          </section>
+          )}
           {controlCenter.showMiniCalendar && (
             <MiniCalendar
               upcomingCalibrations={upcomingCalibrations}
@@ -235,7 +241,7 @@ function DashboardClientComponent({
             />
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

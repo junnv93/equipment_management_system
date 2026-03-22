@@ -6,14 +6,19 @@ import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { OverdueCalibration, UpcomingCalibration } from '@/lib/api/dashboard-api';
-import { DASHBOARD_DDAY_COMPACT_TOKENS as T } from '@/lib/design-tokens';
+import {
+  DASHBOARD_DDAY_COMPACT_TOKENS as T,
+  getTimeBasedUrgency,
+  type UrgencyLevel,
+} from '@/lib/design-tokens';
 import { DISPLAY_LIMITS } from '@/lib/config/dashboard-config';
-import { getTimeBasedUrgency, type UrgencyLevel } from '@/lib/design-tokens/visual-feedback';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { buildScopedUrl, type DashboardScope } from '@/lib/utils/dashboard-scope';
 
 interface CalibrationDdayListProps {
   overdueCalibrations: OverdueCalibration[];
   upcomingCalibrations: UpcomingCalibration[];
+  scope: DashboardScope;
   loading?: boolean;
   className?: string;
 }
@@ -51,6 +56,7 @@ function getDdayLabel(item: DdayItem): string {
 export function CalibrationDdayList({
   overdueCalibrations,
   upcomingCalibrations,
+  scope,
   loading = false,
   className,
 }: CalibrationDdayListProps) {
@@ -171,7 +177,10 @@ export function CalibrationDdayList({
           {/* 더보기 링크 */}
           {(overdueCount > 8 || upcomingCount > 8) && (
             <div className={T.footer}>
-              <Link href={FRONTEND_ROUTES.CALIBRATION.LIST} className={T.viewAllLink}>
+              <Link
+                href={buildScopedUrl(scope, FRONTEND_ROUTES.CALIBRATION.LIST)}
+                className={T.viewAllLink}
+              >
                 {t('viewAll')} →
               </Link>
             </div>

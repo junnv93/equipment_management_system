@@ -354,7 +354,7 @@ export const DASHBOARD_KPI_TOKENS = {
  * - 좌측 색상 바 + D-day 카운터 + 장비명
  */
 export const DASHBOARD_DDAY_COMPACT_TOKENS = {
-  container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm',
+  container: `bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   header: 'px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0',
   title: 'text-sm font-semibold text-foreground',
   count: 'text-xs text-muted-foreground',
@@ -393,7 +393,7 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
  * - 월간 그리드, 이벤트 도트, 헤더 네비게이션
  */
 export const DASHBOARD_CALENDAR_TOKENS = {
-  container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm',
+  container: `bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   header: 'px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0',
   title: 'text-sm font-semibold text-foreground tabular-nums',
   navButton: `p-1 rounded hover:bg-muted active:bg-muted/80 active:scale-95 text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.instantTransform}`,
@@ -431,8 +431,7 @@ export const DASHBOARD_CALENDAR_TOKENS = {
  * OverdueCheckoutsCard에서 사용 (기존 raw Tailwind → 디자인 토큰 교체)
  */
 export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
-  container:
-    'bg-card border border-border rounded-lg p-4 flex flex-col gap-2 min-h-[12rem] shadow-sm',
+  container: `bg-card border border-border rounded-lg p-4 flex flex-col gap-2 min-h-[12rem] shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   containerLoading:
     'bg-card border border-border rounded-lg p-4 flex flex-col gap-3 min-h-[12rem] shadow-sm',
   header: 'flex items-center justify-between',

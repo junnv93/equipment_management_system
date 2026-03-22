@@ -74,21 +74,41 @@ export function resolveDashboardScope(
 // ─── URL 빌더 ────────────────────────────────────────────────
 
 /**
- * 장비 목록 URL을 현재 대시보드 스코프에 맞게 생성.
+ * 대시보드 scope 기반 URL 생성 (범용).
+ *
+ * 대시보드 내 모든 링크(장비/교정/반출 등)가 동일한 scope 범위를 유지하도록
+ * teamId + site를 URL 파라미터에 자동 삽입한다.
+ *
+ * - extraParams: 페이지별 추가 파라미터 (status, tab 등)
+ * - scope.teamId / scope.site: 자동 포함 (falsy 시 생략)
+ */
+export function buildScopedUrl(
+  scope: DashboardScope,
+  basePath: string,
+  extraParams?: Record<string, string>
+): string {
+  const params = new URLSearchParams();
+  if (extraParams) {
+    for (const [key, value] of Object.entries(extraParams)) {
+      if (value) params.set(key, value);
+    }
+  }
+  if (scope.teamId) params.set('teamId', scope.teamId);
+  if (scope.site) params.set('site', scope.site);
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
+}
+
+/**
+ * 장비 목록 URL을 현재 대시보드 스코프에 맞게 생성 (편의 래퍼).
  *
  * - status: EquipmentStatus 타입으로 타입 안전성 보장 (SSOT 준수)
- * - teamId: scope에서 자동 포함
- * - site: scope에서 자동 포함 (@SiteScoped bypass 역할의 범위 일치)
+ * - teamId/site: buildScopedUrl()에 위임
  */
 export function buildScopedEquipmentUrl(
   scope: DashboardScope,
   basePath: string,
   status?: EquipmentStatus
 ): string {
-  const params = new URLSearchParams();
-  if (status) params.set('status', status);
-  if (scope.teamId) params.set('teamId', scope.teamId);
-  if (scope.site) params.set('site', scope.site);
-  const query = params.toString();
-  return query ? `${basePath}?${query}` : basePath;
+  return buildScopedUrl(scope, basePath, status ? { status } : undefined);
 }

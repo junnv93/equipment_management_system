@@ -234,6 +234,10 @@ module.exports = {
           from: { opacity: '0', transform: 'translateY(30px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'scale-in-subtle': {
+          from: { opacity: '0', transform: 'scale(0.96)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
         'progress-indeterminate': {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(400%)' },
@@ -297,6 +301,7 @@ module.exports = {
         // Auth animations
         shake: 'shake 0.5s ease-in-out',
         'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
+        'scale-in-subtle': 'scale-in-subtle 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards',
         'progress-indeterminate': 'progress-indeterminate 1.5s ease-in-out infinite',
         // Approval page animations
         'approval-exit-success': 'approval-exit-success 0.6s ease-out forwards',
