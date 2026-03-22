@@ -440,7 +440,13 @@ function EquipmentFiltersComponent({
             {/* 팀 필터 */}
             <Select
               value={filters.teamId || '_all'}
-              onValueChange={(value) => onTeamIdChange(value === '_all' ? '' : value)}
+              onValueChange={(value) => {
+                const newTeamId = value === '_all' ? '' : value;
+                // Guard: 네비게이션 전환 중 Select의 spurious onValueChange 방지
+                // (클라이언트 라우팅 시 searchParams가 일시적으로 빈 값 → value 변경 → 불필요한 호출)
+                if (newTeamId === (filters.teamId || '')) return;
+                onTeamIdChange(newTeamId);
+              }}
               disabled={isLoadingTeams}
             >
               <SelectTrigger className="h-9 w-[150px] text-sm" aria-label={t('filters.teamFilter')}>

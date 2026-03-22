@@ -81,40 +81,22 @@ export class DashboardService {
           notInArray(schema.equipment.status, [...DASHBOARD_EXCLUDED_STATUSES])
         );
 
-        const [[equipmentStats], [checkoutResult]] = await Promise.all([
-          // 단일 쿼리: total + available + upcoming calibrations (FILTER 조건부 집계)
-          this.db
-            .select({
-              total: count(),
-              available: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = ${EquipmentStatusEnum.enum.available}) as integer)`,
-              upcomingCalibrations: sql<number>`cast(count(*) filter (where ${schema.equipment.calibrationRequired} = ${CalibrationRequiredEnum.enum.required} and ${schema.equipment.nextCalibrationDate} >= ${today} and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater}) as integer)`,
-            })
-            .from(schema.equipment)
-            .where(siteTeamFilter),
-          // 반출 중 장비 수 — KPI 클릭→장비 목록(status=checked_out) 건수와 일치
-          this.db
-            .select({
-              count: sql<number>`cast(count(distinct ${schema.checkoutItems.equipmentId}) as integer)`,
-            })
-            .from(schema.checkouts)
-            .innerJoin(
-              schema.checkoutItems,
-              eq(schema.checkouts.id, schema.checkoutItems.checkoutId)
-            )
-            .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
-            .where(
-              and(
-                eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out),
-                teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-                site ? eq(schema.equipment.site, site) : undefined
-              )
-            ),
-        ]);
+        // 단일 쿼리: total + available + activeCheckouts + upcoming calibrations (FILTER 조건부 집계)
+        // ✅ SSOT: activeCheckouts도 equipment.status 기반 — KPI 클릭 → 장비 목록(status=checked_out) 건수와 일치
+        const [equipmentStats] = await this.db
+          .select({
+            total: count(),
+            available: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = ${EquipmentStatusEnum.enum.available}) as integer)`,
+            activeCheckouts: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = ${EquipmentStatusEnum.enum.checked_out}) as integer)`,
+            upcomingCalibrations: sql<number>`cast(count(*) filter (where ${schema.equipment.calibrationRequired} = ${CalibrationRequiredEnum.enum.required} and ${schema.equipment.nextCalibrationDate} >= ${today} and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater}) as integer)`,
+          })
+          .from(schema.equipment)
+          .where(siteTeamFilter);
 
         return {
           totalEquipment: equipmentStats?.total || 0,
           availableEquipment: equipmentStats?.available || 0,
-          activeCheckouts: checkoutResult?.count || 0,
+          activeCheckouts: equipmentStats?.activeCheckouts || 0,
           upcomingCalibrations: equipmentStats?.upcomingCalibrations || 0,
         };
       },

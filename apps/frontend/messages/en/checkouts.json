@@ -50,12 +50,13 @@
     "next": "Next",
     "processing": "Processing...",
     "bulkApprove": "Approve All",
-    "urgentContact": "Send Reminder",
     "viewDetail": "View Detail"
   },
   "toasts": {
     "approveSuccess": "Checkout request approved.",
     "approveError": "An error occurred during approval.",
+    "versionConflict": "Already processed by another user",
+    "versionConflictDesc": "Data has been updated. Please check the latest status.",
     "rejectSuccess": "Checkout request rejected.",
     "rejectError": "An error occurred during rejection.",
     "startSuccess": "Checkout started.",

@@ -180,6 +180,22 @@ async function main(): Promise<void> {
     console.log('  → Checkout Items (equipment associations)');
     await db.insert(schema.checkoutItems).values(CHECKOUT_ITEMS_SEED_DATA);
 
+    // ✅ equipment.status 동기화 — checkout.status='checked_out'인 장비의 equipment.status도 'checked_out'으로 설정
+    // 런타임에는 CheckoutsService.startCheckout()이 이 동기화를 수행하지만, 시드 데이터는 직접 INSERT하므로 별도 동기화 필요
+    console.log('  → Equipment status sync (checkout → equipment)');
+    const syncResult = await pool.query(`
+      UPDATE equipment
+      SET status = 'checked_out', updated_at = NOW()
+      WHERE id IN (
+        SELECT DISTINCT ci.equipment_id
+        FROM checkout_items ci
+        JOIN checkouts c ON ci.checkout_id = c.id
+        WHERE c.status = 'checked_out'
+      )
+      AND status != 'checked_out'
+    `);
+    console.log(`    ✅ ${syncResult.rowCount}건 장비 상태 동기화됨`);
+
     // =========================================================================
     // PHASE 2: EXTENDED ENTITIES (Partially Implemented)
     // =========================================================================

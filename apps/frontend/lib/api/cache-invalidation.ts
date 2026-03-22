@@ -546,6 +546,35 @@ export class CheckoutCacheInvalidation {
     queryKeys.approvals.all,
     queryKeys.approvals.countsAll,
   ];
+
+  /**
+   * 체크아웃 승인/반려 후 캐시 무효화
+   *
+   * 체크아웃 상태 변경은 승인 카운트, 대시보드 통계에도 영향하므로 교차 무효화.
+   */
+  static async invalidateAfterApproval(queryClient: QueryClient): Promise<void> {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.all, exact: false }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false }),
+      DashboardCacheInvalidation.invalidateAll(queryClient),
+    ]);
+  }
+
+  /**
+   * 반입 처리 후 캐시 무효화
+   *
+   * 반입은 장비 상태에도 영향을 주므로 장비 캐시도 교차 무효화.
+   */
+  static async invalidateAfterReturn(queryClient: QueryClient): Promise<void> {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.all, exact: false }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.all, exact: false }),
+      DashboardCacheInvalidation.invalidateAll(queryClient),
+    ]);
+  }
 }
 
 /**

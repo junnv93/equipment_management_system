@@ -70,9 +70,12 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
       params.set('site', newFilters.site || '_all');
     }
 
-    // ✅ teamId: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('teamId' in updates || newFilters.teamId) {
+    // ✅ teamId: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+    // 클라이언트 네비게이션 중 searchParams 일시적 변경에 의한 spurious URL 재작성 방지
+    if ('teamId' in updates) {
       params.set('teamId', newFilters.teamId || '_all');
+    } else if (newFilters.teamId) {
+      params.set('teamId', newFilters.teamId);
     }
 
     // ✅ approvalStatus: 값이 있거나, 명시적으로 변경되었으면 URL에 포함

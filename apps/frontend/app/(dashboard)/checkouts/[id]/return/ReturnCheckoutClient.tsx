@@ -6,13 +6,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations, useFormatter } from 'next-intl';
 import { ArrowLeft, Package, MapPin, Calendar, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { queryKeys } from '@/lib/api/query-config';
 import checkoutApi, { Checkout, ConditionCheck, ReturnCheckoutDto } from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { isConflictError } from '@/lib/api/error';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CHECKOUT_PURPOSE_LABELS,
   CHECKOUT_STATUS_LABELS,
@@ -52,11 +54,22 @@ export default function ReturnCheckoutClient({
   const returnMutation = useMutation({
     mutationFn: (data: ReturnCheckoutDto) => checkoutApi.returnCheckout(checkout.id, data),
     onSuccess: () => {
-      CheckoutCacheInvalidation.RETURN_KEYS.forEach((key) =>
-        queryClient.invalidateQueries({ queryKey: key })
-      );
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.detail(checkout.id) });
-      router.push(`/checkouts/${checkout.id}`);
+      toast({ title: t('toasts.returnSuccess') });
+      router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
+    },
+    onError: (error: unknown) => {
+      if (isConflictError(error)) {
+        toast({
+          title: t('toasts.versionConflict'),
+          description: t('toasts.versionConflictDesc'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: t('toasts.returnError'), variant: 'destructive' });
+      }
+    },
+    onSettled: () => {
+      CheckoutCacheInvalidation.invalidateAfterReturn(queryClient);
     },
   });
 
@@ -75,7 +88,7 @@ export default function ReturnCheckoutClient({
 
   // 취소 핸들러
   const handleCancel = () => {
-    router.push(`/checkouts/${checkout.id}`);
+    router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
   };
 
   // 반입 예정일 초과 여부
@@ -94,7 +107,7 @@ export default function ReturnCheckoutClient({
       {/* 헤더 */}
       <div>
         <Button variant="ghost" size="sm" className="mb-2" asChild>
-          <Link href={`/checkouts/${checkout.id}`}>
+          <Link href={FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t('returnPage.backToDetail')}
           </Link>

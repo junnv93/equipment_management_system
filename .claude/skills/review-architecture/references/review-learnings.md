@@ -105,6 +105,11 @@
 - **설명**: users 테이블을 registeredBy/approvedBy 두 FK로 동시 JOIN 시 `aliasedTable(schema.users, 'registrar')` 패턴 사용. Drizzle ORM에서 동일 테이블을 서로 다른 alias로 참조하여 SELECT/WHERE에서 구분. 프로젝트 최초 도입 사례.
 - **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 6 "모듈 간 패턴 일관성"에 참고 패턴으로 추가
 
+### [2026-03-22] 클라이언트 네비게이션 중 Radix Select spurious onValueChange
+- **발견 빈도**: 1회 (equipment: EquipmentFilters.tsx teamId Select)
+- **설명**: Next.js App Router 클라이언트 라우팅 중 `useSearchParams()`가 일시적으로 이전 페이지(대시보드)의 빈 params를 반영 → `filters.teamId = ''` → Select의 `value`가 `_all`로 변경 → `onValueChange` 발생 → `updateURL({ teamId: '' })` → `teamId=_all` 설정 → 서버 리다이렉트가 `_all`을 "명시적 전체 선택"으로 인식하여 보정하지 않음. 두 계층 수정으로 해결: (1) `updateURL`에서 teamId "명시적 변경 vs 보존" 분기, (2) Select `onValueChange`에 중복 값 가드.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 7 "프론트엔드 상태 아키텍처"에 "URL-driven 필터와 Radix Select의 클라이언트 네비게이션 호환성" 항목으로 승격
+
 ### [2026-03-22] 대시보드 카운트 vs 장비 목록 불일치 — retired/disposed 제외 누락
 - **발견 빈도**: 1회 (dashboard: getSummary, getEquipmentByTeam, getEquipmentStatusStats)
 - **설명**: 대시보드 카운트 쿼리가 모든 상태의 장비를 포함하지만, 장비 목록은 `showRetired=false`(기본값)로 retired/disposed를 숨김. 또한 "반출 중" 카운트가 `count(distinct checkouts.id)` (반출 건수)를 사용하여 장비 목록의 `status=checked_out` 장비 건수와 불일치. `DASHBOARD_EXCLUDED_STATUSES` SSOT 상수로 해결.
@@ -134,4 +139,5 @@
 | 2026-03-22 | 안티패턴 | Stale CAS 버전 사용 — extractVersion(originalData) 우선 패턴 | review-learnings.md |
 | 2026-03-22 | 새 패턴 | aliasedTable — 동일 테이블 다중 FK JOIN (calibration) | review-learnings.md |
 | 2026-03-22 | 안티패턴 | Pending 승인 목록 @SiteScoped 누락 (calibration, software) | review-learnings.md |
+| 2026-03-22 | 안티패턴 | 클라이언트 네비게이션 중 Radix Select spurious onValueChange | review-learnings.md |
 | 2026-03-22 | 안티패턴 | 대시보드 카운트 vs 장비 목록 retired/disposed 불일치 | review-learnings.md |

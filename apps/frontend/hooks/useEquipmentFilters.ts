@@ -163,9 +163,14 @@ export function useEquipmentFilters() {
         params.set('classification', updatedFilters.classification || '_all');
       }
 
-      // ✅ teamId: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-      if ('teamId' in newFilters || updatedFilters.teamId) {
+      // ✅ teamId: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+      // 클라이언트 네비게이션 중 searchParams 일시적 변경에 의한 spurious URL 재작성 방지
+      if ('teamId' in newFilters) {
+        // 사용자가 명시적으로 팀 필터를 변경한 경우
         params.set('teamId', updatedFilters.teamId || '_all');
+      } else if (updatedFilters.teamId) {
+        // 다른 필터 변경 시 현재 teamId 보존 (센티널 없이 실제 값 유지)
+        params.set('teamId', updatedFilters.teamId);
       }
 
       // isShared (기본값 'all'이 아닐 때만)

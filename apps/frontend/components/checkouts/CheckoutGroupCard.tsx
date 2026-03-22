@@ -18,7 +18,6 @@ import {
   ArrowRight,
   Check,
   X,
-  Phone,
   CheckCheck,
 } from 'lucide-react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
@@ -26,6 +25,7 @@ import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgres
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { isConflictError } from '@/lib/api/error';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CheckoutStatusValues as CSVal,
@@ -190,13 +190,19 @@ function CheckoutGroupCard({
     onSuccess: () => {
       toast({ title: t('toasts.approveSuccess') });
     },
-    onError: () => {
-      toast({ title: t('toasts.approveError'), variant: 'destructive' });
+    onError: (error: unknown) => {
+      if (isConflictError(error)) {
+        toast({
+          title: t('toasts.versionConflict'),
+          description: t('toasts.versionConflictDesc'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: t('toasts.approveError'), variant: 'destructive' });
+      }
     },
     onSettled: () => {
-      CheckoutCacheInvalidation.APPROVAL_KEYS.forEach((key) => {
-        queryClient.invalidateQueries({ queryKey: key as unknown[] });
-      });
+      CheckoutCacheInvalidation.invalidateAfterApproval(queryClient);
     },
   });
 
@@ -456,17 +462,6 @@ function CheckoutGroupCard({
 
                         {(row.status === CSVal.CHECKED_OUT || row.status === CSVal.OVERDUE) && (
                           <>
-                            {row.status === CSVal.OVERDUE && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.urgent}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Phone className="h-3 w-3" />
-                                {t('actions.urgentContact')}
-                              </Button>
-                            )}
                             <Link
                               href={FRONTEND_ROUTES.CHECKOUTS.RETURN(row.checkoutId)}
                               onClick={(e) => e.stopPropagation()}

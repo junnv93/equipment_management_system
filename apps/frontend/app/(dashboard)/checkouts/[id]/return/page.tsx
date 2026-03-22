@@ -37,14 +37,14 @@ type PageProps = {
  * 반입 허용 상태 확인
  */
 function canReturn(status: string, purpose: string): boolean {
-  // 교정/수리: checked_out 상태에서 반입 가능
+  // 교정/수리: checked_out 또는 overdue 상태에서 반입 가능
   if (purpose === CPVal.CALIBRATION || purpose === CPVal.REPAIR) {
-    return status === CSVal.CHECKED_OUT;
+    return status === CSVal.CHECKED_OUT || status === CSVal.OVERDUE;
   }
 
-  // 대여: lender_received 상태에서 반입 가능 (4단계 확인 완료 후)
+  // 대여: lender_received 또는 overdue 상태에서 반입 가능 (4단계 확인 완료 후)
   if (purpose === CPVal.RENTAL) {
-    return status === CSVal.LENDER_RECEIVED;
+    return status === CSVal.LENDER_RECEIVED || status === CSVal.OVERDUE;
   }
 
   return false;
