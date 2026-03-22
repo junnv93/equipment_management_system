@@ -30,9 +30,10 @@ import type { CalibrationHistory } from '@/lib/api/calibration-api';
 interface Props {
   data: CalibrationHistory[];
   isLoading: boolean;
+  canRegister?: boolean;
 }
 
-export default function CalibrationListTable({ data, isLoading }: Props) {
+export default function CalibrationListTable({ data, isLoading, canRegister = true }: Props) {
   const t = useTranslations('calibration');
   const router = useRouter();
   const { fmtDate } = useDateFormatter();
@@ -76,7 +77,7 @@ export default function CalibrationListTable({ data, isLoading }: Props) {
   return (
     <div className={CALIBRATION_TABLE.wrapper}>
       <Table>
-        <TableHeader>
+        <TableHeader className={CALIBRATION_TABLE.stickyHeader}>
           <TableRow>
             <TableHead>{t('content.table.equipmentName')}</TableHead>
             <TableHead>{t('content.table.managementNumber')}</TableHead>
@@ -85,7 +86,9 @@ export default function CalibrationListTable({ data, isLoading }: Props) {
             <TableHead>{t('content.table.nextCalibrationDate')}</TableHead>
             <TableHead>{t('content.table.calibrationAgency')}</TableHead>
             <TableHead>{t('content.table.status')}</TableHead>
-            <TableHead className="text-right">{t('content.table.action')}</TableHead>
+            {canRegister && (
+              <TableHead className="text-right">{t('content.table.action')}</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -98,7 +101,10 @@ export default function CalibrationListTable({ data, isLoading }: Props) {
             const rowClasses = getCalibrationRowClasses(item.approvalStatus);
 
             return (
-              <TableRow key={item.id} className={`${CALIBRATION_TABLE.rowHover} ${rowClasses}`}>
+              <TableRow
+                key={item.id}
+                className={`${CALIBRATION_TABLE.stripe} ${CALIBRATION_TABLE.rowHover} ${rowClasses}`}
+              >
                 <TableCell className="font-medium">
                   <Link href={`/equipment/${item.equipmentId}`} className={CALIBRATION_TABLE.link}>
                     {item.equipmentName}
@@ -118,18 +124,20 @@ export default function CalibrationListTable({ data, isLoading }: Props) {
                 <TableCell>
                   <span className={ddayClasses}>{ddayLabel}</span>
                 </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      router.push(`/calibration/register?equipmentId=${item.equipmentId}`)
-                    }
-                  >
-                    <Clock className="h-4 w-4 mr-1" />
-                    {t('content.table.registerCalibration')}
-                  </Button>
-                </TableCell>
+                {canRegister && (
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        router.push(`/calibration/register?equipmentId=${item.equipmentId}`)
+                      }
+                    >
+                      <Clock className="h-4 w-4 mr-1" />
+                      {t('content.table.registerCalibration')}
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}

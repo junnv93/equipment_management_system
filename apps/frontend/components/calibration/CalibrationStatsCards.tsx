@@ -1,8 +1,15 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
+import { Card, CardContent } from '@/components/ui/card';
 import { useTranslations } from 'next-intl';
-import { CALIBRATION_STATS_TEXT, getKpiCounterClasses } from '@/lib/design-tokens';
+import {
+  CALIBRATION_STATS_TEXT,
+  CALIBRATION_KPI,
+  getCalibrationKpiStaggerStyle,
+  getCalibrationKpiAccentClasses,
+  type CalibrationStatsType,
+} from '@/lib/design-tokens';
 
 interface Stats {
   total: number;
@@ -15,62 +22,110 @@ interface Props {
   stats: Stats;
 }
 
+/**
+ * KPI 카드별 네비게이션 목적지
+ *
+ * - total: 전체 장비 목록
+ * - compliant: 네비게이션 없음 (total - overdue 파생값이므로 단일 필터 불가)
+ * - overdue: 교정 기한 초과 장비 필터
+ * - upcoming: 교정 예정 장비 필터
+ */
+const KPI_LINKS: Record<CalibrationStatsType, string | null> = {
+  total: '/equipment',
+  compliant: null,
+  overdue: '/equipment?status=calibration_overdue',
+  upcoming: '/equipment?status=calibration_scheduled',
+};
+
+function KpiCard({
+  type,
+  staggerIndex,
+  children,
+}: {
+  type: CalibrationStatsType;
+  staggerIndex: number;
+  children: React.ReactNode;
+}) {
+  const href = KPI_LINKS[type];
+  const cardClasses = `${CALIBRATION_KPI.card.base} ${getCalibrationKpiAccentClasses(type)} ${CALIBRATION_KPI.stagger}`;
+
+  if (href) {
+    return (
+      <Link href={href} className="block no-underline">
+        <Card
+          className={`${cardClasses} cursor-pointer`}
+          style={getCalibrationKpiStaggerStyle(staggerIndex)}
+        >
+          {children}
+        </Card>
+      </Link>
+    );
+  }
+
+  return (
+    <Card className={cardClasses} style={getCalibrationKpiStaggerStyle(staggerIndex)}>
+      {children}
+    </Card>
+  );
+}
+
 export default function CalibrationStatsCards({ stats }: Props) {
   const t = useTranslations('calibration');
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {t('content.stats.total')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`text-2xl ${getKpiCounterClasses()} ${CALIBRATION_STATS_TEXT.total}`}>
-            {t('content.stats.unit', { count: stats.total })}
+    <div className={CALIBRATION_KPI.grid}>
+      {/* Hero Card — 전체 관리 장비 (1.8fr) */}
+      <KpiCard type="total" staggerIndex={0}>
+        <CardContent className="pt-5 pb-4">
+          <div className={CALIBRATION_KPI.label}>{t('content.stats.total')}</div>
+          <div className={CALIBRATION_KPI.hero.value}>
+            {stats.total}
+            <span className={CALIBRATION_KPI.hero.unit}>{t('content.stats.unitSuffix')}</span>
+          </div>
+          <div className={CALIBRATION_KPI.hero.sub}>
+            {t('content.stats.compliant')}{' '}
+            <span className={CALIBRATION_KPI.hero.subOk}>{stats.compliant}</span>
+            {' · '}
+            {t('content.stats.overdue')}{' '}
+            <span className={CALIBRATION_KPI.hero.subCritical}>{stats.overdue}</span>
+            {' · '}
+            {t('content.stats.upcoming')} {stats.upcoming}
           </div>
         </CardContent>
-      </Card>
+      </KpiCard>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {t('content.stats.compliant')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`text-2xl ${getKpiCounterClasses()} ${CALIBRATION_STATS_TEXT.compliant}`}>
-            {t('content.stats.unit', { count: stats.compliant })}
+      {/* Compact — 교정 적합 (링크 없음: total - overdue 파생값) */}
+      <KpiCard type="compliant" staggerIndex={1}>
+        <CardContent className="pt-5 pb-4">
+          <div className={CALIBRATION_KPI.label}>{t('content.stats.compliant')}</div>
+          <div className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.compliant}`}>
+            {stats.compliant}
+            <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
         </CardContent>
-      </Card>
+      </KpiCard>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {t('content.stats.overdue')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`text-2xl ${getKpiCounterClasses()} ${CALIBRATION_STATS_TEXT.overdue}`}>
-            {t('content.stats.unit', { count: stats.overdue })}
+      {/* Compact — 기한 초과 */}
+      <KpiCard type="overdue" staggerIndex={2}>
+        <CardContent className="pt-5 pb-4">
+          <div className={CALIBRATION_KPI.label}>{t('content.stats.overdue')}</div>
+          <div className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.overdue}`}>
+            {stats.overdue}
+            <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
         </CardContent>
-      </Card>
+      </KpiCard>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {t('content.stats.upcoming')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`text-2xl ${getKpiCounterClasses()} ${CALIBRATION_STATS_TEXT.upcoming}`}>
-            {t('content.stats.unit', { count: stats.upcoming })}
+      {/* Compact — 교정 예정 (30일) */}
+      <KpiCard type="upcoming" staggerIndex={3}>
+        <CardContent className="pt-5 pb-4">
+          <div className={CALIBRATION_KPI.label}>{t('content.stats.upcoming')}</div>
+          <div className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.upcoming}`}>
+            {stats.upcoming}
+            <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
         </CardContent>
-      </Card>
+      </KpiCard>
     </div>
   );
 }

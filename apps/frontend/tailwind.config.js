@@ -214,6 +214,12 @@ module.exports = {
           '0%, 100%': { opacity: '1', boxShadow: '0 0 0 0 hsl(var(--primary) / 0.4)' },
           '50%': { opacity: '0.85', boxShadow: '0 0 0 6px hsl(var(--primary) / 0)' },
         },
+        // Timeline step waiting — persistent ring that barely breathes (5s cycle)
+        // Ring is ALWAYS visible (3px→5px), never disappears. Opacity change is minimal.
+        'timeline-glow': {
+          '0%, 100%': { boxShadow: '0 0 0 3px hsl(var(--brand-color-info) / 0.12)' },
+          '50%': { boxShadow: '0 0 0 5px hsl(var(--brand-color-info) / 0.06)' },
+        },
         staggerFadeIn: {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
@@ -296,12 +302,15 @@ module.exports = {
         'approval-exit-success': 'approval-exit-success 0.6s ease-out forwards',
         'approval-exit-reject': 'approval-exit-reject 0.5s ease-out forwards',
         'approval-pulse-dot': 'approval-pulse-dot 2s ease-in-out infinite',
+        'timeline-glow': 'timeline-glow 5s ease-in-out infinite',
         'approval-ring-pop': 'approval-ring-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both',
         'approval-ring-expand': 'approval-ring-expand 1.5s ease-out 0.6s both',
         'approval-check-draw': 'approval-check-draw 0.4s ease-out 0.4s both',
         'approval-text-up-1': 'approval-text-up 0.4s ease-out 0.5s both',
         'approval-text-up-2': 'approval-text-up 0.4s ease-out 0.6s both',
         'approval-text-up-3': 'approval-text-up 0.4s ease-out 0.7s both',
+        // Calibration KPI stagger
+        'stagger-fade-in': 'staggerFadeIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) both',
       },
     },
   },

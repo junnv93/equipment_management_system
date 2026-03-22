@@ -78,7 +78,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CANCEL_CHECKOUT, // 반출 취소
     // 교정 관리
     Permission.VIEW_CALIBRATIONS,
-    // CREATE_CALIBRATION 제거: UL-QP-18에 따라 시험실무자만 교정 등록 가능
+    Permission.CREATE_CALIBRATION, // 교정 등록 (시험실무자 + 기술책임자)
     Permission.UPDATE_CALIBRATION,
     Permission.APPROVE_CALIBRATION, // 교정 승인 권한
     Permission.VIEW_CALIBRATION_REQUESTS, // 교정 승인 대기 목록 조회
@@ -163,7 +163,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
   // 시험소장: 명시적 화이트리스트 (UL-QP-18 등록/승인 완전 분리)
   // ⚠️ 새 권한 추가 시 의도적으로 여기에도 추가해야 함 (블랙리스트 자동 부여 방지)
-  // 제외: CREATE_CALIBRATION (시험실무자 전용), MANAGE_SYSTEM_SETTINGS (시스템관리자 전용)
+  // 제외: CREATE_CALIBRATION (시험실무자/기술책임자만 가능), MANAGE_SYSTEM_SETTINGS (시스템관리자 전용)
   // 제외: DEPRECATED 권한 (VIEW_RENTAL_IMPORTS 등)
   lab_manager: [
     // 장비 관리
@@ -184,7 +184,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.START_CHECKOUT,
     Permission.COMPLETE_CHECKOUT,
     Permission.CANCEL_CHECKOUT,
-    // 교정 관리 (CREATE_CALIBRATION 제외 — UL-QP-18 직무분리)
+    // 교정 관리 (CREATE_CALIBRATION 제외 — 시험실무자/기술책임자만 가능)
     Permission.VIEW_CALIBRATIONS,
     Permission.UPDATE_CALIBRATION,
     Permission.DELETE_CALIBRATION,
@@ -254,12 +254,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.MANAGE_SYSTEM_SETTINGS,
   ],
 
-  // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION - deprecated
+  // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION(시험실무자/기술책임자만) - deprecated
   // ⚠️ 의도적 블랙리스트: 새 Permission 추가 시 system_admin에 자동 부여됨
   // (lab_manager는 화이트리스트이므로 새 권한을 수동 추가해야 함)
   system_admin: [
     ...(() => {
-      // 모든 비-deprecated 권한에서 CREATE_CALIBRATION만 제외
+      // 모든 비-deprecated 권한에서 CREATE_CALIBRATION만 제외 (시험실무자/기술책임자만 가능)
       const deprecated = new Set([
         Permission.VIEW_RENTAL_IMPORTS,
         Permission.CREATE_RENTAL_IMPORT,

@@ -8,6 +8,8 @@ import { CALIBRATION_ALERT_TOKENS, getTransitionClasses } from '@/lib/design-tok
 interface CalibrationAlertBannersProps {
   overdue: number;
   upcoming: number;
+  onOverdueAction?: () => void;
+  onUpcomingAction?: () => void;
 }
 
 /**
@@ -16,11 +18,13 @@ interface CalibrationAlertBannersProps {
  * - 교정기한 초과 배너: overdue > 0 (UL-QP-18: 사용 금지 대상)
  * - 교정 예정 배너: upcoming > 0 (30일 이내)
  *
- * 프레젠테이셔널 컴포넌트 — 부모가 stats 전달
+ * 프레젠테이셔널 컴포넌트 — 부모가 stats + 액션 콜백 전달
  */
 export default function CalibrationAlertBanners({
   overdue,
   upcoming,
+  onOverdueAction,
+  onUpcomingAction,
 }: CalibrationAlertBannersProps) {
   const t = useTranslations('calibration');
   const [overdueVisible, setOverdueVisible] = useState(true);
@@ -44,11 +48,7 @@ export default function CalibrationAlertBanners({
           <button
             type="button"
             className={CALIBRATION_ALERT_TOKENS.overdue.action}
-            onClick={() => {
-              document
-                .querySelector('[role="tabpanel"]')
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}
+            onClick={onOverdueAction}
           >
             {t('alerts.overdueAction')}
           </button>
@@ -58,7 +58,8 @@ export default function CalibrationAlertBanners({
             onClick={() => setOverdueVisible(false)}
             aria-label="배너 닫기"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">{t('alerts.closeBanner')}</span>
           </button>
         </div>
       )}
@@ -72,7 +73,7 @@ export default function CalibrationAlertBanners({
           <button
             type="button"
             className={CALIBRATION_ALERT_TOKENS.upcoming.action}
-            onClick={() => setUpcomingVisible(false)}
+            onClick={onUpcomingAction}
           >
             {t('alerts.upcomingAction')}
           </button>
@@ -82,7 +83,8 @@ export default function CalibrationAlertBanners({
             onClick={() => setUpcomingVisible(false)}
             aria-label="배너 닫기"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">{t('alerts.closeBanner')}</span>
           </button>
         </div>
       )}

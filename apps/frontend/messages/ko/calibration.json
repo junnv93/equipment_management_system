@@ -83,7 +83,8 @@
       "technicalManager": "기술책임자",
       "qualityManager": "품질책임자",
       "labManager": "시험소장",
-      "ariaConfirmReview": "교정계획서 확인 완료"
+      "ariaConfirmReview": "교정계획서 확인 완료",
+      "ariaLabel": "3단계 승인 타임라인"
     },
     "rejection": {
       "title": "반려됨",
@@ -203,7 +204,8 @@
     "overdueTitle": "교정 기한이 초과된 장비가 {count}대 있습니다. UL-QP-18에 따라 해당 장비는 사용이 제한됩니다.",
     "overdueAction": "기한 초과 장비 확인",
     "upcomingTitle": "30일 이내 교정이 필요한 장비가 {count}대 있습니다.",
-    "upcomingAction": "교정 예정 장비 확인"
+    "upcomingAction": "교정 예정 장비 확인",
+    "closeBanner": "배너 닫기"
   },
   "content": {
     "registerButton": "교정 정보 등록",
@@ -213,10 +215,13 @@
       "overdue": "교정 기한 초과",
       "upcoming": "30일 이내 교정 필요",
       "unit": "{count}대",
+      "unitSuffix": "대",
       "viewDetails": "확인하기"
     },
     "search": {
       "placeholder": "장비명, 관리번호 검색...",
+      "siteFilter": "시험소",
+      "allSites": "전체 시험소",
       "teamFilter": "팀 필터",
       "allTeams": "모든 팀",
       "searchLabel": "교정 기록 검색"
@@ -468,7 +473,8 @@
     },
     "detail": "상세",
     "kpi": {
-      "total": "전체"
+      "total": "전체",
+      "filterByStatus": "{status}: {count}건 — 클릭하여 필터 적용"
     }
   },
   "planCreate": {

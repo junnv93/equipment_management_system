@@ -155,9 +155,9 @@ export default function IntermediateChecksTab({
       </div>
 
       {/* 중간점검 목록 */}
-      <div className="border rounded-md">
+      <div className={CALIBRATION_TABLE.wrapper}>
         <Table>
-          <TableHeader>
+          <TableHeader className={CALIBRATION_TABLE.stickyHeader}>
             <TableRow>
               <TableHead>{t('content.intermediateChecks.table.status')}</TableHead>
               <TableHead>{t('content.intermediateChecks.table.checkDate')}</TableHead>
@@ -175,7 +175,10 @@ export default function IntermediateChecksTab({
               const style = getStatusStyle(check.intermediateCheckDate, t);
               const IconComponent = style.icon;
               return (
-                <TableRow key={check.id} className={CALIBRATION_TABLE.rowHover}>
+                <TableRow
+                  key={check.id}
+                  className={`${CALIBRATION_TABLE.stripe} ${CALIBRATION_TABLE.rowHover}`}
+                >
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <IconComponent className={`h-4 w-4 ${style.iconColor}`} />

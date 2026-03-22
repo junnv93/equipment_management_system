@@ -3,6 +3,12 @@
  *
  * ✅ Dynamic Hole: Suspense로 전체 컨텐츠 서버 스트리밍
  *
+ * 역할별 데이터 스코핑:
+ * - 백엔드 @SiteScoped 데코레이터가 JWT 기반으로 자동 필터링 (SSOT)
+ * - 프론트엔드는 session.user.teamId를 API 호출에 전달
+ * - URL 기반 buildRoleBasedRedirectUrl은 사용하지 않음
+ *   (장비/교정 페이지와 달리 checkout-filter-utils에 site/teamId 파싱이 없으므로)
+ *
  * 비즈니스 로직 (UL-QP-18):
  * - 장비 반출 요청 및 현황 관리
  * - 반출 목적: 교정, 수리, 대여(외부 대여는 2단계 승인 필요)

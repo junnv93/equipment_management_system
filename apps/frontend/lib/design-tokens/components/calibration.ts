@@ -22,6 +22,7 @@ import {
 import { type StatsVariant } from './dashboard';
 import { AlertCircle, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type React from 'react';
 
 // ============================================================================
 // 0. CALIBRATION_THRESHOLDS — D-day 임계값 SSOT
@@ -181,6 +182,82 @@ export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType | 'pending', st
 };
 
 // ============================================================================
+// 3-1. CALIBRATION_KPI — 비대칭 Hero KPI 그리드 (리디자인)
+// ============================================================================
+
+/**
+ * 교정 KPI 카드 스타일
+ *
+ * AP-01 fix: 비대칭 그리드 (Hero 1.8fr + Compact 1fr×3)
+ * AP-03 fix: 타이포 드라마 (Hero text-5xl, Compact text-3xl)
+ * AP-04 fix: raised elevation + hover lift
+ * AP-06 fix: stagger animation
+ */
+export const CALIBRATION_KPI = {
+  /** 비대칭 그리드 컨테이너 */
+  grid: 'grid grid-cols-1 md:grid-cols-[1.8fr_1fr_1fr_1fr] gap-4',
+
+  /** 카드 공통: raised elevation + hover lift */
+  card: {
+    base: [
+      'relative overflow-hidden',
+      'shadow-sm hover:shadow-md',
+      TRANSITION_PRESETS.fastShadowTransform,
+      'hover:-translate-y-0.5',
+    ].join(' '),
+    /** 상단 accent bar (3px) */
+    accentTotal:
+      'before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-brand-text-primary',
+    accentOk: 'before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-brand-ok',
+    accentCritical:
+      'before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-brand-critical',
+    accentWarning:
+      'before:absolute before:top-0 before:inset-x-0 before:h-[3px] before:bg-brand-warning',
+  },
+
+  /** Hero (전체 관리 장비) */
+  hero: {
+    value: 'text-5xl font-mono tabular-nums font-semibold text-foreground leading-none',
+    unit: 'text-base font-medium text-muted-foreground ml-1',
+    sub: 'text-sm text-muted-foreground mt-2',
+    subOk: 'text-brand-ok font-semibold',
+    subCritical: 'text-brand-critical font-semibold',
+  },
+
+  /** Compact (적합/기한초과/교정예정) */
+  compact: {
+    value: 'text-3xl font-mono tabular-nums font-semibold leading-none',
+    unit: 'text-xs font-normal text-muted-foreground ml-0.5',
+  },
+
+  /** 라벨 */
+  label: 'text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2',
+
+  /** 스태거: motion-safe에서만 애니메이션 적용 */
+  stagger: 'motion-safe:animate-stagger-fade-in motion-safe:opacity-0',
+} as const;
+
+/**
+ * Utility: KPI 카드 스태거 딜레이 (60ms 간격)
+ */
+export function getCalibrationKpiStaggerStyle(index: number): React.CSSProperties {
+  return { animationDelay: `${index * 60}ms` };
+}
+
+/**
+ * Utility: KPI 카드 accent 클래스
+ */
+export function getCalibrationKpiAccentClasses(type: CalibrationStatsType): string {
+  const map: Record<CalibrationStatsType, string> = {
+    total: CALIBRATION_KPI.card.accentTotal,
+    compliant: CALIBRATION_KPI.card.accentOk,
+    overdue: CALIBRATION_KPI.card.accentCritical,
+    upcoming: CALIBRATION_KPI.card.accentWarning,
+  };
+  return map[type];
+}
+
+// ============================================================================
 // 4. CALIBRATION_TAB_COLORS — 탭별 색상
 // ============================================================================
 
@@ -241,13 +318,25 @@ export const CALIBRATION_MOTION = {
 
 /**
  * 교정 테이블 스타일 (EQUIPMENT_TABLE_TOKENS 패턴 참조)
+ *
+ * AP-07 fix: stripe + sticky header + hover accent bar
  */
 export const CALIBRATION_TABLE = {
-  /** 테이블 외부 컨테이너 */
-  wrapper: 'border rounded-md',
+  /** 테이블 외부 컨테이너: raised elevation */
+  wrapper: 'border rounded-lg shadow-sm overflow-hidden',
 
-  /** Row hover */
-  rowHover: ['hover:bg-muted/50 dark:hover:bg-muted/50', CALIBRATION_MOTION.tableRow].join(' '),
+  /** Sticky header */
+  stickyHeader: 'sticky top-0 z-10 bg-background',
+
+  /** Alternate row stripe */
+  stripe: 'even:bg-muted/30 dark:even:bg-muted/20',
+
+  /** Row hover: accent bar (left inset shadow) + background */
+  rowHover: [
+    'hover:bg-brand-info/[0.04] dark:hover:bg-brand-info/[0.06]',
+    'hover:shadow-[inset_3px_0_0_hsl(var(--brand-color-info))]',
+    CALIBRATION_MOTION.tableRow,
+  ].join(' '),
 
   /** 숫자 컬럼 (tabular-nums for Web Interface Guidelines) */
   numericColumn: 'tabular-nums',
@@ -395,8 +484,8 @@ export const CALIBRATION_TIMELINE = {
 
   /** 월별 세그먼트 바 */
   segment: {
-    /** 공통 기반 (높이는 인라인 style로) */
-    base: `w-full rounded-sm ${TRANSITION_PRESETS.fastOpacity}`,
+    /** 공통 기반 (높이는 인라인 style로) — AP-08 fix: focus-visible ring */
+    base: `w-full rounded-sm ${TRANSITION_PRESETS.fastOpacity} focus-visible:ring-2 focus-visible:ring-brand-info focus-visible:ring-offset-1 focus-visible:outline-none`,
     overdue: 'bg-brand-critical',
     warning: 'bg-brand-warning',
     ok: 'bg-brand-ok',
@@ -510,7 +599,7 @@ export function getCalibrationDdayClasses(days: number | null | undefined): stri
  */
 export function getCalibrationDdayLabel(days: number | null | undefined): string {
   if (days === null || days === undefined) return '-';
-  if (days < 0) return `-${Math.abs(days)}일`;
+  if (days < 0) return `D+${Math.abs(days)}`;
   if (days === 0) return 'D-Day';
   return `D-${days}`;
 }

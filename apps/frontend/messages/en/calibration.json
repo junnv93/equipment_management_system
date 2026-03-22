@@ -83,7 +83,8 @@
       "technicalManager": "Technical Manager",
       "qualityManager": "Quality Manager",
       "labManager": "Lab Manager",
-      "ariaConfirmReview": "Confirm calibration plan review"
+      "ariaConfirmReview": "Confirm calibration plan review",
+      "ariaLabel": "3-step approval timeline"
     },
     "rejection": {
       "title": "Rejected",
@@ -203,7 +204,8 @@
     "overdueTitle": "{count} equipment units have exceeded their calibration deadline. Per UL-QP-18, these units are restricted from use.",
     "overdueAction": "View overdue equipment",
     "upcomingTitle": "{count} equipment units require calibration within 30 days.",
-    "upcomingAction": "View upcoming calibrations"
+    "upcomingAction": "View upcoming calibrations",
+    "closeBanner": "Close banner"
   },
   "content": {
     "registerButton": "Register Calibration",
@@ -213,10 +215,13 @@
       "overdue": "Calibration Overdue",
       "upcoming": "Due Within 30 Days",
       "unit": "{count} units",
+      "unitSuffix": "units",
       "viewDetails": "View Details"
     },
     "search": {
       "placeholder": "Search equipment name, management number...",
+      "siteFilter": "Site",
+      "allSites": "All Sites",
       "teamFilter": "Team Filter",
       "allTeams": "All Teams",
       "searchLabel": "Search calibration records"
@@ -468,7 +473,8 @@
     },
     "detail": "Detail",
     "kpi": {
-      "total": "Total"
+      "total": "Total",
+      "filterByStatus": "{status}: {count} — Click to filter"
     }
   },
   "planCreate": {

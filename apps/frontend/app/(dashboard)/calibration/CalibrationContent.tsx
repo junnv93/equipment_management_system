@@ -50,6 +50,9 @@ import { useTranslations } from 'next-intl';
 import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
+import { SITE_LABELS, type Site, type UserRole } from '@equipment-management/schemas';
+import { useSession } from 'next-auth/react';
+import { hasPermission, Permission } from '@equipment-management/shared-constants';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
 import CalibrationTimeline, {
   type CalibrationTimelineItem,
@@ -86,6 +89,7 @@ export default function CalibrationContent({
   const {
     filters,
     updateSearch,
+    updateSite,
     updateTeamId,
     updateTab,
     updateApprovalStatus,
@@ -97,6 +101,10 @@ export default function CalibrationContent({
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const canCreateCalibration = session?.user?.role
+    ? hasPermission(session.user.role as UserRole, Permission.CREATE_CALIBRATION)
+    : false;
 
   // 중간점검 완료 다이얼로그 상태
   const [selectedCheck, setSelectedCheck] = useState<IntermediateCheckItem | null>(null);
@@ -248,15 +256,22 @@ export default function CalibrationContent({
         title={t('title')}
         subtitle={t('subtitle')}
         actions={
-          <Button onClick={() => router.push('/calibration/register')}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('content.registerButton')}
-          </Button>
+          canCreateCalibration ? (
+            <Button onClick={() => router.push('/calibration/register')}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('content.registerButton')}
+            </Button>
+          ) : undefined
         }
       />
 
       {/* Alert Banner (교정기한 초과 / 30일 이내 교정 예정) */}
-      <CalibrationAlertBanners overdue={stats.overdue} upcoming={stats.upcoming} />
+      <CalibrationAlertBanners
+        overdue={stats.overdue}
+        upcoming={stats.upcoming}
+        onOverdueAction={() => router.push('/equipment?status=calibration_overdue')}
+        onUpcomingAction={() => router.push('/equipment?status=calibration_scheduled')}
+      />
 
       {/* 통계 카드 */}
       <CalibrationStatsCards stats={stats} />
@@ -279,6 +294,30 @@ export default function CalibrationContent({
         </div>
 
         <div className={CALIBRATION_FILTER_BAR.divider} aria-hidden="true" />
+
+        {/* 사이트 필터 */}
+        <Select
+          value={filters.site || '_all'}
+          onValueChange={(v) => updateSite((v === '_all' ? '' : v) as Site | '')}
+        >
+          <SelectTrigger
+            className="h-8 w-[120px] text-xs"
+            aria-label={t('content.search.siteFilter')}
+          >
+            <div className="flex items-center gap-1.5">
+              <Filter className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <SelectValue placeholder={t('content.search.siteFilter')} />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">{t('content.search.allSites')}</SelectItem>
+            {Object.entries(SITE_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* 팀 필터 */}
         <Select
@@ -363,6 +402,16 @@ export default function CalibrationContent({
         {countActiveFilters(filters) > 0 && (
           <>
             <div className={CALIBRATION_FILTER_BAR.divider} aria-hidden="true" />
+            {filters.site && (
+              <button
+                type="button"
+                className={CALIBRATION_FILTER_BAR.tag}
+                onClick={() => updateSite('')}
+              >
+                {SITE_LABELS[filters.site as keyof typeof SITE_LABELS]}
+                <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
+              </button>
+            )}
             {filters.teamId && (
               <button
                 type="button"
@@ -435,7 +484,11 @@ export default function CalibrationContent({
         <TabsContent value="list" className={`mt-0 ${CALIBRATION_TAB_TRANSITION}`}>
           <CalibrationTimeline items={timelineItems} />
           <div className="mt-4">
-            <CalibrationListTable data={listData} isLoading={isHistoryLoading} />
+            <CalibrationListTable
+              data={listData}
+              isLoading={isHistoryLoading}
+              canRegister={canCreateCalibration}
+            />
           </div>
         </TabsContent>
 
