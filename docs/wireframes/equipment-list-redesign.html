@@ -1,1271 +1,1064 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>장비 목록 — Command Center 와이어프레임</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap');
-
-    :root {
-      --bg:       #0f1117;
-      --surface:  #16191f;
-      --elevated: #1e2228;
-      --border:   #2a2d35;
-      --border-strong: #3a3d47;
-      --text-primary: #e8eaf0;
-      --text-secondary: #8b8fa8;
-      --text-tertiary: #545769;
-      --accent:   #4f8cff;
-      --accent-dim: rgba(79,140,255,0.12);
-      --ok:       #22c55e;
-      --ok-dim:   rgba(34,197,94,0.15);
-      --warn:     #f59e0b;
-      --warn-dim: rgba(245,158,11,0.15);
-      --danger:   #ef4444;
-      --danger-dim: rgba(239,68,68,0.15);
-      --mono: 'IBM Plex Mono', monospace;
-      --sans: 'IBM Plex Sans KR', sans-serif;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text-primary);
-      min-height: 100vh;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    /* ── 레이블 ── */
-    .label {
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-tertiary);
-      font-family: var(--mono);
-      font-weight: 500;
-    }
-
-    /* ════════════════════════════════════
-       LAYOUT
-    ════════════════════════════════════ */
-    .shell {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      min-height: 100vh;
-    }
-
-    /* ── 상단 헤더 ── */
-    .top-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      height: 52px;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .breadcrumb {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .breadcrumb .current {
-      color: var(--text-primary);
-      font-weight: 500;
-    }
-
-    .breadcrumb .sep { color: var(--text-tertiary); }
-
-    .page-stat {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--text-tertiary);
-      padding: 3px 8px;
-      background: var(--elevated);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-    }
-
-    .top-bar-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* ── 메인 콘텐츠 ── */
-    .content-area {
-      display: grid;
-      grid-template-columns: 200px 1fr;
-      overflow: hidden;
-    }
-
-    /* ════════════════════════════════════
-       LEFT STATUS NAVIGATOR
-    ════════════════════════════════════ */
-    .status-nav {
-      border-right: 1px solid var(--border);
-      background: var(--surface);
-      padding: 16px 0;
-      overflow-y: auto;
-    }
-
-    .status-nav-section {
-      padding: 0 12px 16px;
-    }
-
-    .status-nav-section + .status-nav-section {
-      border-top: 1px solid var(--border);
-      padding-top: 16px;
-    }
-
-    .status-nav-title {
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-tertiary);
-      font-family: var(--mono);
-      padding: 0 4px;
-      margin-bottom: 8px;
-    }
-
-    .status-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 150ms;
-      border: 1px solid transparent;
-    }
-
-    .status-item:hover {
-      background: var(--elevated);
-    }
-
-    .status-item.active {
-      background: var(--accent-dim);
-      border-color: rgba(79,140,255,0.25);
-    }
-
-    .status-item-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-width: 0;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .status-name {
-      font-size: 12px;
-      color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .status-count {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      flex-shrink: 0;
-    }
-
-    .status-count.critical {
-      color: var(--danger);
-    }
-
-    /* 위기 상태 아이템 */
-    .status-item.is-critical {
-      background: var(--danger-dim);
-      border-color: rgba(239,68,68,0.2);
-    }
-
-    .status-item.is-critical .status-name {
-      color: #fca5a5;
-    }
-
-    .status-item.is-warning {
-      background: var(--warn-dim);
-      border-color: rgba(245,158,11,0.2);
-    }
-
-    .status-item.is-warning .status-name {
-      color: #fcd34d;
-    }
-
-    /* 구분선 전 합계 */
-    .total-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      margin: 0 0 12px;
-      border-radius: 6px;
-      background: var(--elevated);
-      cursor: pointer;
-    }
-
-    .total-label {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .total-count {
-      font-family: var(--mono);
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    /* ════════════════════════════════════
-       RIGHT CONTENT AREA
-    ════════════════════════════════════ */
-    .right-panel {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--bg);
-    }
-
-    /* ── 긴급 알림 배너 ── */
-    .alert-banner {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 8px 20px;
-      background: rgba(239,68,68,0.08);
-      border-bottom: 1px solid rgba(239,68,68,0.2);
-    }
-
-    .alert-banner-label {
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--danger);
-      font-family: var(--mono);
-      font-weight: 600;
-      flex-shrink: 0;
-    }
-
-    .alert-chips {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .alert-chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 10px;
-      border-radius: 100px;
-      font-size: 11px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 150ms;
-    }
-
-    .alert-chip:hover { opacity: 0.8; }
-
-    .alert-chip.danger {
-      background: rgba(239,68,68,0.2);
-      color: #fca5a5;
-      border: 1px solid rgba(239,68,68,0.3);
-    }
-
-    .alert-chip.warning {
-      background: rgba(245,158,11,0.2);
-      color: #fcd34d;
-      border: 1px solid rgba(245,158,11,0.3);
-    }
-
-    .alert-chip .chip-count {
-      font-family: var(--mono);
-      font-weight: 700;
-    }
-
-    .alert-chip .chip-icon { font-size: 10px; }
-
-    /* ── Command Bar ── */
-    .command-bar {
-      padding: 10px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    .command-bar-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .search-box {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 10px;
-      height: 34px;
-      background: var(--elevated);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      width: 220px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      flex-shrink: 0;
-    }
-
-    .search-icon { color: var(--text-tertiary); font-size: 12px; }
-
-    .search-shortcut {
-      margin-left: auto;
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--text-tertiary);
-      background: var(--border);
-      padding: 1px 5px;
-      border-radius: 3px;
-    }
-
-    .filter-sep {
-      width: 1px;
-      height: 20px;
-      background: var(--border);
-      flex-shrink: 0;
-    }
-
-    .filter-select {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 10px;
-      height: 34px;
-      background: var(--elevated);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      white-space: nowrap;
-      transition: border-color 150ms;
-    }
-
-    .filter-select:hover {
-      border-color: var(--border-strong);
-      color: var(--text-primary);
-    }
-
-    .filter-select.has-value {
-      border-color: rgba(79,140,255,0.4);
-      color: var(--accent);
-      background: var(--accent-dim);
-    }
-
-    .filter-select .arrow {
-      font-size: 9px;
-      color: var(--text-tertiary);
-      margin-left: 2px;
-    }
-
-    .more-filters-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 10px;
-      height: 34px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 12px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      background: transparent;
-      white-space: nowrap;
-    }
-
-    .more-filters-btn:hover {
-      background: var(--elevated);
-      color: var(--text-primary);
-    }
-
-    .filter-badge {
-      background: var(--accent);
-      color: white;
-      border-radius: 100px;
-      font-size: 9px;
-      font-weight: 700;
-      padding: 0 5px;
-      min-width: 16px;
-      height: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .view-toggle-group {
-      display: flex;
-      margin-left: auto;
-      background: var(--elevated);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    .view-btn {
-      padding: 0 10px;
-      height: 32px;
-      font-size: 11px;
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      color: var(--text-secondary);
-    }
-
-    .view-btn.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-    }
-
-    /* 활성 필터 칩 */
-    .active-filters-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
-
-    .active-chip {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px 2px 8px;
-      border-radius: 100px;
-      font-size: 11px;
-      background: var(--elevated);
-      border: 1px solid var(--border);
-      color: var(--text-secondary);
-    }
-
-    .active-chip-remove {
-      color: var(--text-tertiary);
-      font-size: 10px;
-      cursor: pointer;
-      margin-left: 2px;
-    }
-
-    .active-chip-remove:hover { color: var(--danger); }
-
-    .clear-all-btn {
-      font-size: 11px;
-      color: var(--text-tertiary);
-      cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    .clear-all-btn:hover {
-      color: var(--text-secondary);
-      background: var(--elevated);
-    }
-
-    /* ── 결과 정보 바 ── */
-    .results-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .results-info {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-    }
-
-    .results-total {
-      font-family: var(--mono);
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .results-range {
-      font-size: 11px;
-      color: var(--text-tertiary);
-    }
-
-    .sort-info {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 11px;
-      color: var(--text-tertiary);
-    }
-
-    .sort-key {
-      color: var(--text-secondary);
-      font-family: var(--mono);
-      font-size: 10px;
-    }
-
-    /* ── 테이블 ── */
-    .table-area {
-      flex: 1;
-      overflow: auto;
-      padding: 0 20px 16px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 12px;
-    }
-
-    thead tr {
-      background: var(--surface);
-      border-bottom: 2px solid var(--border-strong);
-    }
-
-    th {
-      padding: 8px 12px;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      text-align: left;
-      white-space: nowrap;
-      letter-spacing: 0.02em;
-    }
-
-    th.sortable {
-      cursor: pointer;
-    }
-
-    th.sortable:hover { color: var(--text-primary); }
-
-    th .sort-arrow {
-      margin-left: 4px;
-      font-size: 9px;
-      opacity: 0.5;
-    }
-
-    th .sort-arrow.active { opacity: 1; color: var(--accent); }
-
-    th.num { font-family: var(--mono); }
-
-    /* 상태 바 컬럼 */
-    th.status-bar-col, td.status-bar-col {
-      width: 4px;
-      padding: 0;
-    }
-
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 80ms;
-    }
-
-    tbody tr:hover { background: var(--surface); }
-
-    td {
-      padding: 10px 12px;
-      vertical-align: middle;
-    }
-
-    .status-bar {
-      display: block;
-      width: 4px;
-      height: 100%;
-      min-height: 42px;
-    }
-
-    .mgmt-num {
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 0.08em;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    .equip-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-
-    .equip-model {
-      font-size: 11px;
-      color: var(--text-tertiary);
-      margin-top: 1px;
-    }
-
-    .loc-text {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    /* 교정 기한 셀 */
-    .cal-date {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text-secondary);
-      display: block;
-    }
-
-    .cal-dday {
-      display: inline-block;
-      margin-top: 2px;
-      font-size: 10px;
-      font-weight: 700;
-      font-family: var(--mono);
-      padding: 1px 6px;
-      border-radius: 3px;
-    }
-
-    .cal-dday.ok { background: var(--ok-dim); color: #86efac; }
-    .cal-dday.warn { background: var(--warn-dim); color: #fcd34d; }
-    .cal-dday.overdue { background: var(--danger-dim); color: #fca5a5; }
-
-    /* 상태 배지 */
-    .status-badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-
-    .status-badge.available { background: var(--ok-dim); color: #86efac; }
-    .status-badge.in-use { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-    .status-badge.cal-scheduled { background: var(--warn-dim); color: #fcd34d; }
-    .status-badge.non-conform { background: var(--danger-dim); color: #fca5a5; }
-    .status-badge.checked-out { background: rgba(14,165,233,0.15); color: #7dd3fc; }
-
-    /* 뷰 버튼 */
-    .view-link {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--text-tertiary);
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: color 150ms, background 150ms;
-    }
-
-    .view-link:hover {
-      color: var(--accent);
-      background: var(--accent-dim);
-    }
-
-    /* ── 페이지네이션 ── */
-    .pagination-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 20px;
-      border-top: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    .page-size-select {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      color: var(--text-secondary);
-    }
-
-    .page-size-select select-stub {
-      padding: 2px 8px;
-      background: var(--elevated);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 11px;
-      color: var(--text-primary);
-    }
-
-    .page-btns {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-    }
-
-    .page-btn {
-      width: 28px;
-      height: 28px;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      background: transparent;
-      transition: background 100ms;
-    }
-
-    .page-btn:hover { background: var(--elevated); color: var(--text-primary); }
-    .page-btn.active { background: var(--accent); color: white; }
-
-    .page-info {
-      font-size: 11px;
-      color: var(--text-tertiary);
-      font-family: var(--mono);
-    }
-
-    /* ── 범례 ── */
-    .wireframe-legend {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 11px;
-      z-index: 100;
-      min-width: 220px;
-    }
-
-    .legend-title {
-      font-size: 9px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--text-tertiary);
-      font-family: var(--mono);
-      margin-bottom: 10px;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
-
-    .legend-num {
-      font-family: var(--mono);
-      color: var(--accent);
-      font-weight: 700;
-      flex-shrink: 0;
-      width: 16px;
-    }
-
-    .legend-desc { color: var(--text-secondary); line-height: 1.4; }
-
-    /* ── 주석 오버레이 ── */
-    .annotation {
-      position: absolute;
-      background: rgba(79,140,255,0.15);
-      border: 1px dashed rgba(79,140,255,0.5);
-      border-radius: 4px;
-      pointer-events: none;
-    }
-
-    .annotation-label {
-      position: absolute;
-      top: -18px;
-      left: 0;
-      font-family: var(--mono);
-      font-size: 9px;
-      color: var(--accent);
-      white-space: nowrap;
-      font-weight: 600;
-    }
-
-    /* ────────────────── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0 12px;
-      height: 32px;
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-      font-family: var(--sans);
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-      border: none;
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-    }
-
-    .btn-ghost:hover {
-      background: var(--elevated);
-      color: var(--text-primary);
-    }
-
-    /* 변경점 주석 뱃지 */
-    .change-note {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 1px 6px;
-      background: rgba(79,140,255,0.15);
-      border: 1px solid rgba(79,140,255,0.3);
-      border-radius: 3px;
-      font-size: 9px;
-      font-family: var(--mono);
-      color: var(--accent);
-      white-space: nowrap;
-    }
-
-    .shared-badge {
-      display: inline-block;
-      padding: 1px 5px;
-      background: rgba(99,102,241,0.2);
-      border: 1px solid rgba(99,102,241,0.3);
-      border-radius: 3px;
-      font-size: 9px;
-      color: #a5b4fc;
-      font-family: var(--mono);
-    }
-
-    .overdue-row {
-      background: rgba(239,68,68,0.04) !important;
-    }
-
-    .overdue-row:hover {
-      background: rgba(239,68,68,0.08) !important;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장비 목록 — 디자인 와이어프레임 v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== Layer 1: Primitives ========== */
+:root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* SSOT: brand.ts BRAND_COLORS_HEX */
+  --brand-ok: #10B981;
+  --brand-warning: #F59E0B;
+  --brand-critical: #EF4444;
+  --brand-info: #3B82F6;
+  --brand-neutral: #6B7280;
+  --brand-purple: #8B5CF6;
+  --brand-repair: #F97316;
+  --brand-temporary: #22B8CF;
+  --midnight: #122C49;
+
+  /* ========== Layer 2: Semantic ========== */
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-muted: #f1f5f9;
+  --bg-strip: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-placeholder: #94a3b8;
+  --border-default: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --border-strong: #94a3b8;
+
+  --shadow-flush: none;
+  --shadow-raised: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-floating: 0 8px 24px rgba(0,0,0,0.12);
+
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-moderate: 350ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --font-display: 'DM Sans', 'Noto Sans KR', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Noto Sans KR', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+.dark {
+  --bg-primary: #0f172a;
+  --bg-card: #1e293b;
+  --bg-muted: #1e293b;
+  --bg-strip: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-placeholder: #64748b;
+  --border-default: #334155;
+  --border-hover: #475569;
+  --border-strong: #64748b;
+  --shadow-raised: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-elevated: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-floating: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --bg-primary: #0f172a;
+    --bg-card: #1e293b;
+    --bg-muted: #1e293b;
+    --bg-strip: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-placeholder: #64748b;
+    --border-default: #334155;
+    --border-hover: #475569;
+    --border-strong: #64748b;
+    --shadow-raised: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 4px 12px rgba(0,0,0,0.25);
+    --shadow-floating: 0 8px 24px rgba(0,0,0,0.4);
+  }
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== Layout ========== */
+.page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+/* ========== Page Header ========== */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--space-3xl);
+}
+.page-header h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.page-header .subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.page-header-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* ========== Button ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 36px;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--brand-info);
+  outline-offset: 2px;
+}
+.btn-primary {
+  background: var(--midnight);
+  color: #fff;
+}
+.btn-primary:hover { background: #1a3d5e; box-shadow: var(--shadow-raised); }
+.btn-outline {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-color: var(--border-default);
+}
+.btn-outline:hover { border-color: var(--border-hover); box-shadow: var(--shadow-raised); }
+
+/* ========== Status Summary Strip ========== */
+.status-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--bg-strip);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: var(--space-xl);
+}
+.status-strip::-webkit-scrollbar { display: none; }
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 28px;
+}
+.status-chip:hover { background: var(--bg-muted); }
+.status-chip:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 1px; }
+.status-chip.active {
+  background: var(--bg-card);
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-raised);
+  font-weight: 600;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-count {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+}
+.status-count.critical { color: var(--brand-critical); }
+.status-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-default);
+  flex-shrink: 0;
+}
+
+/* ========== Command Bar ========== */
+.command-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+}
+.search-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 7px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  font-size: 13px;
+  color: var(--text-primary);
+  min-width: 200px;
+  max-width: 280px;
+  flex: 1;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.search-input:focus-within { border-color: var(--brand-info); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.search-input input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  width: 100%;
+}
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+  min-height: 34px;
+}
+.filter-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+.filter-btn:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 1px; }
+.filter-btn.active {
+  border-color: var(--brand-info);
+  color: var(--brand-info);
+  background: rgba(59,130,246,0.05);
+}
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--brand-info);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+}
+.view-toggle {
+  display: flex;
+  margin-left: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.view-toggle button {
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 34px;
+}
+.view-toggle button:focus-visible { outline: 2px solid var(--brand-info); outline-offset: -2px; }
+.view-toggle button.active { background: var(--bg-muted); color: var(--text-primary); }
+.view-toggle button + button { border-left: 1px solid var(--border-default); }
+
+/* ========== Results Info Bar ========== */
+.results-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--space-xs);
+  margin-bottom: var(--space-md);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.results-bar .sort-info {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-sm);
+}
+
+/* ========== Premium Table ========== */
+.table-container {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-raised);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead tr {
+  background: var(--bg-muted);
+  border-bottom: 2px solid var(--border-default);
+}
+th {
+  padding: 10px 12px;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--bg-muted);
+  z-index: 10;
+}
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+th.sortable:hover { color: var(--text-primary); }
+th.sortable:focus-visible { outline: 2px solid var(--brand-info); outline-offset: -2px; }
+th.sorted { color: var(--text-primary); }
+th .sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.4;
+}
+th.sorted .sort-icon { opacity: 1; color: var(--brand-info); }
+td { padding: 10px 12px; font-size: 13px; }
+.status-bar-cell {
+  width: 4px;
+  padding: 0 !important;
+}
+.status-bar-indicator {
+  display: block;
+  width: 4px;
+  height: 100%;
+  min-height: 48px;
+}
+tbody tr {
+  border-bottom: 1px solid var(--border-default);
+  transition: background var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+  cursor: pointer;
+}
+tbody tr:nth-child(even) { background: rgba(0,0,0,0.015); }
+.dark tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+tbody tr:hover {
+  background: rgba(59,130,246,0.03);
+  box-shadow: inset 4px 0 0 var(--brand-info);
+}
+.dark tbody tr:hover { background: rgba(59,130,246,0.08); }
+tbody tr:last-child { border-bottom: none; }
+.mgmt-number {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+.equip-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.equip-model {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.cal-date {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cal-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.cal-badge.overdue { background: rgba(239,68,68,0.1); color: var(--brand-critical); }
+.cal-badge.urgent { background: rgba(245,158,11,0.1); color: var(--brand-warning); }
+.cal-badge.ok { background: rgba(16,185,129,0.1); color: var(--brand-ok); }
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid;
+}
+.status-badge.available { background: rgba(16,185,129,0.08); color: var(--brand-ok); border-color: rgba(16,185,129,0.2); }
+.status-badge.in-use { background: rgba(59,130,246,0.08); color: var(--brand-info); border-color: rgba(59,130,246,0.2); }
+.status-badge.non-conforming { background: rgba(239,68,68,0.08); color: var(--brand-critical); border-color: rgba(239,68,68,0.2); }
+.status-badge.under-repair { background: rgba(249,115,22,0.08); color: var(--brand-repair); border-color: rgba(249,115,22,0.2); }
+.status-badge.retired { background: rgba(107,114,128,0.08); color: var(--brand-neutral); border-color: rgba(107,114,128,0.2); }
+
+/* Detail button */
+.detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  text-decoration: none;
+  min-height: 30px;
+}
+.detail-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); box-shadow: var(--shadow-raised); }
+.detail-btn:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 1px; }
+.shared-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(139,92,246,0.08);
+  color: var(--brand-purple);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* ========== Card Grid ========== */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-lg);
+}
+.equip-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-left: 4px solid var(--brand-ok);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+  cursor: pointer;
+  position: relative;
+}
+.equip-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-1px);
+}
+.equip-card:focus-within {
+  outline: 2px solid var(--brand-info);
+  outline-offset: 2px;
+}
+.equip-card.non-conforming { border-left-color: var(--brand-critical); }
+.equip-card.in-use { border-left-color: var(--brand-info); }
+.equip-card.under-repair { border-left-color: var(--brand-repair); }
+.equip-card.retired { border-left-color: var(--brand-neutral); }
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+.card-mgmt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.card-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.card-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-md);
+}
+.card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-meta-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-default);
+}
+.card-link {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.card-link:hover { color: var(--brand-info); }
+
+/* ========== Pagination ========== */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-xl);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.page-info { font-family: var(--font-mono); font-size: 12px; }
+.page-buttons {
+  display: flex;
+  gap: 2px;
+}
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 44px;
+  min-width: 44px;
+}
+.page-btn:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+.page-btn:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 1px; }
+.page-btn.active {
+  background: var(--midnight);
+  color: #fff;
+  border-color: var(--midnight);
+}
+
+/* ========== Dark Mode Toggle ========== */
+.theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-elevated);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+.theme-toggle:hover { box-shadow: var(--shadow-floating); }
+.theme-toggle:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 2px; }
+
+/* ========== Animations ========== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeInUp var(--duration-moderate) var(--ease-out) both;
+}
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+  .page-header { flex-direction: column; align-items: flex-start; gap: var(--space-md); }
+  .command-bar { flex-direction: column; }
+  .search-input { max-width: 100%; min-width: auto; }
+  .view-toggle { margin-left: 0; }
+  .hide-mobile { display: none !important; }
+  .card-grid { grid-template-columns: 1fr; }
+  .table-container { overflow-x: auto; }
+  table { min-width: 640px; }
+}
+
+/* ========== Section Spacing ========== */
+.view-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-placeholder);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-default);
+}
+</style>
 </head>
 <body>
-<div class="shell">
+<main class="page-container" role="main" aria-label="장비 목록">
 
-  <!-- ── TOP BAR ── -->
-  <header class="top-bar">
-    <div class="top-bar-left">
-      <div class="breadcrumb">
-        <span>대시보드</span>
-        <span class="sep">/</span>
-        <span class="current">장비 목록</span>
-      </div>
-      <span class="page-stat">전체 · 127개 장비</span>
-      <!-- 변경점 1 -->
-      <span class="change-note">① 페이지 총 카운트 상단 노출</span>
+  <!-- Page Header -->
+  <header class="page-header animate-in">
+    <div>
+      <h1>장비 관리</h1>
+      <p class="subtitle">UL-QP-18 장비 관리 절차서 기반 시험소 장비 현황</p>
     </div>
-    <div class="top-bar-right">
-      <button class="btn btn-ghost">내보내기</button>
-      <button class="btn btn-primary">+ 새 장비 등록</button>
+    <div class="page-header-actions">
+      <button class="btn btn-outline" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        내보내기
+      </button>
+      <button class="btn btn-primary" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        장비 등록
+      </button>
     </div>
   </header>
 
-  <!-- ── MAIN ── -->
-  <div class="content-area">
+  <!-- Status Summary Strip -->
+  <nav class="status-strip animate-in stagger-1" aria-label="상태별 필터">
+    <button class="status-chip active" type="button" aria-pressed="true">
+      <span class="status-count">55</span>
+      <span>전체 장비</span>
+    </button>
+    <span class="status-divider" aria-hidden="true"></span>
+    <button class="status-chip" type="button" aria-pressed="false">
+      <span class="status-dot" style="background: var(--brand-ok);" aria-hidden="true"></span>
+      <span class="status-count">32</span>
+      <span>사용 가능</span>
+    </button>
+    <button class="status-chip" type="button" aria-pressed="false">
+      <span class="status-dot" style="background: var(--brand-info);" aria-hidden="true"></span>
+      <span class="status-count">8</span>
+      <span>사용중</span>
+    </button>
+    <button class="status-chip" type="button" aria-pressed="false">
+      <span class="status-dot" style="background: var(--brand-repair);" aria-hidden="true"></span>
+      <span class="status-count">3</span>
+      <span>수리중</span>
+    </button>
+    <button class="status-chip" type="button" aria-pressed="false">
+      <span class="status-dot" style="background: var(--brand-critical);" aria-hidden="true"></span>
+      <span class="status-count critical">5</span>
+      <span>부적합</span>
+    </button>
+    <button class="status-chip" type="button" aria-pressed="false">
+      <span class="status-dot" style="background: var(--brand-warning);" aria-hidden="true"></span>
+      <span class="status-count">4</span>
+      <span>반출중</span>
+    </button>
+    <button class="status-chip" type="button" aria-pressed="false">
+      <span class="status-dot" style="background: var(--brand-neutral);" aria-hidden="true"></span>
+      <span class="status-count">3</span>
+      <span>퇴역</span>
+    </button>
+  </nav>
 
-    <!-- ════════════════════
-         LEFT STATUS NAVIGATOR
-    ════════════════════ -->
-    <nav class="status-nav" aria-label="장비 상태 필터 내비게이션">
-      <span class="change-note" style="margin: 0 12px 12px; display: block;">② 좌측 Status Navigator</span>
-
-      <div class="total-item" aria-pressed="true">
-        <span class="total-label">전체 장비</span>
-        <span class="total-count">127</span>
-      </div>
-
-      <!-- 긴급 섹션 -->
-      <div class="status-nav-section">
-        <p class="status-nav-title">⚠ 즉시 조치 필요</p>
-
-        <div class="status-item is-critical">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: var(--danger);"></div>
-            <span class="status-name">교정기한 초과</span>
-          </div>
-          <span class="status-count critical">3</span>
-        </div>
-
-        <div class="status-item is-critical" style="margin-top: 4px;">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: #f97316;"></div>
-            <span class="status-name">부적합</span>
-          </div>
-          <span class="status-count critical">2</span>
-        </div>
-
-        <div class="status-item is-warning" style="margin-top: 4px;">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: var(--warn);"></div>
-            <span class="status-name">교정 예정</span>
-          </div>
-          <span class="status-count" style="color: var(--warn);">7</span>
-        </div>
-      </div>
-
-      <!-- 일반 상태 섹션 -->
-      <div class="status-nav-section">
-        <p class="status-nav-title">운영 상태</p>
-
-        <div class="status-item active">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: var(--ok);"></div>
-            <span class="status-name">사용 가능</span>
-          </div>
-          <span class="status-count">89</span>
-        </div>
-
-        <div class="status-item" style="margin-top: 4px;">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: #818cf8;"></div>
-            <span class="status-name">사용 중</span>
-          </div>
-          <span class="status-count">23</span>
-        </div>
-
-        <div class="status-item" style="margin-top: 4px;">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: #38bdf8;"></div>
-            <span class="status-name">반출 중</span>
-          </div>
-          <span class="status-count">3</span>
-        </div>
-      </div>
-
-      <!-- 기타 상태 -->
-      <div class="status-nav-section">
-        <p class="status-nav-title">기타</p>
-
-        <div class="status-item">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: var(--text-tertiary);"></div>
-            <span class="status-name">여분</span>
-          </div>
-          <span class="status-count">4</span>
-        </div>
-
-        <div class="status-item" style="margin-top: 4px;">
-          <div class="status-item-left">
-            <div class="status-dot" style="background: #6b7280;"></div>
-            <span class="status-name">임시</span>
-          </div>
-          <span class="status-count">1</span>
-        </div>
-      </div>
-    </nav>
-
-    <!-- ════════════════════
-         RIGHT PANEL
-    ════════════════════ -->
-    <div class="right-panel">
-
-      <!-- ── 긴급 알림 배너 ── -->
-      <div class="alert-banner">
-        <span class="alert-banner-label">! 알림</span>
-        <div class="alert-chips">
-          <div class="alert-chip danger">
-            <span class="chip-count">3</span>개 교정기한 초과 — 즉시 조치 필요
-          </div>
-          <div class="alert-chip warning">
-            <span class="chip-count">7</span>개 D-30 이내 교정 예정
-          </div>
-        </div>
-        <span class="change-note" style="margin-left: auto;">③ 긴급 알림 배너</span>
-      </div>
-
-      <!-- ── COMMAND BAR ── -->
-      <div class="command-bar">
-        <div class="command-bar-row">
-          <!-- 검색 -->
-          <div class="search-box">
-            <span class="search-icon">⌕</span>
-            <span style="color: var(--text-tertiary);">관리번호 / 장비명 검색...</span>
-            <span class="search-shortcut">⌘K</span>
-          </div>
-
-          <div class="filter-sep"></div>
-
-          <!-- 1차 필터: Site, Status (주요) -->
-          <div class="filter-select">
-            <span>사이트</span>
-            <span class="arrow">▾</span>
-          </div>
-
-          <div class="filter-select has-value">
-            <span>상태: 사용가능</span>
-            <span class="arrow">▾</span>
-          </div>
-
-          <div class="filter-select">
-            <span>교정 기한</span>
-            <span class="arrow">▾</span>
-          </div>
-
-          <div class="filter-sep"></div>
-
-          <!-- 추가 필터 -->
-          <button class="more-filters-btn">
-            ⚙ 추가 필터
-            <span class="filter-badge">2</span>
-          </button>
-
-          <!-- 뷰 토글 (우측 끝) -->
-          <div class="view-toggle-group" style="margin-left: auto;">
-            <div class="view-btn active">≡ 테이블</div>
-            <div class="view-btn">⊞ 카드</div>
-          </div>
-        </div>
-
-        <!-- 활성 필터 칩 -->
-        <div class="active-filters-row">
-          <span class="label">필터:</span>
-          <div class="active-chip">
-            교정방법: 외부교정
-            <span class="active-chip-remove">✕</span>
-          </div>
-          <div class="active-chip">
-            분류: 전기
-            <span class="active-chip-remove">✕</span>
-          </div>
-          <span class="clear-all-btn">↺ 모두 초기화</span>
-          <span class="change-note">④ 활성 필터 칩 — Command Bar 통합</span>
-        </div>
-      </div>
-
-      <!-- ── 결과 정보 바 ── -->
-      <div class="results-bar">
-        <div class="results-info">
-          <span class="results-total">89</span>
-          <span class="results-range">개 장비 · 1–20 표시</span>
-        </div>
-        <div class="sort-info">
-          <span>정렬:</span>
-          <span class="sort-key">관리번호</span>
-          <span>↑</span>
-        </div>
-      </div>
-
-      <!-- ── TABLE ── -->
-      <div class="table-area">
-        <table role="grid" aria-label="장비 목록">
-          <thead>
-            <tr>
-              <th class="status-bar-col" aria-hidden="true"></th>
-              <th class="num sortable">관리번호 <span class="sort-arrow active">↑</span></th>
-              <th class="sortable">장비명 <span class="sort-arrow">↕</span></th>
-              <th>위치</th>
-              <th class="sortable">교정 기한 <span class="sort-arrow">↕</span></th>
-              <th class="sortable">상태 <span class="sort-arrow">↕</span></th>
-              <th style="text-align:right;">상세</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- 일반 행 -->
-            <tr>
-              <td class="status-bar-col">
-                <span class="status-bar" style="background: var(--ok);"></span>
-              </td>
-              <td><span class="mgmt-num">SUW–E 0001</span></td>
-              <td>
-                <div class="equip-name">디지털 멀티미터</div>
-                <div class="equip-model">Fluke 87V</div>
-              </td>
-              <td><span class="loc-text">A동 시험실</span></td>
-              <td>
-                <span class="cal-date">2026-06-15</span>
-                <span class="cal-dday ok">D-98</span>
-              </td>
-              <td><span class="status-badge available">사용 가능</span></td>
-              <td style="text-align:right;">
-                <span class="view-link">상세 →</span>
-              </td>
-            </tr>
-
-            <!-- 교정 예정 행 (경고) -->
-            <tr>
-              <td class="status-bar-col">
-                <span class="status-bar" style="background: var(--warn);"></span>
-              </td>
-              <td><span class="mgmt-num">SUW–E 0002</span></td>
-              <td>
-                <div class="equip-name">오실로스코프 <span class="shared-badge">공용</span></div>
-                <div class="equip-model">Keysight DSOX1204G</div>
-              </td>
-              <td><span class="loc-text">B동 계측실</span></td>
-              <td>
-                <span class="cal-date">2026-03-18</span>
-                <span class="cal-dday warn">D-9 ⚠</span>
-              </td>
-              <td><span class="status-badge cal-scheduled">교정 예정</span></td>
-              <td style="text-align:right;">
-                <span class="view-link">상세 →</span>
-              </td>
-            </tr>
-
-            <!-- 교정 초과 행 (위험 — 행 전체 강조) -->
-            <tr class="overdue-row">
-              <td class="status-bar-col">
-                <span class="status-bar" style="background: var(--danger);"></span>
-              </td>
-              <td><span class="mgmt-num">SUW–E 0003</span></td>
-              <td>
-                <div class="equip-name" style="color: #fca5a5;">전압 교정기</div>
-                <div class="equip-model">Fluke 5500A</div>
-              </td>
-              <td><span class="loc-text">A동 교정실</span></td>
-              <td>
-                <span class="cal-date" style="color: #fca5a5;">2026-03-01</span>
-                <span class="cal-dday overdue">D+8 초과</span>
-              </td>
-              <td><span class="status-badge non-conform">부적합</span></td>
-              <td style="text-align:right;">
-                <span class="view-link" style="color: #fca5a5;">상세 →</span>
-              </td>
-            </tr>
-
-            <!-- 반출 중 행 -->
-            <tr>
-              <td class="status-bar-col">
-                <span class="status-bar" style="background: #38bdf8;"></span>
-              </td>
-              <td><span class="mgmt-num">UIW–R 0012</span></td>
-              <td>
-                <div class="equip-name">임피던스 분석기</div>
-                <div class="equip-model">Keysight E4990A</div>
-              </td>
-              <td><span class="loc-text">외부 교정기관</span></td>
-              <td>
-                <span class="cal-date">2026-09-30</span>
-                <span class="cal-dday ok">D-205</span>
-              </td>
-              <td><span class="status-badge checked-out">반출 중</span></td>
-              <td style="text-align:right;">
-                <span class="view-link">상세 →</span>
-              </td>
-            </tr>
-
-            <!-- 사용 중 행 -->
-            <tr>
-              <td class="status-bar-col">
-                <span class="status-bar" style="background: #818cf8;"></span>
-              </td>
-              <td><span class="mgmt-num">SUW–E 0047</span></td>
-              <td>
-                <div class="equip-name">신호 발생기</div>
-                <div class="equip-model">Rohde & Schwarz SMA100B</div>
-              </td>
-              <td><span class="loc-text">C동 RF실</span></td>
-              <td>
-                <span class="cal-date">2026-12-01</span>
-                <span class="cal-dday ok">D-267</span>
-              </td>
-              <td><span class="status-badge in-use">사용 중</span></td>
-              <td style="text-align:right;">
-                <span class="view-link">상세 →</span>
-              </td>
-            </tr>
-
-            <!-- 더미 행들 -->
-            <tr style="opacity: 0.5;">
-              <td class="status-bar-col">
-                <span class="status-bar" style="background: var(--ok);"></span>
-              </td>
-              <td><span class="mgmt-num">SUW–E 0048</span></td>
-              <td><div class="equip-name">···</div></td>
-              <td>···</td>
-              <td>···</td>
-              <td><span class="status-badge available">사용 가능</span></td>
-              <td style="text-align:right;"><span class="view-link">상세 →</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- ── PAGINATION ── -->
-      <div class="pagination-bar">
-        <div class="page-size-select">
-          <span>페이지당:</span>
-          <div style="padding: 2px 8px; background: var(--elevated); border: 1px solid var(--border); border-radius: 4px; font-size: 11px; color: var(--text-primary); display: inline-flex; align-items: center; gap: 4px;">
-            20개 <span style="color: var(--text-tertiary); font-size: 9px;">▾</span>
-          </div>
-        </div>
-
-        <div class="page-btns">
-          <div class="page-btn">‹</div>
-          <div class="page-btn active">1</div>
-          <div class="page-btn">2</div>
-          <div class="page-btn">3</div>
-          <div class="page-btn" style="width: auto; padding: 0 6px; color: var(--text-tertiary);">···</div>
-          <div class="page-btn">5</div>
-          <div class="page-btn">›</div>
-        </div>
-
-        <span class="page-info">89개 중 1-20</span>
-      </div>
-
-    </div><!-- /right-panel -->
-
-  </div><!-- /content-area -->
-</div><!-- /shell -->
-
-
-<!-- ── 범례 ── -->
-<div class="wireframe-legend">
-  <p class="legend-title">변경 포인트</p>
-
-  <div class="legend-item">
-    <span class="legend-num">①</span>
-    <span class="legend-desc">페이지 총 카운트를 Top Bar에 상시 노출</span>
+  <!-- Command Bar -->
+  <div class="command-bar animate-in stagger-2">
+    <div class="search-input">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" placeholder="장비명, 관리번호, 모델명 검색..." aria-label="장비 검색">
+    </div>
+    <button class="filter-btn active" type="button">
+      사이트
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <button class="filter-btn" type="button">
+      교정 방법
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <button class="filter-btn" type="button">
+      교정 기한
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <button class="filter-btn" type="button">
+      필터
+      <span class="filter-badge">2</span>
+    </button>
+    <div class="view-toggle" role="radiogroup" aria-label="보기 방식">
+      <button class="active" type="button" role="radio" aria-checked="true" aria-label="테이블 보기">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </button>
+      <button type="button" role="radio" aria-checked="false" aria-label="카드 보기">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </button>
+    </div>
   </div>
 
-  <div class="legend-item">
-    <span class="legend-num">②</span>
-    <span class="legend-desc">Status Strip → 좌측 Navigator로 전환<br>스크롤 없이 전체 상태 스캔 가능</span>
+  <!-- Results Info Bar -->
+  <div class="results-bar animate-in stagger-2">
+    <span>55개 장비 · 1–10 표시</span>
+    <span class="sort-info">정렬: 관리번호 ↑</span>
   </div>
 
-  <div class="legend-item">
-    <span class="legend-num">③</span>
-    <span class="legend-desc">긴급 알림 배너 — overdue/non-conform<br>즉시 인지 후 클릭으로 필터 적용</span>
-  </div>
+  <!-- ==================== TABLE VIEW ==================== -->
+  <section aria-label="장비 테이블" class="animate-in stagger-3">
+    <div class="view-label">테이블 뷰</div>
+    <div class="table-container">
+      <table role="grid" aria-label="장비 목록">
+        <thead>
+          <tr role="row">
+            <th class="status-bar-cell" aria-hidden="true"></th>
+            <th class="sortable sorted" scope="col" tabindex="0" aria-sort="ascending">관리번호 <span class="sort-icon">↑</span></th>
+            <th class="sortable" scope="col" tabindex="0">장비명 <span class="sort-icon">↕</span></th>
+            <th class="sortable hide-mobile" scope="col" tabindex="0">위치 <span class="sort-icon">↕</span></th>
+            <th class="sortable hide-mobile" scope="col" tabindex="0">교정 기한 <span class="sort-icon">↕</span></th>
+            <th class="sortable" scope="col" tabindex="0">상태 <span class="sort-icon">↕</span></th>
+            <th scope="col" style="text-align: right;">작업</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr role="row" aria-label="SUW-E0001 스펙트럼 분석기">
+            <td class="status-bar-cell" aria-hidden="true"><span class="status-bar-indicator" style="background: var(--brand-ok);"></span></td>
+            <td><span class="mgmt-number">SUW-E0001</span></td>
+            <td>
+              <div class="equip-name">스펙트럼 분석기</div>
+              <div class="equip-model">Keysight N9020B</div>
+            </td>
+            <td class="hide-mobile" style="font-size:12px; color:var(--text-muted);">수원 EMC Lab A</td>
+            <td class="hide-mobile">
+              <div class="cal-date">2026-04-05</div>
+              <span class="cal-badge ok">D-14</span>
+            </td>
+            <td><span class="status-badge available">● 사용 가능</span></td>
+            <td style="text-align: right;"><a href="#" class="detail-btn">상세 →</a></td>
+          </tr>
+          <tr role="row">
+            <td class="status-bar-cell" aria-hidden="true"><span class="status-bar-indicator" style="background: var(--brand-info);"></span></td>
+            <td><span class="mgmt-number">SUW-E0012</span></td>
+            <td>
+              <div class="equip-name">EMI 수신기</div>
+              <div class="equip-model">R&amp;S ESR26</div>
+            </td>
+            <td class="hide-mobile" style="font-size:12px; color:var(--text-muted);">수원 EMC Lab B</td>
+            <td class="hide-mobile">
+              <div class="cal-date">2026-06-15</div>
+            </td>
+            <td><span class="status-badge in-use">● 사용중</span></td>
+            <td style="text-align: right;"><a href="#" class="detail-btn">상세 →</a></td>
+          </tr>
+          <tr role="row">
+            <td class="status-bar-cell" aria-hidden="true"><span class="status-bar-indicator" style="background: var(--brand-critical);"></span></td>
+            <td><span class="mgmt-number">UIW-R0003</span></td>
+            <td>
+              <div class="equip-name">시그널 제너레이터</div>
+              <div class="equip-model">Keysight N5183B</div>
+            </td>
+            <td class="hide-mobile" style="font-size:12px; color:var(--text-muted);">의왕 RF Lab</td>
+            <td class="hide-mobile">
+              <div class="cal-date" style="color: var(--brand-critical);">2026-03-10</div>
+              <span class="cal-badge overdue">D+12 초과</span>
+            </td>
+            <td><span class="status-badge non-conforming">● 부적합</span></td>
+            <td style="text-align: right;"><a href="#" class="detail-btn">상세 →</a></td>
+          </tr>
+          <tr role="row">
+            <td class="status-bar-cell" aria-hidden="true"><span class="status-bar-indicator" style="background: var(--brand-repair);"></span></td>
+            <td><span class="mgmt-number">SUW-W0008</span></td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <div class="equip-name">전자파 차폐 측정기</div>
+                <span class="shared-badge">공용</span>
+              </div>
+              <div class="equip-model">ETS HI-6053</div>
+            </td>
+            <td class="hide-mobile" style="font-size:12px; color:var(--text-muted);">수원 → 외부 수리</td>
+            <td class="hide-mobile">
+              <div class="cal-date">2026-05-20</div>
+            </td>
+            <td><span class="status-badge under-repair">● 수리중</span></td>
+            <td style="text-align: right;"><a href="#" class="detail-btn">상세 →</a></td>
+          </tr>
+          <tr role="row">
+            <td class="status-bar-cell" aria-hidden="true"><span class="status-bar-indicator" style="background: var(--brand-ok);"></span></td>
+            <td><span class="mgmt-number">PYT-A0005</span></td>
+            <td>
+              <div class="equip-name">파워 앰프</div>
+              <div class="equip-model">AR 150W1000B</div>
+            </td>
+            <td class="hide-mobile" style="font-size:12px; color:var(--text-muted);">평택 Auto Lab</td>
+            <td class="hide-mobile">
+              <div class="cal-date" style="color: var(--brand-warning);">2026-03-25</div>
+              <span class="cal-badge urgent">D-3 긴급</span>
+            </td>
+            <td><span class="status-badge available">● 사용 가능</span></td>
+            <td style="text-align: right;"><a href="#" class="detail-btn">상세 →</a></td>
+          </tr>
+          <tr role="row">
+            <td class="status-bar-cell" aria-hidden="true"><span class="status-bar-indicator" style="background: var(--brand-neutral);"></span></td>
+            <td><span class="mgmt-number">SUW-E0099</span></td>
+            <td>
+              <div class="equip-name">구형 오실로스코프</div>
+              <div class="equip-model">Tektronix TDS3054B</div>
+            </td>
+            <td class="hide-mobile" style="font-size:12px; color:var(--text-muted);">수원 창고</td>
+            <td class="hide-mobile">
+              <div class="cal-date" style="opacity: 0.5;">-</div>
+            </td>
+            <td><span class="status-badge retired">● 퇴역</span></td>
+            <td style="text-align: right;"><a href="#" class="detail-btn">상세 →</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-  <div class="legend-item">
-    <span class="legend-num">④</span>
-    <span class="legend-desc">활성 필터 칩을 Command Bar 내 통합<br>(현재 별도 행으로 분리)</span>
-  </div>
+  <!-- Pagination -->
+  <nav class="pagination animate-in stagger-4" aria-label="페이지 네비게이션">
+    <span class="page-info">1 – 10 / 55</span>
+    <div class="page-buttons">
+      <button class="page-btn" type="button" aria-label="이전 페이지" disabled>‹</button>
+      <button class="page-btn active" type="button" aria-current="page">1</button>
+      <button class="page-btn" type="button">2</button>
+      <button class="page-btn" type="button">3</button>
+      <button class="page-btn" type="button">…</button>
+      <button class="page-btn" type="button">6</button>
+      <button class="page-btn" type="button" aria-label="다음 페이지">›</button>
+    </div>
+  </nav>
 
-  <div class="legend-item">
-    <span class="legend-num">⑤</span>
-    <span class="legend-desc">교정 초과 행: 행 전체 배경 강조<br>(현재 상태 배지만 색상 처리)</span>
-  </div>
-</div>
+  <!-- ==================== CARD VIEW ==================== -->
+  <section aria-label="장비 카드 그리드" style="margin-top: var(--space-3xl);" class="animate-in">
+    <div class="view-label">카드 뷰</div>
+    <div class="card-grid">
+      <article class="equip-card" aria-labelledby="card-1-name">
+        <div class="card-header">
+          <div>
+            <div class="card-mgmt">SUW-E0001</div>
+            <div class="card-name" id="card-1-name">스펙트럼 분석기</div>
+          </div>
+          <div class="card-badges">
+            <span class="status-badge available">사용 가능</span>
+            <span class="cal-badge ok" style="font-size:10px;">D-14</span>
+          </div>
+        </div>
+        <div class="card-meta">
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/></svg>
+            Keysight N9020B
+          </div>
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            수원 EMC Lab A
+          </div>
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            최근 교정: 2025-10-05
+          </div>
+        </div>
+        <div class="card-footer">
+          <a href="#" class="card-link">상세보기 →</a>
+        </div>
+      </article>
 
+      <article class="equip-card non-conforming" aria-labelledby="card-2-name">
+        <div class="card-header">
+          <div>
+            <div class="card-mgmt">UIW-R0003</div>
+            <div class="card-name" id="card-2-name">시그널 제너레이터</div>
+          </div>
+          <div class="card-badges">
+            <span class="status-badge non-conforming">부적합</span>
+            <span class="cal-badge overdue" style="font-size:10px;">D+12 초과</span>
+          </div>
+        </div>
+        <div class="card-meta">
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/></svg>
+            Keysight N5183B
+          </div>
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            의왕 RF Lab
+          </div>
+        </div>
+        <div class="card-footer">
+          <a href="#" class="card-link">상세보기 →</a>
+        </div>
+      </article>
+
+      <article class="equip-card under-repair" aria-labelledby="card-3-name">
+        <div class="card-header">
+          <div>
+            <div class="card-mgmt">SUW-W0008</div>
+            <div class="card-name" id="card-3-name">
+              전자파 차폐 측정기
+              <span class="shared-badge" style="margin-left:4px;">공용</span>
+            </div>
+          </div>
+          <div class="card-badges">
+            <span class="status-badge under-repair">수리중</span>
+          </div>
+        </div>
+        <div class="card-meta">
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/></svg>
+            ETS HI-6053
+          </div>
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            수원 → 외부 수리
+          </div>
+        </div>
+        <div class="card-footer">
+          <a href="#" class="card-link">상세보기 →</a>
+        </div>
+      </article>
+
+      <article class="equip-card in-use" aria-labelledby="card-4-name">
+        <div class="card-header">
+          <div>
+            <div class="card-mgmt">SUW-E0012</div>
+            <div class="card-name" id="card-4-name">EMI 수신기</div>
+          </div>
+          <div class="card-badges">
+            <span class="status-badge in-use">사용중</span>
+          </div>
+        </div>
+        <div class="card-meta">
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/></svg>
+            R&amp;S ESR26
+          </div>
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            수원 EMC Lab B
+          </div>
+          <div class="card-meta-item">
+            <svg class="card-meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            최근 교정: 2025-12-15
+          </div>
+        </div>
+        <div class="card-footer">
+          <a href="#" class="card-link">상세보기 →</a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+</main>
+
+<!-- Dark Mode Toggle -->
+<button class="theme-toggle" type="button" aria-label="다크 모드 전환" onclick="toggleTheme()">🌓</button>
+
+<script>
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  document.documentElement.classList.toggle('light');
+  const isDark = document.documentElement.classList.contains('dark');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else if (saved === 'light') {
+    document.documentElement.classList.add('light');
+  }
+})();
+</script>
 </body>
 </html>

@@ -510,6 +510,18 @@
     "lastCalibrationDate": "Last Calibration Date",
     "nextCalibrationDate": "Next Calibration Date",
     "calibrationAgency": "Calibration Agency",
+    "calibrationCycleUnit": " months",
+    "calibrationRequiredYes": "Required",
+    "calibrationRequiredNo": "Not Required",
+    "calibrationRequired": "Calibration Required",
+    "specMatchMatch": "Match",
+    "specMatchMismatch": "Mismatch",
+    "sharedLabel": "Shared",
+    "sharedYes": "Shared",
+    "sharedNo": "Dedicated",
+    "recentCalibrationHistory": "Recent Calibration History",
+    "viewAllCalibrations": "View All",
+    "calibrationEntry": "Calibration Performed",
     "site": {
       "suwon": "Suwon",
       "uiwang": "Uiwang",
@@ -1075,7 +1087,9 @@
     "title": "Non-Conforming ({count} issues)",
     "description": "This equipment is currently non-conforming. Checkout and rental are restricted until non-conformance is resolved.",
     "discoveryDate": "Discovery Date: {date}",
-    "manage": "Manage Non-Conformance"
+    "manage": "Manage Non-Conformance",
+    "statusWarningTitle": "Non-Conforming Equipment",
+    "statusWarningDesc": "This equipment has exceeded its calibration deadline or is non-conforming. Usage is restricted and a non-conformance record will be automatically generated."
   },
   "sharedBadge": {
     "safetyLab": "Shared",
@@ -1333,7 +1347,7 @@
     "maintenance": "Maintenance",
     "incidentHistory": "Incidents",
     "dday": "D-{days}",
-    "overdue": "{days}d overdue",
+    "overdue": "D+{days}",
     "notApplicable": "N/A",
     "noRecord": "No issues",
     "count": "{count}",

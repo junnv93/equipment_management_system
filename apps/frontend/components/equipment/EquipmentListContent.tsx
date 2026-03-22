@@ -246,7 +246,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   }
 
   return (
-    <div className="space-y-3" aria-live="polite" aria-busy={isFetching}>
+    <div className="space-y-4" aria-live="polite" aria-busy={isFetching}>
       {/* 진행 표시줄 — 백그라운드 데이터 갱신 시 thin indeterminate bar */}
       {isFetching && !isLoading && (
         <div

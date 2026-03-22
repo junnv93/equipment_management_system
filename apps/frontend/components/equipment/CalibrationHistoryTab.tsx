@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { AlertTriangle, Calendar, FileText } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import {
   CONTENT_TOKENS,
   CALIBRATION_TABLE,
@@ -55,6 +55,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
     enabled: !!equipmentId,
+    staleTime: CACHE_TIMES.MEDIUM,
   });
 
   // UL-QP-18: 시험실무자만 교정 등록 가능 (lab_manager도 등록 불가 — 직무분리)

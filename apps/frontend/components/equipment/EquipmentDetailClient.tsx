@@ -30,7 +30,7 @@ import {
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { ANIMATION_PRESETS } from '@/lib/design-tokens';
+import { ANIMATION_PRESETS, NC_BANNER_TOKENS } from '@/lib/design-tokens';
 
 interface EquipmentDetailClientProps {
   equipment: Equipment;
@@ -180,8 +180,8 @@ export function EquipmentDetailClient({
         onDisposalDetailOpen={() => setDisposalDetailOpen(true)}
       />
 
-      {/* 컨텐츠 영역 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+      {/* 컨텐츠 영역 — AP-02 간격 리듬: 섹션 간 space-y-6 (매크로) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* KPI 스트립 */}
         <EquipmentKpiStrip equipment={equipment} />
         {/* 폐기 진행 중 배너 */}
@@ -207,7 +207,8 @@ export function EquipmentDetailClient({
         )}
 
         {/* 부적합 상태 경고 배너 (폐기 다음, 공용장비보다 우선) */}
-        {openNonConformances.length > 0 && (
+        {/* NC 기록이 있으면 상세 배너, 없지만 non_conforming 상태이면 상태 기반 배너 */}
+        {openNonConformances.length > 0 ? (
           <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
             <NonConformanceBanner
               equipmentId={equipmentId}
@@ -215,6 +216,21 @@ export function EquipmentDetailClient({
               showDetails={true}
             />
           </div>
+        ) : (
+          (equipment.status === ESVal.NON_CONFORMING ||
+            equipment.status === ESVal.CALIBRATION_OVERDUE) && (
+            <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
+              <Alert variant="destructive" className={NC_BANNER_TOKENS.statusAlert}>
+                <AlertTriangle className={NC_BANNER_TOKENS.statusAlertIcon} />
+                <AlertTitle className="text-foreground">
+                  {t('nonConformanceBanner.statusWarningTitle')}
+                </AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  {t('nonConformanceBanner.statusWarningDesc')}
+                </AlertDescription>
+              </Alert>
+            </div>
+          )
         )}
 
         {/* 공용장비 안내 배너 */}

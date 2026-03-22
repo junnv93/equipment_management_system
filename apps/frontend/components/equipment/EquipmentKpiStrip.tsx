@@ -24,6 +24,8 @@ interface KpiCardProps {
   isLoading?: boolean;
   /** 숫자 카운트 값 여부 — true이면 font-mono tabular-nums 적용 */
   numeric?: boolean;
+  /** Hero 카드 여부 — true이면 비대칭 그리드의 큰 카드로 표시 */
+  hero?: boolean;
   /** 접근성: 해당 탭으로 이동함을 명시하는 aria-label */
   navigateLabel: string;
 }
@@ -37,31 +39,40 @@ function KpiCard({
   onClick,
   isLoading,
   numeric = false,
+  hero = false,
   navigateLabel,
 }: KpiCardProps) {
   const tokens = EQUIPMENT_KPI_STRIP_TOKENS;
-  const valueClass = numeric ? tokens.numericValue : tokens.value;
+  const valueClass = hero ? tokens.heroValue : numeric ? tokens.numericValue : tokens.value;
+  const cardBase = hero ? tokens.card.hero : tokens.card.base;
+  const iconSize = hero ? 'h-5 w-5' : 'h-4 w-4';
+  const skeletonHeight = hero ? 'h-10 w-16 mt-0.5' : 'h-7 w-12 mt-0.5';
   return (
     <button
       onClick={onClick}
       aria-label={navigateLabel}
       className={cn(
-        tokens.card.base,
+        cardBase,
         tokens.card.hover,
         tokens.card.focus,
         tokens.borderColors[colorVariant]
       )}
       type="button"
     >
-      <div className={cn(tokens.iconContainer, tokens.iconBg[colorVariant])}>
-        <Icon className="h-4 w-4" aria-hidden="true" />
+      <div
+        className={cn(
+          hero ? tokens.heroIconContainer : tokens.iconContainer,
+          tokens.iconBg[colorVariant]
+        )}
+      >
+        <Icon className={iconSize} aria-hidden="true" />
       </div>
       <div className="flex-1 min-w-0">
         <div className={tokens.label}>{label}</div>
         {isLoading ? (
-          <Skeleton className="h-6 w-12 mt-0.5" />
+          <Skeleton className={skeletonHeight} />
         ) : (
-          <div className={valueClass}>{value}</div>
+          <div className={cn(valueClass, hero && tokens.valueColors[colorVariant])}>{value}</div>
         )}
         {sub && !isLoading && <div className={tokens.sub}>{sub}</div>}
       </div>
@@ -139,13 +150,14 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
 
   return (
     <div className={EQUIPMENT_KPI_STRIP_TOKENS.container}>
-      {/* 1. 다음 교정일 */}
+      {/* 1. 다음 교정일 — Hero 카드 (비대칭 그리드 1.6fr) */}
       <KpiCard
         label={t('kpiStrip.nextCalibration')}
         value={calibration.value}
         sub={calibration.sub}
         icon={Calendar}
         colorVariant={calibration.variant}
+        hero
         onClick={() => navigateToTab('calibration')}
         navigateLabel={t('kpiStrip.navigateTo', { label: t('kpiStrip.nextCalibration') })}
       />

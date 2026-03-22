@@ -1,16 +1,27 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Equipment } from '@/lib/api/equipment-api';
-import { MapPin, Package, Wrench } from 'lucide-react';
+import { useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { MapPin, Package, Wrench, ArrowRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
 import {
-  getManagementNumberClasses,
+  CALIBRATION_METHOD_LABELS,
+  CALIBRATION_RESULT_LABELS,
+  type CalibrationMethod,
+  type CalibrationResult,
+} from '@equipment-management/schemas';
+import {
   getTimestampClasses,
-  getBrandSectionHeaderClasses,
+  EQUIPMENT_INFO_CARD_TOKENS,
+  EQUIPMENT_CALIBRATION_TIMELINE_TOKENS,
+  TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import calibrationApi from '@/lib/api/calibration-api';
+import type { Equipment } from '@/lib/api/equipment-api';
 
 interface BasicInfoTabProps {
   equipment: Equipment;
@@ -19,186 +30,249 @@ interface BasicInfoTabProps {
 /**
  * 기본 정보 탭 — 시험설비이력카드(UL-QP-18-02) 디지털화
  *
- * 라벨-값 수평 쌍: 왼쪽 muted 라벨 + 오른쪽 정렬된 값 (서류 양식 모방)
- * 관리번호/일련번호: font-mono tabular-nums tracking-wider
- * 날짜 필드: getTimestampClasses() 적용
+ * 아키텍처:
+ * - SSOT: 그리드/카드/타임라인 스타일 → EQUIPMENT_INFO_CARD_TOKENS, EQUIPMENT_CALIBRATION_TIMELINE_TOKENS
+ * - SSOT: 교정 결과 라벨 → CALIBRATION_RESULT_LABELS (@equipment-management/schemas)
+ * - SSOT: 교정 결과→dot 색상 → EQUIPMENT_CALIBRATION_TIMELINE_TOKENS.resultDotMap
+ * - 캐시: queryKeys.calibrations.byEquipment 재사용 (CalibrationHistoryTab과 공유)
  */
 export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
+  const pathname = usePathname();
+  const tokens = EQUIPMENT_INFO_CARD_TOKENS;
+  const tl = EQUIPMENT_CALIBRATION_TIMELINE_TOKENS;
 
-  /** 서류 양식 스타일 수평 라벨-값 행 */
-  const InfoRow = ({
-    label,
-    value,
-    valueClassName,
-  }: {
-    label: string;
-    value?: string | number | null;
-    valueClassName?: string;
-  }) => (
-    <div className="flex items-baseline justify-between py-2.5 border-b border-border/40 last:border-0 gap-4">
-      <dt className="text-sm text-muted-foreground shrink-0">{label}</dt>
-      <dd className={`text-sm font-medium text-right ${valueClassName ?? 'text-foreground'}`}>
-        {value ?? '-'}
-      </dd>
-    </div>
-  );
+  const equipmentId = String(equipment.id);
 
-  /** 카드 타이틀 (icon + 텍스트, 하단 구분선) */
-  const CardSection = ({
-    icon: Icon,
-    title,
-  }: {
-    icon: React.ComponentType<{ className?: string }>;
-    title: string;
-  }) => (
-    <CardTitle className={`flex items-center gap-2 text-sm ${getBrandSectionHeaderClasses()}`}>
-      <Icon className="h-4 w-4 text-brand-text-muted shrink-0" aria-hidden="true" />
-      {title}
-    </CardTitle>
-  );
+  // 최근 교정이력 — CalibrationHistoryTab과 동일 queryKey로 캐시 공유
+  const { data: calibrations = [] } = useQuery({
+    queryKey: queryKeys.calibrations.byEquipment(equipmentId),
+    queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
+    enabled: !!equipmentId,
+    staleTime: CACHE_TIMES.MEDIUM,
+  });
+
+  const recentCalibrations = useMemo(() => calibrations.slice(0, 3), [calibrations]);
+
+  /** 교정 결과 → 타임라인 dot 클래스 (SSOT: tl.resultDotMap) */
+  const getDotClass = (result?: string) => {
+    const variant = result ? (tl.resultDotMap[result] ?? 'info') : 'info';
+    return tl.dot[variant];
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {/* 기본 정보 카드 */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3 border-b border-border">
-          <CardSection icon={Package} title={t('basicInfoTab.equipmentBasicInfo')} />
-        </CardHeader>
-        <CardContent className="pt-0">
-          <dl className="space-y-0">
-            <InfoRow label={t('fields.name')} value={equipment.name} />
-            <InfoRow label={t('fields.modelName')} value={equipment.modelName} />
-            <InfoRow
-              label={t('fields.managementNumber')}
-              value={equipment.managementNumber}
-              valueClassName={getManagementNumberClasses()}
-            />
-            <InfoRow
-              label={t('fields.serialNumber')}
-              value={equipment.serialNumber}
-              valueClassName={getManagementNumberClasses()}
-            />
-            {equipment.isShared && equipment.externalIdentifier && (
-              <InfoRow
-                label={t('fields.externalIdentifier')}
-                value={equipment.externalIdentifier}
-              />
-            )}
-            <InfoRow label={t('fields.manufacturer')} value={equipment.manufacturer} />
-            <InfoRow
-              label={t('fields.purchaseYear')}
-              value={equipment.purchaseYear}
-              valueClassName="font-mono tabular-nums text-foreground"
-            />
-            {equipment.description && (
-              <div className="pt-3 mt-1 border-t border-border/40">
-                <dt className="text-sm text-muted-foreground mb-1">{t('fields.description')}</dt>
-                <dd className="text-sm text-foreground">{equipment.description}</dd>
-              </div>
-            )}
-          </dl>
-        </CardContent>
-      </Card>
+    <div className="space-y-8">
+      {/* 기본 정보 카드 그리드 — 비대칭 1.6fr (SSOT: tokens.grid) */}
+      <div className={tokens.grid}>
+        {/* Primary: 장비 기본정보 — 좌측 brand-info 보더 (AP-04 깊이 차등) */}
+        <div className={tokens.cardPrimary}>
+          <div className={tokens.header}>
+            <Package className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentBasicInfo')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              <dt className={tokens.dtLabel}>{t('fields.name')}</dt>
+              <dd className={tokens.ddValue}>{equipment.name || '-'}</dd>
 
-      {/* 위치 및 관리 정보 카드 */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3 border-b border-border">
-          <CardSection icon={MapPin} title={t('basicInfoTab.locationManagement')} />
-        </CardHeader>
-        <CardContent className="pt-0">
-          <dl className="space-y-0">
-            <InfoRow
-              label={t('fields.site')}
-              value={
-                equipment.site === 'suwon'
+              <dt className={tokens.dtLabel}>{t('fields.managementNumber')}</dt>
+              <dd className={tokens.ddMono}>{equipment.managementNumber || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.modelName')}</dt>
+              <dd className={tokens.ddValue}>{equipment.modelName || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.manufacturer')}</dt>
+              <dd className={tokens.ddValue}>{equipment.manufacturer || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.serialNumber')}</dt>
+              <dd className={tokens.ddMono}>{equipment.serialNumber || '-'}</dd>
+
+              {equipment.assetNumber && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.assetNumber')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.assetNumber}</dd>
+                </>
+              )}
+
+              <dt className={tokens.dtLabel}>{t('fields.purchaseYear')}</dt>
+              <dd className={tokens.ddValue}>{equipment.purchaseYear ?? '-'}</dd>
+
+              {equipment.description && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.description')}</dt>
+                  <dd className="text-xs text-muted-foreground col-span-full mt-1">
+                    {equipment.description}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+
+        {/* 교정 정보 */}
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <Wrench className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.calibrationInfo')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationRequired')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.calibrationRequired === 'required'
+                  ? t('basicInfoTab.calibrationRequiredYes')
+                  : equipment.calibrationRequired === 'not_required'
+                    ? t('basicInfoTab.calibrationRequiredNo')
+                    : '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationMethod')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.calibrationMethod
+                  ? CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod]
+                  : '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationCycle')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.calibrationCycle
+                  ? `${equipment.calibrationCycle}${t('basicInfoTab.calibrationCycleUnit')}`
+                  : '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.lastCalibrationDate')}</dt>
+              <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                {fmtDate(equipment.lastCalibrationDate) ?? '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.nextCalibrationDate')}</dt>
+              <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                {fmtDate(equipment.nextCalibrationDate) ?? '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationAgency')}</dt>
+              <dd className={tokens.ddValue}>{equipment.calibrationAgency || '-'}</dd>
+            </dl>
+          </div>
+        </div>
+
+        {/* 위치 & 상태 */}
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <MapPin className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.locationManagement')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              <dt className={tokens.dtLabel}>{t('fields.site')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.site === 'suwon'
                   ? t('basicInfoTab.site.suwon')
                   : equipment.site === 'uiwang'
                     ? t('basicInfoTab.site.uiwang')
                     : equipment.site === 'pyeongtaek'
                       ? t('basicInfoTab.site.pyeongtaek')
-                      : '-'
-              }
-            />
-            <InfoRow label={t('fields.team')} value={equipment.teamName} />
-            <InfoRow label={t('fields.location')} value={equipment.location} />
-            <InfoRow
-              label={t('fields.installationDate')}
-              value={fmtDate(equipment.installationDate)}
-              valueClassName={getTimestampClasses()}
-            />
-          </dl>
-          {/* 운영책임자 정보 - 나중에 구현 */}
-        </CardContent>
-      </Card>
+                      : '-'}
+              </dd>
 
-      {/* 교정 정보 카드 */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3 border-b border-border">
-          <CardSection icon={Wrench} title={t('basicInfoTab.calibrationInfo')} />
-        </CardHeader>
-        <CardContent className="pt-0">
-          <dl className="space-y-0">
-            <InfoRow
-              label={t('basicInfoTab.calibrationMethod')}
-              value={
-                equipment.calibrationMethod
-                  ? CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod]
-                  : '-'
-              }
-            />
-            <InfoRow
-              label={t('basicInfoTab.calibrationCycle')}
-              value={equipment.calibrationCycle}
-              valueClassName="font-mono tabular-nums text-foreground"
-            />
-            <InfoRow
-              label={t('basicInfoTab.lastCalibrationDate')}
-              value={fmtDate(equipment.lastCalibrationDate)}
-              valueClassName={getTimestampClasses()}
-            />
-            <InfoRow
-              label={t('basicInfoTab.nextCalibrationDate')}
-              value={fmtDate(equipment.nextCalibrationDate)}
-              valueClassName={getTimestampClasses()}
-            />
-            <InfoRow
-              label={t('basicInfoTab.calibrationAgency')}
-              value={equipment.calibrationAgency}
-            />
-          </dl>
-        </CardContent>
-      </Card>
+              <dt className={tokens.dtLabel}>{t('fields.team')}</dt>
+              <dd className={tokens.ddValue}>{equipment.teamName || '-'}</dd>
 
-      {/* 소프트웨어/펌웨어 정보 카드 */}
-      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
-        <Card className="shadow-sm lg:col-span-3">
-          <CardHeader className="pb-3 border-b border-border">
-            <CardSection icon={Package} title={t('softwareTab.title')} />
-          </CardHeader>
-          <CardContent className="pt-0">
-            <dl className="space-y-0">
-              {equipment.softwareVersion && (
-                <InfoRow
-                  label={t('softwareTab.softwareVersion')}
-                  value={equipment.softwareVersion}
-                  valueClassName="font-mono tabular-nums text-foreground"
-                />
-              )}
-              {equipment.firmwareVersion && (
-                <InfoRow
-                  label={t('softwareTab.firmwareVersion')}
-                  value={equipment.firmwareVersion}
-                  valueClassName="font-mono tabular-nums text-foreground"
-                />
-              )}
-              {equipment.manualLocation && (
-                <InfoRow label={t('softwareTab.manualLocation')} value={equipment.manualLocation} />
+              <dt className={tokens.dtLabel}>{t('fields.location')}</dt>
+              <dd className={tokens.ddValue}>{equipment.location || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.specMatch')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.specMatch === 'match'
+                  ? t('basicInfoTab.specMatchMatch')
+                  : equipment.specMatch === 'mismatch'
+                    ? t('basicInfoTab.specMatchMismatch')
+                    : '-'}
+              </dd>
+
+              {equipment.isShared !== undefined && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('basicInfoTab.sharedLabel')}</dt>
+                  <dd className={tokens.ddValue}>
+                    {equipment.isShared ? t('basicInfoTab.sharedYes') : t('basicInfoTab.sharedNo')}
+                  </dd>
+                </>
               )}
             </dl>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* 소프트웨어/펌웨어 (조건부) */}
+      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <Package className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('softwareTab.title')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              {equipment.softwareVersion && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('softwareTab.softwareVersion')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.softwareVersion}</dd>
+                </>
+              )}
+              {equipment.firmwareVersion && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('softwareTab.firmwareVersion')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.firmwareVersion}</dd>
+                </>
+              )}
+              {equipment.manualLocation && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('softwareTab.manualLocation')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      )}
+
+      {/* 최근 교정 이력 타임라인 — SSOT: resultDotMap + CALIBRATION_RESULT_LABELS */}
+      {recentCalibrations.length > 0 && (
+        <section aria-label={t('basicInfoTab.recentCalibrationHistory')}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display text-base font-semibold text-foreground">
+              {t('basicInfoTab.recentCalibrationHistory')}
+            </h3>
+            <Link
+              href={`${pathname}?tab=calibration`}
+              className={`inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.fastColor}`}
+            >
+              {t('basicInfoTab.viewAllCalibrations')}
+              <ArrowRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className={tl.container}>
+            <div className={tl.line} aria-hidden="true" />
+            {recentCalibrations.map((cal) => (
+              <div key={cal.id} className={tl.item}>
+                <div className={`${tl.dot.base} ${getDotClass(cal.result)}`} />
+                <div className={tl.content}>
+                  <div className={tl.date}>{fmtDate(cal.calibrationDate)}</div>
+                  <div className={tl.title}>
+                    {t('basicInfoTab.calibrationEntry')}
+                    {cal.result &&
+                      ` — ${CALIBRATION_RESULT_LABELS[cal.result as CalibrationResult] ?? cal.result}`}
+                  </div>
+                  <div className={tl.desc}>
+                    {cal.calibrationAgency}
+                    {cal.certificateNumber && ` · ${cal.certificateNumber}`}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -518,14 +518,23 @@ export const EQUIPMENT_EMPTY_STATE_TOKENS = {
  * 장비 테이블 스타일
  */
 export const EQUIPMENT_TABLE_TOKENS = {
-  /** 테이블 외부 컨테이너 */
-  container: 'border border-brand-border-subtle bg-brand-bg-surface rounded-lg overflow-hidden',
+  /** 테이블 외부 컨테이너 — AP-04 raised elevation */
+  container:
+    'border border-brand-border-subtle bg-brand-bg-surface rounded-lg overflow-hidden shadow-sm',
 
-  /** 헤더 행 배경 */
-  headerRow: 'bg-brand-bg-elevated/80 border-b-2 border-brand-border-default',
+  /** 헤더 행 배경 — sticky top-0 (AP-07 프리미엄 테이블) */
+  headerRow:
+    'bg-brand-bg-elevated/80 border-b-2 border-brand-border-default [&_th]:sticky [&_th]:top-0 [&_th]:bg-brand-bg-elevated/95 [&_th]:z-10',
 
-  /** Row hover */
-  rowHover: ['hover:bg-muted/50', TRANSITION_PRESETS.instantBg].join(' '),
+  /** Row hover — AP-07 좌측 accent bar 효과 (inset box-shadow) + AP-08 다크모드 */
+  rowHover: [
+    'hover:bg-brand-info/[0.03] hover:shadow-[inset_4px_0_0_hsl(var(--brand-color-info))]',
+    'dark:hover:bg-brand-info/[0.08]',
+    TRANSITION_PRESETS.instantBg,
+  ].join(' '),
+
+  /** 짝수 행 stripe — AP-07 프리미엄 테이블 */
+  rowStripe: 'even:bg-muted/30 dark:even:bg-muted/10',
 
   /** Header */
   header: {
@@ -691,6 +700,68 @@ export const EQUIPMENT_DETAIL_HEADER_TOKENS = {
 } as const;
 
 // ============================================================================
+// Equipment BasicInfo Card Tokens (와이어프레임 dl-grid 스타일)
+// ============================================================================
+
+/**
+ * 기본정보 탭 카드 스타일 — 와이어프레임 info-card 패턴
+ *
+ * Primary 카드(기본정보): 좌측 brand-info 보더로 시각적 위계 강조
+ * dl-grid: 2-column grid (라벨/값) — 서류 양식 모방
+ */
+export const EQUIPMENT_INFO_CARD_TOKENS = {
+  /** 비대칭 그리드 컨테이너: Primary(1.6fr) + 보조 2개 — AP-01 해소 */
+  grid: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr] gap-4',
+  /** 카드 공통 */
+  card: 'bg-card border border-border rounded-lg overflow-hidden shadow-sm',
+  /** Primary 카드 — 좌측 강조 보더 (AP-04 깊이 차등) */
+  cardPrimary:
+    'bg-card border border-border border-l-[3px] border-l-brand-info rounded-lg overflow-hidden shadow-sm',
+
+  /** 카드 헤더: 아이콘 + 타이틀 (uppercase tracking) */
+  header: 'flex items-center gap-2 px-4 pt-4 pb-2',
+  headerIcon: 'h-4 w-4 text-muted-foreground shrink-0',
+  headerTitle: 'font-display text-xs font-semibold text-foreground uppercase tracking-widest',
+
+  /** dl-grid: 2-column 라벨-값 쌍 */
+  body: 'px-4 pb-4',
+  dlGrid: 'grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]',
+  dtLabel: 'text-muted-foreground whitespace-nowrap py-1',
+  ddValue: 'text-foreground font-medium py-1',
+  ddMono: 'font-mono text-xs tracking-wider text-foreground font-medium py-1',
+} as const;
+
+/**
+ * 최근 교정이력 타임라인 스타일
+ */
+export const EQUIPMENT_CALIBRATION_TIMELINE_TOKENS = {
+  container: 'relative pl-8',
+  line: 'absolute left-[7px] top-1 bottom-1 w-0.5 bg-border rounded-full',
+  item: 'relative pb-6 last:pb-0',
+  dot: {
+    base: 'absolute left-[-25px] top-1 w-2.5 h-2.5 rounded-full border-2 border-card',
+    ok: 'bg-brand-ok shadow-[0_0_0_2px_rgba(16,185,129,0.3)]',
+    info: 'bg-brand-info shadow-[0_0_0_2px_rgba(59,130,246,0.3)]',
+    warn: 'bg-brand-warning shadow-[0_0_0_2px_rgba(245,158,11,0.3)]',
+    critical: 'bg-brand-critical shadow-[0_0_0_2px_rgba(239,68,68,0.3)]',
+  },
+  /** 교정 결과 → dot 색상 매핑 (SSOT: CALIBRATION_RESULT_BADGE와 동일 시멘틱) */
+  resultDotMap: {
+    pass: 'ok',
+    fail: 'critical',
+    conditional: 'warn',
+  } as Record<string, 'ok' | 'info' | 'warn' | 'critical'>,
+  content: [
+    'bg-card border border-border rounded-md px-4 py-3',
+    'hover:shadow-md',
+    TRANSITION_PRESETS.fastShadow,
+  ].join(' '),
+  date: 'font-mono text-[11px] text-muted-foreground tabular-nums',
+  title: 'text-[13px] font-medium text-foreground mt-0.5',
+  desc: 'text-xs text-muted-foreground mt-0.5',
+} as const;
+
+// ============================================================================
 // Equipment KPI Strip Tokens
 // ============================================================================
 
@@ -700,17 +771,25 @@ export const EQUIPMENT_DETAIL_HEADER_TOKENS = {
  * 5개 KPI 카드: 다음 교정일, 현재 위치, 반출 이력, 유지보수, 사고 이력
  */
 export const EQUIPMENT_KPI_STRIP_TOKENS = {
-  container: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 py-4',
+  /** 비대칭 그리드: Hero(1.6fr) + 4개 Compact — AP-01 Card Soup 해소 */
+  container: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr] gap-3 py-4',
   card: {
-    base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4 cursor-pointer',
-    hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
+    base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4 cursor-pointer dark:bg-card/80',
+    /** Hero 카드 (첫 번째 KPI) — 더 넓은 패딩 + elevated shadow */
+    hero: 'bg-card border border-border rounded-lg p-4 flex items-start gap-4 border-l-4 cursor-pointer shadow-sm dark:bg-card/80 dark:shadow-md',
+    hover: [
+      'hover:shadow-md hover:border-border/80 dark:hover:bg-card/90',
+      TRANSITION_PRESETS.fastShadowBorder,
+    ].join(' '),
     focus: FOCUS_TOKENS.classes.brand,
   },
-  /** 텍스트 값 (위치, 교정일 등) */
-  value: 'text-xl font-semibold leading-tight',
+  /** 텍스트 값 (위치, 교정일 등) — AP-03 타이포 드라마: text-xl→text-2xl */
+  value: 'text-2xl font-semibold leading-tight font-display',
+  /** Hero KPI 값 — 극적 크기 차이 (3:1+ 비율) */
+  heroValue: 'text-4xl font-bold tabular-nums leading-none tracking-tight font-mono',
   /** 숫자 카운트 값 — tabular-nums로 정렬, font-mono 없음 (한국어 "건" 혼합 폰트 방지) */
-  numericValue: 'text-xl font-semibold tabular-nums leading-tight',
-  label: 'text-xs text-muted-foreground',
+  numericValue: 'text-2xl font-semibold tabular-nums leading-tight',
+  label: 'text-xs text-muted-foreground uppercase tracking-wide',
   sub: 'text-[11px] text-muted-foreground/70',
   borderColors: {
     ok: getSemanticLeftBorderClasses('ok'),
@@ -725,6 +804,15 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
     neutral: 'bg-muted text-muted-foreground',
   },
   iconContainer: 'rounded-md p-2 flex-shrink-0',
+  /** Hero 아이콘 컨테이너 — 40px (와이어프레임 사양) */
+  heroIconContainer: 'rounded-lg p-2.5 flex-shrink-0',
+  /** Hero 값 색상 — colorVariant에 따라 동적 적용 */
+  valueColors: {
+    ok: 'text-brand-ok',
+    warn: 'text-brand-critical',
+    info: 'text-brand-info',
+    neutral: 'text-foreground',
+  },
 } as const;
 
 export type KpiColorVariant = keyof typeof EQUIPMENT_KPI_STRIP_TOKENS.borderColors;

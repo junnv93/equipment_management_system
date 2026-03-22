@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장비 상세 — 디자인 와이어프레임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== Layer 1: Primitives ========== */
+:root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  --brand-ok: #10B981;
+  --brand-warning: #F59E0B;
+  --brand-critical: #EF4444;
+  --brand-info: #3B82F6;
+  --brand-neutral: #6B7280;
+  --brand-purple: #8B5CF6;
+  --brand-repair: #F97316;
+  --brand-temporary: #22B8CF;
+  --midnight: #122C49;
+
+  --bg-primary: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-muted: #f1f5f9;
+  --bg-strip: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-placeholder: #94a3b8;
+  --border-default: #e2e8f0;
+  --border-hover: #cbd5e1;
+  --border-strong: #94a3b8;
+
+  --shadow-flush: none;
+  --shadow-raised: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-elevated: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-floating: 0 8px 24px rgba(0,0,0,0.12);
+
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-moderate: 350ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --font-display: 'DM Sans', 'Noto Sans KR', sans-serif;
+  --font-body: 'IBM Plex Sans', 'Noto Sans KR', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+.dark {
+  --bg-primary: #0f172a;
+  --bg-card: #1e293b;
+  --bg-muted: #1e293b;
+  --bg-strip: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-placeholder: #64748b;
+  --border-default: #334155;
+  --border-hover: #475569;
+  --border-strong: #64748b;
+  --shadow-raised: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-elevated: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow-floating: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --bg-primary: #0f172a;
+    --bg-card: #1e293b;
+    --bg-muted: #1e293b;
+    --bg-strip: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-placeholder: #64748b;
+    --border-default: #334155;
+    --border-hover: #475569;
+    --border-strong: #64748b;
+    --shadow-raised: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 4px 12px rgba(0,0,0,0.25);
+    --shadow-floating: 0 8px 24px rgba(0,0,0,0.4);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== Sticky Header ========== */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-default);
+  box-shadow: var(--shadow-raised);
+}
+.header-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-md) var(--space-lg);
+}
+.breadcrumb-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+.breadcrumb-row a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.breadcrumb-row a:hover { color: var(--brand-info); }
+.breadcrumb-row a:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 2px; }
+
+.main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-xl);
+}
+.name-group { flex: 1; min-width: 0; }
+.equip-name-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.equip-name {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.header-meta .mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.header-meta .divider {
+  color: var(--border-default);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid;
+}
+.badge-ok { background: rgba(16,185,129,0.08); color: var(--brand-ok); border-color: rgba(16,185,129,0.2); }
+.badge-warning { background: rgba(245,158,11,0.08); color: var(--brand-warning); border-color: rgba(245,158,11,0.2); }
+.badge-critical { background: rgba(239,68,68,0.08); color: var(--brand-critical); border-color: rgba(239,68,68,0.2); }
+.badge-info { background: rgba(59,130,246,0.08); color: var(--brand-info); border-color: rgba(59,130,246,0.2); }
+.badge-neutral { background: rgba(107,114,128,0.08); color: var(--brand-neutral); border-color: rgba(107,114,128,0.2); }
+.badge-purple { background: rgba(139,92,246,0.08); color: var(--brand-purple); border-color: rgba(139,92,246,0.2); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--duration-fast) var(--ease-out);
+  min-height: 36px;
+  text-decoration: none;
+}
+.btn:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 2px; }
+.btn-primary { background: var(--midnight); color: #fff; }
+.btn-primary:hover { background: #1a3d5e; box-shadow: var(--shadow-raised); }
+.btn-outline { background: var(--bg-card); color: var(--text-secondary); border-color: var(--border-default); }
+.btn-outline:hover { border-color: var(--border-hover); box-shadow: var(--shadow-raised); }
+.btn-danger { background: var(--bg-card); color: var(--brand-critical); border-color: rgba(239,68,68,0.3); }
+.btn-danger:hover { background: rgba(239,68,68,0.05); border-color: var(--brand-critical); }
+
+/* ========== Page Content ========== */
+.page-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+/* ========== KPI Strip — AP-01 비대칭 + AP-03 타이포 드라마 ========== */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-2xl);
+}
+.kpi-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+  min-height: 44px;
+}
+.kpi-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-elevated);
+  transform: translateY(-1px);
+}
+.kpi-card:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 2px; }
+.kpi-card.hero {
+  border-left: 4px solid var(--brand-ok);
+}
+.kpi-card.hero .kpi-value {
+  font-size: 36px;
+  letter-spacing: -0.03em;
+}
+.kpi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.kpi-icon.ok { background: rgba(16,185,129,0.1); color: var(--brand-ok); }
+.kpi-icon.info { background: rgba(59,130,246,0.1); color: var(--brand-info); }
+.kpi-icon.neutral { background: rgba(107,114,128,0.1); color: var(--brand-neutral); }
+.kpi-icon.warn { background: rgba(245,158,11,0.1); color: var(--brand-warning); }
+.kpi-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* ========== Alert Banner ========== */
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+  border: 1px solid;
+  animation: slideDown var(--duration-moderate) var(--ease-out) both;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.alert-banner.critical {
+  background: rgba(239,68,68,0.04);
+  border-color: rgba(239,68,68,0.15);
+}
+.dark .alert-banner.critical {
+  background: rgba(239,68,68,0.08);
+  border-color: rgba(239,68,68,0.25);
+}
+.alert-banner.info {
+  background: rgba(59,130,246,0.04);
+  border-color: rgba(59,130,246,0.15);
+}
+.dark .alert-banner.info {
+  background: rgba(59,130,246,0.08);
+  border-color: rgba(59,130,246,0.25);
+}
+.alert-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.alert-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.alert-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ========== Tab Navigation ========== */
+.tab-nav {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border-default);
+  margin-bottom: var(--space-2xl);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 88px; /* below sticky header */
+  z-index: 40;
+  background: var(--bg-primary);
+  padding-top: var(--space-sm);
+}
+.tab-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-md) var(--space-lg);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition: color var(--duration-fast) var(--ease-out);
+  min-height: 44px;
+}
+.tab-btn:hover { color: var(--text-secondary); }
+.tab-btn:focus-visible { outline: 2px solid var(--brand-info); outline-offset: -2px; }
+.tab-btn.active {
+  color: var(--brand-info);
+  font-weight: 600;
+}
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--brand-info);
+  border-radius: 1px 1px 0 0;
+}
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.tab-btn.active .tab-count {
+  background: rgba(59,130,246,0.1);
+  color: var(--brand-info);
+}
+
+/* ========== Info Grid — AP-01 비대칭 ========== */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-2xl);
+}
+.info-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.info-card.primary {
+  border-left: 3px solid var(--brand-info);
+}
+.info-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg) var(--space-lg) var(--space-sm);
+}
+.info-card-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.info-card-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+.info-card-body {
+  padding: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+
+/* Definition List styling */
+.dl-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-xs) var(--space-lg);
+  font-size: 13px;
+}
+.dl-grid dt {
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.dl-grid dd {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.dl-grid dd.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+/* ========== History Section ========== */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: var(--space-2xl);
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--border-default);
+  border-radius: 1px;
+}
+.timeline-item {
+  position: relative;
+  padding-bottom: var(--space-xl);
+}
+.timeline-item:last-child { padding-bottom: 0; }
+.timeline-dot {
+  position: absolute;
+  left: calc(-1 * var(--space-2xl) + 4px);
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 0 0 2px var(--border-default);
+}
+.timeline-dot.ok { background: var(--brand-ok); box-shadow: 0 0 0 2px rgba(16,185,129,0.3); }
+.timeline-dot.warning { background: var(--brand-warning); box-shadow: 0 0 0 2px rgba(245,158,11,0.3); }
+.timeline-dot.info { background: var(--brand-info); box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
+.timeline-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+.timeline-content:hover { box-shadow: var(--shadow-elevated); }
+.timeline-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+.timeline-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ========== Theme Toggle ========== */
+.theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-elevated);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+.theme-toggle:hover { box-shadow: var(--shadow-floating); }
+.theme-toggle:focus-visible { outline: 2px solid var(--brand-info); outline-offset: 2px; }
+
+/* ========== Animations ========== */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeInUp var(--duration-moderate) var(--ease-out) both; }
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 1024px) {
+  .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+  .kpi-card.hero { grid-column: span 1; }
+  .kpi-card.hero .kpi-value { font-size: 28px; }
+  .info-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .info-grid { grid-template-columns: 1fr; }
+  .main-row { flex-direction: column; gap: var(--space-md); }
+  .header-actions { width: 100%; overflow-x: auto; }
+  .equip-name { font-size: 22px; }
+  .tab-nav { top: 110px; }
+}
+@media (max-width: 480px) {
+  .kpi-strip { grid-template-columns: 1fr; }
+  .kpi-card.hero .kpi-value { font-size: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== Sticky Header ========== -->
+<header class="sticky-header" role="banner">
+  <div class="header-inner">
+    <div class="breadcrumb-row">
+      <span>장비 관리 › 스펙트럼 분석기</span>
+      <a href="#">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        목록으로
+      </a>
+    </div>
+    <div class="main-row">
+      <div class="name-group">
+        <div class="equip-name-line">
+          <h1 class="equip-name">스펙트럼 분석기</h1>
+          <span class="badge badge-ok">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            사용 가능
+          </span>
+          <span class="badge badge-warning">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            D-14 교정 예정
+          </span>
+        </div>
+        <div class="header-meta">
+          <span>모델 <span class="mono">Keysight N9020B</span></span>
+          <span class="divider">·</span>
+          <span>관리번호 <span class="mono">SUW-E0001</span></span>
+          <span class="divider">·</span>
+          <span>S/N <span class="mono">MY52000123</span></span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="#" class="btn btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          반출 요청
+        </a>
+        <a href="#" class="btn btn-outline">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          수정
+        </a>
+        <button class="btn btn-danger" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          삭제
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page-content" role="main" aria-label="장비 상세">
+
+  <!-- ========== KPI Strip (AP-01 비대칭, AP-03 타이포 드라마) ========== -->
+  <section class="kpi-strip animate-in stagger-1" aria-label="핵심 지표">
+    <!-- Hero KPI: 다음 교정일 — 1.6fr (큰 카드) -->
+    <button class="kpi-card hero" type="button" aria-label="교정 탭으로 이동: D-14">
+      <div class="kpi-icon ok">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div>
+        <div class="kpi-label">다음 교정일</div>
+        <div class="kpi-value" style="color: var(--brand-ok);">D-14</div>
+        <div class="kpi-sub">2026-04-05</div>
+      </div>
+    </button>
+
+    <!-- 현재 위치 -->
+    <button class="kpi-card" type="button" aria-label="위치 탭으로 이동">
+      <div class="kpi-icon info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div>
+        <div class="kpi-label">현재 위치</div>
+        <div class="kpi-value" style="font-size: 16px; font-family: var(--font-body); font-weight: 600;">수원 EMC Lab A</div>
+        <div class="kpi-sub">FCC EMC/RF</div>
+      </div>
+    </button>
+
+    <!-- 반출 이력 -->
+    <button class="kpi-card" type="button" aria-label="반출 탭으로 이동: 3건">
+      <div class="kpi-icon neutral">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div>
+        <div class="kpi-label">반출 이력</div>
+        <div class="kpi-value">3건</div>
+        <div class="kpi-sub">최근: 2025-11-20</div>
+      </div>
+    </button>
+
+    <!-- 유지보수 -->
+    <button class="kpi-card" type="button" aria-label="유지보수 탭으로 이동: 2건">
+      <div class="kpi-icon neutral">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <div>
+        <div class="kpi-label">유지보수</div>
+        <div class="kpi-value">2건</div>
+        <div class="kpi-sub">최근: 2026-01-08</div>
+      </div>
+    </button>
+
+    <!-- 사고 이력 -->
+    <button class="kpi-card" type="button" aria-label="사고 탭으로 이동: 0건">
+      <div class="kpi-icon neutral">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div class="kpi-label">사고 이력</div>
+        <div class="kpi-value">0건</div>
+        <div class="kpi-sub">이력 없음</div>
+      </div>
+    </button>
+  </section>
+
+  <!-- ========== Alert Banner (부적합 예시) ========== -->
+  <!--
+  <div class="alert-banner critical animate-in stagger-2">
+    <svg class="alert-icon" style="color: var(--brand-critical);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div>
+      <div class="alert-title">열린 부적합 기록 1건</div>
+      <div class="alert-desc">NC-2026-0012: 교정 기한 초과 — 2026-03-10 이후 사용 금지</div>
+    </div>
+  </div>
+  -->
+
+  <!-- ========== Tab Navigation ========== -->
+  <nav class="tab-nav animate-in stagger-2" aria-label="장비 상세 탭">
+    <button class="tab-btn active" type="button" role="tab" aria-selected="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      기본 정보
+    </button>
+    <button class="tab-btn" type="button" role="tab" aria-selected="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      교정 이력
+      <span class="tab-count">5</span>
+    </button>
+    <button class="tab-btn" type="button" role="tab" aria-selected="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      반출 이력
+      <span class="tab-count">3</span>
+    </button>
+    <button class="tab-btn" type="button" role="tab" aria-selected="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      유지보수
+      <span class="tab-count">2</span>
+    </button>
+    <button class="tab-btn" type="button" role="tab" aria-selected="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      위치
+    </button>
+    <button class="tab-btn" type="button" role="tab" aria-selected="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      사고
+    </button>
+    <button class="tab-btn" type="button" role="tab" aria-selected="false">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+      첨부파일
+      <span class="tab-count">2</span>
+    </button>
+  </nav>
+
+  <!-- ========== Tab Content: 기본 정보 (AP-01 비대칭 그리드) ========== -->
+  <section class="animate-in stagger-3" aria-label="기본 정보">
+    <div class="info-grid">
+      <!-- Primary Card: 장비 기본 (큰 카드 1.6fr) -->
+      <div class="info-card primary">
+        <div class="info-card-header">
+          <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span class="info-card-title">장비 정보</span>
+        </div>
+        <div class="info-card-body">
+          <dl class="dl-grid">
+            <dt>장비명</dt>
+            <dd>스펙트럼 분석기</dd>
+            <dt>관리번호</dt>
+            <dd class="mono">SUW-E0001</dd>
+            <dt>모델명</dt>
+            <dd>Keysight N9020B MXA</dd>
+            <dt>제조사</dt>
+            <dd>Keysight Technologies</dd>
+            <dt>시리얼번호</dt>
+            <dd class="mono">MY52000123</dd>
+            <dt>자산번호</dt>
+            <dd class="mono">UL-2023-0045</dd>
+            <dt>구입년도</dt>
+            <dd>2023</dd>
+            <dt>장비사양</dt>
+            <dd style="font-size: 12px; color: var(--text-muted);">9 kHz ~ 26.5 GHz, Phase Noise -128 dBc/Hz</dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- 교정 정보 -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span class="info-card-title">교정</span>
+        </div>
+        <div class="info-card-body">
+          <dl class="dl-grid">
+            <dt>교정 필요</dt>
+            <dd><span class="badge badge-ok" style="font-size:10px; padding: 2px 6px;">필요</span></dd>
+            <dt>교정 방법</dt>
+            <dd>외부 위탁</dd>
+            <dt>교정 주기</dt>
+            <dd>12개월</dd>
+            <dt>최근 교정일</dt>
+            <dd class="mono">2025-04-05</dd>
+            <dt>다음 교정일</dt>
+            <dd class="mono" style="color: var(--brand-ok); font-weight: 600;">2026-04-05</dd>
+            <dt>교정 기관</dt>
+            <dd>KOLAS</dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- 위치 & 상태 -->
+      <div class="info-card">
+        <div class="info-card-header">
+          <svg class="info-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="info-card-title">위치 & 상태</span>
+        </div>
+        <div class="info-card-body">
+          <dl class="dl-grid">
+            <dt>사이트</dt>
+            <dd>수원 (SUW)</dd>
+            <dt>소속팀</dt>
+            <dd>FCC EMC/RF</dd>
+            <dt>위치</dt>
+            <dd>EMC Lab A - Rack 3</dd>
+            <dt>상태</dt>
+            <dd><span class="badge badge-ok" style="font-size:10px; padding: 2px 6px;">사용 가능</span></dd>
+            <dt>시방일치</dt>
+            <dd>일치</dd>
+            <dt>공용 여부</dt>
+            <dd>전용</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 교정 이력 타임라인 (참조 섹션) ========== -->
+  <section class="animate-in stagger-4" aria-label="최근 교정 이력">
+    <div class="section-header">
+      <h2 class="section-title">최근 교정 이력</h2>
+      <a href="#" class="btn btn-outline" style="font-size: 12px; padding: 5px 12px;">전체 보기 →</a>
+    </div>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot ok"></div>
+        <div class="timeline-content">
+          <div class="timeline-date">2025-04-05</div>
+          <div class="timeline-title">정기 교정 — 적합</div>
+          <div class="timeline-desc">KOLAS 위탁 교정 · 교정성적서 #CAL-2025-0089 · 보정계수 1.002</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot ok"></div>
+        <div class="timeline-content">
+          <div class="timeline-date">2024-04-10</div>
+          <div class="timeline-title">정기 교정 — 적합</div>
+          <div class="timeline-desc">KOLAS 위탁 교정 · 교정성적서 #CAL-2024-0067</div>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot info"></div>
+        <div class="timeline-content">
+          <div class="timeline-date">2023-04-15</div>
+          <div class="timeline-title">초기 교정 (신규 등록)</div>
+          <div class="timeline-desc">제조사 교정성적서 · 교정성적서 #MFR-N9020B-001</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Dark Mode Toggle -->
+<button class="theme-toggle" type="button" aria-label="다크 모드 전환" onclick="toggleTheme()">🌓</button>
+
+<script>
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  document.documentElement.classList.toggle('light');
+  const isDark = document.documentElement.classList.contains('dark');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else if (saved === 'light') {
+    document.documentElement.classList.add('light');
+  }
+})();
+</script>
+</body>
+</html>

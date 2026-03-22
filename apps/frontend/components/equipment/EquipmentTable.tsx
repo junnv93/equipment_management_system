@@ -268,7 +268,7 @@ const EquipmentRow = memo(function EquipmentRow({
 
   return (
     <TableRow
-      className={`${EQUIPMENT_TABLE_TOKENS.rowHover} cursor-pointer focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary/20`}
+      className={`${EQUIPMENT_TABLE_TOKENS.rowStripe} ${EQUIPMENT_TABLE_TOKENS.rowHover} cursor-pointer focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary/20`}
       role="row"
       aria-selected={false}
       data-testid="equipment-row"

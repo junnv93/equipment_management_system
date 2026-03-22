@@ -510,6 +510,18 @@
     "lastCalibrationDate": "마지막 교정일",
     "nextCalibrationDate": "다음 교정 예정일",
     "calibrationAgency": "교정 기관",
+    "calibrationCycleUnit": "개월",
+    "calibrationRequiredYes": "필요",
+    "calibrationRequiredNo": "불필요",
+    "calibrationRequired": "교정 필요 여부",
+    "specMatchMatch": "일치",
+    "specMatchMismatch": "불일치",
+    "sharedLabel": "공용 여부",
+    "sharedYes": "공용",
+    "sharedNo": "전용",
+    "recentCalibrationHistory": "최근 교정 이력",
+    "viewAllCalibrations": "전체 보기",
+    "calibrationEntry": "교정 수행",
     "site": {
       "suwon": "수원",
       "uiwang": "의왕",
@@ -1075,7 +1087,9 @@
     "title": "부적합 상태 ({count}건)",
     "description": "이 장비는 현재 부적합 상태입니다. 부적합 처리가 완료될 때까지 대여 및 반출이 제한됩니다.",
     "discoveryDate": "발견일: {date}",
-    "manage": "부적합 관리"
+    "manage": "부적합 관리",
+    "statusWarningTitle": "부적합 상태 장비",
+    "statusWarningDesc": "이 장비는 교정 기한 초과 또는 부적합 상태입니다. 사용이 제한되며, 부적합 기록이 자동 생성될 예정입니다."
   },
   "sharedBadge": {
     "safetyLab": "공용장비",
@@ -1333,7 +1347,7 @@
     "maintenance": "유지보수",
     "incidentHistory": "사고 이력",
     "dday": "D-{days}",
-    "overdue": "{days}일 초과",
+    "overdue": "D+{days}",
     "notApplicable": "N/A",
     "noRecord": "이상 없음",
     "count": "{count}건",
