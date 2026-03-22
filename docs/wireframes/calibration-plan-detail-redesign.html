@@ -312,7 +312,15 @@
       background: var(--info);
       color: white;
       box-shadow: 0 0 0 4px var(--info-light), 0 2px 8px rgba(37, 99, 235, 0.25);
-      animation: pulse-ring 2.5s ease-in-out infinite;
+      /* 작성 중 — 정적 (pulse 없음) */
+    }
+
+    .timeline__node--active-waiting {
+      background: var(--info);
+      color: white;
+      box-shadow: 0 0 0 4px var(--info-light), 0 2px 8px rgba(37, 99, 235, 0.20);
+      animation: pulse-ring 5s ease-in-out infinite;
+      /* 다른 역할의 액션을 기다리는 상태 — ring 호흡 (5초 주기, 항상 보임) */
     }
 
     .timeline__node--completed {
@@ -333,9 +341,10 @@
       box-shadow: 0 0 0 4px var(--critical-light);
     }
 
+    /* 은은한 ring 호흡 — 5초 주기, ring 항상 보임 (3px↔5px), 사라지지 않음 */
     @keyframes pulse-ring {
-      0%, 100% { box-shadow: 0 0 0 4px var(--info-light), 0 2px 8px rgba(37, 99, 235, 0.25); }
-      50% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.08), 0 2px 12px rgba(37, 99, 235, 0.15); }
+      0%, 100% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 2px 6px rgba(37, 99, 235, 0.08); }
+      50% { box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.06), 0 2px 8px rgba(37, 99, 235, 0.05); }
     }
 
     .timeline__label {
@@ -576,8 +585,13 @@
       transition: background var(--transition-fast);
     }
 
+    /* AP-07: stripe 패턴 — 짝수 행 미세 배경 */
+    .plan-table tbody tr:nth-child(even) {
+      background: rgba(0,0,0,0.012);
+    }
+
     .plan-table tbody tr:hover {
-      background: rgba(0,0,0,0.015);
+      background: rgba(0,0,0,0.03);
     }
 
     .plan-table tbody tr:not(:last-child) td {
@@ -898,10 +912,160 @@
   <!-- Scenario switcher -->
   <div class="scenario-bar">
     <span class="scenario-bar__label">Scenario</span>
+    <button class="scenario-tab" data-scenario="draft">작성 중 (기술책임자)</button>
     <button class="scenario-tab scenario-tab--active" data-scenario="pending-approval">승인 대기 (시험소장 뷰)</button>
     <button class="scenario-tab" data-scenario="pending-review">확인 대기 (품질책임자 뷰)</button>
     <button class="scenario-tab" data-scenario="approved">승인 완료</button>
     <button class="scenario-tab" data-scenario="rejected">반려됨</button>
+  </div>
+
+  <!-- ====================================================================
+       SCENARIO 0: 작성 중 — 기술책임자 뷰 (Draft)
+       ==================================================================== -->
+  <div class="scenario" id="scenario-draft">
+    <div class="container stack stack-xl">
+      <div class="page-header">
+        <div class="page-header__left">
+          <a href="#" class="page-header__back" aria-label="목록으로">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          </a>
+          <div>
+            <div class="page-header__title">
+              2026년 수원시험소 교정계획서
+              <span class="badge badge--draft">작성 중</span>
+            </div>
+            <div class="page-header__meta">
+              작성자: 김기술 &nbsp;|&nbsp; 작성일: 2026-01-15 &nbsp;|&nbsp; 팀: 전기시험팀
+            </div>
+          </div>
+        </div>
+        <div class="page-header__actions">
+          <button class="btn btn--destructive">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+            삭제
+          </button>
+          <button class="btn btn--primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            검토 요청
+          </button>
+        </div>
+      </div>
+
+      <!-- Timeline: Step 1 active (NO pulse), Steps 2-3 pending -->
+      <div class="card" style="box-shadow: var(--shadow-sm);">
+        <div class="timeline" role="group" aria-label="3단계 승인 타임라인">
+          <div class="timeline__step" aria-current="step">
+            <div class="timeline__node timeline__node--active annotation" data-note="active 정적 — pulse 없음">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div class="timeline__label">1. 작성</div>
+            <div class="timeline__role">기술책임자</div>
+          </div>
+          <div class="timeline__connector timeline__connector--pending" aria-hidden="true"></div>
+          <div class="timeline__step">
+            <div class="timeline__node timeline__node--pending" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div class="timeline__label">2. 확인</div>
+            <div class="timeline__role">품질책임자</div>
+          </div>
+          <div class="timeline__connector timeline__connector--pending" aria-hidden="true"></div>
+          <div class="timeline__step">
+            <div class="timeline__node timeline__node--pending" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div class="timeline__label">3. 승인</div>
+            <div class="timeline__role">시험소장</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Items Table (editable in draft) -->
+      <div class="card" style="box-shadow: var(--shadow-sm);">
+        <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 15px; font-weight: 700;">교정 대상 장비 목록</div>
+            <div style="font-size: 12px; color: var(--brand-text-muted); margin-top: 2px;">총 5건의 장비가 등록되어 있습니다. 교정기관/비고를 수정할 수 있습니다.</div>
+          </div>
+        </div>
+        <div class="card-body--flush">
+          <div class="table-wrap">
+            <table class="plan-table">
+              <thead>
+                <tr>
+                  <th class="col-base-header" colspan="3">기본정보</th>
+                  <th class="col-snapshot-header group-header col-snapshot-start" colspan="3"><span class="group-header__label">현황 (스냅샷)</span></th>
+                  <th class="col-plan-header group-header col-plan-start" colspan="4"><span class="group-header__label">계획</span></th>
+                  <th class="col-base-header"></th>
+                </tr>
+                <tr>
+                  <th class="col-base" style="width: 44px; text-align: center;">#</th>
+                  <th class="col-base">관리번호</th>
+                  <th class="col-base">장비명</th>
+                  <th class="col-snapshot col-snapshot-start">유효일자</th>
+                  <th class="col-snapshot">주기</th>
+                  <th class="col-snapshot">교정기관</th>
+                  <th class="col-plan col-plan-start">예정일</th>
+                  <th class="col-plan">교정기관</th>
+                  <th class="col-plan">확인</th>
+                  <th class="col-plan">비고</th>
+                  <th class="col-base" style="width: 48px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="cell-num col-base">1</td>
+                  <td class="mono col-base">SUW-E0001</td>
+                  <td class="col-base">정밀 온도계 A</td>
+                  <td class="mono col-snapshot col-snapshot-start">2025-12-15</td>
+                  <td class="col-snapshot">12개월</td>
+                  <td class="col-snapshot">KOLAS</td>
+                  <td class="mono col-plan col-plan-start">2026-06-15</td>
+                  <td class="col-plan">KOLAS</td>
+                  <td class="col-plan cell-action">—</td>
+                  <td class="col-plan" style="color: var(--brand-text-muted);">—</td>
+                  <td class="col-base cell-action">
+                    <button class="btn btn--ghost btn--icon btn--sm" title="수정" aria-label="항목 수정">✏️</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="cell-num col-base">2</td>
+                  <td class="mono col-base">SUW-E0002</td>
+                  <td class="col-base">정밀 습도계 B</td>
+                  <td class="mono col-snapshot col-snapshot-start">2026-01-20</td>
+                  <td class="col-snapshot">6개월</td>
+                  <td class="col-snapshot">한국표준과학연구원</td>
+                  <td class="mono col-plan col-plan-start">2026-07-20</td>
+                  <td class="col-plan">—</td>
+                  <td class="col-plan cell-action">—</td>
+                  <td class="col-plan" style="color: var(--brand-text-muted);">—</td>
+                  <td class="col-base cell-action">
+                    <button class="btn btn--ghost btn--icon btn--sm" title="수정" aria-label="항목 수정">✏️</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <details class="collapsible">
+          <summary class="collapsible__trigger">
+            <svg class="collapsible__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            버전 이력 (1개)
+          </summary>
+          <div class="collapsible__content">
+            <ul class="version-list">
+              <li class="version-item version-item--current">
+                <span class="version-item__number">v1</span>
+                <div class="version-item__badges"><span class="badge badge--draft">작성 중</span></div>
+                <span class="version-item__date">2026-01-15</span>
+              </li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+    </div>
   </div>
 
   <!-- ====================================================================
@@ -965,9 +1129,9 @@
 
           <div class="timeline__connector timeline__connector--completed"></div>
 
-          <!-- Step 3: 승인 (active) -->
-          <div class="timeline__step">
-            <div class="timeline__node timeline__node--active">
+          <!-- Step 3: 승인 (activeWaiting — pulse) -->
+          <div class="timeline__step" aria-current="step">
+            <div class="timeline__node timeline__node--active-waiting">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
             </div>
             <div class="timeline__label">3. 승인</div>
@@ -1207,8 +1371,8 @@
 
           <div class="timeline__connector timeline__connector--completed"></div>
 
-          <div class="timeline__step">
-            <div class="timeline__node timeline__node--active">
+          <div class="timeline__step" aria-current="step">
+            <div class="timeline__node timeline__node--active-waiting">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
             </div>
             <div class="timeline__label">2. 확인</div>

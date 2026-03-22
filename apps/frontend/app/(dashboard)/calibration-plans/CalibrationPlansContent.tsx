@@ -194,7 +194,7 @@ export default function CalibrationPlansContent({
 
       {/* ── KPI 스트립 ──────────────────────────────────────────── */}
       <div className={CALIBRATION_PLAN_KPI_TOKENS.container}>
-        {kpiItems.map((item) => {
+        {kpiItems.map((item, index) => {
           const isClickable = !!item.filterStatus;
           const isActive = filters.status === (item.filterStatus ?? '');
           const cardClasses = cn(
@@ -204,6 +204,11 @@ export default function CalibrationPlansContent({
             isClickable && CALIBRATION_PLAN_KPI_TOKENS.card.focus,
             isClickable && CALIBRATION_PLAN_KPI_TOKENS.card.clickable,
             isActive && CALIBRATION_PLAN_KPI_TOKENS.card.active
+          );
+          const motionClasses = cn(
+            CALIBRATION_PLAN_KPI_TOKENS.motion.entrance,
+            CALIBRATION_PLAN_KPI_TOKENS.motion.duration,
+            'motion-safe:fill-mode-forwards'
           );
           const content = (
             <>
@@ -222,11 +227,21 @@ export default function CalibrationPlansContent({
             </>
           );
 
+          const staggerStyle = {
+            animationDelay: CALIBRATION_PLAN_KPI_TOKENS.motion.getDelay(index),
+          };
+
           return isClickable ? (
             <button
               key={item.key}
               type="button"
-              className={cardClasses}
+              className={cn(cardClasses, motionClasses)}
+              style={staggerStyle}
+              aria-pressed={isActive}
+              aria-label={t('plansList.kpi.filterByStatus', {
+                status: item.label,
+                count: item.count,
+              })}
               onClick={() =>
                 updateStatus(filters.status === item.filterStatus ? '' : item.filterStatus!)
               }
@@ -234,7 +249,12 @@ export default function CalibrationPlansContent({
               {content}
             </button>
           ) : (
-            <div key={item.key} className={cardClasses}>
+            <div
+              key={item.key}
+              className={cn(cardClasses, motionClasses)}
+              style={staggerStyle}
+              aria-label={`${item.label}: ${item.count}`}
+            >
               {content}
             </div>
           );
@@ -354,7 +374,7 @@ export default function CalibrationPlansContent({
       </div>
 
       {/* ── 계획서 목록 (컴팩트 로우) ────────────────────────────── */}
-      <div className="rounded-xl border border-brand-border-subtle bg-brand-bg-surface">
+      <div className={CALIBRATION_PLAN_LIST_TOKENS.container.wrapper}>
         {isLoading ? (
           <div className="p-4 space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (

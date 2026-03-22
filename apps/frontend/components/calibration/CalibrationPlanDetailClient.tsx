@@ -398,7 +398,7 @@ export function CalibrationPlanDetailClient({
 
       {/* 승인 정보 */}
       {plan.approvedAt && (
-        <Card>
+        <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4 text-sm">
               <span>

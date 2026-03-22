@@ -22,6 +22,7 @@ import {
   toTailwindGap,
   getStaggerDelay,
   TRANSITION_PRESETS,
+  ANIMATION_PRESETS,
 } from '../index';
 import { getSemanticLeftBorderClasses, getSemanticStatusClasses } from '../brand';
 import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
@@ -128,14 +129,17 @@ export const CALIBRATION_PLAN_KPI_TOKENS = {
   container: 'grid grid-cols-2 lg:grid-cols-5 gap-3',
   card: {
     base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4',
-    hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
+    hover: [`hover:${ELEVATION_TOKENS.shadow.subtle}`, TRANSITION_PRESETS.fastShadowBorder].join(
+      ' '
+    ),
     focus: FOCUS_TOKENS.classes.default,
     /** 클릭 가능 카드 (필터 적용) */
     clickable: 'cursor-pointer',
-    /** 활성 상태 (현재 필터) */
-    active: 'ring-2 ring-primary/30',
+    /** 활성 상태 (현재 필터) — 깊이 차등: raised elevation */
+    active: `ring-2 ring-primary/30 ${ELEVATION_TOKENS.shadow.subtle}`,
   },
-  value: 'text-xl font-semibold tabular-nums leading-tight',
+  /** AP-03: 타이포 드라마 — KPI 값은 2xl로 키워 라벨 대비 4:1 비율 */
+  value: 'text-2xl font-bold tabular-nums leading-tight',
   label: 'text-xs text-muted-foreground',
   borderColors: {
     total: 'border-l-border',
@@ -152,6 +156,13 @@ export const CALIBRATION_PLAN_KPI_TOKENS = {
     approved: getSemanticStatusClasses('ok'),
   },
   iconContainer: 'rounded-md p-2 flex-shrink-0',
+  /** AP-06: 모션 — KPI 카드 stagger fade-in */
+  motion: {
+    entrance: ANIMATION_PRESETS.slideUpFade,
+    duration: 'motion-safe:duration-300',
+    /** stagger delay 계산 유틸 */
+    getDelay: (index: number) => getStaggerDelay(index, 'grid'),
+  },
 } as const;
 
 export type CalibrationPlanKpiVariant = keyof typeof CALIBRATION_PLAN_KPI_TOKENS.borderColors;
@@ -175,11 +186,13 @@ export const CALIBRATION_PLAN_LIST_TOKENS = {
     base: 'group relative border-b border-border last:border-b-0',
     desktop: `lg:grid ${CALIBRATION_PLAN_LIST_GRID_COLS} lg:items-center lg:gap-3 lg:px-4 lg:py-3`,
     mobile: 'flex flex-col gap-2 p-4 lg:p-0',
-    /** 헤더 행 */
-    header: `hidden lg:grid ${CALIBRATION_PLAN_LIST_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground`,
+    /** 헤더 행 — AP-03: 타이포 드라마 — uppercase tracking-wide로 데이터 행과 구분 */
+    header: `hidden lg:grid ${CALIBRATION_PLAN_LIST_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wide`,
+    /** 목록 외곽 래퍼 — AP-04: 깊이 차등 — raised surface */
+    wrapper: `rounded-xl border border-brand-border-subtle bg-brand-bg-surface ${ELEVATION_TOKENS.shadow.subtle}`,
   },
-  /** 호버 스타일 */
-  hover: ['hover:bg-muted/40', TRANSITION_PRESETS.instantBg].join(' '),
+  /** 호버 스타일 — AP-06: 모션 — fast bg transition */
+  hover: ['hover:bg-muted/40', TRANSITION_PRESETS.fastBg].join(' '),
   /** 첫 번째 셀 좌측 여백 — 데이터 행과 헤더 행에서 공유 */
   firstCellPadding: 'pl-1',
   /** 연도 셀 (강조) */
@@ -242,6 +255,8 @@ export const CALIBRATION_PLAN_DETAIL_HEADER_TOKENS = {
   meta: SUB_PAGE_HEADER_TOKENS.subtitle,
   /** 액션 버튼 그룹 */
   actionsGroup: 'flex flex-wrap gap-2',
+  /** AP-04: 깊이 차등 — 상세 페이지 주요 Card에 raised elevation */
+  cardElevation: ELEVATION_TOKENS.shadow.subtle,
 } as const;
 
 /**
@@ -262,12 +277,19 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
 
   /** 노드 상태별 스타일 */
   state: {
-    /** 현재 진행 중 */
+    /** 현재 진행 중 — pulse는 "타인의 액션 대기" 단계에만 적절 */
     active: {
       background: 'bg-brand-info',
       text: 'text-white',
-      /** Web Interface Guidelines: Animate only transform and opacity */
-      animation: 'motion-safe:animate-pulse',
+      animation: '',
+      icon: 'opacity-100',
+    },
+    /** 현재 진행 중 + 액션 대기 — pending_review/pending_approval에서 사용 */
+    activeWaiting: {
+      background: 'bg-brand-info',
+      text: 'text-white',
+      /** 다른 역할의 액션을 기다리는 상태 → 은은한 ring glow (4초 주기) */
+      animation: 'motion-safe:animate-timeline-glow',
       icon: 'opacity-100',
     },
     /** 완료됨 */
@@ -304,8 +326,16 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
     completed: 'bg-brand-ok',
     /** 대기 중 구간 */
     pending: 'bg-brand-neutral/30',
-    /** Web Interface Guidelines: Specific property transitions */
+    /** AP-06: 모션 — moderate transition으로 연결선 상태 변화 시각화 */
     transition: TRANSITION_PRESETS.fastBg,
+  },
+
+  /** AP-08: 접근성 — 타임라인 ARIA 속성 */
+  a11y: {
+    /** 타임라인 컨테이너 role */
+    role: 'group' as const,
+    /** 현재 진행 단계 표시 */
+    currentStep: 'step' as const,
   },
 
   /** 반응형 레이아웃 */
@@ -717,7 +747,7 @@ export function getCalibrationPlanStatusBadgeClasses(status: CalibrationPlanStat
  * 타임라인 노드 클래스 생성
  */
 export function getCalibrationPlanTimelineNodeClasses(
-  state: 'active' | 'completed' | 'pending' | 'rejected'
+  state: 'active' | 'activeWaiting' | 'completed' | 'pending' | 'rejected'
 ): string {
   const stateToken = CALIBRATION_PLAN_TIMELINE_TOKENS.state[state];
   const nodeToken = CALIBRATION_PLAN_TIMELINE_TOKENS.node;
@@ -747,7 +777,11 @@ export function getCalibrationPlanTimelineConnectorClasses(completed: boolean): 
     'flex-1',
     completed ? connector.completed : connector.pending,
     connector.transition,
-  ].join(' ');
+    // AP-06: 모션 — 커넥터 등장 시 수평 grow (완료된 구간만)
+    completed ? `${ANIMATION_PRESETS.fadeIn} motion-safe:duration-500 origin-left` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 /**
@@ -760,7 +794,11 @@ export function getCalibrationPlanTimelineVerticalConnectorClasses(completed: bo
     connector.verticalHeight,
     completed ? connector.completed : connector.pending,
     connector.transition,
-  ].join(' ');
+    // AP-06: 모션 — 커넥터 등장 시 수직 grow (완료된 구간만)
+    completed ? `${ANIMATION_PRESETS.fadeIn} motion-safe:duration-500 origin-top` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 /**

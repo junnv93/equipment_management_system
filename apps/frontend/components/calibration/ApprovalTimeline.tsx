@@ -22,6 +22,7 @@ import {
   getCalibrationPlanTimelineVerticalConnectorClasses,
   getLoadingSpinnerClasses,
   CALIBRATION_PLAN_TIMELINE_TOKENS,
+  CALIBRATION_PLAN_DETAIL_HEADER_TOKENS,
   ACTION_BUTTON_TOKENS,
   COLLAPSIBLE_TOKENS,
 } from '@/lib/design-tokens';
@@ -89,7 +90,9 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
   });
 
   // 단계별 상태 매핑 — 3단계 노드 렌더링에 필요한 데이터 구조
-  type StepState = 'active' | 'completed' | 'pending' | 'rejected';
+  // active: 현재 단계 (정적) — draft 작성 중
+  // activeWaiting: 현재 단계 + pulse — 다른 역할의 액션을 기다리는 상태
+  type StepState = 'active' | 'activeWaiting' | 'completed' | 'pending' | 'rejected';
   const steps: Array<{
     titleKey: string;
     subtitleKey: string;
@@ -106,7 +109,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
       titleKey: 'planDetail.timeline.step2',
       subtitleKey: 'planDetail.timeline.qualityManager',
       state: isPendingReview
-        ? 'active'
+        ? 'activeWaiting'
         : isPendingApproval || isApproved
           ? 'completed'
           : isRejected && plan.rejectionStage === 'review'
@@ -118,7 +121,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
       titleKey: 'planDetail.timeline.step3',
       subtitleKey: 'planDetail.timeline.labManager',
       state: isPendingApproval
-        ? 'active'
+        ? 'activeWaiting'
         : isApproved
           ? 'completed'
           : isRejected && plan.rejectionStage === 'approval'
@@ -135,6 +138,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
 
   const iconMap: Record<StepState, React.ReactNode> = {
     active: <Circle className="h-5 w-5" />,
+    activeWaiting: <Circle className="h-5 w-5" />,
     completed: <CheckCircle2 className="h-5 w-5" />,
     rejected: <XCircle className="h-5 w-5" />,
     pending: <Circle className="h-5 w-5" />,
@@ -216,10 +220,14 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
   const layout = CALIBRATION_PLAN_TIMELINE_TOKENS.layout;
 
   return (
-    <Card>
+    <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
       <CardContent className="pt-6">
         {/* ── Desktop: 수평 타임라인 (sm 이상) ── */}
-        <div className={layout.horizontal}>
+        <div
+          className={layout.horizontal}
+          role={CALIBRATION_PLAN_TIMELINE_TOKENS.a11y.role}
+          aria-label={t('planDetail.timeline.ariaLabel')}
+        >
           {steps.map((step, idx) => (
             <React.Fragment key={step.titleKey}>
               {idx > 0 && (
@@ -227,10 +235,21 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
                   className={getCalibrationPlanTimelineConnectorClasses(
                     connectorCompleted[idx - 1]
                   )}
+                  aria-hidden="true"
                 />
               )}
-              <div className="flex flex-col items-center flex-1">
-                <div className={getCalibrationPlanTimelineNodeClasses(step.state)}>
+              <div
+                className="flex flex-col items-center flex-1"
+                aria-current={
+                  step.state === 'active' || step.state === 'activeWaiting'
+                    ? CALIBRATION_PLAN_TIMELINE_TOKENS.a11y.currentStep
+                    : undefined
+                }
+              >
+                <div
+                  className={getCalibrationPlanTimelineNodeClasses(step.state)}
+                  aria-hidden="true"
+                >
                   {iconMap[step.state]}
                 </div>
                 <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
@@ -254,11 +273,15 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
         </div>
 
         {/* ── Mobile: 수직 타임라인 (sm 미만) ── */}
-        <div className={layout.vertical}>
+        <div
+          className={layout.vertical}
+          role={CALIBRATION_PLAN_TIMELINE_TOKENS.a11y.role}
+          aria-label={t('planDetail.timeline.ariaLabel')}
+        >
           {steps.map((step, idx) => (
             <React.Fragment key={step.titleKey}>
               {idx > 0 && (
-                <div className={layout.verticalConnectorWrap}>
+                <div className={layout.verticalConnectorWrap} aria-hidden="true">
                   <div
                     className={getCalibrationPlanTimelineVerticalConnectorClasses(
                       connectorCompleted[idx - 1]
@@ -266,8 +289,18 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
                   />
                 </div>
               )}
-              <div className={layout.verticalStep}>
-                <div className={cn(getCalibrationPlanTimelineNodeClasses(step.state), 'shrink-0')}>
+              <div
+                className={layout.verticalStep}
+                aria-current={
+                  step.state === 'active' || step.state === 'activeWaiting'
+                    ? CALIBRATION_PLAN_TIMELINE_TOKENS.a11y.currentStep
+                    : undefined
+                }
+              >
+                <div
+                  className={cn(getCalibrationPlanTimelineNodeClasses(step.state), 'shrink-0')}
+                  aria-hidden="true"
+                >
                   {iconMap[step.state]}
                 </div>
                 <div className="flex flex-col pt-1">

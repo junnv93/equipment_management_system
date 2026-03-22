@@ -42,6 +42,7 @@ import {
   TABLE_TOKENS,
   TABLE_SCROLL_HINT_TOKENS,
   VERSION_HISTORY_COLLAPSIBLE_TOKENS,
+  CALIBRATION_PLAN_DETAIL_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { VersionHistory } from './VersionHistory';
@@ -154,7 +155,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
   const showActions = isDraft || isApproved;
 
   return (
-    <Card>
+    <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
       <CardHeader>
         <CardTitle>{t('planDetail.items.title')}</CardTitle>
         <CardDescription>
@@ -167,9 +168,18 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
       {/* W-1: 확인 진행률 바 (approved 상태에서만) */}
       {isApproved && items.length > 0 && (
         <div className={PLAN_PROGRESS_TOKENS.container}>
-          <span className={PLAN_PROGRESS_TOKENS.label}>{t('planDetail.items.progress.label')}</span>
+          <span className={PLAN_PROGRESS_TOKENS.label} id="progress-label">
+            {t('planDetail.items.progress.label')}
+          </span>
           <div className={PLAN_PROGRESS_TOKENS.barWrap}>
-            <div className={PLAN_PROGRESS_TOKENS.track}>
+            <div
+              className={PLAN_PROGRESS_TOKENS.track}
+              role="progressbar"
+              aria-valuenow={progressPercent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-labelledby="progress-label"
+            >
               <div
                 className={cn(PLAN_PROGRESS_TOKENS.fill, PLAN_PROGRESS_TOKENS.transition)}
                 style={{ width: `${progressPercent}%` }}
