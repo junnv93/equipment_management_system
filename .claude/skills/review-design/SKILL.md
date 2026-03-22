@@ -93,17 +93,21 @@ git diff --name-only HEAD~5 -- 'apps/frontend/components/**' 'apps/frontend/app/
 
 ### Step 4: 와이어프레임 HTML 생성
 
-리뷰 보고서의 개선사항을 반영한 참조용 와이어프레임을 생성합니다.
+리뷰 보고서의 개선사항을 반영한 **개선 버전** 와이어프레임을 생성합니다.
 
-**생성 전 필수 확인:**
+**기존 와이어프레임 탐색 → 읽기 → 개선:**
+1. Glob 도구로 `docs/wireframes/**/*.html` 탐색
+2. 해당 페이지의 기존 와이어프레임이 있으면 **Read 도구로 읽어** 현재 디자인 결정을 파악
+3. 리뷰(Step 3)에서 발견한 안티패턴을 개선한 **새 버전**을 생성
+4. 기존 파일의 강점(레이아웃 구조, 섹션 배치 등)은 유지하면서 약점만 개선
+
+**버전 관리:** 기존 파일을 덮어쓰지 않고, `-v{N}` 접미사로 새 버전 생성
 ```
-Glob: pattern="docs/wireframes/**/*.html"
+docs/wireframes/approval-redesign.html      ← 기존
+docs/wireframes/approval-redesign-v2.html   ← 리뷰 기반 개선 버전
 ```
-→ 이미 존재하면 skip (사용자가 갱신 요청 시만 덮어씀)
 
 와이어프레임 생성 규칙, 브랜드 팔레트, CSS 토큰 템플릿, 접근성 요구사항은 `references/wireframe-rules.md`를 참조하세요.
-
-**경로:** `docs/wireframes/<page-name>-redesign.html`
 
 ---
 

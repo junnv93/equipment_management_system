@@ -36,7 +36,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 3   | `verify-zod`            | Zod 검증 패턴 — ZodValidationPipe, class-validator 금지, Query targets                   |
 | 4   | `verify-ssot`           | SSOT 임포트 소스 — 타입/enum 패키지 임포트, 로컬 재정의 금지                             |
 | 4b  | `verify-hardcoding`     | SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑    |
-| 5   | `verify-frontend-state` | 프론트엔드 상태 관리 — TanStack Query, onSuccess setQueryData 금지                       |
+| 5   | `verify-frontend-state` | 프론트엔드 상태 관리 + 성능 — TanStack Query, onSuccess setQueryData 금지, 동적 import    |
 | 6   | `verify-nextjs`         | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                            |
 | 7   | `verify-filters`        | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱         |
 | 8   | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙  |
@@ -146,6 +146,11 @@ Workflow 섹션에 정의된 각 검사를 순서대로 실행합니다:
 - verify-<name2>: <통과 내용 요약>
 
 코드 리뷰 준비가 완료되었습니다.
+
+---
+> **검증 범위:** 이 검증은 규칙 기반 자동 검사(import 소스, 값 하드코딩, SQL 안티패턴 등)입니다.
+> 아키텍처 수준의 설계 판단(로직 SSOT, 캐시 전략 적절성, 확장성, 계층 관통 일관성)은
+> `/review-architecture`를 별도 실행하세요.
 ```
 
 **이슈 발견 시:**
@@ -159,6 +164,10 @@ Workflow 섹션에 정의된 각 검사를 순서대로 실행합니다:
 | --- | -------------- | --------------------- | --------- | -------------- |
 | 1   | verify-<name1> | `path/to/file.ts:42`  | 문제 설명 | 수정 코드 예시 |
 | 2   | verify-<name2> | `path/to/file.tsx:15` | 문제 설명 | 수정 코드 예시 |
+
+---
+> **검증 범위:** 이 검증은 규칙 기반 자동 검사입니다.
+> 아키텍처 수준의 설계 판단(로직 SSOT, 캐시 전략 적절성, 확장성)은 `/review-architecture`를 별도 실행하세요.
 ```
 
 ### Step 4: 사용자 액션 확인

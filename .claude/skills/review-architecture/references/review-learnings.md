@@ -105,6 +105,11 @@
 - **설명**: users 테이블을 registeredBy/approvedBy 두 FK로 동시 JOIN 시 `aliasedTable(schema.users, 'registrar')` 패턴 사용. Drizzle ORM에서 동일 테이블을 서로 다른 alias로 참조하여 SELECT/WHERE에서 구분. 프로젝트 최초 도입 사례.
 - **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 6 "모듈 간 패턴 일관성"에 참고 패턴으로 추가
 
+### [2026-03-22] 대시보드 카운트 vs 장비 목록 불일치 — retired/disposed 제외 누락
+- **발견 빈도**: 1회 (dashboard: getSummary, getEquipmentByTeam, getEquipmentStatusStats)
+- **설명**: 대시보드 카운트 쿼리가 모든 상태의 장비를 포함하지만, 장비 목록은 `showRetired=false`(기본값)로 retired/disposed를 숨김. 또한 "반출 중" 카운트가 `count(distinct checkouts.id)` (반출 건수)를 사용하여 장비 목록의 `status=checked_out` 장비 건수와 불일치. `DASHBOARD_EXCLUDED_STATUSES` SSOT 상수로 해결.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 1 "계층 관통 추적"에 "카운트 쿼리↔목록 쿼리 필터 일치 검증" 항목으로 승격
+
 ### [2026-03-22] Pending 승인 목록 엔드포인트의 @SiteScoped 누락
 - **발견 빈도**: 1회 (calibration, software 2개 모듈 동시)
 - **설명**: `findAll()`에는 `@SiteScoped`가 적용되어 있지만, `GET /pending` 엔드포인트에는 누락되어 전 사이트/팀의 승인 대기 건이 노출. 사용자가 승인 시도 시 `enforceSiteAccess`에서 403 거부. 목록 단계에서 필터하지 않으면 사용자가 승인 불가 항목을 보게 되어 혼란 유발.
@@ -129,3 +134,4 @@
 | 2026-03-22 | 안티패턴 | Stale CAS 버전 사용 — extractVersion(originalData) 우선 패턴 | review-learnings.md |
 | 2026-03-22 | 새 패턴 | aliasedTable — 동일 테이블 다중 FK JOIN (calibration) | review-learnings.md |
 | 2026-03-22 | 안티패턴 | Pending 승인 목록 @SiteScoped 누락 (calibration, software) | review-learnings.md |
+| 2026-03-22 | 안티패턴 | 대시보드 카운트 vs 장비 목록 retired/disposed 불일치 | review-learnings.md |

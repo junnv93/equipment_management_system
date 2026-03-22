@@ -15,6 +15,14 @@ argument-hint: '[선택사항: 특정 도메인명 또는 파일 경로]'
 
 코드가 "규칙을 지키는가"가 아니라 "아키텍처적으로 올바른 위치에 올바른 패턴으로 구현되었는가"를 검증합니다.
 
+### 핵심 철학: 임시방편이 아닌 시스템 전반 개선
+
+이 스킬의 리뷰어는 **현재 문제를 단편적으로 해결하는 것이 아니라, 아키텍처 수준에서 시스템 전반의 개선을 추구**합니다. 모든 리뷰 판단에서 다음 원칙을 적용합니다:
+
+- **SSOT 사고**: 새 코드가 이미 존재하는 유틸리티/헬퍼/패턴을 재사용하는가? 새로 만든 로직이 기존 것과 중복되지 않는가? (verify-ssot이 "import 소스"를 검사한다면, 이 스킬은 "로직 수준의 SSOT"를 검사)
+- **하드코딩 방지**: 값 수준 하드코딩은 verify-hardcoding이 담당하지만, **설계 결정의 하드코딩**(특정 역할에 대한 if-else 체인, 매직 넘버로 된 비즈니스 규칙 등)은 이 스킬이 판단
+- **성능 전략**: 안티패턴 체크리스트를 넘어, 데이터 증가에 따른 확장성과 캐시 전략의 적절성을 아키텍처 수준에서 판단
+
 ## When to Run
 
 - 새 모듈/기능을 구현한 후 — 기존 모듈과 패턴이 일치하는지 확인
@@ -60,17 +68,17 @@ git diff --name-only
 
 **백엔드 변경 시 확인:**
 
-1. DB 스키마 변경 → DTO에 반영? → Zod schema 업데이트?
-2. 새 엔드포인트 → `@RequirePermissions` 적용? → `@AuditLog` 적용?
-3. 상태 변경 로직 → CAS 적용? → 캐시 무효화 전략?
-4. 새 에러 코드 → `GlobalExceptionFilter`에서 처리? → 프론트엔드 매핑?
+1. DB 스키마 변경 → DTO에 반영? → Zod schema 업데이트? (누락 시 API 응답과 타입이 불일치하여 프론트엔드 런타임 에러)
+2. 새 엔드포인트 → `@RequirePermissions` 적용? → `@AuditLog` 적용? (누락 시 무권한 접근 + 감사 추적 불가)
+3. 상태 변경 로직 → CAS 적용? → 캐시 무효화 전략? (누락 시 동시 수정으로 데이터 덮어쓰기)
+4. 새 에러 코드 → `GlobalExceptionFilter`에서 처리? → 프론트엔드 매핑? (누락 시 사용자에게 generic "오류 발생" 표시 → 해결 불가)
 
 **프론트엔드 변경 시 확인:**
 
-1. 새 API 호출 → `queryKeys`에 등록? → 적절한 `CACHE_TIMES` 프리셋?
-2. mutation → `useOptimisticMutation` 사용? → 캐시 무효화?
-3. 새 페이지 → Server/Client Component 분리? → loading.tsx/error.tsx?
-4. 필터 추가 → URL searchParams 기반? → filter-utils 활용?
+1. 새 API 호출 → `queryKeys`에 등록? → 적절한 `CACHE_TIMES` 프리셋? (미등록 시 mutation 후 캐시 무효화가 해당 쿼리에 적용되지 않아 stale 데이터 표시)
+2. mutation → `useOptimisticMutation` 사용? → 캐시 무효화? (직접 useMutation 시 VERSION_CONFLICT 처리, 롤백, 캐시 무효화를 모두 수동 구현해야 함)
+3. 새 페이지 → Server/Client Component 분리? → loading.tsx/error.tsx? (미분리 시 전체 페이지가 클라이언트 번들에 포함되어 초기 로딩 지연)
+4. 필터 추가 → URL searchParams 기반? → filter-utils 활용? (useState 사용 시 새로고침/공유 시 필터 상태 유실)
 
 **누락 발견 시 보고:**
 
@@ -92,10 +100,10 @@ git diff --name-only
 
 핵심 확인 사항:
 
-- 새 상태 변경 엔드포인트에 `version` 필드가 DTO에 포함되는가?
-- `VersionedBaseService.updateWithVersion()` 사용하는가? (직접 UPDATE 금지)
-- CAS 실패(409) catch에서 해당 엔티티 캐시 삭제하는가?
-- 프론트엔드 mutation에서 version 전송 + VERSION_CONFLICT 처리하는가?
+- 새 상태 변경 엔드포인트에 `version` 필드가 DTO에 포함되는가? (미포함 시 동시 수정을 감지할 수 없어 마지막 쓰기가 이전 변경을 침묵 덮어쓰기)
+- `VersionedBaseService.updateWithVersion()` 사용하는가? (직접 UPDATE 시 WHERE version=? 조건이 누락되어 CAS 무력화)
+- CAS 실패(409) catch에서 해당 엔티티 캐시 삭제하는가? (미삭제 시 stale version이 캐시에 남아 재시도도 계속 409 — 무한 충돌 루프)
+- 프론트엔드 mutation에서 version 전송 + VERSION_CONFLICT 처리하는가? (미처리 시 사용자가 "오류 발생"만 보고 원인을 알 수 없음)
 
 ### Step 4: 캐시 코히어런스
 
@@ -105,18 +113,20 @@ git diff --name-only
 
 핵심 확인 사항:
 
-- 상태 변경 후 관련 캐시가 모두 무효화되는가? (교차 엔티티 포함)
-- `CacheInvalidationHelper`의 교차 무효화 패턴을 따르는가?
-- 프론트엔드 mutation 성공 시 관련 query가 무효화되는가?
-- 캐시 무효화 범위가 과도하지 않은가? (성능 영향)
+- 상태 변경 후 관련 캐시가 모두 무효화되는가? (교차 엔티티 포함 — 예: 부적합 생성 시 장비 캐시 + 대시보드 캐시도 무효화하지 않으면 대시보드에 stale 통계 표시)
+- `CacheInvalidationHelper`의 교차 무효화 패턴을 따르는가? (인라인으로 캐시 삭제 코드를 작성하면 다른 모듈에서 동일 엔티티 변경 시 누락 발생 — 중앙 헬퍼가 교차 관계를 한 곳에서 관리)
+- 프론트엔드 mutation 성공 시 관련 query가 무효화되는가? (미무효화 시 목록 페이지가 stale 데이터 표시 — 사용자가 "승인했는데 왜 아직 대기 중?")
+- 캐시 무효화 범위가 과도하지 않은가? (전체 플러시는 모든 캐시를 날려 동시 사용자 전원의 다음 요청이 DB 직접 조회 → 순간 부하 급증)
 
-### Step 5: 모듈 간 패턴 일관성
+### Step 5: 모듈 간 패턴 일관성 + 로직 SSOT
 
-새로 추가되거나 수정된 코드가 기존 모듈의 패턴과 일치하는지 확인합니다.
+새로 추가되거나 수정된 코드가 기존 모듈의 패턴과 일치하는지 확인합니다. 또한 **로직 수준의 SSOT**를 검증합니다 — verify-ssot이 import 소스를, verify-hardcoding이 값 하드코딩을 잡는다면, 이 Step은 "이미 존재하는 로직을 다시 작성하지 않았는가"를 확인합니다.
 
 상세 체크리스트는 [references/review-checklist.md](references/review-checklist.md)의 "6. 모듈 간 패턴 일관성" 섹션을 참조합니다.
 
-**비교 대상 선정**: 변경된 도메인과 가장 유사한 기존 모듈을 식별합니다.
+#### 5a: 비교 대상 선정
+
+변경된 도메인과 가장 유사한 기존 모듈을 식별합니다.
 
 | 변경 도메인 | 비교 대상 | 이유 |
 |---|---|---|
@@ -126,6 +136,30 @@ git diff --name-only
 | 이벤트 기반 | checkouts | 이벤트 방출 표준 |
 
 비교 대상 모듈의 해당 파일을 읽고, 새 코드와의 패턴 차이를 식별합니다.
+
+#### 5b: 로직 수준 SSOT 검증
+
+새로 작성된 코드가 기존 유틸리티/헬퍼/패턴을 재사용하지 않고 동일 로직을 재구현하지 않았는지 확인합니다. 이것은 중복 코드 문제가 아니라, 시스템 전반의 일관성 문제입니다 — 같은 비즈니스 로직이 두 곳에 존재하면 한쪽만 수정될 때 불일치가 발생합니다.
+
+확인 항목:
+
+- **캐시 무효화를 인라인으로 작성하지 않았는가?** → `CacheInvalidationHelper`에 이미 교차 무효화 메서드가 있는지 확인. 없으면 헬퍼에 추가하고 호출하는 것이 올바른 패턴 (새 모듈이 같은 엔티티를 변경할 때 무효화가 자동 적용되기 때문)
+- **에러 응답 생성을 직접 작성하지 않았는가?** → `AppError` 또는 기존 에러 팩토리 패턴을 재사용하는지 확인
+- **상태 전이 검증을 인라인으로 작성하지 않았는가?** → 기존 상태 전이 로직과 일관된 패턴을 사용하는지 확인
+- **새 enum 값 추가 시 기존 switch/if-else 체인이 이를 처리하는가?** → 새 상태를 추가했는데 기존 모듈의 상태 분기가 이를 고려하지 않으면, default에 빠져 예상치 못한 동작 발생
+
+**로직 SSOT 위반 발견 시:**
+
+```markdown
+### [Warning] 로직 SSOT 위반: {파일명}
+
+- **현재 코드**: 캐시 무효화를 인라인으로 3줄 작성
+- **기존 SSOT**: `CacheInvalidationHelper.invalidateAfterEquipmentUpdate()` 존재
+- **영향**: 다른 모듈이 같은 엔티티 변경 시 이 인라인 무효화 로직이 누락됨
+- **수정안**: `CacheInvalidationHelper`에 메서드 추가/재사용
+```
+
+#### 5c: 패턴 불일치
 
 **패턴 불일치 발견 시:**
 
@@ -140,20 +174,42 @@ git diff --name-only
 
 ### Step 6: 성능 리뷰
 
-성능에 영향을 줄 수 있는 패턴을 확인합니다.
+성능에 영향을 줄 수 있는 패턴을 확인합니다. 단순 안티패턴 체크를 넘어, **아키텍처 수준의 성능 판단**도 수행합니다 — 현재 데이터 규모에서는 작동하더라도, 데이터가 증가하면 병목이 될 수 있는 설계를 사전에 식별합니다.
 
 상세 체크리스트는 [references/review-checklist.md](references/review-checklist.md)의 "5. 성능 안티패턴" 섹션을 참조합니다.
 
+#### 6a: 알려진 안티패턴 (즉시 수정 필요)
+
 **백엔드:**
-- Drizzle ORM: correlated subquery 사용 없는가? (JOIN + GROUP BY 사용)
-- N+1 쿼리: 루프 내 쿼리 실행 없는가?
-- 이벤트 방출: 에러 바운더리 있는가? (핸들러 실패 → 요청 크래시 방지)
-- 불필요한 트랜잭션: CAS 단일 테이블 업데이트에 트랜잭션 사용하지 않는가?
+- Drizzle ORM: correlated subquery 사용 없는가? (메인 쿼리 행마다 서브쿼리 실행 — 장비 1000대면 1000번 서브쿼리)
+- N+1 쿼리: 루프 내 쿼리 실행 없는가? (10건 조회 후 각각 관계 테이블 조회 → 11 쿼리. 배치 조회 + Map 매핑으로 2 쿼리로 축소)
+- 이벤트 방출: 에러 바운더리 있는가? (핸들러 실패 → 요청 크래시 방지. 핵심 로직은 성공했는데 알림 발송 실패로 사용자에게 500 반환)
+- 불필요한 트랜잭션: CAS 단일 테이블 업데이트에 트랜잭션 사용하지 않는가? (WHERE version=? 조건이 원자성을 보장하므로 트랜잭션 오버헤드 불필요)
 
 **프론트엔드:**
-- Server Component에서 가능한 작업을 Client Component로 넘기지 않았는가?
-- `onSuccess`에서 `setQueryData` 사용하지 않는가?
-- 무한 re-render 유발 패턴 없는가? (객체 의존성 등)
+- Server Component에서 가능한 작업을 Client Component로 넘기지 않았는가? (불필요한 JavaScript 번들 증가 → 모바일에서 초기 로딩 지연)
+- `onSuccess`에서 `setQueryData` 사용하지 않는가? (TData와 TCachedData 타입 불일치 75% — 서버 데이터를 클라이언트가 추측하면 stale 데이터 표시)
+- 무한 re-render 유발 패턴 없는가? (useEffect 의존성에 객체/배열 리터럴 → 매 렌더링마다 새 참조 생성 → 무한 루프)
+
+#### 6b: 확장성 판단 (Info/Warning 수준)
+
+현재 코드가 데이터 증가에도 안전한지 아키텍처 수준에서 판단합니다:
+
+- **쿼리 복잡도**: JOIN이 3개 이상 체인되거나, 서브쿼리가 중첩되면 데이터 증가 시 실행 계획이 급격히 나빠질 수 있음. 필요한 데이터만 조회하는 projection(SELECT 컬럼 제한)이 적용되었는가?
+- **캐시 전략 적절성**: staleTime이 30초인데 데이터가 거의 변하지 않는 경우(teams, 설정) → REFERENCE(30분) 프리셋이 적절. 반대로 REFERENCE인데 자주 변하는 데이터 → 사용자가 stale 데이터를 오래 봄
+- **목록 조회 페이지네이션**: LIMIT/OFFSET 없이 전체 조회하는 엔드포인트는 없는가? (장비 1000대 → 10000대 증가 시 응답 시간 선형 증가)
+- **캐시 무효화 범위**: 한 건 수정에 관련 캐시 10개 이상을 무효화하면, 동시 사용자가 많을 때 캐시 히트율이 급락하여 DB 부하 급증
+
+**확장성 이슈 발견 시:**
+
+```markdown
+### [Info] 확장성 고려: {파일명}
+
+- **현재 코드**: 장비 목록 조회에서 모든 관계 테이블을 JOIN
+- **현재 성능**: 장비 500대 기준 ~200ms (허용 범위)
+- **확장 시 위험**: 장비 5000대 이상에서 JOIN 결과 행 수 기하급수 증가
+- **대안**: 필요한 관계만 선택적 JOIN 또는 별도 쿼리로 분리
+```
 
 ### Step 7: 보안 리뷰
 
@@ -161,9 +217,9 @@ git diff --name-only
 
 상세 체크리스트는 [references/review-checklist.md](references/review-checklist.md)의 "4. 보안 계층" 섹션을 참조합니다.
 
-- userId가 `req.user.userId`에서 추출되는가? (body/query 신뢰 금지)
-- `@RequirePermissions(Permission.XXX)` 적용되었는가?
-- `@AuditLog()` 데코레이터가 mutation 엔드포인트에 적용되었는가?
+- userId가 `req.user.userId`에서 추출되는가? (body/query 신뢰 시 클라이언트가 다른 사용자의 userId를 전송하여 권한 우회 가능)
+- `@RequirePermissions(Permission.XXX)` 적용되었는가? (미적용 시 인증만 되면 모든 사용자가 관리자 기능에 접근 가능)
+- `@AuditLog()` 데코레이터가 mutation 엔드포인트에 적용되었는가? (미적용 시 데이터 변경 이력이 남지 않아 문제 발생 시 추적 불가 — UL-QP-18 감사 요구사항 위반)
 
 ### Step 8: 리뷰 보고서
 
@@ -180,7 +236,9 @@ git diff --name-only
 | CAS 일관성 | OK / N개 이슈 | 요약 |
 | 캐시 코히어런스 | OK / N개 이슈 | 요약 |
 | 패턴 일관성 | OK / N개 불일치 | 요약 |
-| 성능 | OK / N개 안티패턴 | 요약 |
+| 로직 SSOT | OK / N개 중복 | 요약 |
+| 성능 안티패턴 | OK / N개 안티패턴 | 요약 |
+| 확장성 | OK / N개 고려사항 | 요약 |
 | 보안 | OK / N개 이슈 | 요약 |
 
 ### 발견된 이슈 (심각도순)
@@ -243,8 +301,8 @@ Step 2-7에서 체크리스트에 명시되지 않은 항목을 확인한 경우
 이 스킬은 다음을 **리뷰하지 않습니다** (verify-* 스킬 또는 lint가 담당):
 
 - 코드 스타일, 포맷팅, 주석 (lint 담당)
-- SSOT import 소스 (verify-ssot 담당)
-- 하드코딩 값 탐지 (verify-hardcoding 담당)
+- SSOT import 소스 — 타입/enum이 올바른 패키지에서 import 되는가 (verify-ssot 담당). 단, **로직 수준의 SSOT**(기존 유틸리티 재사용 여부)는 이 스킬이 Step 5b에서 검사
+- 값 수준 하드코딩 — API 경로, queryKeys, 환경변수, 캐시 키 등의 매직 스트링 (verify-hardcoding 담당). 단, **설계 수준의 하드코딩**(비즈니스 규칙의 인라인 분기 등)은 이 스킬이 판단
 - Zod 검증 패턴 (verify-zod 담당)
 - Design Token 규칙 (verify-design-tokens 담당)
 - i18n 번역 일관성 (verify-i18n 담당)

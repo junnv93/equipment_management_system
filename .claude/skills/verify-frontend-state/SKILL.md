@@ -1,6 +1,6 @@
 ---
 name: verify-frontend-state
-description: 프론트엔드 상태 관리 패턴을 검증합니다. 컴포넌트/훅 추가/수정 후 사용.
+description: 프론트엔드 상태 관리 패턴 + 성능 안티패턴을 검증합니다. TanStack Query 사용, onSuccess setQueryData 금지, 프론트엔드 성능(동적 import, 서버/클라이언트 분리). 컴포넌트/훅 추가/수정 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 ---
@@ -223,6 +223,36 @@ grep -rn "import.*formatDate.*from.*lib/utils/date" apps/frontend/components --i
 
 **예외:** `<input type="date">` value 생성 등 HTML spec이 요구하는 고정 포맷(`'yyyy-MM-dd'`)은 직접 `formatDate` 사용이 정당. 폼 필드 초기값, 내부 계산용 날짜 포맷은 사용자 설정과 무관.
 
+### Step 8: 프론트엔드 성능 안티패턴 탐지
+
+grep으로 탐지 가능한 프론트엔드 성능 안티패턴을 확인합니다. 아키텍처 수준의 성능 판단(캐시 전략 적절성, 확장성 등)은 `/review-architecture` Step 6b가 담당합니다.
+
+#### 8a: 'use client' 컴포넌트에서 불필요한 데이터 패칭
+
+Server Component에서 가능한 데이터 패칭을 Client Component로 넘기면 클라이언트 번들 증가 + 워터폴 발생 (컴포넌트 JS 로드 → fetch 시작).
+
+```bash
+# 'use client' 파일에서 서버 API 직접 호출 탐지 (Server Component에서 props로 전달해야 할 수 있음)
+grep -rn "'use client'" apps/frontend/app --include="*.tsx" -l | xargs grep -l "getServerAuthSession\|serverApiClient" 2>/dev/null
+```
+
+**PASS 기준:** 0개 결과. `'use client'` 파일에서 서버 전용 함수(getServerAuthSession, serverApiClient) 호출 없음.
+
+**참고:** 이 검사는 명백한 위반만 탐지합니다. Client Component에서 `useQuery`로 데이터를 가져오는 것 자체는 정상 — Server Component에서 prefetch하여 props로 전달할 수 있는데 하지 않은 경우가 아키텍처 수준 판단이며 `/review-architecture`가 담당합니다.
+
+#### 8b: 무거운 라이브러리 dynamic import 누락
+
+큰 라이브러리를 정적 import하면 초기 번들에 포함되어 로딩 지연. `dynamic(() => import(...), { ssr: false })`로 코드 분할 필요.
+
+```bash
+# 무거운 차트/에디터 라이브러리 정적 import 탐지
+grep -rn "^import.*from ['\"]recharts\|^import.*from ['\"]chart\.js\|^import.*from ['\"]@monaco-editor\|^import.*from ['\"]react-quill\|^import.*from ['\"]@tiptap" apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" | grep -v "// \|node_modules\|dynamic"
+```
+
+**PASS 기준:** 무거운 라이브러리의 정적 import 0개.
+
+**FAIL 기준:** `import { BarChart } from 'recharts'`가 직접 사용되면 해당 컴포넌트를 dynamic import로 래핑 필요.
+
 ## Output Format
 
 ```markdown
@@ -237,6 +267,8 @@ grep -rn "import.*formatDate.*from.*lib/utils/date" apps/frontend/components --i
 | 5c  | CheckoutCacheInvalidation  | PASS/FAIL | 직접 queryKeys 조합 위치      |
 | 6   | REFETCH_STRATEGIES 사용    | PASS/INFO | refetchInterval 하드코딩 위치 |
 | 7   | useDateFormatter 컨벤션    | PASS/FAIL | 직접 formatDate import 위치   |
+| 8a  | Client에서 서버 함수 호출  | PASS/FAIL | 'use client' + 서버 함수 위치 |
+| 8b  | 무거운 라이브러리 동적 분할 | PASS/FAIL | 정적 import 위치             |
 ```
 
 ## Exceptions
