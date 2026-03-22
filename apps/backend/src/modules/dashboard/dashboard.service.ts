@@ -1,10 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, count, gte, lte, desc, inArray, sql, SQL } from 'drizzle-orm';
+import { eq, and, count, gte, lte, desc, inArray, notInArray, sql, SQL } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import {
   UserRole,
   EquipmentStatusEnum,
+  EquipmentStatusValues as ESVal,
   CheckoutStatusEnum,
   CalibrationRequiredEnum,
   CheckoutPurposeValues as CPVal,
@@ -43,6 +44,15 @@ import {
  * 모든 조회 메서드는 SimpleCacheService로 캐싱됩니다 (30s TTL).
  * 캐시 무효화: CacheInvalidationHelper.invalidateAllDashboard()
  */
+/**
+ * 대시보드 카운트에서 제외할 장비 상태 (SSOT)
+ *
+ * 장비 목록의 showRetired=false 기본값과 일치시키기 위해
+ * retired/disposed 상태를 모든 대시보드 쿼리에서 제외합니다.
+ * 이 상수를 수정하면 getSummary, getEquipmentByTeam, getEquipmentStatusStats에 동시 반영.
+ */
+const DASHBOARD_EXCLUDED_STATUSES = [ESVal.RETIRED, ESVal.DISPOSED] as const;
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -64,9 +74,11 @@ export class DashboardService {
         const thirtyDaysLater = new Date(today);
         thirtyDaysLater.setDate(today.getDate() + 30);
 
+        // retired/disposed 제외 — 장비 목록(showRetired=false 기본값)과 카운트 일치
         const siteTeamFilter = and(
           teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-          site ? eq(schema.equipment.site, site) : undefined
+          site ? eq(schema.equipment.site, site) : undefined,
+          notInArray(schema.equipment.status, [...DASHBOARD_EXCLUDED_STATUSES])
         );
 
         const [[equipmentStats], [checkoutResult]] = await Promise.all([
@@ -79,10 +91,10 @@ export class DashboardService {
             })
             .from(schema.equipment)
             .where(siteTeamFilter),
-          // 활성 반출 수 (다른 테이블이므로 별도 쿼리, 병렬 실행)
+          // 반출 중 장비 수 — KPI 클릭→장비 목록(status=checked_out) 건수와 일치
           this.db
             .select({
-              count: sql<number>`cast(count(distinct ${schema.checkouts.id}) as integer)`,
+              count: sql<number>`cast(count(distinct ${schema.checkoutItems.equipmentId}) as integer)`,
             })
             .from(schema.checkouts)
             .innerJoin(
@@ -129,7 +141,8 @@ export class DashboardService {
           .where(
             and(
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-              site ? eq(schema.equipment.site, site) : undefined
+              site ? eq(schema.equipment.site, site) : undefined,
+              notInArray(schema.equipment.status, [...DASHBOARD_EXCLUDED_STATUSES])
             )
           )
           .groupBy(schema.equipment.teamId, schema.teams.name);
@@ -594,7 +607,8 @@ export class DashboardService {
           .where(
             and(
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-              site ? eq(schema.equipment.site, site) : undefined
+              site ? eq(schema.equipment.site, site) : undefined,
+              notInArray(schema.equipment.status, [...DASHBOARD_EXCLUDED_STATUSES])
             )
           )
           .groupBy(schema.equipment.status);
