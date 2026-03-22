@@ -5,12 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardSummary } from '@/lib/api/dashboard-api';
-import {
-  DASHBOARD_KPI_TOKENS as T,
-  DASHBOARD_KPI_TREND_TOKENS as TR,
-  DASHBOARD_STATUS_MINI_TOKENS as SM,
-  DASHBOARD_STATUS_COLORS,
-} from '@/lib/design-tokens';
+import { DASHBOARD_KPI_TOKENS as T, DASHBOARD_KPI_TREND_TOKENS as TR } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { EquipmentStatusValues } from '@equipment-management/schemas';
@@ -58,70 +53,6 @@ function TrendBadge({
   );
 }
 
-/** 상태 분포 미니 카드 — 5번째 KPI 카드 */
-function StatusMiniCard({
-  equipmentStatusStats,
-}: {
-  equipmentStatusStats: Record<string, number>;
-}) {
-  const t = useTranslations('dashboard');
-
-  // 표시할 상위 4개 상태 (건수 내림차순, 0 제외)
-  const topStatuses = useMemo(() => {
-    const statusOrder: string[] = [
-      EquipmentStatusValues.AVAILABLE,
-      EquipmentStatusValues.IN_USE,
-      EquipmentStatusValues.CHECKED_OUT,
-      EquipmentStatusValues.CALIBRATION_SCHEDULED,
-      EquipmentStatusValues.CALIBRATION_OVERDUE,
-      EquipmentStatusValues.NON_CONFORMING,
-      EquipmentStatusValues.SPARE,
-    ];
-    return statusOrder
-      .filter((s) => (equipmentStatusStats[s] ?? 0) > 0)
-      .slice(0, 4)
-      .map((s) => ({ key: s, count: equipmentStatusStats[s] ?? 0 }));
-  }, [equipmentStatusStats]);
-
-  const total = useMemo(
-    () => Object.values(equipmentStatusStats).reduce((sum, v) => sum + v, 0),
-    [equipmentStatusStats]
-  );
-
-  return (
-    <div className={SM.container}>
-      <div className={SM.header}>
-        <span className={T.primaryLabel}>{t('kpi.statusBreakdown')}</span>
-      </div>
-      <div className={SM.list}>
-        {topStatuses.map(({ key, count }) => {
-          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-          const color = DASHBOARD_STATUS_COLORS[key] ?? '#D8D9DA';
-          return (
-            <div key={key} className={SM.statusRow}>
-              <span
-                className={SM.statusDot}
-                style={{ backgroundColor: color }}
-                aria-hidden="true"
-              />
-              <span className={SM.statusLabel}>
-                {t(`equipmentStatusLabels.${key}` as Parameters<typeof t>[0])}
-              </span>
-              <div className={SM.barTrack} aria-hidden="true">
-                <div className={SM.barFill} style={{ width: `${pct}%`, backgroundColor: color }} />
-              </div>
-              <span className={SM.statusCount} aria-label={`${count}대`}>
-                {count}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <span className={T.primarySub}>{t('kpi.statusBreakdownSub')}</span>
-    </div>
-  );
-}
-
 export function KpiStatusGrid({
   equipmentStatusStats,
   summary,
@@ -152,7 +83,8 @@ export function KpiStatusGrid({
   if (loading) {
     return (
       <div className={DASHBOARD_GRID.kpi} aria-hidden="true">
-        {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton className="h-36 rounded-lg" />
+        {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-28 rounded-lg" />
         ))}
       </div>
@@ -162,17 +94,32 @@ export function KpiStatusGrid({
   return (
     <section aria-label={t('srOnly.equipmentStats')}>
       <div className={DASHBOARD_GRID.kpi}>
-        {/* 1. 전체 장비 */}
+        {/* 1. Hero KPI: 전체 장비 (midnight gradient + 가동률 바) */}
         <Link
           href={buildScopedEquipmentUrl(scope, FRONTEND_ROUTES.EQUIPMENT.LIST)}
-          className={cn(T.primaryCard, 'min-h-[7rem]')}
+          className={cn(T.heroCard, 'min-h-[8.5rem]')}
         >
-          <div className="flex items-start justify-between gap-1">
-            <span className={T.primaryLabel}>{totalLabel}</span>
-            <TrendBadge trend={trends?.total} />
+          <div>
+            <div className="flex items-start justify-between gap-1">
+              <span className={T.heroLabel}>{totalLabel}</span>
+              <TrendBadge trend={trends?.total} />
+            </div>
+            <div className={T.heroCount}>
+              {total}
+              <span className={T.heroUnit}>{t('kpi.totalUnit')}</span>
+            </div>
+            <span className={T.heroSub}>{t('kpi.heroSub')}</span>
           </div>
-          <span className={T.primaryCount}>{total}</span>
-          <span className={T.primarySub}>{t('kpi.total')}</span>
+          {/* 가동률 프로그레스 바 */}
+          <div>
+            <div className={T.heroBarTrack}>
+              <div className={T.heroBarFill} style={{ width: `${utilizationPct}%` }} />
+            </div>
+            <div className={T.heroBarLabels}>
+              <span>0</span>
+              <span>{t('kpi.heroBarLabel', { percent: utilizationPct })}</span>
+            </div>
+          </div>
         </Link>
 
         {/* 2. 가동률 */}
@@ -259,9 +206,6 @@ export function KpiStatusGrid({
             {nonConforming > 0 ? t('kpi.nonConformingSub') : t('kpi.nonConformingSubNone')}
           </span>
         </Link>
-
-        {/* 5. 장비 상태 분포 */}
-        <StatusMiniCard equipmentStatusStats={equipmentStatusStats} />
       </div>
     </section>
   );

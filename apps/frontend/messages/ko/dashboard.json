@@ -335,6 +335,9 @@
   },
   "kpi": {
     "total": "전체 장비",
+    "totalUnit": "대",
+    "heroSub": "",
+    "heroBarLabel": "{percent}% 가동",
     "utilization": "가동률",
     "utilizationSub": "가용 {count}대",
     "activeCheckouts": "반출 중",

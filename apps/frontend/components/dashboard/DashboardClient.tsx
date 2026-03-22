@@ -41,6 +41,7 @@ import type {
 import { DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE, DASHBOARD_GRID } from '@/lib/config/dashboard-config';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
 import { getPageContainerClasses } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 
 // Props 타입
 export interface DashboardClientProps {
@@ -124,9 +125,9 @@ function DashboardClientComponent({
   const upcomingCheckoutReturns = aggregate?.upcomingCheckoutReturns?.items ?? [];
 
   return (
-    <div className={getPageContainerClasses('list', 'space-y-4')}>
-      {/* Row 0: Welcome + QuickActionBar (flex row) */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div className={getPageContainerClasses('list')}>
+      {/* Row 0: Welcome + QuickActionBar — 입장 애니메이션 */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 motion-safe:animate-fade-in-up">
         <header className="flex-1 min-w-0">
           <WelcomeHeader />
         </header>
@@ -137,35 +138,40 @@ function DashboardClientComponent({
         )}
       </div>
 
-      {/* Row 1: AlertBanner */}
+      {/* Row 1: AlertBanner — AP-02: Welcome→Alert 넓은 간격 (mt-6) */}
       {controlCenter.showAlertBanner && (
-        <AlertBanner
-          overdueCalibrationCount={overdueCalibrations.length}
-          overdueCheckoutCount={overdueCheckouts.length}
-          nonConformingCount={equipmentStatusStats.non_conforming ?? 0}
-        />
+        <div className="mt-6 motion-safe:animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+          <AlertBanner
+            overdueCalibrationCount={overdueCalibrations.length}
+            overdueCheckoutCount={overdueCheckouts.length}
+            nonConformingCount={equipmentStatusStats.non_conforming ?? 0}
+          />
+        </div>
       )}
 
-      {/* Row 2: KPI 5카드 (독립 행) */}
-      <KpiStatusGrid
-        summary={summary}
-        equipmentStatusStats={equipmentStatusStats}
-        loading={isLoading}
-        scope={scope}
-      />
+      {/* Row 2: KPI 4카드 — AP-02: Alert→KPI 넓은 간격, KPI→액션 최대 간격 */}
+      <div className="mt-7 mb-8 motion-safe:animate-fade-in-up" style={{ animationDelay: '160ms' }}>
+        <KpiStatusGrid
+          summary={summary}
+          equipmentStatusStats={equipmentStatusStats}
+          loading={isLoading}
+          scope={scope}
+        />
+      </div>
 
       {/*
        * Row 3: 액션 행 — 2컬럼 외부 [1fr_280px]
        *
        * CalibrationDday를 항상 우측 280px 고정 컬럼에 배치하기 위해
        * 외부를 [1fr_280px]로 분리하고, 내부에서 승인대기/반출현황을 서브그리드로 처리.
-       * 이렇게 하면 역할에 따라 승인대기/반출현황이 일부 없더라도
-       * 교정현황은 항상 우측에 고정되어 레이아웃이 일관성을 유지함.
        */}
       {(controlCenter.showPendingApprovals ||
         controlCenter.showCheckoutOverdue ||
         controlCenter.showCalibrationDday) && (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+        <div
+          className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start mb-8 motion-safe:animate-fade-in-up"
+          style={{ animationDelay: '240ms' }}
+        >
           {/* 좌측: 승인대기 + 반출현황 서브그리드 */}
           {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -193,13 +199,12 @@ function DashboardClientComponent({
 
       {/*
        * Row 4: 하단 — 팀 분포 유무에 따라 레이아웃 분기
-       *
-       * showTeamDistribution=true  → 2컬럼 [2fr_1fr]: 최근활동 | 팀분포+달력
-       * showTeamDistribution=false → 최근활동 전폭 + 달력 아래 배치 (1컬럼)
-       *   → test_engineer, quality_manager 역할에서 우측 컬럼이 허전해지는 문제 해결
        */}
       {controlCenter.showTeamDistribution ? (
-        <div className={DASHBOARD_GRID.bottomRow}>
+        <div
+          className={cn(DASHBOARD_GRID.bottomRow, 'motion-safe:animate-fade-in-up')}
+          style={{ animationDelay: '320ms' }}
+        >
           <section aria-label={t('srOnly.recentActivity')}>
             <RecentActivities data={recentActivities} loading={isLoading} />
           </section>
@@ -215,7 +220,10 @@ function DashboardClientComponent({
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div
+          className="space-y-4 motion-safe:animate-fade-in-up"
+          style={{ animationDelay: '320ms' }}
+        >
           <section aria-label={t('srOnly.recentActivity')}>
             <RecentActivities data={recentActivities} loading={isLoading} />
           </section>

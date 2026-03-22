@@ -335,6 +335,9 @@
   },
   "kpi": {
     "total": "Total Equipment",
+    "totalUnit": "",
+    "heroSub": "",
+    "heroBarLabel": "{percent}% in use",
     "utilization": "Utilization",
     "utilizationSub": "{count} available",
     "activeCheckouts": "Checked Out",

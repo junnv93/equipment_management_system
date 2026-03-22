@@ -310,11 +310,20 @@ export const DASHBOARD_KPI_TOKENS = {
   count: 'font-mono tabular-nums font-semibold text-3xl text-foreground leading-tight',
   label: 'text-xs text-muted-foreground truncate',
   percent: 'text-xs text-muted-foreground tabular-nums',
-  // 4-컬럼 주요 KPI 카드 (Link 컴포넌트로 사용 — hover/focus 포함)
-  primaryCard: `group bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${TRANSITION_PRESETS.fastColor}`,
+  // Compact KPI 카드 (Link 컴포넌트로 사용 — hover:raised elevation)
+  primaryCard: `group bg-card border border-border rounded-lg p-5 flex flex-col justify-between gap-2 hover:bg-muted/40 hover:shadow-sm hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${TRANSITION_PRESETS.fastBgTransformShadow}`,
   primaryCount: 'font-mono tabular-nums font-bold text-4xl text-foreground leading-tight',
   primaryLabel: 'text-sm font-medium text-muted-foreground',
   primarySub: 'text-xs text-muted-foreground tabular-nums',
+  // Hero KPI 카드 (와이어프레임 v2 — midnight gradient, 56px 숫자, 가동률 바)
+  heroCard: `group rounded-lg p-7 flex flex-col justify-between gap-2 bg-gradient-to-br from-ul-midnight to-ul-midnight-light text-white border border-transparent hover:shadow-lg hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${TRANSITION_PRESETS.fastBgTransformShadow}`,
+  heroCount: 'font-display tabular-nums font-bold text-[56px] leading-none tracking-tight',
+  heroUnit: 'text-2xl font-normal opacity-50',
+  heroLabel: 'text-xs font-medium uppercase tracking-wider opacity-60',
+  heroSub: 'text-[13px] opacity-60',
+  heroBarTrack: 'h-1.5 rounded-full bg-white/15 overflow-hidden',
+  heroBarFill: 'h-full rounded-full bg-gradient-to-r from-brand-ok to-brand-ok/60',
+  heroBarLabels: 'flex justify-between text-[10px] font-mono opacity-40 mt-1',
   /**
    * 가동률/반출/부적합 상태별 색상 토큰
    *
@@ -345,7 +354,7 @@ export const DASHBOARD_KPI_TOKENS = {
  * - 좌측 색상 바 + D-day 카운터 + 장비명
  */
 export const DASHBOARD_DDAY_COMPACT_TOKENS = {
-  container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden',
+  container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm',
   header: 'px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0',
   title: 'text-sm font-semibold text-foreground',
   count: 'text-xs text-muted-foreground',
@@ -384,7 +393,7 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
  * - 월간 그리드, 이벤트 도트, 헤더 네비게이션
  */
 export const DASHBOARD_CALENDAR_TOKENS = {
-  container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden',
+  container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden shadow-sm',
   header: 'px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0',
   title: 'text-sm font-semibold text-foreground tabular-nums',
   navButton: `p-1 rounded hover:bg-muted active:bg-muted/80 active:scale-95 text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.instantTransform}`,
@@ -422,8 +431,10 @@ export const DASHBOARD_CALENDAR_TOKENS = {
  * OverdueCheckoutsCard에서 사용 (기존 raw Tailwind → 디자인 토큰 교체)
  */
 export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
-  container: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-2 min-h-[12rem]',
-  containerLoading: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-3 min-h-[12rem]',
+  container:
+    'bg-card border border-border rounded-lg p-4 flex flex-col gap-2 min-h-[12rem] shadow-sm',
+  containerLoading:
+    'bg-card border border-border rounded-lg p-4 flex flex-col gap-3 min-h-[12rem] shadow-sm',
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold text-foreground',
   countAlert: 'text-xs font-medium text-brand-critical',
@@ -460,7 +471,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
  * - 팀명 + 수평 CSS 바 + 건수
  */
 export const DASHBOARD_TEAM_DISTRIBUTION_TOKENS = {
-  container: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-3',
+  container: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-3 shadow-sm',
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold text-foreground',
   total: 'text-xs text-muted-foreground',
@@ -502,7 +513,7 @@ export const DASHBOARD_QUICK_ACTION_TOKENS = {
  */
 export const DASHBOARD_ALERT_BANNER_TOKENS = {
   container:
-    'flex items-center gap-3 min-h-[2.75rem] px-3 py-2 rounded-lg border bg-card overflow-hidden',
+    'flex items-center gap-3 min-h-[2.75rem] px-3 py-2 rounded-lg border bg-card overflow-hidden shadow-sm',
   /** 좌측 severity 색상 바 (border-l-4) */
   severityBorder: {
     critical: 'border-l-4 border-l-brand-critical',
@@ -540,7 +551,7 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
  */
 export const DASHBOARD_STATUS_MINI_TOKENS = {
   container:
-    'bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2 min-h-[7rem]',
+    'bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2 min-h-[7rem] shadow-sm',
   header: 'flex items-start justify-between gap-1',
   label: 'text-sm font-medium text-muted-foreground',
   subLabel: 'text-xs text-muted-foreground',
@@ -705,4 +716,27 @@ export const DASHBOARD_EMPTY_STATE_TOKENS = {
    */
   scrollFade:
     'pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent',
+} as const;
+
+// ============================================================================
+// 19. DASHBOARD_ENTRANCE — 입장 애니메이션 (AP-06 개선)
+// ============================================================================
+
+/**
+ * 대시보드 섹션별 입장 애니메이션 토큰
+ *
+ * Row 0~4에 순차 fade-in-up + stagger delay 적용
+ * motion-safe: 접근성 — prefers-reduced-motion 시 즉시 표시
+ */
+export const DASHBOARD_ENTRANCE = {
+  /** 기본 입장 애니메이션 (delay 없음) */
+  base: 'motion-safe:animate-fade-in-up',
+  /** Row별 stagger delay — CSS animation-delay로 적용 */
+  stagger: {
+    row0: 'motion-safe:animate-fade-in-up [animation-delay:0ms]',
+    row1: 'motion-safe:animate-fade-in-up [animation-delay:80ms]',
+    row2: 'motion-safe:animate-fade-in-up [animation-delay:160ms]',
+    row3: 'motion-safe:animate-fade-in-up [animation-delay:240ms]',
+    row4: 'motion-safe:animate-fade-in-up [animation-delay:320ms]',
+  },
 } as const;

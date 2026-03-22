@@ -69,8 +69,8 @@ export interface QuickActionItem {
  * 스켈레톤↔실제 레이아웃 그리드 불일치(CLS 원인)를 원천 봉쇄
  */
 export const DASHBOARD_GRID = {
-  /** KPI 카드 행 */
-  kpi: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3',
+  /** KPI 카드 행 — 비대칭: Hero(2fr) + Compact 3 + StatusMini */
+  kpi: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4',
   /** 3컬럼 액션 행: 승인대기 | 반출현황 | 교정현황 */
   actionRow: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_280px] gap-4 items-start',
   /** 하단 행: 최근활동(2fr) | 팀분포+달력(1fr) */
