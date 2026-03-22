@@ -67,6 +67,10 @@ export const NC_BANNER_TOKENS = {
   desc: 'text-brand-critical/80',
   detailCard: 'bg-card p-3 rounded-lg border border-brand-critical/20',
   detailText: 'text-sm text-foreground',
+  /** 상태 기반 경고 Alert — NC 기록 없이 non_conforming/calibration_overdue일 때 사용 */
+  statusAlert:
+    'border-brand-critical/20 bg-brand-critical/5 dark:border-brand-critical/30 dark:bg-brand-critical/10',
+  statusAlertIcon: 'h-4 w-4 text-brand-critical',
 } as const;
 
 // ============================================================================

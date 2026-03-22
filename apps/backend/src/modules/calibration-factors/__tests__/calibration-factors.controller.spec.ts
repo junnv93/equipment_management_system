@@ -148,7 +148,7 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.findPendingApprovals.mockResolvedValue(expectedResult);
 
-      const result = await controller.findPendingApprovals();
+      const result = await controller.findPendingApprovals({});
 
       expect(service.findPendingApprovals).toHaveBeenCalled();
       expect(result).toEqual(expectedResult);
@@ -166,7 +166,7 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.getRegistry.mockResolvedValue(expectedResult);
 
-      const result = await controller.getRegistry();
+      const result = await controller.getRegistry({});
 
       expect(service.getRegistry).toHaveBeenCalled();
       expect(result).toEqual(expectedResult);

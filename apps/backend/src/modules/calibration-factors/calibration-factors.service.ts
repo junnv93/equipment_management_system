@@ -8,6 +8,7 @@ import {
 import { eq, and, asc, desc, sql, isNull, or, lte, gte } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import { equipmentBelongsToSite, equipmentBelongsToTeam } from '../../common/utils/site-filter';
 import { calibrationFactors, CalibrationFactor } from '@equipment-management/db/schema';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
 import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
@@ -121,6 +122,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
       approvalStatus,
       factorType,
       search,
+      site,
+      teamId,
       sort = 'effectiveDate.desc',
       page = 1,
       pageSize = DEFAULT_PAGE_SIZE,
@@ -128,7 +131,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     const cacheKey = this.buildCacheKey(
       'list',
-      `${equipmentId ?? ''}_${approvalStatus ?? ''}_${factorType ?? ''}_${search ?? ''}_${sort}_${page}_${pageSize}`
+      `${equipmentId ?? ''}_${approvalStatus ?? ''}_${factorType ?? ''}_${search ?? ''}_${site ?? ''}_${teamId ?? ''}_${sort}_${page}_${pageSize}`
     );
 
     return this.cacheService.getOrSet(
@@ -139,6 +142,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
         if (approvalStatus) conditions.push(eq(calibrationFactors.approvalStatus, approvalStatus));
         if (factorType) conditions.push(eq(calibrationFactors.factorType, factorType));
         if (search) conditions.push(safeIlike(calibrationFactors.factorName, likeContains(search)));
+        if (site) conditions.push(equipmentBelongsToSite(calibrationFactors.equipmentId, site));
+        if (teamId) conditions.push(equipmentBelongsToTeam(calibrationFactors.equipmentId, teamId));
 
         const [sortField, sortOrder] = sort.split('.');
         const sortColumn =
@@ -237,7 +242,10 @@ export class CalibrationFactorsService extends VersionedBaseService {
   }
 
   // 보정계수 대장 조회 (전체 장비의 현재 보정계수)
-  async getRegistry(): Promise<{
+  async getRegistry(
+    site?: string,
+    teamId?: string
+  ): Promise<{
     registry: {
       equipmentId: string;
       factors: CalibrationFactorRecord[];
@@ -249,17 +257,19 @@ export class CalibrationFactorsService extends VersionedBaseService {
   }> {
     const today = new Date().toISOString().split('T')[0];
 
+    const conditions = [
+      eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
+      isNull(calibrationFactors.deletedAt),
+      lte(calibrationFactors.effectiveDate, today),
+      or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))!,
+    ];
+    if (site) conditions.push(equipmentBelongsToSite(calibrationFactors.equipmentId, site));
+    if (teamId) conditions.push(equipmentBelongsToTeam(calibrationFactors.equipmentId, teamId));
+
     const records = await this.db
       .select()
       .from(calibrationFactors)
-      .where(
-        and(
-          eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
-          isNull(calibrationFactors.deletedAt),
-          lte(calibrationFactors.effectiveDate, today),
-          or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))
-        )
-      );
+      .where(and(...conditions));
 
     const normalized = records.map(this.normalize.bind(this));
     const grouped = new Map<string, CalibrationFactorRecord[]>();
@@ -282,7 +292,10 @@ export class CalibrationFactorsService extends VersionedBaseService {
   }
 
   // 승인 대기 목록 조회
-  async findPendingApprovals(): Promise<{
+  async findPendingApprovals(
+    site?: string,
+    teamId?: string
+  ): Promise<{
     items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
@@ -294,6 +307,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
   }> {
     return this.findAll({
       approvalStatus: CalibrationFactorApprovalStatus.PENDING,
+      site,
+      teamId,
     } as CalibrationFactorQueryDto);
   }
 

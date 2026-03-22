@@ -104,7 +104,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTOR_REQUESTS)
   @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  findPendingApprovals(): Promise<{
+  findPendingApprovals(@Query() query: { site?: string; teamId?: string }): Promise<{
     items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
@@ -114,7 +114,7 @@ export class CalibrationFactorsController {
       currentPage: number;
     };
   }> {
-    return this.calibrationFactorsService.findPendingApprovals();
+    return this.calibrationFactorsService.findPendingApprovals(query.site, query.teamId);
   }
 
   @Get('registry')
@@ -127,7 +127,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
   @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  getRegistry(): Promise<{
+  getRegistry(@Query() query: { site?: string; teamId?: string }): Promise<{
     registry: {
       equipmentId: string;
       factors: CalibrationFactorRecord[];
@@ -137,7 +137,7 @@ export class CalibrationFactorsController {
     totalFactors: number;
     generatedAt: Date;
   }> {
-    return this.calibrationFactorsService.getRegistry();
+    return this.calibrationFactorsService.getRegistry(query.site, query.teamId);
   }
 
   @Get('equipment/:equipmentUuid')

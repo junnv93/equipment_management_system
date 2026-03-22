@@ -35,6 +35,8 @@ export const nonConformanceQuerySchema = z.object({
     })
     .optional(),
   site: SiteEnum.optional(),
+  /** @SiteScoped(team 스코프)에 의해 자동 주입 — 직접 설정 금지 */
+  teamId: uuidString(VM.uuid.invalid('팀')).optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
   pendingClose: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
@@ -74,6 +76,9 @@ export class NonConformanceQueryDto {
     enum: SiteEnum.options,
   })
   site?: string;
+
+  @ApiPropertyOptional({ description: '팀 UUID 필터 (@SiteScoped team 스코프 자동 주입)' })
+  teamId?: string;
 
   @ApiPropertyOptional({ description: '검색어 (원인 내용)' })
   search?: string;

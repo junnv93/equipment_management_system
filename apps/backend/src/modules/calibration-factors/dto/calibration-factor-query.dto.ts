@@ -10,6 +10,8 @@ import {
   CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
   type CalibrationFactorType,
   type CalibrationFactorApprovalStatus,
+  SiteEnum,
+  type Site,
   VM,
   uuidString,
 } from '@equipment-management/schemas';
@@ -31,6 +33,10 @@ export const calibrationFactorQuerySchema = z.object({
   approvalStatus: CalibrationFactorApprovalStatusEnum.optional(),
   factorType: CalibrationFactorTypeEnum.optional(),
   search: z.string().optional(),
+  /** @SiteScoped에 의해 자동 주입 — 직접 설정 금지 */
+  site: SiteEnum.optional(),
+  /** @SiteScoped(team 스코프)에 의해 자동 주입 — 직접 설정 금지 */
+  teamId: uuidString(VM.uuid.invalid('팀')).optional(),
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -73,6 +79,19 @@ export class CalibrationFactorQueryDto {
     required: false,
   })
   search?: string;
+
+  @ApiProperty({
+    description: '사이트 필터 (@SiteScoped 자동 주입)',
+    enum: SiteEnum.options,
+    required: false,
+  })
+  site?: Site;
+
+  @ApiProperty({
+    description: '팀 UUID 필터 (@SiteScoped team 스코프 자동 주입)',
+    required: false,
+  })
+  teamId?: string;
 
   @ApiProperty({
     description: '정렬 기준 (필드.방향)',

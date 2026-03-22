@@ -26,7 +26,7 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
-import { equipmentBelongsToSite } from '../../common/utils/site-filter';
+import { equipmentBelongsToSite, equipmentBelongsToTeam } from '../../common/utils/site-filter';
 import {
   EquipmentStatusEnum,
   NonConformanceStatusValues as NonConformanceStatus,
@@ -256,6 +256,7 @@ export class NonConformancesService extends VersionedBaseService {
       status,
       ncType,
       site,
+      teamId,
       search,
       pendingClose = false,
       sort = 'discoveryDate.desc',
@@ -276,6 +277,9 @@ export class NonConformancesService extends VersionedBaseService {
         const conditions = this.buildListConditions(filterParams);
         if (site) {
           conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, site));
+        }
+        if (teamId) {
+          conditions.push(equipmentBelongsToTeam(nonConformances.equipmentId, teamId));
         }
         return and(...conditions);
       },
@@ -358,14 +362,17 @@ export class NonConformancesService extends VersionedBaseService {
     });
 
     // Count 쿼리 — buildListConditions()로 data 쿼리와 동일한 필터 보장
-    // site 필터 시 innerJoin으로 equipment.site 조건 적용
+    // site/teamId 필터 시 innerJoin으로 equipment 조건 적용
     const countConditions = this.buildListConditions(filterParams);
     if (site) {
       countConditions.push(eq(equipment.site, site));
     }
+    if (teamId) {
+      countConditions.push(eq(equipment.teamId, teamId));
+    }
 
     const countQuery = this.db.select({ total: sql<number>`count(*)::int` }).from(nonConformances);
-    if (site) {
+    if (site || teamId) {
       countQuery.innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id));
     }
     const [{ total: totalItems }] = await countQuery.where(and(...countConditions));
@@ -382,6 +389,9 @@ export class NonConformancesService extends VersionedBaseService {
       if (site) {
         summaryConditions.push(eq(equipment.site, site));
       }
+      if (teamId) {
+        summaryConditions.push(eq(equipment.teamId, teamId));
+      }
 
       const summaryQuery = this.db
         .select({
@@ -389,7 +399,7 @@ export class NonConformancesService extends VersionedBaseService {
           count: sql<number>`count(*)::int`,
         })
         .from(nonConformances);
-      if (site) {
+      if (site || teamId) {
         summaryQuery.innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id));
       }
       const summaryRows = await summaryQuery
