@@ -39,6 +39,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { EquipmentHistoryService } from './services/equipment-history.service';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { Team } from '@equipment-management/db/schema/teams';
 import {
@@ -96,7 +97,8 @@ export class EquipmentService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly equipmentHistoryService: EquipmentHistoryService
   ) {
     super();
   }
@@ -623,7 +625,7 @@ export class EquipmentService extends VersionedBaseService {
    * 장비 생성
    * 관리번호 중복 검사 후 새 장비 생성
    */
-  async create(createEquipmentDto: CreateEquipmentDto): Promise<Equipment> {
+  async create(createEquipmentDto: CreateEquipmentDto, userId?: string): Promise<Equipment> {
     try {
       // 관리번호 중복 확인
       const existingEquipment = await this.db.query.equipment.findFirst({
@@ -654,6 +656,25 @@ export class EquipmentService extends VersionedBaseService {
         .values(insertData as typeof equipment.$inferInsert)
         .returning();
 
+      // 최초 설치 위치 이력 자동 생성
+      if (newEquipment.location) {
+        const changedAt = (
+          newEquipment.installationDate ??
+          newEquipment.createdAt ??
+          new Date()
+        ).toISOString();
+        await this.equipmentHistoryService.createLocationHistoryInternal(
+          newEquipment.id,
+          {
+            changedAt,
+            newLocation: newEquipment.location,
+            previousLocation: null,
+            notes: '최초 설치',
+          },
+          userId
+        );
+      }
+
       // 캐시 무효화 (신규 장비이므로 teamId 기반 선택적 무효화)
       await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
 
@@ -674,7 +695,10 @@ export class EquipmentService extends VersionedBaseService {
    * 최소 필수 정보만으로 공용장비를 등록합니다.
    * 공용장비는 isShared = true로 설정됩니다.
    */
-  async createShared(createSharedEquipmentDto: CreateSharedEquipmentDto): Promise<Equipment> {
+  async createShared(
+    createSharedEquipmentDto: CreateSharedEquipmentDto,
+    userId?: string
+  ): Promise<Equipment> {
     try {
       // 관리번호 중복 확인
       const existingEquipment = await this.db.query.equipment.findFirst({
@@ -727,6 +751,21 @@ export class EquipmentService extends VersionedBaseService {
         .insert(equipment)
         .values(insertData as typeof equipment.$inferInsert)
         .returning();
+
+      // 최초 설치 위치 이력 자동 생성
+      if (newEquipment.location) {
+        const changedAt = (newEquipment.createdAt ?? new Date()).toISOString();
+        await this.equipmentHistoryService.createLocationHistoryInternal(
+          newEquipment.id,
+          {
+            changedAt,
+            newLocation: newEquipment.location,
+            previousLocation: null,
+            notes: '최초 설치',
+          },
+          userId
+        );
+      }
 
       // 캐시 무효화 (공용장비 생성)
       await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
@@ -1088,7 +1127,11 @@ export class EquipmentService extends VersionedBaseService {
    *
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    */
-  async update(uuid: string, updateEquipmentDto: UpdateEquipmentDto): Promise<Equipment> {
+  async update(
+    uuid: string,
+    updateEquipmentDto: UpdateEquipmentDto,
+    userId?: string
+  ): Promise<Equipment> {
     try {
       // 장비 존재 여부 확인
       const existingEquipment = await this.findOne(uuid);
@@ -1128,6 +1171,20 @@ export class EquipmentService extends VersionedBaseService {
         undefined,
         'EQUIPMENT_NOT_FOUND'
       );
+
+      // 위치 변경 감지 → 이력 자동 생성
+      if (updated.location !== existingEquipment.location && updated.location) {
+        await this.equipmentHistoryService.createLocationHistoryInternal(
+          uuid,
+          {
+            changedAt: new Date().toISOString(),
+            newLocation: updated.location,
+            previousLocation: existingEquipment.location ?? null,
+            notes: '장비 정보 수정',
+          },
+          userId
+        );
+      }
 
       // 캐시 무효화 (기존 팀 + 변경된 팀 모두 무효화)
       const affectedTeamId = existingEquipment.teamId ?? updateEquipmentDto.teamId;

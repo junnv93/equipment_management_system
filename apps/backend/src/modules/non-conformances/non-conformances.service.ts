@@ -33,6 +33,9 @@ import {
   type NonConformanceStatus as NonConformanceStatusType,
   type NonConformanceType,
   REPAIR_REQUIRING_NC_TYPES,
+  NC_CORRECTION_PREREQUISITES,
+  getNCPrerequisite,
+  getNCTypesRequiring,
   ResolutionTypeEnum,
 } from '@equipment-management/schemas';
 import type { NonConformanceDetail } from './non-conformances.types';
@@ -96,13 +99,23 @@ export class NonConformancesService extends VersionedBaseService {
     if (params.search) {
       conditions.push(safeIlike(nonConformances.cause, likeContains(params.search)));
     }
-    // 종료 승인 대기: 수리 필요 유형(DAMAGE/MALFUNCTION)은 수리 이력 필수
-    // approvals.service.ts의 getNonConformanceCount()와 동일한 조건
+    // 종료 승인 대기: 전제조건이 충족된 NC만 표시
+    // NC_CORRECTION_PREREQUISITES SSOT 기반: repair → repairHistoryId, recalibration → calibrationId
     if (params.pendingClose) {
+      const repairTypes = getNCTypesRequiring('repair');
+      const recalibrationTypes = getNCTypesRequiring('recalibration');
       conditions.push(
-        or(
-          notInArray(nonConformances.ncType, [...REPAIR_REQUIRING_NC_TYPES]),
-          isNotNull(nonConformances.repairHistoryId)
+        and(
+          // repair 전제조건: 해당 유형이 아니거나 수리 이력 있음
+          or(
+            notInArray(nonConformances.ncType, [...repairTypes]),
+            isNotNull(nonConformances.repairHistoryId)
+          )!,
+          // recalibration 전제조건: 해당 유형이 아니거나 교정 기록 있음
+          or(
+            notInArray(nonConformances.ncType, [...recalibrationTypes]),
+            isNotNull(nonConformances.calibrationId)
+          )!
         )!
       );
     }
@@ -588,16 +601,9 @@ export class NonConformancesService extends VersionedBaseService {
     if (updateDto.status && updateDto.status !== nonConformance.status) {
       this.validateTransition(nonConformance.status, updateDto.status);
 
-      // corrected 전이 시 수리 기록 필수 검증 (damage/malfunction)
-      if (
-        updateDto.status === NonConformanceStatus.CORRECTED &&
-        this.requiresRepair(nonConformance.ncType as string) &&
-        !nonConformance.repairHistoryId
-      ) {
-        throw new BadRequestException({
-          code: 'NC_REPAIR_RECORD_REQUIRED',
-          message: 'Damage/malfunction type requires a repair record',
-        });
+      // corrected 전이 시 전제조건 검증 (SSOT: NC_CORRECTION_PREREQUISITES)
+      if (updateDto.status === NonConformanceStatus.CORRECTED) {
+        this.validateCorrectionPrerequisite(nonConformance);
       }
     } else if (nonConformance.status === NonConformanceStatus.CLOSED) {
       throw new BadRequestException({
@@ -645,13 +651,8 @@ export class NonConformancesService extends VersionedBaseService {
     // 중앙화된 상태 전이 검증 (corrected → closed)
     this.validateTransition(nonConformance.status, NonConformanceStatus.CLOSED);
 
-    // damage/malfunction 유형은 수리 기록 필수 검증
-    if (this.requiresRepair(nonConformance.ncType as string) && !nonConformance.repairHistoryId) {
-      throw new BadRequestException({
-        code: 'NC_REPAIR_RECORD_REQUIRED',
-        message: 'Damage/malfunction type requires a repair record',
-      });
-    }
+    // 전제조건 검증 (SSOT: NC_CORRECTION_PREREQUISITES)
+    this.validateCorrectionPrerequisite(nonConformance);
 
     // CAS + 트랜잭션으로 부적합 종료 + 장비 상태 복원
     // 트랜잭션 내부이므로 updateWithVersion() 직접 사용 불가 (tx 컨텍스트)
@@ -911,13 +912,8 @@ export class NonConformancesService extends VersionedBaseService {
     // 중앙화된 상태 전이 검증 (open → corrected)
     this.validateTransition(nc.status, NonConformanceStatus.CORRECTED);
 
-    // damage/malfunction 유형은 수리 연결 필수
-    if (this.requiresRepair(nc.ncType as string) && !nc.repairHistoryId) {
-      throw new BadRequestException({
-        code: 'NC_REPAIR_RECORD_REQUIRED',
-        message: `${nc.ncType} type requires a repair record`,
-      });
-    }
+    // 전제조건 검증 (SSOT: NC_CORRECTION_PREREQUISITES)
+    this.validateCorrectionPrerequisite(nc);
 
     try {
       await this.updateWithVersion<NonConformance>(
@@ -971,8 +967,38 @@ export class NonConformancesService extends VersionedBaseService {
 
   /**
    * 부적합 유형이 수리를 필요로 하는지 확인
+   * @deprecated validateCorrectionPrerequisite 사용 권장
    */
   private requiresRepair(ncType: string): boolean {
     return (REPAIR_REQUIRING_NC_TYPES as readonly string[]).includes(ncType);
+  }
+
+  /**
+   * 부적합 유형별 조치 완료 전제조건 검증 (NC_CORRECTION_PREREQUISITES SSOT 기반)
+   *
+   * - repair: repairHistoryId 필수
+   * - recalibration: calibrationId 필수
+   * - null: 전제조건 없음
+   */
+  private validateCorrectionPrerequisite(nc: {
+    ncType: string;
+    repairHistoryId: string | null;
+    calibrationId: string | null;
+  }): void {
+    const prerequisite = getNCPrerequisite(nc.ncType);
+
+    if (prerequisite === 'repair' && !nc.repairHistoryId) {
+      throw new BadRequestException({
+        code: 'NC_REPAIR_RECORD_REQUIRED',
+        message: `${nc.ncType} type requires a repair record before correction`,
+      });
+    }
+
+    if (prerequisite === 'recalibration' && !nc.calibrationId) {
+      throw new BadRequestException({
+        code: 'NC_RECALIBRATION_REQUIRED',
+        message: `${nc.ncType} type requires an approved calibration record before correction`,
+      });
+    }
   }
 }

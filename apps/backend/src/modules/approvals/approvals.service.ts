@@ -53,7 +53,7 @@ import {
   type UserScopeContext,
   CACHE_TTL,
 } from '@equipment-management/shared-constants';
-import { ApprovalCategoryValues } from '@equipment-management/schemas';
+import { ApprovalCategoryValues, getNCTypesRequiring } from '@equipment-management/schemas';
 import { toSafeInt } from '../../common/utils';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -1097,16 +1097,22 @@ export class ApprovalsService {
   private async getNonConformanceCount(userCtx: UserScopeContext): Promise<number> {
     try {
       // N+1 제거: findMany + 2중 client-side filter → COUNT + SQL WHERE 푸시다운
+      // NC_CORRECTION_PREREQUISITES SSOT 기반 전제조건 필터
+      const repairTypes = getNCTypesRequiring('repair');
+      const recalibrationTypes = getNCTypesRequiring('recalibration');
       const conditions: SQL[] = [
         eq(schema.nonConformances.status, NonConformanceStatusValues.CORRECTED),
         isNull(schema.nonConformances.deletedAt),
-        // 수리 필요 유형은 수리 이력이 있어야 승인 가능
-        or(
-          notInArray(schema.nonConformances.ncType, [
-            NonConformanceTypeValues.DAMAGE,
-            NonConformanceTypeValues.MALFUNCTION,
-          ]),
-          isNotNull(schema.nonConformances.repairHistoryId)
+        // 전제조건 충족된 NC만 승인 가능
+        and(
+          or(
+            notInArray(schema.nonConformances.ncType, [...repairTypes]),
+            isNotNull(schema.nonConformances.repairHistoryId)
+          )!,
+          or(
+            notInArray(schema.nonConformances.ncType, [...recalibrationTypes]),
+            isNotNull(schema.nonConformances.calibrationId)
+          )!
         )!,
       ];
 

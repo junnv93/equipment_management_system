@@ -432,7 +432,7 @@ export class EquipmentApprovalService {
       // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
       if (request.requestType === 'create') {
         const requestData = deserializeRequestData('create', request.requestData);
-        await this.equipmentService.create(requestData);
+        await this.equipmentService.create(requestData, request.requestedBy);
       } else if (request.requestType === 'update') {
         const equipmentData = this.requireEquipmentId(request.equipmentId);
         const currentEquipment = await this.db.query.equipment.findFirst({
@@ -447,7 +447,7 @@ export class EquipmentApprovalService {
         const requestData = deserializeRequestData('update', request.requestData);
         // CAS: 요청 생성 시의 version은 stale → 현재 DB version으로 교체
         requestData.version = currentEquipment.version;
-        await this.equipmentService.update(currentEquipment.id, requestData);
+        await this.equipmentService.update(currentEquipment.id, requestData, request.requestedBy);
       } else if (request.requestType === 'delete') {
         const equipmentId = this.requireEquipmentId(request.equipmentId);
         const currentEquipment = await this.db.query.equipment.findFirst({

@@ -34,6 +34,7 @@ export const createLocationHistorySchema = z.object({
   changedAt: dateStringSchema,
   newLocation: z.string().min(1, VM.required('위치')).max(100, VM.string.max('위치', 100)),
   notes: z.string().optional(),
+  version: z.number().int().positive().optional(),
 });
 
 export type CreateLocationHistoryInput = z.infer<typeof createLocationHistorySchema>;
@@ -63,6 +64,12 @@ export class CreateLocationHistoryDto {
     example: '장비 이동 - 공간 확보를 위한 재배치',
   })
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: '장비 버전 (CAS용 - 위치 변동 탭에서 직접 등록 시 필수)',
+    example: 1,
+  })
+  version?: number;
 }
 
 /**
@@ -77,6 +84,9 @@ export class LocationHistoryResponseDto {
 
   @ApiProperty({ description: '변동 일시' })
   changedAt: Date;
+
+  @ApiPropertyOptional({ description: '이전 위치' })
+  previousLocation?: string;
 
   @ApiProperty({ description: '설치 위치' })
   newLocation: string;

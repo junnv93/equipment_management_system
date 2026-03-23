@@ -59,6 +59,7 @@ export enum EquipmentErrorCode {
 
   // 부적합 관련
   NC_REPAIR_RECORD_REQUIRED = 'NC_REPAIR_RECORD_REQUIRED',
+  NC_RECALIBRATION_REQUIRED = 'NC_RECALIBRATION_REQUIRED',
 
   // 기타
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
@@ -292,6 +293,15 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     ],
     severity: 'warning',
   },
+  [EquipmentErrorCode.NC_RECALIBRATION_REQUIRED]: {
+    title: '교정 기록 필요',
+    message: '교정 기한 초과 유형의 부적합은 새로운 교정을 받아야 합니다.',
+    solutions: [
+      '교정 기록을 먼저 등록하고 승인을 받아주세요',
+      '교정 승인 완료 후 자동으로 조치 완료 상태로 전환됩니다',
+    ],
+    severity: 'warning',
+  },
 
   // 기타
   [EquipmentErrorCode.UNKNOWN_ERROR]: {
@@ -501,6 +511,7 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
 
     // 부적합 에러
     NC_REPAIR_RECORD_REQUIRED: EquipmentErrorCode.NC_REPAIR_RECORD_REQUIRED,
+    NC_RECALIBRATION_REQUIRED: EquipmentErrorCode.NC_RECALIBRATION_REQUIRED,
   };
 
   return mappings[normalizedCode] || EquipmentErrorCode.UNKNOWN_ERROR;

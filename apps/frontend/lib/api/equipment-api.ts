@@ -115,6 +115,7 @@ export interface LocationHistoryItem {
   id: string;
   equipmentId: string;
   changedAt: string | Date;
+  previousLocation?: string;
   newLocation: string;
   notes?: string;
   changedBy?: string;
@@ -150,6 +151,7 @@ export interface CreateLocationHistoryInput {
   changedAt: string;
   newLocation: string;
   notes?: string;
+  version?: number;
 }
 
 export interface CreateMaintenanceHistoryInput {

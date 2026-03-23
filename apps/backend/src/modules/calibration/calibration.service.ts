@@ -1204,37 +1204,29 @@ export class CalibrationService extends VersionedBaseService {
       const nc = existingNc[0];
       const today = new Date();
 
-      await this.db.transaction(async (tx) => {
-        await tx
-          .update(nonConformances)
-          .set({
-            status: NCStatusVal.CORRECTED,
-            resolutionType: ResolutionTypeEnum.enum.recalibration,
-            calibrationId,
-            correctionContent: this.i18n.t(
-              'system.calibrationOverdue.correctionContent',
-              DEFAULT_LOCALE
-            ),
-            correctionDate: today.toISOString().split('T')[0],
-            correctedBy: correctedBy || null,
-            updatedAt: today,
-            version: sql`${nonConformances.version} + 1`,
-          })
-          .where(eq(nonConformances.id, nc.id));
+      // NC를 corrected로 변경 + 교정 기록 연결 (트랜잭션 불필요 — 단일 테이블 CAS)
+      // 장비 상태 복원(non_conforming → available)은 NC 종결(close) 시점에 위임
+      // → close()의 "다른 열린 부적합 확인" 로직이 정상 동작하도록 보장
+      await this.db
+        .update(nonConformances)
+        .set({
+          status: NCStatusVal.CORRECTED,
+          resolutionType: ResolutionTypeEnum.enum.recalibration,
+          calibrationId,
+          correctionContent: this.i18n.t(
+            'system.calibrationOverdue.correctionContent',
+            DEFAULT_LOCALE
+          ),
+          correctionDate: today.toISOString().split('T')[0],
+          correctedBy: correctedBy || null,
+          updatedAt: today,
+          version: sql`${nonConformances.version} + 1`,
+        })
+        .where(eq(nonConformances.id, nc.id));
 
-        await tx
-          .update(schema.equipment)
-          .set({
-            status: ESVal.AVAILABLE,
-            updatedAt: today,
-            version: sql`${schema.equipment.version} + 1`,
-          })
-          .where(eq(schema.equipment.id, equipmentId));
-
-        this.logger.log(
-          `장비 ${equipmentId}: calibration_overdue 부적합(${nc.id}) 조치 완료 + 상태 available로 복원`
-        );
-      });
+      this.logger.log(
+        `장비 ${equipmentId}: calibration_overdue 부적합(${nc.id}) corrected로 변경 (장비 상태 복원은 종결 시 처리)`
+      );
     } catch (error) {
       this.logger.error(
         `calibration_overdue 부적합 자동 조치 실패: ${equipmentId}`,

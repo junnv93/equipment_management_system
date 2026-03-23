@@ -171,7 +171,7 @@ export class EquipmentController {
     if (isLabManager) {
       // DTO에 approvalStatus가 없어도 자동으로 approved 처리
       const approvedDto = { ...createEquipmentDto, approvalStatus: ApprovalStatusValues.APPROVED };
-      return this.equipmentService.create(approvedDto);
+      return this.equipmentService.create(approvedDto, userId);
     }
 
     // 일반 사용자는 승인 요청 생성
@@ -229,7 +229,8 @@ export class EquipmentController {
   @UsePipes(CreateSharedEquipmentValidationPipe)
   async createShared(
     @Body() createSharedEquipmentDto: CreateSharedEquipmentDto,
-    @UploadedFiles() files?: MulterFile[]
+    @UploadedFiles() files: MulterFile[] | undefined,
+    @Req() req: AuthenticatedRequest
   ): Promise<SharedEquipmentCreateResult> {
     // 파일 업로드 처리 (교정성적서)
     if (files && files.length > 0) {
@@ -237,7 +238,8 @@ export class EquipmentController {
       await this.attachmentService.createAttachments(files, attachmentType);
     }
 
-    const newEquipment = await this.equipmentService.createShared(createSharedEquipmentDto);
+    const userId = req.user?.userId;
+    const newEquipment = await this.equipmentService.createShared(createSharedEquipmentDto, userId);
     return {
       message: '공용장비가 등록되었습니다.',
       equipment: newEquipment,
@@ -391,7 +393,7 @@ export class EquipmentController {
 
     // 시스템 관리자는 직접 승인 가능
     if (isAdmin && updateEquipmentDto.approvalStatus === ApprovalStatusEnum.enum.approved) {
-      return this.equipmentService.update(uuid, updateEquipmentDto);
+      return this.equipmentService.update(uuid, updateEquipmentDto, userId);
     }
 
     // 시험실무자는 승인 요청 생성

@@ -46,11 +46,56 @@ export type NonConformanceType = z.infer<typeof NonConformanceTypeEnum>;
  *
  * damage(손상), malfunction(오작동) 유형은 종결 전 수리 이력 연결 필수
  * (UL-QP-18: 손상/오작동은 수리 완료 후에만 시정 조치 인정)
+ *
+ * @deprecated NC_CORRECTION_PREREQUISITES 사용 권장 — 유형별 전제조건을 통합 관리
  */
 export const REPAIR_REQUIRING_NC_TYPES: readonly NonConformanceType[] = [
   'damage',
   'malfunction',
 ] as const;
+
+// ============================================================================
+// 부적합 유형별 조치 완료 전제조건 레지스트리 (SSOT)
+// ============================================================================
+
+/**
+ * SINGLE SOURCE OF TRUTH: 부적합 유형별 조치 완료(open→corrected) 전제조건
+ *
+ * - 'repair': 수리 이력 연결 필수 (repairHistoryId)
+ * - 'recalibration': 승인된 교정 기록 연결 필수 (calibrationId)
+ * - null: 전제조건 없음 (수동 조치 가능)
+ *
+ * UL-QP-18 근거:
+ * - damage/malfunction: 수리 완료 후에만 시정 조치 인정
+ * - calibration_overdue: 재교정 완료가 유일한 해소 방법
+ * - calibration_failure/measurement_error/other: 원인 분석 후 자유 조치
+ */
+export type NCPrerequisiteType = 'repair' | 'recalibration';
+
+export const NC_CORRECTION_PREREQUISITES: Readonly<
+  Record<NonConformanceType, NCPrerequisiteType | null>
+> = {
+  damage: 'repair',
+  malfunction: 'repair',
+  calibration_overdue: 'recalibration',
+  calibration_failure: null,
+  measurement_error: null,
+  other: null,
+} as const;
+
+/** 특정 전제조건이 필요한 NC 유형 목록 조회 */
+export function getNCTypesRequiring(prerequisite: NCPrerequisiteType): NonConformanceType[] {
+  return (
+    Object.entries(NC_CORRECTION_PREREQUISITES) as [NonConformanceType, NCPrerequisiteType | null][]
+  )
+    .filter(([, req]) => req === prerequisite)
+    .map(([type]) => type);
+}
+
+/** NC 유형의 전제조건 조회 */
+export function getNCPrerequisite(ncType: string): NCPrerequisiteType | null {
+  return NC_CORRECTION_PREREQUISITES[ncType as NonConformanceType] ?? null;
+}
 
 /**
  * SINGLE SOURCE OF TRUTH: 해결 유형 열거형

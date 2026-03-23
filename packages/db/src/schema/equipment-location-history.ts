@@ -16,6 +16,7 @@ export const equipmentLocationHistory = pgTable(
       .notNull()
       .references(() => equipment.id, { onDelete: 'cascade' }),
     changedAt: timestamp('changed_at').notNull(),
+    previousLocation: varchar('previous_location', { length: 100 }),
     newLocation: varchar('new_location', { length: 100 }).notNull(),
     notes: text('notes'),
     changedBy: uuid('changed_by').references(() => users.id), // 변경자 (users 테이블 참조)

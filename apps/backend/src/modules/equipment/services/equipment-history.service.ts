@@ -1,4 +1,11 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
@@ -29,6 +36,8 @@ import { I18nService } from '../../../common/i18n/i18n.service';
 
 @Injectable()
 export class EquipmentHistoryService {
+  private readonly logger = new Logger(EquipmentHistoryService.name);
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
@@ -147,6 +156,7 @@ export class EquipmentHistoryService {
       id: record.id,
       equipmentId: record.equipmentId,
       changedAt: record.changedAt,
+      previousLocation: record.previousLocation ?? undefined,
       newLocation: record.newLocation,
       notes: record.notes ?? undefined,
       changedBy: record.changedBy ?? undefined,
@@ -155,36 +165,130 @@ export class EquipmentHistoryService {
   }
 
   /**
-   * 위치 변동 이력 추가
+   * 위치 변동 이력 추가 (외부 API용)
+   *
+   * 트랜잭션 내에서:
+   * 1. equipment.location 조회 → previousLocation으로 저장
+   * 2. equipment_location_history INSERT
+   * 3. equipment.location CAS UPDATE (dto.version 있으면 CAS 체크)
+   * 4. 캐시 무효화
    */
   async createLocationHistory(
     equipmentUuid: string,
     dto: CreateLocationHistoryDto,
     userId?: string
   ): Promise<LocationHistoryResponseDto> {
-    // 사용자 ID 검증 (DB에 존재하지 않으면 null 설정)
     const validatedUserId = await this.validateAndGetUserId(userId);
 
-    const [record] = await this.db
-      .insert(equipmentLocationHistory)
-      .values({
-        equipmentId: equipmentUuid,
-        changedAt: new Date(dto.changedAt),
-        newLocation: dto.newLocation,
-        notes: dto.notes ?? null,
-        changedBy: validatedUserId,
-      })
-      .returning();
+    // 현재 장비 위치 + 버전 조회
+    const currentEquipment = await this.db.query.equipment.findFirst({
+      where: eq(equipment.id, equipmentUuid),
+      columns: { location: true, version: true },
+    });
+    if (!currentEquipment) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentUuid})`,
+      });
+    }
+
+    const previousLocation = currentEquipment.location ?? null;
+
+    // 트랜잭션: history INSERT + equipment.location UPDATE
+    const record = await this.db.transaction(async (tx) => {
+      // 1. 이력 생성
+      const [historyRecord] = await tx
+        .insert(equipmentLocationHistory)
+        .values({
+          equipmentId: equipmentUuid,
+          changedAt: new Date(dto.changedAt),
+          previousLocation,
+          newLocation: dto.newLocation,
+          notes: dto.notes ?? null,
+          changedBy: validatedUserId,
+        })
+        .returning();
+
+      // 2. equipment.location 동기화 (CAS 적용)
+      if (dto.version !== undefined) {
+        // 외부 API 호출: CAS 체크
+        const [updated] = await tx
+          .update(equipment)
+          .set({
+            location: dto.newLocation,
+            version: sql`version + 1`,
+            updatedAt: new Date(),
+          } as Record<string, unknown>)
+          .where(and(eq(equipment.id, equipmentUuid), eq(equipment.version, dto.version)))
+          .returning();
+
+        if (!updated) {
+          throw new ConflictException({
+            code: 'VERSION_CONFLICT',
+            message: '다른 사용자가 이미 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
+            currentVersion: currentEquipment.version,
+            expectedVersion: dto.version,
+          });
+        }
+      } else {
+        // 내부 호출: CAS 없이 직접 UPDATE
+        await tx
+          .update(equipment)
+          .set({
+            location: dto.newLocation,
+            version: sql`version + 1`,
+            updatedAt: new Date(),
+          } as Record<string, unknown>)
+          .where(eq(equipment.id, equipmentUuid));
+      }
+
+      return historyRecord;
+    });
+
+    // 캐시 무효화 (equipment.location 변경됨 — SSOT: CacheInvalidationHelper)
+    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentUuid, true, false);
+
+    this.logger.debug(
+      `✓ Location changed: ${equipmentUuid} [${previousLocation ?? '(없음)'}] → [${dto.newLocation}]`
+    );
 
     return {
       id: record.id,
       equipmentId: record.equipmentId,
       changedAt: record.changedAt,
+      previousLocation: record.previousLocation ?? undefined,
       newLocation: record.newLocation,
       notes: record.notes ?? undefined,
       changedBy: record.changedBy ?? undefined,
       createdAt: record.createdAt,
     };
+  }
+
+  /**
+   * 위치 변동 이력 추가 (내부 전용)
+   *
+   * equipment.location UPDATE 없이 history INSERT만 수행.
+   * 장비 생성(create) / 수정(update) 시 호출 — 해당 서비스에서 이미 location을 처리하므로.
+   */
+  async createLocationHistoryInternal(
+    equipmentId: string,
+    data: {
+      changedAt: string;
+      newLocation: string;
+      previousLocation: string | null;
+      notes?: string;
+    },
+    userId?: string
+  ): Promise<void> {
+    const validatedUserId = await this.validateAndGetUserId(userId);
+    await this.db.insert(equipmentLocationHistory).values({
+      equipmentId,
+      changedAt: new Date(data.changedAt),
+      previousLocation: data.previousLocation,
+      newLocation: data.newLocation,
+      notes: data.notes ?? null,
+      changedBy: validatedUserId,
+    });
   }
 
   /**

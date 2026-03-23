@@ -29,7 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Plus, MapPin, Calendar, User, FileText } from 'lucide-react';
+import { Plus, MapPin, Calendar, User, FileText, ArrowRight } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipment-api';
 import { useTranslations } from 'next-intl';
@@ -38,6 +38,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { isConflictError } from '@/lib/errors/equipment-errors';
+import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import {
   TIMELINE_TOKENS,
   getTimelineCardClasses,
@@ -104,7 +106,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     enabled: !!equipmentId,
   });
 
-  // 위치 변동 이력 생성
+  // 위치 변동 이력 생성 (equipment.location 동기화 포함)
   const createMutation = useMutation({
     mutationFn: (data: CreateLocationHistoryInput) =>
       equipmentApi.createLocationHistory(equipmentId, data),
@@ -120,16 +122,26 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
         description: t('locationHistoryTab.toasts.successDesc'),
       });
     },
-    onSettled: () => {
+    onSettled: async () => {
+      // equipment.location이 변경되므로 장비 상세 + 목록 + 이력 모두 무효화
+      await EquipmentCacheInvalidation.invalidateEquipment(queryClient, equipmentId);
       queryClient.invalidateQueries({ queryKey: queryKeys.equipment.locationHistory(equipmentId) });
     },
     onError: (error: unknown) => {
       console.error('위치 변동 이력 등록 실패:', error);
-      toast({
-        title: t('locationHistoryTab.toasts.error'),
-        description: getErrorMessage(error, t('locationHistoryTab.toasts.errorDesc')),
-        variant: 'destructive',
-      });
+      if (isConflictError(error)) {
+        toast({
+          title: '버전 충돌',
+          description: '다른 사용자가 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('locationHistoryTab.toasts.error'),
+          description: getErrorMessage(error, t('locationHistoryTab.toasts.errorDesc')),
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -166,6 +178,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       changedAt: data.changedAt,
       newLocation: data.newLocation,
       notes: data.notes || undefined,
+      version: equipment.version,
     });
   };
 
@@ -368,9 +381,21 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                             <Calendar className="h-4 w-4" />
                             <span>{fmtDate(item.changedAt)}</span>
                           </div>
-                          <h4 className="text-lg font-semibold text-foreground">
-                            {item.newLocation}
-                          </h4>
+                          {item.previousLocation ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">
+                                {item.previousLocation}
+                              </span>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                              <h4 className="text-lg font-semibold text-foreground">
+                                {item.newLocation}
+                              </h4>
+                            </div>
+                          ) : (
+                            <h4 className="text-lg font-semibold text-foreground">
+                              {item.newLocation}
+                            </h4>
+                          )}
                         </div>
                         {canDelete && (
                           <Button

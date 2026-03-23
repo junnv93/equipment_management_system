@@ -9,6 +9,7 @@ export const locationHistorySchema = z.object({
   id: uuidString(),
   equipmentId: uuidString(),
   changedAt: z.coerce.date(),
+  previousLocation: z.string().optional(),
   newLocation: z.string().max(100),
   notes: z.string().optional(),
   changedBy: optionalUuid(),
@@ -19,6 +20,7 @@ export const createLocationHistorySchema = z.object({
   changedAt: z.coerce.date(),
   newLocation: z.string().min(1).max(100),
   notes: z.string().optional(),
+  version: z.number().int().positive().optional(),
 });
 
 export type LocationHistory = z.infer<typeof locationHistorySchema>;
