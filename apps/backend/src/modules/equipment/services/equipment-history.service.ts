@@ -140,6 +140,66 @@ export class EquipmentHistoryService {
     }
   }
 
+  // ===================== 위치 변동 이력 — SSOT 헬퍼 =====================
+
+  /**
+   * changedAt 기준 가장 최신 위치 이력의 newLocation 조회 (SSOT)
+   *
+   * 동점(같은 changedAt) 시 createdAt DESC로 가장 나중에 생성된 기록 선택.
+   * 인덱스: equipment_location_history_equipment_changed_at_idx (equipmentId, changedAt)
+   */
+  private async resolveLatestLocation(
+    queryRunner: AppDatabase,
+    equipmentId: string
+  ): Promise<string | null> {
+    const [latest] = await queryRunner
+      .select({ newLocation: equipmentLocationHistory.newLocation })
+      .from(equipmentLocationHistory)
+      .where(eq(equipmentLocationHistory.equipmentId, equipmentId))
+      .orderBy(desc(equipmentLocationHistory.changedAt), desc(equipmentLocationHistory.createdAt))
+      .limit(1);
+    return latest?.newLocation ?? null;
+  }
+
+  /**
+   * equipment.location을 최신 위치 이력과 동기화 (SSOT)
+   *
+   * CAS 적용: expectedVersion 전달 시 낙관적 잠금 체크.
+   * CAS 미적용: expectedVersion 생략 시 직접 UPDATE (내부 호출용).
+   *
+   * @throws ConflictException CAS 실패 시 (code: 'VERSION_CONFLICT')
+   */
+  private async syncEquipmentLocation(
+    queryRunner: AppDatabase,
+    equipmentId: string,
+    location: string | null,
+    expectedVersion?: number
+  ): Promise<void> {
+    const updateData = {
+      location,
+      version: sql`version + 1`,
+      updatedAt: new Date(),
+    } as Record<string, unknown>;
+
+    if (expectedVersion !== undefined) {
+      const [updated] = await queryRunner
+        .update(equipment)
+        .set(updateData)
+        .where(and(eq(equipment.id, equipmentId), eq(equipment.version, expectedVersion)))
+        .returning({ version: equipment.version });
+
+      if (!updated) {
+        throw new ConflictException({
+          code: 'VERSION_CONFLICT',
+          message: '다른 사용자가 이미 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
+          expectedVersion,
+        });
+      }
+    } else {
+      await queryRunner.update(equipment).set(updateData).where(eq(equipment.id, equipmentId));
+    }
+  }
+
   // ===================== 위치 변동 이력 =====================
 
   /**
@@ -150,7 +210,7 @@ export class EquipmentHistoryService {
       .select()
       .from(equipmentLocationHistory)
       .where(eq(equipmentLocationHistory.equipmentId, equipmentUuid))
-      .orderBy(desc(equipmentLocationHistory.changedAt));
+      .orderBy(desc(equipmentLocationHistory.changedAt), desc(equipmentLocationHistory.createdAt));
 
     return records.map((record) => ({
       id: record.id,
@@ -170,7 +230,7 @@ export class EquipmentHistoryService {
    * 트랜잭션 내에서:
    * 1. equipment.location 조회 → previousLocation으로 저장
    * 2. equipment_location_history INSERT
-   * 3. equipment.location CAS UPDATE (dto.version 있으면 CAS 체크)
+   * 3. resolveLatestLocation → syncEquipmentLocation (SSOT 헬퍼)
    * 4. 캐시 무효화
    */
   async createLocationHistory(
@@ -180,10 +240,10 @@ export class EquipmentHistoryService {
   ): Promise<LocationHistoryResponseDto> {
     const validatedUserId = await this.validateAndGetUserId(userId);
 
-    // 현재 장비 위치 + 버전 조회
+    // 현재 장비 위치 조회
     const currentEquipment = await this.db.query.equipment.findFirst({
       where: eq(equipment.id, equipmentUuid),
-      columns: { location: true, version: true },
+      columns: { location: true },
     });
     if (!currentEquipment) {
       throw new NotFoundException({
@@ -194,7 +254,7 @@ export class EquipmentHistoryService {
 
     const previousLocation = currentEquipment.location ?? null;
 
-    // 트랜잭션: history INSERT + equipment.location UPDATE
+    // 트랜잭션: history INSERT + equipment.location 동기화
     const record = await this.db.transaction(async (tx) => {
       // 1. 이력 생성
       const [historyRecord] = await tx
@@ -209,58 +269,18 @@ export class EquipmentHistoryService {
         })
         .returning();
 
-      // 2. changedAt 기준 가장 최신 이력의 newLocation으로 equipment.location 동기화
-      //    과거 날짜 이력 추가 시에도 현재 위치가 가장 최신 기록을 반영하도록 보장
-      const [latestHistory] = await tx
-        .select({ newLocation: equipmentLocationHistory.newLocation })
-        .from(equipmentLocationHistory)
-        .where(eq(equipmentLocationHistory.equipmentId, equipmentUuid))
-        .orderBy(desc(equipmentLocationHistory.changedAt))
-        .limit(1);
-
-      const resolvedLocation = latestHistory?.newLocation ?? dto.newLocation;
-
-      // 3. equipment.location 동기화 (CAS 적용)
-      if (dto.version !== undefined) {
-        // 외부 API 호출: CAS 체크
-        const [updated] = await tx
-          .update(equipment)
-          .set({
-            location: resolvedLocation,
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(and(eq(equipment.id, equipmentUuid), eq(equipment.version, dto.version)))
-          .returning();
-
-        if (!updated) {
-          throw new ConflictException({
-            code: 'VERSION_CONFLICT',
-            message: '다른 사용자가 이미 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
-            currentVersion: currentEquipment.version,
-            expectedVersion: dto.version,
-          });
-        }
-      } else {
-        // 내부 호출: CAS 없이 직접 UPDATE
-        await tx
-          .update(equipment)
-          .set({
-            location: resolvedLocation,
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(eq(equipment.id, equipmentUuid));
-      }
+      // 2. 최신 이력 기준 위치 결정 + equipment.location 동기화 (SSOT 헬퍼)
+      const resolvedLocation = await this.resolveLatestLocation(tx, equipmentUuid);
+      await this.syncEquipmentLocation(tx, equipmentUuid, resolvedLocation, dto.version);
 
       return historyRecord;
     });
 
-    // 캐시 무효화 (equipment.location 변경됨 — SSOT: CacheInvalidationHelper)
-    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentUuid, true, false);
+    // 캐시 무효화 (SSOT: CacheInvalidationHelper)
+    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentUuid, false, false);
 
     this.logger.debug(
-      `✓ Location history added: ${equipmentUuid} [${previousLocation ?? '(없음)'}] → [${dto.newLocation}], current location resolved to latest record`
+      `✓ Location history added: ${equipmentUuid} [${previousLocation ?? '(없음)'}] → [${dto.newLocation}]`
     );
 
     return {
@@ -305,10 +325,13 @@ export class EquipmentHistoryService {
   /**
    * 위치 변동 이력 삭제
    *
-   * 삭제 후 changedAt 기준 가장 최신 이력의 newLocation으로 equipment.location 동기화.
+   * 삭제 후 resolveLatestLocation → syncEquipmentLocation (SSOT 헬퍼).
    * 이력이 모두 삭제되면 equipment.location을 null로 설정.
+   *
+   * @param historyId 삭제 대상 이력 UUID
+   * @param expectedVersion 장비 CAS 버전 (프론트엔드에서 전달, 동시 수정 방지)
    */
-  async deleteLocationHistory(historyId: string): Promise<void> {
+  async deleteLocationHistory(historyId: string, expectedVersion?: number): Promise<void> {
     const result = await this.db.transaction(async (tx) => {
       // 1. 삭제 대상의 equipmentId 확보 + 삭제
       const [deleted] = await tx
@@ -320,28 +343,14 @@ export class EquipmentHistoryService {
         throw new NotFoundException(`Location history with ID ${historyId} not found`);
       }
 
-      // 2. 남은 이력 중 changedAt 기준 가장 최신 기록 조회
-      const [latestHistory] = await tx
-        .select({ newLocation: equipmentLocationHistory.newLocation })
-        .from(equipmentLocationHistory)
-        .where(eq(equipmentLocationHistory.equipmentId, deleted.equipmentId))
-        .orderBy(desc(equipmentLocationHistory.changedAt))
-        .limit(1);
-
-      // 3. equipment.location 동기화
-      await tx
-        .update(equipment)
-        .set({
-          location: latestHistory?.newLocation ?? null,
-          version: sql`version + 1`,
-          updatedAt: new Date(),
-        } as Record<string, unknown>)
-        .where(eq(equipment.id, deleted.equipmentId));
+      // 2. 최신 이력 기준 위치 결정 + equipment.location 동기화 (SSOT 헬퍼)
+      const resolvedLocation = await this.resolveLatestLocation(tx, deleted.equipmentId);
+      await this.syncEquipmentLocation(tx, deleted.equipmentId, resolvedLocation, expectedVersion);
 
       return deleted;
     });
 
-    // 캐시 무효화
+    // 캐시 무효화 (SSOT: CacheInvalidationHelper)
     await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
       result.equipmentId,
       false,

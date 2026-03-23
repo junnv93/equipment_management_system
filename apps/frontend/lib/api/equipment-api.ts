@@ -485,9 +485,13 @@ const equipmentApi = {
     return transformSingleResponse<LocationHistoryItem>(response);
   },
 
-  // 위치 변동 이력 삭제
-  deleteLocationHistory: async (historyId: string): Promise<void> => {
-    return apiClient.delete(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId));
+  // 위치 변동 이력 삭제 (version: CAS 동시 수정 방지)
+  deleteLocationHistory: async (historyId: string, version?: number): Promise<void> => {
+    const url =
+      version !== undefined
+        ? `${API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId)}?version=${version}`
+        : API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId);
+    return apiClient.delete(url);
   },
 
   // 유지보수 내역 조회

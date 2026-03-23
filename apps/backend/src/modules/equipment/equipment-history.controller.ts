@@ -5,11 +5,19 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   ParseUUIDPipe,
   Request,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -83,17 +91,27 @@ export class EquipmentHistoryController {
   @Delete('location-history/:historyId')
   @ApiOperation({ summary: '위치 변동 이력 삭제' })
   @ApiParam({ name: 'historyId', description: '이력 UUID' })
+  @ApiQuery({
+    name: 'version',
+    required: false,
+    type: Number,
+    description: '장비 CAS 버전 (동시 수정 방지)',
+  })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: '버전 충돌 (VERSION_CONFLICT)' })
   @RequirePermissions(Permission.DELETE_EQUIPMENT)
   @AuditLog({ action: 'delete', entityType: 'location_history', entityIdPath: 'params.historyId' })
   async deleteLocationHistory(
     @Param('historyId', ParseUUIDPipe) historyId: string,
+    @Query('version') versionStr: string | undefined,
     @Request() req: AuthenticatedRequest
   ): Promise<void> {
     const info =
       await this.equipmentHistoryService.getEquipmentSiteInfoByLocationHistoryId(historyId);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.equipmentHistoryService.deleteLocationHistory(historyId);
+    const version = versionStr ? parseInt(versionStr, 10) : undefined;
+    const safeVersion = version !== undefined && !isNaN(version) ? version : undefined;
+    return this.equipmentHistoryService.deleteLocationHistory(historyId, safeVersion);
   }
 
   // ===================== 유지보수 내역 =====================

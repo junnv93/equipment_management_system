@@ -139,7 +139,7 @@ export interface EquipmentApiMethods {
     equipmentUuid: string,
     data: CreateLocationHistoryInput
   ) => Promise<LocationHistoryItem>;
-  deleteLocationHistory: (historyId: string) => Promise<void>;
+  deleteLocationHistory: (historyId: string, version?: number) => Promise<void>;
   getMaintenanceHistory: (equipmentUuid: string) => Promise<MaintenanceHistoryItem[]>;
   createMaintenanceHistory: (
     equipmentUuid: string,
@@ -279,8 +279,12 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
       return transformSingleResponse<LocationHistoryItem>(response);
     },
 
-    deleteLocationHistory: async (historyId: string): Promise<void> => {
-      await apiClient.delete(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId));
+    deleteLocationHistory: async (historyId: string, version?: number): Promise<void> => {
+      const url =
+        version !== undefined
+          ? `${API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId)}?version=${version}`
+          : API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId);
+      await apiClient.delete(url);
     },
 
     getMaintenanceHistory: async (equipmentUuid: string): Promise<MaintenanceHistoryItem[]> => {

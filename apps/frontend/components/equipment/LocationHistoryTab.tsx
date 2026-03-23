@@ -124,8 +124,9 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     },
     onSettled: async () => {
       // equipment.location이 변경되므로 장비 상세 + 목록 + 이력 모두 무효화
+      // EquipmentCacheInvalidation.invalidateEquipment는 detail(id)를 exact:false로 무효화하므로
+      // locationHistory 등 하위 queryKey도 포함됨 — 별도 무효화 불필요
       await EquipmentCacheInvalidation.invalidateEquipment(queryClient, equipmentId);
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.locationHistory(equipmentId) });
     },
     onError: (error: unknown) => {
       console.error('위치 변동 이력 등록 실패:', error);
@@ -145,9 +146,10 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     },
   });
 
-  // 위치 변동 이력 삭제
+  // 위치 변동 이력 삭제 (equipment.version 전달 — CAS 동시 수정 방지)
   const deleteMutation = useMutation({
-    mutationFn: (historyId: string) => equipmentApi.deleteLocationHistory(historyId),
+    mutationFn: (historyId: string) =>
+      equipmentApi.deleteLocationHistory(historyId, equipment.version),
     onSuccess: () => {
       toast({
         title: t('locationHistoryTab.toasts.deleteSuccess'),
@@ -155,17 +157,23 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       });
     },
     onSettled: async () => {
-      // equipment.location이 변경되므로 장비 상세 + 목록 + 이력 모두 무효화
       await EquipmentCacheInvalidation.invalidateEquipment(queryClient, equipmentId);
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.locationHistory(equipmentId) });
     },
     onError: (error: unknown) => {
       console.error('위치 변동 이력 삭제 실패:', error);
-      toast({
-        title: t('locationHistoryTab.toasts.deleteError'),
-        description: getErrorMessage(error, t('locationHistoryTab.toasts.deleteErrorDesc')),
-        variant: 'destructive',
-      });
+      if (isConflictError(error)) {
+        toast({
+          title: '버전 충돌',
+          description: '다른 사용자가 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('locationHistoryTab.toasts.deleteError'),
+          description: getErrorMessage(error, t('locationHistoryTab.toasts.deleteErrorDesc')),
+          variant: 'destructive',
+        });
+      }
     },
   });
 
