@@ -757,5 +757,6 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **review-architecture**: 아키텍처 레벨 코드 리뷰 — 계층 관통 추적, CAS 일관성, 캐시 코히어런스, 모듈 간 패턴 일관성, 성능/보안
 - **review-design**: 디자인 품질 리뷰 + 와이어프레임 HTML 생성 — 10가지 안티패턴(카드 수프~토큰 활용도) 점수화, 접근성/다크모드 포함, Progressive Disclosure 구조(SKILL.md + references/)
 - **manage-skills**: 검증 스킬 유지보수 (커버리지 갭 분석, 스킬 생성/업데이트)
+- **playwright-e2e**: Playwright E2E 테스트 워크플로우 — 계획→생성→실행→검증 전체 사이클, 브라우저 리소스 경합 방지(동시 2개 이하), auth.fixture 패턴 자동 적용, 에이전트 순차 배치 실행
 
 Reference these skills when working on related features.
