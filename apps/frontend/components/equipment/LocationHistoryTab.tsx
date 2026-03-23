@@ -154,7 +154,9 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
         description: t('locationHistoryTab.toasts.deleteSuccessDesc'),
       });
     },
-    onSettled: () => {
+    onSettled: async () => {
+      // equipment.location이 변경되므로 장비 상세 + 목록 + 이력 모두 무효화
+      await EquipmentCacheInvalidation.invalidateEquipment(queryClient, equipmentId);
       queryClient.invalidateQueries({ queryKey: queryKeys.equipment.locationHistory(equipmentId) });
     },
     onError: (error: unknown) => {

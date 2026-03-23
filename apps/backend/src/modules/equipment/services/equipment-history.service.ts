@@ -209,13 +209,24 @@ export class EquipmentHistoryService {
         })
         .returning();
 
-      // 2. equipment.location 동기화 (CAS 적용)
+      // 2. changedAt 기준 가장 최신 이력의 newLocation으로 equipment.location 동기화
+      //    과거 날짜 이력 추가 시에도 현재 위치가 가장 최신 기록을 반영하도록 보장
+      const [latestHistory] = await tx
+        .select({ newLocation: equipmentLocationHistory.newLocation })
+        .from(equipmentLocationHistory)
+        .where(eq(equipmentLocationHistory.equipmentId, equipmentUuid))
+        .orderBy(desc(equipmentLocationHistory.changedAt))
+        .limit(1);
+
+      const resolvedLocation = latestHistory?.newLocation ?? dto.newLocation;
+
+      // 3. equipment.location 동기화 (CAS 적용)
       if (dto.version !== undefined) {
         // 외부 API 호출: CAS 체크
         const [updated] = await tx
           .update(equipment)
           .set({
-            location: dto.newLocation,
+            location: resolvedLocation,
             version: sql`version + 1`,
             updatedAt: new Date(),
           } as Record<string, unknown>)
@@ -235,7 +246,7 @@ export class EquipmentHistoryService {
         await tx
           .update(equipment)
           .set({
-            location: dto.newLocation,
+            location: resolvedLocation,
             version: sql`version + 1`,
             updatedAt: new Date(),
           } as Record<string, unknown>)
@@ -249,7 +260,7 @@ export class EquipmentHistoryService {
     await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentUuid, true, false);
 
     this.logger.debug(
-      `✓ Location changed: ${equipmentUuid} [${previousLocation ?? '(없음)'}] → [${dto.newLocation}]`
+      `✓ Location history added: ${equipmentUuid} [${previousLocation ?? '(없음)'}] → [${dto.newLocation}], current location resolved to latest record`
     );
 
     return {
@@ -293,16 +304,49 @@ export class EquipmentHistoryService {
 
   /**
    * 위치 변동 이력 삭제
+   *
+   * 삭제 후 changedAt 기준 가장 최신 이력의 newLocation으로 equipment.location 동기화.
+   * 이력이 모두 삭제되면 equipment.location을 null로 설정.
    */
   async deleteLocationHistory(historyId: string): Promise<void> {
-    const result = await this.db
-      .delete(equipmentLocationHistory)
-      .where(eq(equipmentLocationHistory.id, historyId))
-      .returning();
+    const result = await this.db.transaction(async (tx) => {
+      // 1. 삭제 대상의 equipmentId 확보 + 삭제
+      const [deleted] = await tx
+        .delete(equipmentLocationHistory)
+        .where(eq(equipmentLocationHistory.id, historyId))
+        .returning();
 
-    if (result.length === 0) {
-      throw new NotFoundException(`Location history with ID ${historyId} not found`);
-    }
+      if (!deleted) {
+        throw new NotFoundException(`Location history with ID ${historyId} not found`);
+      }
+
+      // 2. 남은 이력 중 changedAt 기준 가장 최신 기록 조회
+      const [latestHistory] = await tx
+        .select({ newLocation: equipmentLocationHistory.newLocation })
+        .from(equipmentLocationHistory)
+        .where(eq(equipmentLocationHistory.equipmentId, deleted.equipmentId))
+        .orderBy(desc(equipmentLocationHistory.changedAt))
+        .limit(1);
+
+      // 3. equipment.location 동기화
+      await tx
+        .update(equipment)
+        .set({
+          location: latestHistory?.newLocation ?? null,
+          version: sql`version + 1`,
+          updatedAt: new Date(),
+        } as Record<string, unknown>)
+        .where(eq(equipment.id, deleted.equipmentId));
+
+      return deleted;
+    });
+
+    // 캐시 무효화
+    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
+      result.equipmentId,
+      false,
+      false
+    );
   }
 
   // ===================== 유지보수 내역 =====================
