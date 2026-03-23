@@ -34,9 +34,12 @@ import {
   REPORT_CONSTANTS,
   REPORT_EXPORT_ROW_LIMIT,
   REPORT_UTILIZATION_THRESHOLDS,
+  CACHE_TTL,
   type UserRole,
   type ResolvedDataScope,
 } from '@equipment-management/shared-constants';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import type { ReportColumn, ReportData } from './report-export.service';
 import type {
   EquipmentUsageReport,
@@ -116,7 +119,8 @@ function scopeToEquipmentConditions(scope: ResolvedDataScope): SQL[] {
 export class ReportsService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
+    private readonly db: AppDatabase,
+    private readonly cacheService: SimpleCacheService
   ) {}
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -130,70 +134,77 @@ export class ReportsService {
     query: EquipmentUsageQueryInput,
     scope: ResolvedDataScope
   ): Promise<EquipmentUsageReport> {
-    const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
-    const scopeConditions = scopeToEquipmentConditions(scope);
+    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}usage:${JSON.stringify({ startDate: query.startDate, endDate: query.endDate, equipmentId: query.equipmentId, scope })}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
+        const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const dateConditions = [
-      gte(checkoutsTable.createdAt, start),
-      lte(checkoutsTable.createdAt, end),
-    ];
-    const equipCondition = query.equipmentId
-      ? eq(checkoutItemsTable.equipmentId, query.equipmentId)
-      : undefined;
+        const dateConditions = [
+          gte(checkoutsTable.createdAt, start),
+          lte(checkoutsTable.createdAt, end),
+        ];
+        const equipCondition = query.equipmentId
+          ? eq(checkoutItemsTable.equipmentId, query.equipmentId)
+          : undefined;
 
-    const allConditions = [
-      ...dateConditions,
-      ...(equipCondition ? [equipCondition] : []),
-      ...scopeConditions,
-    ];
+        const allConditions = [
+          ...dateConditions,
+          ...(equipCondition ? [equipCondition] : []),
+          ...scopeConditions,
+        ];
 
-    const teamRows = await this.db
-      .select({
-        teamName: teamsTable.name,
-        checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
-        equipmentCount: sql<number>`COUNT(DISTINCT ${checkoutItemsTable.equipmentId})`,
-      })
-      .from(checkoutsTable)
-      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
-      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
-      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
-      .where(and(...allConditions))
-      .groupBy(teamsTable.id, teamsTable.name);
+        const teamRows = await this.db
+          .select({
+            teamName: teamsTable.name,
+            checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
+            equipmentCount: sql<number>`COUNT(DISTINCT ${checkoutItemsTable.equipmentId})`,
+          })
+          .from(checkoutsTable)
+          .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+          .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+          .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+          .where(and(...allConditions))
+          .groupBy(teamsTable.id, teamsTable.name);
 
-    const topRows = await this.db
-      .select({
-        equipmentId: checkoutItemsTable.equipmentId,
-        name: equipmentTable.name,
-        checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
-      })
-      .from(checkoutsTable)
-      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
-      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
-      .where(and(...allConditions))
-      .groupBy(checkoutItemsTable.equipmentId, equipmentTable.name)
-      .orderBy(desc(sql`COUNT(DISTINCT ${checkoutsTable.id})`))
-      .limit(REPORT_CONSTANTS.TOP_N_LIMIT);
+        const topRows = await this.db
+          .select({
+            equipmentId: checkoutItemsTable.equipmentId,
+            name: equipmentTable.name,
+            checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
+          })
+          .from(checkoutsTable)
+          .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+          .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+          .where(and(...allConditions))
+          .groupBy(checkoutItemsTable.equipmentId, equipmentTable.name)
+          .orderBy(desc(sql`COUNT(DISTINCT ${checkoutsTable.id})`))
+          .limit(REPORT_CONSTANTS.TOP_N_LIMIT);
 
-    const totalCheckouts = teamRows.reduce((acc, r) => acc + Number(r.checkoutCount), 0);
+        const totalCheckouts = teamRows.reduce((acc, r) => acc + Number(r.checkoutCount), 0);
 
-    return {
-      timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
-      totalUsageHours: totalCheckouts * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
-      totalEquipmentCount: topRows.length,
-      departmentDistribution: teamRows.map((r) => ({
-        departmentId: r.teamName ?? '미배정',
-        departmentName: r.teamName ?? '미배정',
-        usageHours: Number(r.checkoutCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
-        equipmentCount: Number(r.equipmentCount),
-      })),
-      topEquipment: topRows.map((r) => ({
-        equipmentId: r.equipmentId ?? '',
-        name: r.name ?? '',
-        usageHours: Number(r.checkoutCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
-        usageCount: Number(r.checkoutCount),
-      })),
-      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end, scopeConditions),
-    };
+        return {
+          timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
+          totalUsageHours: totalCheckouts * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
+          totalEquipmentCount: topRows.length,
+          departmentDistribution: teamRows.map((r) => ({
+            departmentId: r.teamName ?? '미배정',
+            departmentName: r.teamName ?? '미배정',
+            usageHours: Number(r.checkoutCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
+            equipmentCount: Number(r.equipmentCount),
+          })),
+          topEquipment: topRows.map((r) => ({
+            equipmentId: r.equipmentId ?? '',
+            name: r.name ?? '',
+            usageHours: Number(r.checkoutCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
+            usageCount: Number(r.checkoutCount),
+          })),
+          monthlyTrend: await this._getMonthlyCheckoutTrend(start, end, scopeConditions),
+        };
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 
   /**
@@ -203,65 +214,72 @@ export class ReportsService {
     query: CalibrationStatusQueryInput,
     scope: ResolvedDataScope
   ): Promise<CalibrationStatusReport> {
-    const { start, end } = resolveDateRange(query.timeframe ?? 'last_month');
-    const scopeConditions = scopeToEquipmentConditions(scope);
+    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}calibration-status:${JSON.stringify({ timeframe: query.timeframe, status: query.status, scope })}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const { start, end } = resolveDateRange(query.timeframe ?? 'last_month');
+        const scopeConditions = scopeToEquipmentConditions(scope);
 
-    // 교정 쿼리: calibrations → equipment JOIN으로 스코프 적용
-    const calConditions: SQL[] = [
-      gte(calibrationsTable.calibrationDate, start),
-      lte(calibrationsTable.calibrationDate, end),
-      ...scopeConditions,
-    ];
-    if (query.status)
-      calConditions.push(eq(calibrationsTable.status, query.status as CalibrationStatus));
+        // 교정 쿼리: calibrations → equipment JOIN으로 스코프 적용
+        const calConditions: SQL[] = [
+          gte(calibrationsTable.calibrationDate, start),
+          lte(calibrationsTable.calibrationDate, end),
+          ...scopeConditions,
+        ];
+        if (query.status)
+          calConditions.push(eq(calibrationsTable.status, query.status as CalibrationStatus));
 
-    const statusRows = await this.db
-      .select({
-        status: calibrationsTable.status,
-        statusCount: count(calibrationsTable.id),
-      })
-      .from(calibrationsTable)
-      .innerJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
-      .where(and(...calConditions))
-      .groupBy(calibrationsTable.status);
+        // 4개 독립 쿼리 병렬 실행
+        const [statusRows, [overdueRow], [dueRow], [totalEquipRow]] = await Promise.all([
+          this.db
+            .select({
+              status: calibrationsTable.status,
+              statusCount: count(calibrationsTable.id),
+            })
+            .from(calibrationsTable)
+            .innerJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
+            .where(and(...calConditions))
+            .groupBy(calibrationsTable.status),
+          this.db
+            .select({ cnt: count(equipmentTable.id) })
+            .from(equipmentTable)
+            .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_OVERDUE), ...scopeConditions)),
+          this.db
+            .select({ cnt: count(equipmentTable.id) })
+            .from(equipmentTable)
+            .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_SCHEDULED), ...scopeConditions)),
+          this.db
+            .select({ cnt: count(equipmentTable.id) })
+            .from(equipmentTable)
+            .where(scopeConditions.length > 0 ? and(...scopeConditions) : undefined),
+        ]);
 
-    const totalCalibrations = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
+        const totalCalibrations = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
 
-    const [overdueRow] = await this.db
-      .select({ cnt: count(equipmentTable.id) })
-      .from(equipmentTable)
-      .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_OVERDUE), ...scopeConditions));
-
-    const [dueRow] = await this.db
-      .select({ cnt: count(equipmentTable.id) })
-      .from(equipmentTable)
-      .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_SCHEDULED), ...scopeConditions));
-
-    const [totalEquipRow] = await this.db
-      .select({ cnt: count(equipmentTable.id) })
-      .from(equipmentTable)
-      .where(scopeConditions.length > 0 ? and(...scopeConditions) : undefined);
-
-    return {
-      summary: {
-        totalEquipment: Number(totalEquipRow?.cnt ?? 0),
-        requireCalibration: Number(dueRow?.cnt ?? 0) + Number(overdueRow?.cnt ?? 0),
-        dueThisMonth: Number(dueRow?.cnt ?? 0),
-        overdue: Number(overdueRow?.cnt ?? 0),
-        completedThisMonth: statusRows
-          .filter((r) => r.status === CalibrationStatusEnum.enum.completed)
-          .reduce((acc, r) => acc + Number(r.statusCount), 0),
+        return {
+          summary: {
+            totalEquipment: Number(totalEquipRow?.cnt ?? 0),
+            requireCalibration: Number(dueRow?.cnt ?? 0) + Number(overdueRow?.cnt ?? 0),
+            dueThisMonth: Number(dueRow?.cnt ?? 0),
+            overdue: Number(overdueRow?.cnt ?? 0),
+            completedThisMonth: statusRows
+              .filter((r) => r.status === CalibrationStatusEnum.enum.completed)
+              .reduce((acc, r) => acc + Number(r.statusCount), 0),
+          },
+          status: statusRows.map((r) => ({
+            status: CALIBRATION_STATUS_LABELS[r.status] ?? r.status,
+            count: Number(r.statusCount),
+            percentage:
+              totalCalibrations > 0
+                ? Math.round((Number(r.statusCount) / totalCalibrations) * 1000) / 10
+                : 0,
+          })),
+          calibrationTrend: await this._getMonthlyCalibrationTrend(start, end, scopeConditions),
+        };
       },
-      status: statusRows.map((r) => ({
-        status: CALIBRATION_STATUS_LABELS[r.status] ?? r.status,
-        count: Number(r.statusCount),
-        percentage:
-          totalCalibrations > 0
-            ? Math.round((Number(r.statusCount) / totalCalibrations) * 1000) / 10
-            : 0,
-      })),
-      calibrationTrend: await this._getMonthlyCalibrationTrend(start, end, scopeConditions),
-    };
+      CACHE_TTL.MEDIUM
+    );
   }
 
   /**
@@ -281,86 +299,97 @@ export class ReportsService {
     query: CheckoutStatisticsQueryInput,
     scope: ResolvedDataScope
   ): Promise<CheckoutStatisticsReport> {
-    const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
-    const scopeConditions = scopeToEquipmentConditions(scope);
+    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}checkout-stats:${JSON.stringify({ startDate: query.startDate, endDate: query.endDate, scope })}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
+        const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const dateConditions: SQL[] = [
-      gte(checkoutsTable.createdAt, start),
-      lte(checkoutsTable.createdAt, end),
-    ];
+        const dateConditions: SQL[] = [
+          gte(checkoutsTable.createdAt, start),
+          lte(checkoutsTable.createdAt, end),
+        ];
 
-    // 스코프 적용을 위해 equipment JOIN 필요 — COUNT(DISTINCT)로 item fan-out 방지
-    const statusRows = await this.db
-      .select({
-        status: checkoutsTable.status,
-        statusCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
-      })
-      .from(checkoutsTable)
-      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
-      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
-      .where(and(...dateConditions, ...scopeConditions))
-      .groupBy(checkoutsTable.status);
+        // 스코프 적용을 위해 equipment JOIN 필요 — COUNT(DISTINCT)로 item fan-out 방지
+        const statusRows = await this.db
+          .select({
+            status: checkoutsTable.status,
+            statusCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
+          })
+          .from(checkoutsTable)
+          .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+          .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+          .where(and(...dateConditions, ...scopeConditions))
+          .groupBy(checkoutsTable.status);
 
-    const teamRows = await this.db
-      .select({
-        teamName: teamsTable.name,
-        teamId: teamsTable.id,
-        checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
-      })
-      .from(checkoutsTable)
-      .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
-      .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
-      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
-      .where(and(...dateConditions, ...scopeConditions))
-      .groupBy(teamsTable.id, teamsTable.name);
+        const teamRows = await this.db
+          .select({
+            teamName: teamsTable.name,
+            teamId: teamsTable.id,
+            checkoutCount: sql<number>`COUNT(DISTINCT ${checkoutsTable.id})`,
+          })
+          .from(checkoutsTable)
+          .innerJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+          .innerJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+          .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+          .where(and(...dateConditions, ...scopeConditions))
+          .groupBy(teamsTable.id, teamsTable.name);
 
-    const totalCount = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
-    const activeStatuses: Set<string> = new Set([
-      CSVal.APPROVED,
-      CSVal.CHECKED_OUT,
-      CSVal.LENDER_CHECKED,
-      CSVal.BORROWER_RECEIVED,
-      CSVal.IN_USE,
-    ]);
-    const returnedStatuses: Set<string> = new Set([
-      CSVal.RETURNED,
-      CSVal.RETURN_APPROVED,
-      CSVal.LENDER_RECEIVED,
-    ]);
+        const totalCount = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
+        const activeStatuses: Set<string> = new Set([
+          CSVal.APPROVED,
+          CSVal.CHECKED_OUT,
+          CSVal.LENDER_CHECKED,
+          CSVal.BORROWER_RECEIVED,
+          CSVal.IN_USE,
+        ]);
+        const returnedStatuses: Set<string> = new Set([
+          CSVal.RETURNED,
+          CSVal.RETURN_APPROVED,
+          CSVal.LENDER_RECEIVED,
+        ]);
 
-    const activeCount = statusRows
-      .filter((r) => activeStatuses.has(r.status))
-      .reduce((acc, r) => acc + Number(r.statusCount), 0);
-    const returnedCount = statusRows
-      .filter((r) => returnedStatuses.has(r.status))
-      .reduce((acc, r) => acc + Number(r.statusCount), 0);
+        const activeCount = statusRows
+          .filter((r) => activeStatuses.has(r.status))
+          .reduce((acc, r) => acc + Number(r.statusCount), 0);
+        const returnedCount = statusRows
+          .filter((r) => returnedStatuses.has(r.status))
+          .reduce((acc, r) => acc + Number(r.statusCount), 0);
 
-    // 실제 평균 대여 기간 계산 (반환된 checkout의 actualReturnDate - createdAt)
-    const avgDurationResult = await this._computeAvgCheckoutDuration(start, end, scopeConditions);
+        // 실제 평균 대여 기간 계산 (반환된 checkout의 actualReturnDate - createdAt)
+        const avgDurationResult = await this._computeAvgCheckoutDuration(
+          start,
+          end,
+          scopeConditions
+        );
 
-    return {
-      timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
-      summary: {
-        totalCheckouts: totalCount,
-        activeCheckouts: activeCount,
-        avgCheckoutDuration: avgDurationResult,
-        returnRate: totalCount > 0 ? Math.round((returnedCount / totalCount) * 1000) / 10 : 0,
+        return {
+          timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
+          summary: {
+            totalCheckouts: totalCount,
+            activeCheckouts: activeCount,
+            avgCheckoutDuration: avgDurationResult,
+            returnRate: totalCount > 0 ? Math.round((returnedCount / totalCount) * 1000) / 10 : 0,
+          },
+          checkoutsByDepartment: teamRows.map((r) => ({
+            departmentId: r.teamId ?? '미배정',
+            departmentName: r.teamName ?? '미배정',
+            count: Number(r.checkoutCount),
+            percentage:
+              totalCount > 0 ? Math.round((Number(r.checkoutCount) / totalCount) * 1000) / 10 : 0,
+          })),
+          checkoutStatus: statusRows.map((r) => ({
+            status: r.status,
+            count: Number(r.statusCount),
+            percentage:
+              totalCount > 0 ? Math.round((Number(r.statusCount) / totalCount) * 1000) / 10 : 0,
+          })),
+          monthlyTrend: await this._getMonthlyCheckoutTrend(start, end, scopeConditions),
+        };
       },
-      checkoutsByDepartment: teamRows.map((r) => ({
-        departmentId: r.teamId ?? '미배정',
-        departmentName: r.teamName ?? '미배정',
-        count: Number(r.checkoutCount),
-        percentage:
-          totalCount > 0 ? Math.round((Number(r.checkoutCount) / totalCount) * 1000) / 10 : 0,
-      })),
-      checkoutStatus: statusRows.map((r) => ({
-        status: r.status,
-        count: Number(r.statusCount),
-        percentage:
-          totalCount > 0 ? Math.round((Number(r.statusCount) / totalCount) * 1000) / 10 : 0,
-      })),
-      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end, scopeConditions),
-    };
+      CACHE_TTL.MEDIUM
+    );
   }
 
   /**
@@ -370,91 +399,98 @@ export class ReportsService {
     query: UtilizationRateQueryInput,
     scope: ResolvedDataScope
   ): Promise<UtilizationRateReport> {
-    const period = query.period;
-    const { start, end } = resolveDateRange(`last_${period}`);
-    const scopeConditions = scopeToEquipmentConditions(scope);
+    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}utilization:${JSON.stringify({ period: query.period, equipmentId: query.equipmentId, scope })}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const period = query.period;
+        const { start, end } = resolveDateRange(`last_${period}`);
+        const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const checkoutDateConditions = [
-      gte(checkoutsTable.createdAt, start),
-      lte(checkoutsTable.createdAt, end),
-    ];
-    const itemCondition = query.equipmentId
-      ? eq(checkoutItemsTable.equipmentId, query.equipmentId)
-      : undefined;
+        const checkoutDateConditions = [
+          gte(checkoutsTable.createdAt, start),
+          lte(checkoutsTable.createdAt, end),
+        ];
+        const itemCondition = query.equipmentId
+          ? eq(checkoutItemsTable.equipmentId, query.equipmentId)
+          : undefined;
 
-    const rows = await this.db
-      .select({
-        equipmentId: equipmentTable.id,
-        name: equipmentTable.name,
-        managementNumber: equipmentTable.managementNumber,
-        teamName: teamsTable.name,
-        checkoutCount: sql<number>`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`,
-      })
-      .from(equipmentTable)
-      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
-      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
-      .leftJoin(
-        checkoutsTable,
-        and(eq(checkoutsTable.id, checkoutItemsTable.checkoutId), ...checkoutDateConditions)
-      )
-      .where(and(...(itemCondition ? [itemCondition] : []), ...scopeConditions))
-      .groupBy(
-        equipmentTable.id,
-        equipmentTable.name,
-        equipmentTable.managementNumber,
-        teamsTable.name
-      )
-      .orderBy(desc(sql`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`));
+        const rows = await this.db
+          .select({
+            equipmentId: equipmentTable.id,
+            name: equipmentTable.name,
+            managementNumber: equipmentTable.managementNumber,
+            teamName: teamsTable.name,
+            checkoutCount: sql<number>`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`,
+          })
+          .from(equipmentTable)
+          .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+          .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+          .leftJoin(
+            checkoutsTable,
+            and(eq(checkoutsTable.id, checkoutItemsTable.checkoutId), ...checkoutDateConditions)
+          )
+          .where(and(...(itemCondition ? [itemCondition] : []), ...scopeConditions))
+          .groupBy(
+            equipmentTable.id,
+            equipmentTable.name,
+            equipmentTable.managementNumber,
+            teamsTable.name
+          )
+          .orderBy(desc(sql`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`));
 
-    const periodDays = Math.max(
-      1,
-      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-    );
+        const periodDays = Math.max(
+          1,
+          Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+        );
 
-    const withRate = rows.map((r) => ({
-      ...r,
-      utilizationRate: Math.min(
-        100,
-        Math.round((Number(r.checkoutCount) / periodDays) * 1000) / 10
-      ),
-    }));
+        const withRate = rows.map((r) => ({
+          ...r,
+          utilizationRate: Math.min(
+            100,
+            Math.round((Number(r.checkoutCount) / periodDays) * 1000) / 10
+          ),
+        }));
 
-    const avg =
-      withRate.length > 0
-        ? withRate.reduce((acc, r) => acc + r.utilizationRate, 0) / withRate.length
-        : 0;
+        const avg =
+          withRate.length > 0
+            ? withRate.reduce((acc, r) => acc + r.utilizationRate, 0) / withRate.length
+            : 0;
 
-    const sorted = [...withRate].sort((a, b) => b.utilizationRate - a.utilizationRate);
+        const sorted = [...withRate].sort((a, b) => b.utilizationRate - a.utilizationRate);
 
-    return {
-      period,
-      summary: {
-        averageUtilization: Math.round(avg * 10) / 10,
-        highUtilizationCount: withRate.filter(
-          (r) => r.utilizationRate >= REPORT_UTILIZATION_THRESHOLDS.HIGH
-        ).length,
-        lowUtilizationCount: withRate.filter(
-          (r) => r.utilizationRate <= REPORT_UTILIZATION_THRESHOLDS.LOW
-        ).length,
-        totalEquipmentCount: withRate.length,
+        return {
+          period,
+          summary: {
+            averageUtilization: Math.round(avg * 10) / 10,
+            highUtilizationCount: withRate.filter(
+              (r) => r.utilizationRate >= REPORT_UTILIZATION_THRESHOLDS.HIGH
+            ).length,
+            lowUtilizationCount: withRate.filter(
+              (r) => r.utilizationRate <= REPORT_UTILIZATION_THRESHOLDS.LOW
+            ).length,
+            totalEquipmentCount: withRate.length,
+          },
+          utilizationByCategory: [],
+          topUtilized: sorted.slice(0, REPORT_CONSTANTS.TOP_N_LIMIT).map((r) => ({
+            equipmentId: r.equipmentId,
+            name: `${r.name} (${r.managementNumber})`,
+            utilizationRate: r.utilizationRate,
+            department: r.teamName ?? '-',
+          })),
+          lowUtilized: sorted
+            .slice(-REPORT_CONSTANTS.TOP_N_LIMIT)
+            .reverse()
+            .map((r) => ({
+              equipmentId: r.equipmentId,
+              name: `${r.name} (${r.managementNumber})`,
+              utilizationRate: r.utilizationRate,
+              department: r.teamName ?? '-',
+            })),
+        };
       },
-      utilizationByCategory: [],
-      topUtilized: sorted.slice(0, REPORT_CONSTANTS.TOP_N_LIMIT).map((r) => ({
-        equipmentId: r.equipmentId,
-        name: `${r.name} (${r.managementNumber})`,
-        utilizationRate: r.utilizationRate,
-        department: r.teamName ?? '-',
-      })),
-      lowUtilized: sorted
-        .slice(-REPORT_CONSTANTS.TOP_N_LIMIT)
-        .reverse()
-        .map((r) => ({
-          equipmentId: r.equipmentId,
-          name: `${r.name} (${r.managementNumber})`,
-          utilizationRate: r.utilizationRate,
-          department: r.teamName ?? '-',
-        })),
-    };
+      CACHE_TTL.MEDIUM
+    );
   }
 
   /**
@@ -464,70 +500,78 @@ export class ReportsService {
     query: EquipmentDowntimeQueryInput,
     scope: ResolvedDataScope
   ): Promise<EquipmentDowntimeReport> {
-    const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
-    const scopeConditions = scopeToEquipmentConditions(scope);
+    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}downtime:${JSON.stringify({ startDate: query.startDate, endDate: query.endDate, equipmentId: query.equipmentId, scope })}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const { start, end } = resolveDateRange('last_month', query.startDate, query.endDate);
+        const scopeConditions = scopeToEquipmentConditions(scope);
 
-    const conditions: SQL[] = [
-      gte(repairHistoryTable.repairDate, start),
-      lte(repairHistoryTable.repairDate, end),
-      ...scopeConditions,
-    ];
-    if (query.equipmentId) conditions.push(eq(repairHistoryTable.equipmentId, query.equipmentId));
+        const conditions: SQL[] = [
+          gte(repairHistoryTable.repairDate, start),
+          lte(repairHistoryTable.repairDate, end),
+          ...scopeConditions,
+        ];
+        if (query.equipmentId)
+          conditions.push(eq(repairHistoryTable.equipmentId, query.equipmentId));
 
-    const repairRows = await this.db
-      .select({
-        equipmentId: equipmentTable.id,
-        name: equipmentTable.name,
-        managementNumber: equipmentTable.managementNumber,
-        incidentCount: count(repairHistoryTable.id),
-      })
-      .from(repairHistoryTable)
-      .innerJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
-      .where(and(...conditions))
-      .groupBy(equipmentTable.id, equipmentTable.name, equipmentTable.managementNumber)
-      .orderBy(desc(count(repairHistoryTable.id)))
-      .limit(REPORT_CONSTANTS.TOP_N_LIMIT * 2);
+        const repairRows = await this.db
+          .select({
+            equipmentId: equipmentTable.id,
+            name: equipmentTable.name,
+            managementNumber: equipmentTable.managementNumber,
+            incidentCount: count(repairHistoryTable.id),
+          })
+          .from(repairHistoryTable)
+          .innerJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
+          .where(and(...conditions))
+          .groupBy(equipmentTable.id, equipmentTable.name, equipmentTable.managementNumber)
+          .orderBy(desc(count(repairHistoryTable.id)))
+          .limit(REPORT_CONSTANTS.TOP_N_LIMIT * 2);
 
-    const totalIncidents = repairRows.reduce((acc, r) => acc + Number(r.incidentCount), 0);
+        const totalIncidents = repairRows.reduce((acc, r) => acc + Number(r.incidentCount), 0);
 
-    // 수리 결과별 실제 그룹핑
-    const reasonRows = await this.db
-      .select({
-        repairResult: repairHistoryTable.repairResult,
-        incidentCount: count(repairHistoryTable.id),
-      })
-      .from(repairHistoryTable)
-      .innerJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
-      .where(and(...conditions))
-      .groupBy(repairHistoryTable.repairResult)
-      .orderBy(desc(count(repairHistoryTable.id)));
+        // 수리 결과별 실제 그룹핑
+        const reasonRows = await this.db
+          .select({
+            repairResult: repairHistoryTable.repairResult,
+            incidentCount: count(repairHistoryTable.id),
+          })
+          .from(repairHistoryTable)
+          .innerJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
+          .where(and(...conditions))
+          .groupBy(repairHistoryTable.repairResult)
+          .orderBy(desc(count(repairHistoryTable.id)));
 
-    const RESULT_LABELS = REPAIR_RESULT_LABELS as Record<string, string>;
+        const RESULT_LABELS = REPAIR_RESULT_LABELS as Record<string, string>;
 
-    return {
-      timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
-      summary: {
-        totalDowntimeHours: totalIncidents * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
-        totalIncidents,
-        avgDowntimeDuration: totalIncidents > 0 ? REPORT_CONSTANTS.HOURS_PER_CHECKOUT : 0,
-        affectedEquipmentCount: repairRows.length,
+        return {
+          timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
+          summary: {
+            totalDowntimeHours: totalIncidents * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
+            totalIncidents,
+            avgDowntimeDuration: totalIncidents > 0 ? REPORT_CONSTANTS.HOURS_PER_CHECKOUT : 0,
+            affectedEquipmentCount: repairRows.length,
+          },
+          downtimeReasons: reasonRows.map((r) => ({
+            reason: RESULT_LABELS[r.repairResult ?? ''] ?? r.repairResult ?? '미분류',
+            hours: Number(r.incidentCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
+            percentage:
+              totalIncidents > 0
+                ? Math.round((Number(r.incidentCount) / totalIncidents) * 1000) / 10
+                : 0,
+          })),
+          topDowntimeEquipment: repairRows.slice(0, REPORT_CONSTANTS.BOTTOM_N_LIMIT).map((r) => ({
+            equipmentId: r.equipmentId ?? '',
+            name: `${r.name ?? ''} (${r.managementNumber ?? ''})`,
+            downtimeHours: Number(r.incidentCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
+            incidents: Number(r.incidentCount),
+          })),
+          monthlyTrend: [],
+        };
       },
-      downtimeReasons: reasonRows.map((r) => ({
-        reason: RESULT_LABELS[r.repairResult ?? ''] ?? r.repairResult ?? '미분류',
-        hours: Number(r.incidentCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
-        percentage:
-          totalIncidents > 0
-            ? Math.round((Number(r.incidentCount) / totalIncidents) * 1000) / 10
-            : 0,
-      })),
-      topDowntimeEquipment: repairRows.slice(0, REPORT_CONSTANTS.BOTTOM_N_LIMIT).map((r) => ({
-        equipmentId: r.equipmentId ?? '',
-        name: `${r.name ?? ''} (${r.managementNumber ?? ''})`,
-        downtimeHours: Number(r.incidentCount) * REPORT_CONSTANTS.HOURS_PER_CHECKOUT,
-        incidents: Number(r.incidentCount),
-      })),
-      monthlyTrend: [],
-    };
+      CACHE_TTL.MEDIUM
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════════════

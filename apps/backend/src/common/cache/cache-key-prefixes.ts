@@ -56,6 +56,9 @@ export const CACHE_KEY_PREFIXES = {
   /** settings.service.ts */
   SETTINGS: 'settings:',
 
+  /** reports.service.ts */
+  REPORTS: 'reports:',
+
   /** jwt.strategy.ts — 사용자 활성 상태 캐시 */
   USER_ACTIVE: 'user_active:',
 } as const;
