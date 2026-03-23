@@ -29,7 +29,10 @@ import {
   CreateCalibrationFactorDto,
   CreateCalibrationFactorValidationPipe,
 } from './dto/create-calibration-factor.dto';
-import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
+import {
+  CalibrationFactorQueryDto,
+  CalibrationFactorQueryValidationPipe,
+} from './dto/calibration-factor-query.dto';
 import {
   ApproveCalibrationFactorDto,
   RejectCalibrationFactorDto,
@@ -82,7 +85,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
   @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  findAll(@Query() query: CalibrationFactorQueryDto): Promise<{
+  findAll(@Query(CalibrationFactorQueryValidationPipe) query: CalibrationFactorQueryDto): Promise<{
     items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;

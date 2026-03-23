@@ -615,6 +615,8 @@ export class NonConformancesService extends VersionedBaseService {
     // version은 CAS용이므로 SET 절에서 제외
     const { version, ...updateFields } = updateDto;
 
+    const statusChanged = updateDto.status && updateDto.status !== nonConformance.status;
+
     try {
       const updated = await this.updateWithVersion<NonConformance>(
         nonConformances,
@@ -626,6 +628,15 @@ export class NonConformancesService extends VersionedBaseService {
 
       // 캐시 무효화: detail 캐시 삭제
       this.cacheService.delete(this.buildCacheKey('detail', id));
+
+      // 상태 변경 시 교차 엔티티 캐시 무효화 (대시보드, 장비 상세 등)
+      if (statusChanged) {
+        await this.cacheInvalidationHelper
+          .invalidateAfterNonConformanceStatusChange(nonConformance.equipmentId, false)
+          .catch((err) =>
+            this.logger.warn(`Cache invalidation failed after NC update: ${err.message}`)
+          );
+      }
 
       return updated;
     } catch (error) {

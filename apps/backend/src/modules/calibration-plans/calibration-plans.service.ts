@@ -21,6 +21,7 @@ import { teams } from '@equipment-management/db/schema/teams';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import type {
   CreateCalibrationPlanPayload,
   UpdateCalibrationPlanInput,
@@ -53,7 +54,8 @@ export class CalibrationPlansService extends VersionedBaseService {
     @Inject('DRIZZLE_INSTANCE')
     db: AppDatabase,
     private readonly eventEmitter: EventEmitter2,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper
   ) {
     super();
     this.db = db;
@@ -538,6 +540,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     });
 
     this.invalidatePlanCache(uuid);
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
     return this.findOne(uuid);
   }
 
@@ -580,6 +583,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     });
 
     this.invalidatePlanCache(uuid);
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
     return this.findOne(uuid);
   }
 
@@ -621,6 +625,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     });
 
     this.invalidatePlanCache(uuid);
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
     return this.findOne(uuid);
   }
 
@@ -676,6 +681,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     });
 
     this.invalidatePlanCache(uuid);
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
     return this.findOne(uuid);
   }
 

@@ -1251,7 +1251,7 @@ export class CheckoutsService extends VersionedBaseService {
       // ✅ Optimistic locking: CAS를 사용한 상태 전환
       const updated = await this.updateCheckoutStatus(
         uuid,
-        checkout,
+        { ...checkout, version: approveDto.version },
         CSVal.APPROVED as CheckoutStatus,
         {
           approverId: approveDto.approverId,
@@ -1535,40 +1535,48 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ Optimistic locking: CAS를 사용한 상태 전환
-      const updated = await this.updateCheckoutStatus(
-        uuid,
-        checkout,
-        CSVal.RETURNED as CheckoutStatus,
-        {
-          actualReturnDate: new Date(),
-          returnerId,
-          calibrationChecked: returnDto.calibrationChecked ?? false,
-          repairChecked: returnDto.repairChecked ?? false,
-          workingStatusChecked: returnDto.workingStatusChecked ?? false,
-          inspectionNotes: returnDto.inspectionNotes || null,
-        }
-      );
-
-      // 장비별 반입 후 상태 기록 (Phase 3) — 배치 업데이트로 N+1 방지
-      if (returnDto.itemConditions && returnDto.itemConditions.length > 0) {
-        const conditionCases = returnDto.itemConditions.map(
-          (cond) =>
-            sql`WHEN ${checkoutItems.equipmentId} = ${cond.equipmentId} THEN ${cond.conditionAfter}`
+      // ✅ 트랜잭션: checkout 상태 변경 + 장비별 상태 기록을 원자적으로 처리
+      const updated = await this.db.transaction(async (tx) => {
+        // 1. CAS를 사용한 checkout 상태 전환
+        const result = await this.updateWithVersion<Checkout>(
+          checkouts,
+          uuid,
+          returnDto.version,
+          {
+            status: CSVal.RETURNED as CheckoutStatus,
+            actualReturnDate: new Date(),
+            returnerId,
+            calibrationChecked: returnDto.calibrationChecked ?? false,
+            repairChecked: returnDto.repairChecked ?? false,
+            workingStatusChecked: returnDto.workingStatusChecked ?? false,
+            inspectionNotes: returnDto.inspectionNotes || null,
+          },
+          '반출',
+          tx
         );
-        const equipmentIdsForCondition = returnDto.itemConditions.map((c) => c.equipmentId);
-        await this.db
-          .update(checkoutItems)
-          .set({
-            conditionAfter: sql`CASE ${sql.join(conditionCases, sql` `)} END`,
-          })
-          .where(
-            and(
-              eq(checkoutItems.checkoutId, uuid),
-              inArray(checkoutItems.equipmentId, equipmentIdsForCondition)
-            )
+
+        // 2. 장비별 반입 후 상태 기록 (Phase 3) — 배치 업데이트로 N+1 방지
+        if (returnDto.itemConditions && returnDto.itemConditions.length > 0) {
+          const conditionCases = returnDto.itemConditions.map(
+            (cond) =>
+              sql`WHEN ${checkoutItems.equipmentId} = ${cond.equipmentId} THEN ${cond.conditionAfter}`
           );
-      }
+          const equipmentIdsForCondition = returnDto.itemConditions.map((c) => c.equipmentId);
+          await tx
+            .update(checkoutItems)
+            .set({
+              conditionAfter: sql`CASE ${sql.join(conditionCases, sql` `)} END`,
+            })
+            .where(
+              and(
+                eq(checkoutItems.checkoutId, uuid),
+                inArray(checkoutItems.equipmentId, equipmentIdsForCondition)
+              )
+            );
+        }
+
+        return result;
+      });
 
       // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
 
@@ -1596,6 +1604,12 @@ export class CheckoutsService extends VersionedBaseService {
       return updated;
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      // ✅ CAS 실패 시 stale cache 방지
+      if (error instanceof ConflictException) {
+        const detailCacheKey = this.buildCacheKey('detail', { uuid });
+        await this.cacheService.delete(detailCacheKey);
         throw error;
       }
       this.logger.error(
@@ -1640,7 +1654,7 @@ export class CheckoutsService extends VersionedBaseService {
         const result = await this.updateWithVersion<Checkout>(
           checkouts,
           uuid,
-          checkout.version,
+          approveReturnDto.version,
           {
             status: CSVal.RETURN_APPROVED as CheckoutStatus,
             returnApprovedBy: approveReturnDto.approverId,
@@ -1954,7 +1968,7 @@ export class CheckoutsService extends VersionedBaseService {
         await this.updateWithVersion<Checkout>(
           checkouts,
           uuid,
-          checkout.version,
+          dto.version,
           checkoutUpdateData,
           '반출',
           tx

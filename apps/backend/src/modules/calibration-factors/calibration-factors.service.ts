@@ -22,6 +22,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 
 const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
@@ -58,6 +59,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly eventEmitter: EventEmitter2
   ) {
     super();
@@ -358,6 +360,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
       factorId: id,
@@ -408,6 +411,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
       factorId: id,
@@ -425,13 +429,20 @@ export class CalibrationFactorsService extends VersionedBaseService {
   async remove(id: string, version: number): Promise<{ id: string; deleted: boolean }> {
     await this.findOne(id);
 
-    await this.updateWithVersion(
-      calibrationFactors,
-      id,
-      version,
-      { deletedAt: new Date() },
-      '보정계수'
-    );
+    try {
+      await this.updateWithVersion(
+        calibrationFactors,
+        id,
+        version,
+        { deletedAt: new Date() },
+        '보정계수'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');

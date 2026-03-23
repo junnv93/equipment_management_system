@@ -39,6 +39,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { Team } from '@equipment-management/db/schema/teams';
@@ -98,6 +99,7 @@ export class EquipmentService extends VersionedBaseService {
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly equipmentHistoryService: EquipmentHistoryService
   ) {
     super();
@@ -1240,6 +1242,9 @@ export class EquipmentService extends VersionedBaseService {
     await this.cacheService.deleteByPattern(
       `${this.CACHE_PREFIX}(list|count|statusCounts):(?!.*teamId)`
     );
+
+    // 대시보드 + 승인 카운트 교차 무효화
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
   }
 
   /**
