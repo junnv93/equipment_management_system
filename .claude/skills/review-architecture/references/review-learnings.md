@@ -120,6 +120,16 @@
 - **설명**: `findAll()`에는 `@SiteScoped`가 적용되어 있지만, `GET /pending` 엔드포인트에는 누락되어 전 사이트/팀의 승인 대기 건이 노출. 사용자가 승인 시도 시 `enforceSiteAccess`에서 403 거부. 목록 단계에서 필터하지 않으면 사용자가 승인 불가 항목을 보게 되어 혼란 유발.
 - **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 4 "보안 계층"에 명시적 항목으로 승격
 
+### [2026-03-22] NC 유형별 전제조건 하드코딩 — requiresRepair 단일 함수 한계
+- **발견 빈도**: 1회 (non-conformances, approvals, NCDetailClient 3곳 동시)
+- **설명**: `requiresRepair()`가 damage/malfunction만 처리하여 calibration_overdue의 재교정 전제조건이 누락. `NC_CORRECTION_PREREQUISITES` SSOT 레지스트리로 유형별 전제조건(repair/recalibration/null)을 중앙 관리하도록 개선. 백엔드 `validateCorrectionPrerequisite()` + 프론트엔드 `getNCPrerequisite()` + 승인 카운트 쿼리까지 전 계층 적용.
+- **체크리스트 반영**: review-checklist.md 섹션 6 "모듈 간 패턴 일관성"에 "NC 유형별 전제조건은 NC_CORRECTION_PREREQUISITES SSOT 참조" 항목 추가 고려
+
+### [2026-03-22] 교정 승인 시 NC 종결 워크플로우 바이패스 — 장비 상태 즉시 복원
+- **발견 빈도**: 1회 (calibration.service.ts: markCalibrationOverdueAsCorrected)
+- **설명**: 교정 승인 시 NC를 corrected로 변경하면서 장비를 동시에 available로 복원하여, NC의 3단계 워크플로우(open→corrected→closed)를 우회. 종결 반려 시 장비 available + NC open 상태 불일치 발생. 장비 상태 복원을 close() 메서드의 기존 로직(다른 열린 부적합 확인)에 위임하도록 수정.
+- **체크리스트 반영**: review-checklist.md 섹션 2 "CAS 계층 일관성"에 "장비 상태 복원은 NC close() 경로에서만 수행" 항목 추가 고려
+
 ---
 
 ## 업데이트 이력
@@ -139,5 +149,7 @@
 | 2026-03-22 | 안티패턴 | Stale CAS 버전 사용 — extractVersion(originalData) 우선 패턴 | review-learnings.md |
 | 2026-03-22 | 새 패턴 | aliasedTable — 동일 테이블 다중 FK JOIN (calibration) | review-learnings.md |
 | 2026-03-22 | 안티패턴 | Pending 승인 목록 @SiteScoped 누락 (calibration, software) | review-learnings.md |
+| 2026-03-22 | 새 패턴 | NC 유형별 전제조건 SSOT (`NC_CORRECTION_PREREQUISITES`) 도입 | review-learnings.md |
+| 2026-03-22 | 안티패턴 | 교정 승인 시 NC 종결 워크플로우 바이패스 (장비 즉시 복원) | review-learnings.md |
 | 2026-03-22 | 안티패턴 | 클라이언트 네비게이션 중 Radix Select spurious onValueChange | review-learnings.md |
 | 2026-03-22 | 안티패턴 | 대시보드 카운트 vs 장비 목록 retired/disposed 불일치 | review-learnings.md |
