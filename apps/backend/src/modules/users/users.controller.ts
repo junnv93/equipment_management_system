@@ -295,12 +295,19 @@ export class UsersController {
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '사용자 권한 목록' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
-  getUserPermissions(@Param('id', ParseUUIDPipe) id: string): Promise<{
+  async getUserPermissions(@Param('id', ParseUUIDPipe) id: string): Promise<{
     userId: string;
     username: string;
     role: UserRole;
     permissions: string[];
-  } | null> {
-    return this.usersService.findUserPermissions(id);
+  }> {
+    const permissions = await this.usersService.findUserPermissions(id);
+    if (!permissions) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${id} not found.`,
+      });
+    }
+    return permissions;
   }
 }
