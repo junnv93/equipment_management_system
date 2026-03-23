@@ -1,6 +1,6 @@
 ---
 name: review-architecture
-description: 아키텍처 레벨 코드 리뷰 스킬. 변경된 코드의 DB→Service→Controller→DTO→Hook→Component→Cache 계층 관통 검증, 모듈 간 패턴 일관성, CAS 계층 일관성, 캐시 코히어런스, 보안 계층, 성능 안티패턴을 리뷰합니다. "아키텍처 리뷰", "코드 리뷰", "전체 리뷰", "PR 리뷰", "구조 검토", "패턴 일관성 확인" 등의 맥락에서 사용하세요. verify-* 스킬이 규칙 기반 자동 검사라면, 이 스킬은 시니어 아키텍트 관점의 설계 판단 리뷰입니다. 코드 변경 후 구조적 일관성이 궁금할 때, PR 생성 전 아키텍처 수준 점검이 필요할 때 적극 사용하세요.
+description: 아키텍처 레벨 코드 리뷰 스킬. 변경된 코드의 DB→Service→Controller→DTO→Hook→Component→Cache 계층 관통 검증, 모듈 간 패턴 일관성, CAS 계층 일관성, 캐시 코히어런스, 보안 계층, 성능 안티패턴을 리뷰합니다. verify-* 스킬이 규칙 기반 자동 검사라면, 이 스킬은 시니어 아키텍트 관점의 설계 판단 리뷰입니다. "아키텍처 리뷰", "코드 리뷰", "전체 리뷰", "PR 리뷰", "구조 검토", "패턴 일관성 확인", "review changes", "check architecture", "리뷰해줘" 등의 맥락에서 사용하세요. 특히 새 모듈 추가, 복잡한 상태 변경 로직, 다단계 승인 플로우 구현, 캐시 전략 변경 후에 적극 사용하세요. 코드 변경 후 구조적 일관성이 궁금할 때, PR 생성 전 아키텍처 수준 점검이 필요할 때 적극 사용하세요.
 argument-hint: '[선택사항: 특정 도메인명 또는 파일 경로]'
 ---
 
@@ -41,10 +41,10 @@ argument-hint: '[선택사항: 특정 도메인명 또는 파일 경로]'
 **인수가 없는 경우:** git diff로 변경된 파일을 파악합니다.
 
 ```bash
-# 스테이징 + 언스테이징 변경 파일
+# staged + unstaged 변경 파일 (HEAD 대비)
 git diff --name-only HEAD
-git diff --name-only --cached
-git diff --name-only
+# untracked 파일 포함 전체 상태
+git status --short
 ```
 
 변경 파일이 없으면 사용자에게 리뷰 대상을 질문합니다.
@@ -104,6 +104,8 @@ git diff --name-only
 - `VersionedBaseService.updateWithVersion()` 사용하는가? (직접 UPDATE 시 WHERE version=? 조건이 누락되어 CAS 무력화)
 - CAS 실패(409) catch에서 해당 엔티티 캐시 삭제하는가? (미삭제 시 stale version이 캐시에 남아 재시도도 계속 409 — 무한 충돌 루프)
 - 프론트엔드 mutation에서 version 전송 + VERSION_CONFLICT 처리하는가? (미처리 시 사용자가 "오류 발생"만 보고 원인을 알 수 없음)
+- 다중 테이블 변경에 트랜잭션이 적용되었는가? (미적용 시 중간 실패로 부분 커밋 → 데이터 정합성 깨짐. 반대로 CAS 단일 테이블 업데이트에 불필요한 트랜잭션은 커넥션 홀드 시간만 증가)
+- CAS 선점이 실제 작업보다 먼저 실행되는가? (작업 후 CAS 체크 시 동시 요청이 모두 작업을 수행한 뒤 하나만 CAS 성공 — 보상 로직 없으면 중복 생성/변경)
 
 ### Step 4: 캐시 코히어런스
 
@@ -281,6 +283,12 @@ Step 2-7에서 체크리스트에 명시되지 않은 항목을 확인한 경우
 **9c: 반복 발견 안티패턴이 있는가?**
 
 `review-learnings.md`에 이미 기록된 안티패턴이 다시 발견되면(2회 이상), `review-checklist.md`에 명시적 검사 항목으로 승격합니다. 처음 발견된 안티패턴은 `review-learnings.md`에만 기록합니다.
+
+**승격된 항목은 learnings에서 `✅ 승격 완료` 마크로 상태를 갱신합니다** — learnings과 checklist 간 SSOT 불일치 방지.
+
+**9d: 아카이브 정리**
+
+`review-learnings.md`의 1회 발견 항목이 **3개월 이상 재발견 없이 누적 20개를 초과**하면, 오래된 순서로 아카이브 섹션으로 이동합니다. learnings 파일이 비대해지면 참조 효과가 감소하므로, 활성 항목만 상단에 유지합니다.
 
 개선 사항이 있으면 보고서 하단에 한 줄로 표시합니다:
 

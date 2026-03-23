@@ -63,12 +63,12 @@
 ### [2026-03-21] RBAC scope JOIN 유형 선택 (INNER vs LEFT)
 - **발견 위치**: `apps/backend/src/modules/reports/reports.service.ts` 전체
 - **설명**: RBAC scope 조건이 equipment 테이블 컬럼(`siteCode`, `teamId`)을 통해 적용되는 경우, `LEFT JOIN`은 NULL 행이 scope 조건을 우회할 수 있으므로 `INNER JOIN` 사용이 올바름. 단, equipment 기준 쿼리(활용률 등)에서 반출 없는 장비도 0%로 표시하려면 `LEFT JOIN`이 의도적. 또한 `teamsTable` JOIN은 팀 미배정 장비 표시를 위해 항상 `LEFT JOIN`.
-- **체크리스트 반영**: review-checklist.md 섹션 5 "성능 안티패턴"에 추가 고려
+- **체크리스트 반영**: ✅ review-checklist.md 섹션 5 안티패턴 표에 반영 완료
 
 ### [2026-03-21] COUNT(DISTINCT) + fan-out JOIN
 - **발견 위치**: `apps/backend/src/modules/reports/reports.service.ts:153,296,308,1000`
 - **설명**: checkouts → checkoutItems 다:1 관계에서 `count(checkoutsTable.id)`만 사용하면 item 수만큼 카운트 뻥튀기. `COUNT(DISTINCT checkoutsTable.id)` 필수. 활용률 쿼리에서도 `COALESCE(COUNT(DISTINCT ...), 0)` 패턴 사용.
-- **체크리스트 반영**: review-checklist.md 섹션 5 "성능 안티패턴"에 추가 고려
+- **체크리스트 반영**: ✅ review-checklist.md 섹션 5 안티패턴 표에 반영 완료
 
 ### [2026-03-21] Zod v4 `z.string().uuid()` 직접 사용
 - **발견 빈도**: 1회 (frontend: IncidentHistoryTab.tsx) — 마이그레이션 누락
@@ -83,7 +83,7 @@
 ### [2026-03-21] CAS 선점 순서 — 작업보다 CAS 체크가 먼저
 - **발견 빈도**: 1회 (equipment: approveRequest)
 - **설명**: `approveRequest`에서 장비 create/update/delete 작업이 CAS 체크(version WHERE) **이전에** 실행되어, 동시 승인 시 장비 중복 생성 가능. CAS 선점(요청 상태 업데이트)을 장비 작업 이전으로 이동하여 해결. `initiateReturn()`과 동일한 "CAS 선점 → 작업 → 보상" 패턴.
-- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 2 "CAS 계층 일관성"에 명시적 항목으로 승격
+- **체크리스트 반영**: ✅ review-checklist.md 섹션 2 "트랜잭션 경계"에 CAS 선점 순서 항목으로 승격 완료
 
 ### [2026-03-21] DB nullable → DTO optional 정규화 (null → undefined)
 - **발견 빈도**: 1회 (auth: toAuthUser)
@@ -93,7 +93,7 @@
 ### [2026-03-21] Mutation 네비게이션 전 캐시 무효화 필수 (Navigate-Before-Invalidate 안티패턴)
 - **발견 빈도**: 1회 (시스템 전반 — 9개 파일에서 동시 발견)
 - **설명**: `useMutation`의 `onSuccess`에서 `router.push()`로 네비게이션한 뒤, `onSettled`에서 캐시를 무효화하면 대상 페이지에서 stale 데이터가 표시됨. 특히 STATIC 프리셋(`refetchOnMount: false`)에서 심각. `useFormSubmission` 훅의 패턴(invalidation → navigation in onSuccess)이 올바른 참조 구현. `useOptimisticMutation`에는 `onSettledCallback` 옵션을 추가하여 캐시 무효화 완료 후 네비게이션 실행 보장.
-- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 3 "캐시 코히어런스"에 명시적 항목으로 승격
+- **체크리스트 반영**: ✅ review-checklist.md 섹션 3 "Frontend 캐시 확인 포인트 #4" + 섹션 7 "Mutation 라이프사이클"에 승격 완료 (9개 파일 동시 발견으로 시스템적 영향 고려)
 
 ### [2026-03-22] Stale CAS 버전 사용 — extractVersion(originalData) 우선 패턴
 - **발견 빈도**: 2회 (1차: 전체 카테고리 extractVersion 우선, 2차: equipment 카테고리 version 미전송)
@@ -108,17 +108,17 @@
 ### [2026-03-22] 클라이언트 네비게이션 중 Radix Select spurious onValueChange
 - **발견 빈도**: 1회 (equipment: EquipmentFilters.tsx teamId Select)
 - **설명**: Next.js App Router 클라이언트 라우팅 중 `useSearchParams()`가 일시적으로 이전 페이지(대시보드)의 빈 params를 반영 → `filters.teamId = ''` → Select의 `value`가 `_all`로 변경 → `onValueChange` 발생 → `updateURL({ teamId: '' })` → `teamId=_all` 설정 → 서버 리다이렉트가 `_all`을 "명시적 전체 선택"으로 인식하여 보정하지 않음. 두 계층 수정으로 해결: (1) `updateURL`에서 teamId "명시적 변경 vs 보존" 분기, (2) Select `onValueChange`에 중복 값 가드.
-- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 7 "프론트엔드 상태 아키텍처"에 "URL-driven 필터와 Radix Select의 클라이언트 네비게이션 호환성" 항목으로 승격
+- **체크리스트 반영**: ✅ review-checklist.md 섹션 7 "URL-driven 필터와 클라이언트 네비게이션 호환성"에 승격 완료 (1회 발견이지만 App Router 근본 이슈로 조기 승격)
 
 ### [2026-03-22] 대시보드 카운트 vs 장비 목록 불일치 — 데이터 소스 불일치
 - **발견 빈도**: 2회 (1차: activeCheckouts checkout 테이블 기반, 2차: overdueCalibrationCount 교정 테이블 기반)
 - **설명**: 대시보드 KPI/AlertBanner 카운트가 다른 테이블(checkouts, calibrations)에서 집계되지만, 클릭 후 장비 목록은 `equipment.status` 기반 필터링. 카운트 소스와 목록 필터가 다른 테이블을 참조하여 불일치 발생. `equipmentStatusStats` (equipment.status GROUP BY)를 SSOT로 통일하여 해결.
-- **체크리스트 반영**: ✅ 2회 발견 → review-checklist.md 섹션 1 "계층 관통 추적"에 "카운트 쿼리↔목록 쿼리 필터 일치 검증" 항목으로 승격
+- **체크리스트 반영**: ✅ 2회 발견 → review-checklist.md 섹션 1 "계층 관통 추적" + 섹션 3 "Frontend 캐시 확인 포인트 #5"에 승격 완료
 
 ### [2026-03-22] Pending 승인 목록 엔드포인트의 @SiteScoped 누락
 - **발견 빈도**: 1회 (calibration, software 2개 모듈 동시)
 - **설명**: `findAll()`에는 `@SiteScoped`가 적용되어 있지만, `GET /pending` 엔드포인트에는 누락되어 전 사이트/팀의 승인 대기 건이 노출. 사용자가 승인 시도 시 `enforceSiteAccess`에서 403 거부. 목록 단계에서 필터하지 않으면 사용자가 승인 불가 항목을 보게 되어 혼란 유발.
-- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 4 "보안 계층"에 명시적 항목으로 승격
+- **체크리스트 반영**: ✅ review-checklist.md 섹션 4 "보안 계층"에 승격 완료 (1회 발견이지만 2개 모듈 동시 + 보안 영향으로 조기 승격)
 
 ### [2026-03-22] NC 유형별 전제조건 하드코딩 — requiresRepair 단일 함수 한계
 - **발견 빈도**: 1회 (non-conformances, approvals, NCDetailClient 3곳 동시)
@@ -153,3 +153,9 @@
 | 2026-03-22 | 안티패턴 | 교정 승인 시 NC 종결 워크플로우 바이패스 (장비 즉시 복원) | review-learnings.md |
 | 2026-03-22 | 안티패턴 | 클라이언트 네비게이션 중 Radix Select spurious onValueChange | review-learnings.md |
 | 2026-03-22 | 안티패턴 | 대시보드 카운트 vs 장비 목록 retired/disposed 불일치 | review-learnings.md |
+| 2026-03-23 | 체계 개선 | learnings↔checklist SSOT 동기화 — 승격 상태 일괄 갱신 | review-learnings.md |
+| 2026-03-23 | 체크리스트 보강 | 섹션 2: 트랜잭션 경계 + CAS 선점 순서 추가 | review-checklist.md |
+| 2026-03-23 | 체크리스트 보강 | 섹션 3: Navigate-Before-Invalidate + 카운트↔목록 소스 일치 | review-checklist.md |
+| 2026-03-23 | 체크리스트 보강 | 섹션 4: Pending 목록 @SiteScoped 확인 | review-checklist.md |
+| 2026-03-23 | 체크리스트 보강 | 섹션 7: Mutation 라이프사이클 + URL-driven 필터 호환성 | review-checklist.md |
+| 2026-03-23 | 정책 추가 | learnings 아카이브 정책 (3개월/20개 초과 시) | SKILL.md Step 9d |
