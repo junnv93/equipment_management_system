@@ -44,6 +44,8 @@ export const NOTIFICATION_RETENTION_DAYS = 90;
 export const CALIBRATION_THRESHOLDS = {
   /** 교정 예정 경고 임계값 (일) — 이 값 이내면 '교정 예정' 상태 */
   WARNING_DAYS: 30,
+  /** 교정 긴급 임계값 (일) — 이 값 이내면 긴급(빨간색) 표시 */
+  URGENT_DAYS: 3,
   /** 중간점검 upcoming 임계값 (일) — 이 값 이내면 upcoming 상태 */
   INTERMEDIATE_CHECK_UPCOMING_DAYS: 7,
 } as const;

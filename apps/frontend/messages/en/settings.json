@@ -91,14 +91,12 @@
     "typeTitle": "Notification Types",
     "typeDescription": "Select which notification categories to receive.",
     "emailEnabled": "Email Notifications",
-    "emailDescription": "Receive calibration overdue, calibration due, and checkout overdue notifications via email. (Uses Azure AD account email)",
+    "emailDescription": "Approval requests/results are sent immediately. Overdue/due-soon alerts are sent as a daily digest at the specified time.",
     "inAppEnabled": "In-App Notifications",
     "inAppDescription": "Display notifications within the system.",
-    "frequency": "Notification Frequency",
-    "frequencyDescription": "Currently all notifications are sent immediately. Daily/weekly digest features will be added in the future.",
-    "digestTime": "Digest Send Time",
-    "digestTimeDescription": "You can set the send time when daily/weekly digest feature is enabled.",
-    "comingSoon": "Coming Soon"
+    "digestTime": "Digest Email Time",
+    "digestTimeDescription": "Overdue and due-soon alerts will be summarized and sent daily at this time.",
+    "immediateNote": "Approval requests and results are always sent immediately."
   },
   "system": {
     "title": "System Settings",

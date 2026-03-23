@@ -6,10 +6,16 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Form } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bell, Mail, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Bell, Mail, Clock, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useNotificationPreferences,
@@ -18,6 +24,8 @@ import {
 import {
   NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORY_FORM_FIELDS,
+  DIGEST_TIME_OPTIONS,
+  DEFAULT_DIGEST_TIME,
 } from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import { SettingsToggleField } from '@/components/settings/SettingsToggleField';
@@ -35,18 +43,14 @@ import {
  *
  * SSOT: 카테고리 필드는 NOTIFICATION_CATEGORY_FORM_FIELDS에서 자동 생성
  */
-const categoryFieldsSchema = z.object(
-  Object.fromEntries(
+const notificationFormSchema = z.object({
+  emailEnabled: z.boolean(),
+  inAppEnabled: z.boolean(),
+  digestTime: z.enum(DIGEST_TIME_OPTIONS),
+  ...Object.fromEntries(
     NOTIFICATION_CATEGORIES.map((cat) => [NOTIFICATION_CATEGORY_FORM_FIELDS[cat], z.boolean()])
-  ) as Record<string, z.ZodBoolean>
-);
-
-const notificationFormSchema = z
-  .object({
-    emailEnabled: z.boolean(),
-    inAppEnabled: z.boolean(),
-  })
-  .merge(categoryFieldsSchema);
+  ),
+});
 
 type NotificationFormValues = z.infer<typeof notificationFormSchema>;
 
@@ -111,12 +115,18 @@ export default function NotificationsContent() {
     })
   ) as Record<string, boolean>;
 
-  const mergedValues: NotificationFormValues = {
+  const digestTime = (preferences as unknown as Record<string, unknown>)?.digestTime;
+  const validDigestTime = DIGEST_TIME_OPTIONS.includes(
+    digestTime as (typeof DIGEST_TIME_OPTIONS)[number]
+  )
+    ? (digestTime as (typeof DIGEST_TIME_OPTIONS)[number])
+    : DEFAULT_DIGEST_TIME;
+
+  const mergedValues = Object.assign({}, categoryDefaults, categoryValues, {
     emailEnabled: preferences?.emailEnabled ?? false,
     inAppEnabled: preferences?.inAppEnabled ?? true,
-    ...categoryDefaults,
-    ...categoryValues,
-  };
+    digestTime: validDigestTime,
+  }) as unknown as NotificationFormValues;
 
   return <NotificationsForm initialPreferences={mergedValues} />;
 }
@@ -141,12 +151,13 @@ function NotificationsForm({ initialPreferences }: { initialPreferences: Notific
     defaultValues: initialPreferences,
   });
 
-  const handleToggleChange = useCallback(
-    (fieldName: string, checked: boolean) => {
+  const handleFieldChange = useCallback(
+    (fieldName: string, value: boolean | string) => {
       setSavingField(fieldName);
       setSavedField(null);
+      const previousValue = form.getValues(fieldName as keyof NotificationFormValues);
       updateMutation.mutate(
-        { [fieldName]: checked },
+        { [fieldName]: value },
         {
           onSuccess: () => {
             setSavingField(null);
@@ -155,14 +166,23 @@ function NotificationsForm({ initialPreferences }: { initialPreferences: Notific
           },
           onError: () => {
             setSavingField(null);
-            // 토글 원복
-            form.setValue(fieldName as keyof NotificationFormValues, !checked);
+            // 이전 값으로 원복
+            form.setValue(
+              fieldName as keyof NotificationFormValues,
+              previousValue as NotificationFormValues[keyof NotificationFormValues]
+            );
             toast.error(t('toasts.notificationSaveError'));
           },
         }
       );
     },
     [updateMutation, form, t]
+  );
+
+  // SettingsToggleField 호환 (boolean only)
+  const handleToggleChange = useCallback(
+    (fieldName: string, checked: boolean) => handleFieldChange(fieldName, checked),
+    [handleFieldChange]
   );
 
   return (
@@ -208,54 +228,59 @@ function NotificationsForm({ initialPreferences }: { initialPreferences: Notific
 
               <Separator />
 
-              {/* 알림 빈도 (준비중) */}
+              {/* 요약 메일 시간 (digestTime) */}
               <div
-                className={getSettingsFormItemClasses({ disabled: true })}
-                aria-disabled="true"
-                role="group"
-                aria-label={t('notifications.frequency')}
-              >
-                <div className={SETTINGS_FORM_ITEM_TOKENS.layout}>
-                  <div className={SETTINGS_FORM_ITEM_TOKENS.labelSection.withIcon}>
-                    <Clock className={SETTINGS_FORM_ITEM_TOKENS.labelIcon} aria-hidden="true" />
-                    <div className={SETTINGS_FORM_ITEM_TOKENS.labelWrapper}>
-                      <p className={SETTINGS_FORM_ITEM_TOKENS.label}>
-                        {t('notifications.frequency')}
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {t('notifications.comingSoon')}
-                        </Badge>
-                      </p>
-                      <p className={SETTINGS_FORM_ITEM_TOKENS.description}>
-                        {t('notifications.frequencyDescription')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 알림 시간 (준비중) */}
-              <div
-                className={getSettingsFormItemClasses({ disabled: true })}
-                aria-disabled="true"
+                className={getSettingsFormItemClasses({
+                  disabled: !form.watch('emailEnabled'),
+                })}
                 role="group"
                 aria-label={t('notifications.digestTime')}
               >
                 <div className={SETTINGS_FORM_ITEM_TOKENS.layout}>
                   <div className={SETTINGS_FORM_ITEM_TOKENS.labelSection.withIcon}>
                     <Clock className={SETTINGS_FORM_ITEM_TOKENS.labelIcon} aria-hidden="true" />
-                    <div className={SETTINGS_FORM_ITEM_TOKENS.labelWrapper}>
-                      <p className={SETTINGS_FORM_ITEM_TOKENS.label}>
-                        {t('notifications.digestTime')}
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {t('notifications.comingSoon')}
-                        </Badge>
-                      </p>
-                      <p className={SETTINGS_FORM_ITEM_TOKENS.description}>
-                        {t('notifications.digestTimeDescription')}
-                      </p>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className={SETTINGS_FORM_ITEM_TOKENS.labelWrapper}>
+                          <p className={SETTINGS_FORM_ITEM_TOKENS.label}>
+                            {t('notifications.digestTime')}
+                          </p>
+                          <p className={SETTINGS_FORM_ITEM_TOKENS.description}>
+                            {t('notifications.digestTimeDescription')}
+                          </p>
+                        </div>
+                        <Select
+                          value={String(form.watch('digestTime'))}
+                          onValueChange={(value: string) => {
+                            (form as { setValue: (name: string, value: unknown) => void }).setValue(
+                              'digestTime',
+                              value
+                            );
+                            handleFieldChange('digestTime', value);
+                          }}
+                          disabled={!form.watch('emailEnabled')}
+                        >
+                          <SelectTrigger className="w-[100px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DIGEST_TIME_OPTIONS.map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* 승인 즉시 발송 안내 */}
+              <div className="flex items-start gap-2 px-4 py-3 text-sm text-muted-foreground">
+                <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{t('notifications.immediateNote')}</span>
               </div>
             </div>
           </Form>

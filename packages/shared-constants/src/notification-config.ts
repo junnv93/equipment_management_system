@@ -22,3 +22,20 @@ export const NOTIFICATION_CONFIG: { readonly DEFAULT_TTL_DAYS: number } = {
  * SSOT: 이 상수가 유일한 정의이며, Backend/Frontend 양쪽에서 참조합니다.
  */
 export const SSE_APPROVAL_CHANGED_SENTINEL = '__approval_changed__' as const;
+
+/**
+ * 다이제스트 이메일 시간 옵션 — Backend/Frontend 공유 SSOT
+ *
+ * 사용자가 선택 가능한 일간 다이제스트 발송 시간 (UTC).
+ * Backend DTO 검증 + Frontend Select 옵션 + DigestEmailScheduler에서 참조.
+ *
+ * @example
+ * import { DIGEST_TIME_OPTIONS, DEFAULT_DIGEST_TIME } from '@equipment-management/shared-constants';
+ * // DTO: z.enum(DIGEST_TIME_OPTIONS)
+ * // UI: DIGEST_TIME_OPTIONS.map(t => <option>{t}</option>)
+ */
+export const DIGEST_TIME_OPTIONS = ['07:00', '08:00', '09:00', '10:00'] as const;
+
+export type DigestTime = (typeof DIGEST_TIME_OPTIONS)[number];
+
+export const DEFAULT_DIGEST_TIME: DigestTime = '09:00';

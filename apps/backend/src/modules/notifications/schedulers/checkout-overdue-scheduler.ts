@@ -5,7 +5,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CheckoutStatusEnum } from '@equipment-management/schemas';
-import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
 /**
@@ -32,7 +32,7 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
     private readonly eventEmitter: EventEmitter2,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper
   ) {}
 
   /**
@@ -186,10 +186,10 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
           timestamp: now,
         });
 
-        this.cacheService.delete(`checkout:detail:${checkout.id}`);
-        if (item.equipmentId) {
-          this.cacheService.delete(`equipment:detail:${item.equipmentId}`);
-        }
+        await this.cacheInvalidationHelper.invalidateAfterCheckoutStatusChange(
+          checkout.id,
+          item.equipmentId || undefined
+        );
       } catch (err) {
         this.logger.error(
           `반출 기한초과 처리 실패: ${checkout.id}`,

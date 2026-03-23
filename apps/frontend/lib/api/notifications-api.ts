@@ -52,7 +52,7 @@ export interface NotificationPreferences {
   equipmentImportEnabled: boolean;
   equipmentEnabled: boolean;
   systemEnabled: boolean;
-  frequency: string;
+  frequency?: string;
   digestTime: string;
 }
 

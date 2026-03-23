@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { NotificationFrequencyEnum, VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { DIGEST_TIME_OPTIONS } from '@equipment-management/shared-constants';
 
 export const updateNotificationSettingsSchema = z
   .object({
@@ -14,13 +14,8 @@ export const updateNotificationSettingsSchema = z
     equipmentImportEnabled: z.boolean().optional(),
     equipmentEnabled: z.boolean().optional(),
     systemEnabled: z.boolean().optional(),
-    frequency: NotificationFrequencyEnum.optional(),
-    digestTime: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-        message: VM.notification.timeFormat,
-      })
-      .optional(),
+    // frequency는 항상 'daily' 고정 (UI 노출 안 함) — 클라이언트에서 전송하지 않음
+    digestTime: z.enum(DIGEST_TIME_OPTIONS).optional(),
   })
   .strict();
 

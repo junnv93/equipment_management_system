@@ -39,6 +39,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/calibration/calibration.service.ts`                 | ILIKE 검색 사용 (3건)                                                                              |
 | `apps/backend/src/modules/calibration-factors/calibration-factors.service.ts` | ILIKE 검색 사용 (1건)                                                                              |
 | `apps/backend/src/modules/non-conformances/non-conformances.service.ts`       | ILIKE 검색 사용 (1건)                                                                              |
+| `apps/backend/src/modules/notifications/schedulers/digest-email-scheduler.ts` | fan-out JOIN (checkouts→checkoutItems→equipment) + Map dedup                                       |
 
 ## Workflow
 

@@ -248,4 +248,47 @@ export class CacheInvalidationHelper {
 
     this.logger.debug(`✓ Invalidated calibration plan caches: ${planId}`);
   }
+
+  /**
+   * 반출 상태 변경 후 캐시 무효화
+   *
+   * 무효화 대상:
+   * - 특정 반출 상세 캐시 (JSON 키 형식 매칭)
+   * - 반출 목록 캐시 (상태 변경으로 필터 결과 달라짐)
+   * - 장비 상세/목록 캐시 (반출 상태가 장비 상태에 영향)
+   * - 대시보드 캐시 (반출 통계 변경)
+   *
+   * 사용 시점: 반출 기한 초과 전환, 반출 상태 변경 등
+   *
+   * @param checkoutId - 반출 UUID
+   * @param equipmentId - 관련 장비 UUID (없으면 장비 캐시 무효화 생략)
+   */
+  async invalidateAfterCheckoutStatusChange(
+    checkoutId: string,
+    equipmentId?: string
+  ): Promise<void> {
+    // deleteByPattern은 동기 (in-memory cache) — tasks 밖에서 직접 호출
+    this.cacheService.deleteByPattern(
+      `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:\\{"uuid":"${checkoutId}".*`
+    );
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CHECKOUTS}list:*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CHECKOUTS}count:*`);
+
+    const tasks: Promise<void>[] = [
+      // 대시보드 캐시
+      this.invalidateAllDashboard(),
+    ];
+
+    // 장비 상세 캐시 (반출 상태가 장비 표시에 영향)
+    if (equipmentId) {
+      tasks.push(this.invalidateEquipmentDetail(equipmentId));
+    }
+
+    await Promise.all(tasks);
+
+    this.logger.debug(
+      `✓ Invalidated checkout caches: ${checkoutId}` +
+        (equipmentId ? ` (equipment: ${equipmentId})` : '')
+    );
+  }
 }

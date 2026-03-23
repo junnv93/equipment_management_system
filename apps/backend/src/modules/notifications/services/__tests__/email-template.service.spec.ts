@@ -12,164 +12,164 @@ describe('EmailTemplateService', () => {
     service = module.get<EmailTemplateService>(EmailTemplateService);
   });
 
-  describe('buildCalibrationOverdueEmail', () => {
-    const data = {
-      equipmentName: '멀티미터 A',
-      managementNumber: 'SUW-E0001',
-      nextCalibrationDate: '2025-01-01',
-      linkUrl: 'https://example.com/equipment/1',
-    };
+  describe('buildCalibrationOverdueBatchEmail', () => {
+    const items = [
+      { equipmentName: '멀티미터 A', managementNumber: 'SUW-E0001', dueDate: '2025-01-01' },
+      { equipmentName: '오실로스코프 B', managementNumber: 'UIW-E0002', dueDate: '2025-01-03' },
+    ];
 
-    it('제목에 장비명과 관리번호가 포함된다', () => {
-      const { subject } = service.buildCalibrationOverdueEmail(data);
+    it('제목에 건수가 포함된다', () => {
+      const { subject } = service.buildCalibrationOverdueBatchEmail(items);
+      expect(subject).toContain('2건');
       expect(subject).toContain('교정 기한 초과');
-      expect(subject).toContain('멀티미터 A');
-      expect(subject).toContain('SUW-E0001');
     });
 
-    it('HTML에 장비 정보 테이블이 포함된다', () => {
-      const { html } = service.buildCalibrationOverdueEmail(data);
+    it('1건이어도 동일한 템플릿을 사용한다', () => {
+      const { subject } = service.buildCalibrationOverdueBatchEmail([items[0]]);
+      expect(subject).toContain('1건');
+    });
+
+    it('HTML에 모든 장비 정보가 테이블로 포함된다', () => {
+      const { html } = service.buildCalibrationOverdueBatchEmail(items);
       expect(html).toContain('멀티미터 A');
       expect(html).toContain('SUW-E0001');
-      expect(html).toContain('2025-01-01');
+      expect(html).toContain('오실로스코프 B');
+      expect(html).toContain('UIW-E0002');
     });
 
-    it('CTA 버튼에 linkUrl이 포함된다', () => {
-      const { html } = service.buildCalibrationOverdueEmail(data);
-      expect(html).toContain('https://example.com/equipment/1');
-      expect(html).toContain('장비 상세 보기');
-    });
-
-    it('교정 기한 초과 색상(dc2626 빨간색)이 포함된다', () => {
-      const { html } = service.buildCalibrationOverdueEmail(data);
+    it('교정 기한이 빨간색(dc2626)으로 표시된다', () => {
+      const { html } = service.buildCalibrationOverdueBatchEmail(items);
       expect(html).toContain('#dc2626');
     });
 
-    it('Outlook 호환 table 기반 레이아웃을 포함한다', () => {
-      const { html } = service.buildCalibrationOverdueEmail(data);
-      expect(html).toContain('<!DOCTYPE html>');
-      expect(html).toContain('<table');
-      expect(html).toContain('max-width:600px');
+    it('URL/버튼이 포함되지 않는다 (피싱 방지)', () => {
+      const { html } = service.buildCalibrationOverdueBatchEmail(items);
+      expect(html).not.toContain('<a href');
+      expect(html).not.toContain('https://');
+    });
+
+    it('시스템 안내 문구가 포함된다', () => {
+      const { html } = service.buildCalibrationOverdueBatchEmail(items);
+      expect(html).toContain('장비 관리 시스템에 접속하여 확인');
     });
 
     it('XSS: 특수문자를 이스케이프한다', () => {
-      const { html } = service.buildCalibrationOverdueEmail({
-        ...data,
-        equipmentName: '<script>alert("xss")</script>',
-        managementNumber: '&test<>',
-      });
+      const { html } = service.buildCalibrationOverdueBatchEmail([
+        {
+          equipmentName: '<script>alert("xss")</script>',
+          managementNumber: '&test<>',
+          dueDate: '2025-01-01',
+        },
+      ]);
       expect(html).not.toContain('<script>');
       expect(html).toContain('&lt;script&gt;');
       expect(html).toContain('&amp;test');
     });
   });
 
-  describe('buildCalibrationDueSoonEmail', () => {
-    const baseData = {
-      equipmentName: '오실로스코프 B',
-      managementNumber: 'UIW-E0002',
-      daysLeft: 7,
-      dueDate: '2025-02-01',
-      linkUrl: 'https://example.com/equipment/2',
-    };
+  describe('buildCalibrationDueSoonBatchEmail', () => {
+    const items = [
+      {
+        equipmentName: '오실로스코프 B',
+        managementNumber: 'UIW-E0002',
+        daysLeft: 7,
+        dueDate: '2025-02-01',
+      },
+      {
+        equipmentName: '파워미터 C',
+        managementNumber: 'PYT-E0003',
+        daysLeft: 3,
+        dueDate: '2025-01-28',
+      },
+    ];
 
-    it('제목에 D-day가 포함된다', () => {
-      const { subject } = service.buildCalibrationDueSoonEmail(baseData);
-      expect(subject).toContain('D-7');
-      expect(subject).toContain('오실로스코프 B');
-    });
-
-    it('HTML에 남은 일수가 표시된다', () => {
-      const { html } = service.buildCalibrationDueSoonEmail(baseData);
-      expect(html).toContain('D-7');
+    it('제목에 건수와 최소 D-day가 포함된다', () => {
+      const { subject } = service.buildCalibrationDueSoonBatchEmail(items);
+      expect(subject).toContain('2건');
+      expect(subject).toContain('D-3');
     });
 
     it('daysLeft <= 3 시 빨간색(dc2626) 긴급 색상을 사용한다', () => {
-      const { html } = service.buildCalibrationDueSoonEmail({ ...baseData, daysLeft: 3 });
-      expect(html).toContain('#dc2626');
+      const { html } = service.buildCalibrationDueSoonBatchEmail(items);
+      expect(html).toContain('#dc2626'); // daysLeft: 3
     });
 
     it('daysLeft > 3 시 노란색(d97706) 경고 색상을 사용한다', () => {
-      const { html } = service.buildCalibrationDueSoonEmail({ ...baseData, daysLeft: 7 });
-      expect(html).toContain('#d97706');
+      const { html } = service.buildCalibrationDueSoonBatchEmail(items);
+      expect(html).toContain('#d97706'); // daysLeft: 7
     });
 
-    it('dueDate가 HTML에 포함된다', () => {
-      const { html } = service.buildCalibrationDueSoonEmail(baseData);
-      expect(html).toContain('2025-02-01');
+    it('모든 장비가 테이블에 포함된다', () => {
+      const { html } = service.buildCalibrationDueSoonBatchEmail(items);
+      expect(html).toContain('오실로스코프 B');
+      expect(html).toContain('파워미터 C');
+      expect(html).toContain('D-7');
+      expect(html).toContain('D-3');
     });
 
-    it('XSS: linkUrl 특수문자를 이스케이프한다', () => {
-      const { html } = service.buildCalibrationDueSoonEmail({
-        ...baseData,
-        linkUrl: 'javascript:alert("xss")',
-      });
-      expect(html).not.toContain('javascript:alert("xss")');
-      expect(html).toContain('javascript:alert(&quot;xss&quot;)');
+    it('URL/버튼이 포함되지 않는다 (피싱 방지)', () => {
+      const { html } = service.buildCalibrationDueSoonBatchEmail(items);
+      expect(html).not.toContain('<a href');
     });
   });
 
-  describe('buildCheckoutOverdueEmail', () => {
-    const data = {
-      equipmentName: '스펙트럼 분석기 C',
-      managementNumber: 'PYT-E0003',
-      expectedReturnDate: '2025-01-15',
-      checkoutId: 'checkout-uuid-001',
-      linkUrl: 'https://example.com/checkouts/001',
-    };
+  describe('buildCheckoutOverdueBatchEmail', () => {
+    const items = [
+      {
+        equipmentName: '스펙트럼 분석기 C',
+        managementNumber: 'PYT-E0003',
+        expectedReturnDate: '2025-01-15',
+      },
+    ];
 
-    it('제목에 반출 기한 초과가 포함된다', () => {
-      const { subject } = service.buildCheckoutOverdueEmail(data);
+    it('제목에 반출 기한 초과 건수가 포함된다', () => {
+      const { subject } = service.buildCheckoutOverdueBatchEmail(items);
       expect(subject).toContain('반출 기한 초과');
-      expect(subject).toContain('스펙트럼 분석기 C');
+      expect(subject).toContain('1건');
     });
 
     it('HTML에 반환 예정일이 빨간색으로 표시된다', () => {
-      const { html } = service.buildCheckoutOverdueEmail(data);
+      const { html } = service.buildCheckoutOverdueBatchEmail(items);
       expect(html).toContain('2025-01-15');
       expect(html).toContain('#dc2626');
     });
 
-    it('HTML에 반출 ID가 포함된다', () => {
-      const { html } = service.buildCheckoutOverdueEmail(data);
-      expect(html).toContain('checkout-uuid-001');
-    });
-
-    it('CTA 버튼 텍스트가 반출 상세 보기이다', () => {
-      const { html } = service.buildCheckoutOverdueEmail(data);
-      expect(html).toContain('반출 상세 보기');
+    it('URL/버튼이 포함되지 않는다 (피싱 방지)', () => {
+      const { html } = service.buildCheckoutOverdueBatchEmail(items);
+      expect(html).not.toContain('<a href');
+      expect(html).not.toContain('https://');
     });
   });
 
-  describe('공통 레이아웃 (wrapLayout)', () => {
+  describe('공통 레이아웃', () => {
     it('모든 이메일에 푸터 안내문이 포함된다', () => {
-      const { html } = service.buildCalibrationOverdueEmail({
-        equipmentName: 'E',
-        managementNumber: 'M',
-        nextCalibrationDate: '2025-01-01',
-        linkUrl: 'https://example.com',
-      });
+      const { html } = service.buildCalibrationOverdueBatchEmail([
+        { equipmentName: 'E', managementNumber: 'M', dueDate: '2025-01-01' },
+      ]);
       expect(html).toContain('장비 관리 시스템에서 자동 발송');
     });
 
     it('이메일 헤더에 navy 배경(1e40af)이 적용된다', () => {
-      const { html } = service.buildCalibrationOverdueEmail({
-        equipmentName: 'E',
-        managementNumber: 'M',
-        nextCalibrationDate: '2025-01-01',
-        linkUrl: 'https://example.com',
-      });
+      const { html } = service.buildCalibrationOverdueBatchEmail([
+        { equipmentName: 'E', managementNumber: 'M', dueDate: '2025-01-01' },
+      ]);
       expect(html).toContain('#1e40af');
     });
 
     it('한국어 폰트(Malgun Gothic)가 지정된다', () => {
-      const { html } = service.buildCalibrationOverdueEmail({
-        equipmentName: 'E',
-        managementNumber: 'M',
-        nextCalibrationDate: '2025-01-01',
-        linkUrl: 'https://example.com',
-      });
+      const { html } = service.buildCalibrationOverdueBatchEmail([
+        { equipmentName: 'E', managementNumber: 'M', dueDate: '2025-01-01' },
+      ]);
       expect(html).toContain('Malgun Gothic');
+    });
+
+    it('Outlook 호환 table 기반 레이아웃을 포함한다', () => {
+      const { html } = service.buildCalibrationOverdueBatchEmail([
+        { equipmentName: 'E', managementNumber: 'M', dueDate: '2025-01-01' },
+      ]);
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('<table');
+      expect(html).toContain('max-width:600px');
     });
   });
 });

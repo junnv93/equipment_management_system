@@ -52,6 +52,21 @@ export type RecipientStrategy =
   | { type: 'team'; field: string }
   | { type: 'composite'; strategies: RecipientStrategy[] };
 
+/** 이메일 템플릿 빌드 결과 */
+export interface EmailContent {
+  subject: string;
+  html: string;
+}
+
+/**
+ * 이메일 전략
+ *
+ * - 'immediate': 이벤트 발생 즉시 이메일 발송 (승인 요청/결과)
+ * - 'digest': 일간 다이제스트에 포함 (기한 초과/예정 — 스케줄러가 배치 발송)
+ * - 'none': 이메일 발송 안 함 (인앱/SSE만)
+ */
+export type EmailStrategy = 'immediate' | 'digest' | 'none';
+
 export interface NotificationConfig {
   category: NotificationCategory;
   priority: 'low' | 'medium' | 'high';
@@ -62,8 +77,15 @@ export interface NotificationConfig {
   entityType: string;
   entityIdField: string;
   equipmentIdField?: string;
-  /** true인 경우 이메일 알림도 함께 발송 (opt-in 사용자만) */
-  emailEnabled?: boolean;
+  /**
+   * 이메일 발송 전략 (기본: 'none')
+   *
+   * 'immediate' → 디스패처가 이벤트 발생 즉시 이메일 발송
+   *               (titleTemplate/contentTemplate을 이메일 본문으로 자동 변환)
+   * 'digest' → 일간 다이제스트 스케줄러가 배치 발송 (스케줄러가 직접 처리)
+   * 'none' → 이메일 발송 안 함
+   */
+  emailStrategy?: EmailStrategy;
 }
 
 // ============================================================================
@@ -76,32 +98,33 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
   [NOTIFICATION_EVENTS.CHECKOUT_CREATED]: {
     category: 'checkout',
     priority: 'high',
-    titleTemplate: '반출 요청: {{equipmentName}}',
+    titleTemplate: '반출 승인 요청: {{equipmentName}}',
     contentTemplate:
       '{{actorName}}님이 {{equipmentName}}({{managementNumber}}) 반출을 요청했습니다.',
     recipientStrategy: {
       type: 'permission',
       permission: Permission.APPROVE_CHECKOUT,
       scope: 'team',
-      // lab_manager: 소속 사이트 전체 반출 감독, system_admin: 전사 모니터링
       roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: getApprovalPageUrl(AC.OUTGOING),
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CHECKOUT_APPROVED]: {
     category: 'checkout',
     priority: 'medium',
-    titleTemplate: '반출 승인: {{equipmentName}}',
+    titleTemplate: '반출 승인 완료: {{equipmentName}}',
     contentTemplate: '{{equipmentName}}({{managementNumber}}) 반출이 승인되었습니다.',
     recipientStrategy: { type: 'actor', field: 'requesterId' },
     linkTemplate: '/checkouts/{{checkoutId}}',
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CHECKOUT_REJECTED]: {
@@ -115,6 +138,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CHECKOUT_STARTED]: {
@@ -132,7 +156,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
   [NOTIFICATION_EVENTS.CHECKOUT_RETURNED]: {
     category: 'checkout',
     priority: 'medium',
-    titleTemplate: '반입 요청: {{equipmentName}}',
+    titleTemplate: '반입 승인 요청: {{equipmentName}}',
     contentTemplate:
       '{{actorName}}님이 {{equipmentName}}({{managementNumber}}) 반입을 요청했습니다.',
     recipientStrategy: {
@@ -145,18 +169,20 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED]: {
     category: 'checkout',
     priority: 'medium',
-    titleTemplate: '반입 승인: {{equipmentName}}',
+    titleTemplate: '반입 승인 완료: {{equipmentName}}',
     contentTemplate: '{{equipmentName}}({{managementNumber}}) 반입이 승인되었습니다.',
     recipientStrategy: { type: 'actor', field: 'requesterId' },
     linkTemplate: '/checkouts/{{checkoutId}}',
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED]: {
@@ -170,6 +196,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CHECKOUT_OVERDUE]: {
@@ -193,7 +220,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
-    emailEnabled: true,
+    emailStrategy: 'digest',
   },
 
   // ─── 교정 (Calibration) ────────────────────────────────────────────────
@@ -214,18 +241,20 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'calibration',
     entityIdField: 'calibrationId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_APPROVED]: {
     category: 'calibration',
     priority: 'medium',
-    titleTemplate: '교정 승인: {{equipmentName}}',
+    titleTemplate: '교정 승인 완료: {{equipmentName}}',
     contentTemplate: '{{equipmentName}}({{managementNumber}}) 교정 기록이 승인되었습니다.',
     recipientStrategy: { type: 'actor', field: 'registeredBy' },
     linkTemplate: '/equipment/{{equipmentId}}',
     entityType: 'calibration',
     entityIdField: 'calibrationId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_REJECTED]: {
@@ -239,6 +268,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'calibration',
     entityIdField: 'calibrationId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON]: {
@@ -251,7 +281,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'calibration',
     entityIdField: 'equipmentId',
     equipmentIdField: 'equipmentId',
-    emailEnabled: true,
+    emailStrategy: 'digest',
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_OVERDUE]: {
@@ -281,7 +311,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'calibration',
     entityIdField: 'equipmentId',
     equipmentIdField: 'equipmentId',
-    emailEnabled: true,
+    emailStrategy: 'digest',
   },
 
   // ─── 교정계획 (Calibration Plan) 3-step ────────────────────────────────
@@ -301,6 +331,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     linkTemplate: '/calibration-plans?planId={{planId}}',
     entityType: 'calibration_plan',
     entityIdField: 'planId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_PLAN_REVIEWED]: {
@@ -317,6 +348,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     linkTemplate: '/calibration-plans?planId={{planId}}',
     entityType: 'calibration_plan',
     entityIdField: 'planId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_PLAN_APPROVED]: {
@@ -328,6 +360,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     linkTemplate: '/calibration-plans?planId={{planId}}',
     entityType: 'calibration_plan',
     entityIdField: 'planId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_PLAN_REJECTED]: {
@@ -339,6 +372,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     linkTemplate: '/calibration-plans?planId={{planId}}',
     entityType: 'calibration_plan',
     entityIdField: 'planId',
+    emailStrategy: 'immediate',
   },
 
   // ─── 부적합 (Non-Conformance) ──────────────────────────────────────────
@@ -370,6 +404,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'non_conformance',
     entityIdField: 'ncId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.NC_CLOSED]: {
@@ -382,6 +417,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'non_conformance',
     entityIdField: 'ncId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED]: {
@@ -394,6 +430,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'non_conformance',
     entityIdField: 'ncId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   // ─── 장비 요청 (Equipment Request) ─────────────────────────────────────
@@ -414,6 +451,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'equipment_request',
     entityIdField: 'requestId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_APPROVED]: {
@@ -426,6 +464,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'equipment_request',
     entityIdField: 'requestId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_REJECTED]: {
@@ -439,6 +478,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'equipment_request',
     entityIdField: 'requestId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   // ─── 폐기 (Disposal) 2단계 ─────────────────────────────────────────────
@@ -459,6 +499,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'disposal',
     entityIdField: 'disposalId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.DISPOSAL_REVIEWED]: {
@@ -477,6 +518,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'disposal',
     entityIdField: 'disposalId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.DISPOSAL_APPROVED]: {
@@ -489,6 +531,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'disposal',
     entityIdField: 'disposalId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.DISPOSAL_REJECTED]: {
@@ -502,6 +545,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'disposal',
     entityIdField: 'disposalId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   // ─── 장비 반입 (Equipment Import) ──────────────────────────────────────
@@ -521,6 +565,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'equipment_import',
     entityIdField: 'importId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.IMPORT_APPROVED]: {
@@ -533,6 +578,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'equipment_import',
     entityIdField: 'importId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   [NOTIFICATION_EVENTS.IMPORT_REJECTED]: {
@@ -545,6 +591,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'equipment_import',
     entityIdField: 'importId',
     equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
   },
 
   // ─── 시스템 ────────────────────────────────────────────────────────────
@@ -564,3 +611,5 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityIdField: 'actorId',
   },
 };
+
+// ============================================================================

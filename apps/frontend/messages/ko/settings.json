@@ -91,14 +91,12 @@
     "typeTitle": "알림 유형",
     "typeDescription": "수신할 알림 카테고리를 선택하세요.",
     "emailEnabled": "이메일 알림",
-    "emailDescription": "교정 기한 초과, 교정 예정, 반출 기한 초과 알림을 이메일로 받습니다. (Azure AD 계정 이메일 사용)",
+    "emailDescription": "승인 요청/결과는 즉시, 기한 초과/예정은 매일 지정 시간에 요약하여 발송합니다.",
     "inAppEnabled": "앱 내 알림",
     "inAppDescription": "시스템 내에서 알림을 표시합니다.",
-    "frequency": "알림 빈도",
-    "frequencyDescription": "현재 모든 알림은 즉시 발송됩니다. 향후 일간/주간 요약 기능이 추가됩니다.",
-    "digestTime": "요약 발송 시간",
-    "digestTimeDescription": "일간/주간 요약 기능 활성화 시 발송 시간을 설정할 수 있습니다.",
-    "comingSoon": "준비중"
+    "digestTime": "요약 메일 시간",
+    "digestTimeDescription": "기한 초과/예정 알림을 매일 이 시간에 요약하여 발송합니다.",
+    "immediateNote": "승인 요청/결과 알림은 즉시 발송됩니다."
   },
   "system": {
     "title": "시스템 설정",
