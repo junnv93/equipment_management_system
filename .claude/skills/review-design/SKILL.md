@@ -18,8 +18,10 @@ description: >
 ## 실행 흐름
 
 ```
-Step 1: 대상 선정 → Step 2: 안티패턴 분석 → Step 3: 점수화 보고서 → Step 4: 와이어프레임 생성
+Step 1: 대상 선정 → Step 2: 안티패턴 분석 → Step 3: 점수화 보고서 → Step 4: 와이어프레임 생성 (요청 시)
 ```
+
+**Step 4는 사용자가 와이어프레임을 명시적으로 요청한 경우에만 실행합니다.** "점수만 매겨줘", "디자인 리뷰해줘"만 요청한 경우 Step 3까지만 수행합니다.
 
 ---
 
@@ -138,7 +140,8 @@ docs/wireframes/approval-redesign-v2.html   ← 리뷰 기반 개선 버전
 | 간격 체계 | `lib/design-tokens/primitives.ts` → `SPACING_PRIMITIVES` |
 | 모션 프리셋 | `lib/design-tokens/motion.ts` → `TRANSITION_PRESETS`, `ANIMATION_PRESETS` |
 | 긴급도 피드백 | `lib/design-tokens/visual-feedback.ts` → `URGENCY_FEEDBACK_MAP` |
-| 컴포넌트 토큰 | `lib/design-tokens/components/*.ts` |
+| 컴포넌트 토큰 | `lib/design-tokens/components/*.ts` (Glob으로 동적 탐색) |
+| 페이지 레이아웃 | `lib/design-tokens/components/page-layout.ts` → `getPageContainerClasses()` |
 | 전체 export | `lib/design-tokens/index.ts` (600+ exports) |
 
 ---

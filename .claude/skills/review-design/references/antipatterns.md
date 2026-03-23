@@ -74,10 +74,12 @@ Grep 도구를 사용하여 정량 확인:
 
 ### Grep 검사
 
+> **주의:** Grep 도구는 ripgrep 기반이므로 OR 연산자는 `|` (backslash 없이)를 사용합니다.
+
 | 검사 항목 | pattern | output_mode |
 |-----------|---------|-------------|
-| 간격 다양성 카운트 | `space-y-\d\|gap-\d\|mt-\d\|mb-\d` | `count` |
-| 토큰 사용 | `SPACING_PRIMITIVES\|getPageContainerClasses` | `count` |
+| 간격 다양성 카운트 | `space-y-\d|gap-\d|mt-\d|mb-\d` | `count` |
+| 토큰 사용 | `SPACING_PRIMITIVES|getPageContainerClasses` | `count` |
 
 ### 좋은 예
 
@@ -116,8 +118,8 @@ Grep 도구를 사용하여 정량 확인:
 
 | 검사 항목 | pattern | output_mode |
 |-----------|---------|-------------|
-| FONT 토큰 사용 | `FONT\.(heading\|body\|mono\|kpi)` | `count` |
-| 큰 텍스트 사이즈 | `text-(3xl\|4xl\|5xl\|6xl)` | `content` |
+| FONT 토큰 사용 | `FONT\.(heading|body|mono|kpi)` | `count` |
+| 큰 텍스트 사이즈 | `text-(3xl|4xl|5xl|6xl)` | `content` |
 
 ---
 
@@ -142,9 +144,9 @@ Grep 도구를 사용하여 정량 확인:
 
 | 검사 항목 | pattern | output_mode |
 |-----------|---------|-------------|
-| 그림자 다양성 | `shadow-(sm\|md\|lg\|xl\|float\|none)` | `count` |
+| 그림자 다양성 | `shadow-(sm|md|lg|xl|2xl|none)` | `count` |
 | hover 그림자 변화 | `hover:shadow` | `content` |
-| Elevation 토큰 사용 | `ELEVATION_TOKENS\|ELEVATION_PRIMITIVES\|getBrandElevatedClasses` | `count` |
+| Elevation 토큰 사용 | `ELEVATION_TOKENS|ELEVATION_PRIMITIVES|getBrandElevatedClasses` | `count` |
 
 ---
 
@@ -164,18 +166,21 @@ Grep 도구를 사용하여 정량 확인:
 | 표현 방식 | 헬퍼 함수 | 용도 |
 |-----------|----------|------|
 | Pill badge | `getSemanticBadgeClasses(key)` | 컴팩트 상태 |
+| 상태 배경+텍스트 | `getSemanticStatusClasses(key)` | 카드 배경, 테이블 셀 |
 | 좌측 보더 | `getSemanticLeftBorderClasses(key)` | 카드/행 강조 |
-| 배경 틴트 | `getSemanticBgLightClasses(key)` | 영역 구분 |
+| 배경 틴트 | `getSemanticBgLightClasses(key)` | 영역 구분, 아이콘 배경 |
 | 솔리드 배경 | `getSemanticSolidBgClasses(key)` | CTA, 스테퍼 |
 | Dot indicator | `getSemanticDotClasses(key)` | 인라인 상태 |
-| 컨테이너 | `getSemanticContainerClasses(key)` | 알림/배너 |
+| 컨테이너 (프리셋) | `getSemanticContainerClasses(key)` | 알림/배너 (rounded-md border p-4 포함) |
+| 컨테이너 (색상만) | `getSemanticContainerColorClasses(key)` | 커스텀 레이아웃 컨테이너 |
+| 컨테이너 텍스트 | `getSemanticContainerTextClasses(key)` | 컨테이너 내 아이콘/제목 강조 |
 
 ### Grep 검사
 
 | 검사 항목 | pattern | output_mode |
 |-----------|---------|-------------|
-| 시멘틱 헬퍼 다양성 | `getSemantic(Badge\|LeftBorder\|BgLight\|Solid\|Dot\|Container)Classes` | `count` |
-| 하드코딩 상태 색상 (안티패턴) | `bg-green-\|bg-red-\|bg-yellow-\|text-green-\|text-red-` | `content` |
+| 시멘틱 헬퍼 다양성 (패턴 기반) | `getSemantic\w+Classes` | `count` |
+| 하드코딩 상태 색상 (안티패턴) | `bg-green-|bg-red-|bg-yellow-|text-green-|text-red-` | `content` |
 
 ---
 
@@ -204,9 +209,9 @@ Grep 도구를 사용하여 정량 확인:
 
 | 검사 항목 | pattern | output_mode |
 |-----------|---------|-------------|
-| 모션 토큰 사용 | `TRANSITION_PRESETS\|ANIMATION_PRESETS\|getStaggerDelay` | `count` |
+| 모션 토큰 사용 | `TRANSITION_PRESETS|ANIMATION_PRESETS|getStaggerDelay` | `count` |
 | transition-all (안티패턴) | `transition-all` | `content` |
-| motion-safe 접근성 | `motion-safe:\|motion-reduce:` | `count` |
+| motion-safe 접근성 | `motion-safe:|motion-reduce:` | `count` |
 
 ---
 
@@ -225,15 +230,16 @@ Grep 도구를 사용하여 정량 확인:
 | 정렬 인디케이터 | 없음 | 기본 아이콘 | 커스텀 디자인 |
 | 컴포넌트 토큰 | 없음 | 일부 | `*_TABLE_TOKENS` 활용 |
 
-**프로젝트 테이블 토큰 예시:**
-- `EQUIPMENT_TABLE_TOKENS`, `CALIBRATION_TABLE`, `AUDIT_TABLE_TOKENS` 등 — 모듈별 테이블 스타일
+**프로젝트 테이블 토큰 (동적 탐색):**
+
+모듈별 테이블 토큰은 `_TABLE_TOKENS|_TABLE\b` 패턴으로 동적 탐색합니다. 새 모듈이 추가되어도 자동 탐지됩니다.
 
 ### Grep 검사
 
 | 검사 항목 | pattern | output_mode |
 |-----------|---------|-------------|
-| 테이블 토큰 활용 | `_TABLE_TOKENS\|TABLE_HEADER` | `count` |
-| hover 행 스타일 | `hover:bg-\|hover:shadow` | `content` |
+| 테이블 토큰 활용 (패턴 기반) | `_TABLE_TOKENS|_TABLE\b` | `count` |
+| hover 행 스타일 | `hover:bg-|hover:shadow` | `content` |
 | sticky 헤더 | `sticky` | `content` |
 
 ---
@@ -286,16 +292,16 @@ Grep 도구를 사용하여 정량 확인:
 | 텍스트 계층 | 단일 텍스트 | 제목 + 설명 | 제목 + 설명 + CTA + 보조 안내 |
 | 컴포넌트 토큰 | 하드코딩 | — | `*_EMPTY_STATE_TOKENS` 활용 |
 
-**프로젝트 빈 상태 토큰:**
-- `EQUIPMENT_EMPTY_STATE_TOKENS`, `CALIBRATION_EMPTY_STATE`, `NC_EMPTY_STATE_TOKENS`
-- `APPROVAL_EMPTY_STATE_TOKENS`, `AUDIT_EMPTY_STATE_TOKENS`, `REPORTS_EMPTY_STATE_TOKENS`
+**프로젝트 빈 상태 토큰 (동적 탐색):**
+
+구체적 토큰명을 하드코딩하지 않고, Grep 패턴으로 동적 탐색합니다. 새 토큰이 추가되어도 자동으로 탐지됩니다.
 
 ### Grep 검사
 
 | 검사 항목 | pattern | output_mode | 옵션 |
 |-----------|---------|-------------|------|
-| 빈 상태 토큰 활용 | `EMPTY_STATE_TOKENS\|EMPTY_STATE\b` | `count` | |
-| 상황별 분기 확인 | `empty\|no.*result\|no.*data\|권한` | `content` | `-i: true` |
+| 빈 상태 토큰 활용 (패턴 기반) | `_EMPTY_STATE_TOKENS|_EMPTY_STATE\b` | `count` | |
+| 상황별 분기 확인 | `empty|no.*result|no.*data|권한` | `content` | `-i: true` |
 
 ---
 
@@ -317,22 +323,25 @@ Grep 도구를 사용하여 정량 확인:
 | 검사 항목 | pattern | output_mode |
 |-----------|---------|-------------|
 | 디자인 토큰 import | `from '@/lib/design-tokens` | `count` |
-| 하드코딩 hex 색상 (안티패턴) | `text-\[#\|bg-\[#\|border-\[#` | `content` |
-| 하드코딩 Tailwind 색상 (토큰 우회) | `bg-(red\|green\|blue\|yellow\|orange\|gray)-[0-9]` | `content` |
+| 하드코딩 hex 색상 (안티패턴) | `text-\[#|bg-\[#|border-\[#` | `content` |
+| 하드코딩 Tailwind 색상 (토큰 우회) | `bg-(red|green|blue|yellow|orange|gray)-[0-9]` | `content` |
 
-### 컴포넌트별 토큰 매핑
+### 컴포넌트별 토큰 매핑 (동적 탐색)
 
-대상 파일이 어떤 기능에 속하는지에 따라 Layer 3 토큰 파일 존재 여부를 확인:
+대상 파일이 어떤 기능에 속하는지에 따라 Layer 3 토큰 파일 존재 여부를 **Glob 도구로 동적 탐색**합니다.
 
-| 기능 디렉토리 | Layer 3 토큰 파일 |
-|---|---|
-| `components/dashboard/` | `design-tokens/components/dashboard.ts` |
-| `components/equipment/` | `design-tokens/components/equipment.ts` |
-| `components/approvals/` | `design-tokens/components/approval.ts` |
-| `components/checkouts/` | `design-tokens/components/checkout.ts` |
-| `components/calibration/` | `design-tokens/components/calibration.ts` |
-| `components/non-conformances/` | `design-tokens/components/non-conformance.ts` |
-| `components/layout/` | `design-tokens/components/sidebar.ts` + `header.ts` |
+**토큰 매핑을 하드코딩하지 않는 이유:** 새 모듈이 추가될 때마다 이 테이블을 수동 업데이트해야 하면 SSOT 위반. Glob으로 실제 파일을 탐색하면 항상 최신 상태를 반영합니다.
+
+```
+Glob: pattern="lib/design-tokens/components/*.ts"
+      path="apps/frontend"
+```
+
+탐색된 토큰 파일명과 대상 컴포넌트 디렉토리명을 매칭합니다:
+- `design-tokens/components/dashboard.ts` → `components/dashboard/`
+- `design-tokens/components/equipment.ts` → `components/equipment/`
+- 파일명과 디렉토리명이 정확히 일치하지 않을 수 있음 (예: `approval.ts` → `components/approvals/`)
+- 매칭 실패 시 해당 기능에 Layer 3 토큰이 없는 것이 아니라, 네이밍 차이일 수 있으므로 내용을 확인
 
 ---
 

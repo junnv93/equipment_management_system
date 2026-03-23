@@ -50,7 +50,7 @@ approval-redesign-v2.html    ← 리뷰 기반 개선 버전
 프로젝트의 시멘틱 색상 체계를 반영합니다. **SSOT: `brand.ts`의 `BRAND_COLORS_HEX`**. 와이어프레임은 순수 CSS이므로 아래 CSS 변수로 미러링합니다:
 
 ```css
-/* SSOT: brand.ts BRAND_COLORS_HEX */
+/* SSOT: brand.ts BRAND_COLORS_HEX (8개) */
 --brand-ok: #10B981;        /* 성공, 정상, 사용 가능 */
 --brand-warning: #F59E0B;   /* 경고, 주의 */
 --brand-critical: #EF4444;  /* 위험, 부적합, 긴급 */
@@ -58,6 +58,7 @@ approval-redesign-v2.html    ← 리뷰 기반 개선 버전
 --brand-neutral: #6B7280;   /* 비활성, 중립 */
 --brand-purple: #8B5CF6;    /* 보조 강조 */
 --brand-repair: #F97316;    /* 수리, 반출 */
+--brand-temporary: #22B8CF; /* 임시, 대여 */
 
 /* 구조 컬러 (globals.css 기반) */
 --midnight: #122C49;        /* Primary — 헤더, 사이드바 배경 */
@@ -127,25 +128,29 @@ approval-redesign-v2.html    ← 리뷰 기반 개선 버전
   --space-xl: 24px;
   --space-2xl: 32px;
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-full: 9999px;
-
-  /* Layer 2: Semantic */
+  /* Layer 2: Semantic (SSOT: primitives.ts ELEVATION_PRIMITIVES.shadow) */
   --shadow-flush: none;
-  --shadow-raised: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-floating: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-raised: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-floating: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
+  /* SSOT: primitives.ts MOTION_PRIMITIVES */
   --duration-instant: 100ms;
   --duration-fast: 200ms;
-  --duration-moderate: 350ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-moderate: 300ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
 
   /* Typography */
   --font-display: 'DM Sans', 'Noto Sans KR', sans-serif;
   --font-body: 'IBM Plex Sans', 'Noto Sans KR', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+  /* SSOT: primitives.ts RADIUS_PRIMITIVES */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
 }
 
 .dark {
