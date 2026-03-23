@@ -255,40 +255,48 @@ export class CalibrationFactorsService extends VersionedBaseService {
     totalFactors: number;
     generatedAt: Date;
   }> {
-    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = this.buildCacheKey('registry', `${site || 'all'}_${teamId || 'all'}`);
 
-    const conditions = [
-      eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
-      isNull(calibrationFactors.deletedAt),
-      lte(calibrationFactors.effectiveDate, today),
-      or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))!,
-    ];
-    if (site) conditions.push(equipmentBelongsToSite(calibrationFactors.equipmentId, site));
-    if (teamId) conditions.push(equipmentBelongsToTeam(calibrationFactors.equipmentId, teamId));
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const today = new Date().toISOString().split('T')[0];
 
-    const records = await this.db
-      .select()
-      .from(calibrationFactors)
-      .where(and(...conditions));
+        const conditions = [
+          eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
+          isNull(calibrationFactors.deletedAt),
+          lte(calibrationFactors.effectiveDate, today),
+          or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))!,
+        ];
+        if (site) conditions.push(equipmentBelongsToSite(calibrationFactors.equipmentId, site));
+        if (teamId) conditions.push(equipmentBelongsToTeam(calibrationFactors.equipmentId, teamId));
 
-    const normalized = records.map(this.normalize.bind(this));
-    const grouped = new Map<string, CalibrationFactorRecord[]>();
-    for (const factor of normalized) {
-      const existing = grouped.get(factor.equipmentId) ?? [];
-      existing.push(factor);
-      grouped.set(factor.equipmentId, existing);
-    }
+        const records = await this.db
+          .select()
+          .from(calibrationFactors)
+          .where(and(...conditions));
 
-    return {
-      registry: Array.from(grouped.entries()).map(([equipmentId, factors]) => ({
-        equipmentId,
-        factors,
-        factorCount: factors.length,
-      })),
-      totalEquipments: grouped.size,
-      totalFactors: normalized.length,
-      generatedAt: new Date(),
-    };
+        const normalized = records.map(this.normalize.bind(this));
+        const grouped = new Map<string, CalibrationFactorRecord[]>();
+        for (const factor of normalized) {
+          const existing = grouped.get(factor.equipmentId) ?? [];
+          existing.push(factor);
+          grouped.set(factor.equipmentId, existing);
+        }
+
+        return {
+          registry: Array.from(grouped.entries()).map(([equipmentId, factors]) => ({
+            equipmentId,
+            factors,
+            factorCount: factors.length,
+          })),
+          totalEquipments: grouped.size,
+          totalFactors: normalized.length,
+          generatedAt: new Date(),
+        };
+      },
+      CACHE_TTL.VERY_LONG
+    );
   }
 
   // 승인 대기 목록 조회
@@ -349,6 +357,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
       factorId: id,
@@ -398,6 +407,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
       factorId: id,

@@ -11,6 +11,7 @@ import {
   UsePipes,
   Request,
   ParseIntPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -169,7 +170,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findOne(@Param('uuid') uuid: string): Promise<CalibrationFactorRecord> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<CalibrationFactorRecord> {
     return this.calibrationFactorsService.findOne(uuid);
   }
 
@@ -188,7 +189,7 @@ export class CalibrationFactorsController {
   @AuditLog({ action: 'approve', entityType: 'calibration_factor', entityIdPath: 'params.uuid' })
   @UsePipes(ApproveCalibrationFactorValidationPipe)
   async approve(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
@@ -211,7 +212,7 @@ export class CalibrationFactorsController {
   @AuditLog({ action: 'reject', entityType: 'calibration_factor', entityIdPath: 'params.uuid' })
   @UsePipes(RejectCalibrationFactorValidationPipe)
   async reject(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectDto: RejectCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
@@ -238,7 +239,7 @@ export class CalibrationFactorsController {
     description: 'CAS version for optimistic locking',
   })
   remove(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Query('version', ParseIntPipe) version: number
   ): Promise<{ id: string; deleted: boolean }> {
     return this.calibrationFactorsService.remove(uuid, version);

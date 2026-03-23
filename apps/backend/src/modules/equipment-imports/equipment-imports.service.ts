@@ -571,7 +571,11 @@ export class EquipmentImportsService extends VersionedBaseService {
     const previousEquipmentStatus = previousEquipment.status as EquipmentStatus;
 
     // 장비 상태를 'available'로 변경 (checkout 생성 조건 충족)
-    await this.equipmentService.updateStatus(equipmentImport.equipmentId, ESVal.AVAILABLE);
+    await this.equipmentService.updateStatus(
+      equipmentImport.equipmentId,
+      ESVal.AVAILABLE,
+      previousEquipment.version
+    );
 
     // destination 동적 결정
     const destination = getReturnDestination(equipmentImport);
@@ -598,11 +602,12 @@ export class EquipmentImportsService extends VersionedBaseService {
         userTeamId
       );
     } catch (error) {
-      // 보상: checkout 생성 실패 시 장비 상태 롤백
+      // 보상: checkout 생성 실패 시 장비 상태 롤백 (version은 이전 updateStatus로 +1 된 상태)
       this.logger.warn(`Checkout creation failed, rolling back equipment status: ${error}`);
       await this.equipmentService.updateStatus(
         equipmentImport.equipmentId,
-        previousEquipmentStatus
+        previousEquipmentStatus,
+        previousEquipment.version + 1
       );
       throw error;
     }
@@ -621,13 +626,14 @@ export class EquipmentImportsService extends VersionedBaseService {
         'Equipment import'
       );
     } catch (error) {
-      // 보상: CAS 실패 시 checkout 취소 + 장비 상태 롤백
+      // 보상: CAS 실패 시 checkout 취소 + 장비 상태 롤백 (version은 이전 updateStatus로 +1 된 상태)
       this.logger.warn(`Import CAS update failed, compensating: ${error}`);
       try {
-        await this.checkoutsService.cancel(newCheckout.id);
+        await this.checkoutsService.cancel(newCheckout.id, newCheckout.version);
         await this.equipmentService.updateStatus(
           equipmentImport.equipmentId,
-          previousEquipmentStatus
+          previousEquipmentStatus,
+          previousEquipment.version + 1
         );
       } catch (compensateError) {
         this.logger.error(`Compensation failed (manual intervention needed): ${compensateError}`);

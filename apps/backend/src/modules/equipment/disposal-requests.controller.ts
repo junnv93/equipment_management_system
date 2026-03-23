@@ -1,9 +1,10 @@
-import { Controller, Get, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Query, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Permission, DISPOSAL_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { DisposalService } from './services/disposal.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { extractUserId } from '../../common/utils/extract-user';
 import { AuthenticatedRequest } from '../../types/auth';
 
 /**
@@ -12,6 +13,9 @@ import { AuthenticatedRequest } from '../../types/auth';
  * 승인 관리 페이지용 API:
  * - GET /disposal-requests/pending-review - 검토 대기 목록 (기술책임자)
  * - GET /disposal-requests/pending-approval - 최종 승인 대기 목록 (시험소장)
+ *
+ * SiteScopeInterceptor가 @SiteScoped 정책에 따라 req.query에
+ * site(lab_manager) 또는 teamId(technical_manager)를 자동 주입합니다.
  */
 @ApiTags('폐기 요청 목록')
 @ApiBearerAuth()
@@ -31,10 +35,13 @@ export class DisposalRequestsController {
     description: '검토 대기 목록 조회 성공',
   })
   @RequirePermissions(Permission.REVIEW_DISPOSAL)
-  async getPendingReviewRequests(@Req() req: AuthenticatedRequest): Promise<unknown[]> {
-    const userId = req.user.userId;
-    const site = req.query?.site as string | undefined;
-    return this.disposalService.getPendingReviewRequests(userId, site);
+  async getPendingReviewRequests(
+    @Req() req: AuthenticatedRequest,
+    @Query('site') site?: string,
+    @Query('teamId') teamId?: string
+  ): Promise<unknown[]> {
+    const userId = extractUserId(req);
+    return this.disposalService.getPendingReviewRequests(userId, site, teamId);
   }
 
   @Get('pending-approval')
@@ -49,8 +56,7 @@ export class DisposalRequestsController {
     description: '최종 승인 대기 목록 조회 성공',
   })
   @RequirePermissions(Permission.APPROVE_DISPOSAL)
-  async getPendingApprovalRequests(@Req() req: AuthenticatedRequest): Promise<unknown[]> {
-    const site = req.query?.site as string | undefined;
+  async getPendingApprovalRequests(@Query('site') site?: string): Promise<unknown[]> {
     return this.disposalService.getPendingApprovalRequests(site);
   }
 }

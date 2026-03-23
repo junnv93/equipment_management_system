@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EquipmentService } from '../equipment.service';
+import { EquipmentHistoryService } from '../services/equipment-history.service';
 import { ConfigService } from '@nestjs/config';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EquipmentStatus } from '@equipment-management/schemas';
@@ -83,6 +84,16 @@ describe('EquipmentService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn().mockReturnValue('test-value'),
+          },
+        },
+        {
+          provide: EquipmentHistoryService,
+          useValue: {
+            recordLocationChange: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordMaintenanceEvent: jest.fn(),
+            recordIncident: jest.fn(),
+            createLocationHistoryInternal: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -290,22 +301,30 @@ describe('EquipmentService', () => {
 
   describe('remove', () => {
     it('should soft delete an equipment by UUID', async () => {
-      // Arrange: remove는 soft delete (update)를 수행
-      const softDeletedEquipment = { ...mockEquipment, isActive: false };
+      // Arrange: remove는 findOne → updateWithVersion 패턴
+      const softDeletedEquipment = { ...mockEquipment, isActive: false, version: 2 };
+      // findOne via cache
+      mockCacheService.getOrSet.mockImplementation(
+        async (_key: string, factory: () => Promise<unknown>) => factory()
+      );
+      mockDb.query.equipment.findFirst.mockResolvedValue({ ...mockEquipment, version: 1 });
+      // updateWithVersion: returning
       mockDb.returning.mockResolvedValue([softDeletedEquipment]);
 
-      // Act
+      // Act (no version → findOne first)
       const result = await service.remove(mockEquipment.id);
 
       // Assert
-      expect(mockDb.update).toHaveBeenCalled();
       expect(result.isActive).toBe(false);
       expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when removing non-existent equipment', async () => {
-      // Arrange: returning이 빈 배열을 반환하면 NotFoundException
-      mockDb.returning.mockResolvedValue([]);
+      // Arrange: findOne throws NotFoundException
+      mockCacheService.getOrSet.mockImplementation(
+        async (_key: string, factory: () => Promise<unknown>) => factory()
+      );
+      mockDb.query.equipment.findFirst.mockResolvedValue(null);
 
       // Act & Assert
       await expect(service.remove('non-existent-uuid')).rejects.toThrow(NotFoundException);

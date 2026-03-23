@@ -176,6 +176,8 @@
       "deleteSuccessDesc": "교정계획서가 삭제되었습니다.",
       "deleteError": "삭제 실패",
       "deleteErrorDesc": "삭제 중 오류가 발생했습니다.",
+      "versionConflict": "다른 사용자가 이미 처리했습니다",
+      "versionConflictDesc": "데이터가 갱신되었습니다. 최신 상태를 확인해주세요.",
       "updateItemSuccess": "항목 수정 완료",
       "updateItemSuccessDesc": "항목이 수정되었습니다.",
       "updateItemError": "항목 수정 실패",

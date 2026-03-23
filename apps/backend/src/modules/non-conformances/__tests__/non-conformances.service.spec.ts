@@ -267,6 +267,7 @@ describe('NonConformancesService', () => {
         status: NonConformanceStatus.CORRECTED,
         equipmentId: 'eq-uuid',
         ncType: 'calibration_overdue',
+        calibrationId: 'cal-uuid',
       };
       const closeDto = { closureNotes: '종료 메모', version: 1 };
 
@@ -276,7 +277,7 @@ describe('NonConformancesService', () => {
       // Mock transaction
       mockDb.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
         const txWhere = jest.fn();
-        // First where: CAS update returning → success
+        // First where: CAS update returning → success (NC status update)
         txWhere.mockReturnValueOnce({
           returning: jest
             .fn()
@@ -287,6 +288,16 @@ describe('NonConformancesService', () => {
         // Second where: otherOpenNCs query → .limit(1)
         txWhere.mockReturnValueOnce({
           limit: jest.fn().mockResolvedValue([]),
+        });
+        // Third where: equipment version lookup → .limit(1)
+        txWhere.mockReturnValueOnce({
+          limit: jest
+            .fn()
+            .mockResolvedValue([{ id: 'eq-uuid', version: 1, status: 'non_conforming' }]),
+        });
+        // Fourth where: equipment CAS update → .returning()
+        txWhere.mockReturnValueOnce({
+          returning: jest.fn().mockResolvedValue([{ id: 'eq-uuid' }]),
         });
 
         const tx = {

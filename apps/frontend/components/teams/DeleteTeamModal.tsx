@@ -51,7 +51,8 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
   // 삭제 뮤테이션
   const deleteMutation = useMutation({
     mutationFn: () => teamsApi.deleteTeam(team.id),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.teams.all });
       toast({
         title: t('deleteModal.successTitle'),
         description: t('deleteModal.successDesc', { name: team.name }),
@@ -59,9 +60,6 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
 
       onOpenChange(false);
       router.push('/teams');
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all });
     },
     onError: (error: Error) => {
       toast({

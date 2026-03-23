@@ -660,6 +660,45 @@ export class CalibrationService extends VersionedBaseService {
       calibrationDueStatus,
     } = query;
 
+    // ✅ 캐시 키: 필터 파라미터 전체를 직렬화
+    const cacheKey = this.buildCacheKey(
+      'list',
+      `${equipmentId ?? ''}_${calibrationManagerId ?? ''}_${statuses ?? ''}_${calibrationAgency ?? ''}_${fromDate ?? ''}_${toDate ?? ''}_${nextFromDate ?? ''}_${nextToDate ?? ''}_${isPassed ?? ''}_${search ?? ''}_${sort}_${page}_${pageSize}_${approvalStatus ?? ''}_${teamId ?? ''}_${site ?? ''}_${calibrationDueStatus ?? ''}`
+    );
+
+    return this.cacheService.getOrSet(cacheKey, () => this.findAllInternal(query), CACHE_TTL.SHORT);
+  }
+
+  private async findAllInternal(query: CalibrationQueryDto): Promise<{
+    items: CalibrationRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
+    const {
+      equipmentId,
+      calibrationManagerId,
+      statuses,
+      calibrationAgency,
+      fromDate,
+      toDate,
+      nextFromDate,
+      nextToDate,
+      isPassed,
+      search,
+      sort = 'calibrationDate.desc',
+      page = 1,
+      pageSize = DEFAULT_PAGE_SIZE,
+      approvalStatus,
+      teamId,
+      site,
+      calibrationDueStatus,
+    } = query;
+
     // ========== 1. Build WHERE conditions ==========
     const whereConditions: SQL<unknown>[] = [];
 
@@ -1162,92 +1201,94 @@ export class CalibrationService extends VersionedBaseService {
       const nextCalibrationDate =
         calculateNextCalibrationDate(calibrationDate, cycle) ?? calibrationDate;
 
-      await this.db
-        .update(schema.equipment)
-        .set({
-          lastCalibrationDate: calibrationDate,
-          nextCalibrationDate,
-          updatedAt: new Date(),
-          version: sql`${schema.equipment.version} + 1`,
-        })
-        .where(eq(schema.equipment.id, equipmentId));
+      // ✅ W-13: 장비 업데이트 + NC 조치를 하나의 트랜잭션으로 감싸기
+      await this.db.transaction(async (tx) => {
+        await tx
+          .update(schema.equipment)
+          .set({
+            lastCalibrationDate: calibrationDate,
+            nextCalibrationDate,
+            updatedAt: new Date(),
+            version: sql`${schema.equipment.version} + 1`,
+          })
+          .where(eq(schema.equipment.id, equipmentId));
 
-      this.logger.log(
-        `장비 교정일 업데이트 완료: ${equipmentId}, ` +
-          `lastCalibrationDate: ${calibrationDate}, ` +
-          `nextCalibrationDate: ${nextCalibrationDate}`
-      );
+        this.logger.log(
+          `장비 교정일 업데이트 완료: ${equipmentId}, ` +
+            `lastCalibrationDate: ${calibrationDate}, ` +
+            `nextCalibrationDate: ${nextCalibrationDate}`
+        );
 
-      if (calibrationId) {
-        await this.markCalibrationOverdueAsCorrected(equipmentId, calibrationId, approverId);
-      }
+        if (calibrationId) {
+          await this.markCalibrationOverdueAsCorrectedTx(
+            tx,
+            equipmentId,
+            calibrationId,
+            approverId
+          );
+        }
+      });
     } catch (error) {
       this.logger.error(`장비 교정일 업데이트 실패: ${equipmentId}`, error);
     }
   }
 
   /**
-   * 교정 완료 시 calibration_overdue 부적합 자동 조치 완료 처리
+   * 교정 완료 시 calibration_overdue 부적합 자동 조치 완료 처리 (트랜잭션 내)
    */
-  private async markCalibrationOverdueAsCorrected(
+  private async markCalibrationOverdueAsCorrectedTx(
+    tx: Parameters<Parameters<AppDatabase['transaction']>[0]>[0],
     equipmentId: string,
     calibrationId: string,
     correctedBy?: string
   ): Promise<void> {
-    try {
-      const existingNc = await this.db
-        .select({
-          id: nonConformances.id,
-          status: nonConformances.status,
-        })
-        .from(nonConformances)
-        .where(
-          and(
-            eq(nonConformances.equipmentId, equipmentId),
-            eq(nonConformances.ncType, NCTypeVal.CALIBRATION_OVERDUE),
-            isNull(nonConformances.deletedAt),
-            eq(nonConformances.status, NCStatusVal.OPEN)
-          )
+    const existingNc = await tx
+      .select({
+        id: nonConformances.id,
+        status: nonConformances.status,
+      })
+      .from(nonConformances)
+      .where(
+        and(
+          eq(nonConformances.equipmentId, equipmentId),
+          eq(nonConformances.ncType, NCTypeVal.CALIBRATION_OVERDUE),
+          isNull(nonConformances.deletedAt),
+          eq(nonConformances.status, NCStatusVal.OPEN)
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      if (existingNc.length === 0) {
-        this.logger.debug(`장비 ${equipmentId}: open calibration_overdue 부적합 없음`);
-        return;
-      }
-
-      const nc = existingNc[0];
-      const today = new Date();
-
-      // NC를 corrected로 변경 + 교정 기록 연결 (트랜잭션 불필요 — 단일 테이블 CAS)
-      // 장비 상태 복원(non_conforming → available)은 NC 종결(close) 시점에 위임
-      // → close()의 "다른 열린 부적합 확인" 로직이 정상 동작하도록 보장
-      await this.db
-        .update(nonConformances)
-        .set({
-          status: NCStatusVal.CORRECTED,
-          resolutionType: ResolutionTypeEnum.enum.recalibration,
-          calibrationId,
-          correctionContent: this.i18n.t(
-            'system.calibrationOverdue.correctionContent',
-            DEFAULT_LOCALE
-          ),
-          correctionDate: today.toISOString().split('T')[0],
-          correctedBy: correctedBy || null,
-          updatedAt: today,
-          version: sql`${nonConformances.version} + 1`,
-        })
-        .where(eq(nonConformances.id, nc.id));
-
-      this.logger.log(
-        `장비 ${equipmentId}: calibration_overdue 부적합(${nc.id}) corrected로 변경 (장비 상태 복원은 종결 시 처리)`
-      );
-    } catch (error) {
-      this.logger.error(
-        `calibration_overdue 부적합 자동 조치 실패: ${equipmentId}`,
-        error instanceof Error ? error.stack : String(error)
-      );
+    if (existingNc.length === 0) {
+      this.logger.debug(`장비 ${equipmentId}: open calibration_overdue 부적합 없음`);
+      return;
     }
+
+    const nc = existingNc[0];
+    const today = new Date();
+
+    // NC를 corrected로 변경 + 교정 기록 연결
+    // 장비 상태 복원(non_conforming → available)은 NC 종결(close) 시점에 위임
+    // → close()의 "다른 열린 부적합 확인" 로직이 정상 동작하도록 보장
+    await tx
+      .update(nonConformances)
+      .set({
+        status: NCStatusVal.CORRECTED,
+        resolutionType: ResolutionTypeEnum.enum.recalibration,
+        calibrationId,
+        correctionContent: this.i18n.t(
+          'system.calibrationOverdue.correctionContent',
+          DEFAULT_LOCALE
+        ),
+        correctionDate: today.toISOString().split('T')[0],
+        correctedBy: correctedBy || null,
+        updatedAt: today,
+        version: sql`${nonConformances.version} + 1`,
+      })
+      .where(eq(nonConformances.id, nc.id));
+
+    this.logger.log(
+      `장비 ${equipmentId}: calibration_overdue 부적합(${nc.id}) corrected로 변경 (장비 상태 복원은 종결 시 처리)`
+    );
   }
 
   /**
@@ -1275,6 +1316,8 @@ export class CalibrationService extends VersionedBaseService {
     }
 
     // ✅ CAS: DB 기반 optimistic locking
+    // C-8: approvedBy를 null 유지 — 반려자는 approvedBy가 아님
+    // 반려 상태는 approvalStatus: 'rejected' + rejectionReason으로 추적
     try {
       await this.updateWithVersion(
         schema.calibrations,
@@ -1282,7 +1325,6 @@ export class CalibrationService extends VersionedBaseService {
         rejectDto.version,
         {
           approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
-          approvedBy: rejectDto.approverId,
           rejectionReason: rejectDto.rejectionReason,
         },
         'Calibration record'
@@ -1369,6 +1411,7 @@ export class CalibrationService extends VersionedBaseService {
   async completeIntermediateCheck(
     id: string,
     completedBy: string,
+    version: number,
     notes?: string
   ): Promise<{ calibration: CalibrationRecord; message: string }> {
     const calibration = await this.findOne(id);
@@ -1400,15 +1443,25 @@ export class CalibrationService extends VersionedBaseService {
       ? `${existingNotes}\n[${now.toISOString()}] 중간점검 완료: ${notes} (담당자: ${completedBy})`
       : `${existingNotes}\n[${now.toISOString()}] 중간점검 완료 (담당자: ${completedBy})`;
 
-    const [updated] = await this.db
-      .update(schema.calibrations)
-      .set({
-        intermediateCheckDate: nextIntermediateCheckDate.toISOString().split('T')[0],
-        notes: checkNote.trim(),
-        updatedAt: now,
-      })
-      .where(eq(schema.calibrations.id, id))
-      .returning();
+    // ✅ CAS: updateWithVersion으로 중복 완료 처리 방지
+    let updated: CalibrationRow;
+    try {
+      updated = await this.updateWithVersion<CalibrationRow>(
+        schema.calibrations,
+        id,
+        version,
+        {
+          intermediateCheckDate: nextIntermediateCheckDate.toISOString().split('T')[0],
+          notes: checkNote.trim(),
+        },
+        'Calibration record'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
 
     this.invalidateCalibrationCache(id);
 

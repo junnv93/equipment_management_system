@@ -94,20 +94,18 @@ export class MonitoringService {
       // 업타임 계산
       this.metrics.uptime = (Date.now() - this.startTime) / 1000;
 
-      // 스토리지 정보 (실제로는 API를 통해 수집해야 함)
-      // 개발 환경에서는 더미 데이터 사용
+      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
       this.metrics.storage = {
-        diskUsage: 75.5,
-        diskFree: 107374182400, // 100GB
-        diskTotal: 429496729600, // 400GB
+        diskUsage: 0,
+        diskFree: 0,
+        diskTotal: 0,
       };
 
-      // 네트워크 메트릭 (실제로는 API를 통해 수집해야 함)
-      // 개발 환경에서는 더미 데이터 사용
+      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
       this.metrics.network = {
-        requestsPerMinute: Math.floor(Math.random() * 100) + 50,
-        errorRate: Math.random() * 2,
-        avgResponseTime: Math.random() * 100 + 50, // ms
+        requestsPerMinute: 0,
+        errorRate: 0,
+        avgResponseTime: 0,
       };
 
       this.logger.debug('시스템 메트릭이 업데이트되었습니다.', {
@@ -176,12 +174,20 @@ export class MonitoringService {
     cpu: { usage: number; loadAvg: number[] };
     memory: { total: number; free: number; used: number; percentage: number };
     uptime: number;
-    network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
-    storage: { diskUsage: number; diskFree: number; diskTotal: number };
+    network: {
+      requestsPerMinute: number;
+      errorRate: number;
+      avgResponseTime: number;
+      isSimulated: boolean;
+    };
+    storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
   } {
     this.logger.log('시스템 메트릭 조회');
     return {
       ...this.metrics,
+      // TODO: 실제 시스템 메트릭 연동 필요 — network/storage는 시뮬레이션 데이터
+      network: { ...this.metrics.network, isSimulated: true },
+      storage: { ...this.metrics.storage, isSimulated: true },
       hostname: os.hostname(),
       platform: os.platform(),
       arch: os.arch(),
@@ -236,6 +242,7 @@ export class MonitoringService {
    * 데이터베이스 진단 정보 조회
    */
   getDatabaseDiagnostics(): {
+    isSimulated: boolean;
     status: string;
     version: string;
     connections: { active: number; idle: number; max: number };
@@ -256,34 +263,34 @@ export class MonitoringService {
   } {
     this.logger.log('데이터베이스 진단 정보 조회');
 
-    // 임시로 더미 데이터 반환
+    // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
     return {
+      isSimulated: true,
       status: 'connected',
       version: 'PostgreSQL 15.x',
       connections: {
-        active: 10,
-        idle: 5,
-        max: 50,
+        active: 0,
+        idle: 0,
+        max: 0,
       },
       metrics: {
-        connectionsCreated: 15,
+        connectionsCreated: 0,
         connectionErrors: 0,
-        queriesExecuted: 1250,
-        queriesFailed: 2,
-        avgQueryTime: 15,
-        slowQueries: 3,
-        queryCacheHitRate: 0.89,
-        indexUsage: 0.95,
+        queriesExecuted: 0,
+        queriesFailed: 0,
+        avgQueryTime: 0,
+        slowQueries: 0,
+        queryCacheHitRate: 0,
+        indexUsage: 0,
         deadlocks: 0,
-        lockWaitTime: 25, // ms
+        lockWaitTime: 0,
       },
       tablesInfo: [
-        { name: 'users', rowCount: 125, size: '12MB' },
-        { name: 'equipment', rowCount: 1458, size: '56MB' },
-        { name: 'loans', rowCount: 8754, size: '120MB' }, // reservations 테이블은 loans로 통합됨
-        { name: 'rentals', rowCount: 6542, size: '95MB' },
+        { name: 'users', rowCount: 0, size: '-' },
+        { name: 'equipment', rowCount: 0, size: '-' },
+        { name: 'checkouts', rowCount: 0, size: '-' },
       ],
-      replicationLag: 0, // ms (Primary DB)
+      replicationLag: 0,
     };
   }
 
@@ -296,6 +303,7 @@ export class MonitoringService {
     services: {
       database: {
         status: string;
+        isSimulated: boolean;
         metrics: {
           connectionsCreated: number;
           connectionErrors: number;
@@ -315,7 +323,7 @@ export class MonitoringService {
         status: string;
         counts: { error: number; warn: number; info: number; debug: number; verbose: number };
       };
-      cache: { status: string; hitRate: number };
+      cache: { status: string; hitRate: number; isSimulated: boolean };
     };
     lastChecked: string;
   } {
@@ -349,12 +357,13 @@ export class MonitoringService {
       services: {
         database: {
           status: 'connected',
+          isSimulated: true,
           metrics: {
-            connectionsCreated: 15,
+            connectionsCreated: 0,
             connectionErrors: 0,
-            queriesExecuted: 1250,
-            queriesFailed: 2,
-            avgQueryTime: 15,
+            queriesExecuted: 0,
+            queriesFailed: 0,
+            avgQueryTime: 0,
           },
         },
         system: {
@@ -380,7 +389,8 @@ export class MonitoringService {
         },
         cache: {
           status: 'operational',
-          hitRate: 0.93,
+          hitRate: 0, // TODO: 실제 캐시 히트율 연동 필요
+          isSimulated: true,
         },
       },
       lastChecked: new Date().toISOString(),
@@ -405,6 +415,7 @@ export class MonitoringService {
       storage: { diskUsage: number; diskFree: number; diskTotal: number };
     };
     database: {
+      isSimulated: boolean;
       status: string;
       version: string;
       connections: { active: number; idle: number; max: number };
@@ -436,7 +447,11 @@ export class MonitoringService {
       counts: { error: number; warn: number; info: number; debug: number; verbose: number };
       lastErrors: never[];
     };
-    performance: { responseTime: { avg: number; p95: number; p99: number }; throughput: number };
+    performance: {
+      isSimulated: boolean;
+      responseTime: { avg: number; p95: number; p99: number };
+      throughput: number;
+    };
   } {
     this.logger.log('상세 진단 정보 조회');
     return {
@@ -449,13 +464,15 @@ export class MonitoringService {
         counts: this.logCounts,
         lastErrors: [], // 실제로는 최근 오류 로그 정보 포함
       },
+      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
       performance: {
+        isSimulated: true,
         responseTime: {
-          avg: 120, // ms
-          p95: 350, // ms
-          p99: 700, // ms
+          avg: 0,
+          p95: 0,
+          p99: 0,
         },
-        throughput: 85, // requests/sec
+        throughput: 0,
       },
     };
   }

@@ -24,11 +24,11 @@ import { DisposalReviewDialog } from './disposal/DisposalReviewDialog';
 import { DisposalApprovalDialog } from './disposal/DisposalApprovalDialog';
 import {
   EquipmentStatusValues as ESVal,
-  DisposalReviewStatusValues as DRSVal,
   NonConformanceStatusValues as NCStatusVal,
   type DisposalRequest,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
+import { getDisposalCurrentStep } from '@/hooks/use-disposal-permissions';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { ANIMATION_PRESETS, NC_BANNER_TOKENS } from '@/lib/design-tokens';
 
@@ -155,17 +155,8 @@ export function EquipmentDetailClient({
   const openNonConformances =
     nonConformances?.filter((nc) => nc.status !== NCStatusVal.CLOSED) || [];
 
-  // 폐기 진행 단계 계산
-  // pending: step 1 (요청) is current
-  // reviewed: step 2 (검토) is complete, step 3 (승인) is current
-  // approved: step 3 (승인) is complete
-  const currentStep = disposalRequest
-    ? disposalRequest.reviewStatus === DRSVal.PENDING
-      ? 1
-      : disposalRequest.reviewStatus === DRSVal.REVIEWED
-        ? 3
-        : 4
-    : 0;
+  // 폐기 진행 단계 계산 (SSOT: use-disposal-permissions.ts)
+  const currentStep = getDisposalCurrentStep(disposalRequest);
 
   return (
     <div className="min-h-screen bg-background">

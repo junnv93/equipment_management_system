@@ -242,7 +242,12 @@ export class CalibrationController {
     await this.enforceCalibrationAccess(uuid, req);
     // ✅ 보안: completedBy를 JWT 세션에서 추출 (Rule 2)
     const completedBy = extractUserId(req);
-    return this.calibrationService.completeIntermediateCheck(uuid, completedBy, dto.notes);
+    return this.calibrationService.completeIntermediateCheck(
+      uuid,
+      completedBy,
+      dto.version,
+      dto.notes
+    );
   }
 
   @Get('equipment/:equipmentId')
@@ -470,12 +475,19 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 파일 형식' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @ApiQuery({
+    name: 'version',
+    required: true,
+    type: Number,
+    description: 'CAS version for optimistic locking',
+  })
   @UseInterceptors(FileInterceptor('file'))
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadCertificate(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @UploadedFile() file: MulterFile,
+    @Query('version', ParseIntPipe) version: number,
     @Request() req: AuthenticatedRequest
   ): Promise<{
     filePath: string;
@@ -498,9 +510,10 @@ export class CalibrationController {
     // 파일 저장 (calibration/[uuid] 디렉토리에 저장)
     const savedFile = await this.fileUploadService.saveFile(file, `calibration/${uuid}`);
 
-    // 교정 정보에 파일 경로 업데이트
+    // 교정 정보에 파일 경로 업데이트 (CAS 보호)
     await this.calibrationService.update(uuid, {
       certificatePath: savedFile.filePath,
+      version,
     } as UpdateCalibrationDto);
 
     return {

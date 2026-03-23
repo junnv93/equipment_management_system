@@ -1,8 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-// ✅ Single Source of Truth: enums.ts에서 import
-import { CheckoutStatus, CHECKOUT_STATUS_VALUES, VM } from '@equipment-management/schemas';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
@@ -17,11 +15,7 @@ export const updateCheckoutSchema = z.object({
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
   reason: z.string().min(1).optional(),
-  status: z
-    .enum(CHECKOUT_STATUS_VALUES, {
-      message: VM.checkout.status.invalid,
-    })
-    .optional(),
+  // ✅ status는 전용 상태 전이 메서드(approve/reject/cancel 등)를 통해서만 변경 가능
   expectedReturnDate: z.string().datetime().optional(),
   notes: z.string().optional(),
 });
@@ -62,13 +56,7 @@ export class UpdateCheckoutDto extends VersionedDto {
   })
   reason?: string;
 
-  @ApiProperty({
-    description: '반출 상태',
-    enum: CHECKOUT_STATUS_VALUES,
-    example: 'approved',
-    required: false,
-  })
-  status?: CheckoutStatus;
+  // ✅ status는 전용 상태 전이 메서드(approve/reject/cancel 등)를 통해서만 변경 가능
 
   @ApiProperty({
     description: '예상 반입일',

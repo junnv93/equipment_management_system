@@ -166,6 +166,7 @@ export class DashboardService {
             and(
               eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
               lte(schema.equipment.nextCalibrationDate, today),
+              notInArray(schema.equipment.status, [...DASHBOARD_EXCLUDED_STATUSES]),
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
               site ? eq(schema.equipment.site, site) : undefined
             )
@@ -228,6 +229,7 @@ export class DashboardService {
               eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
               gte(schema.equipment.nextCalibrationDate, today),
               lte(schema.equipment.nextCalibrationDate, futureDate),
+              notInArray(schema.equipment.status, [...DASHBOARD_EXCLUDED_STATUSES]),
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
               site ? eq(schema.equipment.site, site) : undefined
             )

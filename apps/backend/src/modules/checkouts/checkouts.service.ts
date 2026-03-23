@@ -19,7 +19,6 @@ import { CreateConditionCheckDto } from './dto/create-condition-check.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import {
   CheckoutStatus,
-  CHECKOUT_STATUS_VALUES,
   EQUIPMENT_STATUS_LABELS,
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
@@ -336,13 +335,15 @@ export class CheckoutsService extends VersionedBaseService {
     }
 
     // 사이트 필터링 (신청자의 사이트 OR 대여 시 빌려주는 사이트)
-    // EXISTS로 크로스사이트 렌탈 지원 — uncorrelated subquery보다 옵티마이저 힌트 명확
+    // IN subquery: correlated EXISTS 대비 옵티마이저가 hash join 선택 가능
     if (site) {
+      const userIdsBySite = this.db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.site, site));
+
       whereConditions.push(
-        or(
-          sql`EXISTS (SELECT 1 FROM ${schema.users} WHERE ${schema.users.id} = ${checkouts.requesterId} AND ${schema.users.site} = ${site})`,
-          eq(checkouts.lenderSiteId, site)
-        )!
+        or(inArray(checkouts.requesterId, userIdsBySite), eq(checkouts.lenderSiteId, site))!
       );
     }
 
@@ -1326,10 +1327,10 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      // ✅ Optimistic locking: 클라이언트가 보낸 version으로 CAS 수행
       const updated = await this.updateCheckoutStatus(
         uuid,
-        checkout,
+        { ...checkout, version: rejectDto.version },
         CSVal.REJECTED as CheckoutStatus,
         {
           approverId: rejectDto.approverId,
@@ -1780,9 +1781,10 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       // ✅ Optimistic locking: returned → checked_out (재반입 프로세스)
+      // 클라이언트가 보낸 version으로 CAS 수행 (서버 최신값 사용 금지)
       const updated = await this.updateCheckoutStatus(
         uuid,
-        checkout,
+        { ...checkout, version: rejectReturnDto.version },
         CSVal.CHECKED_OUT as CheckoutStatus,
         {
           rejectionReason: rejectReturnDto.reason.trim(),
@@ -1825,7 +1827,7 @@ export class CheckoutsService extends VersionedBaseService {
       if (error instanceof ConflictException) {
         // ✅ CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
         const detailCacheKey = this.buildCacheKey('detail', { uuid });
-        this.cacheService.delete(detailCacheKey);
+        await this.cacheService.delete(detailCacheKey);
         throw error;
       }
       this.logger.error(
@@ -1974,6 +1976,12 @@ export class CheckoutsService extends VersionedBaseService {
       ) {
         throw error;
       }
+      if (error instanceof ConflictException) {
+        // ✅ CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
+        const detailCacheKey = this.buildCacheKey('detail', { uuid });
+        await this.cacheService.delete(detailCacheKey);
+        throw error;
+      }
       this.logger.error(
         `상태 확인 등록 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
       );
@@ -2016,7 +2024,7 @@ export class CheckoutsService extends VersionedBaseService {
    * 승인 전 신청자만 취소 가능 (요구사항)
    * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
-  async cancel(uuid: string, req?: AuthenticatedRequest): Promise<Checkout> {
+  async cancel(uuid: string, version: number, req?: AuthenticatedRequest): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
@@ -2033,10 +2041,10 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      // ✅ Optimistic locking: 클라이언트가 보낸 version으로 CAS 수행
       const updated = await this.updateCheckoutStatus(
         uuid,
-        checkout,
+        { ...checkout, version },
         CSVal.CANCELED as CheckoutStatus
       );
 
@@ -2117,16 +2125,8 @@ export class CheckoutsService extends VersionedBaseService {
         updateFields.reason = updateCheckoutDto.reason;
       }
 
-      if (updateCheckoutDto.status !== undefined) {
-        const status = updateCheckoutDto.status as CheckoutStatus;
-        if (!(CHECKOUT_STATUS_VALUES as readonly string[]).includes(status)) {
-          throw new BadRequestException({
-            code: 'CHECKOUT_INVALID_STATUS',
-            message: `Invalid status value: ${status}`,
-          });
-        }
-        updateFields.status = status;
-      }
+      // ✅ status는 전용 상태 전이 메서드(approve/reject/cancel 등)를 통해서만 변경 가능
+      // → UpdateCheckoutDto에서 status 필드 제거됨
 
       // ✅ Optimistic locking: CAS를 사용한 업데이트
       const updated = await this.updateWithVersion<Checkout>(
@@ -2156,8 +2156,8 @@ export class CheckoutsService extends VersionedBaseService {
   /**
    * UUID로 반출 삭제 (취소로 처리)
    */
-  async remove(uuid: string, req?: AuthenticatedRequest): Promise<Checkout> {
-    return this.cancel(uuid, req);
+  async remove(uuid: string, version: number, req?: AuthenticatedRequest): Promise<Checkout> {
+    return this.cancel(uuid, version, req);
   }
 
   /**

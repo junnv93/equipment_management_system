@@ -712,23 +712,46 @@ export class NonConformancesService extends VersionedBaseService {
           .limit(1);
 
         // 다른 열린 부적합이 없으면 장비 상태 복원 (CAS: version 검증)
+        let equipmentStatusRestored = false;
         if (otherOpenNonConformances.length === 0) {
-          await tx
-            .update(equipment)
-            .set({
-              status: EquipmentStatusEnum.enum.available,
-              version: sql`version + 1`,
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(equipment.id, nonConformance.equipmentId),
-                eq(equipment.status, EquipmentStatusEnum.enum.non_conforming)
+          // 장비 현재 version 조회 (CAS용)
+          const [currentEquipment] = await tx
+            .select({ id: equipment.id, version: equipment.version, status: equipment.status })
+            .from(equipment)
+            .where(eq(equipment.id, nonConformance.equipmentId))
+            .limit(1);
+
+          if (
+            currentEquipment &&
+            currentEquipment.status === EquipmentStatusEnum.enum.non_conforming
+          ) {
+            const [updatedEquipment] = await tx
+              .update(equipment)
+              .set({
+                status: EquipmentStatusEnum.enum.available,
+                version: sql`version + 1`,
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(equipment.id, nonConformance.equipmentId),
+                  eq(equipment.version, currentEquipment.version)
+                )
               )
-            );
+              .returning({ id: equipment.id });
+
+            if (!updatedEquipment) {
+              throw new ConflictException({
+                message:
+                  'Equipment has been modified by another user. Please refresh and try again.',
+                code: 'VERSION_CONFLICT',
+              });
+            }
+            equipmentStatusRestored = true;
+          }
         }
 
-        return { updated, equipmentStatusRestored: otherOpenNonConformances.length === 0 };
+        return { updated, equipmentStatusRestored };
       });
     } catch (error) {
       // CAS 실패 시 stale cache 방지

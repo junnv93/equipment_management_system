@@ -19,6 +19,7 @@ import {
   httpStatusToErrorCode,
   mapBackendErrorCode,
 } from '../../errors/equipment-errors';
+import { getDefaultMessageForStatus } from '../error';
 
 /**
  * 백엔드 페이지네이션 응답을 프론트엔드 형식으로 변환
@@ -292,24 +293,8 @@ export function createApiError(error: unknown): ApiError {
     // 현재는 순수 유틸리티 함수로 translation context 없음 — 호출자 레벨에서 처리 예정
     if (status) {
       const errorCode = httpStatusToErrorCode(status);
-      const statusMessages: Record<number, string> = {
-        400: 'Bad request.',
-        401: 'Authentication required. Please log in again.',
-        403: 'You do not have permission to perform this action.',
-        404: 'The requested resource was not found.',
-        409: 'The data already exists.',
-        413: 'File size is too large.',
-        415: 'Unsupported file format.',
-        500: 'An internal server error occurred.',
-        502: 'Cannot connect to the server.',
-        503: 'The server is temporarily unavailable.',
-      };
 
-      return new ApiError(
-        statusMessages[status] || 'An unknown error occurred.',
-        errorCode,
-        status
-      );
+      return new ApiError(getDefaultMessageForStatus(status), errorCode, status);
     }
   }
 

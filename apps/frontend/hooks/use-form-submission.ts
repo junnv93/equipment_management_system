@@ -49,11 +49,11 @@ export function useFormSubmission<TData, TVariables>({
 
   const mutation = useMutation({
     mutationFn,
-    onSuccess: () => {
-      // 쿼리 무효화를 리다이렉트 전에 실행 — 대상 페이지에서 stale 캐시 방지
-      invalidateQueries.forEach((queryKey) => {
-        queryClient.invalidateQueries({ queryKey });
-      });
+    onSuccess: async () => {
+      // 쿼리 무효화를 리다이렉트 전에 완료 — 대상 페이지에서 stale 캐시 방지
+      await Promise.all(
+        invalidateQueries.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+      );
 
       // 성공 메시지
       toast({

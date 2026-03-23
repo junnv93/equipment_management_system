@@ -157,7 +157,10 @@ describe('EquipmentController', () => {
 
       // Assert
       expect(result).toEqual(mockEquipment);
-      expect(equipmentService.create).toHaveBeenCalledWith(createEquipmentDto);
+      expect(equipmentService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ...createEquipmentDto, approvalStatus: 'approved' }),
+        'admin-uuid'
+      );
     });
 
     it('should create equipment request for non-admin user', async () => {
@@ -221,7 +224,10 @@ describe('EquipmentController', () => {
       await expect(
         controller.create(createEquipmentDto, undefined, mockReq as AuthenticatedRequest)
       ).rejects.toThrow(BadRequestException);
-      expect(equipmentService.create).toHaveBeenCalledWith(createEquipmentDto);
+      expect(equipmentService.create).toHaveBeenCalledWith(
+        expect.objectContaining({ ...createEquipmentDto, approvalStatus: 'approved' }),
+        'admin-uuid'
+      );
     });
   });
 
@@ -330,7 +336,7 @@ describe('EquipmentController', () => {
       // Assert
       expect(result).toEqual(updatedEquipment);
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
-      expect(equipmentService.update).toHaveBeenCalledWith(uuid, updateEquipmentDto);
+      expect(equipmentService.update).toHaveBeenCalledWith(uuid, updateEquipmentDto, 'admin-uuid');
     });
 
     it('should throw NotFoundException when equipment does not exist', async () => {

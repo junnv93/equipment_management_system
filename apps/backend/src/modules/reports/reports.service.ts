@@ -101,7 +101,7 @@ function scopeToEquipmentConditions(scope: ResolvedDataScope): SQL[] {
     case 'team':
       return scope.teamId ? [eq(equipmentTable.teamId, scope.teamId)] : [sql`FALSE`];
     case 'site':
-      return scope.site ? [eq(equipmentTable.siteCode, scope.site)] : [sql`FALSE`];
+      return scope.site ? [eq(equipmentTable.site, scope.site)] : [sql`FALSE`];
     case 'all':
       return [];
     case 'none':
@@ -540,7 +540,7 @@ export class ReportsService {
   ): Promise<ReportData> {
     const scopeConditions = scopeToEquipmentConditions(scope);
     const conditions: SQL[] = [...scopeConditions];
-    if (filters.site) conditions.push(eq(equipmentTable.siteCode, filters.site));
+    if (filters.site) conditions.push(eq(equipmentTable.site, filters.site));
     if (filters.status)
       conditions.push(eq(equipmentTable.status, filters.status as EquipmentStatus));
     if (filters.teamId) conditions.push(eq(equipmentTable.teamId, filters.teamId));
@@ -697,7 +697,7 @@ export class ReportsService {
     ];
 
     const equipConditions: SQL[] = [...scopeConditions];
-    if (filters.site) equipConditions.push(eq(equipmentTable.siteCode, filters.site));
+    if (filters.site) equipConditions.push(eq(equipmentTable.site, filters.site));
 
     const rows = await this.db
       .select({
@@ -764,7 +764,7 @@ export class ReportsService {
   ): Promise<ReportData> {
     const scopeConditions = scopeToEquipmentConditions(scope);
     const conditions: SQL[] = [...scopeConditions];
-    if (filters.site) conditions.push(eq(equipmentTable.siteCode, filters.site));
+    if (filters.site) conditions.push(eq(equipmentTable.site, filters.site));
     if (filters.teamId) conditions.push(eq(equipmentTable.teamId, filters.teamId));
 
     const rows = await this.db

@@ -406,61 +406,69 @@ export class EquipmentApprovalService {
         });
       }
 
-      // CAS 선점: 요청 상태를 먼저 업데이트하여 동시 승인 방지
-      // 장비 작업보다 CAS를 먼저 실행해야 중복 장비 생성/수정/삭제를 방지할 수 있음
-      const [updated] = await this.db
-        .update(equipmentRequests)
-        .set({
-          approvalStatus: ApprovalStatusValues.APPROVED,
-          approvedBy,
-          approvedAt: new Date(),
-          version: sql`version + 1`,
-        } as Record<string, unknown>)
-        .where(
-          and(eq(equipmentRequests.id, requestUuid), eq(equipmentRequests.version, expectedVersion))
-        )
-        .returning();
+      // CAS 선점 + 장비 작업을 하나의 트랜잭션으로 감싸 원자성 보장
+      // CAS 선점 성공 후 장비 작업 실패 시 자동 롤백
+      const updated = await this.db.transaction(async (tx) => {
+        // CAS 선점: 요청 상태를 먼저 업데이트하여 동시 승인 방지
+        const [casUpdated] = await tx
+          .update(equipmentRequests)
+          .set({
+            approvalStatus: ApprovalStatusValues.APPROVED,
+            approvedBy,
+            approvedAt: new Date(),
+            version: sql`version + 1`,
+          } as Record<string, unknown>)
+          .where(
+            and(
+              eq(equipmentRequests.id, requestUuid),
+              eq(equipmentRequests.version, expectedVersion)
+            )
+          )
+          .returning();
 
-      if (!updated) {
-        this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
-        throw new ConflictException({
-          code: 'VERSION_CONFLICT',
-          message: 'The request has been modified by another user. Please refresh and try again.',
-        });
-      }
-
-      // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
-      if (request.requestType === 'create') {
-        const requestData = deserializeRequestData('create', request.requestData);
-        await this.equipmentService.create(requestData, request.requestedBy);
-      } else if (request.requestType === 'update') {
-        const equipmentData = this.requireEquipmentId(request.equipmentId);
-        const currentEquipment = await this.db.query.equipment.findFirst({
-          where: eq(equipment.id, equipmentData),
-        });
-        if (!currentEquipment) {
-          throw new NotFoundException({
-            code: 'EQUIPMENT_NOT_FOUND',
-            message: 'Equipment not found.',
+        if (!casUpdated) {
+          this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+          throw new ConflictException({
+            code: 'VERSION_CONFLICT',
+            message: 'The request has been modified by another user. Please refresh and try again.',
           });
         }
-        const requestData = deserializeRequestData('update', request.requestData);
-        // CAS: 요청 생성 시의 version은 stale → 현재 DB version으로 교체
-        requestData.version = currentEquipment.version;
-        await this.equipmentService.update(currentEquipment.id, requestData, request.requestedBy);
-      } else if (request.requestType === 'delete') {
-        const equipmentId = this.requireEquipmentId(request.equipmentId);
-        const currentEquipment = await this.db.query.equipment.findFirst({
-          where: eq(equipment.id, equipmentId),
-        });
-        if (!currentEquipment) {
-          throw new NotFoundException({
-            code: 'EQUIPMENT_NOT_FOUND',
-            message: 'Equipment not found.',
+
+        // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
+        if (request.requestType === 'create') {
+          const requestData = deserializeRequestData('create', request.requestData);
+          await this.equipmentService.create(requestData, request.requestedBy);
+        } else if (request.requestType === 'update') {
+          const equipmentData = this.requireEquipmentId(request.equipmentId);
+          const currentEquipment = await tx.query.equipment.findFirst({
+            where: eq(equipment.id, equipmentData),
           });
+          if (!currentEquipment) {
+            throw new NotFoundException({
+              code: 'EQUIPMENT_NOT_FOUND',
+              message: 'Equipment not found.',
+            });
+          }
+          const requestData = deserializeRequestData('update', request.requestData);
+          // CAS: 요청 생성 시의 version은 stale → 현재 DB version으로 교체
+          requestData.version = currentEquipment.version;
+          await this.equipmentService.update(currentEquipment.id, requestData, request.requestedBy);
+        } else if (request.requestType === 'delete') {
+          const equipmentId = this.requireEquipmentId(request.equipmentId);
+          const currentEquipment = await tx.query.equipment.findFirst({
+            where: eq(equipment.id, equipmentId),
+          });
+          if (!currentEquipment) {
+            throw new NotFoundException({
+              code: 'EQUIPMENT_NOT_FOUND',
+              message: 'Equipment not found.',
+            });
+          }
+          await this.equipmentService.remove(currentEquipment.id, currentEquipment.version);
         }
-        await this.equipmentService.remove(currentEquipment.id);
-      }
+
+        return casUpdated;
+      });
 
       // 📢 알림 이벤트 발행
       const displayData = parseRequestDataForDisplay(request.requestData);

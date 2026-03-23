@@ -1305,34 +1305,37 @@ export class EquipmentService extends VersionedBaseService {
    * UUID로 장비 삭제 (소프트 삭제)
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    */
-  async remove(uuid: string): Promise<Equipment> {
+  async remove(uuid: string, version?: number): Promise<Equipment> {
     try {
-      // 소프트 삭제 (isActive = false)
-      // Equipment 모듈의 transformUpdateDtoToEntity 패턴과 동일하게 처리
-      const updateData: Partial<Equipment> = {
-        isActive: false,
-        updatedAt: new Date(),
-      };
-
-      const [updated] = await this.db
-        .update(equipment)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(equipment.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException({
-          code: 'EQUIPMENT_NOT_FOUND',
-          message: `Equipment with UUID ${uuid} not found.`,
-        });
+      // version이 없으면 기존 조회 후 CAS (내부 호출 호환)
+      let effectiveVersion = version;
+      if (effectiveVersion === undefined) {
+        const existing = await this.findOne(uuid);
+        effectiveVersion = existing.version;
       }
+
+      // 소프트 삭제 (isActive = false) — CAS 보호
+      const updated = await this.updateWithVersion<Equipment>(
+        equipment,
+        uuid,
+        effectiveVersion,
+        { isActive: false },
+        '장비',
+        undefined,
+        'EQUIPMENT_NOT_FOUND'
+      );
 
       // 캐시 무효화 (삭제된 장비)
       await this.invalidateCache(uuid, updated.teamId ?? undefined);
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (error instanceof ConflictException) {
+        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
+        await this.cacheService.delete(this.buildCacheKey('detail', { uuid }));
+        await this.cacheService.delete(this.buildCacheKey('detail', { uuid, includeTeam: true }));
+      }
+      if (error instanceof NotFoundException || error instanceof ConflictException) {
         throw error;
       }
       this.logger.error(
@@ -1355,7 +1358,7 @@ export class EquipmentService extends VersionedBaseService {
    *
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    */
-  async updateStatus(uuid: string, status: EquipmentStatus, version?: number): Promise<Equipment> {
+  async updateStatus(uuid: string, status: EquipmentStatus, version: number): Promise<Equipment> {
     try {
       // 기존 장비 조회 (교정 상태 검증을 위해)
       const existingEquipment = await this.findOne(uuid);
@@ -1368,12 +1371,11 @@ export class EquipmentService extends VersionedBaseService {
         status,
       };
 
-      // ✅ CAS 보호: 외부/내부 호출 모두 VersionedBaseService 사용
-      const effectiveVersion = version ?? existingEquipment.version;
+      // ✅ CAS 보호: version 필수 — TOCTOU 방지
       const updated = await this.updateWithVersion<Equipment>(
         equipment,
         uuid,
-        effectiveVersion,
+        version,
         updateData as Record<string, unknown>,
         '장비',
         undefined,

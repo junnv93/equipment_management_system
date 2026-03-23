@@ -529,6 +529,7 @@ export class CheckoutCacheInvalidation {
   /** 체크아웃 승인/반려 후 무효화 대상 키 */
   static readonly APPROVAL_KEYS: ReadonlyArray<readonly unknown[]> = [
     queryKeys.checkouts.all,
+    queryKeys.equipment.all,
     queryKeys.approvals.all,
     queryKeys.approvals.countsAll,
   ];

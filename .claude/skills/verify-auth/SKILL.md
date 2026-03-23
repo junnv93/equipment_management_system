@@ -135,10 +135,13 @@ grep -n "user\?\." apps/backend/src/common/interceptors/audit.interceptor.ts | h
 
 ### Step 6: Permission import 소스 확인
 
+> **참고:** `verify-ssot` Step 2가 전체 파일(backend + frontend)에서 Permission import 소스를 검사합니다.
+> 이 Step은 컨트롤러에 집중하여 인가 관점에서 빠르게 확인하는 보완 검사입니다.
+
 Permission 값이 `@equipment-management/shared-constants`에서 import되는지 확인합니다.
 
 ```bash
-# Permission import 소스 확인
+# Permission import 소스 확인 (컨트롤러 한정)
 grep -rn "import.*Permission" apps/backend/src --include="*.controller.ts" | grep -v "@equipment-management/shared-constants"
 ```
 

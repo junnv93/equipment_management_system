@@ -49,6 +49,8 @@ import {
   StartCheckoutValidationPipe,
   CreateConditionCheckDto,
   CreateConditionCheckValidationPipe,
+  CancelCheckoutDto,
+  CancelCheckoutValidationPipe,
   CheckoutResponseDto,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -200,6 +202,7 @@ export class CheckoutsController {
 
   @Delete(':uuid')
   @RequirePermissions(Permission.DELETE_CHECKOUT)
+  @UsePipes(CancelCheckoutValidationPipe)
   @AuditLog({ action: 'delete', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -207,14 +210,16 @@ export class CheckoutsController {
     description: '특정 UUID를 가진 반출을 취소합니다. 승인 전만 취소 가능합니다.',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: CancelCheckoutDto })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() cancelDto: CancelCheckoutDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    return this.checkoutsService.remove(uuid, req);
+    return this.checkoutsService.remove(uuid, cancelDto.version, req);
   }
 
   @Patch(':uuid/approve')
@@ -557,19 +562,22 @@ export class CheckoutsController {
 
   @Patch(':uuid/cancel')
   @RequirePermissions(Permission.CANCEL_CHECKOUT)
+  @UsePipes(CancelCheckoutValidationPipe)
   @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 취소',
     description: '승인 전 반출을 취소합니다. 신청자만 취소 가능합니다.',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: CancelCheckoutDto })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async cancel(
     @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() cancelDto: CancelCheckoutDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    return this.checkoutsService.cancel(uuid, req);
+    return this.checkoutsService.cancel(uuid, cancelDto.version, req);
   }
 }

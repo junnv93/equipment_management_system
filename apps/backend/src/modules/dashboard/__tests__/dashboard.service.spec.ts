@@ -110,12 +110,10 @@ describe('DashboardService', () => {
     });
 
     it('반환값에 totalEquipment, availableEquipment가 포함된다', async () => {
-      // getSummary는 Promise.all([equipmentStats, checkoutResult])로 2개 쿼리 실행
-      mockDb.select
-        .mockReturnValueOnce(
-          createQueryChain([{ total: 10, available: 7, upcomingCalibrations: 2 }])
-        )
-        .mockReturnValueOnce(createQueryChain([{ count: 3 }]));
+      // getSummary는 단일 쿼리로 4개 필드를 조건부 집계 (equipment.status 기반 SSOT)
+      mockDb.select.mockReturnValueOnce(
+        createQueryChain([{ total: 10, available: 7, activeCheckouts: 3, upcomingCalibrations: 2 }])
+      );
 
       const result = await service.getSummary(undefined, 'SUW');
 

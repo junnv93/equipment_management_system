@@ -21,6 +21,7 @@ import {
 import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { DisposalService } from './services/disposal.service';
+import type { DisposalRequestWithRelations } from './services/disposal.types';
 import {
   RequestDisposalDto,
   ReviewDisposalDto,
@@ -76,7 +77,7 @@ export class DisposalController {
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
     @Body(new ZodValidationPipe(requestDisposalSchema)) dto: RequestDisposalDto,
     @Req() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<DisposalRequestWithRelations | null> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
     enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
@@ -113,7 +114,7 @@ export class DisposalController {
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
     @Body(new ZodValidationPipe(reviewDisposalSchema)) reviewDto: ReviewDisposalDto,
     @Req() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<DisposalRequestWithRelations | null> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
     enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
@@ -152,7 +153,7 @@ export class DisposalController {
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
     @Body(new ZodValidationPipe(approveDisposalSchema)) approveDto: ApproveDisposalDto,
     @Req() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<DisposalRequestWithRelations | null> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
     enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
@@ -204,7 +205,7 @@ export class DisposalController {
   async getCurrentDisposalRequest(
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
     @Req() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<DisposalRequestWithRelations | null> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
     enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     return this.disposalService.getCurrentDisposalRequest(equipmentId);

@@ -188,6 +188,32 @@ grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules --include="*.servic
 
 **FAIL 기준:** scope 조건이 적용되는 equipment 테이블에 `leftJoin` 사용 시 RBAC 우회 가능.
 
+### Step 7: 순환 의존성 (forwardRef) 모니터링
+
+모듈 간 순환 의존성이 증가하는지 모니터링합니다. `forwardRef()`는 NestJS에서 순환 의존을 해결하는 기법이지만, 과도한 사용은 아키텍처 결합도 증가를 나타냅니다.
+
+```bash
+# forwardRef 사용 현황 확인
+grep -rn "forwardRef" apps/backend/src/modules --include="*.module.ts"
+```
+
+**PASS 기준:** `forwardRef()` 사용이 기존 알려진 순환 의존 쌍(Equipment↔NonConformances, Checkouts↔EquipmentImports, Notifications↔Calibration/Auth)에 한정. 새 `forwardRef()` 추가 시 WARNING.
+
+**FAIL 기준:** 새로운 `forwardRef()` 추가 시 이슈로 보고 (순환 의존 해소 또는 의도적 설계인지 확인 필요).
+
+### Step 8: 무제한 쿼리 결과 탐지
+
+`findMany()` 또는 `.select().from()` 쿼리에 `.limit()`이 없는 목록 조회 패턴을 탐지합니다.
+
+```bash
+# findMany 호출에서 limit 없는 패턴 탐지 (public 메서드만)
+grep -rn "findMany({" apps/backend/src/modules --include="*.service.ts" -A 10 | grep -v "limit:" | grep "findMany"
+```
+
+**PASS 기준:** 목록 조회 메서드(findAll, getList 등)에 `limit` 또는 페이지네이션 파라미터가 포함.
+
+**FAIL 기준:** 공개 API에서 호출되는 findMany에 limit이 없으면 대량 데이터 반환 위험.
+
 ## Output Format
 
 ```markdown
@@ -199,6 +225,8 @@ grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules --include="*.servic
 | 4   | N+1 쿼리 패턴              | PASS/FAIL | N+1 패턴 위치 목록     |
 | 5   | COUNT(DISTINCT) fan-out    | PASS/FAIL | 뻥튀기 카운트 위치     |
 | 6   | RBAC INNER JOIN            | PASS/FAIL | scope 우회 위치        |
+| 7   | 순환 의존성 모니터링       | PASS/WARN | 새 forwardRef 추가 여부 |
+| 8   | 무제한 쿼리 결과           | PASS/FAIL | limit 없는 목록 쿼리   |
 ```
 
 ## Exceptions

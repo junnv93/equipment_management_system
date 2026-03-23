@@ -81,7 +81,7 @@ grep -rn "versionedSchema" apps/backend/src/modules/*/dto --include="*.dto.ts"
 
 ```bash
 # 상태 변경 DTO 중 versionedSchema가 없는 파일 탐지
-for f in $(find apps/backend/src/modules/*/dto -name "approve-*.dto.ts" -o -name "reject-*.dto.ts" -o -name "close-*.dto.ts" -o -name "update-status*.dto.ts"); do
+for f in $(find apps/backend/src/modules/*/dto -name "approve-*.dto.ts" -o -name "reject-*.dto.ts" -o -name "close-*.dto.ts" -o -name "update-status*.dto.ts" -o -name "cancel-*.dto.ts"); do
   grep -L "versionedSchema" "$f" 2>/dev/null
 done
 ```

@@ -24,6 +24,7 @@ import {
 import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration-plans-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { isConflictError } from '@/lib/api/error';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { resolveDisplayName } from '@/lib/utils/display-name';
@@ -147,12 +148,20 @@ export function CalibrationPlanDetailClient({
       setIsSubmitDialogOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast({
-        title: t('planDetail.toasts.submitForReviewError'),
-        description:
-          error.response?.data?.message || t('planDetail.toasts.submitForReviewErrorDesc'),
-        variant: 'destructive',
-      });
+      if (isConflictError(error)) {
+        toast({
+          title: t('planDetail.toasts.versionConflict'),
+          description: t('planDetail.toasts.versionConflictDesc'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('planDetail.toasts.submitForReviewError'),
+          description:
+            error.response?.data?.message || t('planDetail.toasts.submitForReviewErrorDesc'),
+          variant: 'destructive',
+        });
+      }
       invalidateAfterChange();
     },
   });
@@ -172,11 +181,19 @@ export function CalibrationPlanDetailClient({
       setIsApproveDialogOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast({
-        title: t('planDetail.toasts.approveError'),
-        description: error.response?.data?.message || t('planDetail.toasts.approveErrorDesc'),
-        variant: 'destructive',
-      });
+      if (isConflictError(error)) {
+        toast({
+          title: t('planDetail.toasts.versionConflict'),
+          description: t('planDetail.toasts.versionConflictDesc'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('planDetail.toasts.approveError'),
+          description: error.response?.data?.message || t('planDetail.toasts.approveErrorDesc'),
+          variant: 'destructive',
+        });
+      }
       invalidateAfterChange();
     },
   });
@@ -198,11 +215,19 @@ export function CalibrationPlanDetailClient({
       setRejectionReason('');
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast({
-        title: t('planDetail.toasts.rejectError'),
-        description: error.response?.data?.message || t('planDetail.toasts.rejectErrorDesc'),
-        variant: 'destructive',
-      });
+      if (isConflictError(error)) {
+        toast({
+          title: t('planDetail.toasts.versionConflict'),
+          description: t('planDetail.toasts.versionConflictDesc'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('planDetail.toasts.rejectError'),
+          description: error.response?.data?.message || t('planDetail.toasts.rejectErrorDesc'),
+          variant: 'destructive',
+        });
+      }
       invalidateAfterChange();
     },
   });

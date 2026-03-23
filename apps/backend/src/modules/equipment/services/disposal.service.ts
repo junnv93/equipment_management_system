@@ -513,20 +513,55 @@ export class DisposalService extends VersionedBaseService {
       });
     }
 
-    // 3. 트랜잭션: 요청 삭제 + 장비 상태 원복
-    await this.db.transaction(async (tx) => {
-      // 폐기 요청 삭제
-      await tx.delete(disposalRequests).where(eq(disposalRequests.id, request.id));
+    // 3. 장비 현재 version 조회 (CAS 보호용)
+    const currentEquipment = await this.db.query.equipment.findFirst({
+      where: eq(equipment.id, equipmentId),
+      columns: { version: true },
+    });
 
-      // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
-      await tx
+    if (!currentEquipment) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentId})`,
+      });
+    }
+
+    // 4. 트랜잭션: 요청 삭제 + 장비 상태 원복 (CAS 보호)
+    await this.db.transaction(async (tx) => {
+      // 폐기 요청 삭제 (CAS: version 조건으로 동시 취소 방지)
+      const deleted = await tx
+        .delete(disposalRequests)
+        .where(
+          and(eq(disposalRequests.id, request.id), eq(disposalRequests.version, request.version))
+        )
+        .returning({ id: disposalRequests.id });
+
+      if (deleted.length === 0) {
+        this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
+        throw new ConflictException({
+          message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+          code: 'VERSION_CONFLICT',
+        });
+      }
+
+      // 장비 상태 원복 (CAS: version 조건으로 동시 수정 방지)
+      const [updatedEquipment] = await tx
         .update(equipment)
         .set({
           status: ESVal.AVAILABLE,
           version: sql`version + 1`,
           updatedAt: new Date(),
         } as Record<string, unknown>)
-        .where(eq(equipment.id, equipmentId));
+        .where(and(eq(equipment.id, equipmentId), eq(equipment.version, currentEquipment.version)))
+        .returning();
+
+      if (!updatedEquipment) {
+        this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
+        throw new ConflictException({
+          message: '장비가 다른 사용자에 의해 수정되었습니다. 페이지를 새로고침하세요.',
+          code: 'VERSION_CONFLICT',
+        });
+      }
     });
 
     // 4. 캐시 무효화 (SSOT: CacheInvalidationHelper — 장비 상세/목록 + 폐기 요청 + 대시보드)
@@ -579,7 +614,11 @@ export class DisposalService extends VersionedBaseService {
    *
    * @param userId - 현재 사용자 ID (팀 필터링용)
    */
-  async getPendingReviewRequests(userId: string, site?: string): Promise<unknown[]> {
+  async getPendingReviewRequests(
+    userId: string,
+    site?: string,
+    teamId?: string
+  ): Promise<unknown[]> {
     // 1. 현재 사용자 조회 (역할 및 팀 확인)
     const currentUser = await this.db.query.users.findFirst({
       where: eq(users.id, userId),
@@ -592,11 +631,46 @@ export class DisposalService extends VersionedBaseService {
       });
     }
 
-    // 2. lab_manager는 모든 요청 조회, technical_manager는 같은 팀만 조회
+    // 2. DB 레벨 필터 조건 구성 (site/team은 equipment 테이블 컬럼)
+    // Drizzle findMany의 with(relations)은 cross-table WHERE를 지원하지 않으므로
+    // 먼저 equipment JOIN으로 대상 폐기 요청 ID를 필터링한 후 relations 쿼리 수행
     const isLabManager = currentUser.role === URVal.LAB_MANAGER;
 
+    const joinConditions = [
+      eq(disposalRequests.reviewStatus, DRVal.PENDING),
+      eq(disposalRequests.equipmentId, equipment.id),
+    ];
+
+    // site 필터 (SiteScopeInterceptor → lab_manager)
+    if (site) {
+      joinConditions.push(eq(equipment.site, site));
+    }
+
+    // team 필터 (SiteScopeInterceptor → technical_manager)
+    const effectiveTeamId = teamId ?? (!isLabManager ? currentUser.teamId : undefined);
+    if (effectiveTeamId) {
+      joinConditions.push(eq(equipment.teamId, effectiveTeamId));
+    }
+
+    // 3. JOIN으로 DB 레벨 필터링하여 대상 ID 추출
+    const filteredIds = await this.db
+      .select({ id: disposalRequests.id })
+      .from(disposalRequests)
+      .innerJoin(equipment, eq(disposalRequests.equipmentId, equipment.id))
+      .where(and(...joinConditions))
+      .orderBy(sql`${disposalRequests.requestedAt} DESC`)
+      .limit(DASHBOARD_ITEM_LIMIT);
+
+    if (filteredIds.length === 0) {
+      return [];
+    }
+
+    // 4. Relations 포함 조회 (필터링된 ID만)
     const requests = await this.db.query.disposalRequests.findMany({
-      where: eq(disposalRequests.reviewStatus, DRVal.PENDING),
+      where: inArray(
+        disposalRequests.id,
+        filteredIds.map((r) => r.id)
+      ),
       with: {
         equipment: true,
         requester: {
@@ -612,21 +686,9 @@ export class DisposalService extends VersionedBaseService {
         },
       },
       orderBy: (disposalRequests, { desc }) => [desc(disposalRequests.requestedAt)],
-      limit: DASHBOARD_ITEM_LIMIT,
     });
 
-    // 3. 사이트 필터링 (SiteScopeInterceptor가 주입한 site)
-    let filtered = requests;
-    if (site) {
-      filtered = filtered.filter((request) => request.equipment.site === site);
-    }
-
-    // 4. lab_manager가 아니면 같은 팀 장비만 필터링
-    if (!isLabManager && currentUser.teamId) {
-      filtered = filtered.filter((request) => request.equipment.teamId === currentUser.teamId);
-    }
-
-    return filtered;
+    return requests;
   }
 
   /**
@@ -634,8 +696,36 @@ export class DisposalService extends VersionedBaseService {
    * reviewStatus='reviewed'인 요청들을 최신순으로 반환
    */
   async getPendingApprovalRequests(site?: string): Promise<unknown[]> {
+    // DB 레벨 site 필터링 (getPendingReviewRequests와 동일 패턴)
+    // Drizzle findMany의 with(relations)은 cross-table WHERE를 지원하지 않으므로
+    // 먼저 equipment JOIN으로 대상 폐기 요청 ID를 필터링
+    const joinConditions = [
+      eq(disposalRequests.reviewStatus, DRVal.REVIEWED),
+      eq(disposalRequests.equipmentId, equipment.id),
+    ];
+
+    if (site) {
+      joinConditions.push(eq(equipment.site, site));
+    }
+
+    const filteredIds = await this.db
+      .select({ id: disposalRequests.id })
+      .from(disposalRequests)
+      .innerJoin(equipment, eq(disposalRequests.equipmentId, equipment.id))
+      .where(and(...joinConditions))
+      .orderBy(sql`${disposalRequests.reviewedAt} DESC`)
+      .limit(DASHBOARD_ITEM_LIMIT);
+
+    if (filteredIds.length === 0) {
+      return [];
+    }
+
+    // Relations 포함 조회 (필터링된 ID만)
     const requests = await this.db.query.disposalRequests.findMany({
-      where: eq(disposalRequests.reviewStatus, DRVal.REVIEWED),
+      where: inArray(
+        disposalRequests.id,
+        filteredIds.map((r) => r.id)
+      ),
       with: {
         equipment: true,
         requester: {
@@ -646,7 +736,7 @@ export class DisposalService extends VersionedBaseService {
             role: true,
           },
           with: {
-            team: true, // ← Critical: includes team relation
+            team: true,
           },
         },
         reviewer: {
@@ -657,18 +747,12 @@ export class DisposalService extends VersionedBaseService {
             role: true,
           },
           with: {
-            team: true, // ← Critical: includes team relation
+            team: true,
           },
         },
       },
       orderBy: (disposalRequests, { desc }) => [desc(disposalRequests.reviewedAt)],
-      limit: DASHBOARD_ITEM_LIMIT,
     });
-
-    // 사이트 필터링 (SiteScopeInterceptor가 주입한 site)
-    if (site) {
-      return requests.filter((request) => request.equipment.site === site);
-    }
 
     return requests;
   }

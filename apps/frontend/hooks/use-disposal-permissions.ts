@@ -7,6 +7,21 @@ import {
   DisposalReviewStatusValues as DRSVal,
 } from '@equipment-management/schemas';
 
+/**
+ * 폐기 진행 단계 계산 (SSOT)
+ *
+ * pending: step 1 (요청) is current
+ * reviewed: steps 1-2 complete, step 3 (승인) is current
+ * approved: all steps complete (currentStep > 3)
+ * 요청 없음: 0
+ */
+export function getDisposalCurrentStep(disposalRequest?: DisposalRequest | null): number {
+  if (!disposalRequest) return 0;
+  if (disposalRequest.reviewStatus === DRSVal.PENDING) return 1;
+  if (disposalRequest.reviewStatus === DRSVal.REVIEWED) return 3;
+  return 4;
+}
+
 export function useDisposalPermissions(
   equipment: Equipment,
   disposalRequest?: DisposalRequest | null
@@ -45,17 +60,8 @@ export function useDisposalPermissions(
       equipment.status === ESVal.PENDING_DISPOSAL ||
       equipment.status === ESVal.DISPOSED);
 
-  // Calculate current step for progress stepper
-  // pending: step 1 (요청) is current
-  // reviewed: steps 1-2 complete, step 3 (승인) is current
-  // approved: all steps complete (currentStep > 3)
-  const currentStep = disposalRequest
-    ? disposalRequest.reviewStatus === DRSVal.PENDING
-      ? 1
-      : disposalRequest.reviewStatus === DRSVal.REVIEWED
-        ? 3
-        : 4
-    : 0;
+  // Calculate current step for progress stepper (SSOT: getDisposalCurrentStep)
+  const currentStep = getDisposalCurrentStep(disposalRequest);
 
   return {
     canRequestDisposal,

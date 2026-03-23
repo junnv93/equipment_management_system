@@ -116,6 +116,43 @@ grep -rn "onSuccess" apps/frontend --include="*.ts" --include="*.tsx" -A 10 | gr
 
 **참고:** `useOptimisticMutation` 훅 자체에서 onSettled 처리를 하므로, 훅 소비자(consumer)가 onSuccess에서 별도로 invalidate하면 중복.
 
+### Step 4b: Navigate-Before-Invalidate 안티패턴 탐지
+
+`onSuccess`에서 `invalidateQueries`를 `await` 없이 호출한 뒤 `router.push`로 네비게이션하면, 대상 페이지에서 stale 캐시를 읽습니다.
+
+```bash
+# onSuccess에서 invalidateQueries 후 router.push가 있는 패턴 탐지
+# await 없이 invalidateQueries → router.push 순서
+grep -rn "onSuccess" apps/frontend/components apps/frontend/hooks --include="*.tsx" --include="*.ts" -A 15 | grep -B 5 "router\.push\|router\.replace" | grep "invalidateQueries" | grep -v "await"
+```
+
+**PASS 기준:** `invalidateQueries` 호출에 `await`가 있거나, `router.push`보다 먼저 완료가 보장됨.
+
+**FAIL 기준:** `invalidateQueries` (await 없음) → `router.push` 순서 — 대상 페이지에서 stale 데이터 표시.
+
+```typescript
+// ❌ WRONG — invalidate 완료 전 네비게이션
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ... }); // await 없음
+  router.push('/target');
+}
+
+// ✅ CORRECT — invalidate 완료 후 네비게이션
+onSuccess: async () => {
+  await queryClient.invalidateQueries({ queryKey: ... });
+  router.push('/target');
+}
+
+// ✅ CORRECT — 여러 키 병렬 무효화 후 네비게이션
+onSuccess: async () => {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: key1 }),
+    queryClient.invalidateQueries({ queryKey: key2 }),
+  ]);
+  router.push('/target');
+}
+```
+
 ### Step 5: QUERY_CONFIG 프리셋 사용 확인
 
 쿼리에 적절한 staleTime/cacheTime 설정이 있는지 확인합니다.
@@ -262,6 +299,7 @@ grep -rn "^import.*from ['\"]recharts\|^import.*from ['\"]chart\.js\|^import.*fr
 | 2   | onSuccess setQueryData     | PASS/FAIL | 위반 위치 목록                |
 | 3   | useOptimisticMutation 사용 | PASS/INFO | 직접 useMutation 위치         |
 | 4   | invalidateQueries 위치     | PASS/FAIL | onSuccess 내 위치             |
+| 4b  | Navigate-Before-Invalidate | PASS/FAIL | await 없는 invalidate→navigate |
 | 5   | QUERY_CONFIG 프리셋        | PASS/INFO | 직접 설정 위치                |
 | 5b  | countsAll prefix 무효화    | PASS/FAIL | approvals.counts() 사용 위치  |
 | 5c  | CheckoutCacheInvalidation  | PASS/FAIL | 직접 queryKeys 조합 위치      |

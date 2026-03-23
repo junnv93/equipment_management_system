@@ -310,6 +310,28 @@ grep -rn "<=\s*7[^0-9]\|<\s*7[^0-9]\|days.*7[^0-9]" \
 - `CALIBRATION_THRESHOLDS.WARNING_DAYS` — 30 (교정 예정 경고 일수)
 - `CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS` — 7 (중간점검 upcoming 일수)
 
+### Step 15: 서비스 파일 VERSION_CONFLICT 에러 메시지 일관성
+
+`VersionedBaseService.updateWithVersion()`이 VERSION_CONFLICT의 SSOT 에러 형식을 정의합니다. 인라인 CAS를 구현하는 서비스에서 동일한 에러 형식(code, currentVersion, expectedVersion)을 사용하는지 확인합니다.
+
+```bash
+# VERSION_CONFLICT ConflictException에서 currentVersion/expectedVersion 누락 탐지
+grep -rn "VERSION_CONFLICT" apps/backend/src/modules --include="*.service.ts" -B 3 | grep "throw\|ConflictException\|message:" | grep -v "currentVersion\|expectedVersion"
+```
+
+**PASS 기준:** VERSION_CONFLICT를 throw하는 모든 서비스가 `currentVersion`과 `expectedVersion` 필드를 포함.
+
+**FAIL 기준:** `VersionedBaseService.updateWithVersion()`과 다른 에러 형식 사용 (message만 있고 currentVersion/expectedVersion 누락).
+
+```bash
+# VERSION_CONFLICT 한국어 메시지 중복 탐지 (동일 code에 서로 다른 message)
+grep -rn "VERSION_CONFLICT" apps/backend/src --include="*.service.ts" -A 2 | grep "message:"
+```
+
+**PASS 기준:** 동일 에러 code에 대해 메시지 문구가 일관되어야 함. `VersionedBaseService`의 영문 메시지가 SSOT.
+
+**FAIL 기준:** 같은 `VERSION_CONFLICT` code에 서로 다른 한국어/영문 message 혼용 → 프론트엔드가 code 기반 처리하므로 기능적 문제는 없으나 SSOT 위반.
+
 ## Output Format
 
 ```markdown
@@ -330,6 +352,7 @@ grep -rn "<=\s*7[^0-9]\|<\s*7[^0-9]\|days.*7[^0-9]" \
 | 12  | requestData 코덱 사용         | PASS/FAIL | 직접 JSON.parse 위치                   |
 | 13  | DTO 검증 메시지 VM SSOT       | PASS/FAIL | 하드코딩 한국어 메시지 위치            |
 | 14  | CALIBRATION_THRESHOLDS SSOT   | PASS/FAIL | 교정 임계값 매직넘버 위치              |
+| 15  | VERSION_CONFLICT 메시지 일관성 | PASS/FAIL | SSOT 불일치 서비스 목록                |
 ```
 
 ## Exceptions

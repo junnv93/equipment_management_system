@@ -176,6 +176,8 @@
       "deleteSuccessDesc": "The calibration plan has been deleted.",
       "deleteError": "Deletion Failed",
       "deleteErrorDesc": "An error occurred during deletion.",
+      "versionConflict": "Already processed by another user",
+      "versionConflictDesc": "Data has been updated. Please check the latest status.",
       "updateItemSuccess": "Item Updated",
       "updateItemSuccessDesc": "The item has been updated.",
       "updateItemError": "Update Failed",

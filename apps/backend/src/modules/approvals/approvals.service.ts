@@ -659,12 +659,15 @@ export class ApprovalsService {
     const conditions: SQL[] = [
       eq(schema.nonConformances.status, NonConformanceStatusValues.CORRECTED),
       isNull(schema.nonConformances.deletedAt),
-      or(
-        notInArray(schema.nonConformances.ncType, [
-          NonConformanceTypeValues.DAMAGE,
-          NonConformanceTypeValues.MALFUNCTION,
-        ]),
-        isNotNull(schema.nonConformances.repairHistoryId)
+      and(
+        or(
+          notInArray(schema.nonConformances.ncType, [...getNCTypesRequiring('repair')]),
+          isNotNull(schema.nonConformances.repairHistoryId)
+        )!,
+        or(
+          notInArray(schema.nonConformances.ncType, [...getNCTypesRequiring('recalibration')]),
+          isNotNull(schema.nonConformances.calibrationId)
+        )!
       )!,
     ];
 
