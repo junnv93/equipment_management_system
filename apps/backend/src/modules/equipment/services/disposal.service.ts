@@ -20,6 +20,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { VersionedBaseService } from '../../../common/base/versioned-base.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
 import {
   DisposalReviewStatusValues as DRVal,
@@ -46,6 +47,7 @@ export class DisposalService extends VersionedBaseService {
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly eventEmitter: EventEmitter2
   ) {
     super();
@@ -105,20 +107,21 @@ export class DisposalService extends VersionedBaseService {
         })
         .returning();
 
-      // 장비 상태를 'pending_disposal'로 변경
+      // 장비 상태를 'pending_disposal'로 변경 (version bump 필수 — 후속 CAS 업데이트 일관성)
       await tx
         .update(equipment)
         .set({
           status: ESVal.PENDING_DISPOSAL,
+          version: sql`version + 1`,
           updatedAt: new Date(),
-        })
+        } as Record<string, unknown>)
         .where(eq(equipment.id, equipmentId));
 
       return request;
     });
 
-    // 4. 캐시 무효화 - 장비 데이터가 변경되었으므로 캐시 삭제
-    await this.invalidateEquipmentCache();
+    // 4. 캐시 무효화 (SSOT: CacheInvalidationHelper — 장비 상세/목록 + 폐기 요청 + 대시보드)
+    await this.cacheInvalidationHelper.invalidateAfterDisposal(equipmentId);
 
     this.logger.log(
       `폐기 요청 생성: equipmentId=${equipmentId}, requestId=${result.id}, requestedBy=${requestedBy}`
@@ -262,20 +265,20 @@ export class DisposalService extends VersionedBaseService {
           });
         }
 
-        // 장비 상태 원복
+        // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
         await tx
           .update(equipment)
           .set({
             status: ESVal.AVAILABLE,
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
+          } as Record<string, unknown>)
           .where(eq(equipment.id, equipmentId));
       }
     });
 
-    // 6. 캐시 무효화 (승인/반려 모두 — 폐기 요청 상태가 변경됨)
-    // 반려: 장비 상태 available로 원복, 승인: reviewStatus 변경 → 목록/상세 캐시 갱신 필요
-    await this.invalidateEquipmentCache();
+    // 6. 캐시 무효화 (SSOT: CacheInvalidationHelper — 장비 상세/목록 + 폐기 요청 + 대시보드)
+    await this.cacheInvalidationHelper.invalidateAfterDisposal(equipmentId);
 
     this.logger.log(
       `폐기 검토 완료: requestId=${request.id}, decision=${reviewDto.decision}, reviewedBy=${reviewedBy}`
@@ -374,13 +377,14 @@ export class DisposalService extends VersionedBaseService {
           });
         }
 
-        // 장비 상태를 'disposed'로 변경
+        // 장비 상태를 'disposed'로 변경 (version bump 필수 — 후속 CAS 업데이트 일관성)
         await tx
           .update(equipment)
           .set({
             status: ESVal.DISPOSED,
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
+          } as Record<string, unknown>)
           .where(eq(equipment.id, equipmentId));
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
@@ -411,19 +415,20 @@ export class DisposalService extends VersionedBaseService {
           });
         }
 
-        // 장비 상태 원복
+        // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
         await tx
           .update(equipment)
           .set({
             status: ESVal.AVAILABLE,
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
+          } as Record<string, unknown>)
           .where(eq(equipment.id, equipmentId));
       }
     });
 
-    // 3. 캐시 무효화 (장비 상태가 변경됨)
-    await this.invalidateEquipmentCache();
+    // 3. 캐시 무효화 (SSOT: CacheInvalidationHelper — 장비 상세/목록 + 폐기 요청 + 대시보드)
+    await this.cacheInvalidationHelper.invalidateAfterDisposal(equipmentId);
 
     this.logger.log(
       `폐기 최종 승인 완료: requestId=${request.id}, decision=${approveDto.decision}, approvedBy=${approvedBy}`
@@ -513,18 +518,19 @@ export class DisposalService extends VersionedBaseService {
       // 폐기 요청 삭제
       await tx.delete(disposalRequests).where(eq(disposalRequests.id, request.id));
 
-      // 장비 상태 원복 (available)
+      // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
       await tx
         .update(equipment)
         .set({
           status: ESVal.AVAILABLE,
+          version: sql`version + 1`,
           updatedAt: new Date(),
-        })
+        } as Record<string, unknown>)
         .where(eq(equipment.id, equipmentId));
     });
 
-    // 4. 캐시 무효화 (장비 상태가 변경됨)
-    await this.invalidateEquipmentCache();
+    // 4. 캐시 무효화 (SSOT: CacheInvalidationHelper — 장비 상세/목록 + 폐기 요청 + 대시보드)
+    await this.cacheInvalidationHelper.invalidateAfterDisposal(equipmentId);
 
     this.logger.log(
       `폐기 요청 취소: requestId=${request.id}, equipmentId=${equipmentId}, userId=${userId}`
@@ -692,15 +698,5 @@ export class DisposalService extends VersionedBaseService {
     }
 
     return { site: item.site, teamId: item.teamId };
-  }
-
-  private async invalidateEquipmentCache(): Promise<void> {
-    try {
-      await this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-      this.logger.log('장비 캐시 무효화 완료');
-    } catch (error) {
-      this.logger.error('장비 캐시 무효화 실패:', error);
-      // 캐시 무효화 실패는 치명적이지 않으므로 계속 진행
-    }
   }
 }
