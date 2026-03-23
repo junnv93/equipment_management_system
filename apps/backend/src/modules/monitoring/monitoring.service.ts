@@ -6,6 +6,15 @@ import { MetricsService } from '../../common/metrics/metrics.service';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
 
+// 추적할 엔드포인트 최대 수 (메모리 누수 방지)
+const MAX_TRACKED_ENDPOINTS = 500;
+
+// UUID 패턴 (경로 정규화용)
+const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
+// 숫자 ID 패턴 (경로 정규화용)
+const NUMERIC_ID_PATTERN = /\/\d+(?=\/|$)/g;
+
 @Injectable()
 export class MonitoringService {
   // 시스템 시작 시간
@@ -138,18 +147,24 @@ export class MonitoringService {
       this.httpStats.errorRequests++;
     }
 
+    // 경로 정규화 (UUID, 숫자 ID → :id 플레이스홀더)
+    const normalizedEndpoint = this.normalizeEndpointPath(endpoint);
+
     // 엔드포인트별 요청 수 기록
-    const currentCount = this.httpStats.requestsByEndpoint.get(endpoint) || 0;
-    this.httpStats.requestsByEndpoint.set(endpoint, currentCount + 1);
+    const currentCount = this.httpStats.requestsByEndpoint.get(normalizedEndpoint) || 0;
+    this.httpStats.requestsByEndpoint.set(normalizedEndpoint, currentCount + 1);
 
     // 엔드포인트별 응답 시간 기록
-    const responseTimes = this.httpStats.responseTimeByEndpoint.get(endpoint) || [];
+    const responseTimes = this.httpStats.responseTimeByEndpoint.get(normalizedEndpoint) || [];
     responseTimes.push(responseTime);
     // 최대 100개까지만 보관 (메모리 사용량 제한)
     if (responseTimes.length > 100) {
       responseTimes.shift();
     }
-    this.httpStats.responseTimeByEndpoint.set(endpoint, responseTimes);
+    this.httpStats.responseTimeByEndpoint.set(normalizedEndpoint, responseTimes);
+
+    // Map 크기 제한 적용
+    this.enforceEndpointMapLimit();
 
     // Prometheus 메트릭 기록
     this.metricsService.incrementHttpRequestTotal('ALL', endpoint, statusCode.toString());
@@ -475,6 +490,38 @@ export class MonitoringService {
         throughput: 0,
       },
     };
+  }
+
+  /**
+   * 엔드포인트 경로 정규화 (UUID, 숫자 ID → :id)
+   * 동적 경로 세그먼트를 플레이스홀더로 치환하여 Map 키 폭발 방지
+   */
+  private normalizeEndpointPath(path: string): string {
+    return path.replace(UUID_PATTERN, ':id').replace(NUMERIC_ID_PATTERN, '/:id');
+  }
+
+  /**
+   * Map 크기 제한 — 초과 시 요청 수가 가장 적은 엔트리 제거
+   */
+  private enforceEndpointMapLimit(): void {
+    if (this.httpStats.requestsByEndpoint.size <= MAX_TRACKED_ENDPOINTS) {
+      return;
+    }
+
+    // 요청 수가 가장 적은 엔트리 찾기
+    let minKey: string | null = null;
+    let minCount = Infinity;
+    for (const [key, count] of this.httpStats.requestsByEndpoint) {
+      if (count < minCount) {
+        minCount = count;
+        minKey = key;
+      }
+    }
+
+    if (minKey !== null) {
+      this.httpStats.requestsByEndpoint.delete(minKey);
+      this.httpStats.responseTimeByEndpoint.delete(minKey);
+    }
   }
 
   /**
