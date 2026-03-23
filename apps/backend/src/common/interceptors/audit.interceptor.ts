@@ -225,6 +225,9 @@ export class AuditInterceptor implements NestInterceptor {
     } else if (source === 'query') {
       value = request.query;
       parts.shift();
+    } else if (source === 'user') {
+      value = request.user;
+      parts.shift();
     } else if (source === 'response') {
       value = response;
       parts.shift();
@@ -269,11 +272,11 @@ export class AuditInterceptor implements NestInterceptor {
     const sensitiveFields = [
       'password',
       'token',
-      'accessToken',
-      'refreshToken',
+      'accesstoken',
+      'refreshtoken',
       'secret',
-      'apiKey',
-      'privateKey',
+      'apikey',
+      'privatekey',
     ];
 
     const sanitized: Record<string, unknown> = {};
