@@ -147,7 +147,7 @@ function DashboardClientComponent({
       {controlCenter.showAlertBanner && (
         <div className="mt-6 motion-safe:animate-slide-left" style={{ animationDelay: '80ms' }}>
           <AlertBanner
-            overdueCalibrationCount={overdueCalibrations.length}
+            overdueCalibrationCount={equipmentStatusStats.calibration_overdue ?? 0}
             overdueCheckoutCount={overdueCheckouts.length}
             nonConformingCount={equipmentStatusStats.non_conforming ?? 0}
             scope={scope}

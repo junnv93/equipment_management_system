@@ -472,7 +472,7 @@ export class CalibrationService extends VersionedBaseService {
     const today = getUtcStartOfDay();
     const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, 30));
 
-    // 공통 기본 조건
+    // 공통 기본 조건: 교정 대상 장비 (retired/disposed 제외)
     const baseConditions: SQL<unknown>[] = [
       eq(schema.equipment.isActive, true),
       eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
@@ -480,38 +480,22 @@ export class CalibrationService extends VersionedBaseService {
     if (teamId) baseConditions.push(eq(schema.equipment.teamId, teamId));
     if (site) baseConditions.push(eq(schema.equipment.site, site));
 
-    const [totalResult] = await this.db
-      .select({ count: count() })
+    // ✅ SSOT: 단일 FILTER 집계 쿼리 (3쿼리 → 1쿼리)
+    // overdueCount는 equipment.status 기반 — 장비 목록(status=calibration_overdue) 필터 결과와 일치
+    // (next_calibration_date 기반이면 스케줄러가 non_conforming으로 전환한 장비도 포함되어 불일치)
+    const [result] = await this.db
+      .select({
+        total: count(),
+        overdueCount: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = ${ESVal.CALIBRATION_OVERDUE}) as integer)`,
+        dueInMonthCount: sql<number>`cast(count(*) filter (where ${schema.equipment.nextCalibrationDate} is not null and ${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater.toISOString()}::timestamp) as integer)`,
+      })
       .from(schema.equipment)
       .where(and(...baseConditions));
 
-    const [overdueResult] = await this.db
-      .select({ count: count() })
-      .from(schema.equipment)
-      .where(
-        and(
-          ...baseConditions,
-          sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
-          sql`${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`
-        )
-      );
-
-    const [upcomingResult] = await this.db
-      .select({ count: count() })
-      .from(schema.equipment)
-      .where(
-        and(
-          ...baseConditions,
-          sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
-          sql`${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp`,
-          sql`${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater.toISOString()}::timestamp`
-        )
-      );
-
     return {
-      total: totalResult?.count || 0,
-      overdueCount: overdueResult?.count || 0,
-      dueInMonthCount: upcomingResult?.count || 0,
+      total: result?.total || 0,
+      overdueCount: result?.overdueCount || 0,
+      dueInMonthCount: result?.dueInMonthCount || 0,
     };
   }
 
@@ -669,6 +653,7 @@ export class CalibrationService extends VersionedBaseService {
       approvalStatus,
       teamId,
       site,
+      calibrationDueStatus,
     } = query;
 
     // ========== 1. Build WHERE conditions ==========
@@ -741,6 +726,30 @@ export class CalibrationService extends VersionedBaseService {
     }
     if (site) {
       whereConditions.push(eq(schema.equipment.site, site));
+    }
+    if (calibrationDueStatus) {
+      const today = getUtcStartOfDay();
+      const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, 30));
+      switch (calibrationDueStatus) {
+        case 'overdue':
+          whereConditions.push(
+            sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
+            sql`${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`
+          );
+          break;
+        case 'upcoming':
+          whereConditions.push(
+            sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
+            sql`${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp`,
+            sql`${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater.toISOString()}::timestamp`
+          );
+          break;
+        case 'normal':
+          whereConditions.push(
+            sql`(${schema.equipment.nextCalibrationDate} IS NULL OR ${schema.equipment.nextCalibrationDate} > ${thirtyDaysLater.toISOString()}::timestamp)`
+          );
+          break;
+      }
     }
 
     // ========== 2. Count total items ==========

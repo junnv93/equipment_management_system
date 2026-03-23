@@ -21,6 +21,26 @@
 import type { Site } from '@equipment-management/schemas';
 
 /**
+ * 교정 기한 상태 (날짜 기반 가상 상태)
+ *
+ * equipment.status 컬럼이 아닌 equipment.nextCalibrationDate 기반:
+ * - overdue: nextCalibrationDate < today (교정 기한 초과)
+ * - upcoming: today ≤ nextCalibrationDate ≤ today+30일 (교정 예정)
+ * - normal: nextCalibrationDate > today+30일 또는 null (정상)
+ *
+ * 이유: CalibrationOverdueScheduler가 calibration_overdue → non_conforming으로
+ * 자동 전환하므로 equipment.status로는 교정 기한 초과 장비를 식별할 수 없음.
+ */
+export const CALIBRATION_DUE_STATUS_VALUES = ['overdue', 'upcoming', 'normal'] as const;
+export type CalibrationDueStatus = (typeof CALIBRATION_DUE_STATUS_VALUES)[number];
+
+export const CALIBRATION_DUE_STATUS_LABELS: Record<CalibrationDueStatus, string> = {
+  overdue: '교정 기한 초과',
+  upcoming: '교정 예정',
+  normal: '정상',
+};
+
+/**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
  */
 export interface UICalibrationFilters {
@@ -29,6 +49,7 @@ export interface UICalibrationFilters {
   teamId: string; // 팀 ID ('' = 전체)
   approvalStatus: string; // 승인 상태 ('' = 전체)
   result: string; // 교정 결과 ('' = 전체)
+  calibrationDueStatus: CalibrationDueStatus | ''; // 교정 기한 상태 ('' = 전체)
   startDate: string; // 시작일 ('' = 전체)
   endDate: string; // 종료일 ('' = 전체)
   tab: 'list' | 'intermediate' | 'self-inspection'; // 활성 탭 (URL 기반 상태)
@@ -43,6 +64,7 @@ export interface ApiCalibrationFilters {
   teamId?: string;
   approvalStatus?: string;
   result?: string;
+  calibrationDueStatus?: CalibrationDueStatus;
   startDate?: string;
   endDate?: string;
   page?: number;
@@ -58,6 +80,7 @@ export const DEFAULT_UI_FILTERS: UICalibrationFilters = {
   teamId: '',
   approvalStatus: '',
   result: '',
+  calibrationDueStatus: '',
   startDate: '',
   endDate: '',
   tab: 'list',
@@ -102,6 +125,13 @@ export function parseCalibrationFiltersFromSearchParams(
 
   const resultRaw = get('result') || DEFAULT_UI_FILTERS.result;
   const result = resultRaw === '_all' ? '' : resultRaw;
+
+  const calibrationDueStatusRaw =
+    get('calibrationDueStatus') || DEFAULT_UI_FILTERS.calibrationDueStatus;
+  const calibrationDueStatus = (
+    calibrationDueStatusRaw === '_all' ? '' : calibrationDueStatusRaw
+  ) as CalibrationDueStatus | '';
+
   const startDate = get('startDate') || DEFAULT_UI_FILTERS.startDate;
   const endDate = get('endDate') || DEFAULT_UI_FILTERS.endDate;
 
@@ -118,6 +148,7 @@ export function parseCalibrationFiltersFromSearchParams(
     teamId,
     approvalStatus,
     result,
+    calibrationDueStatus,
     startDate,
     endDate,
     tab,
@@ -137,6 +168,7 @@ export function convertFiltersToApiParams(filters: UICalibrationFilters): ApiCal
     teamId: filters.teamId || undefined,
     approvalStatus: filters.approvalStatus || undefined,
     result: filters.result || undefined,
+    calibrationDueStatus: filters.calibrationDueStatus || undefined,
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
     pageSize: 50, // 교정 기록은 많지 않으므로 한 번에 로드
@@ -156,6 +188,7 @@ export function countActiveFilters(filters: UICalibrationFilters): number {
   if (filters.teamId) count++;
   if (filters.approvalStatus) count++;
   if (filters.result) count++;
+  if (filters.calibrationDueStatus) count++;
   if (filters.startDate) count++;
   if (filters.endDate) count++;
   return count;

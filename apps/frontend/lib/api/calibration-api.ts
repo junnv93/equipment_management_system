@@ -65,6 +65,7 @@ export interface CalibrationQuery {
   startDate?: string;
   endDate?: string;
   result?: string;
+  calibrationDueStatus?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   page?: number;

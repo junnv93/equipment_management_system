@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, CheckSquare, ClipboardCheck, X } from 'lucide-react';
+import { Plus, Search, Filter, CheckSquare, ClipboardCheck, CircleDot, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,9 +51,13 @@ import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils'
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
-import { SITE_LABELS, type UserRole } from '@equipment-management/schemas';
+import { SITE_LABELS, EquipmentStatusValues, type UserRole } from '@equipment-management/schemas';
+import {
+  CALIBRATION_DUE_STATUS_VALUES,
+  CALIBRATION_DUE_STATUS_LABELS,
+} from '@/lib/utils/calibration-filter-utils';
 import { useSession } from 'next-auth/react';
-import { hasPermission, Permission } from '@equipment-management/shared-constants';
+import { hasPermission, Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
 import CalibrationTimeline, {
   type CalibrationTimelineItem,
@@ -95,6 +99,7 @@ export default function CalibrationContent({
     updateTab,
     updateApprovalStatus,
     updateResult,
+    updateCalibrationDueStatus,
     clearFilters,
   } = useCalibrationFilters(initialFilters);
 
@@ -109,6 +114,11 @@ export default function CalibrationContent({
   const teamSelect = useFilterSelect(filters.teamId, updateTeamId, 'all');
   const approvalSelect = useFilterSelect(filters.approvalStatus, updateApprovalStatus, 'all');
   const resultSelect = useFilterSelect(filters.result, updateResult, 'all');
+  const calibrationDueStatusSelect = useFilterSelect(
+    filters.calibrationDueStatus,
+    updateCalibrationDueStatus,
+    'all'
+  );
   const { data: session } = useSession();
   const canCreateCalibration = session?.user?.role
     ? hasPermission(session.user.role as UserRole, Permission.CREATE_CALIBRATION)
@@ -149,15 +159,24 @@ export default function CalibrationContent({
     ...QUERY_CONFIG.CALIBRATION_SUMMARY,
   });
 
+  const historyQueryParams = useMemo(() => {
+    const params: Record<string, string | undefined> = {
+      teamId: defaultTeamId,
+      site: defaultSite,
+      calibrationDueStatus: filters.calibrationDueStatus || undefined,
+    };
+    // undefined 값 제거 (queryKey 안정성)
+    return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined));
+  }, [defaultTeamId, defaultSite, filters.calibrationDueStatus]);
+
   const { data: calibrationHistoryData, isLoading: isHistoryLoading } = useQuery({
     queryKey: queryKeys.calibrations.historyList(
-      defaultTeamId || defaultSite ? { teamId: defaultTeamId, site: defaultSite } : undefined
+      Object.keys(historyQueryParams).length > 0 ? historyQueryParams : undefined
     ),
     queryFn: () =>
       calibrationApi.getCalibrationHistory({
         pageSize: SELECTOR_PAGE_SIZE,
-        teamId: defaultTeamId,
-        site: defaultSite,
+        ...historyQueryParams,
       }),
     ...QUERY_CONFIG.CALIBRATION_LIST,
   });
@@ -277,8 +296,16 @@ export default function CalibrationContent({
       <CalibrationAlertBanners
         overdue={stats.overdue}
         upcoming={stats.upcoming}
-        onOverdueAction={() => router.push('/equipment?status=calibration_overdue')}
-        onUpcomingAction={() => router.push('/equipment?status=calibration_scheduled')}
+        onOverdueAction={() =>
+          router.push(
+            `${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=${EquipmentStatusValues.CALIBRATION_OVERDUE}`
+          )
+        }
+        onUpcomingAction={() =>
+          router.push(
+            `${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=${EquipmentStatusValues.CALIBRATION_SCHEDULED}`
+          )
+        }
       />
 
       {/* 통계 카드 */}
@@ -394,6 +421,27 @@ export default function CalibrationContent({
           </SelectContent>
         </Select>
 
+        {/* 교정 기한 상태 필터 */}
+        <Select {...calibrationDueStatusSelect}>
+          <SelectTrigger
+            className="h-8 w-[130px] text-xs"
+            aria-label={t('content.filters.calibrationDueStatusLabel')}
+          >
+            <div className="flex items-center gap-1.5">
+              <CircleDot className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <SelectValue placeholder={t('content.filters.calibrationDueStatusLabel')} />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('content.filters.calibrationDueStatusAll')}</SelectItem>
+            {CALIBRATION_DUE_STATUS_VALUES.map((status) => (
+              <SelectItem key={status} value={status}>
+                {CALIBRATION_DUE_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {/* 활성 필터 태그 */}
         {countActiveFilters(filters) > 0 && (
           <>
@@ -441,6 +489,16 @@ export default function CalibrationContent({
                 onClick={() => updateResult('')}
               >
                 {t(`content.filters.resultOptions.${filters.result}` as Parameters<typeof t>[0])}
+                <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
+              </button>
+            )}
+            {filters.calibrationDueStatus && (
+              <button
+                type="button"
+                className={CALIBRATION_FILTER_BAR.tag}
+                onClick={() => updateCalibrationDueStatus('')}
+              >
+                {CALIBRATION_DUE_STATUS_LABELS[filters.calibrationDueStatus]}
                 <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
               </button>
             )}

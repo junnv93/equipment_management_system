@@ -110,10 +110,10 @@
 - **설명**: Next.js App Router 클라이언트 라우팅 중 `useSearchParams()`가 일시적으로 이전 페이지(대시보드)의 빈 params를 반영 → `filters.teamId = ''` → Select의 `value`가 `_all`로 변경 → `onValueChange` 발생 → `updateURL({ teamId: '' })` → `teamId=_all` 설정 → 서버 리다이렉트가 `_all`을 "명시적 전체 선택"으로 인식하여 보정하지 않음. 두 계층 수정으로 해결: (1) `updateURL`에서 teamId "명시적 변경 vs 보존" 분기, (2) Select `onValueChange`에 중복 값 가드.
 - **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 7 "프론트엔드 상태 아키텍처"에 "URL-driven 필터와 Radix Select의 클라이언트 네비게이션 호환성" 항목으로 승격
 
-### [2026-03-22] 대시보드 카운트 vs 장비 목록 불일치 — retired/disposed 제외 누락
-- **발견 빈도**: 1회 (dashboard: getSummary, getEquipmentByTeam, getEquipmentStatusStats)
-- **설명**: 대시보드 카운트 쿼리가 모든 상태의 장비를 포함하지만, 장비 목록은 `showRetired=false`(기본값)로 retired/disposed를 숨김. 또한 "반출 중" 카운트가 `count(distinct checkouts.id)` (반출 건수)를 사용하여 장비 목록의 `status=checked_out` 장비 건수와 불일치. `DASHBOARD_EXCLUDED_STATUSES` SSOT 상수로 해결.
-- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 1 "계층 관통 추적"에 "카운트 쿼리↔목록 쿼리 필터 일치 검증" 항목으로 승격
+### [2026-03-22] 대시보드 카운트 vs 장비 목록 불일치 — 데이터 소스 불일치
+- **발견 빈도**: 2회 (1차: activeCheckouts checkout 테이블 기반, 2차: overdueCalibrationCount 교정 테이블 기반)
+- **설명**: 대시보드 KPI/AlertBanner 카운트가 다른 테이블(checkouts, calibrations)에서 집계되지만, 클릭 후 장비 목록은 `equipment.status` 기반 필터링. 카운트 소스와 목록 필터가 다른 테이블을 참조하여 불일치 발생. `equipmentStatusStats` (equipment.status GROUP BY)를 SSOT로 통일하여 해결.
+- **체크리스트 반영**: ✅ 2회 발견 → review-checklist.md 섹션 1 "계층 관통 추적"에 "카운트 쿼리↔목록 쿼리 필터 일치 검증" 항목으로 승격
 
 ### [2026-03-22] Pending 승인 목록 엔드포인트의 @SiteScoped 누락
 - **발견 빈도**: 1회 (calibration, software 2개 모듈 동시)

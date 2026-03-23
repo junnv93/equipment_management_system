@@ -9,6 +9,20 @@ import {
   optionalUuid,
 } from '@equipment-management/schemas';
 
+/**
+ * 교정 기한 상태 (날짜 기반 가상 상태)
+ *
+ * equipment.status 컬럼이 아닌 equipment.nextCalibrationDate 기반:
+ * - overdue: nextCalibrationDate < today (교정 기한 초과)
+ * - upcoming: today ≤ nextCalibrationDate ≤ today+30일 (교정 예정)
+ * - normal: nextCalibrationDate > today+30일 또는 null (정상)
+ *
+ * 이유: CalibrationOverdueScheduler가 calibration_overdue → non_conforming으로
+ * 자동 전환하므로 equipment.status로는 교정 기한 초과 장비를 식별할 수 없음.
+ */
+export const CalibrationDueStatusEnum = z.enum(['overdue', 'upcoming', 'normal']);
+export type CalibrationDueStatus = z.infer<typeof CalibrationDueStatusEnum>;
+
 // ========== Zod 스키마 정의 ==========
 
 /**
@@ -29,6 +43,7 @@ export const calibrationQuerySchema = z.object({
   approvalStatus: CalibrationApprovalStatusEnum.optional(),
   teamId: optionalUuid(),
   site: SiteEnum.optional(),
+  calibrationDueStatus: CalibrationDueStatusEnum.optional(),
   sort: z.string().default('calibrationDate.desc'),
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional().default(DEFAULT_PAGE_SIZE),
@@ -127,6 +142,13 @@ export class CalibrationQueryDto {
     example: 'suwon',
   })
   site?: Site;
+
+  @ApiPropertyOptional({
+    description: '교정 기한 상태 필터 (날짜 기반: overdue/upcoming/normal)',
+    enum: CalibrationDueStatusEnum.options,
+    example: 'overdue',
+  })
+  calibrationDueStatus?: CalibrationDueStatus;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',

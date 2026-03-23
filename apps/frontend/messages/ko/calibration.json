@@ -244,7 +244,9 @@
         "pass": "합격",
         "fail": "불합격",
         "conditional": "조건부 합격"
-      }
+      },
+      "calibrationDueStatusLabel": "교정 상태",
+      "calibrationDueStatusAll": "전체"
     },
     "tabs": {
       "all": "전체",

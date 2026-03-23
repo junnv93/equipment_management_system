@@ -25,6 +25,7 @@ import {
   DEFAULT_UI_FILTERS,
 } from '@/lib/utils/calibration-filter-utils';
 import type { Site } from '@equipment-management/schemas';
+import type { CalibrationDueStatus } from '@/lib/utils/calibration-filter-utils';
 
 /**
  * 교정 필터 관리 훅
@@ -103,6 +104,13 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
       params.set('result', newFilters.result);
     }
 
+    // ✅ calibrationDueStatus: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+    if ('calibrationDueStatus' in updates) {
+      params.set('calibrationDueStatus', newFilters.calibrationDueStatus || '_all');
+    } else if (newFilters.calibrationDueStatus) {
+      params.set('calibrationDueStatus', newFilters.calibrationDueStatus);
+    }
+
     // 날짜 필터 (값이 있을 때만)
     if (newFilters.startDate && newFilters.startDate !== DEFAULT_UI_FILTERS.startDate) {
       params.set('startDate', newFilters.startDate);
@@ -158,6 +166,13 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
   };
 
   /**
+   * 교정 기한 상태 필터 업데이트 헬퍼
+   */
+  const updateCalibrationDueStatus = (calibrationDueStatus: CalibrationDueStatus | '') => {
+    updateFilters({ calibrationDueStatus });
+  };
+
+  /**
    * 활성 탭 업데이트 헬퍼
    */
   const updateTab = (tab: UICalibrationFilters['tab']) => {
@@ -197,6 +212,8 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
     updateApprovalStatus,
     /** 교정 결과 필터 업데이트 */
     updateResult,
+    /** 교정 기한 상태 필터 업데이트 */
+    updateCalibrationDueStatus,
     /** 활성 탭 업데이트 */
     updateTab,
     /** 날짜 범위 필터 업데이트 */
