@@ -32,7 +32,11 @@ import {
   IntermediateCheckFilterStatusValues,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
-import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  CALIBRATION_THRESHOLDS,
+  DEFAULT_PAGE_SIZE,
+} from '@equipment-management/shared-constants';
 import {
   getUtcStartOfDay,
   getUtcEndOfDay,
@@ -470,7 +474,7 @@ export class CalibrationService extends VersionedBaseService {
     site?: string
   ): Promise<{ total: number; overdueCount: number; dueInMonthCount: number }> {
     const today = getUtcStartOfDay();
-    const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, 30));
+    const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, CALIBRATION_THRESHOLDS.WARNING_DAYS));
 
     // 공통 기본 조건: 교정 대상 장비 (retired/disposed 제외)
     const baseConditions: SQL<unknown>[] = [
@@ -566,7 +570,7 @@ export class CalibrationService extends VersionedBaseService {
    * GET /api/calibration/upcoming?days=N
    */
   async getUpcomingCalibrations(
-    days: number = 30,
+    days: number = CALIBRATION_THRESHOLDS.WARNING_DAYS,
     teamId?: string,
     site?: string
   ): Promise<
@@ -729,7 +733,9 @@ export class CalibrationService extends VersionedBaseService {
     }
     if (calibrationDueStatus) {
       const today = getUtcStartOfDay();
-      const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, 30));
+      const thirtyDaysLater = getUtcEndOfDay(
+        addDaysUtc(today, CALIBRATION_THRESHOLDS.WARNING_DAYS)
+      );
       switch (calibrationDueStatus) {
         case 'overdue':
           whereConditions.push(
@@ -1334,7 +1340,9 @@ export class CalibrationService extends VersionedBaseService {
    *
    * ✅ DB 쿼리 사용 (기존 인메모리 필터 → DB 조회로 수정)
    */
-  async findUpcomingIntermediateChecks(days: number = 7): Promise<CalibrationRecord[]> {
+  async findUpcomingIntermediateChecks(
+    days: number = CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS
+  ): Promise<CalibrationRecord[]> {
     const today = getUtcStartOfDay();
     const futureDate = getUtcEndOfDay(addDaysUtc(today, days));
 

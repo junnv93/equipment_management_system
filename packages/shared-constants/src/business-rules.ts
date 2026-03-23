@@ -36,6 +36,19 @@ export const MONITORING_THRESHOLDS = {
 export const NOTIFICATION_RETENTION_DAYS = 90;
 
 /**
+ * 교정 관리 임계값 — Backend/Frontend SSOT
+ *
+ * 교정 예정 경고 일수, 중간점검 임계값 등
+ * 프론트엔드 design-tokens와 백엔드 서비스 양쪽에서 참조
+ */
+export const CALIBRATION_THRESHOLDS = {
+  /** 교정 예정 경고 임계값 (일) — 이 값 이내면 '교정 예정' 상태 */
+  WARNING_DAYS: 30,
+  /** 중간점검 upcoming 임계값 (일) — 이 값 이내면 upcoming 상태 */
+  INTERMEDIATE_CHECK_UPCOMING_DAYS: 7,
+} as const;
+
+/**
  * 스케줄러/배치 조회 제한
  */
 export const BATCH_QUERY_LIMITS = {

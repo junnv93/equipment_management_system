@@ -139,6 +139,7 @@ export {
   BATCH_QUERY_LIMITS,
   UTILIZATION_THRESHOLDS,
   REPORT_UTILIZATION_THRESHOLDS,
+  CALIBRATION_THRESHOLDS,
 } from './business-rules';
 
 // 보안 상수 (로그인 제한, 잠금 정책)

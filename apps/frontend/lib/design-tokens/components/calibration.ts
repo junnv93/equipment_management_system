@@ -23,6 +23,7 @@ import { type StatsVariant } from './dashboard';
 import { AlertCircle, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type React from 'react';
+import { CALIBRATION_THRESHOLDS as SHARED_CALIBRATION_THRESHOLDS } from '@equipment-management/shared-constants';
 
 // ============================================================================
 // 0. CALIBRATION_THRESHOLDS — D-day 임계값 SSOT
@@ -31,14 +32,14 @@ import type React from 'react';
 /**
  * 교정/중간점검 D-day 임계값 (일수)
  *
- * 이 상수들은 getCalibrationDdayClasses, resolveUrgency, getStatusStyle 등
- * 여러 컴포넌트에서 참조하는 SSOT입니다. 정책 변경 시 여기만 수정하세요.
+ * SSOT: @equipment-management/shared-constants의 CALIBRATION_THRESHOLDS에서 위임.
+ * 프론트엔드 기존 코드 호환을 위해 CALIBRATION_WARNING_DAYS 키 유지.
  */
 export const CALIBRATION_THRESHOLDS = {
   /** 교정 D-day warning 임계값 (일) — 이 값 이하면 warning 상태 */
-  CALIBRATION_WARNING_DAYS: 30,
+  CALIBRATION_WARNING_DAYS: SHARED_CALIBRATION_THRESHOLDS.WARNING_DAYS,
   /** 중간점검 upcoming 임계값 (일) — 이 값 이하면 upcoming 상태 */
-  INTERMEDIATE_CHECK_UPCOMING_DAYS: 7,
+  INTERMEDIATE_CHECK_UPCOMING_DAYS: SHARED_CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS,
 } as const;
 
 // ============================================================================

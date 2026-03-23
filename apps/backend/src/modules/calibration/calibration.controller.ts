@@ -45,7 +45,11 @@ import {
   RejectCalibrationValidationPipe,
 } from './dto/approve-calibration.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared-constants';
+import {
+  CALIBRATION_THRESHOLDS,
+  Permission,
+  CALIBRATION_DATA_SCOPE,
+} from '@equipment-management/shared-constants';
 import {
   SiteEnum,
   IntermediateCheckStatusEnum,
@@ -162,7 +166,12 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findUpcomingIntermediateChecks(
-    @Query('days', new DefaultValuePipe(7), ParseIntPipe) days: number
+    @Query(
+      'days',
+      new DefaultValuePipe(CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS),
+      ParseIntPipe
+    )
+    days: number
   ): Promise<CalibrationRecord[]> {
     return this.calibrationService.findUpcomingIntermediateChecks(days);
   }
@@ -269,7 +278,8 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findDueCalibrations(
-    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number
+    @Query('days', new DefaultValuePipe(CALIBRATION_THRESHOLDS.WARNING_DAYS), ParseIntPipe)
+    days: number
   ): Promise<{
     items: CalibrationRecord[];
     meta: {
@@ -401,7 +411,8 @@ export class CalibrationController {
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   getUpcomingCalibrations(
-    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
+    @Query('days', new DefaultValuePipe(CALIBRATION_THRESHOLDS.WARNING_DAYS), ParseIntPipe)
+    days: number,
     @Query('teamId') teamId?: string,
     @Query('site') site?: string
   ): Promise<
