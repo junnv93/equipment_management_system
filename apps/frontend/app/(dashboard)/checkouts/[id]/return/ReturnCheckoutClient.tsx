@@ -53,8 +53,9 @@ export default function ReturnCheckoutClient({
   // 반입 처리 mutation (cross-page invalidation: 반입 승인 대기 목록 등)
   const returnMutation = useMutation({
     mutationFn: (data: ReturnCheckoutDto) => checkoutApi.returnCheckout(checkout.id, data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({ title: t('toasts.returnSuccess') });
+      await CheckoutCacheInvalidation.invalidateAfterReturn(queryClient);
       router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
     },
     onError: (error: unknown) => {
@@ -67,9 +68,6 @@ export default function ReturnCheckoutClient({
       } else {
         toast({ title: t('toasts.returnError'), variant: 'destructive' });
       }
-    },
-    onSettled: () => {
-      CheckoutCacheInvalidation.invalidateAfterReturn(queryClient);
     },
   });
 
