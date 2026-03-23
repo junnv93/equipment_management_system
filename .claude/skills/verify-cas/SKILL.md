@@ -57,14 +57,14 @@ argument-hint: '[선택사항: 특정 모듈명]'
 grep -rn "extends VersionedBaseService" apps/backend/src/modules --include="*.service.ts"
 ```
 
-**기대값:** checkouts, calibration, non-conformances, equipment-imports, disposal, software, equipment, calibration-factors (8개)
+**기대값:** checkouts, calibration, non-conformances, equipment-imports, disposal, software, equipment, calibration-factors, calibration-plans (9개)
 
 ```bash
 # 자체 CAS 구현 서비스
 grep -rn "updateWithVersion\|updatePlanWithCAS\|casVersion" apps/backend/src/modules --include="*.service.ts" | grep -v "extends VersionedBaseService" | grep "class\|updateWithVersion\|updatePlanWithCAS"
 ```
 
-**기대값:** calibration-plans (casVersion)
+**기대값:** calibration-plans (VersionedBaseService 상속 + casVersion 필드 병용)
 
 ### Step 2: 상태 변경 DTO에 version 필드 포함 여부
 
@@ -139,17 +139,26 @@ await this.db.transaction(async (tx) => {
 });
 ```
 
-### Step 6: 시스템 내부 version bump 검증
+### Step 6: equipment 테이블 직접 업데이트 시 version bump 검증
 
-스케줄러, 이력 서비스 등 시스템 내부에서 장비 상태를 변경할 때도 `version: sql\`version + 1\``을 포함하는지 확인합니다.
-사용자 요청이 아닌 시스템 자동 처리이므로 CAS WHERE 절(`AND version = ?`)은 불필요하지만, version 필드 증가는 필수입니다.
+`updateWithVersion()`을 거치지 않고 `equipment` 테이블을 직접 `.update()` 하는 모든 서비스에서 `version: sql\`version + 1\``을 포함하는지 확인합니다.
+CAS WHERE 절(`AND version = ?`)은 시스템 내부 작업에서 불필요하지만, version 필드 증가는 필수입니다.
 
 ```bash
-# 시스템 내부 equipment status 변경 시 version bump 포함 여부 확인
-grep -rn "status.*non_conforming\|status.*EquipmentStatusEnum" apps/backend/src/modules/equipment/services/equipment-history.service.ts apps/backend/src/modules/notifications/schedulers/calibration-overdue-scheduler.ts -A 3 | grep -E "version|sql"
+# 모든 서비스에서 equipment 테이블 직접 업데이트 + version bump 포함 여부 확인
+# updateWithVersion을 사용하지 않는 직접 .update(equipment) 호출을 탐지
+grep -rn "\.update(equipment)" apps/backend/src/modules --include="*.service.ts" --include="*.scheduler.ts" -A 5 | grep -v "updateWithVersion"
 ```
 
-**PASS 기준:** 장비 상태 변경 `.set({...})` 블록에 `version: sql\`version + 1\``이 포함되어야 함.
+탐지된 각 `.set({...})` 블록에서 `version: sql\`version + 1\``이 포함되어 있는지 확인합니다.
+
+```bash
+# version bump 없는 equipment 상태 변경 탐지 (위반 패턴)
+# .update(equipment).set({...}) 블록에서 version 필드가 없는 경우
+grep -rn "\.update(equipment)" apps/backend/src/modules --include="*.service.ts" --include="*.scheduler.ts" -A 8 | grep -B 8 "\.where" | grep -v "version.*sql\|updateWithVersion"
+```
+
+**PASS 기준:** `equipment` 테이블을 직접 `.update()` 하는 모든 `.set({...})` 블록에 `version: sql\`version + 1\``이 포함되어야 함.
 
 **FAIL 기준:** `version` 증가 없이 상태만 변경 → 후속 사용자 CAS 업데이트 시 stale version으로 인한 영구 409 발생.
 
@@ -174,18 +183,23 @@ await tx
   .where(eq(equipment.id, equipmentUuid));
 ```
 
-### Step 7: 시스템 내부 상태 변경 후 캐시 무효화
+### Step 7: equipment 직접 업데이트 후 캐시 무효화
 
-시스템 내부(스케줄러, 이력 서비스)에서 장비 상태를 변경한 후 `CacheInvalidationHelper`로 캐시를 무효화하는지 확인합니다.
+`equipment` 테이블을 직접 `.update()` 하는 모든 서비스에서 `CacheInvalidationHelper`로 캐시를 무효화하는지 확인합니다.
 
 ```bash
-# equipment-history.service.ts와 calibration-overdue-scheduler.ts에서 캐시 무효화 확인
-grep -rn "invalidateAfterEquipmentUpdate\|cacheInvalidationHelper" apps/backend/src/modules/equipment/services/equipment-history.service.ts apps/backend/src/modules/notifications/schedulers/calibration-overdue-scheduler.ts
+# equipment 직접 업데이트하는 서비스에서 CacheInvalidationHelper 사용 확인
+grep -rn "\.update(equipment)" apps/backend/src/modules --include="*.service.ts" --include="*.scheduler.ts" -l | xargs grep -l "cacheInvalidationHelper\|CacheInvalidationHelper"
 ```
 
-**PASS 기준:** 장비 상태 변경 후 `cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentId, true, false)` 호출.
+```bash
+# equipment 직접 업데이트하지만 CacheInvalidationHelper를 import하지 않는 서비스 탐지 (위반)
+grep -rn "\.update(equipment)" apps/backend/src/modules --include="*.service.ts" --include="*.scheduler.ts" -l | xargs grep -L "CacheInvalidationHelper"
+```
 
-**FAIL 기준:** 상태 변경 후 캐시 무효화 없음 → 프론트엔드에서 stale 상태 표시.
+**PASS 기준:** `equipment` 테이블을 직접 업데이트하는 모든 서비스가 `CacheInvalidationHelper`를 주입하고, 상태 변경 후 `invalidateAfterEquipmentUpdate()` 또는 `invalidateAfterDisposal()` 등 적절한 메서드를 호출.
+
+**FAIL 기준:** `SimpleCacheService.deleteByPattern()`으로 직접 캐시 삭제 (SSOT 위반) 또는 캐시 무효화 누락.
 
 ### Step 8: 보상 트랜잭션 패턴 검증 (Compensating Transaction)
 
@@ -280,5 +294,5 @@ await this.equipmentService.update(currentEquipment.id, requestData);
 4. **CalibrationPlansService의 casVersion** — `version`이 아닌 `casVersion` 필드 사용은 의도적 설계 (plan revision과 CAS 버전 분리)
 5. **Create 작업** — 새 레코드 생성은 CAS 불필요 (기존 레코드 없음)
 6. **SettingsService** — 시스템 관리자 전용, 단일 사용자 동시 수정 시나리오 없음
-7. **시스템 내부 version bump** — `CalibrationOverdueScheduler`, `EquipmentHistoryService` 등에서 `version: sql\`version + 1\``을 CAS WHERE 절 없이 사용하는 것은 정상. 시스템 자동 처리이므로 사용자 경합이 없고, version 필드 증가만으로 후속 CAS 업데이트와의 일관성을 보장
+7. **크로스 테이블 version bump (CAS WHERE 없이)** — `CalibrationOverdueScheduler`, `EquipmentHistoryService`, `DisposalService`, `NonConformancesService`, `CalibrationService`, `EquipmentImportsService` 등에서 `equipment` 테이블을 직접 `.update()` 하면서 `version: sql\`version + 1\``을 CAS WHERE 절 없이 사용하는 것은 정상. 트랜잭션 내 시스템 자동 처리이므로 사용자 경합이 없고, version 필드 증가만으로 후속 CAS 업데이트와의 일관성을 보장. **단, version bump 자체는 필수** — 누락 시 위반
 8. **CacheInvalidationHelper가 없는 읽기 전용 서비스** — version bump만 하고 캐시 무효화를 하지 않는 서비스가 읽기 전용이면 정상 (예: 조회만 하는 헬퍼)
