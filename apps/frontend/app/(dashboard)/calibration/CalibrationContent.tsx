@@ -49,8 +49,9 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { useTranslations } from 'next-intl';
 import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
+import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
-import { SITE_LABELS, type Site, type UserRole } from '@equipment-management/schemas';
+import { SITE_LABELS, type UserRole } from '@equipment-management/schemas';
 import { useSession } from 'next-auth/react';
 import { hasPermission, Permission } from '@equipment-management/shared-constants';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
@@ -96,11 +97,18 @@ export default function CalibrationContent({
     updateResult,
     clearFilters,
   } = useCalibrationFilters(initialFilters);
+
   const defaultTeamId = filters.teamId || initialFilters?.teamId;
   const defaultSite = filters.site || initialFilters?.site;
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
+  const siteSelect = useFilterSelect(filters.site, updateSite);
+  const teamSelect = useFilterSelect(filters.teamId, updateTeamId, 'all');
+  const approvalSelect = useFilterSelect(filters.approvalStatus, updateApprovalStatus, 'all');
+  const resultSelect = useFilterSelect(filters.result, updateResult, 'all');
   const { data: session } = useSession();
   const canCreateCalibration = session?.user?.role
     ? hasPermission(session.user.role as UserRole, Permission.CREATE_CALIBRATION)
@@ -296,10 +304,7 @@ export default function CalibrationContent({
         <div className={CALIBRATION_FILTER_BAR.divider} aria-hidden="true" />
 
         {/* 사이트 필터 */}
-        <Select
-          value={filters.site || '_all'}
-          onValueChange={(v) => updateSite((v === '_all' ? '' : v) as Site | '')}
-        >
+        <Select {...siteSelect}>
           <SelectTrigger
             className="h-8 w-[120px] text-xs"
             aria-label={t('content.search.siteFilter')}
@@ -320,10 +325,7 @@ export default function CalibrationContent({
         </Select>
 
         {/* 팀 필터 */}
-        <Select
-          value={filters.teamId || 'all'}
-          onValueChange={(v) => updateTeamId(v === 'all' ? '' : v)}
-        >
+        <Select {...teamSelect}>
           <SelectTrigger
             className="h-8 w-[120px] text-xs"
             aria-label={t('content.search.teamFilter')}
@@ -344,10 +346,7 @@ export default function CalibrationContent({
         </Select>
 
         {/* 승인 상태 필터 */}
-        <Select
-          value={filters.approvalStatus || 'all'}
-          onValueChange={(v) => updateApprovalStatus(v === 'all' ? '' : v)}
-        >
+        <Select {...approvalSelect}>
           <SelectTrigger
             className="h-8 w-[120px] text-xs"
             aria-label={t('content.filters.approvalStatusLabel')}
@@ -372,10 +371,7 @@ export default function CalibrationContent({
         </Select>
 
         {/* 교정 결과 필터 */}
-        <Select
-          value={filters.result || 'all'}
-          onValueChange={(v) => updateResult(v === 'all' ? '' : v)}
-        >
+        <Select {...resultSelect}>
           <SelectTrigger
             className="h-8 w-[110px] text-xs"
             aria-label={t('content.filters.resultLabel')}

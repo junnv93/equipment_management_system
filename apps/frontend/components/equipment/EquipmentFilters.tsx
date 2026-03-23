@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EQUIPMENT_FILTER_TOKENS } from '@/lib/design-tokens';
+import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import {
   Select,
   SelectContent,
@@ -107,6 +108,13 @@ function EquipmentFiltersComponent({
 }: EquipmentFiltersProps) {
   const t = useTranslations('equipment');
   const { user } = useAuth();
+
+  // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
+  const siteSelect = useFilterSelect(filters.site, onSiteChange);
+  const statusSelect = useFilterSelect(filters.status, onStatusChange);
+  const calibMethodSelect = useFilterSelect(filters.calibrationMethod, onCalibrationMethodChange);
+  const classificationSelect = useFilterSelect(filters.classification, onClassificationChange);
+  const teamFilterSelect = useFilterSelect(filters.teamId, onTeamIdChange);
 
   // UI-only 상태 (서버 상태 아님 → useState 허용)
   const [isExpanded, setIsExpanded] = useState(false);
@@ -284,11 +292,7 @@ function EquipmentFiltersComponent({
       <div className={EQUIPMENT_FILTER_TOKENS.layout.primaryRow}>
         {slotBefore}
         {/* 사이트 필터 */}
-        <Select
-          value={filters.site || '_all'}
-          onValueChange={(value) => onSiteChange(value === '_all' ? '' : (value as Site))}
-          disabled={isSiteFixed}
-        >
+        <Select {...siteSelect} disabled={isSiteFixed}>
           <SelectTrigger
             className={`h-9 w-[120px] text-sm ${isSiteFixed ? 'cursor-not-allowed opacity-60' : ''}`}
             aria-label={t('filters.siteFilter')}
@@ -306,12 +310,7 @@ function EquipmentFiltersComponent({
         </Select>
 
         {/* 상태 필터 */}
-        <Select
-          value={filters.status || '_all'}
-          onValueChange={(value) =>
-            onStatusChange(value === '_all' ? '' : (value as EquipmentStatus))
-          }
-        >
+        <Select {...statusSelect}>
           <SelectTrigger className="h-9 w-[130px] text-sm" aria-label={t('filters.statusFilter')}>
             <SelectValue placeholder={t('filters.allStatuses')} />
           </SelectTrigger>
@@ -375,12 +374,7 @@ function EquipmentFiltersComponent({
         <div className="overflow-hidden">
           <div className={EQUIPMENT_FILTER_TOKENS.layout.secondaryRow}>
             {/* 교정 방법 필터 */}
-            <Select
-              value={filters.calibrationMethod || '_all'}
-              onValueChange={(value) =>
-                onCalibrationMethodChange(value === '_all' ? '' : (value as CalibrationMethod))
-              }
-            >
+            <Select {...calibMethodSelect}>
               <SelectTrigger
                 className="h-9 w-[150px] text-sm"
                 aria-label={t('filters.calibrationFilter')}
@@ -398,12 +392,7 @@ function EquipmentFiltersComponent({
             </Select>
 
             {/* 장비 분류 필터 */}
-            <Select
-              value={filters.classification || '_all'}
-              onValueChange={(value) =>
-                onClassificationChange(value === '_all' ? '' : (value as Classification))
-              }
-            >
+            <Select {...classificationSelect}>
               <SelectTrigger
                 className="h-9 w-[130px]"
                 aria-label={t('filters.classificationFilter')}
@@ -438,17 +427,7 @@ function EquipmentFiltersComponent({
             </Select>
 
             {/* 팀 필터 */}
-            <Select
-              value={filters.teamId || '_all'}
-              onValueChange={(value) => {
-                const newTeamId = value === '_all' ? '' : value;
-                // Guard: 네비게이션 전환 중 Select의 spurious onValueChange 방지
-                // (클라이언트 라우팅 시 searchParams가 일시적으로 빈 값 → value 변경 → 불필요한 호출)
-                if (newTeamId === (filters.teamId || '')) return;
-                onTeamIdChange(newTeamId);
-              }}
-              disabled={isLoadingTeams}
-            >
+            <Select {...teamFilterSelect} disabled={isLoadingTeams}>
               <SelectTrigger className="h-9 w-[150px] text-sm" aria-label={t('filters.teamFilter')}>
                 {isLoadingTeams ? (
                   <span className="flex items-center gap-2 text-muted-foreground">

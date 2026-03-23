@@ -15,7 +15,7 @@
  * @see lib/utils/calibration-plans-filter-utils.ts
  */
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 import type { CalibrationPlanStatus, Site } from '@equipment-management/schemas';
 import {
@@ -35,6 +35,7 @@ import {
 export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansFilters) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   // 현재 필터 (URL SSOT)
   const currentFilters = useMemo(
@@ -70,19 +71,34 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
       params.set('year', newFilters.year);
     }
 
-    // ✅ siteId: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('siteId' in updates || newFilters.siteId) {
+    // ✅ siteId: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+    if ('siteId' in updates) {
       params.set('siteId', newFilters.siteId || '_all');
+    } else if (newFilters.siteId) {
+      params.set('siteId', newFilters.siteId);
     }
 
-    // ✅ teamId: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('teamId' in updates || newFilters.teamId) {
-      params.set('teamId', newFilters.teamId || '_all');
+    // ✅ teamId: 브라우저 URL ground truth로 spurious clear 차단
+    if ('teamId' in updates) {
+      if (!updates.teamId && typeof window !== 'undefined') {
+        const browserTeamId = new URLSearchParams(window.location.search).get('teamId');
+        if (browserTeamId && browserTeamId !== '_all') {
+          params.set('teamId', browserTeamId);
+        } else {
+          params.set('teamId', '_all');
+        }
+      } else {
+        params.set('teamId', newFilters.teamId || '_all');
+      }
+    } else if (newFilters.teamId) {
+      params.set('teamId', newFilters.teamId);
     }
 
-    // ✅ status: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('status' in updates || newFilters.status) {
+    // ✅ status: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+    if ('status' in updates) {
       params.set('status', newFilters.status || '_all');
+    } else if (newFilters.status) {
+      params.set('status', newFilters.status);
     }
 
     // page (기본값 1이 아닐 때만)

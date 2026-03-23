@@ -15,7 +15,7 @@
  * @see lib/utils/calibration-filter-utils.ts
  */
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 import {
   UICalibrationFilters,
@@ -35,6 +35,7 @@ import type { Site } from '@equipment-management/schemas';
 export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   // 현재 필터 (URL SSOT)
   const currentFilters = useMemo(
@@ -65,27 +66,41 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
       params.set('search', newFilters.search);
     }
 
-    // ✅ site: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('site' in updates || newFilters.site) {
+    // ✅ site: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+    if ('site' in updates) {
       params.set('site', newFilters.site || '_all');
+    } else if (newFilters.site) {
+      params.set('site', newFilters.site);
     }
 
-    // ✅ teamId: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
-    // 클라이언트 네비게이션 중 searchParams 일시적 변경에 의한 spurious URL 재작성 방지
+    // ✅ teamId: 브라우저 URL ground truth로 spurious clear 차단
     if ('teamId' in updates) {
-      params.set('teamId', newFilters.teamId || '_all');
+      if (!updates.teamId && typeof window !== 'undefined') {
+        const browserTeamId = new URLSearchParams(window.location.search).get('teamId');
+        if (browserTeamId && browserTeamId !== '_all') {
+          params.set('teamId', browserTeamId);
+        } else {
+          params.set('teamId', '_all');
+        }
+      } else {
+        params.set('teamId', newFilters.teamId || '_all');
+      }
     } else if (newFilters.teamId) {
       params.set('teamId', newFilters.teamId);
     }
 
-    // ✅ approvalStatus: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('approvalStatus' in updates || newFilters.approvalStatus) {
+    // ✅ approvalStatus: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+    if ('approvalStatus' in updates) {
       params.set('approvalStatus', newFilters.approvalStatus || '_all');
+    } else if (newFilters.approvalStatus) {
+      params.set('approvalStatus', newFilters.approvalStatus);
     }
 
-    // ✅ result: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('result' in updates || newFilters.result) {
+    // ✅ result: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+    if ('result' in updates) {
       params.set('result', newFilters.result || '_all');
+    } else if (newFilters.result) {
+      params.set('result', newFilters.result);
     }
 
     // 날짜 필터 (값이 있을 때만)

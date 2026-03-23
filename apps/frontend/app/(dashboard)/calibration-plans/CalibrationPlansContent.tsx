@@ -54,6 +54,7 @@ import {
 } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { cn } from '@/lib/utils';
+import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 
 interface CalibrationPlansContentProps {
   /** 서버에서 가져온 초기 데이터 */
@@ -106,6 +107,11 @@ export default function CalibrationPlansContent({
   });
 
   const teams = teamsData?.data || [];
+
+  // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
+  const siteSelect = useFilterSelect(filters.siteId, updateSiteId);
+  const teamSelect = useFilterSelect(filters.teamId, updateTeamId);
+  const statusSelect = useFilterSelect(filters.status, updateStatus);
 
   // 교정계획서 목록 조회 (초기 데이터 활용)
   const { data, isLoading, isError } = useQuery({
@@ -285,11 +291,7 @@ export default function CalibrationPlansContent({
           <Label className={CALIBRATION_PLAN_FILTER_TOKENS.fieldLabel}>
             {t('plansList.table.site')}
           </Label>
-          <Select
-            value={filters.siteId || '_all'}
-            onValueChange={(v) => updateSiteId((v === '_all' ? '' : v) as Site | '')}
-            disabled={isSiteFixed}
-          >
+          <Select {...siteSelect} disabled={isSiteFixed}>
             <SelectTrigger
               className={cn(
                 CALIBRATION_PLAN_FILTER_TOKENS.select,
@@ -315,11 +317,7 @@ export default function CalibrationPlansContent({
             <Users className="h-3 w-3 inline mr-1" />
             {t('planCreate.fields.team')}
           </Label>
-          <Select
-            value={filters.teamId || '_all'}
-            onValueChange={(v) => updateTeamId(v === '_all' ? '' : v)}
-            disabled={!filters.siteId || !!isTeamRestricted}
-          >
+          <Select {...teamSelect} disabled={!filters.siteId || !!isTeamRestricted}>
             <SelectTrigger className={cn(CALIBRATION_PLAN_FILTER_TOKENS.select, 'w-[160px]')}>
               <SelectValue placeholder={t('plansList.filter.teamPlaceholder')}>
                 {filters.teamId
@@ -350,12 +348,7 @@ export default function CalibrationPlansContent({
           <Label className={CALIBRATION_PLAN_FILTER_TOKENS.fieldLabel}>
             {t('plansList.table.status')}
           </Label>
-          <Select
-            value={filters.status || '_all'}
-            onValueChange={(v) =>
-              updateStatus((v === '_all' ? '' : v) as CalibrationPlanStatus | '')
-            }
-          >
+          <Select {...statusSelect}>
             <SelectTrigger className={cn(CALIBRATION_PLAN_FILTER_TOKENS.select, 'w-[140px]')}>
               <SelectValue placeholder={t('plansList.filter.statusPlaceholder')} />
             </SelectTrigger>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useEffect, useState } from 'react';
+import { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import type {
   Site,
@@ -130,11 +130,18 @@ export function useEquipmentFilters() {
     };
   }, [searchParams]);
 
+  // ✅ 최신 필터 상태를 ref로 추적 — stale closure 방지
+  // 클라이언트 네비게이션 중 Radix Select의 onValueChange가 stale closure로
+  // 잘못된 filters 값을 참조하는 것을 방지. ref는 항상 최신 렌더의 값을 보유.
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
   // URL 업데이트 함수
   // ✅ 무한 리다이렉트 방지: "_all" 센티널 값으로 "첫 방문"과 "전체 선택" 구분
   const updateURL = useCallback(
     (newFilters: Partial<EquipmentFilters>) => {
-      const currentFilters = { ...filters }; // 현재 필터 상태
+      // ✅ ref에서 최신 필터 읽기 — useCallback의 stale closure 대신 항상 최신 값 사용
+      const currentFilters = { ...filtersRef.current };
       const updatedFilters = { ...currentFilters, ...newFilters }; // 병합
       const params = new URLSearchParams();
 
@@ -143,33 +150,39 @@ export function useEquipmentFilters() {
         params.set('search', updatedFilters.search);
       }
 
-      // ✅ site: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-      if ('site' in newFilters || updatedFilters.site) {
+      // ✅ site: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+      if ('site' in newFilters) {
         params.set('site', updatedFilters.site || '_all');
+      } else if (updatedFilters.site) {
+        params.set('site', updatedFilters.site);
       }
 
-      // ✅ status: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-      if ('status' in newFilters || updatedFilters.status) {
+      // ✅ status: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+      if ('status' in newFilters) {
         params.set('status', updatedFilters.status || '_all');
+      } else if (updatedFilters.status) {
+        params.set('status', updatedFilters.status);
       }
 
-      // ✅ calibrationMethod: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-      if ('calibrationMethod' in newFilters || updatedFilters.calibrationMethod) {
+      // ✅ calibrationMethod: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+      if ('calibrationMethod' in newFilters) {
         params.set('calibrationMethod', updatedFilters.calibrationMethod || '_all');
+      } else if (updatedFilters.calibrationMethod) {
+        params.set('calibrationMethod', updatedFilters.calibrationMethod);
       }
 
-      // ✅ classification: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-      if ('classification' in newFilters || updatedFilters.classification) {
+      // ✅ classification: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+      if ('classification' in newFilters) {
         params.set('classification', updatedFilters.classification || '_all');
+      } else if (updatedFilters.classification) {
+        params.set('classification', updatedFilters.classification);
       }
 
       // ✅ teamId: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
-      // 클라이언트 네비게이션 중 searchParams 일시적 변경에 의한 spurious URL 재작성 방지
+      // spurious onValueChange는 useFilterSelect 훅에서 source 수준에서 차단됨
       if ('teamId' in newFilters) {
-        // 사용자가 명시적으로 팀 필터를 변경한 경우
         params.set('teamId', updatedFilters.teamId || '_all');
       } else if (updatedFilters.teamId) {
-        // 다른 필터 변경 시 현재 teamId 보존 (센티널 없이 실제 값 유지)
         params.set('teamId', updatedFilters.teamId);
       }
 
@@ -205,7 +218,7 @@ export function useEquipmentFilters() {
       const newURL = queryString ? `${pathname}?${queryString}` : pathname;
       router.push(newURL, { scroll: false });
     },
-    [pathname, router, filters]
+    [pathname, router]
   );
 
   // 개별 필터 업데이트

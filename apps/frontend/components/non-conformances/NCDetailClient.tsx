@@ -31,8 +31,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   type NonConformanceStatus,
+  type NonConformanceType,
   NonConformanceStatusValues as NCVal,
-  REPAIR_REQUIRING_NC_TYPES,
+  getNCPrerequisite,
 } from '@equipment-management/schemas';
 import {
   getSemanticBadgeClasses,
@@ -243,8 +244,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     : 0;
   const longOverdue = isNCLongOverdue(elapsedDays);
   const isClosed = nc.status === NCVal.CLOSED;
-  const needsRepair =
-    (REPAIR_REQUIRING_NC_TYPES as readonly string[]).includes(nc.ncType) && !nc.repairHistoryId;
+  const prerequisite = getNCPrerequisite(nc.ncType);
+  const needsRepair = prerequisite === 'repair' && !nc.repairHistoryId;
+  const needsRecalibration = prerequisite === 'recalibration' && !nc.calibrationId;
+  const hasUnmetPrerequisite = needsRepair || needsRecalibration;
 
   /** 조치 편집 시작 */
   const startEditCorrection = () => {
@@ -328,8 +331,8 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         isLongOverdue={longOverdue && !isClosed}
       />
 
-      {/* 수리 필요 안내 */}
-      {needsRepair && !isClosed && (
+      {/* 전제조건 미충족 안내 */}
+      {hasUnmetPrerequisite && !isClosed && (
         <div className={NC_INFO_NOTICE_TOKENS.container}>
           <div className="flex items-start gap-3">
             <Wrench className={NC_INFO_NOTICE_TOKENS.icon} />
@@ -338,13 +341,20 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                 <strong className="text-brand-warning">
                   {NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}
                 </strong>{' '}
-                유형의 부적합입니다. 시정 조치 전 수리 이력을 등록해야 합니다.
+                유형의 부적합입니다.{' '}
+                {needsRepair
+                  ? '시정 조치 전 수리 이력을 등록해야 합니다.'
+                  : '시정 조치 전 교정을 새로 받아야 합니다.'}
               </p>
               <Link
-                href={`/equipment/${nc.equipmentId}`}
+                href={
+                  needsRepair
+                    ? `/equipment/${nc.equipmentId}?tab=incident`
+                    : `/equipment/${nc.equipmentId}?tab=calibration`
+                }
                 className="text-sm text-brand-info hover:underline mt-1 inline-block"
               >
-                수리 이력 등록 →
+                {needsRepair ? '수리 이력 등록 →' : '교정 기록 확인 →'}
               </Link>
             </div>
           </div>
@@ -427,7 +437,14 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         <ActionBar
           nc={nc}
           isManager={isManager()}
-          needsRepair={needsRepair}
+          hasUnmetPrerequisite={hasUnmetPrerequisite}
+          prerequisiteMessage={
+            needsRepair
+              ? '수리 이력을 등록한 후 조치 완료할 수 있습니다'
+              : needsRecalibration
+                ? '교정을 새로 받은 후 조치 완료할 수 있습니다'
+                : undefined
+          }
           onMarkCorrected={() => updateMutation.mutate({ status: NCVal.CORRECTED })}
           onClose={() => setShowCloseDialog(true)}
           onReject={() => setShowRejectDialog(true)}
@@ -600,7 +617,8 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
 function InfoCards({ nc }: { nc: NonConformance }) {
   const { fmtDate } = useDateFormatter();
   const hasRepairLink = !!nc.repairHistoryId;
-  const needsRepair = ['damage', 'malfunction'].includes(nc.ncType);
+  const prerequisiteType = getNCPrerequisite(nc.ncType);
+  const needsRepair = prerequisiteType === 'repair';
 
   return (
     <div className={NC_INFO_CARD_TOKENS.grid}>
@@ -657,7 +675,7 @@ function InfoCards({ nc }: { nc: NonConformance }) {
               있습니다.
             </p>
             <Link
-              href={`/equipment/${nc.equipmentId}`}
+              href={`/equipment/${nc.equipmentId}?tab=incident`}
               className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
             >
               <Wrench className="h-3.5 w-3.5" />
@@ -783,7 +801,8 @@ function CollapsibleSection({
 function ActionBar({
   nc,
   isManager,
-  needsRepair,
+  hasUnmetPrerequisite,
+  prerequisiteMessage,
   onMarkCorrected,
   onClose,
   onReject,
@@ -791,7 +810,8 @@ function ActionBar({
 }: {
   nc: NonConformance;
   isManager: boolean;
-  needsRepair: boolean;
+  hasUnmetPrerequisite: boolean;
+  prerequisiteMessage?: string;
   onMarkCorrected: () => void;
   onClose: () => void;
   onReject: () => void;
@@ -805,16 +825,16 @@ function ActionBar({
           <Button
             size="sm"
             onClick={onMarkCorrected}
-            disabled={isUpdating || needsRepair}
-            title={needsRepair ? '수리 이력을 먼저 등록해야 합니다' : undefined}
+            disabled={isUpdating || hasUnmetPrerequisite}
+            title={hasUnmetPrerequisite ? prerequisiteMessage : undefined}
           >
             조치 완료
           </Button>
         )}
         <span className={NC_ACTION_BAR_TOKENS.roleHint}>
           {nc.status === NCVal.OPEN &&
-            (needsRepair
-              ? '수리 이력을 등록한 후 조치 완료할 수 있습니다'
+            (hasUnmetPrerequisite
+              ? prerequisiteMessage
               : '조치를 완료하면 기술책임자의 종결 승인이 필요합니다')}
           {nc.status === NCVal.CORRECTED &&
             !isManager &&
@@ -833,8 +853,8 @@ function ActionBar({
               size="sm"
               className={NC_APPROVE_BUTTON_TOKENS.approve}
               onClick={onClose}
-              disabled={isUpdating || needsRepair}
-              title={needsRepair ? '수리 이력을 먼저 등록해야 합니다' : undefined}
+              disabled={isUpdating || hasUnmetPrerequisite}
+              title={hasUnmetPrerequisite ? prerequisiteMessage : undefined}
             >
               <Check className="h-3.5 w-3.5 mr-1" />
               종결 승인
