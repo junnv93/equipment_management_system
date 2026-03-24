@@ -31,6 +31,11 @@
 | /non-conformances KPI 카드 | `filter({ hasText: '처리 중' })` | `filter({ hasText: '조치 완료' }).first()` | TM 스코프에서 open 카운트 0이면 "처리 중" 카드 텍스트가 안 보일 수 있음 |
 | /non-conformances Select | `filter({ hasText: /전체 상태/ })` | `comboboxes.nth(0)` | shadcn Select에서 hasText 필터는 불안정. nth()가 더 안정적 |
 | /non-conformances 사이트 필터 URL | `site=SUW` | `site=suwon` | 실제 URL 파라미터는 소문자 (suwon, uiwang 등) |
+| 대시보드 OverdueCheckoutsCard 탭 | `getByRole('button', { name: '기한 초과' })` | `getByRole('tab', { name: /기한 초과/ })` | role="tab"이며 텍스트에 "(N)" 건수 포함 → 정규식 매칭 필수 |
+| 대시보드 AlertBanner | `banner.locator('[role="status"]')` | `page.locator('[role="status"][aria-label="긴급 조치 요약"]')` | AlertBanner 자체가 role="status" or role="alert" — 자식이 아닌 자기 자신에 role 부여 |
+| 대시보드 MiniCalendar 요일 | `calendar.getByText('일')` | `calendar.getByText('월', { exact: true }).first()` | "일"은 날짜(1일, 11일 등)에도 포함 → strict mode violation. "월"/"토" 등으로 우회 |
+| 대시보드 RecentActivities 탭 | `getByRole('button', { name: '전체' })` | `getByRole('tab', { name: '전체' })` | shadcn Tabs → TabsTrigger는 role="tab" (button 아님) |
+| 대시보드 RecentActivities section | `section[aria-label="최근 활동"]` | `[role="region"][aria-labelledby="recent-activities-title"]` | DashboardClient에서 section aria-label 설정, Card에서 region+aria-labelledby 설정 — 두 층 구조 |
 
 ---
 
