@@ -35,8 +35,7 @@ import calibrationApi, {
 import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   getCalibrationTabClasses,
   CALIBRATION_DIALOG,
@@ -120,6 +119,7 @@ export default function CalibrationContent({
     'all'
   );
   const { can } = useAuth();
+  const { fmtDate } = useDateFormatter();
   const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
 
   // 중간점검 완료 다이얼로그 상태
@@ -581,9 +581,7 @@ export default function CalibrationContent({
               <div className={`p-4 ${CALIBRATION_DIALOG.infoBackground} rounded-lg space-y-2`}>
                 <p className="text-sm">
                   <strong>{t('content.completeDialog.scheduledDate')}:</strong>{' '}
-                  {format(new Date(selectedCheck.intermediateCheckDate), 'yyyy년 M월 d일', {
-                    locale: ko,
-                  })}
+                  {fmtDate(selectedCheck.intermediateCheckDate)}
                 </p>
                 <p className="text-sm">
                   <strong>{t('content.completeDialog.agency')}:</strong>{' '}

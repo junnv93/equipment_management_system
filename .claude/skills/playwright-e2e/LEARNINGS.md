@@ -36,6 +36,11 @@
 | 대시보드 MiniCalendar 요일 | `calendar.getByText('일')` | `calendar.getByText('월', { exact: true }).first()` | "일"은 날짜(1일, 11일 등)에도 포함 → strict mode violation. "월"/"토" 등으로 우회 |
 | 대시보드 RecentActivities 탭 | `getByRole('button', { name: '전체' })` | `getByRole('tab', { name: '전체' })` | shadcn Tabs → TabsTrigger는 role="tab" (button 아님) |
 | 대시보드 RecentActivities section | `section[aria-label="최근 활동"]` | `[role="region"][aria-labelledby="recent-activities-title"]` | DashboardClient에서 section aria-label 설정, Card에서 region+aria-labelledby 설정 — 두 층 구조 |
+| 장비 상세 폐기 배너 | `getByText('폐기 대기')` 상태 배지 | `getByRole('button', { name: /탭으로 이동/ })` 로드 대기 후 폐기 텍스트 확인 | 상태 배지 텍스트가 다를 수 있음. KPI 스트립 버튼으로 로드 대기가 안정적 |
+| 수리 이력 다이얼로그 필드 | `dialog.getByText('수리 결과')` 스크롤 필요 | `dialog.locator('input[type="date"]')` + `dialog.locator('textarea')` | max-h-[90vh] overflow-y-auto 다이얼로그에서 하단 필드는 스크롤 없이 안 보일 수 있음 |
+| 장비 목록 빈 상태 대기 | `#filter-site` 셀렉터 대기 | 빈 상태 메시지 직접 대기 (`getByText(/검색 결과가 없습니다/)`) | 검색 결과 없는 경우 필터 UI가 렌더링되지 않아 #filter-site 없음 |
+| 사고 이력 유형 선택 (셀렉트) | `dialog.getByRole('combobox').first()` 후 `.click()` | `dialog.locator('button[role="combobox"]').first()` | shadcn Select 트리거는 button[role="combobox"] |
+| SA 빈 검색 테스트 | `siteAdminPage` (LM) 사용 | `systemAdminPage` (SA) 사용 | LM도 site= 기본 리다이렉트가 있어 ?site=&teamId= 우회 안 됨. SA는 리다이렉트 없음 |
 
 ---
 
@@ -93,6 +98,9 @@ E2E 테스트에서 발견된 앱 버그와 해결 상태를 추적합니다.
 | quality_manager가 GET /api/equipment-imports 접근 시 403 반환 | `packages/shared-constants/src/role-permissions.ts` | 미해결 | 2026-03-24 | |
 | LM이 /calibration/register 직접 접근 시 권한 제어 없음 | `CalibrationRegisterContent.tsx` — canCreateCalibration 체크 미흡 | 미해결 | 2026-03-24 | |
 | QM에게 교정계획서 "새 계획서 작성" 버튼 표시됨 | `CalibrationPlansContent.tsx` — CREATE_CALIBRATION_PLAN 권한 체크 누락 | 미해결 | 2026-03-24 | |
+| QM에게 장비 상세 "수정" 버튼 표시됨 | `EquipmentStickyHeader.tsx` — UPDATE_EQUIPMENT 권한 체크가 QM을 제외하지 않음 | 미해결 | 2026-03-24 | |
+| QM에게 장비 상세 "반출 신청" 버튼 표시됨 | `EquipmentStickyHeader.tsx` — CREATE_CHECKOUT 권한 체크가 QM을 제외하지 않음 | 미해결 | 2026-03-24 | |
+| spare 장비에 D-day 배지 표시됨 | `EquipmentStickyHeader.tsx` — spare 상태에서 D-day 배지 숨김 로직 미적용 | 미해결 | 2026-03-24 | |
 
 ---
 

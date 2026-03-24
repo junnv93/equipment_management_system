@@ -5,6 +5,7 @@
  * 1. .auth/ 디렉토리 생성 보장
  * 2. Frontend / Backend health check (재시도 포함)
  * 3. 테스트 시드 데이터 로딩
+ * 4. 교정 기한 초과 장비 부적합 자동 전환 트리거
  */
 
 import { FullConfig } from '@playwright/test';
@@ -95,6 +96,38 @@ async function globalSetup(config: FullConfig) {
       env: { ...process.env, NODE_ENV: 'development' },
     });
     console.log('  ✅ 시드 데이터 로딩 완료');
+
+    // 5. 교정 기한 초과 장비 자동 부적합 전환
+    //    시드 데이터에 상대 날짜(daysAgo)로 교정일이 설정되어 있어,
+    //    시드 적용 후 스케줄러를 수동 트리거해야 정합성 보장
+    console.log('  🔄 교정 기한 초과 장비 점검 트리거...');
+    try {
+      // lab_manager 역할로 테스트 JWT 획득 (UPDATE_EQUIPMENT 권한 필요)
+      const loginRes = await fetch(`${apiURL}/api/auth/test-login?role=lab_manager`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      const loginData = await loginRes.json();
+      const token = loginData?.data?.access_token ?? loginData?.access_token;
+
+      const overdueRes = await fetch(
+        `${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+      if (overdueRes.ok) {
+        const result = await overdueRes.json();
+        console.log(`  ✅ 교정 기한 초과 점검 완료 (처리: ${result?.data?.processed ?? 0}건)`);
+      } else {
+        console.warn(`  ⚠️  교정 기한 초과 점검 응답: ${overdueRes.status}`);
+      }
+    } catch (error) {
+      console.warn(
+        '  ⚠️  교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다.'
+      );
+    }
   } catch (error) {
     console.warn('  ⚠️  시드 데이터 로딩 실패');
     console.warn(

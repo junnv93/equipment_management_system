@@ -14,7 +14,9 @@ test.describe('역할별 권한 검증', () => {
     // 2. 상세 페이지 접근 가능
     await page.goto(`/equipment/${EQUIPMENT_ID}`);
     await expect(page.getByRole('heading', { name: '안테나 시스템 1' })).toBeVisible();
-    await expect(page.getByText('SUW-E0007', { exact: true })).toBeVisible();
+    await expect(
+      page.locator('#equipment-sticky-header').getByText('SUW-E0007', { exact: true })
+    ).toBeVisible();
 
     // 3. 교정 이력 탭 → 교정 등록 미표시
     await page.getByRole('tab', { name: '교정 이력 탭' }).click();

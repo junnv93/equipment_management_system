@@ -19,9 +19,9 @@ import { useDisposalPermissions } from '@/hooks/use-disposal-permissions';
 import {
   EquipmentStatusValues as ESVal,
   type DisposalRequest,
-  UserRoleValues as URVal,
   CalibrationApprovalStatusValues as CASVal,
 } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import {
   EQUIPMENT_STATUS_TOKENS,
   DEFAULT_STATUS_CONFIG,
@@ -59,24 +59,26 @@ export function EquipmentStickyHeader({
   onDisposalDetailOpen,
 }: EquipmentStickyHeaderProps) {
   const t = useTranslations('equipment');
-  const { hasRole } = useAuth();
+  const { can } = useAuth();
 
   const equipmentId = String(equipment.id);
 
-  // 권한 계산
-  const canEdit = equipment.status !== ESVal.RETIRED;
+  // 권한 계산 — SSOT: Permission enum + STATUS 조건 조합
+  const canEdit = can(Permission.UPDATE_EQUIPMENT) && equipment.status !== ESVal.RETIRED;
   const canDelete =
-    hasRole([URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]) &&
+    can(Permission.DELETE_EQUIPMENT) &&
     !equipment.isShared &&
     (equipment.approvalStatus === CASVal.PENDING_APPROVAL ||
       equipment.approvalStatus === CASVal.REJECTED);
 
   const disposalPermissions = useDisposalPermissions(equipment, disposalRequest);
 
-  // SSOT: STATUS_NOT_ALLOWED_FOR_CHECKOUT (equipment-status-styles.ts)
-  const canCheckout = !STATUS_NOT_ALLOWED_FOR_CHECKOUT.includes(
-    (equipment.status ?? ESVal.AVAILABLE) as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
-  );
+  // SSOT: Permission + STATUS_NOT_ALLOWED_FOR_CHECKOUT (equipment-status-styles.ts)
+  const canCheckout =
+    can(Permission.CREATE_CHECKOUT) &&
+    !STATUS_NOT_ALLOWED_FOR_CHECKOUT.includes(
+      (equipment.status ?? ESVal.AVAILABLE) as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
+    );
 
   // 상태 정규화: calibration_scheduled → available, calibration_overdue → non_conforming
   const getStatusToken = (status: string) => {

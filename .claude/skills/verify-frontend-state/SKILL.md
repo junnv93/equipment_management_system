@@ -252,16 +252,21 @@ const { data } = useQuery({
 
 ### Step 7: useDateFormatter 사용 컨벤션
 
-사용자에게 표시되는 날짜가 `useDateFormatter()` 훅을 통해 포맷되는지 확인합니다. 직접 `formatDate()` 호출은 사용자 `dateFormat` 설정을 무시합니다.
+사용자에게 표시되는 날짜가 `useDateFormatter()` 훅을 통해 포맷되는지 확인합니다. 직접 `formatDate()` 또는 `date-fns`의 `format()` 호출은 사용자 `dateFormat` 설정을 무시합니다.
 
 ```bash
-# 컴포넌트에서 formatDate 직접 import 탐지
+# 7a: 컴포넌트에서 formatDate 직접 import 탐지
 grep -rn "import.*formatDate.*from.*lib/utils/date" apps/frontend/components --include="*.tsx" | grep -v "// "
+
+# 7b: 컴포넌트/페이지에서 date-fns format() 직접 import 탐지
+grep -rn "import.*{ *format *}.*from ['\"]date-fns['\"]" apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" | grep -v "// \|node_modules"
 ```
 
 **PASS 기준:** 사용자에게 표시되는 날짜는 `useDateFormatter().fmtDate` 또는 `fmtDateTime` 사용.
 
-**FAIL 기준:** 컴포넌트에서 `formatDate(value, 'yyyy-MM-dd')` 직접 호출은 사용자 dateFormat 설정 무시.
+**FAIL 기준:**
+- 컴포넌트에서 `formatDate(value, 'yyyy-MM-dd')` 직접 호출
+- 컴포넌트/페이지에서 `import { format } from 'date-fns'` + `format(new Date(...), ...)` 직접 호출
 
 **예외:** `<input type="date">` value 생성 등 HTML spec이 요구하는 고정 포맷(`'yyyy-MM-dd'`)은 직접 `formatDate` 사용이 정당. 폼 필드 초기값, 내부 계산용 날짜 포맷은 사용자 설정과 무관.
 
@@ -295,6 +300,25 @@ grep -rn "^import.*from ['\"]recharts\|^import.*from ['\"]chart\.js\|^import.*fr
 
 **FAIL 기준:** `import { BarChart } from 'recharts'`가 직접 사용되면 해당 컴포넌트를 dynamic import로 래핑 필요.
 
+### Step 9: useAuth().can() 권한 체크 SSOT
+
+클라이언트 컴포넌트에서 `hasPermission`을 직접 import하여 권한 체크하는 대신, `useAuth().can(Permission)` 메서드를 사용하는지 확인합니다. `useAuth`가 세션에서 role을 추출하고 `hasPermission`을 캡슐화하므로, 컴포넌트에서 `useSession() + hasPermission()` 조합을 직접 사용하면 SSOT 위반입니다.
+
+```bash
+# 클라이언트 컴포넌트에서 hasPermission 직접 import 탐지 (useAuth.can() 대신)
+grep -rn "import.*hasPermission.*from.*shared-constants" apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" | grep -v "// \|node_modules\|nav-config\|permission-helpers\|use-auth"
+```
+
+**PASS 기준:** 클라이언트 컴포넌트(`'use client'` 파일)에서 `hasPermission` 직접 import 0건. 모든 권한 체크는 `useAuth().can(Permission.XXX)` 사용.
+
+**FAIL 기준:** 클라이언트 컴포넌트에서 `import { hasPermission } from '@equipment-management/shared-constants'` + `useSession()` 조합으로 권한 체크.
+
+**예외:**
+- `lib/navigation/nav-config.ts` — Server-side 설정 파일이므로 `hasPermission` 직접 사용 정당
+- `lib/utils/permission-helpers.ts` — 유틸리티 함수 정의이므로 직접 사용 정당
+- `hooks/use-auth.ts` — 훅 내부 구현이므로 직접 사용 정당
+- Server Component(`page.tsx`, `layout.tsx`)에서의 직접 사용 — 훅 사용 불가하므로 정당
+
 ## Output Format
 
 ```markdown
@@ -309,9 +333,10 @@ grep -rn "^import.*from ['\"]recharts\|^import.*from ['\"]chart\.js\|^import.*fr
 | 5b  | countsAll prefix 무효화    | PASS/FAIL | approvals.counts() 사용 위치  |
 | 5c  | CheckoutCacheInvalidation  | PASS/FAIL | 직접 queryKeys 조합 위치      |
 | 6   | REFETCH_STRATEGIES 사용    | PASS/INFO | refetchInterval 하드코딩 위치 |
-| 7   | useDateFormatter 컨벤션    | PASS/FAIL | 직접 formatDate import 위치   |
+| 7   | useDateFormatter 컨벤션    | PASS/FAIL | 직접 formatDate/format import 위치 |
 | 8a  | Client에서 서버 함수 호출  | PASS/FAIL | 'use client' + 서버 함수 위치 |
 | 8b  | 무거운 라이브러리 동적 분할 | PASS/FAIL | 정적 import 위치             |
+| 9   | useAuth().can() 권한 SSOT  | PASS/FAIL | hasPermission 직접 import 위치 |
 ```
 
 ## Exceptions
@@ -333,4 +358,6 @@ grep -rn "^import.*from ['\"]recharts\|^import.*from ['\"]chart\.js\|^import.*fr
 12. **use-sidebar-state.ts의 localStorage useState** — 사이드바 접기/펼치기 상태는 UI 로컬 상태 (서버 상태 아님). localStorage에서 읽는 SSR 안전 패턴은 정상 (useState false 초기화 → useEffect로 복원)
 13. **use-idle-timeout.ts의 useState** — `isWarningVisible(boolean)`, `secondsRemaining(number)`는 UI 타이머 상태 (서버 상태 아님). `setInterval` 기반 카운트다운 로직이므로 TanStack Query 대상 아님
 14. **폼/내부 계산용 formatDate 직접 사용** — `CalibrationRegisterDialog`, `CalibrationHistorySection`, `CalibrationInfoSection`, `EquipmentForm` 등에서 `<input type="date">` value 생성을 위해 `formatDate(date, 'yyyy-MM-dd')` 직접 사용은 HTML spec 요구사항. 사용자에게 표시되는 날짜가 아닌 내부 form value이므로 `useDateFormatter` 불필요
+16. **UI 기본 컴포넌트의 date-fns format 사용** — `date-range-picker.tsx`, `date-picker.tsx` 등 `components/ui/` 하위 컴포넌트에서의 `format()` 사용은 shadcn/ui 원본 패턴. 이들은 달력 UI의 내부 표시용이며 사용자 dateFormat 설정과 무관
+17. **Server Component에서의 hasPermission 직접 사용** — `page.tsx`, `layout.tsx` 등 Server Component에서는 React 훅(`useAuth`)을 사용할 수 없으므로 `hasPermission` 직접 import가 정당
 15. **이벤트 핸들러 내 setQueryData 캐시 프라이밍** — `LeaderCombobox.tsx`의 `handleSelect`에서 `queryClient.setQueryData(queryKeys.users.detail(user.id), user)` 호출은 mutation onSuccess가 아닌 이벤트 핸들러에서의 캐시 프라이밍. 이미 가용한 데이터(목록에서 선택된 항목)를 detail 캐시에 즉시 반영하여 후속 useQuery의 네트워크 왕복을 제거하는 성능 최적화 패턴. `onSuccess setQueryData 금지` 규칙과 무관

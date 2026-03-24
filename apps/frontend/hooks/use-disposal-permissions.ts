@@ -3,9 +3,9 @@ import type { Equipment } from '@/lib/api/equipment-api';
 import {
   EquipmentStatusValues as ESVal,
   type DisposalRequest,
-  UserRoleValues as URVal,
   DisposalReviewStatusValues as DRSVal,
 } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 
 /**
  * 폐기 진행 단계 계산 (SSOT)
@@ -26,26 +26,20 @@ export function useDisposalPermissions(
   equipment: Equipment,
   disposalRequest?: DisposalRequest | null
 ) {
-  const { user, hasRole, isAdmin } = useAuth();
+  const { user, can } = useAuth();
 
+  // SSOT: Permission enum 기반 권한 체크 (hasRole 하드코딩 제거)
   const canRequestDisposal =
-    hasRole([
-      URVal.TEST_ENGINEER,
-      URVal.TECHNICAL_MANAGER,
-      URVal.LAB_MANAGER,
-      URVal.SYSTEM_ADMIN,
-    ]) &&
-    equipment.status === ESVal.AVAILABLE &&
-    !equipment.isShared;
+    can(Permission.REQUEST_DISPOSAL) && equipment.status === ESVal.AVAILABLE && !equipment.isShared;
 
   const canReviewDisposal =
-    hasRole([URVal.TECHNICAL_MANAGER]) &&
+    can(Permission.REVIEW_DISPOSAL) &&
     equipment.status === ESVal.PENDING_DISPOSAL &&
     disposalRequest?.reviewStatus === DRSVal.PENDING &&
     user?.teamId === equipment.teamId;
 
   const canApproveDisposal =
-    isAdmin() &&
+    can(Permission.APPROVE_DISPOSAL) &&
     equipment.status === ESVal.PENDING_DISPOSAL &&
     disposalRequest?.reviewStatus === DRSVal.REVIEWED;
 
@@ -54,7 +48,14 @@ export function useDisposalPermissions(
 
   const isReadOnly = equipment.status === ESVal.DISPOSED;
 
+  // 폐기 관련 권한이 하나라도 있을 때만 폐기 버튼 영역 표시
+  const hasAnyDisposalPermission =
+    can(Permission.REQUEST_DISPOSAL) ||
+    can(Permission.REVIEW_DISPOSAL) ||
+    can(Permission.APPROVE_DISPOSAL);
+
   const showDisposalButton =
+    hasAnyDisposalPermission &&
     equipment.status !== ESVal.TEMPORARY &&
     (equipment.status === ESVal.AVAILABLE ||
       equipment.status === ESVal.PENDING_DISPOSAL ||
