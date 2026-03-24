@@ -6,7 +6,6 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -45,7 +44,8 @@ import {
   EQUIPMENT_IMPORT_STATUS_LABELS,
   type EquipmentImportStatus,
 } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import {
   parseCheckoutFiltersFromSearchParams,
@@ -96,8 +96,10 @@ export default function CheckoutsContent({
   const t = useTranslations('checkouts');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { session, can } = useAuth();
   const teamId = session?.user?.teamId;
+  const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
+  const canCreateImport = can(Permission.CREATE_EQUIPMENT_IMPORT);
 
   const filters = parseCheckoutFiltersFromSearchParams(searchParams);
   const isInbound = filters.view === 'inbound';
@@ -215,35 +217,41 @@ export default function CheckoutsContent({
         title={t('title')}
         subtitle={t('description')}
         actions={
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              {t('actions.create')}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
-                  {t('import.requestInbound')}
-                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+          canCreateCheckout || canCreateImport ? (
+            <div className="flex gap-2">
+              {canCreateCheckout && (
+                <Button size="sm" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  {t('actions.create')}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
-                >
-                  <Building className="mr-2 h-4 w-4" />
-                  {t('import.externalRental')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  {t('import.internalShared')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              )}
+              {canCreateImport && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
+                      {t('import.requestInbound')}
+                      <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
+                    >
+                      <Building className="mr-2 h-4 w-4" />
+                      {t('import.externalRental')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      {t('import.internalShared')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          ) : undefined
         }
       />
 

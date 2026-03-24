@@ -51,13 +51,13 @@ import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils'
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
-import { SITE_LABELS, EquipmentStatusValues, type UserRole } from '@equipment-management/schemas';
+import { SITE_LABELS, EquipmentStatusValues } from '@equipment-management/schemas';
 import {
   CALIBRATION_DUE_STATUS_VALUES,
   CALIBRATION_DUE_STATUS_LABELS,
 } from '@/lib/utils/calibration-filter-utils';
-import { useSession } from 'next-auth/react';
-import { hasPermission, Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
 import CalibrationTimeline, {
   type CalibrationTimelineItem,
@@ -119,10 +119,8 @@ export default function CalibrationContent({
     updateCalibrationDueStatus,
     'all'
   );
-  const { data: session } = useSession();
-  const canCreateCalibration = session?.user?.role
-    ? hasPermission(session.user.role as UserRole, Permission.CREATE_CALIBRATION)
-    : false;
+  const { can } = useAuth();
+  const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
 
   // 중간점검 완료 다이얼로그 상태
   const [selectedCheck, setSelectedCheck] = useState<IntermediateCheckItem | null>(null);

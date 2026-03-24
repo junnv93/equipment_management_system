@@ -15,8 +15,10 @@ import {
   ADMIN_ROLES,
   SESSION_SYNC_CHANNEL,
   SESSION_SYNC_MESSAGE,
+  type Permission,
+  hasPermission,
 } from '@equipment-management/shared-constants';
-import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { UserRoleValues as URVal, type UserRole } from '@equipment-management/schemas';
 
 export function useAuth() {
   const { data: session, status } = useSession();
@@ -25,14 +27,18 @@ export function useAuth() {
   const isAuthenticated = status === 'authenticated' && !!session;
   const isLoading = status === 'loading';
 
+  // 원시값 추출 — useCallback 의존성을 객체 참조가 아닌 원시값으로 좁혀
+  // NextAuth 토큰 자동 갱신(만료 60초 전) 시 불필요한 콜백 재생성 방지
+  const userRole = session?.user?.role;
+  const userRoles = session?.user?.roles;
+
   // 역할 확인 함수
   const hasRole = useCallback(
     (requiredRole: string | string[]): boolean => {
-      if (!isAuthenticated || !session?.user?.roles) {
+      if (!isAuthenticated || !userRoles) {
         return false;
       }
 
-      const userRoles = session.user.roles;
       const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
 
       return requiredRoles.some(
@@ -42,7 +48,7 @@ export function useAuth() {
           userRoles.includes(role.toLowerCase())
       );
     },
-    [isAuthenticated, session]
+    [isAuthenticated, userRoles]
   );
 
   // 시험소 관리자 권한 확인 (lab_manager, system_admin — SSOT: ADMIN_ROLES)
@@ -54,6 +60,15 @@ export function useAuth() {
   const isManager = useCallback(() => {
     return hasRole([URVal.TECHNICAL_MANAGER, ...ADMIN_ROLES]);
   }, [hasRole]);
+
+  // Permission 기반 권한 확인 (SSOT: shared-constants/role-permissions.ts)
+  const can = useCallback(
+    (permission: Permission): boolean => {
+      if (!userRole) return false;
+      return hasPermission(userRole as UserRole, permission);
+    },
+    [userRole]
+  );
 
   // 로그아웃 함수
   const logout = useCallback(async () => {
@@ -80,6 +95,7 @@ export function useAuth() {
     hasRole,
     isAdmin,
     isManager,
+    can,
     logout,
   };
 }

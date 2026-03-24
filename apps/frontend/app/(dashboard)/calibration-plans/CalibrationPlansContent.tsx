@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,8 +25,8 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filters';
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
-import { format } from 'date-fns';
 import { resolveDisplayName } from '@/lib/utils/display-name';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   Plus,
   FileText,
@@ -44,7 +44,6 @@ import {
   CALIBRATION_PLAN_DATA_SCOPE,
   resolveDataScope,
   SELECTOR_PAGE_SIZE,
-  hasPermission,
   Permission,
 } from '@equipment-management/shared-constants';
 import {
@@ -77,7 +76,8 @@ export default function CalibrationPlansContent({
   initialFilters,
 }: CalibrationPlansContentProps) {
   const currentYear = new Date().getFullYear();
-  const { data: session } = useSession();
+  const { session, can } = useAuth();
+  const { fmtDate } = useDateFormatter();
   const t = useTranslations('calibration');
 
   // ✅ SSOT: URL-driven 필터 (useState 제거)
@@ -98,9 +98,7 @@ export default function CalibrationPlansContent({
     : false;
 
   // 계획서 생성 권한 체크 (QM은 CREATE_CALIBRATION_PLAN 없음)
-  const canCreatePlan = userRole
-    ? hasPermission(userRole as UserRole, Permission.CREATE_CALIBRATION_PLAN)
-    : false;
+  const canCreatePlan = can(Permission.CREATE_CALIBRATION_PLAN);
 
   // 팀 목록 조회 (필터링용)
   const { data: teamsData } = useQuery({
@@ -465,7 +463,7 @@ export default function CalibrationPlansContent({
 
                   {/* 작성일 */}
                   <div className={CALIBRATION_PLAN_LIST_TOKENS.dateCell}>
-                    {format(new Date(plan.createdAt), 'yyyy-MM-dd')}
+                    {fmtDate(plan.createdAt)}
                   </div>
 
                   {/* 빈 셀 (그리드 정렬 유지) */}

@@ -16,8 +16,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTeamFilters } from '@/hooks/use-team-filters';
 import type { UITeamFilters } from '@/lib/utils/team-filter-utils';
-import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
-import { TEAMS_SITE_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
+import { TEAMS_SITE_RESTRICTED_ROLES, Permission } from '@equipment-management/shared-constants';
 import {
   SITE_PANEL_TOKENS,
   TEAM_ROW_TOKENS,
@@ -50,7 +50,7 @@ interface TeamListContentProps {
  */
 export function TeamListContent({ initialData, initialFilters }: TeamListContentProps) {
   const router = useRouter();
-  const { hasRole, user } = useAuth();
+  const { can, user } = useAuth();
   const t = useTranslations('teams');
 
   const isSiteFixed = user?.role
@@ -76,7 +76,7 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
   });
 
   const teams = useMemo(() => data?.data || [], [data]);
-  const canCreateTeam = hasRole([URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN, URVal.TECHNICAL_MANAGER]);
+  const canCreateTeam = can(Permission.CREATE_TEAMS);
   const hasActiveFilters = activeCount > 0;
 
   const handleClearFilters = () => {

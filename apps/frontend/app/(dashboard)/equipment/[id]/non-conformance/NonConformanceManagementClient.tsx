@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
@@ -38,6 +37,7 @@ import {
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
+import { Permission } from '@equipment-management/shared-constants';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { Button } from '@/components/ui/button';
@@ -69,15 +69,15 @@ export default function NonConformanceManagementClient({
   initialNonConformances,
 }: NonConformanceManagementClientProps) {
   const router = useRouter();
-  const { data: session } = useSession();
-  const { isManager } = useAuth();
+  const { user, isManager, can } = useAuth();
   const { toast } = useToast();
+  const canCreateNC = can(Permission.CREATE_NON_CONFORMANCE);
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
-  // 현재 로그인한 사용자 ID (세션에서 가져옴)
-  const currentUserId = session?.user?.id ?? '';
+  // 현재 로그인한 사용자 ID (useAuth에서 가져옴)
+  const currentUserId = user?.id ?? '';
 
   // React Query로 데이터 조회
   // 서버 프리페치 데이터를 placeholderData로 사용 → 즉시 표시 + 백그라운드 refetch
@@ -350,7 +350,7 @@ export default function NonConformanceManagementClient({
               </p>
             )}
           </div>
-          {equipment?.status !== ESVal.NON_CONFORMING && (
+          {canCreateNC && equipment?.status !== ESVal.NON_CONFORMING && (
             <Button variant="destructive" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
               {t('nonConformanceManagement.register')}
