@@ -124,6 +124,60 @@ export const TEST_NC_IDS = {
 } as const;
 
 // =============================================================================
+// Calibration Plan IDs (SSOT: backend/src/database/utils/uuid-constants.ts)
+// =============================================================================
+
+export const TEST_CALIBRATION_PLAN_IDS = {
+  CPLAN_001_DRAFT: 'cccc0001-0001-4001-8001-000000000001', // draft (v1, 2026 suwon FCC)
+  CPLAN_002_PENDING_REVIEW: 'cccc0002-0002-4002-8002-000000000002', // pending_review (v1, 2026 uiwang)
+  CPLAN_003_PENDING_APPROVAL: 'cccc0003-0003-4003-8003-000000000003', // pending_approval (v1, 2026 suwon General EMC)
+  CPLAN_004_APPROVED: 'cccc0004-0004-4004-8004-000000000004', // approved (v1, 2025 suwon FCC)
+  CPLAN_005_REJECTED: 'cccc0005-0005-4005-8005-000000000005', // rejected (v1, 2024 suwon FCC)
+  CPLAN_006_RESUBMITTED: 'cccc0006-0006-4006-8006-000000000006', // pending_review (v2 from 005)
+} as const;
+
+export const TEST_CALIBRATION_PLAN_ITEM_IDS = {
+  ITEM_001: 'cccc1001-0001-4001-8001-000000000001', // CPLAN_001 item 1
+  ITEM_002: 'cccc1002-0002-4002-8002-000000000002', // CPLAN_001 item 2
+  ITEM_003: 'cccc1003-0003-4003-8003-000000000003', // CPLAN_002 item 1
+  ITEM_004: 'cccc1004-0004-4004-8004-000000000004', // CPLAN_002 item 2
+  ITEM_005: 'cccc1005-0005-4005-8005-000000000005', // CPLAN_003 item 1
+  ITEM_006: 'cccc1006-0006-4006-8006-000000000006', // CPLAN_003 item 2
+  ITEM_007: 'cccc1007-0007-4007-8007-000000000007', // CPLAN_004 item 1 (confirmed)
+  ITEM_008: 'cccc1008-0008-4008-8008-000000000008', // CPLAN_004 item 2 (confirmed)
+  ITEM_009: 'cccc1009-0009-4009-8009-000000000009', // CPLAN_005 item 1
+  ITEM_010: 'cccc1010-0010-4010-8010-000000000010', // CPLAN_005 item 2
+  ITEM_011: 'cccc1011-0011-4011-8011-000000000011', // CPLAN_006 item 1
+  ITEM_012: 'cccc1012-0012-4012-8012-000000000012', // CPLAN_006 item 2
+} as const;
+
+// =============================================================================
+// Calibration IDs (SSOT: backend/src/database/utils/uuid-constants.ts)
+// =============================================================================
+
+export const TEST_CALIBRATION_IDS = {
+  CALIB_001: 'bbbb0001-0001-0001-0001-000000000001',
+  CALIB_002: 'bbbb0002-0002-0002-0002-000000000002',
+  CALIB_003: 'bbbb0003-0003-0003-0003-000000000003',
+  CALIB_004: 'bbbb0004-0004-0004-0004-000000000004',
+  CALIB_005: 'bbbb0005-0005-0005-0005-000000000005',
+  CALIB_006: 'bbbb0006-0006-0006-0006-000000000006',
+} as const;
+
+// =============================================================================
+// Team IDs (SSOT: backend/src/database/utils/uuid-constants.ts)
+// =============================================================================
+
+export const TEST_TEAM_IDS = {
+  FCC_EMC_RF_SUWON: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+  GENERAL_EMC_SUWON: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
+  SAR_SUWON: '7fd28076-fd5e-4d36-b051-bbf8a97b82db',
+  AUTOMOTIVE_EMC_SUWON: 'f0a32655-00f9-4ecd-b43c-af4faed499b6',
+  GENERAL_RF_UIWANG: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
+  AUTOMOTIVE_EMC_PYEONGTAEK: 'b2c3d4e5-f6a7-4890-bcde-f01234567890',
+} as const;
+
+// =============================================================================
 // Timeouts (milliseconds)
 // =============================================================================
 
