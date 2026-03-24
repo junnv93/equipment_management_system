@@ -102,8 +102,16 @@ test.describe('Suite 03: 반출 승인 워크플로우', () => {
   });
 
   test('S03-04: 승인 후 새로고침 → 상태 유지 (DB 영속성)', async ({ techManagerPage: page }) => {
-    // API로 직접 승인
+    // API로 직접 승인 (CAS: version 필수)
     const token = await getBackendToken(page, 'technical_manager');
+
+    // 먼저 현재 version 조회
+    const detailRes = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${SUITE_03.PERSISTENCE}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const { version } = await detailRes.json();
+
     const approveResponse = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${SUITE_03.PERSISTENCE}/approve`,
       {
@@ -111,7 +119,7 @@ test.describe('Suite 03: 반출 승인 워크플로우', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        data: {},
+        data: { version },
       }
     );
     expect(approveResponse.ok()).toBeTruthy();

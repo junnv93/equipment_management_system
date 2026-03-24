@@ -25,6 +25,7 @@ import {
   getBackendToken,
   cleanupCheckoutPool,
   resetEquipmentToAvailable,
+  resetEquipmentForNewCheckout,
   clearBackendCache,
 } from '../helpers/checkout-helpers';
 
@@ -35,16 +36,13 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
   const testEquipmentId = EQUIP.SPECTRUM_ANALYZER_SUW_E;
 
   test.beforeAll(async () => {
-    const pool = require('../helpers/checkout-helpers').getCheckoutPool();
+    await resetEquipmentForNewCheckout(testEquipmentId);
 
-    // ★ Reset equipment to available with future calibration date
+    // 교정일을 미래로 설정 (overdue 스케줄러 방지)
+    const pool = require('../helpers/checkout-helpers').getCheckoutPool();
     await pool.query(
-      `UPDATE equipment
-       SET status = $2,
-           next_calibration_date = NOW() + INTERVAL '365 days',
-           updated_at = NOW()
-       WHERE id = $1`,
-      [testEquipmentId, ESVal.AVAILABLE]
+      `UPDATE equipment SET next_calibration_date = NOW() + INTERVAL '365 days' WHERE id = $1`,
+      [testEquipmentId]
     );
 
     await clearBackendCache();
@@ -87,6 +85,12 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
 
     const token = await getBackendToken(page, 'technical_manager');
 
+    // CAS: 현재 version 조회 후 approve
+    const detail = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const { version } = await detail.json();
+
     const response = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${checkoutId}/approve`,
       {
@@ -94,7 +98,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        data: {},
+        data: { version },
       }
     );
 
@@ -168,6 +172,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
         'Content-Type': 'application/json',
       },
       data: {
+        version: beforeReturn.version,
         calibrationChecked: true,
         workingStatusChecked: true,
         inspectionNotes: '교정 완료 - 성적서 발행 확인, 정상 작동',

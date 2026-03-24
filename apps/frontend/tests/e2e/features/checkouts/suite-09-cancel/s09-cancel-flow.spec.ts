@@ -13,8 +13,9 @@ import { BACKEND_URL, EQUIP } from '../helpers/checkout-constants';
 import {
   getBackendToken,
   cleanupCheckoutPool,
-  resetEquipmentToAvailable,
+  resetEquipmentForNewCheckout,
   clearBackendCache,
+  apiCancelCheckout,
 } from '../helpers/checkout-helpers';
 
 test.describe('Suite 09: 반출 취소', () => {
@@ -24,8 +25,7 @@ test.describe('Suite 09: 반출 취소', () => {
   let approvedCheckoutId: string;
 
   test.beforeAll(async () => {
-    // 장비 상태가 스케줄러에 의해 변경되었을 수 있으므로 리셋
-    await resetEquipmentToAvailable(EQUIP.NETWORK_ANALYZER_SUW_E);
+    await resetEquipmentForNewCheckout(EQUIP.NETWORK_ANALYZER_SUW_E);
     await clearBackendCache();
   });
 
@@ -56,15 +56,8 @@ test.describe('Suite 09: 반출 취소', () => {
     pendingCheckoutId = createData.id;
     expect(createData.status).toBe(CSVal.PENDING);
 
-    // 취소 (technical_manager 권한 필요)
-    const managerToken = await getBackendToken(page, 'technical_manager');
-    const cancelResponse = await page.request.patch(
-      `${BACKEND_URL}/api/checkouts/${pendingCheckoutId}/cancel`,
-      {
-        headers: { Authorization: `Bearer ${managerToken}` },
-      }
-    );
-
+    // 취소 (CAS-aware: 자동 version 조회)
+    const { response: cancelResponse } = await apiCancelCheckout(page, pendingCheckoutId);
     expect(cancelResponse.ok()).toBeTruthy();
     const cancelData = await cancelResponse.json();
     expect(cancelData.status).toBe(CSVal.CANCELED);

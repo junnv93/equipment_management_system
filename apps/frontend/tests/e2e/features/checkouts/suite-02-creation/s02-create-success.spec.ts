@@ -7,7 +7,12 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BACKEND_URL, EQUIP } from '../helpers/checkout-constants';
-import { getBackendToken } from '../helpers/checkout-helpers';
+import {
+  getBackendToken,
+  resetEquipmentToAvailable,
+  clearBackendCache,
+  cleanupCheckoutPool,
+} from '../helpers/checkout-helpers';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
@@ -16,6 +21,13 @@ import {
 const createdCheckoutIds: string[] = [];
 
 test.describe('Suite 02: 반출 생성 성공', () => {
+  test.beforeAll(async () => {
+    // 이전 테스트에서 장비 상태가 변경되었을 수 있으므로 리셋
+    await resetEquipmentToAvailable(EQUIP.SIGNAL_GEN_SUW_E);
+    await resetEquipmentToAvailable(EQUIP.NETWORK_ANALYZER_SUW_E);
+    await clearBackendCache();
+  });
+
   test.afterAll(async ({ browser }) => {
     // 생성된 테스트 반출을 취소 처리
     if (createdCheckoutIds.length === 0) return;
@@ -31,6 +43,11 @@ test.describe('Suite 02: 반출 생성 성공', () => {
     } finally {
       await context.close();
     }
+    // 장비 상태 복원
+    await resetEquipmentToAvailable(EQUIP.SIGNAL_GEN_SUW_E);
+    await resetEquipmentToAvailable(EQUIP.NETWORK_ANALYZER_SUW_E);
+    await clearBackendCache();
+    await cleanupCheckoutPool();
   });
 
   test('S02-04: 교정 반출 생성 → API status=pending', async ({ testOperatorPage: page }) => {

@@ -25,6 +25,19 @@ import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 const BACKEND_URL = BASE_URLS.BACKEND;
 
 // ============================================================================
+// Test Data Constants (SSOT)
+// ============================================================================
+
+/** 시드 데이터 checkout ID 프리픽스. UUID LIKE 패턴 매칭에 사용. */
+const SEED_CHECKOUT_ID_PREFIX = '10000000-';
+
+/** 시드 데이터 장비 ID 프리픽스. */
+const SEED_EQUIPMENT_ID_PREFIX = 'eeee';
+
+/** CAS 초기 version — DB 스키마 DEFAULT 값과 동기화. @see packages/db/src/schema/checkouts.ts */
+const INITIAL_VERSION = 1;
+
+// ============================================================================
 // Database Direct Reset (for test state management)
 // ============================================================================
 
@@ -55,6 +68,38 @@ export async function resetEquipmentToAvailable(equipmentId: string): Promise<vo
     equipmentId,
     ESVal.AVAILABLE,
   ]);
+}
+
+/**
+ * Cancel all active (non-terminal) checkouts for a given equipment ID.
+ * Use in beforeAll when dynamically creating checkouts for equipment
+ * that may have leftover active checkouts from previous test runs.
+ */
+export async function cancelActiveCheckoutsForEquipment(equipmentId: string): Promise<void> {
+  const pool = getCheckoutPool();
+  // 동적 생성된 checkout만 취소 (시드 데이터 보존)
+  // 시드 데이터는 각 스위트의 beforeAll에서 개별적으로 상태 리셋
+  await pool.query(
+    `UPDATE checkouts SET status = 'canceled', version = $2, updated_at = NOW()
+     WHERE status NOT IN ('canceled', 'return_approved', 'rejected')
+       AND id::text NOT LIKE $3
+       AND id IN (
+         SELECT c.id FROM checkouts c
+         JOIN checkout_items ci ON c.id = ci.checkout_id
+         WHERE ci.equipment_id = $1
+       )`,
+    [equipmentId, INITIAL_VERSION, `${SEED_CHECKOUT_ID_PREFIX}%`]
+  );
+}
+
+/**
+ * Reset equipment to available state with active checkout cleanup.
+ * Combines cancelActiveCheckoutsForEquipment + resetEquipmentToAvailable.
+ * Use in beforeAll for suites that dynamically create checkouts.
+ */
+export async function resetEquipmentForNewCheckout(equipmentId: string): Promise<void> {
+  await cancelActiveCheckoutsForEquipment(equipmentId);
+  await resetEquipmentToAvailable(equipmentId);
 }
 
 /**
@@ -103,6 +148,7 @@ export async function resetCheckoutToPending(checkoutId: string): Promise<void> 
   await pool.query(
     `UPDATE checkouts
      SET status = $2,
+         version = ${INITIAL_VERSION},
          approver_id = NULL,
          approved_at = NULL,
          rejection_reason = NULL,
@@ -138,6 +184,7 @@ export async function resetCheckoutToApproved(
   await pool.query(
     `UPDATE checkouts
      SET status = $3,
+         version = ${INITIAL_VERSION},
          approver_id = $2,
          approved_at = NOW(),
          rejection_reason = NULL,
@@ -170,6 +217,7 @@ export async function resetCheckoutToCheckedOut(
   await pool.query(
     `UPDATE checkouts
      SET status = $3,
+         version = ${INITIAL_VERSION},
          approver_id = $2,
          approved_at = NOW() - INTERVAL '1 day',
          checkout_date = NOW(),
@@ -202,6 +250,7 @@ export async function resetCheckoutToReturned(
   await pool.query(
     `UPDATE checkouts
      SET status = $3,
+         version = ${INITIAL_VERSION},
          approver_id = $2,
          approved_at = NOW() - INTERVAL '2 days',
          checkout_date = NOW() - INTERVAL '1 day',
@@ -262,7 +311,7 @@ export async function createCheckoutRequest(
   await page.goto('/checkouts/create');
 
   // Wait for form to load
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // Select equipment
   for (const equipmentId of options.equipmentIds) {
@@ -287,7 +336,7 @@ export async function createCheckoutRequest(
 
   // Submit
   await page.getByRole('button', { name: '신청하기' }).click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ============================================================================
@@ -302,12 +351,12 @@ export async function createCheckoutRequest(
  */
 export async function approveCheckout(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '승인' }).click();
   await page.getByRole('button', { name: '확인' }).click(); // Confirmation dialog
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -322,7 +371,7 @@ export async function rejectCheckout(
   reason?: string
 ): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '거절' }).click();
 
@@ -331,7 +380,7 @@ export async function rejectCheckout(
   }
 
   await page.getByRole('button', { name: '확인' }).click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ============================================================================
@@ -346,12 +395,12 @@ export async function rejectCheckout(
  */
 export async function startCheckout(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '반출 시작' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -370,7 +419,7 @@ export async function returnCheckout(
   notes?: string
 ): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '반입 신청' }).click();
 
@@ -390,7 +439,7 @@ export async function returnCheckout(
   }
 
   await page.getByRole('button', { name: '반입 신청' }).click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -401,12 +450,12 @@ export async function returnCheckout(
  */
 export async function approveReturn(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '반입 승인' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ============================================================================
@@ -421,12 +470,12 @@ export async function approveReturn(page: Page, checkoutId: string): Promise<voi
  */
 export async function lenderPreCheckout(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '반출 전 확인 (대여자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -437,12 +486,12 @@ export async function lenderPreCheckout(page: Page, checkoutId: string): Promise
  */
 export async function borrowerReceiptCheck(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '수령 확인 (차용자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -453,12 +502,12 @@ export async function borrowerReceiptCheck(page: Page, checkoutId: string): Prom
  */
 export async function borrowerPreReturn(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '반입 전 확인 (차용자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -469,12 +518,12 @@ export async function borrowerPreReturn(page: Page, checkoutId: string): Promise
  */
 export async function lenderFinalCheck(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   await page.getByRole('button', { name: '반입 최종 확인 (대여자)' }).click();
   await page.getByRole('button', { name: '확인' }).click();
 
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ============================================================================
@@ -491,16 +540,36 @@ export async function lenderFinalCheck(page: Page, checkoutId: string): Promise<
  * @example
  * const token = await getBackendToken(page, 'technical_manager');
  */
+// Token cache: role → { token, expiresAt }
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
+
 export async function getBackendToken(
   page: Page,
   role: string = 'technical_manager'
 ): Promise<string> {
-  const response = await page.request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-  if (!response.ok()) {
+  // Return cached token if still valid (with 30s buffer)
+  const cached = tokenCache.get(role);
+  if (cached && cached.expiresAt > Date.now() + 30_000) {
+    return cached.token;
+  }
+
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await page.request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
+    if (response.ok()) {
+      const data = await response.json();
+      const token = data.access_token || data.token || '';
+      // Cache for 14 minutes (token lasts 15 min)
+      tokenCache.set(role, { token, expiresAt: Date.now() + 14 * 60 * 1000 });
+      return token;
+    }
+    if (response.status() === 429 && attempt < maxRetries - 1) {
+      await page.waitForTimeout(2000 * (attempt + 1));
+      continue;
+    }
     throw new Error(`Failed to get backend token: ${response.status()}`);
   }
-  const data = await response.json();
-  return data.access_token || data.token || '';
+  throw new Error('Failed to get backend token after retries');
 }
 
 /**
@@ -520,7 +589,10 @@ export async function apiGet(
   const response = await page.request.get(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  expect(response.ok()).toBeTruthy();
+  if (!response.ok()) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`apiGet ${path} failed: ${response.status()} ${body.slice(0, 200)}`);
+  }
   return response.json();
 }
 
@@ -576,6 +648,87 @@ export async function apiPatch(
     // Some endpoints don't return JSON
   }
   return { response, data: responseData };
+}
+
+// ============================================================================
+// CAS-Aware Mutation Helpers
+// ============================================================================
+
+/**
+ * Approve a checkout via API with automatic CAS version resolution.
+ * Fetches current version, then sends PATCH /approve with { version }.
+ */
+export async function apiApproveCheckout(
+  page: Page,
+  checkoutId: string,
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  const detail = await apiGet(page, `/api/checkouts/${checkoutId}`, role);
+  return apiPatch(page, `/api/checkouts/${checkoutId}/approve`, { version: detail.version }, role);
+}
+
+/**
+ * Start a checkout via API with automatic CAS version resolution.
+ */
+export async function apiStartCheckout(
+  page: Page,
+  checkoutId: string,
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  const detail = await apiGet(page, `/api/checkouts/${checkoutId}`, role);
+  return apiPost(page, `/api/checkouts/${checkoutId}/start`, { version: detail.version }, role);
+}
+
+/**
+ * Return a checkout via API with automatic CAS version resolution.
+ */
+export async function apiReturnCheckout(
+  page: Page,
+  checkoutId: string,
+  inspections: {
+    calibrationChecked?: boolean;
+    repairChecked?: boolean;
+    workingStatusChecked: boolean;
+    inspectionNotes?: string;
+  },
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  const detail = await apiGet(page, `/api/checkouts/${checkoutId}`, role);
+  return apiPost(
+    page,
+    `/api/checkouts/${checkoutId}/return`,
+    { version: detail.version, ...inspections },
+    role
+  );
+}
+
+/**
+ * Approve return via API with automatic CAS version resolution.
+ */
+export async function apiApproveReturn(
+  page: Page,
+  checkoutId: string,
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  const detail = await apiGet(page, `/api/checkouts/${checkoutId}`, role);
+  return apiPatch(
+    page,
+    `/api/checkouts/${checkoutId}/approve-return`,
+    { version: detail.version },
+    role
+  );
+}
+
+/**
+ * Cancel a checkout via API with automatic CAS version resolution.
+ */
+export async function apiCancelCheckout(
+  page: Page,
+  checkoutId: string,
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  const detail = await apiGet(page, `/api/checkouts/${checkoutId}`, role);
+  return apiPatch(page, `/api/checkouts/${checkoutId}/cancel`, { version: detail.version }, role);
 }
 
 // ============================================================================
@@ -637,7 +790,7 @@ export async function verifyCheckoutInList(page: Page, checkoutId: string): Prom
  */
 export async function navigateToCheckoutList(page: Page): Promise<void> {
   await page.goto('/checkouts');
-  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('heading', { name: /반출/i })).toBeVisible();
 }
 
 /**
@@ -648,7 +801,7 @@ export async function navigateToCheckoutList(page: Page): Promise<void> {
  */
 export async function navigateToCheckoutDetail(page: Page, checkoutId: string): Promise<void> {
   await page.goto(`/checkouts/${checkoutId}`);
-  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('heading', { name: '반출 상세' })).toBeVisible();
 }
 
 /**
@@ -659,7 +812,7 @@ export async function navigateToCheckoutDetail(page: Page, checkoutId: string): 
  */
 export async function navigateToCheckoutCreate(page: Page): Promise<void> {
   await page.goto('/checkouts/create');
-  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('heading', { name: '장비 반출 신청', level: 1 })).toBeVisible();
 }
 
 // ============================================================================
@@ -674,7 +827,7 @@ export async function navigateToCheckoutCreate(page: Page): Promise<void> {
  */
 export async function searchCheckoutsByEquipment(page: Page, equipmentName: string): Promise<void> {
   await page.getByPlaceholder('장비명으로 검색').fill(equipmentName);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -685,7 +838,7 @@ export async function searchCheckoutsByEquipment(page: Page, equipmentName: stri
  */
 export async function searchCheckoutsByRequester(page: Page, requesterName: string): Promise<void> {
   await page.getByPlaceholder('신청자명으로 검색').fill(requesterName);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -700,7 +853,7 @@ export async function filterCheckoutsByPurpose(
 ): Promise<void> {
   const label = CHECKOUT_PURPOSE_LABELS[purpose];
   await page.getByLabel('목적 필터').selectOption(label);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -715,7 +868,7 @@ export async function filterCheckoutsByStatus(
 ): Promise<void> {
   const label = CHECKOUT_STATUS_LABELS[status as keyof typeof CHECKOUT_STATUS_LABELS];
   await page.getByLabel('상태 필터').selectOption(label);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ============================================================================
@@ -730,7 +883,7 @@ export async function filterCheckoutsByStatus(
  */
 export async function goToNextPage(page: Page): Promise<void> {
   await page.getByRole('button', { name: '다음' }).click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -741,7 +894,7 @@ export async function goToNextPage(page: Page): Promise<void> {
  */
 export async function goToPreviousPage(page: Page): Promise<void> {
   await page.getByRole('button', { name: '이전' }).click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
@@ -752,7 +905,7 @@ export async function goToPreviousPage(page: Page): Promise<void> {
  */
 export async function goToPage(page: Page, pageNumber: number): Promise<void> {
   await page.getByRole('button', { name: pageNumber.toString() }).click();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ============================================================================
@@ -888,6 +1041,7 @@ export async function resetRentalCheckoutToState(
   await pool.query(
     `UPDATE checkouts
      SET status = $2,
+         version = ${INITIAL_VERSION},
          approver_id = $3,
          approved_at = NOW() - INTERVAL '3 days',
          checkout_date = CASE

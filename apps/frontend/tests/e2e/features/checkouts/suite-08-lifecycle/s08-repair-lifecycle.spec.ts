@@ -17,7 +17,9 @@ import {
   getBackendToken,
   cleanupCheckoutPool,
   resetEquipmentToAvailable,
+  resetEquipmentForNewCheckout,
   clearBackendCache,
+  apiApproveCheckout,
 } from '../helpers/checkout-helpers';
 
 test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
@@ -27,7 +29,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
   const testEquipmentId = EQUIP.SIGNAL_GEN_SUW_E;
 
   test.beforeAll(async () => {
-    await resetEquipmentToAvailable(testEquipmentId);
+    await resetEquipmentForNewCheckout(testEquipmentId);
     await clearBackendCache();
   });
 
@@ -64,19 +66,8 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
     expect(checkoutId).toBeTruthy();
     await clearBackendCache();
 
-    const token = await getBackendToken(page, 'technical_manager');
-
-    const response = await page.request.patch(
-      `${BACKEND_URL}/api/checkouts/${checkoutId}/approve`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        data: {},
-      }
-    );
-
+    // CAS-aware approve (자동 version 조회)
+    const { response } = await apiApproveCheckout(page, checkoutId);
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.status).toBe(CSVal.APPROVED);

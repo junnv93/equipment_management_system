@@ -15,7 +15,7 @@ import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 test.describe('Suite 02: 반출 생성 폼 검증', () => {
   test('S02-01: 필수 필드 미입력 시 제출 불가', async ({ testOperatorPage: page }) => {
     await page.goto('/checkouts/create');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: '장비 반출 신청', level: 1 })).toBeVisible();
 
     // 아무것도 입력하지 않으면 신청 버튼이 disabled 상태여야 함
     const submitButton = page.getByRole('button', { name: /신청/ });

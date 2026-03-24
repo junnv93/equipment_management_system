@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "paths": {
+      "@equipment-management/db": ["../../packages/db/dist"],
+      "@equipment-management/db/*": ["../../packages/db/dist/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "src/database/seed-test.ts"]
+}
