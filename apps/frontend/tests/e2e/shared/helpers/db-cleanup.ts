@@ -11,8 +11,9 @@ import {
   DisposalReviewStatusValues as DRSVal,
 } from '@equipment-management/schemas';
 
-const DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
+import { BASE_URLS } from '../constants/shared-test-data';
+
+const DATABASE_URL = BASE_URLS.DATABASE;
 
 // Single shared pool instance for all tests
 let sharedPool: Pool | null = null;

@@ -32,6 +32,8 @@ export const TEST_EQUIPMENT_IDS = {
 
   // Suwon (Automotive EMC - A)
   HARNESS_COUPLER_SUW_A: 'eeee4001-0001-4001-8001-000000000001', // available
+  CURRENT_PROBE_SUW_A: 'eeee4002-0002-4002-8002-000000000002', // available
+  BCI_SUW_A: 'eeee4004-0004-4004-8004-000000000004', // non_conforming
 
   // Uiwang (General RF - W)
   RECEIVER_UIW_W: 'eeee5001-0001-4001-8001-000000000001', // available
@@ -111,16 +113,55 @@ export const TEST_USER_EMAILS = {
 } as const;
 
 // =============================================================================
+// Disposal Equipment & Request IDs (SSOT: backend/src/database/utils/uuid-constants.ts)
+// Group별 격리: A(권한), B(워크플로우), C(반려), D(예외), E(UI)
+// =============================================================================
+
+export const TEST_DISPOSAL_EQUIPMENT_IDS = {
+  // Group A: 권한 검증 (Suwon FCC 팀)
+  PERM_A1_AVAILABLE: 'dddd0001-0001-4001-8001-000000000001',
+  PERM_A2_AVAILABLE: 'dddd0002-0002-4002-8002-000000000002',
+  PERM_A3_AVAILABLE: 'dddd0003-0003-4003-8003-000000000003',
+  PERM_A4_PENDING: 'dddd0004-0004-4004-8004-000000000004', // reviewStatus=pending
+  PERM_A5_REVIEWED: 'dddd0005-0005-4005-8005-000000000005', // reviewStatus=reviewed
+  PERM_A7_UIWANG: 'dddd0007-0007-4007-8007-000000000007', // Uiwang team (cross-team)
+  // Group B: 전체 워크플로우 (sequential reuse)
+  WORKFLOW_B1: 'dddd0101-0101-4101-8101-000000000101',
+  // Group C: 반려 테스트
+  REJ_C1_PENDING: 'dddd0201-0201-4201-8201-000000000201',
+  REJ_C2_REVIEWED: 'dddd0202-0202-4202-8202-000000000202',
+} as const;
+
+export const TEST_DISPOSAL_REQUEST_IDS = {
+  REQ_A4: 'dddd1004-0004-4004-8004-000000000004', // PERM_A4 (pending)
+  REQ_A5: 'dddd1005-0005-4005-8005-000000000005', // PERM_A5 (reviewed)
+  REQ_C1: 'dddd1201-0201-4201-8201-000000000201', // REJ_C1 (pending)
+  REQ_C2: 'dddd1202-0202-4202-8202-000000000202', // REJ_C2 (reviewed)
+} as const;
+
+// =============================================================================
 // Non-Conformance IDs
 // =============================================================================
 
 export const TEST_NC_IDS = {
-  NC_001_MALFUNCTION_OPEN: 'aaaa0001-0001-0001-0001-000000000001',
-  NC_002_ANALYZING_NO_REPAIR: 'aaaa0002-0002-0002-0002-000000000002',
-  NC_003_DAMAGE_ANALYZING: 'aaaa0003-0003-0003-0003-000000000003',
-  NC_004_CLOSED: 'aaaa0004-0004-0004-0004-000000000004',
-  NC_006_WITH_REPAIR: 'aaaa0006-0006-0006-0006-000000000006',
-  NC_007_DAMAGE_CORRECTED: 'aaaa0007-0007-0007-0007-000000000007',
+  // open (Suwon FCC EMC/RF team)
+  NC_001_MALFUNCTION_OPEN: 'aaaa0001-0001-0001-0001-000000000001', // POWER_METER, malfunction
+  // open (General EMC / SAR teams — TM(FCC) 접근 불가)
+  NC_002_ANALYZING_NO_REPAIR: 'aaaa0002-0002-0002-0002-000000000002', // SIGNAL_INT, malfunction
+  NC_003_DAMAGE_ANALYZING: 'aaaa0003-0003-0003-0003-000000000003', // MEASUREMENT_STAND, damage
+  // closed (Automotive EMC — TM(FCC) 접근 불가)
+  NC_004_CLOSED: 'aaaa0004-0004-0004-0004-000000000004', // BCI, malfunction
+  // closed (Suwon FCC — TM 접근 가능)
+  NC_005_CLOSED: 'aaaa0005-0005-0005-0005-000000000005', // NETWORK_ANALYZER, measurement_error
+  // corrected (Automotive EMC — TM(FCC) 접근 불가)
+  NC_006_WITH_REPAIR: 'aaaa0006-0006-0006-0006-000000000006', // HARNESS_COUPLER, calibration_failure
+  NC_007_DAMAGE_CORRECTED: 'aaaa0007-0007-0007-0007-000000000007', // CURRENT_PROBE, damage
+  // corrected (Suwon FCC — TM 접근 가능)
+  NC_008_CORRECTED: 'aaaa0008-0008-0008-0008-000000000008', // EMC_RECEIVER, measurement_error
+  // corrected (Uiwang — TM(FCC) 접근 불가)
+  NC_009_CORRECTED_UIW: 'aaaa0009-0009-0009-0009-000000000009', // RECEIVER_UIW, damage
+  // closed (Uiwang — TM(FCC) 접근 불가)
+  NC_010_CLOSED_UIW: 'aaaa000a-000a-000a-000a-00000000000a', // AMPLIFIER_UIW, malfunction
 } as const;
 
 // =============================================================================
@@ -198,4 +239,7 @@ export const TEST_TIMEOUTS = {
 export const BASE_URLS = {
   FRONTEND: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
   BACKEND: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  DATABASE:
+    process.env.DATABASE_URL ||
+    'postgresql://postgres:postgres@localhost:5432/equipment_management',
 } as const;

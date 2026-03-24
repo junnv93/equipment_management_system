@@ -21,10 +21,10 @@
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 import { Pool } from 'pg';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
 // Create a database connection pool for clearing disposal requests
-const DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
+const DATABASE_URL = BASE_URLS.DATABASE;
 let pool: Pool | null = null;
 
 function getPool(): Pool {

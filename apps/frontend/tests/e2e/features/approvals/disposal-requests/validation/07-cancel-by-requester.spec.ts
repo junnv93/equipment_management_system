@@ -20,9 +20,9 @@ import {
 import { resetEquipmentToPendingDisposal, cleanupPool } from '../helpers/db-cleanup';
 import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 import { Pool } from 'pg';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
-const DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
+const DATABASE_URL = BASE_URLS.DATABASE;
 
 test.describe('Exceptions - Group D', () => {
   test.beforeEach(async () => {

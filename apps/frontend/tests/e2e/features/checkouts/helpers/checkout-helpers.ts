@@ -41,8 +41,7 @@ const INITIAL_VERSION = 1;
 // Database Direct Reset (for test state management)
 // ============================================================================
 
-const DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
+const DATABASE_URL = BASE_URLS.DATABASE;
 
 let checkoutPool: Pool | null = null;
 

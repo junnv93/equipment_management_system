@@ -14,25 +14,53 @@
  */
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
-import { BASE_URLS } from '../../shared/constants/shared-test-data';
+import {
+  BASE_URLS,
+  TEST_NC_IDS,
+  TEST_EQUIPMENT_IDS,
+} from '../../shared/constants/shared-test-data';
+import { getBackendToken } from '../../shared/helpers/api-helpers';
 import { NonConformanceStatusValues as NCSVal } from '@equipment-management/schemas';
+import { Pool } from 'pg';
 
-const TEST_NC_ID = 'aaaa0006-0006-0006-0006-000000000006';
-const TEST_EQUIPMENT_ID = 'eeee4001-0001-4001-8001-000000000001';
+const TEST_NC_ID = TEST_NC_IDS.NC_006_WITH_REPAIR;
+const TEST_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.HARNESS_COUPLER_SUW_A;
 const NC_CAUSE_TEXT = '교정 실패 - 신호 손실';
 const REJECTION_REASON =
   '재교정 성적서 번호가 누락되었습니다. 교정 결과 성적서 번호를 조치 내용에 포함해주세요.';
 const BACKEND_URL = BASE_URLS.BACKEND;
 
-/** 백엔드 JWT 토큰 획득 */
-async function getBackendToken(
-  page: import('@playwright/test').Page,
-  role: string
-): Promise<string> {
-  const response = await page.request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-  expect(response.ok()).toBeTruthy();
-  const data = await response.json();
-  return data.access_token || data.data?.access_token;
+/** DB 직접 리셋 — 시드 데이터 멱등성 보장 */
+async function resetNcForRejectionTest(): Promise<void> {
+  const pool = new Pool({ connectionString: BASE_URLS.DATABASE, max: 2 });
+  try {
+    // NC_006을 corrected 상태로 복원 (이전 실행에서 closed로 변경되었을 수 있음)
+    await pool.query(
+      `UPDATE non_conformances
+       SET status = 'corrected', version = 1,
+           rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
+           closed_by = NULL, closed_at = NULL, closure_notes = NULL,
+           corrected_by = $2, correction_date = NOW() - INTERVAL '3 days',
+           correction_content = '내부 연결부 교체 완료',
+           updated_at = NOW()
+       WHERE id = $1`,
+      [TEST_NC_ID, '00000000-0000-0000-0000-000000000002']
+    );
+    // NC_007도 corrected 상태로 복원
+    await pool.query(
+      `UPDATE non_conformances
+       SET status = 'corrected', version = 1,
+           rejected_by = NULL, rejected_at = NULL, rejection_reason = NULL,
+           closed_by = NULL, closed_at = NULL, closure_notes = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [TEST_NC_IDS.NC_007_DAMAGE_CORRECTED]
+    );
+    // 캐시 클리어
+    await fetch(`${BACKEND_URL}/api/auth/test-cache-clear`, { method: 'POST' });
+  } finally {
+    await pool.end();
+  }
 }
 
 test.describe('부적합 반려 전체 프로세스', () => {
@@ -40,6 +68,10 @@ test.describe('부적합 반려 전체 프로세스', () => {
 
   let tmToken: string;
   let teToken: string;
+
+  test.beforeAll(async () => {
+    await resetNcForRejectionTest();
+  });
 
   test.beforeEach(async ({}, testInfo) => {
     if (testInfo.project.name !== 'chromium') {
@@ -52,14 +84,18 @@ test.describe('부적합 반려 전체 프로세스', () => {
     tmToken = await getBackendToken(techManagerPage, 'technical_manager');
 
     // 먼저 승인 목록에서 해당 NC가 표시되는지 확인 (UI)
+    // URL ?tab=nonconformity → ApprovalsClient가 자동으로 해당 카테고리 선택
     await techManagerPage.goto('/admin/approvals?tab=nonconformity');
     await expect(techManagerPage.getByRole('heading', { name: '승인 관리' })).toBeVisible({
       timeout: 15000,
     });
 
-    const ncTab = techManagerPage.getByRole('tab', { name: /부적합 재개/i });
-    await expect(ncTab).toBeVisible();
-    await ncTab.click();
+    // Sidebar UI: role="navigation" 내 button (Tab UI에서 리디자인됨)
+    const ncButton = techManagerPage
+      .getByRole('navigation', { name: /승인 카테고리/ })
+      .getByRole('button', { name: /부적합 재개/ });
+    await expect(ncButton).toBeVisible();
+    await ncButton.click();
 
     // corrected 상태의 NC가 승인 대기 목록에 표시되는지 확인
     await expect(techManagerPage.getByText(NC_CAUSE_TEXT).first()).toBeVisible({ timeout: 10000 });
@@ -103,7 +139,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
   // Step 2: 시험실무자가 반려 사유 배너 확인 (UI)
   test('Step 2: 시험실무자가 반려 사유 배너를 확인한다', async ({ testOperatorPage }) => {
     await testOperatorPage.goto(`/equipment/${TEST_EQUIPMENT_ID}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
+    await testOperatorPage.waitForLoadState('domcontentloaded');
 
     await expect(testOperatorPage.getByRole('heading', { name: '부적합 관리' })).toBeVisible({
       timeout: 15000,
@@ -232,7 +268,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
 
     // UI 검증: 장비 상세 → 부적합 관리
     await testOperatorPage.goto(`/equipment/${TEST_EQUIPMENT_ID}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
+    await testOperatorPage.waitForLoadState('domcontentloaded');
     await expect(testOperatorPage.getByRole('heading', { name: '부적합 관리' })).toBeVisible({
       timeout: 15000,
     });
@@ -264,8 +300,8 @@ test.describe('부적합 반려 전체 프로세스', () => {
 test.describe('이중 반려 후 종료 프로세스', () => {
   test.describe.configure({ mode: 'serial' });
 
-  const NC_ID = 'aaaa0007-0007-0007-0007-000000000007';
-  const EQUIP_ID = 'eeee4002-0002-4002-8002-000000000002';
+  const NC_ID = TEST_NC_IDS.NC_007_DAMAGE_CORRECTED;
+  const EQUIP_ID = TEST_EQUIPMENT_IDS.CURRENT_PROBE_SUW_A;
   const REASON_1 = '조치 사진이 누락되었습니다. 교체된 BNC 커넥터의 사진을 첨부해주세요.';
   const REASON_2 = '커넥터 규격 정보가 불충분합니다. N-type 50ohm 커넥터 사양서를 첨부해주세요.';
   let tmToken: string;
@@ -366,7 +402,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
 
     // UI 검증: 최신(두 번째) 반려 사유가 배너에 표시
     await testOperatorPage.goto(`/equipment/${EQUIP_ID}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
+    await testOperatorPage.waitForLoadState('domcontentloaded');
     await expect(testOperatorPage.getByRole('heading', { name: '부적합 관리' })).toBeVisible({
       timeout: 15000,
     });
