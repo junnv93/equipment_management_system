@@ -32,7 +32,8 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/lib/api/query-config.ts`                                                                  | queryKeys 팩토리 + QUERY_CONFIG 프리셋                      |
 | `apps/frontend/lib/api/cache-invalidation.ts`                                                            | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등 정적 클래스) |
 | `apps/frontend/components/dashboard/DashboardClient.tsx`                                                 | useQuery 참조 구현                                          |
-| `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx`                                  | placeholderData 참조 구현                                   |
+| `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx`                                  | placeholderData + useOptimisticMutation 참조 구현           |
+| `apps/frontend/app/(dashboard)/checkouts/[id]/return/ReturnCheckoutClient.tsx`                           | cross-page useOptimisticMutation + onSettledCallback 참조   |
 | `apps/frontend/hooks/use-team-filters.ts`                                                                | URL-driven 필터 훅 참조 구현                                |
 | `apps/frontend/lib/utils/equipment-filter-utils.ts`                                                      | 필터 SSOT 유틸리티 참조 구현                                |
 | `apps/frontend/app/(dashboard)/admin/calibration-approvals/CalibrationApprovalsContent.tsx`              | 1-step 승인 direct useMutation 참조                         |
@@ -199,13 +200,17 @@ invalidateKeys: [queryKeys.approvals.countsAll],
 체크아웃 관련 캐시 무효화가 `CheckoutCacheInvalidation` 정적 클래스를 통해 수행되는지 확인합니다.
 
 ```bash
-# 컴포넌트에서 checkout 캐시를 직접 무효화하는 패턴 탐지
+# 1. 컴포넌트에서 checkout 캐시를 직접 무효화하는 패턴 탐지
 grep -rn "invalidateQueries.*queryKeys\.checkouts\." apps/frontend/components apps/frontend/hooks --include="*.ts" --include="*.tsx" | grep -v "cache-invalidation\|CheckoutCacheInvalidation\|// "
+
+# 2. invalidateKeys에 queryKeys 배열을 인라인 하드코딩하는 패턴 탐지
+# CheckoutCacheInvalidation.APPROVAL_KEYS 등 SSOT 상수 대신 직접 배열 조합 사용
+grep -rn "invalidateKeys:\s*\[queryKeys\." apps/frontend/app apps/frontend/components --include="*.tsx" --include="*.ts" | grep -v "// "
 ```
 
-**PASS 기준:** 컴포넌트/훅에서 체크아웃 캐시 무효화는 `CheckoutCacheInvalidation` 사용.
+**PASS 기준:** 컴포넌트/훅에서 체크아웃 캐시 무효화는 `CheckoutCacheInvalidation` 정적 상수(`APPROVAL_KEYS`, `START_KEYS`, `RETURN_KEYS`, `RETURN_APPROVAL_KEYS`) 사용.
 
-**FAIL 기준:** 컴포넌트에서 직접 queryKeys 배열 조합으로 invalidateQueries 호출 시 무효화 누락 가능.
+**FAIL 기준:** (1) 직접 queryKeys 배열로 invalidateQueries 호출, 또는 (2) `invalidateKeys: [queryKeys.checkouts.all, queryKeys.equipment.all]` 같은 인라인 배열 하드코딩. 무효화 범위 변경 시 SSOT 상수 한 곳만 수정해야 모든 소비자에 반영.
 
 ### Step 6: REFETCH_STRATEGIES 하드코딩 탐지
 

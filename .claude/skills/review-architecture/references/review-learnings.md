@@ -157,5 +157,10 @@
 | 2026-03-23 | 체크리스트 보강 | 섹션 2: 트랜잭션 경계 + CAS 선점 순서 추가 | review-checklist.md |
 | 2026-03-23 | 체크리스트 보강 | 섹션 3: Navigate-Before-Invalidate + 카운트↔목록 소스 일치 | review-checklist.md |
 | 2026-03-23 | 체크리스트 보강 | 섹션 4: Pending 목록 @SiteScoped 확인 | review-checklist.md |
+| 2026-03-24 | 새 패턴 | getLatestCasVersion() — 다단계 승인 Stale CAS 해결 (mutationFn 내 fresh fetch) | review-learnings.md |
+| 2026-03-24 | 새 패턴 | enforceFactorAccess — equipment 경유 사이트 접근 제어 (approve/reject/delete) | review-learnings.md |
+| 2026-03-24 | 새 패턴 | needsEquipmentJoin 조건부 JOIN — site/teamId 필터 시에만 JOIN 수행 (성능) | review-learnings.md |
+| 2026-03-24 | 검증 결과 | correlated subquery → JOIN 전환 후 COUNT fan-out 없음 확인 (N:1 관계) | review-learnings.md |
+| 2026-03-24 | 검증 결과 | calibration-factors 반려 approvedBy 패턴 통일 — pending에서 null이므로 미포함으로 유지 | review-learnings.md |
 | 2026-03-23 | 체크리스트 보강 | 섹션 7: Mutation 라이프사이클 + URL-driven 필터 호환성 | review-checklist.md |
 | 2026-03-23 | 정책 추가 | learnings 아카이브 정책 (3개월/20개 초과 시) | SKILL.md Step 9d |

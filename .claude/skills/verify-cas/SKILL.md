@@ -284,6 +284,30 @@ requestData.version = currentEquipment.version; // 현재 DB version 주입
 await this.equipmentService.update(currentEquipment.id, requestData);
 ```
 
+### Step 11: updateWithVersion의 version 인자 출처 검증
+
+`updateWithVersion(table, uuid, version, ...)`의 세 번째 인자(version)가 DB에서 방금 조회한 값이 아닌, 클라이언트 DTO에서 전달된 값인지 확인합니다. DB 조회 version을 사용하면 CAS가 항상 성공하여 동시 수정을 감지할 수 없습니다.
+
+```bash
+# updateWithVersion 호출에서 existing/current/found 변수의 version을 직접 사용하는 패턴 탐지
+grep -rn "updateWithVersion" apps/backend/src/modules --include="*.service.ts" | grep -E "existing\w*\.version|current\w*\.version|found\w*\.version" | grep -v "// "
+```
+
+**PASS 기준:** 위 grep 결과가 0건이거나, 모든 결과가 Exceptions에 해당.
+
+**FAIL 기준:** `updateWithVersion(table, id, existingEntity.version, ...)` 패턴 발견 — DB에서 방금 읽은 version을 CAS에 사용하면 동시 수정 감지 불가.
+
+```typescript
+// ❌ WRONG — DB 조회 version 사용 (CAS 무력화)
+const existing = await this.findOne(uuid);
+await this.updateWithVersion(table, uuid, existing.version, updateData, '엔티티');
+
+// ✅ CORRECT — 클라이언트 DTO version 사용 (진정한 CAS)
+await this.updateWithVersion(table, uuid, dto.version, updateData, '엔티티');
+```
+
+**예외:** Step 10의 승인 프로세스처럼 stale requestData의 version을 현재 DB version으로 의도적으로 교체하는 경우는 정상 (예: `requestData.version = currentEquipment.version`).
+
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
