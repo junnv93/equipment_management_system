@@ -14,6 +14,19 @@ import { BASE_URLS } from '../constants/shared-test-data';
 const BACKEND_URL = BASE_URLS.BACKEND;
 
 // ============================================================================
+// Test Auth (SSOT: test-login 엔드포인트 경로 + 토큰 추출)
+// ============================================================================
+
+/** test-login 엔드포인트 경로 (dev/test 환경 전용) */
+const TEST_LOGIN_PATH = '/api/auth/test-login';
+
+/** 응답에서 access_token을 추출 (ResponseTransformInterceptor 래핑 대응) */
+function extractToken(data: Record<string, unknown>): string | undefined {
+  const nested = data.data as Record<string, unknown> | undefined;
+  return (nested?.access_token ?? data.access_token) as string | undefined;
+}
+
+// ============================================================================
 // Token Cache (rate limit 429 방지 — test-login 엔드포인트 100/분 제한)
 // ============================================================================
 
@@ -23,9 +36,39 @@ const tokenCache: Record<string, { token: string; expiresAt: number }> = {};
 const TOKEN_CACHE_TTL_MS = 10 * 60 * 1000;
 
 /**
- * Backend JWT 토큰 획득 (캐싱)
+ * Backend JWT 토큰 획득 — Node fetch 기반 (Page 불필요)
  *
- * dev/test 환경의 test-login 엔드포인트에서 JWT를 발급받는다.
+ * global-setup, beforeAll 등 Playwright Page가 없는 컨텍스트에서 사용.
+ * rate limit 방지를 위해 역할별 10분 캐싱.
+ */
+export async function fetchBackendToken(role: string): Promise<string> {
+  const now = Date.now();
+  const cached = tokenCache[role];
+  if (cached && cached.expiresAt > now) {
+    return cached.token;
+  }
+
+  const response = await fetch(`${BACKEND_URL}${TEST_LOGIN_PATH}?role=${role}`, {
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) {
+    throw new Error(`test-login failed for role ${role}: ${response.status}`);
+  }
+  const data = await response.json();
+  const token = extractToken(data);
+
+  if (!token) {
+    throw new Error(`Failed to get token for role ${role}: ${JSON.stringify(data)}`);
+  }
+
+  tokenCache[role] = { token, expiresAt: now + TOKEN_CACHE_TTL_MS };
+  return token;
+}
+
+/**
+ * Backend JWT 토큰 획득 — Playwright Page 기반 (캐싱)
+ *
+ * spec 파일 내 테스트에서 사용. page.request를 통해 호출.
  * rate limit 방지를 위해 역할별 10분 캐싱.
  *
  * @param page - Playwright Page (page.request 사용)
@@ -38,10 +81,10 @@ export async function getBackendToken(page: Page, role: string): Promise<string>
     return cached.token;
   }
 
-  const response = await page.request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
+  const response = await page.request.get(`${BACKEND_URL}${TEST_LOGIN_PATH}?role=${role}`);
   expect(response.ok()).toBeTruthy();
   const data = await response.json();
-  const token = data.access_token || data.data?.access_token;
+  const token = extractToken(data);
 
   if (!token) {
     throw new Error(`Failed to get token for role ${role}: ${JSON.stringify(data)}`);

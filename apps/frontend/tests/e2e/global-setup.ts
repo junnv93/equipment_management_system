@@ -13,6 +13,7 @@ import path from 'path';
 import fs from 'fs';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from './shared/constants/shared-test-data';
+import { fetchBackendToken } from './shared/helpers/api-helpers';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 
@@ -102,13 +103,7 @@ async function globalSetup(config: FullConfig) {
     //    시드 적용 후 스케줄러를 수동 트리거해야 정합성 보장
     console.log('  🔄 교정 기한 초과 장비 점검 트리거...');
     try {
-      // lab_manager 역할로 테스트 JWT 획득 (UPDATE_EQUIPMENT 권한 필요)
-      const loginRes = await fetch(`${apiURL}/api/auth/test-login?role=lab_manager`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      const loginData = await loginRes.json();
-      const token = loginData?.data?.access_token ?? loginData?.access_token;
-
+      const token = await fetchBackendToken('lab_manager');
       const overdueRes = await fetch(
         `${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
         {
