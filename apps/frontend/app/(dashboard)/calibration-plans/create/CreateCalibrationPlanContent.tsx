@@ -103,8 +103,8 @@ export default function CreateCalibrationPlanContent() {
   // 계획서 생성 뮤테이션
   const createMutation = useMutation({
     mutationFn: calibrationPlansApi.createCalibrationPlan,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationPlans.lists() });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.calibrationPlans.lists() });
       toast({
         title: t('planCreate.toasts.createSuccess'),
         description: t('planCreate.toasts.createSuccessDesc', {

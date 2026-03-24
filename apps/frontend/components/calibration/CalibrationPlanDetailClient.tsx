@@ -133,12 +133,46 @@ export function CalibrationPlanDetailClient({
   const invalidateAfterChange = () =>
     CalibrationPlansCacheInvalidation.invalidateAfterStatusChange(queryClient, planUuid);
 
+  /**
+   * 최신 casVersion을 조회하여 반환 (Stale CAS 방지)
+   * 다단계 승인(3-step)에서 각 단계마다 casVersion이 증가하므로,
+   * 캐시된 plan?.casVersion이 stale일 수 있음 → 항상 최신 조회
+   */
+  const getLatestCasVersion = async (): Promise<number> => {
+    const latest = await calibrationPlansApi.getCalibrationPlan(planUuid);
+    return latest.casVersion;
+  };
+
+  /**
+   * 공통 에러 핸들러 — VERSION_CONFLICT / 일반 에러 분기
+   */
+  const handleMutationError = (
+    error: Error & { response?: { data?: { message?: string } } },
+    errorTitleKey: string,
+    errorDescKey: string
+  ) => {
+    if (isConflictError(error)) {
+      toast({
+        title: t('planDetail.toasts.versionConflict'),
+        description: t('planDetail.toasts.versionConflictDesc'),
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: t(errorTitleKey as Parameters<typeof t>[0]),
+        description: error.response?.data?.message || t(errorDescKey as Parameters<typeof t>[0]),
+        variant: 'destructive',
+      });
+    }
+    invalidateAfterChange();
+  };
+
   // 검토 요청 뮤테이션 (기술책임자 → 품질책임자)
   const submitForReviewMutation = useMutation({
-    mutationFn: () =>
-      calibrationPlansApi.submitForReview(planUuid, {
-        casVersion: plan?.casVersion ?? 0,
-      }),
+    mutationFn: async () => {
+      const casVersion = await getLatestCasVersion();
+      return calibrationPlansApi.submitForReview(planUuid, { casVersion });
+    },
     onSuccess: () => {
       toast({
         title: t('planDetail.toasts.submitForReviewSuccess'),
@@ -147,31 +181,20 @@ export function CalibrationPlanDetailClient({
       invalidateAfterChange();
       setIsSubmitDialogOpen(false);
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      if (isConflictError(error)) {
-        toast({
-          title: t('planDetail.toasts.versionConflict'),
-          description: t('planDetail.toasts.versionConflictDesc'),
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: t('planDetail.toasts.submitForReviewError'),
-          description:
-            error.response?.data?.message || t('planDetail.toasts.submitForReviewErrorDesc'),
-          variant: 'destructive',
-        });
-      }
-      invalidateAfterChange();
-    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) =>
+      handleMutationError(
+        error,
+        'planDetail.toasts.submitForReviewError',
+        'planDetail.toasts.submitForReviewErrorDesc'
+      ),
   });
 
   // 최종 승인 뮤테이션 (시험소장)
   const approveMutation = useMutation({
-    mutationFn: () =>
-      calibrationPlansApi.approveCalibrationPlan(planUuid, {
-        casVersion: plan?.casVersion ?? 0,
-      }),
+    mutationFn: async () => {
+      const casVersion = await getLatestCasVersion();
+      return calibrationPlansApi.approveCalibrationPlan(planUuid, { casVersion });
+    },
     onSuccess: () => {
       toast({
         title: t('planDetail.toasts.approveSuccess'),
@@ -180,31 +203,20 @@ export function CalibrationPlanDetailClient({
       invalidateAfterChange();
       setIsApproveDialogOpen(false);
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      if (isConflictError(error)) {
-        toast({
-          title: t('planDetail.toasts.versionConflict'),
-          description: t('planDetail.toasts.versionConflictDesc'),
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: t('planDetail.toasts.approveError'),
-          description: error.response?.data?.message || t('planDetail.toasts.approveErrorDesc'),
-          variant: 'destructive',
-        });
-      }
-      invalidateAfterChange();
-    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) =>
+      handleMutationError(
+        error,
+        'planDetail.toasts.approveError',
+        'planDetail.toasts.approveErrorDesc'
+      ),
   });
 
   // 반려 뮤테이션 (품질책임자 또는 시험소장)
   const rejectMutation = useMutation({
-    mutationFn: () =>
-      calibrationPlansApi.rejectCalibrationPlan(planUuid, {
-        casVersion: plan?.casVersion ?? 0,
-        rejectionReason,
-      }),
+    mutationFn: async () => {
+      const casVersion = await getLatestCasVersion();
+      return calibrationPlansApi.rejectCalibrationPlan(planUuid, { casVersion, rejectionReason });
+    },
     onSuccess: () => {
       toast({
         title: t('planDetail.toasts.rejectSuccess'),
@@ -214,28 +226,19 @@ export function CalibrationPlanDetailClient({
       setIsRejectDialogOpen(false);
       setRejectionReason('');
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      if (isConflictError(error)) {
-        toast({
-          title: t('planDetail.toasts.versionConflict'),
-          description: t('planDetail.toasts.versionConflictDesc'),
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: t('planDetail.toasts.rejectError'),
-          description: error.response?.data?.message || t('planDetail.toasts.rejectErrorDesc'),
-          variant: 'destructive',
-        });
-      }
-      invalidateAfterChange();
-    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) =>
+      handleMutationError(
+        error,
+        'planDetail.toasts.rejectError',
+        'planDetail.toasts.rejectErrorDesc'
+      ),
   });
 
   // 삭제 뮤테이션
   const deleteMutation = useMutation({
     mutationFn: () => calibrationPlansApi.deleteCalibrationPlan(planUuid),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await CalibrationPlansCacheInvalidation.invalidateAfterStatusChange(queryClient, planUuid);
       toast({
         title: t('planDetail.toasts.deleteSuccess'),
         description: t('planDetail.toasts.deleteSuccessDesc'),

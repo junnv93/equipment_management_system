@@ -44,6 +44,8 @@ import {
   CALIBRATION_PLAN_DATA_SCOPE,
   resolveDataScope,
   SELECTOR_PAGE_SIZE,
+  hasPermission,
+  Permission,
 } from '@equipment-management/shared-constants';
 import {
   CALIBRATION_PLAN_KPI_TOKENS,
@@ -93,6 +95,11 @@ export default function CalibrationPlansContent({
         { role: userRole as UserRole, site: session?.user?.site },
         CALIBRATION_PLAN_DATA_SCOPE
       ).type === 'site'
+    : false;
+
+  // 계획서 생성 권한 체크 (QM은 CREATE_CALIBRATION_PLAN 없음)
+  const canCreatePlan = userRole
+    ? hasPermission(userRole as UserRole, Permission.CREATE_CALIBRATION_PLAN)
     : false;
 
   // 팀 목록 조회 (필터링용)
@@ -189,12 +196,14 @@ export default function CalibrationPlansContent({
         title={t('plansList.title')}
         subtitle={t('plansList.subtitle')}
         actions={
-          <Button asChild>
-            <Link href="/calibration-plans/create">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('plansList.createButton')}
-            </Link>
-          </Button>
+          canCreatePlan ? (
+            <Button asChild>
+              <Link href="/calibration-plans/create">
+                <Plus className="h-4 w-4 mr-2" />
+                {t('plansList.createButton')}
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -384,12 +393,14 @@ export default function CalibrationPlansContent({
               <FileText className={CALIBRATION_PLAN_LIST_TOKENS.empty.icon} />
             </div>
             <p className={CALIBRATION_PLAN_LIST_TOKENS.empty.text}>{t('plansList.list.empty')}</p>
-            <Button asChild className="mt-4">
-              <Link href="/calibration-plans/create">
-                <Plus className="h-4 w-4 mr-2" />
-                {t('plansList.createButton')}
-              </Link>
-            </Button>
+            {canCreatePlan && (
+              <Button asChild className="mt-4">
+                <Link href="/calibration-plans/create">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('plansList.createButton')}
+                </Link>
+              </Button>
+            )}
           </div>
         ) : (
           <>
