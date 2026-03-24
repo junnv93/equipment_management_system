@@ -92,7 +92,7 @@ test.describe('Suite 15: 반입 반려 워크플로우', () => {
       }
     );
 
-    expect([200, 201]).toContain(response.status());
+    expect(response.status()).toBe(201); // POST /return → 201 Created
 
     await clearBackendCache();
     const updated = await apiGet(page, `/api/checkouts/${SUITE_15.CALIBRATION_RETURN}`);

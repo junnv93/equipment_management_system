@@ -59,7 +59,7 @@ test.describe('Suite 16: 대여 UI 라이프사이클', () => {
       notes: 'E2E 대여 반출 전 확인',
     });
 
-    expect([200, 201]).toContain(response.status());
+    expect(response.status()).toBe(201); // POST condition-check → 201 Created
 
     await clearBackendCache();
     const updated = await apiGet(page, `/api/checkouts/${CHECKOUT_ID}`);
@@ -76,7 +76,7 @@ test.describe('Suite 16: 대여 UI 라이프사이클', () => {
       notes: 'E2E 인수 확인',
     });
 
-    expect([200, 201]).toContain(response.status());
+    expect(response.status()).toBe(201); // POST condition-check → 201 Created
 
     await clearBackendCache();
     const updated = await apiGet(page, `/api/checkouts/${CHECKOUT_ID}`);
@@ -93,7 +93,7 @@ test.describe('Suite 16: 대여 UI 라이프사이클', () => {
       notes: 'E2E 반납 전 확인',
     });
 
-    expect([200, 201]).toContain(response.status());
+    expect(response.status()).toBe(201); // POST condition-check → 201 Created
 
     await clearBackendCache();
     const updated = await apiGet(page, `/api/checkouts/${CHECKOUT_ID}`);
@@ -110,7 +110,7 @@ test.describe('Suite 16: 대여 UI 라이프사이클', () => {
       notes: 'E2E 반입 최종 확인',
     });
 
-    expect([200, 201]).toContain(response.status());
+    expect(response.status()).toBe(201); // POST condition-check → 201 Created
 
     await clearBackendCache();
     const updated = await apiGet(page, `/api/checkouts/${CHECKOUT_ID}`);

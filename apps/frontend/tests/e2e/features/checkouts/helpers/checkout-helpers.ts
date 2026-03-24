@@ -540,7 +540,13 @@ export async function lenderFinalCheck(page: Page, checkoutId: string): Promise<
  * @example
  * const token = await getBackendToken(page, 'technical_manager');
  */
-// Token cache: role → { token, expiresAt }
+/**
+ * Process-scoped token cache: role → { token, expiresAt }
+ *
+ * Playwright의 각 worker는 독립 프로세스이므로 이 캐시는 같은 파일 내
+ * serial 테스트 간에만 공유됩니다. 다른 spec 파일의 worker와는 격리됩니다.
+ * 캐시 TTL은 JWT access token 만료(15분)보다 짧은 14분으로 설정.
+ */
 const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 export async function getBackendToken(
@@ -1170,23 +1176,28 @@ export async function resetCheckoutToReturnedViaAPI(
  */
 export async function fullCheckoutCleanup(): Promise<void> {
   const pool = getCheckoutPool();
+  const seedPattern = `${SEED_CHECKOUT_ID_PREFIX}%`;
+  const equipPattern = `${SEED_EQUIPMENT_ID_PREFIX}%`;
 
   // Step 1: Delete condition_checks (FK to checkouts)
   await pool.query(
-    `DELETE FROM condition_checks WHERE checkout_id IN (SELECT id FROM checkouts WHERE id LIKE '10000000-%')`
+    `DELETE FROM condition_checks WHERE checkout_id IN (SELECT id FROM checkouts WHERE id::text LIKE $1)`,
+    [seedPattern]
   );
 
   // Step 2: Delete checkout_items (FK to checkouts)
   await pool.query(
-    `DELETE FROM checkout_items WHERE checkout_id IN (SELECT id FROM checkouts WHERE id LIKE '10000000-%')`
+    `DELETE FROM checkout_items WHERE checkout_id IN (SELECT id FROM checkouts WHERE id::text LIKE $1)`,
+    [seedPattern]
   );
 
   // Step 3: Delete checkouts
-  await pool.query(`DELETE FROM checkouts WHERE id LIKE '10000000-%'`);
+  await pool.query(`DELETE FROM checkouts WHERE id::text LIKE $1`, [seedPattern]);
 
   // Step 4: Reset all test equipment to available status
-  await pool.query(`UPDATE equipment SET status = $1, updated_at = NOW() WHERE id LIKE 'eeee%'`, [
+  await pool.query(`UPDATE equipment SET status = $1, updated_at = NOW() WHERE id::text LIKE $2`, [
     ESVal.AVAILABLE,
+    equipPattern,
   ]);
 }
 
