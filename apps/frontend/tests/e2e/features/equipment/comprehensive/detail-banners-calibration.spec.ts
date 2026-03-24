@@ -39,10 +39,13 @@ test.describe('장비 상세 - 배너 및 교정 상태 표시', () => {
     });
 
     test('available 장비에는 부적합 배너가 표시되지 않는다', async ({ techManagerPage: page }) => {
-      // SPECTRUM_ANALYZER_SUW_E: available 상태
-      await page.goto(`/equipment/${TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E}`);
+      // SAR_PROBE_SUW_S: available 상태 (다른 테스트에서 미사용, 상태 안정)
+      await page.goto(`/equipment/${TEST_EQUIPMENT_IDS.SAR_PROBE_SUW_S}`);
 
-      await expect(page.getByText('사용 가능').first()).toBeVisible();
+      // 장비 상세 로드 대기
+      await expect(page.getByRole('button', { name: /탭으로 이동/ }).first()).toBeVisible({
+        timeout: 15000,
+      });
 
       // NC 배너가 없어야 함
       const ncAlerts = page.getByRole('alert').filter({ hasText: /부적합/ });

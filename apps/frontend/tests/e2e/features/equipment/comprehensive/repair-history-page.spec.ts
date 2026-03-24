@@ -172,9 +172,8 @@ test.describe('수리 이력 페이지', () => {
       const submitButton = dialog.getByRole('button', { name: /등록/ }).last();
       await submitButton.click();
 
-      // Zod 검증 실패 → 다이얼로그가 닫히지 않아야 함
-      // 2초 후에도 다이얼로그가 여전히 열려있는지 확인
-      await page.waitForTimeout(2000);
+      // Zod 검증 실패 → 에러 메시지 표시 + 다이얼로그 유지
+      await expect(dialog.getByText(/10자|입력해|필수/).first()).toBeVisible({ timeout: 5000 });
       await expect(dialog).toBeVisible();
     });
   });

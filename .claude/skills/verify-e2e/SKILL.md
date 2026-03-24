@@ -34,7 +34,8 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 | `apps/frontend/tests/e2e/shared/fixtures/auth.fixture.ts` | storageState 기반 인증 fixture |
 | `apps/frontend/tests/e2e/auth.setup.ts` | Setup project — 역할별 로그인 수행 |
 | `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts` | 테스트 데이터 SSOT (IDs, URLs, Timeouts) |
-| `apps/frontend/tests/e2e/shared/helpers/api-helpers.ts` | 토큰 캐싱, 캐시 클리어 헬퍼 |
+| `apps/frontend/tests/e2e/shared/helpers/api-helpers.ts` | 토큰 캐싱(getBackendToken, fetchBackendToken), 캐시 클리어 헬퍼 |
+| `apps/frontend/tests/e2e/global-setup.ts` | 글로벌 설정 (시드 + overdue check 트리거, fetchBackendToken 사용) |
 | `apps/frontend/tests/e2e/shared/helpers/approval-helpers.ts` | 승인 API 헬퍼 (CAS-Aware) |
 | `apps/frontend/tests/e2e/shared/helpers/navigation.ts` | 네비게이션 헬퍼 |
 | `apps/frontend/tests/e2e/shared/helpers/dialog.ts` | 다이얼로그 상호작용 헬퍼 |
@@ -199,16 +200,16 @@ grep -rn "pool.query.*UPDATE\|pool.query.*DELETE\|pool.query.*INSERT" apps/front
 
 ### Step 9: Backend 토큰 직접 호출 탐지
 
-`getBackendToken()` 대신 test-login 엔드포인트를 직접 호출하는 패턴을 탐지합니다.
+`getBackendToken()` (Page 기반) 또는 `fetchBackendToken()` (Node fetch 기반) 대신 test-login 엔드포인트를 직접 호출하는 패턴을 탐지합니다.
 
 ```bash
-# test-login 엔드포인트 직접 호출 탐지 (getBackendToken 사용해야 함)
-grep -rn "test-login" apps/frontend/tests/e2e --include="*.ts" | grep -v "api-helpers.ts\|// \|getBackendToken"
+# test-login 엔드포인트 직접 호출 탐지 (SSOT 헬퍼 사용해야 함)
+grep -rn "test-login" apps/frontend/tests/e2e --include="*.ts" | grep -v "api-helpers.ts\|// \|getBackendToken\|fetchBackendToken"
 ```
 
 **PASS 기준:** `api-helpers.ts` 이외에서 `test-login` 직접 호출 없어야 함.
 
-**FAIL 기준:** 직접 호출 → rate limit(100/분) 초과 시 429 에러 발생. `getBackendToken()` 캐싱 사용.
+**FAIL 기준:** 직접 호출 → rate limit(100/분) 초과 시 429 에러 발생. spec 파일에서는 `getBackendToken(page, role)`, global-setup/beforeAll 등 Page 없는 컨텍스트에서는 `fetchBackendToken(role)` 사용.
 
 ### Step 10: Backend URL 하드코딩 탐지
 
