@@ -72,6 +72,10 @@ import {
   CompleteIntermediateCheckPipe,
   type CompleteIntermediateCheckDto,
 } from './dto/complete-intermediate-check.dto';
+import {
+  PendingApprovalsQueryDto,
+  PendingApprovalsQueryPipe,
+} from '../../common/dto/pending-approvals-query.dto';
 
 @ApiTags('교정 관리')
 @ApiBearerAuth()
@@ -151,7 +155,7 @@ export class CalibrationController {
   @RequirePermissions(Permission.VIEW_CALIBRATION_REQUESTS)
   @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
   findPendingApprovals(
-    @Query() query: { site?: string; teamId?: string }
+    @Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto
   ): ReturnType<CalibrationService['findPendingApprovals']> {
     return this.calibrationService.findPendingApprovals(1, 20, query.site, query.teamId);
   }
@@ -554,12 +558,19 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.DELETE_CALIBRATION)
   @AuditLog({ action: 'delete', entityType: 'calibration', entityIdPath: 'params.uuid' })
+  @ApiQuery({
+    name: 'version',
+    required: true,
+    type: Number,
+    description: 'CAS version for optimistic locking',
+  })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Query('version', ParseIntPipe) version: number,
     @Request() req: AuthenticatedRequest
   ): Promise<{ id: string; deleted: boolean }> {
     await this.enforceCalibrationAccess(uuid, req);
-    return this.calibrationService.remove(uuid);
+    return this.calibrationService.remove(uuid, version);
   }
 
   @Patch(':uuid/status')

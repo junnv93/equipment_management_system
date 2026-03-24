@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { CalibrationPlansService } from '../calibration-plans.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import {
   createMockCacheService,
   createMockEventEmitter,
@@ -99,6 +100,10 @@ describe('CalibrationPlansService', () => {
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        {
+          provide: CacheInvalidationHelper,
+          useValue: { invalidateAllDashboard: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 

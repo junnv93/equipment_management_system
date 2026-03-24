@@ -259,73 +259,79 @@ export class CalibrationPlansService extends VersionedBaseService {
       includeSummary,
     } = query;
 
-    const conditions: SQL[] = [];
+    // Cache-aside 패턴 (calibration/calibration-factors 모듈과 동일)
+    const cacheKey = `${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:${year ?? ''}_${siteId ?? ''}_${teamId ?? ''}_${status ?? ''}_${page}_${pageSize}_${includeSummary ?? ''}`;
 
-    if (year) {
-      conditions.push(eq(calibrationPlans.year, year));
-    }
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const conditions: SQL[] = [];
 
-    if (siteId) {
-      conditions.push(eq(calibrationPlans.siteId, siteId));
-    }
+        if (year) {
+          conditions.push(eq(calibrationPlans.year, year));
+        }
 
-    if (teamId) {
-      conditions.push(eq(calibrationPlans.teamId, teamId));
-    }
+        if (siteId) {
+          conditions.push(eq(calibrationPlans.siteId, siteId));
+        }
 
-    if (status) {
-      conditions.push(eq(calibrationPlans.status, status));
-    }
+        if (teamId) {
+          conditions.push(eq(calibrationPlans.teamId, teamId));
+        }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+        if (status) {
+          conditions.push(eq(calibrationPlans.status, status));
+        }
 
-    // COUNT(*) 단일 쿼리로 전체 개수 조회 (기존: 전체 fetch → .length)
-    const [{ count }] = await this.db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(calibrationPlans)
-      .where(whereClause);
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const totalItems = count;
+        const [{ count }] = await this.db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(calibrationPlans)
+          .where(whereClause);
 
-    // LEFT JOIN으로 작성자 이름/팀 이름 포함
-    const offset = (page - 1) * pageSize;
-    const rows = await this.db
-      .select({
-        plan: calibrationPlans,
-        authorName: users.name,
-        teamName: teams.name,
-      })
-      .from(calibrationPlans)
-      .leftJoin(users, eq(calibrationPlans.createdBy, users.id))
-      .leftJoin(teams, eq(calibrationPlans.teamId, teams.id))
-      .where(whereClause)
-      .orderBy(desc(calibrationPlans.year), desc(calibrationPlans.createdAt))
-      .limit(pageSize)
-      .offset(offset);
+        const totalItems = count;
 
-    // 플랫 필드로 응답에 authorName, teamName 추가
-    const items = rows.map((row) => ({
-      ...row.plan,
-      authorName: row.authorName,
-      teamName: row.teamName,
-    }));
+        const offset = (page - 1) * pageSize;
+        const rows = await this.db
+          .select({
+            plan: calibrationPlans,
+            authorName: users.name,
+            teamName: teams.name,
+          })
+          .from(calibrationPlans)
+          .leftJoin(users, eq(calibrationPlans.createdBy, users.id))
+          .leftJoin(teams, eq(calibrationPlans.teamId, teams.id))
+          .where(whereClause)
+          .orderBy(desc(calibrationPlans.year), desc(calibrationPlans.createdAt))
+          .limit(pageSize)
+          .offset(offset);
 
-    const result: CalibrationPlanListResult = {
-      items,
-      meta: {
-        totalItems,
-        itemCount: items.length,
-        itemsPerPage: pageSize,
-        totalPages: Math.ceil(totalItems / pageSize),
-        currentPage: page,
+        const items = rows.map((row) => ({
+          ...row.plan,
+          authorName: row.authorName,
+          teamName: row.teamName,
+        }));
+
+        const result: CalibrationPlanListResult = {
+          items,
+          meta: {
+            totalItems,
+            itemCount: items.length,
+            itemsPerPage: pageSize,
+            totalPages: Math.ceil(totalItems / pageSize),
+            currentPage: page,
+          },
+        };
+
+        if (includeSummary) {
+          result.summary = await this.getSummary({ year, siteId, teamId });
+        }
+
+        return result;
       },
-    };
-
-    if (includeSummary) {
-      result.summary = await this.getSummary({ year, siteId, teamId });
-    }
-
-    return result;
+      CACHE_TTL.MEDIUM
+    );
   }
 
   /**

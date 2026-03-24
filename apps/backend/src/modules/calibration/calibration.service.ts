@@ -448,11 +448,30 @@ export class CalibrationService extends VersionedBaseService {
    *
    * ✅ DB delete 사용 (기존 인메모리 splice → DB delete로 수정)
    */
-  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
+  async remove(id: string, version?: number): Promise<{ id: string; deleted: boolean }> {
     // 존재 여부 확인
-    await this.findOne(id);
+    const calibration = await this.findOne(id);
 
-    await this.db.delete(schema.calibrations).where(eq(schema.calibrations.id, id));
+    if (version !== undefined) {
+      // CAS 보호: version 일치 시에만 삭제
+      const result = await this.db
+        .delete(schema.calibrations)
+        .where(and(eq(schema.calibrations.id, id), eq(schema.calibrations.version, version)))
+        .returning({ id: schema.calibrations.id });
+
+      if (result.length === 0) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+        throw new ConflictException({
+          code: 'VERSION_CONFLICT',
+          message: `Calibration record has been modified. Expected version ${version}, current version ${calibration.version}.`,
+          currentVersion: calibration.version,
+          expectedVersion: version,
+        });
+      }
+    } else {
+      // 내부 호출 (version 미제공): CAS 없이 삭제
+      await this.db.delete(schema.calibrations).where(eq(schema.calibrations.id, id));
+    }
 
     this.invalidateCalibrationCache(id);
     return { id, deleted: true };
