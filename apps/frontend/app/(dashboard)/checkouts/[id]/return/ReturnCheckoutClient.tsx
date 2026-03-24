@@ -2,18 +2,18 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations, useFormatter } from 'next-intl';
 import { ArrowLeft, Package, MapPin, Calendar, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import checkoutApi, { Checkout, ConditionCheck, ReturnCheckoutDto } from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
-import { isConflictError } from '@/lib/api/error';
+import { getErrorMessage } from '@/lib/api/error';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { queryKeys } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CHECKOUT_PURPOSE_LABELS,
@@ -46,28 +46,26 @@ export default function ReturnCheckoutClient({
   conditionChecks,
 }: ReturnCheckoutClientProps) {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const t = useTranslations('checkouts');
   const formatter = useFormatter();
 
-  // 반입 처리 mutation (cross-page invalidation: 반입 승인 대기 목록 등)
-  const returnMutation = useMutation({
+  // 반입 처리 mutation — useOptimisticMutation 패턴 (CheckoutDetailClient과 일관성)
+  // 성공 시 onSettledCallback에서 네비게이션 (캐시 무효화 완료 후)
+  const returnMutation = useOptimisticMutation<Checkout, ReturnCheckoutDto, Checkout>({
     mutationFn: (data: ReturnCheckoutDto) => checkoutApi.returnCheckout(checkout.id, data),
-    onSuccess: async () => {
-      toast({ title: t('toasts.returnSuccess') });
-      await CheckoutCacheInvalidation.invalidateAfterReturn(queryClient);
+    queryKey: queryKeys.checkouts.detail(checkout.id),
+    optimisticUpdate: (old): Checkout =>
+      ({
+        ...old,
+        status: 'returned',
+        actualReturnDate: new Date().toISOString(),
+        version: (old?.version ?? checkout.version) + 1,
+      }) as Checkout,
+    invalidateKeys: CheckoutCacheInvalidation.RETURN_KEYS,
+    successMessage: t('toasts.returnSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.returnError')),
+    onSettledCallback: () => {
       router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(checkout.id));
-    },
-    onError: (error: unknown) => {
-      if (isConflictError(error)) {
-        toast({
-          title: t('toasts.versionConflict'),
-          description: t('toasts.versionConflictDesc'),
-          variant: 'destructive',
-        });
-      } else {
-        toast({ title: t('toasts.returnError'), variant: 'destructive' });
-      }
     },
   });
 

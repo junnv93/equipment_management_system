@@ -532,20 +532,32 @@ export class CheckoutCacheInvalidation {
     queryKeys.equipment.all,
     queryKeys.approvals.all,
     queryKeys.approvals.countsAll,
+    queryKeys.dashboard.all, // 승인 대기 건수 변동 → 대시보드 통계 영향
   ];
 
-  /** 반입 승인 후 무효화 대상 키 */
+  /** 반출 시작 후 무효화 대상 키 (장비 상태 checked_out 전이) */
+  static readonly START_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.checkouts.all,
+    queryKeys.equipment.all, // 장비 상태 → checked_out
+    queryKeys.dashboard.all, // 대시보드 통계 영향
+  ];
+
+  /** 반입 승인 후 무효화 대상 키 (장비 상태 available 복원) */
   static readonly RETURN_APPROVAL_KEYS: ReadonlyArray<readonly unknown[]> = [
     queryKeys.checkouts.all,
+    queryKeys.equipment.all, // 장비 상태 → available 복원
     queryKeys.approvals.all,
     queryKeys.approvals.countsAll,
+    queryKeys.dashboard.all, // 대시보드 통계 영향
   ];
 
   /** 반입 제출(반출→반입) 후 무효화 대상 키 */
   static readonly RETURN_KEYS: ReadonlyArray<readonly unknown[]> = [
     queryKeys.checkouts.all,
+    queryKeys.equipment.all, // 반입 처리 시 장비 상태 변경 대비
     queryKeys.approvals.all,
     queryKeys.approvals.countsAll,
+    queryKeys.dashboard.all, // 승인 대기 건수 변동 → 대시보드 통계 영향
   ];
 
   /**

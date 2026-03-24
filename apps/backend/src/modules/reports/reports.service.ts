@@ -39,7 +39,7 @@ import {
   type ResolvedDataScope,
 } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CACHE_KEY_PREFIXES, buildStableCacheKey } from '../../common/cache/cache-key-prefixes';
 import type { ReportColumn, ReportData } from './report-export.service';
 import type {
   EquipmentUsageReport,
@@ -134,7 +134,12 @@ export class ReportsService {
     query: EquipmentUsageQueryInput,
     scope: ResolvedDataScope
   ): Promise<EquipmentUsageReport> {
-    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}usage:${JSON.stringify({ startDate: query.startDate, endDate: query.endDate, equipmentId: query.equipmentId, scope })}`;
+    const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.REPORTS, 'usage', {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      equipmentId: query.equipmentId,
+      scope,
+    });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -214,7 +219,11 @@ export class ReportsService {
     query: CalibrationStatusQueryInput,
     scope: ResolvedDataScope
   ): Promise<CalibrationStatusReport> {
-    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}calibration-status:${JSON.stringify({ timeframe: query.timeframe, status: query.status, scope })}`;
+    const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.REPORTS, 'calibration-status', {
+      timeframe: query.timeframe,
+      status: query.status,
+      scope,
+    });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -299,7 +308,11 @@ export class ReportsService {
     query: CheckoutStatisticsQueryInput,
     scope: ResolvedDataScope
   ): Promise<CheckoutStatisticsReport> {
-    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}checkout-stats:${JSON.stringify({ startDate: query.startDate, endDate: query.endDate, scope })}`;
+    const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.REPORTS, 'checkout-stats', {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      scope,
+    });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -399,7 +412,11 @@ export class ReportsService {
     query: UtilizationRateQueryInput,
     scope: ResolvedDataScope
   ): Promise<UtilizationRateReport> {
-    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}utilization:${JSON.stringify({ period: query.period, equipmentId: query.equipmentId, scope })}`;
+    const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.REPORTS, 'utilization', {
+      period: query.period,
+      equipmentId: query.equipmentId,
+      scope,
+    });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -500,7 +517,12 @@ export class ReportsService {
     query: EquipmentDowntimeQueryInput,
     scope: ResolvedDataScope
   ): Promise<EquipmentDowntimeReport> {
-    const cacheKey = `${CACHE_KEY_PREFIXES.REPORTS}downtime:${JSON.stringify({ startDate: query.startDate, endDate: query.endDate, equipmentId: query.equipmentId, scope })}`;
+    const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.REPORTS, 'downtime', {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      equipmentId: query.equipmentId,
+      scope,
+    });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {

@@ -1,11 +1,11 @@
 {
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
-  "entryFile": "apps/backend/src/main",
+  "entryFile": "main",
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": false,
-    "tsConfigPath": "tsconfig.json",
+    "tsConfigPath": "tsconfig.build.json",
     "assets": [
       {
         "include": "common/i18n/messages/*.json",

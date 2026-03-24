@@ -2142,11 +2142,12 @@ export class CheckoutsService extends VersionedBaseService {
       // ✅ status는 전용 상태 전이 메서드(approve/reject/cancel 등)를 통해서만 변경 가능
       // → UpdateCheckoutDto에서 status 필드 제거됨
 
-      // ✅ Optimistic locking: CAS를 사용한 업데이트
+      // ✅ Optimistic locking: 클라이언트가 전송한 version으로 CAS 검증
+      // existingCheckout.version이 아닌 DTO의 version을 사용해야 동시 수정을 감지
       const updated = await this.updateWithVersion<Checkout>(
         checkouts,
         uuid,
-        existingCheckout.version,
+        updateCheckoutDto.version,
         updateFields,
         '반출'
       );
@@ -2157,7 +2158,16 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (error instanceof ConflictException) {
+        // CAS 실패 시 stale cache 제거 (다른 상태 변경 메서드와 동일 패턴)
+        const detailCacheKey = this.buildCacheKey('detail', { uuid });
+        await this.cacheService.delete(detailCacheKey);
+      }
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
       this.logger.error(

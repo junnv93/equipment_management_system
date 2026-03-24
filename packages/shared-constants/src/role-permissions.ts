@@ -146,6 +146,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.UPDATE_NOTIFICATION,
     // 부적합 조회
     Permission.VIEW_NON_CONFORMANCES,
+    // 반출입 기록 검토 (UL-QP-18 §4.3 기록 양식 검토 역할)
+    Permission.VIEW_CHECKOUTS,
+    Permission.VIEW_EQUIPMENT_IMPORTS,
     // 보정계수 조회
     Permission.VIEW_CALIBRATION_FACTORS,
     // 소프트웨어 조회

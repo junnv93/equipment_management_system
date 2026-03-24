@@ -36,6 +36,10 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
+import {
+  PendingApprovalsQueryDto,
+  PendingApprovalsQueryPipe,
+} from '../../common/dto/pending-approvals-query.dto';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
@@ -106,7 +110,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE_REQUESTS)
   @SiteScoped({ policy: SOFTWARE_DATA_SCOPE })
-  findPendingApprovals(@Query() query: { site?: Site; teamId?: string }): Promise<{
+  findPendingApprovals(@Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto): Promise<{
     items: SoftwareHistory[];
     meta: {
       totalItems: number;

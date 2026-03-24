@@ -35,7 +35,7 @@ async function runMigration(): Promise<void> {
     const db = drizzle(client);
 
     // 마이그레이션 파일 위치: 빌드 산출물 기준
-    // dist/database/run-migration.js → dist/../drizzle
+    // dist/database/run-migration.js → ../../drizzle
     const migrationsFolder = path.join(__dirname, '..', '..', 'drizzle');
 
     console.log(`[Migration] 마이그레이션 폴더: ${migrationsFolder}`);

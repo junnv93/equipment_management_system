@@ -3,6 +3,7 @@ import { EquipmentService } from '../equipment.service';
 import { EquipmentHistoryService } from '../services/equipment-history.service';
 import { ConfigService } from '@nestjs/config';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { EquipmentStatus } from '@equipment-management/schemas';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
@@ -85,6 +86,10 @@ describe('EquipmentService', () => {
           useValue: {
             get: jest.fn().mockReturnValue('test-value'),
           },
+        },
+        {
+          provide: CacheInvalidationHelper,
+          useValue: { invalidateAllDashboard: jest.fn().mockResolvedValue(undefined) },
         },
         {
           provide: EquipmentHistoryService,

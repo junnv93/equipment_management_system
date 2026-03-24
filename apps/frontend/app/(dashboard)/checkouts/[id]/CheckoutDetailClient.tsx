@@ -187,7 +187,7 @@ export default function CheckoutDetailClient({
         checkoutDate: new Date().toISOString(),
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
-    invalidateKeys: [queryKeys.checkouts.all],
+    invalidateKeys: CheckoutCacheInvalidation.START_KEYS,
     successMessage: t('toasts.startSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.startError')),
     onSuccessCallback: () => {
