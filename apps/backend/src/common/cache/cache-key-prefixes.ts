@@ -26,8 +26,8 @@ export const CACHE_KEY_PREFIXES = {
   /** calibration-plans.service.ts */
   CALIBRATION_PLANS: 'calibration-plans:',
 
-  /** non-conformances.service.ts — 주의: 콜론 없음 (buildCacheKey에서 추가) */
-  NON_CONFORMANCES: 'non-conformances',
+  /** non-conformances.service.ts */
+  NON_CONFORMANCES: 'non-conformances:',
 
   /** dashboard.service.ts */
   DASHBOARD: 'dashboard:',

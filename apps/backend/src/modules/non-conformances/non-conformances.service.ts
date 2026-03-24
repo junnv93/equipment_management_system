@@ -71,7 +71,7 @@ export class NonConformancesService extends VersionedBaseService {
   }
 
   private buildCacheKey(type: string, id: string): string {
-    return `${this.CACHE_PREFIX}:${type}:${id}`;
+    return `${this.CACHE_PREFIX}${type}:${id}`;
   }
 
   /**
@@ -756,6 +756,8 @@ export class NonConformancesService extends VersionedBaseService {
                 message:
                   'Equipment has been modified by another user. Please refresh and try again.',
                 code: 'VERSION_CONFLICT',
+                currentVersion: currentEquipment.version + 1,
+                expectedVersion: currentEquipment.version,
               });
             }
             equipmentStatusRestored = true;
