@@ -45,12 +45,26 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
+import {
+  PendingApprovalsQueryDto,
+  PendingApprovalsQueryPipe,
+} from '../../common/dto/pending-approvals-query.dto';
 
 @ApiTags('보정계수 관리')
 @ApiBearerAuth()
 @Controller('calibration-factors')
 export class CalibrationFactorsController {
   constructor(private readonly calibrationFactorsService: CalibrationFactorsService) {}
+
+  /** 크로스사이트 접근 제어 — calibration_factors → equipment 경유 */
+  private async enforceFactorAccess(uuid: string, req: AuthenticatedRequest): Promise<void> {
+    const factor = await this.calibrationFactorsService.findOne(uuid);
+    const siteAndTeam = await this.calibrationFactorsService.getFactorSiteAndTeam(
+      factor.equipmentId
+    );
+    enforceSiteAccess(req, siteAndTeam.site, CALIBRATION_DATA_SCOPE, siteAndTeam.teamId);
+  }
 
   @Post()
   @ApiOperation({
@@ -108,7 +122,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTOR_REQUESTS)
   @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  findPendingApprovals(@Query() query: { site?: string; teamId?: string }): Promise<{
+  findPendingApprovals(@Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto): Promise<{
     items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
@@ -131,7 +145,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
   @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  getRegistry(@Query() query: { site?: string; teamId?: string }): Promise<{
+  getRegistry(@Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto): Promise<{
     registry: {
       equipmentId: string;
       factors: CalibrationFactorRecord[];
@@ -154,7 +168,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findByEquipment(@Param('equipmentUuid') equipmentUuid: string): Promise<{
+  findByEquipment(@Param('equipmentUuid', ParseUUIDPipe) equipmentUuid: string): Promise<{
     equipmentId: string;
     factors: CalibrationFactorRecord[];
     count: number;
@@ -196,6 +210,7 @@ export class CalibrationFactorsController {
     @Body() approveDto: ApproveCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
+    await this.enforceFactorAccess(uuid, req);
     const approverId = extractUserId(req);
     return this.calibrationFactorsService.approve(uuid, { ...approveDto, approverId });
   }
@@ -219,6 +234,7 @@ export class CalibrationFactorsController {
     @Body() rejectDto: RejectCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
+    await this.enforceFactorAccess(uuid, req);
     const approverId = extractUserId(req);
     return this.calibrationFactorsService.reject(uuid, { ...rejectDto, approverId });
   }
@@ -241,10 +257,12 @@ export class CalibrationFactorsController {
     type: Number,
     description: 'CAS version for optimistic locking',
   })
-  remove(
+  async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Query('version', ParseIntPipe) version: number
+    @Query('version', ParseIntPipe) version: number,
+    @Request() req: AuthenticatedRequest
   ): Promise<{ id: string; deleted: boolean }> {
+    await this.enforceFactorAccess(uuid, req);
     return this.calibrationFactorsService.remove(uuid, version);
   }
 }

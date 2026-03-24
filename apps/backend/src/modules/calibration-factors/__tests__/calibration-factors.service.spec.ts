@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CalibrationFactorsService } from '../calibration-factors.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import {
   CalibrationFactorTypeValues,
   CalibrationFactorApprovalStatusValues,
@@ -84,6 +85,10 @@ describe('CalibrationFactorsService', () => {
         CalibrationFactorsService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        {
+          provide: CacheInvalidationHelper,
+          useValue: { invalidateAllDashboard: jest.fn().mockResolvedValue(undefined) },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();

@@ -8,8 +8,7 @@ import {
 import { eq, and, asc, desc, sql, isNull, or, lte, gte } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
-import { equipmentBelongsToSite, equipmentBelongsToTeam } from '../../common/utils/site-filter';
-import { calibrationFactors, CalibrationFactor } from '@equipment-management/db/schema';
+import { calibrationFactors, CalibrationFactor, equipment } from '@equipment-management/db/schema';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
 import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
 import {
@@ -144,8 +143,10 @@ export class CalibrationFactorsService extends VersionedBaseService {
         if (approvalStatus) conditions.push(eq(calibrationFactors.approvalStatus, approvalStatus));
         if (factorType) conditions.push(eq(calibrationFactors.factorType, factorType));
         if (search) conditions.push(safeIlike(calibrationFactors.factorName, likeContains(search)));
-        if (site) conditions.push(equipmentBelongsToSite(calibrationFactors.equipmentId, site));
-        if (teamId) conditions.push(equipmentBelongsToTeam(calibrationFactors.equipmentId, teamId));
+        // JOIN 기반 사이트/팀 필터 (correlated subquery 대신 — 성능 개선)
+        const needsEquipmentJoin = !!site || !!teamId;
+        if (site) conditions.push(eq(equipment.site, site));
+        if (teamId) conditions.push(eq(equipment.teamId, teamId));
 
         const [sortField, sortOrder] = sort.split('.');
         const sortColumn =
@@ -156,19 +157,34 @@ export class CalibrationFactorsService extends VersionedBaseService {
               : calibrationFactors.createdAt;
         const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
-        const [items, [{ count }]] = await Promise.all([
-          this.db
-            .select()
-            .from(calibrationFactors)
+        const baseQuery = needsEquipmentJoin
+          ? this.db
+              .select()
+              .from(calibrationFactors)
+              .innerJoin(equipment, eq(calibrationFactors.equipmentId, equipment.id))
+          : this.db.select().from(calibrationFactors);
+        const countBaseQuery = needsEquipmentJoin
+          ? this.db
+              .select({ count: sql<number>`count(*)` })
+              .from(calibrationFactors)
+              .innerJoin(equipment, eq(calibrationFactors.equipmentId, equipment.id))
+          : this.db.select({ count: sql<number>`count(*)` }).from(calibrationFactors);
+
+        const [rows, [{ count }]] = await Promise.all([
+          baseQuery
             .where(and(...conditions))
             .orderBy(orderBy)
             .limit(pageSize)
             .offset((page - 1) * pageSize),
-          this.db
-            .select({ count: sql<number>`count(*)` })
-            .from(calibrationFactors)
-            .where(and(...conditions)),
+          countBaseQuery.where(and(...conditions)),
         ]);
+
+        // JOIN 시 { calibration_factors, equipment } 구조로 반환되므로 정규화
+        const items = rows.map((row: Record<string, unknown>) =>
+          'calibration_factors' in row
+            ? (row as { calibration_factors: CalibrationFactor }).calibration_factors
+            : (row as CalibrationFactor)
+        );
 
         const totalItems = Number(count);
         return {
@@ -209,6 +225,29 @@ export class CalibrationFactorsService extends VersionedBaseService {
       },
       CACHE_TTL.MEDIUM
     );
+  }
+
+  /**
+   * 보정계수의 사이트 및 팀 조회 (calibration_factors → equipment 경유)
+   * 크로스사이트/크로스팀 접근 제어에 사용
+   */
+  async getFactorSiteAndTeam(
+    equipmentId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: equipment.site, teamId: equipment.teamId })
+      .from(equipment)
+      .where(eq(equipment.id, equipmentId))
+      .limit(1);
+
+    if (!result) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment ${equipmentId} not found.`,
+      });
+    }
+
+    return { site: result.site, teamId: result.teamId };
   }
 
   // 장비별 현재 적용 중인 보정계수 조회 (승인됨 + 유효 기간 내)
@@ -270,13 +309,26 @@ export class CalibrationFactorsService extends VersionedBaseService {
           lte(calibrationFactors.effectiveDate, today),
           or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))!,
         ];
-        if (site) conditions.push(equipmentBelongsToSite(calibrationFactors.equipmentId, site));
-        if (teamId) conditions.push(equipmentBelongsToTeam(calibrationFactors.equipmentId, teamId));
+        // JOIN 기반 사이트/팀 필터 (correlated subquery 대신 — 성능 개선)
+        const needsEquipmentJoin = !!site || !!teamId;
+        if (site) conditions.push(eq(equipment.site, site));
+        if (teamId) conditions.push(eq(equipment.teamId, teamId));
 
-        const records = await this.db
-          .select()
-          .from(calibrationFactors)
-          .where(and(...conditions));
+        const query = needsEquipmentJoin
+          ? this.db
+              .select()
+              .from(calibrationFactors)
+              .innerJoin(equipment, eq(calibrationFactors.equipmentId, equipment.id))
+          : this.db.select().from(calibrationFactors);
+
+        const rows = await query.where(and(...conditions));
+
+        // JOIN 시 { calibration_factors, equipment } 구조로 반환되므로 정규화
+        const records = rows.map((row: Record<string, unknown>) =>
+          'calibration_factors' in row
+            ? (row as { calibration_factors: CalibrationFactor }).calibration_factors
+            : (row as CalibrationFactor)
+        );
 
         const normalized = records.map(this.normalize.bind(this));
         const grouped = new Map<string, CalibrationFactorRecord[]>();
@@ -360,6 +412,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.APPROVALS);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
@@ -387,6 +440,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
       });
     }
 
+    // calibration 모듈 패턴 통일: 반려 시 approvedBy=null 유지
+    // 반려 사유는 approverComment에 저장 (DB에 rejectionReason 컬럼 없음)
     let updated: CalibrationFactor;
     try {
       updated = await this.updateWithVersion<CalibrationFactor>(
@@ -395,8 +450,6 @@ export class CalibrationFactorsService extends VersionedBaseService {
         rejectDto.version,
         {
           approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
-          approvedBy: rejectDto.approverId,
-          approvedAt: new Date(),
           approverComment: rejectDto.rejectionReason,
         },
         '보정계수'
@@ -411,6 +464,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.APPROVALS);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
@@ -446,6 +500,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
+    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.APPROVALS);
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     return { id, deleted: true };
   }

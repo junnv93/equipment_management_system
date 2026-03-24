@@ -25,6 +25,7 @@ describe('CalibrationFactorsController', () => {
     approve: jest.fn(),
     reject: jest.fn(),
     remove: jest.fn(),
+    getFactorSiteAndTeam: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -47,6 +48,16 @@ describe('CalibrationFactorsController', () => {
     service = module.get<CalibrationFactorsService>(CalibrationFactorsService);
 
     jest.clearAllMocks();
+
+    // enforceFactorAccess에서 사용하는 기본 mock
+    mockCalibrationFactorsService.findOne.mockResolvedValue({
+      id: 'default-uuid',
+      equipmentId: 'equip-uuid',
+    });
+    mockCalibrationFactorsService.getFactorSiteAndTeam.mockResolvedValue({
+      site: 'suwon',
+      teamId: 'team-uuid',
+    });
   });
 
   it('should be defined', () => {
@@ -65,7 +76,9 @@ describe('CalibrationFactorsController', () => {
         effectiveDate: '2024-01-15',
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockReq = { user: { userId: requestedBy } } as any;
+      const mockReq = {
+        user: { userId: requestedBy, roles: ['test_engineer'], site: 'suwon', teamId: 'team-uuid' },
+      } as any;
 
       const expectedResult = {
         id: 'new-factor-id',
@@ -217,7 +230,14 @@ describe('CalibrationFactorsController', () => {
         approverComment: '검토 완료',
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockReq = { user: { userId: approverId } } as any;
+      const mockReq = {
+        user: {
+          userId: approverId,
+          roles: ['technical_manager'],
+          site: 'suwon',
+          teamId: 'team-uuid',
+        },
+      } as any;
 
       const expectedResult = {
         id: uuid,
@@ -245,12 +265,19 @@ describe('CalibrationFactorsController', () => {
         rejectionReason: '값이 범위를 벗어남',
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockReq = { user: { userId: approverId } } as any;
+      const mockReq = {
+        user: {
+          userId: approverId,
+          roles: ['technical_manager'],
+          site: 'suwon',
+          teamId: 'team-uuid',
+        },
+      } as any;
 
       const expectedResult = {
         id: uuid,
         approvalStatus: 'rejected',
-        approvedBy: approverId,
+        approvedBy: null,
         approverComment: rejectDto.rejectionReason,
       };
 
@@ -267,14 +294,32 @@ describe('CalibrationFactorsController', () => {
   describe('remove', () => {
     it('should soft delete a calibration factor', async () => {
       const uuid = 'factor-to-delete';
+      const approverId = '550e8400-e29b-41d4-a716-446655440003';
       const expectedResult = {
         id: uuid,
         deleted: true,
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReq = {
+        user: {
+          userId: approverId,
+          roles: ['technical_manager'],
+          site: 'suwon',
+          teamId: 'team-uuid',
+        },
+      } as any;
 
       mockCalibrationFactorsService.remove.mockResolvedValue(expectedResult);
+      mockCalibrationFactorsService.findOne.mockResolvedValue({
+        id: uuid,
+        equipmentId: 'equip-uuid',
+      });
+      mockCalibrationFactorsService.getFactorSiteAndTeam.mockResolvedValue({
+        site: 'suwon',
+        teamId: 'team-uuid',
+      });
 
-      const result = await controller.remove(uuid, 1);
+      const result = await controller.remove(uuid, 1, mockReq);
 
       expect(service.remove).toHaveBeenCalledWith(uuid, 1);
       expect(result).toEqual(expectedResult);
