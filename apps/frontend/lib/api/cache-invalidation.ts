@@ -561,32 +561,26 @@ export class CheckoutCacheInvalidation {
   ];
 
   /**
-   * 체크아웃 승인/반려 후 캐시 무효화
+   * 상수 기반 캐시 무효화 범용 메서드
    *
-   * 체크아웃 상태 변경은 승인 카운트, 대시보드 통계에도 영향하므로 교차 무효화.
+   * *_KEYS 상수를 SSOT로 활용하여 일관된 무효화 수행.
+   * invalidateKeys 파라미터에 직접 상수를 전달하는 선언적 패턴과 동일한 효과.
    */
-  static async invalidateAfterApproval(queryClient: QueryClient): Promise<void> {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.all, exact: false }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false }),
-      DashboardCacheInvalidation.invalidateAll(queryClient),
-    ]);
+  static async invalidateByKeys(
+    queryClient: QueryClient,
+    keys: ReadonlyArray<readonly unknown[]>
+  ): Promise<void> {
+    await Promise.all(
+      keys.map((key) => queryClient.invalidateQueries({ queryKey: key, exact: false }))
+    );
   }
 
   /**
-   * 반입 처리 후 캐시 무효화
-   *
-   * 반입은 장비 상태에도 영향을 주므로 장비 캐시도 교차 무효화.
+   * 체크아웃 승인/반려 후 캐시 무효화
+   * SSOT: APPROVAL_KEYS 상수 기반
    */
-  static async invalidateAfterReturn(queryClient: QueryClient): Promise<void> {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.all, exact: false }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.all, exact: false }),
-      DashboardCacheInvalidation.invalidateAll(queryClient),
-    ]);
+  static async invalidateAfterApproval(queryClient: QueryClient): Promise<void> {
+    await CheckoutCacheInvalidation.invalidateByKeys(queryClient, this.APPROVAL_KEYS);
   }
 }
 

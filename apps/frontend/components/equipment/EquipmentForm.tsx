@@ -89,6 +89,7 @@ const CalibrationHistorySection = dynamic(
   { loading: () => <Skeleton className="h-40 w-full" />, ssr: false }
 );
 import equipmentApi from '@/lib/api/equipment-api';
+import calibrationApi from '@/lib/api/calibration-api';
 import { useTranslations } from 'next-intl';
 import type {
   LocationHistoryItem,
@@ -288,7 +289,7 @@ export function EquipmentForm({
   const { data: serverCalibrationHistory = [], isLoading: isCalibrationHistoryLoading } = useQuery({
     queryKey: queryKeys.calibrations.byEquipment(initialData?.uuid ?? ''),
     queryFn: async () => {
-      const calibrations = await equipmentApi.getCalibrationHistory(initialData!.uuid!);
+      const calibrations = await calibrationApi.getEquipmentCalibrations(initialData!.uuid!);
       // CalibrationHistoryItem → CalibrationRecord 변환
       return calibrations.map((item) => ({
         id: item.id,

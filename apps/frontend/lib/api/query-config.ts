@@ -352,8 +352,6 @@ export const queryKeys = {
     lists: () => [...queryKeys.checkouts.all, 'list'] as const,
     list: (filters: object) => [...queryKeys.checkouts.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.checkouts.all, 'detail', id] as const,
-    byEquipment: (equipmentId: string) =>
-      [...queryKeys.checkouts.all, 'equipment', equipmentId] as const,
     outbound: (teamId?: string, status?: string, location?: string) =>
       [...queryKeys.checkouts.all, 'outbound', teamId, status, location] as const,
     inbound: (filters: object = {}) => [...queryKeys.checkouts.all, 'inbound', filters] as const,

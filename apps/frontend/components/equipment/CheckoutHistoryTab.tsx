@@ -37,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, FileOutput, Calendar, ArrowRight, User } from 'lucide-react';
+import { Plus, FileOutput, Calendar, ArrowRight, User, AlertTriangle } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { type CreateCheckoutDto, type Checkout } from '@/lib/api/checkout-api';
 import { addDays } from 'date-fns';
@@ -110,9 +110,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장
   const equipmentId = String(equipment.id);
 
-  // 반출 이력 조회
-  const { data: checkoutsResponse, isLoading } = useQuery({
-    queryKey: queryKeys.checkouts.byEquipment(equipmentId),
+  // 반출 이력 조회 — queryKey를 equipment.checkoutHistory로 통일 (KPI 훅과 캐시 공유)
+  const {
+    data: checkoutsResponse,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: queryKeys.equipment.checkoutHistory(equipmentId),
     queryFn: () => checkoutApi.getEquipmentCheckouts(equipmentId),
     enabled: !!equipmentId,
   });
@@ -137,7 +141,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.byEquipment(equipmentId) });
+      // 교차 엔티티 캐시 무효화: 반출 신청은 반출 목록 + 승인 카운트 + 대시보드에도 영향
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.checkoutHistory(equipmentId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all, exact: false });
     },
     onError: (error: unknown) => {
       console.error('반출 신청 실패:', error);
@@ -407,6 +417,30 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         </CardHeader>
         <CardContent>
           <Skeleton className="h-48 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 에러 상태
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileOutput className="h-5 w-5" />
+            {t('checkoutHistoryTab.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <p className={TIMELINE_TOKENS.empty.text}>
+              {t('checkoutHistoryTab.error', {
+                defaultMessage: '반출 이력을 불러오는 중 오류가 발생했습니다.',
+              })}
+            </p>
+          </div>
         </CardContent>
       </Card>
     );

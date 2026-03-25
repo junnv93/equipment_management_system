@@ -22,9 +22,6 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/api/equipment/${id}`,
     /** 관리번호 중복 검사 - excludeId는 수정 시 현재 장비 ID */
     CHECK_MANAGEMENT_NUMBER: '/api/equipment/check-management-number',
-    HISTORY: (id: string) => `/api/equipment/${id}/history`,
-    NON_CONFORMANCE: (id: string) => `/api/equipment/${id}/non-conformance`,
-    CALIBRATION_HISTORY: (id: string) => `/api/equipment/${id}/calibration-history`,
     /** 장비 상태 변경 */
     STATUS: (id: string) => `/api/equipment/${id}/status`,
     /** 교정 예정 장비 조회 */
@@ -239,8 +236,6 @@ export const API_ENDPOINTS = {
     PERMISSIONS: (id: string) => `/api/users/${id}/permissions`,
     /** NextAuth 로그인 시 사용자 동기화 (Internal API Key) */
     SYNC: '/api/users/sync',
-    /** 사용자별 반출 이력 */
-    CHECKOUTS: (userId: string) => `/api/users/${userId}/checkouts`,
   },
 
   // ============================================================================

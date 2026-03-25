@@ -248,27 +248,8 @@ const checkoutApi = {
   },
 
   /**
-   * 특정 사용자의 반출 이력을 조회합니다.
-   */
-  async getUserCheckouts(
-    userId: string,
-    query: CheckoutQuery = {}
-  ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
-    const queryParams = new URLSearchParams();
-
-    Object.entries(query).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value));
-      }
-    });
-
-    const url = `${API_ENDPOINTS.USERS.CHECKOUTS(userId)}?${queryParams.toString()}`;
-    const response = await apiClient.get(url);
-    return response.data;
-  },
-
-  /**
    * 특정 장비의 반출 이력을 조회합니다.
+   * SSOT: API_ENDPOINTS.EQUIPMENT.CHECKOUTS → /api/equipment/:id/checkouts
    */
   async getEquipmentCheckouts(
     equipmentId: string,
@@ -284,7 +265,7 @@ const checkoutApi = {
 
     const url = `${API_ENDPOINTS.EQUIPMENT.CHECKOUTS(equipmentId)}?${queryParams.toString()}`;
     const response = await apiClient.get(url);
-    return response.data;
+    return transformPaginatedResponse<Checkout, CheckoutSummary>(response);
   },
 
   /**

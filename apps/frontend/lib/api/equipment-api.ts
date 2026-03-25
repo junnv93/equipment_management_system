@@ -543,31 +543,6 @@ const equipmentApi = {
   deleteIncidentHistory: async (historyId: string): Promise<void> => {
     return apiClient.delete(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(historyId));
   },
-
-  // 교정 이력 조회 (기존 Calibrations API 활용)
-  getCalibrationHistory: async (equipmentUuid: string): Promise<CalibrationHistoryItem[]> => {
-    const response = await apiClient.get(
-      `${API_ENDPOINTS.CALIBRATIONS.LIST}?equipmentId=${equipmentUuid}`
-    );
-    return transformArrayResponse<CalibrationHistoryItem>(response);
-  },
 };
-
-// 교정 이력 항목 타입 (calibrations API 응답)
-export interface CalibrationHistoryItem {
-  id: string;
-  equipmentId: string;
-  calibrationDate: string | Date;
-  nextCalibrationDate: string | Date;
-  calibrationAgency?: string;
-  calibrationMethod?: string;
-  result?: string;
-  notes?: string;
-  performedBy?: string;
-  performedByName?: string;
-  approvalStatus?: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-}
 
 export default equipmentApi;

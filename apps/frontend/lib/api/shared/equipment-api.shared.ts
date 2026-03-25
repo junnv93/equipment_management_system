@@ -60,49 +60,6 @@ import type {
 // ============================================================================
 
 /**
- * 교정 이력 API 응답 타입
- * 백엔드 응답 구조에 따라 다양한 형태를 지원
- */
-type CalibrationHistoryResponse =
-  | { data: { items: unknown[] } } // 페이지네이션 응답
-  | { items: unknown[] } // 직접 아이템 배열
-  | { data: unknown[] } // 래핑된 배열
-  | unknown[]; // 직접 배열
-
-/**
- * 교정 이력 응답에서 아이템 배열을 안전하게 추출
- */
-function extractCalibrationItems(response: CalibrationHistoryResponse): unknown[] {
-  // 배열인 경우 직접 반환
-  if (Array.isArray(response)) {
-    return response;
-  }
-
-  // 객체인 경우 다양한 구조 처리
-  if (response && typeof response === 'object') {
-    // { data: { items: [...] } }
-    if (
-      'data' in response &&
-      response.data &&
-      typeof response.data === 'object' &&
-      'items' in response.data
-    ) {
-      return Array.isArray(response.data.items) ? response.data.items : [];
-    }
-    // { items: [...] }
-    if ('items' in response) {
-      return Array.isArray(response.items) ? response.items : [];
-    }
-    // { data: [...] }
-    if ('data' in response && Array.isArray(response.data)) {
-      return response.data;
-    }
-  }
-
-  return [];
-}
-
-/**
  * Equipment API 인터페이스
  *
  * Client/Server 양쪽에서 사용할 수 있는 공통 API 인터페이스
@@ -152,7 +109,6 @@ export interface EquipmentApiMethods {
     data: CreateIncidentHistoryInput
   ) => Promise<IncidentHistoryItem>;
   deleteIncidentHistory: (historyId: string) => Promise<void>;
-  getCalibrationHistory: (equipmentUuid: string) => Promise<unknown[]>;
 }
 
 /**
@@ -329,15 +285,6 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
 
     deleteIncidentHistory: async (historyId: string): Promise<void> => {
       await apiClient.delete(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(historyId));
-    },
-
-    getCalibrationHistory: async (equipmentUuid: string): Promise<unknown[]> => {
-      const response = await apiClient.get(
-        `${API_ENDPOINTS.CALIBRATIONS.LIST}?equipmentId=${equipmentUuid}`
-      );
-      // 타입 안전한 응답 데이터 추출
-      const responseData: CalibrationHistoryResponse = response.data ?? response;
-      return extractCalibrationItems(responseData);
     },
   };
 }

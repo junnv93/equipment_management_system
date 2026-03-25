@@ -43,24 +43,62 @@ import {
 export class EquipmentHistoryController {
   constructor(private readonly equipmentHistoryService: EquipmentHistoryService) {}
 
+  // ===================== 반출 이력 =====================
+
+  @Get(':uuid/checkouts')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({ summary: '장비별 반출 이력 조회' })
+  @ApiParam({ name: 'uuid', description: '장비 UUID' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본: 1)' })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: Number,
+    description: '페이지 크기 (기본: 20, 최대: 100)',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '장비별 반출 이력 (페이지네이션)' })
+  async getCheckoutHistory(
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest,
+    @Query('page') pageStr?: string,
+    @Query('pageSize') pageSizeStr?: string
+  ) {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+
+    const page = pageStr ? parseInt(pageStr, 10) : undefined;
+    const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : undefined;
+
+    return this.equipmentHistoryService.getCheckoutHistory(equipmentUuid, { page, pageSize });
+  }
+
   // ===================== 위치 변동 이력 =====================
 
   @Get(':uuid/location-history')
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @ApiOperation({ summary: '장비 위치 변동 이력 조회' })
   @ApiParam({ name: 'uuid', description: '장비 UUID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: '위치 변동 이력 목록',
-    type: [LocationHistoryResponseDto],
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본: 1)' })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: Number,
+    description: '페이지 크기 (기본: 20, 최대: 100)',
   })
+  @ApiResponse({ status: HttpStatus.OK, description: '위치 변동 이력 (페이지네이션)' })
   async getLocationHistory(
     @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
-    @Request() req: AuthenticatedRequest
-  ): Promise<LocationHistoryResponseDto[]> {
+    @Request() req: AuthenticatedRequest,
+    @Query('page') pageStr?: string,
+    @Query('pageSize') pageSizeStr?: string
+  ) {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.equipmentHistoryService.getLocationHistory(equipmentUuid);
+
+    const page = pageStr ? parseInt(pageStr, 10) : undefined;
+    const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : undefined;
+
+    return this.equipmentHistoryService.getLocationHistory(equipmentUuid, { page, pageSize });
   }
 
   @Post(':uuid/location-history')
@@ -120,18 +158,27 @@ export class EquipmentHistoryController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @ApiOperation({ summary: '장비 유지보수 내역 조회' })
   @ApiParam({ name: 'uuid', description: '장비 UUID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: '유지보수 내역 목록',
-    type: [MaintenanceHistoryResponseDto],
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본: 1)' })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: Number,
+    description: '페이지 크기 (기본: 20, 최대: 100)',
   })
+  @ApiResponse({ status: HttpStatus.OK, description: '유지보수 내역 (페이지네이션)' })
   async getMaintenanceHistory(
     @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
-    @Request() req: AuthenticatedRequest
-  ): Promise<MaintenanceHistoryResponseDto[]> {
+    @Request() req: AuthenticatedRequest,
+    @Query('page') pageStr?: string,
+    @Query('pageSize') pageSizeStr?: string
+  ) {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.equipmentHistoryService.getMaintenanceHistory(equipmentUuid);
+
+    const page = pageStr ? parseInt(pageStr, 10) : undefined;
+    const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : undefined;
+
+    return this.equipmentHistoryService.getMaintenanceHistory(equipmentUuid, { page, pageSize });
   }
 
   @Post(':uuid/maintenance-history')
@@ -185,18 +232,27 @@ export class EquipmentHistoryController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @ApiOperation({ summary: '장비 손상/오작동/변경/수리 내역 조회' })
   @ApiParam({ name: 'uuid', description: '장비 UUID' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: '손상/수리 내역 목록',
-    type: [IncidentHistoryResponseDto],
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본: 1)' })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: Number,
+    description: '페이지 크기 (기본: 20, 최대: 100)',
   })
+  @ApiResponse({ status: HttpStatus.OK, description: '손상/수리 내역 (페이지네이션)' })
   async getIncidentHistory(
     @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
-    @Request() req: AuthenticatedRequest
-  ): Promise<IncidentHistoryResponseDto[]> {
+    @Request() req: AuthenticatedRequest,
+    @Query('page') pageStr?: string,
+    @Query('pageSize') pageSizeStr?: string
+  ) {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.equipmentHistoryService.getIncidentHistory(equipmentUuid);
+
+    const page = pageStr ? parseInt(pageStr, 10) : undefined;
+    const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : undefined;
+
+    return this.equipmentHistoryService.getIncidentHistory(equipmentUuid, { page, pageSize });
   }
 
   @Post(':uuid/incident-history')

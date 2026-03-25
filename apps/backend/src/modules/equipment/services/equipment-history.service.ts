@@ -14,6 +14,8 @@ import {
   equipmentIncidentHistory,
   equipment,
   users,
+  checkouts,
+  checkoutItems,
 } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
@@ -22,6 +24,7 @@ import {
   NonConformanceTypeEnum,
   DEFAULT_LOCALE,
 } from '@equipment-management/schemas';
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
 import {
   CreateLocationHistoryDto,
   CreateMaintenanceHistoryDto,
@@ -205,23 +208,49 @@ export class EquipmentHistoryService {
   /**
    * 장비의 위치 변동 이력 조회
    */
-  async getLocationHistory(equipmentUuid: string): Promise<LocationHistoryResponseDto[]> {
+  async getLocationHistory(
+    equipmentUuid: string,
+    options: { page?: number; pageSize?: number } = {}
+  ) {
+    const page = options.page ?? 1;
+    const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = (page - 1) * pageSize;
+
+    const [countResult] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(equipmentLocationHistory)
+      .where(eq(equipmentLocationHistory.equipmentId, equipmentUuid));
+
+    const total = Number(countResult?.count ?? 0);
+
     const records = await this.db
       .select()
       .from(equipmentLocationHistory)
       .where(eq(equipmentLocationHistory.equipmentId, equipmentUuid))
-      .orderBy(desc(equipmentLocationHistory.changedAt), desc(equipmentLocationHistory.createdAt));
+      .orderBy(desc(equipmentLocationHistory.changedAt), desc(equipmentLocationHistory.createdAt))
+      .limit(pageSize)
+      .offset(offset);
 
-    return records.map((record) => ({
-      id: record.id,
-      equipmentId: record.equipmentId,
-      changedAt: record.changedAt,
-      previousLocation: record.previousLocation ?? undefined,
-      newLocation: record.newLocation,
-      notes: record.notes ?? undefined,
-      changedBy: record.changedBy ?? undefined,
-      createdAt: record.createdAt,
-    }));
+    return {
+      data: records.map((record) => ({
+        id: record.id,
+        equipmentId: record.equipmentId,
+        changedAt: record.changedAt,
+        previousLocation: record.previousLocation ?? undefined,
+        newLocation: record.newLocation,
+        notes: record.notes ?? undefined,
+        changedBy: record.changedBy ?? undefined,
+        createdAt: record.createdAt,
+      })),
+      meta: {
+        pagination: {
+          total,
+          pageSize,
+          currentPage: page,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      },
+    };
   }
 
   /**
@@ -363,21 +392,47 @@ export class EquipmentHistoryService {
   /**
    * 장비의 유지보수 내역 조회
    */
-  async getMaintenanceHistory(equipmentUuid: string): Promise<MaintenanceHistoryResponseDto[]> {
+  async getMaintenanceHistory(
+    equipmentUuid: string,
+    options: { page?: number; pageSize?: number } = {}
+  ) {
+    const page = options.page ?? 1;
+    const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = (page - 1) * pageSize;
+
+    const [countResult] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(equipmentMaintenanceHistory)
+      .where(eq(equipmentMaintenanceHistory.equipmentId, equipmentUuid));
+
+    const total = Number(countResult?.count ?? 0);
+
     const records = await this.db
       .select()
       .from(equipmentMaintenanceHistory)
       .where(eq(equipmentMaintenanceHistory.equipmentId, equipmentUuid))
-      .orderBy(desc(equipmentMaintenanceHistory.performedAt));
+      .orderBy(desc(equipmentMaintenanceHistory.performedAt))
+      .limit(pageSize)
+      .offset(offset);
 
-    return records.map((record) => ({
-      id: record.id,
-      equipmentId: record.equipmentId,
-      performedAt: record.performedAt,
-      content: record.content,
-      performedBy: record.performedBy ?? undefined,
-      createdAt: record.createdAt,
-    }));
+    return {
+      data: records.map((record) => ({
+        id: record.id,
+        equipmentId: record.equipmentId,
+        performedAt: record.performedAt,
+        content: record.content,
+        performedBy: record.performedBy ?? undefined,
+        createdAt: record.createdAt,
+      })),
+      meta: {
+        pagination: {
+          total,
+          pageSize,
+          currentPage: page,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      },
+    };
   }
 
   /**
@@ -430,23 +485,49 @@ export class EquipmentHistoryService {
   /**
    * 장비의 손상/오작동/변경/수리 내역 조회
    */
-  async getIncidentHistory(equipmentUuid: string): Promise<IncidentHistoryResponseDto[]> {
+  async getIncidentHistory(
+    equipmentUuid: string,
+    options: { page?: number; pageSize?: number } = {}
+  ) {
+    const page = options.page ?? 1;
+    const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = (page - 1) * pageSize;
+
+    const [countResult] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(equipmentIncidentHistory)
+      .where(eq(equipmentIncidentHistory.equipmentId, equipmentUuid));
+
+    const total = Number(countResult?.count ?? 0);
+
     const records = await this.db
       .select()
       .from(equipmentIncidentHistory)
       .where(eq(equipmentIncidentHistory.equipmentId, equipmentUuid))
-      .orderBy(desc(equipmentIncidentHistory.occurredAt));
+      .orderBy(desc(equipmentIncidentHistory.occurredAt))
+      .limit(pageSize)
+      .offset(offset);
 
-    return records.map((record) => ({
-      id: record.id,
-      equipmentId: record.equipmentId,
-      occurredAt: record.occurredAt,
-      incidentType: record.incidentType,
-      content: record.content,
-      reportedBy: record.reportedBy ?? undefined,
-      createdAt: record.createdAt,
-      nonConformanceId: record.nonConformanceId ?? undefined,
-    }));
+    return {
+      data: records.map((record) => ({
+        id: record.id,
+        equipmentId: record.equipmentId,
+        occurredAt: record.occurredAt,
+        incidentType: record.incidentType,
+        content: record.content,
+        reportedBy: record.reportedBy ?? undefined,
+        createdAt: record.createdAt,
+        nonConformanceId: record.nonConformanceId ?? undefined,
+      })),
+      meta: {
+        pagination: {
+          total,
+          pageSize,
+          currentPage: page,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      },
+    };
   }
 
   /**
@@ -645,6 +726,86 @@ export class EquipmentHistoryService {
     }
 
     return result;
+  }
+
+  // ===================== 반출 이력 =====================
+
+  /**
+   * 장비별 반출 이력 조회
+   *
+   * checkoutItems(N:M 매핑) → checkouts(헤더) → users(신청자) JOIN 경로.
+   * CheckoutsModule에 의존하지 않고 Drizzle DB 직접 쿼리 (순환 의존성 회피).
+   * 인덱스: checkout_items_equipment_id_idx (checkoutItems.equipmentId)
+   */
+  async getCheckoutHistory(
+    equipmentUuid: string,
+    options: { page?: number; pageSize?: number } = {}
+  ) {
+    const page = options.page ?? 1;
+    const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = (page - 1) * pageSize;
+
+    // COUNT 쿼리 (페이지네이션)
+    const [countResult] = await this.db
+      .select({ count: sql<number>`count(DISTINCT ${checkouts.id})` })
+      .from(checkoutItems)
+      .innerJoin(checkouts, eq(checkoutItems.checkoutId, checkouts.id))
+      .where(eq(checkoutItems.equipmentId, equipmentUuid));
+
+    const total = Number(countResult?.count ?? 0);
+
+    // 데이터 쿼리: 서브쿼리로 checkout ID 특정 → checkouts → users
+    // checkoutItems에 (checkoutId, equipmentId) unique 미존재 → 서브쿼리로 DISTINCT 보장
+    const checkoutIdSubquery = this.db
+      .selectDistinct({ checkoutId: checkoutItems.checkoutId })
+      .from(checkoutItems)
+      .where(eq(checkoutItems.equipmentId, equipmentUuid));
+
+    const rows = await this.db
+      .select({
+        id: checkouts.id,
+        version: checkouts.version,
+        purpose: checkouts.purpose,
+        destination: checkouts.destination,
+        reason: checkouts.reason,
+        status: checkouts.status,
+        checkoutDate: checkouts.checkoutDate,
+        expectedReturnDate: checkouts.expectedReturnDate,
+        actualReturnDate: checkouts.actualReturnDate,
+        createdAt: checkouts.createdAt,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(checkouts)
+      .leftJoin(users, eq(checkouts.requesterId, users.id))
+      .where(sql`${checkouts.id} IN (${checkoutIdSubquery})`)
+      .orderBy(desc(checkouts.createdAt))
+      .limit(pageSize)
+      .offset(offset);
+
+    return {
+      data: rows.map((row) => ({
+        id: row.id,
+        version: row.version,
+        purpose: row.purpose,
+        destination: row.destination,
+        reason: row.reason,
+        status: row.status,
+        checkoutDate: row.checkoutDate,
+        expectedReturnDate: row.expectedReturnDate,
+        actualReturnDate: row.actualReturnDate,
+        createdAt: row.createdAt,
+        user: row.userName ? { name: row.userName, email: row.userEmail } : undefined,
+      })),
+      meta: {
+        pagination: {
+          total,
+          pageSize,
+          currentPage: page,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      },
+    };
   }
 
   /**

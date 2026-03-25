@@ -27,10 +27,7 @@
 
 import { cache } from 'react';
 import { createServerApiClient } from './server-api-client';
-import {
-  createEquipmentApiMethods,
-  type EquipmentApiMethods,
-} from './shared/equipment-api.shared';
+import { createEquipmentApiMethods, type EquipmentApiMethods } from './shared/equipment-api.shared';
 
 // Re-export types for convenience
 export type {
@@ -99,29 +96,21 @@ export async function getEquipmentList(
  * 장비 상세 조회 (React.cache 적용)
  * generateMetadata와 Page에서 동일 ID로 호출 시 한 번만 fetch
  */
-export async function getEquipment(
-  ...args: Parameters<EquipmentApiMethods['getEquipment']>
-) {
+export async function getEquipment(...args: Parameters<EquipmentApiMethods['getEquipment']>) {
   return getEquipmentCached(args[0]);
 }
 
-export async function createEquipment(
-  ...args: Parameters<EquipmentApiMethods['createEquipment']>
-) {
+export async function createEquipment(...args: Parameters<EquipmentApiMethods['createEquipment']>) {
   const api = await getApi();
   return api.createEquipment(...args);
 }
 
-export async function updateEquipment(
-  ...args: Parameters<EquipmentApiMethods['updateEquipment']>
-) {
+export async function updateEquipment(...args: Parameters<EquipmentApiMethods['updateEquipment']>) {
   const api = await getApi();
   return api.updateEquipment(...args);
 }
 
-export async function deleteEquipment(
-  ...args: Parameters<EquipmentApiMethods['deleteEquipment']>
-) {
+export async function deleteEquipment(...args: Parameters<EquipmentApiMethods['deleteEquipment']>) {
   const api = await getApi();
   return api.deleteEquipment(...args);
 }
@@ -165,16 +154,12 @@ export async function getRequestByUuid(
   return api.getRequestByUuid(...args);
 }
 
-export async function approveRequest(
-  ...args: Parameters<EquipmentApiMethods['approveRequest']>
-) {
+export async function approveRequest(...args: Parameters<EquipmentApiMethods['approveRequest']>) {
   const api = await getApi();
   return api.approveRequest(...args);
 }
 
-export async function rejectRequest(
-  ...args: Parameters<EquipmentApiMethods['rejectRequest']>
-) {
+export async function rejectRequest(...args: Parameters<EquipmentApiMethods['rejectRequest']>) {
   const api = await getApi();
   return api.rejectRequest(...args);
 }
@@ -242,11 +227,4 @@ export async function deleteIncidentHistory(
 ) {
   const api = await getApi();
   return api.deleteIncidentHistory(...args);
-}
-
-export async function getCalibrationHistory(
-  ...args: Parameters<EquipmentApiMethods['getCalibrationHistory']>
-) {
-  const api = await getApi();
-  return api.getCalibrationHistory(...args);
 }
