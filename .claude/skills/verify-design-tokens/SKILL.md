@@ -31,10 +31,10 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | File                                                                                               | Purpose                                                    |
 | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `apps/frontend/lib/design-tokens/index.ts`                                                         | Public API (Layer 1-3 export)                              |
-| `apps/frontend/lib/design-tokens/primitives.ts`                                                    | Layer 1 원시값                                             |
+| `apps/frontend/lib/design-tokens/primitives.ts`                                                    | Layer 1 원시값 (MOTION_PRIMITIVES.easing 포함)             |
 | `apps/frontend/lib/design-tokens/semantic.ts`                                                      | Layer 2 의미론적 토큰                                      |
 | `apps/frontend/lib/design-tokens/brand.ts`                                                         | Brand 토큰 (글로벌 디자인 언어 SSOT)                       |
-| `apps/frontend/lib/design-tokens/motion.ts`                                                        | Motion 유틸리티 (getTransitionClasses, TRANSITION_PRESETS) |
+| `apps/frontend/lib/design-tokens/motion.ts`                                                        | Motion 유틸리티 (getTransitionClasses, TRANSITION_PRESETS, EASING_CSS_VARS) |
 | `apps/frontend/lib/design-tokens/components/header.ts`                                             | Layer 3 Header 토큰                                        |
 | `apps/frontend/lib/design-tokens/components/notification.ts`                                       | Layer 3 Notification 토큰                                  |
 | `apps/frontend/lib/design-tokens/components/auth.ts`                                               | Layer 3 Auth 토큰                                          |
@@ -58,7 +58,7 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/lib/design-tokens/components/software.ts`                                           | Layer 3 Software 토큰                                      |
 | `apps/frontend/lib/design-tokens/components/calibration-factors.ts`                                | Layer 3 Calibration Factors 토큰                           |
 | `apps/frontend/components/shared/PageHeader.tsx`                                                   | 공유 PageHeader 컴포넌트 (PAGE_HEADER_TOKENS SSOT 사용)    |
-| `apps/frontend/styles/globals.css`                                                                 | Brand CSS 변수 정의 (--brand-color-\*)                     |
+| `apps/frontend/styles/globals.css`                                                                 | Brand CSS 변수 (--brand-color-\*) + easing CSS 변수 (--ease-\*) |
 | `apps/frontend/tailwind.config.js`                                                                 | Tailwind brand 팔레트 확장 설정                            |
 | `apps/frontend/lib/utils/calibration-status.ts`                                                    | 교정 상태 유틸리티 (design-tokens 사용)                    |
 | `apps/frontend/lib/design-tokens/README.md`                                                        | Design Token 시스템 문서                                   |
@@ -417,6 +417,52 @@ done
 
 **FAIL 기준:** 독립적으로 title/subtitle를 하드코딩하는 모듈 발견 시 `...PAGE_HEADER_TOKENS` spread로 변경.
 
+### Step 9: EASING_CSS_VARS ↔ globals.css ↔ MOTION_PRIMITIVES.easing 3자 동기화
+
+easing 값의 SSOT 체인이 3곳에서 동기화되어 있는지 검증합니다:
+
+- `primitives.ts` — `MOTION_PRIMITIVES.easing`: raw cubic-bezier 값 (7개 easing)
+- `motion.ts` — `EASING_CSS_VARS`: raw값 → CSS `var()` 매핑
+- `globals.css` — `:root`의 `--ease-*` CSS 변수 정의
+
+하나에 easing을 추가하고 나머지를 업데이트하지 않으면 drift가 발생합니다.
+
+```bash
+# 1. globals.css의 --ease-* 변수 수 (주석 제외)
+GLOBALS_COUNT=$(grep -c "^\s*--ease-" apps/frontend/styles/globals.css)
+
+# 2. primitives.ts의 MOTION_PRIMITIVES.easing 키 수 (cubic-bezier 패턴)
+PRIMITIVES_COUNT=$(grep -c "cubic-bezier(" apps/frontend/lib/design-tokens/primitives.ts)
+
+# 3. motion.ts의 EASING_CSS_VARS 엔트리 수 (var(--ease-* 패턴)
+MOTION_COUNT=$(grep -c "'var(--ease-" apps/frontend/lib/design-tokens/motion.ts)
+
+echo "globals.css --ease-* count:    $GLOBALS_COUNT"
+echo "primitives.ts cubic-bezier count: $PRIMITIVES_COUNT"
+echo "motion.ts EASING_CSS_VARS count:  $MOTION_COUNT"
+
+if [ "$GLOBALS_COUNT" -eq "$PRIMITIVES_COUNT" ] && [ "$PRIMITIVES_COUNT" -eq "$MOTION_COUNT" ]; then
+  echo "PASS: 3자 동기화 일치 ($GLOBALS_COUNT개)"
+else
+  echo "FAIL: 수 불일치 — drift 발생. 누락된 곳에 easing 추가 필요"
+fi
+```
+
+**PASS 기준:** 3개 수가 동일 (현재 7개).
+
+**FAIL 기준:** 수 불일치 → drift. 새 easing을 추가한 곳과 누락된 곳을 비교하여 동기화 필요:
+
+```
+SSOT 체인:
+  primitives.ts (MOTION_PRIMITIVES.easing.newEasing: 'cubic-bezier(...)')
+    ↓
+  globals.css (:root { --ease-new-easing: cubic-bezier(...); })
+    ↓
+  motion.ts (EASING_CSS_VARS { newEasing: 'var(--ease-new-easing)' })
+```
+
+**면제:** `globals.css`의 주석 내 `--ease-` 참조는 카운트에서 제외 (`^\s*--ease-` 패턴으로 실제 선언만 카운트).
+
 ## Output Format
 
 ```markdown
@@ -435,6 +481,7 @@ done
 | 8b  | 부제목 하드코딩 탐지           | PASS/FAIL | text-muted-foreground 하드코딩 |
 | 8c  | 페이지 제목 아이콘 일관성      | PASS/FAIL | h1 내 아이콘 포함 페이지       |
 | 8d  | 헤더 토큰 SSOT 참조            | PASS/FAIL | spread 누락 모듈               |
+| 9   | Easing 3자 동기화              | PASS/FAIL | globals/primitives/motion 수 불일치 |
 ```
 
 ## Exceptions
