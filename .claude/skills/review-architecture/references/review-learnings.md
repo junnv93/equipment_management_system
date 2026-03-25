@@ -120,6 +120,11 @@
 - **설명**: `findAll()`에는 `@SiteScoped`가 적용되어 있지만, `GET /pending` 엔드포인트에는 누락되어 전 사이트/팀의 승인 대기 건이 노출. 사용자가 승인 시도 시 `enforceSiteAccess`에서 403 거부. 목록 단계에서 필터하지 않으면 사용자가 승인 불가 항목을 보게 되어 혼란 유발.
 - **체크리스트 반영**: ✅ review-checklist.md 섹션 4 "보안 계층"에 승격 완료 (1회 발견이지만 2개 모듈 동시 + 보안 영향으로 조기 승격)
 
+### [2026-03-25] 비-UUID actorId가 uuid 컬럼에 도달하는 Anti-Corruption Layer 부재
+- **발견 빈도**: 1회 (notifications: 3개 스케줄러 × 5 emit 사이트)
+- **설명**: 스케줄러가 `actorId: 'system'` 매직 스트링을 전달 → 디스패처가 그대로 DB uuid 컬럼에 INSERT → PostgreSQL 타입 에러 → 벌크 INSERT 전체 실패. SSOT 상수(`NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID`)로 매직 스트링 제거 + 디스패처에 `normalizeActorForDb()` Anti-Corruption Layer 추가하여 해결. UUID 정규식으로 미래 비-UUID 입력도 방어.
+- **체크리스트 반영**: 추후 2회 이상 발견 시 review-checklist.md 섹션 4 "보안 계층"에 "DB uuid 컬럼에 비-UUID 문자열 도달 방지" 항목으로 승격
+
 ### [2026-03-22] NC 유형별 전제조건 하드코딩 — requiresRepair 단일 함수 한계
 - **발견 빈도**: 1회 (non-conformances, approvals, NCDetailClient 3곳 동시)
 - **설명**: `requiresRepair()`가 damage/malfunction만 처리하여 calibration_overdue의 재교정 전제조건이 누락. `NC_CORRECTION_PREREQUISITES` SSOT 레지스트리로 유형별 전제조건(repair/recalibration/null)을 중앙 관리하도록 개선. 백엔드 `validateCorrectionPrerequisite()` + 프론트엔드 `getNCPrerequisite()` + 승인 카운트 쿼리까지 전 계층 적용.
@@ -164,3 +169,4 @@
 | 2026-03-24 | 검증 결과 | calibration-factors 반려 approvedBy 패턴 통일 — pending에서 null이므로 미포함으로 유지 | review-learnings.md |
 | 2026-03-23 | 체크리스트 보강 | 섹션 7: Mutation 라이프사이클 + URL-driven 필터 호환성 | review-checklist.md |
 | 2026-03-23 | 정책 추가 | learnings 아카이브 정책 (3개월/20개 초과 시) | SKILL.md Step 9d |
+| 2026-03-25 | 안티패턴 | 비-UUID actorId → uuid 컬럼 도달 (Anti-Corruption Layer 부재) | review-learnings.md |

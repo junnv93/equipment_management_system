@@ -1,5 +1,9 @@
 import { apiClient } from './api-client';
-import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
+import {
+  transformPaginatedResponse,
+  transformSingleResponse,
+  transformArrayResponse,
+} from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
@@ -333,7 +337,7 @@ const checkoutApi = {
    */
   async getDestinations(): Promise<string[]> {
     const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.DESTINATIONS);
-    return response.data?.data || response.data || [];
+    return transformArrayResponse<string>(response);
   },
 
   /**
@@ -447,7 +451,7 @@ const checkoutApi = {
    */
   async getConditionChecks(checkoutId: string): Promise<ConditionCheck[]> {
     const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.CONDITION_CHECKS(checkoutId));
-    return response.data?.data || response.data || [];
+    return transformArrayResponse<ConditionCheck>(response);
   },
 
   /**

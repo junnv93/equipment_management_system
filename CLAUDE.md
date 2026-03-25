@@ -750,7 +750,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-nextjs**: Next.js 16 패턴 검증 — await params, useActionState, 서버 컴포넌트, Dynamic imports(코드 분할)
 - **verify-design-tokens**: Design Token 3-Layer 아키텍처 검증 — transition-all 금지, focus-visible 우선, import 경로, Layer 참조
 - **verify-security**: 보안 설정 검증 — Helmet CSP 프로덕션 강화, Next.js Security Headers, PermissionsGuard DENY 모드, @Public 남용
-- **verify-i18n**: i18n 번역 일관성 검증 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조
+- **verify-i18n**: i18n 번역 일관성 검증 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조, Zod 스키마 하드코딩 메시지 탐지
 - **verify-sql-safety**: SQL 안전성 검증 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out JOIN, RBAC INNER JOIN
 - **verify-e2e**: E2E 테스트 패턴 검증 — auth fixture 사용, networkidle 금지, waitForTimeout 금지, locator 안티패턴, SSOT 상수, 테스트 격리
 - **verify-filters**: URL-driven 필터 SSOT 검증 — filter-utils 필수 export, hook 존재, page.tsx 서버 파싱

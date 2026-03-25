@@ -198,6 +198,47 @@ done
 
 **PASS 기준:** 차이 없음 (동일한 ICU 변수 집합).
 
+### Step 6: 프론트엔드 Zod 스키마 하드코딩 한국어 검증 메시지 탐지
+
+컴포넌트 내 Zod 스키마에서 `z.string().min(N, '한국어메시지')` 패턴으로 하드코딩된 검증 메시지를 탐지합니다.
+
+```bash
+# Zod 스키마에서 한국어 하드코딩 검증 메시지 탐지
+grep -rn "z\.string()\.min([0-9]*, *'" apps/frontend/components --include="*.tsx" --include="*.ts" | head -30
+grep -rn "z\.string()\.max([0-9]*, *'" apps/frontend/components --include="*.tsx" --include="*.ts" | head -30
+```
+
+**PASS 기준:** 0개 결과 (Zod 검증 메시지가 모두 `t()` 함수를 통해 i18n 처리됨).
+
+**FAIL 기준:** 하드코딩된 한국어/영어 검증 메시지 발견 시, `createSchema(t)` 팩토리 패턴으로 전환 필요.
+
+**권장 패턴 (검증됨):**
+
+```typescript
+// ❌ WRONG — 하드코딩 한국어
+const schema = z.object({
+  name: z.string().min(1, '이름을 입력하세요'),
+});
+
+// ✅ CORRECT — i18n 팩토리 패턴
+function createSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(1, t('validation.nameRequired')),
+  });
+}
+type FormData = z.infer<ReturnType<typeof createSchema>>;
+
+// 컴포넌트 내부에서:
+const schema = useMemo(() => createSchema(t), [t]);
+```
+
+**참고 구현:** `RepairHistoryClient.tsx:78`, `CheckoutHistoryTab.tsx:63`
+
+**예외:**
+
+- 백엔드 DTO의 Zod 스키마 (`apps/backend/`) — 서버 사이드 검증 메시지는 프론트엔드 i18n 대상 아님
+- 로그 전용 메시지 (`console.error`, `console.warn`) — 개발자용이므로 면제
+
 ## Output Format
 
 ```markdown
@@ -208,6 +249,7 @@ done
 | 3   | 빈 번역 값               | PASS/FAIL | 빈 값 위치 목록          |
 | 4   | 네임스페이스 참조 일관성 | PASS/INFO | 미존재 네임스페이스 목록 |
 | 5   | ICU 변수 쌍 일치         | PASS/INFO | 변수 불일치 도메인 목록  |
+| 6   | Zod 스키마 하드코딩 메시지 | PASS/FAIL | 하드코딩 파일:라인 목록  |
 ```
 
 ## Exceptions

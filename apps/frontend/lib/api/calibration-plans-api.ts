@@ -1,6 +1,10 @@
 import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
-import { transformPaginatedResponse } from './utils/response-transformers';
+import {
+  transformPaginatedResponse,
+  transformSingleResponse,
+  transformArrayResponse,
+} from './utils/response-transformers';
 // ✅ SSOT: packages/schemas에서 import
 import type { CalibrationPlanStatus, Site } from '@equipment-management/schemas';
 import {
@@ -231,12 +235,16 @@ const calibrationPlansApi = {
 
   // 계획서 상세 조회 (항목 포함)
   getCalibrationPlan: async (uuid: string): Promise<CalibrationPlan> => {
-    return apiClient.get(API_ENDPOINTS.CALIBRATION_PLANS.GET(uuid)).then((res) => res.data);
+    return apiClient
+      .get(API_ENDPOINTS.CALIBRATION_PLANS.GET(uuid))
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 계획서 생성
   createCalibrationPlan: async (data: CreateCalibrationPlanDto): Promise<CalibrationPlan> => {
-    return apiClient.post(API_ENDPOINTS.CALIBRATION_PLANS.CREATE, data).then((res) => res.data);
+    return apiClient
+      .post(API_ENDPOINTS.CALIBRATION_PLANS.CREATE, data)
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 계획서 수정
@@ -246,25 +254,29 @@ const calibrationPlansApi = {
   ): Promise<CalibrationPlan> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.UPDATE(uuid), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 계획서 삭제
   deleteCalibrationPlan: async (uuid: string): Promise<{ id: string; deleted: boolean }> => {
-    return apiClient.delete(API_ENDPOINTS.CALIBRATION_PLANS.DELETE(uuid)).then((res) => res.data);
+    return apiClient
+      .delete(API_ENDPOINTS.CALIBRATION_PLANS.DELETE(uuid))
+      .then((res) => transformSingleResponse<{ id: string; deleted: boolean }>(res));
   },
 
   // 승인 요청 (레거시)
   /** @deprecated submitForReview 사용 권장 */
   submitCalibrationPlan: async (uuid: string): Promise<CalibrationPlan> => {
-    return apiClient.post(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT(uuid)).then((res) => res.data);
+    return apiClient
+      .post(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT(uuid))
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 검토 요청 (기술책임자 → 품질책임자)
   submitForReview: async (uuid: string, data: SubmitForReviewDto): Promise<CalibrationPlan> => {
     return apiClient
       .post(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT_FOR_REVIEW(uuid), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 검토 완료 (품질책임자)
@@ -274,7 +286,7 @@ const calibrationPlansApi = {
   ): Promise<CalibrationPlan> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.REVIEW(uuid), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 최종 승인 (시험소장)
@@ -284,7 +296,7 @@ const calibrationPlansApi = {
   ): Promise<CalibrationPlan> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.APPROVE(uuid), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 반려 (품질책임자 또는 시험소장)
@@ -294,7 +306,7 @@ const calibrationPlansApi = {
   ): Promise<CalibrationPlan> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.REJECT(uuid), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 항목 확인
@@ -305,7 +317,7 @@ const calibrationPlansApi = {
   ): Promise<CalibrationPlanItem> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlanItem>(res));
   },
 
   // 항목 수정
@@ -316,7 +328,7 @@ const calibrationPlansApi = {
   ): Promise<CalibrationPlanItem> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.UPDATE_ITEM(planUuid, itemUuid), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlanItem>(res));
   },
 
   // 외부교정 대상 장비 조회
@@ -332,7 +344,7 @@ const calibrationPlansApi = {
     });
 
     const url = `${API_ENDPOINTS.CALIBRATION_PLANS.EXTERNAL_EQUIPMENT}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url).then((res) => res.data);
+    return apiClient.get(url).then((res) => transformArrayResponse<ExternalEquipment>(res));
   },
 
   // 검토 대기 계획서 목록 (품질책임자용)
@@ -359,14 +371,14 @@ const calibrationPlansApi = {
   createNewVersion: async (uuid: string): Promise<CalibrationPlan> => {
     return apiClient
       .post(API_ENDPOINTS.CALIBRATION_PLANS.NEW_VERSION(uuid))
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationPlan>(res));
   },
 
   // 버전 히스토리 조회
   getVersionHistory: async (uuid: string): Promise<CalibrationPlanVersion[]> => {
     return apiClient
       .get(API_ENDPOINTS.CALIBRATION_PLANS.VERSION_HISTORY(uuid))
-      .then((res) => res.data);
+      .then((res) => transformArrayResponse<CalibrationPlanVersion>(res));
   },
 };
 

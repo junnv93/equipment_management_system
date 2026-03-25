@@ -771,6 +771,11 @@
     "empty": "등록된 반출 이력이 없습니다.",
     "latest": "최신",
     "notAvailable": "장비가 사용 가능 상태가 아닙니다",
+    "validation": {
+      "destinationRequired": "반출 장소를 입력하세요",
+      "reasonRequired": "반출 사유를 입력하세요",
+      "expectedReturnDateRequired": "반입 예정일을 입력하세요"
+    },
     "disabledReasons": {
       "checked_out": "이미 반출 중인 장비입니다",
       "retired": "폐기된 장비입니다",

@@ -34,6 +34,7 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | `verify-auth`           | 서버 사이드 인증/인가 패턴 검증        | `apps/backend/src/**/*.controller.ts`, `apps/backend/src/modules/*/dto/**/*.dto.ts`                                          |
 | `verify-zod`            | Zod 검증 패턴 검증                     | `apps/backend/src/modules/*/dto/**/*.dto.ts`, `apps/backend/src/common/pipes/*.ts`                                           |
 | `verify-ssot`           | SSOT 임포트 패턴 검증                  | `apps/backend/src/**/*.ts`, `apps/frontend/**/*.ts`, `apps/frontend/**/*.tsx`                                                |
+| `verify-hardcoding`     | SSOT 하드코딩 탐지 (API 경로, queryKeys, 환경변수, 캐시 키, unwrapResponseData SSOT, response.data 직접 반환 금지) | `apps/frontend/lib/api/**/*.ts`, `apps/frontend/lib/config/**/*.ts`, `apps/backend/src/**/*.service.ts` |
 | `verify-frontend-state` | 프론트엔드 상태 관리 패턴 검증         | `apps/frontend/components/**/*.tsx`, `apps/frontend/app/**/*.tsx`, `apps/frontend/hooks/**/*.ts`                             |
 | `verify-nextjs`         | Next.js 16 패턴 검증                   | `apps/frontend/app/**/page.tsx`, `apps/frontend/app/**/layout.tsx`, `apps/frontend/app/**/error.tsx`                         |
 | `verify-filters`        | URL-driven 필터 SSOT 패턴 검증         | `apps/frontend/lib/utils/*-filter-utils.ts`, `apps/frontend/hooks/use-*-filters.ts`, `apps/frontend/app/**/page.tsx`         |

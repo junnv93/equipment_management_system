@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getSession } from 'next-auth/react';
 // ✅ 일관된 에러 처리: 공통 유틸리티 사용
-import { createApiError } from './utils/response-transformers';
+import { createApiError, unwrapResponseData } from './utils/response-transformers';
 import { API_BASE_URL } from '../config/api-config';
 
 /**
@@ -142,21 +142,8 @@ apiClient.interceptors.request.use(
 
 // 응답 인터셉터 설정
 apiClient.interceptors.response.use(
-  (response) => {
-    // ResponseTransformInterceptor 래핑 해제 (SSOT: 클라이언트 레벨에서 중앙화)
-    // 백엔드가 { success, data, message, timestamp } 형태로 래핑하는 경우 data만 추출
-    const responseData: unknown = response.data;
-    if (
-      responseData &&
-      typeof responseData === 'object' &&
-      'success' in responseData &&
-      (responseData as Record<string, unknown>).success === true &&
-      'data' in responseData
-    ) {
-      response.data = (responseData as Record<string, unknown>).data;
-    }
-    return response;
-  },
+  // SSOT: unwrapResponseData — 3개 API 클라이언트 공유
+  unwrapResponseData,
   async (error) => {
     const originalRequest = error.config;
 

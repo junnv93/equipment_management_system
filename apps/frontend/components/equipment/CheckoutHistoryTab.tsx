@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -59,18 +59,21 @@ import {
 } from '@/lib/design-tokens';
 import { STATUS_NOT_ALLOWED_FOR_CHECKOUT } from '@/lib/constants/equipment-status-styles';
 
-// 반출 신청 스키마
-const checkoutSchema = z.object({
-  destination: z.string().min(1, '반출 장소를 입력하세요').max(200),
-  purpose: UserSelectableCheckoutPurposeEnum,
-  reason: z.string().min(1, '반출 사유를 입력하세요').max(500),
-  expectedReturnDate: z.string().min(1, '반입 예정일을 입력하세요'),
-  phoneNumber: z.string().optional(),
-  address: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-type CheckoutFormData = z.infer<typeof checkoutSchema>;
+// 반출 신청 스키마 — i18n 팩토리 (useTranslations 접근 가능한 컴포넌트 내부에서 호출)
+function createCheckoutSchema(t: (key: string) => string) {
+  return z.object({
+    destination: z.string().min(1, t('checkoutHistoryTab.validation.destinationRequired')).max(200),
+    purpose: UserSelectableCheckoutPurposeEnum,
+    reason: z.string().min(1, t('checkoutHistoryTab.validation.reasonRequired')).max(500),
+    expectedReturnDate: z
+      .string()
+      .min(1, t('checkoutHistoryTab.validation.expectedReturnDateRequired')),
+    phoneNumber: z.string().optional(),
+    address: z.string().optional(),
+    notes: z.string().optional(),
+  });
+}
+type CheckoutFormData = z.infer<ReturnType<typeof createCheckoutSchema>>;
 
 interface CheckoutHistoryTabProps {
   equipment: Equipment;
@@ -93,7 +96,8 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
 
-  // 폼 설정
+  // 폼 설정 — 동적 Zod 스키마 (i18n 검증 메시지)
+  const checkoutSchema = useMemo(() => createCheckoutSchema(t), [t]);
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
@@ -125,6 +129,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   const createMutation = useMutation({
     mutationFn: (data: CreateCheckoutDto) => checkoutApi.createCheckout(data),
     onSuccess: () => {
+      // 캐시 무효화를 다이얼로그 닫기 전에 수행 → stale 목록 노출 방지
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.checkoutHistory(equipmentId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all, exact: false });
       setIsDialogOpen(false);
       form.reset({
         destination: '',
@@ -140,16 +151,11 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         description: t('checkoutHistoryTab.toasts.successDesc'),
       });
     },
-    onSettled: () => {
-      // 교차 엔티티 캐시 무효화: 반출 신청은 반출 목록 + 승인 카운트 + 대시보드에도 영향
+    onError: (error: unknown) => {
+      // 서버 상태와 캐시 동기화 보장 (타임아웃 등으로 서버에서 처리 완료된 경우 대비)
       queryClient.invalidateQueries({
         queryKey: queryKeys.equipment.checkoutHistory(equipmentId),
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all, exact: false });
-      queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll, exact: false });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all, exact: false });
-    },
-    onError: (error: unknown) => {
       console.error('반출 신청 실패:', error);
       toast({
         title: t('checkoutHistoryTab.toasts.error'),

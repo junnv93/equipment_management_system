@@ -8,9 +8,21 @@
  * import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
  * const expiresAt = new Date(Date.now() + NOTIFICATION_CONFIG.DEFAULT_TTL_DAYS * 86_400_000);
  */
-export const NOTIFICATION_CONFIG: { readonly DEFAULT_TTL_DAYS: number } = {
+export const NOTIFICATION_CONFIG: {
+  readonly DEFAULT_TTL_DAYS: number;
+  readonly SYSTEM_ACTOR_ID: string;
+} = {
   /** 알림 기본 만료 기간 (일) — DB 설정 조회 실패 시 폴백 */
   DEFAULT_TTL_DAYS: 90,
+
+  /**
+   * 시스템 자동화 이벤트의 actorId 식별자
+   *
+   * 스케줄러(교정기한 초과, 반출기한 초과, 중간점검)가 emit할 때 사용.
+   * 디스패처의 normalizeActorForDb()가 이 값을 null로 변환하여 UUID 컬럼 호환성 보장.
+   * resolveActorName()이 이 값을 '시스템'으로 변환하여 UI 표시.
+   */
+  SYSTEM_ACTOR_ID: 'system',
 };
 
 /**

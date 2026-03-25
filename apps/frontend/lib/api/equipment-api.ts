@@ -364,13 +364,13 @@ const equipmentApi = {
   // 승인 대기 요청 목록 조회
   getPendingRequests: async (): Promise<EquipmentRequest[]> => {
     const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING);
-    return response.data || [];
+    return transformArrayResponse<EquipmentRequest>(response);
   },
 
   // 요청 상세 조회
   getRequestByUuid: async (requestUuid: string): Promise<EquipmentRequest> => {
     const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.GET(requestUuid));
-    return response.data;
+    return transformSingleResponse<EquipmentRequest>(response);
   },
 
   // 요청 승인 (CAS: version 필수)
@@ -378,7 +378,7 @@ const equipmentApi = {
     const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid), {
       version,
     });
-    return response.data;
+    return transformSingleResponse<EquipmentRequest>(response);
   },
 
   // 요청 반려 (CAS: version 필수)
@@ -391,7 +391,7 @@ const equipmentApi = {
       rejectionReason,
       version,
     });
-    return response.data;
+    return transformSingleResponse<EquipmentRequest>(response);
   },
 
   // 파일 업로드
@@ -412,7 +412,7 @@ const equipmentApi = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
+    return transformSingleResponse<EquipmentAttachment>(response);
   },
 
   // ========== 공용장비 API ==========

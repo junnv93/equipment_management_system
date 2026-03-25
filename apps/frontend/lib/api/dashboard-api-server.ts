@@ -13,6 +13,7 @@
  */
 
 import { createServerApiClient } from './server-api-client';
+import { transformSingleResponse } from './utils/response-transformers';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 // DashboardAggregate는 dashboard-api.ts에서 정의 (SSOT: SSR/CSC 공유 타입)
 import type { DashboardAggregate } from './dashboard-api';
@@ -43,5 +44,5 @@ export async function getDashboardAggregate(
       activitiesLimit,
     },
   });
-  return response.data as DashboardAggregate;
+  return transformSingleResponse<DashboardAggregate>(response);
 }

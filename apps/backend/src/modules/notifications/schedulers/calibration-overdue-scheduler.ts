@@ -5,6 +5,7 @@ import { eq, and, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment, equipmentIncidentHistory } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
+import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
 import {
   EquipmentStatusEnum,
   NonConformanceStatusEnum,
@@ -260,8 +261,8 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
               // RecipientResolver가 scope='site' 해석에 사용 (크로스 사이트 워크플로우)
               site: equip.site ?? '',
               nextCalibrationDate: equip.nextCalibrationDate?.toISOString().split('T')[0] ?? '',
-              actorId: 'system',
-              actorName: '시스템',
+              actorId: NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID,
+              actorName: '',
               timestamp: new Date(),
             });
           } catch (notifyError) {

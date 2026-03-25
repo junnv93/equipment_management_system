@@ -321,7 +321,7 @@ export function RepairHistoryClient({
     deleteMutation.mutate(selectedRepair.uuid);
   };
 
-  const repairs = repairData?.items || [];
+  const repairs = repairData?.data || [];
 
   if (isLoading) {
     return null; // loading.tsx에서 처리

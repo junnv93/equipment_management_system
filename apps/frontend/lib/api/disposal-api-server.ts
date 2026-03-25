@@ -93,14 +93,16 @@ export async function requestDisposal(
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );
-    return response.data;
+    return transformSingleResponse<{ success: boolean; disposalRequest: DisposalRequest }>(
+      response
+    );
   }
 
   const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.DISPOSAL.REQUEST(equipmentId), {
     reason: data.reason,
     reasonDetail: data.reasonDetail,
   });
-  return response.data;
+  return transformSingleResponse<{ success: boolean; disposalRequest: DisposalRequest }>(response);
 }
 
 /**
@@ -112,7 +114,7 @@ export async function reviewDisposal(
 ): Promise<{ success: boolean }> {
   const apiClient = await createServerApiClient();
   const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.DISPOSAL.REVIEW(equipmentId), data);
-  return response.data;
+  return transformSingleResponse<{ success: boolean }>(response);
 }
 
 /**
@@ -127,7 +129,7 @@ export async function approveDisposal(
     API_ENDPOINTS.EQUIPMENT.DISPOSAL.APPROVE(equipmentId),
     data
   );
-  return response.data;
+  return transformSingleResponse<{ success: boolean }>(response);
 }
 
 /**
@@ -136,7 +138,7 @@ export async function approveDisposal(
 export async function cancelDisposalRequest(equipmentId: string): Promise<{ success: boolean }> {
   const apiClient = await createServerApiClient();
   const response = await apiClient.delete(API_ENDPOINTS.EQUIPMENT.DISPOSAL.CANCEL(equipmentId));
-  return response.data;
+  return transformSingleResponse<{ success: boolean }>(response);
 }
 
 const disposalApiServer = {

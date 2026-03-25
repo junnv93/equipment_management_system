@@ -30,7 +30,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
-import { createApiError } from './utils/response-transformers';
+import { createApiError, unwrapResponseData } from './utils/response-transformers';
 import {
   getServerAuthSession,
   getServerAuthHeaders as getAuthHeaders,
@@ -101,21 +101,8 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
 
   // 응답 인터셉터: 래핑 해제 + 에러 처리
   client.interceptors.response.use(
-    (response) => {
-      // ResponseTransformInterceptor 래핑 해제 (SSOT: 클라이언트 레벨에서 중앙화)
-      // 백엔드가 { success, data, message, timestamp } 형태로 래핑하는 경우 data만 추출
-      const responseData: unknown = response.data;
-      if (
-        responseData &&
-        typeof responseData === 'object' &&
-        'success' in responseData &&
-        (responseData as Record<string, unknown>).success === true &&
-        'data' in responseData
-      ) {
-        response.data = (responseData as Record<string, unknown>).data;
-      }
-      return response;
-    },
+    // SSOT: unwrapResponseData — 3개 API 클라이언트 공유
+    unwrapResponseData,
     async (error) => {
       // ✅ 공통 에러 변환 유틸리티 사용
       const apiError = createApiError(error);

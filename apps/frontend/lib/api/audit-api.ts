@@ -1,6 +1,6 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { transformPaginatedResponse } from './utils/response-transformers';
+import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 // ✅ SSOT: 공유 타입은 @equipment-management/schemas에서 import
 import type {
   AuditLogDetails,
@@ -44,7 +44,7 @@ export const auditApi = {
    */
   async getEntityAuditLogs(entityType: string, entityId: string): Promise<EntityAuditLogsResponse> {
     const response = await apiClient.get(API_ENDPOINTS.AUDIT_LOGS.BY_ENTITY(entityType, entityId));
-    return response.data;
+    return transformSingleResponse<EntityAuditLogsResponse>(response);
   },
 
   /**
@@ -54,6 +54,6 @@ export const auditApi = {
     const response = await apiClient.get(
       `${API_ENDPOINTS.AUDIT_LOGS.BY_USER(userId)}?limit=${limit}`
     );
-    return response.data;
+    return transformSingleResponse<EntityAuditLogsResponse>(response);
   },
 };

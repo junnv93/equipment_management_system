@@ -6,6 +6,7 @@ import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CheckoutStatusEnum } from '@equipment-management/schemas';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
 /**
@@ -181,8 +182,8 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
           teamId: checkout.requesterTeamId ?? '',
           requesterSite: checkout.requesterSite ?? '',
           site: checkout.requesterSite ?? '',
-          actorId: 'system',
-          actorName: '시스템',
+          actorId: NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID,
+          actorName: '',
           timestamp: now,
         });
 

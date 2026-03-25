@@ -1,7 +1,7 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS, DASHBOARD_ACTIVITIES_LIMIT } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
-import { transformArrayResponse } from './utils/response-transformers';
+import { transformArrayResponse, transformSingleResponse } from './utils/response-transformers';
 
 export interface DashboardSummary {
   totalEquipment: number;
@@ -141,14 +141,14 @@ class DashboardApi {
         activitiesLimit,
       },
     });
-    return response.data as DashboardAggregate;
+    return transformSingleResponse<DashboardAggregate>(response);
   }
 
   async getSummary(teamId?: string): Promise<DashboardSummary> {
     const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.SUMMARY, {
       params: teamId ? { teamId } : undefined,
     });
-    return response.data;
+    return transformSingleResponse<DashboardSummary>(response);
   }
 
   // 별칭 메서드들 (컴포넌트 호환성)
@@ -179,7 +179,7 @@ class DashboardApi {
     const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.UPCOMING_CALIBRATIONS, {
       params: { days, ...(teamId ? { teamId } : {}) },
     });
-    return response.data;
+    return transformArrayResponse<UpcomingCalibration>(response);
   }
 
   /**
@@ -189,19 +189,19 @@ class DashboardApi {
     const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.OVERDUE_RENTALS, {
       params: teamId ? { teamId } : undefined,
     });
-    return response.data;
+    return transformArrayResponse<OverdueCheckout>(response);
   }
 
   async getRecentActivities(): Promise<RecentActivity[]> {
     const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITIES);
-    return response.data;
+    return transformArrayResponse<RecentActivity>(response);
   }
 
   async getEquipmentStatusStats(teamId?: string): Promise<Record<string, number>> {
     const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.EQUIPMENT_STATUS_STATS, {
       params: teamId ? { teamId } : undefined,
     });
-    return response.data;
+    return transformSingleResponse<Record<string, number>>(response);
   }
 
   /**
@@ -218,7 +218,7 @@ class DashboardApi {
       const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITIES, {
         params: { role, limit },
       });
-      return response.data;
+      return transformArrayResponse<RecentActivity>(response);
     } catch {
       return [];
     }

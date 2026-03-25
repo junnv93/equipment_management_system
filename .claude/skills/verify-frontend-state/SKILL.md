@@ -108,14 +108,20 @@ grep -rn "useMutation(" apps/frontend/components apps/frontend/app --include="*.
 
 ### Step 4: invalidateQueries 위치 확인
 
-서버 동기화가 onSettled에서 수행되는지 확인합니다.
+캐시 무효화 위치가 mutation 유형에 맞는지 확인합니다.
+
+**규칙 (mutation 유형별):**
+- `useOptimisticMutation` → 훅 자체가 `onSettled`에서 처리. 소비자가 별도 invalidate하면 중복 위반.
+- `direct useMutation` (비-optimistic) → `onSuccess`에서 무효화 + UI 전환 순서 보장. `onError`에서도 최소한의 무효화 권장 (타임아웃 등 서버 처리 완료 케이스 대비).
 
 ```bash
-# onSuccess에서 invalidateQueries 호출 탐지 (onSettled에서 해야 함)
-grep -rn "onSuccess" apps/frontend --include="*.ts" --include="*.tsx" -A 10 | grep "invalidateQueries"
+# useOptimisticMutation 소비자가 onSuccess에서 중복 invalidate하는 패턴 탐지
+grep -rn "useOptimisticMutation" apps/frontend --include="*.ts" --include="*.tsx" -l | xargs grep -l "invalidateQueries" 2>/dev/null | grep -v "use-optimistic-mutation\|cache-invalidation"
 ```
 
-**참고:** `useOptimisticMutation` 훅 자체에서 onSettled 처리를 하므로, 훅 소비자(consumer)가 onSuccess에서 별도로 invalidate하면 중복.
+**PASS 기준:** `useOptimisticMutation` 소비자가 별도 `invalidateQueries`를 호출하지 않음.
+
+**참고:** `direct useMutation`에서 `onSuccess` 내 `invalidateQueries`는 정상 (예외 9, 15 참조). 이 경우 `onError`에서도 최소한의 캐시 무효화를 수행하여 서버-캐시 동기화를 보장하는 것이 권장 패턴.
 
 ### Step 4b: Navigate-Before-Invalidate 안티패턴 탐지
 

@@ -1,5 +1,7 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { transformSingleResponse, transformPaginatedResponse } from './utils/response-transformers';
+import type { PaginatedResponse } from './types';
 import type {
   EquipmentImportSource,
   EquipmentImportStatus,
@@ -205,7 +207,7 @@ class EquipmentImportApi {
    * // Get only internal shared imports
    * const internal = await equipmentImportApi.getList({ sourceType: 'internal_shared' });
    */
-  async getList(query?: EquipmentImportQuery): Promise<EquipmentImportListResponse> {
+  async getList(query?: EquipmentImportQuery): Promise<PaginatedResponse<EquipmentImport>> {
     const params = new URLSearchParams();
 
     if (query?.page) params.append('page', String(query.page));
@@ -220,8 +222,8 @@ class EquipmentImportApi {
 
     const queryString = params.toString();
     const url = `${API_ENDPOINTS.EQUIPMENT_IMPORTS.LIST}${queryString ? `?${queryString}` : ''}`;
-    const response = await apiClient.get<EquipmentImportListResponse>(url);
-    return response.data;
+    const response = await apiClient.get(url);
+    return transformPaginatedResponse<EquipmentImport>(response);
   }
 
   /**
@@ -231,8 +233,8 @@ class EquipmentImportApi {
    * @returns Equipment import details (rental or internal shared)
    */
   async getOne(id: string): Promise<EquipmentImport> {
-    const response = await apiClient.get<EquipmentImport>(API_ENDPOINTS.EQUIPMENT_IMPORTS.GET(id));
-    return response.data;
+    const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT_IMPORTS.GET(id));
+    return transformSingleResponse<EquipmentImport>(response);
   }
 
   /**
@@ -268,11 +270,8 @@ class EquipmentImportApi {
    * });
    */
   async create(dto: CreateEquipmentImportDto): Promise<EquipmentImport> {
-    const response = await apiClient.post<EquipmentImport>(
-      API_ENDPOINTS.EQUIPMENT_IMPORTS.CREATE,
-      dto
-    );
-    return response.data;
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT_IMPORTS.CREATE, dto);
+    return transformSingleResponse<EquipmentImport>(response);
   }
 
   /**
@@ -287,11 +286,11 @@ class EquipmentImportApi {
    * @returns Updated equipment import
    */
   async approve(id: string, version: number, comment?: string): Promise<EquipmentImport> {
-    const response = await apiClient.patch<EquipmentImport>(
-      API_ENDPOINTS.EQUIPMENT_IMPORTS.APPROVE(id),
-      { version, comment }
-    );
-    return response.data;
+    const response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT_IMPORTS.APPROVE(id), {
+      version,
+      comment,
+    });
+    return transformSingleResponse<EquipmentImport>(response);
   }
 
   /**
@@ -305,11 +304,11 @@ class EquipmentImportApi {
    * @returns Updated equipment import
    */
   async reject(id: string, version: number, reason: string): Promise<EquipmentImport> {
-    const response = await apiClient.patch<EquipmentImport>(
-      API_ENDPOINTS.EQUIPMENT_IMPORTS.REJECT(id),
-      { version, rejectionReason: reason }
-    );
-    return response.data;
+    const response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT_IMPORTS.REJECT(id), {
+      version,
+      rejectionReason: reason,
+    });
+    return transformSingleResponse<EquipmentImport>(response);
   }
 
   /**
@@ -328,11 +327,8 @@ class EquipmentImportApi {
    * @returns Updated equipment import
    */
   async receive(id: string, dto: ReceiveEquipmentImportDto): Promise<EquipmentImport> {
-    const response = await apiClient.post<EquipmentImport>(
-      API_ENDPOINTS.EQUIPMENT_IMPORTS.RECEIVE(id),
-      dto
-    );
-    return response.data;
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT_IMPORTS.RECEIVE(id), dto);
+    return transformSingleResponse<EquipmentImport>(response);
   }
 
   /**
@@ -346,10 +342,8 @@ class EquipmentImportApi {
    * @returns Created checkout ID for return tracking
    */
   async initiateReturn(id: string): Promise<EquipmentImport> {
-    const response = await apiClient.post<EquipmentImport>(
-      API_ENDPOINTS.EQUIPMENT_IMPORTS.INITIATE_RETURN(id)
-    );
-    return response.data;
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT_IMPORTS.INITIATE_RETURN(id));
+    return transformSingleResponse<EquipmentImport>(response);
   }
 
   /**
@@ -364,11 +358,11 @@ class EquipmentImportApi {
    * @returns Updated equipment import
    */
   async cancel(id: string, version: number, reason?: string): Promise<EquipmentImport> {
-    const response = await apiClient.patch<EquipmentImport>(
-      API_ENDPOINTS.EQUIPMENT_IMPORTS.CANCEL(id),
-      { version, reason }
-    );
-    return response.data;
+    const response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT_IMPORTS.CANCEL(id), {
+      version,
+      reason,
+    });
+    return transformSingleResponse<EquipmentImport>(response);
   }
 }
 

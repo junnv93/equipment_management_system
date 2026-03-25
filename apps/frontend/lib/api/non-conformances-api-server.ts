@@ -14,7 +14,7 @@
  */
 
 import { createServerApiClient } from './server-api-client';
-import { transformPaginatedResponse } from './utils/response-transformers';
+import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import type { NonConformance, NonConformanceQuery } from './non-conformances-api';
@@ -57,5 +57,5 @@ export async function getNonConformances(
 export async function getNonConformance(id: string): Promise<NonConformance> {
   const apiClient = await createServerApiClient();
   const response = await apiClient.get(API_ENDPOINTS.NON_CONFORMANCES.GET(id));
-  return response.data;
+  return transformSingleResponse<NonConformance>(response);
 }

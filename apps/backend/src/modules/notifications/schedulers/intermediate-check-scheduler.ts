@@ -6,6 +6,7 @@ import { and, eq, gte, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CalibrationService } from '../../calibration/calibration.service';
 import { SettingsService } from '../../settings/settings.service';
+import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
 /**
@@ -175,8 +176,8 @@ export class IntermediateCheckScheduler {
             teamId: equip.teamId,
             site: equip.site,
             daysUntil: daysUntilCheck,
-            actorId: 'system',
-            actorName: '시스템',
+            actorId: NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID,
+            actorName: '',
             timestamp: new Date(),
           });
 
@@ -300,8 +301,8 @@ export class IntermediateCheckScheduler {
             teamId: equip.teamId,
             site: equip.site,
             daysUntil: daysUntilCalibration,
-            actorId: 'system',
-            actorName: '시스템',
+            actorId: NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID,
+            actorName: '',
             timestamp: new Date(),
           });
 
@@ -379,8 +380,8 @@ export class IntermediateCheckScheduler {
             teamId: equip.teamId,
             site: equip.site,
             daysUntil: daysUntilCheck,
-            actorId: 'system',
-            actorName: '시스템',
+            actorId: NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID,
+            actorName: '',
             timestamp: new Date(),
           });
           results.push({ calibrationId: calibration.id, success: true });

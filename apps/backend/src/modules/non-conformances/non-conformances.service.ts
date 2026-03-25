@@ -216,7 +216,7 @@ export class NonConformancesService extends VersionedBaseService {
       managementNumber: equip.managementNumber ?? '',
       reporterTeamId: equip.teamId ?? '',
       ncType: createDto.ncType,
-      actorId: createDto.discoveredBy ?? '',
+      actorId: createDto.discoveredBy ?? undefined,
       actorName: '',
       timestamp: new Date(),
     });

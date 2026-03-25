@@ -24,7 +24,7 @@ import {
   transformArrayResponse,
 } from '../utils/response-transformers';
 import type { PaginatedResponse } from '../types';
-import type { EquipmentStatus } from '@equipment-management/schemas';
+import type { EquipmentStatus, EquipmentRequest } from '@equipment-management/schemas';
 
 // Re-export types from equipment-api.ts
 export type {
@@ -81,14 +81,14 @@ export interface EquipmentApiMethods {
   getTeamEquipment: (teamId: string) => Promise<Equipment[]>;
 
   // 승인 프로세스
-  getPendingRequests: () => Promise<unknown[]>;
-  getRequestByUuid: (requestUuid: string) => Promise<unknown>;
-  approveRequest: (requestUuid: string, version: number) => Promise<unknown>;
+  getPendingRequests: () => Promise<EquipmentRequest[]>;
+  getRequestByUuid: (requestUuid: string) => Promise<EquipmentRequest>;
+  approveRequest: (requestUuid: string, version: number) => Promise<EquipmentRequest>;
   rejectRequest: (
     requestUuid: string,
     rejectionReason: string,
     version: number
-  ) => Promise<unknown>;
+  ) => Promise<EquipmentRequest>;
 
   // 이력 관리
   getLocationHistory: (equipmentUuid: string) => Promise<LocationHistoryItem[]>;
@@ -176,43 +176,43 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
       const response = await apiClient.get(
         `${API_ENDPOINTS.EQUIPMENT.CALIBRATION_DUE}?days=${days}`
       );
-      return response.data;
+      return transformArrayResponse<Equipment>(response);
     },
 
     getTeamEquipment: async (teamId: string): Promise<Equipment[]> => {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.TEAM(teamId));
-      return response.data;
+      return transformArrayResponse<Equipment>(response);
     },
 
     // ========== 승인 프로세스 ==========
 
-    getPendingRequests: async (): Promise<unknown[]> => {
+    getPendingRequests: async (): Promise<EquipmentRequest[]> => {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING);
-      return response.data || [];
+      return transformArrayResponse<EquipmentRequest>(response);
     },
 
-    getRequestByUuid: async (requestUuid: string): Promise<unknown> => {
+    getRequestByUuid: async (requestUuid: string): Promise<EquipmentRequest> => {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.GET(requestUuid));
-      return response.data;
+      return transformSingleResponse<EquipmentRequest>(response);
     },
 
-    approveRequest: async (requestUuid: string, version: number): Promise<unknown> => {
+    approveRequest: async (requestUuid: string, version: number): Promise<EquipmentRequest> => {
       const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid), {
         version,
       });
-      return response.data;
+      return transformSingleResponse<EquipmentRequest>(response);
     },
 
     rejectRequest: async (
       requestUuid: string,
       rejectionReason: string,
       version: number
-    ): Promise<unknown> => {
+    ): Promise<EquipmentRequest> => {
       const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(requestUuid), {
         rejectionReason,
         version,
       });
-      return response.data;
+      return transformSingleResponse<EquipmentRequest>(response);
     },
 
     // ========== 이력 관리 ==========

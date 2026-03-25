@@ -14,6 +14,7 @@
 import { useCallback } from 'react';
 import { useAuthenticatedClient } from '../authenticated-client-provider';
 import approvalsApi from '../approvals-api';
+import { transformSingleResponse } from '../utils/response-transformers';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import type {
@@ -33,22 +34,8 @@ export function useApprovalsApi() {
   const getPendingCounts = useCallback(
     async (_role?: UserRole): Promise<PendingCountsByCategory> => {
       try {
-        const response = await client.get<PendingCountsByCategory>(API_ENDPOINTS.APPROVALS.COUNTS);
-        return (
-          response.data || {
-            outgoing: 0,
-            incoming: 0,
-            equipment: 0,
-            calibration: 0,
-            inspection: 0,
-            nonconformity: 0,
-            disposal_review: 0,
-            disposal_final: 0,
-            plan_review: 0,
-            plan_final: 0,
-            software: 0,
-          }
-        );
+        const response = await client.get(API_ENDPOINTS.APPROVALS.COUNTS);
+        return transformSingleResponse<PendingCountsByCategory>(response);
       } catch (error) {
         console.error('Failed to fetch approval counts:', error);
         return {

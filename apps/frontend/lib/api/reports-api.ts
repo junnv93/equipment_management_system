@@ -1,5 +1,6 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { transformSingleResponse } from './utils/response-transformers';
 
 export type ReportType =
   | 'equipment_inventory'
@@ -14,6 +15,83 @@ export type ReportPeriod = 'last_week' | 'last_month' | 'last_quarter' | 'last_y
 
 export type UtilizationRatePeriod = 'week' | 'month' | 'quarter' | 'year';
 
+// ── Report Response Types (백엔드 reports.types.ts 기반) ──
+
+export interface EquipmentUsageReport {
+  timeframe: { startDate: string; endDate: string };
+  totalUsageHours: number;
+  totalEquipmentCount: number;
+  departmentDistribution: {
+    departmentId: string;
+    departmentName: string;
+    usageHours: number;
+    equipmentCount: number;
+  }[];
+  topEquipment: { equipmentId: string; name: string; usageHours: number; usageCount: number }[];
+  monthlyTrend: { month: string; checkouts: number; returns: number }[];
+}
+
+export interface CalibrationStatusReport {
+  summary: {
+    totalEquipment: number;
+    requireCalibration: number;
+    dueThisMonth: number;
+    overdue: number;
+    completedThisMonth: number;
+  };
+  status: { status: string; count: number; percentage: number }[];
+  calibrationTrend: { month: string; completed: number; due: number; overdue: number }[];
+}
+
+export interface CheckoutStatisticsReport {
+  timeframe: { startDate: string; endDate: string };
+  summary: {
+    totalCheckouts: number;
+    activeCheckouts: number;
+    avgCheckoutDuration: number;
+    returnRate: number;
+  };
+  checkoutsByDepartment: {
+    departmentId: string;
+    departmentName: string;
+    count: number;
+    percentage: number;
+  }[];
+  checkoutStatus: { status: string; count: number; percentage: number }[];
+  monthlyTrend: { month: string; checkouts: number; returns: number }[];
+}
+
+export interface UtilizationRateReport {
+  period: string;
+  summary: {
+    averageUtilization: number;
+    highUtilizationCount: number;
+    lowUtilizationCount: number;
+    totalEquipmentCount: number;
+  };
+  utilizationByCategory: { category: string; rate: number }[];
+  topUtilized: { equipmentId: string; name: string; utilizationRate: number; department: string }[];
+  lowUtilized: { equipmentId: string; name: string; utilizationRate: number; department: string }[];
+}
+
+export interface EquipmentDowntimeReport {
+  timeframe: { startDate: string; endDate: string };
+  summary: {
+    totalDowntimeHours: number;
+    totalIncidents: number;
+    avgDowntimeDuration: number;
+    affectedEquipmentCount: number;
+  };
+  downtimeReasons: { reason: string; hours: number; percentage: number }[];
+  topDowntimeEquipment: {
+    equipmentId: string;
+    name: string;
+    downtimeHours: number;
+    incidents: number;
+  }[];
+  monthlyTrend: { month: string; hours: number; incidents: number }[];
+}
+
 // 장비 사용 보고서 조회
 export const getEquipmentUsage = async (
   startDate?: string,
@@ -21,28 +99,18 @@ export const getEquipmentUsage = async (
   equipmentId?: string,
   departmentId?: string
 ) => {
-  try {
-    const response = await apiClient.get(API_ENDPOINTS.REPORTS.EQUIPMENT_USAGE, {
-      params: { startDate, endDate, equipmentId, departmentId },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Failed to fetch equipment usage report:', error);
-    throw error;
-  }
+  const response = await apiClient.get(API_ENDPOINTS.REPORTS.EQUIPMENT_USAGE, {
+    params: { startDate, endDate, equipmentId, departmentId },
+  });
+  return transformSingleResponse<EquipmentUsageReport>(response);
 };
 
 // 교정 상태 보고서 조회
 export const getCalibrationStatus = async (status?: string, timeframe?: string) => {
-  try {
-    const response = await apiClient.get(API_ENDPOINTS.REPORTS.CALIBRATION_STATUS, {
-      params: { status, timeframe },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Failed to fetch calibration status report:', error);
-    throw error;
-  }
+  const response = await apiClient.get(API_ENDPOINTS.REPORTS.CALIBRATION_STATUS, {
+    params: { status, timeframe },
+  });
+  return transformSingleResponse<CalibrationStatusReport>(response);
 };
 
 /**
@@ -53,16 +121,11 @@ export const getCheckoutStatistics = async (
   endDate?: string,
   departmentId?: string
 ) => {
-  try {
-    // 백엔드 API 엔드포인트는 유지 (백엔드 호환성)
-    const response = await apiClient.get(API_ENDPOINTS.REPORTS.RENTAL_STATISTICS, {
-      params: { startDate, endDate, departmentId },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Failed to fetch checkout statistics report:', error);
-    throw error;
-  }
+  // 백엔드 API 엔드포인트는 유지 (백엔드 호환성)
+  const response = await apiClient.get(API_ENDPOINTS.REPORTS.RENTAL_STATISTICS, {
+    params: { startDate, endDate, departmentId },
+  });
+  return transformSingleResponse<CheckoutStatisticsReport>(response);
 };
 
 /**
@@ -76,15 +139,10 @@ export const getUtilizationRate = async (
   equipmentId?: string,
   categoryId?: string
 ) => {
-  try {
-    const response = await apiClient.get(API_ENDPOINTS.REPORTS.UTILIZATION_RATE, {
-      params: { period, equipmentId, categoryId },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Failed to fetch utilization rate report:', error);
-    throw error;
-  }
+  const response = await apiClient.get(API_ENDPOINTS.REPORTS.UTILIZATION_RATE, {
+    params: { period, equipmentId, categoryId },
+  });
+  return transformSingleResponse<UtilizationRateReport>(response);
 };
 
 // 장비 가동 중단 보고서 조회
@@ -93,15 +151,10 @@ export const getEquipmentDowntime = async (
   endDate?: string,
   equipmentId?: string
 ) => {
-  try {
-    const response = await apiClient.get(API_ENDPOINTS.REPORTS.EQUIPMENT_DOWNTIME, {
-      params: { startDate, endDate, equipmentId },
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Failed to fetch equipment downtime report:', error);
-    throw error;
-  }
+  const response = await apiClient.get(API_ENDPOINTS.REPORTS.EQUIPMENT_DOWNTIME, {
+    params: { startDate, endDate, equipmentId },
+  });
+  return transformSingleResponse<EquipmentDowntimeReport>(response);
 };
 
 // 장비 사용 보고서 내보내기

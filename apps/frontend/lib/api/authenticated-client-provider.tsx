@@ -3,7 +3,7 @@
 import { createContext, useContext, useMemo, ReactNode } from 'react';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { useSession, getSession } from 'next-auth/react';
-import { createApiError } from './utils/response-transformers';
+import { createApiError, unwrapResponseData } from './utils/response-transformers';
 import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 
 /**
@@ -63,9 +63,10 @@ export function AuthenticatedClientProvider({ children }: AuthenticatedClientPro
       (error) => Promise.reject(error)
     );
 
-    // ✅ 응답 인터셉터: 401 시 세션 갱신 1회 시도 → 재요청 → 실패 시에만 이벤트 dispatch
+    // ✅ 응답 인터셉터: 래핑 해제 + 401 시 세션 갱신 1회 시도 → 재요청 → 실패 시에만 이벤트 dispatch
     instance.interceptors.response.use(
-      (response) => response,
+      // SSOT: unwrapResponseData — 3개 API 클라이언트 공유
+      unwrapResponseData,
       async (error) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & {
           _authRetried?: boolean;

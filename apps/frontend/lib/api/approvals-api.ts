@@ -35,7 +35,7 @@ import softwareApi from './software-api';
 import calibrationPlansApi from './calibration-plans-api';
 import { reviewDisposal, approveDisposal, getCurrentDisposalRequest } from './disposal-api';
 import equipmentApi from './equipment-api';
-import { transformArrayResponse } from './utils/response-transformers';
+import { transformArrayResponse, transformSingleResponse } from './utils/response-transformers';
 
 // ============================================================================
 // Disposal API 페이로드 타입 (SSOT: 백엔드 DTO와 일치)
@@ -407,11 +407,11 @@ class ApprovalsApi {
         this.mapCheckoutToApprovalItem(item, 'incoming')
       );
 
-      const rentalItems = (rentalImports.items || []).map((item: EquipmentImport) =>
+      const rentalItems = (rentalImports.data || []).map((item: EquipmentImport) =>
         this.mapEquipmentImportToApprovalItem(item, 'incoming')
       );
 
-      const sharedItems = (sharedImports.items || []).map((item: EquipmentImport) =>
+      const sharedItems = (sharedImports.data || []).map((item: EquipmentImport) =>
         this.mapEquipmentImportToApprovalItem(item, 'incoming')
       );
 
@@ -427,8 +427,7 @@ class ApprovalsApi {
   private async getPendingCalibrations(_teamId?: string): Promise<ApprovalItem[]> {
     try {
       const response = await calibrationApi.getPendingCalibrations();
-      // getPendingCalibrations returns { items: Calibration[] }
-      const items = response.items || [];
+      const items = response.data || [];
 
       // Note: teamId 필터링은 별도 장비 조회가 필요하므로 현재는 생략
       return items.map((item: Calibration) => this.mapCalibrationToApprovalItem(item));
@@ -625,7 +624,7 @@ class ApprovalsApi {
         status: 'pending',
         sourceType: 'rental',
       });
-      const items = response.items || [];
+      const items = response.data || [];
 
       return items.map((item) => this.mapEquipmentImportToApprovalItem(item, 'incoming'));
     } catch {
@@ -646,9 +645,8 @@ class ApprovalsApi {
    */
   async getPendingCounts(_role?: UserRole): Promise<PendingCountsByCategory> {
     try {
-      const response = await apiClient.get<PendingCountsByCategory>(API_ENDPOINTS.APPROVALS.COUNTS);
-
-      return response.data || this.getEmptyCounts();
+      const response = await apiClient.get(API_ENDPOINTS.APPROVALS.COUNTS);
+      return transformSingleResponse<PendingCountsByCategory>(response) ?? this.getEmptyCounts();
     } catch (error) {
       console.error('Failed to fetch approval counts:', error);
       return this.getEmptyCounts();
@@ -663,10 +661,14 @@ class ApprovalsApi {
   async getKpi(category?: string): Promise<ApprovalKpiResponse> {
     try {
       const params = category ? `?category=${encodeURIComponent(category)}` : '';
-      const response = await apiClient.get<ApprovalKpiResponse>(
-        `${API_ENDPOINTS.APPROVALS.KPI}${params}`
+      const response = await apiClient.get(`${API_ENDPOINTS.APPROVALS.KPI}${params}`);
+      return (
+        transformSingleResponse<ApprovalKpiResponse>(response) ?? {
+          todayProcessed: 0,
+          urgentCount: 0,
+          avgWaitDays: 0,
+        }
       );
-      return response.data || { todayProcessed: 0, urgentCount: 0, avgWaitDays: 0 };
     } catch {
       return { todayProcessed: 0, urgentCount: 0, avgWaitDays: 0 };
     }

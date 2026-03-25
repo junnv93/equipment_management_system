@@ -1356,7 +1356,7 @@ export class CheckoutsService extends VersionedBaseService {
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           reason: rejectDto.reason,
-          actorId: rejectDto.approverId ?? '',
+          actorId: rejectDto.approverId ?? undefined,
           actorName: '',
           timestamp: new Date(),
         });

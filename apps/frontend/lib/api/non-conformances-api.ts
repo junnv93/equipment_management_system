@@ -1,7 +1,11 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
-import { transformPaginatedResponse } from './utils/response-transformers';
+import {
+  transformPaginatedResponse,
+  transformSingleResponse,
+  transformArrayResponse,
+} from './utils/response-transformers';
 // ✅ SSOT: schemas 패키지에서 타입 import
 import type {
   NonConformanceStatus,
@@ -131,19 +135,23 @@ const nonConformancesApi = {
 
   // 부적합 상세 조회
   getNonConformance: async (id: string): Promise<NonConformance> => {
-    return apiClient.get(API_ENDPOINTS.NON_CONFORMANCES.GET(id)).then((res) => res.data);
+    return apiClient
+      .get(API_ENDPOINTS.NON_CONFORMANCES.GET(id))
+      .then((res) => transformSingleResponse<NonConformance>(res));
   },
 
   // 장비별 열린 부적합 조회
   getEquipmentNonConformances: async (equipmentUuid: string): Promise<NonConformance[]> => {
     return apiClient
       .get(API_ENDPOINTS.NON_CONFORMANCES.EQUIPMENT(equipmentUuid))
-      .then((res) => res.data);
+      .then((res) => transformArrayResponse<NonConformance>(res));
   },
 
   // 부적합 등록
   createNonConformance: async (data: CreateNonConformanceDto): Promise<NonConformance> => {
-    return apiClient.post(API_ENDPOINTS.NON_CONFORMANCES.CREATE, data).then((res) => res.data);
+    return apiClient
+      .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE, data)
+      .then((res) => transformSingleResponse<NonConformance>(res));
   },
 
   // 부적합 업데이트 (원인분석/조치 기록)
@@ -151,7 +159,9 @@ const nonConformancesApi = {
     id: string,
     data: UpdateNonConformanceDto
   ): Promise<NonConformance> => {
-    return apiClient.patch(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(id), data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(id), data)
+      .then((res) => transformSingleResponse<NonConformance>(res));
   },
 
   // 부적합 종료 (기술책임자)
@@ -159,7 +169,9 @@ const nonConformancesApi = {
     id: string,
     data: CloseNonConformanceDto
   ): Promise<NonConformance> => {
-    return apiClient.patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(id), data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(id), data)
+      .then((res) => transformSingleResponse<NonConformance>(res));
   },
 
   // 부적합 조치 반려 (기술책임자: corrected → open)
@@ -169,12 +181,14 @@ const nonConformancesApi = {
   ): Promise<NonConformance> => {
     return apiClient
       .patch(API_ENDPOINTS.NON_CONFORMANCES.REJECT_CORRECTION(id), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<NonConformance>(res));
   },
 
   // 부적합 삭제 (소프트 삭제)
   deleteNonConformance: async (id: string): Promise<{ id: string; deleted: boolean }> => {
-    return apiClient.delete(API_ENDPOINTS.NON_CONFORMANCES.DELETE(id)).then((res) => res.data);
+    return apiClient
+      .delete(API_ENDPOINTS.NON_CONFORMANCES.DELETE(id))
+      .then((res) => transformSingleResponse<{ id: string; deleted: boolean }>(res));
   },
 
   // 종료 대기 중인 부적합 목록 (corrected 상태 + 수리 필터 적용)

@@ -15,7 +15,7 @@
  */
 
 import { createServerApiClient } from './server-api-client';
-import { transformPaginatedResponse } from './utils/response-transformers';
+import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 import type { CalibrationPlan, CalibrationPlanSummary } from './calibration-plans-api';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
@@ -64,5 +64,5 @@ export async function getCalibrationPlansList(
 export async function getCalibrationPlan(uuid: string): Promise<CalibrationPlan> {
   const apiClient = await createServerApiClient();
   const response = await apiClient.get(API_ENDPOINTS.CALIBRATION_PLANS.GET(uuid));
-  return response.data;
+  return transformSingleResponse<CalibrationPlan>(response);
 }

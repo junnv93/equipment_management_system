@@ -125,7 +125,8 @@ for (const [event, type] of Object.entries(EVENT_TO_NOTIFICATION_TYPE)) {
 
 /** 모든 이벤트의 공통 페이로드 */
 export interface BaseNotificationEvent {
-  actorId: string;
+  /** 이벤트 발행자 UUID. 시스템 이벤트는 NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID, 사용자 이벤트는 UUID */
+  actorId?: string;
   actorName: string;
   timestamp: Date;
 }

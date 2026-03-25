@@ -4,6 +4,12 @@
  * ✅ Single Source of Truth: 백엔드 응답 구조를 프론트엔드에서 사용하기 편한 형태로 변환
  * ✅ 중복 제거: 모든 API 클라이언트에서 공통으로 사용
  * ✅ 타입 안전성: TypeScript 타입으로 보장
+ *
+ * 아키텍처 계약:
+ * - 래핑 해제({ success, data } → data)는 Axios 인터셉터가 SSOT로 담당
+ * - transform 함수는 이미 해제된 데이터의 포맷 변환만 담당
+ * - 3개 API 클라이언트(apiClient, serverApiClient, authenticatedClient) 모두
+ *   unwrapResponseData 인터셉터를 공유
  */
 
 import type {
@@ -11,7 +17,7 @@ import type {
   FrontendPaginatedResponse,
   SingleResourceResponse,
 } from '@equipment-management/schemas';
-import { AxiosResponse } from 'axios';
+import type { AxiosResponse } from 'axios';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import {
   ApiError,
@@ -20,6 +26,31 @@ import {
   mapBackendErrorCode,
 } from '../../errors/equipment-errors';
 import { getDefaultMessageForStatus } from '../error';
+
+/**
+ * ResponseTransformInterceptor 래핑 해제 (SSOT)
+ *
+ * 백엔드가 { success: true, data: T, message, timestamp } 형태로 래핑하는 경우
+ * data만 추출하여 response.data에 재할당합니다.
+ *
+ * 모든 Axios 클라이언트의 응답 인터셉터에서 이 함수를 사용해야 합니다:
+ * - api-client.ts (클라이언트 사이드)
+ * - server-api-client.ts (서버 사이드)
+ * - authenticated-client-provider.tsx (세션 기반)
+ */
+export function unwrapResponseData<T>(response: AxiosResponse<T>): AxiosResponse<T> {
+  const responseData: unknown = response.data;
+  if (
+    responseData &&
+    typeof responseData === 'object' &&
+    'success' in responseData &&
+    (responseData as Record<string, unknown>).success === true &&
+    'data' in responseData
+  ) {
+    response.data = (responseData as Record<string, unknown>).data as T;
+  }
+  return response;
+}
 
 /**
  * 백엔드 페이지네이션 응답을 프론트엔드 형식으로 변환
@@ -33,15 +64,11 @@ import { getDefaultMessageForStatus } from '../error';
 export function transformPaginatedResponse<T, TSummary = Record<string, number>>(
   response: AxiosResponse<PaginatedListResponse<T> & { summary?: TSummary }>
 ): FrontendPaginatedResponse<T, TSummary> {
-  // ResponseTransformInterceptor 래핑 해제: { success, data, message, timestamp }
-  // 백엔드 인터셉터가 실제 데이터를 data 필드로 래핑함
-  const rawData = response.data as unknown;
-  const backendData =
-    rawData && typeof rawData === 'object' && 'success' in rawData && 'data' in rawData
-      ? (rawData as { data: unknown }).data
-      : rawData;
+  // 래핑 해제는 인터셉터(unwrapResponseData)가 SSOT로 처리함
+  // 이 함수는 포맷 변환만 담당: { items, meta } → { data, meta.pagination }
+  const backendData = response.data as unknown;
 
-  // 백엔드 응답 구조 확인
+  // 백엔드 표준 페이지네이션: { items: [], meta: { totalItems, ... } }
   if (
     backendData &&
     typeof backendData === 'object' &&
@@ -69,7 +96,7 @@ export function transformPaginatedResponse<T, TSummary = Record<string, number>>
     return result;
   }
 
-  // 레거시 호환성: 이미 변환된 형태인 경우
+  // 이미 프론트엔드 형태인 경우: { data: [], meta: { pagination } }
   if (
     backendData &&
     typeof backendData === 'object' &&
@@ -107,12 +134,18 @@ export function transformSingleResponse<T>(
 ): T {
   const backendData = response.data;
 
-  // 백엔드가 { data: {...} } 형태로 감싸서 반환하는 경우
-  if (backendData && typeof backendData === 'object' && 'data' in backendData) {
+  // ResponseTransformInterceptor 래핑 해제: { success, data } 형태만 언래핑
+  // 'data' in만 검사하면 엔티티 자체에 data 프로퍼티가 있을 때 이중 언래핑 위험
+  if (
+    backendData &&
+    typeof backendData === 'object' &&
+    'success' in backendData &&
+    'data' in backendData
+  ) {
     return (backendData as { data: T }).data;
   }
 
-  // 백엔드가 직접 객체를 반환하는 경우
+  // 인터셉터가 이미 해제했거나 직접 객체를 반환하는 경우
   return backendData as T;
 }
 
@@ -132,15 +165,24 @@ export function transformArrayResponse<T>(
 ): T[] {
   const backendData = response.data;
 
+  // ResponseTransformInterceptor 래핑 해제: { success, data } 형태만 언래핑
+  // 'data' in만 검사하면 엔티티 자체에 data 프로퍼티가 있을 때 이중 언래핑 위험
+  if (
+    backendData &&
+    typeof backendData === 'object' &&
+    !Array.isArray(backendData) &&
+    'success' in backendData &&
+    'data' in backendData
+  ) {
+    const unwrapped = (backendData as { data: unknown }).data;
+    if (Array.isArray(unwrapped)) {
+      return unwrapped as T[];
+    }
+  }
+
   // 배열이 직접 반환된 경우
   if (Array.isArray(backendData)) {
     return backendData;
-  }
-
-  // { data: [...] } 형태
-  if (backendData && typeof backendData === 'object' && 'data' in backendData) {
-    const wrapped = backendData as { data: T[] };
-    return Array.isArray(wrapped.data) ? wrapped.data : [];
   }
 
   // { items: [...] } 형태 (페이지네이션 없는 목록)

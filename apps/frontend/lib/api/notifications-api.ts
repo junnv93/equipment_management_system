@@ -1,5 +1,6 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { transformSingleResponse } from './utils/response-transformers';
 
 /**
  * 알림 API 응답 타입
@@ -84,7 +85,7 @@ const notificationsApi = {
     const qs = queryParams.toString();
     const url = `${API_ENDPOINTS.NOTIFICATIONS.LIST}${qs ? `?${qs}` : ''}`;
     const response = await apiClient.get(url);
-    return response.data?.data ?? response.data;
+    return transformSingleResponse<NotificationListResponse>(response);
   },
 
   /**
@@ -92,7 +93,7 @@ const notificationsApi = {
    */
   async getUnreadCount(): Promise<UnreadCountResponse> {
     const response = await apiClient.get(API_ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
-    return response.data?.data ?? response.data;
+    return transformSingleResponse<UnreadCountResponse>(response);
   },
 
   /**
@@ -121,7 +122,7 @@ const notificationsApi = {
    */
   async getPreferences(): Promise<NotificationPreferences> {
     const response = await apiClient.get(API_ENDPOINTS.NOTIFICATIONS.SETTINGS);
-    return response.data?.data ?? response.data;
+    return transformSingleResponse<NotificationPreferences>(response);
   },
 
   /**
@@ -131,7 +132,7 @@ const notificationsApi = {
     prefs: Partial<Omit<NotificationPreferences, 'id' | 'userId'>>
   ): Promise<NotificationPreferences> {
     const response = await apiClient.patch(API_ENDPOINTS.NOTIFICATIONS.SETTINGS, prefs);
-    return response.data?.data ?? response.data;
+    return transformSingleResponse<NotificationPreferences>(response);
   },
 };
 

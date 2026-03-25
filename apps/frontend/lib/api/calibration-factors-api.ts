@@ -1,6 +1,6 @@
 import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
-import { transformPaginatedResponse } from './utils/response-transformers';
+import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 // ✅ SSOT: packages/schemas에서 import
 import type {
   CalibrationFactorType,
@@ -122,17 +122,21 @@ const calibrationFactorsApi = {
   getEquipmentFactors: async (equipmentUuid: string): Promise<EquipmentFactors> => {
     return apiClient
       .get(API_ENDPOINTS.CALIBRATION_FACTORS.EQUIPMENT(equipmentUuid))
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<EquipmentFactors>(res));
   },
 
   // 보정계수 상세 조회
   getCalibrationFactor: async (id: string): Promise<CalibrationFactor> => {
-    return apiClient.get(API_ENDPOINTS.CALIBRATION_FACTORS.GET(id)).then((res) => res.data);
+    return apiClient
+      .get(API_ENDPOINTS.CALIBRATION_FACTORS.GET(id))
+      .then((res) => transformSingleResponse<CalibrationFactor>(res));
   },
 
   // 보정계수 변경 요청
   createCalibrationFactor: async (data: CreateCalibrationFactorDto): Promise<CalibrationFactor> => {
-    return apiClient.post(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE, data).then((res) => res.data);
+    return apiClient
+      .post(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE, data)
+      .then((res) => transformSingleResponse<CalibrationFactor>(res));
   },
 
   // 승인 대기 목록 조회
@@ -144,7 +148,9 @@ const calibrationFactorsApi = {
 
   // 보정계수 대장 조회
   getCalibrationFactorRegistry: async (): Promise<CalibrationFactorRegistry> => {
-    return apiClient.get(API_ENDPOINTS.CALIBRATION_FACTORS.REGISTRY).then((res) => res.data);
+    return apiClient
+      .get(API_ENDPOINTS.CALIBRATION_FACTORS.REGISTRY)
+      .then((res) => transformSingleResponse<CalibrationFactorRegistry>(res));
   },
 
   // 보정계수 승인
@@ -154,7 +160,7 @@ const calibrationFactorsApi = {
   ): Promise<CalibrationFactor> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_FACTORS.APPROVE(id), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationFactor>(res));
   },
 
   // 보정계수 반려
@@ -164,7 +170,7 @@ const calibrationFactorsApi = {
   ): Promise<CalibrationFactor> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_FACTORS.REJECT(id), data)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<CalibrationFactor>(res));
   },
 
   // 보정계수 삭제 (소프트 삭제) — CAS version 쿼리 파라미터 포함
@@ -174,7 +180,7 @@ const calibrationFactorsApi = {
   ): Promise<{ id: string; deleted: boolean }> => {
     return apiClient
       .delete(`${API_ENDPOINTS.CALIBRATION_FACTORS.DELETE(id)}?version=${version}`)
-      .then((res) => res.data);
+      .then((res) => transformSingleResponse<{ id: string; deleted: boolean }>(res));
   },
 };
 

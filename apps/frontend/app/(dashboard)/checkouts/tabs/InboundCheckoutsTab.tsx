@@ -170,7 +170,7 @@ export default function InboundCheckoutsTab({
 
   const renderRentalImportsList = () => {
     if (rentalImportsLoading) return renderLoadingState();
-    if (!rentalImportsData?.items?.length) return null;
+    if (!rentalImportsData?.data?.length) return null;
 
     return (
       <div className="space-y-3">
@@ -188,7 +188,7 @@ export default function InboundCheckoutsTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rentalImportsData.items.map((item) => (
+              {rentalImportsData.data.map((item) => (
                 <TableRow
                   key={item.id}
                   className={CHECKOUT_INTERACTION_TOKENS.clickableRow}
@@ -231,9 +231,9 @@ export default function InboundCheckoutsTab({
   // Main render
   // ──────────────────────────────────────────────
   const hasInboundCheckouts = inboundGroups.length > 0;
-  const hasRentalImports = rentalImportsData?.items && rentalImportsData.items.length > 0;
+  const hasRentalImports = rentalImportsData?.data && rentalImportsData.data.length > 0;
   const hasInternalSharedImports =
-    internalSharedImportsData?.items && internalSharedImportsData.items.length > 0;
+    internalSharedImportsData?.data && internalSharedImportsData.data.length > 0;
   const isLoading = inboundCheckoutsLoading || rentalImportsLoading || internalSharedImportsLoading;
 
   if (isLoading) return renderLoadingState();
@@ -295,8 +295,8 @@ export default function InboundCheckoutsTab({
 
       {/* 내부 공용장비 */}
       {!internalSharedImportsLoading &&
-        internalSharedImportsData?.items &&
-        internalSharedImportsData.items.length > 0 && (
+        internalSharedImportsData?.data &&
+        internalSharedImportsData.data.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground">
               {t('inbound.internalShared')}
@@ -314,7 +314,7 @@ export default function InboundCheckoutsTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {internalSharedImportsData.items.map((item) => (
+                  {internalSharedImportsData.data.map((item) => (
                     <TableRow
                       key={item.id}
                       className={CHECKOUT_INTERACTION_TOKENS.clickableRow}

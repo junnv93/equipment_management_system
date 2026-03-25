@@ -771,6 +771,11 @@
     "empty": "No checkout history registered.",
     "latest": "Latest",
     "notAvailable": "Equipment is not available for checkout",
+    "validation": {
+      "destinationRequired": "Please enter checkout destination",
+      "reasonRequired": "Please enter checkout reason",
+      "expectedReturnDateRequired": "Please enter expected return date"
+    },
     "disabledReasons": {
       "checked_out": "Equipment is already checked out",
       "retired": "Equipment has been retired",

@@ -42,16 +42,42 @@ export class NotificationDispatcher {
     private readonly settingsService: SettingsService
   ) {}
 
+  /** UUID v4 형식 검증 (비-UUID 문자열이 DB uuid 컬럼에 도달하는 것을 방지) */
+  private static readonly UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  /**
+   * actorId 정규화 — Anti-Corruption Layer
+   *
+   * emit 사이트가 전달하는 다양한 actorId 형식을 DB uuid 컬럼에 안전한 값으로 변환.
+   * 이 메서드가 유일한 actorId→DB 변환 지점이며, 40+ emit 사이트를 개별 수정할 필요 없음.
+   *
+   * 변환 규칙:
+   *   - SYSTEM_ACTOR_ID ('system') → null (스케줄러 자동화 이벤트)
+   *   - falsy (빈 문자열, null, undefined) → null (emit 사이트 방어적 폴백)
+   *   - 유효한 UUID → 그대로 반환 (사용자 액션)
+   *   - 비-UUID 문자열 → null + warn 로그 (미래 emit 사이트 방어)
+   */
+  private normalizeActorForDb(actorId: string | null | undefined): string | null {
+    if (!actorId || actorId === NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID) return null;
+    if (NotificationDispatcher.UUID_PATTERN.test(actorId)) return actorId;
+
+    this.logger.warn(`비-UUID actorId 감지, null로 정규화: "${actorId}"`);
+    return null;
+  }
+
   /**
    * actorId → actorName 중앙 해석
    *
    * 40+ emit 사이트가 actorName을 비워두어도 디스패처에서 DB 조회로 해석.
    * 5분 인메모리 캐시로 actorId당 최초 1회만 DB hit.
+   *
+   * @param dbActorId - normalizeActorForDb()를 거친 정규화된 actorId (null 또는 유효 UUID)
    */
-  private async resolveActorName(actorId: string): Promise<string | null> {
-    if (!actorId || actorId === 'system') return '시스템';
+  private async resolveActorName(dbActorId: string | null): Promise<string | null> {
+    if (!dbActorId) return '시스템';
 
-    const cacheKey = `${CACHE_KEY_PREFIXES.ACTOR_NAME}${actorId}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.ACTOR_NAME}${dbActorId}`;
     const cached = this.cacheService.get<string>(cacheKey);
     if (cached) return cached;
 
@@ -59,7 +85,7 @@ export class NotificationDispatcher {
       const [user] = await this.db
         .select({ name: schema.users.name })
         .from(schema.users)
-        .where(eq(schema.users.id, actorId))
+        .where(eq(schema.users.id, dbActorId))
         .limit(1);
 
       const name = user?.name || null;
@@ -67,7 +93,7 @@ export class NotificationDispatcher {
       return name;
     } catch (err) {
       this.logger.warn(
-        `actorName 조회 실패 (actorId=${actorId}): ${err instanceof Error ? err.message : String(err)}`
+        `actorName 조회 실패 (actorId=${dbActorId}): ${err instanceof Error ? err.message : String(err)}`
       );
       return null;
     }
@@ -93,19 +119,21 @@ export class NotificationDispatcher {
     }
 
     try {
-      // === Stage 1: actorName 중앙 해석 ===
-      const actorId = payload.actorId as string;
+      // === Stage 1: actorId 정규화 + actorName 중앙 해석 ===
+      const rawActorId = payload.actorId as string | undefined;
+      const dbActorId = this.normalizeActorForDb(rawActorId);
       const resolvedActorName =
-        (payload.actorName as string) || (await this.resolveActorName(actorId));
+        (payload.actorName as string) || (await this.resolveActorName(dbActorId));
       const enrichedPayload = { ...payload, actorName: resolvedActorName || '' };
 
       // === Stage 2: 수신자 해석 (실패 → early return) ===
+      // recipientResolver에는 raw actorId를 전달 — 'system'이면 자기 자신 제외 불필요 (의도적)
       let recipientIds: string[];
       try {
         recipientIds = await this.recipientResolver.resolve(
           config.recipientStrategy,
           enrichedPayload,
-          actorId
+          rawActorId ?? ''
         );
       } catch (err) {
         this.logger.error(
@@ -178,7 +206,7 @@ export class NotificationDispatcher {
         linkUrl: notification.linkUrl,
         isRead: false, // 명시적 초기값
         readAt: null,
-        actorId: actorId || null,
+        actorId: dbActorId,
         actorName: resolvedActorName || null,
         recipientSite: recipientSiteMap.get(userId) ?? null,
         expiresAt,

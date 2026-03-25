@@ -342,7 +342,7 @@ export class CalibrationService extends VersionedBaseService {
         managementNumber: equipForCreate?.managementNumber ?? '',
         teamId: equipForCreate?.teamId ?? '',
         site: equipForCreate?.site ?? '',
-        actorId: inserted.registeredBy ?? '',
+        actorId: inserted.registeredBy ?? undefined,
         actorName: '',
         timestamp: new Date(),
       });
