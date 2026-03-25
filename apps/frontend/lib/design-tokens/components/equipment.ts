@@ -483,7 +483,7 @@ export const EQUIPMENT_FILTER_TOKENS = {
 
   /** 2차 필터 확장/축소 트랜지션 (CSS-only grid-rows) */
   expandTransition:
-    'motion-safe:transition-[grid-template-rows] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none',
+    'motion-safe:transition-[grid-template-rows] motion-safe:duration-200 motion-safe:ease-[var(--ease-standard)] motion-reduce:transition-none',
 } as const;
 
 // ============================================================================

@@ -4,8 +4,29 @@
  * Semantic tokens를 Tailwind/CSS로 변환하는 헬퍼 함수들
  */
 
+import { MOTION_PRIMITIVES } from './primitives';
 import { MOTION_TOKENS } from './semantic';
 import type { MotionSpeed } from './semantic';
+
+/**
+ * Easing CSS Custom Property 참조 (Tailwind arbitrary value용)
+ *
+ * getTransitionClasses()에서 ease-[cubic-bezier(...)] 대신
+ * ease-[var(--ease-*)]를 생성하여 Tailwind ambiguity 경고를 방지.
+ *
+ * SSOT 체인: globals.css (:root --ease-*) ← 이 매핑 → getTransitionClasses()
+ * 키: MOTION_PRIMITIVES.easing의 raw cubic-bezier 값 (computed property)
+ * 값: 대응하는 CSS Custom Property var() 참조
+ */
+export const EASING_CSS_VARS: Record<string, string> = {
+  [MOTION_PRIMITIVES.easing.standard]: 'var(--ease-standard)',
+  [MOTION_PRIMITIVES.easing.accelerate]: 'var(--ease-accelerate)',
+  [MOTION_PRIMITIVES.easing.decelerate]: 'var(--ease-decelerate)',
+  [MOTION_PRIMITIVES.easing.spring]: 'var(--ease-spring)',
+  [MOTION_PRIMITIVES.easing.sharp]: 'var(--ease-sharp)',
+  [MOTION_PRIMITIVES.easing.springPop]: 'var(--ease-spring-pop)',
+  [MOTION_PRIMITIVES.easing.springSmooth]: 'var(--ease-spring-smooth)',
+};
 
 /**
  * Transition 클래스 생성
@@ -16,19 +37,19 @@ import type { MotionSpeed } from './semantic';
  *
  * @example
  * getTransitionClasses('fast', ['background-color', 'transform'])
- * → 'motion-safe:transition-[background-color,transform] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(...)] motion-reduce:transition-none'
+ * → 'motion-safe:transition-[background-color,transform] motion-safe:duration-200 motion-safe:ease-[var(--ease-standard)] motion-reduce:transition-none'
  */
 export function getTransitionClasses(
   speed: MotionSpeed = 'fast',
   properties: string[] = ['background-color', 'transform', 'opacity', 'box-shadow']
 ): string {
   const motion = MOTION_TOKENS.transition[speed];
+  const easingRef = EASING_CSS_VARS[motion.easing] ?? motion.easing;
 
-  // prefers-reduced-motion 지원
   return [
     `motion-safe:transition-[${properties.join(',')}]`,
     `motion-safe:duration-${motion.duration}`,
-    `motion-safe:ease-[${motion.easing}]`,
+    `motion-safe:ease-[${easingRef}]`,
     'motion-reduce:transition-none',
   ].join(' ');
 }

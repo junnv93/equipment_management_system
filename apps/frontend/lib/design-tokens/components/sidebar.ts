@@ -19,7 +19,7 @@ export const SIDEBAR_LAYOUT = {
   headerHeight: 'h-14',
   /** width/margin-left transition (prefers-reduced-motion 지원) */
   transition:
-    'motion-safe:transition-[width,margin-left] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none',
+    'motion-safe:transition-[width,margin-left] motion-safe:duration-200 motion-safe:ease-[var(--ease-standard)] motion-reduce:transition-none',
 } as const;
 
 /**

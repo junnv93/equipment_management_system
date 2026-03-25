@@ -103,6 +103,12 @@ export const MOTION_PRIMITIVES = {
 
     /** 샤프 - 빠르고 날카로운 전환 */
     sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',
+
+    /** 스프링 팝 - 다이얼로그 진입, 성공 체크마크 등 오버슈트 */
+    springPop: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+
+    /** 스프링 부드러운 - 스태거 페이드, 서브틀 스케일 인 */
+    springSmooth: 'cubic-bezier(0.22, 1, 0.36, 1)',
   },
 
   /** Stagger delay (연속 애니메이션 간격) */

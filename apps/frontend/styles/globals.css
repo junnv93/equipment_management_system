@@ -16,6 +16,17 @@
 
 @layer base {
   :root {
+    /* ── Motion: Easing CSS Variables (SSOT: primitives.ts) ────────── */
+    /* 테마 불변 — :root에만 정의, .dark 불필요                           */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+    --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --ease-sharp: cubic-bezier(0.4, 0, 0.6, 1);
+    /* ── Spring 변형 (overshoot) — 다이얼로그, 성공 팝 등 ───────── */
+    --ease-spring-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-spring-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
     /* UL Solutions Brand Colors - Light Mode */
     --background: 0 0% 92%;           /* #EBEBEB - UL Background */
     --foreground: 209 61% 18%;        /* #122C49 - Midnight Blue */

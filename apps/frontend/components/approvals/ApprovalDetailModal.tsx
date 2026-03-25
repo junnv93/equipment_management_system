@@ -50,7 +50,7 @@ export default function ApprovalDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] data-[state=open]:duration-300 data-[state=open]:ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+      <DialogContent className="max-w-2xl max-h-[90vh] data-[state=open]:motion-safe:duration-300 data-[state=open]:motion-safe:ease-[var(--ease-spring-pop)]">
         <DialogHeader>
           <DialogTitle>{t('detail.title')}</DialogTitle>
           <DialogDescription>{t('detail.description')}</DialogDescription>
