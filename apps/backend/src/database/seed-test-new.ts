@@ -3,9 +3,9 @@
  * ======================================================
  *
  * Usage:
- *   DATABASE_URL=... pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts
+ *   pnpm --filter backend run db:seed
  *
- * Phase 1: Teams (6), Users (8), Equipment (32), Calibrations (18), NC (10)
+ * Phase 1: Teams (7), Users (16), Equipment (32), Calibrations (18), NC (10)
  * Phase 2: Repair History (8), Calibration Factors (12), Checkouts (68), Cal Plans (6+12)
  * Phase 3: Disposal Equipment (21), Disposal Requests (15)
  * Phase 4: Software History (8), Location History (10), Maintenance History (10),
@@ -138,12 +138,12 @@ async function main(): Promise<void> {
     // =========================================================================
     console.log('\n📋 Phase 1: Inserting core entities...');
 
-    // Teams (6 records)
-    console.log('  → Teams (6)');
+    // Teams
+    console.log(`  → Teams (${TEAMS_SEED_DATA.length})`);
     await db.insert(schema.teams).values(TEAMS_SEED_DATA);
 
-    // Users (8 records)
-    console.log('  → Users (8)');
+    // Users
+    console.log(`  → Users (${USERS_SEED_DATA.length})`);
     await db.insert(schema.users).values(USERS_SEED_DATA);
 
     // Equipment (32 records)
@@ -231,29 +231,77 @@ async function main(): Promise<void> {
     // =========================================================================
     console.log('\n📋 Phase 4: Inserting history & administrative data...');
 
-    // Location History (10)
-    console.log('  → Equipment Location History (10)');
-    await db.insert(schema.equipmentLocationHistory).values(LOCATION_HISTORY_SEED_DATA);
+    // Phase 4 각 항목은 스키마 미동기화 시에도 나머지가 실행되도록 try-catch
+    const phase4Items: Array<{ label: string; fn: () => Promise<void> }> = [
+      {
+        label: `Equipment Location History (${LOCATION_HISTORY_SEED_DATA.length})`,
+        fn: () =>
+          db
+            .insert(schema.equipmentLocationHistory)
+            .values(LOCATION_HISTORY_SEED_DATA)
+            .then(() => {}),
+      },
+      {
+        label: `Equipment Maintenance History (${MAINTENANCE_HISTORY_SEED_DATA.length})`,
+        fn: () =>
+          db
+            .insert(schema.equipmentMaintenanceHistory)
+            .values(MAINTENANCE_HISTORY_SEED_DATA)
+            .then(() => {}),
+      },
+      {
+        label: `Equipment Incident History (${INCIDENT_HISTORY_SEED_DATA.length})`,
+        fn: () =>
+          db
+            .insert(schema.equipmentIncidentHistory)
+            .values(INCIDENT_HISTORY_SEED_DATA)
+            .then(() => {}),
+      },
+      {
+        label: `Equipment Requests (${EQUIPMENT_REQUESTS_SEED_DATA.length})`,
+        fn: () =>
+          db
+            .insert(schema.equipmentRequests)
+            .values(EQUIPMENT_REQUESTS_SEED_DATA)
+            .then(() => {}),
+      },
+      {
+        label: `Equipment Attachments (${EQUIPMENT_ATTACHMENTS_SEED_DATA.length})`,
+        fn: () =>
+          db
+            .insert(schema.equipmentAttachments)
+            .values(EQUIPMENT_ATTACHMENTS_SEED_DATA)
+            .then(() => {}),
+      },
+      {
+        label: `Audit Logs (${AUDIT_LOGS_SEED_DATA.length})`,
+        fn: () =>
+          db
+            .insert(schema.auditLogs)
+            .values(AUDIT_LOGS_SEED_DATA)
+            .then(() => {}),
+      },
+    ];
 
-    // Maintenance History (10)
-    console.log('  → Equipment Maintenance History (10)');
-    await db.insert(schema.equipmentMaintenanceHistory).values(MAINTENANCE_HISTORY_SEED_DATA);
-
-    // Incident History (10)
-    console.log('  → Equipment Incident History (10)');
-    await db.insert(schema.equipmentIncidentHistory).values(INCIDENT_HISTORY_SEED_DATA);
-
-    // Equipment Requests (6)
-    console.log('  → Equipment Requests (6)');
-    await db.insert(schema.equipmentRequests).values(EQUIPMENT_REQUESTS_SEED_DATA);
-
-    // Equipment Attachments (6)
-    console.log('  → Equipment Attachments (6)');
-    await db.insert(schema.equipmentAttachments).values(EQUIPMENT_ATTACHMENTS_SEED_DATA);
-
-    // Audit Logs (20)
-    console.log('  → Audit Logs (20)');
-    await db.insert(schema.auditLogs).values(AUDIT_LOGS_SEED_DATA);
+    for (const item of phase4Items) {
+      try {
+        console.log(`  → ${item.label}`);
+        await item.fn();
+      } catch (err: unknown) {
+        const e = err as Record<string, unknown>;
+        const cause = e.cause as Record<string, unknown> | undefined;
+        const errorCode = e.code || cause?.code;
+        const errorMsg =
+          (e.message as string | undefined) || (cause?.message as string | undefined) || '';
+        if (errorCode === '42P01' || errorCode === '42703' || errorMsg.includes('does not exist')) {
+          console.warn(
+            `  ⚠️ ${item.label} skipped (schema drift) — run "pnpm --filter backend run db:migrate"`
+          );
+        } else {
+          console.error(`  ❌ ${item.label} FAILED: ${errorMsg.slice(0, 200)}`);
+        }
+      }
+    }
 
     // =========================================================================
     // VERIFICATION

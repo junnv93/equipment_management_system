@@ -383,3 +383,4 @@ enforceSiteAccess(req, entitySite, EQUIPMENT_DATA_SCOPE, entityTeamId);
 8. **MetricsController (`src/common/metrics/`)** — Prometheus 스크래핑을 위한 `@Public()` + `@Get()` 사용이 정상. 외부 접근은 monitoring-network 격리 + Nginx 프록시로 차단되므로 인증 불필요. `src/modules/`가 아닌 `src/common/` 레이어에 위치하는 인프라 컨트롤러
 9. **AuthController/MonitoringController의 @SiteScoped 미적용** — 인증 전 엔드포인트이거나 시스템 헬스체크이므로 @SiteScoped 불필요
 10. **lab_manager/system_admin의 bypassRoles** — 이 역할들은 전체 사이트 데이터 접근 권한이 있으므로 `@SiteScoped()`에서 bypass 처리가 정상 (UL-QP-18 직무 정의에 따름)
+11. **test-login/test-cache-clear의 `@Public()` + `@SkipPermissions()`** — 테스트 전용 엔드포인트 (프로덕션 미등록). `ALL_TEST_EMAILS` import 및 허용목록 검증 로직은 SSOT 준수

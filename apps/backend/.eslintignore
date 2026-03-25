@@ -2,7 +2,7 @@ node_modules
 dist
 scripts
 test-uploads
-src/database/seed-test.ts
+src/database/seed-test-new.ts
 src/database/migrate.ts
 src/database/push-schema.ts
 src/database/manual-migrate.ts

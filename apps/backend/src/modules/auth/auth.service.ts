@@ -76,23 +76,6 @@ export interface AzureADUser {
   teamId?: string;
 }
 
-/**
- * 테스트 사용자 정보 인터페이스
- * E2E 테스트에서 사용되는 사용자 정보
- */
-export interface TestUser {
-  id?: string;
-  uuid?: string;
-  email: string;
-  name: string;
-  role: string;
-  department?: string;
-  site?: Site;
-  location?: Location;
-  position?: string;
-  teamId?: string;
-}
-
 // 토큰 라이프사이클 상수는 @equipment-management/shared-constants/auth-token에서 import
 // ABSOLUTE_SESSION_MAX_AGE_SECONDS, ACCESS_TOKEN_TTL_SECONDS, ACCESS_TOKEN_EXPIRES_IN, REFRESH_TOKEN_EXPIRES_IN
 
@@ -337,32 +320,8 @@ export class AuthService {
    * @param testUser - 테스트 사용자 정보 (email을 DB 조회 키로 사용)
    * @returns JWT 토큰을 포함한 인증 정보
    */
-  async generateTestToken(testUser: TestUser): Promise<AuthResponse> {
-    // DB에서 실제 사용자 정보 조회
-    const dbUser = await this.usersService.findByEmail(testUser.email);
-    if (dbUser) {
-      return this.generateToken(this.toAuthUser(dbUser, testUser.role as UserRole));
-    }
-
-    // DB에 없으면 전달된 정보로 폴백
-    this.logger.warn(
-      `generateTestToken(): DB에서 사용자를 찾을 수 없음 (${testUser.email}), 전달된 정보 사용`
-    );
-    return this.generateToken({
-      id: testUser.id ?? testUser.uuid ?? '',
-      email: testUser.email,
-      name: testUser.name,
-      roles: [testUser.role as UserRole],
-      department: testUser.department,
-      site: testUser.site,
-      location: testUser.location,
-      position: testUser.position,
-      teamId: testUser.teamId,
-    });
-  }
-
   /**
-   * 이메일로 테스트 토큰 생성 (신규 방식 - 권장)
+   * 이메일로 테스트 토큰 생성
    * DB에서 이메일로 사용자를 조회하여 JWT 토큰을 생성합니다.
    *
    * @param email - 테스트 사용자의 이메일 주소

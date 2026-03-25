@@ -9,5 +9,5 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", "src/database/seed-test.ts"]
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "src/database/seed-test-new.ts"]
 }

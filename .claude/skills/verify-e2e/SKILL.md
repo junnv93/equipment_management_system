@@ -224,6 +224,19 @@ grep -rn "localhost:3001\|localhost:3000" apps/frontend/tests/e2e --include="*.t
 
 **FAIL 기준:** 하드코딩 URL → 환경에 따라 테스트 실패. `BASE_URLS.BACKEND`/`BASE_URLS.FRONTEND` 사용.
 
+### Step 11b: shared-test-data.ts의 TEST_USERS_BY_TEAM import 확인
+
+`shared-test-data.ts`가 `TEST_USERS_BY_TEAM`을 `@equipment-management/shared-constants`에서 import하는지 확인합니다.
+
+```bash
+# shared-test-data.ts에서 TEST_USERS_BY_TEAM import 확인
+grep -rn "import.*TEST_USERS_BY_TEAM.*@equipment-management/shared-constants" apps/frontend/tests/e2e/shared/constants/shared-test-data.ts
+```
+
+**PASS 기준:** import 존재 — `TEST_USERS_BY_TEAM`이 `@equipment-management/shared-constants`에서 import됨.
+
+**FAIL 기준:** import 누락 — 이메일 SSOT가 `shared-constants` 패키지와 통합되지 않음. `shared-test-data.ts`에서 테스트 이메일을 로컬 정의하고 있으면 `@equipment-management/shared-constants`의 `TEST_USERS_BY_TEAM`으로 교체 필요.
+
 ### Step 11: Pool 정리 검증
 
 DB Pool을 생성하는 헬퍼에서 `cleanupPool()` 또는 `pool.end()`를 export하는지 확인합니다.
@@ -252,6 +265,7 @@ grep -rln "new Pool" apps/frontend/tests/e2e --include="*.ts" | xargs grep -L "c
 | 8   | Backend 캐시 클리어     | PASS/FAIL | DB 수정 후 캐시 클리어 누락   |
 | 9   | Backend 토큰 직접 호출  | PASS/FAIL | test-login 직접 호출          |
 | 10  | Backend URL 하드코딩    | PASS/FAIL | localhost URL 직접 사용       |
+| 11b | TEST_USERS_BY_TEAM SSOT | PASS/FAIL | shared-test-data.ts import    |
 | 11  | Pool 정리               | PASS/FAIL | cleanup 함수 미제공           |
 ```
 

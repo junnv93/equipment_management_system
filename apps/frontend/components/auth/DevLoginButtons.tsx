@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { type SemanticColorKey, getSemanticSolidBgClasses } from '@/lib/design-tokens';
+import { getSemanticSolidBgClasses } from '@/lib/design-tokens';
 import {
   Select,
   SelectContent,
@@ -14,122 +14,11 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useTranslations } from 'next-intl';
+import { TEST_USERS_BY_TEAM, DEFAULT_TEST_TEAM_KEY } from '@equipment-management/shared-constants';
 
 interface DevLoginButtonsProps {
   callbackUrl?: string;
 }
-
-const TEST_USERS_BY_TEAM = {
-  'suwon-fcc-emc-rf': {
-    label: '수원 FCC EMC/RF',
-    users: [
-      {
-        email: 'test.engineer@example.com',
-        role: 'test_engineer',
-        label: '시험실무자',
-        semanticColor: 'info' as SemanticColorKey,
-      },
-      {
-        email: 'tech.manager@example.com',
-        role: 'technical_manager',
-        label: '기술책임자',
-        semanticColor: 'ok' as SemanticColorKey,
-      },
-      {
-        email: 'quality.manager@example.com',
-        role: 'quality_manager',
-        label: '품질책임자',
-        semanticColor: 'warning' as SemanticColorKey,
-      },
-      {
-        email: 'lab.manager@example.com',
-        role: 'lab_manager',
-        label: '시험소장',
-        semanticColor: 'purple' as SemanticColorKey,
-      },
-      {
-        email: 'system.admin@example.com',
-        role: 'system_admin',
-        label: '시스템 관리자',
-        semanticColor: 'critical' as SemanticColorKey,
-      },
-    ],
-  },
-  'suwon-general-emc': {
-    label: '수원 General EMC',
-    users: [
-      {
-        email: 'test.engineer.suwon.general.emc@example.com',
-        role: 'test_engineer',
-        label: '시험실무자',
-        semanticColor: 'info' as SemanticColorKey,
-      },
-      {
-        email: 'tech.manager.suwon.general.emc@example.com',
-        role: 'technical_manager',
-        label: '기술책임자',
-        semanticColor: 'ok' as SemanticColorKey,
-      },
-    ],
-  },
-  'suwon-sar': {
-    label: '수원 SAR',
-    users: [
-      {
-        email: 'test.engineer.suwon.sar@example.com',
-        role: 'test_engineer',
-        label: '시험실무자',
-        semanticColor: 'info' as SemanticColorKey,
-      },
-      {
-        email: 'tech.manager.suwon.sar@example.com',
-        role: 'technical_manager',
-        label: '기술책임자',
-        semanticColor: 'ok' as SemanticColorKey,
-      },
-    ],
-  },
-  'uiwang-general-rf': {
-    label: '의왕 General RF',
-    users: [
-      {
-        email: 'user1@example.com',
-        role: 'test_engineer',
-        label: '시험실무자',
-        semanticColor: 'info' as SemanticColorKey,
-      },
-      {
-        email: 'manager2@example.com',
-        role: 'technical_manager',
-        label: '기술책임자',
-        semanticColor: 'ok' as SemanticColorKey,
-      },
-    ],
-  },
-  'pyeongtaek-auto-emc': {
-    label: '평택 Automotive EMC',
-    users: [
-      {
-        email: 'test.engineer.pyeongtaek@example.com',
-        role: 'test_engineer',
-        label: '시험실무자',
-        semanticColor: 'info' as SemanticColorKey,
-      },
-      {
-        email: 'tech.manager.pyeongtaek@example.com',
-        role: 'technical_manager',
-        label: '기술책임자',
-        semanticColor: 'ok' as SemanticColorKey,
-      },
-      {
-        email: 'admin2@example.com',
-        role: 'lab_manager',
-        label: '시험소장',
-        semanticColor: 'purple' as SemanticColorKey,
-      },
-    ],
-  },
-};
 
 /**
  * 개발 환경 전용 빠른 로그인 버튼
@@ -138,7 +27,7 @@ const TEST_USERS_BY_TEAM = {
  */
 export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
   const t = useTranslations('auth');
-  const [selectedTeam, setSelectedTeam] = useState<string>('suwon-fcc-emc-rf');
+  const [selectedTeam, setSelectedTeam] = useState<string>(DEFAULT_TEST_TEAM_KEY);
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
 
   const handleLogin = async (email: string, role: string) => {

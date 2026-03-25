@@ -34,9 +34,8 @@
     "db:verify": "npx ts-node scripts/verify-migration.ts",
     "security:check-endpoints": "npx ts-node scripts/check-endpoint-annotations.ts",
     "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts",
-    "db:seed:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/equipment_management_test npx ts-node src/database/seed-test.ts",
-    "db:migrate:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/equipment_management_test npx drizzle-kit push",
-    "test:e2e:setup": "npm run db:migrate:test && npm run db:seed:test"
+    "db:seed": "npx ts-node src/database/seed-test-new.ts",
+    "test:e2e:setup": "pnpm run db:migrate && pnpm run db:seed"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.992.0",

@@ -6,7 +6,10 @@
  *
  * @see apps/backend/src/database/utils/uuid-constants.ts - Backend source of truth
  * @see apps/backend/src/database/seed-test-new.ts - Seed script
+ * @see packages/shared-constants/src/test-users.ts - Test user email SSOT
  */
+
+import { TEST_USERS_BY_TEAM } from '@equipment-management/shared-constants';
 
 // =============================================================================
 // Equipment IDs (SSOT: backend/src/database/utils/uuid-constants.ts)
@@ -72,6 +75,10 @@ export const TEST_USER_IDS = {
   TEST_ENGINEER_SUWON_SAR: '00000000-0000-0000-0000-00000000000b',
   TECHNICAL_MANAGER_SUWON_SAR: '00000000-0000-0000-0000-00000000000c',
 
+  // Suwon Automotive EMC (2 users)
+  TEST_ENGINEER_SUWON_AUTO_EMC: '00000000-0000-0000-0000-00000000000d',
+  TECHNICAL_MANAGER_SUWON_AUTO_EMC: '00000000-0000-0000-0000-00000000000e',
+
   // Uiwang General RF (2 users)
   TECHNICAL_MANAGER_UIWANG: 'f47ac10b-58cc-4372-a567-0e02b2c3d478',
   TEST_ENGINEER_UIWANG: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
@@ -83,33 +90,44 @@ export const TEST_USER_IDS = {
 } as const;
 
 // =============================================================================
-// User Emails (for test-login)
+// User Emails — SSOT: @equipment-management/shared-constants/test-users.ts
 // =============================================================================
+
+/** 팀 키 + 역할로 이메일을 안전하게 조회 (인덱스 의존 없음) */
+function emailOf(teamKey: string, role: string): string {
+  const user = TEST_USERS_BY_TEAM[teamKey]?.users.find((u) => u.role === role);
+  if (!user) throw new Error(`Test user not found: ${teamKey}/${role}`);
+  return user.email;
+}
 
 export const TEST_USER_EMAILS = {
   // Suwon FCC EMC/RF
-  TEST_ENGINEER_SUWON: 'test.engineer@example.com',
-  TECHNICAL_MANAGER_SUWON: 'tech.manager@example.com',
-  LAB_MANAGER_SUWON: 'lab.manager@example.com',
-  QUALITY_MANAGER_SUWON: 'quality.manager@example.com',
-  SYSTEM_ADMIN: 'system.admin@example.com',
+  TEST_ENGINEER_SUWON: emailOf('suwon-fcc-emc-rf', 'test_engineer'),
+  TECHNICAL_MANAGER_SUWON: emailOf('suwon-fcc-emc-rf', 'technical_manager'),
+  LAB_MANAGER_SUWON: emailOf('suwon-fcc-emc-rf', 'lab_manager'),
+  QUALITY_MANAGER_SUWON: emailOf('suwon-fcc-emc-rf', 'quality_manager'),
+  SYSTEM_ADMIN: emailOf('suwon-fcc-emc-rf', 'system_admin'),
 
   // Suwon General EMC
-  TEST_ENGINEER_SUWON_GENERAL_EMC: 'test.engineer.suwon.general.emc@example.com',
-  TECHNICAL_MANAGER_SUWON_GENERAL_EMC: 'tech.manager.suwon.general.emc@example.com',
+  TEST_ENGINEER_SUWON_GENERAL_EMC: emailOf('suwon-general-emc', 'test_engineer'),
+  TECHNICAL_MANAGER_SUWON_GENERAL_EMC: emailOf('suwon-general-emc', 'technical_manager'),
 
   // Suwon SAR
-  TEST_ENGINEER_SUWON_SAR: 'test.engineer.suwon.sar@example.com',
-  TECHNICAL_MANAGER_SUWON_SAR: 'tech.manager.suwon.sar@example.com',
+  TEST_ENGINEER_SUWON_SAR: emailOf('suwon-sar', 'test_engineer'),
+  TECHNICAL_MANAGER_SUWON_SAR: emailOf('suwon-sar', 'technical_manager'),
+
+  // Suwon Automotive EMC
+  TEST_ENGINEER_SUWON_AUTO_EMC: emailOf('suwon-auto-emc', 'test_engineer'),
+  TECHNICAL_MANAGER_SUWON_AUTO_EMC: emailOf('suwon-auto-emc', 'technical_manager'),
 
   // Uiwang General RF
-  TEST_ENGINEER_UIWANG: 'user1@example.com',
-  TECHNICAL_MANAGER_UIWANG: 'manager2@example.com',
+  TEST_ENGINEER_UIWANG: emailOf('uiwang-general-rf', 'test_engineer'),
+  TECHNICAL_MANAGER_UIWANG: emailOf('uiwang-general-rf', 'technical_manager'),
 
   // Pyeongtaek Automotive EMC
-  LAB_MANAGER_PYEONGTAEK: 'admin2@example.com',
-  TEST_ENGINEER_PYEONGTAEK: 'test.engineer.pyeongtaek@example.com',
-  TECHNICAL_MANAGER_PYEONGTAEK: 'tech.manager.pyeongtaek@example.com',
+  LAB_MANAGER_PYEONGTAEK: emailOf('pyeongtaek-auto-emc', 'lab_manager'),
+  TEST_ENGINEER_PYEONGTAEK: emailOf('pyeongtaek-auto-emc', 'test_engineer'),
+  TECHNICAL_MANAGER_PYEONGTAEK: emailOf('pyeongtaek-auto-emc', 'technical_manager'),
 } as const;
 
 // =============================================================================

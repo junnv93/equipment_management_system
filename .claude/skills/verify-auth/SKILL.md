@@ -48,6 +48,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/calibration/calibration.controller.ts`            | 참조 구현                                                        |
 | `apps/backend/src/modules/non-conformances/non-conformances.controller.ts`  | 참조 구현                                                        |
 | `apps/backend/src/modules/audit/audit.controller.ts`                        | 감사 로그 컨트롤러 (읽기 전용, @AuditLog 불필요)                 |
+| `apps/backend/src/modules/equipment/equipment-history.controller.ts`        | 참조 구현 (@RequirePermissions + @AuditLog + extractUserId + enforceSiteAccess 전 패턴 적용) |
 | `apps/backend/src/modules/settings/settings.controller.ts`                  | 설정 컨트롤러 (AuditLog entityIdPath 포함)                       |
 | `apps/backend/src/modules/notifications/sse/notification-sse.controller.ts` | SSE 컨트롤러 (SseJwtAuthGuard 사용)                              |
 | `apps/backend/src/common/metrics/metrics.controller.ts`                     | Prometheus 메트릭 컨트롤러 (@Public() + GET, src/common/ 레이어) |
@@ -303,3 +304,4 @@ grep -rn "scope.type.*===.*site.*entitySite\|equipment.*\.site.*!==.*req" apps/b
 8. **SettingsController의 GET 엔드포인트** — 설정 조회는 읽기 전용이므로 AuditLog 불필요
 9. **AuditController** — 읽기 전용 컨트롤러 (GET만 존재). 메서드별 `@RequirePermissions(Permission.VIEW_AUDIT_LOGS)` 사용이 정상. @AuditLog 불필요 (감사 로그 조회에 감사 로그 불필요)
 10. **UsersController의 `@SkipPermissions()` PATCH** — `updateMyPreferences()`는 로그인한 사용자 본인의 설정만 변경하므로 `@SkipPermissions()` + PATCH 조합이 정상. `findAll()`, `findOne()`의 `@SkipPermissions()` + GET도 드롭다운/승인 워크플로에서 모든 역할이 사용자 목록 조회가 필요하므로 정상
+11. **TestAuthController (test-login, test-cache-clear)** — `@Public()` + `@SkipPermissions()` 조합은 정상. 개발/테스트 전용 엔드포인트이며 프로덕션에서 컨트롤러 자체가 미등록

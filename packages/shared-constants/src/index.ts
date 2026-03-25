@@ -188,3 +188,14 @@ export {
   REPORT_DATA_SCOPE,
   resolveDataScope,
 } from './data-scope';
+
+// 테스트 사용자 상수 (Dev Login + E2E 공유)
+export {
+  TEST_USERS_BY_TEAM,
+  DEFAULT_ROLE_EMAILS,
+  ALL_TEST_EMAILS,
+  DEFAULT_TEST_TEAM_KEY,
+  type TestUserEntry,
+  type TestTeamEntry,
+  type TestUserSemanticColor,
+} from './test-users';

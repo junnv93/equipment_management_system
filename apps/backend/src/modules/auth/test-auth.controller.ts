@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Query, ForbiddenException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { UserRoleValues } from '@equipment-management/schemas';
+import { DEFAULT_ROLE_EMAILS, ALL_TEST_EMAILS } from '@equipment-management/shared-constants';
 import { THROTTLE_PRESETS } from '../../common/config/throttle.constants';
-import { AuthService, AuthResponse, TestUser } from './auth.service';
+import { AuthService, AuthResponse } from './auth.service';
 import { Public } from './decorators/public.decorator';
+import { SkipPermissions } from './decorators/skip-permissions.decorator';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 
 /**
@@ -32,12 +33,18 @@ export class TestAuthController {
    */
   @Get('test-login')
   @Public()
+  @SkipPermissions()
   @Throttle({ short: THROTTLE_PRESETS.TEST_LOGIN })
   async testLogin(
     @Query('role') role?: string,
     @Query('email') email?: string
   ): Promise<AuthResponse> {
     if (email) {
+      if (!ALL_TEST_EMAILS.includes(email)) {
+        throw new ForbiddenException(
+          `Not a test user email: ${email}. Use one of: ${ALL_TEST_EMAILS.join(', ')}`
+        );
+      }
       return this.authService.generateTestTokenByEmail(email);
     }
 
@@ -45,41 +52,14 @@ export class TestAuthController {
       throw new ForbiddenException('Either role or email parameter is required');
     }
 
-    const testUsers: Record<string, TestUser> = {
-      [UserRoleValues.TEST_ENGINEER]: {
-        email: 'test.engineer@example.com',
-        name: '시험실무자 (Suwon)',
-        role: UserRoleValues.TEST_ENGINEER,
-      },
-      [UserRoleValues.TECHNICAL_MANAGER]: {
-        email: 'tech.manager@example.com',
-        name: '기술책임자 (Suwon)',
-        role: UserRoleValues.TECHNICAL_MANAGER,
-      },
-      [UserRoleValues.QUALITY_MANAGER]: {
-        email: 'quality.manager@example.com',
-        name: '품질책임자 (Suwon)',
-        role: UserRoleValues.QUALITY_MANAGER,
-      },
-      [UserRoleValues.LAB_MANAGER]: {
-        email: 'lab.manager@example.com',
-        name: '시험소장 (Suwon)',
-        role: UserRoleValues.LAB_MANAGER,
-      },
-      [UserRoleValues.SYSTEM_ADMIN]: {
-        email: 'system.admin@example.com',
-        name: '시스템 관리자',
-        role: UserRoleValues.SYSTEM_ADMIN,
-      },
-    };
-
-    const testUser = testUsers[role];
-    if (!testUser) {
-      const validRoles = Object.values(UserRoleValues).join(', ');
+    // SSOT: shared-constants에서 역할 → 이메일 매핑
+    const resolvedEmail = DEFAULT_ROLE_EMAILS[role];
+    if (!resolvedEmail) {
+      const validRoles = Object.keys(DEFAULT_ROLE_EMAILS).join(', ');
       throw new ForbiddenException(`Invalid role: ${role}. Valid roles: ${validRoles}`);
     }
 
-    return this.authService.generateTestToken(testUser);
+    return this.authService.generateTestTokenByEmail(resolvedEmail);
   }
 
   /**
@@ -88,6 +68,7 @@ export class TestAuthController {
    */
   @Post('test-cache-clear')
   @Public()
+  @SkipPermissions()
   testCacheClear(): { cleared: boolean; message: string } {
     // staging 환경 보호: development/test에서만 캐시 클리어 허용
     const env = process.env.NODE_ENV;

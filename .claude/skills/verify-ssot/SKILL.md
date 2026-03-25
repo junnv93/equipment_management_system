@@ -35,6 +35,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/schemas/` | `enums.ts`, `user.ts`, `errors.ts`, `settings.ts`, `audit-log.ts`, `field-labels.ts`, `validation/messages.ts` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지 |
 | `packages/shared-constants/` | `permissions.ts`, `api-endpoints.ts`, `data-scope.ts`, `auth-token.ts`, `approval-categories.ts`, `business-rules.ts`, `security.ts` | Permission, API 경로, 스코프 정책, 비즈니스 규칙 |
 | `packages/db/` | `schema/audit-logs.ts`, `index.ts` | DB enum 배열, AppDatabase 타입 |
+| `packages/shared-constants/` | `test-users.ts` | Test User Constants SSOT (TEST_USERS_BY_TEAM, DEFAULT_ROLE_EMAILS, ALL_TEST_EMAILS) |
 
 ## Workflow
 
@@ -260,6 +261,19 @@ grep -rn "const VM\s*=\|export const VM\s*=" apps/backend/src apps/frontend --in
 
 **FAIL 기준:** VM을 로컬에서 재정의하거나 잘못된 패키지에서 import → SSOT 불일치.
 
+### Step 12: Test User Constants SSOT 임포트 확인
+
+`TEST_USERS_BY_TEAM`, `DEFAULT_ROLE_EMAILS`, `ALL_TEST_EMAILS`를 로컬에서 재정의하는지 탐지합니다.
+
+```bash
+# Test User 상수 로컬 재정의 탐지
+grep -rn "TEST_USERS_BY_TEAM\s*=\|DEFAULT_ROLE_EMAILS\s*=\|ALL_TEST_EMAILS\s*=" apps/ --include="*.ts" --include="*.tsx" | grep -v "node_modules\|test-users\.ts\|import\|// "
+```
+
+**PASS 기준:** 0개 결과 (모든 Test User 상수가 `@equipment-management/shared-constants`에서 import).
+
+**FAIL 기준:** `apps/` 디렉토리에서 `TEST_USERS_BY_TEAM`, `DEFAULT_ROLE_EMAILS`, `ALL_TEST_EMAILS`를 로컬 재정의하면 위반. `test-users.ts` 자체와 import 구문은 예외.
+
 ## Output Format
 
 ```markdown
@@ -281,6 +295,7 @@ grep -rn "const VM\s*=\|export const VM\s*=" apps/backend/src apps/frontend --in
 | 9   | DB Enum 배열 SSOT 참조        | PASS/FAIL | 하드코딩 enum 배열 위치                |
 | 10  | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
 | 11  | VM 임포트 소스                | PASS/FAIL | 잘못된 VM import 위치                  |
+| 12  | Test User Constants SSOT      | PASS/FAIL | 로컬 재정의 위치                       |
 ```
 
 ## Exceptions

@@ -27,7 +27,7 @@ export const TEAM_GENERAL_RF_UIWANG_ID = 'a1b2c3d4-e5f6-4789-abcd-ef0123456789';
 export const TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID = 'b2c3d4e5-f6a7-4890-bcde-f01234567890'; // A
 
 // =============================================================================
-// USERS (14 users across 3 sites, 7 teams)
+// USERS (16 users across 3 sites, 7 teams)
 // ⚠️ CRITICAL: Must match NextAuth test-login UUIDs in auth.controller.ts
 // =============================================================================
 
@@ -45,6 +45,10 @@ export const USER_TECHNICAL_MANAGER_SUWON_GENERAL_EMC_ID = '00000000-0000-0000-0
 // Suwon SAR users (2 users)
 export const USER_TEST_ENGINEER_SUWON_SAR_ID = '00000000-0000-0000-0000-00000000000b';
 export const USER_TECHNICAL_MANAGER_SUWON_SAR_ID = '00000000-0000-0000-0000-00000000000c';
+
+// Suwon Automotive EMC users (2 users)
+export const USER_TEST_ENGINEER_SUWON_AUTO_EMC_ID = '00000000-0000-0000-0000-00000000000d';
+export const USER_TECHNICAL_MANAGER_SUWON_AUTO_EMC_ID = '00000000-0000-0000-0000-00000000000e';
 
 // Uiwang users (2 users)
 export const USER_TECHNICAL_MANAGER_UIWANG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d478';

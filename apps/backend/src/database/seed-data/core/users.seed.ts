@@ -1,6 +1,6 @@
 /**
  * Users seed data
- * 14 users across 3 sites with proper role hierarchy
+ * 16 users across 3 sites with proper role hierarchy
  * ⚠️ CRITICAL: IDs must match NextAuth test-login UUIDs in auth.controller.ts
  */
 
@@ -16,6 +16,8 @@ import {
   USER_TECHNICAL_MANAGER_SUWON_GENERAL_EMC_ID,
   USER_TEST_ENGINEER_SUWON_SAR_ID,
   USER_TECHNICAL_MANAGER_SUWON_SAR_ID,
+  USER_TEST_ENGINEER_SUWON_AUTO_EMC_ID,
+  USER_TECHNICAL_MANAGER_SUWON_AUTO_EMC_ID,
   USER_TECHNICAL_MANAGER_UIWANG_ID,
   USER_TEST_ENGINEER_UIWANG_ID,
   USER_LAB_MANAGER_PYEONGTAEK_ID,
@@ -24,6 +26,7 @@ import {
   TEAM_FCC_EMC_RF_SUWON_ID,
   TEAM_GENERAL_EMC_SUWON_ID,
   TEAM_SAR_SUWON_ID,
+  TEAM_AUTOMOTIVE_EMC_SUWON_ID,
   TEAM_GENERAL_RF_UIWANG_ID,
   TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID,
 } from '../../utils/uuid-constants';
@@ -183,6 +186,36 @@ export const USERS_SEED_DATA: (typeof users.$inferInsert)[] = [
     name: '기술책임자 (Suwon SAR)',
     role: 'technical_manager' as UserRole,
     teamId: TEAM_SAR_SUWON_ID,
+    site: 'suwon',
+    location: '수원랩',
+    position: 'Technical Manager',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+
+  // =========================================================================
+  // Suwon Automotive EMC Team (2 users)
+  // =========================================================================
+
+  {
+    id: USER_TEST_ENGINEER_SUWON_AUTO_EMC_ID,
+    email: 'test.engineer.suwon.auto.emc@example.com',
+    name: '시험실무자 (Suwon Auto EMC)',
+    role: 'test_engineer' as UserRole,
+    teamId: TEAM_AUTOMOTIVE_EMC_SUWON_ID,
+    site: 'suwon',
+    location: '수원랩',
+    position: 'Test Engineer',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+
+  {
+    id: USER_TECHNICAL_MANAGER_SUWON_AUTO_EMC_ID,
+    email: 'tech.manager.suwon.auto.emc@example.com',
+    name: '기술책임자 (Suwon Auto EMC)',
+    role: 'technical_manager' as UserRole,
+    teamId: TEAM_AUTOMOTIVE_EMC_SUWON_ID,
     site: 'suwon',
     location: '수원랩',
     position: 'Technical Manager',
