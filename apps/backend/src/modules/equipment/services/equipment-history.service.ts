@@ -1,12 +1,6 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
+import { createVersionConflictException } from '../../../common/base/versioned-base.service';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   equipmentLocationHistory,
@@ -205,11 +199,7 @@ export class EquipmentHistoryService {
         .returning({ version: equipment.version });
 
       if (!updated) {
-        throw new ConflictException({
-          code: 'VERSION_CONFLICT',
-          message: '다른 사용자가 이미 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
-          expectedVersion,
-        });
+        throw createVersionConflictException(undefined, expectedVersion);
       }
     } else {
       await queryRunner.update(equipment).set(updateData).where(eq(equipment.id, equipmentId));

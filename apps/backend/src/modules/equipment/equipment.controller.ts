@@ -684,7 +684,7 @@ export class EquipmentController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile() file: MulterFile,
-    @Body('attachmentType') attachmentType: 'inspection_report' | 'history_card' | 'other',
+    @Body('attachmentType') attachmentType: DocumentType,
     @Req() req: AuthenticatedRequest,
     @Body('equipmentId') equipmentId?: string,
     @Body('requestId') requestId?: string,
@@ -697,7 +697,7 @@ export class EquipmentController {
       originalFileName: string;
       fileSize: number;
       mimeType: string;
-      attachmentType: 'inspection_report' | 'history_card' | 'other';
+      attachmentType: DocumentType;
     };
   }> {
     if (!file) {
@@ -732,7 +732,7 @@ export class EquipmentController {
         originalFileName: document.originalFileName,
         fileSize: Number(document.fileSize),
         mimeType: document.mimeType,
-        attachmentType: document.documentType as 'inspection_report' | 'history_card' | 'other',
+        attachmentType: document.documentType as DocumentType,
       },
     };
   }

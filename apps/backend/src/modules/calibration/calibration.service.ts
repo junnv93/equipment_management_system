@@ -36,6 +36,7 @@ import {
   CACHE_TTL,
   CALIBRATION_THRESHOLDS,
   DEFAULT_PAGE_SIZE,
+  SELECTOR_PAGE_SIZE,
 } from '@equipment-management/shared-constants';
 import {
   getUtcStartOfDay,
@@ -569,7 +570,7 @@ export class CalibrationService extends VersionedBaseService {
       .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
       .where(and(...whereConditions))
       .orderBy(schema.equipment.nextCalibrationDate)
-      .limit(100);
+      .limit(SELECTOR_PAGE_SIZE);
 
     return results.map((r) => ({
       id: r.id,
@@ -634,7 +635,7 @@ export class CalibrationService extends VersionedBaseService {
       .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
       .where(and(...whereConditions))
       .orderBy(schema.equipment.nextCalibrationDate)
-      .limit(100);
+      .limit(SELECTOR_PAGE_SIZE);
 
     return results.map((r) => ({
       id: r.id,
