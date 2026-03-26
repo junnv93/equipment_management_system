@@ -3,10 +3,7 @@ import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
 import { RouteLoading } from '@/components/layout/RouteLoading';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
-import {
-  type CheckoutPurpose,
-  CheckoutPurposeValues as CPVal,
-} from '@equipment-management/schemas';
+import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import { getTranslations } from 'next-intl/server';
 
 /**

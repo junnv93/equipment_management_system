@@ -7,7 +7,6 @@ import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
-  type CheckoutPurpose,
 } from '@equipment-management/schemas';
 import { getTranslations } from 'next-intl/server';
 import { getPageContainerClasses } from '@/lib/design-tokens';
