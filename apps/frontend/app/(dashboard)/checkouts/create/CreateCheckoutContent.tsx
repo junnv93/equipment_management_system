@@ -63,6 +63,7 @@ import {
 
 export default function CreateCheckoutContent() {
   const t = useTranslations('checkouts');
+  const tEquip = useTranslations('equipment');
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -361,6 +362,17 @@ export default function CreateCheckoutContent() {
                             equipment.nextCalibrationDate
                           );
                           const selectability = getEquipmentSelectability(equipment, purpose);
+                          // reasonParams.statusLabel이 equipment 네임스페이스의 i18n 키인 경우 resolve
+                          const resolvedReasonParams = selectability.reasonParams?.statusLabel
+                            ? {
+                                ...selectability.reasonParams,
+                                statusLabel: tEquip(
+                                  selectability.reasonParams.statusLabel as Parameters<
+                                    typeof tEquip
+                                  >[0]
+                                ),
+                              }
+                            : selectability.reasonParams;
                           const isAlreadySelected = selectedEquipments.some(
                             (e) => e.id === equipment.id
                           );
@@ -377,7 +389,12 @@ export default function CreateCheckoutContent() {
                                 } else {
                                   handleBlockedEquipmentClick(
                                     equipment,
-                                    selectability.reason || t('create.notSelectable')
+                                    selectability.reasonKey
+                                      ? t(
+                                          selectability.reasonKey as Parameters<typeof t>[0],
+                                          resolvedReasonParams
+                                        )
+                                      : t('create.notSelectable')
                                   );
                                 }
                               }}
@@ -393,7 +410,7 @@ export default function CreateCheckoutContent() {
                               aria-label={
                                 selectability.selectable
                                   ? `${equipment.name} ${isAlreadySelected ? t('create.selected') : t('create.step1Title')}`
-                                  : `${equipment.name} ${t('create.notSelectable')}: ${selectability.reason}`
+                                  : `${equipment.name} ${t('create.notSelectable')}: ${selectability.reasonKey ? t(selectability.reasonKey as Parameters<typeof t>[0], resolvedReasonParams) : ''}`
                               }
                               className={`
                                 ${
@@ -424,10 +441,13 @@ export default function CreateCheckoutContent() {
                                     <p className="text-sm text-muted-foreground font-mono">
                                       {equipment.managementNumber}
                                     </p>
-                                    {selectability.selectable && selectability.warningMessage && (
+                                    {selectability.selectable && selectability.warningKey && (
                                       <p className="text-xs text-brand-warning mt-1.5 leading-tight flex items-start gap-1">
                                         <AlertCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
-                                        {selectability.warningMessage}
+                                        {t(
+                                          selectability.warningKey as Parameters<typeof t>[0],
+                                          selectability.warningParams
+                                        )}
                                       </p>
                                     )}
                                   </div>
@@ -439,7 +459,14 @@ export default function CreateCheckoutContent() {
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent side="left" className="max-w-xs">
-                                        <p className="text-sm">{selectability.reason}</p>
+                                        <p className="text-sm">
+                                          {selectability.reasonKey
+                                            ? t(
+                                                selectability.reasonKey as Parameters<typeof t>[0],
+                                                resolvedReasonParams
+                                              )
+                                            : t('create.notSelectable')}
+                                        </p>
                                       </TooltipContent>
                                     </Tooltip>
                                   )}

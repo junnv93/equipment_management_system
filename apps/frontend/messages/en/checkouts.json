@@ -244,7 +244,11 @@
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",
-    "statusNotSelectable": "Equipment in {statusLabel} status cannot be selected"
+    "statusNotSelectable": "Equipment in {statusLabel} status cannot be selected",
+    "inUseBlocked": "This equipment is currently in use by another user. Available after return.",
+    "checkedOutBlocked": "This equipment is already checked out. Available after return.",
+    "calibrationOverdueRentalBlocked": "Calibration has expired. External rental requires valid calibration.",
+    "nonConformingRentalBlocked": "Equipment is non-conforming. External rental requires equipment in normal condition."
   },
   "create": {
     "title": "Request Equipment Checkout",
