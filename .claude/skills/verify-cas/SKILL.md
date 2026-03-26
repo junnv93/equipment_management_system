@@ -29,7 +29,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 
 | File                                                                                 | Purpose                                              |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| `apps/backend/src/common/base/versioned-base.service.ts`                             | VersionedBaseService 베이스 클래스                   |
+| `apps/backend/src/common/base/versioned-base.service.ts`                             | VersionedBaseService 베이스 클래스, createVersionConflictException SSOT 헬퍼 |
 | `apps/backend/src/common/dto/base-versioned.dto.ts`                                  | versionedSchema 정의                                 |
 | `apps/backend/src/common/cache/cache-invalidation.helper.ts`                         | 캐시 무효화 헬퍼                                     |
 | `apps/backend/src/modules/checkouts/checkouts.service.ts`                            | CAS 적용 서비스 예시                                 |

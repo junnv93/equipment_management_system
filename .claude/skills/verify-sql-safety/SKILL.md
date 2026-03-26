@@ -42,7 +42,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/notifications/schedulers/digest-email-scheduler.ts` | fan-out JOIN (checkouts→checkoutItems→equipment) + Map dedup                                       |
 | `apps/backend/src/modules/equipment/services/equipment-history.service.ts`   | COUNT(DISTINCT) + 페이지네이션 (DEFAULT_PAGE_SIZE/MAX_PAGE_SIZE SSOT), checkoutItems 경유 JOIN  |
 | `packages/shared-constants/src/pagination.ts`                                 | SSOT 페이지네이션 상수 (DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE 등)                                    |
-| `apps/backend/src/common/file-upload/document.service.ts`                     | CTE 재귀 쿼리 (개정 이력), inArray 배치 쿼리 (장비+교정 통합 문서)                              |
+| `apps/backend/src/common/file-upload/document.service.ts`                     | CTE 재귀 쿼리 (개정 이력), inArray 배치 쿼리 (장비+교정 통합 문서), LIMIT 배치 purge (purgeDeletedDocuments) |
 
 ## Workflow
 
