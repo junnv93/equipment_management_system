@@ -2,7 +2,7 @@ import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { equipmentAttachments } from '@equipment-management/db/schema';
 import type { AppDatabase } from '@equipment-management/db';
-import { FileUploadService } from './file-upload.service';
+import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type { MulterFile } from '../../../types/common.types';
 

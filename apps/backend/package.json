@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.992.0",
+    "@aws-sdk/s3-request-presigner": "^3.1017.0",
     "@equipment-management/db": "workspace:*",
     "@equipment-management/schemas": "workspace:*",
     "@equipment-management/shared-constants": "workspace:*",

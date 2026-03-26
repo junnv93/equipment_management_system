@@ -18,4 +18,19 @@ export interface IStorageProvider {
   download(key: string): Promise<Buffer>;
   /** 파일 삭제 — 실패해도 예외 미발생 (warn만) */
   delete(key: string): Promise<void>;
+
+  /** Presigned URL 지원 여부 (S3만 true) */
+  supportsPresignedUrl(): boolean;
+
+  /**
+   * 다운로드용 Presigned URL 생성
+   * @param key 스토리지 키
+   * @param originalFileName 다운로드 시 파일명 (Content-Disposition)
+   * @param expiresIn 만료 시간 (초, 기본 3600)
+   */
+  getPresignedDownloadUrl?(
+    key: string,
+    originalFileName: string,
+    expiresIn?: number
+  ): Promise<string>;
 }

@@ -41,6 +41,10 @@ export class LocalStorageProvider implements IStorageProvider {
     return fs.readFile(filePath);
   }
 
+  supportsPresignedUrl(): boolean {
+    return false;
+  }
+
   async delete(key: string): Promise<void> {
     try {
       const filePath = this.resolvePath(key);

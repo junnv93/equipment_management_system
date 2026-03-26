@@ -9,6 +9,7 @@ import {
   DeleteObjectCommand,
   S3ServiceException,
 } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { GetObjectCommandOutput } from '@aws-sdk/client-s3';
 import { IStorageProvider } from './storage.interface';
 
@@ -90,6 +91,27 @@ export class S3StorageProvider implements IStorageProvider, OnModuleDestroy {
     const body = response.Body as NonNullable<GetObjectCommandOutput['Body']>;
     const bytes = await body.transformToByteArray();
     return Buffer.from(bytes);
+  }
+
+  supportsPresignedUrl(): boolean {
+    return true;
+  }
+
+  async getPresignedDownloadUrl(
+    key: string,
+    originalFileName: string,
+    expiresIn: number = 3600
+  ): Promise<string> {
+    const encodedFileName = encodeURIComponent(originalFileName);
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
+    });
+
+    const url = await getSignedUrl(this.client!, command, { expiresIn });
+    this.logger.debug(`Presigned download URL generated: ${key} (expires ${expiresIn}s)`);
+    return url;
   }
 
   async delete(key: string): Promise<void> {
