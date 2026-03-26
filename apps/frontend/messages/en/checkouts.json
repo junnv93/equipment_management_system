@@ -2,6 +2,16 @@
   "title": "Checkout Management",
   "subtitle": "Manage checkout requests, approvals, and returns",
   "description": "Manage equipment checkout requests and status.",
+  "metadata": {
+    "detailTitle": "{purpose} Checkout Detail - {destination}",
+    "detailDescription": "View {purpose} checkout details for {destination}.",
+    "detailFallbackTitle": "Checkout Detail",
+    "detailFallbackDescription": "Checkout detail information",
+    "returnTitle": "Return Processing - {purpose}",
+    "returnDescription": "Process return of equipment checked out for {purpose} from {destination}",
+    "returnFallbackTitle": "Return Processing",
+    "returnFallbackDescription": "Equipment return processing"
+  },
   "status": {
     "pending": "Pending",
     "approved": "Approved",
