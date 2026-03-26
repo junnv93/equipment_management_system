@@ -28,7 +28,6 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await page.goto('/equipment/create-shared');
 
     // When: 페이지 로드 완료
-    await page.waitForLoadState('networkidle');
 
     // Then: 페이지 제목 확인
     await expect(page.locator('h1')).toContainText('공용/렌탈 장비 임시등록');
@@ -203,7 +202,6 @@ test.describe('공용/렌탈 장비 임시등록', () => {
 
     // When: isShared 필터 적용
     await page.selectOption('select[name="isShared"]', 'shared');
-    await page.waitForLoadState('networkidle');
 
     // Then: 임시등록 장비 카드에 UsagePeriodBadge 표시 (조건부)
     // Note: 실제 데이터가 있어야 테스트 가능. Mock API 필요.

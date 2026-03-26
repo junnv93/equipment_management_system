@@ -19,7 +19,6 @@ test.describe('폼 유효성 검사', () => {
   test('교정 정보 조건부 필수 필드 검증', async ({ techManagerPage: page }) => {
     // 1. techManagerPage로 /equipment/create 페이지 이동
     await page.goto('/equipment/create');
-    await page.waitForLoadState('networkidle');
 
     // 페이지 로드 확인
     await expect(page.getByRole('heading', { name: '장비 등록' })).toBeVisible();
@@ -36,7 +35,6 @@ test.describe('폼 유효성 검사', () => {
 
     // 선택 확인
     await expect(managementMethodCombobox).toContainText('외부 교정');
-    await page.waitForTimeout(500); // UI 업데이트 대기
 
     // 3. 교정 주기, 최종 교정일, 교정 기관 필드 필수로 활성화 확인
     // 교정 주기 필수 표시 확인
@@ -63,7 +61,6 @@ test.describe('폼 유효성 검사', () => {
 
     // 사이트/팀: 기술책임자는 자동 설정 (disabled)
     await expect(page.getByRole('combobox', { name: /사이트/i })).toBeDisabled();
-    await page.waitForTimeout(1000); // Wait for teams to load and auto-set
     await expect(page.getByRole('combobox', { name: /팀/i })).toBeDisabled();
 
     // 관리번호 일련번호 입력
@@ -84,7 +81,6 @@ test.describe('폼 유효성 검사', () => {
 
     // 교정 주기 필드로 포커스 이동 및 에러 확인
     // 브라우저가 자동으로 필수 필드로 스크롤하는 것을 기다림
-    await page.waitForTimeout(1000);
 
     // HTML5 required 속성으로 인한 브라우저 기본 검증 또는
     // 커스텀 에러 메시지 확인
@@ -103,7 +99,6 @@ test.describe('폼 유효성 검사', () => {
 
     // 선택 확인
     await expect(managementMethodCombobox).toContainText('자체 점검');
-    await page.waitForTimeout(500); // UI 업데이트 대기
 
     // 6. 교정 관련 필드 선택 사항으로 변경 확인
     // 교정 주기 필수 표시가 사라졌는지 확인
@@ -140,7 +135,6 @@ test.describe('폼 유효성 검사', () => {
 
     // 체크 확인
     await expect(intermediateCheckCheckbox).toBeChecked();
-    await page.waitForTimeout(500); // UI 업데이트 대기
 
     // 8. 중간점검 주기, 최종 중간점검일 필드 활성화 확인
     // 중간점검 관련 필드가 표시되는지 확인

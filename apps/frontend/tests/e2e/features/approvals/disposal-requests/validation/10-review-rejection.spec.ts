@@ -30,7 +30,6 @@ test.describe('Rejection - Group C', () => {
   test('technical_manager rejects at review stage', async ({ techManagerPage }) => {
     // 1. Navigate to equipment detail page
     await techManagerPage.goto(`/equipment/${EQUIP_DISPOSAL_REJ_C1}`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // 2. Verify "폐기 진행 중" button is visible
     const disposalInProgressButton = techManagerPage.getByRole('button', {
@@ -40,7 +39,6 @@ test.describe('Rejection - Group C', () => {
 
     // 3. Click "폐기 진행 중" button to open dropdown menu
     await disposalInProgressButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 4. Click "폐기 검토하기" menu item in the dropdown
     const reviewMenuItem = techManagerPage.getByRole('menuitem', {
@@ -65,7 +63,6 @@ test.describe('Rejection - Group C', () => {
     const rejectButton = techManagerPage.getByRole('button', { name: /^반려$/i });
     await expect(rejectButton).toBeEnabled();
     await rejectButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 8. Verify warning message appears
     await expect(techManagerPage.getByText(/구체적인 사유를 입력하고/i)).toBeVisible({
@@ -98,7 +95,6 @@ test.describe('Rejection - Group C', () => {
 
     // 12. Reload page to fetch fresh data from backend
     await techManagerPage.reload({ waitUntil: 'networkidle' });
-    await techManagerPage.waitForTimeout(2000); // Wait longer for data fetching
 
     // 13. Debug: Check what buttons are actually visible
     const allButtons = await techManagerPage.locator('button').allTextContents();

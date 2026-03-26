@@ -182,7 +182,6 @@ test.describe('Disposal Final Approval Tab - Cross-Team Approve', () => {
     console.log('✅ ApprovalDetailModal closed');
 
     // Step 11: Verify the item is removed from the list
-    await siteAdminPage.waitForTimeout(1000);
 
     const updatedCount = await approvalItems.count();
     console.log(`Updated approval items count: ${updatedCount}`);

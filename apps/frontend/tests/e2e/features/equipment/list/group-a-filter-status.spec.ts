@@ -29,7 +29,6 @@ test.describe('Group A: Status Filter', () => {
   test.describe('3.1. Status filter shows all EQUIPMENT_STATUS_FILTER_OPTIONS', () => {
     test('should display all status options from SSOT', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 상태 필터 드롭다운 클릭 (Radix UI Select는 button 역할 사용)
       const statusFilter = testOperatorPage.locator('#filter-status');
@@ -70,7 +69,6 @@ test.describe('Group A: Status Filter', () => {
   test.describe('3.2. Selecting status filter updates URL and results', () => {
     test('should filter equipment by "available" status', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 상태 필터 선택: 사용 가능 (Radix UI Select는 button 역할 사용)
       const statusFilter = testOperatorPage.locator('#filter-status');
@@ -112,7 +110,6 @@ test.describe('Group A: Status Filter', () => {
   test.describe('3.3. Status filter for calibration_overdue equipment', () => {
     test('should display D+N badge for overdue equipment', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 상태 필터 선택: 교정 기한 초과 (Radix UI Select는 button 역할 사용)
       const statusFilter = testOperatorPage.locator('#filter-status');
@@ -161,7 +158,6 @@ test.describe('Group A: Status Filter', () => {
     test('should remove status filter when selecting "모든 상태"', async ({ testOperatorPage }) => {
       // 상태 필터가 적용된 상태로 시작
       await testOperatorPage.goto('/equipment?status=available');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 필터 뱃지 확인
       const filterBadge = testOperatorPage.getByText(/상태:\s*사용 가능/);
@@ -173,7 +169,6 @@ test.describe('Group A: Status Filter', () => {
       await testOperatorPage.getByRole('option', { name: '모든 상태', exact: true }).click();
 
       // Wait for URL to update (parameter removed)
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 검증: status 파라미터 제거
       const currentUrl = testOperatorPage.url();
@@ -193,7 +188,6 @@ test.describe('Group A: Status Filter', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });

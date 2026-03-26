@@ -53,7 +53,6 @@ test.describe('Equipment Information Display', () => {
       await currentDetailLinks.nth(i).scrollIntoViewIfNeeded();
 
       // Wait a bit for any animations/overlays to settle
-      await testOperatorPage.waitForTimeout(500);
 
       // Click the link and wait for navigation
       await currentDetailLinks.nth(i).click();

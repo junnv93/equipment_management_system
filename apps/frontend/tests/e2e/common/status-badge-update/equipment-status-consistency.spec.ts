@@ -39,7 +39,6 @@ const TEST_MANAGEMENT_NUMBER = 'SUW-E0002';
 async function getDetailPageStatus(page: Page): Promise<string> {
   // Wait for page to load by checking for h1 (equipment name)
   await page.waitForSelector('h1', { timeout: 10000 });
-  await page.waitForLoadState('networkidle');
 
   // Get page text and search for status keywords
   const bodyText = await page.locator('body').textContent();
@@ -69,7 +68,6 @@ async function getDetailPageStatus(page: Page): Promise<string> {
 async function getListPageStatus(page: Page, managementNumber: string): Promise<string> {
   // Wait for equipment list table to load
   await page.waitForSelector('table', { timeout: 10000 });
-  await page.waitForLoadState('networkidle');
 
   // Find row with management number
   const row = page.locator(`tr:has-text("${managementNumber}")`).first();
@@ -100,14 +98,12 @@ async function createNonConformance(
 ): Promise<void> {
   console.log('[createNonConformance] Step 1: Navigate to NC page');
   await page.goto(`/equipment/${equipmentId}/non-conformance`);
-  await page.waitForLoadState('networkidle');
 
   console.log('[createNonConformance] Step 2: Click "부적합 등록" button');
   const createButton = page.getByRole('button', { name: /부적합 등록/i });
   await createButton.click();
 
   // Wait for form to appear (dialog opens after clicking)
-  await page.waitForTimeout(500);
 
   console.log('[createNonConformance] Step 3: Wait for form fields to appear');
   // After clicking button, textareas appear (verified by debug test)
@@ -154,7 +150,6 @@ async function createNonConformance(
 
   console.log('[createNonConformance] Step 6: Wait for completion');
   // Wait for success message or dialog to close
-  await page.waitForTimeout(2000); // Allow cache invalidation to complete
 }
 
 test.describe('Equipment Status Consistency', () => {
@@ -187,7 +182,6 @@ test.describe('Equipment Status Consistency', () => {
 
       // Step 2: Navigate to list page and verify same status
       await page.goto('/equipment');
-      await page.waitForLoadState('networkidle');
       const initialListStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
       console.log(`Initial list page status: ${initialListStatus}`);
 
@@ -199,7 +193,6 @@ test.describe('Equipment Status Consistency', () => {
 
       // Step 4: Navigate back to detail page
       await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-      await page.waitForLoadState('networkidle');
 
       const updatedDetailStatus = await getDetailPageStatus(page);
       console.log(`Updated detail page status: ${updatedDetailStatus}`);
@@ -209,7 +202,6 @@ test.describe('Equipment Status Consistency', () => {
 
       // Step 5: Navigate to list page
       await page.goto('/equipment');
-      await page.waitForLoadState('networkidle');
 
       const updatedListStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
       console.log(`Updated list page status: ${updatedListStatus}`);
@@ -230,14 +222,12 @@ test.describe('Equipment Status Consistency', () => {
 
     // Step 1: Open list page
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
     const listStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
     console.log(`List page status: ${listStatus}`);
 
     // Step 2: Open detail page in new tab (new page context)
     const detailPage = await context.newPage();
     await detailPage.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-    await detailPage.waitForLoadState('networkidle');
 
     const detailStatus = await getDetailPageStatus(detailPage);
     console.log(`Detail page status (new tab): ${detailStatus}`);
@@ -251,17 +241,14 @@ test.describe('Equipment Status Consistency', () => {
   test('Smart refetch prevents stale data in new page context', async ({ siteAdminPage: page }) => {
     // Step 1: Visit detail page and cache data
     await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-    await page.waitForLoadState('networkidle');
     const firstStatus = await getDetailPageStatus(page);
     console.log(`First visit status: ${firstStatus}`);
 
     // Step 2: Navigate to dashboard and back to verify cache behavior
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
 
     // Step 3: Visit detail page again (cache should be fresh, no refetch expected)
     await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-    await page.waitForLoadState('networkidle');
 
     const secondStatus = await getDetailPageStatus(page);
     console.log(`Second visit status: ${secondStatus}`);
@@ -273,18 +260,15 @@ test.describe('Equipment Status Consistency', () => {
   test('List page always refetches on mount', async ({ siteAdminPage: page }) => {
     // Step 1: Visit list page
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     const status1 = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
     console.log(`List visit 1 status: ${status1}`);
 
     // Step 2: Navigate away
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
 
     // Step 3: Navigate back to list (should refetch due to refetchOnMount: 'always')
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     const status2 = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
     console.log(`List visit 2 status: ${status2}`);
@@ -303,19 +287,16 @@ test.describe('Equipment Status Consistency', () => {
     async ({ siteAdminPage: page }) => {
       // Step 1: Navigate to detail page
       await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-      await page.waitForLoadState('networkidle');
       const initialStatus = await getDetailPageStatus(page);
 
       // Step 2: Keep list page open in background
       await page.goto('/equipment');
-      await page.waitForLoadState('networkidle');
 
       // Step 3: Create NC (triggers invalidateAfterNonConformanceCreation)
       await createNonConformance(page, TEST_EQUIPMENT_ID);
 
       // Step 4: Reload list page (should show updated status)
       await page.reload();
-      await page.waitForLoadState('networkidle');
 
       const listStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
 
@@ -324,7 +305,6 @@ test.describe('Equipment Status Consistency', () => {
 
       // Step 5: Navigate to detail page
       await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-      await page.waitForLoadState('networkidle');
       const detailStatus = await getDetailPageStatus(page);
 
       // ✅ ASSERTION: Both pages consistent
@@ -342,7 +322,6 @@ test.describe('CalibrationOverdueScheduler Cache Invalidation', () => {
 
     // Step 1: Find equipment with overdue calibration
     await page.goto('/equipment?status=calibration_scheduled');
-    await page.waitForLoadState('networkidle');
 
     // TODO: Implement scheduler trigger endpoint test
     // 1. Call POST /api/notifications/trigger-overdue-check

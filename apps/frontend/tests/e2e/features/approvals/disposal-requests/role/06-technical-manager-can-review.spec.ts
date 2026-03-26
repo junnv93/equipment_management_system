@@ -38,8 +38,6 @@ test.describe('Permissions - Group A', () => {
 
   test('technical_manager can review same team pending disposal', async ({ techManagerPage }) => {
     // Wait for React hydration (disposal dropdown is client-side rendered)
-    await techManagerPage.waitForLoadState('networkidle').catch(() => {});
-    await techManagerPage.waitForTimeout(1000);
 
     // 1. Verify "폐기 진행 중" button is visible (auto-waits for hydration)
     const statusButton = techManagerPage.getByRole('button', { name: /폐기 진행 중/i });

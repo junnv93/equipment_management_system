@@ -24,7 +24,6 @@ test.describe('Group C: Sorting Functionality', () => {
   test.describe('5.1. Name sorting (asc/desc)', () => {
     test('should sort equipment by name in ascending order', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 이름순 정렬 버튼 클릭
       const nameHeader = testOperatorPage.getByRole('button', { name: /장비명.*정렬/i });
@@ -49,7 +48,6 @@ test.describe('Group C: Sorting Functionality', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const nameHeader = testOperatorPage.getByRole('button', { name: /장비명.*정렬/i });
 
@@ -89,7 +87,6 @@ test.describe('Group C: Sorting Functionality', () => {
   test.describe('5.2. Management number sorting', () => {
     test('should sort equipment by management number', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 관리번호순 정렬 버튼 클릭
       const managementNumberHeader = testOperatorPage.getByRole('button', {
@@ -116,7 +113,6 @@ test.describe('Group C: Sorting Functionality', () => {
   test.describe('5.3. Calibration due date sorting', () => {
     test('should sort equipment by calibration due date', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 교정 기한순 정렬 버튼 클릭
       const calibrationDueHeader = testOperatorPage.getByRole('button', {
@@ -143,7 +139,6 @@ test.describe('Group C: Sorting Functionality', () => {
   test.describe('5.4. Status sorting', () => {
     test('should sort equipment by status', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 상태순 정렬 버튼 클릭
       const statusHeader = testOperatorPage.getByRole('button', { name: /상태.*정렬/i });
@@ -166,7 +161,6 @@ test.describe('Group C: Sorting Functionality', () => {
 
     test('should sort status in descending order', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const statusHeader = testOperatorPage.getByRole('button', { name: /상태.*정렬/i });
 
@@ -196,15 +190,12 @@ test.describe('Group C: Sorting Functionality', () => {
     test('should persist sort settings across page navigation', async ({ testOperatorPage }) => {
       // 정렬 적용
       await testOperatorPage.goto('/equipment?sortBy=name&sortOrder=desc');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 다른 페이지로 이동
       await testOperatorPage.goto('/');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 뒤로 가기
       await testOperatorPage.goBack();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 🔥 정렬 상태 복원 검증
       await expect(testOperatorPage).toHaveURL(/sortBy=name/);
@@ -219,7 +210,6 @@ test.describe('Group C: Sorting Functionality', () => {
 
     test('should handle sort with other filters', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 상태 필터 적용
       const statusFilter = testOperatorPage.locator('#filter-status');
@@ -249,7 +239,6 @@ test.describe('Group C: Sorting Functionality', () => {
     test('should preserve page number when changing sort', async ({ testOperatorPage }) => {
       // 2페이지로 이동
       await testOperatorPage.goto('/equipment?page=2');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 정렬 변경
       const nameHeader = testOperatorPage.getByRole('button', { name: /장비명.*정렬/i });

@@ -36,7 +36,6 @@ test.describe('Authentication and Role-based Access', () => {
       const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
       // 1. Navigate to http://localhost:3000/login
       await page.goto(`${baseURL}/login`);
-      await page.waitForLoadState('networkidle');
 
       // 2. Enter email 'user@example.com' in the email field
       const emailInput = page.locator('input[name="email"]');
@@ -99,7 +98,6 @@ test.describe('Authentication and Role-based Access', () => {
       const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
       // 1. Navigate to http://localhost:3000/login
       await page.goto(`${baseURL}/login`);
-      await page.waitForLoadState('networkidle');
 
       // 2. Enter email 'manager@example.com' in the email field
       const emailInput = page.locator('input[name="email"]');
@@ -161,7 +159,6 @@ test.describe('Authentication and Role-based Access', () => {
       const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
       // 1. Navigate to http://localhost:3000/login
       await page.goto(`${baseURL}/login`);
-      await page.waitForLoadState('networkidle');
 
       // 2. Enter email 'admin@example.com' in the email field
       const emailInput = page.locator('input[name="email"]');

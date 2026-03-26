@@ -23,7 +23,6 @@ test.describe('Equipment Information Display', () => {
 
   test('Display shared equipment banner', async ({ siteAdminPage }) => {
     await siteAdminPage.goto('/equipment');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Look for shared equipment in the list
     // Shared equipment usually has indicator in the list view
@@ -44,7 +43,6 @@ test.describe('Equipment Information Display', () => {
     for (let i = 0; i < Math.min(equipmentCount, 5); i++) {
       const detailLink = siteAdminPage.getByRole('link', { name: /상세/i }).nth(i);
       await detailLink.click();
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Check for shared equipment banner
       const sharedBanner = siteAdminPage.locator('text=/공용장비|Shared Equipment/i');
@@ -99,7 +97,6 @@ test.describe('Equipment Information Display', () => {
 
       // Go back to list
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       if (foundSharedEquipment && foundNonSharedEquipment) {
         break;

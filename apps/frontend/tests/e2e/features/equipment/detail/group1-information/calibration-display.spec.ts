@@ -21,7 +21,6 @@ test.describe('Equipment Information Display', () => {
 
   test('Display calibration information and D-day badge', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Find equipment with calibration (usually has calibration schedule)
     const detailLinks = testOperatorPage.getByRole('link', { name: /상세/i });
@@ -34,7 +33,6 @@ test.describe('Equipment Information Display', () => {
 
     // Test first equipment for calibration display
     await detailLinks.first().click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Check if equipment has calibration information
     const hasCalibration = (await testOperatorPage.locator('text=/교정|calibration/i').count()) > 0;

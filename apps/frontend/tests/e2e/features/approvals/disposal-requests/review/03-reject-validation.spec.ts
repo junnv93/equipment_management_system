@@ -50,7 +50,6 @@ test.describe('Disposal Review Tab (technical_manager)', () => {
 
     // Step 2: Navigate to /admin/approvals?tab=disposal_review
     await techManagerPage.goto(`/admin/approvals?tab=disposal_review&_t=${timestamp}`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Step 3: Wait for the approval list to load with at least one pending item
     const pageHeading = techManagerPage.getByRole('heading', { name: '승인 관리', level: 1 });
@@ -156,7 +155,6 @@ test.describe('Disposal Review Tab (technical_manager)', () => {
     console.log('✅ Toast notification appeared');
 
     // Verify the rejected item has been removed from the pending list
-    await techManagerPage.waitForTimeout(1000);
 
     const updatedCount = await approvalItems.count();
     console.log(`Updated approval items count: ${updatedCount}`);

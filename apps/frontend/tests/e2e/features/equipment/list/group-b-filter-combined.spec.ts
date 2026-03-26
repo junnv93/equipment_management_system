@@ -22,22 +22,18 @@ test.describe('Group B: Combined Filters', () => {
     test('should apply multiple filters with AND logic', async ({ siteAdminPage }) => {
       // lab_manager로 테스트 (모든 사이트 필터 사용 가능)
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Wait for client-side hydration to complete
-      await siteAdminPage.waitForTimeout(1500);
 
       // 1. 사이트 필터 적용
       const siteFilter = siteAdminPage.locator('#filter-site');
       await siteFilter.click();
       await siteAdminPage.getByRole('option', { name: /수원랩/ }).click();
-      await siteAdminPage.waitForTimeout(500);
 
       // 2. 상태 필터 적용
       const statusFilter = siteAdminPage.locator('#filter-status');
       await statusFilter.click();
       await siteAdminPage.getByRole('option', { name: '사용 가능' }).click();
-      await siteAdminPage.waitForTimeout(500);
 
       // 3. 교정 방법 필터 적용
       const calibrationMethodFilter = siteAdminPage.locator('#filter-calibration');
@@ -45,7 +41,6 @@ test.describe('Group B: Combined Filters', () => {
       await siteAdminPage.getByRole('option', { name: /외부 교정/i }).click();
 
       // Wait for URL to update
-      await siteAdminPage.waitForTimeout(1000);
 
       // URL 검증
       const currentUrl = siteAdminPage.url();
@@ -63,23 +58,19 @@ test.describe('Group B: Combined Filters', () => {
 
     test('should apply filters with search query', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for client-side hydration to complete
-      await testOperatorPage.waitForTimeout(1500);
 
       // 상태 필터 + 검색어
       const statusFilter = testOperatorPage.locator('#filter-status');
       await statusFilter.click();
       await testOperatorPage.getByRole('option', { name: '사용 가능' }).click();
-      await testOperatorPage.waitForTimeout(500);
 
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('분석기');
       await searchInput.press('Enter');
 
       // Wait for results
-      await testOperatorPage.waitForTimeout(1000);
 
       // URL 검증
       const currentUrl = testOperatorPage.url();
@@ -94,25 +85,20 @@ test.describe('Group B: Combined Filters', () => {
     test('should clear all filters when clicking reset button', async ({ siteAdminPage }) => {
       // Apply filters through UI
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Wait for client-side hydration to complete
-      await siteAdminPage.waitForTimeout(1500);
 
       const siteFilter = siteAdminPage.locator('#filter-site');
       await siteFilter.click();
       await siteAdminPage.getByRole('option', { name: /수원랩/ }).click();
-      await siteAdminPage.waitForTimeout(300);
 
       const statusFilter = siteAdminPage.locator('#filter-status');
       await statusFilter.click();
       await siteAdminPage.getByRole('option', { name: '사용 가능' }).click();
-      await siteAdminPage.waitForTimeout(300);
 
       const classificationFilter = siteAdminPage.locator('#filter-classification');
       await classificationFilter.click();
       await siteAdminPage.getByRole('option', { name: /FCC EMC\/RF/i }).click();
-      await siteAdminPage.waitForTimeout(1000);
 
       // 필터 뱃지 확인 (최소 3개)
       await expect(siteAdminPage.getByText(/사이트:.*수원랩/)).toBeVisible({ timeout: 10000 });
@@ -124,7 +110,6 @@ test.describe('Group B: Combined Filters', () => {
       await resetButton.click();
 
       // Wait for URL to update
-      await siteAdminPage.waitForTimeout(1000);
 
       // URL 확인: 쿼리 파라미터 없음
       const currentUrl = siteAdminPage.url();
@@ -145,10 +130,8 @@ test.describe('Group B: Combined Filters', () => {
   test.describe('9.3. Individual filter removal preserves other filters', () => {
     test('should remove only the clicked filter', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?status=available&classification=fcc_emc_rf');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for client-side hydration to complete
-      await testOperatorPage.waitForTimeout(1500);
 
       // 초기 필터 뱃지 확인
       await expect(testOperatorPage.getByText(/상태:.*사용 가능/)).toBeVisible({ timeout: 10000 });
@@ -163,7 +146,6 @@ test.describe('Group B: Combined Filters', () => {
       await removeButton.click();
 
       // Wait for URL to update
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 확인
       const currentUrl = testOperatorPage.url();
@@ -179,10 +161,8 @@ test.describe('Group B: Combined Filters', () => {
 
     test('should maintain filter state when removing search', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?status=available&search=테스트');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for client-side hydration to complete
-      await testOperatorPage.waitForTimeout(1500);
 
       // 검색어 제거 (입력창 지우기)
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -190,7 +170,6 @@ test.describe('Group B: Combined Filters', () => {
       await searchInput.press('Enter');
 
       // Wait for URL to update
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 검증
       const currentUrl = testOperatorPage.url();
@@ -211,13 +190,11 @@ test.describe('Group B: Combined Filters', () => {
   test.describe('9.4. Calibration due filter works independently from status filter', () => {
     test('should combine status and calibration due filters', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 상태 필터: 사용 가능
       const statusFilter = testOperatorPage.locator('#filter-status');
       await statusFilter.click();
       await testOperatorPage.getByRole('option', { name: '사용 가능' }).click();
-      await testOperatorPage.waitForTimeout(500);
 
       // 2. 교정 기한 필터: 기한 초과
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
@@ -225,7 +202,6 @@ test.describe('Group B: Combined Filters', () => {
       await testOperatorPage.getByRole('option', { name: /기한 초과/i }).click();
 
       // Wait for URL to update
-      await testOperatorPage.waitForTimeout(1000);
 
       // URL 검증
       const currentUrl = testOperatorPage.url();
@@ -240,7 +216,6 @@ test.describe('Group B: Combined Filters', () => {
     }) => {
       // 먼저 두 필터 모두 적용
       await testOperatorPage.goto('/equipment?status=available&calibrationDueFilter=overdue');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 초기 필터 뱃지 확인
       await expect(testOperatorPage.getByText(/교정기한:.*기한 초과/)).toBeVisible();
@@ -252,7 +227,6 @@ test.describe('Group B: Combined Filters', () => {
       await removeButton.click();
 
       // Wait for URL to update
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 검증: 교정 기한 필터 제거, 상태 필터 유지
       const currentUrl = testOperatorPage.url();
@@ -269,38 +243,31 @@ test.describe('Group B: Combined Filters', () => {
   test.describe('Additional: Complex filter combinations', () => {
     test('should apply 5+ filters simultaneously', async ({ siteAdminPage }) => {
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Wait for client-side hydration to complete
-      await siteAdminPage.waitForTimeout(1500);
 
       // 5개 필터 적용
       const siteFilter = siteAdminPage.locator('#filter-site');
       await siteFilter.click();
       await siteAdminPage.getByRole('option', { name: /수원랩/ }).click();
-      await siteAdminPage.waitForTimeout(300);
 
       const statusFilter = siteAdminPage.locator('#filter-status');
       await statusFilter.click();
       await siteAdminPage.getByRole('option', { name: '사용 가능' }).click();
-      await siteAdminPage.waitForTimeout(300);
 
       const calibrationMethodFilter = siteAdminPage.locator('#filter-calibration');
       await calibrationMethodFilter.click();
       await siteAdminPage.getByRole('option', { name: /외부 교정/i }).click();
-      await siteAdminPage.waitForTimeout(300);
 
       const sharedFilter = siteAdminPage.locator('#filter-shared');
       await sharedFilter.click();
       await siteAdminPage.getByRole('option', { name: /일반장비/i }).click();
-      await siteAdminPage.waitForTimeout(300);
 
       const calibrationDueFilter = siteAdminPage.locator('#filter-calibration-due');
       await calibrationDueFilter.click();
       await siteAdminPage.getByRole('option', { name: /정상/i }).click();
 
       // Wait for all filters to be applied
-      await siteAdminPage.waitForTimeout(1000);
 
       // URL 검증
       const currentUrl = siteAdminPage.url();

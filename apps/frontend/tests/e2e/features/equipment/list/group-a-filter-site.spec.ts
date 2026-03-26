@@ -23,7 +23,6 @@ test.describe('Group A: Site Filter', () => {
   test.describe('2.1. Site filter shows all options for lab_manager', () => {
     test('should display all site options including "모든 사이트"', async ({ siteAdminPage }) => {
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 사이트 필터 드롭다운 클릭 (Radix UI Select 찾기)
       const siteFilter = siteAdminPage.locator('#filter-site');
@@ -52,7 +51,6 @@ test.describe('Group A: Site Filter', () => {
     test('should filter equipment by selected site and update URL', async ({ siteAdminPage }) => {
       // ✅ ?site= 로 기본 필터 우회하여 "모든 사이트" 상태에서 시작
       await siteAdminPage.goto('/equipment?site=');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 사이트 필터 선택: 수원랩 (Radix UI Select 찾기)
       const siteFilter = siteAdminPage.locator('#filter-site');
@@ -95,7 +93,6 @@ test.describe('Group A: Site Filter', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ✅ 모든 역할에 사이트 필터가 표시됨
       const siteFilter = testOperatorPage.locator('#filter-site');
@@ -121,7 +118,6 @@ test.describe('Group A: Site Filter', () => {
 
     test('should allow test_engineer to change site filter', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 사이트 필터가 표시되는지 확인
       const siteFilter = testOperatorPage.locator('#filter-site');
@@ -150,7 +146,6 @@ test.describe('Group A: Site Filter', () => {
     test('should remove non-default site filter and update URL', async ({ siteAdminPage }) => {
       // 사용자 기본 사이트가 아닌 다른 사이트로 시작 (의왕랩)
       await siteAdminPage.goto('/equipment?site=uiwang');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 필터 뱃지 확인
       const filterBadge = siteAdminPage.getByText(/사이트:\s*의왕랩/);

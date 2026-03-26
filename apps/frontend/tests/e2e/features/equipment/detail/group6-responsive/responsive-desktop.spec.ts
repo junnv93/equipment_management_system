@@ -139,7 +139,6 @@ test.describe('Group 6: Responsive Design', () => {
 
     // 8. Test with ultra-wide display (2560px width)
     await page.setViewportSize({ width: 2560, height: 1440 });
-    await page.waitForTimeout(300); // Allow layout reflow
 
     // 9. Verify content remains readable and centered
     await expect(mainContent).toBeVisible();
@@ -195,7 +194,6 @@ test.describe('Group 6: Responsive Design', () => {
 
     // Test responsiveness by switching back to standard desktop
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.waitForTimeout(300);
 
     // Verify page still renders correctly
     await expect(mainContent).toBeVisible();

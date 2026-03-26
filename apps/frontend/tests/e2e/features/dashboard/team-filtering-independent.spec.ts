@@ -47,7 +47,6 @@ test.describe('Independent State Change Tests @parallel-group-2', () => {
       // Click on team card to filter by FCC EMC/RF
       const fccTeamCard = siteAdminPage.getByRole('button').filter({ hasText: 'FCC EMC/RF' });
       await fccTeamCard.click();
-      await siteAdminPage.waitForTimeout(500);
 
       // Verify team selection visual state
       await expect(fccTeamCard).toHaveClass(/bg-primary/);
@@ -93,7 +92,6 @@ test.describe('Independent State Change Tests @parallel-group-2', () => {
       // Click on team card to filter by SAR
       const sarTeamCard = siteAdminPage.getByRole('button').filter({ hasText: 'SAR' });
       await sarTeamCard.click();
-      await siteAdminPage.waitForTimeout(500);
 
       // Verify team selection visual state
       await expect(sarTeamCard).toHaveClass(/bg-primary/);
@@ -178,7 +176,6 @@ test.describe('Independent State Change Tests @parallel-group-2', () => {
         }
 
         await siteAdminPage.keyboard.press('Tab');
-        await siteAdminPage.waitForTimeout(100);
         attempts++;
       }
 
@@ -188,7 +185,6 @@ test.describe('Independent State Change Tests @parallel-group-2', () => {
       await siteAdminPage.keyboard.press('Enter');
 
       // Wait for UI to update
-      await siteAdminPage.waitForTimeout(1500);
 
       // Verify equipment count updated (should be different from initial)
       const filteredCountElement = totalEquipmentCard.locator('p').first();
@@ -251,7 +247,6 @@ test.describe('Independent State Change Tests @parallel-group-2', () => {
         }
 
         await siteAdminPage.keyboard.press('Tab');
-        await siteAdminPage.waitForTimeout(100);
         attempts++;
       }
 

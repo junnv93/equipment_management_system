@@ -158,7 +158,6 @@ test.describe('Common/Rental Equipment Management', () => {
       // Apply isShared filter
       const sharedFilter = page.locator('select').filter({ hasText: '모든 장비' }).first();
       await sharedFilter.selectOption('shared');
-      await page.waitForTimeout(500); // Wait for filter to apply
 
       // Verify badge is displayed (if temporary equipment exists)
       const badges = page.locator('[aria-label*="사용 기간"]');
@@ -204,19 +203,16 @@ test.describe('Common/Rental Equipment Management', () => {
       // Test "공용장비만" filter
       const sharedFilter = page.locator('select').filter({ hasText: '모든 장비' }).first();
       await sharedFilter.selectOption('shared');
-      await page.waitForTimeout(500);
 
       // URL should contain isShared parameter
       expect(page.url()).toContain('isShared=');
 
       // Test "일반장비만" filter
       await sharedFilter.selectOption('normal');
-      await page.waitForTimeout(500);
       expect(page.url()).toContain('isShared=');
 
       // Test "전체" filter
       await sharedFilter.selectOption('all');
-      await page.waitForTimeout(500);
       // isShared parameter should be removed or set to all
     });
 
@@ -229,7 +225,6 @@ test.describe('Common/Rental Equipment Management', () => {
         .or(page.locator('button:has-text("필터 초기화")'));
       if (await clearButton.isVisible()) {
         await clearButton.click();
-        await page.waitForTimeout(500);
 
         // All filters should be cleared from URL
         expect(page.url()).not.toContain('isShared=');
@@ -346,7 +341,6 @@ test.describe('Common/Rental Equipment Management', () => {
       );
 
       // Wait for validation to appear
-      await page.waitForTimeout(500);
 
       // Alert should have role="alert"
       const alert = page.locator('[role="alert"]').filter({ hasText: '교정 유효기간' });
@@ -387,7 +381,6 @@ test.describe('Common/Rental Equipment Management', () => {
 
       // Should show validation errors (browser native or custom)
       // Form should not be submitted
-      await page.waitForTimeout(1000);
 
       // Should still be on the same page
       expect(page.url()).toContain('/equipment/create-shared');

@@ -28,7 +28,6 @@ test.describe('Group A: Calibration Method Filter', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 교정 방법 필터 드롭다운 클릭 (Radix UI Select 찾기)
       const calibrationMethodFilter = testOperatorPage.locator('#filter-calibration');
@@ -149,7 +148,6 @@ test.describe('Group A: Calibration Method Filter', () => {
       await testOperatorPage.getByRole('option', { name: '모든 교정 방법', exact: true }).click();
 
       // Wait for URL to update (parameter removed)
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 검증: calibrationMethod 파라미터 제거
       const currentUrl = testOperatorPage.url();
@@ -169,7 +167,6 @@ test.describe('Group A: Calibration Method Filter', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });

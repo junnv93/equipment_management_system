@@ -44,7 +44,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
   test('should require ncType when creating non-conformance', async ({ testOperatorPage }) => {
     // 장비 목록으로 이동
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 첫 번째 장비의 상세 페이지로 이동
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
@@ -55,7 +54,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     }
 
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // URL에서 장비 ID 추출
     const url = testOperatorPage.url();
@@ -74,7 +72,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     } else {
       await ncLink.click();
     }
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 부적합 등록 버튼 클릭
     const registerButton = testOperatorPage.getByRole('button', { name: /부적합 등록/i });
@@ -100,7 +97,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
   }) => {
     // 장비 목록으로 이동
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 첫 번째 장비의 상세 페이지로 이동
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
@@ -110,7 +106,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     }
 
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // URL에서 장비 ID 추출
     const url = testOperatorPage.url();
@@ -123,7 +118,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 부적합 관리 페이지로 이동
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 부적합 등록 버튼 클릭
     const registerButton = testOperatorPage.getByRole('button', { name: /부적합 등록/i });
@@ -141,7 +135,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
       // 등록 버튼 클릭
       await testOperatorPage.getByRole('button', { name: /^등록$/ }).click();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 부적합 유형 배지가 표시되는지 확인
       await expect(testOperatorPage.getByText('손상')).toBeVisible();
@@ -152,7 +145,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     testOperatorPage,
   }) => {
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     if ((await detailLink.count()) === 0) {
@@ -161,7 +153,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     }
 
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const url = testOperatorPage.url();
     const match = url.match(/\/equipment\/([^\/]+)/);
@@ -173,7 +164,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 부적합 관리 페이지로 이동
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 부적합 등록 버튼 클릭
     const registerButton = testOperatorPage.getByRole('button', { name: /부적합 등록/i });
@@ -222,7 +212,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 2. 부적합 등록 (damage 유형)
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const registerButton = testOperatorPage.getByRole('button', { name: /부적합 등록/i });
     await registerButton.click();
@@ -235,7 +224,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 등록 버튼 클릭
     await testOperatorPage.getByRole('button', { name: /^등록$/ }).click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 부적합이 등록되었는지 확인
     await expect(testOperatorPage.getByText('E2E 워크플로우 테스트: 센서 파손')).toBeVisible();
@@ -243,7 +231,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 3. 장비 상태가 non_conforming으로 변경되었는지 확인
     await testOperatorPage.goto(`/equipment/${testEquipmentId}`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     await expect(testOperatorPage.getByText('부적합')).toBeVisible();
 
@@ -289,7 +276,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 5. 부적합이 자동으로 'corrected' 상태로 변경되었는지 확인
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     await expect(testOperatorPage.getByText('조치 완료')).toBeVisible();
     await expect(testOperatorPage.getByText('해결: 수리')).toBeVisible();
@@ -297,7 +283,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 6. 기술책임자로 부적합 종료
     await techManagerPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // 부적합 종료는 별도 API 호출 필요 (UI에 종료 버튼이 없다면)
     const closeResponse = await techManagerPage.request.patch(
@@ -319,7 +304,6 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 7. 장비 상태가 'available'로 복원되었는지 확인
     await techManagerPage.goto(`/equipment/${testEquipmentId}`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     await expect(techManagerPage.getByText('사용 가능')).toBeVisible();
 

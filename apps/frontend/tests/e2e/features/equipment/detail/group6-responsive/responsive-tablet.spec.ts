@@ -111,7 +111,6 @@ test.describe('Group 6: Responsive Design', () => {
 
     // 7. Rotate to landscape orientation (1024x768)
     await page.setViewportSize({ width: 1024, height: 768 });
-    await page.waitForTimeout(300); // Allow layout reflow
 
     // 8. Verify layout adjusts for landscape view
     await expect(mainContent).toBeVisible();
@@ -129,7 +128,6 @@ test.describe('Group 6: Responsive Design', () => {
     const calibrationTab = tabs.filter({ hasText: /교정|이력/ }).first();
     if (await calibrationTab.isVisible()) {
       await calibrationTab.click();
-      await page.waitForTimeout(300);
 
       // Verify tab activation (aria-selected or visual indicator)
       const isSelected = await calibrationTab.getAttribute('aria-selected');
@@ -138,7 +136,6 @@ test.describe('Group 6: Responsive Design', () => {
       // Click back to basic info tab
       const basicTab = tabs.first();
       await basicTab.click();
-      await page.waitForTimeout(300);
     }
 
     // Verify action buttons are still accessible in landscape
@@ -156,7 +153,6 @@ test.describe('Group 6: Responsive Design', () => {
 
     // Test responsiveness by switching back to portrait
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.waitForTimeout(300);
 
     // Verify page still renders correctly
     await expect(mainContent).toBeVisible();

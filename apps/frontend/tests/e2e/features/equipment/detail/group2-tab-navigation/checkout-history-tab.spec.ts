@@ -8,12 +8,10 @@ import { EQUIP_SPECTRUM_ANALYZER_SUW_E_ID } from '../../../../shared/constants/t
 test.describe('Tab Navigation', () => {
   test('Checkout history tab content', async ({ testOperatorPage: page }) => {
     await page.goto(`/equipment/${EQUIP_SPECTRUM_ANALYZER_SUW_E_ID}`);
-    await page.waitForLoadState('networkidle');
 
     // Click '반출 이력' tab
     const checkoutTab = page.locator('[role="tab"][aria-label="반출 이력 탭"]');
     await checkoutTab.click();
-    await page.waitForTimeout(1000);
 
     // Verify content loads
     const checkoutPanel = page.locator('[role="tabpanel"][aria-label="반출 이력 탭 패널"]');

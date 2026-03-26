@@ -28,13 +28,11 @@ test.describe('Group C: Search Functionality', () => {
   test.describe('11.1. Search input with debounce and URL update', () => {
     test('should debounce search input and update URL', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('스펙트럼');
 
       // 디바운스 대기 (300ms) + buffer
-      await testOperatorPage.waitForTimeout(500);
 
       // 브라우저 URL 업데이트 확인
       await testOperatorPage.waitForURL(/search=/, { timeout: 10000 });
@@ -49,13 +47,11 @@ test.describe('Group C: Search Functionality', () => {
 
     test('should update search on every keystroke after debounce', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
 
       // 첫 번째 입력: "분석"
       await searchInput.fill('분석');
-      await testOperatorPage.waitForTimeout(500);
 
       // Verify first search
       await testOperatorPage.waitForURL(/search=.*%EB%B6%84%EC%84%9D/, { timeout: 10000 });
@@ -64,7 +60,6 @@ test.describe('Group C: Search Functionality', () => {
 
       // 두 번째 입력: "분석기"
       await searchInput.fill('분석기');
-      await testOperatorPage.waitForTimeout(500);
 
       // Verify second search
       await testOperatorPage.waitForURL(/search=.*%EB%B6%84%EC%84%9D%EA%B8%B0/, { timeout: 10000 });
@@ -78,7 +73,6 @@ test.describe('Group C: Search Functionality', () => {
   test.describe('11.2. Search by management number', () => {
     test('should find equipment by management number', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 관리번호 형식: XXX-X YYYY (예: SUW-E 0001)
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -100,7 +94,6 @@ test.describe('Group C: Search Functionality', () => {
   test.describe('11.3. Search combined with filters', () => {
     test('should combine search with status filter', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 상태 필터 적용: 사용 가능
       const statusFilter = testOperatorPage.locator('#filter-status');
@@ -148,7 +141,6 @@ test.describe('Group C: Search Functionality', () => {
     test('should clear search when clicking X button', async ({ testOperatorPage }) => {
       // 검색어가 있는 상태로 시작
       await testOperatorPage.goto('/equipment?search=테스트');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 검색어 입력창에 값이 있는지 확인
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -159,7 +151,6 @@ test.describe('Group C: Search Functionality', () => {
       await clearButton.click();
 
       // Wait for URL to update (search parameter removed)
-      await testOperatorPage.waitForTimeout(500);
 
       // 브라우저 URL 확인
       await expect(testOperatorPage).not.toHaveURL(/search=/);
@@ -177,14 +168,12 @@ test.describe('Group C: Search Functionality', () => {
     test('should preserve other filters when clearing search', async ({ testOperatorPage }) => {
       // 검색어 + 상태 필터가 있는 상태
       await testOperatorPage.goto('/equipment?search=장비&status=available');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // X 버튼으로 검색어만 제거
       const clearButton = testOperatorPage.getByRole('button', { name: /검색.*지우기|clear/i });
       await clearButton.click();
 
       // Wait for URL to update
-      await testOperatorPage.waitForTimeout(500);
 
       // 🔥 SSOT 검증: search는 제거, status는 유지
       const currentUrl = new URL(testOperatorPage.url());
@@ -201,7 +190,6 @@ test.describe('Group C: Search Functionality', () => {
   test.describe('11.5. Search immediately with Enter key', () => {
     test('should search immediately when pressing Enter', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('분석기');
@@ -221,7 +209,6 @@ test.describe('Group C: Search Functionality', () => {
 
     test('should skip debounce when pressing Enter', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
 
@@ -245,7 +232,6 @@ test.describe('Group C: Search Functionality', () => {
   test.describe('11.6. Clear search with Escape key', () => {
     test('should clear search when pressing Escape', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?search=테스트장비');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
       await expect(searchInput).toHaveValue('테스트장비');
@@ -254,7 +240,6 @@ test.describe('Group C: Search Functionality', () => {
       await searchInput.press('Escape');
 
       // Wait for URL to update
-      await testOperatorPage.waitForTimeout(500);
 
       // 🔥 SSOT 검증: search 파라미터 제거
       const currentUrl = new URL(testOperatorPage.url());
@@ -271,14 +256,12 @@ test.describe('Group C: Search Functionality', () => {
 
     test('should blur input after pressing Escape', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('테스트');
       await searchInput.press('Escape');
 
       // 🔥 UX 검증: Escape 후 포커스 해제
-      await testOperatorPage.waitForTimeout(100);
       const isFocused = await searchInput.evaluate((el) => el === document.activeElement);
       expect(isFocused).toBe(false);
 
@@ -289,7 +272,6 @@ test.describe('Group C: Search Functionality', () => {
   test.describe('Additional: Search edge cases', () => {
     test('should handle empty search query', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?search=테스트');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 검색어를 지우고 Enter
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -310,7 +292,6 @@ test.describe('Group C: Search Functionality', () => {
 
     test('should handle special characters in search', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 특수문자 포함 검색
       const specialChars = 'SUW-E 0001';
@@ -332,7 +313,6 @@ test.describe('Group C: Search Functionality', () => {
     test('should reset page to 1 when searching', async ({ testOperatorPage }) => {
       // 2페이지에서 검색 시작
       await testOperatorPage.goto('/equipment?page=2');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('장비');

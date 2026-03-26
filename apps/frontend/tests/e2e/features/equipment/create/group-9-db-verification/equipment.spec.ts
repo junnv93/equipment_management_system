@@ -97,7 +97,6 @@ test.describe('DB 검증 통합 테스트', () => {
     console.log('✓ Equipment created with UUID:', equipmentId);
 
     // 4. Wait for DB transaction to commit
-    await siteAdminPage.waitForTimeout(2000);
 
     // 5. Verify equipment appears in list via backend API
     const equipmentListResponse = await siteAdminPage.request.get(

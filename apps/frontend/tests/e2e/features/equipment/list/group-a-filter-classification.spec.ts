@@ -22,7 +22,6 @@ test.describe('Group A: Classification Filter', () => {
   test.describe('6.1. Classification filter shows all options', () => {
     test('should display all classification options from SSOT', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 분류 필터 드롭다운 클릭 (Radix UI Select 찾기)
       const classificationFilter = testOperatorPage.locator('#filter-classification');
@@ -60,7 +59,6 @@ test.describe('Group A: Classification Filter', () => {
   test.describe('6.2. FCC EMC/RF classification filter updates URL and results', () => {
     test('should filter equipment by fcc_emc_rf classification', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 분류 필터 선택: FCC EMC/RF (Radix UI Select 찾기)
       const classificationFilter = testOperatorPage.locator('#filter-classification');
@@ -95,7 +93,6 @@ test.describe('Group A: Classification Filter', () => {
   test.describe('6.3. General EMC classification filter updates URL and results', () => {
     test('should filter equipment by general_emc classification', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 분류 필터 선택: General EMC (Radix UI Select 찾기)
       const classificationFilter = testOperatorPage.locator('#filter-classification');
@@ -138,7 +135,6 @@ test.describe('Group A: Classification Filter', () => {
     }) => {
       // 필터가 적용된 상태로 시작
       await testOperatorPage.goto('/equipment?classification=fcc_emc_rf');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 필터 뱃지 확인
       const filterBadge = testOperatorPage.getByText(/분류:\s*FCC EMC\/RF/);
@@ -150,7 +146,6 @@ test.describe('Group A: Classification Filter', () => {
       await testOperatorPage.getByRole('option', { name: '모든 분류', exact: true }).click();
 
       // Wait for URL to update (parameter removed)
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 검증: classification 파라미터 제거
       const currentUrl = testOperatorPage.url();
@@ -168,7 +163,6 @@ test.describe('Group A: Classification Filter', () => {
 
     test('should display multiple classifications without filter', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });

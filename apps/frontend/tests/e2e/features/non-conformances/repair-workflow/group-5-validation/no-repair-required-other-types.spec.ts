@@ -53,7 +53,6 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // Wait a moment to ensure no dialog appears
-    await page.waitForTimeout(500);
 
     // 4. Verify no confirmation dialog appears
     // These types can be corrected without repair
@@ -130,7 +129,6 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     });
 
     await statusSelect.selectOption(NCSVal.CLOSED);
-    await page.waitForTimeout(500);
 
     expect(dialogTriggered).toBe(false);
   });
@@ -162,7 +160,6 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     await statusSelect.selectOption(NCSVal.CORRECTED);
 
     // No dialog should appear
-    await page.waitForTimeout(500);
 
     const selectedValue = await statusSelect.inputValue();
     expect(selectedValue).toBe(NCSVal.CORRECTED);

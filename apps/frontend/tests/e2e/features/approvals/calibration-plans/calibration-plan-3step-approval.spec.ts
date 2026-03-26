@@ -25,7 +25,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
   test.describe('목록 페이지 접근 및 필터', () => {
     test('기술책임자는 교정계획서 목록을 조회할 수 있다', async ({ techManagerPage }) => {
       await techManagerPage.goto('/calibration-plans');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 페이지 제목 확인 (여러 개 있을 수 있으므로 first() 사용)
       await expect(
@@ -38,7 +37,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
 
     test('상태 필터에 검토 대기 옵션이 표시된다', async ({ techManagerPage }) => {
       await techManagerPage.goto('/calibration-plans');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 상태 필터 드롭다운 열기
       const statusFilter = techManagerPage
@@ -59,7 +57,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
   test.describe('역할별 권한 테스트', () => {
     test('기술책임자는 계획서를 작성하고 검토 요청할 수 있다', async ({ techManagerPage }) => {
       await techManagerPage.goto('/calibration-plans');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 새 계획서 작성 버튼 확인 (여러 개 있을 수 있으므로 first() 사용)
       const createButton = techManagerPage.getByRole('link', { name: /새 계획서 작성/i }).first();
@@ -68,7 +65,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
 
     test('품질책임자는 계획서 목록을 조회할 수 있다', async ({ qualityManagerPage }) => {
       await qualityManagerPage.goto('/calibration-plans');
-      await qualityManagerPage.waitForLoadState('networkidle');
 
       // 페이지 제목 확인 (여러 개 있을 수 있으므로 first() 사용)
       await expect(
@@ -78,7 +74,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
 
     test('시험소장은 모든 상태의 계획서를 조회할 수 있다', async ({ siteAdminPage }) => {
       await siteAdminPage.goto('/calibration-plans');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 페이지 제목 확인 (여러 개 있을 수 있으므로 first() 사용)
       await expect(
@@ -95,7 +90,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     test('상세 페이지에서 3단계 승인 타임라인이 표시된다', async ({ techManagerPage }) => {
       // 계획서 목록으로 이동
       await techManagerPage.goto('/calibration-plans');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = techManagerPage.getByRole('button', { name: /상세/i }).first();
@@ -106,7 +100,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 3단계 타임라인 확인
       await expect(techManagerPage.getByText('1. 작성')).toBeVisible();
@@ -126,7 +119,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     }) => {
       // 작성 중 상태 필터로 계획서 목록 조회
       await techManagerPage.goto('/calibration-plans?status=draft');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = techManagerPage.getByRole('button', { name: /상세/i }).first();
@@ -137,7 +129,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 검토 요청 버튼 확인
       const submitButton = techManagerPage.getByRole('button', { name: /검토 요청/i });
@@ -149,7 +140,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     }) => {
       // 확인 대기 상태 필터로 계획서 목록 조회
       await qualityManagerPage.goto('/calibration-plans?status=pending_review');
-      await qualityManagerPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = qualityManagerPage.getByRole('button', { name: /상세/i }).first();
@@ -160,7 +150,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await qualityManagerPage.waitForLoadState('networkidle');
 
       // 타임라인 내 확인 완료 버튼 확인
       const reviewButton = qualityManagerPage.getByRole('button', { name: /확인 완료/i });
@@ -176,7 +165,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     }) => {
       // 승인 대기 상태 필터로 계획서 목록 조회
       await siteAdminPage.goto('/calibration-plans?status=pending_approval');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = siteAdminPage.getByRole('button', { name: /상세/i }).first();
@@ -187,7 +175,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 최종 승인 버튼 확인
       const approveButton = siteAdminPage.getByRole('button', { name: /최종 승인/i });
@@ -203,7 +190,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     test('반려된 계획서에서 반려 단계와 사유가 표시된다', async ({ techManagerPage }) => {
       // 반려됨 상태 필터로 계획서 목록 조회
       await techManagerPage.goto('/calibration-plans?status=rejected');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = techManagerPage.getByRole('button', { name: /상세/i }).first();
@@ -214,7 +200,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 반려 알림 확인
       await expect(techManagerPage.getByText(/반려됨/i)).toBeVisible();
@@ -227,7 +212,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     test('반려된 계획서에서 기술책임자는 재제출 버튼을 볼 수 있다', async ({ techManagerPage }) => {
       // 반려됨 상태 필터로 계획서 목록 조회
       await techManagerPage.goto('/calibration-plans?status=rejected');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = techManagerPage.getByRole('button', { name: /상세/i }).first();
@@ -238,7 +222,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 검토 요청 버튼이 표시되어야 함 (반려된 계획서 재제출)
       const submitButton = techManagerPage.getByRole('button', { name: /검토 요청/i });
@@ -252,7 +235,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     }) => {
       // 작성 중 상태 필터로 계획서 목록 조회
       await techManagerPage.goto('/calibration-plans?status=draft');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = techManagerPage.getByRole('button', { name: /상세/i }).first();
@@ -263,7 +245,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 검토 요청 버튼 클릭
       const submitButton = techManagerPage.getByRole('button', { name: /검토 요청/i });
@@ -290,7 +271,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
     test('반려 다이얼로그에서 사유 입력 없이 반려할 수 없다', async ({ qualityManagerPage }) => {
       // 확인 대기 상태 필터로 계획서 목록 조회
       await qualityManagerPage.goto('/calibration-plans?status=pending_review');
-      await qualityManagerPage.waitForLoadState('networkidle');
 
       // 첫 번째 계획서 상세 보기
       const detailButton = qualityManagerPage.getByRole('button', { name: /상세/i }).first();
@@ -301,7 +281,6 @@ test.describe('Calibration Plan 3-Step Approval Workflow', () => {
       }
 
       await detailButton.click();
-      await qualityManagerPage.waitForLoadState('networkidle');
 
       // 반려 링크 클릭 (타임라인 내 텍스트 링크)
       const rejectLink = qualityManagerPage.getByText('반려').first();

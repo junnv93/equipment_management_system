@@ -23,13 +23,11 @@ test.describe('Equipment Information Display', () => {
   test('Display basic equipment information', async ({ testOperatorPage }) => {
     // 1. Navigate to equipment detail page
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Find first equipment and navigate to detail page
     const firstDetailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     await expect(firstDetailLink).toBeVisible();
     await firstDetailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Verify page title displays equipment name
     await expect(testOperatorPage.locator('h1')).toBeVisible();

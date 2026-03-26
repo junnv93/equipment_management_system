@@ -68,7 +68,6 @@ test.describe('Database State Verification', () => {
     await siteAdminPage.goto(`/admin/approvals?tab=disposal_final&_=${cacheBuster}`);
 
     // 2. Wait for page load
-    await siteAdminPage.waitForLoadState('networkidle');
     await expect(siteAdminPage.locator('h1:has-text("승인 관리")')).toBeVisible();
 
     // 3. Wait for the approval list to render

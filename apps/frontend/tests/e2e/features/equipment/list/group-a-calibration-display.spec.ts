@@ -155,7 +155,6 @@ test.describe('Group A: Calibration Date Display', () => {
     test('should hide calibration date for disposed equipment', async ({ testOperatorPage }) => {
       // disposed 상태로 필터링
       await testOperatorPage.goto('/equipment?status=disposed');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // React Query fetch 완료 대기: 데이터 행 또는 빈 상태 메시지가 나타날 때까지
       const equipmentRow = testOperatorPage.locator('[data-testid="equipment-row"]').first();

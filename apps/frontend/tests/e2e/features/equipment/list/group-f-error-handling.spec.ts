@@ -34,7 +34,6 @@ test.describe('Group F: Error Handling', () => {
       // 3. Backend test endpoint that simulates errors
 
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForTimeout(1000);
 
       // ErrorAlert component
       const errorAlert = testOperatorPage.locator('[role="alert"]');
@@ -72,7 +71,6 @@ test.describe('Group F: Error Handling', () => {
       // 3. Backend test endpoint that simulates errors then recovery
 
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForTimeout(1000);
 
       // ErrorAlert displayed
       const errorAlert = testOperatorPage.locator('[role="alert"]');
@@ -81,8 +79,6 @@ test.describe('Group F: Error Handling', () => {
       // Click retry button
       const retryButton = testOperatorPage.getByRole('button', { name: /다시 시도/i });
       await retryButton.click();
-
-      await testOperatorPage.waitForTimeout(1000);
 
       // Error disappears and data is shown
       await expect(errorAlert).toBeHidden();
@@ -109,7 +105,6 @@ test.describe('Group F: Error Handling', () => {
     // 3. Network throttling/offline mode testing
 
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForTimeout(2000);
 
     // ErrorAlert displayed
     const errorAlert = testOperatorPage.locator('[role="alert"]');
@@ -125,7 +120,6 @@ test.describe('Group F: Error Handling', () => {
 
     // Click retry (after network recovery)
     await retryButton.click();
-    await testOperatorPage.waitForTimeout(1000);
 
     // Error disappears and data is shown
     await expect(errorAlert).toBeHidden();

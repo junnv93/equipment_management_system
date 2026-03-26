@@ -56,14 +56,12 @@ test.describe('Tab Navigation and URL Sync', () => {
     await techManagerPage.goto(`/admin/approvals?tab=disposal_review&_=${timestamp}`);
 
     // 9. Verify '폐기 검토' tab is active on page load
-    await techManagerPage.waitForTimeout(1000); // Allow page to render
     await expect(disposalReviewTab).toHaveAttribute('aria-selected', 'true');
     await expect(disposalReviewTab).toHaveAttribute('data-state', 'active');
     console.log('✅ Step 9: "폐기 검토" tab is active when navigating directly with URL param');
 
     // 10. Test bidirectional sync - Change URL param programmatically (navigate to ?tab=checkout)
     await techManagerPage.goto(`/admin/approvals?tab=checkout&_=${Date.now()}`);
-    await techManagerPage.waitForTimeout(1000);
 
     // Verify '반출' tab becomes active
     const checkoutTab = techManagerPage.getByRole('tab', { name: /반출/ });

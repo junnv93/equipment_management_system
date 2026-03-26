@@ -37,7 +37,6 @@ async function setLocale(page: import('@playwright/test').Page, locale: 'ko' | '
 test.describe('TC-i18n-01: 기본 로케일 한국어', () => {
   test('대시보드 — 한국어 텍스트 렌더링', async ({ testOperatorPage: page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // 핵심 UI 섹션 — 한국어
     await expect(page.getByText('빠른 액션')).toBeVisible();
@@ -46,7 +45,6 @@ test.describe('TC-i18n-01: 기본 로케일 한국어', () => {
 
   test('네비게이션 — 한국어 메뉴명', async ({ testOperatorPage: page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // 사이드바 메뉴 — 한국어
     await expect(page.getByRole('link', { name: '대시보드' })).toBeVisible();
@@ -56,7 +54,6 @@ test.describe('TC-i18n-01: 기본 로케일 한국어', () => {
 
   test('장비 목록 — 한국어 상태 배지', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 페이지 제목 한국어
     await expect(page.getByRole('heading').first()).toBeVisible();
@@ -77,7 +74,6 @@ test.describe('TC-i18n-02: 영어 전환 — 대시보드', () => {
     await setLocale(page, 'en');
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // 영어 텍스트 확인
     await expect(page.getByText('Quick Actions')).toBeVisible();
@@ -91,7 +87,6 @@ test.describe('TC-i18n-02: 영어 전환 — 대시보드', () => {
   test('영어 — 통계 섹션 텍스트 확인', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // 대시보드 탭 영어
     const bodyText = await page.locator('body').textContent();
@@ -106,7 +101,6 @@ test.describe('TC-i18n-03: 영어 전환 — 네비게이션', () => {
   test('사이드바 메뉴명이 영어로 변환', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // 네비게이션 영어 확인
     await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
@@ -127,7 +121,6 @@ test.describe('TC-i18n-04: 영어 전환 — 장비 목록', () => {
   test('장비 목록 UI 전체가 영어', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 영어 전용 고정 UI 텍스트 확인 (데이터 유무와 무관)
     const mainText = await page.locator('main').textContent();
@@ -153,7 +146,6 @@ test.describe('TC-i18n-04: 영어 전환 — 장비 목록', () => {
   test('장비 목록 — 검색 플레이스홀더 영어', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 검색 입력 placeholder 확인
     const searchInput = page
@@ -178,7 +170,6 @@ test.describe('TC-i18n-05: 영어 전환 — 설정 페이지', () => {
   test('설정 페이지 전체가 영어', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
 
     // 설정 페이지 영어 확인
     const bodyText = await page.locator('body').textContent();
@@ -191,7 +182,6 @@ test.describe('TC-i18n-05: 영어 전환 — 설정 페이지', () => {
   }) => {
     await setLocale(page, 'en');
     await page.goto('/settings/display');
-    await page.waitForLoadState('networkidle');
 
     // "Display Settings" 텍스트 확인
     await expect(page.getByText('Display Settings')).toBeVisible();
@@ -212,7 +202,6 @@ test.describe('TC-i18n-06: 공통 버튼 번역', () => {
   test('한국어 — Save=저장, Cancel=취소, Approve=승인', async ({ techManagerPage: page }) => {
     // 반출 목록 페이지 (승인/반려 버튼 있는 페이지)
     await page.goto('/approvals');
-    await page.waitForLoadState('networkidle');
 
     const bodyText = await page.locator('body').textContent();
     // 승인/반려 버튼이 한국어로 렌더링
@@ -223,7 +212,6 @@ test.describe('TC-i18n-06: 공통 버튼 번역', () => {
   test('영어 — 승인 페이지 버튼 영어', async ({ techManagerPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/approvals');
-    await page.waitForLoadState('networkidle');
 
     const bodyText = await page.locator('body').textContent();
     // 영어 액션이 있어야 함
@@ -243,7 +231,6 @@ test.describe('TC-i18n-07: Settings UI를 통한 언어 전환', () => {
   }) => {
     // 1. 설정 > 표시 설정으로 이동 (한국어 상태)
     await page.goto('/settings/display');
-    await page.waitForLoadState('networkidle');
 
     // 한국어 상태 확인
     await expect(page.getByText('표시 설정')).toBeVisible();
@@ -266,7 +253,6 @@ test.describe('TC-i18n-07: Settings UI를 통한 언어 전환', () => {
       await saveButton.click();
 
       // 5. 페이지 리프레시 후 영어 확인
-      await page.waitForLoadState('networkidle');
 
       // router.refresh() 완료 대기 후 영어 텍스트 확인
       await expect(page.getByText('Display Settings')).toBeVisible({ timeout: 10000 });
@@ -274,7 +260,6 @@ test.describe('TC-i18n-07: Settings UI를 통한 언어 전환', () => {
       // select가 다른 방식으로 구현된 경우 — 쿠키 직접 확인으로 대체
       await setLocale(page, 'en');
       await page.reload();
-      await page.waitForLoadState('networkidle');
       await expect(page.getByText('Display Settings')).toBeVisible();
     }
   });
@@ -283,14 +268,12 @@ test.describe('TC-i18n-07: Settings UI를 통한 언어 전환', () => {
     // Settings에서 영어로 전환 후 다른 페이지로 이동해도 영어 유지
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // 대시보드 영어
     await expect(page.getByText('Quick Actions')).toBeVisible();
 
     // 장비 목록으로 이동
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 장비 목록도 영어 유지
     const bodyText = await page.locator('body').textContent();
@@ -307,13 +290,11 @@ test.describe('TC-i18n-08: 한국어 복원', () => {
     // 1. 영어로 전환
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Quick Actions')).toBeVisible();
 
     // 2. 한국어로 복원
     await setLocale(page, 'ko');
     await page.reload();
-    await page.waitForLoadState('networkidle');
 
     // 3. 한국어 복원 확인
     await expect(page.getByText('빠른 액션')).toBeVisible();
@@ -328,14 +309,12 @@ test.describe('TC-i18n-09: Locale 영속성', () => {
   test('영어 설정 후 새로고침해도 영어 유지', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // 첫 로드 영어 확인
     await expect(page.getByText('Quick Actions')).toBeVisible();
 
     // 새로고침
     await page.reload();
-    await page.waitForLoadState('networkidle');
 
     // 새로고침 후에도 영어 유지 (쿠키 영속성)
     await expect(page.getByText('Quick Actions')).toBeVisible();
@@ -344,16 +323,13 @@ test.describe('TC-i18n-09: Locale 영속성', () => {
   test('영어 설정 후 다른 페이지 navigate해도 영어 유지', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // Settings 페이지로 이동
     await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Settings')).toBeVisible();
 
     // Equipment로 이동
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).toMatch(/Equipment|Available|Register/);
   });
@@ -373,7 +349,6 @@ test.describe('TC-i18n-10: 번역 키 누락 감지', () => {
 
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // next-intl 번역 키 누락 에러 필터
     const intlErrors = errors.filter(
@@ -392,7 +367,6 @@ test.describe('TC-i18n-10: 번역 키 누락 감지', () => {
 
     await setLocale(page, 'en');
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     const intlErrors = errors.filter(
       (e) => e.includes('MISSING_MESSAGE') || e.includes('translation') || e.includes('intl')
@@ -405,7 +379,6 @@ test.describe('TC-i18n-10: 번역 키 누락 감지', () => {
   }) => {
     await setLocale(page, 'en');
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     const bodyText = await page.locator('body').textContent();
 
@@ -420,7 +393,6 @@ test.describe('TC-i18n-10: 번역 키 누락 감지', () => {
   test('영어 — 장비 목록 페이지에 번역 키 원문 노출 없음', async ({ testOperatorPage: page }) => {
     await setLocale(page, 'en');
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     const bodyText = await page.locator('body').textContent();
     expect(bodyText).not.toMatch(

@@ -31,10 +31,8 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 2. Navigate to repair history page /equipment/{id}/repair-history
     await testOperatorPage.goto(`/equipment/${equipmentId}/repair-history`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Wait for page to fully load
-    await testOperatorPage.waitForTimeout(1000);
 
     // 3. Verify 'Add Repair History' button is visible
     const addButton = testOperatorPage.getByRole('button', {
@@ -45,7 +43,6 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 4. Click button to open dialog
     await addButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 5. Verify form fields are accessible
     // Check for repair date field

@@ -29,7 +29,6 @@ test.describe('Group C: Pagination', () => {
   test.describe('12.1. Navigate to next page', () => {
     test('should load next page when clicking next button', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible (indicates page is loaded)
       const nextButton = testOperatorPage.getByRole('button', { name: '다음 페이지' });
@@ -63,7 +62,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should disable next button on last page', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       const nextButton = testOperatorPage.getByRole('button', { name: '다음 페이지' });
@@ -98,7 +96,6 @@ test.describe('Group C: Pagination', () => {
   test.describe('12.2. Navigate to specific page number', () => {
     test('should navigate to page 3 when clicking page number', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -134,7 +131,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should highlight current page number', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       const pagination = testOperatorPage.getByRole('navigation', { name: '페이지 탐색' });
@@ -175,7 +171,6 @@ test.describe('Group C: Pagination', () => {
     }) => {
       // 2페이지에서 시작 (3페이지는 존재하지 않을 수 있음)
       await testOperatorPage.goto('/equipment?page=2');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -211,7 +206,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should navigate to last page when clicking last button', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -245,7 +239,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should disable first/previous buttons on first page', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?page=1');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -266,7 +259,6 @@ test.describe('Group C: Pagination', () => {
   test.describe('12.4. Change page size', () => {
     test('should change page size to 50', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -296,7 +288,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should recalculate total pages when changing page size', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -318,7 +309,6 @@ test.describe('Group C: Pagination', () => {
       await testOperatorPage.waitForURL(/pageSize=50/, { timeout: 10000 });
 
       // Wait for page to reload
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Verify the pagination info has changed (range should be larger now)
       const updatedText = await paginationNav.textContent();
@@ -330,7 +320,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should reset to page 1 when changing page size', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?page=2&pageSize=20');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -364,7 +353,6 @@ test.describe('Group C: Pagination', () => {
   test.describe('12.5. Display pagination info', () => {
     test('should display total count and page info', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       const paginationNav = testOperatorPage.getByRole('navigation', { name: '페이지 탐색' });
@@ -382,7 +370,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should update pagination info when changing pages', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       const paginationNav = testOperatorPage.getByRole('navigation', { name: '페이지 탐색' });
@@ -422,7 +409,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should calculate total pages correctly', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       const paginationNav = testOperatorPage.getByRole('navigation', { name: '페이지 탐색' });
@@ -442,7 +428,6 @@ test.describe('Group C: Pagination', () => {
     test('should reset to page 1 when applying status filter', async ({ testOperatorPage }) => {
       // 2페이지에서 시작
       await testOperatorPage.goto('/equipment?page=2');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       await testOperatorPage
@@ -469,14 +454,12 @@ test.describe('Group C: Pagination', () => {
     test('should reset to page 1 when applying search', async ({ testOperatorPage }) => {
       // 2페이지에서 시작
       await testOperatorPage.goto('/equipment?page=2');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 검색어 입력
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('장비');
 
       // Wait for debounce (300ms) + some buffer
-      await testOperatorPage.waitForTimeout(500);
 
       // Wait for URL to update with search parameter
       await testOperatorPage.waitForURL(/search=/, { timeout: 10000 });
@@ -494,10 +477,8 @@ test.describe('Group C: Pagination', () => {
       // Start by simulating being on page 2 with URL parameter only
       // We don't actually navigate to page 2 since lab_manager might not have enough data
       await siteAdminPage.goto('/equipment?page=2');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Wait for page to stabilize
-      await siteAdminPage.waitForTimeout(1000);
 
       // Check if site filter exists (only for users with multi-site access)
       const siteFilter = siteAdminPage.locator('#filter-site');
@@ -512,7 +493,6 @@ test.describe('Group C: Pagination', () => {
       // 사이트 필터 적용
       await siteFilter.click();
       // Wait for dropdown to open
-      await siteAdminPage.waitForTimeout(300);
 
       // Try to click the option with error handling
       try {
@@ -537,7 +517,6 @@ test.describe('Group C: Pagination', () => {
     test('should preserve page number when sorting', async ({ testOperatorPage }) => {
       // 2페이지에서 시작
       await testOperatorPage.goto('/equipment?page=2');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 정렬 변경 (장비명 정렬)
       const nameHeader = testOperatorPage.getByRole('button', { name: /장비명.*정렬/i });
@@ -560,11 +539,9 @@ test.describe('Group C: Pagination', () => {
       // Try to navigate to a very high page number directly
       const invalidPage = 999;
       await testOperatorPage.goto(`/equipment?page=${invalidPage}`);
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // The page should still load - either showing empty results or redirecting to a valid page
       // Wait a bit for any potential redirect or error handling
-      await testOperatorPage.waitForTimeout(1000);
 
       // Verify the page didn't crash - check for any content
       const hasContent = await testOperatorPage.locator('body').isVisible();
@@ -580,7 +557,6 @@ test.describe('Group C: Pagination', () => {
 
     test('should handle zero or negative page numbers', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?page=0');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Verify pagination is visible (page loaded successfully)
       const paginationNav = testOperatorPage.getByRole('navigation', { name: '페이지 탐색' });
@@ -596,7 +572,6 @@ test.describe('Group C: Pagination', () => {
     test('should maintain filters when navigating pages', async ({ testOperatorPage }) => {
       // 필터가 있는 상태에서 페이지 이동 - use a filter that gives multiple pages of results
       await testOperatorPage.goto('/equipment?status=available');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for pagination to be visible
       const paginationNav = testOperatorPage.getByRole('navigation', { name: '페이지 탐색' });
@@ -636,7 +611,6 @@ test.describe('Group C: Pagination', () => {
     }) => {
       // 검색 결과가 없는 검색어
       await testOperatorPage.goto('/equipment?search=존재하지않는장비명123456');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // UI에 빈 상태 표시 - check for text content
       // When there are no results, pagination is hidden (returns null)

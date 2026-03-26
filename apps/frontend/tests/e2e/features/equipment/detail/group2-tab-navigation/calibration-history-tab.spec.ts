@@ -11,14 +11,12 @@ test.describe('Tab Navigation', () => {
   test('Calibration history tab content', async ({ testOperatorPage: page }) => {
     // 1. Navigate to equipment with calibration history
     await page.goto(`/equipment/${EQUIP_SPECTRUM_ANALYZER_SUW_E_ID}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. Click '교정 이력' tab
     const calibrationTab = page.locator('[role="tab"][aria-label="교정 이력 탭"]');
     await calibrationTab.click();
 
     // 3. Wait for content to load
-    await page.waitForTimeout(1000);
 
     // 4. Verify table displays or no-data message
     const calibrationPanel = page.locator('[role="tabpanel"][aria-label="교정 이력 탭 패널"]');

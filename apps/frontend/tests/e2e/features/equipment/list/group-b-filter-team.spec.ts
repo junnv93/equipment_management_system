@@ -20,7 +20,6 @@ test.describe('Group B: Team Filter', () => {
   test.describe('8.1. Team filter loads options dynamically from API', () => {
     test('should load teams from API for test_engineer', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 팀 필터 드롭다운 클릭
       const teamFilter = testOperatorPage.locator('#filter-team');
@@ -28,7 +27,6 @@ test.describe('Group B: Team Filter', () => {
       await teamFilter.click();
 
       // Wait for options to load
-      await testOperatorPage.waitForTimeout(500);
 
       // UI 확인: "모든 팀" 옵션 표시
       await expect(testOperatorPage.getByRole('option', { name: /모든 팀/i })).toBeVisible();
@@ -45,14 +43,12 @@ test.describe('Group B: Team Filter', () => {
 
     test('should load all teams for lab_manager', async ({ siteAdminPage }) => {
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       const teamFilter = siteAdminPage.locator('#filter-team');
       await expect(teamFilter).toBeVisible();
       await teamFilter.click();
 
       // Wait for options to load
-      await siteAdminPage.waitForTimeout(500);
 
       // UI 확인: "모든 팀" 옵션 표시
       await expect(siteAdminPage.getByRole('option', { name: /모든 팀/i })).toBeVisible();
@@ -69,20 +65,17 @@ test.describe('Group B: Team Filter', () => {
 
     test('should update teams when site filter changes', async ({ siteAdminPage }) => {
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 1. 사이트 필터 선택: 수원랩
       const siteFilter = siteAdminPage.locator('#filter-site');
       await siteFilter.click();
       await siteAdminPage.getByRole('option', { name: /수원랩/ }).click();
-      await siteAdminPage.waitForTimeout(500);
 
       // 2. 팀 필터 열기
       const teamFilter = siteAdminPage.locator('#filter-team');
       await teamFilter.click();
 
       // Wait for options to load
-      await siteAdminPage.waitForTimeout(500);
 
       // UI 확인: 팀 옵션이 표시됨
       await expect(siteAdminPage.getByRole('option', { name: /모든 팀/i })).toBeVisible();
@@ -94,14 +87,12 @@ test.describe('Group B: Team Filter', () => {
   test.describe('8.2. Selecting team filter updates URL', () => {
     test('should filter equipment by selected team', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 팀 필터 열기
       const teamFilter = testOperatorPage.locator('#filter-team');
       await teamFilter.click();
 
       // Wait for options to load
-      await testOperatorPage.waitForTimeout(500);
 
       // 첫 번째 팀 선택 (모든 팀 제외)
       const teamOptions = testOperatorPage.getByRole('option').filter({
@@ -143,12 +134,9 @@ test.describe('Group B: Team Filter', () => {
     test('should remove team filter when selecting "모든 팀"', async ({ testOperatorPage }) => {
       // 먼저 팀 필터 적용
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const teamFilter = testOperatorPage.locator('#filter-team');
       await teamFilter.click();
-
-      await testOperatorPage.waitForTimeout(500);
 
       const teamOptions = testOperatorPage.getByRole('option').filter({
         hasNotText: '모든 팀',
@@ -168,7 +156,6 @@ test.describe('Group B: Team Filter', () => {
         await testOperatorPage.getByRole('option', { name: /모든 팀/i }).click();
 
         // Wait for URL to update
-        await testOperatorPage.waitForTimeout(500);
 
         // URL 검증: teamId 파라미터 제거
         const currentUrl = testOperatorPage.url();
@@ -181,19 +168,15 @@ test.describe('Group B: Team Filter', () => {
 
     test('should combine team filter with other filters', async ({ siteAdminPage }) => {
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 1. 상태 필터 적용
       const statusFilter = siteAdminPage.locator('#filter-status');
       await statusFilter.click();
       await siteAdminPage.getByRole('option', { name: '사용 가능' }).click();
-      await siteAdminPage.waitForTimeout(500);
 
       // 2. 팀 필터 적용
       const teamFilter = siteAdminPage.locator('#filter-team');
       await teamFilter.click();
-
-      await siteAdminPage.waitForTimeout(500);
 
       const teamOptions = siteAdminPage.getByRole('option').filter({
         hasNotText: '모든 팀',
@@ -227,12 +210,9 @@ test.describe('Group B: Team Filter', () => {
   test.describe('Additional: Team filter edge cases', () => {
     test('should handle case when team has no equipment', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const teamFilter = testOperatorPage.locator('#filter-team');
       await teamFilter.click();
-
-      await testOperatorPage.waitForTimeout(500);
 
       const teamOptions = testOperatorPage.getByRole('option').filter({
         hasNotText: '모든 팀',
@@ -246,7 +226,6 @@ test.describe('Group B: Team Filter', () => {
         await lastTeamOption.click();
 
         // Wait for table to load
-        await testOperatorPage.waitForTimeout(1000);
 
         // 빈 상태 메시지나 필터 초기화 버튼이 있는지 확인
         const emptyMessage =
@@ -267,12 +246,9 @@ test.describe('Group B: Team Filter', () => {
 
     test('should maintain team filter across pagination', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const teamFilter = testOperatorPage.locator('#filter-team');
       await teamFilter.click();
-
-      await testOperatorPage.waitForTimeout(500);
 
       const teamOptions = testOperatorPage.getByRole('option').filter({
         hasNotText: '모든 팀',
@@ -303,7 +279,6 @@ test.describe('Group B: Team Filter', () => {
           await nextButton.click();
 
           // Wait for page to update
-          await testOperatorPage.waitForTimeout(1000);
 
           // 팀 필터 유지 확인
           const newUrl = testOperatorPage.url();
@@ -319,19 +294,15 @@ test.describe('Group B: Team Filter', () => {
 
     test('should handle team filter with search query', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 검색어 입력
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('분석');
       await searchInput.press('Enter');
-      await testOperatorPage.waitForTimeout(500);
 
       // 팀 필터 적용
       const teamFilter = testOperatorPage.locator('#filter-team');
       await teamFilter.click();
-
-      await testOperatorPage.waitForTimeout(500);
 
       const teamOptions = testOperatorPage.getByRole('option').filter({
         hasNotText: '모든 팀',
@@ -343,7 +314,6 @@ test.describe('Group B: Team Filter', () => {
         await teamOptions.first().click();
 
         // Wait for URL to update
-        await testOperatorPage.waitForTimeout(1000);
 
         // URL 검증: 검색어와 팀 필터 모두 적용
         const currentUrl = testOperatorPage.url();

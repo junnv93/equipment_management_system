@@ -23,7 +23,6 @@ test.describe('Non-Conformance Banner Tests - Seed Setup', () => {
   test('Verify test equipment exists with non-conformance', async ({ siteAdminPage }) => {
     // Navigate to equipment list
     await siteAdminPage.goto('/equipment');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Verify page loaded
     await expect(siteAdminPage.locator('h1')).toContainText(/장비/);
@@ -35,12 +34,10 @@ test.describe('Non-Conformance Banner Tests - Seed Setup', () => {
       .first();
     if (await statusFilter.isVisible()) {
       await statusFilter.click();
-      await siteAdminPage.waitForTimeout(300);
 
       const ncOption = siteAdminPage.getByRole('option', { name: /부적합/i });
       if (await ncOption.isVisible()) {
         await ncOption.click();
-        await siteAdminPage.waitForTimeout(500);
       }
     }
 

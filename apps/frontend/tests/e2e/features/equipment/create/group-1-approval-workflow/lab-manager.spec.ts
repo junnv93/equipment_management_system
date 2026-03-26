@@ -19,7 +19,6 @@ test.describe('역할별 승인 워크플로우 - 시험소 관리자', () => {
   test('시험소 관리자는 장비를 직접 등록할 수 있다', async ({ siteAdminPage }) => {
     // 1. siteAdminPage로 /equipment/create 페이지 이동
     await siteAdminPage.goto('/equipment/create');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Verify page loaded
     await expect(siteAdminPage.locator('h1')).toContainText('장비 등록');
@@ -38,19 +37,14 @@ test.describe('역할별 승인 워크플로우 - 시험소 관리자', () => {
     const siteCombobox = siteAdminPage.getByRole('combobox', { name: '사이트 *' });
     await expect(siteCombobox).toBeEnabled();
     await siteCombobox.click();
-    await siteAdminPage.waitForTimeout(200); // Wait for dropdown to open
     await siteAdminPage.getByRole('option', { name: /수원.*SUW/ }).click();
-    await siteAdminPage.waitForTimeout(300); // Wait for dropdown to close and state update
     console.log('✓ Site dropdown is enabled for lab_manager (can select any site)');
 
     // 팀 선택: 시험소 관리자는 모든 팀을 자유롭게 선택 가능 (enabled)
-    await siteAdminPage.waitForTimeout(500); // Wait for teams to load
     const teamCombobox = siteAdminPage.getByRole('combobox', { name: '팀 *' });
     await expect(teamCombobox).toBeEnabled();
     await teamCombobox.click();
-    await siteAdminPage.waitForTimeout(200); // Wait for dropdown to open
     await siteAdminPage.getByRole('option').first().click();
-    await siteAdminPage.waitForTimeout(300); // Wait for dropdown to close
     console.log('✓ Team dropdown is enabled for lab_manager (can select any team)');
 
     // 관리번호 일련번호: '1003'
@@ -95,7 +89,6 @@ test.describe('역할별 승인 워크플로우 - 시험소 관리자', () => {
 
     // 5. 승인 확인 모달 없이 바로 처리됨 확인
     // Wait a moment to ensure no modal appears
-    await siteAdminPage.waitForTimeout(500);
 
     // Verify no approval confirmation modal
     const modal = siteAdminPage.locator('[role="dialog"]').filter({ hasText: /승인|확인/i });

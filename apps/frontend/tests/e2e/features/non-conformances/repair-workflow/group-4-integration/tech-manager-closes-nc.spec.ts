@@ -35,12 +35,10 @@ test.describe('Full Workflow Integration', () => {
     // 2. Navigate to NC management page
     // First, find equipment with NC
     await techManagerPage.goto('/equipment');
-    await techManagerPage.waitForLoadState('networkidle');
 
     const firstDetailLink = techManagerPage.getByRole('link', { name: /상세/i }).first();
     await expect(firstDetailLink).toBeVisible();
     await firstDetailLink.click();
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = techManagerPage.url();
@@ -53,7 +51,6 @@ test.describe('Full Workflow Integration', () => {
 
     // Navigate to NC management page
     await techManagerPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // 3. Find corrected NC with repair link
     const correctedNCBadge = techManagerPage.getByText('조치 완료');

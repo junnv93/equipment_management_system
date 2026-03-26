@@ -164,7 +164,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await techManagerPage.getByRole('option', { name: /수원랩/ }).click();
 
       // 필터 적용 후 로드 대기
-      await techManagerPage.waitForLoadState('networkidle');
 
       // URL 검증
       await expect(techManagerPage).toHaveURL(/site=(SUW|suwon)/i);
@@ -259,7 +258,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await siteAdminPage.getByRole('option', { name: /의왕랩/ }).click();
 
       // 필터 적용 후 로드 대기
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // URL 검증
       await expect(siteAdminPage).toHaveURL(/site=(UIW|uiwang)/i);
@@ -292,7 +290,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await teamFilterCombobox.click();
 
       // 팀 옵션 로드 대기
-      await testOperatorPage.waitForTimeout(500);
 
       // 비즈니스 로직 검증: 팀 옵션에 "모든 팀"과 실제 팀들이 표시됨
       const teamOptions = testOperatorPage.getByRole('option');
@@ -320,7 +317,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await teamFilterCombobox.click();
 
       // 팀 목록 로드 대기
-      await siteAdminPage.waitForTimeout(500);
 
       // 첫 번째 팀 선택 (모든 팀 제외)
       const teamOptions = siteAdminPage.getByRole('option').filter({
@@ -335,7 +331,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
         await firstTeamOption.click();
 
         // 필터 적용 후 로드 대기
-        await siteAdminPage.waitForLoadState('networkidle');
 
         // URL에 teamId가 포함되어 있는지 확인
         await expect(siteAdminPage).toHaveURL(/teamId=/);
@@ -367,7 +362,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await testOperatorPage.waitForSelector('#filter-site', { timeout: 20000 });
 
       // 장비 목록 로드 대기
-      await testOperatorPage.waitForTimeout(2000);
 
       // 보안 검증: 백엔드가 URL 조작을 무시하고 자신의 사이트만 반환해야 함
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');

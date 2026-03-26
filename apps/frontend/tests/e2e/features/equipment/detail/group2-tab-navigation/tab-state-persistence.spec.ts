@@ -11,7 +11,6 @@ test.describe('Tab Navigation', () => {
   test('Tab state persistence across navigation', async ({ testOperatorPage: page }) => {
     // 1. Navigate to equipment detail page
     await page.goto(`/equipment/${EQUIP_SPECTRUM_ANALYZER_SUW_E_ID}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. Click '교정 이력' tab
     const calibrationTab = page.locator('[role="tab"][aria-label="교정 이력 탭"]');
@@ -22,11 +21,9 @@ test.describe('Tab Navigation', () => {
 
     // 4. Navigate to equipment list
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 5. Use browser back button
     await page.goBack();
-    await page.waitForLoadState('networkidle');
 
     // 6. Verify '교정 이력' tab is still active
     await expect(page).toHaveURL(/\?tab=calibration/);
@@ -34,7 +31,6 @@ test.describe('Tab Navigation', () => {
 
     // 7. Test direct URL with tab parameter
     await page.goto(`/equipment/${EQUIP_SPECTRUM_ANALYZER_SUW_E_ID}?tab=checkout`);
-    await page.waitForLoadState('networkidle');
 
     // 8. Verify '반출 이력' tab is active
     const checkoutTab = page.locator('[role="tab"][aria-label="반출 이력 탭"]');

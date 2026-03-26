@@ -31,13 +31,11 @@ test.describe('Full Workflow Integration', () => {
   }) => {
     // 1. Navigate to equipment detail page for available equipment
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Find first available equipment
     const firstDetailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     await expect(firstDetailLink).toBeVisible();
     await firstDetailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = testOperatorPage.url();
@@ -57,11 +55,9 @@ test.describe('Full Workflow Integration', () => {
     const incidentTab = testOperatorPage.getByRole('tab', { name: /사고 이력/i });
     if ((await incidentTab.count()) > 0) {
       await incidentTab.click();
-      await testOperatorPage.waitForLoadState('networkidle');
     } else {
       // Navigate directly to incident history page
       await testOperatorPage.goto(`/equipment/${testEquipmentId}`);
-      await testOperatorPage.waitForLoadState('networkidle');
     }
 
     // 4. Click 'Register Incident' button
@@ -93,11 +89,9 @@ test.describe('Full Workflow Integration', () => {
     await saveButton.click();
 
     // 10. Wait for success toast notification
-    await testOperatorPage.waitForTimeout(1000);
 
     // 11. Navigate back to equipment detail page
     await testOperatorPage.goto(`/equipment/${testEquipmentId}`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 12. Verify equipment status changed to 'non_conforming'
     await expect(testOperatorPage.getByText('부적합')).toBeVisible();

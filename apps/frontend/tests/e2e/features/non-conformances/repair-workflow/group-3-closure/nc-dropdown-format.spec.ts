@@ -7,12 +7,10 @@ test.describe('Repair History Form Validation', () => {
   test('should display NC dropdown with correct label format', async ({ testOperatorPage }) => {
     // Navigate to equipment list
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Click first equipment link
     const equipmentLink = testOperatorPage.locator('a[href*="/equipment/"]').first();
     await equipmentLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = testOperatorPage.url();
@@ -24,7 +22,6 @@ test.describe('Repair History Form Validation', () => {
 
     // Check if equipment has NCs by navigating to NC page
     await testOperatorPage.goto(`/equipment/${equipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Check if there are any NCs
     const ncCards = testOperatorPage
@@ -37,7 +34,6 @@ test.describe('Repair History Form Validation', () => {
       const registerButton = testOperatorPage.locator('button').filter({ hasText: /부적합 등록/ });
       if (await registerButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await registerButton.click();
-        await testOperatorPage.waitForTimeout(500);
 
         // Fill NC form
         const causeTextarea = testOperatorPage.locator('textarea[placeholder*="부적합 원인"]');
@@ -45,20 +41,17 @@ test.describe('Repair History Form Validation', () => {
 
         const submitButton = testOperatorPage.locator('button').filter({ hasText: /^등록$/ });
         await submitButton.click();
-        await testOperatorPage.waitForTimeout(2000);
       }
     }
 
     // 1. Navigate to repair history page for equipment with open NCs
     await testOperatorPage.goto(`/equipment/${equipmentId}/repair-history`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Click 'Add Repair History' button
     const addButton = testOperatorPage
       .locator('button')
       .filter({ hasText: /수리.*이력.*추가|add.*repair/i });
     await addButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     const dialog = testOperatorPage.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -77,7 +70,6 @@ test.describe('Repair History Form Validation', () => {
       .first();
 
     await ncDropdown.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 4. Verify dropdown options format
 

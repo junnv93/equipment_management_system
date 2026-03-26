@@ -44,8 +44,6 @@ test.describe('Permissions - Group A', () => {
 
   test('shared equipment hides disposal button', async ({ testOperatorPage }) => {
     // Wait for React hydration (disposal button is client-side rendered)
-    await testOperatorPage.waitForLoadState('networkidle').catch(() => {});
-    await testOperatorPage.waitForTimeout(1000);
 
     // 1. Verify equipment is in 'available' state (status badge uses role="status", not "button")
     const availableStatus = testOperatorPage.getByRole('status', { name: /장비 상태.*사용 가능/i });

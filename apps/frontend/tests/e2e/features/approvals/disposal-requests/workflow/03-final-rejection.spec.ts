@@ -124,7 +124,6 @@ test.describe.serial('Final Rejection Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking pending_disposal state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Reload with cache-busting to get fresh server-side data
       await testOperatorPage.reload({ waitUntil: 'networkidle' });
@@ -333,7 +332,6 @@ test.describe.serial('Final Rejection Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking normal state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Navigate with cache-busting
       const cacheBustTimestamp = Date.now();

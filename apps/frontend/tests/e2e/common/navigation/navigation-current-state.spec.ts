@@ -38,7 +38,6 @@ test.describe('Current Navigation State - Desktop (1440px)', () => {
 
     // Navigate to equipment page
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Take screenshot of equipment page
     await page.screenshot({ path: '/tmp/before-desktop-equipment.png', fullPage: true });
@@ -64,7 +63,6 @@ test.describe('Current Navigation State - Desktop (1440px)', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Look for header title
     const headerTitle = page.locator('h1').filter({ hasText: '장비 관리' }).first();
@@ -88,7 +86,6 @@ test.describe('Current Navigation State - Desktop (1440px)', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Check for dashboard menu item in sidebar
     const dashboardMenuItem = page.locator('nav a[href="/"]').filter({ hasText: '대시보드' });
@@ -110,7 +107,6 @@ test.describe('Current Navigation State - Mobile (375px)', () => {
 
     // Navigate to equipment page
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Take screenshot of mobile equipment page
     await page.screenshot({ path: '/tmp/before-mobile-equipment.png', fullPage: true });
@@ -138,7 +134,6 @@ test.describe('Current Navigation State - Mobile (375px)', () => {
 
     // Open hamburger menu
     await hamburgerButton.click();
-    await page.waitForTimeout(500); // Wait for animation
 
     // Check if dashboard link is in mobile menu
     const mobileDashboardLink = page.locator('nav a[href="/"]');
@@ -161,7 +156,6 @@ test.describe('Current Navigation State - Checkouts Page', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/checkouts');
-    await page.waitForLoadState('networkidle');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/before-checkouts.png', fullPage: true });
@@ -183,7 +177,6 @@ test.describe('Current Navigation State - Deep Page (Equipment Detail)', () => {
 
     // Go to equipment list
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Try to find first equipment link (may not exist in test environment)
     const firstEquipmentLink = page.locator('a[href^="/equipment/"]').first();
@@ -191,7 +184,6 @@ test.describe('Current Navigation State - Deep Page (Equipment Detail)', () => {
 
     if (equipmentLinkCount > 0) {
       await firstEquipmentLink.click();
-      await page.waitForLoadState('networkidle');
 
       // Take screenshot of equipment detail page
       await page.screenshot({ path: '/tmp/before-equipment-detail.png', fullPage: true });

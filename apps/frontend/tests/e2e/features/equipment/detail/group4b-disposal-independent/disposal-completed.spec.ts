@@ -14,7 +14,6 @@ test.describe('Disposal Workflow - Completed State', () => {
   test('폐기 완료된 장비가 올바르게 표시된다', async ({ testOperatorPage: page }) => {
     // 1. 폐기 완료(disposed) 장비에 직접 접근
     await page.goto(`/equipment/${EQUIP_DISPOSAL_PERM_A6}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. 폐기 완료 상태 표시 확인
     await expect(page.getByText(/폐기 완료|폐기됨|disposed/i).first()).toBeVisible({

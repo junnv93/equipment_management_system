@@ -204,7 +204,6 @@ test.describe.serial('Disposal Final Approval Tab (lab_manager)', () => {
 
     // Step 19: Verify the approved item has been removed from the pending list
     // Wait for React Query invalidation to complete
-    await siteAdminPage.waitForTimeout(1000);
 
     const updatedCount = await approvalItems.count();
     console.log(`Updated approval items count: ${updatedCount}`);

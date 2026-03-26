@@ -77,7 +77,6 @@ export async function fillRepairForm(
   // Select non-conformance if provided
   if (data.nonConformanceId) {
     await page.click('[id="nonConformanceId"]');
-    await page.waitForTimeout(500); // Wait for dropdown
 
     // Find NC option by text (contains NC cause/type)
     const ncOption = page.getByRole('option').first();

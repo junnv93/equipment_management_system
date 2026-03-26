@@ -109,7 +109,6 @@ test.describe('Disposal Review Tab - Approve Same-Team Request', () => {
 
     // Step 9: Verify the A4 item is no longer visible in the pending list
     // Wait for React Query invalidation to complete
-    await techManagerPage.waitForTimeout(1000);
 
     // Verify the approved item has been removed from the pending list
     const updatedCount = await approvalItems.count();

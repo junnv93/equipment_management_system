@@ -16,12 +16,10 @@ test.describe('Group E-3: Card View', () => {
   test.describe('3.1. Equipment data is displayed correctly in card view', () => {
     test('should display equipment cards with correct data', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 카드 그리드 표시 확인
       const cardGrid = testOperatorPage.locator('[data-testid="equipment-card-grid"]');
@@ -64,12 +62,10 @@ test.describe('Group E-3: Card View', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 첫 번째 카드 선택
       const firstCard = testOperatorPage.locator('[data-testid="equipment-card"]').first();
@@ -112,12 +108,10 @@ test.describe('Group E-3: Card View', () => {
 
     test('should display multiple equipment cards in grid layout', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 카드 그리드 레이아웃 확인
       const cardGrid = testOperatorPage.locator('[data-testid="equipment-card-grid"]');
@@ -158,12 +152,10 @@ test.describe('Group E-3: Card View', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 첫 번째 카드 클릭
       const firstCard = testOperatorPage.locator('[data-testid="equipment-card"]').first();
@@ -187,17 +179,14 @@ test.describe('Group E-3: Card View', () => {
   test.describe('3.2. Search term is highlighted in card view', () => {
     test('should highlight search term in equipment name', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 검색어 입력 (일반적인 장비명 키워드)
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('스펙트럼');
-      await testOperatorPage.waitForTimeout(500); // 디바운스 대기
 
       // 3. 검색 결과 카드 확인
       const cards = testOperatorPage.locator('[data-testid="equipment-card"]');
@@ -231,17 +220,14 @@ test.describe('Group E-3: Card View', () => {
 
     test('should highlight search term in model name', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 모델명으로 검색 (예: 일반적인 모델명 키워드)
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('KS');
-      await testOperatorPage.waitForTimeout(500); // 디바운스 대기
 
       // 3. 검색 결과 카드 확인
       const cards = testOperatorPage.locator('[data-testid="equipment-card"]');
@@ -273,17 +259,14 @@ test.describe('Group E-3: Card View', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 공통으로 나타날 수 있는 키워드 검색 (예: "전원")
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('전원');
-      await testOperatorPage.waitForTimeout(500); // 디바운스 대기
 
       // 3. 검색 결과 카드 확인
       const cards = testOperatorPage.locator('[data-testid="equipment-card"]');
@@ -317,12 +300,10 @@ test.describe('Group E-3: Card View', () => {
 
     test('should not highlight when search term is empty', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 검색어가 없는 상태 확인
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -347,17 +328,14 @@ test.describe('Group E-3: Card View', () => {
 
     test('should clear highlight when search term is removed', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 2. 검색어 입력
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('오실로');
-      await testOperatorPage.waitForTimeout(500);
 
       // 3. 하이라이트 확인
       const cards = testOperatorPage.locator('[data-testid="equipment-card"]');
@@ -379,8 +357,6 @@ test.describe('Group E-3: Card View', () => {
           await testOperatorPage.waitForFunction(() => {
             return !window.location.search.includes('search=');
           });
-
-          await testOperatorPage.waitForTimeout(500);
 
           // 검색 초기화 후 카드 다시 가져오기
           const cardsAfterClear = testOperatorPage.locator('[data-testid="equipment-card"]');

@@ -103,7 +103,6 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking pending_disposal state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Reload with cache-busting
       const cacheBustTimestamp = Date.now();
@@ -219,7 +218,6 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
     await expect(rejectDialog).not.toBeVisible({ timeout: 5000 });
 
     // Wait for React Query invalidation to complete
-    await techManagerPage.waitForTimeout(1000);
 
     const updatedCount = await approvalItems.count();
     console.log(`Updated disposal_review items: ${updatedCount}`);
@@ -241,7 +239,6 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking normal state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Navigate with cache-busting
       const cacheBustTimestamp = Date.now();

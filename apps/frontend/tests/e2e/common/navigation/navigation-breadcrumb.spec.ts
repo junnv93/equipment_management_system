@@ -33,7 +33,6 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
 
     // Navigate to equipment page
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/after-desktop-equipment.png', fullPage: true });
@@ -57,7 +56,6 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Click home icon in breadcrumb
     const breadcrumb = page.locator('nav[aria-label="breadcrumb"]');
@@ -74,7 +72,6 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/checkouts');
-    await page.waitForLoadState('networkidle');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/after-checkouts.png', fullPage: true });
@@ -94,7 +91,6 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
 
     // Go to equipment list
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Try to find first equipment link
     const firstEquipmentLink = page.locator('a[href^="/equipment/"]').first();
@@ -102,7 +98,6 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
 
     if (equipmentLinkCount > 0) {
       await firstEquipmentLink.click();
-      await page.waitForLoadState('networkidle');
 
       // Take screenshot
       await page.screenshot({ path: '/tmp/after-equipment-detail.png', fullPage: true });
@@ -134,7 +129,6 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Find sidebar logo link
     const sidebarLogo = page.locator('aside a[href="/"][aria-label="홈으로 이동"]');
@@ -164,7 +158,6 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/after-mobile-equipment.png', fullPage: true });
@@ -184,7 +177,6 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Click home icon (should be directly in header, no need to open menu)
     const breadcrumb = page.locator('nav[aria-label="breadcrumb"]');
@@ -203,7 +195,6 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
 
     // Go to equipment list
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Find first equipment link
     const firstEquipmentLink = page.locator('a[href^="/equipment/"]').first();
@@ -211,7 +202,6 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
 
     if (equipmentLinkCount > 0) {
       await firstEquipmentLink.click();
-      await page.waitForLoadState('networkidle');
 
       // Take screenshot
       await page.screenshot({ path: '/tmp/after-mobile-equipment-detail.png', fullPage: true });
@@ -238,7 +228,6 @@ test.describe('Breadcrumb Accessibility', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Check nav aria-label
     const breadcrumb = page.locator('nav[aria-label="breadcrumb"]');
@@ -264,7 +253,6 @@ test.describe('Breadcrumb Accessibility', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Take screenshot before keyboard navigation
     await page.screenshot({ path: '/tmp/after-keyboard-focus-before.png' });
@@ -292,7 +280,6 @@ test.describe('Breadcrumb Accessibility', () => {
     await login(page);
 
     await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Focus on home icon
     const homeIcon = page.locator('nav[aria-label="breadcrumb"] a[href="/"]').first();

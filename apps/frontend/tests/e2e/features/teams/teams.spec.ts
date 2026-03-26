@@ -73,7 +73,6 @@ test.describe('팀 관리 페이지 - Basic', () => {
     await searchInput.fill('RF');
 
     // 검색 결과 대기 (디바운스)
-    await page.waitForTimeout(500);
 
     // URL에 검색어 반영 확인
     await expect(page).toHaveURL(/search=RF/);

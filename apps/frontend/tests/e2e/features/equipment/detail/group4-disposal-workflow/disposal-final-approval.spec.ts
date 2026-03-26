@@ -15,7 +15,6 @@ test.describe('폐기 워크플로우 - 최종 승인 (시험소장)', () => {
   test('4.5. 시험소장이 폐기를 최종 승인한다', async ({ siteAdminPage: page }) => {
     // 1. 사전 시드된 reviewed 상태 장비에 UUID 직접 접근
     await page.goto(`/equipment/${EQUIP_DISPOSAL_PERM_A5}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. 폐기 진행 중 버튼 확인
     const progressButton = page.getByRole('button', { name: /폐기 진행 중/i });

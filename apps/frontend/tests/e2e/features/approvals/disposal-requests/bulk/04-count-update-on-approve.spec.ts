@@ -121,7 +121,6 @@ test.describe('Disposal Bulk Actions - Approve Action Updates Count', () => {
 
     // Scroll to button to avoid any visibility issues
     await approveButton.scrollIntoViewIfNeeded();
-    await techManagerPage.waitForTimeout(500);
 
     await approveButton.click();
     console.log('✅ Step 6: Clicked "검토완료" button');
@@ -135,7 +134,6 @@ test.describe('Disposal Bulk Actions - Approve Action Updates Count', () => {
 
     // Step 8: Wait for list to refresh (React Query invalidation)
     // Give React Query time to invalidate cache and refetch
-    await techManagerPage.waitForTimeout(2000);
     console.log('✅ Step 8: Waited for React Query invalidation');
 
     // Step 9: Verify count decremented by 1 in CardDescription

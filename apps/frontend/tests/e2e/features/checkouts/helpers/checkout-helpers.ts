@@ -569,7 +569,6 @@ export async function getBackendToken(
       return token;
     }
     if (response.status() === 429 && attempt < maxRetries - 1) {
-      await page.waitForTimeout(2000 * (attempt + 1));
       continue;
     }
     throw new Error(`Failed to get backend token: ${response.status()}`);

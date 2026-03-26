@@ -137,7 +137,6 @@ authTest.describe('Checkout Race Condition Prevention', () => {
 
       // Verify final DB state: checkout should be in one of the two states
       // Small delay to ensure DB write is committed
-      await page.waitForTimeout(100);
 
       const finalResponse = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -433,7 +432,6 @@ authTest.describe('Checkout UI Auto-Retry', () => {
       console.log(`Toast message: ${toastText}`);
 
       // Verify page shows latest state (approved by other user)
-      await page.waitForTimeout(2000); // Wait for router.refresh()
       await expect(page.getByText('승인됨')).toBeVisible();
 
       console.log('UI correctly shows latest state after conflict');

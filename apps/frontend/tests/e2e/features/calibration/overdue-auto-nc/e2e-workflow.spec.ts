@@ -272,7 +272,6 @@ async function loginToFrontend(page: Page, role: string) {
   }
 
   await page.goto(`${FRONTEND_URL}/`);
-  await page.waitForTimeout(1000);
 }
 
 // ============================================================================
@@ -333,7 +332,6 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     // 5. Navigate to equipment detail page in UI
     await loginToFrontend(page, 'lab_manager');
     await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
-    await page.waitForLoadState('networkidle');
 
     // 6. Verify NonConformanceBanner is displayed
     const ncBanner = page
@@ -592,7 +590,6 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     // 1. Open equipment detail page in browser (equipmentId: `equip-e4-${timestamp}`)
     await loginToFrontend(page, 'lab_manager');
     await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
-    await page.waitForLoadState('networkidle');
 
     // Verify initial status
     const statusBadge = page.locator('text=/사용.*가능|Available/i').first();
@@ -611,7 +608,6 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
 
     // 3. Refresh the equipment detail page
     await page.reload();
-    await page.waitForLoadState('networkidle');
 
     // 4. Verify UI reflects new state
     // Status badge updates to 'Non-conforming'
@@ -630,7 +626,6 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const incidentTab = page.locator('text=/이력|History/i');
     if (await incidentTab.isVisible()) {
       await incidentTab.click();
-      await page.waitForTimeout(1000);
       const calibrationOverdueEntry = page.locator('text=/교정.*기한.*초과|Calibration.*Overdue/i');
       await expect(calibrationOverdueEntry.first()).toBeVisible();
       console.log('Incident History tab shows calibration_overdue entry');

@@ -67,7 +67,6 @@ test.describe('Role-Based Access Control', () => {
     const approvalItems = techManagerPage.locator('[data-testid="approval-item"]');
 
     // Wait for items to load or empty state to appear
-    await techManagerPage.waitForTimeout(2000);
 
     const itemCount = await approvalItems.count();
     console.log(`Found ${itemCount} approval items in disposal_review tab`);

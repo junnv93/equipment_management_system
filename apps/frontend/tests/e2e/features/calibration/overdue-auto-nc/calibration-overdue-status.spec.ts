@@ -90,7 +90,6 @@ test.describe('교정기한 초과 자동 부적합 전환', () => {
 
     // 4. 프론트엔드에서 "부적합" 배지 표시 확인
     await page.goto(`/equipment/${equipmentId}`);
-    await page.waitForLoadState('networkidle');
 
     // 상태 배지가 "부적합"으로 표시되는지 확인
     const statusBadge = page.locator('text=부적합').first();
@@ -140,7 +139,6 @@ test.describe('교정기한 초과 자동 부적합 전환', () => {
 
         // 2. 장비 상세 페이지 방문
         await page.goto(`/equipment/${overdueEquipment.id}`);
-        await page.waitForLoadState('networkidle');
 
         // 3. "부적합" 배지 확인
         const statusBadge = page.locator('text=부적합').first();

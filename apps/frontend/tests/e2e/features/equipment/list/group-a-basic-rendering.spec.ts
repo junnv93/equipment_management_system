@@ -21,7 +21,6 @@ test.describe('Group A: Basic UI Rendering', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 페이지 타이틀 확인
       const pageTitle = testOperatorPage.getByRole('heading', { level: 1, name: /장비 관리/i });
@@ -51,7 +50,6 @@ test.describe('Group A: Basic UI Rendering', () => {
       siteAdminPage,
     }) => {
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 필터 패널 확인 (CardTitle로 표시됨)
       const filterHeading = siteAdminPage.getByRole('heading', { name: /필터/i });
@@ -98,7 +96,6 @@ test.describe('Group A: Basic UI Rendering', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 검색바 확인
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -126,7 +123,6 @@ test.describe('Group A: Basic UI Rendering', () => {
   test.describe('1.4. Equipment table is displayed with correct columns', () => {
     test('should display equipment table with all column headers', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 테이블이 로딩될 때까지 대기
       const table = testOperatorPage.getByRole('grid', { name: /장비 목록/i });
@@ -170,7 +166,6 @@ test.describe('Group A: Basic UI Rendering', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 페이지네이션이 로딩될 때까지 대기
       const pagination = testOperatorPage.getByRole('navigation', { name: /페이지.*탐색/i });

@@ -31,10 +31,8 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 2. Navigate to NC management page for equipment with open NC
     await techManagerPage.goto(`/equipment/${equipmentId}/non-conformance`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Wait for page to fully load
-    await techManagerPage.waitForTimeout(1000);
 
     // 3. Verify 'Edit Record' button is visible
     const editButtons = techManagerPage.getByRole('button', { name: /수정|Edit Record/i });
@@ -48,7 +46,6 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 4. Click 'Edit Record' button
     await firstEditButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 5. Verify edit form fields are accessible
     // Check for correction content textarea

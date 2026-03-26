@@ -22,8 +22,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
 
     // 특정 장비 상세 페이지로 직접 이동
     await techManagerPage.goto(`/equipment/${testEquipmentId}`);
-    await techManagerPage.waitForLoadState('networkidle');
-    await techManagerPage.waitForTimeout(2000);
 
     // 장비 페이지가 올바르게 로드되었는지 확인
     const equipmentTitle = techManagerPage.locator('h1');
@@ -39,7 +37,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     const incidentTab = techManagerPage.getByRole('tab', { name: /사고 이력/i });
     if ((await incidentTab.count()) > 0) {
       await incidentTab.click();
-      await techManagerPage.waitForTimeout(1000);
     } else {
       console.log('사고 이력 탭을 찾을 수 없습니다.');
       test.skip();
@@ -57,7 +54,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
       return;
     }
     await registerButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. 날짜 입력
     const dateInput = techManagerPage.locator('input[type="date"]');
@@ -68,9 +64,7 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     // 3. 사고 유형: 손상 선택
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
     await techManagerPage.getByRole('option', { name: /손상/i }).click();
-    await techManagerPage.waitForTimeout(300);
 
     // 4. 내용 입력
     const testContent = `E2E NC 테스트 - ${Date.now()}`;
@@ -83,7 +77,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     // 6. 체크박스 선택
     const checkbox = techManagerPage.locator('input[type="checkbox"]').first();
     await checkbox.check();
-    await techManagerPage.waitForTimeout(200);
 
     // 7. 체크박스가 체크되었는지 확인
     await expect(checkbox).toBeChecked();
@@ -104,8 +97,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
       .catch(() => {
         console.log('⚠️ incident-history POST 응답을 캡처하지 못함 (타임아웃 또는 다른 경로)');
       });
-
-    await techManagerPage.waitForTimeout(2000);
 
     // 11. 생성된 사고 이력이 목록에 표시되는지 확인
     const createdItem = techManagerPage.getByText(testContent);
@@ -128,7 +119,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     } else {
       // 상태가 변경되지 않았으면 router.refresh 후 확인
       await techManagerPage.reload();
-      await techManagerPage.waitForLoadState('networkidle');
       const reloadedStatus = techManagerPage.getByText(/부적합/i).first();
       expect(await reloadedStatus.count()).toBeGreaterThan(0);
       console.log('⚠️ 새로고침 후 상태 변경 확인됨 (즉시 갱신 미동작)');
@@ -143,7 +133,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
       return;
     }
     await registerButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 날짜 입력
     await techManagerPage.locator('input[type="date"]').fill('2026-01-27');
@@ -151,7 +140,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     // 유형: 변경 (부적합 체크박스 안 나옴)
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
     await techManagerPage.getByRole('option', { name: /변경/i }).click();
 
     // 내용 (고유한 식별자 사용)
@@ -160,7 +148,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
 
     // 저장
     await techManagerPage.getByRole('button', { name: /저장/i }).click();
-    await techManagerPage.waitForTimeout(2000);
 
     // 2. 생성된 이력이 목록에 표시되는지 확인
     const createdItem = techManagerPage.getByRole('heading', { name: testContent, level: 4 });
@@ -205,7 +192,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     }
 
     // API 호출 후 UI 갱신 대기
-    await techManagerPage.waitForTimeout(2000);
 
     // 4. 삭제된 이력이 UI에서 즉시 사라지는지 확인 (새로고침 없이)
     // refetchQueries가 동작하면 삭제 후 즉시 갱신됨
@@ -220,8 +206,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     // 이 테스트는 기존에 부적합이 있는 장비가 필요함
     // 부적합 관리 페이지로 이동
     await techManagerPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await techManagerPage.waitForLoadState('networkidle');
-    await techManagerPage.waitForTimeout(2000);
 
     // 열린 부적합이 있는지 확인
     const openNC = techManagerPage.getByText(/open|분석 중/i);
@@ -239,7 +223,6 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
       return;
     }
     await editButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 상태를 "조치 완료"로 변경
     const statusSelect = techManagerPage.locator('select').last();
@@ -250,12 +233,9 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     // 저장
     const saveButton = techManagerPage.locator('button:has-text("저장")').first();
     await saveButton.click();
-    await techManagerPage.waitForTimeout(2000);
 
     // 장비 상세 페이지로 돌아가서 상태 확인
     await techManagerPage.goto(`/equipment/${testEquipmentId}`);
-    await techManagerPage.waitForLoadState('networkidle');
-    await techManagerPage.waitForTimeout(1000);
 
     // 장비 상태가 여전히 "부적합"인지 확인 (조치완료에서는 복원 안 됨)
     const statusBadge = techManagerPage.getByText(/부적합/i);
@@ -276,8 +256,6 @@ test.describe('UI Refresh Verification', () => {
   test('캐시 무효화 후 UI가 올바르게 갱신되는지 확인', async ({ techManagerPage }) => {
     // 장비 목록 페이지로 이동
     await techManagerPage.goto('/equipment');
-    await techManagerPage.waitForLoadState('networkidle');
-    await techManagerPage.waitForTimeout(2000);
 
     // 첫 번째 장비 상세 페이지로 이동
     const detailLink = techManagerPage.getByRole('link', { name: /상세/i }).first();
@@ -286,13 +264,11 @@ test.describe('UI Refresh Verification', () => {
       return;
     }
     await detailLink.click();
-    await techManagerPage.waitForLoadState('networkidle');
 
     // 사고 이력 탭 클릭
     const incidentTab = techManagerPage.getByRole('tab', { name: /사고 이력/i });
     if ((await incidentTab.count()) > 0) {
       await incidentTab.click();
-      await techManagerPage.waitForTimeout(1000);
     }
 
     // 초기 이력 개수 확인
@@ -309,7 +285,6 @@ test.describe('UI Refresh Verification', () => {
     const basicTab = techManagerPage.getByRole('tab', { name: /기본 정보/i });
     if ((await basicTab.count()) > 0) {
       await basicTab.click();
-      await techManagerPage.waitForTimeout(500);
 
       // 기본 정보가 표시되는지 확인
       const equipmentName = techManagerPage.locator('h1, h2, [class*="title"]').first();

@@ -21,7 +21,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
   test.describe('8.1. Shared equipment filter shows all options', () => {
     test('should display all shared equipment filter options', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 공용/일반 필터 드롭다운 클릭 (Radix UI Select 찾기)
       const sharedFilter = testOperatorPage.locator('#filter-shared');
@@ -46,7 +45,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
   test.describe('8.2. Shared equipment filter transforms to isShared=true API param', () => {
     test('should transform shared to isShared=true', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 공용장비 선택 (Radix UI Select 찾기)
       const sharedFilter = testOperatorPage.locator('#filter-shared');
@@ -68,7 +66,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
 
     test('should return only shared equipment (isShared=true)', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?isShared=shared');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });
@@ -101,7 +98,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
   test.describe('8.3. Normal equipment filter transforms to isShared=false API param', () => {
     test('should transform normal to isShared=false', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 일반장비 선택 (Radix UI Select 찾기)
       const sharedFilter = testOperatorPage.locator('#filter-shared');
@@ -123,7 +119,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
 
     test('should return only normal equipment (isShared=false)', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?isShared=normal');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });
@@ -154,7 +149,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
     test('should remove isShared filter when selecting "전체"', async ({ testOperatorPage }) => {
       // 필터가 적용된 상태로 시작
       await testOperatorPage.goto('/equipment?isShared=shared');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 필터 뱃지 확인 (실제 뱃지 라벨: "구분: 공용장비")
       const filterBadge = testOperatorPage.getByText(/구분:\s*공용장비/);
@@ -166,7 +160,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
       await testOperatorPage.getByRole('option', { name: '모든 장비', exact: true }).click();
 
       // Wait for URL to update (parameter removed)
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 검증: isShared 파라미터 제거
       const currentUrl = testOperatorPage.url();
@@ -186,7 +179,6 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });

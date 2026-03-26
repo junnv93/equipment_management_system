@@ -34,7 +34,6 @@ test.describe('Equipment Status Chart', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // 3. Locate the equipment status chart
@@ -87,7 +86,6 @@ test.describe('Equipment Status Chart', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Examine the chart legend items
     await expect(siteAdminPage.getByRole('heading', { name: '장비 상태' })).toBeVisible({
@@ -157,14 +155,12 @@ test.describe('Equipment Status Chart', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // 3. Click on '장비 현황' tab
     const equipmentTab = siteAdminPage.getByRole('tab', { name: '장비 현황' });
     await expect(equipmentTab).toBeVisible({ timeout: 10000 });
     await equipmentTab.click();
-    await siteAdminPage.waitForTimeout(500); // Wait for tab transition
     console.log('✓ Clicked on 장비 현황 tab');
 
     // 4. Verify equipment status chart is displayed in larger view

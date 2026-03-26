@@ -81,7 +81,6 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
     await expect(disposalFinalTab).toBeVisible();
 
     // Wait for potential badge to load (data may be loading)
-    await siteAdminPage.waitForTimeout(1000);
 
     // Look for badge within the tab
     const tabBadge = disposalFinalTab.locator('[class*="badge"]').first();
@@ -139,7 +138,6 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
     console.log('Step 10: Toast notification appeared');
 
     // Step 11: Wait for list to refresh (React Query invalidation)
-    await siteAdminPage.waitForTimeout(1500);
     console.log('Step 11: Waited for React Query invalidation');
 
     // Step 12: Verify new item count is initial count minus 1
@@ -168,7 +166,6 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
     }
 
     // Step 13: Verify tab badge count has decremented
-    await siteAdminPage.waitForTimeout(500);
 
     // Only verify badge count if it was visible initially
     if (initialBadgeCount > 0) {
@@ -236,12 +233,10 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
       const calPlanTab = siteAdminPage.getByRole('tab', { name: /교정계획서 승인/ });
       if (await calPlanTab.isVisible()) {
         await calPlanTab.click();
-        await siteAdminPage.waitForTimeout(500);
         console.log('Switched to calibration plan approval tab');
 
         // Switch back to disposal_final
         await disposalFinalTab.click();
-        await siteAdminPage.waitForTimeout(1000);
         console.log('Switched back to disposal_final tab');
 
         // Verify the rejected item is still not visible

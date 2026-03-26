@@ -57,13 +57,11 @@ test.describe('Group C-1: Responsive Layout', () => {
 
     // Select damage to show workflow
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '손상');
-    await testOperatorPage.waitForTimeout(1000);
 
     // Check "create non-conformance" checkbox by clicking the label
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
     await ncLabel.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // Verify guidance card is visible and readable
     const guidanceCard = testOperatorPage.locator(UI_CLASSES.INFO_CARD).last(); // Use last to avoid mobile nav styling

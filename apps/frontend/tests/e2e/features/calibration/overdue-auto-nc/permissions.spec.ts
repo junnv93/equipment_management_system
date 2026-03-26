@@ -262,7 +262,6 @@ test.describe('Permission Tests', () => {
     await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
 
     // Wait for page to load
-    await page.waitForLoadState('networkidle');
 
     // 2. Navigate to equipment detail page
     // Test Engineer can access incident history tab
@@ -347,8 +346,6 @@ test.describe('Permission Tests', () => {
       Authorization: `Bearer ${testEngineerToken}`,
     });
     await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
-
-    await page.waitForLoadState('networkidle');
 
     // 3. Verify delete button visibility
     // Test Engineer cannot see delete button for incidents

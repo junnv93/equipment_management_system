@@ -122,7 +122,6 @@ test.describe.serial('Complete Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking equipment state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Reload with cache-busting to get fresh server-side data
       await testOperatorPage.reload({ waitUntil: 'networkidle' });
@@ -309,7 +308,6 @@ test.describe.serial('Complete Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking disposed state...`
       );
-      await siteAdminPage.waitForTimeout(backoffMs);
 
       // Navigate with cache-busting
       const cacheBustTimestamp = Date.now();

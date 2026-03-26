@@ -94,7 +94,6 @@ test.describe('Group 6: Responsive Design', () => {
 
     // 9. Scroll down and verify all content sections are accessible
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500); // Allow smooth scroll to complete
 
     // Verify basic information section is accessible after scroll
     const basicInfoSection = page.getByText(/장비명|모델명|제조사/);
@@ -102,7 +101,6 @@ test.describe('Group 6: Responsive Design', () => {
 
     // Scroll back to top
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForTimeout(300);
 
     // 10. Verify footer and navigation remain functional
     // Verify navigation sidebar or menu is accessible (may be hamburger menu on mobile)

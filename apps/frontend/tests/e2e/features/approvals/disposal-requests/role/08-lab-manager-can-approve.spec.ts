@@ -40,8 +40,6 @@ test.describe('Permissions - Group A', () => {
 
   test('lab_manager can approve reviewed disposal', async ({ siteAdminPage }) => {
     // Wait for React hydration (disposal dropdown is client-side rendered)
-    await siteAdminPage.waitForLoadState('networkidle').catch(() => {});
-    await siteAdminPage.waitForTimeout(1000);
 
     // 1. Verify "폐기 진행 중" button is visible (auto-waits for hydration)
     const statusButton = siteAdminPage.getByRole('button', { name: /폐기 진행 중/i });

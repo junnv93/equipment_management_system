@@ -37,7 +37,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
         '&pageSize=10';
 
       await testOperatorPage.goto(urlWithFilters);
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 검색어 필터 복원 확인
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -75,7 +74,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
       const urlWithPartialFilters = '/equipment?status=available&search=오실로';
 
       await testOperatorPage.goto(urlWithPartialFilters);
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 검색어 필터 복원 확인
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -104,10 +102,8 @@ test.describe('Group E-1: URL State Synchronization', () => {
     }) => {
       // 1. 초기 상태: 필터 없음
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ClientOnly 컴포넌트가 hydrate될 때까지 대기
-      await testOperatorPage.waitForTimeout(1000);
 
       let currentUrl = testOperatorPage.url();
       expect(currentUrl).not.toContain('status=');
@@ -146,13 +142,11 @@ test.describe('Group E-1: URL State Synchronization', () => {
         });
 
       // URL 재확인
-      await testOperatorPage.waitForTimeout(300);
       currentUrl = testOperatorPage.url();
       expect(currentUrl).toContain('search=');
 
       // 4. 브라우저 뒤로 가기 (검색어 제거 상태로 복원)
       await testOperatorPage.goBack();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       currentUrl = testOperatorPage.url();
       expect(currentUrl).toContain('status=available');
@@ -164,7 +158,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
 
       // 5. 다시 뒤로 가기 (초기 상태로 복원)
       await testOperatorPage.goBack();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       currentUrl = testOperatorPage.url();
       expect(currentUrl).not.toContain('status=');
@@ -182,13 +175,11 @@ test.describe('Group E-1: URL State Synchronization', () => {
     }) => {
       // 1. 초기 상태: 필터 없음
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 2. 상태 필터 적용
       const statusFilter = testOperatorPage.getByRole('combobox', { name: /상태/i });
       await statusFilter.click();
       await testOperatorPage.getByRole('option', { name: '사용 가능' }).click();
-      await testOperatorPage.waitForTimeout(300);
 
       let currentUrl = testOperatorPage.url();
       expect(currentUrl).toContain('status=available');
@@ -198,7 +189,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
       await searchInput.fill('오실로');
 
       // 디바운스 대기 + URL 업데이트 확인
-      await testOperatorPage.waitForTimeout(500);
 
       // URL에 search 파라미터가 추가될 때까지 대기 (최대 2초)
       await testOperatorPage
@@ -219,15 +209,12 @@ test.describe('Group E-1: URL State Synchronization', () => {
 
       // 4. 브라우저 뒤로 가기
       await testOperatorPage.goBack();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       currentUrl = testOperatorPage.url();
       expect(currentUrl).not.toContain('search=');
 
       // 5. 브라우저 앞으로 가기 (검색어 복원)
       await testOperatorPage.goForward();
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(300); // URL 업데이트 대기
 
       currentUrl = testOperatorPage.url();
       expect(currentUrl).toContain('status=available');
@@ -256,7 +243,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
 
       // 사용자 B가 URL을 받아서 접속
       await testOperatorPage.goto(sharedUrl);
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 필터 상태가 동일하게 복원되어야 함
       const statusFilter = testOperatorPage.getByRole('combobox', { name: /상태/i });
@@ -278,14 +264,12 @@ test.describe('Group E-1: URL State Synchronization', () => {
     test('should handle invalid status parameter gracefully', async ({ testOperatorPage }) => {
       // 잘못된 status 값
       await testOperatorPage.goto('/equipment?status=invalid_status');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 페이지가 에러 없이 로드되어야 함
       const pageTitle = testOperatorPage.getByRole('heading', { level: 1, name: /장비 관리/i });
       await expect(pageTitle).toBeVisible();
 
       // ClientOnly 컴포넌트가 hydrate될 때까지 대기
-      await testOperatorPage.waitForTimeout(1000);
 
       // 잘못된 값은 무시되고 필터가 적용되지 않음 (URL은 유지될 수 있음)
       // 검색바가 보이면 페이지가 정상 로드된 것
@@ -298,7 +282,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
     test('should handle invalid page parameter gracefully', async ({ testOperatorPage }) => {
       // 잘못된 page 값
       await testOperatorPage.goto('/equipment?page=-1');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 페이지가 에러 없이 로드되어야 함
       const pageTitle = testOperatorPage.getByRole('heading', { level: 1, name: /장비 관리/i });
@@ -315,7 +298,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
     test('should handle invalid sortOrder parameter gracefully', async ({ testOperatorPage }) => {
       // 잘못된 sortOrder 값
       await testOperatorPage.goto('/equipment?sortBy=name&sortOrder=invalid');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 페이지가 에러 없이 로드되어야 함
       const pageTitle = testOperatorPage.getByRole('heading', { level: 1, name: /장비 관리/i });
@@ -334,7 +316,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
     }) => {
       // 잘못된 calibrationDueFilter 값
       await testOperatorPage.goto('/equipment?calibrationDueFilter=invalid_filter');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 페이지가 에러 없이 로드되어야 함
       const pageTitle = testOperatorPage.getByRole('heading', { level: 1, name: /장비 관리/i });
@@ -352,7 +333,6 @@ test.describe('Group E-1: URL State Synchronization', () => {
     test('should handle malformed URL with special characters', async ({ testOperatorPage }) => {
       // 특수 문자가 포함된 잘못된 URL
       await testOperatorPage.goto('/equipment?search=<script>alert("xss")</script>');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 페이지가 에러 없이 로드되어야 함
       const pageTitle = testOperatorPage.getByRole('heading', { level: 1, name: /장비 관리/i });

@@ -34,7 +34,6 @@ test.describe('Pending Approvals Card', () => {
       // 1. Login as lab_manager (handled by fixture)
       // 2. Navigate to dashboard
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 3. Locate the pending approval section
       const pendingApprovalSection = siteAdminPage
@@ -71,7 +70,6 @@ test.describe('Pending Approvals Card', () => {
       // 1. Login as lab_manager (handled by fixture)
       // 2. Navigate to dashboard
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 3. Click on '장비' approval category and wait for navigation
       const equipmentCategory = siteAdminPage.getByRole('link', { name: /장비.*건/ });
@@ -224,7 +222,6 @@ test.describe('Pending Approvals Card', () => {
       // 1. Login as lab_manager with pending approvals in the system (handled by fixture)
       // 2. Navigate to dashboard
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 3. Observe the total count badge
       // Expected: Total count badge shows sum of all pending approvals
@@ -256,7 +253,6 @@ test.describe('Pending Approvals Card', () => {
       const viewAllVisible = await viewAllButton.isVisible({ timeout: 2000 }).catch(() => false);
       if (viewAllVisible) {
         await viewAllButton.click();
-        await siteAdminPage.waitForLoadState('networkidle');
 
         // Expected: Clicking '전체 보기' navigates to /admin/approvals
         expect(siteAdminPage.url()).toContain('/admin/approvals');
@@ -283,10 +279,8 @@ test.describe('Pending Approvals Card', () => {
 
       // 3. Navigate to dashboard
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Wait for error state to render
-      await siteAdminPage.waitForTimeout(2000);
 
       // Expected: Error message is displayed: '승인 대기 정보를 불러오는데 실패했습니다'
       const errorMessage = siteAdminPage

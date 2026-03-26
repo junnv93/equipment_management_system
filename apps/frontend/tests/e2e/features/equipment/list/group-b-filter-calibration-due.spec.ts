@@ -21,7 +21,6 @@ test.describe('Group B: Calibration Due Filter', () => {
   test.describe('7.1. Calibration due filter shows all options', () => {
     test('should display all calibration due filter options', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
       await expect(calibrationDueFilter).toBeVisible();
@@ -40,7 +39,6 @@ test.describe('Group B: Calibration Due Filter', () => {
   test.describe('7.2. Due soon filter transforms to calibrationDue=30 API param', () => {
     test('should transform due_soon to calibrationDue=30', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
       await calibrationDueFilter.click();
@@ -62,7 +60,6 @@ test.describe('Group B: Calibration Due Filter', () => {
 
     test('should return only equipment due within 30 days', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?calibrationDueFilter=due_soon');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', {
@@ -85,7 +82,6 @@ test.describe('Group B: Calibration Due Filter', () => {
   test.describe('7.3. Overdue filter transforms to calibrationOverdue=true API param', () => {
     test('should transform overdue to calibrationOverdue=true', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
       await calibrationDueFilter.click();
@@ -107,10 +103,8 @@ test.describe('Group B: Calibration Due Filter', () => {
 
     test('should return only overdue equipment', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?calibrationDueFilter=overdue');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load or empty state
-      await testOperatorPage.waitForTimeout(1000);
 
       // URL 검증
       const currentUrl = testOperatorPage.url();
@@ -141,7 +135,6 @@ test.describe('Group B: Calibration Due Filter', () => {
   test.describe('7.4. Normal filter transforms to calibrationDueAfter=30 API param', () => {
     test('should transform normal to calibrationDueAfter=30', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
       await calibrationDueFilter.click();
@@ -163,7 +156,6 @@ test.describe('Group B: Calibration Due Filter', () => {
 
     test('should return only equipment due after 30 days', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment?calibrationDueFilter=normal');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', {
@@ -189,7 +181,6 @@ test.describe('Group B: Calibration Due Filter', () => {
     }) => {
       // 먼저 필터 적용
       await testOperatorPage.goto('/equipment?calibrationDueFilter=due_soon');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 필터 뱃지 확인
       await expect(testOperatorPage.getByText(/교정기한:.*교정 임박/)).toBeVisible();
@@ -200,7 +191,6 @@ test.describe('Group B: Calibration Due Filter', () => {
       await testOperatorPage.getByRole('option', { name: /전체/i }).click();
 
       // Wait for URL to update
-      await testOperatorPage.waitForTimeout(500);
 
       // URL 검증: calibrationDueFilter 파라미터 제거
       const currentUrl = testOperatorPage.url();

@@ -88,7 +88,6 @@ test.describe('Tab Navigation - Pending Count Badges Accuracy', () => {
     console.log('✅ Step 4: Page loaded with heading "승인 관리"');
 
     // Wait for pending counts query to complete
-    await techManagerPage.waitForTimeout(2000);
     console.log('✅ Step 4.1: Waited for pending counts query');
 
     // Step 5: Find '폐기 검토' tab
@@ -146,7 +145,6 @@ test.describe('Tab Navigation - Pending Count Badges Accuracy', () => {
     console.log('✅ Step 9: Clicked "폐기 검토" tab');
 
     // Step 10: Wait for disposal_review content to load
-    await techManagerPage.waitForTimeout(1500);
 
     // Verify tab is now active
     await expect(disposalReviewTab).toHaveAttribute('aria-selected', 'true');

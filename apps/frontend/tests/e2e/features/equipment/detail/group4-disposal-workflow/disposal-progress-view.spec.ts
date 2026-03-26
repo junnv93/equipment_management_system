@@ -17,7 +17,6 @@ test.describe('폐기 워크플로우 - 진행 상태 확인', () => {
   }) => {
     // 1. 사전 시드된 pending_disposal 장비에 UUID 직접 접근
     await page.goto(`/equipment/${EQUIP_DISPOSAL_UI_E1}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. 폐기 진행 중 버튼이 표시됨
     const progressButton = page.getByRole('button', { name: /폐기 진행 중/i });
