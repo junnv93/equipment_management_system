@@ -44,6 +44,7 @@ export const users = pgTable(
 
     // 앱 소유 필드 (Azure AD로 덮어쓰지 않음)
     isActive: boolean('is_active').notNull().default(true), // 활성 상태
+    lastLogin: timestamp('last_login'), // 마지막 로그인 시간 (audit.auth.success 이벤트로 갱신)
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

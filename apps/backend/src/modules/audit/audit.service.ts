@@ -2,7 +2,13 @@ import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import { auditLogs, NewAuditLog, AuditLog, AuditLogDetails } from '@equipment-management/db/schema';
+import {
+  auditLogs,
+  users,
+  NewAuditLog,
+  AuditLog,
+  AuditLogDetails,
+} from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import {
@@ -364,6 +370,61 @@ export class AuditService {
       );
     } catch (error) {
       this.logger.error(`Failed to log auth failure event: ${error}`);
+    }
+  }
+
+  /**
+   * 인증 성공 감사 이벤트 리스너
+   *
+   * 로그인 성공 시:
+   * ① 감사 로그 생성 (action: 'login', entityType: 'user')
+   * ② users.lastLogin 갱신 (userId가 유효한 경우)
+   *
+   * audit.auth.failed와 대칭 구조로, 비동기 처리하여 인증 흐름에 영향을 주지 않습니다.
+   */
+  @OnEvent('audit.auth.success', { async: true })
+  async handleAuthSuccess(payload: {
+    event: string;
+    userId: string;
+    email: string;
+    provider: string;
+    timestamp: string;
+  }): Promise<void> {
+    try {
+      // ① 감사 로그 생성
+      await this.create({
+        userId: payload.userId || SYSTEM_USER_UUID,
+        userName: payload.email,
+        userRole: 'system', // 로그인 시점에는 세션 역할 미확정
+        action: 'login',
+        entityType: 'user',
+        entityId: payload.userId || SYSTEM_USER_UUID,
+        entityName: payload.email,
+        details: {
+          additionalInfo: {
+            event: payload.event,
+            provider: payload.provider,
+            email: payload.email,
+          },
+        } satisfies AuditLogDetails,
+      });
+
+      // ② users.lastLogin 갱신 (유효한 userId만)
+      // NOTE: updatedAt 미갱신 — lastLogin은 사용자 정보 변경이 아닌 로그인 활동 추적 전용.
+      // updatedAt 갱신 시 사용자 목록의 "최근 변경" 정렬에 매 로그인이 노이즈로 반영됨.
+      // NOTE: AuditService에서 users 직접 UPDATE — 순환 의존성(AuditModule↔UsersModule) 회피를 위한 의도적 설계.
+      // UsersService에 캐시 도입 시 UsersService.updateLastLogin()으로 위임 필요.
+      if (payload.userId) {
+        await this.db
+          .update(users)
+          .set({ lastLogin: new Date() })
+          .where(eq(users.id, payload.userId));
+      }
+
+      this.logger.log(`[AUTH] Login success: ${payload.email} (provider: ${payload.provider})`);
+    } catch (error) {
+      // 로그 저장 실패가 로그인 흐름에 영향 주지 않음
+      this.logger.error(`Failed to log auth success event: ${error}`);
     }
   }
 }

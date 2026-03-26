@@ -465,13 +465,13 @@ export class UsersService {
 
   /**
    * DB row → User 타입 변환 헬퍼
-   * isActive를 DB 컬럼에서 읽어옴 (기존 하드코딩 제거)
+   * isActive, lastLogin을 DB 컬럼에서 읽어옴
    */
   private toUser(dbUser: typeof usersTable.$inferSelect): User {
     return {
       ...dbUser,
       isActive: dbUser.isActive ?? true,
-      lastLogin: null,
+      lastLogin: dbUser.lastLogin ?? null,
       deletedAt: null,
       equipmentCount: 0,
       rentalsCount: 0,

@@ -91,6 +91,16 @@ test.describe('시나리오 3: quality_manager 읽기전용 패턴', () => {
     await expect(page.getByRole('link', { name: '교정계획서 작성' })).not.toBeVisible();
   });
 
+  test('TC-10b: LM — 교정계획서에서 작성 버튼 미표시 (직무분리)', async ({
+    siteAdminPage: page,
+  }) => {
+    await page.goto('/calibration-plans');
+    await expect(page.locator('main')).toBeVisible({ timeout: 10000 });
+
+    // LM은 최종 승인만 — CREATE_CALIBRATION_PLAN 없음 (직무분리)
+    await expect(page.getByRole('link', { name: '교정계획서 작성' })).not.toBeVisible();
+  });
+
   test('TC-11: QM — 부적합 목록에서 등록 버튼 미표시', async ({ qualityManagerPage: page }) => {
     await page.goto('/non-conformances');
     await expect(page.locator('main')).toBeVisible({ timeout: 10000 });

@@ -186,17 +186,21 @@ export class AuthService {
     // DB에서 사용자 정보 조회하여 site, teamId 등 보강
     const dbUser = await this.usersService.findByEmail(loginDto.email);
     if (dbUser) {
-      return this.generateToken(this.toAuthUser(dbUser));
+      const authResponse = this.generateToken(this.toAuthUser(dbUser));
+      this.emitAuthSuccess(dbUser.id, loginDto.email, 'local');
+      return authResponse;
     }
 
     // DB에 없으면 최소 정보로 폴백 (site/teamId 없음)
     this.logger.warn(`login(): DB에서 사용자를 찾을 수 없음 (${loginDto.email}), 기본값 사용`);
-    return this.generateToken({
+    const authResponse = this.generateToken({
       id: '',
       email: loginDto.email,
       name: defaults.name,
       roles: defaults.roles,
     });
+    this.emitAuthSuccess('', loginDto.email, 'local');
+    return authResponse;
   }
 
   // Azure AD 인증 처리 (프로덕션 환경)
@@ -230,7 +234,9 @@ export class AuthService {
     };
 
     // 토큰 생성
-    return this.generateToken(user);
+    const authResponse = this.generateToken(user);
+    this.emitAuthSuccess(user.id, user.email, 'azure_ad');
+    return authResponse;
   }
 
   // Azure AD 그룹을 팀과 위치로 매핑
@@ -337,7 +343,9 @@ export class AuthService {
       });
     }
 
-    return this.generateToken(this.toAuthUser(dbUser));
+    const authResponse = this.generateToken(this.toAuthUser(dbUser));
+    this.emitAuthSuccess(dbUser.id, email, 'test');
+    return authResponse;
   }
 
   /**
@@ -513,6 +521,26 @@ export class AuthService {
     if (!exp) return 0;
     const remaining = exp * 1000 - Date.now();
     return Math.max(remaining, 0);
+  }
+
+  /**
+   * 로그인 성공 이벤트 발행 (비동기)
+   *
+   * AuditService의 handleAuthSuccess 리스너가 처리:
+   * ① 감사 로그 생성 ② users.lastLogin 갱신
+   *
+   * @param userId - 로그인한 사용자 ID (DB UUID)
+   * @param email - 사용자 이메일
+   * @param provider - 인증 제공자 ('local' | 'azure_ad' | 'test')
+   */
+  private emitAuthSuccess(userId: string, email: string, provider: string): void {
+    this.eventEmitter.emit('audit.auth.success', {
+      event: 'login_success',
+      userId,
+      email,
+      provider,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   /**
