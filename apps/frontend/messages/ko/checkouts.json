@@ -2,6 +2,16 @@
   "title": "반출입 관리",
   "subtitle": "반출 신청, 승인, 반입 처리 관리",
   "description": "장비 반출입 요청 및 현황을 관리합니다.",
+  "metadata": {
+    "detailTitle": "{purpose} 반출 상세 - {destination}",
+    "detailDescription": "{destination}으로의 {purpose} 반출 상세 정보를 확인하세요.",
+    "detailFallbackTitle": "반출 상세",
+    "detailFallbackDescription": "반출 상세 정보",
+    "returnTitle": "반입 처리 - {purpose}",
+    "returnDescription": "{destination}에서 {purpose} 반출된 장비의 반입 처리",
+    "returnFallbackTitle": "반입 처리",
+    "returnFallbackDescription": "장비 반입 처리"
+  },
   "status": {
     "pending": "대기 중",
     "approved": "승인됨",
