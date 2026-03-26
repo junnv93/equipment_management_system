@@ -33,28 +33,12 @@ import {
   IncidentTypeValues as ITVal,
 } from '@equipment-management/schemas';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
 // Backend configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
 const FRONTEND_URL = BASE_URLS.FRONTEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
-
-/**
- * Helper: Login and get JWT token via backend test-login endpoint
- */
-async function loginAsRole(
-  request: APIRequestContext,
-  role: 'test_engineer' | 'technical_manager' | 'lab_manager'
-): Promise<string> {
-  const response = await request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-
-  if (!response.ok()) {
-    throw new Error(`Failed to login as ${role}: ${response.status()}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 /**
  * Helper: Create test equipment for permission testing
@@ -139,7 +123,7 @@ test.describe('Permission Tests', () => {
 
   test('7.1 should allow lab_manager to trigger manual overdue check', async ({ request }) => {
     // 1. Login as Lab Manager (lab_manager role)
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     // 2. Send POST request to /api/notifications/trigger-overdue-check
     const response = await request.post(TRIGGER_ENDPOINT, {
@@ -178,7 +162,7 @@ test.describe('Permission Tests', () => {
     request,
   }) => {
     // 1. Login as Technical Manager (technical_manager role)
-    const token = await loginAsRole(request, 'technical_manager');
+    const token = await fetchBackendToken('technical_manager');
 
     // 2. Send POST request to /api/notifications/trigger-overdue-check
     const response = await request.post(TRIGGER_ENDPOINT, {
@@ -218,7 +202,7 @@ test.describe('Permission Tests', () => {
     request,
   }) => {
     // 1. Login as Test Engineer (test_engineer role)
-    const token = await loginAsRole(request, 'test_engineer');
+    const token = await fetchBackendToken('test_engineer');
 
     // 2. Send POST request to /api/notifications/trigger-overdue-check
     const response = await request.post(TRIGGER_ENDPOINT, {
@@ -258,7 +242,7 @@ test.describe('Permission Tests', () => {
     const managementNumber = `TEST-7.4-${timestamp}`;
 
     // Setup: Create test equipment
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber,
       name: `Permission Test Equipment 7.4 ${timestamp}`,
@@ -345,7 +329,7 @@ test.describe('Permission Tests', () => {
     const managementNumber = `TEST-7.5-${timestamp}`;
 
     // Setup: Create test equipment and incident
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
     const equipment = await createTestEquipment(request, labManagerToken, {
       managementNumber,
       name: `Permission Test Equipment 7.5 ${timestamp}`,
@@ -356,7 +340,7 @@ test.describe('Permission Tests', () => {
 
     // Part 1: Test Engineer cannot delete
     // 1. Login as Test Engineer
-    const testEngineerToken = await loginAsRole(request, 'test_engineer');
+    const testEngineerToken = await fetchBackendToken('test_engineer');
 
     // 2. Navigate to equipment detail with incident history
     await page.setExtraHTTPHeaders({
@@ -384,7 +368,7 @@ test.describe('Permission Tests', () => {
 
     // Part 2: Technical Manager can delete
     // 4. Login as Technical Manager
-    const techManagerToken = await loginAsRole(request, 'technical_manager');
+    const techManagerToken = await fetchBackendToken('technical_manager');
 
     // 5. Verify delete button is visible (via API permission check)
     const deleteResponse = await request.delete(
@@ -422,7 +406,7 @@ test.describe('Permission Tests', () => {
     }
 
     // Verify Lab Manager also has delete permission
-    const labManagerCheckToken = await loginAsRole(request, 'lab_manager');
+    const labManagerCheckToken = await fetchBackendToken('lab_manager');
     const labManagerDeleteResponse = await request.delete(
       `${BACKEND_URL}/api/equipment/${equipment.id}/incident-history/${incident.id}`,
       {

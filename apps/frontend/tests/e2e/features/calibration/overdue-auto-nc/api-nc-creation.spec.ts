@@ -46,27 +46,11 @@ import {
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
 // Backend configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
-
-/**
- * Helper: Login and get JWT token via backend test-login endpoint
- */
-async function loginAsRole(
-  request: APIRequestContext,
-  role: 'lab_manager' | 'technical_manager' | 'test_engineer'
-): Promise<string> {
-  const response = await request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-
-  if (!response.ok()) {
-    throw new Error(`Failed to login as ${role}: ${response.status()}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 /**
  * Helper: Create test equipment with specific properties
@@ -277,7 +261,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
 
   test('2.1 should create non-conformance record with correct fields', async ({ request }) => {
     // 1. Create test equipment with overdue calibration (nextCalibrationDate = yesterday)
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
@@ -317,7 +301,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
 
   test('2.2 should change equipment status to non_conforming', async ({ request }) => {
     // 1. Create test equipment with status = 'available'
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
@@ -351,7 +335,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
 
   test('2.3 should create incident history record automatically', async ({ request }) => {
     // 1. Create test equipment with overdue calibration
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
@@ -391,7 +375,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
 
   test('2.4 should create system notification for administrators', async ({ request }) => {
     // 1. Create test equipment with overdue calibration
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
@@ -438,7 +422,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
     request,
   }) => {
     // 1. Create test equipment with overdue calibration
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
@@ -485,7 +469,7 @@ test.describe('Backend API - Non-Conformance Creation', () => {
 
   test('2.6 should process multiple overdue equipment in single API call', async ({ request }) => {
     // 1. Create 3 test equipment with overdue calibration dates
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 

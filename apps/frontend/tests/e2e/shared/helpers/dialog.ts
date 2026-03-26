@@ -4,7 +4,7 @@
  * Helper functions for interacting with shadcn/ui dialog and select components.
  */
 
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 
 /**
  * Select an option from a shadcn/ui Select component (combobox pattern)
@@ -22,15 +22,15 @@ export async function selectShadcnOption(
   optionText: string
 ): Promise<void> {
   const label = page.getByText(labelPattern).first();
-  await label.waitFor({ state: 'visible', timeout: 5000 });
+  await expect(label).toBeVisible({ timeout: 5000 });
 
   const formItem = label.locator('..');
   const selectTrigger = formItem.getByRole('combobox').first();
 
   await selectTrigger.click();
-  await page.waitForTimeout(300);
-  await page.getByRole('option', { name: optionText, exact: true }).click();
-  await page.waitForTimeout(200);
+  const option = page.getByRole('option', { name: optionText, exact: true });
+  await expect(option).toBeVisible({ timeout: 5000 });
+  await option.click();
 }
 
 /**
@@ -40,8 +40,7 @@ export async function selectShadcnOption(
  * @param buttonName - Button text to click (e.g. '확인', '취소')
  */
 export async function confirmDialog(page: Page, buttonName: string = '확인'): Promise<void> {
-  const dialog = page.locator('[role="dialog"]');
-  await dialog.waitFor({ state: 'visible', timeout: 5000 });
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible({ timeout: 5000 });
   await dialog.getByRole('button', { name: buttonName }).click();
-  await page.waitForTimeout(300);
 }

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
 
 /**
  * E2E Tests for Common/Rental Equipment (UI-14)
@@ -13,15 +13,6 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Common/Rental Equipment Management', () => {
-  test.beforeEach(async ({ page }) => {
-    // Login as technical_manager for full access
-    await page.goto('/login');
-    await page.fill('input[name="email"]', 'technical.manager@test.com');
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/dashboard');
-  });
-
   test.describe('1. Temporary Equipment Registration', () => {
     test('should display temporary registration page with all required fields', async ({
       page,
@@ -46,7 +37,7 @@ test.describe('Common/Rental Equipment Management', () => {
       await expect(page.locator('label:has-text("교정성적서")')).toBeVisible();
     });
 
-    test('should register common equipment successfully', async ({ page }) => {
+    test('should register common equipment successfully', async ({ techManagerPage: page }) => {
       await page.goto('/equipment/create-shared');
 
       // Select common equipment type
@@ -158,7 +149,9 @@ test.describe('Common/Rental Equipment Management', () => {
   });
 
   test.describe('2. Usage Period Display', () => {
-    test('should display D-day badge for temporary equipment', async ({ page }) => {
+    test('should display D-day badge for temporary equipment', async ({
+      techManagerPage: page,
+    }) => {
       // Navigate to equipment list and filter for shared equipment
       await page.goto('/equipment');
 
@@ -179,7 +172,7 @@ test.describe('Common/Rental Equipment Management', () => {
       }
     });
 
-    test('should show usage period in equipment detail page', async ({ page }) => {
+    test('should show usage period in equipment detail page', async ({ techManagerPage: page }) => {
       // This test requires existing temporary equipment
       // Navigate to equipment list with shared filter
       await page.goto('/equipment?isShared=shared');
@@ -205,7 +198,7 @@ test.describe('Common/Rental Equipment Management', () => {
   });
 
   test.describe('3. Equipment List Filtering', () => {
-    test('should filter equipment by isShared status', async ({ page }) => {
+    test('should filter equipment by isShared status', async ({ techManagerPage: page }) => {
       await page.goto('/equipment');
 
       // Test "공용장비만" filter
@@ -227,7 +220,7 @@ test.describe('Common/Rental Equipment Management', () => {
       // isShared parameter should be removed or set to all
     });
 
-    test('should clear all filters including isShared', async ({ page }) => {
+    test('should clear all filters including isShared', async ({ techManagerPage: page }) => {
       await page.goto('/equipment?isShared=shared&status=available');
 
       // Click clear filters button
@@ -246,7 +239,9 @@ test.describe('Common/Rental Equipment Management', () => {
   });
 
   test.describe('4. Rental Equipment 4-Stage Workflow', () => {
-    test('should show checkout status stepper for rental equipment', async ({ page }) => {
+    test('should show checkout status stepper for rental equipment', async ({
+      techManagerPage: page,
+    }) => {
       // This test requires existing rental checkout
       // Navigate to checkouts list
       await page.goto('/checkouts');
@@ -272,7 +267,9 @@ test.describe('Common/Rental Equipment Management', () => {
       }
     });
 
-    test('should display condition comparison card for rental equipment', async ({ page }) => {
+    test('should display condition comparison card for rental equipment', async ({
+      techManagerPage: page,
+    }) => {
       // This test requires rental checkout with multiple condition checks
       await page.goto('/checkouts');
 
@@ -308,7 +305,9 @@ test.describe('Common/Rental Equipment Management', () => {
   });
 
   test.describe('5. Accessibility', () => {
-    test('should have proper ARIA labels for equipment type selection', async ({ page }) => {
+    test('should have proper ARIA labels for equipment type selection', async ({
+      techManagerPage: page,
+    }) => {
       await page.goto('/equipment/create-shared');
 
       // Equipment type radio group should have proper role
@@ -322,7 +321,9 @@ test.describe('Common/Rental Equipment Management', () => {
       await expect(rentalLabel).toHaveText(/렌탈장비/);
     });
 
-    test('should have role="alert" for calibration validity warnings', async ({ page }) => {
+    test('should have role="alert" for calibration validity warnings', async ({
+      techManagerPage: page,
+    }) => {
       await page.goto('/equipment/create-shared');
 
       // Fill in dates to trigger validation
@@ -354,7 +355,7 @@ test.describe('Common/Rental Equipment Management', () => {
       }
     });
 
-    test('should have aria-label for usage period badge', async ({ page }) => {
+    test('should have aria-label for usage period badge', async ({ techManagerPage: page }) => {
       await page.goto('/equipment?isShared=shared');
 
       // Usage period badge should have aria-label
@@ -369,7 +370,9 @@ test.describe('Common/Rental Equipment Management', () => {
   });
 
   test.describe('6. Edge Cases and Validation', () => {
-    test('should prevent submission without required temporary fields', async ({ page }) => {
+    test('should prevent submission without required temporary fields', async ({
+      techManagerPage: page,
+    }) => {
       await page.goto('/equipment/create-shared');
 
       // Select common equipment
@@ -390,7 +393,7 @@ test.describe('Common/Rental Equipment Management', () => {
       expect(page.url()).toContain('/equipment/create-shared');
     });
 
-    test('should handle usage period in the past gracefully', async ({ page }) => {
+    test('should handle usage period in the past gracefully', async ({ techManagerPage: page }) => {
       await page.goto('/equipment/create-shared');
 
       await page.click('input[value="common"]');
