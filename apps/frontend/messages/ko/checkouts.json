@@ -34,7 +34,8 @@
   "purpose": {
     "calibration": "교정",
     "repair": "수리",
-    "rental": "렌탈"
+    "rental": "렌탈",
+    "return_to_vendor": "업체 반환"
   },
   "tabs": {
     "outbound": "반출",

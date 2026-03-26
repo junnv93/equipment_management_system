@@ -34,7 +34,8 @@
   "purpose": {
     "calibration": "Calibration",
     "repair": "Repair",
-    "rental": "Rental"
+    "rental": "Rental",
+    "return_to_vendor": "Return to Vendor"
   },
   "tabs": {
     "outbound": "Outbound",

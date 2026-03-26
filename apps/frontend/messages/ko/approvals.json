@@ -18,6 +18,13 @@
     "rejected": "반려",
     "all": "전체"
   },
+  "unifiedStatus": {
+    "pending": "대기",
+    "pending_review": "검토 대기",
+    "reviewed": "검토 완료",
+    "approved": "승인 완료",
+    "rejected": "반려"
+  },
   "actions": {
     "approve": "승인",
     "reject": "반려",

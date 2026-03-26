@@ -5,6 +5,14 @@
     "uiwang": "Uiwang Lab",
     "pyeongtaek": "Pyeongtaek Lab"
   },
+  "classification": {
+    "fcc_emc_rf": "FCC EMC/RF",
+    "general_emc": "General EMC",
+    "general_rf": "General RF",
+    "sar": "SAR",
+    "automotive_emc": "Automotive EMC",
+    "software": "Software"
+  },
   "subtitle": "Register, modify, and manage calibration records",
   "fields": {
     "name": "Equipment Name",

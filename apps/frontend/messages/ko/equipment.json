@@ -5,6 +5,14 @@
     "uiwang": "의왕랩",
     "pyeongtaek": "평택랩"
   },
+  "classification": {
+    "fcc_emc_rf": "FCC EMC/RF",
+    "general_emc": "General EMC",
+    "general_rf": "General RF",
+    "sar": "SAR",
+    "automotive_emc": "Automotive EMC",
+    "software": "소프트웨어"
+  },
   "subtitle": "장비 등록, 수정, 교정 이력 관리",
   "fields": {
     "name": "장비명",

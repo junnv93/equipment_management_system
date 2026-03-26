@@ -18,6 +18,13 @@
     "rejected": "Rejected",
     "all": "All"
   },
+  "unifiedStatus": {
+    "pending": "Pending",
+    "pending_review": "Pending Review",
+    "reviewed": "Reviewed",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
   "actions": {
     "approve": "Approve",
     "reject": "Reject",
