@@ -32,8 +32,8 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 | Package / Layer | Key Files | SSOT 항목 |
 |---|---|---|
-| `packages/schemas/` | `enums.ts`, `user.ts`, `errors.ts`, `settings.ts`, `audit-log.ts`, `field-labels.ts`, `validation/messages.ts` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지 |
-| `packages/shared-constants/` | `permissions.ts`, `api-endpoints.ts`, `data-scope.ts`, `auth-token.ts`, `approval-categories.ts`, `business-rules.ts`, `security.ts` | Permission, API 경로, 스코프 정책, 비즈니스 규칙 |
+| `packages/schemas/` | `enums.ts`, `user.ts`, `errors.ts`, `settings.ts`, `audit-log.ts`, `field-labels.ts`, `validation/messages.ts`, `document.ts` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지, DocumentType/DocumentJson |
+| `packages/shared-constants/` | `permissions.ts`, `api-endpoints.ts`, `data-scope.ts`, `auth-token.ts`, `approval-categories.ts`, `business-rules.ts`, `security.ts`, `entity-routes.ts` | Permission, API 경로, 스코프 정책, 비즈니스 규칙, 엔티티 라우트 |
 | `packages/db/` | `schema/audit-logs.ts`, `index.ts` | DB enum 배열, AppDatabase 타입 |
 | `packages/shared-constants/` | `test-users.ts` | Test User Constants SSOT (TEST_USERS_BY_TEAM, DEFAULT_ROLE_EMAILS, ALL_TEST_EMAILS) |
 
