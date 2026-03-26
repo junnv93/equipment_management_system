@@ -19,7 +19,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslations } from 'next-intl';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import calibrationFactorsApi, {
-  FACTOR_TYPE_LABELS,
   type CalibrationFactorRegistry,
 } from '@/lib/api/calibration-factors-api';
 import { format } from 'date-fns';
@@ -94,7 +93,7 @@ export default function CalibrationFactorsRegistryContent({
       item.factors.some(
         (f) =>
           f.factorName.toLowerCase().includes(search) ||
-          FACTOR_TYPE_LABELS[f.factorType as keyof typeof FACTOR_TYPE_LABELS]
+          t(`factorType.${f.factorType}` as Parameters<typeof t>[0])
             ?.toLowerCase()
             .includes(search)
       )
@@ -119,8 +118,7 @@ export default function CalibrationFactorsRegistryContent({
     const rows = registry.registry.flatMap((item) =>
       item.factors.map((factor) => [
         item.equipmentId,
-        FACTOR_TYPE_LABELS[factor.factorType as keyof typeof FACTOR_TYPE_LABELS] ||
-          factor.factorType,
+        t(`factorType.${factor.factorType}` as Parameters<typeof t>[0]),
         factor.factorName,
         factor.factorValue,
         factor.unit,
@@ -293,9 +291,7 @@ export default function CalibrationFactorsRegistryContent({
                             variant="outline"
                             className={CAL_FACTORS_COLLAPSIBLE_TOKENS.overflowBadge}
                           >
-                            {FACTOR_TYPE_LABELS[
-                              factor.factorType as keyof typeof FACTOR_TYPE_LABELS
-                            ] || factor.factorType}
+                            {t(`factorType.${factor.factorType}` as Parameters<typeof t>[0])}
                           </Badge>
                         ))}
                         {item.factors.length > 3 && (
@@ -326,9 +322,7 @@ export default function CalibrationFactorsRegistryContent({
                             <TableRow key={factor.id} className={CAL_FACTORS_TABLE_TOKENS.row}>
                               <TableCell>
                                 <Badge variant="outline">
-                                  {FACTOR_TYPE_LABELS[
-                                    factor.factorType as keyof typeof FACTOR_TYPE_LABELS
-                                  ] || factor.factorType}
+                                  {t(`factorType.${factor.factorType}` as Parameters<typeof t>[0])}
                                 </Badge>
                               </TableCell>
                               <TableCell className={CAL_FACTORS_TABLE_TOKENS.cellName}>
