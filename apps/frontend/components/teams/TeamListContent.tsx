@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import teamsApi, { type Team, SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { cn } from '@/lib/utils';
@@ -279,7 +280,6 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface SiteConfig {
-  label: string;
   code: string;
   color: string;
 }
@@ -295,6 +295,7 @@ interface SitePanelProps {
 }
 
 function SitePanel({
+  siteKey,
   siteConfig,
   teams,
   canCreateTeam,
@@ -302,6 +303,7 @@ function SitePanel({
   onAddTeam,
   t,
 }: SitePanelProps) {
+  const siteLabels = useSiteLabels();
   const memberCount = useMemo(
     () => teams.reduce((acc, team) => acc + (team.memberCount || 0), 0),
     [teams]
@@ -320,7 +322,9 @@ function SitePanel({
         />
 
         <div className={SITE_PANEL_TOKENS.nameRow}>
-          <span className={SITE_PANEL_TOKENS.name}>{siteConfig.label}</span>
+          <span className={SITE_PANEL_TOKENS.name}>
+            {siteLabels[siteKey as keyof typeof siteLabels] || siteKey}
+          </span>
           <span
             className={SITE_PANEL_TOKENS.codeBadge}
             style={{
@@ -336,10 +340,10 @@ function SitePanel({
         <div className={SITE_PANEL_TOKENS.metaRow}>
           <div className={SITE_PANEL_TOKENS.metaItem}>
             <Users className="h-3 w-3" aria-hidden="true" />
-            <span className={SITE_PANEL_TOKENS.metaNum}>{teams.length}</span>팀
+            {t('listContent.stats.sectionTeamCount', { count: teams.length })}
           </div>
           <div className={SITE_PANEL_TOKENS.metaItem}>
-            <span className={SITE_PANEL_TOKENS.metaNum}>{memberCount}</span>명
+            {t('listContent.stats.sectionMemberCount', { count: memberCount })}
           </div>
           {noLeaderCount > 0 && (
             <div className={cn(SITE_PANEL_TOKENS.metaItem, 'text-brand-warning')}>
