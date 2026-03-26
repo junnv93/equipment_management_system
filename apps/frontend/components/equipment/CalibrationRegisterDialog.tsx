@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -47,17 +47,21 @@ import {
   DocumentTypeValues,
 } from '@equipment-management/schemas';
 
-const calibrationSchema = z.object({
-  calibrationDate: z.string().min(1, '교정일을 입력하세요'),
-  nextCalibrationDate: z.string().min(1, '다음 교정일을 입력하세요'),
-  calibrationAgency: z.string().min(1, '교정 기관을 입력하세요').max(100),
-  certificateNumber: z.string().min(1, '교정성적서 번호를 입력하세요').max(100),
-  calibrationCycle: z.coerce.number().min(1, '교정 주기를 입력하세요 (최소 1개월)'),
-  result: CalibrationResultEnum,
-  notes: z.string().optional(),
-});
-
-type CalibrationFormData = z.infer<typeof calibrationSchema>;
+function createCalibrationSchema(t: (key: string) => string) {
+  return z.object({
+    calibrationDate: z.string().min(1, t('calibrationHistorySection.validationCalDate')),
+    nextCalibrationDate: z.string().min(1, t('calibrationHistorySection.validationNextCalDate')),
+    calibrationAgency: z.string().min(1, t('calibrationHistorySection.validationAgency')).max(100),
+    certificateNumber: z
+      .string()
+      .min(1, t('calibrationHistorySection.validationCertificateNumber'))
+      .max(100),
+    calibrationCycle: z.coerce.number().min(1, t('calibrationHistorySection.validationCycleMin')),
+    result: CalibrationResultEnum,
+    notes: z.string().optional(),
+  });
+}
+type CalibrationFormData = z.infer<ReturnType<typeof createCalibrationSchema>>;
 
 // 폼 기본값 팩토리 — useForm defaultValues와 form.reset() 양쪽 SSOT
 const getDefaultValues = (): CalibrationFormData => ({
@@ -80,6 +84,7 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const calibrationSchema = useMemo(() => createCalibrationSchema(t), [t]);
 
   const form = useForm<CalibrationFormData>({
     resolver: zodResolver(calibrationSchema),

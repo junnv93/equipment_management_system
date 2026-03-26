@@ -9,6 +9,7 @@
 
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import {
   parseNCFiltersFromSearchParams,
   convertNCFiltersToApiParams,
@@ -29,11 +30,12 @@ type PageProps = {
 /**
  * 로딩 폴백 (ListPageSkeleton 사용)
  */
-function NonConformancesLoadingFallback() {
+async function NonConformancesLoadingFallback() {
+  const t = await getTranslations('non-conformances');
   return (
     <ListPageSkeleton
-      title="부적합 관리"
-      description="장비 부적합 사항을 등록, 분석, 조치하고 종결합니다"
+      title={t('title')}
+      description={t('subtitle')}
       showFilters={true}
       filterCount={3}
       showSearch={true}

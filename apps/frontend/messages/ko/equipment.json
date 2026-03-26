@@ -739,6 +739,15 @@
       "repairSuccessDesc": "수리 이력이 등록되었습니다.",
       "repairError": "오류",
       "repairErrorDesc": "수리 이력 등록 중 오류가 발생했습니다."
+    },
+    "validation": {
+      "occurredAtRequired": "발생 일시를 입력하세요.",
+      "contentRequired": "내용을 입력하세요.",
+      "contentMax": "500자 이하로 입력하세요.",
+      "actionPlanMax": "조치 계획은 500자 이하로 입력하세요.",
+      "repairDateRequired": "수리 일자를 입력하세요.",
+      "repairDescriptionMin": "수리 내용은 최소 10자 이상 입력해야 합니다.",
+      "nonConformanceRequired": "부적합을 선택해주세요."
     }
   },
   "locationHistoryTab": {
@@ -774,7 +783,14 @@
       "deleteSuccess": "삭제 완료",
       "deleteSuccessDesc": "위치 변동 이력이 삭제되었습니다.",
       "deleteError": "삭제 실패",
-      "deleteErrorDesc": "위치 변동 이력 삭제 중 오류가 발생했습니다."
+      "deleteErrorDesc": "위치 변동 이력 삭제 중 오류가 발생했습니다.",
+      "versionConflict": "버전 충돌",
+      "versionConflictDesc": "다른 사용자가 장비를 수정했습니다. 새로고침 후 다시 시도해주세요."
+    },
+    "validation": {
+      "changedAtRequired": "변동 일시를 입력하세요.",
+      "newLocationRequired": "설치 위치를 입력하세요.",
+      "newLocationMax": "100자 이하로 입력하세요."
     }
   },
   "maintenanceHistoryTab": {
@@ -812,6 +828,11 @@
       "deleteSuccessDesc": "유지보수 내역이 삭제되었습니다.",
       "deleteError": "삭제 실패",
       "deleteErrorDesc": "유지보수 내역 삭제 중 오류가 발생했습니다."
+    },
+    "validation": {
+      "performedAtRequired": "수행 일시를 입력하세요.",
+      "contentRequired": "내용을 입력하세요.",
+      "contentMax": "500자 이하로 입력하세요."
     }
   },
   "checkoutHistoryTab": {
@@ -1196,6 +1217,8 @@
     "validationCycle": "유효한 교정 주기를 입력하세요.",
     "validationNextCalDate": "차기 교정일을 입력하세요.",
     "validationNextCalDateOrder": "차기 교정일은 교정일 이후여야 합니다.",
+    "validationCertificateNumber": "교정성적서 번호를 입력하세요.",
+    "validationCycleMin": "교정 주기를 입력하세요 (최소 1개월).",
     "saveError": "교정 이력 저장 중 오류가 발생했습니다.",
     "deleteConfirmTitle": "삭제 확인",
     "deleteConfirmDescription": "이 교정 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",

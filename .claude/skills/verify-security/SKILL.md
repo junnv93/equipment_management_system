@@ -39,7 +39,7 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 | `apps/backend/src/common/decorators/site-scoped.decorator.ts`              | @SiteScoped() 데코레이터 (데이터 격리)                                     |
 | `apps/backend/src/common/interceptors/site-scope.interceptor.ts`           | SiteScopeInterceptor (JWT site → req.query.site 강제 주입)                 |
 | `apps/backend/src/common/metrics/metrics.controller.ts`                    | Prometheus 메트릭 컨트롤러 (@Public() + GET, src/common/ 레이어)           |
-| `scripts/check-endpoint-annotations.ts`                                    | CI 보안 검증 스크립트 (190/190 엔드포인트 어노테이션 검증)                 |
+| ~~`scripts/check-endpoint-annotations.ts`~~                                | (삭제됨 — CI 파이프라인 통합으로 대체)                                     |
 | `apps/frontend/tests/e2e/common/security-headers/security-headers.spec.ts` | 보안 헤더 E2E 테스트 (SH-01: Backend, SH-02: Frontend)                     |
 | `.env`                                                                     | PERMISSIONS_GUARD_MODE 환경변수                                            |
 | `apps/backend/src/common/utils/enforce-site-access.ts`                     | 크로스 사이트/팀 접근 제어 공유 유틸리티 (entityTeamId 지원)               |
@@ -218,18 +218,19 @@ async getStats(@Request() req: AuthenticatedRequest) {
 
 **참고:** DashboardController, ApprovalsController, AuditController가 현재 implicit 패턴을 사용 중.
 
-### Step 7: CI 엔드포인트 어노테이션 검증
+### Step 7: 엔드포인트 보안 데코레이터 적용 확인
 
-모든 컨트롤러 엔드포인트에 보안 데코레이터가 적용되어 있는지 CI 스크립트로 확인합니다.
+모든 컨트롤러 엔드포인트에 보안 데코레이터가 적용되어 있는지 Grep으로 확인합니다.
 
 ```bash
-# CI 보안 검증 스크립트 실행 (190/190 통과 확인)
-npx ts-node scripts/check-endpoint-annotations.ts 2>&1 | tail -10
+# @Get/@Post/@Patch/@Put/@Delete 데코레이터가 있는 메서드에 @RequirePermissions, @Public, @SkipPermissions 중 하나가 있는지 확인
+grep -rn "@Get\|@Post\|@Patch\|@Put\|@Delete" apps/backend/src/**/*.controller.ts | wc -l
+grep -rn "@RequirePermissions\|@Public\|@SkipPermissions" apps/backend/src/**/*.controller.ts | wc -l
 ```
 
-**PASS 기준:** `All X endpoints have annotations` 메시지 출력 (0개 실패).
+**PASS 기준:** 두 명령어의 줄 수가 유사 (각 HTTP 메서드에 대응하는 보안 데코레이터 존재).
 
-**FAIL 기준:** `MISSING` 항목 출력 시 해당 엔드포인트에 `@RequirePermissions()`, `@SkipPermissions()`, 또는 `@Public()` 추가 필요.
+**FAIL 기준:** HTTP 메서드 수보다 보안 데코레이터 수가 현저히 적으면 누락 엔드포인트 확인 필요.
 
 **참고:** 각 엔드포인트는 다음 중 하나를 반드시 가져야 함:
 

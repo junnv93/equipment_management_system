@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,11 +38,14 @@ import { Plus, Trash2, MapPin } from 'lucide-react';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { LocationHistoryItem, CreateLocationHistoryInput } from '@/lib/api/equipment-api';
 
-const locationHistorySchema = z.object({
-  changedAt: z.string().min(1, '변동 일시를 입력하세요'),
-  newLocation: z.string().min(1, '설치 위치를 입력하세요').max(100),
-  notes: z.string().optional(),
-});
+function createLocationHistorySchema(t: (key: string) => string) {
+  return z.object({
+    changedAt: z.string().min(1, t('locationHistoryTab.validation.changedAtRequired')),
+    newLocation: z.string().min(1, t('locationHistoryTab.validation.newLocationRequired')).max(100),
+    notes: z.string().optional(),
+  });
+}
+type LocationHistoryFormData = z.infer<ReturnType<typeof createLocationHistorySchema>>;
 
 interface LocationHistorySectionProps {
   equipmentUuid?: string;
@@ -65,8 +68,9 @@ export function LocationHistorySection({
   const { fmtDate } = useDateFormatter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const locationHistorySchema = useMemo(() => createLocationHistorySchema(t), [t]);
 
-  const form = useForm<z.infer<typeof locationHistorySchema>>({
+  const form = useForm<LocationHistoryFormData>({
     resolver: zodResolver(locationHistorySchema),
     defaultValues: {
       changedAt: fmtDate(new Date()),
@@ -75,7 +79,7 @@ export function LocationHistorySection({
     },
   });
 
-  const handleSubmit = async (data: z.infer<typeof locationHistorySchema>) => {
+  const handleSubmit = async (data: LocationHistoryFormData) => {
     setIsSubmitting(true);
     try {
       await onAdd({

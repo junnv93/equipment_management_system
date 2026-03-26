@@ -1,28 +1,29 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import { Loader2, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
-  AUTH_CONTENT,
   AUTH_MOTION_TOKENS,
   MOTION_PRIMITIVES,
   TRANSITION_PRESETS,
   getSemanticStatusClasses,
 } from '@/lib/design-tokens';
 
-const loginSchema = z.object({
-  email: z.string().min(1, '이메일을 입력하세요').email('유효한 이메일을 입력하세요'),
-  password: z.string().min(1, '비밀번호를 입력하세요'),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+function createLoginSchema(t: (key: string) => string) {
+  return z.object({
+    email: z.string().min(1, t('validation.emailRequired')).email(t('validation.emailInvalid')),
+    password: z.string().min(1, t('validation.passwordRequired')),
+  });
+}
+type LoginFormValues = z.infer<ReturnType<typeof createLoginSchema>>;
 
 interface LoginFormProps {
   callbackUrl?: string;
@@ -44,10 +45,13 @@ export function LoginForm({
   onError,
   disabled = false,
 }: LoginFormProps) {
+  const t = useTranslations('auth.login');
   const [isPending, startTransition] = useTransition();
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shakeError, setShakeError] = useState(false);
+
+  const loginSchema = useMemo(() => createLoginSchema(t), [t]);
 
   const {
     register,
@@ -77,9 +81,9 @@ export function LoginForm({
         });
 
         if (result?.error) {
-          setError(AUTH_CONTENT.error.authFailed);
+          setError(t('authFailed'));
           triggerShake();
-          onError?.(AUTH_CONTENT.error.authFailed);
+          onError?.(t('authFailed'));
         } else if (result?.ok) {
           setIsSuccess(true);
           onSuccess?.();
@@ -88,9 +92,9 @@ export function LoginForm({
           }, MOTION_PRIMITIVES.duration.moderate);
         }
       } catch (err) {
-        setError(AUTH_CONTENT.error.systemError);
+        setError(t('systemError'));
         triggerShake();
-        onError?.(AUTH_CONTENT.error.systemError);
+        onError?.(t('systemError'));
         console.error('Login error:', err);
       }
     });
@@ -115,7 +119,7 @@ export function LoginForm({
         TRANSITION_PRESETS.moderateTransform,
         shakeError && 'animate-shake'
       )}
-      aria-label="로그인 폼"
+      aria-label={t('formAriaLabel')}
       data-testid="login-form"
       noValidate
     >
@@ -139,7 +143,7 @@ export function LoginForm({
       {/* Email Field */}
       <div className="space-y-2">
         <label htmlFor="email" className="text-sm font-medium font-body text-brand-text-secondary">
-          이메일 주소
+          {t('emailLabel')}
         </label>
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none z-10">
@@ -183,7 +187,7 @@ export function LoginForm({
           htmlFor="password"
           className="text-sm font-medium font-body text-brand-text-secondary"
         >
-          비밀번호
+          {t('passwordLabel')}
         </label>
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none z-10">
@@ -242,7 +246,7 @@ export function LoginForm({
                   className="h-5 w-5 motion-safe:animate-scale-in motion-reduce:animate-none"
                   aria-hidden="true"
                 />
-                <span>{AUTH_CONTENT.button.loginSuccess}</span>
+                <span>{t('submitSuccess')}</span>
               </>
             ) : isPending ? (
               <>
@@ -250,10 +254,10 @@ export function LoginForm({
                   className="h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none"
                   aria-hidden="true"
                 />
-                <span>{AUTH_CONTENT.button.loginLoading}</span>
+                <span>{t('submitting')}</span>
               </>
             ) : (
-              <span>{AUTH_CONTENT.button.login}</span>
+              <span>{t('submitButton')}</span>
             )}
           </div>
         </Button>

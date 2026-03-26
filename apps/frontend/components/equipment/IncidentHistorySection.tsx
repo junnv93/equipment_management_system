@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,11 +60,14 @@ const MANUAL_INCIDENT_TYPES: IncidentType[] = [
   ITVal.REPAIR,
 ];
 
-const incidentHistorySchema = z.object({
-  occurredAt: z.string().min(1, '발생 일시를 입력하세요'),
-  incidentType: z.enum([ITVal.DAMAGE, ITVal.MALFUNCTION, ITVal.CHANGE, ITVal.REPAIR]),
-  content: z.string().min(1, '주요 내용을 입력하세요'),
-});
+function createIncidentHistorySchema(t: (key: string) => string) {
+  return z.object({
+    occurredAt: z.string().min(1, t('incidentHistoryTab.validation.occurredAtRequired')),
+    incidentType: z.enum([ITVal.DAMAGE, ITVal.MALFUNCTION, ITVal.CHANGE, ITVal.REPAIR]),
+    content: z.string().min(1, t('incidentHistoryTab.validation.contentRequired')),
+  });
+}
+type IncidentHistoryFormData = z.infer<ReturnType<typeof createIncidentHistorySchema>>;
 
 interface IncidentHistorySectionProps {
   equipmentUuid?: string;
@@ -87,8 +90,9 @@ export function IncidentHistorySection({
   const { fmtDate } = useDateFormatter();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const incidentHistorySchema = useMemo(() => createIncidentHistorySchema(t), [t]);
 
-  const form = useForm<z.infer<typeof incidentHistorySchema>>({
+  const form = useForm<IncidentHistoryFormData>({
     resolver: zodResolver(incidentHistorySchema),
     defaultValues: {
       occurredAt: fmtDate(new Date()),
@@ -97,7 +101,7 @@ export function IncidentHistorySection({
     },
   });
 
-  const handleSubmit = async (data: z.infer<typeof incidentHistorySchema>) => {
+  const handleSubmit = async (data: IncidentHistoryFormData) => {
     setIsSubmitting(true);
     try {
       await onAdd({

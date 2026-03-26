@@ -264,7 +264,6 @@ export {
   NC_WORKFLOW_TOKENS,
   NC_WORKFLOW_STEPS,
   NC_STATUS_STEP_INDEX,
-  NC_KPI_LABELS,
   getNCWorkflowNodeClasses,
   getNCWorkflowLabelClasses,
   getNCWorkflowConnectorClasses,

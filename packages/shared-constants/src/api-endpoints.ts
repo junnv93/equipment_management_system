@@ -204,7 +204,6 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/api/non-conformances/${id}`,
     CLOSE: (id: string) => `/api/non-conformances/${id}/close`,
     REJECT_CORRECTION: (id: string) => `/api/non-conformances/${id}/reject-correction`,
-    PENDING: '/api/non-conformances/pending',
     EQUIPMENT: (equipmentId: string) => `/api/non-conformances/equipment/${equipmentId}`,
   },
 

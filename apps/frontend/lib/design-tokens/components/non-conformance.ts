@@ -136,18 +136,6 @@ export const NC_DETAIL_HEADER_TOKENS = {
 export type NCKpiVariant = NonConformanceStatus;
 
 /**
- * KPI 전용 라벨 (SSOT)
- *
- * NON_CONFORMANCE_STATUS_LABELS (기술 상태: '등록됨')와 다른
- * 비즈니스 맥락 라벨 ('미해결')을 제공합니다.
- */
-export const NC_KPI_LABELS: Record<NCKpiVariant, string> = {
-  open: '미해결',
-  corrected: '조치 완료',
-  closed: '종결',
-} as const;
-
-/**
  * KPI 카드 스타일 — 시멘틱 색상 기반
  *
  * - open: critical (미해결 — 빨강)
