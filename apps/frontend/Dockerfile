@@ -11,8 +11,8 @@ COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 COPY packages/schemas/package.json ./packages/schemas/
 COPY apps/frontend/package.json ./apps/frontend/
 
-# 의존성 설치를 위해 --no-frozen-lockfile 옵션 사용
-RUN pnpm install --no-frozen-lockfile
+# 재현 가능한 빌드를 위해 lockfile 고정
+RUN pnpm install --frozen-lockfile
 
 # 개발 환경
 FROM base AS development
@@ -82,7 +82,7 @@ COPY --from=build /app/packages/schemas/package.json ./packages/schemas/package.
 # 프로덕션 의존성만 설치
 COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
-RUN pnpm install --prod --no-frozen-lockfile
+RUN pnpm install --prod --frozen-lockfile
 
 # 보안을 위해 루트가 아닌 사용자로 전환
 RUN addgroup --system --gid 1001 nodejs

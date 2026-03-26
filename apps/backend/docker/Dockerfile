@@ -70,14 +70,32 @@ RUN pnpm --filter db build || echo "db build skipped"
 RUN pnpm --filter backend build
 
 # ==========================
+# Production Dependencies
+# ==========================
+FROM node:20-alpine AS prod-deps
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/schemas/package.json ./packages/schemas/
+COPY packages/db/package.json ./packages/db/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/ui/package.json ./packages/ui/
+
+RUN pnpm install --frozen-lockfile --prod
+
+# ==========================
 # Production Stage
 # ==========================
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Copy built artifacts and dependencies
-COPY --from=builder /app/node_modules ./node_modules
+# Copy production-only dependencies (devDependencies excluded)
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/packages/schemas/dist ./packages/schemas/dist
 COPY --from=builder /app/packages/schemas/package.json ./packages/schemas/
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist

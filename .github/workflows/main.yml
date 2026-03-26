@@ -229,9 +229,31 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      - name: Build and push images (staging tag)
-        run: |
-          echo "Building staging images for SHA ${{ github.sha }}"
+      - name: Build and push backend image (staging)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/backend/docker/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-backend:staging
+            ${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-backend:staging-${{ github.sha }}
+          cache-from: type=gha,scope=backend-staging
+          cache-to: type=gha,mode=max,scope=backend-staging
+
+      - name: Build and push frontend image (staging)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-frontend:staging
+            ${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-frontend:staging-${{ github.sha }}
+          cache-from: type=gha,scope=frontend-staging
+          cache-to: type=gha,mode=max,scope=frontend-staging
 
       - name: Deploy to staging server
         if: ${{ secrets.STAGING_DEPLOY_HOST != '' }}
@@ -278,6 +300,7 @@ jobs:
         with:
           context: .
           file: apps/backend/docker/Dockerfile
+          target: production
           push: true
           tags: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-backend:latest
@@ -290,6 +313,7 @@ jobs:
         with:
           context: .
           file: apps/frontend/Dockerfile
+          target: production
           push: true
           tags: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-frontend:latest

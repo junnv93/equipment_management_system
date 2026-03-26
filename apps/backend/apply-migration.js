@@ -6,13 +6,11 @@ const path = require('path');
 
 async function runMigration() {
   try {
-    const conn = postgres({
-      host: 'localhost',
-      port: 5432,
-      database: 'postgres_equipment',
-      username: 'postgres',
-      password: 'postgres',
-    });
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL 환경변수가 설정되지 않았습니다.');
+    }
+    const conn = postgres(databaseUrl);
 
     const migrationSql = fs.readFileSync(
       path.join(__dirname, 'drizzle/manual/20260130_seed_test_users.sql'),
