@@ -287,11 +287,18 @@ const schema = useMemo(() => createSchema(t), [t]);
 
 | 컴포넌트/파일 | 패턴 | 필요한 JSON 키 |
 |---|---|---|
-| `ApprovalRow/DetailModal/DetailPanel` | `t('unifiedStatus.${status}')` | `approvals.json: unifiedStatus.*` |
-| `InboundCheckoutsTab` | `tEquip('classification.${classification}')` | `equipment.json: classification.*` |
-| `CalibrationPlansContent` | `t('planStatus.${value}')` | `calibration.json: planStatus.*` |
-| `CalibrationContent` | `t('calibrationDueStatusOptions.${status}')` | `calibration.json: content.filters.calibrationDueStatusOptions.*` |
+| `EquipmentTable/CardGrid/StickyHeader/StatusLocation` | `t('status.${displayStatus}')` | `equipment.json: status.*` |
+| `CheckoutStatusBadge` | `t('status.${status}')` | `checkouts.json: status.*` |
+| `CheckoutStatusBadge` | `tEquipment('importStatus.${status}')` | `equipment.json: importStatus.*` |
 | `CheckoutGroupCard/Content` | `t('purpose.${purpose}')` | `checkouts.json: purpose.*` |
+| `CalibrationResultBadge` | `t('result.${value}')` | `calibration.json: result.*` |
+| `CalibrationResultBadge` | `t('status.${value}')` | `calibration.json: status.*` |
+| `EquipmentImportDetail` | `t('importSource.${sourceType}')` | `equipment.json: importSource.*` |
+| `EquipmentImportDetail` | `t('classification.${classification}')` | `equipment.json: classification.*` |
+| `ApprovalRow/DetailModal/DetailPanel` | `t('unifiedStatus.${status}')` | `approvals.json: unifiedStatus.*` |
+| `CalibrationPlansContent/VersionHistory` | `t('planStatus.${value}')` | `calibration.json: planStatus.*` |
+| `CalibrationContent` | `t('calibrationDueStatusOptions.${status}')` | `calibration.json: content.filters.calibrationDueStatusOptions.*` |
+| `DisposalReasonSelector` | `t('reason.${reasonValue}')` | `disposal.json: reason.*` |
 | `getLocalizedSummary()` | `t('summaryTemplates.*')` | `approvals.json: summaryTemplates.*` |
 
 ```bash

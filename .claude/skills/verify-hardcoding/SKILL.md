@@ -556,6 +556,6 @@ grep -rn '_LABELS\[' apps/frontend/components apps/frontend/app --include="*.tsx
 6. **`lib/design-tokens/primitives.ts`의 JSDoc 주석** — easing SSOT 정의 문서이므로 `cubic-bezier` 값 기술 면제
 7. **`.limit(1)` 단일 레코드 조회** — 페이지네이션이 아닌 단건 조회 패턴으로 면제
 8. **서버 로그/경고 메시지** — `console.log`, `console.warn` 등 개발자 디버깅용 메시지는 UI 표시가 아니므로 면제
-9. **`packages/schemas/src/enums/labels.ts`의 한국어 라벨** — SSOT 정의 파일이므로 면제 (향후 i18n 전환 대상)
+9. **`packages/schemas/src/enums/labels.ts`의 한국어 라벨** — 서버 사이드 전용 SSOT 정의 파일이므로 면제. 프론트엔드 UI 표시에는 i18n 메시지 JSON을 사용 (전환 완료)
 10. **`*_LABELS[value]` 잔존 사용 (컴포넌트 내)** — i18n 마이그레이션 후 React 컴포넌트에서 `*_LABELS` 맵을 직접 사용하여 UI 텍스트를 표시하면 영어 로케일에서 한국어가 혼재됨. `useTranslations()` + JSON 키로 교체 필요. 단, API 유틸리티 파일(`lib/api/*`)에서의 사용은 React hook 호출 불가로 면제 (별도 아키텍처 변경 필요)
 11. **E2E 테스트 파일의 `*_LABELS` 사용** — 테스트는 특정 로케일(한국어) 기반으로 실행되므로 면제
