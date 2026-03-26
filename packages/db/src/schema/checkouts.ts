@@ -98,6 +98,8 @@ export const checkouts = pgTable(
       table.status,
       table.expectedReturnDate
     ),
+    // 대여 시 빌려주는 팀 조회 최적화
+    lenderTeamIdIdx: index('checkouts_lender_team_id_idx').on(table.lenderTeamId),
   })
 );
 
