@@ -7,13 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { MapPin, Package, Wrench, ArrowRight, Camera, Download, BookOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import {
-  CALIBRATION_METHOD_LABELS,
-  CALIBRATION_RESULT_LABELS,
-  DocumentTypeValues,
-  type CalibrationMethod,
-  type CalibrationResult,
-} from '@equipment-management/schemas';
+import { DocumentTypeValues } from '@equipment-management/schemas';
 import {
   getTimestampClasses,
   EQUIPMENT_INFO_CARD_TOKENS,
@@ -43,6 +37,7 @@ interface BasicInfoTabProps {
  */
 export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
   const t = useTranslations('equipment');
+  const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
   const pathname = usePathname();
   const tokens = EQUIPMENT_INFO_CARD_TOKENS;
@@ -244,7 +239,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
               <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationMethod')}</dt>
               <dd className={tokens.ddValue}>
                 {equipment.calibrationMethod
-                  ? CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod]
+                  ? tCal(`method.${equipment.calibrationMethod}` as Parameters<typeof tCal>[0])
                   : '-'}
               </dd>
 
@@ -376,7 +371,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                   <div className={tl.title}>
                     {t('basicInfoTab.calibrationEntry')}
                     {cal.result &&
-                      ` — ${CALIBRATION_RESULT_LABELS[cal.result as CalibrationResult] ?? cal.result}`}
+                      ` — ${tCal(`result.${cal.result}` as Parameters<typeof tCal>[0])}`}
                   </div>
                   <div className={tl.desc}>
                     {cal.calibrationAgency}

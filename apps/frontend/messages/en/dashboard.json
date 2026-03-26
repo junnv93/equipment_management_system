@@ -336,7 +336,7 @@
   "kpi": {
     "total": "Total Equipment",
     "totalUnit": "",
-    "heroSub": "",
+    "heroSub": "Managed equipment",
     "heroBarLabel": "{percent}% in use",
     "utilization": "Utilization",
     "utilizationSub": "{count} available",

@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
-import { CHECKOUT_PURPOSE_LABELS, CheckoutStatus } from '@equipment-management/schemas';
+import type { CheckoutStatus } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
@@ -91,9 +91,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
     const label = t(checkKeys.labelKey as Parameters<typeof t>[0]);
     const role = t(checkKeys.roleKey as Parameters<typeof t>[0]);
 
-    const purposeLabel =
-      CHECKOUT_PURPOSE_LABELS[checkout.purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] ||
-      checkout.purpose;
+    const purposeLabel = t(`purpose.${checkout.purpose}`);
 
     return (
       <Card key={checkout.id} className={`hover:shadow-md ${TRANSITION_PRESETS.fastShadow}`}>

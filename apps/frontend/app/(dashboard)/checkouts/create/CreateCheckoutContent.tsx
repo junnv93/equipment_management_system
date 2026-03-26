@@ -52,7 +52,11 @@ import { addDays } from 'date-fns';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 import teamsApi, { type Site } from '@/lib/api/teams-api';
-import { SITE_LABELS, CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
+import {
+  SITE_LABELS,
+  CheckoutPurposeValues as CPVal,
+  type EquipmentStatus,
+} from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
@@ -60,6 +64,7 @@ import {
   getEquipmentSelectability,
   filterVisibleEquipment,
 } from '@/lib/utils/checkout-selectability';
+import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 
 export default function CreateCheckoutContent() {
   const t = useTranslations('checkouts');
@@ -476,7 +481,11 @@ export default function CreateCheckoutContent() {
                                 <Badge
                                   className={`${statusStyle.className} text-sm whitespace-nowrap`}
                                 >
-                                  {statusStyle.label}
+                                  {tEquip(
+                                    `status.${getDisplayStatus((equipment.status || 'available') as EquipmentStatus)}` as Parameters<
+                                      typeof tEquip
+                                    >[0]
+                                  )}
                                 </Badge>
                               </TableCell>
                             </TableRow>
@@ -541,7 +550,11 @@ export default function CreateCheckoutContent() {
                                     {equipment.name}
                                   </p>
                                   <Badge className={`${statusStyle.className} text-xs`}>
-                                    {statusStyle.label}
+                                    {tEquip(
+                                      `status.${getDisplayStatus((equipment.status || 'available') as EquipmentStatus)}` as Parameters<
+                                        typeof tEquip
+                                      >[0]
+                                    )}
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-muted-foreground font-mono">

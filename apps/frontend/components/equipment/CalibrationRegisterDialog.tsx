@@ -41,11 +41,7 @@ import { addMonths } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
-import {
-  CalibrationResultEnum,
-  CALIBRATION_RESULT_LABELS,
-  DocumentTypeValues,
-} from '@equipment-management/schemas';
+import { CalibrationResultEnum, DocumentTypeValues } from '@equipment-management/schemas';
 
 function createCalibrationSchema(t: (key: string) => string) {
   return z.object({
@@ -80,6 +76,7 @@ interface CalibrationRegisterDialogProps {
 
 export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDialogProps) {
   const t = useTranslations('equipment');
+  const tCal = useTranslations('calibration');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -290,7 +287,7 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
                     <SelectContent>
                       {CalibrationResultEnum.options.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {CALIBRATION_RESULT_LABELS[value]}
+                          {tCal(`result.${value}` as Parameters<typeof tCal>[0])}
                         </SelectItem>
                       ))}
                     </SelectContent>

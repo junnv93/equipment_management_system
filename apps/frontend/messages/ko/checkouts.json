@@ -233,6 +233,19 @@
       "incomplete": "불완비"
     }
   },
+  "returnCondition": {
+    "good": "양호",
+    "damaged": "손상",
+    "lost": "분실",
+    "needs_repair": "수리 필요",
+    "needs_calibration": "교정 필요"
+  },
+  "conditionCheckStep": {
+    "lender_checkout": "① 반출 전 확인 (빌려주는 측)",
+    "borrower_receive": "② 인수 시 확인 (빌리는 측)",
+    "borrower_return": "③ 반납 전 확인 (빌린 측)",
+    "lender_return": "④ 반입 시 확인 (빌려준 측)"
+  },
   "groupCard": {
     "unknownUser": "알 수 없는 사용자",
     "equipmentCount": "장비 {count}대",

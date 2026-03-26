@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { type Site, EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
+import { type Site, EQUIPMENT_STATUS_VALUES } from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -31,8 +31,8 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
-// EQUIPMENT_STATUS_LABELS는 @equipment-management/schemas에서 import (SSOT)
-// 색상 스타일은 @/lib/constants/equipment-status-styles에서 import (SSOT)
+// 장비 상태 라벨은 i18n (useTranslations('equipment').status.*)으로 관리
+// 색상 스타일은 @/lib/design-tokens/getEquipmentStatusTokenStyle에서 import (SSOT)
 
 interface TechnicalManager {
   id: number;
@@ -132,7 +132,7 @@ export function StatusLocationSection({
                               variant="outline"
                               className={getEquipmentStatusTokenStyle(field.value).className}
                             >
-                              {getEquipmentStatusTokenStyle(field.value).label}
+                              {t(`status.${field.value}` as Parameters<typeof t>[0])}
                             </Badge>
                           </div>
                         )}
@@ -140,13 +140,13 @@ export function StatusLocationSection({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {Object.entries(EQUIPMENT_STATUS_LABELS).map(([value, label]) => {
+                    {EQUIPMENT_STATUS_VALUES.map((value) => {
                       const style = getEquipmentStatusTokenStyle(value);
                       return (
                         <SelectItem key={value} value={value}>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={style.className}>
-                              {label}
+                              {t(`status.${value}` as Parameters<typeof t>[0])}
                             </Badge>
                           </div>
                         </SelectItem>

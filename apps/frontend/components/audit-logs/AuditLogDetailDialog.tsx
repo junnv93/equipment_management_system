@@ -17,7 +17,6 @@ import { PrintableAuditReport } from './PrintableAuditReport';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { type AuditLog, type AuditAction } from '@equipment-management/schemas';
 import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
-import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 import {
   AUDIT_ACTION_BADGE_TOKENS,
   DEFAULT_AUDIT_ACTION_BADGE,
@@ -115,9 +114,7 @@ export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetail
                   </div>
                   <div>
                     <span className="text-muted-foreground">{t('detail.userRole')}</span>
-                    <span className="ml-2 font-medium">
-                      {USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole}
-                    </span>
+                    <span className="ml-2 font-medium">{tc(`userRoles.${log.userRole}`)}</span>
                   </div>
                   <div className="col-span-2">
                     <span className="text-muted-foreground">{t('detail.userId')}</span>

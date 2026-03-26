@@ -17,7 +17,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { SYSTEM_USER_UUID } from '@equipment-management/schemas';
-import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 import type { AuditLog, AuditAction } from '@equipment-management/schemas';
 
 // ── 날짜 그룹 타입 ────────────────────────────────────────────
@@ -93,6 +92,7 @@ export function AuditTimelineFeed({
   isRefetching = false,
 }: AuditTimelineFeedProps) {
   const t = useTranslations('audit');
+  const tCommon = useTranslations('common');
 
   const groups = useMemo(
     () => groupByDate(logs, t('timeline.today'), t('timeline.yesterday')),
@@ -245,7 +245,7 @@ export function AuditTimelineFeed({
                         ) : (
                           <span className={AUDIT_TIMELINE_TOKENS.subItem}>
                             <User aria-hidden="true" className="h-3 w-3" />
-                            {USER_ROLE_LABELS[log.userRole as UserRole] ?? log.userRole}
+                            {tCommon(`userRoles.${log.userRole}`)}
                           </span>
                         )}
                         {log.ipAddress && (

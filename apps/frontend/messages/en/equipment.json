@@ -13,6 +13,28 @@
     "automotive_emc": "Automotive EMC",
     "software": "Software"
   },
+  "documentType": {
+    "calibration_certificate": "Calibration Certificate",
+    "raw_data": "Raw Data",
+    "inspection_report": "Inspection Report",
+    "history_card": "History Card",
+    "equipment_photo": "Equipment Photo",
+    "equipment_manual": "Equipment Manual",
+    "other": "Other"
+  },
+  "importSource": {
+    "rental": "External Rental",
+    "internal_shared": "Internal Shared"
+  },
+  "importStatus": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "received": "Received",
+    "return_requested": "Return in Progress",
+    "returned": "Returned",
+    "canceled": "Canceled"
+  },
   "subtitle": "Register, modify, and manage calibration records",
   "fields": {
     "name": "Equipment Name",

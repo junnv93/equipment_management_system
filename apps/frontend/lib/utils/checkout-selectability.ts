@@ -10,7 +10,6 @@
  */
 import type { EquipmentStatus, CheckoutPurpose } from '@equipment-management/schemas';
 import {
-  EQUIPMENT_STATUS_LABEL_KEYS,
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
@@ -72,7 +71,7 @@ export function getEquipmentSelectability(
   }
 
   // SSOT에 명시적 사유가 없는 경우 — 상태 라벨 i18n 키로 기본 메시지 생성
-  const statusLabelKey = EQUIPMENT_STATUS_LABEL_KEYS[status] ?? `status.${status}`;
+  const statusLabelKey = `status.${status}`;
   return {
     selectable: false,
     reasonKey: 'selectability.statusNotSelectable',

@@ -97,6 +97,18 @@
     "corrected": "조치 완료",
     "closed": "종료됨"
   },
+  "resolutionType": {
+    "repair": "수리",
+    "recalibration": "재교정",
+    "replacement": "교체",
+    "disposal": "폐기",
+    "other": "기타"
+  },
+  "repairResult": {
+    "completed": "완료",
+    "partial": "부분 완료",
+    "failed": "실패"
+  },
   "ncType": {
     "damage": "손상",
     "malfunction": "오작동",

@@ -17,8 +17,7 @@ import {
 } from '@/components/ui/table';
 import { ClipboardList } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
 import { type EquipmentImportStatus } from '@equipment-management/schemas';
@@ -56,6 +55,7 @@ export default function InboundCheckoutsTab({
   const t = useTranslations('checkouts');
   const tEquip = useTranslations('equipment');
   const router = useRouter();
+  const { fmtDate } = useDateFormatter();
   const searchParams = useSearchParams();
 
   const { status: statusFilter, search: searchTerm } = filters;
@@ -203,9 +203,9 @@ export default function InboundCheckoutsTab({
                   </TableCell>
                   <TableCell className="line-clamp-1">{item.vendorName}</TableCell>
                   <TableCell className="tabular-nums">
-                    {format(new Date(item.usagePeriodStart), 'yy.MM.dd', { locale: ko })}
+                    {fmtDate(item.usagePeriodStart)}
                     {' ~ '}
-                    {format(new Date(item.usagePeriodEnd), 'yy.MM.dd', { locale: ko })}
+                    {fmtDate(item.usagePeriodEnd)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -217,9 +217,7 @@ export default function InboundCheckoutsTab({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="tabular-nums">
-                    {format(new Date(item.createdAt), 'yy.MM.dd', { locale: ko })}
-                  </TableCell>
+                  <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -332,9 +330,9 @@ export default function InboundCheckoutsTab({
                       </TableCell>
                       <TableCell className="line-clamp-1">{item.ownerDepartment || '-'}</TableCell>
                       <TableCell className="tabular-nums">
-                        {format(new Date(item.usagePeriodStart), 'yy.MM.dd', { locale: ko })}
+                        {fmtDate(item.usagePeriodStart)}
                         {' ~ '}
-                        {format(new Date(item.usagePeriodEnd), 'yy.MM.dd', { locale: ko })}
+                        {fmtDate(item.usagePeriodEnd)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -348,9 +346,7 @@ export default function InboundCheckoutsTab({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="tabular-nums">
-                        {format(new Date(item.createdAt), 'yy.MM.dd', { locale: ko })}
-                      </TableCell>
+                      <TableCell className="tabular-nums">{fmtDate(item.createdAt)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

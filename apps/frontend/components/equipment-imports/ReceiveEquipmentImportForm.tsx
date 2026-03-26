@@ -35,9 +35,7 @@ import equipmentImportApi, {
 } from '@/lib/api/equipment-import-api';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
-  CALIBRATION_METHOD_LABELS,
   CALIBRATION_METHOD_VALUES,
-  EQUIPMENT_IMPORT_SOURCE_LABELS,
   EquipmentImportSourceValues as EISrcVal,
   type CalibrationMethod,
 } from '@equipment-management/schemas';
@@ -55,6 +53,7 @@ interface Props {
  */
 export default function ReceiveEquipmentImportForm({ id }: Props) {
   const t = useTranslations('equipment');
+  const tCalibration = useTranslations('calibration');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const { toast } = useToast();
@@ -162,7 +161,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     );
   }
 
-  const sourceLabel = EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType];
+  const sourceLabel = t(`importSource.${equipmentImport.sourceType}`);
   const ownerLabel =
     equipmentImport.sourceType === EISrcVal.RENTAL
       ? equipmentImport.vendorName
@@ -284,7 +283,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                 <SelectContent>
                   {CALIBRATION_METHOD_VALUES.map((method) => (
                     <SelectItem key={method} value={method}>
-                      {CALIBRATION_METHOD_LABELS[method]}
+                      {tCalibration(`method.${method}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>

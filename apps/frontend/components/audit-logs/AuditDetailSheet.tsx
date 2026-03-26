@@ -18,7 +18,6 @@ import {
 import { useTranslations } from 'next-intl';
 import type { AuditLog, AuditAction } from '@equipment-management/schemas';
 import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
-import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 
 interface AuditDetailSheetProps {
   open: boolean;
@@ -114,7 +113,7 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
                     <span className={AUDIT_DETAIL_SHEET_TOKENS.rowKey}>{t('detail.userRole')}</span>
                     <span className={AUDIT_DETAIL_SHEET_TOKENS.rowVal}>
                       <Badge variant="outline" className="text-xs">
-                        {USER_ROLE_LABELS[log.userRole as UserRole] ?? log.userRole}
+                        {tc(`userRoles.${log.userRole}`)}
                       </Badge>
                     </span>
                   </div>

@@ -16,7 +16,6 @@ import {
   getPermissions,
   PERMISSION_CATEGORIES,
   PERMISSION_CATEGORY_KEYS,
-  PERMISSION_LABELS,
 } from '@equipment-management/shared-constants';
 import { type UserProfile } from '@equipment-management/schemas';
 import {
@@ -104,6 +103,8 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
   const tEquip = useTranslations('equipment');
   const locale = useLocale();
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+
+  const permissionLabels = t.raw('profile.permissions.labels') as Record<string, string>;
 
   // 권한을 카테고리별로 그룹화 (SSOT: PERMISSION_CATEGORIES)
   const permissionsByCategory = useMemo(() => {
@@ -304,7 +305,7 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
                         className={SETTINGS_PERMISSIONS_CARD_TOKENS.badge}
                         role="listitem"
                       >
-                        {PERMISSION_LABELS[permission]}
+                        {permissionLabels[permission] ?? permission}
                       </Badge>
                     ))}
                   </div>

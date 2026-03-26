@@ -30,8 +30,6 @@ import type { Equipment } from '@/lib/api/equipment-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
-import type { DocumentType } from '@equipment-management/schemas';
-import { DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
 import { formatFileSize } from '@/lib/utils/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
@@ -139,9 +137,9 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
               <TableBody>
                 {docs.map((doc) => {
                   const Icon = getFileIcon(doc.mimeType);
-                  const typeLabel =
-                    DOCUMENT_TYPE_LABELS[doc.documentType as DocumentType] ??
-                    t(`attachmentsTab.type.${doc.documentType}`);
+                  const typeLabel = t(
+                    `documentType.${doc.documentType}` as Parameters<typeof t>[0]
+                  );
 
                   return (
                     <TableRow

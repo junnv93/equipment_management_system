@@ -3,6 +3,7 @@
   "subtitle": "Register and manage calibration records",
   "status": {
     "pending": "Pending",
+    "pending_approval": "Pending Approval",
     "approved": "Approved",
     "rejected": "Rejected",
     "completed": "Completed"
@@ -15,7 +16,20 @@
   "result": {
     "pass": "Pass",
     "fail": "Fail",
-    "not_applicable": "Not Applicable"
+    "not_applicable": "Not Applicable",
+    "conditional": "Conditional Pass"
+  },
+  "factorType": {
+    "antenna_gain": "Antenna Gain",
+    "cable_loss": "Cable Loss",
+    "path_loss": "Path Loss",
+    "amplifier_gain": "Amplifier Gain",
+    "other": "Other"
+  },
+  "factorApprovalStatus": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
   },
   "toasts": {
     "registerSuccess": "Calibration record registered.",

@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Separator } from '@/components/ui/separator';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { USER_ROLE_LABELS } from '@equipment-management/shared-constants';
 import { SITE_CONFIG } from '@/lib/api/teams-api';
 import type { TeamMember } from '@/lib/api/teams-api';
 import { ROLE_BADGE_TOKENS } from '@/lib/design-tokens';
@@ -48,7 +47,8 @@ function InfoRow({
 
 export function MemberProfileDialog({ member, open, onOpenChange }: MemberProfileDialogProps) {
   const t = useTranslations('teams');
-  const roleLabel = USER_ROLE_LABELS[member.role as keyof typeof USER_ROLE_LABELS] || member.role;
+  const tCommon = useTranslations('common');
+  const roleLabel = tCommon(`userRoles.${member.role}`);
   const siteLabel = member.site
     ? SITE_CONFIG[member.site as keyof typeof SITE_CONFIG]?.label
     : undefined;

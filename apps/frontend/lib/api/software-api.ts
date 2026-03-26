@@ -2,12 +2,7 @@ import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
-import {
-  SOFTWARE_APPROVAL_STATUS_LABELS,
-  SOFTWARE_TYPE_LABELS,
-  type SoftwareApprovalStatus,
-  type SoftwareType,
-} from '@equipment-management/schemas';
+import { type SoftwareApprovalStatus, type SoftwareType } from '@equipment-management/schemas';
 
 export type { SoftwareApprovalStatus, SoftwareType };
 
@@ -89,9 +84,6 @@ export interface EquipmentBySoftware {
   }[];
   count: number;
 }
-
-// 라벨 상수 — SSOT: @equipment-management/schemas
-export { SOFTWARE_TYPE_LABELS, SOFTWARE_APPROVAL_STATUS_LABELS };
 
 // 소프트웨어 API 객체
 const softwareApi = {

@@ -34,6 +34,8 @@ import type { UserStatus } from './shared';
 
 /**
  * 장비 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(equipment.status.*)를 사용하세요.
  */
 export const EQUIPMENT_STATUS_VALUES = EquipmentStatusEnum.options;
 export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
@@ -49,30 +51,6 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
   disposed: '폐기완료',
   temporary: '임시등록',
   inactive: '비활성',
-};
-
-/**
- * 장비 상태 i18n 키 맵 (Phase 1+: LABELS 대체 예정)
- *
- * 사용법:
- * ```tsx
- * const t = useTranslations('equipment');
- * <Badge>{t(EQUIPMENT_STATUS_LABEL_KEYS[status])}</Badge>
- * ```
- */
-export const EQUIPMENT_STATUS_LABEL_KEYS: Record<EquipmentStatus, string> = {
-  available: 'status.available',
-  in_use: 'status.in_use',
-  checked_out: 'status.checked_out',
-  calibration_scheduled: 'status.calibration_scheduled',
-  calibration_overdue: 'status.calibration_overdue',
-  non_conforming: 'status.non_conforming',
-  spare: 'status.spare',
-  retired: 'status.retired',
-  pending_disposal: 'status.pending_disposal',
-  disposed: 'status.disposed',
-  temporary: 'status.temporary',
-  inactive: 'status.inactive',
 };
 
 /**
@@ -153,6 +131,8 @@ export function findCheckoutStatusGroupKey(filterValue: string): CheckoutStatusG
 
 /**
  * 교정 방법 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(equipment.calibrationMethod.*)를 사용하세요.
  */
 export const CALIBRATION_METHOD_VALUES = CalibrationMethodEnum.options;
 export const CALIBRATION_METHOD_LABELS: Record<CalibrationMethod, string> = {
@@ -163,6 +143,8 @@ export const CALIBRATION_METHOD_LABELS: Record<CalibrationMethod, string> = {
 
 /**
  * 사용자 역할 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(navigation.roles.*)를 사용하세요.
  */
 export const USER_ROLE_VALUES = UserRoleEnum.options;
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
@@ -175,6 +157,8 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
 
 /**
  * 반출 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(checkouts.status.*)를 사용하세요.
  */
 export const CHECKOUT_STATUS_LABELS: Record<CheckoutStatus, string> = {
   pending: '승인 대기',
@@ -195,6 +179,8 @@ export const CHECKOUT_STATUS_LABELS: Record<CheckoutStatus, string> = {
 
 /**
  * 반출 목적 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(checkouts.purpose.*)를 사용하세요.
  */
 export const CHECKOUT_PURPOSE_LABELS: Record<CheckoutPurpose, string> = {
   calibration: '교정',
@@ -205,6 +191,8 @@ export const CHECKOUT_PURPOSE_LABELS: Record<CheckoutPurpose, string> = {
 
 /**
  * 부적합 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(nonConformances.status.*)를 사용하세요.
  */
 export const NON_CONFORMANCE_STATUS_LABELS: Record<NonConformanceStatus, string> = {
   open: '등록됨',
@@ -214,6 +202,8 @@ export const NON_CONFORMANCE_STATUS_LABELS: Record<NonConformanceStatus, string>
 
 /**
  * 부적합 유형 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(nonConformances.type.*)를 사용하세요.
  */
 export const NON_CONFORMANCE_TYPE_LABELS: Record<NonConformanceType, string> = {
   damage: '손상',
@@ -226,6 +216,8 @@ export const NON_CONFORMANCE_TYPE_LABELS: Record<NonConformanceType, string> = {
 
 /**
  * 해결 유형 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(nonConformances.resolutionType.*)를 사용하세요.
  */
 export const RESOLUTION_TYPE_LABELS: Record<ResolutionType, string> = {
   repair: '수리',
@@ -237,6 +229,8 @@ export const RESOLUTION_TYPE_LABELS: Record<ResolutionType, string> = {
 
 /**
  * 수리 결과 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(nonConformances.repairResult.*)를 사용하세요.
  */
 export const REPAIR_RESULT_LABELS: Record<RepairResult, string> = {
   completed: '완료',
@@ -246,6 +240,8 @@ export const REPAIR_RESULT_LABELS: Record<RepairResult, string> = {
 
 /**
  * 사용자 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지를 사용하세요.
  */
 export const USER_STATUS_LABELS: Record<UserStatus, string> = {
   active: '활성',
@@ -255,6 +251,8 @@ export const USER_STATUS_LABELS: Record<UserStatus, string> = {
 
 /**
  * 알림 우선순위 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(notifications.priority.*)를 사용하세요.
  */
 export const NOTIFICATION_PRIORITY_LABELS: Record<NotificationPriority, string> = {
   low: '낮음',
@@ -264,6 +262,8 @@ export const NOTIFICATION_PRIORITY_LABELS: Record<NotificationPriority, string> 
 
 /**
  * 반납 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(checkouts.returnCondition.*)를 사용하세요.
  */
 export const RETURN_CONDITION_LABELS: Record<ReturnCondition, string> = {
   good: '양호',
@@ -275,6 +275,8 @@ export const RETURN_CONDITION_LABELS: Record<ReturnCondition, string> = {
 
 /**
  * 보정계수 타입 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(calibrationFactors.type.*)를 사용하세요.
  */
 export const CALIBRATION_FACTOR_TYPE_LABELS: Record<CalibrationFactorType, string> = {
   antenna_gain: '안테나 이득',
@@ -286,6 +288,8 @@ export const CALIBRATION_FACTOR_TYPE_LABELS: Record<CalibrationFactorType, strin
 
 /**
  * 소프트웨어 타입 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(software.type.*)를 사용하세요.
  */
 export const SOFTWARE_TYPE_LABELS: Record<SoftwareType, string> = {
   measurement: '측정 소프트웨어',
@@ -296,6 +300,8 @@ export const SOFTWARE_TYPE_LABELS: Record<SoftwareType, string> = {
 
 /**
  * 사고 유형 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(equipment.incidentType.*)를 사용하세요.
  */
 export const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
   damage: '손상',
@@ -311,6 +317,8 @@ export const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
  * 참고: pending_review 상태의 라벨이 "확인 대기"로 변경됨 (UX 단순화)
  * - 품질책임자의 "검토" 단계가 "확인" 단계로 단순화됨
  * - 다이얼로그 기반 3클릭 → 타임라인 내 원클릭 확인으로 개선
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(calibrationPlans.status.*)를 사용하세요.
  */
 export const CALIBRATION_PLAN_STATUS_LABELS: Record<CalibrationPlanStatus, string> = {
   draft: '작성 중',
@@ -322,6 +330,8 @@ export const CALIBRATION_PLAN_STATUS_LABELS: Record<CalibrationPlanStatus, strin
 
 /**
  * 교정 승인 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(calibration.approvalStatus.*)를 사용하세요.
  */
 export const CALIBRATION_APPROVAL_STATUS_LABELS: Record<CalibrationApprovalStatus, string> = {
   pending_approval: '승인 대기',
@@ -331,6 +341,8 @@ export const CALIBRATION_APPROVAL_STATUS_LABELS: Record<CalibrationApprovalStatu
 
 /**
  * 교정 결과 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(calibration.result.*)를 사용하세요.
  */
 export const CALIBRATION_RESULT_LABELS: Record<CalibrationResult, string> = {
   pass: '적합',
@@ -340,6 +352,8 @@ export const CALIBRATION_RESULT_LABELS: Record<CalibrationResult, string> = {
 
 /**
  * 보정계수 승인 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(calibrationFactors.approvalStatus.*)를 사용하세요.
  */
 export const CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS: Record<
   CalibrationFactorApprovalStatus,
@@ -352,6 +366,8 @@ export const CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS: Record<
 
 /**
  * 소프트웨어 승인 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(software.approvalStatus.*)를 사용하세요.
  */
 export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, string> = {
   pending: '승인 대기',
@@ -361,6 +377,8 @@ export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, str
 
 /**
  * 상태 확인 단계 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(checkouts.conditionCheckStep.*)를 사용하세요.
  */
 export const CONDITION_CHECK_STEP_LABELS: Record<ConditionCheckStep, string> = {
   lender_checkout: '① 반출 전 확인 (빌려주는 측)',
@@ -371,6 +389,8 @@ export const CONDITION_CHECK_STEP_LABELS: Record<ConditionCheckStep, string> = {
 
 /**
  * 외관/작동 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(checkouts.conditionStatus.*)를 사용하세요.
  */
 export const CONDITION_STATUS_LABELS: Record<ConditionStatus, string> = {
   normal: '정상',
@@ -379,6 +399,8 @@ export const CONDITION_STATUS_LABELS: Record<ConditionStatus, string> = {
 
 /**
  * 부속품 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(checkouts.accessoriesStatus.*)를 사용하세요.
  */
 export const ACCESSORIES_STATUS_LABELS: Record<AccessoriesStatus, string> = {
   complete: '완전',
@@ -387,6 +409,8 @@ export const ACCESSORIES_STATUS_LABELS: Record<AccessoriesStatus, string> = {
 
 /**
  * 통합 승인 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(approvals.status.*)를 사용하세요.
  */
 export const UNIFIED_APPROVAL_STATUS_LABELS: Record<UnifiedApprovalStatus, string> = {
   pending: '대기',
@@ -396,6 +420,11 @@ export const UNIFIED_APPROVAL_STATUS_LABELS: Record<UnifiedApprovalStatus, strin
   rejected: '반려',
 };
 
+/**
+ * 폐기 사유 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(disposal.reason.*)를 사용하세요.
+ */
 export const DISPOSAL_REASON_LABELS: Record<DisposalReason, string> = {
   obsolete: '노후화',
   broken: '고장 (수리 불가)',
@@ -403,6 +432,11 @@ export const DISPOSAL_REASON_LABELS: Record<DisposalReason, string> = {
   other: '기타',
 };
 
+/**
+ * 폐기 검토 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(disposal.reviewStatus.*)를 사용하세요.
+ */
 export const DISPOSAL_REVIEW_STATUS_LABELS: Record<DisposalReviewStatus, string> = {
   pending: '검토 대기',
   reviewed: '검토 완료',
@@ -412,6 +446,8 @@ export const DISPOSAL_REVIEW_STATUS_LABELS: Record<DisposalReviewStatus, string>
 
 /**
  * 장비 반입 출처 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(equipmentImports.source.*)를 사용하세요.
  */
 export const EQUIPMENT_IMPORT_SOURCE_LABELS: Record<EquipmentImportSource, string> = {
   rental: '외부 렌탈',
@@ -420,6 +456,8 @@ export const EQUIPMENT_IMPORT_SOURCE_LABELS: Record<EquipmentImportSource, strin
 
 /**
  * 장비 반입 상태 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(equipmentImports.status.*)를 사용하세요.
  */
 export const EQUIPMENT_IMPORT_STATUS_LABELS: Record<EquipmentImportStatus, string> = {
   pending: '승인 대기',

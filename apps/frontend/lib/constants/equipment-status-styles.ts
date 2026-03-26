@@ -4,55 +4,66 @@
  * SSOT 체인:
  *   BRAND_CLASS_MATRIX (brand.ts)
  *     → EQUIPMENT_STATUS_TOKENS (equipment.ts) — 원본
- *       → EQUIPMENT_STATUS_STYLES (이 파일) — 파생 (className + label + borderColor)
+ *       → EQUIPMENT_STATUS_STYLES (이 파일) — 파생 (className + borderColor)
  *
  * 이 파일은 스타일을 독자적으로 정의하지 않습니다.
- * EQUIPMENT_STATUS_TOKENS.card.className / card.borderColor에서 파생하며,
- * 라벨 오버라이드(calibration_scheduled → "사용 가능" 등)만 이 파일에서 관리합니다.
+ * EQUIPMENT_STATUS_TOKENS.card.className / card.borderColor에서 파생합니다.
+ * 라벨은 i18n으로 관리하며, 표시 상태 오버라이드(calibration_scheduled → available 등)는
+ * getDisplayStatus()를 통해 i18n 키 조회 시 사용합니다.
  *
  * 사용법:
  * ```typescript
- * import { getEquipmentStatusStyle, EQUIPMENT_STATUS_STYLES } from '@/lib/constants/equipment-status-styles';
+ * import { getEquipmentStatusStyle, getDisplayStatus } from '@/lib/constants/equipment-status-styles';
  *
  * const style = getEquipmentStatusStyle(equipment.status);
- * <Badge className={style.className}>{style.label}</Badge>
+ * const displayStatus = getDisplayStatus(equipment.status);
+ * const label = t(`status.${displayStatus}`);
+ * <Badge className={style.className}>{label}</Badge>
  * ```
  */
-import { EQUIPMENT_STATUS_LABELS, type EquipmentStatus } from '@equipment-management/schemas';
+import { EQUIPMENT_STATUS_VALUES, type EquipmentStatus } from '@equipment-management/schemas';
 import { EQUIPMENT_STATUS_TOKENS, DEFAULT_STATUS_CONFIG } from '@/lib/design-tokens';
 
 export interface EquipmentStatusStyle {
   className: string;
-  label: string;
   borderColor: string;
 }
 
 /**
- * 라벨 오버라이드 — 표시 라벨이 상태 이름과 다른 경우
+ * 표시 상태 오버라이드 — UI에서 다른 상태의 라벨로 표시되는 경우
  *
  * calibration_scheduled: 교정 상태는 별도 D-day 배지로 표시하므로 "사용 가능"
  * calibration_overdue: 백엔드 스케줄러 전환 전 즉시 "부적합" 표시
  */
-const LABEL_OVERRIDES: Partial<Record<EquipmentStatus, string>> = {
-  calibration_scheduled: EQUIPMENT_STATUS_LABELS.available,
-  calibration_overdue: EQUIPMENT_STATUS_LABELS.non_conforming,
+export const DISPLAY_STATUS_OVERRIDES: Partial<Record<EquipmentStatus, EquipmentStatus>> = {
+  calibration_scheduled: 'available',
+  calibration_overdue: 'non_conforming',
 };
+
+/**
+ * 표시용 상태 반환 — i18n 라벨 조회 시 사용
+ *
+ * @example
+ * const displayStatus = getDisplayStatus(equipment.status);
+ * const label = t(`status.${displayStatus}`);
+ */
+export function getDisplayStatus(status: EquipmentStatus): EquipmentStatus {
+  return DISPLAY_STATUS_OVERRIDES[status] ?? status;
+}
 
 /**
  * EQUIPMENT_STATUS_TOKENS에서 파생된 스타일 레코드
  *
  * className, borderColor → EQUIPMENT_STATUS_TOKENS.card에서 추출
- * label → EQUIPMENT_STATUS_LABELS + LABEL_OVERRIDES
  */
 export const EQUIPMENT_STATUS_STYLES: Record<EquipmentStatus, EquipmentStatusStyle> =
   Object.fromEntries(
-    (Object.keys(EQUIPMENT_STATUS_LABELS) as EquipmentStatus[]).map((status) => {
+    (EQUIPMENT_STATUS_VALUES as readonly EquipmentStatus[]).map((status) => {
       const tokens = EQUIPMENT_STATUS_TOKENS[status] ?? DEFAULT_STATUS_CONFIG;
       return [
         status,
         {
           className: tokens.card.className,
-          label: LABEL_OVERRIDES[status] ?? EQUIPMENT_STATUS_LABELS[status],
           borderColor: tokens.card.borderColor,
         },
       ];
@@ -64,7 +75,6 @@ export const EQUIPMENT_STATUS_STYLES: Record<EquipmentStatus, EquipmentStatusSty
  */
 export const DEFAULT_STATUS_STYLE: EquipmentStatusStyle = {
   className: DEFAULT_STATUS_CONFIG.card.className,
-  label: '알 수 없음',
   borderColor: DEFAULT_STATUS_CONFIG.card.borderColor,
 };
 
@@ -73,7 +83,7 @@ export const DEFAULT_STATUS_STYLE: EquipmentStatusStyle = {
  *
  * @param status 장비 상태 (EquipmentStatus 또는 string)
  * @param nextCalibrationDate 차기 교정일 (옵션) - 실시간 교정기한 초과 체크용
- * @returns 스타일 객체 (className, label, borderColor)
+ * @returns 스타일 객체 (className, borderColor)
  *
  * @example
  * // 기본 사용
@@ -97,12 +107,7 @@ export function getEquipmentStatusStyle(
     return EQUIPMENT_STATUS_STYLES.non_conforming;
   }
 
-  return (
-    EQUIPMENT_STATUS_STYLES[status as EquipmentStatus] || {
-      ...DEFAULT_STATUS_STYLE,
-      label: status, // 알 수 없는 상태는 원본 값 표시
-    }
-  );
+  return EQUIPMENT_STATUS_STYLES[status as EquipmentStatus] || DEFAULT_STATUS_STYLE;
 }
 
 /**

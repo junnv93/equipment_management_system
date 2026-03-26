@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { TEST_USER_EMAILS } from '../../../shared/constants/shared-test-data';
 
 /**
  * E2E 테스트: 공용/렌탈 장비 임시등록 및 사용 플로우
@@ -16,7 +17,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
   test.beforeEach(async ({ page }) => {
     // 로그인 (시험실무자 권한)
     await page.goto('/api/auth/signin');
-    await page.fill('input[name="email"]', 'test.engineer@example.com');
+    await page.fill('input[name="email"]', TEST_USER_EMAILS.TEST_ENGINEER_SUWON);
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
     await page.waitForURL('/dashboard');
@@ -314,7 +315,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
 test.describe('임시등록 장비 대여 플로우', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/api/auth/signin');
-    await page.fill('input[name="email"]', 'test.engineer@example.com');
+    await page.fill('input[name="email"]', TEST_USER_EMAILS.TEST_ENGINEER_SUWON);
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
     await page.waitForURL('/dashboard');

@@ -13,6 +13,28 @@
     "automotive_emc": "Automotive EMC",
     "software": "소프트웨어"
   },
+  "documentType": {
+    "calibration_certificate": "교정성적서",
+    "raw_data": "원시 데이터",
+    "inspection_report": "검수보고서",
+    "history_card": "이력카드",
+    "equipment_photo": "장비 사진",
+    "equipment_manual": "장비 매뉴얼",
+    "other": "기타"
+  },
+  "importSource": {
+    "rental": "외부 렌탈",
+    "internal_shared": "내부 공용"
+  },
+  "importStatus": {
+    "pending": "승인 대기",
+    "approved": "승인됨",
+    "rejected": "거절됨",
+    "received": "수령 완료",
+    "return_requested": "반납 진행 중",
+    "returned": "반납 완료",
+    "canceled": "취소됨"
+  },
   "subtitle": "장비 등록, 수정, 교정 이력 관리",
   "fields": {
     "name": "장비명",

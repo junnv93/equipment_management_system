@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from 'next-intl';
-import softwareApi, {
-  SOFTWARE_TYPE_LABELS,
-  type SoftwareType,
-  type SoftwareRegistry,
-} from '@/lib/api/software-api';
+import softwareApi, { type SoftwareRegistry } from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { Monitor, Search, Package, Layers, Code, ExternalLink } from 'lucide-react';
@@ -212,9 +208,7 @@ export default function SoftwareContent() {
                       </Badge>
                     </td>
                     <td className={T.bodyCell}>
-                      {item.softwareType
-                        ? SOFTWARE_TYPE_LABELS[item.softwareType as SoftwareType]
-                        : '-'}
+                      {item.softwareType ? t(`type.${item.softwareType}`) : '-'}
                     </td>
                     <td className={cn(T.bodyCell, T.date)}>
                       {item.lastUpdated ? format(new Date(item.lastUpdated), 'yyyy-MM-dd') : '-'}

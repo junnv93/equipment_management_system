@@ -97,6 +97,18 @@
     "corrected": "Corrected",
     "closed": "Closed"
   },
+  "resolutionType": {
+    "repair": "Repair",
+    "recalibration": "Recalibration",
+    "replacement": "Replacement",
+    "disposal": "Disposal",
+    "other": "Other"
+  },
+  "repairResult": {
+    "completed": "Completed",
+    "partial": "Partial",
+    "failed": "Failed"
+  },
   "ncType": {
     "damage": "Damage",
     "malfunction": "Malfunction",

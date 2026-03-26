@@ -7,6 +7,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { TEST_USER_EMAILS } from '../../shared/constants/shared-test-data';
 
 async function loginAs(page: Page, email: string, password: string) {
   await page.goto('http://localhost:3000/login');
@@ -19,7 +20,7 @@ async function loginAs(page: Page, email: string, password: string) {
 test.describe('팀 필터 - 사이트별 조회', () => {
   test('수원랩 사용자는 수원랩 팀만 볼 수 있어야 한다', async ({ page }) => {
     // Given: 수원랩 시험실무자로 로그인
-    await loginAs(page, 'test.engineer@example.com', 'password123');
+    await loginAs(page, TEST_USER_EMAILS.TEST_ENGINEER_SUWON, 'password123');
 
     // When: 장비 목록에서 팀 필터 열기
     await page.goto('http://localhost:3000/equipment');
@@ -55,7 +56,7 @@ test.describe('팀 필터 - 사이트별 조회', () => {
 
   test('팀 필터를 선택하면 해당 팀의 장비만 표시되어야 한다', async ({ page }) => {
     // Given: 로그인
-    await loginAs(page, 'test.engineer@example.com', 'password123');
+    await loginAs(page, TEST_USER_EMAILS.TEST_ENGINEER_SUWON, 'password123');
     await page.goto('http://localhost:3000/equipment');
     await page.waitForLoadState('networkidle');
 
@@ -137,7 +138,7 @@ test.describe('팀 필터 - 사이트별 조회', () => {
 
   test('팀 필터와 교정 기한 필터를 함께 사용할 수 있어야 한다', async ({ page }) => {
     // Given: 로그인
-    await loginAs(page, 'test.engineer@example.com', 'password123');
+    await loginAs(page, TEST_USER_EMAILS.TEST_ENGINEER_SUWON, 'password123');
     await page.goto('http://localhost:3000/equipment');
     await page.waitForLoadState('networkidle');
 
@@ -173,7 +174,7 @@ test.describe('팀 필터 - 사이트별 조회', () => {
 
   test('팀 필터를 제거하면 모든 팀의 장비가 표시되어야 한다', async ({ page }) => {
     // Given: 팀 필터 적용 상태
-    await loginAs(page, 'test.engineer@example.com', 'password123');
+    await loginAs(page, TEST_USER_EMAILS.TEST_ENGINEER_SUWON, 'password123');
     await page.goto('http://localhost:3000/equipment');
     await page.waitForLoadState('networkidle');
 
@@ -208,7 +209,7 @@ test.describe('팀 필터 - 사이트별 조회', () => {
 test.describe('팀 관리 페이지', () => {
   test('팀 목록 페이지에서 사이트별 팀을 확인할 수 있어야 한다', async ({ page }) => {
     // Given: 로그인
-    await loginAs(page, 'test.engineer@example.com', 'password123');
+    await loginAs(page, TEST_USER_EMAILS.TEST_ENGINEER_SUWON, 'password123');
 
     // When: 팀 목록 페이지로 이동
     await page.goto('http://localhost:3000/teams');

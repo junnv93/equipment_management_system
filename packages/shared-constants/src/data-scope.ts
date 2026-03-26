@@ -29,7 +29,10 @@ export type DataScopeType = 'none' | 'team' | 'site' | 'all';
  */
 export interface DataScopePolicy {
   type: DataScopeType;
-  /** 한국어 라벨 — 프론트엔드 UI 표시용 */
+  /**
+   * 한국어 라벨 — 프론트엔드 UI 표시용
+   * @deprecated 프론트엔드에서 미사용. 향후 제거 예정.
+   */
   label: string;
 }
 

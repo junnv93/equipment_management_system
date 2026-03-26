@@ -26,8 +26,9 @@ import {
   getEquipmentStatusTokenStyle,
   getTransitionClasses,
 } from '@/lib/design-tokens';
+import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import type { CalibrationMethod } from '@equipment-management/schemas';
+import type { CalibrationMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
   items: Equipment[];
@@ -148,7 +149,11 @@ const EquipmentCard = memo(function EquipmentCard({
               className={`${style.className} border-0`}
               data-testid="status-badge"
             >
-              {style.label}
+              {t(
+                `status.${getDisplayStatus((equipment.status || 'available') as EquipmentStatus)}` as Parameters<
+                  typeof t
+                >[0]
+              )}
             </Badge>
             {calibrationStatus && (
               <Badge

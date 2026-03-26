@@ -233,6 +233,19 @@
       "incomplete": "Incomplete"
     }
   },
+  "returnCondition": {
+    "good": "Good",
+    "damaged": "Damaged",
+    "lost": "Lost",
+    "needs_repair": "Needs Repair",
+    "needs_calibration": "Needs Calibration"
+  },
+  "conditionCheckStep": {
+    "lender_checkout": "① Pre-checkout Check (Lender)",
+    "borrower_receive": "② Receiving Check (Borrower)",
+    "borrower_return": "③ Pre-return Check (Borrower)",
+    "lender_return": "④ Return Check (Lender)"
+  },
   "groupCard": {
     "unknownUser": "Unknown User",
     "equipmentCount": "{count} equipment",

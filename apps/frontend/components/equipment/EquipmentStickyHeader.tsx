@@ -85,7 +85,11 @@ export function EquipmentStickyHeader({
     const normalized = status === ESVal.CALIBRATION_SCHEDULED ? ESVal.AVAILABLE : status;
     const final = normalized === ESVal.CALIBRATION_OVERDUE ? ESVal.NON_CONFORMING : normalized;
     const token = EQUIPMENT_STATUS_TOKENS[final] || DEFAULT_STATUS_CONFIG;
-    return { label: token.label, icon: token.icon, bg: token.card.className };
+    return {
+      label: t(`status.${final}` as Parameters<typeof t>[0]),
+      icon: token.icon,
+      bg: token.card.className,
+    };
   };
 
   const statusConfig = getStatusToken(equipment.status || ESVal.AVAILABLE);
