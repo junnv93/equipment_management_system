@@ -22,7 +22,11 @@ import { ko } from 'date-fns/locale';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
 import { type EquipmentImportStatus } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  FRONTEND_ROUTES,
+  DEFAULT_PAGE_SIZE,
+  SELECTOR_PAGE_SIZE,
+} from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
@@ -94,7 +98,7 @@ export default function InboundCheckoutsTab({
     queryFn: () =>
       equipmentImportApi.getList({
         sourceType: 'rental', // ✅ Filter for rental imports only
-        limit: 100,
+        limit: SELECTOR_PAGE_SIZE,
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? (statusFilter as EquipmentImportStatus) : undefined,
       }),
@@ -111,7 +115,7 @@ export default function InboundCheckoutsTab({
     }),
     queryFn: () =>
       equipmentImportApi.getList({
-        limit: 100,
+        limit: SELECTOR_PAGE_SIZE,
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? (statusFilter as EquipmentImportStatus) : undefined,
         sourceType: 'internal_shared',

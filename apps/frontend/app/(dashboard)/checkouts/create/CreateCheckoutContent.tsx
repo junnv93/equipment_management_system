@@ -117,13 +117,13 @@ export default function CreateCheckoutContent() {
   // 반출 요청 제출 mutation
   const createCheckoutMutation = useMutation({
     mutationFn: (data: CreateCheckoutDto) => checkoutApi.createCheckout(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
+    onSuccess: async () => {
       toast({
         title: t('toasts.createSuccessTitle'),
         description: t('toasts.createSuccessDescription'),
         variant: 'default',
       });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
       router.push(FRONTEND_ROUTES.CHECKOUTS.LIST);
     },
     onError: (error: unknown) => {
