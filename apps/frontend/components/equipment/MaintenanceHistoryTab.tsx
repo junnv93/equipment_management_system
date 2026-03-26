@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,12 +45,16 @@ import {
 } from '@/lib/design-tokens';
 
 // 유지보수 이력 등록 스키마
-const maintenanceHistorySchema = z.object({
-  performedAt: z.string().min(1, '수행 일시를 입력하세요'),
-  content: z.string().min(1, '내용을 입력하세요').max(500, '500자 이하로 입력하세요'),
-});
-
-type MaintenanceHistoryFormData = z.infer<typeof maintenanceHistorySchema>;
+function createMaintenanceHistorySchema(t: (key: string) => string) {
+  return z.object({
+    performedAt: z.string().min(1, t('maintenanceHistoryTab.validation.performedAtRequired')),
+    content: z
+      .string()
+      .min(1, t('maintenanceHistoryTab.validation.contentRequired'))
+      .max(500, t('maintenanceHistoryTab.validation.contentMax')),
+  });
+}
+type MaintenanceHistoryFormData = z.infer<ReturnType<typeof createMaintenanceHistorySchema>>;
 
 interface MaintenanceHistoryTabProps {
   equipment: Equipment;
@@ -66,6 +70,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   const { toast } = useToast();
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
+  const maintenanceHistorySchema = useMemo(() => createMaintenanceHistorySchema(t), [t]);
 
   // 폼 설정
   const form = useForm<MaintenanceHistoryFormData>({
@@ -276,7 +281,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Wrench className="h-5 w-5 text-brand-info" />
-          유지보수 이력
+          {t('maintenanceHistoryTab.title')}
         </CardTitle>
         {canCreate && RegisterDialog}
       </CardHeader>

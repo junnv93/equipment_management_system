@@ -498,6 +498,14 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     // 리소스 에러
     NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
     EQUIPMENT_NOT_FOUND: EquipmentErrorCode.EQUIPMENT_NOT_FOUND,
+    DOCUMENT_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    ATTACHMENT_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+
+    // 문서 에러
+    DOCUMENT_FILE_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
+    DOCUMENT_OWNER_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
+    DOCUMENT_TYPE_COUNT_MISMATCH: EquipmentErrorCode.VALIDATION_ERROR,
+    CALIBRATION_FILE_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
 
     // 파일 에러
     FILE_TOO_LARGE: EquipmentErrorCode.FILE_TOO_LARGE,

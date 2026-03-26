@@ -48,6 +48,9 @@ export const AUDIT_ACTION_BADGE_TOKENS: Record<AuditAction, string> = {
   close: getSemanticBadgeClasses('neutral'),
   reject_correction: getSemanticBadgeClasses('critical'),
   export: getSemanticBadgeClasses('ok'),
+  upload: getSemanticBadgeClasses('info'),
+  download: getSemanticBadgeClasses('info'),
+  revision: getSemanticBadgeClasses('warning'),
 };
 
 /**
@@ -414,6 +417,9 @@ export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
   close: 'bg-brand-text-muted',
   reject_correction: 'bg-brand-critical',
   export: 'bg-brand-ok',
+  upload: 'bg-brand-info',
+  download: 'bg-brand-info',
+  revision: 'bg-brand-warning',
 };
 
 // ============================================================================

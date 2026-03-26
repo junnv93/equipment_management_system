@@ -1,31 +1,242 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Paperclip } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Paperclip,
+  Download,
+  Trash2,
+  FileText,
+  FileSpreadsheet,
+  Image as ImageIcon,
+  File,
+  History,
+  ShieldCheck,
+} from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { TIMELINE_TOKENS } from '@/lib/design-tokens';
+import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
+import type { DocumentType } from '@equipment-management/schemas';
+import { DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
+import { formatFileSize } from '@/lib/utils/format';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
+import { useAuth } from '@/hooks/use-auth';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { toast } from 'sonner';
+import { DocumentRevisionDialog } from '@/components/shared/DocumentRevisionDialog';
 
 interface AttachmentsTabProps {
   equipment: Equipment;
 }
 
-export function AttachmentsTab({ equipment: _equipment }: AttachmentsTabProps) {
+const MIME_ICONS: Record<string, typeof FileText> = {
+  'application/pdf': FileText,
+  'image/jpeg': ImageIcon,
+  'image/png': ImageIcon,
+  'image/gif': ImageIcon,
+  'application/vnd.ms-excel': FileSpreadsheet,
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': FileSpreadsheet,
+};
+
+function getFileIcon(mimeType: string) {
+  return MIME_ICONS[mimeType] ?? File;
+}
+
+export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
   const t = useTranslations('equipment');
+  const { fmtDate } = useDateFormatter();
+  const { hasRole } = useAuth();
+  const queryClient = useQueryClient();
+
+  const equipmentId = String(equipment.id);
+  const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER]);
+  const [revisionDocId, setRevisionDocId] = useState<string | null>(null);
+
+  const { data: docs = [], isLoading } = useQuery({
+    queryKey: queryKeys.documents.byEquipment(equipmentId),
+    queryFn: () => documentApi.getEquipmentDocuments(equipmentId),
+    enabled: !!equipmentId,
+    staleTime: CACHE_TIMES.LONG,
+  });
+
+  const handleDownload = async (doc: DocumentRecord) => {
+    await documentApi.downloadDocument(doc.id, doc.originalFileName);
+  };
+
+  const handleDelete = async (docId: string) => {
+    if (!confirm(t('attachmentsTab.deleteConfirm'))) return;
+    try {
+      await documentApi.deleteDocument(docId);
+      toast.success(t('attachmentsTab.deleteSuccess'));
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.documents.byEquipment(equipmentId),
+      });
+    } catch {
+      toast.error(t('attachmentsTab.deleteError'));
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-48 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Paperclip className="h-5 w-5 text-brand-info" />
           {t('attachmentsTab.title')}
+          {docs.length > 0 && (
+            <Badge variant="secondary" className="ml-2">
+              {docs.length}
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={TIMELINE_TOKENS.empty.container}>
-          <Paperclip className={TIMELINE_TOKENS.empty.icon} />
-          <p className={TIMELINE_TOKENS.empty.text}>{t('attachmentsTab.empty')}</p>
-        </div>
+        {docs.length === 0 ? (
+          <div className={DOCUMENT_EMPTY_STATE.container}>
+            <Paperclip className={DOCUMENT_EMPTY_STATE.icon} />
+            <p className={DOCUMENT_EMPTY_STATE.text}>{t('attachmentsTab.empty')}</p>
+          </div>
+        ) : (
+          <div className={DOCUMENT_TABLE.wrapper}>
+            <Table>
+              <TableHeader>
+                <TableRow className={DOCUMENT_TABLE.stickyHeader}>
+                  <TableHead>{t('attachmentsTab.tableHeaders.fileName')}</TableHead>
+                  <TableHead>{t('attachmentsTab.tableHeaders.type')}</TableHead>
+                  <TableHead>{t('attachmentsTab.tableHeaders.size')}</TableHead>
+                  <TableHead>{t('attachmentsTab.tableHeaders.revision')}</TableHead>
+                  <TableHead>{t('attachmentsTab.tableHeaders.hash')}</TableHead>
+                  <TableHead>{t('attachmentsTab.tableHeaders.uploadedAt')}</TableHead>
+                  <TableHead>{t('attachmentsTab.tableHeaders.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {docs.map((doc) => {
+                  const Icon = getFileIcon(doc.mimeType);
+                  const typeLabel =
+                    DOCUMENT_TYPE_LABELS[doc.documentType as DocumentType] ??
+                    t(`attachmentsTab.type.${doc.documentType}`);
+
+                  return (
+                    <TableRow
+                      key={doc.id}
+                      className={[DOCUMENT_TABLE.rowHover, DOCUMENT_TABLE.stripe].join(' ')}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                          <span
+                            className={`truncate max-w-[200px] ${DOCUMENT_TABLE.fileNameCell}`}
+                            title={doc.originalFileName}
+                          >
+                            {doc.originalFileName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {typeLabel}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className={DOCUMENT_TABLE.numericCell}>
+                        {formatFileSize(doc.fileSize)}
+                      </TableCell>
+                      <TableCell>
+                        {doc.revisionNumber > 1 ? (
+                          <Badge variant="secondary" className="text-xs">
+                            {t('attachmentsTab.revisionCount', { count: doc.revisionNumber })}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">v1</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {doc.fileHash ? (
+                          <ShieldCheck className="h-4 w-4 text-brand-ok" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className={DOCUMENT_TABLE.numericCell}>
+                        {fmtDate(doc.uploadedAt)}
+                      </TableCell>
+                      <TableCell>
+                        <div className={DOCUMENT_TABLE.actionsCell}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDownload(doc)}
+                            aria-label={`${t('attachmentsTab.download')} ${doc.originalFileName}`}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          {doc.revisionNumber > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              aria-label={`${t('attachmentsTab.revisionHistory')} ${doc.originalFileName}`}
+                              onClick={() => setRevisionDocId(doc.id)}
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(doc.id)}
+                              aria-label={`${t('attachmentsTab.delete')} ${doc.originalFileName}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
+
+      {revisionDocId && (
+        <DocumentRevisionDialog
+          documentId={revisionDocId}
+          open={!!revisionDocId}
+          onOpenChange={(open) => !open && setRevisionDocId(null)}
+        />
+      )}
     </Card>
   );
 }

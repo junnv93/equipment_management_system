@@ -11,6 +11,7 @@ import {
   ParseUUIDPipe,
   HttpStatus,
   UsePipes,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { NonConformancesService } from './non-conformances.service';
@@ -74,7 +75,9 @@ export class NonConformancesController {
     const { site: equipSite, teamId: equipTeamId } =
       await this.nonConformancesService.getEquipmentSiteAndTeam(createDto.equipmentId);
     enforceSiteAccess(req, equipSite, NON_CONFORMANCE_DATA_SCOPE, equipTeamId);
-    return this.nonConformancesService.create(createDto);
+    // Rule 2: discoveredBy는 서버에서 JWT로 추출 (클라이언트 body 신뢰 금지)
+    const discoveredBy = extractUserId(req);
+    return this.nonConformancesService.create(createDto, discoveredBy);
   }
 
   @Get()
@@ -250,10 +253,18 @@ export class NonConformancesController {
   @AuditLog({ action: 'delete', entityType: 'non_conformance', entityIdPath: 'params.uuid' })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Query('version') versionParam: string,
     @Request() req: AuthenticatedRequest
   ): Promise<{ id: string; deleted: boolean }> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
     enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
-    return this.nonConformancesService.remove(uuid);
+    const version = parseInt(versionParam, 10);
+    if (isNaN(version) || version < 1) {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'version query parameter is required and must be a positive integer',
+      });
+    }
+    return this.nonConformancesService.remove(uuid, version);
   }
 }

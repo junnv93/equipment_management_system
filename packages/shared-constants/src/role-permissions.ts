@@ -229,12 +229,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.EXPORT_REPORTS,
     Permission.CREATE_DASHBOARD,
     Permission.MANAGE_REPORTS,
-    // 교정계획서 (최종 승인)
+    // 교정계획서 (최종 승인 — 직무분리: CREATE/SUBMIT/DELETE 제외, 기술책임자만 작성·제출·삭제)
     Permission.VIEW_CALIBRATION_PLANS,
-    Permission.CREATE_CALIBRATION_PLAN,
     Permission.UPDATE_CALIBRATION_PLAN,
-    Permission.DELETE_CALIBRATION_PLAN,
-    Permission.SUBMIT_CALIBRATION_PLAN,
     Permission.REVIEW_CALIBRATION_PLAN,
     Permission.APPROVE_CALIBRATION_PLAN,
     Permission.REJECT_CALIBRATION_PLAN,

@@ -264,7 +264,6 @@ export {
   NC_WORKFLOW_TOKENS,
   NC_WORKFLOW_STEPS,
   NC_STATUS_STEP_INDEX,
-  NC_KPI_LABELS,
   getNCWorkflowNodeClasses,
   getNCWorkflowLabelClasses,
   getNCWorkflowConnectorClasses,
@@ -341,6 +340,19 @@ export {
   type CalibrationStatsType,
   type CalibrationTabType,
 } from './components/calibration';
+
+// ============================================================================
+// Component Layer: Document (문서 관리)
+// ============================================================================
+
+export {
+  DOCUMENT_MOTION,
+  DOCUMENT_TABLE,
+  DOCUMENT_EMPTY_STATE,
+  DOCUMENT_UPLOAD,
+  DOCUMENT_DISPLAY,
+  getDocumentRowClasses,
+} from './components/document';
 
 // Disposal
 export {

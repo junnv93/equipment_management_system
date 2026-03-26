@@ -1,24 +1,24 @@
-const nextJest = require("next/jest")
+const nextJest = require('next/jest');
 
 const createJestConfig = nextJest({
   // next.config.js와 .env 파일이 있는 경로
-  dir: "./",
-})
+  dir: './',
+});
 
 // Jest에 전달할 설정
 const customJestConfig = {
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
-  testEnvironment: "jest-environment-jsdom",
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/$1",
+    '^@/(.*)$': '<rootDir>/$1',
   },
-  testMatch: ["**/__tests__/**/*.test.ts?(x)"],
+  testMatch: ['**/__tests__/**/*.test.ts?(x)'],
   collectCoverageFrom: [
-    "app/**/*.{js,jsx,ts,tsx}",
-    "components/**/*.{js,jsx,ts,tsx}",
-    "lib/**/*.{js,jsx,ts,tsx}",
-    "!**/*.d.ts",
-    "!**/node_modules/**",
+    'app/**/*.{js,jsx,ts,tsx}',
+    'components/**/*.{js,jsx,ts,tsx}',
+    'lib/**/*.{js,jsx,ts,tsx}',
+    '!**/*.d.ts',
+    '!**/node_modules/**',
   ],
   coverageThreshold: {
     global: {
@@ -28,7 +28,7 @@ const customJestConfig = {
       statements: 80,
     },
   },
-}
+};
 
 // createJestConfig는 비동기로 작동하는 Next.js 설정을 동기적으로 처리하도록 변환
-module.exports = createJestConfig(customJestConfig) 
+module.exports = createJestConfig(customJestConfig);

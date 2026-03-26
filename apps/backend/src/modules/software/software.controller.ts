@@ -29,7 +29,6 @@ import {
 } from './dto/approve-software.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, SOFTWARE_DATA_SCOPE } from '@equipment-management/shared-constants';
-import type { Site } from '@equipment-management/schemas';
 import { SoftwareHistory } from '@equipment-management/db/schema';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';

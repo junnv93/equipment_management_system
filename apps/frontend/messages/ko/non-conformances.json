@@ -1,6 +1,6 @@
 {
   "title": "부적합 관리",
-  "subtitle": "부적합 사항 등록 및 처리 관리",
+  "subtitle": "시스템 전체 부적합 현황 및 조치 진행 관리",
   "status": {
     "open": "처리 중",
     "under_review": "검토 중",
@@ -25,7 +25,16 @@
     "approveSuccess": "부적합이 승인되었습니다.",
     "approveError": "승인 처리 중 오류가 발생했습니다.",
     "rejectSuccess": "부적합이 반려되었습니다.",
-    "rejectError": "반려 처리 중 오류가 발생했습니다."
+    "rejectError": "반려 처리 중 오류가 발생했습니다.",
+    "statusChangeSuccess": "상태가 변경되었습니다.",
+    "statusChangeError": "상태 변경에 실패했습니다.",
+    "saveSuccess": "저장되었습니다.",
+    "saveError": "저장에 실패했습니다.",
+    "closureSuccess": "부적합이 종결되었습니다.",
+    "closureError": "종결에 실패했습니다.",
+    "rejectionSuccess": "조치가 반려되었습니다.",
+    "rejectionError": "반려에 실패했습니다.",
+    "rejectionReasonRequired": "반려 사유를 입력하세요."
   },
   "fields": {
     "type": "부적합 유형",
@@ -34,16 +43,156 @@
     "discoveredAt": "발견일",
     "resolvedAt": "해결일",
     "resolution": "처리 방법",
-    "notes": "비고"
+    "notes": "비고",
+    "discoverer": "발견자",
+    "cause": "원인",
+    "actionPlan": "조치 계획",
+    "createdAt": "등록일",
+    "updatedAt": "최종 수정",
+    "version": "버전"
   },
   "list": {
     "empty": "부적합 사항이 없습니다.",
-    "emptyDescription": "부적합 사항을 등록하세요."
+    "emptyDescription": "부적합 사항을 등록하세요.",
+    "emptyWithFilters": "조건에 맞는 부적합 사항이 없습니다.",
+    "emptyWithFiltersDescription": "필터를 변경하거나 초기화해 보세요.",
+    "emptyNoFilters": "등록된 부적합 사항이 없습니다.",
+    "emptyNoFiltersDescription": "장비 상세 페이지에서 부적합을 등록할 수 있습니다.",
+    "export": "내보내기",
+    "searchPlaceholder": "장비명, 관리번호, 원인 검색...",
+    "filterStatus": "상태",
+    "filterStatusAll": "전체 상태",
+    "filterType": "유형",
+    "filterTypeAll": "전체 유형",
+    "filterSite": "사이트",
+    "filterSiteAll": "전체 사이트",
+    "filterReset": "초기화",
+    "filterResetButton": "필터 초기화",
+    "headerStatus": "상태",
+    "headerType": "유형",
+    "headerEquipment": "장비",
+    "headerCause": "원인",
+    "headerDiscoveryDate": "발견일",
+    "headerElapsedDays": "경과일",
+    "rejectedBadge": "반려됨",
+    "elapsedDays": "{days}일",
+    "paginationInfo": "총 {total}건 중 {start}–{end}건",
+    "csvHeaders": {
+      "status": "상태",
+      "type": "유형",
+      "equipmentName": "장비명",
+      "managementNumber": "관리번호",
+      "cause": "원인",
+      "discoveryDate": "발견일",
+      "elapsedDays": "경과일"
+    },
+    "csvFileName": "부적합관리_{date}.csv",
+    "csvElapsedDays": "{days}일"
   },
   "ncStatus": {
     "open": "등록됨",
     "corrected": "조치 완료",
     "closed": "종료됨"
+  },
+  "ncType": {
+    "damage": "손상",
+    "malfunction": "오작동",
+    "calibration_failure": "교정 실패",
+    "calibration_overdue": "교정 기한 초과",
+    "measurement_error": "측정 오류",
+    "other": "기타"
+  },
+  "kpi": {
+    "open": "미해결",
+    "corrected": "조치 완료",
+    "closed": "종결"
+  },
+  "siteLabels": {
+    "suwon": "수원",
+    "uiwang": "의왕",
+    "pyeongtaek": "평택"
+  },
+  "detail": {
+    "title": "부적합 상세",
+    "urgentBadge": "긴급",
+    "discoveryDateLabel": "발견일: {date}",
+    "elapsedDays": "경과 {days}일",
+    "editButton": "수정",
+    "listButton": "목록",
+    "rejectionAlert": {
+      "title": "조치 반려 — 재조치 필요",
+      "rejectedAt": "반려일: {date}",
+      "rejectedBy": " · 반려자: {name}"
+    },
+    "workflow": {
+      "open": "등록",
+      "corrected": "조치",
+      "closed": "종결"
+    },
+    "prerequisite": {
+      "repairNeeded": "시정 조치 전 수리 이력을 등록해야 합니다.",
+      "recalibrationNeeded": "시정 조치 전 교정을 새로 받아야 합니다.",
+      "repairLink": "수리 이력 등록 →",
+      "recalibrationLink": "교정 기록 확인 →",
+      "repairBlocked": "수리 이력을 등록한 후 조치 완료할 수 있습니다.",
+      "recalibrationBlocked": "교정을 새로 받은 후 조치 완료할 수 있습니다.",
+      "typeNotice": "{type} 유형의 부적합입니다."
+    },
+    "correction": {
+      "sectionTitle": "시정 조치",
+      "placeholder": "시정 조치 내용을 입력하세요...",
+      "cancel": "취소",
+      "save": "저장",
+      "dateLabel": "조치일: {date}",
+      "actorLabel": " · 조치자: {name}",
+      "empty": "아직 시정 조치 내용이 없습니다."
+    },
+    "closure": {
+      "sectionTitle": "종결 의견",
+      "dateLabel": "종결일: {date}",
+      "actorLabel": " · 종결자: {name}",
+      "empty": "종결 의견이 없습니다."
+    },
+    "infoCard": {
+      "basicInfo": "기본 정보",
+      "repairLinked": "✓ 수리 연결됨",
+      "repairNeeded": "⚠ 수리 연결 필요",
+      "repairCard": "수리 연결",
+      "repairLinkedBadge": "수리 연결됨",
+      "repairNeededDescription": "{type} 유형의 부적합은 수리 이력 연결이 권장됩니다. 수리 완료 후 시정 조치를 등록할 수 있습니다.",
+      "repairRegisterLink": "수리 이력 등록",
+      "repairNotNeeded": "수리가 필요하지 않은 유형입니다.",
+      "repairDate": "수리일",
+      "repairResult": "수리 결과",
+      "repairDescription": "수리 내용",
+      "repairResults": {
+        "completed": "완료",
+        "partial": "부분 수리",
+        "failed": "실패"
+      }
+    },
+    "dialog": {
+      "closeTitle": "부적합 종결",
+      "closeDescription": "이 부적합 사항을 종결합니다. 종결 후에는 상태를 변경할 수 없습니다.",
+      "closeNotesPlaceholder": "종결 의견 (선택)",
+      "closeCancel": "취소",
+      "closeSubmit": "종결",
+      "closeProcessing": "처리 중...",
+      "rejectTitle": "조치 반려",
+      "rejectDescription": "시정 조치를 반려하고 재조치를 요청합니다.",
+      "rejectReasonPlaceholder": "반려 사유를 입력하세요",
+      "rejectCancel": "취소",
+      "rejectSubmit": "반려",
+      "rejectProcessing": "처리 중..."
+    },
+    "actionBar": {
+      "markCorrected": "조치 완료",
+      "closureApprove": "종결 승인",
+      "reject": "조치 반려",
+      "hintNeedsCorrectionApproval": "조치를 완료하면 기술책임자의 종결 승인이 필요합니다.",
+      "hintWaitingApproval": "기술책임자의 종결 승인을 기다리고 있습니다.",
+      "edit": "편집"
+    }
   },
   "approvals": {
     "title": "부적합 재개 승인",
@@ -74,5 +223,11 @@
       "closeError": "종료 처리 실패",
       "closeErrorDesc": "종료 처리에 실패했습니다."
     }
+  },
+  "notFound": {
+    "title": "부적합 기록을 찾을 수 없습니다",
+    "description": "요청하신 부적합 기록이 존재하지 않거나 삭제되었습니다.\n부적합 ID를 다시 확인해주세요.",
+    "backToList": "부적합 목록으로",
+    "backToHome": "홈으로 이동"
   }
 }

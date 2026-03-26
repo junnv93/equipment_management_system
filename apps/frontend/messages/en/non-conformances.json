@@ -1,6 +1,6 @@
 {
   "title": "Non-Conformance Management",
-  "subtitle": "Register and manage non-conformance items",
+  "subtitle": "Manage system-wide non-conformance status and corrective actions",
   "status": {
     "open": "Open",
     "under_review": "Under Review",
@@ -25,7 +25,16 @@
     "approveSuccess": "Non-conformance approved.",
     "approveError": "An error occurred during approval.",
     "rejectSuccess": "Non-conformance rejected.",
-    "rejectError": "An error occurred during rejection."
+    "rejectError": "An error occurred during rejection.",
+    "statusChangeSuccess": "Status has been changed.",
+    "statusChangeError": "Failed to change status.",
+    "saveSuccess": "Saved successfully.",
+    "saveError": "Failed to save.",
+    "closureSuccess": "Non-conformance has been closed.",
+    "closureError": "Failed to close.",
+    "rejectionSuccess": "Corrective action has been rejected.",
+    "rejectionError": "Failed to reject.",
+    "rejectionReasonRequired": "Please enter a rejection reason."
   },
   "fields": {
     "type": "Non-Conformance Type",
@@ -34,16 +43,156 @@
     "discoveredAt": "Discovery Date",
     "resolvedAt": "Resolution Date",
     "resolution": "Resolution Method",
-    "notes": "Notes"
+    "notes": "Notes",
+    "discoverer": "Discoverer",
+    "cause": "Cause",
+    "actionPlan": "Action Plan",
+    "createdAt": "Created",
+    "updatedAt": "Last Modified",
+    "version": "Version"
   },
   "list": {
     "empty": "No non-conformances found.",
-    "emptyDescription": "Register a non-conformance item."
+    "emptyDescription": "Register a non-conformance item.",
+    "emptyWithFilters": "No non-conformances match the criteria.",
+    "emptyWithFiltersDescription": "Try changing or resetting the filters.",
+    "emptyNoFilters": "No non-conformances registered.",
+    "emptyNoFiltersDescription": "You can register a non-conformance from the equipment detail page.",
+    "export": "Export",
+    "searchPlaceholder": "Search by equipment name, management no., cause...",
+    "filterStatus": "Status",
+    "filterStatusAll": "All Status",
+    "filterType": "Type",
+    "filterTypeAll": "All Types",
+    "filterSite": "Site",
+    "filterSiteAll": "All Sites",
+    "filterReset": "Reset",
+    "filterResetButton": "Reset Filters",
+    "headerStatus": "Status",
+    "headerType": "Type",
+    "headerEquipment": "Equipment",
+    "headerCause": "Cause",
+    "headerDiscoveryDate": "Discovery Date",
+    "headerElapsedDays": "Elapsed",
+    "rejectedBadge": "Rejected",
+    "elapsedDays": "{days}d",
+    "paginationInfo": "{start}–{end} of {total} items",
+    "csvHeaders": {
+      "status": "Status",
+      "type": "Type",
+      "equipmentName": "Equipment Name",
+      "managementNumber": "Management No.",
+      "cause": "Cause",
+      "discoveryDate": "Discovery Date",
+      "elapsedDays": "Elapsed Days"
+    },
+    "csvFileName": "non-conformances_{date}.csv",
+    "csvElapsedDays": "{days}d"
   },
   "ncStatus": {
     "open": "Open",
     "corrected": "Corrected",
     "closed": "Closed"
+  },
+  "ncType": {
+    "damage": "Damage",
+    "malfunction": "Malfunction",
+    "calibration_failure": "Calibration Failure",
+    "calibration_overdue": "Calibration Overdue",
+    "measurement_error": "Measurement Error",
+    "other": "Other"
+  },
+  "kpi": {
+    "open": "Unresolved",
+    "corrected": "Corrected",
+    "closed": "Closed"
+  },
+  "siteLabels": {
+    "suwon": "Suwon",
+    "uiwang": "Uiwang",
+    "pyeongtaek": "Pyeongtaek"
+  },
+  "detail": {
+    "title": "Non-Conformance Detail",
+    "urgentBadge": "Urgent",
+    "discoveryDateLabel": "Discovery: {date}",
+    "elapsedDays": "{days} days elapsed",
+    "editButton": "Edit",
+    "listButton": "List",
+    "rejectionAlert": {
+      "title": "Correction Rejected — Re-action Required",
+      "rejectedAt": "Rejected: {date}",
+      "rejectedBy": " · Rejected by: {name}"
+    },
+    "workflow": {
+      "open": "Registered",
+      "corrected": "Corrected",
+      "closed": "Closed"
+    },
+    "prerequisite": {
+      "repairNeeded": "requires a repair record before corrective action.",
+      "recalibrationNeeded": "requires a new calibration before corrective action.",
+      "repairLink": "Register Repair Record →",
+      "recalibrationLink": "Check Calibration Record →",
+      "repairBlocked": "You can complete the corrective action after registering a repair record.",
+      "recalibrationBlocked": "You can complete the corrective action after receiving a new calibration.",
+      "typeNotice": "This is a {type} type non-conformance."
+    },
+    "correction": {
+      "sectionTitle": "Corrective Action",
+      "placeholder": "Enter corrective action details...",
+      "cancel": "Cancel",
+      "save": "Save",
+      "dateLabel": "Corrected: {date}",
+      "actorLabel": " · Corrector: {name}",
+      "empty": "No corrective action recorded yet."
+    },
+    "closure": {
+      "sectionTitle": "Closure Notes",
+      "dateLabel": "Closed: {date}",
+      "actorLabel": " · Closed by: {name}",
+      "empty": "No closure notes."
+    },
+    "infoCard": {
+      "basicInfo": "Basic Information",
+      "repairLinked": "✓ Repair Linked",
+      "repairNeeded": "⚠ Repair Link Required",
+      "repairCard": "Repair Link",
+      "repairLinkedBadge": "Repair linked",
+      "repairNeededDescription": "{type} type non-conformances recommend linking a repair record. You can register a corrective action after repair is completed.",
+      "repairRegisterLink": "Register Repair Record",
+      "repairNotNeeded": "Repair is not required for this type.",
+      "repairDate": "Repair Date",
+      "repairResult": "Repair Result",
+      "repairDescription": "Repair Description",
+      "repairResults": {
+        "completed": "Completed",
+        "partial": "Partial Repair",
+        "failed": "Failed"
+      }
+    },
+    "dialog": {
+      "closeTitle": "Close Non-Conformance",
+      "closeDescription": "This will close the non-conformance. The status cannot be changed after closure.",
+      "closeNotesPlaceholder": "Closure notes (optional)",
+      "closeCancel": "Cancel",
+      "closeSubmit": "Close",
+      "closeProcessing": "Processing...",
+      "rejectTitle": "Reject Corrective Action",
+      "rejectDescription": "Reject the corrective action and request re-action.",
+      "rejectReasonPlaceholder": "Enter the rejection reason",
+      "rejectCancel": "Cancel",
+      "rejectSubmit": "Reject",
+      "rejectProcessing": "Processing..."
+    },
+    "actionBar": {
+      "markCorrected": "Mark Corrected",
+      "closureApprove": "Approve Closure",
+      "reject": "Reject Action",
+      "hintNeedsCorrectionApproval": "After completing the action, technical manager approval is required for closure.",
+      "hintWaitingApproval": "Waiting for technical manager closure approval.",
+      "edit": "Edit"
+    }
   },
   "approvals": {
     "title": "Non-Conformance Closure Approval",
@@ -74,5 +223,11 @@
       "closeError": "Closure Failed",
       "closeErrorDesc": "Failed to process closure."
     }
+  },
+  "notFound": {
+    "title": "Non-conformance not found",
+    "description": "The requested non-conformance record does not exist or has been deleted.\nPlease check the non-conformance ID.",
+    "backToList": "Non-conformance list",
+    "backToHome": "Go to home"
   }
 }

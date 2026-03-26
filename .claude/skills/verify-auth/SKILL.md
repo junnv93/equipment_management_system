@@ -50,6 +50,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/audit/audit.controller.ts`                        | 감사 로그 컨트롤러 (읽기 전용, @AuditLog 불필요)                 |
 | `apps/backend/src/modules/equipment/equipment-history.controller.ts`        | 참조 구현 (@RequirePermissions + @AuditLog + extractUserId + enforceSiteAccess 전 패턴 적용) |
 | `apps/backend/src/modules/settings/settings.controller.ts`                  | 설정 컨트롤러 (AuditLog entityIdPath 포함)                       |
+| `apps/backend/src/modules/documents/documents.controller.ts`                | 문서 관리 컨트롤러 (업로드, 다운로드, 개정, 삭제)                |
 | `apps/backend/src/modules/notifications/sse/notification-sse.controller.ts` | SSE 컨트롤러 (SseJwtAuthGuard 사용)                              |
 | `apps/backend/src/common/metrics/metrics.controller.ts`                     | Prometheus 메트릭 컨트롤러 (@Public() + GET, src/common/ 레이어) |
 | `packages/shared-constants/src/permissions.ts`                              | Permission enum 정의                                             |

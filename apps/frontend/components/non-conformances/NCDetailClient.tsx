@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { differenceInDays } from 'date-fns';
@@ -19,11 +20,7 @@ import {
   X,
   Pencil,
 } from 'lucide-react';
-import nonConformancesApi, {
-  type NonConformance,
-  NON_CONFORMANCE_STATUS_LABELS,
-  NON_CONFORMANCE_TYPE_LABELS,
-} from '@/lib/api/non-conformances-api';
+import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { NonConformanceCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -31,7 +28,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   type NonConformanceStatus,
-  type NonConformanceType,
   NonConformanceStatusValues as NCVal,
   getNCPrerequisite,
 } from '@equipment-management/schemas';
@@ -54,7 +50,6 @@ import {
   NC_REJECTION_ALERT_TOKENS,
   NC_URGENT_BADGE_TOKENS,
   NC_REPAIR_DETAIL_TOKENS,
-  NC_REPAIR_RESULT_LABELS,
   getNCElapsedDaysClasses,
   isNCLongOverdue,
   NC_INFO_NOTICE_TOKENS,
@@ -76,14 +71,11 @@ import {
 // 상수
 // ============================================================================
 
-/** 워크플로우 스텝 시각 정의 — NC_WORKFLOW_STEPS (SSOT) 기반 파생 */
-const NC_STEP_CONFIG: Record<
-  (typeof NC_WORKFLOW_STEPS)[number],
-  { label: string; icon: typeof AlertTriangle }
-> = {
-  open: { label: '등록', icon: AlertTriangle },
-  corrected: { label: '조치', icon: CheckCircle2 },
-  closed: { label: '종결', icon: XCircle },
+/** NC_STEP_CONFIG 아이콘 매핑 (label은 i18n에서 제공) */
+const NC_STEP_ICONS: Record<(typeof NC_WORKFLOW_STEPS)[number], typeof AlertTriangle> = {
+  open: AlertTriangle,
+  corrected: CheckCircle2,
+  closed: XCircle,
 };
 
 // ============================================================================
@@ -105,6 +97,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const { isManager } = useAuth();
   const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
+  const t = useTranslations('non-conformances');
 
   // State for dialogs
   const [showCloseDialog, setShowCloseDialog] = useState(false);
@@ -148,10 +141,15 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         // correctedBy는 서버에서 JWT로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old, vars) => ({ ...old!, status: vars.status }),
-    invalidateKeys: [queryKeys.nonConformances.lists()],
-    successMessage: '상태가 변경되었습니다',
-    errorMessage: '상태 변경에 실패했습니다',
+    optimisticUpdate: (old, vars) => ({
+      ...old!,
+      status: vars.status,
+      version: (old?.version ?? 0) + 1,
+    }),
+    // invalidateKeys 비움 — onSuccessCallback의 invalidateAfterStatusChange가 NC lists 포함 교차 무효화 단일 처리
+    invalidateKeys: [],
+    successMessage: t('toasts.statusChangeSuccess'),
+    errorMessage: t('toasts.statusChangeError'),
     onSuccessCallback: () => {
       NonConformanceCacheInvalidation.invalidateAfterStatusChange(
         queryClient,
@@ -173,10 +171,14 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         ...vars,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old, vars) => ({ ...old!, ...vars }),
+    optimisticUpdate: (old, vars) => ({
+      ...old!,
+      ...vars,
+      version: (old?.version ?? 0) + 1,
+    }),
     invalidateKeys: [queryKeys.nonConformances.lists()],
-    successMessage: '저장되었습니다',
-    errorMessage: '저장에 실패했습니다',
+    successMessage: t('toasts.saveSuccess'),
+    errorMessage: t('toasts.saveError'),
     onSuccessCallback: () => {
       setEditingCorrection(false);
     },
@@ -194,10 +196,14 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         closureNotes: vars.closureNotes,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old) => ({ ...old!, status: NCVal.CLOSED as NonConformanceStatus }),
-    invalidateKeys: [queryKeys.nonConformances.lists()],
-    successMessage: '부적합이 종결되었습니다',
-    errorMessage: '종결에 실패했습니다',
+    optimisticUpdate: (old) => ({
+      ...old!,
+      status: NCVal.CLOSED as NonConformanceStatus,
+      version: (old?.version ?? 0) + 1,
+    }),
+    invalidateKeys: [],
+    successMessage: t('toasts.closureSuccess'),
+    errorMessage: t('toasts.closureError'),
     onSuccessCallback: () => {
       setShowCloseDialog(false);
       setClosureNotes('');
@@ -221,10 +227,14 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         rejectionReason: vars.rejectionReason,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old) => ({ ...old!, status: NCVal.OPEN as NonConformanceStatus }),
-    invalidateKeys: [queryKeys.nonConformances.lists()],
-    successMessage: '조치가 반려되었습니다',
-    errorMessage: '반려에 실패했습니다',
+    optimisticUpdate: (old) => ({
+      ...old!,
+      status: NCVal.OPEN as NonConformanceStatus,
+      version: (old?.version ?? 0) + 1,
+    }),
+    invalidateKeys: [],
+    successMessage: t('toasts.rejectionSuccess'),
+    errorMessage: t('toasts.rejectionError'),
     onSuccessCallback: () => {
       setShowRejectDialog(false);
       setRejectionReason('');
@@ -265,11 +275,13 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.back()}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className={NC_DETAIL_HEADER_TOKENS.title}>부적합 상세</h1>
+            <h1 className={NC_DETAIL_HEADER_TOKENS.title}>{t('detail.title')}</h1>
             <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
-              {NON_CONFORMANCE_STATUS_LABELS[nc.status as NonConformanceStatus]}
+              {t('ncStatus.' + nc.status)}
             </span>
-            {longOverdue && !isClosed && <span className={NC_URGENT_BADGE_TOKENS.badge}>긴급</span>}
+            {longOverdue && !isClosed && (
+              <span className={NC_URGENT_BADGE_TOKENS.badge}>{t('detail.urgentBadge')}</span>
+            )}
           </div>
           <div className={NC_DETAIL_HEADER_TOKENS.meta}>
             {nc.equipment && (
@@ -281,11 +293,13 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               </Link>
             )}
             <span>·</span>
-            <span>발견일: {fmtDate(nc.discoveryDate)}</span>
+            <span>{t('detail.discoveryDateLabel', { date: fmtDate(nc.discoveryDate) })}</span>
             {!isClosed && (
               <>
                 <span>·</span>
-                <span className={getNCElapsedDaysClasses(elapsedDays)}>경과 {elapsedDays}일</span>
+                <span className={getNCElapsedDaysClasses(elapsedDays)}>
+                  {t('detail.elapsedDays', { days: elapsedDays })}
+                </span>
               </>
             )}
           </div>
@@ -295,13 +309,13 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             <Button variant="ghost" size="sm" asChild>
               <Link href={`/equipment/${nc.equipmentId}`}>
                 <Pencil className="h-3.5 w-3.5 mr-1" />
-                수정
+                {t('detail.editButton')}
               </Link>
             </Button>
           )}
           <Link href="/non-conformances">
             <Button variant="outline" size="sm">
-              목록
+              {t('detail.listButton')}
             </Button>
           </Link>
         </div>
@@ -312,12 +326,12 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         <div className={NC_REJECTION_ALERT_TOKENS.container}>
           <XCircle className={NC_REJECTION_ALERT_TOKENS.icon} />
           <div>
-            <p className={NC_REJECTION_ALERT_TOKENS.title}>조치 반려 — 재조치 필요</p>
+            <p className={NC_REJECTION_ALERT_TOKENS.title}>{t('detail.rejectionAlert.title')}</p>
             <p className={NC_REJECTION_ALERT_TOKENS.description}>{nc.rejectionReason}</p>
             {nc.rejectedAt && (
               <p className={NC_REJECTION_ALERT_TOKENS.date}>
-                반려일: {fmtDate(nc.rejectedAt)}
-                {nc.rejector && ` · 반려자: ${nc.rejector.name}`}
+                {t('detail.rejectionAlert.rejectedAt', { date: fmtDate(nc.rejectedAt) })}
+                {nc.rejector && t('detail.rejectionAlert.rejectedBy', { name: nc.rejector.name })}
               </p>
             )}
           </div>
@@ -338,13 +352,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             <Wrench className={NC_INFO_NOTICE_TOKENS.icon} />
             <div>
               <p className={NC_INFO_NOTICE_TOKENS.text}>
-                <strong className="text-brand-warning">
-                  {NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}
-                </strong>{' '}
-                유형의 부적합입니다.{' '}
+                {t('detail.prerequisite.typeNotice', { type: t('ncType.' + nc.ncType) })}{' '}
                 {needsRepair
-                  ? '시정 조치 전 수리 이력을 등록해야 합니다.'
-                  : '시정 조치 전 교정을 새로 받아야 합니다.'}
+                  ? t('detail.prerequisite.repairNeeded')
+                  : t('detail.prerequisite.recalibrationNeeded')}
               </p>
               <Link
                 href={
@@ -354,7 +365,9 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                 }
                 className="text-sm text-brand-info hover:underline mt-1 inline-block"
               >
-                {needsRepair ? '수리 이력 등록 →' : '교정 기록 확인 →'}
+                {needsRepair
+                  ? t('detail.prerequisite.repairLink')
+                  : t('detail.prerequisite.recalibrationLink')}
               </Link>
             </div>
           </div>
@@ -366,7 +379,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 
       {/* 조치/종결 섹션 */}
       <CollapsibleSection
-        title="🔧 시정 조치"
+        title={'🔧 ' + t('detail.correction.sectionTitle')}
         isOpen={correctionOpen}
         onToggle={() => setCorrectionOpen(!correctionOpen)}
         canEdit={nc.status === NCVal.OPEN && !isClosed}
@@ -379,19 +392,19 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               className={NC_COLLAPSIBLE_EDIT_TOKENS.textarea}
               value={correctionText}
               onChange={(e) => setCorrectionText(e.target.value)}
-              placeholder="시정 조치 내용을 입력하세요..."
+              placeholder={t('detail.correction.placeholder')}
               rows={4}
             />
             <div className={NC_COLLAPSIBLE_EDIT_TOKENS.saveRow}>
               <Button variant="ghost" size="sm" onClick={() => setEditingCorrection(false)}>
-                취소
+                {t('detail.correction.cancel')}
               </Button>
               <Button
                 size="sm"
                 disabled={saveMutation.isPending}
                 onClick={() => saveMutation.mutate({ correctionContent: correctionText })}
               >
-                저장
+                {t('detail.correction.save')}
               </Button>
             </div>
           </div>
@@ -400,19 +413,19 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.correctionContent}</p>
             {nc.correctionDate && (
               <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
-                조치일: {fmtDate(nc.correctionDate)}
-                {nc.corrector && ` · 조치자: ${nc.corrector.name}`}
+                {t('detail.correction.dateLabel', { date: fmtDate(nc.correctionDate) })}
+                {nc.corrector && t('detail.correction.actorLabel', { name: nc.corrector.name })}
               </p>
             )}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground italic">아직 시정 조치 내용이 없습니다</p>
+          <p className="text-sm text-muted-foreground italic">{t('detail.correction.empty')}</p>
         )}
       </CollapsibleSection>
 
       {(nc.closureNotes || isClosed) && (
         <CollapsibleSection
-          title="✅ 종결 의견"
+          title={'✅ ' + t('detail.closure.sectionTitle')}
           isOpen={closureOpen}
           onToggle={() => setClosureOpen(!closureOpen)}
         >
@@ -421,13 +434,13 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.closureNotes}</p>
               {nc.closedAt && (
                 <p className={NC_COLLAPSIBLE_TOKENS.fieldMeta}>
-                  종결일: {fmtDate(nc.closedAt)}
-                  {nc.closer && ` · 종결자: ${nc.closer.name}`}
+                  {t('detail.closure.dateLabel', { date: fmtDate(nc.closedAt) })}
+                  {nc.closer && t('detail.closure.actorLabel', { name: nc.closer.name })}
                 </p>
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground italic">종결 의견이 없습니다</p>
+            <p className="text-sm text-muted-foreground italic">{t('detail.closure.empty')}</p>
           )}
         </CollapsibleSection>
       )}
@@ -440,9 +453,9 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           hasUnmetPrerequisite={hasUnmetPrerequisite}
           prerequisiteMessage={
             needsRepair
-              ? '수리 이력을 등록한 후 조치 완료할 수 있습니다'
+              ? t('detail.prerequisite.repairBlocked')
               : needsRecalibration
-                ? '교정을 새로 받은 후 조치 완료할 수 있습니다'
+                ? t('detail.prerequisite.recalibrationBlocked')
                 : undefined
           }
           onMarkCorrected={() => updateMutation.mutate({ status: NCVal.CORRECTED })}
@@ -456,27 +469,27 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>부적합 종결</DialogTitle>
-            <DialogDescription>
-              이 부적합 사항을 종결합니다. 종결 후에는 상태를 변경할 수 없습니다.
-            </DialogDescription>
+            <DialogTitle>{t('detail.dialog.closeTitle')}</DialogTitle>
+            <DialogDescription>{t('detail.dialog.closeDescription')}</DialogDescription>
           </DialogHeader>
           <Textarea
-            placeholder="종결 의견 (선택)"
+            placeholder={t('detail.dialog.closeNotesPlaceholder')}
             value={closureNotes}
             onChange={(e) => setClosureNotes(e.target.value)}
             rows={3}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCloseDialog(false)}>
-              취소
+              {t('detail.dialog.closeCancel')}
             </Button>
             <Button
               className={NC_APPROVE_BUTTON_TOKENS.approve}
               onClick={() => closeMutation.mutate({ closureNotes })}
               disabled={closeMutation.isPending}
             >
-              {closeMutation.isPending ? '처리 중...' : '종결'}
+              {closeMutation.isPending
+                ? t('detail.dialog.closeProcessing')
+                : t('detail.dialog.closeSubmit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -486,31 +499,33 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>조치 반려</DialogTitle>
-            <DialogDescription>시정 조치를 반려하고 재조치를 요청합니다.</DialogDescription>
+            <DialogTitle>{t('detail.dialog.rejectTitle')}</DialogTitle>
+            <DialogDescription>{t('detail.dialog.rejectDescription')}</DialogDescription>
           </DialogHeader>
           <Textarea
-            placeholder="반려 사유를 입력하세요"
+            placeholder={t('detail.dialog.rejectReasonPlaceholder')}
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
             rows={3}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              취소
+              {t('detail.dialog.rejectCancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={() => {
                 if (!rejectionReason.trim()) {
-                  toast({ title: '반려 사유를 입력하세요', variant: 'destructive' });
+                  toast({ title: t('toasts.rejectionReasonRequired'), variant: 'destructive' });
                   return;
                 }
                 rejectMutation.mutate({ rejectionReason });
               }}
               disabled={rejectMutation.isPending}
             >
-              {rejectMutation.isPending ? '처리 중...' : '반려'}
+              {rejectMutation.isPending
+                ? t('detail.dialog.rejectProcessing')
+                : t('detail.dialog.rejectSubmit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -535,6 +550,13 @@ function WorkflowTimeline({
   currentStepIndex: number;
   isLongOverdue: boolean;
 }) {
+  const t = useTranslations('non-conformances');
+  const workflowLabels: Record<(typeof NC_WORKFLOW_STEPS)[number], string> = {
+    open: t('detail.workflow.open'),
+    corrected: t('detail.workflow.corrected'),
+    closed: t('detail.workflow.closed'),
+  };
+
   return (
     <div
       className={cn(
@@ -544,8 +566,7 @@ function WorkflowTimeline({
     >
       <div className={NC_WORKFLOW_TOKENS.stepsLayout}>
         {NC_WORKFLOW_STEPS.map((stepKey: NonConformanceStatus, idx: number) => {
-          const config = NC_STEP_CONFIG[stepKey];
-          const Icon = config.icon;
+          const Icon = NC_STEP_ICONS[stepKey];
           return (
             <div key={stepKey} className={NC_WORKFLOW_TOKENS.step}>
               {/* 커넥터 (좌측) */}
@@ -568,7 +589,7 @@ function WorkflowTimeline({
               </div>
               {/* 라벨 */}
               <span className={getNCWorkflowLabelClasses(idx, currentStepIndex, isLongOverdue)}>
-                {config.label}
+                {workflowLabels[stepKey]}
               </span>
               {/* 날짜 */}
               <StepDate nc={nc} stepKey={stepKey} />
@@ -616,6 +637,7 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
  */
 function InfoCards({ nc }: { nc: NonConformance }) {
   const { fmtDate } = useDateFormatter();
+  const t = useTranslations('non-conformances');
   const hasRepairLink = !!nc.repairHistoryId;
   const prerequisiteType = getNCPrerequisite(nc.ncType);
   const needsRepair = prerequisiteType === 'repair';
@@ -624,17 +646,17 @@ function InfoCards({ nc }: { nc: NonConformance }) {
     <div className={NC_INFO_CARD_TOKENS.grid}>
       {/* 기본 정보 */}
       <div className={NC_INFO_CARD_TOKENS.card}>
-        <h3 className={NC_INFO_CARD_TOKENS.cardTitle}>기본 정보</h3>
-        <InfoRow label="부적합 유형" value={NON_CONFORMANCE_TYPE_LABELS[nc.ncType] ?? nc.ncType} />
-        <InfoRow label="발견자" value={nc.discoverer?.name ?? nc.discoveredBy} />
-        <InfoRow label="발견일" value={fmtDate(nc.discoveryDate)} />
+        <h3 className={NC_INFO_CARD_TOKENS.cardTitle}>{t('detail.infoCard.basicInfo')}</h3>
+        <InfoRow label={t('fields.type')} value={t('ncType.' + nc.ncType)} />
+        <InfoRow label={t('fields.discoverer')} value={nc.discoverer?.name ?? nc.discoveredBy} />
+        <InfoRow label={t('fields.discoveredAt')} value={fmtDate(nc.discoveryDate)} />
         <div className={NC_INFO_CARD_TOKENS.infoRowVertical}>
-          <span className={NC_INFO_CARD_TOKENS.infoLabel}>원인</span>
+          <span className={NC_INFO_CARD_TOKENS.infoLabel}>{t('fields.cause')}</span>
           <p className={NC_INFO_CARD_TOKENS.infoValueMultiline}>{nc.cause}</p>
         </div>
         {nc.actionPlan && (
           <div className={NC_INFO_CARD_TOKENS.infoRowVertical}>
-            <span className={NC_INFO_CARD_TOKENS.infoLabel}>조치 계획</span>
+            <span className={NC_INFO_CARD_TOKENS.infoLabel}>{t('fields.actionPlan')}</span>
             <p className={NC_INFO_CARD_TOKENS.infoValueMultiline}>{nc.actionPlan}</p>
           </div>
         )}
@@ -661,36 +683,38 @@ function InfoCards({ nc }: { nc: NonConformance }) {
                 : ''
           )}
         >
-          {hasRepairLink ? '✓ 수리 연결됨' : needsRepair ? '⚠ 수리 연결 필요' : '수리 연결'}
+          {hasRepairLink
+            ? t('detail.infoCard.repairLinked')
+            : needsRepair
+              ? t('detail.infoCard.repairNeeded')
+              : t('detail.infoCard.repairCard')}
         </h3>
         {hasRepairLink ? (
           <RepairDetail nc={nc} />
         ) : needsRepair ? (
           <div className="space-y-2 py-2">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              <strong className="text-brand-warning">
-                {NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}
-              </strong>{' '}
-              유형의 부적합은 수리 이력 연결이 권장됩니다. 수리 완료 후 시정 조치를 등록할 수
-              있습니다.
+              {t('detail.infoCard.repairNeededDescription', { type: t('ncType.' + nc.ncType) })}
             </p>
             <Link
               href={`/equipment/${nc.equipmentId}?tab=incident`}
               className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
             >
               <Wrench className="h-3.5 w-3.5" />
-              수리 이력 등록
+              {t('detail.infoCard.repairRegisterLink')}
             </Link>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground py-2">수리가 필요하지 않은 유형입니다</p>
+          <p className="text-sm text-muted-foreground py-2">
+            {t('detail.infoCard.repairNotNeeded')}
+          </p>
         )}
 
         {/* 추가 메타 */}
         <div className="mt-4 pt-3 border-t border-border/40">
-          <InfoRow label="등록일" value={fmtDate(nc.createdAt)} />
-          <InfoRow label="최종 수정" value={fmtDate(nc.updatedAt)} />
-          <InfoRow label="버전" value={String(nc.version)} />
+          <InfoRow label={t('fields.createdAt')} value={fmtDate(nc.createdAt)} />
+          <InfoRow label={t('fields.updatedAt')} value={fmtDate(nc.updatedAt)} />
+          <InfoRow label={t('fields.version')} value={String(nc.version)} />
         </div>
       </div>
     </div>
@@ -700,12 +724,15 @@ function InfoCards({ nc }: { nc: NonConformance }) {
 /** 수리 이력 상세 */
 function RepairDetail({ nc }: { nc: NonConformance }) {
   const { fmtDate } = useDateFormatter();
+  const t = useTranslations('non-conformances');
   const rh = nc.repairHistory;
   if (!rh) {
     return (
       <div className="flex items-center gap-2 py-2">
         <LinkIcon className="h-4 w-4 text-brand-ok" />
-        <span className={NC_REPAIR_LINKED_TOKENS.badge}>수리 연결됨</span>
+        <span className={NC_REPAIR_LINKED_TOKENS.badge}>
+          {t('detail.infoCard.repairLinkedBadge')}
+        </span>
       </div>
     );
   }
@@ -719,19 +746,21 @@ function RepairDetail({ nc }: { nc: NonConformance }) {
   return (
     <div className="py-2 space-y-1">
       <div className={NC_REPAIR_DETAIL_TOKENS.row}>
-        <span className={NC_REPAIR_DETAIL_TOKENS.label}>수리일</span>
+        <span className={NC_REPAIR_DETAIL_TOKENS.label}>{t('detail.infoCard.repairDate')}</span>
         <span className={NC_REPAIR_DETAIL_TOKENS.value}>{fmtDate(rh.repairDate)}</span>
       </div>
       {rh.repairResult && resultBadgeClass && (
         <div className={NC_REPAIR_DETAIL_TOKENS.row}>
-          <span className={NC_REPAIR_DETAIL_TOKENS.label}>수리 결과</span>
+          <span className={NC_REPAIR_DETAIL_TOKENS.label}>{t('detail.infoCard.repairResult')}</span>
           <span className={resultBadgeClass}>
-            {NC_REPAIR_RESULT_LABELS[rh.repairResult] ?? rh.repairResult}
+            {t(`detail.infoCard.repairResults.${rh.repairResult}` as Parameters<typeof t>[0])}
           </span>
         </div>
       )}
       <div className="pt-1">
-        <span className={cn(NC_REPAIR_DETAIL_TOKENS.label, 'block mb-1')}>수리 내용</span>
+        <span className={cn(NC_REPAIR_DETAIL_TOKENS.label, 'block mb-1')}>
+          {t('detail.infoCard.repairDescription')}
+        </span>
         <p className="text-sm text-foreground leading-relaxed">{rh.repairDescription}</p>
       </div>
     </div>
@@ -768,6 +797,7 @@ function CollapsibleSection({
   onEdit?: () => void;
   children: React.ReactNode;
 }) {
+  const t = useTranslations('non-conformances');
   return (
     <div className={NC_COLLAPSIBLE_TOKENS.container}>
       <div className="flex items-center">
@@ -786,7 +816,7 @@ function CollapsibleSection({
         {canEdit && !isEditing && onEdit && (
           <Button variant="ghost" size="sm" className="h-7 px-2 mr-2" onClick={onEdit}>
             <Pencil className="h-3 w-3 mr-1" />
-            편집
+            {t('detail.actionBar.edit')}
           </Button>
         )}
       </div>
@@ -817,6 +847,7 @@ function ActionBar({
   onReject: () => void;
   isUpdating: boolean;
 }) {
+  const t = useTranslations('non-conformances');
   return (
     <div className={NC_ACTION_BAR_TOKENS.container}>
       <div className={NC_ACTION_BAR_TOKENS.left}>
@@ -828,17 +859,15 @@ function ActionBar({
             disabled={isUpdating || hasUnmetPrerequisite}
             title={hasUnmetPrerequisite ? prerequisiteMessage : undefined}
           >
-            조치 완료
+            {t('detail.actionBar.markCorrected')}
           </Button>
         )}
         <span className={NC_ACTION_BAR_TOKENS.roleHint}>
           {nc.status === NCVal.OPEN &&
             (hasUnmetPrerequisite
               ? prerequisiteMessage
-              : '조치를 완료하면 기술책임자의 종결 승인이 필요합니다')}
-          {nc.status === NCVal.CORRECTED &&
-            !isManager &&
-            '기술책임자의 종결 승인을 기다리고 있습니다'}
+              : t('detail.actionBar.hintNeedsCorrectionApproval'))}
+          {nc.status === NCVal.CORRECTED && !isManager && t('detail.actionBar.hintWaitingApproval')}
         </span>
       </div>
       <div className={NC_ACTION_BAR_TOKENS.right}>
@@ -847,7 +876,7 @@ function ActionBar({
           <>
             <Button variant="outline" size="sm" onClick={onReject} disabled={isUpdating}>
               <X className="h-3.5 w-3.5 mr-1" />
-              조치 반려
+              {t('detail.actionBar.reject')}
             </Button>
             <Button
               size="sm"
@@ -857,7 +886,7 @@ function ActionBar({
               title={hasUnmetPrerequisite ? prerequisiteMessage : undefined}
             >
               <Check className="h-3.5 w-3.5 mr-1" />
-              종결 승인
+              {t('detail.actionBar.closureApprove')}
             </Button>
           </>
         )}

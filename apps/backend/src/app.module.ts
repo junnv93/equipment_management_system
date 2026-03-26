@@ -27,6 +27,7 @@ import { DrizzleModule } from './database/drizzle.module';
 import { CacheModule } from './common/cache/cache.module';
 import { CacheEventModule } from './common/cache/cache-event.module';
 import { StorageModule } from './common/storage/storage.module';
+import { FileUploadModule } from './common/file-upload/file-upload.module';
 import { MetricsModule } from './common/metrics/metrics.module';
 import { MetricsMiddleware } from './common/metrics/metrics.middleware';
 import { LoggerModule } from './common/logger/logger.module';
@@ -36,6 +37,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { EquipmentImportsModule } from './modules/equipment-imports/equipment-imports.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { I18nModule } from './common/i18n/i18n.module';
 
 @Module({
@@ -69,6 +71,7 @@ import { I18nModule } from './common/i18n/i18n.module';
     CacheModule,
     CacheEventModule, // EventEmitterModule 이후 — 이벤트 기반 캐시 무효화
     StorageModule,
+    FileUploadModule,
     LoggerModule,
     MetricsModule,
     AuditModule,
@@ -95,6 +98,7 @@ import { I18nModule } from './common/i18n/i18n.module';
     EquipmentImportsModule, // Unified rental + internal shared imports
     ApprovalsModule, // Unified approval counts API
     SettingsModule, // System + calibration settings
+    DocumentsModule, // 통합 문서 관리 (다운로드, 무결성 검증, 버전 관리)
   ],
   controllers: [],
   providers: [

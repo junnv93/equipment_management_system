@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -48,13 +48,17 @@ import {
 } from '@/lib/design-tokens';
 
 // 위치 변동 이력 등록 스키마
-const locationHistorySchema = z.object({
-  changedAt: z.string().min(1, '변동 일시를 입력하세요'),
-  newLocation: z.string().min(1, '설치 위치를 입력하세요').max(100, '100자 이하로 입력하세요'),
-  notes: z.string().optional(),
-});
-
-type LocationHistoryFormData = z.infer<typeof locationHistorySchema>;
+function createLocationHistorySchema(t: (key: string) => string) {
+  return z.object({
+    changedAt: z.string().min(1, t('locationHistoryTab.validation.changedAtRequired')),
+    newLocation: z
+      .string()
+      .min(1, t('locationHistoryTab.validation.newLocationRequired'))
+      .max(100, t('locationHistoryTab.validation.newLocationMax')),
+    notes: z.string().optional(),
+  });
+}
+type LocationHistoryFormData = z.infer<ReturnType<typeof createLocationHistorySchema>>;
 
 interface LocationHistoryTabProps {
   equipment: Equipment;
@@ -74,6 +78,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   const { toast } = useToast();
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
+  const locationHistorySchema = useMemo(() => createLocationHistorySchema(t), [t]);
 
   // 개발 환경에서만 세션 디버그 출력
   if (process.env.NODE_ENV === 'development') {
@@ -132,8 +137,8 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       console.error('위치 변동 이력 등록 실패:', error);
       if (isConflictError(error)) {
         toast({
-          title: '버전 충돌',
-          description: '다른 사용자가 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
+          title: t('locationHistoryTab.toasts.versionConflict'),
+          description: t('locationHistoryTab.toasts.versionConflictDesc'),
           variant: 'destructive',
         });
       } else {
@@ -163,8 +168,8 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       console.error('위치 변동 이력 삭제 실패:', error);
       if (isConflictError(error)) {
         toast({
-          title: '버전 충돌',
-          description: '다른 사용자가 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
+          title: t('locationHistoryTab.toasts.versionConflict'),
+          description: t('locationHistoryTab.toasts.versionConflictDesc'),
           variant: 'destructive',
         });
       } else {

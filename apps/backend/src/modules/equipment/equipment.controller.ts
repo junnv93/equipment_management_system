@@ -58,6 +58,7 @@ import {
 } from '@equipment-management/schemas';
 import {
   type UserRole,
+  type DocumentType,
   ApprovalStatusEnum,
   ApprovalStatusValues,
 } from '@equipment-management/schemas';
@@ -77,6 +78,7 @@ import type {
 } from './equipment.controller.types';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { EquipmentRequest } from '@equipment-management/db/schema/equipment-requests';
+import { DocumentService } from '../../common/file-upload/document.service';
 
 @ApiTags('장비 관리')
 @ApiBearerAuth()
@@ -85,7 +87,8 @@ export class EquipmentController {
   constructor(
     private readonly equipmentService: EquipmentService,
     private readonly approvalService: EquipmentApprovalService,
-    private readonly attachmentService: EquipmentAttachmentService
+    private readonly attachmentService: EquipmentAttachmentService,
+    private readonly documentService: DocumentService
   ) {}
 
   @Post()
@@ -677,10 +680,14 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 파일 형식 또는 크기 초과' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @AuditLog({ action: 'upload', entityType: 'equipment' })
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile() file: MulterFile,
     @Body('attachmentType') attachmentType: 'inspection_report' | 'history_card' | 'other',
+    @Req() req: AuthenticatedRequest,
+    @Body('equipmentId') equipmentId?: string,
+    @Body('requestId') requestId?: string,
     @Body('description') description?: string
   ): Promise<{
     message: string;
@@ -707,23 +714,25 @@ export class EquipmentController {
       });
     }
 
-    const attachment = await this.attachmentService.createAttachment(
-      file,
-      attachmentType,
-      undefined, // equipmentId는 나중에 연결
-      undefined, // requestId는 나중에 연결
-      description
-    );
+    const userId = extractUserId(req);
+    const document = await this.documentService.createDocument(file, {
+      documentType: attachmentType as DocumentType,
+      equipmentId: equipmentId || undefined,
+      requestId: requestId || undefined,
+      description: description || undefined,
+      uploadedBy: userId || undefined,
+      subdirectory: 'equipment',
+    });
 
     return {
       message: '파일이 업로드되었습니다.',
       attachment: {
-        id: attachment.id,
-        fileName: attachment.fileName,
-        originalFileName: attachment.originalFileName,
-        fileSize: attachment.fileSize,
-        mimeType: attachment.mimeType,
-        attachmentType: attachment.attachmentType,
+        id: document.id,
+        fileName: document.fileName,
+        originalFileName: document.originalFileName,
+        fileSize: Number(document.fileSize),
+        mimeType: document.mimeType,
+        attachmentType: document.documentType as 'inspection_report' | 'history_card' | 'other',
       },
     };
   }

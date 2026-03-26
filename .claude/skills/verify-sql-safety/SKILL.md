@@ -42,8 +42,11 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/notifications/schedulers/digest-email-scheduler.ts` | fan-out JOIN (checkouts→checkoutItems→equipment) + Map dedup                                       |
 | `apps/backend/src/modules/equipment/services/equipment-history.service.ts`   | COUNT(DISTINCT) + 페이지네이션 (DEFAULT_PAGE_SIZE/MAX_PAGE_SIZE SSOT), checkoutItems 경유 JOIN  |
 | `packages/shared-constants/src/pagination.ts`                                 | SSOT 페이지네이션 상수 (DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE 등)                                    |
+| `apps/backend/src/common/file-upload/document.service.ts`                     | CTE 재귀 쿼리 (개정 이력), inArray 배치 쿼리 (장비+교정 통합 문서), LIMIT 배치 purge (purgeDeletedDocuments) |
 
 ## Workflow
+
+> **검색 범위 주의:** grep 대상에 `apps/backend/src/modules`뿐만 아니라 `apps/backend/src/common`도 포함해야 합니다. `document.service.ts` 등 common 디렉토리의 서비스도 SQL 쿼리를 실행합니다.
 
 ### Step 1: LIKE/ILIKE 와일드카드 미이스케이프 탐지
 
@@ -51,7 +54,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 
 ```bash
 # 사용자 입력이 LIKE 패턴에 직접 삽입되는 패턴 탐지 (템플릿 리터럴 %${...}%)
-grep -rn "ilike\|like" apps/backend/src/modules --include="*.service.ts" | grep -E "\`%\\\$\{|\`\\\$\{.*\}%" | grep -v "likeContains\|likeStartsWith\|likeEndsWith\|escapeLikePattern\|// "
+grep -rn "ilike\|like" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" | grep -E "\`%\\\$\{|\`\\\$\{.*\}%" | grep -v "likeContains\|likeStartsWith\|likeEndsWith\|escapeLikePattern\|// "
 ```
 
 **PASS 기준:** 0개 결과 (모든 LIKE 패턴이 SSOT 유틸리티를 사용).
@@ -115,14 +118,14 @@ grep -n "sql.raw" apps/backend/src/common/utils/like-escape.ts
 
 ```bash
 # drizzle-orm에서 ilike를 직접 import하는 서비스 탐지 (safeIlike만 허용)
-grep -rn "from 'drizzle-orm'" apps/backend/src/modules --include="*.service.ts" | grep "ilike"
+grep -rn "from 'drizzle-orm'" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" | grep "ilike"
 ```
 
 **PASS 기준:** drizzle-orm에서 `ilike`를 직접 import하는 서비스가 0개. 모든 ILIKE 쿼리가 `safeIlike()`를 사용.
 
 ```bash
 # safeIlike import 확인
-grep -rn "safeIlike" apps/backend/src/modules --include="*.service.ts" | head -20
+grep -rn "safeIlike" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" | head -20
 ```
 
 **FAIL 기준:** `ilike`를 drizzle-orm에서 직접 import하거나, `likeContains()` 없이 `safeIlike()`를 호출하면 위반.
@@ -133,12 +136,12 @@ grep -rn "safeIlike" apps/backend/src/modules --include="*.service.ts" | head -2
 
 ```bash
 # Promise.all + map + 개별 DB 쿼리 패턴 탐지
-grep -rn "Promise\.all" apps/backend/src/modules --include="*.service.ts" -A 5 | grep -E "\.map.*async.*=>|\.select\(|\.from\("
+grep -rn "Promise\.all" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" -A 5 | grep -E "\.map.*async.*=>|\.select\(|\.from\("
 ```
 
 ```bash
 # for/forEach 루프 내 await db 쿼리 탐지
-grep -rn "for.*of\|forEach" apps/backend/src/modules --include="*.service.ts" -A 5 | grep "await.*this\.db\.\|await.*db\."
+grep -rn "for.*of\|forEach" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" -A 5 | grep "await.*this\.db\.\|await.*db\."
 ```
 
 **PASS 기준:** 관련 데이터 로딩이 JOIN 또는 배치 IN() 쿼리로 처리.
@@ -168,7 +171,7 @@ const withRelated = await this.db
 
 ```bash
 # count() + JOIN 조합 탐지 — COUNT(DISTINCT)가 아닌 count() 사용
-grep -rn "count(" apps/backend/src/modules --include="*.service.ts" -B 5 | grep -E "Join.*Items|Join.*checkoutItems|Join.*checkout_items"
+grep -rn "count(" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" -B 5 | grep -E "Join.*Items|Join.*checkoutItems|Join.*checkout_items"
 ```
 
 **PASS 기준:** fan-out JOIN이 있는 쿼리에서 `COUNT(DISTINCT table.id)` 또는 `sql<number>\`COUNT(DISTINCT ...)\`` 사용.
@@ -183,7 +186,7 @@ RBAC scope 조건이 equipment 테이블 컬럼(`siteCode`, `teamId`)을 통해 
 
 ```bash
 # LEFT JOIN + scopeConditions 조합 탐지
-grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules --include="*.service.ts" -B 3 | grep -v "teamsTable\|node_modules"
+grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" -B 3 | grep -v "teamsTable\|node_modules"
 ```
 
 **PASS 기준:** scope 적용 대상 테이블(calibrations→equipment, repairHistory→equipment, checkouts→checkoutItems→equipment)은 `innerJoin` 사용. `teamsTable`과 활용률 쿼리의 `checkoutItems`/`checkouts` LEFT JOIN은 면제.
@@ -196,7 +199,7 @@ grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules --include="*.servic
 
 ```bash
 # forwardRef 사용 현황 확인
-grep -rn "forwardRef" apps/backend/src/modules --include="*.module.ts"
+grep -rn "forwardRef" apps/backend/src/modules apps/backend/src/common --include="*.module.ts"
 ```
 
 **PASS 기준:** `forwardRef()` 사용이 기존 알려진 순환 의존 쌍(Equipment↔NonConformances, Checkouts↔EquipmentImports, Notifications↔Calibration/Auth)에 한정. 새 `forwardRef()` 추가 시 WARNING.

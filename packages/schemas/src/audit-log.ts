@@ -58,6 +58,9 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   close: '종료',
   reject_correction: '조치 반려',
   export: '내보내기',
+  upload: '업로드',
+  download: '다운로드',
+  revision: '개정',
 };
 
 /**
@@ -82,6 +85,9 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   close: 'bg-teal-100 text-teal-800',
   reject_correction: 'bg-rose-100 text-rose-800',
   export: 'bg-emerald-100 text-emerald-800',
+  upload: 'bg-sky-100 text-sky-800',
+  download: 'bg-violet-100 text-violet-800',
+  revision: 'bg-amber-100 text-amber-800',
 };
 
 // ============================================================================
@@ -114,6 +120,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   settings: '설정',
   notification: '알림',
   report: '보고서',
+  document: '문서',
 };
 
 // ============================================================================

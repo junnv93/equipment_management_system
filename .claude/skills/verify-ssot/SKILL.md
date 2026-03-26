@@ -32,8 +32,8 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 | Package / Layer | Key Files | SSOT 항목 |
 |---|---|---|
-| `packages/schemas/` | `enums.ts`, `user.ts`, `errors.ts`, `settings.ts`, `audit-log.ts`, `field-labels.ts`, `validation/messages.ts` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지 |
-| `packages/shared-constants/` | `permissions.ts`, `api-endpoints.ts`, `data-scope.ts`, `auth-token.ts`, `approval-categories.ts`, `business-rules.ts`, `security.ts` | Permission, API 경로, 스코프 정책, 비즈니스 규칙 |
+| `packages/schemas/` | `enums.ts`, `user.ts`, `errors.ts`, `settings.ts`, `audit-log.ts`, `field-labels.ts`, `validation/messages.ts`, `document.ts` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지, DocumentType/DocumentTypeValues/DocumentJson |
+| `packages/shared-constants/` | `permissions.ts`, `api-endpoints.ts`, `data-scope.ts`, `auth-token.ts`, `approval-categories.ts`, `business-rules.ts`, `security.ts`, `entity-routes.ts` | Permission, API 경로, 스코프 정책, 비즈니스 규칙, 엔티티 라우트 |
 | `packages/db/` | `schema/audit-logs.ts`, `index.ts` | DB enum 배열, AppDatabase 타입 |
 | `packages/shared-constants/` | `test-users.ts` | Test User Constants SSOT (TEST_USERS_BY_TEAM, DEFAULT_ROLE_EMAILS, ALL_TEST_EMAILS) |
 
@@ -274,6 +274,19 @@ grep -rn "TEST_USERS_BY_TEAM\s*=\|DEFAULT_ROLE_EMAILS\s*=\|ALL_TEST_EMAILS\s*=" 
 
 **FAIL 기준:** `apps/` 디렉토리에서 `TEST_USERS_BY_TEAM`, `DEFAULT_ROLE_EMAILS`, `ALL_TEST_EMAILS`를 로컬 재정의하면 위반. `test-users.ts` 자체와 import 구문은 예외.
 
+### Step 13: DocumentTypeValues SSOT 임포트 확인
+
+문서 타입 값을 문자열 하드코딩 대신 `DocumentTypeValues` 상수를 사용하는지 확인합니다.
+
+```bash
+# DocumentType 문자열 하드코딩 탐지 (DocumentTypeValues 미사용)
+grep -rn "'calibration_certificate'\|'raw_data'\|'inspection_report'\|'history_card'\|'equipment_photo'\|'equipment_manual'" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "DocumentTypeValues\|DOCUMENT_TYPE_VALUES\|document\.ts\|node_modules\|// \|test\|\.spec\.\|as const"
+```
+
+**PASS 기준:** 0개 결과 (모든 document type이 `DocumentTypeValues.*` 또는 `DOCUMENT_TYPE_VALUES` 배열 사용).
+
+**FAIL 기준:** 문자열 리터럴로 document type 사용 → `DocumentTypeValues.CALIBRATION_CERTIFICATE` 등으로 교체 필요.
+
 ## Output Format
 
 ```markdown
@@ -296,6 +309,7 @@ grep -rn "TEST_USERS_BY_TEAM\s*=\|DEFAULT_ROLE_EMAILS\s*=\|ALL_TEST_EMAILS\s*=" 
 | 10  | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
 | 11  | VM 임포트 소스                | PASS/FAIL | 잘못된 VM import 위치                  |
 | 12  | Test User Constants SSOT      | PASS/FAIL | 로컬 재정의 위치                       |
+| 13  | DocumentTypeValues SSOT       | PASS/FAIL | 문자열 하드코딩 위치                   |
 ```
 
 ## Exceptions

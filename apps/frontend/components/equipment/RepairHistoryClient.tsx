@@ -162,7 +162,7 @@ export function RepairHistoryClient({
       // Clean URL (remove query params)
       window.history.replaceState({}, '', `/equipment/${equipmentId}/repair-history`);
     }
-  }, [autoOpen, initialNcId, equipmentId, form]);
+  }, [autoOpen, initialNcId, equipmentId, form, fmtDate]);
 
   // 열린 부적합 목록 조회 (수리 이력 연결용)
   const { data: openNonConformances } = useQuery({

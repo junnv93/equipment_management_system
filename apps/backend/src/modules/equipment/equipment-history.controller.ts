@@ -36,6 +36,7 @@ import {
   CreateMaintenanceHistoryValidationPipe,
   CreateIncidentHistoryValidationPipe,
 } from './dto/equipment-history.dto';
+import type { PaginatedResponse } from '../../common/types/api-response';
 
 @ApiTags('Equipment History')
 @Controller('equipment')
@@ -62,7 +63,7 @@ export class EquipmentHistoryController {
     @Request() req: AuthenticatedRequest,
     @Query('page') pageStr?: string,
     @Query('pageSize') pageSizeStr?: string
-  ) {
+  ): Promise<PaginatedResponse<Record<string, unknown>>> {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
 
@@ -91,7 +92,7 @@ export class EquipmentHistoryController {
     @Request() req: AuthenticatedRequest,
     @Query('page') pageStr?: string,
     @Query('pageSize') pageSizeStr?: string
-  ) {
+  ): Promise<PaginatedResponse<LocationHistoryResponseDto>> {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
 
@@ -171,7 +172,7 @@ export class EquipmentHistoryController {
     @Request() req: AuthenticatedRequest,
     @Query('page') pageStr?: string,
     @Query('pageSize') pageSizeStr?: string
-  ) {
+  ): Promise<PaginatedResponse<MaintenanceHistoryResponseDto>> {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
 
@@ -245,7 +246,7 @@ export class EquipmentHistoryController {
     @Request() req: AuthenticatedRequest,
     @Query('page') pageStr?: string,
     @Query('pageSize') pageSizeStr?: string
-  ) {
+  ): Promise<PaginatedResponse<IncidentHistoryResponseDto>> {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
 

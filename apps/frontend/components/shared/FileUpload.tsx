@@ -36,7 +36,7 @@ interface FileUploadProps {
   disabled?: boolean;
   label?: string;
   description?: string;
-  attachmentType?: 'inspection_report' | 'history_card' | 'other';
+  attachmentType?: string;
   showProgress?: boolean;
 }
 

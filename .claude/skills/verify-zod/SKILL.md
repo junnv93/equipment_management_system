@@ -258,3 +258,4 @@ export const CreateEquipmentPipe = new ZodValidationPipe(createEquipmentSchema);
 6. **Controller 메서드 레벨 Pipe 적용** — `@UsePipes()`와 `@Body(Pipe)` 파라미터 데코레이터 모두 유효한 적용 방식. 둘 중 하나면 충분
 7. **프로젝트 전체 z.coerce vs z.preprocess 차이** — 파일 간 패턴 차이는 허용 (기존 코드 존중). 동일 파일 내 혼용만 위반
 8. **login.dto.ts, user.dto.ts (auth 모듈)** — 인증 DTO는 NestJS Passport 연동으로 별도 패턴 가능
+9. **multipart/form-data 엔드포인트 (파일 업로드)** — `@UseInterceptors(FileInterceptor)` + `@UploadedFile()` 패턴은 DTO 디렉토리 대신 Swagger `@ApiBody({ schema })` 인라인 스키마 허용. documents.controller.ts 등 파일 업로드 전용 엔드포인트가 이에 해당

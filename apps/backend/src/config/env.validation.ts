@@ -79,6 +79,12 @@ export const envSchema = z
         data.S3_ACCESS_KEY !== undefined &&
         data.S3_SECRET_KEY !== undefined),
     { message: 'S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY는 STORAGE_DRIVER=s3일 때 필수입니다' }
+  )
+  .refine(
+    (data) =>
+      data.NODE_ENV !== 'production' ||
+      (data.FRONTEND_URL !== undefined && data.FRONTEND_URL !== ''),
+    { message: 'FRONTEND_URL은 프로덕션 환경에서 필수입니다 (CORS origin 설정에 필요)' }
   );
 
 export type EnvConfig = z.infer<typeof envSchema>;

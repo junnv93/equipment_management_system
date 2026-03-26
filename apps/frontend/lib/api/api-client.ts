@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getSession } from 'next-auth/react';
 // ✅ 일관된 에러 처리: 공통 유틸리티 사용
 import { createApiError, unwrapResponseData } from './utils/response-transformers';
-import { API_BASE_URL } from '../config/api-config';
+import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 
 /**
  * ============================================================================
@@ -72,6 +72,7 @@ const validateApiPath = (path: string): void => {
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  timeout: API_TIMEOUTS.CLIENT_SIDE,
   headers: {
     'Content-Type': 'application/json',
   },

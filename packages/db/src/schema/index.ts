@@ -27,6 +27,7 @@ export * from './condition-checks';
 export * from './calibrations';
 export * from './equipment-requests';
 export * from './equipment-attachments';
+export * from './documents';
 export * from './calibration-factors';
 export * from './non-conformances';
 export * from './software-history';

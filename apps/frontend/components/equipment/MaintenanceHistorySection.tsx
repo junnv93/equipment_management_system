@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -42,10 +42,13 @@ import type {
   CreateMaintenanceHistoryInput,
 } from '@/lib/api/equipment-api';
 
-const maintenanceHistorySchema = z.object({
-  performedAt: z.string().min(1, '수행 일시를 입력하세요'),
-  content: z.string().min(1, '주요 내용을 입력하세요'),
-});
+function createMaintenanceHistorySchema(t: (key: string) => string) {
+  return z.object({
+    performedAt: z.string().min(1, t('maintenanceHistoryTab.validation.performedAtRequired')),
+    content: z.string().min(1, t('maintenanceHistoryTab.validation.contentRequired')),
+  });
+}
+type MaintenanceHistoryFormData = z.infer<ReturnType<typeof createMaintenanceHistorySchema>>;
 
 interface MaintenanceHistorySectionProps {
   equipmentUuid?: string;
@@ -69,8 +72,9 @@ export function MaintenanceHistorySection({
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const maintenanceHistorySchema = useMemo(() => createMaintenanceHistorySchema(t), [t]);
 
-  const form = useForm<z.infer<typeof maintenanceHistorySchema>>({
+  const form = useForm<MaintenanceHistoryFormData>({
     resolver: zodResolver(maintenanceHistorySchema),
     defaultValues: {
       performedAt: fmtDate(new Date()),
@@ -78,7 +82,7 @@ export function MaintenanceHistorySection({
     },
   });
 
-  const handleSubmit = async (data: z.infer<typeof maintenanceHistorySchema>) => {
+  const handleSubmit = async (data: MaintenanceHistoryFormData) => {
     setIsSubmitting(true);
     try {
       await onAdd({

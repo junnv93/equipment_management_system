@@ -34,13 +34,18 @@ import { ArrowLeft, Save, AlertCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { TEAM_RESTRICTED_ROLES, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  TEAM_RESTRICTED_ROLES,
+  SELECTOR_PAGE_SIZE,
+  Permission,
+} from '@equipment-management/shared-constants';
 import type { UserRole, Site } from '@equipment-management/schemas';
 import {
   CALIBRATION_PLAN_CREATE_TOKENS,
   NUMERIC_TOKENS,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
+import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 export default function CreateCalibrationPlanContent() {
   const router = useRouter();
@@ -48,6 +53,9 @@ export default function CreateCalibrationPlanContent() {
   const { toast } = useToast();
   const { data: session } = useSession();
   const t = useTranslations('calibration');
+
+  // 권한 가드: CREATE_CALIBRATION_PLAN 없으면 목록으로 리다이렉트
+  const { allowed, loading: guardLoading } = usePermissionGuard(Permission.CREATE_CALIBRATION_PLAN);
   const currentYear = new Date().getFullYear();
   const nextYear = currentYear + 1;
 
@@ -152,6 +160,9 @@ export default function CreateCalibrationPlanContent() {
 
   // 연도 옵션 생성 (현재 연도 ~ +2년)
   const yearOptions = Array.from({ length: 3 }, (_, i) => currentYear + i);
+
+  // 권한 가드: 로딩 중이거나 미허용 시 렌더링 차단
+  if (guardLoading || !allowed) return null;
 
   return (
     <div className={getPageContainerClasses()}>

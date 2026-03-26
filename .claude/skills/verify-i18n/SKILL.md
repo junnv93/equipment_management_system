@@ -89,19 +89,41 @@ comm -13 <(ls apps/frontend/messages/en/ | sort) <(ls apps/frontend/messages/ko/
 각 도메인 파일의 JSON 키 구조가 en/ko 간에 완전히 일치하는지 확인합니다.
 
 ```bash
-# 모든 도메인 파일의 en/ko 키 불일치 탐지
-for f in $(ls apps/frontend/messages/en/*.json); do
-  key=$(basename $f)
-  result=$(diff \
-    <(jq -r 'path(..) | join(".")' "$f" | sort) \
-    <(jq -r 'path(..) | join(".")' "apps/frontend/messages/ko/$key" | sort) \
-    2>/dev/null)
-  if [ -n "$result" ]; then
-    echo "MISMATCH: $key"
-    echo "$result" | head -10
-  fi
-done
-echo "키 검사 완료"
+# 모든 도메인 파일의 en/ko 키 불일치 탐지 (Node.js 사용 — jq 미설치 환경 호환)
+node -e "
+const fs = require('fs');
+const path = require('path');
+function getKeys(obj, prefix = '') {
+  let keys = [];
+  for (const [k, v] of Object.entries(obj)) {
+    const full = prefix ? prefix + '.' + k : k;
+    keys.push(full);
+    if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
+      keys = keys.concat(getKeys(v, full));
+    }
+  }
+  return keys.sort();
+}
+const enDir = 'apps/frontend/messages/en';
+const koDir = 'apps/frontend/messages/ko';
+const files = fs.readdirSync(enDir).filter(f => f.endsWith('.json'));
+let allPass = true;
+for (const f of files) {
+  const en = JSON.parse(fs.readFileSync(path.join(enDir, f), 'utf8'));
+  const ko = JSON.parse(fs.readFileSync(path.join(koDir, f), 'utf8'));
+  const enKeys = getKeys(en);
+  const koKeys = getKeys(ko);
+  const enOnly = enKeys.filter(k => !koKeys.includes(k));
+  const koOnly = koKeys.filter(k => !enKeys.includes(k));
+  if (enOnly.length || koOnly.length) {
+    allPass = false;
+    console.log('MISMATCH: ' + f);
+    enOnly.forEach(k => console.log('  en only: ' + k));
+    koOnly.forEach(k => console.log('  ko only: ' + k));
+  }
+}
+if (allPass) console.log('모든 도메인 키 일치 — PASS');
+"
 ```
 
 **PASS 기준:** 모든 도메인에서 "MISMATCH" 출력 없음.
@@ -180,18 +202,36 @@ ls apps/frontend/messages/en/*.json | xargs -I{} basename {} .json | sort
 en/ko에서 `{variable}` 플레이스홀더가 동일하게 사용되는지 확인합니다.
 
 ```bash
-# en 파일의 ICU 변수 추출 후 ko와 비교 (ICU 변수 사용 도메인 전체)
-for domain in equipment dashboard audit checkouts calibration approvals settings teams auth common navigation errors non-conformances disposal notifications software reservations; do
-  echo "=== $domain ==="
-  diff \
-    <(jq -r 'to_entries[] | .value | if type == "string" then . else empty end' \
-      "apps/frontend/messages/en/${domain}.json" 2>/dev/null \
-      | grep -oP '\{[^}]+\}' | sort | uniq) \
-    <(jq -r 'to_entries[] | .value | if type == "string" then . else empty end' \
-      "apps/frontend/messages/ko/${domain}.json" 2>/dev/null \
-      | grep -oP '\{[^}]+\}' | sort | uniq) \
-    && echo "OK" || echo "변수 집합 불일치 가능성"
-done
+# en 파일의 ICU 변수 추출 후 ko와 비교 (Node.js 사용 — jq 미설치 환경 호환)
+node -e "
+const fs = require('fs');
+const path = require('path');
+const enDir = 'apps/frontend/messages/en';
+const koDir = 'apps/frontend/messages/ko';
+function extractVars(obj) {
+  const vars = new Set();
+  function walk(v) {
+    if (typeof v === 'string') {
+      const matches = v.match(/\{[^}]+\}/g);
+      if (matches) matches.forEach(m => vars.add(m));
+    } else if (typeof v === 'object' && v !== null) {
+      Object.values(v).forEach(walk);
+    }
+  }
+  walk(obj);
+  return [...vars].sort();
+}
+const files = fs.readdirSync(enDir).filter(f => f.endsWith('.json'));
+for (const f of files) {
+  const en = JSON.parse(fs.readFileSync(path.join(enDir, f), 'utf8'));
+  const ko = JSON.parse(fs.readFileSync(path.join(koDir, f), 'utf8'));
+  const enVars = extractVars(en);
+  const koVars = extractVars(ko);
+  const match = JSON.stringify(enVars) === JSON.stringify(koVars);
+  const domain = f.replace('.json','');
+  console.log(domain.padEnd(20) + (match ? 'OK' : 'DIFF'));
+}
+"
 ```
 
 **참고:** 이 검사는 전체 파일 수준의 변수 집합을 비교합니다. 개별 키 수준의 변수 불일치는 Step 2 키 구조 검사와 함께 수동 확인 필요. 새로운 ICU 변수 사용 도메인이 추가되면 `for domain in ...` 목록에 포함시켜야 합니다.

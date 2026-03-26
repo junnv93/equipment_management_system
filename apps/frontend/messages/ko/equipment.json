@@ -419,7 +419,9 @@
       "historyPartialDescription": "장비는 등록되었지만 이력 {count}건 저장에 실패했습니다.",
       "registrationFailed": "등록 실패",
       "registrationError": "장비 등록 중 오류가 발생했습니다.",
-      "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다."
+      "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다.",
+      "documentUploadPartialFail": "일부 문서 업로드 실패",
+      "documentUploadPartialFailDescription": "장비는 등록되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요."
     },
     "createShared": {
       "pageTitle": "공용/렌탈 장비 임시등록",
@@ -526,7 +528,12 @@
       "suwon": "수원",
       "uiwang": "의왕",
       "pyeongtaek": "평택"
-    }
+    },
+    "equipmentPhoto": "장비 사진",
+    "equipmentManual": "장비 매뉴얼",
+    "download": "다운로드",
+    "noPhotos": "등록된 장비 사진이 없습니다",
+    "noManuals": "등록된 매뉴얼이 없습니다"
   },
   "softwareTab": {
     "title": "소프트웨어/매뉴얼 정보",
@@ -537,7 +544,47 @@
   },
   "attachmentsTab": {
     "title": "첨부파일",
-    "empty": "첨부파일 기능은 준비 중입니다."
+    "empty": "등록된 첨부파일이 없습니다.",
+    "download": "다운로드",
+    "delete": "삭제",
+    "deleteConfirm": "이 문서를 삭제하시겠습니까?",
+    "deleteSuccess": "문서가 삭제되었습니다.",
+    "revisionHistory": "개정 이력",
+    "uploadRevision": "개정판 업로드",
+    "revisionCount": "Rev.{count}",
+    "type": {
+      "calibration_certificate": "교정성적서",
+      "raw_data": "원시 데이터",
+      "inspection_report": "검수보고서",
+      "history_card": "이력카드",
+      "other": "기타"
+    },
+    "tableHeaders": {
+      "fileName": "파일명",
+      "type": "유형",
+      "size": "크기",
+      "uploadedAt": "업로드일",
+      "hash": "무결성",
+      "revision": "버전",
+      "actions": "관리"
+    },
+    "integrity": {
+      "verified": "검증됨",
+      "unverified": "미검증",
+      "checking": "검증 중..."
+    },
+    "deleteError": "삭제에 실패했습니다.",
+    "revision": {
+      "version": "버전",
+      "fileName": "파일명",
+      "size": "크기",
+      "integrity": "무결성",
+      "uploadedAt": "업로드일",
+      "status": "상태",
+      "empty": "개정 이력이 없습니다.",
+      "latest": "최신",
+      "previous": "이전"
+    }
   },
   "calibrationFactorsTab": {
     "title": "보정계수",
@@ -590,7 +637,9 @@
     },
     "certificate": {
       "download": "성적서 다운로드",
-      "noFile": "파일 없음"
+      "noFile": "파일 없음",
+      "documentsCount": "{count}개 문서",
+      "rawData": "원시 데이터"
     },
     "toasts": {
       "fileRequired": "파일 필요",
@@ -690,6 +739,15 @@
       "repairSuccessDesc": "수리 이력이 등록되었습니다.",
       "repairError": "오류",
       "repairErrorDesc": "수리 이력 등록 중 오류가 발생했습니다."
+    },
+    "validation": {
+      "occurredAtRequired": "발생 일시를 입력하세요.",
+      "contentRequired": "내용을 입력하세요.",
+      "contentMax": "500자 이하로 입력하세요.",
+      "actionPlanMax": "조치 계획은 500자 이하로 입력하세요.",
+      "repairDateRequired": "수리 일자를 입력하세요.",
+      "repairDescriptionMin": "수리 내용은 최소 10자 이상 입력해야 합니다.",
+      "nonConformanceRequired": "부적합을 선택해주세요."
     }
   },
   "locationHistoryTab": {
@@ -725,7 +783,14 @@
       "deleteSuccess": "삭제 완료",
       "deleteSuccessDesc": "위치 변동 이력이 삭제되었습니다.",
       "deleteError": "삭제 실패",
-      "deleteErrorDesc": "위치 변동 이력 삭제 중 오류가 발생했습니다."
+      "deleteErrorDesc": "위치 변동 이력 삭제 중 오류가 발생했습니다.",
+      "versionConflict": "버전 충돌",
+      "versionConflictDesc": "다른 사용자가 장비를 수정했습니다. 새로고침 후 다시 시도해주세요."
+    },
+    "validation": {
+      "changedAtRequired": "변동 일시를 입력하세요.",
+      "newLocationRequired": "설치 위치를 입력하세요.",
+      "newLocationMax": "100자 이하로 입력하세요."
     }
   },
   "maintenanceHistoryTab": {
@@ -763,6 +828,11 @@
       "deleteSuccessDesc": "유지보수 내역이 삭제되었습니다.",
       "deleteError": "삭제 실패",
       "deleteErrorDesc": "유지보수 내역 삭제 중 오류가 발생했습니다."
+    },
+    "validation": {
+      "performedAtRequired": "수행 일시를 입력하세요.",
+      "contentRequired": "내용을 입력하세요.",
+      "contentMax": "500자 이하로 입력하세요."
     }
   },
   "checkoutHistoryTab": {
@@ -1147,6 +1217,8 @@
     "validationCycle": "유효한 교정 주기를 입력하세요.",
     "validationNextCalDate": "차기 교정일을 입력하세요.",
     "validationNextCalDateOrder": "차기 교정일은 교정일 이후여야 합니다.",
+    "validationCertificateNumber": "교정성적서 번호를 입력하세요.",
+    "validationCycleMin": "교정 주기를 입력하세요 (최소 1개월).",
     "saveError": "교정 이력 저장 중 오류가 발생했습니다.",
     "deleteConfirmTitle": "삭제 확인",
     "deleteConfirmDescription": "이 교정 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
@@ -1220,7 +1292,9 @@
     "successDescription": "장비 정보가 성공적으로 수정되었습니다.",
     "errorTitle": "수정 실패",
     "errorDescription": "장비 수정 중 오류가 발생했습니다.",
-    "unknownError": "장비 수정 중 알 수 없는 오류가 발생했습니다."
+    "unknownError": "장비 수정 중 알 수 없는 오류가 발생했습니다.",
+    "documentUploadPartialFail": "일부 문서 업로드 실패",
+    "documentUploadPartialFailDescription": "장비는 수정되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요."
   },
   "attachmentSection": {
     "historyCard": "이력카드",
@@ -1236,7 +1310,11 @@
     "guideCount": "파일 개수: 최대 10개",
     "guideDragDrop": "드래그 앤 드롭으로 쉽게 업로드할 수 있습니다",
     "existingFiles": "기존 첨부파일",
-    "download": "다운로드"
+    "download": "다운로드",
+    "photoTitle": "장비 사진",
+    "photoDescription": "장비의 외관 사진을 첨부하세요 (JPG, PNG, GIF)",
+    "manualTitle": "장비 매뉴얼",
+    "manualDescription": "장비 매뉴얼 PDF를 첨부하세요. 하드 카피 보관 위치는 상태/위치 섹션에서 입력할 수 있습니다."
   },
   "timeline": {
     "emptyDefault": "등록된 이력이 없습니다."

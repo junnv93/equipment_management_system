@@ -15,7 +15,7 @@
  * @see lib/utils/calibration-filter-utils.ts
  */
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import {
   UICalibrationFilters,
@@ -36,7 +36,6 @@ import type { CalibrationDueStatus } from '@/lib/utils/calibration-filter-utils'
 export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pathname = usePathname();
 
   // 현재 필터 (URL SSOT)
   const currentFilters = useMemo(

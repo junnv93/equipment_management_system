@@ -38,7 +38,7 @@ import {
   UserCheck,
   AlertCircle,
 } from 'lucide-react';
-import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import {
   getActionButtonClasses,
@@ -47,6 +47,7 @@ import {
   ACTION_BUTTON_TOKENS,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
+import { useAuth } from '@/hooks/use-auth';
 import { ApprovalTimeline } from './ApprovalTimeline';
 import { PlanItemsTable } from './PlanItemsTable';
 
@@ -79,7 +80,8 @@ export function CalibrationPlanDetailClient({
 }: CalibrationPlanDetailClientProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: session } = useSession();
+  useSession(); // 세션 상태 구독 유지 (인증 변경 시 리렌더)
+  const { can } = useAuth();
   const queryClient = useQueryClient();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const t = useTranslations('calibration');
@@ -293,21 +295,12 @@ export function CalibrationPlanDetailClient({
   const isPendingApproval = plan.status === CPStatus.PENDING_APPROVAL;
   const isApproved = plan.status === CPStatus.APPROVED;
 
-  // 사용자 역할 확인
-  const userRole = session?.user?.role as UserRole | undefined;
-  const isTechnicalManager = userRole === URVal.TECHNICAL_MANAGER;
-  const isQualityManager = userRole === URVal.QUALITY_MANAGER;
-  const isLabManager = userRole === URVal.LAB_MANAGER;
-  const isSystemAdmin = userRole === URVal.SYSTEM_ADMIN;
-
-  // 역할별 액션 가능 여부 — 상태×역할 매트릭스
-  const canSubmitForReview =
-    (isDraft || isRejected) && (isTechnicalManager || isLabManager || isSystemAdmin);
-  const canApprove = isPendingApproval && (isLabManager || isSystemAdmin);
+  // 액션 가능 여부 — 상태×Permission SSOT (role-permissions.ts 자동 반영)
+  const canSubmitForReview = (isDraft || isRejected) && can(Permission.SUBMIT_CALIBRATION_PLAN);
+  const canApprove = isPendingApproval && can(Permission.APPROVE_CALIBRATION_PLAN);
   const canReject =
-    (isPendingApproval && (isLabManager || isQualityManager || isSystemAdmin)) ||
-    (isPendingReview && (isQualityManager || isLabManager || isSystemAdmin));
-  const canDelete = isDraft && (isTechnicalManager || isLabManager || isSystemAdmin);
+    (isPendingApproval || isPendingReview) && can(Permission.REJECT_CALIBRATION_PLAN);
+  const canDelete = isDraft && can(Permission.DELETE_CALIBRATION_PLAN);
 
   return (
     <div className={getPageContainerClasses()}>

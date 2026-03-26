@@ -15,7 +15,7 @@
  * @see lib/utils/calibration-plans-filter-utils.ts
  */
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import type { CalibrationPlanStatus, Site } from '@equipment-management/schemas';
 import {
@@ -35,7 +35,6 @@ import {
 export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansFilters) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pathname = usePathname();
 
   // 현재 필터 (URL SSOT)
   const currentFilters = useMemo(

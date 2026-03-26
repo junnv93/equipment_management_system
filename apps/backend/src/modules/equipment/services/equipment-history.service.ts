@@ -37,6 +37,19 @@ import { getUtcStartOfDay } from '../../../common/utils';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { I18nService } from '../../../common/i18n/i18n.service';
 
+import type { PaginatedResponse } from '../../../common/types/api-response';
+
+/** 표준 PaginationMeta 생성 (SSOT: common/types/api-response.ts) */
+function buildPaginationMeta(total: number, pageSize: number, currentPage: number) {
+  return {
+    totalItems: total,
+    itemCount: Math.min(pageSize, total - (currentPage - 1) * pageSize),
+    itemsPerPage: pageSize,
+    totalPages: Math.ceil(total / pageSize) || 1,
+    currentPage,
+  };
+}
+
 @Injectable()
 export class EquipmentHistoryService {
   private readonly logger = new Logger(EquipmentHistoryService.name);
@@ -211,7 +224,7 @@ export class EquipmentHistoryService {
   async getLocationHistory(
     equipmentUuid: string,
     options: { page?: number; pageSize?: number } = {}
-  ) {
+  ): Promise<PaginatedResponse<LocationHistoryResponseDto>> {
     const page = options.page ?? 1;
     const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = (page - 1) * pageSize;
@@ -232,7 +245,7 @@ export class EquipmentHistoryService {
       .offset(offset);
 
     return {
-      data: records.map((record) => ({
+      items: records.map((record) => ({
         id: record.id,
         equipmentId: record.equipmentId,
         changedAt: record.changedAt,
@@ -242,14 +255,7 @@ export class EquipmentHistoryService {
         changedBy: record.changedBy ?? undefined,
         createdAt: record.createdAt,
       })),
-      meta: {
-        pagination: {
-          total,
-          pageSize,
-          currentPage: page,
-          totalPages: Math.ceil(total / pageSize),
-        },
-      },
+      meta: buildPaginationMeta(total, pageSize, page),
     };
   }
 
@@ -395,7 +401,7 @@ export class EquipmentHistoryService {
   async getMaintenanceHistory(
     equipmentUuid: string,
     options: { page?: number; pageSize?: number } = {}
-  ) {
+  ): Promise<PaginatedResponse<MaintenanceHistoryResponseDto>> {
     const page = options.page ?? 1;
     const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = (page - 1) * pageSize;
@@ -416,7 +422,7 @@ export class EquipmentHistoryService {
       .offset(offset);
 
     return {
-      data: records.map((record) => ({
+      items: records.map((record) => ({
         id: record.id,
         equipmentId: record.equipmentId,
         performedAt: record.performedAt,
@@ -424,14 +430,7 @@ export class EquipmentHistoryService {
         performedBy: record.performedBy ?? undefined,
         createdAt: record.createdAt,
       })),
-      meta: {
-        pagination: {
-          total,
-          pageSize,
-          currentPage: page,
-          totalPages: Math.ceil(total / pageSize),
-        },
-      },
+      meta: buildPaginationMeta(total, pageSize, page),
     };
   }
 
@@ -488,7 +487,7 @@ export class EquipmentHistoryService {
   async getIncidentHistory(
     equipmentUuid: string,
     options: { page?: number; pageSize?: number } = {}
-  ) {
+  ): Promise<PaginatedResponse<IncidentHistoryResponseDto>> {
     const page = options.page ?? 1;
     const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = (page - 1) * pageSize;
@@ -509,7 +508,7 @@ export class EquipmentHistoryService {
       .offset(offset);
 
     return {
-      data: records.map((record) => ({
+      items: records.map((record) => ({
         id: record.id,
         equipmentId: record.equipmentId,
         occurredAt: record.occurredAt,
@@ -519,14 +518,7 @@ export class EquipmentHistoryService {
         createdAt: record.createdAt,
         nonConformanceId: record.nonConformanceId ?? undefined,
       })),
-      meta: {
-        pagination: {
-          total,
-          pageSize,
-          currentPage: page,
-          totalPages: Math.ceil(total / pageSize),
-        },
-      },
+      meta: buildPaginationMeta(total, pageSize, page),
     };
   }
 
@@ -740,7 +732,7 @@ export class EquipmentHistoryService {
   async getCheckoutHistory(
     equipmentUuid: string,
     options: { page?: number; pageSize?: number } = {}
-  ) {
+  ): Promise<PaginatedResponse<Record<string, unknown>>> {
     const page = options.page ?? 1;
     const pageSize = Math.min(options.pageSize ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const offset = (page - 1) * pageSize;
@@ -784,7 +776,7 @@ export class EquipmentHistoryService {
       .offset(offset);
 
     return {
-      data: rows.map((row) => ({
+      items: rows.map((row) => ({
         id: row.id,
         version: row.version,
         purpose: row.purpose,
@@ -797,14 +789,7 @@ export class EquipmentHistoryService {
         createdAt: row.createdAt,
         user: row.userName ? { name: row.userName, email: row.userEmail } : undefined,
       })),
-      meta: {
-        pagination: {
-          total,
-          pageSize,
-          currentPage: page,
-          totalPages: Math.ceil(total / pageSize),
-        },
-      },
+      meta: buildPaginationMeta(total, pageSize, page),
     };
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -77,28 +77,33 @@ import {
 } from '@/lib/design-tokens';
 
 // 사고 이력 등록 스키마
-const incidentHistorySchema = z.object({
-  occurredAt: z.string().min(1, '발생 일시를 입력하세요'),
-  incidentType: IncidentTypeEnum,
-  content: z.string().min(1, '내용을 입력하세요').max(500, '500자 이하로 입력하세요'),
-  // 부적합 생성 관련 필드
-  createNonConformance: z.boolean().default(false),
-  changeEquipmentStatus: z.boolean().default(false),
-  actionPlan: z.string().max(500, '조치 계획은 500자 이하로 입력하세요').optional(),
-});
-
-type IncidentHistoryFormData = z.infer<typeof incidentHistorySchema>;
+function createIncidentHistorySchema(t: (key: string) => string) {
+  return z.object({
+    occurredAt: z.string().min(1, t('incidentHistoryTab.validation.occurredAtRequired')),
+    incidentType: IncidentTypeEnum,
+    content: z
+      .string()
+      .min(1, t('incidentHistoryTab.validation.contentRequired'))
+      .max(500, t('incidentHistoryTab.validation.contentMax')),
+    // 부적합 생성 관련 필드
+    createNonConformance: z.boolean().default(false),
+    changeEquipmentStatus: z.boolean().default(false),
+    actionPlan: z.string().max(500, t('incidentHistoryTab.validation.actionPlanMax')).optional(),
+  });
+}
+type IncidentHistoryFormData = z.infer<ReturnType<typeof createIncidentHistorySchema>>;
 
 // 수리 이력 등록 스키마 (사고 이력 탭용)
-const repairHistorySchema = z.object({
-  repairDate: z.string().min(1, '수리 일자를 입력하세요'),
-  repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
-  repairResult: RepairResultEnum.optional(),
-  notes: z.string().optional(),
-  nonConformanceId: uuidString('부적합을 선택해주세요'), // 필수
-});
-
-type RepairHistoryFormData = z.infer<typeof repairHistorySchema>;
+function createRepairHistorySchema(t: (key: string) => string) {
+  return z.object({
+    repairDate: z.string().min(1, t('incidentHistoryTab.validation.repairDateRequired')),
+    repairDescription: z.string().min(10, t('incidentHistoryTab.validation.repairDescriptionMin')),
+    repairResult: RepairResultEnum.optional(),
+    notes: z.string().optional(),
+    nonConformanceId: uuidString(t('incidentHistoryTab.validation.nonConformanceRequired')),
+  });
+}
+type RepairHistoryFormData = z.infer<ReturnType<typeof createRepairHistorySchema>>;
 
 // REPAIR_RESULT_OPTIONS labels are now provided via useTranslations
 
@@ -119,6 +124,8 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const { toast } = useToast();
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
+  const incidentHistorySchema = useMemo(() => createIncidentHistorySchema(t), [t]);
+  const repairHistorySchema = useMemo(() => createRepairHistorySchema(t), [t]);
 
   // 사고 이력 폼 설정
   const form = useForm<IncidentHistoryFormData>({

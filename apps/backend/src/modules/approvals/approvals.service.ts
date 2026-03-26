@@ -26,7 +26,6 @@ import {
   EquipmentImportStatusValues,
   EquipmentImportSourceEnum,
   NonConformanceStatusValues,
-  NonConformanceTypeValues,
   DisposalReviewStatusValues,
   ApprovalStatusEnum,
   type UserRole,
@@ -964,6 +963,7 @@ export class ApprovalsService {
       ];
       const scopeCondition = this.buildScopeCondition(EQUIPMENT_IMPORT_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.equipmentImports.site, s),
+        team: (t) => eq(schema.equipmentImports.teamId, t),
       });
       if (scopeCondition) conditions.push(scopeCondition);
 

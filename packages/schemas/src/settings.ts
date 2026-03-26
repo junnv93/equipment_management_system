@@ -29,6 +29,7 @@ export const systemSettingsSchema = z.object({
   notificationRetentionDays: z.number().int().min(30).max(365),
   notificationHighGraceDays: z.number().int().min(0).max(365),
   notificationMediumUnreadGraceDays: z.number().int().min(0).max(180),
+  documentRetentionDays: z.number().int().min(1).max(365),
   maintenanceMessage: z.string().max(500),
 });
 
@@ -39,6 +40,7 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   notificationRetentionDays: 90,
   notificationHighGraceDays: 90, // 실질 보존: 90 + 90 = 180일
   notificationMediumUnreadGraceDays: 30, // 실질 보존: 90 + 30 = 120일
+  documentRetentionDays: 30, // soft-delete 후 물리 파일 보존 기간
   maintenanceMessage: '',
 };
 
