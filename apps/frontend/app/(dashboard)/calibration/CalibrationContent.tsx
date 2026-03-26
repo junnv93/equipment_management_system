@@ -51,10 +51,7 @@ import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
 import { SITE_LABELS, EquipmentStatusValues } from '@equipment-management/schemas';
-import {
-  CALIBRATION_DUE_STATUS_VALUES,
-  CALIBRATION_DUE_STATUS_LABELS,
-} from '@/lib/utils/calibration-filter-utils';
+import { CALIBRATION_DUE_STATUS_VALUES } from '@/lib/utils/calibration-filter-utils';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
@@ -434,7 +431,7 @@ export default function CalibrationContent({
             <SelectItem value="all">{t('content.filters.calibrationDueStatusAll')}</SelectItem>
             {CALIBRATION_DUE_STATUS_VALUES.map((status) => (
               <SelectItem key={status} value={status}>
-                {CALIBRATION_DUE_STATUS_LABELS[status]}
+                {t(`content.filters.calibrationDueStatusOptions.${status}`)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -496,7 +493,7 @@ export default function CalibrationContent({
                 className={CALIBRATION_FILTER_BAR.tag}
                 onClick={() => updateCalibrationDueStatus('')}
               >
-                {CALIBRATION_DUE_STATUS_LABELS[filters.calibrationDueStatus]}
+                {t(`content.filters.calibrationDueStatusOptions.${filters.calibrationDueStatus}`)}
                 <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
               </button>
             )}

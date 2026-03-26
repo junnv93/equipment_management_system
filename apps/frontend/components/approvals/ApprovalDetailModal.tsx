@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, XCircle, FileText, Download } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
+import { UNIFIED_APPROVAL_STATUS_LABELS, getLocalizedSummary } from '@/lib/api/approvals-api';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
 import { ApprovalHistoryCard } from './ApprovalHistoryCard';
 import { CategoryDetails, CategoryBadge } from './detail-renderers';
@@ -65,7 +65,7 @@ export default function ApprovalDetailModal({
                   {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
                 </Badge>
                 <CategoryBadge category={item.category} />
-                <h3 className="text-lg font-semibold">{item.summary}</h3>
+                <h3 className="text-lg font-semibold">{getLocalizedSummary(item, t)}</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">

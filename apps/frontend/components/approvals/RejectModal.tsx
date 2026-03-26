@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { XCircle } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
+import { REJECTION_MIN_LENGTH, getLocalizedSummary } from '@/lib/api/approvals-api';
 import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
@@ -119,7 +119,7 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
         <DialogHeader>
           <DialogTitle>{t('rejectModal.title')}</DialogTitle>
           <DialogDescription>
-            {t('rejectModal.description', { summary: item.summary })}
+            {t('rejectModal.description', { summary: getLocalizedSummary(item, t) })}
           </DialogDescription>
         </DialogHeader>
 

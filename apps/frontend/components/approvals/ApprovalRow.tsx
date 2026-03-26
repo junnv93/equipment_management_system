@@ -8,7 +8,11 @@ import { CheckCircle2, XCircle, Eye } from 'lucide-react';
 import { daysBetween } from '@/lib/utils/date';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { TAB_META, UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
+import {
+  TAB_META,
+  UNIFIED_APPROVAL_STATUS_LABELS,
+  getLocalizedSummary,
+} from '@/lib/api/approvals-api';
 import {
   getApprovalStatusBadgeClasses,
   getApprovalActionButtonClasses,
@@ -57,6 +61,7 @@ export function ApprovalRow({
   const urgency = getElapsedDaysUrgency(elapsedDays);
   const tokens = APPROVAL_ROW_TOKENS;
   const meta = TAB_META[item.category];
+  const localizedSummary = getLocalizedSummary(item, t);
 
   return (
     <div
@@ -79,7 +84,7 @@ export function ApprovalRow({
           id={`select-${item.id}`}
           checked={isSelected}
           onCheckedChange={onToggleSelect}
-          aria-label={`${item.summary} ${t('item.select')}`}
+          aria-label={`${localizedSummary} ${t('item.select')}`}
         />
       </div>
 
@@ -98,7 +103,9 @@ export function ApprovalRow({
           <Badge className={cn(getApprovalStatusBadgeClasses(item.status), 'text-xs')}>
             {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
           </Badge>
-          <span className={cn('text-sm font-medium truncate', FONT.heading)}>{item.summary}</span>
+          <span className={cn('text-sm font-medium truncate', FONT.heading)}>
+            {localizedSummary}
+          </span>
           {meta.multiStep && (
             <span className={tokens.stepBadge} aria-label={t('row.stepBadge')}>
               {item.approvalHistory && item.approvalHistory.length > 0

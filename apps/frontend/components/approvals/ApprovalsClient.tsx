@@ -25,6 +25,7 @@ import {
   type ApprovalItem,
   ROLE_TABS,
   TAB_META,
+  getLocalizedSummary,
 } from '@/lib/api/approvals-api';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -145,7 +146,8 @@ export function ApprovalsClient({
       queryKeys.equipment.all,
       queryKeys.nonConformances.all,
     ],
-    successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
+    successMessage: (_, { item }) =>
+      t('toasts.approveDynamic', { summary: getLocalizedSummary(item, t) }),
     errorMessage: t('toasts.approveError'),
     onSuccessCallback: (_, { item }) => {
       setProcessingIds((prev) => {
@@ -221,7 +223,8 @@ export function ApprovalsClient({
       queryKeys.equipment.all,
       queryKeys.nonConformances.all,
     ],
-    successMessage: (_, { item }) => t('toasts.rejectDynamic', { summary: item.summary }),
+    successMessage: (_, { item }) =>
+      t('toasts.rejectDynamic', { summary: getLocalizedSummary(item, t) }),
     errorMessage: t('toasts.rejectError'),
     onSuccessCallback: (_, { item }) => {
       setProcessingIds((prev) => {
@@ -560,7 +563,9 @@ export function ApprovalsClient({
                       ? t(`tabMeta.${approveCommentItem.category}.commentDialogTitle`)
                       : t('commentDialog.titleFallback')}
                   </DialogTitle>
-                  <DialogDescription>{approveCommentItem.summary}</DialogDescription>
+                  <DialogDescription>
+                    {getLocalizedSummary(approveCommentItem, t)}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">

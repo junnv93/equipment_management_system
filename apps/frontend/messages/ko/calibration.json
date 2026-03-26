@@ -248,7 +248,12 @@
         "conditional": "조건부 합격"
       },
       "calibrationDueStatusLabel": "교정 상태",
-      "calibrationDueStatusAll": "전체"
+      "calibrationDueStatusAll": "전체",
+      "calibrationDueStatusOptions": {
+        "overdue": "교정 기한 초과",
+        "upcoming": "교정 예정",
+        "normal": "정상"
+      }
     },
     "tabs": {
       "all": "전체",
