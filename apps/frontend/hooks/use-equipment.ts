@@ -172,10 +172,10 @@ export function useUpdateEquipment() {
  * 장비 삭제 시 즉시 목록에서 제거하여 사용자 경험을 개선합니다.
  */
 export function useDeleteEquipment() {
-  return useOptimisticMutation<void, string, { data: Equipment[] }>({
-    mutationFn: (id) => equipmentApi.deleteEquipment(id),
+  return useOptimisticMutation<void, { id: string; version: number }, { data: Equipment[] }>({
+    mutationFn: ({ id, version }) => equipmentApi.deleteEquipment(id, version),
     queryKey: queryKeys.equipment.lists(),
-    optimisticUpdate: (old, id) => {
+    optimisticUpdate: (old, { id }) => {
       if (!old?.data) return { data: [] };
 
       // ✅ 삭제된 장비 즉시 제거

@@ -439,6 +439,7 @@ export class EquipmentController {
   })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Query('version') versionStr: string | undefined,
     @Req() req: AuthenticatedRequest
   ): Promise<{ message: string; requestUuid?: string }> {
     // 공용장비 삭제 차단
@@ -455,9 +456,13 @@ export class EquipmentController {
     const userId = req.user?.userId ?? '';
     const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
+    // CAS: 프론트엔드에서 전달한 version 사용 (동시 수정 방지)
+    const version = versionStr ? parseInt(versionStr, 10) : undefined;
+    const safeVersion = version !== undefined && !isNaN(version) ? version : undefined;
+
     // 시스템 관리자는 직접 삭제 가능
     if (isAdmin) {
-      await this.equipmentService.remove(uuid);
+      await this.equipmentService.remove(uuid, safeVersion ?? existingEquipment.version);
       return { message: '장비가 삭제되었습니다.' };
     }
 

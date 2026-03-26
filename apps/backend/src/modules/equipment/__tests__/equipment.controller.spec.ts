@@ -384,12 +384,13 @@ describe('EquipmentController', () => {
       const mockReq = {
         user: { roles: ['lab_manager'], userId: 'admin-uuid', site: 'suwon' },
       } as MockRequest;
-      const result = await controller.remove(uuid, mockReq as AuthenticatedRequest);
+      const result = await controller.remove(uuid, undefined, mockReq as AuthenticatedRequest);
 
       // Assert
       expect(result).toEqual({ message: '장비가 삭제되었습니다.' });
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
-      expect(equipmentService.remove).toHaveBeenCalledWith(uuid);
+      // version query param이 없으면 existingEquipment.version 폴백
+      expect(equipmentService.remove).toHaveBeenCalledWith(uuid, mockEquipment.version);
     });
 
     it('should throw NotFoundException when equipment does not exist', async () => {
@@ -403,9 +404,9 @@ describe('EquipmentController', () => {
 
       // Act & Assert
       const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
-      await expect(controller.remove(uuid, mockReq as AuthenticatedRequest)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.remove(uuid, undefined, mockReq as AuthenticatedRequest)
+      ).rejects.toThrow(NotFoundException);
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
     });
   });

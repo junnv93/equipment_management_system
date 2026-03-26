@@ -316,8 +316,8 @@ describe('EquipmentService', () => {
       // updateWithVersion: returning
       mockDb.returning.mockResolvedValue([softDeletedEquipment]);
 
-      // Act (no version → findOne first)
-      const result = await service.remove(mockEquipment.id);
+      // Act — version 필수 전달 (CAS)
+      const result = await service.remove(mockEquipment.id, 1);
 
       // Assert
       expect(result.isActive).toBe(false);
@@ -325,14 +325,26 @@ describe('EquipmentService', () => {
     });
 
     it('should throw NotFoundException when removing non-existent equipment', async () => {
-      // Arrange: findOne throws NotFoundException
-      mockCacheService.getOrSet.mockImplementation(
-        async (_key: string, factory: () => Promise<unknown>) => factory()
-      );
-      mockDb.query.equipment.findFirst.mockResolvedValue(null);
+      // Arrange: updateWithVersion 내부 mock chain
+      // 1) UPDATE: update().set().where().returning() → 빈 배열 (0 rows affected)
+      // 2) SELECT: select().from().where().limit() → 빈 배열 (엔티티 미존재)
+      const originalWhere = mockDb.where;
+      let whereCallCount = 0;
+      mockDb.where = jest.fn().mockImplementation(() => {
+        whereCallCount++;
+        if (whereCallCount === 1) {
+          // UPDATE chain — where 후 returning
+          return { returning: jest.fn().mockResolvedValue([]) };
+        }
+        // SELECT chain — where 후 limit
+        return { limit: jest.fn().mockResolvedValue([]) };
+      });
 
       // Act & Assert
-      await expect(service.remove('non-existent-uuid')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('non-existent-uuid', 1)).rejects.toThrow(NotFoundException);
+
+      // Cleanup
+      mockDb.where = originalWhere;
     });
   });
 });

@@ -325,9 +325,13 @@ const equipmentApi = {
     return transformSingleResponse<EquipmentMutationResponse>(response);
   },
 
-  // 장비 삭제
-  deleteEquipment: async (id: string): Promise<void> => {
-    return apiClient.delete(API_ENDPOINTS.EQUIPMENT.DELETE(id));
+  // 장비 삭제 — CAS version 전달 (동시 수정 방지)
+  deleteEquipment: async (id: string, version?: number): Promise<void> => {
+    const url =
+      version !== undefined
+        ? `${API_ENDPOINTS.EQUIPMENT.DELETE(id)}?version=${version}`
+        : API_ENDPOINTS.EQUIPMENT.DELETE(id);
+    return apiClient.delete(url);
   },
 
   // 장비 상태 변경
