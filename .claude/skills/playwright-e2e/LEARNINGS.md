@@ -41,6 +41,10 @@
 | 장비 목록 빈 상태 대기 | `#filter-site` 셀렉터 대기 | 빈 상태 메시지 직접 대기 (`getByText(/검색 결과가 없습니다/)`) | 검색 결과 없는 경우 필터 UI가 렌더링되지 않아 #filter-site 없음 |
 | 사고 이력 유형 선택 (셀렉트) | `dialog.getByRole('combobox').first()` 후 `.click()` | `dialog.locator('button[role="combobox"]').first()` | shadcn Select 트리거는 button[role="combobox"] |
 | SA 빈 검색 테스트 | `siteAdminPage` (LM) 사용 | `systemAdminPage` (SA) 사용 | LM도 site= 기본 리다이렉트가 있어 ?site=&teamId= 우회 안 됨. SA는 리다이렉트 없음 |
+| AttachmentSection "장비 사진" | `getByText('장비 사진')` | `getByRole('heading', { name: '장비 사진', level: 4 })` | h4 + label 2개 매칭 → strict mode. heading role로 한정 |
+| AttachmentSection "검수보고서" | `getByText(/검수보고서/)` | `getByRole('heading', { name: /검수보고서/, level: 4 })` | h4, label, paragraph 4곳 매칭 → strict mode |
+| 교정 결과 선택 "적합" | `getByRole('option', { name: '적합' })` | `getByRole('option', { name: '적합', exact: true })` | "부적합", "조건부 적합"도 매칭. exact: true 필수 |
+| 첨부파일 탭 콘텐츠 | `tab.click()` 후 즉시 체크 | `goto('?tab=attachments')` + `emptyState.or(table)` 대기 | URL push 기반 탭 → tabpanel 콘텐츠 비동기 로딩. 직접 URL 접근이 안정적 |
 
 ---
 
@@ -62,6 +66,8 @@
 | Disposal review API 응답 | 일부 경우 resp.ok()이지만 빈 JSON body 반환. resp.json() 대신 resp.text()로 파싱 후 조건부 JSON.parse 필요. | 2026-03-24 |
 | calibration_plans 스키마 | submitted_by 컬럼 없음 (submitted_at만 존재). DB 리셋 SQL에서 submitted_by 참조 시 에러 발생. | 2026-03-24 |
 | disposal_requests UUID LIKE | `id NOT LIKE 'dddd%'` → `id::text NOT LIKE 'dddd%'` 캐스팅 필수. UUID 타입에 LIKE 연산자 사용 불가. | 2026-03-24 |
+| 장비 등록 위자드 구조 | 4단계 위자드 (기본→상태·위치→교정→이력·첨부). 파일 첨부는 Step3(인덱스). 수정 모드는 3단계(Step2에 첨부 합체). 각 스텝 필수 필드: Step0만 name/site/teamId. | 2026-03-26 |
+| 교정 등록 성적서번호 | certificateNumber는 교정이력 테이블 컬럼에 표시되지 않음. 기관명과 "성적서 다운로드" 버튼으로 검증. | 2026-03-26 |
 
 ---
 
