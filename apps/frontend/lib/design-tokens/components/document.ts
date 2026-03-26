@@ -10,7 +10,7 @@
  * AP-07: 테이블 프리미엄 (stripe + hover + stickyHeader)
  */
 
-import { TRANSITION_PRESETS, ANIMATION_PRESETS } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 // ============================================================================
 // 1. DOCUMENT_MOTION — 전환 애니메이션

@@ -3,6 +3,7 @@ import { EquipmentController } from '../equipment.controller';
 import { EquipmentService } from '../equipment.service';
 import { EquipmentApprovalService } from '../services/equipment-approval.service';
 import { EquipmentAttachmentService } from '../services/equipment-attachment.service';
+import { DocumentService } from '../../../common/file-upload/document.service';
 import { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import { EquipmentQueryDto } from '../dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
@@ -104,6 +105,14 @@ describe('EquipmentController', () => {
             findByEquipmentId: jest.fn(),
             findByRequestId: jest.fn(),
             deleteAttachment: jest.fn(),
+          },
+        },
+        {
+          provide: DocumentService,
+          useValue: {
+            getDocumentsByEquipment: jest.fn(),
+            createDocument: jest.fn(),
+            deleteDocument: jest.fn(),
           },
         },
       ],

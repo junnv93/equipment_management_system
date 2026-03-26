@@ -26,7 +26,6 @@ import {
   EquipmentImportStatusValues,
   EquipmentImportSourceEnum,
   NonConformanceStatusValues,
-  NonConformanceTypeValues,
   DisposalReviewStatusValues,
   ApprovalStatusEnum,
   type UserRole,

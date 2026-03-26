@@ -25,7 +25,6 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { eq } from 'drizzle-orm';
 import { DocumentService } from '../../common/file-upload/document.service';
 import { FileUploadService } from '../../common/file-upload/file-upload.service';
 import { STORAGE_PROVIDER, IStorageProvider } from '../../common/storage/storage.interface';
@@ -38,6 +37,7 @@ import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
+import type { DocumentWithIntegrity } from '../../common/file-upload/document.service';
 
 @ApiTags('문서 관리')
 @ApiBearerAuth()
@@ -136,7 +136,7 @@ export class DocumentsController {
     @Query('requestId') requestId?: string,
     @Query('type') type?: string,
     @Query('includeCalibrations') includeCalibrations?: string
-  ) {
+  ): Promise<DocumentRecord[]> {
     // UUID 형식 기본 검증
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (equipmentId && !uuidPattern.test(equipmentId)) {
@@ -228,7 +228,7 @@ export class DocumentsController {
   @ApiOperation({ summary: '문서 무결성 검증 (SHA-256)' })
   @ApiParam({ name: 'id', description: '문서 ID (UUID)' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async verify(@Param('id', ParseUUIDPipe) id: string) {
+  async verify(@Param('id', ParseUUIDPipe) id: string): Promise<DocumentWithIntegrity> {
     return this.documentService.verifyIntegrity(id);
   }
 
@@ -241,7 +241,7 @@ export class DocumentsController {
   @ApiParam({ name: 'id', description: '문서 ID (UUID)' })
   @RequirePermissions(Permission.DELETE_EQUIPMENT)
   @AuditLog({ action: 'delete', entityType: 'document', entityIdPath: 'params.id' })
-  async deleteDocument(@Param('id', ParseUUIDPipe) id: string) {
+  async deleteDocument(@Param('id', ParseUUIDPipe) id: string): Promise<{ message: string }> {
     await this.documentService.deleteDocument(id);
     return { message: '문서가 삭제되었습니다.' };
   }
@@ -261,7 +261,7 @@ export class DocumentsController {
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: MulterFile,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<DocumentRecord> {
     if (!file) {
       throw new BadRequestException({
         code: 'DOCUMENT_FILE_REQUIRED',
@@ -277,7 +277,7 @@ export class DocumentsController {
   @ApiOperation({ summary: '문서 개정 이력 조회' })
   @ApiParam({ name: 'id', description: '문서 ID (UUID)' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async getRevisionHistory(@Param('id', ParseUUIDPipe) id: string) {
+  async getRevisionHistory(@Param('id', ParseUUIDPipe) id: string): Promise<DocumentRecord[]> {
     return this.documentService.getRevisionHistory(id);
   }
 }

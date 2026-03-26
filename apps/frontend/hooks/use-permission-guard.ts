@@ -43,6 +43,7 @@ export function usePermissionGuard(
   const permissionKey = Array.isArray(permission) ? permission.join(',') : permission;
   const permissions = useMemo(
     () => (Array.isArray(permission) ? permission : [permission]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- permissionKey는 permission의 직렬화 값으로 안정적 의존성 역할
     [permissionKey]
   );
   const allowed = !isLoading && isAuthenticated && permissions.some((p) => can(p));

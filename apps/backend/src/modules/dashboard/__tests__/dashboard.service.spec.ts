@@ -35,7 +35,9 @@ const createQueryChain = (resolveValue: unknown = []): Record<string, jest.Mock>
 };
 
 /** ApprovalsService.getApprovalCountsByScope()의 기본 반환값 */
-const createMockApprovalCounts = (overrides: Record<string, number> = {}) => ({
+const createMockApprovalCounts = (
+  overrides: Record<string, number> = {}
+): Record<string, number> => ({
   outgoing: 0,
   incoming: 0,
   equipment: 0,

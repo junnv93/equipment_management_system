@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { differenceInDays } from 'date-fns';
@@ -17,28 +16,23 @@ import {
   XCircle,
   Download,
 } from 'lucide-react';
-import nonConformancesApi, {
-  type NonConformance,
-  NON_CONFORMANCE_STATUS_LABELS,
-  NON_CONFORMANCE_TYPE_LABELS,
-} from '@/lib/api/non-conformances-api';
+import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
 import {
-  type NonConformanceType,
   NonConformanceStatusValues as NCStatusVal,
+  NonConformanceTypeValues,
+  SITE_VALUES,
 } from '@equipment-management/schemas';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useNCFilters } from '@/hooks/use-nc-filters';
 import type { UINonConformancesFilters } from '@/lib/utils/non-conformances-filter-utils';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { SITE_LABELS, type NonConformanceStatus, type Site } from '@equipment-management/schemas';
 import {
   getSemanticBadgeClasses,
   ncStatusToSemantic,
   NC_HEADER_TOKENS,
   NC_KPI_TOKENS,
   NC_KPI_CARD_TOKENS,
-  NC_KPI_LABELS,
   getNCKpiCardClasses,
   NC_FILTER_TOKENS,
   NC_LIST_TOKENS,
@@ -67,6 +61,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 
 // ============================================================================
 // 상수
@@ -96,8 +91,7 @@ export default function NonConformancesContent({
   initialData,
   initialFilters: _initialFilters,
 }: NonConformancesContentProps) {
-  const _router = useRouter();
-  const _t = useTranslations('common');
+  const t = useTranslations('non-conformances');
 
   // ✅ SSOT: URL-driven 필터 (useState 제거)
   const {
@@ -111,6 +105,11 @@ export default function NonConformancesContent({
     updatePage,
     clearFilters,
   } = useNCFilters();
+
+  // ✅ Radix Select spurious onValueChange 방지 (useFilterSelect SSOT)
+  const statusSelect = useFilterSelect(filters.status, updateStatus);
+  const ncTypeSelect = useFilterSelect(filters.ncType, updateNCType);
+  const siteSelect = useFilterSelect(filters.site, updateSite);
 
   // ✅ TanStack Query — 서버 초기 데이터를 placeholderData로 사용
   const queryFilters = { ...apiFilters, includeSummary: true };
@@ -141,17 +140,25 @@ export default function NonConformancesContent({
   /** CSV 내보내기 */
   const handleExport = () => {
     if (ncList.length === 0) return;
-    const headers = ['상태', '유형', '장비명', '관리번호', '원인', '발견일', '경과일'];
+    const headers = [
+      t('list.csvHeaders.status'),
+      t('list.csvHeaders.type'),
+      t('list.csvHeaders.equipmentName'),
+      t('list.csvHeaders.managementNumber'),
+      t('list.csvHeaders.cause'),
+      t('list.csvHeaders.discoveryDate'),
+      t('list.csvHeaders.elapsedDays'),
+    ];
     const rows = ncList.map((nc) => {
       const elapsed = computeElapsedDays(nc);
       return [
-        NON_CONFORMANCE_STATUS_LABELS[nc.status as NonConformanceStatus] ?? nc.status,
-        NON_CONFORMANCE_TYPE_LABELS[nc.ncType] ?? nc.ncType,
+        t('ncStatus.' + nc.status),
+        t('ncType.' + nc.ncType),
         nc.equipment?.name ?? '',
         nc.equipment?.managementNumber ?? '',
         nc.cause,
         nc.discoveryDate,
-        nc.status !== 'closed' ? `${elapsed}일` : '',
+        nc.status !== 'closed' ? t('list.csvElapsedDays', { days: elapsed }) : '',
       ];
     });
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
@@ -159,7 +166,8 @@ export default function NonConformancesContent({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `부적합관리_${new Date().toISOString().slice(0, 10)}.csv`;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = t('list.csvFileName', { date: dateStr });
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -169,20 +177,20 @@ export default function NonConformancesContent({
       {/* 헤더 */}
       <div className={NC_HEADER_TOKENS.container}>
         <div>
-          <h1 className={NC_HEADER_TOKENS.title}>부적합 관리</h1>
-          <p className={NC_HEADER_TOKENS.subtitle}>시스템 전체 부적합 현황 및 조치 진행 관리</p>
+          <h1 className={NC_HEADER_TOKENS.title}>{t('title')}</h1>
+          <p className={NC_HEADER_TOKENS.subtitle}>{t('subtitle')}</p>
         </div>
         <div className={NC_HEADER_TOKENS.actionsGroup}>
           <Button variant="ghost" size="sm" onClick={handleExport} disabled={ncList.length === 0}>
             <Download className="h-3.5 w-3.5 mr-1.5" />
-            내보내기
+            {t('list.export')}
           </Button>
         </div>
       </div>
 
       {/* KPI 스트립 */}
       <div className="grid grid-cols-3 gap-3">
-        {(Object.keys(NC_KPI_LABELS) as NCKpiVariant[]).map((variant) => {
+        {(Object.keys(KPI_ICONS) as NCKpiVariant[]).map((variant) => {
           const Icon = KPI_ICONS[variant];
           const tokens = NC_KPI_TOKENS[variant];
           const isActive = filters.status === variant;
@@ -197,7 +205,7 @@ export default function NonConformancesContent({
                 <Icon className={cn('h-5 w-5', tokens.iconColor)} />
               </div>
               <div>
-                <p className={NC_KPI_CARD_TOKENS.label}>{NC_KPI_LABELS[variant]}</p>
+                <p className={NC_KPI_CARD_TOKENS.label}>{t('kpi.' + variant)}</p>
                 <p className={cn(NC_KPI_CARD_TOKENS.value, tokens.valueColor)}>
                   {kpiCounts[variant]}
                 </p>
@@ -213,7 +221,7 @@ export default function NonConformancesContent({
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="장비명, 관리번호, 원인 검색..."
+            placeholder={t('list.searchPlaceholder')}
             value={filters.search}
             onChange={(e) => updateSearch(e.target.value)}
             className="h-8 pl-8 text-sm"
@@ -223,54 +231,45 @@ export default function NonConformancesContent({
         <div className={NC_FILTER_TOKENS.divider} />
 
         {/* 상태 필터 */}
-        <Select
-          value={filters.status || '_all'}
-          onValueChange={(v) => updateStatus((v === '_all' ? '' : v) as NonConformanceStatus | '')}
-        >
+        <Select {...statusSelect}>
           <SelectTrigger className="h-8 w-[130px] text-xs">
-            <SelectValue placeholder="상태" />
+            <SelectValue placeholder={t('list.filterStatus')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">전체 상태</SelectItem>
-            {Object.entries(NON_CONFORMANCE_STATUS_LABELS).map(([key, label]) => (
+            <SelectItem value="_all">{t('list.filterStatusAll')}</SelectItem>
+            {Object.values(NCStatusVal).map((key) => (
               <SelectItem key={key} value={key}>
-                {label}
+                {t('ncStatus.' + key)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         {/* 유형 필터 */}
-        <Select
-          value={filters.ncType || '_all'}
-          onValueChange={(v) => updateNCType((v === '_all' ? '' : v) as NonConformanceType | '')}
-        >
+        <Select {...ncTypeSelect}>
           <SelectTrigger className="h-8 w-[130px] text-xs">
-            <SelectValue placeholder="유형" />
+            <SelectValue placeholder={t('list.filterType')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">전체 유형</SelectItem>
-            {Object.entries(NON_CONFORMANCE_TYPE_LABELS).map(([key, label]) => (
+            <SelectItem value="_all">{t('list.filterTypeAll')}</SelectItem>
+            {Object.values(NonConformanceTypeValues).map((key) => (
               <SelectItem key={key} value={key}>
-                {label}
+                {t('ncType.' + key)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         {/* 사이트 필터 */}
-        <Select
-          value={filters.site || '_all'}
-          onValueChange={(v) => updateSite((v === '_all' ? '' : v) as Site | '')}
-        >
+        <Select {...siteSelect}>
           <SelectTrigger className="h-8 w-[110px] text-xs">
-            <SelectValue placeholder="사이트" />
+            <SelectValue placeholder={t('list.filterSite')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">전체 사이트</SelectItem>
-            {Object.entries(SITE_LABELS).map(([key, label]) => (
+            <SelectItem value="_all">{t('list.filterSiteAll')}</SelectItem>
+            {SITE_VALUES.map((key) => (
               <SelectItem key={key} value={key}>
-                {label}
+                {t('siteLabels.' + key)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -282,7 +281,7 @@ export default function NonConformancesContent({
             <div className={NC_FILTER_TOKENS.divider} />
             {filters.status && (
               <span className={NC_FILTER_TOKENS.tag}>
-                {NON_CONFORMANCE_STATUS_LABELS[filters.status as NonConformanceStatus]}
+                {t('ncStatus.' + filters.status)}
                 <button type="button" onClick={() => updateStatus('')}>
                   <X className={NC_FILTER_TOKENS.tagDismissIcon} />
                 </button>
@@ -290,7 +289,7 @@ export default function NonConformancesContent({
             )}
             {filters.ncType && (
               <span className={NC_FILTER_TOKENS.tag}>
-                {NON_CONFORMANCE_TYPE_LABELS[filters.ncType as NonConformanceType]}
+                {t('ncType.' + filters.ncType)}
                 <button type="button" onClick={() => updateNCType('')}>
                   <X className={NC_FILTER_TOKENS.tagDismissIcon} />
                 </button>
@@ -298,7 +297,7 @@ export default function NonConformancesContent({
             )}
             {filters.site && (
               <span className={NC_FILTER_TOKENS.tag}>
-                {SITE_LABELS[filters.site as keyof typeof SITE_LABELS]}
+                {t('siteLabels.' + filters.site)}
                 <button type="button" onClick={() => updateSite('')}>
                   <X className={NC_FILTER_TOKENS.tagDismissIcon} />
                 </button>
@@ -313,7 +312,7 @@ export default function NonConformancesContent({
               </span>
             )}
             <button type="button" className={NC_FILTER_TOKENS.resetButton} onClick={clearFilters}>
-              초기화
+              {t('list.filterReset')}
             </button>
           </>
         )}
@@ -331,12 +330,12 @@ export default function NonConformancesContent({
         <div className={NC_LIST_TOKENS.wrapper}>
           {/* 테이블 헤더 */}
           <div className={NC_LIST_TOKENS.headerRow}>
-            <span>상태</span>
-            <span>유형</span>
-            <span>장비</span>
-            <span>원인</span>
-            <span>발견일</span>
-            <span>경과일</span>
+            <span>{t('list.headerStatus')}</span>
+            <span>{t('list.headerType')}</span>
+            <span>{t('list.headerEquipment')}</span>
+            <span>{t('list.headerCause')}</span>
+            <span>{t('list.headerDiscoveryDate')}</span>
+            <span>{t('list.headerElapsedDays')}</span>
             <span />
           </div>
 
@@ -351,8 +350,11 @@ export default function NonConformancesContent({
       {pagination && pagination.totalPages > 1 && (
         <div className={NC_PAGINATION_TOKENS.container}>
           <span className={NC_PAGINATION_TOKENS.info}>
-            총 {pagination.total}건 중 {(pagination.currentPage - 1) * pagination.pageSize + 1}–
-            {Math.min(pagination.currentPage * pagination.pageSize, pagination.total)}건
+            {t('list.paginationInfo', {
+              total: pagination.total,
+              start: (pagination.currentPage - 1) * pagination.pageSize + 1,
+              end: Math.min(pagination.currentPage * pagination.pageSize, pagination.total),
+            })}
           </span>
           <div className={NC_PAGINATION_TOKENS.buttons}>
             <button
@@ -399,6 +401,7 @@ export default function NonConformancesContent({
  * 리스트 행 컴포넌트
  */
 function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
+  const t = useTranslations('non-conformances');
   const { fmtDate } = useDateFormatter();
   const elapsedDays = computeElapsedDays(nc);
   const longOverdue = isNCLongOverdue(elapsedDays);
@@ -417,17 +420,17 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
       {/* 상태 + 미니 워크플로우 */}
       <div className="flex flex-col gap-0.5">
         <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
-          {NON_CONFORMANCE_STATUS_LABELS[nc.status as NonConformanceStatus]}
+          {t('ncStatus.' + nc.status)}
         </span>
-        {hasRejection && <span className={NC_REJECTION_BADGE_TOKENS.badge}>반려됨</span>}
+        {hasRejection && (
+          <span className={NC_REJECTION_BADGE_TOKENS.badge}>{t('list.rejectedBadge')}</span>
+        )}
         <MiniWorkflow currentStepIndex={statusIndex} isLongOverdue={longOverdue} />
       </div>
 
       {/* 유형 */}
       <div>
-        <span className={NC_TYPE_CHIP_TOKENS.base}>
-          {NON_CONFORMANCE_TYPE_LABELS[nc.ncType] ?? nc.ncType}
-        </span>
+        <span className={NC_TYPE_CHIP_TOKENS.base}>{t('ncType.' + nc.ncType)}</span>
       </div>
 
       {/* 장비 */}
@@ -449,7 +452,9 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
       {/* 경과일 */}
       <div>
         {nc.status !== 'closed' ? (
-          <span className={getNCElapsedDaysClasses(elapsedDays)}>{elapsedDays}일</span>
+          <span className={getNCElapsedDaysClasses(elapsedDays)}>
+            {t('list.elapsedDays', { days: elapsedDays })}
+          </span>
         ) : (
           <span className="text-[13px] text-muted-foreground">—</span>
         )}
@@ -493,20 +498,19 @@ function MiniWorkflow({
  * 빈 상태
  */
 function EmptyState({ hasFilters, onClear }: { hasFilters: boolean; onClear: () => void }) {
+  const t = useTranslations('non-conformances');
   return (
     <div className={NC_EMPTY_STATE_TOKENS.container}>
       <FileWarning className={cn(NC_EMPTY_STATE_TOKENS.icon, 'mx-auto')} />
       <p className={NC_EMPTY_STATE_TOKENS.title}>
-        {hasFilters ? '조건에 맞는 부적합 사항이 없습니다' : '등록된 부적합 사항이 없습니다'}
+        {hasFilters ? t('list.emptyWithFilters') : t('list.emptyNoFilters')}
       </p>
       <p className={NC_EMPTY_STATE_TOKENS.description}>
-        {hasFilters
-          ? '필터를 변경하거나 초기화해 보세요'
-          : '장비 상세 페이지에서 부적합을 등록할 수 있습니다'}
+        {hasFilters ? t('list.emptyWithFiltersDescription') : t('list.emptyNoFiltersDescription')}
       </p>
       {hasFilters && (
         <Button variant="outline" size="sm" onClick={onClear} className="mt-4">
-          필터 초기화
+          {t('list.filterResetButton')}
         </Button>
       )}
     </div>

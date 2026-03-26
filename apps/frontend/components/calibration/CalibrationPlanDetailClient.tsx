@@ -80,7 +80,7 @@ export function CalibrationPlanDetailClient({
 }: CalibrationPlanDetailClientProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: session } = useSession();
+  useSession(); // 세션 상태 구독 유지 (인증 변경 시 리렌더)
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();

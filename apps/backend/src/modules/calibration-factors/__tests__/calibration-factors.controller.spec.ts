@@ -75,9 +75,9 @@ describe('CalibrationFactorsController', () => {
         unit: 'dBi',
         effectiveDate: '2024-01-15',
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockReq = {
         user: { userId: requestedBy, roles: ['test_engineer'], site: 'suwon', teamId: 'team-uuid' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       const expectedResult = {
@@ -237,6 +237,7 @@ describe('CalibrationFactorsController', () => {
           site: 'suwon',
           teamId: 'team-uuid',
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       const expectedResult = {
@@ -272,6 +273,7 @@ describe('CalibrationFactorsController', () => {
           site: 'suwon',
           teamId: 'team-uuid',
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       const expectedResult = {
@@ -307,6 +309,7 @@ describe('CalibrationFactorsController', () => {
           site: 'suwon',
           teamId: 'team-uuid',
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any;
 
       mockCalibrationFactorsService.remove.mockResolvedValue(expectedResult);

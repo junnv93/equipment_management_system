@@ -62,6 +62,7 @@ import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { FileUploadService } from '../../common/file-upload/file-upload.service';
 import { DocumentService } from '../../common/file-upload/document.service';
 import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
+import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
 import type { CalibrationRecord } from './calibration.service';
@@ -576,7 +577,7 @@ export class CalibrationController {
     @Body('documentTypes') documentTypesRaw: string,
     @Body('descriptions') descriptionsRaw: string | undefined,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<{ documents: DocumentRecord[]; message: string }> {
     await this.enforceCalibrationAccess(uuid, req);
     await this.calibrationService.findOne(uuid);
 
@@ -650,7 +651,7 @@ export class CalibrationController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest,
     @Query('type') type?: string
-  ) {
+  ): Promise<DocumentRecord[]> {
     await this.enforceCalibrationAccess(uuid, req);
     return this.documentService.findByCalibrationId(uuid, type as DocumentType | undefined);
   }
