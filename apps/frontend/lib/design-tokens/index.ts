@@ -350,6 +350,8 @@ export {
   DOCUMENT_MOTION,
   DOCUMENT_TABLE,
   DOCUMENT_EMPTY_STATE,
+  DOCUMENT_UPLOAD,
+  DOCUMENT_DISPLAY,
   getDocumentRowClasses,
 } from './components/document';
 

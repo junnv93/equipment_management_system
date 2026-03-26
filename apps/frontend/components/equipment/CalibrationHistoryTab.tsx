@@ -26,6 +26,7 @@ import {
 } from '@/lib/design-tokens';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
+import { DocumentTypeValues } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -230,13 +231,13 @@ function CalibrationDocumentsCell({ docs }: { docs: DocumentRecord[] }) {
           onClick={() => handleDownload(doc)}
           title={doc.originalFileName}
         >
-          {doc.documentType === 'raw_data' ? (
+          {doc.documentType === DocumentTypeValues.RAW_DATA ? (
             <FileSpreadsheet className="h-3.5 w-3.5" />
           ) : (
             <FileText className="h-3.5 w-3.5" />
           )}
           <span className="truncate max-w-[120px]">
-            {doc.documentType === 'raw_data'
+            {doc.documentType === DocumentTypeValues.RAW_DATA
               ? t('calibrationHistoryTab.certificate.rawData')
               : t('calibrationHistoryTab.certificate.download')}
           </span>

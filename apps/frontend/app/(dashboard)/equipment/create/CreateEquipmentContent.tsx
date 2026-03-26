@@ -8,12 +8,14 @@ import { CreateEquipmentInput, UpdateEquipmentInput } from '@equipment-managemen
 import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { isApprovalResponse } from '@/lib/api/equipment-api';
 import { ErrorAlert, PartialSuccessAlert } from '@/components/shared/ErrorAlert';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import { saveHistoryInParallel } from '@/lib/utils/equipment-history-utils';
+import { uploadEquipmentDocuments } from '@/lib/utils/document-upload-utils';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 
@@ -29,6 +31,7 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
   const { toast } = useToast();
   const t = useTranslations('equipment');
   const createEquipment = useCreateEquipment();
+  const queryClient = useQueryClient();
 
   // i18n 기반 이력 타입 라벨 (saveHistoryInParallel 결과 표시용)
   const historyTypeLabels: Record<string, string> = {
@@ -48,7 +51,8 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
   const handleSubmit = async (
     data: CreateEquipmentInput | UpdateEquipmentInput,
     files?: Array<{ file: File }>,
-    pendingHistory?: PendingHistoryData
+    pendingHistory?: PendingHistoryData,
+    documentFiles?: { photos: File[]; manuals: File[] }
   ): Promise<void> => {
     setSubmitError(null);
     setPartialSuccessInfo(null);
@@ -60,7 +64,29 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
         files: fileList,
       });
 
+      // 사진·매뉴얼 문서 업로드 (SSOT: uploadEquipmentDocuments)
+      const notifyDocUploadFailure = (uploadResult: { failed: number }) => {
+        if (uploadResult.failed > 0) {
+          toast({
+            title: t('form.create.documentUploadPartialFail'),
+            description: t('form.create.documentUploadPartialFailDescription', {
+              count: uploadResult.failed,
+            }),
+            variant: 'destructive',
+          });
+        }
+      };
+
       if (isApprovalResponse(result)) {
+        if (documentFiles) {
+          const docResult = await uploadEquipmentDocuments(
+            documentFiles,
+            result.requestUuid,
+            'requestId',
+            queryClient
+          );
+          notifyDocUploadFailure(docResult);
+        }
         toast({
           title: t('form.create.approvalRequestComplete'),
           description: t('form.create.approvalRequestDescription'),
@@ -68,6 +94,15 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
         router.push('/equipment');
       } else {
         const equipmentUuid = String(result.id);
+        if (documentFiles) {
+          const docResult = await uploadEquipmentDocuments(
+            documentFiles,
+            equipmentUuid,
+            'equipmentId',
+            queryClient
+          );
+          notifyDocUploadFailure(docResult);
+        }
 
         if (pendingHistory) {
           const saveResults = await saveHistoryInParallel(

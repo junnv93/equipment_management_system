@@ -419,7 +419,9 @@
       "historyPartialDescription": "Equipment registered but {count} history records failed to save.",
       "registrationFailed": "Registration Failed",
       "registrationError": "An error occurred while registering the equipment.",
-      "unknownError": "An unknown error occurred while registering the equipment."
+      "unknownError": "An unknown error occurred while registering the equipment.",
+      "documentUploadPartialFail": "Some documents failed to upload",
+      "documentUploadPartialFailDescription": "Equipment was registered but {count} document(s) failed to upload. Please retry from the detail page."
     },
     "createShared": {
       "pageTitle": "Shared/Rental Equipment Temporary Registration",
@@ -526,7 +528,12 @@
       "suwon": "Suwon",
       "uiwang": "Uiwang",
       "pyeongtaek": "Pyeongtaek"
-    }
+    },
+    "equipmentPhoto": "Equipment Photo",
+    "equipmentManual": "Equipment Manual",
+    "download": "Download",
+    "noPhotos": "No equipment photos registered",
+    "noManuals": "No manuals registered"
   },
   "softwareTab": {
     "title": "Software/Manual Information",
@@ -1262,7 +1269,9 @@
     "successDescription": "Equipment information has been updated successfully.",
     "errorTitle": "Edit Failed",
     "errorDescription": "An error occurred while editing equipment.",
-    "unknownError": "An unknown error occurred while editing equipment."
+    "unknownError": "An unknown error occurred while editing equipment.",
+    "documentUploadPartialFail": "Some documents failed to upload",
+    "documentUploadPartialFailDescription": "Equipment was updated but {count} document(s) failed to upload. Please retry from the detail page."
   },
   "attachmentSection": {
     "historyCard": "History Card",
@@ -1278,7 +1287,11 @@
     "guideCount": "Max files: 10",
     "guideDragDrop": "You can easily upload by dragging and dropping files",
     "existingFiles": "Existing Attachments",
-    "download": "Download"
+    "download": "Download",
+    "photoTitle": "Equipment Photo",
+    "photoDescription": "Attach photos of the equipment (JPG, PNG, GIF)",
+    "manualTitle": "Equipment Manual",
+    "manualDescription": "Attach the equipment manual PDF. Hard copy location can be entered in the Status/Location section."
   },
   "timeline": {
     "emptyDefault": "No history recorded."

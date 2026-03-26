@@ -419,7 +419,9 @@
       "historyPartialDescription": "장비는 등록되었지만 이력 {count}건 저장에 실패했습니다.",
       "registrationFailed": "등록 실패",
       "registrationError": "장비 등록 중 오류가 발생했습니다.",
-      "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다."
+      "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다.",
+      "documentUploadPartialFail": "일부 문서 업로드 실패",
+      "documentUploadPartialFailDescription": "장비는 등록되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요."
     },
     "createShared": {
       "pageTitle": "공용/렌탈 장비 임시등록",
@@ -526,7 +528,12 @@
       "suwon": "수원",
       "uiwang": "의왕",
       "pyeongtaek": "평택"
-    }
+    },
+    "equipmentPhoto": "장비 사진",
+    "equipmentManual": "장비 매뉴얼",
+    "download": "다운로드",
+    "noPhotos": "등록된 장비 사진이 없습니다",
+    "noManuals": "등록된 매뉴얼이 없습니다"
   },
   "softwareTab": {
     "title": "소프트웨어/매뉴얼 정보",
@@ -1262,7 +1269,9 @@
     "successDescription": "장비 정보가 성공적으로 수정되었습니다.",
     "errorTitle": "수정 실패",
     "errorDescription": "장비 수정 중 오류가 발생했습니다.",
-    "unknownError": "장비 수정 중 알 수 없는 오류가 발생했습니다."
+    "unknownError": "장비 수정 중 알 수 없는 오류가 발생했습니다.",
+    "documentUploadPartialFail": "일부 문서 업로드 실패",
+    "documentUploadPartialFailDescription": "장비는 수정되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요."
   },
   "attachmentSection": {
     "historyCard": "이력카드",
@@ -1278,7 +1287,11 @@
     "guideCount": "파일 개수: 최대 10개",
     "guideDragDrop": "드래그 앤 드롭으로 쉽게 업로드할 수 있습니다",
     "existingFiles": "기존 첨부파일",
-    "download": "다운로드"
+    "download": "다운로드",
+    "photoTitle": "장비 사진",
+    "photoDescription": "장비의 외관 사진을 첨부하세요 (JPG, PNG, GIF)",
+    "manualTitle": "장비 매뉴얼",
+    "manualDescription": "장비 매뉴얼 PDF를 첨부하세요. 하드 카피 보관 위치는 상태/위치 섹션에서 입력할 수 있습니다."
   },
   "timeline": {
     "emptyDefault": "등록된 이력이 없습니다."

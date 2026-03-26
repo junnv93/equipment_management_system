@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentForm } from '@/components/equipment/EquipmentForm';
 import { useUpdateEquipment } from '@/hooks/use-equipment';
+import { useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import type { UpdateEquipmentInput } from '@equipment-management/schemas';
 import type { Equipment } from '@/lib/api/equipment-api';
+import { uploadEquipmentDocuments } from '@/lib/utils/document-upload-utils';
 import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +37,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const updateEquipment = useUpdateEquipment();
+  const queryClient = useQueryClient();
 
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장
   const equipmentId = String(equipment.id);
@@ -42,7 +45,12 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
   // 에러 상태 관리
   const [submitError, setSubmitError] = useState<ApiError | Error | null>(null);
 
-  const handleSubmit = async (data: UpdateEquipmentInput, files?: Array<{ file: File }>) => {
+  const handleSubmit = async (
+    data: UpdateEquipmentInput,
+    files?: Array<{ file: File }>,
+    _pendingHistory?: unknown,
+    documentFiles?: { photos: File[]; manuals: File[] }
+  ) => {
     // 에러 상태 초기화
     setSubmitError(null);
 
@@ -53,6 +61,25 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
         data: { ...data, version: equipment.version ?? 1 },
         files: fileList,
       });
+
+      // 사진·매뉴얼 문서 업로드 (SSOT: uploadEquipmentDocuments)
+      if (documentFiles) {
+        const docResult = await uploadEquipmentDocuments(
+          documentFiles,
+          equipmentId,
+          'equipmentId',
+          queryClient
+        );
+        if (docResult.failed > 0) {
+          toast({
+            title: t('editToast.documentUploadPartialFail'),
+            description: t('editToast.documentUploadPartialFailDescription', {
+              count: docResult.failed,
+            }),
+            variant: 'destructive',
+          });
+        }
+      }
 
       // 승인 요청이 생성된 경우
       if ((result as { requestUuid?: string }).requestUuid) {

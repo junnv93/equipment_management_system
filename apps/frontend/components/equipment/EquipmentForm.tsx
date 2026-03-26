@@ -133,7 +133,8 @@ interface EquipmentFormProps {
   onSubmit: (
     data: Record<string, unknown>,
     files?: UploadedFile[],
-    pendingHistory?: PendingHistoryData
+    pendingHistory?: PendingHistoryData,
+    documentFiles?: { photos: File[]; manuals: File[] }
   ) => Promise<void>;
   onCancel?: () => void;
   isEdit?: boolean;
@@ -263,6 +264,8 @@ export function EquipmentForm({
 
   // 파일 업로드 상태
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<UploadedFile[]>([]);
+  const [manualFiles, setManualFiles] = useState<UploadedFile[]>([]);
 
   // 이력 데이터 로드 (수정 모드: useQuery SSOT 패턴)
   const { data: serverLocationHistory = [], isLoading: isLocationHistoryLoading } = useQuery({
@@ -865,7 +868,18 @@ export function EquipmentForm({
       });
     }
 
-    await onSubmit(processedData, allFiles.length > 0 ? allFiles : undefined, pendingHistory);
+    const docFiles = {
+      photos: photoFiles.map((f) => f.file),
+      manuals: manualFiles.map((f) => f.file),
+    };
+    const hasDocFiles = docFiles.photos.length > 0 || docFiles.manuals.length > 0;
+
+    await onSubmit(
+      processedData,
+      allFiles.length > 0 ? allFiles : undefined,
+      pendingHistory,
+      hasDocFiles ? docFiles : undefined
+    );
   };
 
   // 확인 모달에서 제출
@@ -1193,6 +1207,10 @@ export function EquipmentForm({
             <AttachmentSection
               files={uploadedFiles}
               onChange={setUploadedFiles}
+              photoFiles={photoFiles}
+              onPhotoChange={setPhotoFiles}
+              manualFiles={manualFiles}
+              onManualChange={setManualFiles}
               isEdit={isEdit}
               isLoading={isLoading}
               existingAttachments={existingAttachments}
@@ -1249,6 +1267,10 @@ export function EquipmentForm({
             <AttachmentSection
               files={uploadedFiles}
               onChange={setUploadedFiles}
+              photoFiles={photoFiles}
+              onPhotoChange={setPhotoFiles}
+              manualFiles={manualFiles}
+              onManualChange={setManualFiles}
               isEdit={isEdit}
               isLoading={isLoading}
               existingAttachments={existingAttachments}

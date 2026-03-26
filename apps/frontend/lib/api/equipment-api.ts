@@ -397,7 +397,7 @@ const equipmentApi = {
   // 파일 업로드
   uploadAttachment: async (
     file: File,
-    attachmentType: 'inspection_report' | 'history_card' | 'other',
+    attachmentType: string,
     description?: string
   ): Promise<EquipmentAttachment> => {
     const formData = new FormData();

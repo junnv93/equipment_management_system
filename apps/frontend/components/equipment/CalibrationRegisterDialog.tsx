@@ -41,7 +41,11 @@ import { addMonths } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
-import { CalibrationResultEnum, CALIBRATION_RESULT_LABELS } from '@equipment-management/schemas';
+import {
+  CalibrationResultEnum,
+  CALIBRATION_RESULT_LABELS,
+  DocumentTypeValues,
+} from '@equipment-management/schemas';
 
 const calibrationSchema = z.object({
   calibrationDate: z.string().min(1, '교정일을 입력하세요'),
@@ -88,7 +92,11 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
 
   const uploadMutation = useMutation({
     mutationFn: ({ calibrationId, file }: { calibrationId: string; file: File }) =>
-      documentApi.uploadCalibrationDocuments(calibrationId, [file], ['calibration_certificate']),
+      documentApi.uploadCalibrationDocuments(
+        calibrationId,
+        [file],
+        [DocumentTypeValues.CALIBRATION_CERTIFICATE]
+      ),
   });
 
   const isSubmitting = createMutation.isPending || uploadMutation.isPending;
