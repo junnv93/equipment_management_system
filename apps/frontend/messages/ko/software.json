@@ -1,4 +1,15 @@
 {
+  "type": {
+    "measurement": "측정 소프트웨어",
+    "analysis": "분석 소프트웨어",
+    "control": "제어 소프트웨어",
+    "other": "기타"
+  },
+  "approvalStatus": {
+    "pending": "승인 대기",
+    "approved": "승인됨",
+    "rejected": "반려됨"
+  },
   "registry": {
     "title": "소프트웨어 통합 관리대장",
     "subtitle": "전체 장비의 소프트웨어 현황을 조회합니다",
