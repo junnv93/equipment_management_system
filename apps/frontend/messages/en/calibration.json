@@ -574,5 +574,11 @@
       "expiryDate": "Expiry Date",
       "approvedAt": "Approved At"
     }
+  },
+  "notFound": {
+    "title": "Calibration plan not found",
+    "description": "The requested calibration plan does not exist or has been deleted.\nPlease check the calibration plan ID.",
+    "backToList": "Calibration plans list",
+    "backToHome": "Go to home"
   }
 }

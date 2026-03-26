@@ -223,5 +223,11 @@
       "closeError": "Closure Failed",
       "closeErrorDesc": "Failed to process closure."
     }
+  },
+  "notFound": {
+    "title": "Non-conformance not found",
+    "description": "The requested non-conformance record does not exist or has been deleted.\nPlease check the non-conformance ID.",
+    "backToList": "Non-conformance list",
+    "backToHome": "Go to home"
   }
 }

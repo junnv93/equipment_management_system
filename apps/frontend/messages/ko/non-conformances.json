@@ -223,5 +223,11 @@
       "closeError": "종료 처리 실패",
       "closeErrorDesc": "종료 처리에 실패했습니다."
     }
+  },
+  "notFound": {
+    "title": "부적합 기록을 찾을 수 없습니다",
+    "description": "요청하신 부적합 기록이 존재하지 않거나 삭제되었습니다.\n부적합 ID를 다시 확인해주세요.",
+    "backToList": "부적합 목록으로",
+    "backToHome": "홈으로 이동"
   }
 }
