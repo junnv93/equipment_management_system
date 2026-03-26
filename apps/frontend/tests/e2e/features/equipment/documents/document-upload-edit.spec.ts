@@ -9,7 +9,7 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
 import path from 'path';
-import type { Page } from '@playwright/test';
+import type { Page } from '../../../shared/fixtures/auth.fixture';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 const EQUIPMENT_ID = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;

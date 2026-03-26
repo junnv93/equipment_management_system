@@ -12,7 +12,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
-import type { Page } from '@playwright/test';
+import type { Page } from '../../../../shared/fixtures/auth.fixture';
 
 /**
  * 교정 관리 페이지로 이동 + 콘텐츠 로딩 대기

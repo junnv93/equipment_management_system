@@ -25,6 +25,7 @@
  */
 
 import { test, expect, type Page } from '../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../shared/constants/shared-test-data';
 
 /** 쿠키 기반 locale 전환 헬퍼 (browser context 수준 — 모든 탭에 적용) */
 async function setLocale(page: Page, locale: string) {
@@ -164,7 +165,7 @@ test.describe('TC-i18n-12: Settings API 연동 검증', () => {
     // router.refresh() 완료 대기
 
     // setLocaleCookie('en')이 NEXT_LOCALE을 업데이트해야 함
-    const cookies = await page.context().cookies('http://localhost:3000');
+    const cookies = await page.context().cookies(BASE_URLS.FRONTEND);
     const localeCookie = cookies.find((c) => c.name === 'NEXT_LOCALE');
     expect(localeCookie?.value).toBe('en');
   });

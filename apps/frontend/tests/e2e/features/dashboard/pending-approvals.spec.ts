@@ -112,6 +112,8 @@ test.describe('Pending Approvals Card', () => {
     test('4.3 Verify role-specific approval categories', async ({ browser }) => {
       const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
+      // TODO: callback/test-login 직접 호출 → auth.fixture storageState 전환 필요
+      // fetchBackendToken()은 backend JWT만 반환하므로 NextAuth 세션이 필요한 이 테스트에는 사용 불가
       // Helper function to login and check categories
       async function loginAndCheckCategories(role: string, expectedCategories: string[]) {
         // Create a new context and page for each login

@@ -22,7 +22,11 @@ import {
 // ============================================================================
 
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import { getBackendToken } from '../../../shared/helpers/api-helpers';
 const BACKEND_URL = BASE_URLS.BACKEND;
+
+// Re-export SSOT getBackendToken for consumers importing from this file
+export { getBackendToken };
 
 // ============================================================================
 // Test Data Constants (SSOT)
@@ -528,53 +532,6 @@ export async function lenderFinalCheck(page: Page, checkoutId: string): Promise<
 // ============================================================================
 // Authenticated API Helpers
 // ============================================================================
-
-/**
- * Get a JWT token from the backend's test-login endpoint.
- *
- * The backend provides `GET /api/auth/test-login?role=<role>` in dev mode,
- * which returns `{ access_token }`. This token is used for direct backend API calls
- * in E2E tests where page.request doesn't carry NextAuth session cookies.
- *
- * @example
- * const token = await getBackendToken(page, 'technical_manager');
- */
-/**
- * Process-scoped token cache: role → { token, expiresAt }
- *
- * Playwright의 각 worker는 독립 프로세스이므로 이 캐시는 같은 파일 내
- * serial 테스트 간에만 공유됩니다. 다른 spec 파일의 worker와는 격리됩니다.
- * 캐시 TTL은 JWT access token 만료(15분)보다 짧은 14분으로 설정.
- */
-const tokenCache = new Map<string, { token: string; expiresAt: number }>();
-
-export async function getBackendToken(
-  page: Page,
-  role: string = 'technical_manager'
-): Promise<string> {
-  // Return cached token if still valid (with 30s buffer)
-  const cached = tokenCache.get(role);
-  if (cached && cached.expiresAt > Date.now() + 30_000) {
-    return cached.token;
-  }
-
-  const maxRetries = 3;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const response = await page.request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-    if (response.ok()) {
-      const data = await response.json();
-      const token = data.access_token || data.token || '';
-      // Cache for 14 minutes (token lasts 15 min)
-      tokenCache.set(role, { token, expiresAt: Date.now() + 14 * 60 * 1000 });
-      return token;
-    }
-    if (response.status() === 429 && attempt < maxRetries - 1) {
-      continue;
-    }
-    throw new Error(`Failed to get backend token: ${response.status()}`);
-  }
-  throw new Error('Failed to get backend token after retries');
-}
 
 /**
  * Make an authenticated GET request to the backend API.

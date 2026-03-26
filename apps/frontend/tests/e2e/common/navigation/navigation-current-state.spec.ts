@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '../../shared/fixtures/auth.fixture';
 
 /**
  * Phase 0: Current Navigation State Verification
@@ -12,32 +12,12 @@ import { test, expect, Page } from '@playwright/test';
  * 4. Document current navigation pain points with screenshots
  */
 
-// Helper function to login
-async function login(page: Page) {
-  await page.goto('http://localhost:3000/login');
-
-  // Wait for login page to load
-  await page.waitForSelector('input[name="email"]', { timeout: 10000 });
-
-  // Fill login form with valid test credentials
-  await page.fill('#email', 'admin@example.com');
-  await page.fill('#password', 'admin123');
-
-  // Submit form
-  await page.click('button[type="submit"]');
-
-  // Wait for navigation to dashboard
-  await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
-}
-
 test.describe('Current Navigation State - Desktop (1440px)', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('should verify sidebar logo is clickable on desktop', async ({ page }) => {
-    await login(page);
-
+  test('should verify sidebar logo is clickable on desktop', async ({ siteAdminPage: page }) => {
     // Navigate to equipment page
-    await page.goto('http://localhost:3000/equipment');
+    await page.goto('/equipment');
 
     // Take screenshot of equipment page
     await page.screenshot({ path: '/tmp/before-desktop-equipment.png', fullPage: true });
@@ -59,10 +39,10 @@ test.describe('Current Navigation State - Desktop (1440px)', () => {
     console.log('✅ Desktop: Sidebar logo is clickable');
   });
 
-  test('should verify header title is NOT clickable on desktop', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
+  test('should verify header title is NOT clickable on desktop', async ({
+    siteAdminPage: page,
+  }) => {
+    await page.goto('/equipment');
 
     // Look for header title
     const headerTitle = page.locator('h1').filter({ hasText: '장비 관리' }).first();
@@ -82,10 +62,10 @@ test.describe('Current Navigation State - Desktop (1440px)', () => {
     }
   });
 
-  test('should verify "대시보드" menu item exists for home navigation', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
+  test('should verify "대시보드" menu item exists for home navigation', async ({
+    siteAdminPage: page,
+  }) => {
+    await page.goto('/equipment');
 
     // Check for dashboard menu item in sidebar
     const dashboardMenuItem = page.locator('nav a[href="/"]').filter({ hasText: '대시보드' });
@@ -102,11 +82,11 @@ test.describe('Current Navigation State - Desktop (1440px)', () => {
 test.describe('Current Navigation State - Mobile (375px)', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('should verify mobile requires hamburger menu to return home', async ({ page }) => {
-    await login(page);
-
+  test('should verify mobile requires hamburger menu to return home', async ({
+    siteAdminPage: page,
+  }) => {
     // Navigate to equipment page
-    await page.goto('http://localhost:3000/equipment');
+    await page.goto('/equipment');
 
     // Take screenshot of mobile equipment page
     await page.screenshot({ path: '/tmp/before-mobile-equipment.png', fullPage: true });
@@ -152,10 +132,8 @@ test.describe('Current Navigation State - Mobile (375px)', () => {
 test.describe('Current Navigation State - Checkouts Page', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('should verify navigation on checkouts page', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/checkouts');
+  test('should verify navigation on checkouts page', async ({ siteAdminPage: page }) => {
+    await page.goto('/checkouts');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/before-checkouts.png', fullPage: true });
@@ -172,11 +150,9 @@ test.describe('Current Navigation State - Checkouts Page', () => {
 test.describe('Current Navigation State - Deep Page (Equipment Detail)', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('should verify navigation on deep nested page', async ({ page }) => {
-    await login(page);
-
+  test('should verify navigation on deep nested page', async ({ siteAdminPage: page }) => {
     // Go to equipment list
-    await page.goto('http://localhost:3000/equipment');
+    await page.goto('/equipment');
 
     // Try to find first equipment link (may not exist in test environment)
     const firstEquipmentLink = page.locator('a[href^="/equipment/"]').first();
@@ -199,7 +175,7 @@ test.describe('Current Navigation State - Deep Page (Equipment Detail)', () => {
 });
 
 test.describe('Summary Report Generation', () => {
-  test('should generate current state summary', async ({ page }) => {
+  test('should generate current state summary', async ({ siteAdminPage: page }) => {
     const summary = {
       testDate: new Date().toISOString(),
       findings: [

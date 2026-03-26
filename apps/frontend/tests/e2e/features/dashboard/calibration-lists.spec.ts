@@ -404,7 +404,7 @@ test.describe('Calibration Lists', () => {
         const isDetailPage =
           currentUrl.includes('/equipment/') ||
           currentUrl.includes('/calibration/') ||
-          currentUrl !== 'http://localhost:3000/';
+          !currentUrl.endsWith('/');
 
         expect(isDetailPage).toBeTruthy();
         console.log('✓ Navigated to equipment detail or calibration detail page');

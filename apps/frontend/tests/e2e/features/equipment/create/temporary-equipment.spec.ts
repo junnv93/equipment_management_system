@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { TEST_USER_EMAILS } from '../../../shared/constants/shared-test-data';
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
 
 /**
  * E2E 테스트: 공용/렌탈 장비 임시등록 및 사용 플로우
@@ -14,16 +13,7 @@ import { TEST_USER_EMAILS } from '../../../shared/constants/shared-test-data';
  */
 
 test.describe('공용/렌탈 장비 임시등록', () => {
-  test.beforeEach(async ({ page }) => {
-    // 로그인 (시험실무자 권한)
-    await page.goto('/api/auth/signin');
-    await page.fill('input[name="email"]', TEST_USER_EMAILS.TEST_ENGINEER_SUWON);
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
-  });
-
-  test('임시등록 페이지 접근 및 기본 필드 표시', async ({ page }) => {
+  test('임시등록 페이지 접근 및 기본 필드 표시', async ({ testOperatorPage: page }) => {
     // Given: 임시등록 페이지 접속
     await page.goto('/equipment/create-shared');
 
@@ -49,7 +39,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(page.locator('label:has-text("교정성적서")')).toBeVisible();
   });
 
-  test('장비 유형 선택 시 소유처 필드 변경', async ({ page }) => {
+  test('장비 유형 선택 시 소유처 필드 변경', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // Given: 공용장비 선택 (기본값)
@@ -70,7 +60,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(ownerInput).toHaveAttribute('placeholder', /렌탈업체명/);
   });
 
-  test('교정 유효성 자동 검증 - 유효한 경우', async ({ page }) => {
+  test('교정 유효성 자동 검증 - 유효한 경우', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // Given: 사용 기간 입력
@@ -89,7 +79,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(validAlert).toHaveClass(/green/);
   });
 
-  test('교정 유효성 자동 검증 - 무효한 경우', async ({ page }) => {
+  test('교정 유효성 자동 검증 - 무효한 경우', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // Given: 사용 기간 입력
@@ -108,7 +98,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(errorAlert).toBeVisible();
   });
 
-  test('공용장비 임시등록 플로우 (전체)', async ({ page }) => {
+  test('공용장비 임시등록 플로우 (전체)', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // Step 1: 기본 정보 입력
@@ -154,7 +144,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(page.locator('text=임시등록된')).toBeVisible();
   });
 
-  test('렌탈장비 임시등록 플로우 (전체)', async ({ page }) => {
+  test('렌탈장비 임시등록 플로우 (전체)', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // Step 1: 기본 정보 입력
@@ -196,7 +186,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(page.locator('text=렌탈')).toBeVisible();
   });
 
-  test('장비 목록에서 사용 기간 D-day 표시', async ({ page }) => {
+  test('장비 목록에서 사용 기간 D-day 표시', async ({ testOperatorPage: page }) => {
     // Given: 임시등록된 장비가 있다고 가정 (Mock 데이터 필요)
     await page.goto('/equipment');
 
@@ -219,7 +209,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     }
   });
 
-  test('장비 상세 페이지에서 임시등록 정보 표시', async ({ page }) => {
+  test('장비 상세 페이지에서 임시등록 정보 표시', async ({ testOperatorPage: page }) => {
     // Given: 임시등록 장비 등록
     await page.goto('/equipment/create-shared');
     await page.fill('input[name="name"]', 'E2E 테스트 장비');
@@ -254,7 +244,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(page.locator('text=/사용 기간이 종료되면/')).toBeVisible();
   });
 
-  test('접근성: ARIA 속성 및 키보드 탐색', async ({ page }) => {
+  test('접근성: ARIA 속성 및 키보드 탐색', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // 장비 유형 라디오 버튼 그룹 접근성
@@ -279,7 +269,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     // Note: 장비 상세 페이지에서 확인 필요
   });
 
-  test('필수 필드 누락 시 에러 표시', async ({ page }) => {
+  test('필수 필드 누락 시 에러 표시', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // Given: 일부 필드만 입력
@@ -296,7 +286,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     // Note: react-hook-form 유효성 검증 메시지는 커스텀 구현에 따라 다름
   });
 
-  test('교정성적서 파일 형식 검증 (PDF만 허용)', async ({ page }) => {
+  test('교정성적서 파일 형식 검증 (PDF만 허용)', async ({ testOperatorPage: page }) => {
     await page.goto('/equipment/create-shared');
 
     // When: PDF가 아닌 파일 업로드 시도
@@ -311,15 +301,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
 });
 
 test.describe('임시등록 장비 대여 플로우', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/api/auth/signin');
-    await page.fill('input[name="email"]', TEST_USER_EMAILS.TEST_ENGINEER_SUWON);
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
-  });
-
-  test('렌탈장비 대여 시 입고 검수 필드 표시', async ({ page }) => {
+  test('렌탈장비 대여 시 입고 검수 필드 표시', async ({ testOperatorPage: page }) => {
     // Given: 반입반출 신청 페이지
     await page.goto('/checkouts/create');
 

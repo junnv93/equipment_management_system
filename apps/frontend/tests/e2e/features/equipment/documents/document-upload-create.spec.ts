@@ -13,7 +13,7 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import path from 'path';
-import type { Page } from '@playwright/test';
+import type { Page } from '../../../shared/fixtures/auth.fixture';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 

@@ -13,8 +13,7 @@
  * - Test UI auto-retry mechanism
  */
 
-import { test as base, expect } from '@playwright/test';
-import { test as authTest } from '../../shared/fixtures/auth.fixture';
+import { test as authTest, expect } from '../../shared/fixtures/auth.fixture';
 import { TEST_EQUIPMENT_IDS, BASE_URLS } from '../../shared/constants/shared-test-data';
 import {
   getBackendToken,
@@ -33,14 +32,9 @@ import {
 // Backend API URL
 const BACKEND_URL = BASE_URLS.BACKEND;
 
-// Use base test for API-only tests
-const test = base;
-
-// Configure serial execution to prevent test interference
-test.describe.configure({ mode: 'serial' });
-
 // Use authTest for all tests to get authenticated request context
 authTest.describe('Checkout Race Condition Prevention', () => {
+  authTest.describe.configure({ mode: 'serial' });
   authTest.beforeAll(async () => {
     // 테스트 장비 격리: 이전 실행에서 남은 active checkout 취소 + available 복원
     const equipIds = [

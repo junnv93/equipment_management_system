@@ -250,10 +250,7 @@ test.describe('Permission Tests', () => {
     });
 
     // 1. Login as Test Engineer
-    const loginResponse = await page.request.get(
-      `${BACKEND_URL}/api/auth/test-login?role=test_engineer`
-    );
-    const { access_token } = await loginResponse.json();
+    const access_token = await fetchBackendToken('test_engineer');
 
     // Navigate to equipment detail page with authentication
     await page.setExtraHTTPHeaders({

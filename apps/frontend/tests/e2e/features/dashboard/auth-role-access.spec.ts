@@ -20,7 +20,6 @@
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 import { test as baseTest } from '@playwright/test';
-import { Page } from '@playwright/test';
 
 test.describe('Authentication and Role-based Access', () => {
   // Run tests only on chromium for consistent results

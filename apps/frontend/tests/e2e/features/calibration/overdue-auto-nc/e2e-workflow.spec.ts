@@ -214,6 +214,7 @@ async function getNonConformances(request: APIRequestContext, token: string, equ
 /**
  * Helper: Login to frontend using NextAuth
  * TODO: auth.fixture storageState 전환 필요 (testIgnore 해제 시)
+ * TODO: callback/test-login 직접 호출 → SSOT 헬퍼(fetchBackendToken) 또는 auth.fixture 전환 필요
  */
 async function loginToFrontend(page: Page, role: string) {
   // Get CSRF token
