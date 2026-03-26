@@ -15,7 +15,7 @@ import { test, expect } from '../../../shared/fixtures/auth.fixture';
 test.describe('Common/Rental Equipment Management', () => {
   test.describe('1. Temporary Equipment Registration', () => {
     test('should display temporary registration page with all required fields', async ({
-      page,
+      techManagerPage: page,
     }) => {
       // Navigate to temporary registration page
       await page.goto('/equipment');
@@ -101,7 +101,7 @@ test.describe('Common/Rental Equipment Management', () => {
     });
 
     test('should show calibration validity error when next calibration date is before usage end date', async ({
-      page,
+      techManagerPage: page,
     }) => {
       await page.goto('/equipment/create-shared');
 

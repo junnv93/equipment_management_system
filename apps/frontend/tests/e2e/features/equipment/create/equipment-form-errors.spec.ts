@@ -169,8 +169,6 @@ test.describe('Equipment Form - Calibration History Errors', () => {
 });
 
 test.describe('Equipment Form - API Error Simulation', () => {
-  test.beforeEach(async ({ siteAdminPage: page }) => {});
-
   test('존재하지 않는 장비 수정 시 에러 처리', async ({ siteAdminPage: page }) => {
     // 존재하지 않는 UUID로 수정 페이지 접근
     await page.goto('/equipment/00000000-0000-0000-0000-000000000000/edit');
@@ -181,7 +179,7 @@ test.describe('Equipment Form - API Error Simulation', () => {
     });
   });
 
-  test('네트워크 오류 시뮬레이션', async ({ page, context }) => {
+  test('네트워크 오류 시뮬레이션', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -308,8 +306,6 @@ test.describe('Equipment Form - API Error Simulation', () => {
 });
 
 test.describe('Equipment Form - ErrorAlert Component', () => {
-  test.beforeEach(async ({ siteAdminPage: page }) => {});
-
   test('ErrorAlert에 해결 방법이 표시되는지 확인', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
@@ -444,8 +440,6 @@ test.describe('Equipment Form - ErrorAlert Component', () => {
 });
 
 test.describe('Equipment Edit Form - Error Handling', () => {
-  test.beforeEach(async ({ siteAdminPage: page }) => {});
-
   test('수정 페이지 로드 실패 시 에러 표시', async ({ siteAdminPage: page }) => {
     // 잘못된 UUID로 접근
     await page.goto('/equipment/invalid-uuid/edit');

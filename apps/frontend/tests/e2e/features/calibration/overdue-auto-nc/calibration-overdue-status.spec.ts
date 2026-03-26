@@ -27,7 +27,7 @@ test.describe('교정기한 초과 자동 부적합 전환', () => {
   }) => {
     // 1. 교정기한이 지난 장비 생성
     await page.goto('/equipment/create-shared', { waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 30000 });
+    await expect(page.getByLabel('장비명')).toBeVisible({ timeout: 30000 });
 
     console.log('✅ 페이지 로드 완료');
 

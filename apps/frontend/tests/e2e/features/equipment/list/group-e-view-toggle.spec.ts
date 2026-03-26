@@ -39,7 +39,7 @@ test.describe('Group E-2: View Toggle', () => {
       const hasTableOrRows = await Promise.race([
         equipmentTable.isVisible().catch(() => false),
         equipmentRow.isVisible().catch(() => false),
-        testOperatorPage.waitForTimeout(3000).then(() => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
       ]);
 
       if (!hasTableOrRows) {
@@ -99,7 +99,7 @@ test.describe('Group E-2: View Toggle', () => {
       const hasTableOrRows = await Promise.race([
         equipmentTable.isVisible().catch(() => false),
         equipmentRow.isVisible().catch(() => false),
-        testOperatorPage.waitForTimeout(3000).then(() => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
       ]);
 
       if (!hasTableOrRows) {
@@ -237,7 +237,7 @@ test.describe('Group E-2: View Toggle', () => {
       const hasTableOrRows = await Promise.race([
         equipmentTable.isVisible().catch(() => false),
         equipmentRow.isVisible().catch(() => false),
-        testOperatorPage.waitForTimeout(3000).then(() => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
       ]);
 
       if (hasTableOrRows) {

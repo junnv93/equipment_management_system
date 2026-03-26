@@ -94,7 +94,10 @@ test.describe('Rejection - Group C', () => {
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
 
     // 12. Reload page to fetch fresh data from backend
-    await techManagerPage.reload({ waitUntil: 'networkidle' });
+    await techManagerPage.reload();
+    await expect(techManagerPage.getByRole('heading', { level: 1 })).toBeVisible({
+      timeout: 10000,
+    });
 
     // 13. Debug: Check what buttons are actually visible
     const allButtons = await techManagerPage.locator('button').allTextContents();

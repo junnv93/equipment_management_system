@@ -106,8 +106,9 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
 
       // Reload with cache-busting
       const cacheBustTimestamp = Date.now();
-      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`, {
-        waitUntil: 'networkidle',
+      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`);
+      await expect(testOperatorPage.getByRole('heading', { level: 1 })).toBeVisible({
+        timeout: 10000,
       });
 
       // 9. Check if '폐기 진행 중' button appeared
@@ -242,8 +243,9 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
 
       // Navigate with cache-busting
       const cacheBustTimestamp = Date.now();
-      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`, {
-        waitUntil: 'networkidle',
+      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`);
+      await expect(testOperatorPage.getByRole('heading', { level: 1 })).toBeVisible({
+        timeout: 10000,
       });
 
       // 20. Check if equipment status reverted to normal
