@@ -517,6 +517,18 @@ export class CalibrationCacheInvalidation {
     queryKeys.approvals.countsAll,
     queryKeys.notifications.all,
   ];
+
+  /** 교정 등록 후 무효화 — 장비 상태(교정일)+문서+대시보드 교차 무효화 */
+  static async invalidateAfterCreate(queryClient: QueryClient, equipmentId: string): Promise<void> {
+    const keys = [
+      queryKeys.calibrations.byEquipment(equipmentId),
+      queryKeys.documents.byEquipment(equipmentId),
+      queryKeys.equipment.detail(equipmentId),
+      queryKeys.equipment.lists(),
+      queryKeys.dashboard.all,
+    ];
+    await Promise.all(keys.map((key) => queryClient.invalidateQueries({ queryKey: key })));
+  }
 }
 
 /**

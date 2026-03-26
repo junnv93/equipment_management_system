@@ -34,8 +34,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
-import { queryKeys } from '@/lib/api/query-config';
 import calibrationApi, { type CreateCalibrationDto } from '@/lib/api/calibration-api';
+import { documentApi } from '@/lib/api/document-api';
+import { CalibrationCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { addMonths } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { useToast } from '@/components/ui/use-toast';
@@ -87,7 +88,7 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
 
   const uploadMutation = useMutation({
     mutationFn: ({ calibrationId, file }: { calibrationId: string; file: File }) =>
-      calibrationApi.uploadCertificate(calibrationId, file),
+      documentApi.uploadCalibrationDocuments(calibrationId, [file], ['calibration_certificate']),
   });
 
   const isSubmitting = createMutation.isPending || uploadMutation.isPending;
@@ -135,10 +136,7 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
         await uploadMutation.mutateAsync({ calibrationId: calibration.id, file: certificateFile });
       }
 
-      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.byEquipment(equipmentId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.detail(equipmentId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      await CalibrationCacheInvalidation.invalidateAfterCreate(queryClient, equipmentId);
       setIsOpen(false);
       setCertificateFile(null);
       form.reset(getDefaultValues());

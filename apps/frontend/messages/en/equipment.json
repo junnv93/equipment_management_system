@@ -537,7 +537,47 @@
   },
   "attachmentsTab": {
     "title": "Attachments",
-    "empty": "Attachment feature is coming soon."
+    "empty": "No attachments registered.",
+    "download": "Download",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this document?",
+    "deleteSuccess": "Document deleted.",
+    "revisionHistory": "Revision History",
+    "uploadRevision": "Upload Revision",
+    "revisionCount": "Rev.{count}",
+    "type": {
+      "calibration_certificate": "Calibration Certificate",
+      "raw_data": "Raw Data",
+      "inspection_report": "Inspection Report",
+      "history_card": "History Card",
+      "other": "Other"
+    },
+    "tableHeaders": {
+      "fileName": "File Name",
+      "type": "Type",
+      "size": "Size",
+      "uploadedAt": "Uploaded",
+      "hash": "Integrity",
+      "revision": "Rev",
+      "actions": "Actions"
+    },
+    "integrity": {
+      "verified": "Verified",
+      "unverified": "Unverified",
+      "checking": "Checking..."
+    },
+    "deleteError": "Failed to delete document.",
+    "revision": {
+      "version": "Version",
+      "fileName": "File Name",
+      "size": "Size",
+      "integrity": "Integrity",
+      "uploadedAt": "Uploaded",
+      "status": "Status",
+      "empty": "No revision history.",
+      "latest": "Latest",
+      "previous": "Previous"
+    }
   },
   "calibrationFactorsTab": {
     "title": "Calibration Factors",
@@ -590,7 +630,9 @@
     },
     "certificate": {
       "download": "Download Certificate",
-      "noFile": "No file"
+      "noFile": "No file",
+      "documentsCount": "{count} documents",
+      "rawData": "Raw Data"
     },
     "toasts": {
       "fileRequired": "File Required",

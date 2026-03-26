@@ -1,10 +1,12 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -13,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { AlertTriangle, Calendar, FileText } from 'lucide-react';
+import { AlertTriangle, Calendar, FileText, FileSpreadsheet, Download } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import {
@@ -23,6 +25,7 @@ import {
   getCalibrationRowClasses,
 } from '@/lib/design-tokens';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
+import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import {
@@ -43,6 +46,7 @@ interface CalibrationHistoryTabProps {
  * - 교정 등록: 시험실무자만 가능 (UL-QP-18 직무분리)
  * - 승인/반려: 기술책임자/시험소장만 가능
  * - 교정기한 초과: 경고 배너 표시
+ * - 성적서/원시데이터: 장비 단위 일괄 조회 → calibrationId 그룹핑 (N+1 방지)
  */
 export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps) {
   const t = useTranslations('equipment');
@@ -58,12 +62,29 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     staleTime: CACHE_TIMES.MEDIUM,
   });
 
-  // UL-QP-18: 시험실무자만 교정 등록 가능 (lab_manager도 등록 불가 — 직무분리)
+  // 장비의 모든 문서를 단일 API 호출로 조회 → calibrationId로 그룹핑
+  // (이전: calibrationIds.map → Promise.all N개 동시 호출, 현재: 1회 호출)
+  const { data: allDocs = [] } = useQuery({
+    queryKey: queryKeys.documents.byEquipment(equipmentId),
+    queryFn: () => documentApi.getEquipmentDocuments(equipmentId, { includeCalibrations: true }),
+    enabled: calibrations.length > 0,
+    staleTime: CACHE_TIMES.LONG,
+  });
+
+  // calibrationId → documents[] 그룹핑 (O(n) Map)
+  const docsByCalibrationId = useMemo(() => {
+    const map = new Map<string, DocumentRecord[]>();
+    for (const doc of allDocs) {
+      if (!doc.calibrationId) continue;
+      const list = map.get(doc.calibrationId) ?? [];
+      list.push(doc);
+      map.set(doc.calibrationId, list);
+    }
+    return map;
+  }, [allDocs]);
+
   const canCreate = hasRole([URVal.TEST_ENGINEER]);
 
-  // 교정기한 초과 여부:
-  // - equipment.status: 백엔드 CalibrationOverdueScheduler가 매시간 전환 (정확)
-  // - nextCalibrationDate 날짜 비교: 스케줄러 실행 전 gap 구간 커버
   const isOverdue =
     equipment.status === ESVal.CALIBRATION_OVERDUE ||
     (equipment.nextCalibrationDate != null && new Date(equipment.nextCalibrationDate) < new Date());
@@ -128,65 +149,100 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {calibrations.map((cal: Calibration) => (
-                    <TableRow
-                      key={cal.id}
-                      className={[
-                        CALIBRATION_TABLE.rowHover,
-                        getCalibrationRowClasses(cal.approvalStatus),
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <TableCell className={CONTENT_TOKENS.numeric.tabular}>
-                        {fmtDate(cal.calibrationDate)}
-                      </TableCell>
-                      <TableCell className={CONTENT_TOKENS.numeric.tabular}>
-                        {fmtDate(cal.nextCalibrationDate)}
-                      </TableCell>
-                      <TableCell>{cal.calibrationAgency}</TableCell>
-                      <TableCell>
-                        {cal.result ? (
-                          <CalibrationResultBadge type="result" value={cal.result} />
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {cal.approvalStatus ? (
-                          <CalibrationResultBadge type="approval" value={cal.approvalStatus} />
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {cal.certificatePath ? (
-                          <a
-                            href={cal.certificatePath}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={CALIBRATION_TABLE.link}
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            {t('calibrationHistoryTab.certificate.download')}
-                          </a>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            {t('calibrationHistoryTab.certificate.noFile')}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <CalibrationApprovalActions calibration={cal} equipmentId={equipmentId} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {calibrations.map((cal: Calibration) => {
+                    const calDocs = docsByCalibrationId.get(cal.id) ?? [];
+                    return (
+                      <TableRow
+                        key={cal.id}
+                        className={[
+                          CALIBRATION_TABLE.rowHover,
+                          getCalibrationRowClasses(cal.approvalStatus),
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                      >
+                        <TableCell className={CONTENT_TOKENS.numeric.tabular}>
+                          {fmtDate(cal.calibrationDate)}
+                        </TableCell>
+                        <TableCell className={CONTENT_TOKENS.numeric.tabular}>
+                          {fmtDate(cal.nextCalibrationDate)}
+                        </TableCell>
+                        <TableCell>{cal.calibrationAgency}</TableCell>
+                        <TableCell>
+                          {cal.result ? (
+                            <CalibrationResultBadge type="result" value={cal.result} />
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {cal.approvalStatus ? (
+                            <CalibrationResultBadge type="approval" value={cal.approvalStatus} />
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <CalibrationDocumentsCell docs={calDocs} />
+                        </TableCell>
+                        <TableCell>
+                          <CalibrationApprovalActions calibration={cal} equipmentId={equipmentId} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/**
+ * 교정별 문서 셀 — 부모에서 일괄 조회한 docs를 props로 수신 (N+1 방지)
+ */
+function CalibrationDocumentsCell({ docs }: { docs: DocumentRecord[] }) {
+  const t = useTranslations('equipment');
+
+  if (docs.length === 0) {
+    return (
+      <span className="text-sm text-muted-foreground">
+        {t('calibrationHistoryTab.certificate.noFile')}
+      </span>
+    );
+  }
+
+  const handleDownload = async (doc: DocumentRecord) => {
+    await documentApi.downloadDocument(doc.id, doc.originalFileName);
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      {docs.map((doc) => (
+        <Button
+          key={doc.id}
+          variant="ghost"
+          size="sm"
+          className="h-auto py-1 px-2 justify-start gap-1.5 text-xs font-normal"
+          onClick={() => handleDownload(doc)}
+          title={doc.originalFileName}
+        >
+          {doc.documentType === 'raw_data' ? (
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+          ) : (
+            <FileText className="h-3.5 w-3.5" />
+          )}
+          <span className="truncate max-w-[120px]">
+            {doc.documentType === 'raw_data'
+              ? t('calibrationHistoryTab.certificate.rawData')
+              : t('calibrationHistoryTab.certificate.download')}
+          </span>
+          <Download className="h-3 w-3 opacity-50" />
+        </Button>
+      ))}
     </div>
   );
 }

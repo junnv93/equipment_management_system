@@ -342,6 +342,17 @@ export {
   type CalibrationTabType,
 } from './components/calibration';
 
+// ============================================================================
+// Component Layer: Document (문서 관리)
+// ============================================================================
+
+export {
+  DOCUMENT_MOTION,
+  DOCUMENT_TABLE,
+  DOCUMENT_EMPTY_STATE,
+  getDocumentRowClasses,
+} from './components/document';
+
 // Disposal
 export {
   DISPOSAL_STEPPER_TOKENS,

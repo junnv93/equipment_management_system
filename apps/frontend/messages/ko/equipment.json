@@ -537,7 +537,47 @@
   },
   "attachmentsTab": {
     "title": "첨부파일",
-    "empty": "첨부파일 기능은 준비 중입니다."
+    "empty": "등록된 첨부파일이 없습니다.",
+    "download": "다운로드",
+    "delete": "삭제",
+    "deleteConfirm": "이 문서를 삭제하시겠습니까?",
+    "deleteSuccess": "문서가 삭제되었습니다.",
+    "revisionHistory": "개정 이력",
+    "uploadRevision": "개정판 업로드",
+    "revisionCount": "Rev.{count}",
+    "type": {
+      "calibration_certificate": "교정성적서",
+      "raw_data": "원시 데이터",
+      "inspection_report": "검수보고서",
+      "history_card": "이력카드",
+      "other": "기타"
+    },
+    "tableHeaders": {
+      "fileName": "파일명",
+      "type": "유형",
+      "size": "크기",
+      "uploadedAt": "업로드일",
+      "hash": "무결성",
+      "revision": "버전",
+      "actions": "관리"
+    },
+    "integrity": {
+      "verified": "검증됨",
+      "unverified": "미검증",
+      "checking": "검증 중..."
+    },
+    "deleteError": "삭제에 실패했습니다.",
+    "revision": {
+      "version": "버전",
+      "fileName": "파일명",
+      "size": "크기",
+      "integrity": "무결성",
+      "uploadedAt": "업로드일",
+      "status": "상태",
+      "empty": "개정 이력이 없습니다.",
+      "latest": "최신",
+      "previous": "이전"
+    }
   },
   "calibrationFactorsTab": {
     "title": "보정계수",
@@ -590,7 +630,9 @@
     },
     "certificate": {
       "download": "성적서 다운로드",
-      "noFile": "파일 없음"
+      "noFile": "파일 없음",
+      "documentsCount": "{count}개 문서",
+      "rawData": "원시 데이터"
     },
     "toasts": {
       "fileRequired": "파일 필요",
