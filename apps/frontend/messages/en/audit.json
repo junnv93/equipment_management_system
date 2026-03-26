@@ -43,7 +43,10 @@
     "logout": "Logout",
     "close": "Close",
     "reject_correction": "Reject Correction",
-    "export": "Export"
+    "export": "Export",
+    "upload": "Upload",
+    "download": "Download",
+    "revision": "Revision"
   },
   "entityTypes": {
     "equipment": "Equipment",
@@ -64,7 +67,8 @@
     "incident_history": "Incident History",
     "settings": "Settings",
     "notification": "Notification",
-    "report": "Report"
+    "report": "Report",
+    "document": "Document"
   },
   "timeline": {
     "today": "Today",
