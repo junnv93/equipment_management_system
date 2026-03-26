@@ -745,7 +745,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-auth**: 서버 사이드 인증/인가 검증 — req.user.userId, @RequirePermissions, @AuditLog
 - **verify-zod**: Zod 검증 패턴 검증 — ZodValidationPipe, class-validator 금지, Controller Pipe 적용, Query DTO 패턴 일관성
 - **verify-ssot**: SSOT 임포트 소스 검증 — 타입/enum 패키지 임포트, 로컬 재정의 금지, Icon library 통합(lucide-react)
-- **verify-hardcoding**: SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑, DTO 매핑
+- **verify-hardcoding**: SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑, DTO 매핑, 한국어 UI 라벨
 - **verify-frontend-state**: 프론트엔드 상태 관리 검증 — TanStack Query, onSuccess setQueryData 금지
 - **verify-nextjs**: Next.js 16 패턴 검증 — await params, useActionState, 서버 컴포넌트, Dynamic imports(코드 분할)
 - **verify-design-tokens**: Design Token 3-Layer 아키텍처 검증 — transition-all 금지, focus-visible 우선, import 경로, Layer 참조
