@@ -612,6 +612,9 @@ export class EquipmentHistoryService {
               isActuallyOverdue &&
               currentEquipment?.status !== EquipmentStatusEnum.enum.non_conforming
             ) {
+              // CAS 면제: 시스템 자동 트리거 (사고이력 생성 → 부적합 전환)
+              // 사용자 직접 요청이 아닌 내부 비즈니스 규칙에 의한 상태 변경이므로
+              // version WHERE 조건 없이 무조건 갱신. CalibrationOverdueScheduler와 동일 패턴.
               await tx
                 .update(equipment)
                 .set({
@@ -665,6 +668,8 @@ export class EquipmentHistoryService {
         // 3. 장비 상태 변경 (선택 + 현재 시점만)
         // ✅ 과거 이력은 현재 장비 상태에 영향을 주지 않음
         if (dto.changeEquipmentStatus === true && !isPastIncident) {
+          // CAS 면제: 사고이력 등록 시 부적합 전환은 트랜잭션 내 시스템 규칙
+          // 사용자는 사고이력을 등록하는 것이지, 장비 상태를 직접 수정하지 않음
           await tx
             .update(equipment)
             .set({

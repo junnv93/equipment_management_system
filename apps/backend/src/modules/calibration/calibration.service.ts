@@ -1222,6 +1222,9 @@ export class CalibrationService extends VersionedBaseService {
         calculateNextCalibrationDate(calibrationDate, cycle) ?? calibrationDate;
 
       // ✅ W-13: 장비 업데이트 + NC 조치를 하나의 트랜잭션으로 감싸기
+      // CAS 면제: 교정 승인 콜백에 의한 교정일 자동 갱신 (시스템 트리거)
+      // calibration 엔티티에서 이미 CAS를 통과한 후 실행되므로,
+      // equipment에 대한 별도 CAS는 불필요. 교정일은 시스템 계산값이며 사용자 입력이 아님.
       await this.db.transaction(async (tx) => {
         await tx
           .update(schema.equipment)

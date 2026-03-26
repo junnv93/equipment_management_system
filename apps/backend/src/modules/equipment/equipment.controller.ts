@@ -235,14 +235,20 @@ export class EquipmentController {
     @UploadedFiles() files: MulterFile[] | undefined,
     @Req() req: AuthenticatedRequest
   ): Promise<SharedEquipmentCreateResult> {
-    // 파일 업로드 처리 (교정성적서)
+    // 파일 업로드 처리 (교정성적서) — create() 패턴과 동일하게 UUID 추출
+    let attachmentUuids: string[] = [];
     if (files && files.length > 0) {
       const attachmentType = 'inspection_report'; // 교정성적서
-      await this.attachmentService.createAttachments(files, attachmentType);
+      const attachments = await this.attachmentService.createAttachments(files, attachmentType);
+      attachmentUuids = attachments.map((a) => a.id);
     }
 
     const userId = req.user?.userId;
-    const newEquipment = await this.equipmentService.createShared(createSharedEquipmentDto, userId);
+    const newEquipment = await this.equipmentService.createShared(
+      createSharedEquipmentDto,
+      userId,
+      attachmentUuids
+    );
     return {
       message: '공용장비가 등록되었습니다.',
       equipment: newEquipment,
@@ -505,13 +511,8 @@ export class EquipmentController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string
   ): Promise<unknown> {
-    const result = await this.equipmentService.findByTeam(
-      teamId,
-      page ? Number(page) : undefined,
-      pageSize ? Number(pageSize) : undefined
-    );
-
-    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
+    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 사이트 스코프 결정 → DB 레벨 필터
+    let site: string | undefined;
     const userRole = req.user?.roles?.[0] as UserRole | undefined;
     if (userRole) {
       const scope = resolveDataScope(
@@ -519,19 +520,16 @@ export class EquipmentController {
         EQUIPMENT_DATA_SCOPE
       );
       if (scope.type === 'site' && scope.site) {
-        const filteredItems = result.items.filter((e) => e.site === scope.site);
-        return {
-          items: filteredItems,
-          meta: {
-            ...result.meta,
-            totalItems: filteredItems.length,
-            itemCount: filteredItems.length,
-          },
-        };
+        site = scope.site;
       }
     }
 
-    return result;
+    return this.equipmentService.findByTeam(
+      teamId,
+      page ? Number(page) : undefined,
+      pageSize ? Number(pageSize) : undefined,
+      site
+    );
   }
 
   @Get('calibration/due')

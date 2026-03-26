@@ -34,6 +34,7 @@ import {
   getTableColumns,
 } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
+import { equipmentAttachments } from '@equipment-management/db/schema/equipment-attachments';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -699,7 +700,8 @@ export class EquipmentService extends VersionedBaseService {
    */
   async createShared(
     createSharedEquipmentDto: CreateSharedEquipmentDto,
-    userId?: string
+    userId?: string,
+    attachmentUuids?: string[]
   ): Promise<Equipment> {
     try {
       // 관리번호 중복 확인
@@ -767,6 +769,14 @@ export class EquipmentService extends VersionedBaseService {
           },
           userId
         );
+      }
+
+      // 첨부파일 연결 — create() 패턴과 동일하게 equipmentId UPDATE
+      if (attachmentUuids && attachmentUuids.length > 0) {
+        await this.db
+          .update(equipmentAttachments)
+          .set({ equipmentId: newEquipment.id })
+          .where(inArray(equipmentAttachments.id, attachmentUuids));
       }
 
       // 캐시 무효화 (공용장비 생성)
@@ -1417,7 +1427,8 @@ export class EquipmentService extends VersionedBaseService {
   async findByTeam(
     teamId: string,
     page = 1,
-    pageSize: number = DEFAULT_PAGE_SIZE
+    pageSize: number = DEFAULT_PAGE_SIZE,
+    site?: string
   ): Promise<{
     items: Equipment[];
     meta: PaginationMeta;
@@ -1436,16 +1447,18 @@ export class EquipmentService extends VersionedBaseService {
       };
     }
 
-    const cacheKey = this.buildCacheKey('team', { teamId: normalizedTeamId, page, pageSize });
+    const cacheKey = this.buildCacheKey('team', { teamId: normalizedTeamId, page, pageSize, site });
 
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         try {
-          const whereClause = and(
-            eq(equipment.teamId, normalizedTeamId),
-            eq(equipment.isActive, true)
-          );
+          // DB 레벨 사이트 필터 — 인메모리 필터 대비 페이지네이션 정합성 보장
+          const conditions = [eq(equipment.teamId, normalizedTeamId), eq(equipment.isActive, true)];
+          if (site) {
+            conditions.push(eq(equipment.site, site));
+          }
+          const whereClause = and(...conditions);
 
           const [{ count: totalItems }] = await this.db
             .select({ count: sql<number>`COUNT(*)` })
