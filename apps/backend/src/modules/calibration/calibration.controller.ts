@@ -10,6 +10,7 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   BadRequestException,
   UsePipes,
   Request,
@@ -17,7 +18,7 @@ import {
   DefaultValuePipe,
   ParseIntPipe,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -57,7 +58,9 @@ import {
   type IntermediateCheckStatus,
 } from '@equipment-management/schemas';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
-import { FileUploadService } from '../equipment/services/file-upload.service';
+import { FileUploadService } from '../../common/file-upload/file-upload.service';
+import { DocumentService } from '../../common/file-upload/document.service';
+import type { DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
 import type { CalibrationRecord } from './calibration.service';
@@ -83,7 +86,8 @@ import {
 export class CalibrationController {
   constructor(
     private readonly calibrationService: CalibrationService,
-    private readonly fileUploadService: FileUploadService
+    private readonly fileUploadService: FileUploadService,
+    private readonly documentService: DocumentService
   ) {}
 
   /** 크로스사이트/크로스팀 접근 제어 — calibrations → equipment 경유 */
@@ -527,6 +531,96 @@ export class CalibrationController {
       fileSize: savedFile.fileSize,
       message: '교정성적서 파일이 업로드되었습니다.',
     };
+  }
+
+  // ============================================================================
+  // 교정 문서 관리 (통합 documents 테이블)
+  // ============================================================================
+
+  @Post(':uuid/documents')
+  @ApiOperation({
+    summary: '교정 문서 업로드 (복수)',
+    description: '교정성적서, 원시 데이터 등 복수 파일을 업로드합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정 ID (UUID)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('files', 10))
+  @RequirePermissions(Permission.CREATE_CALIBRATION)
+  @AuditLog({ action: 'upload', entityType: 'calibration', entityIdPath: 'params.uuid' })
+  async uploadDocuments(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @UploadedFiles() files: MulterFile[],
+    @Body('documentTypes') documentTypesRaw: string,
+    @Body('descriptions') descriptionsRaw: string | undefined,
+    @Request() req: AuthenticatedRequest
+  ) {
+    await this.enforceCalibrationAccess(uuid, req);
+    await this.calibrationService.findOne(uuid);
+
+    if (!files || files.length === 0) {
+      throw new BadRequestException({
+        code: 'CALIBRATION_FILE_REQUIRED',
+        message: 'No files were uploaded.',
+      });
+    }
+
+    // documentTypes는 JSON 배열 또는 쉼표 구분 문자열
+    let documentTypes: DocumentType[];
+    try {
+      documentTypes = JSON.parse(documentTypesRaw) as DocumentType[];
+    } catch {
+      documentTypes = documentTypesRaw.split(',').map((t) => t.trim()) as DocumentType[];
+    }
+
+    // 파일 수와 documentTypes 수 불일치 → 400 에러 (사일런트 폴백 방지)
+    if (documentTypes.length !== files.length) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_TYPE_COUNT_MISMATCH',
+        message: `File count (${files.length}) and documentTypes count (${documentTypes.length}) must match.`,
+      });
+    }
+
+    let descriptions: (string | undefined)[] = [];
+    if (descriptionsRaw) {
+      try {
+        descriptions = JSON.parse(descriptionsRaw) as string[];
+      } catch {
+        descriptions = descriptionsRaw.split(',').map((d) => d.trim());
+      }
+    }
+
+    const userId = extractUserId(req);
+
+    const options = files.map((_, i) => ({
+      documentType: documentTypes[i],
+      calibrationId: uuid,
+      description: descriptions[i],
+      uploadedBy: userId,
+      subdirectory: `calibration/${uuid}`,
+    }));
+
+    const docs = await this.documentService.createDocuments(files, options);
+
+    return {
+      documents: docs,
+      message: `${docs.length}개 문서가 업로드되었습니다.`,
+    };
+  }
+
+  @Get(':uuid/documents')
+  @ApiOperation({
+    summary: '교정 문서 목록 조회',
+    description: '특정 교정의 모든 문서(성적서, 원시데이터 등)를 조회합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정 ID (UUID)' })
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  async getDocuments(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Query('type') type?: string,
+    @Request() req: AuthenticatedRequest
+  ) {
+    await this.enforceCalibrationAccess(uuid, req);
+    return this.documentService.findByCalibrationId(uuid, type as DocumentType | undefined);
   }
 
   @Patch(':uuid')
