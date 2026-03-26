@@ -103,7 +103,7 @@ test.describe('Incident → Non-Conformance → Equipment Status Update', () => 
     await expect(createdItem).toBeVisible({ timeout: 5000 });
 
     // 12. 다이얼로그가 닫혔는지 확인 (저장 성공 시 자동으로 닫힘)
-    const dialog = techManagerPage.locator('[role="dialog"]');
+    const dialog = techManagerPage.getByRole('dialog');
     await expect(dialog).not.toBeVisible({ timeout: 3000 });
 
     // 13. 페이지 새로고침 없이 장비 상태가 "부적합"으로 변경되었는지 확인

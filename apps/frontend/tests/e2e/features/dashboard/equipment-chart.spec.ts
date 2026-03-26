@@ -55,7 +55,7 @@ test.describe('Equipment Status Chart', () => {
 
     // 5. Verify legend shows all status categories with counts
     // Legend items have role="listitem" as per the component code
-    const legendItems = siteAdminPage.locator('[role="listitem"]');
+    const legendItems = siteAdminPage.getByRole('listitem');
     const legendCount = await legendItems.count();
     expect(legendCount).toBeGreaterThan(0);
     console.log(`✓ Legend shows ${legendCount} status categories`);
@@ -107,7 +107,7 @@ test.describe('Equipment Status Chart', () => {
     console.log('✓ Legend items have color coding');
 
     // 5. Verify each legend item shows status name and count
-    const legendItems = siteAdminPage.locator('[role="listitem"]');
+    const legendItems = siteAdminPage.getByRole('listitem');
     const firstItem = legendItems.first();
     await expect(firstItem).toBeVisible();
 
@@ -201,7 +201,7 @@ test.describe('Equipment Status Chart', () => {
       console.log(`✓ Total count from chart: ${totalFromChart}`);
 
       // Get sum from legend items (each shows "status count" format)
-      const legendItems = siteAdminPage.locator('[role="listitem"]');
+      const legendItems = siteAdminPage.getByRole('listitem');
       const itemCount = await legendItems.count();
       let sumFromLegend = 0;
 

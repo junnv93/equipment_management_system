@@ -25,7 +25,7 @@ test.describe('Group C-1: Responsive Layout', () => {
     await expect(ncSelect).toBeVisible();
 
     // Verify dialog is scrollable
-    const dialogContent = dialog.locator('[role="document"]').or(dialog);
+    const dialogContent = dialog.getByRole('document').or(dialog);
     const overflowY = await dialogContent.evaluate((el) =>
       window.getComputedStyle(el).getPropertyValue('overflow-y')
     );

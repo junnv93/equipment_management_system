@@ -64,11 +64,11 @@ test.describe('Group 6: Responsive Design', () => {
     await expect(managementNumber).toBeVisible();
 
     // 5. Verify tabs display horizontally without scrolling
-    const tabList = page.locator('[role="tablist"]');
+    const tabList = page.getByRole('tablist');
     await expect(tabList).toBeVisible();
 
     // Get all tabs
-    const tabs = page.locator('[role="tab"]');
+    const tabs = page.getByRole('tab');
     const tabCount = await tabs.count();
     expect(tabCount).toBeGreaterThan(0);
 

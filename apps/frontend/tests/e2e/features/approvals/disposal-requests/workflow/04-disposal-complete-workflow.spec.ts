@@ -127,7 +127,7 @@ test.describe.serial('Complete Disposal Workflow', () => {
       }
 
       // Check status badges
-      const statusBadges = await testOperatorPage.locator('[role="status"]').all();
+      const statusBadges = await testOperatorPage.getByRole('status').all();
       for (const badge of statusBadges) {
         const text = await badge.textContent();
         console.log(`[DEBUG] Status badge: "${text}"`);

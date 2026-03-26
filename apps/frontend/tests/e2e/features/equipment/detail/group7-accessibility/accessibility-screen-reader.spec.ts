@@ -77,7 +77,7 @@ test.describe('Group 7: Accessibility', () => {
     }
 
     // 5. Verify tabs have role='tab' and proper aria attributes
-    const tabs = page.locator('[role="tab"]');
+    const tabs = page.getByRole('tab');
     const tabCount = await tabs.count();
 
     expect(tabCount).toBeGreaterThan(0);
@@ -105,7 +105,7 @@ test.describe('Group 7: Accessibility', () => {
     }
 
     // Verify tablist exists
-    const tablist = page.locator('[role="tablist"]');
+    const tablist = page.getByRole('tablist');
     await expect(tablist).toBeVisible();
 
     // 6. Verify form inputs have associated labels
@@ -210,7 +210,7 @@ test.describe('Group 7: Accessibility', () => {
     const main = page.locator('main[role="main"], main');
     await expect(main).toBeVisible();
 
-    const navigation = page.locator('[role="navigation"]');
+    const navigation = page.getByRole('navigation');
     const navCount = await navigation.count();
     console.log(`Found ${navCount} navigation landmarks`);
 

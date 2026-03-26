@@ -53,7 +53,7 @@ test.describe('Incident History → Non-Conformance Integration', () => {
       await incidentTab.first().click();
     } else {
       // 탭 목록 확인을 위한 디버깅
-      const allTabs = await testOperatorPage.locator('[role="tab"]').allTextContents();
+      const allTabs = await testOperatorPage.getByRole('tab').allTextContents();
       console.log('Available tabs:', allTabs);
       console.log('사고 이력 탭을 찾을 수 없습니다. 테스트 건너뛰기');
       test.skip();

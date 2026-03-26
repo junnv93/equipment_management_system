@@ -83,7 +83,7 @@ test.describe('Group 7: Accessibility', () => {
 
     // 5. Navigate to tabs using Tab key
     // Find the tab navigation area
-    const tabList = page.locator('[role="tablist"]');
+    const tabList = page.getByRole('tablist');
     await expect(tabList).toBeVisible();
 
     // Tab until we reach the tabs
@@ -136,7 +136,7 @@ test.describe('Group 7: Accessibility', () => {
       await actionButtons.first().click();
 
       // Verify dialog is open
-      const dialog = page.locator('[role="dialog"]');
+      const dialog = page.getByRole('dialog');
       const dialogVisible = await dialog.isVisible().catch(() => false);
 
       if (dialogVisible) {

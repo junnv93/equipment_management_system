@@ -148,7 +148,7 @@ test.describe.serial('Complete Disposal Workflow', () => {
         console.log(`⚠️ No disposal buttons found yet (attempt ${attempt}/${maxAttempts})`);
 
         // Check status badge for debugging
-        const statusBadge = testOperatorPage.locator('[role="status"]').first();
+        const statusBadge = testOperatorPage.getByRole('status').first();
         const statusText = await statusBadge.textContent().catch(() => 'not found');
         console.log(`  Status badge shows: "${statusText}"`);
       }
@@ -326,7 +326,7 @@ test.describe.serial('Complete Disposal Workflow', () => {
         console.log(`⚠️ Disposed state not yet visible (attempt ${attempt}/${maxAttempts})`);
 
         // Log current status for debugging
-        const currentStatusBadge = siteAdminPage.locator('[role="status"]').first();
+        const currentStatusBadge = siteAdminPage.getByRole('status').first();
         const currentStatus = await currentStatusBadge.textContent().catch(() => 'not found');
         console.log(`  Current status: "${currentStatus}"`);
       }

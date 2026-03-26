@@ -343,7 +343,7 @@ test.describe('Common/Rental Equipment Management', () => {
       // Wait for validation to appear
 
       // Alert should have role="alert"
-      const alert = page.locator('[role="alert"]').filter({ hasText: '교정 유효기간' });
+      const alert = page.getByRole('alert').filter({ hasText: '교정 유효기간' });
       if (await alert.isVisible()) {
         await expect(alert).toBeVisible();
       }

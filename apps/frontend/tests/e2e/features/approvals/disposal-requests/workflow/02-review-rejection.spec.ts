@@ -122,7 +122,7 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
           `⚠️ pending_disposal state not yet visible (attempt ${attempt}/${maxAttempts})`
         );
 
-        const currentStatusBadge = testOperatorPage.locator('[role="status"]').first();
+        const currentStatusBadge = testOperatorPage.getByRole('status').first();
         const currentStatus = await currentStatusBadge.textContent().catch(() => 'not found');
         console.log(`  Current status: "${currentStatus}"`);
       }
@@ -269,7 +269,7 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
       }
 
       // Log current status for debugging
-      const currentStatusBadge = testOperatorPage.locator('[role="status"]').first();
+      const currentStatusBadge = testOperatorPage.getByRole('status').first();
       const currentStatus = await currentStatusBadge.textContent().catch(() => 'not found');
       console.log(`  Current status: "${currentStatus}"`);
     }

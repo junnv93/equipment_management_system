@@ -57,7 +57,7 @@ test.describe('Group 7: Accessibility', () => {
     await disposalButton.first().click();
 
     // Verify dialog is open
-    const dialog = page.locator('[role="dialog"]');
+    const dialog = page.getByRole('dialog');
     const dialogVisible = await dialog.isVisible().catch(() => false);
 
     if (!dialogVisible) {

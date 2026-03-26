@@ -89,7 +89,7 @@ test.describe('폼 유효성 검사', () => {
       console.log('Page content snippet:', (pageText ?? '').substring(0, 800));
 
       // Additional debugging: check for any error messages
-      const allAlerts = await page.locator('[role="alert"]').all();
+      const allAlerts = await page.getByRole('alert').all();
       console.log(`Found ${allAlerts.length} alerts`);
       for (const alert of allAlerts) {
         const text = await alert.textContent();

@@ -104,7 +104,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await expect(page.locator('text=/사용 종료일.*이후여야 합니다/')).toBeVisible();
 
     // Then: Alert 역할 확인 (접근성)
-    const errorAlert = page.locator('[role="alert"]');
+    const errorAlert = page.getByRole('alert');
     await expect(errorAlert).toBeVisible();
   });
 
@@ -272,7 +272,7 @@ test.describe('공용/렌탈 장비 임시등록', () => {
     await page.fill('input#usagePeriodEnd', '2026-05-31');
     await page.fill('input[name="nextCalibrationDate"]', '2026-04-30');
 
-    const errorAlert = page.locator('[role="alert"]');
+    const errorAlert = page.getByRole('alert');
     await expect(errorAlert).toBeVisible();
 
     // aria-label 확인 (UsagePeriodBadge)

@@ -90,11 +90,11 @@ test.describe('교정 관리 페이지 - 필터', () => {
     const teamFilter = techManagerPage.getByRole('combobox').first();
     await teamFilter.click();
 
-    const dropdown = techManagerPage.locator('[role="listbox"]');
+    const dropdown = techManagerPage.getByRole('listbox');
     await expect(dropdown).toBeVisible();
 
     // 옵션이 1개 이상 로드되어야 함
-    const options = techManagerPage.locator('[role="option"]');
+    const options = techManagerPage.getByRole('option');
     const count = await options.count();
     expect(count).toBeGreaterThan(0);
   });
@@ -105,9 +105,7 @@ test.describe('교정 관리 페이지 - 필터', () => {
     const teamFilter = techManagerPage.getByRole('combobox').first();
     await teamFilter.click();
 
-    const teamOptions = techManagerPage
-      .locator('[role="option"]')
-      .filter({ hasNotText: /모든 팀|전체/ });
+    const teamOptions = techManagerPage.getByRole('option').filter({ hasNotText: /모든 팀|전체/ });
 
     if ((await teamOptions.count()) > 0) {
       await teamOptions.first().click();

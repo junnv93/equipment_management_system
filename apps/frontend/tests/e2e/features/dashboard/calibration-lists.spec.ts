@@ -366,7 +366,7 @@ test.describe('Calibration Lists', () => {
         ),
         firstItem.locator('a[aria-label*="보기"], a[aria-label*="상세"], a[aria-label*="이동"]'),
         firstItem.locator('button svg, a svg').locator('..'),
-        firstItem.locator('[role="button"]'),
+        firstItem.getByRole('button'),
         firstItem.locator('button, a').last(),
       ];
 

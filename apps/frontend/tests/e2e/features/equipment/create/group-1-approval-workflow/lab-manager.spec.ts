@@ -91,7 +91,7 @@ test.describe('역할별 승인 워크플로우 - 시험소 관리자', () => {
     // Wait a moment to ensure no modal appears
 
     // Verify no approval confirmation modal
-    const modal = siteAdminPage.locator('[role="dialog"]').filter({ hasText: /승인|확인/i });
+    const modal = siteAdminPage.getByRole('dialog').filter({ hasText: /승인|확인/i });
     await expect(modal).not.toBeVisible();
     console.log('✓ No approval confirmation modal appeared');
 

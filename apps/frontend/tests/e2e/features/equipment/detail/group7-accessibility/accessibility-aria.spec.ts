@@ -80,7 +80,7 @@ test.describe('Group 7: Accessibility', () => {
     }
 
     // 3. Inspect tab navigation
-    const tablist = page.locator('[role="tablist"]');
+    const tablist = page.getByRole('tablist');
     await expect(tablist).toBeVisible();
 
     // 4. Verify tablist has role='tablist'
@@ -89,7 +89,7 @@ test.describe('Group 7: Accessibility', () => {
     console.log('✓ Tablist has role="tablist"');
 
     // 5. Verify each tab has role='tab'
-    const tabs = page.locator('[role="tab"]');
+    const tabs = page.getByRole('tab');
     const tabCount = await tabs.count();
 
     expect(tabCount).toBeGreaterThan(0);
@@ -122,7 +122,7 @@ test.describe('Group 7: Accessibility', () => {
     }
 
     // 6. Verify tab panels have role='tabpanel'
-    const tabpanels = page.locator('[role="tabpanel"]');
+    const tabpanels = page.getByRole('tabpanel');
     const tabpanelCount = await tabpanels.count();
 
     if (tabpanelCount > 0) {

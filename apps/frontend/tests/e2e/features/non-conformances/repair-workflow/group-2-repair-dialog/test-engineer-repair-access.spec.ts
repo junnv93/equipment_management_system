@@ -65,7 +65,7 @@ test.describe('Role-Based Permission Verification', () => {
 
     // Check for submit button in dialog
     const submitButton = testOperatorPage
-      .locator('[role="dialog"]')
+      .getByRole('dialog')
       .getByRole('button', { name: /등록|Submit|Register/i });
     if ((await submitButton.count()) > 0) {
       await expect(submitButton.first()).toBeVisible();
@@ -82,7 +82,7 @@ test.describe('Role-Based Permission Verification', () => {
     await expect(addButton).toBeVisible();
 
     // - test_engineer can open repair history dialog (verified)
-    await expect(testOperatorPage.locator('[role="dialog"]')).toBeVisible();
+    await expect(testOperatorPage.getByRole('dialog')).toBeVisible();
 
     // - test_engineer can fill and submit repair history form (form accessible)
 

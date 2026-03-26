@@ -77,7 +77,7 @@ test.describe('Group 6: Responsive Design', () => {
     // On touch devices, hover effects should not persist after tap
 
     // Test tabs for hover behavior
-    const tabs = page.locator('[role="tab"]');
+    const tabs = page.getByRole('tab');
     const tabCount = await tabs.count();
 
     if (tabCount > 1) {
@@ -272,7 +272,7 @@ test.describe('Group 6: Responsive Design', () => {
     }
 
     // Verify tab navigation works through all tabs
-    const desktopTabs = page.locator('[role="tab"]');
+    const desktopTabs = page.getByRole('tab');
     const desktopTabCount = await desktopTabs.count();
 
     if (desktopTabCount > 1) {

@@ -55,7 +55,7 @@ test.describe('Responsive Design', () => {
     // Verify stats cards stack in 2-column grid
     await expect(siteAdminPage.getByRole('heading', { name: '전체 장비' })).toBeVisible();
     const statsSection = siteAdminPage
-      .locator('[role="region"]')
+      .getByRole('region')
       .filter({
         has: siteAdminPage.locator('text=/전체 장비|사용 가능|교정 예정|반출 중/'),
       })

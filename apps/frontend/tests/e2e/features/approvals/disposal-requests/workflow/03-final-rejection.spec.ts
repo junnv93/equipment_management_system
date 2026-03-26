@@ -146,7 +146,7 @@ test.describe.serial('Final Rejection Disposal Workflow', () => {
         );
 
         // Check status badge for debugging
-        const statusBadge = testOperatorPage.locator('[role="status"]').first();
+        const statusBadge = testOperatorPage.getByRole('status').first();
         const statusText = await statusBadge.textContent().catch(() => 'not found');
         console.log(`  Status badge shows: "${statusText}"`);
       }
@@ -364,7 +364,7 @@ test.describe.serial('Final Rejection Disposal Workflow', () => {
       }
 
       // Log current status for debugging
-      const currentStatusBadge = testOperatorPage.locator('[role="status"]').first();
+      const currentStatusBadge = testOperatorPage.getByRole('status').first();
       const currentStatus = await currentStatusBadge.textContent().catch(() => 'not found');
       console.log(`  Current status: "${currentStatus}"`);
     }

@@ -68,11 +68,11 @@ test.describe('Group 6: Responsive Design', () => {
     expect(badgeText!.length).toBeGreaterThan(0);
 
     // 7. Verify tab navigation uses horizontal scroll if needed
-    const tabList = page.locator('[role="tablist"]');
+    const tabList = page.getByRole('tablist');
     await expect(tabList).toBeVisible();
 
     // Verify at least one tab is visible
-    const tabs = page.locator('[role="tab"]');
+    const tabs = page.getByRole('tab');
     const tabCount = await tabs.count();
     expect(tabCount).toBeGreaterThan(0);
 

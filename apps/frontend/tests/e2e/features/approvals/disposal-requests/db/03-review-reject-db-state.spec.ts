@@ -86,7 +86,7 @@ test.describe('Database State Verification', () => {
     await rejectButton.click();
 
     // 7. Wait for the RejectModal to open
-    const rejectModal = techManagerPage.locator('[role="dialog"]').filter({ hasText: '반려' });
+    const rejectModal = techManagerPage.getByRole('dialog').filter({ hasText: '반려' });
     await expect(rejectModal).toBeVisible();
 
     // 8. Enter rejection reason with 10+ characters

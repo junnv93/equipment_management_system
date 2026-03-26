@@ -36,7 +36,7 @@ test.describe('Group F: Error Handling', () => {
       await testOperatorPage.goto('/equipment');
 
       // ErrorAlert component
-      const errorAlert = testOperatorPage.locator('[role="alert"]');
+      const errorAlert = testOperatorPage.getByRole('alert');
       await expect(errorAlert).toBeVisible();
 
       // Error title
@@ -73,7 +73,7 @@ test.describe('Group F: Error Handling', () => {
       await testOperatorPage.goto('/equipment');
 
       // ErrorAlert displayed
-      const errorAlert = testOperatorPage.locator('[role="alert"]');
+      const errorAlert = testOperatorPage.getByRole('alert');
       await expect(errorAlert).toBeVisible();
 
       // Click retry button
@@ -107,7 +107,7 @@ test.describe('Group F: Error Handling', () => {
     await testOperatorPage.goto('/equipment');
 
     // ErrorAlert displayed
-    const errorAlert = testOperatorPage.locator('[role="alert"]');
+    const errorAlert = testOperatorPage.getByRole('alert');
     await expect(errorAlert).toBeVisible();
 
     // Error title

@@ -34,7 +34,7 @@ test.describe('Dashboard Statistics Cards', () => {
     console.log('✓ Stats section loaded');
 
     // 4. Verify 4 stat cards are visible in the statistics section
-    const statCards = siteAdminPage.locator('[role="region"]').filter({
+    const statCards = siteAdminPage.getByRole('region').filter({
       has: siteAdminPage.locator('text=/전체 장비|사용 가능|교정 예정|반출 중/'),
     });
 

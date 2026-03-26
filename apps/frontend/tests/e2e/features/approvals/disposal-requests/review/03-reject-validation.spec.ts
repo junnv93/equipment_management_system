@@ -108,7 +108,7 @@ test.describe('Disposal Review Tab (technical_manager)', () => {
     console.log('✅ Validation error shown for empty reason');
 
     // Step 9: Verify the error has role='alert' and aria-live='assertive' for screen readers
-    const errorAlert = rejectModal.locator('[role="alert"]');
+    const errorAlert = rejectModal.getByRole('alert');
     await expect(errorAlert).toBeVisible();
     await expect(errorAlert).toHaveAttribute('aria-live', 'assertive');
     console.log('✅ Error has proper accessibility attributes');

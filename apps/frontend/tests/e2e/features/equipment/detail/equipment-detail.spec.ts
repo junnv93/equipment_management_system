@@ -200,7 +200,7 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
         await detailLink.click();
 
         // 상태 뱃지에서 상태 확인
-        const statusBadge = testOperatorPage.locator('[role="status"]');
+        const statusBadge = testOperatorPage.getByRole('status');
         if ((await statusBadge.count()) > 0) {
           const statusText = await statusBadge.textContent();
           if (statusText?.includes('사용 가능')) {
@@ -336,11 +336,11 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
         await detailLink.click();
 
         // 탭에 role="tab" 속성이 있는지 확인
-        const tabs = testOperatorPage.locator('[role="tab"]');
+        const tabs = testOperatorPage.getByRole('tab');
         await expect(tabs.first()).toBeVisible();
 
         // 탭패널에 role="tabpanel" 속성이 있는지 확인
-        const tabpanels = testOperatorPage.locator('[role="tabpanel"]');
+        const tabpanels = testOperatorPage.getByRole('tabpanel');
         const count = await tabpanels.count();
         expect(count).toBeGreaterThan(0);
       } else {

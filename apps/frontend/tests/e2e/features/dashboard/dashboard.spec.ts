@@ -51,7 +51,7 @@ test.describe('Dashboard - Basic Rendering', () => {
     await expect(overviewTab).toHaveAttribute('data-state', 'active');
 
     // 탭 클릭 테스트
-    const tabs = testOperatorPage.getByRole('tablist').locator('[role="tab"]');
+    const tabs = testOperatorPage.getByRole('tablist').getByRole('tab');
     const tabCount = await tabs.count();
 
     for (let i = 1; i < tabCount; i++) {
@@ -73,7 +73,7 @@ test.describe('Dashboard - 시험실무자', () => {
     await expect(testOperatorPage.getByRole('heading', { level: 1 })).toBeVisible();
 
     // 역할 배지 확인 - 환영 헤더의 banner role 내에서 찾기
-    const welcomeHeader = testOperatorPage.locator('[role="banner"]');
+    const welcomeHeader = testOperatorPage.getByRole('banner');
     await expect(welcomeHeader.locator('[aria-label*="현재 역할"]')).toBeVisible();
 
     // 승인 대기 카드 제목 확인 (시험실무자는 "내 요청 현황")
@@ -141,7 +141,7 @@ test.describe('Dashboard - 기술책임자', () => {
     await expect(techManagerPage.getByRole('heading', { level: 1 })).toBeVisible();
 
     // 역할 배지 확인 - 환영 헤더의 banner role 내에서 찾기
-    const welcomeHeader = techManagerPage.locator('[role="banner"]');
+    const welcomeHeader = techManagerPage.getByRole('banner');
     await expect(welcomeHeader.locator('[aria-label*="현재 역할"]')).toBeVisible();
 
     // 승인 대기 카드 제목 확인 (기술책임자는 "팀 승인 대기")
@@ -221,7 +221,7 @@ test.describe('Dashboard - 시험소 관리자', () => {
     await expect(siteAdminPage.getByRole('heading', { level: 1 })).toBeVisible();
 
     // 역할 배지 확인 - 환영 헤더의 banner role 내에서 찾기
-    const welcomeHeader = siteAdminPage.locator('[role="banner"]');
+    const welcomeHeader = siteAdminPage.getByRole('banner');
     await expect(welcomeHeader.locator('[aria-label*="현재 역할"]')).toBeVisible();
 
     // 승인 대기 카드 제목 확인
@@ -265,7 +265,7 @@ test.describe('Dashboard - 시스템 관리자', () => {
     await expect(systemAdminPage.getByRole('heading', { level: 1 })).toBeVisible();
 
     // 역할 배지 확인 - 환영 헤더의 banner role 내에서 찾기
-    const welcomeHeader = systemAdminPage.locator('[role="banner"]');
+    const welcomeHeader = systemAdminPage.getByRole('banner');
     await expect(welcomeHeader.locator('[aria-label*="현재 역할"]')).toBeVisible();
 
     // 승인 대기 카드 제목 확인
@@ -354,7 +354,7 @@ test.describe('Dashboard - Accessibility', () => {
     await expect(tabList).toBeVisible();
 
     // 첫 번째 탭 클릭 후 화살표 키로 탐색
-    const tabs = tabList.locator('[role="tab"]');
+    const tabs = tabList.getByRole('tab');
     const firstTab = tabs.first();
     await firstTab.click();
     await firstTab.focus();
@@ -472,7 +472,7 @@ test.describe('Dashboard - Accessibility', () => {
     await testOperatorPage.goto('/');
 
     // 최근 활동 카드가 region role을 가지는지 확인
-    const activityCard = testOperatorPage.locator('[role="region"]').filter({
+    const activityCard = testOperatorPage.getByRole('region').filter({
       has: testOperatorPage.locator('#recent-activities-title'),
     });
 

@@ -50,7 +50,7 @@ test.describe('Incident History Tab Integration', () => {
     if (tabCount > 0) {
       await incidentTab.first().click();
     } else {
-      const allTabs = await techManagerPage.locator('[role="tab"]').allTextContents();
+      const allTabs = await techManagerPage.getByRole('tab').allTextContents();
       console.log('Available tabs:', allTabs);
       console.log('사고 이력 탭을 찾을 수 없습니다. 테스트 건너뛰기');
       test.skip();

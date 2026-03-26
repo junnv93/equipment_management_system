@@ -75,7 +75,7 @@ test.describe('Non-Conformance Banner UI', () => {
   }) => {
     // 1. Verify non-conformance banner is visible
     const ncBanner = siteAdminPage
-      .locator('[role="alert"]')
+      .getByRole('alert')
       .filter({ hasText: /부적합 상태/i })
       .first();
 
@@ -86,7 +86,7 @@ test.describe('Non-Conformance Banner UI', () => {
     if (bannerCount === 0) {
       console.log('No NC banner found. This equipment may not have an active non-conformance.');
       // Try to find any alert banner
-      const anyAlert = siteAdminPage.locator('[role="alert"]');
+      const anyAlert = siteAdminPage.getByRole('alert');
       const alertCount = await anyAlert.count();
       console.log(`Found ${alertCount} alert elements on page`);
 
@@ -137,7 +137,7 @@ test.describe('Non-Conformance Banner UI', () => {
   }) => {
     // 1. Locate the non-conformance banner
     const ncBanner = siteAdminPage
-      .locator('[role="alert"]')
+      .getByRole('alert')
       .filter({ hasText: /부적합 상태/i })
       .first();
 
