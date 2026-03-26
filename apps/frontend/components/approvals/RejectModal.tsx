@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/select';
 import { XCircle } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { REJECTION_MIN_LENGTH, getLocalizedSummary } from '@/lib/api/approvals-api';
+import { REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
+import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 

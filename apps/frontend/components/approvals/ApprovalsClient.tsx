@@ -25,8 +25,8 @@ import {
   type ApprovalItem,
   ROLE_TABS,
   TAB_META,
-  getLocalizedSummary,
 } from '@/lib/api/approvals-api';
+import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { ApprovalKpiStrip } from './ApprovalKpiStrip';

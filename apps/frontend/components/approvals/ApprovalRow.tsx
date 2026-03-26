@@ -8,11 +8,8 @@ import { CheckCircle2, XCircle, Eye } from 'lucide-react';
 import { daysBetween } from '@/lib/utils/date';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import {
-  TAB_META,
-  UNIFIED_APPROVAL_STATUS_LABELS,
-  getLocalizedSummary,
-} from '@/lib/api/approvals-api';
+import { TAB_META } from '@/lib/api/approvals-api';
+import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import {
   getApprovalStatusBadgeClasses,
   getApprovalActionButtonClasses,
@@ -101,7 +98,7 @@ export function ApprovalRow({
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge className={cn(getApprovalStatusBadgeClasses(item.status), 'text-xs')}>
-            {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
+            {t(`unifiedStatus.${item.status}`)}
           </Badge>
           <span className={cn('text-sm font-medium truncate', FONT.heading)}>
             {localizedSummary}

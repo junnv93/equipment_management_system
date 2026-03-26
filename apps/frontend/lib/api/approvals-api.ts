@@ -18,7 +18,6 @@ import {
   type UserRole,
   type UnifiedApprovalStatus,
   type ApprovalCategory,
-  UNIFIED_APPROVAL_STATUS_LABELS,
   SITE_LABELS,
   UserRoleValues as URVal,
   UnifiedApprovalStatusValues as UASVal,
@@ -43,12 +42,10 @@ import { transformArrayResponse, transformSingleResponse } from './utils/respons
 // ============================================================================
 
 // ============================================================================
-// 통합 승인 상태 타입 (프론트엔드 로컬 정의)
-// ✅ SSOT: UnifiedApprovalStatus, UNIFIED_APPROVAL_STATUS_LABELS는
-// @equipment-management/schemas에서 import (위 import 참조)
-// Re-export for downstream consumers
+// 통합 승인 상태 타입
+// ✅ SSOT: UnifiedApprovalStatus는 @equipment-management/schemas에서 import
+// 라벨은 i18n 파일(approvals.unifiedStatus.*)에서 관리
 export type { UnifiedApprovalStatus };
-export { UNIFIED_APPROVAL_STATUS_LABELS };
 
 // ============================================================================
 // 승인 카테고리 정의
@@ -249,12 +246,20 @@ export interface Attachment {
  * getLocalizedSummary()로 로컬라이즈된 텍스트를 생성.
  */
 export type ApprovalSummaryData =
+  | { type: 'calibration'; equipmentId: string }
+  | { type: 'checkout'; equipmentNames: string; direction: 'outgoing' | 'incoming' }
   | { type: 'calibration_plan'; year: string; siteId: string }
   | { type: 'equipment_request'; equipmentName: string; requestType: string }
   | { type: 'disposal'; equipmentName: string; managementNumber: string; step: 'review' | 'final' }
   | { type: 'software'; softwareName: string }
   | { type: 'inspection'; equipmentName: string }
-  | { type: 'non_conformance'; cause: string };
+  | { type: 'non_conformance'; cause: string }
+  | {
+      type: 'equipment_import';
+      equipmentName: string;
+      sourceType: 'rental' | 'internal_shared';
+      vendorOrDepartment: string;
+    };
 
 /**
  * 통합 승인 항목
@@ -316,58 +321,8 @@ export interface BulkActionResult {
   failed: string[];
 }
 
-// ============================================================================
-// 장비 요청 유형 라벨 (SSOT)
-// ============================================================================
-
-/** 장비 등록/수정/삭제 요청 유형 → 영어 라벨 (i18n 폴백) */
-export const REQUEST_TYPE_LABELS: Record<string, string> = {
-  create: 'Registration',
-  update: 'Modification',
-  delete: 'Deletion',
-};
-
-/**
- * ApprovalItem의 summaryData를 사용하여 로컬라이즈된 summary 생성
- *
- * @param item - 승인 항목
- * @param t - useTranslations('approvals') 반환값
- * @returns 로컬라이즈된 summary 문자열 (summaryData가 없으면 item.summary 반환)
- */
-export function getLocalizedSummary(
-  item: ApprovalItem,
-  t: (key: string, params?: Record<string, string | number | Date>) => string
-): string {
-  if (!item.summaryData) return item.summary;
-
-  const data = item.summaryData;
-  switch (data.type) {
-    case 'calibration_plan':
-      return t('summaryTemplates.calibrationPlan', { year: data.year, site: data.siteId });
-    case 'equipment_request':
-      return data.equipmentName
-        ? t('summaryTemplates.equipmentRequest', {
-            equipment: data.equipmentName,
-            action: t(`requestTypes.${data.requestType}`),
-          })
-        : t('summaryTemplates.equipmentRequestNoName', {
-            action: t(`requestTypes.${data.requestType}`),
-          });
-    case 'disposal':
-      return t(`summaryTemplates.disposal_${data.step}`, {
-        equipment: data.equipmentName,
-        managementNumber: data.managementNumber,
-      });
-    case 'software':
-      return t('summaryTemplates.software', { name: data.softwareName });
-    case 'inspection':
-      return t('summaryTemplates.inspection', { equipment: data.equipmentName });
-    case 'non_conformance':
-      return t('summaryTemplates.nonConformance', { cause: data.cause });
-    default:
-      return item.summary;
-  }
-}
+/** 장비 요청 유형 키 — i18n에서 requestTypes.* 키와 매칭 */
+export const REQUEST_TYPES = ['create', 'update', 'delete'] as const;
 
 // ============================================================================
 // 승인 관리 API
@@ -1109,11 +1064,12 @@ class ApprovalsApi {
       requesterName: registeredByUser?.name
         ? String(registeredByUser.name)
         : calibration.registeredByRole === URVal.TEST_ENGINEER
-          ? '시험실무자'
-          : '기술책임자',
+          ? 'Test Engineer'
+          : 'Technical Manager',
       requesterTeam: team?.name ? String(team.name) : '',
       requestedAt: calibration.createdAt,
-      summary: `장비(${calibration.equipmentId}) 교정 기록 등록`,
+      summary: `Equipment (${calibration.equipmentId}) Calibration Record`,
+      summaryData: { type: 'calibration', equipmentId: calibration.equipmentId },
       details: {
         equipmentId: calibration.equipmentId,
         calibrationDate: calibration.calibrationDate,
@@ -1148,6 +1104,7 @@ class ApprovalsApi {
         category === 'outgoing'
           ? `${equipmentNames} Checkout Request`
           : `${equipmentNames} Return Pending`,
+      summaryData: { type: 'checkout', equipmentNames, direction: category },
       details: {
         equipmentIds: checkout.equipmentIds,
         equipment: checkout.equipment,
@@ -1292,8 +1249,6 @@ class ApprovalsApi {
     const equipment = item.equipment as Record<string, unknown> | undefined;
     const requestType = String(item.requestType || 'create');
 
-    const requestTypeLabels = REQUEST_TYPE_LABELS;
-
     // requestData에서 장비명 추출 시도
     let equipmentName = '';
     if (equipment?.name) {
@@ -1309,8 +1264,8 @@ class ApprovalsApi {
     }
 
     const summary = equipmentName
-      ? `${equipmentName} ${requestTypeLabels[requestType] || requestType} Request`
-      : `Equipment ${requestTypeLabels[requestType] || requestType} Request`;
+      ? `${equipmentName} ${requestType} Request`
+      : `Equipment ${requestType} Request`;
 
     return {
       id: String(item.id),
@@ -1408,19 +1363,28 @@ class ApprovalsApi {
 
     // Summary varies by source type
     const isRental = item.sourceType === EISrcVal.RENTAL;
+    const vendorOrDepartment = isRental
+      ? String(item.vendorName || '')
+      : String(item.ownerDepartment || '');
     const summary = isRental
-      ? `${item.equipmentName} 렌탈 반입 (${item.vendorName})`
-      : `${item.equipmentName} 공용장비 반입 (${item.ownerDepartment})`;
+      ? `${item.equipmentName} Rental Import (${item.vendorName})`
+      : `${item.equipmentName} Shared Equipment Import (${item.ownerDepartment})`;
 
     return {
       id: item.id,
       category,
       status: UASVal.PENDING,
       requesterId: item.requesterId,
-      requesterName: requester?.name ? String(requester.name) : '신청자',
+      requesterName: requester?.name ? String(requester.name) : 'Requester',
       requesterTeam: team?.name ? String(team.name) : '',
       requestedAt: item.createdAt,
       summary,
+      summaryData: {
+        type: 'equipment_import',
+        equipmentName: item.equipmentName,
+        sourceType: isRental ? ('rental' as const) : ('internal_shared' as const),
+        vendorOrDepartment,
+      },
       details: {
         equipmentName: item.equipmentName,
         classification: item.classification,

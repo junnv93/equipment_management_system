@@ -266,7 +266,12 @@
     "disposal_final": "{equipment} ({managementNumber}) Disposal Approval",
     "software": "{name} Change Request",
     "inspection": "{equipment} Intermediate Check",
-    "nonConformance": "{cause} (Corrected)"
+    "nonConformance": "{cause} (Corrected)",
+    "calibration": "Equipment ({equipmentId}) Calibration Record",
+    "checkoutOutgoing": "{equipmentNames} Checkout Request",
+    "checkoutIncoming": "{equipmentNames} Return Pending",
+    "equipmentImportRental": "{equipmentName} Rental Import ({vendor})",
+    "equipmentImportShared": "{equipmentName} Shared Equipment Import ({department})"
   },
   "unknown": "Unknown",
   "calibrationFactorApprovals": {
