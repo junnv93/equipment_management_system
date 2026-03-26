@@ -21,6 +21,7 @@ import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import type { AppDatabase } from '@equipment-management/db';
 import { EquipmentService } from '../equipment.service';
+import { DocumentService } from '../../../common/file-upload/document.service';
 import type { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import type { UpdateEquipmentDto } from '../dto/update-equipment.dto';
 import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
@@ -52,6 +53,7 @@ export class EquipmentApprovalService {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
     private readonly equipmentService: EquipmentService,
+    private readonly documentService: DocumentService,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: SimpleCacheService
   ) {}
@@ -437,7 +439,9 @@ export class EquipmentApprovalService {
         // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
         if (request.requestType === 'create') {
           const requestData = deserializeRequestData('create', request.requestData);
-          await this.equipmentService.create(requestData, request.requestedBy);
+          const newEquipment = await this.equipmentService.create(requestData, request.requestedBy);
+          // 요청에 연결된 문서(사진/매뉴얼)를 신규 장비로 소유 이전
+          await this.documentService.transferDocumentsToEquipment(requestUuid, newEquipment.id);
         } else if (request.requestType === 'update') {
           const equipmentData = this.requireEquipmentId(request.equipmentId);
           const currentEquipment = await tx.query.equipment.findFirst({

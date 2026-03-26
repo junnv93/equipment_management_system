@@ -7,6 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
+import { createVersionConflictException } from '../../../common/base/versioned-base.service';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { disposalRequests } from '@equipment-management/db/schema';
 import { equipment } from '@equipment-management/db/schema';
@@ -231,10 +232,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw new ConflictException({
-            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
-            code: 'VERSION_CONFLICT',
-          });
+          throw createVersionConflictException();
         }
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
@@ -259,10 +257,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw new ConflictException({
-            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
-            code: 'VERSION_CONFLICT',
-          });
+          throw createVersionConflictException();
         }
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -371,10 +366,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw new ConflictException({
-            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
-            code: 'VERSION_CONFLICT',
-          });
+          throw createVersionConflictException();
         }
 
         // 장비 상태를 'disposed'로 변경 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -409,10 +401,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw new ConflictException({
-            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
-            code: 'VERSION_CONFLICT',
-          });
+          throw createVersionConflictException();
         }
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -538,10 +527,7 @@ export class DisposalService extends VersionedBaseService {
 
       if (deleted.length === 0) {
         this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-        throw new ConflictException({
-          message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
-          code: 'VERSION_CONFLICT',
-        });
+        throw createVersionConflictException();
       }
 
       // 장비 상태 원복 (CAS: version 조건으로 동시 수정 방지)
@@ -557,10 +543,7 @@ export class DisposalService extends VersionedBaseService {
 
       if (!updatedEquipment) {
         this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-        throw new ConflictException({
-          message: '장비가 다른 사용자에 의해 수정되었습니다. 페이지를 새로고침하세요.',
-          code: 'VERSION_CONFLICT',
-        });
+        throw createVersionConflictException();
       }
     });
 

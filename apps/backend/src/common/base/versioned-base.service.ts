@@ -3,6 +3,28 @@ import { eq, and, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 
 /**
+ * VERSION_CONFLICT 에러 메시지 — SSOT
+ *
+ * 모든 CAS 실패 에러는 이 상수를 사용합니다.
+ * 프론트엔드에서 code 필드('VERSION_CONFLICT')로 매핑하므로 message는 사용자에게 직접 노출되지 않습니다.
+ */
+export const VERSION_CONFLICT_MESSAGE =
+  'This record has been modified by another user. Please refresh the page.';
+
+/** VERSION_CONFLICT ConflictException 생성 헬퍼 */
+export function createVersionConflictException(
+  currentVersion?: number,
+  expectedVersion?: number
+): ConflictException {
+  return new ConflictException({
+    message: VERSION_CONFLICT_MESSAGE,
+    code: 'VERSION_CONFLICT',
+    ...(currentVersion !== undefined && { currentVersion }),
+    ...(expectedVersion !== undefined && { expectedVersion }),
+  });
+}
+
+/**
  * Optimistic Locking (CAS) 추상 기반 서비스
  *
  * ✅ DRY: 5개 모듈(checkout, calibration, non-conformance, equipment-import, disposal)에서 공유
@@ -67,12 +89,7 @@ export abstract class VersionedBaseService {
         });
       }
 
-      throw new ConflictException({
-        message: 'This record has been modified by another user. Please refresh the page.',
-        code: 'VERSION_CONFLICT',
-        currentVersion: existing.version,
-        expectedVersion,
-      });
+      throw createVersionConflictException(existing.version, expectedVersion);
     }
 
     return updated as T;

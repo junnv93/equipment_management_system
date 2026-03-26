@@ -1,9 +1,9 @@
 import { Injectable, Logger, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { eq, and, desc, sql, or, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, or, inArray, lt } from 'drizzle-orm';
 import { documents } from '@equipment-management/db/schema';
 import { calibrations } from '@equipment-management/db/schema';
-import type { DocumentRecord, NewDocument } from '@equipment-management/db/schema/documents';
+import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
 import { FileUploadService } from './file-upload.service';
@@ -342,6 +342,83 @@ export class DocumentService {
       expectedHash: document.fileHash,
       actualHash,
     };
+  }
+
+  /**
+   * 보존 기간이 지난 soft-deleted 문서의 물리 파일 삭제 + DB 하드 삭제
+   *
+   * 설계:
+   * - LIMIT 기반 배치 처리로 메모리 안전 (대량 축적 대비)
+   * - DB 삭제 우선 → 파일 best-effort 정리 (고아 레코드 방지)
+   * - 개별 문서 실패가 전체를 중단하지 않음
+   *
+   * @param retentionDays 삭제 후 보존 기간 (일)
+   * @returns { purged: number; failed: number }
+   */
+  async purgeDeletedDocuments(retentionDays: number): Promise<{ purged: number; failed: number }> {
+    const BATCH_SIZE = 100;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - retentionDays);
+
+    let totalPurged = 0;
+    let totalFailed = 0;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const batch = await this.db
+        .select({ id: documents.id, filePath: documents.filePath })
+        .from(documents)
+        .where(
+          and(eq(documents.status, 'deleted' as DocumentStatus), lt(documents.updatedAt, cutoff))
+        )
+        .limit(BATCH_SIZE);
+
+      if (batch.length === 0) break;
+
+      for (const doc of batch) {
+        try {
+          // DB 삭제 우선: 파일 삭제 실패해도 고아 레코드가 남지 않음
+          await this.db.delete(documents).where(eq(documents.id, doc.id));
+          // best-effort 파일 정리 (StorageProvider.delete는 실패 시 warn만)
+          await this.fileUploadService.deleteFile(doc.filePath);
+          totalPurged++;
+        } catch (error) {
+          totalFailed++;
+          this.logger.warn(
+            `Failed to purge document ${doc.id}: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      }
+
+      // 마지막 배치가 BATCH_SIZE 미만이면 종료
+      if (batch.length < BATCH_SIZE) break;
+    }
+
+    return { purged: totalPurged, failed: totalFailed };
+  }
+
+  /**
+   * 요청(request) 소유 문서를 장비(equipment) 소유로 이전
+   *
+   * 승인 워크플로우에서 요청이 승인되어 장비가 생성된 후,
+   * requestId로 연결된 문서의 소유자를 equipmentId로 이전합니다.
+   */
+  async transferDocumentsToEquipment(requestId: string, equipmentId: string): Promise<number> {
+    const result = await this.db
+      .update(documents)
+      .set({ equipmentId, updatedAt: new Date() })
+      .where(
+        and(eq(documents.requestId, requestId), eq(documents.status, 'active' as DocumentStatus))
+      )
+      .returning({ id: documents.id });
+
+    if (result.length > 0) {
+      this.logger.log(
+        `Transferred ${result.length} documents from request ${requestId} to equipment ${equipmentId}`
+      );
+    }
+
+    return result.length;
   }
 
   /**
