@@ -13,6 +13,7 @@
 export * from './equipment';
 export * from './equipment-request';
 export * from './equipment-attachment';
+export * from './document';
 export * from './equipment-history';
 export * from './user';
 export * from './team';

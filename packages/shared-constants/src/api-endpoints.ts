@@ -131,6 +131,19 @@ export const API_ENDPOINTS = {
       COMPLETE: (id: string) => `/api/calibration/${id}/intermediate-check/complete`,
     },
     CERTIFICATE: (id: string) => `/api/calibration/${id}/certificate`,
+    /** 교정별 문서 목록 (성적서 + 원시데이터 등) */
+    DOCUMENTS: (id: string) => `/api/calibration/${id}/documents`,
+  },
+
+  // ============================================================================
+  // 문서 관리 (통합)
+  // ============================================================================
+  DOCUMENTS: {
+    BASE: '/api/documents',
+    DETAIL: (id: string) => `/api/documents/${id}`,
+    DOWNLOAD: (id: string) => `/api/documents/${id}/download`,
+    VERIFY: (id: string) => `/api/documents/${id}/verify`,
+    REVISIONS: (id: string) => `/api/documents/${id}/revisions`,
   },
 
   // ============================================================================
