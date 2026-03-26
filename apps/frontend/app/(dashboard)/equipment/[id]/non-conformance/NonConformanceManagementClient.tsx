@@ -15,12 +15,9 @@ import {
   XCircle,
   RefreshCw,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import nonConformancesApi, {
-  NonConformance,
-  NonConformanceType,
-} from '@/lib/api/non-conformances-api';
+import nonConformancesApi, { NonConformance } from '@/lib/api/non-conformances-api';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   getSemanticBadgeClasses,
@@ -33,9 +30,12 @@ import {
 import {
   EquipmentStatusValues as ESVal,
   NonConformanceStatusValues as NCStatusVal,
+  MANUAL_NC_TYPES,
+  type NonConformanceType,
 } from '@equipment-management/schemas';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -55,6 +55,15 @@ import {
 } from '@/components/ui/select';
 import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
+/** NC 유형 enum → i18n 키 매핑 (UI 표시용 — i18n 키가 camelCase이므로 매핑 필요) */
+const NC_TYPE_I18N_KEY: Record<string, string> = {
+  damage: 'damage',
+  malfunction: 'malfunction',
+  calibration_failure: 'calibrationFailure',
+  measurement_error: 'measurementError',
+  other: 'other',
+};
+
 interface NonConformanceManagementClientProps {
   equipmentId: string;
   /** 서버 프리페치된 장비 데이터 (placeholderData로 사용) */
@@ -69,15 +78,13 @@ export default function NonConformanceManagementClient({
   initialNonConformances,
 }: NonConformanceManagementClientProps) {
   const router = useRouter();
-  const { user, isManager, can } = useAuth();
+  const queryClient = useQueryClient();
+  const { isManager, can } = useAuth();
   const { toast } = useToast();
   const canCreateNC = can(Permission.CREATE_NON_CONFORMANCE);
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
-
-  // 현재 로그인한 사용자 ID (useAuth에서 가져옴)
-  const currentUserId = user?.id ?? '';
 
   // React Query로 데이터 조회
   // 서버 프리페치 데이터를 placeholderData로 사용 → 즉시 표시 + 백그라운드 refetch
@@ -85,6 +92,7 @@ export default function NonConformanceManagementClient({
     queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     placeholderData: initialEquipment,
+    staleTime: CACHE_TIMES.MEDIUM,
   });
 
   const {
@@ -96,6 +104,7 @@ export default function NonConformanceManagementClient({
     queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
     queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
     placeholderData: initialNonConformances,
+    staleTime: CACHE_TIMES.LONG,
   });
 
   const nonConformances = nonConformancesData?.data || [];
@@ -129,7 +138,6 @@ export default function NonConformanceManagementClient({
     {
       equipmentId: string;
       discoveryDate: string;
-      discoveredBy: string;
       cause: string;
       ncType: NonConformanceType;
       actionPlan?: string;
@@ -157,7 +165,8 @@ export default function NonConformanceManagementClient({
     onSuccessCallback: () => {
       setShowCreateForm(false);
       setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
-      router.refresh();
+      // 교차 엔티티 캐시 무효화 (장비 목록, NC 전체 목록, 대시보드 KPI)
+      EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(queryClient, equipmentId);
     },
   });
 
@@ -170,7 +179,6 @@ export default function NonConformanceManagementClient({
     createMutation.mutate({
       equipmentId,
       discoveryDate: new Date().toISOString().split('T')[0],
-      discoveredBy: currentUserId,
       cause: createForm.cause,
       ncType: createForm.ncType,
       actionPlan: createForm.actionPlan || undefined,
@@ -215,7 +223,8 @@ export default function NonConformanceManagementClient({
     onSuccessCallback: () => {
       setEditingId(null);
       setUpdateForm({ correctionContent: '', status: '' });
-      router.refresh();
+      // 교차 엔티티 캐시 무효화 (상태 변경 시 장비 목록/대시보드 갱신)
+      EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(queryClient, equipmentId);
     },
   });
 
@@ -242,13 +251,12 @@ export default function NonConformanceManagementClient({
       version: number;
       correctionContent?: string;
       correctionDate?: string;
-      correctedBy?: string;
       status?: 'open' | 'corrected';
     } = { version: nc.version };
     if (updateForm.correctionContent) {
       updateData.correctionContent = updateForm.correctionContent;
       updateData.correctionDate = new Date().toISOString().split('T')[0];
-      updateData.correctedBy = currentUserId;
+      // correctedBy는 서버에서 JWT 토큰으로 추출 (Rule 2: 서버 사이드 userId 추출)
     }
     if (updateForm.status) updateData.status = updateForm.status;
 
@@ -381,19 +389,11 @@ export default function NonConformanceManagementClient({
                   <SelectValue placeholder={t('nonConformanceManagement.form.ncTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="damage">
-                    {t('nonConformanceManagement.form.damage')}
-                  </SelectItem>
-                  <SelectItem value="malfunction">
-                    {t('nonConformanceManagement.form.malfunction')}
-                  </SelectItem>
-                  <SelectItem value="calibration_failure">
-                    {t('nonConformanceManagement.form.calibrationFailure')}
-                  </SelectItem>
-                  <SelectItem value="measurement_error">
-                    {t('nonConformanceManagement.form.measurementError')}
-                  </SelectItem>
-                  <SelectItem value="other">{t('nonConformanceManagement.form.other')}</SelectItem>
+                  {MANUAL_NC_TYPES.map((ncType) => (
+                    <SelectItem key={ncType} value={ncType}>
+                      {t(`nonConformanceManagement.form.${NC_TYPE_I18N_KEY[ncType]}`)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1.5">

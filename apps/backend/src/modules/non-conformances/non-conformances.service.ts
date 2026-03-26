@@ -19,7 +19,10 @@ import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
 import { RejectCorrectionDto } from './dto/reject-correction.dto';
 import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import {
+  VersionedBaseService,
+  createVersionConflictException,
+} from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -33,7 +36,6 @@ import {
   type NonConformanceStatus as NonConformanceStatusType,
   type NonConformanceType,
   REPAIR_REQUIRING_NC_TYPES,
-  NC_CORRECTION_PREREQUISITES,
   getNCPrerequisite,
   getNCTypesRequiring,
   ResolutionTypeEnum,
@@ -84,6 +86,8 @@ export class NonConformancesService extends VersionedBaseService {
     ncType?: string;
     search?: string;
     pendingClose?: boolean;
+    site?: string;
+    teamId?: string;
   }): SQL[] {
     const conditions: SQL[] = [isNull(nonConformances.deletedAt)];
 
@@ -98,6 +102,14 @@ export class NonConformancesService extends VersionedBaseService {
     }
     if (params.search) {
       conditions.push(safeIlike(nonConformances.cause, likeContains(params.search)));
+    }
+    // site/teamId 필터: equipmentBelongsToSite/Team 서브쿼리로 SSOT 통일
+    // data/count/summary 3개 쿼리 모두 동일 조건 사용
+    if (params.site) {
+      conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, params.site));
+    }
+    if (params.teamId) {
+      conditions.push(equipmentBelongsToTeam(nonConformances.equipmentId, params.teamId));
     }
     // 종료 승인 대기: 전제조건이 충족된 NC만 표시
     // NC_CORRECTION_PREREQUISITES SSOT 기반: repair → repairHistoryId, recalibration → calibrationId
@@ -140,7 +152,7 @@ export class NonConformancesService extends VersionedBaseService {
   /**
    * 부적합 등록 (장비 상태 자동 변경: non_conforming)
    */
-  async create(createDto: CreateNonConformanceDto): Promise<NonConformance> {
+  async create(createDto: CreateNonConformanceDto, discoveredBy: string): Promise<NonConformance> {
     // ncType 필수 검증
     if (!createDto.ncType) {
       throw new BadRequestException({
@@ -149,37 +161,51 @@ export class NonConformancesService extends VersionedBaseService {
       });
     }
 
-    // 장비 존재 확인
-    const equipmentResult = await this.db
-      .select()
-      .from(equipment)
-      .where(eq(equipment.id, createDto.equipmentId))
-      .limit(1);
-
-    if (equipmentResult.length === 0) {
-      throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
-        message: `Equipment UUID ${createDto.equipmentId} not found`,
-      });
-    }
-
-    // 이미 부적합 상태인지 확인
-    if (equipmentResult[0].status === EquipmentStatusEnum.enum.non_conforming) {
-      throw new BadRequestException({
-        code: 'NC_EQUIPMENT_ALREADY_NON_CONFORMING',
-        message: 'Equipment is already in non-conforming status.',
-      });
-    }
-
-    // 트랜잭션으로 부적합 등록 + 장비 상태 변경
+    // 트랜잭션으로 장비 검증 + 부적합 등록 + 장비 상태 변경 (TOCTOU 방지)
+    let equipmentData: { name: string; managementNumber: string | null; teamId: string | null };
     const result = await this.db.transaction(async (tx) => {
-      // 1. 부적합 등록
+      // 1. 장비 존재 확인 + 상태 검증 (트랜잭션 내부 — race condition 방지)
+      const [currentEquip] = await tx
+        .select({
+          id: equipment.id,
+          version: equipment.version,
+          status: equipment.status,
+          name: equipment.name,
+          managementNumber: equipment.managementNumber,
+          teamId: equipment.teamId,
+        })
+        .from(equipment)
+        .where(eq(equipment.id, createDto.equipmentId))
+        .limit(1);
+
+      if (!currentEquip) {
+        throw new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: `Equipment UUID ${createDto.equipmentId} not found`,
+        });
+      }
+
+      if (currentEquip.status === EquipmentStatusEnum.enum.non_conforming) {
+        throw new BadRequestException({
+          code: 'NC_EQUIPMENT_ALREADY_NON_CONFORMING',
+          message: 'Equipment is already in non-conforming status.',
+        });
+      }
+
+      // 이벤트용 장비 데이터 캡처 (트랜잭션 내 최신 데이터)
+      equipmentData = {
+        name: currentEquip.name,
+        managementNumber: currentEquip.managementNumber,
+        teamId: currentEquip.teamId,
+      };
+
+      // 2. 부적합 등록
       const [nonConformance] = await tx
         .insert(nonConformances)
         .values({
           equipmentId: createDto.equipmentId,
           discoveryDate: createDto.discoveryDate,
-          discoveredBy: createDto.discoveredBy,
+          discoveredBy,
           cause: createDto.cause,
           ncType: createDto.ncType,
           actionPlan: createDto.actionPlan,
@@ -187,15 +213,22 @@ export class NonConformancesService extends VersionedBaseService {
         })
         .returning();
 
-      // 2. 장비 상태를 non_conforming으로 변경 (version bump: close와 일관성 유지)
-      await tx
+      // 3. 장비 상태를 non_conforming으로 변경 (CAS: close()와 동일한 version 검증 패턴)
+      const [updatedEquip] = await tx
         .update(equipment)
         .set({
           status: EquipmentStatusEnum.enum.non_conforming,
           version: sql`version + 1`,
           updatedAt: new Date(),
         } as Record<string, unknown>)
-        .where(eq(equipment.id, createDto.equipmentId));
+        .where(
+          and(eq(equipment.id, createDto.equipmentId), eq(equipment.version, currentEquip.version))
+        )
+        .returning({ id: equipment.id });
+
+      if (!updatedEquip) {
+        throw createVersionConflictException(currentEquip.version + 1, currentEquip.version);
+      }
 
       return nonConformance;
     });
@@ -207,8 +240,8 @@ export class NonConformancesService extends VersionedBaseService {
         this.logger.warn(`Cache invalidation failed after NC creation: ${err.message}`)
       );
 
-    // 📢 알림 이벤트 발행 (부적합 등록)
-    const equip = equipmentResult[0];
+    // 📢 알림 이벤트 발행 (부적합 등록) — 트랜잭션 내 최신 장비 데이터 사용
+    const equip = equipmentData!;
     this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CREATED, {
       ncId: result.id,
       equipmentId: createDto.equipmentId,
@@ -216,7 +249,7 @@ export class NonConformancesService extends VersionedBaseService {
       managementNumber: equip.managementNumber ?? '',
       reporterTeamId: equip.teamId ?? '',
       ncType: createDto.ncType,
-      actorId: createDto.discoveredBy ?? undefined,
+      actorId: discoveredBy,
       actorName: '',
       timestamp: new Date(),
     });
@@ -278,24 +311,12 @@ export class NonConformancesService extends VersionedBaseService {
       pageSize = DEFAULT_PAGE_SIZE,
     } = query;
 
-    // buildListConditions()로 data/count 쿼리 필터 일관성 보장
-    const filterParams = { equipmentId, status, ncType, search, pendingClose };
-
-    // site 필터: equipmentBelongsToSite() 서브쿼리로 단일 쿼리 처리
-    // 별도 사전 조회 없이 DB 레벨에서 IN (SELECT ...) 적용
+    // buildListConditions()로 data/count/summary 쿼리 필터 일관성 보장 (site/teamId 포함)
+    const filterParams = { equipmentId, status, ncType, search, pendingClose, site, teamId };
 
     // Use Drizzle relational query to include user→team relations
     const items = await this.db.query.nonConformances.findMany({
-      where: () => {
-        const conditions = this.buildListConditions(filterParams);
-        if (site) {
-          conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, site));
-        }
-        if (teamId) {
-          conditions.push(equipmentBelongsToTeam(nonConformances.equipmentId, teamId));
-        }
-        return and(...conditions);
-      },
+      where: () => and(...this.buildListConditions(filterParams)),
       with: {
         equipment: {
           columns: {
@@ -374,49 +395,26 @@ export class NonConformancesService extends VersionedBaseService {
       offset: (page - 1) * pageSize,
     });
 
-    // Count 쿼리 — buildListConditions()로 data 쿼리와 동일한 필터 보장
-    // site/teamId 필터 시 innerJoin으로 equipment 조건 적용
-    const countConditions = this.buildListConditions(filterParams);
-    if (site) {
-      countConditions.push(eq(equipment.site, site));
-    }
-    if (teamId) {
-      countConditions.push(eq(equipment.teamId, teamId));
-    }
-
-    const countQuery = this.db.select({ total: sql<number>`count(*)::int` }).from(nonConformances);
-    if (site || teamId) {
-      countQuery.innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id));
-    }
-    const [{ total: totalItems }] = await countQuery.where(and(...countConditions));
+    // Count 쿼리 — buildListConditions() SSOT로 data 쿼리와 동일한 필터 보장
+    const [{ total: totalItems }] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(nonConformances)
+      .where(and(...this.buildListConditions(filterParams)));
 
     // Summary 집계 (includeSummary=true일 때만)
     // ✅ status 필터 제외한 기본 조건으로 전체 상태별 건수 반환
+    // buildListConditions() SSOT: site/teamId도 서브쿼리로 통일 (innerJoin 불필요)
     let summary: Record<string, number> | undefined;
     if (includeSummary) {
-      const summaryConditions = this.buildListConditions({
-        equipmentId,
-        ncType,
-        search,
-      });
-      if (site) {
-        summaryConditions.push(eq(equipment.site, site));
-      }
-      if (teamId) {
-        summaryConditions.push(eq(equipment.teamId, teamId));
-      }
+      const summaryFilterParams = { equipmentId, ncType, search, site, teamId };
 
-      const summaryQuery = this.db
+      const summaryRows = await this.db
         .select({
           status: nonConformances.status,
           count: sql<number>`count(*)::int`,
         })
-        .from(nonConformances);
-      if (site || teamId) {
-        summaryQuery.innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id));
-      }
-      const summaryRows = await summaryQuery
-        .where(and(...summaryConditions))
+        .from(nonConformances)
+        .where(and(...this.buildListConditions(summaryFilterParams)))
         .groupBy(nonConformances.status);
 
       summary = {
@@ -666,47 +664,25 @@ export class NonConformancesService extends VersionedBaseService {
     this.validateCorrectionPrerequisite(nonConformance);
 
     // CAS + 트랜잭션으로 부적합 종료 + 장비 상태 복원
-    // 트랜잭션 내부이므로 updateWithVersion() 직접 사용 불가 (tx 컨텍스트)
-    // → 동일한 404/409 분기 패턴을 수동 적용
+    // updateWithVersion(tx)으로 SSOT CAS 패턴 적용
     let result: { updated: NonConformance; equipmentStatusRestored: boolean };
     try {
       result = await this.db.transaction(async (tx) => {
-        // 1. 부적합 종료 (CAS: version 검증)
-        const [updated] = await tx
-          .update(nonConformances)
-          .set({
+        // 1. 부적합 종료 (CAS: updateWithVersion SSOT 패턴)
+        const updated = await this.updateWithVersion<NonConformance>(
+          nonConformances,
+          id,
+          closeDto.version,
+          {
             status: NonConformanceStatus.CLOSED,
             closedBy,
             closedAt: new Date(),
             closureNotes: closeDto.closureNotes,
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(and(eq(nonConformances.id, id), eq(nonConformances.version, closeDto.version)))
-          .returning();
-
-        if (!updated) {
-          // 404 vs 409 구분 (updateWithVersion 패턴)
-          const [existing] = await tx
-            .select({ id: nonConformances.id, version: nonConformances.version })
-            .from(nonConformances)
-            .where(eq(nonConformances.id, id))
-            .limit(1);
-
-          if (!existing) {
-            throw new NotFoundException({
-              code: 'NC_NOT_FOUND',
-              message: `Non-conformance UUID ${id} not found`,
-            });
-          }
-
-          throw new ConflictException({
-            message: 'This record has been modified by another user. Please refresh the page.',
-            code: 'VERSION_CONFLICT',
-            currentVersion: existing.version,
-            expectedVersion: closeDto.version,
-          });
-        }
+          },
+          'Non-conformance',
+          tx,
+          'NC_NOT_FOUND'
+        );
 
         // 2. 해당 장비에 다른 열린 부적합(closed가 아닌 모든 상태)이 있는지 확인
         const otherOpenNonConformances = await tx
@@ -752,13 +728,10 @@ export class NonConformancesService extends VersionedBaseService {
               .returning({ id: equipment.id });
 
             if (!updatedEquipment) {
-              throw new ConflictException({
-                message:
-                  'Equipment has been modified by another user. Please refresh and try again.',
-                code: 'VERSION_CONFLICT',
-                currentVersion: currentEquipment.version + 1,
-                expectedVersion: currentEquipment.version,
-              });
+              throw createVersionConflictException(
+                currentEquipment.version + 1,
+                currentEquipment.version
+              );
             }
             equipmentStatusRestored = true;
           }
@@ -862,21 +835,37 @@ export class NonConformancesService extends VersionedBaseService {
   }
 
   /**
-   * 소프트 삭제
+   * 소프트 삭제 (CAS: version 검증 + 교차 캐시 무효화)
    */
-  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
-    await this.findOne(id);
+  async remove(id: string, version: number): Promise<{ id: string; deleted: boolean }> {
+    const nc = await this.findOne(id);
 
-    await this.db
-      .update(nonConformances)
-      .set({
-        deletedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(nonConformances.id, id));
+    try {
+      await this.updateWithVersion<NonConformance>(
+        nonConformances,
+        id,
+        version,
+        { deletedAt: new Date() },
+        'Non-conformance',
+        undefined,
+        'NC_NOT_FOUND'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
 
     // detail 캐시 무효화
     this.cacheService.delete(this.buildCacheKey('detail', id));
+
+    // 교차 엔티티 캐시 무효화 (대시보드, 장비 상세의 부적합 목록)
+    await this.cacheInvalidationHelper
+      .invalidateAfterNonConformanceStatusChange(nc.equipmentId, false)
+      .catch((err) =>
+        this.logger.warn(`Cache invalidation failed after NC delete: ${err.message}`)
+      );
 
     return { id, deleted: true };
   }

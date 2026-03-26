@@ -113,11 +113,11 @@ describe('NonConformancesService', () => {
     const createDto = {
       equipmentId: 'test-equipment-uuid',
       discoveryDate: '2024-01-15',
-      discoveredBy: 'test-user-uuid',
       cause: '테스트 부적합 원인',
       ncType: 'damage' as const,
       actionPlan: '테스트 조치 계획',
     };
+    const discoveredBy = 'test-user-uuid';
 
     it('should create a new non-conformance', async () => {
       const mockNonConformance = {
@@ -130,20 +130,34 @@ describe('NonConformancesService', () => {
       // Mock equipment lookup: select().from().where().limit()
       mockDb.limit.mockResolvedValueOnce([mockEquipment]);
 
-      // Mock transaction
+      // Mock transaction — 내부 Drizzle 메서드 체인 재현
       mockDb.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
-        const tx = {
-          insert: jest.fn().mockReturnThis(),
+        // select().from().where().limit() → [equipment]
+        const selectChain = {
+          from: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockResolvedValue([{ ...mockEquipment, version: 1 }]),
+        };
+        // update().set().where().returning() → [equipment] (CAS 장비 상태 변경)
+        const updateChain = {
+          set: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          returning: jest.fn().mockResolvedValue([{ id: mockEquipment.id }]),
+        };
+        // insert().values().returning() → [nc]
+        const insertChain = {
           values: jest.fn().mockReturnThis(),
           returning: jest.fn().mockResolvedValue([mockNonConformance]),
-          update: jest.fn().mockReturnThis(),
-          set: jest.fn().mockReturnThis(),
-          where: jest.fn().mockResolvedValue(undefined),
+        };
+        const tx = {
+          select: jest.fn().mockReturnValue(selectChain),
+          update: jest.fn().mockReturnValue(updateChain),
+          insert: jest.fn().mockReturnValue(insertChain),
         };
         return callback(tx);
       });
 
-      const result = await service.create(createDto);
+      const result = await service.create(createDto, discoveredBy);
 
       expect(result).toBeDefined();
       expect(result.equipmentId).toBe(createDto.equipmentId);
@@ -151,15 +165,31 @@ describe('NonConformancesService', () => {
     });
 
     it('should throw NotFoundException when equipment not found', async () => {
-      mockDb.limit.mockResolvedValueOnce([]);
+      mockDb.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const selectChain = {
+          from: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockResolvedValue([]),
+        };
+        const tx = { select: jest.fn().mockReturnValue(selectChain) };
+        return callback(tx);
+      });
 
-      await expect(service.create(createDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create(createDto, discoveredBy)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when equipment is already non-conforming', async () => {
-      mockDb.limit.mockResolvedValueOnce([{ ...mockEquipment, status: 'non_conforming' }]);
+      mockDb.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) => {
+        const selectChain = {
+          from: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockResolvedValue([{ ...mockEquipment, status: 'non_conforming' }]),
+        };
+        const tx = { select: jest.fn().mockReturnValue(selectChain) };
+        return callback(tx);
+      });
 
-      await expect(service.create(createDto)).rejects.toThrow(BadRequestException);
+      await expect(service.create(createDto, discoveredBy)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -389,12 +419,14 @@ describe('NonConformancesService', () => {
 
   describe('remove', () => {
     it('should soft delete a non-conformance', async () => {
-      const mockNc = { id: 'nc-uuid', status: 'open', equipmentId: 'eq-uuid' };
+      const mockNc = { id: 'nc-uuid', status: 'open', equipmentId: 'eq-uuid', version: 1 };
 
       // Mock findOne (via getOrSet → db.query.nonConformances.findFirst)
       mockDb.query.nonConformances.findFirst.mockResolvedValueOnce(mockNc);
+      // Mock updateWithVersion returning (CAS 성공)
+      mockDb.returning.mockResolvedValueOnce([{ ...mockNc, version: 2, deletedAt: new Date() }]);
 
-      const result = await service.remove('nc-uuid');
+      const result = await service.remove('nc-uuid', 1);
 
       expect(result).toEqual({ id: 'nc-uuid', deleted: true });
       expect(mockDb.update).toHaveBeenCalled();
@@ -405,7 +437,7 @@ describe('NonConformancesService', () => {
       // Mock findOne → not found
       mockDb.query.nonConformances.findFirst.mockResolvedValueOnce(null);
 
-      await expect(service.remove('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('non-existent', 1)).rejects.toThrow(NotFoundException);
     });
   });
 });

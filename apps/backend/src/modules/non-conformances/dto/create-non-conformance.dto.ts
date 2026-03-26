@@ -22,7 +22,7 @@ export const createNonConformanceSchema = z.object({
   discoveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: VM.date.invalidYMD,
   }),
-  discoveredBy: uuidString(VM.uuid.invalid('발견자')),
+  // discoveredBy는 서버에서 JWT로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
   cause: z.string().min(1, VM.nonConformance.cause.required),
   ncType: NonConformanceTypeEnum,
   actionPlan: z.string().optional(),
@@ -40,8 +40,7 @@ export class CreateNonConformanceDto {
   @ApiProperty({ description: '발견일 (YYYY-MM-DD)' })
   discoveryDate: string;
 
-  @ApiProperty({ description: '발견자 UUID' })
-  discoveredBy: string;
+  // discoveredBy는 서버에서 JWT로 추출 (Rule 2)
 
   @ApiProperty({ description: '부적합 원인' })
   cause: string;

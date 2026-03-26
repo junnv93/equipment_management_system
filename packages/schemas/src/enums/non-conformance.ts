@@ -42,6 +42,16 @@ export const NonConformanceTypeEnum = z.enum(NON_CONFORMANCE_TYPE_VALUES);
 export type NonConformanceType = z.infer<typeof NonConformanceTypeEnum>;
 
 /**
+ * SINGLE SOURCE OF TRUTH: 수동 등록 가능한 부적합 유형
+ *
+ * calibration_overdue는 CalibrationOverdueScheduler가 자동 생성하는 유형이므로
+ * 사용자 수동 등록 폼에서는 제외됩니다.
+ */
+export const MANUAL_NC_TYPES: readonly NonConformanceType[] = NON_CONFORMANCE_TYPE_VALUES.filter(
+  (t) => t !== 'calibration_overdue'
+);
+
+/**
  * SINGLE SOURCE OF TRUTH: 수리 기록이 필수인 부적합 유형
  *
  * damage(손상), malfunction(오작동) 유형은 종결 전 수리 이력 연결 필수

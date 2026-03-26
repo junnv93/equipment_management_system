@@ -86,11 +86,10 @@ export interface NonConformanceQuery {
   pageSize?: number;
 }
 
-// 부적합 등록 DTO
+// 부적합 등록 DTO (discoveredBy는 서버에서 JWT로 추출 — Rule 2)
 export interface CreateNonConformanceDto {
   equipmentId: string;
   discoveryDate: string;
-  discoveredBy: string;
   cause: string;
   ncType: NonConformanceType;
   actionPlan?: string;
@@ -184,10 +183,13 @@ const nonConformancesApi = {
       .then((res) => transformSingleResponse<NonConformance>(res));
   },
 
-  // 부적합 삭제 (소프트 삭제)
-  deleteNonConformance: async (id: string): Promise<{ id: string; deleted: boolean }> => {
+  // 부적합 삭제 (소프트 삭제 — CAS: version query param 필수)
+  deleteNonConformance: async (
+    id: string,
+    version: number
+  ): Promise<{ id: string; deleted: boolean }> => {
     return apiClient
-      .delete(API_ENDPOINTS.NON_CONFORMANCES.DELETE(id))
+      .delete(`${API_ENDPOINTS.NON_CONFORMANCES.DELETE(id)}?version=${version}`)
       .then((res) => transformSingleResponse<{ id: string; deleted: boolean }>(res));
   },
 
