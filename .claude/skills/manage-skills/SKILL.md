@@ -41,7 +41,7 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 검증     | `apps/frontend/lib/design-tokens/**/*.ts`, `apps/frontend/components/**/*.tsx`                                               |
 | `verify-security`       | 보안 설정 검증                         | `apps/backend/src/common/middleware/helmet-config.ts`, `apps/frontend/next.config.js`, `apps/backend/src/**/*.controller.ts` |
 | `verify-i18n`           | i18n 번역 파일 일관성 검증             | `apps/frontend/messages/en/*.json`, `apps/frontend/messages/ko/*.json`                                                       |
-| `verify-sql-safety`     | SQL 안전성 검증 (LIKE 이스케이프, N+1) | `apps/backend/src/modules/**/*.service.ts`, `apps/backend/src/common/utils/like-escape.ts`                                   |
+| `verify-sql-safety`     | SQL 안전성 검증 (LIKE 이스케이프, N+1, CTE 재귀) | `apps/backend/src/modules/**/*.service.ts`, `apps/backend/src/common/**/*.service.ts`, `apps/backend/src/common/utils/like-escape.ts` |
 | `verify-e2e`            | E2E 테스트 패턴 검증 (auth fixture, networkidle 금지, SSOT 상수) | `apps/frontend/tests/e2e/**/*.spec.ts`, `apps/frontend/tests/e2e/shared/**/*.ts`                                           |
 
 ## 워크플로우
