@@ -322,8 +322,9 @@ export default function InboundCheckoutsTab({
                         {item.equipmentName}
                       </TableCell>
                       <TableCell>
-                        {CLASSIFICATION_LABELS[item.classification as Classification] ||
-                          item.classification}
+                        {tEquip(
+                          `classification.${item.classification}` as Parameters<typeof tEquip>[0]
+                        )}
                       </TableCell>
                       <TableCell className="line-clamp-1">{item.ownerDepartment || '-'}</TableCell>
                       <TableCell className="tabular-nums">
