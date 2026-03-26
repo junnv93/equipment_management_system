@@ -31,28 +31,12 @@ import {
 } from '@equipment-management/schemas';
 import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
 // Test configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
 const FRONTEND_URL = BASE_URLS.FRONTEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
-
-/**
- * Helper: Login and get JWT token via backend test-login endpoint
- */
-async function loginAsRole(
-  request: APIRequestContext,
-  role: 'test_engineer' | 'technical_manager' | 'lab_manager'
-): Promise<string> {
-  const response = await request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-
-  if (!response.ok()) {
-    throw new Error(`Failed to login as ${role}: ${response.status()}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 /**
  * Helper: Create test equipment with specific properties
@@ -311,7 +295,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     const equipmentId = `equip-e1-${timestamp}`;
 
     // 1. Setup test equipment: nextCalibrationDate = 7 days ago, status = 'available' (equipmentId: `equip-e1-${timestamp}`)
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -359,7 +343,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     console.log('NonConformanceBanner is visible');
 
     // 7. Login as Technical Manager
-    const techManagerToken = await loginAsRole(request, 'technical_manager');
+    const techManagerToken = await fetchBackendToken('technical_manager');
 
     // 8. Create and approve calibration record
     const calibration = await createCalibration(request, techManagerToken, equipment.id);
@@ -389,7 +373,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
   }) => {
     const timestamp = Date.now();
 
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -499,8 +483,8 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
   }) => {
     const timestamp = Date.now();
 
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
-    const techManagerToken = await loginAsRole(request, 'technical_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
+    const techManagerToken = await fetchBackendToken('technical_manager');
 
     // 1. Setup equipment with two NCs (equipmentId: `equip-e3-${timestamp}`)
     const equipment = await createTestEquipment(request, labManagerToken, {
@@ -589,7 +573,7 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const timestamp = Date.now();
     const equipmentId = `equip-e4-${timestamp}`;
 
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -671,7 +655,7 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const equipmentId = `equip-e5-${timestamp}`;
 
     // 1. Setup equipment with overdue calibration (equipmentId: `equip-e5-${timestamp}`)
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
