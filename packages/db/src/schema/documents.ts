@@ -80,6 +80,8 @@ export const documents = pgTable(
       table.documentType
     ),
     statusIdx: index('documents_status_idx').on(table.status),
+    /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
+    statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
   })
 );
 

@@ -10,17 +10,32 @@ export const DOCUMENT_TYPE_VALUES = [
   'raw_data', // 원시 데이터 (교정업체 엑셀 등)
   'inspection_report', // 검수보고서
   'history_card', // 이력카드
+  'equipment_photo', // 장비 사진
+  'equipment_manual', // 장비 매뉴얼 (PDF)
   'other', // 기타
 ] as const;
 
 export const DocumentTypeEnum = z.enum(DOCUMENT_TYPE_VALUES);
 export type DocumentType = z.infer<typeof DocumentTypeEnum>;
 
+/** DocumentType 개별 상수 — 프론트/백엔드에서 문자열 하드코딩 대신 사용 */
+export const DocumentTypeValues = {
+  CALIBRATION_CERTIFICATE: 'calibration_certificate',
+  RAW_DATA: 'raw_data',
+  INSPECTION_REPORT: 'inspection_report',
+  HISTORY_CARD: 'history_card',
+  EQUIPMENT_PHOTO: 'equipment_photo',
+  EQUIPMENT_MANUAL: 'equipment_manual',
+  OTHER: 'other',
+} as const satisfies Record<string, DocumentType>;
+
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   calibration_certificate: '교정성적서',
   raw_data: '원시 데이터',
   inspection_report: '검수보고서',
   history_card: '이력카드',
+  equipment_photo: '장비 사진',
+  equipment_manual: '장비 매뉴얼',
   other: '기타',
 };
 
