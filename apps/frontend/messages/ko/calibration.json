@@ -53,7 +53,10 @@
   "dday": {
     "today": "D-Day",
     "overdue": "D+{days}",
-    "upcoming": "D-{days}"
+    "upcoming": "D-{days}",
+    "fullOverdue": "교정 기한 {days}일 초과",
+    "fullToday": "오늘 교정 만료",
+    "fullUpcoming": "{days}일 후 교정 만료"
   },
   "planDetail": {
     "breadcrumbSuffix": "교정계획서",

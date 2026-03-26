@@ -131,7 +131,7 @@ export function ApprovalsClient({
         item.category,
         item.id,
         userId,
-        comment,
+        comment || t('defaults.approveComment'),
         equipmentId,
         item.originalData
       );

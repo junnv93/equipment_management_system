@@ -274,6 +274,10 @@
     "equipmentImportShared": "{equipmentName} Shared Equipment Import ({department})"
   },
   "unknown": "Unknown",
+  "defaults": {
+    "approveComment": "Approved",
+    "rejectComment": "Rejected"
+  },
   "calibrationFactorApprovals": {
     "title": "Calibration Factor Approval Management",
     "description": "Review and approve calibration factor changes requested by test engineers",

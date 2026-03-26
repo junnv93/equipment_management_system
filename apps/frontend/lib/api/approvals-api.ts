@@ -780,7 +780,7 @@ class ApprovalsApi {
         await reviewDisposal(equipmentId, {
           version: disposalReview.version,
           decision: 'approve',
-          opinion: comment || '승인합니다',
+          opinion: comment || 'Approved',
         });
         break;
       }
@@ -791,7 +791,7 @@ class ApprovalsApi {
         await approveDisposal(equipmentId, {
           version: disposalFinal.version,
           decision: 'approve',
-          comment: comment || '승인합니다',
+          comment: comment || 'Approved',
         });
         break;
       }
@@ -874,7 +874,7 @@ class ApprovalsApi {
         break;
       }
       case 'inspection':
-        throw new Error('중간점검은 반려할 수 없습니다.');
+        throw new Error('Inspection items cannot be rejected.');
       case 'nonconformity': {
         const { version: ncRejectVersion } = await nonConformancesApi.getNonConformance(id);
         await nonConformancesApi.rejectCorrection(id, {
@@ -890,7 +890,7 @@ class ApprovalsApi {
         await reviewDisposal(equipmentId, {
           version: disposalReview.version,
           decision: 'reject',
-          opinion: reason || '반려합니다',
+          opinion: reason || 'Rejected',
         });
         break;
       }
@@ -901,7 +901,7 @@ class ApprovalsApi {
         await approveDisposal(equipmentId, {
           version: disposalFinal.version,
           decision: 'reject',
-          comment: reason || '반려합니다',
+          comment: reason || 'Rejected',
         });
         break;
       }

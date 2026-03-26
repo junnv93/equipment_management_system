@@ -53,7 +53,10 @@
   "dday": {
     "today": "D-Day",
     "overdue": "D+{days}",
-    "upcoming": "D-{days}"
+    "upcoming": "D-{days}",
+    "fullOverdue": "Calibration overdue by {days} days",
+    "fullToday": "Calibration expires today",
+    "fullUpcoming": "Calibration expires in {days} days"
   },
   "planDetail": {
     "breadcrumbSuffix": "Calibration Plan",

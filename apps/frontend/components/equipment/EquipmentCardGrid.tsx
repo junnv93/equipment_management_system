@@ -84,6 +84,7 @@ const EquipmentCard = memo(function EquipmentCard({
   searchTerm?: string;
 }) {
   const t = useTranslations('equipment');
+  const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
   // design token SSOT: 실시간 교정기한 초과 체크 포함
   const style = getEquipmentStatusTokenStyle(equipment.status, equipment.nextCalibrationDate);
@@ -156,7 +157,14 @@ const EquipmentCard = memo(function EquipmentCard({
                   'border-0 text-xs inline-flex items-center gap-1',
                   CALIBRATION_BADGE_TOKENS[calibrationStatus.severity].card
                 )}
-                title={calibrationStatus.fullLabel}
+                title={
+                  calibrationStatus.fullLabelKey
+                    ? tCal(
+                        calibrationStatus.fullLabelKey as Parameters<typeof tCal>[0],
+                        calibrationStatus.fullLabelParams
+                      )
+                    : calibrationStatus.fullLabel
+                }
               >
                 <calibrationStatus.icon className="h-3 w-3" aria-hidden="true" />
                 {calibrationStatus.label}
