@@ -175,7 +175,7 @@ grep -rn "const PAGE_SIZE_OPTIONS\s*[=:]" apps/frontend --include="*.ts" --inclu
 
 ```bash
 # 서비스 파일에서 하드코딩된 캐시 키 프리픽스 탐지
-grep -rn "'equipment:\|'checkouts:\|'calibration:\|'calibration-plans:\|'dashboard:\|'disposal-requests:\|'equipment-imports:\|'software:\|'non-conformances:\|'audit-logs:\|'notification:\|'actor:name:\|'approvals:\|'settings:\|'user_active:\|'reports:" apps/backend/src/modules --include="*.service.ts" --include="*.ts" | grep -v "CACHE_KEY_PREFIXES\|cache-key-prefixes\|// \|spec\|test\|__tests__"
+grep -rn "'equipment:\|'checkouts:\|'calibration:\|'calibration-plans:\|'dashboard:\|'disposal-requests:\|'equipment-imports:\|'software:\|'non-conformances:\|'audit-logs:\|'notification:\|'actor:name:\|'approvals:\|'settings:\|'user_active:\|'reports:\|'documents:" apps/backend/src/modules apps/backend/src/common --include="*.service.ts" --include="*.ts" | grep -v "CACHE_KEY_PREFIXES\|cache-key-prefixes\|// \|spec\|test\|__tests__"
 ```
 
 ```bash

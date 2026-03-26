@@ -57,6 +57,7 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/lib/design-tokens/components/reports.ts`                                            | Layer 3 Reports 토큰                                       |
 | `apps/frontend/lib/design-tokens/components/software.ts`                                           | Layer 3 Software 토큰                                      |
 | `apps/frontend/lib/design-tokens/components/calibration-factors.ts`                                | Layer 3 Calibration Factors 토큰                           |
+| `apps/frontend/lib/design-tokens/components/document.ts`                                          | Layer 3 Document 토큰 (업로드/표시/테이블/빈상태)           |
 | `apps/frontend/components/shared/PageHeader.tsx`                                                   | 공유 PageHeader 컴포넌트 (PAGE_HEADER_TOKENS SSOT 사용)    |
 | `apps/frontend/styles/globals.css`                                                                 | Brand CSS 변수 (--brand-color-\*) + easing CSS 변수 (--ease-\*) |
 | `apps/frontend/tailwind.config.js`                                                                 | Tailwind brand 팔레트 확장 설정                            |
@@ -402,7 +403,7 @@ grep -B2 -A2 'className={.*HEADER_TOKENS.title}' apps/frontend/app --include="*.
 
 ```bash
 # 모듈별 *_HEADER_TOKENS가 PAGE_HEADER_TOKENS를 spread하는지 확인
-for f in apps/frontend/lib/design-tokens/components/{audit,non-conformance,calibration-plans,equipment,notification,reports,software,calibration-factors}.ts; do
+for f in apps/frontend/lib/design-tokens/components/{audit,non-conformance,calibration-plans,equipment,notification,reports,software,calibration-factors,document}.ts; do
   if grep -q "HEADER_TOKENS" "$f"; then
     if grep -q "\.\.\.PAGE_HEADER_TOKENS" "$f"; then
       echo "OK: $f"
