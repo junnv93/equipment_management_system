@@ -52,11 +52,11 @@ const resolveServerBaseUrl = (): string => {
   // 절대 URL이면 서버에서도 그대로 사용 가능
   if (publicUrl?.startsWith('http')) return publicUrl;
 
-  // 상대 경로(/api)인데 내부 URL이 없으면 — 프로덕션에서 SSR 실패 위험
+  // 상대 경로(/api)인데 내부 URL이 없으면 — 프로덕션에서 SSR 불가
   if (publicUrl && process.env.NODE_ENV === 'production') {
-    console.warn(
+    throw new Error(
       '[API Config] NEXT_PUBLIC_API_URL이 상대 경로이지만 INTERNAL_BACKEND_URL이 설정되지 않았습니다. ' +
-        'SSR에서 백엔드 연결이 실패할 수 있습니다.'
+        'SSR에서 백엔드 연결이 실패합니다. INTERNAL_BACKEND_URL을 설정하세요 (예: http://backend:3001).'
     );
   }
 

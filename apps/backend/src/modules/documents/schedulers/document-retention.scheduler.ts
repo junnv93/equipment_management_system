@@ -23,18 +23,25 @@ export class DocumentRetentionScheduler {
 
   @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async handleCron(): Promise<void> {
+    let retentionDays: number;
     try {
       const settings = await this.settingsService.getSystemSettings();
-      const retentionDays = settings.documentRetentionDays;
+      retentionDays = settings.documentRetentionDays;
+    } catch (error) {
+      this.logger.error(
+        '문서 보존 설정 로드 실패 — 스케줄러 실행 중단',
+        error instanceof Error ? error.stack : String(error)
+      );
+      return;
+    }
 
+    try {
       this.logger.log(`문서 물리 삭제 시작 (보존 기간: ${retentionDays}일)`);
-
       const result = await this.documentService.purgeDeletedDocuments(retentionDays);
-
       this.logger.log(`문서 물리 삭제 완료: ${result.purged}건 삭제, ${result.failed}건 실패`);
     } catch (error) {
       this.logger.error(
-        '문서 물리 삭제 실패',
+        '문서 물리 삭제 실행 중 예외 발생',
         error instanceof Error ? error.stack : String(error)
       );
     }

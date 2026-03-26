@@ -653,6 +653,15 @@ export class CalibrationController {
     @Query('type') type?: string
   ): Promise<DocumentRecord[]> {
     await this.enforceCalibrationAccess(uuid, req);
+
+    // SSOT 기반 documentType 검증 (documents.controller.ts와 동일 패턴)
+    if (type && !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(type)) {
+      throw new BadRequestException({
+        code: 'INVALID_DOCUMENT_TYPE',
+        message: `Invalid document type: ${type}`,
+      });
+    }
+
     return this.documentService.findByCalibrationId(uuid, type as DocumentType | undefined);
   }
 

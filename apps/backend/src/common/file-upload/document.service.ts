@@ -377,15 +377,24 @@ export class DocumentService {
 
       for (const doc of batch) {
         try {
-          // DB 삭제 우선: 파일 삭제 실패해도 고아 레코드가 남지 않음
-          await this.db.delete(documents).where(eq(documents.id, doc.id));
-          // best-effort 파일 정리 (StorageProvider.delete는 실패 시 warn만)
+          // 파일 삭제 우선: 실패 시 DB 레코드 유지 → 다음 스케줄러 실행에서 재시도
           await this.fileUploadService.deleteFile(doc.filePath);
-          totalPurged++;
         } catch (error) {
           totalFailed++;
-          this.logger.warn(
-            `Failed to purge document ${doc.id}: ${error instanceof Error ? error.message : String(error)}`
+          this.logger.error(
+            `Failed to delete file for document ${doc.id} (${doc.filePath}): ${error instanceof Error ? error.message : String(error)}`
+          );
+          continue; // 파일 삭제 실패 시 DB 레코드 보존 → 재시도 가능
+        }
+
+        try {
+          await this.db.delete(documents).where(eq(documents.id, doc.id));
+          totalPurged++;
+        } catch (error) {
+          // 파일은 삭제됐지만 DB 삭제 실패 — 다음 실행에서 파일 미존재로 스킵됨
+          totalFailed++;
+          this.logger.error(
+            `Failed to hard-delete document record ${doc.id}: ${error instanceof Error ? error.message : String(error)}`
           );
         }
       }

@@ -132,7 +132,12 @@ export class S3StorageProvider implements IStorageProvider, OnModuleDestroy {
       await this.assertClient().send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
       this.logger.debug(`S3 delete: ${key}`);
     } catch (error) {
-      this.logger.warn(`Failed to delete S3 object: ${key}`, error);
+      // 이미 삭제된 파일은 무시 — 그 외 에러(인증/네트워크)는 전파
+      if (error instanceof S3ServiceException && error.$metadata.httpStatusCode === 404) {
+        this.logger.warn(`S3 object already deleted: ${key}`);
+        return;
+      }
+      throw error;
     }
   }
 

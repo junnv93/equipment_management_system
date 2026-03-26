@@ -1,4 +1,11 @@
-import { Injectable, BadRequestException, Logger, Inject, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  Logger,
+  Inject,
+  OnModuleInit,
+} from '@nestjs/common';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
@@ -67,6 +74,13 @@ export class FileUploadService implements OnModuleInit {
    * 파일 유효성 검사
    */
   private validateFile(file: MulterFile): void {
+    if (!file.buffer || file.buffer.length === 0) {
+      throw new BadRequestException({
+        code: 'FILE_EMPTY',
+        message: 'Empty file is not allowed.',
+      });
+    }
+
     if (file.size > this.maxFileSize) {
       throw new BadRequestException(`File size cannot exceed ${this.maxFileSize / 1024 / 1024}MB.`);
     }
@@ -146,10 +160,13 @@ export class FileUploadService implements OnModuleInit {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      this.logger.error(`Failed to save file: ${error}`);
-      throw new BadRequestException({
+      this.logger.error(
+        `Failed to save file: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined
+      );
+      throw new InternalServerErrorException({
         code: 'FILE_SAVE_FAILED',
-        message: 'Failed to save file.',
+        message: 'Failed to save file due to a server error.',
       });
     }
   }

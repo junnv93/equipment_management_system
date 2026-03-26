@@ -51,7 +51,16 @@ export class LocalStorageProvider implements IStorageProvider {
       await fs.unlink(filePath);
       this.logger.debug(`File deleted: ${filePath}`);
     } catch (error) {
-      this.logger.warn(`Failed to delete file: ${key}`, error);
+      // 이미 삭제된 파일은 무시 — 그 외 에러(권한 등)는 전파
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
+      ) {
+        this.logger.warn(`File already deleted: ${key}`);
+        return;
+      }
+      throw error;
     }
   }
 
