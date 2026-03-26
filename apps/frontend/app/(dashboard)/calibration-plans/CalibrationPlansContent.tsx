@@ -36,7 +36,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { CALIBRATION_PLAN_STATUS_VALUES, SITE_LABELS } from '@equipment-management/schemas';
+import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import type { CalibrationPlanStatus, UserRole, Site } from '@equipment-management/schemas';
 import {
   TEAM_RESTRICTED_ROLES,
@@ -83,6 +84,7 @@ export default function CalibrationPlansContent({
   const { filters, apiFilters, updateYear, updateSiteId, updateTeamId, updateStatus, updatePage } =
     useCalibrationPlansFilters(initialFilters);
   const tc = useTranslations('common');
+  const siteLabels = useSiteLabels();
 
   // 역할 확인
   const userRole = session?.user?.role;
@@ -309,7 +311,7 @@ export default function CalibrationPlansContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_all">{t('plansList.filter.allSites')}</SelectItem>
-              {Object.entries(SITE_LABELS).map(([key, label]) => (
+              {Object.entries(siteLabels).map(([key, label]) => (
                 <SelectItem key={key} value={key}>
                   {label}
                 </SelectItem>
@@ -440,7 +442,7 @@ export default function CalibrationPlansContent({
                   {/* 시험소 */}
                   <div className={CALIBRATION_PLAN_LIST_TOKENS.siteCell}>
                     <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    {SITE_LABELS[plan.siteId] || plan.siteId}
+                    {siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId}
                   </div>
 
                   {/* 팀 */}

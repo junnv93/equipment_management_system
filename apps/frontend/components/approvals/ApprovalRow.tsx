@@ -22,6 +22,7 @@ import {
 import { getElapsedDaysUrgency } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface ApprovalRowProps {
   item: ApprovalItem;
@@ -53,12 +54,13 @@ export function ApprovalRow({
   actionLabel,
 }: ApprovalRowProps) {
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
   const { fmtDate } = useDateFormatter();
   const elapsedDays = daysBetween(item.requestedAt);
   const urgency = getElapsedDaysUrgency(elapsedDays);
   const tokens = APPROVAL_ROW_TOKENS;
   const meta = TAB_META[item.category];
-  const localizedSummary = getLocalizedSummary(item, t);
+  const localizedSummary = getLocalizedSummary(item, t, siteLabels);
 
   return (
     <div

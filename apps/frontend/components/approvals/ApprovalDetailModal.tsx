@@ -20,6 +20,7 @@ import { ApprovalHistoryCard } from './ApprovalHistoryCard';
 import { CategoryDetails, CategoryBadge } from './detail-renderers';
 import { getApprovalStatusBadgeClasses, getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface ApprovalDetailModalProps {
   item: ApprovalItem;
@@ -39,6 +40,7 @@ export default function ApprovalDetailModal({
   actionLabel,
 }: ApprovalDetailModalProps) {
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
   const { fmtDateTime } = useDateFormatter();
 
   // 다단계 승인 여부 확인
@@ -65,7 +67,9 @@ export default function ApprovalDetailModal({
                   {t(`unifiedStatus.${item.status}`)}
                 </Badge>
                 <CategoryBadge category={item.category} />
-                <h3 className="text-lg font-semibold">{getLocalizedSummary(item, t)}</h3>
+                <h3 className="text-lg font-semibold">
+                  {getLocalizedSummary(item, t, siteLabels)}
+                </h3>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">

@@ -52,8 +52,8 @@ import { addDays } from 'date-fns';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 import teamsApi, { type Site } from '@/lib/api/teams-api';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import {
-  SITE_LABELS,
   CheckoutPurposeValues as CPVal,
   type EquipmentStatus,
 } from '@equipment-management/schemas';
@@ -69,6 +69,7 @@ import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 export default function CreateCheckoutContent() {
   const t = useTranslations('checkouts');
   const tEquip = useTranslations('equipment');
+  const siteLabels = useSiteLabels();
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -658,7 +659,7 @@ export default function CreateCheckoutContent() {
                         <SelectValue placeholder={t('create.selectSitePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(SITE_LABELS).map(([key, label]) => (
+                        {Object.entries(siteLabels).map(([key, label]) => (
                           <SelectItem key={key} value={key}>
                             {label}
                           </SelectItem>

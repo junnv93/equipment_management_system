@@ -49,7 +49,8 @@ import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils'
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
-import { SITE_LABELS, EquipmentStatusValues } from '@equipment-management/schemas';
+import { EquipmentStatusValues } from '@equipment-management/schemas';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { CALIBRATION_DUE_STATUS_VALUES } from '@/lib/utils/calibration-filter-utils';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -86,6 +87,7 @@ export default function CalibrationContent({
   initialFilters,
 }: CalibrationContentProps) {
   const t = useTranslations('calibration');
+  const siteLabels = useSiteLabels();
   const {
     filters,
     updateSearch,
@@ -336,7 +338,7 @@ export default function CalibrationContent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">{t('content.search.allSites')}</SelectItem>
-            {Object.entries(SITE_LABELS).map(([key, label]) => (
+            {Object.entries(siteLabels).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label}
               </SelectItem>
@@ -445,7 +447,7 @@ export default function CalibrationContent({
                 className={CALIBRATION_FILTER_BAR.tag}
                 onClick={() => updateSite('')}
               >
-                {SITE_LABELS[filters.site as keyof typeof SITE_LABELS]}
+                {siteLabels[filters.site as keyof typeof siteLabels]}
                 <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
               </button>
             )}

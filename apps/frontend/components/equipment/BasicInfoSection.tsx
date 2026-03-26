@@ -41,7 +41,6 @@ import { type ManagementNumberCheckResult } from '@/lib/api/equipment-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   SITE_OPTIONS,
-  CLASSIFICATION_OPTIONS,
   SITE_TO_CODE,
   CLASSIFICATION_TO_CODE,
   generateManagementNumber,
@@ -49,6 +48,7 @@ import {
 } from '@/lib/constants/management-number';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels, useClassificationLabels } from '@/lib/i18n/use-enum-labels';
 
 /**
  * 사이트별 팀 매핑 (폴백용 - API 응답이 없을 때 사용)
@@ -169,6 +169,8 @@ export function BasicInfoSection({
   wizardMode = false,
 }: BasicInfoSectionProps) {
   const t = useTranslations('equipment');
+  const siteLabels = useSiteLabels();
+  const classificationLabels = useClassificationLabels();
 
   // lab_manager만 사이트/팀 자유 선택 가능, 나머지는 자기 팀만
   const teamRestricted = userRole ? isTeamRestricted(userRole as UserRole) : false;
@@ -494,7 +496,7 @@ export function BasicInfoSection({
                   <SelectContent>
                     {SITE_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label} ({option.code})
+                        {siteLabels[option.value]} ({option.code})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -524,10 +526,7 @@ export function BasicInfoSection({
                           {CLASSIFICATION_TO_CODE[selectedClassification]}
                         </Badge>
                         <span className="text-sm">
-                          {
-                            CLASSIFICATION_OPTIONS.find((o) => o.value === selectedClassification)
-                              ?.label
-                          }
+                          {classificationLabels[selectedClassification]}
                         </span>
                       </>
                     ) : (

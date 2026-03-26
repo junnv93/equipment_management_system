@@ -29,7 +29,17 @@ import type { EquipmentImportSource, EquipmentImportStatus } from './equipment-i
 import type { UserStatus } from './shared';
 
 // ============================================================================
-// LABELS 맵 정의 (UI 표시용 한글 라벨)
+// LABELS 맵 정의 (서버 사이드 전용 — 백엔드 응답, 로그, 알림 등)
+//
+// ⚠️ 프론트엔드 UI에서는 이 라벨을 직접 import하지 마세요.
+//    대신 lib/i18n/use-enum-labels.ts의 hook을 사용하세요:
+//    - useSiteLabels()              → SITE_LABELS 대체
+//    - useClassificationLabels()    → CLASSIFICATION_LABELS 대체
+//    - useCalibrationMethodLabels() → CALIBRATION_METHOD_LABELS 대체
+//    i18n 메시지 키:
+//    - equipment.siteLabel.*        / equipment.classification.*
+//    - equipment.filters.calibrationMethodLabel.*
+//    - checkouts.status.*           / calibration.planStatus.*
 // ============================================================================
 
 /**

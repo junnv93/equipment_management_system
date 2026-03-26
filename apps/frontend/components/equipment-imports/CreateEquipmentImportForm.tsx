@@ -34,15 +34,12 @@ import equipmentImportApi, {
   type CreateInternalSharedImportDto,
 } from '@/lib/api/equipment-import-api';
 import {
-  CLASSIFICATION_LABELS,
-  type Classification,
   type EquipmentImportSource,
   EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
-
-const classificationOptions = Object.entries(CLASSIFICATION_LABELS) as [Classification, string][];
+import { useClassificationLabels } from '@/lib/i18n/use-enum-labels';
 
 interface CreateEquipmentImportFormProps {
   /**
@@ -67,6 +64,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const classificationLabels = useClassificationLabels();
 
   const [form, setForm] = useState({
     equipmentName: '',
@@ -238,7 +236,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                   <SelectValue placeholder={t('equipmentImport.classificationPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {classificationOptions.map(([value, label]) => (
+                  {Object.entries(classificationLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
