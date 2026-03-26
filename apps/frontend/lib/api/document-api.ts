@@ -1,34 +1,13 @@
 import { apiClient } from './api-client';
 import { transformArrayResponse, transformSingleResponse } from './utils/response-transformers';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
+import type { DocumentType, DocumentJson } from '@equipment-management/schemas';
 
 // ============================================================================
-// Document 타입 (프론트엔드용)
+// Document 타입 — SSOT: @equipment-management/schemas
 // ============================================================================
 
-export interface DocumentRecord {
-  id: string;
-  equipmentId?: string | null;
-  calibrationId?: string | null;
-  requestId?: string | null;
-  documentType: DocumentType;
-  status: DocumentStatus;
-  fileName: string;
-  originalFileName: string;
-  filePath: string;
-  fileSize: number;
-  mimeType: string;
-  fileHash?: string | null;
-  revisionNumber: number;
-  parentDocumentId?: string | null;
-  isLatest: boolean;
-  description?: string | null;
-  uploadedBy?: string | null;
-  uploadedAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type DocumentRecord = DocumentJson;
 
 export interface IntegrityResult {
   valid: boolean;
@@ -43,6 +22,33 @@ export interface IntegrityResult {
 // ============================================================================
 
 export const documentApi = {
+  /**
+   * 범용 문서 업로드 (장비/교정/요청)
+   */
+  uploadDocument: async (
+    file: File,
+    documentType: DocumentType,
+    options?: {
+      equipmentId?: string;
+      calibrationId?: string;
+      requestId?: string;
+      description?: string;
+    }
+  ): Promise<DocumentRecord> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    if (options?.equipmentId) formData.append('equipmentId', options.equipmentId);
+    if (options?.calibrationId) formData.append('calibrationId', options.calibrationId);
+    if (options?.requestId) formData.append('requestId', options.requestId);
+    if (options?.description) formData.append('description', options.description);
+
+    const response = await apiClient.post(API_ENDPOINTS.DOCUMENTS.UPLOAD, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return transformSingleResponse<{ document: DocumentRecord }>(response).document;
+  },
+
   /**
    * 교정별 문서 업로드 (복수 파일)
    */
@@ -96,17 +102,33 @@ export const documentApi = {
   },
 
   /**
-   * 문서 다운로드 (인증된 blob 다운로드)
+   * 문서 다운로드 (S3 presigned URL / Local proxy 이중 경로)
    *
-   * <a href> 패턴은 Authorization 헤더를 포함하지 않으므로,
-   * apiClient로 blob을 받아 클라이언트에서 다운로드를 트리거합니다.
+   * - S3: 백엔드가 JSON { presignedUrl, fileName }을 반환 → <a> 태그로 직접 다운로드 (Auth 헤더 없음)
+   * - Local: 백엔드가 binary stream 반환 → Blob URL로 다운로드 트리거
    */
   downloadDocument: async (documentId: string, fileName?: string): Promise<void> => {
     const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId), {
-      responseType: 'blob',
+      responseType: 'arraybuffer',
     });
 
-    const blob = new Blob([response.data]);
+    const contentType = (response.headers['content-type'] as string) ?? '';
+
+    // S3: presigned URL JSON 응답
+    if (contentType.includes('application/json')) {
+      const text = new TextDecoder().decode(response.data as ArrayBuffer);
+      const { presignedUrl, fileName: serverFileName } = JSON.parse(text);
+      const link = document.createElement('a');
+      link.href = presignedUrl;
+      link.setAttribute('download', serverFileName ?? fileName ?? '');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return;
+    }
+
+    // Local: binary stream
+    const blob = new Blob([response.data as ArrayBuffer], { type: contentType });
     const downloadName = fileName ?? `document-${documentId}`;
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');

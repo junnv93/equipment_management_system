@@ -6,6 +6,7 @@ import {
   Param,
   Res,
   Inject,
+  Body,
   Request,
   Query,
   UploadedFile,
@@ -21,6 +22,7 @@ import {
   ApiQuery,
   ApiBearerAuth,
   ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { eq } from 'drizzle-orm';
@@ -46,6 +48,70 @@ export class DocumentsController {
     private readonly fileUploadService: FileUploadService,
     @Inject(STORAGE_PROVIDER) private readonly storageProvider: IStorageProvider
   ) {}
+
+  // ============================================================================
+  // 업로드
+  // ============================================================================
+
+  @Post()
+  @ApiOperation({
+    summary: '문서 업로드',
+    description:
+      '장비/교정/요청에 문서를 업로드합니다. equipmentId, calibrationId, requestId 중 하나 이상 필수.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'documentType'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        documentType: { type: 'string', enum: [...DOCUMENT_TYPE_VALUES] },
+        equipmentId: { type: 'string', format: 'uuid' },
+        calibrationId: { type: 'string', format: 'uuid' },
+        requestId: { type: 'string', format: 'uuid' },
+        description: { type: 'string' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @AuditLog({ action: 'upload', entityType: 'document' })
+  async uploadDocument(
+    @UploadedFile() file: MulterFile,
+    @Body('documentType') documentType: string,
+    @Request() req: AuthenticatedRequest,
+    @Body('equipmentId') equipmentId?: string,
+    @Body('calibrationId') calibrationId?: string,
+    @Body('requestId') requestId?: string,
+    @Body('description') description?: string
+  ): Promise<{ document: DocumentRecord; message: string }> {
+    if (!file) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_FILE_REQUIRED',
+        message: 'File is required.',
+      });
+    }
+
+    if (!documentType || !DOCUMENT_TYPE_VALUES.includes(documentType as DocumentType)) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_TYPE_INVALID',
+        message: `Invalid documentType. Allowed: ${DOCUMENT_TYPE_VALUES.join(', ')}`,
+      });
+    }
+
+    const userId = extractUserId(req);
+    const document = await this.documentService.createDocument(file, {
+      documentType: documentType as DocumentType,
+      equipmentId: equipmentId || undefined,
+      calibrationId: calibrationId || undefined,
+      requestId: requestId || undefined,
+      description: description || undefined,
+      uploadedBy: userId || undefined,
+    });
+
+    return { document, message: '문서가 업로드되었습니다.' };
+  }
 
   // ============================================================================
   // 목록 조회
@@ -127,7 +193,8 @@ export class DocumentsController {
   async download(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
     const document = await this.documentService.findByIdAnyStatus(id);
 
-    // S3 드라이버: Presigned URL로 리다이렉트 (서버 부하 0)
+    // S3 드라이버: Presigned URL을 JSON으로 반환
+    // 302 redirect 대신 JSON 응답 — Axios가 redirect 시 Authorization 헤더를 S3에 전달하면 서명 충돌 발생
     if (
       this.storageProvider.supportsPresignedUrl() &&
       this.storageProvider.getPresignedDownloadUrl
@@ -136,7 +203,7 @@ export class DocumentsController {
         document.filePath,
         document.originalFileName
       );
-      res.redirect(302, url);
+      res.json({ presignedUrl: url, fileName: document.originalFileName });
       return;
     }
 

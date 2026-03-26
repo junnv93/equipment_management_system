@@ -130,6 +130,7 @@ export const API_ENDPOINTS = {
       LIST: (days?: number) => `/api/calibration/intermediate-checks${days ? `?days=${days}` : ''}`,
       COMPLETE: (id: string) => `/api/calibration/${id}/intermediate-check/complete`,
     },
+    /** @deprecated DOCUMENTS(id)를 사용하세요 */
     CERTIFICATE: (id: string) => `/api/calibration/${id}/certificate`,
     /** 교정별 문서 목록 (성적서 + 원시데이터 등) */
     DOCUMENTS: (id: string) => `/api/calibration/${id}/documents`,
@@ -140,6 +141,7 @@ export const API_ENDPOINTS = {
   // ============================================================================
   DOCUMENTS: {
     BASE: '/api/documents',
+    UPLOAD: '/api/documents',
     DETAIL: (id: string) => `/api/documents/${id}`,
     DOWNLOAD: (id: string) => `/api/documents/${id}/download`,
     VERIFY: (id: string) => `/api/documents/${id}/verify`,

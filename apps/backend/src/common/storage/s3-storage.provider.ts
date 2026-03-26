@@ -48,6 +48,19 @@ export class S3StorageProvider implements IStorageProvider, OnModuleDestroy {
     }
   }
 
+  /**
+   * S3 클라이언트가 초기화되었는지 확인하고 반환한다.
+   * STORAGE_DRIVER=s3인데 환경변수가 누락되면 명시적 에러를 던진다.
+   */
+  private assertClient(): S3Client {
+    if (!this.client) {
+      throw new Error(
+        'S3 client not initialized — S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY 환경변수를 확인하세요.'
+      );
+    }
+    return this.client;
+  }
+
   async ensureContainer(): Promise<void> {
     if (!this.client) {
       throw new Error(
@@ -69,7 +82,7 @@ export class S3StorageProvider implements IStorageProvider, OnModuleDestroy {
   }
 
   async upload(key: string, body: Buffer, contentType: string): Promise<void> {
-    await this.client!.send(
+    await this.assertClient().send(
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -82,7 +95,7 @@ export class S3StorageProvider implements IStorageProvider, OnModuleDestroy {
   }
 
   async download(key: string): Promise<Buffer> {
-    const response = await this.client!.send(
+    const response = await this.assertClient().send(
       new GetObjectCommand({ Bucket: this.bucket, Key: key })
     );
 
@@ -109,14 +122,14 @@ export class S3StorageProvider implements IStorageProvider, OnModuleDestroy {
       ResponseContentDisposition: `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
     });
 
-    const url = await getSignedUrl(this.client!, command, { expiresIn });
+    const url = await getSignedUrl(this.assertClient(), command, { expiresIn });
     this.logger.debug(`Presigned download URL generated: ${key} (expires ${expiresIn}s)`);
     return url;
   }
 
   async delete(key: string): Promise<void> {
     try {
-      await this.client!.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+      await this.assertClient().send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
       this.logger.debug(`S3 delete: ${key}`);
     } catch (error) {
       this.logger.warn(`Failed to delete S3 object: ${key}`, error);

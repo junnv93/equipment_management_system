@@ -79,3 +79,15 @@ export const createDocumentInputSchema = z.object({
 });
 
 export type CreateDocumentInput = z.infer<typeof createDocumentInputSchema>;
+
+// ============================================================
+// JSON 전송용 스키마 (HTTP 응답에서 날짜는 ISO 문자열)
+// ============================================================
+
+export const documentJsonSchema = documentSchema.extend({
+  uploadedAt: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type DocumentJson = z.infer<typeof documentJsonSchema>;
