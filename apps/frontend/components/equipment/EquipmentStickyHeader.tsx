@@ -13,11 +13,13 @@ import { cn } from '@/lib/utils';
 import {
   shouldDisplayCalibrationStatus,
   STATUS_NOT_ALLOWED_FOR_CHECKOUT,
+  getDisplayStatus,
 } from '@/lib/constants/equipment-status-styles';
 import { DisposalButton } from './disposal/DisposalButton';
 import { useDisposalPermissions } from '@/hooks/use-disposal-permissions';
 import {
   EquipmentStatusValues as ESVal,
+  type EquipmentStatus,
   type DisposalRequest,
   CalibrationApprovalStatusValues as CASVal,
 } from '@equipment-management/schemas';
@@ -80,10 +82,9 @@ export function EquipmentStickyHeader({
       (equipment.status ?? ESVal.AVAILABLE) as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
     );
 
-  // 상태 정규화: calibration_scheduled → available, calibration_overdue → non_conforming
+  // 상태 정규화: DISPLAY_STATUS_OVERRIDES SSOT 사용
   const getStatusToken = (status: string) => {
-    const normalized = status === ESVal.CALIBRATION_SCHEDULED ? ESVal.AVAILABLE : status;
-    const final = normalized === ESVal.CALIBRATION_OVERDUE ? ESVal.NON_CONFORMING : normalized;
+    const final = getDisplayStatus(status as EquipmentStatus);
     const token = EQUIPMENT_STATUS_TOKENS[final] || DEFAULT_STATUS_CONFIG;
     return {
       label: t(`status.${final}` as Parameters<typeof t>[0]),

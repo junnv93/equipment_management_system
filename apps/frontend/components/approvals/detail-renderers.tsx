@@ -1,7 +1,6 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { CALIBRATION_RESULT_LABELS } from '@equipment-management/schemas';
 import { TAB_META, REQUEST_TYPES, type ApprovalCategory } from '@/lib/api/approvals-api';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Badge } from '@/components/ui/badge';
@@ -121,7 +120,12 @@ function renderEquipmentDetails(details: Record<string, unknown>, t: TFunc) {
 }
 
 /** 교정 기록 */
-function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
+function renderCalibrationDetails(
+  details: Record<string, unknown>,
+  t: TFunc,
+  fmtDate: FmtDate,
+  tCal: TFunc
+) {
   return (
     <>
       <DetailRow label={t('detailRows.equipmentId')} value={details.equipmentId} />
@@ -135,10 +139,13 @@ function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc, fm
         value={details.nextCalibrationDate}
         fmtDate={fmtDate}
       />
-      <LabeledRow
+      <DetailRow
         label={t('detailRows.calibrationResult')}
-        value={details.result}
-        labels={CALIBRATION_RESULT_LABELS}
+        value={
+          details.result
+            ? tCal(`result.${details.result}` as Parameters<typeof tCal>[0])
+            : undefined
+        }
       />
       <DetailRow
         label={t('detailRows.calibrationOrganization')}
@@ -318,13 +325,14 @@ export function CategoryDetails({
   const tCheckouts = useTranslations('checkouts');
   const tNc = useTranslations('non-conformances');
   const tDisposal = useTranslations('disposal');
+  const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
 
   switch (category) {
     case 'equipment':
       return renderEquipmentDetails(details, t);
     case 'calibration':
-      return renderCalibrationDetails(details, t, fmtDate);
+      return renderCalibrationDetails(details, t, fmtDate, tCal);
     case 'outgoing':
     case 'incoming':
       return renderCheckoutDetails(details, t, fmtDate, tCheckouts);
