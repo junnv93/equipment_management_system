@@ -254,10 +254,26 @@
     "inspectionDate": "Inspection Date"
   },
   "requestTypes": {
-    "create": "Create",
-    "update": "Update",
-    "delete": "Delete"
+    "create": "Registration",
+    "update": "Modification",
+    "delete": "Deletion"
   },
+  "summaryTemplates": {
+    "calibrationPlan": "{year} {site} Calibration Plan",
+    "equipmentRequest": "{equipment} {action} Request",
+    "equipmentRequestNoName": "Equipment {action} Request",
+    "disposal_review": "{equipment} ({managementNumber}) Disposal Review",
+    "disposal_final": "{equipment} ({managementNumber}) Disposal Approval",
+    "software": "{name} Change Request",
+    "inspection": "{equipment} Intermediate Check",
+    "nonConformance": "{cause} (Corrected)",
+    "calibration": "Equipment ({equipmentId}) Calibration Record",
+    "checkoutOutgoing": "{equipmentNames} Checkout Request",
+    "checkoutIncoming": "{equipmentNames} Return Pending",
+    "equipmentImportRental": "{equipmentName} Rental Import ({vendor})",
+    "equipmentImportShared": "{equipmentName} Shared Equipment Import ({department})"
+  },
+  "unknown": "Unknown",
   "calibrationFactorApprovals": {
     "title": "Calibration Factor Approval Management",
     "description": "Review and approve calibration factor changes requested by test engineers",

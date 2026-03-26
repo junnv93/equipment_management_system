@@ -201,6 +201,13 @@
     "viewDetail": "View {type} detail",
     "unknownUser": "Unknown User"
   },
+  "userRoles": {
+    "test_engineer": "Test Engineer",
+    "technical_manager": "Technical Manager",
+    "quality_manager": "Quality Manager",
+    "lab_manager": "Lab Manager",
+    "system_admin": "System Admin"
+  },
   "datePicker": {
     "selectDate": "Select date",
     "selectRange": "Select date range"

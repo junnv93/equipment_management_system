@@ -1,4 +1,15 @@
 {
+  "type": {
+    "measurement": "Measurement Software",
+    "analysis": "Analysis Software",
+    "control": "Control Software",
+    "other": "Other"
+  },
+  "approvalStatus": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
   "registry": {
     "title": "Software Integrated Registry",
     "subtitle": "View software status of all equipment",

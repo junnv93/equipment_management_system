@@ -18,7 +18,6 @@ import {
   type UserRole,
   type UnifiedApprovalStatus,
   type ApprovalCategory,
-  UNIFIED_APPROVAL_STATUS_LABELS,
   SITE_LABELS,
   UserRoleValues as URVal,
   UnifiedApprovalStatusValues as UASVal,
@@ -43,12 +42,10 @@ import { transformArrayResponse, transformSingleResponse } from './utils/respons
 // ============================================================================
 
 // ============================================================================
-// 통합 승인 상태 타입 (프론트엔드 로컬 정의)
-// ✅ SSOT: UnifiedApprovalStatus, UNIFIED_APPROVAL_STATUS_LABELS는
-// @equipment-management/schemas에서 import (위 import 참조)
-// Re-export for downstream consumers
+// 통합 승인 상태 타입
+// ✅ SSOT: UnifiedApprovalStatus는 @equipment-management/schemas에서 import
+// 라벨은 i18n 파일(approvals.unifiedStatus.*)에서 관리
 export type { UnifiedApprovalStatus };
-export { UNIFIED_APPROVAL_STATUS_LABELS };
 
 // ============================================================================
 // 승인 카테고리 정의
@@ -242,6 +239,29 @@ export interface Attachment {
 }
 
 /**
+ * 구조화된 summary 데이터 (i18n용)
+ *
+ * 컴포넌트에서 t() 함수로 로컬라이즈된 summary를 생성할 때 사용.
+ * summary 필드는 영어 기본값으로 유지되며, summaryData가 있을 때
+ * getLocalizedSummary()로 로컬라이즈된 텍스트를 생성.
+ */
+export type ApprovalSummaryData =
+  | { type: 'calibration'; equipmentId: string }
+  | { type: 'checkout'; equipmentNames: string; direction: 'outgoing' | 'incoming' }
+  | { type: 'calibration_plan'; year: string; siteId: string }
+  | { type: 'equipment_request'; equipmentName: string; requestType: string }
+  | { type: 'disposal'; equipmentName: string; managementNumber: string; step: 'review' | 'final' }
+  | { type: 'software'; softwareName: string }
+  | { type: 'inspection'; equipmentName: string }
+  | { type: 'non_conformance'; cause: string }
+  | {
+      type: 'equipment_import';
+      equipmentName: string;
+      sourceType: 'rental' | 'internal_shared';
+      vendorOrDepartment: string;
+    };
+
+/**
  * 통합 승인 항목
  */
 export interface ApprovalItem {
@@ -253,6 +273,8 @@ export interface ApprovalItem {
   requesterTeam: string;
   requestedAt: string;
   summary: string;
+  /** 구조화된 summary 데이터 — getLocalizedSummary()에서 i18n 렌더링용 */
+  summaryData?: ApprovalSummaryData;
   details: Record<string, unknown>;
   attachments?: Attachment[];
   approvalHistory?: ApprovalHistoryEntry[];
@@ -299,16 +321,8 @@ export interface BulkActionResult {
   failed: string[];
 }
 
-// ============================================================================
-// 장비 요청 유형 라벨 (SSOT)
-// ============================================================================
-
-/** 장비 등록/수정/삭제 요청 유형 → 한국어 라벨 */
-export const REQUEST_TYPE_LABELS: Record<string, string> = {
-  create: '등록',
-  update: '수정',
-  delete: '삭제',
-};
+/** 장비 요청 유형 키 — i18n에서 requestTypes.* 키와 매칭 */
+export const REQUEST_TYPES = ['create', 'update', 'delete'] as const;
 
 // ============================================================================
 // 승인 관리 API
@@ -1050,11 +1064,12 @@ class ApprovalsApi {
       requesterName: registeredByUser?.name
         ? String(registeredByUser.name)
         : calibration.registeredByRole === URVal.TEST_ENGINEER
-          ? '시험실무자'
-          : '기술책임자',
+          ? 'Test Engineer'
+          : 'Technical Manager',
       requesterTeam: team?.name ? String(team.name) : '',
       requestedAt: calibration.createdAt,
-      summary: `장비(${calibration.equipmentId}) 교정 기록 등록`,
+      summary: `Equipment (${calibration.equipmentId}) Calibration Record`,
+      summaryData: { type: 'calibration', equipmentId: calibration.equipmentId },
       details: {
         equipmentId: calibration.equipmentId,
         calibrationDate: calibration.calibrationDate,
@@ -1071,7 +1086,7 @@ class ApprovalsApi {
     checkout: Checkout,
     category: 'outgoing' | 'incoming'
   ): ApprovalItem {
-    const equipmentNames = checkout.equipment?.map((e) => e.name).join(', ') || '장비';
+    const equipmentNames = checkout.equipment?.map((e) => e.name).join(', ') || 'Equipment';
 
     // user.team 관계를 통해 팀 정보 추출
     const user = checkout.user as Record<string, unknown> | undefined;
@@ -1082,13 +1097,14 @@ class ApprovalsApi {
       category,
       status: this.mapCheckoutStatus(checkout.status),
       requesterId: checkout.requesterId || checkout.userId || '',
-      requesterName: checkout.user?.name || '알 수 없음',
+      requesterName: checkout.user?.name || 'Unknown',
       requesterTeam: team?.name ? String(team.name) : '',
       requestedAt: checkout.createdAt,
       summary:
         category === 'outgoing'
-          ? `${equipmentNames} 반출 요청`
-          : `${equipmentNames} 반입 승인 대기`,
+          ? `${equipmentNames} Checkout Request`
+          : `${equipmentNames} Return Pending`,
+      summaryData: { type: 'checkout', equipmentNames, direction: category },
       details: {
         equipmentIds: checkout.equipmentIds,
         equipment: checkout.equipment,
@@ -1113,10 +1129,11 @@ class ApprovalsApi {
       category,
       status: this.mapPlanStatus(String(plan.status)),
       requesterId: String(plan.createdBy || ''),
-      requesterName: plan.authorName ? String(plan.authorName) : '알 수 없음',
+      requesterName: plan.authorName ? String(plan.authorName) : 'Unknown',
       requesterTeam: plan.teamName ? String(plan.teamName) : '',
       requestedAt: String(plan.createdAt || ''),
-      summary: `${plan.year || ''}년 ${siteLabel} 교정계획서`,
+      summary: `${plan.year || ''} ${siteLabel} Calibration Plan`,
+      summaryData: { type: 'calibration_plan', year: String(plan.year || ''), siteId },
       details: plan,
       originalData: plan,
     };
@@ -1129,10 +1146,11 @@ class ApprovalsApi {
       category: 'software',
       status: 'pending_review',
       requesterId: String(item.changedBy || ''),
-      requesterName: item.changerName ? String(item.changerName) : '알 수 없음',
+      requesterName: item.changerName ? String(item.changerName) : 'Unknown',
       requesterTeam: item.teamName ? String(item.teamName) : '',
       requestedAt: String(item.changedAt || item.createdAt || ''),
-      summary: `${item.softwareName || '소프트웨어'} 변경 요청`,
+      summary: `${item.softwareName || 'Software'} Change Request`,
+      summaryData: { type: 'software', softwareName: String(item.softwareName || 'Software') },
       details: item,
       originalData: item,
     };
@@ -1154,10 +1172,11 @@ class ApprovalsApi {
       category: 'nonconformity',
       status: 'pending', // corrected 상태 = 승인 대기
       requesterId: nc.correctedBy || nc.discoveredBy || '',
-      requesterName: user?.name ? String(user.name) : '시험실무자',
+      requesterName: user?.name ? String(user.name) : 'Unknown',
       requesterTeam: team?.name ? String(team.name) : '',
       requestedAt: nc.correctionDate || nc.discoveryDate,
-      summary: `${nc.cause} (조치 완료)`,
+      summary: `${nc.cause} (Corrected)`,
+      summaryData: { type: 'non_conformance', cause: nc.cause },
       details: {
         equipmentId: nc.equipmentId,
         discoveryDate: nc.discoveryDate,
@@ -1180,10 +1199,11 @@ class ApprovalsApi {
       category: 'inspection',
       status: 'pending',
       requesterId: '',
-      requesterName: '자동 알림',
+      requesterName: 'Auto Alert',
       requesterTeam: item.teamName ? String(item.teamName) : item.team ? String(item.team) : '',
       requestedAt: String(item.nextIntermediateCheckDate || item.createdAt || ''),
-      summary: `${item.equipmentName || '장비'} 중간점검`,
+      summary: `${item.equipmentName || 'Equipment'} Intermediate Check`,
+      summaryData: { type: 'inspection', equipmentName: String(item.equipmentName || 'Equipment') },
       details: item,
       originalData: item,
     };
@@ -1202,10 +1222,16 @@ class ApprovalsApi {
       category,
       status: category === 'disposal_review' ? UASVal.PENDING : UASVal.REVIEWED,
       requesterId: String(item.requestedBy || ''),
-      requesterName: requester?.name ? String(requester.name) : '알 수 없음',
+      requesterName: requester?.name ? String(requester.name) : 'Unknown',
       requesterTeam: team?.name ? String(team.name) : '',
       requestedAt: String(item.requestedAt || ''),
-      summary: `${equipment?.name || '장비'} (${equipment?.managementNumber || ''}) 폐기 ${category === 'disposal_review' ? '검토' : '승인'}`,
+      summary: `${equipment?.name || 'Equipment'} (${equipment?.managementNumber || ''}) Disposal ${category === 'disposal_review' ? 'Review' : 'Approval'}`,
+      summaryData: {
+        type: 'disposal',
+        equipmentName: String(equipment?.name || 'Equipment'),
+        managementNumber: String(equipment?.managementNumber || ''),
+        step: category === 'disposal_review' ? ('review' as const) : ('final' as const),
+      },
       details: {
         reason: item.reason,
         reasonDetail: item.reasonDetail,
@@ -1223,8 +1249,6 @@ class ApprovalsApi {
     const equipment = item.equipment as Record<string, unknown> | undefined;
     const requestType = String(item.requestType || 'create');
 
-    const requestTypeLabels = REQUEST_TYPE_LABELS;
-
     // requestData에서 장비명 추출 시도
     let equipmentName = '';
     if (equipment?.name) {
@@ -1240,21 +1264,22 @@ class ApprovalsApi {
     }
 
     const summary = equipmentName
-      ? `${equipmentName} ${requestTypeLabels[requestType] || requestType} 요청`
-      : `장비 ${requestTypeLabels[requestType] || requestType} 요청`;
+      ? `${equipmentName} ${requestType} Request`
+      : `Equipment ${requestType} Request`;
 
     return {
       id: String(item.id),
       category: 'equipment',
       status: this.mapEquipmentRequestStatus(String(item.approvalStatus || '')),
       requesterId: String(item.requestedBy || ''),
-      requesterName: requester?.name ? String(requester.name) : '알 수 없음',
+      requesterName: requester?.name ? String(requester.name) : 'Unknown',
       requesterTeam: (() => {
         const team = requester?.team as Record<string, unknown> | undefined;
         return team?.name ? String(team.name) : '';
       })(),
       requestedAt: String(item.requestedAt || ''),
       summary,
+      summaryData: { type: 'equipment_request', equipmentName, requestType },
       details: {
         requestType,
         equipmentId: item.equipmentId,
@@ -1338,19 +1363,28 @@ class ApprovalsApi {
 
     // Summary varies by source type
     const isRental = item.sourceType === EISrcVal.RENTAL;
+    const vendorOrDepartment = isRental
+      ? String(item.vendorName || '')
+      : String(item.ownerDepartment || '');
     const summary = isRental
-      ? `${item.equipmentName} 렌탈 반입 (${item.vendorName})`
-      : `${item.equipmentName} 공용장비 반입 (${item.ownerDepartment})`;
+      ? `${item.equipmentName} Rental Import (${item.vendorName})`
+      : `${item.equipmentName} Shared Equipment Import (${item.ownerDepartment})`;
 
     return {
       id: item.id,
       category,
       status: UASVal.PENDING,
       requesterId: item.requesterId,
-      requesterName: requester?.name ? String(requester.name) : '신청자',
+      requesterName: requester?.name ? String(requester.name) : 'Requester',
       requesterTeam: team?.name ? String(team.name) : '',
       requestedAt: item.createdAt,
       summary,
+      summaryData: {
+        type: 'equipment_import',
+        equipmentName: item.equipmentName,
+        sourceType: isRental ? ('rental' as const) : ('internal_shared' as const),
+        vendorOrDepartment,
+      },
       details: {
         equipmentName: item.equipmentName,
         classification: item.classification,

@@ -244,7 +244,11 @@
   },
   "selectability": {
     "calibrationExpiryWarning": "교정 만료일: {date}",
-    "statusNotSelectable": "{statusLabel} 상태의 장비는 선택할 수 없습니다"
+    "statusNotSelectable": "{statusLabel} 상태의 장비는 선택할 수 없습니다",
+    "inUseBlocked": "현재 다른 사용자가 사용 중인 장비입니다. 반납 후 선택 가능합니다.",
+    "checkedOutBlocked": "이미 반출 중인 장비입니다. 반입 완료 후 선택 가능합니다.",
+    "calibrationOverdueRentalBlocked": "교정 기한이 초과된 장비입니다. 외부 대여는 교정이 유효한 장비만 가능합니다.",
+    "nonConformingRentalBlocked": "부적합 상태의 장비입니다. 외부 대여는 정상 상태의 장비만 가능합니다."
   },
   "create": {
     "title": "장비 반출 신청",

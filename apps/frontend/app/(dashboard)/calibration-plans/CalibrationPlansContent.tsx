@@ -17,8 +17,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import calibrationPlansApi, {
   type CalibrationPlan,
   type CalibrationPlanSummary,
-  CALIBRATION_PLAN_STATUS_LABELS,
-  SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
 import teamsApi from '@/lib/api/teams-api';
 import type { PaginatedResponse } from '@/lib/api/types';
@@ -38,6 +36,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { CALIBRATION_PLAN_STATUS_VALUES, SITE_LABELS } from '@equipment-management/schemas';
 import type { CalibrationPlanStatus, UserRole, Site } from '@equipment-management/schemas';
 import {
   TEAM_RESTRICTED_ROLES,
@@ -361,11 +360,9 @@ export default function CalibrationPlansContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_all">{t('plansList.filter.allStatuses')}</SelectItem>
-              {(
-                Object.entries(CALIBRATION_PLAN_STATUS_LABELS) as [CalibrationPlanStatus, string][]
-              ).map(([value, label]) => (
+              {CALIBRATION_PLAN_STATUS_VALUES.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {label}
+                  {t(`planStatus.${value}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -452,7 +449,7 @@ export default function CalibrationPlansContent({
                   {/* 상태 배지 — Design Token 사용 */}
                   <div>
                     <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
-                      {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
+                      {t(`planStatus.${plan.status}`)}
                     </Badge>
                   </div>
 

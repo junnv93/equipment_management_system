@@ -248,7 +248,12 @@
         "conditional": "Conditional"
       },
       "calibrationDueStatusLabel": "Calibration Status",
-      "calibrationDueStatusAll": "All"
+      "calibrationDueStatusAll": "All",
+      "calibrationDueStatusOptions": {
+        "overdue": "Calibration Overdue",
+        "upcoming": "Calibration Due",
+        "normal": "Normal"
+      }
     },
     "tabs": {
       "all": "All",

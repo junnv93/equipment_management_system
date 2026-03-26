@@ -79,8 +79,9 @@ export {
   getAllowedStatusesForPurpose,
   CHECKOUT_HIDDEN_STATUSES,
   CHECKOUT_BLOCKED_REASONS,
-  getBlockedReason,
+  getBlockedReasonKey,
   CHECKOUT_MAX_EQUIPMENT_COUNT,
+  type BlockedReasonI18n,
   type EquipmentSelectability,
 } from './checkout-selectability';
 

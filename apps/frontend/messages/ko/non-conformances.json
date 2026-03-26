@@ -8,6 +8,9 @@
     "closed": "종결"
   },
   "type": {
+    "damage": "손상",
+    "malfunction": "오작동",
+    "calibration_failure": "교정 실패",
     "calibration_overdue": "교정 기한 초과",
     "equipment_failure": "장비 고장",
     "measurement_error": "측정 오류",

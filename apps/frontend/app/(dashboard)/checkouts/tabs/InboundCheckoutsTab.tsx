@@ -21,11 +21,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
-import {
-  CLASSIFICATION_LABELS,
-  type Classification,
-  type EquipmentImportStatus,
-} from '@equipment-management/schemas';
+import { type EquipmentImportStatus } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
@@ -54,6 +50,7 @@ export default function InboundCheckoutsTab({
   onResetFilters,
 }: InboundCheckoutsTabProps) {
   const t = useTranslations('checkouts');
+  const tEquip = useTranslations('equipment');
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -196,8 +193,9 @@ export default function InboundCheckoutsTab({
                 >
                   <TableCell className="font-medium line-clamp-1">{item.equipmentName}</TableCell>
                   <TableCell>
-                    {CLASSIFICATION_LABELS[item.classification as Classification] ||
-                      item.classification}
+                    {tEquip(
+                      `classification.${item.classification}` as Parameters<typeof tEquip>[0]
+                    )}
                   </TableCell>
                   <TableCell className="line-clamp-1">{item.vendorName}</TableCell>
                   <TableCell className="tabular-nums">
