@@ -5,6 +5,7 @@ import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
+import { ClientErrorDto } from './dto/client-error.dto';
 
 // 추적할 엔드포인트 최대 수 (메모리 누수 방지)
 const MAX_TRACKED_ENDPOINTS = 500;
@@ -124,6 +125,20 @@ export class MonitoringService {
     } catch (error) {
       this.logger.error('메트릭 업데이트 중 오류가 발생했습니다.', getErrorStack(error));
     }
+  }
+
+  /**
+   * 프론트엔드 클라이언트 에러 구조화 로깅
+   */
+  logClientError(dto: ClientErrorDto): void {
+    this.logger.error('클라이언트 에러 수신', undefined, {
+      message: dto.message,
+      component: dto.component,
+      url: dto.url,
+      userAgent: dto.userAgent,
+      timestamp: dto.timestamp,
+      ...(dto.stack ? { stack: dto.stack } : {}),
+    });
   }
 
   /**

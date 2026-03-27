@@ -811,7 +811,10 @@ export class EquipmentHistoryService {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      console.error(`[deleteIncidentHistory] Error deleting incident history ${historyId}:`, error);
+      this.logger.error(
+        `deleteIncidentHistory() 실패 — historyId=${historyId}`,
+        (error as Error).stack
+      );
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException(`Failed to delete incident history: ${errorMessage}`);
     }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { BearerStrategy, IProfile } from 'passport-azure-ad';
 import { ConfigService } from '@nestjs/config';
@@ -6,6 +6,8 @@ import { JwtUser } from '../../../types/auth';
 
 @Injectable()
 export class AzureADStrategy extends PassportStrategy(BearerStrategy, 'azure-ad') {
+  private static readonly logger = new Logger(AzureADStrategy.name);
+
   constructor(configService: ConfigService) {
     const clientID = configService.get<string>('AZURE_AD_CLIENT_ID');
     const tenantID = configService.get<string>('AZURE_AD_TENANT_ID');
@@ -17,9 +19,8 @@ export class AzureADStrategy extends PassportStrategy(BearerStrategy, 'azure-ad'
     const isTestMode = !clientID || !tenantID;
 
     if (isTestMode) {
-      // Logger는 super() 호출 후에 사용 가능하므로 console 사용
-      console.warn(
-        '[AzureADStrategy] Azure AD 설정이 누락되어 테스트용 더미 값으로 초기화됩니다. ' +
+      AzureADStrategy.logger.warn(
+        'Azure AD 설정이 누락되어 테스트용 더미 값으로 초기화됩니다. ' +
           '프로덕션 환경에서는 반드시 AZURE_AD_CLIENT_ID와 AZURE_AD_TENANT_ID를 설정하세요.'
       );
     }

@@ -15,7 +15,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
-import type { Page } from '../../../../shared/fixtures/auth.fixture';
+import type { Page } from '../../../shared/fixtures/auth.fixture';
 
 /** Equipment list item locator: <li> elements with "관리번호" text in the equipment panel */
 function getEquipmentItems(page: Page) {

@@ -32,6 +32,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { ClassificationEnum, SiteEnum, optionalUuid } from '@equipment-management/schemas';
 import teamsApi, { type Team, SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { queryKeys } from '@/lib/api/query-config';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { LeaderCombobox } from './LeaderCombobox';
 import { TeamTypeIcon } from './TeamTypeIcon';
 
@@ -67,6 +68,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const t = useTranslations('teams');
+  const siteLabels = useSiteLabels();
 
   const isEditMode = mode === 'edit';
 
@@ -268,7 +270,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                     <SelectContent>
                       {Object.entries(SITE_CONFIG).map(([key, config]) => (
                         <SelectItem key={key} value={key}>
-                          {config.label} ({config.code})
+                          {siteLabels[key as keyof typeof siteLabels]} ({config.code})
                         </SelectItem>
                       ))}
                     </SelectContent>
