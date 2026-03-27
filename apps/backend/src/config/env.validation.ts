@@ -30,8 +30,9 @@ export const envSchema = z
     CACHE_DRIVER: z.enum(['memory', 'redis']).default('memory'),
 
     // JWT 설정
+    // 토큰 만료 시간은 shared-constants의 ACCESS_TOKEN_EXPIRES_IN으로 관리됩니다.
+    // JWT_EXPIRATION은 사용하지 않습니다.
     JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
-    JWT_EXPIRATION: z.string().default('1d'),
 
     // Internal API 설정 (서비스 간 통신)
     INTERNAL_API_KEY: z.string().min(32, 'INTERNAL_API_KEY must be at least 32 characters'),
@@ -72,20 +73,78 @@ export const envSchema = z
     S3_SECRET_KEY: z.string().min(1).optional(),
     S3_BUCKET: z.string().default('equipment-files'),
   })
-  .refine(
-    (data) =>
-      data.STORAGE_DRIVER !== 's3' ||
-      (data.S3_ENDPOINT !== undefined &&
-        data.S3_ACCESS_KEY !== undefined &&
-        data.S3_SECRET_KEY !== undefined),
-    { message: 'S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY는 STORAGE_DRIVER=s3일 때 필수입니다' }
-  )
-  .refine(
-    (data) =>
-      data.NODE_ENV !== 'production' ||
-      (data.FRONTEND_URL !== undefined && data.FRONTEND_URL !== ''),
-    { message: 'FRONTEND_URL은 프로덕션 환경에서 필수입니다 (CORS origin 설정에 필요)' }
-  );
+  .superRefine((data, ctx) => {
+    // S3 설정 — STORAGE_DRIVER=s3 시 필수
+    if (
+      data.STORAGE_DRIVER === 's3' &&
+      (data.S3_ENDPOINT === undefined ||
+        data.S3_ACCESS_KEY === undefined ||
+        data.S3_SECRET_KEY === undefined)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY는 STORAGE_DRIVER=s3일 때 필수입니다',
+      });
+    }
+
+    // REDIS 비밀번호 — CACHE_DRIVER=redis 시 필수
+    if (
+      data.CACHE_DRIVER === 'redis' &&
+      data.NODE_ENV === 'production' &&
+      (!data.REDIS_PASSWORD || data.REDIS_PASSWORD.length < 16)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'REDIS_PASSWORD는 프로덕션 + CACHE_DRIVER=redis일 때 필수입니다 (최소 16자)',
+      });
+    }
+
+    // 프로덕션 전용 검증 — 모든 에러를 한 번에 수집
+    if (data.NODE_ENV === 'production') {
+      if (!data.FRONTEND_URL || data.FRONTEND_URL === '') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'FRONTEND_URL은 프로덕션 환경에서 필수입니다 (CORS origin 설정에 필요)',
+        });
+      }
+
+      if (data.JWT_SECRET.length < 32) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'JWT_SECRET은 프로덕션 환경에서 최소 32자 이상이어야 합니다 (보안 강화)',
+        });
+      }
+
+      if (!data.NEXTAUTH_SECRET || data.NEXTAUTH_SECRET.length < 32) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'NEXTAUTH_SECRET은 프로덕션 환경에서 필수입니다 (최소 32자, 세션 암호화에 사용)',
+        });
+      }
+
+      if (!data.REFRESH_TOKEN_SECRET || data.REFRESH_TOKEN_SECRET.length < 32) {
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            'REFRESH_TOKEN_SECRET은 프로덕션 환경에서 필수입니다 (JWT_SECRET 폴백은 안전하지 않음)',
+        });
+      }
+
+      if (data.REFRESH_TOKEN_SECRET && data.REFRESH_TOKEN_SECRET === data.JWT_SECRET) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'REFRESH_TOKEN_SECRET은 JWT_SECRET과 다른 값이어야 합니다 (토큰 유형 분리)',
+        });
+      }
+
+      if (data.DB_PASSWORD === 'postgres') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'DB_PASSWORD는 프로덕션 환경에서 기본값(postgres)을 사용할 수 없습니다',
+        });
+      }
+    }
+  });
 
 export type EnvConfig = z.infer<typeof envSchema>;
 

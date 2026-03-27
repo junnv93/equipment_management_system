@@ -473,10 +473,12 @@ export const authOptions = {
       if (token.sessionStartedAt) {
         const now = Math.floor(Date.now() / 1000);
         if (now - token.sessionStartedAt > ABSOLUTE_SESSION_MAX_AGE_SECONDS) {
-          console.log('[Auth] Absolute session lifetime exceeded (30d), forcing re-login', {
-            email: token.email,
-            sessionAgeDays: Math.floor((now - token.sessionStartedAt) / 86400),
-          });
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Auth] Absolute session lifetime exceeded (30d), forcing re-login', {
+              email: token.email,
+              sessionAgeDays: Math.floor((now - token.sessionStartedAt) / 86400),
+            });
+          }
           return { ...token, error: 'RefreshAccessTokenError' };
         }
       }

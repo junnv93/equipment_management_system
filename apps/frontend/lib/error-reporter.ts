@@ -1,13 +1,9 @@
 /**
  * Centralized Error Reporting
  *
- * Abstraction layer for error tracking services (Sentry, DataDog, etc.)
- *
- * Benefits:
- * - Single integration point for error reporting
- * - Easy to swap providers (Sentry → DataDog)
- * - Type-safe error context
- * - Development vs Production behavior
+ * LAN-내부 백엔드 API를 통한 구조화된 에러 로깅.
+ * 프로덕션에서는 /api/monitoring/client-errors 엔드포인트로 전송하고,
+ * 개발에서는 콘솔에 출력합니다.
  *
  * Usage:
  * ```typescript
@@ -37,6 +33,27 @@ export interface ErrorContext {
   /** User ID (if authenticated) */
   userId?: string;
 }
+
+// ── Rate limiter: 분당 최대 10개 ──────────────────────────────────────────────
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+let errorCount = 0;
+let windowStart = Date.now();
+
+function isRateLimited(): boolean {
+  const now = Date.now();
+  if (now - windowStart >= RATE_LIMIT_WINDOW_MS) {
+    errorCount = 0;
+    windowStart = now;
+  }
+  if (errorCount >= RATE_LIMIT_MAX) {
+    return true;
+  }
+  errorCount++;
+  return false;
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Report error to monitoring service
@@ -70,35 +87,36 @@ export function reportError(error: Error, context?: ErrorContext): void {
     return;
   }
 
-  // Production: Send to monitoring service
-  // TODO: Integrate Sentry or DataDog here
-  // Example Sentry integration (uncomment when ready):
-  /*
-  import * as Sentry from '@sentry/nextjs';
+  // Production: fire-and-forget POST to backend via sendBeacon
+  if (isRateLimited()) {
+    return;
+  }
 
-  Sentry.captureException(error, {
-    level: severity,
-    tags: {
-      page: page || 'unknown',
-      action: action || 'unknown',
-    },
-    extra: {
-      digest,
-      userId,
-      ...extra,
-    },
-  });
-  */
-
-  // Fallback: Console in production (temporary until monitoring is set up)
-  console.error('[ErrorReporter]', {
+  const component = [page, action].filter(Boolean).join('/') || undefined;
+  const payload = JSON.stringify({
     message: normalizedError.message,
-    page,
-    action,
-    digest,
-    // Don't log full stack in production to avoid sensitive info leakage
-    errorType: normalizedError.constructor.name,
+    stack: normalizedError.stack,
+    component,
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    timestamp: new Date().toISOString(),
   });
+
+  const backendUrl = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/monitoring/client-errors`;
+
+  if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+    navigator.sendBeacon(backendUrl, new Blob([payload], { type: 'application/json' }));
+  } else {
+    // SSR 또는 sendBeacon 미지원 환경 폴백
+    fetch(backendUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {
+      // 에러 리포터 자체의 실패는 무시
+    });
+  }
 }
 
 /**

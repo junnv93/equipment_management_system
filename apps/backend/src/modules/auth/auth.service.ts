@@ -371,8 +371,15 @@ export class AuthService {
 
     try {
       const refreshSecret =
-        this.configService.get<string>('REFRESH_TOKEN_SECRET') ||
-        this.configService.get<string>('JWT_SECRET') + '_refresh';
+        this.configService.get<string>('REFRESH_TOKEN_SECRET') ??
+        (() => {
+          if (process.env.NODE_ENV !== 'production') {
+            this.logger.warn(
+              'REFRESH_TOKEN_SECRET이 설정되지 않아 JWT_SECRET 폴백을 사용합니다. 프로덕션에서는 반드시 별도 설정이 필요합니다.'
+            );
+          }
+          return this.configService.get<string>('JWT_SECRET') + '_refresh';
+        })();
 
       const payload = this.jwtService.verify(refreshToken, {
         secret: refreshSecret,
@@ -552,7 +559,15 @@ export class AuthService {
   private generateToken(user: UserDto, sessionStartedAt?: number): AuthResponse {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
     const refreshSecret =
-      this.configService.get<string>('REFRESH_TOKEN_SECRET') || jwtSecret + '_refresh';
+      this.configService.get<string>('REFRESH_TOKEN_SECRET') ??
+      (() => {
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(
+            'REFRESH_TOKEN_SECRET이 설정되지 않아 JWT_SECRET 폴백을 사용합니다. 프로덕션에서는 반드시 별도 설정이 필요합니다.'
+          );
+        }
+        return jwtSecret + '_refresh';
+      })();
 
     // 신규 로그인 시 현재 시간, refresh 시 기존 값 전파
     const sessionStart = sessionStartedAt ?? Math.floor(Date.now() / 1000);
