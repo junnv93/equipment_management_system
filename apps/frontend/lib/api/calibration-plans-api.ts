@@ -203,14 +203,13 @@ export interface ConfirmPlanItemDto {
   casVersion: number;
 }
 
-// ✅ SSOT: packages/schemas의 라벨 재사용
+/** @deprecated 프론트엔드에서는 i18n (calibration.planStatus.*) 사용 */
 export const CALIBRATION_PLAN_STATUS_LABELS = SSOT_STATUS_LABELS;
 
-// ✅ SSOT: 상태 색상은 design-tokens에서 관리
+// 상태 색상은 design-tokens에서 관리
 // @see lib/design-tokens/components/calibration-plans.ts → CALIBRATION_PLAN_STATUS_BADGE_COLORS
 
-// ✅ SSOT: packages/schemas의 라벨 재사용
-// 타입 확장: API 응답의 siteId가 string이므로 Record<string, string>으로 캐스팅
+/** @deprecated 프론트엔드에서는 useSiteLabels() (lib/i18n/use-enum-labels.ts) 사용 */
 export const SITE_LABELS: Record<string, string> = SSOT_SITE_LABELS;
 
 // 교정계획서 API 객체

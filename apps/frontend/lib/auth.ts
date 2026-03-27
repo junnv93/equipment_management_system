@@ -15,7 +15,6 @@
  */
 
 import NextAuth from 'next-auth';
-import { getSession } from 'next-auth/react';
 import type { JWT } from 'next-auth/jwt';
 import type { Account, Profile, User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -510,11 +509,3 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   // 반드시 .env.local에 설정해야 함 (하드코딩 금지)
   secret: process.env.NEXTAUTH_SECRET,
 });
-
-/**
- * 클라이언트 사이드에서 현재 사용자의 세션 정보 가져오기
- */
-export async function getCurrentUser() {
-  const session = await getSession();
-  return session?.user;
-}

@@ -29,7 +29,7 @@ import calibrationPlansApi, { ExternalEquipment } from '@/lib/api/calibration-pl
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import teamsApi from '@/lib/api/teams-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { format } from 'date-fns';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { ArrowLeft, Save, AlertCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -54,6 +54,7 @@ export default function CreateCalibrationPlanContent() {
   const { data: session } = useSession();
   const t = useTranslations('calibration');
   const siteLabels = useSiteLabels();
+  const { fmtDate } = useDateFormatter();
 
   // 권한 가드: CREATE_CALIBRATION_PLAN 없으면 목록으로 리다이렉트
   const { allowed, loading: guardLoading } = usePermissionGuard(Permission.CREATE_CALIBRATION_PLAN);
@@ -321,9 +322,7 @@ export default function CreateCalibrationPlanContent() {
                           <TableCell className="font-mono">{eq.managementNumber}</TableCell>
                           <TableCell>{eq.name}</TableCell>
                           <TableCell>
-                            {eq.lastCalibrationDate
-                              ? format(new Date(eq.lastCalibrationDate), 'yyyy-MM-dd')
-                              : '-'}
+                            {eq.lastCalibrationDate ? fmtDate(eq.lastCalibrationDate) : '-'}
                           </TableCell>
                           <TableCell>
                             {eq.calibrationCycle
@@ -331,9 +330,7 @@ export default function CreateCalibrationPlanContent() {
                               : '-'}
                           </TableCell>
                           <TableCell>
-                            {eq.nextCalibrationDate
-                              ? format(new Date(eq.nextCalibrationDate), 'yyyy-MM-dd')
-                              : '-'}
+                            {eq.nextCalibrationDate ? fmtDate(eq.nextCalibrationDate) : '-'}
                           </TableCell>
                           <TableCell>{eq.calibrationAgency || '-'}</TableCell>
                         </TableRow>
