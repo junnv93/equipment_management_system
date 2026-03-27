@@ -63,6 +63,7 @@ argument-hint: '[선택사항: 특정 도메인명 (equipment, dashboard, audit 
 | `apps/frontend/messages/ko/reservations.json`     | 예약 도메인 한국어 번역                   |
 | `apps/frontend/lib/i18n/request.ts`               | next-intl 설정 (지원 로케일, 메시지 로더) |
 | `apps/frontend/middleware.ts`                     | next-intl 미들웨어 (로케일 감지)          |
+| `apps/frontend/lib/i18n/use-enum-labels.ts`       | i18n 기반 Enum Label Hooks (동적 키 사용) |
 
 ## Workflow
 
@@ -300,6 +301,9 @@ const schema = useMemo(() => createSchema(t), [t]);
 | `CalibrationContent` | `t('calibrationDueStatusOptions.${status}')` | `calibration.json: content.filters.calibrationDueStatusOptions.*` |
 | `DisposalReasonSelector` | `t('reason.${reasonValue}')` | `disposal.json: reason.*` |
 | `getLocalizedSummary()` | `t('summaryTemplates.*')` | `approvals.json: summaryTemplates.*` |
+| `useSiteLabels()` | `t('siteLabel.${site}')` | `equipment.json: siteLabel.*` |
+| `useClassificationLabels()` | `t('classification.${cls}')` | `equipment.json: classification.*` |
+| `useCalibrationMethodLabels()` | `t('filters.calibrationMethodLabel.${method}')` | `equipment.json: filters.calibrationMethodLabel.*` |
 
 ```bash
 # 동적 키 패턴 탐지 — t(`xxx.${...}`) 형태

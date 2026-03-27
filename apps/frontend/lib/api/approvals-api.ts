@@ -18,13 +18,13 @@ import {
   type UserRole,
   type UnifiedApprovalStatus,
   type ApprovalCategory,
-  SITE_LABELS,
   UserRoleValues as URVal,
   UnifiedApprovalStatusValues as UASVal,
   CalibrationApprovalStatusValues as CASVal,
   CheckoutStatusValues as CSVal,
   CalibrationPlanStatusValues as CPSVal,
   EquipmentImportSourceValues as EISrcVal,
+  SITE_LABELS,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';

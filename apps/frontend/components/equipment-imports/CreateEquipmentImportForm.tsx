@@ -89,8 +89,8 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
   const createMutation = useMutation({
     mutationFn: (data: CreateEquipmentImportDto) => equipmentImportApi.create(data),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
       toast({
         title: t('equipmentImport.toasts.createSuccess'),
         description: t('equipmentImport.toasts.createSuccessDesc'),

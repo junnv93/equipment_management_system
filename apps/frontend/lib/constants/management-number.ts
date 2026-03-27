@@ -25,7 +25,9 @@ export {
   CODE_TO_SITE,
   CLASSIFICATION_TO_CODE,
   CODE_TO_CLASSIFICATION,
+  /** @deprecated 프론트엔드에서는 useClassificationLabels() (lib/i18n/use-enum-labels.ts) 사용 */
   CLASSIFICATION_LABELS,
+  /** @deprecated 프론트엔드에서는 useSiteLabels() (lib/i18n/use-enum-labels.ts) 사용 */
   SITE_LABELS,
   // 정규식
   MANAGEMENT_NUMBER_PATTERN,

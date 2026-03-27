@@ -14,7 +14,7 @@
  * - Absolute Max Lifetime: 30일 초과 시 활동 여부와 무관하게 재로그인 강제
  */
 
-import { getSession } from 'next-auth/react';
+import NextAuth from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { Account, Profile, User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -137,11 +137,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   return refreshPromise;
 }
 
-/**
- * NextAuth 설정 옵션
- * 서버 사이드에서 사용하기 위해 export
- */
-export const authOptions = {
+export const { auth, handlers, signIn, signOut } = NextAuth({
   providers: [
     // Azure AD 로그인 (환경변수가 설정된 경우 우선 활성화)
     ...(hasAzureAD
@@ -149,7 +145,9 @@ export const authOptions = {
           AzureADProvider({
             clientId: process.env.AZURE_AD_CLIENT_ID!,
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-            tenantId: process.env.AZURE_AD_TENANT_ID,
+            ...(process.env.AZURE_AD_TENANT_ID && {
+              issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
+            }),
             authorization: {
               params: {
                 scope: 'openid profile email offline_access User.Read',
@@ -268,9 +266,9 @@ export const authOptions = {
                 // email이 있으면 email로, 없으면 role로 요청
                 const params = new URLSearchParams();
                 if (email) {
-                  params.set('email', email);
+                  params.set('email', email as string);
                 } else if (role) {
-                  params.set('role', role);
+                  params.set('role', role as string);
                 }
 
                 const url = `${API_BASE_URL}/api/auth/test-login?${params.toString()}`;
@@ -321,7 +319,7 @@ export const authOptions = {
     error: '/login',
   },
   session: {
-    strategy: 'jwt' as const,
+    strategy: 'jwt',
     maxAge: REFRESH_TOKEN_TTL_SECONDS, // Refresh Token 수명과 정렬 (@shared-constants)
   },
   callbacks: {
@@ -339,15 +337,7 @@ export const authOptions = {
      * @param profile - OAuth 프로필 정보 (Azure AD 전용)
      * @returns 로그인 허용 여부 (true/false)
      */
-    async signIn({
-      user,
-      account,
-      profile,
-    }: {
-      user: User;
-      account: Account | null;
-      profile?: Profile;
-    }): Promise<boolean> {
+    async signIn({ user, account, profile }): Promise<boolean> {
       // 사용자 정보가 없으면 차단
       if (!user?.email) {
         console.error('[SignIn] No user email provided');
@@ -420,17 +410,7 @@ export const authOptions = {
      * @param account - OAuth 계정 정보 (provider, access_token 등)
      * @param profile - OAuth 프로필 정보 (Azure AD 등)
      */
-    async jwt({
-      token,
-      user,
-      account,
-      profile,
-    }: {
-      token: JWT;
-      user?: User;
-      account?: Account | null;
-      profile?: Profile;
-    }): Promise<JWT> {
+    async jwt({ token, user, account, profile }): Promise<JWT> {
       // Azure AD 로그인 처리
       if (account?.provider === 'azure-ad') {
         if (user) {
@@ -507,7 +487,7 @@ export const authOptions = {
      * @param session - 세션 객체
      * @param token - JWT 토큰 (strategy: 'jwt' 사용 시)
      */
-    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
+    async session({ session, token }): Promise<Session> {
       if (session.user) {
         session.user.id = token.id ?? '';
         session.user.role = token.role ?? 'USER';
@@ -528,12 +508,4 @@ export const authOptions = {
   // NEXTAUTH_SECRET은 JWT 서명/검증에 필수
   // 반드시 .env.local에 설정해야 함 (하드코딩 금지)
   secret: process.env.NEXTAUTH_SECRET,
-};
-
-/**
- * 클라이언트 사이드에서 현재 사용자의 세션 정보 가져오기
- */
-export async function getCurrentUser() {
-  const session = await getSession();
-  return session?.user;
-}
+});

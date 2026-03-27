@@ -347,6 +347,26 @@ grep -rn "getUrgencyFeedbackClasses" apps/frontend/components --include="*.tsx" 
 
 **설계 철학:** "긴급함"은 사용자 피로도를 유발 → pulse는 신중하게 사용 (Architecture v3).
 
+### Step 7c: Design Token 한국어 label 필드 잔존 탐지
+
+Design token 정의에서 한국어 `label` 필드가 잔존하는지 확인합니다. i18n 마이그레이션 후 `labelKey` (i18n 키)만 사용해야 합니다.
+
+```bash
+# 컴포넌트 토큰 파일에서 한국어 label 필드 탐지 (Grep 도구 사용)
+# pattern: "label: '" + 비-ASCII 문자 (한국어)
+# path: apps/frontend/lib/design-tokens/components/
+# glob: "*.ts"
+```
+
+Grep 도구로 탐지: `pattern: "label: '"`, `path: apps/frontend/lib/design-tokens/components/`, `glob: "*.ts"` 후 결과에서 한국어 문자열 포함 여부를 수동 확인합니다.
+
+**PASS 기준:** 0개 결과. 모든 토큰이 `labelKey` (i18n 키 참조)만 사용.
+
+**FAIL 기준:** `label: '한국어'` 형태의 하드코딩이 존재하면 영어 로케일에서 한국어가 혼재됨. `label` 필드를 제거하고 `labelKey`만 유지 필요.
+
+**Exceptions:**
+- CSS 클래스 문자열인 `label` 필드 (예: `label: 'text-xs text-muted-foreground'`) — 토큰 키 이름이 `label`이지만 값이 CSS 클래스이므로 면제
+
 ### Step 8: 페이지 헤더 타이포그래피 SSOT
 
 페이지 제목(`h1`)이 `PAGE_HEADER_TOKENS.title` 또는 `SUB_PAGE_HEADER_TOKENS.title`을 사용하는지 확인합니다. 하드코딩된 `text-2xl font-bold` / `text-3xl font-bold` 등을 탐지합니다.

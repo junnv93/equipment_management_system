@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import type { TeamDetail as TeamDetailType, TeamMember } from '@/lib/api/teams-api';
 import { SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { TeamTypeIcon, TeamTypeBadge } from './TeamTypeIcon';
 import { TeamMemberList } from './TeamMemberList';
 import { SITE_PANEL_TOKENS, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -47,6 +48,7 @@ interface TeamDetailProps {
 export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps) {
   const router = useRouter();
   const t = useTranslations('teams');
+  const siteLabels = useSiteLabels();
   const { hasRole } = useAuth();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -80,7 +82,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
               {siteInfo && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3 w-3" />
-                  <span>{siteInfo.label}</span>
+                  <span>{siteLabels[team.site as keyof typeof siteLabels] || team.site}</span>
                 </div>
               )}
             </div>
@@ -116,7 +118,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
             {siteInfo && (
               <span className="text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3" aria-hidden="true" />
-                {siteInfo.label}
+                {siteLabels[team.site as keyof typeof siteLabels] || team.site}
               </span>
             )}
             {team.leaderName && (
@@ -127,7 +129,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
             )}
             <span className="text-muted-foreground flex items-center gap-1 tabular-nums">
               <Users className="h-3 w-3" aria-hidden="true" />
-              {team.memberCount || 0}명
+              {t('stats.memberCount', { count: team.memberCount || 0 })}
             </span>
           </div>
           {team.description && (

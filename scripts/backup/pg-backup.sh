@@ -1,12 +1,14 @@
 #!/bin/bash
-# PostgreSQL 자동 백업 스크립트
-# 사용법: ./pg-backup.sh
+# ─────────────────────────────────────────────
+# PostgreSQL 자동 백업 스크립트 (SSOT)
+# 사용법: ./scripts/backup/pg-backup.sh
 # crontab: 0 2 * * * /opt/equipment-management/scripts/backup/pg-backup.sh >> /var/log/pg-backup.log 2>&1
+# ─────────────────────────────────────────────
 
 set -euo pipefail
 
 # ─────────────────────────────────────────────
-# 설정
+# 설정 (모든 값은 환경변수로 오버라이드 가능)
 # ─────────────────────────────────────────────
 BACKUP_DIR="${BACKUP_DIR:-/opt/equipment-management/backups/postgres}"
 DB_NAME="${DB_NAME:-equipment_management}"
@@ -15,6 +17,30 @@ RETAIN_DAYS="${RETAIN_DAYS:-7}"
 CONTAINER_NAME="${CONTAINER_NAME:-equipment-management-postgres-1}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${TIMESTAMP}.sql.gz"
+
+# Webhook 알림 설정 (선택)
+WEBHOOK_URL="${BACKUP_WEBHOOK_URL:-}"
+
+# S3 원격 백업 설정 (선택)
+S3_BACKUP_BUCKET="${S3_BACKUP_BUCKET:-}"
+S3_ENDPOINT="${S3_ENDPOINT:-}"
+
+# ─────────────────────────────────────────────
+# 알림 함수
+# ─────────────────────────────────────────────
+notify() {
+  local STATUS="$1"
+  local MESSAGE="$2"
+  if [ -n "${WEBHOOK_URL}" ]; then
+    curl -sf -X POST "${WEBHOOK_URL}" \
+      -H "Content-Type: application/json" \
+      -d "{\"text\":\"[DB 백업 ${STATUS}] ${MESSAGE}\"}" \
+      2>/dev/null || true
+  fi
+}
+
+# 실패 시 자동 알림
+trap 'notify "실패" "백업 실행 중 오류 발생: ${DB_NAME} (${CONTAINER_NAME})"' ERR
 
 # ─────────────────────────────────────────────
 # 백업 디렉토리 생성
@@ -46,6 +72,25 @@ else
 fi
 
 # ─────────────────────────────────────────────
+# S3/RustFS 원격 백업 (선택)
+# ─────────────────────────────────────────────
+if [ -n "${S3_BACKUP_BUCKET}" ]; then
+  if command -v aws >/dev/null 2>&1; then
+    S3_ARGS=("s3" "cp" "${BACKUP_FILE}" "s3://${S3_BACKUP_BUCKET}/postgres/")
+    if [ -n "${S3_ENDPOINT}" ]; then
+      S3_ARGS+=("--endpoint-url" "${S3_ENDPOINT}")
+    fi
+    if aws "${S3_ARGS[@]}" 2>/dev/null; then
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] S3 원격 백업 완료: s3://${S3_BACKUP_BUCKET}/postgres/"
+    else
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] 경고: S3 원격 백업 실패 (로컬 백업은 유지됨)" >&2
+    fi
+  else
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 경고: aws CLI 미설치 — S3 원격 백업 건너뜀" >&2
+  fi
+fi
+
+# ─────────────────────────────────────────────
 # 오래된 백업 정리 (RETAIN_DAYS일 이상)
 # ─────────────────────────────────────────────
 DELETED_COUNT=$(find "${BACKUP_DIR}" -name "*.sql.gz" -mtime "+${RETAIN_DAYS}" | wc -l)
@@ -58,3 +103,6 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] ${DELETED_COUNT}개 오래된 백업 삭제
 BACKUP_COUNT=$(find "${BACKUP_DIR}" -name "*.sql.gz" | wc -l)
 TOTAL_SIZE=$(du -sh "${BACKUP_DIR}" | cut -f1)
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] 현재 백업: ${BACKUP_COUNT}개, 총 크기: ${TOTAL_SIZE}"
+
+# 성공 알림
+notify "성공" "${DB_NAME} 백업 완료 (${BACKUP_SIZE}, ${BACKUP_COUNT}개 보관중)"
