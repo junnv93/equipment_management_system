@@ -7,7 +7,7 @@
  *
  * 이 파일은 Server Components에서만 사용됩니다.
  * - Next.js 16 Server Components에서 안전하게 사용 가능
- * - getServerSession()을 통해 NextAuth 세션 접근
+ * - auth()를 통해 NextAuth 세션 접근
  * - 절대로 'use client' 컴포넌트에서 import하지 마세요
  *
  * 아키텍처 원칙:
@@ -20,14 +20,13 @@
  */
 
 import { cache } from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth';
+import { auth } from '../auth';
 import { getInternalApiKeyHeaders } from '../config/internal-headers';
 
 /**
  * Per-render deduplication: 동일 렌더 트리 내 여러 호출이 단일 Promise를 공유
  *
- * 문제: Server Component에서 getServerSession()을 여러 번 병렬 호출하면
+ * 문제: Server Component에서 auth()를 여러 번 병렬 호출하면
  * 각각 독립적으로 JWT 콜백을 트리거하여 refreshAccessToken()이 중복 실행됨 (429 유발)
  *
  * 해법: React cache()는 같은 렌더 패스 내 동일 인자 호출을 memoize하여
@@ -35,7 +34,7 @@ import { getInternalApiKeyHeaders } from '../config/internal-headers';
  *
  * @see https://react.dev/reference/react/cache
  */
-const getServerSessionCached = cache(() => getServerSession(authOptions));
+const getServerSessionCached = cache(() => auth());
 
 /**
  * 서버 컴포넌트에서 현재 세션 가져오기
