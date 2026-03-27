@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { SITE_CONFIG } from '@/lib/api/teams-api';
 import type { TeamMember } from '@/lib/api/teams-api';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { ROLE_BADGE_TOKENS } from '@/lib/design-tokens';
 
 interface MemberProfileDialogProps {
@@ -48,10 +49,9 @@ function InfoRow({
 export function MemberProfileDialog({ member, open, onOpenChange }: MemberProfileDialogProps) {
   const t = useTranslations('teams');
   const tCommon = useTranslations('common');
+  const siteLabels = useSiteLabels();
   const roleLabel = tCommon(`userRoles.${member.role}`);
-  const siteLabel = member.site
-    ? SITE_CONFIG[member.site as keyof typeof SITE_CONFIG]?.label
-    : undefined;
+  const siteLabel = member.site ? siteLabels[member.site as keyof typeof siteLabels] : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

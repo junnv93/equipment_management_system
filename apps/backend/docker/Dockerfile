@@ -104,6 +104,12 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 # Environment
 ENV NODE_ENV=production
 
+# 보안을 위해 루트가 아닌 사용자로 전환
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+RUN chown -R nestjs:nodejs /app
+USER nestjs
+
 # Expose port
 EXPOSE 3001
 

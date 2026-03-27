@@ -93,7 +93,7 @@ export function generateBreadcrumbs(
 
     // 동적 라우트인 경우 실제 경로로 변환
     let actualHref = route;
-    let actualLabel = routeMetadata.label;
+    let actualLabel = routeMetadata.label ?? routeMetadata.labelKey;
     let isDynamic = false;
     let params: Record<string, string> | undefined;
 
@@ -110,7 +110,7 @@ export function generateBreadcrumbs(
         actualLabel = dynamicLabels[paramValue];
       } else if (paramValue && isUUID(paramValue)) {
         // UUID가 직접 표시되는 것을 방지 (BreadcrumbProvider가 동적으로 로드)
-        actualLabel = routeMetadata.label; // 기본 라벨 유지 (예: "상세", "편집")
+        actualLabel = routeMetadata.label ?? routeMetadata.labelKey; // 기본 라벨 유지 (예: "상세", "편집")
       }
 
       isDynamic = true;
@@ -184,7 +184,7 @@ export function getHomeBreadcrumb(): BreadcrumbItem {
   const homeMetadata = routeMap['/'];
 
   return {
-    label: homeMetadata.label,
+    label: homeMetadata.label ?? homeMetadata.labelKey,
     href: '/',
     icon: homeMetadata.icon,
   };
