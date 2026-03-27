@@ -497,23 +497,28 @@ summaryData: { type: 'checkout', equipmentNames, direction: 'outgoing' },
 - `packages/schemas/src/enums/labels.ts`의 한국어 라벨 상수 — SSOT 정의이므로 면제 (향후 i18n 전환 대상)
 - 주석 내 한국어 설명 — 코드 문서이므로 면제
 
-### Step 20: 컴포넌트 내 *_LABELS 맵 직접 사용 탐지
+### Step 20: 컴포넌트 내 *_LABELS 맵 직접 사용 및 import 탐지
 
-i18n 마이그레이션 후 React 컴포넌트에서 schemas 패키지의 `*_LABELS` 맵을 직접 사용하여 UI 텍스트를 표시하는 패턴을 탐지합니다. `useTranslations()` + JSON 키 패턴으로 교체 필요.
+i18n 마이그레이션 후 React 컴포넌트에서 schemas 패키지의 `*_LABELS` 맵을 직접 import하거나 사용하여 UI 텍스트를 표시하는 패턴을 탐지합니다. `lib/i18n/use-enum-labels.ts`의 hook 또는 `useTranslations()` + JSON 키 패턴으로 교체 필요.
 
 ```bash
-# 컴포넌트/페이지에서 *_LABELS[value] 패턴 사용 탐지
+# 20a: 컴포넌트/페이지에서 *_LABELS[value] 패턴 사용 탐지
 grep -rn '_LABELS\[' apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" | grep -v 'node_modules\|// \|/\*\|\.spec\.\|\.test\.\|tests/' | head -30
+
+# 20b: 컴포넌트/페이지에서 *_LABELS import 탐지 (SITE_LABELS, CLASSIFICATION_LABELS 등)
+grep -rn 'import.*\(SITE_LABELS\|CLASSIFICATION_LABELS\|CALIBRATION_METHOD_LABELS\|EQUIPMENT_STATUS_LABELS\|CHECKOUT_STATUS_LABELS\).*from.*schemas' apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" | grep -v 'node_modules\|\.spec\.\|\.test\.\|tests/' | head -30
 ```
 
-**PASS 기준:** 0개 결과. 모든 컴포넌트가 `useTranslations()` 기반 번역을 사용.
+**PASS 기준:** 20a, 20b 모두 0개 결과. 컴포넌트에서 `useSiteLabels()`, `useClassificationLabels()`, `useCalibrationMethodLabels()` 등 i18n hook을 사용.
 
-**FAIL 기준:** `*_LABELS[value]`를 직접 JSX에서 사용하면 영어 로케일에서 한국어가 혼재되는 버그. `useTranslations('namespace')` + `t('key.${value}')` 패턴으로 교체 필요.
+**FAIL 기준:**
+- 20a: `*_LABELS[value]`를 직접 JSX에서 사용하면 영어 로케일에서 한국어 혼재
+- 20b: 컴포넌트/페이지에서 `*_LABELS`를 직접 import → `lib/i18n/use-enum-labels.ts` hook으로 교체 필요
 
 **Exceptions:**
-- `lib/api/*.ts` (API 유틸리티 파일) — React hook 사용 불가, 별도 아키텍처 변경 필요
+- `lib/api/*.ts` (API 유틸리티 파일) — React hook 사용 불가, `@deprecated` 표기 후 유지
 - `tests/e2e/**/*.ts` (E2E 테스트) — 한국어 로케일 기반 실행
-- `lib/constants/*.ts` (상수 정의 파일) — i18n 키 반환 유틸리티는 허용
+- `lib/constants/*.ts` (상수 정의 파일) — re-export는 `@deprecated` 표기 후 유지
 
 ## Output Format
 
