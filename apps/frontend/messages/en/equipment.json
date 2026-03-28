@@ -616,6 +616,15 @@
       "checking": "Checking..."
     },
     "deleteError": "Failed to delete document.",
+    "preview": "Preview",
+    "previewError": "Unable to load preview.",
+    "previewNotSupported": "Preview is not supported for this file type.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "rotate": "Rotate",
+    "retry": "Retry",
+    "revisionSuccess": "New version has been uploaded.",
+    "revisionError": "Failed to upload new version.",
     "revision": {
       "version": "Version",
       "fileName": "File Name",
