@@ -180,6 +180,7 @@ export function validateEnv(config: Record<string, unknown>): EnvConfig {
   }
 
   // 프로덕션 보안 경고 (non-fatal — Docker 내부 네트워크에서는 허용)
+  // NestJS Logger가 아직 초기화되지 않은 시점이므로 console.warn 사용
   if (result.data.NODE_ENV === 'production') {
     const warnings: string[] = [];
     if (result.data.DB_SSL !== 'true') {

@@ -31,12 +31,19 @@ export interface RedisConnectionConfig {
  * 이 함수를 통해 동일한 환경변수를 동일한 방식으로 해석합니다.
  */
 export function resolveRedisConfig(configService: ConfigService): RedisConnectionConfig {
+  const redisUrl = configService.get<string>('REDIS_URL');
+  // REDIS_URL 사용 시: URL 스킴이 TLS를 결정 (rediss:// = TLS, redis:// = 평문)
+  // REDIS_URL 미사용 시: REDIS_TLS 환경변수가 TLS를 결정
+  const tlsEnabled = redisUrl
+    ? redisUrl.startsWith('rediss://')
+    : configService.get<string>('REDIS_TLS') === 'true';
+
   return {
-    redisUrl: configService.get<string>('REDIS_URL'),
+    redisUrl,
     host: configService.get<string>('REDIS_HOST') || 'localhost',
     port: configService.get<number>('REDIS_PORT') || 6379,
     password: configService.get<string>('REDIS_PASSWORD'),
-    tlsEnabled: configService.get<string>('REDIS_TLS') === 'true',
+    tlsEnabled,
     tlsRejectUnauthorized: configService.get<string>('REDIS_TLS_REJECT_UNAUTHORIZED') !== 'false',
     maxRetries: 0,
   };

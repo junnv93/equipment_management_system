@@ -59,6 +59,8 @@ export class AuditInterceptor implements NestInterceptor {
 
     // 4. @AuditLog() 커스텀 메타데이터 사용
     // 인증된 사용자가 없으면 패스 (로그인/로그아웃/내부 서비스 호출 제외)
+    // 내부 서비스 호출: @InternalServiceOnly() → InternalApiKeyGuard가 이미 타이밍-세이프 검증 완료
+    // 이 시점에서 헤더 존재 = 가드 통과를 의미 (가드 미통과 시 이 인터셉터에 도달하지 않음)
     if (!user && !['login', 'logout'].includes(auditMetadata.action)) {
       const isInternalService = !!request.headers?.['x-internal-api-key'];
       if (!isInternalService) {
