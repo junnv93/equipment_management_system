@@ -674,7 +674,7 @@ export const EQUIPMENT_DETAIL_HEADER_TOKENS = {
     'py-1.5 text-sm text-muted-foreground flex items-center justify-between border-b border-border/50 px-4 sm:px-6 lg:px-8',
   mainRow: 'py-3 flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8',
   nameGroup: 'flex flex-col gap-0.5 min-w-0',
-  name: 'text-lg font-bold text-foreground truncate',
+  name: 'text-xl font-bold text-foreground truncate font-display',
   meta: 'text-xs text-muted-foreground flex items-center gap-2 flex-wrap',
   actions: 'flex items-center gap-2 flex-shrink-0',
   /** 뒤로가기 링크 — getTransitionClasses 적용 */
@@ -764,6 +764,7 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
     hero: 'bg-card border border-border rounded-lg p-4 flex items-start gap-4 border-l-4 cursor-pointer shadow-sm dark:bg-card/80 dark:shadow-md',
     hover: [
       'hover:shadow-md hover:border-border/80 dark:hover:bg-card/90',
+      'active:scale-[0.98]',
       TRANSITION_PRESETS.fastShadowBorder,
     ].join(' '),
     focus: FOCUS_TOKENS.classes.brand,
@@ -840,6 +841,21 @@ export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
   separator: 'mx-1 h-5 w-px bg-border opacity-60 self-center',
   /** 아이콘 크기 */
   iconSize: 'h-4 w-4',
+} as const;
+
+// ============================================================================
+// Shared Equipment Banner Tokens (공용장비 안내 배너)
+// ============================================================================
+
+/**
+ * 공용장비 안내 배너 스타일
+ *
+ * EquipmentDetailClient의 isShared 배너에서 사용.
+ * 하드코딩 dark: 클래스를 토큰으로 추출하여 AP-08 개선.
+ */
+export const SHARED_EQUIPMENT_BANNER_TOKENS = {
+  alert: 'border-brand-info/20 bg-brand-info/5 dark:border-brand-info/30 dark:bg-brand-info/10',
+  icon: 'h-4 w-4 text-brand-info dark:text-brand-info',
 } as const;
 
 // ============================================================================

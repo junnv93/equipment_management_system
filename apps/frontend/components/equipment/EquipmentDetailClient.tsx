@@ -30,7 +30,11 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { getDisposalCurrentStep } from '@/hooks/use-disposal-permissions';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { ANIMATION_PRESETS, NC_BANNER_TOKENS } from '@/lib/design-tokens';
+import {
+  ANIMATION_PRESETS,
+  NC_BANNER_TOKENS,
+  SHARED_EQUIPMENT_BANNER_TOKENS,
+} from '@/lib/design-tokens';
 
 interface EquipmentDetailClientProps {
   equipment: Equipment;
@@ -227,11 +231,8 @@ export function EquipmentDetailClient({
         {/* 공용장비 안내 배너 */}
         {equipment.isShared && (
           <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
-            <Alert
-              variant="default"
-              className="border-brand-info/20 bg-brand-info/5 dark:border-brand-info/30 dark:bg-brand-info/10"
-            >
-              <AlertTriangle className="h-4 w-4 text-brand-info dark:text-brand-info" />
+            <Alert variant="default" className={SHARED_EQUIPMENT_BANNER_TOKENS.alert}>
+              <AlertTriangle className={SHARED_EQUIPMENT_BANNER_TOKENS.icon} />
               <AlertTitle className="text-foreground flex items-center gap-2">
                 {t('sharedBanner.title')}
                 {/* 임시등록 장비이고 사용 기간이 있는 경우 D-day 표시 */}

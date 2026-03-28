@@ -4,7 +4,16 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Package, Wrench, ArrowRight, Camera, Download, BookOpen } from 'lucide-react';
+import {
+  MapPin,
+  Package,
+  Wrench,
+  ArrowRight,
+  Camera,
+  Download,
+  BookOpen,
+  Truck,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { DocumentTypeValues } from '@equipment-management/schemas';
@@ -90,6 +99,315 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
   return (
     <div className="space-y-8">
+      {/* 기본 정보 카드 그리드 — 비대칭 1.6fr (SSOT: tokens.grid) */}
+      <div className={tokens.grid}>
+        {/* Primary: 장비 기본정보 — 좌측 brand-info 보더 (AP-04 깊이 차등) */}
+        <div className={tokens.cardPrimary}>
+          <div className={tokens.header}>
+            <Package className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentBasicInfo')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              <dt className={tokens.dtLabel}>{t('fields.name')}</dt>
+              <dd className={tokens.ddValue}>{equipment.name || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.managementNumber')}</dt>
+              <dd className={tokens.ddMono}>{equipment.managementNumber || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.modelName')}</dt>
+              <dd className={tokens.ddValue}>{equipment.modelName || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.manufacturer')}</dt>
+              <dd className={tokens.ddValue}>{equipment.manufacturer || '-'}</dd>
+
+              {equipment.manufacturerContact && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.manufacturerContact')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.manufacturerContact}</dd>
+                </>
+              )}
+
+              <dt className={tokens.dtLabel}>{t('fields.serialNumber')}</dt>
+              <dd className={tokens.ddMono}>{equipment.serialNumber || '-'}</dd>
+
+              {equipment.assetNumber && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.assetNumber')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.assetNumber}</dd>
+                </>
+              )}
+
+              {equipment.classification && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.classification')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.classification}</dd>
+                </>
+              )}
+
+              <dt className={tokens.dtLabel}>{t('fields.purchaseYear')}</dt>
+              <dd className={tokens.ddValue}>{equipment.purchaseYear ?? '-'}</dd>
+
+              {equipment.accessories && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.accessories')}</dt>
+                  <dd className="text-xs text-muted-foreground col-span-full mt-1">
+                    {equipment.accessories}
+                  </dd>
+                </>
+              )}
+
+              {equipment.description && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.description')}</dt>
+                  <dd className="text-xs text-muted-foreground col-span-full mt-1">
+                    {equipment.description}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+
+        {/* 교정 정보 */}
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <Wrench className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.calibrationInfo')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationRequired')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.calibrationRequired === 'required'
+                  ? t('basicInfoTab.calibrationRequiredYes')
+                  : equipment.calibrationRequired === 'not_required'
+                    ? t('basicInfoTab.calibrationRequiredNo')
+                    : '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationMethod')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.calibrationMethod
+                  ? tCal(`method.${equipment.calibrationMethod}` as Parameters<typeof tCal>[0])
+                  : '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationCycle')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.calibrationCycle
+                  ? `${equipment.calibrationCycle}${t('basicInfoTab.calibrationCycleUnit')}`
+                  : '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.lastCalibrationDate')}</dt>
+              <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                {fmtDate(equipment.lastCalibrationDate) ?? '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.nextCalibrationDate')}</dt>
+              <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                {fmtDate(equipment.nextCalibrationDate) ?? '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationAgency')}</dt>
+              <dd className={tokens.ddValue}>{equipment.calibrationAgency || '-'}</dd>
+
+              {equipment.calibrationResult && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationResultLabel')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.calibrationResult}</dd>
+                </>
+              )}
+
+              {equipment.correctionFactor && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('basicInfoTab.correctionFactorLabel')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.correctionFactor}</dd>
+                </>
+              )}
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.intermediateCheckRequired')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.needsIntermediateCheck
+                  ? t('basicInfoTab.intermediateCheckRequiredYes')
+                  : t('basicInfoTab.intermediateCheckRequiredNo')}
+              </dd>
+
+              {equipment.needsIntermediateCheck && (
+                <>
+                  {equipment.intermediateCheckCycle && (
+                    <>
+                      <dt className={tokens.dtLabel}>
+                        {t('basicInfoTab.intermediateCheckCycleLabel')}
+                      </dt>
+                      <dd className={tokens.ddValue}>
+                        {equipment.intermediateCheckCycle}
+                        {t('basicInfoTab.intermediateCheckCycleUnit')}
+                      </dd>
+                    </>
+                  )}
+
+                  <dt className={tokens.dtLabel}>
+                    {t('basicInfoTab.lastIntermediateCheckDateLabel')}
+                  </dt>
+                  <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                    {fmtDate(equipment.lastIntermediateCheckDate) ?? '-'}
+                  </dd>
+
+                  <dt className={tokens.dtLabel}>
+                    {t('basicInfoTab.nextIntermediateCheckDateLabel')}
+                  </dt>
+                  <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                    {fmtDate(equipment.nextIntermediateCheckDate) ?? '-'}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+
+        {/* 위치 & 상태 */}
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <MapPin className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.locationManagement')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              <dt className={tokens.dtLabel}>{t('fields.site')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.site === 'suwon'
+                  ? t('basicInfoTab.site.suwon')
+                  : equipment.site === 'uiwang'
+                    ? t('basicInfoTab.site.uiwang')
+                    : equipment.site === 'pyeongtaek'
+                      ? t('basicInfoTab.site.pyeongtaek')
+                      : '-'}
+              </dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.team')}</dt>
+              <dd className={tokens.ddValue}>{equipment.teamName || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.location')}</dt>
+              <dd className={tokens.ddValue}>{equipment.location || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.specMatch')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.specMatch === 'match'
+                  ? t('basicInfoTab.specMatchMatch')
+                  : equipment.specMatch === 'mismatch'
+                    ? t('basicInfoTab.specMatchMismatch')
+                    : '-'}
+              </dd>
+
+              {equipment.initialLocation && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.initialLocation')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.initialLocation}</dd>
+                </>
+              )}
+
+              {equipment.installationDate && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.installationDate')}</dt>
+                  <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                    {fmtDate(equipment.installationDate) ?? '-'}
+                  </dd>
+                </>
+              )}
+
+              {equipment.technicalManager && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.technicalManager')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.technicalManager}</dd>
+                </>
+              )}
+
+              {equipment.manualLocation && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.manualLocation')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
+                </>
+              )}
+
+              {equipment.isShared !== undefined && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('basicInfoTab.sharedLabel')}</dt>
+                  <dd className={tokens.ddValue}>
+                    {equipment.isShared ? t('basicInfoTab.sharedYes') : t('basicInfoTab.sharedNo')}
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      {/* 소프트웨어/펌웨어 (조건부) */}
+      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <Package className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('softwareTab.title')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              {equipment.softwareVersion && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('softwareTab.softwareVersion')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.softwareVersion}</dd>
+                </>
+              )}
+              {equipment.firmwareVersion && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('softwareTab.firmwareVersion')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.firmwareVersion}</dd>
+                </>
+              )}
+              {equipment.manualLocation && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('softwareTab.manualLocation')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      )}
+
+      {/* 구매 및 관리 정보 (조건부) */}
+      {(equipment.supplier || equipment.contactInfo || equipment.externalIdentifier) && (
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <Truck className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.supplyManagement')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              {equipment.supplier && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.supplier')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.supplier}</dd>
+                </>
+              )}
+              {equipment.contactInfo && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.contactInfo')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.contactInfo}</dd>
+                </>
+              )}
+              {equipment.externalIdentifier && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.externalIdentifier')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.externalIdentifier}</dd>
+                </>
+              )}
+            </dl>
+          </div>
+        </div>
+      )}
+
       {/* 장비 사진 — AP-04: tokens.card 깊이 + AP-05: count Badge */}
       <div className={tokens.card}>
         <div className={tokens.header}>
@@ -171,179 +489,6 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           )}
         </div>
       </div>
-
-      {/* 기본 정보 카드 그리드 — 비대칭 1.6fr (SSOT: tokens.grid) */}
-      <div className={tokens.grid}>
-        {/* Primary: 장비 기본정보 — 좌측 brand-info 보더 (AP-04 깊이 차등) */}
-        <div className={tokens.cardPrimary}>
-          <div className={tokens.header}>
-            <Package className={tokens.headerIcon} aria-hidden="true" />
-            <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentBasicInfo')}</span>
-          </div>
-          <div className={tokens.body}>
-            <dl className={tokens.dlGrid}>
-              <dt className={tokens.dtLabel}>{t('fields.name')}</dt>
-              <dd className={tokens.ddValue}>{equipment.name || '-'}</dd>
-
-              <dt className={tokens.dtLabel}>{t('fields.managementNumber')}</dt>
-              <dd className={tokens.ddMono}>{equipment.managementNumber || '-'}</dd>
-
-              <dt className={tokens.dtLabel}>{t('fields.modelName')}</dt>
-              <dd className={tokens.ddValue}>{equipment.modelName || '-'}</dd>
-
-              <dt className={tokens.dtLabel}>{t('fields.manufacturer')}</dt>
-              <dd className={tokens.ddValue}>{equipment.manufacturer || '-'}</dd>
-
-              <dt className={tokens.dtLabel}>{t('fields.serialNumber')}</dt>
-              <dd className={tokens.ddMono}>{equipment.serialNumber || '-'}</dd>
-
-              {equipment.assetNumber && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('fields.assetNumber')}</dt>
-                  <dd className={tokens.ddMono}>{equipment.assetNumber}</dd>
-                </>
-              )}
-
-              <dt className={tokens.dtLabel}>{t('fields.purchaseYear')}</dt>
-              <dd className={tokens.ddValue}>{equipment.purchaseYear ?? '-'}</dd>
-
-              {equipment.description && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('fields.description')}</dt>
-                  <dd className="text-xs text-muted-foreground col-span-full mt-1">
-                    {equipment.description}
-                  </dd>
-                </>
-              )}
-            </dl>
-          </div>
-        </div>
-
-        {/* 교정 정보 */}
-        <div className={tokens.card}>
-          <div className={tokens.header}>
-            <Wrench className={tokens.headerIcon} aria-hidden="true" />
-            <span className={tokens.headerTitle}>{t('basicInfoTab.calibrationInfo')}</span>
-          </div>
-          <div className={tokens.body}>
-            <dl className={tokens.dlGrid}>
-              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationRequired')}</dt>
-              <dd className={tokens.ddValue}>
-                {equipment.calibrationRequired === 'required'
-                  ? t('basicInfoTab.calibrationRequiredYes')
-                  : equipment.calibrationRequired === 'not_required'
-                    ? t('basicInfoTab.calibrationRequiredNo')
-                    : '-'}
-              </dd>
-
-              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationMethod')}</dt>
-              <dd className={tokens.ddValue}>
-                {equipment.calibrationMethod
-                  ? tCal(`method.${equipment.calibrationMethod}` as Parameters<typeof tCal>[0])
-                  : '-'}
-              </dd>
-
-              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationCycle')}</dt>
-              <dd className={tokens.ddValue}>
-                {equipment.calibrationCycle
-                  ? `${equipment.calibrationCycle}${t('basicInfoTab.calibrationCycleUnit')}`
-                  : '-'}
-              </dd>
-
-              <dt className={tokens.dtLabel}>{t('basicInfoTab.lastCalibrationDate')}</dt>
-              <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
-                {fmtDate(equipment.lastCalibrationDate) ?? '-'}
-              </dd>
-
-              <dt className={tokens.dtLabel}>{t('basicInfoTab.nextCalibrationDate')}</dt>
-              <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
-                {fmtDate(equipment.nextCalibrationDate) ?? '-'}
-              </dd>
-
-              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationAgency')}</dt>
-              <dd className={tokens.ddValue}>{equipment.calibrationAgency || '-'}</dd>
-            </dl>
-          </div>
-        </div>
-
-        {/* 위치 & 상태 */}
-        <div className={tokens.card}>
-          <div className={tokens.header}>
-            <MapPin className={tokens.headerIcon} aria-hidden="true" />
-            <span className={tokens.headerTitle}>{t('basicInfoTab.locationManagement')}</span>
-          </div>
-          <div className={tokens.body}>
-            <dl className={tokens.dlGrid}>
-              <dt className={tokens.dtLabel}>{t('fields.site')}</dt>
-              <dd className={tokens.ddValue}>
-                {equipment.site === 'suwon'
-                  ? t('basicInfoTab.site.suwon')
-                  : equipment.site === 'uiwang'
-                    ? t('basicInfoTab.site.uiwang')
-                    : equipment.site === 'pyeongtaek'
-                      ? t('basicInfoTab.site.pyeongtaek')
-                      : '-'}
-              </dd>
-
-              <dt className={tokens.dtLabel}>{t('fields.team')}</dt>
-              <dd className={tokens.ddValue}>{equipment.teamName || '-'}</dd>
-
-              <dt className={tokens.dtLabel}>{t('fields.location')}</dt>
-              <dd className={tokens.ddValue}>{equipment.location || '-'}</dd>
-
-              <dt className={tokens.dtLabel}>{t('fields.specMatch')}</dt>
-              <dd className={tokens.ddValue}>
-                {equipment.specMatch === 'match'
-                  ? t('basicInfoTab.specMatchMatch')
-                  : equipment.specMatch === 'mismatch'
-                    ? t('basicInfoTab.specMatchMismatch')
-                    : '-'}
-              </dd>
-
-              {equipment.isShared !== undefined && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('basicInfoTab.sharedLabel')}</dt>
-                  <dd className={tokens.ddValue}>
-                    {equipment.isShared ? t('basicInfoTab.sharedYes') : t('basicInfoTab.sharedNo')}
-                  </dd>
-                </>
-              )}
-            </dl>
-          </div>
-        </div>
-      </div>
-
-      {/* 소프트웨어/펌웨어 (조건부) */}
-      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
-        <div className={tokens.card}>
-          <div className={tokens.header}>
-            <Package className={tokens.headerIcon} aria-hidden="true" />
-            <span className={tokens.headerTitle}>{t('softwareTab.title')}</span>
-          </div>
-          <div className={tokens.body}>
-            <dl className={tokens.dlGrid}>
-              {equipment.softwareVersion && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.softwareVersion')}</dt>
-                  <dd className={tokens.ddMono}>{equipment.softwareVersion}</dd>
-                </>
-              )}
-              {equipment.firmwareVersion && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.firmwareVersion')}</dt>
-                  <dd className={tokens.ddMono}>{equipment.firmwareVersion}</dd>
-                </>
-              )}
-              {equipment.manualLocation && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.manualLocation')}</dt>
-                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
-                </>
-              )}
-            </dl>
-          </div>
-        </div>
-      )}
 
       {/* 최근 교정 이력 타임라인 — SSOT: resultDotMap + CALIBRATION_RESULT_LABELS */}
       {recentCalibrations.length > 0 && (

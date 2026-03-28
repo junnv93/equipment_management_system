@@ -231,6 +231,7 @@ export {
   type CalibrationBadgeStyle,
   type HeaderButtonVariant,
   type KpiColorVariant,
+  SHARED_EQUIPMENT_BANNER_TOKENS,
 } from './components/equipment';
 
 // Equipment Timeline
