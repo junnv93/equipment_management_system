@@ -142,6 +142,13 @@ export class AuthService {
     const defaults = testUserDefaults[loginDto.email];
     const expectedPassword = testPasswords[loginDto.email];
 
+    // DEV_*_PASSWORD 미설정 시 개발자에게 명확한 경고
+    if (defaults && !expectedPassword) {
+      this.logger.warn(
+        `DEV_*_PASSWORD not set for ${loginDto.email}. Set DEV_ADMIN_PASSWORD/DEV_MANAGER_PASSWORD/DEV_USER_PASSWORD in .env`
+      );
+    }
+
     if (!defaults || !expectedPassword || loginDto.password !== expectedPassword) {
       // 실패 카운터 증가
       const now = Date.now();

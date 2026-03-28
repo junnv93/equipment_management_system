@@ -88,5 +88,10 @@ export function createRedisClient(config: RedisConnectionConfig, loggerName: str
         ...sharedOptions,
       });
 
+  // 필수: error 이벤트 리스너 — 미등록 시 unhandled error로 프로세스 크래시
+  client.on('error', (err) => {
+    logger.error(`Redis client error: ${err.message}`);
+  });
+
   return client;
 }

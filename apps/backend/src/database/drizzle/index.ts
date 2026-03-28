@@ -11,6 +11,11 @@ dotenv.config();
 // 로거 설정
 const logger = new Logger('DrizzleORM');
 
+// DB_PASSWORD 미설정 시 명확한 에러 (DATABASE_URL 사용 시에는 URL 내 비밀번호 사용)
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  logger.error('DB_PASSWORD is required when DATABASE_URL is not set. Check your .env file.');
+}
+
 // SSL 설정 (DB_SSL=true 시 활성화)
 const sslEnabled = process.env.DB_SSL === 'true';
 const sslConfig = sslEnabled
