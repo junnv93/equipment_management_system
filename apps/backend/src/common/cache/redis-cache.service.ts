@@ -1,8 +1,8 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, HttpException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
-import { HttpException } from '@nestjs/common';
 import { getErrorMessage } from '../utils/error';
+import { resolveRedisConfig, createRedisClient } from '../redis';
 import type { ICacheService } from './cache.interface';
 
 /**
@@ -23,19 +23,8 @@ export class RedisCacheService implements ICacheService, OnModuleDestroy {
   private readonly defaultTtl = 1000 * 60 * 60; // 기본 1시간
 
   constructor(private readonly configService: ConfigService) {
-    this.client = new Redis({
-      host: this.configService.get<string>('REDIS_HOST') || 'localhost',
-      port: this.configService.get<number>('REDIS_PORT') || 6379,
-      password: this.configService.get<string>('REDIS_PASSWORD'),
-      lazyConnect: true,
-      retryStrategy: (times) => {
-        if (times > 3) {
-          this.logger.error('Redis connection failed after 3 retries');
-          return null; // 재시도 중단
-        }
-        return Math.min(times * 100, 3000);
-      },
-    });
+    const config = resolveRedisConfig(this.configService);
+    this.client = createRedisClient({ ...config, maxRetries: 3 }, RedisCacheService.name);
 
     this.client.connect().catch((err) => {
       this.logger.error(`Redis connection error: ${getErrorMessage(err)}`);

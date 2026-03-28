@@ -753,6 +753,7 @@ export class EquipmentController {
   @Post('cache/invalidate')
   @HttpCode(HttpStatus.OK)
   @InternalServiceOnly()
+  @AuditLog({ action: 'update', entityType: 'equipment' })
   @ApiOperation({
     summary: '장비 캐시 무효화 (E2E 테스트 / 내부 서비스용)',
     description:

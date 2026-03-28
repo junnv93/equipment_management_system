@@ -29,6 +29,17 @@ export const envSchema = z
     // 캐시 드라이버 설정 (memory: 기본, redis: 프로덕션 권장)
     CACHE_DRIVER: z.enum(['memory', 'redis']).default('memory'),
 
+    // SSL/TLS 설정 (Docker 내부 네트워크에서는 false 허용, 외부 통신 시 true 권장)
+    DB_SSL: z.enum(['true', 'false']).default('false'),
+    DB_SSL_REJECT_UNAUTHORIZED: z.enum(['true', 'false']).default('true'),
+    REDIS_TLS: z.enum(['true', 'false']).default('false'),
+    REDIS_TLS_REJECT_UNAUTHORIZED: z.enum(['true', 'false']).default('true'),
+
+    // 개발/테스트용 로컬 로그인 비밀번호 (프로덕션에서는 Azure AD 전용)
+    DEV_ADMIN_PASSWORD: z.string().optional(),
+    DEV_MANAGER_PASSWORD: z.string().optional(),
+    DEV_USER_PASSWORD: z.string().optional(),
+
     // JWT 설정
     // 토큰 만료 시간은 shared-constants의 ACCESS_TOKEN_EXPIRES_IN으로 관리됩니다.
     // JWT_EXPIRATION은 사용하지 않습니다.
@@ -137,7 +148,8 @@ export const envSchema = z
         });
       }
 
-      if (data.DB_PASSWORD === 'postgres') {
+      // DATABASE_URL 사용 시 DB_PASSWORD는 URL 내 비밀번호가 우선하므로 검증 스킵
+      if (!data.DATABASE_URL && data.DB_PASSWORD === 'postgres') {
         ctx.addIssue({
           code: 'custom',
           message: 'DB_PASSWORD는 프로덕션 환경에서 기본값(postgres)을 사용할 수 없습니다',
@@ -165,6 +177,24 @@ export function validateEnv(config: Record<string, unknown>): EnvConfig {
       `\n\n환경 변수 검증 실패:\n${errors}\n\n` +
         `.env 파일을 확인하거나 필요한 환경 변수를 설정해주세요.\n`
     );
+  }
+
+  // 프로덕션 보안 경고 (non-fatal — Docker 내부 네트워크에서는 허용)
+  // NestJS Logger가 아직 초기화되지 않은 시점이므로 console.warn 사용
+  if (result.data.NODE_ENV === 'production') {
+    const warnings: string[] = [];
+    if (result.data.DB_SSL !== 'true') {
+      warnings.push('DB_SSL is not enabled — database connections are unencrypted');
+    }
+    if (result.data.REDIS_TLS !== 'true' && result.data.CACHE_DRIVER === 'redis') {
+      warnings.push('REDIS_TLS is not enabled — Redis connections are unencrypted');
+    }
+    if (warnings.length > 0) {
+      console.warn(
+        `\n⚠ Security warnings (non-blocking):\n${warnings.map((w) => `  - ${w}`).join('\n')}\n` +
+          `  These are acceptable for Docker internal networks but should be reviewed for other deployments.\n`
+      );
+    }
   }
 
   return result.data;

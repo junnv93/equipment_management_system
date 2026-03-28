@@ -749,7 +749,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-frontend-state**: 프론트엔드 상태 관리 검증 — TanStack Query, onSuccess setQueryData 금지
 - **verify-nextjs**: Next.js 16 패턴 검증 — await params, useActionState, 서버 컴포넌트, Dynamic imports(코드 분할)
 - **verify-design-tokens**: Design Token 3-Layer 아키텍처 검증 — transition-all 금지, focus-visible 우선, import 경로, Layer 참조
-- **verify-security**: 보안 설정 검증 — Helmet CSP 프로덕션 강화, Next.js Security Headers, PermissionsGuard DENY 모드, @Public 남용
+- **verify-security**: OWASP Top 10 기반 보안 검증 — A01 접근 제어(JwtAuthGuard, @Public, userId 신뢰), A03 인젝션(Raw SQL, class-validator), A05 설정(Helmet CSP, CORS), A06 취약 컴포넌트(Dependabot, audit), A07 인증(하드코딩 비밀번호, 토큰 수명), A08 무결성(gitleaks, 프리커밋), A09 감사 로깅(@AuditLog), A10 SSRF(타이밍 안전 API 키)
 - **verify-i18n**: i18n 번역 일관성 검증 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조, Zod 스키마 하드코딩 메시지, 동적 i18n 키 커버리지
 - **verify-sql-safety**: SQL 안전성 검증 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out JOIN, RBAC INNER JOIN
 - **verify-e2e**: E2E 테스트 패턴 검증 — auth fixture 사용, networkidle 금지, waitForTimeout 금지, locator 안티패턴, SSOT 상수, 테스트 격리
