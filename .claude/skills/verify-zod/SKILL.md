@@ -1,6 +1,6 @@
 ---
 name: verify-zod
-description: Zod 검증 패턴 준수 여부를 검증합니다. DTO 추가/수정 후, 컨트롤러 엔드포인트 추가 후 사용.
+description: Verifies Zod validation pattern compliance — ZodValidationPipe usage (no class-validator), versionedSchema inclusion in state-change DTOs, controller pipe application, query DTO consistency. Run after adding/modifying DTOs or controller endpoints.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 모듈명]'
 ---

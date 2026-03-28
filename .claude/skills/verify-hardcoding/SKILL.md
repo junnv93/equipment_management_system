@@ -1,6 +1,6 @@
 ---
 name: verify-hardcoding
-description: SSOT 소스가 존재하는 값의 하드코딩을 탐지합니다. API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, 페이지 옵션, 한국어 UI 라벨 등. 기능 구현 후 사용.
+description: Detects hardcoded values that should use SSOT sources — API paths, queryKeys, environment variables, cache keys, token TTL, pagination options, Korean UI labels, ErrorCode mappings, DTO field mappings. Run after feature implementation.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목]'
 ---
@@ -527,7 +527,7 @@ grep -rn 'import.*\(SITE_LABELS\|CLASSIFICATION_LABELS\|CALIBRATION_METHOD_LABEL
 
 ```bash
 # 21a: 파일 크기 매직넘버 탐지 (10MB = 10 * 1024 * 1024)
-grep -rn "10 \* 1024 \* 1024\|10485760" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|FILE_UPLOAD_LIMITS\|node_modules\|// \|test\|\.spec\."
+grep -rn "10 \* 1024 \* 1024\|10485760" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|file-validation\.ts\|FILE_UPLOAD_LIMITS\|node_modules\|// \|test\|\.spec\."
 ```
 
 ```bash

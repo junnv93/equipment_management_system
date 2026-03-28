@@ -1,6 +1,6 @@
 ---
 name: verify-design-tokens
-description: Design Token 3-Layer 아키텍처 준수 여부를 검증합니다. 컴포넌트 추가/수정 후 사용.
+description: Verifies Design Token 3-Layer architecture compliance — no transition-all (use specific properties), focus-visible over focus, correct import paths, layer reference chain (primitive→semantic→component). Run after adding/modifying components.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 컴포넌트명]'
 ---

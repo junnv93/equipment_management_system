@@ -1,6 +1,6 @@
 ---
 name: manage-skills
-description: 세션 변경사항을 분석하여 검증 스킬 누락을 탐지합니다. 기존 스킬을 동적으로 탐색하고, 새 스킬을 생성하거나 기존 스킬을 업데이트한 뒤 CLAUDE.md를 관리합니다.
+description: Analyzes session changes to detect missing verification skills. Dynamically discovers existing skills, creates new skills or updates existing ones, and manages CLAUDE.md skill references. Use when adding new patterns/modules that may need verification coverage, or when maintaining skill consistency. 스킬 관리, 검증 스킬 누락 탐지, CLAUDE.md 업데이트.
 disable-model-invocation: false
 argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 ---

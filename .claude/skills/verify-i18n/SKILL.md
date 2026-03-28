@@ -1,6 +1,6 @@
 ---
 name: verify-i18n
-description: i18n 번역 파일의 일관성을 검증합니다. messages/{en,ko}/*.json 추가/수정 후 사용.
+description: Verifies i18n translation consistency — en/ko key pair matching, no empty translations, namespace references, Zod schema hardcoded message detection, dynamic i18n key coverage. Run after adding/modifying messages/{en,ko}/*.json files.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 도메인명 (equipment, dashboard, audit 등)]'
 ---

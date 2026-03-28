@@ -1,6 +1,6 @@
 ---
 name: verify-cas
-description: CAS(Optimistic Locking) 패턴 준수 여부를 검증합니다. 상태 변경 엔드포인트 추가/수정 후 사용.
+description: Verifies CAS (Optimistic Locking) pattern compliance — version field in DTOs, VersionedBaseService usage, cache invalidation on 409 conflict, frontend VERSION_CONFLICT error handling. Run after adding/modifying state-change endpoints.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 모듈명]'
 ---

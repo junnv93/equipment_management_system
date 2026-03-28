@@ -1,6 +1,6 @@
 ---
 name: verify-security
-description: OWASP Top 10 기반 보안 검증. Helmet CSP, PermissionsGuard, @Public 남용, 인젝션, 인증, 감사 로깅, SSRF, 의존성 취약점 검사.
+description: OWASP Top 10 security verification — A01 broken access control (JwtAuthGuard, @Public misuse, userId trust), A03 injection (raw SQL, class-validator), A05 security misconfiguration (Helmet CSP, CORS), A06 vulnerable components (Dependabot, audit), A07 authentication (hardcoded passwords, token lifetime), A08 integrity (gitleaks, pre-commit), A09 logging (@AuditLog), A10 SSRF (timing-safe API keys).
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 검사 항목 또는 OWASP 카테고리 (A01-A10)]'
 ---

@@ -1,6 +1,6 @@
 ---
 name: review-architecture
-description: 아키텍처 레벨 코드 리뷰 스킬. 변경된 코드의 DB→Service→Controller→DTO→Hook→Component→Cache 계층 관통 검증, 모듈 간 패턴 일관성, CAS 계층 일관성, 캐시 코히어런스, 보안 계층, 성능 안티패턴을 리뷰합니다. verify-* 스킬이 규칙 기반 자동 검사라면, 이 스킬은 시니어 아키텍트 관점의 설계 판단 리뷰입니다. "아키텍처 리뷰", "코드 리뷰", "전체 리뷰", "PR 리뷰", "구조 검토", "패턴 일관성 확인", "review changes", "check architecture", "리뷰해줘" 등의 맥락에서 사용하세요. 특히 새 모듈 추가, 복잡한 상태 변경 로직, 다단계 승인 플로우 구현, 캐시 전략 변경 후에 적극 사용하세요. 코드 변경 후 구조적 일관성이 궁금할 때, PR 생성 전 아키텍처 수준 점검이 필요할 때 적극 사용하세요.
+description: Architecture-level code review — traces changes across DB→Service→Controller→DTO→Hook→Component→Cache layers, verifying cross-module pattern consistency, CAS coherence, cache invalidation correctness, security layers, and performance anti-patterns. Unlike verify-* skills (rule-based automated checks), this provides senior architect-level design judgment. Use after adding new modules, implementing complex state-change logic, multi-step approval flows, or modifying cache strategies. Trigger on: "아키텍처 리뷰", "코드 리뷰", "전체 리뷰", "PR 리뷰", "리뷰해줘", "review changes", "check architecture", "code review", "PR review", "structural review".
 argument-hint: '[선택사항: 특정 도메인명 또는 파일 경로]'
 ---
 

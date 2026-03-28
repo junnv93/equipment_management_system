@@ -1,12 +1,7 @@
 ---
 name: playwright-e2e
 description: |
-  Playwright E2E 테스트 계획 수립, 코드 생성, 실행, 검증까지의 전체 워크플로우를 관리하는 스킬.
-  "E2E 테스트 작성", "Playwright 테스트", "테스트 계획", "테스트 생성", "페이지 테스트",
-  "기능 테스트", "역할별 테스트", "권한 테스트", "통합 테스트 작성" 등의 맥락에서 사용하세요.
-  playwright-test MCP 서버의 planner/generator/healer 에이전트를 조율하며,
-  브라우저 리소스 경합을 방지하는 순차 실행 전략과 프로젝트 고유 패턴을 자동 적용합니다.
-  사용자가 특정 페이지나 기능에 대한 E2E 테스트를 요청할 때 반드시 이 스킬을 사용하세요.
+  Playwright E2E test workflow orchestrator — covers planning, code generation, execution, healing, and verification. Coordinates playwright-test MCP server's planner/generator/healer agents with sequential execution strategy to prevent browser resource contention. Automatically applies project-specific patterns (auth fixtures, storageState, role-based testing). Use whenever the user requests E2E tests, Playwright tests, test plans, test generation, page tests, feature tests, role-based tests, or permission tests. Trigger on: "E2E 테스트", "Playwright 테스트", "테스트 계획", "테스트 생성", "기능 테스트", "권한 테스트".
 ---
 
 # Playwright E2E 테스트 워크플로우 스킬

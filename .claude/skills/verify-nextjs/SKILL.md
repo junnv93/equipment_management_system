@@ -1,6 +1,6 @@
 ---
 name: verify-nextjs
-description: Next.js 16 패턴 준수 여부를 검증합니다. 페이지/레이아웃 추가/수정 후 사용.
+description: Verifies Next.js 16 pattern compliance — await params/searchParams, PageProps typing, useActionState, Server/Client component boundaries, dynamic imports. Run after adding/modifying pages or layouts.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 라우트 경로]'
 ---

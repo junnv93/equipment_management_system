@@ -1,6 +1,6 @@
 ---
 name: verify-auth
-description: 서버 사이드 인증/인가 패턴 준수 여부를 검증합니다. 컨트롤러 엔드포인트 추가/수정 후 사용.
+description: Verifies server-side authentication/authorization pattern compliance — req.user.userId extraction (no body userId), @RequirePermissions decorator, @AuditLog decorator, JwtAuthGuard coverage. Run after adding/modifying controller endpoints.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 모듈명]'
 ---

@@ -1,6 +1,6 @@
 ---
 name: verify-ssot
-description: SSOT(Single Source of Truth) 임포트 소스를 검증합니다. 타입/enum/상수가 올바른 패키지에서 임포트되는지 확인. 타입/enum 추가/수정 후 사용.
+description: Verifies SSOT (Single Source of Truth) import sources — types/enums from @equipment-management/schemas, permissions/endpoints from @equipment-management/shared-constants, no local redefinitions, lucide-react icon library unification. Run after adding/modifying types or enums.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 패키지명]'
 ---
@@ -295,7 +295,7 @@ grep -rn "'calibration_certificate'\|'raw_data'\|'inspection_report'\|'history_c
 
 ```bash
 # MIME 타입 문자열 하드코딩 탐지 (file-types.ts 외부에서 직접 사용)
-grep -rn "'application/pdf'\|'image/jpeg'\|'image/png'\|'image/gif'\|'application/msword'" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|node_modules\|// \|test\|\.spec\.\|\.test\.\|seed-data\|report-export"
+grep -rn "'application/pdf'\|'image/jpeg'\|'image/png'\|'image/gif'\|'application/msword'" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|file-validation\.ts\|node_modules\|// \|test\|\.spec\.\|\.test\.\|seed-data\|report-export"
 ```
 
 ```bash
@@ -305,7 +305,7 @@ grep -rn "accept=['\"].*\.pdf\|accept=['\"].*\.png\|accept=['\"].*\.jpg" apps/fr
 
 ```bash
 # FILE_UPLOAD_LIMITS 미사용 (파일 크기/개수 매직 넘버)
-grep -rn "10 \* 1024 \* 1024\|10485760" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|FILE_UPLOAD_LIMITS\|node_modules\|// "
+grep -rn "10 \* 1024 \* 1024\|10485760" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|file-validation\.ts\|FILE_UPLOAD_LIMITS\|node_modules\|// "
 ```
 
 **PASS 기준:** 0개 결과 (모든 파일 타입 상수가 SSOT에서 임포트됨).

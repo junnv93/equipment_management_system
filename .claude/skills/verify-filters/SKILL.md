@@ -1,6 +1,6 @@
 ---
 name: verify-filters
-description: URL-driven 필터 SSOT 패턴 준수 여부를 검증합니다. 목록 페이지 필터 추가/수정 후 사용.
+description: Verifies URL-driven filter SSOT pattern compliance — filter-utils required exports, hook existence, page.tsx server-side parsing, no useState for filter state (URL params are SSOT). Run after adding/modifying list page filters.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 기능명 (equipment, calibration, teams 등)]'
 ---

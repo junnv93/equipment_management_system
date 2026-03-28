@@ -1,6 +1,6 @@
 ---
 name: verify-frontend-state
-description: 프론트엔드 상태 관리 패턴 + 성능 안티패턴을 검증합니다. TanStack Query 사용, onSuccess setQueryData 금지, 프론트엔드 성능(동적 import, 서버/클라이언트 분리). 컴포넌트/훅 추가/수정 후 사용.
+description: Verifies frontend state management patterns + performance anti-patterns — TanStack Query for server state (no useState), onSuccess setQueryData prohibition, dynamic imports for code splitting, Server/Client component separation. Run after adding/modifying components or hooks.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 ---

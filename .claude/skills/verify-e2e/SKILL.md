@@ -1,6 +1,6 @@
 ---
 name: verify-e2e
-description: E2E 테스트 코드가 프로젝트 규칙(auth fixture, locator 패턴, 안티패턴 금지, SSOT 상수, 테스트 격리)을 준수하는지 검증합니다. E2E 테스트 추가/수정 후 사용.
+description: Verifies E2E test code compliance — auth fixture usage (no loginAs), no networkidle/waitForTimeout, proper locator patterns (getByRole/getByText), SSOT constants, test isolation per suite. Run after adding/modifying E2E test specs.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 spec 파일명 또는 feature 디렉토리]'
 ---
