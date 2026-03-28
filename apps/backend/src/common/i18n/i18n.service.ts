@@ -42,10 +42,25 @@ export class I18nService implements OnModuleInit {
   }
 
   /**
+   * 메시지가 로딩되었는지 확인
+   * onModuleInit 순서가 보장되지 않을 때 호출자가 먼저 로딩 보장에 사용
+   */
+  ensureLoaded(): void {
+    if (Object.keys(this.messages).length === 0) {
+      this.onModuleInit();
+    }
+  }
+
+  /**
    * 키와 로케일로 번역 문자열 조회
    * 폴백 순서: 요청 로케일 → 영어 → 키 자체 반환
    */
   t(key: string, locale: SupportedLocale, params?: Record<string, string>): string {
+    // onModuleInit 순서 미보장 시 lazy loading
+    if (Object.keys(this.messages).length === 0) {
+      this.ensureLoaded();
+    }
+
     const template = this.messages[locale]?.[key] ?? this.messages['en']?.[key] ?? key;
 
     return params ? this.interpolate(template, params) : template;
