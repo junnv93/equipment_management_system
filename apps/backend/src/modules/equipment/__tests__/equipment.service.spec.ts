@@ -58,6 +58,10 @@ describe('EquipmentService', () => {
       update: jest.fn().mockReturnThis(),
       set: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
+      // 트랜잭션 mock: 콜백에 mockDb 자체를 전달하여 동일 체인 사용
+      transaction: jest
+        .fn()
+        .mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockDb)),
     };
 
     // 캐시 서비스 모킹
@@ -276,6 +280,8 @@ describe('EquipmentService', () => {
 
       mockDb.query.equipment.findFirst.mockResolvedValue(mockEquipment);
       mockDb.returning.mockResolvedValue([updatedEquipment]);
+      // 위치 변경 시 트랜잭션 내 re-fetch 결과
+      mockDb.limit.mockResolvedValue([updatedEquipment]);
 
       const updateDto = {
         name: '업데이트된 장비명',

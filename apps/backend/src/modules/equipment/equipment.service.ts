@@ -484,6 +484,7 @@ export class EquipmentService extends VersionedBaseService {
       'id',
       'createdAt',
       'updatedAt',
+      'location', // SSOT — equipment_location_history에서 파생 (직접 쓰기 금지)
     ]);
 
     for (const [key, value] of Object.entries(dto)) {
@@ -552,6 +553,7 @@ export class EquipmentService extends VersionedBaseService {
       'version', // CAS — updateWithVersion이 관리
       'id', // PK 변경 불가
       'createdAt', // 생성 시점 고정
+      'location', // SSOT — equipment_location_history에서 파생 (직접 쓰기 금지)
     ]);
 
     for (const [key, value] of Object.entries(dto)) {
@@ -650,33 +652,48 @@ export class EquipmentService extends VersionedBaseService {
         });
       }
 
-      // DTO를 DB 엔티티로 변환
+      // DTO를 DB 엔티티로 변환 (location은 CUSTOM_HANDLED — SSOT: 이력에서 파생)
       const insertData = this.transformCreateDtoToEntity(createEquipmentDto);
 
-      // 데이터베이스에 삽입
-      const [newEquipment] = await this.db
-        .insert(equipment)
-        .values(insertData as typeof equipment.$inferInsert)
-        .returning();
+      // 트랜잭션: equipment INSERT + 위치 이력 SSOT 동기화
+      const newEquipment = await this.db.transaction(async (tx) => {
+        // 1. 장비 INSERT (location 미포함 — SSOT 제외)
+        const [created] = await tx
+          .insert(equipment)
+          .values(insertData as typeof equipment.$inferInsert)
+          .returning();
 
-      // 최초 설치 위치 이력 자동 생성
-      if (newEquipment.location) {
-        const changedAt = (
-          newEquipment.installationDate ??
-          newEquipment.createdAt ??
-          new Date()
-        ).toISOString();
-        await this.equipmentHistoryService.createLocationHistoryInternal(
-          newEquipment.id,
-          {
-            changedAt,
-            newLocation: newEquipment.location,
-            previousLocation: null,
-            notes: '최초 설치',
-          },
-          userId
-        );
-      }
+        // 2. 최초 설치 위치 이력 + SSOT sync (history INSERT → resolveLatest → syncNoCas)
+        if (createEquipmentDto.location) {
+          const changedAt = (
+            created.installationDate ??
+            created.createdAt ??
+            new Date()
+          ).toISOString();
+          await this.equipmentHistoryService.createLocationHistoryInternal(
+            created.id,
+            {
+              changedAt,
+              newLocation: createEquipmentDto.location,
+              previousLocation: null,
+              notes: '최초 설치',
+            },
+            userId,
+            tx
+          );
+        }
+
+        // 3. 동기화된 최종 결과 반환 (location이 이력에서 파생된 값으로 반영됨)
+        if (createEquipmentDto.location) {
+          const [synced] = await tx
+            .select()
+            .from(equipment)
+            .where(eq(equipment.id, created.id))
+            .limit(1);
+          return synced;
+        }
+        return created;
+      });
 
       // 캐시 무효화 (신규 장비이므로 teamId 기반 선택적 무효화)
       await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
@@ -723,6 +740,7 @@ export class EquipmentService extends VersionedBaseService {
       );
 
       // 공용장비 데이터 구성 (id는 자동 생성됨)
+      // location 제외 — SSOT: equipment_location_history에서 파생
       const insertData: Partial<Equipment> = {
         name: createSharedEquipmentDto.name,
         managementNumber: createSharedEquipmentDto.managementNumber,
@@ -730,7 +748,6 @@ export class EquipmentService extends VersionedBaseService {
         modelName: createSharedEquipmentDto.modelName,
         manufacturer: createSharedEquipmentDto.manufacturer,
         serialNumber: createSharedEquipmentDto.serialNumber,
-        location: createSharedEquipmentDto.location,
         description: createSharedEquipmentDto.description,
         calibrationCycle: createSharedEquipmentDto.calibrationCycle,
         lastCalibrationDate: createSharedEquipmentDto.lastCalibrationDate
@@ -750,34 +767,49 @@ export class EquipmentService extends VersionedBaseService {
         updatedAt: new Date(),
       };
 
-      // 데이터베이스에 삽입
-      const [newEquipment] = await this.db
-        .insert(equipment)
-        .values(insertData as typeof equipment.$inferInsert)
-        .returning();
+      // 트랜잭션: equipment INSERT + 위치 이력 SSOT 동기화 + 첨부파일 연결
+      const newEquipment = await this.db.transaction(async (tx) => {
+        // 1. 장비 INSERT (location 미포함 — SSOT 제외)
+        const [created] = await tx
+          .insert(equipment)
+          .values(insertData as typeof equipment.$inferInsert)
+          .returning();
 
-      // 최초 설치 위치 이력 자동 생성
-      if (newEquipment.location) {
-        const changedAt = (newEquipment.createdAt ?? new Date()).toISOString();
-        await this.equipmentHistoryService.createLocationHistoryInternal(
-          newEquipment.id,
-          {
-            changedAt,
-            newLocation: newEquipment.location,
-            previousLocation: null,
-            notes: '최초 설치',
-          },
-          userId
-        );
-      }
+        // 2. 최초 설치 위치 이력 + SSOT sync
+        if (createSharedEquipmentDto.location) {
+          const changedAt = (created.createdAt ?? new Date()).toISOString();
+          await this.equipmentHistoryService.createLocationHistoryInternal(
+            created.id,
+            {
+              changedAt,
+              newLocation: createSharedEquipmentDto.location,
+              previousLocation: null,
+              notes: '최초 설치',
+            },
+            userId,
+            tx
+          );
+        }
 
-      // 첨부파일 연결 — create() 패턴과 동일하게 equipmentId UPDATE
-      if (attachmentUuids && attachmentUuids.length > 0) {
-        await this.db
-          .update(equipmentAttachments)
-          .set({ equipmentId: newEquipment.id })
-          .where(inArray(equipmentAttachments.id, attachmentUuids));
-      }
+        // 3. 첨부파일 연결
+        if (attachmentUuids && attachmentUuids.length > 0) {
+          await tx
+            .update(equipmentAttachments)
+            .set({ equipmentId: created.id })
+            .where(inArray(equipmentAttachments.id, attachmentUuids));
+        }
+
+        // 4. 동기화된 최종 결과 반환
+        if (createSharedEquipmentDto.location) {
+          const [synced] = await tx
+            .select()
+            .from(equipment)
+            .where(eq(equipment.id, created.id))
+            .limit(1);
+          return synced;
+        }
+        return created;
+      });
 
       // 캐시 무효화 (공용장비 생성)
       await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
@@ -1170,33 +1202,47 @@ export class EquipmentService extends VersionedBaseService {
         this.validateCalibrationStatusChange(existingEquipment, updateEquipmentDto.status);
       }
 
-      // DTO를 DB 엔티티로 변환
+      // DTO를 DB 엔티티로 변환 (location은 CUSTOM_HANDLED — SSOT: 이력에서 파생)
       const updateData = this.transformUpdateDtoToEntity(updateEquipmentDto, existingEquipment);
+      const locationChanged =
+        updateEquipmentDto.location !== undefined &&
+        updateEquipmentDto.location !== existingEquipment.location;
 
-      // ✅ Optimistic Locking: CAS 패턴으로 업데이트 (VersionedBaseService)
-      const updated = await this.updateWithVersion<Equipment>(
-        equipment,
-        uuid,
-        updateEquipmentDto.version,
-        updateData as Record<string, unknown>,
-        '장비',
-        undefined,
-        'EQUIPMENT_NOT_FOUND'
-      );
-
-      // 위치 변경 감지 → 이력 자동 생성
-      if (updated.location !== existingEquipment.location && updated.location) {
-        await this.equipmentHistoryService.createLocationHistoryInternal(
+      // 트랜잭션: CAS 업데이트 + 위치 이력 SSOT 동기화
+      const updated = await this.db.transaction(async (tx) => {
+        // 1. CAS 업데이트 (location 미포함 — SSOT 제외)
+        const result = await this.updateWithVersion<Equipment>(
+          equipment,
           uuid,
-          {
-            changedAt: new Date().toISOString(),
-            newLocation: updated.location,
-            previousLocation: existingEquipment.location ?? null,
-            notes: '장비 정보 수정',
-          },
-          userId
+          updateEquipmentDto.version,
+          updateData as Record<string, unknown>,
+          '장비',
+          tx,
+          'EQUIPMENT_NOT_FOUND'
         );
-      }
+
+        // 2. 위치 변경 감지 → 이력 + SSOT sync (version 미변경 — updateWithVersion이 이미 처리)
+        if (locationChanged && updateEquipmentDto.location) {
+          await this.equipmentHistoryService.createLocationHistoryInternal(
+            uuid,
+            {
+              changedAt: new Date().toISOString(),
+              newLocation: updateEquipmentDto.location,
+              previousLocation: existingEquipment.location ?? null,
+              notes: '장비 정보 수정',
+            },
+            userId,
+            tx
+          );
+        }
+
+        // 3. 동기화된 최종 결과 반환
+        if (locationChanged) {
+          const [synced] = await tx.select().from(equipment).where(eq(equipment.id, uuid)).limit(1);
+          return synced as Equipment;
+        }
+        return result;
+      });
 
       // 캐시 무효화 (기존 팀 + 변경된 팀 모두 무효화)
       const affectedTeamId = existingEquipment.teamId ?? updateEquipmentDto.teamId;

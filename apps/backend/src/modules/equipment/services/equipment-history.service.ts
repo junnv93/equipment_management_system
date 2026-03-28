@@ -172,8 +172,9 @@ export class EquipmentHistoryService {
   }
 
   /**
-   * equipment.location을 최신 위치 이력과 동기화 (SSOT)
+   * equipment.location을 최신 위치 이력과 동기화 (SSOT) — CAS version bump 포함
    *
+   * 외부 API (위치변동 탭에서 직접 추가/삭제) 전용.
    * CAS 적용: expectedVersion 전달 시 낙관적 잠금 체크.
    * CAS 미적용: expectedVersion 생략 시 직접 UPDATE (내부 호출용).
    *
@@ -204,6 +205,23 @@ export class EquipmentHistoryService {
     } else {
       await queryRunner.update(equipment).set(updateData).where(eq(equipment.id, equipmentId));
     }
+  }
+
+  /**
+   * equipment.location을 최신 위치 이력과 동기화 (SSOT) — version 미변경
+   *
+   * 장비 생성(create) / 수정(update) 시 사용.
+   * 호출자(EquipmentService)가 이미 CAS version을 관리하므로 이중 bump 방지.
+   */
+  private async syncEquipmentLocationNoCas(
+    queryRunner: AppDatabase,
+    equipmentId: string,
+    location: string | null
+  ): Promise<void> {
+    await queryRunner
+      .update(equipment)
+      .set({ location, updatedAt: new Date() } as Record<string, unknown>)
+      .where(eq(equipment.id, equipmentId));
   }
 
   // ===================== 위치 변동 이력 =====================
@@ -321,10 +339,13 @@ export class EquipmentHistoryService {
   }
 
   /**
-   * 위치 변동 이력 추가 (내부 전용)
+   * 위치 변동 이력 추가 + equipment.location SSOT 동기화 (내부 전용)
    *
-   * equipment.location UPDATE 없이 history INSERT만 수행.
-   * 장비 생성(create) / 수정(update) 시 호출 — 해당 서비스에서 이미 location을 처리하므로.
+   * 장비 생성(create) / 수정(update) 시 호출.
+   * 트랜잭션 내에서: history INSERT → resolveLatestLocation → syncEquipmentLocationNoCas.
+   * version은 호출자(EquipmentService)가 관리하므로 여기서는 bump하지 않음.
+   *
+   * @param tx 호출자의 트랜잭션 컨텍스트 (생략 시 this.db 사용)
    */
   async createLocationHistoryInternal(
     equipmentId: string,
@@ -334,10 +355,14 @@ export class EquipmentHistoryService {
       previousLocation: string | null;
       notes?: string;
     },
-    userId?: string
+    userId?: string,
+    tx?: AppDatabase
   ): Promise<void> {
     const validatedUserId = await this.validateAndGetUserId(userId);
-    await this.db.insert(equipmentLocationHistory).values({
+    const executor = tx ?? this.db;
+
+    // 1. 이력 INSERT
+    await executor.insert(equipmentLocationHistory).values({
       equipmentId,
       changedAt: new Date(data.changedAt),
       previousLocation: data.previousLocation,
@@ -345,6 +370,10 @@ export class EquipmentHistoryService {
       notes: data.notes ?? null,
       changedBy: validatedUserId,
     });
+
+    // 2. SSOT: 최신 이력 기준 equipment.location 동기화 (version 미변경)
+    const resolvedLocation = await this.resolveLatestLocation(executor, equipmentId);
+    await this.syncEquipmentLocationNoCas(executor, equipmentId, resolvedLocation);
   }
 
   /**
