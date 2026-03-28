@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, REPORT_EXPORT_MIME } from '@equipment-management/shared-constants';
 import { transformSingleResponse } from './utils/response-transformers';
 
 export type ReportType =
@@ -274,20 +274,7 @@ export const generateReport = async (
     });
 
     // 응답 MIME 타입 처리
-    let mimeType: string;
-    switch (format) {
-      case 'pdf':
-        mimeType = 'application/pdf';
-        break;
-      case 'excel':
-        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        break;
-      case 'csv':
-        mimeType = 'text/csv';
-        break;
-      default:
-        mimeType = 'application/octet-stream';
-    }
+    const mimeType = REPORT_EXPORT_MIME[format] ?? 'application/octet-stream';
 
     // 파일 다운로드 처리
     const filename = getReportFileName(reportType, format);

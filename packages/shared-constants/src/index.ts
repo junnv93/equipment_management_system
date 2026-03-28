@@ -175,8 +175,12 @@ export {
   DOCUMENT_FILE_RULES,
   FILE_UPLOAD_LIMITS,
   MIME_TO_MAGIC_BYTES,
+  REPORT_EXPORT_MIME,
+  MIME_TO_CATEGORY,
+  getMimeCategory,
   type FileTypeEntry,
   type DocumentFileRule,
+  type MimeCategory,
 } from './file-types';
 
 // 데이터 스코프 정책 (역할별 접근 범위)
