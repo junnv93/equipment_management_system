@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import type { ReportFormat } from '@equipment-management/schemas';
-import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
+  REPORT_EXPORT_MIME,
+} from '@equipment-management/shared-constants';
 
 export type { ReportFormat };
 
@@ -45,7 +49,7 @@ export class ReportExportService {
         const buffer = await this.generateExcel(data);
         return {
           buffer,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          mimeType: REPORT_EXPORT_MIME.excel,
           filename: `${safeName}_${dateStr}.xlsx`,
         };
       }
@@ -53,7 +57,7 @@ export class ReportExportService {
         const buffer = this.generateCsv(data);
         return {
           buffer,
-          mimeType: 'text/csv; charset=utf-8',
+          mimeType: REPORT_EXPORT_MIME.csv,
           filename: `${safeName}_${dateStr}.csv`,
         };
       }
@@ -61,7 +65,7 @@ export class ReportExportService {
         const buffer = await this.generatePdf(data);
         return {
           buffer,
-          mimeType: 'application/pdf',
+          mimeType: REPORT_EXPORT_MIME.pdf,
           filename: `${safeName}_${dateStr}.pdf`,
         };
       }

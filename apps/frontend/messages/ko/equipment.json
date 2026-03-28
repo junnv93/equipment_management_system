@@ -616,6 +616,15 @@
       "checking": "검증 중..."
     },
     "deleteError": "삭제에 실패했습니다.",
+    "preview": "미리보기",
+    "previewError": "미리보기를 불러올 수 없습니다.",
+    "previewNotSupported": "미리보기를 지원하지 않는 파일 형식입니다.",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "rotate": "회전",
+    "retry": "다시 시도",
+    "revisionSuccess": "새 버전이 업로드되었습니다.",
+    "revisionError": "버전 업로드에 실패했습니다.",
     "revision": {
       "version": "버전",
       "fileName": "파일명",

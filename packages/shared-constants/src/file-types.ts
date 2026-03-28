@@ -143,3 +143,45 @@ export const FILE_UPLOAD_LIMITS = {
   /** 최대 파일 개수 */
   MAX_FILE_COUNT: 10,
 } as const;
+
+// ============================================================
+// 리포트 내보내기 포맷별 MIME 타입
+// ============================================================
+
+/**
+ * 리포트 내보내기 포맷 → MIME 타입 매핑
+ *
+ * 백엔드 report-export.service.ts, 프론트엔드 reports-api.ts 공통 사용
+ */
+export const REPORT_EXPORT_MIME: Readonly<Record<string, string>> = {
+  excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv; charset=utf-8',
+  pdf: 'application/pdf',
+} as const;
+
+// ============================================================
+// MIME 타입 카테고리 (프론트엔드 아이콘/미리보기 매핑용)
+// ============================================================
+
+export type MimeCategory = 'pdf' | 'image' | 'spreadsheet' | 'document' | 'other';
+
+/** MIME 타입 → 카테고리 매핑 (FILE_TYPES 기반 자동 생성) */
+export const MIME_TO_CATEGORY: ReadonlyMap<string, MimeCategory> = new Map([
+  ...FILE_TYPES.filter((ft) => ft.mime === 'application/pdf').map(
+    (ft) => [ft.mime, 'pdf' as MimeCategory] as const
+  ),
+  ...FILE_TYPES.filter((ft) => ft.mime.startsWith('image/')).map(
+    (ft) => [ft.mime, 'image' as MimeCategory] as const
+  ),
+  ...FILE_TYPES.filter((ft) => ft.mime.includes('spreadsheet') || ft.mime.includes('ms-excel')).map(
+    (ft) => [ft.mime, 'spreadsheet' as MimeCategory] as const
+  ),
+  ...FILE_TYPES.filter(
+    (ft) => ft.mime.includes('msword') || ft.mime.includes('wordprocessingml')
+  ).map((ft) => [ft.mime, 'document' as MimeCategory] as const),
+]);
+
+/** MIME 타입의 카테고리를 반환합니다 */
+export function getMimeCategory(mime: string): MimeCategory {
+  return MIME_TO_CATEGORY.get(mime) ?? 'other';
+}
