@@ -239,6 +239,7 @@
     "selectFile": "Select File",
     "uploadedFiles": "Uploaded Files ({count}/{max})",
     "deleteAll": "Delete All",
-    "deleteFile": "Remove File"
+    "deleteFile": "Remove File",
+    "formatHint": "{extensions} (max {maxSize}, {maxFiles} files)"
   }
 }

@@ -1,0 +1,145 @@
+/**
+ * 파일 업로드 타입 상수 — Backend/Frontend SSOT
+ *
+ * MIME 타입, 확장자, 문서 타입별 허용 규칙을 한 곳에서 관리합니다.
+ * - 프론트엔드: FileUpload 컴포넌트의 accept prop, 검증 로직
+ * - 백엔드: FileUploadService의 MIME 타입 검증
+ */
+
+import type { DocumentType } from '@equipment-management/schemas';
+
+// ============================================================
+// MIME 타입 ↔ 확장자 매핑 (SSOT)
+// ============================================================
+
+export interface FileTypeEntry {
+  /** MIME 타입 (예: 'image/png') */
+  readonly mime: string;
+  /** 확장자 목록 (점 포함, 예: ['.png']) */
+  readonly extensions: readonly string[];
+  /** 파일 시그니처 (magic bytes) — 백엔드 MIME 위장 공격 방지용 */
+  readonly magicBytes: readonly (readonly number[])[];
+}
+
+/**
+ * 시스템에서 허용하는 모든 파일 타입 정의
+ *
+ * 추가/제거 시 이 배열만 수정하면 프론트엔드/백엔드 양쪽에 반영됩니다.
+ * - MIME 타입 → 백엔드 allowedMimeTypes
+ * - 확장자 → 프론트엔드 accept prop
+ * - magicBytes → 백엔드 validateMagicBytes
+ */
+export const FILE_TYPES = [
+  { mime: 'application/pdf', extensions: ['.pdf'], magicBytes: [[0x25, 0x50, 0x44, 0x46]] }, // %PDF
+  { mime: 'image/jpeg', extensions: ['.jpg', '.jpeg'], magicBytes: [[0xff, 0xd8, 0xff]] },
+  { mime: 'image/png', extensions: ['.png'], magicBytes: [[0x89, 0x50, 0x4e, 0x47]] }, // \x89PNG
+  { mime: 'image/gif', extensions: ['.gif'], magicBytes: [[0x47, 0x49, 0x46, 0x38]] }, // GIF8
+  { mime: 'application/msword', extensions: ['.doc'], magicBytes: [[0xd0, 0xcf, 0x11, 0xe0]] }, // OLE compound
+  {
+    mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    extensions: ['.docx'],
+    magicBytes: [[0x50, 0x4b, 0x03, 0x04]], // PK ZIP
+  },
+  {
+    mime: 'application/vnd.ms-excel',
+    extensions: ['.xls'],
+    magicBytes: [[0xd0, 0xcf, 0x11, 0xe0]],
+  }, // OLE compound
+  {
+    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    extensions: ['.xlsx'],
+    magicBytes: [[0x50, 0x4b, 0x03, 0x04]], // PK ZIP
+  },
+] as const satisfies readonly FileTypeEntry[];
+
+// ============================================================
+// 파생 상수 (FILE_TYPES에서 자동 생성)
+// ============================================================
+
+/** 허용된 모든 MIME 타입 목록 */
+export const ALLOWED_MIME_TYPES: readonly string[] = FILE_TYPES.map((ft) => ft.mime);
+
+/** 허용된 모든 확장자 목록 (점 포함, 소문자) */
+export const ALLOWED_EXTENSIONS: readonly string[] = FILE_TYPES.flatMap((ft) => ft.extensions);
+
+/** MIME 타입 → 확장자 매핑 */
+export const MIME_TO_EXTENSIONS: ReadonlyMap<string, readonly string[]> = new Map(
+  FILE_TYPES.map((ft) => [ft.mime, ft.extensions])
+);
+
+/** 확장자 → MIME 타입 매핑 (소문자 정규화) */
+export const EXTENSION_TO_MIME: ReadonlyMap<string, string> = new Map(
+  FILE_TYPES.flatMap((ft) => ft.extensions.map((ext) => [ext.toLowerCase(), ft.mime]))
+);
+
+/** MIME 타입 → magic bytes 매핑 (백엔드 파일 시그니처 검증용) */
+export const MIME_TO_MAGIC_BYTES: ReadonlyMap<string, readonly (readonly number[])[]> = new Map(
+  FILE_TYPES.map((ft) => [ft.mime, ft.magicBytes])
+);
+
+// ============================================================
+// 문서 타입별 허용 파일 규칙
+// ============================================================
+
+/**
+ * 문서 타입별 허용되는 MIME 타입 + accept 문자열
+ *
+ * - accept: HTML `<input type="file">` 의 accept 속성값 (확장자 형식)
+ * - mimes: 서버 검증용 MIME 타입 배열
+ */
+export interface DocumentFileRule {
+  readonly accept: string;
+  readonly mimes: readonly string[];
+}
+
+/**
+ * FILE_TYPES에서 MIME 카테고리별 파일 규칙을 파생합니다.
+ * MIME 문자열/확장자를 하드코딩하지 않고 SSOT에서 자동 생성.
+ */
+function buildRule(mimeFilter: (mime: string) => boolean): DocumentFileRule {
+  const matched = FILE_TYPES.filter((ft) => mimeFilter(ft.mime));
+  return {
+    accept: matched.flatMap((ft) => ft.extensions).join(','),
+    mimes: matched.map((ft) => ft.mime),
+  };
+}
+
+/** 이미지 파일만 허용 */
+const IMAGE_RULE: DocumentFileRule = buildRule((m) => m.startsWith('image/'));
+
+/** PDF 파일만 허용 */
+const PDF_RULE: DocumentFileRule = buildRule((m) => m === 'application/pdf');
+
+/** 교정성적서/검수보고서 등 일반 문서 (전체 허용) */
+const ALL_DOCUMENTS_RULE: DocumentFileRule = {
+  accept: ALLOWED_EXTENSIONS.join(','),
+  mimes: [...ALLOWED_MIME_TYPES],
+};
+
+/** 교정 관련 문서 (PDF + 이미지) */
+const CALIBRATION_DOCUMENT_RULE: DocumentFileRule = buildRule(
+  (m) => m === 'application/pdf' || m.startsWith('image/')
+);
+
+/**
+ * 문서 타입별 파일 규칙 매핑
+ *
+ * key: DocumentType (from @equipment-management/schemas)
+ */
+export const DOCUMENT_FILE_RULES: Readonly<Record<DocumentType, DocumentFileRule>> = {
+  equipment_photo: IMAGE_RULE,
+  equipment_manual: PDF_RULE,
+  calibration_certificate: CALIBRATION_DOCUMENT_RULE,
+  raw_data: ALL_DOCUMENTS_RULE,
+  inspection_report: ALL_DOCUMENTS_RULE,
+  history_card: ALL_DOCUMENTS_RULE,
+  other: ALL_DOCUMENTS_RULE,
+};
+
+/** 파일 업로드 제한 */
+export const FILE_UPLOAD_LIMITS = {
+  /** 최대 파일 크기 (bytes) — 10MB */
+  MAX_FILE_SIZE: 10 * 1024 * 1024,
+  /** 최대 파일 개수 */
+  MAX_FILE_COUNT: 10,
+} as const;
