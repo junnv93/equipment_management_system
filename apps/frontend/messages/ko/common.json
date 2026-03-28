@@ -239,6 +239,7 @@
     "selectFile": "파일 선택",
     "uploadedFiles": "업로드된 파일 ({count}/{max})",
     "deleteAll": "전체 삭제",
-    "deleteFile": "파일 삭제"
+    "deleteFile": "파일 삭제",
+    "formatHint": "{extensions} (최대 {maxSize}, {maxFiles}개)"
   }
 }

@@ -494,7 +494,9 @@
       "usagePeriodEnd": "사용 종료일",
       "calibrationCertificate": "교정성적서",
       "selectedFile": "선택된 파일: {name}",
-      "pdfOnly": "PDF 파일만 업로드 가능합니다. (필수)"
+      "pdfOnly": "PDF 파일만 업로드 가능합니다. (필수)",
+      "fileSizeError": "파일 크기 초과",
+      "fileTypeError": "지원하지 않는 파일 형식"
     },
     "wizard": {
       "step1": "기본 정보",
@@ -563,7 +565,17 @@
     "equipmentManual": "장비 매뉴얼",
     "download": "다운로드",
     "noPhotos": "등록된 장비 사진이 없습니다",
-    "noManuals": "등록된 매뉴얼이 없습니다"
+    "noManuals": "등록된 매뉴얼이 없습니다",
+    "supplyManagement": "구매 및 관리 정보",
+    "calibrationResultLabel": "교정 결과",
+    "correctionFactorLabel": "보정계수",
+    "intermediateCheckRequired": "중간점검 대상",
+    "intermediateCheckRequiredYes": "대상",
+    "intermediateCheckRequiredNo": "비대상",
+    "intermediateCheckCycleLabel": "중간점검 주기",
+    "intermediateCheckCycleUnit": "개월",
+    "lastIntermediateCheckDateLabel": "최종 중간 점검일",
+    "nextIntermediateCheckDateLabel": "차기 중간 점검일"
   },
   "softwareTab": {
     "title": "소프트웨어/매뉴얼 정보",
@@ -674,6 +686,8 @@
     "toasts": {
       "fileRequired": "파일 필요",
       "fileRequiredDesc": "교정성적서 파일을 첨부해주세요.",
+      "fileSizeError": "파일 크기 초과",
+      "fileTypeError": "지원하지 않는 파일 형식",
       "success": "교정 이력 등록 완료",
       "successDesc": "교정 이력이 성공적으로 등록되었습니다. 승인을 기다리고 있습니다.",
       "error": "등록 실패",

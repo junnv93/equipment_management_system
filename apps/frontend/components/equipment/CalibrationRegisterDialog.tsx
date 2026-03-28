@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { DOCUMENT_FILE_RULES } from '@equipment-management/shared-constants';
+import { validateFile } from '@/lib/utils/file-validation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -301,8 +303,31 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
               <FormControl>
                 <Input
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => setCertificateFile(e.target.files?.[0] || null)}
+                  accept={DOCUMENT_FILE_RULES.calibration_certificate.accept}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (file) {
+                      const error = validateFile(file, {
+                        accept: DOCUMENT_FILE_RULES.calibration_certificate.accept,
+                      });
+                      if (error) {
+                        toast({
+                          title:
+                            error.type === 'size'
+                              ? t('calibrationHistoryTab.toasts.fileSizeError')
+                              : t('calibrationHistoryTab.toasts.fileTypeError'),
+                          description:
+                            error.type === 'size'
+                              ? `${error.maxSizeMB}MB`
+                              : DOCUMENT_FILE_RULES.calibration_certificate.accept,
+                          variant: 'destructive',
+                        });
+                        e.target.value = '';
+                        return;
+                      }
+                    }
+                    setCertificateFile(file);
+                  }}
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">

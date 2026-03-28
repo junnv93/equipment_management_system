@@ -494,7 +494,9 @@
       "usagePeriodEnd": "Usage End Date",
       "calibrationCertificate": "Calibration Certificate",
       "selectedFile": "Selected file: {name}",
-      "pdfOnly": "Only PDF files are allowed. (Required)"
+      "pdfOnly": "Only PDF files are allowed. (Required)",
+      "fileSizeError": "File size exceeded",
+      "fileTypeError": "Unsupported file format"
     },
     "wizard": {
       "step1": "Basic Info",
@@ -563,7 +565,17 @@
     "equipmentManual": "Equipment Manual",
     "download": "Download",
     "noPhotos": "No equipment photos registered",
-    "noManuals": "No manuals registered"
+    "noManuals": "No manuals registered",
+    "supplyManagement": "Procurement & Management",
+    "calibrationResultLabel": "Calibration Result",
+    "correctionFactorLabel": "Correction Factor",
+    "intermediateCheckRequired": "Intermediate Check",
+    "intermediateCheckRequiredYes": "Required",
+    "intermediateCheckRequiredNo": "Not Required",
+    "intermediateCheckCycleLabel": "Intermediate Check Cycle",
+    "intermediateCheckCycleUnit": " months",
+    "lastIntermediateCheckDateLabel": "Last Intermediate Check Date",
+    "nextIntermediateCheckDateLabel": "Next Intermediate Check Date"
   },
   "softwareTab": {
     "title": "Software/Manual Information",
@@ -674,6 +686,8 @@
     "toasts": {
       "fileRequired": "File Required",
       "fileRequiredDesc": "Please attach the calibration certificate file.",
+      "fileSizeError": "File size exceeded",
+      "fileTypeError": "Unsupported file format",
       "success": "Calibration Registered",
       "successDesc": "Calibration history has been registered. Awaiting approval.",
       "error": "Registration Failed",

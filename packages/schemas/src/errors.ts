@@ -56,6 +56,10 @@ export enum ErrorCode {
   FileTooLarge = 'FILE_TOO_LARGE',
   InvalidFileType = 'INVALID_FILE_TYPE',
   FileUploadFailed = 'FILE_UPLOAD_FAILED',
+  FileEmpty = 'FILE_EMPTY',
+  FileContentMismatch = 'FILE_CONTENT_MISMATCH',
+  FileSaveFailed = 'FILE_SAVE_FAILED',
+  FileReadFailed = 'FILE_READ_FAILED',
 
   // ============================================================================
   // 비즈니스 로직 에러
@@ -116,6 +120,10 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.FileTooLarge]: 413,
   [ErrorCode.InvalidFileType]: 415,
   [ErrorCode.FileUploadFailed]: 500,
+  [ErrorCode.FileEmpty]: 400,
+  [ErrorCode.FileContentMismatch]: 400,
+  [ErrorCode.FileSaveFailed]: 500,
+  [ErrorCode.FileReadFailed]: 500,
 
   // 비즈니스 로직 에러
   [ErrorCode.CheckoutAlreadyApproved]: 409,

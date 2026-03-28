@@ -8,12 +8,15 @@ import { useAuthProviders } from '@/components/auth/AuthProviders';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { DevLoginButtons } from '@/components/auth/DevLoginButtons';
 import { getSafeCallbackUrl } from '@/lib/auth/auth-utils';
+import { cn } from '@/lib/utils';
 import {
   AUTH_CONTENT,
   AUTH_LAYOUT_TOKENS,
+  AUTH_SPLIT_TOKENS,
   getAuthStaggerDelay,
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
+  TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
 
 function LoginProviders() {
@@ -90,8 +93,8 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
       <a
         href="#login-form"
         className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-50
-                   focus-visible:px-4 focus-visible:py-2 focus-visible:bg-[#ca0123] focus-visible:text-white focus-visible:rounded-lg
-                   focus-visible:ring-2 focus-visible:ring-[#ca0123] focus-visible:ring-offset-2"
+                   focus-visible:px-4 focus-visible:py-2 focus-visible:bg-brand-critical focus-visible:text-white focus-visible:rounded-lg
+                   focus-visible:ring-2 focus-visible:ring-brand-critical focus-visible:ring-offset-2"
       >
         {AUTH_CONTENT.button.skipToForm}
       </a>
@@ -99,19 +102,19 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
       {/* ── 좌측: UL 브랜드 패널 ── */}
       <aside
         className="hidden lg:flex lg:w-[45%] flex-col relative overflow-hidden"
-        style={{ backgroundColor: '#122C49' }}
+        style={{ backgroundColor: AUTH_SPLIT_TOKENS.left.bg }}
         aria-hidden="true"
       >
         {/* 서브틀 격자 패턴 */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            opacity: 0.04,
+            opacity: AUTH_SPLIT_TOKENS.left.grid.opacity,
             backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)
+              linear-gradient(${AUTH_SPLIT_TOKENS.left.grid.lineColor} 1px, transparent 1px),
+              linear-gradient(90deg, ${AUTH_SPLIT_TOKENS.left.grid.lineColor} 1px, transparent 1px)
             `,
-            backgroundSize: '56px 56px',
+            backgroundSize: `${AUTH_SPLIT_TOKENS.left.grid.size}px ${AUTH_SPLIT_TOKENS.left.grid.size}px`,
           }}
         />
 
@@ -119,8 +122,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
         <div
           className="absolute top-0 right-0 bottom-0 w-px"
           style={{
-            background:
-              'linear-gradient(to bottom, transparent, #ca0123 30%, #ca0123 70%, transparent)',
+            background: `linear-gradient(to bottom, transparent, ${AUTH_SPLIT_TOKENS.left.accent} 30%, ${AUTH_SPLIT_TOKENS.left.accent} 70%, transparent)`,
           }}
         />
 
@@ -139,7 +141,10 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
         {/* 중앙: 시스템명 */}
         <div className="relative z-10 flex-1 flex flex-col justify-center px-12">
           {/* 레드 구분선 */}
-          <div className="w-10 h-0.5 bg-[#ca0123] mb-8" />
+          <div
+            className="w-10 h-0.5 mb-8"
+            style={{ backgroundColor: AUTH_SPLIT_TOKENS.left.accent }}
+          />
 
           <h1
             className="font-sans font-bold text-white leading-tight mb-4"
@@ -150,7 +155,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
 
           <p
             className="font-mono text-[11px] tracking-[0.2em] uppercase"
-            style={{ color: 'rgba(255,255,255,0.4)' }}
+            style={{ color: AUTH_SPLIT_TOKENS.left.text.muted }}
           >
             Equipment Management System
           </p>
@@ -163,8 +168,14 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
               'ISO/IEC 17025 준수',
             ].map((item) => (
               <div key={item} className="flex items-center gap-3">
-                <div className="w-1 h-1 rounded-full bg-[#ca0123] flex-shrink-0" />
-                <span className="font-sans text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                <div
+                  className="w-1 h-1 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: AUTH_SPLIT_TOKENS.left.accent }}
+                />
+                <span
+                  className="font-sans text-sm"
+                  style={{ color: AUTH_SPLIT_TOKENS.left.text.subtle }}
+                >
                   {item}
                 </span>
               </div>
@@ -176,7 +187,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
         <div className="relative z-10 px-12 pb-10">
           <p
             className="font-mono text-[10px] tracking-[0.15em]"
-            style={{ color: 'rgba(255,255,255,0.2)' }}
+            style={{ color: AUTH_SPLIT_TOKENS.left.text.faint }}
           >
             © {CURRENT_YEAR} UL Solutions. All rights reserved.
           </p>
@@ -185,15 +196,11 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
         {/* 장식: 대형 원형 요소 */}
         <div
           className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full pointer-events-none"
-          style={{
-            border: '1px solid rgba(202,1,35,0.12)',
-          }}
+          style={{ border: `1px solid ${AUTH_SPLIT_TOKENS.left.decoRing.strong}` }}
         />
         <div
           className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full pointer-events-none"
-          style={{
-            border: '1px solid rgba(202,1,35,0.08)',
-          }}
+          style={{ border: `1px solid ${AUTH_SPLIT_TOKENS.left.decoRing.subtle}` }}
         />
       </aside>
 
@@ -228,15 +235,22 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
               <p className="text-sm text-brand-text-muted">계정으로 로그인하여 계속하세요</p>
             </div>
 
-            {/* 폼 */}
-            <div className="bg-white rounded-2xl border border-brand-border-subtle shadow-sm p-8 space-y-6 motion-safe:animate-fade-in motion-reduce:animate-none">
+            {/* 폼 — raised → focus-within: floating (AP-04 깊이 차등) */}
+            <div
+              className={cn(
+                'bg-brand-bg-surface rounded-2xl border border-brand-border-subtle p-8 space-y-6',
+                'shadow-sm focus-within:shadow-lg',
+                TRANSITION_PRESETS.moderateShadow,
+                'motion-safe:animate-fade-in motion-reduce:animate-none'
+              )}
+            >
               <LoginProviders />
             </div>
 
-            {/* 개발자 계정 */}
+            {/* 개발자 계정 — flush elevation (폼 카드보다 한 단계 낮음, AP-04) */}
             {showDevAccounts && (
               <div
-                className="mt-4 bg-white rounded-2xl border border-brand-border-subtle shadow-sm p-6 motion-safe:animate-fade-in motion-reduce:animate-none"
+                className="mt-4 bg-brand-bg-surface rounded-2xl border border-brand-border-subtle p-6 motion-safe:animate-fade-in motion-reduce:animate-none"
                 style={{ animationDelay: getAuthStaggerDelay(0, 100, 100) }}
               >
                 <DevLoginButtons callbackUrl={callbackUrl} />

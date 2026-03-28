@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+import { ALLOWED_EXTENSIONS, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
+import { validateFile as validateFileUtil } from '@/lib/utils/file-validation';
 
 export interface UploadedFile {
   file: File;
@@ -77,9 +79,9 @@ function getFileTypeColor(fileName: string) {
 export function FileUpload({
   files,
   onChange,
-  accept = '.pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx',
-  maxSize = 10 * 1024 * 1024, // 10MB
-  maxFiles = 10,
+  accept = ALLOWED_EXTENSIONS.join(','),
+  maxSize = FILE_UPLOAD_LIMITS.MAX_FILE_SIZE,
+  maxFiles = FILE_UPLOAD_LIMITS.MAX_FILE_COUNT,
   disabled = false,
   label,
   description,
@@ -96,20 +98,12 @@ export function FileUpload({
 
   const validateFile = useCallback(
     (file: File): string | null => {
-      if (file.size > maxSize) {
-        return t('sizeTooLarge', { maxSizeMB: Math.round(maxSize / 1024 / 1024) });
+      const error = validateFileUtil(file, { accept, maxSize });
+      if (!error) return null;
+      if (error.type === 'size') {
+        return t('sizeTooLarge', { maxSizeMB: error.maxSizeMB });
       }
-
-      // 파일 확장자 검증
-      const allowedExtensions = accept
-        .split(',')
-        .map((ext) => ext.trim().toLowerCase().replace('.', ''));
-      const fileExt = file.name.split('.').pop()?.toLowerCase();
-      if (fileExt && !allowedExtensions.includes(fileExt)) {
-        return t('unsupportedType', { accept });
-      }
-
-      return null;
+      return t('unsupportedType', { accept });
     },
     [accept, maxSize, t]
   );
@@ -148,24 +142,26 @@ export function FileUpload({
           progress: 0,
         };
 
-        // 이미지 파일인 경우 미리보기 생성
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            uploadedFile.preview = e.target?.result as string;
-            // 상태 업데이트를 위해 onChange 호출
-            onChange([...files, ...newFiles]);
-          };
-          reader.readAsDataURL(file);
-        }
-
         newFiles.push(uploadedFile);
       });
 
       setErrors(newErrors);
 
       if (newFiles.length > 0) {
-        onChange([...files, ...newFiles]);
+        const allFiles = [...files, ...newFiles];
+        onChange(allFiles);
+
+        // 이미지 파일의 미리보기를 비동기 생성 후 re-render 유발
+        newFiles.forEach((uf) => {
+          if (uf.file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              uf.preview = e.target?.result as string;
+              onChange([...allFiles]);
+            };
+            reader.readAsDataURL(uf.file);
+          }
+        });
       }
 
       // 파일 입력 초기화
@@ -286,7 +282,11 @@ export function FileUpload({
           <div className="text-center">
             <p className="text-sm font-medium">{dragActive ? t('dropHere') : t('dragOrClick')}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {accept.split(',').join(', ')} (최대 {formatFileSize(maxSize)}, {maxFiles}개)
+              {t('formatHint', {
+                extensions: accept.split(',').join(', '),
+                maxSize: formatFileSize(maxSize),
+                maxFiles,
+              })}
             </p>
           </div>
           <Button
