@@ -714,6 +714,8 @@ export const EQUIPMENT_INFO_CARD_TOKENS = {
   dtLabel: 'text-muted-foreground whitespace-nowrap py-1',
   ddValue: 'text-foreground font-medium py-1',
   ddMono: 'font-mono text-xs tracking-wider text-foreground font-medium py-1',
+  /** 전체 너비 값 (장비사양, 부속품 등 긴 텍스트) — col-span-full로 2열 그리드를 관통 */
+  ddFullWidth: 'text-xs text-muted-foreground col-span-full mt-1',
 } as const;
 
 /**

@@ -151,18 +151,14 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
               {equipment.accessories && (
                 <>
                   <dt className={tokens.dtLabel}>{t('fields.accessories')}</dt>
-                  <dd className="text-xs text-muted-foreground col-span-full mt-1">
-                    {equipment.accessories}
-                  </dd>
+                  <dd className={tokens.ddFullWidth}>{equipment.accessories}</dd>
                 </>
               )}
 
               {equipment.description && (
                 <>
                   <dt className={tokens.dtLabel}>{t('fields.description')}</dt>
-                  <dd className="text-xs text-muted-foreground col-span-full mt-1">
-                    {equipment.description}
-                  </dd>
+                  <dd className={tokens.ddFullWidth}>{equipment.description}</dd>
                 </>
               )}
             </dl>
@@ -344,8 +340,8 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
         </div>
       </div>
 
-      {/* 소프트웨어/펌웨어 (조건부) */}
-      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
+      {/* 소프트웨어/펌웨어 (조건부) — manualLocation은 위치 카드에서 표시 */}
+      {(equipment.softwareVersion || equipment.firmwareVersion) && (
         <div className={tokens.card}>
           <div className={tokens.header}>
             <Package className={tokens.headerIcon} aria-hidden="true" />
@@ -363,12 +359,6 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                 <>
                   <dt className={tokens.dtLabel}>{t('softwareTab.firmwareVersion')}</dt>
                   <dd className={tokens.ddMono}>{equipment.firmwareVersion}</dd>
-                </>
-              )}
-              {equipment.manualLocation && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.manualLocation')}</dt>
-                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
                 </>
               )}
             </dl>
