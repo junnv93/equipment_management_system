@@ -1,0 +1,11 @@
+# Equipment Management System — Code Owners
+# These owners will be requested for review on PRs that modify matching paths.
+
+# Default owner for all files
+* @junnv93
+
+# Security-critical paths require explicit review
+apps/backend/src/modules/auth/ @junnv93
+apps/backend/src/common/guards/ @junnv93
+apps/backend/src/config/env.validation.ts @junnv93
+packages/shared-constants/src/permissions.ts @junnv93
