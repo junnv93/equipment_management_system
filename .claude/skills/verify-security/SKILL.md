@@ -45,6 +45,8 @@ OWASP Top 10 (2021) 기반으로 프로덕션 보안을 검증합니다:
 | `apps/backend/src/common/interceptors/site-scope.interceptor.ts`           | SiteScopeInterceptor (JWT site → req.query.site 강제 주입)                 |
 | `apps/backend/src/common/metrics/metrics.controller.ts`                    | Prometheus 메트릭 컨트롤러 (@Public() + GET, src/common/ 레이어)           |
 | ~~`scripts/check-endpoint-annotations.ts`~~                                | (삭제됨 — CI 파이프라인 통합으로 대체)                                     |
+| `apps/backend/src/common/file-upload/file-upload.service.ts`               | 파일 업로드 서비스 (MIME 검증, magic bytes, 크기 제한)                      |
+| `packages/shared-constants/src/file-types.ts`                              | 파일 업로드 SSOT (ALLOWED_MIME_TYPES, MIME_TO_MAGIC_BYTES, FILE_UPLOAD_LIMITS) |
 | `apps/frontend/tests/e2e/common/security-headers/security-headers.spec.ts` | 보안 헤더 E2E 테스트 (SH-01: Backend, SH-02: Frontend)                     |
 | `.env`                                                                     | PERMISSIONS_GUARD_MODE 환경변수                                            |
 | `apps/backend/src/common/utils/enforce-site-access.ts`                     | 크로스 사이트/팀 접근 제어 공유 유틸리티 (entityTeamId 지원)               |
@@ -475,6 +477,33 @@ if (scope.type === 'site' && equipment.site !== req.user.site) { throw new Forbi
 enforceSiteAccess(req, entitySite, EQUIPMENT_DATA_SCOPE, entityTeamId);
 ```
 
+### Step 10: 파일 업로드 보안 검증 (A03 Injection, A05 Security Misconfiguration)
+
+파일 업로드 서비스가 SSOT 상수를 사용하여 MIME 타입, magic bytes, 파일 크기를 검증하는지 확인합니다.
+
+```bash
+# 10a: 백엔드 MIME 타입 허용 목록이 SSOT 참조인지 확인
+grep -rn "ALLOWED_MIME_TYPES\|allowedMimeTypes" apps/backend/src/common/file-upload/ --include="*.ts"
+```
+
+**PASS 기준:** `ALLOWED_MIME_TYPES`가 `@equipment-management/shared-constants`에서 import되어 사용.
+
+```bash
+# 10b: magic bytes 검증이 SSOT 참조인지 확인
+grep -rn "MIME_TO_MAGIC_BYTES\|validateMagicBytes" apps/backend/src/common/file-upload/ --include="*.ts"
+```
+
+**PASS 기준:** `MIME_TO_MAGIC_BYTES`가 import되어 `validateMagicBytes()`에서 사용.
+
+```bash
+# 10c: 파일 크기 제한이 SSOT 참조인지 확인
+grep -rn "FILE_UPLOAD_LIMITS\|maxFileSize" apps/backend/src/common/file-upload/ --include="*.ts"
+```
+
+**PASS 기준:** `FILE_UPLOAD_LIMITS.MAX_FILE_SIZE`가 import되어 `maxFileSize`에 할당.
+
+**FAIL 기준:** 하드코딩된 MIME 타입 배열, magic bytes 맵, 파일 크기 → SSOT 상수로 교체 필요.
+
 ## Output Format
 
 ```markdown
@@ -501,6 +530,7 @@ enforceSiteAccess(req, entitySite, EQUIPMENT_DATA_SCOPE, entityTeamId);
 | —     | 9   | Throttle Guard 등록         | PASS/FAIL | InternalApiThrottlerGuard 사용 여부        |
 | —     | 10  | SSR X-Internal-Api-Key 헤더 | PASS/FAIL | 헤더 전송 코드 존재 여부                   |
 | —     | 11  | enforceSiteAccess 팀 격리   | PASS/FAIL | entityTeamId 전달 여부                     |
+| A03   | 12  | 파일 업로드 MIME/magic bytes| PASS/FAIL | SSOT 참조 여부 (ALLOWED_MIME_TYPES, MIME_TO_MAGIC_BYTES) |
 ```
 
 ## Exceptions
