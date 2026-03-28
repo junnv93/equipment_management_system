@@ -7,8 +7,14 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
+process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'postgres';
 process.env.REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 process.env.REDIS_PORT = process.env.REDIS_PORT || '6379';
+
+// 로컬 로그인 테스트용 비밀번호 (프로덕션에서는 Azure AD 전용)
+process.env.DEV_ADMIN_PASSWORD = process.env.DEV_ADMIN_PASSWORD || 'admin123';
+process.env.DEV_MANAGER_PASSWORD = process.env.DEV_MANAGER_PASSWORD || 'manager123';
+process.env.DEV_USER_PASSWORD = process.env.DEV_USER_PASSWORD || 'user123';
 
 // Jest 전역 타입들을 명시적으로 설정합니다
 // eslint-disable-next-line @typescript-eslint/no-namespace

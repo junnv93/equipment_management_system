@@ -125,11 +125,11 @@ export class AuthService {
       });
     }
 
-    // 환경 변수에서 테스트 비밀번호 가져오기 (기본값은 개발용)
-    const testPasswords: Record<string, string> = {
-      'admin@example.com': process.env.DEV_ADMIN_PASSWORD || 'admin123',
-      'manager@example.com': process.env.DEV_MANAGER_PASSWORD || 'manager123',
-      'user@example.com': process.env.DEV_USER_PASSWORD || 'user123',
+    // 환경 변수에서 테스트 비밀번호 가져오기 (하드코딩 폴백 없음 — 미설정 시 로그인 실패)
+    const testPasswords: Record<string, string | undefined> = {
+      'admin@example.com': process.env.DEV_ADMIN_PASSWORD,
+      'manager@example.com': process.env.DEV_MANAGER_PASSWORD,
+      'user@example.com': process.env.DEV_USER_PASSWORD,
     };
 
     // 비밀번호 검증용 최소 사용자 정보 (DB 조회 키로만 사용)

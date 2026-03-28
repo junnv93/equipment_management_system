@@ -11,14 +11,28 @@ dotenv.config();
 // 로거 설정
 const logger = new Logger('DrizzleORM');
 
+// SSL 설정 (DB_SSL=true 시 활성화)
+const sslEnabled = process.env.DB_SSL === 'true';
+const sslConfig = sslEnabled
+  ? { ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } }
+  : {};
+
+if (process.env.NODE_ENV === 'production' && !sslEnabled) {
+  logger.warn(
+    'DB_SSL is not enabled. Database connections are unencrypted. ' +
+      'This is acceptable for Docker internal networks but should be reviewed for other deployments.'
+  );
+}
+
 // 통합된 데이터베이스 연결 설정
+// 주의: DATABASE_URL이 설정되면 host/port/user/password/database는 무시됨 (pg Pool 동작)
+// ssl, max, timeout 등 Pool 옵션은 DATABASE_URL과 함께 적용됨
 const dbConfig: PoolConfig = {
-  // DATABASE_URL 우선 사용, 없으면 개별 환경 변수 사용
   connectionString: process.env.DATABASE_URL,
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'equipment_management',
   max: parseInt(process.env.DB_POOL_MAX || '50', 10),
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '60000', 10),
@@ -28,6 +42,7 @@ const dbConfig: PoolConfig = {
   query_timeout: 30000, // 30초
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
+  ...sslConfig,
 };
 
 // Postgres 연결 풀 생성
