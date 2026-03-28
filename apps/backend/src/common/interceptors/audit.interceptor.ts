@@ -58,9 +58,12 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     // 4. @AuditLog() 커스텀 메타데이터 사용
-    // 인증된 사용자가 없으면 패스 (로그인/로그아웃 제외)
+    // 인증된 사용자가 없으면 패스 (로그인/로그아웃/내부 서비스 호출 제외)
     if (!user && !['login', 'logout'].includes(auditMetadata.action)) {
-      return next.handle();
+      const isInternalService = !!request.headers?.['x-internal-api-key'];
+      if (!isInternalService) {
+        return next.handle();
+      }
     }
 
     return this.auditResponse(next, auditMetadata, request, user);
