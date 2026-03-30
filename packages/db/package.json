@@ -27,13 +27,13 @@
   "dependencies": {
     "@equipment-management/schemas": "workspace:*",
     "dotenv": "^16.0.0",
-    "drizzle-orm": "^0.45.1",
-    "pg": "^8.11.3"
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^20.17.27",
-    "@types/pg": "^8.10.0",
-    "drizzle-kit": "^0.31.8",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.3"
   }
