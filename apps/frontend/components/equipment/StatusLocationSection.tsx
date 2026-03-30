@@ -45,18 +45,19 @@ interface TechnicalManager {
 
 interface StatusLocationSectionProps {
   control: Control<FormValues>;
-  isEdit?: boolean;
   showSharedOptions?: boolean;
   selectedSite?: Site;
   selectedTeamId?: number | string;
+  /** 등록 모드: true면 location 입력 숨기고 initialLocation이 보관 위치가 됨 */
+  isCreateMode?: boolean;
 }
 
 export function StatusLocationSection({
   control,
-  isEdit: _isEdit = false,
   showSharedOptions: _showSharedOptions = false,
   selectedSite,
   selectedTeamId,
+  isCreateMode = false,
 }: StatusLocationSectionProps) {
   const { setValue } = useFormContext<FormValues>();
   const t = useTranslations('equipment');
@@ -159,36 +160,41 @@ export function StatusLocationSection({
             )}
           />
 
-          {/* 현재 위치 */}
-          <FormField
-            control={control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {t('form.statusLocation.currentLocationLabel')}{' '}
-                  <span className="text-destructive">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={t('form.statusLocation.locationPlaceholder')}
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                <FormDescription>{t('form.statusLocation.locationDescription')}</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* 현재 위치 — 등록 모드에서는 숨김 (initialLocation에서 자동 파생) */}
+          {!isCreateMode && (
+            <FormField
+              control={control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {t('form.statusLocation.currentLocationLabel')}{' '}
+                    <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t('form.statusLocation.locationPlaceholder')}
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormDescription>{t('form.statusLocation.locationDescription')}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
-          {/* 최초 설치 위치 */}
+          {/* 최초 설치 위치 — 등록 모드에서는 필수 (보관 위치로 자동 설정됨) */}
           <FormField
             control={control}
             name="initialLocation"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('fields.initialLocation')}</FormLabel>
+                <FormLabel>
+                  {t('fields.initialLocation')}{' '}
+                  {isCreateMode && <span className="text-destructive">*</span>}
+                </FormLabel>
                 <FormControl>
                   <Input
                     placeholder={t('form.statusLocation.initialLocationPlaceholder')}
@@ -196,6 +202,11 @@ export function StatusLocationSection({
                     value={field.value || ''}
                   />
                 </FormControl>
+                {isCreateMode && (
+                  <FormDescription>
+                    {t('form.statusLocation.initialLocationAsStorageDescription')}
+                  </FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}

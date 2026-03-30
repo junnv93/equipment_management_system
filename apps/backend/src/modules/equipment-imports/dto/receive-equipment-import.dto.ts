@@ -1,16 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 import {
   CalibrationMethodEnum,
   ConditionStatusEnum,
   AccessoriesStatusEnum,
+  VM,
   type ConditionStatus,
   type AccessoriesStatus,
 } from '@equipment-management/schemas';
 
 export const receiveEquipmentImportSchema = z
   .object({
+    ...versionedSchema,
     receivingCondition: z.object({
       appearance: ConditionStatusEnum.describe('외관 상태를 선택해주세요'),
       operation: ConditionStatusEnum.describe('작동 상태를 선택해주세요'),
@@ -41,7 +44,7 @@ export const receiveEquipmentImportSchema = z
       return true;
     },
     {
-      message: '외부 교정 선택 시 교정 주기, 최종 교정일, 교정 기관을 모두 입력해야 합니다.',
+      message: VM.equipmentImport.calibrationRequired,
     }
   );
 
@@ -51,6 +54,9 @@ export const ReceiveEquipmentImportValidationPipe = new ZodValidationPipe(
 );
 
 export class ReceiveEquipmentImportDto {
+  @ApiProperty({ description: 'CAS 버전 (낙관적 잠금)', example: 1 })
+  version: number;
+
   @ApiProperty({
     description: '수령 시 상태점검 결과',
     example: {

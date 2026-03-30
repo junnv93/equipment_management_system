@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, ReactNode } from 'react';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { useSession, getSession } from 'next-auth/react';
+import { AUTH_ERROR_CODE } from '@equipment-management/shared-constants';
 import { createApiError, unwrapResponseData } from './utils/response-transformers';
 import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 
@@ -77,16 +78,26 @@ export function AuthenticatedClientProvider({ children }: AuthenticatedClientPro
           try {
             // getSession() 호출 → JWT 콜백 트리거 → 토큰 자동 갱신
             const freshSession = await getSession();
-            if (freshSession?.accessToken) {
+
+            if (freshSession?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
+              // Refresh token 확실히 만료 — 세션 만료 처리
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('auth:session-expired'));
+              }
+            } else if (freshSession?.accessToken) {
+              // 토큰 갱신 성공 → 재시도
               originalRequest.headers.Authorization = `Bearer ${freshSession.accessToken}`;
               return instance(originalRequest);
+            } else {
+              // 세션 자체가 없음 (미인증)
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('auth:session-expired'));
+              }
             }
           } catch {
-            // 세션 갱신 실패 — 아래에서 이벤트 dispatch
-          }
-          // 재시도도 실패 → 진짜 세션 만료
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('auth:session-expired'));
+            // 네트워크 에러 — session-expired 미발생, 원래 에러만 전파
+            // SessionProvider refetchInterval이 복구 후 자동 갱신
+            console.warn('[AuthClient] 토큰 갱신 중 네트워크 에러 (일시적)');
           }
         }
 

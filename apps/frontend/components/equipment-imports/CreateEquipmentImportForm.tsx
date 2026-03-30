@@ -90,7 +90,11 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
   const createMutation = useMutation({
     mutationFn: (data: CreateEquipmentImportDto) => equipmentImportApi.create(data),
     onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() }),
+        // 반입 신청 생성 시 승인 대기 카운트 증가 → 네비게이션 배지 즉시 갱신
+        queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll }),
+      ]);
       toast({
         title: t('equipmentImport.toasts.createSuccess'),
         description: t('equipmentImport.toasts.createSuccessDesc'),
@@ -172,6 +176,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
         ownerDepartment: form.ownerDepartment,
         internalContact: form.internalContact || undefined,
         borrowingJustification: form.borrowingJustification || undefined,
+        externalIdentifier: form.externalIdentifier || undefined,
       } as CreateInternalSharedImportDto;
     }
 
@@ -360,13 +365,25 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                   />
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <Label htmlFor="internalContact">{t('equipmentImport.internalContact')}</Label>
                   <Input
                     id="internalContact"
                     value={form.internalContact}
                     onChange={(e) => setForm({ ...form, internalContact: e.target.value })}
                     placeholder={t('equipmentImport.internalContactPlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="externalIdentifier">
+                    {t('equipmentImport.sourceIdentifier')}
+                  </Label>
+                  <Input
+                    id="externalIdentifier"
+                    value={form.externalIdentifier}
+                    onChange={(e) => setForm({ ...form, externalIdentifier: e.target.value })}
+                    placeholder={t('equipmentImport.sourceIdentifierPlaceholder')}
                   />
                 </div>
               </>

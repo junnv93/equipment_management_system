@@ -43,8 +43,14 @@
 | SA 빈 검색 테스트 | `siteAdminPage` (LM) 사용 | `systemAdminPage` (SA) 사용 | LM도 site= 기본 리다이렉트가 있어 ?site=&teamId= 우회 안 됨. SA는 리다이렉트 없음 |
 | AttachmentSection "장비 사진" | `getByText('장비 사진')` | `getByRole('heading', { name: '장비 사진', level: 4 })` | h4 + label 2개 매칭 → strict mode. heading role로 한정 |
 | AttachmentSection "검수보고서" | `getByText(/검수보고서/)` | `getByRole('heading', { name: /검수보고서/, level: 4 })` | h4, label, paragraph 4곳 매칭 → strict mode |
+| AttachmentSection file input (사진) | `input[type="file"][accept*="image/jpeg"]` | `input[type="file"][accept=".jpg,.jpeg,.png,.gif"]` | DOCUMENT_FILE_RULES.equipment_photo.accept는 MIME 타입이 아닌 확장자 형식 사용 (.jpg,.jpeg,.png,.gif) |
+| AttachmentSection file input (매뉴얼) | `input[type="file"][accept="application/pdf"]` | `input[type="file"][accept=".pdf"]` | PDF_RULE accept = ".pdf" (확장자). MIME 타입 "application/pdf"로 매칭하면 0개 |
 | 교정 결과 선택 "적합" | `getByRole('option', { name: '적합' })` | `getByRole('option', { name: '적합', exact: true })` | "부적합", "조건부 적합"도 매칭. exact: true 필수 |
 | 첨부파일 탭 콘텐츠 | `tab.click()` 후 즉시 체크 | `goto('?tab=attachments')` + `emptyState.or(table)` 대기 | URL push 기반 탭 → tabpanel 콘텐츠 비동기 로딩. 직접 URL 접근이 안정적 |
+| /checkouts/create 장비 선택 | `getByText('스펙트럼 분석기')` 클릭 | `locator('[data-testid="equipment-{id}"]')` 클릭 | 장비명 텍스트는 다른 링크와 겹쳐 클릭 시 navigate 발생. data-testid가 유일한 row 선택자 |
+| /checkouts/create 반출지 input | `getByLabel('반출지')` | `getByLabel('반출 장소')` | i18n key `create.destinationLabel` 값이 '반출 장소'. '반출지'는 필터 섹션 label |
+| /checkouts/create 토스트 오류 | `getByText('반출 신청 실패')` | `getByRole('status').filter({ hasText: '반출 신청 실패' })` | toast div + aria-live span 2개 매칭 → strict mode violation |
+| 수령 확인 성공 토스트 | `getByText('수령 확인이 완료되었습니다.')` | `getByText('수령 확인이 완료되었습니다.', { exact: true }).first()` | shadcn Toast가 가시 텍스트 div + sr-only 스팬 두 곳에 동일 텍스트 렌더링 → strict mode violation. `.first()` 필수 |
 
 ---
 
@@ -61,6 +67,8 @@
 | BCI_SYSTEM (eeee4004) | non_conforming 상태이지만 Automotive EMC 팀 소속. TE/TM(FCC팀)이 접근 불가. NC 중복 생성 테스트에 사용 불가. | 2026-03-24 |
 | HARNESS_COUPLER_SUW_A | Automotive EMC 팀 소속. TE(수원 FCC)의 장비 목록에 표시되지만 NC 생성 시 권한 에러 발생 가능. | 2026-03-24 |
 | SIGNAL_GEN_SUW_E | Suite 02에서 동적 생성 → afterAll에서 cancel 해도 장비 상태 복원 안 될 수 있음. beforeAll에서 resetEquipmentToAvailable 필수. | 2026-03-24 |
+| 시드 데이터 활성 checkout 차단 | CHECKOUT_EQUIPMENT_ALREADY_ACTIVE 검증 추가 후, 시드 데이터의 활성 checkout이 있는 장비로 신규 신청 불가. `cancelAllActiveCheckoutsForEquipment` (시드 포함 전체 취소)를 beforeAll에서 반드시 호출. 기존 `cancelActiveCheckoutsForEquipment`는 시드 제외 → 사용 금지. | 2026-03-30 |
+| 반려 후 재신청 가능 여부 | rejected 상태 checkout은 CHECKOUT_EQUIPMENT_ALREADY_ACTIVE active 목록에서 제외됨. 반려 후 즉시 동일 장비로 재신청 시 201 성공 (Suite 21-S21-03 검증). | 2026-03-30 |
 | expectedReturnDate | API는 ISO 8601 형식만 허용 (`2026-06-01T00:00:00.000Z`). 단순 날짜 (`2026-06-01`)는 400 validation error 발생. | 2026-03-24 |
 | DISPOSAL_WORKFLOW_B1 | 전체 워크플로우 테스트용 장비. beforeAll에서 resetDisposalAndEquipment 필수. afterAll에서도 정리 필요. | 2026-03-24 |
 | Disposal review API 응답 | 일부 경우 resp.ok()이지만 빈 JSON body 반환. resp.json() 대신 resp.text()로 파싱 후 조건부 JSON.parse 필요. | 2026-03-24 |
@@ -68,6 +76,10 @@
 | disposal_requests UUID LIKE | `id NOT LIKE 'dddd%'` → `id::text NOT LIKE 'dddd%'` 캐스팅 필수. UUID 타입에 LIKE 연산자 사용 불가. | 2026-03-24 |
 | 장비 등록 위자드 구조 | 4단계 위자드 (기본→상태·위치→교정→이력·첨부). 파일 첨부는 Step3(인덱스). 수정 모드는 3단계(Step2에 첨부 합체). 각 스텝 필수 필드: Step0만 name/site/teamId. | 2026-03-26 |
 | 교정 등록 성적서번호 | certificateNumber는 교정이력 테이블 컬럼에 표시되지 않음. 기관명과 "성적서 다운로드" 버튼으로 검증. | 2026-03-26 |
+| equipment-imports 생성 API | 필수 필드: classification, usagePeriodStart/End (ISO 형식), rental→vendorName, internal_shared→ownerDepartment. `lenderOrganization`/`expectedReturnDate`는 구 필드명 (제거됨). sourceType은 'shared' 아닌 'internal_shared'. 응답은 ResponseTransformInterceptor 래핑 → `(raw.data ?? raw).id` 패턴 사용. | 2026-03-30 |
+| calibration_plans casVersion vs version | plans 테이블에는 두 버전 필드가 존재: `version`(계획서 개정 번호, 재제출 시 증가), `casVersion`(CAS 동시 수정 방지, 매 상태 변경마다 증가). 모든 mutation API(`submit-for-review`, `review`, `approve`, `reject`)는 `casVersion`을 요구함. `planVersion = plan.version` 패턴으로 추적하면 VERSION_CONFLICT(409) 발생. 반드시 `planVersion = plan.casVersion` 사용. | 2026-03-30 |
+| calibration_plans 상태 전이 비가역성 | approved 상태 계획서는 삭제/다운그레이드 불가. draft 상태만 DELETE 가능. 테스트에서 2027년 계획서를 생성하면 run 후 남는다. pending_review/pending_approval 상태에서 중단된 경우 beforeAll에서 reject 후 재시작 패턴 필요. | 2026-03-30 |
+| response.json() 이중 호출 | `(await resp.json()).data ?? (await resp.json())` 패턴은 스트림 이중 소비로 두 번째 호출이 실패. `const body = await resp.json(); const data = body.data ?? body;` 패턴 필수. | 2026-03-30 |
 
 ---
 

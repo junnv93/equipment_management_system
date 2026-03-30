@@ -3,12 +3,15 @@
 import { useSearchParams } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AUTH_ERROR_CODE } from '@equipment-management/shared-constants';
+import { AlertCircle } from 'lucide-react';
 import { AzureAdButton } from '@/components/auth/AzureAdButton';
 import { useAuthProviders } from '@/components/auth/AuthProviders';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { DevLoginButtons } from '@/components/auth/DevLoginButtons';
 import { getSafeCallbackUrl } from '@/lib/auth/auth-utils';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import {
   AUTH_CONTENT,
   AUTH_LAYOUT_TOKENS,
@@ -83,6 +86,38 @@ interface LoginPageContentProps {
  * 좌: UL 네이비(#122C49) + 실제 컬러 로고(빨간 그라디언트) + 대형 시스템명
  * 우: 라이트 화이트 + 클린 폼 (다크 모드 없음, 브랜드 토큰 그대로)
  */
+/**
+ * URL 에러 파라미터 표시 (redirect: true 사용 시 NextAuth가 설정)
+ * code=server_unavailable: 백엔드 연결 불가 / 그 외: 인증 실패
+ */
+function UrlErrorBanner() {
+  const searchParams = useSearchParams();
+  const t = useTranslations('auth.login');
+
+  const error = searchParams?.get('error');
+  const code = searchParams?.get('code');
+
+  if (!error) return null;
+
+  const isServerDown = code === AUTH_ERROR_CODE.SERVER_UNAVAILABLE;
+  const message = isServerDown ? t('serverUnavailable') : t('authFailed');
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2.5 py-3 px-4 rounded-lg mb-4',
+        'bg-brand-critical/[0.06] border-l-[3px] border-brand-critical',
+        'motion-safe:animate-slide-down motion-reduce:animate-none'
+      )}
+      role="alert"
+      aria-live="polite"
+    >
+      <AlertCircle className="flex-shrink-0 w-4 h-4 text-brand-critical" aria-hidden="true" />
+      <span className="text-sm font-medium text-brand-critical">{message}</span>
+    </div>
+  );
+}
+
 export function LoginPageContent({ showDevAccounts = false }: LoginPageContentProps) {
   const searchParams = useSearchParams();
   const callbackUrl = getSafeCallbackUrl(searchParams?.get('callbackUrl'), '/');
@@ -234,6 +269,9 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
               </h2>
               <p className="text-sm text-brand-text-muted">계정으로 로그인하여 계속하세요</p>
             </div>
+
+            {/* URL 에러 파라미터 배너 (redirect 모드 로그인 실패 시) */}
+            <UrlErrorBanner />
 
             {/* 폼 — raised → focus-within: floating (AP-04 깊이 차등) */}
             <div

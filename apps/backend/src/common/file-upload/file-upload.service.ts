@@ -131,6 +131,8 @@ export class FileUploadService implements OnModuleInit {
 
       this.logger.log(`File saved: ${key} (hash: ${fileHash.substring(0, 12)}...)`);
 
+      // MULTER_UTF8_OPTIONS(defParamCharset: 'utf8')로 busboy가 이미 UTF-8로 디코딩하므로
+      // 별도 변환 불필요. file.originalname은 그대로 사용.
       return {
         uuid,
         fileName,

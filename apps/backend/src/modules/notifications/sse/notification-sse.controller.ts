@@ -1,6 +1,7 @@
 import { Controller, Sse, Request, Logger, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import { SKIP_ALL_THROTTLES } from '../../../common/config/throttle.constants';
 import { Observable } from 'rxjs';
 import { NotificationSseService, MessageEvent } from './notification-sse.service';
 import { SseAuthenticated } from '../../../common/decorators/sse-authenticated.decorator';
@@ -20,7 +21,7 @@ import { AuthenticatedRequest } from '../../../types/auth';
  * - SseJwtAuthGuard: query param JWT 검증
  * - JwtAuthGuard 대신 별도 가드 사용 (EventSource는 custom header 미지원)
  */
-@SkipThrottle()
+@SkipThrottle(SKIP_ALL_THROTTLES)
 @ApiTags('알림 실시간 스트림')
 @Controller('notifications')
 export class NotificationSseController {

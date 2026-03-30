@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -75,7 +75,11 @@ export default function CreateCheckoutContent() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // 폼 상태 관리
+  // URL searchParams에서 프리셀렉션 equipmentId 읽기
+  const searchParams = useSearchParams();
+  const preselectedEquipmentId = searchParams.get('equipmentId');
+
+  // 폼 ���태 관리
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [destination, setDestination] = useState('');
@@ -91,6 +95,19 @@ export default function CreateCheckoutContent() {
 
   // 사용자 소속 정보
   const userTeamId = user?.teamId;
+
+  // URL에서 전달된 equipmentId로 장비 프리셀렉션
+  const { data: preselectedEquipment } = useQuery({
+    queryKey: queryKeys.equipment.detail(preselectedEquipmentId ?? ''),
+    queryFn: () => equipmentApi.getEquipment(preselectedEquipmentId!),
+    enabled: !!preselectedEquipmentId,
+  });
+
+  useEffect(() => {
+    if (preselectedEquipment && selectedEquipments.length === 0) {
+      setSelectedEquipments([preselectedEquipment]);
+    }
+  }, [preselectedEquipment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 외부 대여 시 선택된 사이트의 팀 목록 조회
   const { data: teamsData } = useQuery({

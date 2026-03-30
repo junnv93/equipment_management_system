@@ -419,54 +419,6 @@ const equipmentApi = {
     return transformSingleResponse<EquipmentAttachment>(response);
   },
 
-  // ========== 공용장비 API ==========
-
-  // 공용장비 등록
-  createSharedEquipment: async (
-    data: {
-      name: string;
-      managementNumber: string;
-      sharedSource: 'safety_lab' | 'external';
-      site: 'suwon' | 'uiwang';
-      modelName?: string;
-      manufacturer?: string;
-      serialNumber?: string;
-      location?: string;
-      description?: string;
-      calibrationCycle?: number;
-      lastCalibrationDate?: Date | string;
-      calibrationAgency?: string;
-      calibrationMethod?: string;
-    },
-    files?: File[]
-  ): Promise<Equipment> => {
-    let response;
-
-    if (files && files.length > 0) {
-      /**
-       * ✅ SSOT: createFormDataUtil 사용
-       * - Date → ISO 문자열 자동 변환
-       * - undefined/null/빈 문자열 자동 제거
-       */
-      const formData = createFormDataUtil(data, files);
-
-      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.SHARED, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    } else {
-      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.SHARED, data);
-    }
-
-    // 응답에서 equipment 객체 추출 (백엔드가 { equipment: {...} } 형태로 반환하는 경우 처리)
-    const responseData = response.data as { equipment?: Equipment } | Equipment | undefined;
-    if (responseData && typeof responseData === 'object' && 'equipment' in responseData) {
-      return responseData.equipment as Equipment;
-    }
-    return transformSingleResponse<Equipment>(response);
-  },
-
   // ========== 이력 관리 API ==========
 
   // 위치 변동 이력 조회

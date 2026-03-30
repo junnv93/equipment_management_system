@@ -34,7 +34,7 @@ import { NotificationsDropdown } from '@/components/notifications/notifications-
 import { GlobalSearchTrigger } from '@/components/layout/GlobalSearchTrigger';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
-import { queryKeys, CACHE_TIMES, REFETCH_INTERVALS } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
 import {
   getHeaderSpacingClass,
@@ -132,13 +132,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   // 승인 대기 카운트 조회 (권한이 있는 경우에만)
   // SSE를 통해 실시간 무효화됨 (useNotificationStream에서 approval-changed 이벤트 처리)
-  // refetchInterval은 SSE 연결 끊김 시 안전망 (10분)
   const { data: pendingCounts } = useQuery<PendingCountsByCategory>({
     queryKey: queryKeys.approvals.counts(userRole),
     queryFn: () => approvalsApi.getPendingCounts(),
     enabled: !!userRole && hasApprovalPermissions(userRole),
-    staleTime: CACHE_TIMES.SHORT,
-    refetchInterval: REFETCH_INTERVALS.SSE_FALLBACK,
+    ...QUERY_CONFIG.APPROVAL_COUNTS,
   });
 
   // SSOT: nav-config.ts에서 필터링된 섹션 조회
@@ -319,10 +317,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
           )}
         </aside>
 
-        {/* 메인 콘텐츠 영역 */}
+        {/* 메인 콘텐츠 영역 — overflow-x: clip으로 사이드바 침범 방지 */}
         <div
           className={cn(
-            'flex flex-col flex-1',
+            'flex flex-col flex-1 overflow-x-clip',
             getSidebarMarginClasses(isCollapsed),
             SIDEBAR_LAYOUT.transition
           )}

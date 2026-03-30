@@ -76,7 +76,7 @@ export interface InternalSharedImport extends BaseEquipmentImport {
   sourceType: 'internal_shared';
   vendorName: null;
   vendorContact: null;
-  externalIdentifier: null;
+  externalIdentifier: string | null;
   ownerDepartment: string;
   internalContact: string | null;
   borrowingJustification: string | null;
@@ -145,6 +145,7 @@ export type CreateEquipmentImportDto = CreateRentalImportDto | CreateInternalSha
  * Receive equipment import DTO (common for both types)
  */
 export interface ReceiveEquipmentImportDto {
+  version: number;
   receivingCondition: ReceivingCondition;
   calibrationInfo?: {
     calibrationMethod: string;
@@ -326,7 +327,20 @@ class EquipmentImportApi {
    * @param dto - Receiving condition and calibration info
    * @returns Updated equipment import
    */
-  async receive(id: string, dto: ReceiveEquipmentImportDto): Promise<EquipmentImport> {
+  async receive(
+    id: string,
+    dto: ReceiveEquipmentImportDto,
+    files?: File[]
+  ): Promise<EquipmentImport> {
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append('data', JSON.stringify(dto));
+      files.forEach((file) => formData.append('files', file));
+      const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT_IMPORTS.RECEIVE(id), formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return transformSingleResponse<EquipmentImport>(response);
+    }
     const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT_IMPORTS.RECEIVE(id), dto);
     return transformSingleResponse<EquipmentImport>(response);
   }
@@ -341,8 +355,10 @@ class EquipmentImportApi {
    * @param id - Equipment import UUID
    * @returns Created checkout ID for return tracking
    */
-  async initiateReturn(id: string): Promise<EquipmentImport> {
-    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT_IMPORTS.INITIATE_RETURN(id));
+  async initiateReturn(id: string, version: number): Promise<EquipmentImport> {
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT_IMPORTS.INITIATE_RETURN(id), {
+      version,
+    });
     return transformSingleResponse<EquipmentImport>(response);
   }
 

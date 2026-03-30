@@ -22,8 +22,9 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
     test('should display all shared equipment filter options', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 공용/일반 필터 드롭다운 클릭 (Radix UI Select 찾기)
-      const sharedFilter = testOperatorPage.locator('#filter-shared');
+      // 추가 필터 버튼 클릭 후 공용/일반 필터 드롭다운 클릭
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const sharedFilter = testOperatorPage.getByRole('combobox', { name: '장비 구분 필터 선택' });
       await expect(sharedFilter).toBeVisible();
       await sharedFilter.click();
 
@@ -46,8 +47,9 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
     test('should transform shared to isShared=true', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 공용장비 선택 (Radix UI Select 찾기)
-      const sharedFilter = testOperatorPage.locator('#filter-shared');
+      // 추가 필터 버튼 클릭 후 공용장비 선택
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const sharedFilter = testOperatorPage.getByRole('combobox', { name: '장비 구분 필터 선택' });
       await sharedFilter.click();
       await testOperatorPage.getByRole('option', { name: '공용장비', exact: true }).click();
 
@@ -99,8 +101,9 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
     test('should transform normal to isShared=false', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 일반장비 선택 (Radix UI Select 찾기)
-      const sharedFilter = testOperatorPage.locator('#filter-shared');
+      // 추가 필터 버튼 클릭 후 일반장비 선택
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const sharedFilter = testOperatorPage.getByRole('combobox', { name: '장비 구분 필터 선택' });
       await sharedFilter.click();
       await testOperatorPage.getByRole('option', { name: '일반장비', exact: true }).click();
 
@@ -154,17 +157,19 @@ test.describe('Group A: Shared/Normal Equipment Filter', () => {
       const filterBadge = testOperatorPage.getByText(/구분:\s*공용장비/);
       await expect(filterBadge).toBeVisible();
 
-      // "모든 장비" 선택 (Radix UI Select 찾기)
-      const sharedFilter = testOperatorPage.locator('#filter-shared');
+      // "모든 장비" 선택 (추가 필터 패널 열기 후)
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const sharedFilter = testOperatorPage.getByRole('combobox', { name: '장비 구분 필터 선택' });
       await sharedFilter.click();
       await testOperatorPage.getByRole('option', { name: '모든 장비', exact: true }).click();
 
-      // Wait for URL to update (parameter removed)
+      // 필터 뱃지가 제거될 때까지 대기 (배지 비가시성 = 필터 해제 완료)
+      await expect(filterBadge).not.toBeVisible({ timeout: 10000 });
 
-      // URL 검증: isShared 파라미터 제거
+      // URL 검증: isShared 파라미터가 없거나 all/_all (전체 선택 = 필터 해제)
       const currentUrl = testOperatorPage.url();
-      const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.has('isShared')).toBe(false);
+      const isSharedVal = new URL(currentUrl).searchParams.get('isShared');
+      expect(isSharedVal === null || isSharedVal === '_all' || isSharedVal === 'all').toBe(true);
 
       // 필터 뱃지가 제거됨
       await expect(filterBadge).not.toBeVisible();

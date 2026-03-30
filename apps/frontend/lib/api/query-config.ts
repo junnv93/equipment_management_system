@@ -121,11 +121,11 @@ export const QUERY_CONFIG = {
     retry: 3,
   },
 
-  /** 장비 상세 - NORMAL (mutation 후 자동 무효화) */
+  /** 장비 상세 - mutation 후 캐시 무효화 기반 갱신 (Server Component 초기 데이터 활용) */
   EQUIPMENT_DETAIL: {
     staleTime: CACHE_TIMES.MEDIUM,
     gcTime: CACHE_TIMES.LONG,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     retry: 2,
   },
 
@@ -183,6 +183,17 @@ export const QUERY_CONFIG = {
 
   /** 승인 대기 목록 - NORMAL (SSE로 무효화 예정) */
   PENDING_APPROVALS: REFETCH_STRATEGIES.NORMAL,
+
+  /**
+   * 승인 카운트 (네비게이션 배지) - SSE_FALLBACK 폴링
+   *
+   * SSE를 통해 실시간 무효화됨 (approval-changed 이벤트)
+   * SSE 연결 끊김 시 10분 폴링을 안전망으로 사용
+   */
+  APPROVAL_COUNTS: {
+    staleTime: CACHE_TIMES.SHORT,
+    refetchInterval: REFETCH_INTERVALS.SSE_FALLBACK,
+  },
 
   /** 사용자 설정 - STATIC (mutation onSettled invalidation으로만 갱신) */
   SETTINGS: REFETCH_STRATEGIES.STATIC,
@@ -391,6 +402,8 @@ export const queryKeys = {
     revisions: (id: string) => ['documents', 'revisions', id] as const,
     byEquipment: (equipmentId: string) => ['documents', 'equipment', equipmentId] as const,
     byRequest: (requestId: string) => ['documents', 'request', requestId] as const,
+    photoThumbnails: (equipmentId: string, photoIds: string) =>
+      ['documents', 'photo-thumbnails', equipmentId, photoIds] as const,
   },
   reports: {
     all: ['reports'] as const,
@@ -454,5 +467,9 @@ export const queryKeys = {
     all: ['breadcrumb'] as const,
     equipment: (id?: string) => [...queryKeys.breadcrumbs.all, 'equipment', id] as const,
     resource: (type: string, id?: string) => [...queryKeys.breadcrumbs.all, type, id] as const,
+  },
+  dataMigration: {
+    all: ['data-migration'] as const,
+    preview: (sessionId: string) => [...queryKeys.dataMigration.all, 'preview', sessionId] as const,
   },
 } as const;

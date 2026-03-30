@@ -106,6 +106,26 @@ export async function resetEquipmentForNewCheckout(equipmentId: string): Promise
 }
 
 /**
+ * Cancel ALL active checkouts for a given equipment ID, including seed data.
+ * Use when the test equipment has seed data checkouts that block new checkout creation
+ * (CHECKOUT_EQUIPMENT_ALREADY_ACTIVE validation).
+ * Safe to use in beforeAll — global setup always restores seed data on next full run.
+ */
+export async function cancelAllActiveCheckoutsForEquipment(equipmentId: string): Promise<void> {
+  const pool = getCheckoutPool();
+  await pool.query(
+    `UPDATE checkouts SET status = 'canceled', updated_at = NOW()
+     WHERE status NOT IN ('canceled', 'return_approved', 'rejected')
+       AND id IN (
+         SELECT c.id FROM checkouts c
+         JOIN checkout_items ci ON c.id = ci.checkout_id
+         WHERE ci.equipment_id = $1
+       )`,
+    [equipmentId]
+  );
+}
+
+/**
  * Cleanup the checkout pool (call in afterAll or global teardown)
  */
 export async function cleanupCheckoutPool(): Promise<void> {

@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { InternalApiThrottlerGuard } from './common/guards/internal-api-throttler.guard';
+import { THROTTLER_CONFIGS } from './common/config/throttle.constants';
 import { validateEnv } from './config/env.validation';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -38,6 +39,7 @@ import { EquipmentImportsModule } from './modules/equipment-imports/equipment-im
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { DataMigrationModule } from './modules/data-migration/data-migration.module';
 import { I18nModule } from './common/i18n/i18n.module';
 
 @Module({
@@ -48,24 +50,8 @@ import { I18nModule } from './common/i18n/i18n.module';
       validate: validateEnv,
     }),
     ScheduleModule.forRoot(), // 스케줄러 모듈 등록 (교정 기한 초과 자동 점검)
-    EventEmitterModule.forRoot({ wildcard: false, maxListeners: 20 }), // 도메인 이벤트 버스
-    ThrottlerModule.forRoot([
-      {
-        name: 'short',
-        ttl: 1000, // 1초
-        limit: 20, // 1초당 20회 (대시보드 등 동시 요청 허용)
-      },
-      {
-        name: 'medium',
-        ttl: 10000, // 10초
-        limit: 100, // 10초당 100회
-      },
-      {
-        name: 'long',
-        ttl: 60000, // 1분
-        limit: 300, // 1분당 300회 (기본)
-      },
-    ]),
+    EventEmitterModule.forRoot({ wildcard: false, maxListeners: 100 }), // 도메인 이벤트 버스
+    ThrottlerModule.forRoot([...THROTTLER_CONFIGS]),
 
     // 공통 모듈
     CacheModule,
@@ -99,6 +85,7 @@ import { I18nModule } from './common/i18n/i18n.module';
     ApprovalsModule, // Unified approval counts API
     SettingsModule, // System + calibration settings
     DocumentsModule, // 통합 문서 관리 (다운로드, 무결성 검증, 버전 관리)
+    DataMigrationModule, // Excel → DB 일괄 장비 마이그레이션
   ],
   controllers: [],
   providers: [

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import {
   Download,
   BookOpen,
   Truck,
+  FileText,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -29,6 +30,7 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { Button } from '@/components/ui/button';
+import { DocumentPreviewDialog } from '@/components/shared/DocumentPreviewDialog';
 import type { Equipment } from '@/lib/api/equipment-api';
 
 interface BasicInfoTabProps {
@@ -87,6 +89,42 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
   const recentCalibrations = useMemo(() => calibrations.slice(0, 3), [calibrations]);
 
+  // 문서 미리보기 다이얼로그 상태
+  const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  // 사진 썸네일 URL — TanStack Query로 캐시 관리 (useState 서버 상태 금지)
+  const photoIds = useMemo(() => photos.map((p) => p.id).join(','), [photos]);
+  const { data: photoUrls = {} } = useQuery({
+    queryKey: queryKeys.documents.photoThumbnails(equipmentId, photoIds),
+    queryFn: async () => {
+      const entries = await Promise.all(
+        photos.map(async (photo) => {
+          try {
+            const result = await documentApi.getPreviewUrl(photo.id);
+            return [photo.id, result.url] as const;
+          } catch {
+            return null;
+          }
+        })
+      );
+      return Object.fromEntries(entries.filter((e): e is [string, string] => e !== null));
+    },
+    enabled: photos.length > 0,
+    staleTime: CACHE_TIMES.LONG,
+  });
+
+  // blob URL 정리 — ref로 최신 값 추적하여 클로저 문제 방지
+  const photoUrlsRef = useRef(photoUrls);
+  photoUrlsRef.current = photoUrls;
+  useEffect(() => {
+    return () => {
+      Object.values(photoUrlsRef.current).forEach((url) => {
+        if (url.startsWith('blob:')) window.URL.revokeObjectURL(url);
+      });
+    };
+  }, [photoIds]);
+
   /** 교정 결과 → 타임라인 dot 클래스 (SSOT: tl.resultDotMap) */
   const getDotClass = (result?: string) => {
     const variant = result ? (tl.resultDotMap[result] ?? 'info') : 'info';
@@ -95,6 +133,11 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
   const handleDownload = async (doc: DocumentRecord) => {
     await documentApi.downloadDocument(doc.id, doc.originalFileName);
+  };
+
+  const handlePreview = (doc: DocumentRecord) => {
+    setPreviewDoc(doc);
+    setPreviewOpen(true);
   };
 
   return (
@@ -413,20 +456,39 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           {photos.length > 0 ? (
             <div className={DOCUMENT_DISPLAY.photoGrid}>
               {photos.map((photo: DocumentRecord) => (
-                <button
-                  key={photo.id}
-                  type="button"
-                  onClick={() => handleDownload(photo)}
-                  className={DOCUMENT_DISPLAY.photoCard}
-                  aria-label={`${t('basicInfoTab.download')} ${photo.originalFileName}`}
-                >
-                  <div className="flex items-center justify-center h-full">
-                    <Camera className={DOCUMENT_DISPLAY.photoIcon} />
-                  </div>
-                  <div className={DOCUMENT_DISPLAY.photoOverlay}>
-                    <p className="text-xs truncate">{photo.originalFileName}</p>
-                  </div>
-                </button>
+                <div key={photo.id} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => handlePreview(photo)}
+                    className={DOCUMENT_DISPLAY.photoCard}
+                    aria-label={`${t('basicInfoTab.preview')} ${photo.originalFileName}`}
+                  >
+                    {photoUrls[photo.id] ? (
+                      /* eslint-disable-next-line @next/next/no-img-element -- presigned/blob URL */
+                      <img
+                        src={photoUrls[photo.id]}
+                        alt={photo.originalFileName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Camera className={DOCUMENT_DISPLAY.photoIcon} />
+                      </div>
+                    )}
+                    <div className={DOCUMENT_DISPLAY.photoOverlay}>
+                      <p className="text-xs truncate">{photo.originalFileName}</p>
+                    </div>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 right-1 h-7 w-7 bg-background/60 backdrop-blur-sm hover:bg-background/80"
+                    onClick={() => handleDownload(photo)}
+                    aria-label={`${t('basicInfoTab.download')} ${photo.originalFileName}`}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               ))}
             </div>
           ) : (
@@ -454,10 +516,16 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           {manuals.length > 0 ? (
             manuals.map((manual: DocumentRecord) => (
               <div key={manual.id} className={DOCUMENT_DISPLAY.manualRow}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <BookOpen className={DOCUMENT_DISPLAY.manualIcon} aria-hidden="true" />
-                  <span className="text-sm truncate">{manual.originalFileName}</span>
-                </div>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 min-w-0 hover:text-foreground text-left"
+                  onClick={() => handlePreview(manual)}
+                >
+                  <FileText className={DOCUMENT_DISPLAY.manualIcon} aria-hidden="true" />
+                  <span className="text-sm truncate underline-offset-2 hover:underline">
+                    {manual.originalFileName}
+                  </span>
+                </button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -518,6 +586,13 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           </div>
         </section>
       )}
+
+      {/* 문서 미리보기 다이얼로그 (사진: 확대/회전, PDF: 브라우저 내 표시) */}
+      <DocumentPreviewDialog
+        document={previewDoc}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
     </div>
   );
 }

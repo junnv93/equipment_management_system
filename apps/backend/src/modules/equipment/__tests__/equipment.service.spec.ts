@@ -126,6 +126,7 @@ describe('EquipmentService', () => {
         managementNumber: 'EQP-TEST-001',
         status: 'available' as EquipmentStatus,
         site: 'suwon' as const,
+        initialLocation: '수원 창고',
       };
 
       // Act
@@ -148,6 +149,7 @@ describe('EquipmentService', () => {
         managementNumber: 'EQP-TEST-001', // 이미 존재하는 번호
         status: 'available' as EquipmentStatus,
         site: 'suwon' as const,
+        initialLocation: '수원 창고',
       };
 
       // Act & Assert

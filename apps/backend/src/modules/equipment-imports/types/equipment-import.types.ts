@@ -32,10 +32,10 @@ export interface InternalSharedImport extends BaseEquipmentImport {
   ownerDepartment: string; // Required
   internalContact: string | null;
   borrowingJustification: string | null;
+  externalIdentifier: string | null; // 소유처 원본 식별번호
   // Vendor fields are null for internal shared
   vendorName: null;
   vendorContact: null;
-  externalIdentifier: null;
 }
 
 // Discriminated union type

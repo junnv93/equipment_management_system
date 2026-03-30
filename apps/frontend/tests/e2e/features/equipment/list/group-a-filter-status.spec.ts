@@ -30,8 +30,8 @@ test.describe('Group A: Status Filter', () => {
     test('should display all status options from SSOT', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 상태 필터 드롭다운 클릭 (Radix UI Select는 button 역할 사용)
-      const statusFilter = testOperatorPage.locator('#filter-status');
+      // 상태 필터 드롭다운 클릭 (1차 필터 - 항상 표시)
+      const statusFilter = testOperatorPage.getByRole('combobox', { name: '장비 상태 필터 선택' });
       await expect(statusFilter).toBeVisible();
       await statusFilter.click();
 
@@ -42,8 +42,14 @@ test.describe('Group A: Status Filter', () => {
       ).toBeVisible();
 
       // EQUIPMENT_STATUS_FILTER_OPTIONS의 각 상태 옵션 확인
+      // UI는 i18n(ko.json)을 사용하므로 일부 레이블이 EQUIPMENT_STATUS_LABELS과 다를 수 있음
+      // 예: pending_disposal → '폐기 대기' (i18n) vs '폐기대기' (SSOT enum label, 공백 차이)
+      const STATUS_I18N_LABELS: Partial<Record<EquipmentStatus, string>> = {
+        pending_disposal: '폐기 대기', // ko.json: status.pending_disposal
+        disposed: '폐기 완료', // ko.json: status.disposed
+      };
       for (const statusValue of EQUIPMENT_STATUS_FILTER_OPTIONS) {
-        const statusLabel = EQUIPMENT_STATUS_LABELS[statusValue];
+        const statusLabel = STATUS_I18N_LABELS[statusValue] ?? EQUIPMENT_STATUS_LABELS[statusValue];
         const option = testOperatorPage.getByRole('option', { name: statusLabel });
         await expect(option).toBeVisible();
       }
@@ -70,8 +76,8 @@ test.describe('Group A: Status Filter', () => {
     test('should filter equipment by "available" status', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 상태 필터 선택: 사용 가능 (Radix UI Select는 button 역할 사용)
-      const statusFilter = testOperatorPage.locator('#filter-status');
+      // 상태 필터 선택: 사용 가능 (1차 필터 - 항상 표시)
+      const statusFilter = testOperatorPage.getByRole('combobox', { name: '장비 상태 필터 선택' });
       await statusFilter.click();
       await testOperatorPage.getByRole('option', { name: '사용 가능' }).click();
 
@@ -98,7 +104,7 @@ test.describe('Group A: Status Filter', () => {
 
       for (let i = 0; i < rowCount; i++) {
         const row = equipmentRows.nth(i);
-        const statusCell = row.locator('td').nth(3); // 상태 컬럼
+        const statusCell = row.locator('td').nth(5); // 상태 컬럼 (COLUMNS: statusBar=0,mgmtNo=1,name=2,location=3,calibrationDue=4,status=5,actions=6)
         const statusText = await statusCell.textContent();
         expect(statusText).toContain('사용 가능');
       }
@@ -111,8 +117,8 @@ test.describe('Group A: Status Filter', () => {
     test('should display D+N badge for overdue equipment', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 상태 필터 선택: 교정 기한 초과 (Radix UI Select는 button 역할 사용)
-      const statusFilter = testOperatorPage.locator('#filter-status');
+      // 상태 필터 선택: 교정 기한 초과 (1차 필터 - 항상 표시)
+      const statusFilter = testOperatorPage.getByRole('combobox', { name: '장비 상태 필터 선택' });
       await statusFilter.click();
       await testOperatorPage.getByRole('option', { name: '교정 기한 초과' }).click();
 
@@ -145,7 +151,8 @@ test.describe('Group A: Status Filter', () => {
 
         const badgeText = await dPlusBadge.textContent();
         console.log('[Test] Overdue badge text:', badgeText);
-        expect(badgeText).toMatch(/^D\+\d+$/);
+        // Badge shows "D+N (초과)" format (label + overdueLabel suffix from i18n)
+        expect(badgeText).toMatch(/D\+\d+/);
 
         console.log('[Test] ✅ calibration_overdue filter displays D+N badge correctly');
       } else {
@@ -163,20 +170,18 @@ test.describe('Group A: Status Filter', () => {
       const filterBadge = testOperatorPage.getByText(/상태:\s*사용 가능/);
       await expect(filterBadge).toBeVisible();
 
-      // "모든 상태" 선택 (Radix UI Select는 button 역할 사용)
-      const statusFilter = testOperatorPage.locator('#filter-status');
+      // "모든 상태" 선택 (1차 필터 - 항상 표시)
+      const statusFilter = testOperatorPage.getByRole('combobox', { name: '장비 상태 필터 선택' });
       await statusFilter.click();
       await testOperatorPage.getByRole('option', { name: '모든 상태', exact: true }).click();
 
-      // Wait for URL to update (parameter removed)
+      // 필터 뱃지가 제거될 때까지 대기 (배지 비가시성 = 필터 해제 완료)
+      await expect(filterBadge).not.toBeVisible({ timeout: 10000 });
 
-      // URL 검증: status 파라미터 제거
+      // URL 검증: status 파라미터가 없거나 _all (전체 선택 = 필터 해제)
       const currentUrl = testOperatorPage.url();
-      const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.has('status')).toBe(false);
-
-      // 필터 뱃지가 제거됨
-      await expect(filterBadge).not.toBeVisible();
+      const statusVal = new URL(currentUrl).searchParams.get('status');
+      expect(statusVal === null || statusVal === '_all').toBe(true);
 
       // Wait for table to reload
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });

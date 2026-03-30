@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getSession } from 'next-auth/react';
+import { AUTH_ERROR_CODE } from '@equipment-management/shared-constants';
 // ✅ 일관된 에러 처리: 공통 유틸리티 사용
 import { createApiError, unwrapResponseData } from './utils/response-transformers';
 import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
@@ -86,7 +87,7 @@ async function getAccessToken(): Promise<string | null> {
   try {
     const session = await getSession();
 
-    if (session?.error === 'RefreshAccessTokenError') {
+    if (session?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
       // Refresh token도 만료됨 — 재로그인 필요
       console.error('[API Client] 세션 갱신 실패 (RefreshAccessTokenError)');
       return null;
@@ -156,8 +157,8 @@ apiClient.interceptors.response.use(
         // getSession()을 호출하면 NextAuth JWT 콜백이 트리거되어 토큰 갱신
         const session = await getSession();
 
-        if (session?.error === 'RefreshAccessTokenError') {
-          // Refresh token도 만료됨 — AuthSync SSOT 핸들러로 위임
+        if (session?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
+          // Refresh token 확실히 만료 — AuthSync SSOT 핸들러로 위임
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('auth:session-expired'));
           }
@@ -169,15 +170,19 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${session.accessToken}`;
           return apiClient(originalRequest);
         }
-      } catch (refreshError) {
-        console.error('[API Client] 토큰 갱신 실패:', refreshError);
-      }
 
-      // 토큰 갱신 실패 — AuthSync SSOT 핸들러로 위임
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:session-expired'));
+        // 세션 자체가 없음 (미인증) — 세션 만료로 처리
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:session-expired'));
+        }
+        return Promise.reject(error);
+      } catch (refreshError) {
+        // 네트워크 에러 (백엔드/NextAuth 일시 다운)
+        // → session-expired 발생시키지 않고 원래 에러만 전파
+        // → SessionProvider refetchInterval이 복구 후 자동 갱신
+        console.warn('[API Client] 토큰 갱신 중 네트워크 에러 (일시적):', refreshError);
+        return Promise.reject(error);
       }
-      return Promise.reject(error);
     }
 
     // ✅ 공통 에러 변환 유틸리티 사용: ApiError로 변환하여 상세 정보 유지

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
+import { AUTH_ERROR_CODE } from '@equipment-management/shared-constants';
 import { Loader2, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,9 +77,11 @@ export function LoginForm({
         });
 
         if (result?.error) {
-          setError(t('authFailed'));
+          const isServerDown = result.code === AUTH_ERROR_CODE.SERVER_UNAVAILABLE;
+          const errorMessage = isServerDown ? t('serverUnavailable') : t('authFailed');
+          setError(errorMessage);
           triggerShake();
-          onError?.(t('authFailed'));
+          onError?.(errorMessage);
         } else if (result?.ok) {
           setIsSuccess(true);
           onSuccess?.();

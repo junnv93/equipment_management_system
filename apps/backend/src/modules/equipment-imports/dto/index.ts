@@ -4,6 +4,7 @@ export * from './approve-equipment-import.dto';
 export * from './reject-equipment-import.dto';
 export * from './receive-equipment-import.dto';
 export * from './cancel-equipment-import.dto';
+export * from './initiate-return-equipment-import.dto';
 export * from './equipment-import-query.dto';
 
 // Legacy rental imports DTOs (backward compatibility)

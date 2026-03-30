@@ -26,5 +26,6 @@
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "playwright"
-  ]
+  ],
+  "prefersReducedMotion": true
 }

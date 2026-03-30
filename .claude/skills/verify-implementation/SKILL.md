@@ -43,7 +43,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 10 | `verify-security`       | both     | 보안 설정 — Helmet CSP 프로덕션 강화, Next.js Security Headers, @Public 남용 검사        |
 | 11 | `verify-i18n`           | frontend | i18n 번역 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조, 동적 키 커버리지          |
 | 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out, RBAC INNER JOIN |
-| 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 — auth fixture, networkidle 금지, locator 안티패턴, SSOT 상수, 테스트 격리           |
+| 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지 — auth fixture, locator, SSOT + CAS 충돌 복구, 캐시 일관성, 사이트 접근 제어 범위 |
 
 ## 워크플로우
 

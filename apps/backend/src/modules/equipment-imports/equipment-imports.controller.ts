@@ -11,8 +11,21 @@ import {
   ParseUUIDPipe,
   Request,
   UsePipes,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
+import { FormDataParserInterceptor } from '../equipment/interceptors/form-data-parser.interceptor';
+import type { MulterFile } from '../../types/common.types';
 import { EquipmentImportsService } from './equipment-imports.service';
 import type { EquipmentImportListResult } from './types/equipment-import.types';
 import type { equipmentImports as equipmentImportsTable } from '@equipment-management/db/schema';
@@ -29,6 +42,8 @@ import {
   ReceiveEquipmentImportValidationPipe,
   CancelEquipmentImportDto,
   CancelEquipmentImportValidationPipe,
+  InitiateReturnEquipmentImportDto,
+  InitiateReturnEquipmentImportValidationPipe,
   EquipmentImportQueryDto,
   EquipmentImportQueryValidationPipe,
 } from './dto';
@@ -93,7 +108,12 @@ export class EquipmentImportsController {
   @ApiOperation({ summary: '장비 반입 상세 조회' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '상세 조회 성공' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<EquipmentImport> {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<EquipmentImport> {
+    const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
+    enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.findOne(id);
   }
 
@@ -137,21 +157,24 @@ export class EquipmentImportsController {
   @ApiOperation({
     summary: '장비 수령 확인 + 자동 등록',
     description:
-      '수령 확인 후 장비 자동 등록. sourceType에 따라 sharedSource와 owner가 자동 설정됩니다.',
+      '수령 확인 후 장비 자동 등록. sourceType에 따라 sharedSource와 owner가 자동 설정됩니다. 교정성적서 파일 첨부를 지원합니다.',
   })
+  @ApiConsumes('multipart/form-data', 'application/json')
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: '수령 확인 성공, 장비 자동 등록됨',
   })
+  @UseInterceptors(FilesInterceptor('files', 5, MULTER_UTF8_OPTIONS), FormDataParserInterceptor)
   async receive(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(ReceiveEquipmentImportValidationPipe) dto: ReceiveEquipmentImportDto,
+    @UploadedFiles() files: MulterFile[] | undefined,
     @Request() req: AuthenticatedRequest
   ): Promise<EquipmentImport> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
     enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
-    return this.equipmentImportsService.receive(id, req.user.userId, dto);
+    return this.equipmentImportsService.receive(id, req.user.userId, dto, files);
   }
 
   @Post(':id/initiate-return')
@@ -167,13 +190,20 @@ export class EquipmentImportsController {
     status: HttpStatus.OK,
     description: '반납 프로세스 시작, checkout 생성됨',
   })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: '동시 수정 충돌 (Version Conflict)' })
   async initiateReturn(
     @Param('id', ParseUUIDPipe) id: string,
+    @Body(InitiateReturnEquipmentImportValidationPipe) dto: InitiateReturnEquipmentImportDto,
     @Request() req: AuthenticatedRequest
   ): Promise<EquipmentImport> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
     enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
-    return this.equipmentImportsService.initiateReturn(id, req.user.userId, req.user.teamId);
+    return this.equipmentImportsService.initiateReturn(
+      id,
+      req.user.userId,
+      req.user.teamId,
+      dto.version
+    );
   }
 
   @Patch(':id/cancel')
