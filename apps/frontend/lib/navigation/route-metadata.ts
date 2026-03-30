@@ -20,6 +20,7 @@ import {
   Calendar,
   AlertTriangle,
   Code,
+  Upload,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -66,10 +67,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   },
   '/equipment/create': {
     labelKey: 'navigation.equipmentCreate',
-    parent: '/equipment',
-  },
-  '/equipment/create-shared': {
-    labelKey: 'navigation.equipmentCreateShared',
     parent: '/equipment',
   },
   '/equipment/[id]': {
@@ -290,6 +287,11 @@ export const routeMap: Record<string, RouteMetadata> = {
     labelKey: 'navigation.adminAuditLogs',
     parent: '/',
     icon: FileText,
+  },
+  '/admin/data-migration': {
+    labelKey: 'navigation.adminDataMigration',
+    parent: '/',
+    icon: Upload,
   },
 
   // ========================================
