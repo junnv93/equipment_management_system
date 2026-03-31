@@ -85,7 +85,10 @@ export default function EquipmentImportDetail({ id }: Props) {
   }, [equipmentImport, id, setDynamicLabel, clearDynamicLabel, t]);
 
   const approveMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () => equipmentImportApi.approve(id, equipmentImport?.version || 1),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.approve(id, fresh.version);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.APPROVED as EquipmentImportStatus }),
     invalidateKeys: [queryKeys.equipmentImports.lists()],
@@ -97,7 +100,10 @@ export default function EquipmentImportDetail({ id }: Props) {
   });
 
   const rejectMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () => equipmentImportApi.reject(id, equipmentImport?.version || 1, rejectionReason),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.reject(id, fresh.version, rejectionReason);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.REJECTED as EquipmentImportStatus }),
     invalidateKeys: [queryKeys.equipmentImports.lists()],
@@ -110,7 +116,10 @@ export default function EquipmentImportDetail({ id }: Props) {
   });
 
   const initiateReturnMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () => equipmentImportApi.initiateReturn(id),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.initiateReturn(id, fresh.version);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({
       ...old!,
@@ -125,8 +134,10 @@ export default function EquipmentImportDetail({ id }: Props) {
   });
 
   const cancelMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () =>
-      equipmentImportApi.cancel(id, equipmentImport?.version || 1, cancelReason || undefined),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.cancel(id, fresh.version, cancelReason || undefined);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.CANCELED as EquipmentImportStatus }),
     invalidateKeys: [queryKeys.equipmentImports.lists()],
@@ -285,6 +296,14 @@ export default function EquipmentImportDetail({ id }: Props) {
                     {t('equipmentImport.internalContact')}
                   </dt>
                   <dd>{equipmentImport.internalContact}</dd>
+                </div>
+              )}
+              {equipmentImport.externalIdentifier && (
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t('equipmentImport.sourceIdentifier')}
+                  </dt>
+                  <dd>{equipmentImport.externalIdentifier}</dd>
                 </div>
               )}
             </dl>

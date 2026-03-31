@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import { SKIP_ALL_THROTTLES } from '../../common/config/throttle.constants';
 import { DashboardService } from './dashboard.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import {
@@ -38,7 +39,7 @@ import {
  * - 모든 엔드포인트는 JWT 인증 및 권한 검증 필요
  * - 역할에 따라 데이터 범위 자동 필터링
  */
-@SkipThrottle()
+@SkipThrottle(SKIP_ALL_THROTTLES)
 @ApiTags('대시보드')
 @ApiBearerAuth()
 @Controller('dashboard')

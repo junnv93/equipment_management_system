@@ -92,7 +92,6 @@
     "empty": "No equipment registered",
     "emptyDescription": "Register equipment to start managing calibration schedules, checkout history, and non-conformances.",
     "createButton": "Register Equipment",
-    "createSharedButton": "Register Shared Equipment",
     "totalItems": "{count} equipment total",
     "loadError": "Failed to load equipment list",
     "loading": "Loading equipment list",
@@ -351,6 +350,7 @@
       "locationPlaceholder": "e.g. RF1 Room",
       "locationDescription": "Enter the current location of the equipment",
       "initialLocationPlaceholder": "e.g. RF1 Room",
+      "initialLocationAsStorageDescription": "This will be set as the initial storage location",
       "techManagerPlaceholder": "Select technical manager",
       "techManagerNoSite": "Select a site first",
       "techManagerNoTeam": "Select a team first",
@@ -438,7 +438,6 @@
     "create": {
       "pageTitle": "Register Equipment",
       "pageDescription": "Register a new equipment in the system",
-      "sharedLink": "Shared Equipment",
       "approvalRequestComplete": "Request Submitted",
       "approvalRequestDescription": "Equipment registration request has been submitted. Please wait for Technical Manager's approval.",
       "registrationComplete": "Registration Complete",
@@ -452,26 +451,6 @@
       "unknownError": "An unknown error occurred while registering the equipment.",
       "documentUploadPartialFail": "Some documents failed to upload",
       "documentUploadPartialFailDescription": "Equipment was registered but {count} document(s) failed to upload. Please retry from the detail page."
-    },
-    "createShared": {
-      "pageTitle": "Shared/Rental Equipment Temporary Registration",
-      "pageDescription": "Temporarily register shared equipment from other teams or rental equipment.",
-      "guideTitle": "What is Temporary Registration?",
-      "guideCommon": "Equipment temporarily borrowed from other teams (Safety, Battery, etc.)",
-      "guideRental": "Equipment rented from external companies",
-      "guideCertRequired": "Calibration must be valid during the usage period.",
-      "guideExpiry": "Equipment will be deactivated when the usage period expires.",
-      "approvalRequestComplete": "Request Submitted",
-      "approvalRequestDescription": "Temporary registration request has been submitted. Please wait for approval.",
-      "tempRegistrationComplete": "Temporary Registration Complete",
-      "tempRegistrationDescription": "Shared/rental equipment has been temporarily registered.",
-      "tempRegistrationWithHistory": "Equipment temporarily registered. ({count} history records saved)",
-      "historyPartialSuccess": "Equipment temporarily registered. {saved}/{total} history records saved.",
-      "historyPartialTitle": "Temporary Registration Complete (Some History Failed)",
-      "historyPartialDescription": "Equipment registered but {count} history records failed to save.",
-      "registrationFailed": "Registration Failed",
-      "registrationError": "An error occurred while registering the equipment.",
-      "unknownError": "An unknown error occurred while registering the equipment."
     },
     "temporary": {
       "title": "Temporary Equipment Info",
@@ -564,6 +543,7 @@
     "equipmentPhoto": "Equipment Photo",
     "equipmentManual": "Equipment Manual",
     "download": "Download",
+    "preview": "Preview",
     "noPhotos": "No equipment photos registered",
     "noManuals": "No manuals registered",
     "supplyManagement": "Procurement & Management",
@@ -1133,6 +1113,8 @@
     "ownerDepartmentPlaceholder": "e.g. Safety Lab, Battery Lab",
     "internalContact": "Contact Person",
     "internalContactPlaceholder": "e.g. John Smith (ext. 1234)",
+    "sourceIdentifier": "Source Identifier",
+    "sourceIdentifierPlaceholder": "Equipment number from the owner",
     "usagePeriodAndReason": "Usage Period & Reason",
     "usagePeriodAndReasonDesc": "Enter the usage period and import reason.",
     "usagePeriodStart": "Usage Start Date",
@@ -1213,7 +1195,7 @@
   },
   "nonConformanceBanner": {
     "title": "Non-Conforming ({count} issues)",
-    "description": "This equipment is currently non-conforming. Checkout and rental are restricted until non-conformance is resolved.",
+    "description": "This equipment is currently non-conforming. Rental is restricted until non-conformance is resolved. (Repair checkout is still available)",
     "discoveryDate": "Discovery Date: {date}",
     "manage": "Manage Non-Conformance",
     "statusWarningTitle": "Non-Conforming Equipment",
@@ -1469,6 +1451,11 @@
     },
     "nextCalibrationLabel": "Next Calibration Date (Auto-calculated)",
     "calibrationAgencyPlaceholder": "e.g., HCT, ABC Calibration",
+    "calibrationCertificate": {
+      "title": "Calibration Certificate",
+      "description": "Attach calibration certificates if available. (PDF, JPG, PNG)",
+      "upload": "Select files or drag & drop"
+    },
     "submit": "Confirm Receipt",
     "toasts": {
       "success": "Receive confirmation completed.",

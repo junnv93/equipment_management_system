@@ -9,6 +9,7 @@ import { AuthenticatedClientProvider } from '@/lib/api/authenticated-client-prov
 import { CACHE_TIMES } from '@/lib/api/query-config';
 import { patchPerformanceMeasure } from '@/lib/utils/patch-performance-measure';
 import {
+  AUTH_ERROR_CODE,
   SESSION_SYNC_CHANNEL,
   SESSION_SYNC_MESSAGE,
   type SessionSyncMessageType,
@@ -48,7 +49,7 @@ interface ProvidersProps {
  *
  * Token Refresh 아키텍처:
  * - SessionProvider refetchInterval(5분)로 주기적 JWT 콜백 트리거
- * - session.error === 'RefreshAccessTokenError' 감지 시 자동 로그아웃
+ * - session.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED 감지 시 자동 로그아웃
  */
 function AuthSync({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
@@ -67,7 +68,7 @@ function AuthSync({ children }: { children: ReactNode }) {
 
   // Refresh Token 만료 감지 → 자동 로그아웃
   useEffect(() => {
-    if (session?.error === 'RefreshAccessTokenError') {
+    if (session?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
       console.error('[AuthSync] Refresh token expired, signing out...');
       signOut({ callbackUrl: '/login' });
     }
@@ -112,7 +113,7 @@ function AuthSync({ children }: { children: ReactNode }) {
 
       // 1단계: 세션(토큰) 갱신 — JWT 콜백이 서버에서 Access Token을 재발급
       const refreshed = await getSession();
-      if (refreshed?.error === 'RefreshAccessTokenError') {
+      if (refreshed?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
         // Refresh Token도 만료 → AuthSync의 session.error 감지 로직이 처리
         return;
       }
@@ -176,7 +177,7 @@ function AuthSync({ children }: { children: ReactNode }) {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <SessionProvider refetchInterval={5 * 60}>
+    <SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={false}>
       <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
           {/* ✅ Best Practice: SessionProvider 내부에서 useSession() 사용 */}

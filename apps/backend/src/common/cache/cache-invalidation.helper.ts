@@ -250,6 +250,33 @@ export class CacheInvalidationHelper {
   }
 
   /**
+   * 장비 반입 캐시 전체 무효화
+   *
+   * 사용 시점: 승인, 반려, 취소 등 장비만 변경되지 않는 반입 상태 변경 후
+   * 패턴: equipment-imports:*
+   *
+   * Note: deleteByPattern은 동기 (in-memory cache) — Promise 반환 없음
+   */
+  invalidateAllEquipmentImports(): void {
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*`);
+    this.logger.debug('✓ Invalidated all equipment import caches');
+  }
+
+  /**
+   * 장비 반입 + 장비 캐시 동시 무효화
+   *
+   * 사용 시점: 수령(장비 자동 생성), 반납 시작(장비 상태 변경), 반납 완료(장비 비활성화) 등
+   * 패턴: equipment-imports:* + equipment:*
+   *
+   * Note: deleteByPattern은 동기 (in-memory cache) — Promise 반환 없음
+   */
+  invalidateEquipmentImportsWithEquipment(): void {
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}*`);
+    this.logger.debug('✓ Invalidated equipment import + equipment caches');
+  }
+
+  /**
    * 반출 상태 변경 후 캐시 무효화
    *
    * 무효화 대상:

@@ -20,7 +20,6 @@ import {
   parseManagementNumber,
   CLASSIFICATION_TO_CODE,
 } from '@equipment-management/schemas';
-import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
 import {
   eq,
   and,
@@ -630,10 +629,16 @@ export class EquipmentService extends VersionedBaseService {
    * 장비 생성
    * 관리번호 중복 검사 후 새 장비 생성
    */
-  async create(createEquipmentDto: CreateEquipmentDto, userId?: string): Promise<Equipment> {
+  async create(
+    createEquipmentDto: CreateEquipmentDto,
+    userId?: string,
+    externalTx?: AppDatabase
+  ): Promise<Equipment> {
     try {
+      const db = externalTx ?? this.db;
+
       // 관리번호 중복 확인
-      const existingEquipment = await this.db.query.equipment.findFirst({
+      const existingEquipment = await db.query.equipment.findFirst({
         where: eq(equipment.managementNumber, createEquipmentDto.managementNumber),
       });
 
@@ -655,8 +660,13 @@ export class EquipmentService extends VersionedBaseService {
       // DTO를 DB 엔티티로 변환 (location은 CUSTOM_HANDLED — SSOT: 이력에서 파생)
       const insertData = this.transformCreateDtoToEntity(createEquipmentDto);
 
+      // SSOT: 등록 시 location이 없으면 initialLocation을 보관 위치로 파생
+      const resolvedLocation = createEquipmentDto.location || createEquipmentDto.initialLocation;
+
       // 트랜잭션: equipment INSERT + 위치 이력 SSOT 동기화
-      const newEquipment = await this.db.transaction(async (tx) => {
+      // externalTx 제공 시: 외부 트랜잭션 컨텍스트에서 직접 실행 (원자성 보장)
+      // externalTx 없을 시: 자체 트랜잭션 생성
+      const runCreate = async (tx: AppDatabase) => {
         // 1. 장비 INSERT (location 미포함 — SSOT 제외)
         const [created] = await tx
           .insert(equipment)
@@ -664,7 +674,7 @@ export class EquipmentService extends VersionedBaseService {
           .returning();
 
         // 2. 최초 설치 위치 이력 + SSOT sync (history INSERT → resolveLatest → syncNoCas)
-        if (createEquipmentDto.location) {
+        if (resolvedLocation) {
           const changedAt = (
             created.installationDate ??
             created.createdAt ??
@@ -674,7 +684,7 @@ export class EquipmentService extends VersionedBaseService {
             created.id,
             {
               changedAt,
-              newLocation: createEquipmentDto.location,
+              newLocation: resolvedLocation,
               previousLocation: null,
               notes: '최초 설치',
             },
@@ -684,7 +694,7 @@ export class EquipmentService extends VersionedBaseService {
         }
 
         // 3. 동기화된 최종 결과 반환 (location이 이력에서 파생된 값으로 반영됨)
-        if (createEquipmentDto.location) {
+        if (resolvedLocation) {
           const [synced] = await tx
             .select()
             .from(equipment)
@@ -693,10 +703,16 @@ export class EquipmentService extends VersionedBaseService {
           return synced;
         }
         return created;
-      });
+      };
 
-      // 캐시 무효화 (신규 장비이므로 teamId 기반 선택적 무효화)
-      await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
+      const newEquipment = externalTx
+        ? await runCreate(externalTx)
+        : await this.db.transaction(runCreate);
+
+      // 캐시 무효화 — externalTx 제공 시 호출자(승인 서비스)가 트랜잭션 커밋 후 처리
+      if (!externalTx) {
+        await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
+      }
 
       return newEquipment;
     } catch (error) {
@@ -705,122 +721,6 @@ export class EquipmentService extends VersionedBaseService {
       }
       this.logger.error(
         `장비 생성 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 공용장비 생성
-   * 최소 필수 정보만으로 공용장비를 등록합니다.
-   * 공용장비는 isShared = true로 설정됩니다.
-   */
-  async createShared(
-    createSharedEquipmentDto: CreateSharedEquipmentDto,
-    userId?: string,
-    attachmentUuids?: string[]
-  ): Promise<Equipment> {
-    try {
-      // 관리번호 중복 확인
-      const existingEquipment = await this.db.query.equipment.findFirst({
-        where: eq(equipment.managementNumber, createSharedEquipmentDto.managementNumber),
-      });
-
-      if (existingEquipment) {
-        throw new BadRequestException({
-          code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
-          message: `Management number ${createSharedEquipmentDto.managementNumber} is already in use.`,
-        });
-      }
-
-      // 다음 교정일 계산
-      const nextCalibrationDate = calculateNextCalibrationDate(
-        createSharedEquipmentDto.lastCalibrationDate,
-        createSharedEquipmentDto.calibrationCycle
-      );
-
-      // 공용장비 데이터 구성 (id는 자동 생성됨)
-      // location 제외 — SSOT: equipment_location_history에서 파생
-      const insertData: Partial<Equipment> = {
-        name: createSharedEquipmentDto.name,
-        managementNumber: createSharedEquipmentDto.managementNumber,
-        site: createSharedEquipmentDto.site,
-        modelName: createSharedEquipmentDto.modelName,
-        manufacturer: createSharedEquipmentDto.manufacturer,
-        serialNumber: createSharedEquipmentDto.serialNumber,
-        description: createSharedEquipmentDto.description,
-        calibrationCycle: createSharedEquipmentDto.calibrationCycle,
-        lastCalibrationDate: createSharedEquipmentDto.lastCalibrationDate
-          ? new Date(createSharedEquipmentDto.lastCalibrationDate)
-          : undefined,
-        nextCalibrationDate,
-        calibrationAgency: createSharedEquipmentDto.calibrationAgency,
-        calibrationMethod: createSharedEquipmentDto.calibrationMethod,
-        // 공용장비 필드 설정
-        isShared: true,
-        sharedSource: createSharedEquipmentDto.sharedSource,
-        // 기본값 설정
-        status: EquipmentStatusEnum.enum.available,
-        isActive: true,
-        approvalStatus: ApprovalStatusEnum.enum.approved, // 공용장비는 바로 승인 상태
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // 트랜잭션: equipment INSERT + 위치 이력 SSOT 동기화 + 첨부파일 연결
-      const newEquipment = await this.db.transaction(async (tx) => {
-        // 1. 장비 INSERT (location 미포함 — SSOT 제외)
-        const [created] = await tx
-          .insert(equipment)
-          .values(insertData as typeof equipment.$inferInsert)
-          .returning();
-
-        // 2. 최초 설치 위치 이력 + SSOT sync
-        if (createSharedEquipmentDto.location) {
-          const changedAt = (created.createdAt ?? new Date()).toISOString();
-          await this.equipmentHistoryService.createLocationHistoryInternal(
-            created.id,
-            {
-              changedAt,
-              newLocation: createSharedEquipmentDto.location,
-              previousLocation: null,
-              notes: '최초 설치',
-            },
-            userId,
-            tx
-          );
-        }
-
-        // 3. 첨부파일 연결
-        if (attachmentUuids && attachmentUuids.length > 0) {
-          await tx
-            .update(equipmentAttachments)
-            .set({ equipmentId: created.id })
-            .where(inArray(equipmentAttachments.id, attachmentUuids));
-        }
-
-        // 4. 동기화된 최종 결과 반환
-        if (createSharedEquipmentDto.location) {
-          const [synced] = await tx
-            .select()
-            .from(equipment)
-            .where(eq(equipment.id, created.id))
-            .limit(1);
-          return synced;
-        }
-        return created;
-      });
-
-      // 캐시 무효화 (공용장비 생성)
-      await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
-
-      return newEquipment;
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      this.logger.error(
-        `공용장비 생성 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
     }
@@ -1545,9 +1445,10 @@ export class EquipmentService extends VersionedBaseService {
   /**
    * 교정 예정 장비 조회
    * ✅ UTC 기준 날짜 비교
+   * ✅ DB-level 사이트 필터링 (in-memory 필터 제거로 확장성 확보)
    */
-  async findCalibrationDue(days: number): Promise<Equipment[]> {
-    const cacheKey = this.buildCacheKey('calibration', { days });
+  async findCalibrationDue(days: number, site?: string): Promise<Equipment[]> {
+    const cacheKey = this.buildCacheKey('calibration', { days, site: site || 'all' });
 
     return this.cacheService.getOrSet(
       cacheKey,
@@ -1556,13 +1457,18 @@ export class EquipmentService extends VersionedBaseService {
           const today = getUtcStartOfDay();
           const dueDate = getUtcEndOfDay(addDaysUtc(today, days));
 
-          // ✅ Drizzle ORM의 Date 객체 처리 문제 해결: sql 템플릿으로 명시적 타임스탬프 변환
+          const conditions = [
+            eq(equipment.isActive, true),
+            sql`${equipment.nextCalibrationDate} IS NOT NULL`,
+            sql`${equipment.nextCalibrationDate} <= ${dueDate.toISOString()}::timestamp`,
+          ];
+
+          if (site) {
+            conditions.push(eq(equipment.site, site));
+          }
+
           return await this.db.query.equipment.findMany({
-            where: and(
-              eq(equipment.isActive, true),
-              sql`${equipment.nextCalibrationDate} IS NOT NULL`,
-              sql`${equipment.nextCalibrationDate} <= ${dueDate.toISOString()}::timestamp`
-            ),
+            where: and(...conditions),
             orderBy: asc(equipment.nextCalibrationDate),
             limit: 500,
           });

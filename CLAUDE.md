@@ -752,7 +752,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-security**: OWASP Top 10 security verification — access control, injection, CSP, vulnerable components, auth, logging, SSRF
 - **verify-i18n**: i18n consistency verification — en/ko key matching, empty translations, Zod hardcoded messages
 - **verify-sql-safety**: SQL safety verification — LIKE escaping, N+1 detection, COUNT(DISTINCT) fan-out, RBAC INNER JOIN
-- **verify-e2e**: E2E test pattern verification — auth fixtures, no networkidle/waitForTimeout, locator patterns, test isolation
+- **verify-e2e**: E2E test pattern + architecture coverage — auth fixtures, locator patterns, test isolation + CAS conflict recovery, cache invalidation after mutation, site access control on mutations
 - **verify-filters**: URL-driven filter SSOT verification — filter-utils exports, hooks, page.tsx server parsing
 - **verify-implementation**: Unified verification — runs all verify-* skills sequentially, generates combined report
 - **review-architecture**: Architecture-level code review — cross-layer tracing, CAS coherence, cache invalidation, pattern consistency

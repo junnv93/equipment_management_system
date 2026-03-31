@@ -78,10 +78,6 @@ test.describe('Equipment Create Form', () => {
     // URL에 /equipment가 포함되어 있는지 확인 (정확한 경로는 다를 수 있음)
     await expect(page).toHaveURL(/\/equipment/);
   });
-
-  test('공용장비 등록 링크 표시', async ({ siteAdminPage: page }) => {
-    await expect(page.getByRole('link', { name: /공용장비 등록/i })).toBeVisible();
-  });
 });
 
 test.describe('Equipment Form - File Upload', () => {
@@ -106,69 +102,6 @@ test.describe('Equipment Form - File Upload', () => {
       .toBeVisible({ timeout: 5000 })
       .catch(() => {
         // 제한 안내가 다른 형태일 수 있음
-      });
-  });
-});
-
-test.describe('Shared Equipment Create Form', () => {
-  test.beforeEach(async ({ siteAdminPage: page }) => {
-    await page.goto('/equipment/create-shared');
-  });
-
-  test('공용장비 등록 페이지 렌더링', async ({ siteAdminPage: page }) => {
-    // 페이지 제목 확인
-    await expect(page.getByRole('heading', { name: '공용장비 등록' })).toBeVisible();
-
-    // 공용장비 안내 확인
-    await expect(page.getByText('공용장비란?')).toBeVisible();
-  });
-
-  test('필수 정보 섹션 렌더링', async ({ siteAdminPage: page }) => {
-    // 필수 필드 확인 (첫 번째 매칭 요소 사용)
-    await expect(page.getByLabel('장비명').first()).toBeVisible();
-    await expect(page.getByLabel('관리번호').first()).toBeVisible();
-    await expect(page.getByLabel('공용장비 출처')).toBeVisible();
-    // 주 사이트는 combobox로 찾기
-    await expect(page.getByRole('combobox', { name: /주 사이트/i })).toBeVisible();
-  });
-
-  test('공용장비 출처 선택', async ({ siteAdminPage: page }) => {
-    await page.getByLabel('공용장비 출처').click();
-
-    // Safety Lab 옵션 확인
-    await expect(page.getByRole('option', { name: /Safety Lab/i })).toBeVisible();
-
-    // 외부 기관 옵션 확인
-    await expect(page.getByRole('option', { name: /외부 기관/i })).toBeVisible();
-  });
-
-  test('공유 사이트 다중 선택', async ({ siteAdminPage: page }) => {
-    // 주 사이트를 수원으로 선택 (combobox 사용)
-    await page.getByRole('combobox', { name: /주 사이트/i }).click();
-    await page.getByRole('option', { name: '수원' }).click();
-
-    // 공유 사이트 체크박스 확인 (role로 찾기)
-    const suwonCheckbox = page.getByRole('checkbox', { name: /수원/i });
-    const uiwangCheckbox = page.getByRole('checkbox', { name: /의왕/i });
-
-    // 수원은 주 사이트이므로 비활성화
-    await expect(suwonCheckbox).toBeDisabled();
-    // 의왕은 선택 가능
-    await expect(uiwangCheckbox).toBeEnabled();
-  });
-
-  test('필수 필드 미입력 시 에러 표시', async ({ siteAdminPage: page }) => {
-    // 등록 버튼 클릭
-    await page
-      .getByRole('button', { name: /공용장비 등록/i })
-      .first()
-      .click();
-
-    // 에러 메시지 확인
-    await expect(page.getByText(/필수/i).first())
-      .toBeVisible({ timeout: 5000 })
-      .catch(() => {
-        // 다른 형태의 에러 메시지 확인
       });
   });
 });

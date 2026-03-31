@@ -1,6 +1,6 @@
 ---
 name: verify-e2e
-description: Verifies E2E test code compliance — auth fixture usage (no loginAs), no networkidle/waitForTimeout, proper locator patterns (getByRole/getByText), SSOT constants, test isolation per suite. Run after adding/modifying E2E test specs.
+description: Verifies E2E test code compliance AND architectural coverage — auth fixture usage, locator patterns, SSOT constants, test isolation, plus architecture-level checks (CAS VERSION_CONFLICT scenarios, cache invalidation after mutation, site access control on mutations). Run after adding/modifying E2E test specs.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 spec 파일명 또는 feature 디렉토리]'
 ---
@@ -252,6 +252,80 @@ grep -rln "new Pool" apps/frontend/tests/e2e --include="*.ts" | xargs grep -L "c
 
 **FAIL 기준:** Pool 정리 함수 미제공 → 테스트 종료 시 connection leak.
 
+### Step 12: 아키텍처 시나리오 커버리지 검증
+
+기존 Step 1~11은 테스트 "코드 형식"을 검사한다 (올바른 import, 올바른 locator 패턴 등).
+이 Step은 테스트가 실제로 "무엇을 검증하는지" — 즉 아키텍처 관심사를 커버하는지 확인한다.
+
+형식이 완벽해도 내용이 happy-path뿐이면, 테스트가 통과해도 시스템의 정합성은 보장되지 않는다.
+CAS 충돌, 캐시 stale, 접근 제어 우회 같은 실제 프로덕션 버그는 이 검사가 잡아야 한다.
+
+#### 12a. CAS 엔티티의 VERSION_CONFLICT 테스트 존재 여부
+
+CAS 엔티티(equipment, checkouts, calibrations, non_conformances, equipment_imports 등)에 대한
+뮤테이션 테스트가 있는 feature 디렉토리에서, 409 VERSION_CONFLICT 시나리오도 함께 테스트하는지 확인한다.
+
+```bash
+# CAS 관련 뮤테이션 테스트가 있는 feature 디렉토리 목록
+FEATURES=$(grep -rln "approve\|reject\|receive\|cancel\|dispose" apps/frontend/tests/e2e/features --include="*.spec.ts" | sed 's|/[^/]*$||' | sort -u)
+
+# 해당 디렉토리에서 409/VERSION_CONFLICT/conflict 테스트 존재 여부
+for dir in $FEATURES; do
+  HAS_CONFLICT=$(grep -rln "409\|VERSION_CONFLICT\|conflict\|version.*mismatch" "$dir" --include="*.spec.ts" 2>/dev/null | wc -l)
+  if [ "$HAS_CONFLICT" -eq 0 ]; then
+    echo "WARN: $dir — 뮤테이션 테스트 있지만 VERSION_CONFLICT 시나리오 없음"
+  fi
+done
+```
+
+**PASS 기준:** CAS 뮤테이션이 있는 모든 feature 디렉토리에 최소 1개의 conflict 시나리오 테스트 존재.
+
+**WARN 기준:** 뮤테이션 테스트만 있고 conflict 테스트가 없는 디렉토리 — 테스트 계획 보완 권장.
+
+#### 12b. 뮤테이션 후 캐시 일관성 테스트 존재 여부
+
+뮤테이션(승인, 반려, 생성 등) 후 목록 페이지로 돌아갈 때 데이터가 갱신되는지 검증하는 테스트가 있는지 확인한다.
+이 테스트가 없으면 Navigate-Before-Invalidate 버그를 잡을 수 없다.
+
+```bash
+# 뮤테이션 후 목록 복귀 패턴 검색 (뮤테이션 → 네비게이션 → 목록 검증)
+grep -rn "click.*승인\|click.*반려\|click.*수령\|mutate" apps/frontend/tests/e2e/features --include="*.spec.ts" -l | while read f; do
+  # 같은 파일에서 뮤테이션 후 목록 검증이 있는지
+  HAS_LIST_CHECK=$(grep -c "goto.*list\|goto.*checkouts\|goto.*equipment[^/]\|getByText.*건\|getByText.*총" "$f" 2>/dev/null)
+  if [ "$HAS_LIST_CHECK" -eq 0 ]; then
+    echo "INFO: $f — 뮤테이션 있지만 목록 복귀 후 데이터 갱신 검증 없음"
+  fi
+done
+```
+
+**PASS 기준:** 뮤테이션 테스트의 50% 이상이 뮤테이션 후 목록/상위 페이지 데이터 갱신을 검증.
+
+**INFO 기준:** 뮤테이션 후 목록 갱신 검증이 없는 파일 — 캐시 무효화 누락 위험.
+
+#### 12c. 사이트 접근 제어 테스트 범위
+
+사이트 격리가 적용된 모듈(equipment, checkouts, equipment-imports 등)에서
+GET뿐 아니라 mutation(POST/PATCH/DELETE)에 대한 접근 제어도 테스트하는지 확인한다.
+
+```bash
+# 사이트 격리 테스트 파일
+SITE_TESTS=$(find apps/frontend/tests/e2e -name "*.spec.ts" | xargs grep -l "site.*isolation\|cross.*site\|enforceSite\|403.*Forbidden\|다른.*사이트" 2>/dev/null)
+
+if [ -z "$SITE_TESTS" ]; then
+  echo "WARN: 사이트 접근 제어 테스트 파일이 존재하지 않음"
+else
+  # mutation 접근 제어 테스트 포함 여부
+  HAS_MUTATION=$(echo "$SITE_TESTS" | xargs grep -l "patch\|post\|delete\|approve\|reject" 2>/dev/null | wc -l)
+  if [ "$HAS_MUTATION" -eq 0 ]; then
+    echo "WARN: 사이트 격리 테스트가 GET만 검증 — mutation(PATCH/POST/DELETE) 접근 제어 미검증"
+  fi
+fi
+```
+
+**PASS 기준:** 사이트 격리 테스트가 GET + mutation 모두 검증.
+
+**WARN 기준:** GET만 검증하거나 테스트 자체가 없음 — 타 사이트 데이터 변조 위험.
+
 ## Output Format
 
 ```markdown
@@ -269,6 +343,9 @@ grep -rln "new Pool" apps/frontend/tests/e2e --include="*.ts" | xargs grep -L "c
 | 10  | Backend URL 하드코딩    | PASS/FAIL | localhost URL 직접 사용       |
 | 11b | TEST_USERS_BY_TEAM SSOT | PASS/FAIL | shared-test-data.ts import    |
 | 11  | Pool 정리               | PASS/FAIL | cleanup 함수 미제공           |
+| 12a | CAS 충돌 복구 테스트    | PASS/WARN | VERSION_CONFLICT 시나리오     |
+| 12b | 캐시 일관성 테스트      | PASS/INFO | 뮤테이션 후 목록 갱신 검증    |
+| 12c | 사이트 접근 제어 범위   | PASS/WARN | GET + mutation 모두 검증      |
 ```
 
 ## Exceptions

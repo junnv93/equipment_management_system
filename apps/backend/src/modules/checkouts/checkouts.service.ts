@@ -1030,6 +1030,43 @@ export class CheckoutsService extends VersionedBaseService {
         throw error;
       }
 
+      // 이미 반출 중(active)인 장비가 있는지 확인 — 중복 반출 방지
+      // OVERDUE 포함: 기한 초과 반출도 여전히 active 상태이므로 중복 반출 차단 필요
+      const activeStatuses = [
+        CSVal.PENDING,
+        CSVal.APPROVED,
+        CSVal.CHECKED_OUT,
+        CSVal.OVERDUE,
+        CSVal.LENDER_CHECKED,
+        CSVal.BORROWER_RECEIVED,
+        CSVal.BORROWER_RETURNED,
+        CSVal.LENDER_RECEIVED,
+        CSVal.RETURNED,
+      ];
+      const activeCheckoutItems = await this.db
+        .select({
+          equipmentId: checkoutItems.equipmentId,
+        })
+        .from(checkoutItems)
+        .innerJoin(checkouts, eq(checkoutItems.checkoutId, checkouts.id))
+        .where(
+          and(
+            inArray(checkoutItems.equipmentId, createCheckoutDto.equipmentIds),
+            inArray(checkouts.status, activeStatuses)
+          )
+        );
+
+      if (activeCheckoutItems.length > 0) {
+        const duplicateIds = [...new Set(activeCheckoutItems.map((item) => item.equipmentId))];
+        const duplicateNames = duplicateIds
+          .map((id) => equipmentMap.get(id)?.name ?? id)
+          .join(', ');
+        throw new BadRequestException({
+          code: 'CHECKOUT_EQUIPMENT_ALREADY_ACTIVE',
+          message: `이미 반출 진행 중인 장비가 포함되어 있습니다: ${duplicateNames}`,
+        });
+      }
+
       // 사용자 팀 classification 조회 (1회)
       let userTeamClassification: string | null | undefined;
       if (userTeamId) {

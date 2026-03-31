@@ -12,10 +12,35 @@ import { ErrorInterceptor } from './common/interceptors/error.interceptor';
 import { MonitoringService } from './modules/monitoring/monitoring.service';
 import { GlobalExceptionFilter } from './common/filters/error.filter';
 
+// NestJS app 참조 — process 핸들러에서 graceful close에 사용
+let appRef: Awaited<ReturnType<typeof NestFactory.create>> | null = null;
+
+// 프로세스 수준 예외 핸들러 — 스케줄러, 이벤트 리스너 등 비동기 컨텍스트에서
+// 잡히지 않는 예외를 포착하여 NestJS graceful shutdown 후 종료
+process.on('uncaughtException', async (error) => {
+  console.error('[FATAL] Uncaught exception:', error);
+  if (appRef) {
+    try {
+      await appRef.close(); // OnModuleDestroy 훅 실행, DB 풀 정리
+    } catch {
+      /* 종료 중 에러 무시 */
+    }
+  }
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  // unhandledRejection은 프로세스 상태를 손상시키지 않으므로 로그만 남기고 계속 실행
+  // Node.js 15+에서 기본 동작(crash)을 오버라이드하여 서비스 안정성 확보
+  // enableShutdownHooks()가 SIGTERM/SIGINT를 담당하므로 여기서 exit 불필요
+  console.error('[WARN] Unhandled promise rejection:', reason);
+});
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+  appRef = app;
 
   // 기본 서비스 및 설정 초기화
   const configService = app.get(ConfigService);

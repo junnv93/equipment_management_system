@@ -804,7 +804,7 @@ export function EquipmentForm({
         manufacturer: data.manufacturer,
         manufacturerContact: data.manufacturerContact,
         serialNumber: data.serialNumber,
-        location: data.location,
+        location: isEdit ? data.location : data.initialLocation,
         description: data.description,
         specMatch: data.specMatch,
         calibrationRequired: data.calibrationRequired,
@@ -1018,7 +1018,7 @@ export function EquipmentForm({
           >
             <StatusLocationSection
               control={form.control}
-              isEdit={isEdit}
+              isCreateMode={!isEdit}
               selectedSite={selectedSite}
               selectedTeamId={watchedTeamId}
             />

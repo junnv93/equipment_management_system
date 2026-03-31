@@ -23,7 +23,7 @@ import {
   type DisposalRequest,
   CalibrationApprovalStatusValues as CASVal,
 } from '@equipment-management/schemas';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   EQUIPMENT_STATUS_TOKENS,
   DEFAULT_STATUS_CONFIG,
@@ -221,7 +221,7 @@ export function EquipmentStickyHeader({
         {/* 오른쪽: 액션 버튼 */}
         <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.actions}>
           {canCheckout && (
-            <Link href={`/equipment/${equipmentId}/checkout`}>
+            <Link href={`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?equipmentId=${equipmentId}`}>
               <Button size="sm" aria-label={t('header.checkoutAriaLabel')}>
                 <FileOutput className="h-4 w-4 mr-1.5" aria-hidden="true" />
                 {t('header.checkoutRequest')}

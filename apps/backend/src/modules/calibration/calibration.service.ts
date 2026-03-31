@@ -49,6 +49,7 @@ import {
   and,
   eq,
   gte,
+  lt,
   lte,
   count,
   sql,
@@ -1226,7 +1227,9 @@ export class CalibrationService extends VersionedBaseService {
       // calibration 엔티티에서 이미 CAS를 통과한 후 실행되므로,
       // equipment에 대한 별도 CAS는 불필요. 교정일은 시스템 계산값이며 사용자 입력이 아님.
       await this.db.transaction(async (tx) => {
-        await tx
+        // 과거 교정이력 승인 시 최신 교정일을 더 오래된 날짜로 덮어쓰지 않도록 조건부 갱신
+        // WHERE lastCalibrationDate IS NULL OR lastCalibrationDate < calibrationDate
+        const [updated] = await tx
           .update(schema.equipment)
           .set({
             lastCalibrationDate: calibrationDate,
@@ -1234,14 +1237,32 @@ export class CalibrationService extends VersionedBaseService {
             updatedAt: new Date(),
             version: sql`${schema.equipment.version} + 1`,
           })
-          .where(eq(schema.equipment.id, equipmentId));
+          .where(
+            and(
+              eq(schema.equipment.id, equipmentId),
+              or(
+                isNull(schema.equipment.lastCalibrationDate),
+                lt(schema.equipment.lastCalibrationDate, calibrationDate)
+              )
+            )
+          )
+          .returning({ id: schema.equipment.id });
 
-        this.logger.log(
-          `장비 교정일 업데이트 완료: ${equipmentId}, ` +
-            `lastCalibrationDate: ${calibrationDate}, ` +
-            `nextCalibrationDate: ${nextCalibrationDate}`
-        );
+        if (updated) {
+          this.logger.log(
+            `장비 교정일 업데이트 완료: ${equipmentId}, ` +
+              `lastCalibrationDate: ${calibrationDate}, ` +
+              `nextCalibrationDate: ${nextCalibrationDate}`
+          );
+        } else {
+          this.logger.log(
+            `장비 교정일 업데이트 건너뜀 (최신 이력 아님): ${equipmentId}, calibrationDate: ${calibrationDate}`
+          );
+        }
 
+        // NC 해결: 장비 교정일 갱신 여부와 무관하게 처리
+        // 이유: 최신 교정이력이 아닌 과거 이력 승인 시 updated=undefined(날짜 미갱신)이지만
+        //       교정 승인 자체는 완료되었으므로 NC는 종료되어야 함
         if (calibrationId) {
           await this.markCalibrationOverdueAsCorrectedTx(
             tx,
@@ -1253,6 +1274,7 @@ export class CalibrationService extends VersionedBaseService {
       });
     } catch (error) {
       this.logger.error(`장비 교정일 업데이트 실패: ${equipmentId}`, error);
+      throw error;
     }
   }
 

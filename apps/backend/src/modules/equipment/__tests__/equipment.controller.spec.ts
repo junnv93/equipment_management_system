@@ -152,6 +152,7 @@ describe('EquipmentController', () => {
         status: 'available' as EquipmentStatus,
         site: 'suwon',
         approvalStatus: 'approved', // 관리자 직접 승인
+        initialLocation: '수원 창고',
       };
 
       jest.spyOn(equipmentService, 'create').mockResolvedValue(mockEquipment);
@@ -179,6 +180,7 @@ describe('EquipmentController', () => {
         managementNumber: 'EQP-NEW-001',
         status: 'available' as EquipmentStatus,
         site: 'suwon',
+        initialLocation: '수원 창고',
       };
 
       const mockRequest = {
@@ -220,6 +222,7 @@ describe('EquipmentController', () => {
         status: 'available' as EquipmentStatus,
         site: 'suwon',
         approvalStatus: 'approved',
+        initialLocation: '수원 창고',
       };
 
       jest

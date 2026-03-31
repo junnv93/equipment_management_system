@@ -77,20 +77,22 @@ pgPool.on('acquire', () => {
   metrics.connectionsAcquired++;
 });
 
-// 오류 이벤트 리스너 - 개선된 재연결 로직
+// 오류 이벤트 리스너 — 지수 백오프 재연결
+// 재연결 타임아웃 ID 추적: DrizzleService.onModuleDestroy()에서 취소하여 shutdown 시 누수 방지
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 10;
 const reconnectInterval = 5000;
+const pendingReconnectTimers = new Set<ReturnType<typeof setTimeout>>();
 
 pgPool.on('error', (err) => {
   metrics.connectionErrors++;
   metrics.lastErrorTime = new Date();
   console.error(`PostgreSQL connection error: ${err.message}`);
 
-  // 백오프 알고리즘을 사용한 재연결
   if (reconnectAttempts < maxReconnectAttempts) {
     const backoffTime = reconnectInterval * Math.pow(2, reconnectAttempts);
-    setTimeout(async () => {
+    const timer = setTimeout(async () => {
+      pendingReconnectTimers.delete(timer);
       reconnectAttempts++;
       console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
 
@@ -98,8 +100,7 @@ pgPool.on('error', (err) => {
         const client = await pgPool.connect();
         await client.query('SELECT 1');
         client.release();
-
-        reconnectAttempts = 0; // 성공 시 카운터 리셋
+        reconnectAttempts = 0;
         metrics.lastReconnectTime = new Date();
         console.log('Successfully reconnected to PostgreSQL');
       } catch (error) {
@@ -108,25 +109,32 @@ pgPool.on('error', (err) => {
         );
       }
     }, backoffTime);
+
+    // .unref(): Node.js 이벤트 루프가 이 타이머 때문에 종료를 막지 않도록 설정
+    // graceful shutdown 시 clearInterval/clearTimeout 없이도 프로세스가 종료될 수 있음
+    timer.unref();
+    pendingReconnectTimers.add(timer);
   } else {
     console.error('Max reconnection attempts reached. Please check database connection.');
   }
 });
 
-// 애플리케이션 종료 시 정리
-process.on('SIGINT', () => {
-  pgPool.end(() => {
-    console.log('PostgreSQL connection pool closed');
-    process.exit(0);
-  });
-});
+/**
+ * 대기 중인 재연결 타이머 전체 취소
+ * DrizzleService.onModuleDestroy()에서 pgPool.end() 전에 호출
+ */
+export function cancelPendingReconnects(): void {
+  for (const timer of pendingReconnectTimers) {
+    clearTimeout(timer);
+  }
+  pendingReconnectTimers.clear();
+  reconnectAttempts = 0;
+}
 
-process.on('SIGTERM', () => {
-  pgPool.end(() => {
-    console.log('PostgreSQL connection pool closed');
-    process.exit(0);
-  });
-});
+// ⚠️ process.on('SIGINT'/'SIGTERM') 핸들러 제거
+// NestJS app.enableShutdownHooks()가 SIGINT/SIGTERM을 처리하여
+// DrizzleService.onModuleDestroy() → pgPool.end()를 올바른 순서로 실행
+// 여기에 별도 핸들러를 두면 process.exit(0) 경쟁 조건이 발생해 graceful shutdown 우회됨
 
 // Drizzle ORM 인스턴스 생성 (스키마 포함)
 export const db = drizzle(pgPool, { schema });

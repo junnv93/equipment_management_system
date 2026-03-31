@@ -375,6 +375,40 @@ async function main(): Promise<void> {
     }
 
     // =========================================================================
+    // POST PHASE 4: equipment_attachments → documents 테이블 동기화
+    // =========================================================================
+    // 프론트엔드 AttachmentsTab은 documents 테이블을 쿼리함 (equipment_attachments는 deprecated)
+    console.log('\n📄 Post Phase 4: Syncing equipment_attachments → documents table...');
+    try {
+      const docSyncResult = await db.execute(sql`
+        INSERT INTO documents (
+          equipment_id, request_id, document_type, status,
+          file_name, original_file_name, file_path, file_size, mime_type,
+          description, revision_number, is_latest, uploaded_at, created_at, updated_at
+        )
+        SELECT
+          ea.equipment_id, ea.request_id,
+          ea.attachment_type::text,
+          'active',
+          ea.file_name, ea.original_file_name, ea.file_path, ea.file_size, ea.mime_type,
+          ea.description, 1, true, ea.uploaded_at,
+          COALESCE(ea.created_at, NOW()), COALESCE(ea.updated_at, NOW())
+        FROM equipment_attachments ea
+        WHERE NOT EXISTS (
+          SELECT 1 FROM documents d
+          WHERE d.file_path = ea.file_path
+            AND d.original_file_name = ea.original_file_name
+        )
+      `);
+      const docSyncCount = (docSyncResult as { rowCount?: number }).rowCount ?? 0;
+      console.log(`  ✅ ${docSyncCount}건 문서 동기화됨 (equipment_attachments → documents)`);
+    } catch (err) {
+      console.warn(
+        `  ⚠️ Document sync skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
+    // =========================================================================
     // VERIFICATION
     // =========================================================================
     console.log('\n🔍 Verifying seed data...');

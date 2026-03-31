@@ -20,6 +20,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import {
   ApiTags,
   ApiOperation,
@@ -496,7 +497,7 @@ export class CalibrationController {
     type: Number,
     description: 'CAS version for optimistic locking',
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', MULTER_UTF8_OPTIONS))
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadCertificate(
@@ -568,7 +569,7 @@ export class CalibrationController {
   })
   @ApiParam({ name: 'uuid', description: '교정 ID (UUID)' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FilesInterceptor('files', 10, MULTER_UTF8_OPTIONS))
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'upload', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadDocuments(

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as os from 'os';
 import * as process from 'process';
 import { LoggerService } from '../../common/logger/logger.service';
@@ -17,7 +17,7 @@ const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 const NUMERIC_ID_PATTERN = /\/\d+(?=\/|$)/g;
 
 @Injectable()
-export class MonitoringService {
+export class MonitoringService implements OnModuleDestroy {
   // 시스템 시작 시간
   private readonly startTime = Date.now();
 
@@ -67,6 +67,9 @@ export class MonitoringService {
   // 메트릭 업데이트 간격 (30초)
   private readonly updateInterval = 30000;
 
+  // 주기적 메트릭 수집 타이머 (OnModuleDestroy에서 정리)
+  private metricsTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor(
     private readonly logger: LoggerService,
     private readonly metricsService: MetricsService
@@ -77,8 +80,15 @@ export class MonitoringService {
     this.updateMetrics();
     this.logger.log('모니터링 서비스가 초기화되었습니다.');
 
-    // 주기적 메트릭 수집
-    setInterval(() => this.updateMetrics(), this.updateInterval);
+    // 주기적 메트릭 수집 (.unref: 이 타이머가 종료를 막지 않도록)
+    this.metricsTimer = setInterval(() => this.updateMetrics(), this.updateInterval).unref();
+  }
+
+  onModuleDestroy(): void {
+    if (this.metricsTimer) {
+      clearInterval(this.metricsTimer);
+      this.metricsTimer = null;
+    }
   }
 
   /**

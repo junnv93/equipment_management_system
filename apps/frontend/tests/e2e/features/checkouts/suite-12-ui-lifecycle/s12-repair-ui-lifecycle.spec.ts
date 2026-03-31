@@ -19,6 +19,7 @@ import {
   getBackendToken,
   cleanupCheckoutPool,
   resetEquipmentToAvailable,
+  cancelAllActiveCheckoutsForEquipment,
   clearBackendCache,
   apiGet,
 } from '../helpers/checkout-helpers';
@@ -32,6 +33,8 @@ test.describe('Suite 12: 수리 반출 UI 전체 라이프사이클', () => {
   const testEquipmentId = EQUIP.FILTER_SUW_E;
 
   test.beforeAll(async () => {
+    // 시드 데이터 포함 모든 활성 체크아웃 취소 (CHECKOUT_EQUIPMENT_ALREADY_ACTIVE 검증 통과)
+    await cancelAllActiveCheckoutsForEquipment(testEquipmentId);
     await resetEquipmentToAvailable(testEquipmentId);
     await clearBackendCache();
   });

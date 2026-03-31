@@ -89,6 +89,7 @@ export const FRONTEND_ROUTES = {
     AUDIT_LOGS: '/admin/audit-logs',
     USERS: '/admin/users',
     SETTINGS: '/admin/settings',
+    DATA_MIGRATION: '/admin/data-migration',
   },
 
   // ============================================================================

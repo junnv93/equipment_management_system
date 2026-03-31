@@ -25,6 +25,8 @@ export {
   SESSION_SYNC_CHANNEL,
   SESSION_SYNC_MESSAGE,
   type SessionSyncMessageType,
+  AUTH_ERROR_CODE,
+  type AuthErrorCode,
 } from './auth-token';
 
 // 역할 관련
