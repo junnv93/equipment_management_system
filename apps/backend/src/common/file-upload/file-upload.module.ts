@@ -1,6 +1,13 @@
 import { Global, Module } from '@nestjs/common';
+import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { FileUploadService } from './file-upload.service';
 import { DocumentService } from './document.service';
+
+/**
+ * Multer 옵션 — NestJS Multer 기본값은 MemoryStorage이므로 별도 storage 지정 불필요.
+ * FileUploadService.saveFile()이 file.buffer를 직접 사용.
+ */
+export const MULTER_UTF8_OPTIONS: MulterOptions = {};
 
 /**
  * 파일 업로드 Global 모듈

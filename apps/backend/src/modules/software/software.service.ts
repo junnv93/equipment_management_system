@@ -57,8 +57,8 @@ export class SoftwareService extends VersionedBaseService {
     if (id) {
       this.cacheService.delete(CACHE_KEYS.DETAIL(id));
     }
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.SOFTWARE}list:*`);
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.SOFTWARE}list:`);
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
     this.cacheService.delete(CACHE_KEYS.REGISTRY);
   }
 

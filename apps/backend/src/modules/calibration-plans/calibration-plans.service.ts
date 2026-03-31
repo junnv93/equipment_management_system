@@ -126,8 +126,8 @@ export class CalibrationPlansService extends VersionedBaseService {
    */
   private invalidatePlanCache(uuid: string): void {
     this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${uuid}`);
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:*`);
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:*`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:`);
   }
 
   /**
@@ -891,8 +891,8 @@ export class CalibrationPlansService extends VersionedBaseService {
       for (const planId of planIds) {
         this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planId}`);
       }
-      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:*`);
-      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:*`);
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:`);
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:`);
     }
 
     return items.length;

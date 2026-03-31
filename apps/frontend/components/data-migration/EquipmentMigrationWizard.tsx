@@ -17,7 +17,7 @@ type WizardStep = 'upload' | 'preview' | 'result';
 const STEPS: WizardStep[] = ['upload', 'preview', 'result'];
 
 export default function EquipmentMigrationWizard() {
-  const t = useTranslations('dataMigration');
+  const t = useTranslations('data-migration');
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
   const [previewResult, setPreviewResult] = useState<MigrationPreviewResult | null>(null);
   const [executeResult, setExecuteResult] = useState<MigrationExecuteResult | null>(null);

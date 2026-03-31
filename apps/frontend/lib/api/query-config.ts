@@ -95,6 +95,24 @@ export const REFETCH_STRATEGIES = {
     refetchOnWindowFocus: false,
     retry: 1,
   },
+
+  /**
+   * SSE 실시간 무효화 + SSE 연결 끊김 폴백 (10분)
+   *
+   * SSE 이벤트(approval-changed 등)가 즉시 무효화를 담당합니다.
+   * 10분 폴링은 SSE 연결이 끊겼을 때의 안전망입니다.
+   *
+   * CRITICAL(30초 폴링)과의 차이:
+   * - CRITICAL: SSE 미구현 상태에서 빈번한 폴링으로 실시간성 보장
+   * - SSE_BACKED: SSE가 주 갱신 수단이므로 폴링은 드문 폴백으로 충분
+   */
+  SSE_BACKED: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchInterval: REFETCH_INTERVALS.SSE_FALLBACK,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
 } as const;
 
 /**
@@ -218,6 +236,9 @@ export const QUERY_CONFIG = {
     refetchOnWindowFocus: false,
     retry: 2,
   },
+
+  /** 승인 카운트 - SSE_BACKED (SSE approval-changed 이벤트로 실시간 무효화, 10분 폴백) */
+  APPROVAL_COUNTS: REFETCH_STRATEGIES.SSE_BACKED,
 } as const;
 
 /**

@@ -72,6 +72,7 @@ describe('EquipmentService', () => {
       getOrSet: jest.fn().mockImplementation((_key, factory) => factory()),
       invalidatePattern: jest.fn(),
       deleteByPattern: jest.fn().mockResolvedValue(undefined),
+      deleteByPrefix: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -120,6 +121,8 @@ describe('EquipmentService', () => {
       // Arrange: 중복 체크에서 null 반환 (중복 없음)
       mockDb.query.equipment.findFirst.mockResolvedValue(null);
       mockDb.returning.mockResolvedValue([mockEquipment]);
+      // initialLocation이 있을 때 tx.select().from().where().limit(1) 동기화 쿼리 mock
+      mockDb.limit.mockResolvedValueOnce([mockEquipment]);
 
       const createDto = {
         name: '테스트 장비',

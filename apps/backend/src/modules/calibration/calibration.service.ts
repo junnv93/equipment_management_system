@@ -133,10 +133,10 @@ export class CalibrationService extends VersionedBaseService {
     if (id) {
       this.cacheService.delete(this.buildCacheKey('detail', id));
     }
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}list:*`);
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:*`);
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}intermediate-checks:*`);
-    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}list:`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}intermediate-checks:`);
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
   }
 
   /**

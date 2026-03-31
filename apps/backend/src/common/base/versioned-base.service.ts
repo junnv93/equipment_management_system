@@ -1,6 +1,20 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { eq, and, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
+import type { AnyPgTable, AnyPgColumn } from 'drizzle-orm/pg-core';
+
+/**
+ * CAS(낙관적 잠금) 대상 테이블의 최소 컬럼 계약
+ *
+ * 이 타입을 만족하는 테이블은 updateWithVersion의 안전한 CAS 연산을 지원합니다.
+ * - AnyPgTable: Drizzle update()/select() API 호환
+ * - id: UUID 기반 엔티티 식별
+ * - version: 낙관적 잠금 버전 카운터
+ */
+type CasPgTable = AnyPgTable & {
+  id: AnyPgColumn;
+  version: AnyPgColumn;
+};
 
 /**
  * VERSION_CONFLICT 에러 메시지 — SSOT
@@ -54,8 +68,7 @@ export abstract class VersionedBaseService {
    * @param tx  선택적 트랜잭션 컨텍스트 — 다중 테이블 원자성이 필요할 때 전달
    */
   protected async updateWithVersion<T>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
-    table: any,
+    table: CasPgTable,
     id: string,
     expectedVersion: number,
     updateData: Record<string, unknown>,
@@ -89,7 +102,7 @@ export abstract class VersionedBaseService {
         });
       }
 
-      throw createVersionConflictException(existing.version, expectedVersion);
+      throw createVersionConflictException(existing.version as number, expectedVersion);
     }
 
     return updated as T;

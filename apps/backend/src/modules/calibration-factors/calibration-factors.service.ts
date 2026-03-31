@@ -102,7 +102,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
       })
       .returning();
 
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX);
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX);
 
     return this.normalize(newFactor);
   }
@@ -410,9 +410,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
     }
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.APPROVALS);
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'registry:');
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
@@ -462,9 +462,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
     }
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.APPROVALS);
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'registry:');
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
@@ -499,9 +499,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
     }
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'list:');
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX + 'registry:');
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.APPROVALS);
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'registry:');
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     return { id, deleted: true };

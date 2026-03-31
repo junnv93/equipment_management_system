@@ -39,6 +39,7 @@ import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { I18nModule } from './common/i18n/i18n.module';
+import { DataMigrationModule } from './modules/data-migration/data-migration.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { I18nModule } from './common/i18n/i18n.module';
     ApprovalsModule, // Unified approval counts API
     SettingsModule, // System + calibration settings
     DocumentsModule, // 통합 문서 관리 (다운로드, 무결성 검증, 버전 관리)
+    DataMigrationModule, // 데이터 마이그레이션 (Excel 일괄 등록)
   ],
   controllers: [],
   providers: [

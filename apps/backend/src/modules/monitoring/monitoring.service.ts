@@ -4,14 +4,14 @@ import * as process from 'process';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { getErrorStack } from '../../common/utils/error';
-import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
+import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
 
 // 추적할 엔드포인트 최대 수 (메모리 누수 방지)
 const MAX_TRACKED_ENDPOINTS = 500;
 
 // UUID 패턴 (경로 정규화용)
-const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const UUID_PATTERN = new RegExp(UUID_PATTERN_SOURCE, 'gi');
 
 // 숫자 ID 패턴 (경로 정규화용)
 const NUMERIC_ID_PATTERN = /\/\d+(?=\/|$)/g;

@@ -78,6 +78,7 @@ describe('CalibrationFactorsService', () => {
       getOrSet: jest.fn().mockImplementation((_key: string, fn: () => unknown) => fn()),
       delete: jest.fn(),
       deleteByPattern: jest.fn(),
+      deleteByPrefix: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

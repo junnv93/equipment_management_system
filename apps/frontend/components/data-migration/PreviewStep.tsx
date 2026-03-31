@@ -47,7 +47,7 @@ const STATUS_BADGE_VARIANT: Record<string, 'default' | 'destructive' | 'secondar
 };
 
 function RowErrorsCell({ row }: { row: MigrationRowPreview }) {
-  const t = useTranslations('dataMigration');
+  const t = useTranslations('data-migration');
   const [expanded, setExpanded] = useState(false);
   const allMessages = [
     ...row.errors.map((e) => ({ type: 'error' as const, text: `[${e.field}] ${e.message}` })),
@@ -96,7 +96,7 @@ export default function PreviewStep({
   onExecuteComplete,
   onBack,
 }: PreviewStepProps) {
-  const t = useTranslations('dataMigration');
+  const t = useTranslations('data-migration');
 
   // 선택 가능한 행: valid + warning (error/duplicate 제외, skipDuplicates=false면 duplicate 포함)
   const selectableRows = preview.rows.filter(
@@ -200,7 +200,9 @@ export default function PreviewStep({
         ).map((item) => (
           <Card key={item.key} className={item.className}>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold">{item.count}</p>
+              <p className="text-2xl font-bold" data-testid={`summary-${item.key}`}>
+                {item.count}
+              </p>
               <p className="text-xs text-muted-foreground">{t(`preview.summary.${item.key}`)}</p>
             </CardContent>
           </Card>

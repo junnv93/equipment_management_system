@@ -7,6 +7,7 @@ export const createMockCacheService = (): Record<string, jest.Mock> => ({
   set: jest.fn(),
   delete: jest.fn(),
   deleteByPattern: jest.fn(),
+  deleteByPrefix: jest.fn(),
   getOrSet: jest.fn().mockImplementation((_k: unknown, f: () => unknown) => f()),
   invalidatePattern: jest.fn(),
   clear: jest.fn(),

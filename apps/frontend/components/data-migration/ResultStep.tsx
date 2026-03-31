@@ -16,7 +16,7 @@ interface ResultStepProps {
 }
 
 export default function ResultStep({ result, onReset }: ResultStepProps) {
-  const t = useTranslations('dataMigration');
+  const t = useTranslations('data-migration');
   const router = useRouter();
   const hasErrors = result.errorCount > 0;
 

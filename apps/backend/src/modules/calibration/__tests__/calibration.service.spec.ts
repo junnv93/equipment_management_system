@@ -145,7 +145,7 @@ describe('CalibrationService', () => {
         certificateNumber: 'CERT-001',
       } as never);
 
-      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+      expect(mockCacheService.deleteByPrefix).toHaveBeenCalledWith(
         expect.stringContaining('calibration:list:')
       );
     });

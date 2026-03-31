@@ -156,6 +156,31 @@ export const documentApi = {
   },
 
   /**
+   * 문서 미리보기 URL 반환 (인라인 표시용)
+   *
+   * - S3: 백엔드가 JSON { presignedUrl } 반환 → presignedUrl을 직접 src로 사용
+   * - Local: 백엔드가 binary stream 반환 → Blob URL 생성 (isBlob: true)
+   *
+   * 호출자는 isBlob === true 일 때 언마운트 시 window.URL.revokeObjectURL()로 해제해야 합니다.
+   */
+  getPreviewUrl: async (documentId: string): Promise<{ url: string; isBlob: boolean }> => {
+    const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId), {
+      responseType: 'arraybuffer',
+    });
+
+    const contentType = (response.headers['content-type'] as string) ?? '';
+
+    if (contentType.includes('application/json')) {
+      const text = new TextDecoder().decode(response.data as ArrayBuffer);
+      const { presignedUrl } = JSON.parse(text);
+      return { url: presignedUrl as string, isBlob: false };
+    }
+
+    const blob = new Blob([response.data as ArrayBuffer], { type: contentType });
+    return { url: window.URL.createObjectURL(blob), isBlob: true };
+  },
+
+  /**
    * 개정판 업로드
    */
   createRevision: async (
