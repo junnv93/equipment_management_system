@@ -153,6 +153,16 @@
     "qcTeam": "품질관리팀",
     "prodTeam": "생산팀",
     "testTeam": "시험팀",
+    "site": "사이트",
+    "allSites": "전체 사이트",
+    "team": "팀",
+    "allTeams": "전체 팀",
+    "stats": {
+      "totalEquipment": "전체 장비",
+      "calibrationOverdue": "교정 만료",
+      "dueThisMonth": "이번 달 예정",
+      "avgUtilization": "평균 활용률"
+    },
     "sampleEquipment1": "오실로스코프 #1",
     "sampleEquipment2": "스펙트럼 분석기 #2",
     "sampleEquipment3": "신호 발생기 #3",
