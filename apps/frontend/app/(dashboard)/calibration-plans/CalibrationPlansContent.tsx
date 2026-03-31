@@ -17,8 +17,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import calibrationPlansApi, {
   type CalibrationPlan,
   type CalibrationPlanSummary,
-  CALIBRATION_PLAN_STATUS_LABELS,
-  SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
 import teamsApi from '@/lib/api/teams-api';
 import type { PaginatedResponse } from '@/lib/api/types';
@@ -38,6 +36,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import type { CalibrationPlanStatus, UserRole, Site } from '@equipment-management/schemas';
 import {
   TEAM_RESTRICTED_ROLES,
@@ -84,6 +84,7 @@ export default function CalibrationPlansContent({
   const { filters, apiFilters, updateYear, updateSiteId, updateTeamId, updateStatus, updatePage } =
     useCalibrationPlansFilters(initialFilters);
   const tc = useTranslations('common');
+  const siteLabels = useSiteLabels();
 
   // 역할 확인
   const userRole = session?.user?.role;
@@ -310,7 +311,7 @@ export default function CalibrationPlansContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_all">{t('plansList.filter.allSites')}</SelectItem>
-              {Object.entries(SITE_LABELS).map(([key, label]) => (
+              {Object.entries(siteLabels).map(([key, label]) => (
                 <SelectItem key={key} value={key}>
                   {label}
                 </SelectItem>
@@ -361,11 +362,9 @@ export default function CalibrationPlansContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="_all">{t('plansList.filter.allStatuses')}</SelectItem>
-              {(
-                Object.entries(CALIBRATION_PLAN_STATUS_LABELS) as [CalibrationPlanStatus, string][]
-              ).map(([value, label]) => (
+              {CALIBRATION_PLAN_STATUS_VALUES.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {label}
+                  {t(`planStatus.${value}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -443,7 +442,7 @@ export default function CalibrationPlansContent({
                   {/* 시험소 */}
                   <div className={CALIBRATION_PLAN_LIST_TOKENS.siteCell}>
                     <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    {SITE_LABELS[plan.siteId] || plan.siteId}
+                    {siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId}
                   </div>
 
                   {/* 팀 */}
@@ -452,7 +451,7 @@ export default function CalibrationPlansContent({
                   {/* 상태 배지 — Design Token 사용 */}
                   <div>
                     <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
-                      {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
+                      {t(`planStatus.${plan.status}`)}
                     </Badge>
                   </div>
 

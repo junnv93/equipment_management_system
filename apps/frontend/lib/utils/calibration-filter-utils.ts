@@ -34,12 +34,6 @@ import type { Site } from '@equipment-management/schemas';
 export const CALIBRATION_DUE_STATUS_VALUES = ['overdue', 'upcoming', 'normal'] as const;
 export type CalibrationDueStatus = (typeof CALIBRATION_DUE_STATUS_VALUES)[number];
 
-export const CALIBRATION_DUE_STATUS_LABELS: Record<CalibrationDueStatus, string> = {
-  overdue: '교정 기한 초과',
-  upcoming: '교정 예정',
-  normal: '정상',
-};
-
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
  */

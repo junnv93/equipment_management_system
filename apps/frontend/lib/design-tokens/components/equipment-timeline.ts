@@ -33,10 +33,10 @@ export const TIMELINE_TOKENS = {
     classes: 'bg-brand-info/10 text-brand-info border border-brand-info/20',
   },
 
-  /** 타임라인 카드 */
+  /** 타임라인 카드 — AP-07: hover 시 좌측 accent bar + shadow 상승 */
   card: {
-    base: 'rounded-lg border bg-card p-4',
-    hover: `hover:shadow-md ${TRANSITION_PRESETS.fastShadow}`,
+    base: 'rounded-lg border bg-card p-4 border-l-2 border-l-transparent',
+    hover: `hover:shadow-md hover:border-l-brand-info ${TRANSITION_PRESETS.fastShadowBorder}`,
   },
 
   /** 항목 간 간격 */

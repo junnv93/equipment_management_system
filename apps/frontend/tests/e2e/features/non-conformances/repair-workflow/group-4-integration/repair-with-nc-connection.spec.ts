@@ -32,12 +32,10 @@ test.describe('Full Workflow Integration', () => {
     // 1. Navigate to repair history page for equipment with open NC
     // First, find equipment with NC
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const firstDetailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     await expect(firstDetailLink).toBeVisible();
     await firstDetailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = testOperatorPage.url();
@@ -50,7 +48,6 @@ test.describe('Full Workflow Integration', () => {
 
     // Navigate to repair history page
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/repair-history`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Click 'Add Repair History' button
     const addRepairButton = testOperatorPage.getByRole('button', {
@@ -94,7 +91,6 @@ test.describe('Full Workflow Integration', () => {
     await registerButton.click();
 
     // Wait for success toast
-    await testOperatorPage.waitForTimeout(1000);
 
     // Verify repair history was created
     await expect(

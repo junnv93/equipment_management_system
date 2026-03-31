@@ -20,7 +20,6 @@ test.describe('역할별 승인 워크플로우 - 기술책임자', () => {
   test('기술책임자는 장비를 직접 등록할 수 있다', async ({ techManagerPage }) => {
     // 1. techManagerPage로 /equipment/create 페이지 이동
     await techManagerPage.goto('/equipment/create');
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Verify page loaded
     await expect(techManagerPage.locator('h1')).toContainText('장비 등록');
@@ -42,7 +41,6 @@ test.describe('역할별 승인 워크플로우 - 기술책임자', () => {
     console.log('✓ Site dropdown is disabled and auto-set for tech_manager');
 
     // 팀: 기술책임자는 자기 팀이 자동 설정되고 변경 불가
-    await techManagerPage.waitForTimeout(1000); // Wait for teams to load
     const teamCombobox = techManagerPage.getByRole('combobox', { name: '팀 *' });
     await expect(teamCombobox).toBeDisabled();
     await expect(teamCombobox).not.toContainText('팀을 선택하세요');
@@ -99,10 +97,9 @@ test.describe('역할별 승인 워크플로우 - 기술책임자', () => {
 
     // 5. 승인 확인 모달 없이 바로 처리됨 확인
     // Wait a moment to ensure no modal appears
-    await techManagerPage.waitForTimeout(500);
 
     // Verify no approval confirmation modal
-    const modal = techManagerPage.locator('[role="dialog"]').filter({ hasText: /승인|확인/i });
+    const modal = techManagerPage.getByRole('dialog').filter({ hasText: /승인|확인/i });
     await expect(modal).not.toBeVisible();
     console.log('✓ No approval confirmation modal appeared');
 

@@ -238,6 +238,16 @@ export const AUTH_SPLIT_TOKENS = {
     bg: '#122C49',
     gradient: 'radial-gradient(circle at 30% 70%, #1e3a5f 0%, #122C49 60%, #0a1c30 100%)',
     grid: { opacity: 0.04, size: 48, lineColor: 'rgba(255,255,255,0.08)' },
+    /** UL Red — 브랜드 포인트 컬러 (레드 라인, dot, 구분선) */
+    accent: '#ca0123',
+    /** 장식 원형 테두리 opacity variants */
+    decoRing: { strong: 'rgba(202,1,35,0.12)', subtle: 'rgba(202,1,35,0.08)' },
+    /** 텍스트 opacity variants */
+    text: {
+      muted: 'rgba(255,255,255,0.4)',
+      subtle: 'rgba(255,255,255,0.55)',
+      faint: 'rgba(255,255,255,0.2)',
+    },
   },
   right: {
     grid: { opacity: 0.05, size: 48, lineColor: 'hsl(220 15% 60%)' },

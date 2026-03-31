@@ -36,7 +36,6 @@ test.describe('History Registration - 이력 등록 기능', () => {
 
     // 장비 목록 페이지로 이동
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 장비 목록에서 첫 번째 "상세" 링크 클릭
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
@@ -45,12 +44,10 @@ test.describe('History Registration - 이력 등록 기능', () => {
       return;
     }
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 위치변동 탭 클릭 (탭 이름: "위치 변동")
     const locationTab = testOperatorPage.getByRole('tab', { name: /위치.*변동/i });
     await locationTab.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 등록 버튼 찾기
     const registerButton = testOperatorPage.getByRole('button', {
@@ -79,7 +76,6 @@ test.describe('History Registration - 이력 등록 기능', () => {
 
   test('유지보수 이력 탭에서 등록 버튼 클릭 시 Dialog가 열린다', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     if ((await detailLink.count()) === 0) {
@@ -87,12 +83,10 @@ test.describe('History Registration - 이력 등록 기능', () => {
       return;
     }
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 유지보수 탭 클릭
     const maintenanceTab = testOperatorPage.getByRole('tab', { name: /유지보수/i });
     await maintenanceTab.click();
-    await testOperatorPage.waitForTimeout(500);
 
     const registerButton = testOperatorPage.getByRole('button', {
       name: /유지보수 등록/i,
@@ -113,7 +107,6 @@ test.describe('History Registration - 이력 등록 기능', () => {
 
   test('사고 이력 탭에서 등록 버튼 클릭 시 Dialog가 열린다', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     if ((await detailLink.count()) === 0) {
@@ -121,12 +114,10 @@ test.describe('History Registration - 이력 등록 기능', () => {
       return;
     }
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 사고 탭 클릭
     const incidentTab = testOperatorPage.getByRole('tab', { name: /사고/i });
     await incidentTab.click();
-    await testOperatorPage.waitForTimeout(500);
 
     const registerButton = testOperatorPage.getByRole('button', { name: /사고 등록/i });
 
@@ -145,7 +136,6 @@ test.describe('History Registration - 이력 등록 기능', () => {
 
   test('교정 이력 탭에서 등록 버튼 클릭 시 Dialog가 열린다', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     if ((await detailLink.count()) === 0) {
@@ -153,12 +143,10 @@ test.describe('History Registration - 이력 등록 기능', () => {
       return;
     }
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 교정 탭 클릭
     const calibrationTab = testOperatorPage.getByRole('tab', { name: /교정/i });
     await calibrationTab.click();
-    await testOperatorPage.waitForTimeout(500);
 
     const registerButton = testOperatorPage.getByRole('button', { name: /교정 등록/i });
 
@@ -177,7 +165,6 @@ test.describe('History Registration - 이력 등록 기능', () => {
 
   test('반출 이력 탭에서 신청 버튼 클릭 시 Dialog가 열린다', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     if ((await detailLink.count()) === 0) {
@@ -185,12 +172,10 @@ test.describe('History Registration - 이력 등록 기능', () => {
       return;
     }
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 반출 탭 클릭
     const checkoutTab = testOperatorPage.getByRole('tab', { name: /반출/i });
     await checkoutTab.click();
-    await testOperatorPage.waitForTimeout(500);
 
     const registerButton = testOperatorPage.getByRole('button', { name: /반출 신청/i });
 
@@ -254,7 +239,6 @@ test.describe('History Registration - 이력 등록 기능', () => {
     });
 
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     if ((await detailLink.count()) === 0) {
@@ -262,15 +246,12 @@ test.describe('History Registration - 이력 등록 기능', () => {
       return;
     }
     await detailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 위치변동 탭 클릭 (탭 이름: "위치 변동")
     const locationTab = testOperatorPage.getByRole('tab', { name: /위치.*변동/i });
     await locationTab.click();
 
     // 탭 컨텐츠가 로드될 때까지 기다림
-    await testOperatorPage.waitForLoadState('networkidle');
-    await testOperatorPage.waitForTimeout(1000);
 
     const registerButton = testOperatorPage.getByRole('button', {
       name: /위치 변경 등록/i,
@@ -300,7 +281,6 @@ test.describe('History Registration - 이력 등록 기능', () => {
       await dialog.getByRole('button', { name: /저장/i }).click();
 
       // API 응답 대기
-      await testOperatorPage.waitForTimeout(3000);
 
       // API 호출 결과 로그
       console.log('[E2E] API 응답 목록:', JSON.stringify(apiResponses, null, 2));

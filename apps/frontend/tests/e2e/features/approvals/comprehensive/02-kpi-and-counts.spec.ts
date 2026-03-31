@@ -16,7 +16,7 @@ test.describe('KPI 스트립 + 카운트 배지', () => {
     });
 
     // KPI 4개 카드 존재 확인 (role="group")
-    const kpiCards = page.locator('[role="group"]');
+    const kpiCards = page.getByRole('group');
 
     // "전체 대기" 카드
     await expect(page.locator('[role="group"][aria-label="전체 대기"]')).toBeVisible();

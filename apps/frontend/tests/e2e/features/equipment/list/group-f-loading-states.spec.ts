@@ -44,7 +44,6 @@ test.describe('Group F: Loading States', () => {
       await expect(skeletonElement).toBeVisible();
 
       // Wait for loading to complete
-      await testOperatorPage.waitForTimeout(2000);
 
       // Data is displayed
       const contentContainer = testOperatorPage.locator('[aria-live="polite"]').first();
@@ -141,7 +140,6 @@ test.describe('Group F: Loading States', () => {
 
       // 장비 목록 페이지로 이동
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 초기 데이터 확인
       await expect(testOperatorPage.getByText('장비 1').first()).toBeVisible();
@@ -164,7 +162,6 @@ test.describe('Group F: Loading States', () => {
       await expect(contentContainer).toHaveAttribute('aria-busy', 'true');
 
       // 로딩 완료 대기
-      await testOperatorPage.waitForTimeout(1500);
 
       // aria-busy가 false로 변경되는지 확인
       await expect(contentContainer).toHaveAttribute('aria-busy', 'false');
@@ -258,7 +255,6 @@ test.describe('Group F: Loading States', () => {
 
     // 장비 목록 페이지로 이동
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForTimeout(1000);
 
     // 초기 데이터 확인 - 테이블의 첫 번째 장비명만 확인 (strict mode 회피)
     const multimeterRow = testOperatorPage.locator('tr').filter({ hasText: '멀티미터' }).first();
@@ -279,7 +275,6 @@ test.describe('Group F: Loading States', () => {
     await expect(spinner).toBeVisible();
 
     // 로딩 완료 대기
-    await testOperatorPage.waitForTimeout(1500);
 
     // 스피너가 사라지는지 확인
     await expect(spinner).toBeHidden();

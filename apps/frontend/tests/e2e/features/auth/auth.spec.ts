@@ -258,7 +258,6 @@ test.describe('접근성', () => {
 test.describe('에러 페이지', () => {
   test('기본 에러 페이지 표시', async ({ page }) => {
     await page.goto('/error?error=Default');
-    await page.waitForLoadState('networkidle');
 
     // 에러 제목 확인
     await expect(page.getByTestId('error-title')).toBeVisible({ timeout: 10000 });
@@ -270,7 +269,6 @@ test.describe('에러 페이지', () => {
 
   test('특정 에러 코드 (CredentialsSignin) 표시', async ({ page }) => {
     await page.goto('/error?error=CredentialsSignin');
-    await page.waitForLoadState('networkidle');
 
     // 에러 제목 확인
     await expect(page.getByTestId('error-title')).toBeVisible({ timeout: 10000 });
@@ -282,7 +280,6 @@ test.describe('에러 페이지', () => {
 
   test('로그인 페이지로 이동', async ({ page }) => {
     await page.goto('/error?error=Default');
-    await page.waitForLoadState('networkidle');
 
     // 로그인 페이지로 돌아가기 클릭
     const backLink = page.getByRole('link', { name: /로그인 페이지로 돌아가기/i });
@@ -295,7 +292,6 @@ test.describe('에러 페이지', () => {
 
   test('다시 시도 버튼 확인', async ({ page }) => {
     await page.goto('/error?error=Default');
-    await page.waitForLoadState('networkidle');
 
     // 다시 시도 버튼 확인 (aria-label로 찾기)
     const retryButton = page.getByLabel('페이지 새로고침');

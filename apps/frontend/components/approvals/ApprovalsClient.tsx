@@ -20,12 +20,14 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
 import type { UserRole } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import {
   type ApprovalCategory,
   type ApprovalItem,
   ROLE_TABS,
   TAB_META,
 } from '@/lib/api/approvals-api';
+import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { ApprovalKpiStrip } from './ApprovalKpiStrip';
@@ -55,6 +57,7 @@ export function ApprovalsClient({
   const searchParams = useSearchParams();
   const approvalsApi = useApprovalsApi();
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
   const { toast } = useToast();
 
   // 현재 역할에서 사용 가능한 탭 (useMemo로 안정화)
@@ -130,7 +133,7 @@ export function ApprovalsClient({
         item.category,
         item.id,
         userId,
-        comment,
+        comment || t('defaults.approveComment'),
         equipmentId,
         item.originalData
       );
@@ -145,7 +148,8 @@ export function ApprovalsClient({
       queryKeys.equipment.all,
       queryKeys.nonConformances.all,
     ],
-    successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
+    successMessage: (_, { item }) =>
+      t('toasts.approveDynamic', { summary: getLocalizedSummary(item, t, siteLabels) }),
     errorMessage: t('toasts.approveError'),
     onSuccessCallback: (_, { item }) => {
       setProcessingIds((prev) => {
@@ -221,7 +225,8 @@ export function ApprovalsClient({
       queryKeys.equipment.all,
       queryKeys.nonConformances.all,
     ],
-    successMessage: (_, { item }) => t('toasts.rejectDynamic', { summary: item.summary }),
+    successMessage: (_, { item }) =>
+      t('toasts.rejectDynamic', { summary: getLocalizedSummary(item, t, siteLabels) }),
     errorMessage: t('toasts.rejectError'),
     onSuccessCallback: (_, { item }) => {
       setProcessingIds((prev) => {
@@ -560,7 +565,9 @@ export function ApprovalsClient({
                       ? t(`tabMeta.${approveCommentItem.category}.commentDialogTitle`)
                       : t('commentDialog.titleFallback')}
                   </DialogTitle>
-                  <DialogDescription>{approveCommentItem.summary}</DialogDescription>
+                  <DialogDescription>
+                    {getLocalizedSummary(approveCommentItem, t, siteLabels)}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">

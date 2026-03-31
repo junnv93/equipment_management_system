@@ -3,11 +3,8 @@ import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
 import { RouteLoading } from '@/components/layout/RouteLoading';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
-import {
-  CHECKOUT_PURPOSE_LABELS,
-  type CheckoutPurpose,
-  CheckoutPurposeValues as CPVal,
-} from '@equipment-management/schemas';
+import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
+import { getTranslations } from 'next-intl/server';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
@@ -88,18 +85,24 @@ export async function generateMetadata(props: PageProps) {
   const { id } = await props.params;
 
   try {
-    const checkout = await getCheckoutCached(id);
-    const purposeLabel =
-      CHECKOUT_PURPOSE_LABELS[checkout.purpose as CheckoutPurpose] || checkout.purpose;
+    const [checkout, t] = await Promise.all([getCheckoutCached(id), getTranslations('checkouts')]);
+    const purposeLabel = t(`purpose.${checkout.purpose}` as Parameters<typeof t>[0]);
 
     return {
-      title: `${purposeLabel} 반출 상세 - ${checkout.destination}`,
-      description: `${checkout.destination}으로의 ${purposeLabel} 반출 상세 정보를 확인하세요.`,
+      title: t('metadata.detailTitle', {
+        purpose: purposeLabel,
+        destination: checkout.destination,
+      }),
+      description: t('metadata.detailDescription', {
+        purpose: purposeLabel,
+        destination: checkout.destination,
+      }),
     };
   } catch {
+    const t = await getTranslations('checkouts');
     return {
-      title: '반출 상세',
-      description: '반출 상세 정보',
+      title: t('metadata.detailFallbackTitle'),
+      description: t('metadata.detailFallbackDescription'),
     };
   }
 }

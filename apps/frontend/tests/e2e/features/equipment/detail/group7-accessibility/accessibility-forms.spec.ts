@@ -14,8 +14,6 @@ import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 test.describe('Group 7: Accessibility', () => {
   test('Form accessibility', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/EQP-010');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // 1. Open disposal request dialog
     // Look for disposal request button
@@ -57,10 +55,9 @@ test.describe('Group 7: Accessibility', () => {
 
     console.log('Opening disposal request dialog...');
     await disposalButton.first().click();
-    await page.waitForTimeout(500);
 
     // Verify dialog is open
-    const dialog = page.locator('[role="dialog"]');
+    const dialog = page.getByRole('dialog');
     const dialogVisible = await dialog.isVisible().catch(() => false);
 
     if (!dialogVisible) {
@@ -151,7 +148,6 @@ test.describe('Group 7: Accessibility', () => {
 
       // Clear and enter short text (invalid)
       await textarea.fill('짧은텍스트');
-      await page.waitForTimeout(300);
 
       // 5. Verify error message is associated with field (aria-describedby)
       const ariaDescribedBy = await textarea.getAttribute('aria-describedby');
@@ -203,7 +199,6 @@ test.describe('Group 7: Accessibility', () => {
         if (!isDisabled) {
           // Try to submit with invalid data
           await submitButton.first().click();
-          await page.waitForTimeout(500);
 
           // Look for error messages
           const errorMessages = dialog.locator(
@@ -244,7 +239,6 @@ test.describe('Group 7: Accessibility', () => {
     // 8. Verify tab order is logical
     for (let i = 0; i < 10; i++) {
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       const focused = page.locator(':focus');
       const isInDialog = await focused.evaluate(
@@ -323,7 +317,6 @@ test.describe('Group 7: Accessibility', () => {
     if (radioCount > 0) {
       console.log(`Found ${radioCount} radio buttons`);
       await radioButtons.first().check();
-      await page.waitForTimeout(200);
       console.log('✓ Radio button selected');
     }
 
@@ -331,7 +324,6 @@ test.describe('Group 7: Accessibility', () => {
     if (hasTextarea) {
       const validText = '이 장비는 노후화로 인해 성능이 저하되었습니다. 폐기 승인을 요청합니다.';
       await textarea.fill(validText);
-      await page.waitForTimeout(300);
       console.log('✓ Textarea filled with valid text');
 
       // Verify character count hint updates
@@ -358,7 +350,6 @@ test.describe('Group 7: Accessibility', () => {
       if (!isDisabled) {
         console.log('Submitting form...');
         await submitButton.first().click();
-        await page.waitForTimeout(1000);
 
         // 11. Verify success message is announced
         // Look for toast notification or success message
@@ -384,7 +375,6 @@ test.describe('Group 7: Accessibility', () => {
         }
 
         // Dialog should close after successful submission
-        await page.waitForTimeout(1000);
         const dialogStillVisible = await dialog.isVisible().catch(() => false);
 
         if (!dialogStillVisible) {

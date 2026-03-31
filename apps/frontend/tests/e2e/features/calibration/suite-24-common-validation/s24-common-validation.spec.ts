@@ -6,7 +6,7 @@
  * D-4: 캐시 무효화 검증
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BASE_URLS, TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
 import { getBackendToken, clearBackendCache } from '../helpers/calibration-api-helpers';
 

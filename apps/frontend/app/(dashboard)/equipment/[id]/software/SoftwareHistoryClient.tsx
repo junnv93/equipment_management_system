@@ -28,11 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import softwareApi, {
-  SoftwareHistory,
-  SOFTWARE_APPROVAL_STATUS_LABELS,
-  SoftwareApprovalStatus,
-} from '@/lib/api/software-api';
+import softwareApi, { SoftwareHistory, SoftwareApprovalStatus } from '@/lib/api/software-api';
 import {
   SOFTWARE_APPROVAL_BADGE_TOKENS,
   SOFTWARE_HISTORY_PAGE_TOKENS as TOKENS,
@@ -54,6 +50,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const t = useTranslations('equipment.softwareHistory');
+  const tSoftware = useTranslations('software');
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newChange, setNewChange] = useState({
@@ -340,7 +337,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
                       <div className={TOKENS.table.statusCell}>
                         {getStatusIcon(item.approvalStatus)}
                         <Badge className={SOFTWARE_APPROVAL_BADGE_TOKENS[item.approvalStatus]}>
-                          {SOFTWARE_APPROVAL_STATUS_LABELS[item.approvalStatus]}
+                          {tSoftware(`approvalStatus.${item.approvalStatus}`)}
                         </Badge>
                       </div>
                     </TableCell>

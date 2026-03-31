@@ -34,7 +34,6 @@ test.describe('Group F: Empty States', () => {
       // 3. Backend API test endpoint that returns empty data
 
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForTimeout(1000);
 
       // Verify empty state component
       const emptyStateSection = testOperatorPage
@@ -77,7 +76,6 @@ test.describe('Group F: Empty States', () => {
 
       // Navigate to equipment page first
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForTimeout(1000);
 
       // Enter search term
       const searchInput = testOperatorPage.getByPlaceholder('장비명, 관리번호, 모델명으로 검색...');
@@ -85,7 +83,6 @@ test.describe('Group F: Empty States', () => {
       await searchInput.press('Enter');
 
       // Wait for search results
-      await testOperatorPage.waitForTimeout(1000);
 
       // Verify empty search results component
       const emptySearchSection = testOperatorPage
@@ -123,7 +120,6 @@ test.describe('Group F: Empty States', () => {
     async ({ testOperatorPage }) => {
       // Navigate to equipment page
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForTimeout(1000);
 
       // Open filter panel
       const filterTrigger = testOperatorPage.getByRole('button', { name: /필터/ });
@@ -134,13 +130,11 @@ test.describe('Group F: Empty States', () => {
         .locator('button[role="combobox"]')
         .filter({ hasText: '전체 상태' });
       await statusFilter.click();
-      await testOperatorPage.waitForTimeout(300);
 
       const retiredOption = testOperatorPage.getByRole('option', { name: '폐기' });
       await retiredOption.click();
 
       // Wait for filter to apply
-      await testOperatorPage.waitForTimeout(1000);
 
       // Verify empty filter results component
       const emptyFilterSection = testOperatorPage
@@ -169,7 +163,6 @@ test.describe('Group F: Empty States', () => {
       await resetButton.click();
 
       // Verify filter is cleared (URL check)
-      await testOperatorPage.waitForTimeout(500);
       const url = testOperatorPage.url();
       expect(url).not.toContain('status=');
     }

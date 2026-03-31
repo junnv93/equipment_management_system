@@ -7,7 +7,8 @@ import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/components/ui/she
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import { AuditLogDiffViewer } from '@/components/ui/audit-log-diff-viewer';
 import { PrintableAuditReport } from './PrintableAuditReport';
-import { formatDateTime, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   AUDIT_ACTION_BADGE_TOKENS,
   DEFAULT_AUDIT_ACTION_BADGE,
@@ -17,7 +18,6 @@ import {
 import { useTranslations } from 'next-intl';
 import type { AuditLog, AuditAction } from '@equipment-management/schemas';
 import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
-import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 
 interface AuditDetailSheetProps {
   open: boolean;
@@ -36,6 +36,7 @@ interface AuditDetailSheetProps {
 export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetProps) {
   const t = useTranslations('audit');
   const tc = useTranslations('common');
+  const { fmtDateTime } = useDateFormatter();
   const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(t);
 
   const hasDetails = log?.details && (log.details.previousValue || log.details.newValue);
@@ -76,7 +77,7 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
                   {getActionLabel(log.action)}
                 </Badge>
                 <span className={AUDIT_DETAIL_SHEET_TOKENS.timestamp}>
-                  {formatDateTime(log.timestamp)}
+                  {fmtDateTime(log.timestamp)}
                 </span>
               </div>
             )}
@@ -112,7 +113,7 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
                     <span className={AUDIT_DETAIL_SHEET_TOKENS.rowKey}>{t('detail.userRole')}</span>
                     <span className={AUDIT_DETAIL_SHEET_TOKENS.rowVal}>
                       <Badge variant="outline" className="text-xs">
-                        {USER_ROLE_LABELS[log.userRole as UserRole] ?? log.userRole}
+                        {tc(`userRoles.${log.userRole}`)}
                       </Badge>
                     </span>
                   </div>
@@ -238,7 +239,7 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
                       {t('detail.createdAt')}
                     </span>
                     <span className={AUDIT_DETAIL_SHEET_TOKENS.rowValMono}>
-                      {formatDateTime(log.createdAt)}
+                      {fmtDateTime(log.createdAt)}
                     </span>
                   </div>
                   {log.details?.requestId && (

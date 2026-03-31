@@ -739,25 +739,25 @@ components/
 
 This project has custom Claude Code skills in `.claude/skills/`:
 
-- **equipment-management**: Domain knowledge for UL-QP-18 procedures
-- **nextjs-16**: Next.js 16 patterns and best practices
-- **verify-cas**: CAS(Optimistic Locking) 패턴 검증 — version 필드, VersionedBaseService, 캐시 무효화
-- **verify-auth**: 서버 사이드 인증/인가 검증 — req.user.userId, @RequirePermissions, @AuditLog
-- **verify-zod**: Zod 검증 패턴 검증 — ZodValidationPipe, class-validator 금지, Controller Pipe 적용, Query DTO 패턴 일관성
-- **verify-ssot**: SSOT 임포트 소스 검증 — 타입/enum 패키지 임포트, 로컬 재정의 금지, Icon library 통합(lucide-react)
-- **verify-hardcoding**: SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑, DTO 매핑
-- **verify-frontend-state**: 프론트엔드 상태 관리 검증 — TanStack Query, onSuccess setQueryData 금지
-- **verify-nextjs**: Next.js 16 패턴 검증 — await params, useActionState, 서버 컴포넌트, Dynamic imports(코드 분할)
-- **verify-design-tokens**: Design Token 3-Layer 아키텍처 검증 — transition-all 금지, focus-visible 우선, import 경로, Layer 참조
-- **verify-security**: 보안 설정 검증 — Helmet CSP 프로덕션 강화, Next.js Security Headers, PermissionsGuard DENY 모드, @Public 남용
-- **verify-i18n**: i18n 번역 일관성 검증 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조, Zod 스키마 하드코딩 메시지 탐지
-- **verify-sql-safety**: SQL 안전성 검증 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out JOIN, RBAC INNER JOIN
-- **verify-e2e**: E2E 테스트 패턴 검증 — auth fixture 사용, networkidle 금지, waitForTimeout 금지, locator 안티패턴, SSOT 상수, 테스트 격리
-- **verify-filters**: URL-driven 필터 SSOT 검증 — filter-utils 필수 export, hook 존재, page.tsx 서버 파싱
-- **verify-implementation**: 모든 verify 스킬 통합 실행
-- **review-architecture**: 아키텍처 레벨 코드 리뷰 — 계층 관통 추적, CAS 일관성, 캐시 코히어런스, 모듈 간 패턴 일관성, 성능/보안
-- **review-design**: 디자인 품질 리뷰 + 와이어프레임 HTML 생성 — 10가지 안티패턴(카드 수프~토큰 활용도) 점수화, 접근성/다크모드 포함, Progressive Disclosure 구조(SKILL.md + references/)
-- **manage-skills**: 검증 스킬 유지보수 (커버리지 갭 분석, 스킬 생성/업데이트)
-- **playwright-e2e**: Playwright E2E 테스트 워크플로우 — 계획→생성→실행→검증→보고 전체 사이클, 브라우저 리소스 경합 방지(동시 2개 이하), auth.fixture 패턴 자동 적용, 에이전트 순차 배치 실행, Phase 5 결과 보고서(성공/실패/앱버그 분류 + Action Items)
+- **equipment-management**: UL-QP-18 equipment management domain guide — CRUD, calibration, checkout, non-conformance, approval workflows
+- **nextjs-16**: Next.js 16 App Router reference — params Promise, PageProps, useActionState, Server Components
+- **verify-cas**: CAS (Optimistic Locking) verification — version field, VersionedBaseService, cache invalidation on 409
+- **verify-auth**: Server-side auth verification — req.user.userId extraction, @RequirePermissions, @AuditLog
+- **verify-zod**: Zod validation verification — ZodValidationPipe, no class-validator, controller pipe, query DTO consistency
+- **verify-ssot**: SSOT import source verification — package imports, no local redefinitions, lucide-react unification
+- **verify-hardcoding**: Hardcoding detection — API paths, queryKeys, env vars, cache keys, token TTL, ErrorCode mappings, Korean UI labels
+- **verify-frontend-state**: Frontend state verification — TanStack Query, no onSuccess setQueryData, dynamic imports
+- **verify-nextjs**: Next.js 16 pattern verification — await params, useActionState, Server Components, dynamic imports
+- **verify-design-tokens**: Design Token 3-Layer verification — no transition-all, focus-visible, import paths, layer references
+- **verify-security**: OWASP Top 10 security verification — access control, injection, CSP, vulnerable components, auth, logging, SSRF
+- **verify-i18n**: i18n consistency verification — en/ko key matching, empty translations, Zod hardcoded messages
+- **verify-sql-safety**: SQL safety verification — LIKE escaping, N+1 detection, COUNT(DISTINCT) fan-out, RBAC INNER JOIN
+- **verify-e2e**: E2E test pattern + architecture coverage — auth fixtures, locator patterns, test isolation + CAS conflict recovery, cache invalidation after mutation, site access control on mutations
+- **verify-filters**: URL-driven filter SSOT verification — filter-utils exports, hooks, page.tsx server parsing
+- **verify-implementation**: Unified verification — runs all verify-* skills sequentially, generates combined report
+- **review-architecture**: Architecture-level code review — cross-layer tracing, CAS coherence, cache invalidation, pattern consistency
+- **review-design**: Design quality review + wireframe HTML — 10 anti-patterns scoring, accessibility, dark mode, progressive disclosure
+- **manage-skills**: Skill maintenance — coverage gap analysis, skill creation/update, CLAUDE.md management
+- **playwright-e2e**: Playwright E2E workflow — plan→generate→execute→heal→report, sequential agent execution, auth.fixture auto-apply
 
 Reference these skills when working on related features.

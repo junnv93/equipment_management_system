@@ -6,7 +6,6 @@
  * ## 주의: networkidle 사용 금지
  *
  * SSE 연결(useNotificationStream)이 persistent connection을 유지하므로
- * waitForLoadState('networkidle')는 절대 resolve되지 않음.
  * 대신 waitForLoadState('domcontentloaded') + 명시적 요소 대기 사용.
  *
  * ## UI 구조
@@ -80,7 +79,6 @@ test.describe('이메일 알림 설정', () => {
 
     // 원복 (다음 테스트를 위해)
     await emailSwitch.click();
-    await page.waitForTimeout(500); // 저장 완료 대기
   });
 
   test('N-32: 이메일 토글 상태가 페이지 새로고침 후 유지된다', async ({
@@ -96,7 +94,6 @@ test.describe('이메일 알림 설정', () => {
 
     // 상태 변경
     await emailSwitch.click();
-    await page.waitForTimeout(1000); // 저장 대기
 
     // 변경된 상태 확인
     const changedState = await emailSwitch.getAttribute('data-state');
@@ -114,7 +111,6 @@ test.describe('이메일 알림 설정', () => {
 
     // 원복 (초기 상태로 복원)
     await emailSwitchAfter.click();
-    await page.waitForTimeout(500);
   });
 
   test('N-33: 이메일 토글과 앱 내 알림 토글이 독립적으로 동작한다', async ({
@@ -132,7 +128,6 @@ test.describe('이메일 알림 설정', () => {
 
     // 이메일 토글만 변경
     await emailSwitch.click();
-    await page.waitForTimeout(500);
 
     // 앱 내 알림 토글은 그대로여야 함
     const inAppStateAfter = await inAppSwitch.getAttribute('data-state');
@@ -140,6 +135,5 @@ test.describe('이메일 알림 설정', () => {
 
     // 이메일 토글 원복
     await emailSwitch.click();
-    await page.waitForTimeout(500);
   });
 });

@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '../../shared/fixtures/auth.fixture';
 
 /**
  * Phase 7: Breadcrumb Navigation Testing
@@ -13,27 +13,12 @@ import { test, expect, Page } from '@playwright/test';
  * 5. Verify sidebar logo hover effects
  */
 
-// Helper function to login
-async function login(page: Page) {
-  await page.goto('http://localhost:3000/login');
-  await page.waitForSelector('#email', { timeout: 10000 });
-
-  await page.fill('#email', 'admin@example.com');
-  await page.fill('#password', 'admin123');
-  await page.click('button[type="submit"]');
-
-  await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
-}
-
 test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('should display breadcrumb on equipment page', async ({ page }) => {
-    await login(page);
-
+  test('should display breadcrumb on equipment page', async ({ siteAdminPage: page }) => {
     // Navigate to equipment page
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/equipment');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/after-desktop-equipment.png', fullPage: true });
@@ -53,11 +38,10 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
     console.log('✅ Desktop: Breadcrumb displays "홈 > 장비 관리"');
   });
 
-  test('should navigate home by clicking home icon in breadcrumb', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+  test('should navigate home by clicking home icon in breadcrumb', async ({
+    siteAdminPage: page,
+  }) => {
+    await page.goto('/equipment');
 
     // Click home icon in breadcrumb
     const breadcrumb = page.locator('nav[aria-label="breadcrumb"]');
@@ -66,15 +50,12 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
     await homeIcon.click();
 
     // Verify navigation to home
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await expect(page).toHaveURL('/');
     console.log('✅ Desktop: Home icon navigation works');
   });
 
-  test('should display breadcrumb on checkouts page', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/checkouts');
-    await page.waitForLoadState('networkidle');
+  test('should display breadcrumb on checkouts page', async ({ siteAdminPage: page }) => {
+    await page.goto('/checkouts');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/after-checkouts.png', fullPage: true });
@@ -89,12 +70,11 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
     console.log('✅ Desktop: Breadcrumb shows "홈 > 대여/반출 관리"');
   });
 
-  test('should display multi-level breadcrumb on equipment detail page', async ({ page }) => {
-    await login(page);
-
+  test('should display multi-level breadcrumb on equipment detail page', async ({
+    siteAdminPage: page,
+  }) => {
     // Go to equipment list
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/equipment');
 
     // Try to find first equipment link
     const firstEquipmentLink = page.locator('a[href^="/equipment/"]').first();
@@ -102,7 +82,6 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
 
     if (equipmentLinkCount > 0) {
       await firstEquipmentLink.click();
-      await page.waitForLoadState('networkidle');
 
       // Take screenshot
       await page.screenshot({ path: '/tmp/after-equipment-detail.png', fullPage: true });
@@ -130,11 +109,8 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
     }
   });
 
-  test('should verify sidebar logo hover effects', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+  test('should verify sidebar logo hover effects', async ({ siteAdminPage: page }) => {
+    await page.goto('/equipment');
 
     // Find sidebar logo link
     const sidebarLogo = page.locator('aside a[href="/"][aria-label="홈으로 이동"]');
@@ -148,7 +124,7 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
 
       // Click logo to navigate home
       await sidebarLogo.click();
-      await expect(page).toHaveURL('http://localhost:3000/');
+      await expect(page).toHaveURL('/');
 
       console.log('✅ Desktop: Sidebar logo hover effects and navigation work');
     } else {
@@ -160,11 +136,8 @@ test.describe('Breadcrumb Navigation - Desktop (1440px)', () => {
 test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('should display mobile breadcrumb with home icon', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+  test('should display mobile breadcrumb with home icon', async ({ siteAdminPage: page }) => {
+    await page.goto('/equipment');
 
     // Take screenshot
     await page.screenshot({ path: '/tmp/after-mobile-equipment.png', fullPage: true });
@@ -180,11 +153,8 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
     console.log('✅ Mobile: Breadcrumb with home icon displays');
   });
 
-  test('should navigate home with one tap on mobile', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+  test('should navigate home with one tap on mobile', async ({ siteAdminPage: page }) => {
+    await page.goto('/equipment');
 
     // Click home icon (should be directly in header, no need to open menu)
     const breadcrumb = page.locator('nav[aria-label="breadcrumb"]');
@@ -193,17 +163,14 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
     await homeIcon.click();
 
     // Verify navigation
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await expect(page).toHaveURL('/');
 
     console.log('✅ Mobile: Home navigation with 1 tap (improved from 2 taps!)');
   });
 
-  test('should display abbreviated breadcrumb on mobile', async ({ page }) => {
-    await login(page);
-
+  test('should display abbreviated breadcrumb on mobile', async ({ siteAdminPage: page }) => {
     // Go to equipment list
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/equipment');
 
     // Find first equipment link
     const firstEquipmentLink = page.locator('a[href^="/equipment/"]').first();
@@ -211,7 +178,6 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
 
     if (equipmentLinkCount > 0) {
       await firstEquipmentLink.click();
-      await page.waitForLoadState('networkidle');
 
       // Take screenshot
       await page.screenshot({ path: '/tmp/after-mobile-equipment-detail.png', fullPage: true });
@@ -234,11 +200,8 @@ test.describe('Breadcrumb Navigation - Mobile (375px)', () => {
 test.describe('Breadcrumb Accessibility', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('should have proper ARIA attributes', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+  test('should have proper ARIA attributes', async ({ siteAdminPage: page }) => {
+    await page.goto('/equipment');
 
     // Check nav aria-label
     const breadcrumb = page.locator('nav[aria-label="breadcrumb"]');
@@ -260,11 +223,8 @@ test.describe('Breadcrumb Accessibility', () => {
     console.log('✅ Accessibility: ARIA attributes correctly set');
   });
 
-  test('should support keyboard navigation', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+  test('should support keyboard navigation', async ({ siteAdminPage: page }) => {
+    await page.goto('/equipment');
 
     // Take screenshot before keyboard navigation
     await page.screenshot({ path: '/tmp/after-keyboard-focus-before.png' });
@@ -283,16 +243,13 @@ test.describe('Breadcrumb Accessibility', () => {
     await page.keyboard.press('Enter');
 
     // Verify navigation
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await expect(page).toHaveURL('/');
 
     console.log('✅ Accessibility: Keyboard navigation works (Tab + Enter)');
   });
 
-  test('should have visible focus indicators', async ({ page }) => {
-    await login(page);
-
-    await page.goto('http://localhost:3000/equipment');
-    await page.waitForLoadState('networkidle');
+  test('should have visible focus indicators', async ({ siteAdminPage: page }) => {
+    await page.goto('/equipment');
 
     // Focus on home icon
     const homeIcon = page.locator('nav[aria-label="breadcrumb"] a[href="/"]').first();
@@ -321,7 +278,7 @@ test.describe('Breadcrumb Accessibility', () => {
 });
 
 test.describe('Comparison Summary', () => {
-  test('should generate improvement summary', async ({ page }) => {
+  test('should generate improvement summary', async ({ siteAdminPage: page }) => {
     const summary = {
       testDate: new Date().toISOString(),
       improvements: [

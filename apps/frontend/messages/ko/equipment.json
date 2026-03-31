@@ -5,6 +5,36 @@
     "uiwang": "의왕랩",
     "pyeongtaek": "평택랩"
   },
+  "classification": {
+    "fcc_emc_rf": "FCC EMC/RF",
+    "general_emc": "General EMC",
+    "general_rf": "General RF",
+    "sar": "SAR",
+    "automotive_emc": "Automotive EMC",
+    "software": "소프트웨어"
+  },
+  "documentType": {
+    "calibration_certificate": "교정성적서",
+    "raw_data": "원시 데이터",
+    "inspection_report": "검수보고서",
+    "history_card": "이력카드",
+    "equipment_photo": "장비 사진",
+    "equipment_manual": "장비 매뉴얼",
+    "other": "기타"
+  },
+  "importSource": {
+    "rental": "외부 렌탈",
+    "internal_shared": "내부 공용"
+  },
+  "importStatus": {
+    "pending": "승인 대기",
+    "approved": "승인됨",
+    "rejected": "거절됨",
+    "received": "수령 완료",
+    "return_requested": "반납 진행 중",
+    "returned": "반납 완료",
+    "canceled": "취소됨"
+  },
   "subtitle": "장비 등록, 수정, 교정 이력 관리",
   "fields": {
     "name": "장비명",
@@ -62,7 +92,6 @@
     "empty": "등록된 장비가 없습니다",
     "emptyDescription": "장비를 등록하여 교정 일정, 반출 이력, 부적합 관리를 시작하세요.",
     "createButton": "장비 등록",
-    "createSharedButton": "공용장비 등록",
     "totalItems": "총 {count}개의 장비",
     "loadError": "장비 목록 로드 실패",
     "loading": "장비 목록 로딩 중",
@@ -321,6 +350,7 @@
       "locationPlaceholder": "예: RF1 Room",
       "locationDescription": "장비가 현재 위치한 장소를 입력하세요",
       "initialLocationPlaceholder": "예: RF1 Room",
+      "initialLocationAsStorageDescription": "최초 보관 위치로 자동 설정됩니다",
       "techManagerPlaceholder": "기술책임자를 선택하세요",
       "techManagerNoSite": "먼저 사이트를 선택하세요",
       "techManagerNoTeam": "먼저 팀을 선택하세요",
@@ -408,7 +438,6 @@
     "create": {
       "pageTitle": "장비 등록",
       "pageDescription": "새로운 장비를 시스템에 등록합니다",
-      "sharedLink": "공용장비 등록",
       "approvalRequestComplete": "등록 요청 완료",
       "approvalRequestDescription": "장비 등록 요청이 제출되었습니다. 기술책임자의 승인을 기다려주세요.",
       "registrationComplete": "장비 등록 완료",
@@ -422,26 +451,6 @@
       "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다.",
       "documentUploadPartialFail": "일부 문서 업로드 실패",
       "documentUploadPartialFailDescription": "장비는 등록되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요."
-    },
-    "createShared": {
-      "pageTitle": "공용/렌탈 장비 임시등록",
-      "pageDescription": "타 팀 공용장비 또는 외부 렌탈장비를 임시로 등록합니다.",
-      "guideTitle": "임시등록이란?",
-      "guideCommon": "타 팀(Safety, Battery 등)에서 일시적으로 빌려오는 장비",
-      "guideRental": "외부 업체에서 대여하는 장비",
-      "guideCertRequired": "사용 기간 동안 교정이 유효해야 합니다.",
-      "guideExpiry": "사용 기간 만료 시 비활성화됩니다.",
-      "approvalRequestComplete": "등록 요청 완료",
-      "approvalRequestDescription": "장비 임시등록 요청이 제출되었습니다. 승인을 기다려주세요.",
-      "tempRegistrationComplete": "임시등록 완료",
-      "tempRegistrationDescription": "공용/렌탈 장비가 임시등록되었습니다.",
-      "tempRegistrationWithHistory": "장비가 임시등록되었습니다. (이력 {count}건 저장됨)",
-      "historyPartialSuccess": "장비가 임시등록되었습니다. 이력 {saved}/{total}건 저장 완료.",
-      "historyPartialTitle": "임시등록 완료 (일부 이력 저장 실패)",
-      "historyPartialDescription": "장비는 등록되었지만 이력 {count}건 저장에 실패했습니다.",
-      "registrationFailed": "등록 실패",
-      "registrationError": "장비 등록 중 오류가 발생했습니다.",
-      "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다."
     },
     "temporary": {
       "title": "임시등록 장비 정보",
@@ -464,7 +473,9 @@
       "usagePeriodEnd": "사용 종료일",
       "calibrationCertificate": "교정성적서",
       "selectedFile": "선택된 파일: {name}",
-      "pdfOnly": "PDF 파일만 업로드 가능합니다. (필수)"
+      "pdfOnly": "PDF 파일만 업로드 가능합니다. (필수)",
+      "fileSizeError": "파일 크기 초과",
+      "fileTypeError": "지원하지 않는 파일 형식"
     },
     "wizard": {
       "step1": "기본 정보",
@@ -532,8 +543,19 @@
     "equipmentPhoto": "장비 사진",
     "equipmentManual": "장비 매뉴얼",
     "download": "다운로드",
+    "preview": "미리보기",
     "noPhotos": "등록된 장비 사진이 없습니다",
-    "noManuals": "등록된 매뉴얼이 없습니다"
+    "noManuals": "등록된 매뉴얼이 없습니다",
+    "supplyManagement": "구매 및 관리 정보",
+    "calibrationResultLabel": "교정 결과",
+    "correctionFactorLabel": "보정계수",
+    "intermediateCheckRequired": "중간점검 대상",
+    "intermediateCheckRequiredYes": "대상",
+    "intermediateCheckRequiredNo": "비대상",
+    "intermediateCheckCycleLabel": "중간점검 주기",
+    "intermediateCheckCycleUnit": "개월",
+    "lastIntermediateCheckDateLabel": "최종 중간 점검일",
+    "nextIntermediateCheckDateLabel": "차기 중간 점검일"
   },
   "softwareTab": {
     "title": "소프트웨어/매뉴얼 정보",
@@ -574,6 +596,15 @@
       "checking": "검증 중..."
     },
     "deleteError": "삭제에 실패했습니다.",
+    "preview": "미리보기",
+    "previewError": "미리보기를 불러올 수 없습니다.",
+    "previewNotSupported": "미리보기를 지원하지 않는 파일 형식입니다.",
+    "zoomIn": "확대",
+    "zoomOut": "축소",
+    "rotate": "회전",
+    "retry": "다시 시도",
+    "revisionSuccess": "새 버전이 업로드되었습니다.",
+    "revisionError": "버전 업로드에 실패했습니다.",
     "revision": {
       "version": "버전",
       "fileName": "파일명",
@@ -644,6 +675,8 @@
     "toasts": {
       "fileRequired": "파일 필요",
       "fileRequiredDesc": "교정성적서 파일을 첨부해주세요.",
+      "fileSizeError": "파일 크기 초과",
+      "fileTypeError": "지원하지 않는 파일 형식",
       "success": "교정 이력 등록 완료",
       "successDesc": "교정 이력이 성공적으로 등록되었습니다. 승인을 기다리고 있습니다.",
       "error": "등록 실패",
@@ -1080,6 +1113,8 @@
     "ownerDepartmentPlaceholder": "예: Safety Lab, Battery Lab",
     "internalContact": "담당자 연락처",
     "internalContactPlaceholder": "예: 홍길동 (내선 1234)",
+    "sourceIdentifier": "소유처 원본 식별번호",
+    "sourceIdentifierPlaceholder": "소유처에서 관리하는 장비번호",
     "usagePeriodAndReason": "사용 기간 및 사유",
     "usagePeriodAndReasonDesc": "장비를 사용할 기간과 반입 사유를 입력하세요.",
     "usagePeriodStart": "사용 시작일",
@@ -1160,7 +1195,7 @@
   },
   "nonConformanceBanner": {
     "title": "부적합 상태 ({count}건)",
-    "description": "이 장비는 현재 부적합 상태입니다. 부적합 처리가 완료될 때까지 대여 및 반출이 제한됩니다.",
+    "description": "이 장비는 현재 부적합 상태입니다. 부적합 처리가 완료될 때까지 대여가 제한됩니다. (수리 목적 반출은 가능)",
     "discoveryDate": "발견일: {date}",
     "manage": "부적합 관리",
     "statusWarningTitle": "부적합 상태 장비",
@@ -1416,6 +1451,11 @@
     },
     "nextCalibrationLabel": "다음 교정일 (자동 계산)",
     "calibrationAgencyPlaceholder": "예: HCT, ABC 교정사",
+    "calibrationCertificate": {
+      "title": "교정성적서",
+      "description": "교정성적서가 있으면 첨부하세요. (PDF, JPG, PNG)",
+      "upload": "파일 선택 또는 드래그"
+    },
     "submit": "수령 확인",
     "toasts": {
       "success": "수령 확인이 완료되었습니다.",

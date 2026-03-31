@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
 
 /**
  * 장비 등록/수정 폼 에러 처리 테스트
@@ -16,50 +16,12 @@ test.setTimeout(90000);
 // 테스트 전 설정: 큰 뷰포트 사용
 test.use({ viewport: { width: 1920, height: 1080 } });
 
-// 로그인 헬퍼 함수
-async function login(
-  page: import('@playwright/test').Page,
-  email: string = 'admin@example.com',
-  password: string = 'admin123'
-) {
-  await page.goto('/login');
-
-  // 페이지 로드 대기
-  await page.waitForLoadState('networkidle');
-
-  // 추가 대기 - hydration 완료
-  await page.waitForTimeout(2000);
-
-  // 로그인 폼이 로드될 때까지 대기 (next-auth getProviders 호출 완료 대기)
-  // "Welcome back" 텍스트가 나타나면 폼이 로드된 것
-  try {
-    await page.waitForSelector('#email', { timeout: 30000 });
-  } catch (e) {
-    // 페이지 상태 디버깅
-    const html = await page.content();
-    console.log('Page HTML contains login-form:', html.includes('login-form'));
-    console.log('Page HTML contains #email:', html.includes('id="email"'));
-    throw e;
-  }
-
-  // 이메일 입력
-  await page.locator('#email').fill(email);
-  // 비밀번호 입력
-  await page.locator('#password').fill(password);
-  // 로그인 버튼 클릭
-  await page.getByTestId('login-button').click();
-
-  // 로그인 성공 후 리다이렉트 대기
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30000 });
-}
-
 test.describe('Equipment Form - Error Handling', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
+  test.beforeEach(async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
   });
 
-  test('필수 필드 누락 시 에러 메시지 표시', async ({ page }) => {
+  test('필수 필드 누락 시 에러 메시지 표시', async ({ siteAdminPage: page }) => {
     // 폼 제출 버튼 클릭 (필수 필드 미입력)
     await page.getByRole('button', { name: /등록/i }).first().click();
 
@@ -74,7 +36,7 @@ test.describe('Equipment Form - Error Handling', () => {
     });
   });
 
-  test('필수 필드 입력 후 에러 사라짐', async ({ page }) => {
+  test('필수 필드 입력 후 에러 사라짐', async ({ siteAdminPage: page }) => {
     // 먼저 제출하여 에러 표시
     await page.getByRole('button', { name: /등록/i }).first().click();
 
@@ -96,7 +58,7 @@ test.describe('Equipment Form - Error Handling', () => {
     await expect(nameInput).toHaveValue('테스트 장비');
   });
 
-  test('역할별 안내 배너 표시', async ({ page }) => {
+  test('역할별 안내 배너 표시', async ({ siteAdminPage: page }) => {
     // 역할 안내 배너 확인
     await expect(page.getByText(/현재 권한:/i)).toBeVisible();
 
@@ -114,7 +76,7 @@ test.describe('Equipment Form - Error Handling', () => {
     expect(roleVisible).toBeTruthy();
   });
 
-  test('파일 크기 제한 안내 표시', async ({ page }) => {
+  test('파일 크기 제한 안내 표시', async ({ siteAdminPage: page }) => {
     // 파일 첨부 섹션으로 스크롤
     await page.getByRole('heading', { name: /파일 첨부/i }).scrollIntoViewIfNeeded();
 
@@ -124,12 +86,11 @@ test.describe('Equipment Form - Error Handling', () => {
 });
 
 test.describe('Equipment Form - Calibration History Errors', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
+  test.beforeEach(async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
   });
 
-  test('교정 이력 추가 시 필수 필드 검증', async ({ page }) => {
+  test('교정 이력 추가 시 필수 필드 검증', async ({ siteAdminPage: page }) => {
     // 교정 이력 섹션으로 스크롤
     await page.getByRole('heading', { name: /교정 이력/i }).scrollIntoViewIfNeeded();
 
@@ -150,7 +111,7 @@ test.describe('Equipment Form - Calibration History Errors', () => {
     }
   });
 
-  test('교정일이 차기 교정일보다 이후인 경우 에러', async ({ page }) => {
+  test('교정일이 차기 교정일보다 이후인 경우 에러', async ({ siteAdminPage: page }) => {
     // 교정 이력 섹션으로 스크롤
     await page.getByRole('heading', { name: /교정 이력/i }).scrollIntoViewIfNeeded();
 
@@ -175,7 +136,7 @@ test.describe('Equipment Form - Calibration History Errors', () => {
     }
   });
 
-  test('교정 이력 삭제 확인 다이얼로그', async ({ page }) => {
+  test('교정 이력 삭제 확인 다이얼로그', async ({ siteAdminPage: page }) => {
     // 교정 이력 섹션으로 스크롤
     await page.getByRole('heading', { name: /교정 이력/i }).scrollIntoViewIfNeeded();
 
@@ -208,11 +169,7 @@ test.describe('Equipment Form - Calibration History Errors', () => {
 });
 
 test.describe('Equipment Form - API Error Simulation', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
-  test('존재하지 않는 장비 수정 시 에러 처리', async ({ page }) => {
+  test('존재하지 않는 장비 수정 시 에러 처리', async ({ siteAdminPage: page }) => {
     // 존재하지 않는 UUID로 수정 페이지 접근
     await page.goto('/equipment/00000000-0000-0000-0000-000000000000/edit');
 
@@ -222,7 +179,7 @@ test.describe('Equipment Form - API Error Simulation', () => {
     });
   });
 
-  test('네트워크 오류 시뮬레이션', async ({ page, context }) => {
+  test('네트워크 오류 시뮬레이션', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -247,7 +204,7 @@ test.describe('Equipment Form - API Error Simulation', () => {
     });
   });
 
-  test('중복 관리번호 에러 처리', async ({ page }) => {
+  test('중복 관리번호 에러 처리', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -281,7 +238,7 @@ test.describe('Equipment Form - API Error Simulation', () => {
     });
   });
 
-  test('서버 에러 (500) 처리', async ({ page }) => {
+  test('서버 에러 (500) 처리', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -313,7 +270,7 @@ test.describe('Equipment Form - API Error Simulation', () => {
     await expect(page.getByText(/서버|오류|실패|error/i).first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('권한 없음 (403) 에러 처리', async ({ page }) => {
+  test('권한 없음 (403) 에러 처리', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -349,11 +306,7 @@ test.describe('Equipment Form - API Error Simulation', () => {
 });
 
 test.describe('Equipment Form - ErrorAlert Component', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
-  test('ErrorAlert에 해결 방법이 표시되는지 확인', async ({ page }) => {
+  test('ErrorAlert에 해결 방법이 표시되는지 확인', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -393,7 +346,7 @@ test.describe('Equipment Form - ErrorAlert Component', () => {
     }
   });
 
-  test('ErrorAlert 닫기 버튼 동작', async ({ page }) => {
+  test('ErrorAlert 닫기 버튼 동작', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -438,7 +391,7 @@ test.describe('Equipment Form - ErrorAlert Component', () => {
     }
   });
 
-  test('다시 시도 버튼 동작', async ({ page }) => {
+  test('다시 시도 버튼 동작', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -487,11 +440,7 @@ test.describe('Equipment Form - ErrorAlert Component', () => {
 });
 
 test.describe('Equipment Edit Form - Error Handling', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
-  });
-
-  test('수정 페이지 로드 실패 시 에러 표시', async ({ page }) => {
+  test('수정 페이지 로드 실패 시 에러 표시', async ({ siteAdminPage: page }) => {
     // 잘못된 UUID로 접근
     await page.goto('/equipment/invalid-uuid/edit');
 

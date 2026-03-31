@@ -152,6 +152,10 @@ test.describe('Suite 33: 종결 + 장비 복원 + 잠금', () => {
     expect(equipRes.ok()).toBeTruthy();
     const equip = await equipRes.json();
     expect(equip.status).toBe(ESVal.AVAILABLE);
+
+    // ★ 프로세스 연속성: 장비 상세 UI에서도 "사용 가능" 배지 즉시 확인 가능해야 함
+    await page.goto(`/equipment/${S33_EQUIP_ID}`);
+    await expect(page.getByText('사용 가능').first()).toBeVisible();
   });
 
   // ============================================================================

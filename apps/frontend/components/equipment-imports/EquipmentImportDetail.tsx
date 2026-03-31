@@ -32,10 +32,7 @@ import { ko } from 'date-fns/locale';
 import equipmentImportApi, { type EquipmentImport } from '@/lib/api/equipment-import-api';
 import { EquipmentImportStatusBadge } from './EquipmentImportStatusBadge';
 import {
-  CLASSIFICATION_LABELS,
-  EQUIPMENT_IMPORT_SOURCE_LABELS,
   type EquipmentImportStatus,
-  type Classification,
   UserRoleValues as URVal,
   EquipmentImportStatusValues as EISVal,
   EquipmentImportSourceValues as EISrcVal,
@@ -76,9 +73,8 @@ export default function EquipmentImportDetail({ id }: Props) {
   // Breadcrumb dynamic label
   useEffect(() => {
     if (equipmentImport) {
-      const sourceLabel = EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType];
-      const classificationLabel =
-        CLASSIFICATION_LABELS[equipmentImport.classification as Classification];
+      const sourceLabel = t(`importSource.${equipmentImport.sourceType}`);
+      const classificationLabel = t(`classification.${equipmentImport.classification}`);
       const label = `${sourceLabel} ${classificationLabel} - ${equipmentImport.equipmentName}`;
       setDynamicLabel(id, label);
     }
@@ -86,10 +82,13 @@ export default function EquipmentImportDetail({ id }: Props) {
     return () => {
       clearDynamicLabel(id);
     };
-  }, [equipmentImport, id, setDynamicLabel, clearDynamicLabel]);
+  }, [equipmentImport, id, setDynamicLabel, clearDynamicLabel, t]);
 
   const approveMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () => equipmentImportApi.approve(id, equipmentImport?.version || 1),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.approve(id, fresh.version);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.APPROVED as EquipmentImportStatus }),
     invalidateKeys: [queryKeys.equipmentImports.lists()],
@@ -101,7 +100,10 @@ export default function EquipmentImportDetail({ id }: Props) {
   });
 
   const rejectMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () => equipmentImportApi.reject(id, equipmentImport?.version || 1, rejectionReason),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.reject(id, fresh.version, rejectionReason);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.REJECTED as EquipmentImportStatus }),
     invalidateKeys: [queryKeys.equipmentImports.lists()],
@@ -114,7 +116,10 @@ export default function EquipmentImportDetail({ id }: Props) {
   });
 
   const initiateReturnMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () => equipmentImportApi.initiateReturn(id),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.initiateReturn(id, fresh.version);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({
       ...old!,
@@ -129,8 +134,10 @@ export default function EquipmentImportDetail({ id }: Props) {
   });
 
   const cancelMutation = useOptimisticMutation<EquipmentImport, void, EquipmentImport>({
-    mutationFn: () =>
-      equipmentImportApi.cancel(id, equipmentImport?.version || 1, cancelReason || undefined),
+    mutationFn: async () => {
+      const fresh = await equipmentImportApi.getOne(id);
+      return equipmentImportApi.cancel(id, fresh.version, cancelReason || undefined);
+    },
     queryKey: queryKeys.equipmentImports.detail(id),
     optimisticUpdate: (old) => ({ ...old!, status: EISVal.CANCELED as EquipmentImportStatus }),
     invalidateKeys: [queryKeys.equipmentImports.lists()],
@@ -174,7 +181,7 @@ export default function EquipmentImportDetail({ id }: Props) {
       <PageHeader
         title={equipmentImport.equipmentName}
         subtitle={t('equipmentImport.detailSubtitle', {
-          source: EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType],
+          source: t(`importSource.${equipmentImport.sourceType}`),
         })}
         onBack={() => router.push('/checkouts?view=inbound')}
         actions={<EquipmentImportStatusBadge status={status} />}
@@ -197,14 +204,11 @@ export default function EquipmentImportDetail({ id }: Props) {
               <dt className="text-sm text-muted-foreground">
                 {t('equipmentImport.classificationLabel')}
               </dt>
-              <dd>
-                {CLASSIFICATION_LABELS[equipmentImport.classification as Classification] ||
-                  equipmentImport.classification}
-              </dd>
+              <dd>{t(`classification.${equipmentImport.classification}`)}</dd>
             </div>
             <div>
               <dt className="text-sm text-muted-foreground">{t('equipmentImport.source')}</dt>
-              <dd>{EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType]}</dd>
+              <dd>{t(`importSource.${equipmentImport.sourceType}`)}</dd>
             </div>
             {equipmentImport.modelName && (
               <div>
@@ -292,6 +296,14 @@ export default function EquipmentImportDetail({ id }: Props) {
                     {t('equipmentImport.internalContact')}
                   </dt>
                   <dd>{equipmentImport.internalContact}</dd>
+                </div>
+              )}
+              {equipmentImport.externalIdentifier && (
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t('equipmentImport.sourceIdentifier')}
+                  </dt>
+                  <dd>{equipmentImport.externalIdentifier}</dd>
                 </div>
               )}
             </dl>

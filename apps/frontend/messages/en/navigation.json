@@ -2,7 +2,6 @@
   "dashboard": "Dashboard",
   "equipment": "Equipment",
   "equipmentCreate": "Register Equipment",
-  "equipmentCreateShared": "Register Shared Equipment",
   "equipmentDetail": "Equipment Detail",
   "equipmentEdit": "Edit",
   "equipmentCalibrationFactors": "Calibration Factors",
@@ -49,6 +48,7 @@
   "adminNonConformanceApprovals": "Non-Conformance Approvals",
   "adminSoftwareApprovals": "Software Approvals",
   "adminAuditLogs": "Audit Logs",
+  "adminDataMigration": "Data Migration",
   "login": "Login",
   "error": "Error",
   "sections": {

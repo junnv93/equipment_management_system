@@ -17,7 +17,6 @@ test.describe('폐기 워크플로우 - 정상 흐름 @sequential', () => {
   test('4.1. 폐기 요청 (시험실무자)', async ({ testOperatorPage: page }) => {
     // 1. UUID 기반으로 장비 상세 페이지 직접 접근
     await page.goto(`/equipment/${EQUIP_DISPOSAL_WORKFLOW}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. '폐기 요청' 버튼 확인 및 클릭
     const disposalButton = page.getByRole('button', { name: /폐기 요청/i });

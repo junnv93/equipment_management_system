@@ -20,7 +20,6 @@ test.describe('Group A-2: Auto-Link Guidance Display', () => {
 
     // Select a non-conformance
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Click first NC option (not "선택 안 함")
     const ncOptions = testOperatorPage.getByRole('option');
@@ -28,7 +27,6 @@ test.describe('Group A-2: Auto-Link Guidance Display', () => {
     await firstRealOption.click();
 
     // Wait for UI update
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify guidance message is displayed
     const guidanceBox = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
@@ -50,7 +48,6 @@ test.describe('Group A-2: Auto-Link Guidance Display', () => {
 
     // Select NC
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
     const firstNC = testOperatorPage.getByRole('option').nth(1);
     await firstNC.click();
 
@@ -62,11 +59,9 @@ test.describe('Group A-2: Auto-Link Guidance Display', () => {
 
     // Deselect NC (선택 안 함)
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
     await testOperatorPage.getByText('선택 안 함').click();
 
     // Wait for UI update
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Guidance should be hidden
     await expect(guidanceBox).not.toBeVisible();
@@ -77,10 +72,8 @@ test.describe('Group A-2: Auto-Link Guidance Display', () => {
 
     // Select NC
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
     const firstNC = testOperatorPage.getByRole('option').nth(1);
     await firstNC.click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify detailed workflow explanation exists
     const guidanceBox = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({

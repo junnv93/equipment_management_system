@@ -14,7 +14,6 @@ test.describe('파일 업로드', () => {
   test('검수보고서 파일 업로드 성공', async ({ techManagerPage: page }) => {
     // 1. techManagerPage로 /equipment/create 페이지 이동
     await page.goto('/equipment/create');
-    await page.waitForLoadState('networkidle');
 
     // 페이지 로드 확인
     await expect(page.getByRole('heading', { name: '장비 등록' })).toBeVisible();
@@ -24,7 +23,6 @@ test.describe('파일 업로드', () => {
 
     // 2. 필수 정보 입력: 사이트/팀 - 기술책임자는 자동 설정 (disabled)
     await expect(page.getByRole('combobox', { name: '사이트 *' })).toBeDisabled();
-    await page.waitForTimeout(1000); // Wait for teams to load and auto-set
     await expect(page.getByRole('combobox', { name: '팀 *' })).toBeDisabled();
 
     // 2. 필수 정보 입력: 관리번호 일련번호
@@ -156,7 +154,6 @@ test.describe('파일 업로드', () => {
     });
 
     // 9. 장비 상세 페이지로 이동 확인
-    await page.waitForLoadState('networkidle');
 
     // URL이 /equipment/[uuid] 형식인지 확인
     const currentUrl = page.url();
@@ -167,7 +164,6 @@ test.describe('파일 업로드', () => {
     const attachmentTab = page.getByRole('tab', { name: /첨부.*파일|파일/i });
     if ((await attachmentTab.count()) > 0) {
       await attachmentTab.click();
-      await page.waitForTimeout(1000);
     }
 
     // 업로드된 파일명 확인

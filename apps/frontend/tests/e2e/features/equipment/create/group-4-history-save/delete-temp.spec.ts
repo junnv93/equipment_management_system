@@ -18,7 +18,6 @@ test.describe('이력 데이터 병렬 저장', () => {
   test('임시 이력 삭제 후 등록', async ({ techManagerPage }) => {
     // 1. techManagerPage로 /equipment/create 페이지 이동
     await techManagerPage.goto('/equipment/create');
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Verify page loaded
     await expect(techManagerPage.locator('h1')).toContainText('장비 등록');
@@ -30,7 +29,6 @@ test.describe('이력 데이터 병렬 저장', () => {
 
     // 사이트/팀: 기술책임자는 자동 설정 (disabled)
     await expect(techManagerPage.getByRole('combobox', { name: '사이트 *' })).toBeDisabled();
-    await techManagerPage.waitForTimeout(1000); // Wait for teams to load and auto-set
     await expect(techManagerPage.getByRole('combobox', { name: '팀 *' })).toBeDisabled();
 
     // 관리번호: '4004'
@@ -113,7 +111,6 @@ test.describe('이력 데이터 병렬 저장', () => {
       .filter({ has: techManagerPage.locator('text=변동 일시') });
     const historyRows = historyTable.locator('tbody tr');
     // Wait for all entries to render
-    await techManagerPage.waitForTimeout(500);
     await expect(historyRows).toHaveCount(3, { timeout: 5000 });
     console.log('✓ 3 history entries displayed in table');
 
@@ -129,7 +126,6 @@ test.describe('이력 데이터 병렬 저장', () => {
       await dialog.accept();
     });
     await deleteButton.click();
-    await techManagerPage.waitForTimeout(500);
     console.log('✓ Deleted second history entry');
 
     // 5. 이력 목록에서 2건만 표시 확인
@@ -158,7 +154,6 @@ test.describe('이력 데이터 병렬 저장', () => {
     // Search for the created equipment
     const searchInput = techManagerPage.locator('input[placeholder*="검색"]').first();
     await searchInput.fill('임시 이력 삭제 테스트');
-    await techManagerPage.waitForTimeout(1000);
 
     // Click on the equipment card to go to detail page
     const equipmentCard = techManagerPage.locator('text=임시 이력 삭제 테스트');
@@ -166,7 +161,6 @@ test.describe('이력 데이터 병렬 저장', () => {
     await equipmentCard.click();
 
     // Wait for detail page to load
-    await techManagerPage.waitForLoadState('networkidle');
     await expect(techManagerPage).toHaveURL(/\/equipment\/[^/]+$/);
     console.log('✓ Navigated to equipment detail page');
 
@@ -179,7 +173,6 @@ test.describe('이력 데이터 병렬 저장', () => {
     if (await historyTab.isVisible()) {
       if ((await historyTab.getAttribute('role')) === 'tab') {
         await historyTab.click();
-        await techManagerPage.waitForTimeout(500);
       }
     }
 

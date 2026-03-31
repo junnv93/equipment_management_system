@@ -9,7 +9,6 @@ test('setup checkout list page', async ({ page }) => {
   await page.goto('http://localhost:3000');
 
   // Wait for page to load
-  await page.waitForLoadState('networkidle');
 
   // Login as technical_manager (using test-login provider)
   await page.goto('http://localhost:3000/api/auth/signin');
@@ -34,8 +33,6 @@ test('setup checkout list page', async ({ page }) => {
   await page.goto('http://localhost:3000/checkouts');
 
   // Wait for checkout list to load
-  await page.waitForLoadState('networkidle');
 
   // Wait for main content to be visible
-  await page.waitForTimeout(2000);
 });

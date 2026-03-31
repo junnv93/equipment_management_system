@@ -251,7 +251,6 @@ test.describe('Calibration Registration and Approval Workflow', () => {
         console.log('승인 대기 항목 발견: 승인/반려 버튼 표시됨');
       } else {
         // 로딩 상태일 수 있으므로 조금 더 대기
-        await techManagerPage.waitForTimeout(2000);
         await expect(
           techManagerPage.locator('text=승인 대기 중인 교정 요청이 없습니다').or(approveButton)
         ).toBeVisible({ timeout: 5000 });

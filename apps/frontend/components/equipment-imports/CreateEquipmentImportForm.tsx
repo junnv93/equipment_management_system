@@ -34,15 +34,12 @@ import equipmentImportApi, {
   type CreateInternalSharedImportDto,
 } from '@/lib/api/equipment-import-api';
 import {
-  CLASSIFICATION_LABELS,
-  type Classification,
   type EquipmentImportSource,
   EquipmentImportSourceValues as EISrcVal,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
-
-const classificationOptions = Object.entries(CLASSIFICATION_LABELS) as [Classification, string][];
+import { useClassificationLabels } from '@/lib/i18n/use-enum-labels';
 
 interface CreateEquipmentImportFormProps {
   /**
@@ -67,6 +64,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const classificationLabels = useClassificationLabels();
 
   const [form, setForm] = useState({
     equipmentName: '',
@@ -91,8 +89,12 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
   const createMutation = useMutation({
     mutationFn: (data: CreateEquipmentImportDto) => equipmentImportApi.create(data),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() });
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.lists() }),
+        // 반입 신청 생성 시 승인 대기 카운트 증가 → 네비게이션 배지 즉시 갱신
+        queryClient.invalidateQueries({ queryKey: queryKeys.approvals.countsAll }),
+      ]);
       toast({
         title: t('equipmentImport.toasts.createSuccess'),
         description: t('equipmentImport.toasts.createSuccessDesc'),
@@ -174,6 +176,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
         ownerDepartment: form.ownerDepartment,
         internalContact: form.internalContact || undefined,
         borrowingJustification: form.borrowingJustification || undefined,
+        externalIdentifier: form.externalIdentifier || undefined,
       } as CreateInternalSharedImportDto;
     }
 
@@ -238,7 +241,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                   <SelectValue placeholder={t('equipmentImport.classificationPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {classificationOptions.map(([value, label]) => (
+                  {Object.entries(classificationLabels).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
@@ -362,13 +365,25 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                   />
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <Label htmlFor="internalContact">{t('equipmentImport.internalContact')}</Label>
                   <Input
                     id="internalContact"
                     value={form.internalContact}
                     onChange={(e) => setForm({ ...form, internalContact: e.target.value })}
                     placeholder={t('equipmentImport.internalContactPlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="externalIdentifier">
+                    {t('equipmentImport.sourceIdentifier')}
+                  </Label>
+                  <Input
+                    id="externalIdentifier"
+                    value={form.externalIdentifier}
+                    onChange={(e) => setForm({ ...form, externalIdentifier: e.target.value })}
+                    placeholder={t('equipmentImport.sourceIdentifierPlaceholder')}
                   />
                 </div>
               </>

@@ -310,17 +310,15 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
      * @see https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates
      */
     onSettled: async (data, error, variables) => {
-      // 1. 주 쿼리 무효화 → 서버 최신 데이터로 동기화
-      await queryClient.invalidateQueries({ queryKey });
-
-      // 2. 관련 쿼리도 무효화 (승인 카운트, 대시보드 등)
-      if (invalidateKeys.length > 0) {
-        await Promise.all(
-          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
-        );
+      // 주 쿼리 + 관련 쿼리 병렬 무효화 → 교차 엔티티 갱신 지연 방지
+      // (기존: 주 쿼리 await 후 관련 쿼리 → 교정 승인 시 equipment detail 갱신 지연)
+      const invalidations: Promise<void>[] = [queryClient.invalidateQueries({ queryKey })];
+      for (const key of invalidateKeys) {
+        invalidations.push(queryClient.invalidateQueries({ queryKey: key }));
       }
+      await Promise.all(invalidations);
 
-      // 3. 캐시 무효화 완료 후 콜백 (성공 시에만 — 네비게이션에 적합)
+      // 캐시 무효화 완료 후 콜백 (성공 시에만 — 네비게이션에 적합)
       if (!error && data !== undefined && onSettledCallback) {
         onSettledCallback(data, variables);
       }

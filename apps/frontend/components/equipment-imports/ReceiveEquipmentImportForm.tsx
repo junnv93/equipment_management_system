@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { isConflictError, ERROR_MESSAGES, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import { EquipmentImportCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -33,15 +34,16 @@ import equipmentImportApi, {
   type ReceivingCondition,
   type ReceiveEquipmentImportDto,
 } from '@/lib/api/equipment-import-api';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, DOCUMENT_FILE_RULES } from '@equipment-management/shared-constants';
 import {
-  CALIBRATION_METHOD_LABELS,
   CALIBRATION_METHOD_VALUES,
-  EQUIPMENT_IMPORT_SOURCE_LABELS,
   EquipmentImportSourceValues as EISrcVal,
   type CalibrationMethod,
 } from '@equipment-management/schemas';
 import { addMonths, format as formatDate } from 'date-fns';
+import { Upload, X, FileText } from 'lucide-react';
+import { validateFile } from '@/lib/utils/file-validation';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 interface Props {
   id: string;
@@ -55,6 +57,7 @@ interface Props {
  */
 export default function ReceiveEquipmentImportForm({ id }: Props) {
   const t = useTranslations('equipment');
+  const tCalibration = useTranslations('calibration');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const { toast } = useToast();
@@ -66,6 +69,8 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     accessories: 'complete',
     notes: '',
   });
+
+  const [files, setFiles] = useState<File[]>([]);
 
   const [calibrationInfo, setCalibrationInfo] = useState<{
     calibrationMethod: CalibrationMethod;
@@ -105,8 +110,11 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
   });
 
   const receiveMutation = useMutation({
-    mutationFn: () => {
-      const payload: Record<string, unknown> = {
+    mutationFn: async () => {
+      // fresh fetch로 최신 version 획득 — 캐시 stale 버전 사용 시 409 VERSION_CONFLICT 발생 가능
+      const fresh = await equipmentImportApi.getOne(id);
+      const payload: ReceiveEquipmentImportDto = {
+        version: fresh.version,
         receivingCondition: {
           ...condition,
           notes: condition.notes || undefined,
@@ -127,10 +135,10 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
         };
       }
 
-      return equipmentImportApi.receive(id, payload as unknown as ReceiveEquipmentImportDto);
+      return equipmentImportApi.receive(id, payload, files.length > 0 ? files : undefined);
     },
-    onSuccess: () => {
-      EquipmentImportCacheInvalidation.invalidateAfterReceive(queryClient, id);
+    onSuccess: async () => {
+      await EquipmentImportCacheInvalidation.invalidateAfterReceive(queryClient, id);
       toast({
         title: t('receiveEquipmentImport.toasts.success'),
         description: t('receiveEquipmentImport.toasts.successDesc'),
@@ -138,6 +146,16 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
       router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(id));
     },
     onError: (error) => {
+      if (isConflictError(error)) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
+        const conflictInfo = ERROR_MESSAGES[EquipmentErrorCode.VERSION_CONFLICT];
+        toast({
+          title: conflictInfo.title,
+          description: conflictInfo.message,
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         title: t('receiveEquipmentImport.toasts.error'),
         description: getErrorMessage(error),
@@ -162,7 +180,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     );
   }
 
-  const sourceLabel = EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType];
+  const sourceLabel = t(`importSource.${equipmentImport.sourceType}`);
   const ownerLabel =
     equipmentImport.sourceType === EISrcVal.RENTAL
       ? equipmentImport.vendorName
@@ -284,7 +302,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                 <SelectContent>
                   {CALIBRATION_METHOD_VALUES.map((method) => (
                     <SelectItem key={method} value={method}>
-                      {CALIBRATION_METHOD_LABELS[method]}
+                      {tCalibration(`method.${method}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -369,6 +387,84 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                 )}
               </>
             )}
+          </div>
+
+          {/* Calibration Certificate Upload */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-lg font-medium">
+              {t('receiveEquipmentImport.calibrationCertificate.title')}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t('receiveEquipmentImport.calibrationCertificate.description')}
+            </p>
+
+            <div className="space-y-3">
+              <Label
+                htmlFor="calibrationFiles"
+                className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-muted-foreground ${TRANSITION_PRESETS.fastBgColor} hover:border-primary hover:text-primary`}
+              >
+                <Upload className="h-5 w-5" />
+                <span>{t('receiveEquipmentImport.calibrationCertificate.upload')}</span>
+                <input
+                  id="calibrationFiles"
+                  type="file"
+                  multiple
+                  accept={DOCUMENT_FILE_RULES.calibration_certificate.accept}
+                  className="hidden"
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.files || []);
+                    const valid = selected.filter((file) => {
+                      const error = validateFile(file, {
+                        accept: DOCUMENT_FILE_RULES.calibration_certificate.accept,
+                      });
+                      if (error) {
+                        toast({
+                          title:
+                            error.type === 'size'
+                              ? t('form.temporary.fileSizeError')
+                              : t('form.temporary.fileTypeError'),
+                          description: error.fileName,
+                          variant: 'destructive',
+                        });
+                        return false;
+                      }
+                      return true;
+                    });
+                    if (valid.length > 0) {
+                      setFiles((prev) => [...prev, ...valid]);
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </Label>
+
+              {files.length > 0 && (
+                <ul className="space-y-2">
+                  {files.map((file, idx) => (
+                    <li
+                      key={`${file.name}-${idx}`}
+                      className="flex items-center justify-between rounded-md border px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2 text-sm">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="truncate max-w-[200px]">{file.name}</span>
+                        <span className="text-muted-foreground">
+                          ({(file.size / 1024).toFixed(0)} KB)
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFiles((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">

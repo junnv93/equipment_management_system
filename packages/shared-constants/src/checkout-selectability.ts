@@ -48,7 +48,9 @@ export const RENTAL_ALLOWED_STATUSES: readonly EquipmentStatus[] = [
  *
  * return_to_vendor는 렌탈 반납 전용이므로 별도 규칙 없음 (시스템이 자동 생성)
  */
-export const PURPOSE_ALLOWED_STATUSES: Record<string, readonly EquipmentStatus[]> = {
+export const PURPOSE_ALLOWED_STATUSES: Partial<
+  Record<CheckoutPurpose, readonly EquipmentStatus[]>
+> = {
   calibration: CALIBRATION_REPAIR_ALLOWED_STATUSES,
   repair: CALIBRATION_REPAIR_ALLOWED_STATUSES,
   rental: RENTAL_ALLOWED_STATUSES,
@@ -60,8 +62,12 @@ export const PURPOSE_ALLOWED_STATUSES: Record<string, readonly EquipmentStatus[]
  * @param purpose 반출 목적 (calibration | repair | rental)
  * @returns 허용되는 장비 상태 배열
  */
-export function getAllowedStatusesForPurpose(purpose: string): readonly EquipmentStatus[] {
-  return PURPOSE_ALLOWED_STATUSES[purpose] ?? CALIBRATION_REPAIR_ALLOWED_STATUSES;
+export function getAllowedStatusesForPurpose(
+  purpose: CheckoutPurpose | string
+): readonly EquipmentStatus[] {
+  return (
+    PURPOSE_ALLOWED_STATUSES[purpose as CheckoutPurpose] ?? CALIBRATION_REPAIR_ALLOWED_STATUSES
+  );
 }
 
 /**
@@ -78,63 +84,87 @@ export const CHECKOUT_HIDDEN_STATUSES: readonly EquipmentStatus[] = [
 ] as const;
 
 /**
- * 목적별 선택 불가 사유 메시지
+ * 차단 사유 i18n 키 정의
  *
- * 목록에는 보이지만 선택할 수 없는 장비에 대한 사유 메시지.
- * 키 = EquipmentStatus, 값 = { 기본 메시지, 목적별 오버라이드 }
+ * SSOT: 프론트엔드에서 t(key, params) 형태로 resolve
+ * - key: checkouts.selectability.* 네임스페이스
+ * - params: 보간 파라미터 (선택)
+ *
+ * 빈 문자열 키('') = 해당 목적에서 차단 아님 (교정/수리에서 부적합 허용 등)
  */
-export const CHECKOUT_BLOCKED_REASONS: Record<
-  string,
-  { default: string; purposeOverrides?: Partial<Record<string, string>> }
+export interface BlockedReasonI18n {
+  /** i18n 키 (checkouts.selectability.* 네임스페이스) */
+  key: string;
+  /** i18n 보간 파라미터 */
+  params?: Record<string, string>;
+}
+
+export const CHECKOUT_BLOCKED_REASONS: Partial<
+  Record<
+    EquipmentStatus,
+    {
+      default: BlockedReasonI18n;
+      purposeOverrides?: Partial<Record<CheckoutPurpose, BlockedReasonI18n>>;
+    }
+  >
 > = {
   in_use: {
-    default: '현재 다른 사용자가 사용 중인 장비입니다. 반납 후 선택 가능합니다.',
+    default: { key: 'selectability.inUseBlocked' },
   },
   checked_out: {
-    default: '이미 반출 중인 장비입니다. 반입 완료 후 선택 가능합니다.',
+    default: { key: 'selectability.checkedOutBlocked' },
   },
   calibration_overdue: {
-    default: '', // 교정/수리에서는 허용
+    default: { key: '' }, // 교정/수리에서는 허용
     purposeOverrides: {
-      rental: '교정 기한이 초과된 장비입니다. 외부 대여는 교정이 유효한 장비만 가능합니다.',
+      rental: { key: 'selectability.calibrationOverdueRentalBlocked' },
     },
   },
   non_conforming: {
-    default: '', // 교정/수리에서는 허용
+    default: { key: '' }, // 교정/수리에서는 허용
     purposeOverrides: {
-      rental: '부적합 상태의 장비입니다. 외부 대여는 정상 상태의 장비만 가능합니다.',
+      rental: { key: 'selectability.nonConformingRentalBlocked' },
     },
   },
 } as const;
 
 /**
  * 장비 선택 가능성 결과 인터페이스
+ *
+ * i18n 기반: reasonKey를 t() 함수로 resolve하여 표시
  */
 export interface EquipmentSelectability {
   /** 선택 가능 여부 */
   selectable: boolean;
-  /** 선택 불가 시 사유 메시지 */
-  reason?: string;
-  /** 선택은 가능하지만 경고가 필요한 경우의 메시지 */
-  warningMessage?: string;
+  /** i18n 키 — 선택 불가 시 사유 (t(reasonKey, reasonParams)로 resolve) */
+  reasonKey?: string;
+  /** i18n 보간 파라미터 */
+  reasonParams?: Record<string, string>;
+  /** i18n 키 — 선택 가능하지만 경고 필요 시 */
+  warningKey?: string;
+  /** i18n 보간 파라미터 for warningKey */
+  warningParams?: Record<string, string>;
 }
 
 /**
- * 장비의 선택 가능 사유 메시지 반환
+ * 장비의 차단 사유 i18n 키 반환
  *
  * @param status 장비 상태
  * @param purpose 반출 목적
- * @returns 차단 사유 메시지 (없으면 undefined)
+ * @returns 차단 사유 i18n 키 (없으면 undefined)
  */
-export function getBlockedReason(status: string, purpose: string): string | undefined {
-  const entry = CHECKOUT_BLOCKED_REASONS[status];
+export function getBlockedReasonKey(
+  status: EquipmentStatus | string,
+  purpose: CheckoutPurpose | string
+): BlockedReasonI18n | undefined {
+  const entry = CHECKOUT_BLOCKED_REASONS[status as EquipmentStatus];
   if (!entry) return undefined;
 
   // 목적별 오버라이드가 있으면 우선
-  const override = entry.purposeOverrides?.[purpose];
+  const override = entry.purposeOverrides?.[purpose as CheckoutPurpose];
   if (override !== undefined) {
-    return override || undefined; // 빈 문자열 = 차단 아님
+    return override.key ? override : undefined; // 빈 키 = 차단 아님
   }
 
-  return entry.default || undefined; // 빈 문자열 = 차단 아님
+  return entry.default.key ? entry.default : undefined; // 빈 키 = 차단 아님
 }

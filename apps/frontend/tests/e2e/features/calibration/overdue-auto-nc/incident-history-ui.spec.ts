@@ -25,7 +25,6 @@ test.describe('Incident History Tab Integration', () => {
 
     // 장비 목록에서 첫 번째 장비 가져오기
     await techManagerPage.goto('/equipment');
-    await techManagerPage.waitForLoadState('networkidle');
 
     const firstEquipmentLink = techManagerPage.getByRole('link', { name: /상세/i }).first();
     if ((await firstEquipmentLink.count()) === 0) {
@@ -35,7 +34,6 @@ test.describe('Incident History Tab Integration', () => {
     }
 
     await firstEquipmentLink.click();
-    await techManagerPage.waitForLoadState('networkidle');
 
     // URL에서 장비 ID 추출
     const url = techManagerPage.url();
@@ -48,14 +46,11 @@ test.describe('Incident History Tab Integration', () => {
       techManagerPage.locator('button[value="incident"]') ||
       techManagerPage.locator('button:has-text("사고 이력")');
 
-    await techManagerPage.waitForTimeout(1000);
-
     const tabCount = await incidentTab.count();
     if (tabCount > 0) {
       await incidentTab.first().click();
-      await techManagerPage.waitForTimeout(500);
     } else {
-      const allTabs = await techManagerPage.locator('[role="tab"]').allTextContents();
+      const allTabs = await techManagerPage.getByRole('tab').allTextContents();
       console.log('Available tabs:', allTabs);
       console.log('사고 이력 탭을 찾을 수 없습니다. 테스트 건너뛰기');
       test.skip();
@@ -78,13 +73,11 @@ test.describe('Incident History Tab Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. Click incident type dropdown
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await expect(typeSelect).toBeVisible();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(300);
 
     // 3. Verify 5 options appear
     const damageOption = techManagerPage.getByRole('option', { name: '손상' });
@@ -118,18 +111,15 @@ test.describe('Incident History Tab Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. Select '교정 기한 초과' as incident type
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
 
     const calibrationOverdueOption = techManagerPage.getByRole('option', {
       name: '교정 기한 초과',
     });
     await calibrationOverdueOption.click();
-    await techManagerPage.waitForTimeout(300);
 
     // 3. Verify non-conformance checkbox appears
     const checkbox = techManagerPage.getByText('부적합으로 등록');
@@ -157,23 +147,19 @@ test.describe('Incident History Tab Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. Select '교정 기한 초과'
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
 
     const calibrationOverdueOption = techManagerPage.getByRole('option', {
       name: '교정 기한 초과',
     });
     await calibrationOverdueOption.click();
-    await techManagerPage.waitForTimeout(300);
 
     // 3. Check '부적합으로 등록' checkbox
     const checkbox = techManagerPage.locator('input[type="checkbox"]').first();
     await checkbox.check();
-    await techManagerPage.waitForTimeout(300);
 
     // 4. Verify action plan textarea appears
     const actionPlanLabel = techManagerPage.getByText('조치 계획');
@@ -201,27 +187,22 @@ test.describe('Incident History Tab Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. Select '변경' (Change) as incident type
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
 
     const changeOption = techManagerPage.getByRole('option', { name: '변경' });
     await changeOption.click();
-    await techManagerPage.waitForTimeout(300);
 
     // 3. Verify checkbox is not visible
     await expect(techManagerPage.getByText('부적합으로 등록')).not.toBeVisible();
 
     // 4. Also test '수리' (Repair) type
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
 
     const repairOption = techManagerPage.getByRole('option', { name: '수리' });
     await repairOption.click();
-    await techManagerPage.waitForTimeout(300);
 
     // Verify checkbox is still hidden
     await expect(techManagerPage.getByText('부적합으로 등록')).not.toBeVisible();
@@ -240,7 +221,6 @@ test.describe('Incident History Tab Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. Fill occurred date: today
     const dateInput = techManagerPage.locator('input[type="date"]');
@@ -250,13 +230,11 @@ test.describe('Incident History Tab Integration', () => {
     // 3. Select: 교정 기한 초과
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
 
     const calibrationOverdueOption = techManagerPage.getByRole('option', {
       name: '교정 기한 초과',
     });
     await calibrationOverdueOption.click();
-    await techManagerPage.waitForTimeout(300);
 
     // 4. Enter content: '교정 기한 7일 초과됨'
     const contentTextarea = techManagerPage.locator('textarea').first();
@@ -265,7 +243,6 @@ test.describe('Incident History Tab Integration', () => {
     // 5. Check '부적합으로 등록'
     const checkbox = techManagerPage.locator('input[type="checkbox"]').first();
     await checkbox.check();
-    await techManagerPage.waitForTimeout(300);
 
     // 6. Enter action plan: '외부 교정기관 교정 예약'
     const actionPlanTextarea = techManagerPage.locator('textarea').last();
@@ -280,7 +257,6 @@ test.describe('Incident History Tab Integration', () => {
     await expect(successToast.first()).toBeVisible({ timeout: 5000 });
 
     // 9. Verify dialog closes
-    await techManagerPage.waitForTimeout(1000);
     const dialogTitle = techManagerPage.getByText('사고 이력 등록');
     await expect(dialogTitle).not.toBeVisible();
 
@@ -294,8 +270,6 @@ test.describe('Incident History Tab Integration', () => {
   }) => {
     // This test assumes there's already a calibration_overdue incident
     // If not, we'll skip or create one first
-
-    await techManagerPage.waitForTimeout(1000);
 
     // Look for purple badge with '교정 기한 초과' text
     const purpleBadge = techManagerPage.locator('.bg-purple-500');
@@ -329,7 +303,6 @@ test.describe('Incident History Tab Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. Leave all fields empty
     const dateInput = techManagerPage.locator('input[type="date"]');
@@ -338,7 +311,6 @@ test.describe('Incident History Tab Integration', () => {
     // 3. Click Submit
     const submitButton = techManagerPage.getByRole('button', { name: /저장/i });
     await submitButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 4. Verify validation errors
     // The form should show validation messages from zod schema
@@ -368,7 +340,6 @@ test.describe('Incident History Tab Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await techManagerPage.waitForTimeout(500);
 
     // 2. Enter content > 500 characters
     const longContent = 'A'.repeat(501);
@@ -382,16 +353,13 @@ test.describe('Incident History Tab Integration', () => {
 
     const typeSelect = techManagerPage.locator('button[role="combobox"]').first();
     await typeSelect.click();
-    await techManagerPage.waitForTimeout(200);
 
     const damageOption = techManagerPage.getByRole('option', { name: '손상' });
     await damageOption.click();
-    await techManagerPage.waitForTimeout(300);
 
     // Click submit
     const submitButton = techManagerPage.getByRole('button', { name: /저장/i });
     await submitButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 3. Verify validation error
     const validationError = techManagerPage.getByText(/500자 이하로 입력하세요/i);

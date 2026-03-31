@@ -104,7 +104,6 @@ test.describe('Disposal Bulk Actions - Empty State Rendering', () => {
     console.log('✅ Step 5: "폐기 승인" tab is active');
 
     // Wait for list query to complete (empty state should render)
-    await siteAdminPage.waitForTimeout(2000);
 
     // Step 6: Verify Clock icon is visible (Lucide icon)
     const clockIcon = siteAdminPage.locator('svg.lucide-clock');

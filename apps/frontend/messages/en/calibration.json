@@ -3,6 +3,7 @@
   "subtitle": "Register and manage calibration records",
   "status": {
     "pending": "Pending",
+    "pending_approval": "Pending Approval",
     "approved": "Approved",
     "rejected": "Rejected",
     "completed": "Completed"
@@ -15,7 +16,20 @@
   "result": {
     "pass": "Pass",
     "fail": "Fail",
-    "not_applicable": "Not Applicable"
+    "not_applicable": "Not Applicable",
+    "conditional": "Conditional Pass"
+  },
+  "factorType": {
+    "antenna_gain": "Antenna Gain",
+    "cable_loss": "Cable Loss",
+    "path_loss": "Path Loss",
+    "amplifier_gain": "Amplifier Gain",
+    "other": "Other"
+  },
+  "factorApprovalStatus": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected"
   },
   "toasts": {
     "registerSuccess": "Calibration record registered.",
@@ -53,7 +67,10 @@
   "dday": {
     "today": "D-Day",
     "overdue": "D+{days}",
-    "upcoming": "D-{days}"
+    "upcoming": "D-{days}",
+    "fullOverdue": "Calibration overdue by {days} days",
+    "fullToday": "Calibration expires today",
+    "fullUpcoming": "Calibration expires in {days} days"
   },
   "planDetail": {
     "breadcrumbSuffix": "Calibration Plan",
@@ -248,7 +265,12 @@
         "conditional": "Conditional"
       },
       "calibrationDueStatusLabel": "Calibration Status",
-      "calibrationDueStatusAll": "All"
+      "calibrationDueStatusAll": "All",
+      "calibrationDueStatusOptions": {
+        "overdue": "Calibration Overdue",
+        "upcoming": "Calibration Due",
+        "normal": "Normal"
+      }
     },
     "tabs": {
       "all": "All",

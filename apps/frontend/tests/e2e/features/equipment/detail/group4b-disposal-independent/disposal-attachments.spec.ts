@@ -14,7 +14,6 @@ test.describe('Disposal Workflow - Attachments', () => {
   test('폐기 요청 다이얼로그에서 파일 업로드 UI가 존재한다', async ({ testOperatorPage: page }) => {
     // 1. available 상태 장비에 직접 접근
     await page.goto(`/equipment/${EQUIP_DISPOSAL_EXC_D2}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. 폐기 요청 버튼 클릭
     const disposalButton = page.getByRole('button', { name: /폐기 요청/i });

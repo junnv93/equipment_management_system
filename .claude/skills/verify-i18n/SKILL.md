@@ -1,6 +1,6 @@
 ---
 name: verify-i18n
-description: i18n 번역 파일의 일관성을 검증합니다. messages/{en,ko}/*.json 추가/수정 후 사용.
+description: Verifies i18n translation consistency — en/ko key pair matching, no empty translations, namespace references, Zod schema hardcoded message detection, dynamic i18n key coverage. Run after adding/modifying messages/{en,ko}/*.json files.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 도메인명 (equipment, dashboard, audit 등)]'
 ---
@@ -63,6 +63,7 @@ argument-hint: '[선택사항: 특정 도메인명 (equipment, dashboard, audit 
 | `apps/frontend/messages/ko/reservations.json`     | 예약 도메인 한국어 번역                   |
 | `apps/frontend/lib/i18n/request.ts`               | next-intl 설정 (지원 로케일, 메시지 로더) |
 | `apps/frontend/middleware.ts`                     | next-intl 미들웨어 (로케일 감지)          |
+| `apps/frontend/lib/i18n/use-enum-labels.ts`       | i18n 기반 Enum Label Hooks (동적 키 사용) |
 
 ## Workflow
 
@@ -279,6 +280,53 @@ const schema = useMemo(() => createSchema(t), [t]);
 - 백엔드 DTO의 Zod 스키마 (`apps/backend/`) — 서버 사이드 검증 메시지는 프론트엔드 i18n 대상 아님
 - 로그 전용 메시지 (`console.error`, `console.warn`) — 개발자용이므로 면제
 
+### Step 7: 동적 i18n 키 커버리지 확인
+
+컴포넌트에서 `t('key.${dynamicValue}')` 패턴으로 동적 키를 사용하는 경우, 해당 enum의 모든 값이 i18n JSON에 키로 존재하는지 확인합니다.
+
+**주요 동적 키 패턴:**
+
+| 컴포넌트/파일 | 패턴 | 필요한 JSON 키 |
+|---|---|---|
+| `EquipmentTable/CardGrid/StickyHeader/StatusLocation` | `t('status.${displayStatus}')` | `equipment.json: status.*` |
+| `CheckoutStatusBadge` | `t('status.${status}')` | `checkouts.json: status.*` |
+| `CheckoutStatusBadge` | `tEquipment('importStatus.${status}')` | `equipment.json: importStatus.*` |
+| `CheckoutGroupCard/Content` | `t('purpose.${purpose}')` | `checkouts.json: purpose.*` |
+| `CalibrationResultBadge` | `t('result.${value}')` | `calibration.json: result.*` |
+| `CalibrationResultBadge` | `t('status.${value}')` | `calibration.json: status.*` |
+| `EquipmentImportDetail` | `t('importSource.${sourceType}')` | `equipment.json: importSource.*` |
+| `EquipmentImportDetail` | `t('classification.${classification}')` | `equipment.json: classification.*` |
+| `ApprovalRow/DetailModal/DetailPanel` | `t('unifiedStatus.${status}')` | `approvals.json: unifiedStatus.*` |
+| `CalibrationPlansContent/VersionHistory` | `t('planStatus.${value}')` | `calibration.json: planStatus.*` |
+| `CalibrationContent` | `t('calibrationDueStatusOptions.${status}')` | `calibration.json: content.filters.calibrationDueStatusOptions.*` |
+| `DisposalReasonSelector` | `t('reason.${reasonValue}')` | `disposal.json: reason.*` |
+| `getLocalizedSummary()` | `t('summaryTemplates.*')` | `approvals.json: summaryTemplates.*` |
+| `useSiteLabels()` | `t('siteLabel.${site}')` | `equipment.json: siteLabel.*` |
+| `useClassificationLabels()` | `t('classification.${cls}')` | `equipment.json: classification.*` |
+| `useCalibrationMethodLabels()` | `t('filters.calibrationMethodLabel.${method}')` | `equipment.json: filters.calibrationMethodLabel.*` |
+
+```bash
+# 동적 키 패턴 탐지 — t(`xxx.${...}`) 형태
+grep -rn 't(`[a-zA-Z]*\.\${' apps/frontend/components apps/frontend/lib/utils --include="*.tsx" --include="*.ts" | grep -v "node_modules\|// \|test\|spec" | head -30
+```
+
+**검사 방법:** 각 동적 키 패턴에서 사용하는 enum 값 배열(SSOT)을 확인하고, 해당 en/ko JSON에 모든 값이 키로 존재하는지 대조합니다.
+
+**PASS 기준:** 모든 동적 키 패턴의 enum 값이 en/ko JSON에 키로 존재.
+
+**FAIL 기준:** enum 값 중 JSON에 누락된 키가 있으면 런타임 시 raw 키 문자열이 표시됨.
+
+```typescript
+// ❌ WRONG — purpose enum에 'return_to_vendor'가 있지만 JSON에 없음
+// checkouts.json: { "purpose": { "calibration": "교정", "repair": "수리", "rental": "렌탈" } }
+// → t('purpose.return_to_vendor') → "purpose.return_to_vendor" (raw 키 표시)
+
+// ✅ CORRECT — 모든 enum 값에 대응하는 키 존재
+// checkouts.json: { "purpose": { "calibration": "교정", "repair": "수리", "rental": "렌탈", "return_to_vendor": "업체 반환" } }
+```
+
+**예외:** 새 enum 값이 추가되었지만 아직 UI에서 사용되지 않는 경우 (코드에 동적 키 패턴이 없으면 누락이 아님)
+
 ## Output Format
 
 ```markdown
@@ -290,6 +338,7 @@ const schema = useMemo(() => createSchema(t), [t]);
 | 4   | 네임스페이스 참조 일관성 | PASS/INFO | 미존재 네임스페이스 목록 |
 | 5   | ICU 변수 쌍 일치         | PASS/INFO | 변수 불일치 도메인 목록  |
 | 6   | Zod 스키마 하드코딩 메시지 | PASS/FAIL | 하드코딩 파일:라인 목록  |
+| 7   | 동적 i18n 키 커버리지    | PASS/FAIL | 누락된 동적 키 목록      |
 ```
 
 ## Exceptions

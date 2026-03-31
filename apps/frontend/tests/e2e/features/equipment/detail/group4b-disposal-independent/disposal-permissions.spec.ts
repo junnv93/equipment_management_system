@@ -14,7 +14,6 @@ test.describe('Disposal Workflow - Permissions', () => {
   test('test_engineer는 폐기 검토 버튼을 볼 수 없다', async ({ testOperatorPage: page }) => {
     // 1. pending_disposal 장비에 직접 접근
     await page.goto(`/equipment/${EQUIP_DISPOSAL_PERM_A4}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. 폐기 진행 중 버튼은 보임 (상태 표시)
     const progressButton = page.getByRole('button', { name: /폐기 진행 중/i });

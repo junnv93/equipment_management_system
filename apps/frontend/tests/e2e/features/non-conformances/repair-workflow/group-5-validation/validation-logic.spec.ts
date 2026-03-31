@@ -42,14 +42,12 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     await testOperatorPage.fill('[name="occurredAt"]', today);
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '손상');
     await testOperatorPage.fill('[name="content"]', 'E2E 검증: 케이블 손상');
-    await testOperatorPage.waitForTimeout(1000);
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
     await ncLabel.click();
 
     // Use dispatchEvent as the button is outside viewport
     await testOperatorPage.getByRole('button', { name: /저장/i }).dispatchEvent('click');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.UI_UPDATE);
 
     // Step 2: Technical manager tries to close without repair
     await techManagerPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
@@ -65,7 +63,6 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     const editButton = ncCard.getByRole('button', { name: /기록 수정/i });
     await expect(editButton).toBeVisible();
     await editButton.click();
-    await techManagerPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Fill correction content
     await techManagerPage.fill('textarea[placeholder*="조치"]', '임시 조치');
@@ -86,7 +83,6 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
 
     // Try to save
     await techManagerPage.getByRole('button', { name: /저장/i }).click();
-    await techManagerPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify dialog was shown
     expect(dialogShown).toBe(true);
@@ -112,7 +108,6 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     const editButton = ncCard.getByRole('button', { name: /기록 수정/i });
     await expect(editButton).toBeVisible();
     await editButton.click();
-    await techManagerPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Fill form
     await techManagerPage.fill('textarea[placeholder*="조치"]', '임시 조치 2');
@@ -126,7 +121,6 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     });
 
     await techManagerPage.getByRole('button', { name: /저장/i }).click();
-    await techManagerPage.waitForTimeout(TIMEOUTS.NAVIGATION);
 
     // Should redirect to repair history page
     await expect(techManagerPage).toHaveURL(/repair-history/, {
@@ -146,11 +140,9 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
       .getByRole('button', { name: /수리 이력 추가/i })
       .first()
       .click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Open NC dropdown
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify already-linked NC is NOT in the list
     // NC_006 cause: "내부 연결부 불량"
@@ -176,11 +168,9 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
       .getByRole('button', { name: /수리 이력 추가/i })
       .first()
       .click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Open NC dropdown
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify closed NC is NOT in the list
     // NC_004 cause: "주입 효율 저하"
@@ -196,7 +186,6 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     await testOperatorPage.fill('[name="occurredAt"]', today);
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '변경');
     await testOperatorPage.fill('[name="content"]', 'E2E 검증: 설정 변경');
-    await testOperatorPage.waitForTimeout(1000);
     // For 'change' type, the checkbox should not appear
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     if (await ncLabel.isVisible()) {
@@ -210,7 +199,6 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     await expect(guidanceCard).not.toBeVisible();
 
     await testOperatorPage.getByRole('button', { name: /저장/i }).click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.UI_UPDATE);
 
     // Navigate to NC management
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
@@ -242,14 +230,12 @@ test.describe.serial('Group E: 비즈니스 로직 검증', () => {
     await testOperatorPage.fill('[name="occurredAt"]', today);
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '손상');
     await testOperatorPage.fill('[name="content"]', 'E2E 검증: 상태 변경 테스트');
-    await testOperatorPage.waitForTimeout(1000);
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
     await ncLabel.click();
 
     // Use dispatchEvent as the button is outside viewport
     await testOperatorPage.getByRole('button', { name: /저장/i }).dispatchEvent('click');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.UI_UPDATE);
 
     // Verify equipment status changed to non_conforming
     await testOperatorPage.goto(`/equipment/${newTestEquipment}`);

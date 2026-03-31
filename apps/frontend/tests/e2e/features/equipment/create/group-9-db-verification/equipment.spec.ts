@@ -18,6 +18,7 @@ import {
   UnifiedApprovalStatusValues as UASVal,
 } from '@equipment-management/schemas';
 import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
+import { getBackendToken } from '../../../../shared/helpers/api-helpers';
 
 test.describe('DB 검증 통합 테스트', () => {
   test('장비 등록 후 DB 데이터 검증', async ({ siteAdminPage }) => {
@@ -25,10 +26,7 @@ test.describe('DB 검증 통합 테스트', () => {
     const backendURL = BASE_URLS.BACKEND;
 
     // 1. Get backend JWT token for API authentication (lab_manager role)
-    const testLoginResponse = await siteAdminPage.request.get(
-      `${backendURL}/api/auth/test-login?role=lab_manager`
-    );
-    const { access_token } = await testLoginResponse.json();
+    const access_token = await getBackendToken(siteAdminPage, 'lab_manager');
     console.log('✓ Got backend JWT token for lab_manager');
 
     // 2. Prepare test data
@@ -97,7 +95,6 @@ test.describe('DB 검증 통합 테스트', () => {
     console.log('✓ Equipment created with UUID:', equipmentId);
 
     // 4. Wait for DB transaction to commit
-    await siteAdminPage.waitForTimeout(2000);
 
     // 5. Verify equipment appears in list via backend API
     const equipmentListResponse = await siteAdminPage.request.get(

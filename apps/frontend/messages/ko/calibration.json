@@ -3,6 +3,7 @@
   "subtitle": "교정 기록 등록 및 관리",
   "status": {
     "pending": "대기 중",
+    "pending_approval": "승인 대기",
     "approved": "승인됨",
     "rejected": "반려됨",
     "completed": "완료"
@@ -13,9 +14,22 @@
     "not_applicable": "비대상"
   },
   "result": {
-    "pass": "합격",
-    "fail": "불합격",
-    "not_applicable": "비대상"
+    "pass": "적합",
+    "fail": "부적합",
+    "not_applicable": "비대상",
+    "conditional": "조건부 적합"
+  },
+  "factorType": {
+    "antenna_gain": "안테나 이득",
+    "cable_loss": "케이블 손실",
+    "path_loss": "경로 손실",
+    "amplifier_gain": "증폭기 이득",
+    "other": "기타"
+  },
+  "factorApprovalStatus": {
+    "pending": "승인 대기",
+    "approved": "승인됨",
+    "rejected": "반려됨"
   },
   "toasts": {
     "registerSuccess": "교정 기록이 등록되었습니다.",
@@ -53,7 +67,10 @@
   "dday": {
     "today": "D-Day",
     "overdue": "D+{days}",
-    "upcoming": "D-{days}"
+    "upcoming": "D-{days}",
+    "fullOverdue": "교정 기한 {days}일 초과",
+    "fullToday": "오늘 교정 만료",
+    "fullUpcoming": "{days}일 후 교정 만료"
   },
   "planDetail": {
     "breadcrumbSuffix": "교정계획서",
@@ -248,7 +265,12 @@
         "conditional": "조건부 합격"
       },
       "calibrationDueStatusLabel": "교정 상태",
-      "calibrationDueStatusAll": "전체"
+      "calibrationDueStatusAll": "전체",
+      "calibrationDueStatusOptions": {
+        "overdue": "교정 기한 초과",
+        "upcoming": "교정 예정",
+        "normal": "정상"
+      }
     },
     "tabs": {
       "all": "전체",

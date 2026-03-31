@@ -2,6 +2,9 @@
 // seed: apps/frontend/tests/e2e/shared/seed/equipment-seed.spec.ts
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
+
+const EQUIPMENT_ID = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;
 
 test.describe('역할별 권한 검증', () => {
   test('기술책임자 권한 범위', async ({ techManagerPage: page }) => {
@@ -9,12 +12,11 @@ test.describe('역할별 권한 검증', () => {
     await page.goto('/equipment');
     await page.getByText('장비 등록').first().waitFor({ state: 'visible' });
 
-    // 2. link '장비 등록'과 link '공용장비 등록' 표시 확인
+    // 2. link '장비 등록' 표시 확인
     await expect(page.getByRole('link', { name: '장비 등록', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: '공용장비 등록', exact: true })).toBeVisible();
 
     // 3. 스펙트럼 분석기 상세 페이지 이동 (available 상태 → 반출 신청 가능)
-    await page.goto('/equipment/eeee1001-0001-4001-8001-000000000001');
+    await page.goto(`/equipment/${EQUIPMENT_ID}`);
     await page.getByText('스펙트럼 분석기').first().waitFor({ state: 'visible' });
 
     // 4. heading '스펙트럼 분석기' 표시 확인

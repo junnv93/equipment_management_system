@@ -201,6 +201,25 @@
     "viewDetail": "View {type} detail",
     "unknownUser": "Unknown User"
   },
+  "userRoles": {
+    "test_engineer": "Test Engineer",
+    "technical_manager": "Technical Manager",
+    "quality_manager": "Quality Manager",
+    "lab_manager": "Lab Manager",
+    "system_admin": "System Admin"
+  },
+  "userStatus": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending"
+  },
+  "incidentType": {
+    "damage": "Damage",
+    "malfunction": "Malfunction",
+    "change": "Change",
+    "repair": "Repair",
+    "calibration_overdue": "Calibration Overdue"
+  },
   "datePicker": {
     "selectDate": "Select date",
     "selectRange": "Select date range"
@@ -220,6 +239,7 @@
     "selectFile": "Select File",
     "uploadedFiles": "Uploaded Files ({count}/{max})",
     "deleteAll": "Delete All",
-    "deleteFile": "Remove File"
+    "deleteFile": "Remove File",
+    "formatHint": "{extensions} (max {maxSize}, {maxFiles} files)"
   }
 }

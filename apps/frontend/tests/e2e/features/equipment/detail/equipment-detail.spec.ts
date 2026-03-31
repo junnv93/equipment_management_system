@@ -31,13 +31,11 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
     test('장비 상세 페이지가 정상적으로 로드된다', async ({ testOperatorPage }) => {
       // 장비 목록 페이지로 이동
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 장비 목록에서 첫 번째 "상세" 링크 찾기
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 헤더가 표시되는지 확인
         await expect(testOperatorPage.locator('h1')).toBeVisible();
@@ -54,12 +52,10 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('장비 기본 정보가 표시된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 기본 정보 탭이 기본 선택되어 있어야 함
         const basicTab = testOperatorPage.getByRole('tab', { name: /기본 정보/i });
@@ -74,12 +70,10 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('상태 뱃지가 표시된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 상태 뱃지가 있는지 확인 (사용 가능, 사용 중, 반출 중 등)
         const statusBadge = testOperatorPage.locator(
@@ -95,12 +89,10 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
   test.describe('탭 전환 및 URL 상태 관리', () => {
     test('탭 클릭 시 URL 쿼리 파라미터가 업데이트된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 기본 정보 탭이 기본 선택되어 있는지 확인
         const basicTab = testOperatorPage.getByRole('tab', { name: /기본 정보/i });
@@ -108,22 +100,18 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
         // 교정 이력 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /교정 이력/i }).click();
-        await testOperatorPage.waitForTimeout(500);
         await expect(testOperatorPage).toHaveURL(/tab=calibration/);
 
         // 위치 변동 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /위치 변동/i }).click();
-        await testOperatorPage.waitForTimeout(500);
         await expect(testOperatorPage).toHaveURL(/tab=location/);
 
         // 유지보수 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /유지보수/i }).click();
-        await testOperatorPage.waitForTimeout(500);
         await expect(testOperatorPage).toHaveURL(/tab=maintenance/);
 
         // 사고 이력 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /사고 이력/i }).click();
-        await testOperatorPage.waitForTimeout(500);
         await expect(testOperatorPage).toHaveURL(/tab=incident/);
       } else {
         test.skip();
@@ -132,7 +120,6 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('URL 쿼리 파라미터로 직접 탭을 선택할 수 있다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
@@ -140,7 +127,6 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
         if (equipmentUrl) {
           // 교정 이력 탭으로 직접 이동
           await testOperatorPage.goto(`${equipmentUrl}?tab=calibration`);
-          await testOperatorPage.waitForLoadState('networkidle');
 
           // 교정 이력 탭이 활성화되어 있는지 확인
           const activeTab = testOperatorPage.getByRole('tab', {
@@ -158,13 +144,11 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
   test.describe('권한별 버튼 표시', () => {
     test('시험실무자는 수정/삭제 버튼을 볼 수 없다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 장비 목록에서 첫 번째 "상세" 링크 찾기
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 수정 버튼이 없어야 함
         const editButton = testOperatorPage.getByRole('button', { name: /수정/i });
@@ -180,13 +164,11 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('기술책임자는 장비 상세 페이지에 접근할 수 있다', async ({ techManagerPage }) => {
       await techManagerPage.goto('/equipment');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 장비 목록에서 첫 번째 "상세" 링크 찾기
       const detailLink = techManagerPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await techManagerPage.waitForLoadState('networkidle');
 
         // 기술책임자는 장비 상세 페이지를 볼 수 있어야 함
         // 장비명 헤더 또는 탭 리스트가 표시되어야 함
@@ -211,16 +193,14 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('반출 신청 버튼이 사용 가능한 장비에 표시된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 장비 목록에서 첫 번째 "상세" 링크 찾기
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 상태 뱃지에서 상태 확인
-        const statusBadge = testOperatorPage.locator('[role="status"]');
+        const statusBadge = testOperatorPage.getByRole('status');
         if ((await statusBadge.count()) > 0) {
           const statusText = await statusBadge.textContent();
           if (statusText?.includes('사용 가능')) {
@@ -243,16 +223,13 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
   test.describe('히스토리 탭', () => {
     test('위치 변동 이력 탭이 타임라인 UI로 표시된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 위치 변동 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /위치 변동/i }).click();
-        await testOperatorPage.waitForTimeout(2000); // 동적 import 로딩 대기
 
         // 위치 변동 탭이 선택되었는지 확인
         const locationTab = testOperatorPage.getByRole('tab', { name: /위치 변동/i });
@@ -268,16 +245,13 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('유지보수 이력 탭이 타임라인 UI로 표시된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 유지보수 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /유지보수/i }).click();
-        await testOperatorPage.waitForTimeout(2000); // 동적 import 로딩 대기
 
         // 유지보수 탭이 선택되었는지 확인
         const maintenanceTab = testOperatorPage.getByRole('tab', { name: /유지보수/i });
@@ -293,16 +267,13 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('사고 이력 탭이 타임라인 UI로 표시된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 사고 이력 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /사고 이력/i }).click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 사고 이력 제목 확인
         await expect(testOperatorPage.getByText(/사고 이력/i)).toBeVisible();
@@ -313,16 +284,13 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('교정 이력 탭이 표시된다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 교정 이력 탭 클릭
         await testOperatorPage.getByRole('tab', { name: /교정 이력/i }).click();
-        await testOperatorPage.waitForTimeout(2000); // 동적 import 로딩 대기
 
         // 교정 이력 탭이 선택되었는지 확인
         const calibrationTab = testOperatorPage.getByRole('tab', { name: /교정 이력/i });
@@ -340,12 +308,10 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
   test.describe('접근성', () => {
     test('키보드로 탭을 전환할 수 있다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 첫 번째 탭에 포커스
         const firstTab = testOperatorPage.getByRole('tab', { name: /기본 정보/i });
@@ -364,19 +330,17 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
 
     test('스크린 리더를 위한 ARIA 속성이 있다', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       const detailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
       if ((await detailLink.count()) > 0) {
         await detailLink.click();
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 탭에 role="tab" 속성이 있는지 확인
-        const tabs = testOperatorPage.locator('[role="tab"]');
+        const tabs = testOperatorPage.getByRole('tab');
         await expect(tabs.first()).toBeVisible();
 
         // 탭패널에 role="tabpanel" 속성이 있는지 확인
-        const tabpanels = testOperatorPage.locator('[role="tabpanel"]');
+        const tabpanels = testOperatorPage.getByRole('tabpanel');
         const count = await tabpanels.count();
         expect(count).toBeGreaterThan(0);
       } else {
@@ -389,7 +353,6 @@ test.describe('Equipment Detail Page - 장비 상세 페이지', () => {
     test('존재하지 않는 장비 ID로 접근 시 에러 페이지가 표시된다', async ({ testOperatorPage }) => {
       // 유효한 UUID 형식이지만 존재하지 않는 ID로 접근
       await testOperatorPage.goto('/equipment/00000000-0000-0000-0000-000000000000');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // not-found 페이지 확인 - "장비를 찾을 수 없습니다" 헤딩 확인
       const errorMessage = testOperatorPage.getByRole('heading', {

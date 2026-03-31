@@ -106,8 +106,6 @@ test.describe('Permissions - Group A', () => {
     });
 
     // Wait for React hydration and page to fully load
-    await testOperatorPage.waitForLoadState('networkidle').catch(() => {});
-    await testOperatorPage.waitForTimeout(2000);
   });
 
   // FIXME: This test requires backend cache to be cleared or backend restart
@@ -135,15 +133,12 @@ test.describe('Permissions - Group A', () => {
       console.log(
         '[WARN] Equipment status not visible on first load - retrying after cache clear...'
       );
-      await testOperatorPage.waitForTimeout(2000);
 
       // Reload page with new cache buster
       const cacheBuster2 = Date.now();
       await testOperatorPage.goto(`/equipment/${EQUIP_DISPOSAL_PERM_A6}?_t=${cacheBuster2}`, {
         waitUntil: 'domcontentloaded',
       });
-      await testOperatorPage.waitForLoadState('networkidle').catch(() => {});
-      await testOperatorPage.waitForTimeout(2000);
 
       // Try again
       isVisible = await disposedStatus.isVisible({ timeout: 5000 }).catch(() => false);

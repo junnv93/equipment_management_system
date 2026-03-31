@@ -94,3 +94,19 @@ export const SESSION_SYNC_MESSAGE = {
 
 export type SessionSyncMessageType =
   (typeof SESSION_SYNC_MESSAGE)[keyof typeof SESSION_SYNC_MESSAGE];
+
+// ─── Auth Error Codes (NextAuth ↔ UI 공유) ──────────────────────────────────
+
+/**
+ * NextAuth CredentialsSignin의 커스텀 error code (SSOT).
+ * authorize()에서 throw 시 설정 → signIn({ redirect: false }) 결과의 code 필드에 전달.
+ * LoginForm, LoginPageContent에서 에러 메시지 분기에 사용.
+ */
+export const AUTH_ERROR_CODE = {
+  /** 백엔드 서버 연결 불가 (ECONNREFUSED 등) */
+  SERVER_UNAVAILABLE: 'server_unavailable',
+  /** Refresh token 만료/무효 → 재로그인 필요 */
+  REFRESH_TOKEN_EXPIRED: 'RefreshAccessTokenError',
+} as const;
+
+export type AuthErrorCode = (typeof AUTH_ERROR_CODE)[keyof typeof AUTH_ERROR_CODE];

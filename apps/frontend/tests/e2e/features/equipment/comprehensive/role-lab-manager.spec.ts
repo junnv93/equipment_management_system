@@ -2,17 +2,17 @@
 // seed: apps/frontend/tests/e2e/shared/seed/equipment-seed.spec.ts
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
 
-const EQUIPMENT_ID = 'eeee1007-0007-4007-8007-000000000007';
+const EQUIPMENT_ID = TEST_EQUIPMENT_IDS.ANTENNA_1_SUW_E;
 
 test.describe('역할별 권한 검증', () => {
   test('시험소장 권한 범위', async ({ siteAdminPage: page }) => {
     // 1. siteAdminPage goto /equipment
     await page.goto('/equipment');
 
-    // 2. Verify link '장비 등록' and link '공용장비 등록' visible
+    // 2. Verify link '장비 등록' visible
     await expect(page.getByRole('link', { name: '장비 등록', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: '공용장비 등록' })).toBeVisible();
 
     // 3. goto detail page, verify heading '안테나 시스템 1'
     await page.goto(`/equipment/${EQUIPMENT_ID}`);

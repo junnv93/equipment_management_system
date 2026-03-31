@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProviders, ClientSafeProvider } from 'next-auth/react';
+import { getProviders } from 'next-auth/react';
 
 interface AuthProvidersState {
   hasAzureAD: boolean;
   hasCredentials: boolean;
-  providers: Record<string, ClientSafeProvider> | null;
+  providers: Awaited<ReturnType<typeof getProviders>>;
   isLoading: boolean;
 }
 

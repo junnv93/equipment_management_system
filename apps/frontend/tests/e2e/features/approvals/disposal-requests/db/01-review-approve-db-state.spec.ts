@@ -65,7 +65,6 @@ test.describe('Database State Verification', () => {
     await techManagerPage.goto(`/admin/approvals?tab=disposal_review&_=${cacheBuster}`);
 
     // 2. Wait for page load
-    await techManagerPage.waitForLoadState('networkidle');
     await expect(techManagerPage.locator('h1:has-text("승인 관리")')).toBeVisible();
 
     // 3. Wait for the approval list to render

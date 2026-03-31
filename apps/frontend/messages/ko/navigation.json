@@ -2,7 +2,6 @@
   "dashboard": "대시보드",
   "equipment": "장비 관리",
   "equipmentCreate": "장비 등록",
-  "equipmentCreateShared": "공유 장비 등록",
   "equipmentDetail": "장비 상세",
   "equipmentEdit": "편집",
   "equipmentCalibrationFactors": "보정계수",
@@ -49,6 +48,7 @@
   "adminNonConformanceApprovals": "부적합 승인",
   "adminSoftwareApprovals": "소프트웨어 승인",
   "adminAuditLogs": "감사 로그",
+  "adminDataMigration": "데이터 마이그레이션",
   "login": "로그인",
   "error": "오류",
   "sections": {

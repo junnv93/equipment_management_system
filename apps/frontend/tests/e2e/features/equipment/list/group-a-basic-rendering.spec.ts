@@ -21,26 +21,18 @@ test.describe('Group A: Basic UI Rendering', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 페이지 타이틀 확인
       const pageTitle = testOperatorPage.getByRole('heading', { level: 1, name: /장비 관리/i });
       await expect(pageTitle).toBeVisible();
 
       // 2. 서브타이틀 확인
-      const subtitle = testOperatorPage.getByText(/시험소 장비를 검색하고 관리합니다/i);
+      const subtitle = testOperatorPage.getByText(/장비 등록, 수정, 교정 이력 관리/i);
       await expect(subtitle).toBeVisible();
 
-      // 3. 장비 등록 버튼 확인 (exact match to avoid matching "공용장비 등록")
+      // 3. 장비 등록 버튼 확인
       const createButton = testOperatorPage.getByRole('link', { name: '장비 등록', exact: true });
       await expect(createButton).toBeVisible();
-
-      // 4. 공용장비 등록 버튼 확인
-      const sharedButton = testOperatorPage.getByRole('link', {
-        name: '공용장비 등록',
-        exact: true,
-      });
-      await expect(sharedButton).toBeVisible();
 
       console.log('[Test] ✅ Page header elements displayed correctly');
     });
@@ -51,42 +43,46 @@ test.describe('Group A: Basic UI Rendering', () => {
       siteAdminPage,
     }) => {
       await siteAdminPage.goto('/equipment');
-      await siteAdminPage.waitForLoadState('networkidle');
 
-      // 필터 패널 확인 (CardTitle로 표시됨)
-      const filterHeading = siteAdminPage.getByRole('heading', { name: /필터/i });
-      await expect(filterHeading).toBeVisible();
+      // 필터 패널 확인 (group role 사용)
+      const filterGroup = siteAdminPage.getByRole('group', { name: '장비 필터 옵션' });
+      await expect(filterGroup).toBeVisible();
 
-      // 1. 사이트 필터 (lab_manager만 표시)
-      const siteFilter = siteAdminPage.getByRole('combobox', { name: /사이트/i });
+      // 1. 사이트 필터 (1차 필터 - 항상 표시)
+      const siteFilter = siteAdminPage.getByRole('combobox', { name: '사이트 필터 선택' });
       await expect(siteFilter).toBeVisible();
 
-      // 2. 상태 필터
-      const statusFilter = siteAdminPage.getByRole('combobox', { name: /상태/i });
+      // 2. 상태 필터 (1차 필터 - 항상 표시)
+      const statusFilter = siteAdminPage.getByRole('combobox', { name: '장비 상태 필터 선택' });
       await expect(statusFilter).toBeVisible();
 
-      // 3. 교정 방법 필터
-      const calibrationMethodFilter = siteAdminPage.getByRole('combobox', {
-        name: /교정.*방법/i,
-      });
-      await expect(calibrationMethodFilter).toBeVisible();
-
-      // 4. 분류 필터
-      const classificationFilter = siteAdminPage.getByRole('combobox', { name: /분류/i });
-      await expect(classificationFilter).toBeVisible();
-
-      // 5. 장비 구분 필터
-      const sharedFilter = siteAdminPage.getByRole('combobox', { name: /장비.*구분/i });
-      await expect(sharedFilter).toBeVisible();
-
-      // 6. 교정 기한 필터
+      // 3. 교정 기한 필터 (1차 필터 - 항상 표시)
       const calibrationDueFilter = siteAdminPage.getByRole('combobox', {
-        name: /교정.*기한/i,
+        name: '교정 기한 필터 선택',
       });
       await expect(calibrationDueFilter).toBeVisible();
 
-      // 7. 팀 필터
-      const teamFilter = siteAdminPage.getByRole('combobox', { name: /팀/i });
+      // 4. 추가 필터 버튼 클릭 후 2차 필터 확인
+      await siteAdminPage.getByRole('button', { name: /추가 필터/ }).click();
+
+      // 5. 교정 방법 필터 (2차 필터)
+      const calibrationMethodFilter = siteAdminPage.getByRole('combobox', {
+        name: '교정 방법 필터 선택',
+      });
+      await expect(calibrationMethodFilter).toBeVisible();
+
+      // 6. 분류 필터 (2차 필터)
+      const classificationFilter = siteAdminPage.getByRole('combobox', {
+        name: '장비 분류 필터 선택',
+      });
+      await expect(classificationFilter).toBeVisible();
+
+      // 7. 장비 구분 필터 (2차 필터)
+      const sharedFilter = siteAdminPage.getByRole('combobox', { name: '장비 구분 필터 선택' });
+      await expect(sharedFilter).toBeVisible();
+
+      // 8. 팀 필터 (2차 필터)
+      const teamFilter = siteAdminPage.getByRole('combobox', { name: '팀 필터 선택' });
       await expect(teamFilter).toBeVisible();
 
       console.log('[Test] ✅ All filter options displayed for lab_manager');
@@ -98,15 +94,16 @@ test.describe('Group A: Basic UI Rendering', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
-      // 1. 검색바 확인
-      const searchInput = testOperatorPage.getByRole('searchbox');
+      // 1. 검색바 확인 (type="text"이므로 aria-label로 찾기)
+      const searchInput = testOperatorPage.getByRole('textbox', {
+        name: '장비명, 모델명, 관리번호 검색',
+      });
       await expect(searchInput).toBeVisible();
       await expect(searchInput).toHaveAttribute('placeholder', /장비명, 모델명, 관리번호로 검색/i);
 
       // 2. 검색 컨테이너 role 확인
-      const searchRegion = testOperatorPage.getByRole('search');
+      const searchRegion = testOperatorPage.getByRole('search', { name: '장비 검색' });
       await expect(searchRegion).toBeVisible();
 
       // 3. 뷰 토글 버튼 확인
@@ -126,22 +123,13 @@ test.describe('Group A: Basic UI Rendering', () => {
   test.describe('1.4. Equipment table is displayed with correct columns', () => {
     test('should display equipment table with all column headers', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 테이블이 로딩될 때까지 대기
       const table = testOperatorPage.getByRole('grid', { name: /장비 목록/i });
       await expect(table).toBeVisible({ timeout: 10000 });
 
-      // 2. 컬럼 헤더 확인
-      const columnHeaders = [
-        /관리번호/i,
-        /장비명/i,
-        /모델명/i,
-        /상태/i,
-        /교정.*기한/i,
-        /위치/i,
-        /상세/i,
-      ];
+      // 2. 컬럼 헤더 확인 (모델명 컬럼 없음 — 관리번호, 장비명, 위치, 교정 기한, 상태, 상세)
+      const columnHeaders = [/관리번호/i, /장비명/i, /상태/i, /교정.*기한/i, /위치/i, /상세/i];
 
       for (const headerPattern of columnHeaders) {
         const header = testOperatorPage.getByRole('columnheader', { name: headerPattern });
@@ -170,7 +158,6 @@ test.describe('Group A: Basic UI Rendering', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 페이지네이션이 로딩될 때까지 대기
       const pagination = testOperatorPage.getByRole('navigation', { name: /페이지.*탐색/i });

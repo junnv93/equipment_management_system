@@ -15,7 +15,6 @@ test.describe('폐기 워크플로우 - 검토 (기술책임자)', () => {
   test('4.3. 기술책임자가 폐기 요청을 검토한다', async ({ techManagerPage: page }) => {
     // 1. 사전 시드된 pending 상태 장비에 UUID 직접 접근
     await page.goto(`/equipment/${EQUIP_DISPOSAL_PERM_A4}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. 폐기 진행 중 버튼 확인
     const progressButton = page.getByRole('button', { name: /폐기 진행 중/i });

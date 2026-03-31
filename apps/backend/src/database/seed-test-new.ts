@@ -304,6 +304,111 @@ async function main(): Promise<void> {
     }
 
     // =========================================================================
+    // POST PHASE 4: SSOT — equipment.location ← latest location history
+    // =========================================================================
+    console.log('\n🔄 Post Phase 4: Syncing equipment.location from location history (SSOT)...');
+    try {
+      const locationSyncResult = await db.execute(sql`
+        UPDATE equipment e
+        SET location = sub.new_location,
+            updated_at = NOW()
+        FROM (
+          SELECT DISTINCT ON (equipment_id)
+            equipment_id,
+            new_location
+          FROM equipment_location_history
+          ORDER BY equipment_id, changed_at DESC, created_at DESC
+        ) sub
+        WHERE e.id = sub.equipment_id
+          AND (e.location IS DISTINCT FROM sub.new_location)
+      `);
+      const syncCount = (locationSyncResult as { rowCount?: number }).rowCount ?? 0;
+      console.log(`  ✅ ${syncCount}건 장비 위치 동기화됨 (location history → equipment.location)`);
+    } catch (err) {
+      console.warn(
+        `  ⚠️ Location SSOT sync skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
+    // =========================================================================
+    // POST PHASE 4: i18n 키 미번역 데이터 수정
+    // =========================================================================
+    // 스케줄러(onModuleInit)가 i18n 로딩 전에 실행되어 키 원문이 DB에 저장된 경우 수정
+    console.log('\n🌐 Post Phase 4: Fixing i18n raw keys in DB...');
+    try {
+      // equipment_incident_history.content
+      const incidentFix = await db.execute(sql`
+        UPDATE equipment_incident_history
+        SET content = '교정 기한 초과로 인한 자동 부적합 전환'
+        WHERE content LIKE '%system.calibrationOverdue.incidentContent%'
+      `);
+      // non_conformances.cause
+      const causeFix = await db.execute(sql`
+        UPDATE non_conformances
+        SET cause = '교정 기한 초과 (다음 교정일: ' ||
+          COALESCE(
+            (SELECT to_char(e.next_calibration_date, 'YYYY-MM-DD')
+             FROM equipment e WHERE e.id = non_conformances.equipment_id),
+            '미정'
+          ) || ')'
+        WHERE cause LIKE '%system.calibrationOverdue.ncCause%'
+      `);
+      // non_conformances.action_plan
+      const planFix = await db.execute(sql`
+        UPDATE non_conformances
+        SET action_plan = '교정 수행 필요'
+        WHERE action_plan LIKE '%system.calibrationOverdue.defaultActionPlan%'
+      `);
+      const totalFixed =
+        ((incidentFix as { rowCount?: number }).rowCount ?? 0) +
+        ((causeFix as { rowCount?: number }).rowCount ?? 0) +
+        ((planFix as { rowCount?: number }).rowCount ?? 0);
+      if (totalFixed > 0) {
+        console.log(`  ✅ ${totalFixed}건 i18n 키 → 한국어 번역 수정됨`);
+      } else {
+        console.log('  ✅ i18n 미번역 데이터 없음');
+      }
+    } catch (err) {
+      console.warn(
+        `  ⚠️ i18n fix skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
+    // =========================================================================
+    // POST PHASE 4: equipment_attachments → documents 테이블 동기화
+    // =========================================================================
+    // 프론트엔드 AttachmentsTab은 documents 테이블을 쿼리함 (equipment_attachments는 deprecated)
+    console.log('\n📄 Post Phase 4: Syncing equipment_attachments → documents table...');
+    try {
+      const docSyncResult = await db.execute(sql`
+        INSERT INTO documents (
+          equipment_id, request_id, document_type, status,
+          file_name, original_file_name, file_path, file_size, mime_type,
+          description, revision_number, is_latest, uploaded_at, created_at, updated_at
+        )
+        SELECT
+          ea.equipment_id, ea.request_id,
+          ea.attachment_type::text,
+          'active',
+          ea.file_name, ea.original_file_name, ea.file_path, ea.file_size, ea.mime_type,
+          ea.description, 1, true, ea.uploaded_at,
+          COALESCE(ea.created_at, NOW()), COALESCE(ea.updated_at, NOW())
+        FROM equipment_attachments ea
+        WHERE NOT EXISTS (
+          SELECT 1 FROM documents d
+          WHERE d.file_path = ea.file_path
+            AND d.original_file_name = ea.original_file_name
+        )
+      `);
+      const docSyncCount = (docSyncResult as { rowCount?: number }).rowCount ?? 0;
+      console.log(`  ✅ ${docSyncCount}건 문서 동기화됨 (equipment_attachments → documents)`);
+    } catch (err) {
+      console.warn(
+        `  ⚠️ Document sync skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
+    // =========================================================================
     // VERIFICATION
     // =========================================================================
     console.log('\n🔍 Verifying seed data...');

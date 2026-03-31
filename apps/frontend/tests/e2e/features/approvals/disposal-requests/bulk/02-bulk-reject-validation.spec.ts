@@ -94,7 +94,6 @@ test.describe('Disposal Bulk Actions - Select All and Bulk Reject with Validatio
 
     // Scroll to checkbox to avoid sticky header issue
     await selectAllCheckbox.scrollIntoViewIfNeeded();
-    await techManagerPage.waitForTimeout(500);
 
     await selectAllCheckbox.click();
     console.log('✅ Clicked "전체 선택" checkbox');
@@ -128,7 +127,6 @@ test.describe('Disposal Bulk Actions - Select All and Bulk Reject with Validatio
 
     // Step 8: Verify reject modal/dialog opens
     // Radix UI AlertDialog uses role="alertdialog", not "dialog"
-    await techManagerPage.waitForTimeout(500);
     const alertDialog = techManagerPage.getByRole('alertdialog');
     await expect(alertDialog).toBeVisible({ timeout: 5000 });
 
@@ -160,7 +158,6 @@ test.describe('Disposal Bulk Actions - Select All and Bulk Reject with Validatio
     expect(shortReasonValue.length).toBeLessThan(10);
 
     // Wait a moment for validation to trigger
-    await techManagerPage.waitForTimeout(500);
 
     // Step 10: Verify error message appears (e.g., "반려 사유는 최소 10자 이상이어야 합니다")
     const errorMessage = alertDialog.getByText(/반려 사유는 10자 이상 입력해주세요/);
@@ -187,7 +184,6 @@ test.describe('Disposal Bulk Actions - Select All and Bulk Reject with Validatio
     expect(validReasonValue.length).toBeGreaterThanOrEqual(10);
 
     // Wait for validation to update
-    await techManagerPage.waitForTimeout(500);
 
     // Verify error message disappears
     await expect(errorMessage).not.toBeVisible({ timeout: 2000 });
@@ -213,7 +209,6 @@ test.describe('Disposal Bulk Actions - Select All and Bulk Reject with Validatio
     console.log(`✅ Toast notification appeared: "${initialCount}건이 반려되었습니다"`);
 
     // Step 14: Wait for list refresh
-    await techManagerPage.waitForTimeout(2000);
 
     // Step 15: Verify all 2 items removed from list
     const updatedCount = await approvalItems.count();

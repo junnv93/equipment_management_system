@@ -30,7 +30,6 @@ test.describe('Non-Conformance Banner UI', () => {
 
     // Navigate to equipment list and find equipment with non_conforming status
     await siteAdminPage.goto('/equipment');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Filter by non_conforming status to find equipment with NC
     const statusFilter = siteAdminPage
@@ -41,12 +40,10 @@ test.describe('Non-Conformance Banner UI', () => {
 
     if (filterCount > 0) {
       await statusFilter.click();
-      await siteAdminPage.waitForTimeout(300);
 
       const ncOption = siteAdminPage.getByRole('option', { name: /부적합/i });
       if (await ncOption.isVisible()) {
         await ncOption.click();
-        await siteAdminPage.waitForTimeout(500);
       }
     }
 
@@ -59,7 +56,6 @@ test.describe('Non-Conformance Banner UI', () => {
     }
 
     await firstEquipmentLink.click();
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     equipmentUrl = siteAdminPage.url();
@@ -79,19 +75,18 @@ test.describe('Non-Conformance Banner UI', () => {
   }) => {
     // 1. Verify non-conformance banner is visible
     const ncBanner = siteAdminPage
-      .locator('[role="alert"]')
+      .getByRole('alert')
       .filter({ hasText: /부적합 상태/i })
       .first();
 
     // Wait for banner to appear
-    await siteAdminPage.waitForTimeout(1000);
 
     // Check if banner exists
     const bannerCount = await ncBanner.count();
     if (bannerCount === 0) {
       console.log('No NC banner found. This equipment may not have an active non-conformance.');
       // Try to find any alert banner
-      const anyAlert = siteAdminPage.locator('[role="alert"]');
+      const anyAlert = siteAdminPage.getByRole('alert');
       const alertCount = await anyAlert.count();
       console.log(`Found ${alertCount} alert elements on page`);
 
@@ -142,11 +137,9 @@ test.describe('Non-Conformance Banner UI', () => {
   }) => {
     // 1. Locate the non-conformance banner
     const ncBanner = siteAdminPage
-      .locator('[role="alert"]')
+      .getByRole('alert')
       .filter({ hasText: /부적합 상태/i })
       .first();
-
-    await siteAdminPage.waitForTimeout(1000);
 
     const bannerCount = await ncBanner.count();
     if (bannerCount === 0) {
@@ -176,8 +169,6 @@ test.describe('Non-Conformance Banner UI', () => {
       await ncManagementLink.first().click();
     }
 
-    await siteAdminPage.waitForLoadState('networkidle');
-
     // 4. Verify navigation to non-conformance management page
     const currentUrl = siteAdminPage.url();
     expect(currentUrl).toContain('/non-conformance');
@@ -197,8 +188,6 @@ test.describe('Non-Conformance Banner UI', () => {
       .locator('header, div')
       .filter({ hasText: /상태|Status/i })
       .first();
-
-    await siteAdminPage.waitForTimeout(1000);
 
     // 2. Verify '부적합' status badge is displayed
     const statusBadge = siteAdminPage.locator('span, div').filter({ hasText: /^부적합$/i });

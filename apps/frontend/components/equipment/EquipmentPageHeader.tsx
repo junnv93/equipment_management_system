@@ -29,9 +29,6 @@ export function EquipmentPageHeader() {
       </div>
       {canCreate && (
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/equipment/create-shared">{t('list.createSharedButton')}</Link>
-          </Button>
           <Button asChild>
             <Link href="/equipment/create">
               <Plus className="h-4 w-4 mr-2" />

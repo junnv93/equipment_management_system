@@ -3,10 +3,6 @@
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import {
-  EQUIPMENT_IMPORT_STATUS_LABELS,
-  type EquipmentImportStatus,
-} from '@equipment-management/schemas';
-import {
   CHECKOUT_STATUS_BADGE_TOKENS,
   RENTAL_IMPORT_STATUS_BADGE_TOKENS,
   DEFAULT_CHECKOUT_BADGE,
@@ -38,11 +34,10 @@ export function CheckoutStatusBadge({
   className = '',
 }: CheckoutStatusBadgeProps) {
   const t = useTranslations('checkouts');
+  const tEquipment = useTranslations('equipment');
   const isRental = type === 'rental';
 
-  const label = isRental
-    ? EQUIPMENT_IMPORT_STATUS_LABELS[status as EquipmentImportStatus] || status
-    : t(`status.${status}`);
+  const label = isRental ? tEquipment(`importStatus.${status}`) : t(`status.${status}`);
 
   const styleMap = isRental ? RENTAL_IMPORT_STATUS_BADGE_TOKENS : CHECKOUT_STATUS_BADGE_TOKENS;
   const style = styleMap[status as keyof typeof styleMap] || DEFAULT_CHECKOUT_BADGE;

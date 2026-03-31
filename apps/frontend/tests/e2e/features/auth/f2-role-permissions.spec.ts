@@ -34,7 +34,6 @@ test.describe('Group F2: Role Permissions', () => {
 
       // 2. Navigate to equipment list
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 3. Verify page loads with equipment list
       await expect(
@@ -50,8 +49,6 @@ test.describe('Group F2: Role Permissions', () => {
       // 5. Click first equipment to navigate to detail page
       await equipmentItems.first().click();
 
-      await testOperatorPage.waitForLoadState('networkidle');
-
       // 6. Verify detail page loads with equipment info
       await expect(testOperatorPage.locator('text=/관리번호|management.*number/i')).toBeVisible();
 
@@ -59,7 +56,6 @@ test.describe('Group F2: Role Permissions', () => {
 
       // 7. Navigate back
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 8. Verify list page loads again
       await expect(testOperatorPage.getByRole('heading', { name: /장비.*목록/i })).toBeVisible();
@@ -77,7 +73,6 @@ test.describe('Group F2: Role Permissions', () => {
       // 1. Login as test_engineer
       // 2. Navigate to checkout creation
       await testOperatorPage.goto('/checkouts/create');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 3. Verify page loads
       await expect(testOperatorPage.getByRole('heading', { name: /장비 반출 신청/ })).toBeVisible();
@@ -85,7 +80,6 @@ test.describe('Group F2: Role Permissions', () => {
       // 4. Search for equipment
       const searchInput = testOperatorPage.getByPlaceholder(/장비.*검색/i);
       await searchInput.fill('SUW-E');
-      await testOperatorPage.waitForTimeout(500);
 
       // 5. Select first available equipment
       const equipment = testOperatorPage.getByText(/SUW-E/).first();
@@ -103,7 +97,6 @@ test.describe('Group F2: Role Permissions', () => {
 
       // 7. Submit
       await testOperatorPage.getByRole('button', { name: /반출 신청/ }).click();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 8. Verify success toast
       await expect(
@@ -133,7 +126,6 @@ test.describe('Group F2: Role Permissions', () => {
         // 1. Login as test_engineer
         // 2. Navigate to equipment creation
         await testOperatorPage.goto('/equipment/create');
-        await testOperatorPage.waitForLoadState('networkidle');
 
         // 3. Verify page loads with role indicator
         await expect(testOperatorPage.getByText(/시험실무자|test.*engineer/i)).toBeVisible();
@@ -152,7 +144,6 @@ test.describe('Group F2: Role Permissions', () => {
         await testOperatorPage.getByLabel(/사이트|site/i).selectOption('suwon');
 
         // Wait for team dropdown to be populated after site selection
-        await testOperatorPage.waitForTimeout(500);
         const teamSelect = testOperatorPage.getByLabel(/팀|team/i);
         await teamSelect.selectOption({ index: 1 }); // Select first team
 
@@ -179,8 +170,6 @@ test.describe('Group F2: Role Permissions', () => {
           await confirmButton.click();
         }
 
-        await testOperatorPage.waitForLoadState('networkidle');
-
         // 12. Verify success toast mentions '요청' (request)
         await expect(
           testOperatorPage.getByRole('status').filter({ hasText: /등록.*요청.*완료|요청.*생성/ })
@@ -205,7 +194,6 @@ test.describe('Group F2: Role Permissions', () => {
       // 1. Login as test_engineer
       // 2. Navigate to approvals page
       await testOperatorPage.goto('/admin/approvals');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 3. Verify no approval tabs are visible
       const tabs = testOperatorPage.getByRole('tab');
@@ -226,7 +214,6 @@ test.describe('Group F2: Role Permissions', () => {
 
       // 6. Try navigating to specific tab via URL
       await testOperatorPage.goto('/admin/approvals?tab=checkout');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Verify tab does not activate
       const activeTab = testOperatorPage.getByRole('tab', { selected: true });
@@ -320,7 +307,6 @@ test.describe('Group F2: Role Permissions', () => {
       // 1. Login as technical_manager
       // 2. Navigate to approvals page
       await techManagerPage.goto('/admin/approvals');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 3. Verify page loads
       await expect(
@@ -375,7 +361,6 @@ test.describe('Group F2: Role Permissions', () => {
     test.fixme('F-4b: technical_manager can approve equipment', async ({ techManagerPage }) => {
       // 1. Navigate to approvals page
       await techManagerPage.goto('/admin/approvals');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 2. Click equipment tab
       await techManagerPage.getByRole('tab', { name: /장비/ }).click();
@@ -395,8 +380,6 @@ test.describe('Group F2: Role Permissions', () => {
         if (await confirmButton.isVisible()) {
           await confirmButton.click();
         }
-
-        await techManagerPage.waitForTimeout(1000);
 
         // 6. Verify success toast
         await expect(
@@ -419,7 +402,6 @@ test.describe('Group F2: Role Permissions', () => {
         // Part 1: Approve checkout
         // 1. Navigate to approvals page
         await techManagerPage.goto('/admin/approvals');
-        await techManagerPage.waitForLoadState('networkidle');
 
         // 2. Click checkout tab
         await techManagerPage.getByRole('tab', { name: /반출/ }).click();
@@ -438,8 +420,6 @@ test.describe('Group F2: Role Permissions', () => {
           if (await confirmButton.isVisible()) {
             await confirmButton.click();
           }
-
-          await techManagerPage.waitForTimeout(1000);
 
           // 5. Verify success
           await expect(
@@ -464,8 +444,6 @@ test.describe('Group F2: Role Permissions', () => {
             // 9. Submit rejection
             const submitRejectButton = techManagerPage.getByRole('button', { name: /확인|제출/ });
             await submitRejectButton.click();
-
-            await techManagerPage.waitForTimeout(1000);
 
             // 10. Verify success
             await expect(
@@ -495,7 +473,6 @@ test.describe('Group F2: Role Permissions', () => {
         // 2. Navigate to equipment detail page
         const testEquipmentId = 'eeee1001-0001-4001-8001-000000000001'; // EQUIP_SPECTRUM_ANALYZER_SUW_E_ID
         await techManagerPage.goto(`/equipment/${testEquipmentId}`);
-        await techManagerPage.waitForLoadState('networkidle');
 
         // 3. Verify no calibration creation button
         await expect(

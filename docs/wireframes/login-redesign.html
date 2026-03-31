@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 — 장비 관리 시스템 (와이어프레임)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Layer 1: Primitives ─── */
+    :root {
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+      --space-3xl: 48px;
+      --space-4xl: 64px;
+
+      --shadow-flush: none;
+      --shadow-raised: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+      --shadow-floating: 0 10px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+
+      --duration-instant: 100ms;
+      --duration-fast: 200ms;
+      --duration-moderate: 300ms;
+      --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+      --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+
+      --font-display: 'DM Sans', 'Noto Sans KR', sans-serif;
+      --font-body: 'IBM Plex Sans', 'Noto Sans KR', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      --radius-2xl: 16px;
+      --radius-full: 9999px;
+
+      /* SSOT: brand.ts BRAND_COLORS_HEX */
+      --brand-ok: #10B981;
+      --brand-warning: #F59E0B;
+      --brand-critical: #EF4444;
+      --brand-info: #3B82F6;
+      --brand-neutral: #6B7280;
+      --brand-purple: #8B5CF6;
+      --brand-repair: #F97316;
+      --brand-temporary: #22B8CF;
+
+      /* UL Brand */
+      --ul-midnight: #122C49;
+      --ul-midnight-deep: #0a1c30;
+      --ul-midnight-light: #1e3a5f;
+      --ul-red: #ca0123;
+      --ul-red-dark: #a8011d;
+
+      /* Light theme */
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-input: #ffffff;
+      --border-subtle: #e2e8f0;
+      --border-input: #cbd5e1;
+      --border-input-focus: var(--brand-info);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --text-inverse: #ffffff;
+      --focus-ring: 0 0 0 2px hsl(217 91% 60% / 0.3);
+    }
+
+    .dark {
+      --bg-page: #0f172a;
+      --bg-card: #1e293b;
+      --bg-input: #1e293b;
+      --border-subtle: #334155;
+      --border-input: #475569;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #64748b;
+      --text-inverse: #0f172a;
+      --shadow-raised: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-floating: 0 10px 25px rgba(0,0,0,0.35);
+    }
+
+    /* ─── Reset ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ─── Split Layout ─── */
+    .login-split {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ─── Left Panel: UL Brand ─── */
+    .brand-panel {
+      display: none;
+      width: 45%;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      background: var(--ul-midnight);
+    }
+
+    @media (min-width: 1024px) {
+      .brand-panel { display: flex; }
+    }
+
+    /* Subtle grid pattern */
+    .brand-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.04;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
+      background-size: 56px 56px;
+      pointer-events: none;
+    }
+
+    /* Right edge red accent line */
+    .brand-panel::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, var(--ul-red) 30%, var(--ul-red) 70%, transparent);
+      pointer-events: none;
+    }
+
+    .brand-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: var(--space-3xl);
+    }
+
+    /* Logo */
+    .brand-logo {
+      margin-bottom: auto;
+    }
+    .brand-logo img {
+      display: block;
+      width: 140px;
+      height: auto;
+    }
+
+    /* Center: System name */
+    .brand-hero {
+      margin: auto 0;
+      padding: var(--space-4xl) 0;
+    }
+
+    .brand-accent-line {
+      width: 40px;
+      height: 2px;
+      background: var(--ul-red);
+      margin-bottom: var(--space-2xl);
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--text-inverse);
+      font-size: clamp(2rem, 3.5vw, 2.75rem);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: var(--space-md);
+    }
+
+    .brand-subtitle {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: var(--space-3xl);
+    }
+
+    /* Features — asymmetric sizing */
+    .brand-features {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-lg);
+    }
+
+    .brand-feature {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .brand-feature-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: var(--radius-full);
+      background: var(--ul-red);
+      flex-shrink: 0;
+    }
+
+    .brand-feature-text {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.01em;
+    }
+
+    /* Certification badge — adds credibility & visual interest */
+    .brand-certification {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-top: var(--space-3xl);
+      padding: var(--space-md) var(--space-lg);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .cert-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .cert-icon svg { width: 16px; height: 16px; }
+
+    .cert-text {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.3);
+      line-height: 1.5;
+    }
+
+    /* Bottom */
+    .brand-footer {
+      margin-top: auto;
+    }
+
+    .brand-copyright {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.18);
+    }
+
+    /* Decorative circles */
+    .brand-deco-1, .brand-deco-2 {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(202,1,35,0.1);
+      pointer-events: none;
+    }
+    .brand-deco-1 { width: 400px; height: 400px; bottom: -140px; left: -140px; }
+    .brand-deco-2 { width: 260px; height: 260px; bottom: -80px; left: -80px; border-color: rgba(202,1,35,0.06); }
+
+    /* ─── Right Panel: Login Form ─── */
+    .form-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-page);
+      position: relative;
+    }
+
+    /* Subtle grid on form side too (lighter) */
+    .form-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.03;
+      background-image:
+        linear-gradient(hsl(220 15% 70%) 1px, transparent 1px),
+        linear-gradient(90deg, hsl(220 15% 70%) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    .dark .form-panel::before {
+      opacity: 0.02;
+      background-image:
+        linear-gradient(hsl(220 15% 30%) 1px, transparent 1px),
+        linear-gradient(90deg, hsl(220 15% 30%) 1px, transparent 1px);
+    }
+
+    .form-wrapper {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-3xl) var(--space-2xl);
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    /* Mobile logo */
+    .mobile-logo {
+      display: block;
+      margin-bottom: var(--space-3xl);
+      text-align: center;
+    }
+    .mobile-logo img { width: 120px; height: auto; display: inline-block; }
+
+    @media (min-width: 1024px) {
+      .mobile-logo { display: none; }
+    }
+
+    /* Form header */
+    .form-header {
+      margin-bottom: var(--space-2xl);
+    }
+
+    .form-heading {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-xs);
+    }
+
+    .form-description {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Form Card — raised elevation ── */
+    .form-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-2xl);
+      box-shadow: var(--shadow-raised);
+      transition: box-shadow var(--duration-moderate) var(--ease-standard);
+    }
+
+    .form-card:focus-within {
+      box-shadow: var(--shadow-floating);
+    }
+
+    /* Azure AD / SSO button */
+    .sso-button {
+      width: 100%;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-md);
+      border: none;
+      border-radius: var(--radius-lg);
+      background: #0078D4;
+      color: white;
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition:
+        background var(--duration-fast) var(--ease-standard),
+        transform var(--duration-instant) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard);
+    }
+
+    .sso-button:hover {
+      background: #106EBE;
+      transform: scale(1.01);
+      box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+    }
+    .sso-button:active { transform: scale(0.99); }
+
+    .sso-button:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring), 0 4px 12px rgba(0, 120, 212, 0.2);
+    }
+
+    .sso-button svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Separator */
+    .separator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      margin: var(--space-xl) 0;
+    }
+
+    .separator-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .separator-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Input group */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+
+    .input-group + .input-group {
+      margin-top: var(--space-lg);
+    }
+
+    .input-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+      pointer-events: none;
+      transition: color var(--duration-fast) var(--ease-standard);
+    }
+
+    .input-field {
+      width: 100%;
+      height: 48px;
+      padding: 0 var(--space-lg) 0 42px;
+      border: 1px solid var(--border-input);
+      border-radius: var(--radius-lg);
+      background: var(--bg-input);
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text-primary);
+      transition:
+        border-color var(--duration-fast) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard);
+    }
+
+    .input-field::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--border-input-focus);
+      box-shadow: var(--focus-ring);
+    }
+
+    .input-field:focus ~ .input-icon {
+      color: var(--brand-info);
+    }
+
+    /* Error state */
+    .input-field.has-error {
+      border-color: var(--brand-critical);
+      box-shadow: 0 0 0 2px hsl(0 84% 60% / 0.15);
+    }
+
+    .input-field.has-error ~ .input-icon {
+      color: var(--brand-critical);
+    }
+
+    .input-error {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--brand-critical);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+
+    /* ── Submit button — stronger elevation on hover ── */
+    .submit-button {
+      width: 100%;
+      height: 48px;
+      margin-top: var(--space-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      border: none;
+      border-radius: var(--radius-lg);
+      background: var(--brand-info);
+      color: white;
+      font-family: var(--font-body);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition:
+        background var(--duration-fast) var(--ease-standard),
+        transform var(--duration-instant) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard);
+    }
+
+    .submit-button:hover {
+      background: #2563eb;
+      transform: scale(1.01);
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+    }
+    .submit-button:active { transform: scale(0.99); }
+
+    .submit-button:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring), 0 4px 14px rgba(59, 130, 246, 0.25);
+    }
+
+    /* ── Dev Accounts Card — flush elevation ── */
+    .dev-card {
+      margin-top: var(--space-lg);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-2xl);
+      padding: var(--space-xl);
+      box-shadow: var(--shadow-flush);
+    }
+
+    .dev-heading {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: var(--space-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+    }
+
+    .dev-heading::before, .dev-heading::after {
+      content: '';
+      width: 20px;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    /* Team selector */
+    .team-selector {
+      margin-bottom: var(--space-lg);
+    }
+
+    .team-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: var(--space-sm);
+    }
+
+    .team-select {
+      width: 100%;
+      height: 36px;
+      padding: 0 var(--space-md);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--bg-input);
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    /* Role buttons grid */
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-sm);
+    }
+
+    .role-button {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      transition:
+        opacity var(--duration-fast) var(--ease-standard),
+        transform var(--duration-instant) var(--ease-standard);
+    }
+
+    .role-button:hover { opacity: 0.9; transform: scale(1.02); }
+    .role-button:active { transform: scale(0.98); }
+    .role-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+    .role-button.te { background: var(--brand-info); }
+    .role-button.tm { background: var(--brand-ok); }
+    .role-button.qm { background: var(--brand-purple); }
+    .role-button.lm { background: var(--brand-repair); }
+
+    /* ── Footer ── */
+    .form-footer {
+      margin-top: var(--space-xl);
+      text-align: center;
+    }
+
+    .footer-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── Error Banner (system-level) ─── */
+    .error-banner {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      margin-bottom: var(--space-lg);
+      border-radius: var(--radius-lg);
+      background: hsl(0 84% 60% / 0.08);
+      border-left: 3px solid var(--brand-critical);
+    }
+
+    .dark .error-banner {
+      background: hsl(0 84% 60% / 0.12);
+    }
+
+    .error-banner-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--brand-critical);
+      flex-shrink: 0;
+    }
+
+    .error-banner-text {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--brand-critical);
+    }
+
+    /* ─── Dark Mode Toggle ─── */
+    .theme-toggle {
+      position: fixed;
+      bottom: var(--space-xl);
+      right: var(--space-xl);
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      box-shadow: var(--shadow-raised);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition:
+        background var(--duration-fast) var(--ease-standard),
+        box-shadow var(--duration-fast) var(--ease-standard);
+    }
+
+    .theme-toggle:hover {
+      box-shadow: var(--shadow-floating);
+    }
+
+    .theme-toggle:focus-visible {
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+
+    .theme-toggle svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-secondary);
+    }
+
+    /* ─── Animations ─── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn var(--duration-moderate) var(--ease-decelerate) both;
+    }
+
+    .animate-slide-down {
+      animation: slideDown var(--duration-moderate) var(--ease-decelerate) both;
+    }
+
+    .animate-scale-in {
+      animation: scaleIn var(--duration-moderate) var(--ease-decelerate) both;
+    }
+
+    .animate-shake {
+      animation: shake 500ms var(--ease-standard);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animate-fade-in,
+      .animate-slide-down,
+      .animate-scale-in,
+      .animate-shake {
+        animation: none !important;
+      }
+
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not(.light) {
+        --bg-page: #0f172a;
+        --bg-card: #1e293b;
+        --bg-input: #1e293b;
+        --border-subtle: #334155;
+        --border-input: #475569;
+        --text-primary: #f1f5f9;
+        --text-secondary: #cbd5e1;
+        --text-muted: #64748b;
+        --shadow-raised: 0 1px 3px rgba(0,0,0,0.3);
+        --shadow-floating: 0 10px 25px rgba(0,0,0,0.35);
+      }
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 480px) {
+      .form-wrapper {
+        padding: var(--space-xl) var(--space-lg);
+      }
+
+      .form-card {
+        padding: var(--space-xl);
+      }
+
+      .role-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-split">
+
+    <!-- ═══ Left: UL Brand Panel ═══ -->
+    <aside class="brand-panel" aria-hidden="true">
+      <div class="brand-content">
+        <!-- Logo -->
+        <div class="brand-logo">
+          <!-- UL Logo placeholder -->
+          <svg width="140" height="50" viewBox="0 0 140 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="38" font-family="DM Sans, sans-serif" font-size="32" font-weight="700" fill="white">UL</text>
+            <text x="55" y="38" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="300" fill="rgba(255,255,255,0.5)">Solutions</text>
+          </svg>
+        </div>
+
+        <!-- Hero -->
+        <div class="brand-hero">
+          <div class="brand-accent-line"></div>
+          <h1 class="brand-title">장비 관리 시스템</h1>
+          <p class="brand-subtitle">Equipment Management System</p>
+
+          <div class="brand-features">
+            <div class="brand-feature">
+              <div class="brand-feature-dot"></div>
+              <span class="brand-feature-text">장비 등록 · 교정 · 반출 관리</span>
+            </div>
+            <div class="brand-feature">
+              <div class="brand-feature-dot"></div>
+              <span class="brand-feature-text">역할 기반 승인 워크플로우</span>
+            </div>
+            <div class="brand-feature">
+              <div class="brand-feature-dot"></div>
+              <span class="brand-feature-text">ISO/IEC 17025 준수</span>
+            </div>
+          </div>
+
+          <!-- NEW: Certification badge — adds depth & credibility -->
+          <div class="brand-certification">
+            <div class="cert-icon">
+              <svg viewBox="0 0 16 16" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5">
+                <path d="M8 1L10 5.5L15 6L11.5 9.5L12.5 14.5L8 12L3.5 14.5L4.5 9.5L1 6L6 5.5L8 1Z"/>
+              </svg>
+            </div>
+            <div class="cert-text">
+              UL-QP-18 절차서 기반<br>
+              시험소 장비 관리 규격 준수
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="brand-footer">
+          <p class="brand-copyright">© 2026 UL Solutions. All rights reserved.</p>
+        </div>
+      </div>
+
+      <!-- Decorative circles -->
+      <div class="brand-deco-1"></div>
+      <div class="brand-deco-2"></div>
+    </aside>
+
+    <!-- ═══ Right: Login Form ═══ -->
+    <main class="form-panel" id="login-form" aria-label="로그인">
+      <div class="form-wrapper">
+        <div class="form-container">
+
+          <!-- Mobile logo -->
+          <div class="mobile-logo">
+            <svg width="120" height="44" viewBox="0 0 140 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="0" y="38" font-family="DM Sans, sans-serif" font-size="32" font-weight="700" fill="var(--text-primary)">UL</text>
+              <text x="55" y="38" font-family="IBM Plex Sans, sans-serif" font-size="14" font-weight="300" fill="var(--text-muted)">Solutions</text>
+            </svg>
+          </div>
+
+          <!-- Header -->
+          <div class="form-header animate-fade-in">
+            <h2 class="form-heading">로그인</h2>
+            <p class="form-description">계정으로 로그인하여 계속하세요</p>
+          </div>
+
+          <!-- ── Form Card (raised → floating on focus-within) ── -->
+          <div class="form-card animate-fade-in" style="animation-delay: 80ms;">
+
+            <!-- Error banner — left-border style (AP-05 개선: badge 외 좌측보더 사용) -->
+            <!--
+            <div class="error-banner animate-slide-down" role="alert" aria-live="polite">
+              <svg class="error-banner-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 15A7 7 0 108 1a7 7 0 000 14zm0-9.5a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3A.75.75 0 018 5.5zM8 11a1 1 0 110 2 1 1 0 010-2z"/>
+              </svg>
+              <span class="error-banner-text">이메일 또는 비밀번호가 일치하지 않습니다.</span>
+            </div>
+            -->
+
+            <!-- SSO Button (Production: Azure AD only) -->
+            <button class="sso-button" type="button" aria-label="Microsoft 계정으로 로그인">
+              <svg viewBox="0 0 21 21" fill="none">
+                <rect width="10" height="10" fill="#F25022"/>
+                <rect x="11" width="10" height="10" fill="#7FBA00"/>
+                <rect y="11" width="10" height="10" fill="#00A4EF"/>
+                <rect x="11" y="11" width="10" height="10" fill="#FFB900"/>
+              </svg>
+              Microsoft 계정으로 로그인
+            </button>
+
+            <!-- Separator (dev only) -->
+            <div class="separator" role="separator" aria-label="또는">
+              <div class="separator-line"></div>
+              <span class="separator-text">or</span>
+              <div class="separator-line"></div>
+            </div>
+
+            <!-- Email -->
+            <div class="input-group">
+              <label class="input-label" for="email">이메일</label>
+              <div class="input-wrapper">
+                <input
+                  id="email"
+                  type="email"
+                  class="input-field"
+                  placeholder="equipment@ulsolutions.com"
+                  autocomplete="email"
+                  spellcheck="false"
+                  aria-invalid="false"
+                >
+                <svg class="input-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="14" height="10" rx="2"/>
+                  <path d="M2 4l7 5 7-5"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Password — tighter gap from email (AP-02: 그룹 내 tight) -->
+            <div class="input-group">
+              <label class="input-label" for="password">비밀번호</label>
+              <div class="input-wrapper">
+                <input
+                  id="password"
+                  type="password"
+                  class="input-field"
+                  placeholder="••••••••••••"
+                  autocomplete="current-password"
+                  aria-invalid="false"
+                >
+                <svg class="input-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="8" width="10" height="8" rx="2"/>
+                  <path d="M6 8V6a3 3 0 016 0v2"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Submit — spacious gap from inputs (AP-02: 섹션 간 spacious) -->
+            <button class="submit-button" type="submit">
+              로그인
+            </button>
+          </div>
+
+          <!-- ── Dev Accounts (flush elevation — AP-04 차등) ── -->
+          <div class="dev-card animate-fade-in" style="animation-delay: 160ms;">
+            <div class="dev-heading">개발자 빠른 로그인</div>
+
+            <div class="team-selector">
+              <label class="team-label" for="team-select">팀 선택</label>
+              <select class="team-select" id="team-select">
+                <option>수원 자동차 시험팀 (Default)</option>
+                <option>의왕 화학 시험팀</option>
+                <option>평택 전자 시험팀</option>
+              </select>
+            </div>
+
+            <label class="team-label">역할 선택</label>
+            <div class="role-grid">
+              <button class="role-button te" type="button">시험실무자</button>
+              <button class="role-button tm" type="button">기술책임자</button>
+              <button class="role-button qm" type="button">품질책임자</button>
+              <button class="role-button lm" type="button">시험소장</button>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="form-footer animate-fade-in" style="animation-delay: 240ms;">
+            <p class="footer-text">© 2026 Equipment Management System. All rights reserved.</p>
+          </div>
+
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Dark mode toggle -->
+  <button class="theme-toggle" id="themeToggle" aria-label="테마 전환" type="button">
+    <svg id="sunIcon" viewBox="0 0 20 20" fill="currentColor" style="display:none;">
+      <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zM4.222 4.222a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM15.778 4.222a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM10 7a3 3 0 100 6 3 3 0 000-6zm-7 3a1 1 0 011-1h1a1 1 0 110 2H4a1 1 0 01-1-1zm12 0a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1zM5.636 14.364a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zm9.435-.707a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM10 15a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1z"/>
+    </svg>
+    <svg id="moonIcon" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+    </svg>
+  </button>
+
+  <script>
+    // Dark mode toggle
+    const toggle = document.getElementById('themeToggle');
+    const sun = document.getElementById('sunIcon');
+    const moon = document.getElementById('moonIcon');
+    const html = document.documentElement;
+
+    function setTheme(dark) {
+      html.classList.toggle('dark', dark);
+      html.classList.toggle('light', !dark);
+      sun.style.display = dark ? 'block' : 'none';
+      moon.style.display = dark ? 'none' : 'block';
+      localStorage.setItem('theme', dark ? 'dark' : 'light');
+    }
+
+    // Initialize
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(saved === 'dark' || (!saved && prefersDark));
+
+    toggle.addEventListener('click', () => {
+      setTheme(!html.classList.contains('dark'));
+    });
+
+    // Interactive demo: error banner toggle
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+  </script>
+
+</body>
+</html>

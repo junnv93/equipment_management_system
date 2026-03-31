@@ -195,7 +195,29 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
           }
 
           // 3-1. 트랜잭션으로 부적합 생성 + 장비 상태 변경 + 사고 이력 등록
-          await this.db.transaction(async (tx) => {
+          const txResult = await this.db.transaction(async (tx) => {
+            // TOCTOU 방어: 트랜잭션 내에서 중복 재확인
+            // (배치 체크는 fast path 최적화, 여기가 실제 안전 게이트)
+            const [existingInTx] = await tx
+              .select({ id: nonConformances.id })
+              .from(nonConformances)
+              .where(
+                and(
+                  eq(nonConformances.equipmentId, equip.id),
+                  eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
+                  isNull(nonConformances.deletedAt),
+                  eq(nonConformances.status, NonConformanceStatusEnum.enum.open)
+                )
+              )
+              .limit(1);
+
+            if (existingInTx) {
+              this.logger.debug(
+                `장비 ${equip.managementNumber}(${equip.id}): 트랜잭션 내 중복 발견, 건너뜀`
+              );
+              return 'skipped' as const;
+            }
+
             const discoveryDate = today.toISOString().split('T')[0];
 
             // (A) 부적합 생성
@@ -240,7 +262,20 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
             this.logger.log(
               `장비 ${equip.managementNumber}(${equip.id}): 부적합 생성 완료 (NC ID: ${nc.id})`
             );
+            return 'created' as const;
           });
+
+          // 트랜잭션 내 중복 감지로 건너뛴 경우
+          if (txResult === 'skipped') {
+            details.push({
+              equipmentId: equip.id,
+              managementNumber: equip.managementNumber,
+              action: 'skipped',
+              reason: '트랜잭션 내 중복 발견 (TOCTOU 방어)',
+            });
+            skipped++;
+            continue;
+          }
 
           // 3-2. 캐시 무효화 (트랜잭션 완료 후)
           await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
@@ -277,14 +312,33 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
           });
           created++;
         } catch (equipError) {
-          this.logger.error(`장비 ${equip.managementNumber}(${equip.id}) 처리 실패: ${equipError}`);
-          details.push({
-            equipmentId: equip.id,
-            managementNumber: equip.managementNumber,
-            action: 'skipped',
-            reason: equipError instanceof Error ? equipError.message : String(equipError),
-          });
-          skipped++;
+          // Partial unique index 위반 (23505) → 동시 실행 중복 → 정상 스킵
+          const pgCode =
+            (equipError as Record<string, unknown>)?.code ??
+            ((equipError as Record<string, unknown>)?.cause as Record<string, unknown>)?.code;
+          if (pgCode === '23505') {
+            this.logger.debug(
+              `장비 ${equip.managementNumber}(${equip.id}): unique constraint 중복 → 건너뜀`
+            );
+            details.push({
+              equipmentId: equip.id,
+              managementNumber: equip.managementNumber,
+              action: 'skipped',
+              reason: 'unique constraint 위반 (동시 실행 중복)',
+            });
+            skipped++;
+          } else {
+            this.logger.error(
+              `장비 ${equip.managementNumber}(${equip.id}) 처리 실패: ${equipError}`
+            );
+            details.push({
+              equipmentId: equip.id,
+              managementNumber: equip.managementNumber,
+              action: 'skipped',
+              reason: equipError instanceof Error ? equipError.message : String(equipError),
+            });
+            skipped++;
+          }
         }
       }
 

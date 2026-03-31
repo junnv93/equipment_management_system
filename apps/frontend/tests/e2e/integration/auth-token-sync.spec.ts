@@ -173,7 +173,7 @@ test.describe('인증 토큰 동기화', () => {
       await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
 
       // 페이지 로드 완료 대기
-      await page.waitForLoadState('networkidle');
+      await expect(page.locator('main')).toBeVisible({ timeout: 15000 });
 
       // API 요청에 Authorization 헤더가 포함되어 있는지 확인
       const authenticatedRequests = apiRequests.filter((req) =>
@@ -282,7 +282,7 @@ test.describe('역할 기반 접근 제어', () => {
     await page.getByTestId('login-button').click();
 
     // 로그인 결과 대기
-    await page.waitForLoadState('networkidle');
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
 
     // 관리자 페이지 접근 시도
     await page.goto('/admin/audit-logs');

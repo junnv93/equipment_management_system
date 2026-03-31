@@ -1,6 +1,6 @@
 ---
 name: verify-sql-safety
-description: SQL 안전성 검증 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지. 검색/목록 API 추가/수정 후 사용.
+description: Verifies SQL safety — LIKE wildcard escaping, N+1 query pattern detection, COUNT(DISTINCT) for fan-out JOINs, RBAC INNER JOIN enforcement. Run after adding/modifying search or list API endpoints.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 모듈명]'
 ---

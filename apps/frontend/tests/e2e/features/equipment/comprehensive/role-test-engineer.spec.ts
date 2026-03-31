@@ -2,17 +2,17 @@
 // seed: apps/frontend/tests/e2e/shared/seed/equipment-seed.spec.ts
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
 
-const EQUIPMENT_ID = 'eeee1001-0001-4001-8001-000000000001';
+const EQUIPMENT_ID = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;
 
 test.describe('역할별 권한 검증', () => {
   test('시험실무자 권한 범위', async ({ testOperatorPage: page }) => {
     // 1. testOperatorPage로 /equipment 이동
     await page.goto('/equipment');
 
-    // 2. link '장비 등록' and link '공용장비 등록' visible
+    // 2. link '장비 등록' visible
     await expect(page.getByRole('link', { name: '장비 등록', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: '공용장비 등록' })).toBeVisible();
 
     // 3. goto /equipment/eeee1001-0001-4001-8001-000000000001 (available 상태 → 반출 신청 가능)
     await page.goto(`/equipment/${EQUIPMENT_ID}`);

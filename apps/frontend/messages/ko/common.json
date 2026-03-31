@@ -201,6 +201,25 @@
     "viewDetail": "{type} 상세 보기",
     "unknownUser": "알 수 없는 사용자"
   },
+  "userRoles": {
+    "test_engineer": "시험실무자",
+    "technical_manager": "기술책임자",
+    "quality_manager": "품질책임자",
+    "lab_manager": "시험소장",
+    "system_admin": "시스템 관리자"
+  },
+  "userStatus": {
+    "active": "활성",
+    "inactive": "비활성",
+    "pending": "승인 대기"
+  },
+  "incidentType": {
+    "damage": "손상",
+    "malfunction": "오작동",
+    "change": "변경",
+    "repair": "수리",
+    "calibration_overdue": "교정 기한 초과"
+  },
   "datePicker": {
     "selectDate": "날짜 선택",
     "selectRange": "날짜 범위 선택"
@@ -220,6 +239,7 @@
     "selectFile": "파일 선택",
     "uploadedFiles": "업로드된 파일 ({count}/{max})",
     "deleteAll": "전체 삭제",
-    "deleteFile": "파일 삭제"
+    "deleteFile": "파일 삭제",
+    "formatHint": "{extensions} (최대 {maxSize}, {maxFiles}개)"
   }
 }

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, FileText, Download, MousePointerClick } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { TAB_META, UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
+import { TAB_META } from '@/lib/api/approvals-api';
+import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
 import { ApprovalHistoryCard } from './ApprovalHistoryCard';
 import { CategoryDetails, CategoryBadge } from './detail-renderers';
@@ -19,6 +20,7 @@ import {
 import { getElapsedDaysUrgency } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface ApprovalDetailPanelProps {
   item: ApprovalItem | null;
@@ -44,6 +46,7 @@ export function ApprovalDetailPanel({
   isProcessing = false,
 }: ApprovalDetailPanelProps) {
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
   const { fmtDateTime } = useDateFormatter();
   const tokens = APPROVAL_DETAIL_PANEL_TOKENS;
 
@@ -75,11 +78,11 @@ export function ApprovalDetailPanel({
         <div className={tokens.header.container}>
           <div className={tokens.header.topRow}>
             <Badge className={getApprovalStatusBadgeClasses(item.status)}>
-              {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
+              {t(`unifiedStatus.${item.status}`)}
             </Badge>
             <CategoryBadge category={item.category} />
           </div>
-          <h3 className={tokens.header.title}>{item.summary}</h3>
+          <h3 className={tokens.header.title}>{getLocalizedSummary(item, t, siteLabels)}</h3>
 
           <div className={tokens.header.metaGrid}>
             <div>

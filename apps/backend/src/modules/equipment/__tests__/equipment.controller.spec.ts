@@ -152,6 +152,7 @@ describe('EquipmentController', () => {
         status: 'available' as EquipmentStatus,
         site: 'suwon',
         approvalStatus: 'approved', // 관리자 직접 승인
+        initialLocation: '수원 창고',
       };
 
       jest.spyOn(equipmentService, 'create').mockResolvedValue(mockEquipment);
@@ -179,6 +180,7 @@ describe('EquipmentController', () => {
         managementNumber: 'EQP-NEW-001',
         status: 'available' as EquipmentStatus,
         site: 'suwon',
+        initialLocation: '수원 창고',
       };
 
       const mockRequest = {
@@ -220,6 +222,7 @@ describe('EquipmentController', () => {
         status: 'available' as EquipmentStatus,
         site: 'suwon',
         approvalStatus: 'approved',
+        initialLocation: '수원 창고',
       };
 
       jest
@@ -384,12 +387,13 @@ describe('EquipmentController', () => {
       const mockReq = {
         user: { roles: ['lab_manager'], userId: 'admin-uuid', site: 'suwon' },
       } as MockRequest;
-      const result = await controller.remove(uuid, mockReq as AuthenticatedRequest);
+      const result = await controller.remove(uuid, undefined, mockReq as AuthenticatedRequest);
 
       // Assert
       expect(result).toEqual({ message: '장비가 삭제되었습니다.' });
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
-      expect(equipmentService.remove).toHaveBeenCalledWith(uuid);
+      // version query param이 없으면 existingEquipment.version 폴백
+      expect(equipmentService.remove).toHaveBeenCalledWith(uuid, mockEquipment.version);
     });
 
     it('should throw NotFoundException when equipment does not exist', async () => {
@@ -403,9 +407,9 @@ describe('EquipmentController', () => {
 
       // Act & Assert
       const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
-      await expect(controller.remove(uuid, mockReq as AuthenticatedRequest)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.remove(uuid, undefined, mockReq as AuthenticatedRequest)
+      ).rejects.toThrow(NotFoundException);
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
     });
   });

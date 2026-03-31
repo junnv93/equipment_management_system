@@ -2,6 +2,16 @@
   "title": "Checkout Management",
   "subtitle": "Manage checkout requests, approvals, and returns",
   "description": "Manage equipment checkout requests and status.",
+  "metadata": {
+    "detailTitle": "{purpose} Checkout Detail - {destination}",
+    "detailDescription": "View {purpose} checkout details for {destination}.",
+    "detailFallbackTitle": "Checkout Detail",
+    "detailFallbackDescription": "Checkout detail information",
+    "returnTitle": "Return Processing - {purpose}",
+    "returnDescription": "Process return of equipment checked out for {purpose} from {destination}",
+    "returnFallbackTitle": "Return Processing",
+    "returnFallbackDescription": "Equipment return processing"
+  },
   "status": {
     "pending": "Pending",
     "approved": "Approved",
@@ -24,7 +34,8 @@
   "purpose": {
     "calibration": "Calibration",
     "repair": "Repair",
-    "rental": "Rental"
+    "rental": "Rental",
+    "return_to_vendor": "Return to Vendor"
   },
   "tabs": {
     "outbound": "Outbound",
@@ -222,6 +233,19 @@
       "incomplete": "Incomplete"
     }
   },
+  "returnCondition": {
+    "good": "Good",
+    "damaged": "Damaged",
+    "lost": "Lost",
+    "needs_repair": "Needs Repair",
+    "needs_calibration": "Needs Calibration"
+  },
+  "conditionCheckStep": {
+    "lender_checkout": "① Pre-checkout Check (Lender)",
+    "borrower_receive": "② Receiving Check (Borrower)",
+    "borrower_return": "③ Pre-return Check (Borrower)",
+    "lender_return": "④ Return Check (Lender)"
+  },
   "groupCard": {
     "unknownUser": "Unknown User",
     "equipmentCount": "{count} equipment",
@@ -244,7 +268,11 @@
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",
-    "statusNotSelectable": "Equipment in {statusLabel} status cannot be selected"
+    "statusNotSelectable": "Equipment in {statusLabel} status cannot be selected",
+    "inUseBlocked": "This equipment is currently in use by another user. Available after return.",
+    "checkedOutBlocked": "This equipment is already checked out. Available after return.",
+    "calibrationOverdueRentalBlocked": "Calibration has expired. External rental requires valid calibration.",
+    "nonConformingRentalBlocked": "Equipment is non-conforming. External rental requires equipment in normal condition."
   },
   "create": {
     "title": "Request Equipment Checkout",

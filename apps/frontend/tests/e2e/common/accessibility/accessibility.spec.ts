@@ -17,7 +17,6 @@ test.describe('Accessibility', () => {
 
     test('로그인 페이지 접근성 검사 (WCAG 2.1 AA)', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       const accessibilityScanResults = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa'])
@@ -34,7 +33,6 @@ test.describe('Accessibility', () => {
 
     test('로그인 페이지 접근성 검사 (상세)', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       const accessibilityScanResults = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa'])
@@ -63,7 +61,6 @@ test.describe('Accessibility', () => {
     test('모바일 뷰 접근성 검사', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       const accessibilityScanResults = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa'])
@@ -80,8 +77,6 @@ test.describe('Accessibility', () => {
 
   test('키보드 네비게이션 - 로그인 페이지', async ({ page }) => {
     await page.goto(PUBLIC_PAGE);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000); // 페이지 안정화 대기
 
     // 인터랙티브 요소가 있는지 확인 (백엔드 없으면 버튼이 없을 수 있음)
     const interactiveElements = page.locator(
@@ -107,8 +102,6 @@ test.describe('Accessibility', () => {
 
   test('로그인 폼 키보드 접근성', async ({ page }) => {
     await page.goto(PUBLIC_PAGE);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // 인터랙티브 요소가 있는지 확인
     const interactiveElements = page.locator('button, input, a[href]');
@@ -129,8 +122,6 @@ test.describe('Accessibility', () => {
 
   test('포커스 인디케이터 표시 - 로그인 페이지', async ({ page }) => {
     await page.goto(PUBLIC_PAGE);
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // 인터랙티브 요소가 있는지 확인
     const focusableElements = page.locator('button, input, a[href]');
@@ -168,7 +159,6 @@ test.describe('Accessibility', () => {
 authTest.describe('Accessibility - 인증 필요', () => {
   authTest('스킵 네비게이션 동작', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Tab 키로 스킵 링크에 포커스
     await testOperatorPage.keyboard.press('Tab');
@@ -190,7 +180,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
     // 모바일 뷰포트 설정
     await testOperatorPage.setViewportSize({ width: 375, height: 667 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 햄버거 메뉴 버튼 찾기 (aria-controls로 특정)
     const menuButton = testOperatorPage.locator('button[aria-controls="mobile-nav-drawer"]');
@@ -198,7 +187,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
 
     // 메뉴 클릭
     await menuButton.click();
-    await testOperatorPage.waitForTimeout(100); // 애니메이션 대기
 
     // 드로어 표시 확인
     const drawer = testOperatorPage.locator('#mobile-nav-drawer');
@@ -206,19 +194,16 @@ authTest.describe('Accessibility - 인증 필요', () => {
 
     // ESC 키로 닫기
     await testOperatorPage.keyboard.press('Escape');
-    await testOperatorPage.waitForTimeout(400); // 애니메이션 완료 대기
     await authExpect(drawer).toHaveAttribute('aria-hidden', 'true');
   });
 
   authTest('모바일 드로어 외부 클릭으로 닫기', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 375, height: 667 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 메뉴 열기 (aria-controls로 특정)
     const menuButton = testOperatorPage.locator('button[aria-controls="mobile-nav-drawer"]');
     await menuButton.click();
-    await testOperatorPage.waitForTimeout(100); // 애니메이션 대기
 
     const drawer = testOperatorPage.locator('#mobile-nav-drawer');
     await authExpect(drawer).toBeVisible();
@@ -227,7 +212,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
     // CSS 클래스의 슬래시는 이스케이프 필요
     const overlay = testOperatorPage.locator('div.fixed.inset-0.bg-black\\/50');
     await overlay.click({ force: true, position: { x: 350, y: 300 } }); // 드로어 외부 영역 클릭
-    await testOperatorPage.waitForTimeout(400); // 애니메이션 완료 대기
 
     await authExpect(drawer).toHaveAttribute('aria-hidden', 'true');
   });
@@ -235,7 +219,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
   authTest('반응형 레이아웃 - 데스크톱', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 1280, height: 800 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 데스크톱에서 사이드바 표시
     const sidebar = testOperatorPage.locator('aside[role="navigation"]');
@@ -249,7 +232,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
   authTest('반응형 레이아웃 - 모바일', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 375, height: 667 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 모바일에서 사이드바 숨김
     const sidebar = testOperatorPage.locator('aside[role="navigation"]');
@@ -263,7 +245,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
   authTest('ARIA 랜드마크 존재 확인', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 1280, height: 800 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 메인 랜드마크
     await authExpect(testOperatorPage.locator('main[role="main"]')).toBeVisible();
@@ -278,7 +259,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
   authTest('현재 페이지 표시 (aria-current)', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 1280, height: 800 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 대시보드 링크에 aria-current="page" 확인 (데스크톱 사이드바에서만 확인)
     const dashboardLink = testOperatorPage.locator('aside a[aria-current="page"]').first();
@@ -290,7 +270,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
   authTest('반응형 테이블 - 데스크톱', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 1280, height: 800 });
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 테이블 존재 확인
     const table = testOperatorPage.locator('[data-testid="responsive-table"], table');
@@ -304,7 +283,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
   authTest('반응형 테이블 - 모바일', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 375, height: 667 });
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 모바일 카드 뷰 또는 스크롤 가능 테이블 확인
     const mobileView = testOperatorPage.locator('[data-testid="responsive-table-mobile"]');
@@ -321,7 +299,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
   authTest('모바일 메뉴 열기/닫기 시 aria-live 알림', async ({ testOperatorPage }) => {
     await testOperatorPage.setViewportSize({ width: 375, height: 667 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // aria-live 영역 확인 (특정 ID만 선택)
     const liveRegion = testOperatorPage.locator('#live-announcements');
@@ -336,7 +313,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
     await menuButton.click();
 
     // 약간의 딜레이 후 aria-live 내용 확인
-    await testOperatorPage.waitForTimeout(300);
     const liveContent = await liveRegion.textContent();
 
     // 알림 메시지가 있어야 함 (메뉴가 열렸습니다 등)
@@ -349,7 +325,6 @@ authTest.describe('Accessibility - 인증 필요', () => {
     await testOperatorPage.emulateMedia({ reducedMotion: 'reduce' });
     await testOperatorPage.setViewportSize({ width: 375, height: 667 });
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 메뉴 버튼 클릭
     const menuButton = testOperatorPage.locator('button[aria-controls="mobile-nav-drawer"]');
@@ -377,7 +352,6 @@ test.describe('Accessibility', () => {
   test.describe('색상 대비 검증', () => {
     test('색상 대비 규칙 준수 (4.5:1 이상)', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       const accessibilityScanResults = await new AxeBuilder({ page })
         .withTags(['wcag2aa'])
@@ -415,7 +389,6 @@ test.describe('Accessibility', () => {
   test.describe('스크린리더 지원', () => {
     test('이미지에 alt 텍스트 존재', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       // 장식용 이미지가 아닌 모든 이미지에 alt 속성 확인
       const images = page.locator('img:not([role="presentation"])');
@@ -433,7 +406,6 @@ test.describe('Accessibility', () => {
 
     test('버튼에 접근 가능한 이름 존재', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       const buttons = page.locator('button');
       const buttonCount = await buttons.count();
@@ -460,7 +432,6 @@ test.describe('Accessibility', () => {
 
     test('폼 필드에 label 연결 확인', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       // 입력 필드들 확인
       const inputs = page.locator('input:not([type="hidden"])');
@@ -500,8 +471,6 @@ test.describe('Accessibility', () => {
   test.describe('포커스 표시 스타일', () => {
     test('로그인 페이지 포커스 링 스타일 확인', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(500);
 
       // 인터랙티브 요소 찾기
       const focusableElements = page.locator('button, input, a[href]');
@@ -536,8 +505,6 @@ test.describe('Accessibility', () => {
 
     test('모든 버튼에 포커스 표시 스타일 적용 확인', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(500);
 
       // 폼 내 버튼 찾기 (로그인 버튼 등)
       const buttons = page.locator('form button:visible, [role="form"] button:visible');
@@ -584,7 +551,6 @@ test.describe('Accessibility', () => {
   test.describe('aria-live 알림', () => {
     test('aria-live 영역 존재 확인', async ({ page }) => {
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       // aria-live 속성이 있는 요소 확인
       const liveRegions = page.locator('[aria-live]');
@@ -601,7 +567,6 @@ test.describe('Accessibility', () => {
       // 모션 감소 설정 에뮬레이션
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto(PUBLIC_PAGE);
-      await page.waitForLoadState('networkidle');
 
       // 애니메이션이 있는 요소들의 transition-duration 확인
       const animatedElements = page.locator('button, a, [class*="transition"], [class*="animate"]');

@@ -7,12 +7,10 @@ test.describe('Repair History Form Validation', () => {
   test('should submit successfully with optional fields empty', async ({ testOperatorPage }) => {
     // Navigate to equipment list
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Click first equipment link
     const equipmentLink = testOperatorPage.locator('a[href*="/equipment/"]').first();
     await equipmentLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = testOperatorPage.url();
@@ -24,14 +22,12 @@ test.describe('Repair History Form Validation', () => {
 
     // 1. Navigate to repair history page
     await testOperatorPage.goto(`/equipment/${equipmentId}/repair-history`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Click 'Add Repair History' button
     const addButton = testOperatorPage
       .locator('button')
       .filter({ hasText: /수리.*이력.*추가|add.*repair/i });
     await addButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     const dialog = testOperatorPage.getByRole('dialog');
     await expect(dialog).toBeVisible();

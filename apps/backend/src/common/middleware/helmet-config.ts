@@ -31,12 +31,9 @@ export class HelmetConfigService {
       // XSS 보호
       xssFilter: true,
 
-      // HTTPS 강제
-      hsts: {
-        maxAge: 31536000, // 1년
-        includeSubDomains: true,
-        preload: true,
-      },
+      // HSTS는 Nginx(nginx.conf.template)에서 단일 관리합니다.
+      // 백엔드는 Nginx 뒤에서 동작하므로 여기서 중복 설정하지 않습니다.
+      hsts: false,
 
       // 프레임 설정
       frameguard: {

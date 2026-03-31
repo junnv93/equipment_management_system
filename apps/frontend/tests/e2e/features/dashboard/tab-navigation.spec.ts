@@ -31,7 +31,6 @@ test.describe('Tab Navigation and Content', () => {
     test('Navigate between tabs using mouse clicks', async ({ siteAdminPage }) => {
       // Login as lab_manager
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 1. Click on '장비 현황' tab
       const equipmentTab = siteAdminPage.getByRole('tab', { name: '장비 현황' });
@@ -93,7 +92,6 @@ test.describe('Tab Navigation and Content', () => {
     test('Navigate tabs using keyboard (accessibility)', async ({ siteAdminPage }) => {
       // Login as lab_manager
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // 1. Focus on the tablist using Tab key
       const tablist = siteAdminPage.getByRole('tablist');
@@ -154,7 +152,6 @@ test.describe('Tab Navigation and Content', () => {
     test('Verify Overview tab content (lab_manager)', async ({ siteAdminPage }) => {
       // Login as lab_manager
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Ensure Overview (개요) tab is selected
       const overviewTab = siteAdminPage.getByRole('tab', { name: '개요' });
@@ -195,7 +192,6 @@ test.describe('Tab Navigation and Content', () => {
     test('Verify Equipment tab content shows team breakdown', async ({ siteAdminPage }) => {
       // Login as lab_manager
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Click on '장비 현황' tab
       const equipmentTab = siteAdminPage.getByRole('tab', { name: '장비 현황' });
@@ -231,7 +227,6 @@ test.describe('Tab Navigation and Content', () => {
     test('Verify Calibration tab shows upcoming and overdue lists', async ({ siteAdminPage }) => {
       // Login as lab_manager
       await siteAdminPage.goto('/');
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // Click on '교정' tab
       const calibrationTab = siteAdminPage.getByRole('tab', { name: '교정' });
@@ -294,7 +289,6 @@ test.describe('Tab Navigation and Content', () => {
     test('Verify Approvals tab for technical_manager', async ({ techManagerPage }) => {
       // Login as technical_manager
       await techManagerPage.goto('/');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // Click on '승인 관리' tab
       const approvalsTab = techManagerPage.getByRole('tab', { name: '승인 관리' });

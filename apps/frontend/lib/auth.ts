@@ -14,11 +14,20 @@
  * - Absolute Max Lifetime: 30일 초과 시 활동 여부와 무관하게 재로그인 강제
  */
 
-import { getSession } from 'next-auth/react';
+import NextAuth, { CredentialsSignin } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { Account, Profile, User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import AzureADProvider from 'next-auth/providers/azure-ad';
+
+/**
+ * 백엔드 서버 연결 불가 시 사용하는 커스텀 인증 에러
+ * signIn({ redirect: false }) 결과의 code 필드에 'server_unavailable'이 설정되어
+ * 프론트엔드에서 "인증 실패"와 "서버 다운"을 구분할 수 있음
+ */
+class ServerUnavailableError extends CredentialsSignin {
+  code = AUTH_ERROR_CODE.SERVER_UNAVAILABLE;
+}
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
@@ -50,6 +59,7 @@ interface AuthorizedUser extends User {
 import { DEFAULT_LOCALE, SITE_TO_LOCATION, type Site } from '@equipment-management/schemas';
 import {
   ABSOLUTE_SESSION_MAX_AGE_SECONDS,
+  AUTH_ERROR_CODE,
   REFRESH_BUFFER_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
 } from '@equipment-management/shared-constants';
@@ -90,7 +100,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
   // refresh token이 없으면 즉시 에러 반환 (in-flight 등록 불필요)
   if (!refreshToken) {
-    return { ...token, error: 'RefreshAccessTokenError' };
+    return { ...token, error: AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED };
   }
 
   // 동일 refresh token으로 진행 중인 요청이 있으면 해당 Promise 공유
@@ -109,8 +119,14 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       });
 
       if (!response.ok) {
-        console.error('[Auth] Token refresh failed:', response.status);
-        return { ...token, error: 'RefreshAccessTokenError' };
+        // 401/403: refresh token이 실제로 만료/무효 → 재로그인 필요
+        if (response.status === 401 || response.status === 403) {
+          console.error('[Auth] Refresh token rejected by server:', response.status);
+          return { ...token, error: AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED };
+        }
+        // 5xx 등 서버 일시 장애 → 기존 토큰 유지, 다음 주기에 재시도
+        console.warn('[Auth] Token refresh server error (retryable):', response.status);
+        return token;
       }
 
       const data = await response.json();
@@ -125,8 +141,11 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
         error: undefined,
       };
     } catch (error) {
-      console.error('[Auth] Token refresh error:', error);
-      return { ...token, error: 'RefreshAccessTokenError' };
+      // 네트워크 에러 (ECONNREFUSED 등): 백엔드 일시 다운
+      // → 기존 토큰 유지, 다음 리프레시 주기(5분)에 재시도
+      // → 세션을 파괴하지 않으므로 백엔드 복구 시 자동 복원
+      console.warn('[Auth] Token refresh network error (backend may be down):', error);
+      return token;
     } finally {
       // 성공/실패 관계없이 완료 시 맵에서 제거 (다음 refresh 주기 허용)
       refreshInFlight.delete(refreshToken);
@@ -137,11 +156,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   return refreshPromise;
 }
 
-/**
- * NextAuth 설정 옵션
- * 서버 사이드에서 사용하기 위해 export
- */
-export const authOptions = {
+export const { auth, handlers, signIn, signOut } = NextAuth({
   providers: [
     // Azure AD 로그인 (환경변수가 설정된 경우 우선 활성화)
     ...(hasAzureAD
@@ -149,7 +164,9 @@ export const authOptions = {
           AzureADProvider({
             clientId: process.env.AZURE_AD_CLIENT_ID!,
             clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-            tenantId: process.env.AZURE_AD_TENANT_ID,
+            ...(process.env.AZURE_AD_TENANT_ID && {
+              issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0`,
+            }),
             authorization: {
               params: {
                 scope: 'openid profile email offline_access User.Read',
@@ -207,8 +224,8 @@ export const authOptions = {
                   accessTokenExpires: data.expires_at,
                 };
               } catch (error) {
-                console.error('인증 오류:', error);
-                return null;
+                console.error('[Auth] Login network error:', error);
+                throw new ServerUnavailableError();
               }
             },
           }),
@@ -268,9 +285,9 @@ export const authOptions = {
                 // email이 있으면 email로, 없으면 role로 요청
                 const params = new URLSearchParams();
                 if (email) {
-                  params.set('email', email);
+                  params.set('email', email as string);
                 } else if (role) {
-                  params.set('role', role);
+                  params.set('role', role as string);
                 }
 
                 const url = `${API_BASE_URL}/api/auth/test-login?${params.toString()}`;
@@ -309,7 +326,7 @@ export const authOptions = {
               } catch (error) {
                 console.error('[Test Auth] Error during test login:', error);
                 console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
-                return null;
+                throw new ServerUnavailableError();
               }
             },
           }),
@@ -321,7 +338,7 @@ export const authOptions = {
     error: '/login',
   },
   session: {
-    strategy: 'jwt' as const,
+    strategy: 'jwt',
     maxAge: REFRESH_TOKEN_TTL_SECONDS, // Refresh Token 수명과 정렬 (@shared-constants)
   },
   callbacks: {
@@ -339,15 +356,7 @@ export const authOptions = {
      * @param profile - OAuth 프로필 정보 (Azure AD 전용)
      * @returns 로그인 허용 여부 (true/false)
      */
-    async signIn({
-      user,
-      account,
-      profile,
-    }: {
-      user: User;
-      account: Account | null;
-      profile?: Profile;
-    }): Promise<boolean> {
+    async signIn({ user, account, profile }): Promise<boolean> {
       // 사용자 정보가 없으면 차단
       if (!user?.email) {
         console.error('[SignIn] No user email provided');
@@ -420,17 +429,7 @@ export const authOptions = {
      * @param account - OAuth 계정 정보 (provider, access_token 등)
      * @param profile - OAuth 프로필 정보 (Azure AD 등)
      */
-    async jwt({
-      token,
-      user,
-      account,
-      profile,
-    }: {
-      token: JWT;
-      user?: User;
-      account?: Account | null;
-      profile?: Profile;
-    }): Promise<JWT> {
+    async jwt({ token, user, account, profile }): Promise<JWT> {
       // Azure AD 로그인 처리
       if (account?.provider === 'azure-ad') {
         if (user) {
@@ -473,11 +472,13 @@ export const authOptions = {
       if (token.sessionStartedAt) {
         const now = Math.floor(Date.now() / 1000);
         if (now - token.sessionStartedAt > ABSOLUTE_SESSION_MAX_AGE_SECONDS) {
-          console.log('[Auth] Absolute session lifetime exceeded (30d), forcing re-login', {
-            email: token.email,
-            sessionAgeDays: Math.floor((now - token.sessionStartedAt) / 86400),
-          });
-          return { ...token, error: 'RefreshAccessTokenError' };
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Auth] Absolute session lifetime exceeded (30d), forcing re-login', {
+              email: token.email,
+              sessionAgeDays: Math.floor((now - token.sessionStartedAt) / 86400),
+            });
+          }
+          return { ...token, error: AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED };
         }
       }
 
@@ -505,7 +506,7 @@ export const authOptions = {
      * @param session - 세션 객체
      * @param token - JWT 토큰 (strategy: 'jwt' 사용 시)
      */
-    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
+    async session({ session, token }): Promise<Session> {
       if (session.user) {
         session.user.id = token.id ?? '';
         session.user.role = token.role ?? 'USER';
@@ -526,12 +527,4 @@ export const authOptions = {
   // NEXTAUTH_SECRET은 JWT 서명/검증에 필수
   // 반드시 .env.local에 설정해야 함 (하드코딩 금지)
   secret: process.env.NEXTAUTH_SECRET,
-};
-
-/**
- * 클라이언트 사이드에서 현재 사용자의 세션 정보 가져오기
- */
-export async function getCurrentUser() {
-  const session = await getSession();
-  return session?.user;
-}
+});

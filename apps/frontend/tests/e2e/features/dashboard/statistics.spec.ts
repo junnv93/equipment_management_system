@@ -28,14 +28,13 @@ test.describe('Dashboard Statistics Cards', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Wait for stats section to load
     await expect(siteAdminPage.locator('text=전체 장비').first()).toBeVisible({ timeout: 10000 });
     console.log('✓ Stats section loaded');
 
     // 4. Verify 4 stat cards are visible in the statistics section
-    const statCards = siteAdminPage.locator('[role="region"]').filter({
+    const statCards = siteAdminPage.getByRole('region').filter({
       has: siteAdminPage.locator('text=/전체 장비|사용 가능|교정 예정|반출 중/'),
     });
 
@@ -126,7 +125,6 @@ test.describe('Dashboard Statistics Cards', () => {
     // 1. Login as test_engineer (already done by fixture)
     // 2. Navigate to dashboard
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 3. Wait for stats section to load
     await expect(testOperatorPage.locator('text=내 장비').first()).toBeVisible({ timeout: 10000 });
@@ -253,7 +251,6 @@ test.describe('Dashboard Statistics Cards', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard and note initial stat values
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Wait for initial stat cards to load
     await expect(

@@ -1,14 +1,7 @@
 ---
 name: review-design
 description: >
-  프론트엔드 디자인 품질 리뷰 + 개선 와이어프레임 HTML 생성.
-  기존 컴포넌트/페이지의 시각적 품질을 10가지 안티패턴(카드 수프, 간격 리듬,
-  타이포 드라마, 깊이, 상태 표시, 모션, 테이블, 접근성, 빈 상태, 토큰 활용도)
-  기준으로 점수화하고, 개선 방향의 참조용 와이어프레임 HTML을 생성합니다.
-  "디자인 리뷰", "UI 리뷰", "UI 품질", "디자인 점수", "촌스러운", "별로",
-  "세련되게", "다듬어줘", "깔끔하게", "프리미엄 디자인", "AI스러운", "카드 수프",
-  "시각적 계층", "와이어프레임 개선" 등의 맥락에서 사용하세요.
-  기존 UI 품질 평가가 목적이며, 새 페이지 구현은 별도 요청으로 처리합니다.
+  Frontend design quality review + improvement wireframe HTML generation. Scores existing components/pages against 10 anti-patterns (card soup, spacing rhythm, typography drama, depth/elevation, state indicators, motion, tables, accessibility, empty states, design token usage) and generates reference wireframe HTML for improvement direction. Use when the user asks for design review, UI review, UI quality assessment, design scoring, or mentions: "디자인 리뷰", "UI 리뷰", "촌스러운", "세련되게", "다듬어줘", "깔끔하게", "프리미엄", "카드 수프", "visual hierarchy", "wireframe". This skill evaluates existing UI quality — new page implementation is handled separately.
 ---
 
 # Review Design — 디자인 품질 리뷰 + 와이어프레임 생성

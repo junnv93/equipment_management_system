@@ -13,7 +13,6 @@
  * ## 주의: networkidle 사용 금지
  *
  * SSE 연결(useNotificationStream)이 persistent connection을 유지하므로
- * waitForLoadState('networkidle')는 절대 resolve되지 않음.
  * 대신 waitForLoadState('domcontentloaded') + 명시적 요소 대기 사용.
  *
  * storageState 기반 인증 (auth.fixture.ts)
@@ -301,7 +300,6 @@ test.describe('알림 목록 페이지 — 삭제', () => {
 
     // 삭제 후 UI 반영 대기 (invalidateQueries → refetch)
     // refetch 후 카운트가 증가하지 않았음을 확인 (SSE 신규 알림으로 즉시 N-1이 보장 안 됨)
-    await page.waitForTimeout(1500);
     const afterCount = await page.locator('.border-l-4').filter({ hasText: deletedTitle! }).count();
     expect(afterCount).toBeLessThanOrEqual(sameCountBefore);
   });

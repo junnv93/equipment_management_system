@@ -36,10 +36,9 @@ import {
 } from '@/components/ui/table';
 import calibrationFactorsApi, {
   CalibrationFactorType,
-  FACTOR_TYPE_LABELS,
-  APPROVAL_STATUS_LABELS,
   FACTOR_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
+import { CALIBRATION_FACTOR_TYPE_VALUES } from '@equipment-management/schemas';
 import { queryKeys } from '@/lib/api/query-config';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CalibrationFactorApprovalStatusValues as CFASVal } from '@equipment-management/schemas';
@@ -73,6 +72,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const t = useTranslations('equipment.calibrationFactorsClient');
+  const tCal = useTranslations('calibration');
   const { fmtDate, fmtDateTime } = useDateFormatter();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -222,9 +222,9 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                   <SelectValue placeholder={t('formFactorTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(FACTOR_TYPE_LABELS).map(([value, label]) => (
+                  {CALIBRATION_FACTOR_TYPE_VALUES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {label}
+                      {tCal(`factorType.${value}` as Parameters<typeof tCal>[0])}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -333,7 +333,9 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                 {pendingFactors.map((factor) => (
                   <TableRow key={factor.id}>
                     <TableCell>
-                      <Badge variant="outline">{FACTOR_TYPE_LABELS[factor.factorType]}</Badge>
+                      <Badge variant="outline">
+                        {tCal(`factorType.${factor.factorType}` as Parameters<typeof tCal>[0])}
+                      </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{factor.factorName}</TableCell>
                     <TableCell>
@@ -343,7 +345,11 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                     <TableCell>{fmtDateTime(factor.requestedAt)}</TableCell>
                     <TableCell>
                       <Badge className={FACTOR_APPROVAL_STATUS_COLORS[factor.approvalStatus]}>
-                        {APPROVAL_STATUS_LABELS[factor.approvalStatus]}
+                        {tCal(
+                          `factorApprovalStatus.${factor.approvalStatus}` as Parameters<
+                            typeof tCal
+                          >[0]
+                        )}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -388,7 +394,9 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                 {currentFactors.map((factor) => (
                   <TableRow key={factor.id}>
                     <TableCell>
-                      <Badge variant="outline">{FACTOR_TYPE_LABELS[factor.factorType]}</Badge>
+                      <Badge variant="outline">
+                        {tCal(`factorType.${factor.factorType}` as Parameters<typeof tCal>[0])}
+                      </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{factor.factorName}</TableCell>
                     <TableCell className="font-mono">

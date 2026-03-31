@@ -8,7 +8,6 @@ import { EQUIP_SPECTRUM_ANALYZER_SUW_E_ID } from '../../../../shared/constants/t
 test.describe('Tab Navigation', () => {
   test('Tab loading and error states', async ({ testOperatorPage: page }) => {
     await page.goto(`/equipment/${EQUIP_SPECTRUM_ANALYZER_SUW_E_ID}`);
-    await page.waitForLoadState('networkidle');
 
     // Click a tab that requires API data
     const calibrationTab = page.locator('[role="tab"][aria-label="교정 이력 탭"]');
@@ -17,7 +16,6 @@ test.describe('Tab Navigation', () => {
     // Loading state should appear briefly (check aria-busy or loading skeleton)
     const loadingIndicator = page.locator('[aria-busy="true"], [aria-label*="로딩"]');
     // Loading might be too fast to catch, so we just verify content loads
-    await page.waitForTimeout(500);
 
     // Verify content eventually loads
     const calibrationPanel = page.locator('[role="tabpanel"][aria-label="교정 이력 탭 패널"]');

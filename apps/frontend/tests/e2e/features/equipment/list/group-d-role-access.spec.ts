@@ -30,7 +30,9 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await testOperatorPage.goto('/equipment');
 
       // 클라이언트 컴포넌트 마운트 대기 (스켈레톤 → 실제 UI, 첫 테스트는 cold start로 더 오래 걸림)
-      await testOperatorPage.waitForSelector('#filter-site', { timeout: 30000 });
+      await expect(
+        testOperatorPage.getByRole('combobox', { name: '사이트 필터 선택' })
+      ).toBeVisible({ timeout: 30000 });
 
       // ✅ 사이트 필터가 모든 역할에 표시됨
       const siteFilterCombobox = testOperatorPage.getByRole('combobox', { name: /사이트/i });
@@ -62,7 +64,9 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await testOperatorPage.goto('/equipment');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await testOperatorPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(
+        testOperatorPage.getByRole('combobox', { name: '사이트 필터 선택' })
+      ).toBeVisible({ timeout: 20000 });
 
       // ✅ test_engineer: 사이트 + 팀 기본 필터 적용 확인
       await testOperatorPage.waitForURL(/site=suwon/, { timeout: 10000 });
@@ -104,7 +108,9 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await techManagerPage.goto('/equipment');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await techManagerPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(techManagerPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible(
+        { timeout: 20000 }
+      );
 
       // ✅ technical_manager: 사이트 + 팀 기본 필터 적용 확인
       await techManagerPage.waitForURL(/site=suwon/, { timeout: 10000 });
@@ -129,7 +135,9 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await techManagerPage.goto('/equipment?site=');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await techManagerPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(techManagerPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible(
+        { timeout: 20000 }
+      );
 
       // 사이트 필터 표시 확인
       const siteFilterCombobox = techManagerPage.getByRole('combobox', { name: /사이트/i });
@@ -154,7 +162,9 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await techManagerPage.goto('/equipment?site=');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await techManagerPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(techManagerPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible(
+        { timeout: 20000 }
+      );
 
       // 사이트 필터 선택: 수원랩
       const siteFilterCombobox = techManagerPage.getByRole('combobox', { name: /사이트/i });
@@ -164,7 +174,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await techManagerPage.getByRole('option', { name: /수원랩/ }).click();
 
       // 필터 적용 후 로드 대기
-      await techManagerPage.waitForLoadState('networkidle');
 
       // URL 검증
       await expect(techManagerPage).toHaveURL(/site=(SUW|suwon)/i);
@@ -195,7 +204,9 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await siteAdminPage.goto('/equipment');
 
       // 클라이언트 컴포넌트 마운트 대기 (cold start 대비 넉넉한 timeout)
-      await siteAdminPage.waitForSelector('#filter-site', { timeout: 30000 });
+      await expect(siteAdminPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible({
+        timeout: 30000,
+      });
 
       // ✅ lab_manager: 사이트 기본 필터 적용 확인
       await siteAdminPage.waitForURL(/site=suwon/, { timeout: 10000 });
@@ -251,7 +262,9 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await siteAdminPage.goto('/equipment?site=');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await siteAdminPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(siteAdminPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible({
+        timeout: 20000,
+      });
 
       // 사이트 필터 선택: 의왕랩
       const siteFilterCombobox = siteAdminPage.getByRole('combobox', { name: /사이트/i });
@@ -259,7 +272,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await siteAdminPage.getByRole('option', { name: /의왕랩/ }).click();
 
       // 필터 적용 후 로드 대기
-      await siteAdminPage.waitForLoadState('networkidle');
 
       // URL 검증
       await expect(siteAdminPage).toHaveURL(/site=(UIW|uiwang)/i);
@@ -285,14 +297,16 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await testOperatorPage.goto('/equipment');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await testOperatorPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(
+        testOperatorPage.getByRole('combobox', { name: '사이트 필터 선택' })
+      ).toBeVisible({ timeout: 20000 });
 
-      // 팀 필터 드롭다운 클릭
-      const teamFilterCombobox = testOperatorPage.getByRole('combobox', { name: /팀/i });
+      // 추가 필터 버튼 클릭 후 팀 필터 드롭다운 클릭 (2차 필터)
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const teamFilterCombobox = testOperatorPage.getByRole('combobox', { name: '팀 필터 선택' });
       await teamFilterCombobox.click();
 
       // 팀 옵션 로드 대기
-      await testOperatorPage.waitForTimeout(500);
 
       // 비즈니스 로직 검증: 팀 옵션에 "모든 팀"과 실제 팀들이 표시됨
       const teamOptions = testOperatorPage.getByRole('option');
@@ -313,14 +327,16 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await siteAdminPage.goto('/equipment');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await siteAdminPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(siteAdminPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible({
+        timeout: 20000,
+      });
 
-      // 팀 필터 드롭다운 클릭
-      const teamFilterCombobox = siteAdminPage.getByRole('combobox', { name: /팀/i });
+      // 추가 필터 버튼 클릭 후 팀 필터 드롭다운 클릭 (2차 필터)
+      await siteAdminPage.getByRole('button', { name: /추가 필터/ }).click();
+      const teamFilterCombobox = siteAdminPage.getByRole('combobox', { name: '팀 필터 선택' });
       await teamFilterCombobox.click();
 
       // 팀 목록 로드 대기
-      await siteAdminPage.waitForTimeout(500);
 
       // 첫 번째 팀 선택 (모든 팀 제외)
       const teamOptions = siteAdminPage.getByRole('option').filter({
@@ -335,7 +351,6 @@ test.describe('Group D: Role-based Data Access Control', () => {
         await firstTeamOption.click();
 
         // 필터 적용 후 로드 대기
-        await siteAdminPage.waitForLoadState('networkidle');
 
         // URL에 teamId가 포함되어 있는지 확인
         await expect(siteAdminPage).toHaveURL(/teamId=/);
@@ -364,10 +379,11 @@ test.describe('Group D: Role-based Data Access Control', () => {
       await testOperatorPage.goto('/equipment?site=uiwang');
 
       // 클라이언트 컴포넌트 마운트 대기
-      await testOperatorPage.waitForSelector('#filter-site', { timeout: 20000 });
+      await expect(
+        testOperatorPage.getByRole('combobox', { name: '사이트 필터 선택' })
+      ).toBeVisible({ timeout: 20000 });
 
       // 장비 목록 로드 대기
-      await testOperatorPage.waitForTimeout(2000);
 
       // 보안 검증: 백엔드가 URL 조작을 무시하고 자신의 사이트만 반환해야 함
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');
@@ -402,9 +418,15 @@ test.describe('Group D: Role-based Data Access Control', () => {
 
       // 클라이언트 컴포넌트 마운트 대기 (모든 페이지)
       await Promise.all([
-        testOperatorPage.waitForSelector('#filter-site', { timeout: 20000 }),
-        techManagerPage.waitForSelector('#filter-site', { timeout: 20000 }),
-        siteAdminPage.waitForSelector('#filter-site', { timeout: 20000 }),
+        expect(testOperatorPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible({
+          timeout: 20000,
+        }),
+        expect(techManagerPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible({
+          timeout: 20000,
+        }),
+        expect(siteAdminPage.getByRole('combobox', { name: '사이트 필터 선택' })).toBeVisible({
+          timeout: 20000,
+        }),
       ]);
 
       // 데이터 로딩 대기 (모든 페이지)

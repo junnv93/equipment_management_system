@@ -51,5 +51,4 @@ test('setup page for manual testing', async ({ page }) => {
 
   // 4. Navigate to the main page
   await page.goto(`${baseURL}/`);
-  await page.waitForTimeout(2000);
 });

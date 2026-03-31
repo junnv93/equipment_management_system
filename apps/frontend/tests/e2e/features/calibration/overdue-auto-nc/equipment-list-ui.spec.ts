@@ -23,7 +23,6 @@ test.describe('Equipment List Integration', () => {
 
     // 1. Navigate to equipment list at /equipment
     await siteAdminPage.goto('/equipment');
-    await siteAdminPage.waitForLoadState('networkidle');
   });
 
   test('5.1 should display D+X overdue badge for equipment with calibration overdue', async ({
@@ -31,7 +30,6 @@ test.describe('Equipment List Integration', () => {
   }) => {
     // 2. Locate equipment with calibration overdue in the grid
     // Wait for equipment list to load
-    await siteAdminPage.waitForTimeout(1000);
 
     // Check if there's any equipment in the list
     const equipmentRows = siteAdminPage.locator('table tbody tr');
@@ -74,7 +72,6 @@ test.describe('Equipment List Integration', () => {
     siteAdminPage,
   }) => {
     // 2. Locate equipment that was converted to non-conforming due to calibration overdue
-    await siteAdminPage.waitForTimeout(1000);
 
     // Check if there's any equipment in the list
     const equipmentRows = siteAdminPage.locator('table tbody tr');
@@ -107,7 +104,6 @@ test.describe('Equipment List Integration', () => {
 
   test('5.3 should filter equipment by non_conforming status', async ({ siteAdminPage }) => {
     // 2. Click on status filter dropdown (상태)
-    await siteAdminPage.waitForTimeout(1000);
 
     // Find the status filter - it could be a button or select
     const statusFilter = siteAdminPage.getByText('상태').first();
@@ -120,7 +116,6 @@ test.describe('Equipment List Integration', () => {
 
     // Click the filter section to expand
     await statusFilter.click();
-    await siteAdminPage.waitForTimeout(500);
 
     // 3. Select '부적합' (non_conforming) option
     const nonConformingOption = siteAdminPage.getByRole('checkbox', { name: '부적합' });
@@ -132,8 +127,6 @@ test.describe('Equipment List Integration', () => {
     }
 
     await nonConformingOption.click();
-    await siteAdminPage.waitForTimeout(1000);
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 4. Verify filtered results
     // All displayed equipment should have '부적합' status badge
@@ -161,7 +154,6 @@ test.describe('Equipment List Integration', () => {
     siteAdminPage,
   }) => {
     // 2. Click on calibration due filter dropdown (교정 기한)
-    await siteAdminPage.waitForTimeout(1000);
 
     // Find the calibration due filter
     const calibrationFilter = siteAdminPage.getByText('교정 기한').first();
@@ -174,7 +166,6 @@ test.describe('Equipment List Integration', () => {
 
     // Click the filter section to expand
     await calibrationFilter.click();
-    await siteAdminPage.waitForTimeout(500);
 
     // 3. Select overdue option
     // The option might be labeled as '초과' or '기한 초과'
@@ -192,8 +183,6 @@ test.describe('Equipment List Integration', () => {
     }
 
     await overdueOption.first().click();
-    await siteAdminPage.waitForTimeout(1000);
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 4. Verify filtered results
     const equipmentRows = siteAdminPage.locator('table tbody tr');

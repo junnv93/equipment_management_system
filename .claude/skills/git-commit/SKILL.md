@@ -1,180 +1,184 @@
 ---
-name: git-commit-skill
-description: Git 변경사항을 분석하여 컨벤셔널 커밋 형식의 한국어 커밋 메시지를 자동으로 생성합니다. 사용자가 커밋 메시지 작성, git commit, 변경사항 요약을 요청하거나 git diff 결과가 있을 때 사용하세요.
+name: git-commit
+description: Analyzes git changes to generate conventional commit messages and auto-selects workflow (direct push to main vs branch+PR) based on change size. Use when the user wants to commit, push, save changes, or prepare a PR. Trigger on: "커밋해줘", "커밋하고 푸시해줘", "변경사항 정리해줘", "git commit", "코드 올려줘", "commit", "push", "save changes", "create PR".
 ---
 
-# Git 커밋 메시지 생성기!
+# Git 커밋 + 배포 워크플로우
 
 ## 개요
 
-이 스킬은 Git 변경사항을 분석하여 컨벤셔널 커밋(Conventional Commits) 형식에 맞는 한국어 커밋 메시지를 자동으로 생성합니다.
+변경사항을 분석하여 커밋 메시지를 생성하고, **변경 규모에 따라 워크플로우를 자동 결정**합니다:
+- **작은 수정** → main에 직접 커밋+푸시
+- **큰 변경** → 브랜치 생성 + 커밋+푸시 + PR 생성
 
-## 언제 사용하나요?
+사용자가 별도 지시를 하면 그에 따릅니다 ("PR로 해줘", "그냥 main에 푸시해줘" 등).
 
-다음과 같은 경우에 이 스킬을 사용하세요:
+## 워크플로우
 
-- 사용자가 "커밋 메시지 만들어줘" 요청
-- "git commit" 작업 진행 중
-- "변경사항 요약해줘" 요청
-- git diff 결과를 분석해야 할 때
-
-## 작동 방식
-
-### 1단계: 변경사항 확인
-
-먼저 git diff를 실행하여 변경사항을 확인합니다:
+### Step 1: 변경사항 수집
 
 ```bash
-git diff --staged
+git status --short
+git diff --staged --stat
+git diff --stat
 ```
 
-staged 변경사항이 없다면:
+staged 변경이 없으면 unstaged 변경을 기준으로 합니다.
+변경사항이 없으면 사용자에게 알리고 종료합니다.
+
+### Step 2: 워크플로우 결정
+
+다음 기준으로 **직접 푸시 vs PR**을 결정합니다:
+
+| 조건 | 결정 | 이유 |
+|---|---|---|
+| 변경 파일 1~3개 AND 로직 변경 없음 | **main 직접 푸시** | 린트/오타/설정 수정은 리뷰 불필요 |
+| i18n, 주석, README, 설정 파일만 변경 | **main 직접 푸시** | 코드 동작에 영향 없음 |
+| `.claude/skills/` 파일만 변경 | **main 직접 푸시** | 개발 도구 설정 변경 |
+| `*.service.ts`, `*.controller.ts` 변경 | **브랜치+PR** | 비즈니스 로직 변경 |
+| `Dockerfile`, `docker-compose`, CI 변경 | **브랜치+PR** | 인프라 변경 |
+| DB 스키마 (`packages/db/`) 변경 | **브랜치+PR** | 데이터 구조 변경 |
+| 파일 4개 이상 변경 | **브랜치+PR** | 규모가 큰 변경 |
+| 사용자가 명시적으로 지정 | **지정대로** | 사용자 의도 우선 |
+
+**애매한 경우**: 사용자에게 한 문장으로 물어봅니다:
+> "파일 5개 변경 (컴포넌트 3개 + i18n 2개). PR로 진행할까요, main에 바로 푸시할까요?"
+
+### Step 3: 변경사항 분석 + 커밋 메시지 생성
 
 ```bash
-git diff
+git diff --staged  # 또는 git diff
+git log --oneline -5  # 커밋 메시지 스타일 참고
 ```
 
-### 2단계: 변경사항 분석
+#### 커밋 타입
 
-다음 정보를 파악합니다:
+| 타입 | 사용 시점 |
+|---|---|
+| `feat` | 새로운 기능 추가 |
+| `fix` | 버그 수정 |
+| `docs` | 문서 수정 |
+| `style` | 코드 포맷팅 (기능 변경 없음) |
+| `refactor` | 코드 리팩토링 |
+| `test` | 테스트 코드 추가/수정 |
+| `chore` | 빌드, 의존성, 설정 등 |
+| `perf` | 성능 개선 |
 
-- 어떤 파일이 수정되었는가?
-- 어떤 기능이 추가/수정/삭제되었는가?
-- 버그 수정인가, 새 기능인가, 리팩토링인가?
-
-### 3단계: 커밋 타입 결정
-
-| 타입       | 사용 시점                                      |
-| ---------- | ---------------------------------------------- |
-| `feat`     | 새로운 기능 추가                               |
-| `fix`      | 버그 수정                                      |
-| `docs`     | 문서 수정 (코드 변경 없음)                     |
-| `style`    | 코드 포맷팅, 세미콜론 누락 등 (기능 변경 없음) |
-| `refactor` | 코드 리팩토링 (기능 변경 없음)                 |
-| `test`     | 테스트 코드 추가/수정                          |
-| `chore`    | 빌드 프로세스, 의존성 관리 등                  |
-| `perf`     | 성능 개선                                      |
-
-### 4단계: 메시지 작성
-
-**형식**:
+#### 메시지 형식
 
 ```
-<타입>: <제목>
+<타입>(<선택: 스코프>): <제목 — 소문자 시작, 50자 이내, 마침표 없음>
 
-<본문> (선택사항)
+<본문 — 변경 이유와 내용, 72자 줄바꿈>
 
-<푸터> (선택사항)
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 ```
 
-**규칙**:
+**commitlint 규칙**:
+- subject는 소문자로 시작 (sentence-case 금지)
+- 스코프가 있으면 괄호 사용: `feat(frontend): ...`
+- HEREDOC으로 커밋 메시지 전달 (줄바꿈 보존)
 
-- 제목: 50자 이내, 명령형, 마침표 없음
-- 본문: 72자마다 줄바꿈, 변경 이유와 방법 설명
-- 푸터: 이슈 참조 (예: `Fixes #123`)
+#### 논리적 커밋 분리
+
+여러 종류의 변경이 섞여있으면 논리적 단위로 분리하여 커밋합니다:
+- 기능 추가 + 린트 수정 → 2개 커밋
+- 백엔드 변경 + 프론트엔드 변경 → 관련 있으면 1개, 독립적이면 2개
+
+### Step 4: 실행
+
+#### A. main 직접 푸시 경로
+
+```bash
+# 1. 파일 스테이징 (구체적 파일명 — git add -A 사용 금지)
+git add <file1> <file2> ...
+
+# 2. 커밋 (HEREDOC으로 메시지 전달)
+git commit -m "$(cat <<'EOF'
+<커밋 메시지>
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+EOF
+)"
+
+# 3. 푸시
+git push origin main
+```
+
+#### B. 브랜치+PR 경로
+
+```bash
+# 1. 브랜치 생성 (타입/설명 형식)
+git checkout -b <type>/<short-description>
+# 예: feat/excel-export, fix/login-error, refactor/cache-strategy
+
+# 2. 파일 스테이징 + 커밋
+git add <files>
+git commit -m "$(cat <<'EOF'
+<커밋 메시지>
+
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+EOF
+)"
+
+# 3. 푸시
+git push -u origin <branch-name>
+
+# 4. PR 생성
+gh pr create --title "<PR 제목>" --body "$(cat <<'EOF'
+## Summary
+<변경 내용 1~3줄>
+
+## Test plan
+<검증 방법>
+
+Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
+PR 생성 후 URL을 사용자에게 알려줍니다.
+
+### Step 5: 결과 보고
+
+```
+커밋 완료:
+- 방식: main 직접 푸시 / PR #XX 생성
+- 커밋: <hash> <메시지 제목>
+- 변경: N개 파일, +XX/-YY lines
+```
 
 ## 예시
 
-### 예시 1: 새로운 기능 추가
-
-**변경사항**: 사용자 로그인 폼 컴포넌트 추가
-
-**커밋 메시지**:
+### 예시 1: 작은 수정 → main 직접 푸시
 
 ```
-feat: 사용자 로그인 폼 컴포넌트 추가
-
-- 이메일과 비밀번호 입력 필드 구현
-- 유효성 검사 로직 추가
-- 로딩 상태 처리
+변경: messages/ko/equipment.json (번역 오타 수정)
+→ 판단: i18n 파일 1개, 동작 영향 없음 → main 직접 푸시
+→ 커밋: fix: 장비 번역 오타 수정
 ```
 
-### 예시 2: 버그 수정
-
-**변경사항**: 토큰 만료 시 무한 리다이렉트 문제 해결
-
-**커밋 메시지**:
+### 예시 2: 기능 추가 → 브랜치+PR
 
 ```
-fix: 토큰 만료 시 무한 리다이렉트 버그 해결
-
-토큰 갱신 로직에서 만료 시간을 잘못 계산하여
-무한 루프가 발생하던 문제를 수정
-
-Fixes #456
+변경: equipment.service.ts, equipment.controller.ts,
+      EquipmentExport.tsx, equipment-api.ts (4개 파일)
+→ 판단: 서비스/컨트롤러 변경 + 4개 파일 → 브랜치+PR
+→ 브랜치: feat/equipment-excel-export
+→ PR #35: "feat: 장비 엑셀 내보내기 기능 추가"
 ```
 
-### 예시 3: 문서 업데이트
-
-**변경사항**: README에 설치 가이드 추가
-
-**커밋 메시지**:
+### 예시 3: 사용자가 명시적 지정
 
 ```
-docs: README에 설치 가이드 추가
+사용자: "PR 없이 그냥 푸시해줘"
+→ 사용자 지시 우선 → main 직접 푸시
 ```
-
-### 예시 4: 리팩토링
-
-**변경사항**: 중복 코드 제거 및 함수 분리
-
-**커밋 메시지**:
-
-```
-refactor: 사용자 인증 로직 모듈화
-
-- 중복되던 토큰 검증 코드를 별도 함수로 분리
-- 인증 관련 유틸리티 함수 통합
-```
-
-### 예시 5: 스타일 변경
-
-**변경사항**: ESLint 규칙에 맞춰 코드 포맷팅
-
-**커밋 메시지**:
-
-```
-style: ESLint 규칙에 따라 코드 포맷팅 적용
-```
-
-### 예시 6: 의존성 업데이트
-
-**변경사항**: Next.js 버전 업데이트
-
-**커밋 메시지**:
-
-```
-chore: Next.js 14.0.0으로 업데이트
-```
-
-## 작성 팁
-
-### ✅ 좋은 커밋 메시지
-
-- **명확한 타입**: `feat: 사용자 프로필 이미지 업로드 기능 추가`
-- **구체적인 설명**: `fix: 장바구니에서 수량 0일 때 삭제 버튼 미표시 버그 해결`
-- **한글로 간결하게**: `refactor: API 호출 로직 재사용 가능하게 개선`
-
-### ❌ 나쁜 커밋 메시지
-
-- **모호함**: `fix: 버그 수정`
-- **너무 김**: `feat: 사용자가 프로필 페이지에서 자신의 이미지를 업로드할 수 있고 크롭할 수 있으며 저장할 수 있는 기능을 추가함`
-- **여러 변경사항**: `feat: 로그인 기능 추가 및 버그 수정 및 문서 업데이트`
-
-## 실행 흐름
-
-1. `git diff --staged` 또는 `git diff` 실행
-2. 변경사항 분석
-3. 적절한 타입 선택
-4. 제목 작성 (50자 이내)
-5. 필요시 본문 추가
-6. 이슈 번호가 있으면 푸터 추가
-7. 최종 커밋 메시지 제시
 
 ## 주의사항
 
 - 하나의 커밋에는 하나의 논리적 변경사항만 포함
-- 여러 타입의 변경이 섞여있다면 커밋 분리 제안
-- 제목은 명령형으로 작성 ("추가했음" ❌, "추가" ✅)
-- 마침표 없음
-- 한국어로 명확하고 이해하기 쉽게 작성
+- `git add -A`나 `git add .` 사용 금지 — 구체적 파일명 나열
+- `.env`, 시크릿 파일은 커밋하지 않음 — 발견 시 경고
+- pre-commit hook 실패 시 새 커밋 생성 (amend 금지)
+- PR 생성 시 `GH_TOKEN` 환경변수 필요 — 없으면 사용자에게 안내

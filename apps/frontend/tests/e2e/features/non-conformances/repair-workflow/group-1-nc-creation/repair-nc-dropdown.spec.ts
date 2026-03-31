@@ -35,7 +35,6 @@ test.describe('Group A-1: NC Dropdown Display in Repair Form', () => {
     // Open dropdown (shadcn Select uses combobox button)
     const ncSelect = testOperatorPage.getByRole('combobox', { name: /부적합 선택/i });
     await ncSelect.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // Verify "선택 안 함" option exists
     const noSelectionOption = testOperatorPage.getByRole('option', { name: '선택 안 함' });
@@ -62,7 +61,6 @@ test.describe('Group A-1: NC Dropdown Display in Repair Form', () => {
     // Open dropdown (shadcn Select uses combobox button)
     const ncSelect = testOperatorPage.getByRole('combobox', { name: /부적합 선택/i });
     await ncSelect.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // Verify dropdown listbox is visible
     const dropdownMenu = testOperatorPage.getByRole('listbox');
@@ -89,7 +87,6 @@ test.describe('Group A-1: NC Dropdown Display in Repair Form', () => {
 
     // Verify it can be opened with keyboard (Space or Enter)
     await testOperatorPage.keyboard.press('Enter');
-    await testOperatorPage.waitForTimeout(300);
 
     // Dropdown listbox should open
     const dropdown = testOperatorPage.getByRole('listbox');

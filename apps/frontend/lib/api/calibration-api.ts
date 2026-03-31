@@ -135,6 +135,7 @@ export interface IntermediateCheckItem {
   status: string;
   calibrationAgency: string;
   notes: string | null;
+  version: number;
   // 플래튼된 조인 필드 (백엔드에서 equipment → flat)
   equipmentName?: string;
   managementNumber?: string;

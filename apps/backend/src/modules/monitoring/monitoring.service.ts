@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as os from 'os';
 import * as process from 'process';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
+import { ClientErrorDto } from './dto/client-error.dto';
 
 // 추적할 엔드포인트 최대 수 (메모리 누수 방지)
 const MAX_TRACKED_ENDPOINTS = 500;
@@ -16,7 +17,7 @@ const UUID_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 const NUMERIC_ID_PATTERN = /\/\d+(?=\/|$)/g;
 
 @Injectable()
-export class MonitoringService {
+export class MonitoringService implements OnModuleDestroy {
   // 시스템 시작 시간
   private readonly startTime = Date.now();
 
@@ -66,6 +67,9 @@ export class MonitoringService {
   // 메트릭 업데이트 간격 (30초)
   private readonly updateInterval = 30000;
 
+  // 주기적 메트릭 수집 타이머 (OnModuleDestroy에서 정리)
+  private metricsTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor(
     private readonly logger: LoggerService,
     private readonly metricsService: MetricsService
@@ -76,8 +80,15 @@ export class MonitoringService {
     this.updateMetrics();
     this.logger.log('모니터링 서비스가 초기화되었습니다.');
 
-    // 주기적 메트릭 수집
-    setInterval(() => this.updateMetrics(), this.updateInterval);
+    // 주기적 메트릭 수집 (.unref: 이 타이머가 종료를 막지 않도록)
+    this.metricsTimer = setInterval(() => this.updateMetrics(), this.updateInterval).unref();
+  }
+
+  onModuleDestroy(): void {
+    if (this.metricsTimer) {
+      clearInterval(this.metricsTimer);
+      this.metricsTimer = null;
+    }
   }
 
   /**
@@ -124,6 +135,20 @@ export class MonitoringService {
     } catch (error) {
       this.logger.error('메트릭 업데이트 중 오류가 발생했습니다.', getErrorStack(error));
     }
+  }
+
+  /**
+   * 프론트엔드 클라이언트 에러 구조화 로깅
+   */
+  logClientError(dto: ClientErrorDto): void {
+    this.logger.error('클라이언트 에러 수신', undefined, {
+      message: dto.message,
+      component: dto.component,
+      url: dto.url,
+      userAgent: dto.userAgent,
+      timestamp: dto.timestamp,
+      ...(dto.stack ? { stack: dto.stack } : {}),
+    });
   }
 
   /**

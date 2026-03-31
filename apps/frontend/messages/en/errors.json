@@ -117,6 +117,16 @@
     "message": "An error occurred while uploading the file.",
     "solutions": ["Please try again later", "Check that the file is not corrupted"]
   },
+  "FILE_EMPTY": {
+    "title": "Empty File",
+    "message": "The uploaded file is empty.",
+    "solutions": ["Make sure the file has content", "Select a different file"]
+  },
+  "FILE_CONTENT_MISMATCH": {
+    "title": "File Content Mismatch",
+    "message": "The file content does not match the declared format.",
+    "solutions": ["Make sure the file is not corrupted", "Select a file with the correct format"]
+  },
   "HISTORY_SAVE_FAILED": {
     "title": "History Save Failed",
     "message": "An error occurred while saving the history information.",

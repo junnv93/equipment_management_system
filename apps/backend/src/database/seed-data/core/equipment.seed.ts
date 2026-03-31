@@ -112,7 +112,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
   // Status distribution: available(3), in_use(1), non_conforming(1), spare(1), checked_out(1), calibration_overdue(1)
   // =========================================================================
 
-  // Available + Calibration Overdue (3 months past)
+  // Available + Calibration Overdue (3 months past) + 전체 필드 테스트용
   createEquipment(
     EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
     '스펙트럼 분석기',
@@ -122,7 +122,23 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'available',
     'external_calibration',
     monthsAgo(3),
-    daysAgo(10)
+    daysAgo(10),
+    {
+      manufacturerContact: '02-1234-5678',
+      supplier: 'Keysight Technologies Korea',
+      contactInfo: '031-987-6543',
+      accessories: 'RF 케이블 3m x2, N-SMA 어댑터, 전용 캐리어 케이스',
+      technicalManager: '김기술',
+      initialLocation: 'SUWON Lab A-201',
+      installationDate: new Date('2023-06-15'),
+      calibrationResult: '적합',
+      correctionFactor: '0.98',
+      needsIntermediateCheck: true,
+      intermediateCheckCycle: 6,
+      lastIntermediateCheckDate: monthsAgo(2),
+      nextIntermediateCheckDate: daysLater(120),
+      manualLocation: 'A동 201호 캐비닛',
+    }
   ),
 
   // Available + Due Soon (7 days)

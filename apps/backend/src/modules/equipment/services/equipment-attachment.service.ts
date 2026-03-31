@@ -5,6 +5,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type { MulterFile } from '../../../types/common.types';
+import type { AttachmentType } from '@equipment-management/schemas';
 
 /**
  * 장비 첨부 파일 서비스
@@ -25,7 +26,7 @@ export class EquipmentAttachmentService {
    */
   async createAttachment(
     file: MulterFile,
-    attachmentType: 'inspection_report' | 'history_card' | 'other',
+    attachmentType: AttachmentType,
     equipmentId?: string,
     requestId?: string,
     description?: string
@@ -63,7 +64,7 @@ export class EquipmentAttachmentService {
    */
   async createAttachments(
     files: MulterFile[],
-    attachmentType: 'inspection_report' | 'history_card' | 'other',
+    attachmentType: AttachmentType,
     equipmentId?: string,
     requestId?: string
   ): Promise<EquipmentAttachment[]> {

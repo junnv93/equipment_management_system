@@ -17,7 +17,6 @@ test.describe('Tab Navigation', () => {
   test('Navigate through all tabs', async ({ testOperatorPage: page }) => {
     // 1. Navigate to equipment detail page
     await page.goto(`/equipment/${EQUIP_SPECTRUM_ANALYZER_SUW_E_ID}`);
-    await page.waitForLoadState('networkidle');
 
     // 2. Verify default tab is '기본 정보'
     const basicTab = page.locator('[role="tab"][aria-label="기본 정보 탭"]');

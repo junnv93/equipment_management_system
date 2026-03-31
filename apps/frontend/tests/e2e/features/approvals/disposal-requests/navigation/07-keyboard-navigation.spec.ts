@@ -38,7 +38,6 @@ test.describe('UI/UX & Accessibility', () => {
 
     // 5. Verify keyboard accessibility - all interactive elements can be reached
     // Wait for dialog to fully render
-    await testOperatorPage.waitForTimeout(500);
 
     // Verify radio buttons are keyboard accessible
     const obsoleteRadio = testOperatorPage.getByRole('radio', { name: '노후화' });
@@ -78,7 +77,6 @@ test.describe('UI/UX & Accessibility', () => {
     // Reopen dialog
     await disposalButton.click();
     await expect(dialog).toBeVisible({ timeout: 10000 });
-    await testOperatorPage.waitForTimeout(500);
 
     // Tab through all focusable elements and verify focus stays within dialog
     // Typical tab order: close button -> radio buttons -> textarea -> submit/cancel buttons -> back to close

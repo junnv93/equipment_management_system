@@ -37,13 +37,11 @@ export async function selectShadcnOption(
   await selectTrigger.click();
 
   // Wait for options list to appear
-  await page.waitForTimeout(300);
 
   // Click the desired option
   await page.getByRole('option', { name: optionText, exact: true }).click();
 
   // Wait for selection to complete and dropdown to close
-  await page.waitForTimeout(200);
 }
 
 /**
@@ -71,7 +69,6 @@ export async function openRepairDialog(page: Page, equipmentId: string): Promise
     .waitFor({ state: 'visible', timeout: 5000 });
 
   // Wait for dialog animation to complete
-  await page.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 }
 
 /**
@@ -101,7 +98,6 @@ export async function openIncidentDialog(page: Page, equipmentId: string): Promi
   await registerButton.waitFor({ state: 'attached', timeout: 15000 });
 
   // Then wait additional time for animations and ensure button is fully interactive
-  await page.waitForTimeout(1000);
   await registerButton.waitFor({ state: 'visible', timeout: 5000 });
   await registerButton.click();
 
@@ -111,7 +107,6 @@ export async function openIncidentDialog(page: Page, equipmentId: string): Promi
     .waitFor({ state: 'visible', timeout: 5000 });
 
   // Wait for dialog animation to complete and form to be ready
-  await page.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
   // Verify the form label exists (not the select element itself, since shadcn Select doesn't use name attribute)
   await page.getByText(/사고 유형/i).waitFor({ state: 'visible', timeout: 5000 });
@@ -134,5 +129,4 @@ export async function openNonConformanceEditDialog(page: Page, equipmentId: stri
     .click();
 
   // Wait for dialog animation
-  await page.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 }

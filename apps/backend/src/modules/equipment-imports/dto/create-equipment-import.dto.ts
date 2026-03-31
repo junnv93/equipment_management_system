@@ -17,8 +17,11 @@ const classificationValues = Object.keys(CLASSIFICATION_LABELS) as [string, ...s
  * sourceType에 따라 조건부 필드 validation:
  * - rental: vendorName 필수
  * - internal_shared: ownerDepartment 필수
+ *
+ * 주의: Zod v4에서 refinement가 있는 스키마에 .extend() 후 .omit() 불가.
+ * baseImportSchemaRaw(refinement 없음)로 extend → 각 스키마에 refinement 개별 적용.
  */
-const baseImportSchema = z.object({
+const baseImportSchemaRaw = z.object({
   equipmentName: z.string().min(1, VM.equipmentImport.name.required).max(100),
   modelName: z.string().max(100).optional(),
   manufacturer: z.string().max(100).optional(),
@@ -32,8 +35,15 @@ const baseImportSchema = z.object({
   reason: z.string().min(1, VM.equipmentImport.reason.required),
 });
 
+const dateRangeCheck = (data: { usagePeriodStart: string; usagePeriodEnd: string }) =>
+  new Date(data.usagePeriodEnd) > new Date(data.usagePeriodStart);
+const dateRangeParams = {
+  message: 'Usage end date must be after the start date.',
+  path: ['usagePeriodEnd'] as string[],
+};
+
 // Rental import schema (외부 렌탈 업체)
-const rentalImportSchema = baseImportSchema.extend({
+const rentalImportSchemaRaw = baseImportSchemaRaw.extend({
   sourceType: z.literal('rental'),
   vendorName: z.string().min(1, VM.equipmentImport.rentalCompany.required).max(100),
   vendorContact: z.string().max(100).optional(),
@@ -43,18 +53,21 @@ const rentalImportSchema = baseImportSchema.extend({
   internalContact: z.undefined().optional(),
   borrowingJustification: z.undefined().optional(),
 });
+const rentalImportSchema = rentalImportSchemaRaw.refine(dateRangeCheck, dateRangeParams);
 
 // Internal shared import schema (내부 공용장비)
-const internalSharedImportSchema = baseImportSchema.extend({
-  sourceType: z.literal('internal_shared'),
-  ownerDepartment: z.string().min(1, VM.equipmentImport.ownerDepartment.required).max(100),
-  internalContact: z.string().max(100).optional(),
-  borrowingJustification: z.string().optional(),
-  // Vendor fields should be undefined for internal shared
-  vendorName: z.undefined().optional(),
-  vendorContact: z.undefined().optional(),
-  externalIdentifier: z.undefined().optional(),
-});
+const internalSharedImportSchema = baseImportSchemaRaw
+  .extend({
+    sourceType: z.literal('internal_shared'),
+    ownerDepartment: z.string().min(1, VM.equipmentImport.ownerDepartment.required).max(100),
+    internalContact: z.string().max(100).optional(),
+    borrowingJustification: z.string().optional(),
+    externalIdentifier: z.string().max(100).optional(),
+    // Vendor fields should be undefined for internal shared
+    vendorName: z.undefined().optional(),
+    vendorContact: z.undefined().optional(),
+  })
+  .refine(dateRangeCheck, dateRangeParams);
 
 // Discriminated union schema
 export const createEquipmentImportSchema = z.discriminatedUnion('sourceType', [
@@ -155,7 +168,9 @@ export class CreateEquipmentImportDto {
 /**
  * @deprecated Use CreateEquipmentImportDto instead
  */
-export const createRentalImportSchema = rentalImportSchema.omit({ sourceType: true });
+export const createRentalImportSchema = rentalImportSchemaRaw
+  .omit({ sourceType: true })
+  .refine(dateRangeCheck, dateRangeParams);
 export type CreateRentalImportInput = z.infer<typeof createRentalImportSchema>;
 export const CreateRentalImportValidationPipe = new ZodValidationPipe(createRentalImportSchema);
 

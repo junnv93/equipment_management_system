@@ -31,8 +31,9 @@ import {
   getManagementNumberClasses,
   getEquipmentStatusTokenStyle,
 } from '@/lib/design-tokens';
+import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import type { CalibrationMethod } from '@equipment-management/schemas';
+import type { CalibrationMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 /**
  * 테이블 열 정의
@@ -82,11 +83,13 @@ const StatusBadge = memo(function StatusBadge({
   status: string;
   nextCalibrationDate?: string | Date | null;
 }) {
+  const t = useTranslations('equipment');
   const style = getEquipmentStatusTokenStyle(status, nextCalibrationDate);
+  const displayStatus = getDisplayStatus((status || 'available') as EquipmentStatus);
 
   return (
     <Badge variant="outline" className={`${style.className} ${EQUIPMENT_TABLE_TOKENS.statusBadge}`}>
-      {style.label}
+      {t(`status.${displayStatus}` as Parameters<typeof t>[0])}
     </Badge>
   );
 });
@@ -217,11 +220,9 @@ const EquipmentRow = memo(function EquipmentRow({
   const statusToken =
     EQUIPMENT_STATUS_TOKENS[equipment.status || 'available'] || DEFAULT_STATUS_CONFIG;
 
-  // 상태명 (상태 바 tooltip + StatusBadge 공용)
-  const statusStyle = useMemo(
-    () => getEquipmentStatusTokenStyle(equipment.status, equipment.nextCalibrationDate),
-    [equipment.status, equipment.nextCalibrationDate]
-  );
+  // 상태명 (상태 바 tooltip용)
+  const displayStatus = getDisplayStatus((equipment.status || 'available') as EquipmentStatus);
+  const statusLabel = t(`status.${displayStatus}` as Parameters<typeof t>[0]);
 
   /**
    * 교정 기한 표시 (D-day 형식)
@@ -278,7 +279,7 @@ const EquipmentRow = memo(function EquipmentRow({
       <TableCell className={EQUIPMENT_TABLE_TOKENS.statusBar.cell} aria-hidden="true">
         <div
           className={`${EQUIPMENT_TABLE_TOKENS.statusBar.indicator} ${statusToken.card.statusBarColor}`}
-          title={statusStyle.label}
+          title={statusLabel}
         />
       </TableCell>
 

@@ -64,7 +64,6 @@ test.describe('Equipment List - Basic', () => {
     await searchInput.fill('스펙트럼');
 
     // 디바운스 대기
-    await page.waitForTimeout(500);
 
     // URL에 검색어 반영 확인
     await expect(page).toHaveURL(/search=/);
@@ -374,7 +373,6 @@ test.describe('Equipment List - Role-based UI', () => {
     testOperatorPage: page,
   }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 모든 역할에 사이트 필터가 표시됨 (combobox로 명확히 지정 - 뱃지와 중복 방지)
     const siteFilter = page.locator('#filter-site');
@@ -386,7 +384,6 @@ test.describe('Equipment List - Role-based UI', () => {
 
   test('기술책임자는 모든 사이트를 볼 수 있어야 함', async ({ techManagerPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 기술책임자는 사이트 필터를 사용할 수 있어야 함 (combobox로 명확히 지정)
     const siteFilter = page.locator('#filter-site');

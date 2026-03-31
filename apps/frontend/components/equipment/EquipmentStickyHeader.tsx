@@ -13,15 +13,17 @@ import { cn } from '@/lib/utils';
 import {
   shouldDisplayCalibrationStatus,
   STATUS_NOT_ALLOWED_FOR_CHECKOUT,
+  getDisplayStatus,
 } from '@/lib/constants/equipment-status-styles';
 import { DisposalButton } from './disposal/DisposalButton';
 import { useDisposalPermissions } from '@/hooks/use-disposal-permissions';
 import {
   EquipmentStatusValues as ESVal,
+  type EquipmentStatus,
   type DisposalRequest,
   CalibrationApprovalStatusValues as CASVal,
 } from '@equipment-management/schemas';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   EQUIPMENT_STATUS_TOKENS,
   DEFAULT_STATUS_CONFIG,
@@ -80,12 +82,15 @@ export function EquipmentStickyHeader({
       (equipment.status ?? ESVal.AVAILABLE) as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
     );
 
-  // 상태 정규화: calibration_scheduled → available, calibration_overdue → non_conforming
+  // 상태 정규화: DISPLAY_STATUS_OVERRIDES SSOT 사용
   const getStatusToken = (status: string) => {
-    const normalized = status === ESVal.CALIBRATION_SCHEDULED ? ESVal.AVAILABLE : status;
-    const final = normalized === ESVal.CALIBRATION_OVERDUE ? ESVal.NON_CONFORMING : normalized;
+    const final = getDisplayStatus(status as EquipmentStatus);
     const token = EQUIPMENT_STATUS_TOKENS[final] || DEFAULT_STATUS_CONFIG;
-    return { label: token.label, icon: token.icon, bg: token.card.className };
+    return {
+      label: t(`status.${final}` as Parameters<typeof t>[0]),
+      icon: token.icon,
+      bg: token.card.className,
+    };
   };
 
   const statusConfig = getStatusToken(equipment.status || ESVal.AVAILABLE);
@@ -216,7 +221,7 @@ export function EquipmentStickyHeader({
         {/* 오른쪽: 액션 버튼 */}
         <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.actions}>
           {canCheckout && (
-            <Link href={`/equipment/${equipmentId}/checkout`}>
+            <Link href={`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?equipmentId=${equipmentId}`}>
               <Button size="sm" aria-label={t('header.checkoutAriaLabel')}>
                 <FileOutput className="h-4 w-4 mr-1.5" aria-hidden="true" />
                 {t('header.checkoutRequest')}

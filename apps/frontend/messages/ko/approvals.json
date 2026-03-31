@@ -18,6 +18,13 @@
     "rejected": "반려",
     "all": "전체"
   },
+  "unifiedStatus": {
+    "pending": "대기",
+    "pending_review": "검토 대기",
+    "reviewed": "검토 완료",
+    "approved": "승인 완료",
+    "rejected": "반려"
+  },
   "actions": {
     "approve": "승인",
     "reject": "반려",
@@ -257,6 +264,26 @@
     "create": "등록",
     "update": "수정",
     "delete": "삭제"
+  },
+  "summaryTemplates": {
+    "calibrationPlan": "{year}년 {site} 교정계획서",
+    "equipmentRequest": "{equipment} {action} 요청",
+    "equipmentRequestNoName": "장비 {action} 요청",
+    "disposal_review": "{equipment} ({managementNumber}) 폐기 검토",
+    "disposal_final": "{equipment} ({managementNumber}) 폐기 승인",
+    "software": "{name} 변경 요청",
+    "inspection": "{equipment} 중간점검",
+    "nonConformance": "{cause} (조치 완료)",
+    "calibration": "장비({equipmentId}) 교정 기록 등록",
+    "checkoutOutgoing": "{equipmentNames} 반출 요청",
+    "checkoutIncoming": "{equipmentNames} 반입 승인 대기",
+    "equipmentImportRental": "{equipmentName} 렌탈 반입 ({vendor})",
+    "equipmentImportShared": "{equipmentName} 공용장비 반입 ({department})"
+  },
+  "unknown": "알 수 없음",
+  "defaults": {
+    "approveComment": "승인합니다",
+    "rejectComment": "반려합니다"
   },
   "calibrationFactorApprovals": {
     "title": "보정계수 승인 관리",

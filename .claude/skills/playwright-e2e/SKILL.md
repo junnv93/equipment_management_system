@@ -1,12 +1,7 @@
 ---
 name: playwright-e2e
 description: |
-  Playwright E2E 테스트 계획 수립, 코드 생성, 실행, 검증까지의 전체 워크플로우를 관리하는 스킬.
-  "E2E 테스트 작성", "Playwright 테스트", "테스트 계획", "테스트 생성", "페이지 테스트",
-  "기능 테스트", "역할별 테스트", "권한 테스트", "통합 테스트 작성" 등의 맥락에서 사용하세요.
-  playwright-test MCP 서버의 planner/generator/healer 에이전트를 조율하며,
-  브라우저 리소스 경합을 방지하는 순차 실행 전략과 프로젝트 고유 패턴을 자동 적용합니다.
-  사용자가 특정 페이지나 기능에 대한 E2E 테스트를 요청할 때 반드시 이 스킬을 사용하세요.
+  Playwright E2E test workflow orchestrator — covers planning, code generation, execution, healing, and verification. Coordinates playwright-test MCP server's planner/generator/healer agents with sequential execution strategy to prevent browser resource contention. Automatically applies project-specific patterns (auth fixtures, storageState, role-based testing). Use whenever the user requests E2E tests, Playwright tests, test plans, test generation, page tests, feature tests, role-based tests, or permission tests. Trigger on: "E2E 테스트", "Playwright 테스트", "테스트 계획", "테스트 생성", "기능 테스트", "권한 테스트".
 ---
 
 # Playwright E2E 테스트 워크플로우 스킬
@@ -39,7 +34,33 @@ Playwright E2E 테스트의 **계획 → 생성 → 실행 → 검증 → 보고
 5. 권한 로직: 컴포넌트 내 hasRole/canCreate 조건 — 역할별 UI 차이
 ```
 
-**1b. 브라우저 스냅샷 (보조)**
+**1b. 아키텍처 분석 (필수)**
+
+UI 요소 파악만으로는 "시스템이 올바른지"를 검증하는 테스트를 만들 수 없다.
+테스트가 진짜 프로세스를 검증하려면, 백엔드 동작과 프론트엔드 상태 관리도 이해해야 한다.
+
+```
+아키텍처 분석 대상:
+1. CAS 엔티티 여부: 백엔드 서비스가 VersionedBaseService를 상속하는가?
+   → YES: 동시 수정 시 VERSION_CONFLICT(409) 테스트 필요
+   → 파일: modules/<feature>/<feature>.service.ts
+
+2. 캐시 무효화 패턴: 프론트엔드 mutation의 onSuccess에서 invalidateQueries를 호출하는가?
+   → 호출 후 페이지 전환(router.push)이 await 없이 실행되면 stale data 위험
+   → 파일: components/<feature>/*.tsx (useMutation/useOptimisticMutation 검색)
+
+3. 접근 제어 데코레이터: 컨트롤러 엔드포인트에 @SiteScoped 또는 enforceSiteAccess가 있는가?
+   → 있으면: 타 사이트 사용자가 접근 불가한지 테스트 필요
+   → 파일: modules/<feature>/<feature>.controller.ts
+
+4. 에러 전파 체인: 백엔드 에러 코드 → mapBackendErrorCode → UI 메시지 흐름이 연결되는가?
+   → VERSION_CONFLICT 발생 시 사용자에게 올바른 메시지가 표시되는지 검증
+   → 파일: lib/errors/equipment-errors.ts, hooks/use-optimistic-mutation.ts
+```
+
+이 분석의 결과는 Phase 2의 "아키텍처 시나리오" 섹션에 반영된다.
+
+**1c. 브라우저 스냅샷 (보조)**
 
 코드만으로 불확실할 때, `playwright-test-planner` 에이전트로 실제 DOM을 확인한다.
 동적 렌더링(조건부 버튼, 역할별 UI 차이, 상태별 버튼 유무)을 확인할 때 특히 유용하다.
@@ -52,6 +73,51 @@ Playwright E2E 테스트의 **계획 → 생성 → 실행 → 검증 → 보고
 - suite 단위로 기능 영역 분리 (목록/상세/역할별 등)
 - 각 test에 구체적인 steps와 expectedResults 명시
 - file 경로는 반드시 `tests/e2e/features/<feature>/` 하위로 지정
+
+#### 아키텍처 시나리오 체크리스트 (필수)
+
+테스트 계획에 happy-path만 나열하면 "UI가 렌더링되는지"만 확인하고 끝난다.
+시스템이 실제로 올바르게 동작하는지 검증하려면 다음 시나리오를 반드시 포함해야 한다.
+Phase 1b의 아키텍처 분석 결과에 따라 해당하는 항목만 선택한다.
+
+```
+해당 시 필수 포함 시나리오:
+
+1. [CAS 엔티티인 경우] 동시 수정 충돌 복구
+   - 사용자 A가 상세 페이지를 연다 (version=1 캐시)
+   - API로 동일 엔티티를 수정한다 (version→2)
+   - 사용자 A가 승인/수정 버튼을 클릭한다
+   - 기대: VERSION_CONFLICT 토스트 표시 + 페이지가 최신 데이터로 갱신
+   - 이 테스트가 중요한 이유: CAS 에러 후 UI가 stale 상태로 멈추면
+     사용자가 계속 실패하는 버튼을 클릭하게 된다
+
+2. [뮤테이션이 있는 경우] 뮤테이션 후 캐시 일관성
+   - 목록 페이지에서 항목 수를 확인한다 (예: 승인 대기 5건)
+   - 상세 페이지에서 승인을 수행한다
+   - 목록 페이지로 돌아간다 (뒤로가기 또는 링크)
+   - 기대: 목록이 갱신되어 4건으로 표시 (stale 5건이 아님)
+   - 이 테스트가 중요한 이유: invalidateQueries 누락이나 Navigate-Before-Invalidate
+     버그는 실제 사용에서 가장 흔한 UX 결함이다
+
+3. [사이트 접근 제어가 있는 경우] 타 사이트 데이터 격리
+   - 수원 사이트 사용자로 로그인한다
+   - API로 의왕 사이트 장비의 상세/수정/삭제를 시도한다
+   - 기대: 403 Forbidden 또는 빈 결과
+   - 이 테스트가 중요한 이유: GET에서 필터링되더라도 PATCH/DELETE에서
+     enforceSiteAccess가 누락되면 데이터 변조가 가능하다
+
+4. [상태 전이가 있는 경우] 전체 워크플로우 관통 테스트
+   - 생성 → 승인 → 실행 → 완료 전체 흐름을 하나의 serial 테스트로 수행
+   - 각 단계 후 상태 배지와 가능한 액션 버튼이 올바른지 검증
+   - 기대: 모든 상태 전이에서 UI가 정확히 반영
+   - 이 테스트가 중요한 이유: 개별 단계 테스트가 통과해도
+     전체 흐름에서 캐시/상태 불일치가 발생할 수 있다
+```
+
+모든 테스트가 이 4가지를 포함할 필요는 없다.
+Phase 1b 분석에서 해당하는 항목만 포함하면 된다.
+하지만 CAS 엔티티에 대해 동시 수정 테스트가 없거나,
+뮤테이션이 있는데 캐시 일관성 테스트가 없다면, 그것은 테스트 계획의 빈틈이다.
 
 ### Phase 3: 테스트 코드 생성
 

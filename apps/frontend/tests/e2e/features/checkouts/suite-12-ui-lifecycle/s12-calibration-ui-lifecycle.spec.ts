@@ -27,6 +27,7 @@ import {
   getBackendToken,
   cleanupCheckoutPool,
   resetEquipmentToAvailable,
+  cancelAllActiveCheckoutsForEquipment,
   clearBackendCache,
   apiGet,
 } from '../helpers/checkout-helpers';
@@ -42,6 +43,9 @@ test.describe('Suite 12: 교정 반출 UI 전체 라이프사이클', () => {
   test.beforeAll(async () => {
     const { getCheckoutPool } = require('../helpers/checkout-helpers');
     const pool = getCheckoutPool();
+
+    // 시드 데이터 포함 모든 활성 체크아웃 취소 (CHECKOUT_EQUIPMENT_ALREADY_ACTIVE 검증 통과)
+    await cancelAllActiveCheckoutsForEquipment(testEquipmentId);
 
     // 장비를 available 상태 + 교정일 여유 있게 설정
     await pool.query(
@@ -110,6 +114,11 @@ test.describe('Suite 12: 교정 반출 UI 전체 라이프사이클', () => {
 
     // UI 확인: "반출 시작" 버튼 표시 (optimistic update)
     await expect(page.getByRole('button', { name: '반출 시작' })).toBeVisible();
+
+    // ★ 목록 캐시 일관성 검증: 승인 후 목록 페이지에서 "승인됨" 상태로 즉시 갱신되어야 함
+    // "승인 후에도 목록이 대기 중으로 보임" 버그를 방지하는 회귀 테스트
+    await page.goto('/checkouts?status=approved');
+    await expect(page.getByText('KRISS 한국표준과학연구원', { exact: false })).toBeVisible();
   });
 
   test('S12-03: technical_manager가 반출 시작 다이얼로그 → checked_out', async ({

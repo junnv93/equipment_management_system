@@ -159,7 +159,6 @@ test.describe('Disposal Review Tab - Reject Same-Team Request with Template', ()
     console.log('✅ RejectModal closed');
 
     // Wait for React Query invalidation to complete
-    await techManagerPage.waitForTimeout(1000);
 
     // Verify the rejected item has been removed from the pending list
     const updatedCount = await approvalItems.count();

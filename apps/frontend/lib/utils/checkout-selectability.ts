@@ -1,56 +1,44 @@
 /**
  * 반출 신청 시 장비 선택 가능 여부 판단 유틸리티
  *
- * SSOT: 허용 상태 규칙은 @equipment-management/shared-constants에서 import
- * 이 파일은 프론트엔드 전용 UI 로직(Equipment 객체 처리, 날짜 포맷팅)만 담당
+ * SSOT 체인:
+ *   shared-constants/checkout-selectability.ts — 허용 상태 규칙 + 차단 사유 i18n 키
+ *     → 이 파일 — Equipment 객체 처리, 날짜 포맷팅, i18n 키 조합
+ *       → Consumer (CreateCheckoutContent) — t(reasonKey, reasonParams)로 resolve
+ *
+ * 모든 사용자 표시 문자열은 i18n 키로 관리 (하드코딩 금지)
  */
 import type { EquipmentStatus, CheckoutPurpose } from '@equipment-management/schemas';
 import {
-  EQUIPMENT_STATUS_LABELS,
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
 import {
   getAllowedStatusesForPurpose,
-  getBlockedReason,
+  getBlockedReasonKey,
   CHECKOUT_HIDDEN_STATUSES,
   type EquipmentSelectability,
 } from '@equipment-management/shared-constants';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { format } from 'date-fns';
 
-/** 프론트엔드 전용 확장: i18n 키 포함 */
-export interface EquipmentSelectabilityWithI18n extends EquipmentSelectability {
-  /** i18n 키 for warningMessage — Phase 3에서 전환 */
-  warningMessageKey?: string;
-  /** i18n 보간 파라미터 for warningMessage */
-  warningMessageParams?: Record<string, string | number>;
-  /** i18n 키 for reason — Phase 3에서 전환 */
-  reasonKey?: string;
-  /** i18n 보간 파라미터 for reason */
-  reasonParams?: Record<string, string | number>;
-}
-
 /**
  * 장비의 선택 가능 여부를 목적에 따라 판단
  *
  * @param equipment 장비 객체
  * @param purpose 반출 목적 (calibration | repair | rental)
- * @returns 선택 가능 여부, 사유, 경고 메시지
+ * @returns i18n 키 기반 선택 가능 결과 — consumer에서 t(reasonKey, reasonParams)로 resolve
  *
  * @example
  * const result = getEquipmentSelectability(equipment, 'calibration');
  * if (!result.selectable) {
- *   // 선택 불가 — result.reason에 사유
- * }
- * if (result.warningMessage) {
- *   // 선택은 되지만 경고 표시
+ *   const message = t(result.reasonKey as Parameters<typeof t>[0], result.reasonParams);
  * }
  */
 export function getEquipmentSelectability(
   equipment: Equipment,
   purpose: CheckoutPurpose
-): EquipmentSelectabilityWithI18n {
+): EquipmentSelectability {
   const status = equipment.status as EquipmentStatus;
   const allowedStatuses = getAllowedStatusesForPurpose(purpose);
 
@@ -63,9 +51,8 @@ export function getEquipmentSelectability(
         const formatted = format(new Date(nextCalDate), 'yyyy.MM.dd');
         return {
           selectable: true,
-          warningMessage: `교정 만료일: ${formatted}`,
-          warningMessageKey: 'checkouts.selectability.calibrationExpiryWarning',
-          warningMessageParams: { date: formatted },
+          warningKey: 'selectability.calibrationExpiryWarning',
+          warningParams: { date: formatted },
         };
       }
     }
@@ -73,19 +60,22 @@ export function getEquipmentSelectability(
     return { selectable: true };
   }
 
-  // 허용 상태가 아닌 경우 — 차단 사유 확인
-  const blockedReason = getBlockedReason(status, purpose);
+  // 허용 상태가 아닌 경우 — SSOT 차단 사유 키 확인
+  const blockedReason = getBlockedReasonKey(status, purpose);
   if (blockedReason) {
-    return { selectable: false, reason: blockedReason };
+    return {
+      selectable: false,
+      reasonKey: blockedReason.key,
+      reasonParams: blockedReason.params,
+    };
   }
 
-  // SSOT에 명시적 사유가 없는 경우 — 상태 라벨로 기본 메시지 생성
-  const statusLabel = EQUIPMENT_STATUS_LABELS[status] ?? status;
+  // SSOT에 명시적 사유가 없는 경우 — 상태 라벨 i18n 키로 기본 메시지 생성
+  const statusLabelKey = `status.${status}`;
   return {
     selectable: false,
-    reason: `${statusLabel} 상태의 장비는 선택할 수 없습니다`,
-    reasonKey: 'checkouts.selectability.statusNotSelectable',
-    reasonParams: { statusLabel },
+    reasonKey: 'selectability.statusNotSelectable',
+    reasonParams: { statusLabel: statusLabelKey },
   };
 }
 

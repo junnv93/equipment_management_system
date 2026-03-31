@@ -14,7 +14,6 @@ test.describe('Calibration Overdue Filter Fix', () => {
     await testOperatorPage.goto('/equipment?calibrationDueFilter=overdue');
 
     // Wait for page to load
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Check that we have results (should be at least 3-6 equipment)
     const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');

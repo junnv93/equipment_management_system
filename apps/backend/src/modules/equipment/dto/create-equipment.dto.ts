@@ -166,8 +166,8 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
   @ApiPropertyOptional({ description: '기술 책임자 (사이트/팀 기준 필터링)' })
   technicalManager?: string;
 
-  @ApiPropertyOptional({ description: '최초 설치 위치' })
-  initialLocation?: string;
+  @ApiProperty({ description: '최초 설치 위치' })
+  initialLocation: string;
 
   @ApiPropertyOptional({ description: '설치 일시' })
   installationDate?: Date;

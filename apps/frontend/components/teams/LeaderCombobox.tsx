@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { USER_ROLE_LABELS } from '@equipment-management/shared-constants';
 import { ROLE_BADGE_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 
@@ -33,6 +32,7 @@ interface LeaderComboboxProps {
  */
 export function LeaderCombobox({ value, onChange, site, teamId, disabled }: LeaderComboboxProps) {
   const t = useTranslations('teams');
+  const tCommon = useTranslations('common');
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -173,7 +173,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
                         ROLE_BADGE_TOKENS[user.role] || 'bg-muted'
                       )}
                     >
-                      {USER_ROLE_LABELS[user.role as keyof typeof USER_ROLE_LABELS] || user.role}
+                      {tCommon(`userRoles.${user.role}`)}
                     </span>
                     {user.department && (
                       <span className="text-xs text-muted-foreground truncate">

@@ -45,7 +45,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
     // 2. Login as lab_manager (already done by fixture)
     // 3. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // Wait for dashboard to load
@@ -55,7 +54,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
 
     // 4. Check browser console for WebSocket connection
     // Wait a bit for WebSocket to attempt connection
-    await siteAdminPage.waitForTimeout(2000);
 
     // Expected: Console shows 'WebSocket connected' message
     const hasWebSocketMessage = consoleMessages.some(
@@ -99,7 +97,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
     // 2. Login as lab_manager (already done by fixture)
     // 3. Navigate to dashboard and note initial stat values
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Wait for initial stat cards to load
     await expect(siteAdminPage.getByRole('heading', { name: '전체 장비' })).toBeVisible({
@@ -127,7 +124,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
     console.log('✓ Triggered dashboard-update event');
 
     // Wait for potential updates
-    await siteAdminPage.waitForTimeout(1000);
 
     // 5. Observe dashboard content
     // Expected: Stat cards update without page reload
@@ -153,7 +149,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
       console.log(`  Toast content: ${toastText}`);
 
       // Expected: Toast auto-dismisses after 3 seconds
-      await siteAdminPage.waitForTimeout(3500);
       const isStillVisible = await toastNotification.isVisible().catch(() => false);
       expect(isStillVisible).toBe(false);
       console.log('✓ Toast auto-dismissed after 3 seconds');
@@ -209,7 +204,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
     // 2. Login as lab_manager (already done by fixture)
     // 3. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // Wait for dashboard to load
@@ -250,7 +244,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
     // Expected: React Query handles data refresh via staleTime
     // Verify that data can still be refreshed without WebSocket
     await siteAdminPage.reload();
-    await siteAdminPage.waitForLoadState('networkidle');
 
     await expect(siteAdminPage.getByRole('heading', { name: '전체 장비' })).toBeVisible({
       timeout: 10000,
@@ -272,7 +265,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
     // 2. Login as lab_manager (already done by fixture)
     // 3. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Wait for dashboard to load
     await expect(siteAdminPage.getByRole('heading', { name: '전체 장비' })).toBeVisible({
@@ -324,7 +316,6 @@ test.describe('Dashboard Real-time Updates (WebSocket)', () => {
 
       // Expected: Toast auto-dismisses after 3 seconds
       console.log('⏳ Waiting for toast to auto-dismiss (3 seconds)...');
-      await siteAdminPage.waitForTimeout(3500);
 
       const isStillVisible = await toastContainer.isVisible().catch(() => false);
       expect(isStillVisible).toBe(false);

@@ -181,7 +181,9 @@
     "stats": {
       "totalTeams": "Total Teams",
       "noLeader": "No Leader",
-      "totalMembers": "Total Members"
+      "totalMembers": "Total Members",
+      "sectionTeamCount": "{count} teams",
+      "sectionMemberCount": "{count} members"
     },
     "empty": {
       "noResults": "No results found",

@@ -8,6 +8,9 @@
     "closed": "종결"
   },
   "type": {
+    "damage": "손상",
+    "malfunction": "오작동",
+    "calibration_failure": "교정 실패",
     "calibration_overdue": "교정 기한 초과",
     "equipment_failure": "장비 고장",
     "measurement_error": "측정 오류",
@@ -93,6 +96,18 @@
     "open": "등록됨",
     "corrected": "조치 완료",
     "closed": "종료됨"
+  },
+  "resolutionType": {
+    "repair": "수리",
+    "recalibration": "재교정",
+    "replacement": "교체",
+    "disposal": "폐기",
+    "other": "기타"
+  },
+  "repairResult": {
+    "completed": "완료",
+    "partial": "부분 완료",
+    "failed": "실패"
   },
   "ncType": {
     "damage": "손상",

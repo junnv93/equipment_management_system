@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
-import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
+import { CalibrationMethodEnum } from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -101,13 +101,11 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {(Object.keys(CALIBRATION_METHOD_LABELS) as CalibrationMethod[]).map(
-                      (value) => (
-                        <SelectItem key={value} value={value}>
-                          {t(`filters.calibrationMethodLabel.${value}` as Parameters<typeof t>[0])}
-                        </SelectItem>
-                      )
-                    )}
+                    {CalibrationMethodEnum.options.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(`filters.calibrationMethodLabel.${value}` as Parameters<typeof t>[0])}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

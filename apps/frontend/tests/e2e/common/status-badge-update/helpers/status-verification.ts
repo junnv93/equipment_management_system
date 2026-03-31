@@ -49,7 +49,6 @@ export async function verifyListPageStatusBadge(
   console.log(`  테이블 로드 완료`);
 
   // 4. 추가 대기 (React Query refetch 완료)
-  await page.waitForTimeout(1000);
 
   // 3. 관리번호 셀 찾기
   const managementNumberCell = page.locator(`td:has-text("${managementNumber}")`).first();

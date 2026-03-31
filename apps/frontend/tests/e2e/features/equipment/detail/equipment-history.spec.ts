@@ -1,26 +1,11 @@
-import { test, expect } from '@playwright/test';
-
-// 로그인 헬퍼 함수
-async function login(
-  page: import('@playwright/test').Page,
-  email: string = 'admin@example.com',
-  password: string = 'admin123'
-) {
-  await page.goto('/login');
-  await page.getByLabel('이메일').fill(email);
-  await page.getByLabel('비밀번호').fill(password);
-  await page.getByTestId('login-button').click();
-  // 로그인 성공 후 리다이렉트 대기
-  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 15000 });
-}
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
 
 test.describe('Equipment History - Create Page', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page);
+  test.beforeEach(async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
   });
 
-  test('장비 등록 페이지에 이력 관리 안내 메시지 표시', async ({ page }) => {
+  test('장비 등록 페이지에 이력 관리 안내 메시지 표시', async ({ siteAdminPage: page }) => {
     // 이력 관리 안내 섹션 확인
     await expect(page.getByText('이력 관리 안내')).toBeVisible();
 
@@ -36,12 +21,10 @@ test.describe('Equipment History - Create Page', () => {
 });
 
 test.describe('Equipment History - Edit Page Sections', () => {
-  test('장비 수정 페이지에서 이력 섹션 표시 확인', async ({ page }) => {
-    await login(page);
-
+  test('장비 수정 페이지에서 이력 섹션 표시 확인', async ({ siteAdminPage: page }) => {
     // 장비 목록 페이지로 이동
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     // 첫 번째 장비의 수정 버튼 클릭 (있는 경우)
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
@@ -49,7 +32,7 @@ test.describe('Equipment History - Edit Page Sections', () => {
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 이력 섹션들 확인
       await expect(page.getByRole('heading', { name: /위치 변동 이력/i })).toBeVisible({
@@ -64,17 +47,16 @@ test.describe('Equipment History - Edit Page Sections', () => {
     }
   });
 
-  test('위치 변동 이력 추가 버튼 표시', async ({ page }) => {
-    await login(page);
+  test('위치 변동 이력 추가 버튼 표시', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 위치 변동 이력 섹션의 추가 버튼 확인
       const locationSection = page
@@ -88,17 +70,16 @@ test.describe('Equipment History - Edit Page Sections', () => {
     }
   });
 
-  test('유지보수 내역 추가 버튼 표시', async ({ page }) => {
-    await login(page);
+  test('유지보수 내역 추가 버튼 표시', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 유지보수 내역 섹션의 추가 버튼 확인
       const maintenanceSection = page
@@ -112,17 +93,16 @@ test.describe('Equipment History - Edit Page Sections', () => {
     }
   });
 
-  test('손상/수리 내역 추가 버튼 표시', async ({ page }) => {
-    await login(page);
+  test('손상/수리 내역 추가 버튼 표시', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 손상/수리 내역 섹션의 추가 버튼 확인
       const incidentSection = page
@@ -136,17 +116,16 @@ test.describe('Equipment History - Edit Page Sections', () => {
     }
   });
 
-  test('교정 이력 교정 등록 버튼 표시', async ({ page }) => {
-    await login(page);
+  test('교정 이력 교정 등록 버튼 표시', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 교정 이력 섹션의 교정 등록 버튼 확인
       const calibrationSection = page
@@ -162,17 +141,16 @@ test.describe('Equipment History - Edit Page Sections', () => {
 });
 
 test.describe('Equipment History - Location History Dialog', () => {
-  test('위치 변동 이력 추가 다이얼로그 열기', async ({ page }) => {
-    await login(page);
+  test('위치 변동 이력 추가 다이얼로그 열기', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 위치 변동 이력 섹션의 추가 버튼 클릭
       const locationSection = page
@@ -195,17 +173,16 @@ test.describe('Equipment History - Location History Dialog', () => {
 });
 
 test.describe('Equipment History - Maintenance History Dialog', () => {
-  test('유지보수 내역 추가 다이얼로그 열기', async ({ page }) => {
-    await login(page);
+  test('유지보수 내역 추가 다이얼로그 열기', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 유지보수 내역 섹션의 추가 버튼 클릭
       const maintenanceSection = page
@@ -227,17 +204,16 @@ test.describe('Equipment History - Maintenance History Dialog', () => {
 });
 
 test.describe('Equipment History - Incident History Dialog', () => {
-  test('손상/수리 내역 추가 다이얼로그 열기', async ({ page }) => {
-    await login(page);
+  test('손상/수리 내역 추가 다이얼로그 열기', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 손상/수리 내역 섹션의 추가 버튼 클릭
       const incidentSection = page
@@ -260,17 +236,16 @@ test.describe('Equipment History - Incident History Dialog', () => {
 });
 
 test.describe('Equipment History - Calibration Table Columns', () => {
-  test('교정 이력 테이블 컬럼 확인', async ({ page }) => {
-    await login(page);
+  test('교정 이력 테이블 컬럼 확인', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const editButtons = page.locator('[data-testid="equipment-edit-button"], a[href*="/edit"]');
     const editButtonCount = await editButtons.count();
 
     if (editButtonCount > 0) {
       await editButtons.first().click();
-      await page.waitForLoadState('networkidle');
+      await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
       // 교정 이력 섹션 테이블 헤더 확인
       const calibrationSection = page
@@ -299,8 +274,7 @@ test.describe('Equipment History - Calibration Table Columns', () => {
 });
 
 test.describe('Equipment Registration - History Dialog After Create', () => {
-  test('장비 등록 완료 후 이력 추가 다이얼로그 표시', async ({ page }) => {
-    await login(page);
+  test('장비 등록 완료 후 이력 추가 다이얼로그 표시', async ({ siteAdminPage: page }) => {
     await page.goto('/equipment/create');
 
     // 필수 필드 입력
@@ -324,7 +298,7 @@ test.describe('Equipment Registration - History Dialog After Create', () => {
     // 이력 정보 추가 다이얼로그 또는 목록 페이지 확인 (역할에 따라 다름)
     // 기술책임자는 직접 승인되어 이력 추가 다이얼로그가 표시될 수 있음
     // 시험실무자는 승인 요청 후 목록 페이지로 이동
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 15000 });
 
     const historyDialog = page.getByRole('dialog').filter({ hasText: '이력 정보 추가' });
     const isHistoryDialogVisible = await historyDialog

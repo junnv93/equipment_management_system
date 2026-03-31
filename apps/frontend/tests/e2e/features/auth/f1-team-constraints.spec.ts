@@ -45,7 +45,6 @@ test.describe('Group F1: Team Constraints', () => {
 
       // 2. Navigate to checkout creation page
       await techManagerPage.goto('/checkouts/create');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 3. Verify page loads
       await expect(techManagerPage.getByRole('heading', { name: /장비 반출 신청/ })).toBeVisible();
@@ -53,7 +52,6 @@ test.describe('Group F1: Team Constraints', () => {
       // 4. Search for RF team equipment
       const searchInput = techManagerPage.getByPlaceholder(/장비.*검색|search/i);
       await searchInput.fill('RF 수신기');
-      await techManagerPage.waitForTimeout(500); // Wait for search results
 
       // 5. Try to select RF equipment (UIW-W0001)
       // Equipment may appear in list since frontend queries all available equipment
@@ -93,8 +91,6 @@ test.describe('Group F1: Team Constraints', () => {
       const submitButton = techManagerPage.getByRole('button', { name: /반출 신청|신청/ });
       await submitButton.click();
 
-      await techManagerPage.waitForTimeout(1000);
-
       // 10. Verify error toast appears
       const errorToast = techManagerPage
         .getByRole('alert')
@@ -133,7 +129,6 @@ test.describe('Group F1: Team Constraints', () => {
       // 1. Login as technical_manager (FCC EMC/RF Suwon team)
       // 2. Navigate to checkout creation page
       await techManagerPage.goto('/checkouts/create');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 3. Verify page loads
       await expect(techManagerPage.getByRole('heading', { name: /장비 반출 신청/ })).toBeVisible();
@@ -141,7 +136,6 @@ test.describe('Group F1: Team Constraints', () => {
       // 4. Search for same-team equipment
       const searchInput = techManagerPage.getByPlaceholder(/장비.*검색|search/i);
       await searchInput.fill('스펙트럼 분석기');
-      await techManagerPage.waitForTimeout(500);
 
       // 5. Verify same-team equipment appears
       const sameTeamEquipment = techManagerPage.getByText(/SUW-E0001|스펙트럼 분석기/).first();
@@ -172,8 +166,6 @@ test.describe('Group F1: Team Constraints', () => {
       // 9. Submit form
       const submitButton = techManagerPage.getByRole('button', { name: /반출 신청/ });
       await submitButton.click();
-
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 10. Verify success toast
       await expect(
@@ -255,12 +247,10 @@ test.describe('Group F1: Team Constraints', () => {
       // STEP 1: Create checkout as test_engineer
       // 1. Login as test_engineer
       await testOperatorPage.goto('/checkouts/create');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 2. Search and select same-team equipment
       const searchInput = testOperatorPage.getByPlaceholder(/장비.*검색/i);
       await searchInput.fill('SUW-E0001');
-      await testOperatorPage.waitForTimeout(500);
 
       const equipment = testOperatorPage.getByText(/SUW-E0001/).first();
       const selectButton = equipment
@@ -280,7 +270,6 @@ test.describe('Group F1: Team Constraints', () => {
 
       // 4. Submit
       await testOperatorPage.getByRole('button', { name: /반출 신청/ }).click();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 5. Verify success and get checkout ID from URL or response
       await testOperatorPage.waitForURL('**/checkouts');
@@ -288,7 +277,6 @@ test.describe('Group F1: Team Constraints', () => {
       // STEP 2: Approve as technical_manager
       // 1. Login as technical_manager
       await techManagerPage.goto('/admin/approvals');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // 2. Click '반출' tab
       const checkoutTab = techManagerPage.getByRole('tab', { name: /반출/ });
@@ -312,8 +300,6 @@ test.describe('Group F1: Team Constraints', () => {
         await confirmButton.click();
       }
 
-      await techManagerPage.waitForTimeout(1000);
-
       // 6. Verify success toast
       await expect(
         techManagerPage.getByRole('status').filter({ hasText: /승인.*완료|approved/i })
@@ -321,7 +307,6 @@ test.describe('Group F1: Team Constraints', () => {
 
       // 7. Navigate to checkouts list and verify status changed
       await techManagerPage.goto('/checkouts');
-      await techManagerPage.waitForLoadState('networkidle');
 
       // Find the checkout and verify 'approved' status
       const approvedCheckout = techManagerPage

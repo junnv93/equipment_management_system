@@ -89,8 +89,9 @@ export interface CalibrationFactorRegistry {
   generatedAt: string;
 }
 
-// ✅ SSOT: packages/schemas의 라벨 재사용 (로컬 별칭)
+/** @deprecated 프론트엔드에서는 i18n (calibration.factorType.*) 사용 */
 export const FACTOR_TYPE_LABELS = CALIBRATION_FACTOR_TYPE_LABELS;
+/** @deprecated 프론트엔드에서는 i18n (calibration.factorApprovalStatus.*) 사용 */
 export const APPROVAL_STATUS_LABELS = CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS;
 
 // 승인 상태 색상 — BRAND_CLASS_MATRIX에서 파생 (SSOT)

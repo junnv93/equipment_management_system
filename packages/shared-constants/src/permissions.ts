@@ -182,6 +182,8 @@ export enum Permission {
 
 /**
  * 권한 라벨 (UI 표시용)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(settings.profile.permissions.labels.*)를 사용하세요.
  */
 export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.VIEW_EQUIPMENT]: '장비 조회',

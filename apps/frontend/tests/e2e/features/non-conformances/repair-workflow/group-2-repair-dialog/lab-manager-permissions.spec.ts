@@ -31,10 +31,8 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 2. Navigate to NC management page
     await siteAdminPage.goto(`/equipment/${equipmentId}/non-conformance`);
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // Wait for page to fully load
-    await siteAdminPage.waitForTimeout(1000);
 
     // 3. Verify all management buttons are accessible
 
@@ -55,7 +53,6 @@ test.describe('Role-Based Permission Verification', () => {
     // 4. Verify can edit any NC status
     // Click edit button to open form
     await editButtons.first().click();
-    await siteAdminPage.waitForTimeout(500);
 
     // Check for status dropdown - lab_manager should have access
     const statusDropdown = siteAdminPage.locator('select[name="status"], [role="combobox"]');

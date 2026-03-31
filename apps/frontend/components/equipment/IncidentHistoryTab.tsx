@@ -66,7 +66,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { createRepairHistory, type CreateRepairHistoryDto } from '@/lib/api/repair-history-api';
-import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
+import nonConformancesApi from '@/lib/api/non-conformances-api';
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import {
   TIMELINE_TOKENS,
@@ -123,6 +123,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const tNc = useTranslations('non-conformances');
   const { fmtDate } = useDateFormatter();
   const incidentHistorySchema = useMemo(() => createIncidentHistorySchema(t), [t]);
   const repairHistorySchema = useMemo(() => createRepairHistorySchema(t), [t]);
@@ -508,7 +509,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                         )}
                         {openNonConformances?.map((nc) => (
                           <SelectItem key={nc.id} value={nc.id}>
-                            [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
+                            [{tNc(`type.${nc.ncType}`)}] {nc.cause.substring(0, 30)}
                             {nc.cause.length > 30 ? '...' : ''} ({fmtDate(nc.discoveryDate)})
                           </SelectItem>
                         ))}

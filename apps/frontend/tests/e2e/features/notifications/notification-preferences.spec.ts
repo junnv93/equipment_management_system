@@ -25,7 +25,6 @@
  * ## 주의: networkidle 사용 금지
  *
  * SSE 연결(useNotificationStream)이 persistent connection을 유지하므로
- * waitForLoadState('networkidle')는 절대 resolve되지 않음.
  * 대신 waitForLoadState('domcontentloaded') + 명시적 요소 대기 사용.
  *
  * storageState 기반 인증 (auth.fixture.ts)

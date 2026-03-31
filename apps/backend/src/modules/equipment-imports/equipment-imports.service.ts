@@ -10,8 +10,6 @@ import {
 import { eq, and, desc, sql, SQL, or } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
-import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { equipment } from '@equipment-management/db/schema/equipment';
@@ -46,6 +44,9 @@ import {
 } from './types/equipment-import.types';
 import { likeContains, likeStartsWith, safeIlike } from '../../common/utils/like-escape';
 import { DEFAULT_PAGE_SIZE, VALIDATION_RULES } from '@equipment-management/shared-constants';
+import { DocumentService } from '../../common/file-upload/document.service';
+import type { MulterFile } from '../../types/common.types';
+import { DocumentTypeValues } from '@equipment-management/schemas';
 
 type EquipmentImport = typeof equipmentImports.$inferSelect;
 
@@ -60,8 +61,8 @@ export class EquipmentImportsService extends VersionedBaseService {
     @Inject(forwardRef(() => CheckoutsService))
     private readonly checkoutsService: CheckoutsService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly cacheService: SimpleCacheService,
-    private readonly cacheInvalidationHelper: CacheInvalidationHelper
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
+    private readonly documentService: DocumentService
   ) {
     super();
   }
@@ -128,7 +129,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         borrowingJustification: dto.borrowingJustification || null,
         vendorName: null,
         vendorContact: null,
-        externalIdentifier: null,
+        externalIdentifier: dto.externalIdentifier || null,
       };
     }
 
@@ -319,13 +320,13 @@ export class EquipmentImportsService extends VersionedBaseService {
       );
     } catch (error) {
       if (error instanceof ConflictException) {
-        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
       }
       throw error;
     }
 
     // 승인 후 목록 + 대시보드/승인카운트 캐시 무효화
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    this.cacheInvalidationHelper.invalidateAllEquipmentImports();
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.logger.log(`Equipment import approved: ${id} (sourceType: ${updated.sourceType})`);
@@ -381,13 +382,13 @@ export class EquipmentImportsService extends VersionedBaseService {
       );
     } catch (error) {
       if (error instanceof ConflictException) {
-        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
       }
       throw error;
     }
 
     // 반려 후 목록 + 대시보드/승인카운트 캐시 무효화
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    this.cacheInvalidationHelper.invalidateAllEquipmentImports();
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     // 📢 알림 이벤트 발행 (장비 반입 거절)
@@ -421,7 +422,8 @@ export class EquipmentImportsService extends VersionedBaseService {
   async receive(
     id: string,
     receivedBy: string,
-    dto: ReceiveEquipmentImportDto
+    dto: ReceiveEquipmentImportDto,
+    files?: MulterFile[]
   ): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
@@ -431,12 +433,6 @@ export class EquipmentImportsService extends VersionedBaseService {
         message: 'Only approved import requests can be received.',
       });
     }
-
-    // TEMP 관리번호 생성 (중복 시 retry)
-    const managementNumber = await this.generateUniqueTemporaryNumber(
-      equipmentImport.site as Site,
-      equipmentImport.classification as Classification
-    );
 
     // 다음 교정일 자동 계산 — SSOT 유틸리티 사용
     let nextCalibrationDate: Date | null = null;
@@ -455,9 +451,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     // sourceType 기반 동적 필드 결정
     const sharedSource = getSharedSource(equipmentImport);
     const owner = getOwnerName(equipmentImport);
-    const externalIdentifier = isRentalImport(equipmentImport)
-      ? equipmentImport.externalIdentifier
-      : null;
+    const externalIdentifier = equipmentImport.externalIdentifier || null;
 
     this.logger.log(
       `Receiving equipment import: ${id} (sourceType: ${equipmentImport.sourceType}, sharedSource: ${sharedSource}, owner: ${owner})`
@@ -467,6 +461,30 @@ export class EquipmentImportsService extends VersionedBaseService {
     let updated: typeof equipmentImports.$inferSelect;
     try {
       updated = await this.db.transaction(async (tx) => {
+        // ✅ 1. CAS 선점 먼저 — 동시 요청은 여기서 409로 차단 (equipmentId 제외)
+        await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
+          equipmentImports,
+          id,
+          dto.version,
+          {
+            status: EIVal.RECEIVED as EquipmentImportStatus,
+            receivedBy,
+            receivedAt: new Date(),
+            receivingCondition: dto.receivingCondition,
+          },
+          'Equipment import',
+          tx
+        );
+
+        // ✅ 2. CAS 통과 후 관리번호 생성 (동시 요청은 이미 409 처리됨)
+        // tx 전달 필수 — 같은 tx 커넥션에서 조회해야 race condition 방지
+        const managementNumber = await this.generateUniqueTemporaryNumber(
+          equipmentImport.site as Site,
+          equipmentImport.classification as Classification,
+          tx as unknown as AppDatabase
+        );
+
+        // ✅ 3. 장비 INSERT
         const [newEquipment] = await tx
           .insert(equipment)
           .values({
@@ -500,38 +518,48 @@ export class EquipmentImportsService extends VersionedBaseService {
           } as typeof equipment.$inferInsert)
           .returning();
 
-        // ✅ CAS: equipment import 업데이트 (tx 컨텍스트로 원자성 보장)
-        const result = await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
-          equipmentImports,
-          id,
-          equipmentImport.version,
-          {
-            status: EIVal.RECEIVED as EquipmentImportStatus,
-            receivedBy,
-            receivedAt: new Date(),
-            receivingCondition: dto.receivingCondition,
-            equipmentId: newEquipment.id,
-          },
-          'Equipment import',
-          tx
-        );
+        // ✅ 4. equipmentId 연결 (CAS 없이 단순 업데이트 — 이미 CAS로 단독 선점됨)
+        const [finalResult] = await tx
+          .update(equipmentImports)
+          .set({ equipmentId: newEquipment.id })
+          .where(eq(equipmentImports.id, id))
+          .returning();
 
         this.logger.log(
           `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
         );
 
-        return result;
+        return finalResult;
       });
     } catch (error) {
       if (error instanceof ConflictException) {
-        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
       }
       throw error;
     }
 
+    // 교정성적서 파일 첨부 (트랜잭션 외부 — 파일 I/O 분리)
+    if (files && files.length > 0 && updated.equipmentId) {
+      try {
+        await Promise.all(
+          files.map((file) =>
+            this.documentService.createDocument(file, {
+              equipmentId: updated.equipmentId!,
+              documentType: DocumentTypeValues.CALIBRATION_CERTIFICATE,
+              uploadedBy: receivedBy,
+              description: `반입 수령 시 첨부 (import: ${id})`,
+            })
+          )
+        );
+      } catch (docError) {
+        this.logger.warn(
+          `교정성적서 첨부 실패 (import: ${id}): ${docError instanceof Error ? docError.message : String(docError)}`
+        );
+      }
+    }
+
     // 수령 후 목록 + 장비 + 대시보드 캐시 무효화 (장비 생성 포함)
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT + '*');
+    this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     return updated;
@@ -548,8 +576,16 @@ export class EquipmentImportsService extends VersionedBaseService {
   async initiateReturn(
     id: string,
     requesterId: string,
-    userTeamId?: string
+    userTeamId?: string,
+    version?: number
   ): Promise<EquipmentImport> {
+    if (version === undefined) {
+      throw new BadRequestException({
+        code: 'VERSION_REQUIRED',
+        message: 'version is required for concurrent modification protection.',
+      });
+    }
+
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== EIVal.RECEIVED) {
@@ -566,15 +602,13 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
-    // 장비의 이전 상태를 저장 (보상 롤백용)
-    const previousEquipment = await this.equipmentService.findOne(equipmentImport.equipmentId);
-    const previousEquipmentStatus = previousEquipment.status as EquipmentStatus;
-
-    // 장비 상태를 'available'로 변경 (checkout 생성 조건 충족)
-    await this.equipmentService.updateStatus(
-      equipmentImport.equipmentId,
-      ESVal.AVAILABLE,
-      previousEquipment.version
+    // CAS 선점: 동시 반납 요청 방어 — 클라이언트 version 필수
+    const updated = await this.updateWithVersion<EquipmentImport>(
+      equipmentImports,
+      id,
+      version,
+      { status: EIVal.RETURN_REQUESTED as EquipmentImportStatus },
+      'Equipment import'
     );
 
     // destination 동적 결정
@@ -585,9 +619,36 @@ export class EquipmentImportsService extends VersionedBaseService {
       `Initiating return for equipment import: ${id} (sourceType: ${equipmentImport.sourceType}, destination: ${destination})`
     );
 
-    let newCheckout: Awaited<ReturnType<typeof this.checkoutsService.create>>;
+    // 장비 상태 변경 + checkout 생성 — CAS 선점 성공 후 실행
+    const previousEquipment = await this.equipmentService.findOne(equipmentImport.equipmentId);
+    const previousEquipmentStatus = previousEquipment.status as EquipmentStatus;
+
+    // CAS 보상 (1/2): 장비 상태 변경 실패 시 import 상태 롤백
     try {
-      // checkout 자동 생성
+      await this.equipmentService.updateStatus(
+        equipmentImport.equipmentId,
+        ESVal.AVAILABLE,
+        previousEquipment.version
+      );
+    } catch (error) {
+      this.logger.warn(`Equipment status update failed, rolling back import status: ${error}`);
+      await this.updateWithVersion<EquipmentImport>(
+        equipmentImports,
+        id,
+        updated.version,
+        { status: EIVal.RECEIVED as EquipmentImportStatus },
+        'Equipment import'
+      ).catch((rollbackErr) =>
+        this.logger.error(
+          `Failed to rollback import to RECEIVED after equipment failure: ${rollbackErr}`
+        )
+      );
+      throw error;
+    }
+
+    let newCheckout: Awaited<ReturnType<typeof this.checkoutsService.create>>;
+    // CAS 보상 (2/2): checkout 생성 실패 시 장비 상태 + import 상태 모두 롤백
+    try {
       newCheckout = await this.checkoutsService.create(
         {
           equipmentIds: [equipmentImport.equipmentId],
@@ -602,51 +663,51 @@ export class EquipmentImportsService extends VersionedBaseService {
         userTeamId
       );
     } catch (error) {
-      // 보상: checkout 생성 실패 시 장비 상태 롤백 (version은 이전 updateStatus로 +1 된 상태)
-      this.logger.warn(`Checkout creation failed, rolling back equipment status: ${error}`);
-      await this.equipmentService.updateStatus(
-        equipmentImport.equipmentId,
-        previousEquipmentStatus,
-        previousEquipment.version + 1
+      this.logger.warn(
+        `Checkout creation failed, rolling back equipment status and import: ${error}`
       );
-      throw error;
-    }
-
-    // equipment import 업데이트 — CAS로 동시 요청 방어
-    let updated: EquipmentImport;
-    try {
-      updated = await this.updateWithVersion<EquipmentImport>(
-        equipmentImports,
-        id,
-        equipmentImport.version,
-        {
-          status: EIVal.RETURN_REQUESTED as EquipmentImportStatus,
-          returnCheckoutId: newCheckout.id,
-        },
-        'Equipment import'
-      );
-    } catch (error) {
-      // 보상: CAS 실패 시 checkout 취소 + 장비 상태 롤백 (version은 이전 updateStatus로 +1 된 상태)
-      this.logger.warn(`Import CAS update failed, compensating: ${error}`);
-      try {
-        await this.checkoutsService.cancel(newCheckout.id, newCheckout.version);
-        await this.equipmentService.updateStatus(
+      await this.equipmentService
+        .updateStatus(
           equipmentImport.equipmentId,
           previousEquipmentStatus,
           previousEquipment.version + 1
+        )
+        .catch((rollbackErr) =>
+          this.logger.error(
+            `Failed to rollback equipment status after checkout failure: ${rollbackErr}`
+          )
         );
-      } catch (compensateError) {
-        this.logger.error(`Compensation failed (manual intervention needed): ${compensateError}`);
-      }
-      if (error instanceof ConflictException) {
-        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
-      }
+      await this.updateWithVersion<EquipmentImport>(
+        equipmentImports,
+        id,
+        updated.version,
+        { status: EIVal.RECEIVED as EquipmentImportStatus },
+        'Equipment import'
+      ).catch((rollbackErr) =>
+        this.logger.error(
+          `Failed to rollback import to RECEIVED after checkout failure: ${rollbackErr}`
+        )
+      );
       throw error;
     }
 
+    // returnCheckoutId 업데이트 (CAS 선점 후 version이 +1된 상태)
+    try {
+      await this.updateWithVersion<EquipmentImport>(
+        equipmentImports,
+        id,
+        updated.version,
+        { returnCheckoutId: newCheckout.id },
+        'Equipment import'
+      );
+    } catch (error) {
+      this.logger.warn(`returnCheckoutId update failed: ${error}`);
+      // checkout은 이미 생성됨 — 반납 프로세스는 진행 가능, returnCheckoutId만 미연결
+      // 심각도 낮음: checkout 목록에서 확인 가능
+    }
+
     // 반납 시작 후 목록 + 장비 + 대시보드 캐시 무효화 (checkout 생성 + 장비 상태 변경)
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT + '*');
+    this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     return updated;
@@ -688,13 +749,13 @@ export class EquipmentImportsService extends VersionedBaseService {
       );
     } catch (error) {
       if (error instanceof ConflictException) {
-        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
       }
       throw error;
     }
 
     // 취소 후 목록 + 승인카운트 캐시 무효화 (pending 감소, 대시보드 통계 불변)
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+    this.cacheInvalidationHelper.invalidateAllEquipmentImports();
     await this.cacheInvalidationHelper.invalidateApprovalCounts();
 
     return updated;
@@ -722,48 +783,103 @@ export class EquipmentImportsService extends VersionedBaseService {
       `Return completed for equipment import: ${equipmentImport.id} (sourceType: ${equipmentImport.sourceType})`
     );
 
-    // 장비 반입 완료 + 장비 비활성화 — 동일 tx 내 원자성 보장
-    await this.db.transaction(async (tx) => {
-      await tx
-        .update(equipmentImports)
-        .set({
-          status: EIVal.RETURNED as EquipmentImportStatus,
-          updatedAt: new Date(),
-        })
-        .where(eq(equipmentImports.id, equipmentImport.id));
-
-      // 장비 비활성화 — tx 내에서 직접 UPDATE (equipmentService는 별도 커넥션이므로 사용 불가)
-      if (equipmentImport.equipmentId) {
-        await tx
-          .update(equipment)
+    // 장비 반입 완료 + 장비 비활성화 — 동일 tx 내 원자성 + CAS 보장
+    try {
+      await this.db.transaction(async (tx) => {
+        // CAS: version 조건으로 동시 요청 방어
+        const importResult = await tx
+          .update(equipmentImports)
           .set({
-            status: ESVal.INACTIVE,
+            status: EIVal.RETURNED as EquipmentImportStatus,
             version: sql`version + 1`,
             updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(eq(equipment.id, equipmentImport.equipmentId));
+          })
+          .where(
+            and(
+              eq(equipmentImports.id, equipmentImport.id),
+              eq(equipmentImports.version, equipmentImport.version)
+            )
+          )
+          .returning({ id: equipmentImports.id });
+
+        if (importResult.length === 0) {
+          throw new ConflictException({
+            code: 'VERSION_CONFLICT',
+            message: 'Equipment import was modified concurrently.',
+          });
+        }
+
+        // 장비 비활성화 — tx 내에서 직접 UPDATE + CAS (equipmentService는 별도 커넥션이므로 사용 불가)
+        if (equipmentImport.equipmentId) {
+          // CAS: tx 내에서 현재 version 조회 후 조건부 업데이트 (동시 수정 방어)
+          const [currentEquip] = await tx
+            .select({ version: equipment.version })
+            .from(equipment)
+            .where(eq(equipment.id, equipmentImport.equipmentId))
+            .limit(1);
+
+          if (!currentEquip) {
+            throw new ConflictException({
+              code: 'EQUIPMENT_NOT_FOUND',
+              message: 'Linked equipment not found during return completion.',
+            });
+          }
+
+          const eqResult = await tx
+            .update(equipment)
+            .set({
+              status: ESVal.INACTIVE,
+              version: sql`version + 1`,
+              updatedAt: new Date(),
+            } as Record<string, unknown>)
+            .where(
+              and(
+                eq(equipment.id, equipmentImport.equipmentId),
+                eq(equipment.version, currentEquip.version)
+              )
+            )
+            .returning({ id: equipment.id });
+
+          if (eqResult.length === 0) {
+            throw new ConflictException({
+              code: 'VERSION_CONFLICT',
+              message: 'Equipment was modified concurrently.',
+            });
+          }
+        }
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        // CAS 실패 시 stale 캐시 제거 — 미삭제 시 재시도도 계속 409 발생
+        this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
       }
-    });
+      throw error;
+    }
 
     // 반납 완료 후 장비 + 대시보드 캐시 무효화 (장비 비활성화 반영)
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
-    this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT + '*');
+    this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
     await this.cacheInvalidationHelper.invalidateAllDashboard();
   }
 
   /**
    * TEMP 관리번호 고유 생성 (중복 시 retry)
+   *
+   * @param site - 사이트 코드
+   * @param classification - 장비 분류
+   * @param tx - 트랜잭션 컨텍스트 (receive() 내부에서 호출 시 tx 전달 필수 — 외부 커넥션 사용 시 race condition)
    */
   private async generateUniqueTemporaryNumber(
     site: Site,
-    classification: Classification
+    classification: Classification,
+    tx?: AppDatabase
   ): Promise<string> {
+    const db = tx ?? this.db;
     const maxRetries = 10;
 
     for (let i = 0; i < maxRetries; i++) {
       // 현재 최대 일련번호 조회 (SSOT: TEMPORARY_EQUIPMENT_PREFIX + SITE_TO_CODE)
       const tempPrefix = `${TEMPORARY_EQUIPMENT_PREFIX}${SITE_TO_CODE[site]}-`;
-      const result = await this.db
+      const result = await db
         .select({ managementNumber: equipment.managementNumber })
         .from(equipment)
         .where(safeIlike(equipment.managementNumber, likeStartsWith(tempPrefix)))
@@ -782,10 +898,12 @@ export class EquipmentImportsService extends VersionedBaseService {
       const serialStr = String(nextSerial).padStart(4, '0');
       const managementNumber = generateTemporaryManagementNumber(site, classification, serialStr);
 
-      // 중복 확인
-      const existing = await this.db.query.equipment.findFirst({
-        where: eq(equipment.managementNumber, managementNumber),
-      });
+      // 중복 확인 (tx 내에서 실행되므로 tx 커넥션 사용)
+      const [existing] = await db
+        .select({ id: equipment.id })
+        .from(equipment)
+        .where(eq(equipment.managementNumber, managementNumber))
+        .limit(1);
 
       if (!existing) {
         return managementNumber;

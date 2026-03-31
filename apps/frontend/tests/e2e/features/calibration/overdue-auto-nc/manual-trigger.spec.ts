@@ -31,27 +31,11 @@ import {
 } from '@equipment-management/schemas';
 import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
 // Test configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
-
-/**
- * Helper: Login and get JWT token via backend test-login endpoint
- */
-async function loginAsRole(
-  request: APIRequestContext,
-  role: 'test_engineer' | 'technical_manager' | 'lab_manager'
-): Promise<string> {
-  const response = await request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-
-  if (!response.ok()) {
-    throw new Error(`Failed to login as ${role}: ${response.status()}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 /**
  * Helper: Create test equipment with specific properties
@@ -142,7 +126,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const equipmentId = `equip-a1-${timestamp}`;
 
     // 1. Setup test equipment with overdue calibration (equipmentId: `equip-a1-${timestamp}`)
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -201,7 +185,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const timestamp = Date.now();
 
     // 1. Setup test equipment (equipmentId: `equip-a2-${timestamp}`)
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -216,7 +200,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     });
 
     // 2. Login as Test Engineer (user@example.com / password123) - NO MANAGE_EQUIPMENT permission
-    const testEngineerToken = await loginAsRole(request, 'test_engineer');
+    const testEngineerToken = await fetchBackendToken('test_engineer');
 
     // 3. Send POST request to `/api/notifications/trigger-overdue-check`
     const response = await request.post(TRIGGER_ENDPOINT, {
@@ -241,7 +225,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const managementNumber = `EQP-A3-${timestamp}`;
 
     // 1. Setup test equipment with overdue calibration
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -288,7 +272,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const managementNumber = `EQP-A4-${timestamp}`;
 
     // 1. Setup test equipment with status: 'non_conforming' (already non-conforming)
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -332,7 +316,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const managementNumber = `EQP-A5-${timestamp}`;
 
     // 1. Setup test equipment with overdue calibration
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -390,7 +374,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const managementNumber = `EQP-A6-${timestamp}`;
 
     // 1. Setup test equipment with calibrationRequired: 'not_required'
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -431,7 +415,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const timestamp = Date.now();
 
     // 1. Setup equipment with status: 'disposed'
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

@@ -16,6 +16,7 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE_URLS } from './shared/constants/shared-test-data';
+import { fetchBackendToken } from './shared/helpers/api-helpers';
 
 const API = `${BASE_URLS.BACKEND}/api`;
 
@@ -57,11 +58,8 @@ test.describe('인가 게이트 (PermissionsGuard DENY)', () => {
 
   let testEngineerToken: string;
 
-  test.beforeAll(async ({ request }) => {
-    const res = await request.get(`${API}/auth/test-login?role=test_engineer`);
-    expect(res.ok()).toBeTruthy();
-    const body = (await res.json()) as { access_token: string };
-    testEngineerToken = body.access_token;
+  test.beforeAll(async () => {
+    testEngineerToken = await fetchBackendToken('test_engineer');
   });
 
   test('test_engineer — 교정계획 승인 시도 → 403', async ({ request }) => {
@@ -134,11 +132,10 @@ test.describe('@InternalServiceOnly 게이트', () => {
   test('사용자 동기화 — 유효한 JWT만 있어도 API 키 없으면 → 401', async ({ request }) => {
     // @InternalServiceOnly는 @Public이므로 JWT를 무시함
     // API 키가 없으면 InternalApiKeyGuard가 401 반환
-    const loginRes = await request.get(`${API}/auth/test-login?role=lab_manager`);
-    const loginBody = (await loginRes.json()) as { access_token: string };
+    const token = await fetchBackendToken('lab_manager');
 
     const res = await request.post(`${API}/users/sync`, {
-      headers: { Authorization: `Bearer ${loginBody.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
       data: { email: 'test@example.com', name: 'Test', role: 'test_engineer' },
     });
     expect(res.status()).toBe(401);

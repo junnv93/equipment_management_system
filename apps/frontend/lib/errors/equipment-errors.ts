@@ -49,6 +49,8 @@ export enum EquipmentErrorCode {
   FILE_TOO_LARGE = 'FILE_TOO_LARGE',
   INVALID_FILE_TYPE = 'INVALID_FILE_TYPE',
   FILE_UPLOAD_FAILED = 'FILE_UPLOAD_FAILED',
+  FILE_EMPTY = 'FILE_EMPTY',
+  FILE_CONTENT_MISMATCH = 'FILE_CONTENT_MISMATCH',
 
   // 이력 저장 에러
   HISTORY_SAVE_FAILED = 'HISTORY_SAVE_FAILED',
@@ -243,6 +245,18 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     title: '파일 업로드 실패',
     message: '파일 업로드 중 오류가 발생했습니다.',
     solutions: ['파일을 다시 선택하여 업로드해주세요', '파일 크기와 형식을 확인하세요'],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.FILE_EMPTY]: {
+    title: '빈 파일',
+    message: '업로드된 파일이 비어있습니다.',
+    solutions: ['파일 내용이 있는지 확인하세요', '다른 파일을 선택해주세요'],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.FILE_CONTENT_MISMATCH]: {
+    title: '파일 내용 불일치',
+    message: '파일 내용이 선언된 형식과 일치하지 않습니다.',
+    solutions: ['파일이 손상되지 않았는지 확인하세요', '올바른 형식의 파일을 선택해주세요'],
     severity: 'error',
   },
 
@@ -512,6 +526,11 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     PAYLOAD_TOO_LARGE: EquipmentErrorCode.FILE_TOO_LARGE,
     INVALID_FILE_TYPE: EquipmentErrorCode.INVALID_FILE_TYPE,
     UNSUPPORTED_MEDIA_TYPE: EquipmentErrorCode.INVALID_FILE_TYPE,
+    FILE_EMPTY: EquipmentErrorCode.FILE_EMPTY,
+    FILE_CONTENT_MISMATCH: EquipmentErrorCode.FILE_CONTENT_MISMATCH,
+    FILE_SAVE_FAILED: EquipmentErrorCode.FILE_UPLOAD_FAILED,
+    FILE_READ_FAILED: EquipmentErrorCode.FILE_UPLOAD_FAILED,
+    FILE_UPLOAD_FAILED: EquipmentErrorCode.FILE_UPLOAD_FAILED,
 
     // 서버 에러
     INTERNAL_SERVER_ERROR: EquipmentErrorCode.SERVER_ERROR,
@@ -520,6 +539,27 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     // 부적합 에러
     NC_REPAIR_RECORD_REQUIRED: EquipmentErrorCode.NC_REPAIR_RECORD_REQUIRED,
     NC_RECALIBRATION_REQUIRED: EquipmentErrorCode.NC_RECALIBRATION_REQUIRED,
+
+    // 데이터 마이그레이션 에러
+    MIGRATION_FILE_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
+    MIGRATION_EMPTY_FILE: EquipmentErrorCode.VALIDATION_ERROR,
+    MIGRATION_NO_DATA_ROWS: EquipmentErrorCode.VALIDATION_ERROR,
+    MIGRATION_NO_HEADERS: EquipmentErrorCode.VALIDATION_ERROR,
+    MIGRATION_NO_VALID_SHEETS: EquipmentErrorCode.VALIDATION_ERROR,
+    MIGRATION_SESSION_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    MIGRATION_SESSION_OWNERSHIP_DENIED: EquipmentErrorCode.PERMISSION_DENIED,
+
+    // 장비 반입 에러
+    IMPORT_ONLY_PENDING_CAN_APPROVE: EquipmentErrorCode.VALIDATION_ERROR,
+    IMPORT_ONLY_PENDING_CAN_REJECT: EquipmentErrorCode.VALIDATION_ERROR,
+    IMPORT_ONLY_APPROVED_CAN_RECEIVE: EquipmentErrorCode.VALIDATION_ERROR,
+    IMPORT_ONLY_RECEIVED_CAN_RETURN: EquipmentErrorCode.VALIDATION_ERROR,
+    IMPORT_ONLY_PENDING_OR_APPROVED_CAN_CANCEL: EquipmentErrorCode.VALIDATION_ERROR,
+    IMPORT_ONLY_REQUESTER_CAN_CANCEL: EquipmentErrorCode.PERMISSION_DENIED,
+    IMPORT_NO_LINKED_EQUIPMENT: EquipmentErrorCode.VALIDATION_ERROR,
+    IMPORT_END_DATE_BEFORE_START: EquipmentErrorCode.VALIDATION_ERROR,
+    IMPORT_TEMP_NUMBER_GENERATION_FAILED: EquipmentErrorCode.SERVER_ERROR,
+    VERSION_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
   };
 
   return mappings[normalizedCode] || EquipmentErrorCode.UNKNOWN_ERROR;

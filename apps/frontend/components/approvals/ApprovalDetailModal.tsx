@@ -14,12 +14,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, XCircle, FileText, Download } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
+import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
 import { ApprovalHistoryCard } from './ApprovalHistoryCard';
 import { CategoryDetails, CategoryBadge } from './detail-renderers';
 import { getApprovalStatusBadgeClasses, getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface ApprovalDetailModalProps {
   item: ApprovalItem;
@@ -39,6 +40,7 @@ export default function ApprovalDetailModal({
   actionLabel,
 }: ApprovalDetailModalProps) {
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
   const { fmtDateTime } = useDateFormatter();
 
   // 다단계 승인 여부 확인
@@ -62,10 +64,12 @@ export default function ApprovalDetailModal({
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Badge className={getApprovalStatusBadgeClasses(item.status)}>
-                  {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
+                  {t(`unifiedStatus.${item.status}`)}
                 </Badge>
                 <CategoryBadge category={item.category} />
-                <h3 className="text-lg font-semibold">{item.summary}</h3>
+                <h3 className="text-lg font-semibold">
+                  {getLocalizedSummary(item, t, siteLabels)}
+                </h3>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">

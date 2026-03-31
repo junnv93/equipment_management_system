@@ -56,7 +56,6 @@ test.describe('Group B-1: NC Management Permissions', () => {
     await techManagerPage.goto(`/equipment/${TEST_EQUIPMENT_ID}/non-conformance`);
 
     // Wait for NC list to load
-    await techManagerPage.waitForTimeout(2000);
 
     // Technical manager should have access to edit buttons for NCs
     // Find any NC card with "기록 수정" button (non-closed NCs)
@@ -82,7 +81,6 @@ test.describe('Group B-1: NC Management Permissions', () => {
     // Lab manager has full access to create, edit, and manage NCs
     // Navigate to equipment with existing NCs to check edit capability
     await siteAdminPage.goto(`/equipment/${TEST_EQUIPMENT_ID}/non-conformance`);
-    await siteAdminPage.waitForTimeout(2000);
 
     const editButton = siteAdminPage.getByRole('button', { name: /기록 수정/i });
     // Should have edit capability

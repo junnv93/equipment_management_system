@@ -32,12 +32,10 @@ test.describe('Full Workflow Integration', () => {
     // 1. Navigate to NC management page
     // First, find equipment with NC
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const firstDetailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     await expect(firstDetailLink).toBeVisible();
     await firstDetailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = testOperatorPage.url();
@@ -50,7 +48,6 @@ test.describe('Full Workflow Integration', () => {
 
     // Navigate to NC management page
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Find the connected NC
     const ncCard = testOperatorPage.locator('.card, [data-testid="nc-card"]').first();

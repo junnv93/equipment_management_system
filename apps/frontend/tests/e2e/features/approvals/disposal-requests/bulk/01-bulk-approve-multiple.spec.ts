@@ -143,7 +143,6 @@ test.describe('Disposal Bulk Actions - Bulk Approve Multiple Items', () => {
 
     // Step 13: Wait for AlertDialog to open and verify it's visible
     // Radix UI AlertDialog uses role="alertdialog", not "dialog"
-    await techManagerPage.waitForTimeout(500);
     const alertDialog = techManagerPage.getByRole('alertdialog');
     await expect(alertDialog).toBeVisible({ timeout: 5000 });
 
@@ -168,7 +167,6 @@ test.describe('Disposal Bulk Actions - Bulk Approve Multiple Items', () => {
     console.log('✅ Toast notification appeared with correct count');
 
     // Step 17: Wait for list to refresh via React Query invalidation
-    await techManagerPage.waitForTimeout(2000);
 
     // Step 18: Verify both selected items are removed from list
     const updatedCount = await approvalItems.count();

@@ -1,13 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import {
-  CALIBRATION_RESULT_LABELS,
-  CHECKOUT_PURPOSE_LABELS,
-  NON_CONFORMANCE_TYPE_LABELS,
-  DISPOSAL_REASON_LABELS,
-} from '@equipment-management/schemas';
-import { TAB_META, REQUEST_TYPE_LABELS, type ApprovalCategory } from '@/lib/api/approvals-api';
+import { TAB_META, REQUEST_TYPES, type ApprovalCategory } from '@/lib/api/approvals-api';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { Badge } from '@/components/ui/badge';
 import { APPROVAL_TIMELINE_TOKENS } from '@/lib/design-tokens';
@@ -57,8 +51,8 @@ function LabeledRow({
   return <DetailRow label={label} value={labels[key] || key} />;
 }
 
-// Translation function type
-type TFunc = (key: string) => string;
+// Translation function type — useTranslations 반환 타입 활용
+type TFunc = ReturnType<typeof useTranslations>;
 type FmtDate = (date: string | Date) => string;
 
 /**
@@ -82,10 +76,7 @@ export function CategoryBadge({ category }: { category: ApprovalCategory }) {
 /** 장비 등록/수정/삭제 */
 function renderEquipmentDetails(details: Record<string, unknown>, t: TFunc) {
   const requestTypeLabels = Object.fromEntries(
-    Object.keys(REQUEST_TYPE_LABELS).map((key) => [
-      key,
-      t(`requestTypes.${key}` as Parameters<typeof t>[0]),
-    ])
+    REQUEST_TYPES.map((key) => [key, t(`requestTypes.${key}` as Parameters<typeof t>[0])])
   );
 
   const requestType = String(details.requestType || '');
@@ -129,7 +120,12 @@ function renderEquipmentDetails(details: Record<string, unknown>, t: TFunc) {
 }
 
 /** 교정 기록 */
-function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
+function renderCalibrationDetails(
+  details: Record<string, unknown>,
+  t: TFunc,
+  fmtDate: FmtDate,
+  tCal: TFunc
+) {
   return (
     <>
       <DetailRow label={t('detailRows.equipmentId')} value={details.equipmentId} />
@@ -143,10 +139,13 @@ function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc, fm
         value={details.nextCalibrationDate}
         fmtDate={fmtDate}
       />
-      <LabeledRow
+      <DetailRow
         label={t('detailRows.calibrationResult')}
-        value={details.result}
-        labels={CALIBRATION_RESULT_LABELS}
+        value={
+          details.result
+            ? tCal(`result.${details.result}` as Parameters<typeof tCal>[0])
+            : undefined
+        }
       />
       <DetailRow
         label={t('detailRows.calibrationOrganization')}
@@ -158,7 +157,12 @@ function renderCalibrationDetails(details: Record<string, unknown>, t: TFunc, fm
 }
 
 /** 반출 / 반입 / 공용장비 */
-function renderCheckoutDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
+function renderCheckoutDetails(
+  details: Record<string, unknown>,
+  t: TFunc,
+  fmtDate: FmtDate,
+  tCheckouts: TFunc
+) {
   // equipment 배열에서 장비 이름 목록 추출
   const equipmentList = details.equipment as Array<Record<string, unknown>> | undefined;
   const equipmentNames = equipmentList
@@ -166,13 +170,14 @@ function renderCheckoutDetails(details: Record<string, unknown>, t: TFunc, fmtDa
     .filter(Boolean)
     .join(', ');
 
+  const purposeValue = details.purpose ? String(details.purpose) : undefined;
+
   return (
     <>
       {equipmentNames && <DetailRow label={t('detailRows.equipment')} value={equipmentNames} />}
-      <LabeledRow
+      <DetailRow
         label={t('detailRows.checkoutPurpose')}
-        value={details.purpose}
-        labels={CHECKOUT_PURPOSE_LABELS}
+        value={purposeValue ? tCheckouts(`purpose.${purposeValue}`) : undefined}
       />
       <DetailRow label={t('detailRows.destination')} value={details.destination} />
       <DateRow
@@ -185,14 +190,19 @@ function renderCheckoutDetails(details: Record<string, unknown>, t: TFunc, fmtDa
 }
 
 /** 부적합 재개 */
-function renderNonConformityDetails(details: Record<string, unknown>, t: TFunc, fmtDate: FmtDate) {
+function renderNonConformityDetails(
+  details: Record<string, unknown>,
+  t: TFunc,
+  fmtDate: FmtDate,
+  tNc: TFunc
+) {
+  const ncTypeValue = details.ncType ? String(details.ncType) : undefined;
   return (
     <>
       <DetailRow label={t('detailRows.equipmentId')} value={details.equipmentId} />
-      <LabeledRow
+      <DetailRow
         label={t('detailRows.ncType')}
-        value={details.ncType}
-        labels={NON_CONFORMANCE_TYPE_LABELS}
+        value={ncTypeValue ? tNc(`type.${ncTypeValue}`) : undefined}
       />
       <DetailRow label={t('detailRows.cause')} value={details.cause} />
       <DetailRow label={t('detailRows.correctionContent')} value={details.correctionContent} />
@@ -224,20 +234,21 @@ function renderDisposalDetails(
   details: Record<string, unknown>,
   isFinal: boolean,
   t: TFunc,
-  fmtDate: FmtDate
+  fmtDate: FmtDate,
+  tDisposal: TFunc
 ) {
   const eq = details.equipment as Record<string, unknown> | undefined;
   const equipmentLabel = eq
     ? `${eq.name || ''}${eq.managementNumber ? ` (${eq.managementNumber})` : ''}`
     : undefined;
+  const reasonValue = details.reason ? String(details.reason) : undefined;
 
   return (
     <>
       {equipmentLabel && <DetailRow label={t('detailRows.equipment')} value={equipmentLabel} />}
-      <LabeledRow
+      <DetailRow
         label={t('detailRows.disposalReason')}
-        value={details.reason}
-        labels={DISPOSAL_REASON_LABELS}
+        value={reasonValue ? tDisposal(`reason.${reasonValue}`) : undefined}
       />
       <DetailRow label={t('detailRows.detailedReason')} value={details.reasonDetail} />
       {isFinal && details.reviewOpinion && (
@@ -311,22 +322,26 @@ export function CategoryDetails({
   details: Record<string, unknown>;
 }) {
   const t = useTranslations('approvals');
+  const tCheckouts = useTranslations('checkouts');
+  const tNc = useTranslations('non-conformances');
+  const tDisposal = useTranslations('disposal');
+  const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
 
   switch (category) {
     case 'equipment':
       return renderEquipmentDetails(details, t);
     case 'calibration':
-      return renderCalibrationDetails(details, t, fmtDate);
+      return renderCalibrationDetails(details, t, fmtDate, tCal);
     case 'outgoing':
     case 'incoming':
-      return renderCheckoutDetails(details, t, fmtDate);
+      return renderCheckoutDetails(details, t, fmtDate, tCheckouts);
     case 'nonconformity':
-      return renderNonConformityDetails(details, t, fmtDate);
+      return renderNonConformityDetails(details, t, fmtDate, tNc);
     case 'disposal_review':
-      return renderDisposalDetails(details, false, t, fmtDate);
+      return renderDisposalDetails(details, false, t, fmtDate, tDisposal);
     case 'disposal_final':
-      return renderDisposalDetails(details, true, t, fmtDate);
+      return renderDisposalDetails(details, true, t, fmtDate, tDisposal);
     case 'plan_review':
     case 'plan_final':
       return renderPlanDetails(details, t);

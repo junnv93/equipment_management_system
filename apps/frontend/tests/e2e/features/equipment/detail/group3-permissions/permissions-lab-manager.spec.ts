@@ -12,11 +12,9 @@ test.describe('Permission-Based Actions', () => {
 
     // 2. Navigate to equipment detail page
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     const firstDetailLink = page.getByRole('link', { name: /상세/i }).first();
     await firstDetailLink.click();
-    await page.waitForLoadState('networkidle');
 
     // 3. Verify 'Edit' button IS visible
     const editButton = page.getByRole('button', { name: /수정/i });

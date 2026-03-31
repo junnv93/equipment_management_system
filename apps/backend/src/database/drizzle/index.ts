@@ -11,14 +11,33 @@ dotenv.config();
 // 로거 설정
 const logger = new Logger('DrizzleORM');
 
+// DB_PASSWORD 미설정 시 명확한 에러 (DATABASE_URL 사용 시에는 URL 내 비밀번호 사용)
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  logger.error('DB_PASSWORD is required when DATABASE_URL is not set. Check your .env file.');
+}
+
+// SSL 설정 (DB_SSL=true 시 활성화)
+const sslEnabled = process.env.DB_SSL === 'true';
+const sslConfig = sslEnabled
+  ? { ssl: { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' } }
+  : {};
+
+if (process.env.NODE_ENV === 'production' && !sslEnabled) {
+  logger.warn(
+    'DB_SSL is not enabled. Database connections are unencrypted. ' +
+      'This is acceptable for Docker internal networks but should be reviewed for other deployments.'
+  );
+}
+
 // 통합된 데이터베이스 연결 설정
+// 주의: DATABASE_URL이 설정되면 host/port/user/password/database는 무시됨 (pg Pool 동작)
+// ssl, max, timeout 등 Pool 옵션은 DATABASE_URL과 함께 적용됨
 const dbConfig: PoolConfig = {
-  // DATABASE_URL 우선 사용, 없으면 개별 환경 변수 사용
   connectionString: process.env.DATABASE_URL,
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'equipment_management',
   max: parseInt(process.env.DB_POOL_MAX || '50', 10),
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '60000', 10),
@@ -28,6 +47,7 @@ const dbConfig: PoolConfig = {
   query_timeout: 30000, // 30초
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
+  ...sslConfig,
 };
 
 // Postgres 연결 풀 생성
@@ -57,7 +77,7 @@ pgPool.on('remove', () => {
   logger.debug('Client removed from pool');
 });
 
-// 오류 이벤트 리스너 - 개선된 재연결 로직
+// 오류 이벤트 리스너 - 지수 백오프 재연결
 let reconnectAttempts = 0;
 const maxReconnectAttempts = 10;
 const reconnectInterval = 5000;
@@ -67,10 +87,9 @@ pgPool.on('error', (err) => {
   metrics.lastErrorTime = new Date();
   logger.error(`PostgreSQL connection error: ${err.message}`);
 
-  // 백오프 알고리즘을 사용한 재연결
   if (reconnectAttempts < maxReconnectAttempts) {
     const backoffTime = reconnectInterval * Math.pow(2, reconnectAttempts);
-    setTimeout(async () => {
+    const timer = setTimeout(async () => {
       reconnectAttempts++;
       logger.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
 
@@ -78,33 +97,21 @@ pgPool.on('error', (err) => {
         const client = await pgPool.connect();
         await client.query('SELECT 1');
         client.release();
-
-        reconnectAttempts = 0; // 성공 시 카운터 리셋
+        reconnectAttempts = 0;
         metrics.lastReconnectTime = new Date();
         logger.log('Successfully reconnected to PostgreSQL');
       } catch (error) {
         logger.error(`Reconnection failed: ${getErrorMessage(error)}`);
       }
     }, backoffTime);
+    timer.unref();
   } else {
     logger.error('Max reconnection attempts reached. Please check database connection.');
   }
 });
 
-// 애플리케이션 종료 시 정리
-process.on('SIGINT', () => {
-  pgPool.end(() => {
-    logger.log('PostgreSQL connection pool closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGTERM', () => {
-  pgPool.end(() => {
-    logger.log('PostgreSQL connection pool closed');
-    process.exit(0);
-  });
-});
+// ⚠️ process.on('SIGINT'/'SIGTERM') 핸들러 없음 — NestJS enableShutdownHooks()가 전담
+// DrizzleService.onModuleDestroy() → pgPool.end() 로 정리
 
 // Drizzle ORM 인스턴스 생성 (스키마 포함)
 export const db = drizzle(pgPool, { schema });

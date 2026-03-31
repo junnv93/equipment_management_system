@@ -1,5 +1,15 @@
-import { pgTable, varchar, timestamp, text, uuid, date, index, integer } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import {
+  pgTable,
+  varchar,
+  timestamp,
+  text,
+  uuid,
+  date,
+  index,
+  integer,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 import {
   NON_CONFORMANCE_STATUS_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
@@ -105,6 +115,10 @@ export const nonConformances = pgTable(
       deletedAtIdx: index('non_conformances_deleted_at_idx').on(table.deletedAt),
       // 목록 정렬 최적화 (ORDER BY created_at DESC)
       createdAtIdx: index('non_conformances_created_at_idx').on(table.createdAt),
+      // TOCTOU 방지: 동일 장비 + 동일 NC 타입에 open 상태 중복 차단
+      equipmentNcTypeOpenUnique: uniqueIndex('non_conformances_equipment_nc_type_open_unique')
+        .on(table.equipmentId, table.ncType)
+        .where(sql`status = 'open' AND deleted_at IS NULL`),
     };
   }
 );

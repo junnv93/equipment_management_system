@@ -8,7 +8,8 @@ import { CheckCircle2, XCircle, Eye } from 'lucide-react';
 import { daysBetween } from '@/lib/utils/date';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { TAB_META, UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
+import { TAB_META } from '@/lib/api/approvals-api';
+import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import {
   getApprovalStatusBadgeClasses,
   getApprovalActionButtonClasses,
@@ -21,6 +22,7 @@ import {
 import { getElapsedDaysUrgency } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface ApprovalRowProps {
   item: ApprovalItem;
@@ -52,11 +54,13 @@ export function ApprovalRow({
   actionLabel,
 }: ApprovalRowProps) {
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
   const { fmtDate } = useDateFormatter();
   const elapsedDays = daysBetween(item.requestedAt);
   const urgency = getElapsedDaysUrgency(elapsedDays);
   const tokens = APPROVAL_ROW_TOKENS;
   const meta = TAB_META[item.category];
+  const localizedSummary = getLocalizedSummary(item, t, siteLabels);
 
   return (
     <div
@@ -79,7 +83,7 @@ export function ApprovalRow({
           id={`select-${item.id}`}
           checked={isSelected}
           onCheckedChange={onToggleSelect}
-          aria-label={`${item.summary} ${t('item.select')}`}
+          aria-label={`${localizedSummary} ${t('item.select')}`}
         />
       </div>
 
@@ -96,9 +100,11 @@ export function ApprovalRow({
       <div className="min-w-0 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge className={cn(getApprovalStatusBadgeClasses(item.status), 'text-xs')}>
-            {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
+            {t(`unifiedStatus.${item.status}`)}
           </Badge>
-          <span className={cn('text-sm font-medium truncate', FONT.heading)}>{item.summary}</span>
+          <span className={cn('text-sm font-medium truncate', FONT.heading)}>
+            {localizedSummary}
+          </span>
           {meta.multiStep && (
             <span className={tokens.stepBadge} aria-label={t('row.stepBadge')}>
               {item.approvalHistory && item.approvalHistory.length > 0

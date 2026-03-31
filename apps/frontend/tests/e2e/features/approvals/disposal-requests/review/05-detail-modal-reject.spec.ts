@@ -47,7 +47,6 @@ test.describe('Disposal Review Tab - Detail Modal Reject Button', () => {
 
     // Step 1: Navigate to /admin/approvals?tab=disposal_review with cache busting
     await techManagerPage.goto(`/admin/approvals?tab=disposal_review&_=${timestamp}`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Step 2: Wait for the approval list to load
     const pageHeading = techManagerPage.getByRole('heading', { name: '승인 관리', level: 1 });
@@ -162,7 +161,6 @@ test.describe('Disposal Review Tab - Detail Modal Reject Button', () => {
     console.log('✅ RejectModal closed after submission');
 
     // Step 13: Verify the rejected item is removed from the list
-    await techManagerPage.waitForTimeout(1000);
 
     const updatedCount = await approvalItems.count();
     console.log(`Updated approval items count: ${updatedCount}`);

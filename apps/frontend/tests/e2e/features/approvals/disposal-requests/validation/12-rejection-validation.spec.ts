@@ -41,7 +41,6 @@ test.describe('Rejection - Group C', () => {
   }) => {
     // 1. Navigate to equipment detail page
     await techManagerPage.goto(`/equipment/${EQUIP_DISPOSAL_REJ_C3}`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // 2. Verify "폐기 진행 중" button is visible
     const disposalInProgressButton = techManagerPage.getByRole('button', {
@@ -51,7 +50,6 @@ test.describe('Rejection - Group C', () => {
 
     // 3. Click "폐기 진행 중" button to open dropdown menu
     await disposalInProgressButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 4. Click "폐기 검토하기" menu item in the dropdown
     const reviewMenuItem = techManagerPage.getByRole('menuitem', {
@@ -74,7 +72,6 @@ test.describe('Rejection - Group C', () => {
 
     // 8. Click "반려" once with empty textarea to trigger warning
     await rejectButton.click();
-    await techManagerPage.waitForTimeout(500);
 
     // 9. Verify warning message appears
     await expect(techManagerPage.getByText(/구체적인 사유를 입력하고/i)).toBeVisible({
@@ -135,7 +132,6 @@ test.describe('Rejection - Group C', () => {
 
     // 1. Navigate to equipment detail page
     await siteAdminPage.goto(`/equipment/${EQUIP_DISPOSAL_REJ_C4}`);
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 2. Verify "폐기 진행 중" button is visible
     const disposalInProgressButton = siteAdminPage.getByRole('button', {
@@ -145,7 +141,6 @@ test.describe('Rejection - Group C', () => {
 
     // 3. Click "폐기 진행 중" button to open dropdown menu
     await disposalInProgressButton.click();
-    await siteAdminPage.waitForTimeout(500);
 
     // 4. Click "최종 승인하기" menu item
     const approveMenuItem = siteAdminPage.getByText('최종 승인하기');
@@ -166,7 +161,6 @@ test.describe('Rejection - Group C', () => {
 
     // 8. Click "반려" once with empty textarea to trigger warning
     await rejectButton.click();
-    await siteAdminPage.waitForTimeout(500);
 
     // 9. Verify warning message appears
     await expect(siteAdminPage.getByText(/구체적인 사유를 입력하고/i)).toBeVisible({

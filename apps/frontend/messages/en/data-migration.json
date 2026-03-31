@@ -1,0 +1,93 @@
+{
+  "title": "Data Migration",
+  "description": "Bulk register equipment data from an Excel file. The process has two steps: Preview → Execute.",
+  "steps": {
+    "upload": "Upload File",
+    "preview": "Preview",
+    "result": "Result"
+  },
+  "upload": {
+    "title": "Upload Excel File",
+    "description": "Upload an xlsx file to review row-by-row validation results.",
+    "dropzone": "Drag and drop a file here, or click to select",
+    "dropzoneActive": "Drop the file here",
+    "fileTypeHint": "Only .xlsx files are supported",
+    "maxSizeHint": "Maximum 10MB",
+    "selectedFile": "Selected file",
+    "removeFile": "Remove file",
+    "options": "Import Options",
+    "autoGenerateNumber": "Auto-generate management numbers",
+    "autoGenerateNumberHint": "Automatically assigns management numbers to rows without one.",
+    "defaultSite": "Default site",
+    "defaultSiteHint": "Default value to use when site information is missing",
+    "skipDuplicates": "Skip duplicates",
+    "skipDuplicatesHint": "Rows with already registered management numbers will be skipped.",
+    "downloadTemplate": "Download Template",
+    "startPreview": "Start Preview",
+    "loading": "Analyzing file...",
+    "noFile": "Please select a file.",
+    "sites": {
+      "suwon": "Suwon",
+      "uiwang": "Uiwang",
+      "pyeongtaek": "Pyeongtaek"
+    }
+  },
+  "preview": {
+    "title": "Preview Results",
+    "description": "Review row-by-row validation results and select items to register.",
+    "summary": {
+      "total": "Total",
+      "valid": "Valid",
+      "error": "Error",
+      "duplicate": "Duplicate",
+      "warning": "Warning"
+    },
+    "unmappedColumns": "Unrecognized columns",
+    "unmappedColumnsHint": "The following column headers were not mapped. Please check the template format.",
+    "table": {
+      "row": "Row",
+      "status": "Status",
+      "name": "Equipment Name",
+      "managementNumber": "Mgmt No.",
+      "errors": "Errors/Warnings",
+      "selectAll": "Select all",
+      "deselectAll": "Deselect all",
+      "collapse": "Collapse",
+      "showMore": "+{count} more",
+      "selectRow": "Select row {row}"
+    },
+    "status": {
+      "valid": "Valid",
+      "error": "Error",
+      "duplicate": "Duplicate",
+      "warning": "Warning"
+    },
+    "executeButton": "Register Selected",
+    "executeButtonCount": "Register {count} items",
+    "backButton": "Re-upload",
+    "loading": "Registering...",
+    "noValidRows": "No items available for registration.",
+    "downloadErrorReport": "Download Error Report"
+  },
+  "result": {
+    "title": "Migration Complete",
+    "success": "Completed successfully.",
+    "created": "Registered",
+    "skipped": "Skipped",
+    "errors": "Errors",
+    "createdUnit": "items",
+    "viewEquipmentList": "Go to Equipment List",
+    "migrateAgain": "Migrate More",
+    "downloadErrorReport": "Download Error Report",
+    "partialSuccess": "Some items failed to register."
+  },
+  "errors": {
+    "fileRequired": "Please select a file.",
+    "invalidFileType": "Only .xlsx files can be uploaded.",
+    "fileTooLarge": "File size must be 10MB or less.",
+    "previewFailed": "Failed to analyze the file. Please check the file format.",
+    "executeFailed": "Failed to register data.",
+    "downloadFailed": "Download failed.",
+    "sessionExpired": "Session expired. Please re-upload the file."
+  }
+}
