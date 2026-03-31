@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -45,24 +46,39 @@ import {
   REPORTS_ICON_TOKENS,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
+import { SITE_VALUES, type Site } from '@equipment-management/schemas';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import teamsApi, { type Team } from '@/lib/api/teams-api';
+import { ReportsStatsSection } from '@/components/reports/ReportsStatsSection';
 
 export default function ReportsContent() {
   const { toast } = useToast();
   const t = useTranslations('common');
   const currentLocale = useLocale();
   const dateLocale = currentLocale === 'ko' ? ko : enUS;
+  const siteLabels = useSiteLabels();
 
   const [reportType, setReportType] = useState<ReportType | ''>('');
   const [dateRange, setDateRange] = useState<ReportPeriod>('last_month');
   const [customDateRange, setCustomDateRange] = useState<DateRange>();
   const [reportFormat, setReportFormat] = useState<ReportFormat>('excel');
-  const [equipmentId, setEquipmentId] = useState<string>('');
-  const [departmentId, setDepartmentId] = useState<string>('');
-  const [categoryId, setCategoryId] = useState<string>('');
+  const [site, setSite] = useState<string>('');
+  const [teamId, setTeamId] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [lastGeneratedReport, setLastGeneratedReport] = useState<ReportGenerationResult | null>(
     null
   );
+
+  // 사이트 선택 시 해당 사이트의 팀 목록 조회
+  const needsTeamFilter = reportType === 'team_equipment' || reportType === 'equipment_inventory';
+  const { data: teamsData } = useQuery({
+    queryKey: queryKeys.teams.bySite(site || undefined),
+    queryFn: () => teamsApi.getTeams({ site: (site as Site) || undefined, pageSize: 100 }),
+    enabled: needsTeamFilter,
+    staleTime: CACHE_TIMES.REFERENCE,
+  });
+  const teams: Team[] = teamsData?.data ?? [];
 
   const { mutate: generateReportMutation, isPending } = useGenerateReport({
     onSuccess: (data) => {
@@ -110,17 +126,22 @@ export default function ReportsContent() {
 
     const additionalParams: Record<string, string> = {};
 
-    if (reportType === 'equipment_inventory' || reportType === 'utilization_report') {
-      if (equipmentId) additionalParams.equipmentId = equipmentId;
-      if (categoryId) additionalParams.categoryId = categoryId;
+    if (reportType === 'equipment_inventory') {
+      if (site) additionalParams.site = site;
+      if (teamId) additionalParams.teamId = teamId;
     }
 
-    if (reportType === 'team_equipment' && departmentId) {
-      additionalParams.departmentId = departmentId;
+    if (reportType === 'calibration_status') {
+      if (status) additionalParams.status = status;
     }
 
-    if (reportType === 'calibration_status' && status) {
-      additionalParams.status = status;
+    if (reportType === 'utilization_report') {
+      if (site) additionalParams.site = site;
+    }
+
+    if (reportType === 'team_equipment') {
+      if (site) additionalParams.site = site;
+      if (teamId) additionalParams.teamId = teamId;
     }
 
     generateReportMutation({
@@ -131,6 +152,18 @@ export default function ReportsContent() {
       endDate: endDateStr,
       additionalParams,
     });
+  };
+
+  const handleSiteChange = (value: string) => {
+    setSite(value);
+    setTeamId(''); // 사이트 변경 시 팀 선택 초기화
+  };
+
+  const handleReportTypeChange = (value: string) => {
+    setReportType(value as ReportType);
+    setSite('');
+    setTeamId('');
+    setStatus('');
   };
 
   const getReportTypeLabel = (type: ReportType) => {
@@ -196,19 +229,6 @@ export default function ReportsContent() {
     }
   };
 
-  const getCategoryLabel = (id: string) => {
-    switch (id) {
-      case 'test':
-        return t('reports.testEquipment');
-      case 'computer':
-        return t('reports.computer');
-      case 'network':
-        return t('reports.networkEquipment');
-      default:
-        return id;
-    }
-  };
-
   const getCalibrationStatusLabel = (s: string) => {
     switch (s) {
       case 'completed':
@@ -222,26 +242,13 @@ export default function ReportsContent() {
     }
   };
 
-  const getDepartmentLabel = (id: string) => {
-    switch (id) {
-      case '1':
-        return t('reports.rdTeam');
-      case '2':
-        return t('reports.qcTeam');
-      case '3':
-        return t('reports.prodTeam');
-      case '4':
-        return t('reports.testTeam');
-      default:
-        return id;
-    }
-  };
-
   const getReportContents = (type: ReportType): string[] => {
     const key = `reports.contents.${type}` as Parameters<typeof t>[0];
     const contents = t.raw(key);
     return Array.isArray(contents) ? (contents as string[]) : [];
   };
+
+  const selectedTeamName = teams.find((team) => team.id === teamId)?.name;
 
   return (
     <div className={getPageContainerClasses()}>
@@ -251,6 +258,9 @@ export default function ReportsContent() {
           <p className={REPORTS_HEADER_TOKENS.subtitle}>{t('reports.subtitle')}</p>
         </div>
       </div>
+
+      {/* 통계 요약 카드 */}
+      <ReportsStatsSection />
 
       {lastGeneratedReport && (
         <div className={REPORTS_SUCCESS_BANNER_TOKENS.container}>
@@ -272,10 +282,7 @@ export default function ReportsContent() {
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="report-type">{t('reports.reportType')}</Label>
-                <Select
-                  value={reportType}
-                  onValueChange={(value) => setReportType(value as ReportType)}
-                >
+                <Select value={reportType} onValueChange={handleReportTypeChange}>
                   <SelectTrigger id="report-type">
                     <SelectValue placeholder={t('reports.reportTypePlaceholder')} />
                   </SelectTrigger>
@@ -316,26 +323,45 @@ export default function ReportsContent() {
 
               <Separator />
 
-              {/* 보고서 유형별 추가 옵션 */}
+              {/* 장비 현황: 사이트 + 팀 필터 */}
               {reportType === 'equipment_inventory' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="equipment-category">{t('reports.equipmentCategory')}</Label>
-                    <Select value={categoryId} onValueChange={setCategoryId}>
-                      <SelectTrigger id="equipment-category">
-                        <SelectValue placeholder={t('reports.allCategories')} />
+                    <Label htmlFor="site-filter">{t('reports.site')}</Label>
+                    <Select value={site} onValueChange={handleSiteChange}>
+                      <SelectTrigger id="site-filter">
+                        <SelectValue placeholder={t('reports.allSites')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allCategories')}</SelectItem>
-                        <SelectItem value="test">{t('reports.testEquipment')}</SelectItem>
-                        <SelectItem value="computer">{t('reports.computer')}</SelectItem>
-                        <SelectItem value="network">{t('reports.networkEquipment')}</SelectItem>
+                        <SelectItem value="">{t('reports.allSites')}</SelectItem>
+                        {SITE_VALUES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {siteLabels[s]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="team-filter">{t('reports.team')}</Label>
+                    <Select value={teamId} onValueChange={setTeamId} disabled={teams.length === 0}>
+                      <SelectTrigger id="team-filter">
+                        <SelectValue placeholder={t('reports.allTeams')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">{t('reports.allTeams')}</SelectItem>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               )}
 
+              {/* 교정 현황: 교정 상태 필터 */}
               {reportType === 'calibration_status' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
@@ -357,38 +383,60 @@ export default function ReportsContent() {
                 </div>
               )}
 
+              {/* 활용률: 사이트 필터 */}
               {reportType === 'utilization_report' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="equipment-id">{t('reports.equipmentSelect')}</Label>
-                    <Select value={equipmentId} onValueChange={setEquipmentId}>
-                      <SelectTrigger id="equipment-id">
-                        <SelectValue placeholder={t('reports.allEquipment')} />
+                    <Label htmlFor="site-filter-util">{t('reports.site')}</Label>
+                    <Select value={site} onValueChange={setSite}>
+                      <SelectTrigger id="site-filter-util">
+                        <SelectValue placeholder={t('reports.allSites')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allEquipment')}</SelectItem>
-                        <SelectItem value="1">{t('reports.sampleEquipment1')}</SelectItem>
-                        <SelectItem value="2">{t('reports.sampleEquipment2')}</SelectItem>
-                        <SelectItem value="3">{t('reports.sampleEquipment3')}</SelectItem>
+                        <SelectItem value="">{t('reports.allSites')}</SelectItem>
+                        {SITE_VALUES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {siteLabels[s]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               )}
 
+              {/* 팀별 장비: 사이트 + 팀 필터 */}
               {reportType === 'team_equipment' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="department-id">{t('reports.departmentSelect')}</Label>
-                    <Select value={departmentId} onValueChange={setDepartmentId}>
-                      <SelectTrigger id="department-id">
-                        <SelectValue placeholder={t('reports.departmentSelect')} />
+                    <Label htmlFor="site-filter-team">{t('reports.site')}</Label>
+                    <Select value={site} onValueChange={handleSiteChange}>
+                      <SelectTrigger id="site-filter-team">
+                        <SelectValue placeholder={t('reports.allSites')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">{t('reports.rdTeam')}</SelectItem>
-                        <SelectItem value="2">{t('reports.qcTeam')}</SelectItem>
-                        <SelectItem value="3">{t('reports.prodTeam')}</SelectItem>
-                        <SelectItem value="4">{t('reports.testTeam')}</SelectItem>
+                        <SelectItem value="">{t('reports.allSites')}</SelectItem>
+                        {SITE_VALUES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {siteLabels[s]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="team-filter-team">{t('reports.team')}</Label>
+                    <Select value={teamId} onValueChange={setTeamId} disabled={teams.length === 0}>
+                      <SelectTrigger id="team-filter-team">
+                        <SelectValue placeholder={t('reports.allTeams')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">{t('reports.allTeams')}</SelectItem>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -499,7 +547,7 @@ export default function ReportsContent() {
           </CardContent>
         </Card>
 
-        {/* 보고서 미리보기 또는 설명 */}
+        {/* 보고서 설명 및 설정 요약 */}
         <Card>
           <CardHeader>
             <CardTitle>
@@ -552,14 +600,18 @@ export default function ReportsContent() {
                           {getPeriodLabel(dateRange)}
                         </span>
                       </li>
-                      {reportType === 'equipment_inventory' && categoryId && (
+                      {site && (
                         <li className={REPORTS_SUMMARY_TOKENS.row}>
-                          <span className={REPORTS_SUMMARY_TOKENS.label}>
-                            {t('reports.equipmentCategoryLabel')}
-                          </span>
+                          <span className={REPORTS_SUMMARY_TOKENS.label}>{t('reports.site')}</span>
                           <span className={REPORTS_SUMMARY_TOKENS.value}>
-                            {getCategoryLabel(categoryId)}
+                            {siteLabels[site as Site]}
                           </span>
+                        </li>
+                      )}
+                      {teamId && selectedTeamName && (
+                        <li className={REPORTS_SUMMARY_TOKENS.row}>
+                          <span className={REPORTS_SUMMARY_TOKENS.label}>{t('reports.team')}</span>
+                          <span className={REPORTS_SUMMARY_TOKENS.value}>{selectedTeamName}</span>
                         </li>
                       )}
                       {reportType === 'calibration_status' && status && (
@@ -569,16 +621,6 @@ export default function ReportsContent() {
                           </span>
                           <span className={REPORTS_SUMMARY_TOKENS.value}>
                             {getCalibrationStatusLabel(status)}
-                          </span>
-                        </li>
-                      )}
-                      {reportType === 'team_equipment' && departmentId && (
-                        <li className={REPORTS_SUMMARY_TOKENS.row}>
-                          <span className={REPORTS_SUMMARY_TOKENS.label}>
-                            {t('reports.departmentLabel')}
-                          </span>
-                          <span className={REPORTS_SUMMARY_TOKENS.value}>
-                            {getDepartmentLabel(departmentId)}
                           </span>
                         </li>
                       )}

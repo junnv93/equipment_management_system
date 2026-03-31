@@ -163,7 +163,6 @@ describe('EquipmentController (e2e)', () => {
         firmwareVersion: 'v2.0.0',
         manualLocation: '/manuals/test.pdf',
         accessories: 'Test Accessories',
-        mainFeatures: 'Test Features',
         technicalManager: 'Test Manager',
         status: 'available',
         site: 'suwon', // ✅ site 필드 추가 (필수)

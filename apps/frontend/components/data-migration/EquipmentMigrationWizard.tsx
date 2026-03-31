@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check } from 'lucide-react';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import FileUploadStep from './FileUploadStep';
 import PreviewStep from './PreviewStep';
 import ResultStep from './ResultStep';
 import type {
-  MigrationPreviewResult,
-  MigrationExecuteResult,
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
   PreviewOptions,
 } from '@/lib/api/data-migration-api';
 
@@ -19,19 +20,19 @@ const STEPS: WizardStep[] = ['upload', 'preview', 'result'];
 export default function EquipmentMigrationWizard() {
   const t = useTranslations('data-migration');
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
-  const [previewResult, setPreviewResult] = useState<MigrationPreviewResult | null>(null);
-  const [executeResult, setExecuteResult] = useState<MigrationExecuteResult | null>(null);
+  const [previewResult, setPreviewResult] = useState<MultiSheetPreviewResult | null>(null);
+  const [executeResult, setExecuteResult] = useState<MultiSheetExecuteResult | null>(null);
   const [previewOptions, setPreviewOptions] = useState<PreviewOptions>({});
 
   const stepIndex = STEPS.indexOf(currentStep);
 
-  const handlePreviewComplete = (result: MigrationPreviewResult, options: PreviewOptions) => {
+  const handlePreviewComplete = (result: MultiSheetPreviewResult, options: PreviewOptions) => {
     setPreviewResult(result);
     setPreviewOptions(options);
     setCurrentStep('preview');
   };
 
-  const handleExecuteComplete = (result: MigrationExecuteResult) => {
+  const handleExecuteComplete = (result: MultiSheetExecuteResult) => {
     setExecuteResult(result);
     setCurrentStep('result');
   };
@@ -55,7 +56,7 @@ export default function EquipmentMigrationWizard() {
               <li key={step} className="flex flex-1 items-center">
                 <div className="flex flex-col items-center gap-1">
                   <div
-                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium ${TRANSITION_PRESETS.fastBgColorBorder} ${
                       isDone
                         ? 'border-primary bg-primary text-primary-foreground'
                         : isActive
@@ -75,7 +76,7 @@ export default function EquipmentMigrationWizard() {
                 </div>
                 {index < STEPS.length - 1 && (
                   <div
-                    className={`mx-2 h-0.5 flex-1 transition-colors ${
+                    className={`mx-2 h-0.5 flex-1 ${TRANSITION_PRESETS.fastBg} ${
                       isDone ? 'bg-primary' : 'bg-muted-foreground/20'
                     }`}
                   />

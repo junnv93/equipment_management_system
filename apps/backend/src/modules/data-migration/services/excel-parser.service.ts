@@ -4,7 +4,25 @@ import type { RawExcelRow, MappedRow } from '../types/data-migration.types';
 import {
   COLUMN_ALIAS_INDEX,
   EQUIPMENT_COLUMN_MAPPING,
+  type ColumnMappingEntry,
 } from '../constants/equipment-column-mapping';
+import {
+  CALIBRATION_ALIAS_INDEX,
+  CALIBRATION_COLUMN_MAPPING,
+} from '../constants/calibration-column-mapping';
+import { REPAIR_ALIAS_INDEX, REPAIR_COLUMN_MAPPING } from '../constants/repair-column-mapping';
+import {
+  INCIDENT_ALIAS_INDEX,
+  INCIDENT_COLUMN_MAPPING,
+} from '../constants/incident-column-mapping';
+import { detectSheetType, SHEET_CONFIGS, type MigrationSheetType } from '../constants/sheet-config';
+
+export interface ParsedSheet {
+  sheetType: MigrationSheetType;
+  sheetName: string;
+  rows: MappedRow[];
+  unmappedColumns: string[];
+}
 
 /**
  * Excel 파일 파싱 서비스
@@ -17,7 +35,7 @@ import {
 @Injectable()
 export class ExcelParserService {
   /**
-   * xlsx 버퍼를 파싱하여 원시 행 배열 반환
+   * xlsx 버퍼를 파싱하여 원시 행 배열 반환 (하위 호환 — 첫 번째 시트만)
    */
   async parseBuffer(buffer: Buffer): Promise<RawExcelRow[]> {
     const workbook = new ExcelJS.Workbook();
@@ -88,27 +106,120 @@ export class ExcelParserService {
    * 원시 행 배열을 DB 필드명으로 매핑
    */
   mapRows(rawRows: RawExcelRow[]): MappedRow[] {
-    return rawRows.map((raw) => this.mapSingleRow(raw));
+    return rawRows.map((raw) => this.mapSingleRow(raw, COLUMN_ALIAS_INDEX));
+  }
+
+  /**
+   * 멀티시트 파싱 — 모든 시트를 타입별로 감지하여 반환
+   */
+  async parseMultiSheetBuffer(buffer: Buffer): Promise<ParsedSheet[]> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+
+    const results: ParsedSheet[] = [];
+
+    workbook.eachSheet((sheet) => {
+      const sheetType = detectSheetType(sheet.name);
+      if (sheetType === null) return; // 인식 불가 시트 스킵 (참고값, 설명 시트 등)
+      const aliasIndex = this.getAliasIndexForType(sheetType);
+
+      if (sheet.rowCount < 2) return; // 빈 시트 스킵
+
+      const { rows, unmappedColumns } = this.parseSheet(sheet, aliasIndex);
+      if (rows.length === 0) return; // 데이터 없는 시트 스킵
+
+      results.push({ sheetType, sheetName: sheet.name, rows, unmappedColumns });
+    });
+
+    if (results.length === 0) {
+      throw new BadRequestException({
+        code: 'MIGRATION_EMPTY_FILE',
+        message: '데이터가 있는 시트가 없습니다.',
+      });
+    }
+
+    return results;
+  }
+
+  private getAliasIndexForType(type: MigrationSheetType): Map<string, ColumnMappingEntry> {
+    switch (type) {
+      case 'calibration':
+        return CALIBRATION_ALIAS_INDEX;
+      case 'repair':
+        return REPAIR_ALIAS_INDEX;
+      case 'incident':
+        return INCIDENT_ALIAS_INDEX;
+      default:
+        return COLUMN_ALIAS_INDEX;
+    }
+  }
+
+  /**
+   * 시트 → rows + unmappedColumns 파싱 (내부 공통 로직)
+   */
+  private parseSheet(
+    sheet: ExcelJS.Worksheet,
+    aliasIndex: Map<string, ColumnMappingEntry>
+  ): { rows: MappedRow[]; unmappedColumns: string[] } {
+    const headerRow = sheet.getRow(1);
+    const columnIndexToHeader: Map<number, string> = new Map();
+
+    headerRow.eachCell((cell, colNumber) => {
+      const header = cell.text?.trim();
+      if (header) {
+        columnIndexToHeader.set(colNumber, header);
+      }
+    });
+
+    if (columnIndexToHeader.size === 0) {
+      return { rows: [], unmappedColumns: [] };
+    }
+
+    const rows: MappedRow[] = [];
+    const globalUnmapped = new Set<string>();
+    let dataRowNumber = 0;
+
+    sheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+
+      const hasData = Array.from(columnIndexToHeader.keys()).some((colIdx) => {
+        const cell = row.getCell(colIdx);
+        return cell.value !== null && cell.value !== undefined && cell.value !== '';
+      });
+      if (!hasData) return;
+
+      dataRowNumber++;
+      const rawData: Record<string, unknown> = {};
+
+      columnIndexToHeader.forEach((header, colIdx) => {
+        const cell = row.getCell(colIdx);
+        rawData[header] = this.extractCellValue(cell);
+      });
+
+      const mapped = this.mapSingleRow({ rowNumber: dataRowNumber, rawData }, aliasIndex);
+      mapped.unmappedColumns.forEach((col) => globalUnmapped.add(col));
+      rows.push(mapped);
+    });
+
+    return { rows, unmappedColumns: Array.from(globalUnmapped) };
   }
 
   /**
    * 단일 행 매핑 (header alias → dbField + transform)
    */
-  private mapSingleRow(raw: RawExcelRow): MappedRow {
+  private mapSingleRow(raw: RawExcelRow, aliasIndex: Map<string, ColumnMappingEntry>): MappedRow {
     const mappedData: Record<string, unknown> = {};
     const unmappedColumns: string[] = [];
-    const recognizedHeaders = new Set<string>();
 
     for (const [header, rawValue] of Object.entries(raw.rawData)) {
       const key = header.toLowerCase().trim();
-      const entry = COLUMN_ALIAS_INDEX.get(key);
+      const entry = aliasIndex.get(key);
 
       if (!entry) {
         unmappedColumns.push(header);
         continue;
       }
 
-      recognizedHeaders.add(entry.dbField);
       const transformed = entry.transform ? entry.transform(rawValue) : rawValue;
       if (transformed !== undefined && transformed !== null && transformed !== '') {
         mappedData[entry.dbField] = transformed;
@@ -227,29 +338,27 @@ export class ExcelParserService {
   }
 
   /**
-   * 입력 템플릿 Excel 생성
-   * 한국어 헤더 + 예시 행 + 데이터 유효성 검사 드롭다운
+   * 입력 템플릿 Excel 생성 (4개 시트: 장비/교정/수리/사고)
    */
   async generateTemplate(): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Equipment Management System';
 
-    const sheet = workbook.addWorksheet('장비 등록', {
+    // ── 장비 등록 시트 ──────────────────────────────────────────────────────────
+    const equipSheet = workbook.addWorksheet('장비 등록', {
       pageSetup: { paperSize: 9, orientation: 'landscape' },
     });
 
-    // 컬럼 정의
-    const columns = EQUIPMENT_COLUMN_MAPPING.map((entry) => ({
+    const equipColumns = EQUIPMENT_COLUMN_MAPPING.map((entry) => ({
       header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
       key: entry.dbField,
       width: 22,
     }));
 
-    sheet.columns = columns;
+    equipSheet.columns = equipColumns;
 
-    // 헤더 스타일
-    const headerRow = sheet.getRow(1);
-    headerRow.eachCell((cell, colIdx) => {
+    const equipHeaderRow = equipSheet.getRow(1);
+    equipHeaderRow.eachCell((cell, colIdx) => {
       const entry = EQUIPMENT_COLUMN_MAPPING[colIdx - 1];
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = {
@@ -265,10 +374,9 @@ export class ExcelParserService {
         right: { style: 'thin' },
       };
     });
-    headerRow.height = 28;
+    equipHeaderRow.height = 28;
 
-    // 예시 행
-    sheet.addRow({
+    equipSheet.addRow({
       name: '네트워크 분석기',
       site: 'suwon',
       initialLocation: '수원랩 A동 102호',
@@ -284,7 +392,78 @@ export class ExcelParserService {
       purchaseYear: '2020',
     });
 
-    // 참고 시트 추가
+    // ── 교정 이력 시트 ──────────────────────────────────────────────────────────
+    const calSheet = workbook.addWorksheet('교정 이력', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+    calSheet.columns = [
+      { header: '관리번호 *', key: 'managementNumber', width: 20 },
+      { header: '교정일 *', key: 'calibrationDate', width: 18 },
+      { header: '교정기관', key: 'agencyName', width: 20 },
+      { header: '성적서번호', key: 'certificateNumber', width: 20 },
+      { header: '교정결과', key: 'result', width: 20 },
+      { header: '교정비용', key: 'cost', width: 15 },
+      { header: '비고', key: 'notes', width: 30 },
+    ];
+    this.applyHeaderStyle(
+      calSheet,
+      CALIBRATION_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    calSheet.addRow({
+      managementNumber: 'SUW-E0001',
+      calibrationDate: '2024-01-15',
+      agencyName: 'HCT',
+      certificateNumber: 'HCT-2024-001',
+      result: '합격',
+      cost: '500000',
+      notes: '정기 교정',
+    });
+
+    // ── 수리 이력 시트 ──────────────────────────────────────────────────────────
+    const repairSheet = workbook.addWorksheet('수리 이력', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+    repairSheet.columns = [
+      { header: '관리번호 *', key: 'managementNumber', width: 20 },
+      { header: '수리일 *', key: 'repairDate', width: 18 },
+      { header: '수리내용 *', key: 'repairDescription', width: 40 },
+      { header: '수리결과(완료/부분/실패)', key: 'repairResult', width: 25 },
+      { header: '비고', key: 'notes', width: 30 },
+    ];
+    this.applyHeaderStyle(
+      repairSheet,
+      REPAIR_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    repairSheet.addRow({
+      managementNumber: 'SUW-E0001',
+      repairDate: '2024-03-20',
+      repairDescription: '전원 공급 장치 교체',
+      repairResult: '완료',
+      notes: '부품 교체 완료',
+    });
+
+    // ── 사고 이력 시트 ──────────────────────────────────────────────────────────
+    const incidentSheet = workbook.addWorksheet('사고 이력', {
+      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    });
+    incidentSheet.columns = [
+      { header: '관리번호 *', key: 'managementNumber', width: 20 },
+      { header: '발생일 *', key: 'occurredAt', width: 18 },
+      { header: '사고유형(손상/오작동/변경/수리) *', key: 'incidentType', width: 35 },
+      { header: '내용 *', key: 'content', width: 50 },
+    ];
+    this.applyHeaderStyle(
+      incidentSheet,
+      INCIDENT_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    incidentSheet.addRow({
+      managementNumber: 'SUW-E0001',
+      occurredAt: '2024-02-10',
+      incidentType: '손상',
+      content: '운반 중 케이블 손상',
+    });
+
+    // ── 참고값 시트 ──────────────────────────────────────────────────────────
     const refSheet = workbook.addWorksheet('참고값');
     refSheet.addRow(['필드명', '허용값']);
     refSheet.addRow(['사이트(site)', 'suwon | uiwang | pyeongtaek']);
@@ -293,12 +472,38 @@ export class ExcelParserService {
       'external_calibration | self_inspection | not_applicable',
     ]);
     refSheet.addRow(['교정필요(calibrationRequired)', 'required | not_required']);
+    refSheet.addRow(['수리결과(repairResult)', 'completed(완료) | partial(부분) | failed(실패)']);
+    refSheet.addRow([
+      '사고유형(incidentType)',
+      'damage(손상) | malfunction(오작동) | change(변경) | repair(수리)',
+    ]);
     refSheet.addRow(['날짜 형식', 'YYYY-MM-DD 또는 YYYY.MM.DD']);
-    refSheet.getColumn(1).width = 30;
-    refSheet.getColumn(2).width = 60;
+    refSheet.getColumn(1).width = 35;
+    refSheet.getColumn(2).width = 70;
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
+  }
+
+  private applyHeaderStyle(sheet: ExcelJS.Worksheet, requiredFlags: boolean[]): void {
+    const headerRow = sheet.getRow(1);
+    headerRow.eachCell((cell, colIdx) => {
+      const isRequired = requiredFlags[colIdx - 1] ?? false;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: isRequired ? 'FF1D4ED8' : 'FF2563EB' },
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+    headerRow.height = 28;
   }
 
   private getStatusLabel(status: string): string {

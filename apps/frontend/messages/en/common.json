@@ -153,6 +153,16 @@
     "qcTeam": "QC Team",
     "prodTeam": "Production Team",
     "testTeam": "Test Team",
+    "site": "Site",
+    "allSites": "All Sites",
+    "team": "Team",
+    "allTeams": "All Teams",
+    "stats": {
+      "totalEquipment": "Total Equipment",
+      "calibrationOverdue": "Cal. Overdue",
+      "dueThisMonth": "Due This Month",
+      "avgUtilization": "Avg Utilization"
+    },
     "sampleEquipment1": "Oscilloscope #1",
     "sampleEquipment2": "Spectrum Analyzer #2",
     "sampleEquipment3": "Signal Generator #3",

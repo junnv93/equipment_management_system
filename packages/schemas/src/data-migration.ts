@@ -60,3 +60,45 @@ export interface MigrationExecuteResult {
   /** 오류 행 상세 목록 (에러 리포트 다운로드용) */
   errors: MigrationRowPreview[];
 }
+
+/** 멀티시트 마이그레이션 시트 타입 */
+export type MigrationSheetType = 'equipment' | 'calibration' | 'repair' | 'incident';
+
+/** 단일 시트 Preview 결과 */
+export interface SheetPreviewResult {
+  sheetType: MigrationSheetType;
+  sheetName: string;
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+  duplicateRows: number;
+  warningRows: number;
+  unmappedColumns: string[];
+  rows: MigrationRowPreview[];
+}
+
+/** 멀티시트 Preview 응답 */
+export interface MultiSheetPreviewResult {
+  sessionId: string;
+  fileName: string;
+  sheets: SheetPreviewResult[];
+  /** 전체 합계 */
+  totalRows: number;
+  validRows: number;
+  errorRows: number;
+}
+
+/** 멀티시트 Execute 응답 */
+export interface MultiSheetExecuteResult {
+  sessionId: string;
+  sheets: {
+    sheetType: MigrationSheetType;
+    createdCount: number;
+    skippedCount: number;
+    errorCount: number;
+  }[];
+  totalCreated: number;
+  totalSkipped: number;
+  totalErrors: number;
+  errors: MigrationRowPreview[];
+}

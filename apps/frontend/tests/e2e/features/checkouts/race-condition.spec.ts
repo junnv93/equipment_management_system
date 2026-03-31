@@ -20,7 +20,8 @@ import {
   apiPost,
   apiPatch,
   apiGet,
-  resetEquipmentForNewCheckout,
+  resetEquipmentToAvailable,
+  cancelAllActiveCheckoutsForEquipment,
   clearBackendCache,
   cleanupCheckoutPool,
 } from './helpers/checkout-helpers';
@@ -33,21 +34,25 @@ import {
 const BACKEND_URL = BASE_URLS.BACKEND;
 
 // Use authTest for all tests to get authenticated request context
+// SPECTRUM_ANALYZER(eeee1001)는 S17이 overdue checkout(061)을 직접 사용하므로 여기서 건드리지 않음
+// 대신 같은 FCC EMC/RF 팀의 disposal 테스트 장비(dddd0001)를 P0-RACE-01, P1-RACE-04에 사용
+const RACE_CONDITION_EQUIP_ID = 'dddd0001-0001-4001-8001-000000000001'; // FCC EMC/RF, available
+
 authTest.describe('Checkout Race Condition Prevention', () => {
   authTest.describe.configure({ mode: 'serial' });
   authTest.beforeAll(async () => {
-    // 테스트 장비 격리: 이전 실행에서 남은 active checkout 취소 + available 복원
+    // 테스트 장비 격리: 시드 데이터 포함 모든 active checkout 취소 + available 복원
+    // SPECTRUM_ANALYZER(EQUIPMENT_1), COUPLER_SUW_E는 S17 overdue 테스트와 공유되므로 제외
     const equipIds = [
-      TEST_EQUIPMENT_IDS.EQUIPMENT_1,
+      RACE_CONDITION_EQUIP_ID,
       TEST_EQUIPMENT_IDS.EQUIPMENT_2,
       TEST_EQUIPMENT_IDS.EQUIPMENT_3,
-      TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E,
       TEST_EQUIPMENT_IDS.FILTER_SUW_E,
-      TEST_EQUIPMENT_IDS.COUPLER_SUW_E,
       TEST_EQUIPMENT_IDS.POWER_METER_SUW_E,
     ];
     for (const id of equipIds) {
-      await resetEquipmentForNewCheckout(id);
+      await cancelAllActiveCheckoutsForEquipment(id);
+      await resetEquipmentToAvailable(id);
     }
     await clearBackendCache();
   });
@@ -62,11 +67,11 @@ authTest.describe('Checkout Race Condition Prevention', () => {
       const page = techManagerPage;
       const token = await getBackendToken(page, 'technical_manager');
 
-      // Setup: Create a pending checkout via API
+      // Setup: Create a pending checkout via API (RACE_CONDITION_EQUIP_ID — S17 overdue 충돌 방지)
       const createResponse = await page.request.post(`${BACKEND_URL}/api/checkouts`, {
         headers: { Authorization: `Bearer ${token}` },
         data: {
-          equipmentIds: [TEST_EQUIPMENT_IDS.EQUIPMENT_1],
+          equipmentIds: [RACE_CONDITION_EQUIP_ID],
           destination: 'Race Condition Test Lab',
           phoneNumber: '010-1234-5678',
           purpose: CPVal.CALIBRATION,
@@ -292,12 +297,11 @@ authTest.describe('Checkout Race Condition Prevention', () => {
   authTest('P1-RACE-04: stale version is rejected at any step', async ({ techManagerPage }) => {
     const page = techManagerPage;
     const token = await getBackendToken(page, 'technical_manager');
-    // Setup: Create and approve a checkout
-    // Use EQUIPMENT_1 (same team as technical_manager) to avoid team permission issues
+    // Setup: Create and approve a checkout (RACE_CONDITION_EQUIP_ID — S17 overdue 충돌 방지)
     const createResponse = await page.request.post(`${BACKEND_URL}/api/checkouts`, {
       headers: { Authorization: `Bearer ${token}` },
       data: {
-        equipmentIds: [TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E], // Same team
+        equipmentIds: [RACE_CONDITION_EQUIP_ID], // FCC EMC/RF team
         destination: 'Stale Version Test',
         phoneNumber: '010-7777-6666',
         purpose: CPVal.REPAIR,
@@ -353,8 +357,10 @@ authTest.describe('Checkout Race Condition Prevention', () => {
 
 authTest.describe('Checkout UI Auto-Retry', () => {
   authTest.beforeAll(async () => {
-    await resetEquipmentForNewCheckout(TEST_EQUIPMENT_IDS.FILTER_SUW_E);
-    await resetEquipmentForNewCheckout(TEST_EQUIPMENT_IDS.COUPLER_SUW_E);
+    // COUPLER_SUW_E는 S17이 overdue checkout(059)을 직접 사용하므로 제외
+    // P2-UI 테스트가 모두 fixme이므로 FILTER_SUW_E만 리셋
+    await cancelAllActiveCheckoutsForEquipment(TEST_EQUIPMENT_IDS.FILTER_SUW_E);
+    await resetEquipmentToAvailable(TEST_EQUIPMENT_IDS.FILTER_SUW_E);
     await clearBackendCache();
   });
 
@@ -487,7 +493,8 @@ authTest.describe('Checkout UI Auto-Retry', () => {
 
 authTest.describe('Checkout Version Propagation', () => {
   authTest.beforeAll(async () => {
-    await resetEquipmentForNewCheckout(TEST_EQUIPMENT_IDS.POWER_METER_SUW_E);
+    await cancelAllActiveCheckoutsForEquipment(TEST_EQUIPMENT_IDS.POWER_METER_SUW_E);
+    await resetEquipmentToAvailable(TEST_EQUIPMENT_IDS.POWER_METER_SUW_E);
     await clearBackendCache();
   });
 

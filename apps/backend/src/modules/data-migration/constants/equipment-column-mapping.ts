@@ -118,6 +118,31 @@ export function toInteger(value: unknown): number | undefined {
   return num !== undefined ? Math.floor(num) : undefined;
 }
 
+/** spec match 정규화 (일치/match → 'match', 불일치/mismatch → 'mismatch') */
+export function mapSpecMatch(value: unknown): string | undefined {
+  if (!value || typeof value !== 'string') return undefined;
+  const normalized = value.trim().toLowerCase();
+  const MAP: Record<string, string> = {
+    일치: 'match',
+    match: 'match',
+    '일치(match)': 'match',
+    불일치: 'mismatch',
+    mismatch: 'mismatch',
+    '불일치(mismatch)': 'mismatch',
+  };
+  return MAP[normalized];
+}
+
+/** 예/아니오 → boolean 변환 */
+export function toBoolean(value: unknown): boolean | undefined {
+  if (value === null || value === undefined || value === '') return undefined;
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (['예', 'y', 'yes', 'true', '1'].includes(normalized)) return true;
+  if (['아니오', 'n', 'no', 'false', '0'].includes(normalized)) return false;
+  return undefined;
+}
+
 // ── 컬럼 매핑 정의 ────────────────────────────────────────────────────────────
 
 /**
@@ -241,10 +266,6 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['장비사양', '사양', '설명', 'Description', 'Specification', 'Spec'],
   },
   {
-    dbField: 'mainFeatures',
-    aliases: ['주요기능', '주요 기능', 'Main Features', 'Features'],
-  },
-  {
     dbField: 'accessories',
     aliases: ['부속품', '액세서리', 'Accessories'],
   },
@@ -273,6 +294,35 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
   {
     dbField: 'firmwareVersion',
     aliases: ['펌웨어버전', 'FW Version', 'Firmware Version'],
+  },
+  {
+    dbField: 'specMatch',
+    aliases: ['시방일치', 'Spec Match', '시방 일치'],
+    transform: mapSpecMatch,
+  },
+  {
+    dbField: 'needsIntermediateCheck',
+    aliases: ['중간점검필요', '중간 점검 필요', 'Needs Intermediate Check'],
+    transform: toBoolean,
+  },
+  {
+    dbField: 'intermediateCheckCycle',
+    aliases: ['중간점검주기', '중간 점검 주기', 'Intermediate Check Cycle'],
+    transform: toInteger,
+  },
+  {
+    dbField: 'lastIntermediateCheckDate',
+    aliases: ['최종중간점검일', '최종 중간점검일', 'Last Intermediate Check Date'],
+    transform: parseExcelDate,
+  },
+  {
+    dbField: 'nextIntermediateCheckDate',
+    aliases: ['차기중간점검일', '차기 중간점검일', 'Next Intermediate Check Date'],
+    transform: parseExcelDate,
+  },
+  {
+    dbField: 'technicalManager',
+    aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
   },
 ];
 

@@ -13,7 +13,8 @@ import { BACKEND_URL, EQUIP } from '../helpers/checkout-constants';
 import {
   getBackendToken,
   cleanupCheckoutPool,
-  resetEquipmentForNewCheckout,
+  resetEquipmentToAvailable,
+  cancelAllActiveCheckoutsForEquipment,
   clearBackendCache,
   apiCancelCheckout,
 } from '../helpers/checkout-helpers';
@@ -24,12 +25,19 @@ test.describe('Suite 09: 반출 취소', () => {
   let pendingCheckoutId: string;
   let approvedCheckoutId: string;
 
+  // S03/S04가 NETWORK_ANALYZER(eeee1003) 시드 checkout을 사용하므로 충돌 방지를 위해 disposal 전용 장비 사용
+  const CANCEL_EQUIP = 'dddd0302-0302-4302-8302-000000000302'; // [Disposal D2] FCC EMC/RF, available
+
   test.beforeAll(async () => {
-    await resetEquipmentForNewCheckout(EQUIP.NETWORK_ANALYZER_SUW_E);
+    await cancelAllActiveCheckoutsForEquipment(CANCEL_EQUIP);
+    await resetEquipmentToAvailable(CANCEL_EQUIP);
     await clearBackendCache();
   });
 
   test.afterAll(async () => {
+    // S09-02에서 생성된 approved 반출 정리 (취소 불가 검증 후 DB에 남아있는 항목)
+    await cancelAllActiveCheckoutsForEquipment(EQUIP.NETWORK_ANALYZER_SUW_E);
+    await resetEquipmentToAvailable(EQUIP.NETWORK_ANALYZER_SUW_E);
     await cleanupCheckoutPool();
   });
 
@@ -107,18 +115,12 @@ test.describe('Suite 09: 반출 취소', () => {
     // ★ Clear cache after approve to ensure cancel() reads fresh 'approved' status
     await clearBackendCache();
 
-    // 취소 시도 (manager 권한으로) → 400 (비즈니스 로직 검증)
-    const cancelResponse = await page.request.patch(
-      `${BACKEND_URL}/api/checkouts/${approvedCheckoutId}/cancel`,
-      {
-        headers: { Authorization: `Bearer ${managerToken}` },
-      }
+    // 취소 시도 (CAS-aware: version 포함) → 400 (비즈니스 로직: approved 상태 취소 불가)
+    const { response: cancelResponse } = await apiCancelCheckout(
+      page,
+      approvedCheckoutId,
+      'technical_manager'
     );
-
-    if (cancelResponse.status() !== 400) {
-      const body = await cancelResponse.text();
-      console.error('Expected 400, got:', cancelResponse.status(), body);
-    }
     expect(cancelResponse.status()).toBe(400);
   });
 });

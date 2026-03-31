@@ -61,6 +61,9 @@ export const CACHE_KEY_PREFIXES = {
 
   /** jwt.strategy.ts — 사용자 활성 상태 캐시 */
   USER_ACTIVE: 'user_active:',
+
+  /** data-migration.service.ts — single/multi 세션 캐시 */
+  DATA_MIGRATION: 'data-migration:',
 } as const;
 
 export type CacheKeyPrefix = (typeof CACHE_KEY_PREFIXES)[keyof typeof CACHE_KEY_PREFIXES];

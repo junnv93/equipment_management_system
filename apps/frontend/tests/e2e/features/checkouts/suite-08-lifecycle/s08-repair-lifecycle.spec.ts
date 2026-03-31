@@ -17,7 +17,7 @@ import {
   getBackendToken,
   cleanupCheckoutPool,
   resetEquipmentToAvailable,
-  resetEquipmentForNewCheckout,
+  cancelAllActiveCheckoutsForEquipment,
   clearBackendCache,
   apiApproveCheckout,
 } from '../helpers/checkout-helpers';
@@ -26,10 +26,12 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
   test.describe.configure({ mode: 'serial' });
 
   let checkoutId: string;
-  const testEquipmentId = EQUIP.SIGNAL_GEN_SUW_E;
+  // S03/S04가 SIGNAL_GEN(eeee1002) 시드 checkout을 사용하므로 충돌 방지를 위해 disposal 전용 장비 사용
+  const testEquipmentId = 'dddd0101-0101-4101-8101-000000000101'; // [Disposal B] FCC EMC/RF, available
 
   test.beforeAll(async () => {
-    await resetEquipmentForNewCheckout(testEquipmentId);
+    await cancelAllActiveCheckoutsForEquipment(testEquipmentId);
+    await resetEquipmentToAvailable(testEquipmentId);
     await clearBackendCache();
   });
 

@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Download, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, Download, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -19,9 +20,11 @@ import {
 } from '@/components/ui/table';
 import { dataMigrationApi } from '@/lib/api/data-migration-api';
 import type {
-  MigrationPreviewResult,
-  MigrationExecuteResult,
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
+  SheetPreviewResult,
   MigrationRowPreview,
+  MigrationSheetType,
   PreviewOptions,
   ExecuteOptions,
 } from '@/lib/api/data-migration-api';
@@ -33,9 +36,9 @@ import {
 } from '@/lib/api/cache-invalidation';
 
 interface PreviewStepProps {
-  preview: MigrationPreviewResult;
+  preview: MultiSheetPreviewResult;
   options: PreviewOptions;
-  onExecuteComplete: (result: MigrationExecuteResult) => void;
+  onExecuteComplete: (result: MultiSheetExecuteResult) => void;
   onBack: () => void;
 }
 
@@ -44,6 +47,13 @@ const STATUS_BADGE_VARIANT: Record<string, 'default' | 'destructive' | 'secondar
   error: 'destructive',
   duplicate: 'secondary',
   warning: 'outline',
+};
+
+/** 이력 시트에서 날짜 컬럼 필드명 */
+const DATE_FIELD: Partial<Record<MigrationSheetType, string>> = {
+  calibration: 'calibrationDate',
+  repair: 'repairDate',
+  incident: 'occurredAt',
 };
 
 function RowErrorsCell({ row }: { row: MigrationRowPreview }) {
@@ -90,6 +100,223 @@ function RowErrorsCell({ row }: { row: MigrationRowPreview }) {
   );
 }
 
+/** 시트별 요약 미니 카드 */
+function SheetSummaryBar({ sheet }: { sheet: SheetPreviewResult }) {
+  const t = useTranslations('data-migration');
+  return (
+    <div className="grid grid-cols-5 gap-2 text-center text-xs">
+      {(
+        [
+          { key: 'total', count: sheet.totalRows, cls: 'bg-muted' },
+          { key: 'valid', count: sheet.validRows, cls: 'bg-green-50 dark:bg-green-950' },
+          { key: 'error', count: sheet.errorRows, cls: 'bg-red-50 dark:bg-red-950' },
+          { key: 'duplicate', count: sheet.duplicateRows, cls: 'bg-yellow-50 dark:bg-yellow-950' },
+          { key: 'warning', count: sheet.warningRows, cls: 'bg-orange-50 dark:bg-orange-950' },
+        ] as const
+      ).map((item) => (
+        <div key={item.key} className={`rounded p-2 ${item.cls}`}>
+          <p className="text-base font-bold">{item.count}</p>
+          <p className="text-muted-foreground">{t(`preview.summary.${item.key}`)}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 장비 시트 테이블 (체크박스 선택 가능) */
+function EquipmentSheetTable({
+  sheet,
+  options,
+  selectedRowNumbers,
+  onToggleAll,
+  onToggleRow,
+}: {
+  sheet: SheetPreviewResult;
+  options: PreviewOptions;
+  selectedRowNumbers: Set<number>;
+  onToggleAll: () => void;
+  onToggleRow: (n: number) => void;
+}) {
+  const t = useTranslations('data-migration');
+  const selectableRows = sheet.rows.filter(
+    (r) =>
+      r.status === 'valid' ||
+      r.status === 'warning' ||
+      (!options.skipDuplicates && r.status === 'duplicate')
+  );
+  const allSelected =
+    selectableRows.length > 0 && selectableRows.every((r) => selectedRowNumbers.has(r.rowNumber));
+
+  return (
+    <div className="overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10 pl-4">
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={onToggleAll}
+                aria-label={
+                  allSelected ? t('preview.table.deselectAll') : t('preview.table.selectAll')
+                }
+              />
+            </TableHead>
+            <TableHead className="w-14">{t('preview.table.row')}</TableHead>
+            <TableHead className="w-24">{t('preview.table.status')}</TableHead>
+            <TableHead>{t('preview.table.name')}</TableHead>
+            <TableHead className="w-36">{t('preview.table.managementNumber')}</TableHead>
+            <TableHead className="min-w-48">{t('preview.table.errors')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sheet.rows.map((row) => {
+            const isSelectable =
+              row.status === 'valid' ||
+              row.status === 'warning' ||
+              (!options.skipDuplicates && row.status === 'duplicate');
+            const isChecked = selectedRowNumbers.has(row.rowNumber);
+
+            return (
+              <TableRow key={row.rowNumber} className={!isSelectable ? 'opacity-50' : undefined}>
+                <TableCell className="pl-4">
+                  {isSelectable && (
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => onToggleRow(row.rowNumber)}
+                      aria-label={t('preview.table.selectRow', { row: row.rowNumber })}
+                    />
+                  )}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{row.rowNumber}</TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'secondary'}>
+                    {t(`preview.status.${row.status}`)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm">{String(row.data['name'] ?? '-')}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {row.managementNumber ?? String(row.data['managementNumber'] ?? '-')}
+                </TableCell>
+                <TableCell>
+                  <RowErrorsCell row={row} />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+/** 이력 시트 테이블 (읽기 전용) */
+function HistorySheetTable({ sheet }: { sheet: SheetPreviewResult }) {
+  const t = useTranslations('data-migration');
+  const dateField = DATE_FIELD[sheet.sheetType];
+
+  return (
+    <div className="space-y-3">
+      <Alert variant="default" className="py-2">
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-xs">{t('preview.historyReadOnly')}</AlertDescription>
+      </Alert>
+      <div className="overflow-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-14">{t('preview.table.row')}</TableHead>
+              <TableHead className="w-24">{t('preview.table.status')}</TableHead>
+              <TableHead className="w-36">{t('preview.table.managementNumber')}</TableHead>
+              {dateField && <TableHead className="w-32">{t('preview.table.date')}</TableHead>}
+              <TableHead className="min-w-48">{t('preview.table.errors')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sheet.rows.map((row) => (
+              <TableRow
+                key={row.rowNumber}
+                className={row.status === 'error' ? 'opacity-50' : undefined}
+              >
+                <TableCell className="text-sm text-muted-foreground">{row.rowNumber}</TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'secondary'}>
+                    {t(`preview.status.${row.status}`)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {String(row.data['managementNumber'] ?? '-')}
+                </TableCell>
+                {dateField && (
+                  <TableCell className="text-xs">{String(row.data[dateField] ?? '-')}</TableCell>
+                )}
+                <TableCell>
+                  <RowErrorsCell row={row} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+/** 개별 시트 탭 콘텐츠 */
+function SheetTabContent({
+  sheet,
+  options,
+  selectedRowNumbers,
+  onToggleAll,
+  onToggleRow,
+}: {
+  sheet: SheetPreviewResult;
+  options: PreviewOptions;
+  selectedRowNumbers: Set<number>;
+  onToggleAll: () => void;
+  onToggleRow: (n: number) => void;
+}) {
+  const t = useTranslations('data-migration');
+
+  return (
+    <div className="space-y-3 pt-2">
+      <SheetSummaryBar sheet={sheet} />
+
+      {sheet.unmappedColumns.length > 0 && (
+        <Alert variant="default">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{t('preview.unmappedColumns')}</AlertTitle>
+          <AlertDescription>
+            <p className="mb-1 text-xs">{t('preview.unmappedColumnsHint')}</p>
+            <div className="flex flex-wrap gap-1">
+              {sheet.unmappedColumns.map((col) => (
+                <Badge key={col} variant="outline" className="text-xs">
+                  {col}
+                </Badge>
+              ))}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          {sheet.sheetType === 'equipment' ? (
+            <EquipmentSheetTable
+              sheet={sheet}
+              options={options}
+              selectedRowNumbers={selectedRowNumbers}
+              onToggleAll={onToggleAll}
+              onToggleRow={onToggleRow}
+            />
+          ) : (
+            <HistorySheetTable sheet={sheet} />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function PreviewStep({
   preview,
   options,
@@ -98,8 +325,10 @@ export default function PreviewStep({
 }: PreviewStepProps) {
   const t = useTranslations('data-migration');
 
-  // 선택 가능한 행: valid + warning (error/duplicate 제외, skipDuplicates=false면 duplicate 포함)
-  const selectableRows = preview.rows.filter(
+  const equipmentSheet = preview.sheets.find((s) => s.sheetType === 'equipment');
+  const isMultiSheet = preview.sheets.length > 1;
+
+  const selectableEquipmentRows = (equipmentSheet?.rows ?? []).filter(
     (r) =>
       r.status === 'valid' ||
       r.status === 'warning' ||
@@ -107,7 +336,7 @@ export default function PreviewStep({
   );
 
   const [selectedRowNumbers, setSelectedRowNumbers] = useState<Set<number>>(
-    () => new Set(selectableRows.map((r) => r.rowNumber))
+    () => new Set(selectableEquipmentRows.map((r) => r.rowNumber))
   );
 
   const queryClient = useQueryClient();
@@ -140,14 +369,11 @@ export default function PreviewStep({
     },
   });
 
-  const allSelected = selectableRows.every((r) => selectedRowNumbers.has(r.rowNumber));
-  const someSelected = selectedRowNumbers.size > 0;
-
   const toggleAll = () => {
-    if (allSelected) {
+    if (selectableEquipmentRows.every((r) => selectedRowNumbers.has(r.rowNumber))) {
       setSelectedRowNumbers(new Set());
     } else {
-      setSelectedRowNumbers(new Set(selectableRows.map((r) => r.rowNumber)));
+      setSelectedRowNumbers(new Set(selectableEquipmentRows.map((r) => r.rowNumber)));
     }
   };
 
@@ -175,27 +401,116 @@ export default function PreviewStep({
     });
   };
 
-  const hasErrors = preview.errorRows > 0 || preview.duplicateRows > 0;
+  const hasErrors = preview.errorRows > 0;
+  const someSelected = selectedRowNumbers.size > 0;
 
+  // 단일 장비 시트 — 탭 없이 기존 레이아웃
+  if (!isMultiSheet && equipmentSheet) {
+    return (
+      <div className="space-y-4">
+        {/* 요약 바 */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {(
+            [
+              { key: 'total', count: preview.totalRows, className: 'bg-muted' },
+              {
+                key: 'valid',
+                count: preview.validRows,
+                className: 'bg-green-50 dark:bg-green-950',
+              },
+              { key: 'error', count: preview.errorRows, className: 'bg-red-50 dark:bg-red-950' },
+              {
+                key: 'duplicate',
+                count: equipmentSheet.duplicateRows,
+                className: 'bg-yellow-50 dark:bg-yellow-950',
+              },
+              {
+                key: 'warning',
+                count: equipmentSheet.warningRows,
+                className: 'bg-orange-50 dark:bg-orange-950',
+              },
+            ] as const
+          ).map((item) => (
+            <Card key={item.key} className={item.className}>
+              <CardContent className="p-3 text-center">
+                <p className="text-2xl font-bold" data-testid={`summary-${item.key}`}>
+                  {item.count}
+                </p>
+                <p className="text-xs text-muted-foreground">{t(`preview.summary.${item.key}`)}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {equipmentSheet.unmappedColumns.length > 0 && (
+          <Alert variant="default">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>{t('preview.unmappedColumns')}</AlertTitle>
+            <AlertDescription>
+              <p className="mb-1 text-xs">{t('preview.unmappedColumnsHint')}</p>
+              <div className="flex flex-wrap gap-1">
+                {equipmentSheet.unmappedColumns.map((col) => (
+                  <Badge key={col} variant="outline" className="text-xs">
+                    {col}
+                  </Badge>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('preview.title')}</CardTitle>
+            <CardDescription>{t('preview.description')}</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <EquipmentSheetTable
+              sheet={equipmentSheet}
+              options={options}
+              selectedRowNumbers={selectedRowNumbers}
+              onToggleAll={toggleAll}
+              onToggleRow={toggleRow}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onBack}>
+              {t('preview.backButton')}
+            </Button>
+            {hasErrors && (
+              <Button
+                variant="outline"
+                onClick={() => errorReportMutation.mutate()}
+                disabled={errorReportMutation.isPending}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t('preview.downloadErrorReport')}
+              </Button>
+            )}
+          </div>
+          <Button onClick={handleExecute} disabled={!someSelected || executeMutation.isPending}>
+            {executeMutation.isPending
+              ? t('preview.loading')
+              : t('preview.executeButtonCount', { count: selectedRowNumbers.size })}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // 멀티 시트 — 탭 레이아웃
   return (
     <div className="space-y-4">
-      {/* 요약 바 */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      {/* 전체 요약 바 */}
+      <div className="grid grid-cols-3 gap-3">
         {(
           [
             { key: 'total', count: preview.totalRows, className: 'bg-muted' },
             { key: 'valid', count: preview.validRows, className: 'bg-green-50 dark:bg-green-950' },
             { key: 'error', count: preview.errorRows, className: 'bg-red-50 dark:bg-red-950' },
-            {
-              key: 'duplicate',
-              count: preview.duplicateRows,
-              className: 'bg-yellow-50 dark:bg-yellow-950',
-            },
-            {
-              key: 'warning',
-              count: preview.warningRows,
-              className: 'bg-orange-50 dark:bg-orange-950',
-            },
           ] as const
         ).map((item) => (
           <Card key={item.key} className={item.className}>
@@ -209,94 +524,39 @@ export default function PreviewStep({
         ))}
       </div>
 
-      {/* 인식 불가 컬럼 경고 */}
-      {preview.unmappedColumns.length > 0 && (
-        <Alert variant="default">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>{t('preview.unmappedColumns')}</AlertTitle>
-          <AlertDescription>
-            <p className="mb-1 text-xs">{t('preview.unmappedColumnsHint')}</p>
-            <div className="flex flex-wrap gap-1">
-              {preview.unmappedColumns.map((col) => (
-                <Badge key={col} variant="outline" className="text-xs">
-                  {col}
-                </Badge>
-              ))}
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* 행별 테이블 */}
+      {/* 시트별 탭 */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{t('preview.title')}</CardTitle>
           <CardDescription>{t('preview.description')}</CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10 pl-4">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={toggleAll}
-                      aria-label={
-                        allSelected ? t('preview.table.deselectAll') : t('preview.table.selectAll')
-                      }
-                    />
-                  </TableHead>
-                  <TableHead className="w-14">{t('preview.table.row')}</TableHead>
-                  <TableHead className="w-24">{t('preview.table.status')}</TableHead>
-                  <TableHead>{t('preview.table.name')}</TableHead>
-                  <TableHead className="w-36">{t('preview.table.managementNumber')}</TableHead>
-                  <TableHead className="min-w-48">{t('preview.table.errors')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {preview.rows.map((row) => {
-                  const isSelectable =
-                    row.status === 'valid' ||
-                    row.status === 'warning' ||
-                    (!options.skipDuplicates && row.status === 'duplicate');
-                  const isChecked = selectedRowNumbers.has(row.rowNumber);
+        <CardContent>
+          <Tabs defaultValue={preview.sheets[0]?.sheetType ?? 'equipment'}>
+            <TabsList>
+              {preview.sheets.map((sheet) => (
+                <TabsTrigger key={sheet.sheetType} value={sheet.sheetType}>
+                  {t(`sheets.${sheet.sheetType}`)}
+                  {sheet.errorRows > 0 && (
+                    <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0">
+                      {sheet.errorRows}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-                  return (
-                    <TableRow
-                      key={row.rowNumber}
-                      className={!isSelectable ? 'opacity-50' : undefined}
-                    >
-                      <TableCell className="pl-4">
-                        {isSelectable && (
-                          <Checkbox
-                            checked={isChecked}
-                            onCheckedChange={() => toggleRow(row.rowNumber)}
-                            aria-label={t('preview.table.selectRow', { row: row.rowNumber })}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {row.rowNumber}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_BADGE_VARIANT[row.status] ?? 'secondary'}>
-                          {t(`preview.status.${row.status}`)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">{String(row.data['name'] ?? '-')}</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {row.managementNumber ?? String(row.data['managementNumber'] ?? '-')}
-                      </TableCell>
-                      <TableCell>
-                        <RowErrorsCell row={row} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+            {preview.sheets.map((sheet) => (
+              <TabsContent key={sheet.sheetType} value={sheet.sheetType}>
+                <SheetTabContent
+                  sheet={sheet}
+                  options={options}
+                  selectedRowNumbers={selectedRowNumbers}
+                  onToggleAll={toggleAll}
+                  onToggleRow={toggleRow}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
         </CardContent>
       </Card>
 

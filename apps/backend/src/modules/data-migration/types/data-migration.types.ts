@@ -13,6 +13,9 @@ import type {
   MigrationRowPreview,
   MigrationPreviewResult,
   MigrationExecuteResult,
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
+  SheetPreviewResult,
 } from '@equipment-management/schemas';
 
 export type {
@@ -21,6 +24,9 @@ export type {
   MigrationRowPreview,
   MigrationPreviewResult,
   MigrationExecuteResult,
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
+  SheetPreviewResult,
 };
 
 /** Excel에서 파싱된 원시 행 데이터 (내부 전용) */
@@ -62,4 +68,19 @@ export interface MigrationSession {
   /** Preview 결과 (Execute에서 재사용) */
   previewResult: MigrationPreviewResult;
   createdAt: Date;
+}
+
+import type { MigrationSheetType } from '../constants/sheet-config';
+
+/** 멀티시트 세션 데이터 — 메모리 캐시 (내부 전용) */
+export interface MultiSheetMigrationSession {
+  sessionId: string;
+  fileName: string;
+  uploadedAt: Date;
+  userId: string;
+  sheets: {
+    sheetType: MigrationSheetType;
+    sheetName: string;
+    rows: MigrationRowPreview[];
+  }[];
 }
