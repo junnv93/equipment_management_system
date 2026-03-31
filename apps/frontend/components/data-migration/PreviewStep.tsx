@@ -200,7 +200,9 @@ export default function PreviewStep({
         ).map((item) => (
           <Card key={item.key} className={item.className}>
             <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold">{item.count}</p>
+              <p className="text-2xl font-bold" data-testid={`summary-${item.key}`}>
+                {item.count}
+              </p>
               <p className="text-xs text-muted-foreground">{t(`preview.summary.${item.key}`)}</p>
             </CardContent>
           </Card>
