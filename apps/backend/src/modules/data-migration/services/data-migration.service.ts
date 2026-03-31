@@ -1,4 +1,11 @@
-import { Injectable, Inject, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { eq, getTableColumns } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -68,7 +75,7 @@ export class DataMigrationService {
   async preview(
     file: MulterFile,
     dto: PreviewEquipmentMigrationDto,
-    _userId: string
+    userId: string
   ): Promise<MigrationPreviewResult> {
     // 파일 저장
     const savedFile = await this.fileUploadService.saveFile(file, 'data-migration');
@@ -105,6 +112,7 @@ export class DataMigrationService {
     // 세션 캐시 저장
     const session: MigrationSession = {
       sessionId: result.sessionId,
+      userId,
       filePath: savedFile.filePath,
       originalFileName: file.originalname,
       previewResult: result,
@@ -145,6 +153,13 @@ export class DataMigrationService {
       throw new NotFoundException({
         code: 'MIGRATION_SESSION_NOT_FOUND',
         message: '마이그레이션 세션을 찾을 수 없습니다. 파일을 다시 업로드하세요.',
+      });
+    }
+
+    if (session.userId !== userId) {
+      throw new ForbiddenException({
+        code: 'MIGRATION_SESSION_OWNERSHIP_DENIED',
+        message: '본인이 생성한 마이그레이션 세션만 실행할 수 있습니다.',
       });
     }
 
@@ -216,12 +231,16 @@ export class DataMigrationService {
       `Execute complete: sessionId=${dto.sessionId}, created=${createdCount}, skipped=${skippedCount}`
     );
 
+    const errorRows = session.previewResult.rows.filter(
+      (r) => r.status === 'error' || r.status === 'duplicate'
+    );
+
     return {
       sessionId: dto.sessionId,
       createdCount,
       skippedCount,
-      errorCount: 0,
-      errors: [],
+      errorCount: errorRows.length,
+      errors: errorRows,
     };
   }
 

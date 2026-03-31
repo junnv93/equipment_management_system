@@ -25,6 +25,7 @@ import {
 import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import type { MulterFile } from '../../types/common.types';
@@ -105,6 +106,7 @@ export class DataMigrationController {
    */
   @Get('equipment/template')
   @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @SkipResponseTransform()
   @ApiOperation({
     summary: '입력 템플릿 다운로드',
     description: '장비 데이터 입력에 필요한 Excel 템플릿을 다운로드합니다.',
@@ -128,6 +130,7 @@ export class DataMigrationController {
    */
   @Get('equipment/:sessionId/error-report')
   @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @SkipResponseTransform()
   @ApiParam({ name: 'sessionId', description: 'Preview에서 발급된 세션 ID' })
   @ApiOperation({
     summary: '에러 리포트 다운로드',

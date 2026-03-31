@@ -53,6 +53,8 @@ export interface ManagementNumberGroup {
 /** 세션 스토리지 데이터 — 메모리 캐시 (내부 전용) */
 export interface MigrationSession {
   sessionId: string;
+  /** Preview를 요청한 사용자 ID — Execute 시 소유권 검증에 사용 */
+  userId: string;
   /** 저장된 파일 경로 (FileUploadService 반환값) */
   filePath: string;
   /** 원본 파일명 */
