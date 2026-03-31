@@ -25,6 +25,8 @@ export {
   SESSION_SYNC_CHANNEL,
   SESSION_SYNC_MESSAGE,
   type SessionSyncMessageType,
+  AUTH_ERROR_CODE,
+  type AuthErrorCode,
 } from './auth-token';
 
 // 역할 관련
@@ -164,6 +166,24 @@ export {
 
 // 로케일/타임존 (날짜 포맷팅, 리포트 출력 등 공유)
 export { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from './locale';
+
+// 파일 업로드 타입 (MIME 타입, 확장자, 문서별 규칙)
+export {
+  FILE_TYPES,
+  ALLOWED_MIME_TYPES,
+  ALLOWED_EXTENSIONS,
+  MIME_TO_EXTENSIONS,
+  EXTENSION_TO_MIME,
+  DOCUMENT_FILE_RULES,
+  FILE_UPLOAD_LIMITS,
+  MIME_TO_MAGIC_BYTES,
+  REPORT_EXPORT_MIME,
+  MIME_TO_CATEGORY,
+  getMimeCategory,
+  type FileTypeEntry,
+  type DocumentFileRule,
+  type MimeCategory,
+} from './file-types';
 
 // 데이터 스코프 정책 (역할별 접근 범위)
 export {

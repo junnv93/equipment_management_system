@@ -47,11 +47,9 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await testOperatorPage.fill('[name="content"]', 'E2E 테스트: 디스플레이 파손');
 
     // Check "create non-conformance" by clicking the label
-    await testOperatorPage.waitForTimeout(1000);
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
     await ncLabel.click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify workflow guidance is displayed
     const guidanceCard = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
@@ -69,7 +67,6 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await expect(toast).toContainText(/등록.*완료|성공/i, { timeout: TIMEOUTS.API_RESPONSE });
 
     // Wait for UI update
-    await testOperatorPage.waitForTimeout(TIMEOUTS.UI_UPDATE);
 
     // Verify equipment status changed to non_conforming
     await testOperatorPage.goto(`/equipment/${equipmentId}`);
@@ -130,7 +127,6 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await testOperatorPage
       .getByRole('heading', { name: '수리 이력 등록' })
       .waitFor({ state: 'visible', timeout: 5000 });
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Fill repair form - ensure each field is visible before filling
     const repairDate = new Date();
@@ -150,7 +146,6 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
 
     // Select the created NC
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Find NC option containing our test content (use role=option for semantic select)
     const ncOption = testOperatorPage
@@ -161,7 +156,6 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await ncOption.click();
 
     // Wait for select to close and form state to update
-    await testOperatorPage.waitForTimeout(500);
 
     // Verify auto-link guidance is displayed
     const guidanceBox = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
@@ -172,9 +166,7 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     // Select repair result: completed (shadcn Select component)
     // repairResult field doesn't have an id, need to find by adjacent label
     await testOperatorPage.getByText('수리 결과').locator('..').getByRole('combobox').click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
     await testOperatorPage.getByRole('option', { name: '수리 완료', exact: true }).click();
-    await testOperatorPage.waitForTimeout(200);
 
     // Submit repair (use dispatchEvent as the button is outside viewport)
     await testOperatorPage.getByRole('button', { name: /등록/i }).dispatchEvent('click');
@@ -227,7 +219,6 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     const editButton = ncCard.getByRole('button', { name: /기록 수정/i });
     await expect(editButton).toBeVisible();
     await editButton.click();
-    await techManagerPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // The edit form should now be visible
     // Since the NC has repair linked and status is "corrected",
@@ -250,7 +241,6 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
   test.fixme('D-6. 장비 상태 복원 검증', async ({ testOperatorPage }) => {
     // Navigate to equipment detail page
     await testOperatorPage.goto(`/equipment/${equipmentId}`);
-    await testOperatorPage.waitForTimeout(TIMEOUTS.UI_UPDATE);
 
     // Verify equipment status badge is visible
     // Note: Status restoration happens when ALL NCs are closed

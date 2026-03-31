@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,35 +25,36 @@ import {
   File,
   History,
   ShieldCheck,
+  Eye,
+  Upload,
 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
+import { getMimeCategory } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
-import type { DocumentType } from '@equipment-management/schemas';
-import { DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
 import { formatFileSize } from '@/lib/utils/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { toast } from 'sonner';
 import { DocumentRevisionDialog } from '@/components/shared/DocumentRevisionDialog';
+import { DocumentPreviewDialog } from '@/components/shared/DocumentPreviewDialog';
 
 interface AttachmentsTabProps {
   equipment: Equipment;
 }
 
-const MIME_ICONS: Record<string, typeof FileText> = {
-  'application/pdf': FileText,
-  'image/jpeg': ImageIcon,
-  'image/png': ImageIcon,
-  'image/gif': ImageIcon,
-  'application/vnd.ms-excel': FileSpreadsheet,
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': FileSpreadsheet,
+const CATEGORY_ICONS: Record<string, typeof FileText> = {
+  pdf: FileText,
+  image: ImageIcon,
+  spreadsheet: FileSpreadsheet,
+  document: FileText,
+  other: File,
 };
 
 function getFileIcon(mimeType: string) {
-  return MIME_ICONS[mimeType] ?? File;
+  return CATEGORY_ICONS[getMimeCategory(mimeType)] ?? File;
 }
 
 export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
@@ -65,6 +66,9 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
   const equipmentId = String(equipment.id);
   const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER]);
   const [revisionDocId, setRevisionDocId] = useState<string | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
+  const [revisionTargetId, setRevisionTargetId] = useState<string | null>(null);
+  const revisionInputRef = useRef<HTMLInputElement>(null);
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: queryKeys.documents.byEquipment(equipmentId),
@@ -75,6 +79,23 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
 
   const handleDownload = async (doc: DocumentRecord) => {
     await documentApi.downloadDocument(doc.id, doc.originalFileName);
+  };
+
+  const handleRevisionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !revisionTargetId) return;
+    try {
+      await documentApi.createRevision(revisionTargetId, file);
+      toast.success(t('attachmentsTab.revisionSuccess'));
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.documents.byEquipment(equipmentId),
+      });
+    } catch {
+      toast.error(t('attachmentsTab.revisionError'));
+    } finally {
+      setRevisionTargetId(null);
+      if (revisionInputRef.current) revisionInputRef.current.value = '';
+    }
   };
 
   const handleDelete = async (docId: string) => {
@@ -139,9 +160,9 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
               <TableBody>
                 {docs.map((doc) => {
                   const Icon = getFileIcon(doc.mimeType);
-                  const typeLabel =
-                    DOCUMENT_TYPE_LABELS[doc.documentType as DocumentType] ??
-                    t(`attachmentsTab.type.${doc.documentType}`);
+                  const typeLabel = t(
+                    `documentType.${doc.documentType}` as Parameters<typeof t>[0]
+                  );
 
                   return (
                     <TableRow
@@ -188,6 +209,18 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
                       </TableCell>
                       <TableCell>
                         <div className={DOCUMENT_TABLE.actionsCell}>
+                          {(getMimeCategory(doc.mimeType) === 'image' ||
+                            getMimeCategory(doc.mimeType) === 'pdf') && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setPreviewDoc(doc)}
+                              aria-label={`${t('attachmentsTab.preview')} ${doc.originalFileName}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -197,6 +230,20 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
+                          {canDelete && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                setRevisionTargetId(doc.id);
+                                revisionInputRef.current?.click();
+                              }}
+                              aria-label={`${t('attachmentsTab.uploadRevision')} ${doc.originalFileName}`}
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                          )}
                           {doc.revisionNumber > 1 && (
                             <Button
                               variant="ghost"
@@ -237,6 +284,20 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
           onOpenChange={(open) => !open && setRevisionDocId(null)}
         />
       )}
+
+      <DocumentPreviewDialog
+        document={previewDoc}
+        open={!!previewDoc}
+        onOpenChange={(open) => !open && setPreviewDoc(null)}
+      />
+
+      {/* 새 버전 업로드용 숨겨진 input */}
+      <input
+        ref={revisionInputRef}
+        type="file"
+        className="hidden"
+        onChange={handleRevisionUpload}
+      />
     </Card>
   );
 }

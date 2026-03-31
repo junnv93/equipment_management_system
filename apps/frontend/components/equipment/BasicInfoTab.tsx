@@ -1,19 +1,23 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Package, Wrench, ArrowRight, Camera, Download, BookOpen } from 'lucide-react';
+import {
+  MapPin,
+  Package,
+  Wrench,
+  ArrowRight,
+  Camera,
+  Download,
+  BookOpen,
+  Truck,
+  FileText,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import {
-  CALIBRATION_METHOD_LABELS,
-  CALIBRATION_RESULT_LABELS,
-  DocumentTypeValues,
-  type CalibrationMethod,
-  type CalibrationResult,
-} from '@equipment-management/schemas';
+import { DocumentTypeValues } from '@equipment-management/schemas';
 import {
   getTimestampClasses,
   EQUIPMENT_INFO_CARD_TOKENS,
@@ -26,6 +30,7 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { Button } from '@/components/ui/button';
+import { DocumentPreviewDialog } from '@/components/shared/DocumentPreviewDialog';
 import type { Equipment } from '@/lib/api/equipment-api';
 
 interface BasicInfoTabProps {
@@ -43,6 +48,7 @@ interface BasicInfoTabProps {
  */
 export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
   const t = useTranslations('equipment');
+  const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
   const pathname = usePathname();
   const tokens = EQUIPMENT_INFO_CARD_TOKENS;
@@ -83,6 +89,42 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
   const recentCalibrations = useMemo(() => calibrations.slice(0, 3), [calibrations]);
 
+  // 문서 미리보기 다이얼로그 상태
+  const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  // 사진 썸네일 URL — TanStack Query로 캐시 관리 (useState 서버 상태 금지)
+  const photoIds = useMemo(() => photos.map((p) => p.id).join(','), [photos]);
+  const { data: photoUrls = {} } = useQuery({
+    queryKey: queryKeys.documents.photoThumbnails(equipmentId, photoIds),
+    queryFn: async () => {
+      const entries = await Promise.all(
+        photos.map(async (photo) => {
+          try {
+            const result = await documentApi.getPreviewUrl(photo.id);
+            return [photo.id, result.url] as const;
+          } catch {
+            return null;
+          }
+        })
+      );
+      return Object.fromEntries(entries.filter((e): e is [string, string] => e !== null));
+    },
+    enabled: photos.length > 0,
+    staleTime: CACHE_TIMES.LONG,
+  });
+
+  // blob URL 정리 — ref로 최신 값 추적하여 클로저 문제 방지
+  const photoUrlsRef = useRef(photoUrls);
+  photoUrlsRef.current = photoUrls;
+  useEffect(() => {
+    return () => {
+      Object.values(photoUrlsRef.current).forEach((url) => {
+        if (url.startsWith('blob:')) window.URL.revokeObjectURL(url);
+      });
+    };
+  }, [photoIds]);
+
   /** 교정 결과 → 타임라인 dot 클래스 (SSOT: tl.resultDotMap) */
   const getDotClass = (result?: string) => {
     const variant = result ? (tl.resultDotMap[result] ?? 'info') : 'info';
@@ -93,90 +135,13 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
     await documentApi.downloadDocument(doc.id, doc.originalFileName);
   };
 
+  const handlePreview = (doc: DocumentRecord) => {
+    setPreviewDoc(doc);
+    setPreviewOpen(true);
+  };
+
   return (
     <div className="space-y-8">
-      {/* 장비 사진 — AP-04: tokens.card 깊이 + AP-05: count Badge */}
-      <div className={tokens.card}>
-        <div className={tokens.header}>
-          <Camera className={tokens.headerIcon} aria-hidden="true" />
-          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentPhoto')}</span>
-          {photos.length > 0 && (
-            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
-              {photos.length}
-            </Badge>
-          )}
-        </div>
-        <div className="p-4">
-          {photos.length > 0 ? (
-            <div className={DOCUMENT_DISPLAY.photoGrid}>
-              {photos.map((photo: DocumentRecord) => (
-                <button
-                  key={photo.id}
-                  type="button"
-                  onClick={() => handleDownload(photo)}
-                  className={DOCUMENT_DISPLAY.photoCard}
-                  aria-label={`${t('basicInfoTab.download')} ${photo.originalFileName}`}
-                >
-                  <div className="flex items-center justify-center h-full">
-                    <Camera className={DOCUMENT_DISPLAY.photoIcon} />
-                  </div>
-                  <div className={DOCUMENT_DISPLAY.photoOverlay}>
-                    <p className="text-xs truncate">{photo.originalFileName}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            /* AP-09: 빈 상태 — 기능 인지 + CTA */
-            <div className={DOCUMENT_DISPLAY.emptyCompact}>
-              <Camera className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
-              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noPhotos')}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 장비 매뉴얼 — AP-06: hover accent 모션 */}
-      <div className={tokens.card}>
-        <div className={tokens.header}>
-          <BookOpen className={tokens.headerIcon} aria-hidden="true" />
-          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentManual')}</span>
-          {manuals.length > 0 && (
-            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
-              {manuals.length}
-            </Badge>
-          )}
-        </div>
-        <div className="p-4 space-y-2">
-          {manuals.length > 0 ? (
-            manuals.map((manual: DocumentRecord) => (
-              <div key={manual.id} className={DOCUMENT_DISPLAY.manualRow}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <BookOpen className={DOCUMENT_DISPLAY.manualIcon} aria-hidden="true" />
-                  <span className="text-sm truncate">{manual.originalFileName}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 flex-shrink-0"
-                  onClick={() => handleDownload(manual)}
-                  aria-label={`${t('basicInfoTab.download')} ${manual.originalFileName}`}
-                >
-                  <Download className="h-4 w-4" />
-                  {t('basicInfoTab.download')}
-                </Button>
-              </div>
-            ))
-          ) : (
-            /* AP-09: 빈 상태 */
-            <div className={DOCUMENT_DISPLAY.emptyCompact}>
-              <BookOpen className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
-              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noManuals')}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* 기본 정보 카드 그리드 — 비대칭 1.6fr (SSOT: tokens.grid) */}
       <div className={tokens.grid}>
         {/* Primary: 장비 기본정보 — 좌측 brand-info 보더 (AP-04 깊이 차등) */}
@@ -199,6 +164,13 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
               <dt className={tokens.dtLabel}>{t('fields.manufacturer')}</dt>
               <dd className={tokens.ddValue}>{equipment.manufacturer || '-'}</dd>
 
+              {equipment.manufacturerContact && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.manufacturerContact')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.manufacturerContact}</dd>
+                </>
+              )}
+
               <dt className={tokens.dtLabel}>{t('fields.serialNumber')}</dt>
               <dd className={tokens.ddMono}>{equipment.serialNumber || '-'}</dd>
 
@@ -209,15 +181,27 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                 </>
               )}
 
+              {equipment.classification && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.classification')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.classification}</dd>
+                </>
+              )}
+
               <dt className={tokens.dtLabel}>{t('fields.purchaseYear')}</dt>
               <dd className={tokens.ddValue}>{equipment.purchaseYear ?? '-'}</dd>
+
+              {equipment.accessories && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.accessories')}</dt>
+                  <dd className={tokens.ddFullWidth}>{equipment.accessories}</dd>
+                </>
+              )}
 
               {equipment.description && (
                 <>
                   <dt className={tokens.dtLabel}>{t('fields.description')}</dt>
-                  <dd className="text-xs text-muted-foreground col-span-full mt-1">
-                    {equipment.description}
-                  </dd>
+                  <dd className={tokens.ddFullWidth}>{equipment.description}</dd>
                 </>
               )}
             </dl>
@@ -244,7 +228,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
               <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationMethod')}</dt>
               <dd className={tokens.ddValue}>
                 {equipment.calibrationMethod
-                  ? CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod]
+                  ? tCal(`method.${equipment.calibrationMethod}` as Parameters<typeof tCal>[0])
                   : '-'}
               </dd>
 
@@ -267,6 +251,57 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
               <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationAgency')}</dt>
               <dd className={tokens.ddValue}>{equipment.calibrationAgency || '-'}</dd>
+
+              {equipment.calibrationResult && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationResultLabel')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.calibrationResult}</dd>
+                </>
+              )}
+
+              {equipment.correctionFactor && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('basicInfoTab.correctionFactorLabel')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.correctionFactor}</dd>
+                </>
+              )}
+
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.intermediateCheckRequired')}</dt>
+              <dd className={tokens.ddValue}>
+                {equipment.needsIntermediateCheck
+                  ? t('basicInfoTab.intermediateCheckRequiredYes')
+                  : t('basicInfoTab.intermediateCheckRequiredNo')}
+              </dd>
+
+              {equipment.needsIntermediateCheck && (
+                <>
+                  {equipment.intermediateCheckCycle && (
+                    <>
+                      <dt className={tokens.dtLabel}>
+                        {t('basicInfoTab.intermediateCheckCycleLabel')}
+                      </dt>
+                      <dd className={tokens.ddValue}>
+                        {equipment.intermediateCheckCycle}
+                        {t('basicInfoTab.intermediateCheckCycleUnit')}
+                      </dd>
+                    </>
+                  )}
+
+                  <dt className={tokens.dtLabel}>
+                    {t('basicInfoTab.lastIntermediateCheckDateLabel')}
+                  </dt>
+                  <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                    {fmtDate(equipment.lastIntermediateCheckDate) ?? '-'}
+                  </dd>
+
+                  <dt className={tokens.dtLabel}>
+                    {t('basicInfoTab.nextIntermediateCheckDateLabel')}
+                  </dt>
+                  <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                    {fmtDate(equipment.nextIntermediateCheckDate) ?? '-'}
+                  </dd>
+                </>
+              )}
             </dl>
           </div>
         </div>
@@ -305,6 +340,36 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                     : '-'}
               </dd>
 
+              {equipment.initialLocation && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.initialLocation')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.initialLocation}</dd>
+                </>
+              )}
+
+              {equipment.installationDate && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.installationDate')}</dt>
+                  <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                    {fmtDate(equipment.installationDate) ?? '-'}
+                  </dd>
+                </>
+              )}
+
+              {equipment.technicalManager && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.technicalManager')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.technicalManager}</dd>
+                </>
+              )}
+
+              {equipment.manualLocation && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.manualLocation')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
+                </>
+              )}
+
               {equipment.isShared !== undefined && (
                 <>
                   <dt className={tokens.dtLabel}>{t('basicInfoTab.sharedLabel')}</dt>
@@ -318,8 +383,8 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
         </div>
       </div>
 
-      {/* 소프트웨어/펌웨어 (조건부) */}
-      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
+      {/* 소프트웨어/펌웨어 (조건부) — manualLocation은 위치 카드에서 표시 */}
+      {(equipment.softwareVersion || equipment.firmwareVersion) && (
         <div className={tokens.card}>
           <div className={tokens.header}>
             <Package className={tokens.headerIcon} aria-hidden="true" />
@@ -339,16 +404,149 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                   <dd className={tokens.ddMono}>{equipment.firmwareVersion}</dd>
                 </>
               )}
-              {equipment.manualLocation && (
+            </dl>
+          </div>
+        </div>
+      )}
+
+      {/* 구매 및 관리 정보 (조건부) */}
+      {(equipment.supplier || equipment.contactInfo || equipment.externalIdentifier) && (
+        <div className={tokens.card}>
+          <div className={tokens.header}>
+            <Truck className={tokens.headerIcon} aria-hidden="true" />
+            <span className={tokens.headerTitle}>{t('basicInfoTab.supplyManagement')}</span>
+          </div>
+          <div className={tokens.body}>
+            <dl className={tokens.dlGrid}>
+              {equipment.supplier && (
                 <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.manualLocation')}</dt>
-                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
+                  <dt className={tokens.dtLabel}>{t('fields.supplier')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.supplier}</dd>
+                </>
+              )}
+              {equipment.contactInfo && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.contactInfo')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.contactInfo}</dd>
+                </>
+              )}
+              {equipment.externalIdentifier && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.externalIdentifier')}</dt>
+                  <dd className={tokens.ddMono}>{equipment.externalIdentifier}</dd>
                 </>
               )}
             </dl>
           </div>
         </div>
       )}
+
+      {/* 장비 사진 — AP-04: tokens.card 깊이 + AP-05: count Badge */}
+      <div className={tokens.card}>
+        <div className={tokens.header}>
+          <Camera className={tokens.headerIcon} aria-hidden="true" />
+          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentPhoto')}</span>
+          {photos.length > 0 && (
+            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
+              {photos.length}
+            </Badge>
+          )}
+        </div>
+        <div className="p-4">
+          {photos.length > 0 ? (
+            <div className={DOCUMENT_DISPLAY.photoGrid}>
+              {photos.map((photo: DocumentRecord) => (
+                <div key={photo.id} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => handlePreview(photo)}
+                    className={DOCUMENT_DISPLAY.photoCard}
+                    aria-label={`${t('basicInfoTab.preview')} ${photo.originalFileName}`}
+                  >
+                    {photoUrls[photo.id] ? (
+                      /* eslint-disable-next-line @next/next/no-img-element -- presigned/blob URL */
+                      <img
+                        src={photoUrls[photo.id]}
+                        alt={photo.originalFileName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Camera className={DOCUMENT_DISPLAY.photoIcon} />
+                      </div>
+                    )}
+                    <div className={DOCUMENT_DISPLAY.photoOverlay}>
+                      <p className="text-xs truncate">{photo.originalFileName}</p>
+                    </div>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1 right-1 h-7 w-7 bg-background/60 backdrop-blur-sm hover:bg-background/80"
+                    onClick={() => handleDownload(photo)}
+                    aria-label={`${t('basicInfoTab.download')} ${photo.originalFileName}`}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* AP-09: 빈 상태 — 기능 인지 + CTA */
+            <div className={DOCUMENT_DISPLAY.emptyCompact}>
+              <Camera className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
+              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noPhotos')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 장비 매뉴얼 — AP-06: hover accent 모션 */}
+      <div className={tokens.card}>
+        <div className={tokens.header}>
+          <BookOpen className={tokens.headerIcon} aria-hidden="true" />
+          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentManual')}</span>
+          {manuals.length > 0 && (
+            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
+              {manuals.length}
+            </Badge>
+          )}
+        </div>
+        <div className="p-4 space-y-2">
+          {manuals.length > 0 ? (
+            manuals.map((manual: DocumentRecord) => (
+              <div key={manual.id} className={DOCUMENT_DISPLAY.manualRow}>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 min-w-0 hover:text-foreground text-left"
+                  onClick={() => handlePreview(manual)}
+                >
+                  <FileText className={DOCUMENT_DISPLAY.manualIcon} aria-hidden="true" />
+                  <span className="text-sm truncate underline-offset-2 hover:underline">
+                    {manual.originalFileName}
+                  </span>
+                </button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 flex-shrink-0"
+                  onClick={() => handleDownload(manual)}
+                  aria-label={`${t('basicInfoTab.download')} ${manual.originalFileName}`}
+                >
+                  <Download className="h-4 w-4" />
+                  {t('basicInfoTab.download')}
+                </Button>
+              </div>
+            ))
+          ) : (
+            /* AP-09: 빈 상태 */
+            <div className={DOCUMENT_DISPLAY.emptyCompact}>
+              <BookOpen className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
+              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noManuals')}</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* 최근 교정 이력 타임라인 — SSOT: resultDotMap + CALIBRATION_RESULT_LABELS */}
       {recentCalibrations.length > 0 && (
@@ -376,7 +574,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                   <div className={tl.title}>
                     {t('basicInfoTab.calibrationEntry')}
                     {cal.result &&
-                      ` — ${CALIBRATION_RESULT_LABELS[cal.result as CalibrationResult] ?? cal.result}`}
+                      ` — ${tCal(`result.${cal.result}` as Parameters<typeof tCal>[0])}`}
                   </div>
                   <div className={tl.desc}>
                     {cal.calibrationAgency}
@@ -388,6 +586,13 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           </div>
         </section>
       )}
+
+      {/* 문서 미리보기 다이얼로그 (사진: 확대/회전, PDF: 브라우저 내 표시) */}
+      <DocumentPreviewDialog
+        document={previewDoc}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
     </div>
   );
 }

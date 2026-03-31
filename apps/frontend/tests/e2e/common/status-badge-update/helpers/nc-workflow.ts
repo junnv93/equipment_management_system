@@ -16,15 +16,12 @@ export async function createIncidentWithNC(
   console.log(`📝 사고 이력 → NC 생성 시작 (장비: ${equipmentId})`);
 
   await page.goto(`/equipment/${equipmentId}`);
-  await page.waitForLoadState('networkidle');
 
   // 사고 이력 탭 클릭
   await page.getByRole('tab', { name: /사고 이력/i }).click();
-  await page.waitForTimeout(1000);
 
   // 사고 등록 다이얼로그 열기
   await page.getByRole('button', { name: /사고 등록/i }).click();
-  await page.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
   // 폼 작성
   const today = new Date().toISOString().split('T')[0];
@@ -33,9 +30,7 @@ export async function createIncidentWithNC(
   // 유형 선택 (손상)
   const typeSelect = page.locator('button[role="combobox"]').first();
   await typeSelect.click();
-  await page.waitForTimeout(200);
   await page.getByRole('option', { name: new RegExp(INCIDENT_TYPES.DAMAGE, 'i') }).click();
-  await page.waitForTimeout(300);
 
   // 내용 입력
   await page.locator('textarea').first().fill(incidentContent);
@@ -43,7 +38,6 @@ export async function createIncidentWithNC(
   // "부적합으로 등록" 체크박스 선택
   const checkbox = page.locator('input[type="checkbox"]').first();
   await checkbox.check();
-  await page.waitForTimeout(200);
 
   // 저장
   await page.getByRole('button', { name: /저장/i }).click();
@@ -60,7 +54,6 @@ export async function createIncidentWithNC(
   }
 
   // 캐시 무효화 대기 (invalidateQueries + refetchQueries)
-  await page.waitForTimeout(TIMEOUTS.CACHE_INVALIDATION);
 
   console.log('✓ 사고 이력 → NC 생성 완료');
 }
@@ -81,8 +74,6 @@ export async function createDirectNC(
     throw new Error(`NC 페이지 navigation 실패: ${response?.status()}`);
   }
 
-  await page.waitForLoadState('networkidle');
-
   // ✅ IMPROVED: 페이지 로드 확인
   await expect(page.getByRole('heading', { name: /부적합 관리/i })).toBeVisible({ timeout: 5000 });
 
@@ -90,8 +81,6 @@ export async function createDirectNC(
   const registerButton = page.getByRole('button', { name: /부적합 등록/i });
   await expect(registerButton).toBeVisible({ timeout: 5000 });
   await registerButton.click();
-
-  await page.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
   // ✅ IMPROVED: Dialog 표시 확인
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
@@ -107,8 +96,6 @@ export async function createDirectNC(
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
   }
 
-  await page.waitForTimeout(TIMEOUTS.CACHE_INVALIDATION);
-
   console.log('✓ 직접 NC 등록 완료');
 }
 
@@ -119,12 +106,10 @@ export async function closeNC(page: Page, equipmentId: string): Promise<void> {
   console.log(`📝 NC 종료 시작 (장비: ${equipmentId})`);
 
   await page.goto(`/equipment/${equipmentId}/non-conformance`);
-  await page.waitForLoadState('networkidle');
 
   // 첫 번째 NC 기록 수정 버튼 클릭
   const editButton = page.getByRole('button', { name: /기록 수정/i }).first();
   await editButton.click();
-  await page.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
   // 상태를 "종료"로 변경
   await page.locator('select[name="status"]').selectOption('closed');
@@ -138,8 +123,6 @@ export async function closeNC(page: Page, equipmentId: string): Promise<void> {
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 3000 });
   }
 
-  await page.waitForTimeout(TIMEOUTS.CACHE_INVALIDATION);
-
   console.log('✓ NC 종료 완료');
 }
 
@@ -149,7 +132,6 @@ export async function closeNC(page: Page, equipmentId: string): Promise<void> {
 export async function verifyNCCreated(page: Page): Promise<void> {
   // NC 탭으로 이동
   await page.getByRole('tab', { name: /부적합 관리/i }).click();
-  await page.waitForTimeout(500);
 
   // "부적합 상태" 텍스트 확인
   const ncStatus = page.getByText(/부적합 상태/i);

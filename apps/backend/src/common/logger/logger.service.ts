@@ -54,7 +54,7 @@ export class LoggerService implements NestLoggerService {
     }
 
     this.logger = winston.createLogger({
-      level: isProduction ? 'info' : 'debug',
+      level: process.env.LOG_LEVEL ?? (isProduction ? 'info' : 'debug'),
       format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
       defaultMeta: { service: 'equipment-management' },
       transports,

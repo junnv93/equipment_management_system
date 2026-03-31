@@ -7,9 +7,8 @@ import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
-  CHECKOUT_PURPOSE_LABELS,
-  type CheckoutPurpose,
 } from '@equipment-management/schemas';
+import { getTranslations } from 'next-intl/server';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
@@ -109,18 +108,21 @@ export async function generateMetadata(props: PageProps) {
   const { id } = await props.params;
 
   try {
-    const checkout = await getCheckoutCached(id);
-    const purposeLabel =
-      CHECKOUT_PURPOSE_LABELS[checkout.purpose as CheckoutPurpose] || checkout.purpose;
+    const [checkout, t] = await Promise.all([getCheckoutCached(id), getTranslations('checkouts')]);
+    const purposeLabel = t(`purpose.${checkout.purpose}` as Parameters<typeof t>[0]);
 
     return {
-      title: `반입 처리 - ${purposeLabel}`,
-      description: `${checkout.destination}에서 ${purposeLabel} 반출된 장비의 반입 처리`,
+      title: t('metadata.returnTitle', { purpose: purposeLabel }),
+      description: t('metadata.returnDescription', {
+        purpose: purposeLabel,
+        destination: checkout.destination,
+      }),
     };
   } catch {
+    const t = await getTranslations('checkouts');
     return {
-      title: '반입 처리',
-      description: '장비 반입 처리',
+      title: t('metadata.returnFallbackTitle'),
+      description: t('metadata.returnFallbackDescription'),
     };
   }
 }

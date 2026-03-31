@@ -9,7 +9,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getFieldLabel } from '@equipment-management/schemas';
 import { format } from 'date-fns';
 import { AUDIT_DIFF_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
@@ -74,7 +73,7 @@ interface AuditLogDiffViewerProps {
  * 감사 로그 Diff Viewer 컴포넌트
  *
  * 변경 전후 값을 필드별로 비교하여 테이블 형식으로 표시합니다.
- * - 필드명 자동 한글화 (getFieldLabel 사용)
+ * - 필드명 자동 변환 (i18n audit.fieldLabels 사용)
  * - 값 포맷팅 (날짜, boolean, 객체 등)
  * - 변경된 필드만 표시 (previousValue ≠ newValue)
  *
@@ -94,7 +93,13 @@ export function AuditLogDiffViewer({
   className,
 }: AuditLogDiffViewerProps) {
   const t = useTranslations('common');
+  const tAudit = useTranslations('audit');
   const boolLabels = { trueLabel: t('diffViewer.boolTrue'), falseLabel: t('diffViewer.boolFalse') };
+
+  const fieldLabelsMap = tAudit.raw('fieldLabels') as Record<string, Record<string, string>>;
+  const resolveFieldLabel = (et: string, field: string): string => {
+    return fieldLabelsMap?.[et]?.[field] ?? field;
+  };
 
   // 변경된 필드만 추출
   const allKeys = new Set([...Object.keys(previousValue || {}), ...Object.keys(newValue || {})]);
@@ -131,7 +136,7 @@ export function AuditLogDiffViewer({
             return (
               <TableRow key={field}>
                 <TableCell className="font-medium">
-                  <Badge variant="outline">{getFieldLabel(entityType, field)}</Badge>
+                  <Badge variant="outline">{resolveFieldLabel(entityType, field)}</Badge>
                 </TableCell>
                 <TableCell className={AUDIT_DIFF_TOKENS.removed}>
                   <pre className="text-sm whitespace-pre-wrap font-mono">

@@ -32,7 +32,6 @@ test.describe('Group E-1: Hydration 검증', () => {
     await navigateToEquipmentDetail(techManagerPage, equipmentId);
 
     // 클라이언트 hydration 대기
-    await techManagerPage.waitForTimeout(TIMEOUTS.HYDRATION_CHECK);
 
     // THEN: Hydration 에러 없음
     await verifyNoHydrationErrors(errors);

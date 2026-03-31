@@ -23,12 +23,10 @@ test.describe('Equipment Information Display', () => {
   test('Display location and management information', async ({ testOperatorPage }) => {
     // 1. Navigate to any equipment detail page
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const firstDetailLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     await expect(firstDetailLink).toBeVisible();
     await firstDetailLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Locate the '위치 및 관리 정보' section
     const locationSection = testOperatorPage.getByText(/위치.*관리.*정보|Location.*Management/i);

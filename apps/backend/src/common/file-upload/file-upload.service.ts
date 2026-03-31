@@ -11,6 +11,12 @@ import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 import type { MulterFile } from '../../types/common.types';
 import { STORAGE_PROVIDER, IStorageProvider } from '../storage/storage.interface';
+import {
+  ALLOWED_MIME_TYPES,
+  FILE_UPLOAD_LIMITS,
+  MIME_TO_MAGIC_BYTES,
+} from '@equipment-management/shared-constants';
+import { ErrorCode } from '@equipment-management/schemas';
 
 /**
  * 파일 업로드 서비스
@@ -24,30 +30,8 @@ import { STORAGE_PROVIDER, IStorageProvider } from '../storage/storage.interface
 @Injectable()
 export class FileUploadService implements OnModuleInit {
   private readonly logger = new Logger(FileUploadService.name);
-  private readonly maxFileSize: number = 10 * 1024 * 1024; // 10MB
-  private readonly allowedMimeTypes: string[] = [
-    'application/pdf',
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  ];
-
-  private readonly MAGIC_BYTES: Record<string, number[][]> = {
-    'application/pdf': [[0x25, 0x50, 0x44, 0x46]], // %PDF
-    'image/jpeg': [[0xff, 0xd8, 0xff]],
-    'image/png': [[0x89, 0x50, 0x4e, 0x47]], // \x89PNG
-    'image/gif': [[0x47, 0x49, 0x46, 0x38]], // GIF8
-    'application/msword': [[0xd0, 0xcf, 0x11, 0xe0]], // OLE compound
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
-      [0x50, 0x4b, 0x03, 0x04],
-    ], // PK ZIP
-    'application/vnd.ms-excel': [[0xd0, 0xcf, 0x11, 0xe0]],
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [[0x50, 0x4b, 0x03, 0x04]], // PK ZIP
-  };
+  private readonly maxFileSize: number = FILE_UPLOAD_LIMITS.MAX_FILE_SIZE;
+  private readonly allowedMimeTypes: readonly string[] = ALLOWED_MIME_TYPES;
 
   constructor(@Inject(STORAGE_PROVIDER) private readonly provider: IStorageProvider) {}
 
@@ -76,7 +60,7 @@ export class FileUploadService implements OnModuleInit {
   private validateFile(file: MulterFile): void {
     if (!file.buffer || file.buffer.length === 0) {
       throw new BadRequestException({
-        code: 'FILE_EMPTY',
+        code: ErrorCode.FileEmpty,
         message: 'Empty file is not allowed.',
       });
     }
@@ -100,7 +84,7 @@ export class FileUploadService implements OnModuleInit {
   private validateMagicBytes(file: MulterFile): void {
     if (!file.buffer || file.buffer.length === 0) return;
 
-    const signatures = this.MAGIC_BYTES[file.mimetype];
+    const signatures = MIME_TO_MAGIC_BYTES.get(file.mimetype);
     if (!signatures) return;
 
     const matches = signatures.some((sig) =>
@@ -109,7 +93,7 @@ export class FileUploadService implements OnModuleInit {
 
     if (!matches) {
       throw new BadRequestException({
-        code: 'FILE_CONTENT_MISMATCH',
+        code: ErrorCode.FileContentMismatch,
         message: 'File content does not match the declared format.',
       });
     }
@@ -147,6 +131,8 @@ export class FileUploadService implements OnModuleInit {
 
       this.logger.log(`File saved: ${key} (hash: ${fileHash.substring(0, 12)}...)`);
 
+      // MULTER_UTF8_OPTIONS(defParamCharset: 'utf8')로 busboy가 이미 UTF-8로 디코딩하므로
+      // 별도 변환 불필요. file.originalname은 그대로 사용.
       return {
         uuid,
         fileName,
@@ -165,7 +151,7 @@ export class FileUploadService implements OnModuleInit {
         error instanceof Error ? error.stack : undefined
       );
       throw new InternalServerErrorException({
-        code: 'FILE_SAVE_FAILED',
+        code: ErrorCode.FileSaveFailed,
         message: 'Failed to save file due to a server error.',
       });
     }
@@ -210,8 +196,8 @@ export class FileUploadService implements OnModuleInit {
       return await this.provider.download(filePath);
     } catch (error) {
       this.logger.error(`Failed to read file: ${filePath}`, error);
-      throw new BadRequestException({
-        code: 'FILE_READ_FAILED',
+      throw new InternalServerErrorException({
+        code: ErrorCode.FileReadFailed,
         message: 'Failed to read file.',
       });
     }

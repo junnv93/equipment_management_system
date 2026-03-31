@@ -31,10 +31,8 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 2. Navigate to NC management page for equipment with open NC
     await testOperatorPage.goto(`/equipment/${equipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Wait for page to fully load
-    await testOperatorPage.waitForTimeout(1000);
 
     // 3. Verify 'Register NC' button is visible
     const registerButton = testOperatorPage.getByRole('button', { name: /사고 등록|Register NC/i });

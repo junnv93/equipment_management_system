@@ -23,7 +23,6 @@ test.describe('역할별 승인 워크플로우', () => {
   test('시험실무자는 장비 등록 시 승인 요청을 생성한다', async ({ testOperatorPage }) => {
     // 1. testOperatorPage로 /equipment/create 페이지 이동
     await testOperatorPage.goto('/equipment/create');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Verify page loaded
     await expect(testOperatorPage.locator('h1')).toContainText('장비 등록');
@@ -55,7 +54,6 @@ test.describe('역할별 승인 워크플로우', () => {
     console.log('✓ Site dropdown is disabled and auto-set for test_engineer');
 
     // Wait for teams to load after auto-set site
-    await testOperatorPage.waitForTimeout(1000);
 
     // 5. 팀: 시험실무자는 자신의 팀이 자동 설정되고 변경 불가
     const teamCombobox = testOperatorPage.getByRole('combobox', { name: '팀 *' });
@@ -65,7 +63,6 @@ test.describe('역할별 승인 워크플로우', () => {
     console.log('✓ Team dropdown is disabled and auto-set for test_engineer');
 
     // 분류코드 자동 설정 확인 (팀 자동 선택 후)
-    await testOperatorPage.waitForTimeout(500);
     const classificationDisplay = testOperatorPage.locator('text=/분류.*자동/i').first();
     await expect(classificationDisplay).toBeVisible();
 
@@ -79,7 +76,6 @@ test.describe('역할별 승인 워크플로우', () => {
     // 6. 관리번호 일련번호 입력: '1001'
     const serialInput = testOperatorPage.locator('input[name="managementSerialNumberStr"]');
     await serialInput.fill('1001');
-    await testOperatorPage.waitForTimeout(500);
 
     // 7. 모델명 입력: 'Test Model 1001'
     const modelInput = testOperatorPage.locator('input[name="modelName"]');
@@ -102,7 +98,6 @@ test.describe('역할별 승인 워크플로우', () => {
     await testOperatorPage.getByRole('option', { name: '외부 교정' }).click();
 
     // Wait for conditional fields to appear
-    await testOperatorPage.waitForTimeout(500);
 
     // 11. 교정 주기 입력: 12
     const calibrationCycleInput = testOperatorPage.locator('input[name="calibrationCycle"]');

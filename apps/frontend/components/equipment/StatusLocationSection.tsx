@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { type Site, EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
+import { type Site, EQUIPMENT_STATUS_VALUES } from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -31,8 +31,8 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
-// EQUIPMENT_STATUS_LABELS는 @equipment-management/schemas에서 import (SSOT)
-// 색상 스타일은 @/lib/constants/equipment-status-styles에서 import (SSOT)
+// 장비 상태 라벨은 i18n (useTranslations('equipment').status.*)으로 관리
+// 색상 스타일은 @/lib/design-tokens/getEquipmentStatusTokenStyle에서 import (SSOT)
 
 interface TechnicalManager {
   id: number;
@@ -45,18 +45,19 @@ interface TechnicalManager {
 
 interface StatusLocationSectionProps {
   control: Control<FormValues>;
-  isEdit?: boolean;
   showSharedOptions?: boolean;
   selectedSite?: Site;
   selectedTeamId?: number | string;
+  /** 등록 모드: true면 location 입력 숨기고 initialLocation이 보관 위치가 됨 */
+  isCreateMode?: boolean;
 }
 
 export function StatusLocationSection({
   control,
-  isEdit: _isEdit = false,
   showSharedOptions: _showSharedOptions = false,
   selectedSite,
   selectedTeamId,
+  isCreateMode = false,
 }: StatusLocationSectionProps) {
   const { setValue } = useFormContext<FormValues>();
   const t = useTranslations('equipment');
@@ -132,7 +133,7 @@ export function StatusLocationSection({
                               variant="outline"
                               className={getEquipmentStatusTokenStyle(field.value).className}
                             >
-                              {getEquipmentStatusTokenStyle(field.value).label}
+                              {t(`status.${field.value}` as Parameters<typeof t>[0])}
                             </Badge>
                           </div>
                         )}
@@ -140,13 +141,13 @@ export function StatusLocationSection({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {Object.entries(EQUIPMENT_STATUS_LABELS).map(([value, label]) => {
+                    {EQUIPMENT_STATUS_VALUES.map((value) => {
                       const style = getEquipmentStatusTokenStyle(value);
                       return (
                         <SelectItem key={value} value={value}>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={style.className}>
-                              {label}
+                              {t(`status.${value}` as Parameters<typeof t>[0])}
                             </Badge>
                           </div>
                         </SelectItem>
@@ -159,36 +160,41 @@ export function StatusLocationSection({
             )}
           />
 
-          {/* 현재 위치 */}
-          <FormField
-            control={control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {t('form.statusLocation.currentLocationLabel')}{' '}
-                  <span className="text-destructive">*</span>
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={t('form.statusLocation.locationPlaceholder')}
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                <FormDescription>{t('form.statusLocation.locationDescription')}</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* 현재 위치 — 등록 모드에서는 숨김 (initialLocation에서 자동 파생) */}
+          {!isCreateMode && (
+            <FormField
+              control={control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {t('form.statusLocation.currentLocationLabel')}{' '}
+                    <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t('form.statusLocation.locationPlaceholder')}
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormDescription>{t('form.statusLocation.locationDescription')}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
-          {/* 최초 설치 위치 */}
+          {/* 최초 설치 위치 — 등록 모드에서는 필수 (보관 위치로 자동 설정됨) */}
           <FormField
             control={control}
             name="initialLocation"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('fields.initialLocation')}</FormLabel>
+                <FormLabel>
+                  {t('fields.initialLocation')}{' '}
+                  {isCreateMode && <span className="text-destructive">*</span>}
+                </FormLabel>
                 <FormControl>
                   <Input
                     placeholder={t('form.statusLocation.initialLocationPlaceholder')}
@@ -196,6 +202,11 @@ export function StatusLocationSection({
                     value={field.value || ''}
                   />
                 </FormControl>
+                {isCreateMode && (
+                  <FormDescription>
+                    {t('form.statusLocation.initialLocationAsStorageDescription')}
+                  </FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}

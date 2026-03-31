@@ -1,12 +1,6 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
+import { createVersionConflictException } from '../../../common/base/versioned-base.service';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   equipmentLocationHistory,
@@ -178,8 +172,9 @@ export class EquipmentHistoryService {
   }
 
   /**
-   * equipment.location을 최신 위치 이력과 동기화 (SSOT)
+   * equipment.location을 최신 위치 이력과 동기화 (SSOT) — CAS version bump 포함
    *
+   * 외부 API (위치변동 탭에서 직접 추가/삭제) 전용.
    * CAS 적용: expectedVersion 전달 시 낙관적 잠금 체크.
    * CAS 미적용: expectedVersion 생략 시 직접 UPDATE (내부 호출용).
    *
@@ -205,15 +200,28 @@ export class EquipmentHistoryService {
         .returning({ version: equipment.version });
 
       if (!updated) {
-        throw new ConflictException({
-          code: 'VERSION_CONFLICT',
-          message: '다른 사용자가 이미 장비를 수정했습니다. 새로고침 후 다시 시도해주세요.',
-          expectedVersion,
-        });
+        throw createVersionConflictException(undefined, expectedVersion);
       }
     } else {
       await queryRunner.update(equipment).set(updateData).where(eq(equipment.id, equipmentId));
     }
+  }
+
+  /**
+   * equipment.location을 최신 위치 이력과 동기화 (SSOT) — version 미변경
+   *
+   * 장비 생성(create) / 수정(update) 시 사용.
+   * 호출자(EquipmentService)가 이미 CAS version을 관리하므로 이중 bump 방지.
+   */
+  private async syncEquipmentLocationNoCas(
+    queryRunner: AppDatabase,
+    equipmentId: string,
+    location: string | null
+  ): Promise<void> {
+    await queryRunner
+      .update(equipment)
+      .set({ location, updatedAt: new Date() } as Record<string, unknown>)
+      .where(eq(equipment.id, equipmentId));
   }
 
   // ===================== 위치 변동 이력 =====================
@@ -331,10 +339,13 @@ export class EquipmentHistoryService {
   }
 
   /**
-   * 위치 변동 이력 추가 (내부 전용)
+   * 위치 변동 이력 추가 + equipment.location SSOT 동기화 (내부 전용)
    *
-   * equipment.location UPDATE 없이 history INSERT만 수행.
-   * 장비 생성(create) / 수정(update) 시 호출 — 해당 서비스에서 이미 location을 처리하므로.
+   * 장비 생성(create) / 수정(update) 시 호출.
+   * 트랜잭션 내에서: history INSERT → resolveLatestLocation → syncEquipmentLocationNoCas.
+   * version은 호출자(EquipmentService)가 관리하므로 여기서는 bump하지 않음.
+   *
+   * @param tx 호출자의 트랜잭션 컨텍스트 (생략 시 this.db 사용)
    */
   async createLocationHistoryInternal(
     equipmentId: string,
@@ -344,10 +355,14 @@ export class EquipmentHistoryService {
       previousLocation: string | null;
       notes?: string;
     },
-    userId?: string
+    userId?: string,
+    tx?: AppDatabase
   ): Promise<void> {
     const validatedUserId = await this.validateAndGetUserId(userId);
-    await this.db.insert(equipmentLocationHistory).values({
+    const executor = tx ?? this.db;
+
+    // 1. 이력 INSERT
+    await executor.insert(equipmentLocationHistory).values({
       equipmentId,
       changedAt: new Date(data.changedAt),
       previousLocation: data.previousLocation,
@@ -355,6 +370,10 @@ export class EquipmentHistoryService {
       notes: data.notes ?? null,
       changedBy: validatedUserId,
     });
+
+    // 2. SSOT: 최신 이력 기준 equipment.location 동기화 (version 미변경)
+    const resolvedLocation = await this.resolveLatestLocation(executor, equipmentId);
+    await this.syncEquipmentLocationNoCas(executor, equipmentId, resolvedLocation);
   }
 
   /**
@@ -622,6 +641,9 @@ export class EquipmentHistoryService {
               isActuallyOverdue &&
               currentEquipment?.status !== EquipmentStatusEnum.enum.non_conforming
             ) {
+              // CAS 면제: 시스템 자동 트리거 (사고이력 생성 → 부적합 전환)
+              // 사용자 직접 요청이 아닌 내부 비즈니스 규칙에 의한 상태 변경이므로
+              // version WHERE 조건 없이 무조건 갱신. CalibrationOverdueScheduler와 동일 패턴.
               await tx
                 .update(equipment)
                 .set({
@@ -675,6 +697,8 @@ export class EquipmentHistoryService {
         // 3. 장비 상태 변경 (선택 + 현재 시점만)
         // ✅ 과거 이력은 현재 장비 상태에 영향을 주지 않음
         if (dto.changeEquipmentStatus === true && !isPastIncident) {
+          // CAS 면제: 사고이력 등록 시 부적합 전환은 트랜잭션 내 시스템 규칙
+          // 사용자는 사고이력을 등록하는 것이지, 장비 상태를 직접 수정하지 않음
           await tx
             .update(equipment)
             .set({
@@ -816,7 +840,10 @@ export class EquipmentHistoryService {
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
-      console.error(`[deleteIncidentHistory] Error deleting incident history ${historyId}:`, error);
+      this.logger.error(
+        `deleteIncidentHistory() 실패 — historyId=${historyId}`,
+        (error as Error).stack
+      );
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new BadRequestException(`Failed to delete incident history: ${errorMessage}`);
     }

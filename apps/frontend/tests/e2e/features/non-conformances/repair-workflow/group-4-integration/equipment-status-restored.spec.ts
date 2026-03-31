@@ -32,12 +32,10 @@ test.describe('Full Workflow Integration', () => {
     // 1. Ensure all NCs for equipment are closed
     // Navigate to equipment list
     await techManagerPage.goto('/equipment');
-    await techManagerPage.waitForLoadState('networkidle');
 
     const firstDetailLink = techManagerPage.getByRole('link', { name: /상세/i }).first();
     await expect(firstDetailLink).toBeVisible();
     await firstDetailLink.click();
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = techManagerPage.url();
@@ -71,7 +69,6 @@ test.describe('Full Workflow Integration', () => {
 
     // 2. Navigate to equipment detail page
     await techManagerPage.goto(`/equipment/${testEquipmentId}`);
-    await techManagerPage.waitForLoadState('networkidle');
 
     // 3. Verify equipment status is 'available'
     const statusBadge = techManagerPage.locator('[role="status"], .badge').first();

@@ -9,7 +9,7 @@
  * - 소프트 삭제 (deletedAt)
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BASE_URLS, TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
 import {
   getBackendToken,

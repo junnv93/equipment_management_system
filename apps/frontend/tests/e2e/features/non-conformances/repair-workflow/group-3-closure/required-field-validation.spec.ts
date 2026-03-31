@@ -9,12 +9,10 @@ test.describe('Repair History Form Validation', () => {
   }) => {
     // Navigate to equipment list
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Click first equipment link
     const equipmentLink = testOperatorPage.locator('a[href*="/equipment/"]').first();
     await equipmentLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = testOperatorPage.url();
@@ -26,7 +24,6 @@ test.describe('Repair History Form Validation', () => {
 
     // 1. Navigate to repair history page
     await testOperatorPage.goto(`/equipment/${equipmentId}/repair-history`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Verify we're on the repair history page
     await expect(
@@ -38,7 +35,6 @@ test.describe('Repair History Form Validation', () => {
       .locator('button')
       .filter({ hasText: /수리.*이력.*추가|add.*repair/i });
     await addButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // Verify dialog opened
     const dialog = testOperatorPage.getByRole('dialog');
@@ -60,7 +56,6 @@ test.describe('Repair History Form Validation', () => {
       .filter({ hasText: /등록|register/i })
       .first();
     await registerButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 6. Verify validation errors appear
 

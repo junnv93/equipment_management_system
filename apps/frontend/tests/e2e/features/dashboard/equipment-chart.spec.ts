@@ -34,7 +34,6 @@ test.describe('Equipment Status Chart', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // 3. Locate the equipment status chart
@@ -56,7 +55,7 @@ test.describe('Equipment Status Chart', () => {
 
     // 5. Verify legend shows all status categories with counts
     // Legend items have role="listitem" as per the component code
-    const legendItems = siteAdminPage.locator('[role="listitem"]');
+    const legendItems = siteAdminPage.getByRole('listitem');
     const legendCount = await legendItems.count();
     expect(legendCount).toBeGreaterThan(0);
     console.log(`✓ Legend shows ${legendCount} status categories`);
@@ -87,7 +86,6 @@ test.describe('Equipment Status Chart', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Examine the chart legend items
     await expect(siteAdminPage.getByRole('heading', { name: '장비 상태' })).toBeVisible({
@@ -109,7 +107,7 @@ test.describe('Equipment Status Chart', () => {
     console.log('✓ Legend items have color coding');
 
     // 5. Verify each legend item shows status name and count
-    const legendItems = siteAdminPage.locator('[role="listitem"]');
+    const legendItems = siteAdminPage.getByRole('listitem');
     const firstItem = legendItems.first();
     await expect(firstItem).toBeVisible();
 
@@ -157,14 +155,12 @@ test.describe('Equipment Status Chart', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // 3. Click on '장비 현황' tab
     const equipmentTab = siteAdminPage.getByRole('tab', { name: '장비 현황' });
     await expect(equipmentTab).toBeVisible({ timeout: 10000 });
     await equipmentTab.click();
-    await siteAdminPage.waitForTimeout(500); // Wait for tab transition
     console.log('✓ Clicked on 장비 현황 tab');
 
     // 4. Verify equipment status chart is displayed in larger view
@@ -205,7 +201,7 @@ test.describe('Equipment Status Chart', () => {
       console.log(`✓ Total count from chart: ${totalFromChart}`);
 
       // Get sum from legend items (each shows "status count" format)
-      const legendItems = siteAdminPage.locator('[role="listitem"]');
+      const legendItems = siteAdminPage.getByRole('listitem');
       const itemCount = await legendItems.count();
       let sumFromLegend = 0;
 

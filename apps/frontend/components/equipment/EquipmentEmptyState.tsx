@@ -61,12 +61,6 @@ export function EquipmentEmptyState() {
             {t('list.createButton')}
           </Link>
         </Button>
-        <Button variant="outline" asChild>
-          <Link href="/equipment/create-shared">
-            <Package className="h-4 w-4 mr-1.5" aria-hidden="true" />
-            {t('list.createSharedButton')}
-          </Link>
-        </Button>
       </div>
     </div>
   );

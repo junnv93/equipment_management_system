@@ -6,6 +6,7 @@
  * - getFieldLabel(entityType, fieldName) 헬퍼 함수 사용
  *
  * @see packages/schemas/src/audit-log.ts (AuditEntityType)
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(audit.fieldLabels.*)를 사용하세요.
  */
 
 /**

@@ -29,8 +29,6 @@ test.describe('Group D-1: 목록-상세 페이지 동기화', () => {
     // GIVEN: 상세 페이지에서 현재 상태 확인
     console.log('  STEP 1: 상세 페이지에서 현재 상태 감지');
     await techManagerPage.goto(`/equipment/${equipmentId}`);
-    await techManagerPage.waitForLoadState('networkidle');
-    await techManagerPage.waitForTimeout(2000);
 
     // 현재 장비 상태 자동 감지
     const currentStatus = await detectEquipmentStatus(techManagerPage);
@@ -42,7 +40,6 @@ test.describe('Group D-1: 목록-상세 페이지 동기화', () => {
     await navigateToEquipmentList(listPage);
 
     // 초기 로드 대기 (새 페이지는 SSR 데이터 없이 시작)
-    await listPage.waitForTimeout(4000);
 
     // THEN: 목록 페이지에서 동일한 상태 배지 확인
     console.log(`  STEP 3: 목록 페이지 배지 검증 (예상: ${currentStatus})`);

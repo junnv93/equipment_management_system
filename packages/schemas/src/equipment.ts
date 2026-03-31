@@ -127,9 +127,10 @@ export const baseEquipmentSchema = z.object({
 });
 
 // 장비 생성 스키마
-// 필수 필드만 명시하고 나머지는 선택적으로 처리
-// 기본값이 필요한 필드는 서비스 레이어에서 처리
-export const createEquipmentSchema = baseEquipmentSchema;
+// initialLocation은 등록 시 필수 — 보관 위치 SSOT (location은 이력에서 파생)
+export const createEquipmentSchema = baseEquipmentSchema.extend({
+  initialLocation: z.string().min(1),
+});
 
 // 장비 업데이트 스키마
 export const updateEquipmentSchema = baseEquipmentSchema.partial();

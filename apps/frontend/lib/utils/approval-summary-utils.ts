@@ -1,14 +1,19 @@
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 
+type TranslateFn = (key: string, params?: Record<string, string | number | Date>) => string;
+
 /**
  * ApprovalItem의 summaryData를 사용하여 로컬라이즈된 summary 생성
  *
  * API 레이어의 summary(영어 기본값)와 분리된 렌더링 유틸리티.
  * summaryData가 없으면 item.summary를 그대로 반환 (fallback).
+ *
+ * @param siteLabels - i18n 사이트 라벨 맵 (useSiteLabels() 반환값). 교정계획서 summary에 사용.
  */
 export function getLocalizedSummary(
   item: ApprovalItem,
-  t: (key: string, params?: Record<string, string | number | Date>) => string
+  t: TranslateFn,
+  siteLabels?: Record<string, string>
 ): string {
   if (!item.summaryData) return item.summary;
 
@@ -20,8 +25,10 @@ export function getLocalizedSummary(
       return data.direction === 'outgoing'
         ? t('summaryTemplates.checkoutOutgoing', { equipmentNames: data.equipmentNames })
         : t('summaryTemplates.checkoutIncoming', { equipmentNames: data.equipmentNames });
-    case 'calibration_plan':
-      return t('summaryTemplates.calibrationPlan', { year: data.year, site: data.siteId });
+    case 'calibration_plan': {
+      const siteLabel = siteLabels?.[data.siteId] ?? data.siteId;
+      return t('summaryTemplates.calibrationPlan', { year: data.year, site: siteLabel });
+    }
     case 'equipment_request':
       return data.equipmentName
         ? t('summaryTemplates.equipmentRequest', {

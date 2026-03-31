@@ -40,7 +40,6 @@ test.describe('Group C-3: Accessibility', () => {
 
     // Should be able to open with Space or Enter
     await testOperatorPage.keyboard.press('Space');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Dropdown should open
     const dropdown = testOperatorPage.locator(UI_CLASSES.COMBOBOX).first();
@@ -49,9 +48,7 @@ test.describe('Group C-3: Accessibility', () => {
     // If not visible with Space, try Enter
     if (!isVisible) {
       await testOperatorPage.keyboard.press('Escape'); // Close if opened
-      await testOperatorPage.waitForTimeout(300);
       await testOperatorPage.keyboard.press('Enter');
-      await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
     }
 
     // Verify dropdown is accessible via keyboard
@@ -64,7 +61,6 @@ test.describe('Group C-3: Accessibility', () => {
 
     // Open dropdown via click (easier setup)
     await testOperatorPage.click('[id="nonConformanceId"]');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Navigate with arrow keys
     await testOperatorPage.keyboard.press('ArrowDown');
@@ -72,7 +68,6 @@ test.describe('Group C-3: Accessibility', () => {
 
     // Select with Enter
     await testOperatorPage.keyboard.press('Enter');
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify guidance message appears (indicates selection worked)
     const guidanceBox = testOperatorPage.locator(UI_CLASSES.INFO_CARD);

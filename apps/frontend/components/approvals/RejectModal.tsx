@@ -25,6 +25,7 @@ import { REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
 import { getLocalizedSummary } from '@/lib/utils/approval-summary-utils';
 import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface RejectModalProps {
   item: ApprovalItem;
@@ -42,6 +43,7 @@ const TEMPLATE_KEYS = ['spec', 'schedule', 'calibration', 'document', 'other'] a
 
 export default function RejectModal({ item, isOpen, onClose, onConfirm }: RejectModalProps) {
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
 
   // 반려 사유 템플릿 (i18n)
   const rejectTemplates = [
@@ -120,7 +122,7 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
         <DialogHeader>
           <DialogTitle>{t('rejectModal.title')}</DialogTitle>
           <DialogDescription>
-            {t('rejectModal.description', { summary: getLocalizedSummary(item, t) })}
+            {t('rejectModal.description', { summary: getLocalizedSummary(item, t, siteLabels) })}
           </DialogDescription>
         </DialogHeader>
 

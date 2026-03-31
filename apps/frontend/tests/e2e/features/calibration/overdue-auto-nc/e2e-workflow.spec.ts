@@ -31,28 +31,12 @@ import {
 } from '@equipment-management/schemas';
 import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
 // Test configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
 const FRONTEND_URL = BASE_URLS.FRONTEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
-
-/**
- * Helper: Login and get JWT token via backend test-login endpoint
- */
-async function loginAsRole(
-  request: APIRequestContext,
-  role: 'test_engineer' | 'technical_manager' | 'lab_manager'
-): Promise<string> {
-  const response = await request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-
-  if (!response.ok()) {
-    throw new Error(`Failed to login as ${role}: ${response.status()}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 /**
  * Helper: Create test equipment with specific properties
@@ -229,6 +213,8 @@ async function getNonConformances(request: APIRequestContext, token: string, equ
 
 /**
  * Helper: Login to frontend using NextAuth
+ * TODO: auth.fixture storageState 전환 필요 (testIgnore 해제 시)
+ * TODO: callback/test-login 직접 호출 → SSOT 헬퍼(fetchBackendToken) 또는 auth.fixture 전환 필요
  */
 async function loginToFrontend(page: Page, role: string) {
   // Get CSRF token
@@ -288,7 +274,6 @@ async function loginToFrontend(page: Page, role: string) {
   }
 
   await page.goto(`${FRONTEND_URL}/`);
-  await page.waitForTimeout(1000);
 }
 
 // ============================================================================
@@ -311,7 +296,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     const equipmentId = `equip-e1-${timestamp}`;
 
     // 1. Setup test equipment: nextCalibrationDate = 7 days ago, status = 'available' (equipmentId: `equip-e1-${timestamp}`)
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -349,7 +334,6 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     // 5. Navigate to equipment detail page in UI
     await loginToFrontend(page, 'lab_manager');
     await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
-    await page.waitForLoadState('networkidle');
 
     // 6. Verify NonConformanceBanner is displayed
     const ncBanner = page
@@ -359,7 +343,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     console.log('NonConformanceBanner is visible');
 
     // 7. Login as Technical Manager
-    const techManagerToken = await loginAsRole(request, 'technical_manager');
+    const techManagerToken = await fetchBackendToken('technical_manager');
 
     // 8. Create and approve calibration record
     const calibration = await createCalibration(request, techManagerToken, equipment.id);
@@ -389,7 +373,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
   }) => {
     const timestamp = Date.now();
 
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -499,8 +483,8 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
   }) => {
     const timestamp = Date.now();
 
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
-    const techManagerToken = await loginAsRole(request, 'technical_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
+    const techManagerToken = await fetchBackendToken('technical_manager');
 
     // 1. Setup equipment with two NCs (equipmentId: `equip-e3-${timestamp}`)
     const equipment = await createTestEquipment(request, labManagerToken, {
@@ -589,7 +573,7 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const timestamp = Date.now();
     const equipmentId = `equip-e4-${timestamp}`;
 
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -608,7 +592,6 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     // 1. Open equipment detail page in browser (equipmentId: `equip-e4-${timestamp}`)
     await loginToFrontend(page, 'lab_manager');
     await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
-    await page.waitForLoadState('networkidle');
 
     // Verify initial status
     const statusBadge = page.locator('text=/사용.*가능|Available/i').first();
@@ -627,7 +610,6 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
 
     // 3. Refresh the equipment detail page
     await page.reload();
-    await page.waitForLoadState('networkidle');
 
     // 4. Verify UI reflects new state
     // Status badge updates to 'Non-conforming'
@@ -646,7 +628,6 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const incidentTab = page.locator('text=/이력|History/i');
     if (await incidentTab.isVisible()) {
       await incidentTab.click();
-      await page.waitForTimeout(1000);
       const calibrationOverdueEntry = page.locator('text=/교정.*기한.*초과|Calibration.*Overdue/i');
       await expect(calibrationOverdueEntry.first()).toBeVisible();
       console.log('Incident History tab shows calibration_overdue entry');
@@ -671,7 +652,7 @@ test.describe('Subgroup E3: Concurrency Tests (Parallel)', () => {
     const equipmentId = `equip-e5-${timestamp}`;
 
     // 1. Setup equipment with overdue calibration (equipmentId: `equip-e5-${timestamp}`)
-    const labManagerToken = await loginAsRole(request, 'lab_manager');
+    const labManagerToken = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

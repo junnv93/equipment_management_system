@@ -33,6 +33,8 @@ pnpm-debug.log*
 .env.test.local
 .env.production.local
 .env.test
+apps/backend/.env.test
+apps/frontend/.env.test
 
 # test uploads (generated during E2E tests)
 test-uploads/

@@ -26,10 +26,10 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import calibrationPlansApi, { ExternalEquipment } from '@/lib/api/calibration-plans-api';
-import { SITE_LABELS } from '@equipment-management/schemas';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import teamsApi from '@/lib/api/teams-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { format } from 'date-fns';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { ArrowLeft, Save, AlertCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -53,6 +53,8 @@ export default function CreateCalibrationPlanContent() {
   const { toast } = useToast();
   const { data: session } = useSession();
   const t = useTranslations('calibration');
+  const siteLabels = useSiteLabels();
+  const { fmtDate } = useDateFormatter();
 
   // 권한 가드: CREATE_CALIBRATION_PLAN 없으면 목록으로 리다이렉트
   const { allowed, loading: guardLoading } = usePermissionGuard(Permission.CREATE_CALIBRATION_PLAN);
@@ -117,7 +119,7 @@ export default function CreateCalibrationPlanContent() {
         title: t('planCreate.toasts.createSuccess'),
         description: t('planCreate.toasts.createSuccessDesc', {
           year: selectedYear,
-          site: SITE_LABELS[selectedSite as Site],
+          site: siteLabels[selectedSite as Site],
         }),
       });
       router.push(`/calibration-plans/${data.id}`);
@@ -214,7 +216,7 @@ export default function CreateCalibrationPlanContent() {
                   <SelectValue placeholder={t('planCreate.fields.sitePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(SITE_LABELS).map(([key, label]) => (
+                  {Object.entries(siteLabels).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
                     </SelectItem>
@@ -276,7 +278,7 @@ export default function CreateCalibrationPlanContent() {
             <CardDescription>
               {t('planCreate.preview.description', {
                 year: selectedYear,
-                site: SITE_LABELS[selectedSite as Site],
+                site: siteLabels[selectedSite as Site],
               })}
             </CardDescription>
           </CardHeader>
@@ -320,9 +322,7 @@ export default function CreateCalibrationPlanContent() {
                           <TableCell className="font-mono">{eq.managementNumber}</TableCell>
                           <TableCell>{eq.name}</TableCell>
                           <TableCell>
-                            {eq.lastCalibrationDate
-                              ? format(new Date(eq.lastCalibrationDate), 'yyyy-MM-dd')
-                              : '-'}
+                            {eq.lastCalibrationDate ? fmtDate(eq.lastCalibrationDate) : '-'}
                           </TableCell>
                           <TableCell>
                             {eq.calibrationCycle
@@ -330,9 +330,7 @@ export default function CreateCalibrationPlanContent() {
                               : '-'}
                           </TableCell>
                           <TableCell>
-                            {eq.nextCalibrationDate
-                              ? format(new Date(eq.nextCalibrationDate), 'yyyy-MM-dd')
-                              : '-'}
+                            {eq.nextCalibrationDate ? fmtDate(eq.nextCalibrationDate) : '-'}
                           </TableCell>
                           <TableCell>{eq.calibrationAgency || '-'}</TableCell>
                         </TableRow>

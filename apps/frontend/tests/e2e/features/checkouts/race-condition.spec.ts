@@ -13,8 +13,7 @@
  * - Test UI auto-retry mechanism
  */
 
-import { test as base, expect } from '@playwright/test';
-import { test as authTest } from '../../shared/fixtures/auth.fixture';
+import { test as authTest, expect } from '../../shared/fixtures/auth.fixture';
 import { TEST_EQUIPMENT_IDS, BASE_URLS } from '../../shared/constants/shared-test-data';
 import {
   getBackendToken,
@@ -33,14 +32,9 @@ import {
 // Backend API URL
 const BACKEND_URL = BASE_URLS.BACKEND;
 
-// Use base test for API-only tests
-const test = base;
-
-// Configure serial execution to prevent test interference
-test.describe.configure({ mode: 'serial' });
-
 // Use authTest for all tests to get authenticated request context
 authTest.describe('Checkout Race Condition Prevention', () => {
+  authTest.describe.configure({ mode: 'serial' });
   authTest.beforeAll(async () => {
     // 테스트 장비 격리: 이전 실행에서 남은 active checkout 취소 + available 복원
     const equipIds = [
@@ -137,7 +131,6 @@ authTest.describe('Checkout Race Condition Prevention', () => {
 
       // Verify final DB state: checkout should be in one of the two states
       // Small delay to ensure DB write is committed
-      await page.waitForTimeout(100);
 
       const finalResponse = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -433,7 +426,6 @@ authTest.describe('Checkout UI Auto-Retry', () => {
       console.log(`Toast message: ${toastText}`);
 
       // Verify page shows latest state (approved by other user)
-      await page.waitForTimeout(2000); // Wait for router.refresh()
       await expect(page.getByText('승인됨')).toBeVisible();
 
       console.log('UI correctly shows latest state after conflict');

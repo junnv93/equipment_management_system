@@ -14,6 +14,12 @@
     "inaccurate": "Accuracy/Precision Not Guaranteed",
     "other": "Other"
   },
+  "reviewStatus": {
+    "pending": "Pending Review",
+    "reviewed": "Reviewed",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
   "fields": {
     "reason": "Disposal Reason",
     "requestDate": "Request Date",
@@ -74,7 +80,8 @@
     "toasts": {
       "successTitle": "Disposal Requested",
       "successDesc": "Disposal request has been submitted successfully.",
-      "errorTitle": "Disposal Request Failed"
+      "errorTitle": "Disposal Request Failed",
+      "fileValidationError": "Invalid file attachment"
     }
   },
   "approvalDialog": {

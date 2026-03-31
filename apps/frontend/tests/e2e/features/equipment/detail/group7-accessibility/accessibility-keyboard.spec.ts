@@ -61,7 +61,6 @@ test.describe('Group 7: Accessibility', () => {
     const focusOrder: string[] = [];
     for (let i = 0; i < 10; i++) {
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       focusedElement = page.locator(':focus');
       const elementInfo = await focusedElement.evaluate((el) => {
@@ -84,14 +83,13 @@ test.describe('Group 7: Accessibility', () => {
 
     // 5. Navigate to tabs using Tab key
     // Find the tab navigation area
-    const tabList = page.locator('[role="tablist"]');
+    const tabList = page.getByRole('tablist');
     await expect(tabList).toBeVisible();
 
     // Tab until we reach the tabs
     let tabFocused = false;
     for (let i = 0; i < 20; i++) {
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       focusedElement = page.locator(':focus');
       const role = await focusedElement.getAttribute('role');
@@ -110,7 +108,6 @@ test.describe('Group 7: Accessibility', () => {
 
     // Press Enter to activate
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
 
     // 7. Verify tab content updates
     // Check that aria-selected is true for the activated tab
@@ -119,7 +116,6 @@ test.describe('Group 7: Accessibility', () => {
 
     // 8. Press Shift+Tab to move focus backward
     await page.keyboard.press('Shift+Tab');
-    await page.waitForTimeout(100);
 
     // 9. Verify backward navigation works correctly
     focusedElement = page.locator(':focus');
@@ -138,16 +134,14 @@ test.describe('Group 7: Accessibility', () => {
     if (buttonCount > 0) {
       // Click the first action button to open a dialog
       await actionButtons.first().click();
-      await page.waitForTimeout(500);
 
       // Verify dialog is open
-      const dialog = page.locator('[role="dialog"]');
+      const dialog = page.getByRole('dialog');
       const dialogVisible = await dialog.isVisible().catch(() => false);
 
       if (dialogVisible) {
         // 11. Verify dialog closes on Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
 
         // Dialog should be closed
         await expect(dialog).not.toBeVisible();

@@ -40,8 +40,6 @@ test.describe('Role-Based Permission Verification', () => {
     // 2. testOperatorPage: verify edit button NOT visible
     console.log('Testing test_engineer (testOperatorPage)...');
     await testOperatorPage.goto(`/equipment/${equipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
-    await testOperatorPage.waitForTimeout(1000);
 
     const testEngineerEditButtons = testOperatorPage.getByRole('button', {
       name: /수정|Edit Record/i,
@@ -55,8 +53,6 @@ test.describe('Role-Based Permission Verification', () => {
     // 3. techManagerPage: verify edit button visible
     console.log('Testing technical_manager (techManagerPage)...');
     await techManagerPage.goto(`/equipment/${equipmentId}/non-conformance`);
-    await techManagerPage.waitForLoadState('networkidle');
-    await techManagerPage.waitForTimeout(1000);
 
     const techManagerEditButtons = techManagerPage.getByRole('button', {
       name: /수정|Edit Record/i,
@@ -71,8 +67,6 @@ test.describe('Role-Based Permission Verification', () => {
     // 4. siteAdminPage: verify edit button visible
     console.log('Testing lab_manager (siteAdminPage)...');
     await siteAdminPage.goto(`/equipment/${equipmentId}/non-conformance`);
-    await siteAdminPage.waitForLoadState('networkidle');
-    await siteAdminPage.waitForTimeout(1000);
 
     const labManagerEditButtons = siteAdminPage.getByRole('button', { name: /수정|Edit Record/i });
     const labManagerEditCount = await labManagerEditButtons.count();

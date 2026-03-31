@@ -122,7 +122,6 @@ export async function waitForNcStatusChange(
 ): Promise<void> {
   for (let i = 0; i < maxAttempts; i++) {
     await page.reload();
-    await page.waitForTimeout(TIMEOUTS.UI_UPDATE);
 
     const statusText = page.locator(`[data-nc-id="${ncId}"]`).or(page.locator('body'));
     if (await statusText.getByText(new RegExp(expectedStatus, 'i')).isVisible()) {

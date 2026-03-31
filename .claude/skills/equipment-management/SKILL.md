@@ -1,22 +1,7 @@
 ---
 name: equipment-management
 description: |
-  장비 관리 시스템(Equipment Management System) 개발 가이드. UL-QP-18 장비 관리 절차서 기반의 시험소 장비 관리 시스템 구현을 위한 전문 스킬입니다.
-
-  사용 시점:
-  (1) 장비 등록/수정/삭제 API 또는 UI 개발 시
-  (2) 시험설비이력카드(UL-QP-18-02) 관련 기능 구현 시
-  (3) 교정(Calibration) 기록 관리 및 승인 프로세스 구현 시
-  (4) 점검(중간점검/자체점검) 기능 구현 시
-  (5) 대여(Rental) 또는 반출(Checkout) 기능 구현 시
-  (6) 보정계수(Calibration Factor) 관리 기능 구현 시
-  (7) 부적합 장비(Non-Conformance) 관리 기능 구현 시
-  (8) 소프트웨어 관리대장(UL-QP-18-07) 기능 구현 시
-  (9) 교정계획서 작성 및 승인 기능 구현 시
-  (10) 사용자 역할 및 권한 체계 관련 개발 시
-  (11) 프론트엔드 UI 개발 시 (Next.js 16 App Router 패턴)
-  (12) 관리번호 체계 및 위치 코드 관련 개발 시
-  (13) 인증/인가 관련 개발 시 (NextAuth 토큰 관리)
+  Equipment Management System development guide based on UL-QP-18 laboratory equipment management procedures. Use this skill whenever implementing features related to: equipment CRUD, calibration records/plans/approval workflows, checkout/rental/import flows, non-conformance management, disposal requests, inspection (중간점검/자체점검), calibration factors, software registry (UL-QP-18-07), management number system, role-based access control (4 roles), or approval processes (1-step/2-step/3-step). Also use when working on equipment history cards (시험설비이력카드 UL-QP-18-02), frontend UI with Next.js 16 App Router, or NextAuth token management. Trigger on keywords: 장비, equipment, calibration, 교정, checkout, 반출, non-conformance, 부적합, disposal, 폐기, approval, 승인.
 ---
 
 # 장비 관리 시스템 개발 가이드

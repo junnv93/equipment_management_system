@@ -11,7 +11,7 @@
  * - D-5: DB-API 필드명 불일치 (technicianId → calibrationManagerId)
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
   BASE_URLS,
   TEST_CALIBRATION_IDS,

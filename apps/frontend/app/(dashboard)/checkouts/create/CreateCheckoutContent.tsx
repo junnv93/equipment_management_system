@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -52,7 +52,11 @@ import { addDays } from 'date-fns';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 import teamsApi, { type Site } from '@/lib/api/teams-api';
-import { SITE_LABELS, CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
+import {
+  CheckoutPurposeValues as CPVal,
+  type EquipmentStatus,
+} from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
@@ -60,16 +64,22 @@ import {
   getEquipmentSelectability,
   filterVisibleEquipment,
 } from '@/lib/utils/checkout-selectability';
+import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 
 export default function CreateCheckoutContent() {
   const t = useTranslations('checkouts');
   const tEquip = useTranslations('equipment');
+  const siteLabels = useSiteLabels();
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // 폼 상태 관리
+  // URL searchParams에서 프리셀렉션 equipmentId 읽기
+  const searchParams = useSearchParams();
+  const preselectedEquipmentId = searchParams.get('equipmentId');
+
+  // 폼 ���태 관리
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [destination, setDestination] = useState('');
@@ -85,6 +95,19 @@ export default function CreateCheckoutContent() {
 
   // 사용자 소속 정보
   const userTeamId = user?.teamId;
+
+  // URL에서 전달된 equipmentId로 장비 프리셀렉션
+  const { data: preselectedEquipment } = useQuery({
+    queryKey: queryKeys.equipment.detail(preselectedEquipmentId ?? ''),
+    queryFn: () => equipmentApi.getEquipment(preselectedEquipmentId!),
+    enabled: !!preselectedEquipmentId,
+  });
+
+  useEffect(() => {
+    if (preselectedEquipment && selectedEquipments.length === 0) {
+      setSelectedEquipments([preselectedEquipment]);
+    }
+  }, [preselectedEquipment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 외부 대여 시 선택된 사이트의 팀 목록 조회
   const { data: teamsData } = useQuery({
@@ -117,13 +140,13 @@ export default function CreateCheckoutContent() {
   // 반출 요청 제출 mutation
   const createCheckoutMutation = useMutation({
     mutationFn: (data: CreateCheckoutDto) => checkoutApi.createCheckout(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
+    onSuccess: async () => {
       toast({
         title: t('toasts.createSuccessTitle'),
         description: t('toasts.createSuccessDescription'),
         variant: 'default',
       });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
       router.push(FRONTEND_ROUTES.CHECKOUTS.LIST);
     },
     onError: (error: unknown) => {
@@ -476,7 +499,11 @@ export default function CreateCheckoutContent() {
                                 <Badge
                                   className={`${statusStyle.className} text-sm whitespace-nowrap`}
                                 >
-                                  {statusStyle.label}
+                                  {tEquip(
+                                    `status.${getDisplayStatus((equipment.status || 'available') as EquipmentStatus)}` as Parameters<
+                                      typeof tEquip
+                                    >[0]
+                                  )}
                                 </Badge>
                               </TableCell>
                             </TableRow>
@@ -541,7 +568,11 @@ export default function CreateCheckoutContent() {
                                     {equipment.name}
                                   </p>
                                   <Badge className={`${statusStyle.className} text-xs`}>
-                                    {statusStyle.label}
+                                    {tEquip(
+                                      `status.${getDisplayStatus((equipment.status || 'available') as EquipmentStatus)}` as Parameters<
+                                        typeof tEquip
+                                      >[0]
+                                    )}
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-muted-foreground font-mono">
@@ -645,7 +676,7 @@ export default function CreateCheckoutContent() {
                         <SelectValue placeholder={t('create.selectSitePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(SITE_LABELS).map(([key, label]) => (
+                        {Object.entries(siteLabels).map(([key, label]) => (
                           <SelectItem key={key} value={key}>
                             {label}
                           </SelectItem>

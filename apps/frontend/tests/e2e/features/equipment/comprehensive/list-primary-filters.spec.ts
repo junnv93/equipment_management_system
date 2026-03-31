@@ -84,8 +84,8 @@ test.describe('장비 목록 - Primary 필터 (사이트/상태/교정기한)', 
     // 필터 배지들 확인
     await expect(page.getByText('상태: 사용 가능')).toBeVisible();
 
-    // 초기화 버튼 클릭
-    await page.getByRole('button', { name: '초기화' }).click();
+    // 초기화 버튼 클릭 (strict mode: 여러 초기화 버튼 중 필터 영역의 것 선택)
+    await page.getByRole('button', { name: '초기화' }).first().click();
 
     // 모든 필터 제거 확인
     await expect(page.getByText('상태: 사용 가능')).not.toBeVisible();

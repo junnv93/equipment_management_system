@@ -1,15 +1,9 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import {
-  type AuditLog,
-  type AuditLogFilter,
-  AUDIT_ACTION_LABELS,
-  AUDIT_ENTITY_TYPE_LABELS,
-  type AuditAction,
-  type AuditEntityType,
-} from '@equipment-management/schemas';
-import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
+import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
+import { type AuditLog, type AuditLogFilter } from '@equipment-management/schemas';
 
 interface PrintableAuditReportProps {
   logs: AuditLog[];
@@ -47,18 +41,18 @@ export function PrintableAuditReport({
   filters,
   generatedBy,
 }: PrintableAuditReportProps) {
+  const tAudit = useTranslations('audit');
+  const tCommon = useTranslations('common');
   const { fmtDateTime } = useDateFormatter();
+  const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(tAudit);
 
   /**
    * 필터 정보 포맷팅
    */
   const formatFilters = (f: AuditLogFilter): string => {
     const parts: string[] = [];
-    if (f.entityType)
-      parts.push(
-        `대상=${AUDIT_ENTITY_TYPE_LABELS[f.entityType as AuditEntityType] || f.entityType}`
-      );
-    if (f.action) parts.push(`액션=${AUDIT_ACTION_LABELS[f.action as AuditAction] || f.action}`);
+    if (f.entityType) parts.push(`대상=${getEntityTypeLabel(f.entityType)}`);
+    if (f.action) parts.push(`액션=${getActionLabel(f.action)}`);
     if (f.userId) parts.push(`사용자=${f.userId}`);
     if (f.startDate) parts.push(`시작일=${f.startDate}`);
     if (f.endDate) parts.push(`종료일=${f.endDate}`);
@@ -121,26 +115,24 @@ export function PrintableAuditReport({
               <td className="p-3 align-top">
                 <div className="font-medium">{log.userName}</div>
                 <div className="text-xs text-muted-foreground">
-                  {USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole}
+                  {tCommon(`userRoles.${log.userRole}` as Parameters<typeof tCommon>[0])}
                 </div>
               </td>
               <td className="p-3 align-top">
                 <div className="inline-block px-2 py-1 rounded bg-muted text-foreground">
-                  {AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action}
+                  {getActionLabel(log.action)}
                 </div>
               </td>
               <td className="p-3 align-top">
                 <div className="font-medium truncate max-w-[200px]">
                   {log.entityName || (
                     <span className="text-muted-foreground text-xs">
-                      {AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] ||
-                        log.entityType}{' '}
-                      ({log.entityId.substring(0, 8)}...)
+                      {getEntityTypeLabel(log.entityType)} ({log.entityId.substring(0, 8)}...)
                     </span>
                   )}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] || log.entityType}
+                  {getEntityTypeLabel(log.entityType)}
                 </div>
               </td>
               <td className="p-3 align-top">

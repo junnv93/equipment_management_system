@@ -2,6 +2,16 @@
   "title": "반출입 관리",
   "subtitle": "반출 신청, 승인, 반입 처리 관리",
   "description": "장비 반출입 요청 및 현황을 관리합니다.",
+  "metadata": {
+    "detailTitle": "{purpose} 반출 상세 - {destination}",
+    "detailDescription": "{destination}으로의 {purpose} 반출 상세 정보를 확인하세요.",
+    "detailFallbackTitle": "반출 상세",
+    "detailFallbackDescription": "반출 상세 정보",
+    "returnTitle": "반입 처리 - {purpose}",
+    "returnDescription": "{destination}에서 {purpose} 반출된 장비의 반입 처리",
+    "returnFallbackTitle": "반입 처리",
+    "returnFallbackDescription": "장비 반입 처리"
+  },
   "status": {
     "pending": "대기 중",
     "approved": "승인됨",
@@ -24,7 +34,8 @@
   "purpose": {
     "calibration": "교정",
     "repair": "수리",
-    "rental": "렌탈"
+    "rental": "렌탈",
+    "return_to_vendor": "업체 반환"
   },
   "tabs": {
     "outbound": "반출",
@@ -221,6 +232,19 @@
       "complete": "완비",
       "incomplete": "불완비"
     }
+  },
+  "returnCondition": {
+    "good": "양호",
+    "damaged": "손상",
+    "lost": "분실",
+    "needs_repair": "수리 필요",
+    "needs_calibration": "교정 필요"
+  },
+  "conditionCheckStep": {
+    "lender_checkout": "① 반출 전 확인 (빌려주는 측)",
+    "borrower_receive": "② 인수 시 확인 (빌리는 측)",
+    "borrower_return": "③ 반납 전 확인 (빌린 측)",
+    "lender_return": "④ 반입 시 확인 (빌려준 측)"
   },
   "groupCard": {
     "unknownUser": "알 수 없는 사용자",

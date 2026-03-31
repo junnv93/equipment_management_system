@@ -1,0 +1,93 @@
+{
+  "title": "데이터 마이그레이션",
+  "description": "Excel 파일에서 장비 데이터를 일괄 등록합니다. Preview → Execute 2단계로 진행됩니다.",
+  "steps": {
+    "upload": "파일 업로드",
+    "preview": "미리보기",
+    "result": "결과"
+  },
+  "upload": {
+    "title": "Excel 파일 업로드",
+    "description": "xlsx 파일을 업로드하면 행별 검증 결과를 확인할 수 있습니다.",
+    "dropzone": "파일을 여기에 드래그하거나 클릭하여 선택",
+    "dropzoneActive": "파일을 여기에 놓으세요",
+    "fileTypeHint": ".xlsx 파일만 지원합니다",
+    "maxSizeHint": "최대 10MB",
+    "selectedFile": "선택된 파일",
+    "removeFile": "파일 제거",
+    "options": "가져오기 옵션",
+    "autoGenerateNumber": "관리번호 자동 생성",
+    "autoGenerateNumberHint": "관리번호가 없는 행에 자동으로 관리번호를 부여합니다.",
+    "defaultSite": "기본 사이트",
+    "defaultSiteHint": "사이트 정보가 없는 경우 사용할 기본값",
+    "skipDuplicates": "중복 항목 건너뛰기",
+    "skipDuplicatesHint": "이미 등록된 관리번호는 건너뜁니다.",
+    "downloadTemplate": "템플릿 다운로드",
+    "startPreview": "미리보기 시작",
+    "loading": "파일 분석 중...",
+    "noFile": "파일을 선택해주세요.",
+    "sites": {
+      "suwon": "수원",
+      "uiwang": "의왕",
+      "pyeongtaek": "평택"
+    }
+  },
+  "preview": {
+    "title": "미리보기 결과",
+    "description": "행별 검증 결과를 확인하고 등록할 항목을 선택하세요.",
+    "summary": {
+      "total": "전체",
+      "valid": "유효",
+      "error": "오류",
+      "duplicate": "중복",
+      "warning": "경고"
+    },
+    "unmappedColumns": "인식되지 않은 컬럼",
+    "unmappedColumnsHint": "다음 컬럼 헤더가 매핑되지 않았습니다. 템플릿 양식을 확인하세요.",
+    "table": {
+      "row": "행",
+      "status": "상태",
+      "name": "장비명",
+      "managementNumber": "관리번호",
+      "errors": "오류/경고",
+      "selectAll": "전체 선택",
+      "deselectAll": "전체 해제",
+      "collapse": "접기",
+      "showMore": "+{count}개 더보기",
+      "selectRow": "행 {row} 선택"
+    },
+    "status": {
+      "valid": "유효",
+      "error": "오류",
+      "duplicate": "중복",
+      "warning": "경고"
+    },
+    "executeButton": "선택 항목 등록",
+    "executeButtonCount": "{count}개 항목 등록",
+    "backButton": "다시 업로드",
+    "loading": "등록 중...",
+    "noValidRows": "등록 가능한 항목이 없습니다.",
+    "downloadErrorReport": "오류 리포트 다운로드"
+  },
+  "result": {
+    "title": "마이그레이션 완료",
+    "success": "성공적으로 완료되었습니다.",
+    "created": "등록 완료",
+    "skipped": "건너뜀",
+    "errors": "오류",
+    "createdUnit": "건",
+    "viewEquipmentList": "장비 목록으로",
+    "migrateAgain": "추가 마이그레이션",
+    "downloadErrorReport": "오류 리포트 다운로드",
+    "partialSuccess": "일부 항목 등록에 실패했습니다."
+  },
+  "errors": {
+    "fileRequired": "파일을 선택해주세요.",
+    "invalidFileType": ".xlsx 파일만 업로드 가능합니다.",
+    "fileTooLarge": "파일 크기는 10MB 이하여야 합니다.",
+    "previewFailed": "파일 분석에 실패했습니다. 파일 형식을 확인해주세요.",
+    "executeFailed": "데이터 등록에 실패했습니다.",
+    "downloadFailed": "다운로드에 실패했습니다.",
+    "sessionExpired": "세션이 만료되었습니다. 파일을 다시 업로드해주세요."
+  }
+}

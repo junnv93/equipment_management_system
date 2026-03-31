@@ -43,7 +43,6 @@ test.describe('Exceptions - Group D', () => {
   test('requester can cancel own pending request', async ({ testOperatorPage }) => {
     // 1. Navigate to equipment detail page
     await testOperatorPage.goto(`/equipment/${EQUIP_DISPOSAL_EXC_D3}`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Verify status badge shows "폐기 진행 중"
     const statusBadge = testOperatorPage.getByRole('status').filter({ hasText: /폐기 진행 중/i });
@@ -55,7 +54,6 @@ test.describe('Exceptions - Group D', () => {
     });
     await expect(disposalInProgressButton).toBeVisible({ timeout: 10000 });
     await disposalInProgressButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 4. Verify dropdown menu is visible
     const dropdownMenu = testOperatorPage.getByRole('menu');
@@ -67,7 +65,6 @@ test.describe('Exceptions - Group D', () => {
 
     // 6. Click "요청 취소" menuitem
     await cancelMenuItem.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 7. Verify confirmation dialog appears
     const dialog = testOperatorPage.getByRole('dialog');
@@ -83,7 +80,6 @@ test.describe('Exceptions - Group D', () => {
 
     // 9. Wait for dialog to close and API call to complete
     await expect(dialog).not.toBeVisible({ timeout: 10000 });
-    await testOperatorPage.waitForTimeout(1000);
 
     // 10. Verify database state changed correctly
     // Note: We use direct DB verification because the backend cache is not invalidated

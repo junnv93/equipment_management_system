@@ -114,7 +114,6 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
     await testOperatorPage.goto('/admin/approvals');
 
     // Step 15: Verify user is redirected to /dashboard
-    await testOperatorPage.waitForTimeout(2000);
     const testEngineerUrl = testOperatorPage.url();
     expect(testEngineerUrl).toContain('/dashboard');
     console.log('✅ test_engineer - Redirected to /dashboard (correct, no approval access)');

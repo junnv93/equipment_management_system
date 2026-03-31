@@ -22,9 +22,8 @@ import {
   type Classification,
   SITE_VALUES,
   EQUIPMENT_STATUS_FILTER_OPTIONS,
-  CALIBRATION_METHOD_LABELS,
-  CLASSIFICATION_LABELS,
 } from '@equipment-management/schemas';
+import { useCalibrationMethodLabels, useClassificationLabels } from '@/lib/i18n/use-enum-labels';
 import {
   EQUIPMENT_DATA_SCOPE,
   resolveDataScope,
@@ -108,6 +107,8 @@ function EquipmentFiltersComponent({
 }: EquipmentFiltersProps) {
   const t = useTranslations('equipment');
   const { user } = useAuth();
+  const calibrationMethodLabels = useCalibrationMethodLabels();
+  const classificationLabels = useClassificationLabels();
 
   // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
   const siteSelect = useFilterSelect(filters.site, onSiteChange);
@@ -146,22 +147,22 @@ function EquipmentFiltersComponent({
 
   const calibrationMethodOptions = useMemo(
     () =>
-      (Object.keys(CALIBRATION_METHOD_LABELS) as CalibrationMethod[]).map((value) => ({
+      (Object.keys(calibrationMethodLabels) as CalibrationMethod[]).map((value) => ({
         value,
-        label: t(`filters.calibrationMethodLabel.${value}` as Parameters<typeof t>[0]),
+        label: calibrationMethodLabels[value],
       })),
-    [t]
+    [calibrationMethodLabels]
   );
 
   const classificationOptions = useMemo(
     () =>
-      (Object.entries(CLASSIFICATION_LABELS) as [Classification, string][]).map(
+      (Object.entries(classificationLabels) as [Classification, string][]).map(
         ([value, label]) => ({
           value,
           label,
         })
       ),
-    []
+    [classificationLabels]
   );
 
   const sharedOptions = useMemo<{ value: 'all' | 'shared' | 'normal'; label: string }[]>(

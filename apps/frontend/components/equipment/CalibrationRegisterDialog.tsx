@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { DOCUMENT_FILE_RULES } from '@equipment-management/shared-constants';
+import { validateFile } from '@/lib/utils/file-validation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -41,11 +43,7 @@ import { addMonths } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
-import {
-  CalibrationResultEnum,
-  CALIBRATION_RESULT_LABELS,
-  DocumentTypeValues,
-} from '@equipment-management/schemas';
+import { CalibrationResultEnum, DocumentTypeValues } from '@equipment-management/schemas';
 
 function createCalibrationSchema(t: (key: string) => string) {
   return z.object({
@@ -80,6 +78,7 @@ interface CalibrationRegisterDialogProps {
 
 export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDialogProps) {
   const t = useTranslations('equipment');
+  const tCal = useTranslations('calibration');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -290,7 +289,7 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
                     <SelectContent>
                       {CalibrationResultEnum.options.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {CALIBRATION_RESULT_LABELS[value]}
+                          {tCal(`result.${value}` as Parameters<typeof tCal>[0])}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -304,8 +303,31 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
               <FormControl>
                 <Input
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => setCertificateFile(e.target.files?.[0] || null)}
+                  accept={DOCUMENT_FILE_RULES.calibration_certificate.accept}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (file) {
+                      const error = validateFile(file, {
+                        accept: DOCUMENT_FILE_RULES.calibration_certificate.accept,
+                      });
+                      if (error) {
+                        toast({
+                          title:
+                            error.type === 'size'
+                              ? t('calibrationHistoryTab.toasts.fileSizeError')
+                              : t('calibrationHistoryTab.toasts.fileTypeError'),
+                          description:
+                            error.type === 'size'
+                              ? `${error.maxSizeMB}MB`
+                              : DOCUMENT_FILE_RULES.calibration_certificate.accept,
+                          variant: 'destructive',
+                        });
+                        e.target.value = '';
+                        return;
+                      }
+                    }
+                    setCertificateFile(file);
+                  }}
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">

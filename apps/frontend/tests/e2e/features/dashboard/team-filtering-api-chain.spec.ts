@@ -86,7 +86,6 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
     await expect(equipmentPanel).toBeVisible();
 
     // 3. Wait for initial data to load
-    await siteAdminPage.waitForTimeout(1000);
 
     // 4. Get unfiltered count from stats card
     unfilteredCount = await getTotalEquipmentCount(siteAdminPage);
@@ -157,7 +156,6 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
     await expect(equipmentPanel).toBeVisible();
 
     // 3. Wait for data to load
-    await siteAdminPage.waitForTimeout(1000);
 
     // 4. Get unfiltered chart total
     const unfilteredChartTotal = await getChartTotalCount(siteAdminPage);
@@ -168,7 +166,6 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
     await teamCard.click();
 
     // 6. Wait for UI to update
-    await siteAdminPage.waitForTimeout(1000);
 
     // 7. Verify chart total matches the filtered count
     const currentChartTotal = await getChartTotalCount(siteAdminPage);
@@ -228,7 +225,6 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
     await expect(equipmentPanel).toBeVisible();
 
     // 3. Wait for initial data to load and get unfiltered count
-    await siteAdminPage.waitForTimeout(1000);
     const freshUnfilteredCount = await getTotalEquipmentCount(siteAdminPage);
     console.log('[Test 3.5] Fresh unfiltered count:', freshUnfilteredCount);
 
@@ -238,7 +234,6 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
     await teamCard.click();
 
     // 5. Wait for filtering
-    await siteAdminPage.waitForTimeout(1000);
     const freshFilteredCount = await getTotalEquipmentCount(siteAdminPage);
     console.log('[Test 3.5] Fresh filtered count:', freshFilteredCount);
 

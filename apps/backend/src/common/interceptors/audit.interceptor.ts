@@ -1,4 +1,5 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -19,10 +20,17 @@ const AUDIT_ARRAY_MAX_LENGTH = 5;
 export class AuditInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditInterceptor.name);
 
+  private readonly validInternalApiKeys: string[];
+
   constructor(
     private readonly reflector: Reflector,
-    private readonly auditService: AuditService
-  ) {}
+    private readonly auditService: AuditService,
+    private readonly configService: ConfigService
+  ) {
+    const currentKey = this.configService.get<string>('INTERNAL_API_KEY') || '';
+    const previousKey = this.configService.get<string>('INTERNAL_API_KEY_PREVIOUS') || '';
+    this.validInternalApiKeys = [currentKey, previousKey].filter(Boolean);
+  }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
@@ -58,9 +66,14 @@ export class AuditInterceptor implements NestInterceptor {
     }
 
     // 4. @AuditLog() 커스텀 메타데이터 사용
-    // 인증된 사용자가 없으면 패스 (로그인/로그아웃 제외)
+    // 인증된 사용자가 없으면 패스 (로그인/로그아웃/내부 서비스 호출 제외)
     if (!user && !['login', 'logout'].includes(auditMetadata.action)) {
-      return next.handle();
+      // 내부 서비스 호출: API 키 값까지 검증 (헤더 존재만으로 신뢰하지 않음)
+      const apiKey = request.headers?.['x-internal-api-key'] as string | undefined;
+      const isInternalService = !!apiKey && this.validInternalApiKeys.includes(apiKey);
+      if (!isInternalService) {
+        return next.handle();
+      }
     }
 
     return this.auditResponse(next, auditMetadata, request, user);

@@ -9,6 +9,11 @@ import { UserRoleValues } from '../rbac/roles.enum';
 import { UsersService } from '../../users/users.service';
 import { TOKEN_BLACKLIST } from '../blacklist/token-blacklist.interface';
 
+// 테스트용 로컬 로그인 비밀번호 설정 (하드코딩 폴백 제거 대응)
+process.env.DEV_ADMIN_PASSWORD = process.env.DEV_ADMIN_PASSWORD || 'admin123';
+process.env.DEV_MANAGER_PASSWORD = process.env.DEV_MANAGER_PASSWORD || 'manager123';
+process.env.DEV_USER_PASSWORD = process.env.DEV_USER_PASSWORD || 'user123';
+
 describe('AuthService', () => {
   let service: AuthService;
   let jwtService: JwtService;

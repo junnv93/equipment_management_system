@@ -25,7 +25,6 @@ test.describe('Equipment Information Display', () => {
     // 1. Navigate to /equipment/non-existent-id-12345
     const nonExistentId = 'non-existent-id-12345-xyz';
     await testOperatorPage.goto(`/equipment/${nonExistentId}`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Verify 404 error page is displayed
     // Error page should show heading with error message
@@ -60,7 +59,6 @@ test.describe('Equipment Information Display', () => {
 
       // 5. Click back button and verify navigation to /equipment
       await backLink.first().click();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Verify we're back at equipment list page
       await testOperatorPage.waitForURL(/\/equipment$/);
@@ -83,13 +81,11 @@ test.describe('Equipment Information Display', () => {
         if (linkCount > 0) {
           // Click first breadcrumb link (usually home or equipment list)
           await breadcrumbLinks.first().click();
-          await testOperatorPage.waitForLoadState('networkidle');
           console.log('✓ Navigation via breadcrumb successful');
         }
       } else {
         // Use browser back button as fallback
         await testOperatorPage.goBack();
-        await testOperatorPage.waitForLoadState('networkidle');
         console.log('✓ Navigation via browser back button');
       }
     }
@@ -100,7 +96,6 @@ test.describe('Equipment Information Display', () => {
   test('404 page maintains proper layout and styling', async ({ testOperatorPage }) => {
     // Navigate to non-existent equipment
     await testOperatorPage.goto('/equipment/00000000-0000-0000-0000-000000000000');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Verify page has proper structure
     const body = testOperatorPage.locator('body');
@@ -115,7 +110,6 @@ test.describe('Equipment Information Display', () => {
     });
 
     // Wait a moment to capture any console errors
-    await testOperatorPage.waitForTimeout(1000);
 
     // Verify no critical console errors (some errors may be expected for 404)
     const criticalErrors = consoleErrors.filter(

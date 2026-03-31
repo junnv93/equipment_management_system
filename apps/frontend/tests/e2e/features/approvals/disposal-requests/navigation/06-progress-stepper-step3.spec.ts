@@ -31,7 +31,6 @@ test.describe('UI/UX & Accessibility', () => {
     await testOperatorPage.goto(`/equipment/${equipmentId}?_t=${Date.now()}`);
 
     // 2. Wait for page to fully load
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 3. Verify equipment status badge shows "폐기 완료"
     // This badge confirms that all 3 steps are complete:

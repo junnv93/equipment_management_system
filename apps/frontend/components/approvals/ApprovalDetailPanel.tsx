@@ -20,6 +20,7 @@ import {
 import { getElapsedDaysUrgency } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface ApprovalDetailPanelProps {
   item: ApprovalItem | null;
@@ -45,6 +46,7 @@ export function ApprovalDetailPanel({
   isProcessing = false,
 }: ApprovalDetailPanelProps) {
   const t = useTranslations('approvals');
+  const siteLabels = useSiteLabels();
   const { fmtDateTime } = useDateFormatter();
   const tokens = APPROVAL_DETAIL_PANEL_TOKENS;
 
@@ -80,7 +82,7 @@ export function ApprovalDetailPanel({
             </Badge>
             <CategoryBadge category={item.category} />
           </div>
-          <h3 className={tokens.header.title}>{getLocalizedSummary(item, t)}</h3>
+          <h3 className={tokens.header.title}>{getLocalizedSummary(item, t, siteLabels)}</h3>
 
           <div className={tokens.header.metaGrid}>
             <div>

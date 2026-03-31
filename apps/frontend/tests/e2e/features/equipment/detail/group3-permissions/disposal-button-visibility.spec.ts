@@ -12,7 +12,6 @@ test.describe('Permission-Based Actions', () => {
 
     // 2. Navigate to equipment list
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Find equipment with 'available' status
     const availableBadge = page.locator('text=/사용 가능/i').first();
@@ -22,7 +21,6 @@ test.describe('Permission-Based Actions', () => {
       // 3. Navigate to available equipment
       const detailLink = availableCard.getByRole('link', { name: /상세/i }).first();
       await detailLink.click();
-      await page.waitForLoadState('networkidle');
 
       // 4. Verify '폐기 요청' button is visible
       const disposalButton = page.getByRole('button', { name: /폐기 요청/i });
@@ -39,7 +37,6 @@ test.describe('Permission-Based Actions', () => {
       const pendingCard = pendingBadge.locator('..').locator('..');
       const detailLink = pendingCard.getByRole('link', { name: /상세/i }).first();
       await detailLink.click();
-      await page.waitForLoadState('networkidle');
 
       // Verify progress indicator
       const progressIndicator = page.locator('text=/폐기.*중/i');

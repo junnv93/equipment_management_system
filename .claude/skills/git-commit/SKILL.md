@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: Git 변경사항을 분석하여 컨벤셔널 커밋 메시지를 생성하고, 변경 규모에 따라 main 직접 푸시 또는 브랜치+PR 워크플로우를 자동 결정합니다. "커밋해줘", "커밋하고 푸시해줘", "변경사항 정리해줘", "git commit", "코드 올려줘" 등의 요청에 사용하세요. 코드 수정 완료 후 사용자가 결과물을 저장하고 싶을 때도 이 스킬을 사용하세요.
+description: Analyzes git changes to generate conventional commit messages and auto-selects workflow (direct push to main vs branch+PR) based on change size. Use when the user wants to commit, push, save changes, or prepare a PR. Trigger on: "커밋해줘", "커밋하고 푸시해줘", "변경사항 정리해줘", "git commit", "코드 올려줘", "commit", "push", "save changes", "create PR".
 ---
 
 # Git 커밋 + 배포 워크플로우

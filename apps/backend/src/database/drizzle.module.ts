@@ -1,6 +1,7 @@
 import { Module, Global, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import {
+  cancelPendingReconnects,
   db,
   pgPool,
   testConnection,
@@ -44,6 +45,7 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('✅ Database connection established successfully');
 
       // 주기적인 헬스 체크 시작 (30초마다) - 연결 성공 시에만
+      // .unref(): 이 타이머가 Node.js 종료를 막지 않도록 설정
       this.healthCheckInterval = setInterval(async () => {
         const health = await healthCheck();
 
@@ -52,19 +54,22 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
         } else {
           this.logger.debug(`Database health check passed (latency: ${health.latency}ms)`);
         }
-      }, 30000);
+      }, 30000).unref();
     }
   }
 
   async onModuleDestroy(): Promise<void> {
     this.logger.log('Closing database connection...');
 
-    // 헬스 체크 중지
+    // 1. 헬스 체크 중지 — 진행 중인 healthCheck()가 종료 중 pgPool을 참조하지 않도록
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval as NodeJS.Timeout);
     }
 
-    // 애플리케이션 종료 시 풀 연결 종료
+    // 2. 대기 중인 재연결 타이머 취소 — pgPool.end() 후 connect() 시도 방지
+    cancelPendingReconnects();
+
+    // 3. 커넥션 풀 종료
     await pgPool.end();
     this.logger.log('Database connection closed');
   }

@@ -66,7 +66,7 @@ import {
   INCIDENT_REPAIR_NC_TYPES,
 } from '@equipment-management/schemas';
 import { getErrorMessage } from '@/lib/api/error';
-import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
+import nonConformancesApi from '@/lib/api/non-conformances-api';
 import {
   getPageContainerClasses,
   getSemanticContainerClasses,
@@ -118,6 +118,7 @@ export function RepairHistoryClient({
   const queryClient = useQueryClient();
   const t = useTranslations('equipment.repairHistory');
   const tCommon = useTranslations('equipment.common');
+  const tNc = useTranslations('non-conformances');
   const { fmtDate } = useDateFormatter();
   const repairHistoryFormSchema = useMemo(() => createRepairHistoryFormSchema(t), [t]);
 
@@ -467,7 +468,7 @@ export function RepairHistoryClient({
                           )}
                           {openNonConformances?.map((nc) => (
                             <SelectItem key={nc.id} value={nc.id}>
-                              [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
+                              [{tNc(`type.${nc.ncType}`)}] {nc.cause.substring(0, 30)}
                               {nc.cause.length > 30 ? '...' : ''} ({fmtDate(nc.discoveryDate)})
                             </SelectItem>
                           ))}
@@ -618,7 +619,7 @@ export function RepairHistoryClient({
                           <SelectItem value="__none__">{t('formNcNone')}</SelectItem>
                           {openNonConformances?.map((nc) => (
                             <SelectItem key={nc.id} value={nc.id}>
-                              [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
+                              [{tNc(`type.${nc.ncType}`)}] {nc.cause.substring(0, 30)}
                               {nc.cause.length > 30 ? '...' : ''} ({fmtDate(nc.discoveryDate)})
                             </SelectItem>
                           ))}

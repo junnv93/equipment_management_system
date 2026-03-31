@@ -144,7 +144,6 @@ test.describe('UI: 사이트 필터 고정 표시', () => {
     testOperatorPage: page,
   }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 필터 패널이 닫혀 있으면 열기
     const filterTrigger = page.getByRole('button', { name: /필터/i });
@@ -162,7 +161,6 @@ test.describe('UI: 사이트 필터 고정 표시', () => {
     siteAdminPage: page,
   }) => {
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // 필터 패널이 닫혀 있으면 열기
     const filterTrigger = page.getByRole('button', { name: /필터/i });

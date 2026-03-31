@@ -74,7 +74,7 @@ test.describe('UI/UX & Accessibility', () => {
 
     // 8. Verify radio button group has proper ARIA attributes
     // Check radiogroup role and aria-required
-    const radioGroup = dialog.locator('[role="radiogroup"]');
+    const radioGroup = dialog.getByRole('radiogroup');
     await expect(radioGroup).toBeVisible();
     const ariaRequired = await radioGroup.getAttribute('aria-required');
     expect(ariaRequired).toBe('true');

@@ -109,7 +109,6 @@ test.describe('Tab Navigation - Tab Switch Clears Selection', () => {
     console.log('✅ Step 9: Clicked "교정 기록" tab');
 
     // Step 10: Wait for tab to load and URL to update
-    await techManagerPage.waitForTimeout(1000);
 
     const urlAfterSwitch = techManagerPage.url();
     expect(urlAfterSwitch).toContain('tab=calibration');
@@ -120,7 +119,6 @@ test.describe('Tab Navigation - Tab Switch Clears Selection', () => {
     console.log('✅ Step 11: Clicked "폐기 검토" tab to return');
 
     // Step 12: Wait for disposal_review content to load
-    await techManagerPage.waitForTimeout(1000);
 
     const urlAfterReturn = techManagerPage.url();
     expect(urlAfterReturn).toContain('tab=disposal_review');

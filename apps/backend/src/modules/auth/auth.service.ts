@@ -125,11 +125,11 @@ export class AuthService {
       });
     }
 
-    // 환경 변수에서 테스트 비밀번호 가져오기 (기본값은 개발용)
-    const testPasswords: Record<string, string> = {
-      'admin@example.com': process.env.DEV_ADMIN_PASSWORD || 'admin123',
-      'manager@example.com': process.env.DEV_MANAGER_PASSWORD || 'manager123',
-      'user@example.com': process.env.DEV_USER_PASSWORD || 'user123',
+    // 환경 변수에서 테스트 비밀번호 가져오기 (하드코딩 폴백 없음 — 미설정 시 로그인 실패)
+    const testPasswords: Record<string, string | undefined> = {
+      'admin@example.com': process.env.DEV_ADMIN_PASSWORD,
+      'manager@example.com': process.env.DEV_MANAGER_PASSWORD,
+      'user@example.com': process.env.DEV_USER_PASSWORD,
     };
 
     // 비밀번호 검증용 최소 사용자 정보 (DB 조회 키로만 사용)
@@ -141,6 +141,13 @@ export class AuthService {
 
     const defaults = testUserDefaults[loginDto.email];
     const expectedPassword = testPasswords[loginDto.email];
+
+    // DEV_*_PASSWORD 미설정 시 개발자에게 명확한 경고
+    if (defaults && !expectedPassword) {
+      this.logger.warn(
+        `DEV_*_PASSWORD not set for ${loginDto.email}. Set DEV_ADMIN_PASSWORD/DEV_MANAGER_PASSWORD/DEV_USER_PASSWORD in .env`
+      );
+    }
 
     if (!defaults || !expectedPassword || loginDto.password !== expectedPassword) {
       // 실패 카운터 증가
@@ -371,8 +378,15 @@ export class AuthService {
 
     try {
       const refreshSecret =
-        this.configService.get<string>('REFRESH_TOKEN_SECRET') ||
-        this.configService.get<string>('JWT_SECRET') + '_refresh';
+        this.configService.get<string>('REFRESH_TOKEN_SECRET') ??
+        (() => {
+          if (process.env.NODE_ENV !== 'production') {
+            this.logger.warn(
+              'REFRESH_TOKEN_SECRET이 설정되지 않아 JWT_SECRET 폴백을 사용합니다. 프로덕션에서는 반드시 별도 설정이 필요합니다.'
+            );
+          }
+          return this.configService.get<string>('JWT_SECRET') + '_refresh';
+        })();
 
       const payload = this.jwtService.verify(refreshToken, {
         secret: refreshSecret,
@@ -552,7 +566,15 @@ export class AuthService {
   private generateToken(user: UserDto, sessionStartedAt?: number): AuthResponse {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
     const refreshSecret =
-      this.configService.get<string>('REFRESH_TOKEN_SECRET') || jwtSecret + '_refresh';
+      this.configService.get<string>('REFRESH_TOKEN_SECRET') ??
+      (() => {
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(
+            'REFRESH_TOKEN_SECRET이 설정되지 않아 JWT_SECRET 폴백을 사용합니다. 프로덕션에서는 반드시 별도 설정이 필요합니다.'
+          );
+        }
+        return jwtSecret + '_refresh';
+      })();
 
     // 신규 로그인 시 현재 시간, refresh 시 기존 값 전파
     const sessionStart = sessionStartedAt ?? Math.floor(Date.now() / 1000);

@@ -38,7 +38,6 @@ test.describe('Exceptions - Group D', () => {
   test('non-requester cannot cancel', async ({ testOperatorPage }) => {
     // 1. Navigate to equipment detail page
     await testOperatorPage.goto(`/equipment/${EQUIP_DISPOSAL_EXC_D4}`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Verify status badge shows "폐기 진행 중"
     const statusBadge = testOperatorPage.getByRole('status').filter({ hasText: /폐기 진행 중/i });
@@ -50,7 +49,6 @@ test.describe('Exceptions - Group D', () => {
     });
     await expect(disposalInProgressButton).toBeVisible({ timeout: 10000 });
     await disposalInProgressButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 4. Verify dropdown menu is visible
     const dropdownMenu = testOperatorPage.getByRole('menu');

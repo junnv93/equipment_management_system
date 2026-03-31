@@ -47,10 +47,8 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       });
 
       await testOperatorPage.goto(`/equipment?${filterParams.toString()}`);
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ClientOnly 컴포넌트 hydration 대기 (명시적 선택자 없음, 불가피한 timeout)
-      await testOperatorPage.waitForTimeout(1000);
 
       // 🔥 Hydration 검증: 에러 없이 로드되어야 함
       const consoleErrors: string[] = [];
@@ -59,8 +57,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
           consoleErrors.push(msg.text());
         }
       });
-
-      await testOperatorPage.waitForTimeout(1000);
 
       // Hydration mismatch 에러 확인
       const hydrationErrors = consoleErrors.filter(
@@ -102,10 +98,8 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
     test('should handle URL with only some filters', async ({ testOperatorPage }) => {
       // 일부 필터만 있는 경우
       await testOperatorPage.goto('/equipment?status=available&page=3');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ClientOnly hydration 대기
-      await testOperatorPage.waitForTimeout(1000);
 
       // 🔥 SSOT 검증: 지정된 필터만 적용, 나머지는 기본값
       const currentUrl = testOperatorPage.url();
@@ -125,10 +119,8 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
     test('should handle invalid URL parameters gracefully', async ({ testOperatorPage }) => {
       // 잘못된 파라미터 값
       await testOperatorPage.goto('/equipment?status=invalid_status&page=-1&pageSize=999999');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ClientOnly hydration 대기
-      await testOperatorPage.waitForTimeout(1000);
 
       // 🔥 SSOT 검증: 잘못된 값은 무시되고 기본값 사용
       const currentUrl = testOperatorPage.url();
@@ -152,8 +144,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
   test.describe('22.2. API params transform correctly from UI filters', () => {
     test('should transform calibrationDueFilter=due_soon', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
       await calibrationDueFilter.click();
@@ -170,8 +160,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
 
     test('should transform calibrationDueFilter=overdue', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
       await calibrationDueFilter.click();
@@ -185,8 +173,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
 
     test('should transform calibrationDueFilter=normal', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       const calibrationDueFilter = testOperatorPage.locator('#filter-calibration-due');
       await calibrationDueFilter.click();
@@ -201,8 +187,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
     test('should transform isShared to boolean API param', async ({ testOperatorPage }) => {
       // Test 1: shared 필터
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       const sharedFilter = testOperatorPage.locator('#filter-shared');
       await sharedFilter.click();
@@ -216,8 +200,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
 
       // Test 2: normal 필터
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       await sharedFilter.click();
       await testOperatorPage.getByRole('option', { name: /일반장비/i }).click();
@@ -229,14 +211,11 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
 
       // Test 3: all 선택 시 파라미터 제거
       await testOperatorPage.goto('/equipment?isShared=shared');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       await sharedFilter.click();
       await testOperatorPage.getByRole('option', { name: /모든 장비/i }).click();
 
       // isShared 파라미터가 URL에서 제거되어야 함
-      await testOperatorPage.waitForTimeout(1000);
       const currentUrl = testOperatorPage.url();
       expect(currentUrl).not.toContain('isShared=');
 
@@ -245,8 +224,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
 
     test('should transform sort parameters correctly', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 이름순 정렬
       const nameHeader = testOperatorPage.getByRole('button', { name: /장비명.*정렬/i });
@@ -271,8 +248,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       await testOperatorPage.goto(
         '/equipment?calibrationDueFilter=due_soon&isShared=shared&status=available'
       );
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 🔥 SSOT 검증: 모든 필터가 동시에 적용
       const currentUrl = testOperatorPage.url();
@@ -296,8 +271,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
     test('should handle empty/default filter values correctly', async ({ testOperatorPage }) => {
       // 모든 필터가 기본값인 경우
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 🔥 SSOT 검증: 기본값 필터는 URL에 나타나지 않음
       const currentUrl = testOperatorPage.url();
@@ -328,8 +301,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       const encoded = encodeURIComponent(koreanSearch);
 
       await testOperatorPage.goto(`/equipment?search=${encoded}`);
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 검색 입력창에 디코딩된 값 표시
       const searchInput = testOperatorPage.getByRole('searchbox');
@@ -346,20 +317,15 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
     test('should maintain filter state across page navigation', async ({ testOperatorPage }) => {
       // 필터 적용
       await testOperatorPage.goto('/equipment?status=available&page=2');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 필터 뱃지 확인
       await expect(testOperatorPage.getByText(/상태:.*사용 가능/)).toBeVisible();
 
       // 다른 페이지로 이동
       await testOperatorPage.goto('/');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 뒤로 가기
       await testOperatorPage.goBack();
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 🔥 SSOT 검증: 브라우저 히스토리를 통한 필터 복원
       const currentUrl = testOperatorPage.url();
@@ -374,8 +340,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
 
     test('should count active filters correctly', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 필터 적용 전: 활성 필터 카운트 0
       const filterCountBadge = testOperatorPage.locator('button:has-text("필터") >> .. >> .ml-2');
@@ -385,19 +349,16 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       const statusFilter = testOperatorPage.locator('#filter-status');
       await statusFilter.click();
       await testOperatorPage.getByRole('option', { name: /사용 가능/i }).click();
-      await testOperatorPage.waitForTimeout(500);
 
       // 2. 교정 방법 필터 적용
       const calibrationMethodFilter = testOperatorPage.locator('#filter-calibration');
       await calibrationMethodFilter.click();
       await testOperatorPage.getByRole('option', { name: /외부 교정/i }).click();
-      await testOperatorPage.waitForTimeout(500);
 
       // 3. 검색어 입력
       const searchInput = testOperatorPage.getByRole('searchbox');
       await searchInput.fill('테스트');
       await searchInput.press('Enter');
-      await testOperatorPage.waitForTimeout(1000);
 
       // 🔥 SSOT 검증: countActiveFilters() 함수 정확성
       // 필터 카운트 뱃지가 3으로 표시되어야 함

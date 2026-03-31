@@ -34,27 +34,11 @@ import {
 } from '@equipment-management/schemas';
 import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
 // Backend configuration
 const BACKEND_URL = BASE_URLS.BACKEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`;
-
-/**
- * Helper: Login and get JWT token via backend test-login endpoint
- */
-async function loginAsRole(
-  request: APIRequestContext,
-  role: 'test_engineer' | 'technical_manager' | 'lab_manager'
-): Promise<string> {
-  const response = await request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
-
-  if (!response.ok()) {
-    throw new Error(`Failed to login as ${role}: ${response.status()}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 /**
  * Helper: Create test equipment with specific properties
@@ -147,7 +131,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     request,
   }) => {
     // 1. Login as Lab Manager (admin@example.com) using NextAuth callback
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     // 2. Send POST request to http://localhost:3001/api/notifications/trigger-overdue-check with session token
     const response = await request.post(TRIGGER_ENDPOINT, {
@@ -194,7 +178,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     request,
   }) => {
     // 1. Login as Test Engineer (user@example.com) using NextAuth callback
-    const testEngineerToken = await loginAsRole(request, 'test_engineer');
+    const testEngineerToken = await fetchBackendToken('test_engineer');
 
     // 2. Send POST request to http://localhost:3001/api/notifications/trigger-overdue-check
     const response = await request.post(TRIGGER_ENDPOINT, {
@@ -223,7 +207,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const managementNumber = `TEST-1.3-${timestamp}`;
 
     // 1. Create test equipment via API with nextCalibrationDate = 7 days ago
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -274,7 +258,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const timestamp = Date.now();
     const managementNumber = `TEST-1.4-${timestamp}`;
 
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -322,7 +306,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const timestamp = Date.now();
     const managementNumber = `TEST-1.5-${timestamp}`;
 
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -385,7 +369,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const timestamp = Date.now();
     const managementNumber = `TEST-1.6-${timestamp}`;
 
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -432,7 +416,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
   }) => {
     const timestamp = Date.now();
 
-    const token = await loginAsRole(request, 'lab_manager');
+    const token = await fetchBackendToken('lab_manager');
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

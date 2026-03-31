@@ -12,12 +12,6 @@ import type {
   NonConformanceType,
   ResolutionType,
 } from '@equipment-management/schemas';
-// ✅ SSOT: schemas 패키지에서 라벨 import
-import {
-  NON_CONFORMANCE_STATUS_LABELS,
-  NON_CONFORMANCE_TYPE_LABELS,
-  RESOLUTION_TYPE_LABELS,
-} from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
 export type { NonConformanceStatus, NonConformanceType, ResolutionType };
@@ -110,9 +104,6 @@ export interface CloseNonConformanceDto {
   version: number;
   closureNotes?: string;
 }
-
-// ✅ Re-export labels from SSOT for backward compatibility
-export { NON_CONFORMANCE_STATUS_LABELS, NON_CONFORMANCE_TYPE_LABELS, RESOLUTION_TYPE_LABELS };
 
 // 부적합 API 객체
 const nonConformancesApi = {

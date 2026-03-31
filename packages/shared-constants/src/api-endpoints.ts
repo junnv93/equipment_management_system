@@ -30,8 +30,6 @@ export const API_ENDPOINTS = {
     TEAM: (teamId: string) => `/api/equipment/team/${teamId}`,
     /** 파일 첨부 */
     ATTACHMENTS: '/api/equipment/attachments',
-    /** 공용장비 등록 */
-    SHARED: '/api/equipment/shared',
     // 위치 변동 이력
     LOCATION_HISTORY: {
       LIST: (id: string) => `/api/equipment/${id}/location-history`,
@@ -383,6 +381,19 @@ export const API_ENDPOINTS = {
       UTILIZATION: '/api/reports/export/utilization',
       TEAM_EQUIPMENT: '/api/reports/export/team-equipment',
       MAINTENANCE: '/api/reports/export/maintenance',
+    },
+  },
+
+  // ============================================================================
+  // 데이터 마이그레이션 (Excel → DB 일괄 가져오기)
+  // ============================================================================
+  DATA_MIGRATION: {
+    EQUIPMENT: {
+      PREVIEW: '/api/data-migration/equipment/preview',
+      EXECUTE: '/api/data-migration/equipment/execute',
+      ERROR_REPORT: (sessionId: string) =>
+        `/api/data-migration/equipment/${sessionId}/error-report`,
+      TEMPLATE: '/api/data-migration/equipment/template',
     },
   },
 

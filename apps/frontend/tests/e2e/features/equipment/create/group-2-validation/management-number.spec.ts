@@ -18,12 +18,10 @@ test.describe('폼 유효성 검사', () => {
   test('관리번호 일련번호 형식 검증', async ({ techManagerPage: page }) => {
     // 1. Navigate to equipment create page
     await page.goto('/equipment/create');
-    await page.waitForLoadState('networkidle');
     await expect(page.getByRole('heading', { name: '장비 등록' })).toBeVisible();
 
     // 2. 사이트/팀: 기술책임자는 자동 설정 (disabled)
     await expect(page.getByRole('combobox', { name: '사이트 *' })).toBeDisabled();
-    await page.waitForTimeout(1000); // Wait for teams to load and auto-set
     await expect(page.getByRole('combobox', { name: '팀 *' })).toBeDisabled();
 
     const serialNumberInput = page
@@ -46,7 +44,6 @@ test.describe('폼 유효성 검사', () => {
 
     // 6. Verify preview shows truncated value
     await page.getByLabel('장비명').click(); // Blur to update preview
-    await page.waitForTimeout(300);
     await expect(page.getByText('→ SUW-E1234')).toBeVisible();
 
     // 7. Test: Valid 4-digit input '0123' should work
@@ -58,7 +55,6 @@ test.describe('폼 유효성 검사', () => {
 
     // 8. Verify preview updates to new value
     await page.getByLabel('장비명').click();
-    await page.waitForTimeout(300);
     await expect(page.getByText('→ SUW-E0123')).toBeVisible();
 
     console.log('✅ Management number serial format validation test passed');

@@ -31,10 +31,8 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 2. Navigate to repair history page /equipment/{id}/repair-history
     await testOperatorPage.goto(`/equipment/${equipmentId}/repair-history`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Wait for page to fully load
-    await testOperatorPage.waitForTimeout(1000);
 
     // 3. Verify 'Add Repair History' button is visible
     const addButton = testOperatorPage.getByRole('button', {
@@ -45,7 +43,6 @@ test.describe('Role-Based Permission Verification', () => {
 
     // 4. Click button to open dialog
     await addButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 5. Verify form fields are accessible
     // Check for repair date field
@@ -68,7 +65,7 @@ test.describe('Role-Based Permission Verification', () => {
 
     // Check for submit button in dialog
     const submitButton = testOperatorPage
-      .locator('[role="dialog"]')
+      .getByRole('dialog')
       .getByRole('button', { name: /등록|Submit|Register/i });
     if ((await submitButton.count()) > 0) {
       await expect(submitButton.first()).toBeVisible();
@@ -85,7 +82,7 @@ test.describe('Role-Based Permission Verification', () => {
     await expect(addButton).toBeVisible();
 
     // - test_engineer can open repair history dialog (verified)
-    await expect(testOperatorPage.locator('[role="dialog"]')).toBeVisible();
+    await expect(testOperatorPage.getByRole('dialog')).toBeVisible();
 
     // - test_engineer can fill and submit repair history form (form accessible)
 

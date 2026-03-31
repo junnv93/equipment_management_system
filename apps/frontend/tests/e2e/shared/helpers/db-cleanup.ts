@@ -12,6 +12,7 @@ import {
 } from '@equipment-management/schemas';
 
 import { BASE_URLS } from '../constants/shared-test-data';
+import { clearBackendCache } from './api-helpers';
 
 const DATABASE_URL = BASE_URLS.DATABASE;
 
@@ -82,11 +83,8 @@ export async function resetEquipmentToAvailable(equipmentId: string): Promise<vo
     [ESVal.AVAILABLE, false, 'approved', equipmentId]
   );
 
+  await clearBackendCache();
   console.log(`✅ Database updated: equipment ${equipmentId} reset to ${ESVal.AVAILABLE}`);
-  console.log(`⚠️  Backend cache may still contain old data (TTL: 1 hour)`);
-
-  // Wait for DB transaction to fully commit
-  await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
 /**
@@ -141,6 +139,7 @@ export async function resetEquipmentToReviewedDisposal(
   `,
     [disposalRequestId, equipmentId, requesterId, reviewerId, DRSVal.REVIEWED]
   );
+  await clearBackendCache();
 }
 
 /**
@@ -183,6 +182,7 @@ export async function resetEquipmentToPendingDisposal(
   `,
     [disposalRequestId, equipmentId, requesterId, DRSVal.PENDING]
   );
+  await clearBackendCache();
 }
 
 /**
@@ -207,6 +207,7 @@ export async function resetEquipmentToShared(equipmentId: string): Promise<void>
     'UPDATE equipment SET status = $1, is_shared = $2, approval_status = $3, updated_at = NOW() WHERE id = $4',
     [ESVal.AVAILABLE, true, 'approved', equipmentId]
   );
+  await clearBackendCache();
 }
 
 /**
@@ -264,6 +265,7 @@ export async function resetEquipmentToDisposed(
   `,
     [disposalRequestId, equipmentId, requesterId, reviewerId, approverId, DRSVal.APPROVED]
   );
+  await clearBackendCache();
 }
 
 /**
@@ -291,5 +293,6 @@ export async function clearAllPendingDisposalRequests(): Promise<void> {
     );
   }
 
+  await clearBackendCache();
   console.log(`✅ Cleared ${equipmentResult.rows.length} pending disposal requests from database`);
 }

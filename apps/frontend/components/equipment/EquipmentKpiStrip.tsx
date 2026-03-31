@@ -7,7 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useEquipmentKpiData } from '@/hooks/use-equipment-kpi';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { EQUIPMENT_KPI_STRIP_TOKENS, type KpiColorVariant } from '@/lib/design-tokens';
+import {
+  EQUIPMENT_KPI_STRIP_TOKENS,
+  type KpiColorVariant,
+  getStaggerDelay,
+  ANIMATION_PRESETS,
+} from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 interface EquipmentKpiStripProps {
@@ -28,6 +33,8 @@ interface KpiCardProps {
   hero?: boolean;
   /** 접근성: 해당 탭으로 이동함을 명시하는 aria-label */
   navigateLabel: string;
+  /** 스태거 딜레이용 인덱스 */
+  index?: number;
 }
 
 function KpiCard({
@@ -41,6 +48,7 @@ function KpiCard({
   numeric = false,
   hero = false,
   navigateLabel,
+  index = 0,
 }: KpiCardProps) {
   const tokens = EQUIPMENT_KPI_STRIP_TOKENS;
   const valueClass = hero ? tokens.heroValue : numeric ? tokens.numericValue : tokens.value;
@@ -55,8 +63,10 @@ function KpiCard({
         cardBase,
         tokens.card.hover,
         tokens.card.focus,
-        tokens.borderColors[colorVariant]
+        tokens.borderColors[colorVariant],
+        `${ANIMATION_PRESETS.slideUpFade} motion-safe:duration-300`
       )}
+      style={{ animationDelay: getStaggerDelay(index, 'grid') }}
       type="button"
     >
       <div
@@ -158,6 +168,7 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
         icon={Calendar}
         colorVariant={calibration.variant}
         hero
+        index={0}
         onClick={() => navigateToTab('calibration')}
         navigateLabel={t('kpiStrip.navigateTo', { label: t('kpiStrip.nextCalibration') })}
       />
@@ -169,6 +180,7 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
         sub={locationSub}
         icon={MapPin}
         colorVariant="info"
+        index={1}
         onClick={() => navigateToTab('location')}
         navigateLabel={t('kpiStrip.navigateTo', { label: t('kpiStrip.currentLocation') })}
       />
@@ -181,6 +193,7 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
         icon={FileOutput}
         colorVariant="neutral"
         numeric
+        index={2}
         onClick={() => navigateToTab('checkout')}
         isLoading={checkouts.isLoading}
         navigateLabel={t('kpiStrip.navigateTo', { label: t('kpiStrip.checkoutHistory') })}
@@ -194,6 +207,7 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
         icon={Wrench}
         colorVariant="neutral"
         numeric
+        index={3}
         onClick={() => navigateToTab('maintenance')}
         isLoading={maintenance.isLoading}
         navigateLabel={t('kpiStrip.navigateTo', { label: t('kpiStrip.maintenance') })}
@@ -211,6 +225,7 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
         icon={AlertTriangle}
         colorVariant={(incidents.data?.total ?? 0) > 0 ? 'warn' : 'neutral'}
         numeric
+        index={4}
         onClick={() => navigateToTab('incident')}
         isLoading={incidents.isLoading}
         navigateLabel={t('kpiStrip.navigateTo', { label: t('kpiStrip.incidentHistory') })}

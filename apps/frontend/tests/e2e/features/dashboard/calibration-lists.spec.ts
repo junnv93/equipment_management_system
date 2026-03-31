@@ -42,7 +42,6 @@ test.describe('Calibration Lists', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Locate the upcoming calibration list in Overview tab
     const overviewPanel = siteAdminPage.getByRole('tabpanel');
@@ -104,7 +103,6 @@ test.describe('Calibration Lists', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Click on '교정' tab
     const calibrationTab = siteAdminPage.getByRole('tab', { name: '교정' });
@@ -184,7 +182,6 @@ test.describe('Calibration Lists', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Examine calibration list items with various D-day values
     const overviewPanel = siteAdminPage.getByRole('tabpanel');
@@ -285,7 +282,6 @@ test.describe('Calibration Lists', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Click on '모든 예정 교정 보기' button
     const overviewPanel = siteAdminPage.getByRole('tabpanel');
@@ -346,7 +342,6 @@ test.describe('Calibration Lists', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Click on action button (arrow icon) for a calibration item
     const overviewPanel = siteAdminPage.getByRole('tabpanel');
@@ -371,7 +366,7 @@ test.describe('Calibration Lists', () => {
         ),
         firstItem.locator('a[aria-label*="보기"], a[aria-label*="상세"], a[aria-label*="이동"]'),
         firstItem.locator('button svg, a svg').locator('..'),
-        firstItem.locator('[role="button"]'),
+        firstItem.getByRole('button'),
         firstItem.locator('button, a').last(),
       ];
 
@@ -401,7 +396,6 @@ test.describe('Calibration Lists', () => {
         console.log('✓ Clicked action button');
 
         // Wait for navigation
-        await siteAdminPage.waitForLoadState('networkidle');
 
         // Verify navigation to equipment detail or calibration detail page
         const currentUrl = siteAdminPage.url();
@@ -410,7 +404,7 @@ test.describe('Calibration Lists', () => {
         const isDetailPage =
           currentUrl.includes('/equipment/') ||
           currentUrl.includes('/calibration/') ||
-          currentUrl !== 'http://localhost:3000/';
+          !currentUrl.endsWith('/');
 
         expect(isDetailPage).toBeTruthy();
         console.log('✓ Navigated to equipment detail or calibration detail page');

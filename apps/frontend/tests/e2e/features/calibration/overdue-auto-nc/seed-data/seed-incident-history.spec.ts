@@ -26,7 +26,6 @@ test.describe('Incident History UI Tests - Seed Setup', () => {
   test('Verify test equipment exists and is accessible', async ({ techManagerPage }) => {
     // Navigate to equipment list
     await techManagerPage.goto('/equipment');
-    await techManagerPage.waitForLoadState('networkidle');
 
     // Verify page loaded
     await expect(techManagerPage.locator('h1')).toContainText(/장비/);

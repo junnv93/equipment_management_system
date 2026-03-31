@@ -68,8 +68,11 @@ export function formatDate(
  * @param date ISO 문자열 또는 Date 객체
  * @returns 포맷된 날짜와 시간 문자열, 유효하지 않은 날짜는 '-'로 표시
  */
-export function formatDateTime(date: string | Date | undefined | null): string {
-  return formatDate(date, 'yyyy년 MM월 dd일 HH:mm');
+export function formatDateTime(
+  date: string | Date | undefined | null,
+  dateFnsLocale?: Locale
+): string {
+  return formatDate(date, 'PPP HH:mm', false, dateFnsLocale);
 }
 
 /**

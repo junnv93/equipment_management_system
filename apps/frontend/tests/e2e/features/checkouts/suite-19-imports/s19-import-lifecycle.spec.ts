@@ -57,6 +57,8 @@ test.describe('Suite 19: 외부 장비 반입 라이프사이클', () => {
 
   test('S19-01: 렌탈 반입 신청 (API)', async ({ techManagerPage: page }) => {
     const token = await getBackendToken(page, 'technical_manager');
+    const now = new Date().toISOString();
+    const threeMonthsLater = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
     const response = await page.request.post(`${BACKEND_URL}/api/equipment-imports`, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       data: {
@@ -65,16 +67,19 @@ test.describe('Suite 19: 외부 장비 반입 라이프사이클', () => {
         modelName: 'TEST-MODEL-001',
         manufacturer: '테스트 제조사',
         serialNumber: `E2E-RENTAL-${Date.now()}`,
+        classification: 'fcc_emc_rf',
+        vendorName: '외부 연구소',
+        usagePeriodStart: now,
+        usagePeriodEnd: threeMonthsLater,
         reason: 'E2E 렌탈 반입 테스트',
-        expectedReturnDate: '2026-06-01',
-        lenderOrganization: '외부 연구소',
       },
     });
 
     if (response.status() === 201) {
-      const data = await response.json();
-      rentalImportId = data.id;
-      rentalImportVersion = data.version || 1;
+      const raw = await response.json();
+      const data = (raw.data ?? raw) as Record<string, unknown>;
+      rentalImportId = data.id as string;
+      rentalImportVersion = (data.version as number) || 1;
       createdImportIds.push(rentalImportId);
     } else {
       const body = await response.text();
@@ -156,27 +161,34 @@ test.describe('Suite 19: 외부 장비 반입 라이프사이클', () => {
 
   test('S19-08: 반입 취소 워크플로우', async ({ techManagerPage: page }) => {
     const token = await getBackendToken(page, 'technical_manager');
+    const now = new Date().toISOString();
+    const threeMonthsLater = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
     const createResponse = await page.request.post(`${BACKEND_URL}/api/equipment-imports`, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       data: {
-        sourceType: 'shared',
+        sourceType: 'internal_shared',
         equipmentName: 'E2E 취소 테스트 장비',
         modelName: 'CANCEL-MODEL-001',
         manufacturer: '테스트 제조사',
         serialNumber: `E2E-CANCEL-${Date.now()}`,
+        classification: 'fcc_emc_rf',
+        ownerDepartment: 'Safety Lab',
+        usagePeriodStart: now,
+        usagePeriodEnd: threeMonthsLater,
         reason: 'E2E 반입 취소 테스트',
       },
     });
 
     if (createResponse.status() === 201) {
-      const createData = await createResponse.json();
-      const cancelId = createData.id;
+      const raw = await createResponse.json();
+      const createData = (raw.data ?? raw) as Record<string, unknown>;
+      const cancelId = createData.id as string;
       createdImportIds.push(cancelId);
 
       const { response } = await apiPatch(
         page,
         `/api/equipment-imports/${cancelId}/cancel`,
-        { version: createData.version || 1 },
+        { version: (createData.version as number) || 1 },
         'technical_manager'
       );
 

@@ -103,12 +103,12 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking pending_disposal state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Reload with cache-busting
       const cacheBustTimestamp = Date.now();
-      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`, {
-        waitUntil: 'networkidle',
+      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`);
+      await expect(testOperatorPage.getByRole('heading', { level: 1 })).toBeVisible({
+        timeout: 10000,
       });
 
       // 9. Check if '폐기 진행 중' button appeared
@@ -123,7 +123,7 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
           `⚠️ pending_disposal state not yet visible (attempt ${attempt}/${maxAttempts})`
         );
 
-        const currentStatusBadge = testOperatorPage.locator('[role="status"]').first();
+        const currentStatusBadge = testOperatorPage.getByRole('status').first();
         const currentStatus = await currentStatusBadge.textContent().catch(() => 'not found');
         console.log(`  Current status: "${currentStatus}"`);
       }
@@ -219,7 +219,6 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
     await expect(rejectDialog).not.toBeVisible({ timeout: 5000 });
 
     // Wait for React Query invalidation to complete
-    await techManagerPage.waitForTimeout(1000);
 
     const updatedCount = await approvalItems.count();
     console.log(`Updated disposal_review items: ${updatedCount}`);
@@ -241,12 +240,12 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking normal state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Navigate with cache-busting
       const cacheBustTimestamp = Date.now();
-      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`, {
-        waitUntil: 'networkidle',
+      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`);
+      await expect(testOperatorPage.getByRole('heading', { level: 1 })).toBeVisible({
+        timeout: 10000,
       });
 
       // 20. Check if equipment status reverted to normal
@@ -272,7 +271,7 @@ test.describe.serial('Review Rejection Disposal Workflow', () => {
       }
 
       // Log current status for debugging
-      const currentStatusBadge = testOperatorPage.locator('[role="status"]').first();
+      const currentStatusBadge = testOperatorPage.getByRole('status').first();
       const currentStatus = await currentStatusBadge.textContent().catch(() => 'not found');
       console.log(`  Current status: "${currentStatus}"`);
     }

@@ -30,7 +30,6 @@ test.describe('UI/UX & Accessibility', () => {
     // 3. Verify dialog opened - use specific selector to avoid mobile nav drawer
     const dialog = testOperatorPage.getByRole('dialog', { name: /장비 폐기 요청/ });
     await expect(dialog).toBeVisible({ timeout: 10000 });
-    await testOperatorPage.waitForTimeout(500);
 
     // 4. Fill form fields
     // Select disposal reason (노후화)
@@ -81,7 +80,6 @@ test.describe('UI/UX & Accessibility', () => {
     console.log(`Response status: ${response.status()}`);
 
     // 10. Immediately check for loading state (within 100ms of click)
-    await testOperatorPage.waitForTimeout(50);
 
     // Check for loading spinner
     const loadingSpinner = dialog.locator('.lucide-loader-2.animate-spin');

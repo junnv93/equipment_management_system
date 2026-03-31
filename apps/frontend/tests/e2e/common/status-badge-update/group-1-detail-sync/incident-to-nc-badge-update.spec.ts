@@ -62,7 +62,6 @@ test.describe('Group A: 사고→NC 워크플로우', () => {
     await verifyDetailPageStatusBadge(techManagerPage, 'non_conforming');
 
     // AND: Hydration 에러 없음
-    await techManagerPage.waitForTimeout(TIMEOUTS.HYDRATION_CHECK);
     await verifyNoHydrationErrors(errors);
 
     console.log('✅ A-2 테스트 완료\n');

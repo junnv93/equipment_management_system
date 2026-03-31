@@ -21,10 +21,8 @@ test.describe('Group E-2: View Toggle', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ClientOnly 컴포넌트가 hydrate될 때까지 대기
-      await testOperatorPage.waitForTimeout(1000);
 
       // 뷰 토글 버튼이 보일 때까지 대기 (데이터 로딩 완료 지표)
       const tableViewButton = testOperatorPage.getByRole('radio', { name: /테이블/i });
@@ -41,7 +39,7 @@ test.describe('Group E-2: View Toggle', () => {
       const hasTableOrRows = await Promise.race([
         equipmentTable.isVisible().catch(() => false),
         equipmentRow.isVisible().catch(() => false),
-        testOperatorPage.waitForTimeout(3000).then(() => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
       ]);
 
       if (!hasTableOrRows) {
@@ -49,7 +47,6 @@ test.describe('Group E-2: View Toggle', () => {
         // 데이터가 없어도 뷰 토글은 작동해야 함
         const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
         await cardViewButton.click();
-        await testOperatorPage.waitForTimeout(300);
         await expect(cardViewButton).toHaveAttribute('aria-checked', 'true');
         console.log('[Test] ✅ Successfully switched from table view to card view (no data)');
         return;
@@ -61,7 +58,6 @@ test.describe('Group E-2: View Toggle', () => {
       // 2. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 3. 카드 뷰 버튼 활성화 확인
       await expect(cardViewButton).toHaveAttribute('aria-checked', 'true');
@@ -89,10 +85,8 @@ test.describe('Group E-2: View Toggle', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ClientOnly 컴포넌트가 hydrate될 때까지 대기
-      await testOperatorPage.waitForTimeout(1000);
 
       // 뷰 토글 버튼이 보일 때까지 대기
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
@@ -105,19 +99,17 @@ test.describe('Group E-2: View Toggle', () => {
       const hasTableOrRows = await Promise.race([
         equipmentTable.isVisible().catch(() => false),
         equipmentRow.isVisible().catch(() => false),
-        testOperatorPage.waitForTimeout(3000).then(() => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
       ]);
 
       if (!hasTableOrRows) {
         console.log('[Test] ⚠️ No equipment data - testing view toggle only');
         // 데이터가 없어도 뷰 토글은 작동해야 함
         await cardViewButton.click();
-        await testOperatorPage.waitForTimeout(300);
         await expect(cardViewButton).toHaveAttribute('aria-checked', 'true');
 
         const tableViewButton = testOperatorPage.getByRole('radio', { name: /테이블/i });
         await tableViewButton.click();
-        await testOperatorPage.waitForTimeout(300);
         await expect(tableViewButton).toHaveAttribute('aria-checked', 'true');
         await expect(cardViewButton).toHaveAttribute('aria-checked', 'false');
         console.log('[Test] ✅ Successfully switched from card view to table view (no data)');
@@ -126,7 +118,6 @@ test.describe('Group E-2: View Toggle', () => {
 
       // 1. 카드 뷰로 먼저 전환
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       await expect(cardViewButton).toHaveAttribute('aria-checked', 'true');
 
@@ -136,7 +127,6 @@ test.describe('Group E-2: View Toggle', () => {
       // 2. 테이블 뷰로 다시 전환
       const tableViewButton = testOperatorPage.getByRole('radio', { name: /테이블/i });
       await tableViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 3. 테이블 뷰 버튼 활성화 확인
       await expect(tableViewButton).toHaveAttribute('aria-checked', 'true');
@@ -161,7 +151,6 @@ test.describe('Group E-2: View Toggle', () => {
   test.describe('2.3. View preference persists in localStorage', () => {
     test('should save card view preference in localStorage', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. localStorage 초기화
       await testOperatorPage.evaluate(() => localStorage.removeItem('equipment-list-view'));
@@ -169,7 +158,6 @@ test.describe('Group E-2: View Toggle', () => {
       // 2. 카드 뷰로 전환
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 3. localStorage 확인
       const viewPreference = await testOperatorPage.evaluate(() =>
@@ -182,19 +170,16 @@ test.describe('Group E-2: View Toggle', () => {
 
     test('should save table view preference in localStorage', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. localStorage를 card로 설정
       await testOperatorPage.evaluate(() => localStorage.setItem('equipment-list-view', 'card'));
 
       // 페이지 새로고침하여 card 뷰로 로드
       await testOperatorPage.reload();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 2. 테이블 뷰로 전환
       const tableViewButton = testOperatorPage.getByRole('radio', { name: /테이블/i });
       await tableViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       // 3. localStorage 확인
       const viewPreference = await testOperatorPage.evaluate(() =>
@@ -214,7 +199,6 @@ test.describe('Group E-2: View Toggle', () => {
 
       // 2. 페이지 새로고침
       await testOperatorPage.reload();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 3. 카드 뷰로 로드되어야 함
       const cardViewButton = testOperatorPage.getByRole('radio', { name: /카드/i });
@@ -230,17 +214,14 @@ test.describe('Group E-2: View Toggle', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. localStorage 초기화
       await testOperatorPage.evaluate(() => localStorage.removeItem('equipment-list-view'));
 
       // 2. 페이지 새로고침
       await testOperatorPage.reload();
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // ClientOnly 컴포넌트가 hydrate될 때까지 대기
-      await testOperatorPage.waitForTimeout(1000);
 
       // 뷰 토글 버튼이 보일 때까지 대기
       const tableViewButton = testOperatorPage.getByRole('radio', { name: /테이블/i });
@@ -256,7 +237,7 @@ test.describe('Group E-2: View Toggle', () => {
       const hasTableOrRows = await Promise.race([
         equipmentTable.isVisible().catch(() => false),
         equipmentRow.isVisible().catch(() => false),
-        testOperatorPage.waitForTimeout(3000).then(() => false),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
       ]);
 
       if (hasTableOrRows) {
@@ -276,7 +257,6 @@ test.describe('Group E-2: View Toggle', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. radiogroup 역할 확인
       const viewToggle = testOperatorPage.getByRole('radiogroup');
@@ -295,7 +275,6 @@ test.describe('Group E-2: View Toggle', () => {
 
       // 4. 카드 뷰 선택 후 aria-checked 변경 확인
       await cardViewButton.click();
-      await testOperatorPage.waitForTimeout(300);
 
       await expect(tableViewButton).toHaveAttribute('aria-checked', 'false');
       await expect(cardViewButton).toHaveAttribute('aria-checked', 'true');
@@ -307,7 +286,6 @@ test.describe('Group E-2: View Toggle', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. 테이블 뷰 버튼에 포커스
       const tableViewButton = testOperatorPage.getByRole('radio', { name: /테이블/i });
@@ -315,7 +293,6 @@ test.describe('Group E-2: View Toggle', () => {
 
       // 2. Enter 키로 선택 (이미 선택된 상태지만 다시 선택 가능)
       await tableViewButton.press('Enter');
-      await testOperatorPage.waitForTimeout(300);
 
       await expect(tableViewButton).toHaveAttribute('aria-checked', 'true');
 
@@ -325,7 +302,6 @@ test.describe('Group E-2: View Toggle', () => {
 
       // 4. Space 키로 선택
       await cardViewButton.press('Space');
-      await testOperatorPage.waitForTimeout(300);
 
       await expect(cardViewButton).toHaveAttribute('aria-checked', 'true');
       await expect(tableViewButton).toHaveAttribute('aria-checked', 'false');
@@ -335,7 +311,6 @@ test.describe('Group E-2: View Toggle', () => {
 
     test('should have accessible labels for view toggle buttons', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // 1. radiogroup에 적절한 레이블이 있어야 함
       const viewToggle = testOperatorPage.getByRole('radiogroup');

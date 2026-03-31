@@ -27,8 +27,6 @@ test.describe('Permissions - Group A', () => {
     await techManagerPage.goto(`/equipment/${EQUIP_DISPOSAL_PERM_A7}`);
 
     // 2. Wait for hydration (disposal dropdown is client-side rendered)
-    await techManagerPage.waitForLoadState('networkidle').catch(() => {});
-    await techManagerPage.waitForTimeout(1000);
 
     // 3. Verify "폐기 진행 중" button is visible
     const statusButton = techManagerPage.getByRole('button', { name: /폐기 진행 중/i });

@@ -43,7 +43,7 @@ import {
  * - card: 카드 목록용 (light bg)
  * - header: 상세 헤더용 (dark bg - ul-midnight)
  * - icon: 아이콘 컴포넌트
- * - label: 한국어 라벨
+ * - labelKey: i18n 메시지 키
  * - borderColor: 카드 왼쪽 테두리
  */
 export interface EquipmentStatusConfig {
@@ -60,9 +60,7 @@ export interface EquipmentStatusConfig {
   };
   /** 상태 아이콘 */
   icon: LucideIcon;
-  /** 한국어 라벨 */
-  label: string;
-  /** i18n 메시지 키 (예: "equipment.status.available") — Phase 3에서 useTranslations()로 전환 */
+  /** i18n 메시지 키 (예: "equipment.status.available") — useTranslations()로 렌더링 */
   labelKey: string;
 }
 
@@ -83,7 +81,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-ok/10 border-brand-ok',
     },
     icon: CheckCircle,
-    label: '사용 가능',
     labelKey: 'equipment.status.available',
   },
   in_use: {
@@ -97,7 +94,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-info/10 border-brand-info',
     },
     icon: Play,
-    label: '사용 중',
     labelKey: 'equipment.status.in_use',
   },
   checked_out: {
@@ -111,7 +107,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-info/10 border-brand-info',
     },
     icon: FileOutput,
-    label: '반출 중',
     labelKey: 'equipment.status.checked_out',
   },
   calibration_scheduled: {
@@ -126,7 +121,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-ok/10 border-brand-ok',
     },
     icon: CheckCircle,
-    label: '사용 가능', // calibration_scheduled → available 표시
     labelKey: 'equipment.status.available',
   },
   calibration_overdue: {
@@ -141,7 +135,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-critical/10 border-brand-critical',
     },
     icon: XCircle,
-    label: '부적합', // calibration_overdue → non_conforming 표시
     labelKey: 'equipment.status.non_conforming',
   },
   non_conforming: {
@@ -155,7 +148,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-critical/10 border-brand-critical',
     },
     icon: XCircle,
-    label: '부적합',
     labelKey: 'equipment.status.non_conforming',
   },
   spare: {
@@ -169,7 +161,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
     },
     icon: Archive,
-    label: '여분',
     labelKey: 'equipment.status.spare',
   },
   retired: {
@@ -183,7 +174,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-neutral/20 border-brand-neutral',
     },
     icon: Ban,
-    label: '폐기',
     labelKey: 'equipment.status.retired',
   },
   pending_disposal: {
@@ -197,7 +187,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-repair/10 border-brand-repair',
     },
     icon: AlertCircle,
-    label: '폐기 진행 중',
     labelKey: 'equipment.status.pending_disposal',
   },
   disposed: {
@@ -211,7 +200,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-neutral/20 border-brand-neutral',
     },
     icon: Ban,
-    label: '폐기 완료',
     labelKey: 'equipment.status.disposed',
   },
   temporary: {
@@ -225,7 +213,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-temporary/10 border-brand-temporary',
     },
     icon: Package,
-    label: '임시',
     labelKey: 'equipment.status.temporary',
   },
   inactive: {
@@ -239,7 +226,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
     },
     icon: Package,
-    label: '비활성',
     labelKey: 'equipment.status.inactive',
   },
 };
@@ -258,7 +244,6 @@ export const DEFAULT_STATUS_CONFIG: EquipmentStatusConfig = {
     bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
   },
   icon: Package,
-  label: '알 수 없음',
   labelKey: 'equipment.status.unknown',
 };
 
@@ -689,7 +674,7 @@ export const EQUIPMENT_DETAIL_HEADER_TOKENS = {
     'py-1.5 text-sm text-muted-foreground flex items-center justify-between border-b border-border/50 px-4 sm:px-6 lg:px-8',
   mainRow: 'py-3 flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8',
   nameGroup: 'flex flex-col gap-0.5 min-w-0',
-  name: 'text-lg font-bold text-foreground truncate',
+  name: 'text-xl font-bold text-foreground truncate font-display',
   meta: 'text-xs text-muted-foreground flex items-center gap-2 flex-wrap',
   actions: 'flex items-center gap-2 flex-shrink-0',
   /** 뒤로가기 링크 — getTransitionClasses 적용 */
@@ -729,6 +714,8 @@ export const EQUIPMENT_INFO_CARD_TOKENS = {
   dtLabel: 'text-muted-foreground whitespace-nowrap py-1',
   ddValue: 'text-foreground font-medium py-1',
   ddMono: 'font-mono text-xs tracking-wider text-foreground font-medium py-1',
+  /** 전체 너비 값 (장비사양, 부속품 등 긴 텍스트) — col-span-full로 2열 그리드를 관통 */
+  ddFullWidth: 'text-xs text-muted-foreground col-span-full mt-1',
 } as const;
 
 /**
@@ -779,6 +766,7 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
     hero: 'bg-card border border-border rounded-lg p-4 flex items-start gap-4 border-l-4 cursor-pointer shadow-sm dark:bg-card/80 dark:shadow-md',
     hover: [
       'hover:shadow-md hover:border-border/80 dark:hover:bg-card/90',
+      'active:scale-[0.98]',
       TRANSITION_PRESETS.fastShadowBorder,
     ].join(' '),
     focus: FOCUS_TOKENS.classes.brand,
@@ -858,6 +846,21 @@ export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
 } as const;
 
 // ============================================================================
+// Shared Equipment Banner Tokens (공용장비 안내 배너)
+// ============================================================================
+
+/**
+ * 공용장비 안내 배너 스타일
+ *
+ * EquipmentDetailClient의 isShared 배너에서 사용.
+ * 하드코딩 dark: 클래스를 토큰으로 추출하여 AP-08 개선.
+ */
+export const SHARED_EQUIPMENT_BANNER_TOKENS = {
+  alert: 'border-brand-info/20 bg-brand-info/5 dark:border-brand-info/30 dark:bg-brand-info/10',
+  icon: 'h-4 w-4 text-brand-info dark:text-brand-info',
+} as const;
+
+// ============================================================================
 // Equipment Card Performance Classes
 // ============================================================================
 
@@ -892,13 +895,13 @@ export const EQUIPMENT_CARD_GRID_TOKENS = {
 export function getEquipmentStatusTokenStyle(
   status: string | undefined | null,
   nextCalibrationDate?: string | Date | null
-): { className: string; label: string; borderColor: string; statusBarColor: string } {
+): { className: string; labelKey: string; borderColor: string; statusBarColor: string } {
   // 실시간 교정기한 초과 체크 (백엔드 스케줄러가 아직 실행되지 않은 경우 대비)
   if (status === 'available' && nextCalibrationDate && new Date(nextCalibrationDate) < new Date()) {
     const nonConforming = EQUIPMENT_STATUS_TOKENS.non_conforming;
     return {
       className: nonConforming.card.className,
-      label: nonConforming.label,
+      labelKey: nonConforming.labelKey,
       borderColor: nonConforming.card.borderColor,
       statusBarColor: nonConforming.card.statusBarColor,
     };
@@ -908,7 +911,7 @@ export function getEquipmentStatusTokenStyle(
   if (token) {
     return {
       className: token.card.className,
-      label: token.label,
+      labelKey: token.labelKey,
       borderColor: token.card.borderColor,
       statusBarColor: token.card.statusBarColor,
     };
@@ -916,7 +919,7 @@ export function getEquipmentStatusTokenStyle(
 
   return {
     className: DEFAULT_STATUS_CONFIG.card.className,
-    label: status || DEFAULT_STATUS_CONFIG.label,
+    labelKey: status ? `equipment.status.${status}` : DEFAULT_STATUS_CONFIG.labelKey,
     borderColor: DEFAULT_STATUS_CONFIG.card.borderColor,
     statusBarColor: DEFAULT_STATUS_CONFIG.card.statusBarColor,
   };

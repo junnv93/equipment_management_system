@@ -23,7 +23,6 @@ test.describe('Group A-4: Workflow Guidance Card Display', () => {
 
     // Wait for the conditional checkbox section to render
     // The checkbox appears only when incidentType is 'damage' or 'malfunction'
-    await testOperatorPage.waitForTimeout(1000);
 
     // Check "create non-conformance" checkbox
     // Find by the text and then locate the checkbox
@@ -32,7 +31,6 @@ test.describe('Group A-4: Workflow Guidance Card Display', () => {
 
     // Click the label which will toggle the checkbox
     await ncLabel.click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify workflow guidance card is displayed
     const guidanceCard = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
@@ -63,13 +61,11 @@ test.describe('Group A-4: Workflow Guidance Card Display', () => {
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '오작동');
 
     // Wait for checkbox section to render
-    await testOperatorPage.waitForTimeout(1000);
 
     // Click the label to check the checkbox
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
     await ncLabel.click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify workflow card is displayed
     const guidanceCard = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
@@ -85,7 +81,6 @@ test.describe('Group A-4: Workflow Guidance Card Display', () => {
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '변경');
 
     // Wait for form to update
-    await testOperatorPage.waitForTimeout(1000);
 
     // For 'change' type, the checkbox should not appear at all
     // because it's only shown for damage/malfunction
@@ -104,12 +99,10 @@ test.describe('Group A-4: Workflow Guidance Card Display', () => {
 
     // Select damage and check NC creation
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '손상');
-    await testOperatorPage.waitForTimeout(1000);
 
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
     await ncLabel.click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Verify guidance is visible
     const guidanceCard = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
@@ -119,7 +112,6 @@ test.describe('Group A-4: Workflow Guidance Card Display', () => {
 
     // Uncheck NC creation by clicking the label again
     await ncLabel.click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     // Guidance should be hidden
     await expect(guidanceCard).not.toBeVisible();
@@ -129,12 +121,10 @@ test.describe('Group A-4: Workflow Guidance Card Display', () => {
     await openIncidentDialog(testOperatorPage, TEST_EQUIPMENT_ID);
 
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '손상');
-    await testOperatorPage.waitForTimeout(1000);
 
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
     await ncLabel.click();
-    await testOperatorPage.waitForTimeout(TIMEOUTS.DIALOG_ANIMATION);
 
     const guidanceCard = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
       hasText: /처리 워크플로우/i,

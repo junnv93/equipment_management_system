@@ -22,6 +22,8 @@ import type { DisposalReason } from '@equipment-management/schemas';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { DISPOSAL_BUTTON_TOKENS, CONTENT_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { DOCUMENT_FILE_RULES, FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
+import { validateFile } from '@/lib/utils/file-validation';
 
 interface DisposalRequestDialogProps {
   open: boolean;
@@ -77,8 +79,33 @@ export function DisposalRequestDialog({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      setAttachments(Array.from(files));
+    if (!files) return;
+
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+    const acceptStr = DOCUMENT_FILE_RULES.other.accept;
+
+    Array.from(files).forEach((file) => {
+      if (validFiles.length >= FILE_UPLOAD_LIMITS.MAX_FILE_COUNT) return;
+      const error = validateFile(file, { accept: acceptStr });
+      if (error) {
+        errors.push(file.name);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      toast({
+        title: t('requestDialog.toasts.fileValidationError'),
+        description: errors.join(', '),
+        variant: 'destructive',
+      });
+    }
+
+    setAttachments(validFiles);
+    if (validFiles.length === 0) {
+      e.target.value = '';
     }
   };
 
@@ -129,6 +156,7 @@ export function DisposalRequestDialog({
                 id="attachments"
                 type="file"
                 multiple
+                accept={DOCUMENT_FILE_RULES.other.accept}
                 onChange={handleFileChange}
                 className="hidden"
                 aria-hidden="false"

@@ -54,7 +54,6 @@ test.describe('Group B: 직접 NC 등록', () => {
     for (const tab of tabs) {
       console.log(`  - ${tab.description} 확인 중...`);
       await techManagerPage.getByRole('tab', { name: tab.name }).click();
-      await techManagerPage.waitForTimeout(500);
       await verifyDetailPageStatusBadge(techManagerPage, 'non_conforming');
     }
 

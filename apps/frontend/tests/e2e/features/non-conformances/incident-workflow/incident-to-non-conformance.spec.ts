@@ -22,7 +22,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
 
     // 장비 목록에서 첫 번째 장비 가져오기
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const firstEquipmentLink = testOperatorPage.getByRole('link', { name: /상세/i }).first();
     if ((await firstEquipmentLink.count()) === 0) {
@@ -32,7 +31,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     }
 
     await firstEquipmentLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // URL에서 장비 ID 추출
     const url = testOperatorPage.url();
@@ -47,17 +45,15 @@ test.describe('Incident History → Non-Conformance Integration', () => {
       testOperatorPage.locator('button:has-text("사고 이력")');
 
     // 탭이 표시될 때까지 대기
-    await testOperatorPage.waitForTimeout(1000);
 
     const tabCount = await incidentTab.count();
     console.log(`Found ${tabCount} incident tab(s)`);
 
     if (tabCount > 0) {
       await incidentTab.first().click();
-      await testOperatorPage.waitForTimeout(500);
     } else {
       // 탭 목록 확인을 위한 디버깅
-      const allTabs = await testOperatorPage.locator('[role="tab"]').allTextContents();
+      const allTabs = await testOperatorPage.getByRole('tab').allTextContents();
       console.log('Available tabs:', allTabs);
       console.log('사고 이력 탭을 찾을 수 없습니다. 테스트 건너뛰기');
       test.skip();
@@ -66,7 +62,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
 
   test('should create incident only (without non-conformance)', async ({ testOperatorPage }) => {
     // 탭 컨텐츠가 로드될 때까지 대기
-    await testOperatorPage.waitForTimeout(1000);
 
     // 사고 등록 버튼 찾기 (여러 방법 시도)
     let registerButton = testOperatorPage.getByRole('button', { name: /사고 등록/i });
@@ -90,7 +85,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 폼 입력 - 날짜
     const dateInput = testOperatorPage.locator('input[type="date"]');
@@ -102,7 +96,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     const typeSelect = testOperatorPage.locator('button[role="combobox"]').first();
     if ((await typeSelect.count()) > 0) {
       await typeSelect.click();
-      await testOperatorPage.waitForTimeout(200);
       const changeOption = testOperatorPage.getByRole('option', { name: /변경/i });
       if ((await changeOption.count()) > 0) {
         await changeOption.click();
@@ -120,7 +113,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
 
     // 저장
     await testOperatorPage.getByRole('button', { name: /저장/i }).click();
-    await testOperatorPage.waitForTimeout(1000);
 
     // 성공 확인 (토스트 메시지 또는 목록에 추가됨)
     const successIndicator = testOperatorPage.getByText(/등록 완료|케이블 교체 작업/i);
@@ -129,7 +121,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
 
   test('should show checkbox for damage/malfunction types', async ({ testOperatorPage }) => {
     // 탭 컨텐츠가 로드될 때까지 대기
-    await testOperatorPage.waitForTimeout(1000);
 
     // 사고 등록 버튼 찾기
     let registerButton = testOperatorPage.getByRole('button', { name: /사고 등록/i });
@@ -141,7 +132,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 사고 유형 선택 (Select/Combobox)
     const typeSelect = testOperatorPage.locator('button[role="combobox"]').first();
@@ -152,31 +142,25 @@ test.describe('Incident History → Non-Conformance Integration', () => {
 
     // damage 선택 시 체크박스 표시
     await typeSelect.click();
-    await testOperatorPage.waitForTimeout(200);
     const damageOption = testOperatorPage.getByRole('option', { name: /손상/i });
     if ((await damageOption.count()) > 0) {
       await damageOption.click();
-      await testOperatorPage.waitForTimeout(300);
       await expect(testOperatorPage.getByText('부적합으로 등록')).toBeVisible();
     }
 
     // change 선택 시 체크박스 숨김
     await typeSelect.click();
-    await testOperatorPage.waitForTimeout(200);
     const changeOption = testOperatorPage.getByRole('option', { name: /변경/i });
     if ((await changeOption.count()) > 0) {
       await changeOption.click();
-      await testOperatorPage.waitForTimeout(300);
       await expect(testOperatorPage.getByText('부적합으로 등록')).not.toBeVisible();
     }
 
     // malfunction 선택 시 체크박스 표시
     await typeSelect.click();
-    await testOperatorPage.waitForTimeout(200);
     const malfunctionOption = testOperatorPage.getByRole('option', { name: /오작동/i });
     if ((await malfunctionOption.count()) > 0) {
       await malfunctionOption.click();
-      await testOperatorPage.waitForTimeout(300);
       await expect(testOperatorPage.getByText('부적합으로 등록')).toBeVisible();
     }
   });
@@ -185,7 +169,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     testOperatorPage,
   }) => {
     // 탭 컨텐츠가 로드될 때까지 대기
-    await testOperatorPage.waitForTimeout(1000);
 
     // 사고 등록 버튼 찾기
     let registerButton = testOperatorPage.getByRole('button', { name: /사고 등록/i });
@@ -197,7 +180,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 날짜 입력
     const dateInput = testOperatorPage.locator('input[type="date"]');
@@ -209,7 +191,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     const typeSelect = testOperatorPage.locator('button[role="combobox"]').first();
     if ((await typeSelect.count()) > 0) {
       await typeSelect.click();
-      await testOperatorPage.waitForTimeout(200);
       const damageOption = testOperatorPage.getByRole('option', { name: /손상/i });
       if ((await damageOption.count()) > 0) {
         await damageOption.click();
@@ -223,7 +204,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     }
 
     // 부적합 체크박스 선택
-    await testOperatorPage.waitForTimeout(300);
     const checkbox = testOperatorPage.locator('input[type="checkbox"]').first();
     if ((await checkbox.count()) > 0) {
       await checkbox.check();
@@ -235,7 +215,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
 
     // 저장
     await testOperatorPage.getByRole('button', { name: /저장/i }).click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 확인 Dialog 표시
     const confirmDialog = testOperatorPage.getByText(/장비 상태 변경 확인|사용할 수 없습니까/i);
@@ -247,8 +226,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
       }
     }
 
-    await testOperatorPage.waitForTimeout(1000);
-
     // 성공 확인
     const successIndicator = testOperatorPage.getByText(/등록 완료|디스플레이 크랙/i);
     await expect(successIndicator.first()).toBeVisible({ timeout: 5000 });
@@ -258,7 +235,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     testOperatorPage,
   }) => {
     // 탭 컨텐츠가 로드될 때까지 대기
-    await testOperatorPage.waitForTimeout(1000);
 
     // 사고 등록 버튼 찾기
     let registerButton = testOperatorPage.getByRole('button', { name: /사고 등록/i });
@@ -270,7 +246,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
       return;
     }
     await registerButton.first().click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 날짜 입력
     const dateInput = testOperatorPage.locator('input[type="date"]');
@@ -282,7 +257,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     const typeSelect = testOperatorPage.locator('button[role="combobox"]').first();
     if ((await typeSelect.count()) > 0) {
       await typeSelect.click();
-      await testOperatorPage.waitForTimeout(200);
       const malfunctionOption = testOperatorPage.getByRole('option', { name: /오작동/i });
       if ((await malfunctionOption.count()) > 0) {
         await malfunctionOption.click();
@@ -296,7 +270,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
     }
 
     // 부적합 체크박스 선택
-    await testOperatorPage.waitForTimeout(300);
     const checkbox = testOperatorPage.locator('input[type="checkbox"]').first();
     if ((await checkbox.count()) > 0) {
       await checkbox.check();
@@ -308,7 +281,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
 
     // 저장
     await testOperatorPage.getByRole('button', { name: /저장/i }).click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 확인 Dialog에서 "예" 선택 - 사용 불가
     const confirmDialog = testOperatorPage.getByText(/장비 상태 변경 확인|사용할 수 없습니까/i);
@@ -318,8 +290,6 @@ test.describe('Incident History → Non-Conformance Integration', () => {
         await yesButton.first().click();
       }
     }
-
-    await testOperatorPage.waitForTimeout(1000);
 
     // 성공 확인
     const successIndicator = testOperatorPage.getByText(/등록 완료|전원부 고장/i);

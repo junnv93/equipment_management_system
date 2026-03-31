@@ -77,7 +77,6 @@ test.describe('Full Workflow Integration', () => {
 
     // 2. Create NC with correct type and status
     await testOperatorPage.goto(`/equipment/${testEquipmentId}/non-conformance`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     const registerButton = testOperatorPage.getByRole('button', { name: /부적합 등록/i });
     await registerButton.click();
@@ -90,7 +89,6 @@ test.describe('Full Workflow Integration', () => {
 
     const submitButton = testOperatorPage.getByRole('button', { name: /^등록$/ });
     await submitButton.click();
-    await testOperatorPage.waitForTimeout(1000);
 
     // Verify NC was created
     const ncListResponse = await testOperatorPage.request.get(

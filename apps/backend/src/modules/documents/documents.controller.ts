@@ -15,6 +15,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import {
   ApiTags,
   ApiOperation,
@@ -74,7 +75,7 @@ export class DocumentsController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', MULTER_UTF8_OPTIONS))
   @RequirePermissions(Permission.CREATE_EQUIPMENT)
   @AuditLog({ action: 'upload', entityType: 'document' })
   async uploadDocument(
@@ -254,7 +255,7 @@ export class DocumentsController {
   @ApiOperation({ summary: '문서 개정판 업로드' })
   @ApiParam({ name: 'id', description: '기존 문서 ID (UUID)' })
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', MULTER_UTF8_OPTIONS))
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'revision', entityType: 'document', entityIdPath: 'params.id' })
   async createRevision(

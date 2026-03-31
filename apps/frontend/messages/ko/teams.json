@@ -181,7 +181,9 @@
     "stats": {
       "totalTeams": "전체 팀",
       "noLeader": "팀장 미지정",
-      "totalMembers": "전체 팀원"
+      "totalMembers": "전체 팀원",
+      "sectionTeamCount": "{count}개 팀",
+      "sectionMemberCount": "{count}명"
     },
     "empty": {
       "noResults": "검색 결과가 없습니다",

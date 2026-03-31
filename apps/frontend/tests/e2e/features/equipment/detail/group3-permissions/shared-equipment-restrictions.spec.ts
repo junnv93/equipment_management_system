@@ -8,7 +8,6 @@ test.describe('Permission-Based Actions', () => {
   test('Edit and delete actions for shared equipment', async ({ siteAdminPage: page }) => {
     // Navigate to equipment list
     await page.goto('/equipment');
-    await page.waitForLoadState('networkidle');
 
     // Look for shared equipment indicator
     const sharedIndicator = page.locator('text=/공용/i').first();
@@ -22,7 +21,6 @@ test.describe('Permission-Based Actions', () => {
     const sharedCard = sharedIndicator.locator('..').locator('..');
     const detailLink = sharedCard.getByRole('link', { name: /상세/i }).first();
     await detailLink.click();
-    await page.waitForLoadState('networkidle');
 
     // Verify shared equipment banner
     const sharedBanner = page.locator('text=/공용장비/i');

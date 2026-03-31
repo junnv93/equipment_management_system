@@ -122,14 +122,17 @@ test.describe.serial('Complete Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking equipment state...`
       );
-      await testOperatorPage.waitForTimeout(backoffMs);
 
       // Reload with cache-busting to get fresh server-side data
-      await testOperatorPage.reload({ waitUntil: 'networkidle' });
+      await testOperatorPage.reload();
+      await expect(testOperatorPage.getByRole('heading', { level: 1 })).toBeVisible({
+        timeout: 10000,
+      });
 
       const cacheBustTimestamp = Date.now();
-      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`, {
-        waitUntil: 'networkidle',
+      await testOperatorPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`);
+      await expect(testOperatorPage.getByRole('heading', { level: 1 })).toBeVisible({
+        timeout: 10000,
       });
 
       // Check if disposal status appeared
@@ -149,7 +152,7 @@ test.describe.serial('Complete Disposal Workflow', () => {
         console.log(`⚠️ No disposal buttons found yet (attempt ${attempt}/${maxAttempts})`);
 
         // Check status badge for debugging
-        const statusBadge = testOperatorPage.locator('[role="status"]').first();
+        const statusBadge = testOperatorPage.getByRole('status').first();
         const statusText = await statusBadge.textContent().catch(() => 'not found');
         console.log(`  Status badge shows: "${statusText}"`);
       }
@@ -309,12 +312,12 @@ test.describe.serial('Complete Disposal Workflow', () => {
       console.log(
         `Attempt ${attempt}/${maxAttempts}: Waiting ${backoffMs}ms before checking disposed state...`
       );
-      await siteAdminPage.waitForTimeout(backoffMs);
 
       // Navigate with cache-busting
       const cacheBustTimestamp = Date.now();
-      await siteAdminPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`, {
-        waitUntil: 'networkidle',
+      await siteAdminPage.goto(`/equipment/${equipmentId}?_=${cacheBustTimestamp}`);
+      await expect(siteAdminPage.getByRole('heading', { level: 1 })).toBeVisible({
+        timeout: 10000,
       });
 
       // 25. Check if equipment status shows '폐기' (disposed)
@@ -328,7 +331,7 @@ test.describe.serial('Complete Disposal Workflow', () => {
         console.log(`⚠️ Disposed state not yet visible (attempt ${attempt}/${maxAttempts})`);
 
         // Log current status for debugging
-        const currentStatusBadge = siteAdminPage.locator('[role="status"]').first();
+        const currentStatusBadge = siteAdminPage.getByRole('status').first();
         const currentStatus = await currentStatusBadge.textContent().catch(() => 'not found');
         console.log(`  Current status: "${currentStatus}"`);
       }

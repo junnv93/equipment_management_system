@@ -27,8 +27,6 @@ test.describe('Group E-2: 워크플로우 콘솔 에러 검증', () => {
     const incidentContent = `Console check - E-2 - ${Date.now()}`;
     await createIncidentWithNC(techManagerPage, equipmentId, incidentContent);
 
-    await techManagerPage.waitForTimeout(TIMEOUTS.HYDRATION_CHECK);
-
     // React 에러 없음 확인
     const reactErrors = errors.filter(
       (e) =>

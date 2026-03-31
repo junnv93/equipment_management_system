@@ -28,10 +28,12 @@ test.describe('Group A: Calibration Method Filter', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
-      // 교정 방법 필터 드롭다운 클릭 (Radix UI Select 찾기)
-      const calibrationMethodFilter = testOperatorPage.locator('#filter-calibration');
+      // 추가 필터 버튼 클릭 후 교정 방법 필터 드롭다운 클릭
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+        name: '교정 방법 필터 선택',
+      });
       await expect(calibrationMethodFilter).toBeVisible();
       await calibrationMethodFilter.click();
 
@@ -61,8 +63,11 @@ test.describe('Group A: Calibration Method Filter', () => {
     test('should filter equipment by external_calibration method', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 교정 방법 필터 선택 (Radix UI Select 찾기)
-      const calibrationMethodFilter = testOperatorPage.locator('#filter-calibration');
+      // 추가 필터 버튼 클릭 후 교정 방법 필터 선택
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+        name: '교정 방법 필터 선택',
+      });
       await calibrationMethodFilter.click();
       await testOperatorPage.getByRole('option', { name: '외부 교정', exact: true }).click();
 
@@ -97,8 +102,11 @@ test.describe('Group A: Calibration Method Filter', () => {
     test('should filter equipment by self_inspection method', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 교정 방법 필터 선택 (Radix UI Select 찾기)
-      const calibrationMethodFilter = testOperatorPage.locator('#filter-calibration');
+      // 추가 필터 버튼 클릭 후 교정 방법 필터 선택
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+        name: '교정 방법 필터 선택',
+      });
       await calibrationMethodFilter.click();
       await testOperatorPage.getByRole('option', { name: '자체 점검', exact: true }).click();
 
@@ -143,21 +151,21 @@ test.describe('Group A: Calibration Method Filter', () => {
       const filterBadge = testOperatorPage.getByText(/교정:\s*외부 교정/);
       await expect(filterBadge).toBeVisible({ timeout: 10000 });
 
-      // "모든 교정 방법" 선택 (Radix UI Select 찾기)
-      const calibrationMethodFilter = testOperatorPage.locator('#filter-calibration');
+      // "모든 교정 방법" 선택 (추가 필터 패널 열기 후)
+      await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
+      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+        name: '교정 방법 필터 선택',
+      });
       await calibrationMethodFilter.click();
       await testOperatorPage.getByRole('option', { name: '모든 교정 방법', exact: true }).click();
 
-      // Wait for URL to update (parameter removed)
-      await testOperatorPage.waitForTimeout(500);
+      // 필터 뱃지가 제거될 때까지 대기 (배지 비가시성 = 필터 해제 완료)
+      await expect(filterBadge).not.toBeVisible({ timeout: 10000 });
 
-      // URL 검증: calibrationMethod 파라미터 제거
+      // URL 검증: calibrationMethod 파라미터가 없거나 _all (전체 선택 = 필터 해제)
       const currentUrl = testOperatorPage.url();
-      const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.has('calibrationMethod')).toBe(false);
-
-      // 필터 뱃지가 제거됨
-      await expect(filterBadge).not.toBeVisible();
+      const calibVal = new URL(currentUrl).searchParams.get('calibrationMethod');
+      expect(calibVal === null || calibVal === '_all').toBe(true);
 
       // Wait for table to reload
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });
@@ -169,7 +177,6 @@ test.describe('Group A: Calibration Method Filter', () => {
       testOperatorPage,
     }) => {
       await testOperatorPage.goto('/equipment');
-      await testOperatorPage.waitForLoadState('networkidle');
 
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });

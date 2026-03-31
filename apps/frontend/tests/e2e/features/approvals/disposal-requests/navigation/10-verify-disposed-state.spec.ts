@@ -44,7 +44,6 @@ test('verify disposed state in DB', async ({ testOperatorPage }) => {
 
   // Now check the page
   await testOperatorPage.goto(`/equipment/${equipmentId}?_t=${Date.now()}`);
-  await testOperatorPage.waitForLoadState('networkidle');
 
   // Get page title to confirm it loaded
   const title = await testOperatorPage.title();

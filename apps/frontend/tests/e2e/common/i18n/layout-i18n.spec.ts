@@ -490,7 +490,7 @@ test.describe('TC-i18n-25: LocaleHtmlSync <html lang> 동기화', () => {
     await page.waitForLoadState('load');
 
     // LocaleHtmlSync가 실행될 때까지 대기
-    await page.waitForFunction(() => document.documentElement.lang === 'ko', { timeout: 10000 });
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ko', { timeout: 10000 });
 
     const htmlLang = await page.evaluate(() => document.documentElement.lang);
     expect(htmlLang).toBe('ko');
@@ -502,7 +502,7 @@ test.describe('TC-i18n-25: LocaleHtmlSync <html lang> 동기화', () => {
     await page.waitForLoadState('load');
 
     // LocaleHtmlSync의 useEffect가 실행될 때까지 대기
-    await page.waitForFunction(() => document.documentElement.lang === 'en', { timeout: 10000 });
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en', { timeout: 10000 });
 
     const htmlLang = await page.evaluate(() => document.documentElement.lang);
     expect(htmlLang).toBe('en');
@@ -512,14 +512,14 @@ test.describe('TC-i18n-25: LocaleHtmlSync <html lang> 동기화', () => {
     // 한국어 확인
     await page.goto('/');
     await page.waitForLoadState('load');
-    await page.waitForFunction(() => document.documentElement.lang === 'ko', { timeout: 10000 });
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ko', { timeout: 10000 });
     expect(await page.evaluate(() => document.documentElement.lang)).toBe('ko');
 
     // 영어로 전환
     await setLocale(page, 'en');
     await page.reload();
     await page.waitForLoadState('load');
-    await page.waitForFunction(() => document.documentElement.lang === 'en', { timeout: 10000 });
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en', { timeout: 10000 });
     expect(await page.evaluate(() => document.documentElement.lang)).toBe('en');
   });
 });

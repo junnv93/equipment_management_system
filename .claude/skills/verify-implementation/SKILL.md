@@ -1,6 +1,6 @@
 ---
 name: verify-implementation
-description: 프로젝트의 모든 verify 스킬을 순차 실행하여 통합 검증 보고서를 생성합니다. 개별 verify 스킬을 하나씩 실행하는 대신 이 스킬로 전체를 한번에 검증. PR 생성 전, 기능 구현 완료 후, 코드 리뷰 시 사용. "전체 검증", "통합 검증", "PR 준비" 키워드로 트리거.
+description: Runs all verify-* skills sequentially to produce a unified verification report. Use instead of running individual verify skills one by one. Run before PR creation, after feature implementation, or during code review. Trigger on: "전체 검증", "통합 검증", "PR 준비", "full verification", "run all checks", "verify everything".
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 ---
@@ -29,29 +29,44 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 
 이 스킬이 순차 실행하는 검증 스킬 목록입니다. `/manage-skills`가 스킬을 생성/삭제할 때 이 목록을 자동 업데이트합니다.
 
-| #   | 스킬                    | 설명                                                                                     |
-| --- | ----------------------- | ---------------------------------------------------------------------------------------- |
-| 1   | `verify-cas`            | CAS(Optimistic Locking) 패턴 — version 필드, VersionedBaseService, 캐시 무효화           |
-| 2   | `verify-auth`           | 서버 사이드 인증/인가 — req.user.userId, @RequirePermissions, @AuditLog                  |
-| 3   | `verify-zod`            | Zod 검증 패턴 — ZodValidationPipe, class-validator 금지, Query targets                   |
-| 4   | `verify-ssot`           | SSOT 임포트 소스 — 타입/enum 패키지 임포트, 로컬 재정의 금지                             |
-| 4b  | `verify-hardcoding`     | SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑    |
-| 5   | `verify-frontend-state` | 프론트엔드 상태 관리 + 성능 — TanStack Query, onSuccess setQueryData 금지, 동적 import    |
-| 6   | `verify-nextjs`         | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                            |
-| 7   | `verify-filters`        | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱         |
-| 8   | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙  |
-| 9   | `verify-security`       | 보안 설정 — Helmet CSP 프로덕션 강화, Next.js Security Headers, @Public 남용 검사        |
-| 10  | `verify-i18n`           | i18n 번역 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조 일관성                     |
-| 11  | `verify-sql-safety`     | SQL 안전성 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out, RBAC INNER JOIN |
-| 12  | `verify-e2e`            | E2E 테스트 패턴 — auth fixture, networkidle 금지, locator 안티패턴, SSOT 상수, 테스트 격리           |
+| #  | 스킬                    | 영역     | 설명                                                                                     |
+|----|-------------------------|----------|------------------------------------------------------------------------------------------|
+| 1  | `verify-cas`            | both     | CAS(Optimistic Locking) 패턴 — version 필드, VersionedBaseService, 캐시 무효화           |
+| 2  | `verify-auth`           | backend  | 서버 사이드 인증/인가 — req.user.userId, @RequirePermissions, @AuditLog                  |
+| 3  | `verify-zod`            | backend  | Zod 검증 패턴 — ZodValidationPipe, class-validator 금지, Query targets                   |
+| 4  | `verify-ssot`           | both     | SSOT 임포트 소스 — 타입/enum 패키지 임포트, 로컬 재정의 금지                             |
+| 5  | `verify-hardcoding`     | both     | SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑    |
+| 6  | `verify-frontend-state` | frontend | 프론트엔드 상태 관리 + 성능 — TanStack Query, onSuccess setQueryData 금지, 동적 import    |
+| 7  | `verify-nextjs`         | frontend | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                            |
+| 8  | `verify-filters`        | frontend | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱         |
+| 9  | `verify-design-tokens`  | frontend | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙  |
+| 10 | `verify-security`       | both     | 보안 설정 — Helmet CSP 프로덕션 강화, Next.js Security Headers, @Public 남용 검사        |
+| 11 | `verify-i18n`           | frontend | i18n 번역 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조, 동적 키 커버리지          |
+| 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out, RBAC INNER JOIN |
+| 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지 — auth fixture, locator, SSOT + CAS 충돌 복구, 캐시 일관성, 사이트 접근 제어 범위 |
 
 ## 워크플로우
 
-### Step 1: 소개
+### Step 1: 실행 대상 결정
 
 위의 **실행 대상 스킬** 섹션에 나열된 스킬을 확인합니다.
 
-선택적 인수가 제공된 경우, 해당 스킬만 필터링합니다.
+**실행 범위 결정 (우선순위 순):**
+
+1. **인수가 제공된 경우**: 해당 스킬만 실행 (예: `/verify-implementation verify-cas verify-auth`)
+2. **인수가 없는 경우**: `git diff --name-only HEAD` + `git status --short`로 변경 파일을 확인하고, 변경 영역에 맞는 스킬만 필터링
+
+**영역 기반 자동 필터링:**
+
+```
+변경 파일 경로 → 영역 매핑:
+  apps/backend/**     → backend, both
+  apps/frontend/**    → frontend, both (tests/e2e/** 제외)
+  apps/frontend/tests/e2e/** → e2e, both
+  packages/**         → backend, frontend, both (전체)
+```
+
+변경 파일이 없으면 전체 스킬을 실행합니다.
 
 **등록된 스킬이 0개인 경우:**
 
@@ -70,31 +85,54 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 ```markdown
 ## 구현 검증
 
-다음 검증 스킬을 순차 실행합니다:
+변경 영역: backend, frontend (N개 파일)
 
-| #   | 스킬           | 설명           |
-| --- | -------------- | -------------- |
-| 1   | verify-<name1> | <description1> |
-| 2   | verify-<name2> | <description2> |
+| #  | 스킬           | 영역     | 상태           |
+|----|----------------|----------|----------------|
+| 1  | verify-cas     | both     | 실행 대상      |
+| 2  | verify-auth    | backend  | 실행 대상      |
+| 6  | verify-nextjs  | frontend | 스킵 (변경 없음) |
+| 13 | verify-e2e     | e2e      | 스킵 (변경 없음) |
 
+실행 대상: X개 / 스킵: Y개
 검증 시작...
 ```
 
-### Step 2: 순차 실행
+### Step 2: 검증 실행
 
-**실행 대상 스킬** 테이블에 나열된 각 스킬에 대해 다음을 수행합니다:
+Step 1에서 결정된 실행 대상 스킬을 실행합니다.
 
-#### 2a. 스킬 SKILL.md 읽기
+#### 실행 전략
 
-해당 스킬의 `.claude/skills/verify-<name>/SKILL.md`를 읽고 다음 섹션을 파싱합니다:
+스킬 수에 따라 실행 방식을 결정합니다:
 
+- **1~3개**: 순차 실행 (직접 검사)
+- **4개 이상**: 영역별 그룹으로 나누어 **Agent 병렬 실행** (최대 3개 동시)
+
+**병렬 실행 그룹:**
+
+| 그룹 | 영역 | 스킬 |
+|---|---|---|
+| A | backend + both | verify-cas, verify-auth, verify-zod, verify-ssot, verify-hardcoding, verify-security, verify-sql-safety |
+| B | frontend + both | verify-cas, verify-ssot, verify-hardcoding, verify-frontend-state, verify-nextjs, verify-filters, verify-design-tokens, verify-security, verify-i18n |
+| C | e2e | verify-e2e |
+
+`both` 영역 스킬(cas, ssot, hardcoding, security)은 A와 B 그룹에 중복 포함되지만, 각 Agent가 자기 영역의 파일만 검사하므로 중복 보고되지 않습니다. A 그룹은 `apps/backend/` 경로만, B 그룹은 `apps/frontend/` 경로만 검사합니다.
+
+Step 1의 스마트 필터링에 의해 해당 영역에 변경이 없으면 그룹 자체가 스킵됩니다.
+
+#### 각 스킬 실행 절차
+
+순차든 병렬이든, 각 스킬에 대해 동일한 절차를 따릅니다:
+
+**2a. 스킬 SKILL.md 읽기**
+
+`.claude/skills/verify-<name>/SKILL.md`를 읽고 파싱:
 - **Workflow** — 실행할 검사 단계와 탐지 명령어
 - **Exceptions** — 위반이 아닌 것으로 간주되는 패턴
 - **Related Files** — 검사 대상 파일 목록
 
-#### 2b. 검사 실행
-
-Workflow 섹션에 정의된 각 검사를 순서대로 실행합니다:
+**2b. 검사 실행**
 
 1. 검사에 명시된 도구(Grep, Glob, Read, Bash)를 사용하여 패턴 탐지
 2. 탐지된 결과를 해당 스킬의 PASS/FAIL 기준에 대조
@@ -104,9 +142,7 @@ Workflow 섹션에 정의된 각 검사를 순서대로 실행합니다:
    - 문제 설명
    - 수정 권장 사항 (코드 예시 포함)
 
-#### 2c. 스킬별 결과 기록
-
-각 스킬 실행 완료 후 진행 상황을 표시합니다:
+**2c. 스킬별 결과 기록**
 
 ```markdown
 ### verify-<name> 검증 완료
@@ -115,8 +151,6 @@ Workflow 섹션에 정의된 각 검사를 순서대로 실행합니다:
 - 통과: X개
 - 이슈: Y개
 - 면제: Z개
-
-[다음 스킬로 이동...]
 ```
 
 ### Step 3: 통합 보고서

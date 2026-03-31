@@ -325,9 +325,13 @@ const equipmentApi = {
     return transformSingleResponse<EquipmentMutationResponse>(response);
   },
 
-  // 장비 삭제
-  deleteEquipment: async (id: string): Promise<void> => {
-    return apiClient.delete(API_ENDPOINTS.EQUIPMENT.DELETE(id));
+  // 장비 삭제 — CAS version 전달 (동시 수정 방지)
+  deleteEquipment: async (id: string, version?: number): Promise<void> => {
+    const url =
+      version !== undefined
+        ? `${API_ENDPOINTS.EQUIPMENT.DELETE(id)}?version=${version}`
+        : API_ENDPOINTS.EQUIPMENT.DELETE(id);
+    return apiClient.delete(url);
   },
 
   // 장비 상태 변경
@@ -413,54 +417,6 @@ const equipmentApi = {
       },
     });
     return transformSingleResponse<EquipmentAttachment>(response);
-  },
-
-  // ========== 공용장비 API ==========
-
-  // 공용장비 등록
-  createSharedEquipment: async (
-    data: {
-      name: string;
-      managementNumber: string;
-      sharedSource: 'safety_lab' | 'external';
-      site: 'suwon' | 'uiwang';
-      modelName?: string;
-      manufacturer?: string;
-      serialNumber?: string;
-      location?: string;
-      description?: string;
-      calibrationCycle?: number;
-      lastCalibrationDate?: Date | string;
-      calibrationAgency?: string;
-      calibrationMethod?: string;
-    },
-    files?: File[]
-  ): Promise<Equipment> => {
-    let response;
-
-    if (files && files.length > 0) {
-      /**
-       * ✅ SSOT: createFormDataUtil 사용
-       * - Date → ISO 문자열 자동 변환
-       * - undefined/null/빈 문자열 자동 제거
-       */
-      const formData = createFormDataUtil(data, files);
-
-      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.SHARED, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    } else {
-      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.SHARED, data);
-    }
-
-    // 응답에서 equipment 객체 추출 (백엔드가 { equipment: {...} } 형태로 반환하는 경우 처리)
-    const responseData = response.data as { equipment?: Equipment } | Equipment | undefined;
-    if (responseData && typeof responseData === 'object' && 'equipment' in responseData) {
-      return responseData.equipment as Equipment;
-    }
-    return transformSingleResponse<Equipment>(response);
   },
 
   // ========== 이력 관리 API ==========

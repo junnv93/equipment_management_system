@@ -116,10 +116,14 @@ export const TEAM_TYPE_CONFIG = CLASSIFICATION_CONFIG;
  * - uiwang: UL Blue (#4A90D9)
  * - pyeongtaek: UL Green (#00A451)
  */
+/**
+ * 사이트 스타일 설정 (코드 + 색상)
+ * 라벨은 i18n으로 관리: useSiteLabels() (lib/i18n/use-enum-labels.ts)
+ */
 export const SITE_CONFIG = {
-  suwon: { label: '수원', code: 'SUW', color: '#122C49' },
-  uiwang: { label: '의왕', code: 'UIW', color: '#4A90D9' },
-  pyeongtaek: { label: '평택', code: 'PYT', color: '#00A451' },
+  suwon: { code: 'SUW', color: '#122C49' },
+  uiwang: { code: 'UIW', color: '#4A90D9' },
+  pyeongtaek: { code: 'PYT', color: '#00A451' },
 } as const;
 
 export type { Site };

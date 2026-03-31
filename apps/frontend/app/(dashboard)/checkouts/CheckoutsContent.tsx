@@ -41,8 +41,6 @@ import checkoutApi, { type CheckoutSummary } from '@/lib/api/checkout-api';
 import {
   CHECKOUT_STATUS_FILTER_OPTIONS,
   EQUIPMENT_IMPORT_STATUS_VALUES,
-  EQUIPMENT_IMPORT_STATUS_LABELS,
-  type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -94,6 +92,7 @@ export default function CheckoutsContent({
   initialFilters,
 }: CheckoutsContentProps) {
   const t = useTranslations('checkouts');
+  const tEquipment = useTranslations('equipment');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session, can } = useAuth();
@@ -199,7 +198,7 @@ export default function CheckoutsContent({
     if (isInbound) {
       return EQUIPMENT_IMPORT_STATUS_VALUES.map((status) => (
         <SelectItem key={status} value={status}>
-          {EQUIPMENT_IMPORT_STATUS_LABELS[status as EquipmentImportStatus]}
+          {tEquipment(`importStatus.${status}`)}
         </SelectItem>
       ));
     }

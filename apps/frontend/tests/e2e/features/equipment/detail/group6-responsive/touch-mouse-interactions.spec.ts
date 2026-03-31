@@ -64,7 +64,6 @@ test.describe('Group 6: Responsive Design', () => {
       if (!isDisabled) {
         // Tap the button (simulate touch)
         await firstButton.tap();
-        await page.waitForTimeout(200);
 
         // Button should respond to tap (e.g., open dialog, navigate, etc.)
         // For now, just verify no errors occurred
@@ -78,7 +77,7 @@ test.describe('Group 6: Responsive Design', () => {
     // On touch devices, hover effects should not persist after tap
 
     // Test tabs for hover behavior
-    const tabs = page.locator('[role="tab"]');
+    const tabs = page.getByRole('tab');
     const tabCount = await tabs.count();
 
     if (tabCount > 1) {
@@ -87,7 +86,6 @@ test.describe('Group 6: Responsive Design', () => {
 
       // Tap the tab
       await secondTab.tap();
-      await page.waitForTimeout(200);
 
       // Tab should be selected (active state, not hover state)
       const isSelected = await secondTab.getAttribute('aria-selected');
@@ -103,7 +101,6 @@ test.describe('Group 6: Responsive Design', () => {
       await firstTab.tap();
 
       // Wait for activation
-      await page.waitForTimeout(100);
 
       const endTime = Date.now();
       const responseTime = endTime - startTime;
@@ -119,7 +116,6 @@ test.describe('Group 6: Responsive Design', () => {
     // Part 2: Test on desktop with mouse
     // 5. Test on desktop with mouse
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.waitForTimeout(300); // Allow layout reflow
 
     // Reload page to reset touch state
     await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
@@ -140,7 +136,6 @@ test.describe('Group 6: Responsive Design', () => {
 
       // Hover over button
       await firstDesktopButton.hover();
-      await page.waitForTimeout(100); // Allow hover transition
 
       // Get hover background color
       const hoverBgColor = await firstDesktopButton.evaluate((el) =>
@@ -153,7 +148,6 @@ test.describe('Group 6: Responsive Design', () => {
 
       // Move mouse away
       await page.mouse.move(0, 0);
-      await page.waitForTimeout(100);
     }
 
     // 7. Verify tooltips appear on hover (if implemented)
@@ -166,7 +160,6 @@ test.describe('Group 6: Responsive Design', () => {
 
       // Hover to potentially trigger tooltip
       await firstTooltipElement.hover();
-      await page.waitForTimeout(300); // Wait for tooltip appearance
 
       // Check if tooltip or title is set
       const title = await firstTooltipElement.getAttribute('title');
@@ -178,7 +171,6 @@ test.describe('Group 6: Responsive Design', () => {
     // 8. Verify keyboard navigation works (Tab key through buttons)
     // Focus on page
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(100);
 
     // Get focused element
     const initialFocusedElement = await page.locator(':focus').first();
@@ -187,7 +179,6 @@ test.describe('Group 6: Responsive Design', () => {
     if (initialFocused) {
       // Press Tab to move to next element
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       const newFocusedElement = await page.locator(':focus').first();
       const newFocused = await newFocusedElement.isVisible().catch(() => false);
@@ -201,7 +192,6 @@ test.describe('Group 6: Responsive Design', () => {
 
       while (tabCount < maxTabs) {
         await page.keyboard.press('Tab');
-        await page.waitForTimeout(50);
         tabCount++;
 
         const focusedEl = await page.locator(':focus').first();
@@ -236,7 +226,6 @@ test.describe('Group 6: Responsive Design', () => {
     if (focusedButtonCount > 0) {
       // Press Enter to activate
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
 
       // Button action should have been triggered
       // (Dialog opened, navigation occurred, etc.)
@@ -246,7 +235,6 @@ test.describe('Group 6: Responsive Design', () => {
 
     // Test Shift+Tab for backward navigation
     await page.keyboard.press('Shift+Tab');
-    await page.waitForTimeout(100);
 
     const backwardFocusedElement = await page.locator(':focus').first();
     const backwardFocused = await backwardFocusedElement.isVisible().catch(() => false);
@@ -267,7 +255,6 @@ test.describe('Group 6: Responsive Design', () => {
 
       if (!isDisabled) {
         await modalButton.click();
-        await page.waitForTimeout(300);
 
         // Check if dialog opened
         const dialog = page.locator('[role="dialog"], [role="alertdialog"]');
@@ -276,7 +263,6 @@ test.describe('Group 6: Responsive Design', () => {
         if (dialogVisible) {
           // Press Escape to close
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(300);
 
           // Dialog should be closed
           const dialogStillVisible = await dialog.isVisible().catch(() => false);
@@ -286,17 +272,15 @@ test.describe('Group 6: Responsive Design', () => {
     }
 
     // Verify tab navigation works through all tabs
-    const desktopTabs = page.locator('[role="tab"]');
+    const desktopTabs = page.getByRole('tab');
     const desktopTabCount = await desktopTabs.count();
 
     if (desktopTabCount > 1) {
       // Focus first tab
       await desktopTabs.first().focus();
-      await page.waitForTimeout(100);
 
       // Press Enter to activate
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
 
       // Tab should be selected
       const firstSelected = await desktopTabs.first().getAttribute('aria-selected');
@@ -304,11 +288,9 @@ test.describe('Group 6: Responsive Design', () => {
 
       // Tab to next tab
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       // Press Enter to activate second tab
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
 
       // Second tab should now be selected
       const secondTab = desktopTabs.nth(1);

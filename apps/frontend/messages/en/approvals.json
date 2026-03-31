@@ -18,6 +18,13 @@
     "rejected": "Rejected",
     "all": "All"
   },
+  "unifiedStatus": {
+    "pending": "Pending",
+    "pending_review": "Pending Review",
+    "reviewed": "Reviewed",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
   "actions": {
     "approve": "Approve",
     "reject": "Reject",
@@ -274,6 +281,10 @@
     "equipmentImportShared": "{equipmentName} Shared Equipment Import ({department})"
   },
   "unknown": "Unknown",
+  "defaults": {
+    "approveComment": "Approved",
+    "rejectComment": "Rejected"
+  },
   "calibrationFactorApprovals": {
     "title": "Calibration Factor Approval Management",
     "description": "Review and approve calibration factor changes requested by test engineers",

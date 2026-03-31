@@ -34,8 +34,6 @@ test.describe.serial('Complete Disposal Workflow', () => {
     });
 
     // Wait for React hydration
-    await testOperatorPage.waitForLoadState('networkidle').catch(() => {});
-    await testOperatorPage.waitForTimeout(1000);
 
     // 2. Check current state and handle accordingly
     const hasPendingDisposalStatus = await testOperatorPage
@@ -58,11 +56,9 @@ test.describe.serial('Complete Disposal Workflow', () => {
       await testOperatorPage.getByRole('button', { name: /확인/i }).click();
 
       // Wait for cancellation to complete
-      await testOperatorPage.waitForTimeout(2000);
 
       // Refresh page to get updated state
       await testOperatorPage.goto(`/equipment/${equipmentId}?_t=${Date.now()}`);
-      await testOperatorPage.waitForTimeout(1000);
     }
 
     // 3. Now request disposal
@@ -111,7 +107,6 @@ test.describe.serial('Complete Disposal Workflow', () => {
     }
 
     // 9. Wait for page to update (React Query invalidation)
-    await testOperatorPage.waitForTimeout(2000);
 
     // 10. Verify status changes to "폐기 진행 중" OR check if page needs refresh
     const hasPendingStatus = await testOperatorPage
@@ -122,7 +117,6 @@ test.describe.serial('Complete Disposal Workflow', () => {
     if (!hasPendingStatus) {
       console.log('[INFO] Status button not visible, refreshing page...');
       await testOperatorPage.reload({ waitUntil: 'domcontentloaded' });
-      await testOperatorPage.waitForTimeout(1000);
 
       // Debug: check what buttons are visible
       const buttons = await testOperatorPage.locator('button:visible').all();
@@ -133,7 +127,7 @@ test.describe.serial('Complete Disposal Workflow', () => {
       }
 
       // Check status badges
-      const statusBadges = await testOperatorPage.locator('[role="status"]').all();
+      const statusBadges = await testOperatorPage.getByRole('status').all();
       for (const badge of statusBadges) {
         const text = await badge.textContent();
         console.log(`[DEBUG] Status badge: "${text}"`);
@@ -234,7 +228,6 @@ test.describe.serial('Complete Disposal Workflow', () => {
 
     // 3. Force click to open read-only detail
     await disposedButton.dispatchEvent('click');
-    await testOperatorPage.waitForTimeout(500);
 
     // 4. If dialog opens, verify 3-step timeline all complete
     const dialog = testOperatorPage.getByRole('dialog');

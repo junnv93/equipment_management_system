@@ -66,7 +66,6 @@ test.describe('Database State Verification', () => {
     await techManagerPage.goto(`/admin/approvals?tab=disposal_review&_=${cacheBuster}`);
 
     // 2. Wait for page load
-    await techManagerPage.waitForLoadState('networkidle');
     await expect(techManagerPage.locator('h1:has-text("승인 관리")')).toBeVisible();
 
     // 3. Wait for the approval list to render
@@ -87,7 +86,7 @@ test.describe('Database State Verification', () => {
     await rejectButton.click();
 
     // 7. Wait for the RejectModal to open
-    const rejectModal = techManagerPage.locator('[role="dialog"]').filter({ hasText: '반려' });
+    const rejectModal = techManagerPage.getByRole('dialog').filter({ hasText: '반려' });
     await expect(rejectModal).toBeVisible();
 
     // 8. Enter rejection reason with 10+ characters

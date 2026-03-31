@@ -1,14 +1,28 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpCode, HttpStatus, UsePipes } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
+import { SKIP_ALL_THROTTLES } from '../../common/config/throttle.constants';
 import { Public } from '../auth/decorators/public.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { MonitoringService } from './monitoring.service';
+import { ClientErrorDto, ClientErrorPipe } from './dto/client-error.dto';
 
-@SkipThrottle()
+@SkipThrottle(SKIP_ALL_THROTTLES)
 @Controller('monitoring')
 export class MonitoringController {
   constructor(private readonly monitoringService: MonitoringService) {}
+
+  /**
+   * 프론트엔드 클라이언트 에러 수집 엔드포인트
+   * 인증 없이 접근 가능합니다. (에러는 로그인 전에도 발생할 수 있음)
+   */
+  @Public()
+  @Post('client-errors')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UsePipes(ClientErrorPipe)
+  reportClientError(@Body() dto: ClientErrorDto): void {
+    this.monitoringService.logClientError(dto);
+  }
 
   /**
    * 기본 건강 상태 확인 엔드포인트

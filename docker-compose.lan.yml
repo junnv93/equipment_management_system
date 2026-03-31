@@ -80,8 +80,6 @@ services:
       AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
       AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
       AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
-    ports:
-      - '3001:3001'
     volumes:
       - /var/lib/equipment-system/logs/backend:/app/logs
     depends_on:

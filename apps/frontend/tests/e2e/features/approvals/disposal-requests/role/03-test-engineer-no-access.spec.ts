@@ -26,8 +26,8 @@ test.describe('Role-Based Access Control', () => {
     // 2. Navigate to /admin/approvals (no cache busting needed)
     await testOperatorPage.goto('/admin/approvals');
 
-    // 3. Wait for navigation to complete
-    await testOperatorPage.waitForLoadState('networkidle', { timeout: 10000 });
+    // 3. Wait for navigation to complete (redirect to dashboard)
+    await testOperatorPage.waitForURL(/\/dashboard/, { timeout: 10000 });
 
     // 4. Verify URL is /dashboard (redirected away from /admin/approvals)
     await testOperatorPage.waitForURL(/\/dashboard/, { timeout: 10000 });

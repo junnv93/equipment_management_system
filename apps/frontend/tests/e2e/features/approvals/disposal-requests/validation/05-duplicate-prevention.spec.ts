@@ -37,7 +37,6 @@ test.describe('Exceptions - Group D', () => {
   test('duplicate request prevention', async ({ testOperatorPage }) => {
     // 1. Navigate to equipment detail page (already has pending_disposal status)
     await testOperatorPage.goto(`/equipment/${EQUIP_DISPOSAL_EXC_D1}`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Verify "폐기 요청" button is NOT visible (duplicate prevention)
     const requestButton = testOperatorPage.getByRole('button', { name: /^폐기 요청$/i });
@@ -55,7 +54,6 @@ test.describe('Exceptions - Group D', () => {
 
     // 5. Open dropdown menu to verify available actions
     await disposalInProgressButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // 6. Verify dropdown menu is visible (shows review/approve actions, not request)
     const dropdownMenu = testOperatorPage.getByRole('menu');

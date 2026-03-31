@@ -35,7 +35,6 @@ test.describe('Recent Activities', () => {
     // 1. Login as lab_manager (already done by fixture)
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Scroll to recent activities section in Overview tab
     const overviewPanel = siteAdminPage.getByRole('tabpanel');
@@ -82,7 +81,6 @@ test.describe('Recent Activities', () => {
 
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 3. Locate the recent activities section
     const overviewPanel = siteAdminPage.getByRole('tabpanel');
@@ -133,7 +131,6 @@ test.describe('Recent Activities', () => {
     // 2. Login as lab_manager (already done by fixture)
     // 3. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 4. Examine recent activity items
     const overviewPanel = siteAdminPage.getByRole('tabpanel');
@@ -246,7 +243,6 @@ test.describe('Recent Activities', () => {
 
     // 1. Login as test_engineer (using testOperatorPage fixture)
     await testOperatorPage.goto('/');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Navigate to dashboard and note activities shown
     const testEngineerPanel = testOperatorPage.getByRole('tabpanel');
@@ -284,7 +280,6 @@ test.describe('Recent Activities', () => {
 
     // Navigate to lab_manager dashboard (using siteAdminPage fixture)
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
 
     // 4. Navigate to dashboard and compare activities
     const labManagerPanel = siteAdminPage.getByRole('tabpanel');

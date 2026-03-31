@@ -13,7 +13,11 @@ import {
   UserRoleValues as URVal,
   CalibrationApprovalStatusValues,
 } from '@equipment-management/schemas';
-import { EQUIPMENT_OWNER_OPTIONS } from '@equipment-management/shared-constants';
+import {
+  EQUIPMENT_OWNER_OPTIONS,
+  DOCUMENT_FILE_RULES,
+} from '@equipment-management/shared-constants';
+import { validateFile } from '@/lib/utils/file-validation';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -800,7 +804,7 @@ export function EquipmentForm({
         manufacturer: data.manufacturer,
         manufacturerContact: data.manufacturerContact,
         serialNumber: data.serialNumber,
-        location: data.location,
+        location: isEdit ? data.location : data.initialLocation,
         description: data.description,
         specMatch: data.specMatch,
         calibrationRequired: data.calibrationRequired,
@@ -1014,7 +1018,7 @@ export function EquipmentForm({
           >
             <StatusLocationSection
               control={form.control}
-              isEdit={isEdit}
+              isCreateMode={!isEdit}
               selectedSite={selectedSite}
               selectedTeamId={watchedTeamId}
             />
@@ -1143,12 +1147,30 @@ export function EquipmentForm({
                     <Input
                       type="file"
                       id="calibrationCertificate"
-                      accept=".pdf"
+                      accept={DOCUMENT_FILE_RULES.calibration_certificate.accept}
                       required
                       className="cursor-pointer"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          const error = validateFile(file, {
+                            accept: DOCUMENT_FILE_RULES.calibration_certificate.accept,
+                          });
+                          if (error) {
+                            toast({
+                              title:
+                                error.type === 'size'
+                                  ? t('form.temporary.fileSizeError')
+                                  : t('form.temporary.fileTypeError'),
+                              description:
+                                error.type === 'size'
+                                  ? `${error.maxSizeMB}MB`
+                                  : DOCUMENT_FILE_RULES.calibration_certificate.accept,
+                              variant: 'destructive',
+                            });
+                            e.target.value = '';
+                            return;
+                          }
                           setCalibrationCertificateFile(file);
                         }
                       }}

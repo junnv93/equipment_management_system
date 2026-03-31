@@ -7,9 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
+import { useTranslations } from 'next-intl';
 import { Equipment } from '@/lib/api/equipment-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
+import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
+import type { EquipmentStatus } from '@equipment-management/schemas';
 
 // 아이템 높이 및 기타 상수 정의
 const ITEM_HEIGHT = 64; // 각 행의, 높이
@@ -26,14 +29,16 @@ interface VirtualizedEquipmentListProps {
 // 각 장비 행을 표시하는 메모이제이션된 컴포넌트
 const EquipmentRow = memo(
   ({ equipment, onClick }: { equipment: Equipment; onClick?: (item: Equipment) => void }) => {
+    const t = useTranslations('equipment');
     const { fmtDate } = useDateFormatter();
     // 상태에 따른 뱃지 스타일 (SSOT: equipment-status-styles.ts)
     // 실시간 교정기한 초과 체크 포함
     const getStatusBadge = (status: string, nextCalibrationDate?: string | Date | null) => {
       const style = getEquipmentStatusTokenStyle(status, nextCalibrationDate);
+      const displayStatus = getDisplayStatus((status || 'available') as EquipmentStatus);
       return (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${style.className}`}>
-          {style.label}
+          {t(`status.${displayStatus}` as Parameters<typeof t>[0])}
         </span>
       );
     };

@@ -51,7 +51,6 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
 
     // Step 2: Navigate to /admin/approvals?tab=disposal_review
     await techManagerPage.goto(`/admin/approvals?tab=disposal_review&_t=${timestamp}`);
-    await techManagerPage.waitForLoadState('networkidle');
     console.log('Step 2: Navigated to disposal_review tab with cache busting');
 
     // Step 3: Wait for list to fully load
@@ -123,8 +122,6 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
 
     // Step 8: Wait for list to refresh (React Query invalidation)
     // Wait for React Query to refetch the data after invalidation
-    await techManagerPage.waitForLoadState('networkidle');
-    await techManagerPage.waitForTimeout(1000);
     console.log('Step 8: Waited for React Query invalidation and network idle');
 
     // Step 9: Verify new item count is initial count minus 1
@@ -150,7 +147,6 @@ test.describe('Suite 4: Data Validation, Role Access, and Bulk Actions', () => {
 
     // Wait for the approval-counts query to refetch (separate from the approvals list query)
     // This query controls the badge display
-    await techManagerPage.waitForTimeout(1000);
 
     if (newBadgeCount === 0) {
       // Badge should disappear or show 0

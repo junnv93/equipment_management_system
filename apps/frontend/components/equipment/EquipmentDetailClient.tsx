@@ -29,8 +29,12 @@ import {
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { getDisposalCurrentStep } from '@/hooks/use-disposal-permissions';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { ANIMATION_PRESETS, NC_BANNER_TOKENS } from '@/lib/design-tokens';
+import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
+import {
+  ANIMATION_PRESETS,
+  NC_BANNER_TOKENS,
+  SHARED_EQUIPMENT_BANNER_TOKENS,
+} from '@/lib/design-tokens';
 
 interface EquipmentDetailClientProps {
   equipment: Equipment;
@@ -108,21 +112,14 @@ export function EquipmentDetailClient({
   const [disposalDetailOpen, setDisposalDetailOpen] = useState(false);
 
   // ✅ 장비 데이터를 React Query로 관리하여 캐시 무효화 시 자동 갱신
-  // 캐시 무효화 후 즉시 refetch하여 상태 변경을 반영
-  //
-  // ⚠️ Smart refetch 전략:
-  // - Server Component provides reliable initial data
-  // - refetchOnMount: 1시간 이상 오래된 캐시만 refetch (CalibrationOverdueScheduler 간격과 동기화)
-  // - 이유: 새 페이지 컨텍스트에서 열 때 stale 데이터 방지
-  // - 효과: 상세/목록 페이지 간 일관성 보장
+  // SSOT: QUERY_CONFIG.EQUIPMENT_DETAIL 기반 + Server Component 초기 데이터 활용
+  // refetchOnMount: CalibrationOverdueScheduler 간격(1시간)과 동기화
   const { data: equipment = initialEquipment } = useQuery({
-    queryKey: queryKeys.equipment.detail(equipmentId), // ✅ 표준화된 키
+    queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
-    placeholderData: initialEquipment, // Server Component에서 전달받은 초기 데이터
-    staleTime: CACHE_TIMES.SHORT, // 백엔드 캐시와 협력하여 불필요한 재호출 방지
+    ...QUERY_CONFIG.EQUIPMENT_DETAIL,
+    placeholderData: initialEquipment,
     refetchOnMount: (query) => {
-      // ✅ 스마트 refetch: 캐시가 1시간 이상 오래되면 refetch
-      // CalibrationOverdueScheduler 간격(1시간)과 동기화
       const dataUpdatedAt = query.state.dataUpdatedAt;
       const oneHourAgo = Date.now() - 60 * 60 * 1000;
       return dataUpdatedAt < oneHourAgo;
@@ -130,24 +127,22 @@ export function EquipmentDetailClient({
     enabled: !!equipmentId,
   });
 
-  // ✅ 폐기 요청 데이터를 React Query로 관리하여 실시간 동기화
-  // - placeholderData로 Server Component에서 받은 데이터 즉시 표시 + 백그라운드 refetch
-  // - staleTime: SHORT — 백엔드 캐시와 협력하여 불필요한 재호출 방지
-  // - enabled: 장비가 pending_disposal 또는 disposed 상태일 때만 활성화
+  // 폐기 요청: EQUIPMENT_DETAIL 전략 + 조건부 활성화
   const { data: disposalRequest } = useQuery({
     queryKey: queryKeys.equipment.currentDisposalRequest(equipmentId),
     queryFn: () => disposalApi.getCurrentDisposalRequest(equipmentId),
+    ...QUERY_CONFIG.EQUIPMENT_DETAIL,
     placeholderData: initialDisposalRequest,
-    staleTime: CACHE_TIMES.SHORT,
     enabled:
       !!equipmentId &&
       (equipment?.status === ESVal.PENDING_DISPOSAL || equipment?.status === ESVal.DISPOSED),
   });
 
-  // 부적합 기록 조회
+  // 부적합 기록: EQUIPMENT_DETAIL 전략
   const { data: nonConformances } = useQuery({
-    queryKey: queryKeys.equipment.nonConformances(equipmentId), // ✅ 표준화된 키
+    queryKey: queryKeys.equipment.nonConformances(equipmentId),
     queryFn: () => nonConformancesApi.getEquipmentNonConformances(equipmentId),
+    ...QUERY_CONFIG.EQUIPMENT_DETAIL,
     enabled: !!equipmentId,
   });
 
@@ -227,11 +222,8 @@ export function EquipmentDetailClient({
         {/* 공용장비 안내 배너 */}
         {equipment.isShared && (
           <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
-            <Alert
-              variant="default"
-              className="border-brand-info/20 bg-brand-info/5 dark:border-brand-info/30 dark:bg-brand-info/10"
-            >
-              <AlertTriangle className="h-4 w-4 text-brand-info dark:text-brand-info" />
+            <Alert variant="default" className={SHARED_EQUIPMENT_BANNER_TOKENS.alert}>
+              <AlertTriangle className={SHARED_EQUIPMENT_BANNER_TOKENS.icon} />
               <AlertTitle className="text-foreground flex items-center gap-2">
                 {t('sharedBanner.title')}
                 {/* 임시등록 장비이고 사용 기간이 있는 경우 D-day 표시 */}

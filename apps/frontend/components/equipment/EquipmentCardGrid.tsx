@@ -26,8 +26,9 @@ import {
   getEquipmentStatusTokenStyle,
   getTransitionClasses,
 } from '@/lib/design-tokens';
+import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import type { CalibrationMethod } from '@equipment-management/schemas';
+import type { CalibrationMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
   items: Equipment[];
@@ -84,6 +85,7 @@ const EquipmentCard = memo(function EquipmentCard({
   searchTerm?: string;
 }) {
   const t = useTranslations('equipment');
+  const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
   // design token SSOT: 실시간 교정기한 초과 체크 포함
   const style = getEquipmentStatusTokenStyle(equipment.status, equipment.nextCalibrationDate);
@@ -147,7 +149,11 @@ const EquipmentCard = memo(function EquipmentCard({
               className={`${style.className} border-0`}
               data-testid="status-badge"
             >
-              {style.label}
+              {t(
+                `status.${getDisplayStatus((equipment.status || 'available') as EquipmentStatus)}` as Parameters<
+                  typeof t
+                >[0]
+              )}
             </Badge>
             {calibrationStatus && (
               <Badge
@@ -156,7 +162,14 @@ const EquipmentCard = memo(function EquipmentCard({
                   'border-0 text-xs inline-flex items-center gap-1',
                   CALIBRATION_BADGE_TOKENS[calibrationStatus.severity].card
                 )}
-                title={calibrationStatus.fullLabel}
+                title={
+                  calibrationStatus.fullLabelKey
+                    ? tCal(
+                        calibrationStatus.fullLabelKey as Parameters<typeof tCal>[0],
+                        calibrationStatus.fullLabelParams
+                      )
+                    : calibrationStatus.fullLabel
+                }
               >
                 <calibrationStatus.icon className="h-3 w-3" aria-hidden="true" />
                 {calibrationStatus.label}

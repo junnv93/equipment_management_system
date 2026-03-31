@@ -9,12 +9,10 @@ test.describe('Repair History Form Validation', () => {
   }) => {
     // Navigate to equipment list
     await testOperatorPage.goto('/equipment');
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Click first equipment link
     const equipmentLink = testOperatorPage.locator('a[href*="/equipment/"]').first();
     await equipmentLink.click();
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // Extract equipment ID from URL
     const url = testOperatorPage.url();
@@ -26,14 +24,12 @@ test.describe('Repair History Form Validation', () => {
 
     // 1. Navigate to repair history page
     await testOperatorPage.goto(`/equipment/${equipmentId}/repair-history`);
-    await testOperatorPage.waitForLoadState('networkidle');
 
     // 2. Click 'Add Repair History' button
     const addButton = testOperatorPage
       .locator('button')
       .filter({ hasText: /수리.*이력.*추가|add.*repair/i });
     await addButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     const dialog = testOperatorPage.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -67,7 +63,6 @@ test.describe('Repair History Form Validation', () => {
 
     // Try to enter negative value
     await costInput.fill('-100');
-    await testOperatorPage.waitForTimeout(500);
 
     // 5. Verify validation behavior
     // Click submit to trigger validation
@@ -76,7 +71,6 @@ test.describe('Repair History Form Validation', () => {
       .filter({ hasText: /등록|register/i })
       .first();
     await registerButton.click();
-    await testOperatorPage.waitForTimeout(500);
 
     // Negative values show validation error
     const costError = dialog.locator(
@@ -94,7 +88,6 @@ test.describe('Repair History Form Validation', () => {
     // 6. Enter valid positive number
     await costInput.clear();
     await costInput.fill('50000');
-    await testOperatorPage.waitForTimeout(500);
 
     // 7. Verify validation passes
     // No error should be visible
@@ -107,7 +100,6 @@ test.describe('Repair History Form Validation', () => {
     // Test with zero (should be valid)
     await costInput.clear();
     await costInput.fill('0');
-    await testOperatorPage.waitForTimeout(500);
 
     // Zero and positive values are accepted
     await expect(costError)

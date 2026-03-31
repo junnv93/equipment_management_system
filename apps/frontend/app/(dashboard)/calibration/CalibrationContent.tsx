@@ -24,9 +24,8 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/api/error';
+import { useQuery } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import calibrationApi, {
   type CalibrationSummary,
   type IntermediateCheckItem,
@@ -50,7 +49,8 @@ import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils'
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
-import { SITE_LABELS, EquipmentStatusValues } from '@equipment-management/schemas';
+import { EquipmentStatusValues } from '@equipment-management/schemas';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { CALIBRATION_DUE_STATUS_VALUES } from '@/lib/utils/calibration-filter-utils';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -87,6 +87,7 @@ export default function CalibrationContent({
   initialFilters,
 }: CalibrationContentProps) {
   const t = useTranslations('calibration');
+  const siteLabels = useSiteLabels();
   const {
     filters,
     updateSearch,
@@ -102,8 +103,6 @@ export default function CalibrationContent({
   const defaultTeamId = filters.teamId || initialFilters?.teamId;
   const defaultSite = filters.site || initialFilters?.site;
   const router = useRouter();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
   const siteSelect = useFilterSelect(filters.site, updateSite);
@@ -196,33 +195,34 @@ export default function CalibrationContent({
 
   // ── Mutation ─────────────────────────────────────────────────────────────
 
-  const completeCheckMutation = useMutation({
-    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+  const completeCheckMutation = useOptimisticMutation<
+    unknown,
+    { id: string; version: number; notes?: string },
+    IntermediateChecksResponse
+  >({
+    mutationFn: async ({ id, version, notes }) => {
       const response = await apiClient.post(
         API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(id),
-        { notes: notes || undefined }
+        { notes: notes || undefined, version }
       );
       return response.data;
     },
-    onSuccess: () => {
-      toast({
-        title: t('content.toasts.completeSuccess'),
-        description: t('content.toasts.completeSuccessDesc'),
-      });
+    queryKey: queryKeys.calibrations.intermediateChecks(defaultTeamId, defaultSite),
+    optimisticUpdate: (old, { id }) => {
+      if (!old) return { items: [], meta: { totalItems: 0, overdueCount: 0, pendingCount: 0 } };
+      return {
+        ...old,
+        items: old.items.filter((item) => item.id !== id),
+        meta: { ...old.meta, totalItems: Math.max(0, old.meta.totalItems - 1) },
+      };
+    },
+    invalidateKeys: [queryKeys.calibrations.all, queryKeys.notifications.all],
+    successMessage: t('content.toasts.completeSuccess'),
+    errorMessage: t('content.toasts.completeError'),
+    onSuccessCallback: () => {
       setIsCompleteDialogOpen(false);
       setSelectedCheck(null);
       setCompletionNotes('');
-    },
-    onError: (error: unknown) => {
-      toast({
-        title: t('content.toasts.completeError'),
-        description: getErrorMessage(error, t('content.toasts.completeError')),
-        variant: 'destructive',
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 
@@ -338,7 +338,7 @@ export default function CalibrationContent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">{t('content.search.allSites')}</SelectItem>
-            {Object.entries(SITE_LABELS).map(([key, label]) => (
+            {Object.entries(siteLabels).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label}
               </SelectItem>
@@ -447,7 +447,7 @@ export default function CalibrationContent({
                 className={CALIBRATION_FILTER_BAR.tag}
                 onClick={() => updateSite('')}
               >
-                {SITE_LABELS[filters.site as keyof typeof SITE_LABELS]}
+                {siteLabels[filters.site as keyof typeof siteLabels]}
                 <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
               </button>
             )}
@@ -611,7 +611,11 @@ export default function CalibrationContent({
             <Button
               onClick={() => {
                 if (selectedCheck)
-                  completeCheckMutation.mutate({ id: selectedCheck.id, notes: completionNotes });
+                  completeCheckMutation.mutate({
+                    id: selectedCheck.id,
+                    version: selectedCheck.version,
+                    notes: completionNotes,
+                  });
               }}
               disabled={completeCheckMutation.isPending}
             >

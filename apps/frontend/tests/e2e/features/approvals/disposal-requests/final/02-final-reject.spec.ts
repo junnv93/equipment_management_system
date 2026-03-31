@@ -145,7 +145,6 @@ test.describe.serial('Disposal Final Approval Tab - Reject Reviewed Request', ()
 
     // Step 13: Verify the rejected item is removed from the list
     // Wait for React Query invalidation to complete
-    await siteAdminPage.waitForTimeout(1000);
 
     // Verify the rejected item has been removed from the pending list
     const updatedCount = await approvalItems.count();

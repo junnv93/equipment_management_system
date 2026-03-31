@@ -38,6 +38,8 @@ export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 /**
  * 카테고리별 한글 라벨
  * - 프론트엔드 필터 드롭다운, 설정 토글에서 사용
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드는 i18n 메시지(notifications.category.{cat}.label/description)를 사용합니다.
  */
 export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> = {
   checkout: '반출',
@@ -52,6 +54,8 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
 
 /**
  * 카테고리별 설명 (설정 페이지 도움말)
+ *
+ * @remarks 서버 사이드 전용 — 프론트엔드는 i18n 메시지(notifications.category.{cat}.label/description)를 사용합니다.
  */
 export const NOTIFICATION_CATEGORY_DESCRIPTIONS: Record<NotificationCategory, string> = {
   checkout: '반출 요청, 승인, 반려, 반입 관련 알림',

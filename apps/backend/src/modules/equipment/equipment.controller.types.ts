@@ -22,12 +22,6 @@ export type EquipmentCreateOrRequestResult =
       request: EquipmentRequest;
     };
 
-/** createShared() — 공용장비 등록 결과 */
-export type SharedEquipmentCreateResult = {
-  message: string;
-  equipment: Equipment;
-};
-
 /** findOne() — 장비 상세 + teamName (team relation → teamName 변환) */
 export type EquipmentDetailResult = Omit<Equipment, never> & {
   teamName: string | null;

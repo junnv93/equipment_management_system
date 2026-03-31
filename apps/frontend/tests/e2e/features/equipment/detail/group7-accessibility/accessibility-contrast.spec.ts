@@ -40,9 +40,6 @@ test.describe('Group 7: Accessibility', () => {
       throw e;
     }
 
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
     // 2. Use contrast checker on all text elements using axe-core
     console.log('Running axe-core color contrast analysis...');
 
@@ -159,7 +156,6 @@ test.describe('Group 7: Accessibility', () => {
 
       // Toggle dark mode
       await darkModeToggle.first().click();
-      await page.waitForTimeout(500);
 
       // 7. Verify dark mode maintains contrast ratios
       const darkModeResults = await new AxeBuilder({ page })
@@ -185,7 +181,6 @@ test.describe('Group 7: Accessibility', () => {
 
       // Toggle back to light mode
       await darkModeToggle.first().click();
-      await page.waitForTimeout(500);
     } else {
       console.log('Dark mode not implemented, skipping dark mode tests');
     }
@@ -237,7 +232,6 @@ test.describe('Group 7: Accessibility', () => {
     // Focus on several interactive elements and check focus style
     const focusableElements = page.locator('button:visible, a:visible, input:visible').first();
     await focusableElements.focus();
-    await page.waitForTimeout(200);
 
     const focusedElement = page.locator(':focus');
     const hasFocus = (await focusedElement.count()) > 0;

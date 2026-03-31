@@ -139,7 +139,6 @@ test.describe('Team Filtering Basic Flow @sequential-group-1', () => {
     await teamCard.click();
 
     // Wait for React state to update
-    await siteAdminPage.waitForTimeout(500);
 
     // 5. Verify team card now has selected styling
     await expect(teamCard).toHaveClass(/bg-primary/);
@@ -150,7 +149,6 @@ test.describe('Team Filtering Basic Flow @sequential-group-1', () => {
 
     // 7. Deselect by clicking the same team again
     await teamCard.click();
-    await siteAdminPage.waitForTimeout(500);
 
     // 8. Verify '전체 팀' button regains selected state
     await expect(allTeamsButton).toHaveClass(/bg-primary/);

@@ -48,7 +48,9 @@ export const RENTAL_ALLOWED_STATUSES: readonly EquipmentStatus[] = [
  *
  * return_to_vendor는 렌탈 반납 전용이므로 별도 규칙 없음 (시스템이 자동 생성)
  */
-export const PURPOSE_ALLOWED_STATUSES: Record<string, readonly EquipmentStatus[]> = {
+export const PURPOSE_ALLOWED_STATUSES: Partial<
+  Record<CheckoutPurpose, readonly EquipmentStatus[]>
+> = {
   calibration: CALIBRATION_REPAIR_ALLOWED_STATUSES,
   repair: CALIBRATION_REPAIR_ALLOWED_STATUSES,
   rental: RENTAL_ALLOWED_STATUSES,
@@ -60,8 +62,12 @@ export const PURPOSE_ALLOWED_STATUSES: Record<string, readonly EquipmentStatus[]
  * @param purpose 반출 목적 (calibration | repair | rental)
  * @returns 허용되는 장비 상태 배열
  */
-export function getAllowedStatusesForPurpose(purpose: string): readonly EquipmentStatus[] {
-  return PURPOSE_ALLOWED_STATUSES[purpose] ?? CALIBRATION_REPAIR_ALLOWED_STATUSES;
+export function getAllowedStatusesForPurpose(
+  purpose: CheckoutPurpose | string
+): readonly EquipmentStatus[] {
+  return (
+    PURPOSE_ALLOWED_STATUSES[purpose as CheckoutPurpose] ?? CALIBRATION_REPAIR_ALLOWED_STATUSES
+  );
 }
 
 /**
@@ -93,9 +99,14 @@ export interface BlockedReasonI18n {
   params?: Record<string, string>;
 }
 
-export const CHECKOUT_BLOCKED_REASONS: Record<
-  string,
-  { default: BlockedReasonI18n; purposeOverrides?: Partial<Record<string, BlockedReasonI18n>> }
+export const CHECKOUT_BLOCKED_REASONS: Partial<
+  Record<
+    EquipmentStatus,
+    {
+      default: BlockedReasonI18n;
+      purposeOverrides?: Partial<Record<CheckoutPurpose, BlockedReasonI18n>>;
+    }
+  >
 > = {
   in_use: {
     default: { key: 'selectability.inUseBlocked' },
@@ -143,14 +154,14 @@ export interface EquipmentSelectability {
  * @returns 차단 사유 i18n 키 (없으면 undefined)
  */
 export function getBlockedReasonKey(
-  status: string,
-  purpose: string
+  status: EquipmentStatus | string,
+  purpose: CheckoutPurpose | string
 ): BlockedReasonI18n | undefined {
-  const entry = CHECKOUT_BLOCKED_REASONS[status];
+  const entry = CHECKOUT_BLOCKED_REASONS[status as EquipmentStatus];
   if (!entry) return undefined;
 
   // 목적별 오버라이드가 있으면 우선
-  const override = entry.purposeOverrides?.[purpose];
+  const override = entry.purposeOverrides?.[purpose as CheckoutPurpose];
   if (override !== undefined) {
     return override.key ? override : undefined; // 빈 키 = 차단 아님
   }

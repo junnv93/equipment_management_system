@@ -19,6 +19,7 @@ import {
   FileText,
   FileSearch,
   AlertTriangle,
+  Upload,
 } from 'lucide-react';
 import { FRONTEND_ROUTES, Permission, hasPermission } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
@@ -121,6 +122,12 @@ export const NAV_SECTIONS: NavSection[] = [
         href: FRONTEND_ROUTES.ADMIN.AUDIT_LOGS,
         labelKey: 'adminAuditLogs',
         requiredPermission: Permission.VIEW_AUDIT_LOGS,
+      },
+      {
+        icon: Upload,
+        href: FRONTEND_ROUTES.ADMIN.DATA_MIGRATION,
+        labelKey: 'adminDataMigration',
+        requiredPermission: Permission.MANAGE_SYSTEM_SETTINGS,
       },
       {
         icon: Users,

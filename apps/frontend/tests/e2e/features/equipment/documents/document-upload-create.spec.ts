@@ -13,7 +13,7 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import path from 'path';
-import type { Page } from '@playwright/test';
+import type { Page } from '../../../shared/fixtures/auth.fixture';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 
@@ -97,8 +97,8 @@ test.describe('장비 등록 - 문서 업로드', () => {
   test('TC-02: 장비 사진 PNG 파일 첨부 후 파일명 표시', async ({ testOperatorPage: page }) => {
     await navigateToAttachmentStep(page);
 
-    // 사진 업로드 영역의 file input (accept="image/jpeg,image/png,image/gif")
-    const photoInput = page.locator('input[type="file"][accept*="image/jpeg"]');
+    // 사진 업로드 영역의 file input (accept=".jpg,.jpeg,.png,.gif")
+    const photoInput = page.locator('input[type="file"][accept=".jpg,.jpeg,.png,.gif"]');
     await photoInput.setInputFiles(path.join(FIXTURES_DIR, 'test-photo.png'));
 
     // 업로드된 파일명 표시 확인
@@ -108,8 +108,8 @@ test.describe('장비 등록 - 문서 업로드', () => {
   test('TC-03: 매뉴얼 PDF 파일 첨부 후 파일명 표시', async ({ testOperatorPage: page }) => {
     await navigateToAttachmentStep(page);
 
-    // 매뉴얼 업로드 (accept="application/pdf")
-    const manualInput = page.locator('input[type="file"][accept="application/pdf"]');
+    // 매뉴얼 업로드 (accept=".pdf")
+    const manualInput = page.locator('input[type="file"][accept=".pdf"]');
     await manualInput.setInputFiles(path.join(FIXTURES_DIR, 'test-manual.pdf'));
 
     // 업로드된 파일명 표시 확인
@@ -122,12 +122,12 @@ test.describe('장비 등록 - 문서 업로드', () => {
     await fillFormAndNavigateToAttachmentStep(page);
 
     // 사진 첨부
-    const photoInput = page.locator('input[type="file"][accept*="image/jpeg"]');
+    const photoInput = page.locator('input[type="file"][accept=".jpg,.jpeg,.png,.gif"]');
     await photoInput.setInputFiles(path.join(FIXTURES_DIR, 'test-photo.png'));
     await expect(page.getByText('test-photo.png')).toBeVisible({ timeout: 5000 });
 
     // 매뉴얼 첨부
-    const manualInput = page.locator('input[type="file"][accept="application/pdf"]');
+    const manualInput = page.locator('input[type="file"][accept=".pdf"]');
     await manualInput.setInputFiles(path.join(FIXTURES_DIR, 'test-manual.pdf'));
     await expect(page.getByText('test-manual.pdf')).toBeVisible({ timeout: 5000 });
 

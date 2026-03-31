@@ -29,9 +29,21 @@ export const envSchema = z
     // 캐시 드라이버 설정 (memory: 기본, redis: 프로덕션 권장)
     CACHE_DRIVER: z.enum(['memory', 'redis']).default('memory'),
 
+    // SSL/TLS 설정 (Docker 내부 네트워크에서는 false 허용, 외부 통신 시 true 권장)
+    DB_SSL: z.enum(['true', 'false']).default('false'),
+    DB_SSL_REJECT_UNAUTHORIZED: z.enum(['true', 'false']).default('true'),
+    REDIS_TLS: z.enum(['true', 'false']).default('false'),
+    REDIS_TLS_REJECT_UNAUTHORIZED: z.enum(['true', 'false']).default('true'),
+
+    // 개발/테스트용 로컬 로그인 비밀번호 (프로덕션에서는 Azure AD 전용)
+    DEV_ADMIN_PASSWORD: z.string().optional(),
+    DEV_MANAGER_PASSWORD: z.string().optional(),
+    DEV_USER_PASSWORD: z.string().optional(),
+
     // JWT 설정
+    // 토큰 만료 시간은 shared-constants의 ACCESS_TOKEN_EXPIRES_IN으로 관리됩니다.
+    // JWT_EXPIRATION은 사용하지 않습니다.
     JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
-    JWT_EXPIRATION: z.string().default('1d'),
 
     // Internal API 설정 (서비스 간 통신)
     INTERNAL_API_KEY: z.string().min(32, 'INTERNAL_API_KEY must be at least 32 characters'),
@@ -72,20 +84,79 @@ export const envSchema = z
     S3_SECRET_KEY: z.string().min(1).optional(),
     S3_BUCKET: z.string().default('equipment-files'),
   })
-  .refine(
-    (data) =>
-      data.STORAGE_DRIVER !== 's3' ||
-      (data.S3_ENDPOINT !== undefined &&
-        data.S3_ACCESS_KEY !== undefined &&
-        data.S3_SECRET_KEY !== undefined),
-    { message: 'S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY는 STORAGE_DRIVER=s3일 때 필수입니다' }
-  )
-  .refine(
-    (data) =>
-      data.NODE_ENV !== 'production' ||
-      (data.FRONTEND_URL !== undefined && data.FRONTEND_URL !== ''),
-    { message: 'FRONTEND_URL은 프로덕션 환경에서 필수입니다 (CORS origin 설정에 필요)' }
-  );
+  .superRefine((data, ctx) => {
+    // S3 설정 — STORAGE_DRIVER=s3 시 필수
+    if (
+      data.STORAGE_DRIVER === 's3' &&
+      (data.S3_ENDPOINT === undefined ||
+        data.S3_ACCESS_KEY === undefined ||
+        data.S3_SECRET_KEY === undefined)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY는 STORAGE_DRIVER=s3일 때 필수입니다',
+      });
+    }
+
+    // REDIS 비밀번호 — CACHE_DRIVER=redis 시 필수
+    if (
+      data.CACHE_DRIVER === 'redis' &&
+      data.NODE_ENV === 'production' &&
+      (!data.REDIS_PASSWORD || data.REDIS_PASSWORD.length < 16)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'REDIS_PASSWORD는 프로덕션 + CACHE_DRIVER=redis일 때 필수입니다 (최소 16자)',
+      });
+    }
+
+    // 프로덕션 전용 검증 — 모든 에러를 한 번에 수집
+    if (data.NODE_ENV === 'production') {
+      if (!data.FRONTEND_URL || data.FRONTEND_URL === '') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'FRONTEND_URL은 프로덕션 환경에서 필수입니다 (CORS origin 설정에 필요)',
+        });
+      }
+
+      if (data.JWT_SECRET.length < 32) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'JWT_SECRET은 프로덕션 환경에서 최소 32자 이상이어야 합니다 (보안 강화)',
+        });
+      }
+
+      if (!data.NEXTAUTH_SECRET || data.NEXTAUTH_SECRET.length < 32) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'NEXTAUTH_SECRET은 프로덕션 환경에서 필수입니다 (최소 32자, 세션 암호화에 사용)',
+        });
+      }
+
+      if (!data.REFRESH_TOKEN_SECRET || data.REFRESH_TOKEN_SECRET.length < 32) {
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            'REFRESH_TOKEN_SECRET은 프로덕션 환경에서 필수입니다 (JWT_SECRET 폴백은 안전하지 않음)',
+        });
+      }
+
+      if (data.REFRESH_TOKEN_SECRET && data.REFRESH_TOKEN_SECRET === data.JWT_SECRET) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'REFRESH_TOKEN_SECRET은 JWT_SECRET과 다른 값이어야 합니다 (토큰 유형 분리)',
+        });
+      }
+
+      // DATABASE_URL 사용 시 DB_PASSWORD는 URL 내 비밀번호가 우선하므로 검증 스킵
+      if (!data.DATABASE_URL && data.DB_PASSWORD === 'postgres') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'DB_PASSWORD는 프로덕션 환경에서 기본값(postgres)을 사용할 수 없습니다',
+        });
+      }
+    }
+  });
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
@@ -106,6 +177,24 @@ export function validateEnv(config: Record<string, unknown>): EnvConfig {
       `\n\n환경 변수 검증 실패:\n${errors}\n\n` +
         `.env 파일을 확인하거나 필요한 환경 변수를 설정해주세요.\n`
     );
+  }
+
+  // 프로덕션 보안 경고 (non-fatal — Docker 내부 네트워크에서는 허용)
+  // NestJS Logger가 아직 초기화되지 않은 시점이므로 console.warn 사용
+  if (result.data.NODE_ENV === 'production') {
+    const warnings: string[] = [];
+    if (result.data.DB_SSL !== 'true') {
+      warnings.push('DB_SSL is not enabled — database connections are unencrypted');
+    }
+    if (result.data.REDIS_TLS !== 'true' && result.data.CACHE_DRIVER === 'redis') {
+      warnings.push('REDIS_TLS is not enabled — Redis connections are unencrypted');
+    }
+    if (warnings.length > 0) {
+      console.warn(
+        `\n⚠ Security warnings (non-blocking):\n${warnings.map((w) => `  - ${w}`).join('\n')}\n` +
+          `  These are acceptable for Docker internal networks but should be reviewed for other deployments.\n`
+      );
+    }
   }
 
   return result.data;

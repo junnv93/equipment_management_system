@@ -44,7 +44,6 @@ test.describe('Responsive Design', () => {
 
     // 3. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // 4. Examine layout of all components
@@ -56,7 +55,7 @@ test.describe('Responsive Design', () => {
     // Verify stats cards stack in 2-column grid
     await expect(siteAdminPage.getByRole('heading', { name: '전체 장비' })).toBeVisible();
     const statsSection = siteAdminPage
-      .locator('[role="region"]')
+      .getByRole('region')
       .filter({
         has: siteAdminPage.locator('text=/전체 장비|사용 가능|교정 예정|반출 중/'),
       })
@@ -114,7 +113,6 @@ test.describe('Responsive Design', () => {
 
     // 3. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // 4. Examine layout of all components
@@ -158,7 +156,6 @@ test.describe('Responsive Design', () => {
 
     // 3. Navigate to dashboard
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Navigated to dashboard');
 
     // 4. Examine layout of all components
@@ -222,7 +219,6 @@ test.describe('Responsive Design', () => {
     // Start with mobile
     await siteAdminPage.setViewportSize({ width: 375, height: 667 });
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Loaded dashboard on mobile viewport');
 
     // 3. Observe welcome header layout changes on mobile
@@ -252,7 +248,6 @@ test.describe('Responsive Design', () => {
 
     // Switch to desktop
     await siteAdminPage.setViewportSize({ width: 1440, height: 900 });
-    await siteAdminPage.waitForTimeout(500); // Wait for layout reflow
     console.log('✓ Switched to desktop viewport');
 
     // Verify welcome header is still visible on desktop
@@ -281,14 +276,12 @@ test.describe('Responsive Design', () => {
     // Start with mobile
     await siteAdminPage.setViewportSize({ width: 375, height: 667 });
     await siteAdminPage.goto('/');
-    await siteAdminPage.waitForLoadState('networkidle');
     console.log('✓ Loaded dashboard on mobile viewport');
 
     // 3. Observe equipment status chart behavior on mobile
     // Navigate to Overview tab (default)
     const overviewTab = siteAdminPage.getByRole('tab', { name: '개요' });
     await overviewTab.click();
-    await siteAdminPage.waitForTimeout(500);
 
     // Verify chart is visible on mobile
     const chartSectionMobile = siteAdminPage.locator('text=장비 상태').first();
@@ -321,7 +314,6 @@ test.describe('Responsive Design', () => {
 
     // Switch to tablet
     await siteAdminPage.setViewportSize({ width: 768, height: 1024 });
-    await siteAdminPage.waitForTimeout(500);
     console.log('✓ Switched to tablet viewport');
 
     // Verify chart resizes appropriately for tablet
@@ -343,7 +335,6 @@ test.describe('Responsive Design', () => {
 
     // Switch to desktop
     await siteAdminPage.setViewportSize({ width: 1440, height: 900 });
-    await siteAdminPage.waitForTimeout(500);
     console.log('✓ Switched to desktop viewport');
 
     // Verify chart resizes appropriately for desktop

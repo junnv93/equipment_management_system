@@ -97,8 +97,8 @@ export function calculateCalibrationStatus(
       severity: 'overdue',
       days: overdueDays,
       label: `D+${overdueDays}`,
-      fullLabel: `교정 기한 ${overdueDays}일 초과`,
-      fullLabelKey: 'calibration.dday.overdue',
+      fullLabel: `Calibration overdue by ${overdueDays} days`,
+      fullLabelKey: 'dday.fullOverdue',
       fullLabelParams: { days: overdueDays },
       icon: CALIBRATION_BADGE_TOKENS.overdue.icon,
     };
@@ -113,8 +113,9 @@ export function calculateCalibrationStatus(
   if (diffDays <= 30) {
     const severity: CalibrationSeverity = diffDays <= 7 ? 'urgent' : 'warning';
     const label = diffDays === 0 ? 'D-Day' : `D-${diffDays}`;
-    const fullLabel = diffDays === 0 ? '오늘 교정 만료' : `${diffDays}일 후 교정 만료`;
-    const fullLabelKey = diffDays === 0 ? 'calibration.dday.today' : 'calibration.dday.upcoming';
+    const fullLabel =
+      diffDays === 0 ? 'Calibration expires today' : `Calibration expires in ${diffDays} days`;
+    const fullLabelKey = diffDays === 0 ? 'dday.fullToday' : 'dday.fullUpcoming';
 
     return {
       type: 'upcoming',

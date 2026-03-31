@@ -15,12 +15,7 @@ import { getErrorMessage } from '@/lib/api/error';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { queryKeys } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import {
-  CHECKOUT_PURPOSE_LABELS,
-  CHECKOUT_STATUS_LABELS,
-  CONDITION_CHECK_STEP_LABELS,
-  CheckoutPurposeValues as CPVal,
-} from '@equipment-management/schemas';
+import { CheckoutPurposeValues as CPVal } from '@equipment-management/schemas';
 import ReturnInspectionForm, {
   InspectionFormData,
 } from '@/components/checkouts/ReturnInspectionForm';
@@ -110,10 +105,7 @@ export default function ReturnCheckoutClient({
         </Button>
         <div className="flex items-center gap-3">
           <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('actions.processReturn')}</h1>
-          <Badge variant="outline">
-            {CHECKOUT_PURPOSE_LABELS[checkout.purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] ||
-              checkout.purpose}
-          </Badge>
+          <Badge variant="outline">{t(`purpose.${checkout.purpose}`)}</Badge>
         </div>
         <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
       </div>
@@ -134,7 +126,7 @@ export default function ReturnCheckoutClient({
           <CardTitle className="text-lg">{t('detail.progressStatus')}</CardTitle>
           <CardDescription>
             {t('returnPage.currentStatus', {
-              status: CHECKOUT_STATUS_LABELS[checkout.status] || checkout.status,
+              status: t(`status.${checkout.status}`),
             })}
           </CardDescription>
         </CardHeader>
@@ -205,9 +197,7 @@ export default function ReturnCheckoutClient({
                     className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                   >
                     <div>
-                      <p className="font-medium text-sm">
-                        {CONDITION_CHECK_STEP_LABELS[check.step]}
-                      </p>
+                      <p className="font-medium text-sm">{t(`conditionCheckStep.${check.step}`)}</p>
                       <p className="text-xs text-muted-foreground">
                         {formatter.dateTime(new Date(check.checkedAt), {
                           dateStyle: 'short',
