@@ -27,6 +27,12 @@ export type EquipmentDetailResult = Omit<Equipment, never> & {
   teamName: string | null;
 };
 
+/** createShared() — 공용장비 등록 결과 */
+export type SharedEquipmentCreateResult = {
+  message: string;
+  equipment: Equipment;
+};
+
 /** findRequestByUuid() — 요청 상세 + Relations */
 export type EquipmentRequestDetailResult = EquipmentRequest & {
   requester?: UserSelect | null;

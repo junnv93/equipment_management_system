@@ -121,6 +121,8 @@ describe('EquipmentService', () => {
       // Arrange: 중복 체크에서 null 반환 (중복 없음)
       mockDb.query.equipment.findFirst.mockResolvedValue(null);
       mockDb.returning.mockResolvedValue([mockEquipment]);
+      // initialLocation이 있을 때 tx.select().from().where().limit(1) 동기화 쿼리 mock
+      mockDb.limit.mockResolvedValueOnce([mockEquipment]);
 
       const createDto = {
         name: '테스트 장비',
@@ -138,7 +140,7 @@ describe('EquipmentService', () => {
       expect(result.name).toBe(createDto.name);
       expect(result.managementNumber).toBe(createDto.managementNumber);
       expect(mockDb.query.equipment.findFirst).toHaveBeenCalled();
-      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
+      expect(mockCacheService.deleteByPrefix).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when management number already exists', async () => {

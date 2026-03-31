@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
+import type { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
@@ -724,6 +725,20 @@ export class EquipmentService extends VersionedBaseService {
       );
       throw error;
     }
+  }
+
+  /**
+   * 공용장비 등록 (isShared: true 고정, 최소 필수 정보만 요구)
+   */
+  async createShared(dto: CreateSharedEquipmentDto, userId?: string): Promise<Equipment> {
+    return this.create(
+      {
+        ...dto,
+        isShared: true,
+        initialLocation: dto.location ?? '',
+      } as CreateEquipmentDto,
+      userId
+    );
   }
 
   /**

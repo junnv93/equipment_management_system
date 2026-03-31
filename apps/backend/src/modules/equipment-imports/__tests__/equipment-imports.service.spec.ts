@@ -7,6 +7,7 @@ import { createMockEventEmitter } from '../../../common/testing/mock-providers';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { DocumentService } from '../../../common/file-upload/document.service';
 
 const MOCK_IMPORT = {
   id: 'import-uuid-1',
@@ -123,6 +124,7 @@ describe('EquipmentImportsService', () => {
             set: jest.fn(),
             delete: jest.fn(),
             deleteByPattern: jest.fn(),
+            deleteByPrefix: jest.fn(),
             getOrSet: jest
               .fn()
               .mockImplementation((_key: string, factory: () => Promise<unknown>) => factory()),
@@ -134,6 +136,13 @@ describe('EquipmentImportsService', () => {
             invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
             invalidateAfterCheckoutStatusChange: jest.fn().mockResolvedValue(undefined),
             invalidateAllDashboard: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: DocumentService,
+          useValue: {
+            attachDocument: jest.fn(),
+            deleteDocumentsByEntity: jest.fn(),
           },
         },
       ],

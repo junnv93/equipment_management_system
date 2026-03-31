@@ -37,10 +37,6 @@ import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { UpdateStatusDto, UpdateStatusValidationPipe } from './dto/update-status.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
-import {
-  CreateSharedEquipmentDto,
-  CreateSharedEquipmentValidationPipe,
-} from './dto/create-shared-equipment.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { InternalServiceOnly } from '../../common/decorators/internal-service-only.decorator';
@@ -72,7 +68,6 @@ import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.d
 import { ApproveRequestBodyPipe, type ApproveRequestBodyDto } from './dto/approve-request-body.dto';
 import type {
   EquipmentCreateOrRequestResult,
-  SharedEquipmentCreateResult,
   EquipmentDetailResult,
   EquipmentRequestDetailResult,
 } from './equipment.controller.types';
@@ -187,65 +182,6 @@ export class EquipmentController {
       message: '장비 등록 요청이 생성되었습니다.',
       requestUuid: request.id,
       request,
-    };
-  }
-
-  @Post('shared')
-  @ApiOperation({
-    summary: '공용장비 등록',
-    description:
-      '공용장비(Safety Lab 등)를 등록합니다. 최소 필수 정보만 요구하며, 교정성적서 파일 첨부를 지원합니다.',
-  })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['name', 'managementNumber', 'sharedSource', 'site'],
-      properties: {
-        name: { type: 'string', description: '장비명' },
-        managementNumber: { type: 'string', description: '관리번호' },
-        sharedSource: {
-          type: 'string',
-          enum: SharedSourceEnum.options,
-          description: '공용장비 출처',
-        },
-        site: { type: 'string', enum: SiteEnum.options, description: '사이트' },
-        modelName: { type: 'string' },
-        manufacturer: { type: 'string' },
-        location: { type: 'string' },
-        calibrationCycle: { type: 'number' },
-        files: {
-          type: 'array',
-          items: { type: 'string', format: 'binary' },
-          description: '교정성적서 파일',
-        },
-      },
-    },
-  })
-  @ApiResponse({ status: HttpStatus.CREATED, description: '공용장비가 등록되었습니다.' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  @RequirePermissions(Permission.CREATE_EQUIPMENT)
-  @AuditLog({ action: 'create', entityType: 'equipment', entityIdPath: 'response.equipment.id' })
-  @UseInterceptors(FilesInterceptor('files', 10), FormDataParserInterceptor)
-  @UsePipes(CreateSharedEquipmentValidationPipe)
-  async createShared(
-    @Body() createSharedEquipmentDto: CreateSharedEquipmentDto,
-    @UploadedFiles() files: MulterFile[] | undefined,
-    @Req() req: AuthenticatedRequest
-  ): Promise<SharedEquipmentCreateResult> {
-    // 파일 업로드 처리 (교정성적서)
-    if (files && files.length > 0) {
-      const attachmentType = 'inspection_report'; // 교정성적서
-      await this.attachmentService.createAttachments(files, attachmentType);
-    }
-
-    const userId = req.user?.userId;
-    const newEquipment = await this.equipmentService.createShared(createSharedEquipmentDto, userId);
-    return {
-      message: '공용장비가 등록되었습니다.',
-      equipment: newEquipment,
     };
   }
 
