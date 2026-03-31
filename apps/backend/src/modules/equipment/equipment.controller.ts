@@ -46,12 +46,7 @@ import {
   resolveDataScope,
 } from '@equipment-management/shared-constants';
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
-import {
-  UserRoleValues,
-  SharedSourceEnum,
-  SiteEnum,
-  AttachmentTypeEnum,
-} from '@equipment-management/schemas';
+import { UserRoleValues, AttachmentTypeEnum } from '@equipment-management/schemas';
 import {
   type UserRole,
   type DocumentType,
@@ -369,6 +364,7 @@ export class EquipmentController {
   })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Query('version') versionStr: string | undefined,
     @Req() req: AuthenticatedRequest
   ): Promise<{ message: string; requestUuid?: string }> {
     // 공용장비 삭제 차단
@@ -387,7 +383,12 @@ export class EquipmentController {
 
     // 시스템 관리자는 직접 삭제 가능
     if (isAdmin) {
-      await this.equipmentService.remove(uuid);
+      const parsedVersion = versionStr !== undefined ? parseInt(versionStr, 10) : undefined;
+      const effectiveVersion =
+        parsedVersion !== undefined && !isNaN(parsedVersion)
+          ? parsedVersion
+          : existingEquipment.version;
+      await this.equipmentService.remove(uuid, effectiveVersion);
       return { message: '장비가 삭제되었습니다.' };
     }
 

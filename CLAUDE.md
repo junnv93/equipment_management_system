@@ -287,6 +287,16 @@ export default function Page({ params }: { params: { id: string } }) {
 import { useActionState } from 'react';
 ```
 
+```typescript
+// ✅ Next.js 16 Proxy 컨벤션 — middleware 컨벤션은 deprecated
+// 파일: proxy.ts (루트), 함수명: proxy, config는 직접 정의 (re-export 불가)
+export async function proxy(request: NextRequest) { ... }
+export const config = { matcher: [...] };
+
+// ❌ WRONG - Next.js 16에서 middleware.ts + middleware 함수명은 deprecated
+export async function middleware(request: NextRequest) { ... }
+```
+
 ---
 
 ## Concurrency Control (CAS / Optimistic Locking)

@@ -327,6 +327,7 @@ Agent tool을 사용하되, `subagent_type`은 지정하지 않습니다 (genera
 3. **단순 모듈의 인라인 쿼리 조건** — 쿼리 복잡도가 낮은 경우 QueryConditions 인터페이스 불필요
 4. **프론트엔드 UI 표시용 로컬 상수** — STATUS_LABELS, STATUS_COLORS 등은 UI 전용
 5. **테스트 파일의 패턴 차이** — 테스트는 프로덕션 코드와 다른 패턴 허용
+6. **`proxy.ts` 파일명 + `proxy` 함수명** — Next.js 16.1.6은 `middleware` 컨벤션을 `proxy`로 전환. `middleware.ts` 파일명과 `middleware` 함수명은 deprecated. `proxy.ts`가 올바른 패턴이며, `export const config`는 반드시 proxy.ts 내에 직접 정의해야 함 (re-export 불가)
 
 ## Related Files
 

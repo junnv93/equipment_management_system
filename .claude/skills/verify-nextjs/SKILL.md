@@ -37,7 +37,7 @@ argument-hint: '[선택사항: 특정 라우트 경로]'
 | `apps/frontend/app/(dashboard)/checkouts/[id]/page.tsx`    | 동적 라우트 참조 구현                                          |
 | `apps/frontend/app/(dashboard)/calibration-plans/page.tsx` | searchParams 사용 참조 구현                                    |
 | `apps/frontend/components/equipment/EquipmentForm.tsx`     | Dynamic import 코드 분할 참조 구현 (7개 섹션)                  |
-| `apps/frontend/middleware.ts`                              | PPR 인증 미들웨어 (cacheComponents 레이아웃 non-blocking 핵심) |
+| `apps/frontend/proxy.ts`                                   | PPR 인증 프록시 (cacheComponents 레이아웃 non-blocking 핵심) — Next.js 16 proxy 컨벤션 |
 
 ## Workflow
 
@@ -77,7 +77,27 @@ grep -rn "searchParams" apps/frontend/app --include="page.tsx" | grep -v "await\
 
 **FAIL 기준:** await 없이 직접 접근 시 위반.
 
-### Step 3: useFormState (deprecated) 사용 탐지
+### Step 3: proxy.ts 컨벤션 확인
+
+Next.js 16.1.6+는 `middleware.ts` 컨벤션을 deprecated하고 `proxy.ts`로 전환했습니다.
+
+```bash
+# middleware.ts가 존재하면 오류 — proxy.ts를 사용해야 함
+ls apps/frontend/middleware.ts 2>/dev/null && echo "FAIL: middleware.ts는 deprecated" || echo "PASS"
+
+# proxy.ts 존재 및 export proxy 함수 확인
+grep -n "export.*function proxy\|export.*proxy" apps/frontend/proxy.ts
+```
+
+**PASS 기준:**
+- `middleware.ts` 파일 없음
+- `proxy.ts`에 `export async function proxy()` + `export const config` 직접 정의
+
+**FAIL 기준:**
+- `middleware.ts` 파일 존재 → proxy.ts와 충돌하여 서버 시작 불가
+- `config`를 다른 파일에서 re-export → Next.js가 인식 못함
+
+### Step 4: useFormState (deprecated) 사용 탐지
 
 `useFormState`가 사용되지 않고 `useActionState`로 대체되었는지 확인합니다.
 
@@ -197,10 +217,11 @@ const HeavyComponent = dynamic(
 | --- | ----------------------- | --------- | ---------------------------------- |
 | 1   | await params            | PASS/FAIL | 미적용 page.tsx 목록               |
 | 2   | await searchParams      | PASS/FAIL | 미적용 page.tsx 목록               |
-| 3   | useFormState 미사용     | PASS/FAIL | 사용 위치 목록                     |
-| 4   | 서버 컴포넌트 page.tsx  | PASS/FAIL | 'use client' page.tsx 목록         |
-| 5   | error.tsx / loading.tsx | PASS/INFO | 누락 라우트 목록                   |
-| 6   | Dynamic imports         | PASS/INFO | ssr: false 누락, loading 누락 위치 |
+| 3   | proxy.ts 컨벤션         | PASS/FAIL | middleware.ts 존재 시 FAIL         |
+| 4   | useFormState 미사용     | PASS/FAIL | 사용 위치 목록                     |
+| 5   | 서버 컴포넌트 page.tsx  | PASS/FAIL | 'use client' page.tsx 목록         |
+| 6   | error.tsx / loading.tsx | PASS/INFO | 누락 라우트 목록                   |
+| 7   | Dynamic imports         | PASS/INFO | ssr: false 누락, loading 누락 위치 |
 ```
 
 ## Exceptions

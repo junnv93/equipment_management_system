@@ -189,11 +189,17 @@
 - **발견 위치**: `apps/backend/src/modules/equipment/services/equipment-approval.service.ts:442`
 - **설명**: `db.transaction(async (tx) => { ... await equipmentService.create(...) })` 패턴에서 `equipmentService.create()`는 `this.db`(별도 커넥션)를 사용. tx 롤백 시 `create()` 내 변경사항은 이미 커밋됨 → 요청 상태는 PENDING으로 복원되지만 장비 레코드는 DB에 남아 관리번호 중복 에러 발생. 서비스 메서드에 `externalTx?: AppDatabase` 파라미터를 추가하여 외부 tx 컨텍스트 전달.
 - **체크리스트 반영**: ✅ 승격 완료 — review-checklist.md 섹션 2 "트랜잭션 경계" (2회 이상: equipment-imports + equipment-approval)
+- **재발 [2026-03-31]**: `createLocationHistoryInternal()`에서 `tx` 파라미터가 커밋 #52에서 제거됨 → 트랜잭션 내 3곳(equipment.service.ts:683, :1135 / data-migration.service.ts:201)에서 `this.db`로 위치 이력 INSERT → All-or-Nothing 의도 무효화. `tx?: AppDatabase` 파라미터 복원 후 `executor = tx ?? this.db` 패턴으로 수정.
 
 ### [2026-03-30] 트랜잭션 내 외부 커넥션 쿼리
 - **발견 빈도**: 1회 (equipment-imports.service.ts: receive → generateUniqueTemporaryNumber)
 - **설명**: 트랜잭션 내부에서 `this.db`(별도 커넥션)로 DB를 조회하면, 트랜잭션 외부에서 동일 값을 선택한 뒤 두 tx가 모두 진행하여 UNIQUE 제약 위반 발생. tx 파라미터를 유틸리티 함수에 전달하거나 생성 로직을 tx 외부로 이동해야 함.
 - **체크리스트 반영**: ⏳ 관찰 중 (1회)
+
+### [2026-03-31] `@Query()` 파라미터 string→number 미변환 — CAS 항상 실패
+- **발견 위치**: `apps/backend/src/modules/equipment/equipment.controller.ts:370`
+- **설명**: NestJS `@Query('version') version: number | undefined`는 TypeScript 타입 선언이지만 런타임에서는 쿼리 파라미터가 항상 **string**으로 전달됨. 타입 변환 없이 `equipmentService.remove(uuid, version)`을 호출하면 Drizzle ORM의 `eq(equipment.version, "3")`에서 타입 불일치로 WHERE 절이 매칭되지 않아 CAS가 항상 실패(409 VERSION_CONFLICT). `@Query('version') versionStr: string | undefined` + `parseInt(versionStr, 10)` 변환 패턴으로 수정. **참조**: `equipment-history.controller.ts:145-153`에 올바른 패턴 존재.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 2 "CAS 계층 일관성" 또는 섹션 4에 승격
 
 ---
 
@@ -273,3 +279,6 @@
 | 2026-03-31 | 수정 완료 | PreviewStep execute onError 에러 코드 문자열 파싱 → mapBackendErrorCode + ApiError 패턴 교체 | PreviewStep.tsx |
 | 2026-03-31 | 수정 완료 | page.tsx 서버 사이드 system_admin 역할 체크 + redirect('/dashboard') 추가 | data-migration/page.tsx |
 | 2026-03-31 | 수정 완료 | assignManagementNumbers classificationCode WHERE 조건 추가 — 분류별 독립 serial 보장 | migration-validator.service.ts |
+| 2026-03-31 | **예외 추가** | Next.js 16.1.6 proxy 컨벤션 — `middleware.ts`→`proxy.ts`, `middleware`→`proxy` 함수명 변경은 의도적 설계. `config` 직접 정의 필수(re-export 불가). 이를 이슈로 보고하지 않음 | SKILL.md Exceptions #6 |
+| 2026-03-31 | 재발 확인 | `createLocationHistoryInternal` tx 파라미터 제거 → 트랜잭션 원자성 파괴 (3곳) — `tx?` 파라미터 복원으로 수정 | equipment-history.service.ts + 3 callers |
+| 2026-03-31 | 안티패턴 | `@Query()` 파라미터 string→number 미변환 — CAS 항상 실패 (`remove()` version 쿼리 파라미터) | equipment.controller.ts |
