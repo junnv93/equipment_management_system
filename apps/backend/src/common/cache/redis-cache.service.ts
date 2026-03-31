@@ -61,17 +61,31 @@ export class RedisCacheService implements ICacheService, OnModuleDestroy {
   }
 
   async deleteByPattern(pattern: string): Promise<void> {
-    // KEYS는 O(N) 블로킹 — SCAN cursor iteration으로 비블로킹 처리
+    const count = await this.scanAndDelete(`*${pattern}*`);
+    this.logger.debug(`Deleted ${count} cache entries matching pattern: ${pattern}`);
+  }
+
+  async deleteByPrefix(prefix: string): Promise<void> {
+    // Redis glob 특수문자(?, *, [, ]) 이스케이프 — 정규식 메타문자와 다름
+    const escaped = prefix.replace(/[?*[\]]/g, '\\$&');
+    const count = await this.scanAndDelete(`${escaped}*`);
+    this.logger.debug(`Deleted ${count} cache entries with prefix: ${prefix}`);
+  }
+
+  /**
+   * Redis SCAN cursor iteration으로 glob에 매칭되는 키를 모두 찾아 삭제합니다.
+   *
+   * KEYS 커맨드는 O(N) 블로킹이므로 SCAN으로 비블로킹 처리합니다.
+   * deleteByPattern / deleteByPrefix 양쪽의 공통 구현입니다.
+   *
+   * @param redisGlob Redis glob 패턴 (예: `*foo*`, `foo:*`)
+   * @returns 삭제된 키 수
+   */
+  private async scanAndDelete(redisGlob: string): Promise<number> {
     const keys: string[] = [];
     let cursor = '0';
     do {
-      const [nextCursor, found] = await this.client.scan(
-        cursor,
-        'MATCH',
-        `*${pattern}*`,
-        'COUNT',
-        100
-      );
+      const [nextCursor, found] = await this.client.scan(cursor, 'MATCH', redisGlob, 'COUNT', 100);
       cursor = nextCursor;
       keys.push(...found);
     } while (cursor !== '0');
@@ -79,12 +93,7 @@ export class RedisCacheService implements ICacheService, OnModuleDestroy {
     if (keys.length > 0) {
       await this.client.del(...keys);
     }
-    this.logger.debug(`Deleted ${keys.length} cache entries matching pattern: ${pattern}`);
-  }
-
-  async deleteByPrefix(prefix: string): Promise<void> {
-    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return this.deleteByPattern(`^${escaped}`);
+    return keys.length;
   }
 
   async getOrSet<T>(

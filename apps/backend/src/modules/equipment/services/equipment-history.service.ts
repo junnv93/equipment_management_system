@@ -24,7 +24,11 @@ import {
   NonConformanceTypeEnum,
   DEFAULT_LOCALE,
 } from '@equipment-management/schemas';
-import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  UUID_TEST_REGEX,
+} from '@equipment-management/shared-constants';
 import {
   CreateLocationHistoryDto,
   CreateMaintenanceHistoryDto,
@@ -799,8 +803,7 @@ export class EquipmentHistoryService {
    */
   async deleteIncidentHistory(historyId: string): Promise<void> {
     // UUID 형식 검증
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(historyId)) {
+    if (!UUID_TEST_REGEX.test(historyId)) {
       throw new BadRequestException(`Invalid history ID format: ${historyId}`);
     }
 
