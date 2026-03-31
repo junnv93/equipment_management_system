@@ -218,6 +218,9 @@ export const QUERY_CONFIG = {
     refetchOnWindowFocus: false,
     retry: 2,
   },
+
+  /** 승인 카운트 - CRITICAL (SSE approval-changed 이벤트로 실시간 무효화) */
+  APPROVAL_COUNTS: REFETCH_STRATEGIES.CRITICAL,
 } as const;
 
 /**

@@ -120,7 +120,7 @@ export {
 } from './pagination';
 
 // 검증 규칙 (Backend DTO + Frontend Form 공유)
-export { VALIDATION_RULES } from './validation-rules';
+export { VALIDATION_RULES, UUID_TEST_REGEX, UUID_PATTERN_SOURCE } from './validation-rules';
 
 // 승인 KPI 상수 (긴급 임계값 등)
 export { APPROVAL_KPI } from './approval-kpi';

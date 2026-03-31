@@ -32,3 +32,29 @@ export const VALIDATION_RULES = {
   /** 관리번호 최대 길이 */
   MANAGEMENT_NUMBER_MAX_LENGTH: 50,
 } as const;
+
+// ============================================================================
+// UUID 정규식 패턴 (SSOT)
+// ============================================================================
+
+/**
+ * UUID v4 형식 검증용 정규식 (anchored, 단일 문자열이 UUID인지 테스트)
+ *
+ * @example
+ * import { UUID_TEST_REGEX } from '@equipment-management/shared-constants';
+ * if (UUID_TEST_REGEX.test(actorId)) { ... }  // notification-dispatcher 등
+ */
+export const UUID_TEST_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * UUID v4 패턴 소스 문자열 (flag 없는 raw source)
+ *
+ * 용도별로 적절한 flags를 붙여 new RegExp()로 인스턴스화하세요.
+ *
+ * @example
+ * import { UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
+ * // 경로 정규화 (gi flags): 문자열 내 모든 UUID를 :id로 치환
+ * const UUID_PATH_PATTERN = new RegExp(UUID_PATTERN_SOURCE, 'gi');
+ * path.replace(UUID_PATH_PATTERN, ':id');
+ */
+export const UUID_PATTERN_SOURCE = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
