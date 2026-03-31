@@ -257,7 +257,7 @@ jobs:
 
       - name: Deploy to staging server
         if: ${{ secrets.STAGING_DEPLOY_HOST != '' }}
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.STAGING_DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -322,7 +322,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=frontend
 
       - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
