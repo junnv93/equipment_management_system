@@ -1,4 +1,5 @@
 /**
+<<<<<<<< HEAD:apps/frontend/proxy.ts
  * Next.js Proxy — 인증 가드 + 로케일 쿠키 동기화 (SSOT)
  *
  * cacheComponents: true 아키텍처에서 레이아웃의 await를 제거하기 위한 핵심 인프라.
@@ -104,3 +105,11 @@ export const config = {
     '/((?!login|api|_next/static|_next/image|images|favicon.ico).*)',
   ],
 };
+========
+ * Next.js Edge Runtime 진입점 — 반드시 이 파일명이어야 합니다.
+ *
+ * 구현은 proxy.ts에서 관리합니다. Next.js가 `middleware.ts`(또는 `middleware.js`)만
+ * 미들웨어로 인식하므로, 이 파일은 진입점 역할만 수행합니다.
+ */
+export { proxy as middleware, config } from './proxy';
+>>>>>>>> origin/main:apps/frontend/middleware.ts
