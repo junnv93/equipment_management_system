@@ -232,7 +232,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException();
+          throw createVersionConflictException(request.version + 1, request.version);
         }
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
@@ -257,7 +257,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException();
+          throw createVersionConflictException(request.version + 1, request.version);
         }
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -366,7 +366,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException();
+          throw createVersionConflictException(request.version + 1, request.version);
         }
 
         // 장비 상태를 'disposed'로 변경 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -401,7 +401,7 @@ export class DisposalService extends VersionedBaseService {
 
         if (!updated) {
           this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException();
+          throw createVersionConflictException(request.version + 1, request.version);
         }
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
@@ -527,7 +527,7 @@ export class DisposalService extends VersionedBaseService {
 
       if (deleted.length === 0) {
         this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-        throw createVersionConflictException();
+        throw createVersionConflictException(request.version + 1, request.version);
       }
 
       // 장비 상태 원복 (CAS: version 조건으로 동시 수정 방지)
@@ -543,7 +543,10 @@ export class DisposalService extends VersionedBaseService {
 
       if (!updatedEquipment) {
         this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-        throw createVersionConflictException();
+        throw createVersionConflictException(
+          currentEquipment.version + 1,
+          currentEquipment.version
+        );
       }
     });
 

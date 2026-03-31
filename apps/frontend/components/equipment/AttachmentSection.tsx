@@ -6,7 +6,6 @@ import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, FileCheck, Camera, BookOpen } from 'lucide-react';
 import { DocumentTypeValues } from '@equipment-management/schemas';
-import { DOCUMENT_FILE_RULES, API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { FORM_SECTION_TOKENS, FOCUS_TOKENS, DOCUMENT_UPLOAD } from '@/lib/design-tokens';
 
 interface AttachmentSectionProps {
@@ -82,7 +81,7 @@ export function AttachmentSection({
               <FileUpload
                 files={photoFiles}
                 onChange={onPhotoChange}
-                accept={DOCUMENT_FILE_RULES.equipment_photo.accept}
+                accept="image/jpeg,image/png,image/gif"
                 label={t('photoTitle')}
                 description={t('photoDescription')}
                 disabled={isLoading}
@@ -99,7 +98,7 @@ export function AttachmentSection({
               <FileUpload
                 files={manualFiles}
                 onChange={onManualChange}
-                accept={DOCUMENT_FILE_RULES.equipment_manual.accept}
+                accept="application/pdf"
                 label={t('manualTitle')}
                 description={t('manualDescription')}
                 disabled={isLoading}
@@ -116,7 +115,6 @@ export function AttachmentSection({
               <FileUpload
                 files={files}
                 onChange={onChange}
-                accept={DOCUMENT_FILE_RULES[attachmentType]?.accept}
                 attachmentType={attachmentType}
                 label={attachmentLabel}
                 description={attachmentDescription}
@@ -151,7 +149,7 @@ export function AttachmentSection({
                     </div>
                   </div>
                   <a
-                    href={`${API_ENDPOINTS.EQUIPMENT.ATTACHMENTS}/${attachment.uuid}`}
+                    href={`/api/equipment/attachments/${attachment.uuid}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`text-sm text-primary hover:underline ${FOCUS_TOKENS.classes.default}`}

@@ -19,7 +19,6 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import { FormDataParserInterceptor } from './interceptors/form-data-parser.interceptor';
 import { AuthenticatedRequest, MulterFile } from '../../types/common.types';
 import {
@@ -32,13 +31,16 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { EquipmentService, type EquipmentListResponse } from './equipment.service';
-import type { PaginationMeta } from '../../common/types/api-response';
 import { EquipmentApprovalService } from './services/equipment-approval.service';
 import { EquipmentAttachmentService } from './services/equipment-attachment.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { UpdateStatusDto, UpdateStatusValidationPipe } from './dto/update-status.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
+import {
+  CreateSharedEquipmentDto,
+  CreateSharedEquipmentValidationPipe,
+} from './dto/create-shared-equipment.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { InternalServiceOnly } from '../../common/decorators/internal-service-only.decorator';
@@ -48,7 +50,12 @@ import {
   resolveDataScope,
 } from '@equipment-management/shared-constants';
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
-import { UserRoleValues, SiteEnum, AttachmentTypeEnum } from '@equipment-management/schemas';
+import {
+  UserRoleValues,
+  SharedSourceEnum,
+  SiteEnum,
+  AttachmentTypeEnum,
+} from '@equipment-management/schemas';
 import {
   type UserRole,
   type DocumentType,
@@ -65,6 +72,7 @@ import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.d
 import { ApproveRequestBodyPipe, type ApproveRequestBodyDto } from './dto/approve-request-body.dto';
 import type {
   EquipmentCreateOrRequestResult,
+  SharedEquipmentCreateResult,
   EquipmentDetailResult,
   EquipmentRequestDetailResult,
 } from './equipment.controller.types';
@@ -116,7 +124,7 @@ export class EquipmentController {
     entityNamePath: 'body.name',
   })
   @UseInterceptors(
-    FilesInterceptor('files', 10, MULTER_UTF8_OPTIONS), // 최대 10개 파일
+    FilesInterceptor('files', 10), // 최대 10개 파일
     FormDataParserInterceptor // FormData JSON 파싱
   )
   @UsePipes(CreateEquipmentValidationPipe)
@@ -179,6 +187,65 @@ export class EquipmentController {
       message: '장비 등록 요청이 생성되었습니다.',
       requestUuid: request.id,
       request,
+    };
+  }
+
+  @Post('shared')
+  @ApiOperation({
+    summary: '공용장비 등록',
+    description:
+      '공용장비(Safety Lab 등)를 등록합니다. 최소 필수 정보만 요구하며, 교정성적서 파일 첨부를 지원합니다.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['name', 'managementNumber', 'sharedSource', 'site'],
+      properties: {
+        name: { type: 'string', description: '장비명' },
+        managementNumber: { type: 'string', description: '관리번호' },
+        sharedSource: {
+          type: 'string',
+          enum: SharedSourceEnum.options,
+          description: '공용장비 출처',
+        },
+        site: { type: 'string', enum: SiteEnum.options, description: '사이트' },
+        modelName: { type: 'string' },
+        manufacturer: { type: 'string' },
+        location: { type: 'string' },
+        calibrationCycle: { type: 'number' },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: '교정성적서 파일',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '공용장비가 등록되었습니다.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @AuditLog({ action: 'create', entityType: 'equipment', entityIdPath: 'response.equipment.id' })
+  @UseInterceptors(FilesInterceptor('files', 10), FormDataParserInterceptor)
+  @UsePipes(CreateSharedEquipmentValidationPipe)
+  async createShared(
+    @Body() createSharedEquipmentDto: CreateSharedEquipmentDto,
+    @UploadedFiles() files: MulterFile[] | undefined,
+    @Req() req: AuthenticatedRequest
+  ): Promise<SharedEquipmentCreateResult> {
+    // 파일 업로드 처리 (교정성적서)
+    if (files && files.length > 0) {
+      const attachmentType = 'inspection_report'; // 교정성적서
+      await this.attachmentService.createAttachments(files, attachmentType);
+    }
+
+    const userId = req.user?.userId;
+    const newEquipment = await this.equipmentService.createShared(createSharedEquipmentDto, userId);
+    return {
+      message: '공용장비가 등록되었습니다.',
+      equipment: newEquipment,
     };
   }
 
@@ -300,7 +367,7 @@ export class EquipmentController {
     trackPreviousValue: true,
   })
   @UseInterceptors(
-    FilesInterceptor('files', 10, MULTER_UTF8_OPTIONS),
+    FilesInterceptor('files', 10),
     FormDataParserInterceptor // FormData JSON 파싱
   )
   @UsePipes(UpdateEquipmentValidationPipe)
@@ -366,7 +433,6 @@ export class EquipmentController {
   })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Query('version') versionStr: string | undefined,
     @Req() req: AuthenticatedRequest
   ): Promise<{ message: string; requestUuid?: string }> {
     // 공용장비 삭제 차단
@@ -383,13 +449,9 @@ export class EquipmentController {
     const userId = req.user?.userId ?? '';
     const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
-    // CAS: 프론트엔드에서 전달한 version 사용 (동시 수정 방지)
-    const version = versionStr ? parseInt(versionStr, 10) : undefined;
-    const safeVersion = version !== undefined && !isNaN(version) ? version : undefined;
-
     // 시스템 관리자는 직접 삭제 가능
     if (isAdmin) {
-      await this.equipmentService.remove(uuid, safeVersion ?? existingEquipment.version);
+      await this.equipmentService.remove(uuid);
       return { message: '장비가 삭제되었습니다.' };
     }
 
@@ -442,9 +504,14 @@ export class EquipmentController {
     @Req() req: AuthenticatedRequest,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string
-  ): Promise<{ items: Equipment[]; meta: PaginationMeta }> {
-    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 사이트 스코프 결정 → DB 레벨 필터
-    let site: string | undefined;
+  ): Promise<unknown> {
+    const result = await this.equipmentService.findByTeam(
+      teamId,
+      page ? Number(page) : undefined,
+      pageSize ? Number(pageSize) : undefined
+    );
+
+    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
     const userRole = req.user?.roles?.[0] as UserRole | undefined;
     if (userRole) {
       const scope = resolveDataScope(
@@ -452,16 +519,19 @@ export class EquipmentController {
         EQUIPMENT_DATA_SCOPE
       );
       if (scope.type === 'site' && scope.site) {
-        site = scope.site;
+        const filteredItems = result.items.filter((e) => e.site === scope.site);
+        return {
+          items: filteredItems,
+          meta: {
+            ...result.meta,
+            totalItems: filteredItems.length,
+            itemCount: filteredItems.length,
+          },
+        };
       }
     }
 
-    return this.equipmentService.findByTeam(
-      teamId,
-      page ? Number(page) : undefined,
-      pageSize ? Number(pageSize) : undefined,
-      site
-    );
+    return result;
   }
 
   @Get('calibration/due')
@@ -477,20 +547,21 @@ export class EquipmentController {
     @Query('days') days: number = 30,
     @Req() req: AuthenticatedRequest
   ): Promise<Equipment[]> {
-    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 사이트 필터 → DB WHERE로 전달
+    const equipmentList = await this.equipmentService.findCalibrationDue(days);
+
+    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
     const userRole = req.user?.roles?.[0] as UserRole | undefined;
-    let siteFilter: string | undefined;
     if (userRole) {
       const scope = resolveDataScope(
         { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
         EQUIPMENT_DATA_SCOPE
       );
       if (scope.type === 'site' && scope.site) {
-        siteFilter = scope.site;
+        return equipmentList.filter((e) => e.site === scope.site);
       }
     }
 
-    return this.equipmentService.findCalibrationDue(days, siteFilter);
+    return equipmentList;
   }
 
   // ========== 승인 프로세스 엔드포인트 ==========
@@ -610,10 +681,10 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @RequirePermissions(Permission.CREATE_EQUIPMENT)
   @AuditLog({ action: 'upload', entityType: 'equipment' })
-  @UseInterceptors(FileInterceptor('file', MULTER_UTF8_OPTIONS))
+  @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile() file: MulterFile,
-    @Body('attachmentType') attachmentType: DocumentType,
+    @Body('attachmentType') attachmentType: 'inspection_report' | 'history_card' | 'other',
     @Req() req: AuthenticatedRequest,
     @Body('equipmentId') equipmentId?: string,
     @Body('requestId') requestId?: string,
@@ -626,7 +697,7 @@ export class EquipmentController {
       originalFileName: string;
       fileSize: number;
       mimeType: string;
-      attachmentType: DocumentType;
+      attachmentType: 'inspection_report' | 'history_card' | 'other';
     };
   }> {
     if (!file) {
@@ -661,7 +732,7 @@ export class EquipmentController {
         originalFileName: document.originalFileName,
         fileSize: Number(document.fileSize),
         mimeType: document.mimeType,
-        attachmentType: document.documentType as DocumentType,
+        attachmentType: document.documentType as 'inspection_report' | 'history_card' | 'other',
       },
     };
   }
@@ -679,7 +750,6 @@ export class EquipmentController {
   @Post('cache/invalidate')
   @HttpCode(HttpStatus.OK)
   @InternalServiceOnly()
-  @AuditLog({ action: 'update', entityType: 'equipment' })
   @ApiOperation({
     summary: '장비 캐시 무효화 (E2E 테스트 / 내부 서비스용)',
     description:

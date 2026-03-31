@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { EquipmentForm, type PendingHistoryData } from '@/components/equipment/EquipmentForm';
 import { useCreateEquipment } from '@/hooks/use-equipment';
 import { CreateEquipmentInput, UpdateEquipmentInput } from '@equipment-management/schemas';
+import { Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/api/query-config';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { isApprovalResponse } from '@/lib/api/equipment-api';
 import { ErrorAlert, PartialSuccessAlert } from '@/components/shared/ErrorAlert';
@@ -89,7 +91,6 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
           title: t('form.create.approvalRequestComplete'),
           description: t('form.create.approvalRequestDescription'),
         });
-        await queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
         router.push('/equipment');
       } else {
         const equipmentUuid = String(result.id);
@@ -148,7 +149,6 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
               title: t('form.create.registrationComplete'),
               description: t('form.create.registrationWithHistory', { count: totalHistory }),
             });
-            await queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
             router.push('/equipment');
           }
         } else {
@@ -156,7 +156,6 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
             title: t('form.create.registrationComplete'),
             description: t('form.create.registrationDescription'),
           });
-          await queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
           router.push('/equipment');
         }
       }
@@ -193,7 +192,14 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
         title={t('form.create.pageTitle')}
         subtitle={t('form.create.pageDescription')}
         onBack={handleCancel}
-        actions={undefined}
+        actions={
+          <Link href="/equipment/create-shared">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Info className="h-4 w-4" />
+              {t('form.create.sharedLink')}
+            </Button>
+          </Link>
+        }
       />
 
       {/* 에러 알림 */}

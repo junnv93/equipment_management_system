@@ -9,7 +9,7 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
 import path from 'path';
-import type { Page } from '../../../shared/fixtures/auth.fixture';
+import type { Page } from '@playwright/test';
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 const EQUIPMENT_ID = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;
@@ -68,7 +68,7 @@ test.describe('장비 수정 — 문서 추가 업로드', () => {
     await navigateToStep2(page);
 
     // 사진 업로드 영역에 파일 첨부
-    const photoInput = page.locator('input[type="file"][accept=".jpg,.jpeg,.png,.gif"]');
+    const photoInput = page.locator('input[type="file"][accept*="image/jpeg"]');
     await photoInput.setInputFiles(path.join(FIXTURES_DIR, 'test-photo.png'));
 
     // 업로드된 파일명 표시 확인
@@ -79,7 +79,7 @@ test.describe('장비 수정 — 문서 추가 업로드', () => {
     await navigateToStep2(page);
 
     // 매뉴얼 업로드
-    const manualInput = page.locator('input[type="file"][accept=".pdf"]');
+    const manualInput = page.locator('input[type="file"][accept="application/pdf"]');
     await manualInput.setInputFiles(path.join(FIXTURES_DIR, 'test-manual.pdf'));
 
     // 업로드된 파일명 표시 확인

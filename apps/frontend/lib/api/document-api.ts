@@ -156,29 +156,6 @@ export const documentApi = {
   },
 
   /**
-   * 문서 미리보기 URL 반환 (이미지/PDF 인라인 표시용)
-   *
-   * - S3: presigned URL 반환
-   * - Local: Blob URL 반환 (호출자가 revokeObjectURL 책임)
-   */
-  getPreviewUrl: async (documentId: string): Promise<{ url: string; isBlob: boolean }> => {
-    const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId), {
-      responseType: 'arraybuffer',
-    });
-
-    const contentType = (response.headers['content-type'] as string) ?? '';
-
-    if (contentType.includes('application/json')) {
-      const text = new TextDecoder().decode(response.data as ArrayBuffer);
-      const { presignedUrl } = JSON.parse(text);
-      return { url: presignedUrl, isBlob: false };
-    }
-
-    const blob = new Blob([response.data as ArrayBuffer], { type: contentType });
-    return { url: window.URL.createObjectURL(blob), isBlob: true };
-  },
-
-  /**
    * 개정판 업로드
    */
   createRevision: async (

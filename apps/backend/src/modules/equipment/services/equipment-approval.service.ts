@@ -439,11 +439,7 @@ export class EquipmentApprovalService {
         // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
         if (request.requestType === 'create') {
           const requestData = deserializeRequestData('create', request.requestData);
-          const newEquipment = await this.equipmentService.create(
-            requestData,
-            request.requestedBy,
-            tx
-          );
+          const newEquipment = await this.equipmentService.create(requestData, request.requestedBy);
           // 요청에 연결된 문서(사진/매뉴얼)를 신규 장비로 소유 이전
           await this.documentService.transferDocumentsToEquipment(requestUuid, newEquipment.id);
         } else if (request.requestType === 'update') {
@@ -492,11 +488,7 @@ export class EquipmentApprovalService {
         timestamp: new Date(),
       });
 
-      // 승인 캐시 무효화 + create 요청 시 equipment 캐시도 무효화 (externalTx 외부 커밋 후)
       this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
-      if (request.requestType === 'create') {
-        this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}*`);
-      }
       this.logger.log(`Request approved: ${requestUuid}`);
       return updated;
     } catch (error) {

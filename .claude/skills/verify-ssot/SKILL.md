@@ -1,6 +1,6 @@
 ---
 name: verify-ssot
-description: Verifies SSOT (Single Source of Truth) import sources — types/enums from @equipment-management/schemas, permissions/endpoints from @equipment-management/shared-constants, no local redefinitions, lucide-react icon library unification. Run after adding/modifying types or enums.
+description: SSOT(Single Source of Truth) 임포트 소스를 검증합니다. 타입/enum/상수가 올바른 패키지에서 임포트되는지 확인. 타입/enum 추가/수정 후 사용.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 패키지명]'
 ---
@@ -36,8 +36,6 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/shared-constants/` | `permissions.ts`, `api-endpoints.ts`, `data-scope.ts`, `auth-token.ts`, `approval-categories.ts`, `business-rules.ts`, `security.ts`, `entity-routes.ts` | Permission, API 경로, 스코프 정책, 비즈니스 규칙, 엔티티 라우트 |
 | `packages/db/` | `schema/audit-logs.ts`, `index.ts` | DB enum 배열, AppDatabase 타입 |
 | `packages/shared-constants/` | `test-users.ts` | Test User Constants SSOT (TEST_USERS_BY_TEAM, DEFAULT_ROLE_EMAILS, ALL_TEST_EMAILS) |
-| `packages/shared-constants/` | `file-types.ts` | FILE_TYPES, ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, MIME_TO_MAGIC_BYTES, DOCUMENT_FILE_RULES, FILE_UPLOAD_LIMITS |
-| `apps/frontend/lib/utils/` | `file-validation.ts` | validateFile() 유틸리티 (FILE_TYPES 파생 상수 사용) |
 
 ## Workflow
 
@@ -289,29 +287,6 @@ grep -rn "'calibration_certificate'\|'raw_data'\|'inspection_report'\|'history_c
 
 **FAIL 기준:** 문자열 리터럴로 document type 사용 → `DocumentTypeValues.CALIBRATION_CERTIFICATE` 등으로 교체 필요.
 
-### Step 14: FILE_TYPES SSOT 임포트 확인
-
-파일 타입 관련 상수(MIME 타입, 확장자, 업로드 제한)가 `@equipment-management/shared-constants`의 `file-types.ts`에서 임포트되는지 확인합니다.
-
-```bash
-# MIME 타입 문자열 하드코딩 탐지 (file-types.ts 외부에서 직접 사용)
-grep -rn "'application/pdf'\|'image/jpeg'\|'image/png'\|'image/gif'\|'application/msword'" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|file-validation\.ts\|node_modules\|// \|test\|\.spec\.\|\.test\.\|seed-data\|report-export"
-```
-
-```bash
-# accept 속성에 확장자 하드코딩 탐지 (DOCUMENT_FILE_RULES/ALLOWED_EXTENSIONS 미사용)
-grep -rn "accept=['\"].*\.pdf\|accept=['\"].*\.png\|accept=['\"].*\.jpg" apps/frontend --include="*.tsx" | grep -v "DOCUMENT_FILE_RULES\|ALLOWED_EXTENSIONS\|file-types\.ts\|node_modules"
-```
-
-```bash
-# FILE_UPLOAD_LIMITS 미사용 (파일 크기/개수 매직 넘버)
-grep -rn "10 \* 1024 \* 1024\|10485760" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "file-types\.ts\|file-validation\.ts\|FILE_UPLOAD_LIMITS\|node_modules\|// "
-```
-
-**PASS 기준:** 0개 결과 (모든 파일 타입 상수가 SSOT에서 임포트됨).
-
-**FAIL 기준:** 하드코딩된 MIME 타입, 확장자, 파일 크기 → `ALLOWED_MIME_TYPES`, `DOCUMENT_FILE_RULES`, `FILE_UPLOAD_LIMITS` 등으로 교체 필요.
-
 ## Output Format
 
 ```markdown
@@ -335,7 +310,6 @@ grep -rn "10 \* 1024 \* 1024\|10485760" apps/backend/src apps/frontend --include
 | 11  | VM 임포트 소스                | PASS/FAIL | 잘못된 VM import 위치                  |
 | 12  | Test User Constants SSOT      | PASS/FAIL | 로컬 재정의 위치                       |
 | 13  | DocumentTypeValues SSOT       | PASS/FAIL | 문자열 하드코딩 위치                   |
-| 14  | FILE_TYPES SSOT               | PASS/FAIL | MIME/확장자/크기 하드코딩 위치          |
 ```
 
 ## Exceptions

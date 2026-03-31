@@ -6,12 +6,16 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { AUTH_ERROR_CODE } from '@equipment-management/shared-constants';
 import { Loader2, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { AUTH_MOTION_TOKENS, MOTION_PRIMITIVES, TRANSITION_PRESETS } from '@/lib/design-tokens';
+import {
+  AUTH_MOTION_TOKENS,
+  MOTION_PRIMITIVES,
+  TRANSITION_PRESETS,
+  getSemanticStatusClasses,
+} from '@/lib/design-tokens';
 
 function createLoginSchema(t: (key: string) => string) {
   return z.object({
@@ -77,11 +81,9 @@ export function LoginForm({
         });
 
         if (result?.error) {
-          const isServerDown = result.code === AUTH_ERROR_CODE.SERVER_UNAVAILABLE;
-          const errorMessage = isServerDown ? t('serverUnavailable') : t('authFailed');
-          setError(errorMessage);
+          setError(t('authFailed'));
           triggerShake();
-          onError?.(errorMessage);
+          onError?.(t('authFailed'));
         } else if (result?.ok) {
           setIsSuccess(true);
           onSuccess?.();
@@ -113,7 +115,7 @@ export function LoginForm({
     <form
       onSubmit={handleSubmit(onSubmit)}
       className={cn(
-        'space-y-4',
+        'space-y-5',
         TRANSITION_PRESETS.moderateTransform,
         shakeError && 'animate-shake'
       )}
@@ -121,20 +123,20 @@ export function LoginForm({
       data-testid="login-form"
       noValidate
     >
-      {/* System Error Message — 좌측보더 스타일 (AP-05: badge 외 다른 표현) */}
+      {/* System Error Message — 카드 상단 빨간 알림 바 */}
       {error && (
         <div
           className={cn(
-            'flex items-center gap-2.5 py-3 px-4 rounded-lg',
-            'bg-brand-critical/[0.06] border-l-[3px] border-brand-critical',
+            'flex items-center gap-2.5 p-3 rounded-lg',
+            getSemanticStatusClasses('critical'),
             'motion-safe:animate-slide-down motion-reduce:animate-none'
           )}
           role="alert"
           aria-live="polite"
           data-testid="login-error"
         >
-          <AlertCircle className="flex-shrink-0 w-4 h-4 text-brand-critical" aria-hidden="true" />
-          <span className="text-sm font-medium text-brand-critical">{error}</span>
+          <AlertCircle className="flex-shrink-0 w-4 h-4" aria-hidden="true" />
+          <span className="text-sm font-medium">{error}</span>
         </div>
       )}
 
@@ -222,8 +224,8 @@ export function LoginForm({
         )}
       </div>
 
-      {/* Login Button — spacious gap from inputs (AP-02 간격 차등) */}
-      <div className="pt-2">
+      {/* Login Button — --color-info 배경 */}
+      <div className="pt-1">
         <Button
           type="submit"
           className={cn(
