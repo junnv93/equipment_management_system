@@ -101,7 +101,7 @@ export function FileUpload({
       const error = validateFileUtil(file, { accept, maxSize });
       if (!error) return null;
       if (error.type === 'size') {
-        return t('sizeTooLarge', { maxSizeMB: error.maxSizeMB });
+        return t('sizeTooLarge', { maxSizeMB: error.maxSizeMB ?? 0 });
       }
       return t('unsupportedType', { accept });
     },

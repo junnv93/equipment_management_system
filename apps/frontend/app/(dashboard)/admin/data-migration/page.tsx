@@ -16,7 +16,7 @@ export default async function DataMigrationPage() {
     redirect('/dashboard');
   }
 
-  const t = await getTranslations('dataMigration');
+  const t = await getTranslations('data-migration');
 
   return (
     <div className="space-y-6">

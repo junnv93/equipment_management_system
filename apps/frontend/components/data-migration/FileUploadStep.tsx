@@ -26,7 +26,7 @@ interface FileUploadStepProps {
 }
 
 export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProps) {
-  const t = useTranslations('dataMigration');
+  const t = useTranslations('data-migration');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
