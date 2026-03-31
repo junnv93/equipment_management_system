@@ -83,7 +83,7 @@ export class HistoryValidatorService {
       return {
         rowNumber: row.rowNumber,
         status,
-        data: row.mappedData,
+        data: parsed.success ? (parsed.data as Record<string, unknown>) : row.mappedData,
         errors,
         warnings,
         managementNumber: mgmtNum,

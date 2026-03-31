@@ -119,7 +119,8 @@ export class ExcelParserService {
     const results: ParsedSheet[] = [];
 
     workbook.eachSheet((sheet) => {
-      const sheetType = detectSheetType(sheet.name) ?? 'equipment';
+      const sheetType = detectSheetType(sheet.name);
+      if (sheetType === null) return; // 인식 불가 시트 스킵 (참고값, 설명 시트 등)
       const aliasIndex = this.getAliasIndexForType(sheetType);
 
       if (sheet.rowCount < 2) return; // 빈 시트 스킵

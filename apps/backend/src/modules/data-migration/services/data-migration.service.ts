@@ -274,9 +274,8 @@ export class DataMigrationService {
       });
     }
     // 비-시스템관리자: defaultSite 미지정 시 자신의 사이트로 자동 적용 (엑셀 미지정 행 보호)
-    if (!isSystemAdmin && userSite && !dto.defaultSite) {
-      dto.defaultSite = userSite as Site;
-    }
+    const effectiveSite: Site | undefined =
+      !isSystemAdmin && userSite && !dto.defaultSite ? (userSite as Site) : dto.defaultSite;
 
     const savedFile = await this.fileUploadService.saveFile(file, 'data-migration');
 
@@ -290,7 +289,7 @@ export class DataMigrationService {
       if (parsedSheet.sheetType === 'equipment') {
         const rowPreviews = await this.migrationValidatorService.validateBatch(parsedSheet.rows, {
           autoGenerateManagementNumber: dto.autoGenerateManagementNumber ?? false,
-          defaultSite: dto.defaultSite,
+          defaultSite: effectiveSite,
           skipDuplicates: dto.skipDuplicates ?? true,
         });
 
@@ -680,6 +679,14 @@ export class DataMigrationService {
     if (sheetSummaries.some((s) => s.sheetType === 'calibration' && s.createdCount > 0)) {
       this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}list:`);
       this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:`);
+    }
+    // 수리/사고 이력이 등록된 경우 장비 detail 캐시 무효화 (이력 탭 stale 방지)
+    if (
+      sheetSummaries.some(
+        (s) => (s.sheetType === 'repair' || s.sheetType === 'incident') && s.createdCount > 0
+      )
+    ) {
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.EQUIPMENT}detail:`);
     }
 
     // 세션 캐시 삭제
