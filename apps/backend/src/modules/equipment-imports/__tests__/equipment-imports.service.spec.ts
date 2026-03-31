@@ -136,6 +136,8 @@ describe('EquipmentImportsService', () => {
             invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
             invalidateAfterCheckoutStatusChange: jest.fn().mockResolvedValue(undefined),
             invalidateAllDashboard: jest.fn().mockResolvedValue(undefined),
+            invalidateAllEquipmentImports: jest.fn(),
+            invalidateEquipmentImportsWithEquipment: jest.fn(),
           },
         },
         {

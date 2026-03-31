@@ -140,7 +140,7 @@ describe('EquipmentService', () => {
       expect(result.name).toBe(createDto.name);
       expect(result.managementNumber).toBe(createDto.managementNumber);
       expect(mockDb.query.equipment.findFirst).toHaveBeenCalled();
-      expect(mockCacheService.deleteByPrefix).toHaveBeenCalled();
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when management number already exists', async () => {
