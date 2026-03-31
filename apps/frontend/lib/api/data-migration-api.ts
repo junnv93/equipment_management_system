@@ -10,8 +10,8 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type {
-  MigrationPreviewResult,
-  MigrationExecuteResult,
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
   Site,
 } from '@equipment-management/schemas';
 
@@ -20,6 +20,11 @@ export type {
   MigrationRowStatus,
   RowFieldError,
   MigrationRowPreview,
+  MigrationSheetType,
+  SheetPreviewResult,
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
+  // 하위 호환 유지
   MigrationPreviewResult,
   MigrationExecuteResult,
 } from '@equipment-management/schemas';
@@ -47,7 +52,7 @@ export const dataMigrationApi = {
   previewEquipmentMigration: async (
     file: File,
     options: PreviewOptions = {}
-  ): Promise<MigrationPreviewResult> => {
+  ): Promise<MultiSheetPreviewResult> => {
     const formData = new FormData();
     formData.append('file', file);
     if (options.autoGenerateManagementNumber !== undefined) {
@@ -60,7 +65,7 @@ export const dataMigrationApi = {
       formData.append('skipDuplicates', String(options.skipDuplicates));
     }
 
-    const response = await apiClient.post<MigrationPreviewResult>(
+    const response = await apiClient.post<MultiSheetPreviewResult>(
       API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.PREVIEW,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
@@ -72,8 +77,8 @@ export const dataMigrationApi = {
    * Execute (Commit)
    * sessionId로 캐시된 Preview 결과를 DB에 INSERT
    */
-  executeEquipmentMigration: async (options: ExecuteOptions): Promise<MigrationExecuteResult> => {
-    const response = await apiClient.post<MigrationExecuteResult>(
+  executeEquipmentMigration: async (options: ExecuteOptions): Promise<MultiSheetExecuteResult> => {
+    const response = await apiClient.post<MultiSheetExecuteResult>(
       API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.EXECUTE,
       {
         sessionId: options.sessionId,

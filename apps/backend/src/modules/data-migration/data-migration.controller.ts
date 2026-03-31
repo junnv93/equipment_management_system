@@ -27,6 +27,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { Permission } from '@equipment-management/shared-constants';
+import { UserRoleValues } from '@equipment-management/schemas';
 import { AuthenticatedRequest } from '../../types/auth';
 import type { MulterFile } from '../../types/common.types';
 import { DataMigrationService } from './services/data-migration.service';
@@ -38,7 +39,10 @@ import {
   PreviewEquipmentMigrationSwagger,
   type PreviewEquipmentMigrationDto,
 } from './dto';
-import type { MigrationPreviewResult, MigrationExecuteResult } from './types/data-migration.types';
+import type {
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
+} from './types/data-migration.types';
 
 @ApiTags('데이터 마이그레이션')
 @ApiBearerAuth()
@@ -47,8 +51,8 @@ export class DataMigrationController {
   constructor(private readonly dataMigrationService: DataMigrationService) {}
 
   /**
-   * 장비 데이터 마이그레이션 Preview (Dry-run)
-   * xlsx 파일 업로드 → 행별 검증 → sessionId 발급
+   * 멀티시트 장비 데이터 마이그레이션 Preview (Dry-run)
+   * xlsx 파일 업로드 → 시트별 행별 검증 → sessionId 발급
    */
   @Post('equipment/preview')
   @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
@@ -56,28 +60,35 @@ export class DataMigrationController {
   @UseInterceptors(FileInterceptor('file', MULTER_UTF8_OPTIONS))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: '장비 데이터 Preview (Dry-run)',
+    summary: '장비 데이터 멀티시트 Preview (Dry-run)',
     description:
-      'xlsx 파일을 업로드하여 행별 검증 결과를 확인합니다. Execute 전 반드시 호출해야 합니다.',
+      'xlsx 파일을 업로드하여 시트별 행별 검증 결과를 확인합니다. Execute 전 반드시 호출해야 합니다. ' +
+      '장비/교정이력/수리이력/사고이력 시트를 자동으로 감지합니다.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Preview 성공 — 행별 상태 반환' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Preview 성공 — 시트별 행별 상태 반환' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '파일 오류 또는 파싱 실패' })
   async previewEquipmentMigration(
     @UploadedFile() file: MulterFile,
     @Body(PreviewEquipmentMigrationPipe) dto: PreviewEquipmentMigrationDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<MigrationPreviewResult> {
+  ): Promise<MultiSheetPreviewResult> {
     if (!file) {
       throw new BadRequestException({
         code: 'MIGRATION_FILE_REQUIRED',
         message: '파일이 업로드되지 않았습니다.',
       });
     }
-    return this.dataMigrationService.preview(file, dto, req.user.userId);
+    return this.dataMigrationService.previewMultiSheet(
+      file,
+      dto,
+      req.user.userId,
+      req.user.site,
+      req.user.roles.includes(UserRoleValues.SYSTEM_ADMIN)
+    );
   }
 
   /**
-   * 장비 데이터 마이그레이션 Execute (Commit)
+   * 멀티시트 장비 데이터 마이그레이션 Execute (Commit)
    * sessionId로 캐시된 Preview 결과를 이용해 DB에 실제 INSERT
    */
   @Post('equipment/execute')
@@ -88,16 +99,17 @@ export class DataMigrationController {
     entityIdPath: 'request.body.sessionId',
   })
   @ApiOperation({
-    summary: '장비 데이터 마이그레이션 실행',
-    description: 'Preview에서 발급된 sessionId를 사용하여 유효한 행을 DB에 일괄 등록합니다.',
+    summary: '장비 데이터 멀티시트 마이그레이션 실행',
+    description:
+      'Preview에서 발급된 sessionId를 사용하여 장비 및 이력 데이터를 DB에 일괄 등록합니다.',
   })
   @ApiResponse({ status: HttpStatus.CREATED, description: '마이그레이션 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '세션 만료 (1시간)' })
   async executeEquipmentMigration(
     @Body(ExecuteEquipmentMigrationPipe) dto: ExecuteEquipmentMigrationDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<MigrationExecuteResult> {
-    return this.dataMigrationService.execute(dto, req.user.userId);
+  ): Promise<MultiSheetExecuteResult> {
+    return this.dataMigrationService.executeMultiSheet(dto, req.user.userId);
   }
 
   /**
@@ -109,7 +121,7 @@ export class DataMigrationController {
   @SkipResponseTransform()
   @ApiOperation({
     summary: '입력 템플릿 다운로드',
-    description: '장비 데이터 입력에 필요한 Excel 템플릿을 다운로드합니다.',
+    description: '장비/교정이력/수리이력/사고이력 4개 시트가 포함된 Excel 템플릿을 다운로드합니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'xlsx 템플릿 파일 다운로드' })
   async downloadTemplate(@Res() res: Response): Promise<void> {

@@ -151,11 +151,9 @@ test.describe('데이터 마이그레이션 전체 플로우', () => {
     await expect(page.getByText(mgmtNum)).toBeVisible({ timeout: 15000 });
   });
 
-  test('TC-F02: 멀티시트 파일 — 장비 등록 시트만 처리됨을 확인', async ({
+  test('TC-F02: 멀티시트 파일 — 시트별 탭 UI + 이력 read-only + 결과 시트별 분류', async ({
     systemAdminPage: page,
   }) => {
-    // 현재 구현: 멀티시트 Excel 업로드 시 첫 번째 '장비 등록' 시트만 파싱
-    // (교정이력/수리이력 별도 처리는 미구현)
     const mgmtNum = uniqueMgmt('UIW');
     const xlsxBuffer = await createMultiSheetXlsx(mgmtNum);
 
@@ -176,18 +174,49 @@ test.describe('데이터 마이그레이션 전체 플로우', () => {
     await page.getByRole('button', { name: '미리보기 시작' }).click();
     await expect(page.getByText('미리보기 결과')).toBeVisible({ timeout: 15000 });
 
-    // 장비 시트의 행이 미리보기에 표시됨을 확인
-    await expect(page.getByRole('table')).toBeVisible();
+    // 멀티시트: 탭 3개 표시 확인 (장비 등록 / 교정 이력 / 수리 이력)
+    await expect(page.getByRole('tab', { name: '장비 등록' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: '교정 이력' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: '수리 이력' })).toBeVisible();
+
+    // 전체 요약 — 멀티시트는 3개 카드(total/valid/error)
     const totalText = await page.locator('[data-testid="summary-total"]').textContent();
     expect(Number(totalText)).toBeGreaterThanOrEqual(1);
 
-    // Execute — 장비 시트의 유효 행 등록
-    const executeBtn = page.getByRole('button', { name: /항목 등록/ });
+    // 장비 탭: 체크박스 선택 가능 (EquipmentSheetTable)
+    await page.getByRole('tab', { name: '장비 등록' }).click();
+    await expect(page.getByRole('table')).toBeVisible();
+
+    // 교정 이력 탭: read-only 안내 메시지 표시 (HistorySheetTable)
+    await page.getByRole('tab', { name: '교정 이력' }).click();
+    await expect(page.getByText('이력 데이터는 유효한 전체 행이 자동 등록됩니다.')).toBeVisible();
+    await expect(page.getByRole('table')).toBeVisible();
+
+    // 수리 이력 탭도 read-only 안내 메시지 표시
+    await page.getByRole('tab', { name: '수리 이력' }).click();
+    await expect(page.getByText('이력 데이터는 유효한 전체 행이 자동 등록됩니다.')).toBeVisible();
+
+    // Execute — 장비 탭 선택 행 수 기준 버튼
+    const executeBtn = page.getByRole('button', { name: /\d+개 항목 등록/ });
     await expect(executeBtn).toBeEnabled();
     await executeBtn.click();
 
+    // 결과: 완료 + 시트별 분류 카드
     await expect(page.getByText('마이그레이션 완료')).toBeVisible({ timeout: 20000 });
-    await expect(page.getByText('등록 완료')).toBeVisible();
+    await expect(page.getByText('시트별 상세')).toBeVisible();
+    // 시트별 카드 (장비/교정/수리)
+    await expect(
+      page
+        .getByRole('heading', { name: '장비 등록', level: 3 })
+        .or(page.getByText('장비 등록').first())
+    ).toBeVisible();
+
+    // 전체 등록 건수가 1 이상 (장비 + 이력 합산)
+    const createdText = await page
+      .locator('.bg-green-50 p.text-3xl, .dark\\:bg-green-950 p.text-3xl')
+      .first()
+      .textContent();
+    expect(Number(createdText)).toBeGreaterThanOrEqual(1);
   });
 
   test('TC-F03: 오류 행 포함 — 유효 행만 선택 등록 가능', async ({ systemAdminPage: page }) => {
@@ -223,7 +252,7 @@ test.describe('데이터 마이그레이션 전체 플로우', () => {
     const validText = await page.locator('[data-testid="summary-valid"]').textContent();
     const validCount = Number(validText);
     if (validCount > 0) {
-      await expect(page.getByRole('button', { name: /항목 등록/ })).toBeEnabled();
+      await expect(page.getByRole('button', { name: /\d+개 항목 등록/ })).toBeEnabled();
     }
   });
 });

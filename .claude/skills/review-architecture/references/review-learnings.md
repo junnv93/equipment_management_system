@@ -201,6 +201,16 @@
 - **설명**: NestJS `@Query('version') version: number | undefined`는 TypeScript 타입 선언이지만 런타임에서는 쿼리 파라미터가 항상 **string**으로 전달됨. 타입 변환 없이 `equipmentService.remove(uuid, version)`을 호출하면 Drizzle ORM의 `eq(equipment.version, "3")`에서 타입 불일치로 WHERE 절이 매칭되지 않아 CAS가 항상 실패(409 VERSION_CONFLICT). `@Query('version') versionStr: string | undefined` + `parseInt(versionStr, 10)` 변환 패턴으로 수정. **참조**: `equipment-history.controller.ts:145-153`에 올바른 패턴 존재.
 - **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 2 "CAS 계층 일관성" 또는 섹션 4에 승격
 
+### [2026-03-31] `deleteByPrefix()` void 반환 — `Promise<unknown>[]` 배열에 push 금지
+- **발견 위치**: `apps/backend/src/modules/data-migration/services/data-migration.service.ts`
+- **설명**: `SimpleCacheService.deleteByPrefix()`는 `void`를 반환하지만 `RedisCacheService.deleteByPrefix()`는 `Promise<void>`를 반환. 인터페이스 `deleteByPrefix(prefix: string): void | Promise<void>`. `void`를 `Promise<unknown>[]` 배열에 `push()`하면 TypeScript 에러 TS2345 발생. 패턴: `await Promise.all(invalidations)` 완료 후 `deleteByPrefix()` 를 별도 동기 호출로 분리.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회)
+
+### [2026-03-31] `readonly const` 배열 `as [string, ...string[]]` 직접 캐스팅 실패
+- **발견 위치**: `apps/backend/src/modules/data-migration/services/history-validator.service.ts:21,28`
+- **설명**: `packages/schemas`의 SSOT enum 배열(`REPAIR_RESULT_VALUES`, `INCIDENT_TYPE_VALUES`)은 `readonly [...]` 타입. Zod `z.enum(VALUES as [string, ...string[]])`로 직접 캐스팅하면 `readonly` → mutable 변환 불가 에러(TS2352). `[...VALUES] as [string, ...string[]]` (spread로 mutable 복사 후 캐스팅) 패턴으로 해결.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회)
+
 ---
 
 ## 아카이브
@@ -282,3 +292,8 @@
 | 2026-03-31 | **예외 추가** | Next.js 16.1.6 proxy 컨벤션 — `middleware.ts`→`proxy.ts`, `middleware`→`proxy` 함수명 변경은 의도적 설계. `config` 직접 정의 필수(re-export 불가). 이를 이슈로 보고하지 않음 | SKILL.md Exceptions #6 |
 | 2026-03-31 | 재발 확인 | `createLocationHistoryInternal` tx 파라미터 제거 → 트랜잭션 원자성 파괴 (3곳) — `tx?` 파라미터 복원으로 수정 | equipment-history.service.ts + 3 callers |
 | 2026-03-31 | 안티패턴 | `@Query()` 파라미터 string→number 미변환 — CAS 항상 실패 (`remove()` version 쿼리 파라미터) | equipment.controller.ts |
+| 2026-03-31 | 안티패턴 | `deleteByPrefix()` void 반환 → `Promise<unknown>[]` push 금지 — `Promise.all` 완료 후 별도 호출로 분리 | data-migration.service.ts |
+| 2026-03-31 | 안티패턴 | readonly SSOT 배열 `as [string, ...string[]]` 직접 캐스팅 실패 → `[...VALUES]` spread 후 캐스팅 | history-validator.service.ts |
+| 2026-03-31 | 수정 완료 | executeMultiSheet() 트랜잭션 내 try-catch 제거 (equipment/calibration/repair/incident 4섹션) | data-migration.service.ts |
+| 2026-03-31 | 수정 완료 | getErrorReport() — multi-sheet 세션 fallback 추가 (MULTI_SESSION_CACHE_KEY_PREFIX) | data-migration.service.ts |
+| 2026-03-31 | 수정 완료 | calibration 캐시 무효화 — executeMultiSheet 완료 후 deleteByPrefix 추가 | data-migration.service.ts |

@@ -3,6 +3,7 @@ import { DataMigrationController } from './data-migration.controller';
 import { DataMigrationService } from './services/data-migration.service';
 import { ExcelParserService } from './services/excel-parser.service';
 import { MigrationValidatorService } from './services/migration-validator.service';
+import { HistoryValidatorService } from './services/history-validator.service';
 import { EquipmentModule } from '../equipment/equipment.module';
 import { CacheModule } from '../../common/cache/cache.module';
 
@@ -21,6 +22,11 @@ import { CacheModule } from '../../common/cache/cache.module';
 @Module({
   imports: [EquipmentModule, CacheModule],
   controllers: [DataMigrationController],
-  providers: [DataMigrationService, ExcelParserService, MigrationValidatorService],
+  providers: [
+    DataMigrationService,
+    ExcelParserService,
+    MigrationValidatorService,
+    HistoryValidatorService,
+  ],
 })
 export class DataMigrationModule {}

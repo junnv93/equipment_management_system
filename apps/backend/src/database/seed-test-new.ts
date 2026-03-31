@@ -399,6 +399,8 @@ async function main(): Promise<void> {
           WHERE d.file_path = ea.file_path
             AND d.original_file_name = ea.original_file_name
         )
+          AND (ea.equipment_id IS NULL OR ea.equipment_id IN (SELECT id FROM equipment))
+          AND (ea.request_id IS NULL OR ea.request_id IN (SELECT id FROM equipment_requests))
       `);
       const docSyncCount = (docSyncResult as { rowCount?: number }).rowCount ?? 0;
       console.log(`  ✅ ${docSyncCount}건 문서 동기화됨 (equipment_attachments → documents)`);

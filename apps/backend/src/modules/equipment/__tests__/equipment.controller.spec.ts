@@ -50,7 +50,6 @@ describe('EquipmentController', () => {
     firmwareVersion: null,
     manualLocation: null,
     accessories: null,
-    mainFeatures: null,
     technicalManager: null,
     status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
     isActive: true,

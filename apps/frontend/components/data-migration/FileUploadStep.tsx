@@ -15,14 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SITE_VALUES } from '@equipment-management/schemas';
+import { FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { dataMigrationApi } from '@/lib/api/data-migration-api';
-import type { PreviewOptions, MigrationPreviewResult } from '@/lib/api/data-migration-api';
+import type { PreviewOptions, MultiSheetPreviewResult } from '@/lib/api/data-migration-api';
 import { toast } from 'sonner';
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-
 interface FileUploadStepProps {
-  onPreviewComplete: (result: MigrationPreviewResult, options: PreviewOptions) => void;
+  onPreviewComplete: (result: MultiSheetPreviewResult, options: PreviewOptions) => void;
 }
 
 export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProps) {
@@ -59,7 +60,7 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
         toast.error(t('errors.invalidFileType'));
         return;
       }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
+      if (file.size > FILE_UPLOAD_LIMITS.MAX_FILE_SIZE) {
         toast.error(t('errors.fileTooLarge'));
         return;
       }
@@ -106,7 +107,7 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
             <div
               role="button"
               tabIndex={0}
-              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 text-center transition-colors cursor-pointer ${
+              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 text-center cursor-pointer ${TRANSITION_PRESETS.fastBgBorder} ${
                 isDragOver
                   ? 'border-primary bg-primary/5'
                   : 'border-muted-foreground/25 hover:border-primary/50'
@@ -212,9 +213,11 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
                 <SelectValue placeholder="-" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="suwon">{t('upload.sites.suwon')}</SelectItem>
-                <SelectItem value="uiwang">{t('upload.sites.uiwang')}</SelectItem>
-                <SelectItem value="pyeongtaek">{t('upload.sites.pyeongtaek')}</SelectItem>
+                {SITE_VALUES.map((site) => (
+                  <SelectItem key={site} value={site}>
+                    {t(`upload.sites.${site}`)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

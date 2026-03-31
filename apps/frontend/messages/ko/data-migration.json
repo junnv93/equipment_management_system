@@ -32,6 +32,12 @@
       "pyeongtaek": "평택"
     }
   },
+  "sheets": {
+    "equipment": "장비 등록",
+    "calibration": "교정 이력",
+    "repair": "수리 이력",
+    "incident": "사고 이력"
+  },
   "preview": {
     "title": "미리보기 결과",
     "description": "행별 검증 결과를 확인하고 등록할 항목을 선택하세요.",
@@ -49,6 +55,7 @@
       "status": "상태",
       "name": "장비명",
       "managementNumber": "관리번호",
+      "date": "날짜",
       "errors": "오류/경고",
       "selectAll": "전체 선택",
       "deselectAll": "전체 해제",
@@ -62,6 +69,7 @@
       "duplicate": "중복",
       "warning": "경고"
     },
+    "historyReadOnly": "이력 데이터는 유효한 전체 행이 자동 등록됩니다.",
     "executeButton": "선택 항목 등록",
     "executeButtonCount": "{count}개 항목 등록",
     "backButton": "다시 업로드",
@@ -76,6 +84,7 @@
     "skipped": "건너뜀",
     "errors": "오류",
     "createdUnit": "건",
+    "sheetBreakdown": "시트별 상세",
     "viewEquipmentList": "장비 목록으로",
     "migrateAgain": "추가 마이그레이션",
     "downloadErrorReport": "오류 리포트 다운로드",

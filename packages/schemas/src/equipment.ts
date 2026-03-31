@@ -94,7 +94,6 @@ export const baseEquipmentSchema = z.object({
   softwareType: SoftwareTypeEnum.optional(), // 'measurement' | 'analysis' | 'control' | 'other'
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
-  mainFeatures: z.string().optional(), // DB와 동기화: 주요 기능
   technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)
 
   // 장비 타입 (DB와 동기화)

@@ -103,7 +103,6 @@ export const equipment = pgTable(
     softwareType: varchar('software_type', { length: 50 }), // 'measurement' | 'analysis' | 'control' | 'other'
     manualLocation: text('manual_location'),
     accessories: text('accessories'),
-    mainFeatures: text('main_features'),
     technicalManager: varchar('technical_manager', { length: 100 }),
 
     // 상태 정보

@@ -10,6 +10,7 @@ import { BACKEND_URL, EQUIP } from '../helpers/checkout-constants';
 import {
   getBackendToken,
   resetEquipmentToAvailable,
+  cancelAllActiveCheckoutsForEquipment,
   clearBackendCache,
   cleanupCheckoutPool,
 } from '../helpers/checkout-helpers';
@@ -21,10 +22,16 @@ import {
 const createdCheckoutIds: string[] = [];
 
 test.describe('Suite 02: 반출 생성 성공', () => {
+  // S03/S04가 SIGNAL_GEN(eeee1002), NETWORK_ANALYZER(eeee1003) 시드 checkout을 사용하므로
+  // 충돌 방지를 위해 disposal 테스트 전용 장비(dddd)를 사용
+  const CALIBRATION_EQUIP = 'dddd0002-0002-4002-8002-000000000002'; // 신호 발생기 disposal, FCC
+  const REPAIR_EQUIP = 'dddd0003-0003-4003-8003-000000000003'; // 네트워크 분석기 disposal, FCC
+
   test.beforeAll(async () => {
-    // 이전 테스트에서 장비 상태가 변경되었을 수 있으므로 리셋
-    await resetEquipmentToAvailable(EQUIP.SIGNAL_GEN_SUW_E);
-    await resetEquipmentToAvailable(EQUIP.NETWORK_ANALYZER_SUW_E);
+    await cancelAllActiveCheckoutsForEquipment(CALIBRATION_EQUIP);
+    await cancelAllActiveCheckoutsForEquipment(REPAIR_EQUIP);
+    await resetEquipmentToAvailable(CALIBRATION_EQUIP);
+    await resetEquipmentToAvailable(REPAIR_EQUIP);
     await clearBackendCache();
   });
 
@@ -44,8 +51,8 @@ test.describe('Suite 02: 반출 생성 성공', () => {
       await context.close();
     }
     // 장비 상태 복원
-    await resetEquipmentToAvailable(EQUIP.SIGNAL_GEN_SUW_E);
-    await resetEquipmentToAvailable(EQUIP.NETWORK_ANALYZER_SUW_E);
+    await resetEquipmentToAvailable(CALIBRATION_EQUIP);
+    await resetEquipmentToAvailable(REPAIR_EQUIP);
     await clearBackendCache();
     await cleanupCheckoutPool();
   });
@@ -59,7 +66,7 @@ test.describe('Suite 02: 반출 생성 성공', () => {
         'Content-Type': 'application/json',
       },
       data: {
-        equipmentIds: [EQUIP.SIGNAL_GEN_SUW_E],
+        equipmentIds: [CALIBRATION_EQUIP],
         purpose: CPVal.CALIBRATION,
         destination: '한국교정시험연구원',
         reason: 'E2E 테스트 - 교정 반출',
@@ -84,7 +91,7 @@ test.describe('Suite 02: 반출 생성 성공', () => {
         'Content-Type': 'application/json',
       },
       data: {
-        equipmentIds: [EQUIP.NETWORK_ANALYZER_SUW_E],
+        equipmentIds: [REPAIR_EQUIP],
         purpose: CPVal.REPAIR,
         destination: '키사이트 서비스센터',
         reason: 'E2E 테스트 - 수리 반출',

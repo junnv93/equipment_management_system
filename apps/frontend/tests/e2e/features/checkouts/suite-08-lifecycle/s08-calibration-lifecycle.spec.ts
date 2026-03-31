@@ -25,21 +25,24 @@ import {
   getBackendToken,
   cleanupCheckoutPool,
   resetEquipmentToAvailable,
-  resetEquipmentForNewCheckout,
+  cancelAllActiveCheckoutsForEquipment,
   clearBackendCache,
+  getCheckoutPool,
 } from '../helpers/checkout-helpers';
 
 test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
   test.describe.configure({ mode: 'serial' });
 
   let checkoutId: string;
-  const testEquipmentId = EQUIP.SPECTRUM_ANALYZER_SUW_E;
+  // S03/S04가 SPECTRUM_ANALYZER(eeee1001) 시드 checkout을 사용하므로 충돌 방지를 위해 disposal 전용 장비 사용
+  const testEquipmentId = 'dddd0008-0008-4008-8008-000000000008'; // [Disposal A8] FCC EMC/RF, available
 
   test.beforeAll(async () => {
-    await resetEquipmentForNewCheckout(testEquipmentId);
+    await cancelAllActiveCheckoutsForEquipment(testEquipmentId);
+    await resetEquipmentToAvailable(testEquipmentId);
 
     // 교정일을 미래로 설정 (overdue 스케줄러 방지)
-    const pool = require('../helpers/checkout-helpers').getCheckoutPool();
+    const pool = getCheckoutPool();
     await pool.query(
       `UPDATE equipment SET next_calibration_date = NOW() + INTERVAL '365 days' WHERE id = $1`,
       [testEquipmentId]

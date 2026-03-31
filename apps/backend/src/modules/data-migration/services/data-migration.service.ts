@@ -6,19 +6,25 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { eq, getTableColumns } from 'drizzle-orm';
+import { eq, getTableColumns, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {
   parseManagementNumber,
   createEquipmentSchema,
   EquipmentStatusEnum,
   ApprovalStatusValues,
+  UserRoleValues,
 } from '@equipment-management/schemas';
+import type { Site } from '@equipment-management/schemas';
 import { equipment } from '@equipment-management/db/schema/equipment';
+import { calibrations } from '@equipment-management/db/schema/calibrations';
+import { repairHistory } from '@equipment-management/db/schema/repair-history';
+import { equipmentIncidentHistory } from '@equipment-management/db/schema/equipment-incident-history';
 import type { AppDatabase } from '@equipment-management/db';
 import type { MulterFile } from '../../../types/common.types';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { EquipmentHistoryService } from '../../equipment/services/equipment-history.service';
 import { calculateNextCalibrationDate } from '../../../common/utils';
@@ -27,9 +33,14 @@ import type {
   MigrationExecuteResult,
   MigrationSession,
   MigrationRowPreview,
+  MultiSheetPreviewResult,
+  MultiSheetExecuteResult,
+  SheetPreviewResult,
+  MultiSheetMigrationSession,
 } from '../types/data-migration.types';
 import { ExcelParserService } from './excel-parser.service';
 import { MigrationValidatorService } from './migration-validator.service';
+import { HistoryValidatorService } from './history-validator.service';
 import type { PreviewEquipmentMigrationDto } from '../dto/preview-migration.dto';
 import type { ExecuteEquipmentMigrationDto } from '../dto/execute-migration.dto';
 
@@ -38,7 +49,12 @@ const EQUIPMENT_COLUMNS = new Set(Object.keys(getTableColumns(equipment)));
 
 /** 세션 캐시 TTL: 1시간 (ms) */
 const SESSION_TTL_MS = 3600 * 1000;
-const SESSION_CACHE_KEY_PREFIX = 'data-migration:session:';
+/** SSOT: CACHE_KEY_PREFIXES.DATA_MIGRATION + 세그먼트 */
+const SESSION_CACHE_KEY_PREFIX = `${CACHE_KEY_PREFIXES.DATA_MIGRATION}session:`;
+const MULTI_SESSION_CACHE_KEY_PREFIX = `${CACHE_KEY_PREFIXES.DATA_MIGRATION}multi-session:`;
+
+/** 배치 INSERT 청크 크기 */
+const CHUNK_SIZE = 100;
 
 /**
  * 데이터 마이그레이션 오케스트레이터 서비스
@@ -61,16 +77,12 @@ export class DataMigrationService {
     private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly equipmentHistoryService: EquipmentHistoryService,
     private readonly excelParserService: ExcelParserService,
-    private readonly migrationValidatorService: MigrationValidatorService
+    private readonly migrationValidatorService: MigrationValidatorService,
+    private readonly historyValidatorService: HistoryValidatorService
   ) {}
 
   /**
-   * Preview (Dry-run)
-   *
-   * 1. 파일 저장 (FileUploadService)
-   * 2. Excel 파싱
-   * 3. 배치 검증 (Zod + DB 중복 + 파일 내 중복)
-   * 4. sessionId 발급 + 결과 캐시 저장
+   * Preview (Dry-run) — 단일시트 하위 호환
    */
   async preview(
     file: MulterFile,
@@ -134,12 +146,7 @@ export class DataMigrationService {
   }
 
   /**
-   * Execute (Commit)
-   *
-   * 1. sessionId로 캐시에서 Preview 결과 조회
-   * 2. 유효 행만 추출
-   * 3. 단일 트랜잭션으로 Batch INSERT (equipment + location history SSOT)
-   * 4. 캐시 무효화
+   * Execute (Commit) — 단일시트 하위 호환
    */
   async execute(
     dto: ExecuteEquipmentMigrationDto,
@@ -245,22 +252,497 @@ export class DataMigrationService {
   }
 
   /**
+   * 멀티시트 Preview (Dry-run)
+   *
+   * 1. 파일 저장
+   * 2. 멀티시트 파싱
+   * 3. 시트별 검증 (장비: MigrationValidatorService, 이력: HistoryValidatorService)
+   * 4. sessionId 발급 + 결과 캐시 저장
+   */
+  async previewMultiSheet(
+    file: MulterFile,
+    dto: PreviewEquipmentMigrationDto,
+    userId: string,
+    userSite?: string,
+    isSystemAdmin = false
+  ): Promise<MultiSheetPreviewResult> {
+    // 비-시스템관리자: defaultSite는 반드시 자신의 사이트와 일치해야 함
+    if (!isSystemAdmin && userSite && dto.defaultSite && dto.defaultSite !== userSite) {
+      throw new ForbiddenException({
+        code: 'MIGRATION_SITE_ACCESS_DENIED',
+        message: '자신의 사이트 데이터만 마이그레이션할 수 있습니다.',
+      });
+    }
+    // 비-시스템관리자: defaultSite 미지정 시 자신의 사이트로 자동 적용 (엑셀 미지정 행 보호)
+    if (!isSystemAdmin && userSite && !dto.defaultSite) {
+      dto.defaultSite = userSite as Site;
+    }
+
+    const savedFile = await this.fileUploadService.saveFile(file, 'data-migration');
+
+    const parsedSheets = await this.excelParserService.parseMultiSheetBuffer(file.buffer);
+
+    // 장비 시트 유효 관리번호 Set 구축 (이력 시트 크로스 검증용)
+    const equipmentMgmtNumbers = new Set<string>();
+    const sheetResults: SheetPreviewResult[] = [];
+
+    for (const parsedSheet of parsedSheets) {
+      if (parsedSheet.sheetType === 'equipment') {
+        const rowPreviews = await this.migrationValidatorService.validateBatch(parsedSheet.rows, {
+          autoGenerateManagementNumber: dto.autoGenerateManagementNumber ?? false,
+          defaultSite: dto.defaultSite,
+          skipDuplicates: dto.skipDuplicates ?? true,
+        });
+
+        // 유효 관리번호 수집
+        for (const row of rowPreviews) {
+          if (row.managementNumber && (row.status === 'valid' || row.status === 'warning')) {
+            equipmentMgmtNumbers.add(row.managementNumber);
+          }
+        }
+
+        const summary = this.buildSummary(rowPreviews);
+        sheetResults.push({
+          sheetType: parsedSheet.sheetType,
+          sheetName: parsedSheet.sheetName,
+          totalRows: parsedSheet.rows.length,
+          ...summary,
+          unmappedColumns: parsedSheet.unmappedColumns,
+          rows: rowPreviews,
+        });
+      }
+    }
+
+    // 이력 시트 처리 (장비 시트 완료 후)
+    for (const parsedSheet of parsedSheets) {
+      if (parsedSheet.sheetType === 'equipment') continue;
+
+      let rowPreviews: MigrationRowPreview[];
+
+      if (parsedSheet.sheetType === 'calibration') {
+        rowPreviews = this.historyValidatorService.validateCalibrationBatch(
+          parsedSheet.rows,
+          equipmentMgmtNumbers
+        );
+      } else if (parsedSheet.sheetType === 'repair') {
+        rowPreviews = this.historyValidatorService.validateRepairBatch(
+          parsedSheet.rows,
+          equipmentMgmtNumbers
+        );
+      } else {
+        rowPreviews = this.historyValidatorService.validateIncidentBatch(
+          parsedSheet.rows,
+          equipmentMgmtNumbers
+        );
+      }
+
+      const summary = this.buildSummary(rowPreviews);
+      sheetResults.push({
+        sheetType: parsedSheet.sheetType,
+        sheetName: parsedSheet.sheetName,
+        totalRows: parsedSheet.rows.length,
+        ...summary,
+        unmappedColumns: parsedSheet.unmappedColumns,
+        rows: rowPreviews,
+      });
+    }
+
+    const sessionId = uuidv4();
+    const totalRows = sheetResults.reduce((acc, s) => acc + s.totalRows, 0);
+    const validRows = sheetResults.reduce((acc, s) => acc + s.validRows, 0);
+    const errorRows = sheetResults.reduce((acc, s) => acc + s.errorRows, 0);
+
+    const result: MultiSheetPreviewResult = {
+      sessionId,
+      fileName: file.originalname,
+      sheets: sheetResults,
+      totalRows,
+      validRows,
+      errorRows,
+    };
+
+    // 멀티시트 세션 캐시 저장
+    const session: MultiSheetMigrationSession = {
+      sessionId,
+      fileName: file.originalname,
+      uploadedAt: new Date(),
+      userId,
+      sheets: sheetResults.map((s) => ({
+        sheetType: s.sheetType,
+        sheetName: s.sheetName,
+        rows: s.rows,
+      })),
+    };
+    this.cacheService.set(`${MULTI_SESSION_CACHE_KEY_PREFIX}${sessionId}`, session, SESSION_TTL_MS);
+
+    this.logger.log(
+      `MultiSheet Preview complete: sessionId=${sessionId}, ` +
+        `sheets=${sheetResults.length}, total=${totalRows}, valid=${validRows}, errors=${errorRows}`
+    );
+
+    // 임시 파일 참조 저장 (에러 리포트 등에 활용하지 않으므로 savedFile 참조만 유지)
+    void savedFile;
+
+    return result;
+  }
+
+  /**
+   * 멀티시트 Execute (Commit)
+   *
+   * 1. sessionId로 캐시에서 멀티시트 Preview 결과 조회
+   * 2. 장비 먼저 INSERT → managementNumber→UUID 맵 구축
+   * 3. DB에서 기존 장비 관리번호 배치 조회
+   * 4. 이력(교정/수리/사고) INSERT — 100행 단위 chunk, 같은 트랜잭션
+   */
+  async executeMultiSheet(
+    dto: ExecuteEquipmentMigrationDto,
+    userId: string
+  ): Promise<MultiSheetExecuteResult> {
+    const session = this.cacheService.get<MultiSheetMigrationSession>(
+      `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`
+    );
+    if (!session) {
+      throw new NotFoundException({
+        code: 'MIGRATION_SESSION_NOT_FOUND',
+        message: '마이그레이션 세션을 찾을 수 없습니다. 파일을 다시 업로드하세요.',
+      });
+    }
+
+    if (session.userId !== userId) {
+      throw new ForbiddenException({
+        code: 'MIGRATION_SESSION_OWNERSHIP_DENIED',
+        message: '본인이 생성한 마이그레이션 세션만 실행할 수 있습니다.',
+      });
+    }
+
+    const sheetSummaries: MultiSheetExecuteResult['sheets'] = [];
+    const allErrors: MigrationRowPreview[] = [];
+    let totalCreated = 0;
+    let totalSkipped = 0;
+    let totalErrors = 0;
+
+    // managementNumber → equipmentId 맵 (이력 INSERT에 사용)
+    const mgmtNumToId = new Map<string, string>();
+
+    await this.db.transaction(async (tx) => {
+      // ── 1. 장비 시트 INSERT ────────────────────────────────────────────────
+      for (const sheet of session.sheets) {
+        if (sheet.sheetType !== 'equipment') continue;
+
+        const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
+        const errorRowsForSheet = sheet.rows.filter(
+          (r) => r.status === 'error' || r.status === 'duplicate'
+        );
+        const skippedCount = sheet.rows.length - validRows.length - errorRowsForSheet.length;
+
+        let createdCount = 0;
+        const sheetErrors: MigrationRowPreview[] = [...errorRowsForSheet];
+
+        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
+        for (const chunk of chunks) {
+          for (const row of chunk) {
+            const entity = this.buildEntityFromRow(row, userId);
+            const [created] = await tx
+              .insert(equipment)
+              .values(entity as typeof equipment.$inferInsert)
+              .returning();
+
+            if (row.managementNumber) {
+              mgmtNumToId.set(row.managementNumber, created.id);
+            }
+
+            // 위치 이력 SSOT 동기화
+            if (row.data.initialLocation || row.data.location) {
+              const resolvedLocation = (row.data.initialLocation || row.data.location) as string;
+              const changedAt = (
+                (row.data.installationDate as Date | undefined) ?? new Date()
+              ).toISOString();
+
+              await this.equipmentHistoryService.createLocationHistoryInternal(
+                created.id,
+                {
+                  changedAt,
+                  newLocation: resolvedLocation,
+                  previousLocation: null,
+                  notes: '데이터 마이그레이션',
+                },
+                userId,
+                tx
+              );
+            }
+
+            createdCount++;
+          }
+        }
+
+        sheetSummaries.push({
+          sheetType: 'equipment',
+          createdCount,
+          skippedCount,
+          errorCount: sheetErrors.length,
+        });
+        allErrors.push(...sheetErrors);
+        totalCreated += createdCount;
+        totalSkipped += skippedCount;
+        totalErrors += sheetErrors.length;
+      }
+
+      // ── 2. DB에서 기존 장비 관리번호 배치 조회 (이력의 미해결 관리번호용) ──
+      const allHistoryMgmtNums = new Set<string>();
+      for (const sheet of session.sheets) {
+        if (sheet.sheetType === 'equipment') continue;
+        for (const row of sheet.rows) {
+          const mgmtNum = row.managementNumber;
+          if (mgmtNum && !mgmtNumToId.has(mgmtNum)) {
+            allHistoryMgmtNums.add(mgmtNum);
+          }
+        }
+      }
+
+      if (allHistoryMgmtNums.size > 0) {
+        const existingEquipment = await tx
+          .select({ managementNumber: equipment.managementNumber, id: equipment.id })
+          .from(equipment)
+          .where(inArray(equipment.managementNumber, Array.from(allHistoryMgmtNums)));
+
+        for (const e of existingEquipment) {
+          mgmtNumToId.set(e.managementNumber, e.id);
+        }
+      }
+
+      // ── 3. 교정 이력 INSERT ────────────────────────────────────────────────
+      for (const sheet of session.sheets) {
+        if (sheet.sheetType !== 'calibration') continue;
+
+        const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
+        let createdCount = 0;
+        const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
+
+        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
+        for (const chunk of chunks) {
+          for (const row of chunk) {
+            const mgmtNum = row.managementNumber;
+            const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
+
+            if (!equipmentId) {
+              sheetErrors.push({
+                ...row,
+                status: 'error',
+                errors: [
+                  {
+                    field: 'managementNumber',
+                    message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
+                    code: 'EQUIPMENT_NOT_FOUND',
+                  },
+                ],
+              });
+              continue;
+            }
+
+            await tx.insert(calibrations).values({
+              equipmentId,
+              calibrationDate: row.data.calibrationDate as Date,
+              agencyName: row.data.agencyName as string | undefined,
+              certificateNumber: row.data.certificateNumber as string | undefined,
+              result: row.data.result as string | undefined,
+              cost: row.data.cost !== undefined ? String(row.data.cost) : undefined,
+              notes: row.data.notes as string | undefined,
+              status: 'completed',
+              approvalStatus: 'approved',
+              registeredBy: userId,
+            });
+            createdCount++;
+          }
+        }
+
+        sheetSummaries.push({
+          sheetType: 'calibration',
+          createdCount,
+          skippedCount: 0,
+          errorCount: sheetErrors.length,
+        });
+        allErrors.push(...sheetErrors);
+        totalCreated += createdCount;
+        totalErrors += sheetErrors.length;
+      }
+
+      // ── 4. 수리 이력 INSERT ────────────────────────────────────────────────
+      for (const sheet of session.sheets) {
+        if (sheet.sheetType !== 'repair') continue;
+
+        const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
+        let createdCount = 0;
+        const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
+
+        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
+        for (const chunk of chunks) {
+          for (const row of chunk) {
+            const mgmtNum = row.managementNumber;
+            const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
+
+            if (!equipmentId) {
+              sheetErrors.push({
+                ...row,
+                status: 'error',
+                errors: [
+                  {
+                    field: 'managementNumber',
+                    message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
+                    code: 'EQUIPMENT_NOT_FOUND',
+                  },
+                ],
+              });
+              continue;
+            }
+
+            await tx.insert(repairHistory).values({
+              equipmentId,
+              repairDate: row.data.repairDate as Date,
+              repairDescription: row.data.repairDescription as string,
+              repairResult: row.data.repairResult as string | undefined,
+              notes: row.data.notes as string | undefined,
+              createdBy: userId,
+            });
+            createdCount++;
+          }
+        }
+
+        sheetSummaries.push({
+          sheetType: 'repair',
+          createdCount,
+          skippedCount: 0,
+          errorCount: sheetErrors.length,
+        });
+        allErrors.push(...sheetErrors);
+        totalCreated += createdCount;
+        totalErrors += sheetErrors.length;
+      }
+
+      // ── 5. 사고 이력 INSERT ────────────────────────────────────────────────
+      for (const sheet of session.sheets) {
+        if (sheet.sheetType !== 'incident') continue;
+
+        const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
+        let createdCount = 0;
+        const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
+
+        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
+        for (const chunk of chunks) {
+          for (const row of chunk) {
+            const mgmtNum = row.managementNumber;
+            const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
+
+            if (!equipmentId) {
+              sheetErrors.push({
+                ...row,
+                status: 'error',
+                errors: [
+                  {
+                    field: 'managementNumber',
+                    message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
+                    code: 'EQUIPMENT_NOT_FOUND',
+                  },
+                ],
+              });
+              continue;
+            }
+
+            await tx.insert(equipmentIncidentHistory).values({
+              equipmentId,
+              occurredAt: row.data.occurredAt as Date,
+              incidentType: row.data.incidentType as string,
+              content: row.data.content as string,
+              reportedBy: userId,
+            });
+            createdCount++;
+          }
+        }
+
+        sheetSummaries.push({
+          sheetType: 'incident',
+          createdCount,
+          skippedCount: 0,
+          errorCount: sheetErrors.length,
+        });
+        allErrors.push(...sheetErrors);
+        totalCreated += createdCount;
+        totalErrors += sheetErrors.length;
+      }
+    });
+
+    // 캐시 무효화
+    const invalidations: Promise<unknown>[] = [
+      this.cacheInvalidationHelper.invalidateEquipmentLists(),
+      this.cacheInvalidationHelper.invalidateAllDashboard(),
+    ];
+    await Promise.all(invalidations);
+    // 교정 이력이 등록된 경우 calibration 목록 캐시도 무효화
+    if (sheetSummaries.some((s) => s.sheetType === 'calibration' && s.createdCount > 0)) {
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}list:`);
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:`);
+    }
+
+    // 세션 캐시 삭제
+    this.cacheService.delete(`${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`);
+
+    this.logger.log(
+      `MultiSheet Execute complete: sessionId=${dto.sessionId}, ` +
+        `created=${totalCreated}, skipped=${totalSkipped}, errors=${totalErrors}`
+    );
+
+    return {
+      sessionId: dto.sessionId,
+      sheets: sheetSummaries,
+      totalCreated,
+      totalSkipped,
+      totalErrors,
+      errors: allErrors,
+    };
+  }
+
+  /**
    * 에러 리포트 Excel 버퍼 반환
    */
   async getErrorReport(sessionId: string): Promise<Buffer> {
-    const session = this.cacheService.get<MigrationSession>(
+    // 단일시트 세션 우선 조회, 없으면 멀티시트 세션 폴백
+    const singleSession = this.cacheService.get<MigrationSession>(
       `${SESSION_CACHE_KEY_PREFIX}${sessionId}`
     );
-    if (!session) {
+
+    if (singleSession) {
+      const errorRows = singleSession.previewResult.rows.filter(
+        (r) => r.status === 'error' || r.status === 'duplicate'
+      );
+      return this.excelParserService.generateErrorReport(
+        errorRows.map((r) => ({
+          rowNumber: r.rowNumber,
+          status: r.status,
+          managementNumber: r.managementNumber,
+          errors: r.errors.map((e) => ({ field: e.field, message: e.message })),
+          data: r.data,
+        }))
+      );
+    }
+
+    const multiSession = this.cacheService.get<MultiSheetMigrationSession>(
+      `${MULTI_SESSION_CACHE_KEY_PREFIX}${sessionId}`
+    );
+
+    if (!multiSession) {
       throw new NotFoundException({
         code: 'MIGRATION_SESSION_NOT_FOUND',
         message: '에러 리포트 세션을 찾을 수 없습니다.',
       });
     }
 
-    const errorRows = session.previewResult.rows.filter(
-      (r) => r.status === 'error' || r.status === 'duplicate'
-    );
+    const errorRows: MigrationRowPreview[] = [];
+    for (const sheet of multiSession.sheets) {
+      for (const row of sheet.rows) {
+        if (row.status === 'error' || row.status === 'duplicate') {
+          errorRows.push(row);
+        }
+      }
+    }
 
     return this.excelParserService.generateErrorReport(
       errorRows.map((r) => ({
@@ -378,5 +860,16 @@ export class DataMigrationService {
     }
 
     return { validRows, errorRows, duplicateRows, warningRows };
+  }
+
+  /**
+   * 배열을 지정된 크기의 청크로 분할
+   */
+  private chunkArray<T>(arr: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
   }
 }

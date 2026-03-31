@@ -32,6 +32,12 @@
       "pyeongtaek": "Pyeongtaek"
     }
   },
+  "sheets": {
+    "equipment": "Equipment",
+    "calibration": "Calibration History",
+    "repair": "Repair History",
+    "incident": "Incident History"
+  },
   "preview": {
     "title": "Preview Results",
     "description": "Review row-by-row validation results and select items to register.",
@@ -49,6 +55,7 @@
       "status": "Status",
       "name": "Equipment Name",
       "managementNumber": "Mgmt No.",
+      "date": "Date",
       "errors": "Errors/Warnings",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
@@ -62,6 +69,7 @@
       "duplicate": "Duplicate",
       "warning": "Warning"
     },
+    "historyReadOnly": "All valid rows in history sheets are automatically registered.",
     "executeButton": "Register Selected",
     "executeButtonCount": "Register {count} items",
     "backButton": "Re-upload",
@@ -76,6 +84,7 @@
     "skipped": "Skipped",
     "errors": "Errors",
     "createdUnit": "items",
+    "sheetBreakdown": "Per-Sheet Details",
     "viewEquipmentList": "Go to Equipment List",
     "migrateAgain": "Migrate More",
     "downloadErrorReport": "Download Error Report",
