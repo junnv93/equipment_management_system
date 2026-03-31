@@ -13,7 +13,7 @@ import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { NotificationSseService, SseNotificationPayload } from '../sse/notification-sse.service';
 import { SettingsService } from '../../settings/settings.service';
-import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
+import { NOTIFICATION_CONFIG, UUID_TEST_REGEX } from '@equipment-management/shared-constants';
 
 /**
  * 알림 디스패처 (배치 인식)
@@ -42,10 +42,6 @@ export class NotificationDispatcher {
     private readonly settingsService: SettingsService
   ) {}
 
-  /** UUID v4 형식 검증 (비-UUID 문자열이 DB uuid 컬럼에 도달하는 것을 방지) */
-  private static readonly UUID_PATTERN =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
   /**
    * actorId 정규화 — Anti-Corruption Layer
    *
@@ -60,7 +56,7 @@ export class NotificationDispatcher {
    */
   private normalizeActorForDb(actorId: string | null | undefined): string | null {
     if (!actorId || actorId === NOTIFICATION_CONFIG.SYSTEM_ACTOR_ID) return null;
-    if (NotificationDispatcher.UUID_PATTERN.test(actorId)) return actorId;
+    if (UUID_TEST_REGEX.test(actorId)) return actorId;
 
     this.logger.warn(`비-UUID actorId 감지, null로 정규화: "${actorId}"`);
     return null;

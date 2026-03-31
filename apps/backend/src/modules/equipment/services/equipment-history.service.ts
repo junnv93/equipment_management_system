@@ -344,10 +344,11 @@ export class EquipmentHistoryService {
       previousLocation: string | null;
       notes?: string;
     },
-    userId?: string
+    userId?: string,
+    tx?: AppDatabase
   ): Promise<void> {
     const validatedUserId = await this.validateAndGetUserId(userId);
-    await this.db.insert(equipmentLocationHistory).values({
+    await (tx ?? this.db).insert(equipmentLocationHistory).values({
       equipmentId,
       changedAt: new Date(data.changedAt),
       previousLocation: data.previousLocation,

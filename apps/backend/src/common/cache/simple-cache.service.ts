@@ -122,6 +122,20 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
   }
 
   /**
+   * 특정 프리픽스로 시작하는 모든 캐시 키를 삭제합니다.
+   *
+   * deleteByPattern('prefix*')의 glob-style 오용 대신 이 메서드를 사용하세요.
+   * 정규식 메타문자를 이스케이프하고 '^' 앵커를 적용하여 의도치 않은 키 삭제를 방지합니다.
+   *
+   * @param prefix CACHE_KEY_PREFIXES 상수 (예: 'equipment:' 또는 'equipment:list:')
+   */
+  deleteByPrefix(prefix: string): void {
+    // 정규식 메타문자 이스케이프 후 ^ 앵커 적용 — 정확한 프리픽스 매칭 보장
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    this.deleteByPattern(`^${escaped}`);
+  }
+
+  /**
    * 캐시에서 값을 가져오거나, 없으면 팩토리 함수를 실행하여 값을 가져옵니다.
    *
    * Thundering Herd 방지: 동일 키에 대한 동시 요청은 하나의 factory만 실행하고

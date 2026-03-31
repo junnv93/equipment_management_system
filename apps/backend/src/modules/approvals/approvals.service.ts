@@ -866,12 +866,16 @@ export class ApprovalsService {
         return undefined;
       case 'site':
         if (!scope.site) {
-          throw new ForbiddenException(
-            '사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
-          );
+          throw new ForbiddenException({
+            code: 'SCOPE_ACCESS_DENIED',
+            message: 'No site assigned to user',
+          });
         }
         if (!scopeFilters.site) {
-          throw new ForbiddenException('이 리소스에 대한 사이트 스코프 필터를 적용할 수 없습니다.');
+          throw new ForbiddenException({
+            code: 'SCOPE_FILTER_UNAVAILABLE',
+            message: 'Site scope filter is not available for this resource',
+          });
         }
         return scopeFilters.site(scope.site);
       case 'team':
@@ -880,9 +884,10 @@ export class ApprovalsService {
           if (scope.site && scopeFilters.site) {
             return scopeFilters.site(scope.site);
           }
-          throw new ForbiddenException(
-            '팀 또는 사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
-          );
+          throw new ForbiddenException({
+            code: 'SCOPE_ACCESS_DENIED',
+            message: 'No team or site assigned to user',
+          });
         }
         // team 콜백 있으면 사용, 없으면 site로 폴백 (team ⊂ site)
         if (scopeFilters.team) {
@@ -891,9 +896,10 @@ export class ApprovalsService {
         if (scope.site && scopeFilters.site) {
           return scopeFilters.site(scope.site);
         }
-        throw new ForbiddenException(
-          '이 리소스에 대한 팀/사이트 스코프 필터를 적용할 수 없습니다.'
-        );
+        throw new ForbiddenException({
+          code: 'SCOPE_FILTER_UNAVAILABLE',
+          message: 'Team/site scope filter is not available for this resource',
+        });
       case 'none':
         // ROLE_CATEGORIES gating에서 이미 제외 — 안전장치
         return sql`false`;

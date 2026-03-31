@@ -269,7 +269,7 @@ export class CheckoutsService extends VersionedBaseService {
    * 예: 반출 생성 시 신청자 팀과 대여 팀의 캐시만 무효화
    */
   private async invalidateCache(teamIds?: string[], checkoutId?: string): Promise<void> {
-    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
+    await this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
     // ✅ SSOT: 개별 checkout의 detail 캐시 무효화 (optimistic locking 지원)
     if (checkoutId) {
       const detailCacheKey = this.buildCacheKey('detail', { uuid: checkoutId });
@@ -278,7 +278,7 @@ export class CheckoutsService extends VersionedBaseService {
 
     if (!teamIds || teamIds.length === 0) {
       // 팀 정보가 없으면 전체 무효화 (안전한 fallback)
-      await this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
+      await this.cacheService.deleteByPrefix(this.CACHE_PREFIX);
       return;
     }
 

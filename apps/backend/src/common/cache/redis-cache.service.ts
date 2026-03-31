@@ -82,6 +82,11 @@ export class RedisCacheService implements ICacheService, OnModuleDestroy {
     this.logger.debug(`Deleted ${keys.length} cache entries matching pattern: ${pattern}`);
   }
 
+  async deleteByPrefix(prefix: string): Promise<void> {
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.deleteByPattern(`^${escaped}`);
+  }
+
   async getOrSet<T>(
     key: string,
     factory: () => Promise<T>,

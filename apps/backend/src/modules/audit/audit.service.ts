@@ -99,13 +99,15 @@ export class AuditService {
    */
   private invalidateListCaches(entityType: string, entityId: string, userId: string): void {
     // 전체 리스트 캐시 무효화 (필터 조합이 다양하므로 패턴 매칭)
-    this.cacheService.deleteByPattern('^audit-logs:list:');
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.AUDIT_LOGS}list:`);
 
     // 특정 엔티티 캐시 무효화 (scope suffix 포함 모든 variant 삭제)
-    this.cacheService.deleteByPattern(`^audit-logs:entity:${entityType}:${entityId}:`);
+    this.cacheService.deleteByPrefix(
+      `${CACHE_KEY_PREFIXES.AUDIT_LOGS}entity:${entityType}:${entityId}:`
+    );
 
     // 특정 사용자 캐시 무효화 (scope suffix 포함 모든 variant 삭제)
-    this.cacheService.deleteByPattern(`^audit-logs:user:${userId}:`);
+    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:`);
   }
 
   /**

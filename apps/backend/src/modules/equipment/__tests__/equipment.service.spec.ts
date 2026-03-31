@@ -72,6 +72,7 @@ describe('EquipmentService', () => {
       getOrSet: jest.fn().mockImplementation((_key, factory) => factory()),
       invalidatePattern: jest.fn(),
       deleteByPattern: jest.fn().mockResolvedValue(undefined),
+      deleteByPrefix: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
