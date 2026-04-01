@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, HttpCode, HttpStatus, UsePipes } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
-import { SKIP_ALL_THROTTLES } from '../../common/config/throttle.constants';
+import { SKIP_ALL_THROTTLES, THROTTLE_PRESETS } from '../../common/config/throttle.constants';
 import { Public } from '../auth/decorators/public.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
@@ -17,7 +17,7 @@ export class MonitoringController {
    * 인증 없이 접근 가능합니다. (에러는 로그인 전에도 발생할 수 있음)
    */
   @Public()
-  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Throttle({ short: THROTTLE_PRESETS.CLIENT_ERROR })
   @Post('client-errors')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UsePipes(ClientErrorPipe)

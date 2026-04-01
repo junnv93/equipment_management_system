@@ -7,6 +7,7 @@ import {
   testConnection,
   healthCheck,
   getConnectionMetrics,
+  executeDiagnosticQuery,
 } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 
@@ -96,6 +97,11 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
     error?: string | undefined;
   }> {
     return await healthCheck();
+  }
+
+  // 시스템 카탈로그 등 raw SQL 실행 (pgPool 캡슐화)
+  async executeDiagnosticQuery<T extends Record<string, unknown>>(query: string): Promise<T[]> {
+    return executeDiagnosticQuery<T>(query);
   }
 }
 

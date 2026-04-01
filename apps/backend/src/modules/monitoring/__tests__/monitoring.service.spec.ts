@@ -5,17 +5,6 @@ import { MetricsService } from '../../../common/metrics/metrics.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { DrizzleService } from '../../../database/drizzle.module';
 
-// pgPool을 모듈 레벨에서 mock
-jest.mock('../../../database/drizzle/index', () => ({
-  pgPool: {
-    totalCount: 5,
-    idleCount: 3,
-    waitingCount: 0,
-    options: { max: 50 },
-    connect: jest.fn(),
-  },
-}));
-
 describe('MonitoringService', () => {
   let service: MonitoringService;
   let mockLoggerService: Record<string, jest.Mock>;
@@ -54,11 +43,13 @@ describe('MonitoringService', () => {
         poolTotalCount: 5,
         poolIdleCount: 3,
         poolWaitingCount: 0,
+        poolMaxCount: 50,
       }),
       performHealthCheck: jest.fn().mockResolvedValue({
         status: 'healthy',
         latency: 5,
       }),
+      executeDiagnosticQuery: jest.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -275,34 +266,24 @@ describe('MonitoringService', () => {
   });
 
   describe('getDatabaseDiagnostics', () => {
-    it('pgPool 메트릭을 반환해야 한다', async () => {
-      // pgPool.connect mock 설정
-      const { pgPool: mockPgPool } = jest.requireMock('../../../database/drizzle/index');
-      const mockClient = {
-        query: jest
-          .fn()
-          .mockResolvedValueOnce({ rows: [{ version: 'PostgreSQL 15.4' }] })
-          .mockResolvedValueOnce({
-            rows: [
-              {
-                xact_commit: '1000',
-                xact_rollback: '5',
-                blks_hit: '9500',
-                blks_read: '500',
-                cache_hit_ratio: '95.00',
-                deadlocks: '0',
-              },
-            ],
-          })
-          .mockResolvedValueOnce({
-            rows: [
-              { name: 'equipment', row_count: '150', size: '2048 kB' },
-              { name: 'users', row_count: '25', size: '128 kB' },
-            ],
-          }),
-        release: jest.fn(),
-      };
-      mockPgPool.connect.mockResolvedValueOnce(mockClient);
+    it('DrizzleService를 통해 DB 메트릭을 반환해야 한다', async () => {
+      // executeDiagnosticQuery mock: 3개 쿼리 순서대로 반환
+      mockDrizzleService.executeDiagnosticQuery
+        .mockResolvedValueOnce([{ version: 'PostgreSQL 15.4' }])
+        .mockResolvedValueOnce([
+          {
+            xact_commit: '1000',
+            xact_rollback: '5',
+            blks_hit: '9500',
+            blks_read: '500',
+            cache_hit_ratio: '95.00',
+            deadlocks: '0',
+          },
+        ])
+        .mockResolvedValueOnce([
+          { name: 'equipment', row_count: '150', size: '2048 kB' },
+          { name: 'users', row_count: '25', size: '128 kB' },
+        ]);
 
       const diagnostics = await service.getDatabaseDiagnostics();
 
@@ -312,12 +293,13 @@ describe('MonitoringService', () => {
       expect(diagnostics.metrics.xactCommit).toBe(1000);
       expect(diagnostics.tablesInfo).toHaveLength(2);
       expect(diagnostics.tablesInfo[0].name).toBe('equipment');
-      expect(mockClient.release).toHaveBeenCalled();
+      expect(mockDrizzleService.executeDiagnosticQuery).toHaveBeenCalledTimes(3);
     });
 
     it('SQL 실패 시 기본값으로 폴백해야 한다', async () => {
-      const { pgPool: mockPgPool } = jest.requireMock('../../../database/drizzle/index');
-      mockPgPool.connect.mockRejectedValueOnce(new Error('Connection refused'));
+      mockDrizzleService.executeDiagnosticQuery.mockRejectedValueOnce(
+        new Error('Connection refused')
+      );
 
       const diagnostics = await service.getDatabaseDiagnostics();
 
@@ -334,9 +316,6 @@ describe('MonitoringService', () => {
         service.recordHttpRequest('/api/test', 200, i);
       }
 
-      const { pgPool: mockPgPool } = jest.requireMock('../../../database/drizzle/index');
-      mockPgPool.connect.mockRejectedValueOnce(new Error('skip'));
-
       const diagnostics = await service.getDiagnostics();
 
       expect(diagnostics.performance.responseTime.avg).toBeCloseTo(50.5, 0);
@@ -347,9 +326,6 @@ describe('MonitoringService', () => {
     });
 
     it('캐시 통계를 포함해야 한다', async () => {
-      const { pgPool: mockPgPool } = jest.requireMock('../../../database/drizzle/index');
-      mockPgPool.connect.mockRejectedValueOnce(new Error('skip'));
-
       const diagnostics = await service.getDiagnostics();
 
       expect(diagnostics.cache).toEqual({

@@ -6,7 +6,6 @@ import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { DrizzleService } from '../../database/drizzle.module';
-import { pgPool } from '../../database/drizzle/index';
 import { getErrorStack, getErrorMessage } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
@@ -359,13 +358,14 @@ export class MonitoringService implements OnModuleDestroy {
   }> {
     this.logger.log('데이터베이스 진단 정보 조회');
 
-    // pgPool 기본 메트릭
+    // DrizzleService를 통해 커넥션 풀 메트릭 조회 (pgPool 직접 접근 제거)
     const connectionMetrics = this.drizzleService.getMetrics() as {
       connectionsCreated: number;
       connectionErrors: number;
       poolTotalCount: number;
       poolIdleCount: number;
       poolWaitingCount: number;
+      poolMaxCount: number;
     };
 
     // 기본값 (SQL 실패 시 사용)
@@ -381,69 +381,73 @@ export class MonitoringService implements OnModuleDestroy {
     let tablesInfo: { name: string; rowCount: number; size: string }[] = [];
 
     try {
-      const client = await pgPool.connect();
-      try {
-        // PostgreSQL 버전
-        const versionResult = await client.query('SELECT version()');
-        version = versionResult.rows[0]?.version ?? version;
+      // DrizzleService.executeDiagnosticQuery()로 시스템 카탈로그 조회
+      const versionRows = await this.drizzleService.executeDiagnosticQuery<{ version: string }>(
+        'SELECT version()'
+      );
+      version = versionRows[0]?.version ?? version;
 
-        // pg_stat_database 통계
-        const statsResult = await client.query(`
-          SELECT
-            xact_commit, xact_rollback,
-            blks_hit, blks_read,
-            CASE WHEN (blks_hit + blks_read) > 0
-              THEN round(blks_hit::numeric / (blks_hit + blks_read) * 100, 2)
-              ELSE 0
-            END AS cache_hit_ratio,
-            deadlocks
-          FROM pg_stat_database
-          WHERE datname = current_database()
-        `);
-        if (statsResult.rows[0]) {
-          const row = statsResult.rows[0];
-          dbStats = {
-            xactCommit: Number(row.xact_commit),
-            xactRollback: Number(row.xact_rollback),
-            blksHit: Number(row.blks_hit),
-            blksRead: Number(row.blks_read),
-            cacheHitRatio: Number(row.cache_hit_ratio),
-            deadlocks: Number(row.deadlocks),
-          };
-        }
-
-        // 주요 테이블 크기/행 수
-        const tablesResult = await client.query(`
-          SELECT
-            relname AS name,
-            n_live_tup AS row_count,
-            pg_size_pretty(pg_total_relation_size(relid)) AS size
-          FROM pg_stat_user_tables
-          ORDER BY pg_total_relation_size(relid) DESC
-          LIMIT 10
-        `);
-        tablesInfo = tablesResult.rows.map(
-          (row: { name: string; row_count: string; size: string }) => ({
-            name: row.name,
-            rowCount: Number(row.row_count),
-            size: row.size,
-          })
-        );
-      } finally {
-        client.release();
+      const statsRows = await this.drizzleService.executeDiagnosticQuery<{
+        xact_commit: string;
+        xact_rollback: string;
+        blks_hit: string;
+        blks_read: string;
+        cache_hit_ratio: string;
+        deadlocks: string;
+      }>(`
+        SELECT
+          xact_commit, xact_rollback,
+          blks_hit, blks_read,
+          CASE WHEN (blks_hit + blks_read) > 0
+            THEN round(blks_hit::numeric / (blks_hit + blks_read) * 100, 2)
+            ELSE 0
+          END AS cache_hit_ratio,
+          deadlocks
+        FROM pg_stat_database
+        WHERE datname = current_database()
+      `);
+      if (statsRows[0]) {
+        const row = statsRows[0];
+        dbStats = {
+          xactCommit: Number(row.xact_commit),
+          xactRollback: Number(row.xact_rollback),
+          blksHit: Number(row.blks_hit),
+          blksRead: Number(row.blks_read),
+          cacheHitRatio: Number(row.cache_hit_ratio),
+          deadlocks: Number(row.deadlocks),
+        };
       }
+
+      const tableRows = await this.drizzleService.executeDiagnosticQuery<{
+        name: string;
+        row_count: string;
+        size: string;
+      }>(`
+        SELECT
+          relname AS name,
+          n_live_tup AS row_count,
+          pg_size_pretty(pg_total_relation_size(relid)) AS size
+        FROM pg_stat_user_tables
+        ORDER BY pg_total_relation_size(relid) DESC
+        LIMIT 10
+      `);
+      tablesInfo = tableRows.map((row) => ({
+        name: row.name,
+        rowCount: Number(row.row_count),
+        size: row.size,
+      }));
     } catch (error) {
       this.logger.warn(`DB 진단 SQL 실패: ${getErrorMessage(error)}`);
     }
 
     return {
-      status: pgPool.totalCount > 0 ? 'connected' : 'disconnected',
+      status: connectionMetrics.poolTotalCount > 0 ? 'connected' : 'disconnected',
       version,
       connections: {
         active: connectionMetrics.poolTotalCount - connectionMetrics.poolIdleCount,
         idle: connectionMetrics.poolIdleCount,
         total: connectionMetrics.poolTotalCount,
-        max: pgPool.options.max ?? 50,
+        max: connectionMetrics.poolMaxCount,
         waiting: connectionMetrics.poolWaitingCount,
       },
       metrics: {

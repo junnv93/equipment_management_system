@@ -38,5 +38,6 @@ export const SKIP_ALL_THROTTLES = Object.fromEntries(
 export const THROTTLE_PRESETS = {
   LOGIN: { limit: 5, ttl: THROTTLE_WINDOW_MS },
   TOKEN_REFRESH: { limit: 10, ttl: THROTTLE_WINDOW_MS },
+  CLIENT_ERROR: { limit: 10, ttl: THROTTLE_WINDOW_MS },
   TEST_LOGIN: { limit: 100, ttl: THROTTLE_WINDOW_MS },
 } as const;

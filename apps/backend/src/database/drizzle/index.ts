@@ -142,7 +142,24 @@ export function getConnectionMetrics(): unknown {
     poolTotalCount: pgPool.totalCount,
     poolIdleCount: pgPool.idleCount,
     poolWaitingCount: pgPool.waitingCount,
+    poolMaxCount: pgPool.options.max ?? 50,
   };
+}
+
+/**
+ * 시스템 카탈로그 등 Drizzle ORM으로 표현 불가한 raw SQL 실행
+ * pgPool.connect/query/release 패턴을 캡슐화하여 커넥션 누수 방지
+ */
+export async function executeDiagnosticQuery<T extends Record<string, unknown>>(
+  query: string
+): Promise<T[]> {
+  const client = await pgPool.connect();
+  try {
+    const result = await client.query(query);
+    return result.rows as T[];
+  } finally {
+    client.release();
+  }
 }
 
 // 헬스 체크 함수
