@@ -96,22 +96,22 @@ describe('NotificationTemplateService', () => {
     });
 
     it('equipmentIdField가 없는 이벤트는 equipmentId=undefined를 반환한다', () => {
-      // equipmentIdField가 없는 이벤트를 찾아서 테스트
       const eventWithoutEquipment = REGISTERED_EVENTS.find(
         (name) => !NOTIFICATION_REGISTRY[name].equipmentIdField
       );
 
-      if (eventWithoutEquipment) {
-        const config = NOTIFICATION_REGISTRY[eventWithoutEquipment];
-        const payload = {
-          actorName: '홍길동',
-          [config.entityIdField]: 'entity-uuid-1',
-        };
+      // 전제 조건 검증 — 해당 이벤트가 없으면 테스트 실패로 명시
+      expect(eventWithoutEquipment).toBeDefined();
 
-        const result = service.buildNotification(eventWithoutEquipment, payload);
+      const config = NOTIFICATION_REGISTRY[eventWithoutEquipment!];
+      const payload = {
+        actorName: '홍길동',
+        [config.entityIdField]: 'entity-uuid-1',
+      };
 
-        expect(result.equipmentId).toBeUndefined();
-      }
+      const result = service.buildNotification(eventWithoutEquipment!, payload);
+
+      expect(result.equipmentId).toBeUndefined();
     });
   });
 });
