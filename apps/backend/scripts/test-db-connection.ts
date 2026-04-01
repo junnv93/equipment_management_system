@@ -3,10 +3,10 @@
  */
 
 import { Client } from 'pg';
-import * as dotenv from 'dotenv';
+import { loadMonorepoEnv } from '@equipment-management/db/load-env';
 
-// .env 파일 로드
-dotenv.config();
+// 모노레포 .env cascade 로딩
+loadMonorepoEnv();
 
 async function testConnection() {
   // 여러 연결 문자열 시도

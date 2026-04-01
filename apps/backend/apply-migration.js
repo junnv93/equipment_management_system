@@ -4,12 +4,20 @@ const postgres = require('postgres');
 const fs = require('fs');
 const path = require('path');
 
+// DB_* 변수로부터 DATABASE_URL 조합 (packages/db/src/load-env.ts의 JS 버전)
+function resolveDatabaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '5432';
+  const user = process.env.DB_USER || 'postgres';
+  const password = process.env.DB_PASSWORD || 'postgres';
+  const dbName = process.env.DB_NAME || 'equipment_management';
+  return `postgresql://${user}:${password}@${host}:${port}/${dbName}`;
+}
+
 async function runMigration() {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error('DATABASE_URL 환경변수가 설정되지 않았습니다.');
-    }
+    const databaseUrl = resolveDatabaseUrl();
     const conn = postgres(databaseUrl);
 
     const migrationSql = fs.readFileSync(

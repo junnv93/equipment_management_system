@@ -1,12 +1,12 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool, PoolConfig } from 'pg';
-import * as dotenv from 'dotenv';
 import { Logger } from '@nestjs/common';
 import * as schema from '@equipment-management/db/schema';
+import { loadMonorepoEnv } from '@equipment-management/db/load-env';
 import { getErrorMessage } from '../../common/utils/error';
 
-// 환경 변수 로드
-dotenv.config();
+// 모노레포 .env cascade 로딩 (CWD/.env.local → CWD/.env → 루트/.env)
+loadMonorepoEnv();
 
 // 로거 설정
 const logger = new Logger('DrizzleORM');

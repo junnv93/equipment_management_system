@@ -1,8 +1,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool, PoolConfig } from 'pg';
-import * as dotenv from 'dotenv';
 import * as schema from './schema';
+import { loadMonorepoEnv } from './load-env';
 
 /**
  * SSOT: 전체 프로젝트에서 사용하는 DB 인스턴스 타입
@@ -10,8 +10,8 @@ import * as schema from './schema';
  */
 export type AppDatabase = NodePgDatabase<typeof schema>;
 
-// 환경 변수 로드
-dotenv.config();
+// 모노레포 .env cascade 로딩 (CWD/.env.local → CWD/.env → 루트/.env)
+loadMonorepoEnv();
 
 /**
  * 데이터베이스 연결 설정 생성 함수

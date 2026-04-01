@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
 import { Client } from 'pg';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-// .env 파일 로드
-dotenv.config();
+// 모노레포 .env cascade 로딩
+loadMonorepoEnv();
 
 /**
  * 수동 마이그레이션 실행 함수
@@ -12,9 +12,8 @@ dotenv.config();
 async function manualMigrate(): Promise<void> {
   console.log('📊 수동 마이그레이션 실행 중...');
 
-  // 데이터베이스 연결 정보
-  const connectionString =
-    process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/equipment_management';
+  // 데이터베이스 연결 정보 (DATABASE_URL → DB_* 폴백)
+  const connectionString = resolveDatabaseUrl();
 
   // 클라이언트 생성
   const client = new Client({ connectionString });

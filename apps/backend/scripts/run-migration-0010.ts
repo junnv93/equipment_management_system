@@ -6,15 +6,13 @@
 import { Client } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-// .env 파일 로드
-dotenv.config();
+// 모노레포 .env cascade 로딩
+loadMonorepoEnv();
 
 async function runMigration() {
-  const connectionString =
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5432/equipment_management';
+  const connectionString = resolveDatabaseUrl();
 
   const client = new Client({ connectionString });
 

@@ -1,10 +1,10 @@
 import * as path from 'path';
-import * as dotenv from 'dotenv';
 import { Client } from 'pg';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { loadMonorepoEnv } from '@equipment-management/db/load-env';
 
-dotenv.config();
+loadMonorepoEnv();
 
 /**
  * 테스트 환경을 위한 마이그레이션 실행 스크립트

@@ -1,19 +1,15 @@
 import type { Config } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-// .env 파일 로드
-dotenv.config();
-
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL 환경 변수가 설정되지 않았습니다. .env 파일을 확인해주세요.');
-}
+// 모노레포 .env cascade 로딩 (CWD/.env.local → CWD/.env → 루트/.env)
+loadMonorepoEnv();
 
 export default {
   schema: '../../packages/db/src/schema/*.ts',
   out: './drizzle',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: resolveDatabaseUrl(),
   },
   // 기존 테이블에 새 인덱스 추가 시 필요한 설정
   verbose: true,
