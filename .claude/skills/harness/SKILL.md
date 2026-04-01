@@ -17,6 +17,11 @@ Anthropic의 "Harness Design for Long-Running Apps" 패턴 적용.
 4. **Constrain deliverables, not implementation** — Planner는 "무엇을" 결정, Generator는 "어떻게" 결정. 구현 세부사항을 과잉 명세하면 cascading error 발생
 5. **Reuse existing infrastructure** — 새 검증 로직 작성 금지. verify-*, review-* 스킬을 orchestrate
 
+## References
+
+- **Handoff formats**: [references/handoff-formats.md](references/handoff-formats.md) — contract/evaluation-report/plan 스키마
+- **Example prompts**: [references/example-prompts.md](references/example-prompts.md) — 도메인별 Mode 0/1/2 실전 프롬프트 예시
+
 ## Handoff Files
 
 에이전트 간 통신은 파일 기반. 포맷 상세: [references/handoff-formats.md](references/handoff-formats.md)
