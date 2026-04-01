@@ -769,5 +769,6 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **review-design**: Design quality review + wireframe HTML — 10 anti-patterns scoring, accessibility, dark mode, progressive disclosure
 - **manage-skills**: Skill maintenance — coverage gap analysis, skill creation/update, CLAUDE.md management
 - **playwright-e2e**: Playwright E2E workflow — plan→generate→execute→heal→report, sequential agent execution, auth.fixture auto-apply
+- **harness**: 3-Agent harness orchestrator — Planner→Generator→Evaluator loop, auto mode selection (Mode 0/1/2), contract-based evaluation, max 3 retry, load-bearing analysis
 
 Reference these skills when working on related features.
