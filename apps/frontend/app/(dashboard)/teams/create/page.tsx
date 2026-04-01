@@ -20,11 +20,9 @@ import { getPageContainerClasses } from '@/lib/design-tokens';
  */
 export default function CreateTeamPage() {
   return (
-    <div className={getPageContainerClasses('form')}>
-      <Suspense fallback={<CreateTeamPageSkeleton />}>
-        <CreateTeamContentAsync />
-      </Suspense>
-    </div>
+    <Suspense fallback={<CreateTeamPageSkeleton />}>
+      <CreateTeamContentAsync />
+    </Suspense>
   );
 }
 
@@ -33,7 +31,7 @@ async function CreateTeamContentAsync() {
   const t = await getTranslations('teams');
 
   return (
-    <>
+    <div className={getPageContainerClasses('form')}>
       {/* 헤더 */}
       <PageHeader
         title={t('create.title')}
@@ -44,7 +42,7 @@ async function CreateTeamContentAsync() {
 
       {/* 폼 */}
       <TeamForm mode="create" />
-    </>
+    </div>
   );
 }
 
@@ -54,7 +52,7 @@ async function CreateTeamContentAsync() {
  */
 export function CreateTeamPageSkeleton() {
   return (
-    <>
+    <div className={getPageContainerClasses('form')}>
       {/* 헤더 스켈레톤 */}
       <div className="flex items-center gap-4">
         <Skeleton className="h-10 w-10 rounded-md" />
@@ -82,7 +80,7 @@ export function CreateTeamPageSkeleton() {
           </div>
         </CardContent>
       </Card>
-    </>
+    </div>
   );
 }
 
