@@ -2,6 +2,7 @@ import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { SKIP_GLOBAL_JWT_KEY } from '../../../common/decorators/sse-authenticated.decorator';
 import { Observable } from 'rxjs';
 import { JwtUser } from '../../../types/auth';
 
@@ -12,12 +13,21 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   }
 
   canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
-    // Public 데코레이터가 있으면 인증 검사를 건너뜁니다
+    // @Public(): 인증 + 권한 모두 생략
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) {
+      return true;
+    }
+
+    // @SseAuthenticated(): 글로벌 JWT만 우회 (자체 SseJwtAuthGuard 사용, PermissionsGuard는 유지)
+    const skipGlobalJwt = this.reflector.getAllAndOverride<boolean>(SKIP_GLOBAL_JWT_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (skipGlobalJwt) {
       return true;
     }
 
