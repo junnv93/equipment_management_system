@@ -27,6 +27,7 @@ import NCEditDialog from '@/components/non-conformances/NCEditDialog';
 import NCRepairDialog from '@/components/non-conformances/NCRepairDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
+import { Permission } from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
   type NonConformanceStatus,
@@ -96,7 +97,8 @@ interface NCDetailClientProps {
 export default function NCDetailClient({ ncId, initialData }: NCDetailClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isManager } = useAuth();
+  const { can } = useAuth();
+  const canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE);
   const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
   const t = useTranslations('non-conformances');
@@ -455,7 +457,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       {!isClosed && (
         <ActionBar
           nc={nc}
-          isManager={isManager()}
+          canCloseNC={canCloseNC}
           hasUnmetPrerequisite={hasUnmetPrerequisite}
           prerequisiteMessage={
             needsRepair
@@ -845,7 +847,7 @@ function CollapsibleSection({
  */
 function ActionBar({
   nc,
-  isManager,
+  canCloseNC,
   hasUnmetPrerequisite,
   prerequisiteMessage,
   onMarkCorrected,
@@ -854,7 +856,7 @@ function ActionBar({
   isUpdating,
 }: {
   nc: NonConformance;
-  isManager: boolean;
+  canCloseNC: boolean;
   hasUnmetPrerequisite: boolean;
   prerequisiteMessage?: string;
   onMarkCorrected: () => void;
@@ -882,12 +884,14 @@ function ActionBar({
             (hasUnmetPrerequisite
               ? prerequisiteMessage
               : t('detail.actionBar.hintNeedsCorrectionApproval'))}
-          {nc.status === NCVal.CORRECTED && !isManager && t('detail.actionBar.hintWaitingApproval')}
+          {nc.status === NCVal.CORRECTED &&
+            !canCloseNC &&
+            t('detail.actionBar.hintWaitingApproval')}
         </span>
       </div>
       <div className={NC_ACTION_BAR_TOKENS.right}>
         {/* 기술책임자 액션 (corrected 상태만) */}
-        {isManager && nc.status === NCVal.CORRECTED && (
+        {canCloseNC && nc.status === NCVal.CORRECTED && (
           <>
             <Button variant="outline" size="sm" onClick={onReject} disabled={isUpdating}>
               <X className="h-3.5 w-3.5 mr-1" />
