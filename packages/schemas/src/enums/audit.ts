@@ -3,6 +3,20 @@ import { z } from 'zod';
 /**
  * SINGLE SOURCE OF TRUTH: 감사 로그 액션 열거형
  *
+ * ## 감사 로그(Audit Log) vs 텔레메트리(Telemetry) 경계
+ *
+ * @AuditLog 데코레이터 사용 기준 (모두 충족 시에만 사용):
+ *   ✅ 인증된 사용자의 의도적 비즈니스 액션 (req.user 존재)
+ *   ✅ 비즈니스 엔티티의 상태 변경 또는 민감 조회
+ *   ✅ 규정 준수(UL-QP-18) 또는 책임 추적이 필요한 이벤트
+ *   ✅ 저빈도 이벤트 (DB write 부하 허용 수준)
+ *
+ * 텔레메트리/관찰 이벤트는 @AuditLog 금지 → NestJS Logger 사용:
+ *   ❌ @Public() 엔드포인트 (req.user=undefined → 인터셉터 graceful skip)
+ *   ❌ 시스템 상태 관찰 (health check, metrics, client-side errors)
+ *   ❌ 고빈도 이벤트 (프론트엔드 에러 수집, 성능 메트릭)
+ *   ❌ 응답이 void/NO_CONTENT (entityId 추출 불가)
+ *
  * 표준 액션값 (소문자 + 언더스코어):
  * - create: 생성
  * - update: 수정
