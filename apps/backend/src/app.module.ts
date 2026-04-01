@@ -45,7 +45,7 @@ import { DataMigrationModule } from './modules/data-migration/data-migration.mod
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      envFilePath: ['.env.local', '.env', '../../.env'],
       validate: validateEnv,
     }),
     ScheduleModule.forRoot(), // 스케줄러 모듈 등록 (교정 기한 초과 자동 점검)

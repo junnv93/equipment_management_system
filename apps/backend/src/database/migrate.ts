@@ -1,19 +1,17 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Client } from 'pg';
-import * as dotenv from 'dotenv';
 import * as path from 'path';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-// .env 파일 로드
-dotenv.config();
+// 모노레포 .env cascade 로딩
+loadMonorepoEnv();
 
 async function main(): Promise<void> {
   console.log('🔄 마이그레이션 시작...');
 
-  // 데이터베이스 연결 문자열
-  const connectionString =
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5432/equipment_management';
+  // 데이터베이스 연결 문자열 (DATABASE_URL → DB_* 폴백)
+  const connectionString = resolveDatabaseUrl();
 
   // PostgreSQL 클라이언트 생성
   const client = new Client({

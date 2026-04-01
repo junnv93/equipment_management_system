@@ -3,12 +3,12 @@ import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import * as mysql from 'mysql2/promise';
 import { Pool } from 'pg';
-import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
+import { loadMonorepoEnv } from '@equipment-management/db/load-env';
 
-// 환경 변수 로드
-dotenv.config();
+// 모노레포 .env cascade 로딩
+loadMonorepoEnv();
 
 // MySQL 연결 설정
 const MYSQL_CONFIG = {

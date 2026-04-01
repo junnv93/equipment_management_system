@@ -1,14 +1,12 @@
 import { Client } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as dotenv from 'dotenv';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-dotenv.config();
+loadMonorepoEnv();
 
 async function runMigration() {
-  const connectionString =
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5433/equipment_management';
+  const connectionString = resolveDatabaseUrl();
 
   const client = new Client({ connectionString });
 
