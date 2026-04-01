@@ -26,7 +26,7 @@ import { AuthenticatedRequest } from '../../../types/auth';
  *
  * 권한:
  * - stream(): 인증된 모든 사용자 접근 가능 (@SkipPermissions)
- * - getStats(): VIEW_SYSTEM_SETTINGS 권한 필수
+ * - getStats(): VIEW_SYSTEM_SETTINGS 권한 필수 (글로벌 JwtAuthGuard 경로)
  */
 @SkipThrottle(SKIP_ALL_THROTTLES)
 @ApiTags('알림 실시간 스트림')
@@ -56,9 +56,9 @@ export class NotificationSseController {
 
   /**
    * SSE 커넥션 통계 (모니터링용)
+   * 일반 HTTP GET — 글로벌 JwtAuthGuard 경로 사용 (SSE 전용 인증 불필요)
    */
   @Get('stream/stats')
-  @SseAuthenticated()
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @ApiOperation({
     summary: 'SSE 커넥션 통계',
