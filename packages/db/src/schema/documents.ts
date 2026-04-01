@@ -90,7 +90,7 @@ export type DocumentRecord = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 
 // Drizzle relations
-export const documentsRelations = relations(documents, ({ one }) => ({
+export const documentsRelations = relations(documents, ({ one, many }) => ({
   equipment: one(equipment, {
     fields: [documents.equipmentId],
     references: [equipment.id],
@@ -110,6 +110,9 @@ export const documentsRelations = relations(documents, ({ one }) => ({
   parentDocument: one(documents, {
     fields: [documents.parentDocumentId],
     references: [documents.id],
+    relationName: 'document_revisions',
+  }),
+  childDocuments: many(documents, {
     relationName: 'document_revisions',
   }),
 }));

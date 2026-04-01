@@ -83,7 +83,7 @@ export type NewEquipmentRequest = typeof equipmentRequests.$inferInsert;
 
 // Drizzle relations 설정
 // ⚠️ requester/approver 모두 users 테이블 참조 → relationName 필수 (Drizzle 다중 관계 규칙)
-export const equipmentRequestsRelations = relations(equipmentRequests, ({ one }) => ({
+export const equipmentRequestsRelations = relations(equipmentRequests, ({ one, many }) => ({
   equipment: one(equipment, {
     fields: [equipmentRequests.equipmentId],
     references: [equipment.id],
@@ -98,4 +98,7 @@ export const equipmentRequestsRelations = relations(equipmentRequests, ({ one })
     references: [users.id],
     relationName: 'equipmentRequestApprover',
   }),
+  documents: many(documents),
 }));
+
+import { documents } from './documents';

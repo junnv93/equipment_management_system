@@ -103,7 +103,7 @@ export type Calibration = typeof calibrations.$inferSelect;
 export type NewCalibration = typeof calibrations.$inferInsert;
 
 // Drizzle relations for joins
-export const calibrationsRelations = relations(calibrations, ({ one }) => ({
+export const calibrationsRelations = relations(calibrations, ({ one, many }) => ({
   equipment: one(equipment, {
     fields: [calibrations.equipmentId],
     references: [equipment.id],
@@ -118,4 +118,7 @@ export const calibrationsRelations = relations(calibrations, ({ one }) => ({
     references: [users.id],
     relationName: 'calibration_approved_by',
   }),
+  documents: many(documents),
 }));
+
+import { documents } from './documents';
