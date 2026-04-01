@@ -2,7 +2,7 @@
  * Helper functions for opening dialogs in NC-Repair workflow tests
  */
 
-import { Page, Locator } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { TIMEOUTS } from '../constants/test-data';
 
 /**

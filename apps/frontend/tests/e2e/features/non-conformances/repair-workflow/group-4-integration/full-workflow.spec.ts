@@ -40,27 +40,31 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     // Open incident registration dialog using helper (handles tab click and dialog opening)
     await openIncidentDialog(testOperatorPage, equipmentId);
 
-    // Fill incident form
-    const today = new Date().toISOString().split('T')[0];
-    await testOperatorPage.fill('[name="occurredAt"]', today);
+    // Select incident type FIRST — occurredAt/content/NC-checkbox render conditionally after this
     await selectShadcnOption(testOperatorPage, /사고 유형/i, '손상');
-    await testOperatorPage.fill('[name="content"]', 'E2E 테스트: 디스플레이 파손');
 
-    // Check "create non-conformance" by clicking the label
+    // Fill remaining fields (visible after type selection)
+    const today = new Date().toISOString().split('T')[0];
+    const incidentDialog = testOperatorPage.getByRole('dialog', { name: /사고 이력 등록/ });
+    await incidentDialog.getByLabel(/발생 일시/i).fill(today);
+    await incidentDialog.getByLabel(/^내용/i).fill('E2E 테스트: 디스플레이 파손');
+
+    // Check "create non-conformance" — click the actual checkbox input
+    // (FormLabel is in a sibling div without htmlFor/id association, so label click won't toggle)
     const ncLabel = testOperatorPage.getByText('부적합으로 등록', { exact: false });
     await ncLabel.waitFor({ state: 'visible', timeout: 10000 });
-    await ncLabel.click();
+    const ncCheckbox = testOperatorPage.getByRole('dialog').getByRole('checkbox');
+    await ncCheckbox.click();
 
     // Verify workflow guidance is displayed
-    const guidanceCard = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
-      hasText: /처리 워크플로우/i,
-    });
-    await expect(guidanceCard).toBeVisible();
+    // (getSemanticContainerClasses('info') renders bg-brand-info/10, not bg-blue-50)
+    await expect(testOperatorPage.getByText(/처리 워크플로우/i).first()).toBeVisible();
 
     // Submit incident - use dispatchEvent as the button is outside viewport
     await testOperatorPage.getByRole('button', { name: /저장|등록/i }).dispatchEvent('click');
 
-    // Wait for toast notification - use more specific selector to avoid status badges
+    // Wait for toast notification — use aria-live to distinguish from equipment status badges
+    // (status badges have role="status" but NOT aria-live; toasts have both)
     const toast = testOperatorPage
       .locator('[role="status"][aria-live]')
       .or(testOperatorPage.locator('.toast'));
@@ -79,24 +83,22 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await testOperatorPage.goto(`/equipment/${equipmentId}/non-conformance`);
 
     // Find NC card containing our test content
-    // NC cards have class: bg-white border border-gray-200 rounded-lg p-6 shadow-sm
+    // NC cards use shadcn Card component: div.rounded-lg.border.bg-card (not bg-white)
     const ncCard = testOperatorPage
-      .locator('div.bg-white.border.border-gray-200.rounded-lg')
+      .locator('div.rounded-lg.border.bg-card')
       .filter({ hasText: 'E2E 테스트: 디스플레이 파손' })
       .first();
     await expect(ncCard).toBeVisible({ timeout: TIMEOUTS.API_RESPONSE });
 
     // Verify NC status badge shows "등록됨" (open status)
-    await expect(ncCard.locator('.rounded-full')).toContainText(/등록됨/i);
+    // Status badge uses span with getSemanticBadgeClasses() → rounded-md, not rounded-full
+    await expect(ncCard.getByText(/등록됨/i)).toBeVisible();
 
-    // Verify repair guidance card is displayed (yellow warning card)
-    const warningCard = ncCard.locator('.bg-yellow-50').filter({
-      hasText: /수리 기록 필요/i,
-    });
-    await expect(warningCard).toBeVisible();
+    // Verify repair guidance card is displayed (warning card uses bg-brand-warning/10, not bg-yellow-50)
+    await expect(ncCard.getByText(/수리 기록 필요/i)).toBeVisible();
 
     // Verify repair registration link exists
-    const repairLink = warningCard.getByRole('link', { name: /수리 이력 등록하기/i });
+    const repairLink = ncCard.getByRole('link', { name: /수리 이력 등록하기/i });
     await expect(repairLink).toBeVisible();
 
     // Extract NC ID by getting all NCs via API simulation
@@ -121,21 +123,26 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
       .getByRole('heading', { name: '수리 이력 등록' })
       .waitFor({ state: 'visible', timeout: 5000 });
 
-    // Fill repair form - ensure each field is visible before filling
+    // Fill repair form — scope to dialog to prevent cross-dialog collisions
     const repairDate = new Date();
     repairDate.setDate(repairDate.getDate() + 2); // 2 days from now
     const repairDateStr = repairDate.toISOString().split('T')[0];
+    const repairDialog = testOperatorPage.getByRole('dialog', { name: /수리 이력 등록/ });
 
-    const repairDateInput = testOperatorPage.locator('[id="repairDate"]');
+    const repairDateInput = repairDialog.getByLabel(/수리 일자/i);
     await repairDateInput.waitFor({ state: 'visible', timeout: 5000 });
     await repairDateInput.fill(repairDateStr);
 
-    const repairDescInput = testOperatorPage.locator('[id="repairDescription"]');
+    const repairDescInput = repairDialog.getByLabel(/수리 내용/i);
     await repairDescInput.waitFor({ state: 'visible', timeout: 5000 });
     await repairDescInput.fill('E2E 테스트: 디스플레이 교체 작업 완료');
 
-    // Select the created NC
-    await testOperatorPage.click('[id="nonConformanceId"]');
+    // Select the created NC — use shadcn combobox pattern (label → formItem → combobox trigger)
+    const ncFormItem = repairDialog
+      .getByText(/연결된 부적합/i)
+      .first()
+      .locator('..');
+    await ncFormItem.getByRole('combobox').click();
 
     // Find NC option containing our test content (use role=option for semantic select)
     const ncOption = testOperatorPage
@@ -148,10 +155,8 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     // Wait for select to close and form state to update
 
     // Verify auto-link guidance is displayed
-    const guidanceBox = testOperatorPage.locator(UI_CLASSES.INFO_CARD).filter({
-      hasText: /자동 연동/i,
-    });
-    await expect(guidanceBox).toBeVisible();
+    // (getSemanticContainerClasses('info') renders bg-brand-info/10, not bg-blue-50)
+    await expect(testOperatorPage.getByText(/자동 연동/i).first()).toBeVisible();
 
     // Select repair result: completed (established selectShadcnOption pattern)
     await selectShadcnOption(testOperatorPage, /수리 결과/i, '수리 완료');
@@ -168,15 +173,15 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     // Navigate to NC management page
     await testOperatorPage.goto(`/equipment/${equipmentId}/non-conformance`);
 
-    // Find NC card
+    // Find NC card (shadcn Card: div.rounded-lg.border.bg-card)
     const ncCard = testOperatorPage
-      .locator('div.bg-white.border.border-gray-200.rounded-lg')
+      .locator('div.rounded-lg.border.bg-card')
       .filter({ hasText: 'E2E 테스트: 디스플레이 파손' })
       .first();
     await expect(ncCard).toBeVisible({ timeout: TIMEOUTS.API_RESPONSE });
 
-    // Verify status badge changed to "조치 완료"
-    await expect(ncCard.locator('.rounded-full')).toContainText(/조치.*완료/i, {
+    // Verify status badge changed to "조치 완료" (use .first() — badge appears before content div)
+    await expect(ncCard.getByText(/조치.*완료/i).first()).toBeVisible({
       timeout: TIMEOUTS.NAVIGATION,
     });
 
@@ -192,9 +197,9 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     // Navigate to NC management page as technical manager
     await techManagerPage.goto(`/equipment/${equipmentId}/non-conformance`);
 
-    // Find NC card
+    // Find NC card (shadcn Card: div.rounded-lg.border.bg-card)
     const ncCard = techManagerPage
-      .locator('div.bg-white.border.border-gray-200.rounded-lg')
+      .locator('div.rounded-lg.border.bg-card')
       .filter({ hasText: 'E2E 테스트: 디스플레이 파손' })
       .first();
     await expect(ncCard).toBeVisible({ timeout: TIMEOUTS.API_RESPONSE });
