@@ -15,6 +15,7 @@ const UpdatableNonConformanceStatusEnum = NonConformanceStatusEnum.extract(['ope
  */
 export const updateNonConformanceSchema = z.object({
   ...versionedSchema,
+  cause: z.string().min(1).optional(),
   actionPlan: z.string().optional(),
   correctionContent: z.string().optional(),
   correctionDate: z
@@ -33,6 +34,9 @@ export const UpdateNonConformanceValidationPipe = new ZodValidationPipe(updateNo
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class UpdateNonConformanceDto extends VersionedDto {
+  @ApiPropertyOptional({ description: '원인' })
+  cause?: string;
+
   @ApiPropertyOptional({ description: '조치 계획' })
   actionPlan?: string;
 

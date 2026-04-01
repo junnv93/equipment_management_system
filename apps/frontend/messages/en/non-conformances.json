@@ -186,6 +186,36 @@
         "failed": "Failed"
       }
     },
+    "editDialog": {
+      "title": "Edit Non-Conformance",
+      "description": "Edit the cause and action plan of this non-conformance.",
+      "actionPlanPlaceholder": "Enter action plan (optional)",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "repairDialog": {
+      "title": "Register Repair Record",
+      "description": "Register a repair record and automatically link it to this non-conformance.",
+      "repairDate": "Repair Date",
+      "repairDescription": "Repair Description",
+      "repairDescriptionPlaceholder": "Enter repair details (minimum 10 characters)",
+      "repairResult": "Repair Result",
+      "repairResultPlaceholder": "Select repair result",
+      "notes": "Notes",
+      "notesPlaceholder": "Additional notes (optional)",
+      "cancel": "Cancel",
+      "register": "Register",
+      "registering": "Registering...",
+      "validation": {
+        "dateRequired": "Repair date is required.",
+        "descriptionMin": "Repair description must be at least 10 characters."
+      },
+      "toasts": {
+        "success": "Repair record has been registered.",
+        "error": "Failed to register repair record."
+      }
+    },
     "dialog": {
       "closeTitle": "Close Non-Conformance",
       "closeDescription": "This will close the non-conformance. The status cannot be changed after closure.",
