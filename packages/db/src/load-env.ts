@@ -24,12 +24,14 @@ export function loadMonorepoEnv(): void {
   // 2. 앱별 기본
   config({ path: resolve(cwd, '.env') });
 
-  // 3. 모노레포 루트 탐색 (상위 디렉토리 순회)
+  // 3. 모노레포 루트 탐색 (상위 디렉토리 순회, 최대 5단계)
+  //    pnpm-workspace.yaml이 없는 환경(CI 등)에서 의도하지 않은
+  //    상위 디렉토리 .env 로드를 방지하기 위해 깊이를 제한합니다.
+  const MAX_DEPTH = 5;
   let dir = cwd;
-  const root = resolve('/');
-  while (dir !== root) {
+  for (let depth = 0; depth < MAX_DEPTH; depth++) {
     const parent = resolve(dir, '..');
-    if (parent === dir) break;
+    if (parent === dir) break; // filesystem root 도달
     dir = parent;
 
     if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) {
