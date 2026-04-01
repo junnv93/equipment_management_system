@@ -1,14 +1,15 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as os from 'os';
+import * as fs from 'fs';
 import * as process from 'process';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
-import { getErrorStack } from '../../common/utils/error';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { DrizzleService } from '../../database/drizzle.module';
+import { pgPool } from '../../database/drizzle/index';
+import { getErrorStack, getErrorMessage } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
-
-// 추적할 엔드포인트 최대 수 (메모리 누수 방지)
-const MAX_TRACKED_ENDPOINTS = 500;
 
 // UUID 패턴 (경로 정규화용)
 const UUID_PATTERN = new RegExp(UUID_PATTERN_SOURCE, 'gi');
@@ -72,7 +73,9 @@ export class MonitoringService implements OnModuleDestroy {
 
   constructor(
     private readonly logger: LoggerService,
-    private readonly metricsService: MetricsService
+    private readonly metricsService: MetricsService,
+    private readonly cacheService: SimpleCacheService,
+    private readonly drizzleService: DrizzleService
   ) {
     this.logger.setContext('MonitoringService');
 
@@ -114,19 +117,11 @@ export class MonitoringService implements OnModuleDestroy {
       // 업타임 계산
       this.metrics.uptime = (Date.now() - this.startTime) / 1000;
 
-      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
-      this.metrics.storage = {
-        diskUsage: 0,
-        diskFree: 0,
-        diskTotal: 0,
-      };
+      // 디스크 사용량 (fs.statfsSync)
+      this.metrics.storage = this.collectDiskMetrics();
 
-      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
-      this.metrics.network = {
-        requestsPerMinute: 0,
-        errorRate: 0,
-        avgResponseTime: 0,
-      };
+      // 네트워크 메트릭 (httpStats에서 계산)
+      this.metrics.network = this.computeNetworkMetrics();
 
       this.logger.debug('시스템 메트릭이 업데이트되었습니다.', {
         cpuUsage: this.metrics.cpu.usage.toFixed(2) + '%',
@@ -135,6 +130,79 @@ export class MonitoringService implements OnModuleDestroy {
     } catch (error) {
       this.logger.error('메트릭 업데이트 중 오류가 발생했습니다.', getErrorStack(error));
     }
+  }
+
+  /**
+   * 디스크 사용량 수집 (fs.statfsSync)
+   */
+  private collectDiskMetrics(): { diskUsage: number; diskFree: number; diskTotal: number } {
+    try {
+      const stats = fs.statfsSync('/');
+      const blockSize = stats.bsize;
+      const total = stats.blocks * blockSize;
+      const free = stats.bavail * blockSize;
+      const used = total - free;
+      return {
+        diskTotal: total,
+        diskFree: free,
+        diskUsage: total > 0 ? (used / total) * 100 : 0,
+      };
+    } catch (error) {
+      this.logger.warn(`디스크 메트릭 수집 실패: ${getErrorMessage(error)}`);
+      return { diskUsage: 0, diskFree: 0, diskTotal: 0 };
+    }
+  }
+
+  /**
+   * 네트워크 메트릭 계산 (httpStats 기반)
+   */
+  private computeNetworkMetrics(): {
+    requestsPerMinute: number;
+    errorRate: number;
+    avgResponseTime: number;
+  } {
+    const uptimeMinutes = this.metrics.uptime / 60;
+    const requestsPerMinute = uptimeMinutes > 0 ? this.httpStats.totalRequests / uptimeMinutes : 0;
+
+    const errorRate =
+      this.httpStats.totalRequests > 0
+        ? (this.httpStats.errorRequests / this.httpStats.totalRequests) * 100
+        : 0;
+
+    // 전체 응답 시간 평균
+    let totalTime = 0;
+    let totalCount = 0;
+    this.httpStats.responseTimeByEndpoint.forEach((times) => {
+      for (const t of times) {
+        totalTime += t;
+        totalCount++;
+      }
+    });
+    const avgResponseTime = totalCount > 0 ? totalTime / totalCount : 0;
+
+    return { requestsPerMinute, errorRate, avgResponseTime };
+  }
+
+  /**
+   * 모든 엔드포인트의 응답 시간을 단일 배열로 수집
+   */
+  private collectAllResponseTimes(): number[] {
+    const all: number[] = [];
+    this.httpStats.responseTimeByEndpoint.forEach((times) => {
+      for (const t of times) {
+        all.push(t);
+      }
+    });
+    return all;
+  }
+
+  /**
+   * 정렬된 배열에서 백분위수 계산
+   */
+  private percentile(sorted: number[], p: number): number {
+    if (sorted.length === 0) return 0;
+    const index = Math.ceil((p / 100) * sorted.length) - 1;
+    return sorted[Math.max(0, index)];
   }
 
   /**
@@ -214,20 +282,12 @@ export class MonitoringService implements OnModuleDestroy {
     cpu: { usage: number; loadAvg: number[] };
     memory: { total: number; free: number; used: number; percentage: number };
     uptime: number;
-    network: {
-      requestsPerMinute: number;
-      errorRate: number;
-      avgResponseTime: number;
-      isSimulated: boolean;
-    };
-    storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
+    network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
+    storage: { diskUsage: number; diskFree: number; diskTotal: number };
   } {
     this.logger.log('시스템 메트릭 조회');
     return {
       ...this.metrics,
-      // TODO: 실제 시스템 메트릭 연동 필요 — network/storage는 시뮬레이션 데이터
-      network: { ...this.metrics.network, isSimulated: true },
-      storage: { ...this.metrics.storage, isSimulated: true },
       hostname: os.hostname(),
       platform: os.platform(),
       arch: os.arch(),
@@ -279,78 +339,132 @@ export class MonitoringService implements OnModuleDestroy {
   }
 
   /**
-   * 데이터베이스 진단 정보 조회
+   * 데이터베이스 진단 정보 조회 (pgPool + pg_stat_database)
    */
-  getDatabaseDiagnostics(): {
-    isSimulated: boolean;
+  async getDatabaseDiagnostics(): Promise<{
     status: string;
     version: string;
-    connections: { active: number; idle: number; max: number };
+    connections: { active: number; idle: number; total: number; max: number; waiting: number };
     metrics: {
       connectionsCreated: number;
       connectionErrors: number;
-      queriesExecuted: number;
-      queriesFailed: number;
-      avgQueryTime: number;
-      slowQueries: number;
-      queryCacheHitRate: number;
-      indexUsage: number;
+      xactCommit: number;
+      xactRollback: number;
+      blksHit: number;
+      blksRead: number;
+      cacheHitRatio: number;
       deadlocks: number;
-      lockWaitTime: number;
     };
     tablesInfo: { name: string; rowCount: number; size: string }[];
-    replicationLag: number;
-  } {
+  }> {
     this.logger.log('데이터베이스 진단 정보 조회');
 
-    // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
+    // pgPool 기본 메트릭
+    const connectionMetrics = this.drizzleService.getMetrics() as {
+      connectionsCreated: number;
+      connectionErrors: number;
+      poolTotalCount: number;
+      poolIdleCount: number;
+      poolWaitingCount: number;
+    };
+
+    // 기본값 (SQL 실패 시 사용)
+    let version = 'PostgreSQL (unknown)';
+    let dbStats = {
+      xactCommit: 0,
+      xactRollback: 0,
+      blksHit: 0,
+      blksRead: 0,
+      cacheHitRatio: 0,
+      deadlocks: 0,
+    };
+    let tablesInfo: { name: string; rowCount: number; size: string }[] = [];
+
+    try {
+      const client = await pgPool.connect();
+      try {
+        // PostgreSQL 버전
+        const versionResult = await client.query('SELECT version()');
+        version = versionResult.rows[0]?.version ?? version;
+
+        // pg_stat_database 통계
+        const statsResult = await client.query(`
+          SELECT
+            xact_commit, xact_rollback,
+            blks_hit, blks_read,
+            CASE WHEN (blks_hit + blks_read) > 0
+              THEN round(blks_hit::numeric / (blks_hit + blks_read) * 100, 2)
+              ELSE 0
+            END AS cache_hit_ratio,
+            deadlocks
+          FROM pg_stat_database
+          WHERE datname = current_database()
+        `);
+        if (statsResult.rows[0]) {
+          const row = statsResult.rows[0];
+          dbStats = {
+            xactCommit: Number(row.xact_commit),
+            xactRollback: Number(row.xact_rollback),
+            blksHit: Number(row.blks_hit),
+            blksRead: Number(row.blks_read),
+            cacheHitRatio: Number(row.cache_hit_ratio),
+            deadlocks: Number(row.deadlocks),
+          };
+        }
+
+        // 주요 테이블 크기/행 수
+        const tablesResult = await client.query(`
+          SELECT
+            relname AS name,
+            n_live_tup AS row_count,
+            pg_size_pretty(pg_total_relation_size(relid)) AS size
+          FROM pg_stat_user_tables
+          ORDER BY pg_total_relation_size(relid) DESC
+          LIMIT 10
+        `);
+        tablesInfo = tablesResult.rows.map(
+          (row: { name: string; row_count: string; size: string }) => ({
+            name: row.name,
+            rowCount: Number(row.row_count),
+            size: row.size,
+          })
+        );
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      this.logger.warn(`DB 진단 SQL 실패: ${getErrorMessage(error)}`);
+    }
+
     return {
-      isSimulated: true,
-      status: 'connected',
-      version: 'PostgreSQL 15.x',
+      status: pgPool.totalCount > 0 ? 'connected' : 'disconnected',
+      version,
       connections: {
-        active: 0,
-        idle: 0,
-        max: 0,
+        active: connectionMetrics.poolTotalCount - connectionMetrics.poolIdleCount,
+        idle: connectionMetrics.poolIdleCount,
+        total: connectionMetrics.poolTotalCount,
+        max: pgPool.options.max ?? 50,
+        waiting: connectionMetrics.poolWaitingCount,
       },
       metrics: {
-        connectionsCreated: 0,
-        connectionErrors: 0,
-        queriesExecuted: 0,
-        queriesFailed: 0,
-        avgQueryTime: 0,
-        slowQueries: 0,
-        queryCacheHitRate: 0,
-        indexUsage: 0,
-        deadlocks: 0,
-        lockWaitTime: 0,
+        connectionsCreated: connectionMetrics.connectionsCreated,
+        connectionErrors: connectionMetrics.connectionErrors,
+        ...dbStats,
       },
-      tablesInfo: [
-        { name: 'users', rowCount: 0, size: '-' },
-        { name: 'equipment', rowCount: 0, size: '-' },
-        { name: 'checkouts', rowCount: 0, size: '-' },
-      ],
-      replicationLag: 0,
+      tablesInfo,
     };
   }
 
   /**
    * 애플리케이션 전체 건강 상태 조회
    */
-  getHealthStatus(): {
+  async getHealthStatus(): Promise<{
     status: string;
     timestamp: string;
     services: {
       database: {
         status: string;
-        isSimulated: boolean;
-        metrics: {
-          connectionsCreated: number;
-          connectionErrors: number;
-          queriesExecuted: number;
-          queriesFailed: number;
-          avgQueryTime: number;
-        };
+        connections: { active: number; idle: number; total: number };
       };
       system: {
         status: string;
@@ -363,10 +477,10 @@ export class MonitoringService implements OnModuleDestroy {
         status: string;
         counts: { error: number; warn: number; info: number; debug: number; verbose: number };
       };
-      cache: { status: string; hitRate: number; isSimulated: boolean };
+      cache: { status: string; hitRate: number; size: number };
     };
     lastChecked: string;
-  } {
+  }> {
     this.logger.log('애플리케이션 건강 상태 조회');
 
     // 임계치 설정
@@ -391,19 +505,31 @@ export class MonitoringService implements OnModuleDestroy {
       overallStatus = 'degraded';
     }
 
+    // DB 헬스 체크
+    const dbHealth = await this.drizzleService.performHealthCheck();
+
+    if (dbHealth.status === 'unhealthy') {
+      overallStatus = 'degraded';
+    }
+
+    // 캐시 통계
+    const cacheStats = this.cacheService.getCacheStats();
+
+    const connectionMetrics = this.drizzleService.getMetrics() as {
+      poolTotalCount: number;
+      poolIdleCount: number;
+    };
+
     return {
       status: overallStatus,
       timestamp: new Date().toISOString(),
       services: {
         database: {
-          status: 'connected',
-          isSimulated: true,
-          metrics: {
-            connectionsCreated: 0,
-            connectionErrors: 0,
-            queriesExecuted: 0,
-            queriesFailed: 0,
-            avgQueryTime: 0,
+          status: dbHealth.status === 'healthy' ? 'connected' : 'unhealthy',
+          connections: {
+            active: connectionMetrics.poolTotalCount - connectionMetrics.poolIdleCount,
+            idle: connectionMetrics.poolIdleCount,
+            total: connectionMetrics.poolTotalCount,
           },
         },
         system: {
@@ -429,8 +555,8 @@ export class MonitoringService implements OnModuleDestroy {
         },
         cache: {
           status: 'operational',
-          hitRate: 0, // TODO: 실제 캐시 히트율 연동 필요
-          isSimulated: true,
+          hitRate: cacheStats.hitRate,
+          size: cacheStats.size,
         },
       },
       lastChecked: new Date().toISOString(),
@@ -438,49 +564,25 @@ export class MonitoringService implements OnModuleDestroy {
   }
 
   /**
+   * 캐시 통계 전용 조회 (경량 — DB 호출 없음)
+   */
+  getCacheStats(): {
+    hits: number;
+    misses: number;
+    hitRate: number;
+    size: number;
+    maxSize: number;
+  } {
+    return this.cacheService.getCacheStats();
+  }
+
+  /**
    * 상세 진단 정보 조회
    */
-  getDiagnostics(): {
-    system: {
-      hostname: string;
-      platform: NodeJS.Platform;
-      arch: string;
-      release: string;
-      nodeVersion: string;
-      nodeEnv: string | undefined;
-      cpu: { usage: number; loadAvg: number[] };
-      memory: { total: number; free: number; used: number; percentage: number };
-      uptime: number;
-      network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
-      storage: { diskUsage: number; diskFree: number; diskTotal: number };
-    };
-    database: {
-      isSimulated: boolean;
-      status: string;
-      version: string;
-      connections: { active: number; idle: number; max: number };
-      metrics: {
-        connectionsCreated: number;
-        connectionErrors: number;
-        queriesExecuted: number;
-        queriesFailed: number;
-        avgQueryTime: number;
-        slowQueries: number;
-        queryCacheHitRate: number;
-        indexUsage: number;
-        deadlocks: number;
-        lockWaitTime: number;
-      };
-      tablesInfo: { name: string; rowCount: number; size: string }[];
-      replicationLag: number;
-    };
-    http: {
-      totalRequests: number;
-      successRequests: number;
-      errorRequests: number;
-      errorRate: number;
-      topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-    };
+  async getDiagnostics(): Promise<{
+    system: ReturnType<MonitoringService['getSystemMetrics']>;
+    database: Awaited<ReturnType<MonitoringService['getDatabaseDiagnostics']>>;
+    http: ReturnType<MonitoringService['getHttpStats']>;
     timestamp: string;
     env: string | undefined;
     logging: {
@@ -488,32 +590,41 @@ export class MonitoringService implements OnModuleDestroy {
       lastErrors: never[];
     };
     performance: {
-      isSimulated: boolean;
       responseTime: { avg: number; p95: number; p99: number };
       throughput: number;
     };
-  } {
+    cache: { hits: number; misses: number; hitRate: number; size: number; maxSize: number };
+  }> {
     this.logger.log('상세 진단 정보 조회');
+
+    // 응답 시간 백분위수 계산
+    const allTimes = this.collectAllResponseTimes();
+    allTimes.sort((a, b) => a - b);
+    const avg = allTimes.length > 0 ? allTimes.reduce((s, t) => s + t, 0) / allTimes.length : 0;
+
+    // throughput: 초당 요청 수
+    const uptimeSeconds = this.metrics.uptime;
+    const throughput = uptimeSeconds > 0 ? this.httpStats.totalRequests / uptimeSeconds : 0;
+
     return {
       system: this.getSystemMetrics(),
-      database: this.getDatabaseDiagnostics(),
+      database: await this.getDatabaseDiagnostics(),
       http: this.getHttpStats(),
       timestamp: new Date().toISOString(),
       env: process.env.NODE_ENV,
       logging: {
         counts: this.logCounts,
-        lastErrors: [], // 실제로는 최근 오류 로그 정보 포함
+        lastErrors: [],
       },
-      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
       performance: {
-        isSimulated: true,
         responseTime: {
-          avg: 0,
-          p95: 0,
-          p99: 0,
+          avg,
+          p95: this.percentile(allTimes, 95),
+          p99: this.percentile(allTimes, 99),
         },
-        throughput: 0,
+        throughput,
       },
+      cache: this.cacheService.getCacheStats(),
     };
   }
 
@@ -529,7 +640,7 @@ export class MonitoringService implements OnModuleDestroy {
    * Map 크기 제한 — 초과 시 요청 수가 가장 적은 엔트리 제거
    */
   private enforceEndpointMapLimit(): void {
-    if (this.httpStats.requestsByEndpoint.size <= MAX_TRACKED_ENDPOINTS) {
+    if (this.httpStats.requestsByEndpoint.size <= MONITORING_THRESHOLDS.MAX_TRACKED_ENDPOINTS) {
       return;
     }
 

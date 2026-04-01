@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, HttpCode, HttpStatus, UsePipes } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { SKIP_ALL_THROTTLES } from '../../common/config/throttle.constants';
 import { Public } from '../auth/decorators/public.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -17,6 +17,7 @@ export class MonitoringController {
    * 인증 없이 접근 가능합니다. (에러는 로그인 전에도 발생할 수 있음)
    */
   @Public()
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
   @Post('client-errors')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UsePipes(ClientErrorPipe)
@@ -44,19 +45,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('metrics')
-  getMetrics(): {
-    hostname: string;
-    platform: NodeJS.Platform;
-    arch: string;
-    release: string;
-    nodeVersion: string;
-    nodeEnv: string | undefined;
-    cpu: { usage: number; loadAvg: number[] };
-    memory: { total: number; free: number; used: number; percentage: number };
-    uptime: number;
-    network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
-    storage: { diskUsage: number; diskFree: number; diskTotal: number };
-  } {
+  getMetrics() {
     return this.monitoringService.getSystemMetrics();
   }
 
@@ -66,54 +55,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('diagnostics')
-  getDiagnostics(): {
-    system: {
-      hostname: string;
-      platform: NodeJS.Platform;
-      arch: string;
-      release: string;
-      nodeVersion: string;
-      nodeEnv: string | undefined;
-      cpu: { usage: number; loadAvg: number[] };
-      memory: { total: number; free: number; used: number; percentage: number };
-      uptime: number;
-      network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
-      storage: { diskUsage: number; diskFree: number; diskTotal: number };
-    };
-    database: {
-      status: string;
-      version: string;
-      connections: { active: number; idle: number; max: number };
-      metrics: {
-        connectionsCreated: number;
-        connectionErrors: number;
-        queriesExecuted: number;
-        queriesFailed: number;
-        avgQueryTime: number;
-        slowQueries: number;
-        queryCacheHitRate: number;
-        indexUsage: number;
-        deadlocks: number;
-        lockWaitTime: number;
-      };
-      tablesInfo: { name: string; rowCount: number; size: string }[];
-      replicationLag: number;
-    };
-    http: {
-      totalRequests: number;
-      successRequests: number;
-      errorRequests: number;
-      errorRate: number;
-      topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-    };
-    timestamp: string;
-    env: string | undefined;
-    logging: {
-      counts: { error: number; warn: number; info: number; debug: number; verbose: number };
-      lastErrors: never[];
-    };
-    performance: { responseTime: { avg: number; p95: number; p99: number }; throughput: number };
-  } {
+  async getDiagnostics() {
     return this.monitoringService.getDiagnostics();
   }
 
@@ -123,36 +65,19 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('status')
-  getStatus(): {
-    status: string;
-    timestamp: string;
-    services: {
-      database: {
-        status: string;
-        metrics: {
-          connectionsCreated: number;
-          connectionErrors: number;
-          queriesExecuted: number;
-          queriesFailed: number;
-          avgQueryTime: number;
-        };
-      };
-      system: {
-        status: string;
-        uptime: string;
-        cpu: { usage: string; status: string };
-        memory: { usage: string; status: string };
-      };
-      api: { status: string; totalRequests: number; errorRate: string };
-      logging: {
-        status: string;
-        counts: { error: number; warn: number; info: number; debug: number; verbose: number };
-      };
-      cache: { status: string; hitRate: number };
-    };
-    lastChecked: string;
-  } {
+  async getStatus() {
     return this.monitoringService.getHealthStatus();
+  }
+
+  /**
+   * 캐시 통계 전용 조회 엔드포인트
+   * DB 호출 없이 in-memory 캐시 메트릭만 반환 (경량)
+   * 시스템 설정 조회 권한 필요
+   */
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
+  @Get('cache-stats')
+  getCacheStats() {
+    return this.monitoringService.getCacheStats();
   }
 
   /**
@@ -161,13 +86,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('http-stats')
-  getHttpStats(): {
-    totalRequests: number;
-    successRequests: number;
-    errorRequests: number;
-    errorRate: number;
-    topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-  } {
+  getHttpStats() {
     return this.monitoringService.getHttpStats();
   }
 }
