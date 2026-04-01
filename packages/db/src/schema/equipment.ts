@@ -192,6 +192,7 @@ export type NewEquipment = typeof equipment.$inferInsert;
 // 관계 정의 및 타입을 위한 import
 import { users } from './users';
 import type { checkouts } from './checkouts';
+import { documents } from './documents';
 
 /**
  * 장비와 관련 엔티티를 포함한 확장 타입
@@ -205,7 +206,7 @@ export type EquipmentWithRelations = Equipment & {
 };
 
 // ✅ Drizzle relations 설정 (타입 안전한 조인)
-export const equipmentRelations = relations(equipment, ({ one }) => ({
+export const equipmentRelations = relations(equipment, ({ one, many }) => ({
   team: one(teams, {
     fields: [equipment.teamId],
     references: [teams.id],
@@ -214,4 +215,5 @@ export const equipmentRelations = relations(equipment, ({ one }) => ({
     fields: [equipment.managerId],
     references: [users.id],
   }),
+  documents: many(documents),
 }));

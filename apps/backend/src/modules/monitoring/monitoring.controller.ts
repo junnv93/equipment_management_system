@@ -15,6 +15,13 @@ export class MonitoringController {
   /**
    * 프론트엔드 클라이언트 에러 수집 엔드포인트
    * 인증 없이 접근 가능합니다. (에러는 로그인 전에도 발생할 수 있음)
+   *
+   * @AuditLog 미적용 — 다음 세 조건 중 하나라도 해당하면 적용 금지:
+   *   1. @Public() 엔드포인트: req.user=undefined → AuditInterceptor graceful skip
+   *   2. 고빈도 텔레메트리: 감사 로그 DB write 부하 불가
+   *   3. void 응답(NO_CONTENT): entityId 추출 불가 → 감사 레코드 미생성
+   * 로깅은 MonitoringService.logClientError() → NestJS Logger(구조화 로그)로 처리.
+   * @see packages/schemas/src/enums/audit.ts — 감사 로그 적용 기준 SSOT
    */
   @Public()
   @Post('client-errors')
