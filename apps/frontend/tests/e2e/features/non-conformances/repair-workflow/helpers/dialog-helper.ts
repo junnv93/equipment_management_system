@@ -108,8 +108,13 @@ export async function openIncidentDialog(page: Page, equipmentId: string): Promi
 
   // Wait for dialog animation to complete and form to be ready
 
-  // Verify the form label exists (not the select element itself, since shadcn Select doesn't use name attribute)
-  await page.getByText(/사고 유형/i).waitFor({ state: 'visible', timeout: 5000 });
+  // Verify the form label exists inside the dialog (use .first() — both the label and the
+  // helper description text match /사고 유형/i; the label is always the first occurrence)
+  await page
+    .getByRole('dialog')
+    .getByText(/사고 유형/i)
+    .first()
+    .waitFor({ state: 'visible', timeout: 5000 });
 }
 
 /**

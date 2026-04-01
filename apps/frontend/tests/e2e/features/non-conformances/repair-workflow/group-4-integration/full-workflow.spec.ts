@@ -106,14 +106,7 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     console.log('[D-2] NC card found:', ncText?.substring(0, 100));
   });
 
-  // FIXME: 수리 이력 등록 시 "입력 데이터 검증 실패" 오류 발생
-  // 모든 필수 필드(repairDate, repairDescription >=10자)를 올바르게 입력하고 있으나,
-  // 백엔드에서 검증 실패 응답이 반환됨. 가능한 원인:
-  // 1. 폼 상태 업데이트 타이밍 이슈 (shadcn Select 컴포넌트)
-  // 2. NC 선택 시 폼 상태가 올바르게 설정되지 않음
-  // 3. 백엔드 DTO 검증과 프론트엔드 폼 데이터 형식 불일치
-  // 수동 테스트에서는 정상 동작하므로 E2E 테스트 환경 특정 이슈로 추정
-  test.fixme('D-3. 수리 이력 등록 및 부적합 연결', async ({ testOperatorPage }) => {
+  test('D-3. 수리 이력 등록 및 부적합 연결', async ({ testOperatorPage }) => {
     // Navigate directly to repair history page (it's a separate page, not a tab)
     await testOperatorPage.goto(`/equipment/${equipmentId}/repair-history`);
 
@@ -141,9 +134,6 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await repairDescInput.waitFor({ state: 'visible', timeout: 5000 });
     await repairDescInput.fill('E2E 테스트: 디스플레이 교체 작업 완료');
 
-    await testOperatorPage.fill('[id="repairedBy"]', 'E2E 테스터');
-    await testOperatorPage.fill('[id="cost"]', '500000');
-
     // Select the created NC
     await testOperatorPage.click('[id="nonConformanceId"]');
 
@@ -163,10 +153,8 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     });
     await expect(guidanceBox).toBeVisible();
 
-    // Select repair result: completed (shadcn Select component)
-    // repairResult field doesn't have an id, need to find by adjacent label
-    await testOperatorPage.getByText('수리 결과').locator('..').getByRole('combobox').click();
-    await testOperatorPage.getByRole('option', { name: '수리 완료', exact: true }).click();
+    // Select repair result: completed (established selectShadcnOption pattern)
+    await selectShadcnOption(testOperatorPage, /수리 결과/i, '수리 완료');
 
     // Submit repair (use dispatchEvent as the button is outside viewport)
     await testOperatorPage.getByRole('button', { name: /등록/i }).dispatchEvent('click');
@@ -176,9 +164,7 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await expect(toast).toContainText(/등록.*완료|성공/i, { timeout: TIMEOUTS.API_RESPONSE });
   });
 
-  // FIXME: D-3 테스트에 의존하는 워크플로우 테스트
-  // D-3이 수리 이력을 등록해야 NC 상태가 "조치 완료"로 변경되는데, D-3이 실패하여 이 테스트도 실행 불가
-  test.fixme('D-4. 부적합 자동 상태 변경 검증', async ({ testOperatorPage }) => {
+  test('D-4. 부적합 자동 상태 변경 검증', async ({ testOperatorPage }) => {
     // Navigate to NC management page
     await testOperatorPage.goto(`/equipment/${equipmentId}/non-conformance`);
 
@@ -202,9 +188,7 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     await expect(ncCard).toContainText(/디스플레이 교체/i);
   });
 
-  // FIXME: D-3, D-4 테스트에 의존하는 워크플로우 테스트
-  // D-4에서 NC 상태가 "조치 완료"가 되어야 기술책임자가 종료 승인 가능
-  test.fixme('D-5. 부적합 종료 승인 (기술책임자)', async ({ techManagerPage }) => {
+  test('D-5. 부적합 종료 승인 (기술책임자)', async ({ techManagerPage }) => {
     // Navigate to NC management page as technical manager
     await techManagerPage.goto(`/equipment/${equipmentId}/non-conformance`);
 
@@ -236,9 +220,7 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     console.log('[D-5] Tech manager can edit NC - closure would update status via API');
   });
 
-  // FIXME: D-3~D-5 테스트에 의존하는 워크플로우 테스트
-  // D-5에서 NC를 종료해야 장비 상태가 복원됨
-  test.fixme('D-6. 장비 상태 복원 검증', async ({ testOperatorPage }) => {
+  test('D-6. 장비 상태 복원 검증', async ({ testOperatorPage }) => {
     // Navigate to equipment detail page
     await testOperatorPage.goto(`/equipment/${equipmentId}`);
 
