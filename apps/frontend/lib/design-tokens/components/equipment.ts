@@ -467,8 +467,7 @@ export const EQUIPMENT_FILTER_TOKENS = {
   },
 
   /** 2차 필터 확장/축소 트랜지션 (CSS-only grid-rows) */
-  expandTransition:
-    'motion-safe:transition-[grid-template-rows] motion-safe:duration-200 motion-safe:ease-[var(--ease-standard)] motion-reduce:transition-none',
+  expandTransition: TRANSITION_PRESETS.fastGridRows,
 } as const;
 
 // ============================================================================

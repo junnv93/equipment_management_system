@@ -1,339 +1,346 @@
-# Harness Example Prompts — 도메인별 실전 사용 예시
+# Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-## 사용법
-
-```
-/harness [아래 프롬프트 중 하나]
-```
-
-모드를 명시하지 않으면 하네스가 자동 판별합니다.
+> **마지막 분석일: 2026-04-01**
+> 코드베이스를 실제 분석하여 발견된 이슈/작업을 하네스 프롬프트로 정리.
+> `/harness [프롬프트]` 형태로 사용.
 
 ---
 
-## 장비 관리 (Equipment)
+## 🔴 CRITICAL — 보안/데이터 무결성
 
-### Mode 0 — Direct
-
-```
-장비 상세 페이지에서 "제조사" 라벨을 "제조업체"로 변경해줘
-```
+### SSE 엔드포인트 권한 강화 (Mode 1)
 
 ```
-equipment 목록의 i18n 번역 누락된 키 3개 추가해줘:
-- equipment.filter.allSites
-- equipment.filter.allClassifications  
-- equipment.badge.calibrationDue
+notification-sse.controller.ts의 SSE 엔드포인트에 권한 검증을 추가해줘.
+
+현재 상태:
+- stream() (line 32): @SseAuthenticated()만 사용 — 인증은 있지만 인가(권한) 검증 없음
+- getStats() (line 57): 동일하게 @SseAuthenticated()만 사용
+
+수정 사항:
+- getStats()에 @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS) 추가
+  (SSE 연결 통계는 시스템 관리 기능)
+- stream()은 인증된 사용자 누구나 알림을 받아야 하므로 현재 유지 가능
+  — 단, @SkipPermissions() 명시적 추가로 의도를 드러내기
+
+검증: pnpm --filter backend run tsc --noEmit + 관련 테스트
 ```
 
-### Mode 1 — Lightweight
+### 부적합 관리 권한 버그 수정 (Mode 1)
 
 ```
-장비 목록에 "최근 교정일" 컬럼을 추가해줘.
-백엔드에서 calibrations 테이블과 JOIN해서 가져오고,
-프론트엔드 테이블에 컬럼 추가해줘.
-```
+test_engineer 역할이 부적합(NC) "기록 수정" 버튼을 볼 수 있는 권한 버그를 수정해줘.
 
-```
-장비 상세 페이지의 "기본정보" 탭에 QR 코드 생성 버튼을 추가해줘.
-관리번호를 QR로 인코딩해서 PNG로 다운로드할 수 있게.
-```
+FIXME 위치:
+- tests/e2e/features/non-conformances/repair-workflow/group-2-repair-dialog/
+  nc-management-permissions.spec.ts (line 26)
+- "FIXME: 권한 버그 - 시험실무자(test_engineer)가 '기록 수정' 버튼을 볼 수 있음"
 
-```
-장비 검색에 "관리번호" 부분 검색을 추가해줘.
-현재는 정확 일치만 되는데, LIKE 검색으로 변경하고
-verify-sql-safety의 와일드카드 이스케이프 규칙을 준수해줘.
-```
+UL-QP-18 규칙:
+- test_engineer(시험실무자)는 기본 CRUD만 가능
+- 부적합 기록 수정은 technical_manager 이상만 가능
 
-### Mode 2 — Full Harness
+조사 포인트:
+1. 프론트엔드: 해당 버튼의 permission 체크 로직 확인
+2. 백엔드: NC update 엔드포인트의 @RequirePermissions 확인
+3. FIXME 주석을 제거하고 테스트가 정상 통과하도록 수정
 
-```
-장비 위치 추적 시스템을 구현해줘.
-- 장비별 현재 위치와 이동 이력 관리
-- location_history 테이블 생성
-- 위치 변경 시 알림 발송
-- 장비 상세 페이지에 위치 이력 탭 추가
-- 위치별 장비 현황 대시보드 위젯
-```
-
-```
-장비 대량 등록 기능을 구현해줘.
-- Excel 템플릿 다운로드 → 작성 → 업로드 흐름
-- 업로드 시 Zod 검증 + 중복 관리번호 체크
-- 검증 결과 미리보기 (성공/실패 행 구분)
-- 확정 시 트랜잭션으로 일괄 INSERT
-- 진행률 표시 (SSE 또는 폴링)
+검증: E2E 테스트 nc-management-permissions.spec.ts PASS
 ```
 
 ---
 
-## 교정 관리 (Calibration)
+## 🟠 HIGH — 기능 갭/성능
 
-### Mode 0
-
-```
-교정 이력 탭에서 날짜 포맷을 YYYY-MM-DD에서 YYYY.MM.DD로 변경해줘
-```
-
-### Mode 1
+### 모니터링 캐시 통계 엔드포인트 완성 (Mode 1)
 
 ```
-교정 등록 시 "교정 주기" 필드를 추가해줘.
-- 백엔드: calibrations 테이블에 calibration_interval_months 컬럼 추가
-- DTO에 Zod 검증 (1~120 범위)
-- 프론트엔드: 교정 등록 폼에 숫자 입력 필드 추가
-- 다음 교정 예정일을 자동 계산해서 표시
+SimpleCacheService의 getCacheStats() 메서드가 이미 구현되어 있지만(line 247-256),
+모니터링 컨트롤러에 노출되는 엔드포인트가 없어. 연결해줘.
+
+현재 구현:
+- SimpleCacheService.getCacheStats(): hits, misses, hitRate, size, maxSize 반환
+- MonitoringController: 6개 엔드포인트 존재하지만 cache-stats 없음
+- MonitoringService: 시스템 메트릭/HTTP 통계/DB 진단은 있지만 캐시 통계 없음
+
+추가 사항:
+1. MonitoringService에 getCacheStats() 메서드 추가 (SimpleCacheService 주입)
+2. MonitoringController에 GET /api/monitoring/cache-stats 엔드포인트 추가
+   - @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
+3. 기존 GET /api/monitoring/diagnostics 응답에 cache 필드 포함
+
+참고: business-rules.ts에 MAX_TRACKED_ENDPOINTS: 500 이미 정의됨 (line 32)
+검증: tsc --noEmit + 모니터링 테스트
 ```
 
-```
-교정 성적서 PDF 미리보기 기능을 추가해줘.
-현재는 다운로드만 되는데, 모달에서 PDF를 바로 볼 수 있게.
-DocumentService의 download API를 활용하고,
-브라우저 내장 PDF 뷰어로 렌더링.
-```
-
-### Mode 2
+### DB 인덱스 누락 보완 (Mode 1)
 
 ```
-교정 계획 대시보드를 구현해줘.
-- 월별 교정 예정 장비 캘린더 뷰
-- 교정 기한 임박 장비 경고 (D-30, D-7, D-1)
-- 팀별 교정 부하 분석 차트
-- 교정 비용 예측 (이전 교정 비용 기반)
-- 새 페이지: /calibration-plans/dashboard
+고빈도 조회 테이블에 인덱스가 누락되어 있어. 추가해줘.
+
+1. equipment_maintenance_history (packages/db/src/schema/equipment-maintenance-history.ts)
+   - 현재: PRIMARY KEY만 존재, 명시적 인덱스 0개
+   - 추가 필요:
+     - equipmentId (장비별 수리이력 조회 — 장비 상세 페이지 핵심 쿼리)
+     - performedAt (날짜순 정렬)
+     - (equipmentId, performedAt) 복합 인덱스 (가장 빈번한 쿼리 패턴)
+
+2. user_preferences (packages/db/src/schema/user-preferences.ts)
+   - 현재: 명시적 인덱스 0개
+   - 추가 필요:
+     - userId (사용자별 설정 조회 — 매 로그인 시 호출)
+
+기존 인덱스 패턴 참고: packages/db/src/schema/equipment.ts의 인덱스 정의 방식
+검증: pnpm --filter backend run db:generate → 마이그레이션 생성 확인
 ```
 
----
-
-## 반출 관리 (Checkouts)
-
-### Mode 0
+### Software 모듈 TODO 해소 — softwareType 스키마 추가 (Mode 1)
 
 ```
-반출 목록 테이블의 "반출 목적" 컬럼 너비를 200px로 고정해줘
+software.service.ts line 460의 TODO를 해소해줘:
+"softwareType: null, // TODO: Add software type to schema"
+
+작업:
+1. packages/schemas에 SoftwareType enum 추가:
+   - measurement (측정용), analysis (분석용), control (제어용), utility (유틸리티), other (기타)
+2. packages/db/src/schema/software.ts에 softwareType 컬럼 추가 (varchar + $type<>)
+3. software.service.ts의 getSoftwareUsageByEquipment()에서 null 대신 실제 값 매핑
+4. 관련 DTO(create/update)에 softwareType 필드 추가
+5. 프론트엔드 소프트웨어 등록/편집 폼에 타입 선택 드롭다운 추가
+
+주의: varchar + $type<> 패턴 사용 (값이 확장될 수 있는 enum — CLAUDE.md 규칙)
+검증: tsc --noEmit + software 테스트
 ```
 
-### Mode 1
+### 누락된 loading.tsx 페이지 추가 (Mode 1)
 
 ```
-반출 승인 시 이메일 알림을 추가해줘.
-- CheckoutsService.approve()에서 승인 완료 후 NotificationsService 호출
-- 요청자에게 "반출이 승인되었습니다" 이메일 발송
-- EmailTemplateService에 checkout_approved 템플릿 추가
-```
+page.tsx는 있지만 loading.tsx가 없는 라우트에 로딩 스켈레톤을 추가해줘.
 
-```
-반출 반려 사유를 필수 입력으로 변경해줘.
-- reject DTO에 reason 필드 추가 (min 10자)
-- 프론트엔드 반려 다이얼로그에 textarea 추가
-- 반려 사유를 반출 상세 페이지에 표시
-```
+누락 라우트 (확인된 것):
+- (dashboard)/checkouts/manage/
+- (dashboard)/checkouts/import/
+- (dashboard)/checkouts/pending-checks/
+- (dashboard)/checkouts/[id]/
+- (dashboard)/reports/calibration-factors/
+- (dashboard)/equipment/create/
+- (dashboard)/calibration/register/
+- (dashboard)/teams/create/
 
-### Mode 2
+각 loading.tsx:
+- 해당 페이지의 레이아웃에 맞는 Skeleton 컴포넌트 사용
+- 기존 loading.tsx 패턴 참조: (dashboard)/equipment/loading.tsx
+- Next.js 16 PPR과 호환되는 Suspense fallback 역할
 
-```
-장비 예약 시스템을 구현해줘.
-- 장비별 예약 캘린더 (주/월 뷰)
-- 예약 충돌 감지 및 경고
-- reservations 테이블 생성
-- 예약 → 반출 자동 연동 (예약일에 반출 요청 자동 생성)
-- 예약 현황 대시보드 위젯
-```
-
----
-
-## 부적합 관리 (Non-Conformances)
-
-### Mode 0
-
-```
-부적합 목록에서 "심각도" 배지 색상을 변경해줘:
-- critical → brand-danger (현재 red-500 하드코딩)
-```
-
-### Mode 1
-
-```
-부적합 시정 조치에 첨부파일 기능을 추가해줘.
-- DocumentService 활용 (기존 문서 관리 인프라 재사용)
-- 시정 조치 제출 시 증빙 사진/문서 첨부 가능
-- 부적합 상세 페이지에 첨부파일 목록 표시
-```
-
-```
-부적합 통계 API를 추가해줘.
-- 월별 부적합 발생 건수 (유형별)
-- 평균 시정 소요일
-- 팀별 부적합 발생률
-- 대시보드 통계 카드에 연동
-```
-
-### Mode 2
-
-```
-CAPA (시정 및 예방 조치) 관리 모듈을 구현해줘.
-- corrective_actions 테이블 생성
-- 부적합 → CAPA 연동 (1:N)
-- CAPA 진행 상태 추적 (등록→조사→시정→검증→완료)
-- 2단계 승인 (TM → LM)
-- CAPA 효과성 평가 기록
-- 보고서: CAPA 현황 + 효과성 분석
+검증: pnpm --filter frontend run build → 빌드 성공
 ```
 
 ---
 
-## 승인 관리 (Approvals)
+## 🟡 MEDIUM — 테스트 커버리지/코드 품질
 
-### Mode 0
-
-```
-승인 대기 카운트 배지에 pulse 애니메이션 제거해줘 (10개 미만일 때)
-```
-
-### Mode 1
+### 미커밋 테스트 파일 정리 및 보완 (Mode 0)
 
 ```
-승인 일괄 처리 기능을 추가해줘.
-- 승인 목록에서 체크박스로 여러 건 선택
-- "선택 승인" / "선택 반려" 버튼
-- 백엔드: POST /api/approvals/batch-approve (CAS 개별 적용)
-- 실패한 건은 결과에 표시 (부분 성공 허용)
+git status에 4개 untracked __tests__ 디렉토리가 있어. 내용을 확인하고 커밋해줘.
+
+대상:
+- apps/backend/src/modules/audit/__tests__/audit.service.spec.ts
+- apps/backend/src/modules/monitoring/__tests__/monitoring.service.spec.ts
+- apps/backend/src/modules/settings/__tests__/settings.service.spec.ts
+- apps/backend/src/modules/software/__tests__/software.service.spec.ts
+
+절차:
+1. 각 테스트 파일이 실행 가능한지 확인 (pnpm --filter backend run test -- --grep "모듈명")
+2. 실패하는 테스트가 있으면 수정
+3. 통과 확인 후 커밋
 ```
 
-### Mode 2
+### 부적합 수리 워크플로우 E2E 테스트 FIXME 해소 (Mode 1)
 
 ```
-승인 위임 시스템을 구현해줘.
-- 부재 시 승인 ���한을 다른 사용자에게 위임
-- approval_delegations 테이블 (delegator, delegate, start_date, end_date)
-- 위임 기간 동안 대리 승인자에게 알림 라우팅
-- 위임 이력 감사 로그
-- 설정 페이지에 위임 관리 UI
+부적합 수리 워크플로우 E2E 테스트의 FIXME 4건을 해소해줘.
+
+위치: tests/e2e/features/non-conformances/repair-workflow/group-4-integration/
+      full-workflow.spec.ts
+
+FIXME 목록:
+- line 109: "수리 이력 등록 시 '입력 데이터 검증 실패' 오류 발생"
+- line 179: "D-3 테스트에 의존하는 워크플로우 테스트"
+- line 205: "D-3, D-4 테스트에 의존하는 워크플로우 테스트"
+- line 239: "D-3~D-5 테스트에 의존하는 워크플로우 테스트"
+
+조사 방향:
+1. line 109: 백엔드 수리이력 등록 API의 Zod 스키마와 프론트엔드 폼 필드 불일치 확인
+2. line 179+: serial 모드 테스트 의존성 체인 — 앞 테스트 실패 시 뒤 테스트 전부 스킵되는 구조
+3. 근본 원인 수정 후 FIXME 주석 제거
+
+검증: full-workflow.spec.ts 전체 PASS
 ```
 
----
-
-## 소프트웨어 관리 (Software)
-
-### Mode 0
+### 모니터링 컨트롤러 @AuditLog 추가 (Mode 0)
 
 ```
-소프트웨어 목록 테이블에서 "버전" 컬럼 정렬을 semver 기준으로 변경해줘
+monitoring.controller.ts의 상태 변경 엔드포인트에 @AuditLog 추가해줘.
+
+대상:
+- @Post('client-errors') reportClientError() (line 21)
+  → @AuditLog({ action: 'report', entityType: 'client_error' })
+
+나머지 GET 엔드포인트(health, metrics, diagnostics, status, http-stats)는
+읽기 전용이므로 감사 로그 불필요.
+
+검증: tsc --noEmit
 ```
 
-### Mode 1
+### 미커밋 변경사항 정리 및 커밋 (Mode 0)
 
 ```
-소프트웨어 라이선스 만료 알림을 추가해줘.
-- software 테이블에 license_expiry_date 컬럼 추가
-- 만료 30일 전 알림 발송 (CalibrationOverdueScheduler 패턴 참고)
-- 소프트웨어 상세 페이지에 만료일 배지 표시
-```
+git status에 11개 수정 파일이 커밋되지 않은 상태야. 내용을 분석하고 논리적 단위로 나눠서 커밋해줘.
 
-### Mode 2
+수정된 파일:
+- apps/backend/src/common/cache/simple-cache.service.ts (캐시 통계 추가)
+- apps/backend/src/modules/monitoring/monitoring.controller.ts
+- apps/backend/src/modules/monitoring/monitoring.service.ts
+- apps/frontend/components/approvals/ApprovalDetailModal.tsx (모션 토큰 수정)
+- apps/frontend/lib/design-tokens/components/equipment.ts
+- apps/frontend/lib/design-tokens/components/sidebar.ts
+- apps/frontend/lib/design-tokens/index.ts
+- apps/frontend/lib/design-tokens/motion.ts
+- apps/frontend/next-env.d.ts
+- apps/frontend/tailwind.config.js
+- packages/shared-constants/src/business-rules.ts (MAX_TRACKED_ENDPOINTS)
 
-```
-소프트웨어 자산 관리 확장을 구현해줘.
-- 라이선스 유형별 관리 (subscription, perpetual, open-source)
-- 라이선스 키 암호화 저장
-- 설치 현황 추적 (장비-소프트웨어 N:M)
-- 라이선스 비용 보고서
-- 자동 갱신 알림 워크플로우
-```
+커밋 분리 제안:
+1. feat(monitoring): 캐시 통계 + 모니터링 개선 (backend 4파일 + shared-constants)
+2. refactor(design-tokens): 모션 토큰 + 디자인 토큰 정리 (frontend 5파일)
+3. chore: next-env.d.ts 업데이트 (자동생성)
 
----
-
-## 대시보드 (Dashboard)
-
-### Mode 0
-
-```
-대시보드 통계 카드의 로딩 스켈레톤 높이를 실제 카드와 맞춰줘
-```
-
-### Mode 1
-
-```
-대시보드에 "이번 주 활동 요약" 위젯을 추가해줘.
-- 이번 주 등록/수정/폐기된 장비 수
-- 이번 주 승인/반려된 건수
-- DashboardService에 getWeeklySummary() 추가
-- QUERY_CONFIG.DASHBOARD 프리셋 적용
-```
-
-### Mode 2
-
-```
-맞춤형 대시보드 시스템을 구현해줘.
-- 사용자별 위젯 배치 커스터마이징 (드래그 앤 드롭)
-- dashboard_layouts 테이블 (user_id, layout_json)
-- 기본 레이아웃 + 역할별 기본 레이아웃
-- 위젯 라이브러리: 통계 카드, 차트, 최근 활동, 알림 등
-- 레이아웃 저장/불러오기
+각 커밋 전 tsc --noEmit 확인.
 ```
 
 ---
 
-## 리포트 (Reports)
+## 🟢 LOW — 개선/정비
 
-### Mode 1
-
-```
-리포트 내보내기에 날짜 범위 필터를 추가해줘.
-- 시작일/종료일 DatePicker 추가
-- 백엔드 쿼리에 WHERE created_at BETWEEN 조건 추가
-- Excel/PDF 파일명에 날짜 범위 포함
-```
-
-### Mode 2
+### 교정 필터 E2E 테스트 활성화 (Mode 1)
 
 ```
-맞춤형 리포트 빌더를 구현해줘.
-- 데이터 소스 선택 (장비, 교정, 반출, 부적합)
-- 컬럼 선택 및 필터 조건 설정
-- 그룹화 및 집계 (COUNT, SUM, AVG)
-- 리포트 템플릿 저장 및 공유
-- 예약 실행 (매주 월요일 이메일 발송)
+비활성화된 교정 필터 E2E 테스트를 수정하고 활성화해줘.
+
+위치: tests/e2e/features/calibration/filters/calibration-filter.spec.ts (line 8)
+상태: 2026-02-12 이후 전체 비활성화
+
+조사:
+1. 비활성화 사유 확인 (주석 또는 git blame)
+2. 현재 교정 필터 UI가 테스트와 일치하는지 확인
+3. 필요 시 locator 업데이트 (getByRole 패턴 준수)
+4. auth.fixture 사용 확인 (loginAs 패턴 금지)
+
+검증: calibration-filter.spec.ts 전체 PASS
+```
+
+### i18n 에러 메시지 Phase 3 구현 (Mode 1)
+
+```
+response-transformers.ts의 i18n TODO를 해소해줘:
+"TODO(i18n): Phase 3에서 errors.json의 키(VALIDATION_ERROR, UNAUTHORIZED 등)로 전환"
+(lib/api/utils/response-transformers.ts line 334)
+
+현재: 에러 메시지가 한국어/영어 하드코딩
+목표: i18n 키 기반으로 전환하여 locale에 따라 자동 전환
+
+작업:
+1. 에러 코드별 i18n 키 매핑 테이블 정의
+2. mapBackendErrorCode()에서 i18n 키 반환하도록 수정
+3. ERROR_MESSAGES를 i18n 파일(ko.json, en.json)로 이동
+4. 기존 EquipmentErrorCode 체계와 호환 유지
+
+주의: 프론트엔드 전체 에러 핸들링 체인에 영향 — 변경 범위 신중하게
+검증: tsc --noEmit + 에러 발생 시나리오 수동 테스트
+```
+
+### 테스트 미존재 모듈 커버리지 확보 (Mode 2)
+
+```
+테스트가 없는 백엔드 모듈에 기본 테스트 스위트를 추가해줘.
+
+대상 모듈:
+1. data-migration — 마이그레이션 유틸리티 (서비스 단위 테스트)
+2. documents — 문서 관리 (CRUD + 파일 업로드 mock 테스트)
+3. notifications — 알림 서비스 (이벤트 발행/구독 + SSE 테스트)
+4. reports — 리포트 생성 (DB 집계 쿼리 + 파일 생성 테스트)
+
+각 모듈 테스트:
+- 기존 테스트 패턴 참조: modules/calibration/__tests__/
+- DI mock 패턴: common/testing/mock-providers.ts 활용
+- SimpleCacheService, EventEmitter2 mock 포함 (보안 아키텍처 Phase 2+3 패턴)
+- 최소 coverage: service 메서드별 1개 테스트 (happy path)
+
+검증: pnpm --filter backend run test → 전체 PASS, 새 테스트 포함
+```
+
+### documents 스키마 Drizzle relations 보완 (Mode 0)
+
+```
+packages/db/src/schema/documents.ts에 foreign key는 있지만
+Drizzle ORM relations() 정의가 누락되어 있어. 추가해줘.
+
+누락된 relations:
+- equipmentId → equipment 테이블
+- calibrationId → calibrations 테이블
+- requestId → equipment_requests 테이블
+
+기존 relations 패턴 참조: packages/db/src/schema/equipment.ts의 equipmentRelations
+검증: tsc --noEmit (타입 안전 쿼리 활성화)
 ```
 
 ---
 
-## 시스템 설정 (Settings)
+## 📋 복합 작업 (Mode 2 — Full Harness)
 
-### Mode 0
-
-```
-설정 페이지의 "저장" 버튼 로딩 상태를 추가해줘 (mutation.isPending)
-```
-
-### Mode 1
+### 모니터링 대시보드 통합 완성 (Mode 2)
 
 ```
-시스템 설정에 "교정 기한 알림 일수" 설정을 추가해줘.
-- system_settings 테이블에 calibration_alert_days 키 추가 (기본: [30, 7, 1])
-- 설정 페이지에 숫자 배열 입력 UI
-- CalibrationOverdueScheduler가 이 설정 값을 참조
+현재 모니터링 백엔드는 거의 완성되어 있지만 프론트엔드와 통합이 부족해.
+모니터링 대시보드를 완성해줘.
+
+현재 상태:
+- MonitoringService: 시스템 메트릭, HTTP 통계, DB 진단, 헬스체크 구현 완료
+- MonitoringController: 6개 엔드포인트 존재
+- SimpleCacheService: getCacheStats() 구현 완료
+- 프론트엔드: /admin 페이지 존재하지만 모니터링 전용 대시보드 없음
+
+구현:
+1. 백엔드: GET /api/monitoring/cache-stats 엔드포인트 추가
+2. 프론트엔드: /admin/monitoring 페이지 생성
+   - 시스템 리소스 (CPU, 메모리, 디스크) — 게이지 차트
+   - HTTP 요청 통계 — 엔드포인트별 응답 시간, 에러율
+   - 캐시 성능 — hit rate, size, 최대 용량
+   - DB 상태 — 커넥션 풀, 쿼리 성능
+   - 헬스 상태 — 서비스별 UP/DOWN
+3. TanStack Query 적용: REFETCH_STRATEGIES.IMPORTANT (2분 폴링)
+4. 역할 제한: lab_manager, system_admin만 접근
+
+검증: tsc + build + 페이지 렌더링 확인
 ```
 
----
-
-## 크로스 도메인 (Cross-Domain)
-
-### Mode 2
+### 부적합→수리 워크플로우 안정화 (Mode 2)
 
 ```
-감사 로그 검색 및 분석 ���스템을 구현해줘.
-- 감사 로그 전문 검색 (Elasticsearch 또는 PostgreSQL FTS)
-- 필터: 날짜 범위, 사용자, 엔티티 유형, 액션
-- 이상 행동 감지 (동일 사용자 단시간 대량 변경)
-- 감사 보고서 PDF 내보내기
-- 새 페이지: /admin/audit-logs (기존 페이지 확장)
-```
+부적합 관리의 수리 워크플로우에 여러 FIXME가 걸려 있어. 근본 원인을 찾아 전체 흐름을 안정화해줘.
 
-```
-다국어(i18n) 관리 시스템을 구현해줘.
-- 번역 키 관리 UI (admin 전용)
-- 누락 키 자동 감지 및 경고
-- 번역 상태 추적 (완료/미완료/검토 필요)
-- CSV 내보내기/가져오기 (번역가 협업용)
-- 런타임 번역 오버라이드 (DB 기반)
+문제점:
+1. 수리이력 등록 시 "입력 데이터 검증 실패" (full-workflow.spec.ts:109)
+   → 백엔드 Zod 스키마와 프론트엔드 폼 필드 불일치 의심
+2. test_engineer가 "기록 수정" 버튼 접근 가능 (nc-management-permissions.spec.ts:26)
+   → 권한 체크 로직 버그
+3. 워크플로우 테스트 체인 전체가 첫 FIXME에 의존하여 연쇄 실패
+
+조사 범위:
+- 백엔드: non-conformances 모듈의 repair 관련 DTO/서비스/컨트롤러
+- 프론트엔드: 부적합 상세 페이지의 수리 다이얼로그 컴포넌트
+- 권한: @RequirePermissions 데코레이터 + 프론트엔드 permission 체크
+
+목표: FIXME 5건 전부 제거 + E2E 테스트 전체 PASS
 ```

@@ -149,6 +149,15 @@ module.exports = {
           foreground: 'hsl(var(--info-foreground))',
         },
       },
+      transitionTimingFunction: {
+        standard: 'var(--ease-standard)',
+        accelerate: 'var(--ease-accelerate)',
+        decelerate: 'var(--ease-decelerate)',
+        spring: 'var(--ease-spring)',
+        sharp: 'var(--ease-sharp)',
+        'spring-pop': 'var(--ease-spring-pop)',
+        'spring-smooth': 'var(--ease-spring-smooth)',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

@@ -50,8 +50,9 @@ async function CreateTeamContentAsync() {
 
 /**
  * 페이지 전체 스켈레톤 (헤더 + 폼)
+ * loading.tsx에서도 재사용 — 컨테이너는 Page(정적 셸) 또는 loading.tsx가 제공
  */
-function CreateTeamPageSkeleton() {
+export function CreateTeamPageSkeleton() {
   return (
     <>
       {/* 헤더 스켈레톤 */}

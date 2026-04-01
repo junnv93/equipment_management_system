@@ -18,8 +18,7 @@ export const SIDEBAR_LAYOUT = {
   mobile: { width: 'w-72' }, // 288px (드로어)
   headerHeight: 'h-14',
   /** width/margin-left transition (prefers-reduced-motion 지원) */
-  transition:
-    'motion-safe:transition-[width,margin-left] motion-safe:duration-200 motion-safe:ease-[var(--ease-standard)] motion-reduce:transition-none',
+  transition: TRANSITION_PRESETS.fastWidthMargin,
 } as const;
 
 /**

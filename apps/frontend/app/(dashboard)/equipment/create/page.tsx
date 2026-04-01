@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 
-function CreateEquipmentFormSkeleton() {
+export function CreateEquipmentFormSkeleton() {
   return (
     <div className={getPageContainerClasses()}>
       <Skeleton className="h-9 w-32" />

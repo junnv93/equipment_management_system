@@ -22,7 +22,7 @@ type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-function CalibrationFactorsLoadingSkeleton() {
+export function CalibrationFactorsLoadingSkeleton() {
   return (
     <div className={getPageContainerClasses()}>
       <div className="flex items-center justify-between">

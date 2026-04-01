@@ -9,23 +9,25 @@ import { MOTION_TOKENS } from './semantic';
 import type { MotionSpeed } from './semantic';
 
 /**
- * Easing CSS Custom Property 참조 (Tailwind arbitrary value용)
+ * Easing → Tailwind named class 매핑
  *
- * getTransitionClasses()에서 ease-[cubic-bezier(...)] 대신
- * ease-[var(--ease-*)]를 생성하여 Tailwind ambiguity 경고를 방지.
+ * tailwind.config.js의 transitionTimingFunction 확장에 등록된 named utility를 참조.
+ * arbitrary value 문법 대신 named class (ease-standard)를 생성하여
+ * Tailwind v4 content detection ambiguity 경고를 원천 차단.
  *
- * SSOT 체인: globals.css (:root --ease-*) ← 이 매핑 → getTransitionClasses()
- * 키: MOTION_PRIMITIVES.easing의 raw cubic-bezier 값 (computed property)
- * 값: 대응하는 CSS Custom Property var() 참조
+ * SSOT 체인: primitives.ts (raw값) → globals.css (CSS 변수) → tailwind.config.js (named utility) ← 이 매핑 → getTransitionClasses()
+ *
+ * 키: MOTION_PRIMITIVES.easing의 raw cubic-bezier 값
+ * 값: tailwind.config.js에 등록된 Tailwind easing class명
  */
-export const EASING_CSS_VARS: Record<string, string> = {
-  [MOTION_PRIMITIVES.easing.standard]: 'var(--ease-standard)',
-  [MOTION_PRIMITIVES.easing.accelerate]: 'var(--ease-accelerate)',
-  [MOTION_PRIMITIVES.easing.decelerate]: 'var(--ease-decelerate)',
-  [MOTION_PRIMITIVES.easing.spring]: 'var(--ease-spring)',
-  [MOTION_PRIMITIVES.easing.sharp]: 'var(--ease-sharp)',
-  [MOTION_PRIMITIVES.easing.springPop]: 'var(--ease-spring-pop)',
-  [MOTION_PRIMITIVES.easing.springSmooth]: 'var(--ease-spring-smooth)',
+export const EASING_CLASSES: Record<string, string> = {
+  [MOTION_PRIMITIVES.easing.standard]: 'ease-standard',
+  [MOTION_PRIMITIVES.easing.accelerate]: 'ease-accelerate',
+  [MOTION_PRIMITIVES.easing.decelerate]: 'ease-decelerate',
+  [MOTION_PRIMITIVES.easing.spring]: 'ease-spring',
+  [MOTION_PRIMITIVES.easing.sharp]: 'ease-sharp',
+  [MOTION_PRIMITIVES.easing.springPop]: 'ease-spring-pop',
+  [MOTION_PRIMITIVES.easing.springSmooth]: 'ease-spring-smooth',
 };
 
 /**
@@ -37,19 +39,24 @@ export const EASING_CSS_VARS: Record<string, string> = {
  *
  * @example
  * getTransitionClasses('fast', ['background-color', 'transform'])
- * → 'motion-safe:transition-[background-color,transform] motion-safe:duration-200 motion-safe:ease-[var(--ease-standard)] motion-reduce:transition-none'
+ * → 'motion-safe:transition-[background-color,transform] motion-safe:duration-200 motion-safe:ease-standard motion-reduce:transition-none'
  */
 export function getTransitionClasses(
   speed: MotionSpeed = 'fast',
   properties: string[] = ['background-color', 'transform', 'opacity', 'box-shadow']
 ): string {
   const motion = MOTION_TOKENS.transition[speed];
-  const easingRef = EASING_CSS_VARS[motion.easing] ?? motion.easing;
+  const easingClass = EASING_CLASSES[motion.easing];
+  if (!easingClass) {
+    throw new Error(
+      `Unmapped easing: "${motion.easing}". Register it in EASING_CLASSES and tailwind.config.js transitionTimingFunction.`
+    );
+  }
 
   return [
     `motion-safe:transition-[${properties.join(',')}]`,
     `motion-safe:duration-${motion.duration}`,
-    `motion-safe:ease-[${easingRef}]`,
+    `motion-safe:${easingClass}`,
     'motion-reduce:transition-none',
   ].join(' ');
 }
@@ -166,6 +173,10 @@ export const TRANSITION_PRESETS = {
     'background-color',
     'transform',
   ]),
+  /** width, margin-left (사이드바 collapse 애니메이션) */
+  fastWidthMargin: getTransitionClasses('fast', ['width', 'margin-left']),
+  /** grid-template-rows (확장/축소 패널) */
+  fastGridRows: getTransitionClasses('fast', ['grid-template-rows']),
 
   // ── Instant (100ms) ───────────────────────────
   /** background-color */
@@ -204,6 +215,21 @@ export const TRANSITION_PRESETS = {
   moderateShadow: getTransitionClasses('moderate', ['box-shadow']),
   /** box-shadow, transform */
   moderateShadowTransform: getTransitionClasses('moderate', ['box-shadow', 'transform']),
+
+  // ── Emphasized (500ms, decelerate) ────────────
+  /** opacity */
+  emphasizedOpacity: getTransitionClasses('emphasized', ['opacity']),
+  /** transform */
+  emphasizedTransform: getTransitionClasses('emphasized', ['transform']),
+  /** transform, opacity */
+  emphasizedTransformOpacity: getTransitionClasses('emphasized', ['transform', 'opacity']),
+  /** background-color, transform, opacity, box-shadow (기본 4속성) */
+  emphasizedAll: getTransitionClasses('emphasized', [
+    'background-color',
+    'transform',
+    'opacity',
+    'box-shadow',
+  ]),
 } as const;
 
 /**

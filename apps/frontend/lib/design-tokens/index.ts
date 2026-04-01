@@ -93,7 +93,7 @@ export {
   getAnimationEasing,
   ANIMATION_PRESETS,
   TRANSITION_PRESETS,
-  EASING_CSS_VARS,
+  EASING_CLASSES,
 } from './motion';
 
 // ============================================================================

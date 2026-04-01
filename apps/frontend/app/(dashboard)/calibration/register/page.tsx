@@ -4,7 +4,7 @@ import { getServerAuthSession } from '@/lib/auth/server-session';
 import { hasPermission, Permission } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import { CalibrationRegisterContent } from './CalibrationRegisterContent';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { RouteLoading } from '@/components/layout/RouteLoading';
 
 export default async function CalibrationRegisterPage() {
   const session = await getServerAuthSession();
@@ -19,13 +19,7 @@ export default async function CalibrationRegisterPage() {
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className={getPageContainerClasses('centered')}>
-          <p className="text-muted-foreground">교정 등록 페이지를 불러오는 중...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<RouteLoading variant="detail" />}>
       <CalibrationRegisterContent />
     </Suspense>
   );

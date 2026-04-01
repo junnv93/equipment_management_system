@@ -28,6 +28,8 @@ export const MONITORING_THRESHOLDS = {
   MEMORY_PERCENT: 85,
   /** 에러율 경고 임계값 (%) */
   ERROR_RATE_PERCENT: 5,
+  /** 추적할 엔드포인트 최대 수 (메모리 누수 방지) */
+  MAX_TRACKED_ENDPOINTS: 500,
 } as const;
 
 /**

@@ -20,6 +20,10 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
   private readonly cleanupTimer: ReturnType<typeof setInterval>;
   private readonly inflight = new Map<string, Promise<unknown>>();
 
+  // 캐시 히트/미스 카운터 (모니터링 메트릭용)
+  private hits = 0;
+  private misses = 0;
+
   constructor() {
     this.maxSize = DEFAULT_MAX_SIZE;
     this.cleanupTimer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
@@ -37,6 +41,7 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
     const item = this.cache.get(key);
 
     if (!item) {
+      this.misses++;
       return undefined;
     }
 
@@ -44,6 +49,7 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
     if (item.expiresAt !== null && Date.now() > item.expiresAt) {
       this.logger.debug(`Cache expired for key: ${key}`);
       this.cache.delete(key);
+      this.misses++;
       return undefined;
     }
 
@@ -51,6 +57,7 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
     this.cache.delete(key);
     this.cache.set(key, item);
 
+    this.hits++;
     this.logger.debug(`Cache hit for key: ${key}`);
     return item.value as T;
   }
@@ -232,5 +239,25 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
     }
 
     return removedCount;
+  }
+
+  /**
+   * 캐시 통계 반환 (모니터링 메트릭용)
+   */
+  getCacheStats(): {
+    hits: number;
+    misses: number;
+    hitRate: number;
+    size: number;
+    maxSize: number;
+  } {
+    const total = this.hits + this.misses;
+    return {
+      hits: this.hits,
+      misses: this.misses,
+      hitRate: total > 0 ? (this.hits / total) * 100 : 0,
+      size: this.cache.size,
+      maxSize: this.maxSize,
+    };
   }
 }
