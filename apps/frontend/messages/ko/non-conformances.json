@@ -186,6 +186,36 @@
         "failed": "실패"
       }
     },
+    "editDialog": {
+      "title": "부적합 정보 수정",
+      "description": "부적합의 원인 및 조치 계획을 수정합니다.",
+      "actionPlanPlaceholder": "조치 계획을 입력하세요 (선택)",
+      "cancel": "취소",
+      "save": "저장",
+      "saving": "저장 중..."
+    },
+    "repairDialog": {
+      "title": "수리 이력 등록",
+      "description": "수리 이력을 등록하고 이 부적합 건에 자동으로 연결합니다.",
+      "repairDate": "수리 일자",
+      "repairDescription": "수리 내용",
+      "repairDescriptionPlaceholder": "수리 내용을 상세히 입력하세요 (최소 10자)",
+      "repairResult": "수리 결과",
+      "repairResultPlaceholder": "수리 결과 선택",
+      "notes": "비고",
+      "notesPlaceholder": "추가 참고 사항 (선택)",
+      "cancel": "취소",
+      "register": "등록",
+      "registering": "등록 중...",
+      "validation": {
+        "dateRequired": "수리 일자를 입력하세요.",
+        "descriptionMin": "수리 내용은 최소 10자 이상 입력하세요."
+      },
+      "toasts": {
+        "success": "수리 이력이 등록되었습니다.",
+        "error": "수리 이력 등록에 실패했습니다."
+      }
+    },
     "dialog": {
       "closeTitle": "부적합 종결",
       "closeDescription": "이 부적합 사항을 종결합니다. 종결 후에는 상태를 변경할 수 없습니다.",

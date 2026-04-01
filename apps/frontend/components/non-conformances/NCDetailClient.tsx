@@ -23,6 +23,8 @@ import {
 import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { NonConformanceCacheInvalidation } from '@/lib/api/cache-invalidation';
+import NCEditDialog from '@/components/non-conformances/NCEditDialog';
+import NCRepairDialog from '@/components/non-conformances/NCRepairDialog';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -102,6 +104,8 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   // State for dialogs
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showRepairDialog, setShowRepairDialog] = useState(false);
   const [closureNotes, setClosureNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -305,12 +309,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           </div>
         </div>
         <div className={NC_DETAIL_HEADER_TOKENS.actionsGroup}>
-          {!isClosed && (
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={`/equipment/${nc.equipmentId}`}>
-                <Pencil className="h-3.5 w-3.5 mr-1" />
-                {t('detail.editButton')}
-              </Link>
+          {!isClosed && nc.status === 'open' && (
+            <Button variant="ghost" size="sm" onClick={() => setShowEditDialog(true)}>
+              <Pencil className="h-3.5 w-3.5 mr-1" />
+              {t('detail.editButton')}
             </Button>
           )}
           <Link href="/non-conformances">
@@ -357,25 +359,29 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
                   ? t('detail.prerequisite.repairNeeded')
                   : t('detail.prerequisite.recalibrationNeeded')}
               </p>
-              <Link
-                href={
-                  needsRepair
-                    ? `/equipment/${nc.equipmentId}?tab=incident`
-                    : `/equipment/${nc.equipmentId}?tab=calibration`
-                }
-                className="text-sm text-brand-info hover:underline mt-1 inline-block"
-              >
-                {needsRepair
-                  ? t('detail.prerequisite.repairLink')
-                  : t('detail.prerequisite.recalibrationLink')}
-              </Link>
+              {needsRepair ? (
+                <button
+                  type="button"
+                  className="text-sm text-brand-info hover:underline mt-1 inline-block"
+                  onClick={() => setShowRepairDialog(true)}
+                >
+                  {t('detail.prerequisite.repairLink')}
+                </button>
+              ) : (
+                <Link
+                  href={`/equipment/${nc.equipmentId}?tab=calibration`}
+                  className="text-sm text-brand-info hover:underline mt-1 inline-block"
+                >
+                  {t('detail.prerequisite.recalibrationLink')}
+                </Link>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* 정보 카드 */}
-      <InfoCards nc={nc} />
+      <InfoCards nc={nc} onRepairRegister={() => setShowRepairDialog(true)} />
 
       {/* 조치/종결 섹션 */}
       <CollapsibleSection
@@ -530,6 +536,14 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* NC 편집 다이얼로그 */}
+      {nc && <NCEditDialog nc={nc} open={showEditDialog} onOpenChange={setShowEditDialog} />}
+
+      {/* 수리이력 등록 다이얼로그 */}
+      {nc && needsRepair && (
+        <NCRepairDialog nc={nc} open={showRepairDialog} onOpenChange={setShowRepairDialog} />
+      )}
     </div>
   );
 }
@@ -635,7 +649,7 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
 /**
  * 정보 카드 (2-column)
  */
-function InfoCards({ nc }: { nc: NonConformance }) {
+function InfoCards({ nc, onRepairRegister }: { nc: NonConformance; onRepairRegister: () => void }) {
   const { fmtDate } = useDateFormatter();
   const t = useTranslations('non-conformances');
   const hasRepairLink = !!nc.repairHistoryId;
@@ -696,13 +710,14 @@ function InfoCards({ nc }: { nc: NonConformance }) {
             <p className="text-sm text-muted-foreground leading-relaxed">
               {t('detail.infoCard.repairNeededDescription', { type: t('ncType.' + nc.ncType) })}
             </p>
-            <Link
-              href={`/equipment/${nc.equipmentId}?tab=incident`}
+            <button
+              type="button"
               className="text-sm text-brand-info hover:underline inline-flex items-center gap-1"
+              onClick={onRepairRegister}
             >
               <Wrench className="h-3.5 w-3.5" />
               {t('detail.infoCard.repairRegisterLink')}
-            </Link>
+            </button>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground py-2">

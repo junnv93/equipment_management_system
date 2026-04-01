@@ -92,6 +92,7 @@ export interface CreateNonConformanceDto {
 // 부적합 업데이트 DTO (CAS: version 필수)
 export interface UpdateNonConformanceDto {
   version: number;
+  cause?: string;
   actionPlan?: string;
   correctionContent?: string;
   correctionDate?: string;
