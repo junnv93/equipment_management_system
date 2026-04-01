@@ -63,11 +63,9 @@ test.describe.serial('Group D: 부적합-수리 전체 워크플로우', () => {
     // Submit incident - use dispatchEvent as the button is outside viewport
     await testOperatorPage.getByRole('button', { name: /저장|등록/i }).dispatchEvent('click');
 
-    // Wait for toast notification — use aria-live to distinguish from equipment status badges
-    // (status badges have role="status" but NOT aria-live; toasts have both)
-    const toast = testOperatorPage
-      .locator('[role="status"][aria-live]')
-      .or(testOperatorPage.locator('.toast'));
+    // Wait for toast notification — [role="status"][aria-live] distinguishes toasts from
+    // static status badges (badges have role="status" but no aria-live attribute)
+    const toast = testOperatorPage.locator('[role="status"][aria-live]').first();
     await expect(toast).toContainText(/등록.*완료|성공/i, { timeout: TIMEOUTS.API_RESPONSE });
 
     // Wait for UI update

@@ -81,6 +81,9 @@ export const equipmentRequests = pgTable(
 export type EquipmentRequest = typeof equipmentRequests.$inferSelect;
 export type NewEquipmentRequest = typeof equipmentRequests.$inferInsert;
 
+// 순환 참조 방지를 위해 파일 하단 배치 (documents → equipment-requests 역방향 의존성)
+import { documents } from './documents';
+
 // Drizzle relations 설정
 // ⚠️ requester/approver 모두 users 테이블 참조 → relationName 필수 (Drizzle 다중 관계 규칙)
 export const equipmentRequestsRelations = relations(equipmentRequests, ({ one, many }) => ({
@@ -100,5 +103,3 @@ export const equipmentRequestsRelations = relations(equipmentRequests, ({ one, m
   }),
   documents: many(documents),
 }));
-
-import { documents } from './documents';

@@ -102,6 +102,9 @@ export const calibrations = pgTable(
 export type Calibration = typeof calibrations.$inferSelect;
 export type NewCalibration = typeof calibrations.$inferInsert;
 
+// 순환 참조 방지를 위해 파일 하단 배치 (documents → calibrations 역방향 의존성)
+import { documents } from './documents';
+
 // Drizzle relations for joins
 export const calibrationsRelations = relations(calibrations, ({ one, many }) => ({
   equipment: one(equipment, {
@@ -120,5 +123,3 @@ export const calibrationsRelations = relations(calibrations, ({ one, many }) => 
   }),
   documents: many(documents),
 }));
-
-import { documents } from './documents';

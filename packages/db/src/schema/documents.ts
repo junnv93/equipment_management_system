@@ -9,6 +9,7 @@ import {
   boolean,
   index,
 } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
 import { equipment } from './equipment';
@@ -53,7 +54,9 @@ export const documents = pgTable(
 
     // 버전 관리
     revisionNumber: integer('revision_number').notNull().default(1),
-    parentDocumentId: uuid('parent_document_id'),
+    parentDocumentId: uuid('parent_document_id').references((): AnyPgColumn => documents.id, {
+      onDelete: 'set null',
+    }),
     isLatest: boolean('is_latest').notNull().default(true),
 
     // 메타데이터
