@@ -26,7 +26,7 @@ export const disposalRequests = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
-    // 장비 정보 (cascade delete: 장비 삭제 시 폐기 요청도 함께 삭제)
+    // 장비 정보 (restrict: 이력 보존 — 장비 삭제 방지)
     equipmentId: uuid('equipment_id')
       .notNull()
       .references(() => equipment.id, { onDelete: 'restrict' }),
