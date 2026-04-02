@@ -1,203 +1,140 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 분석일: 2026-04-02 (2차 스캔 + 검증 완료)**
+> **마지막 정리일: 2026-04-02 (4차 스캔 — 3-Agent 병렬 스캔 + 2차 검증)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용.
 
 ---
 
-## 🟠 HIGH — 성능/i18n
+## 🟠 HIGH (성능/데이터 무결성)
 
-### 프론트엔드 하드코딩 한국어 문자열 i18n 전환 (Mode 1)
-
-```
-컴포넌트 파일에 한국어 문자열이 직접 하드코딩되어 있어.
-messages/{en,ko}/*.json으로 이동해줘.
-
-검증 완료된 위치:
-- components/auth/LoginPageContent.tsx:201 — '장비 등록 · 교정 · 반출 관리'
-- components/auth/LoginPageContent.tsx:202 — '역할 기반 승인 워크플로우'
-- components/shared/FormWizardStepper.tsx:81 — '완료' (aria-label 내)
-- components/shared/EquipmentSelector.tsx:64 — '장비명, 관리번호 검색...'
-
-참고: PrintableAuditReport.tsx:32 "2025년 교정 승인 이력"은 JSDoc 예시이므로 제외.
-참고: console.log 내부의 한국어는 개발 디버깅용이므로 제외.
-
-검증: tsc --noEmit + verify-i18n (en/ko 키 매칭)
-```
-
-### Equipment approvalStatus 인덱스 추가 (Mode 0)
+### checkoutItems FK onDelete 정책 누락 (Mode 0)
 
 ```
-equipment 테이블에서 승인 대기 목록 조회에 사용되는 approvalStatus에 인덱스가 없어.
+checkoutItems.equipmentId FK에 onDelete 정책이 누락되어 있어.
+PR #92에서 다른 FK는 restrict로 통일했는데 이건 빠짐.
 
-현재 인덱스 현황 (이미 존재):
-- teamId ✅ (teamIdIdx + teamStatusIdx 복합)
-- site ✅ (siteIdx)
-- status, location, manufacturer, managerId, isActive, name 등 ✅
+위치: packages/db/src/schema/checkouts.ts:115-117
+현재: .references(() => equipment.id)  // onDelete 없음
+비교: checkoutItems.checkoutId는 { onDelete: 'cascade' } 적용됨
 
-누락:
-- approvalStatus — 승인 대기 목록 필터링에 사용 (admin/equipment-approvals 페이지)
+수정: { onDelete: 'restrict' } 추가 (장비 삭제 시 checkout 이력 보존)
+검증: pnpm --filter @equipment-management/db run build && pnpm --filter backend run tsc --noEmit
+```
 
-위치: packages/db/src/schema/equipment.ts
-마이그레이션: drizzle/manual/20260402_add_equipment_approval_status_index.sql
-검증: tsc --noEmit
+### CI unit-test Turbo 캐시 미적용 (Mode 0)
+
+```
+CI main.yml의 unit-test job에 Turbo 캐시가 없어서 공유 패키지를 매번 재빌드해.
+
+위치: .github/workflows/main.yml:132-153
+문제: quality-gate job은 turbo cache (line 59-66) 사용하지만,
+      unit-test job (line 142-150)은 node-modules-cache만 있고 turbo cache 없음
+      → pnpm build --filter "@equipment-management/*" 매번 풀 빌드
+
+수정: unit-test steps에 quality-gate와 동일한 turbo cache step 추가
+검증: GitHub Actions에서 unit-test job의 Build 단계 시간 비교 (기대: ~15s → ~3s)
 ```
 
 ---
 
-## 🟡 MEDIUM — 코드 품질/정비
+## 🟡 MEDIUM (품질/DX)
 
-### 미사용 Permission enum 정리 (Mode 0) — 사용자 확인 필요
-
-```
-shared-constants/permissions.ts에 정의 + role-permissions.ts에 역할 할당까지 되어 있지만,
-백엔드 @RequirePermissions와 프론트엔드 can() 양쪽 모두에서 실제 사용되지 않는 Permission 5건.
-
-대상:
-- Permission.CREATE_DASHBOARD — lab_manager에 할당, 사용처 0
-- Permission.CREATE_NOTIFICATION — technical_manager, lab_manager에 할당, 사용처 0
-- Permission.MANAGE_NOTIFICATION_SETTINGS — lab_manager에 할당, 사용처 0
-- Permission.MANAGE_REPORTS — lab_manager에 할당, 사용처 0
-- Permission.VIEW_DISPOSAL_REQUESTS — technical_manager, lab_manager에 할당, 사용처 0
-
-판단 필요: 향후 구현 예정 기능을 위한 선행 정의인지, 불필요한 코드인지 사용자 확인 필요.
-- 선행 정의 → 유지 + TODO 주석 추가
-- 불필요 → permissions.ts + role-permissions.ts + permission-categories.ts에서 제거
-
-검증: tsc --noEmit (양쪽)
-```
-
-### CI pnpm install 중복 제거 — 캐시 최적화 (Mode 1)
+### AlertsContent activeTab URL SSOT 위반 (Mode 0)
 
 ```
-main.yml에서 quality-gate, unit-test, build, dep-audit 4개 job이
-각각 독립적으로 pnpm install을 실행해. 캐시 전략으로 최적화해줘.
+알림 페이지의 activeTab이 useState로 관리되어 URL과 동기화되지 않아.
+URL 공유/새로고침 시 탭 상태 유실됨.
 
-현재: 각 job마다 ~40초 pnpm install (4번 × 40초 = 2분 40초 낭비)
-목표: quality-gate에서 1회 install → 나머지 job은 캐시 히트
+위치: apps/frontend/app/(dashboard)/alerts/AlertsContent.tsx:102
+현재: const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all')
+패턴: 다른 페이지들은 useSearchParams()로 URL SSOT 유지
+
+수정: searchParams에서 tab 파라미터 읽기/쓰기 패턴으로 변경
+참조: components/approvals/ApprovalsClient.tsx의 URL 탭 패턴
+검증: 1) 탭 전환 후 새로고침 → 탭 유지  2) pnpm --filter frontend run tsc --noEmit
+```
+
+### PendingChecks 필터 미동작 (Mode 0)
+
+```
+PendingChecksClient의 필터 버튼(전체/대여자/대출자)이 UI에만 존재하고 실제 쿼리에 적용되지 않아.
+
+위치: apps/frontend/app/(dashboard)/checkouts/pending-checks/PendingChecksClient.tsx:63
+문제: _filter 상태가 버튼 variant 스타일에만 사용 (line 183,190,197)
+      실제 useQuery의 queryFn에는 filter 파라미터 전달 없음 (line 66-72)
+
+수정 방안:
+  A) 필터를 쿼리에 반영 (백엔드 API가 지원하면)
+  B) 클라이언트 사이드 필터링 적용
+  C) 미구현 기능이면 필터 UI 제거
+→ 도메인 결정 필요
+
+검증: 필터 버튼 클릭 시 목록이 실제로 필터링되는지 확인
+```
+
+### softwareType TODO 해소 (Mode 1)
+
+```
+소프트웨어 장비별 조회 응답에서 softwareType이 항상 null 반환.
+
+위치: apps/backend/src/modules/software/software.service.ts:460
+현재: softwareType: null, // TODO: Add software type to schema
 
 수정:
-1. quality-gate에서 node_modules 캐시 저장 (actions/cache@v4)
-2. unit-test, build, dep-audit에서 fail-on-cache-miss: true로 캐시 복원
-3. pnpm store 캐시도 공유
+1. software 테이블의 softwareType 컬럼 확인 (packages/db/src/schema/software.ts)
+2. 쿼리에서 softwareType 조회 → 응답에 매핑
+3. softwareType이 스키마에 없으면 추가 필요 여부 판단
 
-검증: PR CI 파이프라인 실행 시간 ~2분 단축 확인
+검증: GET /api/software/:id/equipment 응답에 softwareType 포함 확인
 ```
 
-### 부적합 수리 워크플로우 E2E FIXME 해소 (Mode 1)
+### userPreferences relations() 미정의 (Mode 0)
 
 ```
-full-workflow.spec.ts의 FIXME 4건을 해소해줘.
+userPreferences 테이블에 Drizzle relations() 정의가 없어.
 
-위치: tests/e2e/features/non-conformances/repair-workflow/group-4-integration/
+위치: packages/db/src/schema/user-preferences.ts
+현재: 테이블 정의만 존재, relations() export 없음
+비교: 다른 테이블(users, equipment 등)은 모두 relations() 정의됨
 
-FIXME 목록:
-- line 109: "수리 이력 등록 시 '입력 데이터 검증 실패' 오류 발생"
-- line 179: "D-3 테스트에 의존하는 워크플로우 테스트"
-- line 205: "D-3, D-4 테스트에 의존하는 워크플로우 테스트"
-- line 239: "D-3~D-5 테스트에 의존하는 워크플로우 테스트"
-
-조사:
-1. line 109: 백엔드 수리이력 Zod 스키마와 프론트엔드 폼 필드 불일치 확인
-2. line 179+: serial 의존성 체인 — 앞 테스트 실패 시 연쇄 스킵
-
-검증: full-workflow.spec.ts 전체 PASS
-```
-
-### FK ON DELETE 정책 일관성 검토 (Mode 0) — 사용자 확인 필요
-
-```
-equipment 관련 FK의 ON DELETE 정책이 일관되지 않아.
-
-현재 상태 (검증 완료):
-- equipment → non_conformances: onDelete: 'restrict' ✓ (이력 보존)
-- equipment → calibrations: onDelete: 'restrict' ✓ (이력 보존)
-- equipment → disposal_requests: onDelete: 'cascade' ⚠️ (폐기 이력 삭제됨)
-- equipment → calibration_plans: onDelete: 'cascade' ⚠️ (교정계획 이력 삭제됨)
-
-판단 필요:
-- UL-QP-18 기준으로 교정계획/폐기 이력은 보존해야 하는가?
-  → 보존 필요 시: 'cascade' → 'restrict'로 변경
-  → 삭제 허용 시: 현행 유지 + 의도 주석 추가
-
-위치: packages/db/src/schema/disposal-requests.ts, calibration-plans.ts
+수정: userPreferencesRelations 추가 (userId → users.id 관계)
+검증: pnpm --filter @equipment-management/db run build
 ```
 
 ---
 
-## 🟢 LOW — 개선/정비
+## 🟢 LOW (접근성/정리)
 
-### 교정 필터 E2E 테스트 활성화 (Mode 1)
-
-```
-비활성화된 교정 필터 E2E 테스트를 수정하고 활성화해줘.
-
-위치: tests/e2e/features/calibration/filters/calibration-filter.spec.ts (line 8)
-상태: 2026-02-12 이후 전체 비활성화
-
-조사:
-1. 비활성화 사유 확인 (주석 또는 git blame)
-2. 현재 교정 필터 UI가 테스트와 일치하는지 확인
-3. 필요 시 locator 업데이트 (getByRole 패턴 준수)
-
-검증: calibration-filter.spec.ts 전체 PASS
-```
-
-### i18n 에러 메시지 Phase 3 구현 (Mode 1)
+### NCDetailClient 뒤로가기 버튼 aria-label (Mode 0)
 
 ```
-response-transformers.ts의 i18n TODO를 해소해줘:
-"TODO(i18n): Phase 3에서 errors.json의 키로 전환"
-(lib/api/utils/response-transformers.ts line 334)
+부적합 상세 페이지의 뒤로가기 아이콘 버튼에 aria-label이 없어.
 
-현재: 에러 메시지가 한국어/영어 하드코딩
-목표: i18n 키 기반으로 전환
+위치: apps/frontend/components/non-conformances/NCDetailClient.tsx:281
+현재: <Button variant="ghost" size="icon" ...> <ArrowLeft /> </Button>
 
-작업:
-1. 에러 코드별 i18n 키 매핑 테이블 정의
-2. mapBackendErrorCode()에서 i18n 키 반환
-3. ERROR_MESSAGES를 i18n 파일로 이동
-4. 기존 EquipmentErrorCode 체계 호환 유지
-
-주의: 에러 핸들링 체인 전체에 영향 — 변경 범위 신중하게
-검증: tsc --noEmit + 에러 발생 시나리오 수동 테스트
+수정: aria-label={t('detail.backButton')} 추가 + i18n 키 등록
+검증: 스크린리더에서 "뒤로가기" 버튼으로 인식 확인
 ```
 
-### 폐기 취소 확인 다이얼로그 미구현 (Mode 0)
+### i18n Phase 3 유틸리티 TODO (Mode 1)
 
 ```
-EquipmentDetailClient.tsx:181에 TODO가 있어:
-"TODO: Implement cancel confirmation dialog"
+response-transformers.ts의 HTTP 에러 메시지가 아직 i18n 키로 전환되지 않았어.
 
-폐기 요청 취소 시 확인 다이얼로그 없이 즉시 실행됨.
-사용자 실수 방지를 위해 AlertDialog 추가 필요.
+위치: apps/frontend/lib/api/utils/response-transformers.ts:334
+TODO: Phase 3에서 errors.json의 키(VALIDATION_ERROR, UNAUTHORIZED 등)로 전환
+현재: 순수 유틸리티 함수로 translation context 없음 — 호출자 레벨에서 처리 예정
 
-패턴: 기존 삭제 확인 다이얼로그 참조 (예: checkout 취소)
-검증: tsc --noEmit
+수정: 호출자 컴포넌트에서 errorCode 기반 i18n 메시지 표시 패턴 적용
+참조: lib/errors/ 패턴
+검증: pnpm --filter frontend run tsc --noEmit + 에러 발생 시 한국어 메시지 확인
 ```
 
 ---
 
 ## 📋 복합 작업 (Mode 2 — Full Harness)
-
-### 모니터링 대시보드 프론트엔드 (Mode 2)
-
-```
-모니터링 백엔드 API는 완성 상태 (7개 엔드포인트).
-프론트엔드 대시보드 페이지를 생성해줘.
-
-구현:
-1. /admin/monitoring 페이지 생성
-   - 시스템 리소스 (CPU, 메모리) — 게이지 차트
-   - HTTP 요청 통계 — 엔드포인트별 응답 시간, 에러율
-   - 캐시 성능 — hit rate, size
-   - 헬스 상태 — 서비스별 UP/DOWN
-2. TanStack Query: REFETCH_STRATEGIES.IMPORTANT (2분 폴링)
-3. 역할 제한: system_admin만 접근
-
-검증: tsc + build + 페이지 렌더링 확인
-```
 
 ### 테스트 커버리지 확대 (Mode 2)
 
@@ -221,8 +158,27 @@ EquipmentDetailClient.tsx:181에 TODO가 있어:
 ## 📦 완료 항목 아카이브
 
 <details>
-<summary>이전 세션에서 완료된 항목 (10건)</summary>
+<summary>완료된 항목 (21건)</summary>
 
+### 🟠 HIGH
+- ✅ 프론트엔드 하드코딩 한국어 i18n 전환 — commit d6c8c0cd (2026-04-02)
+- ✅ Equipment approvalStatus 인덱스 추가 — commit d6c8c0cd (2026-04-02)
+
+### 🟡 MEDIUM
+- ✅ 미사용 Permission enum 5건 정리 — PR #92 (2026-04-02)
+- ✅ CI pnpm install 캐시 최적화 — PR #92 (2026-04-02)
+- ✅ FK ON DELETE 정책 cascade→restrict 통일 — PR #92 (2026-04-02)
+- ✅ 부적합 수리 워크플로우 E2E FIXME 해소 — commit 3f93f3e3 (2026-04-02)
+
+### 🟢 LOW
+- ✅ 교정 필터 E2E 테스트 — PR #85에서 중복 삭제 (list-primary-filters.spec.ts가 커버)
+- ✅ i18n 에러 메시지 Phase 3 구현 — PR #85 (2026-04-02)
+- ✅ 폐기 취소 확인 다이얼로그 — commit d6c8c0cd (2026-04-02)
+
+### 📋 복합
+- ✅ 모니터링 대시보드 프론트엔드 — PR #88 (2026-04-02)
+
+### 이전 세션 완료
 - ✅ SSE 엔드포인트 권한 강화 — 이미 구현됨 (2026-04-02)
 - ✅ 부적합 관리 권한 버그 — PR #79 (2026-04-02)
 - ✅ 모니터링 cache-stats 엔드포인트 — PR #77 (2026-04-02)
@@ -238,11 +194,19 @@ EquipmentDetailClient.tsx:181에 TODO가 있어:
 </details>
 
 <details>
-<summary>2차 스캔에서 거짓 양성으로 판명된 항목 (3건)</summary>
+<summary>거짓 양성으로 판명된 항목 (8건)</summary>
 
-- ❌ 교정계획 @AuditLog 누락 — 11개 엔드포인트 전부 @AuditLog 적용됨 (거짓 양성)
-- ❌ auth.service.ts 빈 catch — logger.warn() 포함 + 의도적 fail-open 설계 (거짓 양성)
-- ❌ 누락된 error.tsx 16건 — 12개 라우트 전부 error.tsx 존재 (거짓 양성)
+### 이전 스캔 (2026-04-02 3차)
+- ❌ 교정계획 @AuditLog 누락 — 11개 엔드포인트 전부 @AuditLog 적용됨
+- ❌ auth.service.ts 빈 catch — logger.warn() 포함 + 의도적 fail-open 설계
+- ❌ 누락된 error.tsx 16건 — 12개 라우트 전부 error.tsx 존재
 
-교훈: 에이전트 1차 스캔 결과는 반드시 2차 검증 필요.
+### 4차 스캔 (2026-04-02)
+- ❌ @AuditLog decorator 순서 (non-conformances.controller.ts) — NestJS method decorator 순서는 기능에 영향 없음
+- ❌ error.tsx/loading.tsx 26건 누락 — 부모 라우트 cascading error boundary가 자식 라우트 커버 (28 error.tsx, 29 loading.tsx 존재)
+- ❌ Turbo cache key pnpm-lock만 참조 — Turbo 자체 내부 해싱이 package.json 변경 감지
+- ❌ system-settings 인덱스 부족 — 100 rows 미만 테이블, compound index(category, site) 충분
+- ❌ PATCH 'me/preferences' @AuditLog 누락 — display preferences는 비즈니스 감사 대상 아님
+
+교훈: 에이전트 1차 스캔 결과는 반드시 2차 검증 필요. 4차 스캔 거짓양성률: 38% (5/13).
 </details>
