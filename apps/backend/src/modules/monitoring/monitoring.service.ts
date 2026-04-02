@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { DrizzleService, type ConnectionPoolMetrics } from '../../database/drizzle.module';
+import { DrizzleService } from '../../database/drizzle.module';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
