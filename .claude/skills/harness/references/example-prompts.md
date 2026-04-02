@@ -1,15 +1,30 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-02 (8차 스캔 — 8차 발견 4건 전부 해소)**
+> **마지막 정리일: 2026-04-02 (9차 스캔 — verify-implementation 검증 결과)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용.
 
 ---
 
-## 현재 미해결 프롬프트: 없음
+## 현재 미해결 프롬프트: 2건
 
-8차 스캔에서 발견된 4건 전부 해소됨.
-새로운 이슈를 찾으려면 `/generate-prompts`로 재스캔하세요.
+### SHOULD-01: E2E 테스트 CSS 셀렉터를 getByRole 기반으로 개선
+
+**파일:**
+- `tests/e2e/features/checkouts/suite-21-pending-checks/s21-pending-checks.spec.ts` (lines 35, 61, 75-76)
+- `tests/e2e/features/equipment/comprehensive/create-equipment.spec.ts` (lines 51, 72, 101, 107)
+
+**이슈:** Tailwind 클래스 기반 CSS 셀렉터(`page.locator('.flex.gap-2.mb-6 button')`, `page.locator('[class*="PageHeader"]')`)가 디자인 토큰 변경에 취약. `getByRole('button', { name: ... })` 또는 `getByLabel(...)` 패턴으로 전환 필요.
+
+**검증:** `pnpm --filter frontend exec playwright test <경로> --project=chromium --no-deps` 통과
+
+### SHOULD-02: ReportsContent date-fns format → useDateFormatter 전환
+
+**파일:** `apps/frontend/app/(dashboard)/reports/ReportsContent.tsx` (line 215)
+
+**이슈:** 사용자 표시용 날짜 포맷에 `format(date, 'PPP', { locale })` 직접 호출 사용. 프로젝트 컨벤션인 `useDateFormatter().fmtDate` 사용 권장. 기능은 정상 (locale 파라미터 포함).
+
+**검증:** `pnpm --filter frontend run tsc --noEmit` + 해당 페이지 브라우저 확인
 
 ---
 
