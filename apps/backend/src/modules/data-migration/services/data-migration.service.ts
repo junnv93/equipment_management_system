@@ -1,19 +1,10 @@
-import {
-  Injectable,
-  Inject,
-  Logger,
-  BadRequestException,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
-import { eq, getTableColumns, inArray } from 'drizzle-orm';
+import { Injectable, Inject, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { getTableColumns, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import {
   parseManagementNumber,
-  createEquipmentSchema,
   EquipmentStatusEnum,
   ApprovalStatusValues,
-  UserRoleValues,
 } from '@equipment-management/schemas';
 import type { Site } from '@equipment-management/schemas';
 import { equipment } from '@equipment-management/db/schema/equipment';
@@ -777,7 +768,7 @@ export class DataMigrationService {
    */
   private buildEntityFromRow(
     row: MigrationRowPreview,
-    userId: string
+    _userId: string
   ): Partial<typeof equipment.$inferInsert> {
     const data = row.data;
     const managementNumber = row.managementNumber ?? (data.managementNumber as string);

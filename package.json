@@ -46,7 +46,7 @@
     "npm-check-updates": "^19.3.2",
     "only-allow": "^1.2.1",
     "prettier": "^3.5.3",
-    "turbo": "^1.13.4",
+    "turbo": "^2.9.3",
     "type-coverage": "^2.28.0"
   },
   "dependencies": {
@@ -64,7 +64,8 @@
       "validator": ">=13.15.22",
       "@isaacs/brace-expansion": ">=5.0.1",
       "fast-xml-parser": ">=5.3.6",
-      "multer": ">=2.1.0"
+      "multer": ">=2.1.0",
+      "tar": ">=7.5.7"
     }
   }
 }

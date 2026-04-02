@@ -15,9 +15,9 @@ describe('SoftwareService', () => {
   let mockEventEmitter: Record<string, jest.Mock>;
 
   // thenable chain builder
-  const createSelectChain = (rows: unknown[]) => {
+  const createSelectChain = (rows: unknown[]): Record<string, jest.Mock> => {
     const chain: Record<string, jest.Mock> = {};
-    const self = () => chain;
+    const self = (): Record<string, jest.Mock> => chain;
     chain.from = jest.fn().mockImplementation(self);
     chain.where = jest.fn().mockImplementation(self);
     chain.orderBy = jest.fn().mockImplementation(self);
@@ -30,7 +30,7 @@ describe('SoftwareService', () => {
     return chain;
   };
 
-  const createInsertChain = (returning: unknown[]) => ({
+  const createInsertChain = (returning: unknown[]): { values: jest.Mock } => ({
     values: jest.fn().mockReturnValue({
       returning: jest.fn().mockResolvedValue(returning),
     }),
@@ -53,7 +53,7 @@ describe('SoftwareService', () => {
   };
 
   // protected 메서드 spyOn 헬퍼
-  function spyOnUpdateWithVersion() {
+  function spyOnUpdateWithVersion(): jest.SpyInstance {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return jest.spyOn(service as any, 'updateWithVersion');
   }

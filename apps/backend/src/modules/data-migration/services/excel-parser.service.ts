@@ -15,7 +15,7 @@ import {
   INCIDENT_ALIAS_INDEX,
   INCIDENT_COLUMN_MAPPING,
 } from '../constants/incident-column-mapping';
-import { detectSheetType, SHEET_CONFIGS, type MigrationSheetType } from '../constants/sheet-config';
+import { detectSheetType, type MigrationSheetType } from '../constants/sheet-config';
 
 export interface ParsedSheet {
   sheetType: MigrationSheetType;

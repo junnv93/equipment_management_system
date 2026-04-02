@@ -6,8 +6,6 @@ import {
   generateManagementNumber,
   SITE_TO_CODE,
   CLASSIFICATION_TO_CODE,
-  SiteEnum,
-  ClassificationEnum,
   type Site,
   type Classification,
 } from '@equipment-management/schemas';

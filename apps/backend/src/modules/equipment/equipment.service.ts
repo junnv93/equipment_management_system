@@ -16,7 +16,6 @@ import {
   EquipmentStatus,
   EquipmentStatusEnum,
   EquipmentStatusValues as ESVal,
-  ApprovalStatusEnum,
   ApprovalStatusValues,
   parseManagementNumber,
   CLASSIFICATION_TO_CODE,
@@ -34,7 +33,6 @@ import {
   getTableColumns,
 } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
-import { equipmentAttachments } from '@equipment-management/db/schema/equipment-attachments';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -667,7 +665,7 @@ export class EquipmentService extends VersionedBaseService {
       // 트랜잭션: equipment INSERT + 위치 이력 SSOT 동기화
       // externalTx 제공 시: 외부 트랜잭션 컨텍스트에서 직접 실행 (원자성 보장)
       // externalTx 없을 시: 자체 트랜잭션 생성
-      const runCreate = async (tx: AppDatabase) => {
+      const runCreate = async (tx: AppDatabase): Promise<Equipment> => {
         // 1. 장비 INSERT (location 미포함 — SSOT 제외)
         const [created] = await tx
           .insert(equipment)

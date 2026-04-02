@@ -4,7 +4,6 @@ import {
   Inject,
   ForbiddenException,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
 import { eq, inArray, and, sql, count, asc, desc, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';

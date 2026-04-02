@@ -18,9 +18,9 @@ describe('SettingsService', () => {
   let mockCacheInvalidation: Record<string, jest.Mock>;
 
   // thenable chain builder
-  const createSelectChain = (rows: unknown[]) => {
+  const createSelectChain = (rows: unknown[]): Record<string, jest.Mock> => {
     const chain: Record<string, jest.Mock> = {};
-    const self = () => chain;
+    const self = (): Record<string, jest.Mock> => chain;
     chain.from = jest.fn().mockImplementation(self);
     chain.where = jest.fn().mockImplementation(self);
     chain.limit = jest.fn().mockImplementation(self);
@@ -28,7 +28,7 @@ describe('SettingsService', () => {
     return chain;
   };
 
-  const createUpdateChain = () => {
+  const createUpdateChain = (): { set: jest.Mock; where: jest.Mock } => {
     const chain = {
       set: jest.fn().mockReturnThis(),
       where: jest.fn().mockResolvedValue(undefined),
@@ -36,7 +36,7 @@ describe('SettingsService', () => {
     return chain;
   };
 
-  const createInsertChain = () => ({
+  const createInsertChain = (): { values: jest.Mock } => ({
     values: jest.fn().mockResolvedValue(undefined),
   });
 

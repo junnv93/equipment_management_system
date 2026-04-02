@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { createVersionConflictException } from '../../../common/base/versioned-base.service';
@@ -42,10 +35,10 @@ import { getUtcStartOfDay } from '../../../common/utils';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { I18nService } from '../../../common/i18n/i18n.service';
 
-import type { PaginatedResponse } from '../../../common/types/api-response';
+import type { PaginatedResponse, PaginationMeta } from '../../../common/types/api-response';
 
 /** 표준 PaginationMeta 생성 (SSOT: common/types/api-response.ts) */
-function buildPaginationMeta(total: number, pageSize: number, currentPage: number) {
+function buildPaginationMeta(total: number, pageSize: number, currentPage: number): PaginationMeta {
   return {
     totalItems: total,
     itemCount: Math.min(pageSize, total - (currentPage - 1) * pageSize),

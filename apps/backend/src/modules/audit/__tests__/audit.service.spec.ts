@@ -15,14 +15,14 @@ describe('AuditService', () => {
   let mockCacheService: Record<string, jest.Mock>;
 
   // Drizzle fluent chain builder — 모든 메서드가 this를 반환하고 then()으로 resolve
-  const createInsertChain = () => {
+  const createInsertChain = (): { values: jest.Mock } => {
     const chain = { values: jest.fn().mockResolvedValue(undefined) };
     return chain;
   };
 
-  const createSelectChain = (rows: unknown[]) => {
+  const createSelectChain = (rows: unknown[]): Record<string, jest.Mock> => {
     const chain: Record<string, jest.Mock> = {};
-    const self = () => chain;
+    const self = (): Record<string, jest.Mock> => chain;
     chain.from = jest.fn().mockImplementation(self);
     chain.where = jest.fn().mockImplementation(self);
     chain.orderBy = jest.fn().mockImplementation(self);
@@ -34,7 +34,7 @@ describe('AuditService', () => {
     return chain;
   };
 
-  const createUpdateChain = () => {
+  const createUpdateChain = (): { set: jest.Mock; where: jest.Mock } => {
     const chain = {
       set: jest.fn().mockReturnThis(),
       where: jest.fn().mockResolvedValue(undefined),

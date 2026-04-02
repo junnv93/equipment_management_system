@@ -29,7 +29,7 @@ import {
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { getDisposalCurrentStep } from '@/hooks/use-disposal-permissions';
-import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   ANIMATION_PRESETS,
   NC_BANNER_TOKENS,

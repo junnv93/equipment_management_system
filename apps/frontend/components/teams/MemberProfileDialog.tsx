@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Separator } from '@/components/ui/separator';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { SITE_CONFIG } from '@/lib/api/teams-api';
 import type { TeamMember } from '@/lib/api/teams-api';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { ROLE_BADGE_TOKENS } from '@/lib/design-tokens';
