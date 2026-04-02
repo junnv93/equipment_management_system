@@ -8,44 +8,30 @@
 
 ## 🔴 CRITICAL — 보안/데이터 무결성
 
-### SSE 엔드포인트 권한 강화 (Mode 1)
+### ~~SSE 엔드포인트 권한 강화 (Mode 1)~~ ✅ 이미 구현됨 (확인: 2026-04-02)
 
 ```
-notification-sse.controller.ts의 SSE 엔드포인트에 권한 검증을 추가해줘.
-
-현재 상태:
-- stream() (line 32): @SseAuthenticated()만 사용 — 인증은 있지만 인가(권한) 검증 없음
-- getStats() (line 57): 동일하게 @SseAuthenticated()만 사용
-
-수정 사항:
-- getStats()에 @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS) 추가
-  (SSE 연결 통계는 시스템 관리 기능)
-- stream()은 인증된 사용자 누구나 알림을 받아야 하므로 현재 유지 가능
-  — 단, @SkipPermissions() 명시적 추가로 의도를 드러내기
-
-검증: pnpm --filter backend run tsc --noEmit + 관련 테스트
+결과: 코드 확인 시 이미 구현 완료 상태.
+- stream(): @SseAuthenticated() + @SkipPermissions() 적용 완료
+- getStats(): @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS) 적용 완료
+- Permission은 @equipment-management/shared-constants에서 SSOT import
+- @SseAuthenticated() JSDoc에 권한 가이드 문서화 완료
 ```
 
-### 부적합 관리 권한 버그 수정 (Mode 1)
+### ~~부적합 관리 권한 버그 수정 (Mode 1)~~ ✅ 완료 (2026-04-02)
 
 ```
-test_engineer 역할이 부적합(NC) "기록 수정" 버튼을 볼 수 있는 권한 버그를 수정해줘.
+결과: NCDetailClient.tsx의 "기록 수정" 버튼에 권한 체크 누락 → canCloseNC 조건 추가.
 
-FIXME 위치:
-- tests/e2e/features/non-conformances/repair-workflow/group-2-repair-dialog/
-  nc-management-permissions.spec.ts (line 26)
-- "FIXME: 권한 버그 - 시험실무자(test_engineer)가 '기록 수정' 버튼을 볼 수 있음"
+근본 원인: test_engineer와 technical_manager 모두 UPDATE_NON_CONFORMANCE 권한 보유.
+"기록 수정" 버튼은 상태 변경(원인 분석 → 종료 요청)에 해당하므로
+CLOSE_NON_CONFORMANCE 권한(technical_manager+)으로 게이트하는 것이 UL-QP-18 규칙에 부합.
 
-UL-QP-18 규칙:
-- test_engineer(시험실무자)는 기본 CRUD만 가능
-- 부적합 기록 수정은 technical_manager 이상만 가능
+변경 파일:
+- apps/frontend/components/non-conformances/NCDetailClient.tsx:314 — canCloseNC 조건 추가
 
-조사 포인트:
-1. 프론트엔드: 해당 버튼의 permission 체크 로직 확인
-2. 백엔드: NC update 엔드포인트의 @RequirePermissions 확인
-3. FIXME 주석을 제거하고 테스트가 정상 통과하도록 수정
-
-검증: E2E 테스트 nc-management-permissions.spec.ts PASS
+교훈: role-permissions.ts에서 권한이 있더라도 UL-QP-18 도메인 규칙에 따라
+UI 버튼의 게이트 권한은 다를 수 있음. "수정"과 "상태 변경"은 다른 수준의 권한.
 ```
 
 ---
