@@ -116,22 +116,11 @@ Swagger/OpenAPI 스키마에서 필드가 누락됨 — 반환 타입 수동 복
 
 ## 🟡 MEDIUM — 테스트 커버리지/코드 품질
 
-### 미커밋 테스트 파일 정리 및 보완 (Mode 0)
+### ~~미커밋 테스트 파일 정리 및 보완 (Mode 0)~~ ✅ 이미 커밋됨 (확인: 2026-04-02)
 
 ```
-git status에 3개 untracked __tests__ 디렉토리가 있어. 내용을 확인하고 커밋해줘.
-
-대상 (2026-04-02 재확인):
-- apps/backend/src/modules/audit/__tests__/audit.service.spec.ts
-- apps/backend/src/modules/settings/__tests__/settings.service.spec.ts
-- apps/backend/src/modules/software/__tests__/software.service.spec.ts
-
-참고: monitoring 테스트는 PR #77에서 커밋됨.
-
-절차:
-1. 각 테스트 파일이 실행 가능한지 확인 (pnpm --filter backend run test -- --grep "모듈명")
-2. 실패하는 테스트가 있으면 수정
-3. 통과 확인 후 커밋
+결과: audit, settings, software 테스트 파일 모두 이미 git에 추적 중.
+37 suites 전체 통과 (450 tests passed).
 ```
 
 ### 부적합 수리 워크플로우 E2E 테스트 FIXME 해소 (Mode 1)
@@ -156,19 +145,14 @@ FIXME 목록:
 검증: full-workflow.spec.ts 전체 PASS
 ```
 
-### 모니터링 컨트롤러 @AuditLog 추가 (Mode 0)
+### ~~모니터링 컨트롤러 @AuditLog 추가 (Mode 0)~~ ❌ 적용 불가 (확인: 2026-04-02)
 
 ```
-monitoring.controller.ts의 상태 변경 엔드포인트에 @AuditLog 추가해줘.
-
-대상:
-- @Post('client-errors') reportClientError() (line 21)
-  → @AuditLog({ action: 'report', entityType: 'client_error' })
-
-나머지 GET 엔드포인트(health, metrics, diagnostics, status, http-stats)는
-읽기 전용이므로 감사 로그 불필요.
-
-검증: tsc --noEmit
+결과: @Public() + NO_CONTENT 엔드포인트에 @AuditLog 적용 불가.
+사유 3가지가 JSDoc으로 문서화 완료 (line 19-24):
+1. @Public() → req.user=undefined → AuditInterceptor graceful skip
+2. 고빈도 텔레메트리 → DB write 부하 불가
+3. void 응답 → entityId 추출 불가
 ```
 
 ### ~~미커밋 변경사항 정리 및 커밋 (Mode 0)~~ ✅ 완료 (2026-04-02)
@@ -334,19 +318,11 @@ response-transformers.ts의 i18n TODO를 해소해줘:
 검증: pnpm --filter backend run test → 전체 PASS, 새 테스트 포함
 ```
 
-### documents 스키마 Drizzle relations 보완 (Mode 0)
+### ~~documents 스키마 Drizzle relations 보완 (Mode 0)~~ ✅ 이미 구현됨 (확인: 2026-04-02)
 
 ```
-packages/db/src/schema/documents.ts에 foreign key는 있지만
-Drizzle ORM relations() 정의가 누락되어 있어. 추가해줘.
-
-누락된 relations:
-- equipmentId → equipment 테이블
-- calibrationId → calibrations 테이블
-- requestId → equipment_requests 테이블
-
-기존 relations 패턴 참조: packages/db/src/schema/equipment.ts의 equipmentRelations
-검증: tsc --noEmit (타입 안전 쿼리 활성화)
+결과: documentsRelations가 이미 완전히 정의됨 (line 96-121):
+- equipment, calibration, request, uploadedByUser, parentDocument, childDocuments
 ```
 
 ---
