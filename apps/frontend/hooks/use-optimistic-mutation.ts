@@ -56,9 +56,10 @@
 'use client';
 
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage, isConflictError } from '@/lib/api/error';
-import { ERROR_MESSAGES, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
+import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
 
 /**
  * Optimistic Mutation 옵션
@@ -203,6 +204,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
 }: OptimisticMutationOptions<TData, TVariables, TCachedData>) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations('errors');
 
   return useMutation<TData, Error, TVariables, { snapshot: TCachedData | undefined }>({
     mutationFn,
@@ -244,21 +246,22 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
     onError: (error, variables) => {
       // 1. 에러 토스트 표시 (409 충돌은 전용 메시지)
       if (isConflictError(error)) {
-        const conflictInfo = ERROR_MESSAGES[EquipmentErrorCode.VERSION_CONFLICT];
+        const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, t);
         toast({
           title: conflictInfo.title,
           description: conflictInfo.message,
           variant: 'destructive',
         });
       } else {
+        const unknownInfo = getLocalizedErrorInfo(EquipmentErrorCode.UNKNOWN_ERROR, t);
         const message = errorMessage
           ? typeof errorMessage === 'function'
             ? errorMessage(error)
             : errorMessage
-          : getErrorMessage(error, ERROR_MESSAGES[EquipmentErrorCode.UNKNOWN_ERROR].message);
+          : getErrorMessage(error, unknownInfo.message);
 
         toast({
-          title: ERROR_MESSAGES[EquipmentErrorCode.UNKNOWN_ERROR].title,
+          title: unknownInfo.title,
           description: message,
           variant: 'destructive',
         });

@@ -153,6 +153,43 @@
     "message": "An error occurred while saving the incident history.",
     "solutions": ["Please try again later"]
   },
+  "SCOPE_ACCESS_DENIED": {
+    "title": "Access Scope Exceeded",
+    "message": "You do not have access to this site/team's resources.",
+    "solutions": [
+      "You can only modify data within your assigned site/team.",
+      "Contact the system administrator if you need access."
+    ]
+  },
+  "NC_REPAIR_RECORD_REQUIRED": {
+    "title": "Repair Record Required",
+    "message": "Non-conformances of damage/malfunction type require a repair record.",
+    "solutions": [
+      "Register a repair history on the equipment detail page first",
+      "Link the repair history to the non-conformance and try again"
+    ]
+  },
+  "NC_RECALIBRATION_REQUIRED": {
+    "title": "Calibration Record Required",
+    "message": "Non-conformances of calibration overdue type require a new calibration.",
+    "solutions": [
+      "Register a calibration record and get it approved first",
+      "The status will automatically change to corrected after calibration approval"
+    ]
+  },
+  "httpStatus": {
+    "400": "Bad request.",
+    "401": "Authentication required. Please log in again.",
+    "403": "You do not have permission to perform this action.",
+    "404": "The requested resource was not found.",
+    "409": "Another user has modified this data. Please check the latest data.",
+    "413": "File size is too large.",
+    "415": "Unsupported file format.",
+    "500": "An internal server error occurred.",
+    "502": "Cannot connect to the server.",
+    "503": "The server is temporarily unavailable.",
+    "unknown": "An unknown error occurred."
+  },
   "UNKNOWN_ERROR": {
     "title": "Unknown Error",
     "message": "An unexpected error occurred.",

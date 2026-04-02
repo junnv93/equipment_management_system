@@ -173,8 +173,22 @@ function getStatusFromCode(code: string): number {
  * HTTP 상태 코드에 대한 기본 메시지
  *
  * SSOT: 이 함수가 유일한 정의. response-transformers.ts에서도 import하여 사용.
+ *
+ * i18n 지원: t 함수 전달 시 errors.json의 httpStatus 키 사용.
+ * t 미전달 시 영어 폴백 (순수 유틸리티 함수 호환).
+ *
+ * @param status - HTTP 상태 코드
+ * @param t - next-intl useTranslations('errors') 반환값 (선택)
  */
-export function getDefaultMessageForStatus(status: number): string {
+export function getDefaultMessageForStatus(status: number, t?: (key: string) => string): string {
+  if (t) {
+    try {
+      return t(`httpStatus.${status}`);
+    } catch {
+      return t('httpStatus.unknown');
+    }
+  }
+
   const statusMessages: Record<number, string> = {
     400: 'Bad request.',
     401: 'Authentication required. Please log in again.',

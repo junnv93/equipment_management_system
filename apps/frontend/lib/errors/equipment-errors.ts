@@ -86,7 +86,8 @@ export interface ErrorInfo {
  * - t('key') → 문자열 반환
  * - t.raw('key') → JSON 원시값 반환 (배열 등)
  */
-type TranslationFunction = ((key: string, values?: Record<string, unknown>) => string) & {
+type TranslationFunction = {
+  (key: string, values?: Record<string, string | number | Date>): string;
   raw: (key: string) => unknown;
 };
 
