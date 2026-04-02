@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 분석일: 2026-04-01**
+> **마지막 분석일: 2026-04-02**
 > 코드베이스를 실제 분석하여 발견된 이슈/작업을 하네스 프롬프트로 정리.
 > `/harness [프롬프트]` 형태로 사용.
 
@@ -78,22 +78,22 @@ Swagger/OpenAPI 스키마에서 필드가 누락됨 — 반환 타입 수동 복
 검증: pnpm --filter backend run db:generate → 마이그레이션 생성 확인
 ```
 
-### Software 모듈 TODO 해소 — softwareType 스키마 추가 (Mode 1)
+### ~~Software 모듈 TODO 해소 — softwareType 스키마 추가 (Mode 1)~~ ✅ 완료 (2026-04-02)
 
 ```
-software.service.ts line 460의 TODO를 해소해줘:
-"softwareType: null, // TODO: Add software type to schema"
+결과: SoftwareType enum은 이미 packages/schemas에 존재. DB 컬럼 + Service 연결 + DTO + 폼 추가.
 
-작업:
-1. packages/schemas에 SoftwareType enum 추가:
-   - measurement (측정용), analysis (분석용), control (제어용), utility (유틸리티), other (기타)
-2. packages/db/src/schema/software.ts에 softwareType 컬럼 추가 (varchar + $type<>)
-3. software.service.ts의 getSoftwareUsageByEquipment()에서 null 대신 실제 값 매핑
-4. 관련 DTO(create/update)에 softwareType 필드 추가
-5. 프론트엔드 소프트웨어 등록/편집 폼에 타입 선택 드롭다운 추가
+변경 파일:
+- packages/db/src/schema/software-history.ts — softwareType varchar(30) nullable 컬럼
+- apps/backend/drizzle/manual/20260402_add_software_type_column.sql — 마이그레이션
+- apps/backend/src/modules/software/dto/create-software-change.dto.ts — Zod + Swagger
+- apps/backend/src/modules/software/software.service.ts — create/buildRegistry/findEquipmentBySoftware 연결
+- apps/frontend/lib/api/software-api.ts — CreateSoftwareChangeDto에 softwareType 추가
+- apps/frontend/.../SoftwareHistoryClient.tsx — Select 드롭다운 추가
+- apps/frontend/messages/{en,ko}/equipment.json — dialog.softwareType* i18n 키
 
-주의: varchar + $type<> 패턴 사용 (값이 확장될 수 있는 enum — CLAUDE.md 규칙)
-검증: tsc --noEmit + software 테스트
+교훈: SSOT 인프라(enum, i18n, 프론트엔드 렌더링)가 이미 준비되어 있으면
+실제 DB 컬럼 추가 + 연결만 하면 됨. "준비된 구조"의 가치.
 ```
 
 ### ~~누락된 loading.tsx 페이지 추가 (Mode 1)~~ ✅ 완료 (2026-04-02)
@@ -116,21 +116,11 @@ software.service.ts line 460의 TODO를 해소해줘:
 
 ## 🟡 MEDIUM — 테스트 커버리지/코드 품질
 
-### 미커밋 테스트 파일 정리 및 보완 (Mode 0)
+### ~~미커밋 테스트 파일 정리 및 보완 (Mode 0)~~ ✅ 이미 커밋됨 (확인: 2026-04-02)
 
 ```
-git status에 4개 untracked __tests__ 디렉토리가 있어. 내용을 확인하고 커밋해줘.
-
-대상:
-- apps/backend/src/modules/audit/__tests__/audit.service.spec.ts
-- apps/backend/src/modules/monitoring/__tests__/monitoring.service.spec.ts
-- apps/backend/src/modules/settings/__tests__/settings.service.spec.ts
-- apps/backend/src/modules/software/__tests__/software.service.spec.ts
-
-절차:
-1. 각 테스트 파일이 실행 가능한지 확인 (pnpm --filter backend run test -- --grep "모듈명")
-2. 실패하는 테스트가 있으면 수정
-3. 통과 확인 후 커밋
+결과: audit, settings, software 테스트 파일 모두 이미 git에 추적 중.
+37 suites 전체 통과 (450 tests passed).
 ```
 
 ### 부적합 수리 워크플로우 E2E 테스트 FIXME 해소 (Mode 1)
@@ -155,45 +145,21 @@ FIXME 목록:
 검증: full-workflow.spec.ts 전체 PASS
 ```
 
-### 모니터링 컨트롤러 @AuditLog 추가 (Mode 0)
+### ~~모니터링 컨트롤러 @AuditLog 추가 (Mode 0)~~ ❌ 적용 불가 (확인: 2026-04-02)
 
 ```
-monitoring.controller.ts의 상태 변경 엔드포인트에 @AuditLog 추가해줘.
-
-대상:
-- @Post('client-errors') reportClientError() (line 21)
-  → @AuditLog({ action: 'report', entityType: 'client_error' })
-
-나머지 GET 엔드포인트(health, metrics, diagnostics, status, http-stats)는
-읽기 전용이므로 감사 로그 불필요.
-
-검증: tsc --noEmit
+결과: @Public() + NO_CONTENT 엔드포인트에 @AuditLog 적용 불가.
+사유 3가지가 JSDoc으로 문서화 완료 (line 19-24):
+1. @Public() → req.user=undefined → AuditInterceptor graceful skip
+2. 고빈도 텔레메트리 → DB write 부하 불가
+3. void 응답 → entityId 추출 불가
 ```
 
-### 미커밋 변경사항 정리 및 커밋 (Mode 0)
+### ~~미커밋 변경사항 정리 및 커밋 (Mode 0)~~ ✅ 완료 (2026-04-02)
 
 ```
-git status에 11개 수정 파일이 커밋되지 않은 상태야. 내용을 분석하고 논리적 단위로 나눠서 커밋해줘.
-
-수정된 파일:
-- apps/backend/src/common/cache/simple-cache.service.ts (캐시 통계 추가)
-- apps/backend/src/modules/monitoring/monitoring.controller.ts
-- apps/backend/src/modules/monitoring/monitoring.service.ts
-- apps/frontend/components/approvals/ApprovalDetailModal.tsx (모션 토큰 수정)
-- apps/frontend/lib/design-tokens/components/equipment.ts
-- apps/frontend/lib/design-tokens/components/sidebar.ts
-- apps/frontend/lib/design-tokens/index.ts
-- apps/frontend/lib/design-tokens/motion.ts
-- apps/frontend/next-env.d.ts
-- apps/frontend/tailwind.config.js
-- packages/shared-constants/src/business-rules.ts (MAX_TRACKED_ENDPOINTS)
-
-커밋 분리 제안:
-1. feat(monitoring): 캐시 통계 + 모니터링 개선 (backend 4파일 + shared-constants)
-2. refactor(design-tokens): 모션 토큰 + 디자인 토큰 정리 (frontend 5파일)
-3. chore: next-env.d.ts 업데이트 (자동생성)
-
-각 커밋 전 tsc --noEmit 확인.
+결과: 대부분 PR #77 (monitoring cache-stats)에서 커밋됨.
+나머지 design-tokens, next-env.d.ts 등은 이전 세션에서 처리 완료.
 ```
 
 ---
@@ -352,19 +318,11 @@ response-transformers.ts의 i18n TODO를 해소해줘:
 검증: pnpm --filter backend run test → 전체 PASS, 새 테스트 포함
 ```
 
-### documents 스키마 Drizzle relations 보완 (Mode 0)
+### ~~documents 스키마 Drizzle relations 보완 (Mode 0)~~ ✅ 이미 구현됨 (확인: 2026-04-02)
 
 ```
-packages/db/src/schema/documents.ts에 foreign key는 있지만
-Drizzle ORM relations() 정의가 누락되어 있어. 추가해줘.
-
-누락된 relations:
-- equipmentId → equipment 테이블
-- calibrationId → calibrations 테이블
-- requestId → equipment_requests 테이블
-
-기존 relations 패턴 참조: packages/db/src/schema/equipment.ts의 equipmentRelations
-검증: tsc --noEmit (타입 안전 쿼리 활성화)
+결과: documentsRelations가 이미 완전히 정의됨 (line 96-121):
+- equipment, calibration, request, uploadedByUser, parentDocument, childDocuments
 ```
 
 ---

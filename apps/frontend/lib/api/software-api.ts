@@ -37,6 +37,7 @@ export interface SoftwareHistoryQuery {
 export interface CreateSoftwareChangeDto {
   equipmentId: string;
   softwareName: string;
+  softwareType?: SoftwareType;
   previousVersion?: string;
   newVersion: string;
   verificationRecord: string;

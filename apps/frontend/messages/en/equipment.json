@@ -1394,7 +1394,9 @@
       "verificationPlaceholder": "Describe the verification performed after the change (e.g. Compared with previous measurement results, confirmed difference within 0.1dB)",
       "cancel": "Cancel",
       "submit": "Request Change",
-      "submitting": "Submitting..."
+      "submitting": "Submitting...",
+      "softwareTypeLabel": "Software Type",
+      "softwareTypePlaceholder": "Select type"
     },
     "currentInfo": {
       "title": "Current Software Info",
