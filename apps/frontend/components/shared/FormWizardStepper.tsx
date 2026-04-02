@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Check, AlertCircle } from 'lucide-react';
 import {
   FORM_WIZARD_STEPPER_TOKENS,
@@ -53,12 +54,13 @@ export function FormWizardStepper({
   previewBar,
   className,
 }: FormWizardStepperProps) {
+  const tStep = useTranslations('common.stepStatus');
   const visibleSteps = steps.filter((s) => !s.hidden);
 
   return (
     <div className={className}>
       {/* 스테퍼 노드 행 */}
-      <nav aria-label="폼 진행 단계" className={FORM_WIZARD_STEPPER_TOKENS.container}>
+      <nav aria-label={tStep('stepNav')} className={FORM_WIZARD_STEPPER_TOKENS.container}>
         {visibleSteps.map((step, visibleIndex) => {
           // hidden 스텝을 제외한 실제 인덱스를 원본 steps 배열에서 찾기
           const originalIndex = steps.indexOf(step);
@@ -78,12 +80,12 @@ export function FormWizardStepper({
                   aria-current={originalIndex === currentStep ? 'step' : undefined}
                   aria-label={`${step.label} - ${
                     status === 'completed'
-                      ? '완료'
+                      ? tStep('completed')
                       : status === 'current'
-                        ? '현재'
+                        ? tStep('current')
                         : status === 'error'
-                          ? '오류'
-                          : '미완료'
+                          ? tStep('error')
+                          : tStep('incomplete')
                   }`}
                   className={[
                     getWizardStepperNodeClasses(status),

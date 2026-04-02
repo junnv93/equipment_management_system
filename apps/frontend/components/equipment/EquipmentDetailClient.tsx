@@ -177,9 +177,7 @@ export function EquipmentDetailClient({
               disposalRequest={disposalRequest}
               currentStep={currentStep}
               onViewDetails={() => setDisposalDetailOpen(true)}
-              onCancel={() => {
-                // TODO: Implement cancel confirmation dialog
-              }}
+              onCancel={() => setDisposalCancelOpen(true)}
               canCancel={disposalRequest.requestedBy === user?.id}
             />
           </div>

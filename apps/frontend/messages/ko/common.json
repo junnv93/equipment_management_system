@@ -230,6 +230,13 @@
     "repair": "수리",
     "calibration_overdue": "교정 기한 초과"
   },
+  "stepStatus": {
+    "completed": "완료",
+    "current": "현재",
+    "error": "오류",
+    "incomplete": "미완료",
+    "stepNav": "폼 진행 단계"
+  },
   "datePicker": {
     "selectDate": "날짜 선택",
     "selectRange": "날짜 범위 선택"

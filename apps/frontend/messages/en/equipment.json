@@ -1486,5 +1486,15 @@
     "backToHome": "Go to home",
     "helpTitle": "Looking for specific equipment?",
     "helpDescription": "Search from the equipment list or look up by management number."
+  },
+  "selector": {
+    "searchPlaceholder": "Search by name, management number...",
+    "title": "Select Equipment",
+    "description": "Search and select equipment to check out.",
+    "loading": "Loading...",
+    "noResults": "No results found.",
+    "managementNumber": "Mgmt #: {number}",
+    "location": "Location: {location}",
+    "noLocationInfo": "N/A"
   }
 }
