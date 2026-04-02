@@ -331,8 +331,9 @@ export function createApiError(error: unknown): ApiError {
     }
 
     // HTTP 상태 코드 기반 메시지
-    // TODO(i18n): Phase 3에서 errors.json의 키(VALIDATION_ERROR, UNAUTHORIZED 등)로 전환
-    // 현재는 순수 유틸리티 함수로 translation context 없음 — 호출자 레벨에서 처리 예정
+    // i18n Phase 3: getDefaultMessageForStatus(status, t?) 지원.
+    // 순수 유틸리티 함수이므로 t 미전달 시 영어 폴백 — 호출자(use-optimistic-mutation 등)에서
+    // getLocalizedErrorInfo(code, t)를 통해 로케일 메시지 표시.
     if (status) {
       const errorCode = httpStatusToErrorCode(status);
 
