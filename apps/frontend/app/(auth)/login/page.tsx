@@ -8,7 +8,8 @@ import { LoginPageContent } from '@/components/auth/LoginPageContent';
  * 디자인: Split Screen — 좌 브랜딩(네이비) + 우 로그인 폼(라이트)
  */
 export default function LoginPage() {
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const showDevAccounts =
+    process.env.NODE_ENV === 'development' || process.env.ENABLE_TEST_AUTH === 'true';
 
   return (
     <Suspense
@@ -28,7 +29,7 @@ export default function LoginPage() {
         </div>
       }
     >
-      <LoginPageContent showDevAccounts={isDevelopment} />
+      <LoginPageContent showDevAccounts={showDevAccounts} />
     </Suspense>
   );
 }

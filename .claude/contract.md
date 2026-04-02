@@ -1,32 +1,40 @@
-# Contract: SKILL.md 14개 300줄 이하 경량화
+# Contract: E2E CI Auth Setup Fix
 
 ## 생성 시점
 2026-04-02
 
 ## Context
-SKILL.md 14개가 300줄을 초과하여 컨텍스트 비대화 문제 발생.
-상세 내용을 references/ 디렉토리로 분리하여 경량화.
-기존 패턴(review-design 147줄, equipment-management references/ 구조) 참조.
+CI 환경에서 Playwright auth.setup.ts 5개 역할 로그인 전부 실패.
+Next.js가 `next start` 시 `NODE_ENV=production`을 강제하여:
+1. DevLoginButtons 미렌더링 (`showDevAccounts=false`)
+2. test-login NextAuth provider 미등록 (`isTest || isDevelopment` 모두 false)
 
 ## MUST Criteria
 
 | # | Criterion | Verification |
 |---|-----------|-------------|
-| M1 | 14개 SKILL.md 모두 300줄 이하 | `wc -l .claude/skills/*/SKILL.md \| awk '$1>300'` 결과 0건 |
-| M2 | 추출된 내용이 references/ 파일에 보존 | 각 skill의 references/ 디렉토리에 새 파일 존재 확인 |
-| M3 | SKILL.md에서 references/ 파일로의 링크 유효 | 모든 markdown 링크 대상 파일 존재 |
-| M4 | 기존 references/ 파일 미변경 | 이미 존재하는 references/ 파일 내용 보존 |
-| M5 | Step 제목, Exceptions, Output Format 인라인 유지 | SKILL.md에 워크플로우 구조 보존 |
+| M1 | `ENABLE_TEST_AUTH` 환경변수로 test-login provider + DevLoginButtons 활성화 제어 (NODE_ENV 독립) | `lib/auth.ts`, `login/page.tsx` 코드 확인 |
+| M2 | CI workflow e2e-test job에 `ENABLE_TEST_AUTH=true` 설정 (build + frontend start) | `main.yml` env 블록 확인 |
+| M3 | `pnpm --filter frontend run tsc --noEmit` 통과 | 빌드 검증 |
+| M4 | `pnpm --filter backend run tsc --noEmit` 통과 | 빌드 검증 |
+| M5 | 기존 `ENABLE_LOCAL_AUTH` 패턴과 일관된 네이밍/사용법 | 코드 리뷰 |
+| M6 | `.env.ci.example`에 `ENABLE_TEST_AUTH` 문서화 | 파일 확인 |
+| M7 | `continue-on-error: true` 제거 | `main.yml` 확인 |
+| M8 | 로컬 개발 환경 영향 없음 — NODE_ENV=development 시 기존대로 동작 | 로직 검증 |
 
 ## SHOULD Criteria
 
-| # | Criterion |
-|---|-----------|
-| S1 | references/ 파일 네이밍 kebab-case 일관성 |
-| S2 | 각 SKILL.md 200줄 이하 달성 |
-| S3 | references/ 파일 자기완결적 (상호 의존 없음) |
+| # | Criterion | Note |
+|---|-----------|------|
+| S1 | `pnpm build` 성공 | 전체 빌드 통과 |
+| S2 | auth.setup.ts 코드 변경 불필요 (기존 browser-native 흐름 유지) | 변경 범위 최소화 |
+| S3 | SSOT 준수 — 환경변수 참조가 중앙 집중화 | verify-ssot |
+
+## Out of Scope
+- global-setup.ts 시드 로직 수정
+- E2E 테스트 스펙 파일 수정
+- Backend test-auth.controller.ts 수정
 
 ## 종료 조건
-- M1-M5 전체 PASS → 성공
+- M1-M8 전체 PASS → 성공
 - 동일 이슈 2회 연속 FAIL → 수동 개입
-- 3회 반복 초과 → 수동 개입

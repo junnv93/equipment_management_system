@@ -70,6 +70,7 @@ import { getInternalApiKeyHeaders } from './config/internal-headers';
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isTest = process.env.NODE_ENV === 'test';
 const enableLocalAuth = process.env.ENABLE_LOCAL_AUTH === 'true' || isDevelopment;
+const enableTestAuth = process.env.ENABLE_TEST_AUTH === 'true' || isTest || isDevelopment;
 const hasAzureAD = !!(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET);
 
 // 토큰 라이프사이클 상수는 @equipment-management/shared-constants/auth-token에서 import
@@ -254,7 +255,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
      *
      * 참고: /equipment-management 스킬 - references/auth-architecture.md
      */
-    ...(isTest || isDevelopment
+    ...(enableTestAuth
       ? [
           CredentialsProvider({
             id: 'test-login',
