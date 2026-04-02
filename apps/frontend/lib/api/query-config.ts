@@ -386,7 +386,7 @@ export const queryKeys = {
       [...queryKeys.checkouts.all, 'outbound', teamId, status, location] as const,
     inbound: (filters: object = {}) => [...queryKeys.checkouts.all, 'inbound', filters] as const,
     destinations: () => [...queryKeys.checkouts.all, 'destinations'] as const,
-    pending: () => [...queryKeys.checkouts.all, 'pending'] as const,
+    pending: (role?: string) => [...queryKeys.checkouts.all, 'pending', role] as const,
     returnPending: () => [...queryKeys.checkouts.all, 'return-pending'] as const,
     summary: (params: object = {}) => [...queryKeys.checkouts.all, 'summary', params] as const,
   },

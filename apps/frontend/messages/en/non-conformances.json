@@ -128,6 +128,7 @@
     "pyeongtaek": "Pyeongtaek"
   },
   "detail": {
+    "backButton": "Go back",
     "title": "Non-Conformance Detail",
     "urgentBadge": "Urgent",
     "discoveryDateLabel": "Discovery: {date}",

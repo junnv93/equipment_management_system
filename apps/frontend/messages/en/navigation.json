@@ -17,6 +17,7 @@
   "nonConformances": "Non-Conformances",
   "nonConformancesDetail": "Non-Conformance Detail",
   "checkouts": "Checkouts",
+  "checkoutsPendingChecks": "Pending Checks",
   "checkoutsCreate": "Register Checkout",
   "checkoutsManage": "Manage Checkouts",
   "checkoutsDetail": "Checkout Detail",

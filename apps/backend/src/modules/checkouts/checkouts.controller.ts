@@ -52,6 +52,8 @@ import {
   CancelCheckoutDto,
   CancelCheckoutValidationPipe,
   CheckoutResponseDto,
+  PendingChecksQueryDto,
+  PendingChecksQueryValidationPipe,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
@@ -101,6 +103,34 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.OK, description: '반출지 목록 조회 성공' })
   async getDestinations(): Promise<string[]> {
     return this.checkoutsService.getDistinctDestinations();
+  }
+
+  // ⚠️ @SiteScoped 의도적 미적용: 개인 action-item 엔드포인트.
+  // 데이터는 userId/teamId 기반으로 서비스에서 직접 스코핑하며,
+  // 역할 기반 데이터 가시성 정책(CHECKOUT_DATA_SCOPE)과 무관합니다.
+  @Get('pending-checks')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @UsePipes(PendingChecksQueryValidationPipe)
+  @ApiOperation({
+    summary: '확인 필요 목록 조회',
+    description:
+      '현재 사용자가 확인해야 할 렌탈 반출입 건 목록을 조회합니다. ' +
+      'role 파라미터로 빌려주는 측(lender)/빌리는 측(borrower) 필터링을 지원합니다.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '확인 필요 목록 조회 성공' })
+  async getPendingChecks(
+    @Request() req: AuthenticatedRequest,
+    @Query() query: PendingChecksQueryDto
+  ): Promise<CheckoutListResponse> {
+    const userId = extractUserId(req);
+    const userTeamId = req.user?.teamId;
+    return this.checkoutsService.getPendingChecks(
+      userId,
+      userTeamId,
+      query.role,
+      query.page ?? 1,
+      query.pageSize
+    );
   }
 
   @Get()

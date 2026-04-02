@@ -330,10 +330,9 @@ export function createApiError(error: unknown): ApiError {
       }
     }
 
-    // HTTP 상태 코드 기반 메시지
-    // i18n Phase 3: getDefaultMessageForStatus(status, t?) 지원.
-    // 순수 유틸리티 함수이므로 t 미전달 시 영어 폴백 — 호출자(use-optimistic-mutation 등)에서
-    // getLocalizedErrorInfo(code, t)를 통해 로케일 메시지 표시.
+    // HTTP 상태 코드 기반 메시지 (영어 폴백)
+    // 순수 유틸리티 함수이므로 t 미전달 — 호출자(use-optimistic-mutation 등)에서
+    // getLocalizedErrorInfo(code, t)를 통해 로케일 메시지 표시
     if (status) {
       const errorCode = httpStatusToErrorCode(status);
 

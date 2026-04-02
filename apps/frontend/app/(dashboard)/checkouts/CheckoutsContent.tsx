@@ -35,8 +35,10 @@ import {
   Users,
   Tag,
   CalendarDays,
+  ClipboardList,
   X,
 } from 'lucide-react';
+import Link from 'next/link';
 import checkoutApi, { type CheckoutSummary } from '@/lib/api/checkout-api';
 import {
   CHECKOUT_STATUS_FILTER_OPTIONS,
@@ -123,6 +125,14 @@ export default function CheckoutsContent({
       { scroll: false }
     );
   }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 확인 필요 건수 — pageSize: 1로 최소 데이터만 fetch (count만 필요)
+  const { data: pendingChecksData } = useQuery({
+    queryKey: queryKeys.checkouts.pending(),
+    queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
+    staleTime: CACHE_TIMES.SHORT,
+  });
+  const pendingChecksCount = pendingChecksData?.meta?.pagination?.total ?? 0;
 
   // 반출지 목록
   const { data: destinations } = useQuery({
@@ -216,41 +226,50 @@ export default function CheckoutsContent({
         title={t('title')}
         subtitle={t('description')}
         actions={
-          canCreateCheckout || canCreateImport ? (
-            <div className="flex gap-2">
-              {canCreateCheckout && (
-                <Button size="sm" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  {t('actions.create')}
-                </Button>
-              )}
-              {canCreateImport && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline">
-                      <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
-                      {t('import.requestInbound')}
-                      <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
-                    >
-                      <Building className="mr-2 h-4 w-4" />
-                      {t('import.externalRental')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      {t('import.internalShared')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          ) : undefined
+          <div className="flex gap-2">
+            {pendingChecksCount > 0 && (
+              <Button size="sm" variant="outline" asChild>
+                <Link href={FRONTEND_ROUTES.CHECKOUTS.PENDING_CHECKS}>
+                  <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+                  {t('pendingChecks.title')}
+                  <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium text-destructive-foreground">
+                    {pendingChecksCount}
+                  </span>
+                </Link>
+              </Button>
+            )}
+            {canCreateCheckout && (
+              <Button size="sm" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                {t('actions.create')}
+              </Button>
+            )}
+            {canCreateImport && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
+                    {t('import.requestInbound')}
+                    <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
+                  >
+                    <Building className="mr-2 h-4 w-4" />
+                    {t('import.externalRental')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    {t('import.internalShared')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         }
       />
 

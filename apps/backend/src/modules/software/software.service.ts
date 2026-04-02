@@ -417,6 +417,7 @@ export class SoftwareService extends VersionedBaseService {
         newVersion: schema.softwareHistory.newVersion,
         approvedAt: schema.softwareHistory.approvedAt,
         equipmentName: schema.equipment.name,
+        softwareType: schema.equipment.softwareType,
       })
       .from(schema.softwareHistory)
       .leftJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
@@ -441,6 +442,7 @@ export class SoftwareService extends VersionedBaseService {
     const latestVersionMap = new Map<string, string>();
     const lastUpdatedMap = new Map<string, Date | null>();
     const equipmentNameMap = new Map<string, string>();
+    const softwareTypeMap = new Map<string, string | null>();
 
     for (const record of records) {
       if (!latestVersionMap.has(record.equipmentId)) {
@@ -448,6 +450,7 @@ export class SoftwareService extends VersionedBaseService {
         latestVersionMap.set(record.equipmentId, record.newVersion);
         lastUpdatedMap.set(record.equipmentId, record.approvedAt);
         equipmentNameMap.set(record.equipmentId, record.equipmentName ?? '');
+        softwareTypeMap.set(record.equipmentId, record.softwareType ?? null);
       }
     }
 
@@ -457,7 +460,7 @@ export class SoftwareService extends VersionedBaseService {
         equipmentId,
         equipmentName: equipmentNameMap.get(equipmentId) ?? '',
         softwareVersion: latestVersionMap.get(equipmentId) || null,
-        softwareType: null, // TODO: Add software type to schema
+        softwareType: softwareTypeMap.get(equipmentId) ?? null,
         lastUpdated: lastUpdatedMap.get(equipmentId) || null,
       })),
       count: uniqueEquipmentIds.length,

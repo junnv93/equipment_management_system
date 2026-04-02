@@ -278,7 +278,13 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       <div className={NC_DETAIL_HEADER_TOKENS.container}>
         <div>
           <div className={NC_DETAIL_HEADER_TOKENS.titleArea}>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.back()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => router.back()}
+              aria-label={t('detail.backButton')}
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className={NC_DETAIL_HEADER_TOKENS.title}>{t('detail.title')}</h1>

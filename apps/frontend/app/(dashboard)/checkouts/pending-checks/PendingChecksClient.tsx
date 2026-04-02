@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useTranslations, useFormatter } from 'next-intl';
@@ -18,6 +18,8 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { TRANSITION_PRESETS, getPageContainerClasses } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
+
+type PendingCheckRole = 'all' | 'lender' | 'borrower';
 
 interface PendingChecksClientProps {
   initialData: PaginatedResponse<Checkout>;
@@ -58,15 +60,36 @@ const PENDING_CHECK_KEY_MAP: Partial<
  */
 export default function PendingChecksClient({ initialData }: PendingChecksClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const t = useTranslations('checkouts');
   const formatter = useFormatter();
-  const [_filter, setFilter] = useState<'all' | 'lender' | 'borrower'>('all');
+
+  // URL searchParams에서 role 필터 읽기 (SSOT)
+  const activeRole = (searchParams.get('role') as PendingCheckRole) || 'all';
+
+  const setRole = useCallback(
+    (role: PendingCheckRole) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (role === 'all') {
+        params.delete('role');
+      } else {
+        params.set('role', role);
+      }
+      const query = params.toString();
+      router.push(query ? `${pathname}?${query}` : pathname);
+    },
+    [router, pathname, searchParams]
+  );
+
+  // API에 전달할 role (all이면 undefined)
+  const apiRole = activeRole === 'all' ? undefined : activeRole;
 
   // 확인 필요 목록 조회
   const { data: checksData, isLoading } = useQuery({
-    queryKey: queryKeys.checkouts.pending(),
+    queryKey: queryKeys.checkouts.pending(apiRole),
     queryFn: async () => {
-      return checkoutApi.getPendingChecks();
+      return checkoutApi.getPendingChecks(apiRole ? { role: apiRole } : {});
     },
     placeholderData: initialData,
     staleTime: CACHE_TIMES.SHORT,
@@ -150,7 +173,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
             {/* 확인 버튼 */}
             <div className="flex justify-end mt-4">
               <Button asChild>
-                <Link href={`/checkouts/${checkout.id}/check`}>
+                <Link href={FRONTEND_ROUTES.CHECKOUTS.CHECK(checkout.id)}>
                   {t('pendingChecks.actionButton', { label })}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -180,23 +203,23 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
       {/* 필터 탭 */}
       <div className="flex gap-2 mb-6">
         <Button
-          variant={_filter === 'all' ? 'default' : 'outline'}
+          variant={activeRole === 'all' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setFilter('all')}
+          onClick={() => setRole('all')}
         >
           {t('pendingChecks.filters.all')}
         </Button>
         <Button
-          variant={_filter === 'lender' ? 'default' : 'outline'}
+          variant={activeRole === 'lender' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setFilter('lender')}
+          onClick={() => setRole('lender')}
         >
           {t('pendingChecks.filters.lender')}
         </Button>
         <Button
-          variant={_filter === 'borrower' ? 'default' : 'outline'}
+          variant={activeRole === 'borrower' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setFilter('borrower')}
+          onClick={() => setRole('borrower')}
         >
           {t('pendingChecks.filters.borrower')}
         </Button>
