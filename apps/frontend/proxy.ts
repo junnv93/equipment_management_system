@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
     // next-auth JWT 토큰 검증 (서명 확인 포함)
     const token = await getToken({
       req: request,
-      secret: process.env.NEXTAUTH_SECRET,
+      secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
     });
 
     // 인증되지 않은 사용자 → 로그인 리다이렉트

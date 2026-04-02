@@ -524,7 +524,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       return session;
     },
   },
-  // NEXTAUTH_SECRET은 JWT 서명/검증에 필수
-  // 반드시 .env.local에 설정해야 함 (하드코딩 금지)
-  secret: process.env.NEXTAUTH_SECRET,
+  // Auth.js v5는 AUTH_SECRET → NEXTAUTH_SECRET 순으로 자동 감지하므로 명시 불필요.
+  // Next.js 빌드 시 process.env.NEXTAUTH_SECRET이 인라인될 수 있으므로 삭제.
 });
