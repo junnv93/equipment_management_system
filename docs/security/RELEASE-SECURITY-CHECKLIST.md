@@ -26,9 +26,9 @@ For each significant change, evaluate:
 
 ### 3. Automated Security Verification
 
-- [ ] CI pipeline passed (all 5 gates: secret scan, quality, tests, build, audit)
+- [ ] CI pipeline passed (all gates: secret scan, quality, tests, build, audit, docker)
 - [ ] CodeQL analysis passed (no new high/critical findings)
-- [ ] `pnpm audit --prod --audit-level=high` — 0 critical, 0 unmitigated high
+- [ ] `pnpm audit --prod --audit-level=critical` — 0 critical vulnerabilities
 - [ ] Security decorator check passed (`pnpm security:check`)
 
 ### 4. OWASP Top 10 Verification

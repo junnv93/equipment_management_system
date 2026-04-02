@@ -2,7 +2,7 @@
 
 **Project:** Equipment Management System
 **Submitted by:** Myeongjun Kwon, Laboratory Engineer Associate, UL Korea
-**Date:** 2026-03-28
+**Date:** 2026-04-02
 **Reviewer:** Lance Morrow, CISSP, Cybersecurity Architect
 
 ---
@@ -92,7 +92,7 @@ The application is accessible only within the UL Solutions corporate intranet. I
 
 1. Connection to the UL Solutions corporate intranet (Suwon, Uiwang, or Pyeongtaek office LAN)
 2. Azure AD authentication (SSO)
-3. Role-based authorization (4 roles with 77 granular permissions)
+3. Role-based authorization (5 roles with 72 granular permissions)
 
 The server has no outbound internet access and no Wi-Fi capability. It is connected via LAN cable only, with a port assigned by Global Cybersecurity Compliance.
 
@@ -117,7 +117,7 @@ The server has no outbound internet access and no Wi-Fi capability. It is connec
 
 | Component  | Version  | Status            |
 | ---------- | -------- | ----------------- |
-| Node.js    | 20.18.0+ | Current LTS       |
+| Node.js    | 20.x LTS | Current LTS       |
 | Next.js    | 16.x     | Latest stable     |
 | NestJS     | 10.x     | Current supported |
 | React      | 19.x     | Latest stable     |
@@ -129,7 +129,7 @@ The server has no outbound internet access and no Wi-Fi capability. It is connec
 
 - **Dependabot** configured for weekly npm and GitHub Actions updates (`.github/dependabot.yml`)
 - **npm audit** runs in CI pipeline, failing on High/Critical (CVSS 7+) vulnerabilities
-- **pnpm overrides** for known vulnerability mitigations (9 packages currently managed)
+- **pnpm overrides** for known vulnerability mitigations (11 packages currently managed)
 - **pnpm verify-store-integrity=true** ensures package integrity
 
 ---
@@ -145,7 +145,7 @@ The server has no outbound internet access and no Wi-Fi capability. It is connec
 | **Gate 1** | Secret scanning                     | gitleaks v2                                 | Every push/PR                       |
 | **Gate 2** | Security decorator validation       | Custom `pnpm security:check`                | Every push/PR                       |
 | **Gate 2** | TypeScript strict mode              | `@typescript-eslint/no-explicit-any: error` | Every push/PR                       |
-| **Gate 3** | Dependency vulnerability audit      | `pnpm audit --prod --audit-level=high`      | Every push/PR                       |
+| **Gate 3** | Dependency vulnerability audit      | `pnpm audit --prod --audit-level=critical`  | Every push/PR                       |
 | **Gate 3** | Unit test suite                     | Jest (25 auth-related tests)                | Every push/PR                       |
 | **SAST**   | Static Application Security Testing | GitHub CodeQL (`security-extended` queries) | Every push/PR + **weekly schedule** |
 
@@ -197,7 +197,7 @@ However, the application does employ an **Nginx reverse proxy** with security fe
 ### Authorization (Least Privilege)
 
 - **4 roles:** Test Engineer (L1) < Technical Manager (L2) < Quality Manager (L3) < Lab Manager (L4)
-- **77 granular permissions** mapped to roles across 16 modules (e.g., `APPROVE_CHECKOUT`, `VIEW_CALIBRATION`, `MANAGE_USERS`)
+- **72 granular permissions** mapped to roles across 16 modules (e.g., `APPROVE_CHECKOUT`, `VIEW_CALIBRATION`, `MANAGE_USERS`)
 - **Default-Deny mode:** `PermissionsGuard` denies all access unless explicitly granted via `@RequirePermissions()`
 - **Server-side user extraction:** User identity is always extracted from JWT token, never from client request body
 
@@ -206,8 +206,8 @@ However, the application does employ an **Nginx reverse proxy** with security fe
 - **No hardcoded credentials** in production code — development passwords require explicit environment variables
 - **No default passwords** — removed all fallback values from application code
 - **Credentials storage:** Environment variables with minimum entropy requirements:
-  - JWT_SECRET: 32+ characters (production)
-  - REFRESH_TOKEN_SECRET: 32+ characters, must differ from JWT_SECRET
+  - JWT_SECRET: 16+ characters (32+ recommended)
+  - REFRESH_TOKEN_SECRET: 16+ characters, must differ from JWT_SECRET
   - INTERNAL_API_KEY: 32+ characters
   - All secrets generated via `openssl rand` (384-bit entropy)
 - **Timing-safe comparison** for API key validation (`crypto.timingSafeEqual`)
@@ -534,7 +534,7 @@ PostgreSQL 15 running as a Docker container on the same server (Windows + WSL2 U
 
 **Yes**
 
-- **Full-disk encryption** via BitLocker on the host OS (Ubuntu Server) — all Docker volumes including PostgreSQL data are encrypted at rest
+- **Full-disk encryption** via BitLocker on the host OS (Windows) — all Docker volumes including PostgreSQL data are encrypted at rest
 - **Transport encryption** supported via `DB_SSL=true` for PostgreSQL connections (opt-in, not needed for Docker internal network)
 - The database stores laboratory equipment records, calibration data, and employee names/emails — no financial or healthcare data
 
@@ -545,7 +545,7 @@ PostgreSQL 15 running as a Docker container on the same server (Windows + WSL2 U
 **Yes**
 
 - **PostgreSQL 15**: Current vendor-supported version with active security patches
-- **Docker image updates**: Dependabot monitors Docker base images weekly
+- **Docker image updates**: Manual pull during monthly patching window (`docker compose pull`)
 - **Backup**: PostgreSQL data stored in Docker named volume (`postgres_data`), backup via `pg_dump` scheduled
 
 ---
@@ -565,7 +565,7 @@ PostgreSQL 15 running as a Docker container on the same server (Windows + WSL2 U
 
 **Yes**
 
-- Application-level RBAC: 4 roles with 77 granular permissions, Default-Deny guard
+- Application-level RBAC: 5 roles with 72 granular permissions, Default-Deny guard
 - Database-level: single application user account with necessary privileges only (no superuser access for the application)
 - Server access: restricted to the sole developer/administrator
 
@@ -610,8 +610,8 @@ PostgreSQL authentication uses:
 
 **Yes**
 
-- **High/Critical vulnerabilities**: Blocked at CI pipeline (`pnpm audit --prod --audit-level=high`)
-- **Known vulnerabilities**: Mitigated via `pnpm.overrides` (9 packages currently managed)
+- **Critical vulnerabilities**: Blocked at CI pipeline (`pnpm audit --prod --audit-level=critical`)
+- **Known vulnerabilities**: Mitigated via `pnpm.overrides` (11 packages currently managed)
 - **CodeQL SAST**: Runs weekly + on every push/PR, catching vulnerability patterns
 - **Dependabot**: Creates automated PRs for vulnerable dependencies weekly
 
@@ -667,6 +667,7 @@ PostgreSQL authentication uses:
 
 - All secrets generated with `openssl rand` (192-384 bit entropy)
 - Secret rotation supported (dual API key: `INTERNAL_API_KEY` + `INTERNAL_API_KEY_PREVIOUS`)
+- **Azure AD client secret:** Managed via environment variable (`AZURE_AD_CLIENT_SECRET`), rotation per Azure Entra ID security baseline (recommended every 60 days)
 - Production environment validation rejects weak or default secrets
 - Secrets stored as environment variables with `chmod 600` file permissions
 
@@ -676,7 +677,7 @@ PostgreSQL authentication uses:
 
 **Yes**
 
-- **RBAC:** 4 roles with 77 granular permissions, Default-Deny guard mode
+- **RBAC:** 5 roles with 72 granular permissions, Default-Deny guard mode
 - **Server-side user extraction:** User ID extracted from JWT, never from client input
 - **Audit logging:** All state-changing operations logged with `@AuditLog()` decorator
 - **CAS (Compare-and-Swap):** Optimistic locking prevents concurrent modification conflicts
@@ -723,7 +724,7 @@ The architecture diagram is attached as a separate PDF file (`ARCHITECTURE-DIAGR
 - Network topology (internal/external network boundaries, published ports)
 - Authentication flow (Azure AD SSO → NextAuth → NestJS JWT, with protocols: OAuth 2.0, HTTPS, HMAC-SHA256)
 - Data flow diagram (PostgreSQL wire protocol, Redis protocol, S3 API, all on Docker internal network)
-- RBAC permission model (4 roles, 77 permissions, Default-Deny guard)
+- RBAC permission model (5 roles, 72 permissions, Default-Deny guard)
 
 ---
 

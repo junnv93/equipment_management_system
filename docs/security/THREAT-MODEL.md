@@ -1,7 +1,7 @@
 # Equipment Management System — Threat Model (STRIDE)
 
 **For:** Cyber Architecture Review (CAR)
-**Date:** 2026-03-28
+**Date:** 2026-04-02
 **Methodology:** STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege)
 
 ---

@@ -1,6 +1,6 @@
 # Server Patching & Vulnerability Management Schedule
 
-**Effective Date:** 2026-03-28
+**Effective Date:** 2026-04-02
 **Owner:** Myeongjun Kwon, Laboratory Engineer Associate
 **Review Cadence:** Quarterly
 
@@ -73,7 +73,7 @@ curl -k https://localhost/api/monitoring/health
 
 **Automated enforcement:**
 
-- CI pipeline blocks merge on High/Critical npm vulnerabilities (`pnpm audit --prod --audit-level=high`)
+- CI pipeline blocks merge on Critical npm vulnerabilities (`pnpm audit --prod --audit-level=critical`)
 - CodeQL blocks merge on High/Critical SAST findings
 - Dependabot creates automated PRs for vulnerable dependencies
 
