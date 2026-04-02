@@ -125,6 +125,15 @@ jobs:
             sleep 2
           done
 
+      - name: Debug Auth Providers
+        run: |
+          echo "=== NextAuth Providers ==="
+          curl -sf http://localhost:3000/api/auth/providers || echo "FAILED to fetch providers"
+          echo ""
+          echo "=== Backend test-login ==="
+          curl -sf "http://localhost:3001/api/auth/test-login?role=test_engineer" | head -c 200 || echo "FAILED"
+          echo ""
+
       - name: Run E2E Tests
         run: pnpm --filter frontend exec playwright test --project=${{ github.event.inputs.project || 'chromium' }}
 
