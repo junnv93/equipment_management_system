@@ -1,13 +1,15 @@
 name: CodeQL Security Analysis
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-  schedule:
-    # 매주 월요일 09:00 UTC (한국 월요일 18:00)
-    - cron: '0 9 * * 1'
+  # GHAS 미구매 private repo → SARIF 업로드 불가 → PR/push 트리거 비활성화
+  # GHAS 활성화 시 아래 주석 해제 + continue-on-error 제거
+  # push:
+  #   branches: [main, develop]
+  # pull_request:
+  #   branches: [main, develop]
+  # schedule:
+  #   - cron: '0 9 * * 1'
+  workflow_dispatch: # 수동 실행만 허용
 
 # main.yml과 동일한 concurrency 전략
 concurrency:
