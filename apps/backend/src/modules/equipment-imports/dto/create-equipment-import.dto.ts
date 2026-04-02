@@ -35,7 +35,7 @@ const baseImportSchemaRaw = z.object({
   reason: z.string().min(1, VM.equipmentImport.reason.required),
 });
 
-const dateRangeCheck = (data: { usagePeriodStart: string; usagePeriodEnd: string }) =>
+const dateRangeCheck = (data: { usagePeriodStart: string; usagePeriodEnd: string }): boolean =>
   new Date(data.usagePeriodEnd) > new Date(data.usagePeriodStart);
 const dateRangeParams = {
   message: 'Usage end date must be after the start date.',

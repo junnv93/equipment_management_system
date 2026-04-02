@@ -33,10 +33,8 @@ import type { MulterFile } from '../../types/common.types';
 import { DataMigrationService } from './services/data-migration.service';
 import {
   ExecuteEquipmentMigrationPipe,
-  ExecuteEquipmentMigrationSwagger,
   type ExecuteEquipmentMigrationDto,
   PreviewEquipmentMigrationPipe,
-  PreviewEquipmentMigrationSwagger,
   type PreviewEquipmentMigrationDto,
 } from './dto';
 import type {
