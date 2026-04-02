@@ -337,17 +337,25 @@ jobs:
 
       - name: Wait for services
         run: |
-          echo "Waiting for backend..."
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:3001/api/monitoring/health > /dev/null 2>&1 && break
+          echo "Waiting for backend (max 120s)..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3001/api/monitoring/health > /dev/null 2>&1; then
+              echo "Backend ready (${i}x2s)"
+              break
+            fi
+            if [ "$i" = "60" ]; then echo "Backend failed to start" && exit 1; fi
             sleep 2
           done
-          echo "Waiting for frontend..."
+          echo "Waiting for frontend (max 60s)..."
           for i in $(seq 1 30); do
-            curl -sf http://localhost:3000 > /dev/null 2>&1 && break
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "Frontend ready (${i}x2s)"
+              break
+            fi
+            if [ "$i" = "30" ]; then echo "Frontend failed to start" && exit 1; fi
             sleep 2
           done
-          echo "Services ready"
+          echo "All services ready"
 
       - name: Run E2E Tests (chromium only)
         run: pnpm --filter frontend exec playwright test --project=chromium
