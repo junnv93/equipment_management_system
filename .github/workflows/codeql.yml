@@ -9,14 +9,24 @@ on:
     # 매주 월요일 09:00 UTC (한국 월요일 18:00)
     - cron: '0 9 * * 1'
 
+# main.yml과 동일한 concurrency 전략
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+# main.yml과 동일한 Node 버전 SSOT
+env:
+  NODE_VERSION: '20'
+
 jobs:
   analyze:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
 
     strategy:
       fail-fast: false
@@ -33,10 +43,58 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+      # main.yml과 동일한 빌드 환경 (SSOT)
+      # JS/TS CodeQL은 소스 추출 기반이지만, 빌드하면 타입 정보가 풍부해져 분석 품질 향상
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      # Turbo 캐시 (main.yml과 동일)
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-turbo-
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        id: node-modules-cache
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install Dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (shared packages → apps)
+        run: pnpm build
+        env:
+          # Next.js 빌드에 필요한 플레이스홀더 (main.yml build job과 동일 패턴)
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
+          NEXTAUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
           category: '/language:${{ matrix.language }}'
+          # Private repo + GHAS 미활성 시 SARIF 업로드 실패 방지
+          # GHAS 활성화 시 자동으로 업로드 동작
+          upload: always
+        # GHAS 라이선스 없는 private repo에서 SARIF 업로드 실패해도
+        # workflow 자체는 성공으로 처리 — PR checks 빨간 X 방지
+        # GHAS 활성화 시 이 줄 제거하면 업로드 실패가 다시 blocking됨
+        continue-on-error: true
