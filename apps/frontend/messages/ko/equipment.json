@@ -1394,7 +1394,9 @@
       "verificationPlaceholder": "변경 후 검증 내용을 상세히 입력하세요 (예: 기존 측정 결과와 비교하여 0.1dB 이내 차이 확인)",
       "cancel": "취소",
       "submit": "변경 요청",
-      "submitting": "요청 중..."
+      "submitting": "요청 중...",
+      "softwareTypeLabel": "소프트웨어 타입",
+      "softwareTypePlaceholder": "타입을 선택하세요"
     },
     "currentInfo": {
       "title": "현재 소프트웨어 정보",
