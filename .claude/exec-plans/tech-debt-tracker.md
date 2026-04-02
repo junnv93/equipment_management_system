@@ -7,7 +7,7 @@
 
 ## 미완료 항목
 
-(없음)
+- [ ] getPendingChecks 엔드포인트 Zod validation pipe 누락 — `checkouts.controller.ts:106-130` — 2026-04-02 — 출처: pending-checks
 
 ---
 

@@ -17,6 +17,7 @@
   "nonConformances": "부적합 관리",
   "nonConformancesDetail": "부적합 상세",
   "checkouts": "반출입 관리",
+  "checkoutsPendingChecks": "확인 필요",
   "checkoutsCreate": "반출입 등록",
   "checkoutsManage": "반출입 관리",
   "checkoutsDetail": "반출 상세",

@@ -683,6 +683,135 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
+   * 확인 필요 목록 조회 (현재 사용자 기준)
+   *
+   * UL-QP-18 렌탈 4단계 확인 워크플로우:
+   * ① approved → lender_checked (빌려주는 측: 반출 전 확인)
+   * ② lender_checked → borrower_received (빌리는 측: 인수 확인)
+   * ③ borrower_received/in_use → borrower_returned (빌리는 측: 반납 전 확인)
+   * ④ borrower_returned → lender_received (빌려주는 측: 반입 확인)
+   */
+  async getPendingChecks(
+    userId: string,
+    userTeamId: string | undefined,
+    role?: 'lender' | 'borrower',
+    page = 1,
+    pageSize: number = DEFAULT_PAGE_SIZE
+  ): Promise<CheckoutListResponse> {
+    const lenderStatuses = [CSVal.APPROVED, CSVal.BORROWER_RETURNED];
+    const borrowerStatuses = [CSVal.LENDER_CHECKED, CSVal.BORROWER_RECEIVED, CSVal.IN_USE];
+
+    const conditions: SQL<unknown>[] = [eq(checkouts.purpose, CPVal.RENTAL)];
+
+    if (role === 'lender') {
+      if (!userTeamId) return this.emptyListResponse(page, pageSize);
+      conditions.push(
+        and(eq(checkouts.lenderTeamId, userTeamId), inArray(checkouts.status, lenderStatuses))!
+      );
+    } else if (role === 'borrower') {
+      conditions.push(
+        and(eq(checkouts.requesterId, userId), inArray(checkouts.status, borrowerStatuses))!
+      );
+    } else {
+      const lenderCondition = userTeamId
+        ? and(eq(checkouts.lenderTeamId, userTeamId), inArray(checkouts.status, lenderStatuses))
+        : undefined;
+      const borrowerCondition = and(
+        eq(checkouts.requesterId, userId),
+        inArray(checkouts.status, borrowerStatuses)
+      );
+      conditions.push(
+        lenderCondition ? or(lenderCondition, borrowerCondition)! : borrowerCondition!
+      );
+    }
+
+    const numericPageSize = Number(pageSize);
+    const numericOffset = (page - 1) * numericPageSize;
+
+    const idsWithCount = await this.db
+      .select({ id: checkouts.id, totalCount: sql<number>`COUNT(*) OVER()` })
+      .from(checkouts)
+      .where(and(...conditions))
+      .orderBy(desc(checkouts.createdAt))
+      .limit(numericPageSize)
+      .offset(numericOffset);
+
+    let totalItems: number;
+    if (idsWithCount.length > 0) {
+      totalItems = Number(idsWithCount[0].totalCount);
+    } else {
+      const [countRow] = await this.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(checkouts)
+        .where(and(...conditions));
+      totalItems = Number(countRow?.count || 0);
+    }
+
+    if (idsWithCount.length === 0) {
+      return this.emptyListResponse(page, numericPageSize, totalItems);
+    }
+
+    const itemsWithRelations = await this.db.query.checkouts.findMany({
+      where: (checkouts, { inArray: inArr }) =>
+        inArr(
+          checkouts.id,
+          idsWithCount.map((c) => c.id)
+        ),
+      with: {
+        items: {
+          with: {
+            equipment: { columns: { id: true, name: true, managementNumber: true } },
+          },
+        },
+        requester: {
+          columns: { id: true, name: true, email: true },
+          with: { team: true },
+        },
+      },
+    });
+
+    const sortedItems = idsWithCount
+      .map((idObj) => {
+        const item = itemsWithRelations.find((c) => c.id === idObj.id);
+        if (!item) return null;
+        return {
+          ...item,
+          equipment: item.items.map((ci) => ({
+            id: ci.equipment.id,
+            name: ci.equipment.name,
+            managementNumber: ci.equipment.managementNumber,
+          })),
+          user: item.requester || null,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+
+    return {
+      items: sortedItems,
+      meta: {
+        totalItems,
+        itemCount: sortedItems.length,
+        itemsPerPage: numericPageSize,
+        totalPages: Math.ceil(totalItems / numericPageSize),
+        currentPage: Number(page),
+      },
+    };
+  }
+
+  private emptyListResponse(page: number, pageSize: number, totalItems = 0): CheckoutListResponse {
+    return {
+      items: [],
+      meta: {
+        totalItems,
+        itemCount: 0,
+        itemsPerPage: pageSize,
+        totalPages: Math.ceil(totalItems / pageSize) || 0,
+        currentPage: Number(page),
+      },
+    };
+  }
+
+  /**
    * 반출 요약 정보 조회 (대시보드용)
    * ✅ 성능: 단일 쿼리로 모든 상태별 카운트 집계
    * ✅ 캐시: 5분 TTL

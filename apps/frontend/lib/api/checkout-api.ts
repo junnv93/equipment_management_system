@@ -159,6 +159,12 @@ export interface CheckoutQuery {
   includeSummary?: boolean; // ✅ 성능 최적화: 요약 정보 포함 여부
 }
 
+export interface PendingChecksQuery {
+  role?: 'lender' | 'borrower';
+  page?: number;
+  pageSize?: number;
+}
+
 export interface CreateCheckoutDto {
   equipmentIds: string[];
   destination: string; // ✅ 백엔드 필드명에 맞게 수정 (location → destination)
@@ -459,7 +465,7 @@ const checkoutApi = {
    * 현재 사용자가 확인해야 할 대여 건 목록을 조회합니다.
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async getPendingChecks(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
+  async getPendingChecks(query: PendingChecksQuery = {}): Promise<PaginatedResponse<Checkout>> {
     const queryParams = new URLSearchParams();
 
     Object.entries(query).forEach(([key, value]) => {

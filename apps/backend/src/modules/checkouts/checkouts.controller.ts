@@ -103,6 +103,32 @@ export class CheckoutsController {
     return this.checkoutsService.getDistinctDestinations();
   }
 
+  @Get('pending-checks')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({
+    summary: '확인 필요 목록 조회',
+    description:
+      '현재 사용자가 확인해야 할 렌탈 반출입 건 목록을 조회합니다. ' +
+      'role 파라미터로 빌려주는 측(lender)/빌리는 측(borrower) 필터링을 지원합니다.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '확인 필요 목록 조회 성공' })
+  async getPendingChecks(
+    @Request() req: AuthenticatedRequest,
+    @Query('role') role?: 'lender' | 'borrower',
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ): Promise<CheckoutListResponse> {
+    const userId = extractUserId(req);
+    const userTeamId = req.user?.teamId;
+    return this.checkoutsService.getPendingChecks(
+      userId,
+      userTeamId,
+      role,
+      page ? Number(page) : 1,
+      pageSize ? Number(pageSize) : undefined
+    );
+  }
+
   @Get()
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @SiteScoped({ policy: CHECKOUT_DATA_SCOPE })
