@@ -1,59 +1,70 @@
-# Evaluation Report: E2E CI Auth Setup Fix
+# Evaluation Report: 모니터링 캐시 통계 엔드포인트
 
-**Date:** 2026-04-02
-**Evaluator:** QA Agent
-**Contract:** `.claude/contract.md`
+## 반복 #1 (2026-04-02)
 
----
+## 계약 기준 대조
 
-## Critical Finding: Changes Not Committed
+| 기준 | 판정 | 상세 |
+|------|------|------|
+| `pnpm --filter backend run tsc --noEmit` 에러 0 | **PASS** | 빌드 결과 확인 완료 (0 errors) |
+| `pnpm --filter backend run build` 성공 | **PASS** | 빌드 결과 확인 완료 |
+| verify-implementation 전체 PASS (변경 영역 기반 스킬 자동 선택) | **NOT VERIFIED** | verify-implementation 실행 결과 미제공. 평가자가 수동으로 개별 항목 검증 수행 (아래 상세) |
+| `pnpm --filter backend run test` 기존 테스트 통과 | **PASS** | 37 suites, 450 tests 통과 확인 |
+| API_ENDPOINTS.MONITORING.CACHE_STATS 경로 등록 (SSOT) | **PASS** | `packages/shared-constants/src/api-endpoints.ts` line 298: `CACHE_STATS: '/api/monitoring/cache-stats'` 등록 확인 |
+| MonitoringService에 SimpleCacheService 주입, getCacheStats() 위임 | **PASS** | `monitoring.service.ts` line 77: constructor에 `private readonly cacheService: SimpleCacheService` 주입. line 286-294: `getCacheStats()` 메서드가 `this.cacheService.getCacheStats()` 위임 확인 |
+| MonitoringController에 GET cache-stats 엔드포인트 + @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS) | **PASS** | `monitoring.controller.ts` line 186-196: `@RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)` + `@Get('cache-stats')` + `getCacheStats()` 메서드 확인. Permission enum은 `@equipment-management/shared-constants`에서 import (SSOT 준수) |
+| diagnostics 응답에 cache 필드 포함 (하위 호환 -- 기존 필드 변경 없음) | **FAIL** | cache 필드 추가는 정상. 그러나 **하위 호환 위반 발견**: controller `getDiagnostics()` return type (line 90-123)에서 기존 `database` 필드의 `isSimulated` 속성이 누락되고, `performance` 필드의 `isSimulated` 속성도 누락됨. 서비스는 여전히 `isSimulated: true`를 반환하므로 런타임에는 포함되지만, controller 선언 타입에서 제거된 것은 API 스펙 변경에 해당. 기존 소비자가 `diagnostics.database.isSimulated` 또는 `diagnostics.performance.isSimulated`를 참조하면 타입 레벨에서 깨짐. |
+| getHealthStatus()의 cache.hitRate가 실제 SimpleCacheService 통계 반영 (isSimulated: false) | **PASS** | `monitoring.service.ts` line 446-448: `cache: { status: 'operational', hitRate: this.cacheService.getCacheStats().hitRate }`. 실제 SimpleCacheService 통계 사용 확인. `isSimulated` 필드는 cache 섹션에서 완전 제거됨 (더 이상 시뮬레이션 아니므로 적절) |
 
-All code changes exist only in the working tree (unstaged). `git status` shows modified but uncommitted files:
-- `apps/frontend/lib/auth.ts`
-- `apps/frontend/app/(auth)/login/page.tsx`
-- `.github/workflows/main.yml`
-- `.env.ci.example`
+## SHOULD 기준 대조
 
-The Generator completed the code changes correctly but did not create a commit. Evaluation below is against the **working tree state** (not committed state).
+| 기준 | 판정 | 상세 |
+|------|------|------|
+| review-architecture Critical 이슈 0개 | **NOT VERIFIED** | review-architecture 미실행 |
+| 하드코딩 없음 (verify-hardcoding PASS) | **PASS** | 수동 검증: controller에서 `'cache-stats'` 경로는 NestJS 라우팅 데코레이터로 사용되며, `API_ENDPOINTS`는 클라이언트 소비용 SSOT. controller 데코레이터의 경로 문자열은 NestJS 패턴상 정상 (다른 엔드포인트도 동일 방식). Permission은 SSOT enum 사용. 하드코딩 이슈 없음 |
 
----
+## 발견 사항 상세
 
-## MUST Criteria
+### FAIL-1: Controller diagnostics 반환 타입에서 isSimulated 필드 누락 (하위 호환 위반)
 
-| ID | Criterion | Verdict | Notes |
-|----|-----------|---------|-------|
-| M1 | `ENABLE_TEST_AUTH` 환경변수로 test-login provider + DevLoginButtons 활성화 제어 | **PASS** | `auth.ts:73`: `enableTestAuth = process.env.ENABLE_TEST_AUTH === 'true' \|\| isTest \|\| isDevelopment` 추가. `auth.ts:258`: `...(enableTestAuth` 사용 (기존 `isTest \|\| isDevelopment` 대체). `login/page.tsx:11-12`: `showDevAccounts = process.env.NODE_ENV === 'development' \|\| process.env.ENABLE_TEST_AUTH === 'true'` |
-| M2 | CI workflow e2e-test job에 `ENABLE_TEST_AUTH=true` 설정 | **PASS** | `main.yml` build step (line 309)과 frontend start step (line 340) 모두에 `ENABLE_TEST_AUTH: 'true'` 추가 확인 |
-| M3 | `pnpm --filter frontend run tsc --noEmit` 통과 | **NOT VERIFIED** | 빌드 미실행. Generator 보고에 의존. 변경 범위가 작아(환경변수 읽기 + boolean 연산) 실패 가능성 낮으나 독립 검증 부재 |
-| M4 | `pnpm --filter backend run tsc --noEmit` 통과 | **NOT VERIFIED** | Backend 코드 변경 없음. 실패 가능성 극히 낮으나 독립 검증 부재 |
-| M5 | 기존 `ENABLE_LOCAL_AUTH` 패턴과 일관된 네이밍/사용법 | **PASS** | `enableLocalAuth = process.env.ENABLE_LOCAL_AUTH === 'true' \|\| isDevelopment` vs `enableTestAuth = process.env.ENABLE_TEST_AUTH === 'true' \|\| isTest \|\| isDevelopment`. 동일 패턴: `ENABLE_*` prefix, `=== 'true'` strict check, `\|\| fallback` |
-| M6 | `.env.ci.example`에 `ENABLE_TEST_AUTH` 문서화 | **PASS** | line 34-35: 전용 섹션 추가 `# ENABLE_TEST_AUTH=true` + 용도 설명 주석. line 38: 환경별 차이점에 `ENABLE_TEST_AUTH=true` 추가 |
-| M7 | `continue-on-error: true` 제거 | **PASS** | working tree diff에서 `continue-on-error: true` + 주석 2줄 삭제 확인. 현재 main.yml의 e2e-test job에 `continue-on-error` 없음 |
-| M8 | 로컬 개발 환경 영향 없음 | **PASS** | `auth.ts`: `isDevelopment=true` -> `enableTestAuth=true` (기존 `isTest \|\| isDevelopment`와 동일 결과). `login/page.tsx`: `NODE_ENV === 'development'` 조건 첫 번째 항으로 유지 -> `showDevAccounts=true` (기존 동작 보존) |
+**위치**: `apps/backend/src/modules/monitoring/monitoring.controller.ts` line 90-123
 
----
+**문제**: Controller `getDiagnostics()` 메서드의 선언된 반환 타입에서 두 개 필드의 `isSimulated` 속성이 누락됨:
 
-## SHOULD Criteria
+1. `database` 객체: service는 `isSimulated: boolean`을 반환 (line 300, 323)하나 controller 타입에 없음 (line 90)
+2. `performance` 객체: service는 `isSimulated: boolean`을 반환 (line 505, 530)하나 controller 타입에 없음 (line 122)
 
-| ID | Criterion | Verdict | Notes |
-|----|-----------|---------|-------|
-| S1 | `pnpm build` 성공 | **NOT VERIFIED** | Generator 보고에 의존. 독립 검증 미실행 |
-| S2 | auth.setup.ts 코드 변경 불필요 | **PASS** | `git diff HEAD -- '**/auth.setup.ts'` 출력 없음. auth.setup.ts 미수정 확인 |
-| S3 | SSOT 준수 | **PASS** | `ENABLE_TEST_AUTH` 참조 위치: `auth.ts` (provider 등록), `login/page.tsx` (DevLoginButtons 표시), `main.yml` (CI env), `.env.ci.example` (문서). 환경변수가 단일 제어점으로 기능하며 로컬 상수 재정의 없음 |
+**영향**: 
+- TypeScript 컴파일은 통과 (구조적 타입 시스템에서 초과 속성은 허용)
+- 런타임 JSON 응답에는 `isSimulated` 포함됨
+- 그러나 OpenAPI/Swagger 생성 시 `isSimulated`가 스펙에서 누락
+- 프론트엔드에서 이 필드를 타입으로 참조하면 TypeScript 에러 발생 가능
 
----
+**동일 문제 in getStatus()**: Controller `getStatus()` 반환 타입 (line 138)에서도 `database.isSimulated`가 누락됨. Service `getHealthStatus()` (line 361, 415)는 `isSimulated: true`를 반환.
 
-## Overall Verdict: **CONDITIONAL PASS**
+**계약 기준 적용**: "기존 필드 변경 없음" 요건 위반. `database.isSimulated`와 `performance.isSimulated`는 기존에 존재하던 필드인데, controller 타입 선언에서 삭제됨.
 
-### Code Correctness: PASS (M1, M2, M5, M6, M7, M8 충족)
+### 참고: MonitoringModule import 변경 불필요
 
-코드 변경 4건 모두 정확하며 최소 변경 원칙을 준수한다. 기존 로컬 개발 환경 동작에 영향 없음.
+`CacheModule`은 `@Global()` 데코레이터 적용 (확인: `apps/backend/src/common/cache/cache.module.ts` line 22). MonitoringModule에 별도 import 없이 `SimpleCacheService` 주입 가능. 현재 구현이 정확함.
 
-### Blocking Issues
+### 참고: 보안 검증
 
-1. **변경 사항 미커밋**: 4개 파일의 변경이 working tree에만 존재하며 staged/committed 되지 않음. 커밋 없이는 CI에서 효과 없음.
-2. **M3/M4 독립 검증 미실행**: tsc 빌드가 Evaluator에 의해 실행되지 않음. 변경이 `process.env` 읽기와 boolean 연산뿐이라 실패 가능성은 매우 낮으나, 계약 상 "검증" 요건을 완전히 충족하지는 못함.
+- `@RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)` 적용으로 인증+권한 확인 통과
+- 사용자 입력 데이터 신뢰 이슈 없음 (GET 엔드포인트, 파라미터 없음)
+- `@Public()` 미적용 -- 인증 필수
 
-### 최종 판정
+## 전체 판정: FAIL
 
-코드 품질은 충분하다. 커밋 후 CI 파이프라인에서 실제 E2E auth.setup 통과를 확인하면 완전한 PASS이다.
+MUST 기준 중 "diagnostics 응답에 cache 필드 포함 (하위 호환 -- 기존 필드 변경 없음)"이 FAIL. Controller의 `getDiagnostics()`와 `getStatus()` 반환 타입 선언에서 기존 `isSimulated` 필드가 누락되어 하위 호환성이 깨짐.
+
+## 수정 지시
+
+1. **Controller `getDiagnostics()` 반환 타입 수정** (`monitoring.controller.ts` line 90-123):
+   - `database` 객체에 `isSimulated: boolean` 추가 (line 90 부근)
+   - `performance` 객체에 `isSimulated: boolean` 추가 (line 122 부근)
+
+2. **Controller `getStatus()` 반환 타입 수정** (`monitoring.controller.ts` line 138-142):
+   - `database` 객체에 `isSimulated: boolean` 추가
+
+3. 수정 후 `pnpm --filter backend run tsc --noEmit` 재확인

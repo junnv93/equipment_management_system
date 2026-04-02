@@ -61,8 +61,13 @@ export class MonitoringController {
     cpu: { usage: number; loadAvg: number[] };
     memory: { total: number; free: number; used: number; percentage: number };
     uptime: number;
-    network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
-    storage: { diskUsage: number; diskFree: number; diskTotal: number };
+    network: {
+      requestsPerMinute: number;
+      errorRate: number;
+      avgResponseTime: number;
+      isSimulated: boolean;
+    };
+    storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
   } {
     return this.monitoringService.getSystemMetrics();
   }
@@ -84,10 +89,16 @@ export class MonitoringController {
       cpu: { usage: number; loadAvg: number[] };
       memory: { total: number; free: number; used: number; percentage: number };
       uptime: number;
-      network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
-      storage: { diskUsage: number; diskFree: number; diskTotal: number };
+      network: {
+        requestsPerMinute: number;
+        errorRate: number;
+        avgResponseTime: number;
+        isSimulated: boolean;
+      };
+      storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
     };
     database: {
+      isSimulated: boolean;
       status: string;
       version: string;
       connections: { active: number; idle: number; max: number };
@@ -119,7 +130,12 @@ export class MonitoringController {
       counts: { error: number; warn: number; info: number; debug: number; verbose: number };
       lastErrors: never[];
     };
-    performance: { responseTime: { avg: number; p95: number; p99: number }; throughput: number };
+    performance: {
+      isSimulated: boolean;
+      responseTime: { avg: number; p95: number; p99: number };
+      throughput: number;
+    };
+    cache: { hits: number; misses: number; hitRate: number; size: number; maxSize: number };
   } {
     return this.monitoringService.getDiagnostics();
   }
@@ -136,6 +152,7 @@ export class MonitoringController {
     services: {
       database: {
         status: string;
+        isSimulated: boolean;
         metrics: {
           connectionsCreated: number;
           connectionErrors: number;
@@ -176,5 +193,21 @@ export class MonitoringController {
     topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
   } {
     return this.monitoringService.getHttpStats();
+  }
+
+  /**
+   * 캐시 통계 조회 엔드포인트
+   * 시스템 설정 조회 권한 필요
+   */
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
+  @Get('cache-stats')
+  getCacheStats(): {
+    hits: number;
+    misses: number;
+    hitRate: number;
+    size: number;
+    maxSize: number;
+  } {
+    return this.monitoringService.getCacheStats();
   }
 }

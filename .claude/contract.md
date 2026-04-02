@@ -1,40 +1,33 @@
-# Contract: E2E CI Auth Setup Fix
+# 스프린트 계약: 모니터링 캐시 통계 엔드포인트 완성
 
 ## 생성 시점
 2026-04-02
 
-## Context
-CI 환경에서 Playwright auth.setup.ts 5개 역할 로그인 전부 실패.
-Next.js가 `next start` 시 `NODE_ENV=production`을 강제하여:
-1. DevLoginButtons 미렌더링 (`showDevAccounts=false`)
-2. test-login NextAuth provider 미등록 (`isTest || isDevelopment` 모두 false)
+## 성공 기준
 
-## MUST Criteria
+### 필수 (MUST) — 실패 시 루프 재진입
+- [ ] `pnpm --filter backend run tsc --noEmit` 에러 0
+- [ ] `pnpm --filter backend run build` 성공
+- [ ] verify-implementation 전체 PASS (변경 영역 기반 스킬 자동 선택)
+- [ ] `pnpm --filter backend run test` 기존 테스트 통과
+- [ ] API_ENDPOINTS.MONITORING.CACHE_STATS 경로 등록 (SSOT)
+- [ ] MonitoringService에 SimpleCacheService 주입, getCacheStats() 위임
+- [ ] MonitoringController에 GET cache-stats 엔드포인트 + @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
+- [ ] diagnostics 응답에 cache 필드 포함 (하위 호환 — 기존 필드 변경 없음)
+- [ ] getHealthStatus()의 cache.hitRate가 실제 SimpleCacheService 통계 반영 (isSimulated: false)
 
-| # | Criterion | Verification |
-|---|-----------|-------------|
-| M1 | `ENABLE_TEST_AUTH` 환경변수로 test-login provider + DevLoginButtons 활성화 제어 (NODE_ENV 독립) | `lib/auth.ts`, `login/page.tsx` 코드 확인 |
-| M2 | CI workflow e2e-test job에 `ENABLE_TEST_AUTH=true` 설정 (build + frontend start) | `main.yml` env 블록 확인 |
-| M3 | `pnpm --filter frontend run tsc --noEmit` 통과 | 빌드 검증 |
-| M4 | `pnpm --filter backend run tsc --noEmit` 통과 | 빌드 검증 |
-| M5 | 기존 `ENABLE_LOCAL_AUTH` 패턴과 일관된 네이밍/사용법 | 코드 리뷰 |
-| M6 | `.env.ci.example`에 `ENABLE_TEST_AUTH` 문서화 | 파일 확인 |
-| M7 | `continue-on-error: true` 제거 | `main.yml` 확인 |
-| M8 | 로컬 개발 환경 영향 없음 — NODE_ENV=development 시 기존대로 동작 | 로직 검증 |
+### 권장 (SHOULD) — 실패 시 tech-debt-tracker 기록, 루프 차단 없음
+- [ ] review-architecture Critical 이슈 0개
+- [ ] 하드코딩 없음 (verify-hardcoding PASS)
 
-## SHOULD Criteria
-
-| # | Criterion | Note |
-|---|-----------|------|
-| S1 | `pnpm build` 성공 | 전체 빌드 통과 |
-| S2 | auth.setup.ts 코드 변경 불필요 (기존 browser-native 흐름 유지) | 변경 범위 최소화 |
-| S3 | SSOT 준수 — 환경변수 참조가 중앙 집중화 | verify-ssot |
-
-## Out of Scope
-- global-setup.ts 시드 로직 수정
-- E2E 테스트 스펙 파일 수정
-- Backend test-auth.controller.ts 수정
+### 적용 verify 스킬
+- verify-ssot (API_ENDPOINTS 등록)
+- verify-hardcoding (경로, 상수)
+- verify-auth (Permission 데코레이터)
+- verify-security (서버사이드 권한)
 
 ## 종료 조건
-- M1-M8 전체 PASS → 성공
-- 동일 이슈 2회 연속 FAIL → 수동 개입
+- 필수 기준 전체 PASS → 성공
+- 동일 이슈 2회 연속 FAIL → 설계 문제 (수동 개입 요청)
+- 3회 반복 초과 → 수동 개입 요청
+- SHOULD 실패는 종료 조건에 영향 없음 — tech-debt-tracker.md에 기록

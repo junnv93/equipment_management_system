@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as process from 'process';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
@@ -72,7 +73,8 @@ export class MonitoringService implements OnModuleDestroy {
 
   constructor(
     private readonly logger: LoggerService,
-    private readonly metricsService: MetricsService
+    private readonly metricsService: MetricsService,
+    private readonly cacheService: SimpleCacheService
   ) {
     this.logger.setContext('MonitoringService');
 
@@ -279,6 +281,19 @@ export class MonitoringService implements OnModuleDestroy {
   }
 
   /**
+   * 캐시 통계 조회 (SimpleCacheService 위임)
+   */
+  getCacheStats(): {
+    hits: number;
+    misses: number;
+    hitRate: number;
+    size: number;
+    maxSize: number;
+  } {
+    return this.cacheService.getCacheStats();
+  }
+
+  /**
    * 데이터베이스 진단 정보 조회
    */
   getDatabaseDiagnostics(): {
@@ -363,7 +378,7 @@ export class MonitoringService implements OnModuleDestroy {
         status: string;
         counts: { error: number; warn: number; info: number; debug: number; verbose: number };
       };
-      cache: { status: string; hitRate: number; isSimulated: boolean };
+      cache: { status: string; hitRate: number };
     };
     lastChecked: string;
   } {
@@ -429,8 +444,7 @@ export class MonitoringService implements OnModuleDestroy {
         },
         cache: {
           status: 'operational',
-          hitRate: 0, // TODO: 실제 캐시 히트율 연동 필요
-          isSimulated: true,
+          hitRate: this.cacheService.getCacheStats().hitRate,
         },
       },
       lastChecked: new Date().toISOString(),
@@ -451,8 +465,13 @@ export class MonitoringService implements OnModuleDestroy {
       cpu: { usage: number; loadAvg: number[] };
       memory: { total: number; free: number; used: number; percentage: number };
       uptime: number;
-      network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
-      storage: { diskUsage: number; diskFree: number; diskTotal: number };
+      network: {
+        requestsPerMinute: number;
+        errorRate: number;
+        avgResponseTime: number;
+        isSimulated: boolean;
+      };
+      storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
     };
     database: {
       isSimulated: boolean;
@@ -492,6 +511,13 @@ export class MonitoringService implements OnModuleDestroy {
       responseTime: { avg: number; p95: number; p99: number };
       throughput: number;
     };
+    cache: {
+      hits: number;
+      misses: number;
+      hitRate: number;
+      size: number;
+      maxSize: number;
+    };
   } {
     this.logger.log('상세 진단 정보 조회');
     return {
@@ -514,6 +540,7 @@ export class MonitoringService implements OnModuleDestroy {
         },
         throughput: 0,
       },
+      cache: this.getCacheStats(),
     };
   }
 
