@@ -100,8 +100,8 @@ jobs:
           FRONTEND_URL: http://localhost:3000
           PORT: 3001
 
-      - name: Start Frontend (dev mode — Playwright 공식 권장)
-        run: pnpm --filter frontend run dev &
+      - name: Start Frontend (dev mode — no Turbopack for CI stability)
+        run: pnpm --filter frontend exec next dev --port 3000 --no-turbopack &
         env:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
@@ -114,9 +114,9 @@ jobs:
             [ "$i" = "60" ] && echo "Backend failed" && exit 1
             sleep 2
           done
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
             curl -sf http://localhost:3000 > /dev/null 2>&1 && echo "Frontend ready" && break
-            [ "$i" = "30" ] && echo "Frontend failed" && exit 1
+            [ "$i" = "60" ] && echo "Frontend failed" && exit 1
             sleep 2
           done
 
