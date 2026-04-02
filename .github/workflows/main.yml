@@ -324,8 +324,10 @@ jobs:
           REDIS_PORT: 6379
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-jwt-secret-do-not-use-in-production' }}
           REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET || 'ci-refresh-secret-do-not-use-in-production' }}
+          INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY || 'ci-internal-api-key-do-not-use-in-prod-32chars-minimum-required-here' }}
           NODE_ENV: test
           PERMISSIONS_GUARD_MODE: DENY
+          FRONTEND_URL: http://localhost:3000
           PORT: 3001
 
       - name: Start Frontend (background)
