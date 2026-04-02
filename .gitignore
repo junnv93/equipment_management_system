@@ -140,5 +140,11 @@ apps/server/logs/
 # symlinks
 npm
 
+# Harness handoff files (session-specific, not tracked)
+.claude/contracts/
+.claude/evaluations/
+.claude/contract.md
+.claude/evaluation-report.md
+
 # embedded repositories
 equipment_management_system/ .kombai/

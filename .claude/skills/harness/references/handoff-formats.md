@@ -40,9 +40,12 @@
 
 ---
 
-## contract.md (Planner/Harness → Evaluator)
+## contract (Planner/Harness → Evaluator)
 
-경로: `.claude/contract.md`
+경로: `.claude/contracts/{slug}.md`
+
+**다중 세션 동시 실행 시 충돌 방지를 위해 slug 기반 네임스페이스 사용.**
+slug는 작업 시작 시 kebab-case로 결정 (예: `loading-tsx`, `monitoring-cache-stats`).
 
 ```markdown
 # 스프린트 계약: {작업 제목}
@@ -79,9 +82,11 @@
 
 ---
 
-## evaluation-report.md (Evaluator → Generator/사용자)
+## evaluation-report (Evaluator → Generator/사용자)
 
-경로: `.claude/evaluation-report.md`
+경로: `.claude/evaluations/{slug}.md`
+
+**contract와 동일한 slug 사용. 디렉토리가 없으면 자동 생성.**
 
 ```markdown
 # Evaluation Report: {작업 제목}
