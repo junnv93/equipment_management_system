@@ -107,6 +107,8 @@ jobs:
       - name: Start Frontend
         run: pnpm --filter frontend run start &
         env:
+          # Auth.js v5는 AUTH_SECRET을 런타임에 자동 감지 (빌드 인라인과 무관)
+          AUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: http://localhost:3001
@@ -127,8 +129,8 @@ jobs:
 
       - name: Debug Auth Providers
         run: |
-          echo "=== NextAuth Providers ==="
-          curl -sf http://localhost:3000/api/auth/providers || echo "FAILED to fetch providers"
+          echo "=== NextAuth Providers (verbose) ==="
+          curl -v http://localhost:3000/api/auth/providers 2>&1 | tail -20
           echo ""
           echo "=== Backend test-login ==="
           curl -sf "http://localhost:3001/api/auth/test-login?role=test_engineer" | head -c 200 || echo "FAILED"
