@@ -1,7 +1,7 @@
 # Equipment Management System — Security Implementation Details
 
 **For:** Cyber Architecture Review (CAR)
-**Date:** 2026-03-28
+**Date:** 2026-04-02
 
 ---
 
@@ -50,15 +50,15 @@
 └─────────────────────────────────────────────────────────┘
 ```
 
-| Parameter             | Value                 | Source (SSOT)                    |
-| --------------------- | --------------------- | -------------------------------- |
-| Access token TTL      | 900s (15 min)         | `shared-constants/auth-token.ts` |
-| Refresh token TTL     | 604,800s (7 days)     | `shared-constants/auth-token.ts` |
-| Absolute session max  | 2,592,000s (30 days)  | `shared-constants/auth-token.ts` |
-| Refresh buffer        | 60s before expiry     | `shared-constants/auth-token.ts` |
-| Idle timeout          | 1,800s (30 min)       | `shared-constants/auth-token.ts` |
-| Signing algorithm     | HS256 (HMAC-SHA256)   | JWT strategy                     |
-| Minimum secret length | 32 chars (production) | env.validation.ts                |
+| Parameter             | Value                              | Source (SSOT)                    |
+| --------------------- | ---------------------------------- | -------------------------------- |
+| Access token TTL      | 900s (15 min)                      | `shared-constants/auth-token.ts` |
+| Refresh token TTL     | 604,800s (7 days)                  | `shared-constants/auth-token.ts` |
+| Absolute session max  | 2,592,000s (30 days)               | `shared-constants/auth-token.ts` |
+| Refresh buffer        | 60s before expiry                  | `shared-constants/auth-token.ts` |
+| Idle timeout          | 1,800s (30 min)                    | `shared-constants/auth-token.ts` |
+| Signing algorithm     | HS256 (HMAC-SHA256)                | JWT strategy                     |
+| Minimum secret length | 16 chars (JWT), 32 chars (API key) | env.validation.ts                |
 
 ### 1.3 Token Blacklist (Logout)
 
@@ -115,7 +115,7 @@ Request
 
 ### 2.2 Permission System
 
-- **77 granular permissions** defined in `@equipment-management/shared-constants`
+- **72 granular permissions** defined in `@equipment-management/shared-constants`
 - **4 roles** with predefined permission sets
 - **Default-Deny:** If no permission decorator is found, access is denied
 - **CI enforcement:** `scripts/check-security-decorators.ts` validates all controller endpoints have security decorators
@@ -191,7 +191,7 @@ Client Request
 
 ### 4.4 Clickjacking Prevention
 
-- `X-Frame-Options: DENY` (Helmet)
+- `X-Frame-Options: SAMEORIGIN` (Nginx overrides Helmet)
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 
 ---
@@ -214,12 +214,13 @@ All cipher suites are **NIST SP 800-175B approved**.
 
 ### 5.2 JWT Signing
 
-| Parameter            | Value                                                       |
-| -------------------- | ----------------------------------------------------------- |
-| Algorithm            | HS256 (HMAC-SHA256)                                         |
-| Access token secret  | JWT_SECRET (384-bit entropy, openssl rand)                  |
-| Refresh token secret | REFRESH_TOKEN_SECRET (384-bit, must differ from JWT_SECRET) |
-| Key rotation         | Supported via INTERNAL_API_KEY_PREVIOUS                     |
+| Parameter              | Value                                                              |
+| ---------------------- | ------------------------------------------------------------------ |
+| Algorithm              | HS256 (HMAC-SHA256)                                                |
+| Access token secret    | JWT_SECRET (384-bit entropy, openssl rand)                         |
+| Refresh token secret   | REFRESH_TOKEN_SECRET (384-bit, must differ from JWT_SECRET)        |
+| Key rotation           | Supported via INTERNAL_API_KEY_PREVIOUS                            |
+| Azure AD client secret | AZURE_AD_CLIENT_SECRET (env variable, 60-day rotation recommended) |
 
 ### 5.3 Database Connection Encryption
 
@@ -319,7 +320,7 @@ Client sends: { version: 3, status: 'approved' }
                  └─ Cache invalidation (prevent stale retry)
 ```
 
-**CAS-protected entities:** equipment, checkouts, calibrations, non-conformances, disposal_requests, equipment_imports, equipment_requests, software_history
+**CAS-protected entities:** equipment, equipment_requests, software, checkouts, calibrations, calibration_plans, calibration_factors, non-conformances, disposal_requests, equipment_imports
 
 ---
 
@@ -330,7 +331,7 @@ Client sends: { version: 3, status: 'approved' }
 | Dependabot                  | Automated dependency updates   | Weekly PR creation (npm + GitHub Actions) |
 | gitleaks                    | Secret scanning                | CI Gate 1 (every push/PR)                 |
 | npm audit                   | Vulnerability detection        | CI Gate 3 (High/Critical fails build)     |
-| pnpm overrides              | Known vulnerability mitigation | 9 packages currently managed              |
+| pnpm overrides              | Known vulnerability mitigation | 11 packages currently managed             |
 | pnpm verify-store-integrity | Package tampering detection    | Enabled in .npmrc                         |
 | Husky + lint-staged         | Pre-commit validation          | Every commit                              |
 
@@ -343,7 +344,7 @@ Applied via Helmet middleware and Nginx:
 | Header                    | Value                                        | Source         |
 | ------------------------- | -------------------------------------------- | -------------- |
 | Strict-Transport-Security | max-age=63072000; includeSubDomains; preload | Nginx          |
-| X-Frame-Options           | DENY                                         | Helmet         |
+| X-Frame-Options           | SAMEORIGIN                                   | Nginx + Helmet |
 | X-Content-Type-Options    | nosniff                                      | Nginx + Helmet |
 | Referrer-Policy           | strict-origin-when-cross-origin              | Nginx + Helmet |
 | Permissions-Policy        | camera=(), microphone=(), geolocation=()     | Nginx          |

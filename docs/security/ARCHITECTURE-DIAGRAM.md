@@ -1,7 +1,7 @@
 # Equipment Management System — Architecture Diagrams
 
 **For:** Cyber Architecture Review (CAR)
-**Date:** 2026-03-28
+**Date:** 2026-04-02
 
 ---
 
@@ -248,10 +248,10 @@ Token Lifecycle:
                 ┌────────────▼────────────┐
                 │    Role Assignment      │
                 │                         │
-                │  SiteAdmin    → lab_manager
-                │  TechManager  → technical_manager
-                │  QualityMgr   → quality_manager
-                │  TestOperator → test_engineer
+                │   mapAzureGroupsToTeamAndLocation)
+                │  Azure AD group membership →
+                │   team/site auto-assignment
+                │  Azure AD roles → app roles
                 └────────────┬────────────┘
                              │
     ┌────────────────────────▼────────────────────────┐
