@@ -147,10 +147,7 @@ jobs:
             apps/*/node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Install Dependencies
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: pnpm install --frozen-lockfile
+          fail-on-cache-miss: true
 
       - name: Build Shared Packages
         run: pnpm build --filter "@equipment-management/*"
@@ -204,10 +201,7 @@ jobs:
             apps/*/node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: Install Dependencies
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: pnpm install --frozen-lockfile
+          fail-on-cache-miss: true
 
       - name: Build (turbo — 공유 패키지 → 백엔드 → 프론트엔드 순)
         run: pnpm build
@@ -235,8 +229,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        id: node-modules-cache
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+          fail-on-cache-miss: true
 
       # --prod: 프로덕션 의존성만 검사 (devDependency 제외)
       # --audit-level=critical: CVSS 9+ (Critical)만 빌드 실패 처리
