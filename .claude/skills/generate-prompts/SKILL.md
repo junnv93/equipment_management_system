@@ -1,149 +1,106 @@
-# generate-prompts — 코드베이스 스캔 → 검증 → 프롬프트 생성
-
-코드베이스를 자동 스캔하여 하네스 프롬프트를 생성하고, 거짓 양성을 필터링하며,
-example-prompts.md를 최신 상태로 유지합니다.
-
-트리거: `/generate-prompts`, "프롬프트 생성", "코드베이스 스캔", "새 프롬프트"
-
-## 핵심 원칙
-
-1. **스캔 결과를 절대 신뢰하지 않는다** — 1차 스캔 후 반드시 2차 검증 (코드 직접 확인)
-2. **이미 구현된 것을 프롬프트로 만들지 않는다** — git log, 실제 코드 확인 필수
-3. **프롬프트는 검증 가능해야 한다** — "개선하자" 대신 "tsc 통과 + 테스트 PASS" 기준
-
-## 워크플로우
-
-### Step 1: 기존 프롬프트 로드
-
-`.claude/skills/harness/references/example-prompts.md`를 읽고 현재 상태 파악:
-- 완료된 항목 (~~취소선~~)
-- 진행 중인 항목
-- 미착수 항목
-
-### Step 2: 병렬 스캔 (3개 에이전트)
-
-3개 Agent를 **병렬**로 실행하여 코드베이스를 탐색합니다.
-
-#### Agent A: 백엔드 스캔
-```
-apps/backend/src/ 전체를 탐색:
-1. TODO/FIXME/HACK 주석 (테스트 파일 제외)
-2. 보안 갭: @RequirePermissions/@SkipPermissions 누락, @AuditLog 누락
-3. 성능: N+1 쿼리, 캐시 미적용, 페이지네이션 누락
-4. 데드 코드: 미사용 export, 빈 catch 블록
-→ 각 발견에 file:line 포함
-```
-
-#### Agent B: 프론트엔드 스캔
-```
-apps/frontend/ 전체를 탐색:
-1. TODO/FIXME 주석
-2. 하드코딩 문자열 (한국어/영어 — i18n 미적용)
-3. 성능 안티패턴: 거대 컴포넌트, useState로 필터 관리
-4. 접근성: aria-label 누락, 폼 레이블 누락
-5. 누락된 error.tsx/loading.tsx
-→ 각 발견에 file:line 포함
-```
-
-#### Agent C: 인프라/패키지 스캔
-```
-packages/, .github/workflows/, docker 전체를 탐색:
-1. 스키마 갭: 미사용 enum, 누락된 인덱스, FK 정책 불일치
-2. CI 최적화: 중복 설치, 캐시 미활용, deprecated 액션
-3. 환경변수 갭: .env.example과 실제 사용 불일치
-→ 각 발견에 file:line 포함
-```
-
-### Step 3: 2차 검증 (CRITICAL — 이 단계를 절대 생략하지 않는다)
-
-**각 발견 사항을 실제 코드와 대조 검증합니다.**
-
-검증 방법:
-- "파일 X에 Y가 없다" → 해당 파일을 Read로 직접 확인
-- "데코레이터가 누락" → 해당 컨트롤러를 Read로 전체 확인
-- "인덱스가 없다" → 스키마 파일의 인덱스 섹션 직접 확인
-- "i18n 하드코딩" → 해당 라인을 Read로 직접 확인
-
-검증 결과 분류:
-| 분류 | 기준 | 조치 |
-|------|------|------|
-| **확인됨** | 코드에서 실제 문제 확인 | 프롬프트 작성 |
-| **거짓 양성** | 이미 구현됨 or 의도적 설계 | 제외 + 사유 기록 |
-| **확인 필요** | 도메인 판단이 필요한 사항 | 사용자에게 질문 |
-
-### Step 4: 프롬프트 초안 작성
-
-검증을 통과한 발견 사항만 프롬프트로 작성합니다.
-
-프롬프트 형식:
-```markdown
-### {제목} (Mode {0|1|2})
-
-\`\`\`
-{현재 상태 — 무엇이 문제인가}
-
-{검증 완료된 위치 — file:line}
-
-{수정 사항 — 무엇을 해야 하는가}
-
-검증: {성공 기준}
-\`\`\`
-```
-
-Mode 결정:
-- Mode 0: ≤3 파일, 로직 변경 없음
-- Mode 1: 4~15 파일, 단일 도메인
-- Mode 2: 15+ 파일, DB 변경, 멀티 도메인
-
-우선순위:
-- 🔴 CRITICAL: 보안 취약점, 데이터 무결성 위험
-- 🟠 HIGH: 성능 문제, 기능 갭
-- 🟡 MEDIUM: 코드 품질, 테스트 커버리지
-- 🟢 LOW: 개선, 정비
-
-### Step 5: 완료 항목 아카이브
-
-기존 프롬프트 중 완료된 항목을 `<details>` 아카이브 섹션으로 이동:
-- ~~취소선~~ 항목
-- git log에서 관련 PR 머지 확인된 항목
-- 코드 확인 결과 이미 구현된 항목
-
-거짓 양성은 별도 `<details>` 섹션에 교훈으로 기록.
-
-### Step 6: example-prompts.md 업데이트
-
-최종 프롬프트를 `example-prompts.md`에 작성:
-- 헤더에 분석일 업데이트
-- 신규 항목 추가 (우선순위 섹션에 배치)
-- 완료/거짓양성 아카이브
-
-### Step 7: 사용자 리뷰 요청
-
-```markdown
-## 스캔 결과 요약
-
-| 우선순위 | 신규 | 완료 | 거짓 양성 |
-|---------|------|------|----------|
-
-### 확인 필요 사항
-{도메인 판단이 필요한 항목}
-
-프롬프트를 확정하시겠습니까?
-```
-
+---
+name: generate-prompts
+description: >
+  Scan codebase for actionable issues and generate verified harness prompts.
+  Auto-archive completed items and filter false positives.
+  Use when: user asks to scan codebase, generate new prompts, review existing prompts,
+  clean up completed items, or says "프롬프트 생성", "코드베이스 스캔", "새 프롬프트",
+  "/generate-prompts". Also triggers on "프롬프트 리뷰", "프롬프트 정리".
 ---
 
-## 예외사항
+# generate-prompts
 
-1. **기존 완료 항목을 삭제하지 않는다** — 아카이브로 이동 (교훈 보존)
-2. **스캔 에이전트의 주장을 그대로 넣지 않는다** — 반드시 2차 검증 통과 필요
-3. **도메인 판단이 필요한 사항은 자의적으로 결정하지 않는다** — 사용자에게 질문
-4. **테스트 파일의 TODO/FIXME는 별도 분류** — 테스트 개선은 MEDIUM 이하
+Scan → Verify → Generate harness prompts for `example-prompts.md`.
+
+**Critical rule: Never trust 1st-pass scan results. Always verify with Read/Grep before writing a prompt.**
+
+## Workflow
+
+### 1. Load existing prompts
+
+Read `.claude/skills/harness/references/example-prompts.md`. Note completed (~~strikethrough~~), in-progress, and pending items.
+
+### 2. Parallel scan (3 Agents)
+
+Launch 3 Agents **in parallel** with prompts from [references/scan-prompts.md](references/scan-prompts.md):
+- **Agent A**: Backend (TODO/FIXME, security gaps, performance, dead code)
+- **Agent B**: Frontend (TODO/FIXME, hardcoded strings, a11y, missing error.tsx)
+- **Agent C**: Infra/packages (unused enums, missing indexes, CI optimization)
+
+Each agent must report findings with `file:line`.
+
+### 3. Verify each finding (CRITICAL — never skip)
+
+For every finding, use Read/Grep to confirm it exists in current code:
+
+```
+"X is missing" → Read the file, confirm it's actually missing
+"Decorator missing" → Read the full controller
+"Index missing" → Read the schema's index section
+```
+
+Classify each:
+- **Confirmed** → write prompt
+- **False positive** → exclude, record in archive with reason
+- **Needs user input** → ask user (domain decisions like FK policy, permission removal)
+
+### 4. Write prompts
+
+Format per finding (confirmed only):
+
+```markdown
+### {title} (Mode {0|1|2})
+
+\`\`\`
+{problem — what's wrong, verified locations with file:line}
+{action — what to do}
+검증: {success criteria}
+\`\`\`
+```
+
+Mode: 0 (≤3 files) / 1 (4-15 files) / 2 (15+ or DB change)
+
+Priority: 🔴 CRITICAL (security) → 🟠 HIGH (perf/gaps) → 🟡 MEDIUM (quality) → 🟢 LOW (polish)
+
+### 5. Archive completed items
+
+Move to `<details>` archive section:
+- ~~Strikethrough~~ items
+- Items with merged PRs (check `git log`)
+- Items confirmed as already implemented
+
+False positives → separate `<details>` section with lessons learned.
+
+### 6. Update example-prompts.md
+
+Write final prompts to `.claude/skills/harness/references/example-prompts.md`:
+- Update header date
+- Add new items under priority sections
+- Move completed/false-positive to archive
+
+### 7. User review
+
+Present summary and ask for confirmation:
+
+```
+| Priority | New | Archived | False Positive |
+|----------|-----|----------|----------------|
+
+### Items needing your decision
+{domain questions}
+```
+
+## Exceptions
+
+1. Never delete completed items — archive them (lessons learned)
+2. Never include unverified findings — Step 3 is mandatory
+3. Never make domain decisions autonomously — ask user
+4. Test file TODO/FIXME → classify as MEDIUM or lower
 
 ## Related Files
 
 | File | Purpose |
 |------|---------|
-| `.claude/skills/harness/references/example-prompts.md` | 프롬프트 저장소 (SSOT) |
-| `.claude/skills/harness/SKILL.md` | 하네스 실행 스킬 (프롬프트 소비자) |
-| `CLAUDE.md` | 프로젝트 규칙 (프롬프트 작성 시 참조) |
+| [references/scan-prompts.md](references/scan-prompts.md) | Agent prompts for Step 2 |
+| `.claude/skills/harness/references/example-prompts.md` | Prompt storage (SSOT) |
+| `.claude/skills/harness/SKILL.md` | Harness skill (prompt consumer) |
