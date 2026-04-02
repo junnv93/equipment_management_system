@@ -87,18 +87,11 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
   users: [Permission.VIEW_USERS, Permission.UPDATE_USERS, Permission.MANAGE_ROLES],
   notifications: [
     Permission.VIEW_NOTIFICATIONS,
-    Permission.CREATE_NOTIFICATION,
     Permission.UPDATE_NOTIFICATION,
     Permission.DELETE_NOTIFICATION,
     Permission.CREATE_SYSTEM_NOTIFICATION,
-    Permission.MANAGE_NOTIFICATION_SETTINGS,
   ],
-  reports: [
-    Permission.VIEW_STATISTICS,
-    Permission.EXPORT_REPORTS,
-    Permission.CREATE_DASHBOARD,
-    Permission.MANAGE_REPORTS,
-  ],
+  reports: [Permission.VIEW_STATISTICS, Permission.EXPORT_REPORTS],
   calibrationPlans: [
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.CREATE_CALIBRATION_PLAN,
@@ -111,12 +104,7 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.CONFIRM_CALIBRATION_PLAN_ITEM,
   ],
   audit: [Permission.VIEW_AUDIT_LOGS],
-  disposal: [
-    Permission.REQUEST_DISPOSAL,
-    Permission.REVIEW_DISPOSAL,
-    Permission.APPROVE_DISPOSAL,
-    Permission.VIEW_DISPOSAL_REQUESTS,
-  ],
+  disposal: [Permission.REQUEST_DISPOSAL, Permission.REVIEW_DISPOSAL, Permission.APPROVE_DISPOSAL],
   equipmentImports: [
     Permission.VIEW_EQUIPMENT_IMPORTS,
     Permission.CREATE_EQUIPMENT_IMPORT,
