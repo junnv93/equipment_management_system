@@ -1,0 +1,229 @@
+# Design Token 검증 — Step 상세
+
+## Step 1: transition-all 금지
+
+```bash
+grep -rn "transition-all" apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" \
+  | grep -v "apps/frontend/components/ui/\|no transition-all\|transition-all 금지\|transition-all 대신"
+```
+
+```tsx
+// ❌ WRONG
+className="transition-all hover:bg-muted"
+
+// ✅ CORRECT - specific properties
+className="transition-colors hover:bg-muted"
+
+// ✅ CORRECT - getTransitionClasses
+className={cn(
+  getTransitionClasses('fast', ['background-color']),
+  "hover:bg-muted"
+)}
+```
+
+## Step 2: focus-visible 우선
+
+```bash
+grep -rn "focus:ring\|focus:outline\|focus:bg\|focus:text" apps/frontend/components apps/frontend/app --include="*.tsx" \
+  | grep -v "apps/frontend/components/ui/\|SkipLink"
+```
+
+```tsx
+// ❌ WRONG
+className="focus:ring-2 focus:ring-primary"
+
+// ✅ CORRECT
+className="focus-visible:ring-2 focus-visible:ring-primary"
+
+// ✅ CORRECT - Design Token 사용
+className={FOCUS_TOKENS.classes.default}
+```
+
+## Step 3: Layer 3 함수 import 경로
+
+```bash
+grep -rn "from '.*design-tokens/primitives'\|from '.*design-tokens/semantic'" apps/frontend/components --include="*.tsx" --include="*.ts"
+```
+
+```tsx
+// ❌ WRONG - 내부 파일 직접 import
+import { SIZE_PRIMITIVES } from '@/lib/design-tokens/primitives';
+
+// ✅ CORRECT - Public API 사용
+import { getHeaderButtonClasses, getHeaderSizeClasses } from '@/lib/design-tokens';
+```
+
+## Step 4: 마이그레이션된 컴포넌트 토큰 사용
+
+```bash
+bash .claude/skills/verify-design-tokens/scripts/check-migrated.sh
+```
+
+전체 목록: [migrated-components.md](migrated-components.md) 참조.
+
+## Step 5: Layer 3 컴포넌트 토큰 아키텍처
+
+```bash
+grep -rn "from '../primitives'" apps/frontend/lib/design-tokens/components/ --include="*.ts"
+```
+
+```typescript
+// ❌ WRONG - Layer 3에서 Layer 1 직접 참조
+import { SIZE_PRIMITIVES } from '../primitives';
+
+// ✅ CORRECT - Layer 3에서 Layer 2만 참조
+import { INTERACTIVE_TOKENS } from '../semantic';
+```
+
+면제: `toTailwindSize`, `toTailwindGap` 유틸리티 함수 import 허용.
+
+## Step 5b: Layer 3 컴포넌트 토큰 barrel export 확인
+
+```bash
+for f in apps/frontend/lib/design-tokens/components/*.ts; do
+  basename=$(basename "$f" .ts)
+  if ! grep -q "from './components/$basename'" apps/frontend/lib/design-tokens/index.ts; then
+    echo "NOT EXPORTED: $f"
+  fi
+done
+```
+
+## Step 6: TRANSITION_PRESETS 우선 + getTransitionClasses 속성 지정
+
+### 6a: Layer 3에서 getTransitionClasses 잔여 호출
+
+```bash
+grep -rn "getTransitionClasses(" apps/frontend/lib/design-tokens/components/ --include="*.ts" \
+  | grep -v "//\|*\|SSOT:"
+```
+
+```typescript
+// ❌ WRONG - Layer 3에서 런타임 호출
+import { getTransitionClasses } from '../motion';
+const hover = getTransitionClasses('fast', ['box-shadow', 'transform']);
+
+// ✅ CORRECT - 사전 계산된 프리셋 참조
+import { TRANSITION_PRESETS } from '../motion';
+const hover = TRANSITION_PRESETS.fastShadowTransform;
+```
+
+네이밍 규칙: `{speed}{Properties}` — `fastBg`, `fastBgColor`, `instantBg`, `moderateOpacity` 등.
+
+### 6b: getTransitionClasses 속성 지정 (motion.ts 외부)
+
+```bash
+grep -rn "getTransitionClasses(\s*['\"]" apps/frontend/components apps/frontend/lib/design-tokens --include="*.tsx" --include="*.ts" \
+  | grep -v "motion.ts"
+```
+
+### 6c: 컴포넌트 레벨 하드코딩 트랜지션
+
+```bash
+grep -rn "transition-colors\|transition-opacity\|transition-shadow\|transition-transform" \
+  apps/frontend/components apps/frontend/app --include="*.tsx" \
+  | grep -v "apps/frontend/components/ui/\|TRANSITION_PRESETS\|// \|design-tokens"
+```
+
+```bash
+grep -rn "motion-safe:transition-" apps/frontend/components apps/frontend/app --include="*.tsx" \
+  | grep -v "apps/frontend/components/ui/\|TRANSITION_PRESETS\|// \|design-tokens"
+```
+
+```tsx
+// ❌ WRONG — 하드코딩
+className="transition-colors duration-200 hover:bg-muted"
+
+// ✅ CORRECT — TRANSITION_PRESETS 사용
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+className={cn(TRANSITION_PRESETS.fastBg, "hover:bg-muted")}
+```
+
+## Step 7: Architecture v3 Visual Feedback System
+
+### 7a: Deprecated 패턴
+
+```bash
+grep -rn "NOTIFICATION_BADGE_VARIANTS\[" apps/frontend/components --include="*.tsx" | grep -v "notification.ts\|// "
+```
+
+```tsx
+// ❌ WRONG - deprecated
+const variant = NOTIFICATION_BADGE_VARIANTS[getNotificationBadgeVariant(count)];
+
+// ✅ CORRECT - Architecture v3
+const urgency = getCountBasedUrgency(count);
+const classes = getUrgencyFeedbackClasses(urgency, false);
+```
+
+### 7b: Urgency 함수 사용
+
+3가지 Urgency 계산 함수:
+- `getCountBasedUrgency(count)` — 알림/승인 개수 기반
+- `getTimeBasedUrgency(daysUntilDue)` — 기한 기반
+- `getStatusBasedUrgency(status)` — 시스템 상태 기반
+
+### 7c: includeAnimation 파라미터
+
+권장: `includeAnimation=false`로 시각적 피로도 감소. pulse는 emergency만.
+
+## Step 7c(bis): Design Token 한국어 label 필드 잔존
+
+Grep 도구로 탐지: `pattern: "label: '"`, `path: apps/frontend/lib/design-tokens/components/`, `glob: "*.ts"` 후 한국어 문자열 포함 여부 수동 확인.
+
+면제: CSS 클래스 문자열인 `label` 필드 (예: `label: 'text-xs text-muted-foreground'`).
+
+## Step 8: 페이지 헤더 타이포그래피 SSOT
+
+### 8a: h1 하드코딩
+
+```bash
+grep -rn '<h1 className="text-' apps/frontend/app --include="*.tsx" \
+  | grep -v "not-found\|error\|components/ui/"
+```
+
+### 8b: 부제목 하드코딩
+
+```bash
+grep -rn 'className="text-muted-foreground' apps/frontend/app --include="*.tsx" \
+  | grep -v "not-found\|error\|components/ui/"
+```
+
+### 8c: 페이지 제목 아이콘 일관성
+
+```bash
+grep -B2 -A2 'className={.*HEADER_TOKENS.title}' apps/frontend/app --include="*.tsx" -rn \
+  | grep -E "Icon|Shield|Bell|Clipboard|Calendar|AlertTriangle" \
+  | grep -v "settings\|titleIcon"
+```
+
+### 8d: Layer 3 헤더 토큰 SSOT 참조
+
+```bash
+for f in apps/frontend/lib/design-tokens/components/{audit,non-conformance,calibration-plans,equipment,notification,reports,software,calibration-factors,document}.ts; do
+  if grep -q "HEADER_TOKENS" "$f"; then
+    if grep -q "\.\.\.PAGE_HEADER_TOKENS" "$f"; then
+      echo "OK: $f"
+    else
+      echo "MISSING SPREAD: $f (PAGE_HEADER_TOKENS spread 없음)"
+    fi
+  fi
+done
+```
+
+## Step 9: EASING_CSS_VARS 3자 동기화
+
+```bash
+GLOBALS_COUNT=$(grep -c "^\s*--ease-" apps/frontend/styles/globals.css)
+PRIMITIVES_COUNT=$(grep -c "cubic-bezier(" apps/frontend/lib/design-tokens/primitives.ts)
+MOTION_COUNT=$(grep -c "'var(--ease-" apps/frontend/lib/design-tokens/motion.ts)
+
+echo "globals.css: $GLOBALS_COUNT, primitives.ts: $PRIMITIVES_COUNT, motion.ts: $MOTION_COUNT"
+
+if [ "$GLOBALS_COUNT" -eq "$PRIMITIVES_COUNT" ] && [ "$PRIMITIVES_COUNT" -eq "$MOTION_COUNT" ]; then
+  echo "PASS: 3자 동기화 일치 ($GLOBALS_COUNT개)"
+else
+  echo "FAIL: 수 불일치 — drift 발생"
+fi
+```
+
+SSOT 체인: `primitives.ts` → `globals.css` → `motion.ts` (현재 7개).
