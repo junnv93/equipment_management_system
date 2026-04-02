@@ -500,9 +500,17 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
 
         <div className="grid grid-cols-2 gap-3 text-sm border-t pt-3">
           <div>
-            <span className="text-muted-foreground">{t('db.connections')}</span>
+            <span className="text-muted-foreground">{t('db.connectionsCreated')}</span>
             <p className="font-mono font-medium">
-              {db.metrics.connectionsCreated} created / {db.metrics.connectionErrors} errors
+              {db.metrics.connectionsCreated.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t('db.connectionErrors')}</span>
+            <p
+              className={`font-mono font-medium ${db.metrics.connectionErrors > 0 ? 'text-destructive' : ''}`}
+            >
+              {db.metrics.connectionErrors.toLocaleString()}
             </p>
           </div>
         </div>

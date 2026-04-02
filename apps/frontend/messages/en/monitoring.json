@@ -29,10 +29,7 @@
     "successRequests": "Success",
     "errorRequests": "Errors",
     "errorRate": "Error Rate",
-    "topEndpoints": "Top Endpoints",
-    "endpoint": "Endpoint",
-    "count": "Count",
-    "avgResponseTime": "Avg Response Time"
+    "topEndpoints": "Top Endpoints"
   },
   "cache": {
     "hits": "Cache Hits",
@@ -43,9 +40,8 @@
   },
   "db": {
     "connections": "Connections",
-    "active": "Active",
-    "idle": "Idle",
-    "max": "Max",
+    "connectionsCreated": "Connections Created",
+    "connectionErrors": "Connection Errors",
     "queriesExecuted": "Queries Executed",
     "queriesFailed": "Queries Failed",
     "avgQueryTime": "Avg Query Time"

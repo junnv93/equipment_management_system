@@ -29,10 +29,7 @@
     "successRequests": "성공",
     "errorRequests": "에러",
     "errorRate": "에러율",
-    "topEndpoints": "주요 엔드포인트",
-    "endpoint": "엔드포인트",
-    "count": "요청 수",
-    "avgResponseTime": "평균 응답 시간"
+    "topEndpoints": "주요 엔드포인트"
   },
   "cache": {
     "hits": "캐시 히트",
@@ -43,9 +40,8 @@
   },
   "db": {
     "connections": "커넥션",
-    "active": "활성",
-    "idle": "대기",
-    "max": "최대",
+    "connectionsCreated": "생성된 커넥션",
+    "connectionErrors": "커넥션 에러",
     "queriesExecuted": "실행된 쿼리",
     "queriesFailed": "실패한 쿼리",
     "avgQueryTime": "평균 쿼리 시간"
