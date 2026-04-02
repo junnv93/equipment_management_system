@@ -308,6 +308,7 @@ jobs:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          ENABLE_TEST_AUTH: 'true'
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Run DB Migrations & Seed
@@ -338,6 +339,7 @@ jobs:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          ENABLE_TEST_AUTH: 'true'
 
       - name: Wait for services
         run: |

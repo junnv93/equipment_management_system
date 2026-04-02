@@ -9,6 +9,12 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 const nextConfig = {
   reactStrictMode: true,
 
+  // CI E2E 테스트용 환경변수 — next build 시 서버 번들에 인라인
+  // Next.js는 비-NEXT_PUBLIC_* 변수를 서버 런타임에 전달하지 않을 수 있으므로 명시적 설정 필요
+  env: {
+    ENABLE_TEST_AUTH: process.env.ENABLE_TEST_AUTH || '',
+  },
+
   // ✅ Cache Components (Next.js 16 — experimental.ppr 후속)
   //
   // Suspense 경계가 있는 라우트에 Partial Prerendering 적용:
