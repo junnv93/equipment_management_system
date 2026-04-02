@@ -1318,7 +1318,8 @@
   },
   "editPage": {
     "title": "Edit Equipment",
-    "description": "Edit information for {name}"
+    "description": "Edit information for {name}",
+    "backToDetail": "Back to equipment detail"
   },
   "editToast": {
     "requestTitle": "Edit Request Submitted",
@@ -1357,15 +1358,20 @@
   "formSections": {
     "location": {
       "deleteConfirm": "Are you sure you want to delete this location history?",
+      "deleteAriaLabel": "Delete location history",
       "locationPlaceholder": "e.g., RF1 Room",
       "notesPlaceholder": "Reason for change or notes"
     },
     "maintenance": {
       "deleteConfirm": "Are you sure you want to delete this maintenance record?",
+      "deleteAriaLabel": "Delete maintenance record",
+      "addError": "Failed to add maintenance record",
+      "deleteError": "Failed to delete maintenance record",
       "contentPlaceholder": "e.g., Quarterly inspection - normal operation confirmed"
     },
     "incident": {
       "deleteConfirm": "Are you sure you want to delete this incident record?",
+      "deleteAriaLabel": "Delete incident record",
       "typePlaceholder": "Select type",
       "contentPlaceholder": "e.g., Power supply damage requiring board replacement",
       "types": {

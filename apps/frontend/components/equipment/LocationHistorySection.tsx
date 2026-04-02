@@ -225,8 +225,9 @@ export function LocationHistorySection({
                       size="icon"
                       onClick={() => handleDelete(item.id)}
                       disabled={disabled}
+                      aria-label={t('formSections.location.deleteAriaLabel')}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                     </Button>
                   </TableCell>
                 </TableRow>

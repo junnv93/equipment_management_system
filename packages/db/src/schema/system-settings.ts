@@ -11,7 +11,7 @@ export const systemSettings = pgTable(
     key: varchar('key', { length: 100 }).notNull(),
     value: jsonb('value').notNull(),
     site: varchar('site', { length: 20 }),
-    updatedBy: uuid('updated_by').references(() => users.id),
+    updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'restrict' }),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },

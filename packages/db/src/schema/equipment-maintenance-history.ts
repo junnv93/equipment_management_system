@@ -17,7 +17,7 @@ export const equipmentMaintenanceHistory = pgTable(
       .references(() => equipment.id, { onDelete: 'restrict' }),
     performedAt: timestamp('performed_at').notNull(),
     content: text('content').notNull(),
-    performedBy: uuid('performed_by').references(() => users.id), // 수행자 (users 테이블 참조)
+    performedBy: uuid('performed_by').references(() => users.id, { onDelete: 'restrict' }), // 수행자 (users 테이블 참조)
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => ({

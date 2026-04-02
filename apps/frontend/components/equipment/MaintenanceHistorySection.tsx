@@ -93,7 +93,7 @@ export function MaintenanceHistorySection({
       setIsDialogOpen(false);
     } catch (error) {
       toast({
-        title: t('formSections.maintenance.addError', { fallback: '정비 이력 추가 실패' }),
+        title: t('formSections.maintenance.addError'),
         description: error instanceof Error ? error.message : String(error),
         variant: 'destructive',
       });
@@ -108,7 +108,7 @@ export function MaintenanceHistorySection({
         await onDelete(historyId);
       } catch (error) {
         toast({
-          title: t('formSections.maintenance.deleteError', { fallback: '정비 이력 삭제 실패' }),
+          title: t('formSections.maintenance.deleteError'),
           description: error instanceof Error ? error.message : String(error),
           variant: 'destructive',
         });
@@ -223,8 +223,9 @@ export function MaintenanceHistorySection({
                       size="icon"
                       onClick={() => handleDelete(item.id)}
                       disabled={disabled}
+                      aria-label={t('formSections.maintenance.deleteAriaLabel')}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                     </Button>
                   </TableCell>
                 </TableRow>

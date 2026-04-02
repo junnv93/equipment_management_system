@@ -179,9 +179,9 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
     <div className={getPageContainerClasses('wide')}>
       {/* 헤더 */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" asChild>
+        <Button variant="outline" size="icon" asChild aria-label={t('editPage.backToDetail')}>
           <Link href={`/equipment/${equipmentId}`}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Link>
         </Button>
         <div>

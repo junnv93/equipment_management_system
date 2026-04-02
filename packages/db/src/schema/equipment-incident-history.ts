@@ -20,7 +20,7 @@ export const equipmentIncidentHistory = pgTable(
     occurredAt: timestamp('occurred_at').notNull(),
     incidentType: varchar('incident_type', { length: 50 }).notNull(), // damage, malfunction, change, repair, calibration_overdue
     content: text('content').notNull(),
-    reportedBy: uuid('reported_by').references(() => users.id), // 보고자 (users 테이블 참조)
+    reportedBy: uuid('reported_by').references(() => users.id, { onDelete: 'restrict' }), // 보고자 (users 테이블 참조)
     nonConformanceId: uuid('non_conformance_id').references(() => nonConformances.id, {
       onDelete: 'set null',
     }), // 연결된 부적합 (구조적 FK)

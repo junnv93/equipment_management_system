@@ -73,6 +73,7 @@
     "fullUpcoming": "Calibration expires in {days} days"
   },
   "planDetail": {
+    "backToList": "Back to calibration plans",
     "breadcrumbSuffix": "Calibration Plan",
     "error": {
       "title": "Error",

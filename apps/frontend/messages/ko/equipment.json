@@ -1318,7 +1318,8 @@
   },
   "editPage": {
     "title": "장비 수정",
-    "description": "{name}의 정보를 수정합니다"
+    "description": "{name}의 정보를 수정합니다",
+    "backToDetail": "장비 상세로 돌아가기"
   },
   "editToast": {
     "requestTitle": "수정 요청 완료",
@@ -1357,15 +1358,20 @@
   "formSections": {
     "location": {
       "deleteConfirm": "이 위치 변동 이력을 삭제하시겠습니까?",
+      "deleteAriaLabel": "위치 변동 이력 삭제",
       "locationPlaceholder": "예: RF1 Room",
       "notesPlaceholder": "변동 사유나 특이사항"
     },
     "maintenance": {
       "deleteConfirm": "이 유지보수 내역을 삭제하시겠습니까?",
+      "deleteAriaLabel": "유지보수 내역 삭제",
+      "addError": "정비 이력 추가 실패",
+      "deleteError": "정비 이력 삭제 실패",
       "contentPlaceholder": "예: 분기별 정기 점검 - 정상 동작 확인"
     },
     "incident": {
       "deleteConfirm": "이 손상/수리 내역을 삭제하시겠습니까?",
+      "deleteAriaLabel": "손상/수리 내역 삭제",
       "typePlaceholder": "유형을 선택하세요",
       "contentPlaceholder": "예: 전원부 손상으로 인한 전원 보드 교체 필요",
       "types": {
