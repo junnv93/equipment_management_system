@@ -73,13 +73,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build All
-        run: pnpm build
+      - name: Build Backend (shared packages → backend)
+        run: pnpm --filter backend... run build
         env:
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
-          NEXTAUTH_URL: http://localhost:3000
-          NEXT_PUBLIC_API_URL: http://localhost:3001
-          ENABLE_TEST_AUTH: 'true'
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Run DB Migrations & Seed
@@ -104,15 +100,12 @@ jobs:
           FRONTEND_URL: http://localhost:3000
           PORT: 3001
 
-      - name: Start Frontend
-        run: pnpm --filter frontend run start &
+      - name: Start Frontend (dev mode — Playwright 공식 권장)
+        run: pnpm --filter frontend run dev &
         env:
-          # Auth.js v5는 AUTH_SECRET을 런타임에 자동 감지 (빌드 인라인과 무관)
-          AUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: http://localhost:3001
-          ENABLE_TEST_AUTH: 'true'
 
       - name: Wait for services
         run: |
@@ -126,15 +119,6 @@ jobs:
             [ "$i" = "30" ] && echo "Frontend failed" && exit 1
             sleep 2
           done
-
-      - name: Debug Auth Providers
-        run: |
-          echo "=== NextAuth Providers (verbose) ==="
-          curl -v http://localhost:3000/api/auth/providers 2>&1 | tail -20
-          echo ""
-          echo "=== Backend test-login ==="
-          curl -sf "http://localhost:3001/api/auth/test-login?role=test_engineer" | head -c 200 || echo "FAILED"
-          echo ""
 
       - name: Run E2E Tests
         run: pnpm --filter frontend exec playwright test --project=${{ github.event.inputs.project || 'chromium' }}
