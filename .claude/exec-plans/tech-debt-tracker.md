@@ -7,11 +7,13 @@
 
 ## 미완료 항목
 
-- [ ] getPendingChecks 엔드포인트 Zod validation pipe 누락 — `checkouts.controller.ts:106-130` — 2026-04-02 — 출처: pending-checks
+(없음)
 
 ---
 
 ## 완료 항목
+
+- [x] getPendingChecks 엔드포인트 Zod validation pipe 누락 — 해결: 2026-04-02 — `pending-checks-query.dto.ts` 생성
 
 - [x] EventEmitter2 emit 페이로드 검증 누락 — 해결: 2026-04-02 — `fix/tech-debt-test-assertions`
 - [x] ReportExportService CSV 포맷 `buffer.length > 0` 단언 누락 — 해결: 2026-04-02 — `fix/tech-debt-test-assertions`

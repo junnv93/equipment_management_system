@@ -10,3 +10,4 @@ export * from './reject-return.dto';
 export * from './start-checkout.dto';
 export * from './create-condition-check.dto';
 export * from './checkout-response.dto';
+export * from './pending-checks-query.dto';

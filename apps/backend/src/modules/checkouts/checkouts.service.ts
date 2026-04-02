@@ -29,6 +29,7 @@ import {
   CACHE_TTL,
   CHECKOUT_DATA_SCOPE,
   DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
   getAllowedStatusesForPurpose,
   Permission,
 } from '@equipment-management/shared-constants';
@@ -725,7 +726,7 @@ export class CheckoutsService extends VersionedBaseService {
       );
     }
 
-    const numericPageSize = Number(pageSize);
+    const numericPageSize = Math.min(Number(pageSize), MAX_PAGE_SIZE);
     const numericOffset = (page - 1) * numericPageSize;
 
     const idsWithCount = await this.db

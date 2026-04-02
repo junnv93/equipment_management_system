@@ -126,10 +126,10 @@ export default function CheckoutsContent({
     );
   }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 확인 필요 건수
+  // 확인 필요 건수 — pageSize: 1로 최소 데이터만 fetch (count만 필요)
   const { data: pendingChecksData } = useQuery({
     queryKey: queryKeys.checkouts.pending(),
-    queryFn: () => checkoutApi.getPendingChecks(),
+    queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
     staleTime: CACHE_TIMES.SHORT,
   });
   const pendingChecksCount = pendingChecksData?.meta?.pagination?.total ?? 0;
