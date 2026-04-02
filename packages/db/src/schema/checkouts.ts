@@ -114,7 +114,7 @@ export const checkoutItems = pgTable(
       .references(() => checkouts.id, { onDelete: 'cascade' }),
     equipmentId: uuid('equipment_id')
       .notNull()
-      .references(() => equipment.id),
+      .references(() => equipment.id, { onDelete: 'restrict' }),
 
     // 반입 시 검사 정보
     conditionBefore: text('condition_before'), // 반출 전 상태

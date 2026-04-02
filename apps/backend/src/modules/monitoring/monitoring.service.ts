@@ -1,7 +1,7 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as os from 'os';
 import * as process from 'process';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { sql } from 'drizzle-orm';
 import { LoggerService } from '../../common/logger/logger.service';
@@ -12,7 +12,7 @@ import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // 추적할 엔드포인트 최대 수 (SSOT: shared-constants)
 const MAX_TRACKED_ENDPOINTS = MONITORING_THRESHOLDS.MAX_TRACKED_ENDPOINTS;
@@ -613,8 +613,9 @@ export class MonitoringService implements OnModuleDestroy {
    */
   private async updateDiskMetrics(): Promise<void> {
     try {
-      const { stdout } = await execAsync('df -B1 / 2>/dev/null | tail -1');
-      const parts = stdout.trim().split(/\s+/);
+      const { stdout } = await execFileAsync('df', ['-B1', '/']);
+      const lines = stdout.trim().split('\n');
+      const parts = lines[lines.length - 1].trim().split(/\s+/);
       if (parts.length >= 4) {
         const total = parseInt(parts[1], 10) || 0;
         const used = parseInt(parts[2], 10) || 0;
