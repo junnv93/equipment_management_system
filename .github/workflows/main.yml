@@ -12,9 +12,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+
 env:
   NODE_VERSION: '20'
-  PNPM_VERSION: '9'
 
 jobs:
   # ─────────────────────────────────────────────
@@ -45,8 +49,6 @@ jobs:
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v6
         with:
@@ -128,8 +130,6 @@ jobs:
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v6
         with:
@@ -187,8 +187,6 @@ jobs:
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v6
         with:
@@ -228,8 +226,6 @@ jobs:
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v6
         with:
@@ -281,8 +277,6 @@ jobs:
       - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v6
         with:
@@ -485,8 +479,10 @@ jobs:
             ${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-frontend:${{ github.sha }}
 
       - name: Deploy to staging server
-        if: ${{ secrets.STAGING_DEPLOY_HOST != '' }}
+        if: env.STAGING_DEPLOY_HOST != ''
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          STAGING_DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
         with:
           host: ${{ secrets.STAGING_DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -498,7 +494,9 @@ jobs:
             DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }} ./scripts/deploy/deploy.sh ${{ github.sha }}
 
       - name: Staging smoke test
-        if: ${{ secrets.STAGING_DEPLOY_HOST != '' }}
+        if: env.STAGING_DEPLOY_HOST != ''
+        env:
+          STAGING_DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
         run: |
           BASE="https://${{ secrets.STAGING_DEPLOY_HOST }}"
           for i in 1 2 3 4 5; do
@@ -554,8 +552,10 @@ jobs:
             DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }} ./scripts/deploy/deploy.sh ${{ github.sha }}
 
       - name: Create Grafana deploy annotation
-        if: success() && secrets.GRAFANA_URL != ''
+        if: success() && env.GRAFANA_URL != ''
         continue-on-error: true
+        env:
+          GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
         run: |
           curl -sf -X POST "${{ secrets.GRAFANA_URL }}/api/annotations" \
             -H "Authorization: Bearer ${{ secrets.GRAFANA_API_KEY }}" \
