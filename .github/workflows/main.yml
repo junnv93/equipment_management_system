@@ -300,8 +300,13 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: pnpm install --frozen-lockfile
 
-      - name: Build Shared Packages
-        run: pnpm build --filter "@equipment-management/*"
+      - name: Build All (shared packages → backend → frontend)
+        run: pnpm build
+        env:
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
+          NEXTAUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Run DB Migrations & Seed
         run: pnpm --filter backend exec drizzle-kit push --force && pnpm --filter backend run db:seed
@@ -323,10 +328,8 @@ jobs:
           PERMISSIONS_GUARD_MODE: DENY
           PORT: 3001
 
-      - name: Build & Start Frontend (background)
-        run: |
-          pnpm --filter frontend run build
-          pnpm --filter frontend run start &
+      - name: Start Frontend (background)
+        run: pnpm --filter frontend run start &
         env:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
