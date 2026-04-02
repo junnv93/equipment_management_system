@@ -8,7 +8,10 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, desc, sql, inArray, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import {
+  VersionedBaseService,
+  createVersionConflictException,
+} from '../../common/base/versioned-base.service';
 import {
   calibrationPlans,
   calibrationPlanItems,
@@ -110,12 +113,7 @@ export class CalibrationPlansService extends VersionedBaseService {
       // CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
       this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${uuid}`);
 
-      throw new ConflictException({
-        message: 'This record has been modified by another user. Please refresh the page.',
-        code: 'VERSION_CONFLICT',
-        currentVersion: existing.casVersion,
-        expectedVersion: expectedCasVersion,
-      });
+      throw createVersionConflictException(existing.casVersion as number, expectedCasVersion);
     }
 
     return updated;
@@ -717,12 +715,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     if (confirmDto.casVersion !== undefined) {
       if (plan.casVersion !== confirmDto.casVersion) {
         this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planUuid}`);
-        throw new ConflictException({
-          message: 'This record has been modified by another user. Please refresh the page.',
-          code: 'VERSION_CONFLICT',
-          currentVersion: plan.casVersion,
-          expectedVersion: confirmDto.casVersion,
-        });
+        throw createVersionConflictException(plan.casVersion as number, confirmDto.casVersion);
       }
     }
 

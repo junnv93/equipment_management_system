@@ -18,6 +18,7 @@ import {
 import { UserRoleValues, ApprovalStatusValues } from '@equipment-management/schemas';
 import { DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { createVersionConflictException } from '../../../common/base/versioned-base.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import type { AppDatabase } from '@equipment-management/db';
 import { EquipmentService } from '../equipment.service';
@@ -430,10 +431,7 @@ export class EquipmentApprovalService {
 
         if (!casUpdated) {
           this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
-          throw new ConflictException({
-            code: 'VERSION_CONFLICT',
-            message: 'The request has been modified by another user. Please refresh and try again.',
-          });
+          throw createVersionConflictException();
         }
 
         // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
@@ -579,10 +577,7 @@ export class EquipmentApprovalService {
 
       if (!updated) {
         this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.APPROVALS}*`);
-        throw new ConflictException({
-          code: 'VERSION_CONFLICT',
-          message: 'The request has been modified by another user. Please refresh and try again.',
-        });
+        throw createVersionConflictException();
       }
 
       // 📢 알림 이벤트 발행

@@ -9,7 +9,10 @@ import {
 } from '@nestjs/common';
 import { eq, and, desc, sql, SQL, or } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import {
+  VersionedBaseService,
+  createVersionConflictException,
+} from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { equipment } from '@equipment-management/db/schema/equipment';
@@ -803,10 +806,7 @@ export class EquipmentImportsService extends VersionedBaseService {
           .returning({ id: equipmentImports.id });
 
         if (importResult.length === 0) {
-          throw new ConflictException({
-            code: 'VERSION_CONFLICT',
-            message: 'Equipment import was modified concurrently.',
-          });
+          throw createVersionConflictException();
         }
 
         // 장비 비활성화 — tx 내에서 직접 UPDATE + CAS (equipmentService는 별도 커넥션이므로 사용 불가)
@@ -841,10 +841,7 @@ export class EquipmentImportsService extends VersionedBaseService {
             .returning({ id: equipment.id });
 
           if (eqResult.length === 0) {
-            throw new ConflictException({
-              code: 'VERSION_CONFLICT',
-              message: 'Equipment was modified concurrently.',
-            });
+            throw createVersionConflictException();
           }
         }
       });
