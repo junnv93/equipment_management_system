@@ -52,25 +52,23 @@ UL-QP-18 규칙:
 
 ## 🟠 HIGH — 기능 갭/성능
 
-### 모니터링 캐시 통계 엔드포인트 완성 (Mode 1)
+### ~~모니터링 캐시 통계 엔드포인트 완성 (Mode 1)~~ ✅ 완료 (2026-04-02)
 
 ```
-SimpleCacheService의 getCacheStats() 메서드가 이미 구현되어 있지만(line 247-256),
-모니터링 컨트롤러에 노출되는 엔드포인트가 없어. 연결해줘.
+결과: SimpleCacheService.getCacheStats()를 MonitoringService→Controller로 연결 완료.
 
-현재 구현:
-- SimpleCacheService.getCacheStats(): hits, misses, hitRate, size, maxSize 반환
-- MonitoringController: 6개 엔드포인트 존재하지만 cache-stats 없음
-- MonitoringService: 시스템 메트릭/HTTP 통계/DB 진단은 있지만 캐시 통계 없음
+변경 파일:
+- packages/shared-constants/src/api-endpoints.ts — CACHE_STATS 경로 등록 (SSOT)
+- apps/backend/src/modules/monitoring/monitoring.service.ts — SimpleCacheService 주입,
+  getCacheStats() 위임, getHealthStatus() cache.hitRate 실제 연결,
+  getDiagnostics() cache 필드 추가
+- apps/backend/src/modules/monitoring/monitoring.controller.ts — GET cache-stats 엔드포인트
+  + @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS),
+  Controller↔Service 반환 타입 isSimulated 필드 동기화
 
-추가 사항:
-1. MonitoringService에 getCacheStats() 메서드 추가 (SimpleCacheService 주입)
-2. MonitoringController에 GET /api/monitoring/cache-stats 엔드포인트 추가
-   - @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
-3. 기존 GET /api/monitoring/diagnostics 응답에 cache 필드 포함
-
-참고: business-rules.ts에 MAX_TRACKED_ENDPOINTS: 500 이미 정의됨 (line 32)
-검증: tsc --noEmit + 모니터링 테스트
+교훈: Controller 반환 타입과 Service 반환 타입이 구조적 타이핑으로 tsc 통과하더라도
+Swagger/OpenAPI 스키마에서 필드가 누락됨 — 반환 타입 수동 복사 시 isSimulated 같은
+플래그 필드 누락 주의. 장기적으로 ReturnType<> 활용 권장.
 ```
 
 ### DB 인덱스 누락 보완 (Mode 1)
@@ -407,7 +405,7 @@ Drizzle ORM relations() 정의가 누락되어 있어. 추가해줘.
 - 프론트엔드: /admin 페이지 존재하지만 모니터링 전용 대시보드 없음
 
 구현:
-1. 백엔드: GET /api/monitoring/cache-stats 엔드포인트 추가
+1. 백엔드: ✅ GET /api/monitoring/cache-stats 엔드포인트 완료 (2026-04-02)
 2. 프론트엔드: /admin/monitoring 페이지 생성
    - 시스템 리소스 (CPU, 메모리, 디스크) — 게이지 차트
    - HTTP 요청 통계 — 엔드포인트별 응답 시간, 에러율

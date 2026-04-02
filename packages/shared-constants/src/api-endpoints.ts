@@ -295,6 +295,7 @@ export const API_ENDPOINTS = {
     DIAGNOSTICS: '/api/monitoring/diagnostics',
     STATUS: '/api/monitoring/status',
     HTTP_STATS: '/api/monitoring/http-stats',
+    CACHE_STATS: '/api/monitoring/cache-stats',
   },
 
   // ============================================================================
