@@ -29,7 +29,7 @@ export const disposalRequests = pgTable(
     // 장비 정보 (cascade delete: 장비 삭제 시 폐기 요청도 함께 삭제)
     equipmentId: uuid('equipment_id')
       .notNull()
-      .references(() => equipment.id, { onDelete: 'cascade' }),
+      .references(() => equipment.id, { onDelete: 'restrict' }),
 
     // 폐기 사유
     // @see packages/schemas/src/enums.ts - DisposalReasonEnum

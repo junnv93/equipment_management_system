@@ -16,7 +16,7 @@ export const equipmentIncidentHistory = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
     equipmentId: uuid('equipment_id')
       .notNull()
-      .references(() => equipment.id, { onDelete: 'cascade' }),
+      .references(() => equipment.id, { onDelete: 'restrict' }),
     occurredAt: timestamp('occurred_at').notNull(),
     incidentType: varchar('incident_type', { length: 50 }).notNull(), // damage, malfunction, change, repair, calibration_overdue
     content: text('content').notNull(),

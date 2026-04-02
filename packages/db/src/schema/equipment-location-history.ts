@@ -14,7 +14,7 @@ export const equipmentLocationHistory = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
     equipmentId: uuid('equipment_id')
       .notNull()
-      .references(() => equipment.id, { onDelete: 'cascade' }),
+      .references(() => equipment.id, { onDelete: 'restrict' }),
     changedAt: timestamp('changed_at').notNull(),
     previousLocation: varchar('previous_location', { length: 100 }),
     newLocation: varchar('new_location', { length: 100 }).notNull(),
