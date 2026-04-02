@@ -1,0 +1,23 @@
+// Kombai Tech Stack Configuration
+// Each value must be a string or an array of strings.
+// Example: "Framework": "Vite" or "Project Type": ["React", "Vue"]
+{
+  "Project Type": "React",
+  "Framework": "NextJS 16",
+  "Build Tool": "Turbo",
+  "Component Library": "shadcn",
+  "CSS Implementation": "Vanilla CSS",
+  "Tailwind Version": "v3",
+  "TS/JS": "TS",
+  "Router": "App Router",
+  "State Management": "TanStack Query",
+  "API Client": "Axios",
+  "Testing Framework": "Jest",
+  "ORM/Client Library": "Drizzle",
+  "HTTP Server Framework": "Nest.js",
+  "Charting Library": "Recharts",
+  "Internationalization": "next-intl",
+  "Authentication": "NextAuth.js",
+  "Package Manager": "pnpm",
+  "Icon Set": "Lucide"
+}
