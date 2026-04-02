@@ -34,7 +34,7 @@ export const equipmentRequests = pgTable(
 
     // 요청 정보
     requestType: requestTypeEnum('request_type').notNull(),
-    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }), // 수정/삭제 시 기존 장비 ID
+    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'restrict' }), // 수정/삭제 시 기존 장비 ID
     requestedBy: uuid('requested_by')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),

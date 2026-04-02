@@ -120,7 +120,7 @@ export const calibrationPlanItems = pgTable(
       .references(() => calibrationPlans.id, { onDelete: 'cascade' }),
     equipmentId: uuid('equipment_id')
       .notNull()
-      .references(() => equipment.id, { onDelete: 'cascade' }),
+      .references(() => equipment.id, { onDelete: 'restrict' }),
 
     // 순번
     sequenceNumber: integer('sequence_number').notNull(),

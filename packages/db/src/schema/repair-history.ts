@@ -28,7 +28,7 @@ export const repairHistory = pgTable(
     // 장비 연결
     equipmentId: uuid('equipment_id')
       .notNull()
-      .references(() => equipment.id, { onDelete: 'cascade' }),
+      .references(() => equipment.id, { onDelete: 'restrict' }),
 
     // 수리 정보
     repairDate: timestamp('repair_date').notNull(), // 수리 일자
