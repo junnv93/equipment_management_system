@@ -12,6 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,7 +40,11 @@ import {
   SOFTWARE_APPROVAL_BADGE_TOKENS,
   SOFTWARE_HISTORY_PAGE_TOKENS as TOKENS,
 } from '@/lib/design-tokens';
-import { SoftwareApprovalStatusValues as SAVal } from '@equipment-management/schemas';
+import {
+  SoftwareApprovalStatusValues as SAVal,
+  SOFTWARE_TYPE_VALUES,
+} from '@equipment-management/schemas';
+import type { SoftwareType } from '@equipment-management/schemas';
 // ✅ 직접 import (barrel import 제거)
 import equipmentApi from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
@@ -55,6 +66,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newChange, setNewChange] = useState({
     softwareName: '',
+    softwareType: '' as SoftwareType | '',
     previousVersion: '',
     newVersion: '',
     verificationRecord: '',
@@ -78,6 +90,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
       return softwareApi.createSoftwareChange({
         equipmentId,
         softwareName: data.softwareName,
+        softwareType: data.softwareType || undefined,
         previousVersion: data.previousVersion || undefined,
         newVersion: data.newVersion,
         verificationRecord: data.verificationRecord,
@@ -91,6 +104,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
       setIsCreateDialogOpen(false);
       setNewChange({
         softwareName: '',
+        softwareType: '' as SoftwareType | '',
         previousVersion: '',
         newVersion: '',
         verificationRecord: '',
@@ -205,6 +219,26 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
                   onChange={(e) => setNewChange({ ...newChange, softwareName: e.target.value })}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="softwareType">{t('dialog.softwareTypeLabel')}</Label>
+                <Select
+                  value={newChange.softwareType}
+                  onValueChange={(value: string) =>
+                    setNewChange({ ...newChange, softwareType: value as SoftwareType })
+                  }
+                >
+                  <SelectTrigger id="softwareType">
+                    <SelectValue placeholder={t('dialog.softwareTypePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOFTWARE_TYPE_VALUES.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {tSoftware(`type.${type}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="previousVersion">{t('dialog.previousVersionLabel')}</Label>
@@ -247,6 +281,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
                   setIsCreateDialogOpen(false);
                   setNewChange({
                     softwareName: '',
+                    softwareType: '' as SoftwareType | '',
                     previousVersion: '',
                     newVersion: '',
                     verificationRecord: '',
