@@ -265,7 +265,7 @@ describe('CheckoutsService', () => {
       approverId: approverId,
       comment: '승인합니다.',
     };
-    const _approverTeamId = '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1'; // 수원 RF팀 UUID
+    const approverTeamId = '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1'; // 수원 RF팀 UUID
 
     const mockPendingCheckout = {
       id: checkoutId,
@@ -275,8 +275,56 @@ describe('CheckoutsService', () => {
       purpose: 'calibration',
     };
 
-    // TODO: 복잡한 Drizzle 체인 mock이 필요하여 E2E 테스트에서 검증
-    it.todo('should approve a pending checkout');
+    it('should approve a pending checkout', async () => {
+      const mockApprovedCheckout = {
+        ...mockPendingCheckout,
+        status: 'approved',
+        version: 2,
+        approverId: approverId,
+        approvedAt: new Date(),
+      };
+
+      const mockEquipment = {
+        id: '550e8400-e29b-41d4-a716-446655440001',
+        name: 'Test Equipment',
+        managementNumber: 'SUW-E0001',
+        site: 'suwon',
+        teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+      };
+
+      // findOne: getOrSet가 factory 건너뛰고 직접 반환 (내부 DB 체인 mock 불필요)
+      mockCacheService.getOrSet.mockResolvedValue({ ...mockPendingCheckout, version: 1 });
+      // select checkoutItems: await db.select().from().where() → thenable
+      // chain.then은 기본 [] 반환이므로 override
+      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([{ equipmentId: mockEquipment.id }])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      // equipmentService.findByIds
+      mockEquipmentService.findByIds.mockResolvedValue(
+        new Map([[mockEquipment.id, mockEquipment]])
+      );
+      // teamsService.findOne (approver team classification)
+      mockTeamsService.findOne.mockResolvedValue({
+        id: approverTeamId,
+        classification: 'general_rf',
+      });
+      // updateWithVersion (CAS) — returning
+      mockDrizzle.returning.mockResolvedValueOnce([mockApprovedCheckout]);
+      // getAffectedTeamIds — requester user 조회
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
+
+      const result = await service.approve(checkoutId, mockApproveDto, mockReq);
+
+      // 복원
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe('approved');
+    });
 
     it('should throw BadRequestException when checkout is not pending', async () => {
       const nonPendingCheckout = { ...mockPendingCheckout, status: 'approved' };
@@ -426,8 +474,50 @@ describe('CheckoutsService', () => {
       purpose: 'calibration',
     };
 
-    // TODO: 복잡한 Drizzle 체인 mock이 필요하여 E2E 테스트에서 검증
-    it.todo('should approve return of equipment');
+    it('should approve return of equipment', async () => {
+      const mockApprovedReturn = {
+        ...mockReturnedCheckout,
+        status: 'return_approved',
+        version: 2,
+        returnApprovedBy: approverId,
+        returnApprovedAt: new Date(),
+      };
+
+      // findOne: getOrSet가 직접 반환
+      mockCacheService.getOrSet.mockResolvedValue({ ...mockReturnedCheckout, version: 1 });
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
+      // getCheckoutItemsWithFirstEquipment: await db.select().from().leftJoin().where()
+      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([
+            {
+              equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+              equipmentName: 'Test Equipment',
+              managementNumber: 'SUW-E0001',
+            },
+          ])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      // transaction: updateWithVersion → returning
+      mockDrizzle.returning.mockResolvedValueOnce([mockApprovedReturn]);
+      // equipmentService.updateStatusBatch
+      mockEquipmentService.updateStatusBatch.mockResolvedValue([]);
+      // getAffectedTeamIds: requester user 조회
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
+
+      const result = await service.approveReturn(checkoutId, mockApproveReturnDto, mockReq);
+
+      // 복원
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe('return_approved');
+    });
 
     it('should throw BadRequestException when checkout is not in returned status', async () => {
       const notReturnedCheckout = { ...mockReturnedCheckout, status: 'checked_out' };

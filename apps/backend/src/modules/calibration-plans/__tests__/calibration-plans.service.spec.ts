@@ -206,6 +206,37 @@ describe('CalibrationPlansService', () => {
         } as never)
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('pending_review 상태 계획서를 검토하면 pending_approval로 전환한다', async () => {
+      const pendingReviewPlan = { ...MOCK_PLAN, status: 'pending_review' };
+      const reviewedPlan = { ...pendingReviewPlan, status: 'pending_approval', casVersion: 2 };
+
+      // findOneBasic: pending_review 상태 반환
+      const basicChain = createSelectChain([pendingReviewPlan]);
+      // updatePlanWithCAS: returning → [reviewed plan]
+      const updateChain = createUpdateChain(reviewedPlan);
+      mockDb.update.mockReturnValue(updateChain);
+      // findOne: plan + items 조회
+      const findOneRow = { plan: reviewedPlan, authorName: 'test-user', teamName: 'test-team' };
+      const planChain = createSelectChain([findOneRow]);
+      const itemsChain = createSelectChain([]);
+
+      mockDb.select
+        .mockReturnValueOnce(basicChain) // findOneBasic
+        .mockReturnValueOnce(planChain) // findOne: plan
+        .mockReturnValueOnce(itemsChain); // findOne: items
+
+      const result = await service.review('plan-uuid-1', {
+        casVersion: 1,
+        reviewedBy: 'reviewer-1',
+      } as never);
+
+      expect(result).toBeDefined();
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        expect.stringContaining('calibrationPlan'),
+        expect.objectContaining({ planId: 'plan-uuid-1' })
+      );
+    });
   });
 
   describe('approve()', () => {
@@ -219,6 +250,37 @@ describe('CalibrationPlansService', () => {
           approvedBy: 'approver-1',
         } as never)
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('pending_approval 상태 계획서를 최종 승인하면 approved로 전환한다', async () => {
+      const pendingApprovalPlan = { ...MOCK_PLAN, status: 'pending_approval' };
+      const approvedPlan = { ...pendingApprovalPlan, status: 'approved', casVersion: 2 };
+
+      // findOneBasic: pending_approval 상태 반환
+      const basicChain = createSelectChain([pendingApprovalPlan]);
+      // updatePlanWithCAS: returning → [approved plan]
+      const updateChain = createUpdateChain(approvedPlan);
+      mockDb.update.mockReturnValue(updateChain);
+      // findOne: plan + items 조회
+      const findOneRow = { plan: approvedPlan, authorName: 'test-user', teamName: 'test-team' };
+      const planChain = createSelectChain([findOneRow]);
+      const itemsChain = createSelectChain([]);
+
+      mockDb.select
+        .mockReturnValueOnce(basicChain) // findOneBasic
+        .mockReturnValueOnce(planChain) // findOne: plan
+        .mockReturnValueOnce(itemsChain); // findOne: items
+
+      const result = await service.approve('plan-uuid-1', {
+        casVersion: 1,
+        approvedBy: 'approver-1',
+      } as never);
+
+      expect(result).toBeDefined();
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        expect.stringContaining('calibrationPlan'),
+        expect.objectContaining({ planId: 'plan-uuid-1' })
+      );
     });
   });
 
