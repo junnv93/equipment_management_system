@@ -94,7 +94,7 @@ Present summary and ask for confirmation:
 
 1. Never delete completed items — archive them (lessons learned)
 2. Never include unverified findings — Step 3 is mandatory
-3. Never make domain decisions autonomously — ask user (e.g., "delete unused permission?" or "change FK policy?")
+3. Never make domain decisions autonomously — ask user
 4. Test file TODO/FIXME → classify as MEDIUM or lower
 
 ## Related Files
