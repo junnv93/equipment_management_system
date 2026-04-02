@@ -100,19 +100,15 @@ export enum Permission {
   // 알림 관련 권한
   // ============================================================================
   VIEW_NOTIFICATIONS = 'view:notifications',
-  CREATE_NOTIFICATION = 'create:notification',
   UPDATE_NOTIFICATION = 'update:notification',
   DELETE_NOTIFICATION = 'delete:notification',
   CREATE_SYSTEM_NOTIFICATION = 'create:system:notification',
-  MANAGE_NOTIFICATION_SETTINGS = 'manage:notification:settings',
 
   // ============================================================================
   // 통계 및 보고서 관련 권한
   // ============================================================================
   VIEW_STATISTICS = 'view:statistics',
   EXPORT_REPORTS = 'export:reports',
-  CREATE_DASHBOARD = 'create:dashboard',
-  MANAGE_REPORTS = 'manage:reports',
 
   // ============================================================================
   // 교정계획서 관련 권한 (3단계 승인 워크플로우)
@@ -138,7 +134,6 @@ export enum Permission {
   REQUEST_DISPOSAL = 'request:disposal',
   REVIEW_DISPOSAL = 'review:disposal',
   APPROVE_DISPOSAL = 'approve:disposal',
-  VIEW_DISPOSAL_REQUESTS = 'view:disposal:requests',
 
   // ============================================================================
   // 장비 반입 관련 권한 (렌탈 + 내부 공용 통합)
@@ -236,16 +231,12 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.MANAGE_ROLES]: '역할 관리',
 
   [Permission.VIEW_NOTIFICATIONS]: '알림 조회',
-  [Permission.CREATE_NOTIFICATION]: '알림 생성',
   [Permission.UPDATE_NOTIFICATION]: '알림 수정',
   [Permission.DELETE_NOTIFICATION]: '알림 삭제',
   [Permission.CREATE_SYSTEM_NOTIFICATION]: '시스템 알림 생성',
-  [Permission.MANAGE_NOTIFICATION_SETTINGS]: '알림 설정 관리',
 
   [Permission.VIEW_STATISTICS]: '통계 조회',
   [Permission.EXPORT_REPORTS]: '보고서 내보내기',
-  [Permission.CREATE_DASHBOARD]: '대시보드 생성',
-  [Permission.MANAGE_REPORTS]: '보고서 관리',
 
   [Permission.VIEW_CALIBRATION_PLANS]: '교정계획서 조회',
   [Permission.CREATE_CALIBRATION_PLAN]: '교정계획서 작성',
@@ -262,7 +253,6 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.REQUEST_DISPOSAL]: '폐기 요청',
   [Permission.REVIEW_DISPOSAL]: '폐기 검토',
   [Permission.APPROVE_DISPOSAL]: '폐기 승인',
-  [Permission.VIEW_DISPOSAL_REQUESTS]: '폐기 요청 조회',
 
   [Permission.VIEW_EQUIPMENT_IMPORTS]: '장비 반입 조회',
   [Permission.CREATE_EQUIPMENT_IMPORT]: '장비 반입 신청',

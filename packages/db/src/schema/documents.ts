@@ -32,7 +32,7 @@ export const documents = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 소유자 연결 (다형성 FK — 하나 이상 NOT NULL)
-    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }),
+    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'restrict' }),
     calibrationId: uuid('calibration_id').references(() => calibrations.id, {
       onDelete: 'cascade',
     }),

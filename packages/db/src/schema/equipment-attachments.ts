@@ -24,7 +24,7 @@ export const equipmentAttachments = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 연결 정보
-    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }),
+    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'restrict' }),
     requestId: uuid('request_id').references(() => equipmentRequests.id, {
       onDelete: 'cascade',
     }), // 요청과 연결

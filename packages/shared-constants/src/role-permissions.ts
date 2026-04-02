@@ -88,7 +88,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_TEAMS, // 팀 목록 조회
     // 알림
     Permission.VIEW_NOTIFICATIONS,
-    Permission.CREATE_NOTIFICATION,
     Permission.UPDATE_NOTIFICATION,
     Permission.DELETE_NOTIFICATION,
     // 부적합 관리
@@ -119,7 +118,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 폐기
     Permission.REQUEST_DISPOSAL,
     Permission.REVIEW_DISPOSAL, // 검토 권한 (같은 팀)
-    Permission.VIEW_DISPOSAL_REQUESTS,
     // 장비 반입 (렌탈 + 내부 공용)
     Permission.VIEW_EQUIPMENT_IMPORTS,
     Permission.CREATE_EQUIPMENT_IMPORT,
@@ -219,16 +217,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.MANAGE_ROLES,
     // 알림
     Permission.VIEW_NOTIFICATIONS,
-    Permission.CREATE_NOTIFICATION,
     Permission.UPDATE_NOTIFICATION,
     Permission.DELETE_NOTIFICATION,
     Permission.CREATE_SYSTEM_NOTIFICATION,
-    Permission.MANAGE_NOTIFICATION_SETTINGS,
     // 통계/보고서
     Permission.VIEW_STATISTICS,
     Permission.EXPORT_REPORTS,
-    Permission.CREATE_DASHBOARD,
-    Permission.MANAGE_REPORTS,
     // 교정계획서 (최종 승인 — 직무분리: CREATE/SUBMIT/DELETE 제외, 기술책임자만 작성·제출·삭제)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.UPDATE_CALIBRATION_PLAN,
@@ -242,7 +236,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.REQUEST_DISPOSAL,
     Permission.REVIEW_DISPOSAL,
     Permission.APPROVE_DISPOSAL,
-    Permission.VIEW_DISPOSAL_REQUESTS,
     // 장비 반입
     Permission.VIEW_EQUIPMENT_IMPORTS,
     Permission.CREATE_EQUIPMENT_IMPORT,
