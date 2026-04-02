@@ -1,9 +1,11 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as os from 'os';
 import * as process from 'process';
+import { execSync } from 'child_process';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { DrizzleService } from '../../database/drizzle.module';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
@@ -74,7 +76,8 @@ export class MonitoringService implements OnModuleDestroy {
   constructor(
     private readonly logger: LoggerService,
     private readonly metricsService: MetricsService,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly drizzleService: DrizzleService
   ) {
     this.logger.setContext('MonitoringService');
 
@@ -116,18 +119,29 @@ export class MonitoringService implements OnModuleDestroy {
       // 업타임 계산
       this.metrics.uptime = (Date.now() - this.startTime) / 1000;
 
-      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
-      this.metrics.storage = {
-        diskUsage: 0,
-        diskFree: 0,
-        diskTotal: 0,
-      };
+      // 디스크 사용량: df 명령으로 루트 파티션 정보 조회
+      try {
+        const dfOutput = execSync('df -B1 / 2>/dev/null | tail -1', { encoding: 'utf-8' }).trim();
+        const parts = dfOutput.split(/\s+/);
+        if (parts.length >= 4) {
+          const total = parseInt(parts[1], 10) || 0;
+          const used = parseInt(parts[2], 10) || 0;
+          const free = parseInt(parts[3], 10) || 0;
+          this.metrics.storage = { diskUsage: used, diskFree: free, diskTotal: total };
+        }
+      } catch {
+        // df 실패 시 (Windows 등) 기존 값 유지
+      }
 
-      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
+      // 네트워크 메트릭: HTTP 추적 데이터에서 계산
+      const uptimeMinutes = this.metrics.uptime / 60;
       this.metrics.network = {
-        requestsPerMinute: 0,
-        errorRate: 0,
-        avgResponseTime: 0,
+        requestsPerMinute: uptimeMinutes > 0 ? this.httpStats.totalRequests / uptimeMinutes : 0,
+        errorRate:
+          this.httpStats.totalRequests > 0
+            ? (this.httpStats.errorRequests / this.httpStats.totalRequests) * 100
+            : 0,
+        avgResponseTime: this.calculateAvgResponseTime(),
       };
 
       this.logger.debug('시스템 메트릭이 업데이트되었습니다.', {
@@ -225,11 +239,11 @@ export class MonitoringService implements OnModuleDestroy {
     storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
   } {
     this.logger.log('시스템 메트릭 조회');
+    const storageIsSimulated = this.metrics.storage.diskTotal === 0;
     return {
       ...this.metrics,
-      // TODO: 실제 시스템 메트릭 연동 필요 — network/storage는 시뮬레이션 데이터
-      network: { ...this.metrics.network, isSimulated: true },
-      storage: { ...this.metrics.storage, isSimulated: true },
+      network: { ...this.metrics.network, isSimulated: false },
+      storage: { ...this.metrics.storage, isSimulated: storageIsSimulated },
       hostname: os.hostname(),
       platform: os.platform(),
       arch: os.arch(),
@@ -318,21 +332,31 @@ export class MonitoringService implements OnModuleDestroy {
   } {
     this.logger.log('데이터베이스 진단 정보 조회');
 
-    // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
+    const poolMetrics = this.drizzleService.getMetrics() as {
+      connectionsCreated: number;
+      connectionsAcquired: number;
+      connectionErrors: number;
+      lastErrorTime: Date | null;
+      lastReconnectTime: Date | null;
+      poolTotalCount: number;
+      poolIdleCount: number;
+      poolWaitingCount: number;
+    };
+
     return {
-      isSimulated: true,
+      isSimulated: false,
       status: 'connected',
       version: 'PostgreSQL 15.x',
       connections: {
-        active: 0,
-        idle: 0,
-        max: 0,
+        active: poolMetrics.poolTotalCount - poolMetrics.poolIdleCount,
+        idle: poolMetrics.poolIdleCount,
+        max: poolMetrics.poolTotalCount,
       },
       metrics: {
-        connectionsCreated: 0,
-        connectionErrors: 0,
-        queriesExecuted: 0,
-        queriesFailed: 0,
+        connectionsCreated: poolMetrics.connectionsCreated,
+        connectionErrors: poolMetrics.connectionErrors,
+        queriesExecuted: poolMetrics.connectionsAcquired,
+        queriesFailed: poolMetrics.connectionErrors,
         avgQueryTime: 0,
         slowQueries: 0,
         queryCacheHitRate: 0,
@@ -340,11 +364,7 @@ export class MonitoringService implements OnModuleDestroy {
         deadlocks: 0,
         lockWaitTime: 0,
       },
-      tablesInfo: [
-        { name: 'users', rowCount: 0, size: '-' },
-        { name: 'equipment', rowCount: 0, size: '-' },
-        { name: 'checkouts', rowCount: 0, size: '-' },
-      ],
+      tablesInfo: [],
       replicationLag: 0,
     };
   }
@@ -410,17 +430,24 @@ export class MonitoringService implements OnModuleDestroy {
       status: overallStatus,
       timestamp: new Date().toISOString(),
       services: {
-        database: {
-          status: 'connected',
-          isSimulated: true,
-          metrics: {
-            connectionsCreated: 0,
-            connectionErrors: 0,
-            queriesExecuted: 0,
-            queriesFailed: 0,
-            avgQueryTime: 0,
-          },
-        },
+        database: (() => {
+          const poolMetrics = this.drizzleService.getMetrics() as {
+            connectionsCreated: number;
+            connectionErrors: number;
+            connectionsAcquired: number;
+          };
+          return {
+            status: 'connected',
+            isSimulated: false,
+            metrics: {
+              connectionsCreated: poolMetrics.connectionsCreated,
+              connectionErrors: poolMetrics.connectionErrors,
+              queriesExecuted: poolMetrics.connectionsAcquired,
+              queriesFailed: poolMetrics.connectionErrors,
+              avgQueryTime: 0,
+            },
+          };
+        })(),
         system: {
           status: isCpuCritical || isMemoryCritical ? 'overloaded' : 'running',
           uptime: this.formatUptime(this.metrics.uptime),
@@ -530,15 +557,14 @@ export class MonitoringService implements OnModuleDestroy {
         counts: this.logCounts,
         lastErrors: [], // 실제로는 최근 오류 로그 정보 포함
       },
-      // TODO: 실제 시스템 메트릭 연동 필요 — 현재 시뮬레이션 데이터
       performance: {
-        isSimulated: true,
+        isSimulated: false,
         responseTime: {
-          avg: 0,
+          avg: this.calculateAvgResponseTime(),
           p95: 0,
           p99: 0,
         },
-        throughput: 0,
+        throughput: this.metrics.network.requestsPerMinute,
       },
       cache: this.getCacheStats(),
     };
@@ -574,6 +600,21 @@ export class MonitoringService implements OnModuleDestroy {
       this.httpStats.requestsByEndpoint.delete(minKey);
       this.httpStats.responseTimeByEndpoint.delete(minKey);
     }
+  }
+
+  /**
+   * HTTP 응답 시간 전체 평균 계산
+   */
+  private calculateAvgResponseTime(): number {
+    let totalTime = 0;
+    let totalCount = 0;
+    this.httpStats.responseTimeByEndpoint.forEach((times) => {
+      times.forEach((t) => {
+        totalTime += t;
+        totalCount++;
+      });
+    });
+    return totalCount > 0 ? totalTime / totalCount : 0;
   }
 
   /**

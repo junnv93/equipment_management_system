@@ -19,6 +19,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { monitoringApi } from '@/lib/api/monitoring-api';
 import type {
@@ -119,10 +120,26 @@ function getStatusTranslationKey(status: string): string {
 // Sub-components
 // ============================================================================
 
-function GaugeBar({ value, label, icon }: { value: number; label: string; icon: React.ReactNode }) {
+function GaugeBar({
+  value,
+  label,
+  icon,
+  criticalThreshold = MONITORING_THRESHOLDS.CPU_PERCENT,
+  warningThreshold = MONITORING_THRESHOLDS.RESOURCE_WARNING_PERCENT,
+}: {
+  value: number;
+  label: string;
+  icon: React.ReactNode;
+  criticalThreshold?: number;
+  warningThreshold?: number;
+}) {
   const percentage = Math.min(100, Math.max(0, value));
   const color =
-    percentage >= 90 ? 'bg-destructive' : percentage >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
+    percentage >= criticalThreshold
+      ? 'bg-destructive'
+      : percentage >= warningThreshold
+        ? 'bg-amber-500'
+        : 'bg-emerald-500';
 
   return (
     <div className="space-y-2">
@@ -213,6 +230,7 @@ function SystemResourcesSection({ data }: { data: MonitoringMetrics }) {
           value={data.memory.percentage}
           label={`${t('metrics.memory')} (${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)})`}
           icon={<MemoryStick className="h-3.5 w-3.5" />}
+          criticalThreshold={MONITORING_THRESHOLDS.MEMORY_PERCENT}
         />
         <GaugeBar
           value={
@@ -337,7 +355,7 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
           <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">{t('http.errorRate')}</p>
             <p
-              className={`text-xl font-bold font-mono ${data.errorRate > 5 ? 'text-destructive' : data.errorRate > 1 ? 'text-amber-500' : 'text-emerald-500'}`}
+              className={`text-xl font-bold font-mono ${data.errorRate > MONITORING_THRESHOLDS.ERROR_RATE_PERCENT ? 'text-destructive' : data.errorRate > MONITORING_THRESHOLDS.ERROR_RATE_WARNING_PERCENT ? 'text-amber-500' : 'text-emerald-500'}`}
             >
               {data.errorRate.toFixed(2)}%
             </p>

@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { getServerAuthSession } from '@/lib/auth/server-session';
-import { UserRoleValues } from '@equipment-management/schemas';
+import { hasPermission, Permission } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 import MonitoringDashboardClient from '@/components/monitoring/MonitoringDashboardClient';
 
 export default async function MonitoringPage() {
@@ -12,7 +13,7 @@ export default async function MonitoringPage() {
     redirect('/login');
   }
 
-  if (session.user.role !== UserRoleValues.SYSTEM_ADMIN) {
+  if (!hasPermission(session.user.role as UserRole, Permission.MANAGE_SYSTEM_SETTINGS)) {
     redirect('/dashboard');
   }
 
