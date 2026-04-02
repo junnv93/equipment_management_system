@@ -173,6 +173,7 @@ export const equipment = pgTable(
       classificationCodeIdx: index('equipment_classification_code_idx').on(
         table.classificationCode
       ),
+      approvalStatusIdx: index('equipment_approval_status_idx').on(table.approvalStatus),
     };
   }
 );

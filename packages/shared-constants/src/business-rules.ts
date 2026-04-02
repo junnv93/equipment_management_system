@@ -22,12 +22,16 @@ export const REPORT_CONSTANTS = {
  * 모니터링 임계값
  */
 export const MONITORING_THRESHOLDS = {
-  /** CPU 사용률 경고 임계값 (%) */
+  /** CPU 사용률 위험 임계값 (%) — 이 이상이면 critical */
   CPU_PERCENT: 90,
-  /** 메모리 사용률 경고 임계값 (%) */
+  /** 메모리 사용률 위험 임계값 (%) — 이 이상이면 critical */
   MEMORY_PERCENT: 85,
-  /** 에러율 경고 임계값 (%) */
+  /** 리소스 사용률 경고 임계값 (%) — 이 이상이면 warning (CPU/Memory/Disk 공통) */
+  RESOURCE_WARNING_PERCENT: 70,
+  /** 에러율 위험 임계값 (%) — 이 이상이면 critical */
   ERROR_RATE_PERCENT: 5,
+  /** 에러율 경고 임계값 (%) — 이 이상이면 warning */
+  ERROR_RATE_WARNING_PERCENT: 1,
   /** 추적할 엔드포인트 최대 수 (메모리 누수 방지) */
   MAX_TRACKED_ENDPOINTS: 500,
 } as const;

@@ -20,6 +20,7 @@ import {
   FileSearch,
   AlertTriangle,
   Upload,
+  Activity,
 } from 'lucide-react';
 import { FRONTEND_ROUTES, Permission, hasPermission } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
@@ -140,6 +141,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     sectionKey: 'sections.system',
     items: [
+      {
+        icon: Activity,
+        href: FRONTEND_ROUTES.ADMIN.MONITORING,
+        labelKey: 'adminMonitoring',
+        requiredPermission: Permission.MANAGE_SYSTEM_SETTINGS,
+      },
       {
         icon: Settings,
         href: FRONTEND_ROUTES.SETTINGS.INDEX,

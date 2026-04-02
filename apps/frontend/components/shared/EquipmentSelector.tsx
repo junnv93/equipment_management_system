@@ -7,6 +7,7 @@
  */
 
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ export function EquipmentSelector({
   additionalFilters = {},
 }: EquipmentSelectorProps) {
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const tEquipment = useTranslations('equipment.selector');
 
   // 장비 목록 조회
   const { data: equipmentData, isLoading: equipmentLoading } = useEquipmentList({
@@ -54,14 +56,14 @@ export function EquipmentSelector({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>장비 선택</CardTitle>
-        <CardDescription>대여할 장비를 검색하고 선택하세요.</CardDescription>
+        <CardTitle>{tEquipment('title')}</CardTitle>
+        <CardDescription>{tEquipment('description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="relative mb-4">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="장비명, 관리번호 검색..."
+            placeholder={tEquipment('searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
@@ -70,9 +72,9 @@ export function EquipmentSelector({
 
         <div className="space-y-2" style={{ maxHeight, overflowY: 'auto' }}>
           {equipmentLoading ? (
-            <div className="text-center py-8">로딩 중...</div>
+            <div className="text-center py-8">{tEquipment('loading')}</div>
           ) : equipmentData?.data?.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">검색 결과가 없습니다.</div>
+            <div className="text-center py-8 text-muted-foreground">{tEquipment('noResults')}</div>
           ) : (
             equipmentData?.data?.map((equipment: Equipment) => (
               <div
@@ -86,10 +88,12 @@ export function EquipmentSelector({
               >
                 <div className="font-medium">{equipment.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  관리번호: {equipment.managementNumber}
+                  {tEquipment('managementNumber', { number: equipment.managementNumber })}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  위치: {equipment.location || '정보 없음'}
+                  {tEquipment('location', {
+                    location: equipment.location || tEquipment('noLocationInfo'),
+                  })}
                 </div>
               </div>
             ))

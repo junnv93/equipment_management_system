@@ -230,6 +230,13 @@
     "repair": "Repair",
     "calibration_overdue": "Calibration Overdue"
   },
+  "stepStatus": {
+    "completed": "Completed",
+    "current": "Current",
+    "error": "Error",
+    "incomplete": "Incomplete",
+    "stepNav": "Form progress steps"
+  },
   "datePicker": {
     "selectDate": "Select date",
     "selectRange": "Select date range"

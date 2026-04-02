@@ -23,13 +23,14 @@ import {
 } from '@/lib/design-tokens';
 
 function LoginProviders() {
+  const tLogin = useTranslations('auth.login');
   const searchParams = useSearchParams();
   const callbackUrl = getSafeCallbackUrl(searchParams?.get('callbackUrl'), '/');
   const { hasAzureAD, hasCredentials, isLoading } = useAuthProviders();
 
   if (isLoading) {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label="인증 제공자 로딩 중">
+      <div className="space-y-3" aria-busy="true" aria-label={tLogin('ssoLoading')}>
         <Skeleton className="h-11 w-full rounded-lg" />
         <Skeleton className="h-11 w-full rounded-lg" />
       </div>
@@ -121,6 +122,8 @@ function UrlErrorBanner() {
 export function LoginPageContent({ showDevAccounts = false }: LoginPageContentProps) {
   const searchParams = useSearchParams();
   const callbackUrl = getSafeCallbackUrl(searchParams?.get('callbackUrl'), '/');
+  const tBranding = useTranslations('auth.branding');
+  const tLogin = useTranslations('auth.login');
 
   return (
     <div className="flex min-h-screen">
@@ -185,7 +188,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
             className="font-sans font-bold text-white leading-tight mb-4"
             style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', letterSpacing: '-0.02em' }}
           >
-            장비 관리 시스템
+            {tBranding('systemTitle')}
           </h1>
 
           <p
@@ -197,12 +200,8 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
 
           {/* 기능 리스트 */}
           <div className="mt-10 space-y-3">
-            {[
-              '장비 등록 · 교정 · 반출 관리',
-              '역할 기반 승인 워크플로우',
-              'ISO/IEC 17025 준수',
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3">
+            {(['equipmentManagement', 'approvalWorkflow', 'isoCompliance'] as const).map((key) => (
+              <div key={key} className="flex items-center gap-3">
                 <div
                   className="w-1 h-1 rounded-full flex-shrink-0"
                   style={{ backgroundColor: AUTH_SPLIT_TOKENS.left.accent }}
@@ -211,7 +210,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
                   className="font-sans text-sm"
                   style={{ color: AUTH_SPLIT_TOKENS.left.text.subtle }}
                 >
-                  {item}
+                  {tBranding(`highlights.${key}`)}
                 </span>
               </div>
             ))}
@@ -243,7 +242,7 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
       <main
         id="login-form"
         className="flex flex-1 flex-col bg-brand-bg-base relative"
-        aria-label="로그인"
+        aria-label={tLogin('formAriaLabel')}
       >
         <div className="flex flex-1 flex-col items-center justify-center px-8 py-12">
           {/* 모바일 전용 로고 */}

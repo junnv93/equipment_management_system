@@ -239,6 +239,15 @@ export const QUERY_CONFIG = {
 
   /** 승인 카운트 - SSE_BACKED (SSE approval-changed 이벤트로 실시간 무효화, 10분 폴백) */
   APPROVAL_COUNTS: REFETCH_STRATEGIES.SSE_BACKED,
+
+  /** 모니터링 - PERIODIC (5분 폴링, 시스템 상태 주기적 갱신) */
+  MONITORING: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchInterval: REFETCH_INTERVALS.PERIODIC,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
 } as const;
 
 /**
@@ -470,6 +479,13 @@ export const queryKeys = {
     preferences: () => [...queryKeys.settings.all, 'preferences'] as const,
     calibration: (site?: Site) => [...queryKeys.settings.all, 'calibration', site] as const,
     system: () => [...queryKeys.settings.all, 'system'] as const,
+  },
+  monitoring: {
+    all: ['monitoring'] as const,
+    metrics: () => [...queryKeys.monitoring.all, 'metrics'] as const,
+    status: () => [...queryKeys.monitoring.all, 'status'] as const,
+    httpStats: () => [...queryKeys.monitoring.all, 'http-stats'] as const,
+    cacheStats: () => [...queryKeys.monitoring.all, 'cache-stats'] as const,
   },
   breadcrumbs: {
     all: ['breadcrumb'] as const,

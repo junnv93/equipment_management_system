@@ -1,0 +1,64 @@
+{
+  "title": "System Monitoring",
+  "description": "Monitor system resources, service health, HTTP statistics, and cache performance in real-time.",
+  "sections": {
+    "systemResources": "System Resources",
+    "serviceHealth": "Service Health",
+    "httpStats": "HTTP Request Statistics",
+    "cachePerformance": "Cache Performance",
+    "dbStatus": "Database Status"
+  },
+  "metrics": {
+    "cpu": "CPU Usage",
+    "memory": "Memory Usage",
+    "disk": "Disk Usage",
+    "uptime": "Uptime",
+    "hostname": "Hostname",
+    "platform": "Platform",
+    "nodeVersion": "Node.js Version"
+  },
+  "services": {
+    "database": "Database",
+    "system": "System",
+    "api": "API",
+    "logging": "Logging",
+    "cache": "Cache"
+  },
+  "http": {
+    "totalRequests": "Total Requests",
+    "successRequests": "Success",
+    "errorRequests": "Errors",
+    "errorRate": "Error Rate",
+    "topEndpoints": "Top Endpoints"
+  },
+  "cache": {
+    "hits": "Cache Hits",
+    "misses": "Cache Misses",
+    "hitRate": "Hit Rate",
+    "size": "Current Size",
+    "maxSize": "Max Capacity"
+  },
+  "db": {
+    "connections": "Connections",
+    "connectionsCreated": "Connections Created",
+    "connectionErrors": "Connection Errors",
+    "queriesExecuted": "Queries Executed",
+    "queriesFailed": "Queries Failed",
+    "avgQueryTime": "Avg Query Time"
+  },
+  "status": {
+    "up": "Up",
+    "down": "Down",
+    "degraded": "Degraded",
+    "ok": "OK",
+    "warning": "Warning",
+    "critical": "Critical"
+  },
+  "simulated": "Simulated Data",
+  "lastChecked": "Last Checked",
+  "autoRefresh": "Auto-refresh every 5 minutes",
+  "error": {
+    "fetchFailed": "Failed to load data",
+    "retry": "Retry"
+  }
+}

@@ -90,6 +90,7 @@ export const FRONTEND_ROUTES = {
     USERS: '/admin/users',
     SETTINGS: '/admin/settings',
     DATA_MIGRATION: '/admin/data-migration',
+    MONITORING: '/admin/monitoring',
   },
 
   // ============================================================================
