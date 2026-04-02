@@ -9,13 +9,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 
 ## 목적
 
-프로젝트에 등록된 모든 `verify-*` 스킬을 순차적으로 실행하여 통합 검증을 수행합니다:
-
-- 각 스킬의 Workflow에 정의된 검사를 실행
-- 각 스킬의 Exceptions를 참조하여 false positive 방지
-- 발견된 이슈에 대해 수정 방법을 제시
-- 사용자 승인 후 수정 적용 및 재검증
-
+프로젝트에 등록된 모든 `verify-*` 스킬을 순차적으로 실행하여 통합 검증을 수행합니다.
 이 스킬은 **순수 실행기**입니다. verify-* 스킬의 생성/수정/삭제는 `/manage-skills`가 담당합니다.
 
 ## 실행 시점
@@ -23,291 +17,74 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 - 새로운 기능을 구현한 후
 - Pull Request를 생성하기 전
 - 코드 리뷰 중
-- 코드베이스 규칙 준수 여부를 감사할 때
 
 ## 실행 대상 스킬
 
-이 스킬이 순차 실행하는 검증 스킬 목록입니다. `/manage-skills`가 스킬을 생성/삭제할 때 이 목록을 자동 업데이트합니다.
-
-| #  | 스킬                    | 영역     | 설명                                                                                     |
-|----|-------------------------|----------|------------------------------------------------------------------------------------------|
-| 1  | `verify-cas`            | both     | CAS(Optimistic Locking) 패턴 — version 필드, VersionedBaseService, 캐시 무효화           |
-| 2  | `verify-auth`           | backend  | 서버 사이드 인증/인가 — req.user.userId, @RequirePermissions, @AuditLog                  |
-| 3  | `verify-zod`            | backend  | Zod 검증 패턴 — ZodValidationPipe, class-validator 금지, Query targets                   |
-| 4  | `verify-ssot`           | both     | SSOT 임포트 소스 — 타입/enum 패키지 임포트, 로컬 재정의 금지                             |
-| 5  | `verify-hardcoding`     | both     | SSOT 하드코딩 탐지 — API 경로, queryKeys, 환경변수, 캐시 키, 토큰 TTL, ErrorCode 매핑    |
-| 6  | `verify-frontend-state` | frontend | 프론트엔드 상태 관리 + 성능 — TanStack Query, onSuccess setQueryData 금지, 동적 import    |
-| 7  | `verify-nextjs`         | frontend | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                            |
-| 8  | `verify-filters`        | frontend | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱         |
-| 9  | `verify-design-tokens`  | frontend | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙  |
-| 10 | `verify-security`       | both     | 보안 설정 — Helmet CSP 프로덕션 강화, Next.js Security Headers, @Public 남용 검사        |
-| 11 | `verify-i18n`           | frontend | i18n 번역 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조, 동적 키 커버리지          |
-| 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지, COUNT(DISTINCT) fan-out, RBAC INNER JOIN |
-| 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지 — auth fixture, locator, SSOT + CAS 충돌 복구, 캐시 일관성, 사이트 접근 제어 범위 |
+| #  | 스킬                    | 영역     | 설명                                                    |
+|----|-------------------------|----------|---------------------------------------------------------|
+| 1  | `verify-cas`            | both     | CAS 패턴 — version, VersionedBaseService, 캐시 무효화   |
+| 2  | `verify-auth`           | backend  | 인증/인가 — req.user.userId, @RequirePermissions         |
+| 3  | `verify-zod`            | backend  | Zod 검증 — ZodValidationPipe, Query targets              |
+| 4  | `verify-ssot`           | both     | SSOT 임포트 소스 — 로컬 재정의 금지                      |
+| 5  | `verify-hardcoding`     | both     | 하드코딩 탐지 — API 경로, queryKeys, 환경변수             |
+| 6  | `verify-frontend-state` | frontend | 상태 관리 — TanStack Query, 동적 import                   |
+| 7  | `verify-nextjs`         | frontend | Next.js 16 패턴 — await params, useActionState            |
+| 8  | `verify-filters`        | frontend | URL-driven 필터 SSOT                                     |
+| 9  | `verify-design-tokens`  | frontend | Design Token 3-Layer                                     |
+| 10 | `verify-security`       | both     | 보안 — Helmet CSP, Security Headers                       |
+| 11 | `verify-i18n`           | frontend | i18n — en/ko 키 쌍, 동적 키 커버리지                      |
+| 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 이스케이프, N+1                          |
+| 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지                       |
 
 ## 워크플로우
 
 ### Step 1: 실행 대상 결정
 
-위의 **실행 대상 스킬** 섹션에 나열된 스킬을 확인합니다.
+인수가 제공되면 해당 스킬만, 아니면 `git diff` + `git status`로 변경 영역에 맞는 스킬만 필터링.
 
-**실행 범위 결정 (우선순위 순):**
-
-1. **인수가 제공된 경우**: 해당 스킬만 실행 (예: `/verify-implementation verify-cas verify-auth`)
-2. **인수가 없는 경우**: `git diff --name-only HEAD` + `git status --short`로 변경 파일을 확인하고, 변경 영역에 맞는 스킬만 필터링
-
-**영역 기반 자동 필터링:**
-
-```
-변경 파일 경로 → 영역 매핑:
-  apps/backend/**     → backend, both
-  apps/frontend/**    → frontend, both (tests/e2e/** 제외)
-  apps/frontend/tests/e2e/** → e2e, both
-  packages/**         → backend, frontend, both (전체)
-```
-
-변경 파일이 없으면 전체 스킬을 실행합니다.
-
-**등록된 스킬이 0개인 경우:**
-
-```markdown
-## 구현 검증
-
-검증 스킬이 없습니다. `/manage-skills`를 실행하여 프로젝트에 맞는 검증 스킬을 생성하세요.
-```
-
-이 경우 워크플로우를 종료합니다.
-
-**등록된 스킬이 1개 이상인 경우:**
-
-실행 대상 스킬 테이블의 내용을 표시합니다:
-
-```markdown
-## 구현 검증
-
-변경 영역: backend, frontend (N개 파일)
-
-| #  | 스킬           | 영역     | 상태           |
-|----|----------------|----------|----------------|
-| 1  | verify-cas     | both     | 실행 대상      |
-| 2  | verify-auth    | backend  | 실행 대상      |
-| 6  | verify-nextjs  | frontend | 스킵 (변경 없음) |
-| 13 | verify-e2e     | e2e      | 스킵 (변경 없음) |
-
-실행 대상: X개 / 스킵: Y개
-검증 시작...
-```
+상세: [references/implementation-workflow.md](references/implementation-workflow.md) Step 1
 
 ### Step 2: 검증 실행
 
-Step 1에서 결정된 실행 대상 스킬을 실행합니다.
+1~3개: 순차 실행. 4개 이상: 영역별 그룹 Agent 병렬 실행 (최대 3개 동시).
 
-#### 실행 전략
-
-스킬 수에 따라 실행 방식을 결정합니다:
-
-- **1~3개**: 순차 실행 (직접 검사)
-- **4개 이상**: 영역별 그룹으로 나누어 **Agent 병렬 실행** (최대 3개 동시)
-
-**병렬 실행 그룹:**
-
-| 그룹 | 영역 | 스킬 |
-|---|---|---|
-| A | backend + both | verify-cas, verify-auth, verify-zod, verify-ssot, verify-hardcoding, verify-security, verify-sql-safety |
-| B | frontend + both | verify-cas, verify-ssot, verify-hardcoding, verify-frontend-state, verify-nextjs, verify-filters, verify-design-tokens, verify-security, verify-i18n |
-| C | e2e | verify-e2e |
-
-`both` 영역 스킬(cas, ssot, hardcoding, security)은 A와 B 그룹에 중복 포함되지만, 각 Agent가 자기 영역의 파일만 검사하므로 중복 보고되지 않습니다. A 그룹은 `apps/backend/` 경로만, B 그룹은 `apps/frontend/` 경로만 검사합니다.
-
-Step 1의 스마트 필터링에 의해 해당 영역에 변경이 없으면 그룹 자체가 스킵됩니다.
-
-#### 각 스킬 실행 절차
-
-순차든 병렬이든, 각 스킬에 대해 동일한 절차를 따릅니다:
-
-**2a. 스킬 SKILL.md 읽기**
-
-`.claude/skills/verify-<name>/SKILL.md`를 읽고 파싱:
-- **Workflow** — 실행할 검사 단계와 탐지 명령어
-- **Exceptions** — 위반이 아닌 것으로 간주되는 패턴
-- **Related Files** — 검사 대상 파일 목록
-
-**2b. 검사 실행**
-
-1. 검사에 명시된 도구(Grep, Glob, Read, Bash)를 사용하여 패턴 탐지
-2. 탐지된 결과를 해당 스킬의 PASS/FAIL 기준에 대조
-3. Exceptions 섹션에 해당하는 패턴은 면제 처리
-4. FAIL인 경우 이슈를 기록:
-   - 파일 경로 및 라인 번호
-   - 문제 설명
-   - 수정 권장 사항 (코드 예시 포함)
-
-**2c. 스킬별 결과 기록**
-
-```markdown
-### verify-<name> 검증 완료
-
-- 검사 항목: N개
-- 통과: X개
-- 이슈: Y개
-- 면제: Z개
-```
+상세: [references/implementation-workflow.md](references/implementation-workflow.md) Step 2
 
 ### Step 3: 통합 보고서
-
-모든 스킬 실행 완료 후, 결과를 하나의 보고서로 통합합니다:
 
 ```markdown
 ## 구현 검증 보고서
 
-### 요약
-
 | 검증 스킬      | 상태            | 이슈 수 | 상세    |
 | -------------- | --------------- | ------- | ------- |
-| verify-<name1> | PASS / X개 이슈 | N       | 상세... |
-| verify-<name2> | PASS / X개 이슈 | N       | 상세... |
+| verify-<name>  | PASS / X개 이슈 | N       | 상세... |
 
 **발견된 총 이슈: X개**
 ```
 
-**모든 검증 통과 시:**
+### Step 4~6: 수정 적용 및 재검증
 
-```markdown
-모든 검증을 통과했습니다!
+이슈 발견 시 사용자에게 전체/개별/스킵 옵션을 제시하고, 수정 후 재검증합니다.
 
-구현이 프로젝트의 모든 규칙을 준수합니다:
-
-- verify-<name1>: <통과 내용 요약>
-- verify-<name2>: <통과 내용 요약>
-
-코드 리뷰 준비가 완료되었습니다.
-
----
-> **검증 범위:** 이 검증은 규칙 기반 자동 검사(import 소스, 값 하드코딩, SQL 안티패턴 등)입니다.
-> 아키텍처 수준의 설계 판단(로직 SSOT, 캐시 전략 적절성, 확장성, 계층 관통 일관성)은
-> `/review-architecture`를 별도 실행하세요.
-```
-
-**이슈 발견 시:**
-
-각 이슈를 파일 경로, 문제 설명, 수정 권장 사항과 함께 나열합니다:
-
-```markdown
-### 발견된 이슈
-
-| #   | 스킬           | 파일                  | 문제      | 수정 방법      |
-| --- | -------------- | --------------------- | --------- | -------------- |
-| 1   | verify-<name1> | `path/to/file.ts:42`  | 문제 설명 | 수정 코드 예시 |
-| 2   | verify-<name2> | `path/to/file.tsx:15` | 문제 설명 | 수정 코드 예시 |
-
----
-> **검증 범위:** 이 검증은 규칙 기반 자동 검사입니다.
-> 아키텍처 수준의 설계 판단(로직 SSOT, 캐시 전략 적절성, 확장성)은 `/review-architecture`를 별도 실행하세요.
-```
-
-### Step 4: 사용자 액션 확인
-
-이슈가 발견된 경우 `AskUserQuestion`을 사용하여 사용자에게 확인합니다:
-
-```markdown
----
-
-### 수정 옵션
-
-**X개 이슈가 발견되었습니다. 어떻게 진행할까요?**
-
-1. **전체 수정** - 모든 권장 수정사항을 자동으로 적용
-2. **개별 수정** - 각 수정사항을 하나씩 검토 후 적용
-3. **건너뛰기** - 변경 없이 종료
-```
-
-### Step 5: 수정 적용
-
-사용자 선택에 따라 수정을 적용합니다.
-
-**"전체 수정" 선택 시:**
-
-모든 수정을 순서대로 적용하며 진행 상황을 표시합니다:
-
-```markdown
-## 수정 적용 중...
-
-- [1/X] verify-<name1>: `path/to/file.ts` 수정 완료
-- [2/X] verify-<name2>: `path/to/file.tsx` 수정 완료
-
-X개 수정 완료.
-```
-
-**"개별 수정" 선택 시:**
-
-각 이슈마다 수정 내용을 보여주고 `AskUserQuestion`으로 승인 여부를 확인합니다.
-
-### Step 6: 수정 후 재검증
-
-수정이 적용된 경우, 이슈가 있었던 스킬만 다시 실행하여 Before/After를 비교합니다:
-
-```markdown
-## 수정 후 재검증
-
-이슈가 있었던 스킬을 다시 실행합니다...
-
-| 검증 스킬      | 수정 전  | 수정 후 |
-| -------------- | -------- | ------- |
-| verify-<name1> | X개 이슈 | PASS    |
-| verify-<name2> | Y개 이슈 | PASS    |
-
-모든 검증을 통과했습니다!
-```
-
-**여전히 이슈가 남은 경우:**
-
-```markdown
-### 잔여 이슈
-
-| #   | 스킬          | 파일                 | 문제                            |
-| --- | ------------- | -------------------- | ------------------------------- |
-| 1   | verify-<name> | `path/to/file.ts:42` | 자동 수정 불가 — 수동 확인 필요 |
-
-수동으로 해결한 후 `/verify-implementation`을 다시 실행하세요.
-```
+상세: [references/implementation-workflow.md](references/implementation-workflow.md) Step 4~6
 
 ### Step 7: 실행 이상 감지
 
-실행 중 다음 이상을 감지하면 보고서 하단에 안내합니다. 직접 수정하지 않고 `/manage-skills` 실행을 권장합니다.
+Related Files 미존재, grep 0건, 미등록 스킬 등 이상 감지 시 `/manage-skills` 실행 권장.
 
-감지 대상:
-- Related Files에 명시된 파일이 존재하지 않는 경우
-- grep/glob 패턴이 결과 0건을 반환하는 경우 (파일 이동/삭제 가능성)
-- `.claude/skills/` 디렉토리에 verify-* 스킬이 존재하지만 실행 대상 테이블에 없는 경우
-
-```markdown
-### 스킬 유지보수 필요
-
-실행 중 다음 이상이 감지되었습니다:
-
-- verify-xxx: `path/to/old-file.ts` 파일이 존재하지 않음
-- verify-yyy: 새 스킬이 실행 대상에 미등록
-
-`/manage-skills`를 실행하여 스킬을 최신 상태로 업데이트하세요.
-```
-
-이상이 없으면 이 섹션을 생략합니다.
-
----
+상세: [references/implementation-workflow.md](references/implementation-workflow.md) Step 7
 
 ## 예외사항
 
-다음은 **문제가 아닙니다**:
-
-1. **등록된 스킬이 없는 프로젝트** — 오류가 아닌 안내 메시지를 표시하고 종료
+1. **등록된 스킬이 없는 프로젝트** — 안내 메시지 표시 후 종료
 2. **스킬의 자체적 예외** — 각 verify 스킬의 Exceptions 섹션에 정의된 패턴은 이슈로 보고하지 않음
-3. **verify-implementation 자체** — 실행 대상 스킬 목록에 자기 자신을 포함하지 않음
-4. **manage-skills** — `verify-`로 시작하지 않으므로 실행 대상에 포함되지 않음
-5. **review-architecture** — `verify-`로 시작하지 않으므로 실행 대상에 포함되지 않음 (별도 실행)
+3. **verify-implementation 자체** — 실행 대상에 자기 자신을 포함하지 않음
+4. **manage-skills** — `verify-`로 시작하지 않으므로 실행 대상 아님
+5. **review-architecture** — `verify-`로 시작하지 않으므로 실행 대상 아님
 
 ## Related Files
 
-| File                                    | Purpose                                              |
-| --------------------------------------- | ---------------------------------------------------- |
-| `.claude/skills/manage-skills/SKILL.md` | 스킬 유지보수 (이 파일의 실행 대상 스킬 목록을 관리) |
-| `CLAUDE.md`                             | 프로젝트 지침                                        |
+| File | Purpose |
+|---|---|
+| `.claude/skills/manage-skills/SKILL.md` | 스킬 유지보수 (실행 대상 스킬 목록 관리) |
+| `CLAUDE.md` | 프로젝트 지침 |
