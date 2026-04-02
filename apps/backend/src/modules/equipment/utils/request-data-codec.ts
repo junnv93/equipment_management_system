@@ -6,7 +6,11 @@
  *
  * 모든 requestData 읽기/쓰기는 반드시 이 코덱을 통해야 한다.
  */
-import { createEquipmentSchema, updateEquipmentSchema } from '@equipment-management/schemas';
+import {
+  createEquipmentSchema,
+  updateEquipmentSchema,
+  type RequestType,
+} from '@equipment-management/schemas';
 import { z } from 'zod';
 import type { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import type { UpdateEquipmentDto } from '../dto/update-equipment.dto';
@@ -25,13 +29,11 @@ const deleteRequestDataSchema = z
  * requestType별 Zod 스키마 레지스트리.
  * .passthrough()로 Zod가 알지 못하는 필드(version 등)를 보존한다.
  */
-const REQUEST_DATA_SCHEMAS = {
+const REQUEST_DATA_SCHEMAS: Record<RequestType, z.ZodType> = {
   create: createEquipmentSchema.passthrough(),
   update: updateEquipmentSchema.passthrough(),
   delete: deleteRequestDataSchema,
-} as const;
-
-type RequestType = keyof typeof REQUEST_DATA_SCHEMAS;
+};
 
 // requestType → deserialized 타입 매핑
 interface RequestDataTypeMap {

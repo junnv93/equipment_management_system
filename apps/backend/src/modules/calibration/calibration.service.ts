@@ -7,7 +7,10 @@ import {
   Inject,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import {
+  VersionedBaseService,
+  createVersionConflictException,
+} from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
@@ -463,12 +466,7 @@ export class CalibrationService extends VersionedBaseService {
 
       if (result.length === 0) {
         this.cacheService.delete(this.buildCacheKey('detail', id));
-        throw new ConflictException({
-          code: 'VERSION_CONFLICT',
-          message: `Calibration record has been modified. Expected version ${version}, current version ${calibration.version}.`,
-          currentVersion: calibration.version,
-          expectedVersion: version,
-        });
+        throw createVersionConflictException(calibration.version as number, version);
       }
     } else {
       // 내부 호출 (version 미제공): CAS 없이 삭제

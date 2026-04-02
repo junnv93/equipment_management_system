@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { eq, inArray, and, sql, count, asc, desc, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
+import { createVersionConflictException } from '../../common/base/versioned-base.service';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import {
   users as usersTable,
@@ -363,10 +364,7 @@ export class UsersService {
       .returning();
 
     if (result.length === 0) {
-      throw new ConflictException({
-        message: 'Another administrator has already changed this role. Please refresh the page.',
-        code: 'VERSION_CONFLICT',
-      });
+      throw createVersionConflictException();
     }
 
     return this.toUser(result[0]);
