@@ -58,6 +58,7 @@ describe('ReportExportService', () => {
       const result = await service.generate(MOCK_DATA, 'csv');
 
       expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(result.buffer.length).toBeGreaterThan(0);
       expect(result.filename).toMatch(/\.csv$/);
       expect(result.mimeType).toContain('csv');
     });

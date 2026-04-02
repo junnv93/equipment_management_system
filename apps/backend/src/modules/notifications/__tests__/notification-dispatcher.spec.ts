@@ -205,8 +205,14 @@ describe('NotificationDispatcher', () => {
         checkoutId: 'co-uuid-1',
       });
 
-      // insert가 actorId: null로 호출되었는지 간접 검증 (에러 없이 완료)
       expect(mockDb.insert).toHaveBeenCalled();
+      // insert → values 에 전달된 페이로드에서 actorId: null 검증
+      const valuesCall = chain.values.mock.calls[0]?.[0];
+      if (Array.isArray(valuesCall)) {
+        expect(valuesCall[0]).toHaveProperty('actorId', null);
+      } else if (valuesCall) {
+        expect(valuesCall).toHaveProperty('actorId', null);
+      }
     });
   });
 });
