@@ -1,7 +1,9 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as os from 'os';
 import * as process from 'process';
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { sql } from 'drizzle-orm';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -10,8 +12,22 @@ import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
 
-// 추적할 엔드포인트 최대 수 (메모리 누수 방지)
-const MAX_TRACKED_ENDPOINTS = 500;
+const execAsync = promisify(exec);
+
+// 추적할 엔드포인트 최대 수 (SSOT: shared-constants)
+const MAX_TRACKED_ENDPOINTS = MONITORING_THRESHOLDS.MAX_TRACKED_ENDPOINTS;
+
+/** DrizzleService.getMetrics() 반환 타입 */
+interface ConnectionPoolMetrics {
+  connectionsCreated: number;
+  connectionsAcquired: number;
+  connectionErrors: number;
+  lastErrorTime: Date | null;
+  lastReconnectTime: Date | null;
+  poolTotalCount: number;
+  poolIdleCount: number;
+  poolWaitingCount: number;
+}
 
 // UUID 패턴 (경로 정규화용)
 const UUID_PATTERN = new RegExp(UUID_PATTERN_SOURCE, 'gi');
@@ -23,6 +39,9 @@ const NUMERIC_ID_PATTERN = /\/\d+(?=\/|$)/g;
 export class MonitoringService implements OnModuleDestroy {
   // 시스템 시작 시간
   private readonly startTime = Date.now();
+
+  // PostgreSQL 버전 (동적 조회 + 캐시)
+  private dbVersion = 'PostgreSQL (unknown)';
 
   // 최근 메트릭 정보
   private metrics = {
@@ -81,6 +100,9 @@ export class MonitoringService implements OnModuleDestroy {
   ) {
     this.logger.setContext('MonitoringService');
 
+    // DB 버전 조회 (비동기, 캐시)
+    this.fetchDbVersion();
+
     // 최초 메트릭 수집
     this.updateMetrics();
     this.logger.log('모니터링 서비스가 초기화되었습니다.');
@@ -119,19 +141,8 @@ export class MonitoringService implements OnModuleDestroy {
       // 업타임 계산
       this.metrics.uptime = (Date.now() - this.startTime) / 1000;
 
-      // 디스크 사용량: df 명령으로 루트 파티션 정보 조회
-      try {
-        const dfOutput = execSync('df -B1 / 2>/dev/null | tail -1', { encoding: 'utf-8' }).trim();
-        const parts = dfOutput.split(/\s+/);
-        if (parts.length >= 4) {
-          const total = parseInt(parts[1], 10) || 0;
-          const used = parseInt(parts[2], 10) || 0;
-          const free = parseInt(parts[3], 10) || 0;
-          this.metrics.storage = { diskUsage: used, diskFree: free, diskTotal: total };
-        }
-      } catch {
-        // df 실패 시 (Windows 등) 기존 값 유지
-      }
+      // 디스크 사용량: 비동기 df 명령으로 루트 파티션 정보 조회
+      this.updateDiskMetrics();
 
       // 네트워크 메트릭: HTTP 추적 데이터에서 계산
       const uptimeMinutes = this.metrics.uptime / 60;
@@ -332,21 +343,12 @@ export class MonitoringService implements OnModuleDestroy {
   } {
     this.logger.log('데이터베이스 진단 정보 조회');
 
-    const poolMetrics = this.drizzleService.getMetrics() as {
-      connectionsCreated: number;
-      connectionsAcquired: number;
-      connectionErrors: number;
-      lastErrorTime: Date | null;
-      lastReconnectTime: Date | null;
-      poolTotalCount: number;
-      poolIdleCount: number;
-      poolWaitingCount: number;
-    };
+    const poolMetrics = this.drizzleService.getMetrics() as ConnectionPoolMetrics;
 
     return {
       isSimulated: false,
       status: 'connected',
-      version: 'PostgreSQL 15.x',
+      version: this.dbVersion,
       connections: {
         active: poolMetrics.poolTotalCount - poolMetrics.poolIdleCount,
         idle: poolMetrics.poolIdleCount,
@@ -431,11 +433,7 @@ export class MonitoringService implements OnModuleDestroy {
       timestamp: new Date().toISOString(),
       services: {
         database: (() => {
-          const poolMetrics = this.drizzleService.getMetrics() as {
-            connectionsCreated: number;
-            connectionErrors: number;
-            connectionsAcquired: number;
-          };
+          const poolMetrics = this.drizzleService.getMetrics() as ConnectionPoolMetrics;
           return {
             status: 'connected',
             isSimulated: false,
@@ -599,6 +597,41 @@ export class MonitoringService implements OnModuleDestroy {
     if (minKey !== null) {
       this.httpStats.requestsByEndpoint.delete(minKey);
       this.httpStats.responseTimeByEndpoint.delete(minKey);
+    }
+  }
+
+  /**
+   * DB 버전을 비동기로 조회하여 캐시 (시작 시 한 번만 실행)
+   */
+  private async fetchDbVersion(): Promise<void> {
+    try {
+      const db = this.drizzleService.getDB();
+      const result = await db.execute(sql`SELECT version()`);
+      const raw = (result.rows?.[0] as { version?: string })?.version;
+      if (raw) {
+        const match = raw.match(/^PostgreSQL\s+[\d.]+/);
+        this.dbVersion = match ? match[0] : raw.split(' on ')[0];
+      }
+    } catch {
+      // DB 연결 실패 시 기본값 유지
+    }
+  }
+
+  /**
+   * 디스크 사용량 비동기 업데이트 (이벤트 루프 차단 방지)
+   */
+  private async updateDiskMetrics(): Promise<void> {
+    try {
+      const { stdout } = await execAsync('df -B1 / 2>/dev/null | tail -1');
+      const parts = stdout.trim().split(/\s+/);
+      if (parts.length >= 4) {
+        const total = parseInt(parts[1], 10) || 0;
+        const used = parseInt(parts[2], 10) || 0;
+        const free = parseInt(parts[3], 10) || 0;
+        this.metrics.storage = { diskUsage: used, diskFree: free, diskTotal: total };
+      }
+    } catch {
+      // df 실패 시 (Windows 등) 기존 값 유지
     }
   }
 
