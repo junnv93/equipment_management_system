@@ -110,27 +110,20 @@ software.service.ts line 460의 TODO를 해소해줘:
 검증: tsc --noEmit + software 테스트
 ```
 
-### 누락된 loading.tsx 페이지 추가 (Mode 1)
+### ~~누락된 loading.tsx 페이지 추가 (Mode 1)~~ ✅ 완료 (2026-04-02)
 
 ```
-page.tsx는 있지만 loading.tsx가 없는 라우트에 로딩 스켈레톤을 추가해줘.
+결과: 심층 분석으로 실제 필요한 3곳만 추가 (원래 8곳 → redirect/내부 Suspense 제외).
 
-누락 라우트 (확인된 것):
-- (dashboard)/checkouts/manage/
-- (dashboard)/checkouts/import/
-- (dashboard)/checkouts/pending-checks/
-- (dashboard)/checkouts/[id]/
-- (dashboard)/reports/calibration-factors/
-- (dashboard)/equipment/create/
-- (dashboard)/calibration/register/
-- (dashboard)/teams/create/
+변경 파일:
+- apps/frontend/app/(dashboard)/settings/loading.tsx — settings layout 콘텐츠 영역 스켈레톤
+- apps/frontend/app/(dashboard)/checkouts/import/loading.tsx — import 하위 폼 스켈레톤
+- apps/frontend/app/(dashboard)/notifications/loading.tsx — 알림 목록 스켈레톤
 
-각 loading.tsx:
-- 해당 페이지의 레이아웃에 맞는 Skeleton 컴포넌트 사용
-- 기존 loading.tsx 패턴 참조: (dashboard)/equipment/loading.tsx
-- Next.js 16 PPR과 호환되는 Suspense fallback 역할
-
-검증: pnpm --filter frontend run build → 빌드 성공
+교훈:
+- redirect() 페이지는 서버에서 즉시 302 → loading.tsx 표시 안 됨
+- 내부 Suspense가 있는 PPR 페이지는 page 자체가 sync 렌더 → loading.tsx 추가 가치 제한적
+- RouteLoading 컴포넌트 재사용으로 각 5줄 — 최소 코드 원칙
 ```
 
 ---

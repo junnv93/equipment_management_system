@@ -28,11 +28,14 @@ OpenAI "Harness Engineering" 패턴 적용.
 
 에이전트 간 통신은 파일 기반. 포맷 상세: [references/handoff-formats.md](references/handoff-formats.md)
 
+**Slug 규칙**: 작업 시작 시 kebab-case slug를 결정 (예: `loading-tsx`, `monitoring-cache-stats`).
+이 slug를 contract와 evaluation-report 파일명에 사용하여 **다중 세션 동시 실행 시 충돌 방지**.
+
 | File | Path | Producer → Consumer |
 |------|------|---------------------|
 | **exec-plan** | `.claude/exec-plans/active/YYYY-MM-DD-{slug}.md` | Planner → Generator |
-| **contract.md** | `.claude/contract.md` | Planner/Harness → Evaluator |
-| **evaluation-report.md** | `.claude/evaluation-report.md` | Evaluator → Generator/User |
+| **contract** | `.claude/contracts/{slug}.md` | Planner/Harness → Evaluator |
+| **evaluation-report** | `.claude/evaluations/{slug}.md` | Evaluator → Generator/User |
 
 완료된 계획: `active/` → `completed/`로 이동 (Step 7).
 기술 부채 추적: `.claude/exec-plans/tech-debt-tracker.md` (누적 관리).
@@ -64,7 +67,7 @@ Launch Planner Agent with the following directives:
 - **Constrain deliverables without over-specifying implementation** — define WHAT each file should achieve, NOT HOW to code it. Detailed technical specs cause cascading errors when assumptions break.
 - **Context management**: 실행 계획에 상세 내용을 담되, 에이전트가 필요한 정보에 순차적으로 접근할 수 있도록 구성. 한 파일에 모든 것을 넣지 않는다 — 목차에서 심층 문서로 단계적 진입.
 - Generate `.claude/exec-plans/active/YYYY-MM-DD-{slug}.md` — Phase-based plan with files and verification commands. `docs/exec-plans/` 디렉토리가 없으면 자동 생성.
-- Generate `.claude/contract.md` — MUST/SHOULD criteria with domain-specific success criteria
+- Generate `.claude/contracts/{slug}.md` — MUST/SHOULD criteria with domain-specific success criteria
 - Present both to user for approval before proceeding
 
 ---
@@ -78,7 +81,7 @@ Read [references/handoff-formats.md](references/handoff-formats.md) for contract
 
 Mode 1 default MUST criteria: `tsc --noEmit` + `build` + `verify-implementation PASS` + `backend test PASS`.
 
-Save to `.claude/contract.md`.
+Save to `.claude/contracts/{slug}.md`. Create `.claude/contracts/` directory if it doesn't exist.
 
 ---
 
@@ -112,7 +115,7 @@ IMPORTANT CALIBRATION:
 - Grade against hard thresholds — partial credit does not exist for MUST criteria
 
 Steps:
-1. Read .claude/contract.md for success criteria
+1. Read .claude/contracts/{slug}.md for success criteria
 2. Run build verification (tsc, build, test as applicable)
 3. Run verify-implementation workflow (existing 13 verify-* skills)
 4. Run review-architecture (Mode 2 only)
@@ -121,12 +124,12 @@ Steps:
    - 정적 검증(tsc)이 잡지 못하는 런타임 동작 검증
 6. Compare each MUST criterion against results → PASS/FAIL
 7. Track "이전 반복 대비 변화" to detect repeated failures
-8. Write .claude/evaluation-report.md per handoff format
+8. Write .claude/evaluations/{slug}.md per handoff format
 
 Do NOT modify any code. Report only.
 ```
 
-Read [references/handoff-formats.md](references/handoff-formats.md) for evaluation-report.md schema.
+Read [references/handoff-formats.md](references/handoff-formats.md) for evaluations/{slug}.md schema.
 
 ### Branch on result
 
@@ -137,17 +140,17 @@ Read [references/handoff-formats.md](references/handoff-formats.md) for evaluati
 | **FAIL + same issue 2x consecutive** | → Step 7 with "design-level issue, manual intervention needed" |
 | **FAIL + iteration ≥ 3** | → Step 7 with "max iterations reached, manual intervention needed" |
 
-**SHOULD 기준 실패는 루프 차단하지 않는다.** evaluation-report.md에 기록하고 Step 7에서 후속 작업으로 분류.
+**SHOULD 기준 실패는 루프 차단하지 않는다.** evaluations/{slug}.md에 기록하고 Step 7에서 후속 작업으로 분류.
 
 ---
 
 ## Step 6: Fix Loop
 
-1. Extract FAIL issues from evaluation-report.md
+1. Extract FAIL issues from evaluations/{slug}.md
 2. Apply fixes per Evaluator's specific repair instructions
 3. Return to Step 5
 
-Track iteration count. Detect same-issue recurrence by comparing current FAIL issues against previous evaluation-report.md entries (match by file path + issue description).
+Track iteration count. Detect same-issue recurrence by comparing current FAIL issues against previous evaluations/{slug}.md entries (match by file path + issue description).
 
 ---
 
@@ -195,7 +198,7 @@ PR 생성 후 에이전트 리뷰가 가능한 경우(review-architecture, revie
 ### Post-merge Actions
 - PASS → /git-commit 실행 후 PR 생성
 - SHOULD 실패 항목 → tech-debt-tracker.md 확인
-- FAIL → evaluation-report.md 검토 후 수동 수정
+- FAIL → evaluations/{slug}.md 검토 후 수동 수정
 - 엔트로피 점검 권장: `/harness entropy` (3회 이상 반복된 경우)
 ```
 
