@@ -8,8 +8,8 @@
  *
  * NC 상세 버튼 (NCDetailClient.tsx):
  * - 조치 완료: 모든 인증 사용자 + status=OPEN
- * - 종결 승인: isManager (TM+) + status=CORRECTED
- * - 조치 반려: isManager (TM+) + status=CORRECTED
+ * - 종결 승인: can(Permission.CLOSE_NON_CONFORMANCE) (TM+) + status=CORRECTED
+ * - 조치 반려: can(Permission.CLOSE_NON_CONFORMANCE) (TM+) + status=CORRECTED
  *
  * spec: apps/frontend/tests/e2e/features/permissions/comprehensive/role-permissions.plan.md
  */
@@ -85,7 +85,7 @@ test.describe('시나리오 7: 부적합(NC) 모듈 권한', () => {
     // TE는 OPEN 상태 NC에서 조치 완료 버튼 표시
     await expect(page.getByRole('button', { name: '조치 완료' })).toBeVisible();
 
-    // TE는 isManager가 아니므로 종결 승인/반려 미표시
+    // TE는 CLOSE_NON_CONFORMANCE 권한 없으므로 종결 승인/반려 미표시
     await expect(page.getByRole('button', { name: '종결 승인' })).not.toBeVisible();
     await expect(page.getByRole('button', { name: '조치 반려' })).not.toBeVisible();
   });

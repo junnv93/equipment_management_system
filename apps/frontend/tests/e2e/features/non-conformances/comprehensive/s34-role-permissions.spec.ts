@@ -135,7 +135,7 @@ test.describe('Suite 34: 역할별 권한', () => {
   test('34-08: lab_manager에게 종결/반려 버튼이 표시된다', async ({ siteAdminPage: page }) => {
     await gotoNcDetail(page, NC_IDS.NC_008_CORRECTED);
 
-    // lab_manager도 isManager() = true이므로 종결/반려 가능
+    // lab_manager도 CLOSE_NON_CONFORMANCE 권한 보유 → 종결/반려 가능
     await expect(page.getByRole('button', { name: '종결 승인' })).toBeVisible();
     await expect(page.getByRole('button', { name: '조치 반려' })).toBeVisible();
   });

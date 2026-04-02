@@ -45,7 +45,7 @@ test.describe('Role-Based Permission Verification', () => {
     const editButtons = siteAdminPage.getByRole('button', { name: /수정|Edit Record/i });
     const editButtonCount = await editButtons.count();
 
-    // lab_manager should see edit buttons (isManager() returns true)
+    // lab_manager has CLOSE_NON_CONFORMANCE permission → edit buttons visible
     expect(editButtonCount).toBeGreaterThan(0);
     await expect(editButtons.first()).toBeVisible();
     console.log('✅ lab_manager can see Edit Record button');

@@ -38,7 +38,7 @@ test.describe('Role-Based Permission Verification', () => {
     const editButtons = techManagerPage.getByRole('button', { name: /수정|Edit Record/i });
     const editButtonCount = await editButtons.count();
 
-    // technical_manager should see edit buttons (isManager() returns true)
+    // technical_manager has CLOSE_NON_CONFORMANCE permission → edit buttons visible
     expect(editButtonCount).toBeGreaterThan(0);
 
     const firstEditButton = editButtons.first();
