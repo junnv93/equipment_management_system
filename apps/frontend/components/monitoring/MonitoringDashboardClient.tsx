@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   XCircle,
   Info,
+  TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { monitoringApi } from '@/lib/api/monitoring-api';
+import {
+  ELEVATION_TOKENS,
+  DASHBOARD_ENTRANCE,
+  getDashboardStaggerDelay,
+  DASHBOARD_MOTION,
+  FONT,
+} from '@/lib/design-tokens';
 import type {
   MonitoringMetrics,
   MonitoringStatus,
@@ -85,10 +93,10 @@ function getStatusIcon(status: string) {
     case 'connected':
     case 'running':
     case 'operational':
-      return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+      return <CheckCircle2 className="h-4 w-4 text-brand-ok" />;
     case 'warning':
     case 'degraded':
-      return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      return <AlertTriangle className="h-4 w-4 text-brand-warning" />;
     case 'critical':
     case 'down':
     case 'error':
@@ -96,6 +104,28 @@ function getStatusIcon(status: string) {
     default:
       return <Info className="h-4 w-4 text-muted-foreground" />;
   }
+}
+
+/** Gauge 바 색상 — brand 토큰 사용 */
+function getGaugeColor(
+  percentage: number,
+  criticalThreshold: number,
+  warningThreshold: number
+): string {
+  if (percentage >= criticalThreshold) return 'bg-destructive';
+  if (percentage >= warningThreshold) return 'bg-brand-warning';
+  return 'bg-brand-ok';
+}
+
+/** KPI 숫자 텍스트 색상 — brand 토큰 사용 */
+function getKpiTextColor(
+  value: number,
+  criticalThreshold: number,
+  warningThreshold: number
+): string {
+  if (value >= criticalThreshold) return 'text-destructive';
+  if (value >= warningThreshold) return 'text-brand-warning';
+  return 'text-brand-ok';
 }
 
 /** 백엔드 상태 문자열 → i18n 키 매핑 */
@@ -134,12 +164,7 @@ function GaugeBar({
   warningThreshold?: number;
 }) {
   const percentage = Math.min(100, Math.max(0, value));
-  const color =
-    percentage >= criticalThreshold
-      ? 'bg-destructive'
-      : percentage >= warningThreshold
-        ? 'bg-amber-500'
-        : 'bg-emerald-500';
+  const color = getGaugeColor(percentage, criticalThreshold, warningThreshold);
 
   return (
     <div className="space-y-2">
@@ -148,11 +173,18 @@ function GaugeBar({
           {icon}
           <span>{label}</span>
         </div>
-        <span className="font-mono font-medium text-foreground">{percentage.toFixed(1)}%</span>
+        <span className={`${FONT.mono} font-medium text-foreground`}>{percentage.toFixed(1)}%</span>
       </div>
-      <div className="h-2 w-full rounded-full bg-muted">
+      <div
+        className="h-2 w-full rounded-full bg-muted"
+        role="meter"
+        aria-valuenow={Math.round(percentage)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={label}
+      >
         <div
-          className={`h-full rounded-full transition-[width] duration-500 ease-out ${color}`}
+          className={`h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500 motion-safe:ease-out ${color}`}
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -184,7 +216,7 @@ function SectionError({
       <button
         type="button"
         onClick={onRetry}
-        className="text-sm font-medium text-primary hover:underline"
+        className="text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         {retryLabel}
       </button>
@@ -205,6 +237,106 @@ function SectionSkeleton() {
   );
 }
 
+function HeroKpiSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-lg border bg-card p-4">
+          <Skeleton className="mb-2 h-3 w-16" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// Section: Hero KPI Strip
+// ============================================================================
+
+function HeroKpiStrip({
+  metrics,
+  httpStats,
+}: {
+  metrics: MonitoringMetrics | undefined;
+  httpStats: MonitoringHttpStats | undefined;
+}) {
+  const t = useTranslations('monitoring');
+
+  const cpuValue = metrics?.cpu.usage ?? 0;
+  const memValue = metrics?.memory.percentage ?? 0;
+  const totalRequests = httpStats?.totalRequests ?? 0;
+  const errorRate = httpStats?.errorRate ?? 0;
+
+  const kpis = [
+    {
+      label: t('metrics.cpu'),
+      value: `${cpuValue.toFixed(1)}%`,
+      icon: <Cpu className="h-4 w-4" />,
+      colorClass: getKpiTextColor(
+        cpuValue,
+        MONITORING_THRESHOLDS.CPU_PERCENT,
+        MONITORING_THRESHOLDS.RESOURCE_WARNING_PERCENT
+      ),
+    },
+    {
+      label: t('metrics.memory'),
+      value: `${memValue.toFixed(1)}%`,
+      icon: <MemoryStick className="h-4 w-4" />,
+      colorClass: getKpiTextColor(
+        memValue,
+        MONITORING_THRESHOLDS.MEMORY_PERCENT,
+        MONITORING_THRESHOLDS.RESOURCE_WARNING_PERCENT
+      ),
+    },
+    {
+      label: t('http.totalRequests'),
+      value: totalRequests.toLocaleString(),
+      icon: <TrendingUp className="h-4 w-4" />,
+      colorClass: 'text-brand-info',
+    },
+    {
+      label: t('http.errorRate'),
+      value: `${errorRate.toFixed(2)}%`,
+      icon: <AlertTriangle className="h-4 w-4" />,
+      colorClass: getKpiTextColor(
+        errorRate,
+        MONITORING_THRESHOLDS.ERROR_RATE_PERCENT,
+        MONITORING_THRESHOLDS.ERROR_RATE_WARNING_PERCENT
+      ),
+    },
+  ];
+
+  return (
+    <div
+      className="grid grid-cols-2 gap-3 md:grid-cols-4"
+      role="group"
+      aria-label={t('sections.systemResources')}
+    >
+      {kpis.map((kpi, index) => (
+        <div
+          key={kpi.label}
+          className={`rounded-lg border bg-card p-4 ${ELEVATION_TOKENS.shadow.medium} ${DASHBOARD_ENTRANCE.base} ${DASHBOARD_MOTION.statsCard}`}
+          style={{ animationDelay: getDashboardStaggerDelay(index, 'grid') }}
+        >
+          <div className="flex items-center gap-2 text-muted-foreground">
+            {kpi.icon}
+            <span className="text-xs font-medium" id={`kpi-label-${index}`}>
+              {kpi.label}
+            </span>
+          </div>
+          <p
+            className={`mt-1 text-3xl font-bold ${FONT.kpi} ${kpi.colorClass}`}
+            aria-labelledby={`kpi-label-${index}`}
+          >
+            {kpi.value}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ============================================================================
 // Section: System Resources
 // ============================================================================
@@ -213,7 +345,7 @@ function SystemResourcesSection({ data }: { data: MonitoringMetrics }) {
   const t = useTranslations('monitoring');
 
   return (
-    <Card>
+    <Card className={ELEVATION_TOKENS.shadow.subtle}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Cpu className="h-4 w-4" />
@@ -245,23 +377,23 @@ function SystemResourcesSection({ data }: { data: MonitoringMetrics }) {
         <div className="grid grid-cols-2 gap-3 border-t pt-3 text-sm">
           <div>
             <span className="text-muted-foreground">{t('metrics.uptime')}</span>
-            <p className="font-mono font-medium">{formatUptime(data.uptime)}</p>
+            <p className={`${FONT.mono} font-medium`}>{formatUptime(data.uptime)}</p>
           </div>
           <div>
             <span className="text-muted-foreground">{t('metrics.hostname')}</span>
-            <p className="font-mono font-medium truncate" title={data.hostname}>
+            <p className={`${FONT.mono} font-medium truncate`} title={data.hostname}>
               {data.hostname}
             </p>
           </div>
           <div>
             <span className="text-muted-foreground">{t('metrics.platform')}</span>
-            <p className="font-mono font-medium">
+            <p className={`${FONT.mono} font-medium`}>
               {data.platform} ({data.arch})
             </p>
           </div>
           <div>
             <span className="text-muted-foreground">{t('metrics.nodeVersion')}</span>
-            <p className="font-mono font-medium">{data.nodeVersion}</p>
+            <p className={`${FONT.mono} font-medium`}>{data.nodeVersion}</p>
           </div>
         </div>
       </CardContent>
@@ -295,7 +427,7 @@ function ServiceHealthSection({ data }: { data: MonitoringStatus }) {
   ];
 
   return (
-    <Card>
+    <Card className={ELEVATION_TOKENS.shadow.subtle}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Activity className="h-4 w-4" />
@@ -323,6 +455,7 @@ function ServiceHealthSection({ data }: { data: MonitoringStatus }) {
         <div className="mt-4 border-t pt-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
+            <span className="sr-only">{t('lastChecked')}:</span>
             {t('lastChecked')}: {new Date(data.lastChecked).toLocaleTimeString()}
           </div>
         </div>
@@ -339,7 +472,7 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
   const t = useTranslations('monitoring');
 
   return (
-    <Card>
+    <Card className={ELEVATION_TOKENS.shadow.subtle}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Globe className="h-4 w-4" />
@@ -348,28 +481,30 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-md border p-3">
+          <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('http.totalRequests')}</p>
-            <p className="text-xl font-bold font-mono">{data.totalRequests.toLocaleString()}</p>
+            <p className={`text-2xl font-bold ${FONT.kpi}`}>
+              {data.totalRequests.toLocaleString()}
+            </p>
           </div>
-          <div className="rounded-md border p-3">
+          <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('http.errorRate')}</p>
             <p
-              className={`text-xl font-bold font-mono ${data.errorRate > MONITORING_THRESHOLDS.ERROR_RATE_PERCENT ? 'text-destructive' : data.errorRate > MONITORING_THRESHOLDS.ERROR_RATE_WARNING_PERCENT ? 'text-amber-500' : 'text-emerald-500'}`}
+              className={`text-2xl font-bold ${FONT.kpi} ${getKpiTextColor(data.errorRate, MONITORING_THRESHOLDS.ERROR_RATE_PERCENT, MONITORING_THRESHOLDS.ERROR_RATE_WARNING_PERCENT)}`}
             >
               {data.errorRate.toFixed(2)}%
             </p>
           </div>
-          <div className="rounded-md border p-3">
+          <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('http.successRequests')}</p>
-            <p className="text-xl font-bold font-mono text-emerald-500">
+            <p className={`text-2xl font-bold ${FONT.kpi} text-brand-ok`}>
               {data.successRequests.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-md border p-3">
+          <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('http.errorRequests')}</p>
             <p
-              className={`text-xl font-bold font-mono ${data.errorRequests > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
+              className={`text-2xl font-bold ${FONT.kpi} ${data.errorRequests > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
             >
               {data.errorRequests.toLocaleString()}
             </p>
@@ -382,12 +517,12 @@ function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
             <div className="space-y-1">
               {data.topEndpoints.slice(0, 5).map((ep) => (
                 <div key={ep.endpoint} className="flex items-center justify-between text-xs">
-                  <span className="font-mono truncate max-w-[60%]" title={ep.endpoint}>
+                  <span className={`${FONT.mono} truncate max-w-[60%]`} title={ep.endpoint}>
                     {ep.endpoint}
                   </span>
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <span>{ep.count}x</span>
-                    <span className="font-mono">{formatMs(ep.avgResponseTime)}</span>
+                    <span className={FONT.mono}>{formatMs(ep.avgResponseTime)}</span>
                   </div>
                 </div>
               ))}
@@ -408,7 +543,7 @@ function CachePerformanceSection({ data }: { data: MonitoringCacheStats }) {
   const hitRatePercent = data.hitRate * 100;
 
   return (
-    <Card>
+    <Card className={ELEVATION_TOKENS.shadow.subtle}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Zap className="h-4 w-4" />
@@ -423,15 +558,15 @@ function CachePerformanceSection({ data }: { data: MonitoringCacheStats }) {
         />
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-md border p-3">
+          <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('cache.hits')}</p>
-            <p className="text-xl font-bold font-mono text-emerald-500">
+            <p className={`text-2xl font-bold ${FONT.kpi} text-brand-ok`}>
               {data.hits.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-md border p-3">
+          <div className={`rounded-md border p-3 ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('cache.misses')}</p>
-            <p className="text-xl font-bold font-mono text-amber-500">
+            <p className={`text-2xl font-bold ${FONT.kpi} text-brand-warning`}>
               {data.misses.toLocaleString()}
             </p>
           </div>
@@ -440,11 +575,11 @@ function CachePerformanceSection({ data }: { data: MonitoringCacheStats }) {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <span className="text-muted-foreground">{t('cache.size')}</span>
-            <p className="font-mono font-medium">{data.size}</p>
+            <p className={`${FONT.mono} font-medium`}>{data.size}</p>
           </div>
           <div>
             <span className="text-muted-foreground">{t('cache.maxSize')}</span>
-            <p className="font-mono font-medium">{data.maxSize}</p>
+            <p className={`${FONT.mono} font-medium`}>{data.maxSize}</p>
           </div>
         </div>
       </CardContent>
@@ -461,7 +596,7 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
   const db = data.services.database;
 
   return (
-    <Card>
+    <Card className={ELEVATION_TOKENS.shadow.subtle}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <Database className="h-4 w-4" />
@@ -478,37 +613,37 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
         </div>
 
         <div className="grid grid-cols-3 gap-3 text-sm">
-          <div className="rounded-md border p-3 text-center">
+          <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('db.queriesExecuted')}</p>
-            <p className="text-lg font-bold font-mono">
+            <p className={`text-lg font-bold ${FONT.kpi}`}>
               {db.metrics.queriesExecuted.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-md border p-3 text-center">
+          <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('db.queriesFailed')}</p>
             <p
-              className={`text-lg font-bold font-mono ${db.metrics.queriesFailed > 0 ? 'text-destructive' : 'text-emerald-500'}`}
+              className={`text-lg font-bold ${FONT.kpi} ${db.metrics.queriesFailed > 0 ? 'text-destructive' : 'text-brand-ok'}`}
             >
               {db.metrics.queriesFailed.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-md border p-3 text-center">
+          <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>
             <p className="text-xs text-muted-foreground">{t('db.avgQueryTime')}</p>
-            <p className="text-lg font-bold font-mono">{formatMs(db.metrics.avgQueryTime)}</p>
+            <p className={`text-lg font-bold ${FONT.kpi}`}>{formatMs(db.metrics.avgQueryTime)}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-sm border-t pt-3">
           <div>
             <span className="text-muted-foreground">{t('db.connectionsCreated')}</span>
-            <p className="font-mono font-medium">
+            <p className={`${FONT.mono} font-medium`}>
               {db.metrics.connectionsCreated.toLocaleString()}
             </p>
           </div>
           <div>
             <span className="text-muted-foreground">{t('db.connectionErrors')}</span>
             <p
-              className={`font-mono font-medium ${db.metrics.connectionErrors > 0 ? 'text-destructive' : ''}`}
+              className={`${FONT.mono} font-medium ${db.metrics.connectionErrors > 0 ? 'text-destructive' : ''}`}
             >
               {db.metrics.connectionErrors.toLocaleString()}
             </p>
@@ -550,130 +685,165 @@ export default function MonitoringDashboardClient() {
     ...QUERY_CONFIG.MONITORING,
   });
 
+  const isHeroLoading = metricsQuery.isLoading || httpStatsQuery.isLoading;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <p className="text-xs text-muted-foreground">{t('autoRefresh')}</p>
 
+      {/* Hero KPI Strip — elevated, larger numbers */}
+      {isHeroLoading ? (
+        <HeroKpiSkeleton />
+      ) : (
+        <HeroKpiStrip metrics={metricsQuery.data} httpStats={httpStatsQuery.data} />
+      )}
+
+      {/* Detail Cards Grid */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {/* System Resources */}
-        <Card className="md:row-span-2">
+        <div
+          className={`md:row-span-2 ${DASHBOARD_ENTRANCE.stagger.row1}`}
+          style={{ animationDelay: getDashboardStaggerDelay(0, 'grid') }}
+        >
           {metricsQuery.isLoading ? (
-            <>
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
               <CardHeader className="pb-3">
                 <Skeleton className="h-5 w-32" />
               </CardHeader>
               <CardContent>
                 <SectionSkeleton />
               </CardContent>
-            </>
+            </Card>
           ) : metricsQuery.isError ? (
-            <CardContent>
-              <SectionError
-                message={t('error.fetchFailed')}
-                retryLabel={t('error.retry')}
-                onRetry={() => metricsQuery.refetch()}
-              />
-            </CardContent>
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardContent>
+                <SectionError
+                  message={t('error.fetchFailed')}
+                  retryLabel={t('error.retry')}
+                  onRetry={() => metricsQuery.refetch()}
+                />
+              </CardContent>
+            </Card>
           ) : metricsQuery.data ? (
             <SystemResourcesSection data={metricsQuery.data} />
           ) : null}
-        </Card>
+        </div>
 
         {/* Service Health */}
-        {statusQuery.isLoading ? (
-          <Card>
-            <CardHeader className="pb-3">
-              <Skeleton className="h-5 w-32" />
-            </CardHeader>
-            <CardContent>
-              <SectionSkeleton />
-            </CardContent>
-          </Card>
-        ) : statusQuery.isError ? (
-          <Card>
-            <CardContent>
-              <SectionError
-                message={t('error.fetchFailed')}
-                retryLabel={t('error.retry')}
-                onRetry={() => statusQuery.refetch()}
-              />
-            </CardContent>
-          </Card>
-        ) : statusQuery.data ? (
-          <ServiceHealthSection data={statusQuery.data} />
-        ) : null}
+        <div
+          className={DASHBOARD_ENTRANCE.stagger.row1}
+          style={{ animationDelay: getDashboardStaggerDelay(1, 'grid') }}
+        >
+          {statusQuery.isLoading ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent>
+                <SectionSkeleton />
+              </CardContent>
+            </Card>
+          ) : statusQuery.isError ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardContent>
+                <SectionError
+                  message={t('error.fetchFailed')}
+                  retryLabel={t('error.retry')}
+                  onRetry={() => statusQuery.refetch()}
+                />
+              </CardContent>
+            </Card>
+          ) : statusQuery.data ? (
+            <ServiceHealthSection data={statusQuery.data} />
+          ) : null}
+        </div>
 
         {/* Cache Performance */}
-        {cacheStatsQuery.isLoading ? (
-          <Card>
-            <CardHeader className="pb-3">
-              <Skeleton className="h-5 w-32" />
-            </CardHeader>
-            <CardContent>
-              <SectionSkeleton />
-            </CardContent>
-          </Card>
-        ) : cacheStatsQuery.isError ? (
-          <Card>
-            <CardContent>
-              <SectionError
-                message={t('error.fetchFailed')}
-                retryLabel={t('error.retry')}
-                onRetry={() => cacheStatsQuery.refetch()}
-              />
-            </CardContent>
-          </Card>
-        ) : cacheStatsQuery.data ? (
-          <CachePerformanceSection data={cacheStatsQuery.data} />
-        ) : null}
+        <div
+          className={DASHBOARD_ENTRANCE.stagger.row2}
+          style={{ animationDelay: getDashboardStaggerDelay(2, 'grid') }}
+        >
+          {cacheStatsQuery.isLoading ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent>
+                <SectionSkeleton />
+              </CardContent>
+            </Card>
+          ) : cacheStatsQuery.isError ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardContent>
+                <SectionError
+                  message={t('error.fetchFailed')}
+                  retryLabel={t('error.retry')}
+                  onRetry={() => cacheStatsQuery.refetch()}
+                />
+              </CardContent>
+            </Card>
+          ) : cacheStatsQuery.data ? (
+            <CachePerformanceSection data={cacheStatsQuery.data} />
+          ) : null}
+        </div>
 
         {/* HTTP Stats */}
-        {httpStatsQuery.isLoading ? (
-          <Card>
-            <CardHeader className="pb-3">
-              <Skeleton className="h-5 w-32" />
-            </CardHeader>
-            <CardContent>
-              <SectionSkeleton />
-            </CardContent>
-          </Card>
-        ) : httpStatsQuery.isError ? (
-          <Card>
-            <CardContent>
-              <SectionError
-                message={t('error.fetchFailed')}
-                retryLabel={t('error.retry')}
-                onRetry={() => httpStatsQuery.refetch()}
-              />
-            </CardContent>
-          </Card>
-        ) : httpStatsQuery.data ? (
-          <HttpStatsSection data={httpStatsQuery.data} />
-        ) : null}
+        <div
+          className={DASHBOARD_ENTRANCE.stagger.row2}
+          style={{ animationDelay: getDashboardStaggerDelay(3, 'grid') }}
+        >
+          {httpStatsQuery.isLoading ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent>
+                <SectionSkeleton />
+              </CardContent>
+            </Card>
+          ) : httpStatsQuery.isError ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardContent>
+                <SectionError
+                  message={t('error.fetchFailed')}
+                  retryLabel={t('error.retry')}
+                  onRetry={() => httpStatsQuery.refetch()}
+                />
+              </CardContent>
+            </Card>
+          ) : httpStatsQuery.data ? (
+            <HttpStatsSection data={httpStatsQuery.data} />
+          ) : null}
+        </div>
 
         {/* Database Status */}
-        {statusQuery.isLoading ? (
-          <Card>
-            <CardHeader className="pb-3">
-              <Skeleton className="h-5 w-32" />
-            </CardHeader>
-            <CardContent>
-              <SectionSkeleton />
-            </CardContent>
-          </Card>
-        ) : statusQuery.isError ? (
-          <Card>
-            <CardContent>
-              <SectionError
-                message={t('error.fetchFailed')}
-                retryLabel={t('error.retry')}
-                onRetry={() => statusQuery.refetch()}
-              />
-            </CardContent>
-          </Card>
-        ) : statusQuery.data ? (
-          <DatabaseStatusSection data={statusQuery.data} />
-        ) : null}
+        <div
+          className={DASHBOARD_ENTRANCE.stagger.row3}
+          style={{ animationDelay: getDashboardStaggerDelay(4, 'grid') }}
+        >
+          {statusQuery.isLoading ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent>
+                <SectionSkeleton />
+              </CardContent>
+            </Card>
+          ) : statusQuery.isError ? (
+            <Card className={ELEVATION_TOKENS.shadow.subtle}>
+              <CardContent>
+                <SectionError
+                  message={t('error.fetchFailed')}
+                  retryLabel={t('error.retry')}
+                  onRetry={() => statusQuery.refetch()}
+                />
+              </CardContent>
+            </Card>
+          ) : statusQuery.data ? (
+            <DatabaseStatusSection data={statusQuery.data} />
+          ) : null}
+        </div>
       </div>
     </div>
   );
