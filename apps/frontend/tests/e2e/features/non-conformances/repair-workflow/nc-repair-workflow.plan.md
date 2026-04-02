@@ -127,7 +127,7 @@ This test plan covers the Non-Conformance (NC) and Repair Workflow integration i
 
 - test_engineer can see NC list
 - test_engineer can see 'Register NC' button
-- test_engineer CANNOT see 'Edit Record' button (isManager() check)
+- test_engineer CANNOT see 'Edit Record' button (lacks CLOSE_NON_CONFORMANCE permission)
 - test_engineer CANNOT change NC status
 
 #### 2.2. B-2. technical_manager can see and use edit button
@@ -187,7 +187,7 @@ This test plan covers the Non-Conformance (NC) and Repair Workflow integration i
 - test_engineer can open repair history dialog
 - test_engineer can fill and submit repair history form
 
-#### 2.5. B-5. edit button visibility follows isManager() hook
+#### 2.5. B-5. edit button visibility follows can(Permission.CLOSE_NON_CONFORMANCE)
 
 **File:** `tests/e2e/nc-repair-workflow/group-b/edit-button-visibility.spec.ts`
 
@@ -200,10 +200,10 @@ This test plan covers the Non-Conformance (NC) and Repair Workflow integration i
 
 **Expected Results:**
 
-- useAuth().isManager() returns false for test_engineer
-- useAuth().isManager() returns true for technical_manager
-- useAuth().isManager() returns true for lab_manager
-- Edit button renders conditionally based on isManager()
+- test_engineer lacks CLOSE_NON_CONFORMANCE permission → edit button hidden
+- technical_manager has CLOSE_NON_CONFORMANCE permission → edit button visible
+- lab_manager has CLOSE_NON_CONFORMANCE permission → edit button visible
+- Edit button renders conditionally based on can(Permission.CLOSE_NON_CONFORMANCE)
 
 ### 3. Group C: Repair History Form Validation
 

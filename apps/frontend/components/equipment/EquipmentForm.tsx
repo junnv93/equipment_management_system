@@ -228,7 +228,7 @@ export function EquipmentForm({
   // 임시등록 모드 여부
   const isTemporary = mode === 'temporary';
   // 사용자 정보 가져오기
-  const { user, isManager: _isManager, isAdmin: _isAdmin } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const userSite = (user as { site?: Site })?.site;
   const userTeamId = (user as { teamId?: string })?.teamId;

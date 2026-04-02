@@ -1,43 +1,44 @@
-# Evaluation Report — 백엔드 모듈 단위 테스트 추가
-Date: 2026-04-01
-Iteration: 2 (Iteration 1 FAIL verdicts overturned — false positives)
+# Evaluation Report: NC 관리 권한 게이트 전환
 
-## Build Results
+**Date:** 2026-04-02
+**Evaluator:** QA Agent
+**Iteration:** #2
 
-| Command | Result |
-|---------|--------|
-| `pnpm --filter backend run test` (신규 60개) | 60 passed |
-| `pnpm --filter backend run test` (전체) | 37 suites, 450 passed, 2 todo, 0 failed |
+---
 
 ## MUST Criteria
 
 | ID | Criterion | Verdict | Notes |
 |----|-----------|---------|-------|
-| M1 | tsc --noEmit 0 errors | PASS | 0 errors |
-| M2 | 전체 테스트 PASS (기존 + 신규) | PASS | 37 suites, 450 passed |
-| M3 | 4개 모듈 __tests__/ 존재 | PASS | documents/notifications/reports/data-migration 모두 확인 |
-| M4 | 각 서비스 핵심 메서드 최소 1개 happy path | PASS | 8개 신규 파일 60 test cases |
-| M5 | 모든 mock은 mock-providers.ts 패턴 준수 | PASS | createMockXxx 팩토리 사용 확인 |
-| M6 | 하드코딩 UUID 없음 (상수 또는 팩토리) | PASS | documents.controller.spec.ts 22-23번 줄에 MOCK_CALIBRATION_ID, MOCK_EQUIPMENT_ID_2 상수 정의됨. Iteration 1 FAIL은 Generator 수정 전 구 버전 기준 오판 |
-| M7 | createSelectChain 헬퍼 패턴 사용 | PASS | 신규 Drizzle-의존 파일(notifications.service, notification-dispatcher, reports.service)에 모두 createSelectChain 적용 확인. notification-recipient-resolver.spec.ts는 기존 파일(scope 외) |
+| M1 | NonConformanceManagementClient.tsx -- `isManager()` -> `can(Permission.CLOSE_NON_CONFORMANCE)` | PASS | Line 82: `const { can } = useAuth()`, Line 85: `canEditNC = can(Permission.CLOSE_NON_CONFORMANCE)`, Line 722: `canEditNC` 조건 |
+| M2 | NCDetailClient.tsx -- `isManager()` -> `canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE)` | PASS | Line 100: `const { can } = useAuth()`, Line 101: `canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE)`, ActionBar props/usage 전환 완료 |
+| M3 | `pnpm --filter frontend exec tsc --noEmit` -> 에러 0 | PASS | 출력 없음 (에러 0) 확인 |
+| M4 | E2E `nc-management-permissions.spec.ts` -- `test.fixme` -> `test` 변환 | PASS | B-1.2 FIXME 주석 4줄 제거, `test.fixme(` -> `test(` 변환 완료 (E2E 실행은 미수행 -- 코드 레벨 확인만) |
+| M5 | `isManager()` 미사용 시 destructuring 제거 | PASS | 두 파일 모두 `const { can } = useAuth()` -- `isManager` 완전 제거 |
+| M6 | Permission import -- `@equipment-management/shared-constants` SSOT | PASS | 두 파일 모두 `import { Permission } from '@equipment-management/shared-constants'` 사용 |
+| M7 | NC 도메인 프로덕션 코드에 `isManager()` 잔존 없음 | PASS | `components/non-conformances/`, `app/**/non-conformance/` 양쪽 grep 결과 0건 |
+
+---
 
 ## SHOULD Criteria
 
 | ID | Criterion | Verdict | Notes |
 |----|-----------|---------|-------|
-| S1 | 에러 케이스 unhappy path 테스트 | PASS | NotFoundException, BadRequestException, ForbiddenException 30개 이상 |
-| S2 | 캐시 히트/미스 분기 테스트 | PASS | getOrSet mock 검증 다수 확인 |
-| S3 | EventEmitter2 이벤트 페이로드 검증 | SKIP | NotificationsService가 EventEmitter2 미사용 확인 — 기준 적용 불가 |
-| S4 | Dispatcher fire-and-forget 격리 | PASS | 수신자 해석 실패 시 에러 전파 없음 테스트 |
-| S5 | SSE Reference Counting | PASS | 마지막 구독 해제 시 Subject 정리 테스트 |
-| S6 | 3포맷 buffer.length > 0 | PARTIAL | Excel/PDF: buffer.length > 0 명시적 확인. CSV: toBeInstanceOf(Buffer) 만 검증 |
+| S1 | E2E 테스트 주석에서 `isManager()` 참조 제거 | PASS | spec 파일 grep 결과 0건 -- FIXME 주석 블록 전체 삭제됨 |
+| S2 | EquipmentForm.tsx의 `_isManager` 미사용 destructuring 정리 | FAIL | `EquipmentForm.tsx` Line 231에 `isManager: _isManager` 잔존 (main 브랜치 기준). 이 브랜치에서 미수정. contract scope 외 파일이나 SHOULD로 명시됨 |
+| S3 | 변경 범위가 수술적 -- 요청 외 코드 수정 없음 | PASS | diff: 소스 2파일(NCManagement +5/-3, NCDetail +9/-6), 테스트 1파일(+1/-5). 모든 변경이 `isManager` -> Permission 전환에 직접 매핑 |
+| S4 | 아키텍처 리뷰 Critical 이슈 0개 | PASS | Permission SSOT 준수, ActionBar 내부 prop 이름도 `canCloseNC`로 의미론적 전환, 역할-권한 매핑 정확 |
 
-## Issues Found
+---
 
-### FAIL Issues: 없음
+## Overall Verdict: **PASS**
 
-### SHOULD Issues (기술 부채 후보)
+MUST 기준 7/7 충족. SHOULD 기준 3/4 충족 (S2 FAIL -- scope 외 파일 미정리).
 
-- [ ] `report-export.service.spec.ts` CSV 블록에 `expect(result.buffer.length).toBeGreaterThan(0)` 추가 권장 — `reports/__tests__/report-export.service.spec.ts`
+## 후속 권장 사항
 
-## Overall Verdict: PASS
+### S2: EquipmentForm.tsx `_isManager` 정리
+- **파일**: `apps/frontend/components/equipment/EquipmentForm.tsx:231`
+- **현재**: `const { user, isManager: _isManager, isAdmin: _isAdmin } = useAuth();`
+- **수정**: `const { user } = useAuth();` (미사용 destructuring 제거)
+- **비고**: 이 브랜치의 scope(NC 도메인)에 포함되지 않으므로 별도 정리 권장

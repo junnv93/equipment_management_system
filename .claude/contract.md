@@ -1,28 +1,32 @@
-# Contract: 백엔드 모듈 단위 테스트 추가
+# Contract: NC 관리 권한 게이트 — 역할 기반 → Permission 기반 전환
 
 ## 생성 시점
-2026-04-01
+2026-04-02
 
 ## Context
-테스트가 없던 4개 백엔드 모듈(data-migration, documents, notifications, reports)에
-단위 테스트 스위트를 추가한다.
+부적합(NC) 관리의 "기록 수정", "종결 승인/반려" 버튼이 역할 기반 `isManager()` 대신
+권한 기반 `can(Permission.CLOSE_NON_CONFORMANCE)`을 사용해야 함.
+SSOT 준수, 크로스 사이트 워크플로우 안전성, 아키텍처 일관성을 아키텍처 수준에서 검증.
 
 ## MUST Criteria (모두 PASS해야 함)
-- [ ] pnpm --filter backend run tsc --noEmit → 에러 0
-- [ ] pnpm --filter backend run test → 전체 PASS (기존 + 신규)
-- [ ] 4개 모듈 각각 __tests__/ 디렉토리 존재
-- [ ] 각 서비스의 핵심 메서드마다 최소 1개 테스트 (happy path)
-- [ ] 모든 mock은 기존 mock-providers.ts 패턴 준수 또는 확장
-- [ ] 하드코딩된 UUID/문자열 없음 (상수 또는 팩토리 사용)
-- [ ] Drizzle mock은 createSelectChain 헬퍼 패턴 사용 (calibration.service.spec.ts 참조)
+- [ ] M1: NonConformanceManagementClient.tsx — `isManager()` → `can(Permission.CLOSE_NON_CONFORMANCE)` 전환
+- [ ] M2: NCDetailClient.tsx — `isManager()` → `canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE)` 전환
+- [ ] M3: `pnpm --filter frontend run tsc --noEmit` → 에러 0
+- [ ] M4: E2E `nc-management-permissions.spec.ts` 전체 PASS (test.fixme → test 변환)
+- [ ] M5: `isManager()` import — 변경 파일에서 미사용 시 destructuring 제거
+- [ ] M6: Permission import — `@equipment-management/shared-constants` SSOT 사용 (로컬 재정의 금지)
+- [ ] M7: NC 도메인 프로덕션 코드에 `isManager()` 로직 잔존 없음 (components/non-conformances/, app/**/non-conformance/)
 
 ## SHOULD Criteria (실패해도 루프 차단 안 함)
-- [ ] 에러 케이스 테스트 (unhappy path) — NotFoundException, BadRequestException, ForbiddenException
-- [ ] 캐시 히트/미스 분기 테스트 (getOrSet 두 경로)
-- [ ] EventEmitter2 이벤트 페이로드 검증
-- [ ] NotificationDispatcher fire-and-forget 격리 검증 (수신자 해석 실패 시 전파 없음)
-- [ ] NotificationSseService Reference Counting 검증 (마지막 구독 해제 시 Subject 정리)
-- [ ] ReportExportService 세 포맷(excel/csv/pdf) 모두 buffer.length > 0 확인
+- [ ] S1: E2E 테스트 주석/설명에서 `isManager()` 참조를 permission 기반으로 업데이트
+- [ ] S2: EquipmentForm.tsx의 `_isManager` 미사용 destructuring 정리
+- [ ] S3: 변경 범위가 수술적 — 요청 외 코드 수정 없음
+- [ ] S4: 아키텍처 리뷰 Critical 이슈 0개
+
+## 적용 verify 스킬
+- verify-ssot (Permission import SSOT)
+- verify-auth (권한 체크 패턴)
+- verify-hardcoding (Permission 하드코딩 여부)
 
 ## 종료 조건
 - 필수 기준 전체 PASS → 성공

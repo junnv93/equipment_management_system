@@ -23,11 +23,7 @@ test.describe('Group B-1: NC Management Permissions', () => {
     await expect(createButton).toBeVisible();
   });
 
-  // FIXME: 권한 버그 - 시험실무자(test_engineer)가 "기록 수정" 버튼을 볼 수 있음
-  // 예상 동작: test_engineer 역할은 부적합 상태 변경 권한이 없으므로 "기록 수정" 버튼이 숨겨져야 함
-  // 실제 동작: "기록 수정" 버튼이 표시됨 (권한 검증 로직 또는 조건부 렌더링 누락으로 추정)
-  // 관련 파일: apps/frontend/components/equipment/NonConformanceClient.tsx 또는 해당 권한 체크 로직
-  test.fixme('B-1.2. 시험실무자는 부적합 상태 변경 불가', async ({ testOperatorPage }) => {
+  test('B-1.2. 시험실무자는 부적합 상태 변경 불가', async ({ testOperatorPage }) => {
     await testOperatorPage.goto(`/equipment/${TEST_EQUIPMENT_ID}/non-conformance`);
 
     // Verify NO edit/modify buttons for status change

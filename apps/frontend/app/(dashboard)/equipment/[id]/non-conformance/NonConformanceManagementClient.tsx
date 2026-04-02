@@ -79,9 +79,10 @@ export default function NonConformanceManagementClient({
 }: NonConformanceManagementClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isManager, can } = useAuth();
+  const { can } = useAuth();
   const { toast } = useToast();
   const canCreateNC = can(Permission.CREATE_NON_CONFORMANCE);
+  const canEditNC = can(Permission.CLOSE_NON_CONFORMANCE);
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
@@ -718,7 +719,7 @@ export default function NonConformanceManagementClient({
               )}
 
               {/* 액션 버튼 */}
-              {nc.status !== 'closed' && editingId !== nc.id && isManager() && (
+              {nc.status !== 'closed' && editingId !== nc.id && canEditNC && (
                 <div className="mt-4 pt-4 border-t border-border">
                   <Button variant="secondary" size="sm" onClick={() => startEditing(nc)}>
                     <FileText className="h-4 w-4 mr-2" aria-hidden="true" />

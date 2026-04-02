@@ -10,7 +10,7 @@ import { test, expect } from '../../../../shared/fixtures/auth.fixture';
  * This test verifies that test_engineer role:
  * - Can view NC list
  * - Can see 'Register NC' button
- * - CANNOT see 'Edit Record' button (isManager() check)
+ * - CANNOT see 'Edit Record' button (lacks CLOSE_NON_CONFORMANCE permission)
  * - CANNOT change NC status
  */
 
@@ -48,7 +48,7 @@ test.describe('Role-Based Permission Verification', () => {
       const editButtons = testOperatorPage.getByRole('button', { name: /수정|Edit Record/i });
       const editButtonCount = await editButtons.count();
 
-      // Verify edit button is NOT visible (isManager() returns false)
+      // Verify edit button is NOT visible (lacks CLOSE_NON_CONFORMANCE permission)
       expect(editButtonCount).toBe(0);
 
       console.log('✅ test_engineer cannot see edit button');
