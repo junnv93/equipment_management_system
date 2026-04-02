@@ -60,6 +60,9 @@ function getStatusColor(status: string): 'default' | 'secondary' | 'destructive'
     case 'ok':
     case 'up':
     case 'healthy':
+    case 'connected':
+    case 'running':
+    case 'operational':
       return 'default';
     case 'warning':
     case 'degraded':
@@ -78,6 +81,9 @@ function getStatusIcon(status: string) {
     case 'ok':
     case 'up':
     case 'healthy':
+    case 'connected':
+    case 'running':
+    case 'operational':
       return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
     case 'warning':
     case 'degraded':
@@ -89,6 +95,24 @@ function getStatusIcon(status: string) {
     default:
       return <Info className="h-4 w-4 text-muted-foreground" />;
   }
+}
+
+/** 백엔드 상태 문자열 → i18n 키 매핑 */
+function getStatusTranslationKey(status: string): string {
+  const map: Record<string, string> = {
+    ok: 'ok',
+    up: 'up',
+    healthy: 'up',
+    connected: 'up',
+    running: 'up',
+    operational: 'up',
+    warning: 'warning',
+    degraded: 'degraded',
+    critical: 'critical',
+    down: 'down',
+    error: 'down',
+  };
+  return map[status.toLowerCase()] ?? status;
 }
 
 // ============================================================================
@@ -271,7 +295,7 @@ function ServiceHealthSection({ data }: { data: MonitoringStatus }) {
               <div className="flex items-center gap-2">
                 {getStatusIcon(svc.status)}
                 <Badge variant={getStatusColor(svc.status)} className="text-xs">
-                  {svc.status}
+                  {t(`status.${getStatusTranslationKey(svc.status)}`)}
                 </Badge>
               </div>
             </div>
@@ -430,7 +454,9 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
           {getStatusIcon(db.status)}
-          <Badge variant={getStatusColor(db.status)}>{db.status}</Badge>
+          <Badge variant={getStatusColor(db.status)}>
+            {t(`status.${getStatusTranslationKey(db.status)}`)}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-3 gap-3 text-sm">
