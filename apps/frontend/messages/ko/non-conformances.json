@@ -128,6 +128,7 @@
     "pyeongtaek": "평택"
   },
   "detail": {
+    "backButton": "뒤로가기",
     "title": "부적합 상세",
     "urgentBadge": "긴급",
     "discoveryDateLabel": "발견일: {date}",

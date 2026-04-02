@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   Bell,
@@ -97,9 +98,30 @@ function getPriorityLabel(
   return t('priorityLabels.unknown');
 }
 
+type AlertTab = 'all' | 'unread' | 'read';
+
 export default function AlertsContent() {
   const t = useTranslations('notifications.alerts');
-  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // URL searchParams에서 탭 읽기 (SSOT)
+  const activeTab = (searchParams.get('tab') as AlertTab) || 'all';
+  const setActiveTab = useCallback(
+    (tab: AlertTab) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === 'all') {
+        params.delete('tab');
+      } else {
+        params.set('tab', tab);
+      }
+      const query = params.toString();
+      router.push(query ? `${pathname}?${query}` : pathname);
+    },
+    [router, pathname, searchParams]
+  );
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const isReadParam = activeTab === 'unread' ? false : activeTab === 'read' ? true : undefined;
@@ -253,7 +275,7 @@ export default function AlertsContent() {
 
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+        onValueChange={(v) => setActiveTab(v as AlertTab)}
         className="space-y-4"
       >
         <TabsList>
