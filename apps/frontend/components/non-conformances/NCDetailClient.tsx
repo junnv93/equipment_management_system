@@ -311,7 +311,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           </div>
         </div>
         <div className={NC_DETAIL_HEADER_TOKENS.actionsGroup}>
-          {!isClosed && nc.status === 'open' && (
+          {!isClosed && nc.status === 'open' && canCloseNC && (
             <Button variant="ghost" size="sm" onClick={() => setShowEditDialog(true)}>
               <Pencil className="h-3.5 w-3.5 mr-1" />
               {t('detail.editButton')}
