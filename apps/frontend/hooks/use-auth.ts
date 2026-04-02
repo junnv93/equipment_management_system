@@ -12,13 +12,12 @@ import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { clearTokenCache } from '@/lib/api/api-client';
 import {
-  ADMIN_ROLES,
   SESSION_SYNC_CHANNEL,
   SESSION_SYNC_MESSAGE,
   type Permission,
   hasPermission,
 } from '@equipment-management/shared-constants';
-import { UserRoleValues as URVal, type UserRole } from '@equipment-management/schemas';
+import { type UserRole } from '@equipment-management/schemas';
 
 export function useAuth() {
   const { data: session, status } = useSession();
@@ -50,16 +49,6 @@ export function useAuth() {
     },
     [isAuthenticated, userRoles]
   );
-
-  // 시험소 관리자 권한 확인 (lab_manager, system_admin — SSOT: ADMIN_ROLES)
-  const isAdmin = useCallback(() => {
-    return hasRole(ADMIN_ROLES);
-  }, [hasRole]);
-
-  // 기술책임자 이상 권한 확인 (technical_manager, lab_manager, system_admin)
-  const isManager = useCallback(() => {
-    return hasRole([URVal.TECHNICAL_MANAGER, ...ADMIN_ROLES]);
-  }, [hasRole]);
 
   // Permission 기반 권한 확인 (SSOT: shared-constants/role-permissions.ts)
   const can = useCallback(
@@ -93,8 +82,6 @@ export function useAuth() {
     isAuthenticated,
     isLoading,
     hasRole,
-    isAdmin,
-    isManager,
     can,
     logout,
   };
