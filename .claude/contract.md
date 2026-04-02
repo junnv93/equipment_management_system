@@ -1,34 +1,32 @@
-# Contract: NC 관리 권한 게이트 — 역할 기반 → Permission 기반 전환
+# Contract: SKILL.md 14개 300줄 이하 경량화
 
 ## 생성 시점
 2026-04-02
 
 ## Context
-부적합(NC) 관리의 "기록 수정", "종결 승인/반려" 버튼이 역할 기반 `isManager()` 대신
-권한 기반 `can(Permission.CLOSE_NON_CONFORMANCE)`을 사용해야 함.
-SSOT 준수, 크로스 사이트 워크플로우 안전성, 아키텍처 일관성을 아키텍처 수준에서 검증.
+SKILL.md 14개가 300줄을 초과하여 컨텍스트 비대화 문제 발생.
+상세 내용을 references/ 디렉토리로 분리하여 경량화.
+기존 패턴(review-design 147줄, equipment-management references/ 구조) 참조.
 
-## MUST Criteria (모두 PASS해야 함)
-- [ ] M1: NonConformanceManagementClient.tsx — `isManager()` → `can(Permission.CLOSE_NON_CONFORMANCE)` 전환
-- [ ] M2: NCDetailClient.tsx — `isManager()` → `canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE)` 전환
-- [ ] M3: `pnpm --filter frontend run tsc --noEmit` → 에러 0
-- [ ] M4: E2E `nc-management-permissions.spec.ts` 전체 PASS (test.fixme → test 변환)
-- [ ] M5: `isManager()` import — 변경 파일에서 미사용 시 destructuring 제거
-- [ ] M6: Permission import — `@equipment-management/shared-constants` SSOT 사용 (로컬 재정의 금지)
-- [ ] M7: NC 도메인 프로덕션 코드에 `isManager()` 로직 잔존 없음 (components/non-conformances/, app/**/non-conformance/)
+## MUST Criteria
 
-## SHOULD Criteria (실패해도 루프 차단 안 함)
-- [ ] S1: E2E 테스트 주석/설명에서 `isManager()` 참조를 permission 기반으로 업데이트
-- [ ] S2: EquipmentForm.tsx의 `_isManager` 미사용 destructuring 정리
-- [ ] S3: 변경 범위가 수술적 — 요청 외 코드 수정 없음
-- [ ] S4: 아키텍처 리뷰 Critical 이슈 0개
+| # | Criterion | Verification |
+|---|-----------|-------------|
+| M1 | 14개 SKILL.md 모두 300줄 이하 | `wc -l .claude/skills/*/SKILL.md \| awk '$1>300'` 결과 0건 |
+| M2 | 추출된 내용이 references/ 파일에 보존 | 각 skill의 references/ 디렉토리에 새 파일 존재 확인 |
+| M3 | SKILL.md에서 references/ 파일로의 링크 유효 | 모든 markdown 링크 대상 파일 존재 |
+| M4 | 기존 references/ 파일 미변경 | 이미 존재하는 references/ 파일 내용 보존 |
+| M5 | Step 제목, Exceptions, Output Format 인라인 유지 | SKILL.md에 워크플로우 구조 보존 |
 
-## 적용 verify 스킬
-- verify-ssot (Permission import SSOT)
-- verify-auth (권한 체크 패턴)
-- verify-hardcoding (Permission 하드코딩 여부)
+## SHOULD Criteria
+
+| # | Criterion |
+|---|-----------|
+| S1 | references/ 파일 네이밍 kebab-case 일관성 |
+| S2 | 각 SKILL.md 200줄 이하 달성 |
+| S3 | references/ 파일 자기완결적 (상호 의존 없음) |
 
 ## 종료 조건
-- 필수 기준 전체 PASS → 성공
-- 동일 이슈 2회 연속 FAIL → 설계 문제 (수동 개입 요청)
-- 3회 반복 초과 → 수동 개입 요청
+- M1-M5 전체 PASS → 성공
+- 동일 이슈 2회 연속 FAIL → 수동 개입
+- 3회 반복 초과 → 수동 개입
