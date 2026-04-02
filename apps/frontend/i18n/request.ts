@@ -55,6 +55,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     'audit',
     'software',
     'data-migration',
+    'monitoring',
   ];
 
   const loadedMessages: Record<string, Record<string, unknown>> = {};

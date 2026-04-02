@@ -1,0 +1,68 @@
+{
+  "title": "시스템 모니터링",
+  "description": "시스템 리소스, 서비스 상태, HTTP 통계, 캐시 성능을 실시간으로 모니터링합니다.",
+  "sections": {
+    "systemResources": "시스템 리소스",
+    "serviceHealth": "서비스 건강 상태",
+    "httpStats": "HTTP 요청 통계",
+    "cachePerformance": "캐시 성능",
+    "dbStatus": "데이터베이스 상태"
+  },
+  "metrics": {
+    "cpu": "CPU 사용률",
+    "memory": "메모리 사용률",
+    "disk": "디스크 사용률",
+    "uptime": "업타임",
+    "hostname": "호스트명",
+    "platform": "플랫폼",
+    "nodeVersion": "Node.js 버전"
+  },
+  "services": {
+    "database": "데이터베이스",
+    "system": "시스템",
+    "api": "API",
+    "logging": "로깅",
+    "cache": "캐시"
+  },
+  "http": {
+    "totalRequests": "총 요청",
+    "successRequests": "성공",
+    "errorRequests": "에러",
+    "errorRate": "에러율",
+    "topEndpoints": "주요 엔드포인트",
+    "endpoint": "엔드포인트",
+    "count": "요청 수",
+    "avgResponseTime": "평균 응답 시간"
+  },
+  "cache": {
+    "hits": "캐시 히트",
+    "misses": "캐시 미스",
+    "hitRate": "히트율",
+    "size": "현재 크기",
+    "maxSize": "최대 용량"
+  },
+  "db": {
+    "connections": "커넥션",
+    "active": "활성",
+    "idle": "대기",
+    "max": "최대",
+    "queriesExecuted": "실행된 쿼리",
+    "queriesFailed": "실패한 쿼리",
+    "avgQueryTime": "평균 쿼리 시간"
+  },
+  "status": {
+    "up": "정상",
+    "down": "중단",
+    "degraded": "저하",
+    "ok": "정상",
+    "warning": "경고",
+    "critical": "위험"
+  },
+  "simulated": "시뮬레이션 데이터",
+  "lastChecked": "마지막 확인",
+  "autoRefresh": "5분마다 자동 갱신",
+  "error": {
+    "fetchFailed": "데이터를 불러오지 못했습니다",
+    "retry": "다시 시도"
+  }
+}

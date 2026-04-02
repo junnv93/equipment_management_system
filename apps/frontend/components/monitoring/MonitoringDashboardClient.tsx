@@ -1,0 +1,628 @@
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+import {
+  Cpu,
+  HardDrive,
+  MemoryStick,
+  Activity,
+  Database,
+  Globe,
+  Zap,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Info,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { monitoringApi } from '@/lib/api/monitoring-api';
+import type {
+  MonitoringMetrics,
+  MonitoringStatus,
+  MonitoringHttpStats,
+  MonitoringCacheStats,
+} from '@/lib/api/monitoring-api';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+function formatUptime(seconds: number): string {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function formatMs(ms: number): string {
+  if (ms < 1) return `${(ms * 1000).toFixed(0)}µs`;
+  if (ms < 1000) return `${ms.toFixed(1)}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+function getStatusColor(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+  switch (status.toLowerCase()) {
+    case 'ok':
+    case 'up':
+    case 'healthy':
+      return 'default';
+    case 'warning':
+    case 'degraded':
+      return 'secondary';
+    case 'critical':
+    case 'down':
+    case 'error':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
+}
+
+function getStatusIcon(status: string) {
+  switch (status.toLowerCase()) {
+    case 'ok':
+    case 'up':
+    case 'healthy':
+      return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+    case 'warning':
+    case 'degraded':
+      return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+    case 'critical':
+    case 'down':
+    case 'error':
+      return <XCircle className="h-4 w-4 text-destructive" />;
+    default:
+      return <Info className="h-4 w-4 text-muted-foreground" />;
+  }
+}
+
+// ============================================================================
+// Sub-components
+// ============================================================================
+
+function GaugeBar({ value, label, icon }: { value: number; label: string; icon: React.ReactNode }) {
+  const percentage = Math.min(100, Math.max(0, value));
+  const color =
+    percentage >= 90 ? 'bg-destructive' : percentage >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          {icon}
+          <span>{label}</span>
+        </div>
+        <span className="font-mono font-medium text-foreground">{percentage.toFixed(1)}%</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full transition-[width] duration-500 ease-out ${color}`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SimulatedBadge({ t }: { t: (key: string) => string }) {
+  return (
+    <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+      {t('simulated')}
+    </Badge>
+  );
+}
+
+function SectionError({
+  message,
+  retryLabel,
+  onRetry,
+}: {
+  message: string;
+  retryLabel: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+      <AlertTriangle className="h-6 w-6" />
+      <p className="text-sm">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="text-sm font-medium text-primary hover:underline"
+      >
+        {retryLabel}
+      </button>
+    </div>
+  );
+}
+
+function SectionSkeleton() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-2 w-full" />
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-2 w-full" />
+      <Skeleton className="h-4 w-1/3" />
+      <Skeleton className="h-2 w-full" />
+    </div>
+  );
+}
+
+// ============================================================================
+// Section: System Resources
+// ============================================================================
+
+function SystemResourcesSection({ data }: { data: MonitoringMetrics }) {
+  const t = useTranslations('monitoring');
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Cpu className="h-4 w-4" />
+          {t('sections.systemResources')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <GaugeBar
+          value={data.cpu.usage}
+          label={t('metrics.cpu')}
+          icon={<Cpu className="h-3.5 w-3.5" />}
+        />
+        <GaugeBar
+          value={data.memory.percentage}
+          label={`${t('metrics.memory')} (${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)})`}
+          icon={<MemoryStick className="h-3.5 w-3.5" />}
+        />
+        <GaugeBar
+          value={
+            data.storage.diskTotal > 0 ? (data.storage.diskUsage / data.storage.diskTotal) * 100 : 0
+          }
+          label={`${t('metrics.disk')} (${formatBytes(data.storage.diskUsage)} / ${formatBytes(data.storage.diskTotal)})`}
+          icon={<HardDrive className="h-3.5 w-3.5" />}
+        />
+
+        {(data.storage.isSimulated || data.network.isSimulated) && <SimulatedBadge t={t} />}
+
+        <div className="grid grid-cols-2 gap-3 border-t pt-3 text-sm">
+          <div>
+            <span className="text-muted-foreground">{t('metrics.uptime')}</span>
+            <p className="font-mono font-medium">{formatUptime(data.uptime)}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t('metrics.hostname')}</span>
+            <p className="font-mono font-medium truncate" title={data.hostname}>
+              {data.hostname}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t('metrics.platform')}</span>
+            <p className="font-mono font-medium">
+              {data.platform} ({data.arch})
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t('metrics.nodeVersion')}</span>
+            <p className="font-mono font-medium">{data.nodeVersion}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// Section: Service Health
+// ============================================================================
+
+function ServiceHealthSection({ data }: { data: MonitoringStatus }) {
+  const t = useTranslations('monitoring');
+
+  const services = [
+    {
+      key: 'database',
+      label: t('services.database'),
+      status: data.services.database.status,
+      icon: Database,
+    },
+    { key: 'system', label: t('services.system'), status: data.services.system.status, icon: Cpu },
+    { key: 'api', label: t('services.api'), status: data.services.api.status, icon: Globe },
+    {
+      key: 'logging',
+      label: t('services.logging'),
+      status: data.services.logging.status,
+      icon: Activity,
+    },
+    { key: 'cache', label: t('services.cache'), status: data.services.cache.status, icon: Zap },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Activity className="h-4 w-4" />
+          {t('sections.serviceHealth')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {services.map((svc) => (
+            <div key={svc.key} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svc.icon className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{svc.label}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(svc.status)}
+                <Badge variant={getStatusColor(svc.status)} className="text-xs">
+                  {svc.status}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 border-t pt-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {t('lastChecked')}: {new Date(data.lastChecked).toLocaleTimeString()}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// Section: HTTP Stats
+// ============================================================================
+
+function HttpStatsSection({ data }: { data: MonitoringHttpStats }) {
+  const t = useTranslations('monitoring');
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Globe className="h-4 w-4" />
+          {t('sections.httpStats')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{t('http.totalRequests')}</p>
+            <p className="text-xl font-bold font-mono">{data.totalRequests.toLocaleString()}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{t('http.errorRate')}</p>
+            <p
+              className={`text-xl font-bold font-mono ${data.errorRate > 5 ? 'text-destructive' : data.errorRate > 1 ? 'text-amber-500' : 'text-emerald-500'}`}
+            >
+              {data.errorRate.toFixed(2)}%
+            </p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{t('http.successRequests')}</p>
+            <p className="text-xl font-bold font-mono text-emerald-500">
+              {data.successRequests.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{t('http.errorRequests')}</p>
+            <p
+              className={`text-xl font-bold font-mono ${data.errorRequests > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
+            >
+              {data.errorRequests.toLocaleString()}
+            </p>
+          </div>
+        </div>
+
+        {data.topEndpoints.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">{t('http.topEndpoints')}</h4>
+            <div className="space-y-1">
+              {data.topEndpoints.slice(0, 5).map((ep) => (
+                <div key={ep.endpoint} className="flex items-center justify-between text-xs">
+                  <span className="font-mono truncate max-w-[60%]" title={ep.endpoint}>
+                    {ep.endpoint}
+                  </span>
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <span>{ep.count}x</span>
+                    <span className="font-mono">{formatMs(ep.avgResponseTime)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// Section: Cache Performance
+// ============================================================================
+
+function CachePerformanceSection({ data }: { data: MonitoringCacheStats }) {
+  const t = useTranslations('monitoring');
+  const hitRatePercent = data.hitRate * 100;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Zap className="h-4 w-4" />
+          {t('sections.cachePerformance')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <GaugeBar
+          value={hitRatePercent}
+          label={t('cache.hitRate')}
+          icon={<Zap className="h-3.5 w-3.5" />}
+        />
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{t('cache.hits')}</p>
+            <p className="text-xl font-bold font-mono text-emerald-500">
+              {data.hits.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{t('cache.misses')}</p>
+            <p className="text-xl font-bold font-mono text-amber-500">
+              {data.misses.toLocaleString()}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="text-muted-foreground">{t('cache.size')}</span>
+            <p className="font-mono font-medium">{data.size}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t('cache.maxSize')}</span>
+            <p className="font-mono font-medium">{data.maxSize}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// Section: Database Status
+// ============================================================================
+
+function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
+  const t = useTranslations('monitoring');
+  const db = data.services.database;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Database className="h-4 w-4" />
+          {t('sections.dbStatus')}
+          {db.isSimulated && <SimulatedBadge t={t} />}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2">
+          {getStatusIcon(db.status)}
+          <Badge variant={getStatusColor(db.status)}>{db.status}</Badge>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 text-sm">
+          <div className="rounded-md border p-3 text-center">
+            <p className="text-xs text-muted-foreground">{t('db.queriesExecuted')}</p>
+            <p className="text-lg font-bold font-mono">
+              {db.metrics.queriesExecuted.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-md border p-3 text-center">
+            <p className="text-xs text-muted-foreground">{t('db.queriesFailed')}</p>
+            <p
+              className={`text-lg font-bold font-mono ${db.metrics.queriesFailed > 0 ? 'text-destructive' : 'text-emerald-500'}`}
+            >
+              {db.metrics.queriesFailed.toLocaleString()}
+            </p>
+          </div>
+          <div className="rounded-md border p-3 text-center">
+            <p className="text-xs text-muted-foreground">{t('db.avgQueryTime')}</p>
+            <p className="text-lg font-bold font-mono">{formatMs(db.metrics.avgQueryTime)}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-sm border-t pt-3">
+          <div>
+            <span className="text-muted-foreground">{t('db.connections')}</span>
+            <p className="font-mono font-medium">
+              {db.metrics.connectionsCreated} created / {db.metrics.connectionErrors} errors
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
+export default function MonitoringDashboardClient() {
+  const t = useTranslations('monitoring');
+
+  const metricsQuery = useQuery({
+    queryKey: queryKeys.monitoring.metrics(),
+    queryFn: () => monitoringApi.getMetrics(),
+    ...QUERY_CONFIG.MONITORING,
+  });
+
+  const statusQuery = useQuery({
+    queryKey: queryKeys.monitoring.status(),
+    queryFn: () => monitoringApi.getStatus(),
+    ...QUERY_CONFIG.MONITORING,
+  });
+
+  const httpStatsQuery = useQuery({
+    queryKey: queryKeys.monitoring.httpStats(),
+    queryFn: () => monitoringApi.getHttpStats(),
+    ...QUERY_CONFIG.MONITORING,
+  });
+
+  const cacheStatsQuery = useQuery({
+    queryKey: queryKeys.monitoring.cacheStats(),
+    queryFn: () => monitoringApi.getCacheStats(),
+    ...QUERY_CONFIG.MONITORING,
+  });
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">{t('autoRefresh')}</p>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {/* System Resources */}
+        <Card className="md:row-span-2">
+          {metricsQuery.isLoading ? (
+            <>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent>
+                <SectionSkeleton />
+              </CardContent>
+            </>
+          ) : metricsQuery.isError ? (
+            <CardContent>
+              <SectionError
+                message={t('error.fetchFailed')}
+                retryLabel={t('error.retry')}
+                onRetry={() => metricsQuery.refetch()}
+              />
+            </CardContent>
+          ) : metricsQuery.data ? (
+            <SystemResourcesSection data={metricsQuery.data} />
+          ) : null}
+        </Card>
+
+        {/* Service Health */}
+        {statusQuery.isLoading ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <SectionSkeleton />
+            </CardContent>
+          </Card>
+        ) : statusQuery.isError ? (
+          <Card>
+            <CardContent>
+              <SectionError
+                message={t('error.fetchFailed')}
+                retryLabel={t('error.retry')}
+                onRetry={() => statusQuery.refetch()}
+              />
+            </CardContent>
+          </Card>
+        ) : statusQuery.data ? (
+          <ServiceHealthSection data={statusQuery.data} />
+        ) : null}
+
+        {/* Cache Performance */}
+        {cacheStatsQuery.isLoading ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <SectionSkeleton />
+            </CardContent>
+          </Card>
+        ) : cacheStatsQuery.isError ? (
+          <Card>
+            <CardContent>
+              <SectionError
+                message={t('error.fetchFailed')}
+                retryLabel={t('error.retry')}
+                onRetry={() => cacheStatsQuery.refetch()}
+              />
+            </CardContent>
+          </Card>
+        ) : cacheStatsQuery.data ? (
+          <CachePerformanceSection data={cacheStatsQuery.data} />
+        ) : null}
+
+        {/* HTTP Stats */}
+        {httpStatsQuery.isLoading ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <SectionSkeleton />
+            </CardContent>
+          </Card>
+        ) : httpStatsQuery.isError ? (
+          <Card>
+            <CardContent>
+              <SectionError
+                message={t('error.fetchFailed')}
+                retryLabel={t('error.retry')}
+                onRetry={() => httpStatsQuery.refetch()}
+              />
+            </CardContent>
+          </Card>
+        ) : httpStatsQuery.data ? (
+          <HttpStatsSection data={httpStatsQuery.data} />
+        ) : null}
+
+        {/* Database Status */}
+        {statusQuery.isLoading ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent>
+              <SectionSkeleton />
+            </CardContent>
+          </Card>
+        ) : statusQuery.isError ? (
+          <Card>
+            <CardContent>
+              <SectionError
+                message={t('error.fetchFailed')}
+                retryLabel={t('error.retry')}
+                onRetry={() => statusQuery.refetch()}
+              />
+            </CardContent>
+          </Card>
+        ) : statusQuery.data ? (
+          <DatabaseStatusSection data={statusQuery.data} />
+        ) : null}
+      </div>
+    </div>
+  );
+}

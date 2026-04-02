@@ -49,6 +49,7 @@
   "adminSoftwareApprovals": "Software Approvals",
   "adminAuditLogs": "Audit Logs",
   "adminDataMigration": "Data Migration",
+  "adminMonitoring": "System Monitoring",
   "login": "Login",
   "error": "Error",
   "sections": {

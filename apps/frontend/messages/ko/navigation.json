@@ -49,6 +49,7 @@
   "adminSoftwareApprovals": "소프트웨어 승인",
   "adminAuditLogs": "감사 로그",
   "adminDataMigration": "데이터 마이그레이션",
+  "adminMonitoring": "시스템 모니터링",
   "login": "로그인",
   "error": "오류",
   "sections": {
