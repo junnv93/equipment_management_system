@@ -44,7 +44,7 @@ async function checkHealth(
         return true;
       }
       throw new Error(`Status: ${response.status}`);
-    } catch (error) {
+    } catch {
       if (attempt < maxRetries) {
         console.warn(
           `  ⏳ ${name} 연결 실패 (${attempt}/${maxRetries}), ${retryDelay}ms 후 재시도...`
@@ -82,9 +82,9 @@ async function globalSetup(config: FullConfig) {
   console.log(`  📍 Backend: ${apiURL}`);
   console.log(`  🌐 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 
-  // 3. Health checks (Backend 5회 재시도 — 필수, Frontend 3회 — 필수)
+  // 3. Health checks (Backend 5회, Frontend 10회 — dev mode 첫 컴파일 고려)
   await checkHealth(`${apiURL}${API_ENDPOINTS.MONITORING.HEALTH}`, 'Backend API', 5, 3000, true);
-  await checkHealth(`${baseURL}/login`, 'Frontend', 3, 2000, true);
+  await checkHealth(`${baseURL}/login`, 'Frontend', 10, 3000, true);
 
   // 4. 테스트 시드 데이터 로딩
   console.log('  🌱 테스트 시드 데이터 로딩...');
@@ -118,12 +118,12 @@ async function globalSetup(config: FullConfig) {
       } else {
         console.warn(`  ⚠️  교정 기한 초과 점검 응답: ${overdueRes.status}`);
       }
-    } catch (error) {
+    } catch {
       console.warn(
         '  ⚠️  교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다.'
       );
     }
-  } catch (error) {
+  } catch {
     console.warn('  ⚠️  시드 데이터 로딩 실패');
     console.warn(
       '     수동 실행: pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts'
