@@ -59,6 +59,18 @@ const dbConfig = createDbConfig();
 // Postgres 연결 풀 생성
 export const pgPool = new Pool(dbConfig);
 
+/** 커넥션 풀 메트릭 타입 — SSOT: monitoring.service.ts에서 import하여 사용 */
+export interface ConnectionPoolMetrics {
+  connectionsCreated: number;
+  connectionsAcquired: number;
+  connectionErrors: number;
+  lastErrorTime: Date | null;
+  lastReconnectTime: Date | null;
+  poolTotalCount: number;
+  poolIdleCount: number;
+  poolWaitingCount: number;
+}
+
 // 메트릭 추적
 const metrics = {
   connectionsCreated: 0,
@@ -164,7 +176,7 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // 메트릭 조회 함수
-export function getConnectionMetrics() {
+export function getConnectionMetrics(): ConnectionPoolMetrics {
   return {
     ...metrics,
     poolTotalCount: pgPool.totalCount,

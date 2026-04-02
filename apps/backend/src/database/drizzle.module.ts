@@ -7,6 +7,7 @@ import {
   testConnection,
   healthCheck,
   getConnectionMetrics,
+  type ConnectionPoolMetrics,
 } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 
@@ -85,7 +86,7 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
   }
 
   // 연결 메트릭 반환
-  getMetrics(): unknown {
+  getMetrics(): ConnectionPoolMetrics {
     return getConnectionMetrics();
   }
 
@@ -119,4 +120,11 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
 export class DrizzleModule {}
 
 // Drizzle 인스턴스와 스키마 타입
-export { db, schema, testConnection, healthCheck, getConnectionMetrics };
+export {
+  db,
+  schema,
+  testConnection,
+  healthCheck,
+  getConnectionMetrics,
+  type ConnectionPoolMetrics,
+};

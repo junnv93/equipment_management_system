@@ -7,7 +7,7 @@ import { sql } from 'drizzle-orm';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { DrizzleService } from '../../database/drizzle.module';
+import { DrizzleService, type ConnectionPoolMetrics } from '../../database/drizzle.module';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
 import { ClientErrorDto } from './dto/client-error.dto';
@@ -16,18 +16,6 @@ const execAsync = promisify(exec);
 
 // 추적할 엔드포인트 최대 수 (SSOT: shared-constants)
 const MAX_TRACKED_ENDPOINTS = MONITORING_THRESHOLDS.MAX_TRACKED_ENDPOINTS;
-
-/** DrizzleService.getMetrics() 반환 타입 */
-interface ConnectionPoolMetrics {
-  connectionsCreated: number;
-  connectionsAcquired: number;
-  connectionErrors: number;
-  lastErrorTime: Date | null;
-  lastReconnectTime: Date | null;
-  poolTotalCount: number;
-  poolIdleCount: number;
-  poolWaitingCount: number;
-}
 
 // UUID 패턴 (경로 정규화용)
 const UUID_PATTERN = new RegExp(UUID_PATTERN_SOURCE, 'gi');
@@ -343,7 +331,7 @@ export class MonitoringService implements OnModuleDestroy {
   } {
     this.logger.log('데이터베이스 진단 정보 조회');
 
-    const poolMetrics = this.drizzleService.getMetrics() as ConnectionPoolMetrics;
+    const poolMetrics = this.drizzleService.getMetrics();
 
     return {
       isSimulated: false,
@@ -355,10 +343,13 @@ export class MonitoringService implements OnModuleDestroy {
         max: poolMetrics.poolTotalCount,
       },
       metrics: {
+        // 실제 Pool 메트릭 (pg Pool 이벤트 기반)
         connectionsCreated: poolMetrics.connectionsCreated,
         connectionErrors: poolMetrics.connectionErrors,
+        // connectionsAcquired ≈ 쿼리 실행 근사치 (Pool acquire = 쿼리 1회 실행 패턴)
         queriesExecuted: poolMetrics.connectionsAcquired,
         queriesFailed: poolMetrics.connectionErrors,
+        // pg Pool에서 측정 불가 — pg_stat_statements 확장 필요
         avgQueryTime: 0,
         slowQueries: 0,
         queryCacheHitRate: 0,
@@ -433,7 +424,7 @@ export class MonitoringService implements OnModuleDestroy {
       timestamp: new Date().toISOString(),
       services: {
         database: (() => {
-          const poolMetrics = this.drizzleService.getMetrics() as ConnectionPoolMetrics;
+          const poolMetrics = this.drizzleService.getMetrics();
           return {
             status: 'connected',
             isSimulated: false,
@@ -442,7 +433,7 @@ export class MonitoringService implements OnModuleDestroy {
               connectionErrors: poolMetrics.connectionErrors,
               queriesExecuted: poolMetrics.connectionsAcquired,
               queriesFailed: poolMetrics.connectionErrors,
-              avgQueryTime: 0,
+              avgQueryTime: 0, // pg Pool 레벨에서 측정 불가
             },
           };
         })(),
