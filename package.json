@@ -46,7 +46,7 @@
     "npm-check-updates": "^19.3.2",
     "only-allow": "^1.2.1",
     "prettier": "^3.5.3",
-    "turbo": "^1.13.4",
+    "turbo": "^2.9.3",
     "type-coverage": "^2.28.0"
   },
   "dependencies": {
