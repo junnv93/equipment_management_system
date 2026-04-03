@@ -45,7 +45,7 @@ export const conditionChecks = pgTable(
     // 확인자 정보
     checkedBy: uuid('checked_by')
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: 'restrict' }),
     checkedAt: timestamp('checked_at').defaultNow().notNull(),
 
     // 상태 확인 항목

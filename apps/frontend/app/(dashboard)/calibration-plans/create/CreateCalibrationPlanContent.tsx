@@ -232,8 +232,8 @@ export default function CreateCalibrationPlanContent() {
                 )}
               </Label>
               <Select
-                value={selectedTeamId}
-                onValueChange={setSelectedTeamId}
+                value={selectedTeamId || '__all__'}
+                onValueChange={(v) => setSelectedTeamId(v === '__all__' ? '' : v)}
                 disabled={!selectedSite || (!!isTeamRestricted && !!session?.user?.teamId)}
               >
                 <SelectTrigger id="team">
@@ -249,7 +249,7 @@ export default function CreateCalibrationPlanContent() {
                 </SelectTrigger>
                 <SelectContent>
                   {!isTeamRestricted && (
-                    <SelectItem value="">{t('planCreate.fields.allTeams')}</SelectItem>
+                    <SelectItem value="__all__">{t('planCreate.fields.allTeams')}</SelectItem>
                   )}
                   {teams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>

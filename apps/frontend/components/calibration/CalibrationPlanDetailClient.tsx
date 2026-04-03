@@ -307,9 +307,9 @@ export function CalibrationPlanDetailClient({
       {/* 헤더 — Design Token 적용 */}
       <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.container}>
         <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.titleArea}>
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild aria-label={t('planDetail.backToList')}>
             <Link href="/calibration-plans">
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>
           <div>

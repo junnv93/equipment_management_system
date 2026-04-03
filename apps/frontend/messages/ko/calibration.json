@@ -73,6 +73,7 @@
     "fullUpcoming": "{days}일 후 교정 만료"
   },
   "planDetail": {
+    "backToList": "교정계획 목록으로 돌아가기",
     "breadcrumbSuffix": "교정계획서",
     "error": {
       "title": "오류",

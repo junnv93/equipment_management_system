@@ -277,8 +277,9 @@ export function IncidentHistorySection({
                       size="icon"
                       onClick={() => handleDelete(item.id)}
                       disabled={disabled}
+                      aria-label={t('formSections.incident.deleteAriaLabel')}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                     </Button>
                   </TableCell>
                 </TableRow>

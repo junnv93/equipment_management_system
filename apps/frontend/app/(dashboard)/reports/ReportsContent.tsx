@@ -52,6 +52,11 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import teamsApi, { type Team } from '@/lib/api/teams-api';
 import { ReportsStatsSection } from '@/components/reports/ReportsStatsSection';
 
+/** Radix Select.Item은 빈 문자열 value를 허용하지 않으므로 센티널 사용 */
+const ALL_SENTINEL = '__all__';
+const toSelectValue = (v: string) => (v === '' ? ALL_SENTINEL : v);
+const fromSelectValue = (v: string) => (v === ALL_SENTINEL ? '' : v);
+
 export default function ReportsContent() {
   const { toast } = useToast();
   const t = useTranslations('common');
@@ -155,7 +160,7 @@ export default function ReportsContent() {
   };
 
   const handleSiteChange = (value: string) => {
-    setSite(value);
+    setSite(fromSelectValue(value));
     setTeamId(''); // 사이트 변경 시 팀 선택 초기화
   };
 
@@ -328,12 +333,12 @@ export default function ReportsContent() {
                 <div className="space-y-4">
                   <div className="grid gap-2">
                     <Label htmlFor="site-filter">{t('reports.site')}</Label>
-                    <Select value={site} onValueChange={handleSiteChange}>
+                    <Select value={toSelectValue(site)} onValueChange={handleSiteChange}>
                       <SelectTrigger id="site-filter">
                         <SelectValue placeholder={t('reports.allSites')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allSites')}</SelectItem>
+                        <SelectItem value={ALL_SENTINEL}>{t('reports.allSites')}</SelectItem>
                         {SITE_VALUES.map((s) => (
                           <SelectItem key={s} value={s}>
                             {siteLabels[s]}
@@ -344,12 +349,16 @@ export default function ReportsContent() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="team-filter">{t('reports.team')}</Label>
-                    <Select value={teamId} onValueChange={setTeamId} disabled={teams.length === 0}>
+                    <Select
+                      value={toSelectValue(teamId)}
+                      onValueChange={(v) => setTeamId(fromSelectValue(v))}
+                      disabled={teams.length === 0}
+                    >
                       <SelectTrigger id="team-filter">
                         <SelectValue placeholder={t('reports.allTeams')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allTeams')}</SelectItem>
+                        <SelectItem value={ALL_SENTINEL}>{t('reports.allTeams')}</SelectItem>
                         {teams.map((team) => (
                           <SelectItem key={team.id} value={team.id}>
                             {team.name}
@@ -368,12 +377,15 @@ export default function ReportsContent() {
                     <Label htmlFor="calibration-status">
                       {t('reports.calibrationStatusLabel')}
                     </Label>
-                    <Select value={status} onValueChange={setStatus}>
+                    <Select
+                      value={toSelectValue(status)}
+                      onValueChange={(v) => setStatus(fromSelectValue(v))}
+                    >
                       <SelectTrigger id="calibration-status">
                         <SelectValue placeholder={t('reports.allStatuses')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allStatuses')}</SelectItem>
+                        <SelectItem value={ALL_SENTINEL}>{t('reports.allStatuses')}</SelectItem>
                         <SelectItem value="completed">{t('reports.completed')}</SelectItem>
                         <SelectItem value="scheduled">{t('reports.scheduled')}</SelectItem>
                         <SelectItem value="overdue">{t('reports.overdue')}</SelectItem>
@@ -388,12 +400,15 @@ export default function ReportsContent() {
                 <div className="space-y-4">
                   <div className="grid gap-2">
                     <Label htmlFor="site-filter-util">{t('reports.site')}</Label>
-                    <Select value={site} onValueChange={setSite}>
+                    <Select
+                      value={toSelectValue(site)}
+                      onValueChange={(v) => setSite(fromSelectValue(v))}
+                    >
                       <SelectTrigger id="site-filter-util">
                         <SelectValue placeholder={t('reports.allSites')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allSites')}</SelectItem>
+                        <SelectItem value={ALL_SENTINEL}>{t('reports.allSites')}</SelectItem>
                         {SITE_VALUES.map((s) => (
                           <SelectItem key={s} value={s}>
                             {siteLabels[s]}
@@ -410,12 +425,12 @@ export default function ReportsContent() {
                 <div className="space-y-4">
                   <div className="grid gap-2">
                     <Label htmlFor="site-filter-team">{t('reports.site')}</Label>
-                    <Select value={site} onValueChange={handleSiteChange}>
+                    <Select value={toSelectValue(site)} onValueChange={handleSiteChange}>
                       <SelectTrigger id="site-filter-team">
                         <SelectValue placeholder={t('reports.allSites')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allSites')}</SelectItem>
+                        <SelectItem value={ALL_SENTINEL}>{t('reports.allSites')}</SelectItem>
                         {SITE_VALUES.map((s) => (
                           <SelectItem key={s} value={s}>
                             {siteLabels[s]}
@@ -426,12 +441,16 @@ export default function ReportsContent() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="team-filter-team">{t('reports.team')}</Label>
-                    <Select value={teamId} onValueChange={setTeamId} disabled={teams.length === 0}>
+                    <Select
+                      value={toSelectValue(teamId)}
+                      onValueChange={(v) => setTeamId(fromSelectValue(v))}
+                      disabled={teams.length === 0}
+                    >
                       <SelectTrigger id="team-filter-team">
                         <SelectValue placeholder={t('reports.allTeams')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">{t('reports.allTeams')}</SelectItem>
+                        <SelectItem value={ALL_SENTINEL}>{t('reports.allTeams')}</SelectItem>
                         {teams.map((team) => (
                           <SelectItem key={team.id} value={team.id}>
                             {team.name}

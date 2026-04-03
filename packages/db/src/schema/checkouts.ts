@@ -36,9 +36,9 @@ export const checkouts = pgTable(
     // 사용자 정보
     requesterId: uuid('requester_id')
       .notNull()
-      .references(() => users.id), // 신청자 (장비 담당자)
-    approverId: uuid('approver_id').references(() => users.id), // 승인자 (기술책임자)
-    returnerId: uuid('returner_id').references(() => users.id), // 반입 처리자
+      .references(() => users.id, { onDelete: 'restrict' }), // 신청자 (장비 담당자)
+    approverId: uuid('approver_id').references(() => users.id, { onDelete: 'restrict' }), // 승인자 (기술책임자)
+    returnerId: uuid('returner_id').references(() => users.id, { onDelete: 'restrict' }), // 반입 처리자
 
     // 반출 정보
     purpose: varchar('purpose', { length: 50 }).notNull(), // 목적: calibration, repair, rental
@@ -69,11 +69,15 @@ export const checkouts = pgTable(
     inspectionNotes: text('inspection_notes'), // 검사 비고
 
     // 반입 승인 정보
-    returnApprovedBy: uuid('return_approved_by').references(() => users.id), // 반입 최종 승인자 (기술책임자)
+    returnApprovedBy: uuid('return_approved_by').references(() => users.id, {
+      onDelete: 'restrict',
+    }), // 반입 최종 승인자 (기술책임자)
     returnApprovedAt: timestamp('return_approved_at'), // 반입 최종 승인 시간
 
     // 시험소간 대여 반입 시 빌려준 측 확인 정보
-    lenderConfirmedBy: uuid('lender_confirmed_by').references(() => users.id), // 빌려준 측 확인자
+    lenderConfirmedBy: uuid('lender_confirmed_by').references(() => users.id, {
+      onDelete: 'restrict',
+    }), // 빌려준 측 확인자
     lenderConfirmedAt: timestamp('lender_confirmed_at'), // 빌려준 측 확인 일시
     lenderConfirmNotes: text('lender_confirm_notes'), // 빌려준 측 확인 메모
 

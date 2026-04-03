@@ -19,7 +19,7 @@ export const equipmentLocationHistory = pgTable(
     previousLocation: varchar('previous_location', { length: 100 }),
     newLocation: varchar('new_location', { length: 100 }).notNull(),
     notes: text('notes'),
-    changedBy: uuid('changed_by').references(() => users.id), // 변경자 (users 테이블 참조)
+    changedBy: uuid('changed_by').references(() => users.id, { onDelete: 'restrict' }), // 변경자 (users 테이블 참조)
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => ({
