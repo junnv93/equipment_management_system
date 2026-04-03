@@ -97,10 +97,10 @@ test.describe('장비 등록 페이지', () => {
       await backBtn.first().click();
       await page.waitForURL(/\/equipment/, { timeout: 10000 });
     } else {
-      // PageHeader의 첫 번째 버튼(뒤로가기)이 있을 수 있음
-      const firstBtn = page.locator('[class*="PageHeader"] button').first();
-      if ((await firstBtn.count()) > 0) {
-        await firstBtn.click();
+      // 목록으로 이동하는 다른 네비게이션 요소 확인
+      const navLink = page.getByRole('link', { name: /장비|equipment/i }).first();
+      if ((await navLink.count()) > 0) {
+        await navLink.click();
         await page.waitForURL(/\/equipment/, { timeout: 10000 });
       }
     }

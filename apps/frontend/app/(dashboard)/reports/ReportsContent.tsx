@@ -16,10 +16,9 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
-import { ko, enUS } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
-import { useLocale } from 'next-intl';
 import { useGenerateReport, ReportGenerationResult } from '@/hooks/use-reports';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { ReportType, ReportFormat, ReportPeriod } from '@/lib/api/reports-api';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Separator } from '@/components/ui/separator';
@@ -60,8 +59,7 @@ const fromSelectValue = (v: string) => (v === ALL_SENTINEL ? '' : v);
 export default function ReportsContent() {
   const { toast } = useToast();
   const t = useTranslations('common');
-  const currentLocale = useLocale();
-  const dateLocale = currentLocale === 'ko' ? ko : enUS;
+  const { fmtDate } = useDateFormatter();
   const siteLabels = useSiteLabels();
 
   const [reportType, setReportType] = useState<ReportType | ''>('');
@@ -211,10 +209,6 @@ export default function ReportsContent() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return format(date, 'PPP', { locale: dateLocale });
-  };
-
   const getPeriodLabel = (period: ReportPeriod) => {
     switch (period) {
       case 'last_week':
@@ -227,7 +221,7 @@ export default function ReportsContent() {
         return t('reports.lastYear');
       case 'custom':
         return customDateRange?.from && customDateRange?.to
-          ? `${formatDate(customDateRange.from)} - ${formatDate(customDateRange.to)}`
+          ? `${fmtDate(customDateRange.from, 'PPP')} - ${fmtDate(customDateRange.to, 'PPP')}`
           : t('reports.custom');
       default:
         return '';

@@ -27,22 +27,23 @@ test.describe('확인 필요 목록', () => {
     await page.goto('/checkouts/pending-checks');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
 
-    // 필터 버튼들 찾기 — 3개 크기가 'sm'인 버튼
-    const filterButtons = page.locator('.flex.gap-2.mb-6 button');
-    await expect(filterButtons).toHaveCount(3);
+    // 필터 버튼들 찾기 — 텍스트 기반
+    const lenderBtn = page.getByRole('button', { name: /빌려주는 측|Lender/i });
+    const borrowerBtn = page.getByRole('button', { name: /빌리는 측|Borrower/i });
+    const allBtn = page.getByRole('button', { name: /^전체$|^All$/i });
 
-    // 두 번째 버튼 (빌려주는 측) 클릭
-    await filterButtons.nth(1).click();
+    // 빌려주는 측 클릭
+    await lenderBtn.click();
     await page.waitForURL(/role=lender/);
     expect(page.url()).toContain('role=lender');
 
-    // 세 번째 버튼 (빌리는 측) 클릭
-    await filterButtons.nth(2).click();
+    // 빌리는 측 클릭
+    await borrowerBtn.click();
     await page.waitForURL(/role=borrower/);
     expect(page.url()).toContain('role=borrower');
 
-    // 첫 번째 버튼 (전체) 클릭 → role 파라미터 제거
-    await filterButtons.nth(0).click();
+    // 전체 클릭 → role 파라미터 제거
+    await allBtn.click();
     await page.waitForURL((url) => !url.searchParams.has('role'));
     expect(page.url()).not.toContain('role=');
   });
@@ -54,9 +55,7 @@ test.describe('확인 필요 목록', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
 
     // borrower 필터가 활성화(default variant)된 상태인지 확인
-    const filterButtons = page.locator('.flex.gap-2.mb-6 button');
-    // 세 번째 버튼(빌리는 측)이 default variant
-    const borrowerBtn = filterButtons.nth(2);
+    const borrowerBtn = page.getByRole('button', { name: /빌리는 측|Borrower/i });
     await expect(borrowerBtn).toHaveClass(/bg-primary|default/);
   });
 
@@ -66,11 +65,12 @@ test.describe('확인 필요 목록', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
 
     // 빈 상태 또는 카드 목록 중 하나가 표시됨
-    const emptyState = page.locator('text=/확인할|No.*check|모두 완료/i');
-    const cards = page.locator('[class*="grid"] > div');
+    const emptyState = page.getByText(/확인할 항목이 없|No.*check|모두 완료/i);
+    // 카드 내 확인 진행 링크 버튼은 카드가 있을 때만 존재
+    const cardActions = page.getByRole('link', { name: /진행|proceed/i });
 
     const hasEmpty = (await emptyState.count()) > 0;
-    const hasCards = (await cards.count()) > 0;
+    const hasCards = (await cardActions.count()) > 0;
 
     // 둘 중 하나는 반드시 존재
     expect(hasEmpty || hasCards).toBeTruthy();

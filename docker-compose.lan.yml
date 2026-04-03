@@ -1,25 +1,21 @@
-# 내부 LAN 전용 프로덕션 설정 (수원랩)
+# 내부 LAN 전용 프로덕션 설정
 # 외부 인터넷 노출 없이 유선 LAN 네트워크에서만 접근 가능
 # 사용법: docker compose -f docker-compose.lan.yml up -d
-
-version: '3.8'
+# 마이그레이션: docker compose -f docker-compose.lan.yml --profile migration run --rm migration
 
 services:
   # PostgreSQL Database (핵심 데이터 저장소)
   postgres:
     image: postgres:15
-    container_name: equipment_postgres_prod
+    container_name: equipment_postgres_lan
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_USER: postgres
-      POSTGRES_DB: postgres_equipment # 프로젝트 실제 DB명과 일치
-    ports:
-      - '5432:5432'
+      POSTGRES_DB: postgres_equipment
+    # 포트를 외부 노출하지 않음 — Docker 내부 네트워크에서만 접근
     volumes:
-      # 영구 데이터 저장 (데스크탑 디스크에 저장됨)
       - /var/lib/equipment-system/postgres:/var/lib/postgresql/data
-      # 백업 디렉토리 마운트
       - /var/lib/equipment-system/backups:/backups
     networks:
       - equipment_network
@@ -37,11 +33,10 @@ services:
   # Redis Cache (성능 향상)
   redis:
     image: redis:7-alpine
-    container_name: equipment_redis_prod
+    container_name: equipment_redis_lan
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
-    ports:
-      - '6379:6379'
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # 포트를 외부 노출하지 않음 — Docker 내부 네트워크에서만 접근
     volumes:
       - /var/lib/equipment-system/redis:/data
     networks:
@@ -57,13 +52,38 @@ services:
         max-size: '50m'
         max-file: '5'
 
+  # RustFS (S3 호환 파일 저장소)
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: equipment_rustfs_lan
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - /var/lib/equipment-system/rustfs:/data
+    networks:
+      - equipment_network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:9000/minio/health/live || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
   # Backend API (NestJS)
   backend:
     build:
       context: .
       dockerfile: apps/backend/docker/Dockerfile
       target: production
-    container_name: equipment_backend_prod
+    container_name: equipment_backend_lan
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -76,10 +96,22 @@ services:
       # 인증 시크릿
       JWT_SECRET: ${JWT_SECRET}
       REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      # RBAC — 기본 DENY (미인가 엔드포인트 차단)
+      PERMISSIONS_GUARD_MODE: DENY
+      # 프론트엔드 URL (CORS 허용 origin)
+      FRONTEND_URL: http://${SERVER_LAN_IP:-192.168.1.100}:9000
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
       # Azure AD (회사 계정 통합)
       AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
       AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
       AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      # 파일 저장소 (RustFS S3)
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: http://rustfs:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-equipment-files}
     volumes:
       - /var/lib/equipment-system/logs/backend:/app/logs
     depends_on:
@@ -87,8 +119,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      rustfs:
+        condition: service_healthy
     networks:
       - equipment_network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/monitoring/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     logging:
       driver: 'json-file'
       options:
@@ -99,20 +139,51 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: apps/frontend/docker/Dockerfile
+      dockerfile: apps/frontend/Dockerfile
       target: production
-    container_name: equipment_frontend_prod
+    container_name: equipment_frontend_lan
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      # ⚠️ 중요: 운영 서버의 실제 LAN IP로 변경 필요
-      NEXT_PUBLIC_API_URL: http://192.168.1.100:3001
-      NEXTAUTH_URL: http://192.168.1.100:3000
+      # Nginx 리버스 프록시 경유 — 브라우저는 포트 9000으로 접근
+      # ⚠️ /api 경로 포함 금지 (Axios가 /api/api/... 이중 경로 생성)
+      NEXT_PUBLIC_API_URL: http://${SERVER_LAN_IP:-192.168.1.100}:9000
+      NEXTAUTH_URL: http://${SERVER_LAN_IP:-192.168.1.100}:9000
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-    ports:
-      - '3000:3000'
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      # 내부 네트워크에서 백엔드 직접 통신 (SSR용)
+      INTERNAL_BACKEND_URL: http://backend:3001
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - equipment_network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/api/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  # Nginx Reverse Proxy (단일 포트 9000으로 통합)
+  nginx:
+    image: nginx:alpine
+    container_name: equipment_nginx_lan
+    restart: unless-stopped
+    ports:
+      - '9000:9000'
+    volumes:
+      - ./nginx/lan.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     networks:
       - equipment_network
     logging:
@@ -121,30 +192,26 @@ services:
         max-size: '50m'
         max-file: '5'
 
-  # Nginx Reverse Proxy (옵션: 단일 포트 80으로 통합)
-  nginx:
-    image: nginx:alpine
-    container_name: equipment_nginx_prod
-    restart: unless-stopped
-    ports:
-      - '80:80'
-    volumes:
-      - ./nginx/lan.conf:/etc/nginx/nginx.conf:ro
+  # DB 마이그레이션 (one-shot, 배포 시에만 실행)
+  migration:
+    build:
+      context: .
+      dockerfile: apps/backend/docker/Dockerfile
+      target: production
+    container_name: equipment_migration_lan
+    command: ['node', 'apps/backend/dist/database/run-migration.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/postgres_equipment
     depends_on:
-      - frontend
-      - backend
+      postgres:
+        condition: service_healthy
     networks:
       - equipment_network
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '50m'
-        max-file: '5'
+    restart: 'no'
+    profiles:
+      - migration
 
 networks:
   equipment_network:
     driver: bridge
-# Named volumes (optional, 위 설정에서는 bind mount 사용)
-# volumes:
-#   postgres_data:
-#   redis_data:

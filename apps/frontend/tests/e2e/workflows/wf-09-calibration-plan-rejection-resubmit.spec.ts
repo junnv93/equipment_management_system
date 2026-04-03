@@ -60,14 +60,48 @@ test.describe('WF-09: 교정 계획 반려 → 수정 → 재제출', () => {
     expect(data.status).toBe(CPSVal.PENDING_REVIEW);
   });
 
-  test('Step 4: QM 검토 통과 → LM 승인 → approved', async ({
+  test('Step 4: QM 검토 통과 → pending_approval', async ({ qualityManagerPage: page }) => {
+    await clearBackendCache();
+    const body = await reviewCalibrationPlan(page, WF_PLAN_ID);
+    const data = (body.data ?? body) as Record<string, unknown>;
+    expect(data.status).toBe(CPSVal.PENDING_APPROVAL);
+  });
+
+  // ── LM 반려 시나리오 (문서 Step 6~7) ──
+
+  test('Step 5: LM이 반려 → rejected (draft가 아닌 rejected로 전이)', async ({
+    siteAdminPage: page,
+  }) => {
+    await clearBackendCache();
+    const body = await rejectCalibrationPlan(
+      page,
+      WF_PLAN_ID,
+      'WF-09: 예산 초과, 장비 우선순위 재검토 필요',
+      'lab_manager'
+    );
+    const data = (body.data ?? body) as Record<string, unknown>;
+    // ★ 핵심 검증: LM 반려 시 rejected 상태 (draft 아님)
+    expect(data.status).toBe(CPSVal.REJECTED);
+  });
+
+  test('Step 6: TM 수정 → 재제출 → QM 검토 → LM 최종 승인 → approved', async ({
+    techManagerPage: tmPage,
     qualityManagerPage: qmPage,
     siteAdminPage: lmPage,
   }) => {
+    // rejected → draft 리셋 (실제 운영에서는 TM이 수동 재작성)
+    await resetCalibrationPlanStatus(WF_PLAN_ID, CPSVal.DRAFT);
     await clearBackendCache();
-    await reviewCalibrationPlan(qmPage, WF_PLAN_ID);
 
+    // 재제출
+    await submitPlanForReview(tmPage, WF_PLAN_ID);
     await clearBackendCache();
+
+    // QM 검토 통과
+    await reviewCalibrationPlan(qmPage, WF_PLAN_ID);
+    await clearBackendCache();
+
+    // LM 최종 승인
     const body = await approveCalibrationPlan(lmPage, WF_PLAN_ID);
     const data = (body.data ?? body) as Record<string, unknown>;
     expect(data.status).toBe(CPSVal.APPROVED);
