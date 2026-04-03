@@ -12,6 +12,10 @@ import {
   approveEquipmentImport,
   receiveEquipmentImport,
   initiateImportReturn,
+  approveCheckout,
+  startCheckout,
+  returnCheckout,
+  approveReturn,
   extractId,
   apiGet,
   resetEquipmentImports,
@@ -25,6 +29,7 @@ test.describe('WF-13: 대여 반입 전체 흐름', () => {
 
   let importId: string;
   let createdEquipmentId: string;
+  let returnCheckoutId: string;
 
   test.afterAll(async () => {
     await resetEquipmentImports();
@@ -92,5 +97,38 @@ test.describe('WF-13: 대여 반입 전체 흐름', () => {
     const importBody = await importResp.json();
     const importData = (importBody.data ?? importBody) as Record<string, unknown>;
     expect(importData.returnCheckoutId).toBeTruthy();
+    returnCheckoutId = importData.returnCheckoutId as string;
+  });
+
+  test('Step 6: TM이 반납 반출 승인', async ({ techManagerPage: page }) => {
+    expect(returnCheckoutId).toBeTruthy();
+    await clearBackendCache();
+    const body = await approveCheckout(page, returnCheckoutId);
+    const data = (body.data ?? body) as Record<string, unknown>;
+    expect(data.status).toBe('approved');
+  });
+
+  test('Step 7: 반출 시작 + 반입 처리 + 반입 승인', async ({
+    testOperatorPage: tePage,
+    techManagerPage: tmPage,
+  }) => {
+    await clearBackendCache();
+    await startCheckout(tePage, returnCheckoutId);
+
+    await clearBackendCache();
+    await returnCheckout(tePage, returnCheckoutId, { workingStatusChecked: true });
+
+    await clearBackendCache();
+    await approveReturn(tmPage, returnCheckoutId);
+  });
+
+  test('Step 8: 최종 확인 — 반입 상태 returned', async ({ testOperatorPage: page }) => {
+    await clearBackendCache();
+    const importResp = await apiGet(page, `/api/equipment-imports/${importId}`, 'test_engineer');
+    expect(importResp.ok()).toBeTruthy();
+    const importBody = await importResp.json();
+    const importData = (importBody.data ?? importBody) as Record<string, unknown>;
+    // ★ 반납 완료 후 import 상태가 returned
+    expect(importData.status).toBe('returned');
   });
 });
