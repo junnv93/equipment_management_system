@@ -8,6 +8,10 @@
 
 import { test, expect } from '../shared/fixtures/auth.fixture';
 import {
+  CheckoutStatusValues as CSVal,
+  EquipmentImportStatusValues as EISVal,
+} from '@equipment-management/schemas';
+import {
   createEquipmentImport,
   approveEquipmentImport,
   receiveEquipmentImport,
@@ -105,7 +109,7 @@ test.describe('WF-13: 대여 반입 전체 흐름', () => {
     await clearBackendCache();
     const body = await approveCheckout(page, returnCheckoutId);
     const data = (body.data ?? body) as Record<string, unknown>;
-    expect(data.status).toBe('approved');
+    expect(data.status).toBe(CSVal.APPROVED);
   });
 
   test('Step 7: 반출 시작 + 반입 처리 + 반입 승인', async ({
@@ -129,6 +133,6 @@ test.describe('WF-13: 대여 반입 전체 흐름', () => {
     const importBody = await importResp.json();
     const importData = (importBody.data ?? importBody) as Record<string, unknown>;
     // ★ 반납 완료 후 import 상태가 returned
-    expect(importData.status).toBe('returned');
+    expect(importData.status).toBe(EISVal.RETURNED);
   });
 });

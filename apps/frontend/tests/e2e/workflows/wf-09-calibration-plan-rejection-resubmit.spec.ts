@@ -76,7 +76,7 @@ test.describe('WF-09: 교정 계획 반려 → 수정 → 재제출', () => {
     const body = await rejectCalibrationPlan(
       page,
       WF_PLAN_ID,
-      'WF-09: 예산 초과, 장비 우선순위 재검��� 필요',
+      'WF-09: 예산 초과, 장비 우선순위 재검토 필요',
       'lab_manager'
     );
     const data = (body.data ?? body) as Record<string, unknown>;
@@ -93,7 +93,7 @@ test.describe('WF-09: 교정 계획 반려 → 수정 → 재제출', () => {
     await resetCalibrationPlanStatus(WF_PLAN_ID, CPSVal.DRAFT);
     await clearBackendCache();
 
-    // 재��출
+    // 재제출
     await submitPlanForReview(tmPage, WF_PLAN_ID);
     await clearBackendCache();
 
