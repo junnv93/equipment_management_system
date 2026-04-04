@@ -75,7 +75,7 @@ describe('ApprovalsService', () => {
       expect(result.disposal_final).toBe(0);
       expect(result.plan_review).toBe(0);
       expect(result.plan_final).toBe(0);
-      expect(result.software).toBe(0);
+      expect(result.software_validation).toBe(0);
     });
 
     it('quality_manager 역할은 plan_review만 조회한다', async () => {
@@ -93,13 +93,13 @@ describe('ApprovalsService', () => {
       expect(result.disposal_review).toBe(0);
       expect(result.disposal_final).toBe(0);
       expect(result.plan_final).toBe(0);
-      expect(result.software).toBe(0);
+      expect(result.software_validation).toBe(0);
     });
 
     it('technical_manager 역할은 outgoing/incoming/calibration 등을 조회한다', async () => {
       tableCounts.set(schema.checkouts, 1);
       tableCounts.set(schema.calibrations, 2);
-      tableCounts.set(schema.softwareHistory, 1);
+      tableCounts.set(schema.softwareValidations, 1);
 
       const result = await service.getPendingCountsByRole(MOCK_USER_CTX);
 
@@ -107,7 +107,7 @@ describe('ApprovalsService', () => {
       expect(result.plan_review).toBe(0);
       expect(result.plan_final).toBe(0);
       // software는 조회됨
-      expect(result.software).toBe(1);
+      expect(result.software_validation).toBe(1);
     });
 
     it('lab_manager 역할은 disposal_final과 plan_final을 조회한다', async () => {
@@ -139,7 +139,7 @@ describe('ApprovalsService', () => {
         'disposal_final',
         'plan_review',
         'plan_final',
-        'software',
+        'software_validation',
       ];
 
       for (const key of expectedKeys) {

@@ -94,13 +94,7 @@ export const equipment = pgTable(
     // 추가 정보
     supplier: varchar('supplier', { length: 100 }),
     contactInfo: varchar('contact_info', { length: 100 }),
-    softwareVersion: varchar('software_version', { length: 50 }),
     firmwareVersion: varchar('firmware_version', { length: 50 }),
-
-    // 소프트웨어 정보 (프롬프트 9-1)
-    // @see packages/schemas/src/enums.ts - SoftwareTypeEnum
-    softwareName: varchar('software_name', { length: 200 }), // 소프트웨어명 (EMC32, UL EMC, DASY6 SAR 등)
-    softwareType: varchar('software_type', { length: 50 }), // 'measurement' | 'analysis' | 'control' | 'other'
     manualLocation: text('manual_location'),
     accessories: text('accessories'),
     technicalManager: varchar('technical_manager', { length: 100 }),
@@ -166,8 +160,6 @@ export const equipment = pgTable(
       ),
       // 공용장비 검색 최적화
       isSharedIdx: index('equipment_is_shared_idx').on(table.isShared),
-      // 소프트웨어 검색 최적화
-      softwareNameIdx: index('equipment_software_name_idx').on(table.softwareName),
       // 관리번호 컴포넌트 검색 최적화
       siteCodeIdx: index('equipment_site_code_idx').on(table.siteCode),
       classificationCodeIdx: index('equipment_classification_code_idx').on(
@@ -194,6 +186,7 @@ export type NewEquipment = typeof equipment.$inferInsert;
 import { users } from './users';
 import type { checkouts } from './checkouts';
 import { documents } from './documents';
+import { equipmentTestSoftware } from './equipment-test-software';
 
 /**
  * 장비와 관련 엔티티를 포함한 확장 타입
@@ -217,4 +210,5 @@ export const equipmentRelations = relations(equipment, ({ one, many }) => ({
     references: [users.id],
   }),
   documents: many(documents),
+  testSoftwareLinks: many(equipmentTestSoftware),
 }));

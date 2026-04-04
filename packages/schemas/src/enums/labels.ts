@@ -14,7 +14,7 @@ import type {
   ResolutionType,
   RepairResult,
 } from './non-conformance';
-import type { SoftwareType, SoftwareApprovalStatus } from './software';
+import type { TestField, SoftwareAvailability, ValidationStatus } from './software';
 import type { IncidentType } from './incident';
 import type { NotificationPriority } from './notification';
 import type {
@@ -297,15 +297,24 @@ export const CALIBRATION_FACTOR_TYPE_LABELS: Record<CalibrationFactorType, strin
 };
 
 /**
- * 소프트웨어 타입 라벨 (UI 표시용)
+ * 시험분야 라벨 (UI 표시용)
  *
- * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(software.type.*)를 사용하세요.
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(software.testField.*)를 사용하세요.
  */
-export const SOFTWARE_TYPE_LABELS: Record<SoftwareType, string> = {
-  measurement: '측정 소프트웨어',
-  analysis: '분석 소프트웨어',
-  control: '제어 소프트웨어',
-  other: '기타',
+export const TEST_FIELD_LABELS: Record<TestField, string> = {
+  RF: 'RF 시험',
+  SAR: 'SAR 시험',
+  EMC: 'EMC 시험',
+  RED: 'RED 시험',
+  HAC: 'HAC 시험',
+};
+
+/**
+ * 소프트웨어 가용 여부 라벨 (UI 표시용)
+ */
+export const SOFTWARE_AVAILABILITY_LABELS: Record<SoftwareAvailability, string> = {
+  available: '가용',
+  unavailable: '불가',
 };
 
 /**
@@ -375,13 +384,15 @@ export const CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS: Record<
 };
 
 /**
- * 소프트웨어 승인 상태 라벨 (UI 표시용)
+ * 유효성 확인 상태 라벨 (UI 표시용)
  *
- * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(software.approvalStatus.*)를 사용하세요.
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(software.validationStatus.*)를 사용하세요.
  */
-export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, string> = {
-  pending: '승인 대기',
-  approved: '승인됨',
+export const VALIDATION_STATUS_LABELS: Record<ValidationStatus, string> = {
+  draft: '초안',
+  submitted: '제출됨',
+  approved: '기술 승인',
+  quality_approved: '최종 승인',
   rejected: '반려됨',
 };
 

@@ -18,7 +18,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { CalibrationModule } from './modules/calibration/calibration.module';
 import { CalibrationFactorsModule } from './modules/calibration-factors/calibration-factors.module';
 import { NonConformancesModule } from './modules/non-conformances/non-conformances.module';
-import { SoftwareModule } from './modules/software/software.module';
+import { TestSoftwareModule } from './modules/test-software/test-software.module';
 import { CalibrationPlansModule } from './modules/calibration-plans/calibration-plans.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
@@ -40,6 +40,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { I18nModule } from './common/i18n/i18n.module';
 import { DataMigrationModule } from './modules/data-migration/data-migration.module';
+import { SoftwareValidationsModule } from './modules/software-validations/software-validations.module';
 
 @Module({
   imports: [
@@ -90,7 +91,7 @@ import { DataMigrationModule } from './modules/data-migration/data-migration.mod
     CalibrationModule,
     CalibrationFactorsModule,
     NonConformancesModule,
-    SoftwareModule,
+    TestSoftwareModule,
     CalibrationPlansModule,
     NotificationsModule,
     ReportsModule,
@@ -101,6 +102,7 @@ import { DataMigrationModule } from './modules/data-migration/data-migration.mod
     SettingsModule, // System + calibration settings
     DocumentsModule, // 통합 문서 관리 (다운로드, 무결성 검증, 버전 관리)
     DataMigrationModule, // 데이터 마이그레이션 (Excel 일괄 등록)
+    SoftwareValidationsModule, // 소프트웨어 유효성 확인 (UL-QP-18-09)
   ],
   controllers: [],
   providers: [

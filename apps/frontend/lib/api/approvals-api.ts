@@ -30,7 +30,7 @@ import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
 import nonConformancesApi, { type NonConformance } from './non-conformances-api';
 import equipmentImportApi, { type EquipmentImport } from './equipment-import-api';
-import softwareApi from './software-api';
+import { softwareValidationApi } from './software-api';
 import calibrationPlansApi from './calibration-plans-api';
 import { reviewDisposal, approveDisposal, getCurrentDisposalRequest } from './disposal-api';
 import equipmentApi from './equipment-api';
@@ -199,13 +199,11 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     multiStepType: 'calibration_plan',
     section: 'management',
   },
-  software: {
+  software_validation: {
     labelKey: 'tabMeta.software.label',
     icon: 'Code',
     actionKey: 'tabMeta.software.action',
-    commentRequired: true,
-    commentDialogTitleKey: 'tabMeta.software.commentDialogTitle',
-    commentPlaceholderKey: 'tabMeta.software.commentPlaceholder',
+    commentRequired: false,
     section: 'management',
   },
 };
@@ -301,7 +299,7 @@ export interface PendingCountsByCategory {
   disposal_final: number;
   plan_review: number;
   plan_final: number;
-  software: number;
+  software_validation: number;
 }
 
 export interface ApprovalKpiResponse {
@@ -357,7 +355,7 @@ class ApprovalsApi {
         return this.getPendingPlanReviews();
       case 'plan_final':
         return this.getPendingPlanFinals();
-      case 'software':
+      case 'software_validation':
         return this.getPendingSoftwareApprovals();
       default:
         return [];
@@ -534,7 +532,7 @@ class ApprovalsApi {
    */
   private async getPendingSoftwareApprovals(): Promise<ApprovalItem[]> {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.SOFTWARE.PENDING);
+      const response = await apiClient.get(API_ENDPOINTS.SOFTWARE_VALIDATIONS.PENDING);
       const items = transformArrayResponse<Record<string, unknown>>(response);
 
       return items.map((item) => this.mapSoftwareToApprovalItem(item));
@@ -703,7 +701,7 @@ class ApprovalsApi {
       disposal_final: 0,
       plan_review: 0,
       plan_final: 0,
-      software: 0,
+      software_validation: 0,
     };
   }
 
@@ -810,17 +808,9 @@ class ApprovalsApi {
         });
         break;
       }
-      case 'software': {
-        if (!comment?.trim()) {
-          throw new Error(
-            'Software approval requires a comment (commentRequired: true in TAB_META)'
-          );
-        }
-        const { version: softwareVersion } = await softwareApi.getSoftwareHistoryDetail(id);
-        await softwareApi.approveSoftwareChange(id, {
-          version: softwareVersion,
-          approverComment: comment,
-        });
+      case 'software_validation': {
+        const validation = await softwareValidationApi.get(id);
+        await softwareValidationApi.approve(id, validation.version, comment);
         break;
       }
       default:
@@ -914,12 +904,9 @@ class ApprovalsApi {
         });
         break;
       }
-      case 'software': {
-        const { version: softwareVersion } = await softwareApi.getSoftwareHistoryDetail(id);
-        await softwareApi.rejectSoftwareChange(id, {
-          version: softwareVersion,
-          rejectionReason: reason,
-        });
+      case 'software_validation': {
+        const svForReject = await softwareValidationApi.get(id);
+        await softwareValidationApi.reject(id, svForReject.version, reason);
         break;
       }
       default:
@@ -1143,7 +1130,7 @@ class ApprovalsApi {
     // 백엔드 findHistory()가 LEFT JOIN으로 플랫 필드 반환: changerName, teamName, equipmentName
     return {
       id: String(item.id),
-      category: 'software',
+      category: 'software_validation',
       status: 'pending_review',
       requesterId: String(item.changedBy || ''),
       requesterName: item.changerName ? String(item.changerName) : 'Unknown',

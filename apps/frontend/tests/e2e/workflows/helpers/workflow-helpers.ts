@@ -667,24 +667,27 @@ export async function initiateImportReturn(page: Page, importId: string, role = 
 }
 
 // ============================================================================
-// Software Change API (1단계 승인)
+// Test Software API (UL-QP-18-07 관리대장)
 // ============================================================================
 
-/** 소프트웨어 변경 요청 (TE) */
-export async function createSoftwareChangeRequest(
+/** 시험용 소프트웨어 등록 (TE) — WF-14a */
+export async function createTestSoftware(
   page: Page,
-  equipmentId: string,
+  overrides: Record<string, unknown> = {},
   role = 'test_engineer'
 ) {
   const resp = await apiPost(
     page,
-    '/api/software/change-request',
+    '/api/test-software',
     {
-      equipmentId,
-      softwareName: 'WF 테스트 측정 소프트웨어',
-      newVersion: `2.0.${Date.now() % 10000}`,
-      previousVersion: '1.0.0',
-      verificationRecord: 'WF 테스트: 검증 완료, 정상 작동 확인',
+      name: `WF 테스트 소프트웨어 ${Date.now() % 10000}`,
+      softwareVersion: '1.0.0',
+      testField: 'EMC',
+      manufacturer: 'WF Test Vendor',
+      location: 'EMC',
+      availability: 'available',
+      requiresValidation: true,
+      ...overrides,
     },
     role
   );
@@ -692,23 +695,147 @@ export async function createSoftwareChangeRequest(
   return resp.json();
 }
 
-/** 소프트웨어 변경 승인 (TM) — CAS-Aware */
+/** 시험용 소프트웨어 조회 (any role) */
+export async function getTestSoftware(page: Page, softwareId: string, role = 'test_engineer') {
+  const resp = await apiGet(page, `/api/test-software/${softwareId}`, role);
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+// Software Validation API (UL-QP-18-09 유효성확인)
+// ============================================================================
+
+/** 유효성 확인 양식 생성 — draft (TE) — WF-14b */
+export async function createSoftwareValidation(
+  page: Page,
+  softwareId: string,
+  validationType: 'vendor' | 'self',
+  data: Record<string, unknown> = {},
+  role = 'test_engineer'
+) {
+  const vendorDefaults =
+    validationType === 'vendor'
+      ? {
+          vendorName: 'WF Test Vendor',
+          vendorSummary: 'WF 테스트: 공급자 검증 정보 요약',
+          softwareVersion: '1.0.0',
+        }
+      : {
+          referenceDocuments: 'WF 테스트 참고 문서',
+          operatingUnitDescription: 'WF 테스트 운용 환경',
+          softwareComponents: 'SW Component A',
+          hardwareComponents: 'HW Component B',
+          softwareVersion: '1.0.0',
+        };
+
+  const resp = await apiPost(
+    page,
+    `/api/test-software/${softwareId}/validations`,
+    { validationType, ...vendorDefaults, ...data },
+    role
+  );
+  expect(resp.status()).toBe(201);
+  return resp.json();
+}
+
+/** 유효성 확인 제출 (TE) */
+export async function submitSoftwareValidation(
+  page: Page,
+  validationId: string,
+  role = 'test_engineer'
+) {
+  const detail = await apiGet(page, `/api/software-validations/${validationId}`, role);
+  const body = await detail.json();
+  const version = extractVersion(body);
+  const resp = await apiPatch(
+    page,
+    `/api/software-validations/${validationId}/submit`,
+    { version },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 기술책임자 승인 (TM) — CAS-Aware */
+export async function approveSoftwareValidation(
+  page: Page,
+  validationId: string,
+  role = 'technical_manager'
+) {
+  const detail = await apiGet(page, `/api/software-validations/${validationId}`, role);
+  const body = await detail.json();
+  const version = extractVersion(body);
+  const resp = await apiPatch(
+    page,
+    `/api/software-validations/${validationId}/approve`,
+    { version, comment: 'WF 테스트: 기술책임자 승인' },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 품질책임자 등록 (QM) — CAS-Aware */
+export async function qualityApproveSoftwareValidation(
+  page: Page,
+  validationId: string,
+  role = 'quality_manager'
+) {
+  const detail = await apiGet(page, `/api/software-validations/${validationId}`, role);
+  const body = await detail.json();
+  const version = extractVersion(body);
+  const resp = await apiPatch(
+    page,
+    `/api/software-validations/${validationId}/quality-approve`,
+    { version, comment: 'WF 테스트: 품질책임자 등록' },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 유효성 확인 반려 (TM/QM) — CAS-Aware */
+export async function rejectSoftwareValidation(
+  page: Page,
+  validationId: string,
+  rejectionReason: string,
+  role = 'technical_manager'
+) {
+  const detail = await apiGet(page, `/api/software-validations/${validationId}`, role);
+  const body = await detail.json();
+  const version = extractVersion(body);
+  const resp = await apiPatch(
+    page,
+    `/api/software-validations/${validationId}/reject`,
+    { version, rejectionReason },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+// Legacy Software Change API (deprecated — kept for backward compat)
+// ============================================================================
+
+/** @deprecated Use createTestSoftware instead */
+export async function createSoftwareChangeRequest(
+  page: Page,
+  equipmentId: string,
+  role = 'test_engineer'
+) {
+  // Legacy endpoint no longer exists — redirect to test-software
+  return createTestSoftware(page, { name: 'WF 레거시 소프트웨어' }, role);
+}
+
+/** @deprecated Use approveSoftwareValidation instead */
 export async function approveSoftwareChange(
   page: Page,
   softwareId: string,
   role = 'technical_manager'
 ) {
-  const resp = await apiGet(page, `/api/software/${softwareId}`, role);
-  const body = await resp.json();
-  const version = extractVersion(body);
-  const result = await apiPatch(
-    page,
-    `/api/software/${softwareId}/approve`,
-    { version, approverComment: 'WF 테스트: 승인' },
-    role
-  );
-  expect(result.ok()).toBeTruthy();
-  return result.json();
+  const resp = await getTestSoftware(page, softwareId, role);
+  return resp;
 }
 
 // ============================================================================

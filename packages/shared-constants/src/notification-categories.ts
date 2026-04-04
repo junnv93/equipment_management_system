@@ -30,6 +30,7 @@ export const NOTIFICATION_CATEGORIES = [
   'disposal',
   'equipment_import',
   'equipment',
+  'software',
   'system',
 ] as const;
 
@@ -49,6 +50,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<NotificationCategory, string> 
   disposal: '폐기',
   equipment_import: '장비 반입',
   equipment: '장비',
+  software: '소프트웨어',
   system: '시스템',
 };
 
@@ -65,6 +67,7 @@ export const NOTIFICATION_CATEGORY_DESCRIPTIONS: Record<NotificationCategory, st
   disposal: '폐기 요청, 검토, 승인 알림',
   equipment_import: '장비 반입 요청, 승인 알림',
   equipment: '장비 등록, 수정, 상태 변경 알림',
+  software: '소프트웨어 유효성 확인 제출/승인/반려 알림',
   system: '시스템 점검 및 중요 공지 알림',
 };
 
@@ -79,5 +82,6 @@ export const NOTIFICATION_CATEGORY_FORM_FIELDS: Record<NotificationCategory, str
   disposal: 'disposalEnabled',
   equipment_import: 'equipmentImportEnabled',
   equipment: 'equipmentEnabled',
+  software: 'softwareEnabled',
   system: 'systemEnabled',
 };

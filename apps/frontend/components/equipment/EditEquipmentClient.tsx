@@ -159,7 +159,6 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
     site: equipment.site || undefined,
     supplier: equipment.supplier || undefined,
     contactInfo: equipment.contactInfo || undefined,
-    softwareVersion: equipment.softwareVersion || undefined,
     firmwareVersion: equipment.firmwareVersion || undefined,
     manualLocation: equipment.manualLocation || undefined,
     accessories: equipment.accessories || undefined,

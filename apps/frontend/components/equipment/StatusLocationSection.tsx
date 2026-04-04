@@ -330,25 +330,6 @@ export function StatusLocationSection({
             )}
           />
 
-          {/* S/W 버전 */}
-          <FormField
-            control={control}
-            name="softwareVersion"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('form.statusLocation.swVersionLabel')}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={t('form.statusLocation.swVersionPlaceholder')}
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           {/* 펌웨어 버전 */}
           <FormField
             control={control}

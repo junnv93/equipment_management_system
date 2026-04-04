@@ -199,13 +199,13 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     // Phase 4: History & Admin
     // =========================================================================
 
-    const softHistResult = await pool.query('SELECT COUNT(*) as count FROM software_history');
-    const softHistCount = parseInt(softHistResult.rows[0]?.count ?? 0, 10);
+    const testSoftwareResult = await pool.query('SELECT COUNT(*) as count FROM test_software');
+    const testSoftwareCount = parseInt(testSoftwareResult.rows[0]?.count ?? 0, 10);
     checks.push({
-      name: 'Software History count',
-      passed: softHistCount >= 8,
-      actual: softHistCount,
-      expected: 8,
+      name: 'Test Software count',
+      passed: testSoftwareCount >= 19,
+      actual: testSoftwareCount,
+      expected: 19,
     });
 
     const locHistResult = await pool.query(

@@ -6,5 +6,5 @@ import { ApprovalCategoryValues as AC } from '@equipment-management/schemas';
  * @deprecated 통합 승인 페이지(/admin/approvals?tab=software)로 리다이렉트
  */
 export default function SoftwareApprovalsPage() {
-  redirect(getApprovalPageUrl(AC.SOFTWARE));
+  redirect(getApprovalPageUrl(AC.SOFTWARE_VALIDATION));
 }

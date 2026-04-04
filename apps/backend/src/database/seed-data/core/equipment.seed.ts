@@ -574,9 +574,6 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     undefined,
     undefined,
     {
-      softwareName: 'EMC32',
-      softwareType: 'measurement',
-      softwareVersion: '4.2.1',
       calibrationRequired: 'not_required',
       isActive: true,
     }
@@ -593,9 +590,6 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     undefined,
     undefined,
     {
-      softwareName: 'DASY6',
-      softwareType: 'measurement',
-      softwareVersion: '7.3.0',
       calibrationRequired: 'not_required',
       isActive: true,
     }

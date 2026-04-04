@@ -44,9 +44,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 보정계수
     Permission.VIEW_CALIBRATION_FACTORS,
     Permission.CREATE_CALIBRATION_FACTOR,
-    // 소프트웨어
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
+    // 시험용 소프트웨어
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    // 소프트웨어 유효성 확인
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
     // 폐기
     Permission.REQUEST_DISPOSAL,
     // 사용자 조회 (장비 담당자 선택 드롭다운, 팀 목록 등에 필요)
@@ -100,11 +104,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_CALIBRATION_FACTOR,
     Permission.APPROVE_CALIBRATION_FACTOR,
     Permission.VIEW_CALIBRATION_FACTOR_REQUESTS,
-    // 소프트웨어
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
-    Permission.APPROVE_SOFTWARE_CHANGE,
-    Permission.VIEW_SOFTWARE_REQUESTS,
+    // 시험용 소프트웨어
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    Permission.UPDATE_TEST_SOFTWARE,
+    // 소프트웨어 유효성 확인
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
     // 교정계획서 (작성, 검토요청)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.CREATE_CALIBRATION_PLAN,
@@ -149,8 +157,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_EQUIPMENT_IMPORTS,
     // 보정계수 조회
     Permission.VIEW_CALIBRATION_FACTORS,
-    // 소프트웨어 조회
-    Permission.VIEW_SOFTWARE,
+    // 시험용 소프트웨어 조회 + 유효성 확인 승인 (UL-QP-18-09 품질책임자 등록)
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
     // 교정계획서 (검토 권한)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.REVIEW_CALIBRATION_PLAN, // 검토 완료
@@ -201,11 +211,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_NON_CONFORMANCE,
     Permission.UPDATE_NON_CONFORMANCE,
     Permission.CLOSE_NON_CONFORMANCE,
-    // 소프트웨어
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
-    Permission.APPROVE_SOFTWARE_CHANGE,
-    Permission.VIEW_SOFTWARE_REQUESTS,
+    // 시험용 소프트웨어
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    Permission.UPDATE_TEST_SOFTWARE,
+    // 소프트웨어 유효성 확인
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
     // 팀 관리
     Permission.VIEW_TEAMS,
     Permission.CREATE_TEAMS,

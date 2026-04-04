@@ -2,152 +2,209 @@ import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
-import { type SoftwareApprovalStatus, type SoftwareType } from '@equipment-management/schemas';
+import type {
+  TestField,
+  SoftwareAvailability,
+  ValidationType,
+  ValidationStatus,
+} from '@equipment-management/schemas';
 
-export type { SoftwareApprovalStatus, SoftwareType };
+export type { TestField, SoftwareAvailability, ValidationType, ValidationStatus };
 
-export interface SoftwareHistory {
+// ============================================================================
+// Test Software (UL-QP-18-07)
+// ============================================================================
+
+export interface TestSoftware {
   id: string;
-  equipmentId: string;
-  softwareName: string;
-  previousVersion: string | null;
-  newVersion: string;
-  changedAt: string;
-  changedBy: string;
-  verificationRecord: string;
-  approvalStatus: SoftwareApprovalStatus;
-  approvedBy: string | null;
-  approvedAt: string | null;
-  approverComment: string | null;
+  managementNumber: string;
+  name: string;
+  softwareVersion: string | null;
+  testField: TestField;
+  primaryManagerId: string | null;
+  secondaryManagerId: string | null;
+  installedAt: string | null;
+  manufacturer: string | null;
+  location: string | null;
+  availability: SoftwareAvailability;
+  requiresValidation: boolean;
+  site: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  // Joined fields
+  primaryManagerName?: string;
+  secondaryManagerName?: string;
+}
+
+export interface TestSoftwareQuery {
+  testField?: TestField;
+  availability?: SoftwareAvailability;
+  search?: string;
+  site?: string;
+  page?: number;
+  pageSize?: number;
+  sort?: string;
+}
+
+export interface CreateTestSoftwareDto {
+  name: string;
+  softwareVersion?: string;
+  testField: TestField;
+  primaryManagerId?: string;
+  secondaryManagerId?: string;
+  installedAt?: string;
+  manufacturer?: string;
+  location?: string;
+  availability?: SoftwareAvailability;
+  requiresValidation?: boolean;
+  site?: string;
+}
+
+export interface UpdateTestSoftwareDto extends Partial<CreateTestSoftwareDto> {
+  version: number;
+}
+
+// ============================================================================
+// Software Validation (UL-QP-18-09)
+// ============================================================================
+
+export interface SoftwareValidation {
+  id: string;
+  testSoftwareId: string;
+  validationType: ValidationType;
+  status: ValidationStatus;
+  softwareVersion: string | null;
+  testDate: string | null;
+  // Vendor fields
+  vendorName: string | null;
+  vendorSummary: string | null;
+  receivedBy: string | null;
+  receivedDate: string | null;
+  attachmentNote: string | null;
+  // Self fields
+  referenceDocuments: string | null;
+  operatingUnitDescription: string | null;
+  softwareComponents: string | null;
+  hardwareComponents: string | null;
+  acquisitionFunctions: unknown[] | null;
+  processingFunctions: unknown[] | null;
+  controlFunctions: unknown[] | null;
+  performedBy: string | null;
+  // Approval
+  createdBy: string | null;
+  submittedAt: string | null;
+  submittedBy: string | null;
+  technicalApproverId: string | null;
+  technicalApprovedAt: string | null;
+  qualityApproverId: string | null;
+  qualityApprovedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface SoftwareHistoryQuery {
-  equipmentId?: string;
-  softwareName?: string;
-  approvalStatus?: SoftwareApprovalStatus;
-  search?: string;
-  sort?: string;
-  page?: number;
-  pageSize?: number;
+export interface CreateSoftwareValidationDto {
+  validationType: ValidationType;
+  softwareVersion?: string;
+  testDate?: string;
+  // Vendor fields
+  vendorName?: string;
+  vendorSummary?: string;
+  receivedBy?: string;
+  receivedDate?: string;
+  attachmentNote?: string;
+  // Self fields
+  referenceDocuments?: string;
+  operatingUnitDescription?: string;
+  softwareComponents?: string;
+  hardwareComponents?: string;
+  acquisitionFunctions?: Record<string, unknown>[];
+  processingFunctions?: Record<string, unknown>[];
+  controlFunctions?: Record<string, unknown>[];
+  performedBy?: string;
 }
 
-export interface CreateSoftwareChangeDto {
-  equipmentId: string;
-  softwareName: string;
-  softwareType?: SoftwareType;
-  previousVersion?: string;
-  newVersion: string;
-  verificationRecord: string;
-}
-
-export interface ApproveSoftwareChangeDto {
-  approverComment: string;
+export interface UpdateSoftwareValidationDto extends Partial<CreateSoftwareValidationDto> {
   version: number;
 }
 
-export interface RejectSoftwareChangeDto {
-  rejectionReason: string;
-  version: number;
-}
-
-export interface EquipmentSoftwareInfo {
-  equipmentId: string;
-  equipmentName: string;
-  softwareName: string | null;
-  softwareVersion: string | null;
-  softwareType: SoftwareType | null;
-  lastUpdated: string | null;
-}
-
-export interface SoftwareRegistry {
-  registry: EquipmentSoftwareInfo[];
-  summary: {
-    softwareName: string;
-    equipmentCount: number;
-    versions: (string | null)[];
-  }[];
-  totalEquipments: number;
-  totalSoftwareTypes: number;
-  generatedAt: string;
-}
-
-export interface EquipmentBySoftware {
-  softwareName: string;
-  equipments: {
-    equipmentId: string;
-    equipmentName: string;
-    softwareVersion: string | null;
-    softwareType: SoftwareType | null;
-    lastUpdated: string | null;
-  }[];
-  count: number;
-}
-
-// 소프트웨어 API 객체
-const softwareApi = {
-  // 소프트웨어 변경 요청
-  createSoftwareChange: async (data: CreateSoftwareChangeDto): Promise<SoftwareHistory> => {
-    return apiClient.post(API_ENDPOINTS.SOFTWARE.CHANGE_REQUEST, data).then((res) => res.data);
-  },
-
-  // 소프트웨어 변경 이력 조회
-  getSoftwareHistory: async (
-    query: SoftwareHistoryQuery = {}
-  ): Promise<PaginatedResponse<SoftwareHistory>> => {
+// API methods
+const testSoftwareApi = {
+  list: async (query: TestSoftwareQuery = {}): Promise<PaginatedResponse<TestSoftware>> => {
     const params = new URLSearchParams();
-
     Object.entries(query).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        params.append(key, String(value));
-      }
+      if (value !== undefined && value !== null && value !== '') params.append(key, String(value));
     });
-
-    const url = `${API_ENDPOINTS.SOFTWARE.HISTORY}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url).then((res) => transformPaginatedResponse<SoftwareHistory>(res));
+    const url = `${API_ENDPOINTS.TEST_SOFTWARE.LIST}${params.toString() ? `?${params}` : ''}`;
+    return apiClient.get(url).then((res) => transformPaginatedResponse<TestSoftware>(res));
   },
-
-  // 소프트웨어 변경 이력 상세 조회
-  getSoftwareHistoryDetail: async (id: string): Promise<SoftwareHistory> => {
-    return apiClient.get(API_ENDPOINTS.SOFTWARE.GET(id)).then((res) => res.data);
+  get: async (id: string): Promise<TestSoftware> => {
+    return apiClient.get(API_ENDPOINTS.TEST_SOFTWARE.GET(id)).then((res) => res.data);
   },
-
-  // 승인 대기 목록 조회
-  getPendingSoftwareChanges: async (): Promise<PaginatedResponse<SoftwareHistory>> => {
+  create: async (data: CreateTestSoftwareDto): Promise<TestSoftware> => {
+    return apiClient.post(API_ENDPOINTS.TEST_SOFTWARE.CREATE, data).then((res) => res.data);
+  },
+  update: async (id: string, data: UpdateTestSoftwareDto): Promise<TestSoftware> => {
+    return apiClient.patch(API_ENDPOINTS.TEST_SOFTWARE.UPDATE(id), data).then((res) => res.data);
+  },
+  toggleAvailability: async (id: string, version: number): Promise<TestSoftware> => {
     return apiClient
-      .get(API_ENDPOINTS.SOFTWARE.PENDING)
-      .then((res) => transformPaginatedResponse<SoftwareHistory>(res));
-  },
-
-  // 소프트웨어 통합 관리대장 조회
-  getSoftwareRegistry: async (): Promise<SoftwareRegistry> => {
-    return apiClient.get(API_ENDPOINTS.SOFTWARE.REGISTRY).then((res) => res.data);
-  },
-
-  // 특정 소프트웨어 사용 장비 목록 조회
-  getEquipmentBySoftware: async (softwareName: string): Promise<EquipmentBySoftware> => {
-    return apiClient
-      .get(API_ENDPOINTS.SOFTWARE.EQUIPMENT_BY_SOFTWARE(softwareName))
+      .patch(API_ENDPOINTS.TEST_SOFTWARE.TOGGLE_AVAILABILITY(id), { version })
       .then((res) => res.data);
-  },
-
-  // 소프트웨어 변경 승인
-  approveSoftwareChange: async (
-    id: string,
-    data: ApproveSoftwareChangeDto
-  ): Promise<SoftwareHistory> => {
-    return apiClient.patch(API_ENDPOINTS.SOFTWARE.APPROVE(id), data).then((res) => res.data);
-  },
-
-  // 소프트웨어 변경 반려
-  rejectSoftwareChange: async (
-    id: string,
-    data: RejectSoftwareChangeDto
-  ): Promise<SoftwareHistory> => {
-    return apiClient.patch(API_ENDPOINTS.SOFTWARE.REJECT(id), data).then((res) => res.data);
   },
 };
 
-export default softwareApi;
+const softwareValidationApi = {
+  list: async (softwareId: string): Promise<PaginatedResponse<SoftwareValidation>> => {
+    return apiClient
+      .get(API_ENDPOINTS.SOFTWARE_VALIDATIONS.LIST(softwareId))
+      .then((res) => transformPaginatedResponse<SoftwareValidation>(res));
+  },
+  get: async (id: string): Promise<SoftwareValidation> => {
+    return apiClient.get(API_ENDPOINTS.SOFTWARE_VALIDATIONS.GET(id)).then((res) => res.data);
+  },
+  create: async (
+    softwareId: string,
+    data: CreateSoftwareValidationDto
+  ): Promise<SoftwareValidation> => {
+    return apiClient
+      .post(API_ENDPOINTS.SOFTWARE_VALIDATIONS.CREATE(softwareId), data)
+      .then((res) => res.data);
+  },
+  update: async (id: string, data: UpdateSoftwareValidationDto): Promise<SoftwareValidation> => {
+    return apiClient
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.UPDATE(id), data)
+      .then((res) => res.data);
+  },
+  submit: async (id: string, version: number): Promise<SoftwareValidation> => {
+    return apiClient
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.SUBMIT(id), { version })
+      .then((res) => res.data);
+  },
+  approve: async (id: string, version: number, comment?: string): Promise<SoftwareValidation> => {
+    return apiClient
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.APPROVE(id), { version, comment })
+      .then((res) => res.data);
+  },
+  qualityApprove: async (id: string, version: number): Promise<SoftwareValidation> => {
+    return apiClient
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.QUALITY_APPROVE(id), { version })
+      .then((res) => res.data);
+  },
+  reject: async (
+    id: string,
+    version: number,
+    rejectionReason: string
+  ): Promise<SoftwareValidation> => {
+    return apiClient
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.REJECT(id), { version, rejectionReason })
+      .then((res) => res.data);
+  },
+};
+
+export { testSoftwareApi, softwareValidationApi };
+export default testSoftwareApi;

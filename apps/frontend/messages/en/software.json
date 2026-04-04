@@ -1,46 +1,164 @@
 {
-  "type": {
-    "measurement": "Measurement Software",
-    "analysis": "Analysis Software",
-    "control": "Control Software",
-    "other": "Other"
+  "testField": {
+    "RF": "RF Testing",
+    "SAR": "SAR Testing",
+    "EMC": "EMC Testing",
+    "RED": "RED Testing",
+    "HAC": "HAC Testing"
   },
-  "approvalStatus": {
-    "pending": "Pending",
-    "approved": "Approved",
+  "availability": {
+    "available": "Available",
+    "unavailable": "Unavailable"
+  },
+  "validationType": {
+    "vendor": "Vendor Demonstration",
+    "self": "Self Testing"
+  },
+  "validationStatus": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "approved": "Technically Approved",
+    "quality_approved": "Fully Approved",
     "rejected": "Rejected"
   },
-  "registry": {
-    "title": "Software Integrated Registry",
-    "subtitle": "View software status of all equipment",
-    "stats": {
-      "totalEquipments": "Equipment with Software",
-      "equipmentsDesc": "Equipment with registered software",
-      "totalTypes": "Software Types",
-      "typesDesc": "Unique software types",
-      "lastUpdated": "Last Updated",
-      "updatedDesc": "Registry generation time"
+  "list": {
+    "title": "Test Software Registry",
+    "subtitle": "UL-QP-18-07 Test Software Management",
+    "searchPlaceholder": "Search by name, management number, or manufacturer...",
+    "empty": "No test software registered",
+    "createButton": "Register Software",
+    "columns": {
+      "managementNumber": "Mgmt No.",
+      "name": "Software Name",
+      "version": "Version",
+      "testField": "Test Field",
+      "primaryManager": "Primary Manager",
+      "manufacturer": "Manufacturer",
+      "location": "Location",
+      "availability": "Availability"
     },
-    "summary": {
-      "title": "Software Status by Type",
-      "description": "Number of equipment and version info per software",
-      "equipmentCount": "{count} units",
-      "version": "Version: {versions}",
-      "noVersion": "No info"
-    },
-    "table": {
-      "title": "Software Detail by Equipment",
-      "description": "{count} software entries registered",
-      "searchPlaceholder": "Search by software name or equipment name...",
-      "empty": "No software registered",
-      "headers": {
-        "equipmentName": "Equipment",
-        "softwareName": "Software",
-        "version": "Version",
-        "type": "Type",
-        "lastUpdated": "Last Updated"
-      },
-      "viewHistory": "View History"
+    "filters": {
+      "testField": "Test Field",
+      "availability": "Availability",
+      "allTestFields": "All Fields",
+      "allAvailability": "All"
     }
+  },
+  "detail": {
+    "notFound": "Software not found",
+    "title": "Test Software Detail",
+    "editButton": "Edit",
+    "toggleAvailability": "Toggle Availability",
+    "validationLink": "Manage Validations",
+    "fields": {
+      "managementNumber": "Management Number",
+      "name": "Software Name",
+      "version": "Software Version",
+      "testField": "Test Field",
+      "primaryManager": "Primary Manager",
+      "secondaryManager": "Secondary Manager",
+      "installedAt": "Installed Date",
+      "manufacturer": "Manufacturer",
+      "location": "Location",
+      "availability": "Availability",
+      "requiresValidation": "Requires Validation",
+      "site": "Site",
+      "createdAt": "Created",
+      "updatedAt": "Updated"
+    },
+    "requiresValidationYes": "Yes",
+    "requiresValidationNo": "No",
+    "notSpecified": "Not specified"
+  },
+  "create": {
+    "title": "Register Test Software",
+    "subtitle": "Register test software in the UL-QP-18-07 management register",
+    "formTitle": "Software Information",
+    "requiresValidationLabel": "Requires Validation",
+    "submitButton": "Register"
+  },
+  "form": {
+    "createTitle": "Register Test Software",
+    "editTitle": "Edit Test Software",
+    "nameLabel": "Software Name",
+    "namePlaceholder": "Enter software name",
+    "versionLabel": "Software Version",
+    "versionPlaceholder": "e.g. 1.0.0",
+    "testFieldLabel": "Test Field",
+    "testFieldPlaceholder": "Select test field",
+    "primaryManagerLabel": "Primary Manager",
+    "primaryManagerPlaceholder": "Select primary manager",
+    "secondaryManagerLabel": "Secondary Manager",
+    "secondaryManagerPlaceholder": "Select secondary manager",
+    "installedAtLabel": "Installed Date",
+    "manufacturerLabel": "Manufacturer",
+    "manufacturerPlaceholder": "Enter manufacturer",
+    "locationLabel": "Location",
+    "locationPlaceholder": "Enter location",
+    "availabilityLabel": "Availability",
+    "requiresValidationLabel": "Requires Validation",
+    "siteLabel": "Site",
+    "sitePlaceholder": "Select site",
+    "cancel": "Cancel",
+    "submit": "Save",
+    "submitting": "Saving..."
+  },
+  "validation": {
+    "title": "Software Validations",
+    "subtitle": "UL-QP-18-09 Software Validation Records",
+    "createButton": "New Validation",
+    "empty": "No validation records",
+    "backToDetail": "Back to Software Detail",
+    "columns": {
+      "type": "Validation Type",
+      "status": "Status",
+      "version": "SW Version",
+      "testDate": "Test Date",
+      "submittedAt": "Submitted",
+      "actions": "Actions"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "submit": "Submit for Approval",
+      "approve": "Approve (Technical)",
+      "qualityApprove": "Approve (Quality)",
+      "reject": "Reject"
+    },
+    "form": {
+      "createTitle": "Create Validation Record",
+      "typeLabel": "Validation Type",
+      "typePlaceholder": "Select validation type",
+      "versionLabel": "Software Version",
+      "versionPlaceholder": "e.g. 1.0.0",
+      "testDateLabel": "Test Date",
+      "vendorNameLabel": "Vendor Name",
+      "vendorNamePlaceholder": "Enter vendor name",
+      "vendorSummaryLabel": "Summary",
+      "vendorSummaryPlaceholder": "Validation summary...",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "submitting": "Creating..."
+    },
+    "rejectDialog": {
+      "title": "Reject Validation",
+      "reasonLabel": "Rejection Reason",
+      "reasonPlaceholder": "Enter reason for rejection...",
+      "cancel": "Cancel",
+      "confirm": "Reject"
+    }
+  },
+  "toast": {
+    "createSuccess": "Software registered successfully",
+    "updateSuccess": "Software updated successfully",
+    "toggleSuccess": "Availability updated",
+    "validationCreateSuccess": "Validation record created",
+    "validationSubmitSuccess": "Validation submitted for approval",
+    "validationApproveSuccess": "Validation approved",
+    "validationRejectSuccess": "Validation rejected",
+    "error": "An error occurred",
+    "errorFallback": "Please try again",
+    "versionConflict": "Already processed by another user",
+    "versionConflictDesc": "Data has been updated. Please check the latest status."
   }
 }

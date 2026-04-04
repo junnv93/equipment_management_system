@@ -95,88 +95,6 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
   return (
     <div className="space-y-8">
-      {/* 장비 사진 — AP-04: tokens.card 깊이 + AP-05: count Badge */}
-      <div className={tokens.card}>
-        <div className={tokens.header}>
-          <Camera className={tokens.headerIcon} aria-hidden="true" />
-          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentPhoto')}</span>
-          {photos.length > 0 && (
-            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
-              {photos.length}
-            </Badge>
-          )}
-        </div>
-        <div className="p-4">
-          {photos.length > 0 ? (
-            <div className={DOCUMENT_DISPLAY.photoGrid}>
-              {photos.map((photo: DocumentRecord) => (
-                <button
-                  key={photo.id}
-                  type="button"
-                  onClick={() => handleDownload(photo)}
-                  className={DOCUMENT_DISPLAY.photoCard}
-                  aria-label={`${t('basicInfoTab.download')} ${photo.originalFileName}`}
-                >
-                  <div className="flex items-center justify-center h-full">
-                    <Camera className={DOCUMENT_DISPLAY.photoIcon} />
-                  </div>
-                  <div className={DOCUMENT_DISPLAY.photoOverlay}>
-                    <p className="text-xs truncate">{photo.originalFileName}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            /* AP-09: 빈 상태 — 기능 인지 + CTA */
-            <div className={DOCUMENT_DISPLAY.emptyCompact}>
-              <Camera className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
-              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noPhotos')}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 장비 매뉴얼 — AP-06: hover accent 모션 */}
-      <div className={tokens.card}>
-        <div className={tokens.header}>
-          <BookOpen className={tokens.headerIcon} aria-hidden="true" />
-          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentManual')}</span>
-          {manuals.length > 0 && (
-            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
-              {manuals.length}
-            </Badge>
-          )}
-        </div>
-        <div className="p-4 space-y-2">
-          {manuals.length > 0 ? (
-            manuals.map((manual: DocumentRecord) => (
-              <div key={manual.id} className={DOCUMENT_DISPLAY.manualRow}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <BookOpen className={DOCUMENT_DISPLAY.manualIcon} aria-hidden="true" />
-                  <span className="text-sm truncate">{manual.originalFileName}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 flex-shrink-0"
-                  onClick={() => handleDownload(manual)}
-                  aria-label={`${t('basicInfoTab.download')} ${manual.originalFileName}`}
-                >
-                  <Download className="h-4 w-4" />
-                  {t('basicInfoTab.download')}
-                </Button>
-              </div>
-            ))
-          ) : (
-            /* AP-09: 빈 상태 */
-            <div className={DOCUMENT_DISPLAY.emptyCompact}>
-              <BookOpen className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
-              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noManuals')}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* 기본 정보 카드 그리드 — 비대칭 1.6fr (SSOT: tokens.grid) */}
       <div className={tokens.grid}>
         {/* Primary: 장비 기본정보 — 좌측 brand-info 보더 (AP-04 깊이 차등) */}
@@ -318,8 +236,90 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
         </div>
       </div>
 
-      {/* 소프트웨어/펌웨어 (조건부) */}
-      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
+      {/* 장비 사진 — AP-04: tokens.card 깊이 + AP-05: count Badge */}
+      <div className={tokens.card}>
+        <div className={tokens.header}>
+          <Camera className={tokens.headerIcon} aria-hidden="true" />
+          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentPhoto')}</span>
+          {photos.length > 0 && (
+            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
+              {photos.length}
+            </Badge>
+          )}
+        </div>
+        <div className="p-4">
+          {photos.length > 0 ? (
+            <div className={DOCUMENT_DISPLAY.photoGrid}>
+              {photos.map((photo: DocumentRecord) => (
+                <button
+                  key={photo.id}
+                  type="button"
+                  onClick={() => handleDownload(photo)}
+                  className={DOCUMENT_DISPLAY.photoCard}
+                  aria-label={`${t('basicInfoTab.download')} ${photo.originalFileName}`}
+                >
+                  <div className="flex items-center justify-center h-full">
+                    <Camera className={DOCUMENT_DISPLAY.photoIcon} />
+                  </div>
+                  <div className={DOCUMENT_DISPLAY.photoOverlay}>
+                    <p className="text-xs truncate">{photo.originalFileName}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* AP-09: 빈 상태 — 기능 인지 + CTA */
+            <div className={DOCUMENT_DISPLAY.emptyCompact}>
+              <Camera className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
+              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noPhotos')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 장비 매뉴얼 — AP-06: hover accent 모션 */}
+      <div className={tokens.card}>
+        <div className={tokens.header}>
+          <BookOpen className={tokens.headerIcon} aria-hidden="true" />
+          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentManual')}</span>
+          {manuals.length > 0 && (
+            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
+              {manuals.length}
+            </Badge>
+          )}
+        </div>
+        <div className="p-4 space-y-2">
+          {manuals.length > 0 ? (
+            manuals.map((manual: DocumentRecord) => (
+              <div key={manual.id} className={DOCUMENT_DISPLAY.manualRow}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <BookOpen className={DOCUMENT_DISPLAY.manualIcon} aria-hidden="true" />
+                  <span className="text-sm truncate">{manual.originalFileName}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 flex-shrink-0"
+                  onClick={() => handleDownload(manual)}
+                  aria-label={`${t('basicInfoTab.download')} ${manual.originalFileName}`}
+                >
+                  <Download className="h-4 w-4" />
+                  {t('basicInfoTab.download')}
+                </Button>
+              </div>
+            ))
+          ) : (
+            /* AP-09: 빈 상태 */
+            <div className={DOCUMENT_DISPLAY.emptyCompact}>
+              <BookOpen className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
+              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noManuals')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 펌웨어/메뉴얼 (조건부) */}
+      {(equipment.firmwareVersion || equipment.manualLocation) && (
         <div className={tokens.card}>
           <div className={tokens.header}>
             <Package className={tokens.headerIcon} aria-hidden="true" />
@@ -327,12 +327,6 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           </div>
           <div className={tokens.body}>
             <dl className={tokens.dlGrid}>
-              {equipment.softwareVersion && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.softwareVersion')}</dt>
-                  <dd className={tokens.ddMono}>{equipment.softwareVersion}</dd>
-                </>
-              )}
               {equipment.firmwareVersion && (
                 <>
                   <dt className={tokens.dtLabel}>{t('softwareTab.firmwareVersion')}</dt>

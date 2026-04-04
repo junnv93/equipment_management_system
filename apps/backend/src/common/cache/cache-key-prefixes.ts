@@ -38,8 +38,11 @@ export const CACHE_KEY_PREFIXES = {
   /** disposal.service.ts */
   DISPOSAL_REQUESTS: 'disposal-requests:',
 
-  /** software.service.ts */
-  SOFTWARE: 'software:',
+  /** test-software.service.ts */
+  TEST_SOFTWARE: 'test-software:',
+
+  /** software-validations.service.ts */
+  SOFTWARE_VALIDATIONS: 'software-validations:',
 
   /** audit.service.ts */
   AUDIT_LOGS: 'audit-logs:',

@@ -9,6 +9,8 @@
   "equipmentRent": "대여",
   "equipmentRepairHistory": "수리 이력",
   "equipmentSoftware": "소프트웨어",
+  "softwareDetail": "소프트웨어 상세",
+  "softwareValidation": "소프트웨어 유효성 확인",
   "calibration": "교정 관리",
   "calibrationRegister": "교정 등록",
   "calibrationPlans": "교정계획서",

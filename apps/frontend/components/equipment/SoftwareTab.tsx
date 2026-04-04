@@ -21,14 +21,8 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {equipment.softwareVersion || equipment.firmwareVersion ? (
+        {equipment.firmwareVersion ? (
           <div className="space-y-4">
-            {equipment.softwareVersion && (
-              <div>
-                <p className="text-sm text-muted-foreground">{t('softwareTab.softwareVersion')}</p>
-                <p className="font-medium">{equipment.softwareVersion}</p>
-              </div>
-            )}
             {equipment.firmwareVersion && (
               <div>
                 <p className="text-sm text-muted-foreground">{t('softwareTab.firmwareVersion')}</p>

@@ -7,7 +7,8 @@
 
 ## 미완료 항목
 
-(없음)
+- [ ] equipment.json(en/ko) `softwareHistory.*` 블록 (구 소프트웨어 변경 다이얼로그 i18n 키) — `apps/frontend/messages/{en,ko}/equipment.json:~1385-1434` — 2026-04-04
+- [ ] E2E 테스트 payload stale softwareVersion — `apps/backend/test/equipment.e2e-spec.ts:162`, `equipment-approval.e2e-spec.ts:222,606` — 2026-04-04
 
 ---
 

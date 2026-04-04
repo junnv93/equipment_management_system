@@ -94,10 +94,6 @@ export const routeMap: Record<string, RouteMetadata> = {
     labelKey: 'navigation.equipmentRepairHistory',
     parent: '/equipment/[id]',
   },
-  '/equipment/[id]/software': {
-    labelKey: 'navigation.equipmentSoftware',
-    parent: '/equipment/[id]',
-  },
 
   // ========================================
   // 교정 관리
@@ -195,12 +191,21 @@ export const routeMap: Record<string, RouteMetadata> = {
   },
 
   // ========================================
-  // 소프트웨어 관리
+  // 시험용 소프트웨어 관리
   // ========================================
   '/software': {
     labelKey: 'navigation.software',
     parent: '/',
     icon: Code,
+  },
+  '/software/[id]': {
+    labelKey: 'navigation.softwareDetail',
+    parent: '/software',
+    dynamic: true,
+  },
+  '/software/[id]/validation': {
+    labelKey: 'navigation.softwareValidation',
+    parent: '/software/[id]',
   },
 
   // ========================================

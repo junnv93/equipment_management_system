@@ -71,7 +71,7 @@ export const APPROVAL_CATEGORY_VALUES = [
   'disposal_final',
   'plan_review',
   'plan_final',
-  'software',
+  'software_validation',
 ] as const;
 
 export type ApprovalCategory = (typeof APPROVAL_CATEGORY_VALUES)[number];
@@ -87,5 +87,5 @@ export const ApprovalCategoryValues = {
   DISPOSAL_FINAL: 'disposal_final',
   PLAN_REVIEW: 'plan_review',
   PLAN_FINAL: 'plan_final',
-  SOFTWARE: 'software',
+  SOFTWARE_VALIDATION: 'software_validation',
 } as const satisfies Record<string, ApprovalCategory>;

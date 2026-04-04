@@ -59,7 +59,6 @@
     "description": "장비사양",
     "specMatch": "시방일치 여부",
     "calibrationRequired": "교정필요 여부",
-    "softwareVersion": "소프트웨어 버전",
     "firmwareVersion": "펌웨어 버전",
     "manualLocation": "매뉴얼 보관 위치",
     "accessories": "부속품",
@@ -559,7 +558,6 @@
   },
   "softwareTab": {
     "title": "소프트웨어/매뉴얼 정보",
-    "softwareVersion": "소프트웨어 버전",
     "firmwareVersion": "펌웨어 버전",
     "manualLocation": "매뉴얼 보관 위치",
     "empty": "등록된 소프트웨어 정보가 없습니다."

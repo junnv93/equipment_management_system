@@ -284,4 +284,27 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     actions: [{ method: 'invalidateAllDashboard' }],
     patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
   },
+
+  // ─── 소프트웨어 유효성 확인 (Software Validation) ───
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
+    ],
+  },
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
+    ],
+  },
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
+    ],
+  },
 };

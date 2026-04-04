@@ -40,6 +40,7 @@ const CATEGORY_COLUMN_MAP: Record<
   disposal: 'disposalEnabled',
   equipment_import: 'equipmentImportEnabled',
   equipment: 'equipmentEnabled',
+  software: 'equipmentEnabled', // software 알림은 equipment 설정과 공유 (별도 DB 컬럼 없음)
   system: 'systemEnabled',
 };
 
