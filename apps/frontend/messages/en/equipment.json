@@ -59,7 +59,6 @@
     "description": "Specifications",
     "specMatch": "Spec Match",
     "calibrationRequired": "Calibration Required",
-    "softwareVersion": "Software Version",
     "firmwareVersion": "Firmware Version",
     "manualLocation": "Manual Location",
     "accessories": "Accessories",
@@ -559,7 +558,6 @@
   },
   "softwareTab": {
     "title": "Software/Manual Information",
-    "softwareVersion": "Software Version",
     "firmwareVersion": "Firmware Version",
     "manualLocation": "Manual Location",
     "empty": "No software information registered."
