@@ -86,7 +86,7 @@ test.describe('WF-14b: 소프트웨어 유효성 확인', () => {
       await clearBackendCache();
       const body = await qualityApproveSoftwareValidation(page, validationId);
       const data = (body.data ?? body) as Record<string, unknown>;
-      expect(data.status).toBe('approved');
+      expect(data.status).toBe('quality_approved');
       expect(data.qualityApproverId).toBeTruthy();
       expect(data.qualityApprovedAt).toBeTruthy();
     });
@@ -158,7 +158,7 @@ test.describe('WF-14b: 소프트웨어 유효성 확인', () => {
       await clearBackendCache();
       const body = await qualityApproveSoftwareValidation(page, validationId);
       const data = (body.data ?? body) as Record<string, unknown>;
-      expect(data.status).toBe('approved');
+      expect(data.status).toBe('quality_approved');
     });
   });
 

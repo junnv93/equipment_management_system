@@ -157,9 +157,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_EQUIPMENT_IMPORTS,
     // 보정계수 조회
     Permission.VIEW_CALIBRATION_FACTORS,
-    // 시험용 소프트웨어 조회
+    // 시험용 소프트웨어 조회 + 유효성 확인 승인 (UL-QP-18-09 품질책임자 등록)
     Permission.VIEW_TEST_SOFTWARE,
     Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
     // 교정계획서 (검토 권한)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.REVIEW_CALIBRATION_PLAN, // 검토 완료

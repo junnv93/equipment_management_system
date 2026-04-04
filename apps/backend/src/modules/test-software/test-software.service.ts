@@ -43,10 +43,12 @@ export class TestSoftwareService extends VersionedBaseService {
    * P0001부터 시작, 순차 증가.
    */
   private async generateNextManagementNumber(tx: AppDatabase): Promise<string> {
-    // PNNNN 형식에서 숫자 부분만 추출하여 MAX 계산 (P0043-HAC 같은 접미사 대응)
+    // PNNNN 형식에서 숫자 부분만 추출하여 MAX 계산
+    // Drizzle sql 태그의 정규식 이스케이프 문제를 피하기 위해 sql.raw 사용
     const result = await tx.execute(
-      sql`SELECT MAX(CAST(SUBSTRING(management_number FROM 'P(\d+)') AS INTEGER)) as max_num
-          FROM test_software`
+      sql.raw(
+        `SELECT MAX(CAST(SUBSTRING(management_number FROM 'P([0-9]+)') AS INTEGER)) as max_num FROM test_software`
+      )
     );
 
     const row = result.rows[0] as Record<string, unknown> | undefined;
@@ -56,7 +58,7 @@ export class TestSoftwareService extends VersionedBaseService {
       return 'P0001';
     }
 
-    // Drizzle returns integers as strings for raw sql queries
+    // PostgreSQL returns integers, Drizzle may pass them as string or number
     const maxNum = typeof rawMax === 'string' ? parseInt(rawMax, 10) : Number(rawMax);
     const nextNum = maxNum + 1;
     return `P${String(nextNum).padStart(4, '0')}`;
