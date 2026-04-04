@@ -160,7 +160,7 @@ export default function TestSoftwareListContent() {
                 <TableRow key={sw.id}>
                   <TableCell>
                     <Link
-                      href={`/software/${sw.id}`}
+                      href={FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id)}
                       className="font-mono text-sm text-primary hover:underline"
                     >
                       {sw.managementNumber}
