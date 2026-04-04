@@ -17,7 +17,8 @@
   "validationStatus": {
     "draft": "Draft",
     "submitted": "Submitted",
-    "approved": "Approved",
+    "approved": "Technically Approved",
+    "quality_approved": "Fully Approved",
     "rejected": "Rejected"
   },
   "list": {
@@ -156,6 +157,8 @@
     "validationApproveSuccess": "Validation approved",
     "validationRejectSuccess": "Validation rejected",
     "error": "An error occurred",
-    "errorFallback": "Please try again"
+    "errorFallback": "Please try again",
+    "versionConflict": "Already processed by another user",
+    "versionConflictDesc": "Data has been updated. Please check the latest status."
   }
 }

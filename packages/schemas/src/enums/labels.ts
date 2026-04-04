@@ -391,7 +391,8 @@ export const CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS: Record<
 export const VALIDATION_STATUS_LABELS: Record<ValidationStatus, string> = {
   draft: '초안',
   submitted: '제출됨',
-  approved: '승인됨',
+  approved: '기술 승인',
+  quality_approved: '최종 승인',
   rejected: '반려됨',
 };
 

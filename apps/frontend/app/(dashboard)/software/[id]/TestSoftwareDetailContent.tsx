@@ -29,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import testSoftwareApi, { type UpdateTestSoftwareDto } from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { isConflictError } from '@/lib/api/error';
 import { TEST_FIELD_VALUES } from '@equipment-management/schemas';
 import type { TestField } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -75,15 +76,26 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
     }
   };
 
+  const handleMutationError = (error: Error) => {
+    if (isConflictError(error)) {
+      toast({
+        title: t('toast.versionConflict'),
+        description: t('toast.versionConflictDesc'),
+        variant: 'destructive',
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.detail(id) });
+    } else {
+      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
+    }
+  };
+
   const updateMutation = useMutation({
     mutationFn: (data: UpdateTestSoftwareDto) => testSoftwareApi.update(id, data),
     onSuccess: () => {
       toast({ title: t('toast.updateSuccess') });
       setIsEditOpen(false);
     },
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    },
+    onError: handleMutationError,
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.lists() });
@@ -95,9 +107,7 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
     onSuccess: () => {
       toast({ title: t('toast.toggleSuccess') });
     },
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    },
+    onError: handleMutationError,
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.detail(id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.lists() });

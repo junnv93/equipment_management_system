@@ -17,7 +17,8 @@
   "validationStatus": {
     "draft": "초안",
     "submitted": "제출됨",
-    "approved": "승인됨",
+    "approved": "기술 승인",
+    "quality_approved": "최종 승인",
     "rejected": "반려됨"
   },
   "list": {
@@ -156,6 +157,8 @@
     "validationApproveSuccess": "유효성 확인이 승인되었습니다",
     "validationRejectSuccess": "유효성 확인이 반려되었습니다",
     "error": "오류가 발생했습니다",
-    "errorFallback": "다시 시도해주세요"
+    "errorFallback": "다시 시도해주세요",
+    "versionConflict": "다른 사용자가 이미 처리했습니다",
+    "versionConflictDesc": "데이터가 갱신되었습니다. 최신 상태를 확인해주세요."
   }
 }

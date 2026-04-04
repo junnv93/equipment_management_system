@@ -92,6 +92,7 @@ export interface SoftwareValidation {
   controlFunctions: unknown[] | null;
   performedBy: string | null;
   // Approval
+  createdBy: string | null;
   submittedAt: string | null;
   submittedBy: string | null;
   technicalApproverId: string | null;
@@ -104,6 +105,31 @@ export interface SoftwareValidation {
   version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateSoftwareValidationDto {
+  validationType: ValidationType;
+  softwareVersion?: string;
+  testDate?: string;
+  // Vendor fields
+  vendorName?: string;
+  vendorSummary?: string;
+  receivedBy?: string;
+  receivedDate?: string;
+  attachmentNote?: string;
+  // Self fields
+  referenceDocuments?: string;
+  operatingUnitDescription?: string;
+  softwareComponents?: string;
+  hardwareComponents?: string;
+  acquisitionFunctions?: Record<string, unknown>[];
+  processingFunctions?: Record<string, unknown>[];
+  controlFunctions?: Record<string, unknown>[];
+  performedBy?: string;
+}
+
+export interface UpdateSoftwareValidationDto extends Partial<CreateSoftwareValidationDto> {
+  version: number;
 }
 
 // API methods
@@ -143,13 +169,13 @@ const softwareValidationApi = {
   },
   create: async (
     softwareId: string,
-    data: Record<string, unknown>
+    data: CreateSoftwareValidationDto
   ): Promise<SoftwareValidation> => {
     return apiClient
       .post(API_ENDPOINTS.SOFTWARE_VALIDATIONS.CREATE(softwareId), data)
       .then((res) => res.data);
   },
-  update: async (id: string, data: Record<string, unknown>): Promise<SoftwareValidation> => {
+  update: async (id: string, data: UpdateSoftwareValidationDto): Promise<SoftwareValidation> => {
     return apiClient
       .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.UPDATE(id), data)
       .then((res) => res.data);

@@ -55,7 +55,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       .from(testSoftware)
       .where(eq(testSoftware.id, testSoftwareId))
       .limit(1);
-    return sw?.name ?? '';
+    return sw?.name ?? `[unknown: ${testSoftwareId.slice(0, 8)}]`;
   }
 
   /**
@@ -86,6 +86,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
         testSoftwareId,
         validationType: dto.validationType,
         status: ValidationStatusValues.DRAFT,
+        createdBy,
         softwareVersion: dto.softwareVersion ?? null,
         testDate: dto.testDate ? new Date(dto.testDate) : null,
         // Vendor fields
@@ -346,7 +347,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     id: string,
     version: number,
     approverId: string,
-    comment?: string
+    _comment?: string
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
@@ -402,7 +403,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     id: string,
     version: number,
     approverId: string,
-    comment?: string
+    _comment?: string
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
@@ -420,6 +421,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
         id,
         version,
         {
+          status: ValidationStatusValues.QUALITY_APPROVED,
           qualityApproverId: approverId,
           qualityApprovedAt: new Date(),
         },

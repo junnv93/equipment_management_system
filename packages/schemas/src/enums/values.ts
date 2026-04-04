@@ -239,6 +239,7 @@ export const ValidationStatusValues = {
   DRAFT: 'draft',
   SUBMITTED: 'submitted',
   APPROVED: 'approved',
+  QUALITY_APPROVED: 'quality_approved',
   REJECTED: 'rejected',
 } as const satisfies Record<string, ValidationStatus>;
 

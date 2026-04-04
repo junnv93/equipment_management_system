@@ -20,8 +20,8 @@ import { users } from './users';
  * 방법 1: 공급자 시연 (vendor)
  * 방법 2: UL 자체 시험 (self)
  *
- * 워크플로우: draft → submitted → approved/rejected
- * 기술책임자 승인 + 품질책임자 등록
+ * 워크플로우: draft → submitted → approved → quality_approved (또는 rejected)
+ * 기술책임자 승인 + 품질책임자 최종 승인
  */
 export const softwareValidations = pgTable(
   'software_validations',
@@ -73,6 +73,9 @@ export const softwareValidations = pgTable(
     rejectedAt: timestamp('rejected_at'),
     rejectionReason: text('rejection_reason'),
 
+    // 생성자
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -98,6 +101,11 @@ export const softwareValidationsRelations = relations(softwareValidations, ({ on
   testSoftware: one(testSoftware, {
     fields: [softwareValidations.testSoftwareId],
     references: [testSoftware.id],
+  }),
+  creator: one(users, {
+    fields: [softwareValidations.createdBy],
+    references: [users.id],
+    relationName: 'softwareValidationCreator',
   }),
   submitter: one(users, {
     fields: [softwareValidations.submittedBy],

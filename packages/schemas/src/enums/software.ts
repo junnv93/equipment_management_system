@@ -53,7 +53,8 @@ export type ValidationType = z.infer<typeof ValidationTypeEnum>;
 export const VALIDATION_STATUS_VALUES = [
   'draft', // 초안
   'submitted', // 제출됨
-  'approved', // 승인됨
+  'approved', // 기술책임자 승인
+  'quality_approved', // 품질책임자 승인 (최종)
   'rejected', // 반려됨
 ] as const;
 

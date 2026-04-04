@@ -43,23 +43,26 @@ export class TestSoftwareService extends VersionedBaseService {
    * P0001부터 시작, 순차 증가.
    */
   private async generateNextManagementNumber(tx: AppDatabase): Promise<string> {
+    // PNNNN 형식에서 숫자 부분만 추출하여 MAX 계산 (P0043-HAC 같은 접미사 대응)
     const result = await tx.execute(
-      sql`SELECT MAX(management_number) as max_num FROM test_software FOR UPDATE`
+      sql`SELECT MAX(CAST(SUBSTRING(management_number FROM 'P(\d+)') AS INTEGER)) as max_num
+          FROM test_software`
     );
 
-    const maxNum = (result.rows[0] as { max_num: string | null } | undefined)?.max_num;
+    const row = result.rows[0] as Record<string, unknown> | undefined;
+    const rawMax = row?.max_num;
 
-    if (!maxNum) {
+    if (rawMax == null) {
       return 'P0001';
     }
 
-    // Parse PNNNN → number, increment, zero-pad
-    const numericPart = parseInt(maxNum.substring(1), 10);
-    const nextNum = numericPart + 1;
+    // Drizzle returns integers as strings for raw sql queries
+    const maxNum = typeof rawMax === 'string' ? parseInt(rawMax, 10) : Number(rawMax);
+    const nextNum = maxNum + 1;
     return `P${String(nextNum).padStart(4, '0')}`;
   }
 
-  async create(dto: CreateTestSoftwareInput, createdBy: string): Promise<TestSoftware> {
+  async create(dto: CreateTestSoftwareInput, _createdBy: string): Promise<TestSoftware> {
     const result = await this.db.transaction(async (tx) => {
       const managementNumber = await this.generateNextManagementNumber(tx);
 

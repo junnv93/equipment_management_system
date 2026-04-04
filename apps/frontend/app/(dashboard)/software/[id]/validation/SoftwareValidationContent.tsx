@@ -34,9 +34,14 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
-import { softwareValidationApi, type SoftwareValidation } from '@/lib/api/software-api';
+import {
+  softwareValidationApi,
+  type SoftwareValidation,
+  type CreateSoftwareValidationDto,
+} from '@/lib/api/software-api';
 import testSoftwareApi from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
+import { isConflictError } from '@/lib/api/error';
 import { VALIDATION_TYPE_VALUES } from '@equipment-management/schemas';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -50,7 +55,8 @@ interface SoftwareValidationContentProps {
 const STATUS_ICON: Record<ValidationStatus, React.ReactNode> = {
   draft: <FileEdit className="h-4 w-4 text-muted-foreground" />,
   submitted: <Clock className="h-4 w-4 text-yellow-600" />,
-  approved: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+  approved: <CheckCircle2 className="h-4 w-4 text-blue-600" />,
+  quality_approved: <CheckCircle2 className="h-4 w-4 text-green-600" />,
   rejected: <XCircle className="h-4 w-4 text-red-600" />,
 };
 
@@ -60,7 +66,8 @@ const STATUS_VARIANT: Record<
 > = {
   draft: 'secondary',
   submitted: 'outline',
-  approved: 'default',
+  approved: 'outline',
+  quality_approved: 'default',
   rejected: 'destructive',
 };
 
@@ -101,8 +108,22 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     });
   };
 
+  const handleMutationError = (error: Error) => {
+    if (isConflictError(error)) {
+      toast({
+        title: t('toast.versionConflict'),
+        description: t('toast.versionConflictDesc'),
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
+    }
+    invalidateValidations();
+  };
+
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => softwareValidationApi.create(softwareId, data),
+    mutationFn: (data: CreateSoftwareValidationDto) =>
+      softwareValidationApi.create(softwareId, data),
     onSuccess: () => {
       toast({ title: t('toast.validationCreateSuccess') });
       setIsCreateOpen(false);
@@ -114,9 +135,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
         vendorSummary: '',
       });
     },
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    },
+    onError: handleMutationError,
     onSettled: invalidateValidations,
   });
 
@@ -124,9 +143,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     mutationFn: ({ id, version }: { id: string; version: number }) =>
       softwareValidationApi.submit(id, version),
     onSuccess: () => toast({ title: t('toast.validationSubmitSuccess') }),
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    },
+    onError: handleMutationError,
     onSettled: invalidateValidations,
   });
 
@@ -134,9 +151,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     mutationFn: ({ id, version }: { id: string; version: number }) =>
       softwareValidationApi.approve(id, version),
     onSuccess: () => toast({ title: t('toast.validationApproveSuccess') }),
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    },
+    onError: handleMutationError,
     onSettled: invalidateValidations,
   });
 
@@ -144,9 +159,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     mutationFn: ({ id, version }: { id: string; version: number }) =>
       softwareValidationApi.qualityApprove(id, version),
     onSuccess: () => toast({ title: t('toast.validationApproveSuccess') }),
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    },
+    onError: handleMutationError,
     onSettled: invalidateValidations,
   });
 
@@ -159,16 +172,14 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
       setRejectTarget(null);
       setRejectionReason('');
     },
-    onError: (error: Error) => {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    },
+    onError: handleMutationError,
     onSettled: invalidateValidations,
   });
 
   const handleCreate = () => {
     if (!createForm.validationType) return;
-    const data: Record<string, unknown> = {
-      validationType: createForm.validationType,
+    const data: CreateSoftwareValidationDto = {
+      validationType: createForm.validationType as ValidationType,
       ...(createForm.softwareVersion ? { softwareVersion: createForm.softwareVersion } : {}),
       ...(createForm.testDate ? { testDate: createForm.testDate } : {}),
       ...(createForm.vendorName ? { vendorName: createForm.vendorName } : {}),
@@ -276,16 +287,6 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                             {t('validation.actions.approve')}
                           </Button>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              qualityApproveMutation.mutate({ id: v.id, version: v.version })
-                            }
-                            disabled={qualityApproveMutation.isPending}
-                          >
-                            {t('validation.actions.qualityApprove')}
-                          </Button>
-                          <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => openRejectDialog(v)}
@@ -293,6 +294,18 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                             {t('validation.actions.reject')}
                           </Button>
                         </>
+                      )}
+                      {v.status === 'approved' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            qualityApproveMutation.mutate({ id: v.id, version: v.version })
+                          }
+                          disabled={qualityApproveMutation.isPending}
+                        >
+                          {t('validation.actions.qualityApprove')}
+                        </Button>
                       )}
                     </div>
                   </TableCell>
