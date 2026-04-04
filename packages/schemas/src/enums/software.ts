@@ -1,37 +1,61 @@
 import { z } from 'zod';
 
 /**
- * SINGLE SOURCE OF TRUTH: 소프트웨어 타입 열거형
+ * SINGLE SOURCE OF TRUTH: 시험용 소프트웨어 관련 열거형
  *
- * 표준 타입값 (소문자 + 언더스코어):
- * - measurement: 측정 소프트웨어 (EMC32, DASY6 SAR 등)
- * - analysis: 분석 소프트웨어
- * - control: 제어 소프트웨어
- * - other: 기타
+ * UL-QP-18-07 (시험용 소프트웨어 관리대장) 기반
+ * UL-QP-18-09 (시험 소프트웨어 유효성 확인) 기반
  */
-export const SOFTWARE_TYPE_VALUES = [
-  'measurement', // 측정 소프트웨어
-  'analysis', // 분석 소프트웨어
-  'control', // 제어 소프트웨어
-  'other', // 기타
+
+// ============================================================================
+// 시험분야 (UL-QP-18-07 관리대장 컬럼)
+// ============================================================================
+
+export const TEST_FIELD_VALUES = [
+  'RF', // RF 시험
+  'SAR', // SAR 시험
+  'EMC', // EMC 시험
+  'RED', // RED 시험
+  'HAC', // HAC 시험
 ] as const;
 
-export const SoftwareTypeEnum = z.enum(SOFTWARE_TYPE_VALUES as readonly [string, ...string[]]);
-export type SoftwareType = z.infer<typeof SoftwareTypeEnum>;
+export const TestFieldEnum = z.enum(TEST_FIELD_VALUES);
+export type TestField = z.infer<typeof TestFieldEnum>;
 
-/**
- * SINGLE SOURCE OF TRUTH: 소프트웨어 변경 승인 상태 열거형
- *
- * 표준 상태값 (소문자):
- * - pending: 승인 대기 (변경 요청)
- * - approved: 승인됨 (기술책임자가 승인)
- * - rejected: 반려됨
- */
-export const SOFTWARE_APPROVAL_STATUS_VALUES = [
-  'pending', // 승인 대기
+// ============================================================================
+// 소프트웨어 가용 여부
+// ============================================================================
+
+export const SOFTWARE_AVAILABILITY_VALUES = [
+  'available', // 가용
+  'unavailable', // 불가
+] as const;
+
+export const SoftwareAvailabilityEnum = z.enum(SOFTWARE_AVAILABILITY_VALUES);
+export type SoftwareAvailability = z.infer<typeof SoftwareAvailabilityEnum>;
+
+// ============================================================================
+// 유효성 확인 방법 (UL-QP-18-09)
+// ============================================================================
+
+export const VALIDATION_TYPE_VALUES = [
+  'vendor', // 방법 1: 공급자 시연
+  'self', // 방법 2: UL 자체 시험
+] as const;
+
+export const ValidationTypeEnum = z.enum(VALIDATION_TYPE_VALUES);
+export type ValidationType = z.infer<typeof ValidationTypeEnum>;
+
+// ============================================================================
+// 유효성 확인 상태
+// ============================================================================
+
+export const VALIDATION_STATUS_VALUES = [
+  'draft', // 초안
+  'submitted', // 제출됨
   'approved', // 승인됨
   'rejected', // 반려됨
 ] as const;
 
-export const SoftwareApprovalStatusEnum = z.enum(SOFTWARE_APPROVAL_STATUS_VALUES);
-export type SoftwareApprovalStatus = z.infer<typeof SoftwareApprovalStatusEnum>;
+export const ValidationStatusEnum = z.enum(VALIDATION_STATUS_VALUES);
+export type ValidationStatus = z.infer<typeof ValidationStatusEnum>;

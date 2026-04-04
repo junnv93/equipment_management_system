@@ -318,8 +318,8 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
         </div>
       </div>
 
-      {/* 소프트웨어/펌웨어 (조건부) */}
-      {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
+      {/* 펌웨어/메뉴얼 (조건부) */}
+      {(equipment.firmwareVersion || equipment.manualLocation) && (
         <div className={tokens.card}>
           <div className={tokens.header}>
             <Package className={tokens.headerIcon} aria-hidden="true" />
@@ -327,12 +327,6 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           </div>
           <div className={tokens.body}>
             <dl className={tokens.dlGrid}>
-              {equipment.softwareVersion && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.softwareVersion')}</dt>
-                  <dd className={tokens.ddMono}>{equipment.softwareVersion}</dd>
-                </>
-              )}
               {equipment.firmwareVersion && (
                 <>
                   <dt className={tokens.dtLabel}>{t('softwareTab.firmwareVersion')}</dt>

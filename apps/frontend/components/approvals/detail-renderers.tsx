@@ -345,7 +345,7 @@ export function CategoryDetails({
     case 'plan_review':
     case 'plan_final':
       return renderPlanDetails(details, t);
-    case 'software':
+    case 'software_validation':
       return renderSoftwareDetails(details, t);
     case 'inspection':
       return renderInspectionDetails(details, t, fmtDate);

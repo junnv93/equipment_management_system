@@ -6,7 +6,6 @@ import {
   SiteCodeEnum,
   ClassificationEnum,
   SharedSourceEnum,
-  SoftwareTypeEnum,
   SpecMatchEnum,
   CalibrationRequiredEnum,
 } from './enums';
@@ -86,12 +85,7 @@ export const baseEquipmentSchema = z.object({
   // 추가 정보
   supplier: z.string().optional(),
   contactInfo: z.string().optional(),
-  softwareVersion: z.string().optional(),
   firmwareVersion: z.string().optional(),
-
-  // 소프트웨어 정보 (프롬프트 9-1)
-  softwareName: z.string().optional(), // 소프트웨어명 (EMC32, UL EMC, DASY6 SAR 등)
-  softwareType: SoftwareTypeEnum.optional(), // 'measurement' | 'analysis' | 'control' | 'other'
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
   technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)

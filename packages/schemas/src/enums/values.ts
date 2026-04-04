@@ -11,7 +11,7 @@ import type {
 } from './calibration';
 import type { CalibrationPlanStatus } from './calibration-plan';
 import type { NonConformanceStatus, NonConformanceType, RepairResult } from './non-conformance';
-import type { SoftwareApprovalStatus } from './software';
+import type { ValidationStatus, SoftwareAvailability } from './software';
 import type { IncidentType } from './incident';
 import type { NotificationPriority, NotificationType } from './notification';
 import type {
@@ -232,14 +232,24 @@ export const IncidentTypeValues = {
 } as const;
 
 /**
- * 소프트웨어 승인 상태 값 객체 (dot-notation 접근용)
- * @example SoftwareApprovalStatusValues.PENDING // 'pending'
+ * 유효성 확인 상태 값 객체 (dot-notation 접근용)
+ * @example ValidationStatusValues.DRAFT // 'draft'
  */
-export const SoftwareApprovalStatusValues = {
-  PENDING: 'pending',
+export const ValidationStatusValues = {
+  DRAFT: 'draft',
+  SUBMITTED: 'submitted',
   APPROVED: 'approved',
   REJECTED: 'rejected',
-} as const;
+} as const satisfies Record<string, ValidationStatus>;
+
+/**
+ * 소프트웨어 가용 여부 값 객체 (dot-notation 접근용)
+ * @example SoftwareAvailabilityValues.AVAILABLE // 'available'
+ */
+export const SoftwareAvailabilityValues = {
+  AVAILABLE: 'available',
+  UNAVAILABLE: 'unavailable',
+} as const satisfies Record<string, SoftwareAvailability>;
 
 /**
  * 알림 우선순위 값 객체 (dot-notation 접근용)

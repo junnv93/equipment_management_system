@@ -92,6 +92,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'notification', // 알림
   'report', // 보고서
   'document', // 문서
+  'software_validation', // 소프트웨어 유효성 확인
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);

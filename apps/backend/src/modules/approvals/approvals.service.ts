@@ -20,7 +20,7 @@ import * as schema from '@equipment-management/db/schema';
 import {
   CalibrationApprovalStatusEnum,
   CalibrationPlanStatusValues,
-  SoftwareApprovalStatusValues,
+  ValidationStatusValues,
   CheckoutStatusValues,
   CheckoutPurposeValues,
   EquipmentImportStatusValues,
@@ -44,7 +44,7 @@ import {
   INTERMEDIATE_CHECK_DATA_SCOPE,
   CALIBRATION_DATA_SCOPE,
   CALIBRATION_PLAN_DATA_SCOPE,
-  SOFTWARE_DATA_SCOPE,
+  TEST_SOFTWARE_DATA_SCOPE,
   EQUIPMENT_IMPORT_DATA_SCOPE,
   DISPOSAL_DATA_SCOPE,
   EQUIPMENT_REQUEST_DATA_SCOPE,
@@ -101,7 +101,7 @@ export interface PendingCountsByCategory {
   disposal_final: number;
   plan_review: number;
   plan_final: number;
-  software: number;
+  software_validation: number;
 }
 
 /**
@@ -231,7 +231,9 @@ export class ApprovalsService {
         ? this.getCalibrationPlanReviewCount(userCtx)
         : Promise.resolve(0),
       shouldQuery(AC.PLAN_FINAL) ? this.getCalibrationPlanFinalCount(userCtx) : Promise.resolve(0),
-      shouldQuery(AC.SOFTWARE) ? this.getSoftwareCount(userCtx) : Promise.resolve(0),
+      shouldQuery(AC.SOFTWARE_VALIDATION)
+        ? this.getSoftwareValidationCount(userCtx)
+        : Promise.resolve(0),
     ]);
 
     return {
@@ -245,7 +247,7 @@ export class ApprovalsService {
       disposal_final: disposalFinalCount,
       plan_review: planReviewCount,
       plan_final: planFinalCount,
-      software: softwareCount,
+      software_validation: softwareCount,
     };
   }
 
@@ -340,8 +342,8 @@ export class ApprovalsService {
             userCtx,
             thresholdDays
           );
-        case AC.SOFTWARE:
-          return this.getSoftwareKpi(userCtx, thresholdDays);
+        case AC.SOFTWARE_VALIDATION:
+          return this.getSoftwareValidationKpi(userCtx, thresholdDays);
         default:
           return { urgentCount: 0, avgWaitDays: 0 };
       }
@@ -777,9 +779,9 @@ export class ApprovalsService {
   }
 
   /**
-   * 소프트웨어 검증 KPI — SSOT: SOFTWARE_DATA_SCOPE (equipment JOIN)
+   * 소프트웨어 유효성 확인 KPI — SSOT: TEST_SOFTWARE_DATA_SCOPE (test_software JOIN)
    */
-  private async getSoftwareKpi(
+  private async getSoftwareValidationKpi(
     userCtx: UserScopeContext,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
@@ -787,36 +789,38 @@ export class ApprovalsService {
 
     const kpiSelect = {
       urgent:
-        sql<number>`(count(*) filter (where ${schema.softwareHistory.createdAt} <= ${thresholdDate}))::int`.as(
+        sql<number>`(count(*) filter (where ${schema.softwareValidations.submittedAt} <= ${thresholdDate}))::int`.as(
           'urgent'
         ),
       avgDays:
-        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.softwareHistory.createdAt})) / 86400))::int, 0)`.as(
+        sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.softwareValidations.submittedAt})) / 86400))::int, 0)`.as(
           'avg_days'
         ),
     };
 
     const conditions: SQL[] = [
-      eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING),
+      eq(schema.softwareValidations.status, ValidationStatusValues.SUBMITTED),
     ];
 
-    const scopeCondition = this.buildScopeCondition(SOFTWARE_DATA_SCOPE, userCtx, {
-      site: (s) => eq(schema.equipment.site, s),
-      team: (t) => eq(schema.equipment.teamId, t),
+    const scopeCondition = this.buildScopeCondition(TEST_SOFTWARE_DATA_SCOPE, userCtx, {
+      site: (s) => eq(schema.testSoftware.site, s),
     });
 
     if (scopeCondition) {
       const [result] = await this.db
         .select(kpiSelect)
-        .from(schema.softwareHistory)
-        .innerJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
+        .from(schema.softwareValidations)
+        .innerJoin(
+          schema.testSoftware,
+          eq(schema.softwareValidations.testSoftwareId, schema.testSoftware.id)
+        )
         .where(and(...conditions, scopeCondition));
       return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
     }
 
     const [result] = await this.db
       .select(kpiSelect)
-      .from(schema.softwareHistory)
+      .from(schema.softwareValidations)
       .where(and(...conditions));
     return { urgentCount: toSafeInt(result?.urgent), avgWaitDays: toSafeInt(result?.avgDays) };
   }
@@ -1244,36 +1248,38 @@ export class ApprovalsService {
   }
 
   /**
-   * 소프트웨어 검증 승인 대기 개수 — SSOT: SOFTWARE_DATA_SCOPE (equipment JOIN)
+   * 소프트웨어 유효성 확인 승인 대기 개수 — SSOT: TEST_SOFTWARE_DATA_SCOPE (test_software JOIN)
    */
-  private async getSoftwareCount(userCtx: UserScopeContext): Promise<number> {
+  private async getSoftwareValidationCount(userCtx: UserScopeContext): Promise<number> {
     try {
       const conditions: SQL[] = [
-        eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING),
+        eq(schema.softwareValidations.status, ValidationStatusValues.SUBMITTED),
       ];
 
-      const scopeCondition = this.buildScopeCondition(SOFTWARE_DATA_SCOPE, userCtx, {
-        site: (s) => eq(schema.equipment.site, s),
-        team: (t) => eq(schema.equipment.teamId, t),
+      const scopeCondition = this.buildScopeCondition(TEST_SOFTWARE_DATA_SCOPE, userCtx, {
+        site: (s) => eq(schema.testSoftware.site, s),
       });
 
       if (scopeCondition) {
         const [result] = await this.db
           .select({ count: count() })
-          .from(schema.softwareHistory)
-          .innerJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
+          .from(schema.softwareValidations)
+          .innerJoin(
+            schema.testSoftware,
+            eq(schema.softwareValidations.testSoftwareId, schema.testSoftware.id)
+          )
           .where(and(...conditions, scopeCondition));
         return result?.count ?? 0;
       }
 
       const [result] = await this.db
         .select({ count: count() })
-        .from(schema.softwareHistory)
+        .from(schema.softwareValidations)
         .where(and(...conditions));
       return result?.count ?? 0;
     } catch (error) {
       this.logger.error(
-        '소프트웨어 카운트 조회 실패:',
+        '소프트웨어 유효성 확인 카운트 조회 실패:',
         error instanceof Error ? error.message : error
       );
       return 0;

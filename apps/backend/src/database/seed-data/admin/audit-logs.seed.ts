@@ -226,7 +226,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityType: 'software',
     entityId: SOFT_HIST_001_ID,
     entityName: 'EMC32 v10.0.0 설치',
-    details: { newValue: { softwareName: 'EMC32', version: '10.0.0' } },
+    details: { newValue: { name: 'EMC32', softwareVersion: '10.0.0' } },
     ipAddress: '192.168.1.100',
     userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,

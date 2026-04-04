@@ -9,6 +9,8 @@
   "equipmentRent": "Rental",
   "equipmentRepairHistory": "Repair History",
   "equipmentSoftware": "Software",
+  "softwareDetail": "Software Detail",
+  "softwareValidation": "Software Validation",
   "calibration": "Calibration",
   "calibrationRegister": "Register Calibration",
   "calibrationPlans": "Calibration Plans",

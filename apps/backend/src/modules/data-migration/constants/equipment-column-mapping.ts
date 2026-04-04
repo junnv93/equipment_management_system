@@ -282,15 +282,7 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['연락처', 'Contact Info', 'Contact Information'],
   },
 
-  // 소프트웨어 정보
-  {
-    dbField: 'softwareName',
-    aliases: ['소프트웨어명', '소프트웨어 명', 'Software Name', 'Software'],
-  },
-  {
-    dbField: 'softwareVersion',
-    aliases: ['소프트웨어버전', 'SW Version', 'Software Version'],
-  },
+  // 펌웨어 정보
   {
     dbField: 'firmwareVersion',
     aliases: ['펌웨어버전', 'FW Version', 'Firmware Version'],

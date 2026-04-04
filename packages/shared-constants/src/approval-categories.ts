@@ -39,7 +39,7 @@ export const ROLE_APPROVAL_CATEGORIES: Record<UserRole, readonly ApprovalCategor
     AC.INSPECTION,
     AC.NONCONFORMITY,
     AC.DISPOSAL_REVIEW,
-    AC.SOFTWARE,
+    AC.SOFTWARE_VALIDATION,
   ],
   quality_manager: [AC.PLAN_REVIEW],
   lab_manager: [AC.DISPOSAL_FINAL, AC.PLAN_FINAL, AC.INCOMING],

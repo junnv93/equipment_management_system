@@ -73,10 +73,13 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.CLOSE_NON_CONFORMANCE,
   ],
   software: [
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
-    Permission.APPROVE_SOFTWARE_CHANGE,
-    Permission.VIEW_SOFTWARE_REQUESTS,
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    Permission.UPDATE_TEST_SOFTWARE,
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
   ],
   teams: [
     Permission.VIEW_TEAMS,

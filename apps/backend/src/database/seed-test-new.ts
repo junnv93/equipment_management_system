@@ -52,7 +52,7 @@ import { DISPOSAL_REQUESTS_SEED_DATA } from './seed-data/disposal/disposal-reque
 import { LOCATION_HISTORY_SEED_DATA } from './seed-data/history/location-history.seed';
 import { MAINTENANCE_HISTORY_SEED_DATA } from './seed-data/history/maintenance-history.seed';
 import { INCIDENT_HISTORY_SEED_DATA } from './seed-data/history/incident-history.seed';
-import { SOFTWARE_HISTORY_SEED_DATA } from './seed-data/history/software-history.seed';
+// Software history seed removed — replaced by test_software module
 import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-requests.seed';
 import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
 import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
@@ -99,7 +99,8 @@ async function main(): Promise<void> {
       'equipment_incident_history',
       'equipment_maintenance_history',
       'equipment_location_history',
-      'software_history',
+      'software_validations',
+      'test_software',
       'calibration_factors',
       'repair_history',
       'non_conformances',
@@ -211,7 +212,7 @@ async function main(): Promise<void> {
 
     // Software History (8)
     console.log('  → Software History (8)');
-    await db.insert(schema.softwareHistory).values(SOFTWARE_HISTORY_SEED_DATA);
+    // test_software seed data to be added later (P0001~P0073)
 
     // =========================================================================
     // PHASE 3: DISPOSAL WORKFLOW E2E TEST DATA

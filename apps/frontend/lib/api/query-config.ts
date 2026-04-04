@@ -229,13 +229,8 @@ export const QUERY_CONFIG = {
     retry: 2,
   },
 
-  /** 소프트웨어 관리대장 - NORMAL (승인 후 무효화로 갱신) */
-  SOFTWARE_REGISTRY: {
-    staleTime: CACHE_TIMES.LONG,
-    gcTime: CACHE_TIMES.VERY_LONG,
-    refetchOnWindowFocus: false,
-    retry: 2,
-  },
+  /** 시험용 소프트웨어 목록 - NORMAL (사용자 필터링 시 갱신) */
+  TEST_SOFTWARE_LIST: REFETCH_STRATEGIES.NORMAL,
 
   /** 승인 카운트 - SSE_BACKED (SSE approval-changed 이벤트로 실시간 무효화, 10분 폴백) */
   APPROVAL_COUNTS: REFETCH_STRATEGIES.SSE_BACKED,
@@ -435,12 +430,20 @@ export const queryKeys = {
     equipmentDowntime: (filters?: object) =>
       [...queryKeys.reports.all, 'equipment-downtime', filters] as const,
   },
-  software: {
-    all: ['software'] as const,
-    registry: () => [...queryKeys.software.all, 'registry'] as const,
-    byEquipment: (equipmentId: string) => [...queryKeys.software.all, equipmentId] as const,
-    history: (equipmentId: string) => [...queryKeys.software.all, 'history', equipmentId] as const,
-    pending: () => [...queryKeys.software.all, 'pending'] as const,
+  testSoftware: {
+    all: ['test-software'] as const,
+    lists: () => [...queryKeys.testSoftware.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.testSoftware.lists(), filters] as const,
+    details: () => [...queryKeys.testSoftware.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.testSoftware.details(), id] as const,
+  },
+  softwareValidations: {
+    all: ['software-validations'] as const,
+    byTestSoftware: (softwareId: string) =>
+      [...queryKeys.softwareValidations.all, 'by-software', softwareId] as const,
+    details: () => [...queryKeys.softwareValidations.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.softwareValidations.details(), id] as const,
   },
   equipmentImports: {
     all: ['equipment-imports'] as const,

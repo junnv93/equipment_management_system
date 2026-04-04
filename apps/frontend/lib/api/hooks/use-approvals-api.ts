@@ -49,7 +49,7 @@ export function useApprovalsApi() {
           disposal_final: 0,
           plan_review: 0,
           plan_final: 0,
-          software: 0,
+          software_validation: 0,
         };
       }
     },

@@ -206,29 +206,29 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
-  // 소프트웨어 관리
+  // 시험용 소프트웨어 관리 (UL-QP-18-07)
   // ============================================================================
-  SOFTWARE: {
-    LIST: '/api/software',
-    GET: (id: string) => `/api/software/${id}`,
-    CREATE: '/api/software',
-    UPDATE: (id: string) => `/api/software/${id}`,
-    DELETE: (id: string) => `/api/software/${id}`,
-    CHANGE_REQUEST: '/api/software/change-request',
-    PENDING: '/api/software/pending',
-    REGISTRY: '/api/software/registry',
-    HISTORY: '/api/software/history',
-    APPROVE: (id: string) => `/api/software/${id}/approve`,
-    REJECT: (id: string) => `/api/software/${id}/reject`,
-    EQUIPMENT_BY_SOFTWARE: (name: string) => `/api/software/${encodeURIComponent(name)}/equipment`,
-    CHANGES: {
-      LIST: '/api/software-changes',
-      GET: (id: string) => `/api/software-changes/${id}`,
-      CREATE: '/api/software-changes',
-      APPROVE: (id: string) => `/api/software-changes/${id}/approve`,
-      REJECT: (id: string) => `/api/software-changes/${id}/reject`,
-      PENDING: '/api/software-changes/pending',
-    },
+  TEST_SOFTWARE: {
+    LIST: '/api/test-software',
+    GET: (id: string) => `/api/test-software/${id}`,
+    CREATE: '/api/test-software',
+    UPDATE: (id: string) => `/api/test-software/${id}`,
+    TOGGLE_AVAILABILITY: (id: string) => `/api/test-software/${id}/availability`,
+  },
+
+  // ============================================================================
+  // 소프트웨어 유효성 확인 (UL-QP-18-09)
+  // ============================================================================
+  SOFTWARE_VALIDATIONS: {
+    LIST: (softwareId: string) => `/api/test-software/${softwareId}/validations`,
+    GET: (id: string) => `/api/software-validations/${id}`,
+    CREATE: (softwareId: string) => `/api/test-software/${softwareId}/validations`,
+    UPDATE: (id: string) => `/api/software-validations/${id}`,
+    SUBMIT: (id: string) => `/api/software-validations/${id}/submit`,
+    APPROVE: (id: string) => `/api/software-validations/${id}/approve`,
+    QUALITY_APPROVE: (id: string) => `/api/software-validations/${id}/quality-approve`,
+    REJECT: (id: string) => `/api/software-validations/${id}/reject`,
+    PENDING: '/api/software-validations/pending',
   },
 
   // ============================================================================
