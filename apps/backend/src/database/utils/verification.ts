@@ -203,9 +203,9 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     const testSoftwareCount = parseInt(testSoftwareResult.rows[0]?.count ?? 0, 10);
     checks.push({
       name: 'Test Software count',
-      passed: testSoftwareCount >= 0,
+      passed: testSoftwareCount >= 19,
       actual: testSoftwareCount,
-      expected: 0,
+      expected: 19,
     });
 
     const locHistResult = await pool.query(
