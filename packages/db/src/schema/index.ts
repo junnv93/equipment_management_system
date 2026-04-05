@@ -55,3 +55,6 @@ export * from './equipment-incident-history';
 
 // 중간점검 스키마 (UL-QP-18-03)
 export * from './intermediate-inspections';
+
+// 케이블/패스로스 스키마 (UL-QP-18-08)
+export * from './cables';

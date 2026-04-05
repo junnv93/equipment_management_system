@@ -1,0 +1,117 @@
+{
+  "title": "케이블/경로손실 관리대장",
+  "subtitle": "UL-QP-18-08 케이블/경로손실 관리",
+  "list": {
+    "title": "케이블/경로손실 관리대장",
+    "subtitle": "UL-QP-18-08 케이블/경로손실 관리",
+    "columns": {
+      "managementNumber": "관리번호",
+      "length": "길이 (M)",
+      "connectorType": "타입",
+      "frequencyRange": "주파수 범위 (MHz)",
+      "serialNumber": "S/N",
+      "location": "위치",
+      "status": "상태",
+      "lastMeasurement": "최종 측정일"
+    },
+    "createButton": "케이블 등록",
+    "searchPlaceholder": "관리번호 또는 S/N 검색...",
+    "filters": {
+      "allTypes": "전체 타입",
+      "allStatus": "전체 상태"
+    },
+    "empty": "등록된 케이블이 없습니다"
+  },
+  "detail": {
+    "title": "케이블 정보",
+    "notFound": "케이블을 찾을 수 없습니다.",
+    "notSpecified": "-",
+    "editButton": "수정",
+    "fields": {
+      "managementNumber": "관리번호",
+      "length": "길이 (M)",
+      "connectorType": "커넥터 타입",
+      "frequencyRange": "주파수 범위 (MHz)",
+      "serialNumber": "일련번호",
+      "location": "위치",
+      "site": "사이트",
+      "status": "상태",
+      "lastMeasurementDate": "최종 측정일",
+      "createdAt": "생성일",
+      "updatedAt": "수정일"
+    },
+    "measurementsTitle": "측정 이력",
+    "measurementColumns": {
+      "date": "측정일",
+      "notes": "비고",
+      "dataPointCount": "데이터 수"
+    },
+    "noMeasurements": "기록된 측정 데이터가 없습니다.",
+    "latestDataTitle": "최근 측정 데이터",
+    "noDataPoints": "데이터 포인트가 없습니다."
+  },
+  "measurement": {
+    "addButton": "측정 데이터 추가",
+    "formTitle": "측정 데이터 추가",
+    "date": "측정일",
+    "notes": "비고",
+    "notesPlaceholder": "비고를 입력하세요...",
+    "dataPoints": "주파수/손실 데이터",
+    "frequency": "주파수 (MHz)",
+    "loss": "손실 (dB)",
+    "addRow": "행 추가",
+    "removeRow": "삭제",
+    "bulkPaste": "일괄 입력 (주파수,손실 한 줄씩)",
+    "bulkPastePlaceholder": "100,0.5\n200,1.0\n300,1.5",
+    "parseBulk": "변환",
+    "save": "저장",
+    "saving": "저장 중...",
+    "success": "측정 데이터가 추가되었습니다.",
+    "error": "측정 데이터 추가에 실패했습니다."
+  },
+  "create": {
+    "title": "케이블 등록",
+    "subtitle": "새 케이블/경로손실 항목을 등록합니다",
+    "formTitle": "케이블 정보",
+    "submitButton": "등록",
+    "submitting": "등록 중...",
+    "success": "케이블이 등록되었습니다.",
+    "error": "케이블 등록에 실패했습니다."
+  },
+  "form": {
+    "lengthLabel": "길이 (M)",
+    "lengthPlaceholder": "예: 1.5",
+    "connectorTypeLabel": "커넥터 타입",
+    "connectorTypePlaceholder": "타입 선택",
+    "frequencyRangeMinLabel": "최소 주파수 (MHz)",
+    "frequencyRangeMinPlaceholder": "예: 100",
+    "frequencyRangeMaxLabel": "최대 주파수 (MHz)",
+    "frequencyRangeMaxPlaceholder": "예: 18000",
+    "serialNumberLabel": "일련번호",
+    "serialNumberPlaceholder": "S/N 입력",
+    "locationLabel": "위치",
+    "locationPlaceholder": "위치 입력",
+    "siteLabel": "사이트",
+    "sitePlaceholder": "사이트 선택",
+    "cancel": "취소",
+    "submit": "저장",
+    "submitting": "저장 중...",
+    "editTitle": "케이블 수정"
+  },
+  "toast": {
+    "updateSuccess": "케이블이 수정되었습니다.",
+    "error": "오류가 발생했습니다.",
+    "versionConflict": "버전 충돌",
+    "versionConflictDesc": "다른 사용자가 이 케이블을 수정했습니다. 새로고침 후 다시 시도해주세요."
+  },
+  "status": {
+    "active": "사용중",
+    "retired": "폐기"
+  },
+  "connectorType": {
+    "K": "K",
+    "SMA": "SMA",
+    "N": "N",
+    "other": "기타"
+  }
+}

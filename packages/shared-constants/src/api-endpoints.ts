@@ -405,6 +405,21 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
+  // 케이블/경로손실 관리 (UL-QP-18-08)
+  // ============================================================================
+  CABLES: {
+    LIST: '/api/cables',
+    GET: (id: string) => `/api/cables/${id}`,
+    CREATE: '/api/cables',
+    UPDATE: (id: string) => `/api/cables/${id}`,
+    MEASUREMENTS: {
+      LIST: (cableId: string) => `/api/cables/${cableId}/measurements`,
+      CREATE: (cableId: string) => `/api/cables/${cableId}/measurements`,
+      GET: (measurementId: string) => `/api/cables/measurements/${measurementId}`,
+    },
+  },
+
+  // ============================================================================
   // DEPRECATED: Legacy rental imports (proxy to EQUIPMENT_IMPORTS)
   // ============================================================================
   /**
