@@ -243,6 +243,26 @@
       "reasonPlaceholder": "반려 사유를 입력하세요...",
       "cancel": "취소",
       "confirm": "반려"
+    },
+    "documents": {
+      "title": "첨부파일",
+      "empty": "첨부된 파일이 없습니다",
+      "upload": "파일 업로드",
+      "uploading": "업로드 중...",
+      "uploadSuccess": "파일이 업로드되었습니다",
+      "uploadError": "파일 업로드에 실패했습니다",
+      "deleteConfirm": "이 파일을 삭제하시겠습니까?",
+      "deleteSuccess": "파일이 삭제되었습니다",
+      "deleteError": "파일 삭제에 실패했습니다",
+      "download": "다운로드",
+      "delete": "삭제",
+      "tableHeaders": {
+        "fileName": "파일명",
+        "type": "유형",
+        "size": "크기",
+        "uploadedAt": "업로드일",
+        "actions": "작업"
+      }
     }
   },
   "toast": {

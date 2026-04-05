@@ -58,6 +58,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 장비 반입 (렌탈 + 내부 공용)
     Permission.VIEW_EQUIPMENT_IMPORTS,
     Permission.CREATE_EQUIPMENT_IMPORT,
+    // 자체점검 (UL-QP-18-05)
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
   ],
 
   // 기술책임자: 장비 관리 및 승인 권한, 교정계획서 작성/검토요청
@@ -136,6 +139,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_AUDIT_LOGS,
     // 시스템 설정 (조회만)
     Permission.VIEW_SYSTEM_SETTINGS,
+    // 자체점검 (UL-QP-18-05)
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
+    Permission.CONFIRM_SELF_INSPECTION,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)
@@ -155,6 +162,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 반출입 기록 검토 (UL-QP-18 §4.3 기록 양식 검토 역할)
     Permission.VIEW_CHECKOUTS,
     Permission.VIEW_EQUIPMENT_IMPORTS,
+    // 자체점검 조회
+    Permission.VIEW_SELF_INSPECTIONS,
     // 보정계수 조회
     Permission.VIEW_CALIBRATION_FACTORS,
     // 시험용 소프트웨어 조회 + 유효성 확인 승인 (UL-QP-18-09 품질책임자 등록)
@@ -259,6 +268,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 시스템 설정
     Permission.VIEW_SYSTEM_SETTINGS,
     Permission.MANAGE_SYSTEM_SETTINGS,
+    // 자체점검
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
+    Permission.CONFIRM_SELF_INSPECTION,
   ],
 
   // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION(시험실무자/기술책임자만) - deprecated

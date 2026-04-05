@@ -287,19 +287,22 @@
 
 ---
 
-## WF-14b: 소프트웨�� 유효성 확인 (UL-QP-18-09)
+## WF-14b: 소프트웨어 유효성 확인 (UL-QP-18-09)
 
-**절차서 근거:** UL-QP-18 섹션 14.2~14.3 — 시험 소프트웨어의 유효성확인  
+**절차서 근거:** UL-QP-18 섹션 14.2~14.3 — 시험 소프트웨어의 유효성확인
 **시나리오:** 시험용 소프트웨어의 유효성 확인 양식 작성 → 기술책임자 승인 → 품질책임자 등록
 
 ### 방법 1: 공급자 시연 (Demonstration by Vendor)
 
-| #   | 단계              | 역할 | 액션                                                                                | 검증 포인트                                        |
-| --- | ----------------- | ---- | ----------------------------------------------------------------------------------- | -------------------------------------------------- |
-| 1   | 양식 작성 (draft) | TE   | /software/[id]/validation — 방법 1 선택, 업체명, 공급자 정보 요약, 수령일, 첨부자료 | `software_validations` 레코드 생성, `status=draft` |
-| 2   | 제출              | TE   | 양식 제출                                                                           | `status=submitted`, `submittedAt/By` 기록          |
-| 3   | 기술책임자 확인   | TM   | 공급자 검증 기록 검토 → 승인                                                        | `technicalApproverId/At` 기록                      |
-| 4   | 품질책임자 등록   | QM   | 유효성 확인 완료 → 관리대장 반영                                                    | `qualityApproverId/At` 기록, `status=approved`     |
+| #   | 단계              | 역할 | 액션                                                                                                | 검증 포인트                                        |
+| --- | ----------------- | ---- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| 1   | 양식 작성 (draft) | TE   | /software/[id]/validation — 방법 1 선택, 업체명, 공급자 정보 요약, 수령인(receivedBy), 수령일, 비고 | `software_validations` 레코드 생성, `status=draft` |
+| 2   | 제출              | TE   | 양식 제출                                                                                           | `status=submitted`, `submittedAt/By` 기록          |
+| 3   | 기술책임자 확인   | TM   | 공급자 검증 기록 검토 → 승인                                                                        | `technicalApproverId/At` 기록                      |
+| 4   | 품질책임자 등록   | QM   | 유효성 확인 완료 → 관리대장 반영                                                                    | `qualityApproverId/At` 기록, `status=approved`     |
+
+> **구현 참고:** `receivedBy`는 users 테이블 FK (UUID)로, 공급자 자료를 수령한 담당자를 추적합니다.
+> `attachmentNote`는 현재 텍스트 필드(비고)로만 구현되어 있으며, 파일 첨부 기능은 별도 프롬프트(example-prompts.md 참조)로 추후 구현 예정입니다.
 
 ### 방법 2: UL 자체 시험 (Validation Tests by UL)
 
@@ -311,19 +314,31 @@
 | 4   | 기술책임자 승인   | TM   | 시험 결과 검토 → 유효성 확인 승인                                                     | `technicalApproverId/At` 기록                                       |
 | 5   | 품질책임자 등록   | QM   | 유효성 확인 완료 → 관리대장 반영                                                      | `qualityApproverId/At` 기록, `status=approved`                      |
 
-### 반려 경로
+### 반려 → 재작성 경로
 
-| #   | 단계   | 역할    | 액션                  | 검증 포인트                                           |
-| --- | ------ | ------- | --------------------- | ----------------------------------------------------- |
-| R1  | 반려   | TM / QM | 반려 사유 입력 → 반려 | `status=rejected`, `rejectedBy/At`, `rejectionReason` |
-| R2  | 재작성 | TE      | 양식 수정 → 재제출    | 새 `software_validations` 레코드 또는 기존 수정       |
+| #   | 단계            | 역할         | 액션                             | 검증 포인트                                           |
+| --- | --------------- | ------------ | -------------------------------- | ----------------------------------------------------- |
+| R1  | 반려            | TM / QM      | 반려 사유 입력 → 반려            | `status=rejected`, `rejectedBy/At`, `rejectionReason` |
+| R2  | 재작성 (revise) | TE           | 양식 수정 (rejectionReason 참고) | `status=draft`로 복귀, 반려 메타데이터 초기화         |
+| R3  | 재제출 → 재승인 | TE → TM → QM | 전체 승인 흐름 재진행            | 다시 `submitted` → `approved` 경로 진행               |
+
+> **구현 참고:** `revise()` 메서드는 `rejected` 상태에서만 호출 가능하며, `rejectedBy/At/rejectionReason`을 초기화하고 `status=draft`로 전환합니다. 새 레코드를 생성하지 않고 기존 레코드를 수정합니다.
 
 **워크플로우 상태 전이:**
 
 ```
-draft → submitted → approved (기술책임자 → 품질책임자)
-                  → rejected → draft (재작성)
+draft → submitted → approved (기술책임자) → quality_approved (품질책임자)
+                  ↘ rejected → draft (revise로 복귀)
+        approved  ↘ rejected → draft (품질책임자 반려 시)
 ```
+
+**부수 효과 검증:**
+
+- [ ] 제출 시 알림: `SOFTWARE_VALIDATION_SUBMITTED` 이벤트 발행
+- [ ] 기술책임자 승인 시 알림: `SOFTWARE_VALIDATION_APPROVED` 이벤트 발행
+- [ ] 품질책임자 등록 시 알림: `SOFTWARE_VALIDATION_QUALITY_APPROVED` 이벤트 발행
+- [ ] 반려 시 알림: `SOFTWARE_VALIDATION_REJECTED` 이벤트 발행 (작성자에게 통지)
+- [ ] 승인 대시보드에 `software_validation` 카테고리로 대기 건수 반영
 
 **코드 위치:** `SoftwareValidationsService`, `SoftwareValidationsController`, DB: `software_validations`
 
@@ -392,6 +407,116 @@ draft → submitted → approved (기술책임자 → 품질책임자)
 
 ---
 
+## WF-19: 중간점검표 3단계 승인 (UL-QP-18-03)
+
+**절차서 근거:** UL-QP-18 섹션 — 교정 장비 중간점검
+**시나리오:** 교정 이력에 연결된 중간점검표를 작성하고, 검토 → 승인을 거쳐 확정
+
+| #   | 단계                | 역할 | 액션                                                                                         | 검증 포인트                                                    |
+| --- | ------------------- | ---- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| 1   | 점검표 작성 (draft) | TE   | 교정 상세 → 중간점검 작성: 점검일, 분류(calibrated/non_calibrated), 점검주기, 유효기간, 비고 | `intermediate_inspections` 레코드 생성, `approvalStatus=draft` |
+| 2   | 점검 항목 입력      | TE   | 항목별 점검내용(checkItem), 판정기준(checkCriteria), 결과(checkResult), 판정(pass/fail)      | `intermediate_inspection_items` N건 생성                       |
+| 3   | 측정 장비 등록      | TE   | 점검에 사용한 측정 장비 선택 + 교정일 기록                                                   | `intermediate_inspection_equipment` N건 생성                   |
+| 4   | 제출                | TE   | 점검표 제출                                                                                  | `approvalStatus=submitted`, `submittedAt/By` 기록              |
+| 5   | 검토                | TM   | 점검 결과 검토 → 검토 완료                                                                   | `approvalStatus=reviewed`, `reviewedAt/By` 기록                |
+| 6   | 최종 승인           | LM   | 점검 결과 최종 승인                                                                          | `approvalStatus=approved`, `approvedAt/By` 기록                |
+
+### 반려 경로
+
+| #   | 단계 | 역할    | 액션                      | 검증 포인트                                                              |
+| --- | ---- | ------- | ------------------------- | ------------------------------------------------------------------------ |
+| R1  | 반려 | TM / LM | 반려 사유 입력 → 반려     | `approvalStatus=rejected`, `rejectedAt/By`, `rejectionReason`            |
+| R2  | -    | -       | 현재 rejected는 최종 상태 | rejected 상태에서 draft로 되돌리는 revise 기능은 미구현 (향후 확장 가능) |
+
+> **구현 참고:** 현재 rejected는 최종 상태로, 재작성이 필요하면 새 점검표를 생성해야 합니다.
+> WF-14b의 revise() 패턴과 달리, 중간점검표는 rejected → draft 복귀가 미구현 상태입니다.
+
+**워크플로우 상태 전이:**
+
+```
+draft → submitted → reviewed → approved
+           ↘ rejected (검토 단계 반려)
+                        ↘ rejected (승인 단계 반려)
+```
+
+**Optimistic Locking (CAS):**
+
+- 모든 상태 전이에 `version` 필드 사용
+- 동시 수정 시 `VERSION_CONFLICT` 에러 (409)
+
+**부수 효과 검증:**
+
+- [ ] 교정 상세 페이지에서 연결된 중간점검 목록 표시
+- [ ] 점검 항목별 pass/fail 판정 결과 표시
+- [ ] 측정 장비의 교정일 정보 함께 표시
+- [ ] 감사 로그에 모든 상태 전이 기록 (create, update, submit, review, approve, reject)
+- [ ] draft 상태에서만 편집 가능 (submitted 이후 잠금)
+
+**코드 위치:** `IntermediateInspectionsService`, `IntermediateInspectionsController`, DB: `intermediate_inspections` + `intermediate_inspection_items` + `intermediate_inspection_equipment`
+
+---
+
+## WF-20: 자체점검표 확인 (UL-QP-18-05)
+
+**절차서 근거:** UL-QP-18 섹션 — 장비 자체점검 기록
+**시나리오:** 시험실무자가 장비의 정기 자체점검을 수행하고, 기술책임자가 확인
+
+| #   | 단계                  | 역할   | 액션                                                                                      | 검증 포인트                                             |
+| --- | --------------------- | ------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 1   | 자체점검 실시         | TE     | 장비 상세 → 자체점검 탭 → 점검 작성: 점검일, 외관/기능/안전/교정상태 판정, 종합결과, 비고 | `equipment_self_inspections` 레코드, `status=completed` |
+| 2   | 다음 점검일 자동 산출 | 시스템 | inspectionDate + inspectionCycle(기본 6개월)                                              | `nextInspectionDate` 자동 설정                          |
+| 3   | 기술책임자 확인       | TM     | 점검 결과 검토 → 확인                                                                     | `status=confirmed`, `confirmedAt/By` 기록               |
+| 4   | 확인 후 잠금          | -      | 확인된 점검 기록                                                                          | 편집 불가, 삭제 불가                                    |
+
+**점검 항목 (4개 카테고리):**
+
+| 항목                           | 필드명              | 판정 옵션                 |
+| ------------------------------ | ------------------- | ------------------------- |
+| 외관 (Appearance)              | `appearance`        | pass / fail / na          |
+| 기능 (Functionality)           | `functionality`     | pass / fail / na          |
+| 안전 (Safety)                  | `safety`            | pass / fail / na          |
+| 교정 상태 (Calibration Status) | `calibrationStatus` | pass / fail / na          |
+| **종합 결과**                  | `overallResult`     | **pass / fail** (na 불가) |
+
+**역할별 권한:**
+
+| 역할            | 조회 | 생성/수정 | 확인(confirm) |
+| --------------- | ---- | --------- | ------------- |
+| 시험실무자 (TE) | ✓    | ✓         | ✗             |
+| 기술책임자 (TM) | ✓    | ✓         | ✓             |
+| 품질책임자 (QM) | ✓    | ✗         | ✗             |
+| 시험소장 (LM)   | ✓    | ✓         | ✓             |
+
+**다음 점검일 자동 계산:**
+
+```
+nextInspectionDate = inspectionDate + inspectionCycle(months)
+예: 2026-04-05 + 6개월 = 2026-10-05
+inspectionCycle 범위: 1~120개월 (기본값 6)
+```
+
+**삭제 제한:**
+
+- `completed` 상태: 삭제 가능
+- `confirmed` 상태: 삭제 불가 (`ALREADY_CONFIRMED` 에러)
+- 장비에 자체점검 기록이 있으면 장비 삭제 불가 (FK RESTRICT)
+
+**Optimistic Locking (CAS):**
+
+- update, confirm에 `version` 필드 사용
+- 동시 수정 시 `VERSION_CONFLICT` 에러 (409)
+
+**부수 효과 검증:**
+
+- [ ] 장비 상세 자체점검 탭에 점검 이력 표시 (최신순)
+- [ ] 판정 결과 뱃지 표시 (pass=green, fail=red, na=gray)
+- [ ] 감사 로그에 생성/수정/확인/삭제 기록
+- [ ] confirmed 이후 수정/삭제 UI 비활성화
+
+**코드 위치:** `SelfInspectionsService`, `SelfInspectionsController` + `EquipmentSelfInspectionsController`, DB: `equipment_self_inspections`
+
+---
+
 ## 크로스 기능 의존성 맵
 
 ```
@@ -407,6 +532,10 @@ draft → submitted → approved (기술책임자 → 품질책임자)
      │  Checkouts      │   │ (WF-03)  │ │(WF-10~11,18)│  │ (WF-08~09)   │
      └───────┬─────────┘   └────┬─────┘ └───┬────────┘  └──────────────┘
              │                   │            │
+             │              ┌────┴──────────┐ │
+             │              │ 중간점검 (WF-19)│ │
+             │              │ 교정 하위 연결  │ │
+             │              └────┬──────────┘ │
              ▼                   ▼            ▼
      ┌───────────────────────────────────────────────────────────┐
      │              장비 (Equipment)                               │
@@ -414,6 +543,10 @@ draft → submitted → approved (기술책임자 → 품질책임자)
      │  available ←→ checked_out ←→ non_conforming → disposed    │
      │              ↓ (기한초과, WF-17)                             │
      │          overdue (반출 상태)                                 │
+     │                                                             │
+     │  ┌─── 자체점검 (WF-20): 장비 하위, 상태 영향 없음 ───┐     │
+     │  │  completed → confirmed, nextInspectionDate 자동산출 │     │
+     │  └─────────────────────────────────────────────────────┘     │
      └──────────────────────┬────────────────────────────────────┘
                             │ M:N (equipment_test_software)
                             ▼
@@ -422,6 +555,12 @@ draft → submitted → approved (기술책임자 → 품질책임자)
      │  독립 레지스트리 (PNNNN 관리번호)                            │
      │  유효성 확인: draft → submitted → approved/rejected         │
      │  장비와 M:N 연결 (하나의 SW가 여러 장비 제어)               │
+     └───────────────────────────────────────────────────────────┘
+     ┌───────────────────────────────────────────────────────────┐
+     │       케이블 관리대장 (UL-QP-18-08)                         │
+     │  독립 레지스트리 (active/retired), 승인 흐름 없음            │
+     │  측정 데이터: cableLossMeasurements + cableLossDataPoints  │
+     │  장비와 직접 연결 없음 (독립 관리)                           │
      └───────────────────────────────────────────────────────────┘
 ```
 
@@ -438,6 +577,7 @@ draft → submitted → approved (기술책임자 → 품질책임자)
 | **P1**   | WF-08 (교정계획 3단계 승인)        | 3단계 승인 + 반려 재제출                 |
 | **P1**   | WF-13 (대여 반입)                  | 장비 자동 생성 + 반납 checkout 자동 생성 |
 | **P1**   | WF-12 (폐기 2단계 승인)            | 2단계 승인 + 상태 제한                   |
+| **P1**   | WF-19 (중간점검표 3단계 승인)      | 3단계 승인, 교정 연동, 반려 경로         |
 | **P2**   | WF-05 (반출 반려 → 재신청)         | 반려 시나리오                            |
 | **P2**   | WF-06 (반입 반려 → 재검사)         | 상태 롤백 검증                           |
 | **P2**   | WF-09 (교정계획 반려)              | 반려 단계별 복귀 + LM 반려 경로          |
@@ -446,3 +586,4 @@ draft → submitted → approved (기술책임자 → 품질책임자)
 | **P2**   | WF-18 (NC 조치 반려)               | 상태 롤백 + 장비 상태 복귀               |
 | **P2**   | WF-14b (SW 유효성 확인)            | 3단계 승인 (TE→TM→QM), 2가지 방법 분기   |
 | **P3**   | WF-01, WF-02, WF-04, WF-14a, WF-16 | 단순 흐름 또는 개별 기능으로 커버 가능   |
+| **P3**   | WF-20 (자체점검표)                 | 선형 흐름, 상태 영향 없음                |

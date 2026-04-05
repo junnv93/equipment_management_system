@@ -61,6 +61,7 @@
     "loss": "손실 (dB)",
     "addRow": "행 추가",
     "removeRow": "삭제",
+    "removeRowAriaLabel": "측정 데이터 행 삭제",
     "bulkPaste": "일괄 입력 (주파수,손실 한 줄씩)",
     "bulkPastePlaceholder": "100,0.5\n200,1.0\n300,1.5",
     "parseBulk": "변환",

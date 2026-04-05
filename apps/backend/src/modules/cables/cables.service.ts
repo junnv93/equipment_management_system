@@ -46,7 +46,7 @@ export class CablesService extends VersionedBaseService {
   /**
    * 케이블 생성
    */
-  async create(dto: CreateCableInput, _createdBy: string): Promise<Cable> {
+  async create(dto: CreateCableInput, createdBy: string): Promise<Cable> {
     const [created] = await this.db
       .insert(cables)
       .values({
@@ -58,6 +58,7 @@ export class CablesService extends VersionedBaseService {
         serialNumber: dto.serialNumber ?? null,
         location: dto.location ?? null,
         site: dto.site ?? null,
+        createdBy,
       })
       .returning();
 
@@ -193,7 +194,7 @@ export class CablesService extends VersionedBaseService {
   /**
    * 케이블 수정 (CAS)
    */
-  async update(id: string, dto: UpdateCableInput, _userId: string): Promise<Cable> {
+  async update(id: string, dto: UpdateCableInput): Promise<Cable> {
     const { version, ...updateFields } = dto;
 
     const updateData: Record<string, unknown> = {};

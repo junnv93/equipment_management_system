@@ -185,11 +185,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   /**
    * 중간점검 수정 (draft 상태에서만 가능)
    */
-  async update(
-    id: string,
-    dto: UpdateInspectionInput,
-    _userId: string
-  ): Promise<IntermediateInspection> {
+  async update(id: string, dto: UpdateInspectionInput): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
     if (existing.approvalStatus !== 'draft') {

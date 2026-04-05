@@ -157,7 +157,7 @@ export default function InspectionRecordsDialog({
           <Input
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="반려 사유"
+            placeholder={t('intermediateInspection.rejectionReasonPlaceholder')}
             className="h-8 text-xs w-40"
           />
           <Button

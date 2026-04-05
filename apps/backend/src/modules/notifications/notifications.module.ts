@@ -15,6 +15,7 @@ import { CalibrationOverdueScheduler } from './schedulers/calibration-overdue-sc
 import { CheckoutOverdueScheduler } from './schedulers/checkout-overdue-scheduler';
 import { NotificationCleanupScheduler } from './schedulers/notification-cleanup-scheduler';
 import { DigestEmailScheduler } from './schedulers/digest-email-scheduler';
+import { RetentionExpiryScheduler } from './schedulers/retention-expiry-scheduler';
 import { NotificationSseService } from './sse/notification-sse.service';
 import { NotificationSseController } from './sse/notification-sse.controller';
 import { SseJwtAuthGuard } from '../../common/guards/sse-jwt-auth.guard';
@@ -64,6 +65,7 @@ import { SettingsModule } from '../settings/settings.module';
     CheckoutOverdueScheduler,
     NotificationCleanupScheduler,
     DigestEmailScheduler,
+    RetentionExpiryScheduler,
   ],
   exports: [
     NotificationsService,

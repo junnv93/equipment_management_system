@@ -243,6 +243,26 @@
       "reasonPlaceholder": "Enter reason for rejection...",
       "cancel": "Cancel",
       "confirm": "Reject"
+    },
+    "documents": {
+      "title": "Attachments",
+      "empty": "No files attached",
+      "upload": "Upload File",
+      "uploading": "Uploading...",
+      "uploadSuccess": "File uploaded successfully",
+      "uploadError": "File upload failed",
+      "deleteConfirm": "Are you sure you want to delete this file?",
+      "deleteSuccess": "File deleted successfully",
+      "deleteError": "File deletion failed",
+      "download": "Download",
+      "delete": "Delete",
+      "tableHeaders": {
+        "fileName": "File Name",
+        "type": "Type",
+        "size": "Size",
+        "uploadedAt": "Uploaded",
+        "actions": "Actions"
+      }
     }
   },
   "toast": {

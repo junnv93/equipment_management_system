@@ -30,6 +30,8 @@ export const API_ENDPOINTS = {
     TEAM: (teamId: string) => `/api/equipment/team/${teamId}`,
     /** 파일 첨부 */
     ATTACHMENTS: '/api/equipment/attachments',
+    /** 이력카드 docx 내보내기 (UL-QP-18-02) */
+    HISTORY_CARD: (id: string) => `/api/equipment/${id}/history-card`,
     // 위치 변동 이력
     LOCATION_HISTORY: {
       LIST: (id: string) => `/api/equipment/${id}/location-history`,
@@ -388,6 +390,8 @@ export const API_ENDPOINTS = {
       UTILIZATION: '/api/reports/export/utilization',
       TEAM_EQUIPMENT: '/api/reports/export/team-equipment',
       MAINTENANCE: '/api/reports/export/maintenance',
+      /** 공식 양식 템플릿 내보내기 (UL-QP-18-01 ~ 11) */
+      FORM_TEMPLATE: (formNumber: string) => `/api/reports/export/form/${formNumber}`,
     },
   },
 
@@ -402,6 +406,17 @@ export const API_ENDPOINTS = {
         `/api/data-migration/equipment/${sessionId}/error-report`,
       TEMPLATE: '/api/data-migration/equipment/template',
     },
+  },
+
+  // ============================================================================
+  // 자체점검 관리 (UL-QP-18-05)
+  // ============================================================================
+  SELF_INSPECTIONS: {
+    BY_EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/self-inspections`,
+    GET: (id: string) => `/api/self-inspections/${id}`,
+    UPDATE: (id: string) => `/api/self-inspections/${id}`,
+    CONFIRM: (id: string) => `/api/self-inspections/${id}/confirm`,
+    DELETE: (id: string) => `/api/self-inspections/${id}`,
   },
 
   // ============================================================================

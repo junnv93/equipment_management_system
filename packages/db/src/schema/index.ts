@@ -58,3 +58,6 @@ export * from './intermediate-inspections';
 
 // 케이블/패스로스 스키마 (UL-QP-18-08)
 export * from './cables';
+
+// 자체점검 스키마 (UL-QP-18-05)
+export * from './equipment-self-inspections';

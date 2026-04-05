@@ -67,6 +67,10 @@ export const documents = pgTable(
     description: text('description'),
     uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
 
+    // 보존연한 (UL-QP-18 섹션 15)
+    retentionPeriod: varchar('retention_period', { length: 20 }),
+    retentionExpiresAt: timestamp('retention_expires_at'),
+
     // 시스템 필드
     uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -96,6 +100,7 @@ export const documents = pgTable(
     statusIdx: index('documents_status_idx').on(table.status),
     /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
     statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
+    retentionExpiresAtIdx: index('documents_retention_expires_at_idx').on(table.retentionExpiresAt),
   })
 );
 

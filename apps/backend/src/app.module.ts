@@ -43,6 +43,7 @@ import { DataMigrationModule } from './modules/data-migration/data-migration.mod
 import { SoftwareValidationsModule } from './modules/software-validations/software-validations.module';
 import { IntermediateInspectionsModule } from './modules/intermediate-inspections/intermediate-inspections.module';
 import { CablesModule } from './modules/cables/cables.module';
+import { SelfInspectionsModule } from './modules/self-inspections/self-inspections.module';
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { CablesModule } from './modules/cables/cables.module';
     SoftwareValidationsModule, // 소프트웨어 유효성 확인 (UL-QP-18-09)
     IntermediateInspectionsModule, // 중간점검표 (UL-QP-18-03)
     CablesModule, // 케이블/경로 손실 관리 (UL-QP-18-08)
+    SelfInspectionsModule, // 자체점검표 (UL-QP-18-05)
   ],
   controllers: [],
   providers: [

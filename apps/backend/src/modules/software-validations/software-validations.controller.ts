@@ -108,7 +108,8 @@ export class SoftwareValidationsController {
   @UsePipes(UpdateValidationPipe)
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() dto: UpdateValidationInput
+    @Body() dto: UpdateValidationInput,
+    @Request() _req: AuthenticatedRequest
   ): Promise<SoftwareValidation> {
     return this.validationsService.update(uuid, dto);
   }
@@ -191,7 +192,8 @@ export class SoftwareValidationsController {
   @UsePipes(SubmitValidationPipe)
   async revise(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() dto: SubmitValidationInput
+    @Body() dto: SubmitValidationInput,
+    @Request() _req: AuthenticatedRequest
   ): Promise<SoftwareValidation> {
     return this.validationsService.revise(uuid, dto.version);
   }

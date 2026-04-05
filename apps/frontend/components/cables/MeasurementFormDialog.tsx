@@ -192,8 +192,9 @@ export function MeasurementFormDialog({ cableId, open, onOpenChange }: Measureme
                     onClick={() => removeRow(idx)}
                     disabled={dataPoints.length <= 1}
                     className="shrink-0"
+                    aria-label={t('measurement.removeRowAriaLabel')}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                   </Button>
                 </div>
               ))}
