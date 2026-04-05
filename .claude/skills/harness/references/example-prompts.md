@@ -6,59 +6,11 @@
 
 ---
 
-## 현재 미해결 프롬프트: 16건
+## 현재 미해결 프롬프트: 15건
 
 ### ~~🔴 CRITICAL — 유효성확인 첨부파일 인프라~~ ✅ 완료 → 아카이브 참조
 
-### 🔴 CRITICAL — UL-QP-18-09 방법 2 (UL 자체 시험) 프론트엔드 양식 전체 구현 (Mode 1)
-
-```
-문제:
-UL-QP-18-09 "방법 2: UL 자체 유효성확인 시험" 입력 양식이 프론트엔드에 전혀 구현되지 않음.
-SoftwareValidationContent.tsx:362에서 validationType === 'vendor' 분기만 존재하고
-'self' 분기가 없어, 방법 2로 유효성 확인 양식을 작성할 수 없음.
-
-DB 스키마(software-validations.ts:52-59)에는 9개 필드가 모두 존재하고,
-백엔드 DTO/서비스도 이 필드들을 처리함. 프론트엔드만 누락.
-
-검증됨:
-- SoftwareValidationContent.tsx:362 — vendor 분기만 존재, self 분기 없음
-- software-validations.ts:52-59 — referenceDocuments, operatingUnitDescription,
-  softwareComponents, hardwareComponents, acquisitionFunctions(jsonb),
-  processingFunctions(jsonb), controlFunctions(jsonb), performedBy 모두 DB 존재
-- en/software.json, ko/software.json — 방법 2 관련 i18n 키 없음
-
-UL-QP-18-09 방법 2 필수 입력:
-  기본정보: 참고문서, 조작단위설명, SW구성, HW구성
-  검증항목 (각각 배열):
-    - 획득 기능: 기능명칭, 독립획득방법, 수락기준, 첨부(파일 업로드)
-    - 프로세싱 기능: 기능명칭, 독립처리방법, 수락기준, 첨부(파일 업로드)
-    - 제어 기능: 제어장비기능, 예상기능, 확인기능, 독립판정방법, 수락기준, 첨부(파일 업로드)
-  승인: 시험일자(testDate), 시험수행자(performedBy)
-
-  ※ 선행 조건: "유효성확인 첨부파일 인프라" 프롬프트 완료 필요
-     (documents 테이블 softwareValidationId FK + validation_test_data 타입)
-
-액션:
-1. SoftwareValidationContent.tsx에 validationType === 'self' 분기 추가
-2. 기본정보 4개 텍스트 입력 (referenceDocuments, operatingUnitDescription, softwareComponents, hardwareComponents)
-3. 검증항목 3개 동적 배열 폼 (acquisition/processing/control Functions)
-   — 각 항목 추가/삭제, 하위 필드 입력
-   — 각 항목에 첨부파일 업로드 영역 (ValidationAttachments 컴포넌트 활용)
-     documentType: 'validation_test_data', 항목별 description에 기능 유형 기록
-4. 시험일자(DatePicker) + 시험수행자(UserSelect) 입력
-5. en/ko software.json에 방법 2 관련 i18n 키 추가 (~25키)
-6. createForm state에 방법 2 필드 추가
-7. 저장 후 유효성확인 ID로 첨부파일 조회/표시
-
-검증:
-1. pnpm --filter frontend run tsc --noEmit → 타입 에러 0
-2. 방법 2 선택 → 기본정보 + 검증항목 폼 표시
-3. 획득/프로세싱/제어 기능 항목 추가/삭제 동작
-4. 각 기능 항목에 파일 첨부 → 업로드 성공 → 목록 표시
-5. 제출 → 백엔드에 jsonb 배열 정상 전달
-6. WF-14b 방법 2 E2E 테스트 통과
-```
+### ~~🔴 CRITICAL — UL-QP-18-09 방법 2 프론트엔드 양식~~ ✅ 완료 → 아카이브 참조
 
 ### ~~🔴 CRITICAL — 담당자(정/부) 이름 JOIN 누락 + Create/Edit 폼 필드 보완~~ ✅ 완료 → 아카이브 참조
 
@@ -855,6 +807,8 @@ GitHub Actions deprecation 경고 발생 가능.
   findAll/findOne/findByEquipmentId LEFT JOIN users, Create/Edit 폼에 담당자/설치일/사이트 추가
 - ~~유효성확인 첨부파일 인프라~~ — PR #105, 2026-04-05 (17차)
   documents.softwareValidationId FK + validation_vendor_attachment/validation_test_data 타입 + BE/FE API
+- ~~UL-QP-18-09 방법 2 프론트엔드 양식~~ — PR #105, 2026-04-05 (18차)
+  SoftwareValidationContent.tsx self 분기, 기본정보 4필드, 동적 배열 3종(획득/프로세싱/제어), i18n ~30키
   DB: test_software + software_validations + equipment_test_software, Backend: 2 modules, Frontend: /software pages, E2E: WF-14a/14b 14/14 PASS
 
 ### HIGH
