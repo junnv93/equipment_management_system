@@ -36,6 +36,7 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   report: () => `/reports`,
   document: (id) => `/documents/${id}`,
   software_equipment_link: (id) => `/software/${id}`,
+  intermediate_inspection: (id) => `/calibration/intermediate-checks?selected=${id}`,
 };
 
 /**
