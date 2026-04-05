@@ -36,6 +36,7 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
+      timeout: 120000, // 2분 — CI에서 NextAuth 콜백이 느릴 수 있음
     },
 
     // Browser projects — setup 완료 후 실행
