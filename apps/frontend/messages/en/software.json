@@ -103,6 +103,24 @@
     "submit": "Save",
     "submitting": "Saving..."
   },
+  "linkedEquipment": {
+    "title": "Linked Equipment",
+    "empty": "No linked equipment",
+    "linkButton": "Link Equipment",
+    "unlinkButton": "Unlink",
+    "unlinkConfirm": "Are you sure you want to unlink this equipment?",
+    "linkDialogTitle": "Link Equipment",
+    "linkDialogDesc": "Select equipment to link to this software.",
+    "linkNotes": "Notes (optional)",
+    "linkNotesPlaceholder": "Notes about the link...",
+    "linkSuccess": "Equipment linked successfully",
+    "unlinkSuccess": "Equipment unlinked successfully",
+    "colManagementNumber": "Mgmt No.",
+    "colName": "Equipment Name",
+    "colModel": "Model",
+    "colStatus": "Status",
+    "colActions": "Actions"
+  },
   "validation": {
     "title": "Software Validations",
     "subtitle": "UL-QP-18-09 Software Validation Records",

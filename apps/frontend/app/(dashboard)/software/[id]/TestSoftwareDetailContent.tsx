@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit2, ToggleLeft, FileCheck } from 'lucide-react';
+import { ArrowLeft, Edit2, ToggleLeft, FileCheck, Package, Plus, Unlink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,19 +24,25 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
-import testSoftwareApi, { type UpdateTestSoftwareDto } from '@/lib/api/software-api';
+import testSoftwareApi, {
+  type UpdateTestSoftwareDto,
+  type LinkedEquipment,
+} from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { apiClient } from '@/lib/api/api-client';
+import { UserCombobox } from '@/components/ui/user-combobox';
 import { isConflictError } from '@/lib/api/error';
 import { TEST_FIELD_VALUES, SITE_VALUES } from '@equipment-management/schemas';
 import type { TestField, Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { FRONTEND_ROUTES, API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
+import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
+import { CACHE_TIMES } from '@/lib/api/query-config';
 
 interface TestSoftwareDetailContentProps {
   id: string;
@@ -51,20 +57,70 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
 
   const siteLabels = useSiteLabels();
   const [isEditOpen, setIsEditOpen] = useState(false);
-
-  const { data: usersData } = useQuery({
-    queryKey: queryKeys.users.list(),
-    queryFn: () =>
-      apiClient
-        .get(API_ENDPOINTS.USERS.LIST)
-        .then((r) => (r.data as { items: { id: string; name: string }[] }).items),
-  });
+  const [isLinkEquipmentOpen, setIsLinkEquipmentOpen] = useState(false);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | undefined>();
+  const [linkNotes, setLinkNotes] = useState('');
 
   const { data: software, isLoading } = useQuery({
     queryKey: queryKeys.testSoftware.detail(id),
     queryFn: () => testSoftwareApi.get(id),
     ...QUERY_CONFIG.TEST_SOFTWARE_LIST,
   });
+
+  // M:N 연결된 장비
+  const { data: linkedEquipment = [] } = useQuery({
+    queryKey: queryKeys.testSoftware.linkedEquipment(id),
+    queryFn: () => testSoftwareApi.listLinkedEquipment(id),
+    staleTime: CACHE_TIMES.MEDIUM,
+  });
+
+  const invalidateLinkCaches = (equipmentId?: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.linkedEquipment(id) });
+    if (equipmentId) {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.testSoftware.byEquipment(equipmentId),
+      });
+    }
+  };
+
+  const linkEquipmentMutation = useMutation({
+    mutationFn: (data: { equipmentId: string; notes?: string }) =>
+      testSoftwareApi.linkEquipment(id, data),
+    onSuccess: () => {
+      toast({ title: t('linkedEquipment.linkSuccess') });
+      setIsLinkEquipmentOpen(false);
+      setSelectedEquipmentId(undefined);
+      setLinkNotes('');
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: 'destructive' });
+    },
+    onSettled: () => invalidateLinkCaches(selectedEquipmentId),
+  });
+
+  const unlinkEquipmentMutation = useMutation({
+    mutationFn: (equipmentId: string) => testSoftwareApi.unlinkEquipment(id, equipmentId),
+    onSuccess: () => {
+      toast({ title: t('linkedEquipment.unlinkSuccess') });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: 'destructive' });
+    },
+    onSettled: (_d, _e, equipmentId) => invalidateLinkCaches(equipmentId),
+  });
+
+  const handleLinkEquipment = () => {
+    if (!selectedEquipmentId) return;
+    linkEquipmentMutation.mutate({
+      equipmentId: selectedEquipmentId,
+      notes: linkNotes || undefined,
+    });
+  };
+
+  const handleUnlinkEquipment = (equipmentId: string) => {
+    if (!confirm(t('linkedEquipment.unlinkConfirm'))) return;
+    unlinkEquipmentMutation.mutate(equipmentId);
+  };
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -301,39 +357,19 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
             </div>
             <div className="space-y-2">
               <Label>{t('form.primaryManagerLabel')}</Label>
-              <Select
-                value={editForm.primaryManagerId}
-                onValueChange={(v) => setEditForm({ ...editForm, primaryManagerId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('form.primaryManagerPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(usersData ?? []).map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <UserCombobox
+                value={editForm.primaryManagerId || undefined}
+                onChange={(id) => setEditForm({ ...editForm, primaryManagerId: id ?? '' })}
+                placeholder={t('form.primaryManagerPlaceholder')}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('form.secondaryManagerLabel')}</Label>
-              <Select
-                value={editForm.secondaryManagerId}
-                onValueChange={(v) => setEditForm({ ...editForm, secondaryManagerId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('form.secondaryManagerPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(usersData ?? []).map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <UserCombobox
+                value={editForm.secondaryManagerId || undefined}
+                onChange={(id) => setEditForm({ ...editForm, secondaryManagerId: id ?? '' })}
+                placeholder={t('form.secondaryManagerPlaceholder')}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('form.installedAtLabel')}</Label>
@@ -368,6 +404,122 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
             </Button>
             <Button onClick={handleEditSubmit} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? t('form.submitting') : t('form.submit')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 연결된 장비 섹션 */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Package className="h-5 w-5 text-brand-info" aria-hidden="true" />
+            {t('linkedEquipment.title')}
+            {linkedEquipment.length > 0 && (
+              <Badge variant="secondary">{linkedEquipment.length}</Badge>
+            )}
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setIsLinkEquipmentOpen(true)}>
+            <Plus className="mr-1 h-3 w-3" />
+            {t('linkedEquipment.linkButton')}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {linkedEquipment.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">
+                      {t('linkedEquipment.colManagementNumber')}
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">
+                      {t('linkedEquipment.colName')}
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">
+                      {t('linkedEquipment.colModel')}
+                    </th>
+                    <th className="pb-2 pr-4 font-medium text-muted-foreground">
+                      {t('linkedEquipment.colStatus')}
+                    </th>
+                    <th className="pb-2 font-medium text-muted-foreground">
+                      {t('linkedEquipment.colActions')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linkedEquipment.map((eq: LinkedEquipment) => (
+                    <tr key={eq.id} className="border-b last:border-0">
+                      <td className="py-2 pr-4 font-mono text-xs">
+                        <Link
+                          href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(eq.id)}
+                          className="text-brand-primary hover:underline"
+                        >
+                          {eq.managementNumber}
+                        </Link>
+                      </td>
+                      <td className="py-2 pr-4">{eq.name}</td>
+                      <td className="py-2 pr-4 text-muted-foreground">{eq.modelName || '-'}</td>
+                      <td className="py-2 pr-4">
+                        <Badge variant="outline" className="text-xs">
+                          {eq.status}
+                        </Badge>
+                      </td>
+                      <td className="py-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleUnlinkEquipment(eq.id)}
+                          disabled={unlinkEquipmentMutation.isPending}
+                        >
+                          <Unlink className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+              <Package className="mb-2 h-8 w-8" />
+              <p className="text-sm">{t('linkedEquipment.empty')}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Link Equipment Dialog */}
+      <Dialog open={isLinkEquipmentOpen} onOpenChange={setIsLinkEquipmentOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('linkedEquipment.linkDialogTitle')}</DialogTitle>
+            <DialogDescription>{t('linkedEquipment.linkDialogDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <EquipmentCombobox
+              value={selectedEquipmentId}
+              onChange={setSelectedEquipmentId}
+              excludeIds={linkedEquipment.map((eq: LinkedEquipment) => eq.id)}
+            />
+            <div className="space-y-2">
+              <Label>{t('linkedEquipment.linkNotes')}</Label>
+              <Input
+                value={linkNotes}
+                onChange={(e) => setLinkNotes(e.target.value)}
+                placeholder={t('linkedEquipment.linkNotesPlaceholder')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLinkEquipmentOpen(false)}>
+              {t('form.cancel')}
+            </Button>
+            <Button
+              onClick={handleLinkEquipment}
+              disabled={!selectedEquipmentId || linkEquipmentMutation.isPending}
+            >
+              {t('linkedEquipment.linkButton')}
             </Button>
           </DialogFooter>
         </DialogContent>

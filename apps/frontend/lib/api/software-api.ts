@@ -66,6 +66,22 @@ export interface UpdateTestSoftwareDto extends Partial<CreateTestSoftwareDto> {
 }
 
 // ============================================================================
+// Equipment Link (M:N)
+// ============================================================================
+
+export interface LinkedEquipment {
+  id: string;
+  managementNumber: string;
+  name: string;
+  modelName: string | null;
+  manufacturer: string | null;
+  status: string;
+  site: string | null;
+  notes: string | null;
+  linkedAt: string;
+}
+
+// ============================================================================
 // Software Validation (UL-QP-18-09)
 // ============================================================================
 
@@ -160,6 +176,22 @@ const testSoftwareApi = {
     return apiClient
       .get(API_ENDPOINTS.TEST_SOFTWARE.BY_EQUIPMENT(equipmentId))
       .then((res) => res.data);
+  },
+  listLinkedEquipment: async (softwareId: string): Promise<LinkedEquipment[]> => {
+    return apiClient
+      .get(API_ENDPOINTS.TEST_SOFTWARE.LINKED_EQUIPMENT(softwareId))
+      .then((res) => res.data);
+  },
+  linkEquipment: async (
+    softwareId: string,
+    data: { equipmentId: string; notes?: string }
+  ): Promise<{ id: string }> => {
+    return apiClient
+      .post(API_ENDPOINTS.TEST_SOFTWARE.LINK_EQUIPMENT(softwareId), data)
+      .then((res) => res.data);
+  },
+  unlinkEquipment: async (softwareId: string, equipmentId: string): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.TEST_SOFTWARE.UNLINK_EQUIPMENT(softwareId, equipmentId));
   },
 };
 

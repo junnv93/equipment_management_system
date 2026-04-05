@@ -215,6 +215,10 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/api/test-software/${id}`,
     TOGGLE_AVAILABILITY: (id: string) => `/api/test-software/${id}/availability`,
     BY_EQUIPMENT: (equipmentId: string) => `/api/test-software/by-equipment/${equipmentId}`,
+    LINKED_EQUIPMENT: (id: string) => `/api/test-software/${id}/equipment`,
+    LINK_EQUIPMENT: (id: string) => `/api/test-software/${id}/equipment`,
+    UNLINK_EQUIPMENT: (id: string, equipmentId: string) =>
+      `/api/test-software/${id}/equipment/${equipmentId}`,
   },
 
   // ============================================================================

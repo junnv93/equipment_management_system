@@ -258,5 +258,19 @@
     "deleteAll": "전체 삭제",
     "deleteFile": "파일 삭제",
     "formatHint": "{extensions} (최대 {maxSize}, {maxFiles}개)"
+  },
+  "userCombobox": {
+    "placeholder": "사용자를 검색하여 선택...",
+    "searchPlaceholder": "이름으로 검색...",
+    "typeToSearch": "이름을 입력하여 검색하세요",
+    "noResults": "검색 결과가 없습니다",
+    "clearAriaLabel": "선택 해제"
+  },
+  "equipmentCombobox": {
+    "placeholder": "장비를 검색하여 선택...",
+    "searchPlaceholder": "장비명 또는 관리번호로 검색...",
+    "typeToSearch": "장비명을 입력하여 검색하세요",
+    "noResults": "검색 결과가 없습니다",
+    "clearAriaLabel": "선택 해제"
   }
 }

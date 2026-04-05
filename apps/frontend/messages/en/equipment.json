@@ -574,7 +574,19 @@
     "colAvailability": "Availability",
     "available": "Available",
     "unavailable": "Unavailable",
-    "empty": "No software/manual information registered."
+    "empty": "No software/manual information registered.",
+    "linkButton": "Link Software",
+    "unlinkButton": "Unlink",
+    "unlinkConfirm": "Are you sure you want to unlink this software?",
+    "linkDialogTitle": "Link Test Software",
+    "linkDialogDesc": "Select a test software to link to this equipment.",
+    "linkNotes": "Notes (optional)",
+    "linkNotesPlaceholder": "Notes about the link...",
+    "linkSuccess": "Software linked successfully",
+    "unlinkSuccess": "Software unlinked successfully",
+    "linkError": "Error occurred while linking",
+    "alreadyLinked": "Software is already linked",
+    "colActions": "Actions"
   },
   "attachmentsTab": {
     "title": "Attachments",

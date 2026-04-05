@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Patch,
   Param,
@@ -19,6 +20,7 @@ import {
   UpdateTestSoftwareValidationPipe,
   type UpdateTestSoftwareInput,
 } from './dto/update-test-software.dto';
+import { LinkEquipmentPipe, type LinkEquipmentInput } from './dto/link-equipment.dto';
 import {
   TestSoftwareQueryValidationPipe,
   type TestSoftwareQueryInput,
@@ -71,6 +73,35 @@ export class TestSoftwareController {
   ): Promise<TestSoftware[]> {
     return this.testSoftwareService.findByEquipmentId(equipmentId);
   }
+
+  // ─── M:N 장비 링크 ─────────────────────────────────────────────────
+
+  @Get(':uuid/equipment')
+  @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
+  findLinkedEquipment(@Param('uuid', ParseUUIDPipe) uuid: string) {
+    return this.testSoftwareService.findLinkedEquipment(uuid);
+  }
+
+  @Post(':uuid/equipment')
+  @RequirePermissions(Permission.UPDATE_TEST_SOFTWARE)
+  @AuditLog({ action: 'update', entityType: 'software', entityIdPath: 'params.uuid' })
+  @UsePipes(LinkEquipmentPipe)
+  async linkEquipment(@Param('uuid', ParseUUIDPipe) uuid: string, @Body() dto: LinkEquipmentInput) {
+    return this.testSoftwareService.linkEquipment(uuid, dto);
+  }
+
+  @Delete(':uuid/equipment/:equipmentId')
+  @RequirePermissions(Permission.UPDATE_TEST_SOFTWARE)
+  @AuditLog({ action: 'delete', entityType: 'software', entityIdPath: 'params.uuid' })
+  async unlinkEquipment(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('equipmentId', ParseUUIDPipe) equipmentId: string
+  ) {
+    await this.testSoftwareService.unlinkEquipment(uuid, equipmentId);
+    return { message: '장비 연결이 해제되었습니다.' };
+  }
+
+  // ─── 단건 조회 ────────────────────────────────────────────────────
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)

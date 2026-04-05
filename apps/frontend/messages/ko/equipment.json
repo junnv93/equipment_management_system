@@ -574,7 +574,19 @@
     "colAvailability": "가용 여부",
     "available": "사용 가능",
     "unavailable": "사용 불가",
-    "empty": "등록된 소프트웨어/매뉴얼 정보가 없습니다."
+    "empty": "등록된 소프트웨어/매뉴얼 정보가 없습니다.",
+    "linkButton": "소프트웨어 연결",
+    "unlinkButton": "연결 해제",
+    "unlinkConfirm": "이 소프트웨어의 연결을 해제하시겠습니까?",
+    "linkDialogTitle": "시험용 소프트웨어 연결",
+    "linkDialogDesc": "이 장비에 연결할 시험용 소프트웨어를 선택하세요.",
+    "linkNotes": "비고 (선택)",
+    "linkNotesPlaceholder": "연결에 대한 메모...",
+    "linkSuccess": "소프트웨어가 연결되었습니다",
+    "unlinkSuccess": "소프트웨어 연결이 해제되었습니다",
+    "linkError": "연결 중 오류가 발생했습니다",
+    "alreadyLinked": "이미 연결된 소프트웨어입니다",
+    "colActions": "작업"
   },
   "attachmentsTab": {
     "title": "첨부파일",

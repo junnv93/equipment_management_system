@@ -103,6 +103,24 @@
     "submit": "저장",
     "submitting": "저장 중..."
   },
+  "linkedEquipment": {
+    "title": "연결된 장비",
+    "empty": "연결된 장비가 없습니다",
+    "linkButton": "장비 연결",
+    "unlinkButton": "해제",
+    "unlinkConfirm": "이 장비의 연결을 해제하시겠습니까?",
+    "linkDialogTitle": "장비 연결",
+    "linkDialogDesc": "이 소프트웨어에 연결할 장비를 선택하세요.",
+    "linkNotes": "비고 (선택)",
+    "linkNotesPlaceholder": "연결에 대한 메모...",
+    "linkSuccess": "장비가 연결되었습니다",
+    "unlinkSuccess": "장비 연결이 해제되었습니다",
+    "colManagementNumber": "관리번호",
+    "colName": "장비명",
+    "colModel": "모델",
+    "colStatus": "상태",
+    "colActions": "작업"
+  },
   "validation": {
     "title": "소프트웨어 유효성 확인",
     "subtitle": "UL-QP-18-09 소프트웨어 유효성 확인 기록",

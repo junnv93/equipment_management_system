@@ -4,6 +4,7 @@ import { eq, and, desc, sql, asc } from 'drizzle-orm';
 import {
   testSoftware,
   equipmentTestSoftware,
+  equipment,
   type TestSoftware,
 } from '@equipment-management/db/schema';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
@@ -15,6 +16,7 @@ import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
+import type { LinkEquipmentInput } from './dto/link-equipment.dto';
 
 /** findAll/findOne 응답에 users LEFT JOIN으로 추가되는 필드 */
 export type TestSoftwareWithManagers = TestSoftware & {
@@ -360,5 +362,120 @@ export class TestSoftwareService extends VersionedBaseService {
     this.invalidateCache(id);
 
     return updated;
+  }
+
+  // ─── M:N 장비 링크 ────────────────────────────────────────────────────
+
+  /**
+   * 양방향 캐시 무효화 — 링크/언링크 시 양쪽 엔티티의 캐시를 모두 제거
+   */
+  private invalidateLinkCaches(testSoftwareId: string, equipmentId: string): void {
+    this.cacheService.delete(this.buildCacheKey('by-equipment', equipmentId));
+    this.cacheService.delete(this.buildCacheKey('linked-equipment', testSoftwareId));
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
+  }
+
+  /**
+   * 장비 연결 (M:N)
+   *
+   * UNIQUE 제약(equipment_id, test_software_id) 위반 시 409 Conflict 반환.
+   */
+  async linkEquipment(
+    testSoftwareId: string,
+    dto: LinkEquipmentInput
+  ): Promise<{ id: string; testSoftwareId: string; equipmentId: string; notes: string | null }> {
+    // 소프트웨어 존재 확인
+    await this.findOne(testSoftwareId);
+
+    try {
+      const [link] = await this.db
+        .insert(equipmentTestSoftware)
+        .values({
+          testSoftwareId,
+          equipmentId: dto.equipmentId,
+          notes: dto.notes ?? null,
+        })
+        .returning();
+
+      this.invalidateLinkCaches(testSoftwareId, dto.equipmentId);
+
+      this.eventEmitter.emit('test-software.equipment.linked', {
+        testSoftwareId,
+        equipmentId: dto.equipmentId,
+      });
+
+      return link;
+    } catch (error) {
+      // PostgreSQL unique_violation: 23505
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as { code: string }).code === '23505'
+      ) {
+        throw new ConflictException({
+          code: 'EQUIPMENT_ALREADY_LINKED',
+          message: 'This equipment is already linked to the software.',
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 장비 연결 해제 (M:N)
+   */
+  async unlinkEquipment(testSoftwareId: string, equipmentId: string): Promise<void> {
+    const deleted = await this.db
+      .delete(equipmentTestSoftware)
+      .where(
+        and(
+          eq(equipmentTestSoftware.testSoftwareId, testSoftwareId),
+          eq(equipmentTestSoftware.equipmentId, equipmentId)
+        )
+      )
+      .returning({ id: equipmentTestSoftware.id });
+
+    if (deleted.length === 0) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_LINK_NOT_FOUND',
+        message: 'Equipment link not found.',
+      });
+    }
+
+    this.invalidateLinkCaches(testSoftwareId, equipmentId);
+
+    this.eventEmitter.emit('test-software.equipment.unlinked', {
+      testSoftwareId,
+      equipmentId,
+    });
+  }
+
+  /**
+   * 역방향 조회: 소프트웨어에 연결된 장비 목록
+   */
+  async findLinkedEquipment(testSoftwareId: string) {
+    const cacheKey = this.buildCacheKey('linked-equipment', testSoftwareId);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return this.db
+          .select({
+            id: equipment.id,
+            managementNumber: equipment.managementNumber,
+            name: equipment.name,
+            modelName: equipment.modelName,
+            manufacturer: equipment.manufacturer,
+            status: equipment.status,
+            site: equipment.site,
+            notes: equipmentTestSoftware.notes,
+            linkedAt: equipmentTestSoftware.createdAt,
+          })
+          .from(equipmentTestSoftware)
+          .innerJoin(equipment, eq(equipmentTestSoftware.equipmentId, equipment.id))
+          .where(eq(equipmentTestSoftware.testSoftwareId, testSoftwareId))
+          .orderBy(asc(equipment.managementNumber));
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 }

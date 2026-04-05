@@ -1,18 +1,30 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { Code, BookOpen, Download, ExternalLink, Cpu, Monitor } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Code, BookOpen, Download, ExternalLink, Cpu, Monitor, Plus, Unlink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
 import { DocumentTypeValues } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import testSoftwareApi from '@/lib/api/software-api';
+import { TestSoftwareCombobox } from '@/components/ui/test-software-combobox';
 import { TIMELINE_TOKENS, DOCUMENT_DISPLAY } from '@/lib/design-tokens';
 import type { Equipment } from '@/lib/api/equipment-api';
 
@@ -22,7 +34,13 @@ interface SoftwareTabProps {
 
 export function SoftwareTab({ equipment }: SoftwareTabProps) {
   const t = useTranslations('equipment');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const equipmentId = String(equipment.id);
+
+  const [isLinkOpen, setIsLinkOpen] = useState(false);
+  const [selectedSoftwareId, setSelectedSoftwareId] = useState<string | undefined>();
+  const [linkNotes, setLinkNotes] = useState('');
 
   // 장비 문서에서 매뉴얼 필터링
   const { data: equipmentDocs = [] } = useQuery({
@@ -47,6 +65,68 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
     enabled: !!equipmentId,
     staleTime: CACHE_TIMES.MEDIUM,
   });
+
+  const invalidateLinkCaches = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.byEquipment(equipmentId) });
+    if (selectedSoftwareId) {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.testSoftware.linkedEquipment(selectedSoftwareId),
+      });
+    }
+  };
+
+  const linkMutation = useMutation({
+    mutationFn: (data: { softwareId: string; equipmentId: string; notes?: string }) =>
+      testSoftwareApi.linkEquipment(data.softwareId, {
+        equipmentId: data.equipmentId,
+        notes: data.notes,
+      }),
+    onSuccess: () => {
+      toast({ title: t('softwareTab.linkSuccess') });
+      setIsLinkOpen(false);
+      setSelectedSoftwareId(undefined);
+      setLinkNotes('');
+    },
+    onError: (error: Error) => {
+      const msg = error.message?.includes('ALREADY_LINKED')
+        ? t('softwareTab.alreadyLinked')
+        : t('softwareTab.linkError');
+      toast({ title: msg, variant: 'destructive' });
+    },
+    onSettled: invalidateLinkCaches,
+  });
+
+  const unlinkMutation = useMutation({
+    mutationFn: (data: { softwareId: string; equipmentId: string }) =>
+      testSoftwareApi.unlinkEquipment(data.softwareId, data.equipmentId),
+    onSuccess: () => {
+      toast({ title: t('softwareTab.unlinkSuccess') });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('softwareTab.linkError'),
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.byEquipment(equipmentId) });
+    },
+  });
+
+  const handleLink = () => {
+    if (!selectedSoftwareId) return;
+    linkMutation.mutate({
+      softwareId: selectedSoftwareId,
+      equipmentId,
+      notes: linkNotes || undefined,
+    });
+  };
+
+  const handleUnlink = (softwareId: string) => {
+    if (!confirm(t('softwareTab.unlinkConfirm'))) return;
+    unlinkMutation.mutate({ softwareId, equipmentId });
+  };
 
   const handleDownload = async (doc: DocumentRecord) => {
     await documentApi.downloadDocument(doc.id, doc.originalFileName);
@@ -150,7 +230,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
       {/* 섹션 C: 관련 시험용 소프트웨어 */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base flex-1">
             <Monitor className="h-5 w-5 text-brand-info" aria-hidden="true" />
             {t('softwareTab.relatedSoftware')}
             {hasLinkedSoftware && (
@@ -159,6 +239,10 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
               </Badge>
             )}
           </CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setIsLinkOpen(true)}>
+            <Plus className="mr-1 h-3 w-3" />
+            {t('softwareTab.linkButton')}
+          </Button>
         </CardHeader>
         <CardContent>
           {hasLinkedSoftware ? (
@@ -179,8 +263,11 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                       <th className="pb-2 pr-4 font-medium text-muted-foreground">
                         {t('softwareTab.colTestField')}
                       </th>
-                      <th className="pb-2 font-medium text-muted-foreground">
+                      <th className="pb-2 pr-4 font-medium text-muted-foreground">
                         {t('softwareTab.colAvailability')}
+                      </th>
+                      <th className="pb-2 font-medium text-muted-foreground">
+                        {t('softwareTab.colActions')}
                       </th>
                     </tr>
                   </thead>
@@ -202,7 +289,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                             {sw.testField}
                           </Badge>
                         </td>
-                        <td className="py-2">
+                        <td className="py-2 pr-4">
                           <Badge
                             variant={sw.availability === 'available' ? 'default' : 'secondary'}
                             className="text-xs"
@@ -211,6 +298,16 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                               ? t('softwareTab.available')
                               : t('softwareTab.unavailable')}
                           </Badge>
+                        </td>
+                        <td className="py-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUnlink(sw.id)}
+                            disabled={unlinkMutation.isPending}
+                          >
+                            <Unlink className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -242,6 +339,39 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Link Software Dialog */}
+      <Dialog open={isLinkOpen} onOpenChange={setIsLinkOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('softwareTab.linkDialogTitle')}</DialogTitle>
+            <DialogDescription>{t('softwareTab.linkDialogDesc')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <TestSoftwareCombobox
+              value={selectedSoftwareId}
+              onChange={setSelectedSoftwareId}
+              excludeIds={linkedSoftware.map((sw) => sw.id)}
+            />
+            <div className="space-y-2">
+              <Label>{t('softwareTab.linkNotes')}</Label>
+              <Input
+                value={linkNotes}
+                onChange={(e) => setLinkNotes(e.target.value)}
+                placeholder={t('softwareTab.linkNotesPlaceholder')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLinkOpen(false)}>
+              {t('softwareTab.download') === 'Download' ? 'Cancel' : '취소'}
+            </Button>
+            <Button onClick={handleLink} disabled={!selectedSoftwareId || linkMutation.isPending}>
+              {t('softwareTab.linkButton')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
