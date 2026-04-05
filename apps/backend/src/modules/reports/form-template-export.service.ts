@@ -15,7 +15,7 @@ interface ExportResult {
 
 interface UserScope {
   site: string;
-  teamId?: string | null;
+  teamId?: string;
 }
 
 /**
