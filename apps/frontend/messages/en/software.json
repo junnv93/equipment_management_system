@@ -41,7 +41,8 @@
       "testField": "Test Field",
       "availability": "Availability",
       "allTestFields": "All Fields",
-      "allAvailability": "All"
+      "allAvailability": "All",
+      "manufacturer": "Manufacturer"
     }
   },
   "detail": {
@@ -157,6 +158,9 @@
       "vendorInfo": "Vendor Information (Method 1)",
       "vendorName": "Vendor Name",
       "vendorSummary": "Summary",
+      "receivedBy": "Received By",
+      "receivedDate": "Received Date",
+      "attachmentNote": "Attachment Notes",
       "selfTestInfo": "Self Test Information (Method 2)",
       "referenceDocuments": "Reference Documents",
       "operatingUnitDescription": "Operating Unit Description",
@@ -187,6 +191,11 @@
       "vendorNamePlaceholder": "Enter vendor name",
       "vendorSummaryLabel": "Summary",
       "vendorSummaryPlaceholder": "Validation summary...",
+      "receivedByLabel": "Received By",
+      "receivedByPlaceholder": "Select receiver",
+      "receivedDateLabel": "Received Date",
+      "attachmentNoteLabel": "Attachment Notes",
+      "attachmentNotePlaceholder": "Scan and/or attach information provided by the vendor",
       "referenceDocumentsLabel": "Reference Documents",
       "referenceDocumentsPlaceholder": "Enter reference documents",
       "operatingUnitLabel": "Operating Unit Description",
@@ -222,6 +231,11 @@
       "cancel": "Cancel",
       "submit": "Create",
       "submitting": "Creating..."
+    },
+    "editDialog": {
+      "title": "Edit Validation Record",
+      "save": "Save Changes",
+      "saving": "Saving..."
     },
     "rejectDialog": {
       "title": "Reject Validation",

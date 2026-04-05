@@ -41,6 +41,7 @@ export interface TestSoftwareQuery {
   testField?: TestField;
   availability?: SoftwareAvailability;
   search?: string;
+  manufacturer?: string;
   site?: string;
   page?: number;
   pageSize?: number;

@@ -121,6 +121,7 @@ export class TestSoftwareService extends VersionedBaseService {
       testField,
       availability,
       search,
+      manufacturer,
       site,
       sort = 'createdAt.desc',
       page = 1,
@@ -129,7 +130,7 @@ export class TestSoftwareService extends VersionedBaseService {
 
     const cacheKey = this.buildCacheKey(
       'list',
-      `${testField ?? ''}_${availability ?? ''}_${search ?? ''}_${site ?? ''}_${sort}_${page}_${pageSize}`
+      `${testField ?? ''}_${availability ?? ''}_${search ?? ''}_${manufacturer ?? ''}_${site ?? ''}_${sort}_${page}_${pageSize}`
     );
 
     return this.cacheService.getOrSet(
@@ -140,6 +141,9 @@ export class TestSoftwareService extends VersionedBaseService {
         if (availability) conditions.push(eq(testSoftware.availability, availability));
         if (search) {
           conditions.push(safeIlike(testSoftware.name, likeContains(search)));
+        }
+        if (manufacturer) {
+          conditions.push(safeIlike(testSoftware.manufacturer, likeContains(manufacturer)));
         }
         if (site) conditions.push(eq(testSoftware.site, site));
 

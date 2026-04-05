@@ -140,7 +140,8 @@ export class NotificationsController {
     description: '인증된 사용자의 모든 알림을 읽음으로 표시합니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '모든 알림 읽음 표시 성공' })
-  @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
+  @RequirePermissions(Permission.UPDATE_NOTIFICATION)
+  @AuditLog({ action: 'update', entityType: 'notification' })
   markAllAsRead(
     @Request() req: AuthenticatedRequest
   ): Promise<{ success: boolean; count: number }> {
@@ -230,7 +231,8 @@ export class NotificationsController {
   })
   @ApiParam({ name: 'id', description: '알림 UUID', format: 'uuid' })
   @ApiResponse({ status: HttpStatus.OK, description: '알림 읽음 표시 성공' })
-  @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
+  @RequirePermissions(Permission.UPDATE_NOTIFICATION)
+  @AuditLog({ action: 'update', entityType: 'notification', entityIdPath: 'params.id' })
   markAsRead(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest

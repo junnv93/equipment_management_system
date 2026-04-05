@@ -1,15 +1,24 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, FileCheck } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, FileCheck, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
+import { UserCombobox } from '@/components/ui/user-combobox';
 import { softwareValidationApi } from '@/lib/api/software-api';
+import type { UpdateSoftwareValidationDto } from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
+import { isConflictError } from '@/lib/api/error';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -38,11 +47,76 @@ export default function ValidationDetailContent({
   const t = useTranslations('software');
   const { fmtDate, fmtDateTime } = useDateFormatter();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [isEditOpen, setIsEditOpen] = useState(searchParams.get('edit') === 'true');
+  const [editForm, setEditForm] = useState<{
+    vendorName: string;
+    vendorSummary: string;
+    receivedBy: string;
+    receivedDate: string;
+    attachmentNote: string;
+    softwareVersion: string;
+    testDate: string;
+  } | null>(null);
 
   const { data: validation, isLoading } = useQuery({
     queryKey: queryKeys.softwareValidations.detail(validationId),
     queryFn: () => softwareValidationApi.get(validationId),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateSoftwareValidationDto) =>
+      softwareValidationApi.update(validationId, data),
+    onSuccess: () => {
+      toast({ title: t('toast.updateSuccess') });
+      setIsEditOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.softwareValidations.detail(validationId),
+      });
+    },
+    onError: (error) => {
+      if (isConflictError(error)) {
+        toast({ title: t('toast.versionConflict'), variant: 'destructive' });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.softwareValidations.detail(validationId),
+        });
+      } else {
+        toast({ title: t('toast.error'), variant: 'destructive' });
+      }
+    },
+  });
+
+  const openEditDialog = () => {
+    if (!validation) return;
+    setEditForm({
+      vendorName: validation.vendorName ?? '',
+      vendorSummary: validation.vendorSummary ?? '',
+      receivedBy: validation.receivedBy ?? '',
+      receivedDate: validation.receivedDate?.split('T')[0] ?? '',
+      attachmentNote: validation.attachmentNote ?? '',
+      softwareVersion: validation.softwareVersion ?? '',
+      testDate: validation.testDate?.split('T')[0] ?? '',
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleUpdate = () => {
+    if (!validation || !editForm) return;
+    const data: UpdateSoftwareValidationDto = {
+      version: validation.version,
+      ...(editForm.softwareVersion ? { softwareVersion: editForm.softwareVersion } : {}),
+      ...(editForm.testDate ? { testDate: editForm.testDate } : {}),
+      ...(editForm.vendorName ? { vendorName: editForm.vendorName } : {}),
+      ...(editForm.vendorSummary ? { vendorSummary: editForm.vendorSummary } : {}),
+      ...(editForm.receivedBy ? { receivedBy: editForm.receivedBy } : {}),
+      ...(editForm.receivedDate ? { receivedDate: editForm.receivedDate } : {}),
+      ...(editForm.attachmentNote ? { attachmentNote: editForm.attachmentNote } : {}),
+    };
+    updateMutation.mutate(data);
+  };
 
   if (isLoading) {
     return (
@@ -79,9 +153,17 @@ export default function ValidationDetailContent({
         <div>
           <h1 className={PAGE_HEADER_TOKENS.title}>{t('validation.detail.title')}</h1>
         </div>
-        <Badge variant={STATUS_VARIANT[validation.status]} className="text-sm">
-          {t(`validationStatus.${validation.status}`)}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {validation.status === 'draft' && (
+            <Button variant="outline" size="sm" onClick={openEditDialog}>
+              <Pencil className="mr-1 h-3.5 w-3.5" />
+              {t('validation.actions.edit')}
+            </Button>
+          )}
+          <Badge variant={STATUS_VARIANT[validation.status]} className="text-sm">
+            {t(`validationStatus.${validation.status}`)}
+          </Badge>
+        </div>
       </div>
 
       {/* 기본 정보 */}
@@ -152,6 +234,30 @@ export default function ValidationDetailContent({
                 </dt>
                 <dd className="text-sm whitespace-pre-wrap">{validation.vendorSummary || '-'}</dd>
               </div>
+              {validation.receivedBy && (
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t('validation.detail.receivedBy')}
+                  </dt>
+                  <dd className="text-sm">{validation.receivedBy}</dd>
+                </div>
+              )}
+              {validation.receivedDate && (
+                <div>
+                  <dt className="text-sm text-muted-foreground">
+                    {t('validation.detail.receivedDate')}
+                  </dt>
+                  <dd className="text-sm">{fmtDate(validation.receivedDate)}</dd>
+                </div>
+              )}
+              {validation.attachmentNote && (
+                <div className="sm:col-span-2">
+                  <dt className="text-sm text-muted-foreground">
+                    {t('validation.detail.attachmentNote')}
+                  </dt>
+                  <dd className="text-sm whitespace-pre-wrap">{validation.attachmentNote}</dd>
+                </div>
+              )}
             </dl>
           </CardContent>
         </Card>
@@ -252,6 +358,87 @@ export default function ValidationDetailContent({
           </dl>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('validation.editDialog.title')}</DialogTitle>
+          </DialogHeader>
+          {editForm && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t('validation.form.versionLabel')}</Label>
+                <Input
+                  value={editForm.softwareVersion}
+                  onChange={(e) => setEditForm({ ...editForm, softwareVersion: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('validation.form.testDateLabel')}</Label>
+                <Input
+                  type="date"
+                  value={editForm.testDate}
+                  onChange={(e) => setEditForm({ ...editForm, testDate: e.target.value })}
+                />
+              </div>
+              {isVendor && (
+                <>
+                  <div className="space-y-2">
+                    <Label>{t('validation.form.vendorNameLabel')}</Label>
+                    <Input
+                      value={editForm.vendorName}
+                      onChange={(e) => setEditForm({ ...editForm, vendorName: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('validation.form.vendorSummaryLabel')}</Label>
+                    <Textarea
+                      value={editForm.vendorSummary}
+                      onChange={(e) => setEditForm({ ...editForm, vendorSummary: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{t('validation.form.receivedByLabel')}</Label>
+                      <UserCombobox
+                        value={editForm.receivedBy || undefined}
+                        onChange={(id) => setEditForm({ ...editForm, receivedBy: id ?? '' })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{t('validation.form.receivedDateLabel')}</Label>
+                      <Input
+                        type="date"
+                        value={editForm.receivedDate}
+                        onChange={(e) => setEditForm({ ...editForm, receivedDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('validation.form.attachmentNoteLabel')}</Label>
+                    <Textarea
+                      value={editForm.attachmentNote}
+                      onChange={(e) => setEditForm({ ...editForm, attachmentNote: e.target.value })}
+                      placeholder={t('validation.form.attachmentNotePlaceholder')}
+                    />
+                  </div>
+                </>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+                  {t('validation.form.cancel')}
+                </Button>
+                <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending
+                    ? t('validation.editDialog.saving')
+                    : t('validation.editDialog.save')}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

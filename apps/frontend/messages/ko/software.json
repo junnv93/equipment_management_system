@@ -41,7 +41,8 @@
       "testField": "시험분야",
       "availability": "가용여부",
       "allTestFields": "전체 분야",
-      "allAvailability": "전체"
+      "allAvailability": "전체",
+      "manufacturer": "제작사"
     }
   },
   "detail": {
@@ -157,6 +158,9 @@
       "vendorInfo": "공급자 정보 (방법 1)",
       "vendorName": "공급자명",
       "vendorSummary": "요약",
+      "receivedBy": "수령 직원",
+      "receivedDate": "수령일",
+      "attachmentNote": "첨부파일 메모",
       "selfTestInfo": "자체 시험 정보 (방법 2)",
       "referenceDocuments": "참고 문서",
       "operatingUnitDescription": "조작 단위 설명",
@@ -187,6 +191,11 @@
       "vendorNamePlaceholder": "공급자명을 입력하세요",
       "vendorSummaryLabel": "요약",
       "vendorSummaryPlaceholder": "유효성 확인 요약...",
+      "receivedByLabel": "수령 직원",
+      "receivedByPlaceholder": "수령 직원 선택",
+      "receivedDateLabel": "수령일",
+      "attachmentNoteLabel": "첨부파일 메모",
+      "attachmentNotePlaceholder": "공급자 제공 자료를 스캔하거나 첨부하세요",
       "referenceDocumentsLabel": "참고 문서",
       "referenceDocumentsPlaceholder": "참고 문서 목록을 입력하세요",
       "operatingUnitLabel": "조작 단위 설명",
@@ -222,6 +231,11 @@
       "cancel": "취소",
       "submit": "생성",
       "submitting": "생성 중..."
+    },
+    "editDialog": {
+      "title": "유효성 확인 기록 수정",
+      "save": "변경 저장",
+      "saving": "저장 중..."
     },
     "rejectDialog": {
       "title": "유효성 확인 반려",

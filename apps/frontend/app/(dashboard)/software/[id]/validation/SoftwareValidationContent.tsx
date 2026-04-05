@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   XCircle,
   FileEdit,
+  Pencil,
   Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -103,6 +104,9 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     // Method 1 (vendor)
     vendorName: '',
     vendorSummary: '',
+    receivedBy: '',
+    receivedDate: '',
+    attachmentNote: '',
     // Method 2 (self)
     referenceDocuments: '',
     operatingUnitDescription: '',
@@ -227,6 +231,9 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
       ...(createForm.testDate ? { testDate: createForm.testDate } : {}),
       ...(createForm.vendorName ? { vendorName: createForm.vendorName } : {}),
       ...(createForm.vendorSummary ? { vendorSummary: createForm.vendorSummary } : {}),
+      ...(createForm.receivedBy ? { receivedBy: createForm.receivedBy } : {}),
+      ...(createForm.receivedDate ? { receivedDate: createForm.receivedDate } : {}),
+      ...(createForm.attachmentNote ? { attachmentNote: createForm.attachmentNote } : {}),
       ...(createForm.referenceDocuments
         ? { referenceDocuments: createForm.referenceDocuments }
         : {}),
@@ -338,17 +345,32 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {v.status === 'draft' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            submitMutation.mutate({ id: v.id, version: v.version });
-                          }}
-                          disabled={submitMutation.isPending}
-                        >
-                          {t('validation.actions.submit')}
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(
+                                `${FRONTEND_ROUTES.SOFTWARE.VALIDATION_DETAIL(softwareId, v.id)}?edit=true`
+                              );
+                            }}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" />
+                            {t('validation.actions.edit')}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              submitMutation.mutate({ id: v.id, version: v.version });
+                            }}
+                            disabled={submitMutation.isPending}
+                          >
+                            {t('validation.actions.submit')}
+                          </Button>
+                        </>
                       )}
                       {v.status === 'submitted' && (
                         <>
@@ -477,6 +499,36 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                       setCreateForm({ ...createForm, vendorSummary: e.target.value })
                     }
                     placeholder={t('validation.form.vendorSummaryPlaceholder')}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>{t('validation.form.receivedByLabel')}</Label>
+                    <UserCombobox
+                      value={createForm.receivedBy || undefined}
+                      onChange={(id) => setCreateForm({ ...createForm, receivedBy: id ?? '' })}
+                      placeholder={t('validation.form.receivedByPlaceholder')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t('validation.form.receivedDateLabel')}</Label>
+                    <Input
+                      type="date"
+                      value={createForm.receivedDate}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, receivedDate: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('validation.form.attachmentNoteLabel')}</Label>
+                  <Textarea
+                    value={createForm.attachmentNote}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, attachmentNote: e.target.value })
+                    }
+                    placeholder={t('validation.form.attachmentNotePlaceholder')}
                   />
                 </div>
               </>

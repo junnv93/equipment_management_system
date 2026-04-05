@@ -322,7 +322,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: '${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-backend:${{ github.sha }}'
           format: 'sarif'
@@ -331,7 +331,7 @@ jobs:
         continue-on-error: true
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: '${{ secrets.DOCKER_HUB_USERNAME }}/equipment-management-frontend:${{ github.sha }}'
           format: 'sarif'

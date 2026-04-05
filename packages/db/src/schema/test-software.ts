@@ -18,7 +18,7 @@ export const testSoftware = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 관리번호 PNNNN (P0001, P0002, ...)
-    managementNumber: varchar('management_number', { length: 20 }).notNull().unique(),
+    managementNumber: varchar('management_number', { length: 20 }).notNull(),
 
     // 소프트웨어 정보
     name: varchar('name', { length: 200 }).notNull(),
