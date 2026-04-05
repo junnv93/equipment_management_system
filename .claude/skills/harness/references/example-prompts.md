@@ -6,7 +6,7 @@
 
 ---
 
-## 현재 미해결 프롬프트: 21건
+## 현재 미해결 프롬프트: 20건
 
 ### ~~🔴 CRITICAL — 유효성확인 첨부파일 인프라~~ ✅ 완료 → 아카이브 참조
 
@@ -155,29 +155,7 @@ UL-QP-18-09 양식 (software_validations 테이블에 구현됨):
 2. 반려된 양식 "재수정" → draft로 전환 → 수정 → 재제출 가능
 ```
 
-### 🟠 HIGH — 유효성확인 DB 컬럼 누락 2개 + 품질승인 알림 (Mode 0)
-
-```
-문제:
-UL-QP-18-09 양식에서 요구하는 2개 필드가 DB에 없고,
-품질책임자 승인(qualityApprove) 시 알림 이벤트가 발행되지 않음.
-
-검증됨:
-- software-validations.ts — infoDate (입수 일자, 스펙 시험소프트웨어유효성확인.md:30) 컬럼 없음
-- software-validations.ts — softwareAuthor (제작자, 스펙:63) 컬럼 없음
-- software-validations.service.ts:402-442 — qualityApprove에서 eventEmitter.emit 호출 없음
-  (approve/submit/reject에는 알림 있음)
-
-액션:
-1. DB: software_validations에 info_date(timestamp), software_author(varchar 200) 추가
-2. 서비스: qualityApprove에 SOFTWARE_VALIDATION.QUALITY_APPROVED 이벤트 발행 추가
-3. notification-events.ts에 해당 이벤트 정의
-
-검증:
-1. 마이그레이션 성공
-2. 유효성 확인 생성 시 infoDate, softwareAuthor 저장 가능
-3. QM 승인 → 알림 발송 확인
-```
+### ~~🟠 HIGH — 유효성확인 DB 컬럼 누락 2개 + 품질승인 알림~~ ✅ 완료 → 아카이브 참조
 
 ### 🟡 MEDIUM — 소프트웨어 관리대장 목록 페이지네이션 UI + manufacturer 필터 (Mode 1)
 
