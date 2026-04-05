@@ -46,6 +46,9 @@ export const testSoftware = pgTable(
     // 사이트 스코프
     site: varchar('site', { length: 10 }),
 
+    // 등록자
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),

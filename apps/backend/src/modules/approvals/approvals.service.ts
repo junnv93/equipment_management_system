@@ -799,7 +799,10 @@ export class ApprovalsService {
     };
 
     const conditions: SQL[] = [
-      eq(schema.softwareValidations.status, ValidationStatusValues.SUBMITTED),
+      or(
+        eq(schema.softwareValidations.status, ValidationStatusValues.SUBMITTED),
+        eq(schema.softwareValidations.status, ValidationStatusValues.APPROVED)
+      )!,
     ];
 
     const scopeCondition = this.buildScopeCondition(TEST_SOFTWARE_DATA_SCOPE, userCtx, {
@@ -1253,7 +1256,10 @@ export class ApprovalsService {
   private async getSoftwareValidationCount(userCtx: UserScopeContext): Promise<number> {
     try {
       const conditions: SQL[] = [
-        eq(schema.softwareValidations.status, ValidationStatusValues.SUBMITTED),
+        or(
+          eq(schema.softwareValidations.status, ValidationStatusValues.SUBMITTED),
+          eq(schema.softwareValidations.status, ValidationStatusValues.APPROVED)
+        )!,
       ];
 
       const scopeCondition = this.buildScopeCondition(TEST_SOFTWARE_DATA_SCOPE, userCtx, {

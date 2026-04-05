@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, or, desc, sql } from 'drizzle-orm';
 import {
   softwareValidations,
   testSoftware,
@@ -567,7 +567,12 @@ export class SoftwareValidationsService extends VersionedBaseService {
         return this.db
           .select()
           .from(softwareValidations)
-          .where(eq(softwareValidations.status, ValidationStatusValues.SUBMITTED))
+          .where(
+            or(
+              eq(softwareValidations.status, ValidationStatusValues.SUBMITTED),
+              eq(softwareValidations.status, ValidationStatusValues.APPROVED)
+            )
+          )
           .orderBy(desc(softwareValidations.submittedAt));
       },
       CACHE_TTL.SHORT

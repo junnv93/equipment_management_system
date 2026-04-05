@@ -76,7 +76,7 @@ export class TestSoftwareService extends VersionedBaseService {
     return `P${String(nextNum).padStart(4, '0')}`;
   }
 
-  async create(dto: CreateTestSoftwareInput, _createdBy: string): Promise<TestSoftware> {
+  async create(dto: CreateTestSoftwareInput, createdBy: string): Promise<TestSoftware> {
     const result = await this.db.transaction(async (tx) => {
       const managementNumber = await this.generateNextManagementNumber(tx);
 
@@ -95,6 +95,7 @@ export class TestSoftwareService extends VersionedBaseService {
           availability: dto.availability ?? 'available',
           requiresValidation: dto.requiresValidation ?? true,
           site: dto.site ?? null,
+          createdBy,
         })
         .returning();
 
