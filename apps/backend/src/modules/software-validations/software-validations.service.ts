@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, or, desc, sql } from 'drizzle-orm';
+import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
 import {
   softwareValidations,
   testSoftware,
@@ -134,6 +134,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     const {
       status,
       validationType,
+      site,
       sort = 'createdAt.desc',
       page = 1,
       pageSize = DEFAULT_PAGE_SIZE,
@@ -141,7 +142,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     const cacheKey = this.buildCacheKey(
       'list',
-      `${testSoftwareId}_${status ?? ''}_${validationType ?? ''}_${sort}_${page}_${pageSize}`
+      `${testSoftwareId}_${status ?? ''}_${validationType ?? ''}_${site ?? ''}_${sort}_${page}_${pageSize}`
     );
 
     return this.cacheService.getOrSet(
@@ -151,6 +152,24 @@ export class SoftwareValidationsService extends VersionedBaseService {
         if (status) conditions.push(eq(softwareValidations.status, status));
         if (validationType) {
           conditions.push(eq(softwareValidations.validationType, validationType));
+        }
+
+        // @SiteScoped에 의해 주입된 사이트 필터 (testSoftware JOIN 경유)
+        if (site) {
+          const scopedSoftwareIds = await this.resolveScopedSoftwareIds(site);
+          if (scopedSoftwareIds.length === 0) {
+            return {
+              items: [],
+              meta: {
+                totalItems: 0,
+                itemCount: 0,
+                itemsPerPage: pageSize,
+                totalPages: 0,
+                currentPage: page,
+              },
+            };
+          }
+          conditions.push(inArray(softwareValidations.testSoftwareId, scopedSoftwareIds));
         }
 
         const whereClause = and(...conditions);
@@ -556,23 +575,52 @@ export class SoftwareValidationsService extends VersionedBaseService {
   }
 
   /**
+   * @SiteScoped 사이트 필터에 해당하는 testSoftware ID 목록 조회
+   *
+   * testSoftware에는 teamId 컬럼이 없으므로 site 기준으로만 필터링합니다.
+   * TEST_SOFTWARE_DATA_SCOPE 정책상 team 스코프가 발생하지 않지만,
+   * teamId가 전달되면 무시합니다.
+   */
+  private async resolveScopedSoftwareIds(site?: string): Promise<string[]> {
+    if (!site) return [];
+
+    const rows = await this.db
+      .select({ id: testSoftware.id })
+      .from(testSoftware)
+      .where(eq(testSoftware.site, site));
+
+    return rows.map((r) => r.id);
+  }
+
+  /**
    * 승인 대기 중인 유효성 확인 목록 조회
    */
-  async findPending(): Promise<SoftwareValidation[]> {
-    const cacheKey = this.buildCacheKey('pending', 'all');
+  async findPending(
+    query: ValidationQueryInput = {} as ValidationQueryInput
+  ): Promise<SoftwareValidation[]> {
+    const { site } = query;
+    const cacheKey = this.buildCacheKey('pending', site ?? 'all');
 
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
+        const conditions = [
+          or(
+            eq(softwareValidations.status, ValidationStatusValues.SUBMITTED),
+            eq(softwareValidations.status, ValidationStatusValues.APPROVED)
+          )!,
+        ];
+
+        if (site) {
+          const scopedIds = await this.resolveScopedSoftwareIds(site);
+          if (scopedIds.length === 0) return [];
+          conditions.push(inArray(softwareValidations.testSoftwareId, scopedIds));
+        }
+
         return this.db
           .select()
           .from(softwareValidations)
-          .where(
-            or(
-              eq(softwareValidations.status, ValidationStatusValues.SUBMITTED),
-              eq(softwareValidations.status, ValidationStatusValues.APPROVED)
-            )
-          )
+          .where(and(...conditions))
           .orderBy(desc(softwareValidations.submittedAt));
       },
       CACHE_TTL.SHORT

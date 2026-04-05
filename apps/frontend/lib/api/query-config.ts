@@ -232,6 +232,14 @@ export const QUERY_CONFIG = {
   /** 시험용 소프트웨어 목록 - NORMAL (사용자 필터링 시 갱신) */
   TEST_SOFTWARE_LIST: REFETCH_STRATEGIES.NORMAL,
 
+  /** 시험용 소프트웨어 상세 - NORMAL (mutation 후 자동 무효화) */
+  TEST_SOFTWARE_DETAIL: {
+    staleTime: CACHE_TIMES.MEDIUM,
+    gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
   /** 케이블 목록 - NORMAL (사용자 필터링 시 갱신) */
   CABLES_LIST: REFETCH_STRATEGIES.NORMAL,
 
