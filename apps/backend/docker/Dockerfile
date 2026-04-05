@@ -1,7 +1,7 @@
 # ==========================
 # Development Stage
 # ==========================
-FROM node:20-bullseye AS development
+FROM node:25-bullseye AS development
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ CMD ["pnpm", "--filter", "backend", "run", "start:dev"]
 # ==========================
 # Production Builder
 # ==========================
-FROM node:20-bullseye AS builder
+FROM node:25-bullseye AS builder
 
 WORKDIR /app
 
@@ -71,7 +71,7 @@ RUN pnpm --filter backend build
 # ==========================
 # Production Dependencies
 # ==========================
-FROM node:20-alpine AS prod-deps
+FROM node:25-alpine AS prod-deps
 
 WORKDIR /app
 
@@ -88,7 +88,7 @@ RUN pnpm install --frozen-lockfile --prod
 # ==========================
 # Production Stage
 # ==========================
-FROM node:20-alpine AS production
+FROM node:25-alpine AS production
 
 WORKDIR /app
 
