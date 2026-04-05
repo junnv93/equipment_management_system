@@ -7,7 +7,13 @@
 
 ## 미완료 항목
 
-(없음)
+- [ ] 날짜 검증 메시지 하드코딩 → VM.date.invalidYMD — `create-validation.dto.ts:5`, `update-validation.dto.ts:12,20` — 2026-04-05
+- [ ] countActiveFilters 함수 누락 — `apps/frontend/lib/utils/software-filter-utils.ts` — 2026-04-05
+- [ ] ApiTestSoftwareFilters 인터페이스 미정의 — `apps/frontend/lib/utils/software-filter-utils.ts` — 2026-04-05
+- [ ] SoftwareValidationsController @SiteScoped 미적용 — `software-validations.controller.ts` — 2026-04-05
+- [ ] QUERY_CONFIG TEST_SOFTWARE_DETAIL 분리 필요 — `query-config.ts` — 2026-04-05
+- [ ] 유효성확인 첨부파일 UI (ValidationAttachments 컴포넌트) 미구현 — `SoftwareValidationContent.tsx` — 2026-04-05
+- [ ] 프론트엔드 권한 게이팅 미적용 (소프트웨어 페이지) — `/software` 전체 — 2026-04-05
 
 ---
 
