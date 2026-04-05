@@ -6,72 +6,9 @@
 
 ---
 
-## 현재 미해결 프롬프트: 17건
+## 현재 미해결 프롬프트: 16건
 
-### 🔴 CRITICAL — 유효성확인 첨부파일 인프라: documents 테이블 확장 + 업로드 API + 프론트엔드 통합 (Mode 1)
-
-```
-문제:
-UL-QP-18-09 양식은 방법 1, 방법 2 모두 첨부파일을 요구하지만,
-현재 시스템에는 유효성확인(softwareValidation)에 파일을 첨부하는 인프라가 전혀 없음.
-documents 테이블의 다형성 FK에 softwareValidationId가 없고,
-DocumentType enum에 유효성확인 관련 타입도 없음.
-기존 attachmentNote(text)는 메모 필드일 뿐 실제 파일 저장/관리 불가.
-
-검증됨:
-- packages/db/src/schema/documents.ts:34-39 — 다형성 FK: equipmentId, calibrationId, requestId만 존재
-  softwareValidationId FK 없음
-- packages/schemas/src/document.ts:8-16 — DOCUMENT_TYPE_VALUES에 유효성확인 관련 타입 없음
-- apps/backend/src/modules/documents/documents.controller.ts:67-72 — upload API에 softwareValidationId 파라미터 없음
-- apps/backend/src/modules/documents/documents.controller.ts:120 — list API에 softwareValidationId 필터 없음
-- packages/db/src/schema/software-validations.ts:49 — attachmentNote: text만 존재 (파일 참조 아님)
-- apps/frontend/components/shared/FileUpload.tsx — ✅ 범용 파일 업로드 컴포넌트 존재 (재사용 가능)
-
-UL-QP-18-09 첨부 요구사항:
-  방법 1: "Scan and/or attach information provided by the vendor" — 공급자 제공 자료 스캔/첨부
-  방법 2 획득 기능: "소프트웨어/독립 방법으로 획득한 데이터 비교" 첨부
-  방법 2 프로세싱 기능: "입력 데이터, SW 출력, 독립 방법 출력 비교" 첨부
-  방법 2 제어 기능: "로우 데이터, 확인사항, 관련 정보" 첨부
-
-액션:
-1단계 — DB 스키마 확장:
-  - documents 테이블에 softwareValidationId FK 추가:
-    softwareValidationId: uuid('software_validation_id')
-      .references(() => softwareValidations.id, { onDelete: 'cascade' })
-  - documents 인덱스 추가: software_validation_id_idx, (softwareValidationId, documentType) 복합
-  - documentsRelations에 softwareValidation relation 추가
-  - DOCUMENT_TYPE_VALUES에 추가:
-    'validation_vendor_attachment' (방법 1 공급자 자료)
-    'validation_test_data' (방법 2 시험 데이터)
-  - DocumentTypeValues, DOCUMENT_TYPE_LABELS에 대응 추가
-
-2단계 — 백엔드 API 확장:
-  - documents.controller.ts POST: softwareValidationId 파라미터 추가 (기존 패턴 따름)
-  - documents.controller.ts GET: softwareValidationId 쿼리 필터 추가
-  - document.service.ts: softwareValidationId 조건 처리 추가
-  - Permission: VIEW_TEST_SOFTWARE / CREATE_TEST_SOFTWARE 활용
-
-3단계 — 프론트엔드 API 레이어:
-  - software-api.ts: validationDocuments 메서드 추가
-    uploadValidationDocument(validationId, file, documentType)
-    getValidationDocuments(validationId)
-    deleteValidationDocument(documentId)
-  - query-config.ts: queryKeys.softwareValidation.documents(validationId) 추가
-
-4단계 — 프론트엔드 공통 컴포넌트:
-  - ValidationAttachments 컴포넌트 (재사용 가능):
-    FileUpload 컴포넌트 래핑 + 자동 documentType 설정 + 업로드 후 목록 갱신
-    업로드된 파일 목록 표시 (파일명, 크기, 다운로드, 삭제)
-    draft 상태에서만 업로드/삭제 가능 (submitted 이후 읽기 전용)
-
-검증:
-1. pnpm --filter backend run db:generate → 마이그레이션 생성 (documents에 software_validation_id 추가)
-2. pnpm --filter backend run tsc --noEmit → 타입 에러 0
-3. pnpm --filter frontend run tsc --noEmit → 타입 에러 0
-4. POST /documents {softwareValidationId, documentType: 'validation_vendor_attachment'} → 업로드 성공
-5. GET /documents?softwareValidationId={id} → 해당 유효성확인의 문서 목록 반환
-6. 기존 equipment/calibration 문서 업로드 영향 없음 (회귀 확인)
-```
+### ~~🔴 CRITICAL — 유효성확인 첨부파일 인프라~~ ✅ 완료 → 아카이브 참조
 
 ### 🔴 CRITICAL — UL-QP-18-09 방법 2 (UL 자체 시험) 프론트엔드 양식 전체 구현 (Mode 1)
 
@@ -916,6 +853,8 @@ GitHub Actions deprecation 경고 발생 가능.
 - ~~소프트웨어 도메인 재설계 UL-QP-18-07 + UL-QP-18-09~~ — PR #104, 2026-04-04 (14차)
 - ~~담당자(정/부) 이름 JOIN + Create/Edit 폼 필드 보완~~ — PR #105, 2026-04-05 (16차)
   findAll/findOne/findByEquipmentId LEFT JOIN users, Create/Edit 폼에 담당자/설치일/사이트 추가
+- ~~유효성확인 첨부파일 인프라~~ — PR #105, 2026-04-05 (17차)
+  documents.softwareValidationId FK + validation_vendor_attachment/validation_test_data 타입 + BE/FE API
   DB: test_software + software_validations + equipment_test_software, Backend: 2 modules, Frontend: /software pages, E2E: WF-14a/14b 14/14 PASS
 
 ### HIGH
