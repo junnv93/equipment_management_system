@@ -68,7 +68,7 @@ import { getInternalApiKeyHeaders } from './config/internal-headers';
 
 // 환경 변수 확인
 const isDevelopment = process.env.NODE_ENV === 'development';
-const isTest = process.env.NODE_ENV === 'test';
+const isTest = process.env.NODE_ENV === 'test' || process.env.E2E_TEST === 'true';
 const enableLocalAuth = process.env.ENABLE_LOCAL_AUTH === 'true' || isDevelopment;
 const hasAzureAD = !!(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET);
 
