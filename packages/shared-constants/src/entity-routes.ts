@@ -39,6 +39,7 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   intermediate_inspection: (id) => `/calibration/intermediate-checks?selected=${id}`,
   cable: (id) => `/cables/${id}`,
   cable_loss_measurement: (id) => `/cables/${id}?tab=measurements`,
+  self_inspection: (id) => `/equipment/${id}?tab=self-inspection`,
 };
 
 /**

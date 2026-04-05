@@ -99,6 +99,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'intermediate_inspection', // 중간점검
   'cable', // 케이블
   'cable_loss_measurement', // 케이블 손실 측정
+  'self_inspection', // 자체점검
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);

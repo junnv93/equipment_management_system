@@ -129,6 +129,7 @@
     "incident": "Incident History",
     "software": "Software",
     "attachments": "Attachments",
+    "selfInspection": "Self Inspection",
     "ariaLabel": "Equipment detail tabs",
     "tabAriaLabel": "{label} tab",
     "panelAriaLabel": "{label} tab panel",
@@ -282,7 +283,30 @@
     "delete": "Delete",
     "deleteAriaLabel": "Delete equipment",
     "statusAriaLabel": "Equipment status: {status}",
-    "calibrationStatusAriaLabel": "Calibration status: {status}"
+    "calibrationStatusAriaLabel": "Calibration status: {status}",
+    "exportHistoryCard": "History Card",
+    "historyCardExportAriaLabel": "Export history card as docx"
+  },
+  "selfInspection": {
+    "title": "Self Inspection History",
+    "empty": "No self-inspection records found.",
+    "date": "Date",
+    "appearance": "Appearance",
+    "functionality": "Functionality",
+    "safety": "Safety",
+    "calibrationStatus": "Cal. Status",
+    "overallResult": "Result",
+    "status": "Status",
+    "judgment": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "na": "N/A"
+    },
+    "statusLabel": {
+      "draft": "Draft",
+      "completed": "Completed",
+      "confirmed": "Confirmed"
+    }
   },
   "form": {
     "basicInfo": {

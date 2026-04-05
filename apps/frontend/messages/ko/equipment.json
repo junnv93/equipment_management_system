@@ -129,6 +129,7 @@
     "incident": "사고 이력",
     "software": "소프트웨어",
     "attachments": "첨부파일",
+    "selfInspection": "자체점검",
     "ariaLabel": "장비 상세 정보 탭",
     "tabAriaLabel": "{label} 탭",
     "panelAriaLabel": "{label} 탭 패널",
@@ -282,7 +283,30 @@
     "delete": "삭제",
     "deleteAriaLabel": "장비 삭제하기",
     "statusAriaLabel": "장비 상태: {status}",
-    "calibrationStatusAriaLabel": "교정 상태: {status}"
+    "calibrationStatusAriaLabel": "교정 상태: {status}",
+    "exportHistoryCard": "이력카드",
+    "historyCardExportAriaLabel": "이력카드 docx 내보내기"
+  },
+  "selfInspection": {
+    "title": "자체점검 이력",
+    "empty": "자체점검 기록이 없습니다.",
+    "date": "점검일",
+    "appearance": "외관",
+    "functionality": "기능",
+    "safety": "안전",
+    "calibrationStatus": "교정상태",
+    "overallResult": "전체결과",
+    "status": "상태",
+    "judgment": {
+      "pass": "적합",
+      "fail": "부적합",
+      "na": "해당없음"
+    },
+    "statusLabel": {
+      "draft": "초안",
+      "completed": "완료",
+      "confirmed": "확인됨"
+    }
   },
   "form": {
     "basicInfo": {

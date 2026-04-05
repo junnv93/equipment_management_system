@@ -26,6 +26,7 @@ export const PERMISSION_CATEGORY_KEYS = [
   'audit',
   'disposal',
   'equipmentImports',
+  'selfInspections',
   'system',
 ] as const;
 
@@ -114,6 +115,11 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.APPROVE_EQUIPMENT_IMPORT,
     Permission.COMPLETE_EQUIPMENT_IMPORT,
     Permission.CANCEL_EQUIPMENT_IMPORT,
+  ],
+  selfInspections: [
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
+    Permission.CONFIRM_SELF_INSPECTION,
   ],
   system: [Permission.MANAGE_SYSTEM_SETTINGS, Permission.VIEW_SYSTEM_SETTINGS],
 };

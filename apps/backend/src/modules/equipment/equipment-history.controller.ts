@@ -6,10 +6,12 @@ import {
   Body,
   Param,
   Query,
+  Res,
   ParseUUIDPipe,
   Request,
   HttpStatus,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -25,6 +27,8 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { EquipmentHistoryService } from './services/equipment-history.service';
+import { HistoryCardService } from './services/history-card.service';
+import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import {
   CreateLocationHistoryDto,
   CreateMaintenanceHistoryDto,
@@ -42,7 +46,38 @@ import type { PaginatedResponse } from '../../common/types/api-response';
 @Controller('equipment')
 @ApiBearerAuth()
 export class EquipmentHistoryController {
-  constructor(private readonly equipmentHistoryService: EquipmentHistoryService) {}
+  constructor(
+    private readonly equipmentHistoryService: EquipmentHistoryService,
+    private readonly historyCardService: HistoryCardService
+  ) {}
+
+  // ===================== 이력카드 내보내기 (UL-QP-18-02) =====================
+
+  @Get(':uuid/history-card')
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @AuditLog({ action: 'export', entityType: 'equipment' })
+  @SkipResponseTransform()
+  @ApiOperation({ summary: '시험설비 이력카드 docx 내보내기' })
+  @ApiParam({ name: 'uuid', description: '장비 UUID' })
+  @ApiResponse({ status: HttpStatus.OK, description: '이력카드 docx 파일' })
+  async downloadHistoryCard(
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest,
+    @Res() res: Response
+  ): Promise<void> {
+    const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+
+    const buffer = await this.historyCardService.generateHistoryCard(equipmentUuid);
+    const filename = `이력카드_${equipmentUuid.slice(0, 8)}.docx`;
+
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  }
 
   // ===================== 반출 이력 =====================
 

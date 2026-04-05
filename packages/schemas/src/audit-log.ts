@@ -130,6 +130,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   intermediate_inspection: '중간점검',
   cable: '케이블',
   cable_loss_measurement: '케이블 손실 측정',
+  self_inspection: '자체점검',
 };
 
 // ============================================================================
