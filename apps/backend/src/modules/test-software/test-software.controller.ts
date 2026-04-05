@@ -32,7 +32,7 @@ import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import type { TestSoftware } from '@equipment-management/db/schema';
-import type { PaginatedResponseType } from '@equipment-management/schemas';
+
 import { versionedSchema } from '../../common/dto/base-versioned.dto';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -65,7 +65,7 @@ export class TestSoftwareController {
   @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
   findAll(
     @Query(TestSoftwareQueryValidationPipe) query: TestSoftwareQueryInput
-  ): Promise<PaginatedResponseType<TestSoftware>> {
+  ): ReturnType<TestSoftwareService['findAll']> {
     return this.testSoftwareService.findAll(query);
   }
 
@@ -117,7 +117,7 @@ export class TestSoftwareController {
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<TestSoftware> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): ReturnType<TestSoftwareService['findOne']> {
     return this.testSoftwareService.findOne(uuid);
   }
 
