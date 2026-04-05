@@ -87,13 +87,6 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/equipment_management
 
-      - name: Build Frontend
-        run: pnpm --filter frontend run build
-        env:
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
-          NEXTAUTH_URL: http://localhost:3000
-          NEXT_PUBLIC_API_URL: http://localhost:3001
-
       - name: Install Playwright Browsers
         run: pnpm --filter frontend exec playwright install --with-deps chromium
 
@@ -111,8 +104,8 @@ jobs:
           FRONTEND_URL: http://localhost:3000
           PORT: 3001
 
-      - name: Start Frontend
-        run: pnpm --filter frontend exec next start --port 3000 &
+      - name: Start Frontend (dev mode — next build tree-shakes test-login provider)
+        run: pnpm --filter frontend exec next dev --port 3000 --turbopack &
         env:
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
           NEXTAUTH_URL: http://localhost:3000
@@ -125,11 +118,17 @@ jobs:
             [ "$i" = "60" ] && echo "Backend failed" && exit 1
             sleep 2
           done
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             curl -sf http://localhost:3000 > /dev/null 2>&1 && echo "Frontend ready" && break
-            [ "$i" = "60" ] && echo "Frontend failed" && exit 1
+            [ "$i" = "90" ] && echo "Frontend failed" && exit 1
             sleep 2
           done
+          # Pre-warm: turbopack compiles pages on first request
+          echo "Pre-warming auth endpoints..."
+          curl -sf http://localhost:3000/api/auth/csrf > /dev/null 2>&1 || true
+          curl -sf http://localhost:3000/api/auth/providers > /dev/null 2>&1 || true
+          sleep 3
+          echo "Pre-warm complete"
 
       - name: Run E2E Tests
         run: pnpm --filter frontend exec playwright test --project=chromium --shard=${{ matrix.shard }}/4

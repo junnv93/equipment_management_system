@@ -290,6 +290,7 @@
   "selfInspection": {
     "title": "자체점검 이력",
     "empty": "자체점검 기록이 없습니다.",
+    "error": "자체점검 기록을 불러오는 중 오류가 발생했습니다.",
     "date": "점검일",
     "appearance": "외관",
     "functionality": "기능",

@@ -91,35 +91,21 @@ export async function deleteSelfInspection(id: string): Promise<void> {
 }
 
 export async function downloadHistoryCard(equipmentId: string): Promise<void> {
-  const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(equipmentId), {
-    responseType: 'blob',
+  const { downloadFile } = await import('./utils/download-file');
+  await downloadFile({
+    url: API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(equipmentId),
+    filename: `이력카드_${equipmentId.slice(0, 8)}.docx`,
   });
-  const filename = `이력카드_${equipmentId.slice(0, 8)}.docx`;
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
 }
 
 export async function exportFormTemplate(
   formNumber: string,
   params?: Record<string, string>
 ): Promise<void> {
-  const response = await apiClient.get(API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE(formNumber), {
+  const { downloadFile } = await import('./utils/download-file');
+  await downloadFile({
+    url: API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE(formNumber),
     params,
-    responseType: 'blob',
+    filename: `${formNumber}_${new Date().toISOString().split('T')[0]}.xlsx`,
   });
-  const filename = `${formNumber}_${new Date().toISOString().split('T')[0]}.xlsx`;
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
 }

@@ -220,3 +220,13 @@ export {
   type TestTeamEntry,
   type TestUserSemanticColor,
 } from './test-users';
+
+// UL-QP-18 양식 카탈로그 (SSOT)
+export {
+  FORM_CATALOG,
+  FORM_NUMBERS,
+  isFormImplemented,
+  isFormDedicatedEndpoint,
+  type FormCatalogEntry,
+  type FormNumber,
+} from './form-catalog';

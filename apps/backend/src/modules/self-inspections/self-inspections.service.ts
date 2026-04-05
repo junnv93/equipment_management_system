@@ -11,6 +11,7 @@ import {
   equipmentSelfInspections,
   equipment,
   type EquipmentSelfInspection,
+  type NewEquipmentSelfInspection,
 } from '@equipment-management/db/schema';
 import type { CreateSelfInspectionInput } from './dto/create-self-inspection.dto';
 import type { UpdateSelfInspectionInput } from './dto/update-self-inspection.dto';
@@ -131,7 +132,7 @@ export class SelfInspectionsService {
       });
     }
 
-    const updateData: Record<string, unknown> = {
+    const updateData: Partial<NewEquipmentSelfInspection> = {
       version: existing.version + 1,
       updatedAt: new Date(),
     };

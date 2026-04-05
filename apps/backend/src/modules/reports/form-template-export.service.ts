@@ -1,11 +1,22 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+  NotImplementedException,
+} from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { equipmentSelfInspections } from '@equipment-management/db/schema/equipment-self-inspections';
 import { eq, desc, and } from 'drizzle-orm';
-import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
-import { FORM_RETENTION_PERIODS } from './retention.service';
+import {
+  DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
+  FORM_CATALOG,
+  isFormImplemented,
+  isFormDedicatedEndpoint,
+} from '@equipment-management/shared-constants';
 
 interface ExportResult {
   buffer: Buffer;
@@ -21,7 +32,8 @@ interface UserScope {
 /**
  * 공식 양식 템플릿 기반 내보내기 서비스
  *
- * UL-QP-18-01 ~ UL-QP-18-11 양식을 docx/xlsx로 내보냅니다.
+ * UL-QP-18-01 ~ UL-QP-18-11 양식을 xlsx로 내보냅니다.
+ * 구현되지 않은 양식은 501 Not Implemented를 반환합니다.
  */
 @Injectable()
 export class FormTemplateExportService {
@@ -35,32 +47,38 @@ export class FormTemplateExportService {
     params: Record<string, string>,
     scope?: UserScope
   ): Promise<ExportResult> {
-    const exporters: Record<
-      string,
-      (params: Record<string, string>, scope?: UserScope) => Promise<ExportResult>
-    > = {
-      'UL-QP-18-01': (p, s) => this.exportEquipmentRegistry(p, s),
-      'UL-QP-18-02': (p) => this.exportHistoryCard(p),
-      'UL-QP-18-03': (p) => this.exportIntermediateInspection(p),
-      'UL-QP-18-04': (p) => this.exportCalibrationCertificate(p),
-      'UL-QP-18-05': (p, s) => this.exportSelfInspection(p, s),
-      'UL-QP-18-06': (p) => this.exportCalibrationPlan(p),
-      'UL-QP-18-07': (p) => this.exportSoftwareRegistry(p),
-      'UL-QP-18-08': (p) => this.exportCableRegistry(p),
-      'UL-QP-18-09': (p) => this.exportSoftwareValidation(p),
-      'UL-QP-18-10': (p) => this.exportCheckoutRecord(p),
-      'UL-QP-18-11': (p) => this.exportNonConformanceReport(p),
-    };
+    const catalogEntry = FORM_CATALOG[formNumber as keyof typeof FORM_CATALOG];
 
-    const exporter = exporters[formNumber];
-    if (!exporter) {
+    if (!catalogEntry) {
       throw new BadRequestException({
         code: 'INVALID_FORM_NUMBER',
         message: `Invalid form number: ${formNumber}. Valid range: UL-QP-18-01 ~ UL-QP-18-11`,
       });
     }
 
-    return exporter(params, scope);
+    if (isFormDedicatedEndpoint(formNumber)) {
+      throw new BadRequestException({
+        code: 'USE_DEDICATED_ENDPOINT',
+        message: `${formNumber} ${catalogEntry.name}은(는) 전용 엔드포인트를 사용하세요. (예: GET /api/equipment/:uuid/history-card)`,
+      });
+    }
+
+    if (!isFormImplemented(formNumber)) {
+      throw new NotImplementedException({
+        code: 'FORM_NOT_IMPLEMENTED',
+        message: `${formNumber} ${catalogEntry.name} 내보내기는 아직 구현되지 않았습니다.`,
+      });
+    }
+
+    const exporters: Record<
+      string,
+      (params: Record<string, string>, scope?: UserScope) => Promise<ExportResult>
+    > = {
+      'UL-QP-18-01': (p, s) => this.exportEquipmentRegistry(p, s),
+      'UL-QP-18-05': (p, s) => this.exportSelfInspection(p, s),
+    };
+
+    return exporters[formNumber](params, scope);
   }
 
   private formatDate(d: Date | string | null | undefined): string {
@@ -71,9 +89,10 @@ export class FormTemplateExportService {
 
   // UL-QP-18-01: 시험설비 관리 대장
   private async exportEquipmentRegistry(
-    params: Record<string, string>,
+    _params: Record<string, string>,
     scope?: UserScope
   ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-01'];
     const conditions = scope ? [eq(equipment.site, scope.site)] : [];
     const rows = await this.db
       .select()
@@ -83,7 +102,7 @@ export class FormTemplateExportService {
       .limit(500);
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('시험설비 관리 대장');
+    const sheet = workbook.addWorksheet(entry.name);
 
     sheet.columns = [
       { header: '관리번호', key: 'managementNumber', width: 15 },
@@ -113,42 +132,22 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      filename: `UL-QP-18-01_시험설비관리대장_${new Date().toISOString().split('T')[0]}.xlsx`,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.xlsx`,
     };
   }
 
-  // UL-QP-18-02: 이력카드 — 개별 장비 이력카드는 GET /equipment/:uuid/history-card (docx) 사용
-  private async exportHistoryCard(_params: Record<string, string>): Promise<ExportResult> {
-    throw new BadRequestException({
-      code: 'USE_DEDICATED_ENDPOINT',
-      message:
-        'UL-QP-18-02 이력카드는 GET /api/equipment/:uuid/history-card 엔드포인트를 사용하세요.',
-    });
-  }
-
-  // UL-QP-18-03 ~ UL-QP-18-11: 나머지 양식은 동일한 xlsx 패턴으로 제공
-  // 실제 양식별 데이터 조회는 해당 모듈의 서비스를 호출해야 하므로,
-  // 여기서는 기본 메타데이터 + 보존연한 정보가 포함된 xlsx를 생성합니다.
-
-  private async exportIntermediateInspection(
-    _params: Record<string, string>
-  ): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-03', '중간점검표');
-  }
-
-  private async exportCalibrationCertificate(
-    _params: Record<string, string>
-  ): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-04', '교정성적서');
-  }
-
+  // UL-QP-18-05: 자체점검표
   private async exportSelfInspection(
     params: Record<string, string>,
     scope?: UserScope
   ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-05'];
     const equipmentId = params.equipmentId;
     if (!equipmentId) {
-      return this.createFormPlaceholder('UL-QP-18-05', '자체점검표');
+      throw new BadRequestException({
+        code: 'MISSING_EQUIPMENT_ID',
+        message: 'equipmentId query parameter is required for self-inspection export.',
+      });
     }
 
     // 사이트 필터링: 요청된 장비가 사용자 사이트에 속하는지 확인
@@ -174,7 +173,7 @@ export class FormTemplateExportService {
       .limit(100);
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('자체점검표');
+    const sheet = workbook.addWorksheet(entry.name);
 
     sheet.columns = [
       { header: '점검일', key: 'date', width: 15 },
@@ -204,57 +203,7 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      filename: `UL-QP-18-05_자체점검표_${new Date().toISOString().split('T')[0]}.xlsx`,
-    };
-  }
-
-  private async exportCalibrationPlan(_params: Record<string, string>): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-06', '교정계획서');
-  }
-
-  private async exportSoftwareRegistry(_params: Record<string, string>): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-07', '시험용소프트웨어관리대장');
-  }
-
-  private async exportCableRegistry(_params: Record<string, string>): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-08', '케이블관리대장');
-  }
-
-  private async exportSoftwareValidation(_params: Record<string, string>): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-09', '소프트웨어유효성확인');
-  }
-
-  private async exportCheckoutRecord(_params: Record<string, string>): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-10', '반출반입기록');
-  }
-
-  private async exportNonConformanceReport(_params: Record<string, string>): Promise<ExportResult> {
-    return this.createFormPlaceholder('UL-QP-18-11', '부적합보고서');
-  }
-
-  private async createFormPlaceholder(formNumber: string, formName: string): Promise<ExportResult> {
-    const retention = FORM_RETENTION_PERIODS[formNumber];
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(formName);
-
-    sheet.columns = [
-      { header: '항목', key: 'item', width: 20 },
-      { header: '값', key: 'value', width: 40 },
-    ];
-
-    sheet.addRow({ item: '양식번호', value: formNumber });
-    sheet.addRow({ item: '양식명', value: formName });
-    sheet.addRow({ item: '보존연한', value: retention?.label ?? '미지정' });
-    sheet.addRow({
-      item: '생성일',
-      value: new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE }),
-    });
-
-    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
-    return {
-      buffer,
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      filename: `${formNumber}_${formName}_${new Date().toISOString().split('T')[0]}.xlsx`,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.xlsx`,
     };
   }
 }
