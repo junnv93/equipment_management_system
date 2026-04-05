@@ -102,7 +102,10 @@ export async function createCheckout(
     },
     role
   );
-  expect(resp.status()).toBe(201);
+  if (resp.status() !== 201) {
+    const errorBody = await resp.text();
+    throw new Error(`createCheckout failed: ${resp.status()} — ${errorBody}`);
+  }
   return resp.json();
 }
 
@@ -242,7 +245,10 @@ export async function createNonConformance(
     },
     role
   );
-  expect(resp.status()).toBe(201);
+  if (resp.status() !== 201) {
+    const errorBody = await resp.text();
+    throw new Error(`createNonConformance failed: ${resp.status()} — ${errorBody}`);
+  }
   return resp.json();
 }
 
@@ -335,7 +341,7 @@ export async function getEquipmentCalibrationDates(
 export async function resetEquipmentForWorkflow(equipmentId: string): Promise<void> {
   const pool = getSharedPool();
 
-  // 1. 동적 생성된 active checkout 취소
+  // 1. 해당 장비의 모든 active checkout 취소 (시드 포함)
   await pool.query(
     `UPDATE checkouts SET status = 'canceled', updated_at = NOW()
      WHERE status NOT IN ('canceled', 'return_approved', 'rejected')
@@ -343,8 +349,7 @@ export async function resetEquipmentForWorkflow(equipmentId: string): Promise<vo
          SELECT c.id FROM checkouts c
          JOIN checkout_items ci ON c.id = ci.checkout_id
          WHERE ci.equipment_id = $1
-       )
-       AND id::text NOT LIKE '10000000-%'`,
+       )`,
     [equipmentId]
   );
 
@@ -357,12 +362,11 @@ export async function resetEquipmentForWorkflow(equipmentId: string): Promise<vo
     [equipmentId]
   );
 
-  // 3. 동적 생성된 교정 기록 삭제
+  // 3. 동적 생성된 교정 기록 삭제 (calibrations는 soft-delete 없으므로 hard delete)
   await pool.query(
-    `UPDATE calibrations SET deleted_at = NOW()
+    `DELETE FROM calibrations
      WHERE equipment_id = $1
-       AND id::text NOT LIKE 'bbbb%'
-       AND deleted_at IS NULL`,
+       AND id::text NOT LIKE 'bbbb%'`,
     [equipmentId]
   );
 
@@ -897,6 +901,228 @@ export async function resetEquipmentImports(): Promise<void> {
   // 동적 생성된 import만 삭제 (WF 테스트 프리픽스로 구분)
   await pool.query(
     `DELETE FROM equipment_imports WHERE vendor_name LIKE 'WF%' OR vendor_name LIKE '%WF 테스트%'`
+  );
+  await clearBackendCache();
+}
+
+// ============================================================================
+// Generic: apiDelete
+// ============================================================================
+
+export async function apiDelete(page: Page, path: string, role: string) {
+  const token = await getBackendToken(page, role);
+  return page.request.delete(`${BACKEND_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// ============================================================================
+// WF-17: Checkout Overdue Helpers
+// ============================================================================
+
+/** checkout을 overdue 상태로 DB 직접 전환 (스케줄러 대체) */
+export async function setCheckoutOverdue(checkoutId: string): Promise<void> {
+  const pool = getSharedPool();
+  const pastDate = new Date();
+  pastDate.setDate(pastDate.getDate() - 7);
+  await pool.query(
+    `UPDATE checkouts SET status = 'overdue', expected_return_date = $2, updated_at = NOW()
+     WHERE id = $1`,
+    [checkoutId, pastDate.toISOString()]
+  );
+  await clearBackendCache();
+}
+
+// ============================================================================
+// WF-18: NC Correction Rejection Helpers
+// ============================================================================
+
+/** 부적합 조치 반려 (TM) — CAS-Aware */
+export async function rejectCorrection(
+  page: Page,
+  ncId: string,
+  rejectionReason: string,
+  role = 'technical_manager'
+) {
+  const detailResp = await apiGet(page, `/api/non-conformances/${ncId}`, role);
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  const resp = await apiPatch(
+    page,
+    `/api/non-conformances/${ncId}/reject-correction`,
+    { version, rejectionReason },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+// ============================================================================
+// WF-19: Intermediate Inspection 3-Step Approval Helpers
+// ============================================================================
+
+/** 중간점검표 생성 (TE — UPDATE_CALIBRATION 권한 보유) */
+export async function createIntermediateInspection(
+  page: Page,
+  calibrationId: string,
+  data: Record<string, unknown>,
+  role = 'test_engineer'
+) {
+  const resp = await apiPost(
+    page,
+    `/api/calibration/${calibrationId}/intermediate-inspections`,
+    { calibrationId, ...data },
+    role
+  );
+  if (resp.status() !== 201) {
+    const errorBody = await resp.text();
+    throw new Error(`createIntermediateInspection failed: ${resp.status()} — ${errorBody}`);
+  }
+  return resp.json();
+}
+
+/** CAS-Aware 상태 전이 헬퍼 (중간점검) */
+async function transitionIntermediateInspection(
+  page: Page,
+  inspectionId: string,
+  action: string,
+  role: string,
+  extraData: Record<string, unknown> = {}
+) {
+  const detailResp = await apiGet(page, `/api/intermediate-inspections/${inspectionId}`, role);
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  const resp = await apiPatch(
+    page,
+    `/api/intermediate-inspections/${inspectionId}/${action}`,
+    { version, ...extraData },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 중간점검 제출 (TE — UPDATE_CALIBRATION 권한 보유) */
+export async function submitIntermediateInspection(
+  page: Page,
+  inspectionId: string,
+  role = 'test_engineer'
+) {
+  return transitionIntermediateInspection(page, inspectionId, 'submit', role);
+}
+
+/** 중간점검 검토 (TM) */
+export async function reviewIntermediateInspection(
+  page: Page,
+  inspectionId: string,
+  role = 'technical_manager'
+) {
+  return transitionIntermediateInspection(page, inspectionId, 'review', role);
+}
+
+/** 중간점검 승인 (LM) */
+export async function approveIntermediateInspection(
+  page: Page,
+  inspectionId: string,
+  role = 'lab_manager'
+) {
+  return transitionIntermediateInspection(page, inspectionId, 'approve', role);
+}
+
+/** 중간점검 반려 (TM/LM) */
+export async function rejectIntermediateInspection(
+  page: Page,
+  inspectionId: string,
+  rejectionReason: string,
+  role = 'technical_manager'
+) {
+  return transitionIntermediateInspection(page, inspectionId, 'reject', role, {
+    rejectionReason,
+  });
+}
+
+/** 동적 생성된 중간점검 삭제 (리셋) */
+export async function resetIntermediateInspections(calibrationId: string): Promise<void> {
+  const pool = getSharedPool();
+  await pool.query(
+    `DELETE FROM intermediate_inspections WHERE calibration_id = $1
+     AND id::text NOT LIKE 'ffff%'`,
+    [calibrationId]
+  );
+  await clearBackendCache();
+}
+
+// ============================================================================
+// WF-20: Self-Inspection Confirmation Helpers
+// ============================================================================
+
+/** 자체점검 생성 (TE) */
+export async function createSelfInspection(
+  page: Page,
+  equipmentId: string,
+  data: Record<string, unknown>,
+  role = 'test_engineer'
+) {
+  const resp = await apiPost(page, `/api/equipment/${equipmentId}/self-inspections`, data, role);
+  expect(resp.status()).toBe(201);
+  return resp.json();
+}
+
+/** 자체점검 수정 (TE) — CAS-Aware */
+export async function updateSelfInspection(
+  page: Page,
+  inspectionId: string,
+  data: Record<string, unknown>,
+  role = 'test_engineer'
+) {
+  const detailResp = await apiGet(page, `/api/self-inspections/${inspectionId}`, role);
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  const resp = await apiPatch(
+    page,
+    `/api/self-inspections/${inspectionId}`,
+    { version, ...data },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 자체점검 확인 (TM) — CAS-Aware */
+export async function confirmSelfInspection(
+  page: Page,
+  inspectionId: string,
+  role = 'technical_manager'
+) {
+  const detailResp = await apiGet(page, `/api/self-inspections/${inspectionId}`, role);
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  const resp = await apiPatch(
+    page,
+    `/api/self-inspections/${inspectionId}/confirm`,
+    { version },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 자체점검 삭제 */
+export async function deleteSelfInspection(
+  page: Page,
+  inspectionId: string,
+  role = 'test_engineer'
+) {
+  return apiDelete(page, `/api/self-inspections/${inspectionId}`, role);
+}
+
+/** 동적 생성된 자체점검 삭제 (리셋) */
+export async function resetSelfInspections(equipmentId: string): Promise<void> {
+  const pool = getSharedPool();
+  await pool.query(
+    `DELETE FROM equipment_self_inspections WHERE equipment_id = $1
+     AND id::text NOT LIKE 'ffff%'`,
+    [equipmentId]
   );
   await clearBackendCache();
 }
