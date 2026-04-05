@@ -6,7 +6,7 @@
 
 ---
 
-## 현재 미해결 프롬프트: 18건
+## 현재 미해결 프롬프트: 17건
 
 ### 🔴 CRITICAL — 유효성확인 첨부파일 인프라: documents 테이블 확장 + 업로드 API + 프론트엔드 통합 (Mode 1)
 
@@ -123,36 +123,7 @@ UL-QP-18-09 방법 2 필수 입력:
 6. WF-14b 방법 2 E2E 테스트 통과
 ```
 
-### 🔴 CRITICAL — 담당자(정/부) 이름 JOIN 누락 + Create/Edit 폼 필드 보완 (Mode 1)
-
-```
-문제:
-test-software 서비스의 findAll/findOne에서 users 테이블 JOIN이 없어
-담당자 이름이 API 응답에 포함되지 않음. 프론트엔드에서 항상 '-' 표시.
-또한 Create 폼에서 담당자/설치일자/사이트 입력이 누락됨.
-
-검증됨:
-- test-software.service.ts:150-157 — findAll: select().from(testSoftware) 단독, JOIN 없음
-- test-software.service.ts:185-189 — findOne: 마찬가지 JOIN 없음
-- software-api.ts:36-37 — primaryManagerName?, secondaryManagerName? 옵셔널 정의 (백엔드 미제공)
-- TestSoftwareListContent.tsx:176 — sw.primaryManagerName || '-' 항상 fallback
-- CreateTestSoftwareContent.tsx:34-41 — form state에 6개만 (담당자/설치일자/사이트 없음)
-- TestSoftwareDetailContent.tsx:58-64 — edit에도 5개 필드만
-
-UL-QP-18-07 필수: 담당자(정,부), 설치일자, 위치 — 모두 관리대장 컬럼
-
-액션:
-1. test-software.service.ts findAll/findOne: users LEFT JOIN으로 primaryManagerName, secondaryManagerName 포함
-2. CreateTestSoftwareContent.tsx: primaryManagerId(UserSelect), secondaryManagerId(UserSelect),
-   installedAt(DatePicker), site(SiteSelect), availability(Select) 입력 추가
-3. TestSoftwareDetailContent.tsx Edit: 위와 동일 필드 추가
-4. i18n에 폼 라벨 추가 (담당자정, 담당자부, 설치일자, 사이트)
-
-검증:
-1. GET /api/test-software → items[].primaryManagerName에 사용자 이름 표시
-2. 관리대장 목록에서 담당자 이름 표시
-3. 등록/수정 폼에서 담당자 선택 + 설치일자 입력 동작
-```
+### ~~🔴 CRITICAL — 담당자(정/부) 이름 JOIN 누락 + Create/Edit 폼 필드 보완~~ ✅ 완료 → 아카이브 참조
 
 ### 🟠 HIGH — 장비↔시험용SW M:N 링크 CRUD + 양방향 UI (Mode 2)
 
@@ -939,10 +910,12 @@ GitHub Actions deprecation 경고 발생 가능.
 ## 📦 완료 항목 아카이브
 
 <details>
-<summary>완료된 항목 (35건)</summary>
+<summary>완료된 항목 (36건)</summary>
 
 ### CRITICAL
 - ~~소프트웨어 도메인 재설계 UL-QP-18-07 + UL-QP-18-09~~ — PR #104, 2026-04-04 (14차)
+- ~~담당자(정/부) 이름 JOIN + Create/Edit 폼 필드 보완~~ — PR #105, 2026-04-05 (16차)
+  findAll/findOne/findByEquipmentId LEFT JOIN users, Create/Edit 폼에 담당자/설치일/사이트 추가
   DB: test_software + software_validations + equipment_test_software, Backend: 2 modules, Frontend: /software pages, E2E: WF-14a/14b 14/14 PASS
 
 ### HIGH

@@ -558,9 +558,23 @@
   },
   "softwareTab": {
     "title": "소프트웨어/매뉴얼 정보",
+    "firmwareTitle": "펌웨어 정보",
     "firmwareVersion": "펌웨어 버전",
+    "manualTitle": "매뉴얼",
     "manualLocation": "매뉴얼 보관 위치",
-    "empty": "등록된 소프트웨어 정보가 없습니다."
+    "manualFiles": "매뉴얼 파일",
+    "download": "다운로드",
+    "relatedSoftware": "관련 시험용 소프트웨어",
+    "emptyRelatedSoftware": "연결된 시험용 소프트웨어가 없습니다.",
+    "goToRegistry": "소프트웨어 레지스트리 바로가기",
+    "colManagementNumber": "관리번호",
+    "colName": "이름",
+    "colVersion": "버전",
+    "colTestField": "시험분야",
+    "colAvailability": "가용 여부",
+    "available": "사용 가능",
+    "unavailable": "사용 불가",
+    "empty": "등록된 소프트웨어/매뉴얼 정보가 없습니다."
   },
   "attachmentsTab": {
     "title": "첨부파일",

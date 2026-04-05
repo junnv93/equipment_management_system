@@ -214,6 +214,7 @@ export const API_ENDPOINTS = {
     CREATE: '/api/test-software',
     UPDATE: (id: string) => `/api/test-software/${id}`,
     TOGGLE_AVAILABILITY: (id: string) => `/api/test-software/${id}/availability`,
+    BY_EQUIPMENT: (equipmentId: string) => `/api/test-software/by-equipment/${equipmentId}`,
   },
 
   // ============================================================================

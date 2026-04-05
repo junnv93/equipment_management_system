@@ -558,9 +558,23 @@
   },
   "softwareTab": {
     "title": "Software/Manual Information",
+    "firmwareTitle": "Firmware Information",
     "firmwareVersion": "Firmware Version",
+    "manualTitle": "Manual",
     "manualLocation": "Manual Location",
-    "empty": "No software information registered."
+    "manualFiles": "Manual Files",
+    "download": "Download",
+    "relatedSoftware": "Related Test Software",
+    "emptyRelatedSoftware": "No linked test software.",
+    "goToRegistry": "Go to Software Registry",
+    "colManagementNumber": "Mgmt No.",
+    "colName": "Name",
+    "colVersion": "Version",
+    "colTestField": "Test Field",
+    "colAvailability": "Availability",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "empty": "No software/manual information registered."
   },
   "attachmentsTab": {
     "title": "Attachments",

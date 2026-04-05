@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Package, Wrench, ArrowRight, Camera, Download, BookOpen } from 'lucide-react';
+import { MapPin, Package, Wrench, ArrowRight, Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
@@ -25,7 +25,6 @@ import { Badge } from '@/components/ui/badge';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
-import { Button } from '@/components/ui/button';
 import type { Equipment } from '@/lib/api/equipment-api';
 
 interface BasicInfoTabProps {
@@ -73,14 +72,6 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
       ),
     [equipmentDocs]
   );
-  const manuals = useMemo(
-    () =>
-      equipmentDocs.filter(
-        (d: DocumentRecord) => d.documentType === DocumentTypeValues.EQUIPMENT_MANUAL
-      ),
-    [equipmentDocs]
-  );
-
   const recentCalibrations = useMemo(() => calibrations.slice(0, 3), [calibrations]);
 
   /** 교정 결과 → 타임라인 dot 클래스 (SSOT: tl.resultDotMap) */
@@ -276,73 +267,6 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           )}
         </div>
       </div>
-
-      {/* 장비 매뉴얼 — AP-06: hover accent 모션 */}
-      <div className={tokens.card}>
-        <div className={tokens.header}>
-          <BookOpen className={tokens.headerIcon} aria-hidden="true" />
-          <span className={tokens.headerTitle}>{t('basicInfoTab.equipmentManual')}</span>
-          {manuals.length > 0 && (
-            <Badge variant="secondary" className={DOCUMENT_DISPLAY.countBadge}>
-              {manuals.length}
-            </Badge>
-          )}
-        </div>
-        <div className="p-4 space-y-2">
-          {manuals.length > 0 ? (
-            manuals.map((manual: DocumentRecord) => (
-              <div key={manual.id} className={DOCUMENT_DISPLAY.manualRow}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <BookOpen className={DOCUMENT_DISPLAY.manualIcon} aria-hidden="true" />
-                  <span className="text-sm truncate">{manual.originalFileName}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 flex-shrink-0"
-                  onClick={() => handleDownload(manual)}
-                  aria-label={`${t('basicInfoTab.download')} ${manual.originalFileName}`}
-                >
-                  <Download className="h-4 w-4" />
-                  {t('basicInfoTab.download')}
-                </Button>
-              </div>
-            ))
-          ) : (
-            /* AP-09: 빈 상태 */
-            <div className={DOCUMENT_DISPLAY.emptyCompact}>
-              <BookOpen className={DOCUMENT_DISPLAY.emptyIcon} aria-hidden="true" />
-              <p className={DOCUMENT_DISPLAY.emptyText}>{t('basicInfoTab.noManuals')}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 펌웨어/메뉴얼 (조건부) */}
-      {(equipment.firmwareVersion || equipment.manualLocation) && (
-        <div className={tokens.card}>
-          <div className={tokens.header}>
-            <Package className={tokens.headerIcon} aria-hidden="true" />
-            <span className={tokens.headerTitle}>{t('softwareTab.title')}</span>
-          </div>
-          <div className={tokens.body}>
-            <dl className={tokens.dlGrid}>
-              {equipment.firmwareVersion && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.firmwareVersion')}</dt>
-                  <dd className={tokens.ddMono}>{equipment.firmwareVersion}</dd>
-                </>
-              )}
-              {equipment.manualLocation && (
-                <>
-                  <dt className={tokens.dtLabel}>{t('softwareTab.manualLocation')}</dt>
-                  <dd className={tokens.ddValue}>{equipment.manualLocation}</dd>
-                </>
-              )}
-            </dl>
-          </div>
-        </div>
-      )}
 
       {/* 최근 교정 이력 타임라인 — SSOT: resultDotMap + CALIBRATION_RESULT_LABELS */}
       {recentCalibrations.length > 0 && (

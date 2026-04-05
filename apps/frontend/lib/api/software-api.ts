@@ -156,6 +156,11 @@ const testSoftwareApi = {
       .patch(API_ENDPOINTS.TEST_SOFTWARE.TOGGLE_AVAILABILITY(id), { version })
       .then((res) => res.data);
   },
+  listByEquipment: async (equipmentId: string): Promise<TestSoftware[]> => {
+    return apiClient
+      .get(API_ENDPOINTS.TEST_SOFTWARE.BY_EQUIPMENT(equipmentId))
+      .then((res) => res.data);
+  },
 };
 
 const softwareValidationApi = {

@@ -437,6 +437,8 @@ export const queryKeys = {
       [...queryKeys.testSoftware.lists(), filters] as const,
     details: () => [...queryKeys.testSoftware.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.testSoftware.details(), id] as const,
+    byEquipment: (equipmentId: string) =>
+      [...queryKeys.testSoftware.all, 'by-equipment', equipmentId] as const,
   },
   softwareValidations: {
     all: ['software-validations'] as const,
