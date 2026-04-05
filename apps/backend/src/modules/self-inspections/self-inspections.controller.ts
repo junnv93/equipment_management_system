@@ -14,10 +14,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { SelfInspectionsService } from './self-inspections.service';
 import {
   CreateSelfInspectionPipe,
@@ -53,6 +54,8 @@ export class EquipmentSelfInspectionsController {
     @Body() dto: CreateSelfInspectionInput,
     @Request() req: AuthenticatedRequest
   ) {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.selfInspectionsService.create(equipmentUuid, dto, userId);
   }
@@ -63,11 +66,14 @@ export class EquipmentSelfInspectionsController {
   @ApiParam({ name: 'uuid', description: '장비 UUID' })
   async findByEquipment(
     @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest,
     @Query('page') pageStr?: string,
     @Query('pageSize') pageSizeStr?: string
   ) {
-    const page = pageStr ? parseInt(pageStr, 10) : 1;
-    const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 20;
+    const info = await this.selfInspectionsService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const page = Math.max(1, pageStr ? parseInt(pageStr, 10) : 1);
+    const pageSize = Math.min(100, Math.max(1, pageSizeStr ? parseInt(pageSizeStr, 10) : 20));
     return this.selfInspectionsService.findByEquipment(equipmentUuid, page, pageSize);
   }
 }
@@ -83,9 +89,11 @@ export class SelfInspectionsController {
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)
-  @ApiOperation({ summary: '자체점검 상세 조회' })
-  @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
-  async findById(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  @ApiOperation({ summary: '자��점검 상세 조회' })
+  @ApiParam({ name: 'uuid', description: '���체점검 UUID' })
+  async findById(@Param('uuid', ParseUUIDPipe) uuid: string, @Request() req: AuthenticatedRequest) {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.selfInspectionsService.findById(uuid);
   }
 
@@ -100,6 +108,8 @@ export class SelfInspectionsController {
     @Body() dto: UpdateSelfInspectionInput,
     @Request() req: AuthenticatedRequest
   ) {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.selfInspectionsService.update(uuid, dto, userId);
   }
@@ -115,6 +125,8 @@ export class SelfInspectionsController {
     @Body() dto: ConfirmSelfInspectionInput,
     @Request() req: AuthenticatedRequest
   ) {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.selfInspectionsService.confirm(uuid, userId, dto.version);
   }
@@ -124,7 +136,9 @@ export class SelfInspectionsController {
   @AuditLog({ action: 'delete', entityType: 'self_inspection' })
   @ApiOperation({ summary: '자체점검 삭제 (확인 전만 가능)' })
   @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
-  async delete(@Param('uuid', ParseUUIDPipe) uuid: string, @Request() _req: AuthenticatedRequest) {
+  async delete(@Param('uuid', ParseUUIDPipe) uuid: string, @Request() req: AuthenticatedRequest) {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     await this.selfInspectionsService.delete(uuid);
     return { success: true };
   }

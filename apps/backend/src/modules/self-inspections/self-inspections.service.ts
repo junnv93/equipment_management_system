@@ -229,6 +229,46 @@ export class SelfInspectionsService {
     return updated;
   }
 
+  /**
+   * 장비 사이트 정보 조회 (enforceSiteAccess용)
+   */
+  async getEquipmentSiteInfo(
+    equipmentId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const item = await this.db.query.equipment.findFirst({
+      where: eq(equipment.id, equipmentId),
+      columns: { site: true, teamId: true },
+    });
+    if (!item) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentId})`,
+      });
+    }
+    return { site: item.site, teamId: item.teamId };
+  }
+
+  /**
+   * 자체점검 ID로 장비 사이트 정보 역추적
+   */
+  async getEquipmentSiteInfoBySelfInspectionId(
+    selfInspectionId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: equipment.site, teamId: equipment.teamId })
+      .from(equipmentSelfInspections)
+      .innerJoin(equipment, eq(equipmentSelfInspections.equipmentId, equipment.id))
+      .where(eq(equipmentSelfInspections.id, selfInspectionId))
+      .limit(1);
+    if (!result) {
+      throw new NotFoundException({
+        code: 'SELF_INSPECTION_NOT_FOUND',
+        message: `Self-inspection ${selfInspectionId} not found.`,
+      });
+    }
+    return result;
+  }
+
   async delete(id: string): Promise<void> {
     const existing = await this.findById(id);
 

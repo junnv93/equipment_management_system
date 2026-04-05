@@ -386,12 +386,15 @@ export class ReportsController {
   @SkipResponseTransform()
   async exportFormTemplate(
     @Param('formNumber') formNumber: string,
+    @Request() req: AuthenticatedRequest,
     @Res() res: Response,
     @Query() queryParams: Record<string, string>
   ): Promise<void> {
+    const scope = this._resolveReportScope(req);
     const { buffer, mimeType, filename } = await this.formTemplateExportService.exportForm(
       formNumber,
-      queryParams
+      queryParams,
+      { site: scope.site, teamId: scope.teamId }
     );
     res.set({
       'Content-Type': mimeType,

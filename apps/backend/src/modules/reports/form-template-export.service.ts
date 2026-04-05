@@ -5,7 +5,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { calibrations } from '@equipment-management/db/schema/calibrations';
 import { equipmentSelfInspections } from '@equipment-management/db/schema/equipment-self-inspections';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 import { FORM_RETENTION_PERIODS } from './retention.service';
 
@@ -13,6 +13,11 @@ interface ExportResult {
   buffer: Buffer;
   mimeType: string;
   filename: string;
+}
+
+interface UserScope {
+  site: string;
+  teamId?: string | null;
 }
 
 /**
@@ -27,13 +32,20 @@ export class FormTemplateExportService {
     private readonly db: AppDatabase
   ) {}
 
-  async exportForm(formNumber: string, params: Record<string, string>): Promise<ExportResult> {
-    const exporters: Record<string, (params: Record<string, string>) => Promise<ExportResult>> = {
-      'UL-QP-18-01': (p) => this.exportEquipmentRegistry(p),
+  async exportForm(
+    formNumber: string,
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const exporters: Record<
+      string,
+      (params: Record<string, string>, scope?: UserScope) => Promise<ExportResult>
+    > = {
+      'UL-QP-18-01': (p, s) => this.exportEquipmentRegistry(p, s),
       'UL-QP-18-02': (p) => this.exportHistoryCard(p),
       'UL-QP-18-03': (p) => this.exportIntermediateInspection(p),
       'UL-QP-18-04': (p) => this.exportCalibrationCertificate(p),
-      'UL-QP-18-05': (p) => this.exportSelfInspection(p),
+      'UL-QP-18-05': (p, s) => this.exportSelfInspection(p, s),
       'UL-QP-18-06': (p) => this.exportCalibrationPlan(p),
       'UL-QP-18-07': (p) => this.exportSoftwareRegistry(p),
       'UL-QP-18-08': (p) => this.exportCableRegistry(p),
@@ -50,7 +62,7 @@ export class FormTemplateExportService {
       });
     }
 
-    return exporter(params);
+    return exporter(params, scope);
   }
 
   private formatDate(d: Date | string | null | undefined): string {
@@ -60,10 +72,15 @@ export class FormTemplateExportService {
   }
 
   // UL-QP-18-01: 시험설비 관리 대장
-  private async exportEquipmentRegistry(params: Record<string, string>): Promise<ExportResult> {
+  private async exportEquipmentRegistry(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const conditions = scope ? [eq(equipment.site, scope.site)] : [];
     const rows = await this.db
       .select()
       .from(equipment)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(equipment.managementNumber)
       .limit(500);
 
@@ -102,9 +119,13 @@ export class FormTemplateExportService {
     };
   }
 
-  // UL-QP-18-02: 이력카드 (이미 HistoryCardService에서 docx로 제공 — 여기서는 xlsx 대안)
-  private async exportHistoryCard(params: Record<string, string>): Promise<ExportResult> {
-    return this.exportEquipmentRegistry(params); // 같은 형식 재사용
+  // UL-QP-18-02: 이력카드 — 개별 장비 이력카드는 GET /equipment/:uuid/history-card (docx) 사용
+  private async exportHistoryCard(_params: Record<string, string>): Promise<ExportResult> {
+    throw new BadRequestException({
+      code: 'USE_DEDICATED_ENDPOINT',
+      message:
+        'UL-QP-18-02 이력카드는 GET /api/equipment/:uuid/history-card 엔드포인트를 사용하세요.',
+    });
   }
 
   // UL-QP-18-03 ~ UL-QP-18-11: 나머지 양식은 동일한 xlsx 패턴으로 제공
@@ -123,10 +144,28 @@ export class FormTemplateExportService {
     return this.createFormPlaceholder('UL-QP-18-04', '교정성적서');
   }
 
-  private async exportSelfInspection(params: Record<string, string>): Promise<ExportResult> {
+  private async exportSelfInspection(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
     const equipmentId = params.equipmentId;
     if (!equipmentId) {
       return this.createFormPlaceholder('UL-QP-18-05', '자체점검표');
+    }
+
+    // 사이트 필터링: 요청된 장비가 사용자 사이트에 속하는지 확인
+    if (scope) {
+      const [eqRow] = await this.db
+        .select({ site: equipment.site })
+        .from(equipment)
+        .where(and(eq(equipment.id, equipmentId), eq(equipment.site, scope.site)))
+        .limit(1);
+      if (!eqRow) {
+        throw new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: 'Equipment not found or not accessible from your site.',
+        });
+      }
     }
 
     const rows = await this.db
