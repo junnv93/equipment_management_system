@@ -66,7 +66,7 @@ export class TestSoftwareValidationsController {
   findByTestSoftware(
     @Param('softwareId', ParseUUIDPipe) softwareId: string,
     @Query(ValidationQueryPipe) query: ValidationQueryInput
-  ) {
+  ): ReturnType<SoftwareValidationsService['findByTestSoftware']> {
     return this.validationsService.findByTestSoftware(softwareId, query);
   }
 }

@@ -32,6 +32,7 @@ import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import type { TestSoftware } from '@equipment-management/db/schema';
+import type { PaginatedResponseType } from '@equipment-management/schemas';
 import { versionedSchema } from '../../common/dto/base-versioned.dto';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -62,7 +63,9 @@ export class TestSoftwareController {
   @Get()
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
   @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
-  findAll(@Query(TestSoftwareQueryValidationPipe) query: TestSoftwareQueryInput) {
+  findAll(
+    @Query(TestSoftwareQueryValidationPipe) query: TestSoftwareQueryInput
+  ): Promise<PaginatedResponseType<TestSoftware>> {
     return this.testSoftwareService.findAll(query);
   }
 
@@ -78,7 +81,9 @@ export class TestSoftwareController {
 
   @Get(':uuid/equipment')
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
-  findLinkedEquipment(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  findLinkedEquipment(
+    @Param('uuid', ParseUUIDPipe) uuid: string
+  ): ReturnType<TestSoftwareService['findLinkedEquipment']> {
     return this.testSoftwareService.findLinkedEquipment(uuid);
   }
 
@@ -86,7 +91,10 @@ export class TestSoftwareController {
   @RequirePermissions(Permission.UPDATE_TEST_SOFTWARE)
   @AuditLog({ action: 'link', entityType: 'software_equipment_link', entityIdPath: 'params.uuid' })
   @UsePipes(LinkEquipmentPipe)
-  async linkEquipment(@Param('uuid', ParseUUIDPipe) uuid: string, @Body() dto: LinkEquipmentInput) {
+  async linkEquipment(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: LinkEquipmentInput
+  ): ReturnType<TestSoftwareService['linkEquipment']> {
     return this.testSoftwareService.linkEquipment(uuid, dto);
   }
 
@@ -100,7 +108,7 @@ export class TestSoftwareController {
   async unlinkEquipment(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string
-  ) {
+  ): Promise<{ message: string }> {
     await this.testSoftwareService.unlinkEquipment(uuid, equipmentId);
     return { message: '장비 연결이 해제되었습니다.' };
   }
@@ -109,7 +117,7 @@ export class TestSoftwareController {
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<TestSoftware> {
     return this.testSoftwareService.findOne(uuid);
   }
 

@@ -7,7 +7,20 @@ import {
   equipment,
   type TestSoftware,
 } from '@equipment-management/db/schema';
+import type { EquipmentStatus, Site } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+
+interface LinkedEquipment {
+  id: string;
+  managementNumber: string;
+  name: string;
+  modelName: string | null;
+  manufacturer: string | null;
+  status: EquipmentStatus;
+  site: Site | null;
+  notes: string | null;
+  linkedAt: Date;
+}
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -211,7 +224,7 @@ export class TestSoftwareService extends VersionedBaseService {
     );
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<TestSoftware> {
     const cacheKey = this.buildCacheKey('detail', id);
     return this.cacheService.getOrSet(
       cacheKey,
@@ -458,7 +471,7 @@ export class TestSoftwareService extends VersionedBaseService {
   /**
    * 역방향 조회: 소프트웨어에 연결된 장비 목록
    */
-  async findLinkedEquipment(testSoftwareId: string) {
+  async findLinkedEquipment(testSoftwareId: string): Promise<LinkedEquipment[]> {
     const cacheKey = this.buildCacheKey('linked-equipment', testSoftwareId);
     return this.cacheService.getOrSet(
       cacheKey,
