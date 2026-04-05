@@ -99,7 +99,7 @@ export const FORM_CATALOG = {
     retentionLabel: '3년',
     implemented: false,
   },
-} as const satisfies Record<string, FormCatalogEntry>;
+} satisfies Record<string, FormCatalogEntry>;
 
 export type FormNumber = keyof typeof FORM_CATALOG;
 
