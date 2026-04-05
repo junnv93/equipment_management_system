@@ -32,9 +32,13 @@ env:
 
 jobs:
   e2e:
-    name: E2E Tests (${{ github.event.inputs.project || 'chromium' }})
+    name: E2E Tests (shard ${{ matrix.shard }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgres:15
@@ -84,7 +88,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/equipment_management
 
       - name: Install Playwright Browsers
-        run: pnpm --filter frontend exec playwright install --with-deps ${{ github.event.inputs.project || 'chromium' }}
+        run: pnpm --filter frontend exec playwright install --with-deps chromium
 
       - name: Start Backend
         run: pnpm --filter backend run start:prod &
@@ -121,13 +125,13 @@ jobs:
           done
 
       - name: Run E2E Tests
-        run: pnpm --filter frontend exec playwright test --project=${{ github.event.inputs.project || 'chromium' }}
+        run: pnpm --filter frontend exec playwright test --project=chromium --shard=${{ matrix.shard }}/4
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report-${{ github.run_id }}
+          name: playwright-report-shard-${{ matrix.shard }}-${{ github.run_id }}
           path: apps/frontend/playwright-report/
           retention-days: 14
 

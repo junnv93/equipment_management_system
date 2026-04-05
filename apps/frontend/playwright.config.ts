@@ -14,7 +14,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 4,
+  workers: process.env.CI ? 4 : 4,
   reporter: 'html',
   // 기본 타임아웃 설정 (안정성 향상)
   timeout: 60000, // 60초

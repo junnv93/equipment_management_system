@@ -29,12 +29,10 @@ import { EquipmentPagination } from '@/components/equipment/EquipmentPagination'
 import cablesApi from '@/lib/api/cables-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { CABLE_CONNECTOR_TYPE_VALUES, CABLE_STATUS_VALUES } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 const ALL_VALUE = '__ALL__';
-
-const CONNECTOR_TYPES = ['K', 'SMA', 'N', 'other'] as const;
-const STATUS_VALUES = ['active', 'retired'] as const;
 
 interface CableListFilters {
   search: string;
@@ -165,7 +163,7 @@ export default function CableListContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_VALUE}>{t('list.filters.allTypes')}</SelectItem>
-            {CONNECTOR_TYPES.map((ct) => (
+            {CABLE_CONNECTOR_TYPE_VALUES.map((ct) => (
               <SelectItem key={ct} value={ct}>
                 {t(`connectorType.${ct}`)}
               </SelectItem>
@@ -181,7 +179,7 @@ export default function CableListContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_VALUE}>{t('list.filters.allStatus')}</SelectItem>
-            {STATUS_VALUES.map((s) => (
+            {CABLE_STATUS_VALUES.map((s) => (
               <SelectItem key={s} value={s}>
                 {t(`status.${s}`)}
               </SelectItem>

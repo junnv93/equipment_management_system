@@ -40,12 +40,10 @@ import { isConflictError } from '@/lib/api/error';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { SITE_VALUES } from '@equipment-management/schemas';
+import { SITE_VALUES, CABLE_CONNECTOR_TYPE_VALUES } from '@equipment-management/schemas';
 import type { Site } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { MeasurementFormDialog } from '@/components/cables/MeasurementFormDialog';
-
-const CONNECTOR_TYPES = ['K', 'SMA', 'N', 'other'] as const;
 
 interface CableDetailContentProps {
   id: string;
@@ -331,7 +329,7 @@ export default function CableDetailContent({ id }: CableDetailContentProps) {
                   <SelectValue placeholder={t('form.connectorTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {CONNECTOR_TYPES.map((ct) => (
+                  {CABLE_CONNECTOR_TYPE_VALUES.map((ct) => (
                     <SelectItem key={ct} value={ct}>
                       {t(`connectorType.${ct}`)}
                     </SelectItem>

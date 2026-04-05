@@ -50,6 +50,7 @@ export interface CableQuery {
 }
 
 export interface CreateCableDto {
+  managementNumber: string;
   length?: string;
   connectorType?: string;
   frequencyRangeMin?: number;
