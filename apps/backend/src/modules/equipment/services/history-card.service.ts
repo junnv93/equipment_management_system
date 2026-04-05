@@ -28,6 +28,7 @@ interface HistoryCardEquipmentInfo {
 }
 
 interface HistoryCardCalibration {
+  [key: string]: string;
   calibrationDate: string;
   nextCalibrationDate: string;
   status: string;
@@ -37,6 +38,7 @@ interface HistoryCardCalibration {
 }
 
 interface HistoryCardCheckout {
+  [key: string]: string;
   checkoutDate: string;
   returnDate: string;
   purpose: string;
@@ -45,6 +47,7 @@ interface HistoryCardCheckout {
 }
 
 interface HistoryCardRepair {
+  [key: string]: string;
   repairDate: string;
   description: string;
   result: string;
@@ -52,6 +55,7 @@ interface HistoryCardRepair {
 }
 
 interface HistoryCardNonConformance {
+  [key: string]: string;
   discoveryDate: string;
   ncType: string;
   cause: string;
@@ -228,10 +232,7 @@ export class HistoryCardService {
   private buildTemplateXml(data: HistoryCardData): string {
     const esc = (v: unknown): string => this.escapeXml(String(v ?? '-'));
     const eq = data.equipment;
-    const rows = <T extends Record<string, string>>(
-      items: T[],
-      keys: (keyof T & string)[]
-    ): string =>
+    const rows = (items: Record<string, string>[], keys: string[]): string =>
       items
         .map(
           (item) =>
