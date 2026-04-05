@@ -72,24 +72,13 @@ interface LocationHistoryTabProps {
  * - 색상: UL Midnight Blue 포인트
  */
 export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
-  const { hasRole, session, isAuthenticated } = useAuth();
+  const { hasRole } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
   const locationHistorySchema = useMemo(() => createLocationHistorySchema(t), [t]);
-
-  // 개발 환경에서만 세션 디버그 출력
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[LocationHistoryTab] 세션 상태:', {
-      isAuthenticated,
-      hasSession: !!session,
-      user: session?.user,
-      roles: session?.user?.roles,
-      hasAccessToken: !!session?.accessToken,
-    });
-  }
 
   // 폼 설정
   const form = useForm<LocationHistoryFormData>({
@@ -183,12 +172,6 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   });
 
   const handleSubmit = (data: LocationHistoryFormData) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[LocationHistoryTab] 위치 변동 등록 요청:', {
-        equipmentId,
-        data,
-      });
-    }
     createMutation.mutate({
       changedAt: data.changedAt,
       newLocation: data.newLocation,
@@ -211,20 +194,6 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     URVal.SYSTEM_ADMIN,
   ]);
   const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
-
-  // 개발 환경에서만 권한 체크 디버그 출력
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[LocationHistoryTab] 권한 체크:', {
-      canCreate,
-      canDelete,
-      testHasRoles: {
-        test_engineer: hasRole([URVal.TEST_ENGINEER]),
-        technical_manager: hasRole([URVal.TECHNICAL_MANAGER]),
-        lab_manager: hasRole([URVal.LAB_MANAGER]),
-        system_admin: hasRole([URVal.SYSTEM_ADMIN]),
-      },
-    });
-  }
 
   // 등록 Dialog
   const RegisterDialog = (

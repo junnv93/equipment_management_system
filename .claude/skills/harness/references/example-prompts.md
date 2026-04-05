@@ -1,37 +1,32 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-05 (21차 — Mode 0/1/2 일괄 처리 + 3-agent 재스캔)**
+> **마지막 정리일: 2026-04-05 (22차 — Mode 2-3 완료 후 재스캔)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용.
 
 ---
 
-## 현재 미해결 프롬프트: 8건
+## 현재 미해결 프롬프트: 10건
 
-### 🟠 HIGH — UL-QP-18 절차서 준수 갭 해소: 이력카드 통합 + 보존연한 + 자체점검표 + 공식 양식 내보내기 (Mode 2)
+### 🟠 HIGH — software-validations update/revise userId 미추출 (Mode 0)
 
 ```
 문제:
-UL-QP-18 절차서 준수 검증 결과 약 90% 달성. 3개 기능 갭 + 1개 운영 갭 확인됨.
+software-validations 컨트롤러의 update, revise 엔드포인트에서
+@Request() 파라미터가 없어 userId를 서버에서 추출하지 않음.
+AuditLog 인터셉터가 req.user를 자동으로 사용하지만,
+서비스 레이어에서 "누가 수정했는지" 추적 불가.
 
-갭 1 — 섹션 7.6-7.7 시험설비 이력카드 (UL-QP-18-02) 내보내기:
-5개 테이블 데이터를 통합하여 이력카드 docx 내보내기 기능 필요.
+검증됨:
+- software-validations.controller.ts:109-113 — update() @Request() 없음
+- software-validations.controller.ts:192-196 — revise() @Request() 없음
 
-갭 2 — 섹션 15 기록 보존연한:
-documents 테이블에 retentionPeriod, retentionExpiresAt 추가.
-양식번호별 기본 보존연한 매핑.
-
-갭 3 — 섹션 8.6 자체점검표 (UL-QP-18-05):
-equipment_self_inspections 테이블 신규 + 자체점검 주기 관리.
-
-갭 4 — 공식 양식 템플릿 기반 레포트 내보내기:
-docxtemplater + exceljs 활용, 11개 양식 내보내기 엔드포인트.
+액션:
+1. update(): @Request() req 추가 + extractUserId(req) 서비스 전달
+2. revise(): @Request() req 추가 + extractUserId(req) 서비스 전달
 
 검증:
-1. pnpm tsc --noEmit → 0
-2. 이력카드 내보내기 docx 다운로드
-3. 자체점검표 CRUD + 확인 워크플로우
-4. 11개 내보내기 엔드포인트 각각 파일 생성
+1. grep "extractUserId" software-validations.controller.ts → 2건 이상
 ```
 
 ### 🟠 HIGH — Dockerfile 프로덕션 빌드 차단 3건 (Mode 0)
@@ -52,6 +47,43 @@ docxtemplater + exceljs 활용, 11개 양식 내보내기 엔드포인트.
 
 검증:
 1. docker build -f apps/backend/docker/Dockerfile . → 성공
+```
+
+### 🟠 HIGH — history-card.service.ts XML 이스케이프 누락 (Mode 0)
+
+```
+문제:
+이력카드 docx 생성 시 DB 데이터를 XML에 직접 삽입하여 특수문자(&, <, >) 미이스케이프.
+사용자 입력에 XML 특수문자가 포함되면 docx 파일이 깨짐.
+
+검증됨:
+- history-card.service.ts:169-174 — `<w:t>${String(item[k] ?? '-')}</w:t>` XML 이스케이프 없음
+- history-card.service.ts:180-184 — heading, para 헬퍼도 동일
+
+액션:
+1. XML 이스케이프 헬퍼 함수 추가 (& → &amp;, < → &lt;, > → &gt;, " → &quot;)
+2. buildTemplateXml 내 모든 사용자 데이터에 적용
+
+검증:
+1. 장비명에 "Test & <Equipment>" 입력 후 이력카드 다운로드 → 정상 열림
+```
+
+### 🟡 MEDIUM — LocationHistoryTab console.log 3건 제거 (Mode 0)
+
+```
+문제:
+LocationHistoryTab에 디버깅용 console.log가 프로덕션 코드에 남아있음.
+
+검증됨:
+- LocationHistoryTab.tsx:85 — console.log('[LocationHistoryTab] 세션 상태:', ...)
+- LocationHistoryTab.tsx:187 — console.log('[LocationHistoryTab] 위치 변동 등록 요청:', ...)
+- LocationHistoryTab.tsx:217 — console.log('[LocationHistoryTab] 권한 체크:', ...)
+
+액션:
+1. 3개 console.log 제거
+
+검증:
+1. grep -r "console.log" apps/frontend/components/equipment/LocationHistoryTab.tsx → 0건
 ```
 
 ### 🟡 MEDIUM — 새 모듈 하드코딩 문자열 3건 + aria-label 1건 (Mode 0)
@@ -98,19 +130,20 @@ cables 테이블에 createdBy 컬럼 자체가 없어 추적 불가.
 1. grep -r "_createdBy\|_userId" apps/backend/src/modules/cables/ → 0건
 ```
 
-### 🟡 MEDIUM — 새 라우트 error.tsx / loading.tsx 누락 6건 (Mode 0)
+### 🟡 MEDIUM — 새 라우트 error.tsx / loading.tsx 누락 (Mode 0)
 
 ```
 문제:
-21차 하네스에서 추가된 라우트에 에러 바운더리/로딩 스켈레톤 누락.
+최근 추가된 라우트에 에러 바운더리/로딩 스켈레톤 누락.
 
 검증됨:
 - software/[id]/validation/ — error.tsx, loading.tsx 없음
 - software/[id]/validation/[validationId]/ — error.tsx, loading.tsx 없음
 - cables/create/ — error.tsx, loading.tsx 없음
+- checkouts/import/[id]/ — error.tsx 없음
 
 액션:
-1. 3개 라우트에 error.tsx (RouteError 패턴) 추가
+1. 4개 라우트에 error.tsx (RouteError 패턴) 추가
 2. 3개 라우트에 loading.tsx (Skeleton 패턴) 추가
 
 검증:
@@ -183,7 +216,13 @@ logout에만 적용됨. 인증 이벤트 감사 추적 갭.
 ---
 
 <details>
-<summary>✅ 아카이브 — 완료된 프롬프트 (21차 세션, 2026-04-05)</summary>
+<summary>✅ 아카이브 — 완료된 프롬프트 (22차 세션, 2026-04-05)</summary>
+
+### ~~🟠 HIGH — UL-QP-18 절차서 준수 갭 해소: 이력카드 + 보존연한 + 자체점검표 + 양식 내보내기~~ ✅ 완료
+
+> PR #109 (2026-04-05). 이력카드 docx 5테이블 통합 내보내기, documents 보존연한 컬럼,
+> equipment_self_inspections 모듈, 11개 양식 xlsx 엔드포인트.
+> Harness Mode 2, MUST 15/15 PASS.
 
 ### ~~🟡 MEDIUM — 소프트웨어 관리대장 목록 페이지네이션 UI + manufacturer 필터~~ ✅ 완료
 
@@ -210,7 +249,7 @@ logout에만 적용됨. 인증 이벤트 감사 추적 갭.
 ### ~~🟡 MEDIUM — error.tsx / loading.tsx 루트별 미적용~~ ✅ 대부분 완료
 
 > 커밋 46bf582a (2026-04-05). software/[id] 하위 추가. 대부분 라우트 커버됨.
-> 나머지 3개 라우트(validation, validationId, cables/create) 별도 프롬프트.
+> 나머지 4개 라우트(validation, validationId, cables/create, checkouts/import/[id]) 별도 프롬프트.
 
 ### ~~🟠 HIGH — CI 보안: trivy-action@master 미고정 + copilot-setup-steps.yml 빌드 실패~~ ✅ 완료
 
@@ -246,5 +285,18 @@ logout에만 적용됨. 인증 이벤트 감사 추적 갭.
 ### ~~🔴 CRITICAL — UL-QP-18-09 방법 2 프론트엔드 양식~~ ✅ 완료 (이전 세션)
 
 ### ~~🔴 CRITICAL — 유효성확인 첨부파일 인프라~~ ✅ 완료 (이전 세션)
+
+</details>
+
+<details>
+<summary>❌ False Positives — 22차 스캔 (2026-04-05)</summary>
+
+### intermediate-checks API 엔드포인트 미구현
+> 스캔 결과: `API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL` 백엔드 미구현.
+> 검증 결과: calibration.controller.ts:171,191에 `@Get('intermediate-checks')`, `@Get('intermediate-checks/all')` 구현 확인. FALSE POSITIVE.
+
+### software-validations update() 캐시 무효화 누락
+> 스캔 결과: update() 메서드에서 invalidateCache() 미호출.
+> 검증 결과: software-validations.service.ts:294에서 `this.invalidateCache(id)` 호출 확인. FALSE POSITIVE.
 
 </details>

@@ -42,6 +42,9 @@ export const cables = pgTable(
     lastMeasurementDate: timestamp('last_measurement_date'),
     measuredBy: uuid('measured_by').references(() => users.id, { onDelete: 'restrict' }),
 
+    // 생성자
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -134,6 +137,11 @@ export const cablesRelations = relations(cables, ({ one, many }) => ({
     fields: [cables.measuredBy],
     references: [users.id],
     relationName: 'cableMeasuredBy',
+  }),
+  creator: one(users, {
+    fields: [cables.createdBy],
+    references: [users.id],
+    relationName: 'cableCreator',
   }),
   measurements: many(cableLossMeasurements),
 }));

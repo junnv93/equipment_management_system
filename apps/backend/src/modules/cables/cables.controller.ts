@@ -81,10 +81,9 @@ export class CablesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCableInput,
-    @Request() req: AuthenticatedRequest
+    @Request() _req: AuthenticatedRequest
   ): ReturnType<CablesService['update']> {
-    const userId = extractUserId(req);
-    return this.cablesService.update(id, dto, userId);
+    return this.cablesService.update(id, dto);
   }
 
   @Post(':id/measurements')

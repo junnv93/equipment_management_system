@@ -61,6 +61,7 @@
     "loss": "Loss (dB)",
     "addRow": "Add Row",
     "removeRow": "Remove",
+    "removeRowAriaLabel": "Remove measurement data row",
     "bulkPaste": "Bulk Paste (freq,loss per line)",
     "bulkPastePlaceholder": "100,0.5\n200,1.0\n300,1.5",
     "parseBulk": "Parse",

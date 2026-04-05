@@ -125,10 +125,9 @@ export class IntermediateInspectionsController {
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: UpdateInspectionInput,
-    @Request() req: AuthenticatedRequest
+    @Request() _req: AuthenticatedRequest
   ): Promise<IntermediateInspection> {
-    const userId = extractUserId(req);
-    return this.inspectionsService.update(uuid, dto, userId);
+    return this.inspectionsService.update(uuid, dto);
   }
 
   @Patch(':uuid/submit')

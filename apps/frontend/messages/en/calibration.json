@@ -608,7 +608,10 @@
       "non_calibrated": "Non-Calibrated Equipment"
     },
     "inspectionCycle": "Inspection Cycle",
+    "inspectionCyclePlaceholder": "e.g. 6 months",
     "calibrationValidityPeriod": "Calibration Validity Period",
+    "validityPeriodPlaceholder": "e.g. 2026-12-31",
+    "rejectionReasonPlaceholder": "Enter rejection reason",
     "overallResult": "Overall Result",
     "resultOptions": {
       "pass": "Pass",

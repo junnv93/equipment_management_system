@@ -214,7 +214,7 @@ export default function InspectionFormDialog({
               <Input
                 value={inspectionCycle}
                 onChange={(e) => setInspectionCycle(e.target.value)}
-                placeholder="e.g. 6 months"
+                placeholder={t('intermediateInspection.inspectionCyclePlaceholder')}
               />
             </div>
             <div className="space-y-2">
@@ -222,7 +222,7 @@ export default function InspectionFormDialog({
               <Input
                 value={calibrationValidityPeriod}
                 onChange={(e) => setCalibrationValidityPeriod(e.target.value)}
-                placeholder="e.g. 2026-12-31"
+                placeholder={t('intermediateInspection.validityPeriodPlaceholder')}
               />
             </div>
           </div>

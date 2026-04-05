@@ -168,24 +168,33 @@ export class HistoryCardService {
     return Buffer.from(zip.generate({ type: 'nodebuffer' }));
   }
 
+  private escapeXml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   private buildTemplateXml(data: HistoryCardData): string {
+    const esc = (v: unknown) => this.escapeXml(String(v ?? '-'));
     const eq = data.equipment;
     const rows = (items: Record<string, unknown>[], keys: string[]): string =>
       items
         .map(
           (item) =>
-            `<w:tr>${keys.map((k) => `<w:tc><w:p><w:r><w:t>${String(item[k] ?? '-')}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`
+            `<w:tr>${keys.map((k) => `<w:tc><w:p><w:r><w:t>${esc(item[k])}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`
         )
         .join('');
 
     const tableHeader = (headers: string[]): string =>
-      `<w:tr>${headers.map((h) => `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9E2F3"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>${h}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
+      `<w:tr>${headers.map((h) => `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9E2F3"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>${esc(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
 
     const heading = (text: string): string =>
-      `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t>${text}</w:t></w:r></w:p>`;
+      `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t>${esc(text)}</w:t></w:r></w:p>`;
 
     const para = (label: string, value: string): string =>
-      `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${label}: </w:t></w:r><w:r><w:t>${value}</w:t></w:r></w:p>`;
+      `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${esc(label)}: </w:t></w:r><w:r><w:t>${esc(value)}</w:t></w:r></w:p>`;
 
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">
