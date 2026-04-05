@@ -1,65 +1,65 @@
 /**
- * Playwright Auth Setup Project
+ * Playwright Auth Setup — API-based (Industry Standard)
  *
- * 5개 역할에 대해 browser-native 로그인을 수행하고
- * storageState(쿠키 + localStorage)를 .auth/ 디렉토리에 저장합니다.
+ * UI 로그인 대신 NextAuth API를 직접 호출하여 세션을 생성합니다.
+ * 이 방식은 프론트엔드 렌더링 모드(dev/prod)와 완전히 독립적입니다.
  *
- * 이 파일은 모든 browser project 실행 전 1회만 실행됩니다.
- * (playwright.config.ts의 dependencies: ['setup'] 참조)
- *
- * 장점:
- * - Zero cookie parsing: 브라우저가 Set-Cookie를 자체 처리
- * - Zero CSRF management: signIn()이 CSRF를 자동 처리
- * - Zero hardcoded waits: waitForURL이 실제 redirect 완료를 감지
- * - 실제 프로덕션 플로우 검증: 로그인 UI 자체도 테스트됨
+ * Flow:
+ * 1. GET /api/auth/csrf → CSRF 토큰 획득
+ * 2. POST /api/auth/callback/test-login → NextAuth가 세션 쿠키 생성
+ * 3. storageState 저장 → 테스트에서 재사용
  */
 
-import { test as setup, expect } from '@playwright/test';
+import { test as setup } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 
-/**
- * 역할별 설정
- * - role: 백엔드 역할 식별자
- * - label: DevLoginButtons의 버튼 텍스트 (getByRole 매칭용)
- * - file: storageState 저장 파일명
- */
 const ROLES = [
-  { role: 'test_engineer', label: '시험실무자', file: 'test-engineer.json' },
-  { role: 'technical_manager', label: '기술책임자', file: 'technical-manager.json' },
-  { role: 'quality_manager', label: '품질책임자', file: 'quality-manager.json' },
-  { role: 'lab_manager', label: '시험소장', file: 'lab-manager.json' },
-  { role: 'system_admin', label: '시스템 관리자', file: 'system-admin.json' },
+  { role: 'test_engineer', file: 'test-engineer.json' },
+  { role: 'technical_manager', file: 'technical-manager.json' },
+  { role: 'quality_manager', file: 'quality-manager.json' },
+  { role: 'lab_manager', file: 'lab-manager.json' },
+  { role: 'system_admin', file: 'system-admin.json' },
 ] as const;
 
-// .auth 디렉토리 보장
 if (!fs.existsSync(AUTH_DIR)) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 }
 
-for (const { role, label, file } of ROLES) {
+for (const { role, file } of ROLES) {
   const outputPath = path.join(AUTH_DIR, file);
 
   setup(`authenticate as ${role}`, async ({ page }) => {
-    // 1. 로그인 페이지 이동
-    await page.goto('/login');
-    await page.waitForLoadState('domcontentloaded');
+    // 1. CSRF 토큰 획득 (NextAuth 보안 요구사항)
+    const csrfResponse = await page.request.get('/api/auth/csrf');
+    const { csrfToken } = await csrfResponse.json();
 
-    // 2. DevLoginButtons의 역할 버튼 클릭
-    //    기본 팀: 수원 FCC EMC/RF (DevLoginButtons의 초기값)
-    const button = page.getByRole('button', { name: label });
-    await expect(button).toBeVisible({ timeout: 30000 });
-    await button.click();
+    // 2. NextAuth callback API로 직접 로그인 (UI 불필요)
+    //    test-login CredentialsProvider의 authorize()가 백엔드 /api/auth/test-login 호출
+    const signInResponse = await page.request.post('/api/auth/callback/test-login', {
+      form: {
+        csrfToken,
+        role,
+        json: 'true',
+      },
+    });
 
-    // 3. NextAuth redirect 완료 대기 (로그인 → 대시보드)
-    //    CI 환경에서는 NextAuth 콜백 + DB 조회 + 세션 생성이 느릴 수 있으므로 충분한 타임아웃
-    await page.waitForURL('/', { timeout: 60000 });
-    await expect(page).not.toHaveURL(/\/login/);
+    // 3. 세션 생성 확인 — NextAuth가 Set-Cookie로 세션 토큰을 설정
+    if (!signInResponse.ok()) {
+      const text = await signInResponse.text();
+      throw new Error(`Auth failed for ${role}: ${signInResponse.status()} ${text}`);
+    }
 
-    // 4. i18n: E2E 테스트는 ko 로케일로 고정 (256개 spec 파일 변경 불필요)
-    //    Playwright addCookies는 maxAge 미지원 → expires (Unix timestamp, 초 단위) 사용
+    // 4. 세션 유효성 검증 — /api/auth/session이 사용자 정보를 반환하는지 확인
+    const sessionResponse = await page.request.get('/api/auth/session');
+    const session = await sessionResponse.json();
+    if (!session?.user?.email) {
+      throw new Error(`Session not created for ${role}: ${JSON.stringify(session)}`);
+    }
+
+    // 5. i18n: ko 로케일 고정
     await page.context().addCookies([
       {
         name: 'NEXT_LOCALE',
@@ -71,12 +71,12 @@ for (const { role, label, file } of ROLES) {
       },
     ]);
 
-    // 5. storageState 저장 (쿠키 + localStorage)
+    // 6. storageState 저장
     await page.context().storageState({ path: outputPath });
   });
 }
 
-// site-admin.json alias 생성 (seed-parallel-group-1.spec.ts 호환)
+// site-admin.json alias
 setup('create site-admin alias', async () => {
   const src = path.join(AUTH_DIR, 'lab-manager.json');
   const dst = path.join(AUTH_DIR, 'site-admin.json');

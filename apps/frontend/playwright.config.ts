@@ -32,11 +32,11 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    // Auth Setup (1회 실행 — 5개 역할 browser-native 로그인 + storageState 저장)
+    // Auth Setup (1회 실행 — API 기반 인증, UI 불필요)
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
-      timeout: 120000, // 2분 — CI에서 NextAuth 콜백이 느릴 수 있음
+      timeout: 30000, // API 기반이므로 30초면 충분
     },
 
     // Browser projects — setup 완료 후 실행
