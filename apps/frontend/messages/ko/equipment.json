@@ -586,7 +586,8 @@
     "unlinkSuccess": "소프트웨어 연결이 해제되었습니다",
     "linkError": "연결 중 오류가 발생했습니다",
     "alreadyLinked": "이미 연결된 소프트웨어입니다",
-    "colActions": "작업"
+    "colActions": "작업",
+    "cancel": "취소"
   },
   "attachmentsTab": {
     "title": "첨부파일",

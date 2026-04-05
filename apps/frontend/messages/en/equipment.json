@@ -586,7 +586,8 @@
     "unlinkSuccess": "Software unlinked successfully",
     "linkError": "Error occurred while linking",
     "alreadyLinked": "Software is already linked",
-    "colActions": "Actions"
+    "colActions": "Actions",
+    "cancel": "Cancel"
   },
   "attachmentsTab": {
     "title": "Attachments",

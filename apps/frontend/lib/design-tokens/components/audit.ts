@@ -422,6 +422,8 @@ export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
   upload: 'bg-brand-info',
   download: 'bg-brand-info',
   revision: 'bg-brand-warning',
+  link: 'bg-brand-ok',
+  unlink: 'bg-brand-text-muted',
 };
 
 // ============================================================================

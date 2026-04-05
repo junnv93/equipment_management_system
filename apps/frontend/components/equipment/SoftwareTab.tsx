@@ -367,7 +367,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsLinkOpen(false)}>
-              {t('softwareTab.download') === 'Download' ? 'Cancel' : '취소'}
+              {t('softwareTab.cancel')}
             </Button>
             <Button onClick={handleLink} disabled={!selectedSoftwareId || linkMutation.isPending}>
               {t('softwareTab.linkButton')}
