@@ -67,6 +67,10 @@
 
 > PR #109 (2026-04-05). Harness Mode 2, MUST 15/15 PASS.
 
+### SHOULD
+- E2E CSS 셀렉터 → getByRole/getByText 전환 — pending-checks + create-equipment (2026-04-03, 10차)
+- ReportsContent date-fns format → useDateFormatter 전환 (2026-04-03, 10차)
+
 ### ~~🟡 MEDIUM — 소프트웨어 관리대장 페이지네이션 + manufacturer 필터~~ ✅ 완료
 ### ~~🟡 MEDIUM — P0043 중복 관리번호 UNIQUE 제거~~ ✅ 완료
 ### ~~🟡 MEDIUM — 유효성확인 방법 1 receivedBy/receivedDate~~ ✅ 부분 완료
