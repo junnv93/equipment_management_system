@@ -36,10 +36,9 @@ test.describe('Recent Activities', () => {
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
 
-    // 3. Scroll to recent activities section in Overview tab
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
+    // 3. Scroll to recent activities section
+    const overviewPanel = siteAdminPage.locator('main');
     await expect(overviewPanel).toBeVisible();
-    console.log('✓ Overview tab panel is visible');
 
     // Verify section header shows '시험소 최근 활동'
     const sectionHeader = overviewPanel.getByRole('heading', { name: '시험소 최근 활동' });
@@ -83,9 +82,8 @@ test.describe('Recent Activities', () => {
     await siteAdminPage.goto('/');
 
     // 3. Locate the recent activities section
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
+    const overviewPanel = siteAdminPage.locator('main');
     await expect(overviewPanel).toBeVisible();
-    console.log('✓ Overview tab panel is visible');
 
     // Look for the recent activities section
     const activitiesSection = overviewPanel.locator('text=시험소 최근 활동').locator('..');
@@ -133,9 +131,8 @@ test.describe('Recent Activities', () => {
     await siteAdminPage.goto('/');
 
     // 4. Examine recent activity items
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
+    const overviewPanel = siteAdminPage.locator('main');
     await expect(overviewPanel).toBeVisible();
-    console.log('✓ Overview tab panel is visible');
 
     // Find the recent activities section
     const activitiesSection = overviewPanel.locator('text=시험소 최근 활동').locator('..');
@@ -237,7 +234,7 @@ test.describe('Recent Activities', () => {
   test('Test 7.4: Verify activity role-based filtering', async ({
     testOperatorPage,
     siteAdminPage,
-    browser,
+    browser: _browser,
   }) => {
     // This test requires role switching (logout/login)
 
@@ -245,7 +242,7 @@ test.describe('Recent Activities', () => {
     await testOperatorPage.goto('/');
 
     // 2. Navigate to dashboard and note activities shown
-    const testEngineerPanel = testOperatorPage.getByRole('tabpanel');
+    const testEngineerPanel = testOperatorPage.locator('main');
     await expect(testEngineerPanel).toBeVisible();
     console.log('✓ Logged in as test_engineer - Dashboard loaded');
 
@@ -282,7 +279,7 @@ test.describe('Recent Activities', () => {
     await siteAdminPage.goto('/');
 
     // 4. Navigate to dashboard and compare activities
-    const labManagerPanel = siteAdminPage.getByRole('tabpanel');
+    const labManagerPanel = siteAdminPage.locator('main');
     await expect(labManagerPanel).toBeVisible();
     console.log('✓ Logged in as lab_manager - Dashboard loaded');
 

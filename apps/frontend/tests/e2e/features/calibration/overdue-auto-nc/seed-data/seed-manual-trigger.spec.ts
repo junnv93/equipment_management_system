@@ -47,7 +47,7 @@ test.describe('Group A: Manual Trigger - Seed Setup', () => {
       const data = await response.json();
       expect(data).toHaveProperty('access_token');
       expect(data).toHaveProperty('user');
-      expect(data.user.role).toBe(role);
+      expect(data.user.roles).toContain(role);
 
       console.log(`✅ Test login successful for role: ${role}`);
     }

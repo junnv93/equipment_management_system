@@ -25,3 +25,22 @@ updates:
     labels:
       - 'dependencies'
       - 'ci'
+
+  # Docker base images
+  - package-ecosystem: 'docker'
+    directory: '/apps/backend/docker'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'dependencies'
+      - 'docker'
+
+  - package-ecosystem: 'docker'
+    directory: '/apps/frontend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'dependencies'
+      - 'docker'

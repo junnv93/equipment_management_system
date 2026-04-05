@@ -7,6 +7,6 @@
     "eslint --quiet --fix --config apps/frontend/eslint.config.mjs",
     "prettier --write"
   ],
-  "packages/**/*.ts": ["prettier --write"],
+  "packages/**/*.ts": ["eslint --quiet --fix", "prettier --write"],
   "*.{js,jsx,json,md,yml,yaml}": ["prettier --write"]
 }
