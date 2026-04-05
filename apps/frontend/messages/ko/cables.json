@@ -79,6 +79,8 @@
     "error": "케이블 등록에 실패했습니다."
   },
   "form": {
+    "managementNumberLabel": "관리번호",
+    "managementNumberPlaceholder": "예: E020K-325",
     "lengthLabel": "길이 (M)",
     "lengthPlaceholder": "예: 1.5",
     "connectorTypeLabel": "커넥터 타입",

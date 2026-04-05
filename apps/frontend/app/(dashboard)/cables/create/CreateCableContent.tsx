@@ -19,13 +19,11 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import cablesApi, { type CreateCableDto } from '@/lib/api/cables-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { SITE_VALUES } from '@equipment-management/schemas';
+import { SITE_VALUES, CABLE_CONNECTOR_TYPE_VALUES } from '@equipment-management/schemas';
 import type { Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
-
-const CONNECTOR_TYPES = ['K', 'SMA', 'N', 'other'] as const;
 
 export default function CreateCableContent() {
   const t = useTranslations('cables');
@@ -35,6 +33,7 @@ export default function CreateCableContent() {
   const siteLabels = useSiteLabels();
 
   const [form, setForm] = useState({
+    managementNumber: '',
     length: '',
     connectorType: '',
     frequencyRangeMin: '',
@@ -59,7 +58,9 @@ export default function CreateCableContent() {
   });
 
   const handleSubmit = () => {
+    if (!form.managementNumber) return;
     const dto: CreateCableDto = {
+      managementNumber: form.managementNumber,
       ...(form.length ? { length: form.length } : {}),
       ...(form.connectorType ? { connectorType: form.connectorType } : {}),
       ...(form.frequencyRangeMin ? { frequencyRangeMin: Number(form.frequencyRangeMin) } : {}),
@@ -88,6 +89,17 @@ export default function CreateCableContent() {
           <CardTitle>{t('create.formTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('form.managementNumberLabel')} *</Label>
+              <Input
+                value={form.managementNumber}
+                onChange={(e) => setForm({ ...form, managementNumber: e.target.value })}
+                placeholder={t('form.managementNumberPlaceholder')}
+                required
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>{t('form.lengthLabel')}</Label>
@@ -107,7 +119,7 @@ export default function CreateCableContent() {
                   <SelectValue placeholder={t('form.connectorTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {CONNECTOR_TYPES.map((ct) => (
+                  {CABLE_CONNECTOR_TYPE_VALUES.map((ct) => (
                     <SelectItem key={ct} value={ct}>
                       {t(`connectorType.${ct}`)}
                     </SelectItem>

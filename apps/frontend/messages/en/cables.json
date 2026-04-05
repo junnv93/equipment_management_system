@@ -79,6 +79,8 @@
     "error": "Failed to register cable."
   },
   "form": {
+    "managementNumberLabel": "Management Number",
+    "managementNumberPlaceholder": "e.g. E020K-325",
     "lengthLabel": "Length (M)",
     "lengthPlaceholder": "e.g. 1.5",
     "connectorTypeLabel": "Connector Type",
