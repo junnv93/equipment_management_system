@@ -233,6 +233,7 @@ export const API_ENDPOINTS = {
     APPROVE: (id: string) => `/api/software-validations/${id}/approve`,
     QUALITY_APPROVE: (id: string) => `/api/software-validations/${id}/quality-approve`,
     REJECT: (id: string) => `/api/software-validations/${id}/reject`,
+    REVISE: (id: string) => `/api/software-validations/${id}/revise`,
     PENDING: '/api/software-validations/pending',
   },
 

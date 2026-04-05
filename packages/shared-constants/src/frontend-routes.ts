@@ -80,6 +80,8 @@ export const FRONTEND_ROUTES = {
     CREATE: '/software/create',
     DETAIL: (id: string) => `/software/${id}`,
     VALIDATION: (id: string) => `/software/${id}/validation`,
+    VALIDATION_DETAIL: (softwareId: string, validationId: string) =>
+      `/software/${softwareId}/validation/${validationId}`,
   },
 
   // ============================================================================

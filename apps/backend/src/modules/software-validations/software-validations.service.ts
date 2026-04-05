@@ -515,6 +515,47 @@ export class SoftwareValidationsService extends VersionedBaseService {
   }
 
   /**
+   * 재수정 (rejected → draft)
+   */
+  async revise(id: string, version: number): Promise<SoftwareValidation> {
+    const existing = await this.findOne(id);
+
+    if (existing.status !== ValidationStatusValues.REJECTED) {
+      throw new BadRequestException({
+        code: 'INVALID_STATUS_TRANSITION',
+        message: 'Only rejected validations can be revised.',
+      });
+    }
+
+    let updated: SoftwareValidation;
+    try {
+      updated = await this.updateWithVersion<SoftwareValidation>(
+        softwareValidations,
+        id,
+        version,
+        {
+          status: ValidationStatusValues.DRAFT,
+          rejectedBy: null,
+          rejectedAt: null,
+          rejectionReason: null,
+        },
+        '소프트웨어 유효성 확인',
+        undefined,
+        'SOFTWARE_VALIDATION_NOT_FOUND'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
+
+    this.invalidateCache(id);
+
+    return updated;
+  }
+
+  /**
    * 승인 대기 중인 유효성 확인 목록 조회
    */
   async findPending(): Promise<SoftwareValidation[]> {

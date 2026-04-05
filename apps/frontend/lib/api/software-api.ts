@@ -92,6 +92,8 @@ export interface SoftwareValidation {
   status: ValidationStatus;
   softwareVersion: string | null;
   testDate: string | null;
+  infoDate: string | null;
+  softwareAuthor: string | null;
   // Vendor fields
   vendorName: string | null;
   vendorSummary: string | null;
@@ -222,9 +224,9 @@ const softwareValidationApi = {
       .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.SUBMIT(id), { version })
       .then((res) => res.data);
   },
-  approve: async (id: string, version: number, comment?: string): Promise<SoftwareValidation> => {
+  approve: async (id: string, version: number): Promise<SoftwareValidation> => {
     return apiClient
-      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.APPROVE(id), { version, comment })
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.APPROVE(id), { version })
       .then((res) => res.data);
   },
   qualityApprove: async (id: string, version: number): Promise<SoftwareValidation> => {
@@ -239,6 +241,11 @@ const softwareValidationApi = {
   ): Promise<SoftwareValidation> => {
     return apiClient
       .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.REJECT(id), { version, rejectionReason })
+      .then((res) => res.data);
+  },
+  revise: async (id: string, version: number): Promise<SoftwareValidation> => {
+    return apiClient
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.REVISE(id), { version })
       .then((res) => res.data);
   },
 };

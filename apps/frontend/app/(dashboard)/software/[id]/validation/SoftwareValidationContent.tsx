@@ -50,10 +50,9 @@ import {
 } from '@/lib/api/software-api';
 import testSoftwareApi from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { apiClient } from '@/lib/api/api-client';
+import { UserCombobox } from '@/components/ui/user-combobox';
 import { isConflictError } from '@/lib/api/error';
 import { VALIDATION_TYPE_VALUES } from '@equipment-management/schemas';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
@@ -113,15 +112,6 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     acquisitionFunctions: [] as FunctionItem[],
     processingFunctions: [] as FunctionItem[],
     controlFunctions: [] as FunctionItem[],
-  });
-
-  const { data: usersData } = useQuery({
-    queryKey: queryKeys.users.list(),
-    queryFn: () =>
-      apiClient
-        .get(API_ENDPOINTS.USERS.LIST)
-        .then((r) => (r.data as { items: { id: string; name: string }[] }).items),
-    enabled: createForm.validationType === 'self',
   });
 
   const { data: software } = useQuery({
@@ -221,6 +211,14 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     onSettled: invalidateValidations,
   });
 
+  const reviseMutation = useMutation({
+    mutationFn: ({ id, version }: { id: string; version: number }) =>
+      softwareValidationApi.revise(id, version),
+    onSuccess: () => toast({ title: t('toast.validationCreateSuccess') }),
+    onError: handleMutationError,
+    onSettled: invalidateValidations,
+  });
+
   const handleCreate = () => {
     if (!createForm.validationType) return;
     const data: CreateSoftwareValidationDto = {
@@ -314,7 +312,13 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
             </TableHeader>
             <TableBody>
               {validations.map((v) => (
-                <TableRow key={v.id}>
+                <TableRow
+                  key={v.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() =>
+                    router.push(FRONTEND_ROUTES.SOFTWARE.VALIDATION_DETAIL(softwareId, v.id))
+                  }
+                >
                   <TableCell>{t(`validationType.${v.validationType}`)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
@@ -337,7 +341,10 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => submitMutation.mutate({ id: v.id, version: v.version })}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            submitMutation.mutate({ id: v.id, version: v.version });
+                          }}
                           disabled={submitMutation.isPending}
                         >
                           {t('validation.actions.submit')}
@@ -348,7 +355,10 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => approveMutation.mutate({ id: v.id, version: v.version })}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              approveMutation.mutate({ id: v.id, version: v.version });
+                            }}
                             disabled={approveMutation.isPending}
                           >
                             {t('validation.actions.approve')}
@@ -356,7 +366,10 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => openRejectDialog(v)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openRejectDialog(v);
+                            }}
                           >
                             {t('validation.actions.reject')}
                           </Button>
@@ -366,12 +379,26 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() =>
-                            qualityApproveMutation.mutate({ id: v.id, version: v.version })
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            qualityApproveMutation.mutate({ id: v.id, version: v.version });
+                          }}
                           disabled={qualityApproveMutation.isPending}
                         >
                           {t('validation.actions.qualityApprove')}
+                        </Button>
+                      )}
+                      {v.status === 'rejected' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            reviseMutation.mutate({ id: v.id, version: v.version });
+                          }}
+                          disabled={reviseMutation.isPending}
+                        >
+                          {t('validation.actions.revise')}
                         </Button>
                       )}
                     </div>
@@ -510,21 +537,11 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                 {/* 수행자 */}
                 <div className="space-y-2">
                   <Label>{t('validation.form.performedByLabel')}</Label>
-                  <Select
-                    value={createForm.performedBy}
-                    onValueChange={(v) => setCreateForm({ ...createForm, performedBy: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('validation.form.performedByPlaceholder')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(usersData ?? []).map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <UserCombobox
+                    value={createForm.performedBy || undefined}
+                    onChange={(id) => setCreateForm({ ...createForm, performedBy: id ?? '' })}
+                    placeholder={t('validation.form.performedByPlaceholder')}
+                  />
                 </div>
 
                 {/* 획득 기능 */}

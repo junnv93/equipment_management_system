@@ -144,7 +144,7 @@ export class SoftwareValidationsController {
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareValidation> {
     const approverId = extractUserId(req);
-    return this.validationsService.approve(uuid, dto.version, approverId, dto.comment);
+    return this.validationsService.approve(uuid, dto.version, approverId);
   }
 
   @Patch(':uuid/quality-approve')
@@ -161,7 +161,7 @@ export class SoftwareValidationsController {
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareValidation> {
     const approverId = extractUserId(req);
-    return this.validationsService.qualityApprove(uuid, dto.version, approverId, dto.comment);
+    return this.validationsService.qualityApprove(uuid, dto.version, approverId);
   }
 
   @Patch(':uuid/reject')
@@ -179,5 +179,20 @@ export class SoftwareValidationsController {
   ): Promise<SoftwareValidation> {
     const rejectedBy = extractUserId(req);
     return this.validationsService.reject(uuid, dto.version, rejectedBy, dto.rejectionReason);
+  }
+
+  @Patch(':uuid/revise')
+  @RequirePermissions(Permission.CREATE_SOFTWARE_VALIDATION)
+  @AuditLog({
+    action: 'update',
+    entityType: 'software_validation',
+    entityIdPath: 'params.uuid',
+  })
+  @UsePipes(SubmitValidationPipe)
+  async revise(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: SubmitValidationInput
+  ): Promise<SoftwareValidation> {
+    return this.validationsService.revise(uuid, dto.version);
   }
 }
