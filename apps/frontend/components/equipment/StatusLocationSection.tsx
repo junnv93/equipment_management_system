@@ -24,8 +24,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FormValues } from './BasicInfoSection';
-import { apiClient } from '@/lib/api/api-client';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import usersApi from '@/lib/api/users-api';
 import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
@@ -87,20 +86,12 @@ export function StatusLocationSection({
       site: currentSite,
       teams: currentTeamId ? String(currentTeamId) : undefined,
     }),
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      params.append('roles', 'technical_manager');
-      params.append('site', currentSite!);
-      if (currentTeamId) {
-        params.append('teams', String(currentTeamId));
-      }
-
-      const response = await apiClient.get(`${API_ENDPOINTS.USERS.LIST}?${params.toString()}`);
-      type UserResponse = { data?: { items?: TechnicalManager[] }; items?: TechnicalManager[] };
-      const responseData = response as UserResponse;
-      const userData = responseData.data?.items || responseData.items || [];
-      return Array.isArray(userData) ? userData : [];
-    },
+    queryFn: () =>
+      usersApi.listForSelect<TechnicalManager>({
+        roles: 'technical_manager',
+        site: currentSite!,
+        ...(currentTeamId ? { teams: String(currentTeamId) } : {}),
+      }),
     enabled: !!currentSite,
     ...QUERY_CONFIG.USERS,
   });
@@ -321,25 +312,6 @@ export function StatusLocationSection({
                 <FormControl>
                   <Input
                     placeholder={t('form.statusLocation.contactPlaceholder')}
-                    {...field}
-                    value={field.value || ''}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* S/W 버전 */}
-          <FormField
-            control={control}
-            name="softwareVersion"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('form.statusLocation.swVersionLabel')}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={t('form.statusLocation.swVersionPlaceholder')}
                     {...field}
                     value={field.value || ''}
                   />

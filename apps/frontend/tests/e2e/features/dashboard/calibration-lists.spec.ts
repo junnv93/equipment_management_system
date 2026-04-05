@@ -43,10 +43,9 @@ test.describe('Calibration Lists', () => {
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
 
-    // 3. Locate the upcoming calibration list in Overview tab
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
+    // 3. Locate the upcoming calibration list
+    const overviewPanel = siteAdminPage.locator('main');
     await expect(overviewPanel).toBeVisible();
-    console.log('✓ Overview tab panel is visible');
 
     // Verify card header shows '교정 예정 장비' with count badge
     const cardHeader = overviewPanel.getByRole('heading', { name: '교정 예정 장비' });
@@ -104,14 +103,8 @@ test.describe('Calibration Lists', () => {
     // 2. Navigate to dashboard
     await siteAdminPage.goto('/');
 
-    // 3. Click on '교정' tab
-    const calibrationTab = siteAdminPage.getByRole('tab', { name: '교정' });
-    await calibrationTab.click();
-    await expect(calibrationTab).toHaveAttribute('aria-selected', 'true');
-    console.log('✓ Clicked on "교정" tab');
-
-    // 4. Locate the overdue calibration list
-    const calibrationPanel = siteAdminPage.getByRole('tabpanel');
+    // 3. Locate the overdue calibration list
+    const calibrationPanel = siteAdminPage.locator('main');
     await expect(calibrationPanel).toBeVisible();
 
     // Verify card header shows '교정 지연 장비' with count badge
@@ -184,7 +177,7 @@ test.describe('Calibration Lists', () => {
     await siteAdminPage.goto('/');
 
     // 3. Examine calibration list items with various D-day values
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
+    const overviewPanel = siteAdminPage.locator('main');
 
     // Find all calibration items with D-day badges
     const calibrationItems = overviewPanel.locator('[role="listitem"], li, article').filter({
@@ -252,12 +245,8 @@ test.describe('Calibration Lists', () => {
       console.log('⚠ No calibration items with D-day badges found for color verification');
     }
 
-    // Also check the Calibration tab for overdue items
-    const calibrationTab = siteAdminPage.getByRole('tab', { name: '교정' });
-    await calibrationTab.click();
-    console.log('\n✓ Switched to "교정" tab to verify overdue item colors');
-
-    const calibrationPanel = siteAdminPage.getByRole('tabpanel');
+    // Also check for overdue items in the main view
+    const calibrationPanel = siteAdminPage.locator('main');
     const overdueItems = calibrationPanel.locator('[role="listitem"], li, article').filter({
       has: calibrationPanel.locator('text=/초과|D\\+\\d+/'),
     });
@@ -284,7 +273,7 @@ test.describe('Calibration Lists', () => {
     await siteAdminPage.goto('/');
 
     // 3. Click on '모든 예정 교정 보기' button
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
+    const overviewPanel = siteAdminPage.locator('main');
 
     // The View All button is a <Button> component with onClick handler, not a link
     const button = overviewPanel.getByRole('button', { name: /모든 예정 교정 보기/ });
@@ -344,7 +333,7 @@ test.describe('Calibration Lists', () => {
     await siteAdminPage.goto('/');
 
     // 3. Click on action button (arrow icon) for a calibration item
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
+    const overviewPanel = siteAdminPage.locator('main');
 
     // Find calibration items
     const calibrationItems = overviewPanel.locator('[role="listitem"], li, article').filter({

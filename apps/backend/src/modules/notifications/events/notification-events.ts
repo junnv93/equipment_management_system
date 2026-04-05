@@ -57,9 +57,11 @@ export const NOTIFICATION_EVENTS = {
   IMPORT_APPROVED: 'equipmentImport.approved',
   IMPORT_REJECTED: 'equipmentImport.rejected',
 
-  // ─── 소프트웨어 (Software) ───
-  SOFTWARE_APPROVED: 'software.approved',
-  SOFTWARE_REJECTED: 'software.rejected',
+  // ─── 소프트웨어 유효성 확인 (Software Validation) ───
+  SOFTWARE_VALIDATION_SUBMITTED: 'softwareValidation.submitted',
+  SOFTWARE_VALIDATION_APPROVED: 'softwareValidation.approved',
+  SOFTWARE_VALIDATION_REJECTED: 'softwareValidation.rejected',
+  SOFTWARE_VALIDATION_QUALITY_APPROVED: 'softwareValidation.qualityApproved',
 
   // ─── 중간점검 (Intermediate Check) ───
   INTERMEDIATE_CHECK_COMPLETED: 'intermediateCheck.completed',
@@ -207,10 +209,11 @@ export interface CalibrationPlanNotificationEvent extends BaseNotificationEvent 
   reason?: string;
 }
 
-/** 소프트웨어 관련 이벤트 페이로드 */
-export interface SoftwareNotificationEvent extends BaseNotificationEvent {
-  softwareHistoryId: string;
-  equipmentId: string;
+/** 소프트웨어 유효성 확인 관련 이벤트 페이로드 */
+export interface SoftwareValidationNotificationEvent extends BaseNotificationEvent {
+  validationId: string;
+  testSoftwareId: string;
+  softwareName: string;
   reason?: string;
 }
 
@@ -237,6 +240,6 @@ export type NotificationEventPayload =
   | DisposalNotificationEvent
   | ImportNotificationEvent
   | EquipmentRequestNotificationEvent
-  | SoftwareNotificationEvent
+  | SoftwareValidationNotificationEvent
   | CalibrationFactorNotificationEvent
   | SystemNotificationEvent;

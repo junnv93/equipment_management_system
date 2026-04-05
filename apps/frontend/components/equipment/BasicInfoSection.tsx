@@ -124,7 +124,6 @@ export interface FormValues {
   managementSerialNumberStr?: string; // 일련번호 (4자리 문자열)
   supplier?: string;
   contactInfo?: string;
-  softwareVersion?: string;
   firmwareVersion?: string;
   manualLocation?: string;
   accessories?: string;

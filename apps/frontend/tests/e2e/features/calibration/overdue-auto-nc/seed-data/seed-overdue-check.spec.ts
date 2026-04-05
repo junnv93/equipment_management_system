@@ -34,7 +34,7 @@ test.describe('Group 1: Manual Overdue Check Trigger - Seed Setup', () => {
 
       const data = await response.json();
       expect(data).toHaveProperty('access_token');
-      expect(data.user.role).toBe(role);
+      expect(data.user.roles).toContain(role);
       console.log(`✅ Test login successful for role: ${role}`);
     }
   });

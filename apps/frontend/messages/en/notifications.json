@@ -135,6 +135,8 @@
     "viewDetail": "View Detail",
     "markRead": "Mark as Read",
     "delete": "Delete",
+    "moreActions": "More actions",
+    "filterNotifications": "Filter notifications",
     "priorityLabels": {
       "high": "High",
       "medium": "Medium",

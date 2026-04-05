@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Edit, Trash2, FileOutput } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, FileOutput, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -220,6 +220,19 @@ export function EquipmentStickyHeader({
 
         {/* 오른쪽: 액션 버튼 */}
         <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.actions}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              import('@/lib/api/self-inspection-api').then(({ downloadHistoryCard }) =>
+                downloadHistoryCard(equipmentId)
+              );
+            }}
+            aria-label={t('header.historyCardExportAriaLabel')}
+          >
+            <Download className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            {t('header.exportHistoryCard')}
+          </Button>
           {canCheckout && (
             <Link href={`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?equipmentId=${equipmentId}`}>
               <Button size="sm" aria-label={t('header.checkoutAriaLabel')}>

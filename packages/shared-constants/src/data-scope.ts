@@ -132,10 +132,10 @@ export const CALIBRATION_PLAN_DATA_SCOPE: FeatureScopePolicy = {
   system_admin: { type: 'all', label: '전체 교정계획서' },
 };
 
-/** 소프트웨어: 팀 장비에 종속된 소프트웨어 유효성 확인 */
-export const SOFTWARE_DATA_SCOPE: FeatureScopePolicy = {
-  test_engineer: { type: 'team', label: '소속 팀 소프트웨어' },
-  technical_manager: { type: 'team', label: '소속 팀 소프트웨어' },
+/** 시험용 소프트웨어: 사이트 기반 스코프 */
+export const TEST_SOFTWARE_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 소프트웨어' },
+  technical_manager: { type: 'site', label: '소속 사이트 소프트웨어' },
   quality_manager: { type: 'all', label: '전체 소프트웨어' },
   lab_manager: { type: 'site', label: '소속 사이트 소프트웨어' },
   system_admin: { type: 'all', label: '전체 소프트웨어' },

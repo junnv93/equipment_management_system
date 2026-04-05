@@ -73,6 +73,27 @@ export const FRONTEND_ROUTES = {
   },
 
   // ============================================================================
+  // 시험용 소프트웨어 관리 (UL-QP-18-07)
+  // ============================================================================
+  SOFTWARE: {
+    LIST: '/software',
+    CREATE: '/software/create',
+    DETAIL: (id: string) => `/software/${id}`,
+    VALIDATION: (id: string) => `/software/${id}/validation`,
+    VALIDATION_DETAIL: (softwareId: string, validationId: string) =>
+      `/software/${softwareId}/validation/${validationId}`,
+  },
+
+  // ============================================================================
+  // 케이블/경로손실 관리 (UL-QP-18-08)
+  // ============================================================================
+  CABLES: {
+    LIST: '/cables',
+    CREATE: '/cables/create',
+    DETAIL: (id: string) => `/cables/${id}`,
+  },
+
+  // ============================================================================
   // 팀 관리
   // ============================================================================
   TEAMS: {

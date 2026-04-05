@@ -48,6 +48,8 @@ export const AUDIT_ACTION_VALUES = [
   'upload', // 파일 업로드
   'download', // 파일 다운로드
   'revision', // 문서 개정
+  'link', // M:N 연결
+  'unlink', // M:N 연결 해제
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES);
@@ -92,6 +94,12 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'notification', // 알림
   'report', // 보고서
   'document', // 문서
+  'software_validation', // 소프트웨어 유효성 확인
+  'software_equipment_link', // 장비↔소프트웨어 연결
+  'intermediate_inspection', // 중간점검
+  'cable', // 케이블
+  'cable_loss_measurement', // 케이블 손실 측정
+  'self_inspection', // 자체점검
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);

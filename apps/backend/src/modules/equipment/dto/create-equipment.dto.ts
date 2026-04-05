@@ -151,9 +151,6 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
   @ApiPropertyOptional({ description: '연락처' })
   contactInfo?: string;
 
-  @ApiPropertyOptional({ description: '소프트웨어 버전' })
-  softwareVersion?: string;
-
   @ApiPropertyOptional({ description: '펌웨어 버전' })
   firmwareVersion?: string;
 

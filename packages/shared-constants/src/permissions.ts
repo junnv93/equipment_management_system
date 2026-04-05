@@ -74,12 +74,19 @@ export enum Permission {
   CLOSE_NON_CONFORMANCE = 'close:non-conformance',
 
   // ============================================================================
-  // 소프트웨어 관련 권한
+  // 시험용 소프트웨어 관련 권한
   // ============================================================================
-  VIEW_SOFTWARE = 'view:software',
-  CREATE_SOFTWARE_CHANGE = 'create:software-change',
-  APPROVE_SOFTWARE_CHANGE = 'approve:software-change',
-  VIEW_SOFTWARE_REQUESTS = 'view:software:requests',
+  VIEW_TEST_SOFTWARE = 'view:test-software',
+  CREATE_TEST_SOFTWARE = 'create:test-software',
+  UPDATE_TEST_SOFTWARE = 'update:test-software',
+
+  // ============================================================================
+  // 소프트웨어 유효성 확인 관련 권한
+  // ============================================================================
+  VIEW_SOFTWARE_VALIDATIONS = 'view:software-validations',
+  CREATE_SOFTWARE_VALIDATION = 'create:software-validation',
+  SUBMIT_SOFTWARE_VALIDATION = 'submit:software-validation',
+  APPROVE_SOFTWARE_VALIDATION = 'approve:software-validation',
 
   // ============================================================================
   // 팀 관련 권한
@@ -143,6 +150,13 @@ export enum Permission {
   APPROVE_EQUIPMENT_IMPORT = 'approve:equipment-import',
   COMPLETE_EQUIPMENT_IMPORT = 'complete:equipment-import',
   CANCEL_EQUIPMENT_IMPORT = 'cancel:equipment-import',
+
+  // ============================================================================
+  // 자체점검 관련 권한 (UL-QP-18-05)
+  // ============================================================================
+  VIEW_SELF_INSPECTIONS = 'view:self-inspections',
+  CREATE_SELF_INSPECTION = 'create:self-inspection',
+  CONFIRM_SELF_INSPECTION = 'confirm:self-inspection',
 
   // ============================================================================
   // 시스템 설정 관련 권한
@@ -216,10 +230,13 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.UPDATE_NON_CONFORMANCE]: '부적합 수정',
   [Permission.CLOSE_NON_CONFORMANCE]: '부적합 종료',
 
-  [Permission.VIEW_SOFTWARE]: '소프트웨어 조회',
-  [Permission.CREATE_SOFTWARE_CHANGE]: '소프트웨어 변경 요청',
-  [Permission.APPROVE_SOFTWARE_CHANGE]: '소프트웨어 변경 승인',
-  [Permission.VIEW_SOFTWARE_REQUESTS]: '소프트웨어 요청 조회',
+  [Permission.VIEW_TEST_SOFTWARE]: '시험용 소프트웨어 조회',
+  [Permission.CREATE_TEST_SOFTWARE]: '시험용 소프트웨어 등록',
+  [Permission.UPDATE_TEST_SOFTWARE]: '시험용 소프트웨어 수정',
+  [Permission.VIEW_SOFTWARE_VALIDATIONS]: '소프트웨어 유효성 확인 조회',
+  [Permission.CREATE_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 생성',
+  [Permission.SUBMIT_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 제출',
+  [Permission.APPROVE_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 승인',
 
   [Permission.VIEW_TEAMS]: '팀 조회',
   [Permission.CREATE_TEAMS]: '팀 생성',
@@ -259,6 +276,10 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.APPROVE_EQUIPMENT_IMPORT]: '장비 반입 승인',
   [Permission.COMPLETE_EQUIPMENT_IMPORT]: '장비 반입 완료',
   [Permission.CANCEL_EQUIPMENT_IMPORT]: '장비 반입 취소',
+
+  [Permission.VIEW_SELF_INSPECTIONS]: '자체점검 조회',
+  [Permission.CREATE_SELF_INSPECTION]: '자체점검 등록',
+  [Permission.CONFIRM_SELF_INSPECTION]: '자체점검 확인',
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',

@@ -32,6 +32,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 교정 관리
     Permission.VIEW_CALIBRATIONS,
     Permission.CREATE_CALIBRATION, // 교정 등록 (승인 대기 상태로 등록)
+    Permission.UPDATE_CALIBRATION, // 교정 수정 + 중간점검 작성 (UL-QP-18-03 점검자=TE)
     // 팀 조회
     Permission.VIEW_TEAMS, // 팀 목록 조회 (장비 필터에 필요)
     // 알림 기본 권한
@@ -44,9 +45,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 보정계수
     Permission.VIEW_CALIBRATION_FACTORS,
     Permission.CREATE_CALIBRATION_FACTOR,
-    // 소프트웨어
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
+    // 시험용 소프트웨어
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    // 소프트웨어 유효성 확인
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
     // 폐기
     Permission.REQUEST_DISPOSAL,
     // 사용자 조회 (장비 담당자 선택 드롭다운, 팀 목록 등에 필요)
@@ -54,6 +59,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 장비 반입 (렌탈 + 내부 공용)
     Permission.VIEW_EQUIPMENT_IMPORTS,
     Permission.CREATE_EQUIPMENT_IMPORT,
+    // 자체점검 (UL-QP-18-05)
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
   ],
 
   // 기술책임자: 장비 관리 및 승인 권한, 교정계획서 작성/검토요청
@@ -100,11 +108,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_CALIBRATION_FACTOR,
     Permission.APPROVE_CALIBRATION_FACTOR,
     Permission.VIEW_CALIBRATION_FACTOR_REQUESTS,
-    // 소프트웨어
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
-    Permission.APPROVE_SOFTWARE_CHANGE,
-    Permission.VIEW_SOFTWARE_REQUESTS,
+    // 시험용 소프트웨어
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    Permission.UPDATE_TEST_SOFTWARE,
+    // 소프트웨어 유효성 확인
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
     // 교정계획서 (작성, 검토요청)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.CREATE_CALIBRATION_PLAN,
@@ -128,6 +140,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_AUDIT_LOGS,
     // 시스템 설정 (조회만)
     Permission.VIEW_SYSTEM_SETTINGS,
+    // 자체점검 (UL-QP-18-05)
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
+    Permission.CONFIRM_SELF_INSPECTION,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)
@@ -147,10 +163,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 반출입 기록 검토 (UL-QP-18 §4.3 기록 양식 검토 역할)
     Permission.VIEW_CHECKOUTS,
     Permission.VIEW_EQUIPMENT_IMPORTS,
+    // 자체점검 조회
+    Permission.VIEW_SELF_INSPECTIONS,
     // 보정계수 조회
     Permission.VIEW_CALIBRATION_FACTORS,
-    // 소프트웨어 조회
-    Permission.VIEW_SOFTWARE,
+    // 시험용 소프트웨어 조회 + 유효성 확인 승인 (UL-QP-18-09 품질책임자 등록)
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
     // 교정계획서 (검토 권한)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.REVIEW_CALIBRATION_PLAN, // 검토 완료
@@ -201,11 +221,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_NON_CONFORMANCE,
     Permission.UPDATE_NON_CONFORMANCE,
     Permission.CLOSE_NON_CONFORMANCE,
-    // 소프트웨어
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
-    Permission.APPROVE_SOFTWARE_CHANGE,
-    Permission.VIEW_SOFTWARE_REQUESTS,
+    // 시험용 소프트웨어
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    Permission.UPDATE_TEST_SOFTWARE,
+    // 소프트웨어 유효성 확인
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
     // 팀 관리
     Permission.VIEW_TEAMS,
     Permission.CREATE_TEAMS,
@@ -245,6 +269,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 시스템 설정
     Permission.VIEW_SYSTEM_SETTINGS,
     Permission.MANAGE_SYSTEM_SETTINGS,
+    // 자체점검
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
+    Permission.CONFIRM_SELF_INSPECTION,
   ],
 
   // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION(시험실무자/기술책임자만) - deprecated

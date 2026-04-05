@@ -62,6 +62,7 @@ const CATEGORY_STYLE_MAP: Record<NotificationCategory, CategoryStyle> = {
   },
   equipment_import: { icon: ArrowLeft, semanticColor: 'purple' },
   equipment: { icon: Settings, semanticColor: 'ok' },
+  software: { icon: Settings, semanticColor: 'info' },
   system: { icon: AlertCircle, semanticColor: 'critical' },
 };
 

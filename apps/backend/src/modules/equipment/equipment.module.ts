@@ -8,6 +8,7 @@ import { EquipmentApprovalService } from './services/equipment-approval.service'
 import { EquipmentAttachmentService } from './services/equipment-attachment.service';
 // FileUploadService는 FileUploadModule(@Global)에서 전역 제공
 import { RepairHistoryService } from './services/repair-history.service';
+import { HistoryCardService } from './services/history-card.service';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import { DisposalService } from './services/disposal.service';
 import { RepairHistoryController } from './repair-history.controller';
@@ -35,6 +36,7 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     RepairHistoryService,
     EquipmentHistoryService,
     DisposalService,
+    HistoryCardService,
     InternalApiKeyGuard,
   ],
   exports: [

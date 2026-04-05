@@ -12,7 +12,8 @@ import { disposalRequests } from './disposal-requests';
 import { equipmentImports } from './equipment-imports';
 import { equipmentRequests } from './equipment-requests';
 import { nonConformances } from './non-conformances';
-import { softwareHistory } from './software-history';
+import { testSoftware } from './test-software';
+import { softwareValidations } from './software-validations';
 
 /** @see packages/schemas/src/enums.ts - UserRoleEnum (SSOT) */
 export const userRoles = USER_ROLE_VALUES;
@@ -126,7 +127,11 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   closedNonConformances: many(nonConformances, { relationName: 'nonConformanceCloser' }),
   rejectedNonConformances: many(nonConformances, { relationName: 'nonConformanceRejector' }),
 
-  // software-history (2 FK → users)
-  changedSoftwareHistories: many(softwareHistory, { relationName: 'softwareHistoryChanger' }),
-  approvedSoftwareHistories: many(softwareHistory, { relationName: 'softwareHistoryApprover' }),
+  // test-software (2 FK → users)
+  managedTestSoftware: many(testSoftware, { relationName: 'testSoftwarePrimaryManager' }),
+  secondaryManagedTestSoftware: many(testSoftware, {
+    relationName: 'testSoftwareSecondaryManager',
+  }),
+  // software-validations (multiple FK → users)
+  submittedValidations: many(softwareValidations, { relationName: 'softwareValidationSubmitter' }),
 }));

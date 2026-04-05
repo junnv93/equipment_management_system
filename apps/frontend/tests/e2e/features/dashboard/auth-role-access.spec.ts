@@ -65,30 +65,9 @@ test.describe('Authentication and Role-based Access', () => {
       const roleBadge = page.locator('[aria-label*="현재 역할"]', { hasText: '시험실무자' });
       await expect(roleBadge).toBeVisible();
 
-      // Expected: Tabs show: 개요, 내 장비, 교정 (3 tabs only)
-      const tabsList = page.getByRole('tablist');
-      await expect(tabsList).toBeVisible();
-
-      const tab1 = page.getByRole('tab', { name: '개요' });
-      const tab2 = page.getByRole('tab', { name: '내 장비' });
-      const tab3 = page.getByRole('tab', { name: '교정' });
-
-      await expect(tab1).toBeVisible();
-      await expect(tab2).toBeVisible();
-      await expect(tab3).toBeVisible();
-
-      // Verify only 3 tabs exist
-      const allTabs = page.getByRole('tab');
-      await expect(allTabs).toHaveCount(3);
-
-      // Verify tabs that should NOT be visible
-      const approvalTab = page.getByRole('tab', { name: '승인 관리' });
-      const equipmentStatusTab = page.getByRole('tab', { name: '장비 현황' });
-      const rentalTab = page.getByRole('tab', { name: '대여/반출' });
-
-      await expect(approvalTab).not.toBeVisible();
-      await expect(equipmentStatusTab).not.toBeVisible();
-      await expect(rentalTab).not.toBeVisible();
+      // 대시보드 콘텐츠가 로드되었는지 확인
+      const approvalCard = page.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
     });
   });
 
@@ -122,20 +101,9 @@ test.describe('Authentication and Role-based Access', () => {
       const roleBadge = page.locator('[aria-label*="현재 역할"]', { hasText: '기술책임자' });
       await expect(roleBadge).toBeVisible({ timeout: 10000 });
 
-      // Expected: Tabs show: 개요, 팀 장비, 교정, 승인 관리 (4 tabs)
-      const tab1 = page.getByRole('tab', { name: '개요' });
-      const tab2 = page.getByRole('tab', { name: '팀 장비' });
-      const tab3 = page.getByRole('tab', { name: '교정' });
-      const tab4 = page.getByRole('tab', { name: '승인 관리' });
-
-      await expect(tab1).toBeVisible();
-      await expect(tab2).toBeVisible();
-      await expect(tab3).toBeVisible();
-      await expect(tab4).toBeVisible();
-
-      // Verify exactly 4 tabs exist
-      const allTabs = page.getByRole('tab');
-      await expect(allTabs).toHaveCount(4);
+      // 대시보드 콘텐츠 확인
+      const approvalCard = page.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
 
       // Expected: Quick actions include: 승인 관리, 교정 등록, 장비 등록
       // Quick actions are in a nav element with aria-label="빠른 액션"
@@ -183,20 +151,9 @@ test.describe('Authentication and Role-based Access', () => {
       const roleBadge = page.locator('[aria-label*="현재 역할"]', { hasText: '시험소 관리자' });
       await expect(roleBadge).toBeVisible({ timeout: 10000 });
 
-      // Expected: Tabs show: 개요, 장비 현황, 교정, 대여/반출 (4 tabs)
-      const tab1 = page.getByRole('tab', { name: '개요' });
-      const tab2 = page.getByRole('tab', { name: '장비 현황' });
-      const tab3 = page.getByRole('tab', { name: '교정' });
-      const tab4 = page.getByRole('tab', { name: '대여/반출' });
-
-      await expect(tab1).toBeVisible();
-      await expect(tab2).toBeVisible();
-      await expect(tab3).toBeVisible();
-      await expect(tab4).toBeVisible();
-
-      // Verify exactly 4 tabs exist
-      const allTabs = page.getByRole('tab');
-      await expect(allTabs).toHaveCount(4);
+      // 대시보드 콘텐츠 확인
+      const approvalCard = page.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
 
       // Expected: Quick actions include: 승인 관리, 사용자 관리, 시스템 설정
       // Quick actions are in a nav element with aria-label="빠른 액션"
@@ -275,9 +232,9 @@ test.describe('Authentication and Role-based Access', () => {
       });
       await expect(roleBadgeAfter).toBeVisible({ timeout: 10000 });
 
-      // Verify tabs are still visible
-      const tabsList = siteAdminPage.getByRole('tablist');
-      await expect(tabsList).toBeVisible();
+      // Verify dashboard content is visible (승인 대기 카드)
+      const approvalCard = siteAdminPage.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
 
       // Expected: Session cookie is maintained
       const cookiesAfter = await siteAdminPage.context().cookies();
@@ -287,69 +244,74 @@ test.describe('Authentication and Role-based Access', () => {
     });
   });
 
-  test.describe('Group 2: Role-based Tab Visibility (using fixtures)', () => {
-    test('Test engineer sees only 3 tabs', async ({ testOperatorPage }) => {
+  test.describe('Group 2: Role-based Widget Visibility (using fixtures)', () => {
+    test('Test engineer sees KPI, quick actions, approval card', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/');
       await testOperatorPage.waitForLoadState('load');
 
-      // Verify role badge - use more specific selector to avoid strict mode violation
+      // 역할 배지 확인
       const roleBadge = testOperatorPage.locator('[aria-label*="현재 역할"]', {
         hasText: '시험실무자',
       });
       await expect(roleBadge).toBeVisible({ timeout: 10000 });
 
-      // Verify tab count
-      const allTabs = testOperatorPage.getByRole('tab');
-      await expect(allTabs).toHaveCount(3);
+      // KPI 카드 표시
+      await expect(testOperatorPage.locator('text=사용 가능').first()).toBeVisible();
 
-      // Verify specific tabs
-      await expect(testOperatorPage.getByRole('tab', { name: '개요' })).toBeVisible();
-      await expect(testOperatorPage.getByRole('tab', { name: '내 장비' })).toBeVisible();
-      await expect(testOperatorPage.getByRole('tab', { name: '교정' })).toBeVisible();
+      // 빠른 액션 표시
+      await expect(testOperatorPage.locator('nav[aria-label="빠른 액션"]')).toBeVisible();
+
+      // 승인 대기 카드 표시 (내 요청 현황)
+      const approvalCard = testOperatorPage.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
     });
 
-    test('Technical manager sees 4 tabs including approval management', async ({
+    test('Technical manager sees approval card and team distribution', async ({
       techManagerPage,
     }) => {
       await techManagerPage.goto('/');
       await techManagerPage.waitForLoadState('load');
 
-      // Verify role badge - use more specific selector to avoid strict mode violation
+      // 역할 배지 확인
       const roleBadge = techManagerPage.locator('[aria-label*="현재 역할"]', {
         hasText: '기술책임자',
       });
       await expect(roleBadge).toBeVisible({ timeout: 10000 });
 
-      // Verify tab count
-      const allTabs = techManagerPage.getByRole('tab');
-      await expect(allTabs).toHaveCount(4);
+      // 승인 대기 카드 (팀 승인 대기)
+      const approvalCard = techManagerPage.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
+      await expect(approvalCard.locator('#pending-approval-title')).toContainText('팀 승인 대기');
 
-      // Verify specific tabs
-      await expect(techManagerPage.getByRole('tab', { name: '개요' })).toBeVisible();
-      await expect(techManagerPage.getByRole('tab', { name: '팀 장비' })).toBeVisible();
-      await expect(techManagerPage.getByRole('tab', { name: '교정' })).toBeVisible();
-      await expect(techManagerPage.getByRole('tab', { name: '승인 관리' })).toBeVisible();
+      // 팀 장비 분포 표시
+      const teamDistribution = techManagerPage.locator('[role="region"][aria-label*="팀"]');
+      await expect(teamDistribution.first()).toBeVisible();
     });
 
-    test('Lab manager sees 4 tabs with equipment status and rental', async ({ siteAdminPage }) => {
+    test('Lab manager sees all widgets with full access', async ({ siteAdminPage }) => {
       await siteAdminPage.goto('/');
       await siteAdminPage.waitForLoadState('load');
 
-      // Verify role badge - use more specific selector to avoid strict mode violation
+      // 역할 배지 확인
       const roleBadge = siteAdminPage.locator('[aria-label*="현재 역할"]', {
         hasText: '시험소 관리자',
       });
       await expect(roleBadge).toBeVisible({ timeout: 10000 });
 
-      // Verify tab count
-      const allTabs = siteAdminPage.getByRole('tab');
-      await expect(allTabs).toHaveCount(4);
+      // 승인 대기 카드 (시험소 승인 대기)
+      const approvalCard = siteAdminPage.getByTestId('pending-approval-card');
+      await expect(approvalCard).toBeVisible();
+      await expect(approvalCard.locator('#pending-approval-title')).toContainText(
+        '시험소 승인 대기'
+      );
 
-      // Verify specific tabs
-      await expect(siteAdminPage.getByRole('tab', { name: '개요' })).toBeVisible();
-      await expect(siteAdminPage.getByRole('tab', { name: '장비 현황' })).toBeVisible();
-      await expect(siteAdminPage.getByRole('tab', { name: '교정' })).toBeVisible();
-      await expect(siteAdminPage.getByRole('tab', { name: '대여/반출' })).toBeVisible();
+      // 팀 장비 분포 표시
+      const teamDistribution = siteAdminPage.locator('[role="region"][aria-label*="팀"]');
+      await expect(teamDistribution.first()).toBeVisible();
+
+      // 최근 활동 표시
+      const recentActivities = siteAdminPage.locator('[aria-labelledby="recent-activities-title"]');
+      await expect(recentActivities).toBeVisible();
     });
   });
 

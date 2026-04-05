@@ -30,7 +30,9 @@ export * from './equipment-attachments';
 export * from './documents';
 export * from './calibration-factors';
 export * from './non-conformances';
-export * from './software-history';
+export * from './test-software';
+export * from './software-validations';
+export * from './equipment-test-software';
 export * from './calibration-plans';
 export * from './repair-history';
 export * from './audit-logs';
@@ -50,3 +52,12 @@ export * from './system-settings';
 export * from './equipment-location-history';
 export * from './equipment-maintenance-history';
 export * from './equipment-incident-history';
+
+// 중간점검 스키마 (UL-QP-18-03)
+export * from './intermediate-inspections';
+
+// 케이블/패스로스 스키마 (UL-QP-18-08)
+export * from './cables';
+
+// 자체점검 스키마 (UL-QP-18-05)
+export * from './equipment-self-inspections';

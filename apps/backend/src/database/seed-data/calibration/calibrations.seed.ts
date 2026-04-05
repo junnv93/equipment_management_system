@@ -24,6 +24,10 @@ import {
   // User IDs
   USER_TEST_ENGINEER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
+  // Calibration IDs (고정 UUID — E2E 테스트 참조)
+  CALIB_001_ID,
+  CALIB_002_ID,
+  CALIB_003_ID,
 } from '../../utils/uuid-constants';
 
 const now = new Date();
@@ -85,6 +89,7 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
     monthsAgo(12),
     monthsAgo(12),
     {
+      id: CALIB_001_ID,
       intermediateCheckDate: toDateString(daysAgo(5)),
     }
   ),
@@ -98,6 +103,7 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
     monthsAgo(11),
     monthsAgo(11),
     {
+      id: CALIB_002_ID,
       registrarComment: '기술책임자가 직접 등록하였습니다.',
       approverComment: '자가 승인',
       intermediateCheckDate: toDateString(daysLater(3)),
@@ -113,6 +119,7 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
     monthsAgo(11),
     monthsAgo(11),
     {
+      id: CALIB_003_ID,
       intermediateCheckDate: toDateString(daysLater(14)),
     }
   ),

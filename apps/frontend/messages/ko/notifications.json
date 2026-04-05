@@ -117,6 +117,8 @@
     "viewDetail": "상세 보기",
     "markRead": "읽음 표시",
     "delete": "삭제",
+    "moreActions": "추가 작업",
+    "filterNotifications": "알림 필터",
     "priorityLabels": {
       "high": "높음",
       "medium": "중간",

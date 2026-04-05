@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Code,
   Paperclip,
+  ClipboardCheck,
 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EQUIPMENT_TAB_UNDERLINE_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
@@ -81,6 +82,11 @@ const SoftwareTab = dynamic(
 
 const AttachmentsTab = dynamic(
   () => import('./AttachmentsTab').then((mod) => ({ default: mod.AttachmentsTab })),
+  { loading: () => <TabSkeleton />, ssr: false }
+);
+
+const SelfInspectionTab = dynamic(
+  () => import('./SelfInspectionTab').then((mod) => ({ default: mod.SelfInspectionTab })),
   { loading: () => <TabSkeleton />, ssr: false }
 );
 
@@ -158,6 +164,12 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
       label: t('tabs.software'),
       icon: Code,
       component: SoftwareTab,
+    },
+    {
+      value: 'self-inspection',
+      label: t('tabs.selfInspection'),
+      icon: ClipboardCheck,
+      component: SelfInspectionTab,
     },
     {
       value: 'attachments',

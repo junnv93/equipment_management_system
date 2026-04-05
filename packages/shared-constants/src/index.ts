@@ -200,7 +200,7 @@ export {
   INTERMEDIATE_CHECK_DATA_SCOPE,
   EQUIPMENT_IMPORT_DATA_SCOPE,
   CALIBRATION_PLAN_DATA_SCOPE,
-  SOFTWARE_DATA_SCOPE,
+  TEST_SOFTWARE_DATA_SCOPE,
   USER_DATA_SCOPE,
   NOTIFICATION_DATA_SCOPE,
   DISPOSAL_DATA_SCOPE,
@@ -220,3 +220,13 @@ export {
   type TestTeamEntry,
   type TestUserSemanticColor,
 } from './test-users';
+
+// UL-QP-18 양식 카탈로그 (SSOT)
+export {
+  FORM_CATALOG,
+  FORM_NUMBERS,
+  isFormImplemented,
+  isFormDedicatedEndpoint,
+  type FormCatalogEntry,
+  type FormNumber,
+} from './form-catalog';

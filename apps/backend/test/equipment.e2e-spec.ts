@@ -159,7 +159,6 @@ describe('EquipmentController (e2e)', () => {
         purchaseYear: 2023,
         supplier: 'Test Supplier',
         contactInfo: 'test@example.com',
-        softwareVersion: 'v1.0.0',
         firmwareVersion: 'v2.0.0',
         manualLocation: '/manuals/test.pdf',
         accessories: 'Test Accessories',

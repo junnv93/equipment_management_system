@@ -147,6 +147,7 @@ describe('DocumentsController', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
         'true'
       );
 
@@ -165,9 +166,9 @@ describe('DocumentsController', () => {
 
     it('유효하지 않은 documentType은 BadRequestException을 던진다', async () => {
       const eqId = 'eq-uuid-1111-1111-1111-111111111111';
-      await expect(controller.list(eqId, undefined, undefined, 'INVALID')).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        controller.list(eqId, undefined, undefined, undefined, 'INVALID')
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -1,8 +1,16 @@
-import { Injectable, Logger, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { eq, and, desc, sql, or, inArray, lt } from 'drizzle-orm';
 import { documents } from '@equipment-management/db/schema';
 import { calibrations } from '@equipment-management/db/schema';
+import { softwareValidations } from '@equipment-management/db/schema';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
@@ -14,6 +22,7 @@ export interface CreateDocumentOptions {
   equipmentId?: string;
   calibrationId?: string;
   requestId?: string;
+  softwareValidationId?: string;
   description?: string;
   uploadedBy?: string;
   subdirectory?: string;
@@ -41,11 +50,22 @@ export class DocumentService {
    */
   async createDocument(file: MulterFile, options: CreateDocumentOptions): Promise<DocumentRecord> {
     // 최소 1개 소유자 FK 필수 — 고아 문서 방지
-    if (!options.equipmentId && !options.calibrationId && !options.requestId) {
+    if (
+      !options.equipmentId &&
+      !options.calibrationId &&
+      !options.requestId &&
+      !options.softwareValidationId
+    ) {
       throw new BadRequestException({
         code: 'DOCUMENT_OWNER_REQUIRED',
-        message: 'At least one owner (equipmentId, calibrationId, or requestId) is required.',
+        message:
+          'At least one owner (equipmentId, calibrationId, requestId, or softwareValidationId) is required.',
       });
+    }
+
+    // 유효성확인 문서는 draft 상태에서만 업로드 가능
+    if (options.softwareValidationId) {
+      await this.ensureValidationIsDraft(options.softwareValidationId);
     }
 
     const subdirectory = options.subdirectory ?? this.resolveSubdirectory(options);
@@ -57,6 +77,7 @@ export class DocumentService {
         equipmentId: options.equipmentId,
         calibrationId: options.calibrationId,
         requestId: options.requestId,
+        softwareValidationId: options.softwareValidationId,
         documentType: options.documentType,
         status: 'active' as DocumentStatus,
         fileName: savedFile.fileName,
@@ -201,12 +222,39 @@ export class DocumentService {
   }
 
   /**
+   * 유효성확인별 문서 목록 (활성 문서만)
+   */
+  async findBySoftwareValidationId(
+    softwareValidationId: string,
+    type?: DocumentType
+  ): Promise<DocumentRecord[]> {
+    const conditions = [
+      eq(documents.softwareValidationId, softwareValidationId),
+      eq(documents.status, 'active' as DocumentStatus),
+    ];
+    if (type) {
+      conditions.push(eq(documents.documentType, type));
+    }
+
+    return this.db
+      .select()
+      .from(documents)
+      .where(and(...conditions))
+      .orderBy(desc(documents.uploadedAt));
+  }
+
+  /**
    * 문서 논리 삭제 (스토리지 파일은 보존 — 감사 추적 + 복구 가능)
    *
    * 물리 삭제는 별도 retention 스케줄러에서 처리합니다.
    */
   async deleteDocument(id: string): Promise<void> {
-    await this.findByIdAnyStatus(id);
+    const doc = await this.findByIdAnyStatus(id);
+
+    // 유효성확인 문서는 draft 상태에서만 삭제 가능
+    if (doc.softwareValidationId) {
+      await this.ensureValidationIsDraft(doc.softwareValidationId);
+    }
 
     await this.db
       .update(documents)
@@ -248,6 +296,7 @@ export class DocumentService {
           equipmentId: parentDoc.equipmentId,
           calibrationId: parentDoc.calibrationId,
           requestId: parentDoc.requestId,
+          softwareValidationId: parentDoc.softwareValidationId,
           documentType: parentDoc.documentType as DocumentType,
           status: 'active' as DocumentStatus,
           fileName: savedFile.fileName,
@@ -431,11 +480,38 @@ export class DocumentService {
   }
 
   /**
+   * 유효성확인이 draft 상태인지 검증 — draft가 아니면 문서 변경 차단
+   */
+  private async ensureValidationIsDraft(validationId: string): Promise<void> {
+    const validation = await this.db.query.softwareValidations.findFirst({
+      where: eq(softwareValidations.id, validationId),
+      columns: { id: true, status: true },
+    });
+
+    if (!validation) {
+      throw new NotFoundException({
+        code: 'VALIDATION_NOT_FOUND',
+        message: `Software validation ${validationId} not found.`,
+      });
+    }
+
+    if (validation.status !== 'draft') {
+      throw new ForbiddenException({
+        code: 'VALIDATION_NOT_DRAFT',
+        message: `Cannot modify documents for validation in '${validation.status}' status. Only 'draft' validations allow document changes.`,
+      });
+    }
+  }
+
+  /**
    * documentType + 소유자 정보로 subdirectory 결정
    */
   private resolveSubdirectory(options: CreateDocumentOptions): string {
     if (options.calibrationId) {
       return `calibration/${options.calibrationId}`;
+    }
+    if (options.softwareValidationId) {
+      return `validation/${options.softwareValidationId}`;
     }
     return 'equipment';
   }

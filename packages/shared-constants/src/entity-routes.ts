@@ -24,7 +24,8 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   user: (id) => `/admin/users/${id}`,
   team: (id) => `/admin/teams/${id}`,
   calibration_factor: (id) => `/equipment/${id}?tab=factors`, // 장비 상세의 보정계수 탭
-  software: (id) => `/equipment/${id}?tab=software`, // 장비 상세의 소프트웨어 탭
+  software: (id) => `/software/${id}`, // 시험용 소프트웨어 상세
+  software_validation: (id) => `/software/${id}?tab=validation`, // 유효성 확인
   repair_history: (id) => `/equipment/${id}?tab=maintenance`, // 장비 상세의 수리이력 탭
   equipment_import: (id) => `/equipment-imports/${id}`,
   location_history: (id) => `/equipment/${id}?tab=location`, // 장비 상세의 위치 이력 탭
@@ -34,6 +35,11 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   notification: (id) => `/notifications?selected=${id}`,
   report: () => `/reports`,
   document: (id) => `/documents/${id}`,
+  software_equipment_link: (id) => `/software/${id}`,
+  intermediate_inspection: (id) => `/calibration/intermediate-checks?selected=${id}`,
+  cable: (id) => `/cables/${id}`,
+  cable_loss_measurement: (id) => `/cables/${id}?tab=measurements`,
+  self_inspection: (id) => `/equipment/${id}?tab=self-inspection`,
 };
 
 /**

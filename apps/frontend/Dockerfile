@@ -4,7 +4,7 @@ WORKDIR /app
 # 공통 의존성 레이어
 FROM base AS deps
 RUN apk add --no-cache libc6-compat && \
-    npm install -g pnpm@10.7.0 next typescript rimraf
+    npm install -g pnpm@10.7.1 next typescript rimraf
 
 # 의존성 파일만 복사하여 레이어 캐싱 활용
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
@@ -20,7 +20,7 @@ WORKDIR /app
 
 # 필요한 개발 도구 설치
 RUN apk add --no-cache curl && \
-    npm install -g pnpm@10.7.0 next typescript rimraf
+    npm install -g pnpm@10.7.1 next typescript rimraf
 
 # deps 단계에서 설치한 의존성 복사
 COPY --from=deps /app/node_modules ./node_modules
@@ -63,34 +63,27 @@ RUN cd apps/frontend && npm run build
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# 프로덕션 환경
+# 프로덕션 환경 (standalone — node_modules 불필요)
 FROM base AS production
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV NEXT_TELEMETRY_DISABLED 1
-
-# 필요한 파일만 복사
-COPY --from=build /app/apps/frontend/public ./public
-COPY --from=build /app/apps/frontend/.next ./.next
-COPY --from=build /app/apps/frontend/next.config.js ./
-COPY --from=build /app/apps/frontend/package.json ./
-COPY --from=build /app/packages/schemas/dist ./packages/schemas/dist
-COPY --from=build /app/packages/schemas/package.json ./packages/schemas/package.json
-
-# 프로덕션 의존성만 설치
-COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
-RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
-RUN pnpm install --prod --frozen-lockfile
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # 보안을 위해 루트가 아닌 사용자로 전환
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-RUN chown -R nextjs:nodejs /app
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# standalone 서버 복사 (모노레포 구조 유지됨)
+COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
+# public + static 에셋은 server.js 기준 상대 경로에 배치
+COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/public ./apps/frontend/public
+COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
+
 USER nextjs
 
 EXPOSE 3000
 
-# 프로덕션 서비스 실행
-CMD ["node", "node_modules/.bin/next", "start"] 
+# standalone 서버 실행 (node_modules 없이 단일 파일 서버)
+CMD ["node", "apps/frontend/server.js"]

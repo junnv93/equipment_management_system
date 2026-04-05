@@ -598,6 +598,76 @@
       "approvedAt": "승인일"
     }
   },
+  "intermediateInspection": {
+    "createButton": "점검 기록 작성",
+    "formTitle": "중간점검 기록 (UL-QP-18-03)",
+    "inspectionDate": "점검일",
+    "classification": "장비 분류",
+    "classificationOptions": {
+      "calibrated": "교정기기",
+      "non_calibrated": "비교정기기"
+    },
+    "inspectionCycle": "점검 주기",
+    "inspectionCyclePlaceholder": "예: 6개월",
+    "calibrationValidityPeriod": "교정 유효기간",
+    "validityPeriodPlaceholder": "예: 2026-12-31",
+    "rejectionReasonPlaceholder": "반려 사유를 입력하세요",
+    "overallResult": "종합 판정",
+    "resultOptions": {
+      "pass": "적합",
+      "fail": "부적합",
+      "conditional": "조건부 적합"
+    },
+    "remarks": "비고",
+    "remarksPlaceholder": "특이사항을 입력하세요...",
+    "items": {
+      "title": "점검 항목",
+      "checkItem": "점검 항목",
+      "checkCriteria": "합격 기준",
+      "checkResult": "측정 결과",
+      "judgment": "판정",
+      "judgmentOptions": {
+        "pass": "적합",
+        "fail": "부적합"
+      },
+      "addItem": "항목 추가",
+      "removeItem": "삭제",
+      "noItems": "등록된 점검 항목이 없습니다"
+    },
+    "actions": {
+      "submit": "제출",
+      "review": "검토 승인",
+      "approve": "최종 승인",
+      "reject": "반려",
+      "view": "기록 보기"
+    },
+    "status": {
+      "draft": "작성 중",
+      "submitted": "제출됨",
+      "reviewed": "검토됨",
+      "approved": "승인됨",
+      "rejected": "반려됨"
+    },
+    "cancel": "취소",
+    "save": "저장",
+    "saving": "저장 중...",
+    "records": "점검 기록",
+    "noRecords": "점검 기록이 없습니다",
+    "toasts": {
+      "createSuccess": "점검 기록이 생성되었습니다.",
+      "createError": "점검 기록 생성에 실패했습니다.",
+      "submitSuccess": "점검 기록이 검토 요청되었습니다.",
+      "submitError": "제출에 실패했습니다.",
+      "reviewSuccess": "점검 검토가 완료되었습니다.",
+      "reviewError": "검토에 실패했습니다.",
+      "approveSuccess": "점검이 승인되었습니다.",
+      "approveError": "승인에 실패했습니다.",
+      "rejectSuccess": "점검이 반려되었습니다.",
+      "rejectError": "반려에 실패했습니다.",
+      "versionConflict": "다른 사용자가 이미 처리했습니다.",
+      "versionConflictDesc": "데이터가 갱신되었습니다. 최신 상태를 확인해주세요."
+    }
+  },
   "notFound": {
     "title": "교정계획서를 찾을 수 없습니다",
     "description": "요청하신 교정계획서가 존재하지 않거나 삭제되었습니다.\n교정계획서 ID를 다시 확인해주세요.",

@@ -68,7 +68,6 @@ import { getInternalApiKeyHeaders } from './config/internal-headers';
 
 // 환경 변수 확인
 const isDevelopment = process.env.NODE_ENV === 'development';
-const isTest = process.env.NODE_ENV === 'test';
 const enableLocalAuth = process.env.ENABLE_LOCAL_AUTH === 'true' || isDevelopment;
 const hasAzureAD = !!(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET);
 
@@ -254,84 +253,85 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
      *
      * 참고: /equipment-management 스킬 - references/auth-architecture.md
      */
-    ...(isTest || isDevelopment
-      ? [
-          CredentialsProvider({
-            id: 'test-login',
-            name: 'Test Login',
-            credentials: {
-              role: {
-                label: 'Role',
-                type: 'text',
-                placeholder: 'test_engineer | technical_manager | lab_manager | system_admin',
-              },
-              email: {
-                label: 'Email',
-                type: 'email',
-                placeholder: 'test.engineer@example.com (optional, overrides role)',
-              },
-            },
-            async authorize(credentials) {
-              // email이 제공되면 email 우선, 아니면 role 사용
-              const email = credentials?.email;
-              const role = credentials?.role;
+    // test-login: 항상 등록. 보안은 백엔드가 담당 (NODE_ENV !== test/development이면 엔드포인트 404).
+    // 프론트엔드에서 NODE_ENV로 게이트하면 next build가 NODE_ENV=production을 강제 인라인하여
+    // 프로덕션 빌드에서 provider가 tree-shake됨 → CI E2E 인증 불가.
+    ...[
+      CredentialsProvider({
+        id: 'test-login',
+        name: 'Test Login',
+        credentials: {
+          role: {
+            label: 'Role',
+            type: 'text',
+            placeholder: 'test_engineer | technical_manager | lab_manager | system_admin',
+          },
+          email: {
+            label: 'Email',
+            type: 'email',
+            placeholder: 'test.engineer@example.com (optional, overrides role)',
+          },
+        },
+        async authorize(credentials) {
+          // email이 제공되면 email 우선, 아니면 role 사용
+          const email = credentials?.email;
+          const role = credentials?.role;
 
-              if (!email && !role) {
-                console.error('[Test Auth] Either email or role is required');
-                return null;
-              }
+          if (!email && !role) {
+            console.error('[Test Auth] Either email or role is required');
+            return null;
+          }
 
-              try {
-                // email이 있으면 email로, 없으면 role로 요청
-                const params = new URLSearchParams();
-                if (email) {
-                  params.set('email', email as string);
-                } else if (role) {
-                  params.set('role', role as string);
-                }
+          try {
+            // email이 있으면 email로, 없으면 role로 요청
+            const params = new URLSearchParams();
+            if (email) {
+              params.set('email', email as string);
+            } else if (role) {
+              params.set('role', role as string);
+            }
 
-                const url = `${API_BASE_URL}/api/auth/test-login?${params.toString()}`;
-                console.log('[Test Auth] Calling backend test-login:', url);
+            const url = `${API_BASE_URL}/api/auth/test-login?${params.toString()}`;
+            console.log('[Test Auth] Calling backend test-login:', url);
 
-                // 백엔드 테스트 로그인 엔드포인트 호출
-                const response = await fetch(url);
+            // 백엔드 테스트 로그인 엔드포인트 호출
+            const response = await fetch(url);
 
-                if (!response.ok) {
-                  const text = await response.text();
-                  console.error('[Test Auth] Backend test-login failed:', response.status, text);
-                  console.error('[Test Auth] URL:', url);
-                  console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
-                  return null;
-                }
+            if (!response.ok) {
+              const text = await response.text();
+              console.error('[Test Auth] Backend test-login failed:', response.status, text);
+              console.error('[Test Auth] URL:', url);
+              console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
+              return null;
+            }
 
-                const data = await response.json();
+            const data = await response.json();
 
-                // NextAuth 세션에 저장할 사용자 정보 반환
-                // 이 정보는 jwt 콜백에서 token에 저장되고, session 콜백에서 session에 전달됨
-                // 백엔드는 roles 배열을 반환하므로 roles[0]으로 role 설정
-                const userRole = data.user.roles?.[0] || data.user.role || 'user';
-                return {
-                  id: data.user.id || data.user.uuid,
-                  name: data.user.name,
-                  email: data.user.email,
-                  role: userRole,
-                  roles: data.user.roles || [userRole],
-                  department: data.user.department,
-                  site: data.user.site,
-                  teamId: data.user.teamId,
-                  accessToken: data.access_token,
-                  refreshToken: data.refresh_token,
-                  accessTokenExpires: data.expires_at,
-                };
-              } catch (error) {
-                console.error('[Test Auth] Error during test login:', error);
-                console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
-                throw new ServerUnavailableError();
-              }
-            },
-          }),
-        ]
-      : []),
+            // NextAuth 세션에 저장할 사용자 정보 반환
+            // 이 정보는 jwt 콜백에서 token에 저장되고, session 콜백에서 session에 전달됨
+            // 백엔드는 roles 배열을 반환하므로 roles[0]으로 role 설정
+            const userRole = data.user.roles?.[0] || data.user.role || 'user';
+            return {
+              id: data.user.id || data.user.uuid,
+              name: data.user.name,
+              email: data.user.email,
+              role: userRole,
+              roles: data.user.roles || [userRole],
+              department: data.user.department,
+              site: data.user.site,
+              teamId: data.user.teamId,
+              accessToken: data.access_token,
+              refreshToken: data.refresh_token,
+              accessTokenExpires: data.expires_at,
+            };
+          } catch (error) {
+            console.error('[Test Auth] Error during test login:', error);
+            console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
+            throw new ServerUnavailableError();
+          }
+        },
+      }),
+    ],
   ],
   pages: {
     signIn: '/login',

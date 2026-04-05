@@ -598,6 +598,76 @@
       "approvedAt": "Approved At"
     }
   },
+  "intermediateInspection": {
+    "createButton": "Create Inspection Record",
+    "formTitle": "Intermediate Inspection Record (UL-QP-18-03)",
+    "inspectionDate": "Inspection Date",
+    "classification": "Classification",
+    "classificationOptions": {
+      "calibrated": "Calibrated Equipment",
+      "non_calibrated": "Non-Calibrated Equipment"
+    },
+    "inspectionCycle": "Inspection Cycle",
+    "inspectionCyclePlaceholder": "e.g. 6 months",
+    "calibrationValidityPeriod": "Calibration Validity Period",
+    "validityPeriodPlaceholder": "e.g. 2026-12-31",
+    "rejectionReasonPlaceholder": "Enter rejection reason",
+    "overallResult": "Overall Result",
+    "resultOptions": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "conditional": "Conditional"
+    },
+    "remarks": "Remarks",
+    "remarksPlaceholder": "Enter any notable findings...",
+    "items": {
+      "title": "Inspection Items",
+      "checkItem": "Check Item",
+      "checkCriteria": "Pass Criteria",
+      "checkResult": "Measured Result",
+      "judgment": "Judgment",
+      "judgmentOptions": {
+        "pass": "Pass",
+        "fail": "Fail"
+      },
+      "addItem": "Add Item",
+      "removeItem": "Remove",
+      "noItems": "No inspection items added"
+    },
+    "actions": {
+      "submit": "Submit",
+      "review": "Review & Approve",
+      "approve": "Final Approve",
+      "reject": "Reject",
+      "view": "View Record"
+    },
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "reviewed": "Reviewed",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "records": "Inspection Records",
+    "noRecords": "No inspection records yet",
+    "toasts": {
+      "createSuccess": "Inspection record created.",
+      "createError": "Failed to create inspection record.",
+      "submitSuccess": "Inspection submitted for review.",
+      "submitError": "Failed to submit inspection.",
+      "reviewSuccess": "Inspection review completed.",
+      "reviewError": "Failed to review inspection.",
+      "approveSuccess": "Inspection approved.",
+      "approveError": "Failed to approve inspection.",
+      "rejectSuccess": "Inspection rejected.",
+      "rejectError": "Failed to reject inspection.",
+      "versionConflict": "Already processed by another user.",
+      "versionConflictDesc": "Data has been updated. Please check the latest status."
+    }
+  },
   "notFound": {
     "title": "Calibration plan not found",
     "description": "The requested calibration plan does not exist or has been deleted.\nPlease check the calibration plan ID.",

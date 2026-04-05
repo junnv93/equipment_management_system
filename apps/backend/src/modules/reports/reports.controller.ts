@@ -1,8 +1,9 @@
-import { Controller, Get, Query, Res, Request, UsePipes } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res, Request, UsePipes } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportExportService } from './report-export.service';
+import { FormTemplateExportService } from './form-template-export.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -61,7 +62,8 @@ import {
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
-    private readonly reportExportService: ReportExportService
+    private readonly reportExportService: ReportExportService,
+    private readonly formTemplateExportService: FormTemplateExportService
   ) {}
 
   // ── 헬퍼: RBAC 스코프 해석 ──────────────────────────────────────────────────
@@ -372,6 +374,35 @@ export class ReportsController {
     });
 
     await this._streamFile(res, data, query.format);
+  }
+
+  // ── 공식 양식 템플릿 내보내기 (UL-QP-18-01 ~ 11) ────────────────────────
+
+  @Get('export/form/:formNumber')
+  @ApiOperation({ summary: '공식 양식 템플릿 내보내기' })
+  @ApiResponse({ status: 200, description: '양식 파일' })
+  @RequirePermissions(Permission.EXPORT_REPORTS)
+  @AuditLog({ action: 'export', entityType: 'report' })
+  @SkipResponseTransform()
+  async exportFormTemplate(
+    @Param('formNumber') formNumber: string,
+    @Request() req: AuthenticatedRequest,
+    @Res() res: Response,
+    @Query() queryParams: Record<string, string>
+  ): Promise<void> {
+    const scope = this._resolveReportScope(req);
+    const { buffer, mimeType, filename } = await this.formTemplateExportService.exportForm(
+      formNumber,
+      queryParams,
+      scope.site ? { site: scope.site, teamId: scope.teamId } : undefined
+    );
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Length': buffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    });
+    res.end(buffer);
   }
 
   // ── Private 헬퍼 ────────────────────────────────────────────────────────

@@ -560,7 +560,7 @@ export class DashboardService {
         const equipment = counts.equipment;
         const calibration = counts.calibration;
         const checkout = counts.outgoing;
-        const software = counts.software;
+        const software = counts.software_validation;
 
         return {
           equipment,

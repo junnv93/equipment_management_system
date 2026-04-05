@@ -70,7 +70,7 @@ const CATEGORY_SEMANTIC_COLOR: Record<ApprovalCategory, SemanticColorKey> = {
   disposal_final: 'critical', // 폐기 승인 → red 계열
   plan_review: 'purple', // 계획 검토 → violet 계열
   plan_final: 'purple', // 계획 승인 → violet 계열
-  software: 'purple', // 소프트웨어 → purple 계열
+  software_validation: 'purple', // 소프트웨어 유효성 → purple 계열
 };
 
 const CATEGORY_COLORS: Record<ApprovalCategory, { color: string; bgColor: string }> =

@@ -48,7 +48,7 @@ const createMockApprovalCounts = (
   disposal_final: 0,
   plan_review: 0,
   plan_final: 0,
-  software: 0,
+  software_validation: 0,
   ...overrides,
 });
 
@@ -196,7 +196,12 @@ describe('DashboardService', () => {
 
     it('PendingCountsByCategory를 대시보드 DTO 형식으로 매핑한다', async () => {
       mockApprovalsService.getApprovalCountsByScope.mockResolvedValue(
-        createMockApprovalCounts({ equipment: 3, calibration: 2, outgoing: 5, software: 1 })
+        createMockApprovalCounts({
+          equipment: 3,
+          calibration: 2,
+          outgoing: 5,
+          software_validation: 1,
+        })
       );
 
       const result = await service.getPendingApprovalCounts('technical_manager');
@@ -212,7 +217,12 @@ describe('DashboardService', () => {
 
     it('total은 매핑된 필드들의 합계이다', async () => {
       mockApprovalsService.getApprovalCountsByScope.mockResolvedValue(
-        createMockApprovalCounts({ equipment: 1, calibration: 1, outgoing: 1, software: 1 })
+        createMockApprovalCounts({
+          equipment: 1,
+          calibration: 1,
+          outgoing: 1,
+          software_validation: 1,
+        })
       );
 
       const result = await service.getPendingApprovalCounts('technical_manager');

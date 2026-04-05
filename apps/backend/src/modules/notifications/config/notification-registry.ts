@@ -594,6 +594,61 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     emailStrategy: 'immediate',
   },
 
+  // ─── 소프트웨어 유효성 확인 (Software Validation) ───────────────────────
+
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED]: {
+    category: 'software',
+    priority: 'high',
+    titleTemplate: '소프트웨어 유효성 확인 제출: {{softwareName}}',
+    contentTemplate: '{{actorName}}님이 {{softwareName}} 유효성 확인을 제출했습니다.',
+    recipientStrategy: {
+      type: 'permission',
+      permission: Permission.APPROVE_SOFTWARE_VALIDATION,
+      scope: 'site',
+      roleScopes: { quality_manager: 'all', system_admin: 'all' },
+    },
+    linkTemplate: getApprovalPageUrl(AC.SOFTWARE_VALIDATION),
+    entityType: 'software_validation',
+    entityIdField: 'validationId',
+    emailStrategy: 'immediate',
+  },
+
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED]: {
+    category: 'software',
+    priority: 'medium',
+    titleTemplate: '소프트웨어 유효성 확인 승인: {{softwareName}}',
+    contentTemplate: '{{softwareName}} 유효성 확인이 승인되었습니다.',
+    recipientStrategy: { type: 'actor', field: 'submittedBy' },
+    linkTemplate: '/software/{{testSoftwareId}}',
+    entityType: 'software_validation',
+    entityIdField: 'validationId',
+    emailStrategy: 'immediate',
+  },
+
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED]: {
+    category: 'software',
+    priority: 'high',
+    titleTemplate: '소프트웨어 유효성 확인 반려: {{softwareName}}',
+    contentTemplate: '{{softwareName}} 유효성 확인이 반려되었습니다. 사유: {{reason}}',
+    recipientStrategy: { type: 'actor', field: 'submittedBy' },
+    linkTemplate: '/software/{{testSoftwareId}}',
+    entityType: 'software_validation',
+    entityIdField: 'validationId',
+    emailStrategy: 'immediate',
+  },
+
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED]: {
+    category: 'software',
+    priority: 'high',
+    titleTemplate: '소프트웨어 유효성 확인 품질 승인: {{softwareName}}',
+    contentTemplate: '{{softwareName}} 유효성 확인이 품질책임자에 의해 최종 승인되었습니다.',
+    recipientStrategy: { type: 'actor', field: 'submittedBy' },
+    linkTemplate: '/software/{{testSoftwareId}}',
+    entityType: 'software_validation',
+    entityIdField: 'validationId',
+    emailStrategy: 'immediate',
+  },
+
   // ─── 시스템 ────────────────────────────────────────────────────────────
 
   [NOTIFICATION_EVENTS.SYSTEM_ANNOUNCEMENT]: {

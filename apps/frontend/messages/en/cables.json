@@ -1,0 +1,120 @@
+{
+  "title": "Cable & Path Loss Registry",
+  "subtitle": "UL-QP-18-08 Cable/Path Loss management",
+  "list": {
+    "title": "Cable & Path Loss Registry",
+    "subtitle": "UL-QP-18-08 Cable/Path Loss management",
+    "columns": {
+      "managementNumber": "Mgmt No.",
+      "length": "Length (M)",
+      "connectorType": "Type",
+      "frequencyRange": "Freq Range (MHz)",
+      "serialNumber": "S/N",
+      "location": "Location",
+      "status": "Status",
+      "lastMeasurement": "Last Measurement"
+    },
+    "createButton": "Register Cable",
+    "searchPlaceholder": "Search management number or S/N...",
+    "filters": {
+      "allTypes": "All Types",
+      "allStatus": "All Status"
+    },
+    "empty": "No cables registered"
+  },
+  "detail": {
+    "title": "Cable Information",
+    "notFound": "Cable not found.",
+    "notSpecified": "-",
+    "editButton": "Edit",
+    "fields": {
+      "managementNumber": "Management Number",
+      "length": "Length (M)",
+      "connectorType": "Connector Type",
+      "frequencyRange": "Frequency Range (MHz)",
+      "serialNumber": "Serial Number",
+      "location": "Location",
+      "site": "Site",
+      "status": "Status",
+      "lastMeasurementDate": "Last Measurement",
+      "createdAt": "Created",
+      "updatedAt": "Updated"
+    },
+    "measurementsTitle": "Measurement History",
+    "measurementColumns": {
+      "date": "Date",
+      "notes": "Notes",
+      "dataPointCount": "Data Points"
+    },
+    "noMeasurements": "No measurements recorded.",
+    "latestDataTitle": "Latest Measurement Data",
+    "noDataPoints": "No data points."
+  },
+  "measurement": {
+    "addButton": "Add Measurement",
+    "formTitle": "Add Measurement Data",
+    "date": "Measurement Date",
+    "notes": "Notes",
+    "notesPlaceholder": "Enter notes...",
+    "dataPoints": "Frequency/Loss Data",
+    "frequency": "Freq (MHz)",
+    "loss": "Loss (dB)",
+    "addRow": "Add Row",
+    "removeRow": "Remove",
+    "removeRowAriaLabel": "Remove measurement data row",
+    "bulkPaste": "Bulk Paste (freq,loss per line)",
+    "bulkPastePlaceholder": "100,0.5\n200,1.0\n300,1.5",
+    "parseBulk": "Parse",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Measurement added successfully.",
+    "error": "Failed to add measurement."
+  },
+  "create": {
+    "title": "Register Cable",
+    "subtitle": "Register a new cable/path loss entry",
+    "formTitle": "Cable Information",
+    "submitButton": "Register",
+    "submitting": "Registering...",
+    "success": "Cable registered successfully.",
+    "error": "Failed to register cable."
+  },
+  "form": {
+    "managementNumberLabel": "Management Number",
+    "managementNumberPlaceholder": "e.g. E020K-325",
+    "lengthLabel": "Length (M)",
+    "lengthPlaceholder": "e.g. 1.5",
+    "connectorTypeLabel": "Connector Type",
+    "connectorTypePlaceholder": "Select type",
+    "frequencyRangeMinLabel": "Min Frequency (MHz)",
+    "frequencyRangeMinPlaceholder": "e.g. 100",
+    "frequencyRangeMaxLabel": "Max Frequency (MHz)",
+    "frequencyRangeMaxPlaceholder": "e.g. 18000",
+    "serialNumberLabel": "Serial Number",
+    "serialNumberPlaceholder": "Enter S/N",
+    "locationLabel": "Location",
+    "locationPlaceholder": "Enter location",
+    "siteLabel": "Site",
+    "sitePlaceholder": "Select site",
+    "cancel": "Cancel",
+    "submit": "Save",
+    "submitting": "Saving...",
+    "editTitle": "Edit Cable"
+  },
+  "toast": {
+    "updateSuccess": "Cable updated successfully.",
+    "error": "An error occurred.",
+    "versionConflict": "Version Conflict",
+    "versionConflictDesc": "This cable was modified by another user. Please refresh and try again."
+  },
+  "status": {
+    "active": "Active",
+    "retired": "Retired"
+  },
+  "connectorType": {
+    "K": "K",
+    "SMA": "SMA",
+    "N": "N",
+    "other": "Other"
+  }
+}

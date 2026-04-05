@@ -26,6 +26,7 @@ export const PERMISSION_CATEGORY_KEYS = [
   'audit',
   'disposal',
   'equipmentImports',
+  'selfInspections',
   'system',
 ] as const;
 
@@ -73,10 +74,13 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.CLOSE_NON_CONFORMANCE,
   ],
   software: [
-    Permission.VIEW_SOFTWARE,
-    Permission.CREATE_SOFTWARE_CHANGE,
-    Permission.APPROVE_SOFTWARE_CHANGE,
-    Permission.VIEW_SOFTWARE_REQUESTS,
+    Permission.VIEW_TEST_SOFTWARE,
+    Permission.CREATE_TEST_SOFTWARE,
+    Permission.UPDATE_TEST_SOFTWARE,
+    Permission.VIEW_SOFTWARE_VALIDATIONS,
+    Permission.CREATE_SOFTWARE_VALIDATION,
+    Permission.SUBMIT_SOFTWARE_VALIDATION,
+    Permission.APPROVE_SOFTWARE_VALIDATION,
   ],
   teams: [
     Permission.VIEW_TEAMS,
@@ -111,6 +115,11 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
     Permission.APPROVE_EQUIPMENT_IMPORT,
     Permission.COMPLETE_EQUIPMENT_IMPORT,
     Permission.CANCEL_EQUIPMENT_IMPORT,
+  ],
+  selfInspections: [
+    Permission.VIEW_SELF_INSPECTIONS,
+    Permission.CREATE_SELF_INSPECTION,
+    Permission.CONFIRM_SELF_INSPECTION,
   ],
   system: [Permission.MANAGE_SYSTEM_SETTINGS, Permission.VIEW_SYSTEM_SETTINGS],
 };

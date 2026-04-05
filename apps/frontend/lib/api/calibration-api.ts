@@ -8,6 +8,10 @@ import {
 import type {
   CalibrationApprovalStatus,
   CalibrationRegisteredByRole,
+  InspectionApprovalStatus,
+  InspectionResult,
+  InspectionJudgment,
+  EquipmentClassification,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
@@ -156,6 +160,75 @@ export interface IntermediateChecksResponse {
   };
 }
 
+// ============================================================================
+// 중간점검표 타입 (UL-QP-18-03)
+// ============================================================================
+
+export interface IntermediateInspection {
+  id: string;
+  calibrationId: string;
+  equipmentId: string;
+  inspectionDate: string;
+  inspectorId: string;
+  classification: EquipmentClassification | null;
+  inspectionCycle: string | null;
+  calibrationValidityPeriod: string | null;
+  overallResult: InspectionResult | null;
+  remarks: string | null;
+  approvalStatus: InspectionApprovalStatus;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  items?: IntermediateInspectionItem[];
+  inspectionEquipment?: IntermediateInspectionEquipmentRef[];
+}
+
+export interface IntermediateInspectionItem {
+  id: string;
+  inspectionId: string;
+  itemNumber: number;
+  checkItem: string;
+  checkCriteria: string | null;
+  checkResult: string | null;
+  judgment: InspectionJudgment | null;
+}
+
+export interface IntermediateInspectionEquipmentRef {
+  id: string;
+  inspectionId: string;
+  equipmentId: string;
+  calibrationDate: string | null;
+}
+
+export interface CreateInspectionDto {
+  inspectionDate: string;
+  classification?: EquipmentClassification;
+  inspectionCycle?: string;
+  calibrationValidityPeriod?: string;
+  overallResult?: InspectionResult;
+  remarks?: string;
+  items?: {
+    itemNumber: number;
+    checkItem: string;
+    checkCriteria: string;
+    checkResult?: string;
+    judgment?: InspectionJudgment;
+  }[];
+  measurementEquipment?: {
+    equipmentId: string;
+    calibrationDate?: string;
+  }[];
+}
+
+export interface UpdateInspectionDto extends Partial<CreateInspectionDto> {
+  version: number;
+}
+
 // 교정 API 객체
 const calibrationApi = {
   // 교정 이력 목록 조회
@@ -296,6 +369,72 @@ const calibrationApi = {
       formData
     );
     return transformSingleResponse<{ filePath: string; message: string }>(response);
+  },
+
+  // ============================================================================
+  // 중간점검표 API (UL-QP-18-03)
+  // ============================================================================
+  intermediateInspections: {
+    list: async (calibrationId: string): Promise<IntermediateInspection[]> => {
+      const response = await apiClient.get(
+        `/calibration/${calibrationId}/intermediate-inspections`
+      );
+      return transformArrayResponse<IntermediateInspection>(response);
+    },
+
+    detail: async (id: string): Promise<IntermediateInspection> => {
+      const response = await apiClient.get(`/intermediate-inspections/${id}`);
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    create: async (
+      calibrationId: string,
+      data: CreateInspectionDto
+    ): Promise<IntermediateInspection> => {
+      const response = await apiClient.post(
+        `/calibration/${calibrationId}/intermediate-inspections`,
+        data
+      );
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    update: async (id: string, data: UpdateInspectionDto): Promise<IntermediateInspection> => {
+      const response = await apiClient.patch(`/intermediate-inspections/${id}`, data);
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    submit: async (id: string, version: number): Promise<IntermediateInspection> => {
+      const response = await apiClient.patch(`/intermediate-inspections/${id}/submit`, {
+        version,
+      });
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    review: async (id: string, version: number): Promise<IntermediateInspection> => {
+      const response = await apiClient.patch(`/intermediate-inspections/${id}/review`, {
+        version,
+      });
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    approve: async (id: string, version: number): Promise<IntermediateInspection> => {
+      const response = await apiClient.patch(`/intermediate-inspections/${id}/approve`, {
+        version,
+      });
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    reject: async (
+      id: string,
+      version: number,
+      rejectionReason: string
+    ): Promise<IntermediateInspection> => {
+      const response = await apiClient.patch(`/intermediate-inspections/${id}/reject`, {
+        version,
+        rejectionReason,
+      });
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
   },
 };
 

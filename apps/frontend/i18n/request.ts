@@ -56,6 +56,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     'software',
     'data-migration',
     'monitoring',
+    'cables',
   ];
 
   const loadedMessages: Record<string, Record<string, unknown>> = {};

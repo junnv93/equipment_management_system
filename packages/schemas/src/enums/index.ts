@@ -13,4 +13,7 @@ export * from './disposal';
 export * from './approval';
 export * from './equipment-import';
 export * from './labels';
+export * from './intermediate-inspection';
+export * from './cable';
+export * from './self-inspection';
 export * from './values';

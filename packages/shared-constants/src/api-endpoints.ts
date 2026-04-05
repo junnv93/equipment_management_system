@@ -30,6 +30,8 @@ export const API_ENDPOINTS = {
     TEAM: (teamId: string) => `/api/equipment/team/${teamId}`,
     /** 파일 첨부 */
     ATTACHMENTS: '/api/equipment/attachments',
+    /** 이력카드 docx 내보내기 (UL-QP-18-02) */
+    HISTORY_CARD: (id: string) => `/api/equipment/${id}/history-card`,
     // 위치 변동 이력
     LOCATION_HISTORY: {
       LIST: (id: string) => `/api/equipment/${id}/location-history`,
@@ -206,29 +208,35 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
-  // 소프트웨어 관리
+  // 시험용 소프트웨어 관리 (UL-QP-18-07)
   // ============================================================================
-  SOFTWARE: {
-    LIST: '/api/software',
-    GET: (id: string) => `/api/software/${id}`,
-    CREATE: '/api/software',
-    UPDATE: (id: string) => `/api/software/${id}`,
-    DELETE: (id: string) => `/api/software/${id}`,
-    CHANGE_REQUEST: '/api/software/change-request',
-    PENDING: '/api/software/pending',
-    REGISTRY: '/api/software/registry',
-    HISTORY: '/api/software/history',
-    APPROVE: (id: string) => `/api/software/${id}/approve`,
-    REJECT: (id: string) => `/api/software/${id}/reject`,
-    EQUIPMENT_BY_SOFTWARE: (name: string) => `/api/software/${encodeURIComponent(name)}/equipment`,
-    CHANGES: {
-      LIST: '/api/software-changes',
-      GET: (id: string) => `/api/software-changes/${id}`,
-      CREATE: '/api/software-changes',
-      APPROVE: (id: string) => `/api/software-changes/${id}/approve`,
-      REJECT: (id: string) => `/api/software-changes/${id}/reject`,
-      PENDING: '/api/software-changes/pending',
-    },
+  TEST_SOFTWARE: {
+    LIST: '/api/test-software',
+    GET: (id: string) => `/api/test-software/${id}`,
+    CREATE: '/api/test-software',
+    UPDATE: (id: string) => `/api/test-software/${id}`,
+    TOGGLE_AVAILABILITY: (id: string) => `/api/test-software/${id}/availability`,
+    BY_EQUIPMENT: (equipmentId: string) => `/api/test-software/by-equipment/${equipmentId}`,
+    LINKED_EQUIPMENT: (id: string) => `/api/test-software/${id}/equipment`,
+    LINK_EQUIPMENT: (id: string) => `/api/test-software/${id}/equipment`,
+    UNLINK_EQUIPMENT: (id: string, equipmentId: string) =>
+      `/api/test-software/${id}/equipment/${equipmentId}`,
+  },
+
+  // ============================================================================
+  // 소프트웨어 유효성 확인 (UL-QP-18-09)
+  // ============================================================================
+  SOFTWARE_VALIDATIONS: {
+    LIST: (softwareId: string) => `/api/test-software/${softwareId}/validations`,
+    GET: (id: string) => `/api/software-validations/${id}`,
+    CREATE: (softwareId: string) => `/api/test-software/${softwareId}/validations`,
+    UPDATE: (id: string) => `/api/software-validations/${id}`,
+    SUBMIT: (id: string) => `/api/software-validations/${id}/submit`,
+    APPROVE: (id: string) => `/api/software-validations/${id}/approve`,
+    QUALITY_APPROVE: (id: string) => `/api/software-validations/${id}/quality-approve`,
+    REJECT: (id: string) => `/api/software-validations/${id}/reject`,
+    REVISE: (id: string) => `/api/software-validations/${id}/revise`,
+    PENDING: '/api/software-validations/pending',
   },
 
   // ============================================================================
@@ -382,6 +390,8 @@ export const API_ENDPOINTS = {
       UTILIZATION: '/api/reports/export/utilization',
       TEAM_EQUIPMENT: '/api/reports/export/team-equipment',
       MAINTENANCE: '/api/reports/export/maintenance',
+      /** 공식 양식 템플릿 내보내기 (UL-QP-18-01 ~ 11) */
+      FORM_TEMPLATE: (formNumber: string) => `/api/reports/export/form/${formNumber}`,
     },
   },
 
@@ -396,6 +406,46 @@ export const API_ENDPOINTS = {
         `/api/data-migration/equipment/${sessionId}/error-report`,
       TEMPLATE: '/api/data-migration/equipment/template',
     },
+  },
+
+  // ============================================================================
+  // 자체점검 관리 (UL-QP-18-05)
+  // ============================================================================
+  SELF_INSPECTIONS: {
+    BY_EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/self-inspections`,
+    GET: (id: string) => `/api/self-inspections/${id}`,
+    UPDATE: (id: string) => `/api/self-inspections/${id}`,
+    CONFIRM: (id: string) => `/api/self-inspections/${id}/confirm`,
+    DELETE: (id: string) => `/api/self-inspections/${id}`,
+  },
+
+  // ============================================================================
+  // 케이블/경로손실 관리 (UL-QP-18-08)
+  // ============================================================================
+  CABLES: {
+    LIST: '/api/cables',
+    GET: (id: string) => `/api/cables/${id}`,
+    CREATE: '/api/cables',
+    UPDATE: (id: string) => `/api/cables/${id}`,
+    MEASUREMENTS: {
+      LIST: (cableId: string) => `/api/cables/${cableId}/measurements`,
+      CREATE: (cableId: string) => `/api/cables/${cableId}/measurements`,
+      GET: (measurementId: string) => `/api/cables/measurements/${measurementId}`,
+    },
+  },
+
+  // ============================================================================
+  // 중간점검 관리 (교정 하위)
+  // ============================================================================
+  INTERMEDIATE_INSPECTIONS: {
+    BY_CALIBRATION: (calibrationId: string) =>
+      `/api/calibration/${calibrationId}/intermediate-inspections`,
+    GET: (id: string) => `/api/intermediate-inspections/${id}`,
+    UPDATE: (id: string) => `/api/intermediate-inspections/${id}`,
+    SUBMIT: (id: string) => `/api/intermediate-inspections/${id}/submit`,
+    REVIEW: (id: string) => `/api/intermediate-inspections/${id}/review`,
+    APPROVE: (id: string) => `/api/intermediate-inspections/${id}/approve`,
+    REJECT: (id: string) => `/api/intermediate-inspections/${id}/reject`,
   },
 
   // ============================================================================

@@ -6,7 +6,7 @@ export default defineConfig({
   testIgnore: [
     '**/node_modules/**',
     '**/dist/**',
-    '**/calibration-overdue-auto-nc/**', // Exclude tests with missing fixtures
+    '**/overdue-auto-nc/**', // Exclude tests with missing fixtures
     '**/../backend/**', // Exclude backend tests
     '**/backend/**', // Exclude all backend directory
     '**/__tests__/**', // Exclude backend test directories
@@ -14,7 +14,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 4,
+  workers: process.env.CI ? 4 : 4,
   reporter: 'html',
   // 기본 타임아웃 설정 (안정성 향상)
   timeout: 60000, // 60초
@@ -30,12 +30,14 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    reducedMotion: 'reduce',
   },
   projects: [
-    // Auth Setup (1회 실행 — 5개 역할 browser-native 로그인 + storageState 저장)
+    // Auth Setup (1회 실행 — API 기반 인증, UI 불필요)
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
+      timeout: 30000, // API 기반이므로 30초면 충분
     },
 
     // Browser projects — setup 완료 후 실행

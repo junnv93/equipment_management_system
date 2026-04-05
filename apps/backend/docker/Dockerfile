@@ -6,7 +6,7 @@ FROM node:20-bullseye AS development
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 
 # Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -16,11 +16,10 @@ COPY .npmrc ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/db/package.json ./packages/db/
-COPY packages/api-client/package.json ./packages/api-client/
-COPY packages/ui/package.json ./packages/ui/
+COPY packages/shared-constants/package.json ./packages/shared-constants/
 
-# Install dependencies with proper hoisting
-RUN pnpm install --shamefully-hoist
+# Install dependencies
+RUN pnpm install
 
 # Copy source code
 COPY . .
@@ -46,7 +45,7 @@ FROM node:20-bullseye AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 
 # Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -55,8 +54,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/db/package.json ./packages/db/
-COPY packages/api-client/package.json ./packages/api-client/
-COPY packages/ui/package.json ./packages/ui/
+COPY packages/shared-constants/package.json ./packages/shared-constants/
 
 # Install all dependencies
 RUN pnpm install --frozen-lockfile
@@ -66,6 +64,7 @@ COPY . .
 
 # Build packages in correct order
 RUN pnpm --filter schemas build
+RUN pnpm --filter shared-constants build
 RUN pnpm --filter db build || echo "db build skipped"
 RUN pnpm --filter backend build
 
@@ -76,14 +75,13 @@ FROM node:20-alpine AS prod-deps
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/db/package.json ./packages/db/
-COPY packages/api-client/package.json ./packages/api-client/
-COPY packages/ui/package.json ./packages/ui/
+COPY packages/shared-constants/package.json ./packages/shared-constants/
 
 RUN pnpm install --frozen-lockfile --prod
 
@@ -98,6 +96,8 @@ WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/packages/schemas/dist ./packages/schemas/dist
 COPY --from=builder /app/packages/schemas/package.json ./packages/schemas/
+COPY --from=builder /app/packages/shared-constants/dist ./packages/shared-constants/dist
+COPY --from=builder /app/packages/shared-constants/package.json ./packages/shared-constants/
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 
