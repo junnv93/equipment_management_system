@@ -2,7 +2,7 @@
  * Test Software (UL-QP-18-07 관리대장) seed data
  *
  * P0001~P0020 대표 샘플: 시험분야별(SAR/RF/EMC/RED/HAC) 균형 배분
- * 실제 관리대장(docs/procedure/시험용소프트웨어관리대장.md)의 데이터 기반
+ * 실제 관리대장(docs/procedure/절차서/시험용소프트웨어관리대장.md)의 데이터 기반
  */
 
 import { testSoftware } from '@equipment-management/db/schema';

@@ -4,7 +4,7 @@
  * 시험용 소프트웨어 등록 → 관리번호 자동 채번 → 관리대장 확인
  *
  * @see docs/workflows/critical-workflows.md WF-14a
- * @see docs/procedure/시험용소프트웨어관리대장.md
+ * @see docs/procedure/절차서/시험용소프트웨어관리대장.md
  */
 
 import { test, expect } from '../shared/fixtures/auth.fixture';
