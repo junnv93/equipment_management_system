@@ -14,33 +14,46 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    commit-message:
+      prefix: 'chore'
+      prefix-development: 'chore'
+      include: 'scope'
 
   # GitHub Actions
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
-      day: 'monday'
+      day: 'wednesday'
     open-pull-requests-limit: 5
     labels:
       - 'dependencies'
       - 'ci'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
 
   # Docker base images
   - package-ecosystem: 'docker'
     directory: '/apps/backend/docker'
     schedule:
       interval: 'weekly'
-      day: 'monday'
+      day: 'friday'
     labels:
       - 'dependencies'
       - 'docker'
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
 
   - package-ecosystem: 'docker'
     directory: '/apps/frontend'
     schedule:
       interval: 'weekly'
-      day: 'monday'
+      day: 'friday'
     labels:
       - 'dependencies'
       - 'docker'
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
