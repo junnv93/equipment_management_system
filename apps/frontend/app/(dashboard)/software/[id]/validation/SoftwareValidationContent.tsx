@@ -118,7 +118,9 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
   const { data: usersData } = useQuery({
     queryKey: queryKeys.users.list(),
     queryFn: () =>
-      apiClient.get(API_ENDPOINTS.USERS.LIST).then((r) => r.data as { id: string; name: string }[]),
+      apiClient
+        .get(API_ENDPOINTS.USERS.LIST)
+        .then((r) => (r.data as { items: { id: string; name: string }[] }).items),
     enabled: createForm.validationType === 'self',
   });
 

@@ -55,7 +55,9 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
   const { data: usersData } = useQuery({
     queryKey: queryKeys.users.list(),
     queryFn: () =>
-      apiClient.get(API_ENDPOINTS.USERS.LIST).then((r) => r.data as { id: string; name: string }[]),
+      apiClient
+        .get(API_ENDPOINTS.USERS.LIST)
+        .then((r) => (r.data as { items: { id: string; name: string }[] }).items),
   });
 
   const { data: software, isLoading } = useQuery({
