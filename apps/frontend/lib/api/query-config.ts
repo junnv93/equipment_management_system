@@ -410,6 +410,12 @@ export const queryKeys = {
     documents: (calibrationId: string) =>
       [...queryKeys.calibrations.all, 'documents', calibrationId] as const,
   },
+  intermediateInspections: {
+    all: ['intermediate-inspections'] as const,
+    byCalibration: (calibrationId: string) =>
+      ['intermediate-inspections', 'calibration', calibrationId] as const,
+    detail: (id: string) => ['intermediate-inspections', 'detail', id] as const,
+  },
   documents: {
     all: ['documents'] as const,
     detail: (id: string) => ['documents', 'detail', id] as const,

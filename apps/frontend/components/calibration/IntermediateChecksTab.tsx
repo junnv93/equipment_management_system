@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,8 @@ import { ko } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi, { type IntermediateCheckItem } from '@/lib/api/calibration-api';
+import InspectionFormDialog from './InspectionFormDialog';
+import InspectionRecordsDialog from './InspectionRecordsDialog';
 import {
   getIntermediateCheckBadgeClasses,
   getIntermediateCheckIcon,
@@ -79,6 +82,9 @@ export default function IntermediateChecksTab({
   isCompleting,
 }: Props) {
   const t = useTranslations('calibration');
+  const [selectedCheck, setSelectedCheck] = useState<IntermediateCheckItem | null>(null);
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
 
   // ✅ 쿼리 소유: 이 컴포넌트가 자신의 데이터를 책임짐
   // TanStack Query가 오케스트레이터의 동일 queryKey와 캐시를 공유 → 네트워크 요청 1회만 발생
@@ -165,6 +171,7 @@ export default function IntermediateChecksTab({
               <TableHead>{t('content.intermediateChecks.table.managementNumber')}</TableHead>
               <TableHead>{t('content.intermediateChecks.table.team')}</TableHead>
               <TableHead>{t('content.intermediateChecks.table.nextCalibrationDate')}</TableHead>
+              <TableHead>{t('intermediateInspection.records')}</TableHead>
               <TableHead className="text-right">
                 {t('content.intermediateChecks.table.action')}
               </TableHead>
@@ -209,6 +216,19 @@ export default function IntermediateChecksTab({
                   <TableCell className={CALIBRATION_TABLE.numericColumn}>
                     {format(new Date(check.nextCalibrationDate), 'yyyy-MM-dd', { locale: ko })}
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedCheck(check);
+                        setRecordsOpen(true);
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      {t('intermediateInspection.actions.view')}
+                    </Button>
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" onClick={() => onComplete(check)} disabled={isCompleting}>
                       <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -221,6 +241,30 @@ export default function IntermediateChecksTab({
           </TableBody>
         </Table>
       </div>
+
+      {/* 점검 기록 목록 다이얼로그 */}
+      {selectedCheck && (
+        <InspectionRecordsDialog
+          open={recordsOpen}
+          onOpenChange={setRecordsOpen}
+          calibrationId={selectedCheck.id}
+          equipmentName={selectedCheck.equipmentName}
+          onCreateNew={() => {
+            setRecordsOpen(false);
+            setFormOpen(true);
+          }}
+        />
+      )}
+
+      {/* 점검 기록 작성 다이얼로그 */}
+      {selectedCheck && (
+        <InspectionFormDialog
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          calibrationId={selectedCheck.id}
+          equipmentId={selectedCheck.equipmentId}
+        />
+      )}
     </div>
   );
 }

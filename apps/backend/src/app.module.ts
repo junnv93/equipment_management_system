@@ -41,6 +41,7 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { I18nModule } from './common/i18n/i18n.module';
 import { DataMigrationModule } from './modules/data-migration/data-migration.module';
 import { SoftwareValidationsModule } from './modules/software-validations/software-validations.module';
+import { IntermediateInspectionsModule } from './modules/intermediate-inspections/intermediate-inspections.module';
 
 @Module({
   imports: [
@@ -103,6 +104,7 @@ import { SoftwareValidationsModule } from './modules/software-validations/softwa
     DocumentsModule, // 통합 문서 관리 (다운로드, 무결성 검증, 버전 관리)
     DataMigrationModule, // 데이터 마이그레이션 (Excel 일괄 등록)
     SoftwareValidationsModule, // 소프트웨어 유효성 확인 (UL-QP-18-09)
+    IntermediateInspectionsModule, // 중간점검표 (UL-QP-18-03)
   ],
   controllers: [],
   providers: [

@@ -52,3 +52,6 @@ export * from './system-settings';
 export * from './equipment-location-history';
 export * from './equipment-maintenance-history';
 export * from './equipment-incident-history';
+
+// 중간점검 스키마 (UL-QP-18-03)
+export * from './intermediate-inspections';
