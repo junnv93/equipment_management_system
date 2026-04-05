@@ -46,7 +46,7 @@ jobs:
       # main.yml과 동일한 빌드 환경 (SSOT)
       # JS/TS CodeQL은 소스 추출 기반이지만, 빌드하면 타입 정보가 풍부해져 분석 품질 향상
       - name: Setup pnpm
-        uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
