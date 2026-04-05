@@ -7,8 +7,7 @@
 
 ## 미완료 항목
 
-- [ ] equipment.json(en/ko) `softwareHistory.*` 블록 (구 소프트웨어 변경 다이얼로그 i18n 키) — `apps/frontend/messages/{en,ko}/equipment.json:~1385-1434` — 2026-04-04
-- [ ] E2E 테스트 payload stale softwareVersion — `apps/backend/test/equipment.e2e-spec.ts:162`, `equipment-approval.e2e-spec.ts:222,606` — 2026-04-04
+(없음)
 
 ---
 
@@ -21,3 +20,5 @@
 - [x] EquipmentForm.tsx `isManager: _isManager` 미사용 destructuring 정리 — 해결: 2026-04-02 — PR #66
 - [x] E2E 테스트 주석에서 `isManager()` 참조를 permission 기반으로 업데이트 — 해결: 2026-04-02 — PR #66
 - [x] `isManager`/`isAdmin` 함수 use-auth.ts에서 제거 — 해결: 2026-04-02 — `refactor/remove-unused-role-checks`
+- [x] equipment.json(en/ko) `softwareHistory.*` 레거시 i18n 키 블록 제거 — 해결: 2026-04-05
+- [x] E2E 테스트 payload stale softwareVersion — 이전 커밋에서 이미 정리됨 확인: 2026-04-05

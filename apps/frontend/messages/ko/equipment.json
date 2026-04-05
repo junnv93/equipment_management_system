@@ -1394,58 +1394,6 @@
       }
     }
   },
-  "softwareHistory": {
-    "title": "소프트웨어 변경 이력",
-    "back": "뒤로가기",
-    "createRequest": "변경 요청",
-    "equipmentLabel": "{name} ({id})",
-    "dialog": {
-      "title": "소프트웨어 변경 요청",
-      "description": "소프트웨어 변경 내용과 검증 기록을 입력하세요. 검증 기록은 필수입니다.",
-      "softwareNameLabel": "소프트웨어명",
-      "softwareNamePlaceholder": "예: EMC32",
-      "previousVersionLabel": "이전 버전",
-      "previousVersionPlaceholder": "예: 10.2.0",
-      "newVersionLabel": "새 버전",
-      "newVersionPlaceholder": "예: 10.3.0",
-      "verificationLabel": "검증 기록",
-      "verificationPlaceholder": "변경 후 검증 내용을 상세히 입력하세요 (예: 기존 측정 결과와 비교하여 0.1dB 이내 차이 확인)",
-      "cancel": "취소",
-      "submit": "변경 요청",
-      "submitting": "요청 중...",
-      "softwareTypeLabel": "소프트웨어 타입",
-      "softwareTypePlaceholder": "타입을 선택하세요"
-    },
-    "currentInfo": {
-      "title": "현재 소프트웨어 정보",
-      "name": "소프트웨어명",
-      "version": "버전",
-      "type": "타입",
-      "firmwareVersion": "펌웨어 버전"
-    },
-    "history": {
-      "title": "변경 이력",
-      "count": "총 {count}개의 변경 이력이 있습니다",
-      "empty": "소프트웨어 변경 이력이 없습니다",
-      "colSoftware": "소프트웨어명",
-      "colVersionChange": "버전 변경",
-      "colChangedDate": "변경일",
-      "colStatus": "상태",
-      "colVerification": "검증 기록"
-    },
-    "validation": {
-      "softwareNameRequired": "소프트웨어명을 입력해주세요.",
-      "newVersionRequired": "새 버전을 입력해주세요.",
-      "verificationRequired": "검증 기록은 필수입니다.",
-      "inputError": "입력 오류"
-    },
-    "toast": {
-      "createSuccess": "변경 요청 완료",
-      "createSuccessDesc": "소프트웨어 변경 요청이 등록되었습니다. 기술책임자의 승인을 기다려주세요.",
-      "createError": "변경 요청 실패",
-      "createErrorFallback": "소프트웨어 변경 요청 중 오류가 발생했습니다."
-    }
-  },
   "teamEquipmentList": {
     "searchPlaceholder": "장비 검색...",
     "viewAll": "전체 장비 보기",
