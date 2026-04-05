@@ -148,3 +148,4 @@ npm
 
 # embedded repositories
 equipment_management_system/ .kombai/
+.playwright-mcp/

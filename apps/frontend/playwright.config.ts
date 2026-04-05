@@ -6,7 +6,7 @@ export default defineConfig({
   testIgnore: [
     '**/node_modules/**',
     '**/dist/**',
-    '**/calibration-overdue-auto-nc/**', // Exclude tests with missing fixtures
+    '**/overdue-auto-nc/**', // Exclude tests with missing fixtures
     '**/../backend/**', // Exclude backend tests
     '**/backend/**', // Exclude all backend directory
     '**/__tests__/**', // Exclude backend test directories
