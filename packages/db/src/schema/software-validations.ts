@@ -41,6 +41,10 @@ export const softwareValidations = pgTable(
     softwareVersion: varchar('software_version', { length: 100 }),
     testDate: timestamp('test_date'),
 
+    // ── 공통 ──
+    infoDate: timestamp('info_date'), // 입수 일자 (UL-QP-18-09)
+    softwareAuthor: varchar('software_author', { length: 200 }), // 제작자
+
     // ── 방법 1: 공급자 시연 (vendor) ──
     vendorName: varchar('vendor_name', { length: 200 }),
     vendorSummary: text('vendor_summary'),

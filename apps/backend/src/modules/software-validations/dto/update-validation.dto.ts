@@ -11,6 +11,11 @@ export const updateValidationSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다')
     .optional(),
+  infoDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다')
+    .optional(),
+  softwareAuthor: z.string().max(200, VM.string.max('제작자', 200)).optional(),
   // ── 방법 1: 공급자 시연 (vendor) ──
   vendorName: z.string().max(200, VM.string.max('공급자명', 200)).optional(),
   vendorSummary: z.string().optional(),

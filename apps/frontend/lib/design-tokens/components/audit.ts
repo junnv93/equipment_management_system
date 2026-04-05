@@ -51,6 +51,8 @@ export const AUDIT_ACTION_BADGE_TOKENS: Record<AuditAction, string> = {
   upload: getSemanticBadgeClasses('info'),
   download: getSemanticBadgeClasses('info'),
   revision: getSemanticBadgeClasses('warning'),
+  link: getSemanticBadgeClasses('ok'),
+  unlink: getSemanticBadgeClasses('neutral'),
 };
 
 /**

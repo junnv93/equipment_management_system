@@ -28,6 +28,8 @@ export const createValidationSchema = z
     validationType: ValidationTypeEnum,
     softwareVersion: z.string().max(100, VM.string.max('소프트웨어 버전', 100)).optional(),
     testDate: datePattern.optional(),
+    infoDate: datePattern.optional(),
+    softwareAuthor: z.string().max(200, VM.string.max('제작자', 200)).optional(),
     // ── 방법 1: 공급자 시연 (vendor) ──
     vendorName: z.string().max(200, VM.string.max('공급자명', 200)).optional(),
     vendorSummary: z.string().optional(),

@@ -90,6 +90,8 @@ export class SoftwareValidationsService extends VersionedBaseService {
         createdBy,
         softwareVersion: dto.softwareVersion ?? null,
         testDate: dto.testDate ? new Date(dto.testDate) : null,
+        infoDate: dto.infoDate ? new Date(dto.infoDate) : null,
+        softwareAuthor: dto.softwareAuthor ?? null,
         // Vendor fields
         vendorName: dto.vendorName ?? null,
         vendorSummary: dto.vendorSummary ?? null,
@@ -241,6 +243,10 @@ export class SoftwareValidationsService extends VersionedBaseService {
       updateData.softwareVersion = updateFields.softwareVersion;
     if (updateFields.testDate !== undefined)
       updateData.testDate = updateFields.testDate ? new Date(updateFields.testDate) : null;
+    if (updateFields.infoDate !== undefined)
+      updateData.infoDate = updateFields.infoDate ? new Date(updateFields.infoDate) : null;
+    if (updateFields.softwareAuthor !== undefined)
+      updateData.softwareAuthor = updateFields.softwareAuthor;
     if (updateFields.vendorName !== undefined) updateData.vendorName = updateFields.vendorName;
     if (updateFields.vendorSummary !== undefined)
       updateData.vendorSummary = updateFields.vendorSummary;
@@ -344,12 +350,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
   /**
    * 기술책임자 승인 (submitted → approved)
    */
-  async approve(
-    id: string,
-    version: number,
-    approverId: string,
-    _comment?: string
-  ): Promise<SoftwareValidation> {
+  async approve(id: string, version: number, approverId: string): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
     if (existing.status !== ValidationStatusValues.SUBMITTED) {
@@ -403,8 +404,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
   async qualityApprove(
     id: string,
     version: number,
-    approverId: string,
-    _comment?: string
+    approverId: string
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
@@ -438,6 +438,17 @@ export class SoftwareValidationsService extends VersionedBaseService {
     }
 
     this.invalidateCache(id);
+
+    const swNameQA = await this.getSoftwareName(existing.testSoftwareId);
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED, {
+      validationId: id,
+      testSoftwareId: existing.testSoftwareId,
+      softwareName: swNameQA,
+      submittedBy: existing.submittedBy,
+      actorId: approverId,
+      actorName: '',
+      timestamp: new Date(),
+    });
 
     return updated;
   }

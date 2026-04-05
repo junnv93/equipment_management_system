@@ -84,7 +84,7 @@ export class TestSoftwareController {
 
   @Post(':uuid/equipment')
   @RequirePermissions(Permission.UPDATE_TEST_SOFTWARE)
-  @AuditLog({ action: 'update', entityType: 'software', entityIdPath: 'params.uuid' })
+  @AuditLog({ action: 'link', entityType: 'software_equipment_link', entityIdPath: 'params.uuid' })
   @UsePipes(LinkEquipmentPipe)
   async linkEquipment(@Param('uuid', ParseUUIDPipe) uuid: string, @Body() dto: LinkEquipmentInput) {
     return this.testSoftwareService.linkEquipment(uuid, dto);
@@ -92,7 +92,11 @@ export class TestSoftwareController {
 
   @Delete(':uuid/equipment/:equipmentId')
   @RequirePermissions(Permission.UPDATE_TEST_SOFTWARE)
-  @AuditLog({ action: 'delete', entityType: 'software', entityIdPath: 'params.uuid' })
+  @AuditLog({
+    action: 'unlink',
+    entityType: 'software_equipment_link',
+    entityIdPath: 'params.uuid',
+  })
   async unlinkEquipment(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string
