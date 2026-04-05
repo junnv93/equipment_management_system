@@ -4,7 +4,7 @@
   "description": "Equipment Management System",
   "private": true,
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=20.18.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
@@ -16,18 +16,18 @@
     "test": "turbo run test",
     "test:e2e:turbo": "turbo run test:e2e",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:build": "docker-compose build",
-    "docker:logs": "docker-compose logs -f",
-    "docker:ps": "docker-compose ps",
-    "docker:restart": "docker-compose restart",
-    "docker:clean": "docker-compose down -v --remove-orphans",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "docker:logs": "docker compose logs -f",
+    "docker:ps": "docker compose ps",
+    "docker:restart": "docker compose restart",
+    "docker:clean": "docker compose down -v --remove-orphans",
     "test:e2e": "pnpm --filter frontend exec playwright test",
     "test:e2e:ui": "pnpm --filter frontend exec playwright test --ui",
     "db:sync": "bash ./scripts/apply-manual-migrations.sh",
     "db:push": "bash ./scripts/sync-db-schema.sh",
-    "prepare": "husky install",
+    "prepare": "husky",
     "type-check": "type-coverage --detail",
     "type-check:strict": "type-coverage --detail --at-least 90",
     "security:check": "ts-node scripts/check-security-decorators.ts && pnpm --filter backend run security:check-endpoints"
@@ -38,20 +38,16 @@
   ],
   "packageManager": "pnpm@10.7.1",
   "devDependencies": {
-    "@commitlint/cli": "^18.4.3",
-    "@commitlint/config-conventional": "^18.4.3",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@types/node": "^20.17.27",
-    "husky": "^8.0.3",
+    "husky": "^9.1.7",
     "lint-staged": "^15.2.0",
     "npm-check-updates": "^19.3.2",
     "only-allow": "^1.2.1",
     "prettier": "^3.5.3",
     "turbo": "^2.9.3",
     "type-coverage": "^2.28.0"
-  },
-  "dependencies": {
-    "@nestjs/throttler": "^6.5.0",
-    "zod": "^4.3.5"
   },
   "pnpm": {
     "overrides": {
