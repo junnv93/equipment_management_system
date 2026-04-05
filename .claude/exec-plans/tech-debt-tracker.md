@@ -7,6 +7,9 @@
 
 ## 미완료 항목
 
+- [ ] team-filtering E2E 테스트 재작성 (URL param 기반) — team-filtering-*.spec.ts (4파일) — 2026-04-05
+- [ ] 대시보드 탭 testIgnore 패턴 정리 — playwright.config.ts:9 `calibration-overdue-auto-nc` → `overdue-auto-nc` — 2026-04-05
+
 - [x] 날짜 검증 메시지 하드코딩 → VM.date.invalidYMD — 해결: 2026-04-05 — create/update-validation.dto.ts 4곳 교체
 - [x] countActiveFilters 함수 누락 — 해결: 2026-04-05 — software-filter-utils.ts에 추가
 - [x] ApiTestSoftwareFilters 인터페이스 미정의 — 해결: 2026-04-05 — 불필요 (toApiFilters가 TestSoftwareQuery 반환)

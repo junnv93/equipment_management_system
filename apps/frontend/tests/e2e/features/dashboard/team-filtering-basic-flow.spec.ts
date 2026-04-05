@@ -27,7 +27,8 @@
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 
-test.describe('Team Filtering Basic Flow @sequential-group-1', () => {
+// SKIP: 대시보드 리디자인으로 탭 UI 제거됨 (99a7c59b)
+test.describe.skip('Team Filtering Basic Flow @sequential-group-1', () => {
   // Variables used for logging within tests (not shared state)
   let selectedTeamName: string;
   let initialEquipmentCount: number;

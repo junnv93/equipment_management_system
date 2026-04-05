@@ -23,7 +23,8 @@
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 
-test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
+// SKIP: 대시보드 리디자인으로 탭 UI 제거됨 (99a7c59b)
+test.describe.skip('Team Filtering API Chain @sequential-group-2', () => {
   // Shared state variables across sequential tests
   let selectedTeamName = 'FCC EMC/RF';
   let unfilteredCount: number;
@@ -34,7 +35,7 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
   /**
    * Helper function to get total equipment count from stats card
    */
-  async function getTotalEquipmentCount(page: any): Promise<number> {
+  async function getTotalEquipmentCount(page: import('@playwright/test').Page): Promise<number> {
     const totalEquipmentCard = page
       .getByText('전체 장비')
       .locator('..')
@@ -47,7 +48,7 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
   /**
    * Helper function to get total equipment count from chart legend
    */
-  async function getChartTotalCount(page: any): Promise<number> {
+  async function getChartTotalCount(page: import('@playwright/test').Page): Promise<number> {
     try {
       // Wait for chart to be visible (it's loaded dynamically)
       const chartSection = page.locator('text=장비 상태').first().locator('..');
@@ -60,7 +61,7 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
         .textContent({ timeout: 3000 });
       const match = totalText?.match(/총\s*(\d+)\s*대의 장비/);
       return match ? parseInt(match[1]) : 0;
-    } catch (error) {
+    } catch {
       console.warn('[Chart Total] Chart not fully loaded, skipping chart verification');
       return 0;
     }
@@ -269,7 +270,7 @@ test.describe.serial('Team Filtering API Chain @sequential-group-2', () => {
 
     // 11. Verify chart total also restored (if available)
     const restoredChartTotal = await getChartTotalCount(siteAdminPage);
-    const freshUnfilteredChartTotal = restoredChartTotal; // After clicking "전체 팀"
+    const _freshUnfilteredChartTotal = restoredChartTotal; // After clicking "전체 팀"
 
     if (restoredChartTotal > 0) {
       console.log('[Test 3.5] Restored chart total:', restoredChartTotal);

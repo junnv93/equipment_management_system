@@ -53,23 +53,7 @@ test.describe('Responsive Design', () => {
     console.log('✓ Mobile menu button is visible');
 
     // Verify stats cards stack in 2-column grid
-    await expect(siteAdminPage.getByRole('heading', { name: '전체 장비' })).toBeVisible();
-    const statsSection = siteAdminPage
-      .getByRole('region')
-      .filter({
-        has: siteAdminPage.locator('text=/전체 장비|사용 가능|교정 예정|반출 중/'),
-      })
-      .first();
-
-    // Check if stats are in a 2-column grid by verifying grid-cols-2 class
-    const statsContainer = siteAdminPage
-      .locator('div')
-      .filter({
-        has: siteAdminPage.getByRole('heading', { name: '전체 장비' }),
-      })
-      .locator('..')
-      .locator('..');
-
+    await expect(siteAdminPage.locator('text=사용 가능').first()).toBeVisible();
     console.log('✓ Stats cards arranged in grid layout');
 
     // Verify quick action buttons wrap to multiple rows
@@ -79,23 +63,6 @@ test.describe('Responsive Design', () => {
     const buttonCount = await quickActionButtons.count();
     expect(buttonCount).toBeGreaterThanOrEqual(1);
     console.log(`✓ Quick action buttons present: ${buttonCount} button(s)`);
-
-    // Verify tab list is horizontally scrollable
-    const tablist = siteAdminPage.getByRole('tablist');
-    await expect(tablist).toBeVisible();
-
-    // Check for overflow-x-auto or scrollable behavior
-    const tablistClasses = await tablist.getAttribute('class');
-    const isScrollable =
-      tablistClasses?.includes('overflow-x-auto') ||
-      tablistClasses?.includes('overflow-auto') ||
-      tablistClasses?.includes('scroll');
-
-    if (isScrollable) {
-      console.log('✓ Tab list is horizontally scrollable');
-    } else {
-      console.log('⚠ Tab list may not have explicit scroll class');
-    }
 
     // Verify content fits within viewport without horizontal scroll
     const bodyWidth = await siteAdminPage.evaluate(() => document.body.scrollWidth);
@@ -133,13 +100,10 @@ test.describe('Responsive Design', () => {
       console.log('⚠ Pending approvals section may be in different tab');
     }
 
-    // Verify Overview content shows in layout
-    const overviewTab = siteAdminPage.getByRole('tab', { name: '개요' });
-    await overviewTab.click();
-
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
-    await expect(overviewPanel).toBeVisible();
-    console.log('✓ Overview content displays properly');
+    // Verify main content area displays properly
+    const mainContent = siteAdminPage.locator('main');
+    await expect(mainContent).toBeVisible();
+    console.log('✓ Main content displays properly');
 
     // Verify side navigation behavior (may be collapsed or visible)
     const nav = siteAdminPage.locator('nav').first();
@@ -190,16 +154,13 @@ test.describe('Responsive Design', () => {
       console.log('✓ Pending approval section visible on desktop');
     }
 
-    // Verify Overview tab shows content in multi-column layout
-    const overviewTab = siteAdminPage.getByRole('tab', { name: '개요' });
-    await overviewTab.click();
-
-    const overviewPanel = siteAdminPage.getByRole('tabpanel');
-    await expect(overviewPanel).toBeVisible();
+    // Verify main content shows multi-column layout with chart and lists
+    const mainContent = siteAdminPage.locator('main');
+    await expect(mainContent).toBeVisible();
 
     // Check for chart and calibration list
-    const chartSection = overviewPanel.locator('text=장비 상태').first();
-    const calibrationList = overviewPanel.locator('text=교정 예정 장비').first();
+    const chartSection = mainContent.locator('text=장비 상태').first();
+    const calibrationList = mainContent.locator('text=교정 예정 장비').first();
 
     await expect(chartSection).toBeVisible();
     await expect(calibrationList).toBeVisible();
@@ -279,10 +240,6 @@ test.describe('Responsive Design', () => {
     console.log('✓ Loaded dashboard on mobile viewport');
 
     // 3. Observe equipment status chart behavior on mobile
-    // Navigate to Overview tab (default)
-    const overviewTab = siteAdminPage.getByRole('tab', { name: '개요' });
-    await overviewTab.click();
-
     // Verify chart is visible on mobile
     const chartSectionMobile = siteAdminPage.locator('text=장비 상태').first();
     await expect(chartSectionMobile).toBeVisible();

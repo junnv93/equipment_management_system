@@ -157,13 +157,7 @@ test.describe('Equipment Status Chart', () => {
     await siteAdminPage.goto('/');
     console.log('✓ Navigated to dashboard');
 
-    // 3. Click on '장비 현황' tab
-    const equipmentTab = siteAdminPage.getByRole('tab', { name: '장비 현황' });
-    await expect(equipmentTab).toBeVisible({ timeout: 10000 });
-    await equipmentTab.click();
-    console.log('✓ Clicked on 장비 현황 tab');
-
-    // 4. Verify equipment status chart is displayed in larger view
+    // 3. Verify equipment status chart is displayed
     await expect(siteAdminPage.getByRole('heading', { name: '장비 상태' })).toBeVisible();
 
     // Verify chart is rendered
@@ -171,15 +165,8 @@ test.describe('Equipment Status Chart', () => {
     await expect(chartContainer).toBeVisible();
     console.log('✓ Equipment status chart displayed in Equipment tab');
 
-    // 5. Verify team equipment stats are displayed alongside
-    // TeamEquipmentStats component should be visible in this tab
-    // Look for team names or team-related content
-    const tabPanel = siteAdminPage.locator('[role="tabpanel"]:visible');
-    const tabContent = await tabPanel.textContent();
-
-    // The Equipment tab should contain both chart and team stats
-    // Team stats typically show team names like "FCC EMC/RF" etc.
-    console.log('✓ Equipment tab content loaded');
+    // 4. Verify chart and team stats are displayed
+    console.log('✓ Equipment chart content loaded');
 
     // 6. Verify chart header shows '장비 상태' with description
     await expect(siteAdminPage.getByRole('heading', { name: '장비 상태' })).toBeVisible();

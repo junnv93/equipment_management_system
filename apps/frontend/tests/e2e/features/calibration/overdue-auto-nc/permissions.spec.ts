@@ -25,7 +25,7 @@
  */
 
 import { test, expect, APIRequestContext } from '@playwright/test';
-import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
   EquipmentStatus,
   EquipmentStatusValues as ESVal,
@@ -69,6 +69,7 @@ async function createTestEquipment(
       isActive: true,
       manufacturer: 'Test Manufacturer',
       modelNumber: 'TEST-PERM-001',
+      initialLocation: 'Test Lab',
     },
   });
 

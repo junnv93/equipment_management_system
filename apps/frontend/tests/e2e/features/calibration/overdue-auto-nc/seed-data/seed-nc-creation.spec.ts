@@ -32,7 +32,7 @@ test.describe('Group 2: NC Creation - Seed Setup', () => {
 
     const data = await response.json();
     expect(data).toHaveProperty('access_token');
-    expect(data.user.role).toBe(URVal.LAB_MANAGER);
+    expect(data.user.roles).toContain(URVal.LAB_MANAGER);
     console.log('✅ Test login successful for lab_manager');
   });
 

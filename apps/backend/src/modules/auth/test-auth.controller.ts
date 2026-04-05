@@ -24,6 +24,20 @@ export class TestAuthController {
   ) {}
 
   /**
+   * 테스트 전용 헬스체크 엔드포인트
+   * E2E 테스트에서 백엔드 접근 가능 여부를 확인할 때 사용됩니다.
+   */
+  @Get('test')
+  @Public()
+  @SkipPermissions()
+  testHealthCheck(): { message: string; timestamp: number } {
+    return {
+      message: 'Backend API is accessible',
+      timestamp: Date.now(),
+    };
+  }
+
+  /**
    * 테스트 전용 로그인 엔드포인트
    * E2E 테스트에서 사용됩니다.
    *

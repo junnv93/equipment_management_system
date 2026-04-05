@@ -43,22 +43,19 @@ test.describe('Dashboard - Basic Rendering', () => {
     await expect(approvalCard).toBeVisible();
   });
 
-  test('탭 전환', async ({ testOperatorPage }) => {
+  test('단일 뷰 위젯 섹션 확인', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/');
 
-    // 개요 탭이 기본 선택
-    const overviewTab = testOperatorPage.getByRole('tab', { name: '개요' });
-    await expect(overviewTab).toHaveAttribute('data-state', 'active');
+    // KPI 통계 섹션
+    await expect(testOperatorPage.locator('text=사용 가능').first()).toBeVisible();
 
-    // 탭 클릭 테스트
-    const tabs = testOperatorPage.getByRole('tablist').getByRole('tab');
-    const tabCount = await tabs.count();
+    // 빠른 액션 바
+    const quickActions = testOperatorPage.locator('nav[aria-label="빠른 액션"]');
+    await expect(quickActions).toBeVisible();
 
-    for (let i = 1; i < tabCount; i++) {
-      const tab = tabs.nth(i);
-      await tab.click();
-      await expect(tab).toHaveAttribute('data-state', 'active');
-    }
+    // 교정 D-day 리스트 (region)
+    const calibrationRegion = testOperatorPage.locator('[role="region"][aria-label*="교정"]');
+    await expect(calibrationRegion.first()).toBeVisible();
   });
 });
 
@@ -106,13 +103,16 @@ test.describe('Dashboard - 시험실무자', () => {
     await expect(approvalCard.locator('a[aria-label*="반출"]')).toBeVisible();
   });
 
-  test('시험실무자 탭 목록', async ({ testOperatorPage }) => {
+  test('시험실무자 위젯 가시성', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/');
 
-    // 시험실무자 전용 탭 확인
-    await expect(testOperatorPage.getByRole('tab', { name: '개요' })).toBeVisible();
-    await expect(testOperatorPage.getByRole('tab', { name: '내 장비' })).toBeVisible();
-    await expect(testOperatorPage.getByRole('tab', { name: '교정' })).toBeVisible();
+    // 시험실무자: KPI, 빠른 액션, 교정 D-day 표시
+    await expect(testOperatorPage.locator('text=사용 가능').first()).toBeVisible();
+    await expect(testOperatorPage.locator('nav[aria-label="빠른 액션"]')).toBeVisible();
+
+    // 시험실무자: 승인 대기 카드는 표시됨 (내 요청 현황)
+    const approvalCard = testOperatorPage.getByTestId('pending-approval-card');
+    await expect(approvalCard).toBeVisible();
   });
 
   test('시험실무자 최근 활동 - 본인 활동만 표시', async ({ testOperatorPage }) => {
@@ -187,14 +187,17 @@ test.describe('Dashboard - 기술책임자', () => {
     }
   });
 
-  test('기술책임자 탭 목록 - 승인 관리 탭 포함', async ({ techManagerPage }) => {
+  test('기술책임자 위젯 가시성 - 팀 분포 포함', async ({ techManagerPage }) => {
     await techManagerPage.goto('/');
 
-    // 기술책임자 전용 탭 확인
-    await expect(techManagerPage.getByRole('tab', { name: '개요' })).toBeVisible();
-    await expect(techManagerPage.getByRole('tab', { name: '팀 장비' })).toBeVisible();
-    await expect(techManagerPage.getByRole('tab', { name: '교정' })).toBeVisible();
-    await expect(techManagerPage.getByRole('tab', { name: '승인 관리' })).toBeVisible();
+    // 기술책임자: 승인 대기 카드 (팀 승인 대기)
+    const approvalCard = techManagerPage.getByTestId('pending-approval-card');
+    await expect(approvalCard).toBeVisible();
+    await expect(approvalCard.locator('#pending-approval-title')).toContainText('팀 승인 대기');
+
+    // 기술책임자: 팀 장비 분포 차트 표시
+    const teamDistribution = techManagerPage.locator('[role="region"][aria-label*="팀"]');
+    await expect(teamDistribution.first()).toBeVisible();
   });
 
   test('기술책임자 최근 활동 - 팀 활동 표시', async ({ techManagerPage }) => {
@@ -244,13 +247,16 @@ test.describe('Dashboard - 시험소 관리자', () => {
     await expect(approvalCard.locator('a[aria-label*="소프트웨어"]')).toBeVisible();
   });
 
-  test('시험소 관리자 탭 목록 - 대여/반출 탭 포함', async ({ siteAdminPage }) => {
+  test('시험소 관리자 위젯 가시성 - 전체 위젯 표시', async ({ siteAdminPage }) => {
     await siteAdminPage.goto('/');
 
-    await expect(siteAdminPage.getByRole('tab', { name: '개요' })).toBeVisible();
-    await expect(siteAdminPage.getByRole('tab', { name: '장비 현황' })).toBeVisible();
-    await expect(siteAdminPage.getByRole('tab', { name: '교정' })).toBeVisible();
-    await expect(siteAdminPage.getByRole('tab', { name: '대여/반출' })).toBeVisible();
+    // 시험소 관리자: 모든 위젯 표시
+    await expect(siteAdminPage.getByTestId('pending-approval-card')).toBeVisible();
+    await expect(siteAdminPage.locator('nav[aria-label="빠른 액션"]')).toBeVisible();
+
+    // 시험소 관리자: 승인 카드 제목
+    const approvalCard = siteAdminPage.getByTestId('pending-approval-card');
+    await expect(approvalCard.locator('#pending-approval-title')).toContainText('시험소 승인 대기');
   });
 });
 
@@ -324,9 +330,9 @@ test.describe('Dashboard - Responsive Layout', () => {
     const statsGrid = testOperatorPage.locator('.grid.gap-4');
     await expect(statsGrid.first()).toBeVisible();
 
-    // 탭이 스크롤 가능
-    const tabsList = testOperatorPage.getByRole('tablist');
-    await expect(tabsList).toBeVisible();
+    // 빠른 액션이 표시됨
+    const quickActions = testOperatorPage.locator('nav[aria-label="빠른 액션"]');
+    await expect(quickActions).toBeVisible();
   });
 
   test('모바일에서 승인 대기 카드 스크롤', async ({ testOperatorPage }) => {
@@ -346,25 +352,18 @@ test.describe('Dashboard - Responsive Layout', () => {
 // 키보드 네비게이션 및 접근성 테스트 (인증 필요)
 // ============================================================================
 test.describe('Dashboard - Accessibility', () => {
-  test('키보드 탭 네비게이션', async ({ testOperatorPage }) => {
+  test('키보드 네비게이션 - 빠른 액션', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/');
 
-    // 탭 목록 확인
-    const tabList = testOperatorPage.getByRole('tablist');
-    await expect(tabList).toBeVisible();
+    const quickActions = testOperatorPage.locator('nav[aria-label="빠른 액션"]');
+    await expect(quickActions).toBeVisible();
 
-    // 첫 번째 탭 클릭 후 화살표 키로 탐색
-    const tabs = tabList.getByRole('tab');
-    const firstTab = tabs.first();
-    await firstTab.click();
-    await firstTab.focus();
+    // 빠른 액션 링크에 포커스 이동
+    const firstLink = quickActions.locator('a').first();
+    await firstLink.focus();
 
-    // 화살표 키로 다음 탭으로 이동
-    await testOperatorPage.keyboard.press('ArrowRight');
-
-    // 포커스가 이동했는지 확인 (두 번째 탭 또는 첫 번째 탭이 여전히 포커스)
-    const focusedElement = testOperatorPage.locator(':focus');
-    await expect(focusedElement).toBeVisible();
+    const isFocused = await firstLink.evaluate((el) => document.activeElement === el);
+    expect(isFocused).toBe(true);
   });
 
   test('승인 대기 카드 링크 접근성', async ({ testOperatorPage }) => {
@@ -441,13 +440,18 @@ test.describe('Dashboard - Accessibility', () => {
     }
   });
 
-  test('@a11y 탭 리스트 aria-label 확인', async ({ testOperatorPage }) => {
+  test('@a11y 승인 대기 카드 접근성 확인', async ({ testOperatorPage }) => {
     await testOperatorPage.goto('/');
 
-    const tabList = testOperatorPage.getByRole('tablist');
-    if (await tabList.isVisible()) {
-      const ariaLabel = await tabList.getAttribute('aria-label');
-      expect(ariaLabel).toBeTruthy();
+    const approvalCard = testOperatorPage.getByTestId('pending-approval-card');
+    if (await approvalCard.isVisible()) {
+      // role="region" 확인
+      const role = await approvalCard.getAttribute('role');
+      expect(role).toBe('region');
+
+      // aria-labelledby 확인
+      const labelledBy = await approvalCard.getAttribute('aria-labelledby');
+      expect(labelledBy).toBeTruthy();
     }
   });
 

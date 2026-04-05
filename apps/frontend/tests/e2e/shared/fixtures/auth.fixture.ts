@@ -72,7 +72,11 @@ async function createAuthenticatedPage(
     );
   }
   const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
-  const context = await browser.newContext({ baseURL, storageState: storageStatePath });
+  const context = await browser.newContext({
+    baseURL,
+    storageState: storageStatePath,
+    reducedMotion: 'reduce',
+  });
   const page = await context.newPage();
   return { context, page };
 }
@@ -83,6 +87,7 @@ async function createAuthenticatedPage(
  * 각 테스트는 독립적인 브라우저 컨텍스트에서 실행됩니다.
  * storageState를 통해 인증 상태가 주입되므로 네트워크 로그인이 불필요합니다.
  */
+/* eslint-disable react-hooks/rules-of-hooks -- Playwright fixture `use()`, not React Hook */
 export const test = base.extend<AuthFixtures>({
   /** 시험실무자 (Test Engineer) — 장비 운영, 점검, 이력카드 작성 */
   testOperatorPage: async ({ browser }, use) => {

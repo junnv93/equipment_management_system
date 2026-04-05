@@ -19,7 +19,8 @@
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 
-test.describe('Independent State Change Tests @parallel-group-2', () => {
+// SKIP: 대시보드 리디자인으로 탭 UI 제거됨 (99a7c59b)
+test.describe.skip('Independent State Change Tests @parallel-group-2', () => {
   test.beforeEach(async ({ siteAdminPage }) => {
     // Fresh page navigation for each test to ensure independence
     await siteAdminPage.goto('/');

@@ -30,6 +30,7 @@ export default defineConfig({
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    reducedMotion: 'reduce',
   },
   projects: [
     // Auth Setup (1회 실행 — API 기반 인증, UI 불필요)

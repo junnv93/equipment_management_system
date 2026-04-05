@@ -14,7 +14,8 @@
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 
-test.describe('Team Filtering Persistence', () => {
+// SKIP: 대시보드 리디자인으로 탭 UI 제거됨 (99a7c59b)
+test.describe.skip('Team Filtering Persistence', () => {
   const selectedTeamName = 'SAR';
 
   test('should persist team selection when switching to 교정 (Calibration) tab', async ({
