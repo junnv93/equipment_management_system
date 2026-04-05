@@ -4,7 +4,7 @@ WORKDIR /app
 # 공통 의존성 레이어
 FROM base AS deps
 RUN apk add --no-cache libc6-compat && \
-    npm install -g pnpm@10.7.0 next typescript rimraf
+    npm install -g pnpm@10.7.1 next typescript rimraf
 
 # 의존성 파일만 복사하여 레이어 캐싱 활용
 COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
@@ -20,7 +20,7 @@ WORKDIR /app
 
 # 필요한 개발 도구 설치
 RUN apk add --no-cache curl && \
-    npm install -g pnpm@10.7.0 next typescript rimraf
+    npm install -g pnpm@10.7.1 next typescript rimraf
 
 # deps 단계에서 설치한 의존성 복사
 COPY --from=deps /app/node_modules ./node_modules
@@ -81,7 +81,7 @@ COPY --from=build /app/packages/schemas/package.json ./packages/schemas/package.
 
 # 프로덕션 의존성만 설치
 COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
-RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 RUN pnpm install --prod --frozen-lockfile
 
 # 보안을 위해 루트가 아닌 사용자로 전환

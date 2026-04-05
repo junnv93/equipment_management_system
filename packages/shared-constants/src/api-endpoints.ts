@@ -435,6 +435,20 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
+  // 중간점검 관리 (교정 하위)
+  // ============================================================================
+  INTERMEDIATE_INSPECTIONS: {
+    BY_CALIBRATION: (calibrationId: string) =>
+      `/api/calibration/${calibrationId}/intermediate-inspections`,
+    GET: (id: string) => `/api/intermediate-inspections/${id}`,
+    UPDATE: (id: string) => `/api/intermediate-inspections/${id}`,
+    SUBMIT: (id: string) => `/api/intermediate-inspections/${id}/submit`,
+    REVIEW: (id: string) => `/api/intermediate-inspections/${id}/review`,
+    APPROVE: (id: string) => `/api/intermediate-inspections/${id}/approve`,
+    REJECT: (id: string) => `/api/intermediate-inspections/${id}/reject`,
+  },
+
+  // ============================================================================
   // DEPRECATED: Legacy rental imports (proxy to EQUIPMENT_IMPORTS)
   // ============================================================================
   /**

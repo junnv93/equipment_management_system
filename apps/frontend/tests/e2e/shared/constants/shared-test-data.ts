@@ -29,6 +29,7 @@ export const TEST_EQUIPMENT_IDS = {
   // Suwon (General EMC - R)
   OSCILLOSCOPE_SUW_R: 'eeee2001-0001-4001-8001-000000000001', // available (overdue)
   POWER_SUPPLY_SUW_R: 'eeee2002-0002-4002-8002-000000000002', // available (due soon)
+  MULTIMETER_SUW_R: 'eeee2003-0003-4003-8003-000000000003', // in_use (TE 팀)
 
   // Suwon (SAR - S)
   SAR_PROBE_SUW_S: 'eeee3001-0001-4001-8001-000000000001', // available

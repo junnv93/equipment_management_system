@@ -32,6 +32,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 교정 관리
     Permission.VIEW_CALIBRATIONS,
     Permission.CREATE_CALIBRATION, // 교정 등록 (승인 대기 상태로 등록)
+    Permission.UPDATE_CALIBRATION, // 교정 수정 + 중간점검 작성 (UL-QP-18-03 점검자=TE)
     // 팀 조회
     Permission.VIEW_TEAMS, // 팀 목록 조회 (장비 필터에 필요)
     // 알림 기본 권한

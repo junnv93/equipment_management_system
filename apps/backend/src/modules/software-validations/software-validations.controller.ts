@@ -28,8 +28,9 @@ import type {
   RejectValidationInput,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, TEST_SOFTWARE_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import type { SoftwareValidation } from '@equipment-management/db/schema/software-validations';
@@ -63,6 +64,7 @@ export class TestSoftwareValidationsController {
 
   @Get(':softwareId/validations')
   @RequirePermissions(Permission.VIEW_SOFTWARE_VALIDATIONS)
+  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
   findByTestSoftware(
     @Param('softwareId', ParseUUIDPipe) softwareId: string,
     @Query(ValidationQueryPipe) query: ValidationQueryInput
@@ -88,8 +90,11 @@ export class SoftwareValidationsController {
 
   @Get('pending')
   @RequirePermissions(Permission.APPROVE_SOFTWARE_VALIDATION)
-  findPending(): Promise<SoftwareValidation[]> {
-    return this.validationsService.findPending();
+  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
+  findPending(
+    @Query(ValidationQueryPipe) query: ValidationQueryInput
+  ): Promise<SoftwareValidation[]> {
+    return this.validationsService.findPending(query);
   }
 
   @Get(':uuid')

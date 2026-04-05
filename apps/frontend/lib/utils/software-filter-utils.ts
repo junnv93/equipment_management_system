@@ -81,6 +81,21 @@ export function toApiFilters(ui: UITestSoftwareFilters): TestSoftwareQuery {
 /**
  * UI 필터 → URLSearchParams 문자열 변환
  */
+/**
+ * 활성 필터 개수 계산
+ */
+export function countActiveFilters(filters: UITestSoftwareFilters): number {
+  let count = 0;
+  if (filters.search) count++;
+  if (filters.testField) count++;
+  if (filters.availability) count++;
+  if (filters.manufacturer) count++;
+  return count;
+}
+
+/**
+ * UI 필터 → URLSearchParams 문자열 변환
+ */
 export function toSearchParamsString(ui: UITestSoftwareFilters): string {
   const params = new URLSearchParams();
   if (ui.search) params.set('search', ui.search);

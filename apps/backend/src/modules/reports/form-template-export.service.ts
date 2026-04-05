@@ -78,7 +78,14 @@ export class FormTemplateExportService {
       'UL-QP-18-05': (p, s) => this.exportSelfInspection(p, s),
     };
 
-    return exporters[formNumber](params, scope);
+    const exporter = exporters[formNumber];
+    if (!exporter) {
+      throw new NotImplementedException({
+        code: 'FORM_NOT_IMPLEMENTED',
+        message: `${formNumber} exporter is registered as implemented but has no handler.`,
+      });
+    }
+    return exporter(params, scope);
   }
 
   private formatDate(d: Date | string | null | undefined): string {

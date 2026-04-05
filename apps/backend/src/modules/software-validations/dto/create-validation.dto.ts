@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { ValidationTypeEnum, uuidString, VM } from '@equipment-management/schemas';
 
-const datePattern = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다');
+const datePattern = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD);
 
 const VENDOR_FIELDS = [
   'vendorName',

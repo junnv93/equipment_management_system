@@ -1,8 +1,16 @@
-import { Injectable, Logger, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { eq, and, desc, sql, or, inArray, lt } from 'drizzle-orm';
 import { documents } from '@equipment-management/db/schema';
 import { calibrations } from '@equipment-management/db/schema';
+import { softwareValidations } from '@equipment-management/db/schema';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
@@ -53,6 +61,11 @@ export class DocumentService {
         message:
           'At least one owner (equipmentId, calibrationId, requestId, or softwareValidationId) is required.',
       });
+    }
+
+    // 유효성확인 문서는 draft 상태에서만 업로드 가능
+    if (options.softwareValidationId) {
+      await this.ensureValidationIsDraft(options.softwareValidationId);
     }
 
     const subdirectory = options.subdirectory ?? this.resolveSubdirectory(options);
@@ -236,7 +249,12 @@ export class DocumentService {
    * 물리 삭제는 별도 retention 스케줄러에서 처리합니다.
    */
   async deleteDocument(id: string): Promise<void> {
-    await this.findByIdAnyStatus(id);
+    const doc = await this.findByIdAnyStatus(id);
+
+    // 유효성확인 문서는 draft 상태에서만 삭제 가능
+    if (doc.softwareValidationId) {
+      await this.ensureValidationIsDraft(doc.softwareValidationId);
+    }
 
     await this.db
       .update(documents)
@@ -459,6 +477,30 @@ export class DocumentService {
     }
 
     return result.length;
+  }
+
+  /**
+   * 유효성확인이 draft 상태인지 검증 — draft가 아니면 문서 변경 차단
+   */
+  private async ensureValidationIsDraft(validationId: string): Promise<void> {
+    const validation = await this.db.query.softwareValidations.findFirst({
+      where: eq(softwareValidations.id, validationId),
+      columns: { id: true, status: true },
+    });
+
+    if (!validation) {
+      throw new NotFoundException({
+        code: 'VALIDATION_NOT_FOUND',
+        message: `Software validation ${validationId} not found.`,
+      });
+    }
+
+    if (validation.status !== 'draft') {
+      throw new ForbiddenException({
+        code: 'VALIDATION_NOT_DRAFT',
+        message: `Cannot modify documents for validation in '${validation.status}' status. Only 'draft' validations allow document changes.`,
+      });
+    }
   }
 
   /**

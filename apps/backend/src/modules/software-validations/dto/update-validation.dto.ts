@@ -9,11 +9,11 @@ export const updateValidationSchema = z.object({
   softwareVersion: z.string().max(100, VM.string.max('소프트웨어 버전', 100)).optional(),
   testDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD)
     .optional(),
   infoDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD)
     .optional(),
   softwareAuthor: z.string().max(200, VM.string.max('제작자', 200)).optional(),
   // ── 방법 1: 공급자 시연 (vendor) ──
@@ -22,7 +22,7 @@ export const updateValidationSchema = z.object({
   receivedBy: uuidString(VM.uuid.invalid('수령인')).optional(),
   receivedDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD)
     .optional(),
   attachmentNote: z.string().optional(),
   // ── 방법 2: UL 자체 시험 (self) ──
