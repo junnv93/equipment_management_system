@@ -106,7 +106,7 @@ jobs:
     needs: quality-gate
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15.13
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -120,7 +120,7 @@ jobs:
           --health-retries 5
 
       redis:
-        image: redis:alpine
+        image: redis:7.4-alpine
         ports:
           - 6379:6379
         options: >-
@@ -172,8 +172,8 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/equipment_management
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-jwt-secret-do-not-use-in-production' }}
-          REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET || 'ci-refresh-secret-do-not-use-in-production' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
           NODE_ENV: test
           PERMISSIONS_GUARD_MODE: DENY
 
@@ -216,7 +216,7 @@ jobs:
         run: pnpm build
         env:
           # Next.js 빌드 시 필요한 플레이스홀더 환경 변수
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: http://localhost:3001
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
@@ -359,6 +359,7 @@ jobs:
   deploy-staging:
     name: Deploy (Staging)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [docker-build, image-scan]
     environment:
       name: staging
@@ -418,6 +419,7 @@ jobs:
   deploy:
     name: Deploy (Production)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: deploy-staging
     environment:
       name: production

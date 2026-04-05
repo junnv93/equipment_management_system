@@ -41,7 +41,7 @@ jobs:
         shard: [1, 2, 3, 4]
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15.13
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -55,7 +55,7 @@ jobs:
           --health-retries 5
 
       redis:
-        image: redis:alpine
+        image: redis:7.4-alpine
         ports:
           - 6379:6379
         options: >-
@@ -96,9 +96,9 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/equipment_management
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-jwt-secret-do-not-use-in-production' }}
-          REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET || 'ci-refresh-secret-do-not-use-in-production' }}
-          INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY || 'ci-internal-api-key-do-not-use-in-prod-32chars-minimum-required-here' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
+          INTERNAL_API_KEY: ${{ secrets.INTERNAL_API_KEY }}
           NODE_ENV: test
           PERMISSIONS_GUARD_MODE: DENY
           FRONTEND_URL: http://localhost:3000
@@ -107,7 +107,7 @@ jobs:
       - name: Start Frontend (dev mode — next build tree-shakes test-login provider)
         run: pnpm --filter frontend exec next dev --port 3000 --turbopack &
         env:
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-nextauth-placeholder-32chars-min' }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXTAUTH_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: http://localhost:3001
 
