@@ -228,7 +228,10 @@ export class HistoryCardService {
   private buildTemplateXml(data: HistoryCardData): string {
     const esc = (v: unknown): string => this.escapeXml(String(v ?? '-'));
     const eq = data.equipment;
-    const rows = (items: Record<string, string>[], keys: string[]): string =>
+    const rows = <T extends Record<string, string>>(
+      items: T[],
+      keys: (keyof T & string)[]
+    ): string =>
       items
         .map(
           (item) =>
