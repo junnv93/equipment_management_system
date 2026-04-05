@@ -138,6 +138,9 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     queryClient.invalidateQueries({
       queryKey: queryKeys.softwareValidations.byTestSoftware(softwareId),
     });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.approvals.all,
+    });
   };
 
   const handleMutationError = (error: Error) => {

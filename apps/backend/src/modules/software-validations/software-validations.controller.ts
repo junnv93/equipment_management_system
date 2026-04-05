@@ -32,6 +32,7 @@ import { Permission } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
+import type { SoftwareValidation } from '@equipment-management/db/schema/software-validations';
 
 /**
  * 소프트웨어별 유효성 확인 생성/조회 (nested route)
@@ -55,7 +56,7 @@ export class TestSoftwareValidationsController {
     @Param('softwareId', ParseUUIDPipe) softwareId: string,
     @Body() dto: CreateValidationInput,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<SoftwareValidation> {
     const createdBy = extractUserId(req);
     return this.validationsService.create(softwareId, dto, createdBy);
   }
@@ -65,7 +66,7 @@ export class TestSoftwareValidationsController {
   findByTestSoftware(
     @Param('softwareId', ParseUUIDPipe) softwareId: string,
     @Query(ValidationQueryPipe) query: ValidationQueryInput
-  ): Promise<unknown> {
+  ) {
     return this.validationsService.findByTestSoftware(softwareId, query);
   }
 }
@@ -87,13 +88,13 @@ export class SoftwareValidationsController {
 
   @Get('pending')
   @RequirePermissions(Permission.APPROVE_SOFTWARE_VALIDATION)
-  findPending(): Promise<unknown> {
+  findPending(): Promise<SoftwareValidation[]> {
     return this.validationsService.findPending();
   }
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_SOFTWARE_VALIDATIONS)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<SoftwareValidation> {
     return this.validationsService.findOne(uuid);
   }
 
@@ -108,7 +109,7 @@ export class SoftwareValidationsController {
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: UpdateValidationInput
-  ): Promise<unknown> {
+  ): Promise<SoftwareValidation> {
     return this.validationsService.update(uuid, dto);
   }
 
@@ -124,7 +125,7 @@ export class SoftwareValidationsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: SubmitValidationInput,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<SoftwareValidation> {
     const submitterId = extractUserId(req);
     return this.validationsService.submit(uuid, dto.version, submitterId);
   }
@@ -141,7 +142,7 @@ export class SoftwareValidationsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: ApproveValidationInput,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<SoftwareValidation> {
     const approverId = extractUserId(req);
     return this.validationsService.approve(uuid, dto.version, approverId, dto.comment);
   }
@@ -158,7 +159,7 @@ export class SoftwareValidationsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: ApproveValidationInput,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<SoftwareValidation> {
     const approverId = extractUserId(req);
     return this.validationsService.qualityApprove(uuid, dto.version, approverId, dto.comment);
   }
@@ -175,7 +176,7 @@ export class SoftwareValidationsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: RejectValidationInput,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<SoftwareValidation> {
     const rejectedBy = extractUserId(req);
     return this.validationsService.reject(uuid, dto.version, rejectedBy, dto.rejectionReason);
   }

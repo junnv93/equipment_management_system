@@ -47,6 +47,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'pending:');
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
   }
 
   private async getSoftwareName(testSoftwareId: string): Promise<string> {
@@ -442,7 +443,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
   }
 
   /**
-   * 반려 (submitted → rejected)
+   * 반려 (submitted/approved → rejected)
    */
   async reject(
     id: string,
@@ -452,10 +453,13 @@ export class SoftwareValidationsService extends VersionedBaseService {
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
-    if (existing.status !== ValidationStatusValues.SUBMITTED) {
+    if (
+      existing.status !== ValidationStatusValues.SUBMITTED &&
+      existing.status !== ValidationStatusValues.APPROVED
+    ) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
-        message: 'Only submitted validations can be rejected.',
+        message: 'Only submitted or approved validations can be rejected.',
       });
     }
 

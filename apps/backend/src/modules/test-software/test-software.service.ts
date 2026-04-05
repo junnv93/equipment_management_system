@@ -54,10 +54,10 @@ export class TestSoftwareService extends VersionedBaseService {
    */
   private async generateNextManagementNumber(tx: AppDatabase): Promise<string> {
     // PNNNN 형식에서 숫자 부분만 추출하여 MAX 계산
-    // Drizzle sql 태그의 정규식 이스케이프 문제를 피하기 위해 sql.raw 사용
+    // FOR UPDATE로 동시 삽입 시 중복 방지 — 행 잠금으로 다른 트랜잭션의 동시 읽기 차단
     const result = await tx.execute(
       sql.raw(
-        `SELECT MAX(CAST(SUBSTRING(management_number FROM 'P([0-9]+)') AS INTEGER)) as max_num FROM test_software`
+        `SELECT MAX(CAST(SUBSTRING(management_number FROM 'P([0-9]+)') AS INTEGER)) as max_num FROM test_software FOR UPDATE`
       )
     );
 
