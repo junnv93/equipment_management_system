@@ -1,21 +1,26 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { transformSingleResponse } from './utils/response-transformers';
+import type {
+  SelfInspectionItemJudgment,
+  SelfInspectionResult,
+  SelfInspectionStatus,
+} from '@equipment-management/schemas';
 
 export interface SelfInspection {
   id: string;
   equipmentId: string;
   inspectionDate: string;
   inspectorId: string;
-  appearance: 'pass' | 'fail' | 'na';
-  functionality: 'pass' | 'fail' | 'na';
-  safety: 'pass' | 'fail' | 'na';
-  calibrationStatus: 'pass' | 'fail' | 'na';
-  overallResult: 'pass' | 'fail';
+  appearance: SelfInspectionItemJudgment;
+  functionality: SelfInspectionItemJudgment;
+  safety: SelfInspectionItemJudgment;
+  calibrationStatus: SelfInspectionItemJudgment;
+  overallResult: SelfInspectionResult;
   remarks: string | null;
   inspectionCycle: number;
   nextInspectionDate: string | null;
-  status: 'draft' | 'completed' | 'confirmed';
+  status: SelfInspectionStatus;
   confirmedBy: string | null;
   confirmedAt: string | null;
   version: number;
@@ -25,11 +30,11 @@ export interface SelfInspection {
 
 export interface CreateSelfInspectionDto {
   inspectionDate: string;
-  appearance: 'pass' | 'fail' | 'na';
-  functionality: 'pass' | 'fail' | 'na';
-  safety: 'pass' | 'fail' | 'na';
-  calibrationStatus: 'pass' | 'fail' | 'na';
-  overallResult: 'pass' | 'fail';
+  appearance: SelfInspectionItemJudgment;
+  functionality: SelfInspectionItemJudgment;
+  safety: SelfInspectionItemJudgment;
+  calibrationStatus: SelfInspectionItemJudgment;
+  overallResult: SelfInspectionResult;
   remarks?: string;
   inspectionCycle?: number;
 }
