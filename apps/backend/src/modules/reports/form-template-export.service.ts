@@ -1,9 +1,7 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import PizZip from 'pizzip';
 import ExcelJS from 'exceljs';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment } from '@equipment-management/db/schema/equipment';
-import { calibrations } from '@equipment-management/db/schema/calibrations';
 import { equipmentSelfInspections } from '@equipment-management/db/schema/equipment-self-inspections';
 import { eq, desc, and } from 'drizzle-orm';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
@@ -133,13 +131,13 @@ export class FormTemplateExportService {
   // 여기서는 기본 메타데이터 + 보존연한 정보가 포함된 xlsx를 생성합니다.
 
   private async exportIntermediateInspection(
-    params: Record<string, string>
+    _params: Record<string, string>
   ): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-03', '중간점검표');
   }
 
   private async exportCalibrationCertificate(
-    params: Record<string, string>
+    _params: Record<string, string>
   ): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-04', '교정성적서');
   }
@@ -210,27 +208,27 @@ export class FormTemplateExportService {
     };
   }
 
-  private async exportCalibrationPlan(params: Record<string, string>): Promise<ExportResult> {
+  private async exportCalibrationPlan(_params: Record<string, string>): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-06', '교정계획서');
   }
 
-  private async exportSoftwareRegistry(params: Record<string, string>): Promise<ExportResult> {
+  private async exportSoftwareRegistry(_params: Record<string, string>): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-07', '시험용소프트웨어관리대장');
   }
 
-  private async exportCableRegistry(params: Record<string, string>): Promise<ExportResult> {
+  private async exportCableRegistry(_params: Record<string, string>): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-08', '케이블관리대장');
   }
 
-  private async exportSoftwareValidation(params: Record<string, string>): Promise<ExportResult> {
+  private async exportSoftwareValidation(_params: Record<string, string>): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-09', '소프트웨어유효성확인');
   }
 
-  private async exportCheckoutRecord(params: Record<string, string>): Promise<ExportResult> {
+  private async exportCheckoutRecord(_params: Record<string, string>): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-10', '반출반입기록');
   }
 
-  private async exportNonConformanceReport(params: Record<string, string>): Promise<ExportResult> {
+  private async exportNonConformanceReport(_params: Record<string, string>): Promise<ExportResult> {
     return this.createFormPlaceholder('UL-QP-18-11', '부적합보고서');
   }
 

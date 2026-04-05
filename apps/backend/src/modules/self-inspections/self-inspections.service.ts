@@ -111,7 +111,7 @@ export class SelfInspectionsService {
   async update(
     id: string,
     dto: UpdateSelfInspectionInput,
-    userId: string
+    _userId: string
   ): Promise<EquipmentSelfInspection> {
     const existing = await this.findById(id);
 
@@ -283,4 +283,4 @@ export class SelfInspectionsService {
   }
 }
 
-const countFn = () => sql<number>`count(*)`;
+const countFn = (): ReturnType<typeof sql<number>> => sql<number>`count(*)`;

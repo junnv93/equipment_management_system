@@ -177,7 +177,7 @@ export class HistoryCardService {
   }
 
   private buildTemplateXml(data: HistoryCardData): string {
-    const esc = (v: unknown) => this.escapeXml(String(v ?? '-'));
+    const esc = (v: unknown): string => this.escapeXml(String(v ?? '-'));
     const eq = data.equipment;
     const rows = (items: Record<string, unknown>[], keys: string[]): string =>
       items
