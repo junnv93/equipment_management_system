@@ -32,6 +32,7 @@ export const documentApi = {
       equipmentId?: string;
       calibrationId?: string;
       requestId?: string;
+      softwareValidationId?: string;
       description?: string;
     }
   ): Promise<DocumentRecord> => {
@@ -41,6 +42,8 @@ export const documentApi = {
     if (options?.equipmentId) formData.append('equipmentId', options.equipmentId);
     if (options?.calibrationId) formData.append('calibrationId', options.calibrationId);
     if (options?.requestId) formData.append('requestId', options.requestId);
+    if (options?.softwareValidationId)
+      formData.append('softwareValidationId', options.softwareValidationId);
     if (options?.description) formData.append('description', options.description);
 
     const response = await apiClient.post(API_ENDPOINTS.DOCUMENTS.UPLOAD, formData, {
@@ -198,6 +201,19 @@ export const documentApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return transformSingleResponse<DocumentRecord>(response);
+  },
+
+  /**
+   * 유효성확인별 문서 목록 조회
+   */
+  getValidationDocuments: async (
+    softwareValidationId: string,
+    type?: DocumentType
+  ): Promise<DocumentRecord[]> => {
+    const params: Record<string, string> = { softwareValidationId };
+    if (type) params.type = type;
+    const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.BASE, { params });
+    return transformArrayResponse<DocumentRecord>(response);
   },
 
   /**

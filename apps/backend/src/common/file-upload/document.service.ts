@@ -14,6 +14,7 @@ export interface CreateDocumentOptions {
   equipmentId?: string;
   calibrationId?: string;
   requestId?: string;
+  softwareValidationId?: string;
   description?: string;
   uploadedBy?: string;
   subdirectory?: string;
@@ -41,10 +42,16 @@ export class DocumentService {
    */
   async createDocument(file: MulterFile, options: CreateDocumentOptions): Promise<DocumentRecord> {
     // 최소 1개 소유자 FK 필수 — 고아 문서 방지
-    if (!options.equipmentId && !options.calibrationId && !options.requestId) {
+    if (
+      !options.equipmentId &&
+      !options.calibrationId &&
+      !options.requestId &&
+      !options.softwareValidationId
+    ) {
       throw new BadRequestException({
         code: 'DOCUMENT_OWNER_REQUIRED',
-        message: 'At least one owner (equipmentId, calibrationId, or requestId) is required.',
+        message:
+          'At least one owner (equipmentId, calibrationId, requestId, or softwareValidationId) is required.',
       });
     }
 
@@ -57,6 +64,7 @@ export class DocumentService {
         equipmentId: options.equipmentId,
         calibrationId: options.calibrationId,
         requestId: options.requestId,
+        softwareValidationId: options.softwareValidationId,
         documentType: options.documentType,
         status: 'active' as DocumentStatus,
         fileName: savedFile.fileName,
@@ -201,6 +209,28 @@ export class DocumentService {
   }
 
   /**
+   * 유효성확인별 문서 목록 (활성 문서만)
+   */
+  async findBySoftwareValidationId(
+    softwareValidationId: string,
+    type?: DocumentType
+  ): Promise<DocumentRecord[]> {
+    const conditions = [
+      eq(documents.softwareValidationId, softwareValidationId),
+      eq(documents.status, 'active' as DocumentStatus),
+    ];
+    if (type) {
+      conditions.push(eq(documents.documentType, type));
+    }
+
+    return this.db
+      .select()
+      .from(documents)
+      .where(and(...conditions))
+      .orderBy(desc(documents.uploadedAt));
+  }
+
+  /**
    * 문서 논리 삭제 (스토리지 파일은 보존 — 감사 추적 + 복구 가능)
    *
    * 물리 삭제는 별도 retention 스케줄러에서 처리합니다.
@@ -248,6 +278,7 @@ export class DocumentService {
           equipmentId: parentDoc.equipmentId,
           calibrationId: parentDoc.calibrationId,
           requestId: parentDoc.requestId,
+          softwareValidationId: parentDoc.softwareValidationId,
           documentType: parentDoc.documentType as DocumentType,
           status: 'active' as DocumentStatus,
           fileName: savedFile.fileName,
@@ -436,6 +467,9 @@ export class DocumentService {
   private resolveSubdirectory(options: CreateDocumentOptions): string {
     if (options.calibrationId) {
       return `calibration/${options.calibrationId}`;
+    }
+    if (options.softwareValidationId) {
+      return `validation/${options.softwareValidationId}`;
     }
     return 'equipment';
   }

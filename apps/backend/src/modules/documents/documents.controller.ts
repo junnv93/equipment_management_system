@@ -70,6 +70,7 @@ export class DocumentsController {
         equipmentId: { type: 'string', format: 'uuid' },
         calibrationId: { type: 'string', format: 'uuid' },
         requestId: { type: 'string', format: 'uuid' },
+        softwareValidationId: { type: 'string', format: 'uuid' },
         description: { type: 'string' },
       },
     },
@@ -84,6 +85,7 @@ export class DocumentsController {
     @Body('equipmentId') equipmentId?: string,
     @Body('calibrationId') calibrationId?: string,
     @Body('requestId') requestId?: string,
+    @Body('softwareValidationId') softwareValidationId?: string,
     @Body('description') description?: string
   ): Promise<{ document: DocumentRecord; message: string }> {
     if (!file) {
@@ -106,6 +108,7 @@ export class DocumentsController {
       equipmentId: equipmentId || undefined,
       calibrationId: calibrationId || undefined,
       requestId: requestId || undefined,
+      softwareValidationId: softwareValidationId || undefined,
       description: description || undefined,
       uploadedBy: userId || undefined,
     });
@@ -122,6 +125,7 @@ export class DocumentsController {
   @ApiQuery({ name: 'equipmentId', required: false })
   @ApiQuery({ name: 'calibrationId', required: false })
   @ApiQuery({ name: 'requestId', required: false })
+  @ApiQuery({ name: 'softwareValidationId', required: false })
   @ApiQuery({ name: 'type', required: false, enum: DOCUMENT_TYPE_VALUES })
   @ApiQuery({
     name: 'includeCalibrations',
@@ -134,6 +138,7 @@ export class DocumentsController {
     @Query('equipmentId') equipmentId?: string,
     @Query('calibrationId') calibrationId?: string,
     @Query('requestId') requestId?: string,
+    @Query('softwareValidationId') softwareValidationId?: string,
     @Query('type') type?: string,
     @Query('includeCalibrations') includeCalibrations?: string
   ): Promise<DocumentRecord[]> {
@@ -153,6 +158,12 @@ export class DocumentsController {
     }
     if (requestId && !uuidPattern.test(requestId)) {
       throw new BadRequestException({ code: 'INVALID_UUID', message: 'Invalid requestId format.' });
+    }
+    if (softwareValidationId && !uuidPattern.test(softwareValidationId)) {
+      throw new BadRequestException({
+        code: 'INVALID_UUID',
+        message: 'Invalid softwareValidationId format.',
+      });
     }
 
     // documentType 검증 — 무효값 시 400 에러
@@ -176,6 +187,9 @@ export class DocumentsController {
     }
     if (requestId) {
       return this.documentService.findByRequestId(requestId);
+    }
+    if (softwareValidationId) {
+      return this.documentService.findBySoftwareValidationId(softwareValidationId, validType);
     }
     return [];
   }

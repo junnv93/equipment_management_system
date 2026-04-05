@@ -134,6 +134,8 @@ export const DOCUMENT_FILE_RULES: Readonly<Record<DocumentType, DocumentFileRule
   inspection_report: ALL_DOCUMENTS_RULE,
   history_card: ALL_DOCUMENTS_RULE,
   other: ALL_DOCUMENTS_RULE,
+  validation_vendor_attachment: ALL_DOCUMENTS_RULE,
+  validation_test_data: ALL_DOCUMENTS_RULE,
 };
 
 /** 파일 업로드 제한 */

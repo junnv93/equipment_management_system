@@ -15,6 +15,7 @@ import type { DocumentType, DocumentStatus } from '@equipment-management/schemas
 import { equipment } from './equipment';
 import { calibrations } from './calibrations';
 import { equipmentRequests } from './equipment-requests';
+import { softwareValidations } from './software-validations';
 import { users } from './users';
 
 /**
@@ -37,6 +38,9 @@ export const documents = pgTable(
       onDelete: 'cascade',
     }),
     requestId: uuid('request_id').references(() => equipmentRequests.id, { onDelete: 'cascade' }),
+    softwareValidationId: uuid('software_validation_id').references(() => softwareValidations.id, {
+      onDelete: 'cascade',
+    }),
 
     // 문서 분류
     documentType: varchar('document_type', { length: 50 }).$type<DocumentType>().notNull(),
@@ -82,6 +86,13 @@ export const documents = pgTable(
       table.equipmentId,
       table.documentType
     ),
+    softwareValidationIdIdx: index('documents_software_validation_id_idx').on(
+      table.softwareValidationId
+    ),
+    softwareValidationTypeIdx: index('documents_software_validation_type_idx').on(
+      table.softwareValidationId,
+      table.documentType
+    ),
     statusIdx: index('documents_status_idx').on(table.status),
     /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
     statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
@@ -105,6 +116,10 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   request: one(equipmentRequests, {
     fields: [documents.requestId],
     references: [equipmentRequests.id],
+  }),
+  softwareValidation: one(softwareValidations, {
+    fields: [documents.softwareValidationId],
+    references: [softwareValidations.id],
   }),
   uploadedByUser: one(users, {
     fields: [documents.uploadedBy],
