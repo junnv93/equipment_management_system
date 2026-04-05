@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -18,13 +18,13 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
+import { UserCombobox } from '@/components/ui/user-combobox';
 import testSoftwareApi, { type CreateTestSoftwareDto } from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { apiClient } from '@/lib/api/api-client';
 import { TEST_FIELD_VALUES, SITE_VALUES } from '@equipment-management/schemas';
 import type { TestField, Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import { FRONTEND_ROUTES, API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 export default function CreateTestSoftwareContent() {
@@ -34,14 +34,6 @@ export default function CreateTestSoftwareContent() {
   const queryClient = useQueryClient();
 
   const siteLabels = useSiteLabels();
-
-  const { data: usersData } = useQuery({
-    queryKey: queryKeys.users.list(),
-    queryFn: () =>
-      apiClient
-        .get(API_ENDPOINTS.USERS.LIST)
-        .then((r) => (r.data as { items: { id: string; name: string }[] }).items),
-  });
 
   const [form, setForm] = useState({
     name: '',
@@ -157,39 +149,19 @@ export default function CreateTestSoftwareContent() {
             </div>
             <div className="space-y-2">
               <Label>{t('form.primaryManagerLabel')}</Label>
-              <Select
-                value={form.primaryManagerId}
-                onValueChange={(v) => setForm({ ...form, primaryManagerId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('form.primaryManagerPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(usersData ?? []).map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <UserCombobox
+                value={form.primaryManagerId || undefined}
+                onChange={(id) => setForm({ ...form, primaryManagerId: id ?? '' })}
+                placeholder={t('form.primaryManagerPlaceholder')}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('form.secondaryManagerLabel')}</Label>
-              <Select
-                value={form.secondaryManagerId}
-                onValueChange={(v) => setForm({ ...form, secondaryManagerId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('form.secondaryManagerPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(usersData ?? []).map((u) => (
-                    <SelectItem key={u.id} value={u.id}>
-                      {u.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <UserCombobox
+                value={form.secondaryManagerId || undefined}
+                onChange={(id) => setForm({ ...form, secondaryManagerId: id ?? '' })}
+                placeholder={t('form.secondaryManagerPlaceholder')}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('form.installedAtLabel')}</Label>
