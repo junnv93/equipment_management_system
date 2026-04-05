@@ -1,7 +1,11 @@
 import { Inject, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, desc, sql, asc } from 'drizzle-orm';
-import { testSoftware, type TestSoftware } from '@equipment-management/db/schema';
+import {
+  testSoftware,
+  equipmentTestSoftware,
+  type TestSoftware,
+} from '@equipment-management/db/schema';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -11,6 +15,12 @@ import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
+
+/** findAll/findOne 응답에 users LEFT JOIN으로 추가되는 필드 */
+export type TestSoftwareWithManagers = TestSoftware & {
+  primaryManagerName: string | null;
+  secondaryManagerName: string | null;
+};
 
 @Injectable()
 export class TestSoftwareService extends VersionedBaseService {
@@ -95,7 +105,7 @@ export class TestSoftwareService extends VersionedBaseService {
   }
 
   async findAll(query: TestSoftwareQueryInput): Promise<{
-    items: TestSoftware[];
+    items: TestSoftwareWithManagers[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -145,8 +155,29 @@ export class TestSoftwareService extends VersionedBaseService {
 
         const [rows, [{ count }]] = await Promise.all([
           this.db
-            .select()
+            .select({
+              id: testSoftware.id,
+              managementNumber: testSoftware.managementNumber,
+              name: testSoftware.name,
+              softwareVersion: testSoftware.softwareVersion,
+              testField: testSoftware.testField,
+              primaryManagerId: testSoftware.primaryManagerId,
+              secondaryManagerId: testSoftware.secondaryManagerId,
+              installedAt: testSoftware.installedAt,
+              manufacturer: testSoftware.manufacturer,
+              location: testSoftware.location,
+              availability: testSoftware.availability,
+              requiresValidation: testSoftware.requiresValidation,
+              site: testSoftware.site,
+              version: testSoftware.version,
+              createdAt: testSoftware.createdAt,
+              updatedAt: testSoftware.updatedAt,
+              primaryManagerName: sql<string | null>`pm.name`,
+              secondaryManagerName: sql<string | null>`sm.name`,
+            })
             .from(testSoftware)
+            .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
+            .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
             .where(whereClause)
             .orderBy(orderBy)
             .limit(pageSize)
@@ -159,7 +190,7 @@ export class TestSoftwareService extends VersionedBaseService {
 
         const totalItems = Number(count);
         return {
-          items: rows,
+          items: rows as TestSoftwareWithManagers[],
           meta: {
             totalItems,
             itemCount: rows.length,
@@ -173,14 +204,35 @@ export class TestSoftwareService extends VersionedBaseService {
     );
   }
 
-  async findOne(id: string): Promise<TestSoftware> {
+  async findOne(id: string) {
     const cacheKey = this.buildCacheKey('detail', id);
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         const [record] = await this.db
-          .select()
+          .select({
+            id: testSoftware.id,
+            managementNumber: testSoftware.managementNumber,
+            name: testSoftware.name,
+            softwareVersion: testSoftware.softwareVersion,
+            testField: testSoftware.testField,
+            primaryManagerId: testSoftware.primaryManagerId,
+            secondaryManagerId: testSoftware.secondaryManagerId,
+            installedAt: testSoftware.installedAt,
+            manufacturer: testSoftware.manufacturer,
+            location: testSoftware.location,
+            availability: testSoftware.availability,
+            requiresValidation: testSoftware.requiresValidation,
+            site: testSoftware.site,
+            version: testSoftware.version,
+            createdAt: testSoftware.createdAt,
+            updatedAt: testSoftware.updatedAt,
+            primaryManagerName: sql<string | null>`pm.name`,
+            secondaryManagerName: sql<string | null>`sm.name`,
+          })
           .from(testSoftware)
+          .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
+          .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
           .where(eq(testSoftware.id, id))
           .limit(1);
 
@@ -192,6 +244,45 @@ export class TestSoftwareService extends VersionedBaseService {
         }
 
         return record;
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async findByEquipmentId(equipmentId: string): Promise<TestSoftwareWithManagers[]> {
+    const cacheKey = this.buildCacheKey('by-equipment', equipmentId);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const rows = await this.db
+          .select({
+            id: testSoftware.id,
+            managementNumber: testSoftware.managementNumber,
+            name: testSoftware.name,
+            softwareVersion: testSoftware.softwareVersion,
+            testField: testSoftware.testField,
+            primaryManagerId: testSoftware.primaryManagerId,
+            secondaryManagerId: testSoftware.secondaryManagerId,
+            installedAt: testSoftware.installedAt,
+            manufacturer: testSoftware.manufacturer,
+            location: testSoftware.location,
+            availability: testSoftware.availability,
+            requiresValidation: testSoftware.requiresValidation,
+            site: testSoftware.site,
+            version: testSoftware.version,
+            createdAt: testSoftware.createdAt,
+            updatedAt: testSoftware.updatedAt,
+            primaryManagerName: sql<string | null>`pm.name`,
+            secondaryManagerName: sql<string | null>`sm.name`,
+          })
+          .from(equipmentTestSoftware)
+          .innerJoin(testSoftware, eq(equipmentTestSoftware.testSoftwareId, testSoftware.id))
+          .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
+          .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
+          .where(eq(equipmentTestSoftware.equipmentId, equipmentId))
+          .orderBy(asc(testSoftware.managementNumber));
+
+        return rows as TestSoftwareWithManagers[];
       },
       CACHE_TTL.MEDIUM
     );

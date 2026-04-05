@@ -29,12 +29,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import testSoftwareApi, { type UpdateTestSoftwareDto } from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { apiClient } from '@/lib/api/api-client';
 import { isConflictError } from '@/lib/api/error';
-import { TEST_FIELD_VALUES } from '@equipment-management/schemas';
-import type { TestField } from '@equipment-management/schemas';
+import { TEST_FIELD_VALUES, SITE_VALUES } from '@equipment-management/schemas';
+import type { TestField, Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 interface TestSoftwareDetailContentProps {
   id: string;
@@ -47,7 +49,14 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const siteLabels = useSiteLabels();
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  const { data: usersData } = useQuery({
+    queryKey: queryKeys.users.list(),
+    queryFn: () =>
+      apiClient.get(API_ENDPOINTS.USERS.LIST).then((r) => r.data as { id: string; name: string }[]),
+  });
 
   const { data: software, isLoading } = useQuery({
     queryKey: queryKeys.testSoftware.detail(id),
@@ -61,6 +70,10 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
     testField: '' as TestField | '',
     manufacturer: '',
     location: '',
+    primaryManagerId: '',
+    secondaryManagerId: '',
+    installedAt: '',
+    site: '' as Site | '',
   });
 
   const openEditDialog = () => {
@@ -71,6 +84,10 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
         testField: software.testField,
         manufacturer: software.manufacturer ?? '',
         location: software.location ?? '',
+        primaryManagerId: software.primaryManagerId ?? '',
+        secondaryManagerId: software.secondaryManagerId ?? '',
+        installedAt: software.installedAt ?? '',
+        site: (software.site ?? '') as Site | '',
       });
       setIsEditOpen(true);
     }
@@ -123,6 +140,10 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
       testField: (editForm.testField as TestField) || undefined,
       manufacturer: editForm.manufacturer || undefined,
       location: editForm.location || undefined,
+      primaryManagerId: editForm.primaryManagerId || undefined,
+      secondaryManagerId: editForm.secondaryManagerId || undefined,
+      installedAt: editForm.installedAt || undefined,
+      site: (editForm.site as Site) || undefined,
     };
     updateMutation.mutate(dto);
   };
@@ -275,6 +296,68 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
                 onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                 placeholder={t('form.locationPlaceholder')}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.primaryManagerLabel')}</Label>
+              <Select
+                value={editForm.primaryManagerId}
+                onValueChange={(v) => setEditForm({ ...editForm, primaryManagerId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('form.primaryManagerPlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(usersData ?? []).map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.secondaryManagerLabel')}</Label>
+              <Select
+                value={editForm.secondaryManagerId}
+                onValueChange={(v) => setEditForm({ ...editForm, secondaryManagerId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('form.secondaryManagerPlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(usersData ?? []).map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.installedAtLabel')}</Label>
+              <Input
+                type="date"
+                value={editForm.installedAt}
+                onChange={(e) => setEditForm({ ...editForm, installedAt: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.siteLabel')}</Label>
+              <Select
+                value={editForm.site}
+                onValueChange={(v) => setEditForm({ ...editForm, site: v as Site })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('form.sitePlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {SITE_VALUES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {siteLabels[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

@@ -60,22 +60,21 @@ export class TestSoftwareController {
   @Get()
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
   @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
-  findAll(@Query(TestSoftwareQueryValidationPipe) query: TestSoftwareQueryInput): Promise<{
-    items: TestSoftware[];
-    meta: {
-      totalItems: number;
-      itemCount: number;
-      itemsPerPage: number;
-      totalPages: number;
-      currentPage: number;
-    };
-  }> {
+  findAll(@Query(TestSoftwareQueryValidationPipe) query: TestSoftwareQueryInput) {
     return this.testSoftwareService.findAll(query);
+  }
+
+  @Get('by-equipment/:equipmentId')
+  @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
+  findByEquipment(
+    @Param('equipmentId', ParseUUIDPipe) equipmentId: string
+  ): Promise<TestSoftware[]> {
+    return this.testSoftwareService.findByEquipmentId(equipmentId);
   }
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<TestSoftware> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string) {
     return this.testSoftwareService.findOne(uuid);
   }
 
