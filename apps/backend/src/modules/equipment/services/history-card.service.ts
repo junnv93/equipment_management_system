@@ -11,12 +11,61 @@ import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 
+interface HistoryCardEquipmentInfo {
+  managementNumber: string;
+  name: string;
+  modelName: string;
+  manufacturer: string;
+  serialNumber: string;
+  status: string;
+  site: string;
+  location: string;
+  teamName: string;
+  managerName: string;
+  purchaseYear: string;
+  installationDate: string;
+  description: string;
+}
+
+interface HistoryCardCalibration {
+  calibrationDate: string;
+  nextCalibrationDate: string;
+  status: string;
+  result: string;
+  technicianId: string;
+  certificateNumber: string;
+}
+
+interface HistoryCardCheckout {
+  checkoutDate: string;
+  returnDate: string;
+  purpose: string;
+  destination: string;
+  status: string;
+}
+
+interface HistoryCardRepair {
+  repairDate: string;
+  description: string;
+  result: string;
+  notes: string;
+}
+
+interface HistoryCardNonConformance {
+  discoveryDate: string;
+  ncType: string;
+  cause: string;
+  status: string;
+  correctionContent: string;
+  actionPlan: string;
+}
+
 interface HistoryCardData {
-  equipment: Record<string, unknown>;
-  calibrations: Record<string, unknown>[];
-  checkouts: Record<string, unknown>[];
-  repairs: Record<string, unknown>[];
-  nonConformances: Record<string, unknown>[];
+  equipment: HistoryCardEquipmentInfo;
+  calibrations: HistoryCardCalibration[];
+  checkouts: HistoryCardCheckout[];
+  repairs: HistoryCardRepair[];
+  nonConformances: HistoryCardNonConformance[];
   generatedAt: string;
 }
 
@@ -179,7 +228,7 @@ export class HistoryCardService {
   private buildTemplateXml(data: HistoryCardData): string {
     const esc = (v: unknown): string => this.escapeXml(String(v ?? '-'));
     const eq = data.equipment;
-    const rows = (items: Record<string, unknown>[], keys: string[]): string =>
+    const rows = (items: Record<string, string>[], keys: string[]): string =>
       items
         .map(
           (item) =>

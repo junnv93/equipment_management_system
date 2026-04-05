@@ -1,25 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { FORM_CATALOG } from '@equipment-management/shared-constants';
 
 /**
  * 기록 보존연한 서비스 (UL-QP-18 섹션 15)
  *
  * 양식번호별 기본 보존연한 매핑 및 만료일 계산
+ * 보존연한 데이터는 FORM_CATALOG (SSOT)에서 파생합니다.
  */
 
-/** 양식번호별 기본 보존연한 (년) */
-export const FORM_RETENTION_PERIODS: Record<string, { years: number; label: string }> = {
-  'UL-QP-18-01': { years: -1, label: '영구보존' }, // 시험설비 관리 대장
-  'UL-QP-18-02': { years: -1, label: '영구보존' }, // 시험설비 이력카드
-  'UL-QP-18-03': { years: 5, label: '5년' }, // 중간점검표
-  'UL-QP-18-04': { years: 5, label: '5년' }, // 교정 성적서
-  'UL-QP-18-05': { years: 5, label: '5년' }, // 자체점검표
-  'UL-QP-18-06': { years: 5, label: '5년' }, // 교정계획서
-  'UL-QP-18-07': { years: 5, label: '5년' }, // 시험용 소프트웨어 관리대장
-  'UL-QP-18-08': { years: 5, label: '5년' }, // Cable/Path Loss 관리대장
-  'UL-QP-18-09': { years: 5, label: '5년' }, // 소프트웨어 유효성 확인
-  'UL-QP-18-10': { years: 3, label: '3년' }, // 반출/반입 기록
-  'UL-QP-18-11': { years: 3, label: '3년' }, // 부적합 보고서
-};
+/** 양식번호별 기본 보존연한 (년) — FORM_CATALOG에서 파생 */
+export const FORM_RETENTION_PERIODS: Record<string, { years: number; label: string }> =
+  Object.fromEntries(
+    Object.entries(FORM_CATALOG).map(([k, v]) => [
+      k,
+      { years: v.retentionYears, label: v.retentionLabel },
+    ])
+  );
 
 @Injectable()
 export class RetentionService {

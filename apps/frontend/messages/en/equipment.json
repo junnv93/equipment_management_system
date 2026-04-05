@@ -290,6 +290,7 @@
   "selfInspection": {
     "title": "Self Inspection History",
     "empty": "No self-inspection records found.",
+    "error": "Failed to load self-inspection records.",
     "date": "Date",
     "appearance": "Appearance",
     "functionality": "Functionality",

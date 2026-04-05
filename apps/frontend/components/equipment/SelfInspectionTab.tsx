@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { AlertTriangle } from 'lucide-react';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 
 interface SelfInspectionTabProps {
@@ -39,7 +40,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const { fmtDate } = useDateFormatter();
   const equipmentId = String(equipment.id);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: queryKeys.equipment.selfInspections(equipmentId),
     queryFn: () => getSelfInspections(equipmentId),
   });
@@ -52,6 +53,22 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
         <CardContent className="p-6">
           <Skeleton className="h-8 w-1/3 mb-4" />
           <Skeleton className="h-32 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('selfInspection.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertTriangle className="h-8 w-8 text-brand-warning" />
+            <p className="text-muted-foreground mt-2 text-sm">{t('selfInspection.error')}</p>
+          </div>
         </CardContent>
       </Card>
     );
