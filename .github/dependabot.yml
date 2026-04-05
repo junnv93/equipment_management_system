@@ -14,9 +14,6 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
-    # 보안 업데이트는 그룹 무시하고 즉시 개별 PR 생성
-    security-updates:
-      open-pull-requests-limit: 15
 
   # GitHub Actions
   - package-ecosystem: 'github-actions'

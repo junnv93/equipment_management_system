@@ -75,9 +75,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# standalone 서버 + static/public 에셋 복사
-COPY --from=build /app/apps/frontend/public ./public
+# standalone 서버 복사 (모노레포 구조 유지됨)
 COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
+# public + static 에셋은 server.js 기준 상대 경로에 배치
+COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/public ./apps/frontend/public
 COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
 
 USER nextjs
