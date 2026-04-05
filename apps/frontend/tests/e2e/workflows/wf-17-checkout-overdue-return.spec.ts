@@ -28,8 +28,8 @@ import {
 } from './helpers/workflow-helpers';
 import { TEST_EQUIPMENT_IDS } from '../shared/constants/shared-test-data';
 
-/** WF-17 전용 — POWER_SUPPLY_SUW_R (수원 사이트, 다른 WF 미사용) */
-const WF_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.POWER_SUPPLY_SUW_R;
+/** WF-17 전용 — FILTER_SUW_E (FCC EMC/RF 팀, 다른 WF 미사용) */
+const WF_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.FILTER_SUW_E;
 
 test.describe('WF-17: 반출 기한 초과 overdue → 반입 처리', () => {
   test.describe.configure({ mode: 'serial' });

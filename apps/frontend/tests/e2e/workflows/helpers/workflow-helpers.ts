@@ -119,17 +119,20 @@ export async function approveCheckout(page: Page, checkoutId: string, role = 'te
   return resp.json();
 }
 
-/** 반출 시작 (TE) — CAS-Aware */
-export async function startCheckout(page: Page, checkoutId: string, role = 'test_engineer') {
+/** 반출 시작 (TM) — CAS-Aware */
+export async function startCheckout(page: Page, checkoutId: string, role = 'technical_manager') {
   const detailResp = await apiGet(page, `/api/checkouts/${checkoutId}`, role);
   const detail = await detailResp.json();
   const version = extractVersion(detail);
-  const resp = await apiPatch(page, `/api/checkouts/${checkoutId}/start`, { version }, role);
-  expect(resp.ok()).toBeTruthy();
+  const resp = await apiPost(page, `/api/checkouts/${checkoutId}/start`, { version }, role);
+  if (!resp.ok()) {
+    const errorBody = await resp.text();
+    throw new Error(`startCheckout failed: ${resp.status()} — ${errorBody}`);
+  }
   return resp.json();
 }
 
-/** 반입 처리 (TE) — CAS-Aware */
+/** ��입 처리 (TM) — CAS-Aware */
 export async function returnCheckout(
   page: Page,
   checkoutId: string,
@@ -138,12 +141,12 @@ export async function returnCheckout(
     repairChecked?: boolean;
     workingStatusChecked?: boolean;
   } = {},
-  role = 'test_engineer'
+  role = 'technical_manager'
 ) {
   const detailResp = await apiGet(page, `/api/checkouts/${checkoutId}`, role);
   const detail = await detailResp.json();
   const version = extractVersion(detail);
-  const resp = await apiPatch(
+  const resp = await apiPost(
     page,
     `/api/checkouts/${checkoutId}/return`,
     {
@@ -155,7 +158,10 @@ export async function returnCheckout(
     },
     role
   );
-  expect(resp.ok()).toBeTruthy();
+  if (!resp.ok()) {
+    const errorBody = await resp.text();
+    throw new Error(`returnCheckout failed: ${resp.status()} — ${errorBody}`);
+  }
   return resp.json();
 }
 
@@ -270,11 +276,14 @@ export async function correctNonConformance(
   const version = extractVersion(detail);
   const resp = await apiPatch(
     page,
-    `/api/non-conformances/${ncId}/correct`,
-    { version, ...correction },
+    `/api/non-conformances/${ncId}`,
+    { version, status: 'corrected', ...correction },
     role
   );
-  expect(resp.ok()).toBeTruthy();
+  if (!resp.ok()) {
+    const errorBody = await resp.text();
+    throw new Error(`correctNonConformance failed: ${resp.status()} — ${errorBody}`);
+  }
   return resp.json();
 }
 

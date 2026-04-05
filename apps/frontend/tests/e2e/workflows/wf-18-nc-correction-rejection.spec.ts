@@ -23,8 +23,8 @@ import {
 } from './helpers/workflow-helpers';
 import { TEST_EQUIPMENT_IDS } from '../shared/constants/shared-test-data';
 
-/** WF-18 전용 — MULTIMETER_SUW_R (TE 팀 소속) */
-const WF_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.MULTIMETER_SUW_R;
+/** WF-18 전용 — ANTENNA_1_SUW_E (FCC EMC/RF 팀, 다른 WF 미사용, seed NC 없음) */
+const WF_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.ANTENNA_1_SUW_E;
 
 test.describe('WF-18: 부적합 조치 반려 → open 복귀 → ��조치 → 종결', () => {
   test.describe.configure({ mode: 'serial' });
