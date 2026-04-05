@@ -56,6 +56,8 @@ export const cables = pgTable(
     managementNumberIdx: index('cables_management_number_idx').on(table.managementNumber),
     statusIdx: index('cables_status_idx').on(table.status),
     siteIdx: index('cables_site_idx').on(table.site),
+    measuredByIdx: index('cables_measured_by_idx').on(table.measuredBy),
+    createdByIdx: index('cables_created_by_idx').on(table.createdBy),
   })
 );
 

@@ -80,6 +80,8 @@ export const intermediateInspections = pgTable(
     inspectionDateIdx: index('intermediate_inspections_inspection_date_idx').on(
       table.inspectionDate
     ),
+    inspectorIdIdx: index('intermediate_inspections_inspector_id_idx').on(table.inspectorId),
+    createdByIdx: index('intermediate_inspections_created_by_idx').on(table.createdBy),
   })
 );
 
