@@ -128,6 +128,8 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   software_validation: '소프트웨어 유효성 확인',
   software_equipment_link: '장비-소프트웨어 연결',
   intermediate_inspection: '중간점검',
+  cable: '케이블',
+  cable_loss_measurement: '케이블 손실 측정',
 };
 
 // ============================================================================
