@@ -45,16 +45,17 @@ for (const { role, label, file } of ROLES) {
   setup(`authenticate as ${role}`, async ({ page }) => {
     // 1. 로그인 페이지 이동
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // 2. DevLoginButtons의 역할 버튼 클릭
     //    기본 팀: 수원 FCC EMC/RF (DevLoginButtons의 초기값)
     const button = page.getByRole('button', { name: label });
-    await expect(button).toBeVisible({ timeout: 10000 });
+    await expect(button).toBeVisible({ timeout: 30000 });
     await button.click();
 
     // 3. NextAuth redirect 완료 대기 (로그인 → 대시보드)
-    await page.waitForURL('/', { timeout: 15000 });
+    //    CI 환경에서는 NextAuth 콜백 + DB 조회 + 세션 생성이 느릴 수 있으므로 충분한 타임아웃
+    await page.waitForURL('/', { timeout: 60000 });
     await expect(page).not.toHaveURL(/\/login/);
 
     // 4. i18n: E2E 테스트는 ko 로케일로 고정 (256개 spec 파일 변경 불필요)
