@@ -12,8 +12,9 @@
 - [ ] ApiTestSoftwareFilters 인터페이스 미정의 — `apps/frontend/lib/utils/software-filter-utils.ts` — 2026-04-05
 - [ ] SoftwareValidationsController @SiteScoped 미적용 — `software-validations.controller.ts` — 2026-04-05
 - [ ] QUERY_CONFIG TEST_SOFTWARE_DETAIL 분리 필요 — `query-config.ts` — 2026-04-05
-- [ ] 유효성확인 첨부파일 UI (ValidationAttachments 컴포넌트) 미구현 — `SoftwareValidationContent.tsx` — 2026-04-05
+- [x] 유효성확인 첨부파일 UI (ValidationAttachments 컴포넌트) — 해결: 2026-04-05 — ValidationDetailContent.tsx에 인라인 구현
 - [ ] 프론트엔드 권한 게이팅 미적용 (소프트웨어 페이지) — `/software` 전체 — 2026-04-05
+- [ ] 백엔드 문서 업로드/삭제 시 부모 validation status=draft 검증 미적용 — `DocumentsController`, `DocumentService` — 2026-04-05
 
 ---
 

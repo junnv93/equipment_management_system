@@ -1,12 +1,12 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-05 (22차 — Mode 2-3 완료 후 재스캔)**
+> **마지막 정리일: 2026-04-05 (23차 — WF E2E 커버리지 갭 분석 후 프롬프트 추가)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
-> `/harness [프롬프트]` 형태로 사용.
+> `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
 ---
 
-## 현재 미해결 프롬프트: 10건
+## 현재 미해결 프롬프트: 14건 (기존 10건 + E2E 4건)
 
 ### 🟠 HIGH — software-validations update/revise userId 미추출 (Mode 0)
 
@@ -211,6 +211,182 @@ logout에만 적용됨. 인증 이벤트 감사 추적 갭.
 
 검증:
 1. 로그인/로그아웃 시 감사 로그 생성 확인
+```
+
+---
+
+## E2E 워크플로우 테스트 프롬프트: 4건
+
+> **근거:** `docs/workflows/critical-workflows.md` WF-17~WF-20 대비 E2E 커버리지 갭.
+> 기존 WF-01~WF-16은 `apps/frontend/tests/e2e/workflows/` 에 전용 spec 파일 존재.
+> `/playwright-e2e` 로 실행하여 시드 데이터 + 헬퍼 함수 + spec 파일을 생성.
+
+### 🟡 MEDIUM — WF-17 E2E: 반출 기한 초과 overdue 전이 + 반입 처리 (Playwright)
+
+```
+문제:
+WF-17 워크플로우(반출 기한 초과 → overdue 자동 전이)에 대한 전용 워크플로우 E2E 테스트 없음.
+기존 suite-17 feature 테스트는 UI 읽기 전용(시드 데이터 기반)이며,
+실제 상태 전이 검증과 overdue 상태에서의 반입 처리 흐름이 누락.
+
+검증됨:
+- apps/frontend/tests/e2e/workflows/ — wf-17-*.spec.ts 미존재
+- suite-17-overdue/s17-overdue-scenarios.spec.ts — parallel mode, 읽기 전용
+- CheckoutOverdueScheduler는 서버 사이드이므로 E2E에서 직접 트리거 불가
+
+구현 전략:
+CheckoutOverdueScheduler를 직접 테스트할 수 없으므로,
+API로 DB 상태를 직접 설정(expectedReturnDate 과거일 + checked_out)한 뒤
+overdue 시나리오 후속 워크플로우(반입 처리)를 검증.
+
+액션:
+1. workflow-helpers.ts에 추가:
+   - createOverdueCheckout(): 반출 생성 → 승인 → 시작 → API로 expectedReturnDate 과거일 설정
+   - markCheckoutOverdue(): API PATCH로 status=overdue 직접 전이 (테스트 전용)
+2. shared-test-data.ts에 WF-17 전용 시드 상수 추가 (장비 UUID)
+3. wf-17-checkout-overdue-return.spec.ts 생성:
+   Step 1: TE가 반출 생성 → 승인 → 시작 (checked_out)
+   Step 2: expectedReturnDate를 과거일로 API 설정
+   Step 3: 장비 상태 checked_out 유지 확인 (overdue는 반출 상태)
+   Step 4: TE가 반입 폼 작성 → 제출 (returned)
+   Step 5: TM이 반입 승인 → 장비 available 복원
+
+패턴 준수:
+- auth.fixture.ts 기반 testOperatorPage / techManagerPage 사용
+- test.describe.configure({ mode: 'serial' })
+- CAS version 추출 후 PATCH
+- clearBackendCache() 호출 후 상태 검증
+- beforeAll/afterAll에서 resetEquipmentForWorkflow()
+
+검증:
+1. npx playwright test wf-17 --reporter=list → 5 Step 전체 PASS
+```
+
+### 🟠 HIGH — WF-19 E2E: 중간점검표 3단계 승인 + 반려 (Playwright)
+
+```
+문제:
+WF-19 워크플로우(중간점검표 3단계 승인)에 대한 전용 워크플로우 E2E 테스트 없음.
+기존 intermediate-check.spec.ts는 교정 인증서 UI 기능 테스트이며,
+draft → submitted → reviewed → approved 전체 승인 흐름과 반려 경로 미검증.
+
+검증됨:
+- apps/frontend/tests/e2e/workflows/ — wf-19-*.spec.ts 미존재
+- features/calibration/certificate/intermediate-check.spec.ts — UI 완료 다이얼로그만 테스트
+- IntermediateInspectionsController에 8개 엔드포인트 구현 확인
+- 3단계 승인: TE(작성/제출) → TM(검토) → LM(승인), TM/LM 반려 가능
+
+선행 조건:
+- 시드 데이터: 중간점검용 교정 레코드 (calibration UUID) + 장비 UUID 필요
+- uuid-constants.ts에 WF-19 전용 상수 추가
+
+액션:
+1. uuid-constants.ts / shared-test-data.ts에 추가:
+   - TEST_INTERMEDIATE_INSPECTION_IDS (WF-19 전용)
+   - 또는 기존 TEST_CALIBRATION_IDS.CALIB_001 활용
+2. workflow-helpers.ts에 추가:
+   - createIntermediateInspection(page, calibrationId, dto)
+   - submitIntermediateInspection(page, inspectionId)
+   - reviewIntermediateInspection(page, inspectionId)
+   - approveIntermediateInspection(page, inspectionId)
+   - rejectIntermediateInspection(page, inspectionId, reason)
+   - resetIntermediateInspections(calibrationId)
+3. wf-19-intermediate-inspection-3step-approval.spec.ts 생성:
+   === 정상 승인 흐름 ===
+   Step 1: TE가 중간점검표 작성 (draft) — 점검일, 분류, 주기, 종합결과
+   Step 2: TE가 점검 항목 2건 + 측정 장비 1건 포함하여 생성
+   Step 3: TE가 제출 → submitted
+   Step 4: TM이 검토 → reviewed
+   Step 5: LM이 최종 승인 → approved
+   Step 6: API 검증 — approvedAt/By 기록, 점검 항목/장비 데이터 유지
+   === 반려 흐름 ===
+   Step 7: 새 점검표 생성 → 제출
+   Step 8: TM이 반려 (사유: "점검 항목 보완 필요") → rejected
+   Step 9: API 검증 — rejectedAt/By, rejectionReason 기록
+
+패턴 준수:
+- auth.fixture.ts 기반 testOperatorPage / techManagerPage / siteAdminPage 사용
+- test.describe.configure({ mode: 'serial' })
+- CAS version 필수 (모든 PATCH에 version 포함)
+- POST /calibration/:uuid/intermediate-inspections (교정 하위 생성)
+- PATCH /intermediate-inspections/:uuid/submit|review|approve|reject
+
+검증:
+1. npx playwright test wf-19 --reporter=list → 9 Step 전체 PASS
+```
+
+### 🟡 MEDIUM — WF-18 E2E: 부적합 조치 반려 전용 워크플로우 테스트 (Playwright)
+
+```
+문제:
+WF-18(부적합 조치 반려)은 nc-rejection-flow.spec.ts에서 기능 테스트로 커버되지만,
+workflows/ 디렉토리에 전용 WF-18 파일이 없어 워크플로우 테스트 명명 규칙 불일치.
+기존 feature 테스트가 이미 corrected → open 복귀 + 장비 상태 복원을 검증하므로
+기능적 갭은 아니나, 일관성을 위해 WF 래퍼 생성 권장.
+
+검증됨:
+- apps/frontend/tests/e2e/workflows/ — wf-18-*.spec.ts 미존재
+- features/non-conformances/nc-rejection-flow.spec.ts — 전체 흐름 + 이중 반려 stress 테스트 존재
+- nc-rejection-flow.spec.ts 커버리지: corrected→open 복귀, 장비 non_conforming→available, CAS 버전 체인
+
+액션 (경량):
+1. wf-18-nc-correction-rejection.spec.ts 생성:
+   기존 nc-rejection-flow.spec.ts의 핵심 시나리오를 WF 형식으로 래핑.
+   Step 1: TE가 NC 조치 완료 (corrected)
+   Step 2: TM이 조치 반려 → open 복귀
+   Step 3: 장비 상태 non_conforming 확인
+   Step 4: TE 재조치 + TM 종결 → closed, 장비 available
+
+   ※ nc-rejection-flow.spec.ts의 헬퍼 함수 재사용.
+   ※ stress 테스트(이중 반려)는 feature 테스트에 유지.
+
+검증:
+1. npx playwright test wf-18 --reporter=list → 4 Step PASS
+```
+
+### 🟡 MEDIUM — WF-20 E2E: 자체점검표 확인 + 잠금 (Playwright)
+
+```
+문제:
+WF-20 워크플로우(자체점검표 확인)에 대한 E2E 테스트가 전혀 없음.
+feature 테스트도 미존재. 자체점검 CRUD + 기술책임자 confirm + 잠금이 완전 미검증.
+
+검증됨:
+- apps/frontend/tests/e2e/ — self-inspection 관련 spec 파일 0건
+- SelfInspectionsController/Service 백엔드 구현 확인
+- 권한: CREATE_SELF_INSPECTION (TE, TM, LM), CONFIRM_SELF_INSPECTION (TM, LM만)
+- completed → confirmed 선형 흐름, confirmed 후 수정/삭제 불가
+
+선행 조건:
+- 시드 데이터: WF-20 전용 장비 UUID (또는 기존 TEST_EQUIPMENT_IDS 활용)
+- 자체점검 시드 불필요 (테스트에서 직접 생성)
+
+액션:
+1. workflow-helpers.ts에 추가:
+   - createSelfInspection(page, equipmentId, dto)
+     dto: { inspectionDate, appearance, functionality, safety, calibrationStatus, overallResult, inspectionCycle }
+   - confirmSelfInspection(page, inspectionId, version)
+   - deleteSelfInspection(page, inspectionId)
+   - getSelfInspection(page, inspectionId)
+   - resetSelfInspections(equipmentId): 해당 장비의 미확인 점검 기록 삭제
+2. wf-20-self-inspection-confirmation.spec.ts 생성:
+   Step 1: TE가 자체점검 생성 — 외관(pass), 기능(pass), 안전(pass), 교정상태(pass), 종합(pass), 주기 6개월
+   Step 2: API 검증 — status=completed, nextInspectionDate = inspectionDate + 6개월
+   Step 3: TE가 점검 내용 수정 (remarks 추가) — 정상 동작
+   Step 4: TM이 확인 (confirm) → status=confirmed, confirmedAt/By 기록
+   Step 5: 확인 후 수정 시도 → 400 에러 (ALREADY_CONFIRMED 또는 유사)
+   Step 6: 확인 후 삭제 시도 → 400 에러
+   Step 7: 권한 테스트 — TE가 confirm 시도 → 403 (CONFIRM_SELF_INSPECTION 없음)
+
+패턴 준수:
+- auth.fixture.ts 기반 testOperatorPage / techManagerPage 사용
+- test.describe.configure({ mode: 'serial' })
+- CAS version 필수 (update, confirm에 version 포함)
+- POST /api/equipment/:uuid/self-inspections (장비 하위 생성)
+- PATCH /api/self-inspections/:uuid/confirm
+
+검증:
+1. npx playwright test wf-20 --reporter=list → 7 Step 전체 PASS
 ```
 
 ---
