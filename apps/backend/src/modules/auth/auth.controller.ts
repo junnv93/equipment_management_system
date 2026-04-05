@@ -25,6 +25,7 @@ export class AuthController {
   @Public()
   @Throttle({ short: THROTTLE_PRESETS.LOGIN }) // 1분당 5회
   @Post('login')
+  @AuditLog({ action: 'create', entityType: 'user' })
   @UsePipes(LoginValidationPipe)
   async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(loginDto);
@@ -85,6 +86,7 @@ export class AuthController {
   @Public()
   @Throttle({ medium: THROTTLE_PRESETS.TOKEN_REFRESH }) // 1분당 10회
   @Post('refresh') // @BodyPipeExempt: single JWT string field, JWT validity verified by authService
+  @AuditLog({ action: 'update', entityType: 'user' })
   async refresh(@Body('refresh_token') refreshToken: string): Promise<AuthResponse> {
     if (!refreshToken) {
       throw new ForbiddenException('refresh_token is required');
