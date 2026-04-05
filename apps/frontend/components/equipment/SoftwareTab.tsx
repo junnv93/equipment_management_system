@@ -66,15 +66,6 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
     staleTime: CACHE_TIMES.MEDIUM,
   });
 
-  const invalidateLinkCaches = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.byEquipment(equipmentId) });
-    if (selectedSoftwareId) {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.testSoftware.linkedEquipment(selectedSoftwareId),
-      });
-    }
-  };
-
   const linkMutation = useMutation({
     mutationFn: (data: { softwareId: string; equipmentId: string; notes?: string }) =>
       testSoftwareApi.linkEquipment(data.softwareId, {
@@ -93,7 +84,14 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
         : t('softwareTab.linkError');
       toast({ title: msg, variant: 'destructive' });
     },
-    onSettled: invalidateLinkCaches,
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.byEquipment(equipmentId) });
+      if (variables?.softwareId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.testSoftware.linkedEquipment(variables.softwareId),
+        });
+      }
+    },
   });
 
   const unlinkMutation = useMutation({
@@ -109,8 +107,13 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
         variant: 'destructive',
       });
     },
-    onSettled: () => {
+    onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.byEquipment(equipmentId) });
+      if (variables?.softwareId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.testSoftware.linkedEquipment(variables.softwareId),
+        });
+      }
     },
   });
 
