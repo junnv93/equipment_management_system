@@ -20,7 +20,7 @@ export interface FormCatalogEntry {
   dedicatedEndpoint?: boolean;
 }
 
-export const FORM_CATALOG = {
+export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
   'UL-QP-18-01': {
     formNumber: 'UL-QP-18-01',
     name: '시험설비 관리 대장',
@@ -99,18 +99,16 @@ export const FORM_CATALOG = {
     retentionLabel: '3년',
     implemented: false,
   },
-} satisfies Record<string, FormCatalogEntry>;
+};
 
-export type FormNumber = keyof typeof FORM_CATALOG;
+export type FormNumber = string;
 
-export const FORM_NUMBERS = Object.keys(FORM_CATALOG) as FormNumber[];
+export const FORM_NUMBERS = Object.keys(FORM_CATALOG);
 
 export function isFormImplemented(formNumber: string): boolean {
-  const entry = FORM_CATALOG[formNumber as FormNumber];
-  return entry?.implemented === true;
+  return FORM_CATALOG[formNumber]?.implemented === true;
 }
 
 export function isFormDedicatedEndpoint(formNumber: string): boolean {
-  const entry = FORM_CATALOG[formNumber as FormNumber];
-  return entry?.dedicatedEndpoint === true;
+  return FORM_CATALOG[formNumber]?.dedicatedEndpoint === true;
 }
