@@ -6,7 +6,7 @@
 
 ---
 
-## 현재 미해결 프롬프트: 20건
+## 현재 미해결 프롬프트: 19건
 
 ### ~~🔴 CRITICAL — 유효성확인 첨부파일 인프라~~ ✅ 완료 → 아카이브 참조
 
@@ -128,32 +128,7 @@ UL-QP-18-09 양식 (software_validations 테이블에 구현됨):
 9. 이력카드 내보내기에서 항목 7 "관련 S/W"가 M:N JOIN으로 정상 출력
 -->
 
-### 🟠 HIGH — 유효성 확인 상세(Detail) 뷰 + 반려 재제출 경로 구현 (Mode 1)
-
-```
-문제:
-유효성 확인 개별 레코드의 상세 내용을 볼 수 있는 페이지가 없음.
-테이블에서 행을 클릭해 전체 필드(승인자, 승인일시, 반려사유 등)를 확인하는 화면 부재.
-또한 반려(rejected) → 초안(draft) 재수정 경로가 없어 반려된 양식을 수정할 수 없음.
-
-검증됨:
-- SoftwareValidationContent.tsx:236-316 — 테이블 목록만, 행 클릭 상세 없음
-- en/software.json:121 — validation.actions.view 키 정의되어 있으나 미사용
-- /software/[id]/validation/[validationId] 라우트 없음
-- software-validations.service.ts — rejected → draft 전이 메서드 없음
-- SoftwareValidationContent.tsx:269-309 — rejected 상태 행에 액션 버튼 없음
-
-액션:
-1. /software/[id]/validation/[validationId]/page.tsx — 상세 뷰 페이지 생성
-   모든 필드 표시: 방법1/2 정보, 승인자/일시, 반려사유
-2. 백엔드: PATCH /software-validations/:uuid/revise — rejected → draft 전이
-3. 프론트엔드: rejected 행에 "재수정" 버튼 → status를 draft로 되돌림
-4. i18n 키 추가 (상세뷰 라벨, 재수정 버튼)
-
-검증:
-1. 테이블 행 클릭 → 상세 페이지 이동, 전체 필드 표시
-2. 반려된 양식 "재수정" → draft로 전환 → 수정 → 재제출 가능
-```
+### ~~🟠 HIGH — 유효성 확인 상세 뷰 + 반려 재제출~~ ✅ 완료 → 아카이브 참조
 
 ### ~~🟠 HIGH — 유효성확인 DB 컬럼 누락 2개 + 품질승인 알림~~ ✅ 완료 → 아카이브 참조
 
