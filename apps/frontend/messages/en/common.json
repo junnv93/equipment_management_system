@@ -258,5 +258,19 @@
     "deleteAll": "Delete All",
     "deleteFile": "Remove File",
     "formatHint": "{extensions} (max {maxSize}, {maxFiles} files)"
+  },
+  "userCombobox": {
+    "placeholder": "Search and select a user...",
+    "searchPlaceholder": "Search by name...",
+    "typeToSearch": "Type a name to search",
+    "noResults": "No results found",
+    "clearAriaLabel": "Clear selection"
+  },
+  "equipmentCombobox": {
+    "placeholder": "Search and select equipment...",
+    "searchPlaceholder": "Search by name or management number...",
+    "typeToSearch": "Type to search equipment",
+    "noResults": "No results found",
+    "clearAriaLabel": "Clear selection"
   }
 }

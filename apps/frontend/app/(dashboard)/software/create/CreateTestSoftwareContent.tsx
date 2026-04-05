@@ -18,18 +18,22 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
+import { UserCombobox } from '@/components/ui/user-combobox';
 import testSoftwareApi, { type CreateTestSoftwareDto } from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { TEST_FIELD_VALUES } from '@equipment-management/schemas';
-import type { TestField } from '@equipment-management/schemas';
+import { TEST_FIELD_VALUES, SITE_VALUES } from '@equipment-management/schemas';
+import type { TestField, Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 
 export default function CreateTestSoftwareContent() {
   const t = useTranslations('software');
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const siteLabels = useSiteLabels();
 
   const [form, setForm] = useState({
     name: '',
@@ -38,6 +42,10 @@ export default function CreateTestSoftwareContent() {
     manufacturer: '',
     location: '',
     requiresValidation: true,
+    primaryManagerId: '',
+    secondaryManagerId: '',
+    installedAt: '',
+    site: '' as Site | '',
   });
 
   const createMutation = useMutation({
@@ -62,6 +70,10 @@ export default function CreateTestSoftwareContent() {
       ...(form.softwareVersion ? { softwareVersion: form.softwareVersion } : {}),
       ...(form.manufacturer ? { manufacturer: form.manufacturer } : {}),
       ...(form.location ? { location: form.location } : {}),
+      ...(form.primaryManagerId ? { primaryManagerId: form.primaryManagerId } : {}),
+      ...(form.secondaryManagerId ? { secondaryManagerId: form.secondaryManagerId } : {}),
+      ...(form.installedAt ? { installedAt: form.installedAt } : {}),
+      ...(form.site ? { site: form.site } : {}),
       requiresValidation: form.requiresValidation,
     };
     createMutation.mutate(dto);
@@ -134,6 +146,48 @@ export default function CreateTestSoftwareContent() {
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
                 placeholder={t('form.locationPlaceholder')}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.primaryManagerLabel')}</Label>
+              <UserCombobox
+                value={form.primaryManagerId || undefined}
+                onChange={(id) => setForm({ ...form, primaryManagerId: id ?? '' })}
+                placeholder={t('form.primaryManagerPlaceholder')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.secondaryManagerLabel')}</Label>
+              <UserCombobox
+                value={form.secondaryManagerId || undefined}
+                onChange={(id) => setForm({ ...form, secondaryManagerId: id ?? '' })}
+                placeholder={t('form.secondaryManagerPlaceholder')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.installedAtLabel')}</Label>
+              <Input
+                type="date"
+                value={form.installedAt}
+                onChange={(e) => setForm({ ...form, installedAt: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('form.siteLabel')}</Label>
+              <Select
+                value={form.site}
+                onValueChange={(v) => setForm({ ...form, site: v as Site })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('form.sitePlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {SITE_VALUES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {siteLabels[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-3 pt-6">
               <Switch

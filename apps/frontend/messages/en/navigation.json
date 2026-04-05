@@ -30,6 +30,8 @@
   "checkoutsImportShared": "Internal Shared Import",
   "checkoutsImportReceive": "Receive Confirmation",
   "software": "Software Management",
+  "cables": "Cable Management",
+  "cablesDetail": "Cable Detail",
   "reports": "Reports",
   "reportsCalibrationFactors": "Calibration Factors Report",
   "teams": "Teams",

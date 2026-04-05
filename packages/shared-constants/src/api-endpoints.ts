@@ -214,6 +214,11 @@ export const API_ENDPOINTS = {
     CREATE: '/api/test-software',
     UPDATE: (id: string) => `/api/test-software/${id}`,
     TOGGLE_AVAILABILITY: (id: string) => `/api/test-software/${id}/availability`,
+    BY_EQUIPMENT: (equipmentId: string) => `/api/test-software/by-equipment/${equipmentId}`,
+    LINKED_EQUIPMENT: (id: string) => `/api/test-software/${id}/equipment`,
+    LINK_EQUIPMENT: (id: string) => `/api/test-software/${id}/equipment`,
+    UNLINK_EQUIPMENT: (id: string, equipmentId: string) =>
+      `/api/test-software/${id}/equipment/${equipmentId}`,
   },
 
   // ============================================================================
@@ -228,6 +233,7 @@ export const API_ENDPOINTS = {
     APPROVE: (id: string) => `/api/software-validations/${id}/approve`,
     QUALITY_APPROVE: (id: string) => `/api/software-validations/${id}/quality-approve`,
     REJECT: (id: string) => `/api/software-validations/${id}/reject`,
+    REVISE: (id: string) => `/api/software-validations/${id}/revise`,
     PENDING: '/api/software-validations/pending',
   },
 
@@ -395,6 +401,21 @@ export const API_ENDPOINTS = {
       ERROR_REPORT: (sessionId: string) =>
         `/api/data-migration/equipment/${sessionId}/error-report`,
       TEMPLATE: '/api/data-migration/equipment/template',
+    },
+  },
+
+  // ============================================================================
+  // 케이블/경로손실 관리 (UL-QP-18-08)
+  // ============================================================================
+  CABLES: {
+    LIST: '/api/cables',
+    GET: (id: string) => `/api/cables/${id}`,
+    CREATE: '/api/cables',
+    UPDATE: (id: string) => `/api/cables/${id}`,
+    MEASUREMENTS: {
+      LIST: (cableId: string) => `/api/cables/${cableId}/measurements`,
+      CREATE: (cableId: string) => `/api/cables/${cableId}/measurements`,
+      GET: (measurementId: string) => `/api/cables/measurements/${measurementId}`,
     },
   },
 

@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, or, desc, sql } from 'drizzle-orm';
 import {
   softwareValidations,
   testSoftware,
@@ -47,6 +47,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'pending:');
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
   }
 
   private async getSoftwareName(testSoftwareId: string): Promise<string> {
@@ -89,6 +90,8 @@ export class SoftwareValidationsService extends VersionedBaseService {
         createdBy,
         softwareVersion: dto.softwareVersion ?? null,
         testDate: dto.testDate ? new Date(dto.testDate) : null,
+        infoDate: dto.infoDate ? new Date(dto.infoDate) : null,
+        softwareAuthor: dto.softwareAuthor ?? null,
         // Vendor fields
         vendorName: dto.vendorName ?? null,
         vendorSummary: dto.vendorSummary ?? null,
@@ -240,6 +243,10 @@ export class SoftwareValidationsService extends VersionedBaseService {
       updateData.softwareVersion = updateFields.softwareVersion;
     if (updateFields.testDate !== undefined)
       updateData.testDate = updateFields.testDate ? new Date(updateFields.testDate) : null;
+    if (updateFields.infoDate !== undefined)
+      updateData.infoDate = updateFields.infoDate ? new Date(updateFields.infoDate) : null;
+    if (updateFields.softwareAuthor !== undefined)
+      updateData.softwareAuthor = updateFields.softwareAuthor;
     if (updateFields.vendorName !== undefined) updateData.vendorName = updateFields.vendorName;
     if (updateFields.vendorSummary !== undefined)
       updateData.vendorSummary = updateFields.vendorSummary;
@@ -343,12 +350,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
   /**
    * 기술책임자 승인 (submitted → approved)
    */
-  async approve(
-    id: string,
-    version: number,
-    approverId: string,
-    _comment?: string
-  ): Promise<SoftwareValidation> {
+  async approve(id: string, version: number, approverId: string): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
     if (existing.status !== ValidationStatusValues.SUBMITTED) {
@@ -402,8 +404,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
   async qualityApprove(
     id: string,
     version: number,
-    approverId: string,
-    _comment?: string
+    approverId: string
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
@@ -438,11 +439,22 @@ export class SoftwareValidationsService extends VersionedBaseService {
 
     this.invalidateCache(id);
 
+    const swNameQA = await this.getSoftwareName(existing.testSoftwareId);
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED, {
+      validationId: id,
+      testSoftwareId: existing.testSoftwareId,
+      softwareName: swNameQA,
+      submittedBy: existing.submittedBy,
+      actorId: approverId,
+      actorName: '',
+      timestamp: new Date(),
+    });
+
     return updated;
   }
 
   /**
-   * 반려 (submitted → rejected)
+   * 반려 (submitted/approved → rejected)
    */
   async reject(
     id: string,
@@ -452,10 +464,13 @@ export class SoftwareValidationsService extends VersionedBaseService {
   ): Promise<SoftwareValidation> {
     const existing = await this.findOne(id);
 
-    if (existing.status !== ValidationStatusValues.SUBMITTED) {
+    if (
+      existing.status !== ValidationStatusValues.SUBMITTED &&
+      existing.status !== ValidationStatusValues.APPROVED
+    ) {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
-        message: 'Only submitted validations can be rejected.',
+        message: 'Only submitted or approved validations can be rejected.',
       });
     }
 
@@ -500,6 +515,47 @@ export class SoftwareValidationsService extends VersionedBaseService {
   }
 
   /**
+   * 재수정 (rejected → draft)
+   */
+  async revise(id: string, version: number): Promise<SoftwareValidation> {
+    const existing = await this.findOne(id);
+
+    if (existing.status !== ValidationStatusValues.REJECTED) {
+      throw new BadRequestException({
+        code: 'INVALID_STATUS_TRANSITION',
+        message: 'Only rejected validations can be revised.',
+      });
+    }
+
+    let updated: SoftwareValidation;
+    try {
+      updated = await this.updateWithVersion<SoftwareValidation>(
+        softwareValidations,
+        id,
+        version,
+        {
+          status: ValidationStatusValues.DRAFT,
+          rejectedBy: null,
+          rejectedAt: null,
+          rejectionReason: null,
+        },
+        '소프트웨어 유효성 확인',
+        undefined,
+        'SOFTWARE_VALIDATION_NOT_FOUND'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
+
+    this.invalidateCache(id);
+
+    return updated;
+  }
+
+  /**
    * 승인 대기 중인 유효성 확인 목록 조회
    */
   async findPending(): Promise<SoftwareValidation[]> {
@@ -511,7 +567,12 @@ export class SoftwareValidationsService extends VersionedBaseService {
         return this.db
           .select()
           .from(softwareValidations)
-          .where(eq(softwareValidations.status, ValidationStatusValues.SUBMITTED))
+          .where(
+            or(
+              eq(softwareValidations.status, ValidationStatusValues.SUBMITTED),
+              eq(softwareValidations.status, ValidationStatusValues.APPROVED)
+            )
+          )
           .orderBy(desc(softwareValidations.submittedAt));
       },
       CACHE_TTL.SHORT

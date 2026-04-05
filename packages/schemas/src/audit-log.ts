@@ -61,6 +61,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   upload: '업로드',
   download: '다운로드',
   revision: '개정',
+  link: '연결',
+  unlink: '연결 해제',
 };
 
 /**
@@ -88,6 +90,8 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   upload: 'bg-sky-100 text-sky-800',
   download: 'bg-violet-100 text-violet-800',
   revision: 'bg-amber-100 text-amber-800',
+  link: 'bg-lime-100 text-lime-800',
+  unlink: 'bg-stone-100 text-stone-800',
 };
 
 // ============================================================================
@@ -122,6 +126,10 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   report: '보고서',
   document: '문서',
   software_validation: '소프트웨어 유효성 확인',
+  software_equipment_link: '장비-소프트웨어 연결',
+  intermediate_inspection: '중간점검',
+  cable: '케이블',
+  cable_loss_measurement: '케이블 손실 측정',
 };
 
 // ============================================================================

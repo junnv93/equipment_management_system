@@ -18,6 +18,7 @@ export const testSoftwareQuerySchema = z.object({
   testField: TestFieldEnum.optional(),
   availability: SoftwareAvailabilityEnum.optional(),
   search: z.string().optional(),
+  manufacturer: z.string().optional(),
   /** @SiteScoped에 의해 자동 주입 — 직접 설정 금지 */
   site: SiteEnum.optional(),
   /** @SiteScoped(team 스코프)에 의해 자동 주입 — 직접 설정 금지 */

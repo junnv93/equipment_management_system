@@ -212,7 +212,7 @@ export default function AlertsContent() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" aria-label={t('moreActions')}>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -262,7 +262,7 @@ export default function AlertsContent() {
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" aria-label={t('filterNotifications')}>
             <Filter className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="icon" asChild>

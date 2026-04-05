@@ -18,7 +18,7 @@ export const testSoftware = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 관리번호 PNNNN (P0001, P0002, ...)
-    managementNumber: varchar('management_number', { length: 20 }).notNull().unique(),
+    managementNumber: varchar('management_number', { length: 20 }).notNull(),
 
     // 소프트웨어 정보
     name: varchar('name', { length: 200 }).notNull(),
@@ -45,6 +45,9 @@ export const testSoftware = pgTable(
 
     // 사이트 스코프
     site: varchar('site', { length: 10 }),
+
+    // 등록자
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

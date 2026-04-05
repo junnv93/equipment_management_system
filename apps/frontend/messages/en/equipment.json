@@ -558,9 +558,36 @@
   },
   "softwareTab": {
     "title": "Software/Manual Information",
+    "firmwareTitle": "Firmware Information",
     "firmwareVersion": "Firmware Version",
+    "manualTitle": "Manual",
     "manualLocation": "Manual Location",
-    "empty": "No software information registered."
+    "manualFiles": "Manual Files",
+    "download": "Download",
+    "relatedSoftware": "Related Test Software",
+    "emptyRelatedSoftware": "No linked test software.",
+    "goToRegistry": "Go to Software Registry",
+    "colManagementNumber": "Mgmt No.",
+    "colName": "Name",
+    "colVersion": "Version",
+    "colTestField": "Test Field",
+    "colAvailability": "Availability",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "empty": "No software/manual information registered.",
+    "linkButton": "Link Software",
+    "unlinkButton": "Unlink",
+    "unlinkConfirm": "Are you sure you want to unlink this software?",
+    "linkDialogTitle": "Link Test Software",
+    "linkDialogDesc": "Select a test software to link to this equipment.",
+    "linkNotes": "Notes (optional)",
+    "linkNotesPlaceholder": "Notes about the link...",
+    "linkSuccess": "Software linked successfully",
+    "unlinkSuccess": "Software unlinked successfully",
+    "linkError": "Error occurred while linking",
+    "alreadyLinked": "Software is already linked",
+    "colActions": "Actions",
+    "cancel": "Cancel"
   },
   "attachmentsTab": {
     "title": "Attachments",
@@ -1378,58 +1405,6 @@
         "change": "Change",
         "repair": "Repair"
       }
-    }
-  },
-  "softwareHistory": {
-    "title": "Software Change History",
-    "back": "Go Back",
-    "createRequest": "Request Change",
-    "equipmentLabel": "{name} ({id})",
-    "dialog": {
-      "title": "Software Change Request",
-      "description": "Enter the software change details and verification record. Verification record is required.",
-      "softwareNameLabel": "Software Name",
-      "softwareNamePlaceholder": "e.g. EMC32",
-      "previousVersionLabel": "Previous Version",
-      "previousVersionPlaceholder": "e.g. 10.2.0",
-      "newVersionLabel": "New Version",
-      "newVersionPlaceholder": "e.g. 10.3.0",
-      "verificationLabel": "Verification Record",
-      "verificationPlaceholder": "Describe the verification performed after the change (e.g. Compared with previous measurement results, confirmed difference within 0.1dB)",
-      "cancel": "Cancel",
-      "submit": "Request Change",
-      "submitting": "Submitting...",
-      "softwareTypeLabel": "Software Type",
-      "softwareTypePlaceholder": "Select type"
-    },
-    "currentInfo": {
-      "title": "Current Software Info",
-      "name": "Software Name",
-      "version": "Version",
-      "type": "Type",
-      "firmwareVersion": "Firmware Version"
-    },
-    "history": {
-      "title": "Change History",
-      "count": "{count} change record(s)",
-      "empty": "No software change history",
-      "colSoftware": "Software Name",
-      "colVersionChange": "Version Change",
-      "colChangedDate": "Changed Date",
-      "colStatus": "Status",
-      "colVerification": "Verification Record"
-    },
-    "validation": {
-      "softwareNameRequired": "Please enter the software name.",
-      "newVersionRequired": "Please enter the new version.",
-      "verificationRequired": "Verification record is required.",
-      "inputError": "Input Error"
-    },
-    "toast": {
-      "createSuccess": "Request Submitted",
-      "createSuccessDesc": "The software change request has been submitted. Please wait for the technical manager's approval.",
-      "createError": "Request Failed",
-      "createErrorFallback": "An error occurred while submitting the software change request."
     }
   },
   "teamEquipmentList": {

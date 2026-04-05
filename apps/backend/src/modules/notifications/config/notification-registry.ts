@@ -637,6 +637,18 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     emailStrategy: 'immediate',
   },
 
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED]: {
+    category: 'software',
+    priority: 'high',
+    titleTemplate: '소프트웨어 유효성 확인 품질 승인: {{softwareName}}',
+    contentTemplate: '{{softwareName}} 유효성 확인이 품질책임자에 의해 최종 승인되었습니다.',
+    recipientStrategy: { type: 'actor', field: 'submittedBy' },
+    linkTemplate: '/software/{{testSoftwareId}}',
+    entityType: 'software_validation',
+    entityIdField: 'validationId',
+    emailStrategy: 'immediate',
+  },
+
   // ─── 시스템 ────────────────────────────────────────────────────────────
 
   [NOTIFICATION_EVENTS.SYSTEM_ANNOUNCEMENT]: {

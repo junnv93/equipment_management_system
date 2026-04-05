@@ -59,6 +59,7 @@ export const NOTIFICATION_TYPE_VALUES = [
   'software_validation_submitted', // 유효성 확인 제출
   'software_validation_approved', // 유효성 확인 승인
   'software_validation_rejected', // 유효성 확인 반려
+  'software_validation_quality_approved', // 유효성 확인 품질 승인
 
   // ─── 중간점검 (Intermediate Check) ───
   'intermediate_check_completed', // 중간점검 완료

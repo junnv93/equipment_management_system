@@ -48,22 +48,24 @@ export const calibrationPlans = pgTable(
       .default('draft'),
 
     // 작성자 정보 (기술책임자)
-    createdBy: uuid('created_by').notNull(), // 작성자 ID
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }), // 작성자 ID
 
     // 검토 요청 단계 (기술책임자 → 품질책임자)
     submittedAt: timestamp('submitted_at'), // 검토 요청 일시
 
     // 검토 단계 (품질책임자)
-    reviewedBy: uuid('reviewed_by'), // 검토자 ID (품질책임자)
+    reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'restrict' }), // 검토자 ID (품질책임자)
     reviewedAt: timestamp('reviewed_at'), // 검토 완료 일시
     reviewComment: text('review_comment'), // 검토 의견
 
     // 승인 단계 (시험소장)
-    approvedBy: uuid('approved_by'), // 승인자 ID (시험소장)
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'restrict' }), // 승인자 ID (시험소장)
     approvedAt: timestamp('approved_at'), // 승인 일시
 
     // 반려 정보 (품질책임자 또는 시험소장)
-    rejectedBy: uuid('rejected_by'), // 반려자 ID
+    rejectedBy: uuid('rejected_by').references(() => users.id, { onDelete: 'restrict' }), // 반려자 ID
     rejectedAt: timestamp('rejected_at'), // 반려 일시
     rejectionReason: text('rejection_reason'), // 반려 사유
     rejectionStage: varchar('rejection_stage', { length: 20 }), // 'review' | 'approval'
@@ -135,7 +137,7 @@ export const calibrationPlanItems = pgTable(
     plannedCalibrationAgency: varchar('planned_calibration_agency', { length: 100 }), // 계획된 교정기관
 
     // 확인 (기술책임자)
-    confirmedBy: uuid('confirmed_by'), // 확인자 ID (기술책임자)
+    confirmedBy: uuid('confirmed_by').references(() => users.id, { onDelete: 'restrict' }), // 확인자 ID (기술책임자)
     confirmedAt: timestamp('confirmed_at'), // 확인일시
 
     // 비고
@@ -203,5 +205,9 @@ export const calibrationPlanItemsRelations = relations(calibrationPlanItems, ({ 
   equipment: one(equipment, {
     fields: [calibrationPlanItems.equipmentId],
     references: [equipment.id],
+  }),
+  confirmedByUser: one(users, {
+    fields: [calibrationPlanItems.confirmedBy],
+    references: [users.id],
   }),
 }));

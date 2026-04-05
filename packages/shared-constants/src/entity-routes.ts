@@ -35,6 +35,10 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   notification: (id) => `/notifications?selected=${id}`,
   report: () => `/reports`,
   document: (id) => `/documents/${id}`,
+  software_equipment_link: (id) => `/software/${id}`,
+  intermediate_inspection: (id) => `/calibration/intermediate-checks?selected=${id}`,
+  cable: (id) => `/cables/${id}`,
+  cable_loss_measurement: (id) => `/cables/${id}?tab=measurements`,
 };
 
 /**

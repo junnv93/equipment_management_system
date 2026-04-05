@@ -5,7 +5,7 @@
  * 방법 2: UL 자체 시험 — TE 시험 실시 → TM 승인 → QM 등록
  *
  * @see docs/workflows/critical-workflows.md WF-14b
- * @see docs/procedure/시험소프트웨어유효성확인.md
+ * @see docs/procedure/절차서/시험소프트웨어유효성확인.md
  */
 
 import { test, expect } from '../shared/fixtures/auth.fixture';

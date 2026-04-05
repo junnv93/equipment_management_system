@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EquipmentPagination } from '@/components/equipment/EquipmentPagination';
 import testSoftwareApi from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TEST_FIELD_VALUES, SOFTWARE_AVAILABILITY_VALUES } from '@equipment-management/schemas';
@@ -54,6 +55,28 @@ export default function TestSoftwareListContent() {
       } else {
         params.delete(key);
       }
+      // 필터 변경 시 첫 페이지로 리셋
+      if (key !== 'page') params.delete('page');
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router]
+  );
+
+  const setPage = useCallback(
+    (page: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (page > 1) params.set('page', String(page));
+      else params.delete('page');
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router]
+  );
+
+  const setPageSize = useCallback(
+    (pageSize: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('pageSize', String(pageSize));
+      params.delete('page');
       router.replace(`?${params.toString()}`, { scroll: false });
     },
     [searchParams, router]
@@ -66,6 +89,14 @@ export default function TestSoftwareListContent() {
   });
 
   const items = data?.data ?? [];
+  const paginationInfo = useMemo(
+    () => ({
+      totalItems: data?.meta?.pagination?.total ?? 0,
+      totalPages: data?.meta?.pagination?.totalPages ?? 1,
+      currentPage: data?.meta?.pagination?.currentPage ?? uiFilters.page,
+    }),
+    [data, uiFilters.page]
+  );
 
   return (
     <div className={getPageContainerClasses()}>
@@ -126,6 +157,13 @@ export default function TestSoftwareListContent() {
             ))}
           </SelectContent>
         </Select>
+        <div className="relative min-w-[160px]">
+          <Input
+            placeholder={t('list.filters.manufacturer')}
+            value={uiFilters.manufacturer}
+            onChange={(e) => updateFilter('manufacturer', e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -186,6 +224,18 @@ export default function TestSoftwareListContent() {
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {/* Pagination */}
+      {paginationInfo.totalPages > 1 && (
+        <EquipmentPagination
+          currentPage={paginationInfo.currentPage}
+          totalPages={paginationInfo.totalPages}
+          pageSize={uiFilters.pageSize}
+          totalItems={paginationInfo.totalItems}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       )}
     </div>
   );

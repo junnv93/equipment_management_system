@@ -232,6 +232,17 @@ export const QUERY_CONFIG = {
   /** 시험용 소프트웨어 목록 - NORMAL (사용자 필터링 시 갱신) */
   TEST_SOFTWARE_LIST: REFETCH_STRATEGIES.NORMAL,
 
+  /** 케이블 목록 - NORMAL (사용자 필터링 시 갱신) */
+  CABLES_LIST: REFETCH_STRATEGIES.NORMAL,
+
+  /** 케이블 상세 - NORMAL (mutation 후 자동 무효화) */
+  CABLES_DETAIL: {
+    staleTime: CACHE_TIMES.MEDIUM,
+    gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
   /** 승인 카운트 - SSE_BACKED (SSE approval-changed 이벤트로 실시간 무효화, 10분 폴백) */
   APPROVAL_COUNTS: REFETCH_STRATEGIES.SSE_BACKED,
 
@@ -410,12 +421,19 @@ export const queryKeys = {
     documents: (calibrationId: string) =>
       [...queryKeys.calibrations.all, 'documents', calibrationId] as const,
   },
+  intermediateInspections: {
+    all: ['intermediate-inspections'] as const,
+    byCalibration: (calibrationId: string) =>
+      ['intermediate-inspections', 'calibration', calibrationId] as const,
+    detail: (id: string) => ['intermediate-inspections', 'detail', id] as const,
+  },
   documents: {
     all: ['documents'] as const,
     detail: (id: string) => ['documents', 'detail', id] as const,
     revisions: (id: string) => ['documents', 'revisions', id] as const,
     byEquipment: (equipmentId: string) => ['documents', 'equipment', equipmentId] as const,
     byRequest: (requestId: string) => ['documents', 'request', requestId] as const,
+    byValidation: (validationId: string) => ['documents', 'validation', validationId] as const,
   },
   reports: {
     all: ['reports'] as const,
@@ -437,6 +455,20 @@ export const queryKeys = {
       [...queryKeys.testSoftware.lists(), filters] as const,
     details: () => [...queryKeys.testSoftware.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.testSoftware.details(), id] as const,
+    byEquipment: (equipmentId: string) =>
+      [...queryKeys.testSoftware.all, 'by-equipment', equipmentId] as const,
+    linkedEquipment: (softwareId: string) =>
+      [...queryKeys.testSoftware.all, 'linked-equipment', softwareId] as const,
+  },
+  cables: {
+    all: ['cables'] as const,
+    lists: () => [...queryKeys.cables.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) => [...queryKeys.cables.lists(), filters] as const,
+    details: () => [...queryKeys.cables.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.cables.details(), id] as const,
+    measurements: (cableId: string) =>
+      [...queryKeys.cables.detail(cableId), 'measurements'] as const,
+    measurementDetail: (id: string) => [...queryKeys.cables.all, 'measurement-detail', id] as const,
   },
   softwareValidations: {
     all: ['software-validations'] as const,

@@ -13,6 +13,8 @@ export const DOCUMENT_TYPE_VALUES = [
   'equipment_photo', // 장비 사진
   'equipment_manual', // 장비 매뉴얼 (PDF)
   'other', // 기타
+  'validation_vendor_attachment', // 유효성확인 방법 1 — 공급자 제공 자료
+  'validation_test_data', // 유효성확인 방법 2 — 시험 데이터
 ] as const;
 
 export const DocumentTypeEnum = z.enum(DOCUMENT_TYPE_VALUES);
@@ -27,6 +29,8 @@ export const DocumentTypeValues = {
   EQUIPMENT_PHOTO: 'equipment_photo',
   EQUIPMENT_MANUAL: 'equipment_manual',
   OTHER: 'other',
+  VALIDATION_VENDOR_ATTACHMENT: 'validation_vendor_attachment',
+  VALIDATION_TEST_DATA: 'validation_test_data',
 } as const satisfies Record<string, DocumentType>;
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
@@ -37,6 +41,8 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   equipment_photo: '장비 사진',
   equipment_manual: '장비 매뉴얼',
   other: '기타',
+  validation_vendor_attachment: '유효성확인 공급자 자료',
+  validation_test_data: '유효성확인 시험 데이터',
 };
 
 // ============================================================
@@ -61,6 +67,7 @@ export const documentSchema = z.object({
   equipmentId: nullableOptionalUuid(),
   calibrationId: nullableOptionalUuid(),
   requestId: nullableOptionalUuid(),
+  softwareValidationId: nullableOptionalUuid(),
   documentType: DocumentTypeEnum,
   status: DocumentStatusEnum,
   fileName: z.string().max(255),
@@ -89,6 +96,7 @@ export const createDocumentInputSchema = z.object({
   equipmentId: optionalUuid(),
   calibrationId: optionalUuid(),
   requestId: optionalUuid(),
+  softwareValidationId: optionalUuid(),
   documentType: DocumentTypeEnum,
   description: z.string().optional(),
 });

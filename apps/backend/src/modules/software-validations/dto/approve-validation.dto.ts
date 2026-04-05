@@ -5,7 +5,6 @@ import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 export const approveValidationSchema = z.object({
   ...versionedSchema,
-  comment: z.string().optional(),
 });
 
 export type ApproveValidationInput = z.infer<typeof approveValidationSchema>;

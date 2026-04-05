@@ -1,7 +1,12 @@
 import { Inject, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, desc, sql, asc } from 'drizzle-orm';
-import { testSoftware, type TestSoftware } from '@equipment-management/db/schema';
+import {
+  testSoftware,
+  equipmentTestSoftware,
+  equipment,
+  type TestSoftware,
+} from '@equipment-management/db/schema';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -11,6 +16,13 @@ import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
+import type { LinkEquipmentInput } from './dto/link-equipment.dto';
+
+/** findAll/findOne 응답에 users LEFT JOIN으로 추가되는 필드 */
+export type TestSoftwareWithManagers = TestSoftware & {
+  primaryManagerName: string | null;
+  secondaryManagerName: string | null;
+};
 
 @Injectable()
 export class TestSoftwareService extends VersionedBaseService {
@@ -44,10 +56,10 @@ export class TestSoftwareService extends VersionedBaseService {
    */
   private async generateNextManagementNumber(tx: AppDatabase): Promise<string> {
     // PNNNN 형식에서 숫자 부분만 추출하여 MAX 계산
-    // Drizzle sql 태그의 정규식 이스케이프 문제를 피하기 위해 sql.raw 사용
+    // FOR UPDATE로 동시 삽입 시 중복 방지 — 행 잠금으로 다른 트랜잭션의 동시 읽기 차단
     const result = await tx.execute(
       sql.raw(
-        `SELECT MAX(CAST(SUBSTRING(management_number FROM 'P([0-9]+)') AS INTEGER)) as max_num FROM test_software`
+        `SELECT MAX(CAST(SUBSTRING(management_number FROM 'P([0-9]+)') AS INTEGER)) as max_num FROM test_software FOR UPDATE`
       )
     );
 
@@ -64,7 +76,7 @@ export class TestSoftwareService extends VersionedBaseService {
     return `P${String(nextNum).padStart(4, '0')}`;
   }
 
-  async create(dto: CreateTestSoftwareInput, _createdBy: string): Promise<TestSoftware> {
+  async create(dto: CreateTestSoftwareInput, createdBy: string): Promise<TestSoftware> {
     const result = await this.db.transaction(async (tx) => {
       const managementNumber = await this.generateNextManagementNumber(tx);
 
@@ -83,6 +95,7 @@ export class TestSoftwareService extends VersionedBaseService {
           availability: dto.availability ?? 'available',
           requiresValidation: dto.requiresValidation ?? true,
           site: dto.site ?? null,
+          createdBy,
         })
         .returning();
 
@@ -95,7 +108,7 @@ export class TestSoftwareService extends VersionedBaseService {
   }
 
   async findAll(query: TestSoftwareQueryInput): Promise<{
-    items: TestSoftware[];
+    items: TestSoftwareWithManagers[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -108,6 +121,7 @@ export class TestSoftwareService extends VersionedBaseService {
       testField,
       availability,
       search,
+      manufacturer,
       site,
       sort = 'createdAt.desc',
       page = 1,
@@ -116,7 +130,7 @@ export class TestSoftwareService extends VersionedBaseService {
 
     const cacheKey = this.buildCacheKey(
       'list',
-      `${testField ?? ''}_${availability ?? ''}_${search ?? ''}_${site ?? ''}_${sort}_${page}_${pageSize}`
+      `${testField ?? ''}_${availability ?? ''}_${search ?? ''}_${manufacturer ?? ''}_${site ?? ''}_${sort}_${page}_${pageSize}`
     );
 
     return this.cacheService.getOrSet(
@@ -127,6 +141,9 @@ export class TestSoftwareService extends VersionedBaseService {
         if (availability) conditions.push(eq(testSoftware.availability, availability));
         if (search) {
           conditions.push(safeIlike(testSoftware.name, likeContains(search)));
+        }
+        if (manufacturer) {
+          conditions.push(safeIlike(testSoftware.manufacturer, likeContains(manufacturer)));
         }
         if (site) conditions.push(eq(testSoftware.site, site));
 
@@ -145,8 +162,29 @@ export class TestSoftwareService extends VersionedBaseService {
 
         const [rows, [{ count }]] = await Promise.all([
           this.db
-            .select()
+            .select({
+              id: testSoftware.id,
+              managementNumber: testSoftware.managementNumber,
+              name: testSoftware.name,
+              softwareVersion: testSoftware.softwareVersion,
+              testField: testSoftware.testField,
+              primaryManagerId: testSoftware.primaryManagerId,
+              secondaryManagerId: testSoftware.secondaryManagerId,
+              installedAt: testSoftware.installedAt,
+              manufacturer: testSoftware.manufacturer,
+              location: testSoftware.location,
+              availability: testSoftware.availability,
+              requiresValidation: testSoftware.requiresValidation,
+              site: testSoftware.site,
+              version: testSoftware.version,
+              createdAt: testSoftware.createdAt,
+              updatedAt: testSoftware.updatedAt,
+              primaryManagerName: sql<string | null>`pm.name`,
+              secondaryManagerName: sql<string | null>`sm.name`,
+            })
             .from(testSoftware)
+            .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
+            .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
             .where(whereClause)
             .orderBy(orderBy)
             .limit(pageSize)
@@ -159,7 +197,7 @@ export class TestSoftwareService extends VersionedBaseService {
 
         const totalItems = Number(count);
         return {
-          items: rows,
+          items: rows as TestSoftwareWithManagers[],
           meta: {
             totalItems,
             itemCount: rows.length,
@@ -173,14 +211,36 @@ export class TestSoftwareService extends VersionedBaseService {
     );
   }
 
-  async findOne(id: string): Promise<TestSoftware> {
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/explicit-module-boundary-types
+  async findOne(id: string) {
     const cacheKey = this.buildCacheKey('detail', id);
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         const [record] = await this.db
-          .select()
+          .select({
+            id: testSoftware.id,
+            managementNumber: testSoftware.managementNumber,
+            name: testSoftware.name,
+            softwareVersion: testSoftware.softwareVersion,
+            testField: testSoftware.testField,
+            primaryManagerId: testSoftware.primaryManagerId,
+            secondaryManagerId: testSoftware.secondaryManagerId,
+            installedAt: testSoftware.installedAt,
+            manufacturer: testSoftware.manufacturer,
+            location: testSoftware.location,
+            availability: testSoftware.availability,
+            requiresValidation: testSoftware.requiresValidation,
+            site: testSoftware.site,
+            version: testSoftware.version,
+            createdAt: testSoftware.createdAt,
+            updatedAt: testSoftware.updatedAt,
+            primaryManagerName: sql<string | null>`pm.name`,
+            secondaryManagerName: sql<string | null>`sm.name`,
+          })
           .from(testSoftware)
+          .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
+          .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
           .where(eq(testSoftware.id, id))
           .limit(1);
 
@@ -192,6 +252,45 @@ export class TestSoftwareService extends VersionedBaseService {
         }
 
         return record;
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  async findByEquipmentId(equipmentId: string): Promise<TestSoftwareWithManagers[]> {
+    const cacheKey = this.buildCacheKey('by-equipment', equipmentId);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const rows = await this.db
+          .select({
+            id: testSoftware.id,
+            managementNumber: testSoftware.managementNumber,
+            name: testSoftware.name,
+            softwareVersion: testSoftware.softwareVersion,
+            testField: testSoftware.testField,
+            primaryManagerId: testSoftware.primaryManagerId,
+            secondaryManagerId: testSoftware.secondaryManagerId,
+            installedAt: testSoftware.installedAt,
+            manufacturer: testSoftware.manufacturer,
+            location: testSoftware.location,
+            availability: testSoftware.availability,
+            requiresValidation: testSoftware.requiresValidation,
+            site: testSoftware.site,
+            version: testSoftware.version,
+            createdAt: testSoftware.createdAt,
+            updatedAt: testSoftware.updatedAt,
+            primaryManagerName: sql<string | null>`pm.name`,
+            secondaryManagerName: sql<string | null>`sm.name`,
+          })
+          .from(equipmentTestSoftware)
+          .innerJoin(testSoftware, eq(equipmentTestSoftware.testSoftwareId, testSoftware.id))
+          .leftJoin(sql`users as pm`, sql`pm.id = ${testSoftware.primaryManagerId}`)
+          .leftJoin(sql`users as sm`, sql`sm.id = ${testSoftware.secondaryManagerId}`)
+          .where(eq(equipmentTestSoftware.equipmentId, equipmentId))
+          .orderBy(asc(testSoftware.managementNumber));
+
+        return rows as TestSoftwareWithManagers[];
       },
       CACHE_TTL.MEDIUM
     );
@@ -269,5 +368,121 @@ export class TestSoftwareService extends VersionedBaseService {
     this.invalidateCache(id);
 
     return updated;
+  }
+
+  // ─── M:N 장비 링크 ────────────────────────────────────────────────────
+
+  /**
+   * 양방향 캐시 무효화 — 링크/언링크 시 양쪽 엔티티의 캐시를 모두 제거
+   */
+  private invalidateLinkCaches(testSoftwareId: string, equipmentId: string): void {
+    this.cacheService.delete(this.buildCacheKey('by-equipment', equipmentId));
+    this.cacheService.delete(this.buildCacheKey('linked-equipment', testSoftwareId));
+    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
+  }
+
+  /**
+   * 장비 연결 (M:N)
+   *
+   * UNIQUE 제약(equipment_id, test_software_id) 위반 시 409 Conflict 반환.
+   */
+  async linkEquipment(
+    testSoftwareId: string,
+    dto: LinkEquipmentInput
+  ): Promise<{ id: string; testSoftwareId: string; equipmentId: string; notes: string | null }> {
+    // 소프트웨어 존재 확인
+    await this.findOne(testSoftwareId);
+
+    try {
+      const [link] = await this.db
+        .insert(equipmentTestSoftware)
+        .values({
+          testSoftwareId,
+          equipmentId: dto.equipmentId,
+          notes: dto.notes ?? null,
+        })
+        .returning();
+
+      this.invalidateLinkCaches(testSoftwareId, dto.equipmentId);
+
+      this.eventEmitter.emit('test-software.equipment.linked', {
+        testSoftwareId,
+        equipmentId: dto.equipmentId,
+      });
+
+      return link;
+    } catch (error) {
+      // PostgreSQL unique_violation: 23505
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as { code: string }).code === '23505'
+      ) {
+        throw new ConflictException({
+          code: 'EQUIPMENT_ALREADY_LINKED',
+          message: 'This equipment is already linked to the software.',
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * 장비 연결 해제 (M:N)
+   */
+  async unlinkEquipment(testSoftwareId: string, equipmentId: string): Promise<void> {
+    const deleted = await this.db
+      .delete(equipmentTestSoftware)
+      .where(
+        and(
+          eq(equipmentTestSoftware.testSoftwareId, testSoftwareId),
+          eq(equipmentTestSoftware.equipmentId, equipmentId)
+        )
+      )
+      .returning({ id: equipmentTestSoftware.id });
+
+    if (deleted.length === 0) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_LINK_NOT_FOUND',
+        message: 'Equipment link not found.',
+      });
+    }
+
+    this.invalidateLinkCaches(testSoftwareId, equipmentId);
+
+    this.eventEmitter.emit('test-software.equipment.unlinked', {
+      testSoftwareId,
+      equipmentId,
+    });
+  }
+
+  /**
+   * 역방향 조회: 소프트웨어에 연결된 장비 목록
+   */
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type, @typescript-eslint/explicit-module-boundary-types
+  async findLinkedEquipment(testSoftwareId: string) {
+    const cacheKey = this.buildCacheKey('linked-equipment', testSoftwareId);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return this.db
+          .select({
+            id: equipment.id,
+            managementNumber: equipment.managementNumber,
+            name: equipment.name,
+            modelName: equipment.modelName,
+            manufacturer: equipment.manufacturer,
+            status: equipment.status,
+            site: equipment.site,
+            notes: equipmentTestSoftware.notes,
+            linkedAt: equipmentTestSoftware.createdAt,
+          })
+          .from(equipmentTestSoftware)
+          .innerJoin(equipment, eq(equipmentTestSoftware.equipmentId, equipment.id))
+          .where(eq(equipmentTestSoftware.testSoftwareId, testSoftwareId))
+          .orderBy(asc(equipment.managementNumber));
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 }

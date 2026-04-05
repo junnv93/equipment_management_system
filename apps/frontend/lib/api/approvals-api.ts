@@ -810,7 +810,7 @@ class ApprovalsApi {
       }
       case 'software_validation': {
         const validation = await softwareValidationApi.get(id);
-        await softwareValidationApi.approve(id, validation.version, comment);
+        await softwareValidationApi.approve(id, validation.version);
         break;
       }
       default:

@@ -80,6 +80,17 @@ export const FRONTEND_ROUTES = {
     CREATE: '/software/create',
     DETAIL: (id: string) => `/software/${id}`,
     VALIDATION: (id: string) => `/software/${id}/validation`,
+    VALIDATION_DETAIL: (softwareId: string, validationId: string) =>
+      `/software/${softwareId}/validation/${validationId}`,
+  },
+
+  // ============================================================================
+  // 케이블/경로손실 관리 (UL-QP-18-08)
+  // ============================================================================
+  CABLES: {
+    LIST: '/cables',
+    CREATE: '/cables/create',
+    DETAIL: (id: string) => `/cables/${id}`,
   },
 
   // ============================================================================

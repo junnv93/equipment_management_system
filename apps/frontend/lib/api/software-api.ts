@@ -41,6 +41,7 @@ export interface TestSoftwareQuery {
   testField?: TestField;
   availability?: SoftwareAvailability;
   search?: string;
+  manufacturer?: string;
   site?: string;
   page?: number;
   pageSize?: number;
@@ -66,6 +67,22 @@ export interface UpdateTestSoftwareDto extends Partial<CreateTestSoftwareDto> {
 }
 
 // ============================================================================
+// Equipment Link (M:N)
+// ============================================================================
+
+export interface LinkedEquipment {
+  id: string;
+  managementNumber: string;
+  name: string;
+  modelName: string | null;
+  manufacturer: string | null;
+  status: string;
+  site: string | null;
+  notes: string | null;
+  linkedAt: string;
+}
+
+// ============================================================================
 // Software Validation (UL-QP-18-09)
 // ============================================================================
 
@@ -76,6 +93,8 @@ export interface SoftwareValidation {
   status: ValidationStatus;
   softwareVersion: string | null;
   testDate: string | null;
+  infoDate: string | null;
+  softwareAuthor: string | null;
   // Vendor fields
   vendorName: string | null;
   vendorSummary: string | null;
@@ -156,6 +175,27 @@ const testSoftwareApi = {
       .patch(API_ENDPOINTS.TEST_SOFTWARE.TOGGLE_AVAILABILITY(id), { version })
       .then((res) => res.data);
   },
+  listByEquipment: async (equipmentId: string): Promise<TestSoftware[]> => {
+    return apiClient
+      .get(API_ENDPOINTS.TEST_SOFTWARE.BY_EQUIPMENT(equipmentId))
+      .then((res) => res.data);
+  },
+  listLinkedEquipment: async (softwareId: string): Promise<LinkedEquipment[]> => {
+    return apiClient
+      .get(API_ENDPOINTS.TEST_SOFTWARE.LINKED_EQUIPMENT(softwareId))
+      .then((res) => res.data);
+  },
+  linkEquipment: async (
+    softwareId: string,
+    data: { equipmentId: string; notes?: string }
+  ): Promise<{ id: string }> => {
+    return apiClient
+      .post(API_ENDPOINTS.TEST_SOFTWARE.LINK_EQUIPMENT(softwareId), data)
+      .then((res) => res.data);
+  },
+  unlinkEquipment: async (softwareId: string, equipmentId: string): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.TEST_SOFTWARE.UNLINK_EQUIPMENT(softwareId, equipmentId));
+  },
 };
 
 const softwareValidationApi = {
@@ -185,9 +225,9 @@ const softwareValidationApi = {
       .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.SUBMIT(id), { version })
       .then((res) => res.data);
   },
-  approve: async (id: string, version: number, comment?: string): Promise<SoftwareValidation> => {
+  approve: async (id: string, version: number): Promise<SoftwareValidation> => {
     return apiClient
-      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.APPROVE(id), { version, comment })
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.APPROVE(id), { version })
       .then((res) => res.data);
   },
   qualityApprove: async (id: string, version: number): Promise<SoftwareValidation> => {
@@ -202,6 +242,11 @@ const softwareValidationApi = {
   ): Promise<SoftwareValidation> => {
     return apiClient
       .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.REJECT(id), { version, rejectionReason })
+      .then((res) => res.data);
+  },
+  revise: async (id: string, version: number): Promise<SoftwareValidation> => {
+    return apiClient
+      .patch(API_ENDPOINTS.SOFTWARE_VALIDATIONS.REVISE(id), { version })
       .then((res) => res.data);
   },
 };
