@@ -1,15 +1,13 @@
 name: CodeQL Security Analysis
 
 on:
-  # GHAS 미구매 private repo → SARIF 업로드 불가 → PR/push 트리거 비활성화
-  # GHAS 활성화 시 아래 주석 해제 + continue-on-error 제거
-  # push:
-  #   branches: [main, develop]
-  # pull_request:
-  #   branches: [main, develop]
-  # schedule:
-  #   - cron: '0 9 * * 1'
-  workflow_dispatch: # 수동 실행만 허용
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1' # 매주 월요일 09:00 UTC
+  workflow_dispatch:
 
 # main.yml과 동일한 concurrency 전략
 concurrency:
@@ -37,10 +35,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@d4b3ca9fa7f69d38bfcd667bdc45bc373d16277e # v4
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
@@ -48,17 +46,17 @@ jobs:
       # main.yml과 동일한 빌드 환경 (SSOT)
       # JS/TS CodeQL은 소스 추출 기반이지만, 빌드하면 타입 정보가 풍부해져 분석 품질 향상
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       # Turbo 캐시 (main.yml과 동일)
       - name: Restore Turbo cache
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
@@ -67,7 +65,7 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - name: Restore node_modules cache
-        uses: actions/cache@v5
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
         id: node-modules-cache
         with:
           path: |
@@ -90,7 +88,7 @@ jobs:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@d4b3ca9fa7f69d38bfcd667bdc45bc373d16277e # v4
         with:
           category: '/language:${{ matrix.language }}'
           # Private repo + GHAS 미활성 시 SARIF 업로드 실패 방지
