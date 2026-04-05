@@ -44,7 +44,7 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
-    needs: secret-scan
+    # secret-scan과 병렬 실행 — 시크릿 스캔은 독립 게이트로, 코드 품질 파이프라인을 차단하지 않음
     steps:
       - uses: actions/checkout@v6
 
@@ -266,7 +266,7 @@ jobs:
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [unit-test, build, dep-audit]
+    needs: [secret-scan, unit-test, build, dep-audit]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
