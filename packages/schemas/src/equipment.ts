@@ -62,19 +62,19 @@ export const baseEquipmentSchema = z.object({
   specMatch: SpecMatchEnum.optional(), // 시방일치 여부: 'match' | 'mismatch'
   calibrationRequired: CalibrationRequiredEnum.optional(), // 교정필요 여부: 'required' | 'not_required'
 
-  // 교정 정보
-  calibrationCycle: z.number().int().positive().optional(),
-  lastCalibrationDate: z.coerce.date().optional(),
-  nextCalibrationDate: z.coerce.date().optional(),
-  calibrationAgency: z.string().optional(), // placeholder: HCT
+  // 교정 정보 (nullable: calibrationRequired 전환 시 명시적 null 클리어)
+  calibrationCycle: z.number().int().positive().optional().nullable(),
+  lastCalibrationDate: z.coerce.date().optional().nullable(),
+  nextCalibrationDate: z.coerce.date().optional().nullable(),
+  calibrationAgency: z.string().optional().nullable(), // placeholder: HCT
   // 기본값이 있는 필드는 생성 시 선택적으로 처리 (서비스 레이어에서 기본값 적용)
   needsIntermediateCheck: z.boolean().optional(),
   managementMethod: ManagementMethodEnum.optional(), // 라벨: 관리 방법
 
-  // 중간점검 정보 (신규: 3개 필드로 분리)
-  lastIntermediateCheckDate: z.coerce.date().optional(), // 최종 중간 점검일
-  intermediateCheckCycle: z.number().int().positive().optional(), // 중간점검 주기 (개월)
-  nextIntermediateCheckDate: z.coerce.date().optional(), // 차기 중간 점검일
+  // 중간점검 정보 (nullable: calibrationRequired 전환 시 명시적 null 클리어)
+  lastIntermediateCheckDate: z.coerce.date().optional().nullable(), // 최종 중간 점검일
+  intermediateCheckCycle: z.number().int().positive().optional().nullable(), // 중간점검 주기 (개월)
+  nextIntermediateCheckDate: z.coerce.date().optional().nullable(), // 차기 중간 점검일
 
   // 관리 정보
   purchaseYear: z.number().int().min(1990).max(2100).optional().nullable(), // 구입년도 (연도 정수)

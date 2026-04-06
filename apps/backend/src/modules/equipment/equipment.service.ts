@@ -511,21 +511,27 @@ export class EquipmentService extends VersionedBaseService {
       updatedAt: new Date(),
     };
 
-    // 교정일 재계산이 필요한 경우
-    const lastCalibrationDate = dto.lastCalibrationDate ?? existingEquipment.lastCalibrationDate;
-    const calibrationCycle = dto.calibrationCycle ?? existingEquipment.calibrationCycle;
+    // 교정일 재계산 또는 null 클리어
+    // calibrationRequired 전환 시 null이 명시적으로 전송될 수 있음
+    if (dto.calibrationCycle === null || dto.lastCalibrationDate === null) {
+      // 교정 불필요 전환 → 교정일도 함께 null 클리어
+      updateData.nextCalibrationDate = null;
+    } else {
+      const lastCalibrationDate = dto.lastCalibrationDate ?? existingEquipment.lastCalibrationDate;
+      const calibrationCycle = dto.calibrationCycle ?? existingEquipment.calibrationCycle;
 
-    if (
-      lastCalibrationDate &&
-      calibrationCycle &&
-      (dto.lastCalibrationDate !== undefined || dto.calibrationCycle !== undefined)
-    ) {
-      const nextCalibrationDate = calculateNextCalibrationDate(
-        lastCalibrationDate,
-        calibrationCycle
-      );
-      if (nextCalibrationDate !== existingEquipment.nextCalibrationDate) {
-        updateData.nextCalibrationDate = nextCalibrationDate;
+      if (
+        lastCalibrationDate &&
+        calibrationCycle &&
+        (dto.lastCalibrationDate !== undefined || dto.calibrationCycle !== undefined)
+      ) {
+        const nextCalibrationDate = calculateNextCalibrationDate(
+          lastCalibrationDate,
+          calibrationCycle
+        );
+        if (nextCalibrationDate !== existingEquipment.nextCalibrationDate) {
+          updateData.nextCalibrationDate = nextCalibrationDate;
+        }
       }
     }
 

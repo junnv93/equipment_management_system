@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
 import { CalibrationRequiredValues, ManagementMethodValues } from '@equipment-management/schemas';
@@ -57,8 +57,15 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
   const isNotRequired = calibrationRequired === CalibrationRequiredValues.NOT_REQUIRED;
   const isNotSelected = !calibrationRequired;
 
+  // 초기 마운트 추적 (수정 모드에서 기존 데이터가 useEffect에 의해 삭제되는 것 방지)
+  const hasCalibrationRequiredChanged = useRef(false);
+
   // 교정필요여부 변경 시 연동 필드 자동 설정
   useEffect(() => {
+    if (!hasCalibrationRequiredChanged.current) {
+      hasCalibrationRequiredChanged.current = true;
+      return;
+    }
     if (isRequired) {
       setValue('managementMethod', ManagementMethodValues.EXTERNAL_CALIBRATION);
       setValue('needsIntermediateCheck', true);
@@ -72,24 +79,31 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
       setValue('lastIntermediateCheckDate', undefined);
       setValue('intermediateCheckCycle', undefined);
       setValue('nextIntermediateCheckDate', undefined);
-      // managementMethod가 external_calibration이면 리셋
       if (managementMethod === ManagementMethodValues.EXTERNAL_CALIBRATION) {
         setValue('managementMethod', undefined);
       }
     }
-    // managementMethod는 의도적으로 deps에서 제외 (무한 루프 방지)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calibrationRequired, setValue]);
+    // managementMethod는 읽기만 하므로 deps에 포함해도 무한 루프 없음
+    // (isRequired 분기에서 setValue하지만, isRequired가 변경되지 않으면 재실행 안 됨)
+  }, [calibrationRequired, isRequired, isNotRequired, managementMethod, setValue]);
 
   // 자체점검 선택 시 점검 주기 필드 활성화
   const isSelfInspection = managementMethod === ManagementMethodValues.SELF_INSPECTION;
 
-  // 자체점검 선택/해제 시 점검 필드 초기화
+  // 자체점검 선택/해제 시 needsIntermediateCheck 연동 + 점검 필드 초기화
+  const hasManagementMethodChanged = useRef(false);
   useEffect(() => {
-    if (isNotRequired && !isSelfInspection) {
-      setValue('lastIntermediateCheckDate', undefined);
-      setValue('intermediateCheckCycle', undefined);
-      setValue('nextIntermediateCheckDate', undefined);
+    if (!hasManagementMethodChanged.current) {
+      hasManagementMethodChanged.current = true;
+      return;
+    }
+    if (isNotRequired) {
+      setValue('needsIntermediateCheck', isSelfInspection);
+      if (!isSelfInspection) {
+        setValue('lastIntermediateCheckDate', undefined);
+        setValue('intermediateCheckCycle', undefined);
+        setValue('nextIntermediateCheckDate', undefined);
+      }
     }
   }, [isNotRequired, isSelfInspection, setValue]);
 
