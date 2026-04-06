@@ -62,6 +62,7 @@ function createCalibrationSchema(t: (key: string) => string) {
   });
 }
 type CalibrationFormData = z.infer<ReturnType<typeof createCalibrationSchema>>;
+type CalibrationFormInput = z.input<ReturnType<typeof createCalibrationSchema>>;
 
 // 폼 기본값 팩토리 — useForm defaultValues와 form.reset() 양쪽 SSOT
 const getDefaultValues = (): CalibrationFormData => ({
@@ -86,9 +87,9 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const calibrationSchema = useMemo(() => createCalibrationSchema(t), [t]);
 
-  const form = useForm<CalibrationFormData>({
+  const form = useForm<CalibrationFormInput, unknown, CalibrationFormData>({
     resolver: zodResolver(calibrationSchema),
-    defaultValues: getDefaultValues(),
+    defaultValues: getDefaultValues() as unknown as CalibrationFormInput,
   });
 
   const createMutation = useMutation({
@@ -107,7 +108,8 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
   const isSubmitting = createMutation.isPending || uploadMutation.isPending;
 
   const handleCalibrationDateChange = (date: string) => {
-    const cycle = form.getValues('calibrationCycle') || 12;
+    const cycleRaw = form.getValues('calibrationCycle');
+    const cycle = Number(cycleRaw) || 12;
     form.setValue(
       'nextCalibrationDate',
       formatDate(addMonths(toDate(date) ?? new Date(), cycle), 'yyyy-MM-dd')
@@ -214,7 +216,7 @@ export function CalibrationRegisterDialog({ equipmentId }: CalibrationRegisterDi
                         type="number"
                         min={1}
                         {...field}
-                        value={field.value ?? ''}
+                        value={(field.value as number | string | undefined) ?? ''}
                         onChange={(e) => {
                           field.onChange(e);
                           handleCycleChange(parseInt(e.target.value) || 12);
