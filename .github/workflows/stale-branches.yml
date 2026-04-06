@@ -1,0 +1,27 @@
+name: Stale Branch Cleanup
+
+on:
+  schedule:
+    # 매주 일요일 00:00 UTC (일요일 09:00 KST)
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    name: Delete Stale Branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete branches with no activity for 30+ days
+        uses: beatlabs/delete-old-branches-action@6e94df089e90d18f5b0cc4e27956e90b1b4bd8ae # v0.0.10
+        with:
+          repo_token: ${{ github.token }}
+          date: 30d
+          dry_run: false
+          # main, develop, dependabot/* 은 절대 삭제하지 않음
+          exclude_branch_regex: ^(main|develop|dependabot/.*)$
+          # PR이 열려있는 브랜치는 삭제하지 않음
+          exclude_open_pr_branches: true
