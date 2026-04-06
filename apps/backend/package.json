@@ -6,9 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "prebuild": "rimraf dist",
     "build": "nest build",
-    "predev": "pnpm --filter @equipment-management/db run build && rimraf dist",
+    "predev": "pnpm --filter @equipment-management/db run build",
     "dev": "nest start --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -27,8 +26,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:e2e:cov": "jest --config ./test/jest-e2e.json --coverage",
     "db:generate": "npx drizzle-kit generate",
-    "db:migrate": "npx drizzle-kit push",
-    "db:manual-migrate": "npx ts-node src/database/manual-migrate.ts",
+    "db:migrate": "npx drizzle-kit migrate",
+    "db:push": "npx drizzle-kit push",
+    "db:push:force": "npx drizzle-kit push --force",
     "db:studio": "npx drizzle-kit studio",
     "db:test:migrate": "npx ts-node src/database/tests/migrate.test.ts",
     "db:verify": "npx ts-node scripts/verify-migration.ts",
@@ -160,6 +160,7 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "forceExit": true,
     "coverageThreshold": {
       "global": {
         "branches": 20,

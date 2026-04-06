@@ -116,3 +116,4 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 9. **AuthController/MonitoringController의 @SiteScoped 미적용** — 인증 전/헬스체크
 10. **lab_manager/system_admin의 bypassRoles** — UL-QP-18 직무 정의에 따름
 11. **test-login/test-cache-clear의 `@Public()` + `@SkipPermissions()`** — 테스트 전용 엔드포인트
+12. **UsersController의 `POST/DELETE me/signature`** — `@SkipPermissions()` 사용하나 `req.user.userId`로 본인만 변경, MIME 타입(PNG/JPEG) + 2MB 크기 제한 적용

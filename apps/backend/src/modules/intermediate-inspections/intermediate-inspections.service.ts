@@ -6,12 +6,13 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import {
   intermediateInspections,
   intermediateInspectionItems,
   intermediateInspectionEquipment,
   calibrations,
+  equipment,
   type IntermediateInspection,
 } from '@equipment-management/db/schema';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
@@ -37,9 +38,12 @@ export class IntermediateInspectionsService extends VersionedBaseService {
     return `${this.CACHE_PREFIX}${type}:${id}`;
   }
 
-  private invalidateCache(id?: string): void {
+  private invalidateCache(id?: string, equipmentId?: string): void {
     if (id) {
       this.cacheService.delete(this.buildCacheKey('detail', id));
+    }
+    if (equipmentId) {
+      this.cacheService.delete(this.buildCacheKey('list-equip', equipmentId));
     }
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.CALIBRATION);
@@ -49,7 +53,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
    * 중간점검 생성 (draft 상태) — 3테이블 트랜잭션 삽입
    */
   async create(
-    dto: CreateInspectionInput,
+    dto: CreateInspectionInput & { calibrationId: string },
     equipmentId: string,
     createdBy: string
   ): Promise<IntermediateInspection> {
@@ -113,7 +117,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       return created;
     });
 
-    this.invalidateCache();
+    this.invalidateCache(undefined, equipmentId);
 
     return result;
   }
@@ -135,6 +139,90 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       },
       CACHE_TTL.LONG
     );
+  }
+
+  /**
+   * 특정 장비의 중간점검 목록 조회
+   */
+  async findByEquipment(equipmentId: string): Promise<IntermediateInspection[]> {
+    const cacheKey = this.buildCacheKey('list-equip', equipmentId);
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return this.db
+          .select()
+          .from(intermediateInspections)
+          .where(eq(intermediateInspections.equipmentId, equipmentId))
+          .orderBy(desc(intermediateInspections.createdAt));
+      },
+      CACHE_TTL.LONG
+    );
+  }
+
+  /**
+   * 장비 기반 중간점검 생성 — 최신 승인된 교정을 자동 조회
+   *
+   * 승인된 교정 우선, 없으면 가장 최근 교정을 사용.
+   * 교정 기록이 전혀 없으면 NO_ACTIVE_CALIBRATION 에러.
+   */
+  async createByEquipment(
+    equipmentId: string,
+    dto: Omit<CreateInspectionInput, 'calibrationId'>,
+    createdBy: string
+  ): Promise<IntermediateInspection> {
+    // 승인된 교정 우선 조회
+    let [calibration] = await this.db
+      .select({ id: calibrations.id })
+      .from(calibrations)
+      .where(
+        and(eq(calibrations.equipmentId, equipmentId), eq(calibrations.approvalStatus, 'approved'))
+      )
+      .orderBy(desc(calibrations.createdAt))
+      .limit(1);
+
+    // 승인된 교정이 없으면 최신 교정 fallback
+    if (!calibration) {
+      [calibration] = await this.db
+        .select({ id: calibrations.id })
+        .from(calibrations)
+        .where(eq(calibrations.equipmentId, equipmentId))
+        .orderBy(desc(calibrations.createdAt))
+        .limit(1);
+    }
+
+    if (!calibration) {
+      throw new NotFoundException({
+        code: 'NO_ACTIVE_CALIBRATION',
+        message: `Equipment ${equipmentId} has no calibration records. Cannot create intermediate inspection.`,
+      });
+    }
+
+    return this.create({ ...dto, calibrationId: calibration.id }, equipmentId, createdBy);
+  }
+
+  /**
+   * 교정 기반 중간점검 생성 — calibrationId에서 equipmentId를 조회
+   */
+  async createByCalibration(
+    calibrationId: string,
+    dto: Omit<CreateInspectionInput, 'calibrationId'>,
+    createdBy: string
+  ): Promise<IntermediateInspection> {
+    const [cal] = await this.db
+      .select({ equipmentId: calibrations.equipmentId })
+      .from(calibrations)
+      .where(eq(calibrations.id, calibrationId))
+      .limit(1);
+
+    if (!cal) {
+      throw new NotFoundException({
+        code: 'CALIBRATION_NOT_FOUND',
+        message: `Calibration with UUID ${calibrationId} not found.`,
+      });
+    }
+
+    return this.create({ ...dto, calibrationId }, cal.equipmentId, createdBy);
   }
 
   /**
@@ -272,7 +360,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       throw error;
     }
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.equipmentId);
 
     return updated;
   }
@@ -312,7 +400,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       throw error;
     }
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.equipmentId);
 
     return updated;
   }
@@ -352,7 +440,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       throw error;
     }
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.equipmentId);
 
     return updated;
   }
@@ -392,7 +480,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       throw error;
     }
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.equipmentId);
 
     return updated;
   }
@@ -438,8 +526,69 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       throw error;
     }
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.equipmentId);
 
     return updated;
+  }
+
+  /**
+   * 장비 UUID로 사이트 정보 조회 (enforceSiteAccess용)
+   */
+  async getEquipmentSiteInfo(
+    equipmentId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const item = await this.db.query.equipment.findFirst({
+      where: eq(equipment.id, equipmentId),
+      columns: { site: true, teamId: true },
+    });
+    if (!item) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentId})`,
+      });
+    }
+    return { site: item.site, teamId: item.teamId };
+  }
+
+  /**
+   * 중간점검 ID로 장비 사이트 정보 역추적 (enforceSiteAccess용)
+   */
+  async getEquipmentSiteInfoByInspectionId(
+    inspectionId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: equipment.site, teamId: equipment.teamId })
+      .from(intermediateInspections)
+      .innerJoin(equipment, eq(intermediateInspections.equipmentId, equipment.id))
+      .where(eq(intermediateInspections.id, inspectionId))
+      .limit(1);
+    if (!result) {
+      throw new NotFoundException({
+        code: 'INTERMEDIATE_INSPECTION_NOT_FOUND',
+        message: `Intermediate inspection ${inspectionId} not found.`,
+      });
+    }
+    return result;
+  }
+
+  /**
+   * 교정 ID로 장비 사이트 정보 역추적 (enforceSiteAccess용)
+   */
+  async getEquipmentSiteInfoByCalibrationId(
+    calibrationId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const [result] = await this.db
+      .select({ site: equipment.site, teamId: equipment.teamId })
+      .from(calibrations)
+      .innerJoin(equipment, eq(calibrations.equipmentId, equipment.id))
+      .where(eq(calibrations.id, calibrationId))
+      .limit(1);
+    if (!result) {
+      throw new NotFoundException({
+        code: 'CALIBRATION_NOT_FOUND',
+        message: `Calibration ${calibrationId} not found.`,
+      });
+    }
+    return result;
   }
 }

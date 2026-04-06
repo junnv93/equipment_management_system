@@ -8,7 +8,7 @@
  */
 
 import { equipment } from '@equipment-management/db/schema';
-import { EquipmentStatus, CalibrationMethod } from '@equipment-management/schemas';
+import { EquipmentStatus, ManagementMethod } from '@equipment-management/schemas';
 import { daysAgo, monthsAgo, daysLater, monthsLater } from '../../utils/date-helpers';
 import {
   // Suwon teams
@@ -53,8 +53,6 @@ import {
   EQUIP_AMPLIFIER_UIW_W_ID,
   EQUIP_TEST_HARNESS_PYT_A_ID,
   EQUIP_POWER_AMP_PYT_A_ID,
-  EQUIP_EMC32_SUW_P_ID,
-  EQUIP_DASY6_SUW_P_ID,
 } from '../../utils/uuid-constants';
 
 const now = new Date();
@@ -66,7 +64,7 @@ function createEquipment(
   teamId: string,
   site: 'suwon' | 'uiwang' | 'pyeongtaek',
   status: EquipmentStatus,
-  calibrationMethod: CalibrationMethod,
+  managementMethod: ManagementMethod,
   lastCalibrationDate?: Date,
   nextCalibrationDate?: Date,
   overrides?: Partial<typeof equipment.$inferInsert>
@@ -87,11 +85,11 @@ function createEquipment(
     teamId,
     site,
     status,
-    calibrationMethod,
+    managementMethod,
     lastCalibrationDate,
     nextCalibrationDate,
-    calibrationCycle: 12, // 12 months
-    calibrationRequired: 'required',
+    calibrationCycle: managementMethod === 'external_calibration' ? 12 : undefined,
+    calibrationRequired: managementMethod === 'external_calibration' ? 'required' : 'not_required',
     specMatch: 'match',
     isActive: true,
     approvalStatus: 'approved',
@@ -109,7 +107,7 @@ function createEquipment(
 export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
   // =========================================================================
   // Suwon FCC EMC/RF (E) - 8 equipment
-  // Status distribution: available(3), in_use(1), non_conforming(1), spare(1), checked_out(1), calibration_overdue(1)
+  // Status distribution: available(4), non_conforming(1), spare(1), checked_out(1), calibration_overdue(1)
   // =========================================================================
 
   // Available + Calibration Overdue (3 months past) + 전체 필드 테스트용
@@ -182,14 +180,14 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     { isActive: true }
   ),
 
-  // In-Use
+  // Available (formerly in_use)
   createEquipment(
     EQUIP_EMC_RECEIVER_SUW_E_ID,
     'EMC 수신기',
     'SUW-E0005',
     TEAM_FCC_EMC_RF_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'external_calibration',
     monthsAgo(6),
     daysLater(180)
@@ -236,7 +234,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
 
   // =========================================================================
   // Suwon General EMC (R) - 6 equipment
-  // Status distribution: available(2), in_use(1), non_conforming(1), checked_out(1), pending_disposal(1)
+  // Status distribution: available(3), non_conforming(1), checked_out(1), pending_disposal(1)
   // =========================================================================
 
   // Available + Calibration Overdue + 공용장비
@@ -273,7 +271,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'SUW-R0003',
     TEAM_GENERAL_EMC_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'self_inspection',
     monthsAgo(8),
     daysLater(120)
@@ -320,7 +318,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
 
   // =========================================================================
   // Suwon SAR (S) - 6 equipment
-  // Status distribution: available(2), in_use(1), non_conforming(1), spare(1), checked_out(1)
+  // Status distribution: available(3), non_conforming(1), spare(1), checked_out(1)
   // =========================================================================
 
   createEquipment(
@@ -353,7 +351,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'SUW-S0003',
     TEAM_SAR_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'self_inspection',
     monthsAgo(3),
     daysLater(270),
@@ -398,7 +396,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
 
   // =========================================================================
   // Suwon Automotive EMC (A) - 6 equipment
-  // Status distribution: available(2), in_use(1), non_conforming(1), pending_disposal(1), disposed(1)
+  // Status distribution: available(3), non_conforming(1), pending_disposal(1), disposed(1)
   // =========================================================================
 
   createEquipment(
@@ -431,7 +429,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'SUW-A0003',
     TEAM_AUTOMOTIVE_EMC_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'external_calibration',
     monthsAgo(6),
     daysLater(180)
@@ -558,40 +556,6 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     daysLater(60)
   ),
 
-  // =========================================================================
-  // Suwon Software (P) - 2 equipment (no calibration)
-  // Status distribution: available(2)
-  // =========================================================================
-
-  createEquipment(
-    EQUIP_EMC32_SUW_P_ID,
-    'EMC32 소프트웨어',
-    'SUW-P0001',
-    TEAM_FCC_EMC_RF_SUWON_ID,
-    'suwon',
-    'available',
-    'not_applicable',
-    undefined,
-    undefined,
-    {
-      calibrationRequired: 'not_required',
-      isActive: true,
-    }
-  ),
-
-  createEquipment(
-    EQUIP_DASY6_SUW_P_ID,
-    'DASY6 SAR 소프트웨어',
-    'SUW-P0002',
-    TEAM_SAR_SUWON_ID,
-    'suwon',
-    'available',
-    'not_applicable',
-    undefined,
-    undefined,
-    {
-      calibrationRequired: 'not_required',
-      isActive: true,
-    }
-  ),
+  // NOTE: 시험용 소프트웨어(EMC32, DASY6)는 소프트웨어 관리 모듈에서 관리.
+  // 장비 테이블에 포함하지 않음.
 ];

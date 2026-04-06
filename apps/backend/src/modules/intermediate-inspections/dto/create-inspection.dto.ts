@@ -25,7 +25,7 @@ const inspectionEquipmentSchema = z.object({
 });
 
 export const createInspectionSchema = z.object({
-  calibrationId: uuidString(VM.uuid.invalid('교정 기록')),
+  calibrationId: uuidString(VM.uuid.invalid('교정 기록')).optional(),
   inspectionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식은 YYYY-MM-DD여야 합니다'),
   classification: EquipmentClassificationEnum.optional(),
   inspectionCycle: z.string().max(20, VM.string.max('점검 주기', 20)).optional(),

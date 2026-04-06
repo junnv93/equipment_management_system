@@ -2,24 +2,24 @@
  * Group A: 교정 방법 필터 테스트
  *
  * 검증 범위:
- * 1. 모든 CALIBRATION_METHOD_LABELS 표시 (SSOT 준수)
+ * 1. 모든 MANAGEMENT_METHOD_LABELS 표시 (SSOT 준수)
  * 2. 외부 교정 (external_calibration) 필터 선택 시 URL 업데이트 및 결과 반환
  * 3. 자체 점검 (self_inspection) 필터 선택 시 URL 업데이트 및 결과 반환
  *
  * 비즈니스 로직:
- * - 모든 반환 항목의 calibrationMethod가 선택한 값과 일치
+ * - 모든 반환 항목의 managementMethod가 선택한 값과 일치
  * - 필터 뱃지 표시 확인
  *
  * SSOT:
- * - CALIBRATION_METHOD_LABELS: @equipment-management/schemas
- * - CalibrationMethod: @equipment-management/schemas
+ * - MANAGEMENT_METHOD_LABELS: @equipment-management/schemas
+ * - ManagementMethod: @equipment-management/schemas
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
-  CALIBRATION_METHOD_LABELS,
-  CalibrationMethodValues as CMVal,
-  type CalibrationMethod,
+  MANAGEMENT_METHOD_LABELS,
+  ManagementMethodValues as CMVal,
+  type ManagementMethod,
 } from '@equipment-management/schemas';
 
 test.describe('Group A: Calibration Method Filter', () => {
@@ -31,31 +31,31 @@ test.describe('Group A: Calibration Method Filter', () => {
 
       // 추가 필터 버튼 클릭 후 교정 방법 필터 드롭다운 클릭
       await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
-      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+      const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: '교정 방법 필터 선택',
       });
-      await expect(calibrationMethodFilter).toBeVisible();
-      await calibrationMethodFilter.click();
+      await expect(managementMethodFilter).toBeVisible();
+      await managementMethodFilter.click();
 
-      // 🔥 SSOT 검증: "모든 교정 방법" 옵션
+      // 🔥 SSOT 검증: "모든 관리 방법" 옵션
       await expect(
-        testOperatorPage.getByRole('option', { name: '모든 교정 방법', exact: true })
+        testOperatorPage.getByRole('option', { name: '모든 관리 방법', exact: true })
       ).toBeVisible();
 
-      // 🔥 SSOT 검증: CALIBRATION_METHOD_LABELS의 각 옵션 확인
-      const calibrationMethods: CalibrationMethod[] = [
+      // 🔥 SSOT 검증: MANAGEMENT_METHOD_LABELS의 각 옵션 확인
+      const managementMethods: ManagementMethod[] = [
         'external_calibration',
         'self_inspection',
         'not_applicable',
       ];
 
-      for (const method of calibrationMethods) {
-        const methodLabel = CALIBRATION_METHOD_LABELS[method];
+      for (const method of managementMethods) {
+        const methodLabel = MANAGEMENT_METHOD_LABELS[method];
         const option = testOperatorPage.getByRole('option', { name: methodLabel, exact: true });
         await expect(option).toBeVisible();
       }
 
-      console.log('[Test] ✅ All CALIBRATION_METHOD_LABELS displayed correctly');
+      console.log('[Test] ✅ All MANAGEMENT_METHOD_LABELS displayed correctly');
     });
   });
 
@@ -65,17 +65,17 @@ test.describe('Group A: Calibration Method Filter', () => {
 
       // 추가 필터 버튼 클릭 후 교정 방법 필터 선택
       await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
-      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+      const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: '교정 방법 필터 선택',
       });
-      await calibrationMethodFilter.click();
+      await managementMethodFilter.click();
       await testOperatorPage.getByRole('option', { name: '외부 교정', exact: true }).click();
 
       // 1. URL 파라미터 검증
-      await testOperatorPage.waitForURL(/calibrationMethod=external_calibration/, {
+      await testOperatorPage.waitForURL(/managementMethod=external_calibration/, {
         timeout: 10000,
       });
-      await expect(testOperatorPage).toHaveURL(/calibrationMethod=external_calibration/);
+      await expect(testOperatorPage).toHaveURL(/managementMethod=external_calibration/);
 
       // Wait for table to reload
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });
@@ -87,7 +87,7 @@ test.describe('Group A: Calibration Method Filter', () => {
       // 3. 비즈니스 로직 검증: API 호출하여 데이터 확인
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.get('calibrationMethod')).toBe(CMVal.EXTERNAL_CALIBRATION);
+      expect(urlObj.searchParams.get('managementMethod')).toBe(CMVal.EXTERNAL_CALIBRATION);
 
       // Verify equipment rows are displayed
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');
@@ -104,15 +104,15 @@ test.describe('Group A: Calibration Method Filter', () => {
 
       // 추가 필터 버튼 클릭 후 교정 방법 필터 선택
       await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
-      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+      const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: '교정 방법 필터 선택',
       });
-      await calibrationMethodFilter.click();
+      await managementMethodFilter.click();
       await testOperatorPage.getByRole('option', { name: '자체 점검', exact: true }).click();
 
       // 1. URL 파라미터 검증
-      await testOperatorPage.waitForURL(/calibrationMethod=self_inspection/, { timeout: 10000 });
-      await expect(testOperatorPage).toHaveURL(/calibrationMethod=self_inspection/);
+      await testOperatorPage.waitForURL(/managementMethod=self_inspection/, { timeout: 10000 });
+      await expect(testOperatorPage).toHaveURL(/managementMethod=self_inspection/);
 
       // Wait for table to reload
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });
@@ -124,7 +124,7 @@ test.describe('Group A: Calibration Method Filter', () => {
       // 3. 비즈니스 로직 검증: URL 파라미터 확인
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.get('calibrationMethod')).toBe(CMVal.SELF_INSPECTION);
+      expect(urlObj.searchParams.get('managementMethod')).toBe(CMVal.SELF_INSPECTION);
 
       // Verify equipment rows are displayed (if data exists)
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');
@@ -141,30 +141,30 @@ test.describe('Group A: Calibration Method Filter', () => {
   });
 
   test.describe('Additional: Calibration method filter edge cases', () => {
-    test('should remove calibrationMethod filter when selecting "모든 방법"', async ({
+    test('should remove managementMethod filter when selecting "모든 방법"', async ({
       testOperatorPage,
     }) => {
       // 필터가 적용된 상태로 시작
-      await testOperatorPage.goto('/equipment?calibrationMethod=external_calibration');
+      await testOperatorPage.goto('/equipment?managementMethod=external_calibration');
 
       // 필터 뱃지 확인 (실제 뱃지 라벨: "교정: 외부 교정")
       const filterBadge = testOperatorPage.getByText(/교정:\s*외부 교정/);
       await expect(filterBadge).toBeVisible({ timeout: 10000 });
 
-      // "모든 교정 방법" 선택 (추가 필터 패널 열기 후)
+      // "모든 관리 방법" 선택 (추가 필터 패널 열기 후)
       await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
-      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+      const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: '교정 방법 필터 선택',
       });
-      await calibrationMethodFilter.click();
-      await testOperatorPage.getByRole('option', { name: '모든 교정 방법', exact: true }).click();
+      await managementMethodFilter.click();
+      await testOperatorPage.getByRole('option', { name: '모든 관리 방법', exact: true }).click();
 
       // 필터 뱃지가 제거될 때까지 대기 (배지 비가시성 = 필터 해제 완료)
       await expect(filterBadge).not.toBeVisible({ timeout: 10000 });
 
-      // URL 검증: calibrationMethod 파라미터가 없거나 _all (전체 선택 = 필터 해제)
+      // URL 검증: managementMethod 파라미터가 없거나 _all (전체 선택 = 필터 해제)
       const currentUrl = testOperatorPage.url();
-      const calibVal = new URL(currentUrl).searchParams.get('calibrationMethod');
+      const calibVal = new URL(currentUrl).searchParams.get('managementMethod');
       expect(calibVal === null || calibVal === '_all').toBe(true);
 
       // Wait for table to reload
@@ -181,10 +181,10 @@ test.describe('Group A: Calibration Method Filter', () => {
       // Wait for table to load
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });
 
-      // Verify URL has no calibrationMethod parameter
+      // Verify URL has no managementMethod parameter
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.has('calibrationMethod')).toBe(false);
+      expect(urlObj.searchParams.has('managementMethod')).toBe(false);
 
       // Verify equipment rows are displayed
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');

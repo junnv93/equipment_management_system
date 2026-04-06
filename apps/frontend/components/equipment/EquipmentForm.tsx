@@ -208,10 +208,11 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   lastCalibrationDate: 'lastCalibrationDate',
   nextCalibrationDate: 'nextCalibrationDate',
   calibrationAgency: 'calibrationAgency',
-  calibrationMethod: 'calibrationMethod',
+  managementMethod: 'managementMethod',
   lastIntermediateCheckDate: 'lastIntermediateCheckDate',
   intermediateCheckCycle: 'intermediateCheckCycle',
   technicalManager: 'technicalManager',
+  deputyManagerId: 'deputyManagerId',
 };
 
 export function EquipmentForm({
@@ -415,7 +416,7 @@ export function EquipmentForm({
         : '',
       calibrationAgency: initialData?.calibrationAgency || '',
       needsIntermediateCheck: initialData?.needsIntermediateCheck || false,
-      calibrationMethod: initialData?.calibrationMethod,
+      managementMethod: initialData?.managementMethod,
       lastIntermediateCheckDate: initialData?.lastIntermediateCheckDate
         ? formatDate(initialData.lastIntermediateCheckDate, 'yyyy-MM-dd')
         : '',
@@ -435,6 +436,7 @@ export function EquipmentForm({
       manualLocation: initialData?.manualLocation || '',
       accessories: initialData?.accessories || '',
       technicalManager: initialData?.technicalManager || '',
+      deputyManagerId: initialData?.deputyManagerId || null,
       initialLocation: initialData?.initialLocation || '',
       installationDate: initialData?.installationDate
         ? formatDate(initialData.installationDate, 'yyyy-MM-dd')
@@ -808,7 +810,7 @@ export function EquipmentForm({
         specMatch: data.specMatch,
         calibrationRequired: data.calibrationRequired,
         calibrationAgency: data.calibrationAgency,
-        calibrationMethod: data.calibrationMethod,
+        managementMethod: data.managementMethod,
         teamId: data.teamId, // optional().nullable() - 빈 문자열 → undefined
         supplier: data.supplier,
         contactInfo: data.contactInfo,
@@ -816,6 +818,7 @@ export function EquipmentForm({
         manualLocation: data.manualLocation,
         accessories: data.accessories,
         technicalManager: data.technicalManager,
+        deputyManagerId: data.deputyManagerId,
         initialLocation: data.initialLocation,
         status: isTemporary ? 'temporary' : data.status,
         calibrationResult: data.calibrationResult,
@@ -830,7 +833,26 @@ export function EquipmentForm({
       }
     );
 
-    // 2. 임시등록 모드 전용 필드 추가
+    // 2. 교정 불필요 전환 시 외부교정 필드 명시적 null 클리어 (DB stale data 방지)
+    if (data.calibrationRequired === 'not_required') {
+      Object.assign(processedData, {
+        calibrationCycle: null,
+        lastCalibrationDate: null,
+        nextCalibrationDate: null,
+        calibrationAgency: null,
+      });
+      // 비대상(not_applicable)이면 점검 필드도 클리어
+      if (data.managementMethod !== 'self_inspection') {
+        Object.assign(processedData, {
+          lastIntermediateCheckDate: null,
+          intermediateCheckCycle: null,
+          nextIntermediateCheckDate: null,
+          needsIntermediateCheck: false,
+        });
+      }
+    }
+
+    // 3. 임시등록 모드 전용 필드 추가
     if (isTemporary) {
       Object.assign(processedData, {
         isShared: true,

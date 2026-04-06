@@ -5,7 +5,7 @@ import { Control, useFormContext } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import {
   type EquipmentStatus,
-  type CalibrationMethod,
+  type ManagementMethod,
   type Site,
   type SpecMatch,
   type CalibrationRequired,
@@ -112,7 +112,7 @@ export interface FormValues {
   nextCalibrationDate?: string;
   calibrationAgency?: string;
   needsIntermediateCheck?: boolean;
-  calibrationMethod?: CalibrationMethod;
+  managementMethod?: ManagementMethod;
   lastIntermediateCheckDate?: string;
   intermediateCheckCycle?: number;
   nextIntermediateCheckDate?: string;
@@ -128,6 +128,7 @@ export interface FormValues {
   manualLocation?: string;
   accessories?: string;
   technicalManager?: string;
+  deputyManagerId?: string | null; // 부담당자 UUID
   initialLocation?: string;
   installationDate?: string;
   status?: EquipmentStatus;

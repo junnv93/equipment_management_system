@@ -1,0 +1,51 @@
+{
+  "title": "Form Templates",
+  "description": "Manage UL-QP-18 form templates.",
+  "table": {
+    "formNumber": "Form Number",
+    "formName": "Form Name",
+    "retention": "Retention",
+    "version": "Version",
+    "lastUpload": "Last Upload",
+    "filename": "Filename",
+    "actions": "Actions",
+    "noTemplate": "Not Registered"
+  },
+  "stats": {
+    "total": "Total Forms",
+    "registered": "Registered",
+    "unregistered": "Not Registered"
+  },
+  "status": {
+    "registered": "Registered",
+    "unregistered": "Not Registered"
+  },
+  "download": "Download",
+  "upload": "Upload",
+  "history": "History",
+  "uploadDialog": {
+    "title": "Upload Form",
+    "description": "Upload a new version for {formNumber} {formName}.",
+    "selectFile": "Select File",
+    "dropzoneHint": "Only .docx, .xlsx files are supported",
+    "selectedFile": "Selected: {filename}",
+    "uploading": "Uploading...",
+    "success": "Form template uploaded successfully.",
+    "error": "Failed to upload form template."
+  },
+  "historyDialog": {
+    "title": "Form History",
+    "version": "Version",
+    "filename": "Filename",
+    "uploadDate": "Upload Date",
+    "status": "Status",
+    "active": "Current",
+    "inactive": "Previous",
+    "empty": "No history available."
+  },
+  "empty": "No form templates registered.",
+  "emptyDescription": "Form templates will appear here once they are configured.",
+  "error": "Failed to load form templates.",
+  "errorDescription": "Please check the network connection and try again.",
+  "retry": "Retry"
+}

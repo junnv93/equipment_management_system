@@ -29,6 +29,7 @@
 | `packages/shared-constants/src/notification-config.ts`                       | SSOT 알림 설정 상수 (NOTIFICATION_CONFIG — 만료, SYSTEM_ACTOR_ID 등) + SSE_APPROVAL_CHANGED_SENTINEL       |
 | `apps/backend/src/modules/notifications/events/notification-events.ts`       | SSOT 이벤트명→알림타입 매핑 (EVENT_TO_NOTIFICATION_TYPE — 모듈 로드 시 NOTIFICATION_TYPE_VALUES 교차 검증) |
 | `packages/shared-constants/src/security.ts`                                  | SSOT 보안 상수 (SECURITY — 로그인 제한, 잠금 정책 등)                                                     |
+| `packages/shared-constants/src/form-catalog.ts`                              | SSOT 양식 카탈로그 (FORM_CATALOG — 양식 번호, 이름, 보존기간, 구현 여부)                                   |
 | `packages/db/src/schema/calibration-plans.ts`                                | DB 스키마 rejectionStage (REJECTION_STAGE_VALUES SSOT import 필수)                                        |
 | `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리 (countsAll prefix 키 포함)                                                               |
 | `apps/frontend/lib/api/cache-invalidation.ts`                                | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등)                                                           |

@@ -42,13 +42,17 @@ test.describe('WF-20: 자체점검표 확인 + 잠금', () => {
     await cleanupSharedPool();
   });
 
-  test('Step 1: TE가 자체점검 생성 — completed 상태', async ({ testOperatorPage: page }) => {
+  test('Step 1: TE가 자체점검 생성 (유연 항목) — completed 상태', async ({
+    testOperatorPage: page,
+  }) => {
     const body = await createSelfInspection(page, WF_EQUIPMENT_ID, {
       inspectionDate: today,
-      appearance: 'pass',
-      functionality: 'pass',
-      safety: 'pass',
-      calibrationStatus: 'pass',
+      items: [
+        { itemNumber: 1, checkItem: '외관검사', checkResult: 'pass' },
+        { itemNumber: 2, checkItem: '출력 특성 점검', checkResult: 'pass' },
+        { itemNumber: 3, checkItem: '안전 점검', checkResult: 'pass' },
+        { itemNumber: 4, checkItem: '기능 점검', checkResult: 'pass' },
+      ],
       overallResult: 'pass',
       inspectionCycle: 6,
     });
@@ -56,6 +60,9 @@ test.describe('WF-20: 자체점검표 확인 + 잠금', () => {
 
     const data = (body.data ?? body) as Record<string, unknown>;
     expect(data.status).toBe('completed');
+    // items 배열 반환 검증
+    const items = (data.items as Array<Record<string, unknown>>) ?? [];
+    expect(items.length).toBe(4);
   });
 
   test('Step 2: nextInspectionDate 자동 산출 검증', async ({ testOperatorPage: page }) => {
@@ -115,10 +122,11 @@ test.describe('WF-20: 자체점검표 확인 + 잠금', () => {
     // 새 점검 생성
     const newBody = await createSelfInspection(page, WF_EQUIPMENT_ID, {
       inspectionDate: today,
-      appearance: 'pass',
-      functionality: 'fail',
-      safety: 'pass',
-      calibrationStatus: 'na',
+      items: [
+        { itemNumber: 1, checkItem: '외관검사', checkResult: 'pass' },
+        { itemNumber: 2, checkItem: '기능 점검', checkResult: 'fail' },
+        { itemNumber: 3, checkItem: '안전 점검', checkResult: 'pass' },
+      ],
       overallResult: 'fail',
     });
     const newId = extractId(newBody);

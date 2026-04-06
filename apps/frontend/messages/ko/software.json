@@ -27,6 +27,8 @@
     "searchPlaceholder": "소프트웨어명, 관리번호, 제작사 검색...",
     "empty": "등록된 시험용 소프트웨어가 없습니다",
     "createButton": "소프트웨어 등록",
+    "exportLedger": "관리대장 내보내기",
+    "exportError": "내보내기에 실패했습니다",
     "columns": {
       "managementNumber": "관리번호",
       "name": "소프트웨어명",
@@ -138,6 +140,7 @@
     },
     "actions": {
       "view": "보기",
+      "exportValidation": "양식 내보내기",
       "edit": "수정",
       "submit": "승인 요청",
       "approve": "승인 (기술)",

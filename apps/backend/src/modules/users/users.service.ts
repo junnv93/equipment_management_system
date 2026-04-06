@@ -461,6 +461,26 @@ export class UsersService {
   }
 
   /**
+   * 전자서명 이미지 경로 업데이트
+   */
+  async updateSignaturePath(userId: string, signatureImagePath: string | null): Promise<User> {
+    const [updated] = await this.db
+      .update(usersTable)
+      .set({ signatureImagePath, updatedAt: new Date() })
+      .where(eq(usersTable.id, userId))
+      .returning();
+
+    if (!updated) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${userId} not found.`,
+      });
+    }
+
+    return this.toUser(updated);
+  }
+
+  /**
    * DB row → User 타입 변환 헬퍼
    * isActive, lastLogin을 DB 컬럼에서 읽어옴
    */

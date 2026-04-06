@@ -34,6 +34,7 @@ import {
 } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
+import { users } from '@equipment-management/db/schema/users';
 import type { AppDatabase } from '@equipment-management/db';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -188,7 +189,7 @@ export class EquipmentService extends VersionedBaseService {
       sort,
       site,
       isShared,
-      calibrationMethod,
+      managementMethod,
       classification,
       showRetired,
     } = queryParams;
@@ -245,8 +246,8 @@ export class EquipmentService extends VersionedBaseService {
     }
 
     // 교정 방법 필터
-    if (calibrationMethod) {
-      whereConditions.push(eq(equipment.calibrationMethod, calibrationMethod));
+    if (managementMethod) {
+      whereConditions.push(eq(equipment.managementMethod, managementMethod));
     }
 
     // 장비 분류 필터 (관리번호 분류코드 기준)
@@ -510,21 +511,27 @@ export class EquipmentService extends VersionedBaseService {
       updatedAt: new Date(),
     };
 
-    // 교정일 재계산이 필요한 경우
-    const lastCalibrationDate = dto.lastCalibrationDate ?? existingEquipment.lastCalibrationDate;
-    const calibrationCycle = dto.calibrationCycle ?? existingEquipment.calibrationCycle;
+    // 교정일 재계산 또는 null 클리어
+    // calibrationRequired 전환 시 null이 명시적으로 전송될 수 있음
+    if (dto.calibrationCycle === null || dto.lastCalibrationDate === null) {
+      // 교정 불필요 전환 → 교정일도 함께 null 클리어
+      updateData.nextCalibrationDate = null;
+    } else {
+      const lastCalibrationDate = dto.lastCalibrationDate ?? existingEquipment.lastCalibrationDate;
+      const calibrationCycle = dto.calibrationCycle ?? existingEquipment.calibrationCycle;
 
-    if (
-      lastCalibrationDate &&
-      calibrationCycle &&
-      (dto.lastCalibrationDate !== undefined || dto.calibrationCycle !== undefined)
-    ) {
-      const nextCalibrationDate = calculateNextCalibrationDate(
-        lastCalibrationDate,
-        calibrationCycle
-      );
-      if (nextCalibrationDate !== existingEquipment.nextCalibrationDate) {
-        updateData.nextCalibrationDate = nextCalibrationDate;
+      if (
+        lastCalibrationDate &&
+        calibrationCycle &&
+        (dto.lastCalibrationDate !== undefined || dto.calibrationCycle !== undefined)
+      ) {
+        const nextCalibrationDate = calculateNextCalibrationDate(
+          lastCalibrationDate,
+          calibrationCycle
+        );
+        if (nextCalibrationDate !== existingEquipment.nextCalibrationDate) {
+          updateData.nextCalibrationDate = nextCalibrationDate;
+        }
       }
     }
 
@@ -883,10 +890,37 @@ export class EquipmentService extends VersionedBaseService {
             teamMap = new Map(teamData.map((t) => [t.id, t.name]));
           }
 
-          // 장비 데이터에 팀 이름 추가
+          // 부담당자 ID 목록 추출 (중복 제거)
+          const deputyManagerIds = [
+            ...new Set(
+              rawItems
+                .filter((item) => item.deputyManagerId)
+                .map((item) => item.deputyManagerId as string)
+            ),
+          ];
+
+          // 부담당자 이름 일괄 조회 (N+1 방지)
+          let deputyManagerMap: Map<string, string> = new Map();
+          if (deputyManagerIds.length > 0) {
+            const deputyData = await this.db
+              .select({ id: users.id, name: users.name })
+              .from(users)
+              .where(
+                sql`${users.id} IN (${sql.join(
+                  deputyManagerIds.map((id) => sql`${id}`),
+                  sql`, `
+                )})`
+              );
+            deputyManagerMap = new Map(deputyData.map((u) => [u.id, u.name]));
+          }
+
+          // 장비 데이터에 팀 이름 + 부담당자 이름 추가
           const items = rawItems.map((item) => ({
             ...item,
             teamName: item.teamId ? teamMap.get(item.teamId) || null : null,
+            deputyManagerName: item.deputyManagerId
+              ? deputyManagerMap.get(item.deputyManagerId) || null
+              : null,
           }));
 
           // 디버깅: 테스트 환경에서 실제 반환된 아이템 수 로깅
@@ -945,7 +979,18 @@ export class EquipmentService extends VersionedBaseService {
             });
           }
 
-          return equipmentData;
+          // 부담당자 이름 resolve
+          let deputyManagerName: string | null = null;
+          if (equipmentData.deputyManagerId) {
+            const [deputy] = await this.db
+              .select({ name: users.name })
+              .from(users)
+              .where(eq(users.id, equipmentData.deputyManagerId))
+              .limit(1);
+            deputyManagerName = deputy?.name ?? null;
+          }
+
+          return { ...equipmentData, deputyManagerName };
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;
@@ -1251,7 +1296,7 @@ export class EquipmentService extends VersionedBaseService {
     }
 
     // 교정 방법이 "해당 없음"이면 검증 불필요
-    if (existingEquipment.calibrationMethod === 'not_applicable') {
+    if (existingEquipment.managementMethod === 'not_applicable') {
       return;
     }
 

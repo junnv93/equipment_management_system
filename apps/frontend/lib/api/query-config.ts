@@ -313,6 +313,8 @@ export const queryKeys = {
       [...queryKeys.equipment.detail(id), 'disposal-request', 'current'] as const,
     selfInspections: (id: string) =>
       [...queryKeys.equipment.detail(id), 'self-inspections'] as const,
+    intermediateInspections: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'intermediate-inspections'] as const,
   },
   calibrationPlans: {
     all: ['calibrationPlans'] as const,
@@ -531,6 +533,12 @@ export const queryKeys = {
     status: () => [...queryKeys.monitoring.all, 'status'] as const,
     httpStats: () => [...queryKeys.monitoring.all, 'http-stats'] as const,
     cacheStats: () => [...queryKeys.monitoring.all, 'cache-stats'] as const,
+  },
+  formTemplates: {
+    all: ['formTemplates'] as const,
+    list: () => [...queryKeys.formTemplates.all, 'list'] as const,
+    history: (formNumber: string) =>
+      [...queryKeys.formTemplates.all, 'history', formNumber] as const,
   },
   breadcrumbs: {
     all: ['breadcrumb'] as const,

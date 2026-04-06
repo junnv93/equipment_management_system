@@ -269,7 +269,6 @@
   },
   "equipmentStatusLabels": {
     "available": "Available",
-    "in_use": "In Use",
     "checked_out": "Checked Out",
     "calibration_scheduled": "Calibration Scheduled",
     "calibration_overdue": "Calibration Overdue",

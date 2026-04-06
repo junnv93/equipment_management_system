@@ -8,7 +8,7 @@ import { test, expect } from '../../../shared/fixtures/auth.fixture';
  * 2. 장비 분류 필터 - 백엔드 필터링 작동 확인
  * 3. 교정 기한 필터 - status와 독립적으로 작동 확인
  * 4. 공용장비 필터 - isShared 필터링 확인
- * 5. 교정 방법 필터 - calibrationMethod 필터링 확인
+ * 5. 교정 방법 필터 - managementMethod 필터링 확인
  * 6. 필터 조합 - 여러 필터 동시 적용
  * 7. API 요청 파라미터 검증 - 네트워크 요청 확인
  */
@@ -77,20 +77,20 @@ test.describe('장비 목록 필터', () => {
     await expect(page.locator('text=구분: 공용장비')).toBeVisible();
   });
 
-  test('교정 방법 필터 - calibrationMethod 필터링', async ({ siteAdminPage: page }) => {
+  test('교정 방법 필터 - managementMethod 필터링', async ({ siteAdminPage: page }) => {
     // 교정 방법 드롭다운 열기
     await page.click('#filter-calibration');
 
     // 옵션들 확인
-    await expect(page.locator('[role="option"]:has-text("모든 교정 방법")')).toBeVisible();
+    await expect(page.locator('[role="option"]:has-text("모든 관리 방법")')).toBeVisible();
     await expect(page.locator('[role="option"]:has-text("외부 교정")')).toBeVisible();
     await expect(page.locator('[role="option"]:has-text("자체 점검")')).toBeVisible();
 
     // 외부 교정 선택
     await page.click('[role="option"]:has-text("외부 교정")');
 
-    // URL에 calibrationMethod 파라미터 확인
-    await expect(page).toHaveURL(/calibrationMethod=external_calibration/);
+    // URL에 managementMethod 파라미터 확인
+    await expect(page).toHaveURL(/managementMethod=external_calibration/);
 
     // 활성 필터 배지 확인
     await expect(page.locator('text=교정: 외부 교정')).toBeVisible();
@@ -151,13 +151,13 @@ test.describe('장비 목록 필터', () => {
     // 3. 교정 방법: 외부 교정 - URL 업데이트 대기
     await page.click('#filter-calibration');
     await page.click('[role="option"]:has-text("외부 교정")');
-    await expect(page).toHaveURL(/calibrationMethod=external_calibration/, { timeout: 10000 });
+    await expect(page).toHaveURL(/managementMethod=external_calibration/, { timeout: 10000 });
 
     // 최종 URL에 모든 파라미터가 포함되었는지 확인
     const finalUrl = page.url();
     expect(finalUrl).toContain('classification=fcc_emc_rf');
     expect(finalUrl).toContain('status=available');
-    expect(finalUrl).toContain('calibrationMethod=external_calibration');
+    expect(finalUrl).toContain('managementMethod=external_calibration');
 
     // 활성 필터 배지들 확인
     await expect(page.locator('text=분류: FCC EMC/RF')).toBeVisible();

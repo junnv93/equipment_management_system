@@ -73,9 +73,9 @@ test.describe('WF-07: 대여 반출 전체 흐름 (시험소 간)', () => {
     await clearBackendCache();
     await conditionCheck(page, checkoutId, 'borrower_receive', 'test_engineer');
 
-    // ★ 장비 상태: in_use 전이
+    // ★ 장비 상태: borrower_receive 후에도 checked_out 유지 (장비 상태 변경은 lender_checkout/lender_return에서만)
     await clearBackendCache();
-    await expectEquipmentStatus(page, WF_EQUIPMENT_ID, ESVal.IN_USE);
+    await expectEquipmentStatus(page, WF_EQUIPMENT_ID, ESVal.CHECKED_OUT);
   });
 
   test('Step 5: 빌리는 측 반납 확인 (borrower_return)', async ({ testOperatorPage: page }) => {

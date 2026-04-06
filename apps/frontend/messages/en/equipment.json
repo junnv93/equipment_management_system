@@ -63,16 +63,16 @@
     "manualLocation": "Manual Location",
     "accessories": "Accessories",
     "technicalManager": "Technical Manager",
+    "deputyManager": "Deputy Manager",
     "initialLocation": "Initial Location",
     "installationDate": "Installation Date",
     "supplier": "Supplier",
     "contactInfo": "Contact",
     "externalIdentifier": "External Identifier",
-    "calibrationMethod": "Management Method"
+    "managementMethod": "Management Method"
   },
   "status": {
     "available": "Available",
-    "in_use": "In Use",
     "checked_out": "Checked Out",
     "calibration_scheduled": "Calibration Scheduled",
     "calibration_overdue": "Calibration Overdue",
@@ -91,6 +91,8 @@
     "empty": "No equipment registered",
     "emptyDescription": "Register equipment to start managing calibration schedules, checkout history, and non-conformances.",
     "createButton": "Register Equipment",
+    "exportLedger": "Export Ledger",
+    "exportError": "Failed to export equipment ledger",
     "totalItems": "{count} equipment total",
     "loadError": "Failed to load equipment list",
     "loading": "Loading equipment list",
@@ -130,6 +132,7 @@
     "software": "Software",
     "attachments": "Attachments",
     "selfInspection": "Self Inspection",
+    "inspection": "Inspection",
     "ariaLabel": "Equipment detail tabs",
     "tabAriaLabel": "{label} tab",
     "panelAriaLabel": "{label} tab panel",
@@ -153,7 +156,7 @@
     "allStatuses": "All Statuses",
     "allSites": "All Sites",
     "siteFixed": "Fixed",
-    "allCalibrationMethods": "All Methods",
+    "allManagementMethods": "All Methods",
     "allClassifications": "All Classifications",
     "allEquipment": "All Equipment",
     "teamEquipment": "Team Equipment",
@@ -164,7 +167,7 @@
     "loading": "Loading...",
     "site": "Site",
     "status": "Status",
-    "calibrationMethod": "Calibration Method",
+    "managementMethod": "Management Method",
     "classification": "Classification",
     "shared": "Equipment Type",
     "team": "Team",
@@ -178,7 +181,7 @@
     "calibrationNormalDesc": "Calibration not due soon",
     "siteFilter": "Select site filter",
     "statusFilter": "Select status filter",
-    "calibrationFilter": "Select calibration method filter",
+    "managementMethodFilter": "Select management method filter",
     "classificationFilter": "Select classification filter",
     "sharedFilter": "Select equipment type filter",
     "calibrationDueFilter": "Select calibration due filter",
@@ -191,7 +194,7 @@
     "badgeCalibrationDue": "Cal. Due: {label}",
     "badgeTeam": "Team: {label}",
     "allDescription": "All equipment",
-    "calibrationMethodLabel": {
+    "managementMethodLabel": {
       "external_calibration": "External Calibration",
       "self_inspection": "Self Inspection",
       "not_applicable": "Not Applicable"
@@ -237,7 +240,7 @@
     "locationSrOnly": "Location",
     "ownerNumberSrOnly": "Owner Number",
     "lastCalibrationSrOnly": "Last Calibration",
-    "calibrationMethodSrOnly": "Calibration Method",
+    "managementMethodSrOnly": "Management Method",
     "calibrationPrefix": "Cal: ",
     "ownerNumberTitle": "Owner Number: {number}",
     "viewDetailAriaLabel": "View {name} details",
@@ -298,6 +301,10 @@
     "calibrationStatus": "Cal. Status",
     "overallResult": "Result",
     "status": "Status",
+    "itemNumber": "No.",
+    "checkItem": "Check Item",
+    "checkResult": "Result",
+    "remarks": "Remarks",
     "judgment": {
       "pass": "Pass",
       "fail": "Fail",
@@ -307,7 +314,28 @@
       "draft": "Draft",
       "completed": "Completed",
       "confirmed": "Confirmed"
+    },
+    "form": {
+      "title": "Self Inspection Record (UL-QP-18-05)",
+      "description": "Enter inspection results for each item",
+      "addItem": "Add Item",
+      "itemNamePlaceholder": "Inspection item name",
+      "selectResult": "Select result",
+      "selectJudgment": "Judgment",
+      "remarksPlaceholder": "Enter remarks",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "createSuccess": "Self inspection record created successfully.",
+      "createError": "Failed to create self inspection record."
     }
+  },
+  "inspection": {
+    "intermediateTitle": "Intermediate Inspection Records (UL-QP-18-03)",
+    "selfTitle": "Self Inspection Records (UL-QP-18-05)",
+    "noActiveCalibration": "No active calibration record found. Cannot create intermediate inspection.",
+    "createButton": "Create Inspection Record",
+    "notApplicable": "This equipment is not subject to inspection (Management method: N/A)"
   },
   "form": {
     "basicInfo": {
@@ -365,7 +393,12 @@
       "intermediateCheckCycle": "Intermediate Check Cycle (months)",
       "intermediateCheckCyclePlaceholder": "e.g., 6",
       "nextIntermediateCheckDate": "Next Intermediate Check Date",
-      "autoCalculated": "Auto-calculated"
+      "autoCalculated": "Auto-calculated",
+      "selectCalibrationRequired": "Please select calibration required status in Basic Information first",
+      "notApplicableDescription": "Non-applicable equipment does not require calibration or inspection information",
+      "selfInspectionCycle": "Self-Inspection Cycle (months)",
+      "lastSelfInspectionDate": "Last Self-Inspection Date",
+      "nextSelfInspectionDate": "Next Self-Inspection Date"
     },
     "statusLocation": {
       "title": "Status & Location",
@@ -384,6 +417,8 @@
       "techManagerDirectInputPlaceholder": "e.g. John Smith",
       "techManagerDescriptionWithTeam": "Only technical managers from the selected team are shown",
       "techManagerDescription": "Select a team first to see available technical managers",
+      "deputyManagerPlaceholder": "Select deputy manager",
+      "deputyManagerDescription": "Deputy operations manager — select from technical managers",
       "supplierPlaceholder": "e.g. ABC Supply Co.",
       "contactPlaceholder": "e.g. +1-234-567-8900",
       "swVersionPlaceholder": "e.g. v1.0.0",
@@ -432,7 +467,7 @@
       "lastCalibrationDate": "Last Calibration Date",
       "nextCalibrationDate": "Next Calibration Date",
       "calibrationAgency": "Calibration Agency",
-      "calibrationMethod": "Management Method",
+      "managementMethod": "Management Method",
       "lastIntermediateCheckDate": "Last Intermediate Check Date",
       "intermediateCheckCycle": "Intermediate Check Cycle",
       "technicalManager": "Technical Manager",
@@ -474,7 +509,8 @@
       "registrationError": "An error occurred while registering the equipment.",
       "unknownError": "An unknown error occurred while registering the equipment.",
       "documentUploadPartialFail": "Some documents failed to upload",
-      "documentUploadPartialFailDescription": "Equipment was registered but {count} document(s) failed to upload. Please retry from the detail page."
+      "documentUploadPartialFailDescription": "Equipment was registered but {count} document(s) failed to upload. Please retry from the detail page.",
+      "sharedLink": "Register Shared Equipment"
     },
     "temporary": {
       "title": "Temporary Equipment Info",
@@ -542,7 +578,7 @@
     "locationManagement": "Location & Management Information",
     "calibrationInfo": "Calibration Information",
     "softwareManualInfo": "Software/Manual Information",
-    "calibrationMethod": "Calibration Method",
+    "managementMethod": "Management Method",
     "calibrationCycle": "Calibration Cycle (months)",
     "lastCalibrationDate": "Last Calibration Date",
     "nextCalibrationDate": "Next Calibration Date",
@@ -931,8 +967,7 @@
     },
     "disabledReasons": {
       "checked_out": "Equipment is already checked out",
-      "retired": "Equipment has been retired",
-      "in_use": "Equipment is in use"
+      "retired": "Equipment has been retired"
     },
     "purpose": {
       "calibration": "Calibration",

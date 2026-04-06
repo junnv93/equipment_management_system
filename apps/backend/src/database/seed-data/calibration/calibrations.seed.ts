@@ -20,7 +20,6 @@ import {
   EQUIP_CURRENT_PROBE_SUW_A_ID,
   EQUIP_RECEIVER_UIW_W_ID,
   EQUIP_TRANSMITTER_UIW_W_ID,
-  EQUIP_EMC32_SUW_P_ID,
   // User IDs
   USER_TEST_ENGINEER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -216,15 +215,7 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
     daysAgo(5)
   ),
 
-  // EMC32 Software - pass, pending approval (test_engineer)
-  createCalibration(
-    EQUIP_EMC32_SUW_P_ID,
-    'pass',
-    'pending_approval',
-    'test_engineer',
-    daysAgo(3),
-    daysAgo(3)
-  ),
+  // NOTE: EMC32 소프트웨어 교정 레코드 제거 — 소프트웨어는 장비 테이블에서 관리하지 않음
 
   // Network Analyzer #2 - pass, pending approval
   createCalibration(

@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 장비 상태 정의
 -- available: 사용 가능
--- in_use: 사용 중
 -- maintenance: 유지보수 중
 -- calibration: 교정 중
 -- retired: 폐기됨
@@ -34,7 +33,7 @@ CREATE TABLE IF NOT EXISTS equipment (
   next_calibration_date TIMESTAMP,
   calibration_agency TEXT,
   needs_intermediate_check BOOLEAN DEFAULT 0,
-  calibration_method TEXT CHECK (calibration_method IN ('external_calibration', 'self_inspection', 'not_applicable')),
+  management_method TEXT CHECK (management_method IN ('external_calibration', 'self_inspection', 'not_applicable')),
   
   -- 관리 정보
   purchase_year INTEGER,

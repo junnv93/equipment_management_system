@@ -1,82 +1,40 @@
 {
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1716617689350,
-      "tag": "0000_initial_migration",
+      "version": "7",
+      "when": 1775435744836,
+      "tag": "0000_loving_phalanx",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "5",
-      "when": 1743256531708,
-      "tag": "0001_lame_valkyrie",
+      "version": "7",
+      "when": 1775435814679,
+      "tag": "0001_neat_union_jack",
       "breakpoints": true
     },
     {
       "idx": 2,
-      "version": "5",
-      "when": 1743257000000,
-      "tag": "0002_add_rejection_reason",
+      "version": "7",
+      "when": 1775437642976,
+      "tag": "0002_friendly_thor_girl",
       "breakpoints": true
     },
     {
       "idx": 3,
-      "version": "5",
-      "when": 1743257100000,
-      "tag": "0003_fix_loans_table_structure",
+      "version": "7",
+      "when": 1775439647646,
+      "tag": "0003_late_prodigy",
       "breakpoints": true
     },
     {
       "idx": 4,
-      "version": "5",
-      "when": 1743257200000,
-      "tag": "0004_fix_checkouts_table_structure",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1743257300000,
-      "tag": "0005_update_user_roles_and_add_site_location",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1743257400000,
-      "tag": "0006_add_site_to_equipment_and_teams",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "5",
-      "when": 1743257500000,
-      "tag": "0007_convert_equipment_team_id_to_uuid",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "5",
-      "when": 1743257600000,
-      "tag": "0008_convert_teams_id_to_uuid",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "5",
-      "when": 1743257700000,
-      "tag": "0009_make_equipment_site_required",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "5",
-      "when": 1743257800000,
-      "tag": "0010_add_equipment_approval_system",
+      "version": "7",
+      "when": 1775692800000,
+      "tag": "0004_inspection_export_deputy",
       "breakpoints": true
     }
   ]

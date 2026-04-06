@@ -50,6 +50,13 @@
         "view:software": "View Software",
         "create:software-change": "Request Software Change",
         "approve:software-change": "Approve Software Change",
+        "view:test-software": "View Test Software",
+        "create:test-software": "Create Test Software",
+        "update:test-software": "Update Test Software",
+        "view:software-validations": "View Software Validations",
+        "create:software-validation": "Create Software Validation",
+        "submit:software-validation": "Submit Software Validation",
+        "approve:software-validation": "Approve Software Validation",
         "view:software:requests": "View Software Requests",
         "view:teams": "View Teams",
         "create:teams": "Create Teams",
@@ -83,7 +90,10 @@
         "complete:equipment-import": "Complete Equipment Import",
         "cancel:equipment-import": "Cancel Equipment Import",
         "manage:system:settings": "Manage System Settings",
-        "view:system:settings": "View System Settings"
+        "view:system:settings": "View System Settings",
+        "view:self-inspections": "View Self Inspections",
+        "create:self-inspection": "Create Self Inspection",
+        "confirm:self-inspection": "Confirm Self Inspection"
       },
       "categories": {
         "equipment": "Equipment",
@@ -100,6 +110,7 @@
         "audit": "Audit Logs",
         "disposal": "Disposal",
         "equipmentImports": "Equipment Imports",
+        "selfInspections": "Self Inspections",
         "system": "System Settings"
       }
     },
@@ -114,6 +125,20 @@
       "phone": "Office Phone",
       "employeeId": "Employee ID",
       "userId": "User ID"
+    },
+    "signature": {
+      "title": "Electronic Signature",
+      "description": "Used in the approval section when exporting documents such as history cards",
+      "upload": "Upload signature image",
+      "uploadHint": "PNG, JPEG format (max 2MB)",
+      "change": "Change",
+      "delete": "Delete",
+      "noSignature": "No signature registered",
+      "uploadSuccess": "Electronic signature has been registered",
+      "deleteSuccess": "Electronic signature has been deleted",
+      "uploadError": "Failed to upload signature",
+      "deleteError": "Failed to delete signature",
+      "confirmDelete": "Are you sure you want to delete your electronic signature?"
     }
   },
   "nav": {

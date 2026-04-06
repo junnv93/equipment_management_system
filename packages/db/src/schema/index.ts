@@ -61,3 +61,6 @@ export * from './cables';
 
 // 자체점검 스키마 (UL-QP-18-05)
 export * from './equipment-self-inspections';
+
+// 양식 템플릿 스키마 (스토리지 기반)
+export * from './form-templates';

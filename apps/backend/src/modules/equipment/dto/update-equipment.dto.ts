@@ -6,7 +6,7 @@ import {
   Classification,
   SiteCode,
   EQUIPMENT_STATUS_VALUES,
-  CALIBRATION_METHOD_VALUES,
+  MANAGEMENT_METHOD_VALUES,
   SPEC_MATCH_VALUES,
   CALIBRATION_REQUIRED_VALUES,
   SiteEnum,
@@ -14,7 +14,7 @@ import {
   SiteCodeEnum,
   ClassificationCodeEnum,
   ApprovalStatusEnum,
-  type CalibrationMethod,
+  type ManagementMethod,
   type SpecMatch,
   type CalibrationRequired,
   type ClassificationCode,
@@ -91,9 +91,9 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
 
   @ApiPropertyOptional({
     description: '관리 방법 (교정 방법)',
-    enum: CALIBRATION_METHOD_VALUES,
+    enum: MANAGEMENT_METHOD_VALUES,
   })
-  calibrationMethod?: CalibrationMethod;
+  managementMethod?: ManagementMethod;
 
   @ApiPropertyOptional({ description: '최종 중간 점검일' })
   lastIntermediateCheckDate?: Date;
@@ -159,6 +159,9 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
   @ApiPropertyOptional({ description: '기술 책임자 (사이트/팀 기준 필터링)' })
   technicalManager?: string;
 
+  @ApiPropertyOptional({ description: '부담당자 ID (운영 책임자 부, UUID)' })
+  deputyManagerId?: string | null;
+
   @ApiPropertyOptional({ description: '최초 설치 위치' })
   initialLocation?: string;
 
@@ -174,7 +177,7 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
   @ApiPropertyOptional({
     description: '장비 상태',
     enum: EQUIPMENT_STATUS_VALUES,
-    example: 'in_use',
+    example: 'available',
   })
   status?: EquipmentStatus;
 

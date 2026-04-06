@@ -8,10 +8,10 @@ import { MapPin, Package, Wrench, ArrowRight, Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import {
-  CALIBRATION_METHOD_LABELS,
+  MANAGEMENT_METHOD_LABELS,
   CALIBRATION_RESULT_LABELS,
   DocumentTypeValues,
-  type CalibrationMethod,
+  type ManagementMethod,
   type CalibrationResult,
 } from '@equipment-management/schemas';
 import {
@@ -150,10 +150,10 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                     : '-'}
               </dd>
 
-              <dt className={tokens.dtLabel}>{t('basicInfoTab.calibrationMethod')}</dt>
+              <dt className={tokens.dtLabel}>{t('basicInfoTab.managementMethod')}</dt>
               <dd className={tokens.ddValue}>
-                {equipment.calibrationMethod
-                  ? CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod]
+                {equipment.managementMethod
+                  ? MANAGEMENT_METHOD_LABELS[equipment.managementMethod as ManagementMethod]
                   : '-'}
               </dd>
 
@@ -201,6 +201,12 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
               <dt className={tokens.dtLabel}>{t('fields.team')}</dt>
               <dd className={tokens.ddValue}>{equipment.teamName || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.technicalManager')}</dt>
+              <dd className={tokens.ddValue}>{equipment.technicalManager || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.deputyManager')}</dt>
+              <dd className={tokens.ddValue}>{equipment.deputyManagerName || '-'}</dd>
 
               <dt className={tokens.dtLabel}>{t('fields.location')}</dt>
               <dd className={tokens.ddValue}>{equipment.location || '-'}</dd>

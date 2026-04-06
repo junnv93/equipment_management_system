@@ -11,7 +11,7 @@
 
 import { type LucideIcon } from 'lucide-react';
 import {
-  type CalibrationMethod,
+  type ManagementMethod,
   EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
 import { type CalibrationSeverity, CALIBRATION_BADGE_TOKENS } from '@/lib/design-tokens';
@@ -43,7 +43,7 @@ export interface CalibrationStatus {
  *
  * @param status - 장비 상태 (EquipmentStatus)
  * @param calibrationRequired - 교정 필요 여부
- * @param calibrationMethod - 교정 방법
+ * @param managementMethod - 교정 방법
  * @param nextCalibrationDate - 차기 교정일
  * @returns CalibrationStatus | null
  *
@@ -59,7 +59,7 @@ export interface CalibrationStatus {
 export function calculateCalibrationStatus(
   status: string | undefined | null,
   calibrationRequired: boolean | undefined | null,
-  calibrationMethod: CalibrationMethod | undefined | null,
+  managementMethod: ManagementMethod | undefined | null,
   nextCalibrationDate: string | Date | undefined | null
 ): CalibrationStatus | null {
   // 1. 교정 상태 표시를 건너뛸 장비 상태 확인
@@ -71,7 +71,7 @@ export function calculateCalibrationStatus(
   }
 
   // 2. 교정 불필요 장비
-  if (!calibrationRequired || calibrationMethod === 'not_applicable') {
+  if (!calibrationRequired || managementMethod === 'not_applicable') {
     return null;
   }
 

@@ -5,6 +5,7 @@ import {
   transformSingleResponse,
   transformArrayResponse,
 } from './utils/response-transformers';
+import { downloadFile } from './utils/download-file';
 // ✅ SSOT: packages/schemas에서 import
 import type { CalibrationPlanStatus, Site } from '@equipment-management/schemas';
 import {
@@ -360,10 +361,12 @@ const calibrationPlansApi = {
       .then((res) => transformPaginatedResponse<CalibrationPlan>(res));
   },
 
-  // PDF 다운로드 (새 탭에서 HTML 열기 - 브라우저에서 인쇄하여 PDF 저장)
-  openPrintView: (uuid: string): void => {
-    const url = API_ENDPOINTS.CALIBRATION_PLANS.PDF(uuid);
-    window.open(url, '_blank');
+  // Excel 내보내기 (UL-QP-19-01 양식 기반 xlsx 다운로드)
+  downloadExcel: async (uuid: string): Promise<void> => {
+    await downloadFile({
+      url: API_ENDPOINTS.CALIBRATION_PLANS.EXPORT(uuid),
+      filename: `교정계획서_${uuid.slice(0, 8)}.xlsx`,
+    });
   },
 
   // 새 버전 생성 (승인된 계획서만)

@@ -140,7 +140,7 @@ describe('Calibration Filter E2E', () => {
       const response = await request(app.getHttpServer())
         .get('/equipment')
         .query({
-          calibrationMethod: 'external_calibration',
+          managementMethod: 'external_calibration',
           calibrationDue: 30,
         })
         .set('Authorization', `Bearer ${accessToken}`)
@@ -153,7 +153,7 @@ describe('Calibration Filter E2E', () => {
       console.log(`외부교정 + 교정 임박 장비: ${items.length}개`);
 
       // 모든 장비가 외부교정 방법인지 확인
-      const allExternal = items.every((item: Record<string, unknown>) => item.calibrationMethod === 'external_calibration');
+      const allExternal = items.every((item: Record<string, unknown>) => item.managementMethod === 'external_calibration');
       if (items.length > 0) {
         expect(allExternal).toBe(true);
       }

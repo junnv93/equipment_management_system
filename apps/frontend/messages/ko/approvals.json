@@ -9,7 +9,7 @@
     "calibrationFactor": "보정계수 승인",
     "equipment": "장비 등록 승인",
     "nonConformance": "부적합 승인",
-    "software": "소프트웨어 승인",
+    "software_validation": "소프트웨어 유효성 승인",
     "disposal": "폐기 승인"
   },
   "status": {
@@ -57,10 +57,10 @@
     "disposal_final": { "label": "폐기 승인", "action": "승인" },
     "plan_review": { "label": "교정계획서 검토", "action": "검토완료" },
     "plan_final": { "label": "교정계획서 승인", "action": "승인" },
-    "software": {
-      "label": "소프트웨어",
+    "software_validation": {
+      "label": "소프트웨어 유효성",
       "action": "검토완료",
-      "commentDialogTitle": "소프트웨어 변경 검토 코멘트",
+      "commentDialogTitle": "소프트웨어 유효성 검토 코멘트",
       "commentPlaceholder": "검토 완료 내용을 입력하세요"
     }
   },
@@ -271,7 +271,7 @@
     "equipmentRequestNoName": "장비 {action} 요청",
     "disposal_review": "{equipment} ({managementNumber}) 폐기 검토",
     "disposal_final": "{equipment} ({managementNumber}) 폐기 승인",
-    "software": "{name} 변경 요청",
+    "software_validation": "{name} 변경 요청",
     "inspection": "{equipment} 중간점검",
     "nonConformance": "{cause} (조치 완료)",
     "calibration": "장비({equipmentId}) 교정 기록 등록",

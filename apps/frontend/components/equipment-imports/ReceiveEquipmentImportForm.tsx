@@ -36,9 +36,9 @@ import equipmentImportApi, {
 } from '@/lib/api/equipment-import-api';
 import { FRONTEND_ROUTES, DOCUMENT_FILE_RULES } from '@equipment-management/shared-constants';
 import {
-  CALIBRATION_METHOD_VALUES,
+  MANAGEMENT_METHOD_VALUES,
   EquipmentImportSourceValues as EISrcVal,
-  type CalibrationMethod,
+  type ManagementMethod,
 } from '@equipment-management/schemas';
 import { addMonths, format as formatDate } from 'date-fns';
 import { Upload, X, FileText } from 'lucide-react';
@@ -73,12 +73,12 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
   const [files, setFiles] = useState<File[]>([]);
 
   const [calibrationInfo, setCalibrationInfo] = useState<{
-    calibrationMethod: CalibrationMethod;
+    managementMethod: ManagementMethod;
     calibrationCycle?: number;
     lastCalibrationDate?: string;
     calibrationAgency?: string;
   }>({
-    calibrationMethod: 'not_applicable',
+    managementMethod: 'not_applicable',
   });
 
   // Auto-calculate next calibration date
@@ -86,7 +86,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
 
   useEffect(() => {
     if (
-      calibrationInfo.calibrationMethod === 'external_calibration' &&
+      calibrationInfo.managementMethod === 'external_calibration' &&
       calibrationInfo.calibrationCycle &&
       calibrationInfo.lastCalibrationDate
     ) {
@@ -101,7 +101,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
   }, [
     calibrationInfo.calibrationCycle,
     calibrationInfo.lastCalibrationDate,
-    calibrationInfo.calibrationMethod,
+    calibrationInfo.managementMethod,
   ]);
 
   const { data: equipmentImport, isLoading } = useQuery({
@@ -122,16 +122,16 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
       };
 
       // Add calibration info for external calibration
-      if (calibrationInfo.calibrationMethod === 'external_calibration') {
+      if (calibrationInfo.managementMethod === 'external_calibration') {
         payload.calibrationInfo = {
-          calibrationMethod: calibrationInfo.calibrationMethod,
+          managementMethod: calibrationInfo.managementMethod,
           calibrationCycle: calibrationInfo.calibrationCycle,
           lastCalibrationDate: calibrationInfo.lastCalibrationDate,
           calibrationAgency: calibrationInfo.calibrationAgency,
         };
-      } else if (calibrationInfo.calibrationMethod !== 'not_applicable') {
+      } else if (calibrationInfo.managementMethod !== 'not_applicable') {
         payload.calibrationInfo = {
-          calibrationMethod: calibrationInfo.calibrationMethod,
+          managementMethod: calibrationInfo.managementMethod,
         };
       }
 
@@ -284,15 +284,15 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
 
             {/* Calibration Method */}
             <div className="space-y-2">
-              <Label htmlFor="calibrationMethod">
-                {t('fields.calibrationMethod')} <span className="text-destructive">*</span>
+              <Label htmlFor="managementMethod">
+                {t('fields.managementMethod')} <span className="text-destructive">*</span>
               </Label>
               <Select
-                value={calibrationInfo.calibrationMethod}
+                value={calibrationInfo.managementMethod}
                 onValueChange={(value) =>
                   setCalibrationInfo({
                     ...calibrationInfo,
-                    calibrationMethod: value as CalibrationMethod,
+                    managementMethod: value as ManagementMethod,
                   })
                 }
               >
@@ -300,7 +300,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CALIBRATION_METHOD_VALUES.map((method) => (
+                  {MANAGEMENT_METHOD_VALUES.map((method) => (
                     <SelectItem key={method} value={method}>
                       {tCalibration(`method.${method}`)}
                     </SelectItem>
@@ -310,7 +310,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
             </div>
 
             {/* Additional fields for external calibration */}
-            {calibrationInfo.calibrationMethod === 'external_calibration' && (
+            {calibrationInfo.managementMethod === 'external_calibration' && (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   {/* Calibration Cycle */}

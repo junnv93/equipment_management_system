@@ -92,6 +92,10 @@
       "label": "Equipment",
       "description": "Equipment registration, modification, status change notifications"
     },
+    "software": {
+      "label": "Software",
+      "description": "Software registration, update, and license notifications"
+    },
     "system": { "label": "System", "description": "System maintenance and important announcements" }
   },
   "comingSoon": "Coming Soon",

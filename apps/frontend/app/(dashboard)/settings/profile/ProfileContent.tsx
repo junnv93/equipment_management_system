@@ -1,14 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, ChevronDown, Info } from 'lucide-react';
+import { AlertCircle, ChevronDown, Info, Upload, Trash2, Pen, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/use-toast';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import {
@@ -25,9 +27,13 @@ import {
   SETTINGS_PERMISSIONS_CARD_TOKENS,
   SETTINGS_PROFILE_BADGE_TOKENS,
   SETTINGS_SPACING_TOKENS,
+  SETTINGS_FORM_ITEM_TOKENS,
+  SETTINGS_SAVE_INDICATOR_TOKENS,
   getSettingsCardClasses,
   getSettingsCardHeaderClasses,
   getSettingsPermissionsTriggerClasses,
+  getSettingsFormItemClasses,
+  TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
 
 function GridCell({ label, children }: { label: string; children: React.ReactNode }) {
@@ -88,6 +94,183 @@ function ProfileSkeleton() {
         </CardContent>
       </Card>
     </>
+  );
+}
+
+/**
+ * SignatureCard — 전자서명 업로드/삭제 카드
+ *
+ * Design tokens: SETTINGS_FORM_ITEM_TOKENS, TRANSITION_PRESETS
+ * Accessibility: focus-visible, aria-label, Loader2 스피너
+ */
+function SignatureCard({
+  profile,
+}: {
+  profile: UserProfile & { signatureImagePath?: string | null };
+}) {
+  const t = useTranslations('settings');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await apiClient.post(API_ENDPOINTS.USERS.SIGNATURE, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.profile() });
+      toast({ description: t('profile.signature.uploadSuccess') });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', description: t('profile.signature.uploadError') });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiClient.delete(API_ENDPOINTS.USERS.SIGNATURE);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.profile() });
+      setConfirmingDelete(false);
+      toast({ description: t('profile.signature.deleteSuccess') });
+    },
+    onError: () => {
+      toast({ variant: 'destructive', description: t('profile.signature.deleteError') });
+    },
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    uploadMutation.mutate(file);
+    e.target.value = '';
+  };
+
+  const hasSignature = !!profile.signatureImagePath;
+  const isLoading = uploadMutation.isPending || deleteMutation.isPending;
+
+  return (
+    <Card className={getSettingsCardClasses()}>
+      <CardHeader className={getSettingsCardHeaderClasses()}>
+        <div className={SETTINGS_CARD_HEADER_TOKENS.titleWrapper}>
+          <CardTitle className={SETTINGS_CARD_HEADER_TOKENS.title}>
+            {t('profile.signature.title')}
+          </CardTitle>
+          <CardDescription className={SETTINGS_CARD_HEADER_TOKENS.description}>
+            {t('profile.signature.description')}
+          </CardDescription>
+        </div>
+        {isLoading && (
+          <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
+        )}
+      </CardHeader>
+      <CardContent className="pt-4">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg"
+          className="hidden"
+          onChange={handleFileSelect}
+          aria-label={t('profile.signature.upload')}
+        />
+
+        {hasSignature ? (
+          <div className={`${getSettingsFormItemClasses()} ${SETTINGS_FORM_ITEM_TOKENS.layout}`}>
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="rounded-md border border-border/50 bg-muted/30 p-3 flex items-center justify-center shadow-sm">
+                <img
+                  src={`/api/files/${profile.signatureImagePath}`}
+                  alt={t('profile.signature.title')}
+                  className="max-h-12 max-w-[160px] object-contain"
+                />
+              </div>
+              <div className={SETTINGS_FORM_ITEM_TOKENS.labelWrapper}>
+                <p className={SETTINGS_FORM_ITEM_TOKENS.label}>{t('profile.signature.title')}</p>
+                <p className={`${SETTINGS_FORM_ITEM_TOKENS.description} text-muted-foreground`}>
+                  {t('profile.signature.uploadHint')}
+                </p>
+              </div>
+            </div>
+            <div className={SETTINGS_FORM_ITEM_TOKENS.actionArea}>
+              {confirmingDelete ? (
+                <>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteMutation.mutate()}
+                    disabled={isLoading}
+                  >
+                    {t('profile.signature.delete')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={isLoading}
+                  >
+                    ✕
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                  >
+                    <Pen className="h-3.5 w-3.5 mr-1.5" />
+                    {t('profile.signature.change')}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmingDelete(true)}
+                    disabled={isLoading}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span className="sr-only">{t('profile.signature.delete')}</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className={[
+              'w-full rounded-lg border-2 border-dashed border-border/50 p-8',
+              'flex flex-col items-center gap-2.5 cursor-pointer',
+              'hover:border-primary/30 hover:bg-accent/30',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              TRANSITION_PRESETS.fastBorderBg,
+            ].join(' ')}
+          >
+            <div className="rounded-full bg-muted/50 p-3">
+              <Upload className="h-6 w-6 text-muted-foreground/70" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">{t('profile.signature.upload')}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t('profile.signature.uploadHint')}
+              </p>
+            </div>
+          </button>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -253,6 +436,9 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Signature Card */}
+      <SignatureCard profile={profile} />
 
       {/* Permissions Card — 읽기 전용 Collapsible */}
       <Card className={getSettingsCardClasses()}>

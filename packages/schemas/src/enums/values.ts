@@ -23,7 +23,7 @@ import type {
 } from './return-condition';
 import type { DisposalReviewStatus } from './disposal';
 import type { UserStatus } from './shared';
-import type { CalibrationMethod } from './equipment';
+import type { ManagementMethod } from './equipment';
 import type { ResolutionType } from './non-conformance';
 
 // ============================================================================
@@ -37,7 +37,6 @@ import type { ResolutionType } from './non-conformance';
  */
 export const EquipmentStatusValues = {
   AVAILABLE: 'available',
-  IN_USE: 'in_use',
   CHECKED_OUT: 'checked_out',
   CALIBRATION_SCHEDULED: 'calibration_scheduled',
   CALIBRATION_OVERDUE: 'calibration_overdue',
@@ -73,14 +72,14 @@ export const UserStatusValues = {
 } as const;
 
 /**
- * 교정 방법 값 객체 (dot-notation 접근용)
- * @example CalibrationMethodValues.EXTERNAL_CALIBRATION // 'external_calibration'
+ * 관리 방법 값 객체 (dot-notation 접근용)
+ * @example ManagementMethodValues.EXTERNAL_CALIBRATION // 'external_calibration'
  */
-export const CalibrationMethodValues = {
+export const ManagementMethodValues = {
   EXTERNAL_CALIBRATION: 'external_calibration',
   SELF_INSPECTION: 'self_inspection',
   NOT_APPLICABLE: 'not_applicable',
-} as const satisfies Record<string, CalibrationMethod>;
+} as const satisfies Record<string, ManagementMethod>;
 
 /**
  * 해결 유형 값 객체 (dot-notation 접근용)

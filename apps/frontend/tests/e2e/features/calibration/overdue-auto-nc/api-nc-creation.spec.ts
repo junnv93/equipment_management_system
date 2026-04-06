@@ -31,18 +31,13 @@
  */
 
 import { test, expect, APIRequestContext } from '@playwright/test';
-import {
-  EquipmentStatus,
-  NonConformanceType,
-  NonConformanceStatus,
-  IncidentType,
-} from '@equipment-management/schemas';
+import { EquipmentStatus } from '@equipment-management/schemas';
 import {
   EquipmentStatusValues as ESVal,
   NonConformanceStatusValues as NCSVal,
   NonConformanceTypeValues as NCTVal,
   IncidentTypeValues as ITVal,
-  CalibrationMethodValues as CMVal,
+  ManagementMethodValues as CMVal,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
@@ -80,7 +75,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: equipmentData.calibrationRequired || 'required',
-      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
+      managementMethod: CMVal.EXTERNAL_CALIBRATION,
       nextCalibrationDate: equipmentData.nextCalibrationDate?.toISOString(),
       isActive: equipmentData.isActive ?? true,
       manufacturer: 'Test Manufacturer',

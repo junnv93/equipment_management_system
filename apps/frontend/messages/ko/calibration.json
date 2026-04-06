@@ -48,7 +48,7 @@
     "calibrationDate": "교정일",
     "nextCalibrationDate": "다음 교정 예정일",
     "calibrationAgency": "교정 기관",
-    "calibrationMethod": "교정 방법",
+    "managementMethod": "관리 방법",
     "result": "교정 결과",
     "certificate": "교정 성적서",
     "notes": "비고"
@@ -84,7 +84,7 @@
       "createdAt": "작성일"
     },
     "actions": {
-      "printPdf": "인쇄/PDF",
+      "exportExcel": "Excel 내보내기",
       "delete": "삭제",
       "submitForReview": "검토 요청",
       "reject": "반려",
@@ -190,6 +190,8 @@
       "rejectSuccessDesc": "교정계획서가 반려되었습니다.",
       "rejectError": "반려 실패",
       "rejectErrorDesc": "반려 처리 중 오류가 발생했습니다.",
+      "exportError": "내보내기 실패",
+      "exportErrorDesc": "Excel 파일 생성 중 오류가 발생했습니다.",
       "deleteSuccess": "삭제 완료",
       "deleteSuccessDesc": "교정계획서가 삭제되었습니다.",
       "deleteError": "삭제 실패",
@@ -653,6 +655,7 @@
     "saving": "저장 중...",
     "records": "점검 기록",
     "noRecords": "점검 기록이 없습니다",
+    "loadError": "점검 기록을 불러오는 중 오류가 발생했습니다",
     "toasts": {
       "createSuccess": "점검 기록이 생성되었습니다.",
       "createError": "점검 기록 생성에 실패했습니다.",

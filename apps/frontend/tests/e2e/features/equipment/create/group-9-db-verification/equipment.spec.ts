@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // spec: equipment-create test plan - DB verification
 // seed: apps/frontend/tests/e2e/equipment-create/seed.spec.ts
 
@@ -14,7 +15,7 @@
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 import {
   EquipmentStatusValues as ESVal,
-  CalibrationMethodValues as CMVal,
+  ManagementMethodValues as CMVal,
   UnifiedApprovalStatusValues as UASVal,
 } from '@equipment-management/schemas';
 import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
@@ -47,7 +48,7 @@ test.describe('DB 검증 통합 테스트', () => {
         .split('T')[0],
       calibrationAgency: 'KOLAS',
       needsIntermediateCheck: false,
-      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
+      managementMethod: CMVal.EXTERNAL_CALIBRATION,
       teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // FCC EMC/RF team (SUW)
       site: 'suwon',
       technicalManager: 'test_tech_manager_uuid', // Placeholder - backend should handle this
@@ -179,9 +180,9 @@ test.describe('DB 검증 통합 테스트', () => {
     expect(equipment.location).toBe('RF1 Room');
     console.log('✓ location matches');
 
-    // calibrationMethod === 'external_calibration'
-    expect(equipment.calibrationMethod).toBe(CMVal.EXTERNAL_CALIBRATION);
-    console.log('✓ calibrationMethod matches');
+    // managementMethod === 'external_calibration'
+    expect(equipment.managementMethod).toBe(CMVal.EXTERNAL_CALIBRATION);
+    console.log('✓ managementMethod matches');
 
     // calibrationCycle === 12
     expect(equipment.calibrationCycle).toBe(12);

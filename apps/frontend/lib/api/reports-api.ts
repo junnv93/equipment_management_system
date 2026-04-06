@@ -1,6 +1,40 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS, REPORT_EXPORT_MIME } from '@equipment-management/shared-constants';
 import { transformSingleResponse } from './utils/response-transformers';
+import { downloadFile } from './utils/download-file';
+
+// ============================================================================
+// 공식 양식 템플릿 내보내기 (UL-QP-18-XX)
+// ============================================================================
+
+/**
+ * UL-QP-18 공식 양식 내보내기 (SSOT)
+ *
+ * form-template-export.service.ts 의 프론트엔드 진입점.
+ * 모든 양식 내보내기(QP-18-01 ~ QP-18-11)는 이 함수를 사용합니다.
+ */
+export async function exportFormTemplate(
+  formNumber: string,
+  params?: Record<string, string>
+): Promise<void> {
+  // QP-18-01(시험설비 관리대장)만 XLSX, 나머지는 모두 DOCX 양식
+  const ext = formNumber === 'UL-QP-18-01' ? 'xlsx' : 'docx';
+  await downloadFile({
+    url: API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE(formNumber),
+    params,
+    filename: `${formNumber}_${new Date().toISOString().split('T')[0]}.${ext}`,
+  });
+}
+
+/**
+ * 장비 이력카드 다운로드 (UL-QP-18-02)
+ */
+export async function downloadHistoryCard(equipmentId: string): Promise<void> {
+  await downloadFile({
+    url: API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(equipmentId),
+    filename: `이력카드_${equipmentId.slice(0, 8)}.docx`,
+  });
+}
 
 export type ReportType =
   | 'equipment_inventory'

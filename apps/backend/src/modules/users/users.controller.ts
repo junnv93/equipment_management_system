@@ -9,11 +9,15 @@ import {
   Query,
   Request,
   NotFoundException,
+  BadRequestException,
   HttpStatus,
   HttpCode,
   UsePipes,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
@@ -33,6 +37,8 @@ import {
   DEFAULT_DISPLAY_PREFERENCES,
 } from './dto/user-preferences.dto';
 import type { User, PaginatedResponseType, UserRole } from '@equipment-management/schemas';
+import type { MulterFile } from '../../types/common.types';
+import { FileUploadService } from '../../common/file-upload/file-upload.service';
 import { AuthenticatedRequest } from '../../types/auth';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
@@ -44,7 +50,13 @@ import { InternalServiceOnly } from '../../common/decorators/internal-service-on
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  private static readonly SIGNATURE_MAX_SIZE = 2 * 1024 * 1024; // 2MB
+  private static readonly SIGNATURE_ALLOWED_TYPES = ['image/png', 'image/jpeg'];
+
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly fileUploadService: FileUploadService
+  ) {}
 
   @Post()
   @RequirePermissions(Permission.UPDATE_USERS)
@@ -153,6 +165,83 @@ export class UsersController {
     }
     const updated = await this.usersService.updatePreferences(userId, dto);
     return { ...DEFAULT_DISPLAY_PREFERENCES, ...updated };
+  }
+
+  @Post('me/signature')
+  @SkipPermissions()
+  @UseInterceptors(FileInterceptor('file'))
+  @AuditLog({ action: 'update', entityType: 'user' })
+  @ApiOperation({
+    summary: '전자서명 업로드',
+    description:
+      '현재 로그인한 사용자의 전자서명 이미지를 업로드합니다. PNG/JPEG만 허용, 최대 2MB.',
+  })
+  @ApiResponse({ status: 200, description: '전자서명 업로드 성공' })
+  @ApiResponse({ status: 400, description: '잘못된 파일 형식 또는 크기 초과' })
+  async uploadSignature(
+    @Request() req: AuthenticatedRequest,
+    @UploadedFile() file: MulterFile
+  ): Promise<User> {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information could not be verified.',
+      });
+    }
+    if (!file) {
+      throw new BadRequestException({
+        code: 'FILE_REQUIRED',
+        message: 'Signature image file is required.',
+      });
+    }
+    if (!UsersController.SIGNATURE_ALLOWED_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException({
+        code: 'INVALID_FILE_TYPE',
+        message: 'Only PNG and JPEG formats are allowed for signatures.',
+      });
+    }
+    if (file.size > UsersController.SIGNATURE_MAX_SIZE) {
+      throw new BadRequestException({
+        code: 'FILE_TOO_LARGE',
+        message: 'Signature image must be under 2MB.',
+      });
+    }
+
+    // 기존 서명 파일이 있으면 삭제
+    const existingUser = await this.usersService.findOne(userId);
+    if (existingUser?.signatureImagePath) {
+      await this.fileUploadService.deleteFile(existingUser.signatureImagePath);
+    }
+
+    const saved = await this.fileUploadService.saveFile(file, 'signatures');
+    return this.usersService.updateSignaturePath(userId, saved.filePath);
+  }
+
+  @Delete('me/signature')
+  @SkipPermissions()
+  @AuditLog({ action: 'update', entityType: 'user' })
+  @ApiOperation({
+    summary: '전자서명 삭제',
+    description: '현재 로그인한 사용자의 전자서명 이미지를 삭제합니다.',
+  })
+  @ApiResponse({ status: 200, description: '전자서명 삭제 성공' })
+  async deleteSignature(@Request() req: AuthenticatedRequest): Promise<User> {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information could not be verified.',
+      });
+    }
+
+    // 물리 파일 삭제
+    const existingUser = await this.usersService.findOne(userId);
+    if (existingUser?.signatureImagePath) {
+      await this.fileUploadService.deleteFile(existingUser.signatureImagePath);
+    }
+
+    return this.usersService.updateSignaturePath(userId, null);
   }
 
   @Get(':id')

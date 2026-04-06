@@ -40,6 +40,7 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   cable: (id) => `/cables/${id}`,
   cable_loss_measurement: (id) => `/cables/${id}?tab=measurements`,
   self_inspection: (id) => `/equipment/${id}?tab=self-inspection`,
+  form_template: () => `/reports/form-templates`,
 };
 
 /**

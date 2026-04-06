@@ -41,3 +41,36 @@ export const SELF_INSPECTION_STATUS_VALUES = [
 
 export const SelfInspectionStatusEnum = z.enum(SELF_INSPECTION_STATUS_VALUES);
 export type SelfInspectionStatus = z.infer<typeof SelfInspectionStatusEnum>;
+
+// ============================================================================
+// 기타 특기사항 (조치내용) — QP-18-05 섹션 3
+// ============================================================================
+
+export const SpecialNoteSchema = z.object({
+  content: z.string().min(1),
+  date: z.string().nullable(),
+});
+export type SpecialNote = z.infer<typeof SpecialNoteSchema>;
+
+// ============================================================================
+// 자체점검 항목 기본값
+// ============================================================================
+
+export const DEFAULT_SELF_INSPECTION_ITEMS = [
+  '외관검사',
+  '출력 특성 점검',
+  '안전 점검',
+  '기능 점검',
+] as const;
+
+/**
+ * 유연 항목명 → 기존 고정 컬럼 매핑 (하위 호환용 SSOT)
+ * key: selfInspectionItems.checkItem, value: equipmentSelfInspections 고정 컬럼명
+ */
+export const SELF_INSPECTION_LEGACY_COLUMN_MAP: Record<string, string> = {
+  외관검사: 'appearance',
+  '출력 특성 점검': 'functionality', // 출력 특성 = 기능 검증 → functionality 컬럼에 매핑
+  '기능 점검': 'functionality',
+  '안전 점검': 'safety',
+  '교정 상태 점검': 'calibrationStatus',
+} as const;

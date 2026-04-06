@@ -12,7 +12,7 @@ import {
 import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { EQUIPMENT_STATUS_VALUES, CALIBRATION_METHOD_VALUES } from '@equipment-management/schemas';
+import { EQUIPMENT_STATUS_VALUES, MANAGEMENT_METHOD_VALUES } from '@equipment-management/schemas';
 import type {
   EquipmentStatus,
   SpecMatch,
@@ -34,8 +34,8 @@ export const equipmentStatusEnum = pgEnum('equipment_status', [...EQUIPMENT_STAT
   ...string[],
 ]);
 
-/** @see packages/schemas/src/enums.ts - CalibrationMethodEnum (SSOT) */
-export const calibrationMethods = CALIBRATION_METHOD_VALUES;
+/** @see packages/schemas/src/enums.ts - ManagementMethodEnum (SSOT) */
+export const managementMethods = MANAGEMENT_METHOD_VALUES;
 
 // 장비 테이블 스키마
 // ✅ UUID 통일: serial(integer) id를 uuid id로 변경하여 전체 스키마 일관성 확보
@@ -77,7 +77,7 @@ export const equipment = pgTable(
     nextCalibrationDate: timestamp('next_calibration_date'),
     calibrationAgency: varchar('calibration_agency', { length: 100 }),
     needsIntermediateCheck: boolean('needs_intermediate_check').default(false),
-    calibrationMethod: varchar('calibration_method', { length: 50 }), // 관리 방법
+    managementMethod: varchar('management_method', { length: 50 }), // 관리 방법
 
     // 중간점검 정보 (3개 필드로 분리)
     lastIntermediateCheckDate: timestamp('last_intermediate_check_date'), // 최종 중간 점검일
@@ -87,6 +87,7 @@ export const equipment = pgTable(
     // 관리 정보
     teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
     managerId: uuid('manager_id').references(() => users.id, { onDelete: 'set null' }),
+    deputyManagerId: uuid('deputy_manager_id').references(() => users.id, { onDelete: 'set null' }), // 운영 책임자 (부) — QP-18-02
     site: varchar('site', { length: 20 }).notNull(), // ✅ 사이트별 권한 관리: 필수 필드 'suwon' | 'uiwang'
     purchaseYear: integer('purchase_year'), // 구입년도 (연도 정수, 예: 2026)
     price: integer('price'),
@@ -144,6 +145,7 @@ export const equipment = pgTable(
       manufacturerIdx: index('equipment_manufacturer_idx').on(table.manufacturer),
       teamIdIdx: index('equipment_team_id_idx').on(table.teamId),
       managerIdIdx: index('equipment_manager_id_idx').on(table.managerId),
+      deputyManagerIdIdx: index('equipment_deputy_manager_id_idx').on(table.deputyManagerId),
       siteIdx: index('equipment_site_idx').on(table.site),
       nextCalibrationDateIdx: index('equipment_next_calibration_date_idx').on(
         table.nextCalibrationDate
@@ -196,6 +198,7 @@ import { equipmentTestSoftware } from './equipment-test-software';
 export type EquipmentWithRelations = Equipment & {
   team?: typeof teams.$inferSelect;
   manager?: typeof users.$inferSelect;
+  deputyManager?: typeof users.$inferSelect;
   checkouts?: Array<typeof checkouts.$inferSelect>;
 };
 
@@ -208,6 +211,12 @@ export const equipmentRelations = relations(equipment, ({ one, many }) => ({
   manager: one(users, {
     fields: [equipment.managerId],
     references: [users.id],
+    relationName: 'equipment_manager',
+  }),
+  deputyManager: one(users, {
+    fields: [equipment.deputyManagerId],
+    references: [users.id],
+    relationName: 'equipment_deputy_manager',
   }),
   documents: many(documents),
   testSoftwareLinks: many(equipmentTestSoftware),

@@ -69,7 +69,7 @@ describe('CalibrationPlansController (e2e)', () => {
       managementNumber: `CP-MN-${crypto.randomBytes(8).toString('hex')}`,
       status: 'available',
       site: TEST_SITE,
-      calibrationMethod: 'external_calibration',
+      managementMethod: 'external_calibration',
       calibrationCycle: 12,
       lastCalibrationDate: new Date(`${TEST_YEAR - 1}-06-01`).toISOString(),
       nextCalibrationDate: new Date(`${TEST_YEAR}-06-01`).toISOString(),

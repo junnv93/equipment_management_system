@@ -25,29 +25,22 @@ import type {
   RejectInspectionInput,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import type { IntermediateInspection } from '@equipment-management/db/schema';
-import { Inject, NotFoundException } from '@nestjs/common';
-import type { AppDatabase } from '@equipment-management/db';
-import { eq } from 'drizzle-orm';
-import { calibrations } from '@equipment-management/db/schema';
 
 /**
- * 교정별 중간점검 생성/조회 (nested route)
+ * 장비별 중간점검 생성/조회 (nested route)
  *
- * POST /calibration/:uuid/intermediate-inspections
- * GET  /calibration/:uuid/intermediate-inspections
+ * POST /equipment/:uuid/intermediate-inspections
+ * GET  /equipment/:uuid/intermediate-inspections
  */
-@Controller('calibration')
-export class CalibrationIntermediateInspectionsController {
-  constructor(
-    private readonly inspectionsService: IntermediateInspectionsService,
-    @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
-  ) {}
+@Controller('equipment')
+export class EquipmentIntermediateInspectionsController {
+  constructor(private readonly inspectionsService: IntermediateInspectionsService) {}
 
   @Post(':uuid/intermediate-inspections')
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
@@ -62,32 +55,61 @@ export class CalibrationIntermediateInspectionsController {
     @Body() dto: CreateInspectionInput,
     @Request() req: AuthenticatedRequest
   ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfo(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const createdBy = extractUserId(req);
-
-    // calibration에서 equipmentId 조회
-    const [cal] = await this.db
-      .select({ equipmentId: calibrations.equipmentId })
-      .from(calibrations)
-      .where(eq(calibrations.id, uuid))
-      .limit(1);
-
-    if (!cal) {
-      throw new NotFoundException({
-        code: 'CALIBRATION_NOT_FOUND',
-        message: `Calibration with UUID ${uuid} not found.`,
-      });
-    }
-
-    return this.inspectionsService.create(
-      { ...dto, calibrationId: uuid },
-      cal.equipmentId,
-      createdBy
-    );
+    return this.inspectionsService.createByEquipment(uuid, dto, createdBy);
   }
 
   @Get(':uuid/intermediate-inspections')
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findByCalibration(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<IntermediateInspection[]> {
+  async findByEquipment(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<IntermediateInspection[]> {
+    const info = await this.inspectionsService.getEquipmentSiteInfo(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.inspectionsService.findByEquipment(uuid);
+  }
+}
+
+/**
+ * 교정별 중간점검 생성/조회 (nested route)
+ *
+ * POST /calibration/:uuid/intermediate-inspections
+ * GET  /calibration/:uuid/intermediate-inspections
+ */
+@Controller('calibration')
+export class CalibrationIntermediateInspectionsController {
+  constructor(private readonly inspectionsService: IntermediateInspectionsService) {}
+
+  @Post(':uuid/intermediate-inspections')
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({
+    action: 'create',
+    entityType: 'intermediate_inspection',
+    entityIdPath: 'response.id',
+  })
+  @UsePipes(CreateInspectionPipe)
+  async create(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: CreateInspectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByCalibrationId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const createdBy = extractUserId(req);
+    return this.inspectionsService.createByCalibration(uuid, dto, createdBy);
+  }
+
+  @Get(':uuid/intermediate-inspections')
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  async findByCalibration(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<IntermediateInspection[]> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByCalibrationId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.inspectionsService.findByCalibration(uuid);
   }
 }
@@ -108,9 +130,12 @@ export class IntermediateInspectionsController {
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findOne(
-    @Param('uuid', ParseUUIDPipe) uuid: string
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
   ): ReturnType<IntermediateInspectionsService['findOne']> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.inspectionsService.findOne(uuid);
   }
 
@@ -125,8 +150,10 @@ export class IntermediateInspectionsController {
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: UpdateInspectionInput,
-    @Request() _req: AuthenticatedRequest
+    @Request() req: AuthenticatedRequest
   ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     return this.inspectionsService.update(uuid, dto);
   }
 
@@ -143,6 +170,8 @@ export class IntermediateInspectionsController {
     @Body() dto: SubmitInspectionInput,
     @Request() req: AuthenticatedRequest
   ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.inspectionsService.submit(uuid, dto.version, userId);
   }
@@ -160,6 +189,8 @@ export class IntermediateInspectionsController {
     @Body() dto: ApproveInspectionInput,
     @Request() req: AuthenticatedRequest
   ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.inspectionsService.review(uuid, dto.version, userId);
   }
@@ -177,6 +208,8 @@ export class IntermediateInspectionsController {
     @Body() dto: ApproveInspectionInput,
     @Request() req: AuthenticatedRequest
   ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.inspectionsService.approve(uuid, dto.version, userId);
   }
@@ -194,6 +227,8 @@ export class IntermediateInspectionsController {
     @Body() dto: RejectInspectionInput,
     @Request() req: AuthenticatedRequest
   ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.inspectionsService.reject(uuid, dto.version, userId, dto.rejectionReason);
   }

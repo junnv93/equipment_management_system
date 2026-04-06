@@ -148,7 +148,7 @@ export interface ReceiveEquipmentImportDto {
   version: number;
   receivingCondition: ReceivingCondition;
   calibrationInfo?: {
-    calibrationMethod: string;
+    managementMethod: string;
     calibrationCycle?: number;
     lastCalibrationDate?: string;
     calibrationAgency?: string;

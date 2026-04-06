@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import type {
   Site,
   EquipmentStatus,
-  CalibrationMethod,
+  ManagementMethod,
   Classification,
 } from '@equipment-management/schemas';
 import {
@@ -33,7 +33,7 @@ export interface EquipmentFilters {
   search: string;
   site: Site | '';
   status: EquipmentStatus | '';
-  calibrationMethod: CalibrationMethod | '';
+  managementMethod: ManagementMethod | '';
   classification: Classification | '';
   isShared: 'all' | 'shared' | 'normal';
   calibrationDueFilter: CalibrationDueFilter;
@@ -164,11 +164,11 @@ export function useEquipmentFilters() {
         params.set('status', updatedFilters.status);
       }
 
-      // ✅ calibrationMethod: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
-      if ('calibrationMethod' in newFilters) {
-        params.set('calibrationMethod', updatedFilters.calibrationMethod || '_all');
-      } else if (updatedFilters.calibrationMethod) {
-        params.set('calibrationMethod', updatedFilters.calibrationMethod);
+      // ✅ managementMethod: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
+      if ('managementMethod' in newFilters) {
+        params.set('managementMethod', updatedFilters.managementMethod || '_all');
+      } else if (updatedFilters.managementMethod) {
+        params.set('managementMethod', updatedFilters.managementMethod);
       }
 
       // ✅ classification: 명시적 변경 시 _all 센티널, 그 외에는 현재 값 보존
@@ -245,9 +245,9 @@ export function useEquipmentFilters() {
     [updateURL]
   );
 
-  const setCalibrationMethod = useCallback(
-    (calibrationMethod: CalibrationMethod | '') => {
-      updateURL({ calibrationMethod, page: 1 });
+  const setManagementMethod = useCallback(
+    (managementMethod: ManagementMethod | '') => {
+      updateURL({ managementMethod, page: 1 });
     },
     [updateURL]
   );
@@ -365,7 +365,7 @@ export function useEquipmentFilters() {
     setSearch,
     setSite,
     setStatus,
-    setCalibrationMethod,
+    setManagementMethod,
     setClassification,
     setIsShared,
     setCalibrationDueFilter,

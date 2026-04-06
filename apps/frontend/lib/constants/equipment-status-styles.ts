@@ -148,8 +148,4 @@ export function shouldDisplayCalibrationStatus(status: string | undefined | null
  *
  * CRITICAL: 이 상수를 직접 하드코딩하지 말 것 — 이 곳이 유일한 정의 위치
  */
-export const STATUS_NOT_ALLOWED_FOR_CHECKOUT: EquipmentStatus[] = [
-  'checked_out',
-  'retired',
-  'in_use',
-];
+export const STATUS_NOT_ALLOWED_FOR_CHECKOUT: EquipmentStatus[] = ['checked_out', 'retired'];

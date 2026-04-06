@@ -63,16 +63,16 @@
     "manualLocation": "매뉴얼 보관 위치",
     "accessories": "부속품",
     "technicalManager": "기술책임자",
+    "deputyManager": "부담당자",
     "initialLocation": "최초 설치 위치",
     "installationDate": "설치 일시",
     "supplier": "공급사",
     "contactInfo": "연락처",
     "externalIdentifier": "소유처 원본 번호",
-    "calibrationMethod": "관리 방법"
+    "managementMethod": "관리 방법"
   },
   "status": {
     "available": "사용 가능",
-    "in_use": "사용 중",
     "checked_out": "반출 중",
     "calibration_scheduled": "교정 예정",
     "calibration_overdue": "교정 기한 초과",
@@ -91,6 +91,8 @@
     "empty": "등록된 장비가 없습니다",
     "emptyDescription": "장비를 등록하여 교정 일정, 반출 이력, 부적합 관리를 시작하세요.",
     "createButton": "장비 등록",
+    "exportLedger": "관리대장 내보내기",
+    "exportError": "관리대장 내보내기에 실패했습니다",
     "totalItems": "총 {count}개의 장비",
     "loadError": "장비 목록 로드 실패",
     "loading": "장비 목록 로딩 중",
@@ -130,6 +132,7 @@
     "software": "소프트웨어",
     "attachments": "첨부파일",
     "selfInspection": "자체점검",
+    "inspection": "점검",
     "ariaLabel": "장비 상세 정보 탭",
     "tabAriaLabel": "{label} 탭",
     "panelAriaLabel": "{label} 탭 패널",
@@ -153,7 +156,7 @@
     "allStatuses": "모든 상태",
     "allSites": "모든 사이트",
     "siteFixed": "고정됨",
-    "allCalibrationMethods": "모든 교정 방법",
+    "allManagementMethods": "모든 관리 방법",
     "allClassifications": "모든 분류",
     "allEquipment": "모든 장비",
     "teamEquipment": "팀 장비",
@@ -164,7 +167,7 @@
     "loading": "로딩 중...",
     "site": "사이트",
     "status": "상태",
-    "calibrationMethod": "교정 방법",
+    "managementMethod": "관리 방법",
     "classification": "장비 분류",
     "shared": "장비 구분",
     "team": "팀",
@@ -178,7 +181,7 @@
     "calibrationNormalDesc": "교정 기한 여유",
     "siteFilter": "사이트 필터 선택",
     "statusFilter": "장비 상태 필터 선택",
-    "calibrationFilter": "교정 방법 필터 선택",
+    "managementMethodFilter": "관리 방법 필터 선택",
     "classificationFilter": "장비 분류 필터 선택",
     "sharedFilter": "장비 구분 필터 선택",
     "calibrationDueFilter": "교정 기한 필터 선택",
@@ -191,7 +194,7 @@
     "badgeCalibrationDue": "교정기한: {label}",
     "badgeTeam": "팀: {label}",
     "allDescription": "모든 장비",
-    "calibrationMethodLabel": {
+    "managementMethodLabel": {
       "external_calibration": "외부 교정",
       "self_inspection": "자체 점검",
       "not_applicable": "비대상"
@@ -237,7 +240,7 @@
     "locationSrOnly": "위치",
     "ownerNumberSrOnly": "소유처 번호",
     "lastCalibrationSrOnly": "마지막 교정일",
-    "calibrationMethodSrOnly": "교정 방법",
+    "managementMethodSrOnly": "관리 방법",
     "calibrationPrefix": "교정: ",
     "ownerNumberTitle": "소유처 번호: {number}",
     "viewDetailAriaLabel": "{name} 상세 보기",
@@ -298,6 +301,10 @@
     "calibrationStatus": "교정상태",
     "overallResult": "전체결과",
     "status": "상태",
+    "itemNumber": "번호",
+    "checkItem": "점검 항목",
+    "checkResult": "점검 결과",
+    "remarks": "비고",
     "judgment": {
       "pass": "적합",
       "fail": "부적합",
@@ -307,7 +314,28 @@
       "draft": "초안",
       "completed": "완료",
       "confirmed": "확인됨"
+    },
+    "form": {
+      "title": "자체점검 기록 작성 (UL-QP-18-05)",
+      "description": "점검 항목별 판정 결과를 입력하세요",
+      "addItem": "항목 추가",
+      "itemNamePlaceholder": "점검 항목명",
+      "selectResult": "종합결과 선택",
+      "selectJudgment": "판정",
+      "remarksPlaceholder": "비고 사항을 입력하세요",
+      "cancel": "취소",
+      "save": "저장",
+      "saving": "저장 중...",
+      "createSuccess": "자체점검 기록이 생성되었습니다.",
+      "createError": "자체점검 기록 생성에 실패했습니다."
     }
+  },
+  "inspection": {
+    "intermediateTitle": "중간점검 기록 (UL-QP-18-03)",
+    "selfTitle": "자체점검 기록 (UL-QP-18-05)",
+    "noActiveCalibration": "활성 교정 기록이 없어 중간점검을 생성할 수 없습니다",
+    "createButton": "점검 기록 작성",
+    "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: 비대상)"
   },
   "form": {
     "basicInfo": {
@@ -365,7 +393,12 @@
       "intermediateCheckCycle": "중간점검 주기 (개월)",
       "intermediateCheckCyclePlaceholder": "예: 6",
       "nextIntermediateCheckDate": "차기 중간 점검일",
-      "autoCalculated": "자동 계산됨"
+      "autoCalculated": "자동 계산됨",
+      "selectCalibrationRequired": "기본 정보에서 교정필요 여부를 먼저 선택하세요",
+      "notApplicableDescription": "비대상 장비는 교정 및 점검 정보가 필요하지 않습니다",
+      "selfInspectionCycle": "자체점검 주기 (개월)",
+      "lastSelfInspectionDate": "최종 자체 점검일",
+      "nextSelfInspectionDate": "차기 자체 점검일"
     },
     "statusLocation": {
       "title": "상태 및 위치",
@@ -384,6 +417,8 @@
       "techManagerDirectInputPlaceholder": "예: 홍길동",
       "techManagerDescriptionWithTeam": "선택한 팀의 기술책임자만 표시됩니다",
       "techManagerDescription": "팀을 먼저 선택하면 해당 팀의 기술책임자가 표시됩니다",
+      "deputyManagerPlaceholder": "부담당자 선택",
+      "deputyManagerDescription": "운영 책임자(부) — 기술책임자 중 선택",
       "supplierPlaceholder": "예: ABC 공급사",
       "contactPlaceholder": "예: 02-1234-5678",
       "swVersionPlaceholder": "예: v1.0.0",
@@ -432,7 +467,7 @@
       "lastCalibrationDate": "최종 교정일",
       "nextCalibrationDate": "차기 교정일",
       "calibrationAgency": "교정 기관",
-      "calibrationMethod": "관리 방법",
+      "managementMethod": "관리 방법",
       "lastIntermediateCheckDate": "최종 중간 점검일",
       "intermediateCheckCycle": "중간점검 주기",
       "technicalManager": "기술책임자",
@@ -474,7 +509,8 @@
       "registrationError": "장비 등록 중 오류가 발생했습니다.",
       "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다.",
       "documentUploadPartialFail": "일부 문서 업로드 실패",
-      "documentUploadPartialFailDescription": "장비는 등록되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요."
+      "documentUploadPartialFailDescription": "장비는 등록되었지만 문서 {count}건 업로드에 실패했습니다. 상세 페이지에서 다시 시도해주세요.",
+      "sharedLink": "공용장비 등록"
     },
     "temporary": {
       "title": "임시등록 장비 정보",
@@ -542,7 +578,7 @@
     "locationManagement": "위치 및 관리 정보",
     "calibrationInfo": "교정 정보",
     "softwareManualInfo": "소프트웨어/매뉴얼 정보",
-    "calibrationMethod": "교정 방법",
+    "managementMethod": "관리 방법",
     "calibrationCycle": "교정 주기 (개월)",
     "lastCalibrationDate": "마지막 교정일",
     "nextCalibrationDate": "다음 교정 예정일",
@@ -931,8 +967,7 @@
     },
     "disabledReasons": {
       "checked_out": "이미 반출 중인 장비입니다",
-      "retired": "폐기된 장비입니다",
-      "in_use": "사용 중인 장비입니다"
+      "retired": "폐기된 장비입니다"
     },
     "purpose": {
       "calibration": "교정",

@@ -4,12 +4,29 @@ import {
   NotFoundException,
   BadRequestException,
   NotImplementedException,
+  Logger,
 } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import type { AppDatabase } from '@equipment-management/db';
+import { DocxTemplate } from './docx-template.util';
+import { FormTemplateService } from './form-template.service';
 import { equipment } from '@equipment-management/db/schema/equipment';
-import { equipmentSelfInspections } from '@equipment-management/db/schema/equipment-self-inspections';
-import { eq, desc, and } from 'drizzle-orm';
+import {
+  equipmentSelfInspections,
+  selfInspectionItems,
+} from '@equipment-management/db/schema/equipment-self-inspections';
+import {
+  intermediateInspections,
+  intermediateInspectionItems,
+  intermediateInspectionEquipment,
+} from '@equipment-management/db/schema/intermediate-inspections';
+import { testSoftware } from '@equipment-management/db/schema/test-software';
+import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cables';
+import { softwareValidations } from '@equipment-management/db/schema/software-validations';
+import { users } from '@equipment-management/db/schema/users';
+import { teams } from '@equipment-management/db/schema/teams';
+import { eq, desc, and, notInArray, inArray, sql, type SQL, asc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import {
   DEFAULT_LOCALE,
   DEFAULT_TIMEZONE,
@@ -17,6 +34,14 @@ import {
   isFormImplemented,
   isFormDedicatedEndpoint,
 } from '@equipment-management/shared-constants';
+import {
+  CLASSIFICATION_TO_CODE,
+  SOFTWARE_AVAILABILITY_LABELS,
+  type Classification,
+  type EquipmentStatus,
+  type SoftwareAvailability,
+} from '@equipment-management/schemas';
+import { STORAGE_PROVIDER, type IStorageProvider } from '../../common/storage/storage.interface';
 
 interface ExportResult {
   buffer: Buffer;
@@ -29,6 +54,9 @@ interface UserScope {
   teamId?: string;
 }
 
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
 /**
  * 공식 양식 템플릿 기반 내보내기 서비스
  *
@@ -37,9 +65,14 @@ interface UserScope {
  */
 @Injectable()
 export class FormTemplateExportService {
+  private readonly logger = new Logger(FormTemplateExportService.name);
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
+    private readonly db: AppDatabase,
+    @Inject(STORAGE_PROVIDER)
+    private readonly storage: IStorageProvider,
+    private readonly formTemplateService: FormTemplateService
   ) {}
 
   async exportForm(
@@ -75,7 +108,11 @@ export class FormTemplateExportService {
       (params: Record<string, string>, scope?: UserScope) => Promise<ExportResult>
     > = {
       'UL-QP-18-01': (p, s) => this.exportEquipmentRegistry(p, s),
+      'UL-QP-18-03': (p, s) => this.exportIntermediateInspection(p, s),
       'UL-QP-18-05': (p, s) => this.exportSelfInspection(p, s),
+      'UL-QP-18-07': (p, s) => this.exportSoftwareRegistry(p, s),
+      'UL-QP-18-08': (p, s) => this.exportCablePathLoss(p, s),
+      'UL-QP-18-09': (p, s) => this.exportSoftwareValidation(p, s),
     };
 
     const exporter = exporters[formNumber];
@@ -88,62 +125,369 @@ export class FormTemplateExportService {
     return exporter(params, scope);
   }
 
+  // ============================================================================
+  // 공통 유틸리티
+  // ============================================================================
+
   private formatDate(d: Date | string | null | undefined): string {
     if (!d) return '-';
     const date = d instanceof Date ? d : new Date(d);
     return date.toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE });
   }
 
+  private makeFilename(entry: { formNumber: string; name: string }): string {
+    return `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.xlsx`;
+  }
+
+  // ============================================================================
   // UL-QP-18-01: 시험설비 관리 대장
+  // ============================================================================
+
+  /** QP-18-01 enum → 한국어 변환 */
+  private static readonly MANAGEMENT_METHOD_LABELS: Record<string, string> = {
+    external_calibration: '외부교정',
+    self_inspection: '자체점검',
+    not_applicable: '비대상',
+  };
+
+  /** 장비 상태 → QP-18-01 가용여부 (3가지) */
+  private static readonly STATUS_TO_AVAILABILITY: Record<string, string> = {
+    available: '사용',
+    checked_out: '사용',
+    calibration_scheduled: '사용',
+    calibration_overdue: '사용',
+    non_conforming: '고장',
+    spare: '여분',
+    retired: '불용',
+    pending_disposal: '불용',
+    disposed: '불용',
+    temporary: '사용',
+    inactive: '여분',
+  };
+
   private async exportEquipmentRegistry(
-    _params: Record<string, string>,
+    params: Record<string, string>,
     scope?: UserScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-01'];
-    const conditions = scope ? [eq(equipment.site, scope.site)] : [];
+    const conditions: SQL<unknown>[] = [];
+
+    // 사이트 필터: params 우선, 없으면 scope
+    const siteFilter = params.site || scope?.site;
+    if (siteFilter) {
+      conditions.push(eq(equipment.site, siteFilter));
+    }
+
+    // URL 필터 조건 반영 (장비 목록 페이지와 동일)
+    if (params.teamId) {
+      conditions.push(eq(equipment.teamId, params.teamId));
+    }
+    if (params.status) {
+      conditions.push(sql`${equipment.status} = ${params.status}`);
+    }
+    if (params.managementMethod) {
+      conditions.push(eq(equipment.managementMethod, params.managementMethod));
+    }
+    if (params.classification && params.classification in CLASSIFICATION_TO_CODE) {
+      const code = CLASSIFICATION_TO_CODE[params.classification as Classification];
+      conditions.push(eq(equipment.classificationCode, code));
+    }
+    if (params.manufacturer) {
+      conditions.push(eq(equipment.manufacturer, params.manufacturer));
+    }
+    if (params.location) {
+      conditions.push(eq(equipment.location, params.location));
+    }
+    if (params.isShared === 'true') {
+      conditions.push(eq(equipment.isShared, true));
+    } else if (params.isShared === 'false') {
+      conditions.push(eq(equipment.isShared, false));
+    }
+
+    // 활성 장비만 (isActive = true)
+    conditions.push(eq(equipment.isActive, true));
+
+    // 퇴역/폐기 장비 숨기기
+    if (params.showRetired !== 'true') {
+      conditions.push(notInArray(equipment.status, ['retired', 'disposed'] as EquipmentStatus[]));
+    }
+
     const rows = await this.db
       .select()
       .from(equipment)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(equipment.managementNumber)
-      .limit(500);
+      .limit(1000);
 
+    const formatDate = (d: Date | null | undefined): string => {
+      if (!d) return 'N/A';
+      return new Date(d).toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE });
+    };
+
+    // 템플릿 파일 로드 (양식 서식 보존) — 스토리지 기반
+    const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-01');
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(entry.name);
+    await workbook.xlsx.load(templateBuffer);
+    const sheet =
+      workbook.getWorksheet('시험설비 관리대장') ||
+      workbook.getWorksheet('시험설비 관리 대장') ||
+      workbook.worksheets[0];
 
-    sheet.columns = [
-      { header: '관리번호', key: 'managementNumber', width: 15 },
-      { header: '장비명', key: 'name', width: 25 },
-      { header: '모델명', key: 'modelName', width: 20 },
-      { header: '제조사', key: 'manufacturer', width: 15 },
-      { header: '일련번호', key: 'serialNumber', width: 15 },
-      { header: '상태', key: 'status', width: 12 },
-      { header: '설치장소', key: 'location', width: 15 },
-      { header: '사이트', key: 'site', width: 10 },
-    ];
+    // Row 1: 헤더 업데이트 (팀명 + 날짜)
+    const headerCell = sheet.getRow(1).getCell(1);
+    const teamLabel = params.teamId ? '' : '(전체)';
+    headerCell.value = `${teamLabel} 시험설비 관리대장`;
+    const dateCell = sheet.getRow(1).getCell(14);
+    if (dateCell) {
+      dateCell.value = `최종 업데이트 일자 : ${new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE })}`;
+    }
 
-    rows.forEach((row) => {
-      sheet.addRow({
-        managementNumber: row.managementNumber,
-        name: row.name,
-        modelName: row.modelName ?? '-',
-        manufacturer: row.manufacturer ?? '-',
-        serialNumber: row.serialNumber ?? '-',
-        status: row.status,
-        location: row.location ?? '-',
-        site: row.site,
+    // Row 1: 팀명+날짜 헤더, Row 2: 컬럼 헤더 (템플릿 보존)
+    // Row 3+: 기존 데이터를 DB 데이터로 덮어쓰기
+    const DATA_START_ROW = 3;
+
+    // 기존 데이터 행의 스타일 참조용 (Row 3 — 템플릿 원본 스타일)
+    const styleRef = sheet.getRow(DATA_START_ROW);
+    const cellStyles: Partial<ExcelJS.Style>[] = [];
+    for (let c = 1; c <= 16; c++) {
+      cellStyles.push({ ...styleRef.getCell(c).style });
+    }
+
+    // DB 데이터를 Row 3부터 덮어쓰기
+    rows.forEach((row, idx) => {
+      const r = DATA_START_ROW + idx;
+      const excelRow = sheet.getRow(r);
+      const values: (string | number)[] = [
+        row.managementNumber,
+        row.assetNumber ?? 'N/A',
+        row.name,
+        FormTemplateExportService.MANAGEMENT_METHOD_LABELS[row.managementMethod ?? ''] ?? 'N/A',
+        formatDate(row.lastCalibrationDate),
+        row.calibrationAgency ?? 'N/A',
+        row.calibrationCycle ?? 'N/A',
+        formatDate(row.nextCalibrationDate),
+        row.manufacturer ?? '-',
+        row.purchaseYear ?? '-',
+        row.modelName ?? '-',
+        row.serialNumber ?? '-',
+        row.description ?? '-',
+        row.location ?? '-',
+        row.needsIntermediateCheck ? 'O' : 'X',
+        FormTemplateExportService.STATUS_TO_AVAILABILITY[row.status] ?? '사용',
+      ];
+
+      values.forEach((val, c) => {
+        const cell = excelRow.getCell(c + 1);
+        cell.value = val;
+        if (cellStyles[c]) {
+          Object.assign(cell.style, cellStyles[c]);
+        }
       });
+
+      excelRow.commit();
     });
 
+    // 남은 기존 템플릿 행 비우기 (DB 데이터보다 템플릿 행이 더 많은 경우)
+    const templateDataEnd = sheet.rowCount;
+    for (let r = DATA_START_ROW + rows.length; r <= templateDataEnd; r++) {
+      const excelRow = sheet.getRow(r);
+      for (let c = 1; c <= 16; c++) {
+        excelRow.getCell(c).value = null;
+      }
+      excelRow.commit();
+    }
+
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+    return { buffer, mimeType: XLSX_MIME, filename: this.makeFilename(entry) };
+  }
+
+  // ============================================================================
+  // UL-QP-18-03: 중간점검표
+  // ============================================================================
+
+  private async exportIntermediateInspection(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-03'];
+    const inspectionId = params.inspectionId;
+    if (!inspectionId) {
+      throw new BadRequestException({
+        code: 'MISSING_INSPECTION_ID',
+        message: 'inspectionId query parameter is required for intermediate inspection export.',
+      });
+    }
+
+    // 점검 기록 + 장비 정보 조회
+    const [inspection] = await this.db
+      .select({
+        id: intermediateInspections.id,
+        inspectionDate: intermediateInspections.inspectionDate,
+        classification: intermediateInspections.classification,
+        inspectionCycle: intermediateInspections.inspectionCycle,
+        calibrationValidityPeriod: intermediateInspections.calibrationValidityPeriod,
+        overallResult: intermediateInspections.overallResult,
+        remarks: intermediateInspections.remarks,
+        approvalStatus: intermediateInspections.approvalStatus,
+        approvedAt: intermediateInspections.approvedAt,
+        // 장비 정보
+        equipmentName: equipment.name,
+        equipmentModel: equipment.modelName,
+        managementNumber: equipment.managementNumber,
+        equipmentLocation: equipment.location,
+        equipmentSite: equipment.site,
+        // 점검자
+        inspectorId: intermediateInspections.inspectorId,
+        approvedById: intermediateInspections.approvedBy,
+      })
+      .from(intermediateInspections)
+      .innerJoin(equipment, eq(intermediateInspections.equipmentId, equipment.id))
+      .where(eq(intermediateInspections.id, inspectionId))
+      .limit(1);
+
+    if (!inspection) {
+      throw new NotFoundException({
+        code: 'INSPECTION_NOT_FOUND',
+        message: `Intermediate inspection ${inspectionId} not found.`,
+      });
+    }
+
+    // 사이트 필터링
+    if (scope && inspection.equipmentSite !== scope.site) {
+      throw new NotFoundException({
+        code: 'INSPECTION_NOT_FOUND',
+        message: 'Inspection not accessible from your site.',
+      });
+    }
+
+    // 팀 정보 조회
+    const [teamRow] = await this.db
+      .select({ teamName: teams.name })
+      .from(equipment)
+      .innerJoin(teams, eq(equipment.teamId, teams.id))
+      .where(eq(equipment.managementNumber, inspection.managementNumber!))
+      .limit(1);
+
+    // 점검자, 승인자 정보 조회
+    const [inspector] = inspection.inspectorId
+      ? await this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, inspection.inspectorId))
+          .limit(1)
+      : [null];
+
+    const [approver] = inspection.approvedById
+      ? await this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, inspection.approvedById))
+          .limit(1)
+      : [null];
+
+    // 점검 항목
+    const items = await this.db
+      .select()
+      .from(intermediateInspectionItems)
+      .where(eq(intermediateInspectionItems.inspectionId, inspectionId))
+      .orderBy(intermediateInspectionItems.itemNumber);
+
+    // 측정 장비 목록
+    const measureEquipment = await this.db
+      .select({
+        managementNumber: equipment.managementNumber,
+        equipmentName: equipment.name,
+        calibrationDate: intermediateInspectionEquipment.calibrationDate,
+      })
+      .from(intermediateInspectionEquipment)
+      .innerJoin(equipment, eq(intermediateInspectionEquipment.equipmentId, equipment.id))
+      .where(eq(intermediateInspectionEquipment.inspectionId, inspectionId));
+
+    // docx 템플릿 로드 — 스토리지 기반
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-03');
+    const doc = new DocxTemplate(templateBuf);
+    const classificationLabel =
+      inspection.classification === 'calibrated' ? '교정기기' : '비교정기기';
+
+    // --- Table 0: 장비 정보 헤더 + 점검 항목 ---
+    // Row 0~3: 장비 정보 (값만 교체 — 셀[1], 셀[3])
+    doc.setCellValue(0, 0, 1, classificationLabel);
+    doc.setCellValue(0, 0, 3, teamRow?.teamName ?? '-');
+    doc.setCellValue(0, 1, 1, inspection.managementNumber ?? '-');
+    doc.setCellValue(0, 1, 3, inspection.equipmentLocation ?? '-');
+    doc.setCellValue(0, 2, 1, inspection.equipmentName ?? '-');
+    doc.setCellValue(0, 2, 3, inspection.equipmentModel ?? '-');
+    doc.setCellValue(0, 3, 1, inspection.inspectionCycle ?? '-');
+    doc.setCellValue(0, 3, 3, inspection.calibrationValidityPeriod ?? '-');
+    // Row 4: 구분행 (유지)
+    // Row 5: 헤더행 (유지)
+    // Row 6~: 데이터 행 — 템플릿 Row[6]을 복제, Row[7~10] 빈 행 제거
+    const itemData = items.map((item) => [
+      String(item.itemNumber),
+      item.checkItem,
+      item.checkCriteria ?? '-',
+      item.checkResult ?? '-',
+      item.judgment === 'pass' ? '합격' : item.judgment === 'fail' ? '불합격' : '-',
+    ]);
+    doc.setDataRows(0, 6, itemData, 4); // 템플릿에 빈 행 4개 (Row 7~10)
+
+    // --- Table 1: 측정 장비 List ---
+    // Row 0: 타이틀 (유지), Row 1: 헤더 (유지)
+    // Row 2~: 데이터 행 — 템플릿 Row[2]를 복제, Row[3~5] 빈 행 제거
+    const meData = measureEquipment.map((me, idx) => [
+      String(idx + 1),
+      me.managementNumber ?? '-',
+      me.equipmentName ?? '-',
+      this.formatDate(me.calibrationDate),
+    ]);
+    doc.setDataRows(1, 2, meData, 3); // 빈 행 3개 (Row 3~5)
+
+    // --- Table 2: 점검 결과 및 결재 ---
+    // Row 0: [1]=점검일, [4]=담당서명, [5]=검토서명, [6]=승인서명
+    doc.setCellValue(2, 0, 1, this.formatDate(inspection.inspectionDate));
+    // Row 1: [1]=점검자
+    doc.setCellValue(2, 1, 1, inspector?.name ?? '-');
+    // Row 2: [1]=특이사항
+    doc.setCellValue(2, 2, 1, inspection.remarks ?? '-');
+
+    // 결재란 서명 이미지 삽입 (담당/검토 = 점검자, 승인 = 기술책임자)
+    await this.insertDocxSignature(
+      doc,
+      2,
+      0,
+      4,
+      inspector?.signaturePath ?? null,
+      inspector?.name ?? '-'
+    );
+    await this.insertDocxSignature(
+      doc,
+      2,
+      0,
+      5,
+      inspector?.signaturePath ?? null,
+      inspector?.name ?? '-'
+    );
+    await this.insertDocxSignature(
+      doc,
+      2,
+      0,
+      6,
+      approver?.signaturePath ?? null,
+      approver?.name ?? '-'
+    );
+
+    const buffer = doc.toBuffer();
     return {
       buffer,
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.xlsx`,
+      mimeType: DOCX_MIME,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
     };
   }
 
+  // ============================================================================
   // UL-QP-18-05: 자체점검표
+  // ============================================================================
+
   private async exportSelfInspection(
     params: Record<string, string>,
     scope?: UserScope
@@ -157,60 +501,758 @@ export class FormTemplateExportService {
       });
     }
 
-    // 사이트 필터링: 요청된 장비가 사용자 사이트에 속하는지 확인
-    if (scope) {
-      const [eqRow] = await this.db
-        .select({ site: equipment.site })
-        .from(equipment)
-        .where(and(eq(equipment.id, equipmentId), eq(equipment.site, scope.site)))
+    // 장비 정보 조회 (헤더용)
+    const [eqRow] = await this.db
+      .select({
+        id: equipment.id,
+        name: equipment.name,
+        modelName: equipment.modelName,
+        managementNumber: equipment.managementNumber,
+        location: equipment.location,
+        site: equipment.site,
+        calibrationRequired: equipment.calibrationRequired,
+        teamId: equipment.teamId,
+      })
+      .from(equipment)
+      .where(
+        scope
+          ? and(eq(equipment.id, equipmentId), eq(equipment.site, scope.site))
+          : eq(equipment.id, equipmentId)
+      )
+      .limit(1);
+
+    if (!eqRow) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: 'Equipment not found or not accessible from your site.',
+      });
+    }
+
+    // 팀 정보
+    const [teamRow] = eqRow.teamId
+      ? await this.db
+          .select({ teamName: teams.name })
+          .from(teams)
+          .where(eq(teams.id, eqRow.teamId))
+          .limit(1)
+      : [null];
+
+    // 대상 점검 기록: inspectionId가 있으면 해당 건(+장비 소속 검증), 없으면 최근 1건
+    const inspectionId = params.inspectionId;
+    const [record] = inspectionId
+      ? await this.db
+          .select()
+          .from(equipmentSelfInspections)
+          .where(
+            and(
+              eq(equipmentSelfInspections.id, inspectionId),
+              eq(equipmentSelfInspections.equipmentId, equipmentId) // 사이트 우회 방지
+            )
+          )
+          .limit(1)
+      : await this.db
+          .select()
+          .from(equipmentSelfInspections)
+          .where(eq(equipmentSelfInspections.equipmentId, equipmentId))
+          .orderBy(desc(equipmentSelfInspections.inspectionDate))
+          .limit(1);
+
+    if (!record) {
+      throw new NotFoundException({
+        code: 'SELF_INSPECTION_NOT_FOUND',
+        message: 'No self-inspection records found for this equipment.',
+      });
+    }
+
+    // 점검자/확인자 정보
+    const [inspector] = await this.db
+      .select({ name: users.name, signaturePath: users.signatureImagePath })
+      .from(users)
+      .where(eq(users.id, record.inspectorId))
+      .limit(1);
+
+    const [confirmer] = record.confirmedBy
+      ? await this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, record.confirmedBy))
+          .limit(1)
+      : [null];
+
+    // 점검 항목 (자식 테이블)
+    const items = await this.db
+      .select()
+      .from(selfInspectionItems)
+      .where(eq(selfInspectionItems.inspectionId, record.id))
+      .orderBy(selfInspectionItems.itemNumber);
+
+    // docx 템플릿 로드 — 스토리지 기반
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-05');
+    const doc = new DocxTemplate(templateBuf);
+    const classificationLabel =
+      eqRow.calibrationRequired === 'required' ? '교정기기' : '비교정기기';
+
+    // --- Table 0: 장비 정보 헤더 + 점검 항목 ---
+    doc.setCellValue(0, 0, 1, classificationLabel);
+    doc.setCellValue(0, 0, 3, teamRow?.teamName ?? '-');
+    doc.setCellValue(0, 1, 1, eqRow.managementNumber ?? '-');
+    doc.setCellValue(0, 1, 3, eqRow.location ?? '-');
+    doc.setCellValue(0, 2, 1, eqRow.name ?? '-');
+    doc.setCellValue(0, 2, 3, eqRow.modelName ?? '-');
+    doc.setCellValue(0, 3, 1, `${record.inspectionCycle}개월`);
+    doc.setCellValue(0, 3, 3, classificationLabel === '비교정기기' ? 'N/A' : '-');
+    // Row 4: 구분행, Row 5: 헤더행 (유지)
+    // Row 6+: 데이터 행 — 유연 항목 or 레거시 fallback
+    const resultLabel = (r: string): string =>
+      r === 'pass' ? '이상 없음' : r === 'fail' ? '부적합' : 'N/A';
+
+    let itemData: string[][];
+    if (items.length > 0) {
+      itemData = items.map((item) => [
+        String(item.itemNumber),
+        item.checkItem,
+        resultLabel(item.checkResult),
+      ]);
+    } else {
+      // 기존 고정 컬럼 fallback
+      itemData = [
+        ['1', '외관검사', resultLabel(record.appearance)],
+        ['2', '기능 점검', resultLabel(record.functionality)],
+        ['3', '안전 점검', resultLabel(record.safety)],
+        ['4', '교정 상태 점검', resultLabel(record.calibrationStatus)],
+      ];
+    }
+    doc.setDataRows(0, 6, itemData, 6); // 템플릿에 빈 행 6개 (Row 7~12)
+
+    // --- Table 1: 기타 특기사항 (조치내용) ---
+    // Row 0: 타이틀 (유지)
+    // Row 1~: 데이터 행 — 템플릿 Row[1]을 복제, Row[2~3] 빈 행 제거
+    // JSONB 런타임 안전 파싱 (레거시 데이터 shape 불일치 방어)
+    const rawNotes = record.specialNotes;
+    const specialNotes = Array.isArray(rawNotes)
+      ? (rawNotes as { content?: string; date?: string | null }[]).filter(
+          (n) => typeof n?.content === 'string'
+        )
+      : null;
+    const noteData =
+      specialNotes && specialNotes.length > 0
+        ? specialNotes.map((note, idx) => [String(idx + 1), note.content ?? '-', note.date ?? '-'])
+        : record.remarks
+          ? [['1', record.remarks, '-']]
+          : [['', '-', '-']];
+    doc.setDataRows(1, 1, noteData, 2); // 빈 행 2개 (Row 2~3)
+
+    // --- Table 2: 점검 결과 및 결재 ---
+    doc.setCellValue(2, 0, 1, this.formatDate(record.inspectionDate));
+    doc.setCellValue(2, 1, 1, inspector?.name ?? '-');
+    doc.setCellValue(2, 2, 1, record.remarks ?? '-');
+
+    // 결재란 서명 (담당/검토 = 점검자, 승인 = 기술책임자)
+    await this.insertDocxSignature(
+      doc,
+      2,
+      0,
+      4,
+      inspector?.signaturePath ?? null,
+      inspector?.name ?? '-'
+    );
+    await this.insertDocxSignature(
+      doc,
+      2,
+      0,
+      5,
+      inspector?.signaturePath ?? null,
+      inspector?.name ?? '-'
+    );
+    await this.insertDocxSignature(
+      doc,
+      2,
+      0,
+      6,
+      confirmer?.signaturePath ?? null,
+      confirmer?.name ?? '-'
+    );
+
+    const buffer = doc.toBuffer();
+    return {
+      buffer,
+      mimeType: DOCX_MIME,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+    };
+  }
+
+  // ============================================================================
+  // docx 서명 삽입 헬퍼
+  // ============================================================================
+
+  private async insertDocxSignature(
+    doc: DocxTemplate,
+    tableIndex: number,
+    rowIndex: number,
+    cellIndex: number,
+    signaturePath: string | null,
+    fallbackName: string
+  ): Promise<void> {
+    if (!signaturePath) {
+      doc.setCellValue(tableIndex, rowIndex, cellIndex, fallbackName);
+      return;
+    }
+    try {
+      const imageBuffer = await this.storage.download(signaturePath);
+      const ext = signaturePath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+      doc.setSignatureImage(tableIndex, rowIndex, cellIndex, imageBuffer, ext);
+    } catch {
+      this.logger.warn(`Failed to load signature: ${signaturePath}, using name fallback`);
+      doc.setCellValue(tableIndex, rowIndex, cellIndex, fallbackName);
+    }
+  }
+
+  // ============================================================================
+  // UL-QP-18-07: 시험용 소프트웨어 관리대장 (DOCX — 10열 단일 테이블)
+  // ============================================================================
+
+  private async exportSoftwareRegistry(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-07'];
+    const conditions: SQL<unknown>[] = [];
+
+    // 사이트 필터: params 우선, 없으면 scope
+    const siteFilter = params.site || scope?.site;
+    if (siteFilter) {
+      conditions.push(eq(testSoftware.site, siteFilter));
+    }
+
+    // 시험분야 필터 (varchar.$type<TestField> — raw string 비교)
+    if (params.testField) {
+      conditions.push(sql`${testSoftware.testField} = ${params.testField}`);
+    }
+
+    // 가용 여부 필터 (varchar.$type<SoftwareAvailability> — raw string 비교)
+    if (params.availability) {
+      conditions.push(sql`${testSoftware.availability} = ${params.availability}`);
+    }
+
+    // 제작사 필터
+    if (params.manufacturer) {
+      conditions.push(eq(testSoftware.manufacturer, params.manufacturer));
+    }
+
+    // 검색어 필터 (관리번호, SW명, 제작사 ILIKE)
+    if (params.search) {
+      const term = `%${params.search}%`;
+      conditions.push(
+        sql`(${testSoftware.managementNumber} ILIKE ${term} OR ${testSoftware.name} ILIKE ${term} OR ${testSoftware.manufacturer} ILIKE ${term})`
+      );
+    }
+
+    // 담당자(정/부) JOIN — alias로 분리
+    const primaryManager = alias(users, 'primaryManager');
+    const secondaryManager = alias(users, 'secondaryManager');
+
+    const rows = await this.db
+      .select({
+        managementNumber: testSoftware.managementNumber,
+        name: testSoftware.name,
+        softwareVersion: testSoftware.softwareVersion,
+        testField: testSoftware.testField,
+        primaryManagerName: primaryManager.name,
+        secondaryManagerName: secondaryManager.name,
+        installedAt: testSoftware.installedAt,
+        manufacturer: testSoftware.manufacturer,
+        location: testSoftware.location,
+        availability: testSoftware.availability,
+        requiresValidation: testSoftware.requiresValidation,
+      })
+      .from(testSoftware)
+      .leftJoin(primaryManager, eq(testSoftware.primaryManagerId, primaryManager.id))
+      .leftJoin(secondaryManager, eq(testSoftware.secondaryManagerId, secondaryManager.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(asc(testSoftware.managementNumber))
+      .limit(1000);
+
+    // DOCX 템플릿 로드 — T0: 10열 테이블 (R0=헤더, R1~R21=빈 데이터행)
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-07');
+    const doc = new DocxTemplate(templateBuf);
+
+    // T0 R0 = 헤더행 (보존), R1 = 템플�� 데이터행 (복제 기준)
+    // 10열: 관리번호, SW명, 버전, 시험분야, 담당자(정.부), 설치일자, 제작사, 위치, 가용여부, 유효성확인대상
+    const dataRows = rows.map((row) => {
+      // 담당자(정,부) — 양식은 1열에 "정,부" 합쳐 표기
+      const managerDisplay = [row.primaryManagerName, row.secondaryManagerName]
+        .filter(Boolean)
+        .join(',');
+      // requiresValidation=true → 'X'(대상), false → 'O'(미대상)
+      const validationLabel = row.requiresValidation ? 'X' : 'O';
+
+      return [
+        row.managementNumber,
+        row.name,
+        row.softwareVersion ?? '-',
+        row.testField,
+        managerDisplay || '-',
+        this.formatDate(row.installedAt),
+        row.manufacturer ?? '-',
+        row.location ?? '-',
+        SOFTWARE_AVAILABILITY_LABELS[row.availability as SoftwareAvailability] ?? row.availability,
+        validationLabel,
+      ];
+    });
+
+    // R1을 템플릿 행으로 복제, R2~R21(빈 행 20개)을 제거
+    doc.setDataRows(0, 1, dataRows, 20);
+
+    const buffer = doc.toBuffer();
+    return {
+      buffer,
+      mimeType: DOCX_MIME,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+    };
+  }
+
+  // ============================================================================
+  // UL-QP-18-09: 시험 소프트웨어의 유효성확인
+  // ============================================================================
+
+  private async exportSoftwareValidation(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-09'];
+    const validationId = params.validationId;
+    if (!validationId) {
+      throw new BadRequestException({
+        code: 'MISSING_VALIDATION_ID',
+        message: 'validationId query parameter is required for software validation export.',
+      });
+    }
+
+    // 유효성 확인 기록 + 대상 소프트웨어 정보 조회
+    const [record] = await this.db
+      .select({
+        id: softwareValidations.id,
+        validationType: softwareValidations.validationType,
+        status: softwareValidations.status,
+        softwareVersion: softwareValidations.softwareVersion,
+        testDate: softwareValidations.testDate,
+        infoDate: softwareValidations.infoDate,
+        softwareAuthor: softwareValidations.softwareAuthor,
+        // 방법 1: 공급자 시연
+        vendorName: softwareValidations.vendorName,
+        vendorSummary: softwareValidations.vendorSummary,
+        receivedBy: softwareValidations.receivedBy,
+        receivedDate: softwareValidations.receivedDate,
+        attachmentNote: softwareValidations.attachmentNote,
+        // 방법 2: 자체 시험
+        referenceDocuments: softwareValidations.referenceDocuments,
+        operatingUnitDescription: softwareValidations.operatingUnitDescription,
+        softwareComponents: softwareValidations.softwareComponents,
+        hardwareComponents: softwareValidations.hardwareComponents,
+        acquisitionFunctions: softwareValidations.acquisitionFunctions,
+        processingFunctions: softwareValidations.processingFunctions,
+        controlFunctions: softwareValidations.controlFunctions,
+        performedBy: softwareValidations.performedBy,
+        // 승인
+        submittedBy: softwareValidations.submittedBy,
+        technicalApproverId: softwareValidations.technicalApproverId,
+        qualityApproverId: softwareValidations.qualityApproverId,
+        // 소프트웨어 정보
+        softwareName: testSoftware.name,
+        softwareSite: testSoftware.site,
+      })
+      .from(softwareValidations)
+      .innerJoin(testSoftware, eq(softwareValidations.testSoftwareId, testSoftware.id))
+      .where(eq(softwareValidations.id, validationId))
+      .limit(1);
+
+    if (!record) {
+      throw new NotFoundException({
+        code: 'VALIDATION_NOT_FOUND',
+        message: `Software validation ${validationId} not found.`,
+      });
+    }
+
+    // 사이트 스코프 필터
+    if (scope && record.softwareSite !== scope.site) {
+      throw new NotFoundException({
+        code: 'VALIDATION_NOT_FOUND',
+        message: 'Validation not accessible from your site.',
+      });
+    }
+
+    // 관련 사용자 정보 일괄 조회 (receivedBy, performedBy, technicalApprover, qualityApprover)
+    const resolveUser = async (
+      userId: string | null
+    ): Promise<{ name: string; signaturePath: string | null } | null> => {
+      if (!userId) return null;
+      const [u] = await this.db
+        .select({ name: users.name, signaturePath: users.signatureImagePath })
+        .from(users)
+        .where(eq(users.id, userId))
         .limit(1);
-      if (!eqRow) {
-        throw new NotFoundException({
-          code: 'EQUIPMENT_NOT_FOUND',
-          message: 'Equipment not found or not accessible from your site.',
+      return u ?? null;
+    };
+
+    const [receiver, performer, techApprover] = await Promise.all([
+      resolveUser(record.receivedBy),
+      resolveUser(record.performedBy),
+      resolveUser(record.technicalApproverId),
+    ]);
+
+    // docx 템플릿 로드
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-09');
+    const doc = new DocxTemplate(templateBuf);
+
+    // ── DOCX 구조 (9개 테이블) ──
+    // T0~T2: 방법1 (공급자 시연)
+    //   T0: 기본정보 (3행2열) — R0: Vendor, R1: SW Name, R2: Version/Date
+    //   T1: 검증내용 (5행2열) — R0: infoDate+Summary, R1~R4: 상세
+    //   T2: 수령정보 (3행2열) — R0: Receiver, R1: Date, R2: Attachments
+    // T3~T8: 방법2 (자체 시험)
+    //   T3: 기본정보 (7행2열) — R0: Name, R1: Author, R2: Version, R3: References, R4: Operating, R5: SW, R6: HW
+    //   T4: 획득기능 (3행2열) — R0: Name, R1: Means, R2: Criteria
+    //   T5: 프로세싱기능 (3행2열) — R0: Name, R1: Means, R2: Criteria
+    //   T6: 제어기능 (4행4열) — R0: Header, R1~R3: Data
+    //   T7: 수락기준 (1행2열) — R0: Criteria
+    //   T8: 승인란 (3행2열) — R0: Date, R1: Performer, R2: Authorizer
+
+    if (record.validationType === 'vendor') {
+      // ── 방법 1: 공급자 시연 (T0~T2) ──
+      // T0: 기본 정보
+      doc.setCellValue(0, 0, 1, record.vendorName ?? '-');
+      doc.setCellValue(0, 1, 1, `${record.softwareName} ${record.softwareVersion ?? ''}`);
+      doc.setCellValue(
+        0,
+        2,
+        1,
+        `${record.softwareVersion ?? '-'} / ${this.formatDate(record.infoDate)}`
+      );
+
+      // T1: 검증 내용 — R0 col1: infoDate, R0 col1도 Summary와 같은 행
+      doc.setCellValue(1, 0, 0, this.formatDate(record.infoDate));
+      doc.setCellValue(1, 0, 1, record.vendorSummary ?? '-');
+
+      // T2: 수령 정보
+      doc.setCellValue(2, 0, 1, receiver?.name ?? '-');
+      doc.setCellValue(2, 1, 1, this.formatDate(record.receivedDate));
+      doc.setCellValue(2, 2, 1, record.attachmentNote ?? '-');
+    } else {
+      // ── 방법 2: UL 자체 유효성확인 시험 (T3~T8) ──
+      // T3: 기본 정보 (7행)
+      doc.setCellValue(3, 0, 1, `${record.softwareName} ${record.softwareVersion ?? ''}`);
+      doc.setCellValue(3, 1, 1, record.softwareAuthor ?? '-');
+      doc.setCellValue(3, 2, 1, record.softwareVersion ?? '-');
+      doc.setCellValue(3, 3, 1, record.referenceDocuments ?? '-');
+      doc.setCellValue(3, 4, 1, record.operatingUnitDescription ?? '-');
+      doc.setCellValue(3, 5, 1, record.softwareComponents ?? '-');
+      doc.setCellValue(3, 6, 1, record.hardwareComponents ?? '-');
+
+      // T4: 획득 기능 (Acquisition) — R0=헤더 유지, 각 행 cell[1]에 값
+      const acqFunctions = this.parseJsonbFunctionArray(record.acquisitionFunctions);
+      if (acqFunctions.length > 0) {
+        const acq = acqFunctions[0];
+        doc.setCellValue(4, 0, 1, acq.name);
+        doc.setCellValue(4, 1, 1, acq.criteria);
+        doc.setCellValue(4, 2, 1, acq.result);
+      }
+
+      // T5: 프로세싱 기능 (Processing)
+      const procFunctions = this.parseJsonbFunctionArray(record.processingFunctions);
+      if (procFunctions.length > 0) {
+        const proc = procFunctions[0];
+        doc.setCellValue(5, 0, 1, proc.name);
+        doc.setCellValue(5, 1, 1, proc.criteria);
+        doc.setCellValue(5, 2, 1, proc.result);
+      }
+
+      // T6: 제어 기능 (Control) — 4행4열, R0=헤더, R1~R3=데이터
+      const ctrlFunctions = this.parseJsonbFunctionArray(record.controlFunctions);
+      if (ctrlFunctions.length > 0) {
+        const ctrl = ctrlFunctions[0];
+        doc.setCellValue(6, 1, 0, ctrl.name);
+        doc.setCellValue(6, 1, 1, ctrl.criteria);
+        doc.setCellValue(6, 1, 2, ctrl.result);
+      }
+
+      // T7: 수락 기준
+      // (보통 비어있거나 템플릿 유지)
+
+      // T8: 승인란
+      doc.setCellValue(8, 0, 1, this.formatDate(record.testDate));
+      doc.setCellValue(8, 1, 1, performer?.name ?? '-');
+      await this.insertDocxSignature(
+        doc,
+        8,
+        2,
+        1,
+        techApprover?.signaturePath ?? null,
+        techApprover?.name ?? '-'
+      );
+    }
+
+    const buffer = doc.toBuffer();
+    return {
+      buffer,
+      mimeType: DOCX_MIME,
+      filename: `${entry.formNumber}_${entry.name}_${record.validationType}_${new Date().toISOString().split('T')[0]}.docx`,
+    };
+  }
+
+  // ============================================================================
+  // UL-QP-18-08: Cable and Path Loss 관리대장
+  // ============================================================================
+
+  /**
+   * 케이블 목록(시트1) + 개별 케이블 Path Loss 데이터(시트2~N) Excel 내보내기
+   *
+   * 시트 구조:
+   *  - "RF Conducted": 케이블 목록 (No, 관리번호, Length, TYPE, 주파수범위, S/N, 위치)
+   *  - 관리번호별 시트: Freq(MHz), Data(dB) 테이블
+   */
+  private async exportCablePathLoss(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-08'];
+    const conditions: SQL<unknown>[] = [];
+
+    const siteFilter = params.site || scope?.site;
+    if (siteFilter) {
+      conditions.push(sql`${cables.site} = ${siteFilter}`);
+    }
+    if (params.connectorType) {
+      conditions.push(sql`${cables.connectorType} = ${params.connectorType}`);
+    }
+    if (params.status) {
+      conditions.push(sql`${cables.status} = ${params.status}`);
+    } else {
+      // 기본: active 케이블만
+      conditions.push(eq(cables.status, 'active'));
+    }
+
+    const cableRows = await this.db
+      .select()
+      .from(cables)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(cables.managementNumber)
+      .limit(500);
+
+    // 템플릿 로드 시도 — 없으면 빈 워크북에서 생성
+    let workbook: ExcelJS.Workbook;
+    try {
+      const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-08');
+      workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(templateBuffer);
+    } catch {
+      workbook = new ExcelJS.Workbook();
+    }
+
+    // ── 시트 1: RF Conducted (목록) ──
+    const listSheet =
+      workbook.getWorksheet('RF Conducted') ?? workbook.addWorksheet('RF Conducted');
+
+    const LIST_HEADERS = [
+      'No',
+      '관리번호',
+      'Length (M)',
+      'TYPE',
+      '사용 주파수 범위',
+      'S/N',
+      '위치',
+    ];
+    const headerRow = listSheet.getRow(1);
+    LIST_HEADERS.forEach((h, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = h;
+      cell.font = { bold: true };
+      cell.border = {
+        top: { style: 'thin' },
+        bottom: { style: 'thin' },
+        left: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+    headerRow.commit();
+
+    cableRows.forEach((cable, idx) => {
+      const row = listSheet.getRow(idx + 2);
+      const freqRange =
+        cable.frequencyRangeMin != null && cable.frequencyRangeMax != null
+          ? `${cable.frequencyRangeMin} MHz to ${cable.frequencyRangeMax} MHz`
+          : cable.frequencyRangeMin != null
+            ? `${cable.frequencyRangeMin} MHz+`
+            : cable.frequencyRangeMax != null
+              ? `to ${cable.frequencyRangeMax} MHz`
+              : 'N/A';
+
+      const values: (string | number)[] = [
+        idx + 1,
+        cable.managementNumber,
+        cable.length ?? '-',
+        cable.connectorType ?? '-',
+        freqRange,
+        cable.serialNumber ?? 'N/A',
+        cable.location ?? '-',
+      ];
+
+      values.forEach((val, c) => {
+        const cell = row.getCell(c + 1);
+        cell.value = val;
+        cell.border = {
+          top: { style: 'thin' },
+          bottom: { style: 'thin' },
+          left: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+      row.commit();
+    });
+
+    // 열 너비 설정
+    listSheet.columns = [
+      { width: 5 },
+      { width: 14 },
+      { width: 12 },
+      { width: 8 },
+      { width: 24 },
+      { width: 14 },
+      { width: 18 },
+    ];
+
+    // ── 시트 2~N: 개별 케이블 Path Loss (Batch 쿼리 — N+1 방지) ──
+    const cableIds = cableRows.map((c) => c.id);
+
+    if (cableIds.length > 0) {
+      // 1) 각 케이블의 최신 측정을 DISTINCT ON으로 한 번에 조회
+      const latestMeasurements = await this.db.execute<{
+        id: string;
+        cable_id: string;
+        measurement_date: Date;
+      }>(sql`
+        SELECT DISTINCT ON (cable_id) id, cable_id, measurement_date
+        FROM cable_loss_measurements
+        WHERE cable_id = ANY(${cableIds})
+        ORDER BY cable_id, measurement_date DESC
+      `);
+
+      const measurementByCableId = new Map<string, { id: string; measurementDate: Date }>();
+      for (const row of latestMeasurements.rows) {
+        measurementByCableId.set(row.cable_id, {
+          id: row.id,
+          measurementDate: row.measurement_date,
         });
+      }
+
+      // 2) 최신 측정 ID들의 데이터 포인트를 IN 절로 한 번에 조회
+      const measurementIds = [...measurementByCableId.values()].map((m) => m.id);
+
+      const allDataPoints =
+        measurementIds.length > 0
+          ? await this.db
+              .select()
+              .from(cableLossDataPoints)
+              .where(inArray(cableLossDataPoints.measurementId, measurementIds))
+              .orderBy(
+                asc(cableLossDataPoints.measurementId),
+                asc(cableLossDataPoints.frequencyMhz)
+              )
+          : [];
+
+      // 3) measurementId → dataPoints[] 그룹핑
+      const dpByMeasurementId = new Map<string, typeof allDataPoints>();
+      for (const dp of allDataPoints) {
+        const arr = dpByMeasurementId.get(dp.measurementId) ?? [];
+        arr.push(dp);
+        dpByMeasurementId.set(dp.measurementId, arr);
+      }
+
+      // 4) 시트 생성
+      for (const cable of cableRows) {
+        const measurement = measurementByCableId.get(cable.id);
+        if (!measurement) continue;
+
+        const dataPoints = dpByMeasurementId.get(measurement.id) ?? [];
+        if (dataPoints.length === 0) continue;
+
+        // 시트명: 관리번호 (Excel 시트명 31자 제한, 특수문자 제거)
+        const sheetName = cable.managementNumber.replace(/[:\\/?*[\]]/g, '_').slice(0, 31);
+        const dataSheet = workbook.addWorksheet(sheetName);
+
+        // 헤더 행: 케이블 정보
+        const infoRow = dataSheet.getRow(1);
+        infoRow.getCell(1).value = `Cable: ${cable.managementNumber}`;
+        infoRow.getCell(1).font = { bold: true };
+        const dateRow = dataSheet.getRow(2);
+        dateRow.getCell(1).value = `Measured: ${this.formatDate(measurement.measurementDate)}`;
+
+        // 데이터 헤더
+        const dpHeaderRow = dataSheet.getRow(4);
+        dpHeaderRow.getCell(1).value = 'Freq(MHz)';
+        dpHeaderRow.getCell(2).value = 'Data(dB)';
+        dpHeaderRow.getCell(1).font = { bold: true };
+        dpHeaderRow.getCell(2).font = { bold: true };
+        [1, 2].forEach((c) => {
+          dpHeaderRow.getCell(c).border = {
+            top: { style: 'thin' },
+            bottom: { style: 'thin' },
+            left: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+        dpHeaderRow.commit();
+
+        // 데이터 포인트
+        dataPoints.forEach((dp, dpIdx) => {
+          const dpRow = dataSheet.getRow(5 + dpIdx);
+          dpRow.getCell(1).value = dp.frequencyMhz;
+          dpRow.getCell(2).value = Number(dp.lossDb);
+          [1, 2].forEach((c) => {
+            dpRow.getCell(c).border = {
+              top: { style: 'thin' },
+              bottom: { style: 'thin' },
+              left: { style: 'thin' },
+              right: { style: 'thin' },
+            };
+            dpRow.getCell(c).numFmt = c === 1 ? '#,##0' : '0.000';
+          });
+          dpRow.commit();
+        });
+
+        dataSheet.columns = [{ width: 14 }, { width: 14 }];
       }
     }
 
-    const rows = await this.db
-      .select()
-      .from(equipmentSelfInspections)
-      .where(eq(equipmentSelfInspections.equipmentId, equipmentId))
-      .orderBy(desc(equipmentSelfInspections.inspectionDate))
-      .limit(100);
-
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(entry.name);
-
-    sheet.columns = [
-      { header: '점검일', key: 'date', width: 15 },
-      { header: '외관', key: 'appearance', width: 10 },
-      { header: '기능', key: 'functionality', width: 10 },
-      { header: '안전', key: 'safety', width: 10 },
-      { header: '교정상태', key: 'calibrationStatus', width: 12 },
-      { header: '전체결과', key: 'overallResult', width: 10 },
-      { header: '비고', key: 'remarks', width: 25 },
-      { header: '상태', key: 'status', width: 10 },
-    ];
-
-    rows.forEach((row) => {
-      sheet.addRow({
-        date: this.formatDate(row.inspectionDate),
-        appearance: row.appearance,
-        functionality: row.functionality,
-        safety: row.safety,
-        calibrationStatus: row.calibrationStatus,
-        overallResult: row.overallResult,
-        remarks: row.remarks ?? '-',
-        status: row.status,
-      });
-    });
-
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
-    return {
-      buffer,
-      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.xlsx`,
-    };
+    return { buffer, mimeType: XLSX_MIME, filename: this.makeFilename(entry) };
+  }
+
+  /**
+   * JSONB 기능 검증 배열 안전 파싱
+   * DB의 acquisitionFunctions/processingFunctions/controlFunctions 컬럼은
+   * JSONB 타입이며 [{name, criteria, result}] 형태를 기대합니다.
+   */
+  private parseJsonbFunctionArray(
+    raw: unknown
+  ): { name: string; criteria: string; result: string }[] {
+    if (!raw) return [];
+    try {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(
+          (item: unknown): item is { name: string; criteria: string; result: string } =>
+            typeof item === 'object' &&
+            item !== null &&
+            typeof (item as Record<string, unknown>).name === 'string'
+        )
+        .map((item) => ({
+          name: item.name,
+          criteria: item.criteria ?? '-',
+          result: item.result ?? '-',
+        }));
+    } catch {
+      return [];
+    }
   }
 }

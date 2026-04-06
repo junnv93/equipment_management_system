@@ -48,7 +48,7 @@
     "calibrationDate": "Calibration Date",
     "nextCalibrationDate": "Next Calibration Date",
     "calibrationAgency": "Calibration Agency",
-    "calibrationMethod": "Calibration Method",
+    "managementMethod": "Management Method",
     "result": "Calibration Result",
     "certificate": "Calibration Certificate",
     "notes": "Notes"
@@ -84,7 +84,7 @@
       "createdAt": "Created"
     },
     "actions": {
-      "printPdf": "Print/PDF",
+      "exportExcel": "Export Excel",
       "delete": "Delete",
       "submitForReview": "Submit for Review",
       "reject": "Reject",
@@ -190,6 +190,8 @@
       "rejectSuccessDesc": "The calibration plan has been rejected.",
       "rejectError": "Rejection Failed",
       "rejectErrorDesc": "An error occurred during rejection.",
+      "exportError": "Export Failed",
+      "exportErrorDesc": "An error occurred while generating the Excel file.",
       "deleteSuccess": "Deleted",
       "deleteSuccessDesc": "The calibration plan has been deleted.",
       "deleteError": "Deletion Failed",
@@ -653,6 +655,7 @@
     "saving": "Saving...",
     "records": "Inspection Records",
     "noRecords": "No inspection records yet",
+    "loadError": "Failed to load inspection records",
     "toasts": {
       "createSuccess": "Inspection record created.",
       "createError": "Failed to create inspection record.",

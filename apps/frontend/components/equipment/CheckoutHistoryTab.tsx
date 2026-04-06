@@ -201,7 +201,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
    * 반출 가능 상태 확인
    *
    * UL-QP-18 기준:
-   * - 이미 반출 중(checked_out), 폐기(retired), 사용 중(in_use)인 장비는 반출 불가
+   * - 이미 반출 중(checked_out), 폐기(retired)인 장비는 반출 불가
    * - 부적합(non_conforming), 교정기한초과(calibration_overdue)인 장비도
    *   교정/수리 목적으로는 반출 가능
    * - 외부 대여(rental)는 available 상태에서만 가능
@@ -229,7 +229,6 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       if (currentStatus === ESVal.CHECKED_OUT)
         return t('checkoutHistoryTab.disabledReasons.checked_out');
       if (currentStatus === ESVal.RETIRED) return t('checkoutHistoryTab.disabledReasons.retired');
-      if (currentStatus === ESVal.IN_USE) return t('checkoutHistoryTab.disabledReasons.in_use');
     }
     return null;
   };

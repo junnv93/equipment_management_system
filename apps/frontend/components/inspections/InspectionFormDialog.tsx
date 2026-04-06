@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { isConflictError } from '@/lib/api/error';
+import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,11 +29,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { queryKeys } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import type { CreateInspectionDto } from '@/lib/api/calibration-api';
-import type {
-  InspectionJudgment,
-  InspectionResult,
-  EquipmentClassification,
-} from '@equipment-management/schemas';
+import type { InspectionJudgment, InspectionResult } from '@equipment-management/schemas';
 
 interface InspectionItemForm {
   checkItem: string;
@@ -43,23 +41,25 @@ interface InspectionItemForm {
 interface InspectionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  calibrationId: string;
   equipmentId: string;
+  equipmentName?: string;
+  calibrationId?: string;
 }
 
 export default function InspectionFormDialog({
   open,
   onOpenChange,
-  calibrationId,
   equipmentId,
+  equipmentName,
+  calibrationId,
 }: InspectionFormDialogProps) {
   const t = useTranslations('calibration');
+  const tEquip = useTranslations('equipment');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Form state
   const [inspectionDate, setInspectionDate] = useState('');
-  const [classification, setClassification] = useState<EquipmentClassification | ''>('');
   const [inspectionCycle, setInspectionCycle] = useState('');
   const [calibrationValidityPeriod, setCalibrationValidityPeriod] = useState('');
   const [overallResult, setOverallResult] = useState<InspectionResult | ''>('');
@@ -68,7 +68,6 @@ export default function InspectionFormDialog({
 
   const resetForm = () => {
     setInspectionDate('');
-    setClassification('');
     setInspectionCycle('');
     setCalibrationValidityPeriod('');
     setOverallResult('');
@@ -76,21 +75,55 @@ export default function InspectionFormDialog({
     setItems([]);
   };
 
+  const tErrors = useTranslations('errors');
+
   const createMutation = useMutation({
-    mutationFn: (data: CreateInspectionDto) =>
-      calibrationApi.intermediateInspections.create(calibrationId, data),
+    mutationFn: (data: CreateInspectionDto) => {
+      if (calibrationId) {
+        return calibrationApi.intermediateInspections.create(calibrationId, data);
+      }
+      return calibrationApi.intermediateInspections.createByEquipment(equipmentId, data);
+    },
     onSuccess: () => {
       toast({ description: t('intermediateInspection.toasts.createSuccess') });
+      // 교차 캐시 무효화: 점검 목록 + 교정 전체 + 장비 상세
       queryClient.invalidateQueries({
-        queryKey: queryKeys.intermediateInspections.byCalibration(calibrationId),
+        queryKey: queryKeys.equipment.intermediateInspections(equipmentId),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.detail(equipmentId),
+      });
+      if (calibrationId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.intermediateInspections.byCalibration(calibrationId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: queryKeys.calibrations.all,
       });
       resetForm();
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
+      // NO_ACTIVE_CALIBRATION 에러 특별 처리
+      const apiError = error as Error & { response?: { code?: string } };
+      if (apiError.response?.code === 'NO_ACTIVE_CALIBRATION') {
+        toast({
+          variant: 'destructive',
+          description: tEquip('inspection.noActiveCalibration'),
+        });
+        return;
+      }
+      // VERSION_CONFLICT 에러 처리
+      if (isConflictError(error)) {
+        const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, tErrors);
+        toast({
+          title: conflictInfo.title,
+          description: conflictInfo.message,
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         variant: 'destructive',
         description: t('intermediateInspection.toasts.createError'),
@@ -118,7 +151,7 @@ export default function InspectionFormDialog({
 
     const dto: CreateInspectionDto = {
       inspectionDate,
-      ...(classification ? { classification } : {}),
+      classification: 'calibrated' as const,
       ...(inspectionCycle ? { inspectionCycle } : {}),
       ...(calibrationValidityPeriod ? { calibrationValidityPeriod } : {}),
       ...(overallResult ? { overallResult } : {}),
@@ -144,9 +177,7 @@ export default function InspectionFormDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('intermediateInspection.formTitle')}</DialogTitle>
-          <DialogDescription>
-            {equipmentId.substring(0, 8)}... / {calibrationId.substring(0, 8)}...
-          </DialogDescription>
+          {equipmentName && <DialogDescription>{equipmentName}</DialogDescription>}
         </DialogHeader>
 
         <div className="space-y-4">
@@ -161,50 +192,28 @@ export default function InspectionFormDialog({
             />
           </div>
 
-          {/* 장비 분류 + 종합 판정 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t('intermediateInspection.classification')}</Label>
-              <Select
-                value={classification}
-                onValueChange={(v) => setClassification(v as EquipmentClassification)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="calibrated">
-                    {t('intermediateInspection.classificationOptions.calibrated')}
-                  </SelectItem>
-                  <SelectItem value="non_calibrated">
-                    {t('intermediateInspection.classificationOptions.non_calibrated')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t('intermediateInspection.overallResult')}</Label>
-              <Select
-                value={overallResult}
-                onValueChange={(v) => setOverallResult(v as InspectionResult)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pass">
-                    {t('intermediateInspection.resultOptions.pass')}
-                  </SelectItem>
-                  <SelectItem value="fail">
-                    {t('intermediateInspection.resultOptions.fail')}
-                  </SelectItem>
-                  <SelectItem value="conditional">
-                    {t('intermediateInspection.resultOptions.conditional')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* 종합 판정 */}
+          <div className="space-y-2">
+            <Label>{t('intermediateInspection.overallResult')}</Label>
+            <Select
+              value={overallResult}
+              onValueChange={(v) => setOverallResult(v as InspectionResult)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pass">
+                  {t('intermediateInspection.resultOptions.pass')}
+                </SelectItem>
+                <SelectItem value="fail">
+                  {t('intermediateInspection.resultOptions.fail')}
+                </SelectItem>
+                <SelectItem value="conditional">
+                  {t('intermediateInspection.resultOptions.conditional')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 점검 주기 + 교정 유효기간 */}
@@ -225,17 +234,6 @@ export default function InspectionFormDialog({
                 placeholder={t('intermediateInspection.validityPeriodPlaceholder')}
               />
             </div>
-          </div>
-
-          {/* 비고 */}
-          <div className="space-y-2">
-            <Label>{t('intermediateInspection.remarks')}</Label>
-            <Textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder={t('intermediateInspection.remarksPlaceholder')}
-              rows={3}
-            />
           </div>
 
           {/* 점검 항목 동적 배열 */}
@@ -326,6 +324,17 @@ export default function InspectionFormDialog({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* 비고 */}
+          <div className="space-y-2">
+            <Label>{t('intermediateInspection.remarks')}</Label>
+            <Textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder={t('intermediateInspection.remarksPlaceholder')}
+              rows={3}
+            />
           </div>
         </div>
 

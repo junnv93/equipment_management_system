@@ -13,7 +13,6 @@ export async function detectEquipmentStatus(page: Page): Promise<EquipmentStatus
   const possibleStatuses: EquipmentStatus[] = [
     'non_conforming',
     'available',
-    'in_use',
     'checked_out',
     'calibration_scheduled',
     'calibration_overdue',

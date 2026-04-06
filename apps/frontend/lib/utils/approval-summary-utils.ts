@@ -43,8 +43,8 @@ export function getLocalizedSummary(
         equipment: data.equipmentName,
         managementNumber: data.managementNumber,
       });
-    case 'software':
-      return t('summaryTemplates.software', { name: data.softwareName });
+    case 'software_validation':
+      return t('summaryTemplates.software_validation', { name: data.softwareName });
     case 'inspection':
       return t('summaryTemplates.inspection', { equipment: data.equipmentName });
     case 'non_conformance':

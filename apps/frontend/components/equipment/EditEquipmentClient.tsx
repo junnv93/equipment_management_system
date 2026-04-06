@@ -140,7 +140,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
       : undefined,
     calibrationAgency: equipment.calibrationAgency || undefined,
     needsIntermediateCheck: equipment.needsIntermediateCheck || false,
-    calibrationMethod: equipment.calibrationMethod || undefined,
+    managementMethod: equipment.managementMethod || undefined,
     lastIntermediateCheckDate: (equipment as Record<string, unknown>).lastIntermediateCheckDate
       ? new Date((equipment as Record<string, unknown>).lastIntermediateCheckDate as string)
           .toISOString()

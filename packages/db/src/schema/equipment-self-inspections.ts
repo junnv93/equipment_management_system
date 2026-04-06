@@ -1,4 +1,14 @@
-import { pgTable, varchar, timestamp, text, uuid, index, integer, date } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  varchar,
+  timestamp,
+  text,
+  uuid,
+  index,
+  integer,
+  date,
+  jsonb,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import {
   SELF_INSPECTION_ITEM_JUDGMENT_VALUES,
@@ -45,11 +55,15 @@ export const equipmentSelfInspections = pgTable(
       .$type<SelfInspectionItemJudgment>()
       .notNull(),
 
-    // 전체 결과
+    // 전체 결���
     overallResult: varchar('overall_result', { length: 10 })
       .$type<SelfInspectionResult>()
       .notNull(),
     remarks: text('remarks'),
+
+    // 기타 특기사항 (조치내용) — QP-18-05 섹션 3
+    // 형식: [{content: string, date: string | null}]
+    specialNotes: jsonb('special_notes').$type<{ content: string; date: string | null }[]>(),
 
     // 점검 주기 (월 단위)
     inspectionCycle: integer('inspection_cycle').notNull().default(6),
@@ -90,22 +104,65 @@ export const selfInspectionResultValues = SELF_INSPECTION_RESULT_VALUES;
 export const selfInspectionStatusValues = SELF_INSPECTION_STATUS_VALUES;
 
 // ============================================================================
+// 자체점검 항목 (유연한 체크리스트 — QP-18-05 섹션 2)
+// ============================================================================
+
+/**
+ * 자체점검 개별 항목
+ *
+ * 기본 항목: 외관검사, 출력 특성 점검, 안전 점검, 기능 점검
+ * 사용자가 항목을 추가/삭제할 수 있음
+ */
+export const selfInspectionItems = pgTable(
+  'self_inspection_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+
+    inspectionId: uuid('inspection_id')
+      .notNull()
+      .references(() => equipmentSelfInspections.id, { onDelete: 'cascade' }),
+    itemNumber: integer('item_number').notNull(),
+    checkItem: varchar('check_item', { length: 300 }).notNull(),
+    checkResult: varchar('check_result', { length: 10 })
+      .$type<SelfInspectionItemJudgment>()
+      .notNull(),
+  },
+  (table) => ({
+    inspectionIdIdx: index('self_inspection_items_inspection_id_idx').on(table.inspectionId),
+  })
+);
+
+export type SelfInspectionItem = typeof selfInspectionItems.$inferSelect;
+export type NewSelfInspectionItem = typeof selfInspectionItems.$inferInsert;
+
+// ============================================================================
 // Relations
 // ============================================================================
 
-export const equipmentSelfInspectionsRelations = relations(equipmentSelfInspections, ({ one }) => ({
-  equipment: one(equipment, {
-    fields: [equipmentSelfInspections.equipmentId],
-    references: [equipment.id],
-  }),
-  inspector: one(users, {
-    fields: [equipmentSelfInspections.inspectorId],
-    references: [users.id],
-    relationName: 'selfInspectionInspector',
-  }),
-  confirmer: one(users, {
-    fields: [equipmentSelfInspections.confirmedBy],
-    references: [users.id],
-    relationName: 'selfInspectionConfirmer',
+export const equipmentSelfInspectionsRelations = relations(
+  equipmentSelfInspections,
+  ({ one, many }) => ({
+    equipment: one(equipment, {
+      fields: [equipmentSelfInspections.equipmentId],
+      references: [equipment.id],
+    }),
+    inspector: one(users, {
+      fields: [equipmentSelfInspections.inspectorId],
+      references: [users.id],
+      relationName: 'selfInspectionInspector',
+    }),
+    confirmer: one(users, {
+      fields: [equipmentSelfInspections.confirmedBy],
+      references: [users.id],
+      relationName: 'selfInspectionConfirmer',
+    }),
+    items: many(selfInspectionItems),
+  })
+);
+
+export const selfInspectionItemsRelations = relations(selfInspectionItems, ({ one }) => ({
+  inspection: one(equipmentSelfInspections, {
+    fields: [selfInspectionItems.inspectionId],
+    references: [equipmentSelfInspections.id],
   }),
 }));

@@ -30,9 +30,9 @@ import {
   EquipmentStatusValues as ESVal,
   NonConformanceStatusValues as NCSVal,
   NonConformanceTypeValues as NCTVal,
-  CalibrationMethodValues as CMVal,
+  ManagementMethodValues as CMVal,
 } from '@equipment-management/schemas';
-import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
@@ -68,7 +68,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: equipmentData.calibrationRequired || 'required',
-      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
+      managementMethod: CMVal.EXTERNAL_CALIBRATION,
       nextCalibrationDate: equipmentData.nextCalibrationDate?.toISOString(),
       isActive: equipmentData.isActive ?? true,
       manufacturer: 'Test Manufacturer',
@@ -213,7 +213,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     // 2. Set calibrationRequired = 'required' and status = 'available' and isActive = true
-    const equipment = await createTestEquipment(request, token, {
+    const _equipment = await createTestEquipment(request, token, {
       managementNumber,
       name: `Test Equipment 1.3 ${timestamp}`,
       status: ESVal.AVAILABLE,

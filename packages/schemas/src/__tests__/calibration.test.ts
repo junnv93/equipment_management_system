@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 
 import { isCalibration, CalibrationStatusEnum } from '../calibration';
-import { CalibrationMethodEnum } from '../enums';
+import { ManagementMethodEnum } from '../enums';
 
 describe('Calibration Type Guards and Schemas', () => {
   describe('isCalibration', () => {
@@ -12,7 +12,7 @@ describe('Calibration Type Guards and Schemas', () => {
         calibrationManagerId: '123e4567-e89b-12d3-a456-426614174002',
         calibrationDate: new Date(),
         nextCalibrationDate: new Date(),
-        calibrationMethod: CalibrationMethodEnum.enum.external_calibration,
+        managementMethod: ManagementMethodEnum.enum.external_calibration,
         status: CalibrationStatusEnum.enum.completed,
         calibrationAgency: 'Test Agency',
         createdAt: new Date(),
@@ -57,7 +57,7 @@ describe('Calibration Type Guards and Schemas', () => {
         calibrationManagerId: '123e4567-e89b-12d3-a456-426614174002',
         calibrationDate: new Date(),
         nextCalibrationDate: new Date(),
-        calibrationMethod: 'invalid-method',
+        managementMethod: 'invalid-method',
         status: 'invalid-status',
         calibrationAgency: 'Test Agency',
         createdAt: new Date(),
@@ -72,4 +72,4 @@ describe('Calibration Type Guards and Schemas', () => {
       expect(isCalibration(undefined)).toBe(false);
     });
   });
-}); 
+});

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  CalibrationMethodEnum,
+  ManagementMethodEnum,
   EquipmentStatusEnum,
   SiteEnum,
   SiteCodeEnum,
@@ -62,19 +62,19 @@ export const baseEquipmentSchema = z.object({
   specMatch: SpecMatchEnum.optional(), // 시방일치 여부: 'match' | 'mismatch'
   calibrationRequired: CalibrationRequiredEnum.optional(), // 교정필요 여부: 'required' | 'not_required'
 
-  // 교정 정보
-  calibrationCycle: z.number().int().positive().optional(),
-  lastCalibrationDate: z.coerce.date().optional(),
-  nextCalibrationDate: z.coerce.date().optional(),
-  calibrationAgency: z.string().optional(), // placeholder: HCT
+  // 교정 정보 (nullable: calibrationRequired 전환 시 명시적 null 클리어)
+  calibrationCycle: z.number().int().positive().optional().nullable(),
+  lastCalibrationDate: z.coerce.date().optional().nullable(),
+  nextCalibrationDate: z.coerce.date().optional().nullable(),
+  calibrationAgency: z.string().optional().nullable(), // placeholder: HCT
   // 기본값이 있는 필드는 생성 시 선택적으로 처리 (서비스 레이어에서 기본값 적용)
   needsIntermediateCheck: z.boolean().optional(),
-  calibrationMethod: CalibrationMethodEnum.optional(), // 라벨: 관리 방법
+  managementMethod: ManagementMethodEnum.optional(), // 라벨: 관리 방법
 
-  // 중간점검 정보 (신규: 3개 필드로 분리)
-  lastIntermediateCheckDate: z.coerce.date().optional(), // 최종 중간 점검일
-  intermediateCheckCycle: z.number().int().positive().optional(), // 중간점검 주기 (개월)
-  nextIntermediateCheckDate: z.coerce.date().optional(), // 차기 중간 점검일
+  // 중간점검 정보 (nullable: calibrationRequired 전환 시 명시적 null 클리어)
+  lastIntermediateCheckDate: z.coerce.date().optional().nullable(), // 최종 중간 점검일
+  intermediateCheckCycle: z.number().int().positive().optional().nullable(), // 중간점검 주기 (개월)
+  nextIntermediateCheckDate: z.coerce.date().optional().nullable(), // 차기 중간 점검일
 
   // 관리 정보
   purchaseYear: z.number().int().min(1990).max(2100).optional().nullable(), // 구입년도 (연도 정수)
@@ -89,6 +89,7 @@ export const baseEquipmentSchema = z.object({
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
   technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)
+  deputyManagerId: nullableOptionalUuid(), // 부담당자 ID (운영 책임자 부) — QP-18-02
 
   // 장비 타입 (DB와 동기화)
   equipmentType: z.string().optional(), // 장비 타입
@@ -137,7 +138,8 @@ export const equipmentSchema = baseEquipmentSchema.extend({
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   // DB에 있는 추가 필드들
-  managerId: z.string().optional().nullable(), // 담당자 ID
+  managerId: z.string().optional().nullable(), // 담당자 ID (운영 책임자 정)
+  deputyManagerId: z.string().optional().nullable(), // 부담당자 ID (운영 책임자 부) — QP-18-02
   intermediateCheckSchedule: z.coerce.date().optional().nullable(), // 중간점검 일정
   repairHistory: z.string().optional().nullable(), // 수리 내역
 });
@@ -153,7 +155,7 @@ export const equipmentFilterSchema = z.object({
   site: SiteEnum.optional(),
   classification: ClassificationEnum.optional(), // 분류 필터 (fcc_emc_rf, general_emc 등)
   classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드 필터
-  calibrationMethod: CalibrationMethodEnum.optional(), // 교정 방법 필터 (외부교정/자체점검/비대상)
+  managementMethod: ManagementMethodEnum.optional(), // 관리 방법 필터 (외부교정/자체점검/비대상)
   calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이내 교정 임박
   calibrationDueAfter: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이후 교정 여유
   calibrationOverdue: z
@@ -209,6 +211,7 @@ export type EquipmentFilter = z.input<typeof equipmentFilterSchema>;
  */
 export const equipmentResponseSchema = equipmentSchema.extend({
   teamName: z.string().nullable().optional(), // 팀 테이블에서 조인된 팀 이름
+  deputyManagerName: z.string().nullable().optional(), // 부담당자 이름 (users 조인)
 });
 export type EquipmentResponse = z.infer<typeof equipmentResponseSchema>;
 

@@ -33,7 +33,7 @@ import {
 } from '@/lib/design-tokens';
 import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import type { CalibrationMethod, EquipmentStatus } from '@equipment-management/schemas';
+import type { ManagementMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 /**
  * 테이블 열 정의
@@ -205,13 +205,13 @@ const EquipmentRow = memo(function EquipmentRow({
       calculateCalibrationStatus(
         equipment.status,
         !!equipment.calibrationRequired,
-        equipment.calibrationMethod as CalibrationMethod | undefined,
+        equipment.managementMethod as ManagementMethod | undefined,
         equipment.nextCalibrationDate
       ),
     [
       equipment.status,
       equipment.calibrationRequired,
-      equipment.calibrationMethod,
+      equipment.managementMethod,
       equipment.nextCalibrationDate,
     ]
   );

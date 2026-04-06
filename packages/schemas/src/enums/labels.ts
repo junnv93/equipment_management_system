@@ -1,5 +1,5 @@
-import type { EquipmentStatus, CalibrationMethod, UserRole } from './equipment';
-import { EquipmentStatusEnum, CalibrationMethodEnum, UserRoleEnum } from './equipment';
+import type { EquipmentStatus, ManagementMethod, UserRole } from './equipment';
+import { EquipmentStatusEnum, ManagementMethodEnum, UserRoleEnum } from './equipment';
 import type { CheckoutStatus, CheckoutPurpose } from './checkout';
 import type {
   CalibrationApprovalStatus,
@@ -35,10 +35,10 @@ import type { UserStatus } from './shared';
 //    대신 lib/i18n/use-enum-labels.ts의 hook을 사용하세요:
 //    - useSiteLabels()              → SITE_LABELS 대체
 //    - useClassificationLabels()    → CLASSIFICATION_LABELS 대체
-//    - useCalibrationMethodLabels() → CALIBRATION_METHOD_LABELS 대체
+//    - useManagementMethodLabels() → MANAGEMENT_METHOD_LABELS 대체
 //    i18n 메시지 키:
 //    - equipment.siteLabel.*        / equipment.classification.*
-//    - equipment.filters.calibrationMethodLabel.*
+//    - equipment.filters.managementMethodLabel.*
 //    - checkouts.status.*           / calibration.planStatus.*
 // ============================================================================
 
@@ -50,7 +50,6 @@ import type { UserStatus } from './shared';
 export const EQUIPMENT_STATUS_VALUES = EquipmentStatusEnum.options;
 export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
   available: '사용 가능',
-  in_use: '사용 중',
   checked_out: '반출 중',
   calibration_scheduled: '교정 예정',
   calibration_overdue: '교정 기한 초과',
@@ -72,7 +71,6 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
  */
 export const EQUIPMENT_STATUS_FILTER_OPTIONS: EquipmentStatus[] = [
   'available',
-  'in_use',
   'checked_out',
   'calibration_overdue',
   'non_conforming',
@@ -140,12 +138,12 @@ export function findCheckoutStatusGroupKey(filterValue: string): CheckoutStatusG
 }
 
 /**
- * 교정 방법 라벨 (UI 표시용)
+ * 관리 방법 라벨 (UI 표시용)
  *
- * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(equipment.calibrationMethod.*)를 사용하세요.
+ * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(equipment.managementMethod.*)를 사용하세요.
  */
-export const CALIBRATION_METHOD_VALUES = CalibrationMethodEnum.options;
-export const CALIBRATION_METHOD_LABELS: Record<CalibrationMethod, string> = {
+export const MANAGEMENT_METHOD_VALUES = ManagementMethodEnum.options;
+export const MANAGEMENT_METHOD_LABELS: Record<ManagementMethod, string> = {
   external_calibration: '외부 교정',
   self_inspection: '자체 점검',
   not_applicable: '비대상',

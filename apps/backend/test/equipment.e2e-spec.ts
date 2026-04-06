@@ -155,7 +155,7 @@ describe('EquipmentController (e2e)', () => {
         nextCalibrationDate: new Date('2025-01-01').toISOString(),
         calibrationAgency: 'Test Agency',
         needsIntermediateCheck: true,
-        calibrationMethod: 'external_calibration',
+        managementMethod: 'external_calibration',
         purchaseYear: 2023,
         supplier: 'Test Supplier',
         contactInfo: 'test@example.com',
@@ -399,7 +399,7 @@ describe('EquipmentController (e2e)', () => {
       // 장비 업데이트 (UUID 사용)
       // 표준 상태값 사용: packages/schemas/src/enums.ts 참조
       const updateData = {
-        status: 'in_use' as const, // API 표준 상태값: 사용 중
+        status: 'spare' as const,
         description: 'Updated Description',
         location: 'Updated Location',
         approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
@@ -442,7 +442,7 @@ describe('EquipmentController (e2e)', () => {
         nextCalibrationDate: new Date('2025-01-01').toISOString(),
         calibrationAgency: 'Test Agency',
         needsIntermediateCheck: true,
-        calibrationMethod: 'external_calibration',
+        managementMethod: 'external_calibration',
         approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
       };
 
@@ -454,7 +454,7 @@ describe('EquipmentController (e2e)', () => {
 
       expect(response.body.calibrationCycle).toBe(updateData.calibrationCycle);
       expect(response.body.needsIntermediateCheck).toBe(updateData.needsIntermediateCheck);
-      expect(response.body.calibrationMethod).toBe(updateData.calibrationMethod);
+      expect(response.body.managementMethod).toBe(updateData.managementMethod);
     });
 
     it('should not update equipment with invalid status', async () => {
@@ -597,7 +597,7 @@ describe('EquipmentController (e2e)', () => {
       const updateData = {
         name: 'Updated CRUD Equipment Name',
         location: 'Updated CRUD Location',
-        status: 'in_use' as const, // API 표준 상태값: 사용 중
+        status: 'spare' as const,
         approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
       };
 

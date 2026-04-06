@@ -29,7 +29,7 @@ import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
   EquipmentStatus,
   EquipmentStatusValues as ESVal,
-  CalibrationMethodValues as CMVal,
+  ManagementMethodValues as CMVal,
   IncidentTypeValues as ITVal,
 } from '@equipment-management/schemas';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
@@ -65,7 +65,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: 'required',
-      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
+      managementMethod: CMVal.EXTERNAL_CALIBRATION,
       isActive: true,
       manufacturer: 'Test Manufacturer',
       modelNumber: 'TEST-PERM-001',

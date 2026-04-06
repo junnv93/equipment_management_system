@@ -198,7 +198,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
     setSearch,
     setSite,
     setStatus,
-    setCalibrationMethod,
+    setManagementMethod,
     setClassification,
     setIsShared,
     setCalibrationDueFilter,
@@ -278,7 +278,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
           filters={filters}
           onSiteChange={setSite}
           onStatusChange={setStatus}
-          onCalibrationMethodChange={setCalibrationMethod}
+          onManagementMethodChange={setManagementMethod}
           onClassificationChange={setClassification}
           onIsSharedChange={setIsShared}
           onCalibrationDueFilterChange={setCalibrationDueFilter}

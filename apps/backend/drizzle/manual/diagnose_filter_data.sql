@@ -75,11 +75,11 @@ ORDER BY next_calibration_date NULLS LAST;
 -- ==============================================================
 SELECT
     'calibrationMethod 분포' AS category,
-    calibration_method AS value,
+    management_method AS value,
     COUNT(*) AS count
 FROM equipment
 WHERE is_active = true
-GROUP BY calibration_method;
+GROUP BY management_method;
 
 -- ==============================================================
 -- 5. 상태 분포 확인
@@ -129,7 +129,7 @@ SELECT
     COUNT(*) AS count
 FROM equipment
 WHERE is_active = true
-  AND calibration_method = 'external_calibration';
+  AND management_method = 'external_calibration';
 
 -- calibrationMethod=not_applicable
 SELECT
@@ -137,7 +137,7 @@ SELECT
     COUNT(*) AS count
 FROM equipment
 WHERE is_active = true
-  AND calibration_method = 'not_applicable';
+  AND management_method = 'not_applicable';
 
 -- ==============================================================
 -- 7. 공용장비 상세 목록

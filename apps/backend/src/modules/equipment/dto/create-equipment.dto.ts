@@ -6,7 +6,7 @@ import {
   Site,
   SiteCode,
   EQUIPMENT_STATUS_VALUES,
-  CALIBRATION_METHOD_VALUES,
+  MANAGEMENT_METHOD_VALUES,
   SPEC_MATCH_VALUES,
   CALIBRATION_REQUIRED_VALUES,
   SHARED_SOURCE_VALUES,
@@ -14,7 +14,7 @@ import {
   ClassificationEnum,
   SiteCodeEnum,
   ClassificationCodeEnum,
-  type CalibrationMethod,
+  type ManagementMethod,
   type SpecMatch,
   type CalibrationRequired,
   type SharedSource,
@@ -87,9 +87,9 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiPropertyOptional({
     description: '관리 방법 (교정 방법)',
-    enum: CALIBRATION_METHOD_VALUES,
+    enum: MANAGEMENT_METHOD_VALUES,
   })
-  calibrationMethod?: CalibrationMethod;
+  managementMethod?: ManagementMethod;
 
   @ApiPropertyOptional({ description: '최종 중간 점검일' })
   lastIntermediateCheckDate?: Date;
@@ -162,6 +162,9 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiPropertyOptional({ description: '기술 책임자 (사이트/팀 기준 필터링)' })
   technicalManager?: string;
+
+  @ApiPropertyOptional({ description: '부담당자 ID (운영 책임자 부, UUID)' })
+  deputyManagerId?: string | null;
 
   @ApiProperty({ description: '최초 설치 위치' })
   initialLocation: string;

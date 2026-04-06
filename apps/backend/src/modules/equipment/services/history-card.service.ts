@@ -7,9 +7,29 @@ import { calibrations } from '@equipment-management/db/schema/calibrations';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { repairHistory } from '@equipment-management/db/schema/repair-history';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
+import { equipmentLocationHistory } from '@equipment-management/db/schema/equipment-location-history';
+import { equipmentMaintenanceHistory } from '@equipment-management/db/schema/equipment-maintenance-history';
+import { equipmentIncidentHistory } from '@equipment-management/db/schema/equipment-incident-history';
 import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
+import { FormTemplateService } from '../../reports/form-template.service';
+
+const SPEC_MATCH_LABELS: Record<string, string> = {
+  match: '일치',
+  mismatch: '불일치',
+};
+
+const CALIBRATION_REQUIRED_LABELS: Record<string, string> = {
+  required: '필요',
+  not_required: '불필요',
+};
+
+const MANAGEMENT_METHOD_LABELS: Record<string, string> = {
+  external_calibration: '외부교정',
+  self_inspection: '자체점검',
+  not_applicable: '비대상',
+};
 
 interface HistoryCardEquipmentInfo {
   managementNumber: string;
@@ -22,9 +42,24 @@ interface HistoryCardEquipmentInfo {
   location: string;
   teamName: string;
   managerName: string;
+  deputyManagerName: string;
   purchaseYear: string;
   installationDate: string;
   description: string;
+  assetNumber: string;
+  accessories: string;
+  manufacturerContact: string;
+  supplier: string;
+  supplierContact: string;
+  specMatch: string;
+  calibrationRequired: string;
+  calibrationCycle: string;
+  managementMethod: string;
+  manualLocation: string;
+  initialLocation: string;
+  needsIntermediateCheck: string;
+  approverName: string;
+  approvalDate: string;
 }
 
 interface HistoryCardCalibration {
@@ -64,12 +99,37 @@ interface HistoryCardNonConformance {
   actionPlan: string;
 }
 
+interface HistoryCardLocationHistory {
+  [key: string]: string;
+  changedAt: string;
+  previousLocation: string;
+  newLocation: string;
+  notes: string;
+}
+
+interface HistoryCardMaintenanceHistory {
+  [key: string]: string;
+  performedAt: string;
+  content: string;
+}
+
+interface HistoryCardIncidentHistory {
+  [key: string]: string;
+  occurredAt: string;
+  incidentType: string;
+  content: string;
+}
+
 interface HistoryCardData {
   equipment: HistoryCardEquipmentInfo;
   calibrations: HistoryCardCalibration[];
   checkouts: HistoryCardCheckout[];
   repairs: HistoryCardRepair[];
   nonConformances: HistoryCardNonConformance[];
+  locationHistory: HistoryCardLocationHistory[];
+  maintenanceHistory: HistoryCardMaintenanceHistory[];
+  incidentHistory: HistoryCardIncidentHistory[];
+  approverSignaturePath: string | null;
   generatedAt: string;
 }
 
@@ -83,12 +143,14 @@ interface HistoryCardData {
 export class HistoryCardService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
+    private readonly db: AppDatabase,
+    private readonly formTemplateService: FormTemplateService
   ) {}
 
   async generateHistoryCard(equipmentId: string): Promise<Buffer> {
     const data = await this.aggregateData(equipmentId);
-    return this.renderDocx(data);
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-02');
+    return this.renderDocx(data, templateBuf);
   }
 
   private async aggregateData(equipmentId: string): Promise<HistoryCardData> {
@@ -102,13 +164,25 @@ export class HistoryCardService {
       throw new NotFoundException(`장비를 찾을 수 없습니다: ${equipmentId}`);
     }
 
-    // 팀/담당자 정보
+    // 팀/담당자/부담당자/승인자 정보
     const [team] = equipmentRow.teamId
       ? await this.db.select().from(teams).where(eq(teams.id, equipmentRow.teamId)).limit(1)
       : [null];
 
     const [manager] = equipmentRow.managerId
       ? await this.db.select().from(users).where(eq(users.id, equipmentRow.managerId)).limit(1)
+      : [null];
+
+    const [deputyManager] = equipmentRow.deputyManagerId
+      ? await this.db
+          .select()
+          .from(users)
+          .where(eq(users.id, equipmentRow.deputyManagerId))
+          .limit(1)
+      : [null];
+
+    const [approver] = equipmentRow.approvedBy
+      ? await this.db.select().from(users).where(eq(users.id, equipmentRow.approvedBy)).limit(1)
       : [null];
 
     // 교정 이력
@@ -150,6 +224,30 @@ export class HistoryCardService {
       .orderBy(desc(nonConformances.createdAt))
       .limit(50);
 
+    // 위치 변동 이력
+    const locationRows = await this.db
+      .select()
+      .from(equipmentLocationHistory)
+      .where(eq(equipmentLocationHistory.equipmentId, equipmentId))
+      .orderBy(desc(equipmentLocationHistory.changedAt))
+      .limit(50);
+
+    // 유지보수 내역
+    const maintenanceRows = await this.db
+      .select()
+      .from(equipmentMaintenanceHistory)
+      .where(eq(equipmentMaintenanceHistory.equipmentId, equipmentId))
+      .orderBy(desc(equipmentMaintenanceHistory.performedAt))
+      .limit(50);
+
+    // 손상/오작동/변경/수리 내역
+    const incidentRows = await this.db
+      .select()
+      .from(equipmentIncidentHistory)
+      .where(eq(equipmentIncidentHistory.equipmentId, equipmentId))
+      .orderBy(desc(equipmentIncidentHistory.occurredAt))
+      .limit(50);
+
     const formatDate = (d: Date | string | null | undefined): string => {
       if (!d) return '-';
       const date = d instanceof Date ? d : new Date(d);
@@ -168,9 +266,27 @@ export class HistoryCardService {
         location: equipmentRow.location ?? '-',
         teamName: team?.name ?? '-',
         managerName: manager?.name ?? '-',
+        deputyManagerName: deputyManager?.name ?? '-',
         purchaseYear: equipmentRow.purchaseYear ? String(equipmentRow.purchaseYear) : '-',
         installationDate: formatDate(equipmentRow.installationDate),
         description: equipmentRow.description ?? '-',
+        assetNumber: equipmentRow.assetNumber ?? '-',
+        accessories: equipmentRow.accessories ?? '-',
+        manufacturerContact: equipmentRow.manufacturerContact ?? '-',
+        supplier: equipmentRow.supplier ?? '-',
+        supplierContact: equipmentRow.contactInfo ?? '-',
+        specMatch: SPEC_MATCH_LABELS[equipmentRow.specMatch ?? ''] ?? '-',
+        calibrationRequired:
+          CALIBRATION_REQUIRED_LABELS[equipmentRow.calibrationRequired ?? ''] ?? '-',
+        calibrationCycle: equipmentRow.calibrationCycle
+          ? `${equipmentRow.calibrationCycle}개월`
+          : '-',
+        managementMethod: MANAGEMENT_METHOD_LABELS[equipmentRow.managementMethod ?? ''] ?? '-',
+        manualLocation: equipmentRow.manualLocation ?? '-',
+        initialLocation: equipmentRow.initialLocation ?? '-',
+        needsIntermediateCheck: equipmentRow.needsIntermediateCheck ? 'O' : 'X',
+        approverName: approver?.name ?? '-',
+        approvalDate: formatDate(equipmentRow.updatedAt),
       },
       calibrations: calibrationRows.map((row) => ({
         calibrationDate: formatDate(row.calibrationDate),
@@ -201,140 +317,210 @@ export class HistoryCardService {
         correctionContent: row.correctionContent ?? '-',
         actionPlan: row.actionPlan ?? '-',
       })),
+      locationHistory: locationRows.map((row) => ({
+        changedAt: formatDate(row.changedAt),
+        previousLocation: row.previousLocation ?? '-',
+        newLocation: row.newLocation,
+        notes: row.notes ?? '-',
+      })),
+      maintenanceHistory: maintenanceRows.map((row) => ({
+        performedAt: formatDate(row.performedAt),
+        content: row.content,
+      })),
+      incidentHistory: incidentRows.map((row) => ({
+        occurredAt: formatDate(row.occurredAt),
+        incidentType: row.incidentType,
+        content: row.content,
+      })),
+      approverSignaturePath: approver?.signatureImagePath ?? null,
       generatedAt: new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE }),
     };
   }
 
-  private renderDocx(data: HistoryCardData): Buffer {
-    // docxtemplater를 사용하여 프로그래밍적으로 docx 생성
-    // 템플릿 없이 XML로 직접 구성
-    const templateXml = this.buildTemplateXml(data);
-    const zip = new PizZip();
+  /**
+   * 템플릿 기반 docx 생성
+   *
+   * 원본 양식(UL-QP-18-02)을 로드하여 기본정보 셀에 데이터를 주입하고,
+   * 이력 테이블(위치변동/교정/유지보수/사고수리)에 행을 추가합니다.
+   */
+  private renderDocx(data: HistoryCardData, templateBuf: Buffer): Buffer {
+    const zip = new PizZip(templateBuf);
+    let xml = zip.file('word/document.xml')!.asText();
 
-    // Minimal docx structure
-    zip.file('[Content_Types].xml', CONTENT_TYPES_XML);
-    zip.file('_rels/.rels', RELS_XML);
-    zip.file('word/_rels/document.xml.rels', DOCUMENT_RELS_XML);
-    zip.file('word/document.xml', templateXml);
-    zip.file('word/styles.xml', STYLES_XML);
+    const esc = (v: unknown): string =>
+      String(v ?? '-')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 
-    return Buffer.from(zip.generate({ type: 'nodebuffer' }));
-  }
-
-  private escapeXml(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  private buildTemplateXml(data: HistoryCardData): string {
-    const esc = (v: unknown): string => this.escapeXml(String(v ?? '-'));
     const eq = data.equipment;
-    const rows = (items: Record<string, string>[], keys: string[]): string =>
-      items
+
+    // ── 섹션 1: 기본정보 셀 주입 ──
+    // 템플릿 XML에서 빈 셀(<w:p>에 <w:r>이 없는 셀)을 찾아 데이터를 주입
+    // labelFragment: 해당 행을 식별할 수 있는 고유 텍스트 조각 (XML 내 <w:t> 태그 제거 후 매칭)
+    // emptyCellIndex: 해당 행에서 N번째 빈 셀 (0-based)
+    const injectCellAfterLabel = (
+      labelFragment: string,
+      value: string,
+      emptyCellIndex: number
+    ): void => {
+      // 행(<w:tr>...</w:tr>)을 순회하며 labelFragment를 포함하는 행을 찾음
+      const rowRegex = /<w:tr\b[^>]*>[\s\S]*?<\/w:tr>/g;
+      let rowMatch: RegExpExecArray | null;
+      while ((rowMatch = rowRegex.exec(xml)) !== null) {
+        const rowXml = rowMatch[0];
+        // 행 내 모든 텍스트를 추출하여 label 매칭 (XML 태그 제거)
+        const rowText = rowXml.replace(/<[^>]+>/g, '');
+        if (!rowText.includes(labelFragment)) continue;
+
+        // 이 행에서 빈 셀을 찾음: <w:tc>...</w:tc> 중 <w:r>이 없는 셀
+        const cellRegex = /<w:tc\b[^>]*>[\s\S]*?<\/w:tc>/g;
+        let cellMatch: RegExpExecArray | null;
+        let emptyCount = 0;
+        while ((cellMatch = cellRegex.exec(rowXml)) !== null) {
+          const cellXml = cellMatch[0];
+          // 빈 셀 = <w:r>이 없는 셀
+          if (!/<w:r\b/.test(cellXml)) {
+            if (emptyCount === emptyCellIndex) {
+              // </w:p> 앞에 <w:r> 삽입
+              const runXml = `<w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${esc(value)}</w:t></w:r>`;
+              const newCellXml = cellXml.replace('</w:p>', runXml + '</w:p>');
+              const newRowXml = rowXml.replace(cellXml, newCellXml);
+              xml = xml.replace(rowXml, newRowXml);
+              return;
+            }
+            emptyCount++;
+          }
+        }
+        break; // 행을 찾았지만 빈 셀이 부족하면 종료
+      }
+    };
+
+    // Row 2: 관리번호, 자산번호
+    injectCellAfterLabel('관  리', eq.managementNumber, 0);
+    injectCellAfterLabel('산  번', eq.assetNumber, 0);
+    // Row 3: 장비명, 부속품&주요기능
+    injectCellAfterLabel('장    비    명', eq.name, 0);
+    injectCellAfterLabel('부 속 품', eq.accessories, 0);
+    // Row 4: 제조사명 (merged cells — 1st empty)
+    injectCellAfterLabel('제  조', eq.manufacturer, 0);
+    // Row 5: 제조사 연락처
+    injectCellAfterLabel('제조사  연락처', eq.manufacturerContact, 0);
+    // Row 6: 공급사
+    injectCellAfterLabel('공    급    사', eq.supplier, 0);
+    // Row 7: 공급사 연락처
+    injectCellAfterLabel('공급사  연락처', eq.supplierContact, 0);
+    // Row 8: 일련번호 (시방일치 행, "일련번호" 옆 빈 셀)
+    injectCellAfterLabel('일 련', eq.serialNumber, 0);
+    // Row 9: 운영책임자 정
+    injectCellAfterLabel('운  영 책임자', eq.managerName, 0);
+    // Row 10: 교정주기, 부담당자
+    injectCellAfterLabel('교  정  주  기', eq.calibrationCycle, 0);
+    injectCellAfterLabel('부', eq.deputyManagerName, 0);
+    // Row 13: 최초 설치 위치, 설치일시
+    injectCellAfterLabel('최초 설치 위치', eq.initialLocation, 0);
+    injectCellAfterLabel('설 치  일', eq.installationDate, 0);
+
+    // 확인란 (서명/날짜): "/   /" → "승인자 / 승인일"
+    xml = xml.replace('/   /', esc(`${eq.approverName} / ${eq.approvalDate}`));
+
+    // 시방일치 여부: "□일치   □불일치" → 체크 표시
+    if (eq.specMatch === '일치') {
+      xml = xml.replace('□일치   □불일치', '■일치   □불일치');
+    } else if (eq.specMatch === '불일치') {
+      xml = xml.replace('□일치   □불일치', '□일치   ■불일치');
+    }
+
+    // 교정필요 여부: "□필요   □불필요" → 체크 표시
+    if (eq.calibrationRequired === '필요') {
+      xml = xml.replace('□필요   □불필요', '■필요   □불필요');
+    } else if (eq.calibrationRequired === '불필요') {
+      xml = xml.replace('□필요   □불필요', '□필요   ■불필요');
+    }
+
+    // S/W 매뉴얼 보관장소: 빈 "(보관장소 : ...)" 패턴에 위치 주입
+    xml = xml.replace(/\(보관장소\s*:[\s\n]*\)/g, `(보관장소 : ${esc(eq.manualLocation)})`);
+
+    // ── 섹션 2~5: 이력 테이블 행 추가 ──
+    // 이력 테이블은 헤더 행만 있는 빈 테이블이므로 헤더 행 뒤에 데이터 행을 삽입
+
+    const makeRow = (cells: string[], colCount: number): string => {
+      const tcs = cells
+        .slice(0, colCount)
         .map(
-          (item) =>
-            `<w:tr>${keys.map((k) => `<w:tc><w:p><w:r><w:t>${esc(item[k])}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`
+          (c) =>
+            `<w:tc><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>${esc(c)}</w:t></w:r></w:p></w:tc>`
         )
         .join('');
+      return `<w:tr>${tcs}</w:tr>`;
+    };
 
-    const tableHeader = (headers: string[]): string =>
-      `<w:tr>${headers.map((h) => `<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9E2F3"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>${esc(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
+    // 위치 변동 이력 (테이블 1 하단 — "변 \n동  일\n 시" 행 뒤)
+    if (data.locationHistory.length > 0) {
+      const locationRows = data.locationHistory
+        .map((h) => makeRow([h.changedAt, h.newLocation, h.notes], 3))
+        .join('');
+      // "비\n  고" 셀이 포함된 헤더 행의 </w:tr> 뒤에 삽입
+      const locationHeaderEnd = xml.indexOf('비\n  고');
+      if (locationHeaderEnd > -1) {
+        const insertPoint = xml.indexOf('</w:tr>', locationHeaderEnd) + '</w:tr>'.length;
+        xml = xml.slice(0, insertPoint) + locationRows + xml.slice(insertPoint);
+      }
+    }
 
-    const heading = (text: string): string =>
-      `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t>${esc(text)}</w:t></w:r></w:p>`;
+    // 교정 이력 (테이블 1 — "주 요   결 과" 행 뒤)
+    if (data.calibrations.length > 0) {
+      const calRows = data.calibrations
+        .map((c) => makeRow([c.calibrationDate, c.result, c.nextCalibrationDate], 3))
+        .join('');
+      const calHeaderEnd = xml.indexOf('차기 교정\n 예정일');
+      if (calHeaderEnd > -1) {
+        const insertPoint = xml.indexOf('</w:tr>', calHeaderEnd) + '</w:tr>'.length;
+        xml = xml.slice(0, insertPoint) + calRows + xml.slice(insertPoint);
+      }
+    }
 
-    const para = (label: string, value: string): string =>
-      `<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>${esc(label)}: </w:t></w:r><w:r><w:t>${esc(value)}</w:t></w:r></w:p>`;
+    // 유지보수 내역 (테이블 2 — " 장비 유지보수 내역" 제목 뒤)
+    if (data.maintenanceHistory.length > 0) {
+      const maintRows = data.maintenanceHistory
+        .map((m) => makeRow([m.performedAt, m.content], 2))
+        .join('');
+      // "주  요\n    내  용" (유지보수 섹션) 뒤에 삽입
+      const maintHeader = xml.indexOf('장비 유지보수 내역');
+      if (maintHeader > -1) {
+        // 유지보수 헤더 행 = "일   시" + "주  요\n    내  용" 뒤의 </w:tr>
+        const maintHeaderRowEnd = xml.indexOf(
+          '</w:tr>',
+          xml.indexOf('주  요\n    내  용', maintHeader)
+        );
+        if (maintHeaderRowEnd > -1) {
+          const insertPoint = maintHeaderRowEnd + '</w:tr>'.length;
+          xml = xml.slice(0, insertPoint) + maintRows + xml.slice(insertPoint);
+        }
+      }
+    }
 
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">
-<w:body>
-${heading('시험설비 이력카드 (UL-QP-18-02)')}
-${para('생성일', data.generatedAt)}
-<w:p/>
-${heading('1. 장비 기본 정보')}
-${para('관리번호', String(eq.managementNumber))}
-${para('장비명', String(eq.name))}
-${para('모델명', String(eq.modelName))}
-${para('제조사', String(eq.manufacturer))}
-${para('일련번호', String(eq.serialNumber))}
-${para('상태', String(eq.status))}
-${para('사이트', String(eq.site))}
-${para('설치장소', String(eq.location))}
-${para('소속팀', String(eq.teamName))}
-${para('담당자', String(eq.managerName))}
-${para('구입년도', String(eq.purchaseYear))}
-${para('설치일', String(eq.installationDate))}
-${para('장비사양', String(eq.description))}
-<w:p/>
-${heading('2. 교정 이력')}
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/></w:tblPr>
-${tableHeader(['교정일', '차기교정일', '상태', '결과', '담당자ID', '성적서번호'])}
-${rows(data.calibrations, ['calibrationDate', 'nextCalibrationDate', 'status', 'result', 'technicianId', 'certificateNumber'])}
-</w:tbl>
-<w:p/>
-${heading('3. 반출 이력')}
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/></w:tblPr>
-${tableHeader(['반출일', '반입일', '목적', '반출지', '상태'])}
-${rows(data.checkouts, ['checkoutDate', 'returnDate', 'purpose', 'destination', 'status'])}
-</w:tbl>
-<w:p/>
-${heading('4. 수리 이력')}
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/></w:tblPr>
-${tableHeader(['수리일', '수리내용', '결과', '비고'])}
-${rows(data.repairs, ['repairDate', 'description', 'result', 'notes'])}
-</w:tbl>
-<w:p/>
-${heading('5. 부적합 이력')}
-<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/></w:tblPr>
-${tableHeader(['발견일', '유형', '원인', '상태', '조치내용', '조치계획'])}
-${rows(data.nonConformances, ['discoveryDate', 'ncType', 'cause', 'status', 'correctionContent', 'actionPlan'])}
-</w:tbl>
-</w:body>
-</w:document>`;
+    // 손상/오작동/변경/수리 내역 (테이블 2 — " 장비 손상, 오작동" 제목 뒤)
+    if (data.incidentHistory.length > 0) {
+      const incRows = data.incidentHistory
+        .map((inc) => makeRow([inc.occurredAt, `[${inc.incidentType}] ${inc.content}`], 2))
+        .join('');
+      const incHeader = xml.indexOf('장비 손상, 오작동');
+      if (incHeader > -1) {
+        const incHeaderRowEnd = xml.indexOf(
+          '</w:tr>',
+          xml.indexOf('주  요\n    내  용', incHeader)
+        );
+        if (incHeaderRowEnd > -1) {
+          const insertPoint = incHeaderRowEnd + '</w:tr>'.length;
+          xml = xml.slice(0, insertPoint) + incRows + xml.slice(insertPoint);
+        }
+      }
+    }
+
+    // XML 업데이트
+    zip.file('word/document.xml', xml);
+    return Buffer.from(zip.generate({ type: 'nodebuffer' }));
   }
 }
-
-// Minimal OOXML boilerplate for valid docx
-const CONTENT_TYPES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-</Types>`;
-
-const RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`;
-
-const DOCUMENT_RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`;
-
-const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:style w:type="paragraph" w:styleId="Heading1">
-    <w:name w:val="heading 1"/>
-    <w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr>
-    <w:rPr><w:b/><w:sz w:val="28"/></w:rPr>
-  </w:style>
-  <w:style w:type="table" w:styleId="TableGrid">
-    <w:name w:val="Table Grid"/>
-    <w:tblPr>
-      <w:tblBorders>
-        <w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-      </w:tblBorders>
-    </w:tblPr>
-  </w:style>
-</w:styles>`;

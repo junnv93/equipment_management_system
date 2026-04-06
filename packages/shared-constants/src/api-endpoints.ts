@@ -169,7 +169,7 @@ export const API_ENDPOINTS = {
       `/api/calibration-plans/${planId}/items/${itemId}`,
     NEW_VERSION: (id: string) => `/api/calibration-plans/${id}/new-version`,
     VERSION_HISTORY: (id: string) => `/api/calibration-plans/${id}/versions`,
-    PDF: (id: string) => `/api/calibration-plans/${id}/pdf`,
+    EXPORT: (id: string) => `/api/calibration-plans/${id}/export`,
     EXTERNAL_EQUIPMENT: '/api/calibration-plans/equipment/external',
     PENDING_REVIEW: '/api/calibration-plans?status=pending_review',
     PENDING_APPROVAL: '/api/calibration-plans?status=pending_approval',
@@ -254,6 +254,8 @@ export const API_ENDPOINTS = {
     ACTIVATE: (id: string) => `/api/users/${id}/activate`,
     DEACTIVATE: (id: string) => `/api/users/${id}/deactivate`,
     PERMISSIONS: (id: string) => `/api/users/${id}/permissions`,
+    /** 전자서명 업로드/삭제 */
+    SIGNATURE: '/api/users/me/signature',
     /** NextAuth 로그인 시 사용자 동기화 (Internal API Key) */
     SYNC: '/api/users/sync',
   },
@@ -435,9 +437,10 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
-  // 중간점검 관리 (교정 하위)
+  // 중간점검 관리
   // ============================================================================
   INTERMEDIATE_INSPECTIONS: {
+    BY_EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/intermediate-inspections`,
     BY_CALIBRATION: (calibrationId: string) =>
       `/api/calibration/${calibrationId}/intermediate-inspections`,
     GET: (id: string) => `/api/intermediate-inspections/${id}`,
@@ -446,6 +449,16 @@ export const API_ENDPOINTS = {
     REVIEW: (id: string) => `/api/intermediate-inspections/${id}/review`,
     APPROVE: (id: string) => `/api/intermediate-inspections/${id}/approve`,
     REJECT: (id: string) => `/api/intermediate-inspections/${id}/reject`,
+  },
+
+  // ============================================================================
+  // 양식 템플릿 관리
+  // ============================================================================
+  FORM_TEMPLATES: {
+    LIST: '/api/form-templates',
+    DOWNLOAD: (formNumber: string) => `/api/form-templates/${formNumber}/download`,
+    UPLOAD: (formNumber: string) => `/api/form-templates/${formNumber}/upload`,
+    HISTORY: (formNumber: string) => `/api/form-templates/${formNumber}/history`,
   },
 
   // ============================================================================

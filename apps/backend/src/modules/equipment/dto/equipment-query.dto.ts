@@ -4,11 +4,11 @@ import {
   EquipmentFilter,
   equipmentFilterSchema,
   EquipmentStatus,
-  CalibrationMethod,
+  ManagementMethod,
   Classification,
   Site,
   EQUIPMENT_STATUS_VALUES,
-  CALIBRATION_METHOD_VALUES,
+  MANAGEMENT_METHOD_VALUES,
   SiteEnum,
   ClassificationEnum,
 } from '@equipment-management/schemas';
@@ -63,10 +63,10 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
 
   @ApiPropertyOptional({
     description: '교정 방법 (외부교정/자체점검/비대상)',
-    enum: CALIBRATION_METHOD_VALUES,
+    enum: MANAGEMENT_METHOD_VALUES,
     example: 'external_calibration',
   })
-  calibrationMethod?: CalibrationMethod;
+  managementMethod?: ManagementMethod;
 
   @ApiPropertyOptional({
     description: '장비 분류',

@@ -59,9 +59,9 @@ describe('parseEquipmentFiltersFromSearchParams()', () => {
       expect(parseEquipmentFiltersFromSearchParams(params).teamId).toBe('');
     });
 
-    it('calibrationMethod=_all → calibrationMethod=""', () => {
-      const params = new URLSearchParams('calibrationMethod=_all');
-      expect(parseEquipmentFiltersFromSearchParams(params).calibrationMethod).toBe('');
+    it('managementMethod=_all → managementMethod=""', () => {
+      const params = new URLSearchParams('managementMethod=_all');
+      expect(parseEquipmentFiltersFromSearchParams(params).managementMethod).toBe('');
     });
   });
 
@@ -213,7 +213,7 @@ describe('countActiveFilters()', () => {
       search: '오실로스코프',
       site: 'suwon' as never,
       status: 'available' as never,
-      calibrationMethod: 'external' as never,
+      managementMethod: 'external' as never,
       classification: 'fcc_emc_rf' as never,
       isShared: 'shared' as const,
       calibrationDueFilter: 'due_soon' as const,

@@ -44,6 +44,7 @@ import { SoftwareValidationsModule } from './modules/software-validations/softwa
 import { IntermediateInspectionsModule } from './modules/intermediate-inspections/intermediate-inspections.module';
 import { CablesModule } from './modules/cables/cables.module';
 import { SelfInspectionsModule } from './modules/self-inspections/self-inspections.module';
+import { FormTemplateModule } from './modules/reports/form-template.module';
 
 @Module({
   imports: [
@@ -109,6 +110,7 @@ import { SelfInspectionsModule } from './modules/self-inspections/self-inspectio
     IntermediateInspectionsModule, // 중간점검표 (UL-QP-18-03)
     CablesModule, // 케이블/경로 손실 관리 (UL-QP-18-08)
     SelfInspectionsModule, // 자체점검표 (UL-QP-18-05)
+    FormTemplateModule, // 양식 템플릿 관리 (글로벌 — 스토리지 기반)
   ],
   controllers: [],
   providers: [
