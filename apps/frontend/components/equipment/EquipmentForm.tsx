@@ -833,7 +833,26 @@ export function EquipmentForm({
       }
     );
 
-    // 2. 임시등록 모드 전용 필드 추가
+    // 2. 교정 불필요 전환 시 외부교정 필드 명시적 null 클리어 (DB stale data 방지)
+    if (data.calibrationRequired === 'not_required') {
+      Object.assign(processedData, {
+        calibrationCycle: null,
+        lastCalibrationDate: null,
+        nextCalibrationDate: null,
+        calibrationAgency: null,
+      });
+      // 비대상(not_applicable)이면 점검 필드도 클리어
+      if (data.managementMethod !== 'self_inspection') {
+        Object.assign(processedData, {
+          lastIntermediateCheckDate: null,
+          intermediateCheckCycle: null,
+          nextIntermediateCheckDate: null,
+          needsIntermediateCheck: false,
+        });
+      }
+    }
+
+    // 3. 임시등록 모드 전용 필드 추가
     if (isTemporary) {
       Object.assign(processedData, {
         isShared: true,
