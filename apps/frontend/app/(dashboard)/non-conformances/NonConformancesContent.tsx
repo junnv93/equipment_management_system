@@ -441,7 +441,7 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
 
       {/* 원인 */}
       <div className="min-w-0">
-        <p className={NC_LIST_TOKENS.causeTruncate}>{nc.cause}</p>
+        <CauseText cause={nc.cause} />
       </div>
 
       {/* 발견일 */}
@@ -515,6 +515,24 @@ function EmptyState({ hasFilters, onClear }: { hasFilters: boolean; onClear: () 
       )}
     </div>
   );
+}
+
+/**
+ * 원인 텍스트 — 괄호 부가 정보를 별도 줄로 분리
+ */
+function CauseText({ cause }: { cause: string }) {
+  const parenIdx = cause.indexOf('(');
+  if (parenIdx > 0) {
+    const main = cause.slice(0, parenIdx).trim();
+    const detail = cause.slice(parenIdx);
+    return (
+      <>
+        <p className={NC_LIST_TOKENS.causeMain}>{main}</p>
+        <p className={NC_LIST_TOKENS.causeDetail}>{detail}</p>
+      </>
+    );
+  }
+  return <p className={NC_LIST_TOKENS.causeMain}>{cause}</p>;
 }
 
 // ============================================================================

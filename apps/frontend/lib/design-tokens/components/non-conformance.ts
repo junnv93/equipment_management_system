@@ -230,7 +230,7 @@ export const NC_FILTER_TOKENS = {
  * 컬럼: 상태+워크플로우 | 유형 | 장비 | 원인 | 발견일 | 경과일 | 액션
  */
 export const NC_LIST_GRID_COLS =
-  'lg:grid lg:grid-cols-[130px_100px_1fr_minmax(120px,200px)_90px_70px_50px] lg:gap-3 lg:items-center';
+  'lg:grid lg:grid-cols-[130px_100px_1fr_1.2fr_90px_70px_50px] lg:gap-3 lg:items-center';
 
 /**
  * 리스트 행 스타일
@@ -260,8 +260,10 @@ export const NC_LIST_TOKENS = {
   ].join(' '),
   /** 관리번호 */
   managementNumber: 'font-mono text-[11px] text-muted-foreground tabular-nums',
-  /** 원인 텍스트 (truncate) */
-  causeTruncate: 'text-sm text-foreground truncate max-w-[200px] lg:max-w-none',
+  /** 원인 주 텍스트 */
+  causeMain: 'text-sm text-foreground',
+  /** 원인 부가 정보 (괄호 등) */
+  causeDetail: 'text-xs text-muted-foreground mt-0.5',
   /** 날짜 */
   date: 'text-sm text-muted-foreground tabular-nums',
   /** 액션 버튼 */
