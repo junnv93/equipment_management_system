@@ -393,7 +393,12 @@
       "intermediateCheckCycle": "Intermediate Check Cycle (months)",
       "intermediateCheckCyclePlaceholder": "e.g., 6",
       "nextIntermediateCheckDate": "Next Intermediate Check Date",
-      "autoCalculated": "Auto-calculated"
+      "autoCalculated": "Auto-calculated",
+      "selectCalibrationRequired": "Please select calibration required status in Basic Information first",
+      "notApplicableDescription": "Non-applicable equipment does not require calibration or inspection information",
+      "selfInspectionCycle": "Self-Inspection Cycle (months)",
+      "lastSelfInspectionDate": "Last Self-Inspection Date",
+      "nextSelfInspectionDate": "Next Self-Inspection Date"
     },
     "statusLocation": {
       "title": "Status & Location",
@@ -504,7 +509,8 @@
       "registrationError": "An error occurred while registering the equipment.",
       "unknownError": "An unknown error occurred while registering the equipment.",
       "documentUploadPartialFail": "Some documents failed to upload",
-      "documentUploadPartialFailDescription": "Equipment was registered but {count} document(s) failed to upload. Please retry from the detail page."
+      "documentUploadPartialFailDescription": "Equipment was registered but {count} document(s) failed to upload. Please retry from the detail page.",
+      "sharedLink": "Register Shared Equipment"
     },
     "temporary": {
       "title": "Temporary Equipment Info",
