@@ -82,7 +82,7 @@ test.describe('장비 목록 필터', () => {
     await page.click('#filter-calibration');
 
     // 옵션들 확인
-    await expect(page.locator('[role="option"]:has-text("모든 교정 방법")')).toBeVisible();
+    await expect(page.locator('[role="option"]:has-text("모든 관리 방법")')).toBeVisible();
     await expect(page.locator('[role="option"]:has-text("외부 교정")')).toBeVisible();
     await expect(page.locator('[role="option"]:has-text("자체 점검")')).toBeVisible();
 

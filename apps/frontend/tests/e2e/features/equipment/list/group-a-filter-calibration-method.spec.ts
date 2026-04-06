@@ -37,9 +37,9 @@ test.describe('Group A: Calibration Method Filter', () => {
       await expect(managementMethodFilter).toBeVisible();
       await managementMethodFilter.click();
 
-      // 🔥 SSOT 검증: "모든 교정 방법" 옵션
+      // 🔥 SSOT 검증: "모든 관리 방법" 옵션
       await expect(
-        testOperatorPage.getByRole('option', { name: '모든 교정 방법', exact: true })
+        testOperatorPage.getByRole('option', { name: '모든 관리 방법', exact: true })
       ).toBeVisible();
 
       // 🔥 SSOT 검증: MANAGEMENT_METHOD_LABELS의 각 옵션 확인
@@ -151,13 +151,13 @@ test.describe('Group A: Calibration Method Filter', () => {
       const filterBadge = testOperatorPage.getByText(/교정:\s*외부 교정/);
       await expect(filterBadge).toBeVisible({ timeout: 10000 });
 
-      // "모든 교정 방법" 선택 (추가 필터 패널 열기 후)
+      // "모든 관리 방법" 선택 (추가 필터 패널 열기 후)
       await testOperatorPage.getByRole('button', { name: /추가 필터/ }).click();
       const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: '교정 방법 필터 선택',
       });
       await managementMethodFilter.click();
-      await testOperatorPage.getByRole('option', { name: '모든 교정 방법', exact: true }).click();
+      await testOperatorPage.getByRole('option', { name: '모든 관리 방법', exact: true }).click();
 
       // 필터 뱃지가 제거될 때까지 대기 (배지 비가시성 = 필터 해제 완료)
       await expect(filterBadge).not.toBeVisible({ timeout: 10000 });

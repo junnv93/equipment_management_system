@@ -156,12 +156,12 @@ function EquipmentFiltersComponent({
 
   const classificationOptions = useMemo(
     () =>
-      (Object.entries(classificationLabels) as [Classification, string][]).map(
-        ([value, label]) => ({
+      (Object.entries(classificationLabels) as [Classification, string][])
+        .filter(([value]) => value !== 'software')
+        .map(([value, label]) => ({
           value,
           label,
-        })
-      ),
+        })),
     [classificationLabels]
   );
 

@@ -87,7 +87,7 @@ test.describe('Group E-1: URL State Synchronization', () => {
       const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: /교정.*방법/i,
       });
-      await expect(managementMethodFilter).toContainText('모든 교정 방법');
+      await expect(managementMethodFilter).toContainText('모든 관리 방법');
 
       const classificationFilter = testOperatorPage.getByRole('combobox', { name: /분류/i });
       await expect(classificationFilter).toContainText('모든 분류');

@@ -46,10 +46,6 @@ export const TEST_EQUIPMENT_IDS = {
   // Pyeongtaek (Automotive EMC - A)
   TEST_HARNESS_PYT_A: 'eeee6001-0001-4001-8001-000000000001', // available
 
-  // Suwon (Software - P) — calibrationRequired: 'not_required'
-  EMC32_SOFTWARE_SUW_P: 'eeee7001-0001-4001-8001-000000000001', // available, non-calibrated
-  DASY6_SOFTWARE_SUW_P: 'eeee7002-0002-4002-8002-000000000002', // available, non-calibrated
-
   // Convenience aliases for race condition tests (using available equipment)
   EQUIPMENT_1: 'eeee1001-0001-4001-8001-000000000001', // SPECTRUM_ANALYZER_SUW_E (available)
   EQUIPMENT_2: 'eeee1002-0002-4002-8002-000000000002', // SIGNAL_GEN_SUW_E (available)

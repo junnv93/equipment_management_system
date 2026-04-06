@@ -108,9 +108,7 @@ export const EQUIP_AMPLIFIER_UIW_W_ID = 'eeee5004-0004-4004-8004-000000000004'; 
 export const EQUIP_TEST_HARNESS_PYT_A_ID = 'eeee6001-0001-4001-8001-000000000001'; // available
 export const EQUIP_POWER_AMP_PYT_A_ID = 'eeee6002-0002-4002-8002-000000000002'; // available
 
-// Software equipment (P) - Suwon [2 equipment]
-export const EQUIP_EMC32_SUW_P_ID = 'eeee7001-0001-4001-8001-000000000001'; // available
-export const EQUIP_DASY6_SUW_P_ID = 'eeee7002-0002-4002-8002-000000000002'; // available
+// NOTE: 소프트웨어(EMC32, DASY6)는 소프트웨어 관리 모듈에서 관리. 장비 테이블에 포함하지 않음.
 
 // =============================================================================
 // CALIBRATIONS (18 calibrations)

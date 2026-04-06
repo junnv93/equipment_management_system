@@ -13,8 +13,8 @@ import { TEST_EQUIPMENT_IDS } from '../../shared/constants/shared-test-data';
 /** 교정 대상 장비 — 중간점검 UI 표시 */
 const CALIBRATED_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;
 
-/** 비교정 대상 장비 (소프트웨어) — 자체점검 UI 표시 */
-const NON_CALIBRATED_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.EMC32_SOFTWARE_SUW_P;
+/** 자체점검 대상 장비 (managementMethod: self_inspection) — 자체점검 UI 표시 */
+const SELF_INSPECTION_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.MULTIMETER_SUW_R;
 
 test.describe('점검 탭 분기 렌더링', () => {
   test('교정 대상 장비 → 점검 탭에 중간점검 UI 표시', async ({ testOperatorPage: page }) => {
@@ -33,7 +33,7 @@ test.describe('점검 탭 분기 렌더링', () => {
   test('비교정 대상 장비 → 점검 탭에 자체점검 UI + 생성 버튼 표시', async ({
     testOperatorPage: page,
   }) => {
-    await page.goto(`/equipment/${NON_CALIBRATED_EQUIPMENT_ID}?tab=inspection`);
+    await page.goto(`/equipment/${SELF_INSPECTION_EQUIPMENT_ID}?tab=inspection`);
 
     // 자체점검 제목 확인
     await expect(page.getByText('자체점검 이력')).toBeVisible({ timeout: 15000 });

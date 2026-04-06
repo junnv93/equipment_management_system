@@ -24,7 +24,7 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
   EquipmentStatusValues as ESVal,
-  CalibrationMethodValues as CMVal,
+  ManagementMethodValues as CMVal,
 } from '@equipment-management/schemas';
 
 test.describe('Group G: SSOT Filter Utils Verification', () => {
@@ -35,7 +35,7 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       // 복잡한 필터 조합으로 URL 직접 입력
       const filterParams = new URLSearchParams({
         status: ESVal.AVAILABLE,
-        calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
+        managementMethod: CMVal.EXTERNAL_CALIBRATION,
         classification: 'fcc_emc_rf',
         isShared: 'shared',
         calibrationDueFilter: 'due_soon',
@@ -71,7 +71,7 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       // 1. URL 파라미터 검증 (서버와 클라이언트가 동일하게 파싱)
       const currentUrl = testOperatorPage.url();
       expect(currentUrl).toContain('status=available');
-      expect(currentUrl).toContain('calibrationMethod=external_calibration');
+      expect(currentUrl).toContain('managementMethod=external_calibration');
       expect(currentUrl).toContain('classification=fcc_emc_rf');
       expect(currentUrl).toContain('isShared=shared');
       expect(currentUrl).toContain('calibrationDueFilter=due_soon');
@@ -123,7 +123,6 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       // ClientOnly hydration 대기
 
       // 🔥 SSOT 검증: 잘못된 값은 무시되고 기본값 사용
-      const currentUrl = testOperatorPage.url();
 
       // invalid_status는 URL에 남지만 필터로 적용되지 않음
       // 필터 뱃지가 없어야 함 (잘못된 상태는 필터로 인식 안 됨)
@@ -279,7 +278,7 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       expect(currentUrl).not.toContain('status=');
       expect(currentUrl).not.toContain('isShared=');
       expect(currentUrl).not.toContain('calibrationDueFilter=');
-      expect(currentUrl).not.toContain('calibrationMethod=');
+      expect(currentUrl).not.toContain('managementMethod=');
       expect(currentUrl).not.toContain('classification=');
 
       // 필터 뱃지가 없어야 함
@@ -351,8 +350,8 @@ test.describe('Group G: SSOT Filter Utils Verification', () => {
       await testOperatorPage.getByRole('option', { name: /사용 가능/i }).click();
 
       // 2. 교정 방법 필터 적용
-      const calibrationMethodFilter = testOperatorPage.locator('#filter-calibration');
-      await calibrationMethodFilter.click();
+      const managementMethodFilter = testOperatorPage.locator('#filter-calibration');
+      await managementMethodFilter.click();
       await testOperatorPage.getByRole('option', { name: /외부 교정/i }).click();
 
       // 3. 검색어 입력
