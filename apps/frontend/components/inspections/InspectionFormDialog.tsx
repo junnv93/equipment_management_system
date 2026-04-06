@@ -236,17 +236,6 @@ export default function InspectionFormDialog({
             </div>
           </div>
 
-          {/* 비고 */}
-          <div className="space-y-2">
-            <Label>{t('intermediateInspection.remarks')}</Label>
-            <Textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder={t('intermediateInspection.remarksPlaceholder')}
-              rows={3}
-            />
-          </div>
-
           {/* 점검 항목 동적 배열 */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -335,6 +324,17 @@ export default function InspectionFormDialog({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* 비고 */}
+          <div className="space-y-2">
+            <Label>{t('intermediateInspection.remarks')}</Label>
+            <Textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              placeholder={t('intermediateInspection.remarksPlaceholder')}
+              rows={3}
+            />
           </div>
         </div>
 
