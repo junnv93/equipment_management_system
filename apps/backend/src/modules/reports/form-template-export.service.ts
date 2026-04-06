@@ -21,11 +21,7 @@ import {
   intermediateInspectionEquipment,
 } from '@equipment-management/db/schema/intermediate-inspections';
 import { testSoftware } from '@equipment-management/db/schema/test-software';
-import {
-  cables,
-  cableLossMeasurements,
-  cableLossDataPoints,
-} from '@equipment-management/db/schema/cables';
+import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cables';
 import { softwareValidations } from '@equipment-management/db/schema/software-validations';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
@@ -607,7 +603,7 @@ export class FormTemplateExportService {
     doc.setCellValue(0, 3, 3, classificationLabel === '비교정기기' ? 'N/A' : '-');
     // Row 4: 구분행, Row 5: 헤더행 (유지)
     // Row 6+: 데이터 행 — 유연 항목 or 레거시 fallback
-    const resultLabel = (r: string) =>
+    const resultLabel = (r: string): string =>
       r === 'pass' ? '이상 없음' : r === 'fail' ? '부적합' : 'N/A';
 
     let itemData: string[][];
