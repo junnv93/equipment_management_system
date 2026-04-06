@@ -34,6 +34,7 @@ import {
 } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
+import { users } from '@equipment-management/db/schema/users';
 import type { AppDatabase } from '@equipment-management/db';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -883,10 +884,37 @@ export class EquipmentService extends VersionedBaseService {
             teamMap = new Map(teamData.map((t) => [t.id, t.name]));
           }
 
-          // 장비 데이터에 팀 이름 추가
+          // 부담당자 ID 목록 추출 (중복 제거)
+          const deputyManagerIds = [
+            ...new Set(
+              rawItems
+                .filter((item) => item.deputyManagerId)
+                .map((item) => item.deputyManagerId as string)
+            ),
+          ];
+
+          // 부담당자 이름 일괄 조회 (N+1 방지)
+          let deputyManagerMap: Map<string, string> = new Map();
+          if (deputyManagerIds.length > 0) {
+            const deputyData = await this.db
+              .select({ id: users.id, name: users.name })
+              .from(users)
+              .where(
+                sql`${users.id} IN (${sql.join(
+                  deputyManagerIds.map((id) => sql`${id}`),
+                  sql`, `
+                )})`
+              );
+            deputyManagerMap = new Map(deputyData.map((u) => [u.id, u.name]));
+          }
+
+          // 장비 데이터에 팀 이름 + 부담당자 이름 추가
           const items = rawItems.map((item) => ({
             ...item,
             teamName: item.teamId ? teamMap.get(item.teamId) || null : null,
+            deputyManagerName: item.deputyManagerId
+              ? deputyManagerMap.get(item.deputyManagerId) || null
+              : null,
           }));
 
           // 디버깅: 테스트 환경에서 실제 반환된 아이템 수 로깅
@@ -945,7 +973,18 @@ export class EquipmentService extends VersionedBaseService {
             });
           }
 
-          return equipmentData;
+          // 부담당자 이름 resolve
+          let deputyManagerName: string | null = null;
+          if (equipmentData.deputyManagerId) {
+            const [deputy] = await this.db
+              .select({ name: users.name })
+              .from(users)
+              .where(eq(users.id, equipmentData.deputyManagerId))
+              .limit(1);
+            deputyManagerName = deputy?.name ?? null;
+          }
+
+          return { ...equipmentData, deputyManagerName };
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;

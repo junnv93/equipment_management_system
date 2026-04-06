@@ -212,6 +212,7 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   lastIntermediateCheckDate: 'lastIntermediateCheckDate',
   intermediateCheckCycle: 'intermediateCheckCycle',
   technicalManager: 'technicalManager',
+  deputyManagerId: 'deputyManagerId',
 };
 
 export function EquipmentForm({
@@ -435,6 +436,7 @@ export function EquipmentForm({
       manualLocation: initialData?.manualLocation || '',
       accessories: initialData?.accessories || '',
       technicalManager: initialData?.technicalManager || '',
+      deputyManagerId: initialData?.deputyManagerId || null,
       initialLocation: initialData?.initialLocation || '',
       installationDate: initialData?.installationDate
         ? formatDate(initialData.installationDate, 'yyyy-MM-dd')
@@ -816,6 +818,7 @@ export function EquipmentForm({
         manualLocation: data.manualLocation,
         accessories: data.accessories,
         technicalManager: data.technicalManager,
+        deputyManagerId: data.deputyManagerId,
         initialLocation: data.initialLocation,
         status: isTemporary ? 'temporary' : data.status,
         calibrationResult: data.calibrationResult,

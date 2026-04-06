@@ -89,6 +89,7 @@ export const baseEquipmentSchema = z.object({
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
   technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)
+  deputyManagerId: nullableOptionalUuid(), // 부담당자 ID (운영 책임자 부) — QP-18-02
 
   // 장비 타입 (DB와 동기화)
   equipmentType: z.string().optional(), // 장비 타입
@@ -137,7 +138,8 @@ export const equipmentSchema = baseEquipmentSchema.extend({
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   // DB에 있는 추가 필드들
-  managerId: z.string().optional().nullable(), // 담당자 ID
+  managerId: z.string().optional().nullable(), // 담당자 ID (운영 책임자 정)
+  deputyManagerId: z.string().optional().nullable(), // 부담당자 ID (운영 책임자 부) — QP-18-02
   intermediateCheckSchedule: z.coerce.date().optional().nullable(), // 중간점검 일정
   repairHistory: z.string().optional().nullable(), // 수리 내역
 });
@@ -209,6 +211,7 @@ export type EquipmentFilter = z.input<typeof equipmentFilterSchema>;
  */
 export const equipmentResponseSchema = equipmentSchema.extend({
   teamName: z.string().nullable().optional(), // 팀 테이블에서 조인된 팀 이름
+  deputyManagerName: z.string().nullable().optional(), // 부담당자 이름 (users 조인)
 });
 export type EquipmentResponse = z.infer<typeof equipmentResponseSchema>;
 

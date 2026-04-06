@@ -87,6 +87,7 @@ export const equipment = pgTable(
     // 관리 정보
     teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
     managerId: uuid('manager_id').references(() => users.id, { onDelete: 'set null' }),
+    deputyManagerId: uuid('deputy_manager_id').references(() => users.id, { onDelete: 'set null' }), // 운영 책임자 (부) — QP-18-02
     site: varchar('site', { length: 20 }).notNull(), // ✅ 사이트별 권한 관리: 필수 필드 'suwon' | 'uiwang'
     purchaseYear: integer('purchase_year'), // 구입년도 (연도 정수, 예: 2026)
     price: integer('price'),
@@ -144,6 +145,7 @@ export const equipment = pgTable(
       manufacturerIdx: index('equipment_manufacturer_idx').on(table.manufacturer),
       teamIdIdx: index('equipment_team_id_idx').on(table.teamId),
       managerIdIdx: index('equipment_manager_id_idx').on(table.managerId),
+      deputyManagerIdIdx: index('equipment_deputy_manager_id_idx').on(table.deputyManagerId),
       siteIdx: index('equipment_site_idx').on(table.site),
       nextCalibrationDateIdx: index('equipment_next_calibration_date_idx').on(
         table.nextCalibrationDate
@@ -196,6 +198,7 @@ import { equipmentTestSoftware } from './equipment-test-software';
 export type EquipmentWithRelations = Equipment & {
   team?: typeof teams.$inferSelect;
   manager?: typeof users.$inferSelect;
+  deputyManager?: typeof users.$inferSelect;
   checkouts?: Array<typeof checkouts.$inferSelect>;
 };
 
@@ -208,6 +211,12 @@ export const equipmentRelations = relations(equipment, ({ one, many }) => ({
   manager: one(users, {
     fields: [equipment.managerId],
     references: [users.id],
+    relationName: 'equipment_manager',
+  }),
+  deputyManager: one(users, {
+    fields: [equipment.deputyManagerId],
+    references: [users.id],
+    relationName: 'equipment_deputy_manager',
   }),
   documents: many(documents),
   testSoftwareLinks: many(equipmentTestSoftware),

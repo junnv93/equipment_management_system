@@ -128,6 +128,7 @@ export interface FormValues {
   manualLocation?: string;
   accessories?: string;
   technicalManager?: string;
+  deputyManagerId?: string | null; // 부담당자 UUID
   initialLocation?: string;
   installationDate?: string;
   status?: EquipmentStatus;

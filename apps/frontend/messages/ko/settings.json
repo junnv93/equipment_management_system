@@ -50,6 +50,13 @@
         "view:software": "소프트웨어 조회",
         "create:software-change": "소프트웨어 변경 요청",
         "approve:software-change": "소프트웨어 변경 승인",
+        "view:test-software": "시험용 소프트웨어 조회",
+        "create:test-software": "시험용 소프트웨어 등록",
+        "update:test-software": "시험용 소프트웨어 수정",
+        "view:software-validations": "소프트웨어 유효성 확인 조회",
+        "create:software-validation": "소프트웨어 유효성 확인 생성",
+        "submit:software-validation": "소프트웨어 유효성 확인 제출",
+        "approve:software-validation": "소프트웨어 유효성 확인 승인",
         "view:software:requests": "소프트웨어 요청 조회",
         "view:teams": "팀 조회",
         "create:teams": "팀 생성",
@@ -83,7 +90,10 @@
         "complete:equipment-import": "장비 반입 완료",
         "cancel:equipment-import": "장비 반입 취소",
         "manage:system:settings": "시스템 설정 관리",
-        "view:system:settings": "시스템 설정 조회"
+        "view:system:settings": "시스템 설정 조회",
+        "view:self-inspections": "자체점검 조회",
+        "create:self-inspection": "자체점검 등록",
+        "confirm:self-inspection": "자체점검 확인"
       },
       "categories": {
         "equipment": "장비",
@@ -100,6 +110,7 @@
         "audit": "감사 로그",
         "disposal": "폐기",
         "equipmentImports": "장비 반입",
+        "selfInspections": "자체점검",
         "system": "시스템 설정"
       }
     },
@@ -114,6 +125,20 @@
       "phone": "회사 전화",
       "employeeId": "사원번호",
       "userId": "사용자 ID"
+    },
+    "signature": {
+      "title": "전자 서명",
+      "description": "이력카드 등 문서 내보내기 시 결재란에 사용됩니다",
+      "upload": "서명 이미지 업로드",
+      "uploadHint": "PNG, JPEG 형식 (최대 2MB)",
+      "change": "변경",
+      "delete": "삭제",
+      "noSignature": "등록된 서명이 없습니다",
+      "uploadSuccess": "전자 서명이 등록되었습니다",
+      "deleteSuccess": "전자 서명이 삭제되었습니다",
+      "uploadError": "서명 업로드에 실패했습니다",
+      "deleteError": "서명 삭제에 실패했습니다",
+      "confirmDelete": "전자 서명을 삭제하시겠습니까?"
     }
   },
   "nav": {

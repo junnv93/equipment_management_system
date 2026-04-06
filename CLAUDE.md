@@ -36,8 +36,9 @@ pnpm --filter frontend run test       # Frontend tests
 pnpm --filter frontend run test:e2e   # Playwright E2E tests
 
 # Database
-pnpm --filter backend run db:generate # Generate migration
-pnpm --filter backend run db:migrate  # Run migrations
+pnpm --filter backend run db:generate # Generate migration SQL from schema diff
+pnpm --filter backend run db:migrate  # Apply pending migrations (drizzle-kit migrate)
+pnpm --filter backend run db:push     # Direct schema sync (dev prototyping only)
 pnpm --filter backend run db:studio   # Open Drizzle Studio
 
 # Docker (Infrastructure only)

@@ -75,8 +75,9 @@ export function StatusLocationSection({
       isInitialMount.current = false;
       return;
     }
-    // 팀이 변경되면 이전 팀의 기술책임자 선택값을 초기화
+    // 팀이 변경되면 이전 팀의 기술책임자/부담당자 선택값을 초기화
     setValue('technicalManager', '');
+    setValue('deputyManagerId', null);
   }, [currentTeamId, setValue]);
 
   // 기술책임자 목록 로드 (사이트/팀 기준 필터링) — useQuery SSOT 패턴
@@ -277,6 +278,47 @@ export function StatusLocationSection({
                   {currentTeamId
                     ? t('form.statusLocation.techManagerDescriptionWithTeam')
                     : t('form.statusLocation.techManagerDescription')}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* 부담당자 (운영 책임자 부) — UUID 저장 */}
+          <FormField
+            control={control}
+            name="deputyManagerId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('fields.deputyManager')}</FormLabel>
+                <Select
+                  onValueChange={(v) => field.onChange(v === '__none__' ? null : v)}
+                  value={field.value || undefined}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          !currentSite
+                            ? t('form.statusLocation.techManagerNoSite')
+                            : isLoadingManagers
+                              ? t('form.statusLocation.techManagerLoading')
+                              : t('form.statusLocation.deputyManagerPlaceholder')
+                        }
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="__none__">-</SelectItem>
+                    {technicalManagers.map((manager) => (
+                      <SelectItem key={manager.uuid ?? `deputy-${manager.id}`} value={manager.uuid}>
+                        {manager.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {t('form.statusLocation.deputyManagerDescription')}
                 </FormDescription>
                 <FormMessage />
               </FormItem>

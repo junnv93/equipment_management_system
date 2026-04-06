@@ -1,6 +1,6 @@
 {
-  "id": "a496c30e-677c-4ba1-bc4c-f6783ce07515",
-  "prevId": "ec1f50e3-5771-4a6d-a9f1-13bd4214778f",
+  "id": "ec1f50e3-5771-4a6d-a9f1-13bd4214778f",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4679,12 +4679,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "deputy_manager_id": {
-          "name": "deputy_manager_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "site": {
           "name": "site",
           "type": "varchar(20)",
@@ -4937,21 +4931,6 @@
           "method": "btree",
           "with": {}
         },
-        "equipment_deputy_manager_id_idx": {
-          "name": "equipment_deputy_manager_id_idx",
-          "columns": [
-            {
-              "expression": "deputy_manager_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "equipment_site_idx": {
           "name": "equipment_site_idx",
           "columns": [
@@ -5145,15 +5124,6 @@
           "tableFrom": "equipment",
           "tableTo": "users",
           "columnsFrom": ["manager_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "equipment_deputy_manager_id_users_id_fk": {
-          "name": "equipment_deputy_manager_id_users_id_fk",
-          "tableFrom": "equipment",
-          "tableTo": "users",
-          "columnsFrom": ["deputy_manager_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"

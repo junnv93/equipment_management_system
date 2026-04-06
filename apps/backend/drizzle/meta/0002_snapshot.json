@@ -1,6 +1,6 @@
 {
-  "id": "a496c30e-677c-4ba1-bc4c-f6783ce07515",
-  "prevId": "ec1f50e3-5771-4a6d-a9f1-13bd4214778f",
+  "id": "cd3ca6f9-698f-4d8e-87b5-1005449114ce",
+  "prevId": "a496c30e-677c-4ba1-bc4c-f6783ce07515",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5363,6 +5363,12 @@
         "manager_name": {
           "name": "manager_name",
           "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "signature_image_path": {
+          "name": "signature_image_path",
+          "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },

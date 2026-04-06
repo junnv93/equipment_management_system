@@ -202,6 +202,12 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
               <dt className={tokens.dtLabel}>{t('fields.team')}</dt>
               <dd className={tokens.ddValue}>{equipment.teamName || '-'}</dd>
 
+              <dt className={tokens.dtLabel}>{t('fields.technicalManager')}</dt>
+              <dd className={tokens.ddValue}>{equipment.technicalManager || '-'}</dd>
+
+              <dt className={tokens.dtLabel}>{t('fields.deputyManager')}</dt>
+              <dd className={tokens.ddValue}>{equipment.deputyManagerName || '-'}</dd>
+
               <dt className={tokens.dtLabel}>{t('fields.location')}</dt>
               <dd className={tokens.ddValue}>{equipment.location || '-'}</dd>
 

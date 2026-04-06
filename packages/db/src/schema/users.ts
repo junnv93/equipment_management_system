@@ -43,6 +43,9 @@ export const users = pgTable(
     employeeId: varchar('employee_id', { length: 50 }), // 직원 ID
     managerName: varchar('manager_name', { length: 100 }), // 관리자 이름
 
+    // 전자서명 이미지 경로 (프로필에서 업로드, 이력카드 내보내기 시 사용)
+    signatureImagePath: varchar('signature_image_path', { length: 500 }),
+
     // 앱 소유 필드 (Azure AD로 덮어쓰지 않음)
     isActive: boolean('is_active').notNull().default(true), // 활성 상태
     lastLogin: timestamp('last_login'), // 마지막 로그인 시간 (audit.auth.success 이벤트로 갱신)
@@ -77,8 +80,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   leaderOfTeams: many(teams, { relationName: 'teamLeader' }),
 
-  // equipment
-  managedEquipments: many(equipment),
+  // equipment (2 FK → users: manager, deputy_manager)
+  managedEquipments: many(equipment, { relationName: 'equipment_manager' }),
+  deputyManagedEquipments: many(equipment, { relationName: 'equipment_deputy_manager' }),
 
   // checkouts (5 FK → users)
   requestedCheckouts: many(checkouts, { relationName: 'checkout_requester' }),

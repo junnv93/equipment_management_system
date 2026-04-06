@@ -33,6 +33,7 @@ export const updateUserSchema = baseUserSchema.partial().extend({
 // 사용자 조회용 스키마
 export const userSchema = baseUserSchema.extend({
   id: uuidString(),
+  signatureImagePath: z.string().nullable().optional(), // 전자서명 이미지 경로
   isActive: z.boolean(),
   lastLogin: z.date().nullable(),
   equipmentCount: z.number().nonnegative().optional(),
