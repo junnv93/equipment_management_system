@@ -1,8 +1,11 @@
 /**
- * UL-QP-18 양식 카탈로그 — 단일 진실 공급원 (SSOT)
+ * UL-QP-18/19 양식 카탈로그 — 단일 진실 공급원 (SSOT)
  *
  * 양식 번호, 공식 문서명, 보존연한, 구현 상태를 하나의 카탈로그로 관리합니다.
- * 양식명은 UL-QP-18 절차서의 공식 문서명이므로 i18n 대상이 아닙니다.
+ * 양식명은 UL-QP-18/19 절차서의 공식 문서명이므로 i18n 대상이 아닙니다.
+ *
+ * ⚠️ 주의: 양식 번호, 양식명, 보존연한은 공식 절차서 원문에서만 가져와야 합니다.
+ *    AI가 추측하거나 임의로 생성하지 마세요. 절차서 원문을 확인한 후에만 수정하세요.
  */
 
 export interface FormCatalogEntry {
@@ -23,7 +26,7 @@ export interface FormCatalogEntry {
 export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
   'UL-QP-18-01': {
     formNumber: 'UL-QP-18-01',
-    name: '시험설비 관리 대장',
+    name: '시험설비 관리대장',
     retentionYears: -1,
     retentionLabel: '영구보존',
     implemented: true,
@@ -38,28 +41,21 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
   },
   'UL-QP-18-03': {
     formNumber: 'UL-QP-18-03',
-    name: '중간점검표',
+    name: '중간 점검표',
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
   },
-  'UL-QP-18-04': {
-    formNumber: 'UL-QP-18-04',
-    name: '교정 성적서',
-    retentionYears: 5,
-    retentionLabel: '5년',
-    implemented: false,
-  },
   'UL-QP-18-05': {
     formNumber: 'UL-QP-18-05',
-    name: '자체점검표',
+    name: '자체 점검표',
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
   },
   'UL-QP-18-06': {
     formNumber: 'UL-QP-18-06',
-    name: '교정계획서',
+    name: '장비 반·출입 확인서',
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: false,
@@ -69,35 +65,47 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     name: '시험용 소프트웨어 관리대장',
     retentionYears: 5,
     retentionLabel: '5년',
-    implemented: false,
+    implemented: true,
   },
   'UL-QP-18-08': {
     formNumber: 'UL-QP-18-08',
-    name: 'Cable/Path Loss 관리대장',
+    name: 'Cable and Path Loss 관리 대장',
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: false,
   },
   'UL-QP-18-09': {
     formNumber: 'UL-QP-18-09',
-    name: '소프트웨어 유효성 확인',
+    name: '시험 소프트웨어의 유효성확인',
+    retentionYears: 5,
+    retentionLabel: '5년',
+    implemented: true,
+  },
+  'UL-QP-18-10': {
+    formNumber: 'UL-QP-18-10',
+    name: '공용 장비 사용/반납 확인서',
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: false,
   },
-  'UL-QP-18-10': {
-    formNumber: 'UL-QP-18-10',
-    name: '반출/반입 기록',
-    retentionYears: 3,
-    retentionLabel: '3년',
-    implemented: false,
-  },
   'UL-QP-18-11': {
     formNumber: 'UL-QP-18-11',
-    name: '부적합 보고서',
-    retentionYears: 3,
-    retentionLabel: '3년',
+    name: '보정인자 및 파라미터 관리대장',
+    retentionYears: 5,
+    retentionLabel: '5년',
     implemented: false,
+  },
+
+  // ============================================================================
+  // UL-QP-19: 교정 절차서 양식
+  // ============================================================================
+  'UL-QP-19-01': {
+    formNumber: 'UL-QP-19-01',
+    name: '연간 교정계획서',
+    retentionYears: 5,
+    retentionLabel: '5년',
+    implemented: true,
+    dedicatedEndpoint: true,
   },
 };
 

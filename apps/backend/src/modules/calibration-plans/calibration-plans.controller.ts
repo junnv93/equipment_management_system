@@ -23,7 +23,7 @@ import {
   ApiProduces,
 } from '@nestjs/swagger';
 import { CalibrationPlansService } from './calibration-plans.service';
-import { CalibrationPlansPdfService } from './calibration-plans-pdf.service';
+import { CalibrationPlansExportService } from './calibration-plans-export.service';
 import {
   CreateCalibrationPlanDto,
   UpdateCalibrationPlanDto,
@@ -63,7 +63,7 @@ import { extractUserId, enforceSiteAccess } from '../../common/utils';
 export class CalibrationPlansController {
   constructor(
     private readonly calibrationPlansService: CalibrationPlansService,
-    private readonly pdfService: CalibrationPlansPdfService
+    private readonly exportService: CalibrationPlansExportService
   ) {}
 
   @Post()
@@ -346,18 +346,18 @@ export class CalibrationPlansController {
     return this.calibrationPlansService.updateItem(uuid, itemUuid, updateDto);
   }
 
-  @Get(':uuid/pdf')
+  @Get(':uuid/export')
   @ApiOperation({
-    summary: 'PDF 다운로드 (HTML)',
-    description:
-      '교정계획서를 인쇄 가능한 HTML로 출력합니다. 브라우저에서 인쇄(Ctrl+P)하여 PDF로 저장하세요.',
+    summary: 'Excel 내보내기',
+    description: '교정계획서를 UL-QP-19-01 양식 템플릿 기반 Excel(.xlsx)로 내보냅니다.',
   })
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
-  @ApiProduces('text/html')
-  @ApiResponse({ status: HttpStatus.OK, description: 'HTML 출력 성공' })
+  @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  @ApiResponse({ status: HttpStatus.OK, description: 'Excel 파일 다운로드' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  async downloadPdf(
+  @AuditLog({ action: 'export', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
+  async exportExcel(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Res() res: Response,
     @Request() req: AuthenticatedRequest
@@ -365,14 +365,16 @@ export class CalibrationPlansController {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
 
-    const htmlBuffer = await this.pdfService.generatePdf(uuid);
+    const { buffer, mimeType, filename } = await this.exportService.exportExcel(uuid);
 
     res.set({
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Length': htmlBuffer.length,
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Length': buffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     });
 
-    res.send(htmlBuffer);
+    res.end(buffer);
   }
 
   @Post(':uuid/new-version')

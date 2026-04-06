@@ -256,8 +256,8 @@ export function CalibrationPlanDetailClient({
     },
   });
 
-  const handlePrintView = () => {
-    calibrationPlansApi.openPrintView(planUuid);
+  const handleExportExcel = () => {
+    calibrationPlansApi.downloadExcel(planUuid);
   };
 
   if (isLoading) {
@@ -334,11 +334,11 @@ export function CalibrationPlanDetailClient({
           {isApproved && (
             <Button
               variant="outline"
-              onClick={handlePrintView}
+              onClick={handleExportExcel}
               className={getActionButtonClasses('ghost')}
             >
               <Download className={`${ACTION_BUTTON_TOKENS.ghost.iconSize} mr-2`} />
-              {t('planDetail.actions.printPdf')}
+              {t('planDetail.actions.exportExcel')}
             </Button>
           )}
           {canDelete && (

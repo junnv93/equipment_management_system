@@ -169,7 +169,7 @@ export const API_ENDPOINTS = {
       `/api/calibration-plans/${planId}/items/${itemId}`,
     NEW_VERSION: (id: string) => `/api/calibration-plans/${id}/new-version`,
     VERSION_HISTORY: (id: string) => `/api/calibration-plans/${id}/versions`,
-    PDF: (id: string) => `/api/calibration-plans/${id}/pdf`,
+    EXPORT: (id: string) => `/api/calibration-plans/${id}/export`,
     EXTERNAL_EQUIPMENT: '/api/calibration-plans/equipment/external',
     PENDING_REVIEW: '/api/calibration-plans?status=pending_review',
     PENDING_APPROVAL: '/api/calibration-plans?status=pending_approval',
@@ -437,9 +437,10 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
-  // 중간점검 관리 (교정 하위)
+  // 중간점검 관리
   // ============================================================================
   INTERMEDIATE_INSPECTIONS: {
+    BY_EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/intermediate-inspections`,
     BY_CALIBRATION: (calibrationId: string) =>
       `/api/calibration/${calibrationId}/intermediate-inspections`,
     GET: (id: string) => `/api/intermediate-inspections/${id}`,
