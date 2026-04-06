@@ -241,11 +241,13 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                   <SelectValue placeholder={t('equipmentImport.classificationPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(classificationLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  {Object.entries(classificationLabels)
+                    .filter(([value]) => value !== 'software')
+                    .map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
