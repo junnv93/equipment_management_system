@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: Analyzes git changes to generate conventional commit messages and auto-selects workflow (direct push to main vs branch+PR) based on change size. Use when the user wants to commit, push, save changes, or prepare a PR. Trigger on: "커밋해줘", "커밋하고 푸시해줘", "변경사항 정리해줘", "git commit", "코드 올려줘", "commit", "push", "save changes", "create PR".
+description: Analyzes git changes to generate conventional commit messages and auto-selects workflow (direct push to main vs branch+PR) based on change size. Use when the user wants to commit, push, save changes, or prepare a PR. Trigger on: "커밋해줘", "커밋하고 푸시해줘", "변경사항 정리해줘", "git commit", "코드 올려줘", "commit", "push", "save changes", "create PR", "세션 마무리해줘".
 ---
 
 # Git 커밋 + 배포 워크플로우
@@ -15,28 +15,31 @@ description: Analyzes git changes to generate conventional commit messages and a
 
 ## 워크플로우
 
-### Step 1: 변경사항 수집
+### Step 1: 현재 상태 파악
 
 ```bash
 git status --short
+git branch --show-current
 git diff --staged --stat
 git diff --stat
 ```
 
-staged 변경이 없으면 unstaged 변경을 기준으로 합니다.
-변경사항이 없으면 사용자에게 알리고 종료합니다.
+- staged 변경이 없으면 unstaged 변경을 기준으로 함
+- 변경사항이 없으면 사용자에게 알리고 종료
+- **현재 브랜치가 main이 아니면** → 해당 브랜치에서 커밋+푸시 (새 브랜치 생성 불필요)
 
 ### Step 2: 워크플로우 결정
 
-다음 기준으로 **직접 푸시 vs PR**을 결정합니다:
+현재 브랜치가 main일 때만 적용합니다. feature 브랜치에 이미 있으면 그 브랜치에서 커밋+푸시합니다.
 
 | 조건 | 결정 | 이유 |
 |---|---|---|
 | 변경 파일 1~3개 AND 로직 변경 없음 | **main 직접 푸시** | 린트/오타/설정 수정은 리뷰 불필요 |
 | i18n, 주석, README, 설정 파일만 변경 | **main 직접 푸시** | 코드 동작에 영향 없음 |
-| `.claude/skills/` 파일만 변경 | **main 직접 푸시** | 개발 도구 설정 변경 |
+| `.claude/`, `.github/dependabot.yml` 변경 | **main 직접 푸시** | 개발 도구/봇 설정 변경 |
 | `*.service.ts`, `*.controller.ts` 변경 | **브랜치+PR** | 비즈니스 로직 변경 |
-| `Dockerfile`, `docker-compose`, CI 변경 | **브랜치+PR** | 인프라 변경 |
+| `Dockerfile`, `docker-compose` 변경 | **브랜치+PR** | 인프라 변경 |
+| `.github/workflows/` CI 파이프라인 변경 | **브랜치+PR** | CI 변경은 검증 필요 |
 | DB 스키마 (`packages/db/`) 변경 | **브랜치+PR** | 데이터 구조 변경 |
 | 파일 4개 이상 변경 | **브랜치+PR** | 규모가 큰 변경 |
 | 사용자가 명시적으로 지정 | **지정대로** | 사용자 의도 우선 |
@@ -63,6 +66,7 @@ git log --oneline -5  # 커밋 메시지 스타일 참고
 | `test` | 테스트 코드 추가/수정 |
 | `chore` | 빌드, 의존성, 설정 등 |
 | `perf` | 성능 개선 |
+| `ci` | CI/CD 파이프라인 변경 |
 
 #### 메시지 형식
 
@@ -71,7 +75,7 @@ git log --oneline -5  # 커밋 메시지 스타일 참고
 
 <본문 — 변경 이유와 내용, 72자 줄바꿈>
 
-Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 **commitlint 규칙**:
@@ -97,7 +101,7 @@ git add <file1> <file2> ...
 git commit -m "$(cat <<'EOF'
 <커밋 메시지>
 
-Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 
@@ -108,7 +112,7 @@ git push origin main
 #### B. 브랜치+PR 경로
 
 ```bash
-# 1. 브랜치 생성 (타입/설명 형식)
+# 1. 브랜치 생성 (타입/설명 형식) — 이미 feature 브랜치면 스킵
 git checkout -b <type>/<short-description>
 # 예: feat/excel-export, fix/login-error, refactor/cache-strategy
 
@@ -117,14 +121,14 @@ git add <files>
 git commit -m "$(cat <<'EOF'
 <커밋 메시지>
 
-Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 
 # 3. 푸시
 git push -u origin <branch-name>
 
-# 4. PR 생성
+# 4. PR 생성 (open PR이 없을 때만)
 gh pr create --title "<PR 제목>" --body "$(cat <<'EOF'
 ## Summary
 <변경 내용 1~3줄>
@@ -132,18 +136,27 @@ gh pr create --title "<PR 제목>" --body "$(cat <<'EOF'
 ## Test plan
 <검증 방법>
 
-Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )"
 ```
 
 PR 생성 후 URL을 사용자에게 알려줍니다.
 
-### Step 5: 결과 보고
+### Step 5: pre-commit hook 대응
+
+이 프로젝트는 Prettier가 PostToolUse hook으로 자동 실행됩니다.
+
+- 커밋 후 "file was modified by a linter" 메시지가 나오면 → `git diff`로 확인
+- 실제 내용이 변경된 게 아니라 포맷만 바뀐 경우 → 무시 (커밋은 이미 성공)
+- pre-commit hook이 커밋을 거부한 경우 → 문제 수정 후 **새 커밋 생성** (amend 금지)
+
+### Step 6: 결과 보고
 
 ```
 커밋 완료:
 - 방식: main 직접 푸시 / PR #XX 생성
+- 브랜치: main / feat/xxx
 - 커밋: <hash> <메시지 제목>
 - 변경: N개 파일, +XX/-YY lines
 ```
@@ -168,7 +181,17 @@ PR 생성 후 URL을 사용자에게 알려줍니다.
 → PR #35: "feat: 장비 엑셀 내보내기 기능 추가"
 ```
 
-### 예시 3: 사용자가 명시적 지정
+### 예시 3: feature 브랜치에서 추가 커밋
+
+```
+현재 브랜치: feat/qp18-export (이미 PR #135 열려있음)
+변경: self-inspections.service.spec.ts, package.json
+→ 판단: 이미 feature 브랜치 → 해당 브랜치에 커밋+푸시
+→ 커밋: test: add unit tests for self-inspections
+→ 푸시: feat/qp18-export (기존 PR #135에 반영)
+```
+
+### 예시 4: 사용자가 명시적 지정
 
 ```
 사용자: "PR 없이 그냥 푸시해줘"
@@ -180,5 +203,5 @@ PR 생성 후 URL을 사용자에게 알려줍니다.
 - 하나의 커밋에는 하나의 논리적 변경사항만 포함
 - `git add -A`나 `git add .` 사용 금지 — 구체적 파일명 나열
 - `.env`, 시크릿 파일은 커밋하지 않음 — 발견 시 경고
-- pre-commit hook 실패 시 새 커밋 생성 (amend 금지)
-- PR 생성 시 `GH_TOKEN` 환경변수 필요 — 없으면 사용자에게 안내
+- 이미 open PR이 있는 브랜치에서는 PR 중복 생성하지 않음
+- `--no-verify`로 hook 우회 금지 — hook 실패 시 원인 파악 후 수정
