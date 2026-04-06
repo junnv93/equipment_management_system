@@ -21,6 +21,9 @@ import {
   AlertTriangle,
   Code,
   Upload,
+  Activity,
+  Cable,
+  FilePlus,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -152,6 +155,10 @@ export const routeMap: Record<string, RouteMetadata> = {
     labelKey: 'navigation.checkoutsCreate',
     parent: '/checkouts',
   },
+  '/checkouts/pending-checks': {
+    labelKey: 'navigation.checkoutsPendingChecks',
+    parent: '/checkouts',
+  },
   '/checkouts/manage': {
     labelKey: 'navigation.checkoutsManage',
     parent: '/checkouts',
@@ -198,6 +205,10 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/',
     icon: Code,
   },
+  '/software/create': {
+    labelKey: 'navigation.softwareCreate',
+    parent: '/software',
+  },
   '/software/[id]': {
     labelKey: 'navigation.softwareDetail',
     parent: '/software',
@@ -206,6 +217,11 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/software/[id]/validation': {
     labelKey: 'navigation.softwareValidation',
     parent: '/software/[id]',
+  },
+  '/software/[id]/validation/[validationId]': {
+    labelKey: 'navigation.softwareValidationDetail',
+    parent: '/software/[id]/validation',
+    dynamic: true,
   },
 
   // ========================================
@@ -222,6 +238,33 @@ export const routeMap: Record<string, RouteMetadata> = {
   },
 
   // ========================================
+  // 케이블 관리
+  // ========================================
+  '/cables': {
+    labelKey: 'navigation.cables',
+    parent: '/',
+    icon: Cable,
+  },
+  '/cables/create': {
+    labelKey: 'navigation.cablesCreate',
+    parent: '/cables',
+  },
+  '/cables/[id]': {
+    labelKey: 'navigation.cablesDetail',
+    parent: '/cables',
+    dynamic: true,
+  },
+
+  // ========================================
+  // 양식 관리
+  // ========================================
+  '/form-templates': {
+    labelKey: 'navigation.formTemplates',
+    parent: '/',
+    icon: FilePlus,
+  },
+
+  // ========================================
   // 팀 관리
   // ========================================
   '/teams': {
@@ -229,15 +272,28 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/',
     icon: Users,
   },
+  '/teams/create': {
+    labelKey: 'navigation.teamsCreate',
+    parent: '/teams',
+  },
   '/teams/[id]': {
     labelKey: 'navigation.teamsDetail',
     parent: '/teams',
     dynamic: true,
   },
+  '/teams/[id]/edit': {
+    labelKey: 'navigation.teamsEdit',
+    parent: '/teams/[id]',
+  },
 
   // ========================================
   // 알림
   // ========================================
+  '/alerts': {
+    labelKey: 'navigation.alerts',
+    parent: '/',
+    icon: Bell,
+  },
   '/notifications': {
     labelKey: 'navigation.notifications',
     parent: '/',
@@ -297,6 +353,11 @@ export const routeMap: Record<string, RouteMetadata> = {
     labelKey: 'navigation.adminDataMigration',
     parent: '/',
     icon: Upload,
+  },
+  '/admin/monitoring': {
+    labelKey: 'navigation.adminMonitoring',
+    parent: '/',
+    icon: Activity,
   },
 
   // ========================================

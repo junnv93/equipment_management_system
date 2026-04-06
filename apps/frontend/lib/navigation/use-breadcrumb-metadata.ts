@@ -45,7 +45,7 @@ export function useDynamicBreadcrumbLabels(): Record<string, string> | undefined
         const equipment = await equipmentApi.getById(dynamicParams.id);
         return {
           key: dynamicParams.id,
-          label: equipment.name || equipment.managementNumber || '장비 상세',
+          label: equipment.name || equipment.managementNumber,
         };
       } catch (error) {
         console.error('Failed to fetch equipment name for breadcrumb:', error);
