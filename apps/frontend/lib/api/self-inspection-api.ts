@@ -120,22 +120,5 @@ export async function deleteSelfInspection(id: string): Promise<void> {
   await apiClient.delete(API_ENDPOINTS.SELF_INSPECTIONS.DELETE(id));
 }
 
-export async function downloadHistoryCard(equipmentId: string): Promise<void> {
-  const { downloadFile } = await import('./utils/download-file');
-  await downloadFile({
-    url: API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(equipmentId),
-    filename: `이력카드_${equipmentId.slice(0, 8)}.docx`,
-  });
-}
-
-export async function exportFormTemplate(
-  formNumber: string,
-  params?: Record<string, string>
-): Promise<void> {
-  const { downloadFile } = await import('./utils/download-file');
-  await downloadFile({
-    url: API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE(formNumber),
-    params,
-    filename: `${formNumber}_${new Date().toISOString().split('T')[0]}.xlsx`,
-  });
-}
+// SSOT: 양식 내보내기 함수는 reports-api.ts로 이동됨 — re-export로 기존 소비자 호환 유지
+export { exportFormTemplate, downloadHistoryCard } from './reports-api';

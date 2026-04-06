@@ -20,7 +20,10 @@
       "allTypes": "All Types",
       "allStatus": "All Status"
     },
-    "empty": "No cables registered"
+    "empty": "No cables registered",
+    "exportButton": "Export Form",
+    "exporting": "Exporting...",
+    "exportError": "Failed to export form."
   },
   "detail": {
     "title": "Cable Information",

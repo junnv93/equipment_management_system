@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { EQUIPMENT_LIST_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
-import { exportFormTemplate } from '@/lib/api/self-inspection-api';
+import { exportFormTemplate } from '@/lib/api/reports-api';
 import { useToast } from '@/components/ui/use-toast';
 
 /**

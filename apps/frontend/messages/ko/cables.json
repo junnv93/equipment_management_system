@@ -20,7 +20,10 @@
       "allTypes": "전체 타입",
       "allStatus": "전체 상태"
     },
-    "empty": "등록된 케이블이 없습니다"
+    "empty": "등록된 케이블이 없습니다",
+    "exportButton": "양식 내보내기",
+    "exporting": "내보내기 중...",
+    "exportError": "양식 내보내기에 실패했습니다."
   },
   "detail": {
     "title": "케이블 정보",

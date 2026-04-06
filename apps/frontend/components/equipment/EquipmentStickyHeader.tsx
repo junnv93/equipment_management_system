@@ -224,7 +224,7 @@ export function EquipmentStickyHeader({
             variant="outline"
             size="sm"
             onClick={() => {
-              import('@/lib/api/self-inspection-api').then(({ downloadHistoryCard }) =>
+              import('@/lib/api/reports-api').then(({ downloadHistoryCard }) =>
                 downloadHistoryCard(equipmentId)
               );
             }}

@@ -72,7 +72,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     name: 'Cable and Path Loss 관리 대장',
     retentionYears: 5,
     retentionLabel: '5년',
-    implemented: false,
+    implemented: true,
   },
   'UL-QP-18-09': {
     formNumber: 'UL-QP-18-09',
