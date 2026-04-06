@@ -197,7 +197,7 @@ export async function createCalibration(
     {
       equipmentId,
       calibrationDate,
-      calibrationMethod: 'external_calibration',
+      managementMethod: 'external_calibration',
       calibrationResult: 'pass',
       calibrationAgency: 'KRISS 한국표준과학연구원',
       certificateNumber: `WF-CERT-${Date.now()}`,

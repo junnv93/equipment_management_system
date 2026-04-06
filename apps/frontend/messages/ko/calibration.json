@@ -48,7 +48,7 @@
     "calibrationDate": "교정일",
     "nextCalibrationDate": "다음 교정 예정일",
     "calibrationAgency": "교정 기관",
-    "calibrationMethod": "교정 방법",
+    "managementMethod": "관리 방법",
     "result": "교정 결과",
     "certificate": "교정 성적서",
     "notes": "비고"

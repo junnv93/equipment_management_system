@@ -8,7 +8,7 @@
  *
  * 이 파일이 존재하는 이유:
  * - 2026-01-30 버그: page.tsx와 useEquipmentFilters.ts가 각각 다른 파싱 로직을
- *   사용하여 새 필터(classification, calibrationMethod, isShared 등)가
+ *   사용하여 새 필터(classification, managementMethod, isShared 등)가
  *   서버 컴포넌트에서 누락되는 문제 발생
  *
  * 사용처:
@@ -36,7 +36,7 @@
 import type {
   Site,
   EquipmentStatus,
-  CalibrationMethod,
+  ManagementMethod,
   Classification,
 } from '@equipment-management/schemas';
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
@@ -52,7 +52,7 @@ export interface UIEquipmentFilters {
   search: string;
   site: Site | '';
   status: EquipmentStatus | '';
-  calibrationMethod: CalibrationMethod | '';
+  managementMethod: ManagementMethod | '';
   classification: Classification | '';
   isShared: 'all' | 'shared' | 'normal';
   calibrationDueFilter: 'all' | 'due_soon' | 'overdue' | 'normal';
@@ -70,7 +70,7 @@ export interface ApiEquipmentFilters {
   search?: string;
   site?: Site;
   status?: EquipmentStatus;
-  calibrationMethod?: CalibrationMethod;
+  managementMethod?: ManagementMethod;
   classification?: Classification;
   isShared?: boolean;
   calibrationDue?: number;
@@ -90,7 +90,7 @@ export const DEFAULT_UI_FILTERS: UIEquipmentFilters = {
   search: '',
   site: '',
   status: '',
-  calibrationMethod: '',
+  managementMethod: '',
   classification: '',
   isShared: 'all',
   calibrationDueFilter: 'all',
@@ -139,9 +139,9 @@ export function parseEquipmentFiltersFromSearchParams(
   const statusRaw = get('status') || DEFAULT_UI_FILTERS.status;
   const status = (statusRaw === '_all' ? '' : statusRaw) as EquipmentStatus | '';
 
-  const calibrationMethodRaw = get('calibrationMethod') || DEFAULT_UI_FILTERS.calibrationMethod;
-  const calibrationMethod = (calibrationMethodRaw === '_all' ? '' : calibrationMethodRaw) as
-    | CalibrationMethod
+  const managementMethodRaw = get('managementMethod') || DEFAULT_UI_FILTERS.managementMethod;
+  const managementMethod = (managementMethodRaw === '_all' ? '' : managementMethodRaw) as
+    | ManagementMethod
     | '';
 
   const classificationRaw = get('classification') || DEFAULT_UI_FILTERS.classification;
@@ -173,7 +173,7 @@ export function parseEquipmentFiltersFromSearchParams(
     search,
     site,
     status,
-    calibrationMethod,
+    managementMethod,
     classification,
     isShared,
     calibrationDueFilter,
@@ -215,7 +215,7 @@ export function convertFiltersToApiParams(filters: UIEquipmentFilters): ApiEquip
     search: filters.search || undefined,
     site: filters.site || undefined,
     status: filters.status || undefined,
-    calibrationMethod: filters.calibrationMethod || undefined,
+    managementMethod: filters.managementMethod || undefined,
     classification: filters.classification || undefined,
     isShared,
     calibrationDue,
@@ -239,7 +239,7 @@ export function countActiveFilters(filters: UIEquipmentFilters): number {
   if (filters.search) count++;
   if (filters.site) count++;
   if (filters.status) count++;
-  if (filters.calibrationMethod) count++;
+  if (filters.managementMethod) count++;
   if (filters.classification) count++;
   if (filters.isShared !== 'all') count++;
   if (filters.calibrationDueFilter !== 'all') count++;

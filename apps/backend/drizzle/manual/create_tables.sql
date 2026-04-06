@@ -68,7 +68,7 @@ CREATE INDEX IF NOT EXISTS "checkout_expected_return_date_idx" ON "checkouts" ("
 CREATE INDEX IF NOT EXISTS "calibration_equipment_id_idx" ON "calibrations" ("equipment_id");
 CREATE INDEX IF NOT EXISTS "calibration_date_idx" ON "calibrations" ("calibration_date");
 CREATE INDEX IF NOT EXISTS "next_calibration_date_idx" ON "calibrations" ("next_calibration_date");
-CREATE INDEX IF NOT EXISTS "calibration_method_idx" ON "calibrations" ("method");
+CREATE INDEX IF NOT EXISTS "management_method_idx" ON "calibrations" ("method");
 CREATE INDEX IF NOT EXISTS "calibration_result_idx" ON "calibrations" ("result");
 CREATE INDEX IF NOT EXISTS "calibration_performed_by_idx" ON "calibrations" ("performed_by");
 

@@ -225,7 +225,7 @@ export default function ValidationDetailContent({
   if (!validation) {
     return (
       <div className={getPageContainerClasses('detail')}>
-        <p className="text-muted-foreground">Not found</p>
+        <p className="text-muted-foreground">{t('detail.notFound')}</p>
       </div>
     );
   }

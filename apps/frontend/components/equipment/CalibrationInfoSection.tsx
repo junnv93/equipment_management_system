@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
-import { CalibrationMethodEnum } from '@equipment-management/schemas';
+import { ManagementMethodEnum } from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -38,7 +38,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
   // 교정 주기와 최종 교정일 감시
   const calibrationCycle = useWatch({ control, name: 'calibrationCycle' });
   const lastCalibrationDate = useWatch({ control, name: 'lastCalibrationDate' });
-  const calibrationMethod = useWatch({ control, name: 'calibrationMethod' });
+  const managementMethod = useWatch({ control, name: 'managementMethod' });
 
   // 중간점검 관련 필드 감시
   const needsIntermediateCheck = useWatch({ control, name: 'needsIntermediateCheck' });
@@ -72,7 +72,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
   }, [intermediateCheckCycle, lastIntermediateCheckDate, setValue]);
 
   // 외부 교정인지 확인
-  const isExternalCalibration = calibrationMethod === 'external_calibration';
+  const isExternalCalibration = managementMethod === 'external_calibration';
 
   return (
     <Card>
@@ -88,11 +88,11 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
           {/* 관리 방법 (라벨 변경: 교정 방법 → 관리 방법) */}
           <FormField
             control={control}
-            name="calibrationMethod"
+            name="managementMethod"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  {t('fields.calibrationMethod')} <span className="text-destructive">*</span>
+                  {t('fields.managementMethod')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
@@ -101,9 +101,9 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {CalibrationMethodEnum.options.map((value) => (
+                    {ManagementMethodEnum.options.map((value) => (
                       <SelectItem key={value} value={value}>
-                        {t(`filters.calibrationMethodLabel.${value}` as Parameters<typeof t>[0])}
+                        {t(`filters.managementMethodLabel.${value}` as Parameters<typeof t>[0])}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -25,7 +25,7 @@ const EXPORT_FILTER_KEYS = [
   'site',
   'teamId',
   'status',
-  'calibrationMethod',
+  'managementMethod',
   'classification',
   'manufacturer',
   'location',

@@ -8,7 +8,7 @@
  * 4. 상태 필터와 교정 기한 필터의 독립성
  *
  * SQL 유사 로직:
- * WHERE site='SUW' AND status='available' AND calibrationMethod='external_calibration'
+ * WHERE site='SUW' AND status='available' AND managementMethod='external_calibration'
  *
  * SSOT:
  * - equipment-filter-utils.ts: countActiveFilters()
@@ -36,8 +36,8 @@ test.describe('Group B: Combined Filters', () => {
       await siteAdminPage.getByRole('option', { name: '사용 가능' }).click();
 
       // 3. 교정 방법 필터 적용
-      const calibrationMethodFilter = siteAdminPage.locator('#filter-calibration');
-      await calibrationMethodFilter.click();
+      const managementMethodFilter = siteAdminPage.locator('#filter-calibration');
+      await managementMethodFilter.click();
       await siteAdminPage.getByRole('option', { name: /외부 교정/i }).click();
 
       // Wait for URL to update
@@ -46,7 +46,7 @@ test.describe('Group B: Combined Filters', () => {
       const currentUrl = siteAdminPage.url();
       expect(currentUrl).toContain('site=suwon');
       expect(currentUrl).toContain('status=available');
-      expect(currentUrl).toContain('calibrationMethod=external_calibration');
+      expect(currentUrl).toContain('managementMethod=external_calibration');
 
       // 필터 뱃지 확인
       await expect(siteAdminPage.getByText(/사이트:.*수원랩/)).toBeVisible({ timeout: 10000 });
@@ -255,8 +255,8 @@ test.describe('Group B: Combined Filters', () => {
       await statusFilter.click();
       await siteAdminPage.getByRole('option', { name: '사용 가능' }).click();
 
-      const calibrationMethodFilter = siteAdminPage.locator('#filter-calibration');
-      await calibrationMethodFilter.click();
+      const managementMethodFilter = siteAdminPage.locator('#filter-calibration');
+      await managementMethodFilter.click();
       await siteAdminPage.getByRole('option', { name: /외부 교정/i }).click();
 
       const sharedFilter = siteAdminPage.locator('#filter-shared');
@@ -273,7 +273,7 @@ test.describe('Group B: Combined Filters', () => {
       const currentUrl = siteAdminPage.url();
       expect(currentUrl).toContain('site=suwon');
       expect(currentUrl).toContain('status=available');
-      expect(currentUrl).toContain('calibrationMethod=external_calibration');
+      expect(currentUrl).toContain('managementMethod=external_calibration');
       expect(currentUrl).toContain('isShared=normal');
       expect(currentUrl).toContain('calibrationDueFilter=normal');
 

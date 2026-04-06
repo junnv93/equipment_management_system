@@ -99,7 +99,7 @@
       "location": "Location",
       "building": "Building",
       "room": "Room",
-      "calibrationMethod": "Calibration Method",
+      "managementMethod": "Management Method",
       "calibrationDate": "Calibration Date",
       "nextCalibrationDate": "Next Calibration Date",
       "calibrationCycle": "Calibration Cycle",

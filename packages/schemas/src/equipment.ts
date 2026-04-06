@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  CalibrationMethodEnum,
+  ManagementMethodEnum,
   EquipmentStatusEnum,
   SiteEnum,
   SiteCodeEnum,
@@ -69,7 +69,7 @@ export const baseEquipmentSchema = z.object({
   calibrationAgency: z.string().optional(), // placeholder: HCT
   // 기본값이 있는 필드는 생성 시 선택적으로 처리 (서비스 레이어에서 기본값 적용)
   needsIntermediateCheck: z.boolean().optional(),
-  calibrationMethod: CalibrationMethodEnum.optional(), // 라벨: 관리 방법
+  managementMethod: ManagementMethodEnum.optional(), // 라벨: 관리 방법
 
   // 중간점검 정보 (신규: 3개 필드로 분리)
   lastIntermediateCheckDate: z.coerce.date().optional(), // 최종 중간 점검일
@@ -155,7 +155,7 @@ export const equipmentFilterSchema = z.object({
   site: SiteEnum.optional(),
   classification: ClassificationEnum.optional(), // 분류 필터 (fcc_emc_rf, general_emc 등)
   classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드 필터
-  calibrationMethod: CalibrationMethodEnum.optional(), // 교정 방법 필터 (외부교정/자체점검/비대상)
+  managementMethod: ManagementMethodEnum.optional(), // 관리 방법 필터 (외부교정/자체점검/비대상)
   calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이내 교정 임박
   calibrationDueAfter: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이후 교정 여유
   calibrationOverdue: z

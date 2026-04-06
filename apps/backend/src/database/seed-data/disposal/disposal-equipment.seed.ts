@@ -81,7 +81,7 @@ function createDisposalEquipment(
     teamId,
     site,
     status,
-    calibrationMethod: 'external_calibration',
+    managementMethod: 'external_calibration',
     lastCalibrationDate: CALIBRATION_DATE,
     nextCalibrationDate: NEXT_CALIBRATION,
     calibrationCycle: 12,

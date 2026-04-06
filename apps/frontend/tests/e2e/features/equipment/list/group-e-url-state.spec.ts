@@ -27,7 +27,7 @@ test.describe('Group E-1: URL State Synchronization', () => {
         '/equipment?' +
         'search=스펙트럼' +
         '&status=available' +
-        '&calibrationMethod=self_inspection' +
+        '&managementMethod=self_inspection' +
         '&classification=fcc_emc_rf' +
         '&isShared=shared' +
         '&calibrationDueFilter=due_soon' +
@@ -44,7 +44,7 @@ test.describe('Group E-1: URL State Synchronization', () => {
 
       // 2. URL 파라미터로 필터가 제대로 복원되었는지 확인
       await expect(testOperatorPage).toHaveURL(/status=available/);
-      await expect(testOperatorPage).toHaveURL(/calibrationMethod=self_inspection/);
+      await expect(testOperatorPage).toHaveURL(/managementMethod=self_inspection/);
       await expect(testOperatorPage).toHaveURL(/classification=fcc_emc_rf/);
       await expect(testOperatorPage).toHaveURL(/isShared=shared/);
       await expect(testOperatorPage).toHaveURL(/calibrationDueFilter=due_soon/);
@@ -84,10 +84,10 @@ test.describe('Group E-1: URL State Synchronization', () => {
       await expect(statusFilter).toContainText('사용 가능');
 
       // 3. 나머지 필터는 기본값이어야 함
-      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+      const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: /교정.*방법/i,
       });
-      await expect(calibrationMethodFilter).toContainText('모든 교정 방법');
+      await expect(managementMethodFilter).toContainText('모든 교정 방법');
 
       const classificationFilter = testOperatorPage.getByRole('combobox', { name: /분류/i });
       await expect(classificationFilter).toContainText('모든 분류');
@@ -238,7 +238,7 @@ test.describe('Group E-1: URL State Synchronization', () => {
       const sharedUrl =
         '/equipment?' +
         'status=available' +
-        '&calibrationMethod=external_calibration' +
+        '&managementMethod=external_calibration' +
         '&search=전원';
 
       // 사용자 B가 URL을 받아서 접속
@@ -248,10 +248,10 @@ test.describe('Group E-1: URL State Synchronization', () => {
       const statusFilter = testOperatorPage.getByRole('combobox', { name: /상태/i });
       await expect(statusFilter).toContainText('사용 가능');
 
-      const calibrationMethodFilter = testOperatorPage.getByRole('combobox', {
+      const managementMethodFilter = testOperatorPage.getByRole('combobox', {
         name: /교정.*방법/i,
       });
-      await expect(calibrationMethodFilter).toContainText('외부 교정');
+      await expect(managementMethodFilter).toContainText('외부 교정');
 
       const searchInput = testOperatorPage.getByRole('searchbox');
       await expect(searchInput).toHaveValue('전원');

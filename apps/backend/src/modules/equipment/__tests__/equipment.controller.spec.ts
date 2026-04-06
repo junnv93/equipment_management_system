@@ -38,7 +38,7 @@ describe('EquipmentController', () => {
     nextCalibrationDate: null,
     calibrationAgency: null,
     needsIntermediateCheck: false,
-    calibrationMethod: null,
+    managementMethod: null,
     teamId: null,
     teamName: null,
     managerId: null,

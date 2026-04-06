@@ -18,12 +18,12 @@ import {
 import {
   type Site,
   type EquipmentStatus,
-  type CalibrationMethod,
+  type ManagementMethod,
   type Classification,
   SITE_VALUES,
   EQUIPMENT_STATUS_FILTER_OPTIONS,
 } from '@equipment-management/schemas';
-import { useCalibrationMethodLabels, useClassificationLabels } from '@/lib/i18n/use-enum-labels';
+import { useManagementMethodLabels, useClassificationLabels } from '@/lib/i18n/use-enum-labels';
 import {
   EQUIPMENT_DATA_SCOPE,
   resolveDataScope,
@@ -42,7 +42,7 @@ interface EquipmentFiltersProps {
   filters: FiltersType;
   onSiteChange: (site: Site | '') => void;
   onStatusChange: (status: EquipmentStatus | '') => void;
-  onCalibrationMethodChange: (method: CalibrationMethod | '') => void;
+  onManagementMethodChange: (method: ManagementMethod | '') => void;
   onClassificationChange: (classification: Classification | '') => void;
   onIsSharedChange: (isShared: 'all' | 'shared' | 'normal') => void;
   onCalibrationDueFilterChange: (filter: CalibrationDueFilter) => void;
@@ -87,14 +87,14 @@ const ActiveFilterBadge = memo(function ActiveFilterBadge({
  * 장비 필터 컴포넌트 (컴팩트 인라인 바)
  *
  * - 1차 필터(Site, Status, CalibrationDue) + "추가 필터" 확장 버튼
- * - 2차 필터(CalibrationMethod, Classification, IsShared, Team) — 확장 시 표시
+ * - 2차 필터(ManagementMethod, Classification, IsShared, Team) — 확장 시 표시
  * - 활성 필터 배지 (하단 행)
  */
 function EquipmentFiltersComponent({
   filters,
   onSiteChange,
   onStatusChange,
-  onCalibrationMethodChange,
+  onManagementMethodChange,
   onClassificationChange,
   onIsSharedChange,
   onCalibrationDueFilterChange,
@@ -107,13 +107,13 @@ function EquipmentFiltersComponent({
 }: EquipmentFiltersProps) {
   const t = useTranslations('equipment');
   const { user } = useAuth();
-  const calibrationMethodLabels = useCalibrationMethodLabels();
+  const managementMethodLabels = useManagementMethodLabels();
   const classificationLabels = useClassificationLabels();
 
   // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
   const siteSelect = useFilterSelect(filters.site, onSiteChange);
   const statusSelect = useFilterSelect(filters.status, onStatusChange);
-  const calibMethodSelect = useFilterSelect(filters.calibrationMethod, onCalibrationMethodChange);
+  const calibMethodSelect = useFilterSelect(filters.managementMethod, onManagementMethodChange);
   const classificationSelect = useFilterSelect(filters.classification, onClassificationChange);
   const teamFilterSelect = useFilterSelect(filters.teamId, onTeamIdChange);
 
@@ -145,13 +145,13 @@ function EquipmentFiltersComponent({
     [t]
   );
 
-  const calibrationMethodOptions = useMemo(
+  const managementMethodOptions = useMemo(
     () =>
-      (Object.keys(calibrationMethodLabels) as CalibrationMethod[]).map((value) => ({
+      (Object.keys(managementMethodLabels) as ManagementMethod[]).map((value) => ({
         value,
-        label: calibrationMethodLabels[value],
+        label: managementMethodLabels[value],
       })),
-    [calibrationMethodLabels]
+    [managementMethodLabels]
   );
 
   const classificationOptions = useMemo(
@@ -224,12 +224,12 @@ function EquipmentFiltersComponent({
   // 2차 필터 활성 개수 (추가 필터 버튼 배지용)
   const additionalFilterCount = useMemo(() => {
     let count = 0;
-    if (filters.calibrationMethod) count++;
+    if (filters.managementMethod) count++;
     if (filters.classification) count++;
     if (filters.isShared !== 'all') count++;
     if (filters.teamId) count++;
     return count;
-  }, [filters.calibrationMethod, filters.classification, filters.isShared, filters.teamId]);
+  }, [filters.managementMethod, filters.classification, filters.isShared, filters.teamId]);
 
   // 활성 필터 배지 라벨 함수들
   const getStatusLabel = useCallback(
@@ -246,11 +246,11 @@ function EquipmentFiltersComponent({
     [siteOptions]
   );
 
-  const getCalibrationMethodLabel = useCallback(
-    (method: CalibrationMethod) => {
-      return calibrationMethodOptions.find((opt) => opt.value === method)?.label || method;
+  const getManagementMethodLabel = useCallback(
+    (method: ManagementMethod) => {
+      return managementMethodOptions.find((opt) => opt.value === method)?.label || method;
     },
-    [calibrationMethodOptions]
+    [managementMethodOptions]
   );
 
   const getClassificationLabel = useCallback(
@@ -378,13 +378,13 @@ function EquipmentFiltersComponent({
             <Select {...calibMethodSelect}>
               <SelectTrigger
                 className="h-9 w-[150px] text-sm"
-                aria-label={t('filters.calibrationFilter')}
+                aria-label={t('filters.managementMethodFilter')}
               >
-                <SelectValue placeholder={t('filters.allCalibrationMethods')} />
+                <SelectValue placeholder={t('filters.allManagementMethods')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="_all">{t('filters.allCalibrationMethods')}</SelectItem>
-                {calibrationMethodOptions.map((option) => (
+                <SelectItem value="_all">{t('filters.allManagementMethods')}</SelectItem>
+                {managementMethodOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -473,12 +473,12 @@ function EquipmentFiltersComponent({
               onRemove={() => onStatusChange('')}
             />
           )}
-          {filters.calibrationMethod && (
+          {filters.managementMethod && (
             <ActiveFilterBadge
               label={t('filters.badgeCalibration', {
-                label: getCalibrationMethodLabel(filters.calibrationMethod),
+                label: getManagementMethodLabel(filters.managementMethod),
               })}
-              onRemove={() => onCalibrationMethodChange('')}
+              onRemove={() => onManagementMethodChange('')}
             />
           )}
           {filters.classification && (

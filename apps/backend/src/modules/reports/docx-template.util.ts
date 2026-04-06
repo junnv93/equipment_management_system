@@ -203,8 +203,8 @@ export class DocxTemplate {
     const rPrMatch = cellXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
     const rPr = rPrMatch ? rPrMatch[0] : '';
 
-    // 셀 시작 태그 유지
-    const startTag = cellXml.match(/^<w:tc[\s>][^>]*>/)?.[0] ?? '<w:tc>';
+    // 셀 시작 태그만 캡처 — <w:tc> 또는 <w:tc attr="..."> (내부 자식 태그 포함 방지)
+    const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
 
     return `${startTag}${tcPr}<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(newText)}</w:t></w:r></w:p></w:tc>`;
   }
@@ -214,7 +214,7 @@ export class DocxTemplate {
     const tcPr = tcPrMatch ? tcPrMatch[0] : '';
     const pPrMatch = cellXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
     const pPr = pPrMatch ? pPrMatch[0] : '';
-    const startTag = cellXml.match(/^<w:tc[\s>][^>]*>/)?.[0] ?? '<w:tc>';
+    const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
 
     return `${startTag}${tcPr}<w:p>${pPr}<w:r>${imageXml}</w:r></w:p></w:tc>`;
   }

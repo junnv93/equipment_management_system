@@ -26,7 +26,7 @@ import { AppModule } from './../src/app.module';
  * - calibrationOverdue 필터
  * - status 필터 (EQUIPMENT_STATUS_FILTER_OPTIONS)
  * - isShared 필터
- * - calibrationMethod 필터
+ * - managementMethod 필터
  * - calibrationDue / calibrationDueAfter 필터
  */
 describe('Equipment Filters (e2e)', () => {
@@ -176,27 +176,27 @@ describe('Equipment Filters (e2e)', () => {
     });
   });
 
-  describe('GET /equipment?calibrationMethod= - 교정 방법 필터', () => {
-    it('calibrationMethod=external_calibration 필터 적용', () => {
+  describe('GET /equipment?managementMethod= - 교정 방법 필터', () => {
+    it('managementMethod=external_calibration 필터 적용', () => {
       return request(app.getHttpServer())
-        .get('/equipment?calibrationMethod=external_calibration')
+        .get('/equipment?managementMethod=external_calibration')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
           expect(res.body).toHaveProperty('items');
 
-          // 결과가 있다면 모든 장비가 calibrationMethod='external_calibration'
+          // 결과가 있다면 모든 장비가 managementMethod='external_calibration'
           if (res.body.items.length > 0) {
             res.body.items.forEach((equipment: any) => {
-              expect(equipment.calibrationMethod).toBe('external_calibration');
+              expect(equipment.managementMethod).toBe('external_calibration');
             });
           }
         });
     });
 
-    it('calibrationMethod=self_inspection 필터 적용', () => {
+    it('managementMethod=self_inspection 필터 적용', () => {
       return request(app.getHttpServer())
-        .get('/equipment?calibrationMethod=self_inspection')
+        .get('/equipment?managementMethod=self_inspection')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -204,15 +204,15 @@ describe('Equipment Filters (e2e)', () => {
 
           if (res.body.items.length > 0) {
             res.body.items.forEach((equipment: any) => {
-              expect(equipment.calibrationMethod).toBe('self_inspection');
+              expect(equipment.managementMethod).toBe('self_inspection');
             });
           }
         });
     });
 
-    it('calibrationMethod=not_applicable 필터 적용', () => {
+    it('managementMethod=not_applicable 필터 적용', () => {
       return request(app.getHttpServer())
-        .get('/equipment?calibrationMethod=not_applicable')
+        .get('/equipment?managementMethod=not_applicable')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -220,7 +220,7 @@ describe('Equipment Filters (e2e)', () => {
 
           if (res.body.items.length > 0) {
             res.body.items.forEach((equipment: any) => {
-              expect(equipment.calibrationMethod).toBe('not_applicable');
+              expect(equipment.managementMethod).toBe('not_applicable');
             });
           }
         });
@@ -340,9 +340,9 @@ describe('Equipment Filters (e2e)', () => {
   });
 
   describe('GET /equipment - 복잡한 필터 조합', () => {
-    it('classification + status + calibrationMethod 조합', () => {
+    it('classification + status + managementMethod 조합', () => {
       return request(app.getHttpServer())
-        .get('/equipment?classification=fcc_emc_rf&status=available&calibrationMethod=external_calibration')
+        .get('/equipment?classification=fcc_emc_rf&status=available&managementMethod=external_calibration')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -353,7 +353,7 @@ describe('Equipment Filters (e2e)', () => {
             res.body.items.forEach((equipment: any) => {
               expect(equipment.classificationCode).toBe('E');
               expect(equipment.status).toBe('available');
-              expect(equipment.calibrationMethod).toBe('external_calibration');
+              expect(equipment.managementMethod).toBe('external_calibration');
             });
           }
         });

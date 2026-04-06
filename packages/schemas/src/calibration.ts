@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CalibrationMethodEnum } from './enums';
+import { ManagementMethodEnum } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
 import { uuidString } from './utils/fields';
 
@@ -30,7 +30,7 @@ export const baseCalibrationSchema = z.object({
   calibrationManagerId: uuidString(),
   calibrationDate: z.date(),
   nextCalibrationDate: z.date(),
-  calibrationMethod: CalibrationMethodEnum,
+  managementMethod: ManagementMethodEnum,
   status: CalibrationStatusEnum,
   calibrationAgency: z.string(),
   certificateNumber: z.string().optional(),

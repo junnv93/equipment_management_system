@@ -384,7 +384,7 @@ export class ExcelParserService {
       modelName: 'N5247A',
       manufacturer: 'Keysight',
       serialNumber: 'MY12345678',
-      calibrationMethod: 'external_calibration',
+      managementMethod: 'external_calibration',
       calibrationRequired: 'required',
       calibrationCycle: '12',
       lastCalibrationDate: '2024-01-15',
@@ -468,7 +468,7 @@ export class ExcelParserService {
     refSheet.addRow(['필드명', '허용값']);
     refSheet.addRow(['사이트(site)', 'suwon | uiwang | pyeongtaek']);
     refSheet.addRow([
-      '관리방법(calibrationMethod)',
+      '관리방법(managementMethod)',
       'external_calibration | self_inspection | not_applicable',
     ]);
     refSheet.addRow(['교정필요(calibrationRequired)', 'required | not_required']);

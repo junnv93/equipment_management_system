@@ -195,7 +195,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
       const conditions: SQL[] = [
         eq(equipment.site, siteId),
-        eq(equipment.calibrationMethod, 'external_calibration'),
+        eq(equipment.managementMethod, 'external_calibration'),
         eq(equipment.isActive, true),
       ];
 
@@ -800,7 +800,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     const { year, siteId, teamId } = query;
 
     const conditions: SQL[] = [
-      eq(equipment.calibrationMethod, 'external_calibration'),
+      eq(equipment.managementMethod, 'external_calibration'),
       eq(equipment.isActive, true),
     ];
 

@@ -116,7 +116,7 @@ export function EquipmentKpiStrip({ equipment }: EquipmentKpiStripProps) {
 
   // 교정 D-day 계산
   const getCalibrationDisplay = (): { value: string; sub?: string; variant: KpiColorVariant } => {
-    if (!equipment.calibrationRequired || equipment.calibrationMethod === 'not_applicable') {
+    if (!equipment.calibrationRequired || equipment.managementMethod === 'not_applicable') {
       return { value: t('kpiStrip.notApplicable'), variant: 'neutral' };
     }
     if (!equipment.nextCalibrationDate) {

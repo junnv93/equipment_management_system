@@ -28,7 +28,7 @@ import {
 } from '@/lib/design-tokens';
 import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import type { CalibrationMethod, EquipmentStatus } from '@equipment-management/schemas';
+import type { ManagementMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
   items: Equipment[];
@@ -100,13 +100,13 @@ const EquipmentCard = memo(function EquipmentCard({
       calculateCalibrationStatus(
         equipment.status,
         !!equipment.calibrationRequired,
-        equipment.calibrationMethod as CalibrationMethod | undefined,
+        equipment.managementMethod as ManagementMethod | undefined,
         equipment.nextCalibrationDate
       ),
     [
       equipment.status,
       equipment.calibrationRequired,
-      equipment.calibrationMethod,
+      equipment.managementMethod,
       equipment.nextCalibrationDate,
     ]
   );
@@ -234,13 +234,13 @@ const EquipmentCard = memo(function EquipmentCard({
             </div>
           )}
 
-          {equipment.calibrationMethod && (
+          {equipment.managementMethod && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <dt className="sr-only">{t('card.calibrationMethodSrOnly')}</dt>
+              <dt className="sr-only">{t('card.managementMethodSrOnly')}</dt>
               <Wrench className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <dd>
                 {t(
-                  `filters.calibrationMethodLabel.${equipment.calibrationMethod as CalibrationMethod}` as Parameters<
+                  `filters.managementMethodLabel.${equipment.managementMethod as ManagementMethod}` as Parameters<
                     typeof t
                   >[0]
                 )}

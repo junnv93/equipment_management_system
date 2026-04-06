@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 
 import { isEquipment } from '../equipment';
-import { CalibrationMethodEnum, EquipmentStatusEnum } from '../enums';
+import { ManagementMethodEnum, EquipmentStatusEnum } from '../enums';
 
 describe('Equipment Type Guards and Schemas', () => {
   describe('isEquipment', () => {
@@ -11,7 +11,7 @@ describe('Equipment Type Guards and Schemas', () => {
         name: 'Test Equipment',
         managementNumber: 'SUW-E0001',
         status: EquipmentStatusEnum.enum.available,
-        calibrationMethod: CalibrationMethodEnum.enum.external_calibration,
+        managementMethod: ManagementMethodEnum.enum.external_calibration,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         deletedAt: null,
@@ -63,4 +63,4 @@ describe('Equipment Type Guards and Schemas', () => {
       expect(isEquipment(undefined)).toBe(false);
     });
   });
-}); 
+});

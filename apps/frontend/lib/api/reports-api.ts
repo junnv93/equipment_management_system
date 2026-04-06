@@ -17,17 +17,8 @@ export async function exportFormTemplate(
   formNumber: string,
   params?: Record<string, string>
 ): Promise<void> {
-  // 서버가 Content-Disposition filename을 반환하지만,
-  // downloadFile이 fallback filename을 필요로 하므로 DOCX/XLSX 양식 모두 대응
-  const XLSX_FORMS = [
-    'UL-QP-18-01',
-    'UL-QP-18-03',
-    'UL-QP-18-05',
-    'UL-QP-18-07',
-    'UL-QP-18-08',
-    'UL-QP-18-09',
-  ];
-  const ext = XLSX_FORMS.includes(formNumber) ? 'xlsx' : 'docx';
+  // QP-18-01(시험설비 관리대장)만 XLSX, 나머지는 모두 DOCX 양식
+  const ext = formNumber === 'UL-QP-18-01' ? 'xlsx' : 'docx';
   await downloadFile({
     url: API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE(formNumber),
     params,

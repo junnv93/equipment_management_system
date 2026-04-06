@@ -67,7 +67,7 @@ export function mapSiteValue(value: unknown): string | undefined {
 }
 
 /** 교정 방법 정규화 (한/영 → DB enum 값) */
-export function mapCalibrationMethod(value: unknown): string | undefined {
+export function mapManagementMethod(value: unknown): string | undefined {
   if (!value || typeof value !== 'string') return undefined;
   const normalized = value.trim().toLowerCase();
   const METHOD_MAP: Record<string, string> = {
@@ -203,9 +203,9 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
 
   // 교정 정보
   {
-    dbField: 'calibrationMethod',
+    dbField: 'managementMethod',
     aliases: ['관리방법', '교정방법', '관리 방법', 'Calibration Method', 'Cal Method'],
-    transform: mapCalibrationMethod,
+    transform: mapManagementMethod,
   },
   {
     dbField: 'calibrationRequired',

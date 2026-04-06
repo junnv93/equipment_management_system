@@ -104,7 +104,7 @@ async function pushSchema(): Promise<void> {
         next_calibration_date timestamp,
         calibration_agency varchar(100),
         needs_intermediate_check boolean DEFAULT false,
-        calibration_method varchar(50),
+        management_method varchar(50),
         last_intermediate_check_date timestamp,
         intermediate_check_cycle integer,
         next_intermediate_check_date timestamp,

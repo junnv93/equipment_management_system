@@ -440,7 +440,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     // 다음 교정일 자동 계산 — SSOT 유틸리티 사용
     let nextCalibrationDate: Date | null = null;
     if (
-      dto.calibrationInfo?.calibrationMethod === 'external_calibration' &&
+      dto.calibrationInfo?.managementMethod === 'external_calibration' &&
       dto.calibrationInfo.calibrationCycle &&
       dto.calibrationInfo.lastCalibrationDate
     ) {
@@ -509,7 +509,7 @@ export class EquipmentImportsService extends VersionedBaseService {
             isActive: true,
             approvalStatus: EIVal.APPROVED,
             // 교정 정보 추가
-            calibrationMethod: dto.calibrationInfo?.calibrationMethod || null,
+            managementMethod: dto.calibrationInfo?.managementMethod || null,
             calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
             lastCalibrationDate: dto.calibrationInfo?.lastCalibrationDate
               ? new Date(dto.calibrationInfo.lastCalibrationDate)

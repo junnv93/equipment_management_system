@@ -2,8 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
-  CalibrationMethodEnum,
-  type CalibrationMethod,
+  ManagementMethodEnum,
+  type ManagementMethod,
   CalibrationStatusEnum,
   type CalibrationStatus,
   CalibrationRegisteredByRoleEnum,
@@ -25,7 +25,7 @@ export const calibrationBaseSchema = z.object({
   calibrationManagerId: optionalUuid(), // FE 미전송 시 registeredBy 폴백
   calibrationDate: z.coerce.date({ message: VM.date.invalid }),
   nextCalibrationDate: z.coerce.date({ message: VM.date.invalid }).optional(),
-  calibrationMethod: CalibrationMethodEnum.optional().default('external_calibration'),
+  managementMethod: ManagementMethodEnum.optional().default('external_calibration'),
   status: CalibrationStatusEnum.default(CalibrationStatusEnum.enum.scheduled),
   calibrationAgency: z.string().min(1, VM.calibration.agency.required).max(100),
   certificateNumber: z.string().max(100).optional(),
@@ -77,11 +77,11 @@ export class CreateCalibrationDto {
 
   @ApiProperty({
     description: '교정 방법',
-    enum: CalibrationMethodEnum.options,
+    enum: ManagementMethodEnum.options,
     required: false,
     default: 'external_calibration',
   })
-  calibrationMethod?: CalibrationMethod;
+  managementMethod?: ManagementMethod;
 
   @ApiProperty({
     description: '교정 상태',

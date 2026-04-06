@@ -32,7 +32,7 @@ test.describe('장비 목록 - Secondary 필터 (교정방법/분류/공용/팀)
     await calibFilter.click();
     await page.getByRole('option', { name: '외부 교정' }).click();
 
-    await expect(page).toHaveURL(/calibrationMethod=external_calibration/);
+    await expect(page).toHaveURL(/managementMethod=external_calibration/);
     await expect(page.getByText('교정: 외부 교정')).toBeVisible();
   });
 
@@ -114,7 +114,7 @@ test.describe('장비 목록 - 복합 필터', () => {
     // URL에 필터 파라미터 포함
     const url = page.url();
     expect(url).toContain('status=available');
-    expect(url).toContain('calibrationMethod=external_calibration');
+    expect(url).toContain('managementMethod=external_calibration');
   });
 
   test('개별 필터 제거 시 다른 필터 유지', async ({ techManagerPage: page }) => {

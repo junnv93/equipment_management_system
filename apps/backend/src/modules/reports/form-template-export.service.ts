@@ -148,7 +148,7 @@ export class FormTemplateExportService {
   // ============================================================================
 
   /** QP-18-01 enum → 한국어 변환 */
-  private static readonly CALIBRATION_METHOD_LABELS: Record<string, string> = {
+  private static readonly MANAGEMENT_METHOD_LABELS: Record<string, string> = {
     external_calibration: '외부교정',
     self_inspection: '자체점검',
     not_applicable: '비대상',
@@ -189,8 +189,8 @@ export class FormTemplateExportService {
     if (params.status) {
       conditions.push(sql`${equipment.status} = ${params.status}`);
     }
-    if (params.calibrationMethod) {
-      conditions.push(eq(equipment.calibrationMethod, params.calibrationMethod));
+    if (params.managementMethod) {
+      conditions.push(eq(equipment.managementMethod, params.managementMethod));
     }
     if (params.classification && params.classification in CLASSIFICATION_TO_CODE) {
       const code = CLASSIFICATION_TO_CODE[params.classification as Classification];
@@ -265,7 +265,7 @@ export class FormTemplateExportService {
         row.managementNumber,
         row.assetNumber ?? 'N/A',
         row.name,
-        FormTemplateExportService.CALIBRATION_METHOD_LABELS[row.calibrationMethod ?? ''] ?? 'N/A',
+        FormTemplateExportService.MANAGEMENT_METHOD_LABELS[row.managementMethod ?? ''] ?? 'N/A',
         formatDate(row.lastCalibrationDate),
         row.calibrationAgency ?? 'N/A',
         row.calibrationCycle ?? 'N/A',
@@ -738,6 +738,19 @@ export class FormTemplateExportService {
       conditions.push(sql`${testSoftware.availability} = ${params.availability}`);
     }
 
+    // 제작사 필터
+    if (params.manufacturer) {
+      conditions.push(eq(testSoftware.manufacturer, params.manufacturer));
+    }
+
+    // 검색어 필터 (관리번호, SW명, 제작사 ILIKE)
+    if (params.search) {
+      const term = `%${params.search}%`;
+      conditions.push(
+        sql`(${testSoftware.managementNumber} ILIKE ${term} OR ${testSoftware.name} ILIKE ${term} OR ${testSoftware.manufacturer} ILIKE ${term})`
+      );
+    }
+
     // 담당자(정/부) JOIN — alias로 분리
     const primaryManager = alias(users, 'primaryManager');
     const secondaryManager = alias(users, 'secondaryManager');
@@ -885,11 +898,10 @@ export class FormTemplateExportService {
       return u ?? null;
     };
 
-    const [receiver, performer, techApprover, qualityApprover] = await Promise.all([
+    const [receiver, performer, techApprover] = await Promise.all([
       resolveUser(record.receivedBy),
       resolveUser(record.performedBy),
       resolveUser(record.technicalApproverId),
-      resolveUser(record.qualityApproverId),
     ]);
 
     // docx 템플릿 로드

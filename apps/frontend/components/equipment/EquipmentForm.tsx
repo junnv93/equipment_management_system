@@ -208,7 +208,7 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
   lastCalibrationDate: 'lastCalibrationDate',
   nextCalibrationDate: 'nextCalibrationDate',
   calibrationAgency: 'calibrationAgency',
-  calibrationMethod: 'calibrationMethod',
+  managementMethod: 'managementMethod',
   lastIntermediateCheckDate: 'lastIntermediateCheckDate',
   intermediateCheckCycle: 'intermediateCheckCycle',
   technicalManager: 'technicalManager',
@@ -416,7 +416,7 @@ export function EquipmentForm({
         : '',
       calibrationAgency: initialData?.calibrationAgency || '',
       needsIntermediateCheck: initialData?.needsIntermediateCheck || false,
-      calibrationMethod: initialData?.calibrationMethod,
+      managementMethod: initialData?.managementMethod,
       lastIntermediateCheckDate: initialData?.lastIntermediateCheckDate
         ? formatDate(initialData.lastIntermediateCheckDate, 'yyyy-MM-dd')
         : '',
@@ -810,7 +810,7 @@ export function EquipmentForm({
         specMatch: data.specMatch,
         calibrationRequired: data.calibrationRequired,
         calibrationAgency: data.calibrationAgency,
-        calibrationMethod: data.calibrationMethod,
+        managementMethod: data.managementMethod,
         teamId: data.teamId, // optional().nullable() - 빈 문자열 → undefined
         supplier: data.supplier,
         contactInfo: data.contactInfo,

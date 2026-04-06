@@ -69,7 +69,7 @@
     "supplier": "공급사",
     "contactInfo": "연락처",
     "externalIdentifier": "소유처 원본 번호",
-    "calibrationMethod": "관리 방법"
+    "managementMethod": "관리 방법"
   },
   "status": {
     "available": "사용 가능",
@@ -156,7 +156,7 @@
     "allStatuses": "모든 상태",
     "allSites": "모든 사이트",
     "siteFixed": "고정됨",
-    "allCalibrationMethods": "모든 교정 방법",
+    "allManagementMethods": "모든 관리 방법",
     "allClassifications": "모든 분류",
     "allEquipment": "모든 장비",
     "teamEquipment": "팀 장비",
@@ -167,7 +167,7 @@
     "loading": "로딩 중...",
     "site": "사이트",
     "status": "상태",
-    "calibrationMethod": "교정 방법",
+    "managementMethod": "관리 방법",
     "classification": "장비 분류",
     "shared": "장비 구분",
     "team": "팀",
@@ -181,7 +181,7 @@
     "calibrationNormalDesc": "교정 기한 여유",
     "siteFilter": "사이트 필터 선택",
     "statusFilter": "장비 상태 필터 선택",
-    "calibrationFilter": "교정 방법 필터 선택",
+    "managementMethodFilter": "관리 방법 필터 선택",
     "classificationFilter": "장비 분류 필터 선택",
     "sharedFilter": "장비 구분 필터 선택",
     "calibrationDueFilter": "교정 기한 필터 선택",
@@ -194,7 +194,7 @@
     "badgeCalibrationDue": "교정기한: {label}",
     "badgeTeam": "팀: {label}",
     "allDescription": "모든 장비",
-    "calibrationMethodLabel": {
+    "managementMethodLabel": {
       "external_calibration": "외부 교정",
       "self_inspection": "자체 점검",
       "not_applicable": "비대상"
@@ -240,7 +240,7 @@
     "locationSrOnly": "위치",
     "ownerNumberSrOnly": "소유처 번호",
     "lastCalibrationSrOnly": "마지막 교정일",
-    "calibrationMethodSrOnly": "교정 방법",
+    "managementMethodSrOnly": "관리 방법",
     "calibrationPrefix": "교정: ",
     "ownerNumberTitle": "소유처 번호: {number}",
     "viewDetailAriaLabel": "{name} 상세 보기",
@@ -334,7 +334,8 @@
     "intermediateTitle": "중간점검 기록 (UL-QP-18-03)",
     "selfTitle": "자체점검 기록 (UL-QP-18-05)",
     "noActiveCalibration": "활성 교정 기록이 없어 중간점검을 생성할 수 없습니다",
-    "createButton": "점검 기록 작성"
+    "createButton": "점검 기록 작성",
+    "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: 비대상)"
   },
   "form": {
     "basicInfo": {
@@ -461,7 +462,7 @@
       "lastCalibrationDate": "최종 교정일",
       "nextCalibrationDate": "차기 교정일",
       "calibrationAgency": "교정 기관",
-      "calibrationMethod": "관리 방법",
+      "managementMethod": "관리 방법",
       "lastIntermediateCheckDate": "최종 중간 점검일",
       "intermediateCheckCycle": "중간점검 주기",
       "technicalManager": "기술책임자",
@@ -571,7 +572,7 @@
     "locationManagement": "위치 및 관리 정보",
     "calibrationInfo": "교정 정보",
     "softwareManualInfo": "소프트웨어/매뉴얼 정보",
-    "calibrationMethod": "교정 방법",
+    "managementMethod": "관리 방법",
     "calibrationCycle": "교정 주기 (개월)",
     "lastCalibrationDate": "마지막 교정일",
     "nextCalibrationDate": "다음 교정 예정일",

@@ -100,7 +100,7 @@ export function EquipmentStickyHeader({
     const isNonConforming = equipment.status === ESVal.NON_CONFORMING;
     const shouldSkip = !shouldDisplayCalibrationStatus(equipment.status);
     if (shouldSkip && !isNonConforming) return null;
-    if (!equipment.calibrationRequired || equipment.calibrationMethod === 'not_applicable')
+    if (!equipment.calibrationRequired || equipment.managementMethod === 'not_applicable')
       return null;
     if (!equipment.nextCalibrationDate) return null;
 
@@ -135,7 +135,7 @@ export function EquipmentStickyHeader({
   }, [
     equipment.status,
     equipment.calibrationRequired,
-    equipment.calibrationMethod,
+    equipment.managementMethod,
     equipment.nextCalibrationDate,
     t,
   ]);

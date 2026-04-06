@@ -48,7 +48,7 @@
     "calibrationDate": "Calibration Date",
     "nextCalibrationDate": "Next Calibration Date",
     "calibrationAgency": "Calibration Agency",
-    "calibrationMethod": "Calibration Method",
+    "managementMethod": "Management Method",
     "result": "Calibration Result",
     "certificate": "Calibration Certificate",
     "notes": "Notes"

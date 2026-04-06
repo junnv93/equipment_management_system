@@ -25,7 +25,7 @@ const CALIBRATION_REQUIRED_LABELS: Record<string, string> = {
   not_required: '불필요',
 };
 
-const CALIBRATION_METHOD_LABELS: Record<string, string> = {
+const MANAGEMENT_METHOD_LABELS: Record<string, string> = {
   external_calibration: '외부교정',
   self_inspection: '자체점검',
   not_applicable: '비대상',
@@ -54,7 +54,7 @@ interface HistoryCardEquipmentInfo {
   specMatch: string;
   calibrationRequired: string;
   calibrationCycle: string;
-  calibrationMethod: string;
+  managementMethod: string;
   manualLocation: string;
   initialLocation: string;
   needsIntermediateCheck: string;
@@ -281,7 +281,7 @@ export class HistoryCardService {
         calibrationCycle: equipmentRow.calibrationCycle
           ? `${equipmentRow.calibrationCycle}개월`
           : '-',
-        calibrationMethod: CALIBRATION_METHOD_LABELS[equipmentRow.calibrationMethod ?? ''] ?? '-',
+        managementMethod: MANAGEMENT_METHOD_LABELS[equipmentRow.managementMethod ?? ''] ?? '-',
         manualLocation: equipmentRow.manualLocation ?? '-',
         initialLocation: equipmentRow.initialLocation ?? '-',
         needsIntermediateCheck: equipmentRow.needsIntermediateCheck ? 'O' : 'X',

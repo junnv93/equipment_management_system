@@ -66,10 +66,10 @@ test.describe('Group A: Basic UI Rendering', () => {
       await siteAdminPage.getByRole('button', { name: /추가 필터/ }).click();
 
       // 5. 교정 방법 필터 (2차 필터)
-      const calibrationMethodFilter = siteAdminPage.getByRole('combobox', {
+      const managementMethodFilter = siteAdminPage.getByRole('combobox', {
         name: '교정 방법 필터 선택',
       });
-      await expect(calibrationMethodFilter).toBeVisible();
+      await expect(managementMethodFilter).toBeVisible();
 
       // 6. 분류 필터 (2차 필터)
       const classificationFilter = siteAdminPage.getByRole('combobox', {

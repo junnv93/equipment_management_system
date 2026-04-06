@@ -33,9 +33,9 @@ import {
   ClassificationEnum,
   type Site,
   type Classification,
-  type CalibrationMethod,
+  type ManagementMethod,
 } from '@equipment-management/schemas';
-import { CALIBRATION_METHOD_VALUES } from '@equipment-management/schemas';
+import { MANAGEMENT_METHOD_VALUES } from '@equipment-management/schemas';
 
 // ============================================================================
 // Site Labels
@@ -93,21 +93,21 @@ export function useClassificationLabels(): Record<Classification, string> {
 /**
  * i18n 기반 교정 방법 라벨 맵
  *
- * @returns Record<CalibrationMethod, string> — CALIBRATION_METHOD_LABELS와 동일한 형태
+ * @returns Record<ManagementMethod, string> — MANAGEMENT_METHOD_LABELS와 동일한 형태
  * @example
- *   const methodLabels = useCalibrationMethodLabels();
+ *   const methodLabels = useManagementMethodLabels();
  *   methodLabels.external_calibration  // "외부 교정" (ko) | "External Calibration" (en)
  */
-export function useCalibrationMethodLabels(): Record<CalibrationMethod, string> {
+export function useManagementMethodLabels(): Record<ManagementMethod, string> {
   const t = useTranslations('equipment');
   return useMemo(
     () =>
       Object.fromEntries(
-        CALIBRATION_METHOD_VALUES.map((method) => [
+        MANAGEMENT_METHOD_VALUES.map((method) => [
           method,
-          t(`filters.calibrationMethodLabel.${method}` as Parameters<typeof t>[0]),
+          t(`filters.managementMethodLabel.${method}` as Parameters<typeof t>[0]),
         ])
-      ) as Record<CalibrationMethod, string>,
+      ) as Record<ManagementMethod, string>,
     [t]
   );
 }

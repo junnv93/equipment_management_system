@@ -189,7 +189,7 @@ export class EquipmentService extends VersionedBaseService {
       sort,
       site,
       isShared,
-      calibrationMethod,
+      managementMethod,
       classification,
       showRetired,
     } = queryParams;
@@ -246,8 +246,8 @@ export class EquipmentService extends VersionedBaseService {
     }
 
     // 교정 방법 필터
-    if (calibrationMethod) {
-      whereConditions.push(eq(equipment.calibrationMethod, calibrationMethod));
+    if (managementMethod) {
+      whereConditions.push(eq(equipment.managementMethod, managementMethod));
     }
 
     // 장비 분류 필터 (관리번호 분류코드 기준)
@@ -1290,7 +1290,7 @@ export class EquipmentService extends VersionedBaseService {
     }
 
     // 교정 방법이 "해당 없음"이면 검증 불필요
-    if (existingEquipment.calibrationMethod === 'not_applicable') {
+    if (existingEquipment.managementMethod === 'not_applicable') {
       return;
     }
 

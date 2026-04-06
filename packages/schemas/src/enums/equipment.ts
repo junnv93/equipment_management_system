@@ -40,14 +40,19 @@ export const EquipmentStatusEnum = z.enum([
 
 export type EquipmentStatus = z.infer<typeof EquipmentStatusEnum>;
 
-// 교정 방법 열거형
-export const CalibrationMethodEnum = z.enum([
+// 관리 방법 열거형 (외부교정 / 자체점검 / 비대상)
+export const ManagementMethodEnum = z.enum([
   'external_calibration', // 외부 교정
   'self_inspection', // 자체 점검
   'not_applicable', // 비대상
 ]);
 
-export type CalibrationMethod = z.infer<typeof CalibrationMethodEnum>;
+export type ManagementMethod = z.infer<typeof ManagementMethodEnum>;
+
+/** @deprecated Use ManagementMethodEnum / ManagementMethod instead */
+export const CalibrationMethodEnum = ManagementMethodEnum;
+/** @deprecated Use ManagementMethod instead */
+export type CalibrationMethod = ManagementMethod;
 
 // 사용자 역할 열거형 (UL-QP-18 절차서 영문 명칭 기준)
 // 역할 계층: test_engineer(1) < technical_manager(2) < quality_manager(3) < lab_manager(4) < system_admin(5)

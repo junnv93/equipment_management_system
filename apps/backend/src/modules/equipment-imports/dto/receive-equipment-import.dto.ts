@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 import {
-  CalibrationMethodEnum,
+  ManagementMethodEnum,
   ConditionStatusEnum,
   AccessoriesStatusEnum,
   VM,
@@ -24,7 +24,7 @@ export const receiveEquipmentImportSchema = z
     // 교정 정보 추가 (선택적)
     calibrationInfo: z
       .object({
-        calibrationMethod: CalibrationMethodEnum,
+        managementMethod: ManagementMethodEnum,
         calibrationCycle: z.number().int().positive().optional(),
         lastCalibrationDate: z.string().optional(), // ISO 8601 형식
         calibrationAgency: z.string().min(1).optional(),
@@ -34,7 +34,7 @@ export const receiveEquipmentImportSchema = z
   .refine(
     (data) => {
       // 외부 교정 선택 시 모든 교정 필드 필수
-      if (data.calibrationInfo?.calibrationMethod === 'external_calibration') {
+      if (data.calibrationInfo?.managementMethod === 'external_calibration') {
         return (
           data.calibrationInfo.calibrationCycle &&
           data.calibrationInfo.lastCalibrationDate &&
@@ -77,14 +77,14 @@ export class ReceiveEquipmentImportDto {
     description: '교정 정보 (선택적, 외부 교정 시 필수)',
     required: false,
     example: {
-      calibrationMethod: 'external_calibration',
+      managementMethod: 'external_calibration',
       calibrationCycle: 12,
       lastCalibrationDate: '2026-02-09',
       calibrationAgency: 'ABC 교정사',
     },
   })
   calibrationInfo?: {
-    calibrationMethod: string;
+    managementMethod: string;
     calibrationCycle?: number;
     lastCalibrationDate?: string;
     calibrationAgency?: string;

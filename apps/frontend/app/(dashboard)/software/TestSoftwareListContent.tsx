@@ -36,7 +36,7 @@ import {
   type UITestSoftwareFilters,
 } from '@/lib/utils/software-filter-utils';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import { exportFormTemplate } from '@/lib/api/self-inspection-api';
+import { exportFormTemplate } from '@/lib/api/reports-api';
 import { toast } from 'sonner';
 
 const ALL_VALUE = '__ALL__';

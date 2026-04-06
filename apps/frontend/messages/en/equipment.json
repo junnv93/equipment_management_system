@@ -69,7 +69,7 @@
     "supplier": "Supplier",
     "contactInfo": "Contact",
     "externalIdentifier": "External Identifier",
-    "calibrationMethod": "Management Method"
+    "managementMethod": "Management Method"
   },
   "status": {
     "available": "Available",
@@ -156,7 +156,7 @@
     "allStatuses": "All Statuses",
     "allSites": "All Sites",
     "siteFixed": "Fixed",
-    "allCalibrationMethods": "All Methods",
+    "allManagementMethods": "All Methods",
     "allClassifications": "All Classifications",
     "allEquipment": "All Equipment",
     "teamEquipment": "Team Equipment",
@@ -167,7 +167,7 @@
     "loading": "Loading...",
     "site": "Site",
     "status": "Status",
-    "calibrationMethod": "Calibration Method",
+    "managementMethod": "Management Method",
     "classification": "Classification",
     "shared": "Equipment Type",
     "team": "Team",
@@ -181,7 +181,7 @@
     "calibrationNormalDesc": "Calibration not due soon",
     "siteFilter": "Select site filter",
     "statusFilter": "Select status filter",
-    "calibrationFilter": "Select calibration method filter",
+    "managementMethodFilter": "Select management method filter",
     "classificationFilter": "Select classification filter",
     "sharedFilter": "Select equipment type filter",
     "calibrationDueFilter": "Select calibration due filter",
@@ -194,7 +194,7 @@
     "badgeCalibrationDue": "Cal. Due: {label}",
     "badgeTeam": "Team: {label}",
     "allDescription": "All equipment",
-    "calibrationMethodLabel": {
+    "managementMethodLabel": {
       "external_calibration": "External Calibration",
       "self_inspection": "Self Inspection",
       "not_applicable": "Not Applicable"
@@ -240,7 +240,7 @@
     "locationSrOnly": "Location",
     "ownerNumberSrOnly": "Owner Number",
     "lastCalibrationSrOnly": "Last Calibration",
-    "calibrationMethodSrOnly": "Calibration Method",
+    "managementMethodSrOnly": "Management Method",
     "calibrationPrefix": "Cal: ",
     "ownerNumberTitle": "Owner Number: {number}",
     "viewDetailAriaLabel": "View {name} details",
@@ -334,7 +334,8 @@
     "intermediateTitle": "Intermediate Inspection Records (UL-QP-18-03)",
     "selfTitle": "Self Inspection Records (UL-QP-18-05)",
     "noActiveCalibration": "No active calibration record found. Cannot create intermediate inspection.",
-    "createButton": "Create Inspection Record"
+    "createButton": "Create Inspection Record",
+    "notApplicable": "This equipment is not subject to inspection (Management method: N/A)"
   },
   "form": {
     "basicInfo": {
@@ -461,7 +462,7 @@
       "lastCalibrationDate": "Last Calibration Date",
       "nextCalibrationDate": "Next Calibration Date",
       "calibrationAgency": "Calibration Agency",
-      "calibrationMethod": "Management Method",
+      "managementMethod": "Management Method",
       "lastIntermediateCheckDate": "Last Intermediate Check Date",
       "intermediateCheckCycle": "Intermediate Check Cycle",
       "technicalManager": "Technical Manager",
@@ -571,7 +572,7 @@
     "locationManagement": "Location & Management Information",
     "calibrationInfo": "Calibration Information",
     "softwareManualInfo": "Software/Manual Information",
-    "calibrationMethod": "Calibration Method",
+    "managementMethod": "Management Method",
     "calibrationCycle": "Calibration Cycle (months)",
     "lastCalibrationDate": "Last Calibration Date",
     "nextCalibrationDate": "Next Calibration Date",

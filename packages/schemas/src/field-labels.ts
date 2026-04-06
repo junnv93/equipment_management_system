@@ -28,7 +28,7 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     location: '위치',
     building: '건물',
     room: '호실',
-    calibrationMethod: '교정 방법',
+    managementMethod: '관리 방법',
     calibrationDate: '교정일',
     nextCalibrationDate: '차기 교정일',
     calibrationCycle: '교정 주기',
