@@ -32,7 +32,6 @@ interface TeamEquipmentListProps {
  */
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   available: 'default',
-  in_use: 'secondary',
   checked_out: 'outline',
   calibration_scheduled: 'secondary',
   calibration_overdue: 'destructive',

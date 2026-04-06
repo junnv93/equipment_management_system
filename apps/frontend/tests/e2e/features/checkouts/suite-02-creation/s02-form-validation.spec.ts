@@ -4,7 +4,7 @@
  * 폼 유효성 검증을 테스트합니다. 실제 데이터 생성은 s02-create-success에서 수행.
  *
  * ⚠️ calibration/repair 목적의 반출은 non_conforming 장비도 허용됨.
- *    차단되는 상태: in_use, checked_out 등
+ *    차단되는 상태: checked_out, retired 등
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
@@ -47,17 +47,17 @@ test.describe('Suite 02: 반출 생성 폼 검증', () => {
     expect(response.status()).toBe(400);
   });
 
-  test('S02-03: 사용중 장비 반출 차단 (API 400)', async ({ testOperatorPage: page }) => {
+  test('S02-03: 반출중 장비 반출 차단 (API 400)', async ({ testOperatorPage: page }) => {
     const token = await getBackendToken(page, 'test_engineer');
 
-    // in_use 상태 장비로 반출 신청 시도 (calibration/repair에서 in_use는 허용되지 않음)
+    // checked_out 상태 장비로 반출 신청 시도
     const response = await page.request.post(`${BACKEND_URL}/api/checkouts`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       data: {
-        equipmentIds: [EQUIP.EMC_RECEIVER_SUW_E], // in_use status
+        equipmentIds: [EQUIP.ANTENNA_1_SUW_E], // checked_out status
         purpose: CPVal.CALIBRATION,
         destination: '한국교정시험연구원',
         reason: '교정 시도',

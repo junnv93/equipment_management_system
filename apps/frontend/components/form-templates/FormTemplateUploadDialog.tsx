@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Upload } from 'lucide-react';
+import { Upload, FileUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/lib/api/query-config';
 import { uploadFormTemplate } from '@/lib/api/form-templates-api';
+import { FORM_TEMPLATES_UPLOAD_TOKENS, FORM_TEMPLATES_MOTION } from '@/lib/design-tokens';
 
 interface FormTemplateUploadDialogProps {
   formNumber: string;
@@ -70,27 +71,48 @@ export default function FormTemplateUploadDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-2">
+          {/* 파일 선택 드롭존 */}
+          <div>
             <input
               ref={fileInputRef}
               type="file"
               accept=".docx,.xlsx"
               onChange={handleFileChange}
               className="hidden"
+              aria-label={t('uploadDialog.selectFile')}
             />
-            <Button
-              variant="outline"
-              className="w-full"
+            <button
+              type="button"
+              className={`${FORM_TEMPLATES_UPLOAD_TOKENS.dropzone} ${selectedFile ? FORM_TEMPLATES_UPLOAD_TOKENS.dropzoneActive : ''}`}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className="mr-2 h-4 w-4" />
-              {selectedFile ? selectedFile.name : t('uploadDialog.selectFile')}
-            </Button>
-            <p className="text-xs text-muted-foreground">{t('uploadDialog.accept')}</p>
+              {selectedFile ? (
+                <>
+                  <FileUp className={FORM_TEMPLATES_UPLOAD_TOKENS.dropzoneIcon} />
+                  <span className={FORM_TEMPLATES_UPLOAD_TOKENS.selectedFile}>
+                    {selectedFile.name}
+                  </span>
+                  <span className={FORM_TEMPLATES_UPLOAD_TOKENS.dropzoneHint}>
+                    {t('uploadDialog.dropzoneHint')}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Upload className={FORM_TEMPLATES_UPLOAD_TOKENS.dropzoneIcon} />
+                  <span className={FORM_TEMPLATES_UPLOAD_TOKENS.dropzoneText}>
+                    {t('uploadDialog.selectFile')}
+                  </span>
+                  <span className={FORM_TEMPLATES_UPLOAD_TOKENS.dropzoneHint}>
+                    {t('uploadDialog.dropzoneHint')}
+                  </span>
+                </>
+              )}
+            </button>
           </div>
 
+          {/* 업로드 버튼 */}
           <Button
-            className="w-full"
+            className={`${FORM_TEMPLATES_UPLOAD_TOKENS.uploadBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
             disabled={!selectedFile || mutation.isPending}
             onClick={handleUpload}
           >

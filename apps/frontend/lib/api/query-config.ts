@@ -313,6 +313,8 @@ export const queryKeys = {
       [...queryKeys.equipment.detail(id), 'disposal-request', 'current'] as const,
     selfInspections: (id: string) =>
       [...queryKeys.equipment.detail(id), 'self-inspections'] as const,
+    intermediateInspections: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'intermediate-inspections'] as const,
   },
   calibrationPlans: {
     all: ['calibrationPlans'] as const,

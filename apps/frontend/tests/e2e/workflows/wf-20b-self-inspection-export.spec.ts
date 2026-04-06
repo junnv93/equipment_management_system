@@ -67,7 +67,7 @@ test.describe('WF-20b: 자체점검표 양식 내보내기 (QP-18-05)', () => {
 
   test('Step 2: 미구현 양식 호출 → 501', async ({ testOperatorPage: page }) => {
     const token = await getBackendToken(page, 'test_engineer');
-    const resp = await page.request.get(`${BACKEND_URL}/api/reports/export/form/UL-QP-18-04`, {
+    const resp = await page.request.get(`${BACKEND_URL}/api/reports/export/form/UL-QP-18-06`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(resp.status()).toBe(501);

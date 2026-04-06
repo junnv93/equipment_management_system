@@ -247,7 +247,7 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
   return (
     <div className={getPageContainerClasses('detail')}>
       {/* Nav */}
-      <Button variant="ghost" size="sm" onClick={() => router.back()}>
+      <Button variant="ghost" size="sm" onClick={() => router.push(FRONTEND_ROUTES.SOFTWARE.LIST)}>
         <ArrowLeft className="mr-1 h-4 w-4" />
         {t('list.title')}
       </Button>

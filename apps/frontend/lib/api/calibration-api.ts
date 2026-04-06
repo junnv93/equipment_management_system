@@ -375,15 +375,33 @@ const calibrationApi = {
   // 중간점검표 API (UL-QP-18-03)
   // ============================================================================
   intermediateInspections: {
+    listByEquipment: async (equipmentId: string): Promise<IntermediateInspection[]> => {
+      const response = await apiClient.get(
+        API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.BY_EQUIPMENT(equipmentId)
+      );
+      return transformArrayResponse<IntermediateInspection>(response);
+    },
+
+    createByEquipment: async (
+      equipmentId: string,
+      data: CreateInspectionDto
+    ): Promise<IntermediateInspection> => {
+      const response = await apiClient.post(
+        API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.BY_EQUIPMENT(equipmentId),
+        data
+      );
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
     list: async (calibrationId: string): Promise<IntermediateInspection[]> => {
       const response = await apiClient.get(
-        `/calibration/${calibrationId}/intermediate-inspections`
+        API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.BY_CALIBRATION(calibrationId)
       );
       return transformArrayResponse<IntermediateInspection>(response);
     },
 
     detail: async (id: string): Promise<IntermediateInspection> => {
-      const response = await apiClient.get(`/intermediate-inspections/${id}`);
+      const response = await apiClient.get(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.GET(id));
       return transformSingleResponse<IntermediateInspection>(response);
     },
 
@@ -392,33 +410,36 @@ const calibrationApi = {
       data: CreateInspectionDto
     ): Promise<IntermediateInspection> => {
       const response = await apiClient.post(
-        `/calibration/${calibrationId}/intermediate-inspections`,
+        API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.BY_CALIBRATION(calibrationId),
         data
       );
       return transformSingleResponse<IntermediateInspection>(response);
     },
 
     update: async (id: string, data: UpdateInspectionDto): Promise<IntermediateInspection> => {
-      const response = await apiClient.patch(`/intermediate-inspections/${id}`, data);
+      const response = await apiClient.patch(
+        API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.UPDATE(id),
+        data
+      );
       return transformSingleResponse<IntermediateInspection>(response);
     },
 
     submit: async (id: string, version: number): Promise<IntermediateInspection> => {
-      const response = await apiClient.patch(`/intermediate-inspections/${id}/submit`, {
+      const response = await apiClient.patch(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.SUBMIT(id), {
         version,
       });
       return transformSingleResponse<IntermediateInspection>(response);
     },
 
     review: async (id: string, version: number): Promise<IntermediateInspection> => {
-      const response = await apiClient.patch(`/intermediate-inspections/${id}/review`, {
+      const response = await apiClient.patch(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.REVIEW(id), {
         version,
       });
       return transformSingleResponse<IntermediateInspection>(response);
     },
 
     approve: async (id: string, version: number): Promise<IntermediateInspection> => {
-      const response = await apiClient.patch(`/intermediate-inspections/${id}/approve`, {
+      const response = await apiClient.patch(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.APPROVE(id), {
         version,
       });
       return transformSingleResponse<IntermediateInspection>(response);
@@ -429,7 +450,7 @@ const calibrationApi = {
       version: number,
       rejectionReason: string
     ): Promise<IntermediateInspection> => {
-      const response = await apiClient.patch(`/intermediate-inspections/${id}/reject`, {
+      const response = await apiClient.patch(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.REJECT(id), {
         version,
         rejectionReason,
       });

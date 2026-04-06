@@ -265,7 +265,7 @@ describe('EquipmentController', () => {
       const query: EquipmentQueryDto = {
         page: 1,
         pageSize: 20,
-        status: 'in_use' as EquipmentStatus, // 표준 상태값: 사용 중
+        status: 'spare' as EquipmentStatus,
       };
 
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);

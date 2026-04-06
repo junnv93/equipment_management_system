@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Search, Package } from 'lucide-react';
+import { Plus, Search, Package, Download, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,8 @@ import {
   type UITestSoftwareFilters,
 } from '@/lib/utils/software-filter-utils';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { exportFormTemplate } from '@/lib/api/self-inspection-api';
+import { toast } from 'sonner';
 
 const ALL_VALUE = '__ALL__';
 
@@ -98,6 +100,24 @@ export default function TestSoftwareListContent() {
     [data, uiFilters.page]
   );
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportLedger = async () => {
+    setExporting(true);
+    try {
+      const params: Record<string, string> = {};
+      for (const key of ['testField', 'availability', 'search', 'manufacturer'] as const) {
+        const value = searchParams.get(key);
+        if (value) params[key] = value;
+      }
+      await exportFormTemplate('UL-QP-18-07', params);
+    } catch {
+      toast.error(t('list.exportError'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className={getPageContainerClasses()}>
       {/* Header */}
@@ -106,12 +126,22 @@ export default function TestSoftwareListContent() {
           <h1 className={PAGE_HEADER_TOKENS.title}>{t('list.title')}</h1>
           <p className={PAGE_HEADER_TOKENS.subtitle}>{t('list.subtitle')}</p>
         </div>
-        <Link href={FRONTEND_ROUTES.SOFTWARE.CREATE}>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('list.createButton')}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportLedger} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {t('list.exportLedger')}
           </Button>
-        </Link>
+          <Link href={FRONTEND_ROUTES.SOFTWARE.CREATE}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('list.createButton')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -195,14 +225,13 @@ export default function TestSoftwareListContent() {
             </TableHeader>
             <TableBody>
               {items.map((sw) => (
-                <TableRow key={sw.id}>
+                <TableRow
+                  key={sw.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id))}
+                >
                   <TableCell>
-                    <Link
-                      href={FRONTEND_ROUTES.SOFTWARE.DETAIL(sw.id)}
-                      className="font-mono text-sm text-primary hover:underline"
-                    >
-                      {sw.managementNumber}
-                    </Link>
+                    <span className="font-mono text-sm text-primary">{sw.managementNumber}</span>
                   </TableCell>
                   <TableCell className="font-medium">{sw.name}</TableCell>
                   <TableCell>

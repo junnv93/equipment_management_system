@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
 import { getFormTemplateHistory } from '@/lib/api/form-templates-api';
+import { FORM_TEMPLATES_HISTORY_TOKENS, FORM_TEMPLATES_MOTION } from '@/lib/design-tokens';
 
 interface FormTemplateHistoryDialogProps {
   formNumber: string;
@@ -43,7 +44,7 @@ export default function FormTemplateHistoryDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {t('historyDialog.title')} - {formNumber} {formName}
+            {t('historyDialog.title')} — {formNumber} {formName}
           </DialogTitle>
         </DialogHeader>
 
@@ -56,38 +57,56 @@ export default function FormTemplateHistoryDialog({
         )}
 
         {!isLoading && (!history || history.length === 0) && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {t('historyDialog.empty')}
-          </p>
+          <p className={FORM_TEMPLATES_HISTORY_TOKENS.empty}>{t('historyDialog.empty')}</p>
         )}
 
         {!isLoading && history && history.length > 0 && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('historyDialog.version')}</TableHead>
-                <TableHead>{t('historyDialog.filename')}</TableHead>
-                <TableHead>{t('historyDialog.uploadDate')}</TableHead>
-                <TableHead>{t('historyDialog.status')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {history.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>v{item.version}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{item.originalFilename}</TableCell>
-                  <TableCell>{new Date(item.uploadedAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    {item.isActive ? (
-                      <Badge variant="default">{t('historyDialog.active')}</Badge>
-                    ) : (
-                      <Badge variant="secondary">{t('historyDialog.inactive')}</Badge>
-                    )}
-                  </TableCell>
+          <div
+            className={`${FORM_TEMPLATES_HISTORY_TOKENS.tableContainer} ${FORM_TEMPLATES_MOTION.contentEntrance}`}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow className={FORM_TEMPLATES_HISTORY_TOKENS.headerRow}>
+                  <TableHead>{t('historyDialog.version')}</TableHead>
+                  <TableHead>{t('historyDialog.filename')}</TableHead>
+                  <TableHead>{t('historyDialog.uploadDate')}</TableHead>
+                  <TableHead>{t('historyDialog.status')}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {history.map((item) => (
+                  <TableRow key={item.id} className={FORM_TEMPLATES_HISTORY_TOKENS.bodyRow}>
+                    <TableCell className={FORM_TEMPLATES_HISTORY_TOKENS.version}>
+                      v{item.version}
+                    </TableCell>
+                    <TableCell className={FORM_TEMPLATES_HISTORY_TOKENS.filename}>
+                      {item.originalFilename}
+                    </TableCell>
+                    <TableCell className={FORM_TEMPLATES_HISTORY_TOKENS.date}>
+                      {new Date(item.uploadedAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {item.isActive ? (
+                        <Badge
+                          className={FORM_TEMPLATES_HISTORY_TOKENS.activeBadge}
+                          variant="outline"
+                        >
+                          {t('historyDialog.active')}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          className={FORM_TEMPLATES_HISTORY_TOKENS.inactiveBadge}
+                          variant="outline"
+                        >
+                          {t('historyDialog.inactive')}
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </DialogContent>
     </Dialog>

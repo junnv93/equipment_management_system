@@ -13,10 +13,7 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { BASE_URLS, TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
-import {
-  getBackendToken,
-  getCalibrationFactors,
-} from '../../calibration/helpers/calibration-api-helpers';
+import { getBackendToken } from '../../calibration/helpers/calibration-api-helpers';
 
 const BACKEND_URL = BASE_URLS.BACKEND;
 const FACTORS_API = `${BACKEND_URL}/api/calibration-factors`;
@@ -83,7 +80,7 @@ test.describe('C-1: 보정계수 목록/상세 API 테스트', () => {
   test.describe('장비별 보정계수 이력', () => {
     test('특정 장비의 보정계수 이력 조회 API 정상 응답', async ({ request }) => {
       const token = await getBackendToken(request, 'technical_manager');
-      // EMC Receiver (in_use, Suwon FCC) — cable_loss 시드 데이터 있음
+      // EMC Receiver (available, Suwon FCC) — cable_loss 시드 데이터 있음
       const equipmentId = TEST_EQUIPMENT_IDS.EMC_RECEIVER_SUW_E;
 
       const response = await request.get(`${FACTORS_API}/equipment/${equipmentId}`, {

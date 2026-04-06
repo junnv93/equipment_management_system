@@ -308,7 +308,7 @@ export class DashboardController {
     schema: {
       type: 'object',
       additionalProperties: { type: 'number' },
-      example: { available: 10, in_use: 5, checked_out: 2 },
+      example: { available: 10, checked_out: 2, spare: 3 },
     },
   })
   async getEquipmentStatusStats(

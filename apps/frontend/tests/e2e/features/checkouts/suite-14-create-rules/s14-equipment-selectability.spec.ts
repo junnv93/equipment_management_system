@@ -161,23 +161,6 @@ test.describe('Suite 14: 반출 생성 규칙', () => {
     }
   });
 
-  test('S14-05: 교정 목적 — in_use 장비 반출 불가 (400)', async ({ testOperatorPage: page }) => {
-    const { response } = await apiPost(
-      page,
-      '/api/checkouts',
-      {
-        equipmentIds: [EQUIP.EMC_RECEIVER_SUW_E],
-        purpose: CPVal.CALIBRATION,
-        destination: '한국교정시험연구원',
-        reason: 'E2E in_use 테스트',
-        expectedReturnDate: '2026-06-01T00:00:00.000Z',
-      },
-      'test_engineer'
-    );
-
-    expect(response.status()).toBe(400);
-  });
-
   test('S14-06: 필수 필드 누락 시 반출 생성 실패 (400)', async ({ testOperatorPage: page }) => {
     const { response } = await apiPost(
       page,

@@ -85,8 +85,8 @@ const AttachmentsTab = dynamic(
   { loading: () => <TabSkeleton />, ssr: false }
 );
 
-const SelfInspectionTab = dynamic(
-  () => import('./SelfInspectionTab').then((mod) => ({ default: mod.SelfInspectionTab })),
+const InspectionTab = dynamic(
+  () => import('./InspectionTab').then((mod) => ({ default: mod.InspectionTab })),
   { loading: () => <TabSkeleton />, ssr: false }
 );
 
@@ -110,10 +110,13 @@ interface TabConfig {
  * - URL 쿼리 파라미터로 탭 상태 관리
  * - 각 탭 컨텐츠는 lazy loading
  */
-export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
+export function EquipmentTabs({ equipment, activeTab: rawActiveTab }: EquipmentTabsProps) {
   const t = useTranslations('equipment');
   const router = useRouter();
   const pathname = usePathname();
+
+  // 하위 호환: ?tab=self-inspection → ?tab=inspection 리다이렉트
+  const activeTab = rawActiveTab === 'self-inspection' ? 'inspection' : rawActiveTab;
 
   // 탭 설정
   const tabs: TabConfig[] = [
@@ -166,10 +169,10 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
       component: SoftwareTab,
     },
     {
-      value: 'self-inspection',
-      label: t('tabs.selfInspection'),
+      value: 'inspection',
+      label: t('tabs.inspection'),
       icon: ClipboardCheck,
-      component: SelfInspectionTab,
+      component: InspectionTab,
     },
     {
       value: 'attachments',
