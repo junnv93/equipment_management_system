@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Group E: End-to-End Integration Tests
  * Calibration Overdue Auto Non-Conformance - E2E Workflows
@@ -21,15 +22,14 @@
 import { test, expect, APIRequestContext, Page } from '@playwright/test';
 import {
   EquipmentStatus,
-  NonConformanceStatus,
   EquipmentStatusValues as ESVal,
   NonConformanceStatusValues as NCSVal,
   NonConformanceTypeValues as NCTVal,
   IncidentTypeValues as ITVal,
-  CalibrationMethodValues as CMVal,
+  ManagementMethodValues as CMVal,
   ResolutionTypeValues as RTVal,
 } from '@equipment-management/schemas';
-import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 import { fetchBackendToken } from '../../../shared/helpers/api-helpers';
 
@@ -66,7 +66,7 @@ async function createTestEquipment(
       classification: 'fcc_emc_rf',
       teamId: '00000000-0000-0000-0000-000000000099', // Test team
       calibrationRequired: equipmentData.calibrationRequired || 'required',
-      calibrationMethod: CMVal.EXTERNAL_CALIBRATION,
+      managementMethod: CMVal.EXTERNAL_CALIBRATION,
       nextCalibrationDate: equipmentData.nextCalibrationDate?.toISOString(),
       isActive: equipmentData.isActive ?? true,
       manufacturer: 'Test Manufacturer',
@@ -442,7 +442,7 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     console.log('Equipment A: processed, NC created');
 
     // Equipment B: skipped (existing NC), status unchanged
-    const updatedEquipmentB = await getEquipment(request, labManagerToken, equipmentB.id);
+    const _updatedEquipmentB = await getEquipment(request, labManagerToken, equipmentB.id);
     const ncsB = await getNonConformances(request, labManagerToken, equipmentB.id);
     const openNCs = ncsB.data.filter(
       (nc: any) => nc.ncType === NCTVal.CALIBRATION_OVERDUE && nc.status === NCSVal.OPEN
