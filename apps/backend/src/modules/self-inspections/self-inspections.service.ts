@@ -6,15 +6,25 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray } from 'drizzle-orm';
 import {
   equipmentSelfInspections,
+  selfInspectionItems,
   equipment,
   type EquipmentSelfInspection,
   type NewEquipmentSelfInspection,
+  type SelfInspectionItem,
 } from '@equipment-management/db/schema';
+import {
+  SELF_INSPECTION_LEGACY_COLUMN_MAP,
+  type SelfInspectionItemJudgment,
+} from '@equipment-management/schemas';
 import type { CreateSelfInspectionInput } from './dto/create-self-inspection.dto';
 import type { UpdateSelfInspectionInput } from './dto/update-self-inspection.dto';
+
+export interface SelfInspectionWithItems extends EquipmentSelfInspection {
+  items: SelfInspectionItem[];
+}
 
 @Injectable()
 export class SelfInspectionsService {
@@ -27,7 +37,7 @@ export class SelfInspectionsService {
     equipmentId: string,
     dto: CreateSelfInspectionInput,
     inspectorId: string
-  ): Promise<EquipmentSelfInspection> {
+  ): Promise<SelfInspectionWithItems> {
     // 장비 존재 확인
     const [eqRow] = await this.db
       .select({ id: equipment.id })
@@ -48,35 +58,54 @@ export class SelfInspectionsService {
     nextDate.setMonth(nextDate.getMonth() + cycle);
     const nextInspectionDate = nextDate.toISOString().split('T')[0];
 
-    const [created] = await this.db
-      .insert(equipmentSelfInspections)
-      .values({
-        equipmentId,
-        inspectionDate,
-        inspectorId,
-        appearance: dto.appearance,
-        functionality: dto.functionality,
-        safety: dto.safety,
-        calibrationStatus: dto.calibrationStatus,
-        overallResult: dto.overallResult,
-        remarks: dto.remarks ?? null,
-        inspectionCycle: cycle,
-        nextInspectionDate,
-        status: 'completed',
-      })
-      .returning();
+    // items에서 기존 고정 컬럼 값 추출 (하위 호환)
+    const legacyValues = this.extractLegacyValues(dto);
 
-    return created;
+    return await this.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(equipmentSelfInspections)
+        .values({
+          equipmentId,
+          inspectionDate,
+          inspectorId,
+          appearance: legacyValues.appearance,
+          functionality: legacyValues.functionality,
+          safety: legacyValues.safety,
+          calibrationStatus: legacyValues.calibrationStatus,
+          overallResult: dto.overallResult,
+          remarks: dto.remarks ?? null,
+          specialNotes: dto.specialNotes ?? null,
+          inspectionCycle: cycle,
+          nextInspectionDate,
+          status: 'completed',
+        })
+        .returning();
+
+      // 점검 항목 삽입
+      const insertedItems = await tx
+        .insert(selfInspectionItems)
+        .values(
+          dto.items.map((item) => ({
+            inspectionId: created.id,
+            itemNumber: item.itemNumber,
+            checkItem: item.checkItem,
+            checkResult: item.checkResult,
+          }))
+        )
+        .returning();
+
+      return { ...created, items: insertedItems };
+    });
   }
 
   async findByEquipment(
     equipmentId: string,
     page = 1,
     pageSize = 20
-  ): Promise<{ data: EquipmentSelfInspection[]; total: number }> {
+  ): Promise<{ data: SelfInspectionWithItems[]; total: number }> {
     const offset = (page - 1) * pageSize;
 
-    const data = await this.db
+    const rows = await this.db
       .select()
       .from(equipmentSelfInspections)
       .where(eq(equipmentSelfInspections.equipmentId, equipmentId))
@@ -89,10 +118,34 @@ export class SelfInspectionsService {
       .from(equipmentSelfInspections)
       .where(eq(equipmentSelfInspections.equipmentId, equipmentId));
 
+    // batch IN 쿼리로 모든 items를 한 번에 로드 (N+1 방지)
+    const inspectionIds = rows.map((r) => r.id);
+    const allItems =
+      inspectionIds.length > 0
+        ? await this.db
+            .select()
+            .from(selfInspectionItems)
+            .where(inArray(selfInspectionItems.inspectionId, inspectionIds))
+            .orderBy(selfInspectionItems.itemNumber)
+        : [];
+
+    // inspectionId별로 그룹핑
+    const itemsByInspection = new Map<string, SelfInspectionItem[]>();
+    for (const item of allItems) {
+      const list = itemsByInspection.get(item.inspectionId) ?? [];
+      list.push(item);
+      itemsByInspection.set(item.inspectionId, list);
+    }
+
+    const data = rows.map((row) => ({
+      ...row,
+      items: itemsByInspection.get(row.id) ?? [],
+    }));
+
     return { data, total: Number(count) };
   }
 
-  async findById(id: string): Promise<EquipmentSelfInspection> {
+  async findById(id: string): Promise<SelfInspectionWithItems> {
     const [row] = await this.db
       .select()
       .from(equipmentSelfInspections)
@@ -106,14 +159,20 @@ export class SelfInspectionsService {
       });
     }
 
-    return row;
+    const items = await this.db
+      .select()
+      .from(selfInspectionItems)
+      .where(eq(selfInspectionItems.inspectionId, id))
+      .orderBy(selfInspectionItems.itemNumber);
+
+    return { ...row, items };
   }
 
   async update(
     id: string,
     dto: UpdateSelfInspectionInput,
     _userId: string
-  ): Promise<EquipmentSelfInspection> {
+  ): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
     if (existing.status === 'confirmed') {
@@ -132,52 +191,91 @@ export class SelfInspectionsService {
       });
     }
 
-    const updateData: Partial<NewEquipmentSelfInspection> = {
-      version: existing.version + 1,
-      updatedAt: new Date(),
-    };
+    return await this.db.transaction(async (tx) => {
+      const updateData: Partial<NewEquipmentSelfInspection> = {
+        version: existing.version + 1,
+        updatedAt: new Date(),
+      };
 
-    if (dto.inspectionDate) updateData.inspectionDate = new Date(dto.inspectionDate);
-    if (dto.appearance) updateData.appearance = dto.appearance;
-    if (dto.functionality) updateData.functionality = dto.functionality;
-    if (dto.safety) updateData.safety = dto.safety;
-    if (dto.calibrationStatus) updateData.calibrationStatus = dto.calibrationStatus;
-    if (dto.overallResult) updateData.overallResult = dto.overallResult;
-    if (dto.remarks !== undefined) updateData.remarks = dto.remarks;
-    if (dto.inspectionCycle) {
-      updateData.inspectionCycle = dto.inspectionCycle;
-      const baseDate = dto.inspectionDate ? new Date(dto.inspectionDate) : existing.inspectionDate;
-      const nextDate = new Date(baseDate);
-      nextDate.setMonth(nextDate.getMonth() + dto.inspectionCycle);
-      updateData.nextInspectionDate = nextDate.toISOString().split('T')[0];
-    }
+      if (dto.inspectionDate) updateData.inspectionDate = new Date(dto.inspectionDate);
+      if (dto.overallResult) updateData.overallResult = dto.overallResult;
+      if (dto.remarks !== undefined) updateData.remarks = dto.remarks;
+      if (dto.specialNotes !== undefined) updateData.specialNotes = dto.specialNotes;
+      if (dto.inspectionCycle) {
+        updateData.inspectionCycle = dto.inspectionCycle;
+        const baseDate = dto.inspectionDate
+          ? new Date(dto.inspectionDate)
+          : existing.inspectionDate;
+        const nextDate = new Date(baseDate);
+        nextDate.setMonth(nextDate.getMonth() + dto.inspectionCycle);
+        updateData.nextInspectionDate = nextDate.toISOString().split('T')[0];
+      }
 
-    const [updated] = await this.db
-      .update(equipmentSelfInspections)
-      .set(updateData)
-      .where(
-        and(
-          eq(equipmentSelfInspections.id, id),
-          eq(equipmentSelfInspections.version, existing.version)
+      // items가 있으면 기존 고정 컬럼도 동기화
+      if (dto.items) {
+        const legacyValues = this.extractLegacyValues(dto);
+        updateData.appearance = legacyValues.appearance;
+        updateData.functionality = legacyValues.functionality;
+        updateData.safety = legacyValues.safety;
+        updateData.calibrationStatus = legacyValues.calibrationStatus;
+      } else {
+        // 개별 고정 컬럼 업데이트 (하위 호환)
+        if (dto.appearance) updateData.appearance = dto.appearance;
+        if (dto.functionality) updateData.functionality = dto.functionality;
+        if (dto.safety) updateData.safety = dto.safety;
+        if (dto.calibrationStatus) updateData.calibrationStatus = dto.calibrationStatus;
+      }
+
+      const [updated] = await tx
+        .update(equipmentSelfInspections)
+        .set(updateData)
+        .where(
+          and(
+            eq(equipmentSelfInspections.id, id),
+            eq(equipmentSelfInspections.version, existing.version)
+          )
         )
-      )
-      .returning();
+        .returning();
 
-    if (!updated) {
-      throw new ConflictException({
-        code: 'VERSION_CONFLICT',
-        message: 'Self-inspection was modified by another user.',
-      });
-    }
+      if (!updated) {
+        throw new ConflictException({
+          code: 'VERSION_CONFLICT',
+          message: 'Self-inspection was modified by another user.',
+        });
+      }
 
-    return updated;
+      // items가 있으면 전체 교체 (cascade delete 후 재삽입)
+      let updatedItems: SelfInspectionItem[];
+      if (dto.items) {
+        await tx.delete(selfInspectionItems).where(eq(selfInspectionItems.inspectionId, id));
+        updatedItems = await tx
+          .insert(selfInspectionItems)
+          .values(
+            dto.items.map((item) => ({
+              inspectionId: id,
+              itemNumber: item.itemNumber,
+              checkItem: item.checkItem,
+              checkResult: item.checkResult,
+            }))
+          )
+          .returning();
+      } else {
+        updatedItems = await tx
+          .select()
+          .from(selfInspectionItems)
+          .where(eq(selfInspectionItems.inspectionId, id))
+          .orderBy(selfInspectionItems.itemNumber);
+      }
+
+      return { ...updated, items: updatedItems };
+    });
   }
 
   async confirm(
     id: string,
     confirmedBy: string,
     version: number
-  ): Promise<EquipmentSelfInspection> {
+  ): Promise<SelfInspectionWithItems> {
     const existing = await this.findById(id);
 
     if (existing.status === 'confirmed') {
@@ -227,7 +325,13 @@ export class SelfInspectionsService {
       });
     }
 
-    return updated;
+    const items = await this.db
+      .select()
+      .from(selfInspectionItems)
+      .where(eq(selfInspectionItems.inspectionId, id))
+      .orderBy(selfInspectionItems.itemNumber);
+
+    return { ...updated, items };
   }
 
   /**
@@ -281,6 +385,50 @@ export class SelfInspectionsService {
     }
 
     await this.db.delete(equipmentSelfInspections).where(eq(equipmentSelfInspections.id, id));
+  }
+
+  /**
+   * items 배열에서 기존 고정 컬럼 값 추출 (하위 호환)
+   * 외관검사 → appearance, 기능 점검 → functionality, 안전 점검 → safety, 교정 상태 점검 → calibrationStatus
+   */
+  private extractLegacyValues(dto: {
+    items?: { checkItem: string; checkResult: string }[];
+    appearance?: SelfInspectionItemJudgment;
+    functionality?: SelfInspectionItemJudgment;
+    safety?: SelfInspectionItemJudgment;
+    calibrationStatus?: SelfInspectionItemJudgment;
+  }): {
+    appearance: SelfInspectionItemJudgment;
+    functionality: SelfInspectionItemJudgment;
+    safety: SelfInspectionItemJudgment;
+    calibrationStatus: SelfInspectionItemJudgment;
+  } {
+    // DTO에 직접 고정 컬럼이 있으면 우선 사용
+    if (dto.appearance && dto.functionality && dto.safety && dto.calibrationStatus) {
+      return {
+        appearance: dto.appearance,
+        functionality: dto.functionality,
+        safety: dto.safety,
+        calibrationStatus: dto.calibrationStatus,
+      };
+    }
+
+    // items에서 매핑 (SSOT: @equipment-management/schemas)
+    const itemMap = new Map<string, SelfInspectionItemJudgment>();
+
+    for (const item of dto.items ?? []) {
+      const legacyKey = SELF_INSPECTION_LEGACY_COLUMN_MAP[item.checkItem];
+      if (legacyKey) {
+        itemMap.set(legacyKey, item.checkResult as SelfInspectionItemJudgment);
+      }
+    }
+
+    return {
+      appearance: itemMap.get('appearance') ?? 'na',
+      functionality: itemMap.get('functionality') ?? 'na',
+      safety: itemMap.get('safety') ?? 'na',
+      calibrationStatus: itemMap.get('calibrationStatus') ?? 'na',
+    };
   }
 }
 

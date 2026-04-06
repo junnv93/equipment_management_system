@@ -63,6 +63,7 @@
     "manualLocation": "Manual Location",
     "accessories": "Accessories",
     "technicalManager": "Technical Manager",
+    "deputyManager": "Deputy Manager",
     "initialLocation": "Initial Location",
     "installationDate": "Installation Date",
     "supplier": "Supplier",
@@ -72,7 +73,6 @@
   },
   "status": {
     "available": "Available",
-    "in_use": "In Use",
     "checked_out": "Checked Out",
     "calibration_scheduled": "Calibration Scheduled",
     "calibration_overdue": "Calibration Overdue",
@@ -91,6 +91,8 @@
     "empty": "No equipment registered",
     "emptyDescription": "Register equipment to start managing calibration schedules, checkout history, and non-conformances.",
     "createButton": "Register Equipment",
+    "exportLedger": "Export Ledger",
+    "exportError": "Failed to export equipment ledger",
     "totalItems": "{count} equipment total",
     "loadError": "Failed to load equipment list",
     "loading": "Loading equipment list",
@@ -298,6 +300,10 @@
     "calibrationStatus": "Cal. Status",
     "overallResult": "Result",
     "status": "Status",
+    "itemNumber": "No.",
+    "checkItem": "Check Item",
+    "checkResult": "Result",
+    "remarks": "Remarks",
     "judgment": {
       "pass": "Pass",
       "fail": "Fail",
@@ -384,6 +390,8 @@
       "techManagerDirectInputPlaceholder": "e.g. John Smith",
       "techManagerDescriptionWithTeam": "Only technical managers from the selected team are shown",
       "techManagerDescription": "Select a team first to see available technical managers",
+      "deputyManagerPlaceholder": "Select deputy manager",
+      "deputyManagerDescription": "Deputy operations manager — select from technical managers",
       "supplierPlaceholder": "e.g. ABC Supply Co.",
       "contactPlaceholder": "e.g. +1-234-567-8900",
       "swVersionPlaceholder": "e.g. v1.0.0",
@@ -931,8 +939,7 @@
     },
     "disabledReasons": {
       "checked_out": "Equipment is already checked out",
-      "retired": "Equipment has been retired",
-      "in_use": "Equipment is in use"
+      "retired": "Equipment has been retired"
     },
     "purpose": {
       "calibration": "Calibration",

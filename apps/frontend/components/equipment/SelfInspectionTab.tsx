@@ -35,6 +35,9 @@ const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
 };
 
+/** 기존 고정 컬럼 fallback 항목 — i18n 키 사용 */
+const LEGACY_ITEM_KEYS = ['appearance', 'functionality', 'safety', 'calibrationStatus'] as const;
+
 export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
@@ -85,56 +88,64 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
             {t('selfInspection.empty')}
           </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('selfInspection.date')}</TableHead>
-                <TableHead>{t('selfInspection.appearance')}</TableHead>
-                <TableHead>{t('selfInspection.functionality')}</TableHead>
-                <TableHead>{t('selfInspection.safety')}</TableHead>
-                <TableHead>{t('selfInspection.calibrationStatus')}</TableHead>
-                <TableHead>{t('selfInspection.overallResult')}</TableHead>
-                <TableHead>{t('selfInspection.status')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inspections.map((inspection) => (
-                <TableRow key={inspection.id}>
-                  <TableCell>{fmtDate(inspection.inspectionDate)}</TableCell>
-                  <TableCell>
-                    <Badge className={JUDGMENT_COLORS[inspection.appearance]}>
-                      {t(`selfInspection.judgment.${inspection.appearance}`)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={JUDGMENT_COLORS[inspection.functionality]}>
-                      {t(`selfInspection.judgment.${inspection.functionality}`)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={JUDGMENT_COLORS[inspection.safety]}>
-                      {t(`selfInspection.judgment.${inspection.safety}`)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={JUDGMENT_COLORS[inspection.calibrationStatus]}>
-                      {t(`selfInspection.judgment.${inspection.calibrationStatus}`)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={JUDGMENT_COLORS[inspection.overallResult]}>
-                      {t(`selfInspection.judgment.${inspection.overallResult}`)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={STATUS_COLORS[inspection.status]}>
-                      {t(`selfInspection.statusLabel.${inspection.status}`)}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="space-y-6">
+            {inspections.map((inspection) => {
+              const items =
+                inspection.items && inspection.items.length > 0
+                  ? inspection.items
+                  : LEGACY_ITEM_KEYS.map((key, idx) => ({
+                      itemNumber: idx + 1,
+                      checkItem: t(`selfInspection.${key}`),
+                      checkResult: inspection[key],
+                    }));
+
+              return (
+                <div key={inspection.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">{fmtDate(inspection.inspectionDate)}</span>
+                      <Badge className={STATUS_COLORS[inspection.status]}>
+                        {t(`selfInspection.statusLabel.${inspection.status}`)}
+                      </Badge>
+                      <Badge className={JUDGMENT_COLORS[inspection.overallResult]}>
+                        {t(`selfInspection.judgment.${inspection.overallResult}`)}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-16">{t('selfInspection.itemNumber')}</TableHead>
+                        <TableHead>{t('selfInspection.checkItem')}</TableHead>
+                        <TableHead className="w-24">{t('selfInspection.checkResult')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item) => (
+                        <TableRow key={`${inspection.id}-${item.itemNumber}`}>
+                          <TableCell>{item.itemNumber}</TableCell>
+                          <TableCell>{item.checkItem}</TableCell>
+                          <TableCell>
+                            <Badge className={JUDGMENT_COLORS[item.checkResult]}>
+                              {t(`selfInspection.judgment.${item.checkResult}`)}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {inspection.remarks && (
+                    <p className="text-muted-foreground text-sm">
+                      <span className="font-medium">{t('selfInspection.remarks')}:</span>{' '}
+                      {inspection.remarks}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </CardContent>
     </Card>

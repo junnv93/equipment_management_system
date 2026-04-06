@@ -5,7 +5,16 @@ import type {
   SelfInspectionItemJudgment,
   SelfInspectionResult,
   SelfInspectionStatus,
+  SpecialNote,
 } from '@equipment-management/schemas';
+
+export interface SelfInspectionItem {
+  id: string;
+  inspectionId: string;
+  itemNumber: number;
+  checkItem: string;
+  checkResult: SelfInspectionItemJudgment;
+}
 
 export interface SelfInspection {
   id: string;
@@ -18,6 +27,8 @@ export interface SelfInspection {
   calibrationStatus: SelfInspectionItemJudgment;
   overallResult: SelfInspectionResult;
   remarks: string | null;
+  specialNotes: SpecialNote[] | null;
+  items: SelfInspectionItem[];
   inspectionCycle: number;
   nextInspectionDate: string | null;
   status: SelfInspectionStatus;
@@ -28,19 +39,38 @@ export interface SelfInspection {
   updatedAt: string;
 }
 
-export interface CreateSelfInspectionDto {
-  inspectionDate: string;
-  appearance: SelfInspectionItemJudgment;
-  functionality: SelfInspectionItemJudgment;
-  safety: SelfInspectionItemJudgment;
-  calibrationStatus: SelfInspectionItemJudgment;
-  overallResult: SelfInspectionResult;
-  remarks?: string;
-  inspectionCycle?: number;
+export interface SelfInspectionItemInput {
+  itemNumber: number;
+  checkItem: string;
+  checkResult: SelfInspectionItemJudgment;
 }
 
-export interface UpdateSelfInspectionDto extends Partial<CreateSelfInspectionDto> {
+export interface CreateSelfInspectionDto {
+  inspectionDate: string;
+  items: SelfInspectionItemInput[];
+  overallResult: SelfInspectionResult;
+  remarks?: string;
+  specialNotes?: SpecialNote[];
+  inspectionCycle?: number;
+  // 하위 호환
+  appearance?: SelfInspectionItemJudgment;
+  functionality?: SelfInspectionItemJudgment;
+  safety?: SelfInspectionItemJudgment;
+  calibrationStatus?: SelfInspectionItemJudgment;
+}
+
+export interface UpdateSelfInspectionDto {
   version: number;
+  inspectionDate?: string;
+  items?: SelfInspectionItemInput[];
+  overallResult?: SelfInspectionResult;
+  remarks?: string;
+  specialNotes?: SpecialNote[];
+  inspectionCycle?: number;
+  appearance?: SelfInspectionItemJudgment;
+  functionality?: SelfInspectionItemJudgment;
+  safety?: SelfInspectionItemJudgment;
+  calibrationStatus?: SelfInspectionItemJudgment;
 }
 
 export async function getSelfInspections(

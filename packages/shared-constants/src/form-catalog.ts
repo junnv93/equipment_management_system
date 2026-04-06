@@ -41,7 +41,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     name: '중간점검표',
     retentionYears: 5,
     retentionLabel: '5년',
-    implemented: false,
+    implemented: true,
   },
   'UL-QP-18-04': {
     formNumber: 'UL-QP-18-04',

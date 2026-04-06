@@ -1,0 +1,38 @@
+{
+  "title": "Form Templates",
+  "description": "Manage UL-QP-18 form templates.",
+  "table": {
+    "formNumber": "Form Number",
+    "formName": "Form Name",
+    "retention": "Retention",
+    "version": "Version",
+    "lastUpload": "Last Upload",
+    "filename": "Filename",
+    "actions": "Actions",
+    "noTemplate": "Not Registered"
+  },
+  "download": "Download",
+  "upload": "Upload",
+  "history": "History",
+  "uploadDialog": {
+    "title": "Upload Form",
+    "description": "Upload a new version for {formNumber} {formName}.",
+    "selectFile": "Select File",
+    "accept": "Only .docx, .xlsx files are supported",
+    "uploading": "Uploading...",
+    "success": "Form template uploaded successfully.",
+    "error": "Failed to upload form template."
+  },
+  "historyDialog": {
+    "title": "Form History",
+    "version": "Version",
+    "filename": "Filename",
+    "uploadDate": "Upload Date",
+    "status": "Status",
+    "active": "Current",
+    "inactive": "Previous",
+    "empty": "No history available."
+  },
+  "empty": "No form templates registered.",
+  "error": "Failed to load form templates."
+}

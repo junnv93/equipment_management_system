@@ -532,6 +532,12 @@ export const queryKeys = {
     httpStats: () => [...queryKeys.monitoring.all, 'http-stats'] as const,
     cacheStats: () => [...queryKeys.monitoring.all, 'cache-stats'] as const,
   },
+  formTemplates: {
+    all: ['formTemplates'] as const,
+    list: () => [...queryKeys.formTemplates.all, 'list'] as const,
+    history: (formNumber: string) =>
+      [...queryKeys.formTemplates.all, 'history', formNumber] as const,
+  },
   breadcrumbs: {
     all: ['breadcrumb'] as const,
     equipment: (id?: string) => [...queryKeys.breadcrumbs.all, 'equipment', id] as const,

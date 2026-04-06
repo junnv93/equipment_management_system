@@ -11,6 +11,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ErrorInterceptor } from './common/interceptors/error.interceptor';
 import { MonitoringService } from './modules/monitoring/monitoring.service';
 import { GlobalExceptionFilter } from './common/filters/error.filter';
+import { FormTemplateService } from './modules/reports/form-template.service';
 
 // NestJS app 참조 — process 핸들러에서 graceful close에 사용
 let appRef: Awaited<ReturnType<typeof NestFactory.create>> | null = null;
@@ -149,6 +150,10 @@ async function bootstrap(): Promise<void> {
   // enableShutdownHooks(): SIGTERM/SIGINT 수신 시 OnApplicationShutdown 훅 실행 후 포트 반납
   // 미설정 시: 구 프로세스가 포트를 점유한 채로 재시작 → EADDRINUSE
   app.enableShutdownHooks();
+
+  // 양식 템플릿 시드: 파일시스템 → 스토리지 (최초 1회)
+  const formTemplateService = app.get(FormTemplateService);
+  await formTemplateService.seedFromFilesystem('../../docs/procedure/template');
 
   const port = configService.get('PORT') || 3001;
   await app.listen(port);

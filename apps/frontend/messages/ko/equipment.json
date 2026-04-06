@@ -63,6 +63,7 @@
     "manualLocation": "매뉴얼 보관 위치",
     "accessories": "부속품",
     "technicalManager": "기술책임자",
+    "deputyManager": "부담당자",
     "initialLocation": "최초 설치 위치",
     "installationDate": "설치 일시",
     "supplier": "공급사",
@@ -72,7 +73,6 @@
   },
   "status": {
     "available": "사용 가능",
-    "in_use": "사용 중",
     "checked_out": "반출 중",
     "calibration_scheduled": "교정 예정",
     "calibration_overdue": "교정 기한 초과",
@@ -91,6 +91,8 @@
     "empty": "등록된 장비가 없습니다",
     "emptyDescription": "장비를 등록하여 교정 일정, 반출 이력, 부적합 관리를 시작하세요.",
     "createButton": "장비 등록",
+    "exportLedger": "관리대장 내보내기",
+    "exportError": "관리대장 내보내기에 실패했습니다",
     "totalItems": "총 {count}개의 장비",
     "loadError": "장비 목록 로드 실패",
     "loading": "장비 목록 로딩 중",
@@ -298,6 +300,10 @@
     "calibrationStatus": "교정상태",
     "overallResult": "전체결과",
     "status": "상태",
+    "itemNumber": "번호",
+    "checkItem": "점검 항목",
+    "checkResult": "점검 결과",
+    "remarks": "비고",
     "judgment": {
       "pass": "적합",
       "fail": "부적합",
@@ -384,6 +390,8 @@
       "techManagerDirectInputPlaceholder": "예: 홍길동",
       "techManagerDescriptionWithTeam": "선택한 팀의 기술책임자만 표시됩니다",
       "techManagerDescription": "팀을 먼저 선택하면 해당 팀의 기술책임자가 표시됩니다",
+      "deputyManagerPlaceholder": "부담당자 선택",
+      "deputyManagerDescription": "운영 책임자(부) — 기술책임자 중 선택",
       "supplierPlaceholder": "예: ABC 공급사",
       "contactPlaceholder": "예: 02-1234-5678",
       "swVersionPlaceholder": "예: v1.0.0",
@@ -931,8 +939,7 @@
     },
     "disabledReasons": {
       "checked_out": "이미 반출 중인 장비입니다",
-      "retired": "폐기된 장비입니다",
-      "in_use": "사용 중인 장비입니다"
+      "retired": "폐기된 장비입니다"
     },
     "purpose": {
       "calibration": "교정",

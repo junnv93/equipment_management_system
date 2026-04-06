@@ -126,6 +126,12 @@ export const NAV_SECTIONS: NavSection[] = [
     sectionKey: 'sections.management',
     items: [
       {
+        icon: FileText,
+        href: FRONTEND_ROUTES.FORM_TEMPLATES,
+        labelKey: 'formTemplates',
+        requiredPermission: Permission.VIEW_FORM_TEMPLATES,
+      },
+      {
         icon: CheckSquare,
         href: FRONTEND_ROUTES.ADMIN.APPROVALS,
         labelKey: 'adminApprovals',

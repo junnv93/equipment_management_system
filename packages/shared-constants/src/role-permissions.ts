@@ -62,6 +62,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 자체점검 (UL-QP-18-05)
     Permission.VIEW_SELF_INSPECTIONS,
     Permission.CREATE_SELF_INSPECTION,
+    // 보고서 내보내기
+    Permission.EXPORT_REPORTS,
+    // 양식 템플릿
+    Permission.VIEW_FORM_TEMPLATES,
   ],
 
   // 기술책임자: 장비 관리 및 승인 권한, 교정계획서 작성/검토요청
@@ -144,6 +148,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_SELF_INSPECTIONS,
     Permission.CREATE_SELF_INSPECTION,
     Permission.CONFIRM_SELF_INSPECTION,
+    // 양식 템플릿
+    Permission.VIEW_FORM_TEMPLATES,
+    Permission.MANAGE_FORM_TEMPLATES,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)
@@ -180,6 +187,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.EXPORT_REPORTS,
     // 감사 로그 (전체 스코프)
     Permission.VIEW_AUDIT_LOGS,
+    // 양식 템플릿
+    Permission.VIEW_FORM_TEMPLATES,
+    Permission.MANAGE_FORM_TEMPLATES,
   ],
 
   // 시험소장: 명시적 화이트리스트 (UL-QP-18 등록/승인 완전 분리)
@@ -273,6 +283,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_SELF_INSPECTIONS,
     Permission.CREATE_SELF_INSPECTION,
     Permission.CONFIRM_SELF_INSPECTION,
+    // 양식 템플릿
+    Permission.VIEW_FORM_TEMPLATES,
+    Permission.MANAGE_FORM_TEMPLATES,
   ],
 
   // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION(시험실무자/기술책임자만) - deprecated

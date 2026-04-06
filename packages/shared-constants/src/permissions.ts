@@ -159,6 +159,12 @@ export enum Permission {
   CONFIRM_SELF_INSPECTION = 'confirm:self-inspection',
 
   // ============================================================================
+  // 양식 템플릿 관련 권한
+  // ============================================================================
+  VIEW_FORM_TEMPLATES = 'view:form-templates',
+  MANAGE_FORM_TEMPLATES = 'manage:form-templates',
+
+  // ============================================================================
   // 시스템 설정 관련 권한
   // ============================================================================
   MANAGE_SYSTEM_SETTINGS = 'manage:system:settings',
@@ -280,6 +286,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.VIEW_SELF_INSPECTIONS]: '자체점검 조회',
   [Permission.CREATE_SELF_INSPECTION]: '자체점검 등록',
   [Permission.CONFIRM_SELF_INSPECTION]: '자체점검 확인',
+
+  [Permission.VIEW_FORM_TEMPLATES]: '양식 조회',
+  [Permission.MANAGE_FORM_TEMPLATES]: '양식 관리',
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',

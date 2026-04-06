@@ -254,6 +254,8 @@ export const API_ENDPOINTS = {
     ACTIVATE: (id: string) => `/api/users/${id}/activate`,
     DEACTIVATE: (id: string) => `/api/users/${id}/deactivate`,
     PERMISSIONS: (id: string) => `/api/users/${id}/permissions`,
+    /** 전자서명 업로드/삭제 */
+    SIGNATURE: '/api/users/me/signature',
     /** NextAuth 로그인 시 사용자 동기화 (Internal API Key) */
     SYNC: '/api/users/sync',
   },
@@ -446,6 +448,16 @@ export const API_ENDPOINTS = {
     REVIEW: (id: string) => `/api/intermediate-inspections/${id}/review`,
     APPROVE: (id: string) => `/api/intermediate-inspections/${id}/approve`,
     REJECT: (id: string) => `/api/intermediate-inspections/${id}/reject`,
+  },
+
+  // ============================================================================
+  // 양식 템플릿 관리
+  // ============================================================================
+  FORM_TEMPLATES: {
+    LIST: '/api/form-templates',
+    DOWNLOAD: (formNumber: string) => `/api/form-templates/${formNumber}/download`,
+    UPLOAD: (formNumber: string) => `/api/form-templates/${formNumber}/upload`,
+    HISTORY: (formNumber: string) => `/api/form-templates/${formNumber}/history`,
   },
 
   // ============================================================================
