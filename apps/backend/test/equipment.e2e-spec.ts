@@ -399,7 +399,7 @@ describe('EquipmentController (e2e)', () => {
       // 장비 업데이트 (UUID 사용)
       // 표준 상태값 사용: packages/schemas/src/enums.ts 참조
       const updateData = {
-        status: 'in_use' as const, // API 표준 상태값: 사용 중
+        status: 'spare' as const,
         description: 'Updated Description',
         location: 'Updated Location',
         approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
@@ -597,7 +597,7 @@ describe('EquipmentController (e2e)', () => {
       const updateData = {
         name: 'Updated CRUD Equipment Name',
         location: 'Updated CRUD Location',
-        status: 'in_use' as const, // API 표준 상태값: 사용 중
+        status: 'spare' as const,
         approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
       };
 

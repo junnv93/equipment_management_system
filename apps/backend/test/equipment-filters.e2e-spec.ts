@@ -304,7 +304,6 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment - 상태 필터 (EQUIPMENT_STATUS_FILTER_OPTIONS)', () => {
     const testStatuses = [
       'available',
-      'in_use',
       'checked_out',
       'calibration_overdue',
       'non_conforming',

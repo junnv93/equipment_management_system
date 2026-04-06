@@ -69,7 +69,7 @@ export const EQUIP_SPECTRUM_ANALYZER_SUW_E_ID = 'eeee1001-0001-4001-8001-0000000
 export const EQUIP_SIGNAL_GEN_SUW_E_ID = 'eeee1002-0002-4002-8002-000000000002'; // available
 export const EQUIP_NETWORK_ANALYZER_SUW_E_ID = 'eeee1003-0003-4003-8003-000000000003'; // available
 export const EQUIP_POWER_METER_SUW_E_ID = 'eeee1004-0004-4004-8004-000000000004'; // non_conforming
-export const EQUIP_EMC_RECEIVER_SUW_E_ID = 'eeee1005-0005-4005-8005-000000000005'; // in_use
+export const EQUIP_EMC_RECEIVER_SUW_E_ID = 'eeee1005-0005-4005-8005-000000000005'; // available
 export const EQUIP_FILTER_SUW_E_ID = 'eeee1006-0006-4006-8006-000000000006'; // spare
 export const EQUIP_ANTENNA_1_SUW_E_ID = 'eeee1007-0007-4007-8007-000000000007'; // checked_out
 export const EQUIP_COUPLER_SUW_E_ID = 'eeee1008-0008-4008-8008-000000000008'; // calibration_overdue
@@ -77,7 +77,7 @@ export const EQUIP_COUPLER_SUW_E_ID = 'eeee1008-0008-4008-8008-000000000008'; //
 // Suwon equipment (General EMC - R) [6 equipment]
 export const EQUIP_OSCILLOSCOPE_SUW_R_ID = 'eeee2001-0001-4001-8001-000000000001'; // available (overdue)
 export const EQUIP_POWER_SUPPLY_SUW_R_ID = 'eeee2002-0002-4002-8002-000000000002'; // available (due soon)
-export const EQUIP_MULTIMETER_SUW_R_ID = 'eeee2003-0003-4003-8003-000000000003'; // in_use
+export const EQUIP_MULTIMETER_SUW_R_ID = 'eeee2003-0003-4003-8003-000000000003'; // available
 export const EQUIP_SIGNAL_INT_SUW_R_ID = 'eeee2004-0004-4004-8004-000000000004'; // non_conforming
 export const EQUIP_ATTENUATOR_SUW_R_ID = 'eeee2005-0005-4005-8005-000000000005'; // checked_out
 export const EQUIP_ABSORBER_SUW_R_ID = 'eeee2006-0006-4006-8006-000000000006'; // pending_disposal
@@ -85,7 +85,7 @@ export const EQUIP_ABSORBER_SUW_R_ID = 'eeee2006-0006-4006-8006-000000000006'; /
 // Suwon equipment (SAR - S) [6 equipment]
 export const EQUIP_SAR_PROBE_SUW_S_ID = 'eeee3001-0001-4001-8001-000000000001'; // available
 export const EQUIP_PHANTOM_HEAD_SUW_S_ID = 'eeee3002-0002-4002-8002-000000000002'; // available
-export const EQUIP_SAR_SYSTEM_SUW_S_ID = 'eeee3003-0003-4003-8003-000000000003'; // in_use
+export const EQUIP_SAR_SYSTEM_SUW_S_ID = 'eeee3003-0003-4003-8003-000000000003'; // available
 export const EQUIP_MEASUREMENT_STAND_SUW_S_ID = 'eeee3004-0004-4004-8004-000000000004'; // non_conforming
 export const EQUIP_LIQUID_HANDLER_SUW_S_ID = 'eeee3005-0005-4005-8005-000000000005'; // spare
 export const EQUIP_TEMPERATURE_CONTROL_SUW_S_ID = 'eeee3006-0006-4006-8006-000000000006'; // checked_out
@@ -93,7 +93,7 @@ export const EQUIP_TEMPERATURE_CONTROL_SUW_S_ID = 'eeee3006-0006-4006-8006-00000
 // Suwon equipment (Automotive EMC - A) [6 equipment]
 export const EQUIP_HARNESS_COUPLER_SUW_A_ID = 'eeee4001-0001-4001-8001-000000000001'; // available
 export const EQUIP_CURRENT_PROBE_SUW_A_ID = 'eeee4002-0002-4002-8002-000000000002'; // available
-export const EQUIP_INJECTION_CLAMP_SUW_A_ID = 'eeee4003-0003-4003-8003-000000000003'; // in_use
+export const EQUIP_INJECTION_CLAMP_SUW_A_ID = 'eeee4003-0003-4003-8003-000000000003'; // available
 export const EQUIP_BCI_SUW_A_ID = 'eeee4004-0004-4004-8004-000000000004'; // non_conforming
 export const EQUIP_POWER_CONTROLLER_SUW_A_ID = 'eeee4005-0005-4005-8005-000000000005'; // pending_disposal
 export const EQUIP_SENSOR_SUW_A_ID = 'eeee4006-0006-4006-8006-000000000006'; // disposed
@@ -360,6 +360,36 @@ export const ATTACH_003_ID = '55550003-0003-4003-8003-000000000003';
 export const ATTACH_004_ID = '55550004-0004-4004-8004-000000000004';
 export const ATTACH_005_ID = '55550005-0005-4005-8005-000000000005';
 export const ATTACH_006_ID = '55550006-0006-4006-8006-000000000006';
+
+// =============================================================================
+// SOFTWARE VALIDATIONS (10 records across all statuses)
+// Pattern: 66660NNN-0NNN-40NN-80NN-0000000000NN
+// =============================================================================
+
+export const SW_VALID_001_ID = '66660001-0001-4001-8001-000000000001'; // draft (vendor)
+export const SW_VALID_002_ID = '66660002-0002-4002-8002-000000000002'; // submitted (vendor)
+export const SW_VALID_003_ID = '66660003-0003-4003-8003-000000000003'; // approved (vendor)
+export const SW_VALID_004_ID = '66660004-0004-4004-8004-000000000004'; // quality_approved (vendor)
+export const SW_VALID_005_ID = '66660005-0005-4005-8005-000000000005'; // rejected (vendor)
+export const SW_VALID_006_ID = '66660006-0006-4006-8006-000000000006'; // draft (self)
+export const SW_VALID_007_ID = '66660007-0007-4007-8007-000000000007'; // submitted (self)
+export const SW_VALID_008_ID = '66660008-0008-4008-8008-000000000008'; // approved (self)
+export const SW_VALID_009_ID = '66660009-0009-4009-8009-000000000009'; // quality_approved (self)
+export const SW_VALID_010_ID = '6666000a-000a-400a-800a-00000000000a'; // rejected (self)
+
+// =============================================================================
+// EQUIPMENT ↔ TEST SOFTWARE LINKS (8 M:N records)
+// Pattern: 77770NNN-0NNN-40NN-80NN-0000000000NN
+// =============================================================================
+
+export const EQ_SW_LINK_001_ID = '77770001-0001-4001-8001-000000000001';
+export const EQ_SW_LINK_002_ID = '77770002-0002-4002-8002-000000000002';
+export const EQ_SW_LINK_003_ID = '77770003-0003-4003-8003-000000000003';
+export const EQ_SW_LINK_004_ID = '77770004-0004-4004-8004-000000000004';
+export const EQ_SW_LINK_005_ID = '77770005-0005-4005-8005-000000000005';
+export const EQ_SW_LINK_006_ID = '77770006-0006-4006-8006-000000000006';
+export const EQ_SW_LINK_007_ID = '77770007-0007-4007-8007-000000000007';
+export const EQ_SW_LINK_008_ID = '77770008-0008-4008-8008-000000000008';
 
 // =============================================================================
 // TEAM SPECIAL ID (placeholder team for test users)

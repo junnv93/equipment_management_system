@@ -109,7 +109,7 @@ function createEquipment(
 export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
   // =========================================================================
   // Suwon FCC EMC/RF (E) - 8 equipment
-  // Status distribution: available(3), in_use(1), non_conforming(1), spare(1), checked_out(1), calibration_overdue(1)
+  // Status distribution: available(4), non_conforming(1), spare(1), checked_out(1), calibration_overdue(1)
   // =========================================================================
 
   // Available + Calibration Overdue (3 months past) + 전체 필드 테스트용
@@ -182,14 +182,14 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     { isActive: true }
   ),
 
-  // In-Use
+  // Available (formerly in_use)
   createEquipment(
     EQUIP_EMC_RECEIVER_SUW_E_ID,
     'EMC 수신기',
     'SUW-E0005',
     TEAM_FCC_EMC_RF_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'external_calibration',
     monthsAgo(6),
     daysLater(180)
@@ -236,7 +236,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
 
   // =========================================================================
   // Suwon General EMC (R) - 6 equipment
-  // Status distribution: available(2), in_use(1), non_conforming(1), checked_out(1), pending_disposal(1)
+  // Status distribution: available(3), non_conforming(1), checked_out(1), pending_disposal(1)
   // =========================================================================
 
   // Available + Calibration Overdue + 공용장비
@@ -273,7 +273,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'SUW-R0003',
     TEAM_GENERAL_EMC_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'self_inspection',
     monthsAgo(8),
     daysLater(120)
@@ -320,7 +320,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
 
   // =========================================================================
   // Suwon SAR (S) - 6 equipment
-  // Status distribution: available(2), in_use(1), non_conforming(1), spare(1), checked_out(1)
+  // Status distribution: available(3), non_conforming(1), spare(1), checked_out(1)
   // =========================================================================
 
   createEquipment(
@@ -353,7 +353,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'SUW-S0003',
     TEAM_SAR_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'self_inspection',
     monthsAgo(3),
     daysLater(270),
@@ -398,7 +398,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
 
   // =========================================================================
   // Suwon Automotive EMC (A) - 6 equipment
-  // Status distribution: available(2), in_use(1), non_conforming(1), pending_disposal(1), disposed(1)
+  // Status distribution: available(3), non_conforming(1), pending_disposal(1), disposed(1)
   // =========================================================================
 
   createEquipment(
@@ -431,7 +431,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'SUW-A0003',
     TEAM_AUTOMOTIVE_EMC_SUWON_ID,
     'suwon',
-    'in_use',
+    'available',
     'external_calibration',
     monthsAgo(6),
     daysLater(180)

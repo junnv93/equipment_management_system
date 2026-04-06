@@ -27,6 +27,8 @@
     "searchPlaceholder": "Search by name, management number, or manufacturer...",
     "empty": "No test software registered",
     "createButton": "Register Software",
+    "exportLedger": "Export Registry",
+    "exportError": "Export failed",
     "columns": {
       "managementNumber": "Mgmt No.",
       "name": "Software Name",
@@ -138,6 +140,7 @@
     },
     "actions": {
       "view": "View",
+      "exportValidation": "Export Form",
       "edit": "Edit",
       "submit": "Submit for Approval",
       "approve": "Approve (Technical)",

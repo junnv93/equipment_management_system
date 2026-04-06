@@ -132,6 +132,7 @@
     "software": "소프트웨어",
     "attachments": "첨부파일",
     "selfInspection": "자체점검",
+    "inspection": "점검",
     "ariaLabel": "장비 상세 정보 탭",
     "tabAriaLabel": "{label} 탭",
     "panelAriaLabel": "{label} 탭 패널",
@@ -313,7 +314,27 @@
       "draft": "초안",
       "completed": "완료",
       "confirmed": "확인됨"
+    },
+    "form": {
+      "title": "자체점검 기록 작성 (UL-QP-18-05)",
+      "description": "점검 항목별 판정 결과를 입력하세요",
+      "addItem": "항목 추가",
+      "itemNamePlaceholder": "점검 항목명",
+      "selectResult": "종합결과 선택",
+      "selectJudgment": "판정",
+      "remarksPlaceholder": "비고 사항을 입력하세요",
+      "cancel": "취소",
+      "save": "저장",
+      "saving": "저장 중...",
+      "createSuccess": "자체점검 기록이 생성되었습니다.",
+      "createError": "자체점검 기록 생성에 실패했습니다."
     }
+  },
+  "inspection": {
+    "intermediateTitle": "중간점검 기록 (UL-QP-18-03)",
+    "selfTitle": "자체점검 기록 (UL-QP-18-05)",
+    "noActiveCalibration": "활성 교정 기록이 없어 중간점검을 생성할 수 없습니다",
+    "createButton": "점검 기록 작성"
   },
   "form": {
     "basicInfo": {

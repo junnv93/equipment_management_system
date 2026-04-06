@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 장비 상태 정의
 -- available: 사용 가능
--- in_use: 사용 중
 -- maintenance: 유지보수 중
 -- calibration: 교정 중
 -- retired: 폐기됨

@@ -74,6 +74,10 @@
     "disposal": { "label": "폐기", "description": "폐기 요청, 검토, 승인 알림" },
     "equipment_import": { "label": "장비 반입", "description": "장비 반입 요청, 승인 알림" },
     "equipment": { "label": "장비", "description": "장비 등록, 수정, 상태 변경 알림" },
+    "software": {
+      "label": "소프트웨어",
+      "description": "소프트웨어 등록, 업데이트, 라이선스 관련 알림"
+    },
     "system": { "label": "시스템", "description": "시스템 점검 및 중요 공지 알림" }
   },
   "comingSoon": "준비중",

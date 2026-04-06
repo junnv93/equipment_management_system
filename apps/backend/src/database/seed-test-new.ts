@@ -54,6 +54,10 @@ import { MAINTENANCE_HISTORY_SEED_DATA } from './seed-data/history/maintenance-h
 import { INCIDENT_HISTORY_SEED_DATA } from './seed-data/history/incident-history.seed';
 // Test Software (UL-QP-18-07 관리대장) seed data
 import { TEST_SOFTWARE_SEED_DATA } from './seed-data/software/test-software.seed';
+// Software Validations (UL-QP-18-09) seed data
+import { SOFTWARE_VALIDATIONS_SEED_DATA } from './seed-data/software/software-validations.seed';
+// Equipment ↔ Test Software M:N links
+import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from './seed-data/software/equipment-test-software.seed';
 import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-requests.seed';
 import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
 import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
@@ -212,9 +216,19 @@ async function main(): Promise<void> {
     console.log('  → Calibration Factors (12)');
     await db.insert(schema.calibrationFactors).values(CALIBRATION_FACTORS_SEED_DATA);
 
-    // Test Software — UL-QP-18-07 관리대장 (20 records)
+    // Test Software — UL-QP-18-07 관리대장
     console.log(`  → Test Software (${TEST_SOFTWARE_SEED_DATA.length})`);
     await db.insert(schema.testSoftware).values(TEST_SOFTWARE_SEED_DATA);
+
+    // Software Validations — UL-QP-18-09 유효성 확인
+    console.log(`  → Software Validations (${SOFTWARE_VALIDATIONS_SEED_DATA.length})`);
+    await db.insert(schema.softwareValidations).values(SOFTWARE_VALIDATIONS_SEED_DATA);
+
+    // Equipment ↔ Test Software M:N links
+    console.log(
+      `  → Equipment ↔ Test Software Links (${EQUIPMENT_TEST_SOFTWARE_SEED_DATA.length})`
+    );
+    await db.insert(schema.equipmentTestSoftware).values(EQUIPMENT_TEST_SOFTWARE_SEED_DATA);
 
     // =========================================================================
     // PHASE 3: DISPOSAL WORKFLOW E2E TEST DATA

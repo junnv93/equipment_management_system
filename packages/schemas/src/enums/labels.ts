@@ -50,7 +50,6 @@ import type { UserStatus } from './shared';
 export const EQUIPMENT_STATUS_VALUES = EquipmentStatusEnum.options;
 export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
   available: '사용 가능',
-  in_use: '사용 중',
   checked_out: '반출 중',
   calibration_scheduled: '교정 예정',
   calibration_overdue: '교정 기한 초과',
@@ -72,7 +71,6 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
  */
 export const EQUIPMENT_STATUS_FILTER_OPTIONS: EquipmentStatus[] = [
   'available',
-  'in_use',
   'checked_out',
   'calibration_overdue',
   'non_conforming',

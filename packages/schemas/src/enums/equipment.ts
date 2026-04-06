@@ -11,7 +11,6 @@ import { optionalUuid } from '../utils/fields';
  *
  * 표준 상태값 (소문자 + 언더스코어):
  * - available: 사용 가능
- * - in_use: 사용 중 (대여 중 포함)
  * - checked_out: 반출 중 (교정/수리/대여는 checkout_type으로 구분)
  * - calibration_scheduled: 교정 예정
  * - calibration_overdue: 교정 기한 초과
@@ -27,7 +26,6 @@ import { optionalUuid } from '../utils/fields';
  */
 export const EquipmentStatusEnum = z.enum([
   'available', // 사용 가능
-  'in_use', // 사용 중 (대여 중 포함)
   'checked_out', // 반출 중
   'calibration_scheduled', // 교정 예정
   'calibration_overdue', // 교정 기한 초과

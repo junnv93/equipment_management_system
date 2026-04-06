@@ -70,7 +70,6 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     // Verify each filter-able status has at least 2 equipment
     const filterableStatuses = [
       'available',
-      'in_use',
       'checked_out',
       'calibration_overdue',
       'non_conforming',

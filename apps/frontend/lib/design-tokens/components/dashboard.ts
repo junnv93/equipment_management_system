@@ -133,7 +133,6 @@ export function getRoleBadgeClasses(role: string): { color: string; bgColor: str
  */
 export const DASHBOARD_STATUS_COLORS: Record<string, string> = {
   available: '#00A451', // UL Green — 사용 가능
-  in_use: '#0067B1', // UL Blue — 사용 중
   checked_out: '#FF9D55', // UL Orange — 반출 중
   calibration_scheduled: '#577E9E', // UL Fog — 교정 예정
   calibration_overdue: '#CA0123', // UL Red — 교정 기한 초과

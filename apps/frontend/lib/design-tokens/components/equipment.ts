@@ -20,7 +20,6 @@ import {
 import { PAGE_HEADER_TOKENS } from './page-layout';
 import {
   CheckCircle,
-  Play,
   FileOutput,
   XCircle,
   Archive,
@@ -82,19 +81,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     },
     icon: CheckCircle,
     labelKey: 'equipment.status.available',
-  },
-  in_use: {
-    card: {
-      className: getSemanticStatusClasses('info'),
-      borderColor: getSemanticLeftBorderClasses('info'),
-      statusBarColor: 'bg-brand-info',
-    },
-    header: {
-      textColor: getSemanticContainerTextClasses('info'),
-      bgClasses: 'bg-brand-info/10 border-brand-info',
-    },
-    icon: Play,
-    labelKey: 'equipment.status.in_use',
   },
   checked_out: {
     card: {
@@ -633,7 +619,6 @@ export const EQUIPMENT_TOOLBAR_TOKENS = {
  */
 export const EQUIPMENT_STATUS_DISPLAY_ORDER = [
   'available',
-  'in_use',
   'checked_out',
   'calibration_scheduled',
   'non_conforming',

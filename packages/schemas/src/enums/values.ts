@@ -37,7 +37,6 @@ import type { ResolutionType } from './non-conformance';
  */
 export const EquipmentStatusValues = {
   AVAILABLE: 'available',
-  IN_USE: 'in_use',
   CHECKED_OUT: 'checked_out',
   CALIBRATION_SCHEDULED: 'calibration_scheduled',
   CALIBRATION_OVERDUE: 'calibration_overdue',

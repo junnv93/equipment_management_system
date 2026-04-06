@@ -1,38 +1,51 @@
 {
-  "title": "양식 관리",
-  "description": "UL-QP-18 양식 템플릿을 관리합니다.",
+  "title": "\uc591\uc2dd \uad00\ub9ac",
+  "description": "UL-QP-18 \uc591\uc2dd \ud15c\ud50c\ub9bf\uc744 \uad00\ub9ac\ud569\ub2c8\ub2e4.",
   "table": {
-    "formNumber": "양식 번호",
-    "formName": "양식명",
-    "retention": "보존연한",
-    "version": "버전",
-    "lastUpload": "최종 업로드",
-    "filename": "파일명",
-    "actions": "작업",
-    "noTemplate": "미등록"
+    "formNumber": "\uc591\uc2dd \ubc88\ud638",
+    "formName": "\uc591\uc2dd\uba85",
+    "retention": "\ubcf4\uc874\uc5f0\ud55c",
+    "version": "\ubc84\uc804",
+    "lastUpload": "\ucd5c\uc885 \uc5c5\ub85c\ub4dc",
+    "filename": "\ud30c\uc77c\uba85",
+    "actions": "\uc791\uc5c5",
+    "noTemplate": "\ubbf8\ub4f1\ub85d"
   },
-  "download": "다운로드",
-  "upload": "업로드",
-  "history": "이력",
+  "stats": {
+    "total": "\uc804\uccb4 \uc591\uc2dd",
+    "registered": "\ub4f1\ub85d \uc644\ub8cc",
+    "unregistered": "\ubbf8\ub4f1\ub85d"
+  },
+  "status": {
+    "registered": "\ub4f1\ub85d",
+    "unregistered": "\ubbf8\ub4f1\ub85d"
+  },
+  "download": "\ub2e4\uc6b4\ub85c\ub4dc",
+  "upload": "\uc5c5\ub85c\ub4dc",
+  "history": "\uc774\ub825",
   "uploadDialog": {
-    "title": "양식 업로드",
-    "description": "{formNumber} {formName} 양식의 새 버전을 업로드합니다.",
-    "selectFile": "파일 선택",
-    "accept": ".docx, .xlsx 파일만 지원",
-    "uploading": "업로드 중...",
-    "success": "양식이 업로드되었습니다.",
-    "error": "양식 업로드에 실패했습니다."
+    "title": "\uc591\uc2dd \uc5c5\ub85c\ub4dc",
+    "description": "{formNumber} {formName} \uc591\uc2dd\uc758 \uc0c8 \ubc84\uc804\uc744 \uc5c5\ub85c\ub4dc\ud569\ub2c8\ub2e4.",
+    "selectFile": "\ud30c\uc77c \uc120\ud0dd",
+    "dropzoneHint": ".docx, .xlsx \ud30c\uc77c\ub9cc \uc9c0\uc6d0",
+    "selectedFile": "\uc120\ud0dd\ub428: {filename}",
+    "uploading": "\uc5c5\ub85c\ub4dc \uc911...",
+    "success": "\uc591\uc2dd\uc774 \uc5c5\ub85c\ub4dc\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
+    "error": "\uc591\uc2dd \uc5c5\ub85c\ub4dc\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4."
   },
   "historyDialog": {
-    "title": "양식 이력",
-    "version": "버전",
-    "filename": "파일명",
-    "uploadDate": "업로드일",
-    "status": "상태",
-    "active": "현재",
-    "inactive": "이전",
-    "empty": "이력이 없습니다."
+    "title": "\uc591\uc2dd \uc774\ub825",
+    "version": "\ubc84\uc804",
+    "filename": "\ud30c\uc77c\uba85",
+    "uploadDate": "\uc5c5\ub85c\ub4dc\uc77c",
+    "status": "\uc0c1\ud0dc",
+    "active": "\ud604\uc7ac",
+    "inactive": "\uc774\uc804",
+    "empty": "\uc774\ub825\uc774 \uc5c6\uc2b5\ub2c8\ub2e4."
   },
-  "empty": "등록된 양식이 없습니다.",
-  "error": "양식 목록을 불러오는 데 실패했습니다."
+  "empty": "\ub4f1\ub85d\ub41c \uc591\uc2dd\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
+  "emptyDescription": "\uc591\uc2dd\uc774 \uad6c\uc131\ub418\uba74 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub429\ub2c8\ub2e4.",
+  "error": "\uc591\uc2dd \ubaa9\ub85d\uc744 \ubd88\ub7ec\uc624\ub294 \ub370 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",
+  "errorDescription": "\ub124\ud2b8\uc6cc\ud06c \uc5f0\uacb0\uc744 \ud655\uc778\ud558\uace0 \ub2e4\uc2dc \uc2dc\ub3c4\ud574 \uc8fc\uc138\uc694.",
+  "retry": "\ub2e4\uc2dc \uc2dc\ub3c4"
 }

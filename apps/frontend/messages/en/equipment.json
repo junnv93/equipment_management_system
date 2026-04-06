@@ -132,6 +132,7 @@
     "software": "Software",
     "attachments": "Attachments",
     "selfInspection": "Self Inspection",
+    "inspection": "Inspection",
     "ariaLabel": "Equipment detail tabs",
     "tabAriaLabel": "{label} tab",
     "panelAriaLabel": "{label} tab panel",
@@ -313,7 +314,27 @@
       "draft": "Draft",
       "completed": "Completed",
       "confirmed": "Confirmed"
+    },
+    "form": {
+      "title": "Self Inspection Record (UL-QP-18-05)",
+      "description": "Enter inspection results for each item",
+      "addItem": "Add Item",
+      "itemNamePlaceholder": "Inspection item name",
+      "selectResult": "Select result",
+      "selectJudgment": "Judgment",
+      "remarksPlaceholder": "Enter remarks",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "createSuccess": "Self inspection record created successfully.",
+      "createError": "Failed to create self inspection record."
     }
+  },
+  "inspection": {
+    "intermediateTitle": "Intermediate Inspection Records (UL-QP-18-03)",
+    "selfTitle": "Self Inspection Records (UL-QP-18-05)",
+    "noActiveCalibration": "No active calibration record found. Cannot create intermediate inspection.",
+    "createButton": "Create Inspection Record"
   },
   "form": {
     "basicInfo": {

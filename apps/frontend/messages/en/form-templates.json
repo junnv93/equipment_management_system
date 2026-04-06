@@ -11,6 +11,15 @@
     "actions": "Actions",
     "noTemplate": "Not Registered"
   },
+  "stats": {
+    "total": "Total Forms",
+    "registered": "Registered",
+    "unregistered": "Not Registered"
+  },
+  "status": {
+    "registered": "Registered",
+    "unregistered": "Not Registered"
+  },
   "download": "Download",
   "upload": "Upload",
   "history": "History",
@@ -18,7 +27,8 @@
     "title": "Upload Form",
     "description": "Upload a new version for {formNumber} {formName}.",
     "selectFile": "Select File",
-    "accept": "Only .docx, .xlsx files are supported",
+    "dropzoneHint": "Only .docx, .xlsx files are supported",
+    "selectedFile": "Selected: {filename}",
     "uploading": "Uploading...",
     "success": "Form template uploaded successfully.",
     "error": "Failed to upload form template."
@@ -34,5 +44,8 @@
     "empty": "No history available."
   },
   "empty": "No form templates registered.",
-  "error": "Failed to load form templates."
+  "emptyDescription": "Form templates will appear here once they are configured.",
+  "error": "Failed to load form templates.",
+  "errorDescription": "Please check the network connection and try again.",
+  "retry": "Retry"
 }

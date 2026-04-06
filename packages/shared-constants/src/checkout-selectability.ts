@@ -108,9 +108,6 @@ export const CHECKOUT_BLOCKED_REASONS: Partial<
     }
   >
 > = {
-  in_use: {
-    default: { key: 'selectability.inUseBlocked' },
-  },
   checked_out: {
     default: { key: 'selectability.checkedOutBlocked' },
   },

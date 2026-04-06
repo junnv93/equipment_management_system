@@ -125,7 +125,7 @@ const sw = (
   location,
   availability,
   requiresValidation,
-  site: 'SUW',
+  site: 'suwon',
 });
 
 // User pair shortcuts

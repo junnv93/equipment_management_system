@@ -217,11 +217,11 @@ grep -rn "return response\.data" apps/frontend/lib/api --include="*.ts" | grep -
 ## Step 19: FORM_CATALOG 양식 번호 SSOT
 
 ```bash
-grep -rn "UL-QP-18-0[0-9]\|UL-QP-18-1[0-1]" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|form-catalog\.\|FORM_CATALOG\|// \|test\|\.spec\.\|\.test\."
+grep -rn "UL-QP-18-0[0-9]\|UL-QP-18-1[0-1]\|UL-QP-19-0[0-9]" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|form-catalog\.\|FORM_CATALOG\|// \|test\|\.spec\.\|\.test\."
 ```
 
 SSOT: `packages/shared-constants/src/form-catalog.ts`의 `FORM_CATALOG` 상수.
-양식 번호 문자열(`'UL-QP-18-01'` 등)을 직접 사용하지 않고 `FORM_CATALOG`에서 참조해야 함.
+양식 번호 문자열(`'UL-QP-18-XX'`, `'UL-QP-19-XX'` 등)을 직접 사용하지 않고 `FORM_CATALOG`에서 참조해야 함.
 
 ```typescript
 // ❌ WRONG — 양식 번호 하드코딩
