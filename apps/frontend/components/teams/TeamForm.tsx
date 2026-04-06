@@ -89,9 +89,10 @@ export function TeamForm({ team, mode }: TeamFormProps) {
   );
 
   type TeamFormValues = z.infer<typeof teamFormSchema>;
+  type TeamFormInput = z.input<typeof teamFormSchema>;
 
   // 폼 초기화
-  const form = useForm<TeamFormValues>({
+  const form = useForm<TeamFormInput, unknown, TeamFormValues>({
     resolver: zodResolver(teamFormSchema),
     defaultValues: {
       name: team?.name || '',

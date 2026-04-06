@@ -85,6 +85,7 @@ function createRepairHistoryFormSchema(t: (key: string) => string) {
   });
 }
 type RepairHistoryFormValues = z.infer<ReturnType<typeof createRepairHistoryFormSchema>>;
+type RepairHistoryFormInput = z.input<ReturnType<typeof createRepairHistoryFormSchema>>;
 
 interface RepairHistoryClientProps {
   /**
@@ -128,7 +129,7 @@ export function RepairHistoryClient({
   const [selectedRepair, setSelectedRepair] = useState<RepairHistory | null>(null);
 
   // ✅ React Hook Form으로 폼 상태 관리
-  const form = useForm<RepairHistoryFormValues>({
+  const form = useForm<RepairHistoryFormInput, unknown, RepairHistoryFormValues>({
     resolver: zodResolver(repairHistoryFormSchema),
     defaultValues: {
       repairDate: fmtDate(new Date()),

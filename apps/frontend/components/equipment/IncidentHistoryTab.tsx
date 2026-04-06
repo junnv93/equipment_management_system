@@ -92,6 +92,7 @@ function createIncidentHistorySchema(t: (key: string) => string) {
   });
 }
 type IncidentHistoryFormData = z.infer<ReturnType<typeof createIncidentHistorySchema>>;
+type IncidentHistoryFormInput = z.input<ReturnType<typeof createIncidentHistorySchema>>;
 
 // 수리 이력 등록 스키마 (사고 이력 탭용)
 function createRepairHistorySchema(t: (key: string) => string) {
@@ -129,7 +130,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const repairHistorySchema = useMemo(() => createRepairHistorySchema(t), [t]);
 
   // 사고 이력 폼 설정
-  const form = useForm<IncidentHistoryFormData>({
+  const form = useForm<IncidentHistoryFormInput, unknown, IncidentHistoryFormData>({
     resolver: zodResolver(incidentHistorySchema),
     defaultValues: {
       occurredAt: fmtDate(new Date()),
