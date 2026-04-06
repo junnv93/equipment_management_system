@@ -36,6 +36,9 @@ pnpm-debug.log*
 apps/backend/.env.test
 apps/frontend/.env.test
 
+# uploads (runtime-generated storage)
+uploads/
+
 # test uploads (generated during E2E tests)
 test-uploads/
 **/test-uploads/
