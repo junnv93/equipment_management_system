@@ -200,9 +200,9 @@ export const TAB_META: Record<ApprovalCategory, TabMeta> = {
     section: 'management',
   },
   software_validation: {
-    labelKey: 'tabMeta.software.label',
+    labelKey: 'tabMeta.software_validation.label',
     icon: 'Code',
-    actionKey: 'tabMeta.software.action',
+    actionKey: 'tabMeta.software_validation.action',
     commentRequired: false,
     section: 'management',
   },
@@ -249,7 +249,7 @@ export type ApprovalSummaryData =
   | { type: 'calibration_plan'; year: string; siteId: string }
   | { type: 'equipment_request'; equipmentName: string; requestType: string }
   | { type: 'disposal'; equipmentName: string; managementNumber: string; step: 'review' | 'final' }
-  | { type: 'software'; softwareName: string }
+  | { type: 'software_validation'; softwareName: string }
   | { type: 'inspection'; equipmentName: string }
   | { type: 'non_conformance'; cause: string }
   | {
@@ -1137,7 +1137,10 @@ class ApprovalsApi {
       requesterTeam: item.teamName ? String(item.teamName) : '',
       requestedAt: String(item.changedAt || item.createdAt || ''),
       summary: `${item.softwareName || 'Software'} Change Request`,
-      summaryData: { type: 'software', softwareName: String(item.softwareName || 'Software') },
+      summaryData: {
+        type: 'software_validation',
+        softwareName: String(item.softwareName || 'Software'),
+      },
       details: item,
       originalData: item,
     };
