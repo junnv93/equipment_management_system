@@ -28,6 +28,7 @@
     "db:generate": "npx drizzle-kit generate",
     "db:migrate": "npx drizzle-kit migrate",
     "db:push": "npx drizzle-kit push",
+    "db:push:force": "npx drizzle-kit push --force",
     "db:studio": "npx drizzle-kit studio",
     "db:test:migrate": "npx ts-node src/database/tests/migrate.test.ts",
     "db:verify": "npx ts-node scripts/verify-migration.ts",
@@ -159,6 +160,7 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "forceExit": true,
     "coverageThreshold": {
       "global": {
         "branches": 20,
