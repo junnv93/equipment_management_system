@@ -32,6 +32,8 @@ export const CheckoutEquipmentSchema = z.object({
   id: uuidString(),
   checkoutId: uuidString(),
   equipmentId: uuidString(),
+  sequenceNumber: z.number().int().positive(),
+  quantity: z.number().int().positive(),
   condition: z.string().optional(),
   notes: z.string().optional(),
   createdAt: z.date(),

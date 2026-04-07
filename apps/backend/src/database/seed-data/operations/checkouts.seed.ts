@@ -1447,6 +1447,8 @@ function createCheckoutItem(
   return {
     checkoutId,
     equipmentId,
+    sequenceNumber: 1,
+    quantity: 1,
     ...overrides,
   };
 }
@@ -1542,30 +1544,30 @@ export const CHECKOUT_ITEMS_SEED_DATA: CheckoutItemInsert[] = [
 
   // Multi-equipment items (수동 정의 — 사이트 일치 검증 완료)
   // #7: Suwon calibration (2 items)
-  createCheckoutItem(CHECKOUT_007_ID, EQUIP_POWER_METER_SUW_E_ID),
-  createCheckoutItem(CHECKOUT_007_ID, EQUIP_EMC_RECEIVER_SUW_E_ID),
+  createCheckoutItem(CHECKOUT_007_ID, EQUIP_POWER_METER_SUW_E_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_007_ID, EQUIP_EMC_RECEIVER_SUW_E_ID, { sequenceNumber: 2 }),
   // #8: Uiwang repair (2 items)
-  createCheckoutItem(CHECKOUT_008_ID, EQUIP_AMPLIFIER_UIW_W_ID),
-  createCheckoutItem(CHECKOUT_008_ID, EQUIP_RECEIVER_UIW_W_ID),
+  createCheckoutItem(CHECKOUT_008_ID, EQUIP_AMPLIFIER_UIW_W_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_008_ID, EQUIP_RECEIVER_UIW_W_ID, { sequenceNumber: 2 }),
   // #29: Suwon rental, lender=Suwon (2 items)
-  createCheckoutItem(CHECKOUT_029_ID, EQUIP_ANTENNA_1_SUW_E_ID),
-  createCheckoutItem(CHECKOUT_029_ID, EQUIP_COUPLER_SUW_E_ID),
+  createCheckoutItem(CHECKOUT_029_ID, EQUIP_ANTENNA_1_SUW_E_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_029_ID, EQUIP_COUPLER_SUW_E_ID, { sequenceNumber: 2 }),
   // #35: Suwon rental, lender=FCC_EMC_RF_SUWON (3 items)
-  createCheckoutItem(CHECKOUT_035_ID, EQUIP_FILTER_SUW_E_ID),
-  createCheckoutItem(CHECKOUT_035_ID, EQUIP_ANTENNA_1_SUW_E_ID),
-  createCheckoutItem(CHECKOUT_035_ID, EQUIP_COUPLER_SUW_E_ID),
+  createCheckoutItem(CHECKOUT_035_ID, EQUIP_FILTER_SUW_E_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_035_ID, EQUIP_ANTENNA_1_SUW_E_ID, { sequenceNumber: 2 }),
+  createCheckoutItem(CHECKOUT_035_ID, EQUIP_COUPLER_SUW_E_ID, { sequenceNumber: 3 }),
   // #65: Suwon calibration (3 items)
-  createCheckoutItem(CHECKOUT_065_ID, EQUIP_SPECTRUM_ANALYZER_SUW_E_ID),
-  createCheckoutItem(CHECKOUT_065_ID, EQUIP_SIGNAL_GEN_SUW_E_ID),
-  createCheckoutItem(CHECKOUT_065_ID, EQUIP_NETWORK_ANALYZER_SUW_E_ID),
+  createCheckoutItem(CHECKOUT_065_ID, EQUIP_SPECTRUM_ANALYZER_SUW_E_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_065_ID, EQUIP_SIGNAL_GEN_SUW_E_ID, { sequenceNumber: 2 }),
+  createCheckoutItem(CHECKOUT_065_ID, EQUIP_NETWORK_ANALYZER_SUW_E_ID, { sequenceNumber: 3 }),
   // #66: Uiwang repair (3 items)
-  createCheckoutItem(CHECKOUT_066_ID, EQUIP_RECEIVER_UIW_W_ID),
-  createCheckoutItem(CHECKOUT_066_ID, EQUIP_TRANSMITTER_UIW_W_ID),
-  createCheckoutItem(CHECKOUT_066_ID, EQUIP_AMPLIFIER_UIW_W_ID),
+  createCheckoutItem(CHECKOUT_066_ID, EQUIP_RECEIVER_UIW_W_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_066_ID, EQUIP_TRANSMITTER_UIW_W_ID, { sequenceNumber: 2 }),
+  createCheckoutItem(CHECKOUT_066_ID, EQUIP_AMPLIFIER_UIW_W_ID, { sequenceNumber: 3 }),
   // #67: Suwon calibration (2 items)
-  createCheckoutItem(CHECKOUT_067_ID, EQUIP_POWER_METER_SUW_E_ID),
-  createCheckoutItem(CHECKOUT_067_ID, EQUIP_EMC_RECEIVER_SUW_E_ID),
+  createCheckoutItem(CHECKOUT_067_ID, EQUIP_POWER_METER_SUW_E_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_067_ID, EQUIP_EMC_RECEIVER_SUW_E_ID, { sequenceNumber: 2 }),
   // #68: Uiwang repair (2 items)
-  createCheckoutItem(CHECKOUT_068_ID, EQUIP_ANTENNA_2_UIW_W_ID),
-  createCheckoutItem(CHECKOUT_068_ID, EQUIP_RECEIVER_UIW_W_ID),
+  createCheckoutItem(CHECKOUT_068_ID, EQUIP_ANTENNA_2_UIW_W_ID, { sequenceNumber: 1 }),
+  createCheckoutItem(CHECKOUT_068_ID, EQUIP_RECEIVER_UIW_W_ID, { sequenceNumber: 2 }),
 ];
