@@ -29,6 +29,7 @@ import { USERS_SEED_DATA } from './seed-data/core/users.seed';
 import { EQUIPMENT_SEED_DATA } from './seed-data/core/equipment.seed';
 import { CALIBRATIONS_SEED_DATA } from './seed-data/calibration/calibrations.seed';
 import { NON_CONFORMANCES_SEED_DATA } from './seed-data/operations/non-conformances.seed';
+import { FORM_TEMPLATES_SEED_DATA } from './seed-data/operations/form-templates.seed';
 
 // Phase 2 seed data modules (IMPLEMENTED)
 import { REPAIR_HISTORY_SEED_DATA } from './seed-data/operations/repair-history.seed';
@@ -110,6 +111,7 @@ async function main(): Promise<void> {
       'calibration_factors',
       'repair_history',
       'non_conformances',
+      'form_templates',
       'checkout_items',
       'checkouts',
       'calibration_plan_items',
