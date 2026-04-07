@@ -4,6 +4,7 @@ import { CalibrationPlansService } from './calibration-plans.service';
 import { FormTemplateService } from '../reports/form-template.service';
 import { SITE_LABELS } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
+import { toExcelLoadableBuffer } from '../../common/utils';
 import type { CalibrationPlanDetail, CalibrationPlanItemDetail } from './calibration-plans.types';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -37,7 +38,7 @@ export class CalibrationPlansExportService {
     // 스토리지에서 템플릿 로드
     const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-19-01');
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(templateBuffer);
+    await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
     const sheet =
       workbook.getWorksheet('연간 교정계획서') ||
       workbook.getWorksheet('교정계획서') ||

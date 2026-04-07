@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import ExcelJS from 'exceljs';
+import { toExcelLoadableBuffer } from '../../common/utils';
 import type { AppDatabase } from '@equipment-management/db';
 import { DocxTemplate } from './docx-template.util';
 import { FormTemplateService } from './form-template.service';
@@ -227,7 +228,7 @@ export class FormTemplateExportService {
     // 템플릿 파일 로드 (양식 서식 보존) — 스토리지 기반
     const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-01');
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(templateBuffer);
+    await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
     const sheet =
       workbook.getWorksheet('시험설비 관리대장') ||
       workbook.getWorksheet('시험설비 관리 대장') ||
@@ -1043,7 +1044,7 @@ export class FormTemplateExportService {
     try {
       const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-08');
       workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(templateBuffer);
+      await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
     } catch {
       workbook = new ExcelJS.Workbook();
     }
