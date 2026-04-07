@@ -1,19 +1,296 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
 @import './accessibility.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ============================================================================
+   Dark Mode Variant — class-based (.dark on <html>)
+   ============================================================================ */
+@custom-variant dark (&:where(.dark, .dark *));
 
-@layer utilities {
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* ============================================================================
+   @theme inline — utility generation referencing var() WITHOUT emitting :root
+   variables. Avoids recursion with Next.js font-loader vars (--font-sans etc.)
+   and the runtime HSL token bridge defined in @layer base below.
+   ============================================================================ */
+@theme inline {
+  /* Font families — Next.js font loader sets these on <html> */
+  --font-sans: var(--font-sans), var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  --font-body: var(--font-body), var(--font-sans), system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* Border radius */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /* Easings */
+  --ease-standard: var(--ease-standard);
+  --ease-accelerate: var(--ease-accelerate);
+  --ease-decelerate: var(--ease-decelerate);
+  --ease-spring: var(--ease-spring);
+  --ease-sharp: var(--ease-sharp);
+  --ease-spring-pop: var(--ease-spring-pop);
+  --ease-spring-smooth: var(--ease-spring-smooth);
+
+  /* shadcn/ui semantic colors */
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  /* Brand Design Tokens — bridge to HSL runtime vars (light/dark in @layer base) */
+  --color-brand-bg-base: hsl(var(--brand-bg-base));
+  --color-brand-bg-surface: hsl(var(--brand-bg-surface));
+  --color-brand-bg-elevated: hsl(var(--brand-bg-elevated));
+  --color-brand-bg-overlay: hsl(var(--brand-bg-overlay));
+
+  --color-brand-border-subtle: hsl(var(--brand-border-subtle));
+  --color-brand-border: hsl(var(--brand-border-default));
+  --color-brand-border-strong: hsl(var(--brand-border-strong));
+
+  --color-brand-text-primary: hsl(var(--brand-text-primary));
+  --color-brand-text-secondary: hsl(var(--brand-text-secondary));
+  --color-brand-text-muted: hsl(var(--brand-text-muted));
+  --color-brand-text-inverse: hsl(var(--brand-text-inverse));
+
+  --color-brand-ok: hsl(var(--brand-color-ok));
+  --color-brand-warning: hsl(var(--brand-color-warning));
+  --color-brand-critical: hsl(var(--brand-color-critical));
+  --color-brand-info: hsl(var(--brand-color-info));
+  --color-brand-neutral: hsl(var(--brand-color-neutral));
+  --color-brand-purple: hsl(var(--brand-color-purple));
+  --color-brand-repair: hsl(var(--brand-color-repair));
+  --color-brand-temporary: hsl(var(--brand-color-temporary));
+
+  --color-brand-site-suw: hsl(var(--brand-color-site-suw));
+  --color-brand-site-uiw: hsl(var(--brand-color-site-uiw));
+  --color-brand-site-pyt: hsl(var(--brand-color-site-pyt));
+
+  /* Semantic colors */
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+}
+
+/* ============================================================================
+   @theme — theme-invariant literals (UL brand hex + animations + keyframes)
+   These ARE emitted as :root CSS variables.
+   ============================================================================ */
+@theme {
+  /* UL Solutions Brand Colors — literal hex */
+  --color-ul-midnight: #122c49;
+  --color-ul-midnight-dark: #0a1c30;
+  --color-ul-midnight-light: #1e3a5f;
+  --color-ul-fog: #577e9e;
+  --color-ul-red: #ca0123;
+  --color-ul-red-dark: #5b0428;
+  --color-ul-red-hover: #a8011d;
+  --color-ul-green: #00a451;
+  --color-ul-green-hover: #008940;
+  --color-ul-blue: #0067b1;
+  --color-ul-blue-light: #bce4f7;
+  --color-ul-orange: #ff9d55;
+  --color-ul-info: #bce4f7;
+  --color-ul-gray-bg: #ebebeb;
+  --color-ul-gray-1: #d8d9da;
+  --color-ul-gray-2: #b5b7b9;
+  --color-ul-gray-3: #939698;
+
+  /* Animations */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-fade-in: fade-in 0.5s ease-out forwards;
+  --animate-slide-right: slide-right 0.4s ease-out forwards;
+  --animate-slide-left: slide-left 0.4s ease-out forwards;
+  --animate-slide-up: slide-up 0.4s ease-out forwards;
+  --animate-slide-down: slide-down 0.3s ease-out forwards;
+  --animate-scale-in: scale-in 0.5s ease-out forwards;
+  --animate-badge-pulse: badge-pulse 2s var(--ease-sharp) 3;
+  --animate-checkmark-pop: checkmark-pop 0.5s var(--ease-spring-pop) forwards;
+  --animate-gentle-bounce: gentle-bounce 2s ease-in-out infinite;
+  --animate-shake: shake 0.5s ease-in-out;
+  --animate-fade-in-up: fade-in-up 0.6s ease-out forwards;
+  --animate-scale-in-subtle: scale-in-subtle 0.4s var(--ease-spring-smooth) forwards;
+  --animate-progress-indeterminate: progress-indeterminate 1.5s ease-in-out infinite;
+  --animate-approval-exit-success: approval-exit-success 0.6s ease-out forwards;
+  --animate-approval-exit-reject: approval-exit-reject 0.5s ease-out forwards;
+  --animate-approval-pulse-dot: approval-pulse-dot 2s ease-in-out infinite;
+  --animate-timeline-glow: timeline-glow 5s ease-in-out infinite;
+  --animate-approval-ring-pop: approval-ring-pop 0.5s var(--ease-spring-pop) 0.2s both;
+  --animate-approval-ring-expand: approval-ring-expand 1.5s ease-out 0.6s both;
+  --animate-approval-check-draw: approval-check-draw 0.4s ease-out 0.4s both;
+  --animate-approval-text-up-1: approval-text-up 0.4s ease-out 0.5s both;
+  --animate-approval-text-up-2: approval-text-up 0.4s ease-out 0.6s both;
+  --animate-approval-text-up-3: approval-text-up 0.4s ease-out 0.7s both;
+  --animate-stagger-fade-in: staggerFadeIn 0.25s var(--ease-spring-smooth) both;
+  --animate-pulse-glow: pulseGlow 2s ease-in-out infinite;
+
+  /* Keyframes */
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-right {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slide-left {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes badge-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+  }
+  @keyframes checkmark-pop {
+    0% { transform: scale(0) rotate(-45deg); opacity: 0; }
+    50% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  @keyframes gentle-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+    50% { opacity: 0.85; box-shadow: 0 0 0 6px hsl(var(--primary) / 0); }
+  }
+  @keyframes timeline-glow {
+    0%, 100% { box-shadow: 0 0 0 3px hsl(var(--brand-color-info) / 0.12); }
+    50% { box-shadow: 0 0 0 5px hsl(var(--brand-color-info) / 0.06); }
+  }
+  @keyframes staggerFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in-subtle {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes progress-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+  }
+  @keyframes approval-exit-success {
+    0% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 1; transform: translateX(0); }
+    40% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 1; transform: translateX(0); }
+    100% { background-color: hsl(var(--brand-color-ok) / 0.15); opacity: 0; transform: translateX(24px); }
+  }
+  @keyframes approval-exit-reject {
+    0% { background-color: hsl(var(--brand-color-critical) / 0.08); opacity: 1; }
+    100% { opacity: 0; transform: translateX(-16px); }
+  }
+  @keyframes approval-pulse-dot {
+    0%, 100% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(2.2); opacity: 0; }
+  }
+  @keyframes approval-ring-pop {
+    from { transform: scale(0.6); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes approval-ring-expand {
+    from { transform: scale(0.8); opacity: 0.4; }
+    to { transform: scale(1.3); opacity: 0; }
+  }
+  @keyframes approval-check-draw {
+    from { transform: scale(0) rotate(-45deg); opacity: 0; }
+    to { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  @keyframes approval-text-up {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 }
 
+/* ============================================================================
+   Custom utilities (Tailwind v4 @utility)
+   ============================================================================ */
+
+/* shadcn-style centered container with breakpoint max-widths */
+@utility container {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (min-width: 640px) { max-width: 640px; }
+  @media (min-width: 768px) { max-width: 768px; }
+  @media (min-width: 1024px) { max-width: 1024px; }
+  @media (min-width: 1280px) { max-width: 1280px; }
+  @media (min-width: 1400px) { max-width: 1400px; }
+}
+
+/* animation-delay-{0..1000} (was a JS plugin in v3) */
+@utility animation-delay-0 { animation-delay: 0ms; }
+@utility animation-delay-100 { animation-delay: 100ms; }
+@utility animation-delay-200 { animation-delay: 200ms; }
+@utility animation-delay-300 { animation-delay: 300ms; }
+@utility animation-delay-400 { animation-delay: 400ms; }
+@utility animation-delay-500 { animation-delay: 500ms; }
+@utility animation-delay-600 { animation-delay: 600ms; }
+@utility animation-delay-700 { animation-delay: 700ms; }
+@utility animation-delay-800 { animation-delay: 800ms; }
+@utility animation-delay-900 { animation-delay: 900ms; }
+@utility animation-delay-1000 { animation-delay: 1000ms; }
+
+/* ============================================================================
+   Runtime CSS variables — SSOT for the Design Token 3-Layer bridge.
+   These names/values are consumed by lib/design-tokens/* and the @theme inline
+   declarations above. DO NOT rename without updating both consumers.
+   ============================================================================ */
 @layer base {
   :root {
     /* ── Motion: Easing CSS Variables (SSOT: primitives.ts) ────────── */
@@ -191,6 +468,16 @@
   }
 }
 
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* ============================================================================
    Print Styles - 품질 심사 보고서용
    ============================================================================ */
@@ -252,4 +539,4 @@
     background-color: currentColor !important;
     print-color-adjust: exact;
   }
-} 
+}
