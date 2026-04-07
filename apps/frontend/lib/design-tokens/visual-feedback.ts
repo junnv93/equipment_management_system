@@ -63,7 +63,7 @@ export const VISUAL_FEEDBACK_TOKENS = {
     scale: 'scale-100',
     ring: '',
     animation: '',
-    bgOpacity: 'bg-opacity-100',
+    bgOpacity: '',
   },
 
   /** 미묘한 강조 (scale만) */
@@ -71,7 +71,7 @@ export const VISUAL_FEEDBACK_TOKENS = {
     scale: 'scale-105',
     ring: '',
     animation: '',
-    bgOpacity: 'bg-opacity-100',
+    bgOpacity: '',
   },
 
   /** 명확한 강조 (scale + ring) */
@@ -79,7 +79,7 @@ export const VISUAL_FEEDBACK_TOKENS = {
     scale: 'scale-105',
     ring: 'ring-1 ring-destructive/30 ring-offset-1',
     animation: '',
-    bgOpacity: 'bg-opacity-100',
+    bgOpacity: '',
   },
 
   /** 최대 강조 (scale + ring + pulse) - 신중하게 사용 */
@@ -87,7 +87,7 @@ export const VISUAL_FEEDBACK_TOKENS = {
     scale: 'scale-110',
     ring: 'ring-2 ring-destructive/50 ring-offset-2',
     animation: ANIMATION_PRESETS.pulse, // motion-safe 조건부 적용
-    bgOpacity: 'bg-opacity-90',
+    bgOpacity: '',
   },
 } as const;
 
