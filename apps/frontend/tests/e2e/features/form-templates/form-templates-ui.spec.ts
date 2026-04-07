@@ -154,10 +154,12 @@ test.describe('양식 관리 UI Smoke (PR #157)', () => {
     await expect(page.getByRole('heading', { name: '양식 관리', level: 1 })).toBeVisible();
 
     // 첫 번째 row의 "개정 이력" 버튼 클릭
-    await page
-      .getByRole('button', { name: /개정 이력/ })
-      .first()
-      .click();
+    // Mobile Chrome viewport에서 sticky header가 상단 row를 가려 pointer event를 가로채므로
+    // scrollIntoView({block: 'center'})로 화면 중앙에 배치한 뒤 클릭
+    const historyBtn = page.getByRole('button', { name: /개정 이력/ }).first();
+    await historyBtn.scrollIntoViewIfNeeded();
+    await historyBtn.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await historyBtn.click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -215,6 +217,9 @@ test.describe('양식 관리 UI Smoke (PR #157)', () => {
     // 이미 등록된 양식의 "개정 등록" 버튼만 사용.
     const reviseBtn = page.getByRole('button', { name: /개정 등록/ }).first();
     await expect(reviseBtn).toBeVisible();
+    // Mobile Chrome sticky header 가로채기 회피 (TC-UI-04와 동일)
+    await reviseBtn.scrollIntoViewIfNeeded();
+    await reviseBtn.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     await reviseBtn.click();
 
     const dialog = page.getByRole('dialog');
