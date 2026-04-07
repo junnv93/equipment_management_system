@@ -57,18 +57,24 @@ test.describe('양식 관리 UI Smoke (PR #157)', () => {
         buffer: fileBuffer,
       };
 
-      // 1) 동일 formNumber 파일 교체 시도 — 현행 row가 있으면 성공 (formNumber 유지)
-      const replaceResp = await page.request.post(`${BACKEND_URL}/api/form-templates/replace`, {
-        headers: { Authorization: `Bearer ${token}` },
-        multipart: { formName: SEED_FORM_NAME, file: fileField },
-      });
-      if (replaceResp.ok()) return;
+      // 멀티워커 race 대응: replace→404→create 경로에서 두 워커가 동시에 create를 호출하면
+      // unique constraint(formNumber) 위반(409)이 발생할 수 있다.
+      // 전략: replace 우선 → 404면 create → create가 conflict면 다른 워커가 끝낸 것이므로 replace 재시도.
+      const tryReplace = () =>
+        page.request.post(`${BACKEND_URL}/api/form-templates/replace`, {
+          headers: { Authorization: `Bearer ${token}` },
+          multipart: { formName: SEED_FORM_NAME, file: fileField },
+        });
 
-      // 2) 현행 row가 없으면(404) 최초 생성 — 고정 formNumber 사용
+      // 1) 동일 formNumber 파일 교체 시도 — 현행 row가 있으면 성공
+      const replaceResp = await tryReplace();
+      if (replaceResp.ok()) return;
       if (replaceResp.status() !== 404) {
         const body = await replaceResp.text();
         throw new Error(`form-template replace failed: ${replaceResp.status()} ${body}`);
       }
+
+      // 2) 현행 row가 없으면 최초 생성
       const createResp = await page.request.post(`${BACKEND_URL}/api/form-templates`, {
         headers: { Authorization: `Bearer ${token}` },
         multipart: {
@@ -78,10 +84,18 @@ test.describe('양식 관리 UI Smoke (PR #157)', () => {
           file: fileField,
         },
       });
-      if (!createResp.ok()) {
-        const body = await createResp.text();
-        throw new Error(`form-template seed failed: ${createResp.status()} ${body}`);
+      if (createResp.ok()) return;
+
+      // 3) 다른 워커가 먼저 생성한 경우(409 Conflict) → replace로 폴백
+      if (createResp.status() === 409) {
+        const retryResp = await tryReplace();
+        if (retryResp.ok()) return;
+        const body = await retryResp.text();
+        throw new Error(`form-template seed retry-replace failed: ${retryResp.status()} ${body}`);
       }
+
+      const body = await createResp.text();
+      throw new Error(`form-template seed failed: ${createResp.status()} ${body}`);
     } finally {
       await ctx.close();
     }
