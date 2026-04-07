@@ -177,6 +177,10 @@ async function main(): Promise<void> {
     console.log('  → Non-Conformances (10)');
     await db.insert(schema.nonConformances).values(NON_CONFORMANCES_SEED_DATA);
 
+    // Form Templates — E2E 양식 목록/이력 prerequisites
+    console.log(`  → Form Templates (${FORM_TEMPLATES_SEED_DATA.length})`);
+    await db.insert(schema.formTemplates).values(FORM_TEMPLATES_SEED_DATA);
+
     // Calibration Plans & Items (6 plans + 12 items)
     console.log('  → Calibration Plans (6)');
     await db.insert(schema.calibrationPlans).values(CALIBRATION_PLANS_SEED_DATA);
