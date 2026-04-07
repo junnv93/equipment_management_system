@@ -544,6 +544,8 @@ export const queryKeys = {
       [...queryKeys.formTemplates.all, 'revisions', formName] as const,
     searchByNumber: (formNumber: string) =>
       [...queryKeys.formTemplates.all, 'search', formNumber] as const,
+    /** 보존연한 만료로 소프트 아카이브된 양식 목록 (UL-QP-03 §11) */
+    archived: () => [...queryKeys.formTemplates.all, 'archived'] as const,
   },
   breadcrumbs: {
     all: ['breadcrumb'] as const,

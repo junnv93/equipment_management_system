@@ -79,5 +79,28 @@
   "emptyDescription": "Form templates will appear here once they are configured.",
   "error": "Failed to load form templates.",
   "errorDescription": "Please check the network connection and try again.",
-  "retry": "Retry"
+  "retry": "Retry",
+  "tabs": {
+    "active": "Active Forms",
+    "archived": "Retention Expired"
+  },
+  "archived": {
+    "description": "Forms automatically archived after their retention period (UL-QP-03 §11). Files are retained for legal and knowledge preservation purposes.",
+    "table": {
+      "formName": "Form Name",
+      "formNumber": "Form Number",
+      "filename": "Filename",
+      "uploadedAt": "First Registered",
+      "archivedAt": "Archived On",
+      "actions": "Actions"
+    },
+    "stats": {
+      "total": "Archived Forms",
+      "latestArchive": "Latest Archive"
+    },
+    "empty": "No archived forms.",
+    "emptyDescription": "Forms whose retention period has elapsed will appear here automatically.",
+    "downloadLocked": "Only Quality Manager / Lab Manager / System Admin can download archived forms",
+    "lockedBadge": "Archival Hold"
+  }
 }

@@ -150,6 +150,47 @@ test.describe('양식 관리 UI Smoke (PR #157)', () => {
     await expect(dialog.getByRole('heading', { name: '개정 이력' })).toBeVisible();
   });
 
+  test('TC-UI-06: 활성/아카이브 탭 토글 + URL ?view=archived SSOT', async ({
+    testOperatorPage: page,
+  }) => {
+    await page.goto('/form-templates');
+    await expect(page.getByRole('heading', { name: '양식 관리', level: 1 })).toBeVisible();
+
+    // 기본은 활성 탭 — URL에 ?view= 없음
+    await expect(page).toHaveURL(/\/form-templates(\?(?!view=).*)?$/);
+    await expect(page.getByRole('tab', { name: /활성 양식/ })).toHaveAttribute(
+      'data-state',
+      'active'
+    );
+
+    // 아카이브 탭 클릭 → URL 변경 + 탭 활성 + 설명 노출 또는 빈 상태
+    await page.getByRole('tab', { name: /보존연한 만료/ }).click();
+    await expect(page).toHaveURL(/\?view=archived/);
+    await expect(page.getByRole('tab', { name: /보존연한 만료/ })).toHaveAttribute(
+      'data-state',
+      'active'
+    );
+    // 빈 상태 또는 데이터 — 둘 중 하나는 반드시 표시
+    const emptyMsg = page.getByText('아카이브된 양식이 없습니다.');
+    const desc = page.getByText(/보존연한이 경과하여 자동 아카이브된 양식/);
+    await expect(emptyMsg.or(desc)).toBeVisible();
+
+    // 활성 탭으로 복귀 → URL 파라미터 제거
+    await page.getByRole('tab', { name: /활성 양식/ }).click();
+    await expect(page).not.toHaveURL(/\?view=archived/);
+  });
+
+  test('TC-UI-07: ?view=archived 딥링크 직접 진입 시 아카이브 탭 활성', async ({
+    testOperatorPage: page,
+  }) => {
+    await page.goto('/form-templates?view=archived');
+    await expect(page.getByRole('heading', { name: '양식 관리', level: 1 })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /보존연한 만료/ })).toHaveAttribute(
+      'data-state',
+      'active'
+    );
+  });
+
   test('TC-UI-05: TM 업로드 다이얼로그 → 개정 사유 필드 존재 (PR #157)', async ({
     techManagerPage: page,
   }) => {

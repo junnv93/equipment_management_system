@@ -82,6 +82,8 @@ interface HistoryItem {
   uploadedAt: Date;
   uploadedBy: string | null;
   supersededAt: Date | null;
+  /** 보존연한 만료 소프트 아카이브 시점 (UL-QP-03 §11). null이면 활성. */
+  archivedAt: Date | null;
 }
 
 interface SearchByNumberResult {
@@ -309,5 +311,6 @@ function toHistoryItem(row: FormTemplate): HistoryItem {
     uploadedAt: row.uploadedAt,
     uploadedBy: row.uploadedBy,
     supersededAt: row.supersededAt,
+    archivedAt: row.archivedAt,
   };
 }
