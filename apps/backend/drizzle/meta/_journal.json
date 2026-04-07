@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775435744836,
-      "tag": "0000_loving_phalanx",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775435814679,
-      "tag": "0001_neat_union_jack",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1775437642976,
-      "tag": "0002_friendly_thor_girl",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1775439647646,
-      "tag": "0003_late_prodigy",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1775692800000,
-      "tag": "0004_inspection_export_deputy",
+      "when": 1775523312012,
+      "tag": "0000_baseline",
       "breakpoints": true
     }
   ]
