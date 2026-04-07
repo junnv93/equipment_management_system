@@ -11,12 +11,14 @@ import { test, expect } from '../shared/fixtures/auth.fixture';
 import {
   createSelfInspection,
   createCheckout,
+  createEquipmentImport,
+  extractId,
   resetEquipmentForWorkflow,
   resetSelfInspections,
   clearBackendCache,
   cleanupSharedPool,
 } from './helpers/workflow-helpers';
-import { TEST_EQUIPMENT_IDS, BASE_URLS } from '../shared/constants/shared-test-data';
+import { TEST_EQUIPMENT_IDS, TEST_TEAM_IDS, BASE_URLS } from '../shared/constants/shared-test-data';
 import { getBackendToken } from '../shared/helpers/api-helpers';
 
 const WF_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.TRANSMITTER_UIW_W;
@@ -65,6 +67,51 @@ test.describe('WF-20b: 자체점검표 양식 내보내기 (QP-18-05)', () => {
     );
     const body = await resp.body();
     expect(body.length).toBeGreaterThan(1000); // XLSX는 최소 수 KB
+  });
+
+  test('Step 3: QP-18-10 공용장비 사용/반납 확인서 export → 200', async ({
+    testOperatorPage: page,
+  }) => {
+    // 반입 신청 1건 즉석 생성 (시드 의존 X)
+    const now = Date.now();
+    const startIso = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+    const endIso = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const created = await createEquipmentImport(
+      page,
+      {
+        sourceType: 'rental',
+        vendorName: `WF-20b QP-18-10 export 검증 업체 ${now}`,
+        vendorContact: '02-1234-5678',
+        externalIdentifier: `EXT-${now}`,
+        equipmentName: 'WF-20b QP-18-10 테스트 장비',
+        modelName: 'QP1810-MODEL',
+        manufacturer: '테스트 제조사',
+        serialNumber: `SN-${now}`,
+        classification: 'fcc_emc_rf',
+        teamId: TEST_TEAM_IDS.FCC_EMC_RF_SUWON,
+        site: 'suwon',
+        usagePeriodStart: startIso,
+        usagePeriodEnd: endIso,
+        usageLocation: '수원 EMC 챔버',
+        reason: 'WF-20b QP-18-10 export 검증용 반입',
+      },
+      'test_engineer'
+    );
+    const importId = extractId(created);
+    expect(importId).toBeTruthy();
+
+    const token = await getBackendToken(page, 'test_engineer');
+    const resp = await page.request.get(
+      `${BACKEND_URL}/api/reports/export/form/UL-QP-18-10?importId=${importId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    expect(resp.status()).toBe(200);
+    expect(resp.headers()['content-type']).toContain(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+    const body = await resp.body();
+    expect(body.length).toBeGreaterThan(1000);
   });
 
   test('Step 2: QP-18-06 반출입확인서 export → 200', async ({ testOperatorPage: page }) => {

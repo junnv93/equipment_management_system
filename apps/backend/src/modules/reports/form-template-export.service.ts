@@ -22,6 +22,7 @@ import {
   intermediateInspectionEquipment,
 } from '@equipment-management/db/schema/intermediate-inspections';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
+import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
 import { testSoftware } from '@equipment-management/db/schema/test-software';
 import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cables';
@@ -117,6 +118,7 @@ export class FormTemplateExportService {
       'UL-QP-18-07': (p, s) => this.exportSoftwareRegistry(p, s),
       'UL-QP-18-08': (p, s) => this.exportCablePathLoss(p, s),
       'UL-QP-18-09': (p, s) => this.exportSoftwareValidation(p, s),
+      'UL-QP-18-10': (p, s) => this.exportEquipmentImport(p, s),
     };
 
     const exporter = exporters[formNumber];
@@ -1419,5 +1421,188 @@ export class FormTemplateExportService {
     } catch {
       return [];
     }
+  }
+
+  // ============================================================================
+  // UL-QP-18-10: 공용 장비 사용/반납 확인서 (DOCX — 단일 테이블 25행, Part1+Part2)
+  // ============================================================================
+
+  private async exportEquipmentImport(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-10'];
+    const importId = params.importId;
+    if (!importId) {
+      throw new BadRequestException({
+        code: 'MISSING_IMPORT_ID',
+        message: 'importId query parameter is required for equipment import export.',
+      });
+    }
+
+    const [imp] = await this.db
+      .select()
+      .from(equipmentImports)
+      .where(eq(equipmentImports.id, importId))
+      .limit(1);
+
+    if (!imp) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        message: 'Equipment import not found.',
+      });
+    }
+
+    // 사이트 우회 방지
+    if (scope && imp.site !== scope.site) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        message: 'Equipment import not found or not accessible from your site.',
+      });
+    }
+
+    // 신청자 (사용자=신청자=반납자 동일 가정 — 스키마에 별도 반납자 없음)
+    const [requester] = await this.db
+      .select({ name: users.name, signaturePath: users.signatureImagePath })
+      .from(users)
+      .where(eq(users.id, imp.requesterId))
+      .limit(1);
+
+    // 승인자 (nullable)
+    const [approver] = imp.approverId
+      ? await this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, imp.approverId))
+          .limit(1)
+      : [null];
+
+    // 사용 부서 (teams JOIN)
+    const [team] = await this.db
+      .select({ name: teams.name })
+      .from(teams)
+      .where(eq(teams.id, imp.teamId))
+      .limit(1);
+
+    // 사용 출처 식별: rental → vendorName, internal_shared → ownerDepartment
+    const sourceLabel =
+      imp.sourceType === 'rental' ? (imp.vendorName ?? '-') : (imp.ownerDepartment ?? '-');
+
+    // 관리번호: rental은 externalIdentifier, internal_shared는 serialNumber 우선
+    const managementLabel = imp.externalIdentifier ?? imp.serialNumber ?? '-';
+
+    // 반납 상태 jsonb 파싱
+    const returnedCondition = (imp.returnedCondition ?? {}) as {
+      appearance?: string;
+      abnormality?: string;
+      notes?: string;
+    };
+    const receivingCondition = (imp.receivingCondition ?? {}) as {
+      appearance?: string;
+      operation?: string;
+      accessories?: string;
+      notes?: string;
+    };
+
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-10');
+    const doc = new DocxTemplate(templateBuf);
+
+    // ============== Part 1: 사용 확인서 (R0~R13) ==============
+
+    // R1: 결재란 (작성=requester, 승인=approver) — Part1
+    await this.insertDocxSignature(doc, 0, 1, 1, requester?.signaturePath ?? null, '(서명)');
+    await this.insertDocxSignature(doc, 0, 1, 2, approver?.signaturePath ?? null, '(서명)');
+
+    // R2: 사용부서 / 사용자
+    doc.setCellValue(0, 2, 1, team?.name ?? sourceLabel);
+    doc.setCellValue(0, 2, 3, requester?.name ?? '-');
+
+    // R3: 사용장소 / 사용기간
+    doc.setCellValue(0, 3, 1, imp.usageLocation ?? '-');
+    const usageStart = this.formatQp1806Date(imp.usagePeriodStart);
+    const usageEnd = this.formatQp1806Date(imp.usagePeriodEnd);
+    doc.setCellValue(0, 3, 3, `${usageStart} ~ ${usageEnd}`);
+
+    // R4: 사용목적
+    doc.setCellValue(0, 4, 1, imp.reason ?? '-');
+
+    // R5: 사용 확인 문장 + 날짜
+    const checkoutDateStr = this.formatQp1806Date(imp.usagePeriodStart);
+    doc.setCellValue(
+      0,
+      5,
+      0,
+      `아래 목록과 같이 공용장비 사용(반출)을 확인합니다.    ${checkoutDateStr}    사용자 : ${requester?.name ?? '-'}`
+    );
+
+    // R9~R13: Part1 장비 데이터 행 5개 (단일 import → 1번 행에만 데이터, 2~5번은 '-')
+    for (let i = 0; i < 5; i++) {
+      const rowIdx = 9 + i;
+      if (i === 0) {
+        doc.setCellValue(0, rowIdx, 1, imp.equipmentName ?? '-');
+        doc.setCellValue(0, rowIdx, 2, imp.modelName ?? '-');
+        doc.setCellValue(0, rowIdx, 3, imp.quantityOut != null ? String(imp.quantityOut) : '-');
+        doc.setCellValue(0, rowIdx, 4, managementLabel);
+        doc.setCellValue(0, rowIdx, 5, receivingCondition.appearance ?? '-');
+        doc.setCellValue(0, rowIdx, 6, '-');
+      } else {
+        doc.setCellValue(0, rowIdx, 1, '-');
+        doc.setCellValue(0, rowIdx, 2, '-');
+        doc.setCellValue(0, rowIdx, 3, '-');
+        doc.setCellValue(0, rowIdx, 4, '-');
+        doc.setCellValue(0, rowIdx, 5, '-');
+        doc.setCellValue(0, rowIdx, 6, '-');
+      }
+    }
+
+    // ============== Part 2: 반납 확인서 (R14~R24) ==============
+
+    // R15: 결재란 — Part2
+    await this.insertDocxSignature(doc, 0, 15, 1, requester?.signaturePath ?? null, '(서명)');
+    await this.insertDocxSignature(doc, 0, 15, 2, approver?.signaturePath ?? null, '(서명)');
+
+    // R18~R22: Part2 반납 데이터 행 5개
+    for (let i = 0; i < 5; i++) {
+      const rowIdx = 18 + i;
+      if (i === 0) {
+        doc.setCellValue(0, rowIdx, 1, imp.equipmentName ?? '-');
+        doc.setCellValue(0, rowIdx, 2, imp.modelName ?? '-');
+        doc.setCellValue(
+          0,
+          rowIdx,
+          3,
+          imp.quantityReturned != null ? String(imp.quantityReturned) : '-'
+        );
+        doc.setCellValue(0, rowIdx, 4, managementLabel);
+        doc.setCellValue(0, rowIdx, 5, returnedCondition.appearance ?? '-');
+        doc.setCellValue(0, rowIdx, 6, returnedCondition.abnormality ?? '-');
+      } else {
+        doc.setCellValue(0, rowIdx, 1, '-');
+        doc.setCellValue(0, rowIdx, 2, '-');
+        doc.setCellValue(0, rowIdx, 3, '-');
+        doc.setCellValue(0, rowIdx, 4, '-');
+        doc.setCellValue(0, rowIdx, 5, '-');
+        doc.setCellValue(0, rowIdx, 6, '-');
+      }
+    }
+
+    // R23: 특기사항 (이상 발생 시 상세)
+    doc.setCellValue(0, 23, 1, imp.returnedAbnormalDetails ?? '-');
+
+    // R24: 반납 확인 문장 + 날짜
+    const returnDateStr = this.formatQp1806Date(imp.receivedAt);
+    doc.setCellValue(
+      0,
+      24,
+      0,
+      `상기 목록과 같이 공용 장비를 이상없이 반납하였음을 확인합니다.    ${returnDateStr}    반납자 : ${requester?.name ?? '-'}`
+    );
+
+    const buffer = doc.toBuffer();
+    return {
+      buffer,
+      mimeType: DOCX_MIME,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+    };
   }
 }
