@@ -3,10 +3,12 @@ import {
   formTemplateReplaceBodySchema,
   formTemplateHistoryQuerySchema,
   formTemplateSearchQuerySchema,
+  formTemplateRevisionsQuerySchema,
   type FormTemplateCreateBody,
   type FormTemplateReplaceBody,
   type FormTemplateHistoryQuery,
   type FormTemplateSearchQuery,
+  type FormTemplateRevisionsQuery,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -21,6 +23,7 @@ export type CreateFormTemplateDto = FormTemplateCreateBody;
 export type ReplaceFormTemplateDto = FormTemplateReplaceBody;
 export type FormTemplateHistoryQueryDto = FormTemplateHistoryQuery;
 export type FormTemplateSearchQueryDto = FormTemplateSearchQuery;
+export type FormTemplateRevisionsQueryDto = FormTemplateRevisionsQuery;
 
 /** POST /form-templates — 최초/개정 등록 */
 export const CreateFormTemplatePipe = new ZodValidationPipe(formTemplateCreateBodySchema);
@@ -37,3 +40,9 @@ export const FormTemplateHistoryQueryPipe = new ZodValidationPipe(formTemplateHi
 export const FormTemplateSearchQueryPipe = new ZodValidationPipe(formTemplateSearchQuerySchema, {
   targets: ['query'],
 });
+
+/** GET /form-templates/revisions?formName=... */
+export const FormTemplateRevisionsQueryPipe = new ZodValidationPipe(
+  formTemplateRevisionsQuerySchema,
+  { targets: ['query'] }
+);

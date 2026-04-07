@@ -19,6 +19,14 @@
     "registered": "등록",
     "unregistered": "미등록"
   },
+  "category": {
+    "quality": "품질 양식",
+    "technical": "기술 양식"
+  },
+  "recommendedManager": {
+    "quality": "권장 관리: 품질책임자",
+    "technical": "권장 관리: 기술 부서"
+  },
   "download": "다운로드",
   "register": "등록",
   "revise": "개정 등록",
@@ -43,6 +51,9 @@
     "newFormNumber": "새 양식 번호",
     "newFormNumberPlaceholder": "예: UL-QP-26-02",
     "newFormNumberHint": "절차서상 새로 발급된 번호를 정확히 입력하세요",
+    "changeSummary": "개정 사유",
+    "changeSummaryPlaceholder": "예: 보존연한 항목 추가, 5.2절 표현 수정",
+    "changeSummaryHint": "UL-QP-03 §7.5에 따라 개정 사유를 5자 이상 기록해야 합니다",
     "selectFile": "파일 선택",
     "dropzoneHint": ".docx, .xlsx 파일만 지원",
     "uploading": "업로드 중...",
@@ -59,6 +70,7 @@
     "status": "상태",
     "current": "현행",
     "superseded": "개정됨",
+    "changeSummary": "개정 사유",
     "supersededAt": "{date} 개정",
     "empty": "개정 이력이 없습니다.",
     "downloadHistoryDenied": "과거 양식 다운로드는 품질책임자/시험소장/시스템관리자만 가능합니다"

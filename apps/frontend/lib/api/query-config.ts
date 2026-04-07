@@ -540,6 +540,8 @@ export const queryKeys = {
     // 개정 이력은 양식명(안정 키) 기준으로 조회
     historyByName: (formName: string) =>
       [...queryKeys.formTemplates.all, 'history', formName] as const,
+    revisionsByName: (formName: string) =>
+      [...queryKeys.formTemplates.all, 'revisions', formName] as const,
     searchByNumber: (formNumber: string) =>
       [...queryKeys.formTemplates.all, 'search', formNumber] as const,
   },

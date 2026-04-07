@@ -471,6 +471,10 @@ export const API_ENDPOINTS = {
     CREATE: '/api/form-templates',
     /** 동일 formNumber 파일 교체 (이력 보존 없음) */
     REPLACE: '/api/form-templates/replace',
+    /** 양식명 기준 개정 메타데이터(changeSummary) 이력 (UL-QP-03 §7.5) */
+    REVISIONS_BY_NAME: '/api/form-templates/revisions',
+    /** 보존연한 만료로 소프트 아카이브된 양식 목록 (UL-QP-03 §11) */
+    ARCHIVED: '/api/form-templates/archived',
   },
 
   // ============================================================================

@@ -84,13 +84,23 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
                 >
                   {/* 양식명 — 안정 식별자, mono + status dot */}
                   <TableCell>
-                    <span className="inline-flex items-center gap-2">
-                      <span
-                        className={`${FORM_TEMPLATES_TABLE_TOKENS.statusDot} ${statusTokens.dot}`}
-                        aria-label={registered ? t('status.registered') : t('status.unregistered')}
-                      />
-                      <span className="text-sm font-medium">{tpl.formName}</span>
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className={`${FORM_TEMPLATES_TABLE_TOKENS.statusDot} ${statusTokens.dot}`}
+                          aria-label={
+                            registered ? t('status.registered') : t('status.unregistered')
+                          }
+                        />
+                        <span className="text-sm font-medium">{tpl.formName}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          {t(`category.${tpl.category}`)}
+                        </Badge>
+                      </span>
+                      <span className="pl-4 text-[11px] text-muted-foreground">
+                        {t(`recommendedManager.${tpl.category}`)}
+                      </span>
+                    </div>
                   </TableCell>
 
                   {/* 현행 양식 번호 */}

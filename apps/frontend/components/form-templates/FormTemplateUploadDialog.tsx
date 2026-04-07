@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/lib/api/query-config';
 import {
   createFormTemplateVersion,
@@ -63,12 +64,17 @@ export default function FormTemplateUploadDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formNumber, setFormNumber] = useState('');
+  const [changeSummary, setChangeSummary] = useState('');
+
+  // 개정 모드(create + 기존 현행 row 존재)일 때만 changeSummary 입력 표시
+  const isReviseMode = mode === 'create' && currentFormNumber !== null;
 
   // 모드 전환 시 상태 초기화
   useEffect(() => {
     if (open) {
       setSelectedFile(null);
       setFormNumber('');
+      setChangeSummary('');
     }
   }, [open, mode]);
 
@@ -88,6 +94,7 @@ export default function FormTemplateUploadDialog({
     invalidateAll();
     setSelectedFile(null);
     setFormNumber('');
+    setChangeSummary('');
     onOpenChange(false);
   };
 
@@ -101,8 +108,8 @@ export default function FormTemplateUploadDialog({
   };
 
   const createMutation = useMutation({
-    mutationFn: ({ file, number }: { file: File; number: string }) =>
-      createFormTemplateVersion({ formName, formNumber: number, file }),
+    mutationFn: ({ file, number, summary }: { file: File; number: string; summary: string }) =>
+      createFormTemplateVersion({ formName, formNumber: number, changeSummary: summary, file }),
     onSuccess,
     onError,
   });
@@ -124,14 +131,20 @@ export default function FormTemplateUploadDialog({
     if (!selectedFile) return;
     if (mode === 'create') {
       if (!formNumber.trim()) return;
-      createMutation.mutate({ file: selectedFile, number: formNumber.trim() });
+      // 최초 등록은 changeSummary UI 미표시 — 백엔드 스키마(min 5)를 만족시키는 기본값 사용
+      const summary = isReviseMode ? changeSummary.trim() : '최초 등록';
+      if (isReviseMode && summary.length < 5) return;
+      createMutation.mutate({ file: selectedFile, number: formNumber.trim(), summary });
     } else {
       replaceMutation.mutate({ file: selectedFile });
     }
   };
 
   const canSubmit =
-    !!selectedFile && !isPending && (mode === 'replace' || formNumber.trim().length > 0);
+    !!selectedFile &&
+    !isPending &&
+    (mode === 'replace' ||
+      (formNumber.trim().length > 0 && (!isReviseMode || changeSummary.trim().length >= 5)));
 
   // 설명 문구는 모드 + 기존 현행 row 유무로 결정 (초기/개정/교체)
   const descriptionKey = (() => {
@@ -168,6 +181,23 @@ export default function FormTemplateUploadDialog({
                 autoComplete="off"
               />
               <p className="text-xs text-muted-foreground">{t('uploadDialog.newFormNumberHint')}</p>
+            </div>
+          )}
+
+          {/* 개정 모드에서만 changeSummary 입력 (UL-QP-03 §7.5) */}
+          {isReviseMode && (
+            <div className="space-y-2">
+              <Label htmlFor="form-template-change-summary">
+                {t('uploadDialog.changeSummary')}
+              </Label>
+              <Textarea
+                id="form-template-change-summary"
+                value={changeSummary}
+                onChange={(e) => setChangeSummary(e.target.value)}
+                placeholder={t('uploadDialog.changeSummaryPlaceholder')}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">{t('uploadDialog.changeSummaryHint')}</p>
             </div>
           )}
 

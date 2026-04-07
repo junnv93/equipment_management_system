@@ -47,6 +47,8 @@ export const formTemplates = pgTable(
     /** 업로드한 사용자 */
     uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'restrict' }),
     uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
+    /** 보존연한 만료로 소프트 아카이브된 시점. null이면 활성 (UL-QP-03 §11) */
+    archivedAt: timestamp('archived_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },

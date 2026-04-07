@@ -240,5 +240,6 @@ export {
   isFormDedicatedEndpoint,
   getFormCatalogEntryByName,
   type FormCatalogEntry,
+  type FormCategory,
   type FormNumber,
 } from './form-catalog';

@@ -45,9 +45,21 @@ export const formNameSchema = z
  * 서비스 레이어가 기존 현행 row의 존재 여부로 "최초 등록"인지 "개정"인지 자동 판단합니다.
  * 이 엔드포인트 하나로 두 경우를 모두 처리 → 프론트엔드/백엔드 계약 단순화.
  */
+/**
+ * 개정 사유 / 변경 요약 (UL-QP-03 §7.5).
+ * 최초 등록(현행 row 없음) 시에도 동일 스키마로 검증되며,
+ * 서비스 레이어가 changeSummary를 revisions 테이블에 INSERT합니다.
+ */
+export const changeSummarySchema = z
+  .string()
+  .trim()
+  .min(5, '개정 사유는 최소 5자 이상 입력해야 합니다')
+  .max(1000, '개정 사유는 1000자를 초과할 수 없습니다');
+
 export const formTemplateCreateBodySchema = z.object({
   formName: formNameSchema,
   formNumber: formNumberSchema,
+  changeSummary: changeSummarySchema,
 });
 export type FormTemplateCreateBody = z.infer<typeof formTemplateCreateBodySchema>;
 
@@ -68,3 +80,9 @@ export const formTemplateSearchQuerySchema = z.object({
   formNumber: formNumberSchema,
 });
 export type FormTemplateSearchQuery = z.infer<typeof formTemplateSearchQuerySchema>;
+
+/** 양식명 기준 개정 메타데이터 이력 조회 */
+export const formTemplateRevisionsQuerySchema = z.object({
+  formName: formNameSchema,
+});
+export type FormTemplateRevisionsQuery = z.infer<typeof formTemplateRevisionsQuerySchema>;

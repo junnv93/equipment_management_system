@@ -21,6 +21,7 @@ import {
 import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
 import {
   listFormTemplateHistoryByName,
+  listFormTemplateRevisionsByName,
   downloadFormTemplateById,
 } from '@/lib/api/form-templates-api';
 import { FORM_TEMPLATES_HISTORY_TOKENS, FORM_TEMPLATES_MOTION } from '@/lib/design-tokens';
@@ -46,6 +47,17 @@ export default function FormTemplateHistoryDialog({
     enabled: open,
     ...REFETCH_STRATEGIES.STATIC,
   });
+
+  const { data: revisions } = useQuery({
+    queryKey: queryKeys.formTemplates.revisionsByName(formName),
+    queryFn: () => listFormTemplateRevisionsByName(formName),
+    enabled: open,
+    ...REFETCH_STRATEGIES.STATIC,
+  });
+
+  const changeSummaryByFormNumber = new Map(
+    (revisions ?? []).map((r) => [r.newFormNumber, r.changeSummary])
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,6 +89,7 @@ export default function FormTemplateHistoryDialog({
                 <TableRow className={FORM_TEMPLATES_HISTORY_TOKENS.headerRow}>
                   <TableHead>{t('historyDialog.formNumber')}</TableHead>
                   <TableHead>{t('historyDialog.filename')}</TableHead>
+                  <TableHead>{t('historyDialog.changeSummary')}</TableHead>
                   <TableHead>{t('historyDialog.uploadDate')}</TableHead>
                   <TableHead>{t('historyDialog.status')}</TableHead>
                   <TableHead className="text-right">{t('table.actions')}</TableHead>
@@ -109,6 +122,9 @@ export default function FormTemplateHistoryDialog({
                       </TableCell>
                       <TableCell className={FORM_TEMPLATES_HISTORY_TOKENS.filename}>
                         {item.originalFilename}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {changeSummaryByFormNumber.get(item.formNumber) ?? '-'}
                       </TableCell>
                       <TableCell className={FORM_TEMPLATES_HISTORY_TOKENS.date}>
                         {new Date(item.uploadedAt).toLocaleDateString()}

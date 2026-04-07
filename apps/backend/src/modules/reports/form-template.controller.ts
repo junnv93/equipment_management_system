@@ -21,10 +21,12 @@ import {
   ReplaceFormTemplatePipe,
   FormTemplateHistoryQueryPipe,
   FormTemplateSearchQueryPipe,
+  FormTemplateRevisionsQueryPipe,
   type CreateFormTemplateDto,
   type ReplaceFormTemplateDto,
   type FormTemplateHistoryQueryDto,
   type FormTemplateSearchQueryDto,
+  type FormTemplateRevisionsQueryDto,
 } from './dto/form-template.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
@@ -33,6 +35,7 @@ import {
   Permission,
   FORM_CATALOG,
   userHasPermission,
+  type FormCategory,
 } from '@equipment-management/shared-constants';
 import { ErrorCode } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
@@ -51,10 +54,22 @@ interface FormTemplateListItem {
   formName: string;
   retentionLabel: string;
   implemented: boolean;
+  category: FormCategory;
   /** 최초 등록 시점의 formNumber (FORM_CATALOG 키, 참고용) */
   initialFormNumber: string;
   /** 현행 등록된 템플릿. 없으면 null (업로드 필요) */
   current: CurrentTemplateSummary | null;
+}
+
+interface FormTemplateRevisionItem {
+  id: string;
+  formTemplateId: string;
+  previousFormNumber: string | null;
+  newFormNumber: string;
+  changeSummary: string;
+  revisedBy: string | null;
+  revisedAt: Date;
+  version: number;
 }
 
 interface HistoryItem {
@@ -98,6 +113,7 @@ export class FormTemplateController {
         formName: entry.name,
         retentionLabel: entry.retentionLabel,
         implemented: entry.implemented,
+        category: entry.category,
         initialFormNumber,
         current: current
           ? {
@@ -111,6 +127,37 @@ export class FormTemplateController {
       });
     }
     return items;
+  }
+
+  // ── GET /revisions?formName=... — 개정 메타데이터(changeSummary) 조회 ────
+
+  @Get('revisions')
+  @ApiOperation({ summary: '양식명 기준 개정 메타데이터 조회 (UL-QP-03 §7.5)' })
+  @RequirePermissions(Permission.VIEW_FORM_TEMPLATES)
+  async revisions(
+    @Query(FormTemplateRevisionsQueryPipe) query: FormTemplateRevisionsQueryDto
+  ): Promise<FormTemplateRevisionItem[]> {
+    const rows = await this.formTemplateService.listRevisionsByName(query.formName);
+    return rows.map((r) => ({
+      id: r.id,
+      formTemplateId: r.formTemplateId,
+      previousFormNumber: r.previousFormNumber,
+      newFormNumber: r.newFormNumber,
+      changeSummary: r.changeSummary,
+      revisedBy: r.revisedBy,
+      revisedAt: r.revisedAt,
+      version: r.version,
+    }));
+  }
+
+  // ── GET /archived — 보존연한 만료 아카이브 양식 (UL-QP-03 §11) ────────────
+
+  @Get('archived')
+  @ApiOperation({ summary: '소프트 아카이브된 양식 목록 조회' })
+  @RequirePermissions(Permission.VIEW_FORM_TEMPLATES)
+  async archived(): Promise<HistoryItem[]> {
+    const rows = await this.formTemplateService.listArchived();
+    return rows.map(toHistoryItem);
   }
 
   // ── GET /history?formName=... — 개정 이력 조회 (전원 허용, 조회만) ────────
@@ -211,6 +258,7 @@ export class FormTemplateController {
     return this.formTemplateService.createFormTemplateVersion({
       formName: dto.formName,
       formNumber: dto.formNumber,
+      changeSummary: dto.changeSummary,
       file: file.buffer,
       filename: file.originalname,
       mimeType: file.mimetype,

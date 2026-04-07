@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, type FormCategory } from '@equipment-management/shared-constants';
 import { transformSingleResponse } from './utils/response-transformers';
 
 /**
@@ -22,8 +22,20 @@ export interface FormTemplateListItem {
   formName: string;
   retentionLabel: string;
   implemented: boolean;
+  category: FormCategory;
   initialFormNumber: string;
   current: FormTemplateCurrentSummary | null;
+}
+
+export interface FormTemplateRevisionItem {
+  id: string;
+  formTemplateId: string;
+  previousFormNumber: string | null;
+  newFormNumber: string;
+  changeSummary: string;
+  revisedBy: string | null;
+  revisedAt: string;
+  version: number;
 }
 
 export interface FormTemplateHistoryItem {
@@ -54,6 +66,15 @@ export async function listFormTemplateHistoryByName(
   formName: string
 ): Promise<FormTemplateHistoryItem[]> {
   const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.HISTORY_BY_NAME, {
+    params: { formName },
+  });
+  return response.data?.data ?? response.data;
+}
+
+export async function listFormTemplateRevisionsByName(
+  formName: string
+): Promise<FormTemplateRevisionItem[]> {
+  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.REVISIONS_BY_NAME, {
     params: { formName },
   });
   return response.data?.data ?? response.data;
@@ -91,11 +112,13 @@ export async function downloadFormTemplateById(id: string): Promise<void> {
 export async function createFormTemplateVersion(params: {
   formName: string;
   formNumber: string;
+  changeSummary: string;
   file: File;
 }): Promise<FormTemplateHistoryItem> {
   const formData = new FormData();
   formData.append('formName', params.formName);
   formData.append('formNumber', params.formNumber);
+  formData.append('changeSummary', params.changeSummary);
   formData.append('file', params.file);
   const response = await apiClient.post(API_ENDPOINTS.FORM_TEMPLATES.CREATE, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

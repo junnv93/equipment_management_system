@@ -8,6 +8,13 @@
  *    AI가 추측하거나 임의로 생성하지 마세요. 절차서 원문을 확인한 후에만 수정하세요.
  */
 
+/**
+ * 양식 카테고리 (UL-QP-03 §6.1)
+ * - quality: 품질 양식 (품질책임자 관리)
+ * - technical: 기술 양식 (기술 부서 관리, UL-QP-18/19 계열)
+ */
+export type FormCategory = 'quality' | 'technical';
+
 export interface FormCatalogEntry {
   /** 양식 번호 (예: 'UL-QP-18-01') */
   formNumber: string;
@@ -19,6 +26,8 @@ export interface FormCatalogEntry {
   retentionLabel: string;
   /** 양식 내보내기 구현 여부 */
   implemented: boolean;
+  /** 양식 카테고리 — 권장 관리자 안내용 (권한 강제 X) */
+  category: FormCategory;
   /** 전용 엔드포인트로 안내 (별도 API 경로 존재 시) */
   dedicatedEndpoint?: boolean;
 }
@@ -30,6 +39,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: -1,
     retentionLabel: '영구보존',
     implemented: true,
+    category: 'technical',
   },
   'UL-QP-18-02': {
     formNumber: 'UL-QP-18-02',
@@ -37,6 +47,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: -1,
     retentionLabel: '영구보존',
     implemented: false,
+    category: 'technical',
     dedicatedEndpoint: true,
   },
   'UL-QP-18-03': {
@@ -45,6 +56,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
+    category: 'technical',
   },
   'UL-QP-18-05': {
     formNumber: 'UL-QP-18-05',
@@ -52,6 +64,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
+    category: 'technical',
   },
   'UL-QP-18-06': {
     formNumber: 'UL-QP-18-06',
@@ -59,6 +72,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: false,
+    category: 'technical',
   },
   'UL-QP-18-07': {
     formNumber: 'UL-QP-18-07',
@@ -66,6 +80,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
+    category: 'technical',
   },
   'UL-QP-18-08': {
     formNumber: 'UL-QP-18-08',
@@ -73,6 +88,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
+    category: 'technical',
   },
   'UL-QP-18-09': {
     formNumber: 'UL-QP-18-09',
@@ -80,6 +96,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
+    category: 'technical',
   },
   'UL-QP-18-10': {
     formNumber: 'UL-QP-18-10',
@@ -87,6 +104,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: false,
+    category: 'technical',
   },
   'UL-QP-18-11': {
     formNumber: 'UL-QP-18-11',
@@ -94,6 +112,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: false,
+    category: 'technical',
   },
 
   // ============================================================================
@@ -105,6 +124,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     retentionYears: 5,
     retentionLabel: '5년',
     implemented: true,
+    category: 'technical',
     dedicatedEndpoint: true,
   },
 };

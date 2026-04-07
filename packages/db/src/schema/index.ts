@@ -64,3 +64,4 @@ export * from './equipment-self-inspections';
 
 // 양식 템플릿 스키마 (스토리지 기반)
 export * from './form-templates';
+export * from './form-template-revisions';

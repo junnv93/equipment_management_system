@@ -19,6 +19,14 @@
     "registered": "Registered",
     "unregistered": "Not Registered"
   },
+  "category": {
+    "quality": "Quality Form",
+    "technical": "Technical Form"
+  },
+  "recommendedManager": {
+    "quality": "Recommended owner: Quality Manager",
+    "technical": "Recommended owner: Technical Department"
+  },
   "download": "Download",
   "register": "Register",
   "revise": "Revise",
@@ -43,6 +51,9 @@
     "newFormNumber": "New Form Number",
     "newFormNumberPlaceholder": "e.g. UL-QP-26-02",
     "newFormNumberHint": "Enter the newly issued number from the procedure document",
+    "changeSummary": "Change Summary",
+    "changeSummaryPlaceholder": "e.g. Added retention column, revised section 5.2 wording",
+    "changeSummaryHint": "Per UL-QP-03 §7.5, a revision reason of at least 5 characters is required",
     "selectFile": "Select File",
     "dropzoneHint": "Only .docx, .xlsx files are supported",
     "uploading": "Uploading...",
@@ -59,6 +70,7 @@
     "status": "Status",
     "current": "Current",
     "superseded": "Superseded",
+    "changeSummary": "Change Summary",
     "supersededAt": "Superseded on {date}",
     "empty": "No revision history.",
     "downloadHistoryDenied": "Only Quality Manager / Lab Manager / System Admin can download historical forms"
