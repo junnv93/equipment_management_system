@@ -32,7 +32,8 @@
     "prepare": "husky",
     "type-check": "type-coverage --detail",
     "type-check:strict": "type-coverage --detail --at-least 90",
-    "security:check": "ts-node scripts/check-security-decorators.ts && pnpm --filter backend run security:check-endpoints"
+    "security:check": "ts-node scripts/check-security-decorators.ts && pnpm --filter backend run security:check-endpoints",
+    "audit:dependabot": "node ./scripts/audit-dependabot.mjs"
   },
   "workspaces": [
     "apps/*",
@@ -48,6 +49,7 @@
     "npm-check-updates": "^20.0.0",
     "only-allow": "^1.2.2",
     "prettier": "^3.8.1",
+    "semver": "^7.7.4",
     "turbo": "^2.9.4",
     "type-coverage": "^2.28.0"
   },
