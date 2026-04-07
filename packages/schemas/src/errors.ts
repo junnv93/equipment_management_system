@@ -76,6 +76,15 @@ export enum ErrorCode {
   ScopeAccessDenied = 'SCOPE_ACCESS_DENIED',
 
   // ============================================================================
+  // 양식 템플릿 관련 에러 (UL-QP-18 form templates)
+  // ============================================================================
+  FormNumberAlreadyExists = 'FORM_NUMBER_ALREADY_EXISTS',
+  FormTemplateNotFound = 'FORM_TEMPLATE_NOT_FOUND',
+  FormHistoryDownloadForbidden = 'FORM_HISTORY_DOWNLOAD_FORBIDDEN',
+  InvalidFormName = 'INVALID_FORM_NAME',
+  InvalidFormNumberFormat = 'INVALID_FORM_NUMBER_FORMAT',
+
+  // ============================================================================
   // 네트워크/시스템 에러
   // ============================================================================
   NetworkError = 'NETWORK_ERROR',
@@ -134,6 +143,13 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
 
   // 스코프/접근 범위 에러
   [ErrorCode.ScopeAccessDenied]: 403,
+
+  // 양식 템플릿 관련 에러
+  [ErrorCode.FormNumberAlreadyExists]: 409,
+  [ErrorCode.FormTemplateNotFound]: 404,
+  [ErrorCode.FormHistoryDownloadForbidden]: 403,
+  [ErrorCode.InvalidFormName]: 400,
+  [ErrorCode.InvalidFormNumberFormat]: 400,
 
   // 네트워크/시스템 에러
   [ErrorCode.NetworkError]: 503,

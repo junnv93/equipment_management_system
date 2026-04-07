@@ -102,6 +102,8 @@ async function bootstrap(): Promise<void> {
   app.enableCors({
     origin: frontendUrl || 'http://localhost:3000',
     credentials: true,
+    // 파일 다운로드 시 클라이언트(axios)가 서버 SSOT 파일명/타입을 읽을 수 있도록 노출.
+    exposedHeaders: ['Content-Disposition', 'Content-Type', 'Content-Length'],
   });
 
   // 글로벌 접두사

@@ -12,17 +12,19 @@ import { downloadFile } from './utils/download-file';
  *
  * form-template-export.service.ts 의 프론트엔드 진입점.
  * 모든 양식 내보내기(QP-18-01 ~ QP-18-11)는 이 함수를 사용합니다.
+ *
+ * 파일명/확장자는 서버의 `Content-Disposition` 및 `Content-Type` 헤더가 SSOT입니다.
+ * `downloadFile`이 서버 헤더를 우선 파싱하므로 클라이언트 쪽 확장자 추측은 불필요합니다.
  */
 export async function exportFormTemplate(
   formNumber: string,
   params?: Record<string, string>
 ): Promise<void> {
-  // QP-18-01(시험설비 관리대장)만 XLSX, 나머지는 모두 DOCX 양식
-  const ext = formNumber === 'UL-QP-18-01' ? 'xlsx' : 'docx';
   await downloadFile({
     url: API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE(formNumber),
     params,
-    filename: `${formNumber}_${new Date().toISOString().split('T')[0]}.${ext}`,
+    // filename 생략 → 서버 Content-Disposition 헤더 사용. 서버가 헤더를 못 내리는
+    // 비정상 상황에서만 브라우저 기본 동작(URL 기반)이 사용됩니다.
   });
 }
 
@@ -32,7 +34,7 @@ export async function exportFormTemplate(
 export async function downloadHistoryCard(equipmentId: string): Promise<void> {
   await downloadFile({
     url: API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(equipmentId),
-    filename: `이력카드_${equipmentId.slice(0, 8)}.docx`,
+    // filename 생략 → 서버 Content-Disposition 헤더 사용.
   });
 }
 

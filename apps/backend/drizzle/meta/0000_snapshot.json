@@ -1,5 +1,5 @@
 {
-  "id": "ec1f50e3-5771-4a6d-a9f1-13bd4214778f",
+  "id": "48b3faa2-6a66-44b5-9b2b-d0c2d7db3fd2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4253,6 +4253,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "special_notes": {
+          "name": "special_notes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
         "inspection_cycle": {
           "name": "inspection_cycle",
           "type": "integer",
@@ -4410,6 +4416,76 @@
           "columnsFrom": ["confirmed_by"],
           "columnsTo": ["id"],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.self_inspection_items": {
+      "name": "self_inspection_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "inspection_id": {
+          "name": "inspection_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "item_number": {
+          "name": "item_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "check_item": {
+          "name": "check_item",
+          "type": "varchar(300)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "check_result": {
+          "name": "check_result",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "self_inspection_items_inspection_id_idx": {
+          "name": "self_inspection_items_inspection_id_idx",
+          "columns": [
+            {
+              "expression": "inspection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "self_inspection_items_inspection_id_equipment_self_inspections_id_fk": {
+          "name": "self_inspection_items_inspection_id_equipment_self_inspections_id_fk",
+          "tableFrom": "self_inspection_items",
+          "tableTo": "equipment_self_inspections",
+          "columnsFrom": ["inspection_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -4643,8 +4719,8 @@
           "notNull": false,
           "default": false
         },
-        "calibration_method": {
-          "name": "calibration_method",
+        "management_method": {
+          "name": "management_method",
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
@@ -4675,6 +4751,12 @@
         },
         "manager_id": {
           "name": "manager_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deputy_manager_id": {
+          "name": "deputy_manager_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -4931,6 +5013,21 @@
           "method": "btree",
           "with": {}
         },
+        "equipment_deputy_manager_id_idx": {
+          "name": "equipment_deputy_manager_id_idx",
+          "columns": [
+            {
+              "expression": "deputy_manager_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "equipment_site_idx": {
           "name": "equipment_site_idx",
           "columns": [
@@ -5127,6 +5224,15 @@
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
+        },
+        "equipment_deputy_manager_id_users_id_fk": {
+          "name": "equipment_deputy_manager_id_users_id_fk",
+          "tableFrom": "equipment",
+          "tableTo": "users",
+          "columnsFrom": ["deputy_manager_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -5137,6 +5243,159 @@
           "columns": ["management_number"]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.form_templates": {
+      "name": "form_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "form_name": {
+          "name": "form_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "form_number": {
+          "name": "form_number",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "storage_key": {
+          "name": "storage_key",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_filename": {
+          "name": "original_filename",
+          "type": "varchar(300)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime_type": {
+          "name": "mime_type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "file_size": {
+          "name": "file_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_current": {
+          "name": "is_current",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "superseded_at": {
+          "name": "superseded_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uploaded_by": {
+          "name": "uploaded_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uploaded_at": {
+          "name": "uploaded_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "form_templates_form_name_idx": {
+          "name": "form_templates_form_name_idx",
+          "columns": [
+            {
+              "expression": "form_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "form_templates_current_idx": {
+          "name": "form_templates_current_idx",
+          "columns": [
+            {
+              "expression": "form_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"form_templates\".\"is_current\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "form_templates_form_number_unique": {
+          "name": "form_templates_form_number_unique",
+          "columns": [
+            {
+              "expression": "form_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "form_templates_uploaded_by_users_id_fk": {
+          "name": "form_templates_uploaded_by_users_id_fk",
+          "tableFrom": "form_templates",
+          "tableTo": "users",
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -5333,6 +5592,12 @@
         "manager_name": {
           "name": "manager_name",
           "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "signature_image_path": {
+          "name": "signature_image_path",
+          "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },
@@ -7614,7 +7879,6 @@
       "schema": "public",
       "values": [
         "available",
-        "in_use",
         "checked_out",
         "calibration_scheduled",
         "calibration_overdue",

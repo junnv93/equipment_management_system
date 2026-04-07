@@ -97,6 +97,19 @@ jobs:
         # 모든 컨트롤러 엔드포인트에 @RequirePermissions/@SkipPermissions/@Public 보장
         run: pnpm security:check
 
+      - name: Drizzle — Schema Drift Check
+        # schema.ts ↔ drizzle/meta snapshot 동기화 검증.
+        # 누군가 schema.ts만 고치고 `drizzle-kit generate`를 깜빡하면 여기서 잡힙니다.
+        # 참고: docs/development/DRIZZLE_MIGRATIONS.md
+        run: |
+          pnpm --filter backend exec drizzle-kit generate --name __drift_check__ 2>&1 | tee /tmp/drizzle-gen.log
+          if git status --porcelain apps/backend/drizzle/ | grep -qE '^(\?\?|\sM|M )'; then
+            echo "::error::Schema drift detected. Run 'pnpm --filter backend run db:generate' locally and commit the result."
+            git status apps/backend/drizzle/
+            git diff apps/backend/drizzle/ | head -100
+            exit 1
+          fi
+
   # ─────────────────────────────────────────────
   # Gate 3a: 유닛 테스트 (quality-gate 후 병렬)
   # ─────────────────────────────────────────────

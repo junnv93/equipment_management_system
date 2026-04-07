@@ -23,6 +23,7 @@ export * from './types/disposal';
 export * from './settings';
 export * from './audit-log';
 export * from './field-labels';
+export * from './form-template';
 
 // ============================================================
 // Enums - Single Source of Truth

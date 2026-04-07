@@ -1,12 +1,11 @@
 {
   "title": "Form Templates",
-  "description": "Manage UL-QP-18 form templates.",
+  "description": "Manage UL-QP-18 form templates. Form name is the stable identifier; form numbers change with each revision.",
   "table": {
-    "formNumber": "Form Number",
     "formName": "Form Name",
+    "formNumber": "Current Number",
     "retention": "Retention",
-    "version": "Version",
-    "lastUpload": "Last Upload",
+    "lastUpload": "Last Registered",
     "filename": "Filename",
     "actions": "Actions",
     "noTemplate": "Not Registered"
@@ -20,28 +19,61 @@
     "registered": "Registered",
     "unregistered": "Not Registered"
   },
+  "category": {
+    "quality": "Quality Form",
+    "technical": "Technical Form"
+  },
+  "recommendedManager": {
+    "quality": "Recommended owner: Quality Manager",
+    "technical": "Recommended owner: Technical Department"
+  },
   "download": "Download",
-  "upload": "Upload",
-  "history": "History",
+  "register": "Register",
+  "revise": "Revise",
+  "replace": "Replace File",
+  "history": "Revision History",
+  "search": {
+    "placeholder": "Search by past form number (e.g. UL-QP-18-01)",
+    "button": "Search",
+    "noResult": "No form found for this number.",
+    "foundCurrent": "This number refers to a currently active form.",
+    "foundHistoric": "This form has been revised to {currentFormNumber}.",
+    "viewCurrent": "View current form"
+  },
   "uploadDialog": {
-    "title": "Upload Form",
-    "description": "Upload a new version for {formNumber} {formName}.",
+    "title": "Register Form",
+    "descriptionInitial": "Register {formName} for the first time. Enter the form number.",
+    "descriptionRevise": "Register a revision of {formName}. The new number must differ from {currentFormNumber}.",
+    "descriptionReplace": "Replace file for {formName} ({currentFormNumber}). The previous file will not be retained.",
+    "modeRevise": "Revise (new number)",
+    "modeReplace": "Replace file (same number)",
+    "modeHint": "Use 'Revise' when the form number changes; use 'Replace' for simple corrections.",
+    "newFormNumber": "New Form Number",
+    "newFormNumberPlaceholder": "e.g. UL-QP-26-02",
+    "newFormNumberHint": "Enter the newly issued number from the procedure document",
+    "changeSummary": "Change Summary",
+    "changeSummaryPlaceholder": "e.g. Added retention column, revised section 5.2 wording",
+    "changeSummaryHint": "Per UL-QP-03 §7.5, a revision reason of at least 5 characters is required",
     "selectFile": "Select File",
     "dropzoneHint": "Only .docx, .xlsx files are supported",
-    "selectedFile": "Selected: {filename}",
     "uploading": "Uploading...",
-    "success": "Form template uploaded successfully.",
-    "error": "Failed to upload form template."
+    "successCreate": "Form template registered successfully.",
+    "successReplace": "Form template file replaced successfully.",
+    "error": "Failed to register form template.",
+    "errorNumberExists": "This form number already exists."
   },
   "historyDialog": {
-    "title": "Form History",
-    "version": "Version",
+    "title": "Revision History",
+    "formNumber": "Form Number",
     "filename": "Filename",
-    "uploadDate": "Upload Date",
+    "uploadDate": "Registered",
     "status": "Status",
-    "active": "Current",
-    "inactive": "Previous",
-    "empty": "No history available."
+    "current": "Current",
+    "superseded": "Superseded",
+    "changeSummary": "Change Summary",
+    "supersededAt": "Superseded on {date}",
+    "empty": "No revision history.",
+    "downloadHistoryDenied": "Only Quality Manager / Lab Manager / System Admin can download historical forms"
   },
   "empty": "No form templates registered.",
   "emptyDescription": "Form templates will appear here once they are configured.",

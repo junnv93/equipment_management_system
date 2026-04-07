@@ -1,5 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { FormTemplateService } from './form-template.service';
+import { FormTemplateArchivalService } from './form-template-archival.service';
 
 /**
  * 양식 템플릿 모듈 (글로벌)
@@ -9,7 +10,7 @@ import { FormTemplateService } from './form-template.service';
  */
 @Global()
 @Module({
-  providers: [FormTemplateService],
+  providers: [FormTemplateService, FormTemplateArchivalService],
   exports: [FormTemplateService],
 })
 export class FormTemplateModule {}

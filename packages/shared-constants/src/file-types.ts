@@ -147,6 +147,47 @@ export const FILE_UPLOAD_LIMITS = {
 } as const;
 
 // ============================================================
+// 양식 템플릿 전용 규칙 (UL-QP-18 form templates)
+// ============================================================
+
+/**
+ * UL-QP-18 양식 템플릿으로 업로드 가능한 파일 규칙.
+ *
+ * 절차서가 Office Open XML 포맷(.docx / .xlsx)만 요구하므로 FILE_TYPES에서
+ * 해당 두 MIME만 필터링하여 파생합니다. 확장자나 MIME 문자열을 어디에서도
+ * 하드코딩하지 않도록 백엔드/프론트엔드 모두 이 상수를 사용합니다.
+ */
+export const FORM_TEMPLATE_FILE_RULE: DocumentFileRule = buildRule(
+  (m) =>
+    m === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    m === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+);
+
+/** 양식 템플릿 허용 확장자 (점 포함, 소문자). 프론트엔드 `<input accept>`, 백엔드 Zod 검증 공용 */
+export const FORM_TEMPLATE_ALLOWED_EXTENSIONS: readonly string[] =
+  FORM_TEMPLATE_FILE_RULE.mimes.flatMap((m) => MIME_TO_EXTENSIONS.get(m) ?? []);
+
+/** 양식 템플릿 허용 MIME 타입 */
+export const FORM_TEMPLATE_ALLOWED_MIMES: readonly string[] = FORM_TEMPLATE_FILE_RULE.mimes;
+
+/**
+ * 업로드된 파일의 MIME 또는 원본 파일명으로부터 정규화된 확장자(점 포함, 소문자)를 반환합니다.
+ * 1순위: MIME → extension 매핑 (서버 신뢰 가능한 출처)
+ * 2순위: 파일명의 확장자 (fallback)
+ * 3순위: `.docx` 기본값
+ */
+export function resolveFormTemplateExtension(mime: string, filename: string): string {
+  const byMime = MIME_TO_EXTENSIONS.get(mime);
+  if (byMime && byMime.length > 0) return byMime[0];
+  const dotIdx = filename.lastIndexOf('.');
+  if (dotIdx >= 0) {
+    const ext = filename.slice(dotIdx).toLowerCase();
+    if (FORM_TEMPLATE_ALLOWED_EXTENSIONS.includes(ext)) return ext;
+  }
+  return '.docx';
+}
+
+// ============================================================
 // 리포트 내보내기 포맷별 MIME 타입
 // ============================================================
 

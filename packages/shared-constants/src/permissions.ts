@@ -163,6 +163,8 @@ export enum Permission {
   // ============================================================================
   VIEW_FORM_TEMPLATES = 'view:form-templates',
   MANAGE_FORM_TEMPLATES = 'manage:form-templates',
+  /** 과거(superseded) 양식 버전 다운로드 권한. 품질책임자/시험소장/시스템관리자만 */
+  DOWNLOAD_FORM_TEMPLATE_HISTORY = 'download:form-template-history',
 
   // ============================================================================
   // 시스템 설정 관련 권한
@@ -289,6 +291,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 
   [Permission.VIEW_FORM_TEMPLATES]: '양식 조회',
   [Permission.MANAGE_FORM_TEMPLATES]: '양식 관리',
+  [Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY]: '양식 개정 이력 다운로드',
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',
