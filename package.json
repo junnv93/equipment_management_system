@@ -27,6 +27,7 @@
     "test:e2e:ui": "pnpm --filter frontend exec playwright test --ui",
     "db:sync": "bash ./scripts/apply-manual-migrations.sh",
     "db:push": "bash ./scripts/sync-db-schema.sh",
+    "preinstall": "npx only-allow pnpm",
     "prepare": "husky",
     "type-check": "type-coverage --detail",
     "type-check:strict": "type-coverage --detail --at-least 90",
