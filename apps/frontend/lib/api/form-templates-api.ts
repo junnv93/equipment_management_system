@@ -48,6 +48,8 @@ export interface FormTemplateHistoryItem {
   uploadedBy: string | null;
   uploadedAt: string;
   supersededAt: string | null;
+  /** 보존연한 만료 아카이브 시점 (UL-QP-03 §11). null이면 활성. */
+  archivedAt: string | null;
 }
 
 export interface FormTemplateSearchResult {
@@ -59,6 +61,15 @@ export interface FormTemplateSearchResult {
 
 export async function listFormTemplates(): Promise<FormTemplateListItem[]> {
   const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.LIST);
+  return response.data?.data ?? response.data;
+}
+
+/**
+ * 보존연한 만료로 소프트 아카이브된 양식 row 목록 (UL-QP-03 §11).
+ * archivedAt 내림차순. 파일은 보존되지만 활성 목록에서 제외됨.
+ */
+export async function listArchivedFormTemplates(): Promise<FormTemplateHistoryItem[]> {
+  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.ARCHIVED);
   return response.data?.data ?? response.data;
 }
 
