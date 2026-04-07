@@ -57,7 +57,7 @@
     "react-window": "^2.2.7",
     "react-window-infinite-loader": "^2.0.1",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^2.6.0",
+    "tailwind-merge": "^3.5.0",
     "zod": "workspace:*"
   },
   "devDependencies": {
