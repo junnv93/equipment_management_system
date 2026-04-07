@@ -10,6 +10,8 @@
 import { test, expect } from '../shared/fixtures/auth.fixture';
 import {
   createSelfInspection,
+  createCheckout,
+  resetEquipmentForWorkflow,
   resetSelfInspections,
   clearBackendCache,
   cleanupSharedPool,
@@ -65,11 +67,29 @@ test.describe('WF-20b: 자체점검표 양식 내보내기 (QP-18-05)', () => {
     expect(body.length).toBeGreaterThan(1000); // XLSX는 최소 수 KB
   });
 
-  test('Step 2: 미구현 양식 호출 → 501', async ({ testOperatorPage: page }) => {
+  test('Step 2: QP-18-06 반출입확인서 export → 200', async ({ testOperatorPage: page }) => {
+    // 활성 checkout 1건을 즉석에서 생성 (시드 데이터 의존 X)
+    await resetEquipmentForWorkflow(WF_EQUIPMENT_ID);
+    const created = await createCheckout(
+      page,
+      [WF_EQUIPMENT_ID],
+      'calibration',
+      'KRISS 한국표준과학연구원',
+      'WF-20b QP-18-06 export 검증용 반출'
+    );
+    const checkoutId = (created.id ?? created.checkoutId) as string;
+
     const token = await getBackendToken(page, 'test_engineer');
-    const resp = await page.request.get(`${BACKEND_URL}/api/reports/export/form/UL-QP-18-06`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(resp.status()).toBe(501);
+    const resp = await page.request.get(
+      `${BACKEND_URL}/api/reports/export/form/UL-QP-18-06?checkoutId=${checkoutId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    expect(resp.status()).toBe(200);
+    expect(resp.headers()['content-type']).toContain(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+    const body = await resp.body();
+    expect(body.length).toBeGreaterThan(1000);
   });
 });
