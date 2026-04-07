@@ -42,31 +42,45 @@ function createMinimalDocxBuffer(): Buffer {
 }
 
 test.describe('양식 관리 UI Smoke (PR #157)', () => {
-  // 개정 등록 버튼이 보이려면 최소 1개 양식이 등록되어 있어야 함 → API로 시드
+  // 개정 등록 버튼이 보이려면 최소 1개 양식이 등록되어 있어야 함 → API로 시드.
+  // 절차서상 고유한 formNumber(UL-QP-18-05)를 유지해야 dev DB에 잔재가 쌓이지 않음.
+  // 전략: 먼저 POST /replace 시도(현행 row 파일만 교체) → 현행 row가 없으면 POST 로 최초 생성.
   test.beforeAll(async ({ browser }) => {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     try {
       const token = await getBackendToken(page, 'technical_manager');
-      // PR #157: POST /form-templates (formName + formNumber + changeSummary + file)
-      // 이미 현행 row가 있으면 자동으로 개정 처리. 매 실행마다 새 번호 사용.
-      const uniqueFormNumber = `${SEED_FORM_NUMBER}-${Date.now()}`;
-      const seedResp = await page.request.post(`${BACKEND_URL}/api/form-templates`, {
+      const fileBuffer = createMinimalDocxBuffer();
+      const fileField = {
+        name: `${SEED_FORM_NUMBER}_seed.docx`,
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        buffer: fileBuffer,
+      };
+
+      // 1) 동일 formNumber 파일 교체 시도 — 현행 row가 있으면 성공 (formNumber 유지)
+      const replaceResp = await page.request.post(`${BACKEND_URL}/api/form-templates/replace`, {
+        headers: { Authorization: `Bearer ${token}` },
+        multipart: { formName: SEED_FORM_NAME, file: fileField },
+      });
+      if (replaceResp.ok()) return;
+
+      // 2) 현행 row가 없으면(404) 최초 생성 — 고정 formNumber 사용
+      if (replaceResp.status() !== 404) {
+        const body = await replaceResp.text();
+        throw new Error(`form-template replace failed: ${replaceResp.status()} ${body}`);
+      }
+      const createResp = await page.request.post(`${BACKEND_URL}/api/form-templates`, {
         headers: { Authorization: `Bearer ${token}` },
         multipart: {
           formName: SEED_FORM_NAME,
-          formNumber: uniqueFormNumber,
+          formNumber: SEED_FORM_NUMBER,
           changeSummary: 'UI smoke test seed (자동 생성)',
-          file: {
-            name: `${uniqueFormNumber}_seed.docx`,
-            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            buffer: createMinimalDocxBuffer(),
-          },
+          file: fileField,
         },
       });
-      if (!seedResp.ok()) {
-        const body = await seedResp.text();
-        throw new Error(`form-template seed failed: ${seedResp.status()} ${body}`);
+      if (!createResp.ok()) {
+        const body = await createResp.text();
+        throw new Error(`form-template seed failed: ${createResp.status()} ${body}`);
       }
     } finally {
       await ctx.close();

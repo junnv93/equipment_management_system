@@ -1,6 +1,6 @@
 {
   "title": "Form Templates",
-  "description": "Manage UL-QP-18 form templates. Form name is the stable identifier; form numbers change with each revision.",
+  "description": "Manage the latest versions of equipment and calibration forms (UL-QP-18 · UL-QP-19). Per UL-QP-03 §8, superseded forms are replaced immediately, while historic numbers remain searchable for traceability.",
   "table": {
     "formName": "Form Name",
     "formNumber": "Current Number",
