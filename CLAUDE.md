@@ -218,6 +218,77 @@ const displayData = { ...checkout, statusLabel: STATUS_LABELS[checkout.status] }
 
 ---
 
+## Git Workflow Rules (GitHub Flow)
+
+**핵심 원칙: 1 세션 = 1 작업 = 1 브랜치 = 1 PR**
+
+브랜치는 short-lived여야 하며, 서로 다른 성격의 작업을 한 브랜치에 섞지 않습니다.
+
+### 작업 시작 전 (필수 체크)
+
+모든 non-trivial 작업을 시작하기 전에 `git status`를 확인합니다.
+
+```
+1. 현재 브랜치가 main인가?
+   → Yes: 새 브랜치를 만들어야 한다 (아래 네이밍 규칙)
+   → No: 현재 브랜치명이 지금 하려는 작업 성격과 일치하는가?
+
+2. uncommitted 변경이 있는가?
+   → 있으면: 그 변경이 "지금 할 작업"과 관련 있는가?
+      - 관련 있음: 그대로 진행
+      - 관련 없음: 사용자에게 보고하고 분리 여부를 묻는다
+                    (stash, 새 브랜치 이동, 커밋 중 선택)
+
+3. 현재 브랜치가 main보다 behind한가? (SessionStart hook 경고 확인)
+   → 필요하면 rebase 제안
+```
+
+**브랜치가 더럽거나 스코프가 맞지 않으면, 코드를 건드리기 전에 먼저 정리 여부를 사용자에게 확인합니다.**
+
+### 브랜치 네이밍 규칙
+
+| Prefix | 용도 | 예시 |
+|---|---|---|
+| `feat/` | 새 기능 | `feat/form-template-search` |
+| `fix/` | 버그 수정 | `fix/cas-409-cache-coherence` |
+| `chore/` | 빌드/의존성/설정 | `chore/upgrade-nextjs-16` |
+| `refactor/` | 동작 변경 없는 리팩터링 | `refactor/extract-approval-service` |
+| `docs/` | 문서만 변경 | `docs/add-qp03-procedure` |
+| `test/` | 테스트만 추가/수정 | `test/nc-overdue-e2e` |
+
+스코프는 kebab-case, 한 단어~세 단어로 간결하게.
+
+### 작업 중 규칙
+
+- 요청과 **무관한 변경**을 발견하면: 언급만 하고 건드리지 않는다 (Behavioral Guideline 3: Surgical Changes와 연동)
+- 한 세션에서 **여러 성격의 작업**이 섞이기 시작하면: 즉시 중단하고 사용자에게 분리를 제안한다
+- 드리프트 조기 감지: 작업 중간에 `git status` 파일 수가 "지금 작업 + 직접 관련 파일" 개수를 초과하면 경고
+
+### 작업 완료 시
+
+1. `git status` + `git diff --stat`으로 **모든 변경이 요청에 매핑되는지** 재확인
+2. 사용자가 명시적으로 요청할 때만 commit / push / PR 생성 (기존 규칙 유지)
+3. PR 머지 후: 로컬 브랜치 삭제 제안 (stale 브랜치는 자동 정리되지만 로컬은 수동)
+
+### 금지 사항
+
+- `main`에 직접 커밋/푸시 금지
+- 하나의 브랜치에 무관한 작업 여러 개 쌓기 금지 (현재 `chore/remove-recharts-and-stale-e2e`가 이 위반의 예)
+- `--no-verify`로 hook 우회 금지 (기존 규칙)
+- 사용자 요청 범위를 넘어선 "김에 같이" 변경 금지
+
+### SessionStart 감지 결과 해석
+
+`.claude/settings.json`의 SessionStart hook이 출력하는 값:
+- `branch=` 현재 브랜치명 — 작업 성격과 맞는지 판단
+- `behind_main=N` main이 N커밋 앞섬 — N > 0이고 작업이 길어질 것 같으면 rebase 제안
+- `ahead_main=N` 현재 브랜치가 N커밋 앞섬 — PR 대상이 될 커밋 수
+- `upstream_gone=1` 원격 브랜치가 삭제됨 — 이미 머지되었을 가능성, 로컬 삭제 제안
+- `dirty=N` uncommitted 파일 수 — N > 0이면 첫 액션 전에 확인
+- `diverged=N` main과 비교한 변경 파일 수 — `ahead_main` 대비 지나치게 크면 드리프트 의심
+
+---
+
 ## CRITICAL Rules (위반 시 프로덕션 버그)
 
 ### Rule 0: SSOT (Single Source of Truth)
