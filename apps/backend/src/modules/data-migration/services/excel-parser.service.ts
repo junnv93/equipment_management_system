@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import ExcelJS from 'exceljs';
+import { toExcelLoadableBuffer } from '../../../common/utils';
 import type { RawExcelRow, MappedRow } from '../types/data-migration.types';
 import {
   COLUMN_ALIAS_INDEX,
@@ -39,7 +40,7 @@ export class ExcelParserService {
    */
   async parseBuffer(buffer: Buffer): Promise<RawExcelRow[]> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(toExcelLoadableBuffer(buffer));
 
     const sheet = workbook.getWorksheet(1);
     if (!sheet) {
@@ -114,7 +115,7 @@ export class ExcelParserService {
    */
   async parseMultiSheetBuffer(buffer: Buffer): Promise<ParsedSheet[]> {
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(toExcelLoadableBuffer(buffer));
 
     const results: ParsedSheet[] = [];
 
