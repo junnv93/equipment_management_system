@@ -218,63 +218,80 @@ const displayData = { ...checkout, statusLabel: STATUS_LABELS[checkout.status] }
 
 ---
 
-## Git Workflow Rules (GitHub Flow)
+## Git Workflow Rules (Solo Trunk-Based, 2026-04-08~)
 
-**핵심 원칙: 1 세션 = 1 작업 = 1 브랜치 = 1 PR**
+**핵심 원칙: 1인 프로젝트 — 기본은 main 직접 작업, 위험 작업만 브랜치**
 
-브랜치는 short-lived여야 하며, 서로 다른 성격의 작업을 한 브랜치에 섞지 않습니다.
+이 프로젝트는 1인 개발 + 다중 PC + 다중 Claude 세션 환경입니다.
+GitHub Flow의 PR 게이트는 협업이 없는 환경에서 오버헤드만 만들었으므로,
+trunk-based로 전환했습니다. **CI 게이트는 `.husky/pre-push`로 이동**했습니다.
 
-### 작업 시작 전 (필수 체크)
+### 기본 모드: main 직접 작업
 
-모든 non-trivial 작업을 시작하기 전에 `git status`를 확인합니다.
+대부분의 작업은 main에서 직접 수행합니다:
+- 논리 단위로 commit
+- push 시 `pre-push` hook이 `tsc + test`를 자동 검증 → 실패하면 푸시 차단
+- 다른 PC에서는 `git pull`만으로 동기화 완료
 
 ```
-1. 현재 브랜치가 main인가?
-   → Yes: 새 브랜치를 만들어야 한다 (아래 네이밍 규칙)
-   → No: 현재 브랜치명이 지금 하려는 작업 성격과 일치하는가?
-
-2. uncommitted 변경이 있는가?
-   → 있으면: 그 변경이 "지금 할 작업"과 관련 있는가?
-      - 관련 있음: 그대로 진행
-      - 관련 없음: 사용자에게 보고하고 분리 여부를 묻는다
-                    (stash, 새 브랜치 이동, 커밋 중 선택)
-
-3. 현재 브랜치가 main보다 behind한가? (SessionStart hook 경고 확인)
-   → 필요하면 rebase 제안
+일반 작업 흐름:
+  git pull                              # 최신 main 받기
+  ...코딩...
+  git add <files> && git commit         # 논리 단위로 커밋
+  git push                              # pre-push hook이 검증
 ```
 
-**브랜치가 더럽거나 스코프가 맞지 않으면, 코드를 건드리기 전에 먼저 정리 여부를 사용자에게 확인합니다.**
+### 예외: 브랜치를 써야 하는 경우
 
-### 브랜치 네이밍 규칙
+다음 케이스에만 브랜치 + PR을 사용합니다 (월 1~2회 빈도):
 
-| Prefix | 용도 | 예시 |
-|---|---|---|
-| `feat/` | 새 기능 | `feat/form-template-search` |
-| `fix/` | 버그 수정 | `fix/cas-409-cache-coherence` |
-| `chore/` | 빌드/의존성/설정 | `chore/upgrade-nextjs-16` |
-| `refactor/` | 동작 변경 없는 리팩터링 | `refactor/extract-approval-service` |
-| `docs/` | 문서만 변경 | `docs/add-qp03-procedure` |
-| `test/` | 테스트만 추가/수정 | `test/nc-overdue-e2e` |
+| 상황 | 이유 |
+|---|---|
+| **DB 마이그레이션** (`drizzle/000X_*.sql` 추가) | 실패 시 main 전체 망가짐, 격리 검증 필요 |
+| **major 의존성 업그레이드** (Next.js, NestJS, Tailwind 등 메이저 bump) | breaking change 검증 필요 |
+| **광범위한 리팩토링** (50+ 파일) | 단계적 검증 + 롤백 용이성 |
+| **실험적 작업** (성공 여부 불확실) | main 오염 방지 |
 
-스코프는 kebab-case, 한 단어~세 단어로 간결하게.
+브랜치를 만들 때만 아래 네이밍 규칙 적용:
 
-### 작업 중 규칙
+| Prefix | 용도 |
+|---|---|
+| `feat/` | 새 기능 (예외적, 광범위한 경우) |
+| `fix/` | 위험한 버그 수정 |
+| `chore/` | 의존성 major bump, 마이그레이션 |
+| `refactor/` | 광범위한 리팩토링 |
 
-- 요청과 **무관한 변경**을 발견하면: 언급만 하고 건드리지 않는다 (Behavioral Guideline 3: Surgical Changes와 연동)
-- 한 세션에서 **여러 성격의 작업**이 섞이기 시작하면: 즉시 중단하고 사용자에게 분리를 제안한다
-- 드리프트 조기 감지: 작업 중간에 `git status` 파일 수가 "지금 작업 + 직접 관련 파일" 개수를 초과하면 경고
+### 작업 시작 전 체크 (간소화)
+
+```
+1. git pull                # 항상 최신 main으로 시작
+2. git status              # 다른 세션이 남긴 uncommitted 있나?
+   → 있으면: 사용자에게 보고
+3. 위험 작업인가? (위 표 참조)
+   → Yes: 브랜치 만들고 진행
+   → No: main에서 바로 시작
+```
 
 ### 작업 완료 시
 
-1. `git status` + `git diff --stat`으로 **모든 변경이 요청에 매핑되는지** 재확인
-2. 사용자가 명시적으로 요청할 때만 commit / push / PR 생성 (기존 규칙 유지)
-3. PR 머지 후: 로컬 브랜치 삭제 제안 (stale 브랜치는 자동 정리되지만 로컬은 수동)
+1. `git status` + `git diff --stat`으로 변경 확인
+2. 논리 단위로 commit (사용자가 명시적으로 요청 시)
+3. `git push` — pre-push hook이 자동 검증
+4. 검증 실패 시: **`--no-verify`로 우회 금지**, 원인 수정 후 재푸시
+
+### pre-push hook이 실행하는 것
+
+`.husky/pre-push`:
+- `pnpm tsc --noEmit` — 타입 체크 (전 패키지)
+- `pnpm --filter backend run test` — 백엔드 유닛 테스트
+- `pnpm --filter frontend run test` — 프론트엔드 유닛 테스트
+
+E2E, CodeQL, Secret Scan은 여전히 GitHub Actions에서 push 후 실행됩니다.
 
 ### 금지 사항
 
-- `main`에 직접 커밋/푸시 금지
-- 하나의 브랜치에 무관한 작업 여러 개 쌓기 금지 (현재 `chore/remove-recharts-and-stale-e2e`가 이 위반의 예)
-- `--no-verify`로 hook 우회 금지 (기존 규칙)
+- `--no-verify`로 pre-push/pre-commit hook 우회 금지 (진짜 긴급 상황 + 사용자 명시 승인 시만)
+- 위험 작업(위 표)을 main에 직접 커밋 금지
 - 사용자 요청 범위를 넘어선 "김에 같이" 변경 금지
 
 ### SessionStart 감지 결과 해석

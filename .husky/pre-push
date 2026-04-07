@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+# Pre-push gate: prevents pushing broken code to main.
+# Replaces the GitHub Flow PR/CI gate for solo single-developer workflow.
+#
+# To bypass in genuine emergencies (use sparingly):
+#   git push --no-verify
+#
+# What runs:
+#   1. TypeScript type check (all packages)
+#   2. Backend unit tests
+#   3. Frontend unit tests
+#
+# Skipped (still rely on GitHub Actions for these):
+#   - E2E tests (too slow for every push)
+#   - Lint (already covered by pre-commit lint-staged)
+#   - CodeQL / Secret Scan (server-side only)
+
+set -e
+
+echo "▶ pre-push: TypeScript check..."
+pnpm tsc --noEmit
+
+echo "▶ pre-push: backend tests..."
+pnpm --filter backend run test --silent --passWithNoTests
+
+echo "▶ pre-push: frontend tests..."
+pnpm --filter frontend run test --silent --passWithNoTests
+
+echo "✔ pre-push: all checks passed"
