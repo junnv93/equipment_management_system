@@ -78,6 +78,14 @@ export const equipmentImports = pgTable(
     usagePeriodStart: timestamp('usage_period_start').notNull(),
     usagePeriodEnd: timestamp('usage_period_end').notNull(),
 
+    // QP-18-10 양식 매핑: 사용 장소 / 수량 / 반납 상태 (Part1 사용 + Part2 반납)
+    usageLocation: varchar('usage_location', { length: 255 }), // 사용장소
+    quantityOut: integer('quantity_out'), // 사용(반출) 수량
+    quantityReturned: integer('quantity_returned'), // 반납 수량
+    // 반납 시 상태확인: { appearance: 'normal'|'abnormal', abnormality: 'none'|'exists', notes?: string }
+    returnedCondition: jsonb('returned_condition'),
+    returnedAbnormalDetails: text('returned_abnormal_details'), // 반납 시 이상 발생 상세
+
     // 반입 사유 (공통)
     reason: text('reason').notNull(),
 
