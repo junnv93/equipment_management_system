@@ -7,6 +7,9 @@
 
 ## 미완료 항목
 
+- [x] form-templates-ui.spec.ts beforeAll 시드 race condition — 해결: 2026-04-07 — `fix/form-templates-seed-race` — create 409 시 replace 폴백 재시도
+- [ ] Mobile Chrome viewport에서 sticky header가 form-templates 테이블 row 액션 가로챔 — `apps/frontend/tests/e2e/features/form-templates/form-templates-ui.spec.ts:138,194` (TC-UI-04, TC-UI-05) — 2026-04-07 — `td intercepts pointer events`. 데스크탑 chromium 패스, Mobile Chrome 간헐 실패. sticky header z-index와 모바일 viewport 스크롤 조합. 해결: z-index 재검토 or 모바일에서 row 액션을 케밥 메뉴로
+
 - [x] team-filtering E2E 테스트 재작성 (URL param 기반) — 해결: 2026-04-05 — 4파일 skip → 1파일 URL param 기반으로 통합
 - [x] 대시보드 탭 testIgnore 패턴 정리 — 해결: 2026-04-05 — `**/overdue-auto-nc/**`로 수정
 
