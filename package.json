@@ -14,6 +14,7 @@
     "lint": "turbo run lint",
     "type-check:turbo": "turbo run type-check",
     "test": "turbo run test",
+    "verify": "pnpm --filter backend run lint:ci && pnpm --filter frontend run lint && pnpm --filter backend run type-check && pnpm --filter frontend run type-check && pnpm --filter backend run test:cov",
     "test:e2e:turbo": "turbo run test:e2e",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "docker:up": "docker compose up -d",
