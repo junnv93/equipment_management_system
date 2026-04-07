@@ -139,11 +139,11 @@ export class AppModule implements NestModule {
     consumer
       .apply(MetricsMiddleware)
       .exclude('metrics') // metrics 엔드포인트 자체는 제외
-      .forRoutes('*'); // 모든 경로에 적용
+      .forRoutes('{*splat}'); // 모든 경로에 적용 (Nest 11 / Express 5 named wildcard)
 
     consumer
       .apply(MonitoringMiddleware)
       .exclude('monitoring') // 모니터링 엔드포인트 자체는 제외
-      .forRoutes('*'); // 모든 경로에 적용
+      .forRoutes('{*splat}'); // 모든 경로에 적용 (Nest 11 / Express 5 named wildcard)
   }
 }
