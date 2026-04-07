@@ -18,6 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
+import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import {
   Select,
   SelectContent,
@@ -138,7 +140,10 @@ export default function SelfInspectionFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t('selfInspection.form.title')}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {t('selfInspection.form.title')}
+            <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
+          </DialogTitle>
           <DialogDescription>{t('selfInspection.form.description')}</DialogDescription>
         </DialogHeader>
 

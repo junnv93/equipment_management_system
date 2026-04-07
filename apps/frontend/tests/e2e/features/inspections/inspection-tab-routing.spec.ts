@@ -20,8 +20,11 @@ test.describe('점검 탭 분기 렌더링', () => {
   test('교정 대상 장비 → 점검 탭에 중간점검 UI 표시', async ({ testOperatorPage: page }) => {
     await page.goto(`/equipment/${CALIBRATED_EQUIPMENT_ID}?tab=inspection`);
 
-    // 중간점검 제목 확인 (UL-QP-18-03)
-    await expect(page.getByText('중간점검 기록 (UL-QP-18-03)')).toBeVisible({ timeout: 15000 });
+    // 중간점검 제목 확인 — 제목과 양식 번호 배지를 분리 매칭
+    // (양식 번호는 FormNumberBadge가 런타임에 DB에서 조회하므로 i18n 하드코딩 없음)
+    await expect(page.getByRole('heading', { name: /중간점검 기록/ }).first()).toBeVisible({
+      timeout: 15000,
+    });
 
     // "점검 기록 작성" 버튼 존재
     await expect(page.getByRole('button', { name: '점검 기록 작성' })).toBeVisible();
@@ -42,7 +45,7 @@ test.describe('점검 탭 분기 렌더링', () => {
     await expect(page.getByRole('button', { name: '점검 기록 작성' })).toBeVisible();
 
     // 중간점검 관련 UI는 표시되지 않아야 함
-    await expect(page.getByText('중간점검 기록 (UL-QP-18-03)')).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: /중간점검 기록/ })).not.toBeVisible();
   });
 
   test('?tab=self-inspection URL → ?tab=inspection으로 하위 호환', async ({
@@ -52,7 +55,10 @@ test.describe('점검 탭 분기 렌더링', () => {
 
     // 리다이렉트 후 점검 탭 콘텐츠가 렌더링되어야 함
     await expect(
-      page.getByText('중간점검 기록 (UL-QP-18-03)').or(page.getByText('자체점검 이력'))
+      page
+        .getByRole('heading', { name: /중간점검 기록/ })
+        .or(page.getByText('자체점검 이력'))
+        .first()
     ).toBeVisible({ timeout: 15000 });
   });
 

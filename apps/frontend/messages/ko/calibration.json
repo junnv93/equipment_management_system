@@ -602,7 +602,7 @@
   },
   "intermediateInspection": {
     "createButton": "점검 기록 작성",
-    "formTitle": "중간점검 기록 (UL-QP-18-03)",
+    "formTitle": "중간점검 기록",
     "inspectionDate": "점검일",
     "classification": "장비 분류",
     "classificationOptions": {

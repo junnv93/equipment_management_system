@@ -8,6 +8,8 @@ import { queryKeys } from '@/lib/api/query-config';
 import { getSelfInspections } from '@/lib/api/self-inspection-api';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
+import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -74,7 +76,10 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{t('selfInspection.title')}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            {t('selfInspection.title')}
+            <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -90,7 +95,10 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t('selfInspection.title')}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            {t('selfInspection.title')}
+            <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
+          </CardTitle>
           <Button size="sm" onClick={() => setIsFormOpen(true)}>
             <FileText className="h-4 w-4 mr-1" />
             {t('inspection.createButton')}
