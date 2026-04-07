@@ -21,6 +21,8 @@ import {
   intermediateInspectionItems,
   intermediateInspectionEquipment,
 } from '@equipment-management/db/schema/intermediate-inspections';
+import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
+import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
 import { testSoftware } from '@equipment-management/db/schema/test-software';
 import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cables';
 import { softwareValidations } from '@equipment-management/db/schema/software-validations';
@@ -111,6 +113,7 @@ export class FormTemplateExportService {
       'UL-QP-18-01': (p, s) => this.exportEquipmentRegistry(p, s),
       'UL-QP-18-03': (p, s) => this.exportIntermediateInspection(p, s),
       'UL-QP-18-05': (p, s) => this.exportSelfInspection(p, s),
+      'UL-QP-18-06': (p, s) => this.exportCheckout(p, s),
       'UL-QP-18-07': (p, s) => this.exportSoftwareRegistry(p, s),
       'UL-QP-18-08': (p, s) => this.exportCablePathLoss(p, s),
       'UL-QP-18-09': (p, s) => this.exportSoftwareValidation(p, s),
@@ -673,6 +676,167 @@ export class FormTemplateExportService {
       confirmer?.signaturePath ?? null,
       confirmer?.name ?? '-'
     );
+
+    const buffer = doc.toBuffer();
+    return {
+      buffer,
+      mimeType: DOCX_MIME,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+    };
+  }
+
+  // ============================================================================
+  // UL-QP-18-06: 장비 반·출입 확인서
+  // ============================================================================
+
+  private formatQp1806Date(d: Date | string | null | undefined): string {
+    if (!d) return '-';
+    const date = d instanceof Date ? d : new Date(d);
+    if (Number.isNaN(date.getTime())) return '-';
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y} . ${m} . ${day} .`;
+  }
+
+  private async exportCheckout(
+    params: Record<string, string>,
+    scope?: UserScope
+  ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-06'];
+    const checkoutId = params.checkoutId;
+    if (!checkoutId) {
+      throw new BadRequestException({
+        code: 'MISSING_CHECKOUT_ID',
+        message: 'checkoutId query parameter is required for checkout export.',
+      });
+    }
+
+    const [checkout] = await this.db
+      .select()
+      .from(checkouts)
+      .where(eq(checkouts.id, checkoutId))
+      .limit(1);
+
+    if (!checkout) {
+      throw new NotFoundException({
+        code: 'CHECKOUT_NOT_FOUND',
+        message: 'Checkout not found.',
+      });
+    }
+
+    // 반출 장비 목록 + 장비 정보 (단일 JOIN, sequenceNumber 정렬)
+    const items = await this.db
+      .select({
+        sequenceNumber: checkoutItems.sequenceNumber,
+        quantity: checkoutItems.quantity,
+        conditionBefore: checkoutItems.conditionBefore,
+        conditionAfter: checkoutItems.conditionAfter,
+        equipmentName: equipment.name,
+        equipmentModel: equipment.modelName,
+        equipmentManagementNumber: equipment.managementNumber,
+        equipmentSite: equipment.site,
+      })
+      .from(checkoutItems)
+      .innerJoin(equipment, eq(checkoutItems.equipmentId, equipment.id))
+      .where(eq(checkoutItems.checkoutId, checkoutId))
+      .orderBy(asc(checkoutItems.sequenceNumber));
+
+    // 사이트 우회 방지 — 어느 장비도 scope 사이트 외이면 차단
+    if (scope && items.some((it) => it.equipmentSite !== scope.site)) {
+      throw new NotFoundException({
+        code: 'CHECKOUT_NOT_FOUND',
+        message: 'Checkout not found or not accessible from your site.',
+      });
+    }
+
+    // 상태 확인 기록 (per-checkout, 단계별 fallback 용)
+    const condChecks = await this.db
+      .select()
+      .from(conditionChecks)
+      .where(eq(conditionChecks.checkoutId, checkoutId));
+
+    // 작성자(신청자) 조회
+    const [requester] = await this.db
+      .select({ name: users.name, signaturePath: users.signatureImagePath })
+      .from(users)
+      .where(eq(users.id, checkout.requesterId))
+      .limit(1);
+
+    // 승인자 조회
+    const [approver] = checkout.approverId
+      ? await this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, checkout.approverId))
+          .limit(1)
+      : [null];
+
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-06');
+    const doc = new DocxTemplate(templateBuf);
+
+    // Row 2: 반출지 / 전화번호
+    doc.setCellValue(0, 2, 1, checkout.destination ?? '-');
+    doc.setCellValue(0, 2, 3, checkout.phoneNumber ?? '-');
+    // Row 3: 반출주소
+    doc.setCellValue(0, 3, 1, checkout.address ?? '-');
+    // Row 4: 반출사유
+    doc.setCellValue(0, 4, 1, checkout.reason ?? '-');
+
+    // Row 5: 반출 확인 문장 + 날짜
+    const checkoutDateStr = this.formatQp1806Date(checkout.checkoutDate);
+    doc.setCellValue(
+      0,
+      5,
+      0,
+      `아래 목록과 같이 측정장비를 반출하였음을 확인합니다.    ${checkoutDateStr}    반출자 : ${requester?.name ?? '-'}`
+    );
+
+    // Row 9~22: 장비 목록 14행 (순번 1~14)
+    const conditionFallback = (step: 'lender_checkout' | 'lender_return'): string => {
+      const c = condChecks.find((cc) => cc.step === step);
+      if (!c) return '-';
+      return `${c.appearanceStatus}/${c.operationStatus}`;
+    };
+    for (let i = 0; i < 14; i++) {
+      const rowIdx = 9 + i;
+      const item = items.find((it) => it.sequenceNumber === i + 1);
+      if (!item) {
+        doc.setCellValue(0, rowIdx, 1, '-');
+        doc.setCellValue(0, rowIdx, 2, '-');
+        doc.setCellValue(0, rowIdx, 3, '-');
+        doc.setCellValue(0, rowIdx, 4, '-');
+        doc.setCellValue(0, rowIdx, 5, '-');
+        doc.setCellValue(0, rowIdx, 6, '-');
+        continue;
+      }
+      doc.setCellValue(0, rowIdx, 1, item.equipmentName ?? '-');
+      doc.setCellValue(0, rowIdx, 2, item.equipmentModel ?? '-');
+      doc.setCellValue(0, rowIdx, 3, String(item.quantity));
+      doc.setCellValue(0, rowIdx, 4, item.equipmentManagementNumber ?? '-');
+      doc.setCellValue(0, rowIdx, 5, item.conditionBefore ?? conditionFallback('lender_checkout'));
+      doc.setCellValue(0, rowIdx, 6, item.conditionAfter ?? conditionFallback('lender_return'));
+    }
+
+    // Row 23: 특기사항
+    doc.setCellValue(0, 23, 1, checkout.inspectionNotes ?? '-');
+
+    // Row 24: 반입 확인 문장 + 날짜
+    const returnDateStr = this.formatQp1806Date(checkout.actualReturnDate);
+    doc.setCellValue(
+      0,
+      24,
+      0,
+      `상기 목록과 같이 측정장비를 이상없이 반입하였음을 확인합니다.    ${returnDateStr}    반입자 : ${requester?.name ?? '-'}`
+    );
+
+    // Row 1: 작성/승인 결재란 (반출 시점)
+    await this.insertDocxSignature(doc, 0, 1, 1, requester?.signaturePath ?? null, '(서명)');
+    await this.insertDocxSignature(doc, 0, 1, 2, approver?.signaturePath ?? null, '(서명)');
+
+    // Row 25: 작성/승인 결재란 (반입 시점)
+    await this.insertDocxSignature(doc, 0, 25, 1, requester?.signaturePath ?? null, '(서명)');
+    await this.insertDocxSignature(doc, 0, 25, 2, approver?.signaturePath ?? null, '(서명)');
 
     const buffer = doc.toBuffer();
     return {

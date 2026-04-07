@@ -71,7 +71,7 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     name: '장비 반·출입 확인서',
     retentionYears: 5,
     retentionLabel: '5년',
-    implemented: false,
+    implemented: true,
     category: 'technical',
   },
   'UL-QP-18-07': {
