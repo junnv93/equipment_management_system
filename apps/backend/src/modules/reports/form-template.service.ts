@@ -207,31 +207,11 @@ export class FormTemplateService {
     const broken: Array<{ formNumber: string; storageKey: string; reason: string }> = [];
     let healthy = 0;
     for (const row of rows) {
-      try {
-        const buf = await this.storage.download(row.storageKey);
-        if (buf.length !== row.fileSize) {
-          broken.push({
-            formNumber: row.formNumber,
-            storageKey: row.storageKey,
-            reason: `size mismatch (db=${row.fileSize}, disk=${buf.length})`,
-          });
-          continue;
-        }
-        if (buf.length < FormTemplateService.MIN_VALID_FILE_SIZE) {
-          broken.push({
-            formNumber: row.formNumber,
-            storageKey: row.storageKey,
-            reason: `file too small (${buf.length} bytes)`,
-          });
-          continue;
-        }
+      const reason = await this.checkRowStorageReason(row);
+      if (reason === null) {
         healthy++;
-      } catch (err) {
-        broken.push({
-          formNumber: row.formNumber,
-          storageKey: row.storageKey,
-          reason: `storage error: ${(err as Error)?.message ?? err}`,
-        });
+      } else {
+        broken.push({ formNumber: row.formNumber, storageKey: row.storageKey, reason });
       }
     }
     if (broken.length > 0) {
@@ -505,11 +485,12 @@ export class FormTemplateService {
       const existing = await this.findCurrentByName(entry.name);
 
       // 자가 치유: 기존 row가 있어도 storage가 깨졌으면 디스크 파일로 덮어씀
+      let healReason: string | null = null;
       if (existing) {
-        const storageHealthy = await this.isStorageRowHealthy(existing);
-        if (storageHealthy) continue;
+        healReason = await this.checkRowStorageReason(existing);
+        if (healReason === null) continue;
         this.logger.warn(
-          `Form template storage broken for ${entry.name} (${existing.formNumber}) — self-healing from filesystem`
+          `Form template storage broken for ${entry.name} (${existing.formNumber}) — ${healReason} — self-healing from filesystem`
         );
       }
 
@@ -535,56 +516,85 @@ export class FormTemplateService {
 
       await this.storage.upload(storageKey, buffer, mimeType);
 
-      // 자가 치유: 깨진 row가 있으면 UPDATE, 없으면 INSERT
-      if (existing) {
-        const previousStorageKey = existing.storageKey;
-        await this.db
-          .update(formTemplates)
-          .set({
+      // 자가 치유: 깨진 row가 있으면 UPDATE, 없으면 INSERT.
+      // storage upload는 끝났으므로, DB 작업이 실패하면 방금 올린 파일을 정리해 orphan을 막는다
+      // (createFormTemplateVersion과 동일한 패턴).
+      try {
+        if (existing) {
+          const previousStorageKey = existing.storageKey;
+          await this.db.transaction(async (tx) => {
+            await tx
+              .update(formTemplates)
+              .set({
+                storageKey,
+                originalFilename: matchingFile,
+                mimeType,
+                fileSize: buffer.length,
+                uploadedAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(eq(formTemplates.id, existing.id));
+            // UL-QP-03 §7.5: 자가 치유도 형식상 파일 교체이므로 감사 가능한 변경으로 기록
+            await tx.insert(formTemplateRevisions).values({
+              formTemplateId: existing.id,
+              previousFormNumber: existing.formNumber,
+              newFormNumber: existing.formNumber,
+              changeSummary: `self-heal at boot: ${healReason ?? 'storage corruption detected'}`,
+              revisedBy: null,
+            });
+          });
+          // 깨진 이전 storage 파일 정리(있다면)
+          if (previousStorageKey && previousStorageKey !== storageKey) {
+            await this.safeDeleteStorage(
+              previousStorageKey,
+              'seedFromFilesystem self-heal cleanup'
+            );
+          }
+          this.logger.log(`Self-healed template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
+        } else {
+          await this.db.insert(formTemplates).values({
+            formName: entry.name,
+            formNumber,
             storageKey,
             originalFilename: matchingFile,
             mimeType,
             fileSize: buffer.length,
-            uploadedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(formTemplates.id, existing.id));
-        // 깨진 이전 storage 파일 정리(있다면)
-        if (previousStorageKey && previousStorageKey !== storageKey) {
-          await this.safeDeleteStorage(previousStorageKey, 'seedFromFilesystem self-heal cleanup');
+            isCurrent: true,
+            uploadedBy: null,
+          });
+          this.logger.log(`Seeded template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
         }
-        this.logger.log(`Self-healed template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
-      } else {
-        await this.db.insert(formTemplates).values({
-          formName: entry.name,
-          formNumber,
-          storageKey,
-          originalFilename: matchingFile,
-          mimeType,
-          fileSize: buffer.length,
-          isCurrent: true,
-          uploadedBy: null,
-        });
-        this.logger.log(`Seeded template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
+      } catch (err) {
+        await this.safeDeleteStorage(storageKey, 'seedFromFilesystem rollback');
+        throw err;
       }
     }
   }
 
-  /** seedFromFilesystem 자가 치유 판단용: storage 파일이 실재하고 크기/시그니처가 정상인지 */
-  private async isStorageRowHealthy(row: FormTemplateRow): Promise<boolean> {
+  /**
+   * 단일 row의 storage 무결성을 검사하고 깨진 사유를 반환. 정상이면 null.
+   * `verifyAllCurrentTemplates`와 `seedFromFilesystem` 자가 치유가 동일한 기준을 공유하도록
+   * 단일 진입점으로 추출됨.
+   */
+  private async checkRowStorageReason(row: FormTemplateRow): Promise<string | null> {
+    let buf: Buffer;
     try {
-      const buf = await this.storage.download(row.storageKey);
-      if (buf.length !== row.fileSize) return false;
-      if (buf.length < FormTemplateService.MIN_VALID_FILE_SIZE) return false;
-      const isOfficeOpenXml =
-        row.mimeType.includes('officedocument') || row.mimeType.includes('openxmlformats');
-      if (isOfficeOpenXml && !buf.subarray(0, 4).equals(FormTemplateService.OFFICE_ZIP_SIGNATURE)) {
-        return false;
-      }
-      return true;
-    } catch {
-      return false;
+      buf = await this.storage.download(row.storageKey);
+    } catch (err) {
+      return `storage error: ${(err as Error)?.message ?? err}`;
     }
+    if (buf.length !== row.fileSize) {
+      return `size mismatch (db=${row.fileSize}, disk=${buf.length})`;
+    }
+    if (buf.length < FormTemplateService.MIN_VALID_FILE_SIZE) {
+      return `file too small (${buf.length} bytes)`;
+    }
+    const isOfficeOpenXml =
+      row.mimeType.includes('officedocument') || row.mimeType.includes('openxmlformats');
+    if (isOfficeOpenXml && !buf.subarray(0, 4).equals(FormTemplateService.OFFICE_ZIP_SIGNATURE)) {
+      return `invalid ZIP signature (not an Office file)`;
+    }
+    return null;
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
