@@ -160,6 +160,70 @@ export class FormTemplateService {
     return this.downloadBuffer(row);
   }
 
+  // ── 무결성 검증 ────────────────────────────────────────────────────────────
+
+  /** Office OpenXML(docx/xlsx/pptx)은 ZIP 컨테이너 — `PK\x03\x04` 4 byte로 시작 */
+  private static readonly OFFICE_ZIP_SIGNATURE = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+  /** 정상 Office 파일은 최소 수 KB. placeholder/text 파일 차단을 위한 하한 */
+  private static readonly MIN_VALID_FILE_SIZE = 4096;
+
+  /**
+   * 업로드 직전 파일 무결성 검증.
+   * - 크기 하한으로 placeholder(1024 byte 등) 차단
+   * - Office 계열 MIME은 ZIP 시그니처 검증으로 텍스트/잘못된 파일 차단
+   *
+   * 내부 ZIP 구조까지 풀어 검증하지는 않음 (성능). E2E가 만든 minimal docx처럼
+   * 시그니처는 통과하나 Word가 못 여는 경우는 startup health check + size 하한으로 잡힘.
+   */
+  private assertValidFileContent(buffer: Buffer, mimeType: string, filename: string): void {
+    if (buffer.length < FormTemplateService.MIN_VALID_FILE_SIZE) {
+      throw new BadRequestException({
+        code: ErrorCode.InvalidFormat,
+        message: `파일이 너무 작습니다 (${buffer.length} bytes < ${FormTemplateService.MIN_VALID_FILE_SIZE}). 정상 양식 파일이 아닐 수 있습니다: ${filename}`,
+      });
+    }
+    const isOfficeOpenXml =
+      mimeType.includes('officedocument') || mimeType.includes('openxmlformats');
+    if (isOfficeOpenXml) {
+      if (!buffer.subarray(0, 4).equals(FormTemplateService.OFFICE_ZIP_SIGNATURE)) {
+        throw new BadRequestException({
+          code: ErrorCode.InvalidFormat,
+          message: `유효한 Office 파일이 아닙니다 (ZIP 시그니처 누락): ${filename}`,
+        });
+      }
+    }
+  }
+
+  /**
+   * 모든 현행 양식 row의 storage 파일이 실재하고 크기가 일치하는지 검증.
+   * 결과는 로그로만 보고 (예외 던지지 않음 — 부팅을 막지 않기 위함).
+   * 이번 같은 데이터 사고를 다음 부팅에서 즉시 인지할 수 있게 함.
+   */
+  async verifyAllCurrentTemplates(): Promise<{
+    healthy: number;
+    broken: Array<{ formNumber: string; storageKey: string; reason: string }>;
+  }> {
+    const rows = await this.listAllCurrent();
+    const broken: Array<{ formNumber: string; storageKey: string; reason: string }> = [];
+    let healthy = 0;
+    for (const row of rows) {
+      const reason = await this.checkRowStorageReason(row);
+      if (reason === null) {
+        healthy++;
+      } else {
+        broken.push({ formNumber: row.formNumber, storageKey: row.storageKey, reason });
+      }
+    }
+    if (broken.length > 0) {
+      this.logger.error(
+        `Form template integrity check FAILED: ${broken.length} broken row(s) — ${JSON.stringify(broken)}`
+      );
+    } else {
+      this.logger.log(`Form template integrity check OK: ${healthy} row(s)`);
+    }
+    return { healthy, broken };
+  }
+
   // ── 변경 ──────────────────────────────────────────────────────────────────
 
   /**
@@ -198,6 +262,9 @@ export class FormTemplateService {
     //    확장자는 FILE_TYPES SSOT에서 MIME 기준으로 파생. 하드코딩 없음.
     const ext = resolveFormTemplateExtension(mimeType, filename);
     const storageKey = this.buildStorageKey(formNumber, ext);
+
+    // 3-1. 파일 시그니처 + 크기 무결성 검증 (placeholder/손상 파일 차단)
+    this.assertValidFileContent(file, mimeType, filename);
 
     // 4. 스토리지 업로드를 트랜잭션 밖에서 먼저 실행 (orphan 방지 + DB 실패 시 cleanup 가능)
     await this.storage.upload(storageKey, file, mimeType);
@@ -280,6 +347,9 @@ export class FormTemplateService {
     // 3. 새 storageKey 생성 (UUID 기반). 같은 formNumber 디렉토리 내.
     const ext = resolveFormTemplateExtension(mimeType, filename);
     const storageKey = this.buildStorageKey(current.formNumber, ext);
+
+    // 3-1. 파일 시그니처 + 크기 무결성 검증 (placeholder/손상 파일 차단)
+    this.assertValidFileContent(file, mimeType, filename);
 
     // 4. 업로드 → DB UPDATE → 이전 파일 삭제 순서 (storage orphan 최소화)
     await this.storage.upload(storageKey, file, mimeType);
@@ -388,7 +458,14 @@ export class FormTemplateService {
   // ── 시드 (부트스트랩) ──────────────────────────────────────────────────────
 
   /**
-   * 파일시스템에서 초기 시드. 각 FORM_CATALOG 항목의 formName에 현행 row가 없으면 INSERT.
+   * 파일시스템에서 초기 시드 + 자가 치유.
+   *
+   * - 현행 row가 없음 → INSERT
+   * - 현행 row가 있는데 storage 파일이 사라졌거나 손상(시그니처/크기 위반) → 디스크 파일로 갱신
+   * - 현행 row가 있고 storage 파일도 정상 → skip
+   *
+   * 자가 치유 덕분에 누군가 placeholder seed를 다시 넣거나 디스크 파일이 손실되어도
+   * 다음 부팅에서 자동으로 복구됩니다.
    *
    * MIME/확장자 판정은 `EXTENSION_TO_MIME` (FILE_TYPES SSOT)을 사용합니다.
    */
@@ -406,7 +483,16 @@ export class FormTemplateService {
 
     for (const [formNumber, entry] of Object.entries(FORM_CATALOG)) {
       const existing = await this.findCurrentByName(entry.name);
-      if (existing) continue;
+
+      // 자가 치유: 기존 row가 있어도 storage가 깨졌으면 디스크 파일로 덮어씀
+      let healReason: string | null = null;
+      if (existing) {
+        healReason = await this.checkRowStorageReason(existing);
+        if (healReason === null) continue;
+        this.logger.warn(
+          `Form template storage broken for ${entry.name} (${existing.formNumber}) — ${healReason} — self-healing from filesystem`
+        );
+      }
 
       const matchingFile = files.find((f) => f.includes(formNumber));
       if (!matchingFile) continue;
@@ -430,19 +516,85 @@ export class FormTemplateService {
 
       await this.storage.upload(storageKey, buffer, mimeType);
 
-      await this.db.insert(formTemplates).values({
-        formName: entry.name,
-        formNumber,
-        storageKey,
-        originalFilename: matchingFile,
-        mimeType,
-        fileSize: buffer.length,
-        isCurrent: true,
-        uploadedBy: null,
-      });
-
-      this.logger.log(`Seeded template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
+      // 자가 치유: 깨진 row가 있으면 UPDATE, 없으면 INSERT.
+      // storage upload는 끝났으므로, DB 작업이 실패하면 방금 올린 파일을 정리해 orphan을 막는다
+      // (createFormTemplateVersion과 동일한 패턴).
+      try {
+        if (existing) {
+          const previousStorageKey = existing.storageKey;
+          await this.db.transaction(async (tx) => {
+            await tx
+              .update(formTemplates)
+              .set({
+                storageKey,
+                originalFilename: matchingFile,
+                mimeType,
+                fileSize: buffer.length,
+                uploadedAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(eq(formTemplates.id, existing.id));
+            // UL-QP-03 §7.5: 자가 치유도 형식상 파일 교체이므로 감사 가능한 변경으로 기록
+            await tx.insert(formTemplateRevisions).values({
+              formTemplateId: existing.id,
+              previousFormNumber: existing.formNumber,
+              newFormNumber: existing.formNumber,
+              changeSummary: `self-heal at boot: ${healReason ?? 'storage corruption detected'}`,
+              revisedBy: null,
+            });
+          });
+          // 깨진 이전 storage 파일 정리(있다면)
+          if (previousStorageKey && previousStorageKey !== storageKey) {
+            await this.safeDeleteStorage(
+              previousStorageKey,
+              'seedFromFilesystem self-heal cleanup'
+            );
+          }
+          this.logger.log(`Self-healed template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
+        } else {
+          await this.db.insert(formTemplates).values({
+            formName: entry.name,
+            formNumber,
+            storageKey,
+            originalFilename: matchingFile,
+            mimeType,
+            fileSize: buffer.length,
+            isCurrent: true,
+            uploadedBy: null,
+          });
+          this.logger.log(`Seeded template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
+        }
+      } catch (err) {
+        await this.safeDeleteStorage(storageKey, 'seedFromFilesystem rollback');
+        throw err;
+      }
     }
+  }
+
+  /**
+   * 단일 row의 storage 무결성을 검사하고 깨진 사유를 반환. 정상이면 null.
+   * `verifyAllCurrentTemplates`와 `seedFromFilesystem` 자가 치유가 동일한 기준을 공유하도록
+   * 단일 진입점으로 추출됨.
+   */
+  private async checkRowStorageReason(row: FormTemplateRow): Promise<string | null> {
+    let buf: Buffer;
+    try {
+      buf = await this.storage.download(row.storageKey);
+    } catch (err) {
+      return `storage error: ${(err as Error)?.message ?? err}`;
+    }
+    if (buf.length !== row.fileSize) {
+      return `size mismatch (db=${row.fileSize}, disk=${buf.length})`;
+    }
+    if (buf.length < FormTemplateService.MIN_VALID_FILE_SIZE) {
+      return `file too small (${buf.length} bytes)`;
+    }
+    const isOfficeOpenXml =
+      row.mimeType.includes('officedocument') || row.mimeType.includes('openxmlformats');
+    if (isOfficeOpenXml && !buf.subarray(0, 4).equals(FormTemplateService.OFFICE_ZIP_SIGNATURE)) {
+      return `invalid ZIP signature (not an Office file)`;
+    }
+    return null;
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────

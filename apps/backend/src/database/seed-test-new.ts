@@ -29,7 +29,8 @@ import { USERS_SEED_DATA } from './seed-data/core/users.seed';
 import { EQUIPMENT_SEED_DATA } from './seed-data/core/equipment.seed';
 import { CALIBRATIONS_SEED_DATA } from './seed-data/calibration/calibrations.seed';
 import { NON_CONFORMANCES_SEED_DATA } from './seed-data/operations/non-conformances.seed';
-import { FORM_TEMPLATES_SEED_DATA } from './seed-data/operations/form-templates.seed';
+// form_templates는 main.ts의 seedFromFilesystem이 docs/procedure/template/의 실제 파일로 시드함.
+// placeholder seed는 다운로드 시 ENOENT를 일으키므로 제거됨.
 
 // Phase 2 seed data modules (IMPLEMENTED)
 import { REPAIR_HISTORY_SEED_DATA } from './seed-data/operations/repair-history.seed';
@@ -177,9 +178,8 @@ async function main(): Promise<void> {
     console.log('  → Non-Conformances (10)');
     await db.insert(schema.nonConformances).values(NON_CONFORMANCES_SEED_DATA);
 
-    // Form Templates — E2E 양식 목록/이력 prerequisites
-    console.log(`  → Form Templates (${FORM_TEMPLATES_SEED_DATA.length})`);
-    await db.insert(schema.formTemplates).values(FORM_TEMPLATES_SEED_DATA);
+    // Form Templates: main.ts:158 seedFromFilesystem이 백엔드 부팅 시 docs/procedure/template/의
+    // 실제 파일로 시드함. placeholder seed는 다운로드 시 ENOENT를 일으켜 제거됨.
 
     // Calibration Plans & Items (6 plans + 12 items)
     console.log('  → Calibration Plans (6)');

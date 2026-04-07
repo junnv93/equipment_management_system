@@ -153,9 +153,11 @@ async function bootstrap(): Promise<void> {
   // 미설정 시: 구 프로세스가 포트를 점유한 채로 재시작 → EADDRINUSE
   app.enableShutdownHooks();
 
-  // 양식 템플릿 시드: 파일시스템 → 스토리지 (최초 1회)
+  // 양식 템플릿 시드: 파일시스템 → 스토리지 (최초 1회 + 깨진 row 자가 치유)
   const formTemplateService = app.get(FormTemplateService);
   await formTemplateService.seedFromFilesystem('../../docs/procedure/template');
+  // 무결성 health check: 부팅 로그에서 즉시 깨진 row 인지
+  await formTemplateService.verifyAllCurrentTemplates();
 
   const port = configService.get('PORT') || 3001;
   await app.listen(port);
