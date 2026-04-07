@@ -120,6 +120,10 @@ export const checkoutItems = pgTable(
       .notNull()
       .references(() => equipment.id, { onDelete: 'restrict' }),
 
+    // QP-18-06 양식 매핑: 장비 목록 순번(1~14) 및 수량
+    sequenceNumber: integer('sequence_number').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+
     // 반입 시 검사 정보
     conditionBefore: text('condition_before'), // 반출 전 상태
     conditionAfter: text('condition_after'), // 반입 후 상태

@@ -1297,10 +1297,12 @@ export class CheckoutsService extends VersionedBaseService {
           .values(insertData as typeof checkouts.$inferInsert)
           .returning();
 
-        // 반출 장비 목록 생성
-        const itemsData = createCheckoutDto.equipmentIds.map((equipmentId) => ({
+        // 반출 장비 목록 생성 (QP-18-06: 순번 자동 할당, 수량 기본 1)
+        const itemsData = createCheckoutDto.equipmentIds.map((equipmentId, index) => ({
           checkoutId: checkout.id,
           equipmentId,
+          sequenceNumber: index + 1,
+          quantity: 1,
           conditionBefore: null,
           conditionAfter: null,
           inspectionNotes: null,
