@@ -3,6 +3,10 @@ node_modules
 .pnp
 .pnp.js
 
+# disallow npm/yarn lockfiles — this repo uses pnpm only
+package-lock.json
+yarn.lock
+
 # testing
 coverage
 tests/e2e/.team/
