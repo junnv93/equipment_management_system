@@ -602,7 +602,7 @@
   },
   "intermediateInspection": {
     "createButton": "Create Inspection Record",
-    "formTitle": "Intermediate Inspection Record (UL-QP-18-03)",
+    "formTitle": "Intermediate Inspection Record",
     "inspectionDate": "Inspection Date",
     "classification": "Classification",
     "classificationOptions": {

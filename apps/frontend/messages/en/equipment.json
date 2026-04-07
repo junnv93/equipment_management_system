@@ -316,7 +316,7 @@
       "confirmed": "Confirmed"
     },
     "form": {
-      "title": "Self Inspection Record (UL-QP-18-05)",
+      "title": "Self Inspection Record",
       "description": "Enter inspection results for each item",
       "addItem": "Add Item",
       "itemNamePlaceholder": "Inspection item name",
@@ -331,8 +331,8 @@
     }
   },
   "inspection": {
-    "intermediateTitle": "Intermediate Inspection Records (UL-QP-18-03)",
-    "selfTitle": "Self Inspection Records (UL-QP-18-05)",
+    "intermediateTitle": "Intermediate Inspection Records",
+    "selfTitle": "Self Inspection Records",
     "noActiveCalibration": "No active calibration record found. Cannot create intermediate inspection.",
     "createButton": "Create Inspection Record",
     "notApplicable": "This equipment is not subject to inspection (Management method: N/A)"

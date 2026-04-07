@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
+import { FORM_CATALOG } from '@equipment-management/shared-constants';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -263,7 +265,10 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{tEquip('inspection.intermediateTitle')}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            {tEquip('inspection.intermediateTitle')}
+            <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-03'].name} />
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm text-center py-8">
@@ -278,7 +283,10 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{tEquip('inspection.intermediateTitle')}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            {tEquip('inspection.intermediateTitle')}
+            <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-03'].name} />
+          </CardTitle>
           <Button size="sm" onClick={() => setIsFormOpen(true)}>
             <FileText className="h-4 w-4 mr-1" />
             {tEquip('inspection.createButton')}

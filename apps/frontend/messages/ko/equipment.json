@@ -316,7 +316,7 @@
       "confirmed": "확인됨"
     },
     "form": {
-      "title": "자체점검 기록 작성 (UL-QP-18-05)",
+      "title": "자체점검 기록 작성",
       "description": "점검 항목별 판정 결과를 입력하세요",
       "addItem": "항목 추가",
       "itemNamePlaceholder": "점검 항목명",
@@ -331,8 +331,8 @@
     }
   },
   "inspection": {
-    "intermediateTitle": "중간점검 기록 (UL-QP-18-03)",
-    "selfTitle": "자체점검 기록 (UL-QP-18-05)",
+    "intermediateTitle": "중간점검 기록",
+    "selfTitle": "자체점검 기록",
     "noActiveCalibration": "활성 교정 기록이 없어 중간점검을 생성할 수 없습니다",
     "createButton": "점검 기록 작성",
     "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: 비대상)"
