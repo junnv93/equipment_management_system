@@ -227,3 +227,51 @@ fi
 ```
 
 SSOT 체인: `primitives.ts` → `globals.css` → `motion.ts` (현재 7개).
+
+
+## Step 10: Tailwind v4 호환성
+
+v3 → v4 마이그레이션(2026-04, PR #180) 이후 v3 잔재 재도입 방지.
+
+### 10a: v4에서 제거된 opacity/decoration 유틸리티
+
+v4에서 컴파일은 통과하지만 효과 없음(silent failure). 슬래시 표기(`bg-foo/50`)로 마이그레이션.
+
+```bash
+rg -n '\b(bg-opacity-|text-opacity-|ring-opacity-|border-opacity-|decoration-slice|decoration-clone)\b' \
+  apps/frontend --type-add 'tsx:*.tsx' --type ts --type tsx --type css
+```
+
+**PASS:** 0 hits. **FAIL:** 발견 위치를 슬래시 표기 또는 토큰 SSOT(`lib/design-tokens/visual-feedback.ts` 등)로 교체.
+
+### 10b: 레거시 v3 파일/디렉티브 재도입 금지
+
+v4는 CSS-first 설정. `tailwind.config.*` 파일과 `@tailwind base|components|utilities` 디렉티브는 v3 잔재.
+
+```bash
+ls apps/frontend/tailwind.config.* 2>/dev/null && echo "FAIL" || echo "PASS"
+rg -n '^@tailwind\s+(base|components|utilities)' apps/frontend/styles
+```
+
+**PASS:** 두 명령 모두 0 hits. **FAIL:** config 삭제 후 토큰을 `globals.css`의 `@theme`/`@theme inline`으로 이전, 디렉티브를 `@import 'tailwindcss';`로 교체.
+
+### 10c: tailwindcss-animate 재도입 금지
+
+v3 전용. v4에서는 `tw-animate-css`를 `globals.css`에서 `@import 'tw-animate-css';`로 사용.
+
+```bash
+grep -n tailwindcss-animate apps/frontend/package.json && echo "FAIL" || echo "PASS"
+```
+
+**PASS:** 0 hits. **FAIL:** `tw-animate-css`로 교체.
+
+### 10d: PostCSS 플러그인 단일성
+
+`postcss.config.js`는 `@tailwindcss/postcss` 단일 플러그인만 사용. v3 `tailwindcss` 플러그인 또는 별도 `autoprefixer`(v4 내장) 금지.
+
+```bash
+grep -nE "(^|[^@])tailwindcss['\"]?\s*:|autoprefixer" apps/frontend/postcss.config.js && echo "FAIL" || echo "PASS"
+grep -n '@tailwindcss/postcss' apps/frontend/postcss.config.js || echo "FAIL: missing v4 plugin"
+```
+
+**PASS:** 첫 명령 0 hits + 두 번째 명령 매치. **FAIL:** `postcss.config.js`를 `{ plugins: { '@tailwindcss/postcss': {} } }`로 교체.

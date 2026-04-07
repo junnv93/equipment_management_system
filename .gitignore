@@ -147,11 +147,7 @@ apps/server/logs/
 # symlinks
 npm
 
-# Harness handoff files (session-specific, not tracked)
-.claude/contracts/
-.claude/evaluations/
-.claude/contract.md
-.claude/evaluation-report.md
+# (Harness handoff files are now tracked for cross-PC sync)
 
 # embedded repositories
 equipment_management_system/ .kombai/
