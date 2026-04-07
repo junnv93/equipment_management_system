@@ -45,6 +45,9 @@
 | AttachmentSection "검수보고서" | `getByText(/검수보고서/)` | `getByRole('heading', { name: /검수보고서/, level: 4 })` | h4, label, paragraph 4곳 매칭 → strict mode |
 | 교정 결과 선택 "적합" | `getByRole('option', { name: '적합' })` | `getByRole('option', { name: '적합', exact: true })` | "부적합", "조건부 적합"도 매칭. exact: true 필수 |
 | 첨부파일 탭 콘텐츠 | `tab.click()` 후 즉시 체크 | `goto('?tab=attachments')` + `emptyState.or(table)` 대기 | URL push 기반 탭 → tabpanel 콘텐츠 비동기 로딩. 직접 URL 접근이 안정적 |
+| 양식 페이지 검색 버튼 | `getByRole('button', { name: '검색', exact: true })` | `searchInput.press('Enter')` | 헤더 글로벌 검색(aria-label="검색") + 폼 검색 버튼 2개 충돌. Enter 키로 우회 |
+| 양식 업로드 다이얼로그 "개정 사유" | `dialog.getByText('개정 사유')` | `dialog.getByLabel('개정 사유')` | label("개정 사유") + 헬퍼 텍스트("UL-QP-03 §7.5에 따라 개정 사유…") 2개 매칭 → strict mode |
+| 양식 페이지 "개정 등록" 버튼 | 시드 없이 `getByRole('button', { name: /개정 등록/ })` | beforeAll에서 `POST /api/form-templates` (formName + formNumber + changeSummary + file)로 시드 후 사용 | 글로벌 시드는 form_templates를 만들지 않음. revise 모드 UI는 현행 row 존재해야 표시 |
 
 ---
 
