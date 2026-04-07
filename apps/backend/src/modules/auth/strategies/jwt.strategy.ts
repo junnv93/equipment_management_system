@@ -55,10 +55,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly usersService: UsersService,
     private readonly cacheService: SimpleCacheService
   ) {
+    const jwtSecret = configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      secretOrKey: jwtSecret,
       algorithms: ['HS256'],
       passReqToCallback: true, // req 객체를 validate()에 전달
     });
