@@ -412,7 +412,6 @@ export class DocumentService {
     let totalPurged = 0;
     let totalFailed = 0;
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const batch = await this.db
         .select({ id: documents.id, filePath: documents.filePath })

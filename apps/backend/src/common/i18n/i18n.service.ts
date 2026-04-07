@@ -32,7 +32,7 @@ export class I18nService implements OnModuleInit {
         this.logger.log(
           `i18n loaded: ${locale} (${Object.keys(this.messages[locale]!).length} keys)`
         );
-      } catch (error) {
+      } catch (_error) {
         this.logger.warn(
           `i18n messages not found for locale "${locale}" at ${join(__dirname, 'messages', `${locale}.json`)}. ` +
             `Ensure nest-cli.json assets includes "common/i18n/messages/*.json".`

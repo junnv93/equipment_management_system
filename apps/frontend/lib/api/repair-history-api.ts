@@ -36,7 +36,7 @@ export interface CreateRepairHistoryDto {
 }
 
 // 수리 이력 수정 DTO
-export interface UpdateRepairHistoryDto extends Partial<CreateRepairHistoryDto> {}
+export type UpdateRepairHistoryDto = Partial<CreateRepairHistoryDto>;
 
 // 수리 이력 조회 쿼리
 export interface RepairHistoryQuery {

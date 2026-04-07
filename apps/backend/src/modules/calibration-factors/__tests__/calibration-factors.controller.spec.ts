@@ -229,7 +229,7 @@ describe('CalibrationFactorsController', () => {
       const approveDto = {
         approverComment: '검토 완료',
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const mockReq = {
         user: {
           userId: approverId,
@@ -265,7 +265,7 @@ describe('CalibrationFactorsController', () => {
       const rejectDto = {
         rejectionReason: '값이 범위를 벗어남',
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const mockReq = {
         user: {
           userId: approverId,
@@ -301,7 +301,7 @@ describe('CalibrationFactorsController', () => {
         id: uuid,
         deleted: true,
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       const mockReq = {
         user: {
           userId: approverId,

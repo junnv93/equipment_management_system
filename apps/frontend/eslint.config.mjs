@@ -1,16 +1,10 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import nextPlugin from '@next/eslint-plugin-next';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import tseslint from 'typescript-eslint';
+import { sharedRules } from '../../eslint.shared.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-/** @type {import('eslint').Linter.FlatConfig[]} */
-const eslintConfig = [
+export default tseslint.config(
   {
     ignores: [
       'node_modules/**',
@@ -19,15 +13,18 @@ const eslintConfig = [
       'public/**',
       '*.config.js',
       '*.config.mjs',
+      '*.config.ts',
       'tests/e2e/**',
       '*.setup.js',
     ],
   },
   {
     files: ['**/*.{ts,tsx}'],
+    extends: [...tseslint.configs.recommended],
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: {
@@ -36,9 +33,8 @@ const eslintConfig = [
       },
     },
     plugins: {
-      '@typescript-eslint': tsPlugin,
       '@next/next': nextPlugin,
-      'react': reactPlugin,
+      react: reactPlugin,
       'react-hooks': reactHooksPlugin,
     },
     rules: {
@@ -62,22 +58,8 @@ const eslintConfig = [
       '@next/next/no-html-link-for-pages': 'error',
       '@next/next/no-img-element': 'warn',
 
-      // SSOT 회귀 방지: 잘못된 import 경로 차단 (error로 강화)
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['**/auth/rbac/roles.enum'],
-              message: 'Import UserRole from @equipment-management/schemas instead.',
-            },
-            {
-              group: ['**/auth/rbac/permissions.enum'],
-              message: 'Import Permission from @equipment-management/shared-constants instead.',
-            },
-          ],
-        },
-      ],
+      // SSOT 회귀 방지: 잘못된 import 경로 차단 (shared fragment)
+      ...sharedRules,
     },
     settings: {
       react: {
@@ -85,6 +67,4 @@ const eslintConfig = [
       },
     },
   },
-];
-
-export default eslintConfig;
+);

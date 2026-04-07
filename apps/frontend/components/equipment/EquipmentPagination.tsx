@@ -58,7 +58,7 @@ function EquipmentPaginationComponent({
 
       // 시작 위치 계산
       let startPage = Math.max(2, currentPage - Math.floor(maxVisiblePages / 2));
-      let endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
+      const endPage = Math.min(totalPages - 1, startPage + maxVisiblePages - 1);
 
       // 시작 위치 조정
       if (endPage - startPage < maxVisiblePages - 1) {

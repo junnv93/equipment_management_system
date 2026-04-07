@@ -100,7 +100,7 @@ export interface CreateCalibrationDto {
   intermediateCheckDate?: string;
 }
 
-export interface UpdateCalibrationDto extends Partial<CreateCalibrationDto> {}
+export type UpdateCalibrationDto = Partial<CreateCalibrationDto>;
 
 export interface ApproveCalibrationDto {
   version: number;

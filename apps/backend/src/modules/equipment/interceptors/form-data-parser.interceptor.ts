@@ -17,7 +17,7 @@ export class FormDataParserInterceptor implements NestInterceptor {
         try {
           request.body = { ...JSON.parse(request.body.data), ...request.body };
           delete request.body.data;
-        } catch (error) {
+        } catch (_error) {
           // 파싱 실패 시 무시
         }
       }
