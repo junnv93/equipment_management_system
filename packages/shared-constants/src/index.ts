@@ -58,7 +58,13 @@ export {
 export { Permission, PERMISSION_LABELS } from './permissions';
 
 // 역할-권한 매핑
-export { ROLE_PERMISSIONS, hasPermission, getPermissions } from './role-permissions';
+export {
+  ROLE_PERMISSIONS,
+  hasPermission,
+  getPermissions,
+  derivePermissionsFromRoles,
+  userHasPermission,
+} from './role-permissions';
 
 // 권한 카테고리
 export {
@@ -180,6 +186,10 @@ export {
   REPORT_EXPORT_MIME,
   MIME_TO_CATEGORY,
   getMimeCategory,
+  FORM_TEMPLATE_FILE_RULE,
+  FORM_TEMPLATE_ALLOWED_EXTENSIONS,
+  FORM_TEMPLATE_ALLOWED_MIMES,
+  resolveFormTemplateExtension,
   type FileTypeEntry,
   type DocumentFileRule,
   type MimeCategory,
@@ -225,8 +235,10 @@ export {
 export {
   FORM_CATALOG,
   FORM_NUMBERS,
+  FORM_NAMES,
   isFormImplemented,
   isFormDedicatedEndpoint,
+  getFormCatalogEntryByName,
   type FormCatalogEntry,
   type FormNumber,
 } from './form-catalog';

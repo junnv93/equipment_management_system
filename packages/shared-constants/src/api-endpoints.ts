@@ -456,9 +456,21 @@ export const API_ENDPOINTS = {
   // ============================================================================
   FORM_TEMPLATES: {
     LIST: '/api/form-templates',
-    DOWNLOAD: (formNumber: string) => `/api/form-templates/${formNumber}/download`,
-    UPLOAD: (formNumber: string) => `/api/form-templates/${formNumber}/upload`,
-    HISTORY: (formNumber: string) => `/api/form-templates/${formNumber}/history`,
+    /** row ID로 다운로드 (현행/과거 공통). 과거 row는 DOWNLOAD_FORM_TEMPLATE_HISTORY 권한 필요 */
+    DOWNLOAD_BY_ID: (id: string) => `/api/form-templates/${id}/download`,
+    /** 양식명 기준 개정 이력 조회 */
+    HISTORY_BY_NAME: '/api/form-templates/history',
+    /** 과거 formNumber로 검색 */
+    SEARCH_BY_NUMBER: '/api/form-templates/search',
+    /**
+     * 양식 템플릿 버전 생성 (최초 등록 + 개정 공통).
+     * 서비스가 기존 현행 row 존재 여부로 자동 분기:
+     * - 없으면: 단순 INSERT (최초 등록)
+     * - 있으면: 이전 row supersede + INSERT (개정)
+     */
+    CREATE: '/api/form-templates',
+    /** 동일 formNumber 파일 교체 (이력 보존 없음) */
+    REPLACE: '/api/form-templates/replace',
   },
 
   // ============================================================================

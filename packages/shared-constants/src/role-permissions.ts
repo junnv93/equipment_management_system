@@ -190,6 +190,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 양식 템플릿
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
+    Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY,
   ],
 
   // 시험소장: 명시적 화이트리스트 (UL-QP-18 등록/승인 완전 분리)
@@ -286,6 +287,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 양식 템플릿
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
+    Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY,
   ],
 
   // 시스템 관리자: 전체 권한 - CREATE_CALIBRATION(시험실무자/기술책임자만) - deprecated
@@ -320,4 +322,39 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
  */
 export function getPermissions(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] ?? [];
+}
+
+/**
+ * 역할 배열(JWT `roles` 클레임)로부터 유효 권한 집합을 파생합니다.
+ *
+ * SSOT: `ROLE_PERMISSIONS` 매핑이 유일한 소스. `PermissionsGuard`와 컨트롤러
+ * 레벨의 데이터 기반 권한 체크가 모두 이 함수를 사용하여 로직 중복을 제거합니다.
+ *
+ * 유효하지 않은 역할 문자열은 조용히 무시됩니다 (방어적 기본값 DENY).
+ */
+export function derivePermissionsFromRoles(roles: readonly string[] | undefined): Permission[] {
+  if (!roles || roles.length === 0) return [];
+  const result = new Set<Permission>();
+  for (const role of roles) {
+    const perms = ROLE_PERMISSIONS[role as UserRole];
+    if (perms) for (const p of perms) result.add(p);
+  }
+  return Array.from(result);
+}
+
+/**
+ * 사용자의 역할 목록이 특정 권한을 가지고 있는지 검사.
+ *
+ * 컨트롤러에서 "데이터에 의존하는" 권한 체크가 필요할 때 사용합니다.
+ * (예: 과거 양식 row인 경우에만 추가 권한 요구)
+ */
+export function userHasPermission(
+  roles: readonly string[] | undefined,
+  permission: Permission
+): boolean {
+  if (!roles) return false;
+  for (const role of roles) {
+    if (ROLE_PERMISSIONS[role as UserRole]?.includes(permission)) return true;
+  }
+  return false;
 }

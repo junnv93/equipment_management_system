@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Download, Upload, History } from 'lucide-react';
+import { Download, Upload, History, FilePlus } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -15,18 +15,23 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { downloadFormTemplate } from '@/lib/api/form-templates-api';
+import { downloadFormTemplateById } from '@/lib/api/form-templates-api';
 import type { FormTemplateListItem } from '@/lib/api/form-templates-api';
 import {
   FORM_TEMPLATES_TABLE_TOKENS,
   FORM_TEMPLATES_STATUS_TOKENS,
   FORM_TEMPLATES_MOTION,
 } from '@/lib/design-tokens';
-import FormTemplateUploadDialog from './FormTemplateUploadDialog';
+import FormTemplateUploadDialog, { type UploadDialogMode } from './FormTemplateUploadDialog';
 import FormTemplateHistoryDialog from './FormTemplateHistoryDialog';
 
 interface FormTemplatesTableProps {
   templates: FormTemplateListItem[];
+}
+
+interface UploadTarget {
+  template: FormTemplateListItem;
+  mode: UploadDialogMode;
 }
 
 export default function FormTemplatesTable({ templates }: FormTemplatesTableProps) {
@@ -34,10 +39,10 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
   const { can } = useAuth();
   const canManage = can(Permission.MANAGE_FORM_TEMPLATES);
 
-  const [uploadTarget, setUploadTarget] = useState<FormTemplateListItem | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<UploadTarget | null>(null);
   const [historyTarget, setHistoryTarget] = useState<FormTemplateListItem | null>(null);
 
-  const isRegistered = (tpl: FormTemplateListItem) => tpl.activeTemplate !== null;
+  const isRegistered = (tpl: FormTemplateListItem) => tpl.current !== null;
 
   return (
     <>
@@ -46,16 +51,13 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
           <TableHeader>
             <TableRow className={FORM_TEMPLATES_TABLE_TOKENS.headerRow}>
               <TableHead className={FORM_TEMPLATES_TABLE_TOKENS.headerCell}>
-                {t('table.formNumber')}
-              </TableHead>
-              <TableHead className={FORM_TEMPLATES_TABLE_TOKENS.headerCell}>
                 {t('table.formName')}
               </TableHead>
               <TableHead className={FORM_TEMPLATES_TABLE_TOKENS.headerCell}>
-                {t('table.retention')}
+                {t('table.formNumber')}
               </TableHead>
-              <TableHead className={`${FORM_TEMPLATES_TABLE_TOKENS.headerCell} text-center`}>
-                {t('table.version')}
+              <TableHead className={FORM_TEMPLATES_TABLE_TOKENS.headerCell}>
+                {t('table.retention')}
               </TableHead>
               <TableHead className={FORM_TEMPLATES_TABLE_TOKENS.headerCell}>
                 {t('table.lastUpload')}
@@ -77,35 +79,25 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
 
               return (
                 <TableRow
-                  key={tpl.formNumber}
+                  key={tpl.formName}
                   className={`${FORM_TEMPLATES_TABLE_TOKENS.rowHover} ${FORM_TEMPLATES_TABLE_TOKENS.rowStripe}`}
                 >
-                  {/* 양식 번호 — mono font 강조 + 상태 dot */}
+                  {/* 양식명 — 안정 식별자, mono + status dot */}
                   <TableCell>
                     <span className="inline-flex items-center gap-2">
                       <span
                         className={`${FORM_TEMPLATES_TABLE_TOKENS.statusDot} ${statusTokens.dot}`}
                         aria-label={registered ? t('status.registered') : t('status.unregistered')}
                       />
-                      <span className={FORM_TEMPLATES_TABLE_TOKENS.formNumber}>
-                        {tpl.formNumber}
-                      </span>
+                      <span className="text-sm font-medium">{tpl.formName}</span>
                     </span>
                   </TableCell>
 
-                  {/* 양식명 */}
-                  <TableCell className="text-sm">{tpl.name}</TableCell>
-
-                  {/* 보존연한 */}
-                  <TableCell className="text-sm text-muted-foreground">
-                    {tpl.retentionLabel}
-                  </TableCell>
-
-                  {/* 버전 */}
-                  <TableCell className="text-center">
-                    {tpl.activeTemplate ? (
-                      <span className={FORM_TEMPLATES_TABLE_TOKENS.version}>
-                        v{tpl.activeTemplate.version}
+                  {/* 현행 양식 번호 */}
+                  <TableCell>
+                    {tpl.current ? (
+                      <span className={FORM_TEMPLATES_TABLE_TOKENS.formNumber}>
+                        {tpl.current.formNumber}
                       </span>
                     ) : (
                       <Badge className={statusTokens.badge} variant="outline">
@@ -114,51 +106,78 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
                     )}
                   </TableCell>
 
-                  {/* 최종 업로드 */}
+                  {/* 보존연한 */}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {tpl.retentionLabel}
+                  </TableCell>
+
+                  {/* 최종 등록 */}
                   <TableCell className={FORM_TEMPLATES_TABLE_TOKENS.date}>
-                    {tpl.activeTemplate
-                      ? new Date(tpl.activeTemplate.uploadedAt).toLocaleDateString()
-                      : '-'}
+                    {tpl.current ? new Date(tpl.current.uploadedAt).toLocaleDateString() : '-'}
                   </TableCell>
 
                   {/* 파일명 */}
                   <TableCell className={FORM_TEMPLATES_TABLE_TOKENS.filename}>
-                    {tpl.activeTemplate?.originalFilename ?? '-'}
+                    {tpl.current?.originalFilename ?? '-'}
                   </TableCell>
 
                   {/* 액션 */}
                   <TableCell className="text-right">
                     <div className={FORM_TEMPLATES_TABLE_TOKENS.actionGroup}>
-                      {tpl.activeTemplate && (
+                      {tpl.current && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
-                          onClick={() => downloadFormTemplate(tpl.formNumber)}
-                          aria-label={`${t('download')} ${tpl.formNumber}`}
+                          onClick={() => downloadFormTemplateById(tpl.current!.id)}
+                          aria-label={`${t('download')} ${tpl.formName}`}
                         >
                           <Download className="h-3.5 w-3.5" />
                           {t('download')}
                         </Button>
                       )}
-                      {canManage && (
+                      {canManage && !tpl.current && (
                         <Button
                           variant="ghost"
                           size="sm"
                           className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
-                          onClick={() => setUploadTarget(tpl)}
-                          aria-label={`${t('upload')} ${tpl.formNumber}`}
+                          onClick={() => setUploadTarget({ template: tpl, mode: 'create' })}
+                          aria-label={`${t('register')} ${tpl.formName}`}
                         >
-                          <Upload className="h-3.5 w-3.5" />
-                          {t('upload')}
+                          <FilePlus className="h-3.5 w-3.5" />
+                          {t('register')}
                         </Button>
+                      )}
+                      {canManage && tpl.current && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
+                            onClick={() => setUploadTarget({ template: tpl, mode: 'create' })}
+                            aria-label={`${t('revise')} ${tpl.formName}`}
+                          >
+                            <FilePlus className="h-3.5 w-3.5" />
+                            {t('revise')}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
+                            onClick={() => setUploadTarget({ template: tpl, mode: 'replace' })}
+                            aria-label={`${t('replace')} ${tpl.formName}`}
+                          >
+                            <Upload className="h-3.5 w-3.5" />
+                            {t('replace')}
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="ghost"
                         size="sm"
                         className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
                         onClick={() => setHistoryTarget(tpl)}
-                        aria-label={`${t('history')} ${tpl.formNumber}`}
+                        aria-label={`${t('history')} ${tpl.formName}`}
                       >
                         <History className="h-3.5 w-3.5" />
                         {t('history')}
@@ -174,8 +193,9 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
 
       {uploadTarget && (
         <FormTemplateUploadDialog
-          formNumber={uploadTarget.formNumber}
-          formName={uploadTarget.name}
+          formName={uploadTarget.template.formName}
+          currentFormNumber={uploadTarget.template.current?.formNumber ?? null}
+          mode={uploadTarget.mode}
           open={!!uploadTarget}
           onOpenChange={(open) => {
             if (!open) setUploadTarget(null);
@@ -185,8 +205,7 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
 
       {historyTarget && (
         <FormTemplateHistoryDialog
-          formNumber={historyTarget.formNumber}
-          formName={historyTarget.name}
+          formName={historyTarget.formName}
           open={!!historyTarget}
           onOpenChange={(open) => {
             if (!open) setHistoryTarget(null);

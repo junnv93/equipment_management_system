@@ -242,6 +242,69 @@ export function getErrorMessage(error: unknown, defaultMessage = 'An error occur
 }
 
 /**
+ * 백엔드가 내려준 원본 에러 코드(`code` 필드)를 추출합니다.
+ *
+ * `toApiError`가 `mapBackendErrorCode`로 프론트엔드 EquipmentErrorCode에 매핑해 덮어쓰기 전에,
+ * 원본 백엔드 코드(예: `FORM_NUMBER_ALREADY_EXISTS`)를 그대로 얻고 싶을 때 사용합니다.
+ * 모듈별로 자신의 에러 코드 → i18n 키 매핑을 유지하기 위한 SSOT 진입점.
+ */
+export function getBackendErrorCode(error: unknown): string | undefined {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as Record<string, unknown>).response === 'object'
+  ) {
+    const axiosError = error as {
+      response?: { data?: { code?: unknown } };
+    };
+    const code = axiosError.response?.data?.code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  // ApiError 인스턴스에서도 꺼내기
+  if (error instanceof ApiError) return error.code;
+  return undefined;
+}
+
+/**
+ * 백엔드 에러 코드를 i18n 키로 번역하는 고차 유틸리티.
+ *
+ * 모듈별로 `{ [ErrorCode]: 'i18nKey' }` 매핑을 전달하면, 매칭되는 코드가 있을 때
+ * 해당 번역을 반환하고 없으면 `getErrorMessage(error)` 또는 `fallbackKey` 번역으로 폴백합니다.
+ *
+ * 에러 처리 로직이 분산되지 않고, 각 모듈이 자기 에러 맥락만 선언하면 되도록 설계되었습니다.
+ *
+ * @example
+ * ```ts
+ * const msg = translateApiError(error, t, {
+ *   codeMap: { FORM_NUMBER_ALREADY_EXISTS: 'uploadDialog.errorNumberExists' },
+ *   fallbackKey: 'uploadDialog.error',
+ * });
+ * toast.error(msg);
+ * ```
+ */
+export function translateApiError(
+  error: unknown,
+  t: (key: string) => string,
+  options: {
+    codeMap?: Readonly<Record<string, string>>;
+    fallbackKey?: string;
+  } = {}
+): string {
+  const { codeMap, fallbackKey } = options;
+  const backendCode = getBackendErrorCode(error);
+  if (backendCode && codeMap && codeMap[backendCode]) {
+    return t(codeMap[backendCode]);
+  }
+  if (fallbackKey) {
+    // t()가 키 없을 때 키 문자열을 반환하는 next-intl 기본값을 받아들입니다.
+    const translated = t(fallbackKey);
+    if (translated && translated !== fallbackKey) return translated;
+  }
+  return getErrorMessage(error);
+}
+
+/**
  * 404 에러인지 확인
  *
  * @param error - 알 수 없는 에러 객체

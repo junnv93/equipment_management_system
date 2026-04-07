@@ -537,8 +537,11 @@ export const queryKeys = {
   formTemplates: {
     all: ['formTemplates'] as const,
     list: () => [...queryKeys.formTemplates.all, 'list'] as const,
-    history: (formNumber: string) =>
-      [...queryKeys.formTemplates.all, 'history', formNumber] as const,
+    // 개정 이력은 양식명(안정 키) 기준으로 조회
+    historyByName: (formName: string) =>
+      [...queryKeys.formTemplates.all, 'history', formName] as const,
+    searchByNumber: (formNumber: string) =>
+      [...queryKeys.formTemplates.all, 'search', formNumber] as const,
   },
   breadcrumbs: {
     all: ['breadcrumb'] as const,

@@ -1,51 +1,71 @@
 {
-  "title": "\uc591\uc2dd \uad00\ub9ac",
-  "description": "UL-QP-18 \uc591\uc2dd \ud15c\ud50c\ub9bf\uc744 \uad00\ub9ac\ud569\ub2c8\ub2e4.",
+  "title": "양식 관리",
+  "description": "UL-QP-18 양식 템플릿을 관리합니다. 양식명은 절차서 공식 명칭(안정)이고, 양식 번호는 개정마다 변경됩니다.",
   "table": {
-    "formNumber": "\uc591\uc2dd \ubc88\ud638",
-    "formName": "\uc591\uc2dd\uba85",
-    "retention": "\ubcf4\uc874\uc5f0\ud55c",
-    "version": "\ubc84\uc804",
-    "lastUpload": "\ucd5c\uc885 \uc5c5\ub85c\ub4dc",
-    "filename": "\ud30c\uc77c\uba85",
-    "actions": "\uc791\uc5c5",
-    "noTemplate": "\ubbf8\ub4f1\ub85d"
+    "formName": "양식명",
+    "formNumber": "현행 번호",
+    "retention": "보존연한",
+    "lastUpload": "최종 등록",
+    "filename": "파일명",
+    "actions": "작업",
+    "noTemplate": "미등록"
   },
   "stats": {
-    "total": "\uc804\uccb4 \uc591\uc2dd",
-    "registered": "\ub4f1\ub85d \uc644\ub8cc",
-    "unregistered": "\ubbf8\ub4f1\ub85d"
+    "total": "전체 양식",
+    "registered": "등록 완료",
+    "unregistered": "미등록"
   },
   "status": {
-    "registered": "\ub4f1\ub85d",
-    "unregistered": "\ubbf8\ub4f1\ub85d"
+    "registered": "등록",
+    "unregistered": "미등록"
   },
-  "download": "\ub2e4\uc6b4\ub85c\ub4dc",
-  "upload": "\uc5c5\ub85c\ub4dc",
-  "history": "\uc774\ub825",
+  "download": "다운로드",
+  "register": "등록",
+  "revise": "개정 등록",
+  "replace": "파일 교체",
+  "history": "개정 이력",
+  "search": {
+    "placeholder": "과거 양식 번호로 검색 (예: UL-QP-18-01)",
+    "button": "검색",
+    "noResult": "해당 번호의 양식을 찾을 수 없습니다.",
+    "foundCurrent": "검색된 번호는 현재 유효한 양식입니다.",
+    "foundHistoric": "이 양식은 현재 {currentFormNumber}로 개정되었습니다.",
+    "viewCurrent": "현행 양식 보기"
+  },
   "uploadDialog": {
-    "title": "\uc591\uc2dd \uc5c5\ub85c\ub4dc",
-    "description": "{formNumber} {formName} \uc591\uc2dd\uc758 \uc0c8 \ubc84\uc804\uc744 \uc5c5\ub85c\ub4dc\ud569\ub2c8\ub2e4.",
-    "selectFile": "\ud30c\uc77c \uc120\ud0dd",
-    "dropzoneHint": ".docx, .xlsx \ud30c\uc77c\ub9cc \uc9c0\uc6d0",
-    "selectedFile": "\uc120\ud0dd\ub428: {filename}",
-    "uploading": "\uc5c5\ub85c\ub4dc \uc911...",
-    "success": "\uc591\uc2dd\uc774 \uc5c5\ub85c\ub4dc\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
-    "error": "\uc591\uc2dd \uc5c5\ub85c\ub4dc\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4."
+    "title": "양식 등록",
+    "descriptionInitial": "{formName} 양식을 최초로 등록합니다. 양식 번호를 입력하세요.",
+    "descriptionRevise": "{formName}의 개정판을 등록합니다. 새 양식 번호는 기존 번호({currentFormNumber})와 달라야 합니다.",
+    "descriptionReplace": "{formName} ({currentFormNumber})의 파일만 교체합니다. 이전 파일은 보존되지 않습니다.",
+    "modeRevise": "개정 등록 (새 번호 발급)",
+    "modeReplace": "파일 교체 (동일 번호 유지)",
+    "modeHint": "양식 번호가 바뀌면 '개정 등록', 단순 실수 수정이면 '파일 교체'",
+    "newFormNumber": "새 양식 번호",
+    "newFormNumberPlaceholder": "예: UL-QP-26-02",
+    "newFormNumberHint": "절차서상 새로 발급된 번호를 정확히 입력하세요",
+    "selectFile": "파일 선택",
+    "dropzoneHint": ".docx, .xlsx 파일만 지원",
+    "uploading": "업로드 중...",
+    "successCreate": "양식이 등록되었습니다.",
+    "successReplace": "양식 파일이 교체되었습니다.",
+    "error": "양식 등록에 실패했습니다.",
+    "errorNumberExists": "이미 사용된 양식 번호입니다."
   },
   "historyDialog": {
-    "title": "\uc591\uc2dd \uc774\ub825",
-    "version": "\ubc84\uc804",
-    "filename": "\ud30c\uc77c\uba85",
-    "uploadDate": "\uc5c5\ub85c\ub4dc\uc77c",
-    "status": "\uc0c1\ud0dc",
-    "active": "\ud604\uc7ac",
-    "inactive": "\uc774\uc804",
-    "empty": "\uc774\ub825\uc774 \uc5c6\uc2b5\ub2c8\ub2e4."
+    "title": "개정 이력",
+    "formNumber": "양식 번호",
+    "filename": "파일명",
+    "uploadDate": "등록일",
+    "status": "상태",
+    "current": "현행",
+    "superseded": "개정됨",
+    "supersededAt": "{date} 개정",
+    "empty": "개정 이력이 없습니다.",
+    "downloadHistoryDenied": "과거 양식 다운로드는 품질책임자/시험소장/시스템관리자만 가능합니다"
   },
-  "empty": "\ub4f1\ub85d\ub41c \uc591\uc2dd\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
-  "emptyDescription": "\uc591\uc2dd\uc774 \uad6c\uc131\ub418\uba74 \uc5ec\uae30\uc5d0 \ud45c\uc2dc\ub429\ub2c8\ub2e4.",
-  "error": "\uc591\uc2dd \ubaa9\ub85d\uc744 \ubd88\ub7ec\uc624\ub294 \ub370 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.",
-  "errorDescription": "\ub124\ud2b8\uc6cc\ud06c \uc5f0\uacb0\uc744 \ud655\uc778\ud558\uace0 \ub2e4\uc2dc \uc2dc\ub3c4\ud574 \uc8fc\uc138\uc694.",
-  "retry": "\ub2e4\uc2dc \uc2dc\ub3c4"
+  "empty": "등록된 양식이 없습니다.",
+  "emptyDescription": "양식이 구성되면 여기에 표시됩니다.",
+  "error": "양식 목록을 불러오는 데 실패했습니다.",
+  "errorDescription": "네트워크 연결을 확인하고 다시 시도해 주세요.",
+  "retry": "다시 시도"
 }

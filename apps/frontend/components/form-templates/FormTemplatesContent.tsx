@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import FormTemplatesTable from './FormTemplatesTable';
+import FormTemplateSearchBar from './FormTemplateSearchBar';
 
 export default function FormTemplatesContent() {
   const t = useTranslations('form-templates');
@@ -32,7 +33,7 @@ export default function FormTemplatesContent() {
   });
 
   const totalCount = templates?.length ?? 0;
-  const registeredCount = templates?.filter((tpl) => tpl.activeTemplate !== null).length ?? 0;
+  const registeredCount = templates?.filter((tpl) => tpl.current !== null).length ?? 0;
   const unregisteredCount = totalCount - registeredCount;
 
   return (
@@ -128,8 +129,13 @@ export default function FormTemplatesContent() {
             </div>
           </div>
 
-          {/* 테이블 */}
+          {/* 과거 번호 검색 */}
           <div className="mt-6">
+            <FormTemplateSearchBar />
+          </div>
+
+          {/* 테이블 */}
+          <div className="mt-4">
             <FormTemplatesTable templates={templates} />
           </div>
         </div>

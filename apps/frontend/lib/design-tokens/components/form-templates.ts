@@ -232,7 +232,38 @@ export const FORM_TEMPLATES_UPLOAD_TOKENS = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 9. 모션
+// 9. 과거 번호 검색바
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const FORM_TEMPLATES_SEARCH_BAR_TOKENS = {
+  /** 검색바 컨테이너 */
+  container: [
+    'rounded-lg border border-border bg-card p-4',
+    TRANSITION_PRESETS.fastShadowBorder,
+    'hover:border-border/80',
+  ].join(' '),
+
+  /** 입력 행 (아이콘 + 입력 + 버튼) */
+  inputRow: 'flex items-center gap-2',
+
+  /** 안내 아이콘 */
+  leadingIcon: 'h-4 w-4 text-muted-foreground',
+
+  /** 결과 영역 */
+  resultBlock: 'mt-3 space-y-2 text-sm',
+
+  /** 결과 없음/보조 텍스트 */
+  secondaryText: 'text-sm text-muted-foreground',
+
+  /** 현행 → 과거 화살표 행 */
+  relationRow: 'flex items-center justify-between gap-3',
+
+  /** 과거 번호 배지 (탈락 상태) */
+  supersededBadge: 'opacity-70',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10. 모션
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const FORM_TEMPLATES_MOTION = {

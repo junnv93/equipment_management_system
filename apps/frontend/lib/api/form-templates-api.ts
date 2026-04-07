@@ -2,63 +2,117 @@ import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { transformSingleResponse } from './utils/response-transformers';
 
-export interface FormTemplateListItem {
+/**
+ * 양식 템플릿 API 클라이언트.
+ *
+ * 식별자 모델: formName(안정) + formNumber(가변). 메타데이터는 formName 기준.
+ * 엔드포인트 설계: 최초 등록과 개정 등록은 동일한 `POST /form-templates`를 사용합니다.
+ * 백엔드 서비스가 기존 현행 row 존재 여부로 자동 분기합니다.
+ */
+
+export interface FormTemplateCurrentSummary {
+  id: string;
   formNumber: string;
-  name: string;
+  originalFilename: string;
+  uploadedAt: string;
+  uploadedBy: string | null;
+}
+
+export interface FormTemplateListItem {
+  formName: string;
   retentionLabel: string;
   implemented: boolean;
-  activeTemplate: {
-    id: string;
-    version: number;
-    originalFilename: string;
-    uploadedAt: string;
-    uploadedBy: string | null;
-  } | null;
+  initialFormNumber: string;
+  current: FormTemplateCurrentSummary | null;
 }
 
 export interface FormTemplateHistoryItem {
   id: string;
   formNumber: string;
-  version: number;
-  storageKey: string;
   originalFilename: string;
   mimeType: string;
   fileSize: number;
-  isActive: boolean;
+  isCurrent: boolean;
   uploadedBy: string | null;
   uploadedAt: string;
+  supersededAt: string | null;
 }
+
+export interface FormTemplateSearchResult {
+  match: FormTemplateHistoryItem | null;
+  currentForSameForm: FormTemplateHistoryItem | null;
+}
+
+// ── 조회 ──────────────────────────────────────────────────────────────────
 
 export async function listFormTemplates(): Promise<FormTemplateListItem[]> {
   const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.LIST);
-  const data = response.data?.data ?? response.data;
-  return data;
+  return response.data?.data ?? response.data;
 }
 
-export async function downloadFormTemplate(formNumber: string): Promise<void> {
+export async function listFormTemplateHistoryByName(
+  formName: string
+): Promise<FormTemplateHistoryItem[]> {
+  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.HISTORY_BY_NAME, {
+    params: { formName },
+  });
+  return response.data?.data ?? response.data;
+}
+
+export async function searchFormTemplateByNumber(
+  formNumber: string
+): Promise<FormTemplateSearchResult> {
+  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.SEARCH_BY_NUMBER, {
+    params: { formNumber },
+  });
+  return response.data?.data ?? response.data;
+}
+
+// ── 다운로드 ──────────────────────────────────────────────────────────────
+
+/** row ID 기반 다운로드. 파일명/MIME 타입은 서버 응답 헤더가 SSOT */
+export async function downloadFormTemplateById(id: string): Promise<void> {
   const { downloadFile } = await import('./utils/download-file');
   await downloadFile({
-    url: API_ENDPOINTS.FORM_TEMPLATES.DOWNLOAD(formNumber),
-    filename: `${formNumber}_양식.docx`,
+    url: API_ENDPOINTS.FORM_TEMPLATES.DOWNLOAD_BY_ID(id),
+    // filename은 생략 — 서버 Content-Disposition 헤더를 SSOT로 사용
   });
 }
 
-export async function uploadFormTemplate(
-  formNumber: string,
-  file: File
-): Promise<FormTemplateHistoryItem> {
+// ── 변경 ──────────────────────────────────────────────────────────────────
+
+/**
+ * 양식 템플릿 버전 생성.
+ * - 현행 row 없음 → 최초 등록
+ * - 현행 row 있음 → 개정 등록 (자동으로 이전 row supersede)
+ *
+ * 호출자는 "최초인지 개정인지"를 구분할 필요 없음. 계약 단순화.
+ */
+export async function createFormTemplateVersion(params: {
+  formName: string;
+  formNumber: string;
+  file: File;
+}): Promise<FormTemplateHistoryItem> {
   const formData = new FormData();
-  formData.append('file', file);
-  const response = await apiClient.post(API_ENDPOINTS.FORM_TEMPLATES.UPLOAD(formNumber), formData, {
+  formData.append('formName', params.formName);
+  formData.append('formNumber', params.formNumber);
+  formData.append('file', params.file);
+  const response = await apiClient.post(API_ENDPOINTS.FORM_TEMPLATES.CREATE, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return transformSingleResponse(response);
 }
 
-export async function getFormTemplateHistory(
-  formNumber: string
-): Promise<FormTemplateHistoryItem[]> {
-  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.HISTORY(formNumber));
-  const data = response.data?.data ?? response.data;
-  return data;
+/** 파일 교체: 동일 formNumber 내 파일만 교체. 이력 보존 없음 */
+export async function replaceFormTemplateFile(params: {
+  formName: string;
+  file: File;
+}): Promise<FormTemplateHistoryItem> {
+  const formData = new FormData();
+  formData.append('formName', params.formName);
+  formData.append('file', params.file);
+  const response = await apiClient.post(API_ENDPOINTS.FORM_TEMPLATES.REPLACE, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return transformSingleResponse(response);
 }

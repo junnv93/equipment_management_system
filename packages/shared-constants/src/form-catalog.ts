@@ -120,3 +120,26 @@ export function isFormImplemented(formNumber: string): boolean {
 export function isFormDedicatedEndpoint(formNumber: string): boolean {
   return FORM_CATALOG[formNumber]?.dedicatedEndpoint === true;
 }
+
+/**
+ * 양식명 → 카탈로그 엔트리 인덱스 (빌드 타임 구성, O(1) 조회).
+ *
+ * FORM_CATALOG 키는 `initialFormNumber`(최초 등록 시점의 번호)이지만,
+ * 런타임에서 양식명(안정 식별자)으로 메타데이터를 찾는 경우가 많아 역인덱스를 미리 구성합니다.
+ */
+const FORM_CATALOG_BY_NAME: ReadonlyMap<string, FormCatalogEntry> = new Map(
+  Object.values(FORM_CATALOG).map((entry) => [entry.name, entry])
+);
+
+/**
+ * 양식명으로 카탈로그 엔트리 조회 (O(1)).
+ *
+ * 양식 번호가 개정되어도 양식명은 변하지 않으므로, DB의 `form_templates.formName`을
+ * FORM_CATALOG 메타데이터(retention/implemented/dedicatedEndpoint)에 매핑할 때 사용.
+ */
+export function getFormCatalogEntryByName(name: string): FormCatalogEntry | undefined {
+  return FORM_CATALOG_BY_NAME.get(name);
+}
+
+/** 카탈로그의 모든 양식명 (절차서 공식 명칭) */
+export const FORM_NAMES: readonly string[] = Array.from(FORM_CATALOG_BY_NAME.keys());
