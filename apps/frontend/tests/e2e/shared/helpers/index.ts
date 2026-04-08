@@ -4,3 +4,4 @@ export * from './db-cleanup';
 export * from './api-helpers';
 export * from './sticky-helpers';
 export * from './toast-helpers';
+export * from './download-helpers';
