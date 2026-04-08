@@ -63,6 +63,7 @@ import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from './seed-data/software/equipmen
 import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-requests.seed';
 import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
 import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
+import { NOTIFICATIONS_SEED_DATA } from './seed-data/admin/notifications.seed';
 
 // Utilities
 import { verifySeed, printVerificationResults } from './utils/verification';
@@ -100,6 +101,7 @@ async function main(): Promise<void> {
 
     const tables = [
       'audit_logs',
+      'notifications',
       'equipment_attachments',
       'equipment_requests',
       'disposal_requests',
@@ -302,6 +304,14 @@ async function main(): Promise<void> {
           db
             .insert(schema.auditLogs)
             .values(AUDIT_LOGS_SEED_DATA)
+            .then(() => {}),
+      },
+      {
+        label: `Notifications (${NOTIFICATIONS_SEED_DATA.length})`,
+        fn: () =>
+          db
+            .insert(schema.notifications)
+            .values(NOTIFICATIONS_SEED_DATA)
             .then(() => {}),
       },
     ];
