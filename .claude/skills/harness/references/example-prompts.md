@@ -400,9 +400,17 @@ parent locator 를 좁힌 뒤 `getByRole('button', { name: '수정' })` 사용. 
 영향 범위: 자체점검/중간점검/케이블/장비/SW/교정계획 등 거의 모든 행 액션 카드.
 ```
 
-### ~~🟡 MEDIUM — useToast 가 시각 div + aria-live status 두 곳에 동일 텍스트 발화 (strict mode 충돌)~~ ✅ False Positive (35차 entropy 검증, 2026-04-08)
+### ~~🟡 MEDIUM → 🚨 HIGH — useToast 분리 상태 머신 (silent production bug) — toast-ssot-dedup~~ ✅ 완료 (36차, 2026-04-08)
 
-> Radix Toast의 의도된 a11y dual presentation (시각 토스트 + visually-hidden announcer). 컴포넌트 수정 금지. e2e는 `expectToastVisible` 헬퍼(`apps/frontend/tests/e2e/shared/helpers/toast-helpers.ts`)가 `li[role="status"]`로 시각 토스트만 매칭하여 strict-mode 충돌 회피.
+> **35차 false-positive 판정 정정**: Radix dual presentation 자체는 a11y 의도가 맞으나, 그 조사 과정에서 진짜 SSOT 위반이 드러났다.
+>
+> **실제 문제**: `apps/frontend/hooks/use-toast.ts` (TOAST_REMOVE_DELAY=1000000ms) ↔ `apps/frontend/components/ui/use-toast.ts` (1000ms) 두 파일이 각자의 private `memoryState` + `listeners` 보유. `<Toaster />`는 후자만 구독. 전자를 import하던 6개 컴포넌트(`disposal/{Cancel,Review,Approval,Request}Dialog`, `MaintenanceHistorySection`, `admin/audit-logs/AuditLogsContent`)의 `toast()` 호출은 별도 state로 dispatch되어 **화면 렌더 0건 — silent production bug**.
+>
+> **해결**: 6개 import path → `@/components/ui/use-toast`로 마이그레이션, `hooks/use-toast.ts` 삭제. e2e 5개 spec(`s19-receive-with-certificate`, `incident-history-ui`, `intermediate-check`, `permission-error`, `10-cas-version-conflict`)을 `expectToastVisible`/`toastLocator` helper로 일원화. `verify-frontend-state` Step 10/11 (useToast 단일 경로 + e2e 토스트 helper 강제) 신설.
+>
+> **검증**: tsc 0, frontend test 99/99, build PASS, `@/hooks/use-toast` grep 0 hit. /verify-implementation 4스킬 PASS, /review-architecture 6 area PASS.
+>
+> **교훈**: 모듈-스코프 closure state(`memoryState`, `listeners` 배열)는 import path 단위로 격리됨 — singleton 가정이 path divergence로 깨질 수 있음. file dedup이 아니라 React module instance graph 점검이 본질.
 
 ### ~~🟡 MEDIUM — useToast 중복 (legacy entry)~~
 

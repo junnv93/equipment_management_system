@@ -21,6 +21,7 @@
 - [ ] WF-35 spec: `waitForTimeout(1_500)` → `expect.poll` 기반 refetch 대기로 결정성 향상 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:105` — 2026-04-08
 - [ ] `shared-test-data.ts`에 `FRONTEND_URL` 상수 추가 + WF-35 spec 의 `'http://localhost:3000'` 폴백 치환 — `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`, `wf-35-cas-ui-recovery.spec.ts:30` — 2026-04-08
 - [ ] 백엔드 NC Redis detail 캐시가 `updateWithVersion` 409 실패 경로에서도 무효화되는지 확인 (stale → 재시도 재-409 flakiness 방지) — `apps/backend/src/modules/non-conformances/non-conformances.service.ts` — 2026-04-08
+- [ ] toast helper 미적용 e2e spec follow-up migration — 36차 toast-ssot-dedup scope 외에서 토스트 텍스트로 의심되는 직접 매칭 잔존: `equipment-form-errors.spec.ts:202/270/431` (`/네트워크|연결|오류|실패/i`, `/서버|오류|실패/i`), `disposal-completed.spec.ts:19`, `disposal-final-approval.spec.ts:47`, `disposal-review-tech-manager.spec.ts:40`, `s31-detail-ui.spec.ts:49`, `s06-plan-process-continuity.spec.ts:210`, `s04-post-approval.spec.ts:24`, `full-workflow.spec.ts:182`. 일부는 상태 배지 false positive지만 폼 에러/disposal 류는 실제 토스트일 가능성 — 라인별 컨텍스트 확인 후 `expectToastVisible`로 일괄 마이그레이션 — 2026-04-08
 - [x] form-templates-ui.spec.ts beforeAll 시드 race condition — 해결: 2026-04-07 — `fix/form-templates-seed-race` — create 409 시 replace 폴백 재시도
 - [x] Mobile Chrome viewport에서 sticky header가 form-templates 테이블 row 액션 가로챔 — 해결: 2026-04-07 — TC-UI-04/05에서 `scrollIntoView({block: 'center'})`로 버튼을 화면 중앙 배치 후 클릭 (Playwright 기본 `scrollIntoViewIfNeeded`는 'nearest'라 sticky header 아래에 걸림)
 
