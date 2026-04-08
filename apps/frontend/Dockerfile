@@ -1,89 +1,82 @@
+# =============================================================================
+# Frontend Dockerfile — multi-stage with strict layer caching
+# =============================================================================
+# Stage layout:
+#   base       → corepack + pnpm 만 (이미지 캐싱 anchor)
+#   deps       → workspace manifest 만 복사하여 설치 (lockfile-only 캐시 레이어)
+#   development→ deps + 소스 (HMR 용)
+#   builder    → deps + 소스 빌드 (Next.js standalone)
+#   production → standalone server.js + 정적 에셋만 (node_modules 불필요)
+#
+# 보안:
+#   - 모든 런타임 stage 는 built-in node 사용자 (UID/GID 1000) 로 실행
+#   - 글로벌 npm 설치(pnpm/typescript/rimraf) 제거 → workspace devDeps 로 일원화
+# =============================================================================
+
+# ----- base ------------------------------------------------------------------
 FROM node:20-alpine AS base
 WORKDIR /app
+RUN apk add --no-cache libc6-compat \
+ && corepack enable && corepack prepare pnpm@10.7.1 --activate
 
-# 공통 의존성 레이어
+# ----- deps (lockfile-only 레이어) -------------------------------------------
 FROM base AS deps
-RUN apk add --no-cache libc6-compat && \
-    npm install -g pnpm@10.7.1 next typescript rimraf
-
-# 의존성 파일만 복사하여 레이어 캐싱 활용
-COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
-COPY packages/schemas/package.json ./packages/schemas/
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/frontend/package.json ./apps/frontend/
-
-# 재현 가능한 빌드를 위해 lockfile 고정
+COPY packages/schemas/package.json ./packages/schemas/
+COPY packages/shared-constants/package.json ./packages/shared-constants/
+COPY packages/db/package.json ./packages/db/
 RUN pnpm install --frozen-lockfile
 
-# 개발 환경
+# ----- development -----------------------------------------------------------
 FROM base AS development
-WORKDIR /app
-
-# 필요한 개발 도구 설치
-RUN apk add --no-cache curl && \
-    npm install -g pnpm@10.7.1 next typescript rimraf
-
-# deps 단계에서 설치한 의존성 복사
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages ./packages
 COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
-
-# 소스 코드 복사
+COPY --from=deps /app/packages ./packages
 COPY . .
-
-# schemas 패키지 빌드
-WORKDIR /app/packages/schemas
-RUN rimraf dist && npx tsc -p tsconfig.json --skipLibCheck
-
-# 프론트엔드 작업 디렉토리로 이동
-WORKDIR /app/apps/frontend
-
-# pnpm 경로 설정
-ENV PNPM_HOME=/usr/local/bin
-ENV PATH=${PNPM_HOME}:${PATH}:/app/node_modules/.bin
-
-ENV NODE_ENV=development
-ENV PORT=3000
+# shared 패키지 사전 빌드 (Next.js dev compiler 가 dist/ 참조)
+RUN pnpm --filter schemas build && pnpm --filter shared-constants build
+RUN chown -R node:node /app
+USER node
+ENV NODE_ENV=development \
+    PORT=3000 \
+    NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
+CMD ["pnpm", "--filter", "frontend", "run", "dev"]
 
-# 프론트엔드 서비스 실행
-CMD ["npm", "run", "dev"]
-
-# 빌드 환경
-FROM base AS build
-WORKDIR /app
+# ----- builder ---------------------------------------------------------------
+FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
+COPY --from=deps /app/packages ./packages
 COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --filter schemas build \
+ && pnpm --filter shared-constants build \
+ && pnpm --filter frontend build
 
-# 필요한 도구 설치
-RUN npm install -g typescript rimraf
-
-# 스키마 빌드 후 프론트엔드 빌드
-RUN cd packages/schemas && rimraf dist && npx tsc -p tsconfig.json --skipLibCheck
-RUN cd apps/frontend && npm run build
-
-ENV NEXT_TELEMETRY_DISABLED 1
-
-# 프로덕션 환경 (standalone — node_modules 불필요)
+# ----- production ------------------------------------------------------------
 FROM base AS production
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV NEXT_TELEMETRY_DISABLED=1
+# wget for HEALTHCHECK + tini for proper signal forwarding
+RUN apk add --no-cache wget tini
 
-# 보안을 위해 루트가 아닌 사용자로 전환
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+ENV NODE_ENV=production \
+    PORT=3000 \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0
 
-# standalone 서버 복사 (모노레포 구조 유지됨)
-COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
-# public + static 에셋은 server.js 기준 상대 경로에 배치
-COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/public ./apps/frontend/public
-COPY --from=build --chown=nextjs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
+# Next.js standalone output (모노레포 구조 보존)
+COPY --from=builder --chown=node:node /app/apps/frontend/.next/standalone ./
+COPY --from=builder --chown=node:node /app/apps/frontend/public ./apps/frontend/public
+COPY --from=builder --chown=node:node /app/apps/frontend/.next/static ./apps/frontend/.next/static
 
-USER nextjs
-
+USER node
 EXPOSE 3000
 
-# standalone 서버 실행 (node_modules 없이 단일 파일 서버)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1:3000/api/health || exit 1
+
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "apps/frontend/server.js"]

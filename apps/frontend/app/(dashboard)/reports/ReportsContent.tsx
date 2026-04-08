@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { useGenerateReport, ReportGenerationResult } from '@/hooks/use-reports';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -51,10 +51,12 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import teamsApi, { type Team } from '@/lib/api/teams-api';
 import { ReportsStatsSection } from '@/components/reports/ReportsStatsSection';
 import { useReportsFilters } from '@/hooks/use-reports-filters';
-import type { UIReportsFilters, ReportCalibrationStatus } from '@/lib/utils/reports-filter-utils';
+import {
+  ALL_SENTINEL,
+  type UIReportsFilters,
+  type ReportCalibrationStatus,
+} from '@/lib/utils/reports-filter-utils';
 
-/** Radix Select.Item은 빈 문자열 value를 허용하지 않으므로 센티널 사용 */
-const ALL_SENTINEL = '__all__';
 const toSelectValue = (v: string) => (v === '' ? ALL_SENTINEL : v);
 const fromSelectValue = (v: string) => (v === ALL_SENTINEL ? '' : v);
 
@@ -83,9 +85,11 @@ export default function ReportsContent(_props: ReportsContentProps) {
   // customDateRange는 URL의 ISO 문자열을 Date 객체로 역직렬화
   const customDateRange: DateRange | undefined = useMemo(() => {
     if (!filters.customDateFrom && !filters.customDateTo) return undefined;
+    // parseISO: yyyy-MM-dd → 로컬 자정 (KST). new Date('yyyy-MM-dd')는 UTC 자정으로
+    // 파싱되어 KST 표시 시 하루 전으로 보이는 회귀를 방지.
     return {
-      from: filters.customDateFrom ? new Date(filters.customDateFrom) : undefined,
-      to: filters.customDateTo ? new Date(filters.customDateTo) : undefined,
+      from: filters.customDateFrom ? parseISO(filters.customDateFrom) : undefined,
+      to: filters.customDateTo ? parseISO(filters.customDateTo) : undefined,
     };
   }, [filters.customDateFrom, filters.customDateTo]);
 

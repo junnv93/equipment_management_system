@@ -53,6 +53,7 @@ export const AUDIT_ACTION_BADGE_TOKENS: Record<AuditAction, string> = {
   revision: getSemanticBadgeClasses('warning'),
   link: getSemanticBadgeClasses('ok'),
   unlink: getSemanticBadgeClasses('neutral'),
+  access_denied: getSemanticBadgeClasses('critical'),
 };
 
 /**
@@ -424,6 +425,7 @@ export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
   revision: 'bg-brand-warning',
   link: 'bg-brand-ok',
   unlink: 'bg-brand-text-muted',
+  access_denied: 'bg-brand-critical',
 };
 
 // ============================================================================

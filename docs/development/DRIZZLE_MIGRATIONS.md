@@ -108,6 +108,67 @@ npx drizzle-kit migrate    # "applied successfully" (실제로는 재실행 안 
 npx drizzle-kit generate   # "No schema changes, nothing to migrate"
 ```
 
+## 6. 운영(prod) first-apply 사전 가드 (text→uuid USING 캐스트)
+
+### 배경
+
+`drizzle-kit generate` 가 만든 `ALTER COLUMN ... SET DATA TYPE uuid USING col::uuid`
+는 컬럼에 비-UUID 형식 string 이 1건이라도 잔존하면 트랜잭션 abort 합니다.
+generate 가 자동 추가하는 backfill UPDATE 는 일반적으로 `NOT IN (SELECT id FROM users)`
+형태라 **UUID 포맷이 아닌 임의 string (레거시 사번 등)** 은 통과시킵니다.
+
+이 함정은 dev 데이터(seed)에서는 노출되지 않고 운영 first-apply 시점에만 폭발합니다.
+
+### 사례: 0006_gray_sersi.sql
+
+`equipment.requested_by`, `equipment.approved_by` 두 컬럼을 text→uuid 로 변환.
+dev 통과(20행, 모두 UUID), 운영 미적용 상태이므로 first-apply 전 사전 가드 필수.
+
+### 절차 (모든 text→uuid 캐스트 마이그레이션 공통)
+
+1. **사전 가드 스크립트 작성** (`drizzle/manual/YYYYMMDD_pre_NNNN_uuid_cast_guard.sql`)
+   - 정규식으로 비-UUID 값을 NULL 로 backfill
+   - `BEGIN`/`COMMIT` 트랜잭션 + `\set ON_ERROR_STOP on`
+   - `RAISE NOTICE` 로 sanitize 행 수 출력 (감사 추적용)
+   - 멱등(반복 실행 안전)
+   - 예시: `apps/backend/drizzle/manual/20260408_pre_0006_uuid_cast_guard.sql`
+2. **운영 적용 순서**
+
+   ```bash
+   # 1) 사전 가드 (수동, 1회)
+   psql "$DATABASE_URL" -f apps/backend/drizzle/manual/YYYYMMDD_pre_NNNN_uuid_cast_guard.sql
+
+   # 2) 일반 마이그레이션
+   pnpm --filter backend run db:migrate
+   ```
+
+3. **검증**
+   - 가드 스크립트의 `RAISE NOTICE` 출력에서 sanitized 행 수가 0 이 아닌 경우
+     → 즉시 백업/롤백 검토 후 개별 분석 (어떤 레거시 데이터가 잔존했는지)
+
+### 신규 마이그레이션 작성자 체크리스트
+
+- [ ] `drizzle-kit generate` 결과에 `SET DATA TYPE uuid USING ... ::uuid` 가 포함되는가?
+- [ ] 그렇다면 위 절차에 따라 `manual/` 사전 가드 스크립트를 함께 PR 에 포함했는가?
+- [ ] PR 설명에 "운영 적용 시 사전 가드 실행 필요" 명시했는가?
+
+### CI 자동 가드 (선택, 권장)
+
+```bash
+# scripts/check-uuid-cast-guard.sh
+set -e
+NEW_CASTS=$(git diff origin/main -- 'apps/backend/drizzle/*.sql' \
+  | grep -E '^\+.*USING .*::uuid' || true)
+if [ -n "$NEW_CASTS" ]; then
+  GUARD_FILES=$(git diff --name-only origin/main \
+    -- 'apps/backend/drizzle/manual/*pre_*_uuid_cast_guard.sql' || true)
+  if [ -z "$GUARD_FILES" ]; then
+    echo "❌ text→uuid USING 캐스트 발견했으나 manual/ 사전 가드 누락"
+    exit 1
+  fi
+fi
+```
+
 ## 업계 표준 참고 (ORM별 대응 명령)
 
 | 도구        | 추적 테이블            | "이미 적용됨" 표시                          | Baseline 절차                               |

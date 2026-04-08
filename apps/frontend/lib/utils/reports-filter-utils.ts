@@ -25,6 +25,18 @@ export const REPORT_CALIBRATION_STATUS_VALUES = ['completed', 'scheduled', 'over
 export type ReportCalibrationStatus = (typeof REPORT_CALIBRATION_STATUS_VALUES)[number];
 
 /**
+ * ALL 센티널 (SSOT)
+ *
+ * Radix/shadcn `<Select>`은 empty string value를 허용하지 않으므로 "전체"
+ * 옵션에 사용할 placeholder 값이 필요. URL 표현과 UI 표현을 단일 상수로
+ * 통일하여 calibration-filter-utils와 동일한 컨벤션을 따른다.
+ *
+ * - URL: `?site=_all` → parseReportsFiltersFromSearchParams가 `''`로 변환
+ * - UI:  `<SelectItem value={ALL_SENTINEL}>` + toSelectValue/fromSelectValue
+ */
+export const ALL_SENTINEL = '_all';
+
+/**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
  *
  * - reportType: '' = 미선택
@@ -93,8 +105,8 @@ export function parseReportsFiltersFromSearchParams(
     return null;
   };
 
-  // ✅ "_all" 센티널을 빈 문자열로 변환 (calibration-filter-utils 패턴 일치)
-  const stripAll = (raw: string | null): string => (raw && raw !== '_all' ? raw : '');
+  // ✅ ALL_SENTINEL을 빈 문자열로 변환 (SSOT)
+  const stripAll = (raw: string | null): string => (raw && raw !== ALL_SENTINEL ? raw : '');
 
   const reportTypeRaw = stripAll(get('reportType'));
   const reportType = (REPORT_TYPE_VALUES as string[]).includes(reportTypeRaw)
