@@ -73,6 +73,35 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 
 **PASS:** 클라이언트 컴포넌트에서 `hasPermission` 직접 import 0개.
 
+### Step 10: useToast SSOT (단일 hook 경로)
+
+`useToast` / `toast` 는 반드시 `@/components/ui/use-toast` 1곳에서만 import. 과거 `@/hooks/use-toast` 사본은 별도 `memoryState`/`listeners` 를 가져 `<Toaster />` 가 구독하지 않아 해당 컴포넌트의 토스트가 화면에 렌더되지 않는 silent production bug 를 유발했다 (2026-04-08 toast-ssot-dedup 작업에서 6개 컴포넌트 영향 확인).
+
+**검증:**
+```bash
+grep -rn "@/hooks/use-toast" apps/frontend --include="*.ts" --include="*.tsx"
+```
+
+**PASS:** 0 hit.
+
+### Step 11: E2E 토스트 매칭은 expectToastVisible helper 사용
+
+Radix Toast 는 의도적으로 시각 토스트(`<li role="status">`) + visually-hidden status mirror (`<span role="status" aria-live="assertive">`) 를 동시에 노출한다 (스크린리더 a11y). 따라서 `page.getByText('...').first()` 같은 직접 매칭은 strict mode 충돌을 우회할 뿐 의도(시각 발화 검증)가 코드에 드러나지 않고, mirror span 의 "Notification " 접두사 변경 시 silent break 위험이 있다.
+
+**규칙:**
+- 토스트 메시지 검증은 `apps/frontend/tests/e2e/shared/helpers/toast-helpers.ts` 의 `expectToastVisible(page, text)` 사용
+- 두 후보 토스트(성공/에러 분기)는 `toastLocator(page, text)` 로 좁힌 뒤 `.or()` 로 결합
+- spec 안에서 토스트 텍스트에 직접 `.first()` 사용 금지
+
+**검증:**
+```bash
+# 토스트로 보이는 한국어 종결형 문구에 .first() 직접 매칭
+grep -rn "getByText.*되었\|getByText.*완료\|getByText.*실패.*\.first()" \
+  apps/frontend/tests/e2e --include="*.spec.ts"
+```
+
+**PASS:** 토스트 텍스트에 직접 `.first()` 적용된 매칭 0건. helper 우회만 한정 검출.
+
 ## Output Format
 
 ```markdown
@@ -91,6 +120,8 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | 8a  | Client에서 서버 함수 호출  | PASS/FAIL | 'use client' + 서버 함수 위치 |
 | 8b  | 무거운 라이브러리 동적 분할 | PASS/FAIL | 정적 import 위치             |
 | 9   | useAuth().can() 권한 SSOT  | PASS/FAIL | hasPermission 직접 import 위치 |
+| 10  | useToast SSOT 단일 경로    | PASS/FAIL | `@/hooks/use-toast` import 위치 |
+| 11  | E2E 토스트 helper 사용     | PASS/FAIL | 토스트 텍스트 직접 .first() 위치 |
 ```
 
 ## Exceptions
