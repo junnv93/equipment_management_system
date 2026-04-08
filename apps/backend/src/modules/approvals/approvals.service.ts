@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   eq,
@@ -35,10 +35,10 @@ import {
   type EquipmentImportSource,
   type EquipmentImportStatus,
 } from '@equipment-management/schemas';
+import { buildScopePredicate } from '../../common/scope/scope-sql-builder';
 import {
   APPROVAL_KPI,
   ROLE_APPROVAL_CATEGORIES,
-  resolveDataScope,
   NON_CONFORMANCE_DATA_SCOPE,
   CHECKOUT_DATA_SCOPE,
   INTERMEDIATE_CHECK_DATA_SCOPE,
@@ -48,7 +48,6 @@ import {
   EQUIPMENT_IMPORT_DATA_SCOPE,
   DISPOSAL_DATA_SCOPE,
   EQUIPMENT_REQUEST_DATA_SCOPE,
-  type FeatureScopePolicy,
   type UserScopeContext,
   CACHE_TTL,
 } from '@equipment-management/shared-constants';
@@ -505,7 +504,7 @@ export class ApprovalsService {
       eq(schema.equipmentImports.status, EquipmentImportStatusValues.PENDING),
       eq(schema.equipmentImports.sourceType, sourceType),
     ];
-    const scopeCondition = this.buildScopeCondition(EQUIPMENT_IMPORT_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(EQUIPMENT_IMPORT_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.equipmentImports.site, s),
     });
     if (scopeCondition) conditions.push(scopeCondition);
@@ -547,7 +546,7 @@ export class ApprovalsService {
           'avg_days'
         ),
     };
-    const scopeCondition = this.buildScopeCondition(EQUIPMENT_REQUEST_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(EQUIPMENT_REQUEST_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.users.site, s),
       team: (t) => eq(schema.users.teamId, t),
     });
@@ -587,7 +586,7 @@ export class ApprovalsService {
           'avg_days'
         ),
     };
-    const scopeCondition = this.buildScopeCondition(CALIBRATION_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(CALIBRATION_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.equipment.site, s),
       team: (t) => eq(schema.equipment.teamId, t),
     });
@@ -629,7 +628,7 @@ export class ApprovalsService {
           'avg_days'
         ),
     };
-    const scopeCondition = this.buildScopeCondition(INTERMEDIATE_CHECK_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(INTERMEDIATE_CHECK_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.equipment.site, s),
       team: (t) => eq(schema.equipment.teamId, t),
     });
@@ -672,7 +671,7 @@ export class ApprovalsService {
     ];
 
     // SSOT: NON_CONFORMANCE_DATA_SCOPE 정책 기반 스코프 필터링
-    const scopeCondition = this.buildScopeCondition(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.equipment.site, s),
       team: (t) => eq(schema.equipment.teamId, t),
     });
@@ -718,7 +717,7 @@ export class ApprovalsService {
           'avg_days'
         ),
     };
-    const scopeCondition = this.buildScopeCondition(DISPOSAL_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(DISPOSAL_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.equipment.site, s),
       team: (t) => eq(schema.equipment.teamId, t),
     });
@@ -763,7 +762,7 @@ export class ApprovalsService {
       eq(schema.calibrationPlans.isLatestVersion, true),
     ];
 
-    const scopeCondition = this.buildScopeCondition(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.calibrationPlans.siteId, s),
       team: (t) => eq(schema.calibrationPlans.teamId, t),
     });
@@ -804,7 +803,7 @@ export class ApprovalsService {
       )!,
     ];
 
-    const scopeCondition = this.buildScopeCondition(TEST_SOFTWARE_DATA_SCOPE, userCtx, {
+    const scopeCondition = buildScopePredicate(TEST_SOFTWARE_DATA_SCOPE, userCtx, {
       site: (s) => eq(schema.testSoftware.site, s),
     });
 
@@ -835,81 +834,6 @@ export class ApprovalsService {
     date.setDate(date.getDate() - thresholdDays);
     date.setHours(0, 0, 0, 0);
     return date;
-  }
-
-  /**
-   * 정책 기반 스코프 SQL 조건 생성 (SSOT)
-   *
-   * SiteScopeInterceptor와 동일한 resolveDataScope()를 사용하여
-   * COUNT/KPI 쿼리에서도 SSOT 정책 기반 필터링을 보장합니다.
-   *
-   * 콜백 패턴으로 테이블 독립적 — 호출자가 자신의 JOIN 컬럼을 지정합니다.
-   *
-   * @example
-   * // NC: equipment.site 기반
-   * buildScopeCondition(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
-   *   site: (s) => eq(schema.equipment.site, s),
-   *   team: (t) => eq(schema.equipment.teamId, t),
-   * });
-   * // Checkout: users 테이블 기반
-   * buildScopeCondition(CHECKOUT_DATA_SCOPE, userCtx, {
-   *   site: (s) => eq(schema.users.site, s),
-   *   team: (t) => eq(schema.users.teamId, t),
-   * });
-   */
-  private buildScopeCondition(
-    policy: FeatureScopePolicy,
-    userCtx: UserScopeContext,
-    scopeFilters: {
-      site?: (siteValue: string) => SQL;
-      team?: (teamIdValue: string) => SQL;
-    }
-  ): SQL | undefined {
-    const scope = resolveDataScope(userCtx, policy);
-
-    switch (scope.type) {
-      case 'all':
-        return undefined;
-      case 'site':
-        if (!scope.site) {
-          throw new ForbiddenException({
-            code: 'SCOPE_ACCESS_DENIED',
-            message: 'No site assigned to user',
-          });
-        }
-        if (!scopeFilters.site) {
-          throw new ForbiddenException({
-            code: 'SCOPE_FILTER_UNAVAILABLE',
-            message: 'Site scope filter is not available for this resource',
-          });
-        }
-        return scopeFilters.site(scope.site);
-      case 'team':
-        // SiteScopeInterceptor와 동일: teamId 없으면 site 폴백, 둘 다 없으면 차단
-        if (!scope.teamId) {
-          if (scope.site && scopeFilters.site) {
-            return scopeFilters.site(scope.site);
-          }
-          throw new ForbiddenException({
-            code: 'SCOPE_ACCESS_DENIED',
-            message: 'No team or site assigned to user',
-          });
-        }
-        // team 콜백 있으면 사용, 없으면 site로 폴백 (team ⊂ site)
-        if (scopeFilters.team) {
-          return scopeFilters.team(scope.teamId);
-        }
-        if (scope.site && scopeFilters.site) {
-          return scopeFilters.site(scope.site);
-        }
-        throw new ForbiddenException({
-          code: 'SCOPE_FILTER_UNAVAILABLE',
-          message: 'Team/site scope filter is not available for this resource',
-        });
-      case 'none':
-        // ROLE_CATEGORIES gating에서 이미 제외 — 안전장치
-        return sql`false`;
-    }
   }
 
   /**
@@ -967,7 +891,7 @@ export class ApprovalsService {
         eq(schema.equipmentImports.status, status),
         eq(schema.equipmentImports.sourceType, sourceType),
       ];
-      const scopeCondition = this.buildScopeCondition(EQUIPMENT_IMPORT_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(EQUIPMENT_IMPORT_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.equipmentImports.site, s),
         team: (t) => eq(schema.equipmentImports.teamId, t),
       });
@@ -997,7 +921,7 @@ export class ApprovalsService {
       const conditions: SQL[] = [
         eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval),
       ];
-      const scopeCondition = this.buildScopeCondition(EQUIPMENT_REQUEST_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(EQUIPMENT_REQUEST_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.users.site, s),
         team: (t) => eq(schema.users.teamId, t),
       });
@@ -1033,7 +957,7 @@ export class ApprovalsService {
       const conditions: SQL[] = [
         eq(schema.calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval),
       ];
-      const scopeCondition = this.buildScopeCondition(CALIBRATION_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(CALIBRATION_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.equipment.site, s),
         team: (t) => eq(schema.equipment.teamId, t),
       });
@@ -1068,7 +992,7 @@ export class ApprovalsService {
         isNotNull(schema.calibrations.intermediateCheckDate),
         lte(schema.calibrations.intermediateCheckDate, today),
       ];
-      const scopeCondition = this.buildScopeCondition(INTERMEDIATE_CHECK_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(INTERMEDIATE_CHECK_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.equipment.site, s),
         team: (t) => eq(schema.equipment.teamId, t),
       });
@@ -1126,7 +1050,7 @@ export class ApprovalsService {
       ];
 
       // SSOT: NON_CONFORMANCE_DATA_SCOPE 정책 기반 스코프 필터링
-      const scopeCondition = this.buildScopeCondition(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(NON_CONFORMANCE_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.equipment.site, s),
         team: (t) => eq(schema.equipment.teamId, t),
       });
@@ -1158,7 +1082,7 @@ export class ApprovalsService {
   ): Promise<number> {
     try {
       const conditions: SQL[] = [eq(schema.disposalRequests.reviewStatus, reviewStatus)];
-      const scopeCondition = this.buildScopeCondition(DISPOSAL_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(DISPOSAL_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.equipment.site, s),
         team: (t) => eq(schema.equipment.teamId, t),
       });
@@ -1193,7 +1117,7 @@ export class ApprovalsService {
         eq(schema.calibrationPlans.isLatestVersion, true),
       ];
 
-      const scopeCondition = this.buildScopeCondition(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.calibrationPlans.siteId, s),
         team: (t) => eq(schema.calibrationPlans.teamId, t),
       });
@@ -1223,7 +1147,7 @@ export class ApprovalsService {
         eq(schema.calibrationPlans.isLatestVersion, true),
       ];
 
-      const scopeCondition = this.buildScopeCondition(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(CALIBRATION_PLAN_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.calibrationPlans.siteId, s),
         team: (t) => eq(schema.calibrationPlans.teamId, t),
       });
@@ -1255,7 +1179,7 @@ export class ApprovalsService {
         )!,
       ];
 
-      const scopeCondition = this.buildScopeCondition(TEST_SOFTWARE_DATA_SCOPE, userCtx, {
+      const scopeCondition = buildScopePredicate(TEST_SOFTWARE_DATA_SCOPE, userCtx, {
         site: (s) => eq(schema.testSoftware.site, s),
       });
 

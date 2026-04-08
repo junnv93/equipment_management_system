@@ -50,8 +50,8 @@ export function equipmentBelongsToSite(equipmentIdColumn: AnyColumn, site: strin
  * 장비 ID 컬럼이 특정 팀에 속하는지 확인하는 SQL 조건을 생성합니다.
  *
  * @SiteScoped 인터셉터가 team 스코프를 resolve한 경우 사용됩니다.
- * approvals.service.ts의 buildScopeCondition({ team: eq(equipment.teamId, t) })과
- * 논리적으로 동일한 결과를 보장합니다.
+ * `common/scope/scope-sql-builder.ts:buildScopePredicate({ team: ... })` 콜백으로
+ * 직접 전달 가능. equipment 경유 cross-table 케이스에서 team→teamId 매칭 SSOT.
  *
  * 생성되는 SQL:
  *   `equipmentIdColumn IN (SELECT "id" FROM "equipment" WHERE "team_id" = $teamId)`
