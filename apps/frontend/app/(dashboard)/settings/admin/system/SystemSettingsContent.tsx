@@ -32,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 import { useTranslations } from 'next-intl';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -109,6 +109,7 @@ export default function SystemSettingsContent() {
 
 function SystemSettingsFormContent({ initialSettings }: { initialSettings: SystemSettingsForm }) {
   const t = useTranslations('settings');
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<SystemSettingsForm>({
@@ -124,11 +125,11 @@ function SystemSettingsFormContent({ initialSettings }: { initialSettings: Syste
         maintenanceMessage: formData.maintenanceMessage,
       }),
     onSuccess: (_, variables) => {
-      toast.success(t('toasts.systemSaveSuccess'));
+      toast({ description: t('toasts.systemSaveSuccess') });
       form.reset(variables);
     },
     onError: () => {
-      toast.error(t('toasts.systemSaveError'));
+      toast({ variant: 'destructive', description: t('toasts.systemSaveError') });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.system() });

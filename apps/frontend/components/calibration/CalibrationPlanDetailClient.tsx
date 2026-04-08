@@ -86,6 +86,7 @@ export function CalibrationPlanDetailClient({
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const t = useTranslations('calibration');
   const tEquip = useTranslations('equipment');
+  const tCommon = useTranslations('common');
   const { fmtDate, fmtDateTime } = useDateFormatter();
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -256,8 +257,15 @@ export function CalibrationPlanDetailClient({
     },
   });
 
-  const handleExportExcel = () => {
-    calibrationPlansApi.downloadExcel(planUuid);
+  const handleExportExcel = async () => {
+    try {
+      await calibrationPlansApi.downloadExcel(planUuid);
+    } catch {
+      toast({
+        variant: 'destructive',
+        description: tCommon('errors.downloadFailed'),
+      });
+    }
   };
 
   if (isLoading) {

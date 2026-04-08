@@ -56,6 +56,7 @@
     "unauthorized": "접근 권한이 없습니다.",
     "serverError": "서버 오류가 발생했습니다.",
     "networkError": "네트워크 오류가 발생했습니다.",
+    "downloadFailed": "파일 다운로드에 실패했습니다.",
     "versionConflict": "다른 사용자가 동시에 수정했습니다. 페이지를 새로고침 후 다시 시도해주세요.",
     "tryAgain": "다시 시도",
     "login": "로그인",

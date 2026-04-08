@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { dataMigrationApi } from '@/lib/api/data-migration-api';
 import type { MultiSheetExecuteResult, MigrationSheetType } from '@/lib/api/data-migration-api';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ResultStepProps {
   result: MultiSheetExecuteResult;
@@ -19,6 +19,7 @@ const SHEET_ORDER: MigrationSheetType[] = ['equipment', 'calibration', 'repair',
 
 export default function ResultStep({ result, onReset }: ResultStepProps) {
   const t = useTranslations('data-migration');
+  const { toast } = useToast();
   const router = useRouter();
   const hasErrors = result.totalErrors > 0;
   const hasMultipleSheets = result.sheets.length > 1;
@@ -27,7 +28,7 @@ export default function ResultStep({ result, onReset }: ResultStepProps) {
     try {
       await dataMigrationApi.downloadErrorReport(result.sessionId);
     } catch {
-      toast.error(t('errors.downloadFailed'));
+      toast({ variant: 'destructive', description: t('errors.downloadFailed') });
     }
   };
 

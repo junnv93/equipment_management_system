@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { Upload, FileUp } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 import { FORM_TEMPLATE_FILE_RULE } from '@equipment-management/shared-constants';
 import { ErrorCode } from '@equipment-management/schemas';
 import {
@@ -60,6 +60,7 @@ export default function FormTemplateUploadDialog({
   onOpenChange,
 }: FormTemplateUploadDialogProps) {
   const t = useTranslations('form-templates');
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -88,9 +89,10 @@ export default function FormTemplateUploadDialog({
   };
 
   const onSuccess = (_data: FormTemplateHistoryItem) => {
-    toast.success(
-      mode === 'create' ? t('uploadDialog.successCreate') : t('uploadDialog.successReplace')
-    );
+    toast({
+      description:
+        mode === 'create' ? t('uploadDialog.successCreate') : t('uploadDialog.successReplace'),
+    });
     invalidateAll();
     setSelectedFile(null);
     setFormNumber('');
@@ -99,12 +101,13 @@ export default function FormTemplateUploadDialog({
   };
 
   const onError = (error: unknown) => {
-    toast.error(
-      translateApiError(error, t, {
+    toast({
+      variant: 'destructive',
+      description: translateApiError(error, t, {
         codeMap: UPLOAD_ERROR_CODE_MAP,
         fallbackKey: 'uploadDialog.error',
-      })
-    );
+      }),
+    });
   };
 
   const createMutation = useMutation({

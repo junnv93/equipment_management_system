@@ -20,7 +20,7 @@ import { FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { dataMigrationApi } from '@/lib/api/data-migration-api';
 import type { PreviewOptions, MultiSheetPreviewResult } from '@/lib/api/data-migration-api';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 
 interface FileUploadStepProps {
   onPreviewComplete: (result: MultiSheetPreviewResult, options: PreviewOptions) => void;
@@ -28,6 +28,7 @@ interface FileUploadStepProps {
 
 export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProps) {
   const t = useTranslations('data-migration');
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -43,30 +44,30 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
       onPreviewComplete(result, opts);
     },
     onError: () => {
-      toast.error(t('errors.previewFailed'));
+      toast({ variant: 'destructive', description: t('errors.previewFailed') });
     },
   });
 
   const templateMutation = useMutation({
     mutationFn: dataMigrationApi.downloadTemplate,
     onError: () => {
-      toast.error(t('errors.downloadFailed'));
+      toast({ variant: 'destructive', description: t('errors.downloadFailed') });
     },
   });
 
   const validateAndSetFile = useCallback(
     (file: File) => {
       if (!file.name.endsWith('.xlsx')) {
-        toast.error(t('errors.invalidFileType'));
+        toast({ variant: 'destructive', description: t('errors.invalidFileType') });
         return;
       }
       if (file.size > FILE_UPLOAD_LIMITS.MAX_FILE_SIZE) {
-        toast.error(t('errors.fileTooLarge'));
+        toast({ variant: 'destructive', description: t('errors.fileTooLarge') });
         return;
       }
       setSelectedFile(file);
     },
-    [t]
+    [t, toast]
   );
 
   const handleDrop = useCallback(
@@ -86,7 +87,7 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
 
   const handlePreview = () => {
     if (!selectedFile) {
-      toast.error(t('errors.fileRequired'));
+      toast({ variant: 'destructive', description: t('errors.fileRequired') });
       return;
     }
     previewMutation.mutate({ file: selectedFile, opts: options });

@@ -239,8 +239,7 @@ export default function ValidationDetailContent({
       const { exportFormTemplate } = await import('@/lib/api/reports-api');
       await exportFormTemplate('UL-QP-18-09', { validationId });
     } catch {
-      const { toast } = await import('sonner');
-      toast.error(t('toast.error'));
+      toast({ variant: 'destructive', description: t('toast.error') });
     } finally {
       setExportingForm(false);
     }

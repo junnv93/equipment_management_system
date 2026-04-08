@@ -38,12 +38,13 @@ import {
 } from '@/lib/utils/software-filter-utils';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { exportFormTemplate } from '@/lib/api/reports-api';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 
 const ALL_VALUE = '__ALL__';
 
 export default function TestSoftwareListContent() {
   const t = useTranslations('software');
+  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -116,7 +117,7 @@ export default function TestSoftwareListContent() {
       }
       await exportFormTemplate('UL-QP-18-07', params);
     } catch {
-      toast.error(t('list.exportError'));
+      toast({ variant: 'destructive', description: t('list.exportError') });
     } finally {
       setExporting(false);
     }

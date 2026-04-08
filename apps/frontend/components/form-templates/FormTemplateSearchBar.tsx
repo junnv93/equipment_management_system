@@ -16,7 +16,7 @@ import {
 } from '@/lib/api/form-templates-api';
 import { getErrorMessage } from '@/lib/api/error';
 import { FORM_TEMPLATES_SEARCH_BAR_TOKENS } from '@/lib/design-tokens';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 
 /**
  * 과거 formNumber 검색 바.
@@ -26,6 +26,7 @@ import { toast } from 'sonner';
  */
 export default function FormTemplateSearchBar() {
   const t = useTranslations('form-templates');
+  const { toast } = useToast();
   const { can } = useAuth();
   const canDownloadHistory = can(Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY);
 
@@ -43,7 +44,7 @@ export default function FormTemplateSearchBar() {
       const data = await searchFormTemplateByNumber(trimmed);
       setResult(data);
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      toast({ variant: 'destructive', description: getErrorMessage(error) });
       setResult(null);
     } finally {
       setLoading(false);

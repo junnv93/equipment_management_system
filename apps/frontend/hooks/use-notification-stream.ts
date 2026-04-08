@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { createElement, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
+import { ToastAction, type ToastActionElement } from '@/components/ui/toast';
 import { queryKeys } from '@/lib/api/query-config';
 import {
   API_ENDPOINTS,
@@ -37,6 +38,7 @@ const MAX_RETRY_DELAY_MS = 30_000;
 
 export function useNotificationStream() {
   const { data: session, update: updateSession } = useSession();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,19 +111,24 @@ export function useNotificationStream() {
                 });
 
                 // 2. toast 표시
-                toast(notification.title, {
+                toast({
+                  title: notification.title,
                   description: notification.content,
                   action: notification.linkUrl
-                    ? {
-                        label: '확인',
-                        onClick: () => {
-                          if (notification.linkUrl.startsWith('/')) {
-                            router.push(notification.linkUrl);
-                          } else {
-                            window.location.href = notification.linkUrl;
-                          }
+                    ? (createElement(
+                        ToastAction,
+                        {
+                          altText: '확인',
+                          onClick: () => {
+                            if (notification.linkUrl.startsWith('/')) {
+                              router.push(notification.linkUrl);
+                            } else {
+                              window.location.href = notification.linkUrl;
+                            }
+                          },
                         },
-                      }
+                        '확인'
+                      ) as unknown as ToastActionElement)
                     : undefined,
                   duration: 5000,
                 });
@@ -170,5 +177,5 @@ export function useNotificationStream() {
         reconnectTimerRef.current = null;
       }
     };
-  }, [accessToken, queryClient, router, updateSession]);
+  }, [accessToken, queryClient, router, updateSession, toast]);
 }

@@ -16,7 +16,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bell, Mail, Clock, Info } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 import {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
@@ -140,6 +140,7 @@ export default function NotificationsContent() {
 function NotificationsForm({ initialPreferences }: { initialPreferences: NotificationFormValues }) {
   const t = useTranslations('settings');
   const tNotif = useTranslations('notifications');
+  const { toast } = useToast();
   const categoryItems = useCategoryItems(tNotif);
   const updateMutation = useUpdateNotificationPreferences();
 
@@ -171,12 +172,12 @@ function NotificationsForm({ initialPreferences }: { initialPreferences: Notific
               fieldName as keyof NotificationFormValues,
               previousValue as NotificationFormValues[keyof NotificationFormValues]
             );
-            toast.error(t('toasts.notificationSaveError'));
+            toast({ variant: 'destructive', description: t('toasts.notificationSaveError') });
           },
         }
       );
     },
-    [updateMutation, form, t]
+    [updateMutation, form, t, toast]
   );
 
   // SettingsToggleField 호환 (boolean only)

@@ -24,6 +24,7 @@ import {
 } from '@/lib/design-tokens';
 import FormTemplateUploadDialog, { type UploadDialogMode } from './FormTemplateUploadDialog';
 import FormTemplateHistoryDialog from './FormTemplateHistoryDialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface FormTemplatesTableProps {
   templates: FormTemplateListItem[];
@@ -36,6 +37,8 @@ interface UploadTarget {
 
 export default function FormTemplatesTable({ templates }: FormTemplatesTableProps) {
   const t = useTranslations('form-templates');
+  const tCommon = useTranslations('common');
+  const { toast } = useToast();
   const { can } = useAuth();
   const canManage = can(Permission.MANAGE_FORM_TEMPLATES);
 
@@ -139,7 +142,16 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
                           variant="ghost"
                           size="sm"
                           className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
-                          onClick={() => downloadFormTemplateById(tpl.current!.id)}
+                          onClick={async () => {
+                            try {
+                              await downloadFormTemplateById(tpl.current!.id);
+                            } catch {
+                              toast({
+                                variant: 'destructive',
+                                description: tCommon('errors.downloadFailed'),
+                              });
+                            }
+                          }}
                           aria-label={`${t('download')} ${tpl.formName}`}
                         >
                           <Download className="h-3.5 w-3.5" />

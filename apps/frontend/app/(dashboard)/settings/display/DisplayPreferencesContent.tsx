@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -98,6 +98,7 @@ export default function DisplayPreferencesContent() {
  */
 function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPreferences }) {
   const t = useTranslations('settings');
+  const { toast } = useToast();
   const currentLocale = useLocale();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -111,7 +112,7 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
     mutationFn: (data: DisplayPreferences) =>
       apiClient.patch(API_ENDPOINTS.USERS.PREFERENCES, data),
     onSuccess: (_, variables) => {
-      toast.success(t('toasts.saveSuccess'));
+      toast({ description: t('toasts.saveSuccess') });
       // dirty 상태 즉시 초기화 (onSettled의 invalidate+refetch 완료 전에도 Save 버튼 비활성화)
       form.reset(variables);
       // 로케일이 실제로 변경된 경우에만 쿠키 동기화 + 페이지 재렌더
@@ -121,7 +122,7 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
       }
     },
     onError: () => {
-      toast.error(t('toasts.saveError'));
+      toast({ variant: 'destructive', description: t('toasts.saveError') });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.preferences() });

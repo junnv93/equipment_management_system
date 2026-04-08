@@ -56,6 +56,7 @@
     "unauthorized": "You do not have permission to access this.",
     "serverError": "A server error occurred.",
     "networkError": "A network error occurred.",
+    "downloadFailed": "Failed to download the file.",
     "versionConflict": "Another user made changes at the same time. Please refresh and try again.",
     "tryAgain": "Try Again",
     "login": "Login",

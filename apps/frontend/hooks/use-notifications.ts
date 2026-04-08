@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 import notificationsApi from '@/lib/api/notifications-api';
 import type { NotificationQueryParams } from '@/lib/api/notifications-api';
 import { queryKeys, QUERY_CONFIG, CACHE_TIMES } from '@/lib/api/query-config';
@@ -52,11 +52,12 @@ export function useMarkAsRead() {
  */
 export function useMarkAllAsRead() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: () => notificationsApi.markAllAsRead(),
     onSuccess: () => {
-      toast.success('모든 알림을 읽음으로 표시했습니다.');
+      toast({ description: '모든 알림을 읽음으로 표시했습니다.' });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
@@ -69,11 +70,12 @@ export function useMarkAllAsRead() {
  */
 export function useDeleteNotification() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (id: string) => notificationsApi.remove(id),
     onSuccess: () => {
-      toast.success('알림이 삭제되었습니다.');
+      toast({ description: '알림이 삭제되었습니다.' });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });

@@ -36,7 +36,7 @@ import { formatFileSize } from '@/lib/utils/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 import { DocumentRevisionDialog } from '@/components/shared/DocumentRevisionDialog';
 
 interface AttachmentsTabProps {
@@ -58,6 +58,7 @@ function getFileIcon(mimeType: string) {
 
 export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
   const t = useTranslations('equipment');
+  const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
   const { can } = useAuth();
   const queryClient = useQueryClient();
@@ -83,12 +84,12 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
     if (!confirm(t('attachmentsTab.deleteConfirm'))) return;
     try {
       await documentApi.deleteDocument(docId);
-      toast.success(t('attachmentsTab.deleteSuccess'));
+      toast({ description: t('attachmentsTab.deleteSuccess') });
       queryClient.invalidateQueries({
         queryKey: queryKeys.documents.byEquipment(equipmentId),
       });
     } catch {
-      toast.error(t('attachmentsTab.deleteError'));
+      toast({ variant: 'destructive', description: t('attachmentsTab.deleteError') });
     }
   };
 

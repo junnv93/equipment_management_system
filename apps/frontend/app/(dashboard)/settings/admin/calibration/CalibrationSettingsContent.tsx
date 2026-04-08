@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check, X, Plus } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -102,6 +102,7 @@ function CalibrationSettingsFormContent({
   initialSettings: CalibrationSettingsForm;
 }) {
   const t = useTranslations('settings');
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<CalibrationSettingsForm>({
@@ -113,11 +114,11 @@ function CalibrationSettingsFormContent({
     mutationFn: (formData: CalibrationSettingsForm) =>
       apiClient.patch(API_ENDPOINTS.SETTINGS.CALIBRATION, formData),
     onSuccess: (_, variables) => {
-      toast.success(t('toasts.calibrationSaveSuccess'));
+      toast({ description: t('toasts.calibrationSaveSuccess') });
       form.reset(variables);
     },
     onError: () => {
-      toast.error(t('toasts.calibrationSaveError'));
+      toast({ variant: 'destructive', description: t('toasts.calibrationSaveError') });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.calibration() });

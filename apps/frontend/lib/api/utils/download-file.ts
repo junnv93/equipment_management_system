@@ -1,6 +1,4 @@
-import { toast } from 'sonner';
 import { apiClient } from '../api-client';
-import { getErrorMessage } from '../error';
 
 interface DownloadFileOptions {
   /** API endpoint URL */
@@ -12,8 +10,6 @@ interface DownloadFileOptions {
    * 그 값이 우선합니다. SSOT는 서버 — 클라이언트는 헤더가 없을 때만 이 값을 사용.
    */
   filename?: string;
-  /** Custom error message (falls back to API error message) */
-  errorMessage?: string;
 }
 
 /**
@@ -39,31 +35,30 @@ function parseFilenameFromContentDisposition(header: string | undefined): string
  *
  * 서버가 내려주는 `Content-Type`/`Content-Disposition`을 SSOT로 사용합니다.
  * 호출자는 filename을 옵션으로만 제공하며, 헤더가 없을 때만 fallback으로 적용됩니다.
+ *
+ * 다운로드 실패 시 에러를 그대로 throw 합니다 — 호출자가 try-catch로 처리하여
+ * Radix `useToast`(컴포넌트 hook)로 사용자 피드백을 표시해야 합니다.
  */
 export async function downloadFile(options: DownloadFileOptions): Promise<void> {
-  try {
-    const response = await apiClient.get(options.url, {
-      params: options.params,
-      responseType: 'blob',
-    });
+  const response = await apiClient.get(options.url, {
+    params: options.params,
+    responseType: 'blob',
+  });
 
-    const contentType =
-      (response.headers?.['content-type'] as string | undefined) ?? 'application/octet-stream';
-    const serverFilename = parseFilenameFromContentDisposition(
-      response.headers?.['content-disposition'] as string | undefined
-    );
-    const filename = serverFilename ?? options.filename ?? 'download';
+  const contentType =
+    (response.headers?.['content-type'] as string | undefined) ?? 'application/octet-stream';
+  const serverFilename = parseFilenameFromContentDisposition(
+    response.headers?.['content-disposition'] as string | undefined
+  );
+  const filename = serverFilename ?? options.filename ?? 'download';
 
-    const blob = new Blob([response.data], { type: contentType });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    toast.error(options.errorMessage ?? getErrorMessage(error));
-  }
+  const blob = new Blob([response.data], { type: contentType });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 }

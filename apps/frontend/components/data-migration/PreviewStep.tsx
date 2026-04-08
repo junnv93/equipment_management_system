@@ -28,7 +28,7 @@ import type {
   PreviewOptions,
   ExecuteOptions,
 } from '@/lib/api/data-migration-api';
-import { toast } from 'sonner';
+import { useToast } from '@/components/ui/use-toast';
 import { mapBackendErrorCode, EquipmentErrorCode, ApiError } from '@/lib/errors/equipment-errors';
 import {
   EquipmentCacheInvalidation,
@@ -324,6 +324,7 @@ export default function PreviewStep({
   onBack,
 }: PreviewStepProps) {
   const t = useTranslations('data-migration');
+  const { toast } = useToast();
 
   const equipmentSheet = preview.sheets.find((s) => s.sheetType === 'equipment');
   const isMultiSheet = preview.sheets.length > 1;
@@ -355,9 +356,9 @@ export default function PreviewStep({
       const code =
         err instanceof ApiError ? mapBackendErrorCode(err.code) : EquipmentErrorCode.UNKNOWN_ERROR;
       if (code === EquipmentErrorCode.NOT_FOUND) {
-        toast.error(t('errors.sessionExpired'));
+        toast({ variant: 'destructive', description: t('errors.sessionExpired') });
       } else {
-        toast.error(t('errors.executeFailed'));
+        toast({ variant: 'destructive', description: t('errors.executeFailed') });
       }
     },
   });
@@ -365,7 +366,7 @@ export default function PreviewStep({
   const errorReportMutation = useMutation({
     mutationFn: () => dataMigrationApi.downloadErrorReport(preview.sessionId),
     onError: () => {
-      toast.error(t('errors.downloadFailed'));
+      toast({ variant: 'destructive', description: t('errors.downloadFailed') });
     },
   });
 
@@ -391,7 +392,7 @@ export default function PreviewStep({
 
   const handleExecute = () => {
     if (selectedRowNumbers.size === 0) {
-      toast.error(t('preview.noValidRows'));
+      toast({ variant: 'destructive', description: t('preview.noValidRows') });
       return;
     }
     executeMutation.mutate({

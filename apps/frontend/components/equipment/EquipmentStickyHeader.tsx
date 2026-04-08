@@ -30,6 +30,7 @@ import {
   CALIBRATION_BADGE_TOKENS,
   EQUIPMENT_DETAIL_HEADER_TOKENS,
 } from '@/lib/design-tokens';
+import { useToast } from '@/components/ui/use-toast';
 
 interface EquipmentStickyHeaderProps {
   /** 부모(EquipmentDetailClient)의 TanStack Query 구독 데이터 — 직접 구독하지 않음 */
@@ -61,6 +62,8 @@ export function EquipmentStickyHeader({
   onDisposalDetailOpen,
 }: EquipmentStickyHeaderProps) {
   const t = useTranslations('equipment');
+  const tCommon = useTranslations('common');
+  const { toast } = useToast();
   const { can } = useAuth();
 
   const equipmentId = String(equipment.id);
@@ -224,9 +227,14 @@ export function EquipmentStickyHeader({
             variant="outline"
             size="sm"
             onClick={() => {
-              import('@/lib/api/reports-api').then(({ downloadHistoryCard }) =>
-                downloadHistoryCard(equipmentId)
-              );
+              import('@/lib/api/reports-api')
+                .then(({ downloadHistoryCard }) => downloadHistoryCard(equipmentId))
+                .catch(() =>
+                  toast({
+                    variant: 'destructive',
+                    description: tCommon('errors.downloadFailed'),
+                  })
+                );
             }}
             aria-label={t('header.historyCardExportAriaLabel')}
           >
