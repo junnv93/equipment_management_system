@@ -39,7 +39,7 @@ import {
   isFormImplemented,
   isFormDedicatedEndpoint,
 } from '@equipment-management/shared-constants';
-import type { EnforcedReportFilter } from './utils/report-scope-enforcement';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import {
   CLASSIFICATION_TO_CODE,
   SOFTWARE_AVAILABILITY_LABELS,
@@ -92,7 +92,7 @@ export class FormTemplateExportService {
   async exportForm(
     formNumber: string,
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const catalogEntry = FORM_CATALOG[formNumber as keyof typeof FORM_CATALOG];
 
@@ -119,7 +119,7 @@ export class FormTemplateExportService {
 
     const exporters: Record<
       string,
-      (params: Record<string, string>, filter: EnforcedReportFilter) => Promise<ExportResult>
+      (params: Record<string, string>, filter: EnforcedScope) => Promise<ExportResult>
     > = {
       'UL-QP-18-01': (p, f) => this.exportEquipmentRegistry(p, f),
       'UL-QP-18-03': (p, f) => this.exportIntermediateInspection(p, f),
@@ -179,7 +179,7 @@ export class FormTemplateExportService {
 
   private async exportEquipmentRegistry(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-01'];
     const conditions: SQL<unknown>[] = [];
@@ -315,7 +315,7 @@ export class FormTemplateExportService {
 
   private async exportIntermediateInspection(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-03'];
     const inspectionId = params.inspectionId;
@@ -505,7 +505,7 @@ export class FormTemplateExportService {
 
   private async exportSelfInspection(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-05'];
     const equipmentId = params.equipmentId;
@@ -716,7 +716,7 @@ export class FormTemplateExportService {
 
   private async exportCheckout(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-06'];
     const checkoutId = params.checkoutId;
@@ -900,7 +900,7 @@ export class FormTemplateExportService {
 
   private async exportSoftwareRegistry(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-07'];
     const conditions: SQL<unknown>[] = [];
@@ -1002,7 +1002,7 @@ export class FormTemplateExportService {
 
   private async exportSoftwareValidation(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-09'];
     const validationId = params.validationId;
@@ -1205,7 +1205,7 @@ export class FormTemplateExportService {
    */
   private async exportCablePathLoss(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-08'];
     const conditions: SQL<unknown>[] = [];
@@ -1457,7 +1457,7 @@ export class FormTemplateExportService {
 
   private async exportEquipmentImport(
     params: Record<string, string>,
-    filter: EnforcedReportFilter
+    filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-10'];
     const importId = params.importId;

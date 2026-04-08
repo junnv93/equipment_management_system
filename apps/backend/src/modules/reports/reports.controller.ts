@@ -8,7 +8,10 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
-import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import {
+  CurrentScope,
+  CurrentEnforcedScope,
+} from '../../common/decorators/current-scope.decorator';
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import {
   Permission,
@@ -69,20 +72,11 @@ export class ReportsController {
     private readonly formTemplateExportService: FormTemplateExportService
   ) {}
 
-  // ── 헬퍼: RBAC 스코프 해석 ──────────────────────────────────────────────────
-
-  private _resolveReportScope(req: AuthenticatedRequest): ResolvedDataScope {
-    return resolveDataScope(
-      {
-        role: req.user.roles[0] as UserRole,
-        site: req.user.site,
-        teamId: req.user.teamId,
-      },
-      REPORT_DATA_SCOPE
-    );
-  }
-
   // ── 통계 집계 엔드포인트 (JSON) ─────────────────────────────────────────────
+  // 모든 stat / export 라우트는 @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
+  // + @CurrentScope() 로 인터셉터에 위임 — controller helper 불필요.
+  // audit-logs 라우트만 별도 AUDIT_LOG_SCOPE + 'none' 시 빈 보고서 fallback 정책으로
+  // 인라인 처리.
 
   @Get('equipment-usage')
   @ApiOperation({ summary: '장비 사용 보고서', description: '장비별 사용 통계를 제공합니다.' })
@@ -91,12 +85,12 @@ export class ReportsController {
   @ApiQuery({ name: 'equipmentId', required: false, description: '특정 장비 ID' })
   @ApiResponse({ status: 200, description: '장비 사용 통계 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @UsePipes(EquipmentUsageQueryPipe)
   getEquipmentUsage(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Query() query: EquipmentUsageQueryInput
   ): Promise<EquipmentUsageReport> {
-    const scope = this._resolveReportScope(req);
     return this.reportsService.getEquipmentUsage(query, scope);
   }
 
@@ -109,12 +103,12 @@ export class ReportsController {
   @ApiQuery({ name: 'timeframe', required: false, description: '기간', enum: REPORT_PERIOD_VALUES })
   @ApiResponse({ status: 200, description: '교정 상태 통계 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @UsePipes(CalibrationStatusQueryPipe)
   getCalibrationStatus(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Query() query: CalibrationStatusQueryInput
   ): Promise<CalibrationStatusReport> {
-    const scope = this._resolveReportScope(req);
     return this.reportsService.getCalibrationStatus(query, scope);
   }
 
@@ -124,12 +118,12 @@ export class ReportsController {
   @ApiQuery({ name: 'endDate', required: false, description: '종료 날짜 (ISO 형식)' })
   @ApiResponse({ status: 200, description: '대여 통계 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @UsePipes(CheckoutStatisticsQueryPipe)
   getRentalStatistics(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Query() query: CheckoutStatisticsQueryInput
   ): Promise<CheckoutStatisticsReport> {
-    const scope = this._resolveReportScope(req);
     return this.reportsService.getCheckoutStatistics(query, scope);
   }
 
@@ -139,12 +133,12 @@ export class ReportsController {
   @ApiQuery({ name: 'equipmentId', required: false, description: '특정 장비 ID' })
   @ApiResponse({ status: 200, description: '장비 활용률 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @UsePipes(UtilizationRateQueryPipe)
   getUtilizationRate(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Query() query: UtilizationRateQueryInput
   ): Promise<UtilizationRateReport> {
-    const scope = this._resolveReportScope(req);
     return this.reportsService.getUtilizationRate(query, scope);
   }
 
@@ -158,12 +152,12 @@ export class ReportsController {
   @ApiQuery({ name: 'equipmentId', required: false, description: '특정 장비 ID' })
   @ApiResponse({ status: 200, description: '장비 가동 중단 통계 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @UsePipes(EquipmentDowntimeQueryPipe)
   getEquipmentDowntime(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Query() query: EquipmentDowntimeQueryInput
   ): Promise<EquipmentDowntimeReport> {
-    const scope = this._resolveReportScope(req);
     return this.reportsService.getEquipmentDowntime(query, scope);
   }
 
@@ -180,15 +174,15 @@ export class ReportsController {
   @ApiQuery({ name: 'endDate', required: false })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @AuditLog({ action: 'export', entityType: 'report' })
   @SkipResponseTransform()
   @UsePipes(ExportEquipmentUsageQueryPipe)
   async exportEquipmentUsage(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Res() res: Response,
     @Query() query: ExportEquipmentUsageQueryInput
   ): Promise<void> {
-    const scope = this._resolveReportScope(req);
     const data = await this.reportsService.getEquipmentInventoryData({ site: scope.site }, scope);
     await this._streamFile(res, data, query.format);
   }
@@ -201,15 +195,15 @@ export class ReportsController {
   @ApiQuery({ name: 'teamId', required: false, description: '팀 ID' })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @AuditLog({ action: 'export', entityType: 'report' })
   @SkipResponseTransform()
   @UsePipes(ExportEquipmentInventoryQueryPipe)
   async exportEquipmentInventory(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Res() res: Response,
     @Query() query: ExportEquipmentInventoryQueryInput
   ): Promise<void> {
-    const scope = this._resolveReportScope(req);
     const data = await this.reportsService.getEquipmentInventoryData(
       { site: query.site, status: query.status, teamId: query.teamId },
       scope
@@ -225,15 +219,15 @@ export class ReportsController {
   @ApiQuery({ name: 'status', required: false, description: '교정 상태' })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @AuditLog({ action: 'export', entityType: 'report' })
   @SkipResponseTransform()
   @UsePipes(ExportCalibrationStatusQueryPipe)
   async exportCalibrationStatus(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Res() res: Response,
     @Query() query: ExportCalibrationStatusQueryInput
   ): Promise<void> {
-    const scope = this._resolveReportScope(req);
     const data = await this.reportsService.getCalibrationStatusData(
       { startDate: query.startDate, endDate: query.endDate, status: query.status },
       scope
@@ -254,15 +248,15 @@ export class ReportsController {
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @AuditLog({ action: 'export', entityType: 'report' })
   @SkipResponseTransform()
   @UsePipes(ExportUtilizationQueryPipe)
   async exportUtilization(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Res() res: Response,
     @Query() query: ExportUtilizationQueryInput
   ): Promise<void> {
-    const scope = this._resolveReportScope(req);
     const data = await this.reportsService.getUtilizationData(
       {
         startDate: query.startDate,
@@ -282,15 +276,15 @@ export class ReportsController {
   @ApiQuery({ name: 'teamId', required: false })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @AuditLog({ action: 'export', entityType: 'report' })
   @SkipResponseTransform()
   @UsePipes(ExportTeamEquipmentQueryPipe)
   async exportTeamEquipment(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Res() res: Response,
     @Query() query: ExportTeamEquipmentQueryInput
   ): Promise<void> {
-    const scope = this._resolveReportScope(req);
     const data = await this.reportsService.getTeamEquipmentData(
       { site: query.site, teamId: query.teamId },
       scope
@@ -306,15 +300,15 @@ export class ReportsController {
   @ApiQuery({ name: 'equipmentId', required: false })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @AuditLog({ action: 'export', entityType: 'report' })
   @SkipResponseTransform()
   @UsePipes(ExportMaintenanceQueryPipe)
   async exportMaintenance(
-    @Request() req: AuthenticatedRequest,
+    @CurrentScope() scope: ResolvedDataScope,
     @Res() res: Response,
     @Query() query: ExportMaintenanceQueryInput
   ): Promise<void> {
-    const scope = this._resolveReportScope(req);
     const data = await this.reportsService.getMaintenanceData(
       { startDate: query.startDate, endDate: query.endDate, equipmentId: query.equipmentId },
       scope
