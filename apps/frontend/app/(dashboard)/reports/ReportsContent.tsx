@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
@@ -50,25 +50,53 @@ import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import teamsApi, { type Team } from '@/lib/api/teams-api';
 import { ReportsStatsSection } from '@/components/reports/ReportsStatsSection';
+import { useReportsFilters } from '@/hooks/use-reports-filters';
+import type { UIReportsFilters, ReportCalibrationStatus } from '@/lib/utils/reports-filter-utils';
 
 /** Radix Select.Item은 빈 문자열 value를 허용하지 않으므로 센티널 사용 */
 const ALL_SENTINEL = '__all__';
 const toSelectValue = (v: string) => (v === '' ? ALL_SENTINEL : v);
 const fromSelectValue = (v: string) => (v === ALL_SENTINEL ? '' : v);
 
-export default function ReportsContent() {
+interface ReportsContentProps {
+  /**
+   * Server Component에서 URL searchParams로부터 파싱한 초기 필터 (URL SSOT).
+   *
+   * ⚠️ 현재 클라이언트는 useSearchParams() 를 통해 URL을 직접 읽으므로 prop 자체는
+   * 사용되지 않는다. calibration / equipment 등 기존 페이지와 동일한 시그니처 컨벤션을
+   * 유지하기 위해 prop은 받아두며, 향후 SSR 초기 데이터 fetch (예: 통계 사전 로드)
+   * 가 추가되면 그때 hook 초기값으로 주입할 수 있다.
+   */
+  initialFilters: UIReportsFilters;
+}
+
+export default function ReportsContent(_props: ReportsContentProps) {
   const { toast } = useToast();
   const t = useTranslations('common');
   const { fmtDate } = useDateFormatter();
   const siteLabels = useSiteLabels();
 
-  const [reportType, setReportType] = useState<ReportType | ''>('');
-  const [dateRange, setDateRange] = useState<ReportPeriod>('last_month');
-  const [customDateRange, setCustomDateRange] = useState<DateRange>();
-  const [reportFormat, setReportFormat] = useState<ReportFormat>('excel');
-  const [site, setSite] = useState<string>('');
-  const [teamId, setTeamId] = useState<string>('');
-  const [status, setStatus] = useState<string>('');
+  // ✅ URL SSOT — 필터 상태는 URL searchParams에서만 읽고 router.replace로 갱신
+  const { filters, updateFilters } = useReportsFilters();
+  const { reportType, dateRange, reportFormat, site, teamId, status } = filters;
+
+  // customDateRange는 URL의 ISO 문자열을 Date 객체로 역직렬화
+  const customDateRange: DateRange | undefined = useMemo(() => {
+    if (!filters.customDateFrom && !filters.customDateTo) return undefined;
+    return {
+      from: filters.customDateFrom ? new Date(filters.customDateFrom) : undefined,
+      to: filters.customDateTo ? new Date(filters.customDateTo) : undefined,
+    };
+  }, [filters.customDateFrom, filters.customDateTo]);
+
+  const setCustomDateRange = (next: DateRange | undefined) => {
+    updateFilters({
+      customDateFrom: next?.from ? format(next.from, 'yyyy-MM-dd') : '',
+      customDateTo: next?.to ? format(next.to, 'yyyy-MM-dd') : '',
+    });
+  };
+
+  // lastGeneratedReport는 일회성 mutation 결과(필터 아님) → useState 유지
   const [lastGeneratedReport, setLastGeneratedReport] = useState<ReportGenerationResult | null>(
     null
   );
@@ -158,15 +186,17 @@ export default function ReportsContent() {
   };
 
   const handleSiteChange = (value: string) => {
-    setSite(fromSelectValue(value));
-    setTeamId(''); // 사이트 변경 시 팀 선택 초기화
+    // 사이트 변경 시 팀 선택 초기화
+    updateFilters({ site: fromSelectValue(value) as UIReportsFilters['site'], teamId: '' });
   };
 
   const handleReportTypeChange = (value: string) => {
-    setReportType(value as ReportType);
-    setSite('');
-    setTeamId('');
-    setStatus('');
+    updateFilters({
+      reportType: value as ReportType,
+      site: '',
+      teamId: '',
+      status: '',
+    });
   };
 
   const getReportTypeLabel = (type: ReportType) => {
@@ -345,7 +375,7 @@ export default function ReportsContent() {
                     <Label htmlFor="team-filter">{t('reports.team')}</Label>
                     <Select
                       value={toSelectValue(teamId)}
-                      onValueChange={(v) => setTeamId(fromSelectValue(v))}
+                      onValueChange={(v) => updateFilters({ teamId: fromSelectValue(v) })}
                       disabled={teams.length === 0}
                     >
                       <SelectTrigger id="team-filter">
@@ -373,7 +403,11 @@ export default function ReportsContent() {
                     </Label>
                     <Select
                       value={toSelectValue(status)}
-                      onValueChange={(v) => setStatus(fromSelectValue(v))}
+                      onValueChange={(v) =>
+                        updateFilters({
+                          status: fromSelectValue(v) as ReportCalibrationStatus | '',
+                        })
+                      }
                     >
                       <SelectTrigger id="calibration-status">
                         <SelectValue placeholder={t('reports.allStatuses')} />
@@ -396,7 +430,9 @@ export default function ReportsContent() {
                     <Label htmlFor="site-filter-util">{t('reports.site')}</Label>
                     <Select
                       value={toSelectValue(site)}
-                      onValueChange={(v) => setSite(fromSelectValue(v))}
+                      onValueChange={(v) =>
+                        updateFilters({ site: fromSelectValue(v) as UIReportsFilters['site'] })
+                      }
                     >
                       <SelectTrigger id="site-filter-util">
                         <SelectValue placeholder={t('reports.allSites')} />
@@ -437,7 +473,7 @@ export default function ReportsContent() {
                     <Label htmlFor="team-filter-team">{t('reports.team')}</Label>
                     <Select
                       value={toSelectValue(teamId)}
-                      onValueChange={(v) => setTeamId(fromSelectValue(v))}
+                      onValueChange={(v) => updateFilters({ teamId: fromSelectValue(v) })}
                       disabled={teams.length === 0}
                     >
                       <SelectTrigger id="team-filter-team">
@@ -462,7 +498,7 @@ export default function ReportsContent() {
                 <Label>{t('reports.periodSelect')}</Label>
                 <Select
                   value={dateRange}
-                  onValueChange={(value) => setDateRange(value as ReportPeriod)}
+                  onValueChange={(value) => updateFilters({ dateRange: value as ReportPeriod })}
                 >
                   <SelectTrigger>
                     <div className="flex items-center">
@@ -493,7 +529,7 @@ export default function ReportsContent() {
                 <Label>{t('reports.outputFormat')}</Label>
                 <RadioGroup
                   defaultValue={reportFormat}
-                  onValueChange={(value) => setReportFormat(value as ReportFormat)}
+                  onValueChange={(value) => updateFilters({ reportFormat: value as ReportFormat })}
                   className="flex items-center space-x-6"
                 >
                   <div className="flex items-center space-x-2">

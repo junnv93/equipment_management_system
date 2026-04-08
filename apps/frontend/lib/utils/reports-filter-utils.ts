@@ -1,0 +1,148 @@
+/**
+ * ============================================================================
+ * 🔴 SSOT: 보고서 필터 변환 유틸리티 (Single Source of Truth)
+ * ============================================================================
+ *
+ * ⚠️ 이 파일은 보고서 필터 파싱/변환의 유일한 소스입니다.
+ * 다른 파일에서 직접 필터 파싱 로직을 작성하지 마세요!
+ *
+ * 사용처:
+ * - app/(dashboard)/reports/page.tsx (Server Component)
+ * - hooks/use-reports-filters.ts (Client Hook)
+ * - app/(dashboard)/reports/ReportsContent.tsx (Client Component)
+ *
+ * 패턴 출처: lib/utils/calibration-filter-utils.ts (SSOT 표준)
+ * ============================================================================
+ */
+
+import type { Site } from '@equipment-management/schemas';
+import type { ReportType, ReportFormat, ReportPeriod } from '@/lib/api/reports-api';
+
+/**
+ * 교정 보고서 status 서브필터 (calibration_status 보고서 전용)
+ */
+export const REPORT_CALIBRATION_STATUS_VALUES = ['completed', 'scheduled', 'overdue'] as const;
+export type ReportCalibrationStatus = (typeof REPORT_CALIBRATION_STATUS_VALUES)[number];
+
+/**
+ * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
+ *
+ * - reportType: '' = 미선택
+ * - customDateFrom/To: ISO yyyy-MM-dd 문자열 (DateRange는 컴포넌트에서 Date로 변환)
+ */
+export interface UIReportsFilters {
+  reportType: ReportType | '';
+  dateRange: ReportPeriod;
+  customDateFrom: string;
+  customDateTo: string;
+  reportFormat: ReportFormat;
+  site: Site | '';
+  teamId: string;
+  status: ReportCalibrationStatus | '';
+}
+
+/**
+ * UI 필터 기본값
+ */
+export const DEFAULT_REPORTS_FILTERS: UIReportsFilters = {
+  reportType: '',
+  dateRange: 'last_month',
+  customDateFrom: '',
+  customDateTo: '',
+  reportFormat: 'excel',
+  site: '',
+  teamId: '',
+  status: '',
+};
+
+const REPORT_TYPE_VALUES: ReportType[] = [
+  'equipment_inventory',
+  'calibration_status',
+  'utilization_report',
+  'team_equipment',
+  'maintenance_report',
+];
+
+const REPORT_FORMAT_VALUES: ReportFormat[] = ['pdf', 'excel', 'csv'];
+
+const REPORT_PERIOD_VALUES: ReportPeriod[] = [
+  'last_week',
+  'last_month',
+  'last_quarter',
+  'last_year',
+  'custom',
+];
+
+/**
+ * URLSearchParams에서 UI 필터 객체로 변환
+ *
+ * 서버 컴포넌트(Record)와 클라이언트 훅(URLSearchParams) 모두 지원
+ */
+export function parseReportsFiltersFromSearchParams(
+  searchParams: URLSearchParams | Record<string, string | string[] | undefined>
+): UIReportsFilters {
+  const get = (key: string): string | null => {
+    if (searchParams instanceof URLSearchParams) {
+      return searchParams.get(key);
+    }
+    const value = searchParams[key];
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+      return value[0];
+    }
+    return null;
+  };
+
+  // ✅ "_all" 센티널을 빈 문자열로 변환 (calibration-filter-utils 패턴 일치)
+  const stripAll = (raw: string | null): string => (raw && raw !== '_all' ? raw : '');
+
+  const reportTypeRaw = stripAll(get('reportType'));
+  const reportType = (REPORT_TYPE_VALUES as string[]).includes(reportTypeRaw)
+    ? (reportTypeRaw as ReportType)
+    : DEFAULT_REPORTS_FILTERS.reportType;
+
+  const dateRangeRaw = get('dateRange') || '';
+  const dateRange = (REPORT_PERIOD_VALUES as string[]).includes(dateRangeRaw)
+    ? (dateRangeRaw as ReportPeriod)
+    : DEFAULT_REPORTS_FILTERS.dateRange;
+
+  const customDateFrom = get('customDateFrom') || DEFAULT_REPORTS_FILTERS.customDateFrom;
+  const customDateTo = get('customDateTo') || DEFAULT_REPORTS_FILTERS.customDateTo;
+
+  const reportFormatRaw = get('reportFormat') || '';
+  const reportFormat = (REPORT_FORMAT_VALUES as string[]).includes(reportFormatRaw)
+    ? (reportFormatRaw as ReportFormat)
+    : DEFAULT_REPORTS_FILTERS.reportFormat;
+
+  const site = stripAll(get('site')) as Site | '';
+  const teamId = stripAll(get('teamId'));
+
+  const statusRaw = stripAll(get('status'));
+  const status = (REPORT_CALIBRATION_STATUS_VALUES as readonly string[]).includes(statusRaw)
+    ? (statusRaw as ReportCalibrationStatus)
+    : DEFAULT_REPORTS_FILTERS.status;
+
+  return {
+    reportType,
+    dateRange,
+    customDateFrom,
+    customDateTo,
+    reportFormat,
+    site,
+    teamId,
+    status,
+  };
+}
+
+/**
+ * 활성 필터 개수 (reportType / dateRange / format 등 보고서 정의 자체는 제외하고
+ * 서브필터만 카운트)
+ */
+export function countActiveReportsFilters(filters: UIReportsFilters): number {
+  let count = 0;
+  if (filters.site) count++;
+  if (filters.teamId) count++;
+  if (filters.status) count++;
+  if (filters.dateRange === 'custom' && filters.customDateFrom && filters.customDateTo) count++;
+  return count;
+}
