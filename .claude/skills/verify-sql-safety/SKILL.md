@@ -201,17 +201,31 @@ grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules apps/backend/src/co
 **현재 SSOT 헬퍼:**
 - `apps/backend/src/modules/checkouts/checkout-scope.util.ts` — `buildCheckoutSiteCondition` / `buildCheckoutTeamCondition` / `buildCheckoutScopeFromResolved` / `buildCheckoutScopeForUser`. List, KPI, approval count 모두 이 헬퍼만 사용. 액션 가드 (`enforceScopeFromData`, `enforceScopeFromCheckout`)와 동일 정의.
 
-**탐지:**
+**탐지 (positive presence — 헬퍼 호출 강제):**
 ```bash
-# checkouts/approvals 서비스에서 인라인 equipment.site/teamId/lenderSiteId/lenderTeamId 조건 검출
-# 액션 가드(enforceScopeFromData/enforceScopeFromCheckout) 정의부 외에는 0 hit 이어야 함.
-grep -nE "equipment\.(site|teamId)|lender(Site|Team)Id" \
+# (1) 두 서비스 모두 SSOT 헬퍼 호출이 ≥1 건 존재해야 한다.
+#     negative grep 은 lender 컬럼의 정당한 사용(approve action 가드, getAffectedTeamIds 등)
+#     에서 noise 가 매우 크므로 positive presence 로 검사한다.
+grep -nE "buildCheckoutScope(ForUser|FromResolved)|buildCheckoutSiteCondition|buildCheckoutTeamCondition" \
   apps/backend/src/modules/checkouts/checkouts.service.ts \
-  apps/backend/src/modules/approvals/approvals.service.ts \
-  | grep -v "enforceScope"
+  apps/backend/src/modules/approvals/approvals.service.ts
+
+# (2) 안티패턴 정밀 가드 — list/count 쿼리에서 users 테이블을 requesterId 로 join 하면
+#     33차 phantom row 버그 형태가 부활한 것 (helper 내부 inArray subquery 는 단일 컬럼
+#     select 라 다음 grep 에 매칭되지 않는다).
+grep -nE "innerJoin\(.*users.*requesterId|leftJoin\(.*users.*requesterId" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  apps/backend/src/modules/approvals/approvals.service.ts
 ```
 
-**PASS:** 매칭 0건 또는 액션 가드 본체(line 967-1005 부근)만. **FAIL:** list/count 메서드 본문에 인라인 scope SQL 발견 → SSOT 헬퍼로 교체.
+**PASS:**
+- (1) 두 서비스 모두 헬퍼 호출 ≥1 건
+- (2) requesterId↔users JOIN 0 건 (helper 내부 subquery 는 본 grep 에 매칭되지 않음)
+
+**FAIL:** 헬퍼 호출이 사라지거나 users↔requesterId JOIN 이 list/count 메서드 본문에 다시 등장 → SSOT 헬퍼 호출로 교체.
+
+**예외 (allowed):**
+- 단일 checkout 의 site/team **ownership resolver** (e.g. `eq(checkouts.id, checkoutId)` 단일 행 쿼리에서 CASE/WHEN 으로 rental 분기 처리). 이는 action 가드 측 SSOT (`enforceScopeFromData` 와 동일 정의)이며 list filter 가 아니다. 현재 면제 위치: `apps/backend/src/modules/checkouts/checkouts.service.ts:2320-2335` (rental-aware ownership 추출).
 
 **확장 시 규칙:** 다른 도메인(예: equipment-imports, calibrations)에서 동일한 list/action 비대칭이 발생하면 같은 패턴으로 `*-scope.util.ts` 헬퍼를 추출하고 본 Step 의 grep 대상에 추가한다.
 

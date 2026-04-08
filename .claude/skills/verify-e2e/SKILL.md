@@ -73,6 +73,36 @@ grep -rn "\.locator('\\.\\(h\\|w\\|p\\|m\\|bg\\|text\\|flex\\|grid\\)-" apps/fro
 
 → `ApprovalKpi` 컴포넌트에 `data-testid="kpi-pending-skeleton"` 부여 + 일괄 전환 필요 (별도 harness 프롬프트 등재됨).
 
+### Step 5a: actionability 우회 안티패턴 (35차 추가)
+
+`click({ force: true })` / `.first()` 우회는 sticky overlay/ aria-live 중복 같은 **실제 UX/접근성 결함을 가립니다**. 회피책 대신 SSOT 헬퍼로 교정하고 spec 에서는 헬퍼만 호출.
+
+**현재 SSOT 헬퍼:**
+- `apps/frontend/tests/e2e/shared/helpers/sticky-helpers.ts` — `safeClick` / sticky-aware scroll utilities (force 사용 금지)
+- `apps/frontend/tests/e2e/shared/helpers/toast-helpers.ts` — useToast 중복 발화 우회 (`.first()` 대신)
+
+**탐지:**
+```bash
+# spec 파일에서 force:true 사용 금지 (sticky-helpers 내부는 면제)
+# 면제: position 좌표 클릭 (드로어 외부 클릭 등 의도적 a11y 패턴)
+grep -rn "force:\s*true" apps/frontend/tests/e2e --include="*.spec.ts" \
+  | grep -v "position:"
+
+# 토스트/리스트 .first() 우회 패턴 검출 (헬퍼 내부 면제)
+grep -rn "getByText.*\.first()\|getByRole.*status.*\.first()" \
+  apps/frontend/tests/e2e --include="*.spec.ts"
+```
+
+**PASS:** spec 파일에서 0건 (헬퍼 내부 + position 좌표 클릭 면제). **FAIL:** spec 에서 직접 사용 → 헬퍼 호출로 교체.
+
+**예외:**
+- `click({ force: true, position: ... })` — 정확한 좌표 클릭 (드로어 외부, 캔버스, 오버레이 영역 테스트). 현재 면제 위치: `apps/frontend/tests/e2e/common/accessibility/accessibility.spec.ts`.
+
+**기존 hit (35차 현재 — 알려진 부채):**
+- `apps/frontend/tests/e2e/features/approvals/comprehensive/04-bulk-actions.spec.ts` — `#select-all` checkbox 가 6건 force-click. sticky overlay 또는 hidden checkbox 가 원인일 가능성 → SelectAll 컴포넌트 actionability 점검 후 `safeClick` 으로 마이그레이션 필요 (별도 harness 프롬프트 등재 권장).
+
+**근거:** WF-20 spec 작성 중 sticky header z-index 결함 + useToast 중복 aria-live 발화가 force/first 우회로 가려져 있던 것을 발견 (34차 부채 → 35차 헬퍼 추출 완료).
+
 ### Step 6: UUID 하드코딩
 
 **PASS:** spec에 UUID 리터럴 0건. `shared-test-data.ts` 또는 constants에서 import.
