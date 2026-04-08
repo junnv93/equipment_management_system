@@ -23,6 +23,7 @@ import {
 } from '@equipment-management/shared-constants';
 import * as schema from '@equipment-management/db/schema';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
+import { dispatchScopePredicate } from '../../common/scope/scope-sql-builder';
 
 export type CheckoutScopeDirection = 'outbound' | 'inbound' | undefined;
 
@@ -98,35 +99,34 @@ export function buildCheckoutTeamCondition(
 /**
  * `ResolvedDataScope` (resolveDataScope 결과) → checkout SQL predicate.
  *
- * 반환 값:
- *   - `{ deny: true }`           → 호출자는 즉시 0/빈 결과 반환
+ * 정책 상태기계는 `common/scope/scope-sql-builder.ts:dispatchScopePredicate` SSOT 를
+ * 사용하고, 본 함수는 checkout 의 3-case OR (rental/inbound/outbound) 도메인 SQL 빌더
+ * 만 콜백으로 위임한다. 외부 contract `{ deny, condition? }` 는 보존:
+ *
+ *   - `{ deny: true }`           → 호출자는 즉시 0/빈 결과 반환 (none / unavailable)
  *   - `{ deny: false }`          → 필터 없음 (scope=all). users JOIN 생략 가능
  *   - `{ condition: SQL, ... }`  → WHERE 에 AND 결합
  *
- * SiteScopeInterceptor 의 team→site 폴백 동작과 동일.
+ * `unavailable` 분기는 본 함수가 site/team 콜백을 항상 제공하므로 도달 불가능 — 안전망.
  */
 export function buildCheckoutScopeFromResolved(
   db: AppDatabase,
   scope: ResolvedDataScope,
   direction?: CheckoutScopeDirection
 ): { condition?: SQL; deny: boolean } {
-  switch (scope.type) {
-    case 'none':
-      return { deny: true };
+  const result = dispatchScopePredicate(scope, {
+    site: (s) => buildCheckoutSiteCondition(db, s, direction),
+    team: (t) => buildCheckoutTeamCondition(db, t, direction),
+  });
+  switch (result.kind) {
     case 'all':
       return { deny: false };
-    case 'site':
-      if (!scope.site) return { deny: true };
-      return { condition: buildCheckoutSiteCondition(db, scope.site, direction), deny: false };
-    case 'team':
-      if (scope.teamId) {
-        return { condition: buildCheckoutTeamCondition(db, scope.teamId, direction), deny: false };
-      }
-      if (scope.site) {
-        return { condition: buildCheckoutSiteCondition(db, scope.site, direction), deny: false };
-      }
+    case 'none':
       return { deny: true };
-    default:
+    case 'condition':
+      return { condition: result.condition, deny: false };
+    case 'unavailable':
+      // 본 함수는 양 콜백을 항상 제공하므로 unreachable — 안전망 fail-closed
       return { deny: true };
   }
 }
