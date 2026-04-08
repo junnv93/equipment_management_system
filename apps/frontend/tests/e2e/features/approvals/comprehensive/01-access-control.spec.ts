@@ -135,51 +135,54 @@ test.describe('Cross-site list/action 대칭 (회귀)', () => {
 
     const items = page.locator('[data-testid="approval-item"]');
     const total = await items.count();
-    if (total === 0) {
-      test.skip();
-      return;
-    }
+    // 시드 드리프트로 인한 silent regression 방지 — 0 건은 명시적 실패.
+    expect(
+      total,
+      'TM(suwon) outgoing 시드가 비어 회귀 가드가 무력화됨. seed-test-new.ts 점검 필요.'
+    ).toBeGreaterThan(0);
 
-    // 모든 항목을 순회하며 403 발생 여부만 점검 (실제 승인은 첫 항목만, 나머지는 dialog 열고 닫기)
-    // - 본 회귀 케이스의 핵심은 "list 가 노출한 항목이 backend 에서 거부되지 않는다"
-    let firstApproved = false;
-    const failures: string[] = [];
+    // 검증 전략 — 실제 mutation 으로 시드를 갉아먹지 않으면서 모든 행의 액션 가드 통과를 검증:
+    // 1) 모든 row 에 대해 GET /api/checkouts/:id 로 detail 조회 (read-side 도 enforceScopeFromCheckout 통과 필요)
+    //    → list 에 있지만 가드가 거부하는 cross-site 행은 여기서 403 으로 잡힌다.
+    // 2) 첫 행만 실제 승인 PATCH 로 mutation 경로 (enforceScopeFromData) 까지 종단 검증.
+    const itemIds = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('[data-testid="approval-item"]'))
+        .map((el) => el.getAttribute('data-checkout-id') ?? el.getAttribute('data-id'))
+        .filter((v): v is string => !!v);
+    });
 
-    for (let i = 0; i < total; i++) {
-      const row = page.locator('[data-testid="approval-item"]').nth(i);
-      await row.getByRole('button', { name: /상세 보기/ }).click();
-      const dialog = page.getByRole('dialog');
-      await expect(dialog).toBeVisible({ timeout: 5000 });
-
-      if (!firstApproved) {
-        const respPromise = page.waitForResponse(
-          (res) =>
-            /\/api\/(checkouts|approvals)\/.+\/approve/.test(res.url()) &&
-            res.request().method() === 'PATCH',
-          { timeout: 10000 }
-        );
-        await dialog.getByRole('button', { name: '승인' }).click();
-        const resp = await respPromise;
-        if (resp.status() === 403) {
-          failures.push(`row#${i}: 403 ${resp.url()}`);
-        } else if (resp.ok()) {
-          firstApproved = true;
-        }
-        // dialog 가 mutation 후 자동 닫힘 — wait
-        await page.waitForTimeout(300);
-        if (await dialog.isVisible().catch(() => false)) {
-          await page.keyboard.press('Escape');
-        }
-      } else {
-        // 후속 항목: 승인하지 않고 닫기만 (시드 데이터 보존)
-        await page.keyboard.press('Escape');
+    // detail dry-check — list/action 대칭의 read-side 회귀 가드
+    const detailFailures: string[] = [];
+    for (const id of itemIds) {
+      const resp = await page.request.get(`/api/checkouts/${id}`);
+      if (resp.status() === 403) {
+        detailFailures.push(`detail GET ${id}: 403 SCOPE_ACCESS_DENIED`);
       }
     }
-
     expect(
-      failures,
-      `outgoing 목록에 액션 가드가 거부한 cross-site 항목이 노출됨:\n${failures.join('\n')}`
+      detailFailures,
+      `outgoing 목록에 read-side 가드가 거부하는 cross-site 항목 노출:\n${detailFailures.join('\n')}`
     ).toEqual([]);
+
+    // mutation 종단 검증 — 첫 행만
+    const firstRow = items.first();
+    await firstRow.getByRole('button', { name: /상세 보기/ }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    const approvePromise = page.waitForResponse(
+      (res) =>
+        /\/api\/(checkouts|approvals)\/.+\/approve/.test(res.url()) &&
+        res.request().method() === 'PATCH',
+      { timeout: 10000 }
+    );
+    await dialog.getByRole('button', { name: '승인' }).click();
+    const approveResp = await approvePromise;
+    expect(
+      approveResp.ok(),
+      `첫 행 승인 PATCH 가 액션 가드에 거부됨 (list/action 비대칭): ${approveResp.status()} ${approveResp.url()}`
+    ).toBeTruthy();
+    await expect(dialog).toBeHidden({ timeout: 5000 });
   });
 });
 
