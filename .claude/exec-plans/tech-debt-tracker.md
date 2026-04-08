@@ -27,8 +27,8 @@
   9. `form-template-export.service.exportForm` 시그니처 단순화: `(formNumber, params, filter: EnforcedReportFilter)`. service 는 enforcement / scope resolution 책임 완전 제거
   10. 인터셉터 spec 4건 추가 (silent attach / failLoud attach / cross-site reject / type=all attach), 백엔드 515 PASS (회귀 0)
   11. 두 시스템이 정책 SSOT + 진입점 단일화 → drift 방지, 향후 새 enforcement 소비자는 데코레이터 한 줄 + parameter decorator 만 사용
-- [ ] `reports.controller._resolveReportScope` 13곳 호출 마이그레이션 — `@SiteScoped({ policy: REPORT_DATA_SCOPE })` + `@CurrentScope()` 로 점진적 치환 후 helper 제거. (단순 mechanical, 별도 PR 권장 — 인프라가 모두 준비됨) — 2026-04-08
-- [ ] `enforceReportScope` wrapper 함수 + spec 삭제 검토 — form-template-export 가 더 이상 호출 안 함. 다른 사용처 0 확인 후 제거 가능. `EnforcedReportFilter` 타입은 alias 로 유지 — 2026-04-08
+- [x] `reports.controller._resolveReportScope` 12곳 마이그레이션 + helper 제거 — 해결: 2026-04-08 — `refactor/reports-controller-scope-migration`. 12개 stat/export 라우트(5 stat + 7 file export)에 `@SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })` + `@CurrentScope() scope: ResolvedDataScope` 일괄 적용. failLoud 선택 이유: query mutation 0 (Zod pipe 충돌 회피) + scope=none 즉시 403 (보안 일관성). `_resolveReportScope` private helper 완전 제거. audit-logs 라우트는 `AUDIT_LOG_SCOPE` + 'none'시 빈 보고서 fallback 정책 때문에 인라인 유지 (의도적 예외)
+- [x] `enforceReportScope` wrapper 함수 + spec + 파일 통째로 삭제 — 해결: 2026-04-08 — 사용처 0 확인 (form-template-export 가 직접 `EnforcedScope` 사용). `report-scope-enforcement.ts` + spec + 빈 디렉토리 통째 삭제. `EnforcedReportFilter` 타입 alias 도 제거하고 form-template-export.service 의 9곳을 `EnforcedScope` 직접 사용으로 교체 — 진정한 단일 타입 SSOT (`common/scope/scope-enforcer.ts`)
 - [ ] WF-25 spec assertion 본 경로 활성화 — TE 사용자 대상 calibration_due 알림(linkUrl=/equipment/...) deterministic 시딩 + D-day 배지 soft assertion 추가 — `apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts` — 2026-04-08
 - [ ] WF-35 spec: `page.locator('textarea').first()` → `getByRole('textbox')` 대체 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:50` — 2026-04-08
 - [ ] WF-35 spec: `waitForTimeout(1_500)` → `expect.poll` 기반 refetch 대기로 결정성 향상 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:105` — 2026-04-08
