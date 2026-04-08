@@ -327,7 +327,32 @@
       "save": "저장",
       "saving": "저장 중...",
       "createSuccess": "자체점검 기록이 생성되었습니다.",
-      "createError": "자체점검 기록 생성에 실패했습니다."
+      "createError": "자체점검 기록 생성에 실패했습니다.",
+      "editTitle": "자체점검 기록 수정",
+      "update": "수정 저장",
+      "updateSuccess": "자체점검 기록이 수정되었습니다.",
+      "updateError": "자체점검 기록 수정에 실패했습니다."
+    },
+    "actions": {
+      "edit": "수정",
+      "confirm": "확인",
+      "delete": "삭제"
+    },
+    "confirmDialog": {
+      "title": "자체점검 확인",
+      "message": "이 자체점검 기록을 확인 처리하시겠습니까? 확인 후에는 수정/삭제할 수 없습니다.",
+      "action": "확인 처리",
+      "cancel": "취소",
+      "success": "자체점검이 확인되었습니다.",
+      "error": "확인 처리에 실패했습니다."
+    },
+    "deleteDialog": {
+      "title": "자체점검 삭제",
+      "message": "이 자체점검 기록을 삭제하시겠습니까? 되돌릴 수 없습니다.",
+      "action": "삭제",
+      "cancel": "취소",
+      "success": "자체점검 기록이 삭제되었습니다.",
+      "error": "삭제에 실패했습니다."
     }
   },
   "inspection": {

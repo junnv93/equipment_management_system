@@ -327,7 +327,32 @@
       "save": "Save",
       "saving": "Saving...",
       "createSuccess": "Self inspection record created successfully.",
-      "createError": "Failed to create self inspection record."
+      "createError": "Failed to create self inspection record.",
+      "editTitle": "Edit Self Inspection Record",
+      "update": "Save Changes",
+      "updateSuccess": "Self inspection record updated successfully.",
+      "updateError": "Failed to update self inspection record."
+    },
+    "actions": {
+      "edit": "Edit",
+      "confirm": "Confirm",
+      "delete": "Delete"
+    },
+    "confirmDialog": {
+      "title": "Confirm Self Inspection",
+      "message": "Mark this self inspection as confirmed? It cannot be edited or deleted afterward.",
+      "action": "Confirm",
+      "cancel": "Cancel",
+      "success": "Self inspection has been confirmed.",
+      "error": "Failed to confirm self inspection."
+    },
+    "deleteDialog": {
+      "title": "Delete Self Inspection",
+      "message": "Delete this self inspection record? This cannot be undone.",
+      "action": "Delete",
+      "cancel": "Cancel",
+      "success": "Self inspection record deleted.",
+      "error": "Failed to delete self inspection record."
     }
   },
   "inspection": {

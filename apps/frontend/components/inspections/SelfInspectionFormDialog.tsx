@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isConflictError } from '@/lib/api/error';
@@ -29,7 +29,13 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { queryKeys } from '@/lib/api/query-config';
-import { createSelfInspection, type CreateSelfInspectionDto } from '@/lib/api/self-inspection-api';
+import {
+  createSelfInspection,
+  updateSelfInspection,
+  type CreateSelfInspectionDto,
+  type SelfInspection,
+  type UpdateSelfInspectionDto,
+} from '@/lib/api/self-inspection-api';
 import type {
   SelfInspectionItemJudgment,
   SelfInspectionResult,
@@ -45,17 +51,22 @@ interface SelfInspectionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   equipmentId: string;
+  /** edit 모드일 때 전달; 미전달이면 create 모드 */
+  initialData?: SelfInspection;
 }
 
 export default function SelfInspectionFormDialog({
   open,
   onOpenChange,
   equipmentId,
+  initialData,
 }: SelfInspectionFormDialogProps) {
   const t = useTranslations('equipment');
   const tErrors = useTranslations('errors');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const isEdit = !!initialData;
 
   const [inspectionDate, setInspectionDate] = useState('');
   const [overallResult, setOverallResult] = useState<SelfInspectionResult | ''>('');
@@ -71,34 +82,84 @@ export default function SelfInspectionFormDialog({
     setItems(DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({ checkItem: name, checkResult: '' })));
   };
 
+  // edit 모드: dialog가 열릴 때 initialData로 폼 채우기
+  useEffect(() => {
+    if (!open) return;
+    if (initialData) {
+      setInspectionDate(initialData.inspectionDate?.slice(0, 10) ?? '');
+      setOverallResult(initialData.overallResult ?? '');
+      setRemarks(initialData.remarks ?? '');
+      const seeded =
+        initialData.items && initialData.items.length > 0
+          ? initialData.items.map((it) => ({
+              checkItem: it.checkItem,
+              checkResult: it.checkResult,
+            }))
+          : DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({
+              checkItem: name,
+              checkResult: '' as const,
+            }));
+      setItems(seeded);
+    } else {
+      resetForm();
+    }
+  }, [open, initialData]);
+
+  const handleMutationError = (error: Error, fallbackKey: 'createError' | 'updateError') => {
+    if (isConflictError(error)) {
+      const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, tErrors);
+      toast({
+        title: conflictInfo.title,
+        description: conflictInfo.message,
+        variant: 'destructive',
+      });
+      // CAS 409: 상세 캐시 삭제 → 다음 열람 시 최신 version refetch
+      queryClient.removeQueries({
+        queryKey: queryKeys.equipment.selfInspections(equipmentId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.selfInspections(equipmentId),
+      });
+      onOpenChange(false);
+      return;
+    }
+    toast({
+      variant: 'destructive',
+      description: t(`selfInspection.form.${fallbackKey}`),
+    });
+  };
+
+  const invalidateAfterSuccess = () => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.equipment.selfInspections(equipmentId),
+    });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.equipment.detail(equipmentId),
+    });
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: CreateSelfInspectionDto) => createSelfInspection(equipmentId, data),
     onSuccess: () => {
       toast({ description: t('selfInspection.form.createSuccess') });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.equipment.selfInspections(equipmentId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.equipment.detail(equipmentId),
-      });
+      invalidateAfterSuccess();
       resetForm();
       onOpenChange(false);
     },
-    onError: (error: Error) => {
-      if (isConflictError(error)) {
-        const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, tErrors);
-        toast({
-          title: conflictInfo.title,
-          description: conflictInfo.message,
-          variant: 'destructive',
-        });
-        return;
-      }
-      toast({
-        variant: 'destructive',
-        description: t('selfInspection.form.createError'),
-      });
+    onError: (error: Error) => handleMutationError(error, 'createError'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateSelfInspectionDto) => {
+      if (!initialData) throw new Error('updateMutation called without initialData');
+      return updateSelfInspection(initialData.id, data);
     },
+    onSuccess: () => {
+      toast({ description: t('selfInspection.form.updateSuccess') });
+      invalidateAfterSuccess();
+      onOpenChange(false);
+    },
+    onError: (error: Error) => handleMutationError(error, 'updateError'),
   });
 
   const handleAddItem = () => {
@@ -122,7 +183,7 @@ export default function SelfInspectionFormDialog({
   const handleSubmit = () => {
     if (!isValid) return;
 
-    const dto: CreateSelfInspectionDto = {
+    const payload = {
       inspectionDate,
       overallResult: overallResult as SelfInspectionResult,
       items: items.map((item, idx) => ({
@@ -133,15 +194,21 @@ export default function SelfInspectionFormDialog({
       ...(remarks ? { remarks } : {}),
     };
 
-    createMutation.mutate(dto);
+    if (isEdit && initialData) {
+      updateMutation.mutate({ version: initialData.version, ...payload });
+    } else {
+      createMutation.mutate(payload);
+    }
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {t('selfInspection.form.title')}
+            {isEdit ? t('selfInspection.form.editTitle') : t('selfInspection.form.title')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
           </DialogTitle>
           <DialogDescription>{t('selfInspection.form.description')}</DialogDescription>
@@ -241,10 +308,12 @@ export default function SelfInspectionFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('selfInspection.form.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!isValid || createMutation.isPending}>
-            {createMutation.isPending
+          <Button onClick={handleSubmit} disabled={!isValid || isPending}>
+            {isPending
               ? t('selfInspection.form.saving')
-              : t('selfInspection.form.save')}
+              : isEdit
+                ? t('selfInspection.form.update')
+                : t('selfInspection.form.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

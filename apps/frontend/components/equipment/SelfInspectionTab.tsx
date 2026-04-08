@@ -2,14 +2,19 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { queryKeys } from '@/lib/api/query-config';
-import { getSelfInspections } from '@/lib/api/self-inspection-api';
+import {
+  confirmSelfInspection,
+  deleteSelfInspection,
+  getSelfInspections,
+  type SelfInspection,
+} from '@/lib/api/self-inspection-api';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
-import { FORM_CATALOG } from '@equipment-management/shared-constants';
+import { FORM_CATALOG, Permission } from '@equipment-management/shared-constants';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,8 +26,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { AlertTriangle, FileText } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { AlertTriangle, CheckCircle2, FileText, Pencil, Trash2 } from 'lucide-react';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/components/ui/use-toast';
+import { isConflictError } from '@/lib/api/error';
+import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
 
 const SelfInspectionFormDialog = dynamic(
   () => import('@/components/inspections/SelfInspectionFormDialog'),
@@ -50,9 +69,19 @@ const LEGACY_ITEM_KEYS = ['appearance', 'functionality', 'safety', 'calibrationS
 
 export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const t = useTranslations('equipment');
+  const tErrors = useTranslations('errors');
   const { fmtDate } = useDateFormatter();
+  const { can } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const equipmentId = String(equipment.id);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<SelfInspection | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<SelfInspection | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SelfInspection | null>(null);
+
+  const canEdit = can(Permission.CREATE_SELF_INSPECTION);
+  const canConfirm = can(Permission.CONFIRM_SELF_INSPECTION);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: queryKeys.equipment.selfInspections(equipmentId),
@@ -60,6 +89,62 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   });
 
   const inspections = data?.data ?? [];
+
+  const handleConflictError = (_error: Error) => {
+    const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, tErrors);
+    toast({
+      title: conflictInfo.title,
+      description: conflictInfo.message,
+      variant: 'destructive',
+    });
+    queryClient.removeQueries({ queryKey: queryKeys.equipment.selfInspections(equipmentId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.equipment.selfInspections(equipmentId) });
+  };
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.equipment.selfInspections(equipmentId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.equipment.detail(equipmentId) });
+  };
+
+  const confirmMutation = useMutation({
+    mutationFn: (target: SelfInspection) => confirmSelfInspection(target.id, target.version),
+    onSuccess: () => {
+      toast({ description: t('selfInspection.confirmDialog.success') });
+      invalidate();
+      setConfirmTarget(null);
+    },
+    onError: (error: Error) => {
+      if (isConflictError(error)) {
+        handleConflictError(error);
+        setConfirmTarget(null);
+        return;
+      }
+      toast({
+        variant: 'destructive',
+        description: t('selfInspection.confirmDialog.error'),
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (target: SelfInspection) => deleteSelfInspection(target.id),
+    onSuccess: () => {
+      toast({ description: t('selfInspection.deleteDialog.success') });
+      invalidate();
+      setDeleteTarget(null);
+    },
+    onError: (error: Error) => {
+      if (isConflictError(error)) {
+        handleConflictError(error);
+        setDeleteTarget(null);
+        return;
+      }
+      toast({
+        variant: 'destructive',
+        description: t('selfInspection.deleteDialog.error'),
+      });
+    },
+  });
 
   if (isLoading) {
     return (
@@ -121,6 +206,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                         checkResult: inspection[key],
                       }));
 
+                const isConfirmed = inspection.status === 'confirmed';
                 return (
                   <div key={inspection.id} className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
@@ -132,6 +218,41 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                         <Badge className={JUDGMENT_COLORS[inspection.overallResult]}>
                           {t(`selfInspection.judgment.${inspection.overallResult}`)}
                         </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {canEdit && !isConfirmed && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditTarget(inspection)}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            {t('selfInspection.actions.edit')}
+                          </Button>
+                        )}
+                        {canConfirm && !isConfirmed && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmTarget(inspection)}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            {t('selfInspection.actions.confirm')}
+                          </Button>
+                        )}
+                        {canEdit && !isConfirmed && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTarget(inspection)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1 text-destructive" />
+                            {t('selfInspection.actions.delete')}
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -179,6 +300,61 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
           equipmentId={equipmentId}
         />
       )}
+
+      {editTarget && (
+        <SelfInspectionFormDialog
+          open={!!editTarget}
+          onOpenChange={(open) => !open && setEditTarget(null)}
+          equipmentId={equipmentId}
+          initialData={editTarget}
+        />
+      )}
+
+      <AlertDialog open={!!confirmTarget} onOpenChange={(open) => !open && setConfirmTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('selfInspection.confirmDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('selfInspection.confirmDialog.message')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('selfInspection.confirmDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={confirmMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmTarget) confirmMutation.mutate(confirmTarget);
+              }}
+            >
+              {t('selfInspection.confirmDialog.action')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('selfInspection.deleteDialog.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('selfInspection.deleteDialog.message')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('selfInspection.deleteDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteTarget) deleteMutation.mutate(deleteTarget);
+              }}
+            >
+              {t('selfInspection.deleteDialog.action')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
