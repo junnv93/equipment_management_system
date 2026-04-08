@@ -189,26 +189,26 @@ export class CheckoutsService extends VersionedBaseService {
     newStatus: CheckoutStatus,
     additionalData?: Partial<Checkout>
   ): Promise<Checkout> {
-    try {
-      return await this.updateWithVersion<Checkout>(
-        checkouts,
-        uuid,
-        currentCheckout.version,
-        {
-          status: newStatus,
-          ...additionalData,
-        },
-        '반출'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
-        // findOne 캐시가 stale version을 가지고 있으면 재시도도 계속 409
-        const detailCacheKey = this.buildCacheKey('detail', { uuid });
-        await this.cacheService.delete(detailCacheKey);
-      }
-      throw error;
-    }
+    // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    return await this.updateWithVersion<Checkout>(
+      checkouts,
+      uuid,
+      currentCheckout.version,
+      {
+        status: newStatus,
+        ...additionalData,
+      },
+      '반출'
+    );
+  }
+
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * 모든 updateWithVersion 호출 경로(update/approve/reject/cancel/return/condition-check 등)
+   * 가 단일 정책을 공유 → 메서드별 try/catch boilerplate 제거.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    await this.cacheService.delete(this.buildCacheKey('detail', { uuid: id }));
   }
 
   /**
@@ -1719,13 +1719,12 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
-        throw error;
-      }
-      // ✅ CAS 실패 시 stale cache 방지
-      if (error instanceof ConflictException) {
-        const detailCacheKey = this.buildCacheKey('detail', { uuid });
-        await this.cacheService.delete(detailCacheKey);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
@@ -1823,12 +1822,12 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      // ✅ CAS 실패 시 stale cache 방지
-      if (error instanceof ConflictException) {
-        const detailCacheKey = this.buildCacheKey('detail', { uuid });
-        await this.cacheService.delete(detailCacheKey);
-      }
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
@@ -1951,13 +1950,12 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
-        throw error;
-      }
-      if (error instanceof ConflictException) {
-        // ✅ CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
-        const detailCacheKey = this.buildCacheKey('detail', { uuid });
-        await this.cacheService.delete(detailCacheKey);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
@@ -2102,14 +2100,10 @@ export class CheckoutsService extends VersionedBaseService {
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
-        error instanceof ForbiddenException
+        error instanceof ForbiddenException ||
+        error instanceof ConflictException
       ) {
-        throw error;
-      }
-      if (error instanceof ConflictException) {
-        // ✅ CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
-        const detailCacheKey = this.buildCacheKey('detail', { uuid });
-        await this.cacheService.delete(detailCacheKey);
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
@@ -2274,16 +2268,12 @@ export class CheckoutsService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof ConflictException) {
-        // CAS 실패 시 stale cache 제거 (다른 상태 변경 메서드와 동일 패턴)
-        const detailCacheKey = this.buildCacheKey('detail', { uuid });
-        await this.cacheService.delete(detailCacheKey);
-      }
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
         error instanceof ConflictException
       ) {
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
