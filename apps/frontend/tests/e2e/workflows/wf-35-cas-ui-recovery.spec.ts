@@ -17,7 +17,8 @@
 
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 import path from 'path';
-import { TEST_NC_IDS } from '../shared/constants/shared-test-data';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { TEST_NC_IDS, BASE_URLS } from '../shared/constants/shared-test-data';
 
 const TM_STORAGE_STATE = path.join(__dirname, '../.auth/technical-manager.json');
 const NC_ID = TEST_NC_IDS.NC_001_MALFUNCTION_OPEN;
@@ -27,7 +28,7 @@ async function openAuthenticatedPage(
   browser: import('@playwright/test').Browser
 ): Promise<{ context: BrowserContext; page: Page }> {
   const context = await browser.newContext({
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    baseURL: BASE_URLS.FRONTEND,
     storageState: TM_STORAGE_STATE,
     reducedMotion: 'reduce',
   });
@@ -47,12 +48,12 @@ async function gotoNcDetail(page: Page, ncId: string) {
 async function startCorrectionEdit(page: Page) {
   const editButton = page.getByRole('button', { name: '편집', exact: true });
   await editButton.click();
-  const textarea = page.locator('textarea').first();
+  const textarea = page.getByRole('textbox').first();
   await expect(textarea).toBeVisible({ timeout: 5000 });
   return textarea;
 }
 
-async function fillAndSave(page: Page, textarea: ReturnType<Page['locator']>, content: string) {
+async function fillAndSave(page: Page, textarea: ReturnType<Page['getByRole']>, content: string) {
   await textarea.fill(content);
   await page.getByRole('button', { name: '저장', exact: true }).click();
 }
@@ -101,8 +102,16 @@ test.describe('WF-35: CAS 충돌 UI 복구 (다탭 시뮬레이션)', () => {
       ).toBeVisible({ timeout: 10_000 });
 
       // Step 5: onSettled 의 invalidateQueries 가 detail 재조회 → nc.version 최신화 대기
-      //   (dev 모드에서는 networkidle 이 HMR polling 때문에 수렴하지 않으므로 waitForTimeout 사용)
-      await pageB.waitForTimeout(1_500);
+      //   waitForTimeout 대신 GET /non-conformances/:id 가 200 으로 완료되는 시점을 polling 하여
+      //   결정성 확보 (HMR polling 영향 없음).
+      const ncDetailUrl = API_ENDPOINTS.NON_CONFORMANCES.GET(NC_ID);
+      await pageB.waitForResponse(
+        (resp) =>
+          resp.url().endsWith(ncDetailUrl) &&
+          resp.request().method() === 'GET' &&
+          resp.status() === 200,
+        { timeout: 10_000 }
+      );
 
       // Step 6: 페이지 B 재시도 — 409 에러 경로는 editingCorrection 을 리셋하지 않으므로
       //   textarea 가 여전히 열려 있음. "저장" 만 다시 클릭하면 최신 version 으로 PATCH.
