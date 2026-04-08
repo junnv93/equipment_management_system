@@ -7,6 +7,7 @@
 
 ## 미완료 항목
 
+- [ ] Export UI 다운로드 동선 미검증 양식 — wf-19b/20b/21 spec이 모두 `page.request.get` API-only. 사용자 클릭 → `waitForEvent('download')` → 한국어 filename UTF-8 → 다운로드 토스트/에러 피드백 spec 부재. UL-QP-18-04/06/07/09/11 등 미작성 양식 추가 시 동일 함정 위험. verify-e2e Step 5b 가드 등재됨 (35차) — `apps/frontend/tests/e2e/workflows/wf-{19b,20b,21}-*.spec.ts` — 2026-04-08
 - [x] Form export 5 보조 exporter team-scope 경계 미강제 — 해결: 2026-04-08 — intermediate/self/checkout/equipment-import 4곳에 `filter.teamId` WHERE/post-check 추가, software validation은 site-only 리소스라 team scope에서 SCOPE_RESOURCE_MISMATCH 403 reject. `enforceReportScope` team branch도 `params.site` pass-through 제거해 site-only 리소스 우회 차단
 - [x] 프론트엔드 `hasRole()` → `can(Permission.X)` 전면 마이그레이션 — 해결: 2026-04-08 — 10개 파일 (checkouts/tabs, checkout detail, calibration approval/history, checkout/location/maintenance/incident history tabs, attachments, teams) 일괄 치환 + `useAuth().hasRole` 제거. 백엔드 @RequirePermissions와 단일 SSOT 공유. Side fix: CalibrationHistoryTab가 TM도 허용하도록 backend 정책과 정렬 (기존 `[TE]`는 TM이 교정 등록 불가 버그)
 - [ ] `checkout-scope.util.ts` 패턴을 다른 도메인(equipment-imports, calibration-plans, non-conformances)에도 적용 검토 — 각 도메인이 list/KPI/Action predicate 분리 운영 시 동일 drift 위험. 단순 복사 금지, 일반화 가능성 먼저 검토 — `apps/backend/src/modules/checkouts/checkout-scope.util.ts` 참조 — 2026-04-08

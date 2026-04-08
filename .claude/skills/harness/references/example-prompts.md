@@ -1,8 +1,243 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-08 (34차 후속 — wf20-infra-debt harness PASS, review-architecture tech debt 3건 등재)**
+> **마지막 정리일: 2026-04-08 (36차 — generate-prompts 전체 스캔, CRITICAL 1 + HIGH 6 + MEDIUM 3 신규 등재, 34차 stale 4건 정리)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+---
+
+## 36차 신규 — generate-prompts 3-agent 병렬 스캔 (10건)
+
+> **발견 배경 (2026-04-08, 36차)**: aria-label SSOT 롤아웃(35차) 완료 후 example-prompts.md 상단 우선순위가 모두 stale로 확인되어 generate-prompts 스킬 실행. Backend/Frontend/Infra+Packages 3개 에이전트 병렬 스캔 + 2차 verify(Read/Grep) 통과한 항목만 등재.
+
+### 🔴 CRITICAL — audit_logs.userId FK 미설정 + relations() 미정의
+
+```
+배경: packages/db/src/schema/audit-logs.ts:36 의 `userId: uuid('user_id').notNull()` 에
+`.references(() => users.id)` 가 누락되어 있다. 사용자 삭제 시 audit log가 orphan 상태로
+남으며, 더 큰 문제는 이 파일에 `relations()` export가 전혀 없어서 audit 모듈이 drizzle
+relation 타입 안전성 없이 user join을 수동으로 구성한다.
+
+회피책 (현재): userName/userRole/userSite/userTeamId 를 비정규화로 박아둠 (line 37-57). 사용자
+정보 변경 시 stale 가능. CASCADE/SET NULL 정책 부재.
+
+근본 해결:
+1. userId에 `.references(() => users.id, { onDelete: 'set null' })` 추가 + nullable 전환
+   (audit log는 사용자 삭제 후에도 보존되어야 하므로 SET NULL이 정답).
+2. relations() 블록 추가: `userId → users` 1:N. audit module의 수동 join 제거.
+3. 마이그레이션: 기존 orphan userId 발견 시 SET NULL 백필.
+4. ✅ 비정규화된 userName/Role/Site/TeamId는 유지 — 삭제 후에도 누가 무엇을 했는지 표시하기 위함.
+
+영향 범위: packages/db/src/schema/audit-logs.ts (1 파일) + drizzle migration 1건 +
+apps/backend/src/modules/audit/* 의 join 코드 (수동 join → relation 사용으로 단순화).
+Mode 2 — DB 마이그레이션 동반.
+
+검증:
+- pnpm tsc --noEmit
+- pnpm --filter backend run test
+- 신규 마이그레이션 SQL 검토: ALTER TABLE audit_logs ADD CONSTRAINT ... ON DELETE SET NULL
+- /verify-implementation PASS
+- 회귀: 사용자 삭제 → audit log 조회 시 userName 보존 + userId NULL 확인
+```
+
+### 🟠 HIGH — equipment.requestedBy/approvedBy 타입 드리프트 (varchar(36) → uuid + FK)
+
+```
+배경: packages/db/src/schema/equipment.ts:112-113 의 `requestedBy: varchar('requested_by',
+{ length: 36 })`, `approvedBy: varchar('approved_by', { length: 36 })` 가 다른 모든 user
+참조 컬럼(`managerId`, `deputyManagerId` 등)과 타입이 다르다 (varchar(36) vs uuid).
+- FK 제약 없음 → 존재하지 않는 사용자 ID 입력 가능
+- JOIN 시 cast 필요 → 타입 안전성 손실
+- drizzle relations() 에서 user 참조 불가
+
+근본 해결:
+1. 두 컬럼을 uuid로 변경 + `.references(() => users.id, { onDelete: 'set null' })` 추가
+2. 마이그레이션: 기존 데이터 유효성 검사 → 잘못된 ID는 NULL로 백필 → 컬럼 타입 변경
+3. relations() 블록에 두 관계 추가
+
+영향 범위: packages/db/src/schema/equipment.ts (1 파일) + 마이그레이션 SQL 1건 + 등록/승인
+서비스 코드의 타입 변경 (대부분 string → string이라 컴파일은 통과). Mode 2.
+
+검증:
+- pnpm tsc --noEmit (전 패키지)
+- 마이그레이션 SQL: 데이터 무결성 검증 단계 포함
+- 회귀: 장비 등록/승인 워크플로(WF-01/02) E2E 통과
+```
+
+### 🟠 HIGH — checkouts.lenderTeamId/lenderSiteId FK 누락 (시험소간 대여)
+
+```
+배경: packages/db/src/schema/checkouts.ts:49-50 의 `lenderTeamId: uuid('lender_team_id')`
+는 teams.id 를 참조해야 하지만 `.references()` 가 없다. `lenderSiteId: varchar('lender_site_id', { length: 50 })` 도
+sites enum/테이블 검증 없음. 다른 user 참조 컬럼 (requesterId, approverId 등)은 모두 FK가
+명시되어 있어 일관성 깨짐. 시험소간 대여 시나리오에서 dangling reference 가능.
+
+근본 해결:
+1. lenderTeamId에 `.references(() => teams.id, { onDelete: 'restrict' })` 추가
+   (대여 중인 팀을 삭제하면 안 됨)
+2. lenderSiteId는 SITE 상수와 정합성 검증 — packages/schemas의 SITE enum 사용 또는 CHECK 제약
+3. 마이그레이션: 기존 NULL이 아닌 lenderTeamId 중 teams 미존재 ID 발견 시 사용자에게 보고
+
+영향 범위: packages/db/src/schema/checkouts.ts (1 파일) + 마이그레이션 1건. Mode 2.
+
+검증:
+- pnpm tsc --noEmit
+- 회귀: 시험소간 대여 워크플로(WF-08 또는 해당 spec) 통과
+- 마이그레이션 무결성 검증
+```
+
+### 🟠 HIGH — calibrations.registeredBy/approvedBy FK 누락 (technicianId와 일관성 깨짐)
+
+```
+배경: packages/db/src/schema/calibrations.ts:69-70 의 `registeredBy: uuid('registered_by')`,
+`approvedBy: uuid('approved_by')` 는 raw uuid 컬럼이고 `.references()` 가 없다. 같은 파일
+line 44 의 `technicianId: uuid('technician_id').references(() => users.id, ...)` 는
+FK가 있어 명백한 일관성 위반. 교정 3단계 승인(WF-04) 의 actor 추적 신뢰성 저하.
+
+근본 해결:
+1. 두 컬럼에 `.references(() => users.id, { onDelete: 'set null' })` 추가
+2. relations() 블록에 두 관계 추가
+3. 마이그레이션: 백필 검증
+
+영향 범위: packages/db/src/schema/calibrations.ts (1 파일) + 마이그레이션 1건. Mode 2.
+
+검증:
+- pnpm tsc --noEmit + backend test
+- 회귀: WF-04 교정 3단계 승인 E2E 통과
+```
+
+### 🟠 HIGH — notification_preferences.userId FK 누락 (notifications 정책 33차 후속)
+
+```
+배경: 33차 notifications FK 정책 정비(memory: project_notifications_fk_policy)에서
+notification_preferences는 후속으로 분류되었음. packages/db/src/schema/notifications.ts:105
+의 `userId: uuid().notNull().unique()` 에 `.references(() => users.id, { onDelete: 'cascade' })`
+가 빠져 있다. 사용자 삭제 시 preference orphan 잔류.
+
+근본 해결:
+1. userId에 `.references(() => users.id, { onDelete: 'cascade' })` 추가 (preference는 사용자
+   삭제 시 함께 삭제되어야 함 — recipient policy와 일관)
+2. 마이그레이션 + orphan 백필 (DELETE FROM notification_preferences WHERE user_id NOT IN ...)
+
+영향 범위: packages/db/src/schema/notifications.ts + 마이그레이션 1건. Mode 1.
+
+검증:
+- pnpm tsc --noEmit
+- 0004/0005 마이그레이션과 동일 패턴 재사용
+```
+
+### 🟠 HIGH — RENTAL_IMPORT 5개 deprecated 권한 매핑 모순 (role-permissions.ts)
+
+```
+배경: packages/shared-constants/src/permissions.ts:181-197 의 5개 권한
+(VIEW_RENTAL_IMPORTS, CREATE/APPROVE/COMPLETE/CANCEL_RENTAL_IMPORT)이 deprecated로 표시되어
+있고, role-permissions.ts:199 에 "제외: DEPRECATED 권한 (VIEW_RENTAL_IMPORTS 등)" 주석이
+있는데, 같은 파일 line 300-304 에는 여전히 해당 5개 권한이 한 role의 매핑에 포함되어 있다.
+주석과 데이터가 모순. 백엔드 컨트롤러에서 해당 Permission을 사용하는 곳은 0건(검증 완료).
+
+회피책 (현재): permissions.ts에 deprecated 표시만 하고 mapping은 그대로 둠.
+
+근본 해결:
+1. role-permissions.ts:300-304 에서 5개 deprecated 권한 항목 제거
+2. permissions.ts 에서 5개 enum 항목 제거 (모든 사용처 0개 검증 완료)
+3. api-endpoints.ts:483-496 의 RENTAL_IMPORTS 블록도 EQUIPMENT_IMPORTS와 string-for-string
+   중복이므로 동시 제거
+4. /verify-ssot로 dead enum 가드 회귀 확인
+
+영향 범위: packages/shared-constants/src/{permissions,role-permissions,api-endpoints}.ts
+(3 파일). Mode 1.
+
+검증:
+- pnpm tsc --noEmit (전 패키지)
+- pnpm --filter backend run test + frontend test
+- /verify-ssot PASS
+- grep -rn "VIEW_RENTAL_IMPORTS\|CREATE_RENTAL_IMPORT\|APPROVE_RENTAL_IMPORT" apps/ packages/ → 0건
+```
+
+### 🟠 HIGH — apps/frontend/app/(dashboard)/form-templates/error.tsx 누락
+
+```
+배경: apps/frontend/app/(dashboard)/form-templates/ 에 page.tsx + loading.tsx 만 있고
+error.tsx 가 없다. 다른 모든 dashboard route segment(equipment, checkouts, calibration,
+approvals 등)는 error.tsx + loading.tsx 한 쌍을 갖고 있어 패턴 일관성 깨짐. form-template
+업로드/파싱 실패 시 fallback이 dashboard layout 단까지 올라가 사용자 경험 저하.
+
+근본 해결:
+1. error.tsx 추가 — 다른 segment의 error.tsx와 동일 구조 (use client + ErrorBoundary
+   reset 핸들러 + 한국어 메시지)
+2. /verify-nextjs 또는 /verify-implementation 의 route segment coverage 룰 추가 검토
+
+영향 범위: 1 파일 신규 생성. Mode 0.
+
+검증:
+- pnpm tsc --noEmit
+- 회귀: form-template 업로드 spec 통과
+```
+
+### 🟡 MEDIUM — Frontend Dockerfile build stage root 실행 + pnpm 중복 install
+
+```
+배경: apps/frontend/Dockerfile 의 build 스테이지(line 23-58)에서 `npm install -g pnpm`이
+3개 스테이지에서 반복 실행되고, build 스테이지가 USER 직권 없이 root로 `npm run build`를
+실행한다. production 스테이지(line 67-89)만 비-root로 전환. 또한 HEALTHCHECK 디렉티브가
+production 스테이지에 부재. apps/backend/docker/Dockerfile 도 동일 패턴.
+
+근본 해결:
+1. multi-stage builder에서 deps 스테이지를 하나로 통합 → COPY --from=deps 로 재사용
+2. build 스테이지에도 `USER node` 적용 (또는 별도 build user)
+3. production 스테이지에 HEALTHCHECK 추가: `HEALTHCHECK CMD wget -qO- http://localhost:3000/api/health || exit 1`
+4. 동일 변경 backend Dockerfile에도 적용
+
+영향 범위: apps/frontend/Dockerfile + apps/backend/docker/Dockerfile (2 파일). Mode 1.
+
+검증:
+- docker build 양 이미지 성공
+- docker run 후 HEALTHCHECK status healthy 확인
+- 이미지 크기 비교 (deps 통합 전/후)
+```
+
+### 🟡 MEDIUM — Backend Dockerfile layer caching 깨짐 (lockfile-only 레이어 무효화)
+
+```
+배경: apps/backend/docker/Dockerfile builder 스테이지에서 `pnpm install --frozen-lockfile`
+(line 60) 직후 `COPY . .` (line 63) 가 실행되어 lockfile-only 레이어 캐싱 효과가 사라진다.
+prod-deps 스테이지는 또다시 전체 install을 실행 → 같은 빌드에서 install 3회. CI 시간 손실.
+
+근본 해결:
+1. lockfile + package.json 만 먼저 COPY → install → 그 다음 COPY . . (표준 docker layer
+   caching 패턴)
+2. prod-deps 스테이지는 builder의 node_modules를 COPY --from 으로 재사용
+
+영향 범위: apps/backend/docker/Dockerfile. Mode 0~1.
+
+검증:
+- docker build 시간 측정 (변경 전/후)
+- 레이어 수 감소
+```
+
+### 🟡 MEDIUM — Reports 페이지 7개 useState 필터 → URL searchParams SSOT
+
+```
+배경: apps/frontend/app/(dashboard)/reports/ReportsContent.tsx:65-71 에서 reportType,
+dateRange, customDateRange, reportFormat, site, teamId, status 7개 필터가 모두 useState
+로 관리되고 있다. CLAUDE.md Filter SSOT 원칙(URL 파라미터가 유일한 진실의 소스)과 위배.
+사용자가 특정 보고서 조합을 북마크/공유 불가능. Alerts 페이지(AlertsContent.tsx:125)도
+searchQuery만 useState에 따로 보관하여 부분 위반.
+
+근본 해결:
+1. ReportsContent의 7개 useState → useSearchParams + URL 동기화 hook (다른 list 페이지의
+   필터 패턴 재사용)
+2. AlertsContent의 searchQuery도 동일 처리 — 이미 useSearchParams를 import 중이므로 변경 작음
+3. /verify-filters 로 회귀
+
+영향 범위: apps/frontend/app/(dashboard)/reports/ReportsContent.tsx +
+apps/frontend/app/(dashboard)/alerts/AlertsContent.tsx (2 파일). Mode 1.
+
+검증:
+- pnpm tsc --noEmit + frontend test
+- /verify-filters PASS
+- 수동: ?reportType=...&site=... URL로 진입 시 필터 초기 상태 반영 확인
+```
 
 ---
 
@@ -13,7 +248,9 @@
 > divergence가 확인되었다. wf20-infra-debt harness contract의 SHOULD criteria로 분류되었던
 > 항목 + producer/consumer scope 정합성 검증 중 발견된 항목을 등재.
 
-### 🟠 HIGH — 점검/케이블/SW/교정 행 액션 aria-label SSOT 미적용 (cross-component divergence)
+### ~~🟠 HIGH — 점검/케이블/SW/교정 행 액션 aria-label SSOT 미적용~~ ✅ 완료 (35차, 2026-04-08, 커밋 ec8ccd46) — Cable scope 제외, Calibration 부분 적용, IntermediateInspection 키명 변경
+
+### ~~🟠 HIGH — 점검/케이블/SW/교정 행 액션 aria-label SSOT 미적용 (cross-component divergence)~~ ✅ 완료 (35차, 2026-04-08, ec8ccd46)
 
 ```
 배경: wf20-infra-debt harness (2026-04-08, PASS) 가 SelfInspectionTab.tsx 의 3개 행 액션 버튼
