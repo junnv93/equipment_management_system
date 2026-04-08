@@ -1,4 +1,4 @@
-FROM node:18-slim AS base
+FROM node:20-slim AS base
 WORKDIR /app
 
 # ----- 공통 베이스 -----

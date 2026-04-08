@@ -1,4 +1,4 @@
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # ----- 공통 베이스 -----
 FROM base AS deps
