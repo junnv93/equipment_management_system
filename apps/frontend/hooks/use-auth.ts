@@ -29,28 +29,12 @@ export function useAuth() {
   // 원시값 추출 — useCallback 의존성을 객체 참조가 아닌 원시값으로 좁혀
   // NextAuth 토큰 자동 갱신(만료 60초 전) 시 불필요한 콜백 재생성 방지
   const userRole = session?.user?.role;
-  const userRoles = session?.user?.roles;
-
-  // 역할 확인 함수
-  const hasRole = useCallback(
-    (requiredRole: string | string[]): boolean => {
-      if (!isAuthenticated || !userRoles) {
-        return false;
-      }
-
-      const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-
-      return requiredRoles.some(
-        (role) =>
-          userRoles.includes(role) ||
-          userRoles.includes(role.toUpperCase()) ||
-          userRoles.includes(role.toLowerCase())
-      );
-    },
-    [isAuthenticated, userRoles]
-  );
 
   // Permission 기반 권한 확인 (SSOT: shared-constants/role-permissions.ts)
+  //
+  // 역할 기반 `hasRole()`은 2026-04-08에 제거되었다 — 모든 호출처가 `can(Permission.X)`로
+  // 마이그레이션되어 백엔드 @RequirePermissions 정책과 단일 SSOT를 공유한다.
+  // 서버 액션에서의 역할 체크는 `lib/auth/server-session.ts#hasRole`을 사용하라.
   const can = useCallback(
     (permission: Permission): boolean => {
       if (!userRole) return false;
@@ -81,7 +65,6 @@ export function useAuth() {
     user: session?.user,
     isAuthenticated,
     isLoading,
-    hasRole,
     can,
     logout,
   };

@@ -10,10 +10,8 @@ import { CalibrationCacheInvalidation } from '@/lib/api/cache-invalidation';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { useAuth } from '@/hooks/use-auth';
-import {
-  UserRoleValues as URVal,
-  CalibrationApprovalStatusValues as CASVal,
-} from '@equipment-management/schemas';
+import { CalibrationApprovalStatusValues as CASVal } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { getCalibrationActionButtonClasses } from '@/lib/design-tokens';
 
 interface CalibrationApprovalActionsProps {
@@ -24,7 +22,7 @@ interface CalibrationApprovalActionsProps {
 /**
  * 교정 승인/반려 인라인 액션
  *
- * 렌더링 조건: approvalStatus === 'pending_approval' AND hasRole(['technical_manager', 'lab_manager'])
+ * 렌더링 조건: approvalStatus === 'pending_approval' AND can(APPROVE_CALIBRATION)
  * CAS: version 필드 전달 필수 (동시 수정 충돌 방지)
  */
 export function CalibrationApprovalActions({
@@ -32,7 +30,8 @@ export function CalibrationApprovalActions({
   equipmentId,
 }: CalibrationApprovalActionsProps) {
   const t = useTranslations('equipment');
-  const { hasRole } = useAuth();
+  const { can } = useAuth();
+  const canApprove = can(Permission.APPROVE_CALIBRATION);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
   // 훅은 조건부 return 이전에 항상 호출 (React 훅 규칙)
@@ -64,10 +63,7 @@ export function CalibrationApprovalActions({
   });
 
   // 렌더링 조건: pending_approval 상태 + 승인 권한 보유
-  if (
-    calibration.approvalStatus !== CASVal.PENDING_APPROVAL ||
-    !hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER])
-  ) {
+  if (calibration.approvalStatus !== CASVal.PENDING_APPROVAL || !canApprove) {
     return null;
   }
 

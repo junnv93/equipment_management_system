@@ -8,7 +8,7 @@ import { ArrowLeft, Edit, Trash2, Users, MapPin, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
-import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import type { TeamDetail as TeamDetailType, TeamMember } from '@/lib/api/teams-api';
 import { SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
@@ -49,7 +49,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
   const router = useRouter();
   const t = useTranslations('teams');
   const siteLabels = useSiteLabels();
-  const { hasRole } = useAuth();
+  const { can } = useAuth();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const siteInfo = team.site ? SITE_CONFIG[team.site as keyof typeof SITE_CONFIG] : null;
@@ -57,9 +57,9 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
     (team.classification && CLASSIFICATION_CONFIG[team.classification]) ||
     CLASSIFICATION_CONFIG.fcc_emc_rf;
 
-  // 권한 확인
-  const canEdit = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
-  const canDelete = hasRole([URVal.SYSTEM_ADMIN]); // system_admin만 팀 삭제 가능
+  // SSOT: 백엔드 teams 컨트롤러 @RequirePermissions와 정렬
+  const canEdit = can(Permission.UPDATE_TEAMS);
+  const canDelete = can(Permission.DELETE_TEAMS);
 
   return (
     <div className="space-y-6">

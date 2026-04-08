@@ -48,9 +48,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import {
   EquipmentStatusValues as ESVal,
-  UserRoleValues as URVal,
   CheckoutPurposeValues as CPVal,
 } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import {
   TIMELINE_TOKENS,
@@ -89,7 +89,7 @@ interface CheckoutHistoryTabProps {
  * - 반출 신청 (교정/수리/외부대여)
  */
 export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
-  const { hasRole, user: _user } = useAuth();
+  const { can, user: _user } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -190,12 +190,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   };
 
   // 등록 권한 확인 (시험실무자 이상)
-  const canCreate = hasRole([
-    URVal.TEST_ENGINEER,
-    URVal.TECHNICAL_MANAGER,
-    URVal.LAB_MANAGER,
-    URVal.SYSTEM_ADMIN,
-  ]);
+  const canCreate = can(Permission.CREATE_CHECKOUT);
 
   /**
    * 반출 가능 상태 확인

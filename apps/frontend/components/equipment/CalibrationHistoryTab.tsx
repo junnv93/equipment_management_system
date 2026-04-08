@@ -29,10 +29,8 @@ import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { DocumentTypeValues } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
-import {
-  UserRoleValues as URVal,
-  EquipmentStatusValues as ESVal,
-} from '@equipment-management/schemas';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { CalibrationResultBadge } from './CalibrationResultBadge';
 import { CalibrationRegisterDialog } from './CalibrationRegisterDialog';
 import { CalibrationApprovalActions } from './CalibrationApprovalActions';
@@ -51,7 +49,7 @@ interface CalibrationHistoryTabProps {
  */
 export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps) {
   const t = useTranslations('equipment');
-  const { hasRole } = useAuth();
+  const { can } = useAuth();
   const { fmtDate } = useDateFormatter();
 
   const equipmentId = String(equipment.id);
@@ -84,7 +82,9 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     return map;
   }, [allDocs]);
 
-  const canCreate = hasRole([URVal.TEST_ENGINEER]);
+  // SSOT: 백엔드 @RequirePermissions(CREATE_CALIBRATION)와 일치 — 기존 [TE] 제한은
+  // TM이 교정 등록하지 못하게 막아 백엔드 정책과 불일치했음. 현재는 TE + TM 모두 허용.
+  const canCreate = can(Permission.CREATE_CALIBRATION);
 
   const isOverdue =
     equipment.status === ESVal.CALIBRATION_OVERDUE ||

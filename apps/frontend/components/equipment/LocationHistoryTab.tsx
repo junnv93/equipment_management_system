@@ -35,7 +35,7 @@ import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipme
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
-import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { isConflictError } from '@/lib/errors/equipment-errors';
@@ -72,7 +72,7 @@ interface LocationHistoryTabProps {
  * - 색상: UL Midnight Blue 포인트
  */
 export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
-  const { hasRole } = useAuth();
+  const { can } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -186,14 +186,9 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     }
   };
 
-  // 등록 권한 확인
-  const canCreate = hasRole([
-    URVal.TEST_ENGINEER,
-    URVal.TECHNICAL_MANAGER,
-    URVal.LAB_MANAGER,
-    URVal.SYSTEM_ADMIN,
-  ]);
-  const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
+  // SSOT: 백엔드 @RequirePermissions(UPDATE/DELETE_EQUIPMENT)와 일치 (equipment-history.controller.ts)
+  const canCreate = can(Permission.UPDATE_EQUIPMENT);
+  const canDelete = can(Permission.DELETE_EQUIPMENT);
 
   // 등록 Dialog
   const RegisterDialog = (

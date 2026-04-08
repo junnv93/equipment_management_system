@@ -35,7 +35,7 @@ import { DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
 import { formatFileSize } from '@/lib/utils/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
-import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { toast } from 'sonner';
 import { DocumentRevisionDialog } from '@/components/shared/DocumentRevisionDialog';
 
@@ -59,11 +59,13 @@ function getFileIcon(mimeType: string) {
 export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
-  const { hasRole } = useAuth();
+  const { can } = useAuth();
   const queryClient = useQueryClient();
 
   const equipmentId = String(equipment.id);
-  const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER]);
+  // SSOT: 첨부파일 삭제는 장비 삭제 권한과 동일 계층 — 기존 [TM, LM]에서 SA를 포함시키는
+  // 확장(누락 복구)이며 백엔드 권한 계층과 정렬된다.
+  const canDelete = can(Permission.DELETE_EQUIPMENT);
   const [revisionDocId, setRevisionDocId] = useState<string | null>(null);
 
   const { data: docs = [], isLoading } = useQuery({

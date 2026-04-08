@@ -54,8 +54,8 @@ import { isBefore, startOfDay } from 'date-fns';
 import { toDate } from '@/lib/utils/date';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
+import { Permission } from '@equipment-management/shared-constants';
 import {
-  UserRoleValues as URVal,
   IncidentTypeValues as ITVal,
   IncidentTypeEnum,
   NonConformanceStatusValues as NCStatusVal,
@@ -118,7 +118,7 @@ interface IncidentHistoryTabProps {
  * 사고 이력 탭 - 타임라인 UI
  */
 export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
-  const { hasRole } = useAuth();
+  const { can } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -343,14 +343,9 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     }
   };
 
-  // 등록 권한 확인
-  const canCreate = hasRole([
-    URVal.TEST_ENGINEER,
-    URVal.TECHNICAL_MANAGER,
-    URVal.LAB_MANAGER,
-    URVal.SYSTEM_ADMIN,
-  ]);
-  const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
+  // SSOT: 백엔드 @RequirePermissions(UPDATE/DELETE_EQUIPMENT)와 일치 (equipment-history.controller.ts)
+  const canCreate = can(Permission.UPDATE_EQUIPMENT);
+  const canDelete = can(Permission.DELETE_EQUIPMENT);
 
   // 등록 Dialog
   const RegisterDialog = (

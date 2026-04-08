@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ClipboardList, Clock, AlertTriangle, PackageCheck, PackageOpen } from 'lucide-react';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
 import {
@@ -26,10 +26,7 @@ import {
   convertFiltersToApiParams,
   type UICheckoutFilters,
 } from '@/lib/utils/checkout-filter-utils';
-import {
-  getCheckoutStatusGroupFilterValue,
-  UserRoleValues as URVal,
-} from '@equipment-management/schemas';
+import { getCheckoutStatusGroupFilterValue } from '@equipment-management/schemas';
 
 interface OutboundCheckoutsTabProps {
   teamId?: string;
@@ -114,8 +111,8 @@ export default function OutboundCheckoutsTab({
   const t = useTranslations('checkouts');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { hasRole } = useAuth();
-  const canApprove = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
+  const { can } = useAuth();
+  const canApprove = can(Permission.APPROVE_CHECKOUT);
 
   const statCards = useStatCards(summary);
 

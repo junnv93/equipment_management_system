@@ -55,8 +55,8 @@ import {
   CheckoutStatus,
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
-  UserRoleValues as URVal,
 } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
@@ -83,9 +83,9 @@ export default function CheckoutDetailClient({
   const t = useTranslations('checkouts');
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
-  const { hasRole } = useAuth();
-  // 승인/반출 시작/반입 승인: technical_manager, lab_manager, system_admin 전용
-  const canApprove = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
+  const { can } = useAuth();
+  // SSOT: 백엔드 @RequirePermissions(APPROVE_CHECKOUT)와 일치 (role-permissions.ts)
+  const canApprove = can(Permission.APPROVE_CHECKOUT);
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
