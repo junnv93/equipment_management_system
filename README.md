@@ -109,7 +109,7 @@
 
 | 기술           | 버전 | 용도                          |
 | -------------- | ---- | ----------------------------- |
-| Next.js        | 16.1 | React 프레임워크 (App Router) |
+| Next.js        | 16.2 | React 프레임워크 (App Router) |
 | React          | 19.2 | UI 라이브러리                 |
 | TypeScript     | 5.x  | 타입 안전성                   |
 | TailwindCSS    | -    | 스타일링                      |
@@ -122,7 +122,7 @@
 
 | 기술        | 버전 | 용도                 |
 | ----------- | ---- | -------------------- |
-| NestJS      | 10.x | Node.js 프레임워크   |
+| NestJS      | 11.x | Node.js 프레임워크   |
 | TypeScript  | 5.x  | 타입 안전성          |
 | Drizzle ORM | 0.45 | 데이터베이스 ORM     |
 | Passport    | -    | 인증 (JWT, Azure AD) |
@@ -198,27 +198,31 @@ equipment-management-system/
 ├── apps/
 │   ├── backend/                 # NestJS API (Port 3001)
 │   │   ├── src/
-│   │   │   ├── modules/         # 20개 기능 모듈
-│   │   │   │   ├── approvals/           # 통합 승인 관리
-│   │   │   │   ├── audit/               # 감사 로그
-│   │   │   │   ├── auth/                # JWT + Azure AD 인증
-│   │   │   │   ├── calibration/         # 교정 기록
-│   │   │   │   ├── calibration-factors/ # 교정 인자
-│   │   │   │   ├── calibration-plans/   # 교정 계획 (3단계 승인)
-│   │   │   │   ├── checkouts/           # 반출 관리
-│   │   │   │   ├── dashboard/           # 대시보드 통계
-│   │   │   │   ├── data-migration/      # 데이터 마이그레이션
-│   │   │   │   ├── documents/           # 문서 관리
-│   │   │   │   ├── equipment/           # 장비 CRUD + 폐기 + 수리이력
-│   │   │   │   ├── equipment-imports/   # 장비 반입
-│   │   │   │   ├── monitoring/          # 시스템 모니터링
-│   │   │   │   ├── non-conformances/    # 부적합 관리
-│   │   │   │   ├── notifications/       # 알림 서비스
-│   │   │   │   ├── reports/             # 리포트 생성
-│   │   │   │   ├── settings/            # 시스템 설정
-│   │   │   │   ├── software/            # 소프트웨어 관리
-│   │   │   │   ├── teams/               # 팀 관리
-│   │   │   │   └── users/               # 사용자 관리
+│   │   │   ├── modules/         # 25개 기능 모듈
+│   │   │   │   ├── approvals/                # 통합 승인 관리 (1/2/3-step)
+│   │   │   │   ├── audit/                    # 감사 로그
+│   │   │   │   ├── auth/                     # JWT + Azure AD 인증
+│   │   │   │   ├── cables/                   # 케이블 관리
+│   │   │   │   ├── calibration/              # 교정 기록
+│   │   │   │   ├── calibration-factors/      # 교정 인자
+│   │   │   │   ├── calibration-plans/        # 교정 계획 (3단계 승인)
+│   │   │   │   ├── checkouts/                # 반출 관리 (교정/수리/렌탈)
+│   │   │   │   ├── dashboard/                # 대시보드 통계
+│   │   │   │   ├── data-migration/           # 데이터 마이그레이션
+│   │   │   │   ├── documents/                # 문서 관리 (SHA-256, presigned URL)
+│   │   │   │   ├── equipment/                # 장비 CRUD + 폐기 + 수리이력
+│   │   │   │   ├── equipment-imports/        # 장비 반입
+│   │   │   │   ├── intermediate-inspections/ # 중간점검 (교정 대상)
+│   │   │   │   ├── monitoring/               # 시스템 모니터링
+│   │   │   │   ├── non-conformances/         # 부적합 관리
+│   │   │   │   ├── notifications/            # 알림 서비스
+│   │   │   │   ├── reports/                  # 리포트 생성
+│   │   │   │   ├── self-inspections/         # 자체점검 (비교정 대상)
+│   │   │   │   ├── settings/                 # 시스템/교정 설정
+│   │   │   │   ├── software-validations/     # 소프트웨어 검증
+│   │   │   │   ├── teams/                    # 팀 관리
+│   │   │   │   ├── test-software/            # 시험 소프트웨어
+│   │   │   │   └── users/                    # 사용자 관리
 │   │   │   ├── common/          # Guards, Pipes, Filters, Interceptors, Decorators, Cache
 │   │   │   └── database/        # Drizzle ORM 설정
 │   │   └── test/                # E2E 테스트
@@ -408,11 +412,17 @@ pnpm build
 
 ## 기여하기
 
-1. Fork
-2. Feature 브랜치 생성 (`git checkout -b feat/amazing-feature`)
-3. 커밋 (`git commit -m 'feat: Add amazing feature'`)
-4. Push (`git push origin feat/amazing-feature`)
-5. Pull Request 생성
+이 저장소는 **Solo Trunk-Based** 워크플로우(2026-04-08~)를 사용합니다.
+
+- 일반 작업은 `main`에서 직접 수행하며, `git push` 시 `.husky/pre-push` hook이 `tsc + 유닛 테스트`를 자동 검증합니다.
+- 다음 위험 작업에만 별도 브랜치(`feat/`, `fix/`, `chore/`, `refactor/`)와 PR을 사용합니다:
+  - DB 마이그레이션 (`drizzle/000X_*.sql`)
+  - major 의존성 업그레이드 (Next.js, NestJS, Tailwind 등)
+  - 광범위한 리팩토링 (50+ 파일)
+  - 결과 불확실한 실험적 작업
+- `--no-verify`로 hook을 우회하지 마세요. 검증 실패는 원인을 수정 후 재푸시합니다.
+
+자세한 규칙은 [`CLAUDE.md`](CLAUDE.md)의 _Git Workflow Rules_ 섹션을 참조하세요.
 
 ---
 
@@ -422,4 +432,4 @@ MIT License. [LICENSE](LICENSE) 파일 참조.
 
 ---
 
-**마지막 업데이트**: 2026-04-02
+**마지막 업데이트**: 2026-04-08
