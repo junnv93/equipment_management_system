@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-08 (30차 — critical-workflows.md UI 검증 보강 + WF-22~37 등재 후속, 신규 4건)**
+> **마지막 정리일: 2026-04-08 (31차 — WF-21 API spec 완료 + Export UI 갭 발견, 신규 4건)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -67,28 +67,95 @@ verify된 spec 으로 cover되지 않는다.
 - 회귀: features/non-conformances/comprehensive/s35-cas-cache.spec.ts 통과 유지
 ```
 
-### 🟡 MEDIUM — WF-25 alerts → 장비 상세 → 반출 신청 cross-flow E2E (Playwright)
+### ~~🟡 MEDIUM — WF-25 alerts → 장비 상세 → 반출 신청 cross-flow E2E~~ ✅ 완료 (32차, 2026-04-08)
+
+- spec: `apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts`
+- 시드 보강: `apps/backend/src/database/seed-data/admin/notifications.seed.ts` — TE 대상 calibration_due 알림 1건 deterministic
+- 부수 architecture fix (cross-cutting):
+  - `notifications` Phase 0 truncate 추가 (idempotency 회복, 누적 280건 → 1건)
+  - `verification.ts` SSOT 리팩토링 — 16개 magic number → `SEED_DATA.length/.filter().length` 도출
+  - `global-setup.ts` fail-fast (warn → throw, false negative 차단)
+  - `notifications.{recipient,team,equipment,actor}_id` hard FK + ON DELETE 정책 (migration `0004_opposite_selene.sql`)
+- 검증: WF-25 + alert-kpi 13/13, backend 473/473, 시드 30/30
+
+### 🟡 MEDIUM — global-setup 교정 overdue 트리거 실패 (lab_manager 토큰 발급) (Mode 1)
 
 ```
-critical-workflows.md WF-25 신규 등재. features/dashboard/comprehensive/alert-kpi.spec.ts 가
-KPI 카드 표시는 cover하지만, 사용자가 alert 행을 클릭 → 장비 상세 → "반출 신청" 버튼 → 폼 prefill
-까지 이어지는 cross-flow 는 미커버.
+apps/frontend/tests/e2e/global-setup.ts 의 시드 후 "교정 기한 초과 장비 자동 부적합 전환"
+단계에서 fetchBackendToken('lab_manager') 가 실패하여 POST /notifications/trigger-overdue-check
+호출이 catch 로 떨어지고 "⚠️ 교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다"
+경고만 남긴다. 이로 인해 시드 상대날짜(daysAgo) 기반 교정일이 overdue 상태로 전환되지 않아
+calibration_overdue 상태의 장비 집계가 부정확해질 수 있다.
+
+증상 로그 (2026-04-08 세션):
+  🌱 테스트 시드 데이터 로딩...
+  ✅ 시드 데이터 로딩 완료
+  🔄 교정 기한 초과 장비 점검 트리거...
+  ⚠️  교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다.
+
+확인 필요:
+1. fetchBackendToken() 구현 위치와 credentials 소스 (env? hardcoded?)
+2. lab_manager 계정이 실제로 존재하고 credentials 가 valid 한지
+3. AbortSignal.timeout(10000) 이 실제로 발동하는지 vs 인증 단계에서 실패하는지
+4. 실패를 silent warn 으로 처리하는 현재 방식이 적절한가 — global-setup 이 fail-fast 로 전환된
+   이상 이 트리거 실패도 throw 할지, 아니면 warn 유지할지 정책 결정 필요
 
 작업:
-1. apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts
-2. 시나리오:
-   a. 시드: 다음 교정일이 임박한 장비 1건 보장 (calibrations.seed 확장 또는 spec 내 API 직접 갱신)
-   b. TE 로그인 → /alerts (또는 / 대시보드 KPI)
-   c. "교정 임박" 탭/카드 → 장비 행 클릭
-   d. /equipment/[id] 진입 검증 (URL + 다음 교정일 강조 표시)
-   e. "반출 신청" 버튼 클릭 → /checkouts/create?equipmentId=... 로 이동
-   f. 폼이 해당 장비로 prefill 되었는지 검증 (장비 선택 필드의 값)
-   g. 목적: "교정" 선택 → 제출 → pending 토스트
-3. /alerts 페이지 컴포넌트 확인 후 셀렉터 확정 (apps/frontend/app/(dashboard)/alerts/AlertsContent.tsx)
+1. global-setup.ts 의 fetchBackendToken 및 trigger 호출 블록 로그 보강 (err.message 출력)
+2. 원인 파악 후: credentials 수정 or 스케줄러 로직을 시드 단계에서 직접 호출하도록 리팩토링
+   (API 호출 우회 — seed-test-new.ts 안에서 SQL 로 overdue 상태 계산)
+3. calibration_overdue 집계가 포함된 spec(alert-kpi 등)이 영향받는지 확인
 
 검증:
-- pnpm --filter frontend exec playwright test wf-25-alert-to-checkout exit 0
-- prefill 검증은 input value assertion (browser_verify_value 또는 expect(input).toHaveValue)
+- pnpm --filter frontend exec playwright test alert-kpi --project=chromium 통과 유지
+- global-setup 로그에 "⚠️ 교정 기한 초과 점검 트리거 실패" 메시지 없음
+- 시드 검증에 Equipment status: calibration_overdue ≥ 1 체크 통과
+```
+
+### 🟢 LOW — verification.ts SSOT 리팩토링 후속 커버리지 갭 (Mode 0 or Mode 1)
+
+```
+32차 세션에서 verification.ts 의 모든 count 체크를 SEED_DATA 기반 SSOT 로 전환했으나,
+아래 테이블/항목은 여전히 검증 누락 상태이다.
+
+누락 항목:
+1. `repair_history` — REPAIR_HISTORY_SEED_DATA.length 로 검증 추가 가능
+2. `calibration_factors` — CALIBRATION_FACTORS_SEED_DATA.length
+3. `software_validations` — SOFTWARE_VALIDATIONS_SEED_DATA.length
+4. `equipment_test_software` — EQUIPMENT_TEST_SOFTWARE_SEED_DATA.length
+5. `disposal_requests` — DISPOSAL_REQUESTS_SEED_DATA.length
+6. `checkout_items` — CHECKOUT_ITEMS_SEED_DATA.length (FK 파생이지만 명시적 체크 권장)
+7. `calibration_plan_items` 상태별 분포 (기존 plans 만 상태 체크, items 는 count 만)
+
+작업:
+1. apps/backend/src/database/utils/verification.ts 에 누락된 6~7 개 checkCount 호출 추가
+2. 각 seed 파일 import 추가
+3. 재시드 → 전체 PASS 확인
+
+검증:
+- pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts → "Summary: N/N checks passed"
+- 수치가 drift 되면 자동 실패 (SSOT 원칙)
+```
+
+### 🟢 LOW — WF-25 spec D-day 배지 soft assertion 보강 (Mode 0)
+
+```
+apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts 는 현재
+알림 → 장비 상세 → checkouts/create prefill 까지는 검증하지만, 장비 상세 페이지의
+EquipmentStickyHeader calibrationStatus 배지 (D-7/D-30/기한 초과) 는 검증하지 않는다
+(주석 8)번에 의도적 생략 명시).
+
+본 cross-flow 가 "alerts 의 교정 임박 신호 → 장비 상세의 교정 강조 시각 신호" 일관성을
+cover하려면 soft assertion 추가가 필요하다.
+
+작업:
+1. 장비 상세 페이지 진입 후, calibrationStatus 배지 locator 확인 (D-\d+ 또는 기한 초과)
+2. `if (await badge.count() > 0) await expect(badge).toBeVisible()` 형태의 soft 검증 추가
+3. 배지가 없는 경우(일반 상태)는 skip 하지 않고 통과 (soft 성격 유지)
+
+검증:
+- pnpm --filter frontend exec playwright test wf-25-alert-to-checkout --project=chromium 통과 유지
+- tech-debt-tracker.md 해당 항목 해결 처리
 ```
 
 ### 🟡 MEDIUM — WF-33 SSE 다탭 승인 카운트 동기화 E2E (Playwright)
@@ -115,6 +182,221 @@ critical-workflows.md WF-33 신규 등재. features/notifications/notification-r
 검증:
 - pnpm --filter frontend exec playwright test wf-33-approval-count-realtime exit 0
 - 회귀: features/notifications/notification-realtime.spec.ts 통과 유지
+```
+
+---
+
+## 31차 신규 — Export spec API-only 갭 + WF-21 후속 + 보안 (5건)
+
+### 🔴 CRITICAL — Form Template Export site scope bypass (다중 exporter 공통 보안 갭)
+
+```
+배경: 31차 review-architecture에서 발견 (WF-21 spec이 ?site=suwon 을 명시 호출한 첫 케이스라
+가시화됨). form-template-export.service.ts의 다수 exporter 가 `params.site || scope?.site`
+패턴을 사용 — JS 단락 평가상 **쿼리 파라미터가 서버 scope를 덮어쓴다**.
+
+위협 시나리오:
+- suwon 사이트로 scope된 사용자가 GET /api/reports/export/form/UL-QP-18-08?site=incheon
+  요청 → exporter는 scope 무시하고 incheon 데이터로 XLSX 반환
+- 동일 패턴이 다른 양식(QP-18-01/05 등) exporter에도 5+ 곳 존재 가능 — grep 필요
+
+⚠️ 부분 완화 현황 (Defense-in-depth 갭):
+- CableListContent.tsx:110 — 프론트엔드는 `if (user?.site) params.site = user.site;`
+  로 자기 사이트만 자동 전송 → 일반 클릭 동선으로는 노출 안 됨
+- 그러나 사용자가 fetch/curl/Postman 으로 직접 호출하면 우회 가능 → 백엔드 단의 정정이
+  여전히 필수 (CLAUDE.md Rule 2 정신: 클라이언트 신뢰 금지)
+- 다른 양식 export 페이지의 프론트엔드도 동일하게 user.site 강제하는지 grep 필요
+- CLAUDE.md Rule 2 (Server-Side User Extraction) 와 동일한 정신 위반:
+  클라이언트가 보낸 값으로 권한을 확장할 수 있어서는 안 됨
+
+확인 필요:
+- form-template-export.service.ts grep `params.site || scope` / `params.site ?? scope`
+  → 모든 exporter 헤드 위치 식별
+- _resolveReportScope (reports.controller.ts) 가 admin / 비scoped 사용자에게
+  어떻게 동작하는지 (admin 은 scope?.site === undefined 이어야 params.site 가 의미 있음)
+- params.teamId 도 동일 패턴인지 검토
+
+작업:
+1. form-template-export.service.ts 내 모든 exporter에서 site 우선순위 역전:
+   `const siteFilter = scope?.site ?? params.site;` (서버 scope 우선)
+2. teamId 도 동일하게 `scope?.teamId ?? params.teamId` 로 변경
+3. 음성 테스트 추가:
+   - apps/backend/test 또는 e2e — suwon-scoped 사용자 + ?site=incheon → 결과가 suwon 데이터
+4. WF-21 spec 에 회귀 케이스 1건 추가: scoped 사용자가 다른 site 요청 시 cross-site 누출 0
+5. 정책 결정 필요: silent override (scope 강제) vs 403 reject — 다른 controller/guard 와 일관성
+   우선 (현재 monitoring/audit 등이 어떻게 처리하는지 확인 후 결정)
+
+검증:
+- pnpm --filter backend exec tsc --noEmit exit 0
+- pnpm --filter backend run test exit 0
+- grep "params.site || scope\\|params.site ?? scope" apps/backend/src/modules/reports
+  → 0 hit (또는 모두 역전된 형태)
+- 회귀: 기존 export spec (wf-19b/20b/21) 통과 유지
+
+⚠️ 보안 패치이므로 별도 PR + 위험 작업 표 (CLAUDE.md) 에 준해 브랜치 사용 권장.
+정책 영향이 크므로 silent override vs reject 결정을 사용자에게 먼저 확인할 것.
+```
+
+---
+
+## 31차 신규 — Export spec API-only 갭 + WF-21 후속 (4건)
+
+> **갭 발견 배경 (2026-04-08, 31차)**: WF-21 cable path loss spec을 wf-19b/wf-20b 패턴 답습해 작성한 결과 API-only로 정착. 사용자 피드백: "테스트 후 어떤 UI가 검증되었는지 항상 설명해라"
+> → 스캔 결과 wf-19b/wf-20b/wf-21 3개 export spec 모두 사용자가 누르는 "내보내기" 버튼 동선이 0건 검증된 상태. 패턴화된 회귀 위험.
+> 또한 WF-21 자체의 케이블 등록 다이얼로그/측정 폼 다이얼로그도 미검증 (기존 spec은 백엔드 API만 호출).
+
+### 🟠 HIGH — WF-21 UI 동선 검증 spec (등록 페이지 + 측정 다이얼로그 + 상세 렌더링)
+
+```
+방금 추가된 wf-21-cable-path-loss.spec.ts (31차)는 백엔드 API만 검증한다.
+사용자가 화면에서 보고/누르는 다음 UI 동선은 하나도 cover되지 않는다.
+
+⚠️ 작업 시작 전 필수 사전 확인 (잘못된 가정 방지):
+- 등록 UI: **별도 페이지** /cables/create 로 이동 (다이얼로그 아님)
+  - 라우트: FRONTEND_ROUTES.CABLES.CREATE = '/cables/create'
+  - 컴포넌트: apps/frontend/app/(dashboard)/cables/create/CreateCableContent.tsx
+- 측정 추가 UI: **다이얼로그** apps/frontend/components/cables/MeasurementFormDialog.tsx
+- 모든 라벨이 i18n: useTranslations('cables') — getByText 시 라벨 하드코딩 금지,
+  apps/frontend/messages/ko.json 의 cables 네임스페이스를 먼저 grep해서 실제 한국어 라벨 확정 후 사용
+- 목록 컴포넌트: apps/frontend/app/(dashboard)/cables/CableListContent.tsx
+- 상세 컴포넌트: apps/frontend/app/(dashboard)/cables/[id]/CableDetailContent.tsx
+
+미검증 동선 (이 spec이 cover해야 함):
+- /cables 목록 페이지 렌더링 (페이지 타이틀, 표 헤더, 행, 빈 상태)
+- 검색 input + connectorType/status Select 필터 → URL params 반영
+- "케이블 등록" 버튼(getByRole link/button) 클릭 → /cables/create 페이지 이동
+- /cables/create 폼 필드 입력 (관리번호 / 길이 / connectorType / 주파수 min/max / 시리얼 / 위치 / site)
+- 빈 관리번호 등 잘못된 입력 → 한국어 유효성 메시지 (VM.required / VM.string.max)
+- "저장" 클릭 → 성공 토스트 → /cables 또는 /cables/[id] 리다이렉트
+- 목록 검색에 관리번호 입력 → 행 보임 → 행 내 관리번호 링크 클릭 → /cables/[id] 진입
+- 상세 페이지 헤더에 관리번호 / 커넥터 / 주파수범위 표시
+- "측정 추가" 버튼 클릭 → MeasurementFormDialog (getByRole('dialog')) 열림
+- 측정일 입력, Freq/Loss 데이터 포인트 행 추가, 저장 → 토스트 + 측정 이력 카드 즉시 반영
+- 목록 "내보내기" 버튼 → page.waitForEvent('download') 트리거 (XLSX 파일명 검증)
+
+작업:
+1. apps/frontend/tests/e2e/workflows/wf-21-cable-ui.spec.ts 신규
+2. fixture: testOperatorPage (../shared/fixtures/auth.fixture)
+3. 시나리오 (mode: 'serial', step별 분리 — wf-19/wf-20 패턴):
+   Step 1: 목록 페이지 진입 + 헤더/표/필터 가시성
+   Step 2: "케이블 등록" 클릭 → /cables/create 이동 검증
+   Step 3: 폼 빈 제출 → 한국어 에러 메시지
+   Step 4: 정상 입력 → 저장 → 토스트 → 리다이렉트
+   Step 5: 목록 검색 → 새 케이블 행 → 클릭 → 상세
+   Step 6: 상세 헤더 검증
+   Step 7: "측정 추가" → 다이얼로그 → 입력 → 저장 → 측정 카드 반영
+   Step 8: 목록 복귀 → "내보내기" 버튼 → download 이벤트
+   afterAll: API로 생성된 케이블 hard delete (또는 status retired) + cleanupSharedPool
+
+규칙:
+- CSS 셀렉터 금지 (메모리 규칙). getByRole / getByText / getByLabel 만 사용
+- 라벨 텍스트는 messages/ko.json 에서 그대로 가져와야 함 — 추측 금지
+- 도메인 데이터 fabricate 금지: 관리번호 ELLLX-NNN, dB는 더미 0.5/1.0 등
+- WF-21 API spec과 격리: 다른 관리번호 슬롯 사용 (충돌 방지)
+- frontend dev server 상태: playwright config 에 webServer 설정 있는지 먼저 확인.
+  없으면 사용자에게 개발 서버 기동 요청
+
+검증:
+- pnpm --filter frontend exec playwright test wf-21-cable-ui --project=chromium exit 0
+- pnpm --filter frontend exec tsc --noEmit exit 0
+- 회귀: wf-21-cable-path-loss.spec.ts (API spec) 통과 유지
+- find apps/frontend/tests/e2e -iname '*cable*' → 2 hits (API + UI)
+- 라벨 확정 출처: messages/ko.json 의 "cables.list.title", "cables.list.createButton",
+  "cables.list.exportButton" 등 — 실제 키는 코드 grep으로 확정
+```
+
+### 🟠 HIGH — WF-21 권한 가시성 spec (TE/TM/QM/LM 역할별 버튼 노출)
+
+```
+WF-21 cable path loss UI에서 역할별로 어떤 액션이 노출/숨김/disabled 되는지 검증되지 않음.
+permissions/comprehensive/ 트리에 cable 권한 spec 0건 (find -iname '*cable*' 결과 없음).
+
+확인 필요한 권한 매트릭스:
+- VIEW_CALIBRATIONS (목록/상세 진입 가능 역할)
+- UPDATE_CALIBRATION (등록/수정/측정 추가 가능 역할)
+- 폐기/retire 액션은 누가? (CablesService 코드 grep 필요)
+
+작업:
+1. apps/frontend/tests/e2e/permissions/cable-permissions.spec.ts 신규
+2. 각 역할로 storageState 로드 후 /cables 진입:
+   - test_engineer: 등록 버튼 visible, 행 측정 추가 visible
+   - quality_manager: 등록 visible? (UPDATE_CALIBRATION 보유 여부 grep 후 확정)
+   - technical_manager: 등록 visible
+   - lab_manager: 동상
+   - (만약 read-only 역할이 있다면) 등록 버튼 not visible
+3. 권한 없는 역할이 직접 URL로 /api/cables POST 호출 → 403 검증 (페이지 접근과 별개)
+
+확인 코드:
+- packages/shared-constants/src/role-permissions.ts — 각 역할의 UPDATE_CALIBRATION 보유 여부
+- apps/backend/src/modules/cables/cables.controller.ts — @RequirePermissions 데코레이터
+
+검증:
+- pnpm --filter frontend exec playwright test cable-permissions --project=chromium exit 0
+- 회귀: 다른 permissions/* spec 통과 유지
+```
+
+### 🟡 MEDIUM — Export 다운로드 UX 검증 spec (wf-19b/20b/21 공통 갭)
+
+```
+3개 export spec (wf-19b-intermediate-inspection-export, wf-20b-self-inspection-export,
+wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다.
+**사용자가 화면에서 클릭하는 "내보내기" 버튼 → 브라우저 다운로드 트리거** 동선은
+0건 검증.
+
+미검증 항목:
+- 목록/상세 페이지의 "내보내기" 버튼/드롭다운 가시성
+- 클릭 시 download 이벤트 발생 (page.waitForEvent('download'))
+- Content-Disposition filename* UTF-8 인코딩이 OS에 도달했을 때 한국어 깨짐 없음
+- 다운로드 진행 토스트/스피너
+- 에러 시 (404/500) 사용자 피드백 토스트
+
+작업:
+1. apps/frontend/tests/e2e/workflows/wf-export-ui.spec.ts 신규 (3개 양식 통합 또는 spec 분리)
+2. 시나리오 per 양식 (UL-QP-18-03 / UL-QP-18-05 / UL-QP-18-08):
+   a. 데이터 prerequisite 확보 (API로 1건 생성 — 기존 helper 재사용)
+   b. 해당 목록 페이지 (/equipment/[id] 또는 /cables) 진입
+   c. "내보내기" 버튼 클릭 (getByRole('button', { name: /내보내기/ }))
+   d. const downloadPromise = page.waitForEvent('download'); await button.click();
+   e. const download = await downloadPromise;
+   f. expect(download.suggestedFilename()).toMatch(/UL-QP-18-(03|05|08)/)
+   g. 한국어 파일명 깨짐 검증 (filename에 한글 포함 시 정상 디코딩)
+   h. 다운로드 path 저장 후 파일 크기 > 1KB
+3. 회귀 보호: 기존 wf-19b/20b/21 export API spec은 그대로 유지
+
+확인 필요:
+- 각 페이지 컴포넌트의 export 트리거 위치
+  (CableListContent.tsx, IntermediateInspectionTab.tsx, SelfInspectionTab.tsx)
+- 버튼이 양식별 select dropdown인지 단일 버튼인지
+
+검증:
+- pnpm --filter frontend exec playwright test wf-export-ui --project=chromium exit 0
+- 회귀: wf-19b/20b/21 통과 유지
+- 다운로드 임시 디렉토리 정리 (test.afterAll)
+```
+
+### 🟡 MEDIUM — Export spec UI 갭 패턴 가드 (verify-* 스킬 보강)
+
+```
+배경: 31차에서 wf-19b/20b/21 3개 export spec이 모두 API-only로 정착한 패턴이 발견됨.
+앞으로 추가될 export spec (UL-QP-18-04/06/07/09/11 등 미작성 양식)도 동일 함정에 빠질
+위험. verify-e2e 또는 verify-workflows 스킬에 가드 추가 필요.
+
+작업:
+1. .claude/skills/verify-e2e/SKILL.md (또는 verify-workflows) 에 새 체크 추가:
+   - "export 키워드 + page.request.get 만 사용하는 spec은 동일 양식의 UI 다운로드 spec
+     동행 여부 확인" 룰
+   - grep 패턴: spec 파일 내 'export/form/UL-QP-18' 등장 + 'waitForEvent("download")' 부재
+     → WARN
+2. 또는 manage-skills 워크플로로 신규 verify-export-ui-coverage 스킬 생성
+3. tech-debt-tracker.md에 "Export UI 다운로드 동선 미검증 양식" 누적 트래킹 항목 추가
+
+검증:
+- /verify-e2e (또는 신규 스킬) 실행 시 wf-19b/20b/21 3건이 WARN으로 보고됨
+- 위 'WF-21 UI 동선 검증 spec'과 'Export 다운로드 UX 검증 spec' 추가 후 WARN 0건
+- 메타 변경이므로 tsc/test 영향 없음
+
+선택: 단순 docs/development/E2E_PATTERNS.md 에 "export spec은 API + UI 다운로드 한 쌍으로
+작성" 가이드라인 명시만 해도 가능 (스킬 보강 vs 문서화 — 사용자 결정 필요)
 ```
 
 ---

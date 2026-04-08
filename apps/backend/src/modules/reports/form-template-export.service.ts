@@ -1299,7 +1299,10 @@ export class FormTemplateExportService {
       }>(sql`
         SELECT DISTINCT ON (cable_id) id, cable_id, measurement_date
         FROM cable_loss_measurements
-        WHERE cable_id = ANY(${cableIds})
+        WHERE cable_id IN (${sql.join(
+          cableIds.map((id) => sql`${id}`),
+          sql`, `
+        )})
         ORDER BY cable_id, measurement_date DESC
       `);
 
