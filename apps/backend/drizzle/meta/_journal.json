@@ -29,6 +29,20 @@
       "when": 1775565864983,
       "tag": "0003_add_equipment_imports_return_state",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775613303630,
+      "tag": "0004_opposite_selene",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775614541696,
+      "tag": "0005_burly_leopardon",
+      "breakpoints": true
     }
   ]
 }

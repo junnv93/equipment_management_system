@@ -21,14 +21,19 @@ export const notifications = pgTable(
     priority: varchar('priority', { length: 10 }).notNull().default('medium'),
 
     // 수신 대상 (3가지 전략: 개인 / 팀 / 시스템 전체)
-    recipientId: uuid('recipient_id'), // 특정 사용자 수신
-    teamId: uuid('team_id'), // 팀 전체 수신 (단일 레코드)
+    // FK + ON DELETE CASCADE: 수신자/팀이 삭제되면 알림도 함께 정리되어
+    // dangling reference 와 IDOR 잠재성을 방지한다.
+    recipientId: uuid('recipient_id').references(() => users.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }),
     isSystemWide: boolean('is_system_wide').notNull().default(false), // 전체 사용자
 
     // 관련 엔티티 (딥링크 + 연관 조회)
-    equipmentId: uuid('equipment_id'), // 관련 장비
+    // equipment 는 hard delete 가 사실상 없고 disposed 상태로만 전이되지만,
+    // 향후 정책 변경 대비 CASCADE 로 안전 fallback.
+    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }),
     entityType: varchar('entity_type', { length: 50 }), // 'checkout' | 'calibration' 등
-    entityId: uuid('entity_id'), // 해당 엔티티 UUID
+    // entityId 는 polymorphic (entityType 별로 다른 테이블 참조) → DB-level FK 불가.
+    entityId: uuid('entity_id'),
     linkUrl: varchar('link_url', { length: 300 }), // 프론트엔드 딥링크
 
     // 읽음 상태
@@ -36,7 +41,8 @@ export const notifications = pgTable(
     readAt: timestamp('read_at'),
 
     // 이벤트 발생자
-    actorId: uuid('actor_id'),
+    // SET NULL: 사용자가 떠나도 감사 추적용으로 알림 자체는 보존.
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
     actorName: varchar('actor_name', { length: 100 }),
 
     // 수신자 사이트 (감사 추적 + 관리자 통계)
@@ -66,6 +72,9 @@ export const notifications = pgTable(
     index('idx_notifications_expires').on(table.expiresAt),
     // 사이트별 시간순 조회 최적화 (관리자 통계)
     index('idx_notifications_site_created').on(table.recipientSite, table.createdAt),
+    // actor_id FK (ON DELETE SET NULL) 의 삭제 경로를 지원하기 위한 인덱스.
+    // PostgreSQL 은 FK 컬럼을 자동 인덱싱하지 않아, 사용자 삭제 시 전체 스캔이 발생.
+    index('idx_notifications_actor').on(table.actorId),
   ]
 );
 

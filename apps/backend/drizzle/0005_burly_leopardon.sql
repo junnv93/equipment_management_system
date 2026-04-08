@@ -1,0 +1,1 @@
+CREATE INDEX "idx_notifications_actor" ON "notifications" USING btree ("actor_id");
