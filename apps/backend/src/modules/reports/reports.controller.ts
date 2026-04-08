@@ -7,6 +7,9 @@ import { FormTemplateExportService } from './form-template-export.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import {
   Permission,
   resolveDataScope,
@@ -382,19 +385,21 @@ export class ReportsController {
   @ApiOperation({ summary: '공식 양식 템플릿 내보내기' })
   @ApiResponse({ status: 200, description: '양식 파일' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })
   @AuditLog({ action: 'export', entityType: 'report' })
   @SkipResponseTransform()
   async exportFormTemplate(
     @Param('formNumber') formNumber: string,
-    @Request() req: AuthenticatedRequest,
     @Res() res: Response,
-    @Query() queryParams: Record<string, string>
+    @Query() queryParams: Record<string, string>,
+    @CurrentEnforcedScope() enforcedScope: EnforcedScope
   ): Promise<void> {
-    const scope = this._resolveReportScope(req);
+    // 인터셉터가 cross-site/cross-team mismatch 를 이미 거부한 enforced 값을 주입.
+    // service 는 더 이상 ResolvedDataScope 나 enforce 책임을 가지지 않음.
     const { buffer, mimeType, filename } = await this.formTemplateExportService.exportForm(
       formNumber,
       queryParams,
-      scope
+      enforcedScope
     );
     res.set({
       'Content-Type': mimeType,

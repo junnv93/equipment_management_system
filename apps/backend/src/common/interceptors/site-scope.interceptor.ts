@@ -12,6 +12,7 @@ import { SITE_SCOPED_KEY, SiteScopedOptions } from '../decorators/site-scoped.de
 import { resolveDataScope } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
+import { enforceScope } from '../scope/scope-enforcer';
 
 /**
  * SiteScopeInterceptor (전역 APP_INTERCEPTOR)
@@ -64,48 +65,58 @@ export class SiteScopeInterceptor implements NestInterceptor {
         options.policy
       );
 
+      // 모든 모드 공통: raw scope attach (controller 가 @CurrentScope() 로 read).
+      // type === 'all' 도 attach 해야 controller 가 일관되게 사용 가능.
+      request.dataScope = scope;
+
       if (scope.type === 'all') {
+        // all 의 경우 enforced 결과는 query pass-through (제약 없음).
+        request.enforcedScope = {
+          site: (request.query as Record<string, string> | undefined)?.[
+            options.siteField ?? 'site'
+          ],
+          teamId: (request.query as Record<string, string> | undefined)?.[
+            options.teamField ?? 'teamId'
+          ],
+        };
         return next.handle();
-      }
-
-      if (scope.type === 'none') {
-        this.logger.warn(
-          `[SECURITY] User ${user.userId} role=${userRole} — access denied by policy`
-        );
-        throw new ForbiddenException('이 리소스에 대한 접근 권한이 없습니다.');
-      }
-
-      if (!request.query) {
-        request.query = {};
       }
 
       const siteField = options.siteField ?? 'site';
       const teamField = options.teamField ?? 'teamId';
 
-      if (scope.type === 'site') {
-        if (!scope.site) {
-          this.logger.warn(`[SECURITY] User ${user.userId} has no site — blocking access`);
-          throw new ForbiddenException(
-            '사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
-          );
+      if (!request.query) {
+        request.query = {};
+      }
+      const query = request.query as Record<string, string>;
+
+      // SSOT: enforceScope 가 cross-site/cross-team mismatch 시 ForbiddenException throw.
+      // throw 는 AuditInterceptor 의 access_denied 경로로 자동 흡수됨 (단일 정책 엔진).
+      try {
+        const enforced = enforceScope({ site: query[siteField], teamId: query[teamField] }, scope);
+        // 모든 모드 공통: enforced 결과 attach (@CurrentEnforcedScope() 용)
+        request.enforcedScope = enforced;
+
+        // 기본 (silent) 모드: query mutate 로 backward compat 유지.
+        // failLoud 모드: query mutation 생략 — controller / service 가 명시적으로
+        // req.enforcedScope 를 받아 SQL WHERE 에 바인딩 (export / 다운로드 라우트).
+        if (!options.failLoud) {
+          if (enforced.site !== undefined) query[siteField] = enforced.site;
+          if (enforced.teamId !== undefined) query[teamField] = enforced.teamId;
         }
-        (request.query as Record<string, string>)[siteField] = scope.site;
-      } else if (scope.type === 'team') {
-        if (!scope.teamId) {
-          // 팀이 없으면 site 필터로 폴백 (계정 설정 불완전한 경우 보수적 처리)
-          if (user.site) {
-            (request.query as Record<string, string>)[siteField] = user.site;
-          } else {
-            this.logger.warn(
-              `[SECURITY] User ${user.userId} has no teamId or site — blocking access`
-            );
-            throw new ForbiddenException(
-              '팀 또는 사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
-            );
-          }
-        } else {
-          (request.query as Record<string, string>)[teamField] = scope.teamId;
+      } catch (err) {
+        // teamId 누락 폴백: 계정 설정 불완전한 경우 보수적으로 site 필터로 강등.
+        // silent 모드 한정 backward compat — failLoud 는 폴백 없이 즉시 throw.
+        if (!options.failLoud && scope.type === 'team' && !scope.teamId && user.site) {
+          query[siteField] = user.site;
+          // 폴백 시에도 enforcedScope attach (소비자 일관성)
+          request.enforcedScope = { site: user.site, teamId: undefined };
+          return next.handle();
         }
+        this.logger.warn(
+          `[SECURITY] User ${user.userId} role=${userRole} — ${err instanceof ForbiddenException ? err.message : String(err)}`
+        );
+        throw err;
       }
 
       return next.handle();
