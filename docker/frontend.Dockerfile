@@ -71,15 +71,19 @@ FROM base AS production
 RUN apt-get update && apt-get install -y git && \
     corepack enable && corepack prepare pnpm@latest --activate
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/apps/frontend/package.json ./apps/frontend/package.json
-COPY --from=builder /app/apps/frontend/public ./apps/frontend/public
-RUN mkdir -p apps/frontend/.next/static
-RUN echo "console.log('Frontend started');" > apps/frontend/server.js
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+COPY --from=builder --chown=node:node /app/apps/frontend/package.json ./apps/frontend/package.json
+COPY --from=builder --chown=node:node /app/apps/frontend/public ./apps/frontend/public
+RUN mkdir -p apps/frontend/.next/static && chown -R node:node apps/frontend/.next
+RUN echo "console.log('Frontend started');" > apps/frontend/server.js && chown node:node apps/frontend/server.js
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Non-root 실행 (CIS Docker Benchmark 4.1) — node:20-slim 기본 'node' user (uid 1000).
+# 3000 은 unprivileged port 이므로 root 권한 불필요.
+USER node
+
 EXPOSE 3000
-CMD ["node", "apps/frontend/server.js"] 
+CMD ["node", "apps/frontend/server.js"]

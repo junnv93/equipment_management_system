@@ -58,16 +58,20 @@ WORKDIR /app
 # 패키지 매니저 설정
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# 필요한 파일만 복사
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/schemas/dist ./packages/schemas/dist
-COPY --from=builder /app/packages/schemas/package.json ./packages/schemas/
-COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
-COPY --from=builder /app/apps/backend/package.json ./apps/backend/
+# 필요한 파일만 복사 (node:1000 소유 — non-root 실행 hardening)
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/packages/schemas/dist ./packages/schemas/dist
+COPY --from=builder --chown=node:node /app/packages/schemas/package.json ./packages/schemas/
+COPY --from=builder --chown=node:node /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder --chown=node:node /app/apps/backend/package.json ./apps/backend/
 
 # 환경 변수 설정
 ENV NODE_ENV=production
 
+# Non-root 실행 (CIS Docker Benchmark 4.1) — node:20-alpine 기본 'node' user (uid 1000).
+# 3001 은 unprivileged port 이므로 root 권한 불필요.
+USER node
+
 # 실행 명령
 EXPOSE 3001
-CMD ["node", "apps/backend/dist/main.js"] 
+CMD ["node", "apps/backend/dist/main.js"]
