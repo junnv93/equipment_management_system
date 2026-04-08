@@ -43,6 +43,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/equipment/services/equipment-history.service.ts`   | COUNT(DISTINCT) + 페이지네이션 (DEFAULT_PAGE_SIZE/MAX_PAGE_SIZE SSOT), checkoutItems 경유 JOIN  |
 | `packages/shared-constants/src/pagination.ts`                                 | SSOT 페이지네이션 상수 (DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE 등)                                    |
 | `apps/backend/src/common/file-upload/document.service.ts`                     | CTE 재귀 쿼리 (개정 이력), inArray 배치 쿼리 (장비+교정 통합 문서), LIMIT 배치 purge (purgeDeletedDocuments) |
+| `apps/backend/src/modules/checkouts/checkout-scope.util.ts`                   | Checkout 스코프 SSOT 헬퍼 — list/KPI/action 가드가 동일 3-case predicate 공유 (Step 6a 참조) |
 
 ## Workflow
 
@@ -192,6 +193,27 @@ grep -rn "leftJoin.*equipmentTable" apps/backend/src/modules apps/backend/src/co
 **PASS 기준:** scope 적용 대상 테이블(calibrations→equipment, repairHistory→equipment, checkouts→checkoutItems→equipment)은 `innerJoin` 사용. `teamsTable`과 활용률 쿼리의 `checkoutItems`/`checkouts` LEFT JOIN은 면제.
 
 **FAIL 기준:** scope 조건이 적용되는 equipment 테이블에 `leftJoin` 사용 시 RBAC 우회 가능.
+
+### Step 6a: Cross-cutting scope predicate SSOT (35차 추가)
+
+같은 도메인의 list / KPI / action 가드가 site/team scope 조건을 **각자 인라인 SQL로** 작성하면 list↔action 비대칭이 발생한다 (33차 phantom row 버그). 한 번 SSOT 헬퍼로 추출했으면 모든 read/write site에서 해당 헬퍼만 호출해야 한다.
+
+**현재 SSOT 헬퍼:**
+- `apps/backend/src/modules/checkouts/checkout-scope.util.ts` — `buildCheckoutSiteCondition` / `buildCheckoutTeamCondition` / `buildCheckoutScopeFromResolved` / `buildCheckoutScopeForUser`. List, KPI, approval count 모두 이 헬퍼만 사용. 액션 가드 (`enforceScopeFromData`, `enforceScopeFromCheckout`)와 동일 정의.
+
+**탐지:**
+```bash
+# checkouts/approvals 서비스에서 인라인 equipment.site/teamId/lenderSiteId/lenderTeamId 조건 검출
+# 액션 가드(enforceScopeFromData/enforceScopeFromCheckout) 정의부 외에는 0 hit 이어야 함.
+grep -nE "equipment\.(site|teamId)|lender(Site|Team)Id" \
+  apps/backend/src/modules/checkouts/checkouts.service.ts \
+  apps/backend/src/modules/approvals/approvals.service.ts \
+  | grep -v "enforceScope"
+```
+
+**PASS:** 매칭 0건 또는 액션 가드 본체(line 967-1005 부근)만. **FAIL:** list/count 메서드 본문에 인라인 scope SQL 발견 → SSOT 헬퍼로 교체.
+
+**확장 시 규칙:** 다른 도메인(예: equipment-imports, calibrations)에서 동일한 list/action 비대칭이 발생하면 같은 패턴으로 `*-scope.util.ts` 헬퍼를 추출하고 본 Step 의 grep 대상에 추가한다.
 
 ### Step 7: 순환 의존성 (forwardRef) 모니터링
 
