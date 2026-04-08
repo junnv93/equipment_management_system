@@ -1,12 +1,125 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-08 (29차 — 시니어 dev/RF cert 시각 부채 스캔, 신규 4건 + 사용자 결정 1건)**
+> **마지막 정리일: 2026-04-08 (30차 — critical-workflows.md UI 검증 보강 + WF-22~37 등재 후속, 신규 4건)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
 ---
 
-## 현재 미해결 프롬프트: 4건 (+ 사용자 결정 대기 1건)
+## 현재 미해결 프롬프트: 8건 (+ 사용자 결정 대기 1건)
+
+### 🟠 HIGH — WF-21 케이블 Path Loss 관리 E2E 워크플로우 spec 부재 (Playwright)
+
+```
+docs/workflows/critical-workflows.md WF-21 (UL-QP-18-08 케이블 Path Loss 관리) 가
+정식 등재되어 있고 코드(`CablesService`, `CablesController`, `CableListContent`,
+`CableDetailContent`, `MeasurementFormDialog`, `FormTemplateExportService`)는 모두 존재하지만,
+apps/frontend/tests/e2e/workflows/ 트리에 wf-21-* spec 이 없다.
+features/ 트리에서도 cable 관련 spec 0건 (find -iname '*cable*' 결과 없음).
+
+WF-19/WF-20 export spec(`wf-19b-intermediate-inspection-export.spec.ts`,
+`wf-20b-self-inspection-export.spec.ts`) 패턴을 그대로 답습해 케이블 등록 → 측정 추가 →
+QP-18-08 export 까지 cover.
+
+작업:
+1. apps/frontend/tests/e2e/workflows/wf-21-cable-path-loss.spec.ts 신규 작성
+2. 시나리오: TE 로그인 → /cables → "케이블 등록" → ELLLX-NNN 형식 관리번호 → 상세 진입 → 측정 추가
+   (Freq/Data 포인트 N개) → latestDataPoints 표시 확인 → 목록 "내보내기" → xlsx 다운로드 → 시트1(목록) +
+   개별 케이블 시트 검증
+3. CAS 충돌은 케이블 수정 단계에서 1건만 (선택)
+4. 도메인 데이터 fabricate 금지 — 관리번호 형식 ELLLX-NNN 만 준수, 실측 dB 값은 더미 0/1/2 허용
+
+검증:
+- pnpm --filter frontend exec playwright test wf-21-cable-path-loss exit 0
+- 시드 의존성: cables 시드 (없으면 spec 내부 API 직접 생성)
+- find apps/frontend/tests/e2e -iname '*cable*' → 1+ hit
+```
+
+### 🟠 HIGH — WF-35 CAS 충돌 프론트엔드 UI 복구 E2E (다탭 시뮬레이션) (Playwright)
+
+```
+critical-workflows.md WF-35 (CAS 충돌 UI 복구) 신규 등재됨. 백엔드 관점 spec 은
+features/non-conformances/comprehensive/s35-cas-cache.spec.ts 와
+features/approvals/comprehensive/10-cas-version-conflict.spec.ts 가 이미 있지만,
+**프론트엔드 사용자 동선** (다탭 동시 편집 → 한국어 토스트 → 자동 refetch → 재시도 성공) 은
+verify된 spec 으로 cover되지 않는다.
+
+확인된 코드 경로:
+- use-optimistic-mutation.ts:249 — getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, t)
+- InspectionFormDialog.tsx:121, SelfInspectionFormDialog.tsx:89, ReceiveEquipmentImportForm.tsx:151
+- CalibrationPlanDetailClient.tsx:149 공통 핸들러
+
+작업:
+1. apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts 신규
+2. 시나리오:
+   a. 같은 storageState 로 두 BrowserContext 열기 (또는 한 컨텍스트 내 두 페이지)
+   b. 양쪽 페이지 모두 /equipment/[id] 또는 /equipment/[id]/edit 진입
+   c. 페이지A: 필드 수정 → "저장" → 토스트 확인, version +1
+   d. 페이지B: 다른 필드 수정 → "저장" → 409 응답
+   e. 페이지B 에서 한국어 토스트 텍스트 검증 (`getByRole('status', { name: /다른 사용자/ })` 등)
+   f. 페이지B 폼이 최신 version 으로 reload 되었는지 확인
+   g. 페이지B 에서 다시 "저장" → 성공 토스트
+3. WF-19 의 `wf-19-intermediate-inspection-3step-approval.spec.ts` 다탭 패턴 참고
+
+검증:
+- pnpm --filter frontend exec playwright test wf-35-cas-ui-recovery exit 0
+- 토스트 셀렉터는 getByRole/getByText (CSS 셀렉터 금지 — 사용자 메모리 규칙)
+- 회귀: features/non-conformances/comprehensive/s35-cas-cache.spec.ts 통과 유지
+```
+
+### 🟡 MEDIUM — WF-25 alerts → 장비 상세 → 반출 신청 cross-flow E2E (Playwright)
+
+```
+critical-workflows.md WF-25 신규 등재. features/dashboard/comprehensive/alert-kpi.spec.ts 가
+KPI 카드 표시는 cover하지만, 사용자가 alert 행을 클릭 → 장비 상세 → "반출 신청" 버튼 → 폼 prefill
+까지 이어지는 cross-flow 는 미커버.
+
+작업:
+1. apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts
+2. 시나리오:
+   a. 시드: 다음 교정일이 임박한 장비 1건 보장 (calibrations.seed 확장 또는 spec 내 API 직접 갱신)
+   b. TE 로그인 → /alerts (또는 / 대시보드 KPI)
+   c. "교정 임박" 탭/카드 → 장비 행 클릭
+   d. /equipment/[id] 진입 검증 (URL + 다음 교정일 강조 표시)
+   e. "반출 신청" 버튼 클릭 → /checkouts/create?equipmentId=... 로 이동
+   f. 폼이 해당 장비로 prefill 되었는지 검증 (장비 선택 필드의 값)
+   g. 목적: "교정" 선택 → 제출 → pending 토스트
+3. /alerts 페이지 컴포넌트 확인 후 셀렉터 확정 (apps/frontend/app/(dashboard)/alerts/AlertsContent.tsx)
+
+검증:
+- pnpm --filter frontend exec playwright test wf-25-alert-to-checkout exit 0
+- prefill 검증은 input value assertion (browser_verify_value 또는 expect(input).toHaveValue)
+```
+
+### 🟡 MEDIUM — WF-33 SSE 다탭 승인 카운트 동기화 E2E (Playwright)
+
+```
+critical-workflows.md WF-33 신규 등재. features/notifications/notification-realtime.spec.ts 가
+**알림 배지** 의 cross-tab 갱신은 cover하지만, **승인 대시보드 카운트** 의 cross-tab 갱신
+(REFETCH_STRATEGIES CRITICAL/IMPORTANT 전략) 은 cover되지 않는다.
+
+작업:
+1. apps/frontend/tests/e2e/workflows/wf-33-approval-count-realtime.spec.ts
+2. 시나리오:
+   a. TM 로그인, 두 BrowserContext (또는 두 page) 모두 /admin/approvals 진입
+   b. 양쪽 모두 초기 대기 카운트 N 캡처
+   c. 페이지A 에서 1건 승인 → 토스트, A 카운트 N-1 검증
+   d. 페이지B 에서 자동 갱신 대기 (focus 이벤트 트리거 또는 SSE 30s — REFETCH_STRATEGIES.CRITICAL 인 경우 SSE)
+   e. 페이지B 카운트가 N-1 로 갱신되는지 검증 (timeout 35s 이내)
+3. SSE 미사용 카테고리(IMPORTANT 2m 폴링)는 spec 분리 또는 폴링 강제 트리거
+
+확인 필요:
+- apps/frontend/lib/api/query-config.ts 또는 refetch-strategies 파일에서 approvals 카테고리가
+  어느 전략(CRITICAL/IMPORTANT)인지 먼저 grep — 그에 따라 대기 전략 변경
+
+검증:
+- pnpm --filter frontend exec playwright test wf-33-approval-count-realtime exit 0
+- 회귀: features/notifications/notification-realtime.spec.ts 통과 유지
+```
+
+---
+
+## 현재 미해결 프롬프트: 4건 (29차 이월)
 
 ### 🟠 HIGH — UL-QP-19-01 exporters map 누락 (런타임 NotImplementedException) (Mode 0)
 
