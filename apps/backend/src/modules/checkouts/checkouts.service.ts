@@ -335,16 +335,35 @@ export class CheckoutsService extends VersionedBaseService {
       whereConditions.push(eq(checkouts.purpose, purpose));
     }
 
-    // 사이트 필터링 (신청자의 사이트 OR 대여 시 빌려주는 사이트)
-    // IN subquery: correlated EXISTS 대비 옵티마이저가 hash join 선택 가능
+    // 사이트 필터링 — SSOT: equipment.site (enforceScopeFromData와 동일 정의)
+    // List/Action 대칭: 액션 가드와 같은 predicate를 공유한다.
+    // - 비rental: 장비 소속 사이트가 우리 사이트인 checkout (case 1: 우리 장비 outgoing)
+    // - rental + lenderSite=우리 : 우리가 대여해주는 건 (case 3: outgoing)
+    // - rental + 신청자 사이트=우리 : 우리가 빌려오는 건 (case 2: inbound 가시성 유지)
     if (site) {
-      const userIdsBySite = this.db
+      const checkoutIdsBySite = this.db
+        .select({ id: checkoutItems.checkoutId })
+        .from(checkoutItems)
+        .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
+        .where(eq(schema.equipment.site, site));
+
+      const requesterIdsBySite = this.db
         .select({ id: schema.users.id })
         .from(schema.users)
         .where(eq(schema.users.site, site));
 
       whereConditions.push(
-        or(inArray(checkouts.requesterId, userIdsBySite), eq(checkouts.lenderSiteId, site))!
+        or(
+          and(
+            sql`${checkouts.purpose} != ${CPVal.RENTAL}`,
+            sql`${checkouts.id} IN (${checkoutIdsBySite})`
+          ),
+          and(eq(checkouts.purpose, CPVal.RENTAL), eq(checkouts.lenderSiteId, site)),
+          and(
+            eq(checkouts.purpose, CPVal.RENTAL),
+            inArray(checkouts.requesterId, requesterIdsBySite)
+          )
+        )!
       );
     }
 
@@ -409,52 +428,45 @@ export class CheckoutsService extends VersionedBaseService {
       whereConditions.push(sql`${checkouts.id} IN (${subquery})`);
     }
 
-    // 팀 ID 필터링 (신청자의 팀 OR 대여 시 빌려주는 팀)
+    // 팀 ID 필터링 — SSOT: equipment.teamId (enforceScopeFromData와 동일 정의)
+    // List/Action 대칭: 액션 가드와 같은 predicate를 공유한다.
+    // 의미:
+    //   case 1 (outbound, 비rental): 우리 팀 장비가 교정/수리로 나감 → equipment.teamId=us
+    //   case 2 (inbound, rental):    우리가 타팀 장비를 빌려옴      → requesterId in users(teamId=us)
+    //   case 3 (outbound, rental):   우리가 타팀에 빌려줌            → lenderTeamId=us
     if (teamId) {
-      // direction과 teamId를 조합한 필터링
-      if (direction === 'outbound') {
-        // 반출: 우리 팀 장비가 나가는 건
-        // - (신청자가 우리 팀 AND 목적이 rental이 아님) = 교정/수리 반출
-        // - OR (lenderTeamId가 우리 팀) = 타팀이 우리 장비를 빌려감
-        const requestersByTeam = this.db
-          .select({ id: schema.users.id })
-          .from(schema.users)
-          .where(eq(schema.users.teamId, teamId));
+      const checkoutIdsByEquipTeam = this.db
+        .select({ id: checkoutItems.checkoutId })
+        .from(checkoutItems)
+        .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
+        .where(eq(schema.equipment.teamId, teamId));
 
+      const requesterIdsByTeam = this.db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.teamId, teamId));
+
+      const inEquipTeam = sql`${checkouts.id} IN (${checkoutIdsByEquipTeam})`;
+      const isRental = eq(checkouts.purpose, CPVal.RENTAL);
+      const isNonRental = sql`${checkouts.purpose} != ${CPVal.RENTAL}`;
+
+      if (direction === 'outbound') {
+        // case 1 + case 3
         whereConditions.push(
-          or(
-            and(
-              sql`${checkouts.requesterId} IN (${requestersByTeam})`,
-              sql`${checkouts.purpose} != ${CPVal.RENTAL}`
-            ),
-            eq(checkouts.lenderTeamId, teamId)
-          )!
+          or(and(isNonRental, inEquipTeam), and(isRental, eq(checkouts.lenderTeamId, teamId)))!
         );
       } else if (direction === 'inbound') {
-        // 반입: 외부 장비가 들어오는 건
-        // - (신청자가 우리 팀 AND 목적이 rental) = 우리가 타팀 장비를 빌림
-        const requestersByTeam = this.db
-          .select({ id: schema.users.id })
-          .from(schema.users)
-          .where(eq(schema.users.teamId, teamId));
-
+        // case 2
         whereConditions.push(
-          and(
-            sql`${checkouts.requesterId} IN (${requestersByTeam})`,
-            eq(checkouts.purpose, CPVal.RENTAL)
-          )!
+          and(isRental, sql`${checkouts.requesterId} IN (${requesterIdsByTeam})`)!
         );
       } else {
-        // direction 없으면 기존 로직 유지 (양쪽 모두 포함)
-        const requestersByTeam = this.db
-          .select({ id: schema.users.id })
-          .from(schema.users)
-          .where(eq(schema.users.teamId, teamId));
-
+        // case 1 + case 2 + case 3
         whereConditions.push(
           or(
-            sql`${checkouts.requesterId} IN (${requestersByTeam})`,
-            eq(checkouts.lenderTeamId, teamId)
+            and(isNonRental, inEquipTeam),
+            and(isRental, eq(checkouts.lenderTeamId, teamId)),
+            and(isRental, sql`${checkouts.requesterId} IN (${requesterIdsByTeam})`)
           )!
         );
       }

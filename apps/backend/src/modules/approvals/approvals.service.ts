@@ -932,17 +932,92 @@ export class ApprovalsService {
       if (purpose) conditions.push(eq(schema.checkouts.purpose, purpose));
       if (excludePurpose) conditions.push(ne(schema.checkouts.purpose, excludePurpose));
 
-      const scopeCondition = this.buildScopeCondition(CHECKOUT_DATA_SCOPE, userCtx, {
-        site: (s) => eq(schema.users.site, s),
-        team: (t) => eq(schema.users.teamId, t),
-      });
+      // SSOT: equipment.site/teamId 기준 — checkouts.service.ts buildQueryConditions와
+      // enforceScopeFromData 액션 가드와 동일 정의. List/KPI 카운트 정합 보장.
+      // - 비rental: 장비 소속 사이트/팀 = 우리
+      // - rental + lender = 우리: 우리가 빌려주는 건
+      // - rental + 신청자 사이트/팀 = 우리: 우리가 빌려오는 건
+      const scope = resolveDataScope(userCtx, CHECKOUT_DATA_SCOPE);
+      let scopeCondition: SQL | undefined;
 
-      // 스코프 필터 있으면 users JOIN 필요, 없으면 (all) JOIN 생략
+      if (scope.type === 'none') {
+        return 0;
+      } else if (scope.type === 'site' && scope.site) {
+        const cIdsBySite = this.db
+          .select({ id: schema.checkoutItems.checkoutId })
+          .from(schema.checkoutItems)
+          .innerJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+          .where(eq(schema.equipment.site, scope.site));
+        const requesterIdsBySite = this.db
+          .select({ id: schema.users.id })
+          .from(schema.users)
+          .where(eq(schema.users.site, scope.site));
+        scopeCondition = or(
+          and(
+            ne(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+            sql`${schema.checkouts.id} IN (${cIdsBySite})`
+          ),
+          and(
+            eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+            eq(schema.checkouts.lenderSiteId, scope.site)
+          ),
+          and(
+            eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+            inArray(schema.checkouts.requesterId, requesterIdsBySite)
+          )
+        );
+      } else if (scope.type === 'team') {
+        // team scope: teamId 우선, 없으면 site 폴백 (SiteScopeInterceptor 동일 동작)
+        if (scope.teamId) {
+          const cIdsByTeam = this.db
+            .select({ id: schema.checkoutItems.checkoutId })
+            .from(schema.checkoutItems)
+            .innerJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+            .where(eq(schema.equipment.teamId, scope.teamId));
+          const requesterIdsByTeam = this.db
+            .select({ id: schema.users.id })
+            .from(schema.users)
+            .where(eq(schema.users.teamId, scope.teamId));
+          scopeCondition = or(
+            and(
+              ne(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+              sql`${schema.checkouts.id} IN (${cIdsByTeam})`
+            ),
+            and(
+              eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+              eq(schema.checkouts.lenderTeamId, scope.teamId)
+            ),
+            and(
+              eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+              inArray(schema.checkouts.requesterId, requesterIdsByTeam)
+            )
+          );
+        } else if (scope.site) {
+          const cIdsBySite = this.db
+            .select({ id: schema.checkoutItems.checkoutId })
+            .from(schema.checkoutItems)
+            .innerJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+            .where(eq(schema.equipment.site, scope.site));
+          scopeCondition = or(
+            and(
+              ne(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+              sql`${schema.checkouts.id} IN (${cIdsBySite})`
+            ),
+            and(
+              eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
+              eq(schema.checkouts.lenderSiteId, scope.site)
+            )
+          );
+        } else {
+          return 0;
+        }
+      }
+      // scope.type === 'all' → scopeCondition undefined, JOIN 생략
+
       if (scopeCondition) {
         const [result] = await this.db
           .select({ count: count() })
           .from(schema.checkouts)
-          .innerJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
           .where(and(...conditions, scopeCondition));
         return result?.count ?? 0;
       }

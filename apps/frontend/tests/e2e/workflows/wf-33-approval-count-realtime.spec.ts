@@ -92,42 +92,30 @@ test.describe('WF-33: 다탭 승인 카운트 SSE 실시간 동기화', () => {
         return;
       }
 
-      // Step 3: 탭A 에서 승인 가능한 첫 항목을 찾아 "상세 보기" → "승인" 클릭.
-      // 목록에는 TM 의 site scope 를 벗어난 cross-site 항목이 혼합 노출될 수 있어
-      // (SCOPE_ACCESS_DENIED 403), 승인 PATCH 가 2xx 로 돌아올 때까지 최대 N 건 순회.
+      // Step 3: 탭A 에서 첫 outgoing 항목을 직접 승인.
+      // List/Action 대칭 보장 후(approvals-cross-site-scope 수정) — 목록에 노출된
+      // 모든 항목은 액션 가드를 통과해야 한다. 이전의 "최대 8건 순회 우회" 제거.
       const items = pageA.locator('[data-testid="approval-item"]');
-      const maxAttempts = Math.min(await items.count(), 8);
-      expect(maxAttempts, '탭A 에 승인 시도할 pending 항목이 있어야 함').toBeGreaterThan(0);
+      expect(await items.count(), '탭A 에 승인 대상 pending 항목이 있어야 함').toBeGreaterThan(0);
 
-      let approved = false;
-      let lastError = '';
-      for (let i = 0; i < maxAttempts; i++) {
-        // i 번째 항목 시도 — 실패 시 DOM 은 그대로이므로 인덱스를 진행해야 다음 항목 도달
-        const currentItem = pageA.locator('[data-testid="approval-item"]').nth(i);
-        await currentItem.getByRole('button', { name: /상세 보기/ }).click();
+      const firstItem = items.first();
+      await firstItem.getByRole('button', { name: /상세 보기/ }).click();
 
-        const dialog = pageA.getByRole('dialog');
-        await expect(dialog).toBeVisible({ timeout: 5000 });
+      const dialog = pageA.getByRole('dialog');
+      await expect(dialog).toBeVisible({ timeout: 5000 });
 
-        const approveResponsePromise = pageA.waitForResponse(
-          (res) =>
-            /\/api\/(checkouts|approvals)\/.+\/approve/.test(res.url()) &&
-            res.request().method() === 'PATCH',
-          { timeout: 10000 }
-        );
-        await dialog.getByRole('button', { name: '승인' }).click();
-        const approveResponse = await approveResponsePromise;
-
-        if (approveResponse.ok()) {
-          approved = true;
-          break;
-        }
-        lastError = `${approveResponse.status()} ${approveResponse.url()}`;
-        // 실패 시 다이얼로그 닫고 다음 항목으로 — 에러 토스트 닫힘 대기
-        await pageA.keyboard.press('Escape');
-        await pageA.waitForTimeout(500);
-      }
-      expect(approved, `${maxAttempts} 건 모두 승인 실패: ${lastError}`).toBeTruthy();
+      const approveResponsePromise = pageA.waitForResponse(
+        (res) =>
+          /\/api\/(checkouts|approvals)\/.+\/approve/.test(res.url()) &&
+          res.request().method() === 'PATCH',
+        { timeout: 10000 }
+      );
+      await dialog.getByRole('button', { name: '승인' }).click();
+      const approveResponse = await approveResponsePromise;
+      expect(
+        approveResponse.ok(),
+        `첫 outgoing 항목 승인 실패 (list/action 대칭 회귀): ${approveResponse.status()} ${approveResponse.url()}`
+      ).toBeTruthy();
 
       // Step 3 검증: 탭A 카운트 N-1 (useOptimisticMutation.invalidateKeys)
       await expect

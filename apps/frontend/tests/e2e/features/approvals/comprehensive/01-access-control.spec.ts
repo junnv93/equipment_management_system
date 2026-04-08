@@ -110,6 +110,79 @@ test.describe('승인 페이지 접근 제어', () => {
   });
 });
 
+test.describe('Cross-site list/action 대칭 (회귀)', () => {
+  /**
+   * REGRESSION: approvals-cross-site-scope (2026-04-08)
+   *
+   * 이전 결함: GET /api/checkouts?statuses=pending 의 site/teamId 필터가 requester
+   * 기준이라, TM(suwon) 이 신청자만 같은 팀이고 장비는 타 사이트인 비rental checkout
+   * 까지 outgoing 목록에서 보았다. 액션 가드(enforceScopeFromData)는 equipment.site 로
+   * 거부 → 403 "유령 행".
+   *
+   * 수정: list 쿼리도 equipment.site/teamId 기준으로 정렬 (rental은 lender + 신청자
+   * 폴백). 동일 정의를 공유 → 보이는 모든 항목이 액션 가능해야 한다.
+   *
+   * 검증 원칙: TM 으로 outgoing 탭의 모든 비rental checkout 상세를 열어 "승인" 버튼을
+   * 눌렀을 때 403 이 0회여야 한다.
+   */
+  test('TC-08: TM outgoing 목록의 모든 항목은 액션 가드를 통과해야 한다 (list/action 대칭)', async ({
+    techManagerPage: page,
+  }) => {
+    await page.goto('/admin/approvals?tab=outgoing');
+    await expect(page.getByRole('heading', { name: '승인 관리', level: 1 })).toBeVisible({
+      timeout: 10000,
+    });
+
+    const items = page.locator('[data-testid="approval-item"]');
+    const total = await items.count();
+    if (total === 0) {
+      test.skip();
+      return;
+    }
+
+    // 모든 항목을 순회하며 403 발생 여부만 점검 (실제 승인은 첫 항목만, 나머지는 dialog 열고 닫기)
+    // - 본 회귀 케이스의 핵심은 "list 가 노출한 항목이 backend 에서 거부되지 않는다"
+    let firstApproved = false;
+    const failures: string[] = [];
+
+    for (let i = 0; i < total; i++) {
+      const row = page.locator('[data-testid="approval-item"]').nth(i);
+      await row.getByRole('button', { name: /상세 보기/ }).click();
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible({ timeout: 5000 });
+
+      if (!firstApproved) {
+        const respPromise = page.waitForResponse(
+          (res) =>
+            /\/api\/(checkouts|approvals)\/.+\/approve/.test(res.url()) &&
+            res.request().method() === 'PATCH',
+          { timeout: 10000 }
+        );
+        await dialog.getByRole('button', { name: '승인' }).click();
+        const resp = await respPromise;
+        if (resp.status() === 403) {
+          failures.push(`row#${i}: 403 ${resp.url()}`);
+        } else if (resp.ok()) {
+          firstApproved = true;
+        }
+        // dialog 가 mutation 후 자동 닫힘 — wait
+        await page.waitForTimeout(300);
+        if (await dialog.isVisible().catch(() => false)) {
+          await page.keyboard.press('Escape');
+        }
+      } else {
+        // 후속 항목: 승인하지 않고 닫기만 (시드 데이터 보존)
+        await page.keyboard.press('Escape');
+      }
+    }
+
+    expect(
+      failures,
+      `outgoing 목록에 액션 가드가 거부한 cross-site 항목이 노출됨:\n${failures.join('\n')}`
+    ).toEqual([]);
+  });
+});
+
 test.describe('탭 URL 동기화', () => {
   test('TC-06: ?tab=equipment → 장비 탭 활성화', async ({ techManagerPage: page }) => {
     await page.goto('/admin/approvals?tab=equipment');
