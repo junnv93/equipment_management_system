@@ -34,7 +34,8 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/schemas/` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지, DocumentType |
 | `packages/shared-constants/` | Permission, API 경로, 스코프 정책, 비즈니스 규칙, 엔티티 라우트, Test Users |
 | `packages/db/` | DB enum 배열, AppDatabase 타입 |
-| `apps/backend/src/common/scope/scope-enforcer.ts` | `enforceScope()` 정책 함수 + `EnforcedScope` 타입 (cross-site/cross-team 차단 SSOT) |
+| `apps/backend/src/common/scope/scope-enforcer.ts` | `enforceScope()` 정책 함수 + `EnforcedScope` 타입 (요청 경계 — cross-site/cross-team 차단 SSOT) |
+| `apps/backend/src/common/scope/scope-sql-builder.ts` | `buildScopePredicate` / `dispatchScopePredicate` (쿼리 계층 — 정책 상태기계 SSOT, 2026-04-08~) |
 | `apps/backend/src/common/decorators/site-scoped.decorator.ts` | `@SiteScoped` 데코레이터 + `SiteScopedOptions` (failLoud 옵션 포함) |
 | `apps/backend/src/common/decorators/current-scope.decorator.ts` | `@CurrentScope()` / `@CurrentEnforcedScope()` parameter decorator |
 
@@ -88,20 +89,29 @@ react-icons(deprecated) 사용 및 비표준 icon library 탐지.
 | 11 | VM (Validation Messages) 임포트 소스 |
 | 12 | Test User Constants SSOT |
 | 13 | DocumentTypeValues SSOT |
-| 14 | Scope enforcement SSOT — `EnforcedScope` / `enforceScope` 로컬 재정의 금지, `@SiteScoped` 사용 라우트는 controller helper로 `_resolveXxxScope` 사본 정의 금지 |
+| 14 | Scope enforcement + query-layer SSOT — `EnforcedScope` / `enforceScope` 로컬 재정의 금지, controller helper로 `_resolveXxxScope` 사본 정의 금지, **service 계층의 `switch (scope.type)` 정책 상태기계 사본 정의 금지** (2026-04-08 추가) |
 
 **Step 14 탐지 명령어:**
 ```bash
-# EnforcedScope/enforceScope 로컬 재정의 (scope-enforcer.ts 외)
+# (a) EnforcedScope/enforceScope 로컬 재정의 (scope-enforcer.ts 외)
 grep -rn "interface EnforcedScope\|export function enforceScope" apps/backend/src/ \
   | grep -v "common/scope/scope-enforcer.ts"
 
-# controller 가 _resolveXxxScope 같은 inline scope helper 를 정의 (도메인 특수 예외 외)
+# (b) controller 가 _resolveXxxScope 같은 inline scope helper 를 정의 (도메인 특수 예외 외)
 grep -rn "private _resolve.*Scope\|private resolveDataScope" apps/backend/src/modules/ \
   | grep -v "audit-logs"  # AUDIT_LOG_SCOPE 인라인은 의도적 예외
+
+# (c) query-layer 정책 상태기계 사본 — service 가 buildScopePredicate/dispatchScopePredicate 우회하고
+#     scope.type 4-case switch 를 인라인 구현. 0건이 PASS.
+grep -rn "switch.*scope\.type\|scope\.type === 'team'\|scope\.type === 'site'" apps/backend/src/modules/ \
+  --include="*.ts" \
+  | grep -v "checkout-scope.util.ts"  # 도메인 특수 3-case OR builder, dispatch 위에 얹힘
+# common/scope/ 외에서 hit 가 있으면 buildScopePredicate / dispatchScopePredicate 로 마이그레이션 권장.
 ```
 
-규칙 근거: 2026-04-08 (8c4806fd) Phase 1+2 통합으로 scope enforcement 가 단일 정책 함수 + 단일 진입점(@SiteScoped)으로 수렴.
+규칙 근거:
+- 2026-04-08 (8c4806fd) Phase 1+2 통합으로 scope enforcement 가 단일 정책 함수 + 단일 진입점(@SiteScoped)으로 수렴
+- 2026-04-08 (8d7c8971 / b0804812) `buildScopePredicate` + `dispatchScopePredicate` 가 query 계층 정책 상태기계 SSOT 로 승격. approvals.service 18 callsite 마이그레이션 + checkout-scope.util.ts 통합으로 drift 차단.
 
 상세: [references/ssot-checks.md](references/ssot-checks.md) Step 5~13
 

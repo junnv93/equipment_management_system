@@ -69,6 +69,15 @@ export abstract class VersionedBaseService {
    *   내부에서 catch + log warning 처리. base class 가 외곽 보호도 적용.
    * - default: no-op (캐시가 없는 도메인 안전 보장 — backward compatible)
    *
+   * **⚠️ 트랜잭션 안전성 주의 (DB write 금지):**
+   * `updateWithVersion(tx)` 형태로 호출되어도 본 훅은 항상 outer connection
+   * (`this.db`) 를 통해 실행되며, 곧이어 throw 되는 ConflictException 이 호출자
+   * 트랜잭션을 rollback 시킨다. 따라서 훅 본문에서 **DB write (audit row 삽입,
+   * 다른 테이블 version bump 등) 를 수행하면 split-brain** 이 발생: 본 훅의
+   * write 는 commit 되었으나 호출자 tx 의 다른 변경은 rollback 되어 데이터
+   * 정합성이 깨진다. 본 훅에서는 in-memory 캐시 / Redis 무효화 / 로그만 수행하고,
+   * persistent state mutation 은 절대 하지 말 것.
+   *
    * @param id  CAS 충돌이 발생한 엔티티 UUID
    */
   protected async onVersionConflict(_id: string): Promise<void> {
