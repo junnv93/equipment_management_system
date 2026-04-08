@@ -31,34 +31,30 @@ test.describe('교정 목록 데이터 통합 검증', () => {
     await expect(page.getByRole('heading', { name: '교정 관리' })).toBeVisible();
 
     // 2. 전체 교정 장비 카드 검증
-    const totalCardTitle = page.getByText('전체 교정 장비');
-    await expect(totalCardTitle).toBeVisible();
+    await expect(page.getByText('전체 교정 장비')).toBeVisible();
     const totalValue = parseStatValue(
-      await totalCardTitle.locator('..').locator('..').locator('.text-2xl').textContent()
+      await page.getByTestId('calibration-stat-total').textContent()
     );
     expect(totalValue).toBeGreaterThanOrEqual(0);
 
     // 3. 정상 장비 카드 검증
-    const normalCardTitle = page.getByText('정상 장비');
-    await expect(normalCardTitle).toBeVisible();
+    await expect(page.getByText('정상 장비')).toBeVisible();
     const normalValue = parseStatValue(
-      await normalCardTitle.locator('..').locator('..').locator('.text-2xl').textContent()
+      await page.getByTestId('calibration-stat-compliant').textContent()
     );
     expect(normalValue).toBeGreaterThanOrEqual(0);
 
     // 4. 교정 기한 초과 카드 검증
-    const overdueCardTitle = page.getByText('교정 기한 초과');
-    await expect(overdueCardTitle).toBeVisible();
+    await expect(page.getByText('교정 기한 초과')).toBeVisible();
     const overdueValue = parseStatValue(
-      await overdueCardTitle.locator('..').locator('..').locator('.text-2xl').textContent()
+      await page.getByTestId('calibration-stat-overdue').textContent()
     );
     expect(overdueValue).toBeGreaterThanOrEqual(0);
 
     // 5. 30일 이내 교정 필요 카드 검증
-    const upcomingCardTitle = page.getByText('30일 이내 교정 필요');
-    await expect(upcomingCardTitle).toBeVisible();
+    await expect(page.getByText('30일 이내 교정 필요')).toBeVisible();
     const upcomingValue = parseStatValue(
-      await upcomingCardTitle.locator('..').locator('..').locator('.text-2xl').textContent()
+      await page.getByTestId('calibration-stat-upcoming').textContent()
     );
     expect(upcomingValue).toBeGreaterThanOrEqual(0);
 

@@ -119,8 +119,8 @@ test.describe('Incident History Tab Integration', () => {
     const checkbox = techManagerPage.getByText('부적합으로 등록');
     await expect(checkbox).toBeVisible();
 
-    // 4. Verify checkbox has yellow background (bg-yellow-50)
-    const checkboxContainer = techManagerPage.locator('.bg-yellow-50');
+    // 4. Verify warning-style checkbox container is rendered
+    const checkboxContainer = techManagerPage.getByTestId('incident-nc-checkbox-container');
     await expect(checkboxContainer).toBeVisible();
 
     // 5. Verify description text
@@ -264,16 +264,14 @@ test.describe('Incident History Tab Integration', () => {
     // This test assumes there's already a calibration_overdue incident
     // If not, we'll skip or create one first
 
-    // Look for purple badge with '교정 기한 초과' text
-    const purpleBadge = techManagerPage.locator('.bg-purple-500');
-    const badgeCount = await purpleBadge.count();
+    // Look for calibration_overdue incident type badge
+    const overdueBadge = techManagerPage.getByTestId('incident-type-badge-calibration_overdue');
+    const badgeCount = await overdueBadge.count();
 
     if (badgeCount > 0) {
       // Verify badge shows '교정 기한 초과'
-      const calibrationOverdueBadge = techManagerPage.locator('.bg-purple-500', {
-        hasText: '교정 기한 초과',
-      });
-      await expect(calibrationOverdueBadge.first()).toBeVisible();
+      await expect(overdueBadge.first()).toBeVisible();
+      await expect(overdueBadge.first()).toContainText('교정 기한 초과');
 
       console.log('✅ Found existing calibration_overdue incident with purple badge');
     } else {

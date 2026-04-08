@@ -633,6 +633,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                     render={({ field }) => (
                       <FormItem
                         className={`flex flex-row items-start space-x-3 space-y-0 ${getSemanticContainerClasses('warning')}`}
+                        data-testid="incident-nc-checkbox-container"
                       >
                         <FormControl>
                           <input
@@ -822,7 +823,11 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                         <div className="flex items-start justify-between">
                           <div className="space-y-1 flex-1">
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
+                              <Badge
+                                variant="outline"
+                                className="text-xs"
+                                data-testid={`incident-type-badge-${item.incidentType}`}
+                              >
                                 {t(`incidentHistoryTab.types.${item.incidentType}` as const)}
                               </Badge>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">

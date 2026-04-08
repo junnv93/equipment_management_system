@@ -97,7 +97,7 @@ Mode 2 — DB 마이그레이션 동반.
 - 회귀: 장비 등록/승인 워크플로(WF-01/02) E2E 통과
 ```
 
-### 🟠 HIGH — checkouts.lenderTeamId/lenderSiteId FK 누락 (시험소간 대여) — ⚠️ 부분 완료 (35차, lenderTeamId만, lenderSiteId 잔존)
+### ~~🟠 HIGH — checkouts.lenderTeamId/lenderSiteId FK 누락 (시험소간 대여)~~ ✅ 완료 (35차 lenderTeamId FK, lenderSiteId는 SiteEnum 코드값이므로 FK 대상 아님 — false positive)
 
 ```
 배경: packages/db/src/schema/checkouts.ts:49-50 의 `lenderTeamId: uuid('lender_team_id')`

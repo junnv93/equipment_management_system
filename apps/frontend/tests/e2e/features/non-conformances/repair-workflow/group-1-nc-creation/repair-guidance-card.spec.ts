@@ -10,12 +10,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
-import {
-  TEST_EQUIPMENT_ID,
-  NC_WITHOUT_REPAIR_ID,
-  NC_WITH_REPAIR_ID,
-  UI_CLASSES,
-} from '../constants/test-data';
+import { TEST_EQUIPMENT_ID } from '../constants/test-data';
 import { NON_CONFORMANCE_TYPE_LABELS } from '@equipment-management/schemas';
 
 test.describe('Group A-3: Repair Guidance Card Display', () => {
@@ -26,15 +21,15 @@ test.describe('Group A-3: Repair Guidance Card Display', () => {
     await testOperatorPage.goto(`/equipment/${TEST_EQUIPMENT_ID}/non-conformance`);
 
     // Wait for page to load
-    await testOperatorPage.waitForSelector('.bg-white.border', { timeout: 10000 });
+    await testOperatorPage.getByTestId('nc-card').first().waitFor({ timeout: 10000 });
 
     // Find NC card by its cause text (unique identifier in seed data)
     const ncCard = testOperatorPage
-      .locator('.bg-white.border')
+      .getByTestId('nc-card')
       .filter({ hasText: '측정값 불안정성 발생' });
 
     // Verify warning card exists (yellow background)
-    const warningCard = ncCard.locator(UI_CLASSES.WARNING_CARD);
+    const warningCard = ncCard.getByTestId('nc-repair-warning');
     await expect(warningCard).toBeVisible();
 
     // Verify alert icon (triangle)
@@ -62,12 +57,10 @@ test.describe('Group A-3: Repair Guidance Card Display', () => {
     await testOperatorPage.goto(`/equipment/${equipmentWithRepairedNC}/non-conformance`);
 
     // Wait for page to load
-    await testOperatorPage.waitForSelector('.bg-white.border', { timeout: 10000 });
+    await testOperatorPage.getByTestId('nc-card').first().waitFor({ timeout: 10000 });
 
     // Find NC card by its cause text (from seed data: NC_007 cause is "BNC 커넥터 불량")
-    const ncCard = testOperatorPage
-      .locator('.bg-white.border')
-      .filter({ hasText: 'BNC 커넥터 불량' });
+    const ncCard = testOperatorPage.getByTestId('nc-card').filter({ hasText: 'BNC 커넥터 불량' });
 
     // Verify success message (green text) - it's in a div with flex items-center
     // The success div contains the full message with "종료 승인 가능"
@@ -99,7 +92,7 @@ test.describe('Group A-3: Repair Guidance Card Display', () => {
       .locator('..');
 
     // Verify NO warning card for measurement_error type
-    const warningCard = ncCard.locator(UI_CLASSES.WARNING_CARD);
+    const warningCard = ncCard.getByTestId('nc-repair-warning');
     await expect(warningCard).not.toBeVisible();
 
     // Verify no "수리 기록 필요" text
@@ -110,13 +103,13 @@ test.describe('Group A-3: Repair Guidance Card Display', () => {
     await testOperatorPage.goto(`/equipment/${TEST_EQUIPMENT_ID}/non-conformance`);
 
     // Wait for page to load
-    await testOperatorPage.waitForSelector('.bg-white.border', { timeout: 10000 });
+    await testOperatorPage.getByTestId('nc-card').first().waitFor({ timeout: 10000 });
 
     // Find NC card with warning
     const ncCard = testOperatorPage
-      .locator('.bg-white.border')
+      .getByTestId('nc-card')
       .filter({ hasText: '측정값 불안정성 발생' });
-    const warningCard = ncCard.locator(UI_CLASSES.WARNING_CARD);
+    const warningCard = ncCard.getByTestId('nc-repair-warning');
 
     // Verify warning card has appropriate background color
     await expect(warningCard).toBeVisible();

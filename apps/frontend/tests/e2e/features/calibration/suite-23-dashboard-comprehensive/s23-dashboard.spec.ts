@@ -20,10 +20,11 @@ test.describe('A-1: 교정 현황 대시보드', () => {
       const statsSection = page.locator('[class*="grid"]').first();
       await expect(statsSection).toBeVisible();
 
-      // 숫자가 포함된 카드들이 표시되는지 확인
-      const numberElements = page.locator('.text-2xl, .text-3xl');
-      const count = await numberElements.count();
-      expect(count).toBeGreaterThanOrEqual(3);
+      // 4개 KPI 카드 (total/compliant/overdue/upcoming) 값 노출 검증
+      await expect(page.getByTestId('calibration-stat-total')).toBeVisible();
+      await expect(page.getByTestId('calibration-stat-compliant')).toBeVisible();
+      await expect(page.getByTestId('calibration-stat-overdue')).toBeVisible();
+      await expect(page.getByTestId('calibration-stat-upcoming')).toBeVisible();
     });
   });
 
@@ -122,7 +123,6 @@ test.describe('A-1: 교정 현황 대시보드', () => {
         await teamFilter.click();
         const firstTeamOption = page.getByRole('option').first();
         if (await firstTeamOption.isVisible()) {
-          const teamName = await firstTeamOption.textContent();
           await firstTeamOption.click();
 
           // URL에 teamId 반영 확인

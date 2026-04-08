@@ -472,6 +472,7 @@ export default function NonConformanceManagementClient({
           nonConformances.map((nc, index) => (
             <Card
               key={nc.id}
+              data-testid="nc-card"
               className="p-6 motion-safe:animate-[staggerFadeIn_0.3s_ease-out_forwards]"
               style={{ animationDelay: `${index * 60}ms` }}
             >
@@ -606,7 +607,10 @@ export default function NonConformanceManagementClient({
               {nc.status !== 'closed' && ['damage', 'malfunction'].includes(nc.ncType) && (
                 <div className="mt-4 pt-4 border-t border-border">
                   {!nc.repairHistoryId ? (
-                    <div className={getSemanticContainerClasses('warning')}>
+                    <div
+                      data-testid="nc-repair-warning"
+                      className={getSemanticContainerClasses('warning')}
+                    >
                       <div className="flex items-start gap-3">
                         <AlertTriangle
                           className={`h-5 w-5 ${getSemanticContainerTextClasses('warning')} mt-0.5`}
@@ -639,7 +643,7 @@ export default function NonConformanceManagementClient({
                       </div>
                     </div>
                   ) : (
-                    <div className={NC_REPAIR_LINKED_TOKENS.text}>
+                    <div data-testid="nc-repair-linked" className={NC_REPAIR_LINKED_TOKENS.text}>
                       <CheckCircle className="h-4 w-4" aria-hidden="true" />
                       {t('nonConformanceManagement.repairLinkedApproval')}
                       <Link

@@ -78,7 +78,7 @@ export default function CalibrationStatsCards({ stats }: Props) {
       <KpiCard type="total" staggerIndex={0}>
         <CardContent className="pt-5 pb-4">
           <div className={CALIBRATION_KPI.label}>{t('content.stats.total')}</div>
-          <div className={CALIBRATION_KPI.hero.value}>
+          <div className={CALIBRATION_KPI.hero.value} data-testid="calibration-stat-total">
             {stats.total}
             <span className={CALIBRATION_KPI.hero.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
@@ -98,7 +98,10 @@ export default function CalibrationStatsCards({ stats }: Props) {
       <KpiCard type="compliant" staggerIndex={1}>
         <CardContent className="pt-5 pb-4">
           <div className={CALIBRATION_KPI.label}>{t('content.stats.compliant')}</div>
-          <div className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.compliant}`}>
+          <div
+            className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.compliant}`}
+            data-testid="calibration-stat-compliant"
+          >
             {stats.compliant}
             <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
@@ -109,7 +112,10 @@ export default function CalibrationStatsCards({ stats }: Props) {
       <KpiCard type="overdue" staggerIndex={2}>
         <CardContent className="pt-5 pb-4">
           <div className={CALIBRATION_KPI.label}>{t('content.stats.overdue')}</div>
-          <div className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.overdue}`}>
+          <div
+            className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.overdue}`}
+            data-testid="calibration-stat-overdue"
+          >
             {stats.overdue}
             <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
@@ -120,7 +126,10 @@ export default function CalibrationStatsCards({ stats }: Props) {
       <KpiCard type="upcoming" staggerIndex={3}>
         <CardContent className="pt-5 pb-4">
           <div className={CALIBRATION_KPI.label}>{t('content.stats.upcoming')}</div>
-          <div className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.upcoming}`}>
+          <div
+            className={`${CALIBRATION_KPI.compact.value} ${CALIBRATION_STATS_TEXT.upcoming}`}
+            data-testid="calibration-stat-upcoming"
+          >
             {stats.upcoming}
             <span className={CALIBRATION_KPI.compact.unit}>{t('content.stats.unitSuffix')}</span>
           </div>
