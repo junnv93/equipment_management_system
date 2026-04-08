@@ -101,6 +101,8 @@ export class UsersController {
   }
 
   @Get('me')
+  // SkipPermissions 정당성: 본인 리소스(`req.user.userId`) 조회 — 소유자 == 주체이므로
+  // 권한 체크 대신 인증만으로 충분. VIEW_USERS 없는 일반 시험원도 본인 정보는 봐야 함.
   @SkipPermissions()
   @ApiOperation({
     summary: '내 프로필 조회',
@@ -127,6 +129,7 @@ export class UsersController {
   }
 
   @Get('me/preferences')
+  // SkipPermissions 정당성: 본인의 UI 표시 설정 — 소유자 == 주체. 권한과 무관한 개인 환경.
   @SkipPermissions()
   @ApiOperation({
     summary: '내 표시 설정 조회',
@@ -146,6 +149,8 @@ export class UsersController {
   }
 
   @Patch('me/preferences')
+  // SkipPermissions 정당성: 본인의 UI 표시 설정 변경 — userId는 서버(req.user)에서 추출하므로
+  // 타인 설정 변경 불가. UPDATE_USERS 권한과는 별개의 개인 환경 영역.
   @SkipPermissions()
   @ApiOperation({
     summary: '내 표시 설정 변경',
@@ -168,6 +173,9 @@ export class UsersController {
   }
 
   @Post('me/signature')
+  // SkipPermissions 정당성: 본인의 전자서명 업로드 — userId는 서버에서 추출. 모든 시험원은
+  // 보고서 서명을 위해 본인 서명 등록이 필요하므로 권한 게이트 대신 인증만 요구.
+  // 파일 검증(MIME/크기)은 아래 본문에서 수행, @AuditLog로 변경 추적.
   @SkipPermissions()
   @UseInterceptors(FileInterceptor('file'))
   @AuditLog({ action: 'update', entityType: 'user' })
@@ -219,6 +227,7 @@ export class UsersController {
   }
 
   @Delete('me/signature')
+  // SkipPermissions 정당성: 본인 전자서명 삭제 — userId 서버 추출, 타인 영향 없음. @AuditLog 적용.
   @SkipPermissions()
   @AuditLog({ action: 'update', entityType: 'user' })
   @ApiOperation({

@@ -11,6 +11,21 @@
  * - delete: 삭제
  * - approve: 승인
  * - reject: 반려
+ *
+ * ─── 신규 권한 추가 시 가이드 ─────────────────────────────────────────────
+ * 1. 리소스 명사 단/복수 결정:
+ *    - 컬렉션 조회(목록) → 복수형 (`view:checkouts`, `view:teams`, `view:notifications`)
+ *    - 단일 리소스 mutation → 단수형 (`create:checkout`, `update:notification`)
+ *    - 기존 권한과의 일관성을 우선 (예: equipment는 불가산이라 단수 유지)
+ * 2. 워크플로우 단계가 있는 도메인은 CRUD 대신 transition 동사 사용:
+ *    - 예: `submit:`, `review:`, `approve:`, `complete:`, `cancel:`
+ *    - 절차서(UL-QP-18)의 각 단계가 권한 1개에 대응되도록
+ * 3. CRUD 매트릭스 폭발 금지: 실제로 분기되는 행동만 권한화
+ *    (역할별로 항상 같이 부여된다면 하나로 합치기)
+ * 4. 추가 후 ROLE_PERMISSIONS(role-permissions.ts) 매핑 반드시 갱신
+ *    + PERMISSION_LABELS도 함께 추가 (서버 사이드 라벨)
+ * 5. 명명 불일치(단/복수)는 발견하더라도 기존 항목을 리네임하지 말 것 —
+ *    DB/감사로그/프론트 캐시 키 전체 마이그레이션 비용이 이득보다 큼.
  */
 
 /**
