@@ -1,4 +1,5 @@
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { expectToastVisible } from '../../../shared/helpers/toast-helpers';
 
 /**
  * 장비 등록/수정 폼 에러 처리 테스트
@@ -198,10 +199,8 @@ test.describe('Equipment Form - API Error Simulation', () => {
     // 폼 제출
     await page.getByRole('button', { name: /등록/i }).first().click();
 
-    // 에러 메시지 확인 (toast 또는 ErrorAlert)
-    await expect(page.getByText(/네트워크|연결|오류|실패/i).first()).toBeVisible({
-      timeout: 10000,
-    });
+    // 에러 토스트 확인 — destructive variant toast가 catch 블록에서 항상 호출됨
+    await expectToastVisible(page, /네트워크|연결|오류|실패/i, { timeout: 10000 });
   });
 
   test('중복 관리번호 에러 처리', async ({ siteAdminPage: page }) => {
@@ -266,8 +265,8 @@ test.describe('Equipment Form - API Error Simulation', () => {
     // 폼 제출
     await page.getByRole('button', { name: /등록/i }).first().click();
 
-    // 서버 에러 메시지 확인
-    await expect(page.getByText(/서버|오류|실패|error/i).first()).toBeVisible({ timeout: 10000 });
+    // 서버 에러 토스트 확인
+    await expectToastVisible(page, /서버|오류|실패|error/i, { timeout: 10000 });
   });
 
   test('권한 없음 (403) 에러 처리', async ({ siteAdminPage: page }) => {
@@ -427,8 +426,8 @@ test.describe('Equipment Form - ErrorAlert Component', () => {
     // 첫 번째 제출 (에러 발생)
     await page.getByRole('button', { name: /등록/i }).first().click();
 
-    // 에러 메시지 확인
-    await expect(page.getByText(/서버|오류|실패/i).first()).toBeVisible({ timeout: 10000 });
+    // 에러 토스트 확인
+    await expectToastVisible(page, /서버|오류|실패/i, { timeout: 10000 });
 
     // 다시 시도 버튼 클릭 (있다면)
     const retryButton = page.getByRole('button', { name: /다시.*시도|재시도|retry/i });
