@@ -32,6 +32,12 @@ import { EQUIPMENT_REQUESTS_SEED_DATA } from '../seed-data/admin/equipment-reque
 import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from '../seed-data/admin/equipment-attachments.seed';
 import { AUDIT_LOGS_SEED_DATA } from '../seed-data/admin/audit-logs.seed';
 import { NOTIFICATIONS_SEED_DATA } from '../seed-data/admin/notifications.seed';
+import { REPAIR_HISTORY_SEED_DATA } from '../seed-data/operations/repair-history.seed';
+import { CHECKOUT_ITEMS_SEED_DATA } from '../seed-data/operations/checkouts.seed';
+import { CALIBRATION_FACTORS_SEED_DATA } from '../seed-data/calibration/calibration-factors.seed';
+import { SOFTWARE_VALIDATIONS_SEED_DATA } from '../seed-data/software/software-validations.seed';
+import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from '../seed-data/software/equipment-test-software.seed';
+import { DISPOSAL_REQUESTS_SEED_DATA } from '../seed-data/disposal/disposal-requests.seed';
 
 interface VerificationResult {
   passed: boolean;
@@ -273,6 +279,64 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
 
     checks.push(
       await checkCount(pool, 'Notifications count', 'notifications', NOTIFICATIONS_SEED_DATA.length)
+    );
+
+    // =========================================================================
+    // Phase 4B: Coverage gap fill (32차 verification.ts SSOT 후속)
+    // =========================================================================
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Repair History count',
+        'repair_history',
+        REPAIR_HISTORY_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Checkout Items count',
+        'checkout_items',
+        CHECKOUT_ITEMS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Calibration Factors count',
+        'calibration_factors',
+        CALIBRATION_FACTORS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Software Validations count',
+        'software_validations',
+        SOFTWARE_VALIDATIONS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Equipment Test Software count',
+        'equipment_test_software',
+        EQUIPMENT_TEST_SOFTWARE_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Disposal Requests count',
+        'disposal_requests',
+        DISPOSAL_REQUESTS_SEED_DATA.length
+      )
     );
 
     // =========================================================================
