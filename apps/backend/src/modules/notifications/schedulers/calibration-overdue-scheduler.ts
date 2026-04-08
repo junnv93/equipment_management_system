@@ -45,9 +45,10 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
   private readonly logger = new Logger(CalibrationOverdueScheduler.name);
 
   // 제외할 장비 상태 목록 (SSOT enum 참조)
+  // 주의: calibration_overdue는 제외하지 않음 — 이 상태야말로 스케줄러가
+  // NC를 만들어야 할 대상 입력. 제외하면 영원히 NC가 생성되지 않음.
   private readonly EXCLUDED_STATUSES = [
     EquipmentStatusEnum.enum.non_conforming,
-    EquipmentStatusEnum.enum.calibration_overdue,
     EquipmentStatusEnum.enum.disposed,
     EquipmentStatusEnum.enum.pending_disposal,
     EquipmentStatusEnum.enum.retired,

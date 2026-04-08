@@ -212,6 +212,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
     hasActiveFilters,
     queryFilters,
     isClient,
+    updateURL,
   } = useEquipmentFilters();
 
   // 장비 목록 쿼리
@@ -268,7 +269,27 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         isTeamScoped={!!filters.teamId}
         totalItems={paginationInfo.totalItems}
         activeStatus={filters.status as EquipmentStatus | ''}
-        onStatusChange={setStatus}
+        isCalibrationOverdueActive={filters.calibrationDueFilter === 'overdue'}
+        onStatusChange={(key) => {
+          // "교정기한초과" 칩은 status enum이 아닌 derived 필터(calibrationDueFilter='overdue')로 라우팅.
+          // status 컬럼의 calibration_overdue 값은 스케줄러에 의해 즉시 non_conforming으로 전이되므로
+          // 단순 status 필터로는 0건이 나오는 문제 회피.
+          //
+          // ⚠️ 반드시 updateURL로 atomic 업데이트: setStatus + setCalibrationDueFilter를
+          // 연속 호출하면 각각 router.push를 일으켜 두 번째가 첫 번째 스냅샷을 덮어쓰며
+          // 한쪽 변경이 유실됨 (overdue → 다른 칩 클릭 시 overdue 필터가 남는 버그 원인).
+          if (key === 'calibration_overdue') {
+            updateURL({ status: '', calibrationDueFilter: 'overdue', page: 1 });
+            return;
+          }
+          // 다른 칩으로 이동 시 derived overdue 필터가 켜져 있었다면 함께 해제
+          updateURL({
+            status: key,
+            calibrationDueFilter:
+              filters.calibrationDueFilter === 'overdue' ? 'all' : filters.calibrationDueFilter,
+            page: 1,
+          });
+        }}
         statusCounts={statusCounts}
       />
 
