@@ -123,7 +123,21 @@ export class SiteScopeInterceptor implements NestInterceptor {
     }
 
     // ─── bypassRoles 모드 (레거시) ───────────────────────────────────────
+    // policy 모드와 동일하게 req.dataScope / req.enforcedScope 를 항상 attach 하여
+    // @CurrentScope() / @CurrentEnforcedScope() 소비자가 모드와 무관하게 동작하도록 보장.
+    // (decorator JSDoc 의 "두 모드 모두 항상 attach" 계약 준수)
+    const siteField = options.siteField ?? 'site';
+    const teamField = options.teamField ?? 'teamId';
+
+    if (!request.query) {
+      request.query = {};
+    }
+    const query = request.query as Record<string, string>;
+
     if (options.bypassRoles && userRole && options.bypassRoles.includes(userRole as never)) {
+      // bypass 역할 — policy 'all' 과 의미 동일: 제약 없음, query pass-through.
+      request.dataScope = { type: 'all', label: '레거시 우회 (bypassRoles)' };
+      request.enforcedScope = { site: query[siteField], teamId: query[teamField] };
       return next.handle();
     }
 
@@ -135,11 +149,11 @@ export class SiteScopeInterceptor implements NestInterceptor {
       );
     }
 
-    // req.query.site에 사용자 사이트 강제 주입
-    if (!request.query) {
-      request.query = {};
-    }
-    (request.query as Record<string, string>).site = user.site;
+    // 비-bypass 역할 — policy 'site' 와 의미 동일: user.site 강제 주입.
+    const resolvedSite = user.site;
+    request.dataScope = { type: 'site', site: resolvedSite, label: '레거시 사이트 격리' };
+    request.enforcedScope = { site: resolvedSite, teamId: undefined };
+    query[siteField] = resolvedSite;
 
     return next.handle();
   }
