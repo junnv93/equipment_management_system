@@ -119,7 +119,25 @@ critical-workflows.md WF-33 신규 등재. features/notifications/notification-r
 
 ---
 
-## 현재 미해결 프롬프트: 4건 (29차 이월)
+## 현재 미해결 프롬프트: 1건 (29차 이월, 30차 일부 처리)
+
+> **30차 처리 (2026-04-08)**: #6 self-inspections CAS 통일 ✅ PASS, #7 Docker Node 20 LTS ✅ 완료, #8 setQueryData → false positive (아래 참조)
+
+### ~~🟠 HIGH — self-inspections.service.ts CAS 중복 구현~~ ✅ 완료 (30차)
+
+> 30차 (2026-04-08). VersionedBaseService 상속으로 전환, update()/confirm() updateWithVersion 사용,
+> confirm() transaction wrap, 테스트 mock 갱신 (CAS 경로 변경 반영). 473/473 PASS.
+
+### ~~🟠 HIGH — Docker Node 18 → 20 LTS~~ ✅ 완료 (30차)
+
+> 30차 (2026-04-08). backend.Dockerfile/frontend.Dockerfile FROM 라인 변경.
+> engines 필드는 이미 >=20.18.0 였음 (drift 상태였던 것).
+
+### ~~🟡 MEDIUM — use-management-number-check setQueryData~~ ❌ False Positive (30차)
+
+> 30차 (2026-04-08). 검증 결과: useOptimisticMutation 안이 아닌 일반 prefetch 패턴.
+> 캐시 키 타입(useQuery line 79, ManagementNumberCheckResult|null) = setQueryData 값 타입 동일.
+> CLAUDE.md 규칙은 useOptimisticMutation onSuccess 한정. 코드 변경 없음.
 
 ### 🟠 HIGH — UL-QP-19-01 exporters map 누락 (런타임 NotImplementedException) (Mode 0)
 
