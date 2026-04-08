@@ -34,6 +34,9 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/schemas/` | Enum, 타입, ErrorCode, 설정 기본값, VM 검증 메시지, DocumentType |
 | `packages/shared-constants/` | Permission, API 경로, 스코프 정책, 비즈니스 규칙, 엔티티 라우트, Test Users |
 | `packages/db/` | DB enum 배열, AppDatabase 타입 |
+| `apps/backend/src/common/scope/scope-enforcer.ts` | `enforceScope()` 정책 함수 + `EnforcedScope` 타입 (cross-site/cross-team 차단 SSOT) |
+| `apps/backend/src/common/decorators/site-scoped.decorator.ts` | `@SiteScoped` 데코레이터 + `SiteScopedOptions` (failLoud 옵션 포함) |
+| `apps/backend/src/common/decorators/current-scope.decorator.ts` | `@CurrentScope()` / `@CurrentEnforcedScope()` parameter decorator |
 
 ## Workflow
 
@@ -72,7 +75,7 @@ react-icons(deprecated) 사용 및 비표준 icon library 탐지.
 
 상세: [references/ssot-checks.md](references/ssot-checks.md) Step 4
 
-### Step 5~13: 추가 SSOT 검증
+### Step 5~14: 추가 SSOT 검증
 
 | Step | 검증 대상 |
 |---|---|
@@ -85,6 +88,20 @@ react-icons(deprecated) 사용 및 비표준 icon library 탐지.
 | 11 | VM (Validation Messages) 임포트 소스 |
 | 12 | Test User Constants SSOT |
 | 13 | DocumentTypeValues SSOT |
+| 14 | Scope enforcement SSOT — `EnforcedScope` / `enforceScope` 로컬 재정의 금지, `@SiteScoped` 사용 라우트는 controller helper로 `_resolveXxxScope` 사본 정의 금지 |
+
+**Step 14 탐지 명령어:**
+```bash
+# EnforcedScope/enforceScope 로컬 재정의 (scope-enforcer.ts 외)
+grep -rn "interface EnforcedScope\|export function enforceScope" apps/backend/src/ \
+  | grep -v "common/scope/scope-enforcer.ts"
+
+# controller 가 _resolveXxxScope 같은 inline scope helper 를 정의 (도메인 특수 예외 외)
+grep -rn "private _resolve.*Scope\|private resolveDataScope" apps/backend/src/modules/ \
+  | grep -v "audit-logs"  # AUDIT_LOG_SCOPE 인라인은 의도적 예외
+```
+
+규칙 근거: 2026-04-08 (8c4806fd) Phase 1+2 통합으로 scope enforcement 가 단일 정책 함수 + 단일 진입점(@SiteScoped)으로 수렴.
 
 상세: [references/ssot-checks.md](references/ssot-checks.md) Step 5~13
 
@@ -111,6 +128,7 @@ react-icons(deprecated) 사용 및 비표준 icon library 탐지.
 | 11  | VM 임포트 소스                | PASS/FAIL | 잘못된 VM import 위치                  |
 | 12  | Test User Constants SSOT      | PASS/FAIL | 로컬 재정의 위치                       |
 | 13  | DocumentTypeValues SSOT       | PASS/FAIL | 문자열 하드코딩 위치                   |
+| 14  | Scope enforcement SSOT        | PASS/FAIL | 로컬 enforceScope/EnforcedScope 재정의 또는 controller inline scope helper |
 ```
 
 ## Exceptions
@@ -125,3 +143,4 @@ react-icons(deprecated) 사용 및 비표준 icon library 탐지.
 6. **백엔드 DTO의 re-export** — SSOT 소비자이므로 정상
 7. **roles.enum.ts의 TypeScript enum** — 백엔드 호환성을 위한 로컬 enum (SSOT 주석 + re-export 동반 시 면제)
 8. **`Promise<unknown>` 허용 케이스** — `private` 헬퍼 메서드나 단순 delete/count 반환은 면제
+9. **audit-logs route 의 인라인 `resolveDataScope` 호출** — `AUDIT_LOG_SCOPE` + 'none → 빈 보고서' fallback 정책으로 인터셉터 통합 불가, 의도적 예외 (`reports.controller.exportAuditLogs`)
