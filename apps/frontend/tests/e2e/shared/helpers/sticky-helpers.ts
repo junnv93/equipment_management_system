@@ -35,6 +35,8 @@ export async function clickBelowStickyHeader(page: Page, locator: Locator): Prom
       '--sticky-header-height'
     );
     const parsed = parseFloat(raw);
+    // --sticky-header-height 미설정 시 0 반환 — EquipmentDetailClient 언/마운트 시점에는
+    // sticky 자체가 화면에 없어 race 가 아니다 (의도된 fallback).
     return Number.isFinite(parsed) ? parsed : 0;
   });
 
