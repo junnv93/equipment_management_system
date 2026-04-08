@@ -243,11 +243,12 @@ describe('AuditService', () => {
       });
 
       expect(mockDb.insert).toHaveBeenCalled();
-      // SYSTEM_USER_UUID를 userId로 사용
+      // userId null = 익명/실패 액션 (FK SET NULL); entityId는 nil UUID 유지
       const insertedValues = mockDb.insert.mock.results[0].value.values;
       expect(insertedValues).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: SYSTEM_USER_UUID,
+          userId: null,
+          entityId: SYSTEM_USER_UUID,
           userName: 'bad@example.com',
           action: 'login',
         })

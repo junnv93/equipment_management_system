@@ -7,7 +7,6 @@ import { AUDIT_LOG_KEY, AuditLogMetadata } from '../decorators/audit-log.decorat
 import { SKIP_AUDIT_KEY } from '../decorators/skip-audit.decorator';
 import { AuditService } from '../../modules/audit/audit.service';
 import type { AuditAction, CreateAuditLogDto } from '@equipment-management/schemas';
-import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
 import { AuditLogDetails } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
 
@@ -194,8 +193,8 @@ export class AuditInterceptor implements NestInterceptor {
 
     const auditLogDto: CreateAuditLogDto = {
       // SSOT: JwtUser.userId (JWT sub → userId)
-      // nil UUID 폴백: 'anonymous' 문자열은 PostgreSQL uuid 컬럼에 INSERT 실패
-      userId: user?.userId || SYSTEM_USER_UUID,
+      // null 폴백: audit_logs.userId는 FK SET NULL nullable. userName으로 행위자 식별
+      userId: user?.userId ?? null,
       userName: user?.name || 'Anonymous User',
       // SSOT: JwtUser.roles (배열의 첫 번째 역할)
       userRole: user?.roles?.[0] || 'unknown',

@@ -158,7 +158,8 @@ export interface AuditLogDetails {
 export interface AuditLog {
   id: string;
   timestamp: string | Date;
-  userId: string;
+  /** 행위자 ID. nullable: 사용자 삭제 시 SET NULL (감사 보존). userName 등 비정규화 컬럼으로 식별 */
+  userId: string | null;
   userName: string;
   userRole: string;
   action: string;
@@ -178,7 +179,8 @@ export interface AuditLog {
  * 감사 로그 생성 DTO (Backend)
  */
 export interface CreateAuditLogDto {
-  userId: string;
+  /** 행위자 ID. null = 시스템/익명 (FK SET NULL 정책). userName/userRole로 식별 */
+  userId: string | null;
   userName: string;
   userRole: string;
   action: string;

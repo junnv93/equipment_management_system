@@ -509,7 +509,8 @@ export class DashboardService {
             type: activityType,
             equipmentId: row.entityType === 'equipment' ? row.entityId : '',
             equipmentName: row.entityName || '',
-            userId: row.userId,
+            // audit_logs.userId는 사용자 삭제 후 NULL이 될 수 있음 (FK SET NULL) — DTO 호환 위해 빈 문자열로 폴백
+            userId: row.userId ?? '',
             userName: row.userName,
             timestamp: row.timestamp.toISOString(),
             details,

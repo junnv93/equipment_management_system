@@ -97,7 +97,7 @@ export class AuditService {
    * 리스트 캐시 무효화
    * 새 로그 생성 시 관련 캐시를 삭제합니다.
    */
-  private invalidateListCaches(entityType: string, entityId: string, userId: string): void {
+  private invalidateListCaches(entityType: string, entityId: string, userId: string | null): void {
     // 전체 리스트 캐시 무효화 (필터 조합이 다양하므로 패턴 매칭)
     this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.AUDIT_LOGS}list:`);
 
@@ -107,7 +107,10 @@ export class AuditService {
     );
 
     // 특정 사용자 캐시 무효화 (scope suffix 포함 모든 variant 삭제)
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:`);
+    // userId null = 익명/시스템 액션이므로 사용자별 캐시 무효화 대상 없음
+    if (userId) {
+      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:`);
+    }
   }
 
   /**
@@ -348,8 +351,8 @@ export class AuditService {
   }): Promise<void> {
     try {
       await this.create({
-        // nil UUID: PostgreSQL uuid 컬럼 호환 — 'system'/'anonymous' 문자열은 INSERT 실패
-        userId: SYSTEM_USER_UUID,
+        // null userId: FK SET NULL nullable. entityId는 nil UUID 유지 (no FK)
+        userId: null,
         userName: payload.email ?? 'unknown',
         userRole: 'system',
         action: 'login', // 로그인 시도 실패 — 기존 enum 재사용
@@ -395,7 +398,7 @@ export class AuditService {
     try {
       // ① 감사 로그 생성
       await this.create({
-        userId: payload.userId || SYSTEM_USER_UUID,
+        userId: payload.userId || null,
         userName: payload.email,
         userRole: 'system', // 로그인 시점에는 세션 역할 미확정
         action: 'login',

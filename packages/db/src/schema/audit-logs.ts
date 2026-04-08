@@ -1,5 +1,7 @@
 import { pgTable, varchar, timestamp, text, uuid, json, index } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES } from '@equipment-management/schemas';
+import { users } from './users';
 
 /** @see packages/schemas/src/enums.ts - AuditActionEnum (SSOT) */
 export const auditAction = AUDIT_ACTION_VALUES;
@@ -33,7 +35,9 @@ export const auditLogs = pgTable(
     timestamp: timestamp('timestamp').defaultNow().notNull(),
 
     // 사용자 정보
-    userId: uuid('user_id').notNull(),
+    // FK to users with SET NULL on delete — 감사 로그는 사용자 삭제 후에도 보존되어야 하므로
+    // 비정규화된 userName/userRole/userSite/userTeamId 컬럼이 실제 표시에 사용된다.
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     userName: varchar('user_name', { length: 100 }).notNull(),
     userRole: varchar('user_role', { length: 50 }).notNull(),
 
@@ -88,6 +92,14 @@ export const auditLogs = pgTable(
     ),
   })
 );
+
+// 관계 정의: audit_logs.userId → users.id (SET NULL)
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
 
 // 감사 로그 타입
 export type AuditLog = typeof auditLogs.$inferSelect;
