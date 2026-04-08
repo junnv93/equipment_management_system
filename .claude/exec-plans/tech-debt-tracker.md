@@ -7,6 +7,10 @@
 
 ## 미완료 항목
 
+- [ ] Form export 5 보조 exporter (intermediate/self/checkout/software-validation/equipment-import)의 team-scope 데이터 경계 미강제 — `enforceReportScope`가 진입에서 cross-border는 차단하지만 team-scoped 사용자가 `?id=X`로 단일 item 조회 시 post-query는 `filter.site`만 체크 → 다른 팀 item도 반환 가능. 각 exporter SQL에 `equipment.teamId` 노출 후 `filter.teamId` 체크 추가 필요 — `apps/backend/src/modules/reports/form-template-export.service.ts:370-380, 530-540, 750-770, 1050-1070, 1465-1480` — 2026-04-08
+- [ ] 체크아웃/교정 detail mutation 버튼 `hasRole()` → `can(Permission.X)` 마이그레이션 (SSOT 준수) — `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx:88`, `components/equipment/CalibrationHistoryTab.tsx:87` — 2026-04-08
+- [ ] `@AuditLog({action:'export'})` interceptor가 ForbiddenException 경로에서도 감사 로그 남기도록 확인 — 성공 경로만 로깅 시 cross-site 공격 probing이 감사에 안 남음 — `apps/backend/src/modules/reports/reports.controller.ts:380-410`, `common/interceptors/audit-log.interceptor.ts` — 2026-04-08
+- [ ] `SiteScopeInterceptor`와 `enforceReportScope` 통합 검토 — 두 파일이 유사한 "cross-site 차단" 정책을 각자 구현. 하나의 정책 엔진으로 수렴 가능 — `common/interceptors/site-scope.interceptor.ts`, `modules/reports/utils/report-scope-enforcement.ts` — 2026-04-08
 - [ ] WF-25 spec assertion 본 경로 활성화 — TE 사용자 대상 calibration_due 알림(linkUrl=/equipment/...) deterministic 시딩 + D-day 배지 soft assertion 추가 — `apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts` — 2026-04-08
 - [ ] WF-35 spec: `page.locator('textarea').first()` → `getByRole('textbox')` 대체 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:50` — 2026-04-08
 - [ ] WF-35 spec: `waitForTimeout(1_500)` → `expect.poll` 기반 refetch 대기로 결정성 향상 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:105` — 2026-04-08

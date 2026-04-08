@@ -4,7 +4,6 @@ import {
   NotFoundException,
   BadRequestException,
   NotImplementedException,
-  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import ExcelJS from 'exceljs';
@@ -38,7 +37,9 @@ import {
   FORM_CATALOG,
   isFormImplemented,
   isFormDedicatedEndpoint,
+  type ResolvedDataScope,
 } from '@equipment-management/shared-constants';
+import { enforceReportScope, type EnforcedReportFilter } from './utils/report-scope-enforcement';
 import {
   CLASSIFICATION_TO_CODE,
   SOFTWARE_AVAILABILITY_LABELS,
@@ -52,11 +53,6 @@ interface ExportResult {
   buffer: Buffer;
   mimeType: string;
   filename: string;
-}
-
-interface UserScope {
-  site: string;
-  teamId?: string;
 }
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -80,10 +76,22 @@ export class FormTemplateExportService {
     private readonly formTemplateService: FormTemplateService
   ) {}
 
+  /**
+   * 양식 템플릿 기반 내보내기 진입점.
+   *
+   * ## 스코프 강제 지점 (단일 SSOT)
+   * 모든 form export는 이 진입점에서 `enforceReportScope()`를 통과해야 한다.
+   * - `type: 'none'` → 즉시 403
+   * - `type: 'team/site'` + cross-border params → 즉시 403
+   * - 검증된 `EnforcedReportFilter`만 개별 exporter에 전달된다
+   *
+   * 개별 exporter는 더 이상 `ResolvedDataScope` 전체를 알지 못하며,
+   * `filter.site` / `filter.teamId`만 조건절에 적용한다.
+   */
   async exportForm(
     formNumber: string,
     params: Record<string, string>,
-    scope?: UserScope
+    scope: ResolvedDataScope
   ): Promise<ExportResult> {
     const catalogEntry = FORM_CATALOG[formNumber as keyof typeof FORM_CATALOG];
 
@@ -108,18 +116,21 @@ export class FormTemplateExportService {
       });
     }
 
+    // 진입점 단일 스코프 강제 — cross-border / none은 여기서 403
+    const filter = enforceReportScope(params, scope);
+
     const exporters: Record<
       string,
-      (params: Record<string, string>, scope?: UserScope) => Promise<ExportResult>
+      (params: Record<string, string>, filter: EnforcedReportFilter) => Promise<ExportResult>
     > = {
-      'UL-QP-18-01': (p, s) => this.exportEquipmentRegistry(p, s),
-      'UL-QP-18-03': (p, s) => this.exportIntermediateInspection(p, s),
-      'UL-QP-18-05': (p, s) => this.exportSelfInspection(p, s),
-      'UL-QP-18-06': (p, s) => this.exportCheckout(p, s),
-      'UL-QP-18-07': (p, s) => this.exportSoftwareRegistry(p, s),
-      'UL-QP-18-08': (p, s) => this.exportCablePathLoss(p, s),
-      'UL-QP-18-09': (p, s) => this.exportSoftwareValidation(p, s),
-      'UL-QP-18-10': (p, s) => this.exportEquipmentImport(p, s),
+      'UL-QP-18-01': (p, f) => this.exportEquipmentRegistry(p, f),
+      'UL-QP-18-03': (p, f) => this.exportIntermediateInspection(p, f),
+      'UL-QP-18-05': (p, f) => this.exportSelfInspection(p, f),
+      'UL-QP-18-06': (p, f) => this.exportCheckout(p, f),
+      'UL-QP-18-07': (p, f) => this.exportSoftwareRegistry(p, f),
+      'UL-QP-18-08': (p, f) => this.exportCablePathLoss(p, f),
+      'UL-QP-18-09': (p, f) => this.exportSoftwareValidation(p, f),
+      'UL-QP-18-10': (p, f) => this.exportEquipmentImport(p, f),
     };
 
     const exporter = exporters[formNumber];
@@ -129,30 +140,7 @@ export class FormTemplateExportService {
         message: `${formNumber} exporter is registered as implemented but has no handler.`,
       });
     }
-    return exporter(params, scope);
-  }
-
-  // ============================================================================
-  // 공통 유틸리티
-  // ============================================================================
-
-  /**
-   * Resolve site filter enforcing server-side scope.
-   *
-   * Security: client query param MUST NOT override server scope (CLAUDE.md Rule 2).
-   * - Scoped user with mismatched `?site=` → ForbiddenException (OWASP IDOR guard)
-   * - Scoped user with matching or no `?site=` → scope.site
-   * - Unscoped user (admin) → params.site (unrestricted)
-   */
-  resolveSiteFilter(params: Record<string, string>, scope?: UserScope): string | undefined {
-    if (!scope) return params.site;
-    if (params.site && params.site !== scope.site) {
-      throw new ForbiddenException({
-        code: 'CROSS_SITE_EXPORT_DENIED',
-        message: `Cross-site export denied: scope=${scope.site}, requested=${params.site}`,
-      });
-    }
-    return scope.site;
+    return exporter(params, filter);
   }
 
   private formatDate(d: Date | string | null | undefined): string {
@@ -193,19 +181,16 @@ export class FormTemplateExportService {
 
   private async exportEquipmentRegistry(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-01'];
     const conditions: SQL<unknown>[] = [];
 
-    const siteFilter = this.resolveSiteFilter(params, scope);
-    if (siteFilter) {
-      conditions.push(eq(equipment.site, siteFilter));
+    if (filter.site) {
+      conditions.push(eq(equipment.site, filter.site));
     }
-
-    // URL 필터 조건 반영 (장비 목록 페이지와 동일)
-    if (params.teamId) {
-      conditions.push(eq(equipment.teamId, params.teamId));
+    if (filter.teamId) {
+      conditions.push(eq(equipment.teamId, filter.teamId));
     }
     if (params.status) {
       conditions.push(sql`${equipment.status} = ${params.status}`);
@@ -260,7 +245,7 @@ export class FormTemplateExportService {
 
     // Row 1: 헤더 업데이트 (팀명 + 날짜)
     const headerCell = sheet.getRow(1).getCell(1);
-    const teamLabel = params.teamId ? '' : '(전체)';
+    const teamLabel = filter.teamId ? '' : '(전체)';
     headerCell.value = `${teamLabel} 시험설비 관리대장`;
     const dateCell = sheet.getRow(1).getCell(14);
     if (dateCell) {
@@ -332,7 +317,7 @@ export class FormTemplateExportService {
 
   private async exportIntermediateInspection(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-03'];
     const inspectionId = params.inspectionId;
@@ -378,7 +363,7 @@ export class FormTemplateExportService {
     }
 
     // 사이트 필터링
-    if (scope && inspection.equipmentSite !== scope.site) {
+    if (filter.site && inspection.equipmentSite !== filter.site) {
       throw new NotFoundException({
         code: 'INSPECTION_NOT_FOUND',
         message: 'Inspection not accessible from your site.',
@@ -515,7 +500,7 @@ export class FormTemplateExportService {
 
   private async exportSelfInspection(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-05'];
     const equipmentId = params.equipmentId;
@@ -540,8 +525,8 @@ export class FormTemplateExportService {
       })
       .from(equipment)
       .where(
-        scope
-          ? and(eq(equipment.id, equipmentId), eq(equipment.site, scope.site))
+        filter.site
+          ? and(eq(equipment.id, equipmentId), eq(equipment.site, filter.site))
           : eq(equipment.id, equipmentId)
       )
       .limit(1);
@@ -722,7 +707,7 @@ export class FormTemplateExportService {
 
   private async exportCheckout(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-06'];
     const checkoutId = params.checkoutId;
@@ -764,7 +749,7 @@ export class FormTemplateExportService {
       .orderBy(asc(checkoutItems.sequenceNumber));
 
     // 사이트 우회 방지 — 어느 장비도 scope 사이트 외이면 차단
-    if (scope && items.some((it) => it.equipmentSite !== scope.site)) {
+    if (filter.site && items.some((it) => it.equipmentSite !== filter.site)) {
       throw new NotFoundException({
         code: 'CHECKOUT_NOT_FOUND',
         message: 'Checkout not found or not accessible from your site.',
@@ -899,14 +884,13 @@ export class FormTemplateExportService {
 
   private async exportSoftwareRegistry(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-07'];
     const conditions: SQL<unknown>[] = [];
 
-    const siteFilter = this.resolveSiteFilter(params, scope);
-    if (siteFilter) {
-      conditions.push(eq(testSoftware.site, siteFilter));
+    if (filter.site) {
+      conditions.push(eq(testSoftware.site, filter.site));
     }
 
     // 시험분야 필터 (varchar.$type<TestField> — raw string 비교)
@@ -1002,7 +986,7 @@ export class FormTemplateExportService {
 
   private async exportSoftwareValidation(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-09'];
     const validationId = params.validationId;
@@ -1059,7 +1043,7 @@ export class FormTemplateExportService {
     }
 
     // 사이트 스코프 필터
-    if (scope && record.softwareSite !== scope.site) {
+    if (filter.site && record.softwareSite !== filter.site) {
       throw new NotFoundException({
         code: 'VALIDATION_NOT_FOUND',
         message: 'Validation not accessible from your site.',
@@ -1197,14 +1181,13 @@ export class FormTemplateExportService {
    */
   private async exportCablePathLoss(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-08'];
     const conditions: SQL<unknown>[] = [];
 
-    const siteFilter = this.resolveSiteFilter(params, scope);
-    if (siteFilter) {
-      conditions.push(sql`${cables.site} = ${siteFilter}`);
+    if (filter.site) {
+      conditions.push(sql`${cables.site} = ${filter.site}`);
     }
     if (params.connectorType) {
       conditions.push(sql`${cables.connectorType} = ${params.connectorType}`);
@@ -1450,7 +1433,7 @@ export class FormTemplateExportService {
 
   private async exportEquipmentImport(
     params: Record<string, string>,
-    scope?: UserScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-10'];
     const importId = params.importId;
@@ -1475,7 +1458,7 @@ export class FormTemplateExportService {
     }
 
     // 사이트 우회 방지
-    if (scope && imp.site !== scope.site) {
+    if (filter.site && imp.site !== filter.site) {
       throw new NotFoundException({
         code: 'EQUIPMENT_IMPORT_NOT_FOUND',
         message: 'Equipment import not found or not accessible from your site.',

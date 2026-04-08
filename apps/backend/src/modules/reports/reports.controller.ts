@@ -394,7 +394,7 @@ export class ReportsController {
     const { buffer, mimeType, filename } = await this.formTemplateExportService.exportForm(
       formNumber,
       queryParams,
-      scope.site ? { site: scope.site, teamId: scope.teamId } : undefined
+      scope
     );
     res.set({
       'Content-Type': mimeType,

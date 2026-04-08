@@ -39,7 +39,8 @@ import { TEST_FIELD_VALUES, SITE_VALUES } from '@equipment-management/schemas';
 import type { TestField, Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
 import { CACHE_TIMES } from '@/lib/api/query-config';
@@ -50,6 +51,8 @@ interface TestSoftwareDetailContentProps {
 
 export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailContentProps) {
   const t = useTranslations('software');
+  const { can } = useAuth();
+  const canUpdate = can(Permission.UPDATE_TEST_SOFTWARE);
   const { fmtDate } = useDateFormatter();
   const router = useRouter();
   const { toast } = useToast();
@@ -262,14 +265,18 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
           <Badge variant={software.availability === 'available' ? 'default' : 'secondary'}>
             {t(`availability.${software.availability}`)}
           </Badge>
-          <Button variant="outline" size="sm" onClick={() => toggleMutation.mutate()}>
-            <ToggleLeft className="mr-1 h-4 w-4" />
-            {t('detail.toggleAvailability')}
-          </Button>
-          <Button variant="outline" size="sm" onClick={openEditDialog}>
-            <Edit2 className="mr-1 h-4 w-4" />
-            {t('detail.editButton')}
-          </Button>
+          {canUpdate && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => toggleMutation.mutate()}>
+                <ToggleLeft className="mr-1 h-4 w-4" />
+                {t('detail.toggleAvailability')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={openEditDialog}>
+                <Edit2 className="mr-1 h-4 w-4" />
+                {t('detail.editButton')}
+              </Button>
+            </>
+          )}
           <Link href={FRONTEND_ROUTES.SOFTWARE.VALIDATION(id)}>
             <Button size="sm">
               <FileCheck className="mr-1 h-4 w-4" />
@@ -419,10 +426,12 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
               <Badge variant="secondary">{linkedEquipment.length}</Badge>
             )}
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={() => setIsLinkEquipmentOpen(true)}>
-            <Plus className="mr-1 h-3 w-3" />
-            {t('linkedEquipment.linkButton')}
-          </Button>
+          {canUpdate && (
+            <Button variant="outline" size="sm" onClick={() => setIsLinkEquipmentOpen(true)}>
+              <Plus className="mr-1 h-3 w-3" />
+              {t('linkedEquipment.linkButton')}
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {linkedEquipment.length > 0 ? (
@@ -466,14 +475,16 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
                         </Badge>
                       </td>
                       <td className="py-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleUnlinkEquipment(eq.id)}
-                          disabled={unlinkEquipmentMutation.isPending}
-                        >
-                          <Unlink className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUnlinkEquipment(eq.id)}
+                            disabled={unlinkEquipmentMutation.isPending}
+                          >
+                            <Unlink className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}

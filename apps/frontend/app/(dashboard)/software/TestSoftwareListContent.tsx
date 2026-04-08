@@ -29,7 +29,8 @@ import { EquipmentPagination } from '@/components/equipment/EquipmentPagination'
 import testSoftwareApi from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TEST_FIELD_VALUES, SOFTWARE_AVAILABILITY_VALUES } from '@equipment-management/schemas';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import {
   parseTestSoftwareFiltersFromSearchParams,
   toApiFilters,
@@ -45,6 +46,9 @@ export default function TestSoftwareListContent() {
   const t = useTranslations('software');
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const { can } = useAuth();
+  const canCreate = can(Permission.CREATE_TEST_SOFTWARE);
 
   const uiFilters = parseTestSoftwareFiltersFromSearchParams(searchParams);
   const apiFilters = toApiFilters(uiFilters);
@@ -135,12 +139,14 @@ export default function TestSoftwareListContent() {
             )}
             {t('list.exportLedger')}
           </Button>
-          <Link href={FRONTEND_ROUTES.SOFTWARE.CREATE}>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('list.createButton')}
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link href={FRONTEND_ROUTES.SOFTWARE.CREATE}>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('list.createButton')}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
