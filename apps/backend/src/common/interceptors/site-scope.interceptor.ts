@@ -12,6 +12,7 @@ import { SITE_SCOPED_KEY, SiteScopedOptions } from '../decorators/site-scoped.de
 import { resolveDataScope } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
+import { enforceScope } from '../scope/scope-enforcer';
 
 /**
  * SiteScopeInterceptor (전역 APP_INTERCEPTOR)
@@ -68,44 +69,32 @@ export class SiteScopeInterceptor implements NestInterceptor {
         return next.handle();
       }
 
-      if (scope.type === 'none') {
-        this.logger.warn(
-          `[SECURITY] User ${user.userId} role=${userRole} — access denied by policy`
-        );
-        throw new ForbiddenException('이 리소스에 대한 접근 권한이 없습니다.');
-      }
+      const siteField = options.siteField ?? 'site';
+      const teamField = options.teamField ?? 'teamId';
 
       if (!request.query) {
         request.query = {};
       }
+      const query = request.query as Record<string, string>;
 
-      const siteField = options.siteField ?? 'site';
-      const teamField = options.teamField ?? 'teamId';
-
-      if (scope.type === 'site') {
-        if (!scope.site) {
-          this.logger.warn(`[SECURITY] User ${user.userId} has no site — blocking access`);
-          throw new ForbiddenException(
-            '사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
-          );
+      // SSOT: enforceScope 가 cross-site/cross-team mismatch 시 ForbiddenException throw.
+      // throw 는 AuditInterceptor 의 access_denied 경로로 자동 흡수됨 (단일 정책 엔진).
+      // 정상 경로에서는 결과를 alias field 로 주입 (silent enforcement, backward compat).
+      try {
+        const enforced = enforceScope({ site: query[siteField], teamId: query[teamField] }, scope);
+        if (enforced.site !== undefined) query[siteField] = enforced.site;
+        if (enforced.teamId !== undefined) query[teamField] = enforced.teamId;
+      } catch (err) {
+        // teamId 누락 폴백: 계정 설정 불완전한 경우 보수적으로 site 필터로 강등.
+        // (기존 동작 유지 — scope.type === 'team' && !scope.teamId 만 해당)
+        if (scope.type === 'team' && !scope.teamId && user.site) {
+          query[siteField] = user.site;
+          return next.handle();
         }
-        (request.query as Record<string, string>)[siteField] = scope.site;
-      } else if (scope.type === 'team') {
-        if (!scope.teamId) {
-          // 팀이 없으면 site 필터로 폴백 (계정 설정 불완전한 경우 보수적 처리)
-          if (user.site) {
-            (request.query as Record<string, string>)[siteField] = user.site;
-          } else {
-            this.logger.warn(
-              `[SECURITY] User ${user.userId} has no teamId or site — blocking access`
-            );
-            throw new ForbiddenException(
-              '팀 또는 사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
-            );
-          }
-        } else {
-          (request.query as Record<string, string>)[teamField] = scope.teamId;
-        }
+        this.logger.warn(
+          `[SECURITY] User ${user.userId} role=${userRole} — ${err instanceof ForbiddenException ? err.message : String(err)}`
+        );
+        throw err;
       }
 
       return next.handle();

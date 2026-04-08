@@ -15,7 +15,13 @@
 - [ ] checkout inbound rental list/action 미세 비대칭 — list의 rental requester OR-branch는 우리가 빌려오는 건을 노출하지만, `enforceScopeFromData`는 rental을 lender 기준으로만 검증해 inbound rental "승인"은 여전히 403. 의도적 디자인(borrower 가시성)이지만 outgoing 탭 라우팅에서 inbound가 섞이지 않도록 frontend 확인 필요 — `checkouts.service.ts enforceScopeFromData` + `checkout-scope.util.ts` — 2026-04-08
 - [ ] `checkouts.service.spec.ts` SQL-shape 회귀 unit 테스트 부재 — 현 mock 인프라가 SQL 조건 검증 미지원, e2e(TC-08)만 커버. checkout-scope.util 단위 테스트는 병렬 세션이 작성 중 (`__tests__/checkout-scope.util.spec.ts`) — 2026-04-08
 - [ ] `@AuditLog({action:'export'})` interceptor가 ForbiddenException 경로에서도 감사 로그 남기도록 확인 — 성공 경로만 로깅 시 cross-site 공격 probing이 감사에 안 남음 — `apps/backend/src/modules/reports/reports.controller.ts:380-410`, `common/interceptors/audit-log.interceptor.ts` — 2026-04-08
-- [ ] `SiteScopeInterceptor`와 `enforceReportScope` 통합 검토 — 두 파일이 유사한 "cross-site 차단" 정책을 각자 구현. 하나의 정책 엔진으로 수렴 가능 — `common/interceptors/site-scope.interceptor.ts`, `modules/reports/utils/report-scope-enforcement.ts` — 2026-04-08
+- [x] `SiteScopeInterceptor` ↔ `enforceReportScope` 통합 — 해결: 2026-04-08 — `refactor/scope-enforcer-ssot`. 하나의 정책 엔진으로 수렴:
+  1. 신규 SSOT helper `apps/backend/src/common/scope/scope-enforcer.ts` — `enforceScope(params, scope)` 4-case 정책 (none/team/site/all) 단일 정의
+  2. `enforceReportScope` 를 wrapper 로 변환 — 내부에서 `enforceScope` 위임. 기존 13건 spec 회귀 0
+  3. `SiteScopeInterceptor` policy 모드를 `enforceScope` 로 위임. cross-site/cross-team mismatch 시 자동 ForbiddenException → audit interceptor 의 `access_denied` 경로와 자동 통합 (cross-site probing 추적). silent enforcement (params 미지정 시 주입) 는 backward compat 유지
+  4. teamId 누락 폴백 (계정 설정 불완전) → site 강등 정책은 인터셉터 외곽에서 보존
+  5. 새 helper unit test 13건 추가 (`scope-enforcer.spec.ts`) — 4 scope type × 모든 경계 케이스
+  6. 511 backend test PASS (회귀 0). 두 시스템이 정책 SSOT 공유 → drift 방지, 향후 새 enforcement 소비자도 동일 helper 호출만 하면 됨
 - [ ] WF-25 spec assertion 본 경로 활성화 — TE 사용자 대상 calibration_due 알림(linkUrl=/equipment/...) deterministic 시딩 + D-day 배지 soft assertion 추가 — `apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts` — 2026-04-08
 - [ ] WF-35 spec: `page.locator('textarea').first()` → `getByRole('textbox')` 대체 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:50` — 2026-04-08
 - [ ] WF-35 spec: `waitForTimeout(1_500)` → `expect.poll` 기반 refetch 대기로 결정성 향상 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:105` — 2026-04-08
