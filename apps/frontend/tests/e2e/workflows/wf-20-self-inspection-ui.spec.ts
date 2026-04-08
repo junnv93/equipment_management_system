@@ -25,31 +25,22 @@
 
 import type { Locator } from '@playwright/test';
 import { test, expect, type Page } from '../shared/fixtures/auth.fixture';
+// Page type retained for fillSelfInspectionForm helper signature
 import {
   resetSelfInspections,
   cleanupSharedPool,
   clearBackendCache,
 } from './helpers/workflow-helpers';
-import { getBackendToken } from '../shared/helpers/api-helpers';
+import { getBackendToken, clickBelowStickyHeader, expectToastVisible } from '../shared/helpers';
 import { BASE_URLS, TEST_EQUIPMENT_IDS } from '../shared/constants/shared-test-data';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { DEFAULT_SELF_INSPECTION_ITEMS } from '@equipment-management/schemas';
 
 /**
- * 장비 상세 페이지는 sticky header + 통계 카드가 일반 click의 actionability를
- * 차단한다 (z-index/pointer-events 설계 부채 — example-prompts 34차 #1 참조).
- * 로케이터로 정확히 식별한 뒤 force click 으로 우회한다.
- */
-async function safeClick(page: Page, locator: Locator) {
-  await locator.scrollIntoViewIfNeeded();
-  await page.evaluate(() => window.scrollBy(0, -80));
-  await locator.click({ force: true });
-}
-
-/**
- * 장비 상세 페이지에는 다른 카드/헤더에도 "수정" 버튼이 존재 (예: 장비 자체 수정).
- * 동일 accessible name 다중 발생은 a11y 부채 (example-prompts 34차 #2 참조) —
- * 임시로 "자체점검 이력" CardTitle을 기준으로 SelfInspectionTab 카드만 한정한다.
+ * 자체점검 카드를 좁히는 narrowing helper.
+ *
+ * 행 액션 버튼은 컨텍스트 aria-label("{date} 자체점검 기록 수정") 이 부착되어 있어
+ * 페이지 전체에서 unique 매칭이 가능하다. 본 helper 는 안전 net + 카드 헤더 검증용.
  */
 function selfInspectionCard(page: Page): Locator {
   return page
@@ -57,6 +48,13 @@ function selfInspectionCard(page: Page): Locator {
     .filter({ has: page.getByRole('heading', { name: /자체점검 이력/ }) })
     .first();
 }
+
+/** 행 액션 aria-label 매칭 (i18n: selfInspection.actions.{edit|confirm|delete}AriaLabel) */
+const ROW_ACTION_PATTERN = {
+  edit: /자체점검 기록 수정$/,
+  confirm: /자체점검 기록 확인 처리$/,
+  delete: /자체점검 기록 삭제$/,
+} as const;
 
 /** 종합결과 + 모든 항목을 "적합"으로 채운다 (Step 1, Step 2 공통) */
 async function fillSelfInspectionForm(page: Page, dialog: Locator, isoDate: string) {
@@ -96,9 +94,6 @@ const L = {
   createSuccess: '자체점검 기록이 생성되었습니다.',
   updateSuccess: '자체점검 기록이 수정되었습니다.',
   confirmSuccess: '자체점검이 확인되었습니다.',
-  editAction: '수정',
-  confirmAction: '확인',
-  deleteAction: '삭제',
   confirmDialogTitle: '자체점검 확인',
   confirmDialogAction: '확인 처리',
   statusConfirmed: '확인됨',
@@ -127,7 +122,7 @@ test.describe('WF-20 UI: 자체점검 작성/수정/확인/삭제 동선 (QP-18-
     await expect(card.getByRole('button', { name: L.createButton })).toBeVisible({
       timeout: 15000,
     });
-    await safeClick(page, card.getByRole('button', { name: L.createButton }));
+    await clickBelowStickyHeader(page, card.getByRole('button', { name: L.createButton }));
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading', { name: L.formTitle })).toBeVisible();
@@ -135,7 +130,7 @@ test.describe('WF-20 UI: 자체점검 작성/수정/확인/삭제 동선 (QP-18-
     await fillSelfInspectionForm(page, dialog, today);
     await dialog.getByRole('button', { name: L.saveButton }).click();
 
-    await expect(page.getByText(L.createSuccess).first()).toBeVisible({ timeout: 10000 });
+    await expectToastVisible(page, L.createSuccess);
     await expect(dialog).toBeHidden();
 
     // 백엔드 영속화 + nextInspectionDate 자동 산출 검증 (SSOT helper 사용)
@@ -168,9 +163,11 @@ test.describe('WF-20 UI: 자체점검 작성/수정/확인/삭제 동선 (QP-18-
     await page.goto(`/equipment/${WF_EQUIPMENT_ID}?tab=inspection`);
 
     const card = selfInspectionCard(page);
-    const editBtn = card.getByRole('button', { name: L.editAction }).first();
+    // 행 액션은 컨텍스트 aria-label 로 unique 식별 (i18n editAriaLabel)
+    const editBtn = page.getByRole('button', { name: ROW_ACTION_PATTERN.edit }).first();
     await expect(editBtn).toBeVisible({ timeout: 15000 });
-    await safeClick(page, editBtn);
+    await expect(card.getByRole('button', { name: ROW_ACTION_PATTERN.edit })).toHaveCount(1);
+    await clickBelowStickyHeader(page, editBtn);
 
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading', { name: L.editTitle })).toBeVisible();
@@ -182,7 +179,7 @@ test.describe('WF-20 UI: 자체점검 작성/수정/확인/삭제 동선 (QP-18-
     await dialog.getByPlaceholder(L.remarksPlaceholder).fill('WF-20 UI: edit dialog 검증');
     await dialog.getByRole('button', { name: L.updateButton }).click();
 
-    await expect(page.getByText(L.updateSuccess).first()).toBeVisible({ timeout: 10000 });
+    await expectToastVisible(page, L.updateSuccess);
     await expect(dialog).toBeHidden();
   });
 
@@ -193,10 +190,10 @@ test.describe('WF-20 UI: 자체점검 작성/수정/확인/삭제 동선 (QP-18-
     await page.goto(`/equipment/${WF_EQUIPMENT_ID}?tab=inspection`);
 
     const card = selfInspectionCard(page);
-    await expect(card.getByRole('button', { name: L.editAction }).first()).toBeVisible({
+    await expect(card.getByRole('button', { name: ROW_ACTION_PATTERN.edit }).first()).toBeVisible({
       timeout: 15000,
     });
-    await expect(card.getByRole('button', { name: L.confirmAction })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: ROW_ACTION_PATTERN.confirm })).toHaveCount(0);
   });
 
   test('Step 4: TM 확인 → AlertDialog → confirmed', async ({ techManagerPage: page }) => {
@@ -204,15 +201,16 @@ test.describe('WF-20 UI: 자체점검 작성/수정/확인/삭제 동선 (QP-18-
     await page.goto(`/equipment/${WF_EQUIPMENT_ID}?tab=inspection`);
 
     const card = selfInspectionCard(page);
-    const confirmBtn = card.getByRole('button', { name: L.confirmAction }).first();
+    const confirmBtn = page.getByRole('button', { name: ROW_ACTION_PATTERN.confirm }).first();
     await expect(confirmBtn).toBeVisible({ timeout: 15000 });
-    await safeClick(page, confirmBtn);
+    await expect(card.getByRole('button', { name: ROW_ACTION_PATTERN.confirm })).toHaveCount(1);
+    await clickBelowStickyHeader(page, confirmBtn);
 
     const alert = page.getByRole('alertdialog');
     await expect(alert.getByRole('heading', { name: L.confirmDialogTitle })).toBeVisible();
     await alert.getByRole('button', { name: L.confirmDialogAction }).click();
 
-    await expect(page.getByText(L.confirmSuccess).first()).toBeVisible({ timeout: 10000 });
+    await expectToastVisible(page, L.confirmSuccess);
   });
 
   test('Step 5: confirmed 상태 → 수정/확인/삭제 버튼 모두 사라짐', async ({
@@ -224,8 +222,8 @@ test.describe('WF-20 UI: 자체점검 작성/수정/확인/삭제 동선 (QP-18-
     const card = selfInspectionCard(page);
     await expect(card.getByText(L.statusConfirmed).first()).toBeVisible({ timeout: 15000 });
 
-    await expect(card.getByRole('button', { name: L.editAction })).toHaveCount(0);
-    await expect(card.getByRole('button', { name: L.confirmAction })).toHaveCount(0);
-    await expect(card.getByRole('button', { name: L.deleteAction })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: ROW_ACTION_PATTERN.edit })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: ROW_ACTION_PATTERN.confirm })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: ROW_ACTION_PATTERN.delete })).toHaveCount(0);
   });
 });

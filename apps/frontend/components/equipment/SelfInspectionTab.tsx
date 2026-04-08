@@ -207,11 +207,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                       }));
 
                 const isConfirmed = inspection.status === 'confirmed';
+                const inspectionDateLabel = fmtDate(inspection.inspectionDate);
                 return (
                   <div key={inspection.id} className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="font-medium">{fmtDate(inspection.inspectionDate)}</span>
+                        <span className="font-medium">{inspectionDateLabel}</span>
                         <Badge className={STATUS_COLORS[inspection.status]}>
                           {t(`selfInspection.statusLabel.${inspection.status}`)}
                         </Badge>
@@ -225,6 +226,9 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                             type="button"
                             variant="ghost"
                             size="sm"
+                            aria-label={t('selfInspection.actions.editAriaLabel', {
+                              date: inspectionDateLabel,
+                            })}
                             onClick={() => setEditTarget(inspection)}
                           >
                             <Pencil className="h-4 w-4 mr-1" />
@@ -236,6 +240,9 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                             type="button"
                             variant="ghost"
                             size="sm"
+                            aria-label={t('selfInspection.actions.confirmAriaLabel', {
+                              date: inspectionDateLabel,
+                            })}
                             onClick={() => setConfirmTarget(inspection)}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -247,6 +254,9 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                             type="button"
                             variant="ghost"
                             size="sm"
+                            aria-label={t('selfInspection.actions.deleteAriaLabel', {
+                              date: inspectionDateLabel,
+                            })}
                             onClick={() => setDeleteTarget(inspection)}
                           >
                             <Trash2 className="h-4 w-4 mr-1 text-destructive" />

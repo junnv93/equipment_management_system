@@ -336,7 +336,10 @@
     "actions": {
       "edit": "Edit",
       "confirm": "Confirm",
-      "delete": "Delete"
+      "delete": "Delete",
+      "editAriaLabel": "Edit self inspection from {date}",
+      "confirmAriaLabel": "Confirm self inspection from {date}",
+      "deleteAriaLabel": "Delete self inspection from {date}"
     },
     "confirmDialog": {
       "title": "Confirm Self Inspection",
