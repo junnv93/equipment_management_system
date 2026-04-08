@@ -7,6 +7,11 @@
 
 ## 미완료 항목
 
+- [ ] WF-25 spec assertion 본 경로 활성화 — TE 사용자 대상 calibration_due 알림(linkUrl=/equipment/...) deterministic 시딩 + D-day 배지 soft assertion 추가 — `apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts` — 2026-04-08
+- [ ] WF-35 spec: `page.locator('textarea').first()` → `getByRole('textbox')` 대체 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:50` — 2026-04-08
+- [ ] WF-35 spec: `waitForTimeout(1_500)` → `expect.poll` 기반 refetch 대기로 결정성 향상 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:105` — 2026-04-08
+- [ ] `shared-test-data.ts`에 `FRONTEND_URL` 상수 추가 + WF-35 spec 의 `'http://localhost:3000'` 폴백 치환 — `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`, `wf-35-cas-ui-recovery.spec.ts:30` — 2026-04-08
+- [ ] 백엔드 NC Redis detail 캐시가 `updateWithVersion` 409 실패 경로에서도 무효화되는지 확인 (stale → 재시도 재-409 flakiness 방지) — `apps/backend/src/modules/non-conformances/non-conformances.service.ts` — 2026-04-08
 - [x] form-templates-ui.spec.ts beforeAll 시드 race condition — 해결: 2026-04-07 — `fix/form-templates-seed-race` — create 409 시 replace 폴백 재시도
 - [x] Mobile Chrome viewport에서 sticky header가 form-templates 테이블 row 액션 가로챔 — 해결: 2026-04-07 — TC-UI-04/05에서 `scrollIntoView({block: 'center'})`로 버튼을 화면 중앙 배치 후 클릭 (Playwright 기본 `scrollIntoViewIfNeeded`는 'nearest'라 sticky header 아래에 걸림)
 
