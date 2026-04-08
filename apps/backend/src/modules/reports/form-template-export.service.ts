@@ -38,9 +38,8 @@ import {
   FORM_CATALOG,
   isFormImplemented,
   isFormDedicatedEndpoint,
-  type ResolvedDataScope,
 } from '@equipment-management/shared-constants';
-import { enforceReportScope, type EnforcedReportFilter } from './utils/report-scope-enforcement';
+import type { EnforcedReportFilter } from './utils/report-scope-enforcement';
 import {
   CLASSIFICATION_TO_CODE,
   SOFTWARE_AVAILABILITY_LABELS,
@@ -80,19 +79,20 @@ export class FormTemplateExportService {
   /**
    * 양식 템플릿 기반 내보내기 진입점.
    *
-   * ## 스코프 강제 지점 (단일 SSOT)
-   * 모든 form export는 이 진입점에서 `enforceReportScope()`를 통과해야 한다.
-   * - `type: 'none'` → 즉시 403
-   * - `type: 'team/site'` + cross-border params → 즉시 403
-   * - 검증된 `EnforcedReportFilter`만 개별 exporter에 전달된다
+   * ## 스코프 강제 지점 (SiteScopeInterceptor 가 단일 SSOT)
+   * 호출 시점에 `filter` 는 이미 `SiteScopeInterceptor` (failLoud 모드) 가
+   * `enforceScope()` 를 통과시킨 값이다. 따라서 본 service 는:
+   * - cross-border 검증 / 정책 분기를 더 이상 알지 못함
+   * - `ResolvedDataScope` 를 받지 않음
+   * - `filter.site` / `filter.teamId` 만 SQL WHERE 에 바인딩
    *
-   * 개별 exporter는 더 이상 `ResolvedDataScope` 전체를 알지 못하며,
-   * `filter.site` / `filter.teamId`만 조건절에 적용한다.
+   * cross-site / none 거부는 인터셉터에서 ForbiddenException 으로 처리되고,
+   * AuditInterceptor 가 `access_denied` 로 자동 기록한다.
    */
   async exportForm(
     formNumber: string,
     params: Record<string, string>,
-    scope: ResolvedDataScope
+    filter: EnforcedReportFilter
   ): Promise<ExportResult> {
     const catalogEntry = FORM_CATALOG[formNumber as keyof typeof FORM_CATALOG];
 
@@ -116,9 +116,6 @@ export class FormTemplateExportService {
         message: `${formNumber} ${catalogEntry.name} 내보내기는 아직 구현되지 않았습니다.`,
       });
     }
-
-    // 진입점 단일 스코프 강제 — cross-border / none은 여기서 403
-    const filter = enforceReportScope(params, scope);
 
     const exporters: Record<
       string,

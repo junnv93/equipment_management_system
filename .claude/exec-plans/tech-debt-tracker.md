@@ -21,7 +21,14 @@
   3. `SiteScopeInterceptor` policy 모드를 `enforceScope` 로 위임. cross-site/cross-team mismatch 시 자동 ForbiddenException → audit interceptor 의 `access_denied` 경로와 자동 통합 (cross-site probing 추적). silent enforcement (params 미지정 시 주입) 는 backward compat 유지
   4. teamId 누락 폴백 (계정 설정 불완전) → site 강등 정책은 인터셉터 외곽에서 보존
   5. 새 helper unit test 13건 추가 (`scope-enforcer.spec.ts`) — 4 scope type × 모든 경계 케이스
-  6. 511 backend test PASS (회귀 0). 두 시스템이 정책 SSOT 공유 → drift 방지, 향후 새 enforcement 소비자도 동일 helper 호출만 하면 됨
+  6. **Phase 2 (호출 진입점 통합)**: `@SiteScoped` 데코레이터에 `failLoud?: boolean` 옵션 추가. 인터셉터가 모든 모드에서 `req.dataScope` (raw `ResolvedDataScope`) + `req.enforcedScope` (검증된 `{site?, teamId?}`) 를 attach. silent 모드는 `req.query` mutate (backward compat), failLoud 모드는 mutation 생략하고 attach 만 수행
+  7. 신규 parameter decorator `@CurrentScope()` / `@CurrentEnforcedScope()` — controller 가 `req` 파싱 없이 typed 값 직접 받음. 누락 시 fail-fast 500
+  8. `reports.controller.exportFormTemplate` — `_resolveReportScope` helper 호출 제거, `@SiteScoped({ policy: REPORT_DATA_SCOPE, failLoud: true })` + `@CurrentEnforcedScope()` 로 대체
+  9. `form-template-export.service.exportForm` 시그니처 단순화: `(formNumber, params, filter: EnforcedReportFilter)`. service 는 enforcement / scope resolution 책임 완전 제거
+  10. 인터셉터 spec 4건 추가 (silent attach / failLoud attach / cross-site reject / type=all attach), 백엔드 515 PASS (회귀 0)
+  11. 두 시스템이 정책 SSOT + 진입점 단일화 → drift 방지, 향후 새 enforcement 소비자는 데코레이터 한 줄 + parameter decorator 만 사용
+- [ ] `reports.controller._resolveReportScope` 13곳 호출 마이그레이션 — `@SiteScoped({ policy: REPORT_DATA_SCOPE })` + `@CurrentScope()` 로 점진적 치환 후 helper 제거. (단순 mechanical, 별도 PR 권장 — 인프라가 모두 준비됨) — 2026-04-08
+- [ ] `enforceReportScope` wrapper 함수 + spec 삭제 검토 — form-template-export 가 더 이상 호출 안 함. 다른 사용처 0 확인 후 제거 가능. `EnforcedReportFilter` 타입은 alias 로 유지 — 2026-04-08
 - [ ] WF-25 spec assertion 본 경로 활성화 — TE 사용자 대상 calibration_due 알림(linkUrl=/equipment/...) deterministic 시딩 + D-day 배지 soft assertion 추가 — `apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts` — 2026-04-08
 - [ ] WF-35 spec: `page.locator('textarea').first()` → `getByRole('textbox')` 대체 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:50` — 2026-04-08
 - [ ] WF-35 spec: `waitForTimeout(1_500)` → `expect.poll` 기반 refetch 대기로 결정성 향상 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:105` — 2026-04-08

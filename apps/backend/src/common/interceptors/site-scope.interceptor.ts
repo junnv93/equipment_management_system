@@ -65,7 +65,20 @@ export class SiteScopeInterceptor implements NestInterceptor {
         options.policy
       );
 
+      // 모든 모드 공통: raw scope attach (controller 가 @CurrentScope() 로 read).
+      // type === 'all' 도 attach 해야 controller 가 일관되게 사용 가능.
+      request.dataScope = scope;
+
       if (scope.type === 'all') {
+        // all 의 경우 enforced 결과는 query pass-through (제약 없음).
+        request.enforcedScope = {
+          site: (request.query as Record<string, string> | undefined)?.[
+            options.siteField ?? 'site'
+          ],
+          teamId: (request.query as Record<string, string> | undefined)?.[
+            options.teamField ?? 'teamId'
+          ],
+        };
         return next.handle();
       }
 
@@ -79,16 +92,25 @@ export class SiteScopeInterceptor implements NestInterceptor {
 
       // SSOT: enforceScope 가 cross-site/cross-team mismatch 시 ForbiddenException throw.
       // throw 는 AuditInterceptor 의 access_denied 경로로 자동 흡수됨 (단일 정책 엔진).
-      // 정상 경로에서는 결과를 alias field 로 주입 (silent enforcement, backward compat).
       try {
         const enforced = enforceScope({ site: query[siteField], teamId: query[teamField] }, scope);
-        if (enforced.site !== undefined) query[siteField] = enforced.site;
-        if (enforced.teamId !== undefined) query[teamField] = enforced.teamId;
+        // 모든 모드 공통: enforced 결과 attach (@CurrentEnforcedScope() 용)
+        request.enforcedScope = enforced;
+
+        // 기본 (silent) 모드: query mutate 로 backward compat 유지.
+        // failLoud 모드: query mutation 생략 — controller / service 가 명시적으로
+        // req.enforcedScope 를 받아 SQL WHERE 에 바인딩 (export / 다운로드 라우트).
+        if (!options.failLoud) {
+          if (enforced.site !== undefined) query[siteField] = enforced.site;
+          if (enforced.teamId !== undefined) query[teamField] = enforced.teamId;
+        }
       } catch (err) {
         // teamId 누락 폴백: 계정 설정 불완전한 경우 보수적으로 site 필터로 강등.
-        // (기존 동작 유지 — scope.type === 'team' && !scope.teamId 만 해당)
-        if (scope.type === 'team' && !scope.teamId && user.site) {
+        // silent 모드 한정 backward compat — failLoud 는 폴백 없이 즉시 throw.
+        if (!options.failLoud && scope.type === 'team' && !scope.teamId && user.site) {
           query[siteField] = user.site;
+          // 폴백 시에도 enforcedScope attach (소비자 일관성)
+          request.enforcedScope = { site: user.site, teamId: undefined };
           return next.handle();
         }
         this.logger.warn(

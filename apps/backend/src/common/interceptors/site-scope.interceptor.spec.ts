@@ -13,9 +13,19 @@ import {
 /** mock ExecutionContext + request 객체 생성 */
 function createMockContext(user: Record<string, unknown> | null = {}): {
   context: Record<string, jest.Mock>;
-  request: { user: Record<string, unknown> | null; query: Record<string, string> };
+  request: {
+    user: Record<string, unknown> | null;
+    query: Record<string, string>;
+    dataScope?: unknown;
+    enforcedScope?: unknown;
+  };
 } {
-  const request = { user, query: {} as Record<string, string> };
+  const request: {
+    user: Record<string, unknown> | null;
+    query: Record<string, string>;
+    dataScope?: unknown;
+    enforcedScope?: unknown;
+  } = { user, query: {} as Record<string, string> };
   const context = {
     getHandler: jest.fn().mockReturnValue({}),
     getClass: jest.fn().mockReturnValue({}),
@@ -237,6 +247,74 @@ describe('SiteScopeInterceptor', () => {
       expect(() => interceptor.intercept(context as never, callHandler as never)).toThrow(
         ForbiddenException
       );
+    });
+  });
+
+  describe('failLoud 모드 + dataScope/enforcedScope attach', () => {
+    it('silent (default) 모드는 query 에 silent 주입하면서 동시에 enforcedScope 도 attach 한다', () => {
+      const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE });
+      const { context, request } = createMockContext({
+        userId: 'u1',
+        roles: ['lab_manager'],
+        site: 'suwon',
+      });
+      const callHandler = createCallHandler();
+
+      interceptor.intercept(context as never, callHandler as never);
+
+      expect(request.query.site).toBe('suwon'); // silent 주입 (backward compat)
+      expect(request.dataScope).toMatchObject({ type: 'site', site: 'suwon' });
+      expect(request.enforcedScope).toEqual({ site: 'suwon', teamId: undefined });
+      expect(callHandler.handle).toHaveBeenCalledTimes(1);
+    });
+
+    it('failLoud 모드는 query mutation 을 생략하고 enforcedScope attach 만 수행한다', () => {
+      const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE, failLoud: true });
+      const { context, request } = createMockContext({
+        userId: 'u1',
+        roles: ['lab_manager'],
+        site: 'suwon',
+      });
+      const callHandler = createCallHandler();
+
+      interceptor.intercept(context as never, callHandler as never);
+
+      expect(request.query.site).toBeUndefined(); // silent 주입 안 함
+      expect(request.dataScope).toMatchObject({ type: 'site', site: 'suwon' });
+      expect(request.enforcedScope).toEqual({ site: 'suwon', teamId: undefined });
+      expect(callHandler.handle).toHaveBeenCalledTimes(1);
+    });
+
+    it('failLoud + cross-site mismatch → 즉시 ForbiddenException (audit access_denied 통합)', () => {
+      const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE, failLoud: true });
+      const { context, request } = createMockContext({
+        userId: 'u1',
+        roles: ['lab_manager'],
+        site: 'suwon',
+      });
+      // 클라이언트가 다른 site 명시
+      request.query = { site: 'uiwang' };
+      const callHandler = createCallHandler();
+
+      expect(() => interceptor.intercept(context as never, callHandler as never)).toThrow(
+        ForbiddenException
+      );
+      expect(callHandler.handle).not.toHaveBeenCalled();
+    });
+
+    it('scope.type === all 도 dataScope/enforcedScope attach (controller 일관성)', () => {
+      const interceptor = createInterceptor({ policy: EQUIPMENT_DATA_SCOPE });
+      const { context, request } = createMockContext({
+        userId: 'u1',
+        roles: ['system_admin'],
+      });
+      const callHandler = createCallHandler();
+
+      interceptor.intercept(context as never, callHandler as never);
+
+      expect(request.dataScope).toMatchObject({ type: 'all' });
+      expect(request.enforcedScope).toBeDefined();
+      expect(callHandler.handle).toHaveBeenCalledTimes(1);
     });
   });
 

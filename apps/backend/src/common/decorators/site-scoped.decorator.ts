@@ -40,6 +40,20 @@ export interface SiteScopedOptions {
    * DTO의 팀 필드명이 표준(`teamId`)과 다를 때 사용합니다.
    */
   teamField?: string;
+  /**
+   * fail-loud 모드 — 기본값: `false`
+   *
+   * - `false` (default): 인터셉터가 `req.query` 에 enforced 값을 silent 주입.
+   *   list / search 라우트의 backward compat 동작.
+   * - `true`: `req.query` mutation 생략. enforced 결과를 `req.enforcedScope` 에만
+   *   attach 하여 controller / service 가 명시적으로 받아 SQL WHERE 에 바인딩.
+   *   민감한 export / 다운로드 라우트에서 사용 권장 — cross-site mismatch 가
+   *   ForbiddenException 으로 즉시 실패하고 audit access_denied 에 잡힘.
+   *
+   * 두 모드 모두 `req.dataScope` 와 `req.enforcedScope` 는 항상 attach 됨
+   * (`@CurrentScope()` / `@CurrentEnforcedScope()` parameter decorator 사용 가능).
+   */
+  failLoud?: boolean;
 }
 
 /**
