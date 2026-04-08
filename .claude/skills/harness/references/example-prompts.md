@@ -119,9 +119,10 @@ critical-workflows.md WF-33 신규 등재. features/notifications/notification-r
 
 ---
 
-## 현재 미해결 프롬프트: 1건 (29차 이월, 30차 일부 처리)
+## 현재 미해결 프롬프트: 3건 (29차 이월 1건 + 30차 후속 2건)
 
-> **30차 처리 (2026-04-08)**: #6 self-inspections CAS 통일 ✅ PASS, #7 Docker Node 20 LTS ✅ 완료, #8 setQueryData → false positive (아래 참조)
+> **30차 처리 (2026-04-08)**: #6 self-inspections CAS 통일 ✅ PASS, #7 Docker Node 20 LTS ✅ 완료, #8 setQueryData → false positive
+> **30차 후속 등재**: review-architecture/verify-security에서 발견한 dormant code path + hardening gap 2건
 
 ### ~~🟠 HIGH — self-inspections.service.ts CAS 중복 구현~~ ✅ 완료 (30차)
 
@@ -138,6 +139,69 @@ critical-workflows.md WF-33 신규 등재. features/notifications/notification-r
 > 30차 (2026-04-08). 검증 결과: useOptimisticMutation 안이 아닌 일반 prefetch 패턴.
 > 캐시 키 타입(useQuery line 79, ManagementNumberCheckResult|null) = setQueryData 값 타입 동일.
 > CLAUDE.md 규칙은 useOptimisticMutation onSuccess 한정. 코드 변경 없음.
+
+### 🟠 HIGH — 자체점검 update/confirm UI 미구현 (백엔드 CAS dormant) (Mode 1)
+
+```
+30차 (2026-04-08) review-architecture에서 발견. 백엔드 self-inspections CAS는 완벽히
+구현/검증되었으나 (commit a7c276bd), 프론트엔드 사용자 동선에서 update/confirm을 호출하는
+컴포넌트가 존재하지 않는다.
+
+확인된 현황:
+- apps/frontend/lib/api/self-inspection-api.ts:104,112 — updateSelfInspection/confirmSelfInspection 정의됨
+- apps/frontend/components/equipment/SelfInspectionFormDialog.tsx — create 전용
+- apps/frontend/components/equipment/SelfInspectionTab.tsx — read-only
+- apps/frontend/tests/e2e/.../workflow-helpers.ts:1081,1101 — E2E helper만 호출
+- 사용자가 UI에서 자체점검 수정/확인 시 → 동작 불가 (호출 진입점 없음)
+
+작업:
+1. SelfInspectionFormDialog를 create/edit 겸용으로 확장 (mode prop 추가) 또는
+   별도 SelfInspectionEditDialog 신규
+2. SelfInspectionTab에 행별 "수정"/"확인" 버튼 + 권한 체크 (UPDATE_CALIBRATION,
+   confirmedBy 권한)
+3. useOptimisticMutation 사용 — confirm은 status 'completed' → 'confirmed' 단방향
+4. VERSION_CONFLICT 처리: getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT)
+   + 상세 캐시 삭제 후 refetch (CLAUDE.md CAS 규칙)
+5. 캐시 무효화: queryKeys.equipment.selfInspections(equipmentId) +
+   EquipmentCacheInvalidation 교차 무효화
+6. confirmed 상태에서는 수정/삭제 버튼 비활성 (백엔드 ALREADY_CONFIRMED 가드 미러링)
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit exit 0
+- pnpm --filter frontend run test exit 0
+- E2E: workflow-helpers.ts의 자체점검 update/confirm flow가 새 UI를 통해 동작
+  (helper에서 API 직접 호출 → page object 경유로 마이그레이션 검토)
+- /verify-frontend-state, /verify-cas 통과
+```
+
+### 🟡 MEDIUM — Dockerfile USER 미선언 (root 실행 hardening) (Mode 0)
+
+```
+30차 (2026-04-08) verify-security에서 발견 (pre-existing). 두 Dockerfile 모두 USER
+디렉티브가 없어 모든 stage가 root로 실행된다. CIS Docker Benchmark 4.1 위반.
+
+확인된 파일:
+- docker/backend.Dockerfile (alpine, 5 stages: base/deps/development/builder/production)
+- docker/frontend.Dockerfile (slim, 5 stages: base/deps/development/builder/production)
+
+node:20-alpine은 기본 'node' user를 제공 (uid 1000). slim도 동일.
+
+작업:
+1. backend.Dockerfile production stage 끝부분에 USER node 추가
+   - WORKDIR /app 소유권을 node:node로 chown (COPY --chown=node:node)
+2. frontend.Dockerfile production stage 동일
+3. development stage는 volume mount 권한 충돌 가능 — production만 적용 권장
+4. CMD/ENTRYPOINT가 :80/:443 등 privileged port 사용 안 하는지 확인 (현재 3000/3001 → OK)
+
+검증:
+- docker compose -f docker-compose.prod.yml build (가능 시)
+- docker run --rm -it <image> id → uid=1000(node) gid=1000(node)
+- 컨테이너 내부에서 /app 쓰기 가능 (logs/uploads 디렉토리 권한)
+- pnpm tsc --noEmit / test 무관 (Dockerfile만 변경)
+
+선택: development stage도 USER node 시 docker-compose volume mount 시 host UID 매핑
+필요 → 별도 작업으로 분리 가능
+```
 
 ### 🟠 HIGH — UL-QP-19-01 exporters map 누락 (런타임 NotImplementedException) (Mode 0)
 
