@@ -6,9 +6,42 @@
 
 ---
 
+## 36차 후속 — review-architecture Critical 1건 (2026-04-08)
+
+> **발견 배경**: Step B (커밋 f8e06b86, 0006_gray_sersi 마이그레이션) review-architecture 결과. dev DB는 통과(20행)했으나 운영 적용 전 사전 검증 필요.
+
+### 🟠 HIGH — 0006 마이그레이션 USING 캐스트 운영 사전 검증 가드 (Mode 0)
+
+```
+배경: apps/backend/drizzle/0006_gray_sersi.sql 의
+  ALTER TABLE equipment ALTER COLUMN requested_by/approved_by SET DATA TYPE uuid USING ::uuid
+는 운영 데이터에 잘못된 형식 string('system'/직원번호/부분 UUID 등)이 잔존하면
+`invalid input syntax for type uuid` 로 트랜잭션 전체가 abort 된다.
+0006의 backfill UPDATE는 `NOT IN (SELECT id::text FROM users)` 만 NULL 처리하므로,
+완전히 비-uuid 형식 string은 backfill 후에도 cast 단계에서 실패한다.
+
+근본 해결 (택1):
+1. 0006의 backfill UPDATE에 regex 가드 추가 — 잘못된 형식도 NULL로 변환
+   ```sql
+   UPDATE equipment SET requested_by = NULL
+     WHERE requested_by IS NOT NULL
+       AND requested_by !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+   ```
+   동일하게 approved_by 처리. 이미 dev에 적용된 0006은 그대로 두고, 별도 hotfix 마이그레이션 0008로 idempotent guard 추가.
+2. 또는 운영 적용 전 dry-run SQL 추가 (DO $$ ... RAISE EXCEPTION ...)
+3. docs/development/DRIZZLE_MIGRATIONS.md 에 운영 적용 절차 보강: 사전 dry-run + cleanup 의무화
+
+영향 범위: 1 hotfix SQL + DRIZZLE_MIGRATIONS.md 1개 섹션. Mode 0.
+
+⚠️ 현재 0006은 dev DB에 적용 완료. 운영 적용 시점에서 처음 위험이 발현됨.
+정기 staging 환경(있다면) 적용으로 사전 발견 가능.
+```
+
+---
+
 ## 36차 신규 — generate-prompts 3-agent 병렬 스캔 (10건)
 
-> **발견 배경 (2026-04-08, 36차)**: aria-label SSOT 롤아웃(35차) 완료 후 example-prompts.md 상단 우선순위가 모두 stale로 확인되어 generate-prompts 스킬 실행. Backend/Frontend/Infra+Packages 3개 에이전트 병렬 스캔 + 2차 verify(Read/Grep) 통과한 항목만 등재.
+> **발견 배경 (2026-04-08, 36차)**: aria-label SSOT 롤아웃(35차) 완료 후 example-prompts.md 상단 우선순위가 모두 stale로 확인되어 generate-prompts 스킬 실행. Backend/Frontend/Infra+Packages 3개 에이전트 병렬 스캔 + 2차 verify(Read/Grep) 통과한 항목만 등재. **#10 (Reports/Alerts URL SSOT) 의 Alerts 부분은 커밋 95534053 에서 별도 처리됨 — Reports 부분만 잔존.**
 
 ### 🔴 CRITICAL — audit_logs.userId FK 미설정 + relations() 미정의
 
