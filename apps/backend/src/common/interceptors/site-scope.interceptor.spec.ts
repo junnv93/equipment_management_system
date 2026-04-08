@@ -333,6 +333,8 @@ describe('SiteScopeInterceptor', () => {
       interceptor.intercept(context as never, callHandler as never);
 
       expect(request.query).toEqual({});
+      expect(request.dataScope).toMatchObject({ type: 'all' });
+      expect(request.enforcedScope).toBeDefined();
       expect(callHandler.handle).toHaveBeenCalledTimes(1);
     });
 
@@ -350,6 +352,8 @@ describe('SiteScopeInterceptor', () => {
       interceptor.intercept(context as never, callHandler as never);
 
       expect(request.query.site).toBe('pyeongtaek');
+      expect(request.dataScope).toMatchObject({ type: 'site', site: 'pyeongtaek' });
+      expect(request.enforcedScope).toMatchObject({ site: 'pyeongtaek' });
     });
 
     it('bypassRoles에 미포함 역할이고 user.site가 없으면 ForbiddenException을 던진다', () => {
