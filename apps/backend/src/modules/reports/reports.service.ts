@@ -40,6 +40,7 @@ import {
 } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES, buildStableCacheKey } from '../../common/cache/cache-key-prefixes';
+import { dispatchScopePredicate } from '../../common/scope/scope-sql-builder';
 import type { ReportColumn, ReportData } from './report-export.service';
 import type {
   EquipmentUsageReport,
@@ -98,17 +99,31 @@ function resolveDateRange(
 /**
  * ResolvedDataScope를 장비 테이블 기준 Drizzle WHERE 조건으로 변환합니다.
  * 보고서의 모든 쿼리는 equipment 테이블을 JOIN하므로 여기서 통일 적용.
+ *
+ * SSOT: `common/scope/scope-sql-builder.ts:dispatchScopePredicate` 정책 상태기계를
+ * 위임 호출. 본 함수는 equipment 테이블의 join 컬럼(site/teamId)만 결정하고
+ * 정책 분기(all/site/team→site fallback/none)는 SSOT 가 책임진다.
+ *
+ * 정책 정렬:
+ * - all  → 빈 배열 (필터 미적용)
+ * - site → equipment.site = scope.site
+ * - team → teamId 우선, 누락 시 site 폴백 (SiteScopeInterceptor 와 동일한 team ⊂ site 정책)
+ * - none → sql`FALSE` (0행 강제)
  */
 function scopeToEquipmentConditions(scope: ResolvedDataScope): SQL[] {
-  switch (scope.type) {
-    case 'team':
-      return scope.teamId ? [eq(equipmentTable.teamId, scope.teamId)] : [sql`FALSE`];
-    case 'site':
-      return scope.site ? [eq(equipmentTable.site, scope.site)] : [sql`FALSE`];
+  const dispatch = dispatchScopePredicate(scope, {
+    site: (s) => eq(equipmentTable.site, s),
+    team: (t) => eq(equipmentTable.teamId, t),
+  });
+  switch (dispatch.kind) {
     case 'all':
       return [];
     case 'none':
-      // none 스코프는 빈 결과를 보장하는 불가능 조건
+      return [sql`FALSE`];
+    case 'condition':
+      return [dispatch.condition];
+    case 'unavailable':
+      // 두 콜백이 모두 제공되었으므로 도달 불가. 방어적 fail-closed.
       return [sql`FALSE`];
   }
 }
