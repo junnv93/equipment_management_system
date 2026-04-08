@@ -123,12 +123,14 @@ async function globalSetup(config: FullConfig) {
         '  ⚠️  교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다.'
       );
     }
-  } catch {
-    console.warn('  ⚠️  시드 데이터 로딩 실패');
-    console.warn(
+  } catch (err) {
+    // Fail-fast: 시드 실패는 false negative 의 주된 원인이었으므로, 경고가 아닌
+    // 명시적 실패로 처리한다. 검증 실패(seed-test-new.ts exit 1)도 여기로 떨어진다.
+    console.error('  ❌ 시드 데이터 로딩/검증 실패 — 글로벌 설정 중단');
+    console.error(
       '     수동 실행: pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts'
     );
-    console.warn('     테스트가 foreign key 오류로 실패할 수 있습니다.');
+    throw err instanceof Error ? err : new Error(`Seed loading failed: ${String(err)}`);
   }
 
   console.log('🔧 글로벌 설정 완료\n');

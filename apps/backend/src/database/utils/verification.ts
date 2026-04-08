@@ -1,10 +1,37 @@
 /**
  * Seed data verification utilities
- * Validates that all seed data meets requirements for E2E tests
+ *
+ * **SSOT 원칙**: expected count 는 seed array 에서 직접 도출한다.
+ * 하드코딩된 magic number(예: `>= 18`)는 시드 변경 시 drift 의 원인이 되었으므로
+ * 모든 count 검증은 `SEED_ARRAY.length` 또는 `SEED_ARRAY.filter(...).length` 를
+ * single source of truth 로 사용한다.
+ *
+ * 시드는 Phase 0 에서 truncate 후 deterministic 하게 insert 되므로
+ * DB count 는 seed length 와 정확히 일치해야 한다 (===).
  */
 
 import { Pool } from 'pg';
 import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+
+import { USERS_SEED_DATA } from '../seed-data/core/users.seed';
+import { TEAMS_SEED_DATA } from '../seed-data/core/teams.seed';
+import { EQUIPMENT_SEED_DATA } from '../seed-data/core/equipment.seed';
+import { CALIBRATIONS_SEED_DATA } from '../seed-data/calibration/calibrations.seed';
+import { NON_CONFORMANCES_SEED_DATA } from '../seed-data/operations/non-conformances.seed';
+import { CHECKOUTS_SEED_DATA } from '../seed-data/operations/checkouts.seed';
+import {
+  CALIBRATION_PLANS_SEED_DATA,
+  CALIBRATION_PLAN_ITEMS_SEED_DATA,
+} from '../seed-data/calibration/calibration-plans.seed';
+import { DISPOSAL_EQUIPMENT_SEED_DATA } from '../seed-data/disposal/disposal-equipment.seed';
+import { TEST_SOFTWARE_SEED_DATA } from '../seed-data/software/test-software.seed';
+import { LOCATION_HISTORY_SEED_DATA } from '../seed-data/history/location-history.seed';
+import { MAINTENANCE_HISTORY_SEED_DATA } from '../seed-data/history/maintenance-history.seed';
+import { INCIDENT_HISTORY_SEED_DATA } from '../seed-data/history/incident-history.seed';
+import { EQUIPMENT_REQUESTS_SEED_DATA } from '../seed-data/admin/equipment-requests.seed';
+import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from '../seed-data/admin/equipment-attachments.seed';
+import { AUDIT_LOGS_SEED_DATA } from '../seed-data/admin/audit-logs.seed';
+import { NOTIFICATIONS_SEED_DATA } from '../seed-data/admin/notifications.seed';
 
 interface VerificationResult {
   passed: boolean;
@@ -18,48 +45,50 @@ interface VerificationResult {
 }
 
 /**
- * Verify all critical seed data requirements using raw SQL
+ * SSOT: seed array → expected count helper.
+ *
+ * Phase 0 에서 truncate 후 deterministic insert 되므로 DB count 는 seed length 와
+ * **정확히** 일치해야 한다. `===` 비교로 검증하여 seed 외부에서 side-effect 로
+ * 추가 row 가 생기는(예: DB trigger, 스케줄러 선행 실행) silent drift 를 즉시 노출.
+ *
+ * 의도적으로 ≥ 비교가 필요한 경우(예: seed-time 스케줄러 이벤트로 자연 증가)에는
+ * `minOnly: true` 플래그를 지정한다.
+ */
+async function checkCount(
+  pool: Pool,
+  name: string,
+  table: string,
+  expected: number,
+  whereClause = '',
+  options: { minOnly?: boolean } = {}
+): Promise<VerificationResult['checks'][number]> {
+  const sql = `SELECT COUNT(*)::int AS count FROM ${table}${whereClause ? ` WHERE ${whereClause}` : ''}`;
+  const res = await pool.query(sql);
+  const actual = parseInt(res.rows[0]?.count ?? 0, 10);
+  const passed = options.minOnly ? actual >= expected : actual === expected;
+  return { name, passed, actual, expected };
+}
+
+/**
+ * Verify all critical seed data requirements using seed-derived expected counts.
  */
 export async function verifySeed(pool: Pool): Promise<VerificationResult> {
-  const checks = [];
+  const checks: VerificationResult['checks'] = [];
 
   try {
     // =========================================================================
-    // Phase 1: Core Entity Counts
+    // Phase 1: Core Entity Counts (SSOT: seed.length)
     // =========================================================================
 
-    // Users count
-    const userResult = await pool.query('SELECT COUNT(*) as count FROM users');
-    const userCount = parseInt(userResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Users count',
-      passed: userCount >= 8,
-      actual: userCount,
-      expected: 8,
-    });
+    checks.push(await checkCount(pool, 'Users count', 'users', USERS_SEED_DATA.length));
+    checks.push(await checkCount(pool, 'Teams count', 'teams', TEAMS_SEED_DATA.length));
 
-    // Teams count
-    const teamResult = await pool.query('SELECT COUNT(*) as count FROM teams');
-    const teamCount = parseInt(teamResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Teams count',
-      passed: teamCount >= 6,
-      actual: teamCount,
-      expected: 6,
-    });
-
-    // Equipment count
-    const equipResult = await pool.query('SELECT COUNT(*) as count FROM equipment');
-    const equipCount = parseInt(equipResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Equipment count',
-      passed: equipCount >= 32,
-      actual: equipCount,
-      expected: 32,
-    });
+    // Equipment 는 두 시드(core + disposal)가 동일 테이블에 insert 됨
+    const expectedEquipment = EQUIPMENT_SEED_DATA.length + DISPOSAL_EQUIPMENT_SEED_DATA.length;
+    checks.push(await checkCount(pool, 'Equipment count', 'equipment', expectedEquipment));
 
     // =========================================================================
-    // Phase 1: Equipment Status Distribution
+    // Phase 1: Equipment Status Distribution (필터별 최소 1건 — 시드 의도)
     // =========================================================================
 
     const statusResult = await pool.query(
@@ -67,7 +96,6 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     );
     const statusMap = new Map(statusResult.rows.map((r) => [r.status, parseInt(r.count, 10)]));
 
-    // Verify each filter-able status has at least 2 equipment
     const filterableStatuses = [
       'available',
       'checked_out',
@@ -89,82 +117,72 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     }
 
     // =========================================================================
-    // Phase 1: Calibration Data
+    // Phase 1: Calibration Data (SSOT: seed array .length 및 filter)
     // =========================================================================
 
-    const calibResult = await pool.query('SELECT COUNT(*) as count FROM calibrations');
-    const calibCount = parseInt(calibResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Calibrations count',
-      passed: calibCount >= 18,
-      actual: calibCount,
-      expected: 18,
-    });
-
-    // Pending approval calibrations
-    const pendingApprovalCalibs = await pool.query(
-      "SELECT COUNT(*) as count FROM calibrations WHERE approval_status = 'pending_approval'"
+    checks.push(
+      await checkCount(pool, 'Calibrations count', 'calibrations', CALIBRATIONS_SEED_DATA.length)
     );
-    const pendingCount = parseInt(pendingApprovalCalibs.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Calibrations pending approval',
-      passed: pendingCount >= 6,
-      actual: pendingCount,
-      expected: 6,
-    });
+
+    const expectedPendingCalibs = CALIBRATIONS_SEED_DATA.filter(
+      (c) => c.approvalStatus === 'pending_approval'
+    ).length;
+    checks.push(
+      await checkCount(
+        pool,
+        'Calibrations pending approval',
+        'calibrations',
+        expectedPendingCalibs,
+        "approval_status = 'pending_approval'"
+      )
+    );
 
     // =========================================================================
     // Phase 1: Non-Conformances
     // =========================================================================
 
-    const ncResult = await pool.query('SELECT COUNT(*) as count FROM non_conformances');
-    const ncCount = parseInt(ncResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Non-conformances count',
-      passed: ncCount >= 10,
-      actual: ncCount,
-      expected: 10,
-    });
+    checks.push(
+      await checkCount(
+        pool,
+        'Non-conformances count',
+        'non_conformances',
+        NON_CONFORMANCES_SEED_DATA.length
+      )
+    );
 
     // =========================================================================
     // Phase 1B: Checkouts
     // =========================================================================
 
-    const checkoutResult = await pool.query('SELECT COUNT(*) as count FROM checkouts');
-    const checkoutCount = parseInt(checkoutResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Checkouts count',
-      passed: checkoutCount >= 68,
-      actual: checkoutCount,
-      expected: 68,
-    });
+    checks.push(await checkCount(pool, 'Checkouts count', 'checkouts', CHECKOUTS_SEED_DATA.length));
 
-    // Pending checkouts (for C-1 permission test)
-    const pendingCheckouts = await pool.query(
-      "SELECT COUNT(*) as count FROM checkouts WHERE status = 'pending'"
+    const expectedPendingCheckouts = CHECKOUTS_SEED_DATA.filter(
+      (c) => c.status === 'pending'
+    ).length;
+    checks.push(
+      await checkCount(
+        pool,
+        'Pending checkouts',
+        'checkouts',
+        expectedPendingCheckouts,
+        "status = 'pending'"
+      )
     );
-    const pendingCheckoutCount = parseInt(pendingCheckouts.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Pending checkouts',
-      passed: pendingCheckoutCount >= 8,
-      actual: pendingCheckoutCount,
-      expected: 8,
-    });
 
     // =========================================================================
     // Phase 2: Calibration Plans (3-step approval)
     // =========================================================================
 
-    const cplanResult = await pool.query('SELECT COUNT(*) as count FROM calibration_plans');
-    const cplanCount = parseInt(cplanResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Calibration Plans count',
-      passed: cplanCount >= 6,
-      actual: cplanCount,
-      expected: 6,
-    });
+    checks.push(
+      await checkCount(
+        pool,
+        'Calibration Plans count',
+        'calibration_plans',
+        CALIBRATION_PLANS_SEED_DATA.length
+      )
+    );
 
-    // Status distribution: at least 1 per workflow state
+    // Status distribution: 워크플로우 상태별 최소 1건 (도메인 invariant)
     const cplanStatusResult = await pool.query(
       'SELECT status, COUNT(*) as count FROM calibration_plans GROUP BY status'
     );
@@ -182,90 +200,75 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
       });
     }
 
-    // Plan items
-    const cplanItemResult = await pool.query(
-      'SELECT COUNT(*) as count FROM calibration_plan_items'
+    checks.push(
+      await checkCount(
+        pool,
+        'Calibration Plan Items count',
+        'calibration_plan_items',
+        CALIBRATION_PLAN_ITEMS_SEED_DATA.length
+      )
     );
-    const cplanItemCount = parseInt(cplanItemResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Calibration Plan Items count',
-      passed: cplanItemCount >= 12,
-      actual: cplanItemCount,
-      expected: 12,
-    });
 
     // =========================================================================
     // Phase 4: History & Admin
     // =========================================================================
 
-    const testSoftwareResult = await pool.query('SELECT COUNT(*) as count FROM test_software');
-    const testSoftwareCount = parseInt(testSoftwareResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Test Software count',
-      passed: testSoftwareCount >= 19,
-      actual: testSoftwareCount,
-      expected: 19,
-    });
-
-    const locHistResult = await pool.query(
-      'SELECT COUNT(*) as count FROM equipment_location_history'
+    checks.push(
+      await checkCount(pool, 'Test Software count', 'test_software', TEST_SOFTWARE_SEED_DATA.length)
     );
-    const locHistCount = parseInt(locHistResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Location History count',
-      passed: locHistCount >= 10,
-      actual: locHistCount,
-      expected: 10,
-    });
 
-    const maintHistResult = await pool.query(
-      'SELECT COUNT(*) as count FROM equipment_maintenance_history'
+    checks.push(
+      await checkCount(
+        pool,
+        'Location History count',
+        'equipment_location_history',
+        LOCATION_HISTORY_SEED_DATA.length
+      )
     );
-    const maintHistCount = parseInt(maintHistResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Maintenance History count',
-      passed: maintHistCount >= 10,
-      actual: maintHistCount,
-      expected: 10,
-    });
 
-    const incidentResult = await pool.query(
-      'SELECT COUNT(*) as count FROM equipment_incident_history'
+    checks.push(
+      await checkCount(
+        pool,
+        'Maintenance History count',
+        'equipment_maintenance_history',
+        MAINTENANCE_HISTORY_SEED_DATA.length
+      )
     );
-    const incidentCount = parseInt(incidentResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Incident History count',
-      passed: incidentCount >= 10,
-      actual: incidentCount,
-      expected: 10,
-    });
 
-    const equipReqResult = await pool.query('SELECT COUNT(*) as count FROM equipment_requests');
-    const equipReqCount = parseInt(equipReqResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Equipment Requests count',
-      passed: equipReqCount >= 6,
-      actual: equipReqCount,
-      expected: 6,
-    });
+    checks.push(
+      await checkCount(
+        pool,
+        'Incident History count',
+        'equipment_incident_history',
+        INCIDENT_HISTORY_SEED_DATA.length
+      )
+    );
 
-    const attachResult = await pool.query('SELECT COUNT(*) as count FROM equipment_attachments');
-    const attachCount = parseInt(attachResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Equipment Attachments count',
-      passed: attachCount >= 6,
-      actual: attachCount,
-      expected: 6,
-    });
+    checks.push(
+      await checkCount(
+        pool,
+        'Equipment Requests count',
+        'equipment_requests',
+        EQUIPMENT_REQUESTS_SEED_DATA.length
+      )
+    );
 
-    const auditResult = await pool.query('SELECT COUNT(*) as count FROM audit_logs');
-    const auditCount = parseInt(auditResult.rows[0]?.count ?? 0, 10);
-    checks.push({
-      name: 'Audit Logs count',
-      passed: auditCount >= 20,
-      actual: auditCount,
-      expected: 20,
-    });
+    checks.push(
+      await checkCount(
+        pool,
+        'Equipment Attachments count',
+        'equipment_attachments',
+        EQUIPMENT_ATTACHMENTS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(pool, 'Audit Logs count', 'audit_logs', AUDIT_LOGS_SEED_DATA.length)
+    );
+
+    checks.push(
+      await checkCount(pool, 'Notifications count', 'notifications', NOTIFICATIONS_SEED_DATA.length)
+    );
 
     // =========================================================================
     // SUMMARY
