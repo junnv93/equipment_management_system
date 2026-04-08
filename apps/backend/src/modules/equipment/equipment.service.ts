@@ -105,6 +105,17 @@ export class EquipmentService extends VersionedBaseService {
     super();
   }
 
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * Equipment 는 compound cache key 사용 — `{uuid}` (기본) + `{uuid, includeTeam: true}` (조인 변형)
+   * 두 키 모두 무효화해야 stale version 으로 인한 재시도 409 루프 방지.
+   * 모든 updateWithVersion 경로(update/updateStatus/syncFromExternal 등)가 단일 정책 공유.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    await this.cacheService.delete(this.buildCacheKey('detail', { uuid: id }));
+    await this.cacheService.delete(this.buildCacheKey('detail', { uuid: id, includeTeam: true }));
+  }
+
   // calculateNextCalibrationDate → common/utils/date-utils.ts (SSOT)
 
   /**
@@ -785,8 +796,13 @@ export class EquipmentService extends VersionedBaseService {
           // 상태별 카운트 조건: status 필터만 제외한 WHERE 조건 재구축
           // 동일한 site/teamId/search/classification 등 필터를 적용하되
           // status 조건만 빼서 GROUP BY status로 전체 분포를 조회
+          // statusCounts 스코프: status 칩과 동일한 의미를 갖는 derived "교정기한초과" 칩이
+          // 자기 자신으로 좁아지지 않도록 calibrationOverdue도 함께 제외한다.
+          // Trade-off: 사용자가 overdue 필터를 켠 상태에서 다른 status 칩 카운트는 overdue
+          // 미적용 기준으로 계산되므로 클릭 시 결과 집합이 넓어진다 (status 칩과 동일한 동작).
           const {
             status: _excludeStatus,
+            calibrationOverdue: _excludeCalibrationOverdue,
             page: _,
             pageSize: __,
             sort: ___,
@@ -839,6 +855,31 @@ export class EquipmentService extends VersionedBaseService {
                 statusResults.forEach((r) => {
                   if (r.status) counts[r.status] = r.count;
                 });
+
+                // calibration_overdue 키는 derived 기준으로 덮어쓴다.
+                // - status enum 값은 스케줄러가 즉시 non_conforming으로 전이시켜 거의 0이 됨
+                // - "교정기한초과"는 status가 아닌 사실(nextCalibrationDate < today)이므로
+                //   부적합으로 전환된 장비도 카운트에 포함되어야 함
+                const today = getUtcStartOfDay();
+                const overdueExcluded = [
+                  ESVal.DISPOSED,
+                  ESVal.PENDING_DISPOSAL,
+                  ESVal.RETIRED,
+                  ESVal.INACTIVE,
+                ];
+                const overdueResult = await this.db
+                  .select({ count: sql<number>`cast(count(*) as integer)` })
+                  .from(equipment)
+                  .where(
+                    and(
+                      ...statusCountWhere,
+                      sql`${equipment.nextCalibrationDate} IS NOT NULL`,
+                      sql`${equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`,
+                      notInArray(equipment.status, overdueExcluded)
+                    )
+                  );
+                counts[ESVal.CALIBRATION_OVERDUE] = Number(overdueResult[0]?.count || 0);
+
                 return counts;
               },
               CACHE_TTL.LONG
@@ -1208,17 +1249,12 @@ export class EquipmentService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof ConflictException) {
-        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
-        // findOne 캐시가 stale version을 가지고 있으면 재시도도 계속 409
-        await this.cacheService.delete(this.buildCacheKey('detail', { uuid }));
-        await this.cacheService.delete(this.buildCacheKey('detail', { uuid, includeTeam: true }));
-      }
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
         error instanceof ConflictException
       ) {
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
@@ -1349,12 +1385,8 @@ export class EquipmentService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof ConflictException) {
-        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
-        await this.cacheService.delete(this.buildCacheKey('detail', { uuid }));
-        await this.cacheService.delete(this.buildCacheKey('detail', { uuid, includeTeam: true }));
-      }
       if (error instanceof NotFoundException || error instanceof ConflictException) {
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
@@ -1406,16 +1438,12 @@ export class EquipmentService extends VersionedBaseService {
 
       return updated;
     } catch (error) {
-      if (error instanceof ConflictException) {
-        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
-        await this.cacheService.delete(this.buildCacheKey('detail', { uuid }));
-        await this.cacheService.delete(this.buildCacheKey('detail', { uuid, includeTeam: true }));
-      }
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
         error instanceof ConflictException
       ) {
+        // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
         throw error;
       }
       this.logger.error(
