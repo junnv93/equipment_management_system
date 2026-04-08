@@ -40,7 +40,7 @@ Mode 2 — DB 마이그레이션 동반.
 - 회귀: 사용자 삭제 → audit log 조회 시 userName 보존 + userId NULL 확인
 ```
 
-### 🟠 HIGH — equipment.requestedBy/approvedBy 타입 드리프트 (varchar(36) → uuid + FK)
+### ~~🟠 HIGH — equipment.requestedBy/approvedBy 타입 드리프트 (varchar(36) → uuid + FK)~~ ✅ 완료 (35차, 2026-04-08, f8e06b86)
 
 ```
 배경: packages/db/src/schema/equipment.ts:112-113 의 `requestedBy: varchar('requested_by',
@@ -64,7 +64,7 @@ Mode 2 — DB 마이그레이션 동반.
 - 회귀: 장비 등록/승인 워크플로(WF-01/02) E2E 통과
 ```
 
-### 🟠 HIGH — checkouts.lenderTeamId/lenderSiteId FK 누락 (시험소간 대여)
+### 🟠 HIGH — checkouts.lenderTeamId/lenderSiteId FK 누락 (시험소간 대여) — ⚠️ 부분 완료 (35차, lenderTeamId만, lenderSiteId 잔존)
 
 ```
 배경: packages/db/src/schema/checkouts.ts:49-50 의 `lenderTeamId: uuid('lender_team_id')`
@@ -86,7 +86,7 @@ sites enum/테이블 검증 없음. 다른 user 참조 컬럼 (requesterId, appr
 - 마이그레이션 무결성 검증
 ```
 
-### 🟠 HIGH — calibrations.registeredBy/approvedBy FK 누락 (technicianId와 일관성 깨짐)
+### ~~🟠 HIGH — calibrations.registeredBy/approvedBy FK 누락 (technicianId와 일관성 깨짐)~~ ✅ 완료 (35차, f8e06b86)
 
 ```
 배경: packages/db/src/schema/calibrations.ts:69-70 의 `registeredBy: uuid('registered_by')`,
@@ -106,7 +106,7 @@ FK가 있어 명백한 일관성 위반. 교정 3단계 승인(WF-04) 의 actor 
 - 회귀: WF-04 교정 3단계 승인 E2E 통과
 ```
 
-### 🟠 HIGH — notification_preferences.userId FK 누락 (notifications 정책 33차 후속)
+### ~~🟠 HIGH — notification_preferences.userId FK 누락 (notifications 정책 33차 후속)~~ ✅ 완료 (35차, f8e06b86)
 
 ```
 배경: 33차 notifications FK 정책 정비(memory: project_notifications_fk_policy)에서
@@ -126,7 +126,7 @@ notification_preferences는 후속으로 분류되었음. packages/db/src/schema
 - 0004/0005 마이그레이션과 동일 패턴 재사용
 ```
 
-### 🟠 HIGH — RENTAL_IMPORT 5개 deprecated 권한 매핑 모순 (role-permissions.ts)
+### ~~🟠 HIGH — RENTAL_IMPORT 5개 deprecated 권한 매핑 모순 (role-permissions.ts)~~ ✅ 완료 (35차 entropy 검증, 흔적 0건)
 
 ```
 배경: packages/shared-constants/src/permissions.ts:181-197 의 5개 권한
@@ -154,7 +154,7 @@ notification_preferences는 후속으로 분류되었음. packages/db/src/schema
 - grep -rn "VIEW_RENTAL_IMPORTS\|CREATE_RENTAL_IMPORT\|APPROVE_RENTAL_IMPORT" apps/ packages/ → 0건
 ```
 
-### 🟠 HIGH — apps/frontend/app/(dashboard)/form-templates/error.tsx 누락
+### ~~🟠 HIGH — apps/frontend/app/(dashboard)/form-templates/error.tsx 누락~~ ✅ 완료 (35차 entropy 검증, 파일 존재)
 
 ```
 배경: apps/frontend/app/(dashboard)/form-templates/ 에 page.tsx + loading.tsx 만 있고
