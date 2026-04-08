@@ -1,10 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, desc, and } from 'drizzle-orm';
 import {
@@ -47,6 +41,14 @@ export class IntermediateInspectionsService extends VersionedBaseService {
     }
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.CALIBRATION);
+  }
+
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * 5개 updateWithVersion 경로(update/finalize/approve/reject/remove) 단일 정책 공유.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   /**
@@ -300,65 +302,58 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       updateData.overallResult = updateFields.overallResult;
     if (updateFields.remarks !== undefined) updateData.remarks = updateFields.remarks;
 
-    let updated: IntermediateInspection;
-    try {
-      // 트랜잭션으로 메인 테이블 + 하위 테이블 동시 수정
-      updated = await this.db.transaction(async (tx) => {
-        const result = await this.updateWithVersion<IntermediateInspection>(
-          intermediateInspections,
-          id,
-          version,
-          updateData,
-          '중간점검',
-          tx,
-          'INTERMEDIATE_INSPECTION_NOT_FOUND'
-        );
+    // 트랜잭션으로 메인 테이블 + 하위 테이블 동시 수정.
+    // 409 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated = await this.db.transaction(async (tx) => {
+      const result = await this.updateWithVersion<IntermediateInspection>(
+        intermediateInspections,
+        id,
+        version,
+        updateData,
+        '중간점검',
+        tx,
+        'INTERMEDIATE_INSPECTION_NOT_FOUND'
+      );
 
-        // 항목 교체 (전체 삭제 후 재삽입)
-        if (items !== undefined) {
-          await tx
-            .delete(intermediateInspectionItems)
-            .where(eq(intermediateInspectionItems.inspectionId, id));
+      // 항목 교체 (전체 삭제 후 재삽입)
+      if (items !== undefined) {
+        await tx
+          .delete(intermediateInspectionItems)
+          .where(eq(intermediateInspectionItems.inspectionId, id));
 
-          if (items.length > 0) {
-            await tx.insert(intermediateInspectionItems).values(
-              items.map((item) => ({
-                inspectionId: id,
-                itemNumber: item.itemNumber,
-                checkItem: item.checkItem,
-                checkCriteria: item.checkCriteria,
-                checkResult: item.checkResult ?? null,
-                judgment: item.judgment ?? null,
-              }))
-            );
-          }
+        if (items.length > 0) {
+          await tx.insert(intermediateInspectionItems).values(
+            items.map((item) => ({
+              inspectionId: id,
+              itemNumber: item.itemNumber,
+              checkItem: item.checkItem,
+              checkCriteria: item.checkCriteria,
+              checkResult: item.checkResult ?? null,
+              judgment: item.judgment ?? null,
+            }))
+          );
         }
-
-        // 측정 장비 교체
-        if (measurementEquipment !== undefined) {
-          await tx
-            .delete(intermediateInspectionEquipment)
-            .where(eq(intermediateInspectionEquipment.inspectionId, id));
-
-          if (measurementEquipment.length > 0) {
-            await tx.insert(intermediateInspectionEquipment).values(
-              measurementEquipment.map((equip) => ({
-                inspectionId: id,
-                equipmentId: equip.equipmentId,
-                calibrationDate: equip.calibrationDate ? new Date(equip.calibrationDate) : null,
-              }))
-            );
-          }
-        }
-
-        return result;
-      });
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
       }
-      throw error;
-    }
+
+      // 측정 장비 교체
+      if (measurementEquipment !== undefined) {
+        await tx
+          .delete(intermediateInspectionEquipment)
+          .where(eq(intermediateInspectionEquipment.inspectionId, id));
+
+        if (measurementEquipment.length > 0) {
+          await tx.insert(intermediateInspectionEquipment).values(
+            measurementEquipment.map((equip) => ({
+              inspectionId: id,
+              equipmentId: equip.equipmentId,
+              calibrationDate: equip.calibrationDate ? new Date(equip.calibrationDate) : null,
+            }))
+          );
+        }
+      }
+
+      return result;
+    });
 
     this.invalidateCache(id, existing.equipmentId);
 
@@ -378,27 +373,19 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       });
     }
 
-    let updated: IntermediateInspection;
-    try {
-      updated = await this.updateWithVersion<IntermediateInspection>(
-        intermediateInspections,
-        id,
-        version,
-        {
-          approvalStatus: 'submitted',
-          submittedAt: new Date(),
-          submittedBy: userId,
-        },
-        '중간점검',
-        undefined,
-        'INTERMEDIATE_INSPECTION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<IntermediateInspection>(
+      intermediateInspections,
+      id,
+      version,
+      {
+        approvalStatus: 'submitted',
+        submittedAt: new Date(),
+        submittedBy: userId,
+      },
+      '중간점검',
+      undefined,
+      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+    );
 
     this.invalidateCache(id, existing.equipmentId);
 
@@ -418,27 +405,19 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       });
     }
 
-    let updated: IntermediateInspection;
-    try {
-      updated = await this.updateWithVersion<IntermediateInspection>(
-        intermediateInspections,
-        id,
-        version,
-        {
-          approvalStatus: 'reviewed',
-          reviewedAt: new Date(),
-          reviewedBy: userId,
-        },
-        '중간점검',
-        undefined,
-        'INTERMEDIATE_INSPECTION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<IntermediateInspection>(
+      intermediateInspections,
+      id,
+      version,
+      {
+        approvalStatus: 'reviewed',
+        reviewedAt: new Date(),
+        reviewedBy: userId,
+      },
+      '중간점검',
+      undefined,
+      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+    );
 
     this.invalidateCache(id, existing.equipmentId);
 
@@ -458,27 +437,19 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       });
     }
 
-    let updated: IntermediateInspection;
-    try {
-      updated = await this.updateWithVersion<IntermediateInspection>(
-        intermediateInspections,
-        id,
-        version,
-        {
-          approvalStatus: 'approved',
-          approvedAt: new Date(),
-          approvedBy: userId,
-        },
-        '중간점검',
-        undefined,
-        'INTERMEDIATE_INSPECTION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<IntermediateInspection>(
+      intermediateInspections,
+      id,
+      version,
+      {
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        approvedBy: userId,
+      },
+      '중간점검',
+      undefined,
+      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+    );
 
     this.invalidateCache(id, existing.equipmentId);
 
@@ -503,28 +474,20 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       });
     }
 
-    let updated: IntermediateInspection;
-    try {
-      updated = await this.updateWithVersion<IntermediateInspection>(
-        intermediateInspections,
-        id,
-        version,
-        {
-          approvalStatus: 'rejected',
-          rejectedAt: new Date(),
-          rejectedBy: userId,
-          rejectionReason: reason,
-        },
-        '중간점검',
-        undefined,
-        'INTERMEDIATE_INSPECTION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<IntermediateInspection>(
+      intermediateInspections,
+      id,
+      version,
+      {
+        approvalStatus: 'rejected',
+        rejectedAt: new Date(),
+        rejectedBy: userId,
+        rejectionReason: reason,
+      },
+      '중간점검',
+      undefined,
+      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+    );
 
     this.invalidateCache(id, existing.equipmentId);
 

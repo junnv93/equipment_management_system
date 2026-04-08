@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, desc, asc, sql, or } from 'drizzle-orm';
 import {
@@ -33,6 +33,14 @@ export class CablesService extends VersionedBaseService {
 
   private buildCacheKey(type: string, id: string): string {
     return `${this.CACHE_PREFIX}${type}:${id}`;
+  }
+
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * 모든 updateWithVersion 호출 경로가 단일 정책 공유 → catch boilerplate 제거.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   private invalidateCache(id?: string): void {
@@ -213,23 +221,15 @@ export class CablesService extends VersionedBaseService {
     if (updateFields.site !== undefined) updateData.site = updateFields.site;
     if (updateFields.status !== undefined) updateData.status = updateFields.status;
 
-    let updated: Cable;
-    try {
-      updated = await this.updateWithVersion<Cable>(
-        cables,
-        id,
-        version,
-        updateData,
-        '케이블',
-        undefined,
-        'CABLE_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<Cable>(
+      cables,
+      id,
+      version,
+      updateData,
+      '케이블',
+      undefined,
+      'CABLE_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 

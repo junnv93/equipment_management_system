@@ -49,6 +49,14 @@ export class TestSoftwareService extends VersionedBaseService {
   }
 
   /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * update/toggleAvailability 등 모든 updateWithVersion 경로가 단일 정책 공유.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    this.cacheService.delete(this.buildCacheKey('detail', id));
+  }
+
+  /**
    * PNNNN 관리번호 생성
    *
    * SELECT ... FOR UPDATE로 동시 삽입 시 중복 방지.
@@ -320,23 +328,15 @@ export class TestSoftwareService extends VersionedBaseService {
       updateData.requiresValidation = updateFields.requiresValidation;
     if (updateFields.site !== undefined) updateData.site = updateFields.site;
 
-    let updated: TestSoftware;
-    try {
-      updated = await this.updateWithVersion<TestSoftware>(
-        testSoftware,
-        id,
-        version,
-        updateData,
-        '시험용 소프트웨어',
-        undefined,
-        'TEST_SOFTWARE_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<TestSoftware>(
+      testSoftware,
+      id,
+      version,
+      updateData,
+      '시험용 소프트웨어',
+      undefined,
+      'TEST_SOFTWARE_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 
@@ -347,23 +347,15 @@ export class TestSoftwareService extends VersionedBaseService {
     const current = await this.findOne(id);
     const newAvailability = current.availability === 'available' ? 'unavailable' : 'available';
 
-    let updated: TestSoftware;
-    try {
-      updated = await this.updateWithVersion<TestSoftware>(
-        testSoftware,
-        id,
-        version,
-        { availability: newAvailability },
-        '시험용 소프트웨어',
-        undefined,
-        'TEST_SOFTWARE_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<TestSoftware>(
+      testSoftware,
+      id,
+      version,
+      { availability: newAvailability },
+      '시험용 소프트웨어',
+      undefined,
+      'TEST_SOFTWARE_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 

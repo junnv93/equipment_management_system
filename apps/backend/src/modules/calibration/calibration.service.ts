@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-  Logger,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, Inject } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   VersionedBaseService,
@@ -130,6 +123,14 @@ export class CalibrationService extends VersionedBaseService {
     return id
       ? `${CACHE_KEY_PREFIXES.CALIBRATION}${type}:${id}`
       : `${CACHE_KEY_PREFIXES.CALIBRATION}${type}`;
+  }
+
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * update/approve/reject/completeIntermediateCheck 모든 updateWithVersion 경로 단일 정책.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   private invalidateCalibrationCache(id?: string): void {
@@ -412,21 +413,14 @@ export class CalibrationService extends VersionedBaseService {
 
     if (updateCalibrationDto.version !== undefined) {
       // ✅ CAS 보호: 클라이언트가 version을 전송한 경우 (상태 변경 등)
-      try {
-        await this.updateWithVersion(
-          schema.calibrations,
-          id,
-          updateCalibrationDto.version,
-          updateData,
-          'Calibration record'
-        );
-      } catch (error) {
-        // ✅ CAS 캐시 정합성: 409 시 stale 캐시 제거
-        if (error instanceof ConflictException) {
-          this.cacheService.delete(this.buildCacheKey('detail', id));
-        }
-        throw error;
-      }
+      // 409 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+      await this.updateWithVersion(
+        schema.calibrations,
+        id,
+        updateCalibrationDto.version,
+        updateData,
+        'Calibration record'
+      );
     } else {
       // version 없는 내부 호출 (certificatePath 업데이트 등)
       const [updated] = await this.db
@@ -1124,26 +1118,18 @@ export class CalibrationService extends VersionedBaseService {
       });
     }
 
-    // ✅ CAS: DB 기반 optimistic locking
-    try {
-      await this.updateWithVersion(
-        schema.calibrations,
-        id,
-        approveDto.version,
-        {
-          approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
-          approvedBy: approveDto.approverId,
-          approverComment: approveDto.approverComment,
-        },
-        'Calibration record'
-      );
-    } catch (error) {
-      // ✅ CAS 캐시 정합성: 409 시 stale 캐시 제거 (checkout 패턴)
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    // ✅ CAS: DB 기반 optimistic locking — 409 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    await this.updateWithVersion(
+      schema.calibrations,
+      id,
+      approveDto.version,
+      {
+        approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
+        approvedBy: approveDto.approverId,
+        approverComment: approveDto.approverComment,
+      },
+      'Calibration record'
+    );
 
     // 캐시 무효화 (교정 자체)
     this.invalidateCalibrationCache(id);
@@ -1358,27 +1344,19 @@ export class CalibrationService extends VersionedBaseService {
       });
     }
 
-    // ✅ CAS: DB 기반 optimistic locking
-    // C-8: approvedBy를 null 유지 — 반려자는 approvedBy가 아님
-    // 반려 상태는 approvalStatus: 'rejected' + rejectionReason으로 추적
-    try {
-      await this.updateWithVersion(
-        schema.calibrations,
-        id,
-        rejectDto.version,
-        {
-          approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
-          rejectionReason: rejectDto.rejectionReason,
-        },
-        'Calibration record'
-      );
-    } catch (error) {
-      // ✅ CAS 캐시 정합성: 409 시 stale 캐시 제거
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    // ✅ CAS: DB 기반 optimistic locking — 409 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    // C-8: approvedBy를 null 유지 — 반려자는 approvedBy가 아님.
+    // 반려 상태는 approvalStatus: 'rejected' + rejectionReason으로 추적.
+    await this.updateWithVersion(
+      schema.calibrations,
+      id,
+      rejectDto.version,
+      {
+        approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
+        rejectionReason: rejectDto.rejectionReason,
+      },
+      'Calibration record'
+    );
 
     // 캐시 무효화 (교정 자체)
     this.invalidateCalibrationCache(id);
@@ -1486,25 +1464,18 @@ export class CalibrationService extends VersionedBaseService {
       ? `${existingNotes}\n[${now.toISOString()}] 중간점검 완료: ${notes} (담당자: ${completedBy})`
       : `${existingNotes}\n[${now.toISOString()}] 중간점검 완료 (담당자: ${completedBy})`;
 
-    // ✅ CAS: updateWithVersion으로 중복 완료 처리 방지
-    let updated: CalibrationRow;
-    try {
-      updated = await this.updateWithVersion<CalibrationRow>(
-        schema.calibrations,
-        id,
-        version,
-        {
-          intermediateCheckDate: nextIntermediateCheckDate.toISOString().split('T')[0],
-          notes: checkNote.trim(),
-        },
-        'Calibration record'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    // ✅ CAS: updateWithVersion으로 중복 완료 처리 방지.
+    // 409 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated = await this.updateWithVersion<CalibrationRow>(
+      schema.calibrations,
+      id,
+      version,
+      {
+        intermediateCheckDate: nextIntermediateCheckDate.toISOString().split('T')[0],
+        notes: checkNote.trim(),
+      },
+      'Calibration record'
+    );
 
     this.invalidateCalibrationCache(id);
 

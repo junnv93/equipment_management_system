@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { eq, and, asc, desc, sql, isNull, or, lte, gte } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
@@ -66,6 +60,14 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
   private buildCacheKey(type: string, id: string): string {
     return `${this.CACHE_PREFIX}${type}:${id}`;
+  }
+
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * approve/reject/remove 모든 updateWithVersion 경로가 단일 정책 공유.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   /**
@@ -388,26 +390,18 @@ export class CalibrationFactorsService extends VersionedBaseService {
       });
     }
 
-    let updated: CalibrationFactor;
-    try {
-      updated = await this.updateWithVersion<CalibrationFactor>(
-        calibrationFactors,
-        id,
-        approveDto.version,
-        {
-          approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
-          approvedBy: approveDto.approverId,
-          approvedAt: new Date(),
-          approverComment: approveDto.approverComment,
-        },
-        '보정계수'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<CalibrationFactor>(
+      calibrationFactors,
+      id,
+      approveDto.version,
+      {
+        approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
+        approvedBy: approveDto.approverId,
+        approvedAt: new Date(),
+        approverComment: approveDto.approverComment,
+      },
+      '보정계수'
+    );
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
@@ -442,24 +436,16 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
     // calibration 모듈 패턴 통일: 반려 시 approvedBy=null 유지
     // 반려 사유는 approverComment에 저장 (DB에 rejectionReason 컬럼 없음)
-    let updated: CalibrationFactor;
-    try {
-      updated = await this.updateWithVersion<CalibrationFactor>(
-        calibrationFactors,
-        id,
-        rejectDto.version,
-        {
-          approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
-          approverComment: rejectDto.rejectionReason,
-        },
-        '보정계수'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<CalibrationFactor>(
+      calibrationFactors,
+      id,
+      rejectDto.version,
+      {
+        approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
+        approverComment: rejectDto.rejectionReason,
+      },
+      '보정계수'
+    );
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
@@ -483,20 +469,13 @@ export class CalibrationFactorsService extends VersionedBaseService {
   async remove(id: string, version: number): Promise<{ id: string; deleted: boolean }> {
     await this.findOne(id);
 
-    try {
-      await this.updateWithVersion(
-        calibrationFactors,
-        id,
-        version,
-        { deletedAt: new Date() },
-        '보정계수'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    await this.updateWithVersion(
+      calibrationFactors,
+      id,
+      version,
+      { deletedAt: new Date() },
+      '보정계수'
+    );
 
     this.cacheService.delete(this.buildCacheKey('detail', id));
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');

@@ -1,10 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
 import {
@@ -48,6 +42,14 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'pending:');
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
+  }
+
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * 6개 updateWithVersion 경로(update/submit/review/approve/reject/etc) 단일 정책 공유.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   private async getSoftwareName(testSoftwareId: string): Promise<string> {
@@ -292,23 +294,15 @@ export class SoftwareValidationsService extends VersionedBaseService {
       updateData.controlFunctions = updateFields.controlFunctions;
     if (updateFields.performedBy !== undefined) updateData.performedBy = updateFields.performedBy;
 
-    let updated: SoftwareValidation;
-    try {
-      updated = await this.updateWithVersion<SoftwareValidation>(
-        softwareValidations,
-        id,
-        version,
-        updateData,
-        '소프트웨어 유효성 확인',
-        undefined,
-        'SOFTWARE_VALIDATION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<SoftwareValidation>(
+      softwareValidations,
+      id,
+      version,
+      updateData,
+      '소프트웨어 유효성 확인',
+      undefined,
+      'SOFTWARE_VALIDATION_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 
@@ -328,27 +322,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
       });
     }
 
-    let updated: SoftwareValidation;
-    try {
-      updated = await this.updateWithVersion<SoftwareValidation>(
-        softwareValidations,
-        id,
-        version,
-        {
-          status: ValidationStatusValues.SUBMITTED,
-          submittedAt: new Date(),
-          submittedBy: submitterId,
-        },
-        '소프트웨어 유효성 확인',
-        undefined,
-        'SOFTWARE_VALIDATION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<SoftwareValidation>(
+      softwareValidations,
+      id,
+      version,
+      {
+        status: ValidationStatusValues.SUBMITTED,
+        submittedAt: new Date(),
+        submittedBy: submitterId,
+      },
+      '소프트웨어 유효성 확인',
+      undefined,
+      'SOFTWARE_VALIDATION_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 
@@ -379,27 +365,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
       });
     }
 
-    let updated: SoftwareValidation;
-    try {
-      updated = await this.updateWithVersion<SoftwareValidation>(
-        softwareValidations,
-        id,
-        version,
-        {
-          status: ValidationStatusValues.APPROVED,
-          technicalApproverId: approverId,
-          technicalApprovedAt: new Date(),
-        },
-        '소프트웨어 유효성 확인',
-        undefined,
-        'SOFTWARE_VALIDATION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<SoftwareValidation>(
+      softwareValidations,
+      id,
+      version,
+      {
+        status: ValidationStatusValues.APPROVED,
+        technicalApproverId: approverId,
+        technicalApprovedAt: new Date(),
+      },
+      '소프트웨어 유효성 확인',
+      undefined,
+      'SOFTWARE_VALIDATION_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 
@@ -434,27 +412,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
       });
     }
 
-    let updated: SoftwareValidation;
-    try {
-      updated = await this.updateWithVersion<SoftwareValidation>(
-        softwareValidations,
-        id,
-        version,
-        {
-          status: ValidationStatusValues.QUALITY_APPROVED,
-          qualityApproverId: approverId,
-          qualityApprovedAt: new Date(),
-        },
-        '소프트웨어 유효성 확인',
-        undefined,
-        'SOFTWARE_VALIDATION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<SoftwareValidation>(
+      softwareValidations,
+      id,
+      version,
+      {
+        status: ValidationStatusValues.QUALITY_APPROVED,
+        qualityApproverId: approverId,
+        qualityApprovedAt: new Date(),
+      },
+      '소프트웨어 유효성 확인',
+      undefined,
+      'SOFTWARE_VALIDATION_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 
@@ -493,28 +463,20 @@ export class SoftwareValidationsService extends VersionedBaseService {
       });
     }
 
-    let updated: SoftwareValidation;
-    try {
-      updated = await this.updateWithVersion<SoftwareValidation>(
-        softwareValidations,
-        id,
-        version,
-        {
-          status: ValidationStatusValues.REJECTED,
-          rejectedBy: rejectedById,
-          rejectedAt: new Date(),
-          rejectionReason: reason,
-        },
-        '소프트웨어 유효성 확인',
-        undefined,
-        'SOFTWARE_VALIDATION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<SoftwareValidation>(
+      softwareValidations,
+      id,
+      version,
+      {
+        status: ValidationStatusValues.REJECTED,
+        rejectedBy: rejectedById,
+        rejectedAt: new Date(),
+        rejectionReason: reason,
+      },
+      '소프트웨어 유효성 확인',
+      undefined,
+      'SOFTWARE_VALIDATION_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 
@@ -546,28 +508,20 @@ export class SoftwareValidationsService extends VersionedBaseService {
       });
     }
 
-    let updated: SoftwareValidation;
-    try {
-      updated = await this.updateWithVersion<SoftwareValidation>(
-        softwareValidations,
-        id,
-        version,
-        {
-          status: ValidationStatusValues.DRAFT,
-          rejectedBy: null,
-          rejectedAt: null,
-          rejectionReason: null,
-        },
-        '소프트웨어 유효성 확인',
-        undefined,
-        'SOFTWARE_VALIDATION_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    const updated = await this.updateWithVersion<SoftwareValidation>(
+      softwareValidations,
+      id,
+      version,
+      {
+        status: ValidationStatusValues.DRAFT,
+        rejectedBy: null,
+        rejectedAt: null,
+        rejectionReason: null,
+      },
+      '소프트웨어 유효성 확인',
+      undefined,
+      'SOFTWARE_VALIDATION_NOT_FOUND'
+    );
 
     this.invalidateCache(id);
 
