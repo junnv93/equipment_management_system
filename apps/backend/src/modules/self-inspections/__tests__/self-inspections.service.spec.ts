@@ -226,9 +226,16 @@ describe('SelfInspectionsService', () => {
     });
 
     it('should throw ConflictException on version mismatch', async () => {
+      // findById select inspection (현재 v=2) + items
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([{ ...MOCK_INSPECTION, version: 2 }]))
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+      // updateWithVersion: WHERE version=1 매칭 0건 → []
+      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([]));
+      // updateWithVersion fallback: 현재 version 재조회
+      (mockDb.select as jest.Mock).mockReturnValueOnce(
+        createDrizzleChain([{ id: INSPECTION_ID, version: 2 }])
+      );
 
       await expect(
         service.update(INSPECTION_ID, { ...updateDto, version: 1 }, USER_ID)
@@ -292,6 +299,12 @@ describe('SelfInspectionsService', () => {
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+      // updateWithVersion: WHERE version=999 매칭 0건 → []
+      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([]));
+      // fallback select
+      (mockDb.select as jest.Mock).mockReturnValueOnce(
+        createDrizzleChain([{ id: INSPECTION_ID, version: 1 }])
+      );
 
       await expect(service.confirm(INSPECTION_ID, USER_ID, 999)).rejects.toThrow(ConflictException);
     });

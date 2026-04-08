@@ -1,12 +1,6 @@
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, desc, and, sql, inArray } from 'drizzle-orm';
+import { eq, desc, sql, inArray } from 'drizzle-orm';
 import {
   equipmentSelfInspections,
   selfInspectionItems,
@@ -19,6 +13,7 @@ import {
   SELF_INSPECTION_LEGACY_COLUMN_MAP,
   type SelfInspectionItemJudgment,
 } from '@equipment-management/schemas';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import type { CreateSelfInspectionInput } from './dto/create-self-inspection.dto';
 import type { UpdateSelfInspectionInput } from './dto/update-self-inspection.dto';
 
@@ -27,11 +22,13 @@ export interface SelfInspectionWithItems extends EquipmentSelfInspection {
 }
 
 @Injectable()
-export class SelfInspectionsService {
+export class SelfInspectionsService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
-  ) {}
+    protected readonly db: AppDatabase
+  ) {
+    super();
+  }
 
   async create(
     equipmentId: string,
@@ -182,20 +179,8 @@ export class SelfInspectionsService {
       });
     }
 
-    if (existing.version !== dto.version) {
-      throw new ConflictException({
-        code: 'VERSION_CONFLICT',
-        message: 'Self-inspection was modified by another user.',
-        currentVersion: existing.version,
-        expectedVersion: dto.version,
-      });
-    }
-
     return await this.db.transaction(async (tx) => {
-      const updateData: Partial<NewEquipmentSelfInspection> = {
-        version: existing.version + 1,
-        updatedAt: new Date(),
-      };
+      const updateData: Partial<NewEquipmentSelfInspection> = {};
 
       if (dto.inspectionDate) updateData.inspectionDate = new Date(dto.inspectionDate);
       if (dto.overallResult) updateData.overallResult = dto.overallResult;
@@ -226,23 +211,15 @@ export class SelfInspectionsService {
         if (dto.calibrationStatus) updateData.calibrationStatus = dto.calibrationStatus;
       }
 
-      const [updated] = await tx
-        .update(equipmentSelfInspections)
-        .set(updateData)
-        .where(
-          and(
-            eq(equipmentSelfInspections.id, id),
-            eq(equipmentSelfInspections.version, existing.version)
-          )
-        )
-        .returning();
-
-      if (!updated) {
-        throw new ConflictException({
-          code: 'VERSION_CONFLICT',
-          message: 'Self-inspection was modified by another user.',
-        });
-      }
+      const updated = await this.updateWithVersion<EquipmentSelfInspection>(
+        equipmentSelfInspections,
+        id,
+        dto.version,
+        updateData,
+        'Self-inspection',
+        tx,
+        'SELF_INSPECTION_NOT_FOUND'
+      );
 
       // items가 있으면 전체 교체 (cascade delete 후 재삽입)
       let updatedItems: SelfInspectionItem[];
@@ -292,46 +269,29 @@ export class SelfInspectionsService {
       });
     }
 
-    if (existing.version !== version) {
-      throw new ConflictException({
-        code: 'VERSION_CONFLICT',
-        message: 'Self-inspection was modified by another user.',
-        currentVersion: existing.version,
-        expectedVersion: version,
-      });
-    }
+    return await this.db.transaction(async (tx) => {
+      const updated = await this.updateWithVersion<EquipmentSelfInspection>(
+        equipmentSelfInspections,
+        id,
+        version,
+        {
+          status: 'confirmed',
+          confirmedBy,
+          confirmedAt: new Date(),
+        },
+        'Self-inspection',
+        tx,
+        'SELF_INSPECTION_NOT_FOUND'
+      );
 
-    const [updated] = await this.db
-      .update(equipmentSelfInspections)
-      .set({
-        status: 'confirmed',
-        confirmedBy,
-        confirmedAt: new Date(),
-        version: existing.version + 1,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(equipmentSelfInspections.id, id),
-          eq(equipmentSelfInspections.version, existing.version)
-        )
-      )
-      .returning();
+      const items = await tx
+        .select()
+        .from(selfInspectionItems)
+        .where(eq(selfInspectionItems.inspectionId, id))
+        .orderBy(selfInspectionItems.itemNumber);
 
-    if (!updated) {
-      throw new ConflictException({
-        code: 'VERSION_CONFLICT',
-        message: 'Self-inspection was modified by another user.',
-      });
-    }
-
-    const items = await this.db
-      .select()
-      .from(selfInspectionItems)
-      .where(eq(selfInspectionItems.inspectionId, id))
-      .orderBy(selfInspectionItems.itemNumber);
-
-    return { ...updated, items };
+      return { ...updated, items };
+    });
   }
 
   /**
