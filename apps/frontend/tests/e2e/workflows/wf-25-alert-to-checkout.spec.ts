@@ -62,6 +62,15 @@ test.describe('WF-25: alerts → 장비 상세 → 반출 신청 cross-flow', ()
     // StickyHeader 가 렌더링될 때까지 대기 — h1 (장비명)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10000 });
 
+    // 3a) D-day 배지 soft assertion: alerts 의 교정 임박 신호 → 장비 상세의 시각 신호
+    //     일관성을 cross-flow 로 검증. 배지가 없는 일반 상태(D > 30, not_applicable 등)는
+    //     매칭 0 → 통과 (soft 성격 유지). aria-label "교정 상태: ..." 패턴으로 i18n 의존
+    //     최소화.
+    const calibrationBadge = page.getByLabel(/^교정 상태:/);
+    if ((await calibrationBadge.count()) > 0) {
+      await expect(calibrationBadge.first()).toBeVisible();
+    }
+
     // 4) "반출 신청" 버튼 클릭
     //    EquipmentStickyHeader.tsx:238 — aria-label = t('header.checkoutAriaLabel') = "반출 신청하기"
     //    canCheckout(=Permission.CREATE_CHECKOUT + 상태 허용)이 true 일 때만 표시.

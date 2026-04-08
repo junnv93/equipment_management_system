@@ -87,6 +87,8 @@ async function globalSetup(config: FullConfig) {
   await checkHealth(`${baseURL}/login`, 'Frontend', 10, 3000, true);
 
   // 4. 테스트 시드 데이터 로딩
+  // 시드 실패와 trigger-overdue 실패는 원인/복구 절차가 다르므로 try/catch 를 분리해
+  // 정확한 에러 prefix 와 수동 재현 명령을 출력한다 (양쪽 모두 fail-fast).
   console.log('  🌱 테스트 시드 데이터 로딩...');
   try {
     const { execSync } = await import('child_process');
@@ -102,11 +104,21 @@ async function globalSetup(config: FullConfig) {
     // Heavy write 직후 첫 fetch가 keep-alive stale socket으로 "other side closed"를
     // 던지는 경우가 관찰되었음 (tech-debt#global-setup-flake).
     await new Promise((r) => setTimeout(r, 300));
+  } catch (err) {
+    // Fail-fast: 시드 실패는 false negative 의 주된 원인이었으므로, 경고가 아닌
+    // 명시적 실패로 처리한다. 검증 실패(seed-test-new.ts exit 1)도 여기로 떨어진다.
+    console.error('  ❌ 시드 데이터 로딩/검증 실패 — 글로벌 설정 중단');
+    console.error(
+      '     수동 실행: pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts'
+    );
+    throw err instanceof Error ? err : new Error(`Seed loading failed: ${String(err)}`);
+  }
 
-    // 5. 교정 기한 초과 장비 자동 부적합 전환
-    //    시드 데이터에 상대 날짜(daysAgo)로 교정일이 설정되어 있어,
-    //    시드 적용 후 스케줄러를 수동 트리거해야 정합성 보장
-    console.log('  🔄 교정 기한 초과 장비 점검 트리거...');
+  // 5. 교정 기한 초과 장비 자동 부적합 전환
+  //    시드 데이터에 상대 날짜(daysAgo)로 교정일이 설정되어 있어,
+  //    시드 적용 후 스케줄러를 수동 트리거해야 정합성 보장
+  console.log('  🔄 교정 기한 초과 장비 점검 트리거...');
+  try {
     const token = await fetchBackendToken('lab_manager');
     const overdueRes = await fetchWithRetry(
       `${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
@@ -133,13 +145,10 @@ async function globalSetup(config: FullConfig) {
       `  ✅ 교정 기한 초과 점검 완료 (처리: ${result.processed ?? 0}건, 부적합 생성: ${result.created ?? 0}건)`
     );
   } catch (err) {
-    // Fail-fast: 시드 실패는 false negative 의 주된 원인이었으므로, 경고가 아닌
-    // 명시적 실패로 처리한다. 검증 실패(seed-test-new.ts exit 1)도 여기로 떨어진다.
-    console.error('  ❌ 시드 데이터 로딩/검증 실패 — 글로벌 설정 중단');
-    console.error(
-      '     수동 실행: pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts'
-    );
-    throw err instanceof Error ? err : new Error(`Seed loading failed: ${String(err)}`);
+    console.error('  ❌ 교정 기한 초과 트리거 실패 — 글로벌 설정 중단');
+    console.error('     수동 실행: curl -X POST -H "Authorization: Bearer <lab_manager token>" \\');
+    console.error(`        ${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`);
+    throw err instanceof Error ? err : new Error(`Trigger overdue failed: ${String(err)}`);
   }
 
   console.log('🔧 글로벌 설정 완료\n');
