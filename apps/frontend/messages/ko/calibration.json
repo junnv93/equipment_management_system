@@ -641,7 +641,11 @@
       "review": "검토 승인",
       "approve": "최종 승인",
       "reject": "반려",
-      "view": "기록 보기"
+      "view": "기록 보기",
+      "submitAriaLabel": "{date} 중간점검 제출",
+      "reviewAriaLabel": "{date} 중간점검 검토 승인",
+      "approveAriaLabel": "{date} 중간점검 최종 승인",
+      "rejectAriaLabel": "{date} 중간점검 반려"
     },
     "status": {
       "draft": "작성 중",

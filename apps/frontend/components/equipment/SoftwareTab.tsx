@@ -306,6 +306,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                           <Button
                             variant="ghost"
                             size="sm"
+                            aria-label={t('softwareTab.unlinkAriaLabel', { name: sw.name })}
                             onClick={() => handleUnlink(sw.id)}
                             disabled={unlinkMutation.isPending}
                           >

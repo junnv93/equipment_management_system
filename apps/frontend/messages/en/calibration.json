@@ -641,7 +641,11 @@
       "review": "Review & Approve",
       "approve": "Final Approve",
       "reject": "Reject",
-      "view": "View Record"
+      "view": "View Record",
+      "submitAriaLabel": "Submit intermediate inspection from {date}",
+      "reviewAriaLabel": "Review intermediate inspection from {date}",
+      "approveAriaLabel": "Final approve intermediate inspection from {date}",
+      "rejectAriaLabel": "Reject intermediate inspection from {date}"
     },
     "status": {
       "draft": "Draft",

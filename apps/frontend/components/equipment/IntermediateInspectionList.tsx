@@ -157,6 +157,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
 
   const renderActions = (inspection: IntermediateInspection) => {
     const { id, version, approvalStatus } = inspection;
+    const inspectionDateLabel = format(new Date(inspection.inspectionDate), 'yyyy-MM-dd');
 
     if (rejectingId === id) {
       return (
@@ -196,6 +197,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
             size="sm"
             variant="outline"
             disabled={isPending}
+            aria-label={t('intermediateInspection.actions.submitAriaLabel', {
+              date: inspectionDateLabel,
+            })}
             onClick={() => submitMutation.mutate({ id, version })}
           >
             <Send className="h-3 w-3 mr-1" />
@@ -208,6 +212,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               size="sm"
               variant="outline"
               disabled={isPending}
+              aria-label={t('intermediateInspection.actions.reviewAriaLabel', {
+                date: inspectionDateLabel,
+              })}
               onClick={() => reviewMutation.mutate({ id, version })}
             >
               <CheckCircle className="h-3 w-3 mr-1" />
@@ -217,6 +224,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               size="sm"
               variant="ghost"
               disabled={isPending}
+              aria-label={t('intermediateInspection.actions.rejectAriaLabel', {
+                date: inspectionDateLabel,
+              })}
               onClick={() => setRejectingId(id)}
             >
               <XCircle className="h-3 w-3 mr-1" />
@@ -230,6 +240,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               size="sm"
               variant="outline"
               disabled={isPending}
+              aria-label={t('intermediateInspection.actions.approveAriaLabel', {
+                date: inspectionDateLabel,
+              })}
               onClick={() => approveMutation.mutate({ id, version })}
             >
               <CheckCircle className="h-3 w-3 mr-1" />
@@ -239,6 +252,9 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               size="sm"
               variant="ghost"
               disabled={isPending}
+              aria-label={t('intermediateInspection.actions.rejectAriaLabel', {
+                date: inspectionDateLabel,
+              })}
               onClick={() => setRejectingId(id)}
             >
               <XCircle className="h-3 w-3 mr-1" />

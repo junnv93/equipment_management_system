@@ -387,7 +387,9 @@ export function CalibrationHistorySection({
                             size="icon"
                             onClick={() => handleDeleteClick(item.id)}
                             disabled={disabled}
-                            aria-label={t('deleteAriaLabel')}
+                            aria-label={t('deleteAriaLabel', {
+                              date: fmtDate(item.calibrationDate),
+                            })}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                           </Button>
@@ -398,7 +400,9 @@ export function CalibrationHistorySection({
                             variant="ghost"
                             size="icon"
                             asChild
-                            aria-label={t('detailAriaLabel')}
+                            aria-label={t('detailAriaLabel', {
+                              date: fmtDate(item.calibrationDate),
+                            })}
                           >
                             <Link href={`/calibrations/${item.id}`}>
                               <ExternalLink className="h-4 w-4" aria-hidden="true" />
