@@ -24,7 +24,7 @@ export interface EnforcedReportFilter {
  * | scope.type | 동작 |
  * |---|---|
  * | `none`     | 항상 거부 (접근 권한 자체가 없음) |
- * | `team`     | `teamId = scope.teamId` 강제. 다른 teamId 요청 → 403. `params.site`는 teamId 필터가 이미 암묵적으로 제한하므로 pass-through |
+ * | `team`     | `teamId = scope.teamId` 강제. 다른 teamId 요청 → 403. `params.site`는 **무시**하고 `undefined` 반환 — team 경계는 teamId JOIN이 결정하고, site-only 리소스(예: software validation)에 대한 우회 경로를 차단한다 |
  * | `site`     | `site = scope.site` 강제. 다른 site 요청 → 403. `params.teamId`는 같은 사이트 내 팀 필터로 허용 |
  * | `all`      | 모든 `params` 허용 (admin / 전체 권한) |
  *
@@ -62,8 +62,9 @@ export function enforceReportScope(
       }
       return {
         teamId: scope.teamId,
-        // params.site는 자연스럽게 teamId JOIN으로 제한되므로 pass-through
-        site: params.site || undefined,
+        // team 경계는 teamId JOIN이 결정. params.site는 무시한다 — 그렇지 않으면
+        // site-only 리소스(software validation 등)가 params.site 우회에 노출된다.
+        site: undefined,
       };
     }
 

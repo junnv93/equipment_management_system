@@ -31,9 +31,9 @@ describe('enforceReportScope', () => {
       expect(() => enforceReportScope({ teamId: 'team-B' }, TEAM)).toThrow(ForbiddenException);
     });
 
-    it('params.site는 pass-through (teamId 필터가 자연스럽게 제한)', () => {
-      const result = enforceReportScope({ site: 'any' }, TEAM);
-      expect(result).toEqual({ teamId: 'team-A', site: 'any' });
+    it('params.site는 무시되고 undefined 반환 (site-only 리소스 우회 차단)', () => {
+      const result = enforceReportScope({ site: 'incheon' }, TEAM);
+      expect(result).toEqual({ teamId: 'team-A', site: undefined });
     });
 
     it('스코프 객체에 teamId 누락(해석기 버그) → ForbiddenException (fail-closed)', () => {

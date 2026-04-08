@@ -7,7 +7,7 @@
 
 ## 미완료 항목
 
-- [ ] Form export 5 보조 exporter (intermediate/self/checkout/software-validation/equipment-import)의 team-scope 데이터 경계 미강제 — `enforceReportScope`가 진입에서 cross-border는 차단하지만 team-scoped 사용자가 `?id=X`로 단일 item 조회 시 post-query는 `filter.site`만 체크 → 다른 팀 item도 반환 가능. 각 exporter SQL에 `equipment.teamId` 노출 후 `filter.teamId` 체크 추가 필요 — `apps/backend/src/modules/reports/form-template-export.service.ts:370-380, 530-540, 750-770, 1050-1070, 1465-1480` — 2026-04-08
+- [x] Form export 5 보조 exporter team-scope 경계 미강제 — 해결: 2026-04-08 — intermediate/self/checkout/equipment-import 4곳에 `filter.teamId` WHERE/post-check 추가, software validation은 site-only 리소스라 team scope에서 SCOPE_RESOURCE_MISMATCH 403 reject. `enforceReportScope` team branch도 `params.site` pass-through 제거해 site-only 리소스 우회 차단
 - [ ] 체크아웃/교정 detail mutation 버튼 `hasRole()` → `can(Permission.X)` 마이그레이션 (SSOT 준수) — `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx:88`, `components/equipment/CalibrationHistoryTab.tsx:87` — 2026-04-08
 - [ ] `@AuditLog({action:'export'})` interceptor가 ForbiddenException 경로에서도 감사 로그 남기도록 확인 — 성공 경로만 로깅 시 cross-site 공격 probing이 감사에 안 남음 — `apps/backend/src/modules/reports/reports.controller.ts:380-410`, `common/interceptors/audit-log.interceptor.ts` — 2026-04-08
 - [ ] `SiteScopeInterceptor`와 `enforceReportScope` 통합 검토 — 두 파일이 유사한 "cross-site 차단" 정책을 각자 구현. 하나의 정책 엔진으로 수렴 가능 — `common/interceptors/site-scope.interceptor.ts`, `modules/reports/utils/report-scope-enforcement.ts` — 2026-04-08

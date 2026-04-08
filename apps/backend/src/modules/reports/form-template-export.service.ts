@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   NotImplementedException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import ExcelJS from 'exceljs';
@@ -346,6 +347,7 @@ export class FormTemplateExportService {
         managementNumber: equipment.managementNumber,
         equipmentLocation: equipment.location,
         equipmentSite: equipment.site,
+        equipmentTeamId: equipment.teamId,
         // 점검자
         inspectorId: intermediateInspections.inspectorId,
         approvedById: intermediateInspections.approvedBy,
@@ -362,11 +364,17 @@ export class FormTemplateExportService {
       });
     }
 
-    // 사이트 필터링
+    // 스코프 경계 강제 (site 또는 team) — 경계 밖은 존재 은닉(404)
     if (filter.site && inspection.equipmentSite !== filter.site) {
       throw new NotFoundException({
         code: 'INSPECTION_NOT_FOUND',
         message: 'Inspection not accessible from your site.',
+      });
+    }
+    if (filter.teamId && inspection.equipmentTeamId !== filter.teamId) {
+      throw new NotFoundException({
+        code: 'INSPECTION_NOT_FOUND',
+        message: 'Inspection not accessible from your team.',
       });
     }
 
@@ -525,9 +533,13 @@ export class FormTemplateExportService {
       })
       .from(equipment)
       .where(
-        filter.site
-          ? and(eq(equipment.id, equipmentId), eq(equipment.site, filter.site))
-          : eq(equipment.id, equipmentId)
+        (() => {
+          // 스코프 경계를 WHERE 조건에 직접 적용 — 경계 밖은 단순히 "없는 것"으로 은닉
+          const conditions: SQL<unknown>[] = [eq(equipment.id, equipmentId)];
+          if (filter.site) conditions.push(eq(equipment.site, filter.site));
+          if (filter.teamId) conditions.push(eq(equipment.teamId, filter.teamId));
+          return and(...conditions);
+        })()
       )
       .limit(1);
 
@@ -742,17 +754,24 @@ export class FormTemplateExportService {
         equipmentModel: equipment.modelName,
         equipmentManagementNumber: equipment.managementNumber,
         equipmentSite: equipment.site,
+        equipmentTeamId: equipment.teamId,
       })
       .from(checkoutItems)
       .innerJoin(equipment, eq(checkoutItems.equipmentId, equipment.id))
       .where(eq(checkoutItems.checkoutId, checkoutId))
       .orderBy(asc(checkoutItems.sequenceNumber));
 
-    // 사이트 우회 방지 — 어느 장비도 scope 사이트 외이면 차단
+    // 스코프 경계 강제 — 어느 항목 하나라도 경계 밖이면 전체 차단
     if (filter.site && items.some((it) => it.equipmentSite !== filter.site)) {
       throw new NotFoundException({
         code: 'CHECKOUT_NOT_FOUND',
         message: 'Checkout not found or not accessible from your site.',
+      });
+    }
+    if (filter.teamId && items.some((it) => it.equipmentTeamId !== filter.teamId)) {
+      throw new NotFoundException({
+        code: 'CHECKOUT_NOT_FOUND',
+        message: 'Checkout not found or not accessible from your team.',
       });
     }
 
@@ -1042,7 +1061,15 @@ export class FormTemplateExportService {
       });
     }
 
-    // 사이트 스코프 필터
+    // Software validation은 site 단위 리소스(testSoftware에 teamId 없음).
+    // Team 스코프로는 경계를 결정할 방법이 없으므로 명시적 403.
+    if (filter.teamId) {
+      throw new ForbiddenException({
+        code: 'SCOPE_RESOURCE_MISMATCH',
+        message:
+          '팀 스코프 사용자는 소프트웨어 유효성 확인 리포트를 조회할 수 없습니다 (site 단위 리소스).',
+      });
+    }
     if (filter.site && record.softwareSite !== filter.site) {
       throw new NotFoundException({
         code: 'VALIDATION_NOT_FOUND',
@@ -1457,11 +1484,17 @@ export class FormTemplateExportService {
       });
     }
 
-    // 사이트 우회 방지
+    // 스코프 경계 강제
     if (filter.site && imp.site !== filter.site) {
       throw new NotFoundException({
         code: 'EQUIPMENT_IMPORT_NOT_FOUND',
         message: 'Equipment import not found or not accessible from your site.',
+      });
+    }
+    if (filter.teamId && imp.teamId !== filter.teamId) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        message: 'Equipment import not found or not accessible from your team.',
       });
     }
 

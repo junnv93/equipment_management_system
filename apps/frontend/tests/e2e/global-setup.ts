@@ -13,7 +13,7 @@ import path from 'path';
 import fs from 'fs';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { BASE_URLS } from './shared/constants/shared-test-data';
-import { fetchBackendToken } from './shared/helpers/api-helpers';
+import { fetchBackendToken, fetchWithRetry } from './shared/helpers/api-helpers';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 
@@ -98,18 +98,27 @@ async function globalSetup(config: FullConfig) {
     });
     console.log('  ✅ 시드 데이터 로딩 완료');
 
+    // Seed 완료 후 backend connection pool이 안정화되기까지 짧은 settle.
+    // Heavy write 직후 첫 fetch가 keep-alive stale socket으로 "other side closed"를
+    // 던지는 경우가 관찰되었음 (tech-debt#global-setup-flake).
+    await new Promise((r) => setTimeout(r, 300));
+
     // 5. 교정 기한 초과 장비 자동 부적합 전환
     //    시드 데이터에 상대 날짜(daysAgo)로 교정일이 설정되어 있어,
     //    시드 적용 후 스케줄러를 수동 트리거해야 정합성 보장
     console.log('  🔄 교정 기한 초과 장비 점검 트리거...');
     const token = await fetchBackendToken('lab_manager');
-    const overdueRes = await fetch(
+    const overdueRes = await fetchWithRetry(
       `${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
-        // fresh seed 직후 scheduler가 N+1 쿼리를 돌려 기존 10s 로는 부족했음
-        signal: AbortSignal.timeout(30000),
+      },
+      {
+        // fresh seed 직후 scheduler N+1, keep-alive stale 등 복구 가능한 실패 대응
+        retries: 3,
+        backoffMs: 500,
+        timeoutMs: 30000,
       }
     );
     if (!overdueRes.ok) {

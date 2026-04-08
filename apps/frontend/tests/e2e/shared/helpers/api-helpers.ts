@@ -14,6 +14,62 @@ import { BASE_URLS } from '../constants/shared-test-data';
 const BACKEND_URL = BASE_URLS.BACKEND;
 
 // ============================================================================
+// Resilient fetch (global-setup, CI 환경의 transient 실패 대응)
+// ============================================================================
+
+/**
+ * 재시도 가능한 fetch wrapper — keep-alive stale socket, transient 5xx, 타임아웃 복구.
+ *
+ * 주요 실패 시나리오:
+ * - seed 직후 backend connection pool이 settle되지 않아 undici keep-alive socket이
+ *   `SocketError: other side closed`로 실패
+ * - 백엔드 rolling restart 중의 순간적 502/503
+ * - DNS/네트워크 flake
+ *
+ * @param url fetch URL
+ * @param init fetch options
+ * @param opts.retries 최대 시도 횟수 (기본 3)
+ * @param opts.backoffMs 초기 백오프 ms (기본 500, 지수 증가)
+ * @param opts.timeoutMs 요청당 타임아웃 (기본 30000)
+ * @param opts.retryOnStatus 재시도할 HTTP status (기본 [502, 503, 504])
+ */
+export async function fetchWithRetry(
+  url: string,
+  init: RequestInit = {},
+  opts: {
+    retries?: number;
+    backoffMs?: number;
+    timeoutMs?: number;
+    retryOnStatus?: number[];
+  } = {}
+): Promise<Response> {
+  const retries = opts.retries ?? 3;
+  const backoffMs = opts.backoffMs ?? 500;
+  const timeoutMs = opts.timeoutMs ?? 30000;
+  const retryOnStatus = opts.retryOnStatus ?? [502, 503, 504];
+
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: init.signal ?? AbortSignal.timeout(timeoutMs),
+      });
+      if (response.ok || !retryOnStatus.includes(response.status)) {
+        return response;
+      }
+      lastErr = new Error(`HTTP ${response.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+    if (attempt < retries - 1) {
+      await new Promise((r) => setTimeout(r, backoffMs * 2 ** attempt));
+    }
+  }
+  throw new Error(`fetchWithRetry exhausted ${retries} attempts for ${url}: ${String(lastErr)}`);
+}
+
+// ============================================================================
 // Test Auth (SSOT: test-login 엔드포인트 경로 + 토큰 추출)
 // ============================================================================
 
@@ -48,9 +104,24 @@ export async function fetchBackendToken(role: string): Promise<string> {
     return cached.token;
   }
 
-  const response = await fetch(`${BACKEND_URL}${TEST_LOGIN_PATH}?role=${role}`, {
-    signal: AbortSignal.timeout(5000),
-  });
+  // 시드 직후 undici keep-alive 소켓이 닫혀 첫 fetch가 SocketError("other side closed")로
+  // 실패하는 케이스 회피 — 짧은 backoff로 최대 3회 재시도.
+  let response: Response | null = null;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      response = await fetch(`${BACKEND_URL}${TEST_LOGIN_PATH}?role=${role}`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      break;
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+  }
+  if (!response) {
+    throw new Error(`test-login fetch failed for role ${role}: ${String(lastErr)}`);
+  }
   if (!response.ok) {
     throw new Error(`test-login failed for role ${role}: ${response.status}`);
   }

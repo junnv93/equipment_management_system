@@ -1,8 +1,146 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-08 (33차 — WF-33 다탭 SSE E2E 완료 + global-setup overdue 트리거 fail-fast 복구 + review-architecture 후속 3건 등재)**
+> **마지막 정리일: 2026-04-08 (34차 — WF-20 자체점검 UI 동선 + production 버그 수정 + 인프라 부채 5건 등재)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+---
+
+## 34차 신규 — WF-20 작업 중 발견된 인프라/디자인 부채 (5건)
+
+> **발견 배경 (2026-04-08, 34차)**: WF-20 자체점검 update/confirm UI 구현 + UI 동선 spec 작성 중
+> production 버그 (`getSelfInspections` 반환 shape 불일치)를 발견·수정하면서, 5개의 임시방편으로
+> 우회한 인프라/디자인 약점이 동시에 드러났다. 모든 워크플로우에 영향을 주므로 분리 트래킹.
+
+### 🟡 MEDIUM — 장비 상세 sticky header가 행 액션 클릭을 가로챔 (z-index/pointer-events)
+
+```
+배경: WF-20 UI spec 작성 중 발견. 장비 상세 페이지에서 점검 행의 "수정"/"확인"/"삭제" 버튼을
+Playwright `click()` 으로 누르면 sticky header(`<header role="banner">`) + 통계 카드(`5건/0건`)
++ Card-header 가 pointer events 를 가로채 60s 안에 액션이 도달하지 못한다.
+
+회피책 (현재): wf-20-self-inspection-ui.spec.ts 의 `safeClick(force: true)` — actionability
+검사를 우회. 사용자가 마우스로 누를 때는 z-index 레이어링 문제 그대로 남음.
+
+근본 해결:
+1. EquipmentPageHeader sticky 컨테이너 z-index 검토 — 헤더만 sticky 이고 통계 카드는
+   non-sticky 여야 함 (현재 통계 카드도 viewport 상단에 떠 있는 듯).
+2. SelfInspectionTab/IntermediateInspectionList 행 액션 영역에 `position: relative; z-index: 1`
+   부여해 sticky 위로 올림.
+3. CSS 변수 `--sticky-header-height` 가 이미 정의되어 있음 (메모리 참조) — `padding-top` 보정
+   확인.
+
+영향 범위: WF-19/20/25 등 장비 상세 탭 전반에 영향. 키보드 사용자/실사용자의 클릭이
+sticky 영역 아래로 가려지는 시각적 결함도 동반.
+
+검증:
+- safeClick `force: false` 로 wf-20-self-inspection-ui spec 통과
+- review-design 카드 z-index/spacing 점수 확인
+- a11y: tab focus 가 sticky 가려진 버튼으로 이동 가능한지
+```
+
+### 🟡 MEDIUM — 페이지 내 동일 accessible name "수정" 다중 발생 (a11y/SSOT)
+
+```
+배경: WF-20 UI spec 작성 중 발견. `getByRole('button', { name: '수정' })` 가 한 페이지에 4+
+요소를 매칭한다 — 자체점검 카드 행 액션, 장비 헤더 "장비 수정", 다른 탭의 수정 액션 등.
+i18n key 로 grep 시 "수정" 라벨 사용처가 5+ (ko/equipment.json line 284, 337, 582, 1042, 1101).
+
+회피책 (현재): wf-20-self-inspection-ui.spec.ts 가 `selfInspectionCard()` 헬퍼로
+parent locator 를 좁힌 뒤 `getByRole('button', { name: '수정' })` 사용. 테스트는 통과하나
+스크린리더 사용자에게는 같은 이름의 버튼이 페이지 곳곳에 흩어져 있어 컨텍스트 불명확.
+
+근본 해결:
+1. 행 액션 버튼에 `aria-label` 명시 — "자체점검 2026-04-08 수정", "케이블 SUW-C0001 수정" 등
+   행 식별자 포함.
+2. 또는 SSOT i18n 키 분리 — `selfInspection.actions.editLabel: "자체점검 수정"` 처럼
+   문맥별 키 도입.
+3. /verify-i18n 에 동일 i18n 값 다중 사용 패턴 감지 룰 추가 검토.
+
+영향 범위: 자체점검/중간점검/케이블/장비/SW/교정계획 등 거의 모든 행 액션 카드.
+```
+
+### 🟡 MEDIUM — useToast 가 시각 div + aria-live status 두 곳에 동일 텍스트 발화 (strict mode 충돌)
+
+```
+배경: WF-20 UI spec 작성 중 발견. `await expect(page.getByText('자체점검 기록이 생성되었습니다.'))`
+가 strict mode violation 으로 실패 — 매칭되는 요소 2개:
+  1. <div class="text-sm opacity-90">자체점검 기록이 생성되었습니다.</div>  (시각 토스트)
+  2. <span role="status" aria-live="assertive">Notification 자체점검 기록이 생성되었습니다.</span>
+
+회피책 (현재): wf-20-self-inspection-ui.spec.ts 가 `.first()` 추가로 통과. 그러나 이는
+`useToast` 가 SSOT 를 위반하고 한 메시지를 두 번 DOM 에 박는다는 뜻 — 스크린리더가
+"Notification 자체점검..." 을 읽고, 시각 토스트도 따로 표시.
+
+근본 해결:
+1. shadcn/Toaster 컴포넌트 검토 — `<ol role="region" aria-label="Notifications">` 단일
+   래퍼만 두고 자식 토스트가 자체적으로 `aria-live` 를 갖도록 구조 정리.
+2. "Notification " 접두사가 어디서 붙는지 (`Toaster` 의 visually-hidden status?) 확인.
+3. /verify-i18n 또는 /verify-frontend-state 에 토스트 중복 발화 가드 추가.
+
+영향 범위: 모든 mutation 토스트가 동일 패턴으로 strict mode 충돌을 일으킬 수 있음.
+WF-19/20/21/25 등 다수 spec 이 이미 `.first()` 우회 사용 가능성.
+```
+
+### ~~🟡 MEDIUM — 시드 직후 undici keep-alive 소켓 끊김으로 첫 fetch 실패~~ ✅ 완료 (33차, 2026-04-08)
+
+> `fetchWithRetry` 헬퍼 도입 (api-helpers.ts) + global-setup overdue trigger을 재시도 wrapper로 감싸기 + seed 후 300ms settle. 회귀 테스트 한 번에 16/16 통과.
+
+```
+배경: WF-20 UI spec 디버깅 중 발견. global-setup 의 `pnpm seed-test-new.ts` (execSync) 가
+완료된 직후 `fetchBackendToken('lab_manager')` 가 `SocketError: other side closed` 로 100%
+실패. curl 로 같은 endpoint 호출 시 즉시 200 — backend 자체는 정상.
+
+원인: undici fetch 의 keep-alive 풀이 시드 스크립트의 backend HTTP 연결을 재사용하려다,
+backend가 시드 PG truncate 시점에 inflight 응답을 close 하면서 socket 이 stale 상태가 됨.
+
+회피책 (현재): apps/frontend/tests/e2e/shared/helpers/api-helpers.ts 의 fetchBackendToken
+에 3회 retry + exponential backoff 추가. spec 자체는 정상 통과하지만 매 시드마다 1~2회
+재시도가 발생.
+
+근본 해결 (택1):
+1. seed-test-new.ts 종료 직전 backend `/api/health` 또는 cache-clear 호출로 connection
+   풀 정리 + warmup ping. seed 종료 시점에 undici 가 새 connection 으로 강제 전환.
+2. global-setup 에서 seed 후 `await new Promise(r => setTimeout(r, 1000))` + warmup GET 1회
+   (gracefully) — 단순하지만 deterministic.
+3. backend 에 `Connection: close` 를 시드 트랜잭션 직후 일시 적용 (가장 침투적).
+
+영향 범위: 모든 e2e workflow 의 안정성. 시드 자체는 30/30 검증 통과지만 직후 fetch 가
+flake 로 first-attempt 실패.
+
+검증:
+- pnpm e2e 10회 연속 실행, fetchBackendToken retry 카운트 0 유지
+- api-helpers 의 retry 루프 제거 후에도 통과
+```
+
+### 🟡 MEDIUM — audit_logs 시드 카운트 drift (seed verification 30/30 → 29/30)
+
+```
+배경: WF-20 UI spec 다중 실행 중 발견. seed 검증의 hardcoded expectation `Audit Logs count
+expected 20` 가 테스트 실행마다 늘어남 — 24/20, 28/20 등. 매번 수동 reseed 필요.
+
+원인: seed-test-new.ts 가 audit_logs 테이블을 truncate 대상에 포함하지 않거나, 시드 데이터
+로딩 자체가 audit log 를 추가하면서 baseline 이 흔들림. 테스트 실행 시 추가 audit log 생성
+(create/update/confirm 액션) 가 누적.
+
+회피책 (현재): 매 spec 실행 전 `cd apps/backend && npx ts-node src/database/seed-test-new.ts`
+수동 호출. global-setup 의 seed 도 같은 스크립트인데 왜 manual 만 통과하는지는 불분명.
+
+근본 해결:
+1. seed-test-new.ts 의 truncate 시퀀스에 `audit_logs` 명시적으로 포함 (이미 truncated 면
+   확인).
+2. seed 검증 expectation 을 audit_logs 만 ">=" 또는 동적 계산 (시드 후 audit_logs 모두
+   삭제 후 재시드).
+3. backend 의 seed 시 자체가 audit log 생성하지 않도록 transaction 안에서 trigger off.
+
+영향 범위: 모든 e2e workflow. 첫 spec 실행 후 두 번째부터 global-setup 이 fail 하면서
+"수동 reseed → 재실행" 패턴이 강제됨. CI/CD 에서는 격리된 컨테이너라 영향 적지만
+로컬 개발 워크플로우 마찰 큼.
+
+검증:
+- pnpm e2e 5회 연속 실행, 매번 30/30 통과
+- audit_logs 카운트가 매 실행 후 정확히 20 으로 reset
+```
 
 ---
 
