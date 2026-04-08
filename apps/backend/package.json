@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "predev": "pnpm --filter @equipment-management/db run build",
+    "predev": "pnpm --filter @equipment-management/db run build && npx drizzle-kit migrate",
     "dev": "nest start --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
