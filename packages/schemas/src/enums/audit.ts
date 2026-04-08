@@ -50,6 +50,7 @@ export const AUDIT_ACTION_VALUES = [
   'revision', // 문서 개정
   'link', // M:N 연결
   'unlink', // M:N 연결 해제
+  'access_denied', // 권한/사이트 스코프 거부 (cross-site probing 추적)
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES);
