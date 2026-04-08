@@ -43,6 +43,13 @@
       "when": 1775614541696,
       "tag": "0005_burly_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775626901569,
+      "tag": "0006_gray_sersi",
+      "breakpoints": true
     }
   ]
 }

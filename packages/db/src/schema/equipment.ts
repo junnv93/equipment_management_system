@@ -109,8 +109,8 @@ export const equipment = pgTable(
 
     // 승인 프로세스 필드
     approvalStatus: varchar('approval_status', { length: 50 }).default('approved'), // 'pending_approval' | 'approved' | 'rejected'
-    requestedBy: varchar('requested_by', { length: 36 }), // 요청자 ID
-    approvedBy: varchar('approved_by', { length: 36 }), // 승인자 ID
+    requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }), // 요청자 ID
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }), // 승인자 ID
 
     // 추가 필수 필드 (프롬프트 3 요구사항)
     equipmentType: varchar('equipment_type', { length: 50 }), // 장비 타입

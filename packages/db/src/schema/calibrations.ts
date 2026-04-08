@@ -66,8 +66,8 @@ export const calibrations = pgTable(
       .$type<CalibrationApprovalStatus>()
       .notNull()
       .default('pending_approval'),
-    registeredBy: uuid('registered_by'), // 등록자 ID
-    approvedBy: uuid('approved_by'), // 승인자 ID (기술책임자)
+    registeredBy: uuid('registered_by').references(() => users.id, { onDelete: 'set null' }), // 등록자 ID
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }), // 승인자 ID (기술책임자)
     registeredByRole: varchar('registered_by_role', {
       length: 50,
     }).$type<CalibrationRegisteredByRole>(), // 등록자 역할

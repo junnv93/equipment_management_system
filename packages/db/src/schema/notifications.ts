@@ -102,7 +102,10 @@ export const notificationPreferences = pgTable(
   'notification_preferences',
   {
     id: uuid('id').primaryKey().defaultRandom().notNull(),
-    userId: uuid('user_id').notNull().unique(),
+    userId: uuid('user_id')
+      .notNull()
+      .unique()
+      .references(() => users.id, { onDelete: 'cascade' }),
 
     // 전체 토글
     inAppEnabled: boolean('in_app_enabled').notNull().default(true),

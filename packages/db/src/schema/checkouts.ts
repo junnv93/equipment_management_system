@@ -17,6 +17,7 @@ import {
 import type { CheckoutStatus } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
+import { teams } from './teams';
 
 /** @see packages/schemas/src/enums.ts - CheckoutStatusEnum (SSOT) */
 export const checkoutStatus = CHECKOUT_STATUS_VALUES;
@@ -46,7 +47,7 @@ export const checkouts = pgTable(
     destination: varchar('destination', { length: 255 }).notNull(), // 반출 장소
 
     // 외부 대여 시 빌려주는 측 정보
-    lenderTeamId: uuid('lender_team_id'), // 빌려주는 측 팀 ID
+    lenderTeamId: uuid('lender_team_id').references(() => teams.id, { onDelete: 'restrict' }), // 빌려주는 측 팀 ID
     lenderSiteId: varchar('lender_site_id', { length: 50 }), // 빌려주는 측 사이트 ID
     phoneNumber: varchar('phone_number', { length: 50 }),
     address: text('address'),
