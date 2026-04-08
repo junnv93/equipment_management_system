@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -122,7 +122,22 @@ export default function AlertsContent() {
     [router, pathname, searchParams]
   );
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // searchQuery도 URL searchParams에서 읽어 SSOT 통일 (CLAUDE.md Filter SSOT 원칙).
+  // history pollution 방지를 위해 router.replace 사용.
+  const searchQuery = searchParams.get('q') ?? '';
+  const setSearchQuery = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value) {
+        params.set('q', value);
+      } else {
+        params.delete('q');
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [router, pathname, searchParams]
+  );
 
   const isReadParam = activeTab === 'unread' ? false : activeTab === 'read' ? true : undefined;
 
