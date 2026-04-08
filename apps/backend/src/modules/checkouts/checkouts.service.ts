@@ -49,6 +49,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
+import { buildCheckoutSiteCondition, buildCheckoutTeamCondition } from './checkout-scope.util';
 import type { AuthenticatedRequest } from '../../types/auth';
 import type { PaginationMeta } from '../../common/types/api-response';
 // Drizzle에서 자동 추론되는 타입 사용
@@ -335,36 +336,9 @@ export class CheckoutsService extends VersionedBaseService {
       whereConditions.push(eq(checkouts.purpose, purpose));
     }
 
-    // 사이트 필터링 — SSOT: equipment.site (enforceScopeFromData와 동일 정의)
-    // List/Action 대칭: 액션 가드와 같은 predicate를 공유한다.
-    // - 비rental: 장비 소속 사이트가 우리 사이트인 checkout (case 1: 우리 장비 outgoing)
-    // - rental + lenderSite=우리 : 우리가 대여해주는 건 (case 3: outgoing)
-    // - rental + 신청자 사이트=우리 : 우리가 빌려오는 건 (case 2: inbound 가시성 유지)
+    // 사이트 필터 — SSOT helper (checkout-scope.util.ts) 사용. 인라인 SQL 금지.
     if (site) {
-      const checkoutIdsBySite = this.db
-        .select({ id: checkoutItems.checkoutId })
-        .from(checkoutItems)
-        .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
-        .where(eq(schema.equipment.site, site));
-
-      const requesterIdsBySite = this.db
-        .select({ id: schema.users.id })
-        .from(schema.users)
-        .where(eq(schema.users.site, site));
-
-      whereConditions.push(
-        or(
-          and(
-            sql`${checkouts.purpose} != ${CPVal.RENTAL}`,
-            sql`${checkouts.id} IN (${checkoutIdsBySite})`
-          ),
-          and(eq(checkouts.purpose, CPVal.RENTAL), eq(checkouts.lenderSiteId, site)),
-          and(
-            eq(checkouts.purpose, CPVal.RENTAL),
-            inArray(checkouts.requesterId, requesterIdsBySite)
-          )
-        )!
-      );
+      whereConditions.push(buildCheckoutSiteCondition(this.db, site, direction));
     }
 
     if (destination) {
@@ -428,48 +402,9 @@ export class CheckoutsService extends VersionedBaseService {
       whereConditions.push(sql`${checkouts.id} IN (${subquery})`);
     }
 
-    // 팀 ID 필터링 — SSOT: equipment.teamId (enforceScopeFromData와 동일 정의)
-    // List/Action 대칭: 액션 가드와 같은 predicate를 공유한다.
-    // 의미:
-    //   case 1 (outbound, 비rental): 우리 팀 장비가 교정/수리로 나감 → equipment.teamId=us
-    //   case 2 (inbound, rental):    우리가 타팀 장비를 빌려옴      → requesterId in users(teamId=us)
-    //   case 3 (outbound, rental):   우리가 타팀에 빌려줌            → lenderTeamId=us
+    // 팀 ID 필터 — SSOT helper (checkout-scope.util.ts) 사용. 인라인 SQL 금지.
     if (teamId) {
-      const checkoutIdsByEquipTeam = this.db
-        .select({ id: checkoutItems.checkoutId })
-        .from(checkoutItems)
-        .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
-        .where(eq(schema.equipment.teamId, teamId));
-
-      const requesterIdsByTeam = this.db
-        .select({ id: schema.users.id })
-        .from(schema.users)
-        .where(eq(schema.users.teamId, teamId));
-
-      const inEquipTeam = sql`${checkouts.id} IN (${checkoutIdsByEquipTeam})`;
-      const isRental = eq(checkouts.purpose, CPVal.RENTAL);
-      const isNonRental = sql`${checkouts.purpose} != ${CPVal.RENTAL}`;
-
-      if (direction === 'outbound') {
-        // case 1 + case 3
-        whereConditions.push(
-          or(and(isNonRental, inEquipTeam), and(isRental, eq(checkouts.lenderTeamId, teamId)))!
-        );
-      } else if (direction === 'inbound') {
-        // case 2
-        whereConditions.push(
-          and(isRental, sql`${checkouts.requesterId} IN (${requesterIdsByTeam})`)!
-        );
-      } else {
-        // case 1 + case 2 + case 3
-        whereConditions.push(
-          or(
-            and(isNonRental, inEquipTeam),
-            and(isRental, eq(checkouts.lenderTeamId, teamId)),
-            and(isRental, sql`${checkouts.requesterId} IN (${requesterIdsByTeam})`)
-          )!
-        );
-      }
+      whereConditions.push(buildCheckoutTeamCondition(this.db, teamId, direction));
     }
 
     // 정렬 설정

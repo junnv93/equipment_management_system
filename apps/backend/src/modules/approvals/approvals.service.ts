@@ -56,6 +56,7 @@ import { ApprovalCategoryValues, getNCTypesRequiring } from '@equipment-manageme
 import { toSafeInt } from '../../common/utils';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { buildCheckoutScopeForUser } from '../checkouts/checkout-scope.util';
 
 /** 승인 카테고리 축약 (SSOT: @equipment-management/schemas) */
 const AC = ApprovalCategoryValues;
@@ -427,18 +428,16 @@ export class ApprovalsService {
         ),
     };
 
-    const scopeCondition = this.buildScopeCondition(CHECKOUT_DATA_SCOPE, userCtx, {
-      site: (s) => eq(schema.users.site, s),
-      team: (t) => eq(schema.users.teamId, t),
-    });
-
-    if (scopeCondition) {
-      return this.db
-        .select(kpiSelect)
-        .from(schema.checkouts)
-        .innerJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
-        .where(and(...conditions, scopeCondition));
+    // SSOT helper — checkout-scope.util.ts. getCheckoutCount/list/Action 과 동일 predicate.
+    // direction='outbound' (case 1+3): KPI 는 "승인 가능한 항목"의 집계이므로 borrower
+    // 가시성 case 2 (rental + requester) 를 포함하면 안 된다 — 액션 가드와 비대칭 방지.
+    // deny 시에는 빈 KPI 한 행을 반환해 호출자(`Promise.all`)의 shape 호환을 유지.
+    const scoped = buildCheckoutScopeForUser(this.db, userCtx, CHECKOUT_DATA_SCOPE, 'outbound');
+    if (scoped.deny) {
+      return Promise.resolve([{ total: 0, urgent: 0, sumDays: 0 }]);
     }
+    if (scoped.condition) conditions.push(scoped.condition);
+
     return this.db
       .select(kpiSelect)
       .from(schema.checkouts)
@@ -932,95 +931,14 @@ export class ApprovalsService {
       if (purpose) conditions.push(eq(schema.checkouts.purpose, purpose));
       if (excludePurpose) conditions.push(ne(schema.checkouts.purpose, excludePurpose));
 
-      // SSOT: equipment.site/teamId 기준 — checkouts.service.ts buildQueryConditions와
-      // enforceScopeFromData 액션 가드와 동일 정의. List/KPI 카운트 정합 보장.
-      // - 비rental: 장비 소속 사이트/팀 = 우리
-      // - rental + lender = 우리: 우리가 빌려주는 건
-      // - rental + 신청자 사이트/팀 = 우리: 우리가 빌려오는 건
-      const scope = resolveDataScope(userCtx, CHECKOUT_DATA_SCOPE);
-      let scopeCondition: SQL | undefined;
-
-      if (scope.type === 'none') {
-        return 0;
-      } else if (scope.type === 'site' && scope.site) {
-        const cIdsBySite = this.db
-          .select({ id: schema.checkoutItems.checkoutId })
-          .from(schema.checkoutItems)
-          .innerJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
-          .where(eq(schema.equipment.site, scope.site));
-        const requesterIdsBySite = this.db
-          .select({ id: schema.users.id })
-          .from(schema.users)
-          .where(eq(schema.users.site, scope.site));
-        scopeCondition = or(
-          and(
-            ne(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-            sql`${schema.checkouts.id} IN (${cIdsBySite})`
-          ),
-          and(
-            eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-            eq(schema.checkouts.lenderSiteId, scope.site)
-          ),
-          and(
-            eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-            inArray(schema.checkouts.requesterId, requesterIdsBySite)
-          )
-        );
-      } else if (scope.type === 'team') {
-        // team scope: teamId 우선, 없으면 site 폴백 (SiteScopeInterceptor 동일 동작)
-        if (scope.teamId) {
-          const cIdsByTeam = this.db
-            .select({ id: schema.checkoutItems.checkoutId })
-            .from(schema.checkoutItems)
-            .innerJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
-            .where(eq(schema.equipment.teamId, scope.teamId));
-          const requesterIdsByTeam = this.db
-            .select({ id: schema.users.id })
-            .from(schema.users)
-            .where(eq(schema.users.teamId, scope.teamId));
-          scopeCondition = or(
-            and(
-              ne(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-              sql`${schema.checkouts.id} IN (${cIdsByTeam})`
-            ),
-            and(
-              eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-              eq(schema.checkouts.lenderTeamId, scope.teamId)
-            ),
-            and(
-              eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-              inArray(schema.checkouts.requesterId, requesterIdsByTeam)
-            )
-          );
-        } else if (scope.site) {
-          const cIdsBySite = this.db
-            .select({ id: schema.checkoutItems.checkoutId })
-            .from(schema.checkoutItems)
-            .innerJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
-            .where(eq(schema.equipment.site, scope.site));
-          scopeCondition = or(
-            and(
-              ne(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-              sql`${schema.checkouts.id} IN (${cIdsBySite})`
-            ),
-            and(
-              eq(schema.checkouts.purpose, CheckoutPurposeValues.RENTAL),
-              eq(schema.checkouts.lenderSiteId, scope.site)
-            )
-          );
-        } else {
-          return 0;
-        }
-      }
-      // scope.type === 'all' → scopeCondition undefined, JOIN 생략
-
-      if (scopeCondition) {
-        const [result] = await this.db
-          .select({ count: count() })
-          .from(schema.checkouts)
-          .where(and(...conditions, scopeCondition));
-        return result?.count ?? 0;
-      }
+      // SSOT helper — checkout-scope.util.ts. List/KPI/Action 동일 정의 사용.
+      // direction='outbound' (case 1+3): 승인 카운트는 "approver scope" 이며
+      // borrower 가시성 case 2 (rental + requester) 를 포함하면 액션 가드와 비대칭
+      // 발생 → 유령 행. 모든 getCheckoutCount 호출자(outgoingCheckouts,
+      // outgoingVendorReturns, incomingReturns)는 owner-측 승인 시맨틱이므로 outbound.
+      const scoped = buildCheckoutScopeForUser(this.db, userCtx, CHECKOUT_DATA_SCOPE, 'outbound');
+      if (scoped.deny) return 0;
+      if (scoped.condition) conditions.push(scoped.condition);
 
       const [result] = await this.db
         .select({ count: count() })
