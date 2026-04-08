@@ -50,6 +50,14 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 상세: [references/ssot-checks.md](references/ssot-checks.md) Step 2
 
+### Step 2a: Client-side `hasRole()` 금지 (role literal 기반 권한 게이트 탐지)
+
+**PASS:** 프론트엔드 컴포넌트/페이지에 `useAuth().hasRole` 사용 0건. role 리터럴 배열을 권한 게이트로 쓰는 패턴 0건. **FAIL:** client code에서 hasRole 또는 `[URVal.XXX, ...]`로 권한 결정.
+
+규칙 근거: 2026-04-08 (49fb6d7e)에 role-based client gating이 전면 `can(Permission.X)`로 마이그레이션되어 백엔드 `@RequirePermissions`와 단일 SSOT를 공유.
+
+상세: [references/ssot-checks.md](references/ssot-checks.md) Step 2a
+
 ### Step 3: 패키지별 임포트 소스 확인 (3a~3e 포함)
 
 API_ENDPOINTS, Audit Log 타입, Field Labels, Entity Routes, Data Scope, SSOT 상수의 import 소스 확인.

@@ -62,6 +62,33 @@ grep -rn "import.*Permission" apps/backend/src apps/frontend --include="*.ts" --
 
 **PASS 기준:** 0개 결과.
 
+### Step 2a: Client-side `hasRole()` 사용 금지
+
+프론트엔드 컴포넌트는 role 리터럴 기반 권한 체크(`hasRole([...])`) 대신 `can(Permission.X)`를 사용해야 한다. 백엔드 `@RequirePermissions(Permission.X)`와 단일 SSOT를 공유하기 위함이다. 2026-04-08 (커밋 49fb6d7e)에 `useAuth().hasRole`이 제거되었다.
+
+```bash
+# 1. useAuth에서 hasRole destructure 탐지 (use-auth.ts 자체 제외)
+grep -rnE "useAuth\(\)[^;]*hasRole|\{[^}]*hasRole[^}]*\}\s*=\s*useAuth" \
+  apps/frontend/app apps/frontend/components apps/frontend/hooks \
+  --include="*.ts" --include="*.tsx" \
+  | grep -v "use-auth.ts\|// "
+```
+
+```bash
+# 2. role 리터럴 배열을 권한 게이트로 사용 탐지 (canCreate/canEdit/canDelete/canApprove 주변)
+grep -rnE "(canCreate|canEdit|canDelete|canApprove|canUpdate)\s*=\s*hasRole" \
+  apps/frontend/app apps/frontend/components \
+  --include="*.ts" --include="*.tsx"
+```
+
+**PASS 기준:** 두 명령어 모두 0개 결과.
+
+**예외:**
+- `apps/frontend/lib/auth/server-session.ts`의 `hasRole()` — Promise 반환, Server Action 전용 (별도 함수)
+- `apps/frontend/hooks/use-auth.ts`의 deprecation 주석
+- 테스트 픽스처/스펙에서 role 배열 사용 (인증 컨텍스트 생성용)
+- **정당한 role-기반 UI 로직**(role→아이콘/레이블/카테고리 매핑, `URVal`을 Record key로 사용)은 권한 게이트가 **아니므로 허용**. Check 1, 2만 권한 게이트의 실제 드리프트를 탐지한다. 권한을 *결정*하는 코드만 대상.
+
 ## Step 3: 패키지별 임포트 소스 확인
 
 ```bash
