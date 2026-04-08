@@ -90,6 +90,22 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 - **12b:** 뮤테이션 후 목록 갱신 검증 50% 이상
 - **12c:** 사이트 격리 테스트가 GET + mutation 모두 검증
 
+### Step 13: global-setup 시드 실패 fail-fast
+
+테스트 시드/검증 실패가 `console.warn` 뒤에 진행되면 false negative 가 발생한다
+(e.g. 스키마 drift 또는 시드 검증 실패를 조용히 통과). 시드/검증 실패는 **throw** 로
+글로벌 설정을 중단해야 한다.
+
+**탐지:**
+```bash
+grep -nA3 "시드 데이터 로딩\|seed.*load" apps/frontend/tests/e2e/global-setup.ts \
+  | grep -B1 "console\.warn" && echo "❌ seed 실패가 warn-and-continue 로 흡수됨"
+```
+
+**PASS:** `} catch { throw ... }` 또는 `throw err`. **FAIL:** `} catch { console.warn(...) }` 후 진행.
+
+**예외:** 시드 성공 이후의 부가 단계(예: overdue scheduler 트리거)는 warn 유지 가능 — 단 그 이유가 주석으로 명시되어야 함 ("optional enrichment — test seeds already cover...").
+
 ## Output Format
 
 ```markdown
@@ -110,6 +126,7 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 | 12a | CAS 충돌 복구 테스트    | PASS/WARN | VERSION_CONFLICT 시나리오     |
 | 12b | 캐시 일관성 테스트      | PASS/INFO | 뮤테이션 후 목록 갱신 검증    |
 | 12c | 사이트 접근 제어 범위   | PASS/WARN | GET + mutation 모두 검증      |
+| 13  | global-setup fail-fast  | PASS/FAIL | 시드 실패가 warn-and-continue |
 ```
 
 ## Exceptions

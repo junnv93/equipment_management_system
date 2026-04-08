@@ -495,7 +495,8 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-security**: OWASP Top 10 security verification — access control, injection, CSP, vulnerable components, auth, logging, SSRF
 - **verify-i18n**: i18n consistency verification — en/ko key matching, empty translations, Zod hardcoded messages
 - **verify-sql-safety**: SQL safety verification — LIKE escaping, N+1 detection, COUNT(DISTINCT) fan-out, RBAC INNER JOIN
-- **verify-e2e**: E2E test pattern + architecture coverage — auth fixtures, locator patterns, test isolation + CAS conflict recovery, cache invalidation after mutation, site access control on mutations
+- **verify-e2e**: E2E test pattern + architecture coverage — auth fixtures, locator patterns, test isolation + CAS conflict recovery, cache invalidation after mutation, site access control on mutations, global-setup seed fail-fast
+- **verify-seed-integrity**: Seed infrastructure 3-way SSOT triangle — every seed-data/**/*.seed.ts must be imported by seed-test-new.ts (insert wiring) + registered in Phase 0 truncate list + covered by verification.ts checkCount call. verification.ts forbids magic-number thresholds — all expected counts derived from SEED_DATA.length / .filter().length. checkCount default === (strict), minOnly:true is explicit opt-in.
 - **verify-workflows**: Cross-feature workflow E2E coverage — WF-01~WF-16 test existence, step completeness, role correctness, status transition assertions, side-effect verification
 - **verify-filters**: URL-driven filter SSOT verification — filter-utils exports, hooks, page.tsx server parsing
 - **verify-implementation**: Unified verification — runs all verify-* skills sequentially, generates combined report
