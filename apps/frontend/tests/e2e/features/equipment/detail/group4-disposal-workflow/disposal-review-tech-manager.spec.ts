@@ -10,6 +10,7 @@
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 import { EQUIP_DISPOSAL_PERM_A4 } from '../../../../../../../backend/src/database/utils/uuid-constants';
+import { expectToastVisible } from '../../../../shared/helpers/toast-helpers';
 
 test.describe('폐기 워크플로우 - 검토 (기술책임자)', () => {
   test('4.3. 기술책임자가 폐기 요청을 검토한다', async ({ techManagerPage: page }) => {
@@ -36,8 +37,8 @@ test.describe('폐기 워크플로우 - 검토 (기술책임자)', () => {
     if (await actionButton.isVisible().catch(() => false)) {
       await actionButton.click();
 
-      // 6. 성공 확인 (토스트 또는 상태 변경)
-      await expect(page.getByText(/검토|승인|완료/i).first()).toBeVisible({ timeout: 10000 });
+      // 6. 성공 토스트 확인 — disposal.json reviewDialog.toasts.approveTitle = "검토 완료"
+      await expectToastVisible(page, '검토 완료', { timeout: 10000 });
     }
   });
 });

@@ -400,7 +400,7 @@ parent locator 를 좁힌 뒤 `getByRole('button', { name: '수정' })` 사용. 
 영향 범위: 자체점검/중간점검/케이블/장비/SW/교정계획 등 거의 모든 행 액션 카드.
 ```
 
-### ~~🟡 MEDIUM → 🚨 HIGH — useToast 분리 상태 머신 (silent production bug) — toast-ssot-dedup~~ ✅ 완료 (36차, 2026-04-08)
+### ~~🟡 MEDIUM → 🚨 HIGH — useToast 분리 상태 머신 (silent production bug) — toast-ssot-dedup~~ ✅ 완료 (36차, 2026-04-08, 4 commits + 2 follow-ups)
 
 > **35차 false-positive 판정 정정**: Radix dual presentation 자체는 a11y 의도가 맞으나, 그 조사 과정에서 진짜 SSOT 위반이 드러났다.
 >
@@ -411,6 +411,8 @@ parent locator 를 좁힌 뒤 `getByRole('button', { name: '수정' })` 사용. 
 > **검증**: tsc 0, frontend test 99/99, build PASS, `@/hooks/use-toast` grep 0 hit. /verify-implementation 4스킬 PASS, /review-architecture 6 area PASS.
 >
 > **교훈**: 모듈-스코프 closure state(`memoryState`, `listeners` 배열)는 import path 단위로 격리됨 — singleton 가정이 path divergence로 깨질 수 있음. file dedup이 아니라 React module instance graph 점검이 본질.
+>
+> **Follow-ups (e2f0326f, 57cc6a50, [HEAD])**: 부채로 등재한 9 spec 후보 중 3건(`equipment-form-errors.spec.ts` catch toast)만 실제 토스트, 6건은 status badge false positive로 분류. `disposal-review-tech-manager.spec.ts:40`도 root-cause 조사 후 `disposal.json reviewDialog.toasts.approveTitle="검토 완료"` 토스트임을 확인하고 helper로 마이그레이션. 토스트 SSOT 라운드 100% 종결.
 
 ### ~~🟡 MEDIUM — useToast 중복 (legacy entry)~~
 
