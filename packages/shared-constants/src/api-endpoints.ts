@@ -476,24 +476,6 @@ export const API_ENDPOINTS = {
     /** 보존연한 만료로 소프트 아카이브된 양식 목록 (UL-QP-03 §11) */
     ARCHIVED: '/api/form-templates/archived',
   },
-
-  // ============================================================================
-  // DEPRECATED: Legacy rental imports (proxy to EQUIPMENT_IMPORTS)
-  // ============================================================================
-  /**
-   * @deprecated Use EQUIPMENT_IMPORTS instead
-   * Legacy endpoints for backward compatibility
-   */
-  RENTAL_IMPORTS: {
-    LIST: '/api/equipment-imports?sourceType=rental',
-    GET: (id: string) => `/api/equipment-imports/${id}`,
-    CREATE: '/api/equipment-imports',
-    APPROVE: (id: string) => `/api/equipment-imports/${id}/approve`,
-    REJECT: (id: string) => `/api/equipment-imports/${id}/reject`,
-    RECEIVE: (id: string) => `/api/equipment-imports/${id}/receive`,
-    INITIATE_RETURN: (id: string) => `/api/equipment-imports/${id}/initiate-return`,
-    CANCEL: (id: string) => `/api/equipment-imports/${id}/cancel`,
-  },
 } as const;
 
 /**

@@ -171,30 +171,6 @@ export enum Permission {
   // ============================================================================
   MANAGE_SYSTEM_SETTINGS = 'manage:system:settings',
   VIEW_SYSTEM_SETTINGS = 'view:system:settings',
-
-  // ============================================================================
-  // DEPRECATED: Legacy rental import permissions (backward compatibility)
-  // ============================================================================
-  /**
-   * @deprecated Use VIEW_EQUIPMENT_IMPORTS instead
-   */
-  VIEW_RENTAL_IMPORTS = 'view:equipment-imports',
-  /**
-   * @deprecated Use CREATE_EQUIPMENT_IMPORT instead
-   */
-  CREATE_RENTAL_IMPORT = 'create:equipment-import',
-  /**
-   * @deprecated Use APPROVE_EQUIPMENT_IMPORT instead
-   */
-  APPROVE_RENTAL_IMPORT = 'approve:equipment-import',
-  /**
-   * @deprecated Use COMPLETE_EQUIPMENT_IMPORT instead
-   */
-  COMPLETE_RENTAL_IMPORT = 'complete:equipment-import',
-  /**
-   * @deprecated Use CANCEL_EQUIPMENT_IMPORT instead
-   */
-  CANCEL_RENTAL_IMPORT = 'cancel:equipment-import',
 }
 
 /**
@@ -295,7 +271,4 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',
-
-  // Legacy labels omitted (same string values as new permissions)
-  // VIEW_RENTAL_IMPORTS, CREATE_RENTAL_IMPORT, etc. share strings with EQUIPMENT_IMPORTS
 };

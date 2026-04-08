@@ -196,7 +196,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // 시험소장: 명시적 화이트리스트 (UL-QP-18 등록/승인 완전 분리)
   // ⚠️ 새 권한 추가 시 의도적으로 여기에도 추가해야 함 (블랙리스트 자동 부여 방지)
   // 제외: CREATE_CALIBRATION (시험실무자/기술책임자만 가능), MANAGE_SYSTEM_SETTINGS (시스템관리자 전용)
-  // 제외: DEPRECATED 권한 (VIEW_RENTAL_IMPORTS 등)
   lab_manager: [
     // 장비 관리
     Permission.VIEW_EQUIPMENT,
@@ -294,19 +293,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   // ⚠️ 의도적 블랙리스트: 새 Permission 추가 시 system_admin에 자동 부여됨
   // (lab_manager는 화이트리스트이므로 새 권한을 수동 추가해야 함)
   system_admin: [
-    ...(() => {
-      // 모든 비-deprecated 권한에서 CREATE_CALIBRATION만 제외 (시험실무자/기술책임자만 가능)
-      const deprecated = new Set([
-        Permission.VIEW_RENTAL_IMPORTS,
-        Permission.CREATE_RENTAL_IMPORT,
-        Permission.APPROVE_RENTAL_IMPORT,
-        Permission.COMPLETE_RENTAL_IMPORT,
-        Permission.CANCEL_RENTAL_IMPORT,
-      ]);
-      return Object.values(Permission).filter(
-        (p) => p !== Permission.CREATE_CALIBRATION && !deprecated.has(p)
-      );
-    })(),
+    // 모든 권한에서 CREATE_CALIBRATION만 제외 (시험실무자/기술책임자만 가능)
+    ...Object.values(Permission).filter((p) => p !== Permission.CREATE_CALIBRATION),
   ],
 };
 
