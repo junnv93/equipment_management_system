@@ -128,3 +128,5 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 12. **calibration/overdue-auto-nc/** — API 전용 테스트
 13. **seed 파일** — 시드 스크립트
 14. **복합 CSS 셀렉터** — `getByRole`로 대체 불가한 경우 허용
+15. **네거티브 네비게이션/토스트 assertion용 짧은 `waitForTimeout`** — "클릭 후 아무 일도 일어나지 않음"을 증명하려면 일정 시간 대기가 불가피. `≤ 1000ms` 이내의 `waitForTimeout` + 직후 `toHaveURL` / `toHaveCount(0)` 쌍 패턴은 정당. 예: early-return handler의 no-op 회귀 보호
+16. **`getByPlaceholder`** — Playwright user-facing semantic locator 패밀리 소속(CSS 셀렉터 아님). shadcn `<Label>`이 `htmlFor` 바인딩 없이 사용된 폼에서 `getByLabel`이 불안정할 때 허용. `getByRole('textbox', { name })`이 가능하면 그 쪽을 우선
