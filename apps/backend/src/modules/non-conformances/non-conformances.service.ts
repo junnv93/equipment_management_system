@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Inject,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, Logger } from '@nestjs/common';
 import { eq, and, isNull, SQL, ne, sql, or, notInArray, isNotNull } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
@@ -74,6 +67,15 @@ export class NonConformancesService extends VersionedBaseService {
 
   private buildCacheKey(type: string, id: string): string {
     return `${this.CACHE_PREFIX}${type}:${id}`;
+  }
+
+  /**
+   * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
+   * 모든 updateWithVersion 호출 경로(update/close/rejectCorrection/remove/linkRepair...)
+   * 가 단일 정책을 공유 → catch boilerplate 제거.
+   */
+  protected async onVersionConflict(id: string): Promise<void> {
+    await this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   /**
@@ -615,35 +617,28 @@ export class NonConformancesService extends VersionedBaseService {
 
     const statusChanged = updateDto.status && updateDto.status !== nonConformance.status;
 
-    try {
-      const updated = await this.updateWithVersion<NonConformance>(
-        nonConformances,
-        id,
-        version,
-        updateFields,
-        'Non-conformance'
-      );
+    // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated = await this.updateWithVersion<NonConformance>(
+      nonConformances,
+      id,
+      version,
+      updateFields,
+      'Non-conformance'
+    );
 
-      // 캐시 무효화: detail 캐시 삭제
-      this.cacheService.delete(this.buildCacheKey('detail', id));
+    // 성공 경로: detail 캐시 삭제
+    this.cacheService.delete(this.buildCacheKey('detail', id));
 
-      // 상태 변경 시 교차 엔티티 캐시 무효화 (대시보드, 장비 상세 등)
-      if (statusChanged) {
-        await this.cacheInvalidationHelper
-          .invalidateAfterNonConformanceStatusChange(nonConformance.equipmentId, false)
-          .catch((err) =>
-            this.logger.warn(`Cache invalidation failed after NC update: ${err.message}`)
-          );
-      }
-
-      return updated;
-    } catch (error) {
-      // CAS 실패 시 stale cache 방지
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
+    // 상태 변경 시 교차 엔티티 캐시 무효화 (대시보드, 장비 상세 등)
+    if (statusChanged) {
+      await this.cacheInvalidationHelper
+        .invalidateAfterNonConformanceStatusChange(nonConformance.equipmentId, false)
+        .catch((err) =>
+          this.logger.warn(`Cache invalidation failed after NC update: ${err.message}`)
+        );
     }
+
+    return updated;
   }
 
   /**
@@ -665,9 +660,9 @@ export class NonConformancesService extends VersionedBaseService {
 
     // CAS + 트랜잭션으로 부적합 종료 + 장비 상태 복원
     // updateWithVersion(tx)으로 SSOT CAS 패턴 적용
-    let result: { updated: NonConformance; equipmentStatusRestored: boolean };
-    try {
-      result = await this.db.transaction(async (tx) => {
+    // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const result: { updated: NonConformance; equipmentStatusRestored: boolean } =
+      await this.db.transaction(async (tx) => {
         // 1. 부적합 종료 (CAS: updateWithVersion SSOT 패턴)
         const updated = await this.updateWithVersion<NonConformance>(
           nonConformances,
@@ -739,13 +734,6 @@ export class NonConformancesService extends VersionedBaseService {
 
         return { updated, equipmentStatusRestored };
       });
-    } catch (error) {
-      // CAS 실패 시 stale cache 방지
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
 
     // 성공 시 detail 캐시 삭제
     this.cacheService.delete(this.buildCacheKey('detail', id));
@@ -787,51 +775,44 @@ export class NonConformancesService extends VersionedBaseService {
     // 중앙화된 상태 전이 검증
     this.validateTransition(nonConformance.status, NonConformanceStatus.OPEN);
 
-    try {
-      const updated = await this.updateWithVersion<NonConformance>(
-        nonConformances,
-        id,
-        dto.version,
-        {
-          status: NonConformanceStatus.OPEN,
-          rejectedBy,
-          rejectedAt: new Date(),
-          rejectionReason: dto.rejectionReason,
-        },
-        'Non-conformance'
+    // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated = await this.updateWithVersion<NonConformance>(
+      nonConformances,
+      id,
+      dto.version,
+      {
+        status: NonConformanceStatus.OPEN,
+        rejectedBy,
+        rejectedAt: new Date(),
+        rejectionReason: dto.rejectionReason,
+      },
+      'Non-conformance'
+    );
+
+    // 성공 시 detail 캐시 삭제
+    this.cacheService.delete(this.buildCacheKey('detail', id));
+
+    // 캐시 무효화 (장비 상태는 변경되지 않음 — non_conforming 유지)
+    await this.cacheInvalidationHelper
+      .invalidateAfterNonConformanceStatusChange(nonConformance.equipmentId, false)
+      .catch((err) =>
+        this.logger.warn(`Cache invalidation failed after NC rejection: ${err.message}`)
       );
 
-      // 성공 시 detail 캐시 삭제
-      this.cacheService.delete(this.buildCacheKey('detail', id));
+    // 📢 알림 이벤트 발행 (조치 반려)
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED, {
+      ncId: id,
+      equipmentId: nonConformance.equipmentId,
+      equipmentName: '',
+      managementNumber: '',
+      reporterTeamId: '',
+      reason: dto.rejectionReason,
+      actorId: rejectedBy,
+      actorName: '',
+      timestamp: new Date(),
+    });
 
-      // 캐시 무효화 (장비 상태는 변경되지 않음 — non_conforming 유지)
-      await this.cacheInvalidationHelper
-        .invalidateAfterNonConformanceStatusChange(nonConformance.equipmentId, false)
-        .catch((err) =>
-          this.logger.warn(`Cache invalidation failed after NC rejection: ${err.message}`)
-        );
-
-      // 📢 알림 이벤트 발행 (조치 반려)
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED, {
-        ncId: id,
-        equipmentId: nonConformance.equipmentId,
-        equipmentName: '',
-        managementNumber: '',
-        reporterTeamId: '',
-        reason: dto.rejectionReason,
-        actorId: rejectedBy,
-        actorName: '',
-        timestamp: new Date(),
-      });
-
-      return updated;
-    } catch (error) {
-      // CAS 실패 시 stale cache 방지
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    return updated;
   }
 
   /**
@@ -840,22 +821,16 @@ export class NonConformancesService extends VersionedBaseService {
   async remove(id: string, version: number): Promise<{ id: string; deleted: boolean }> {
     const nc = await this.findOne(id);
 
-    try {
-      await this.updateWithVersion<NonConformance>(
-        nonConformances,
-        id,
-        version,
-        { deletedAt: new Date() },
-        'Non-conformance',
-        undefined,
-        'NC_NOT_FOUND'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    await this.updateWithVersion<NonConformance>(
+      nonConformances,
+      id,
+      version,
+      { deletedAt: new Date() },
+      'Non-conformance',
+      undefined,
+      'NC_NOT_FOUND'
+    );
 
     // detail 캐시 무효화
     this.cacheService.delete(this.buildCacheKey('detail', id));
@@ -894,27 +869,21 @@ export class NonConformancesService extends VersionedBaseService {
       });
     }
 
-    try {
-      await this.updateWithVersion<NonConformance>(
-        nonConformances,
-        ncId,
-        nc.version,
-        {
-          repairHistoryId: repairId,
-          resolutionType: ResolutionTypeEnum.enum.repair,
-        },
-        'Non-conformance',
-        undefined,
-        'NC_NOT_FOUND'
-      );
+    // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    await this.updateWithVersion<NonConformance>(
+      nonConformances,
+      ncId,
+      nc.version,
+      {
+        repairHistoryId: repairId,
+        resolutionType: ResolutionTypeEnum.enum.repair,
+      },
+      'Non-conformance',
+      undefined,
+      'NC_NOT_FOUND'
+    );
 
-      this.cacheService.delete(this.buildCacheKey('detail', ncId));
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', ncId));
-      }
-      throw error;
-    }
+    this.cacheService.delete(this.buildCacheKey('detail', ncId));
   }
 
   /**
@@ -940,29 +909,23 @@ export class NonConformancesService extends VersionedBaseService {
     // 전제조건 검증 (SSOT: NC_CORRECTION_PREREQUISITES)
     this.validateCorrectionPrerequisite(nc);
 
-    try {
-      await this.updateWithVersion<NonConformance>(
-        nonConformances,
-        id,
-        nc.version,
-        {
-          status: NonConformanceStatus.CORRECTED,
-          correctionContent: correctionData.correctionContent,
-          correctionDate: correctionData.correctionDate.toISOString().split('T')[0],
-          correctedBy: correctionData.correctedBy,
-        },
-        'Non-conformance',
-        undefined,
-        'NC_NOT_FOUND'
-      );
+    // CAS 충돌 시 detail 캐시 무효화는 onVersionConflict() 훅이 처리.
+    await this.updateWithVersion<NonConformance>(
+      nonConformances,
+      id,
+      nc.version,
+      {
+        status: NonConformanceStatus.CORRECTED,
+        correctionContent: correctionData.correctionContent,
+        correctionDate: correctionData.correctionDate.toISOString().split('T')[0],
+        correctedBy: correctionData.correctedBy,
+      },
+      'Non-conformance',
+      undefined,
+      'NC_NOT_FOUND'
+    );
 
-      this.cacheService.delete(this.buildCacheKey('detail', id));
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
-      }
-      throw error;
-    }
+    this.cacheService.delete(this.buildCacheKey('detail', id));
 
     // 📢 알림 이벤트 발행 (조치 완료 — 승인 요청)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTED, {

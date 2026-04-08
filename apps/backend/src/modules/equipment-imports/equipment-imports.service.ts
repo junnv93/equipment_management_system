@@ -71,6 +71,16 @@ export class EquipmentImportsService extends VersionedBaseService {
   }
 
   /**
+   * VersionedBaseService 훅 override — 409 발생 시 list/dashboard 전체 무효화.
+   * equipment-imports 는 리스트 캐시 위주이므로 도메인 전체 키를 한 번에 비움.
+   * 모든 updateWithVersion 호출 경로(approve/reject/requestReturn/완료/롤백 등)
+   * 가 단일 정책을 공유 → 누락된 catch boilerplate 위험 제거.
+   */
+  protected async onVersionConflict(_id: string): Promise<void> {
+    this.cacheInvalidationHelper.invalidateAllEquipmentImports();
+  }
+
+  /**
    * 장비 반입 신청 생성 (통합: 렌탈 + 내부 공용)
    *
    * sourceType에 따라 조건부 필드 처리:
@@ -307,26 +317,18 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
-    // ✅ CAS: optimistic locking
-    let updated: EquipmentImport;
-    try {
-      updated = await this.updateWithVersion<EquipmentImport>(
-        equipmentImports,
-        id,
-        dto.version,
-        {
-          status: EIVal.APPROVED as EquipmentImportStatus,
-          approverId,
-          approvedAt: new Date(),
-        },
-        'Equipment import'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
-      }
-      throw error;
-    }
+    // ✅ CAS: optimistic locking — 충돌 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated = await this.updateWithVersion<EquipmentImport>(
+      equipmentImports,
+      id,
+      dto.version,
+      {
+        status: EIVal.APPROVED as EquipmentImportStatus,
+        approverId,
+        approvedAt: new Date(),
+      },
+      'Equipment import'
+    );
 
     // 승인 후 목록 + 대시보드/승인카운트 캐시 무효화
     this.cacheInvalidationHelper.invalidateAllEquipmentImports();
@@ -368,27 +370,19 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
-    // ✅ CAS: optimistic locking
-    let updated: EquipmentImport;
-    try {
-      updated = await this.updateWithVersion<EquipmentImport>(
-        equipmentImports,
-        id,
-        dto.version,
-        {
-          status: EIVal.REJECTED as EquipmentImportStatus,
-          approverId,
-          approvedAt: new Date(),
-          rejectionReason: dto.rejectionReason,
-        },
-        'Equipment import'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
-      }
-      throw error;
-    }
+    // ✅ CAS: optimistic locking — 충돌 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated = await this.updateWithVersion<EquipmentImport>(
+      equipmentImports,
+      id,
+      dto.version,
+      {
+        status: EIVal.REJECTED as EquipmentImportStatus,
+        approverId,
+        approvedAt: new Date(),
+        rejectionReason: dto.rejectionReason,
+      },
+      'Equipment import'
+    );
 
     // 반려 후 목록 + 대시보드/승인카운트 캐시 무효화
     this.cacheInvalidationHelper.invalidateAllEquipmentImports();
@@ -461,85 +455,78 @@ export class EquipmentImportsService extends VersionedBaseService {
     );
 
     // 장비 생성 + 반입 상태 업데이트 — 원자성 보장
-    let updated: typeof equipmentImports.$inferSelect;
-    try {
-      updated = await this.db.transaction(async (tx) => {
-        // ✅ 1. CAS 선점 먼저 — 동시 요청은 여기서 409로 차단 (equipmentId 제외)
-        await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
-          equipmentImports,
-          id,
-          dto.version,
-          {
-            status: EIVal.RECEIVED as EquipmentImportStatus,
-            receivedBy,
-            receivedAt: new Date(),
-            receivingCondition: dto.receivingCondition,
-          },
-          'Equipment import',
-          tx
-        );
+    // CAS 충돌 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated: typeof equipmentImports.$inferSelect = await this.db.transaction(async (tx) => {
+      // ✅ 1. CAS 선점 먼저 — 동시 요청은 여기서 409로 차단 (equipmentId 제외)
+      await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
+        equipmentImports,
+        id,
+        dto.version,
+        {
+          status: EIVal.RECEIVED as EquipmentImportStatus,
+          receivedBy,
+          receivedAt: new Date(),
+          receivingCondition: dto.receivingCondition,
+        },
+        'Equipment import',
+        tx
+      );
 
-        // ✅ 2. CAS 통과 후 관리번호 생성 (동시 요청은 이미 409 처리됨)
-        // tx 전달 필수 — 같은 tx 커넥션에서 조회해야 race condition 방지
-        const managementNumber = await this.generateUniqueTemporaryNumber(
-          equipmentImport.site as Site,
-          equipmentImport.classification as Classification,
-          tx as unknown as AppDatabase
-        );
+      // ✅ 2. CAS 통과 후 관리번호 생성 (동시 요청은 이미 409 처리됨)
+      // tx 전달 필수 — 같은 tx 커넥션에서 조회해야 race condition 방지
+      const managementNumber = await this.generateUniqueTemporaryNumber(
+        equipmentImport.site as Site,
+        equipmentImport.classification as Classification,
+        tx as unknown as AppDatabase
+      );
 
-        // ✅ 3. 장비 INSERT
-        const [newEquipment] = await tx
-          .insert(equipment)
-          .values({
-            name: equipmentImport.equipmentName,
-            managementNumber,
-            site: equipmentImport.site,
-            modelName: equipmentImport.modelName,
-            manufacturer: equipmentImport.manufacturer,
-            serialNumber: equipmentImport.serialNumber,
-            description: equipmentImport.description,
-            teamId: equipmentImport.teamId,
-            isShared: true,
-            sharedSource, // 'external' or 'internal_shared'
-            owner, // vendorName or ownerDepartment
-            externalIdentifier,
-            usagePeriodStart: equipmentImport.usagePeriodStart,
-            usagePeriodEnd: equipmentImport.usagePeriodEnd,
-            status: ESVal.TEMPORARY,
-            isActive: true,
-            approvalStatus: EIVal.APPROVED,
-            // 교정 정보 추가
-            managementMethod: dto.calibrationInfo?.managementMethod || null,
-            calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
-            lastCalibrationDate: dto.calibrationInfo?.lastCalibrationDate
-              ? new Date(dto.calibrationInfo.lastCalibrationDate)
-              : null,
-            calibrationAgency: dto.calibrationInfo?.calibrationAgency || null,
-            nextCalibrationDate,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          } as typeof equipment.$inferInsert)
-          .returning();
+      // ✅ 3. 장비 INSERT
+      const [newEquipment] = await tx
+        .insert(equipment)
+        .values({
+          name: equipmentImport.equipmentName,
+          managementNumber,
+          site: equipmentImport.site,
+          modelName: equipmentImport.modelName,
+          manufacturer: equipmentImport.manufacturer,
+          serialNumber: equipmentImport.serialNumber,
+          description: equipmentImport.description,
+          teamId: equipmentImport.teamId,
+          isShared: true,
+          sharedSource, // 'external' or 'internal_shared'
+          owner, // vendorName or ownerDepartment
+          externalIdentifier,
+          usagePeriodStart: equipmentImport.usagePeriodStart,
+          usagePeriodEnd: equipmentImport.usagePeriodEnd,
+          status: ESVal.TEMPORARY,
+          isActive: true,
+          approvalStatus: EIVal.APPROVED,
+          // 교정 정보 추가
+          managementMethod: dto.calibrationInfo?.managementMethod || null,
+          calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
+          lastCalibrationDate: dto.calibrationInfo?.lastCalibrationDate
+            ? new Date(dto.calibrationInfo.lastCalibrationDate)
+            : null,
+          calibrationAgency: dto.calibrationInfo?.calibrationAgency || null,
+          nextCalibrationDate,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as typeof equipment.$inferInsert)
+        .returning();
 
-        // ✅ 4. equipmentId 연결 (CAS 없이 단순 업데이트 — 이미 CAS로 단독 선점됨)
-        const [finalResult] = await tx
-          .update(equipmentImports)
-          .set({ equipmentId: newEquipment.id })
-          .where(eq(equipmentImports.id, id))
-          .returning();
+      // ✅ 4. equipmentId 연결 (CAS 없이 단순 업데이트 — 이미 CAS로 단독 선점됨)
+      const [finalResult] = await tx
+        .update(equipmentImports)
+        .set({ equipmentId: newEquipment.id })
+        .where(eq(equipmentImports.id, id))
+        .returning();
 
-        this.logger.log(
-          `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
-        );
+      this.logger.log(
+        `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
+      );
 
-        return finalResult;
-      });
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
-      }
-      throw error;
-    }
+      return finalResult;
+    });
 
     // 교정성적서 파일 첨부 (트랜잭션 외부 — 파일 I/O 분리)
     if (files && files.length > 0 && updated.equipmentId) {
@@ -738,24 +725,17 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
-    // ✅ CAS: optimistic locking — approved 상태에서 receive()와의 경합 방어
-    let updated: EquipmentImport;
-    try {
-      updated = await this.updateWithVersion<EquipmentImport>(
-        equipmentImports,
-        id,
-        version,
-        {
-          status: EIVal.CANCELED as EquipmentImportStatus,
-        },
-        'Equipment import'
-      );
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheInvalidationHelper.invalidateAllEquipmentImports();
-      }
-      throw error;
-    }
+    // ✅ CAS: optimistic locking — approved 상태에서 receive()와의 경합 방어.
+    // CAS 충돌 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    const updated = await this.updateWithVersion<EquipmentImport>(
+      equipmentImports,
+      id,
+      version,
+      {
+        status: EIVal.CANCELED as EquipmentImportStatus,
+      },
+      'Equipment import'
+    );
 
     // 취소 후 목록 + 승인카운트 캐시 무효화 (pending 감소, 대시보드 통계 불변)
     this.cacheInvalidationHelper.invalidateAllEquipmentImports();

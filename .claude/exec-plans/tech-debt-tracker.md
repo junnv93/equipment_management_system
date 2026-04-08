@@ -20,7 +20,13 @@
 - [ ] WF-35 spec: `page.locator('textarea').first()` → `getByRole('textbox')` 대체 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:50` — 2026-04-08
 - [ ] WF-35 spec: `waitForTimeout(1_500)` → `expect.poll` 기반 refetch 대기로 결정성 향상 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:105` — 2026-04-08
 - [ ] `shared-test-data.ts`에 `FRONTEND_URL` 상수 추가 + WF-35 spec 의 `'http://localhost:3000'` 폴백 치환 — `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`, `wf-35-cas-ui-recovery.spec.ts:30` — 2026-04-08
-- [ ] 백엔드 NC Redis detail 캐시가 `updateWithVersion` 409 실패 경로에서도 무효화되는지 확인 (stale → 재시도 재-409 flakiness 방지) — `apps/backend/src/modules/non-conformances/non-conformances.service.ts` — 2026-04-08
+- [x] 백엔드 NC Redis detail 캐시가 `updateWithVersion` 409 실패 경로에서도 무효화 — 해결: 2026-04-08 — `refactor/cas-conflict-cache-hook`. 단편 수정이 아닌 아키텍처 수준 SSOT 통합:
+  1. `VersionedBaseService` 에 `onVersionConflict(id)` 훅 추가 — 13개 서브클래스 공유. `updateWithVersion` 이 ConflictException throw 직전에 자동 호출, 훅 실패 외곽 보호로 원본 409 가리지 않음
+  2. NC 서비스 — 5곳(update/close/rejectCorrection/remove/linkRepair/markCorrected) try/catch boilerplate 제거 + `onVersionConflict` override 추가 (`detail` 캐시 삭제 단일 정책). `ConflictException` import 제거
+  3. equipment-imports 서비스 — `requestReturn` 등 try/catch 누락된 CAS 경로 발견 (cross-cutting bug). override 추가로 approve/reject/cancel/receive 등 모든 `updateWithVersion` 경로가 자동 invalidation. 4곳 try/catch boilerplate 제거. `onReturnCompleted` 의 raw `tx.update` 경로는 hook 우회라 기존 catch 유지
+  4. 다른 11개 서브클래스(checkout/calibration/calibration-plans/calibration-factors/equipment/disposal/software-validations/intermediate-inspections/cables/test-software/self-inspections)는 default no-op 으로 backward compatible — 점진적 채택 가능
+  5. 5건 unit test 추가 (`versioned-base.service.spec.ts`): 성공/NotFound/409+hook/hook 실패 외곽 보호/default no-op 회귀
+- [ ] CAS 충돌 캐시 무효화 훅 점진적 채택 — checkouts/calibration/calibration-plans/calibration-factors/equipment/disposal 등 11개 서브클래스가 여전히 메서드별 try/catch boilerplate 사용. 각 도메인의 cache invalidation 정책을 `onVersionConflict` override 로 일괄 이전 검토. 단순 복사 금지, 도메인별 캐시 키/스코프 차이 검토 후 — 2026-04-08
 - [x] toast helper 미적용 e2e spec follow-up migration — 해결: 2026-04-08 (commit e2f0326f) — 라인별 분류 결과 9/10이 false positive (배지/상태/목록), `equipment-form-errors.spec.ts:202/270/431` 3건만 실제 토스트 (CreateEquipmentContent catch에서 destructive toast 항상 호출)이라 `expectToastVisible`로 마이그레이션. `disposal-review-tech-manager.spec.ts:40`은 regex `/검토|승인|완료/i`가 너무 광범위해 별도 조사 필요 — 보류
 - [x] `disposal-review-tech-manager.spec.ts:40` root-cause 조사 — 해결: 2026-04-08 — `DisposalReviewDialog.tsx:60-70` 의 onSuccess 가 `disposal.json reviewDialog.toasts.approveTitle = "검토 완료"` 를 토스트로 띄움을 확인. 광범위 regex 의도는 토스트 매칭이었음. `expectToastVisible(page, '검토 완료')` 로 명시적 마이그레이션
 - [x] form-templates-ui.spec.ts beforeAll 시드 race condition — 해결: 2026-04-07 — `fix/form-templates-seed-race` — create 409 시 replace 폴백 재시도
