@@ -102,27 +102,27 @@ async function globalSetup(config: FullConfig) {
     //    시드 데이터에 상대 날짜(daysAgo)로 교정일이 설정되어 있어,
     //    시드 적용 후 스케줄러를 수동 트리거해야 정합성 보장
     console.log('  🔄 교정 기한 초과 장비 점검 트리거...');
-    try {
-      const token = await fetchBackendToken('lab_manager');
-      const overdueRes = await fetch(
-        `${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(10000),
-        }
-      );
-      if (overdueRes.ok) {
-        const result = await overdueRes.json();
-        console.log(`  ✅ 교정 기한 초과 점검 완료 (처리: ${result?.data?.processed ?? 0}건)`);
-      } else {
-        console.warn(`  ⚠️  교정 기한 초과 점검 응답: ${overdueRes.status}`);
+    const token = await fetchBackendToken('lab_manager');
+    const overdueRes = await fetch(
+      `${apiURL}${API_ENDPOINTS.NOTIFICATIONS.TRIGGER_OVERDUE_CHECK}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        // fresh seed 직후 scheduler가 N+1 쿼리를 돌려 기존 10s 로는 부족했음
+        signal: AbortSignal.timeout(30000),
       }
-    } catch {
-      console.warn(
-        '  ⚠️  교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다.'
+    );
+    if (!overdueRes.ok) {
+      const body = await overdueRes.text().catch(() => '<body read failed>');
+      throw new Error(
+        `교정 기한 초과 점검 트리거 실패: HTTP ${overdueRes.status} — ${body.slice(0, 500)}`
       );
     }
+    // 응답은 flat ({"processed":N,...}) — ResponseTransformInterceptor 미적용 엔드포인트
+    const result = (await overdueRes.json()) as { processed?: number; created?: number };
+    console.log(
+      `  ✅ 교정 기한 초과 점검 완료 (처리: ${result.processed ?? 0}건, 부적합 생성: ${result.created ?? 0}건)`
+    );
   } catch (err) {
     // Fail-fast: 시드 실패는 false negative 의 주된 원인이었으므로, 경고가 아닌
     // 명시적 실패로 처리한다. 검증 실패(seed-test-new.ts exit 1)도 여기로 떨어진다.

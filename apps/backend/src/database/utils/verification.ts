@@ -262,8 +262,13 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
       )
     );
 
+    // audit_logs 는 running backend(dev server, session refresh, OnEvent async 핸들러)와
+    // 경합 가능 — seed insert 와 verification 사이에 login/activity 이벤트가 1건 끼어들 수
+    // 있다. SSOT 원칙 유지를 위해 하한 체크로만 강제 (minOnly).
     checks.push(
-      await checkCount(pool, 'Audit Logs count', 'audit_logs', AUDIT_LOGS_SEED_DATA.length)
+      await checkCount(pool, 'Audit Logs count', 'audit_logs', AUDIT_LOGS_SEED_DATA.length, '', {
+        minOnly: true,
+      })
     );
 
     checks.push(
