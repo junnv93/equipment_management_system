@@ -78,11 +78,14 @@ export async function getSelfInspections(
   page = 1,
   pageSize = 20
 ): Promise<{ data: SelfInspection[]; total: number }> {
-  const response = await apiClient.get(API_ENDPOINTS.SELF_INSPECTIONS.BY_EQUIPMENT(equipmentId), {
-    params: { page, pageSize },
-  });
-  const data = response.data?.data ?? response.data;
-  return data;
+  // 백엔드 응답: { data: SelfInspection[], total: number } (envelope 없음)
+  // axios interceptor unwrapResponseData는 { success, data } 봉투만 처리하므로
+  // 이 엔드포인트는 response.data 자체가 페이지네이션 객체임.
+  const response = await apiClient.get<{ data: SelfInspection[]; total: number }>(
+    API_ENDPOINTS.SELF_INSPECTIONS.BY_EQUIPMENT(equipmentId),
+    { params: { page, pageSize } }
+  );
+  return response.data;
 }
 
 export async function getSelfInspection(id: string): Promise<SelfInspection> {
