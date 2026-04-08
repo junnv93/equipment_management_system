@@ -117,10 +117,7 @@ describe('AuditInterceptor — access_denied path', () => {
     expect(dto.details.additionalInfo.reason).toContain('cross-site denied');
   });
 
-  it('Forbidden + non-UUID params(formNumber) → DB 기록 대신 logger.warn fallback', async () => {
-    const warnSpy = jest
-      .spyOn((interceptor as unknown as { logger: { warn: jest.Mock } }).logger, 'warn')
-      .mockImplementation();
+  it('Forbidden + non-UUID params(formNumber) → SYSTEM_USER_UUID sentinel + path-based entityName 으로 DB 기록', async () => {
     const ctx = makeContext({
       method: 'GET',
       params: { formNumber: 'UL-QP-18-04' },
@@ -136,10 +133,18 @@ describe('AuditInterceptor — access_denied path', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     await flushMicrotasks();
 
-    expect(auditService.create).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toContain('AccessDenied');
-    expect(warnSpy.mock.calls[0][0]).toContain('site mismatch');
+    // 이전 동작: logger.warn fallback (DB 미기록 → SQL 분석 불가)
+    // 새 동작: sentinel + path-based entityName 으로 audit_logs 에 정규 기록
+    expect(auditService.create).toHaveBeenCalledTimes(1);
+    const dto = (auditService.create as jest.Mock).mock.calls[0][0];
+    expect(dto).toMatchObject({
+      action: 'access_denied',
+      entityType: 'report',
+      entityId: '00000000-0000-0000-0000-000000000000', // SYSTEM_USER_UUID sentinel
+    });
+    expect(dto.entityName).toContain('GET');
+    expect(dto.details.additionalInfo.entityIdSentinel).toBe(true);
+    expect(dto.details.additionalInfo.reason).toContain('site mismatch');
   });
 
   it('NotFoundException 등 403 외 에러는 audit 안 함', async () => {

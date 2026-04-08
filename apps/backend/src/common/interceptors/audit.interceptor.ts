@@ -17,6 +17,7 @@ import { AuditService } from '../../modules/audit/audit.service';
 import type { AuditAction, CreateAuditLogDto } from '@equipment-management/schemas';
 import { AuditLogDetails } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
+import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
 
 /** 감사 로그 details JSON 최대 크기 (바이트) */
 const AUDIT_DETAILS_MAX_SIZE = 32_768; // 32KB
@@ -139,9 +140,11 @@ export class AuditInterceptor implements NestInterceptor {
   /**
    * 권한 거부 감사 로그 기록 (cross-site probing 분석용)
    *
-   * - response 가 없으므로 entityId는 params(uuid)에서만 추출 시도
-   * - 추출 실패 시: audit_logs.entity_id NOT NULL 제약을 만족할 수 없으므로
-   *   DB 기록 대신 보안 logger.warn 으로 fallback (전체 컨텍스트 포함)
+   * - response 가 없으므로 entityId 는 params(uuid)에서만 추출 시도
+   * - 추출 실패(form export `formNumber` 등 non-UUID param)시: SYSTEM_USER_UUID
+   *   sentinel 로 entity_id NOT NULL 제약 충족 + 사람이 읽을 수 있는 path-based
+   *   identifier 를 `entityName` 에 저장하여 SQL `WHERE entity_name LIKE ...` 분석 가능.
+   *   (이전: `logger.warn` 로그 파일 fallback → audit_logs DB 미기록 → SQL 분석 불가)
    * - userId/IP/site/team + sanitized 요청 본문을 모두 보존하여 forensic 분석 가능
    */
   private async logAccessDeniedAsync(
@@ -152,28 +155,27 @@ export class AuditInterceptor implements NestInterceptor {
     const user: JwtUser | undefined = request.user;
     const ipAddress = this.getClientIp(request);
 
-    const entityId = this.extractEntityIdFromParams(request);
+    const extractedId = this.extractEntityIdFromParams(request);
+    const useSentinel = !extractedId;
+    const entityId = extractedId ?? SYSTEM_USER_UUID;
+    // sentinel fallback 시 path-based 사람-readable identifier 를 entityName 에 보존.
+    // 예: GET /api/reports/export/form/UL-QP-18-01 → "GET /api/reports/export/form/UL-QP-18-01"
+    const entityName = useSentinel
+      ? `${request.method} ${request.route?.path ?? request.originalUrl ?? request.url}`
+      : undefined;
+
     const errorResponse = err.getResponse();
     const errorMessage =
       typeof errorResponse === 'string'
         ? errorResponse
         : ((errorResponse as { message?: string })?.message ?? err.message);
 
-    // entityId 없으면 DB 기록 불가 (NOT NULL 제약). 보안 로그로만 남김.
-    if (!entityId) {
-      this.logger.warn(
-        `[AccessDenied] ${metadata.action}/${metadata.entityType} userId=${user?.userId ?? 'anon'} ` +
-          `site=${user?.site ?? '-'} team=${user?.teamId ?? '-'} ip=${ipAddress ?? '-'} ` +
-          `path=${request.method} ${request.originalUrl ?? request.url} reason=${errorMessage}`
-      );
-      return;
-    }
-
     const details: AuditLogDetails = {
       additionalInfo: {
         deniedAction: metadata.action,
         reason: errorMessage,
         path: `${request.method} ${request.originalUrl ?? request.url}`,
+        ...(useSentinel ? { entityIdSentinel: true } : {}),
       },
     };
     if (request.body && Object.keys(request.body).length > 0) {
@@ -192,7 +194,7 @@ export class AuditInterceptor implements NestInterceptor {
       action: 'access_denied',
       entityType: metadata.entityType,
       entityId,
-      entityName: undefined,
+      entityName,
       details,
       ipAddress,
       userSite: user?.site,
@@ -204,7 +206,8 @@ export class AuditInterceptor implements NestInterceptor {
 
   /**
    * params 에서 UUID 형식 식별자만 추출 (uuid > id 우선)
-   * audit_logs.entityId 가 uuid NOT NULL 이므로 형식 검증 필수
+   * audit_logs.entityId 가 uuid NOT NULL 이므로 형식 검증 필수.
+   * 추출 실패 시 호출자가 SYSTEM_USER_UUID sentinel 로 fallback.
    */
   private extractEntityIdFromParams(request: AuthenticatedRequest): string | undefined {
     const params = (request.params ?? {}) as Record<string, string | undefined>;
