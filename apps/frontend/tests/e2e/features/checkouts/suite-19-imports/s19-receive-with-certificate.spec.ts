@@ -11,6 +11,7 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { getBackendToken, clearBackendCache } from '../../../shared/helpers/api-helpers';
+import { expectToastVisible } from '../../../shared/helpers/toast-helpers';
 import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 import fs from 'fs';
 import os from 'os';
@@ -121,10 +122,8 @@ test.describe('Suite 19 확장: 수령 시 교정성적서 첨부', () => {
       // 수령 확인 클릭
       await page.getByRole('button', { name: '수령 확인' }).click();
 
-      // 성공 토스트 (첫 번째 매칭 — sr-only 스팬과 중복 존재)
-      await expect(
-        page.getByText('수령 확인이 완료되었습니다.', { exact: true }).first()
-      ).toBeVisible({ timeout: 15000 });
+      // 성공 토스트 — expectToastVisible 가 시각 토스트(li[role="status"])만 매칭
+      await expectToastVisible(page, '수령 확인이 완료되었습니다.', { timeout: 15000 });
     } finally {
       if (fs.existsSync(pdfPath)) {
         fs.unlinkSync(pdfPath);

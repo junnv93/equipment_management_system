@@ -13,10 +13,9 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { INCIDENT_TYPE_LABELS } from '@equipment-management/schemas';
+import { expectToastVisible } from '../../../shared/helpers/toast-helpers';
 
 test.describe('Incident History Tab Integration', () => {
-  let equipmentId: string;
-
   test.beforeEach(async ({ techManagerPage }, testInfo) => {
     // Chromium에서만 실행
     if (testInfo.project.name !== 'chromium') {
@@ -34,11 +33,6 @@ test.describe('Incident History Tab Integration', () => {
     }
 
     await firstEquipmentLink.click();
-
-    // URL에서 장비 ID 추출
-    const url = techManagerPage.url();
-    const match = url.match(/\/equipment\/([^/?]+)/);
-    equipmentId = match?.[1] || '';
 
     // 사고이력 탭 클릭
     const incidentTab =
@@ -252,9 +246,8 @@ test.describe('Incident History Tab Integration', () => {
     const submitButton = techManagerPage.getByRole('button', { name: /저장/i });
     await submitButton.click();
 
-    // 8. Verify success toast
-    const successToast = techManagerPage.getByText(/사고 이력 등록 완료|등록 완료/i);
-    await expect(successToast.first()).toBeVisible({ timeout: 5000 });
+    // 8. Verify success toast — 시각 토스트만 매칭
+    await expectToastVisible(techManagerPage, /사고 이력 등록 완료|등록 완료/i, { timeout: 5000 });
 
     // 9. Verify dialog closes
     const dialogTitle = techManagerPage.getByText('사고 이력 등록');

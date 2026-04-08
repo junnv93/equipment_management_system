@@ -17,40 +17,38 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import type { Route } from '@playwright/test';
+import { expectToastVisible } from '../../../shared/helpers/toast-helpers';
 
 test.describe('권한 검증 및 에러 처리', () => {
   // fixme: 품질책임자의 교정 등록 페이지 접근 제어가 프론트엔드에 구현되어 있지 않음.
   // /calibration/register 페이지에 역할 기반 접근 제어(redirect 또는 권한 확인)가 없어
   // quality_manager도 정상적으로 접근 가능합니다.
-  test.fixme(
-    '7.1. 품질책임자는 교정 등록 페이지에 접근할 수 없다',
-    async ({ qualityManagerPage: page }) => {
-      await page.goto('/calibration/register');
-      // Expected: access denied or redirect — but page renders normally
-    }
-  );
+  test.fixme('7.1. 품질책임자는 교정 등록 페이지에 접근할 수 없다', async ({
+    qualityManagerPage: page,
+  }) => {
+    await page.goto('/calibration/register');
+    // Expected: access denied or redirect — but page renders normally
+  });
 
   // fixme: /admin/approvals 통합 승인 페이지는 APPROVAL_ROLES 기반 redirect가 있으나,
   // 시험실무자(test_engineer)가 직접 URL로 접근 시 동작을 확인해야 합니다.
-  test.fixme(
-    '7.2. 시험실무자는 승인 페이지에 접근할 수 없다',
-    async ({ testOperatorPage: page }) => {
-      await page.goto('/admin/approvals?tab=calibration');
-      // Expected: redirect to /dashboard — but page renders with approve/reject buttons
-    }
-  );
+  test.fixme('7.2. 시험실무자는 승인 페이지에 접근할 수 없다', async ({
+    testOperatorPage: page,
+  }) => {
+    await page.goto('/admin/approvals?tab=calibration');
+    // Expected: redirect to /dashboard — but page renders with approve/reject buttons
+  });
 
   // fixme: 교정 등록 폼의 필수 필드 유효성 검증 테스트.
   // CalibrationRegisterContent의 장비 선택 UI가 CSS class (.equipment-list-item)가 아닌
   // 카드 기반 UI로 구현되어 있어 selector 매칭이 안 됩니다.
   // 또한 폼 단계가 장비 선택 → 폼 입력으로 분리되어 있어 별도 분석이 필요합니다.
-  test.fixme(
-    '7.3. 교정 등록 시 필수 필드 미입력이면 API 요청이 차단된다',
-    async ({ testOperatorPage: page }) => {
-      await page.goto('/calibration/register');
-      // Needs: proper form field selectors matching CalibrationRegisterContent UI
-    }
-  );
+  test.fixme('7.3. 교정 등록 시 필수 필드 미입력이면 API 요청이 차단된다', async ({
+    testOperatorPage: page,
+  }) => {
+    await page.goto('/calibration/register');
+    // Needs: proper form field selectors matching CalibrationRegisterContent UI
+  });
 
   test('7.4. CAS 버전 충돌 시 자동 캐시 무효화 및 서버 재검증이 수행된다', async ({
     techManagerPage: page,
@@ -121,10 +119,8 @@ test.describe('권한 검증 및 에러 처리', () => {
       await confirmButton.click();
     }
 
-    // 4. VERSION_CONFLICT 에러 토스트 메시지 확인
-    // Toast renders title and description as separate elements — use exact text to avoid strict mode
-    const errorToast = page.getByText('승인 실패', { exact: true }).first();
-    await expect(errorToast).toBeVisible({ timeout: 10000 });
+    // 4. VERSION_CONFLICT 에러 토스트 — expectToastVisible 가 시각 토스트만 매칭
+    await expectToastVisible(page, '승인 실패', { timeout: 10000 });
 
     // 5. 캐시 무효화 후 목록이 재조회되는지 확인
     // onSettled에서 invalidateQueries가 실행되므로 refetch 발생
@@ -189,11 +185,10 @@ test.describe('권한 검증 및 에러 처리', () => {
   // CalibrationRegisterContent는 역할 확인을 하지만 (isTechnicalManager),
   // 이는 UI 분기용이지 접근 차단용이 아닙니다.
   // UL-QP-18 직무분리 원칙에 따라 서버 사이드 접근 제어 구현이 필요합니다.
-  test.fixme(
-    '7.6. 시험소장은 교정 등록을 직접 할 수 없다 (UL-QP-18 직무분리)',
-    async ({ siteAdminPage: page }) => {
-      await page.goto('/calibration/register');
-      // Expected: access denied or redirect — but page renders normally for lab_manager
-    }
-  );
+  test.fixme('7.6. 시험소장은 교정 등록을 직접 할 수 없다 (UL-QP-18 직무분리)', async ({
+    siteAdminPage: page,
+  }) => {
+    await page.goto('/calibration/register');
+    // Expected: access denied or redirect — but page renders normally for lab_manager
+  });
 });

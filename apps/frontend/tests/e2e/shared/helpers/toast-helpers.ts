@@ -36,6 +36,21 @@ export async function expectToastVisible(
   options: ExpectToastOptions = {}
 ): Promise<void> {
   const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS;
-  const visualToast = page.locator('li[role="status"]').filter({ hasText: text }).first();
+  const visualToast = toastLocator(page, text).first();
   await expect(visualToast).toBeVisible({ timeout });
+}
+
+/**
+ * 시각 토스트 컨테이너만을 좁힌 Locator 를 반환한다.
+ *
+ * `expectToastVisible` 로 충분한 경우엔 그것을 쓰고, 두 후보 토스트를 `.or()` 로 묶어
+ * 어느 쪽이든 떠야 한다고 검증할 때만 이 함수를 직접 사용한다 (예: 성공/에러 양분기).
+ *
+ * @example
+ * const success = toastLocator(page, /승인되었습니다/);
+ * const error = toastLocator(page, /오류|충돌/);
+ * await expect(success.or(error)).toBeVisible({ timeout: 10_000 });
+ */
+export function toastLocator(page: Page, text: string | RegExp) {
+  return page.locator('li[role="status"]').filter({ hasText: text });
 }

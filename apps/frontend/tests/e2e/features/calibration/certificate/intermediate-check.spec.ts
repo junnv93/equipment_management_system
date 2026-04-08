@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { expectToastVisible } from '../../../shared/helpers/toast-helpers';
 
 test.describe('중간점검 완료 워크플로우', () => {
   test.describe.configure({ mode: 'serial' }); // 상태 변경 테스트
@@ -84,9 +85,6 @@ test.describe('중간점검 완료 워크플로우', () => {
       return;
     }
 
-    // Record initial count of "완료" buttons
-    const beforeCount = count;
-
     // 4. 첫 번째 '완료' 버튼 클릭
     await completeButtons.first().click();
 
@@ -102,10 +100,8 @@ test.describe('중간점검 완료 워크플로우', () => {
     await expect(confirmButton).toBeVisible();
     await confirmButton.click();
 
-    // 7. 성공 토스트 메시지 확인 (specific toast text to avoid matching dialog heading)
-    await expect(page.getByText('중간점검이 완료 처리되었습니다.').first()).toBeVisible({
-      timeout: 10000,
-    });
+    // 7. 성공 토스트 — 시각 토스트(li[role="status"])만 매칭하여 다이얼로그 헤딩과 충돌 회피
+    await expectToastVisible(page, '중간점검이 완료 처리되었습니다.', { timeout: 10000 });
 
     // 8. 다이얼로그가 닫히는지 확인
     await expect(dialog).not.toBeVisible({ timeout: 5000 });

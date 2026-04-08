@@ -13,12 +13,10 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
-  apiApproveCheckout,
-  getCheckout,
   waitForApprovalListOrEmpty,
   cleanupApprovalPool,
 } from '../../../shared/helpers/approval-helpers';
-import { clearBackendCache } from '../../../shared/helpers/api-helpers';
+import { expectToastVisible, toastLocator } from '../../../shared/helpers/toast-helpers';
 
 test.describe('CAS 409 동시성 제어', () => {
   test.describe.configure({ mode: 'serial' });
@@ -68,10 +66,10 @@ test.describe('CAS 409 동시성 제어', () => {
     // 승인 버튼 클릭 — 첫 번째 시도는 성공할 수 있음 (서버에서 최신 version 사용)
     await dialog.getByRole('button', { name: '승인' }).click();
 
-    // 승인 성공 또는 에러 토스트 중 하나가 나타남
-    const successToast = page.getByText(/승인되었습니다/).first();
-    const errorToast = page.getByText(/오류가 발생|충돌|다시 시도/).first();
-    await expect(successToast.or(errorToast)).toBeVisible({ timeout: 10000 });
+    // 승인 성공 또는 에러 토스트 중 하나 — 시각 토스트만 매칭
+    const successToast = toastLocator(page, /승인되었습니다/);
+    const errorToast = toastLocator(page, /오류가 발생|충돌|다시 시도/);
+    await expect(successToast.or(errorToast).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('TC-02: 승인 후 목록 갱신 (invalidateQueries)', async ({ techManagerPage: page }) => {
@@ -113,8 +111,7 @@ test.describe('CAS 409 동시성 제어', () => {
       await expect(dialog).toBeVisible();
       await dialog.getByRole('button', { name: /승인/ }).click();
 
-      const toast = page.getByText(/승인되었습니다/).first();
-      await expect(toast).toBeVisible({ timeout: 10000 });
+      await expectToastVisible(page, /승인되었습니다/, { timeout: 10000 });
       approved = true;
       break;
     }
