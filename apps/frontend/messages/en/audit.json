@@ -46,7 +46,8 @@
     "export": "Export",
     "upload": "Upload",
     "download": "Download",
-    "revision": "Revision"
+    "revision": "Revision",
+    "access_denied": "Access Denied"
   },
   "entityTypes": {
     "equipment": "Equipment",

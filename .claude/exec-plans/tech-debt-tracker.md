@@ -14,7 +14,14 @@
 - [ ] `approvals.service.ts buildScopeCondition` 콜백 시그니처 leaky abstraction — `(value) => SQL` 단일 컬럼 비교만 지원해 purpose-aware rule(rental 분기) 우회 인라인 발생. checkouts 외 도메인이 계속 사용 중이므로 콜백 contract를 `(scope) => SQL` 또는 다중-predicate 빌더로 확장 검토 — `apps/backend/src/modules/approvals/approvals.service.ts:861` — 2026-04-08
 - [ ] checkout inbound rental list/action 미세 비대칭 — list의 rental requester OR-branch는 우리가 빌려오는 건을 노출하지만, `enforceScopeFromData`는 rental을 lender 기준으로만 검증해 inbound rental "승인"은 여전히 403. 의도적 디자인(borrower 가시성)이지만 outgoing 탭 라우팅에서 inbound가 섞이지 않도록 frontend 확인 필요 — `checkouts.service.ts enforceScopeFromData` + `checkout-scope.util.ts` — 2026-04-08
 - [ ] `checkouts.service.spec.ts` SQL-shape 회귀 unit 테스트 부재 — 현 mock 인프라가 SQL 조건 검증 미지원, e2e(TC-08)만 커버. checkout-scope.util 단위 테스트는 병렬 세션이 작성 중 (`__tests__/checkout-scope.util.spec.ts`) — 2026-04-08
-- [ ] `@AuditLog({action:'export'})` interceptor가 ForbiddenException 경로에서도 감사 로그 남기도록 확인 — 성공 경로만 로깅 시 cross-site 공격 probing이 감사에 안 남음 — `apps/backend/src/modules/reports/reports.controller.ts:380-410`, `common/interceptors/audit-log.interceptor.ts` — 2026-04-08
+- [x] `@AuditLog` interceptor가 ForbiddenException 경로에서도 감사 로그 남기도록 — 해결: 2026-04-08 — `chore/audit-access-denied`. 아키텍처 수준 SSOT 우선 접근:
+  1. `AUDIT_ACTION_VALUES`에 `'access_denied'` 추가 (DB는 varchar(50)이라 마이그레이션 불필요) + label/color/i18n(en,ko) 동시 갱신
+  2. `AuditInterceptor.auditResponse` 의 `tap.error` 핸들러 활성화: `HttpException` status `FORBIDDEN`만 캐치 (5xx/404 등 운영 노이즈 회피)
+  3. `logAccessDeniedAsync` — entityId는 `params.uuid|id|entityId` UUID 형식만 추출(audit_logs.entity_id NOT NULL 충족), 추출 불가 시 `logger.warn` fallback (form export 등 string param 경로)
+  4. forensic 정보 보존: userId/userSite/userTeamId/IP/sanitized requestBody/query/path
+  5. fire-and-forget — 원본 에러 전파에 영향 없음, 로깅 실패 swallow
+  6. 단일 interceptor 변경으로 모든 `@AuditLog` 엔드포인트(reports/equipment/checkouts/calibration/...) 자동 적용 — cross-site probing 시도가 audit_logs 에 통합 기록
+  7. 4건 unit test 추가 (`audit.interceptor.spec.ts`): forbidden+UUID, forbidden+non-UUID fallback, NotFound 무시, 성공 경로 회귀
 - [ ] `SiteScopeInterceptor`와 `enforceReportScope` 통합 검토 — 두 파일이 유사한 "cross-site 차단" 정책을 각자 구현. 하나의 정책 엔진으로 수렴 가능 — `common/interceptors/site-scope.interceptor.ts`, `modules/reports/utils/report-scope-enforcement.ts` — 2026-04-08
 - [ ] WF-25 spec assertion 본 경로 활성화 — TE 사용자 대상 calibration_due 알림(linkUrl=/equipment/...) deterministic 시딩 + D-day 배지 soft assertion 추가 — `apps/frontend/tests/e2e/workflows/wf-25-alert-to-checkout.spec.ts` — 2026-04-08
 - [ ] WF-35 spec: `page.locator('textarea').first()` → `getByRole('textbox')` 대체 — `apps/frontend/tests/e2e/workflows/wf-35-cas-ui-recovery.spec.ts:50` — 2026-04-08

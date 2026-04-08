@@ -63,6 +63,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   revision: '개정',
   link: '연결',
   unlink: '연결 해제',
+  access_denied: '접근 거부',
 };
 
 /**
@@ -92,6 +93,7 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   revision: 'bg-amber-100 text-amber-800',
   link: 'bg-lime-100 text-lime-800',
   unlink: 'bg-stone-100 text-stone-800',
+  access_denied: 'bg-red-100 text-red-800',
 };
 
 // ============================================================================

@@ -1,4 +1,12 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
@@ -14,6 +22,8 @@ import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
 const AUDIT_DETAILS_MAX_SIZE = 32_768; // 32KB
 /** 배열 truncate 임계값 */
 const AUDIT_ARRAY_MAX_LENGTH = 5;
+/** UUID v4 형식 검증 (entityId NOT NULL 제약 충족 여부 사전 판정) */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -105,12 +115,101 @@ export class AuditInterceptor implements NestInterceptor {
             );
           });
         },
-        error: () => {
-          // 에러 발생 시에도 필요하다면 로그 기록 가능
-          // 현재는 성공한 경우만 기록
+        error: (err: unknown) => {
+          // 권한/스코프 거부(403)만 별도 감사 — cross-site probing 추적 목적.
+          // 5xx, 400, 404 등은 운영 노이즈가 크고 감사 가치가 낮아 제외.
+          // 로깅 실패는 swallow → 원본 에러 전파에 영향 없음.
+          if (!this.isForbiddenError(err)) return;
+          this.logAccessDeniedAsync(metadata, request, err).catch((logError) => {
+            this.logger.error(
+              `Access-denied audit log failed: ${logError instanceof Error ? logError.message : String(logError)}`,
+              logError instanceof Error ? logError.stack : undefined
+            );
+          });
         },
       })
     );
+  }
+
+  /** HttpException 중 status === 403 (Forbidden) 인지 판정 */
+  private isForbiddenError(err: unknown): err is HttpException {
+    return err instanceof HttpException && err.getStatus() === HttpStatus.FORBIDDEN;
+  }
+
+  /**
+   * 권한 거부 감사 로그 기록 (cross-site probing 분석용)
+   *
+   * - response 가 없으므로 entityId는 params(uuid)에서만 추출 시도
+   * - 추출 실패 시: audit_logs.entity_id NOT NULL 제약을 만족할 수 없으므로
+   *   DB 기록 대신 보안 logger.warn 으로 fallback (전체 컨텍스트 포함)
+   * - userId/IP/site/team + sanitized 요청 본문을 모두 보존하여 forensic 분석 가능
+   */
+  private async logAccessDeniedAsync(
+    metadata: AuditLogMetadata,
+    request: AuthenticatedRequest,
+    err: HttpException
+  ): Promise<void> {
+    const user: JwtUser | undefined = request.user;
+    const ipAddress = this.getClientIp(request);
+
+    const entityId = this.extractEntityIdFromParams(request);
+    const errorResponse = err.getResponse();
+    const errorMessage =
+      typeof errorResponse === 'string'
+        ? errorResponse
+        : ((errorResponse as { message?: string })?.message ?? err.message);
+
+    // entityId 없으면 DB 기록 불가 (NOT NULL 제약). 보안 로그로만 남김.
+    if (!entityId) {
+      this.logger.warn(
+        `[AccessDenied] ${metadata.action}/${metadata.entityType} userId=${user?.userId ?? 'anon'} ` +
+          `site=${user?.site ?? '-'} team=${user?.teamId ?? '-'} ip=${ipAddress ?? '-'} ` +
+          `path=${request.method} ${request.originalUrl ?? request.url} reason=${errorMessage}`
+      );
+      return;
+    }
+
+    const details: AuditLogDetails = {
+      additionalInfo: {
+        deniedAction: metadata.action,
+        reason: errorMessage,
+        path: `${request.method} ${request.originalUrl ?? request.url}`,
+      },
+    };
+    if (request.body && Object.keys(request.body).length > 0) {
+      (details.additionalInfo as Record<string, unknown>).requestBody = this.truncateForAudit(
+        this.sanitizeData(request.body)
+      );
+    }
+    if (request.query && Object.keys(request.query).length > 0) {
+      (details.additionalInfo as Record<string, unknown>).query = this.sanitizeData(request.query);
+    }
+
+    const auditLogDto: CreateAuditLogDto = {
+      userId: user?.userId ?? null,
+      userName: user?.name || 'Anonymous User',
+      userRole: user?.roles?.[0] || 'unknown',
+      action: 'access_denied',
+      entityType: metadata.entityType,
+      entityId,
+      entityName: undefined,
+      details,
+      ipAddress,
+      userSite: user?.site,
+      userTeamId: user?.teamId,
+    };
+
+    await this.auditService.create(auditLogDto);
+  }
+
+  /**
+   * params 에서 UUID 형식 식별자만 추출 (uuid > id 우선)
+   * audit_logs.entityId 가 uuid NOT NULL 이므로 형식 검증 필수
+   */
+  private extractEntityIdFromParams(request: AuthenticatedRequest): string | undefined {
+    const params = (request.params ?? {}) as Record<string, string | undefined>;
+    const candidates = [params.uuid, params.id, params.entityId];
+    return candidates.find((c): c is string => typeof c === 'string' && UUID_REGEX.test(c));
   }
 
   /**
