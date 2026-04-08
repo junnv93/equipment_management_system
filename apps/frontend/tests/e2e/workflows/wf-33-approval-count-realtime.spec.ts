@@ -53,9 +53,9 @@ async function gotoApprovalsOutgoingReady(page: Page) {
     timeout: 15000,
   });
   // KPI 스켈레톤 소멸 대기
-  await expect(page.getByRole('group', { name: '전체 대기' }).locator('.h-8.w-14')).not.toBeVisible(
-    { timeout: 10000 }
-  );
+  await expect(
+    page.getByRole('group', { name: '전체 대기' }).getByTestId('kpi-value-skeleton')
+  ).not.toBeVisible({ timeout: 10000 });
 }
 
 test.describe('WF-33: 다탭 승인 카운트 SSE 실시간 동기화', () => {

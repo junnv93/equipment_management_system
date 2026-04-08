@@ -10,18 +10,10 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import {
-  apiApproveCheckout,
-  apiRejectCheckout,
-  getCheckout,
   waitForApprovalListOrEmpty,
   waitForToast,
   cleanupApprovalPool,
 } from '../../../shared/helpers/approval-helpers';
-import { clearBackendCache } from '../../../shared/helpers/api-helpers';
-
-// 시드 데이터에서 pending checkout IDs (SSOT)
-// checkout 001~006은 pending 상태로 시드됨
-const PENDING_CHECKOUT_PREFIX = '10000000-0001-4001-8001-';
 
 test.describe('실제 승인/반려 + UI 상태 변경', () => {
   test.describe.configure({ mode: 'serial' });
@@ -49,7 +41,6 @@ test.describe('실제 승인/반려 + UI 상태 변경', () => {
 
     // 첫 번째 항목의 상세 모달 열기
     const firstItem = initialItems.first();
-    const summaryText = await firstItem.locator('.font-medium.truncate').first().textContent();
     await firstItem.getByRole('button', { name: /상세 보기/ }).click();
 
     const dialog = page.getByRole('dialog');
@@ -132,7 +123,9 @@ test.describe('실제 승인/반려 + UI 상태 변경', () => {
     const totalPendingCard = page.locator('[role="group"][aria-label="전체 대기"]');
     await expect(totalPendingCard).toBeVisible();
     // 스켈레톤이 사라질 때까지 대기
-    await expect(totalPendingCard.locator('.h-8.w-14')).not.toBeVisible({ timeout: 10000 });
+    await expect(totalPendingCard.getByTestId('kpi-value-skeleton')).not.toBeVisible({
+      timeout: 10000,
+    });
 
     const hasData = await waitForApprovalListOrEmpty(page);
     if (!hasData) {

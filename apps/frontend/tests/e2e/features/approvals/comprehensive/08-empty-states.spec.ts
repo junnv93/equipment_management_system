@@ -50,9 +50,10 @@ test.describe('빈 상태 렌더링', () => {
     const totalPendingCard = page.locator('[role="group"][aria-label="전체 대기"]');
     await expect(totalPendingCard).toBeVisible();
 
-    // 스켈레톤이 사라질 때까지 대기 (Skeleton은 h-8 w-14 클래스)
-    // 실제 값이 로드되면 스켈레톤이 사라지고 숫자가 표시됨
-    await expect(totalPendingCard.locator('.h-8.w-14')).not.toBeVisible({ timeout: 10000 });
+    // 스켈레톤이 사라질 때까지 대기 — kpi-value-skeleton (data-testid SSOT)
+    await expect(totalPendingCard.getByTestId('kpi-value-skeleton')).not.toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('TC-03: LM - 빈 카테고리 순회', async ({ siteAdminPage: page }) => {

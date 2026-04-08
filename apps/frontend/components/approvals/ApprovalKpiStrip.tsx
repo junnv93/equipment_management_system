@@ -54,7 +54,7 @@ function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: Kpi
       <div className={cn('flex-1 min-w-0', tokens.contentZ)}>
         <div className={tokens.label}>{label}</div>
         {isLoading ? (
-          <Skeleton className="h-8 w-14 mt-0.5" />
+          <Skeleton className="h-8 w-14 mt-0.5" data-testid="kpi-value-skeleton" />
         ) : (
           <div className={tokens.value}>
             {value === '0' || value === '-' ? (

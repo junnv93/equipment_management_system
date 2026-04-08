@@ -15,9 +15,6 @@ test.describe('KPI 스트립 + 카운트 배지', () => {
       timeout: 10000,
     });
 
-    // KPI 4개 카드 존재 확인 (role="group")
-    const kpiCards = page.getByRole('group');
-
     // "전체 대기" 카드
     await expect(page.locator('[role="group"][aria-label="전체 대기"]')).toBeVisible();
 
@@ -68,7 +65,9 @@ test.describe('KPI 스트립 + 카운트 배지', () => {
     const totalPendingCard = page.locator('[role="group"][aria-label="전체 대기"]');
     await expect(totalPendingCard).toBeVisible();
     // 숫자 또는 대시(–) 표시 확인 — 스켈레톤이 아닌 실제 값
-    await expect(totalPendingCard.locator('.h-8.w-14')).not.toBeVisible({ timeout: 10000 });
+    await expect(totalPendingCard.getByTestId('kpi-value-skeleton')).not.toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('TC-04: LM 승인 페이지 - 3개 탭에 카운트 배지', async ({ siteAdminPage: page }) => {
