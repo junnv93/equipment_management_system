@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { cancelDisposalRequest } from '@/lib/api/disposal-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';

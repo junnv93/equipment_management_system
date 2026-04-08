@@ -23,7 +23,7 @@ import {
 import { AuditSummaryBar } from '@/components/audit-logs/AuditSummaryBar';
 import { AuditTimelineFeed } from '@/components/audit-logs/AuditTimelineFeed';
 import { AuditDetailSheet } from '@/components/audit-logs/AuditDetailSheet';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { auditApi, type AuditLog } from '@/lib/api/audit-api';
 import { apiClient } from '@/lib/api/api-client';

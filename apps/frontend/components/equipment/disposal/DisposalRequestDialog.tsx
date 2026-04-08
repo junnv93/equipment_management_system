@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Upload, X } from 'lucide-react';
 import { DisposalReasonSelector } from './DisposalReasonSelector';
 import { requestDisposal } from '@/lib/api/disposal-api';
