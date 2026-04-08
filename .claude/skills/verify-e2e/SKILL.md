@@ -54,7 +54,24 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 
 ### Step 5: Locator 안티패턴
 
-**PASS:** `locator('[role=]')` 0건, `waitForFunction` 0건.
+**PASS:** `locator('[role=]')` 0건, `waitForFunction` 0건, **Tailwind utility class selector 0건**.
+
+**Tailwind utility class selector 금지** (33차 추가, review-architecture 발견):
+스켈레톤/로딩 상태 대기를 위해 `locator('.h-8.w-14')` 같은 Tailwind utility class literal 을 쓰면
+Tailwind 리팩토링 시 무음 브레이크. 스켈레톤 컴포넌트에 `data-testid` 부여 후 `getByTestId` 사용.
+
+탐지:
+```bash
+grep -rn "\.locator('\\.\\(h\\|w\\|p\\|m\\|bg\\|text\\|flex\\|grid\\)-" apps/frontend/tests/e2e \
+  --include="*.ts" --include="*.spec.ts"
+```
+→ 0 hit 이어야 함.
+
+**기존 hit (33차 현재):**
+- `apps/frontend/tests/e2e/workflows/wf-33-approval-count-realtime.spec.ts` (KPI 스켈레톤 `.h-8.w-14`)
+- `apps/frontend/tests/e2e/features/approvals/comprehensive/09-actual-approve-reject.spec.ts` (동일)
+
+→ `ApprovalKpi` 컴포넌트에 `data-testid="kpi-pending-skeleton"` 부여 + 일괄 전환 필요 (별도 harness 프롬프트 등재됨).
 
 ### Step 6: UUID 하드코딩
 

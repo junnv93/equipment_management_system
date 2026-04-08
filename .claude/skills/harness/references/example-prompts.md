@@ -1,12 +1,99 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-08 (31차 — WF-21 API spec 완료 + Export UI 갭 발견, 신규 4건)**
+> **마지막 정리일: 2026-04-08 (33차 — WF-33 다탭 SSE E2E 완료 + global-setup overdue 트리거 fail-fast 복구 + review-architecture 후속 3건 등재)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
 ---
 
-## 현재 미해결 프롬프트: 8건 (+ 사용자 결정 대기 1건)
+## 33차 신규 — review-architecture 후속 이슈 (3건)
+
+### 🟠 HIGH — /admin/approvals cross-site pending 노출 (프론트/백엔드 site scope 비대칭)
+
+```
+WF-33 spec 작성 중 발견 (커밋 d3251006): TM(site=suwon) 이 /admin/approvals?tab=outgoing
+에서 목록 첫 항목으로 CHECKOUT_004 (Uiwang W repair) 를 본다. 그러나 이 항목의 "승인"
+버튼을 누르면 backend 가 403 SCOPE_ACCESS_DENIED 로 튕는다.
+
+사용자 증상: "보이는데 못 누르는 유령 행". WF-33 spec 은 이를 회피하기 위해 최대 8건
+순회 루프를 쓰고 있음 (wf-33-approval-count-realtime.spec.ts:95-130).
+
+의심 원인 (확인 필요):
+1. 백엔드: GET /api/approvals/pending?category=outgoing 쿼리에서 site filter INNER JOIN
+   누락. 프론트로 cross-site checkouts 가 전달됨.
+2. 또는 프론트: getPendingOutgoing() 이 user.site 를 query param 에 싣지 않아 백엔드가
+   전체 반환.
+
+작업:
+1. apps/backend/src/modules/approvals/approvals.service.ts 의 outgoing 쿼리 분기
+   (getPendingOutgoing 등) 에서 site filter 가 INNER JOIN 인지 grep 확인
+2. apps/frontend/lib/api/approvals-api.ts 에서 user.site 를 params 로 넘기는지 확인
+3. 원인에 해당하는 쪽 수정:
+   - 백엔드: `.innerJoin(equipment, ...).where(eq(equipment.site, scope.site))`
+   - 프론트: 의도적으로 cross-site 를 보여주되 disabled 렌더 (사용자 피드백 포함)
+4. WF-33 spec 의 "최대 8건 순회" 루프를 "첫 항목 바로 클릭" 으로 단순화
+5. features/approvals/comprehensive/01-access-control.spec.ts 에 cross-site 노출 회귀
+   케이스 추가
+
+검증:
+- pnpm --filter backend exec tsc --noEmit exit 0
+- pnpm --filter backend run test -- approvals exit 0
+- pnpm --filter frontend exec playwright test wf-33-approval-count-realtime --project=chromium
+  통과 유지 (루프 단순화 후에도)
+- TM(suwon) 으로 직접 로그인 후 /admin/approvals?tab=outgoing 에 Uiwang 행 미노출 확인
+
+⚠️ 보안/UX 사이드 이펙트: 백엔드 쪽 수정은 쿼리 결과 집합이 바뀌므로 다른 spec(02-kpi-and-
+counts.spec.ts, waitForApprovalListOrEmpty 가정) 회귀 범위 점검 필수.
+```
+
+### 🟡 MEDIUM — E2E 스켈레톤 대기용 CSS class selector → data-testid 전환 (verify-e2e 강화)
+
+```
+WF-33 spec 과 09-actual-approve-reject.spec.ts 가 KPI "전체 대기" 카드의 스켈레톤
+소멸을 기다릴 때 `.locator('.h-8.w-14')` Tailwind 유틸 클래스 셀렉터를 쓴다.
+메모리 규칙("CSS 셀렉터 금지, getByRole/getByText 만") 위반이며 Tailwind 리팩토링 시
+무음 브레이크 위험.
+
+발견 파일 (2곳):
+- apps/frontend/tests/e2e/workflows/wf-33-approval-count-realtime.spec.ts:56
+- apps/frontend/tests/e2e/features/approvals/comprehensive/09-actual-approve-reject.spec.ts:135
+
+작업:
+1. 승인 KPI 스켈레톤 컴포넌트 (apps/frontend/components/approvals/ApprovalKpi.tsx 또는
+   관련 컴포넌트) 에서 스켈레톤 엘리먼트에 `data-testid="kpi-pending-skeleton"` 부여
+2. 두 spec 파일의 `.locator('.h-8.w-14')` 를 `getByTestId('kpi-pending-skeleton')` 로 교체
+3. 다른 KPI 카드/스켈레톤 대기 패턴도 grep 으로 찾아 일괄 전환:
+   `grep -rn "locator('\.h-[0-9]" apps/frontend/tests/e2e`
+4. .claude/skills/verify-e2e/ 규칙에 "Tailwind 유틸 class locator 금지" 명시 추가
+
+검증:
+- grep "locator('\\.(h|w)-" apps/frontend/tests/e2e → 0 hit
+- pnpm --filter frontend exec playwright test wf-33-approval-count-realtime
+  09-actual-approve-reject --project=chromium exit 0
+```
+
+### 🟢 LOW — global-setup 에러 로그 정밀화 (seed vs trigger-overdue 구분) (Mode 0)
+
+```
+apps/frontend/tests/e2e/global-setup.ts 의 외부 try/catch 가 seed 실패 + trigger-overdue
+실패 둘 다 "❌ 시드 데이터 로딩/검증 실패" 메시지로 출력한다. 실제로는 trigger-overdue
+가 throw 한 경우도 있어 디버깅 시 misleading.
+
+작업:
+1. trigger-overdue 블록을 별도 try/catch 로 분리 (여전히 outer throw 유지)
+2. 각각 다른 error prefix 출력:
+   - "❌ 시드 데이터 로딩/검증 실패" (seed 전용)
+   - "❌ 교정 기한 초과 트리거 실패" (trigger-overdue 전용)
+3. 두 경우 모두 수동 재현 명령을 함께 출력
+
+검증:
+- pnpm --filter frontend exec tsc --noEmit exit 0
+- 두 에러 경로를 주석으로 설명 (향후 작업자 혼동 방지)
+```
+
+---
+
+## 현재 미해결 프롬프트: 9건 (+ 사용자 결정 대기 1건) — 33차 신규 3건 포함 (상단 참조)
 
 ### 🟠 HIGH — WF-21 케이블 Path Loss 관리 E2E 워크플로우 spec 부재 (Playwright)
 
@@ -78,39 +165,14 @@ verify된 spec 으로 cover되지 않는다.
   - `notifications.{recipient,team,equipment,actor}_id` hard FK + ON DELETE 정책 (migration `0004_opposite_selene.sql`)
 - 검증: WF-25 + alert-kpi 13/13, backend 473/473, 시드 30/30
 
-### 🟡 MEDIUM — global-setup 교정 overdue 트리거 실패 (lab_manager 토큰 발급) (Mode 1)
+### ~~🟡 MEDIUM — global-setup 교정 overdue 트리거 실패 (lab_manager 토큰 발급) (Mode 1)~~ ✅ 완료 (33차, 2026-04-08, 커밋 d3251006)
 
-```
-apps/frontend/tests/e2e/global-setup.ts 의 시드 후 "교정 기한 초과 장비 자동 부적합 전환"
-단계에서 fetchBackendToken('lab_manager') 가 실패하여 POST /notifications/trigger-overdue-check
-호출이 catch 로 떨어지고 "⚠️ 교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다"
-경고만 남긴다. 이로 인해 시드 상대날짜(daysAgo) 기반 교정일이 overdue 상태로 전환되지 않아
-calibration_overdue 상태의 장비 집계가 부정확해질 수 있다.
-
-증상 로그 (2026-04-08 세션):
-  🌱 테스트 시드 데이터 로딩...
-  ✅ 시드 데이터 로딩 완료
-  🔄 교정 기한 초과 장비 점검 트리거...
-  ⚠️  교정 기한 초과 점검 트리거 실패 — 일부 장비 상태가 부정확할 수 있습니다.
-
-확인 필요:
-1. fetchBackendToken() 구현 위치와 credentials 소스 (env? hardcoded?)
-2. lab_manager 계정이 실제로 존재하고 credentials 가 valid 한지
-3. AbortSignal.timeout(10000) 이 실제로 발동하는지 vs 인증 단계에서 실패하는지
-4. 실패를 silent warn 으로 처리하는 현재 방식이 적절한가 — global-setup 이 fail-fast 로 전환된
-   이상 이 트리거 실패도 throw 할지, 아니면 warn 유지할지 정책 결정 필요
-
-작업:
-1. global-setup.ts 의 fetchBackendToken 및 trigger 호출 블록 로그 보강 (err.message 출력)
-2. 원인 파악 후: credentials 수정 or 스케줄러 로직을 시드 단계에서 직접 호출하도록 리팩토링
-   (API 호출 우회 — seed-test-new.ts 안에서 SQL 로 overdue 상태 계산)
-3. calibration_overdue 집계가 포함된 spec(alert-kpi 등)이 영향받는지 확인
-
-검증:
-- pnpm --filter frontend exec playwright test alert-kpi --project=chromium 통과 유지
-- global-setup 로그에 "⚠️ 교정 기한 초과 점검 트리거 실패" 메시지 없음
-- 시드 검증에 Equipment status: calibration_overdue ≥ 1 체크 통과
-```
+- 실제 원인: lab_manager 토큰 자체는 정상. 2가지 문제 존재했음.
+  1. 응답이 flat (`{"processed":3}`) 인데 global-setup 이 `result?.data?.processed` 로 읽어 성공 시에도 "0건" 로깅 — ResponseTransformInterceptor 미적용 엔드포인트
+  2. `catch {}` silent 처리로 fail-fast 로 전환된 주변 블록과 일관성 위반 + 원인 진단 불가
+- 수정: silent catch 제거(throw), timeout 10s→30s (fresh seed 직후 N+1 대응), `result.processed` 직접 읽음
+- 곁들임: verification.ts audit_logs 를 `minOnly` 로 완화 — running backend 와 async `@OnEvent('audit.auth.success')` 핸들러 경합으로 seed insert 와 verify 사이에 +1 row 가 끼어들 수 있음 (SSOT 원칙 유지, 하한만 강제)
+- 검증: 재실행 시 `✅ 교정 기한 초과 점검 완료 (처리: 3건, 부적합 생성: 3건)` 정상 로깅, WF-33 e2e 통과
 
 ### 🟢 LOW — verification.ts SSOT 리팩토링 후속 커버리지 갭 (Mode 0 or Mode 1)
 
@@ -158,37 +220,25 @@ cover하려면 soft assertion 추가가 필요하다.
 - tech-debt-tracker.md 해당 항목 해결 처리
 ```
 
-### 🟡 MEDIUM — WF-33 SSE 다탭 승인 카운트 동기화 E2E (Playwright)
+### ~~🟡 MEDIUM — WF-33 SSE 다탭 승인 카운트 동기화 E2E (Playwright)~~ ✅ 완료 (33차, 2026-04-08, 커밋 d3251006)
 
-```
-critical-workflows.md WF-33 신규 등재. features/notifications/notification-realtime.spec.ts 가
-**알림 배지** 의 cross-tab 갱신은 cover하지만, **승인 대시보드 카운트** 의 cross-tab 갱신
-(REFETCH_STRATEGIES CRITICAL/IMPORTANT 전략) 은 cover되지 않는다.
-
-작업:
-1. apps/frontend/tests/e2e/workflows/wf-33-approval-count-realtime.spec.ts
-2. 시나리오:
-   a. TM 로그인, 두 BrowserContext (또는 두 page) 모두 /admin/approvals 진입
-   b. 양쪽 모두 초기 대기 카운트 N 캡처
-   c. 페이지A 에서 1건 승인 → 토스트, A 카운트 N-1 검증
-   d. 페이지B 에서 자동 갱신 대기 (focus 이벤트 트리거 또는 SSE 30s — REFETCH_STRATEGIES.CRITICAL 인 경우 SSE)
-   e. 페이지B 카운트가 N-1 로 갱신되는지 검증 (timeout 35s 이내)
-3. SSE 미사용 카테고리(IMPORTANT 2m 폴링)는 spec 분리 또는 폴링 강제 트리거
-
-확인 필요:
-- apps/frontend/lib/api/query-config.ts 또는 refetch-strategies 파일에서 approvals 카테고리가
-  어느 전략(CRITICAL/IMPORTANT)인지 먼저 grep — 그에 따라 대기 전략 변경
-
-검증:
-- pnpm --filter frontend exec playwright test wf-33-approval-count-realtime exit 0
-- 회귀: features/notifications/notification-realtime.spec.ts 통과 유지
-```
+- spec: `apps/frontend/tests/e2e/workflows/wf-33-approval-count-realtime.spec.ts`
+- 실측한 전략: approvals counts 는 `REFETCH_STRATEGIES.SSE_BACKED` (refetchInterval 10분 폴백) → 15s window 내 감소 = SSE 푸시 증명
+- 파이프라인 검증: 탭A 승인 클릭 → `ApprovalSseListener` → `NotificationSseService.broadcastApprovalChanged()` → 두 탭 `useNotificationStream` 이 `countsAll` prefix 무효화 → 자동 refetch
+- 견고성: 탭A 의 "첫 항목" 이 cross-site uiwang checkout 이어서 403 SCOPE_ACCESS_DENIED 였음 → 최대 8건 순회해 승인 가능한 것 선택 (프론트엔드가 cross-site pending 을 목록에 노출하는 것 자체는 별도 관찰 사항)
+- 승인 PATCH 응답은 `waitForResponse` 로 명시 대기 → 토스트 플레이키함 제거
+- Step 5 (bell 카운트 +1) 는 별도 notification 트리거가 필요해 본 spec 범위 밖
+- 검증: playwright 14.6s 통과, 7 passed
 
 ---
 
 ## 31차 신규 — Export spec API-only 갭 + WF-21 후속 + 보안 (5건)
 
-### 🔴 CRITICAL — Form Template Export site scope bypass (다중 exporter 공통 보안 갭)
+### ~~🔴 CRITICAL — Form Template Export site scope bypass~~ ✅ 완료 (33차, 2026-04-08, 23192fd8)
+
+> `resolveSiteFilter` 헬퍼 도입 + 3곳 치환 + 403 reject(OWASP IDOR 표준) + 5 cases unit test. 실측 grep 결과 취약 파일 1개(form-template-export.service.ts)뿐이었음.
+
+<details><summary>원문</summary>
 
 ```
 배경: 31차 review-architecture에서 발견 (WF-21 spec이 ?site=suwon 을 명시 호출한 첫 케이스라
@@ -237,6 +287,8 @@ critical-workflows.md WF-33 신규 등재. features/notifications/notification-r
 정책 영향이 크므로 silent override vs reject 결정을 사용자에게 먼저 확인할 것.
 ```
 
+</details>
+
 ---
 
 ## 31차 신규 — Export spec API-only 갭 + WF-21 후속 (4건)
@@ -245,7 +297,9 @@ critical-workflows.md WF-33 신규 등재. features/notifications/notification-r
 > → 스캔 결과 wf-19b/wf-20b/wf-21 3개 export spec 모두 사용자가 누르는 "내보내기" 버튼 동선이 0건 검증된 상태. 패턴화된 회귀 위험.
 > 또한 WF-21 자체의 케이블 등록 다이얼로그/측정 폼 다이얼로그도 미검증 (기존 spec은 백엔드 API만 호출).
 
-### 🟠 HIGH — WF-21 UI 동선 검증 spec (등록 페이지 + 측정 다이얼로그 + 상세 렌더링)
+### ~~🟠 HIGH — WF-21 UI 동선 검증 spec~~ ✅ 완료 (33차, 99ea61f1 / 검증 2026-04-08)
+
+> wf-21-cable-ui.spec.ts 8 step 모두 구현. Playwright 14/14 통과 확인.
 
 ```
 방금 추가된 wf-21-cable-path-loss.spec.ts (31차)는 백엔드 API만 검증한다.
@@ -305,7 +359,9 @@ critical-workflows.md WF-33 신규 등재. features/notifications/notification-r
   "cables.list.exportButton" 등 — 실제 키는 코드 grep으로 확정
 ```
 
-### 🟠 HIGH — WF-21 권한 가시성 spec (TE/TM/QM/LM 역할별 버튼 노출)
+### ~~🟠 HIGH — WF-21 권한 가시성 spec~~ ✅ 완료 (33차, 2026-04-08, 3a8ae03d)
+
+> UI gating 구현(canCreate/canUpdate) + features/permissions/comprehensive/cable-permissions.spec.ts 10 cases. Defense-in-depth (QM POST → 403) 포함.
 
 ```
 WF-21 cable path loss UI에서 역할별로 어떤 액션이 노출/숨김/disabled 되는지 검증되지 않음.
