@@ -40,6 +40,7 @@ pnpm --filter backend run db:generate # Generate migration SQL from schema diff
 pnpm --filter backend run db:migrate  # Apply pending migrations (drizzle-kit migrate)
 pnpm --filter backend run db:push     # Direct schema sync (dev prototyping only)
 pnpm --filter backend run db:studio   # Open Drizzle Studio
+pnpm --filter backend run db:reset    # DROP + CREATE + migrate + seed (PC 이동/꼬임 복구)
 
 # Docker (Infrastructure only)
 docker compose up -d                  # Start PostgreSQL + Redis
@@ -271,6 +272,20 @@ trunk-based로 전환했습니다. **CI 게이트는 `.husky/pre-push`로 이동
    → Yes: 브랜치 만들고 진행
    → No: main에서 바로 시작
 ```
+
+### PC 이동 후 첫 작업 (DB 상태 리셋)
+
+**로컬 DB는 일회용(ephemeral)으로 다룹니다.** 다른 PC에서 추가된 마이그레이션/seed가 현재 PC의 로컬 DB와 어긋나면 `drizzle-kit migrate`가 말없이 hang 하거나 부분 적용 상태로 깨지는 경우가 있습니다 (2026-04-08 발생). 예방 워크플로우:
+
+```
+git pull
+pnpm --filter backend run db:reset   # DROP + CREATE + migrate + seed, 약 30초
+pnpm dev
+```
+
+`db:reset`은 `equipment_management` DB를 통째로 drop/recreate 하고 0부터 마이그레이션을 재적용한 뒤 `seed-test-new.ts`를 실행합니다. 수동으로 입력한 로컬 데이터는 전부 날아가므로, 보존할 데이터가 있는 PC에서는 사용하지 마세요. (이 프로젝트는 seed가 SSOT라 일반적으로 문제 없음.)
+
+`__drizzle_migrations` 테이블과 `drizzle/meta/_journal.json`이 불일치하면 drizzle-kit migrate CLI가 에러를 출력하지 않고 스피너 상태로 멈춥니다 — 이럴 땐 `pnpm --filter backend run db:reset` 이 가장 빠른 복구 방법입니다.
 
 ### 작업 완료 시
 

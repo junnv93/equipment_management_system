@@ -35,6 +35,7 @@
     "security:check-endpoints": "npx ts-node scripts/check-endpoint-annotations.ts",
     "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts",
     "db:seed": "npx ts-node src/database/seed-test-new.ts",
+    "db:reset": "bash scripts/db-reset.sh",
     "test:e2e:setup": "pnpm run db:migrate && pnpm run db:seed"
   },
   "dependencies": {
