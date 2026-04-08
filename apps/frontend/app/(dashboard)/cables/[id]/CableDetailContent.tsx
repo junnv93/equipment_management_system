@@ -44,6 +44,8 @@ import { SITE_VALUES, CABLE_CONNECTOR_TYPE_VALUES } from '@equipment-management/
 import type { Site } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { MeasurementFormDialog } from '@/components/cables/MeasurementFormDialog';
+import { useAuth } from '@/hooks/use-auth';
+import { Permission } from '@equipment-management/shared-constants';
 
 interface CableDetailContentProps {
   id: string;
@@ -51,6 +53,8 @@ interface CableDetailContentProps {
 
 export default function CableDetailContent({ id }: CableDetailContentProps) {
   const t = useTranslations('cables');
+  const { can } = useAuth();
+  const canUpdate = can(Permission.UPDATE_CALIBRATION);
   const { fmtDate } = useDateFormatter();
   const router = useRouter();
   const { toast } = useToast();
@@ -209,13 +213,17 @@ export default function CableDetailContent({ id }: CableDetailContentProps) {
           <Badge variant={cable.status === 'active' ? 'default' : 'secondary'}>
             {t(`status.${cable.status}` as Parameters<typeof t>[0])}
           </Badge>
-          <Button variant="outline" size="sm" onClick={openEditDialog}>
-            <Edit2 className="mr-1 h-4 w-4" />
-            {t('detail.editButton')}
-          </Button>
-          <Button size="sm" onClick={() => setIsMeasurementOpen(true)}>
-            {t('measurement.addButton')}
-          </Button>
+          {canUpdate && (
+            <>
+              <Button variant="outline" size="sm" onClick={openEditDialog}>
+                <Edit2 className="mr-1 h-4 w-4" />
+                {t('detail.editButton')}
+              </Button>
+              <Button size="sm" onClick={() => setIsMeasurementOpen(true)}>
+                {t('measurement.addButton')}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

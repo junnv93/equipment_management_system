@@ -62,6 +62,7 @@ export default function CableListContent() {
   const { toast } = useToast();
   const { can, user } = useAuth();
   const canExport = can(Permission.EXPORT_REPORTS);
+  const canCreate = can(Permission.UPDATE_CALIBRATION);
   const [exporting, setExporting] = useState(false);
 
   const filters = parseFiltersFromSearchParams(searchParams);
@@ -169,12 +170,14 @@ export default function CableListContent() {
               {exporting ? t('list.exporting') : t('list.exportButton')}
             </Button>
           )}
-          <Link href={FRONTEND_ROUTES.CABLES.CREATE}>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('list.createButton')}
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link href={FRONTEND_ROUTES.CABLES.CREATE}>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('list.createButton')}
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
