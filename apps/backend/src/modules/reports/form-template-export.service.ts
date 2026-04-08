@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   NotImplementedException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import ExcelJS from 'exceljs';
@@ -135,6 +136,25 @@ export class FormTemplateExportService {
   // 공통 유틸리티
   // ============================================================================
 
+  /**
+   * Resolve site filter enforcing server-side scope.
+   *
+   * Security: client query param MUST NOT override server scope (CLAUDE.md Rule 2).
+   * - Scoped user with mismatched `?site=` → ForbiddenException (OWASP IDOR guard)
+   * - Scoped user with matching or no `?site=` → scope.site
+   * - Unscoped user (admin) → params.site (unrestricted)
+   */
+  resolveSiteFilter(params: Record<string, string>, scope?: UserScope): string | undefined {
+    if (!scope) return params.site;
+    if (params.site && params.site !== scope.site) {
+      throw new ForbiddenException({
+        code: 'CROSS_SITE_EXPORT_DENIED',
+        message: `Cross-site export denied: scope=${scope.site}, requested=${params.site}`,
+      });
+    }
+    return scope.site;
+  }
+
   private formatDate(d: Date | string | null | undefined): string {
     if (!d) return '-';
     const date = d instanceof Date ? d : new Date(d);
@@ -178,8 +198,7 @@ export class FormTemplateExportService {
     const entry = FORM_CATALOG['UL-QP-18-01'];
     const conditions: SQL<unknown>[] = [];
 
-    // 사이트 필터: params 우선, 없으면 scope
-    const siteFilter = params.site || scope?.site;
+    const siteFilter = this.resolveSiteFilter(params, scope);
     if (siteFilter) {
       conditions.push(eq(equipment.site, siteFilter));
     }
@@ -885,8 +904,7 @@ export class FormTemplateExportService {
     const entry = FORM_CATALOG['UL-QP-18-07'];
     const conditions: SQL<unknown>[] = [];
 
-    // 사이트 필터: params 우선, 없으면 scope
-    const siteFilter = params.site || scope?.site;
+    const siteFilter = this.resolveSiteFilter(params, scope);
     if (siteFilter) {
       conditions.push(eq(testSoftware.site, siteFilter));
     }
@@ -1184,7 +1202,7 @@ export class FormTemplateExportService {
     const entry = FORM_CATALOG['UL-QP-18-08'];
     const conditions: SQL<unknown>[] = [];
 
-    const siteFilter = params.site || scope?.site;
+    const siteFilter = this.resolveSiteFilter(params, scope);
     if (siteFilter) {
       conditions.push(sql`${cables.site} = ${siteFilter}`);
     }
