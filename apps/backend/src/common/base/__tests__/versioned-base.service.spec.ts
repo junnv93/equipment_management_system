@@ -16,7 +16,7 @@ describe('VersionedBaseService — onVersionConflict hook', () => {
   const ENTITY_ID = '11111111-1111-4111-8111-111111111111';
 
   // Drizzle update().set().where().returning() 체이닝 mock 빌더
-  function buildDb(returnedRows: unknown[], existingRows: unknown[] = []) {
+  function buildDb(returnedRows: unknown[], existingRows: unknown[] = []): AppDatabase {
     const updateChain = {
       set: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -51,8 +51,8 @@ describe('VersionedBaseService — onVersionConflict hook', () => {
     }
 
     // protected → public for testing
-    public callUpdate(id: string, version: number) {
-      return (this as unknown as { updateWithVersion: Function }).updateWithVersion(
+    public callUpdate(id: string, version: number): Promise<{ id: string; version: number }> {
+      return this.updateWithVersion<{ id: string; version: number }>(
         mockTable,
         id,
         version,
@@ -102,8 +102,8 @@ describe('VersionedBaseService — onVersionConflict hook', () => {
       constructor(public readonly db: AppDatabase) {
         super();
       }
-      public callUpdate(id: string, version: number) {
-        return (this as unknown as { updateWithVersion: Function }).updateWithVersion(
+      public callUpdate(id: string, version: number): Promise<{ id: string; version: number }> {
+        return this.updateWithVersion<{ id: string; version: number }>(
           mockTable,
           id,
           version,

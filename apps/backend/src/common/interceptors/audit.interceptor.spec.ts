@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, of, throwError } from 'rxjs';
@@ -44,7 +44,7 @@ describe('AuditInterceptor — access_denied path', () => {
     user?: Record<string, unknown> | undefined;
     metadata?: AuditLogMetadata;
     skip?: boolean;
-  }) {
+  }): ExecutionContext {
     const request = {
       method: opts.method ?? 'GET',
       url: '/api/test',
@@ -64,7 +64,7 @@ describe('AuditInterceptor — access_denied path', () => {
     return {
       switchToHttp: () => ({ getRequest: () => request }),
       getHandler: () => ({}),
-    } as never;
+    } as unknown as ExecutionContext;
   }
 
   /**
@@ -72,7 +72,7 @@ describe('AuditInterceptor — access_denied path', () => {
    * 끝날 때까지 대기. firstValueFrom 으로 원본 throw 만 받으면 동기적으로
    * 검증할 수 없으므로 setImmediate 한 틱 양보.
    */
-  async function flushMicrotasks() {
+  async function flushMicrotasks(): Promise<void> {
     await new Promise((resolve) => setImmediate(resolve));
   }
 
