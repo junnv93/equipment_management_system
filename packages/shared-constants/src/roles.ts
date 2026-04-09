@@ -87,6 +87,24 @@ export function isSystemAdmin(role: UserRole): boolean {
 }
 
 /**
+ * 장비 운영 책임자(정/부)로 등록 가능한 역할 목록
+ * UL-QP-18: 기술책임자 이상만 장비 운영 책임자로 지정 가능
+ */
+export const EQUIPMENT_MANAGER_ELIGIBLE_ROLES: UserRole[] = [
+  'technical_manager',
+  'quality_manager',
+  'lab_manager',
+  'system_admin',
+];
+
+/**
+ * 장비 운영 책임자 자격 여부 확인
+ */
+export function isEligibleAsEquipmentManager(role: UserRole): boolean {
+  return isTechnicalManagerOrAbove(role);
+}
+
+/**
  * 승인 권한이 있는 역할 목록
  * (기술책임자, 품질책임자, 시험소장)
  */

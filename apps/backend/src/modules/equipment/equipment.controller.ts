@@ -324,6 +324,26 @@ export class EquipmentController {
     const userId = req.user?.userId ?? '';
     const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
+    // 운영 책임자 역할/사이트 자격 사전 검증 (승인 워크플로우 분기 전 공통 적용)
+    const hasManagerChange =
+      updateEquipmentDto.managerId !== undefined ||
+      updateEquipmentDto.deputyManagerId !== undefined;
+    if (hasManagerChange) {
+      await this.equipmentService.validateManagerEligibilityPublic(
+        {
+          managerId:
+            updateEquipmentDto.managerId !== undefined
+              ? updateEquipmentDto.managerId
+              : existingEquipment.managerId,
+          deputyManagerId:
+            updateEquipmentDto.deputyManagerId !== undefined
+              ? updateEquipmentDto.deputyManagerId
+              : existingEquipment.deputyManagerId,
+        },
+        updateEquipmentDto.site ?? existingEquipment.site
+      );
+    }
+
     // 파일 업로드 처리
     let attachmentUuids: string[] = [];
     if (files && files.length > 0) {

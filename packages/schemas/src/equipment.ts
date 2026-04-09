@@ -89,7 +89,8 @@ export const baseEquipmentSchema = z.object({
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
   technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)
-  deputyManagerId: nullableOptionalUuid(), // 부담당자 ID (운영 책임자 부) — QP-18-02
+  managerId: nullableOptionalUuid(), // 담당자 ID (운영 책임자 정 — 기술책임자 이상)
+  deputyManagerId: nullableOptionalUuid(), // 부담당자 ID (운영 책임자 부 — 기술책임자 이상)
 
   // 장비 타입 (DB와 동기화)
   equipmentType: z.string().optional(), // 장비 타입

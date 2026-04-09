@@ -52,6 +52,8 @@ export {
   canApprove,
   isTeamRestricted,
   isSiteRestricted,
+  EQUIPMENT_MANAGER_ELIGIBLE_ROLES,
+  isEligibleAsEquipmentManager,
 } from './roles';
 
 // 권한 관련

@@ -36,7 +36,12 @@ import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
 import type { AppDatabase } from '@equipment-management/db';
-import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  DEFAULT_PAGE_SIZE,
+  isEligibleAsEquipmentManager,
+  type UserRole,
+} from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
@@ -643,6 +648,70 @@ export class EquipmentService extends VersionedBaseService {
   }
 
   /**
+   * 운영 책임자(정/부) 역할 자격 검증.
+   *
+   * UL-QP-18: 기술책임자(technical_manager) 이상만 장비 운영 책임자로 지정 가능.
+   * 같은 사이트 소속이어야 한다 (크로스 사이트 할당 차단).
+   *
+   * SSOT: isEligibleAsEquipmentManager() — packages/shared-constants/src/roles.ts
+   */
+  /**
+   * 컨트롤러에서 승인 분기 전 호출 가능한 public wrapper.
+   */
+  async validateManagerEligibilityPublic(
+    managerIds: { managerId?: string | null; deputyManagerId?: string | null },
+    equipmentSite: string
+  ): Promise<void> {
+    return this.validateManagerEligibility(managerIds, equipmentSite);
+  }
+
+  private async validateManagerEligibility(
+    managerIds: { managerId?: string | null; deputyManagerId?: string | null },
+    equipmentSite: string
+  ): Promise<void> {
+    const idsToCheck = [
+      { id: managerIds.managerId, label: '운영 책임자 (정)' },
+      { id: managerIds.deputyManagerId, label: '운영 책임자 (부)' },
+    ].filter((entry) => entry.id);
+
+    if (idsToCheck.length === 0) return;
+
+    const userRows = await this.db
+      .select({ id: users.id, role: users.role, site: users.site, name: users.name })
+      .from(users)
+      .where(
+        inArray(
+          users.id,
+          idsToCheck.map((e) => e.id!)
+        )
+      );
+
+    const userMap = new Map(userRows.map((u) => [u.id, u]));
+
+    for (const { id, label } of idsToCheck) {
+      const user = userMap.get(id!);
+      if (!user) {
+        throw new BadRequestException({
+          code: 'EQUIPMENT_MANAGER_NOT_FOUND',
+          message: `${label}로 지정된 사용자를 찾을 수 없습니다. (ID: ${id})`,
+        });
+      }
+      if (!isEligibleAsEquipmentManager(user.role as UserRole)) {
+        throw new BadRequestException({
+          code: 'EQUIPMENT_MANAGER_ROLE_INSUFFICIENT',
+          message: `${label}는 기술책임자 이상만 지정할 수 있습니다. (현재: ${user.name}, 역할: ${user.role})`,
+        });
+      }
+      if (user.site !== equipmentSite) {
+        throw new BadRequestException({
+          code: 'EQUIPMENT_MANAGER_SITE_MISMATCH',
+          message: `${label}는 장비와 같은 사이트 소속이어야 합니다. (장비: ${equipmentSite}, 사용자: ${user.site})`,
+        });
+      }
+    }
+  }
+
+  /**
    * 장비 생성
    * 관리번호 중복 검사 후 새 장비 생성
    */
@@ -673,6 +742,15 @@ export class EquipmentService extends VersionedBaseService {
           message: 'Site information is required.',
         });
       }
+
+      // 운영 책임자 역할/사이트 자격 검증
+      await this.validateManagerEligibility(
+        {
+          managerId: createEquipmentDto.managerId,
+          deputyManagerId: createEquipmentDto.deputyManagerId,
+        },
+        createEquipmentDto.site
+      );
 
       // DTO를 DB 엔티티로 변환 (location은 CUSTOM_HANDLED — SSOT: 이력에서 파생)
       const insertData = this.transformCreateDtoToEntity(createEquipmentDto);
@@ -1194,6 +1272,27 @@ export class EquipmentService extends VersionedBaseService {
             message: `Management number ${updateEquipmentDto.managementNumber} is already in use.`,
           });
         }
+      }
+
+      // 운영 책임자 역할/사이트 자격 검증 (변경된 경우만)
+      const hasManagerChange =
+        updateEquipmentDto.managerId !== undefined ||
+        updateEquipmentDto.deputyManagerId !== undefined;
+      if (hasManagerChange) {
+        const site = updateEquipmentDto.site ?? existingEquipment.site;
+        await this.validateManagerEligibility(
+          {
+            managerId:
+              updateEquipmentDto.managerId !== undefined
+                ? updateEquipmentDto.managerId
+                : existingEquipment.managerId,
+            deputyManagerId:
+              updateEquipmentDto.deputyManagerId !== undefined
+                ? updateEquipmentDto.deputyManagerId
+                : existingEquipment.deputyManagerId,
+          },
+          site
+        );
       }
 
       // 상태 변경 시 교정 기한 검증 (UL-QP-18)
