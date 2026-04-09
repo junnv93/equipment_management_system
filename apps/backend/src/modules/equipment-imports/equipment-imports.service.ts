@@ -309,16 +309,10 @@ export class EquipmentImportsService extends VersionedBaseService {
     approverId: string,
     dto: ApproveEquipmentImportDto
   ): Promise<EquipmentImport> {
-    const equipmentImport = await this.findOne(id);
-
-    if (equipmentImport.status !== EIVal.PENDING) {
-      throw new BadRequestException({
-        code: 'IMPORT_ONLY_PENDING_CAN_APPROVE',
-        message: 'Only pending import requests can be approved.',
-      });
-    }
-
-    // ✅ CAS: optimistic locking — 충돌 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    // ✅ CAS + precondition atomicity:
+    // status=PENDING 검사를 updateWithVersion WHERE 절에 병합한다. 동시 승인 시
+    // 선검사 윈도우 레이스가 사라지고, 후행자는 항상 결정적으로 409(VERSION_CONFLICT)
+    // 또는 400(IMPORT_ONLY_PENDING_CAN_APPROVE, 사후 재시도) 를 받는다.
     const updated = await this.updateWithVersion<EquipmentImport>(
       equipmentImports,
       id,
@@ -328,7 +322,18 @@ export class EquipmentImportsService extends VersionedBaseService {
         approverId,
         approvedAt: new Date(),
       },
-      'Equipment import'
+      'Equipment import',
+      undefined,
+      'IMPORT_NOT_FOUND',
+      'version',
+      [
+        {
+          column: equipmentImports.status,
+          expected: EIVal.PENDING,
+          errorCode: 'IMPORT_ONLY_PENDING_CAN_APPROVE',
+          errorMessage: 'Only pending import requests can be approved.',
+        },
+      ]
     );
 
     // 승인 후 목록 + 대시보드/승인카운트 캐시 무효화
@@ -362,16 +367,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     approverId: string,
     dto: RejectEquipmentImportDto
   ): Promise<EquipmentImport> {
-    const equipmentImport = await this.findOne(id);
-
-    if (equipmentImport.status !== EIVal.PENDING) {
-      throw new BadRequestException({
-        code: 'IMPORT_ONLY_PENDING_CAN_REJECT',
-        message: 'Only pending import requests can be rejected.',
-      });
-    }
-
-    // ✅ CAS: optimistic locking — 충돌 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+    // ✅ CAS + precondition atomicity (approve 와 동일 원칙)
     const updated = await this.updateWithVersion<EquipmentImport>(
       equipmentImports,
       id,
@@ -382,7 +378,18 @@ export class EquipmentImportsService extends VersionedBaseService {
         approvedAt: new Date(),
         rejectionReason: dto.rejectionReason,
       },
-      'Equipment import'
+      'Equipment import',
+      undefined,
+      'IMPORT_NOT_FOUND',
+      'version',
+      [
+        {
+          column: equipmentImports.status,
+          expected: EIVal.PENDING,
+          errorCode: 'IMPORT_ONLY_PENDING_CAN_REJECT',
+          errorMessage: 'Only pending import requests can be rejected.',
+        },
+      ]
     );
 
     // 반려 후 목록 + 대시보드/승인카운트 캐시 무효화

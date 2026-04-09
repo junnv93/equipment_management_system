@@ -71,6 +71,17 @@ export enum ErrorCode {
   CannotSelfApprove = 'CANNOT_SELF_APPROVE',
 
   // ============================================================================
+  // Optimistic Locking (CAS) — SSOT for VersionedBaseService.updateWithVersion()
+  // ============================================================================
+  /**
+   * CAS(낙관적 잠금) 충돌.
+   * 백엔드 VersionedBaseService 와 프론트엔드 useOptimisticMutation / error classifier,
+   * E2E helpers(approval-helpers.ts, s25-cas-concurrent-approval.spec.ts 등) 가 모두 이 값을 참조.
+   * 리터럴 `'VERSION_CONFLICT'` 를 새로 도입하지 말고 항상 `ErrorCode.VersionConflict` 사용할 것.
+   */
+  VersionConflict = 'VERSION_CONFLICT',
+
+  // ============================================================================
   // 스코프/접근 범위 에러
   // ============================================================================
   ScopeAccessDenied = 'SCOPE_ACCESS_DENIED',
@@ -140,6 +151,9 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.CalibrationOverdue]: 400,
   [ErrorCode.NonConformanceNotOpen]: 400,
   [ErrorCode.CannotSelfApprove]: 403,
+
+  // Optimistic Locking
+  [ErrorCode.VersionConflict]: 409,
 
   // 스코프/접근 범위 에러
   [ErrorCode.ScopeAccessDenied]: 403,

@@ -11,7 +11,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
-import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
+import { CheckoutStatusValues as CSVal, ErrorCode } from '@equipment-management/schemas';
 import { TEST_EQUIPMENT_IDS, BASE_URLS } from '../../../shared/constants/shared-test-data';
 import {
   getBackendToken,
@@ -26,10 +26,9 @@ import {
   getCheckoutPool,
 } from '../helpers/checkout-helpers';
 
-// VERSION_CONFLICT 는 versioned-base.service.ts (백엔드) 의 SSOT 리터럴.
-// 프론트엔드 SSOT export 는 현재 없음 (tech-debt) — 동일 리터럴을 로컬 상수로 고정.
-// @see apps/backend/src/common/base/versioned-base.service.ts:35
-const VERSION_CONFLICT_CODE = 'VERSION_CONFLICT' as const;
+// ErrorCode.VersionConflict 는 packages/schemas/errors.ts 의 SSOT.
+// 백엔드 VersionedBaseService 와 프론트엔드/E2E 헬퍼가 모두 이 값을 참조한다.
+const VERSION_CONFLICT_CODE = ErrorCode.VersionConflict;
 
 // equipment_imports.status 는 CheckoutStatus 와 enum 자체는 다르지만 'canceled' 리터럴을 공유.
 // @see apps/backend/src/modules/equipment-imports 의 status enum
@@ -187,28 +186,20 @@ test.describe('Suite 25 (Equipment Import): CAS Concurrent Approval', () => {
     expect(fulfilled).toHaveLength(2);
 
     const ok = fulfilled.filter((r) => r.value.ok());
-    // equipment_imports.approve 는 updateWithVersion 호출 전에 status === PENDING
-    // 선검사를 수행하므로, 동시 요청 중 후행자는 상황에 따라 409(VERSION_CONFLICT)
-    // 또는 400(IMPORT_ONLY_PENDING_CAN_APPROVE)로 반환된다. 두 경우 모두 "경합 1건
-    // 거부" 라는 의미상 동일한 CAS 경합을 표현하므로 허용한다.
+    // equipment_imports.approve 는 updateWithVersion WHERE 절에 status=PENDING
+    // precondition 을 병합하므로, 동시 요청 중 후행자는 결정적으로 409(VERSION_CONFLICT)
+    // 를 받는다. (CasPrecondition 병합 전에는 400/409 비결정적 — 2026-04-09 수정)
     const loser = fulfilled.filter((r) => !r.value.ok());
     expect(ok).toHaveLength(1);
     expect(loser).toHaveLength(1);
-    const loserStatus = loser[0].value.status();
-    expect([400, 409]).toContain(loserStatus);
+    expect(loser[0].value.status()).toBe(409);
 
     const loserBody = await loser[0].value.json();
-    if (loserStatus === 409) {
-      expect(loserBody).toMatchObject({
-        code: VERSION_CONFLICT_CODE,
-        currentVersion: version + 1,
-        expectedVersion: version,
-      });
-    } else {
-      expect(loserBody).toMatchObject({
-        code: 'IMPORT_ONLY_PENDING_CAN_APPROVE',
-      });
-    }
+    expect(loserBody).toMatchObject({
+      code: VERSION_CONFLICT_CODE,
+      currentVersion: version + 1,
+      expectedVersion: version,
+    });
   });
 });
 

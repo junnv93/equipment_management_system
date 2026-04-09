@@ -198,8 +198,12 @@ describe('EquipmentImportsService', () => {
 
   describe('approve()', () => {
     it('pending 상태가 아닌 반입 승인 시 BadRequestException을 던진다', async () => {
-      const approvedImport = { ...MOCK_IMPORT, status: 'approved' };
-      mockDb.select.mockReturnValue(createSelectChain([approvedImport]));
+      // 새 CAS 원자 플로우: WHERE status=PENDING 병합 → UPDATE 0 rows → 분류 SELECT
+      // version 은 일치 하지만 __pre_0 (status 컬럼 alias) 가 precondition 과 불일치 → 400
+      mockDb.update.mockReturnValue(createUpdateChain([]));
+      mockDb.select.mockReturnValue(
+        createSelectChain([{ id: 'import-uuid-1', version: 1, __pre_0: 'approved' }])
+      );
 
       await expect(
         service.approve('import-uuid-1', 'approver-1', { version: 1 } as never)
@@ -207,9 +211,7 @@ describe('EquipmentImportsService', () => {
     });
 
     it('승인 성공 시 이벤트를 발행한다', async () => {
-      // findOne: pending 반환
-      mockDb.select.mockReturnValue(createSelectChain([MOCK_IMPORT]));
-      // updateWithVersion: approved 반환
+      // updateWithVersion: approved 반환 (findOne 선행 호출은 더 이상 없음)
       const approvedImport = { ...MOCK_IMPORT, status: 'approved', version: 2 };
       mockDb.update.mockReturnValue(createUpdateChain(approvedImport));
 
@@ -225,8 +227,11 @@ describe('EquipmentImportsService', () => {
 
   describe('reject()', () => {
     it('pending 상태가 아닌 반입 거절 시 BadRequestException을 던진다', async () => {
-      const approvedImport = { ...MOCK_IMPORT, status: 'approved' };
-      mockDb.select.mockReturnValue(createSelectChain([approvedImport]));
+      // approve 와 동일한 원자 CAS 플로우 — precondition(__pre_0) 불일치 경로
+      mockDb.update.mockReturnValue(createUpdateChain([]));
+      mockDb.select.mockReturnValue(
+        createSelectChain([{ id: 'import-uuid-1', version: 1, __pre_0: 'approved' }])
+      );
 
       await expect(
         service.reject('import-uuid-1', 'approver-1', {

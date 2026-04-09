@@ -1,6 +1,7 @@
-import { ConflictException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Logger, NotFoundException } from '@nestjs/common';
 import { eq, and, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { AnyPgTable, AnyPgColumn } from 'drizzle-orm/pg-core';
 
 /**
@@ -32,10 +33,45 @@ export function createVersionConflictException(
 ): ConflictException {
   return new ConflictException({
     message: VERSION_CONFLICT_MESSAGE,
-    code: 'VERSION_CONFLICT',
+    code: ErrorCode.VersionConflict,
     ...(currentVersion !== undefined && { currentVersion }),
     ...(expectedVersion !== undefined && { expectedVersion }),
   });
+}
+
+/**
+ * CAS `updateWithVersion` 에 병합할 추가 WHERE 조건 (precondition).
+ *
+ * **왜 필요한가:**
+ * 승인/반려/상태 전이 핸들러는 전통적으로 "findOne → 상태 검사 → updateWithVersion"
+ * 순서로 작성되는데, findOne 과 update 사이 윈도우에 다른 트랜잭션이 동일 레코드의
+ * 상태를 바꿀 수 있다. 이 경우 후행자는 비결정적으로 400(상태 불일치) 또는 409(버전
+ * 불일치) 를 받아 E2E 테스트와 클라이언트 재시도 로직이 양쪽 경로를 모두 알아야 한다.
+ *
+ * Precondition 을 CAS WHERE 절에 병합하면:
+ *   `WHERE id = ? AND version = ? AND status = 'PENDING'`
+ * 단일 원자 UPDATE 로 상태 전이가 보장되며, 실패 시 분류 순서는
+ *   NotFound(404) → VersionConflict(409) → Precondition(400)
+ * 으로 결정적이 된다.
+ *
+ * **사용 예 (equipment-imports.service.approve):**
+ * ```
+ * await this.updateWithVersion(equipmentImports, id, dto.version, { ... }, 'Equipment import', undefined, 'ENTITY_NOT_FOUND', 'version', [
+ *   { column: equipmentImports.status, expected: EIVal.PENDING,
+ *     errorCode: 'IMPORT_ONLY_PENDING_CAN_APPROVE',
+ *     errorMessage: 'Only pending import requests can be approved.' }
+ * ]);
+ * ```
+ */
+export interface CasPrecondition {
+  /** 비교 대상 컬럼 (동일 테이블) */
+  column: AnyPgColumn;
+  /** 기대값 — `column = expected` 형태로 병합 */
+  expected: unknown;
+  /** precondition 실패 시 반환할 에러 코드 (e.g., 'IMPORT_ONLY_PENDING_CAN_APPROVE') */
+  errorCode: string;
+  /** precondition 실패 시 사용자에게 노출할 메시지 */
+  errorMessage: string;
 }
 
 /**
@@ -116,7 +152,8 @@ export abstract class VersionedBaseService {
     entityName: string,
     tx?: AppDatabase,
     notFoundCode = 'ENTITY_NOT_FOUND',
-    casColumnKey: 'version' | 'casVersion' = 'version'
+    casColumnKey: 'version' | 'casVersion' = 'version',
+    preconditions: readonly CasPrecondition[] = []
   ): Promise<T> {
     const executor = tx ?? this.db;
     const casColumn = (table as unknown as Record<string, AnyPgColumn | undefined>)[casColumnKey];
@@ -126,6 +163,13 @@ export abstract class VersionedBaseService {
       );
     }
 
+    // CAS WHERE: id + version + (선택적) precondition 컬럼들을 단일 원자 조건으로 병합
+    const whereConditions = [
+      eq(table.id, id),
+      eq(casColumn, expectedVersion),
+      ...preconditions.map((p) => eq(p.column, p.expected)),
+    ];
+
     const [updated] = await executor
       .update(table)
       .set({
@@ -133,14 +177,22 @@ export abstract class VersionedBaseService {
         [casColumnKey]: sql`${casColumn} + 1`,
         updatedAt: new Date(),
       } as Record<string, unknown>)
-      .where(and(eq(table.id, id), eq(casColumn, expectedVersion)))
+      .where(and(...whereConditions))
       .returning();
 
     if (!updated) {
-      // alias 는 casColumnKey 와 동일하게 유지 — 호출자가 의미적으로 올바른 키로 읽게 함.
-      // 성공 경로 반환값도 동일 컬럼명을 유지해 conflict response 와 정합성 확보.
+      // 실패 원인 분류: 단일 SELECT 로 CAS 컬럼 + 모든 precondition 컬럼 조회.
+      // 분류 순서는 NotFound(404) → VersionConflict(409) → Precondition(400).
+      const selection: Record<string, AnyPgColumn> = {
+        id: table.id,
+        [casColumnKey]: casColumn,
+      };
+      preconditions.forEach((p, idx) => {
+        selection[`__pre_${idx}`] = p.column;
+      });
+
       const [existing] = await executor
-        .select({ id: table.id, [casColumnKey]: casColumn })
+        .select(selection)
         .from(table)
         .where(eq(table.id, id))
         .limit(1);
@@ -152,22 +204,38 @@ export abstract class VersionedBaseService {
         });
       }
 
-      // CAS 충돌 — stale detail 캐시 무효화 훅 호출 (서브클래스 정책 위임)
-      // 훅 실패가 원본 409 에러를 가리지 않도록 외곽 보호.
-      try {
-        await this.onVersionConflict(id);
-      } catch (hookErr) {
-        this.versionedBaseLogger.warn(
-          `onVersionConflict hook failed for ${entityName} ${id}: ${
-            hookErr instanceof Error ? hookErr.message : String(hookErr)
-          }`
-        );
+      const existingRecord = existing as Record<string, unknown>;
+      const currentVersion = existingRecord[casColumnKey] as number;
+
+      if (currentVersion !== expectedVersion) {
+        // CAS 충돌 — stale detail 캐시 무효화 훅 호출 (서브클래스 정책 위임)
+        // 훅 실패가 원본 409 에러를 가리지 않도록 외곽 보호.
+        try {
+          await this.onVersionConflict(id);
+        } catch (hookErr) {
+          this.versionedBaseLogger.warn(
+            `onVersionConflict hook failed for ${entityName} ${id}: ${
+              hookErr instanceof Error ? hookErr.message : String(hookErr)
+            }`
+          );
+        }
+        throw createVersionConflictException(currentVersion, expectedVersion);
       }
 
-      throw createVersionConflictException(
-        (existing as Record<string, unknown>)[casColumnKey] as number,
-        expectedVersion
-      );
+      // 버전은 일치 → precondition 중 첫 번째 불일치 항목이 실패 원인
+      for (let i = 0; i < preconditions.length; i++) {
+        const precondition = preconditions[i];
+        if (existingRecord[`__pre_${i}`] !== precondition.expected) {
+          throw new BadRequestException({
+            code: precondition.errorCode,
+            message: precondition.errorMessage,
+          });
+        }
+      }
+
+      // 이론적으로 도달 불가 (UPDATE 0 rows 인데 SELECT 는 모든 조건 만족).
+      // 동시 DELETE + INSERT 같은 극단 경로 방어용.
+      throw createVersionConflictException(currentVersion, expectedVersion);
     }
 
     return updated as T;
