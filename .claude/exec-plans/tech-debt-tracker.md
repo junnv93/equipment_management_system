@@ -10,9 +10,9 @@
 - [x] `VERSION_CONFLICT` error code SSOT 부재 — 해결: 2026-04-09 — `bc7565cb` `ErrorCode.VersionConflict` 를 `packages/schemas/src/errors.ts` 에 추가. 백엔드 `versioned-base.service.ts` + E2E s25-cas-concurrent-approval 이 SSOT import 사용. 로컬 리터럴 제거
 - [x] `equipment-imports.service.approve` CAS 원자성 — 해결: 2026-04-09 — `bc7565cb` `CasPrecondition[]` 을 `VersionedBaseService.updateWithVersion` 에 추가. `equipment-imports.service.ts` approve/reject 가 status=PENDING 조건을 WHERE 절에 원자적 병합. s25-04 assertion 을 "409 only" 로 엄격화
 - [ ] s23/s24/s25/s26/s27 multi-suite 병렬 실행 오염 — `apps/frontend/tests/e2e/features/checkouts/suite-2[3-7]-*/` — 2026-04-09 — 5개 스위트를 단일 invocation 으로 실행 시 공용 장비 (`EMC_RECEIVER_SUW_E` 등) 상태 충돌로 비결정적 실패. standalone 은 전부 OK. suite 간 장비 격리 설계 또는 장비 파티셔닝 필요. 기존 chromium-only 선례 확대. 출처: suite-26/27 세션 관찰
-- [ ] `equipment-imports.service.initiateReturn` CAS 원자성 — `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts:589` — 2026-04-09 — `status !== RECEIVED` findOne 선검사가 `updateWithVersion` 호출 이전 (approve/reject 리팩토링과 동일 패턴). CasPrecondition 원자화 대상. S27-07 이 400/409 양방 허용으로 우회 중. 출처: suite-27 Planner 조사
-- [ ] auto-checkout cancel → import 롤백 callback 미구현 — `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts:760` — 2026-04-09 — `initiateReturn` 이 import→return_requested 전이 + auto-checkout 생성 후, auto-checkout cancel 시 import 를 received 로 되돌리는 역방향 callback 없음. `onReturnCompleted` 은 approve-return path 전용. S27-08 fixme. 출처: suite-27 Planner 조사
-- [ ] Seed 주석 오표기: `TRANSMITTER_UIW_W` — `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts:44` — 2026-04-09 — 주석 `// available` 인데 실제 `is_shared=false`. suite-26 에서 `RECEIVER_UIW_W` 로 대체 사용. 주석 또는 seed 정리 필요. 출처: suite-26 Generator 디버깅
+- [x] `equipment-imports.service.initiateReturn` CAS 원자성 — 해결: 2026-04-09 — tech-debt-round3 harness. CasPrecondition `status=RECEIVED` 를 `updateWithVersion` WHERE 절에 병합. findOne 선검사 제거 (TOCTOU 해소). S27-07 assertion 을 409-only 로 엄격화
+- [x] auto-checkout cancel → import 롤백 callback 미구현 — 해결: 2026-04-09 — tech-debt-round3 harness. `onReturnCanceled(checkoutId)` 신규 콜백 구현 (`return_requested → received` 롤백 + `returnCheckoutId` null 초기화). `checkouts.service.cancel()` 에서 `RETURN_TO_VENDOR` purpose 취소 시 자동 호출. S27-08 fixme 제거, 실제 테스트 구현
+- [x] Seed 주석 오표기: `TRANSMITTER_UIW_W` — 해결: 2026-04-09 — 주석을 `// available, not shared` 로 보정
 
 - [ ] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — `packages/db/src/schema/audit-logs.ts` — 2026-04-09 — UL-QP-18 장기 보관 요구 + write-heavy 누적 → 수년 후 테이블 비대화. PostgreSQL declarative partitioning (`createdAt` 기준 월/분기) 또는 아카이빙 잡 검토. 즉시 필요는 아니나 설계 판단 필요. 아키텍처 리뷰(2026-04-09)에서 발견
 
@@ -94,6 +94,9 @@
 - [x] 유효성확인 첨부파일 UI (ValidationAttachments 컴포넌트) — 해결: 2026-04-05 — ValidationDetailContent.tsx에 인라인 구현
 - [x] 프론트엔드 권한 게이팅 미적용 (소프트웨어 페이지) — 해결: 2026-04-05 — software/layout.tsx 서버사이드 권한 체크
 - [x] 백엔드 문서 업로드/삭제 시 부모 validation status=draft 검증 미적용 — 해결: 2026-04-05 — document.service.ts ensureValidationIsDraft()
+- [x] ValidationDetailContent `isEditOpen` URL↔state 드리프트 — 해결: 2026-04-09 — tech-debt-round3 harness. `useState(searchParams.get('edit'))` → searchParams 직접 파생 + `router.replace` 양방향 동기화. URL이 SSOT
+- [x] form-data-parser.interceptor 빈 catch (silent swallow) — 해결: 2026-04-09 — tech-debt-round3 harness. `Logger.warn` + `BadRequestException` throw. `FORM_DATA_PARSE_FAILED` error code
+- [x] CLAUDE.md 420줄 엔트로피 → 295줄 — 해결: 2026-04-09 — tech-debt-round3 harness. Behavioral Guidelines, Production Checklist, PostToolUse Hook → `docs/references/` 분리. Deep-Dive References 테이블에 3건 추가
 
 ---
 

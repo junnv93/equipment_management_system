@@ -215,24 +215,50 @@ test.describe('Suite 27: Equipment Import Auto Checkout Tracking', () => {
     expect(first.ok()).toBeTruthy();
     await clearBackendCache();
 
-    // 2회차: 동일 stale version 재전송 → 409 (+ 상태 전이되어 400 도 가능하나
-    // CasPrecondition 이 없는 initiateReturn 은 `findOne 선검사` 경로 → 400 return 가능).
-    // 실제 동작: status !== RECEIVED (이미 return_requested) 이므로 findOne 선검사가 먼저 실행 →
-    // 400 IMPORT_ONLY_RECEIVED_CAN_RETURN. 이는 `equipment-imports.service.ts:589` 의
-    // findOne 선검사 패턴 (suite-25 refactor 시 equipment-imports.approve/reject 만 원자화됨).
-    // → tech-debt: initiateReturn 도 CasPrecondition 으로 원자화 대상 (후속 작업).
+    // 2회차: 동일 stale version 재전송 → CasPrecondition 원자화 적용으로
+    // 409(VERSION_CONFLICT) 결정적 반환. status=RECEIVED precondition 이
+    // updateWithVersion WHERE 절에 병합되어 findOne 선검사 윈도우 없음.
     const second = await requestImportReturn(page, received.importId, received.version);
-    // 현재 도메인: 400 (선검사) 또는 409 (CAS) 모두 "경합 거부" 의미. 둘 다 허용.
-    expect([400, 409]).toContain(second.status());
+    expect(second.status()).toBe(409);
   });
 
-  test('S27-08: auto-checkout cancel → import 롤백', async () => {
-    test.fixme(
-      true,
-      'initiateReturn 은 import → return_requested 전이 후 auto-checkout 을 생성하지만, ' +
-        'auto-checkout cancel 시 import 를 received 로 되돌리는 역방향 callback 이 ' +
-        '백엔드에 존재하지 않음. `equipment-imports.service.ts:760` 의 onReturnCompleted 는 ' +
-        'return-approve path 에만 연결됨. 설계 변경으로 cancel rollback callback 추가 시 활성화.'
+  test('S27-08: auto-checkout cancel → import 롤백', async ({ techManagerPage: page }) => {
+    const teToken = await getBackendToken(page, 'test_engineer');
+    const received = await createReceivedRentalImport(page, teToken);
+    createdImportIds.push(received.importId);
+
+    // 1. 반납 요청: import → return_requested + auto-checkout 생성
+    const returnResp = await requestImportReturn(page, received.importId, received.version);
+    expect(returnResp.ok()).toBeTruthy();
+    const returnBody = (await returnResp.json()) as { returnCheckoutId?: string; version: number };
+    await clearBackendCache();
+
+    // 2. import 가 return_requested 인지 확인
+    const snapshot1 = await getImportSnapshot(page, received.importId);
+    expect(snapshot1.status).toBe(EISVal.RETURN_REQUESTED);
+
+    // 3. auto-checkout 을 찾아서 cancel
+    const checkoutId = returnBody.returnCheckoutId ?? snapshot1.returnCheckoutId;
+    expect(checkoutId).toBeTruthy();
+
+    const checkoutSnap = await getCheckoutSnapshot(page, checkoutId!);
+    expect(checkoutSnap.status).toBe(CSVal.PENDING);
+
+    // TM 토큰으로 checkout cancel API 호출
+    const tmToken = await getBackendToken(page, 'tech_manager');
+    const cancelResp = await page.request.patch(
+      `${process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:3001'}/api/checkouts/${checkoutId}/cancel`,
+      {
+        headers: { Authorization: `Bearer ${tmToken}` },
+        data: { version: checkoutSnap.version },
+      }
     );
+    expect(cancelResp.ok()).toBeTruthy();
+    await clearBackendCache();
+
+    // 4. import 가 received 로 롤백되었는지 확인
+    const snapshot2 = await getImportSnapshot(page, received.importId);
+    expect(snapshot2.status).toBe(EISVal.RECEIVED);
+    expect(snapshot2.returnCheckoutId).toBeNull();
   });
 });

@@ -44,7 +44,7 @@ done
 ```
 
 **PASS:** P0 워크플로우(WF-03, WF-10, WF-11) 100% 커버
-**WARN:** P1 워크플로우(WF-07, WF-08, WF-12, WF-13) 일부 미커버
+**WARN:** P1 워크플로우(WF-07, WF-08, WF-12, WF-13) 일부 미커버. WF-13 cancel 롤백 경로 추가됨 (onReturnCanceled + suite-27 S27-08)
 **INFO:** P2~P3 미커버
 
 ### Step 2: 단계 완전성

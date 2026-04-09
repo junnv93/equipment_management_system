@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -91,7 +91,19 @@ export default function ValidationDetailContent({
   const { toast } = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isEditOpen, setIsEditOpen] = useState(searchParams.get('edit') === 'true');
+  const isEditOpen = searchParams.get('edit') === 'true';
+  const setIsEditOpen = useCallback(
+    (open: boolean) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (open) {
+        params.set('edit', 'true');
+      } else {
+        params.delete('edit');
+      }
+      router.replace(`?${params.toString()}`);
+    },
+    [searchParams, router]
+  );
   const [editForm, setEditForm] = useState<{
     vendorName: string;
     vendorSummary: string;

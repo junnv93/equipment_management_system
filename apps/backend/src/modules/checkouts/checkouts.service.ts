@@ -2172,6 +2172,17 @@ export class CheckoutsService extends VersionedBaseService {
         CSVal.CANCELED as CheckoutStatus
       );
 
+      // 렌탈 반납 목적 checkout 취소 시 import 상태 롤백 콜백
+      if (checkout.purpose === CPVal.RETURN_TO_VENDOR) {
+        try {
+          await this.rentalImportsService.onReturnCanceled(uuid);
+        } catch (callbackError) {
+          this.logger.warn(
+            `렌탈 반입 취소 롤백 콜백 처리 중 오류: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`
+          );
+        }
+      }
+
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);

@@ -41,7 +41,7 @@ export const TEST_EQUIPMENT_IDS = {
 
   // Uiwang (General RF - W)
   RECEIVER_UIW_W: 'eeee5001-0001-4001-8001-000000000001', // available
-  TRANSMITTER_UIW_W: 'eeee5002-0002-4002-8002-000000000002', // available
+  TRANSMITTER_UIW_W: 'eeee5002-0002-4002-8002-000000000002', // available, not shared
 
   // Pyeongtaek (Automotive EMC - A)
   TEST_HARNESS_PYT_A: 'eeee6001-0001-4001-8001-000000000001', // available

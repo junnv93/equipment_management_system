@@ -1,4 +1,11 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 
 /**
@@ -7,6 +14,8 @@ import { Observable } from 'rxjs';
  */
 @Injectable()
 export class FormDataParserInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(FormDataParserInterceptor.name);
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
 
@@ -18,7 +27,13 @@ export class FormDataParserInterceptor implements NestInterceptor {
           request.body = { ...JSON.parse(request.body.data), ...request.body };
           delete request.body.data;
         } catch (error) {
-          // 파싱 실패 시 무시
+          this.logger.warn(
+            `FormData JSON parse failed: ${error instanceof Error ? error.message : String(error)}`
+          );
+          throw new BadRequestException({
+            code: 'FORM_DATA_PARSE_FAILED',
+            message: 'Invalid JSON in form data field.',
+          });
         }
       }
 

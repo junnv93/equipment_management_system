@@ -584,14 +584,8 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
+    // equipmentId 존재 여부는 CAS 전에 확인 필요 (CasPrecondition은 단일 값 비교만 가능)
     const equipmentImport = await this.findOne(id);
-
-    if (equipmentImport.status !== EIVal.RECEIVED) {
-      throw new BadRequestException({
-        code: 'IMPORT_ONLY_RECEIVED_CAN_RETURN',
-        message: 'Only received imports can initiate a return.',
-      });
-    }
 
     if (!equipmentImport.equipmentId) {
       throw new BadRequestException({
@@ -600,13 +594,27 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
-    // CAS 선점: 동시 반납 요청 방어 — 클라이언트 version 필수
+    // ✅ CAS + precondition atomicity (approve/reject 와 동일 원칙):
+    // status=RECEIVED 검사를 updateWithVersion WHERE 절에 병합한다. 동시 반납 요청 시
+    // 선검사 윈도우 레이스가 사라지고, 후행자는 결정적으로 409(VERSION_CONFLICT)
+    // 또는 400(IMPORT_ONLY_RECEIVED_CAN_RETURN) 을 받는다.
     const updated = await this.updateWithVersion<EquipmentImport>(
       equipmentImports,
       id,
       version,
       { status: EIVal.RETURN_REQUESTED as EquipmentImportStatus },
-      'Equipment import'
+      'Equipment import',
+      undefined,
+      'IMPORT_NOT_FOUND',
+      'version',
+      [
+        {
+          column: equipmentImports.status,
+          expected: EIVal.RECEIVED,
+          errorCode: 'IMPORT_ONLY_RECEIVED_CAN_RETURN',
+          errorMessage: 'Only received imports can initiate a return.',
+        },
+      ]
     );
 
     // destination 동적 결정
@@ -842,6 +850,64 @@ export class EquipmentImportsService extends VersionedBaseService {
     }
 
     // 반납 완료 후 장비 + 대시보드 캐시 무효화 (장비 비활성화 반영)
+    this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
+  }
+
+  /**
+   * checkout 취소 콜백 (onReturnCompleted 의 대칭)
+   * return_requested → received
+   * 장비 status → 'available' (initiateReturn 에서 available 로 변경했으므로 원복 불필요,
+   * 단 returnCheckoutId 를 null 로 초기화하여 다음 반납 시도 가능하게 함)
+   */
+  async onReturnCanceled(checkoutId: string): Promise<void> {
+    const result = await this.db
+      .select()
+      .from(equipmentImports)
+      .where(eq(equipmentImports.returnCheckoutId, checkoutId))
+      .limit(1);
+
+    if (result.length === 0) {
+      return; // 장비 반입과 연결되지 않은 checkout
+    }
+
+    const equipmentImport = result[0];
+
+    this.logger.log(
+      `Return canceled for equipment import: ${equipmentImport.id} (checkoutId: ${checkoutId})`
+    );
+
+    // import 상태 롤백: return_requested → received + returnCheckoutId 초기화
+    try {
+      await this.db.transaction(async (tx) => {
+        const importResult = await tx
+          .update(equipmentImports)
+          .set({
+            status: EIVal.RECEIVED as EquipmentImportStatus,
+            returnCheckoutId: null,
+            version: sql`version + 1`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(equipmentImports.id, equipmentImport.id),
+              eq(equipmentImports.version, equipmentImport.version),
+              eq(equipmentImports.status, EIVal.RETURN_REQUESTED)
+            )
+          )
+          .returning({ id: equipmentImports.id });
+
+        if (importResult.length === 0) {
+          throw createVersionConflictException();
+        }
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
+      }
+      throw error;
+    }
+
     this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
     await this.cacheInvalidationHelper.invalidateAllDashboard();
   }
