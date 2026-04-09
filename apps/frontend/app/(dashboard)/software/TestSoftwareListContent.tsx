@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Search, Package, Download, Loader2 } from 'lucide-react';
+import { Plus, Search, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,14 +37,12 @@ import {
   type UITestSoftwareFilters,
 } from '@/lib/utils/software-filter-utils';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import { exportFormTemplate } from '@/lib/api/reports-api';
-import { useToast } from '@/components/ui/use-toast';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
 const ALL_VALUE = '__ALL__';
 
 export default function TestSoftwareListContent() {
   const t = useTranslations('software');
-  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -105,23 +103,11 @@ export default function TestSoftwareListContent() {
     [data, uiFilters.page]
   );
 
-  const [exporting, setExporting] = useState(false);
-
-  const handleExportLedger = async () => {
-    setExporting(true);
-    try {
-      const params: Record<string, string> = {};
-      for (const key of ['testField', 'availability', 'search', 'manufacturer'] as const) {
-        const value = searchParams.get(key);
-        if (value) params[key] = value;
-      }
-      await exportFormTemplate('UL-QP-18-07', params);
-    } catch {
-      toast({ variant: 'destructive', description: t('list.exportError') });
-    } finally {
-      setExporting(false);
-    }
-  };
+  const exportParams: Record<string, string> = {};
+  for (const key of ['testField', 'availability', 'search', 'manufacturer'] as const) {
+    const value = searchParams.get(key);
+    if (value) exportParams[key] = value;
+  }
 
   return (
     <div className={getPageContainerClasses()}>
@@ -132,14 +118,13 @@ export default function TestSoftwareListContent() {
           <p className={PAGE_HEADER_TOKENS.subtitle}>{t('list.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportLedger} disabled={exporting}>
-            {exporting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            {t('list.exportLedger')}
-          </Button>
+          <ExportFormButton
+            formNumber="UL-QP-18-07"
+            params={exportParams}
+            label={t('list.exportLedger')}
+            errorToastDescription={t('list.exportError')}
+            size="default"
+          />
           {canCreate && (
             <Link href={FRONTEND_ROUTES.SOFTWARE.CREATE}>
               <Button>

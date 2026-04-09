@@ -1,16 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Download, Loader2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { EQUIPMENT_LIST_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
-import { exportFormTemplate } from '@/lib/api/reports-api';
-import { useToast } from '@/components/ui/use-toast';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
 /**
  * 장비 목록 페이지 헤더 (Client Component)
@@ -36,32 +34,19 @@ const EXPORT_FILTER_KEYS = [
 export function EquipmentPageHeader() {
   const t = useTranslations('equipment');
   const { can, user } = useAuth();
-  const { toast } = useToast();
   const searchParams = useSearchParams();
   const canCreate = can(Permission.CREATE_EQUIPMENT);
-  const canExport = can(Permission.EXPORT_REPORTS);
-  const [exporting, setExporting] = useState(false);
 
-  const handleExportLedger = async () => {
-    setExporting(true);
-    try {
-      // URL 필터 조건을 그대로 내보내기에 전달
-      const params: Record<string, string> = {};
-      for (const key of EXPORT_FILTER_KEYS) {
-        const value = searchParams.get(key);
-        if (value) params[key] = value;
-      }
-      // 사이트 기본값: URL에 없으면 사용자 사이트
-      if (!params.site && user?.site) {
-        params.site = user.site;
-      }
-      await exportFormTemplate('UL-QP-18-01', params);
-    } catch {
-      toast({ variant: 'destructive', description: t('list.exportError') });
-    } finally {
-      setExporting(false);
-    }
-  };
+  // URL 필터 조건을 그대로 내보내기에 전달
+  const exportParams: Record<string, string> = {};
+  for (const key of EXPORT_FILTER_KEYS) {
+    const value = searchParams.get(key);
+    if (value) exportParams[key] = value;
+  }
+  // 사이트 기본값: URL에 없으면 사용자 사이트
+  if (!exportParams.site && user?.site) {
+    exportParams.site = user.site;
+  }
 
   return (
     <div className={EQUIPMENT_LIST_HEADER_TOKENS.container}>
@@ -70,16 +55,13 @@ export function EquipmentPageHeader() {
         <p className={EQUIPMENT_LIST_HEADER_TOKENS.subtitle}>{t('subtitle')}</p>
       </div>
       <div className="flex gap-2">
-        {canExport && (
-          <Button variant="outline" onClick={handleExportLedger} disabled={exporting}>
-            {exporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            {t('list.exportLedger')}
-          </Button>
-        )}
+        <ExportFormButton
+          formNumber="UL-QP-18-01"
+          params={exportParams}
+          label={t('list.exportLedger')}
+          errorToastDescription={t('list.exportError')}
+          size="default"
+        />
         {canCreate && (
           <Button asChild>
             <Link href="/equipment/create">

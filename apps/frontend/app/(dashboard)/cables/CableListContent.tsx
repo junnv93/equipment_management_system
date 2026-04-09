@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Search, Cable, Download, Loader2 } from 'lucide-react';
+import { Plus, Search, Cable } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,8 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EquipmentPagination } from '@/components/equipment/EquipmentPagination';
 import cablesApi from '@/lib/api/cables-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { exportFormTemplate } from '@/lib/api/reports-api';
-import { useToast } from '@/components/ui/use-toast';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { CABLE_CONNECTOR_TYPE_VALUES, CABLE_STATUS_VALUES } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -59,13 +58,16 @@ export default function CableListContent() {
   const t = useTranslations('cables');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const { can, user } = useAuth();
-  const canExport = can(Permission.EXPORT_REPORTS);
   const canCreate = can(Permission.UPDATE_CALIBRATION);
-  const [exporting, setExporting] = useState(false);
 
   const filters = parseFiltersFromSearchParams(searchParams);
+
+  const exportParams: Record<string, string> = {};
+  if (filters.connectorType) exportParams.connectorType = filters.connectorType;
+  if (filters.status) exportParams.status = filters.status;
+  // 크로스 사이트: 사용자 사이트를 기본 필터로 전달 (다중 사이트 환경 보호)
+  if (user?.site) exportParams.site = user.site;
 
   const updateFilter = useCallback(
     (key: keyof CableListFilters, value: string) => {
@@ -100,22 +102,6 @@ export default function CableListContent() {
     },
     [searchParams, router]
   );
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const params: Record<string, string> = {};
-      if (filters.connectorType) params.connectorType = filters.connectorType;
-      if (filters.status) params.status = filters.status;
-      // 크로스 사이트: 사용자 사이트를 기본 필터로 전달 (다중 사이트 환경 보호)
-      if (user?.site) params.site = user.site;
-      await exportFormTemplate('UL-QP-18-08', params);
-    } catch {
-      toast({ variant: 'destructive', description: t('list.exportError') });
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const apiQuery = useMemo(
     () => ({
@@ -160,16 +146,13 @@ export default function CableListContent() {
           <p className={PAGE_HEADER_TOKENS.subtitle}>{t('list.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          {canExport && (
-            <Button variant="outline" onClick={handleExport} disabled={exporting}>
-              {exporting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              {exporting ? t('list.exporting') : t('list.exportButton')}
-            </Button>
-          )}
+          <ExportFormButton
+            formNumber="UL-QP-18-08"
+            params={exportParams}
+            label={t('list.exportButton')}
+            errorToastDescription={t('list.exportError')}
+            size="default"
+          />
           {canCreate && (
             <Link href={FRONTEND_ROUTES.CABLES.CREATE}>
               <Button>

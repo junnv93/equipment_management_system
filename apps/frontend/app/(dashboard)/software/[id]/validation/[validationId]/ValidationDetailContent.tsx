@@ -16,8 +16,6 @@ import {
   FileSpreadsheet,
   Image as ImageIcon,
   File,
-  FileOutput,
-  Loader2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,6 +47,7 @@ import {
   DOCUMENT_EMPTY_STATE,
 } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { DocumentTypeValues, DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
 import type { ValidationStatus, DocumentType } from '@equipment-management/schemas';
 import { formatFileSize } from '@/lib/utils/format';
@@ -92,7 +91,6 @@ export default function ValidationDetailContent({
   const { toast } = useToast();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [exportingForm, setExportingForm] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(searchParams.get('edit') === 'true');
   const [editForm, setEditForm] = useState<{
     vendorName: string;
@@ -233,18 +231,6 @@ export default function ValidationDetailContent({
   const isVendor = validation.validationType === 'vendor';
   const isSelf = validation.validationType === 'self';
 
-  const handleExportValidation = async () => {
-    setExportingForm(true);
-    try {
-      const { exportFormTemplate } = await import('@/lib/api/reports-api');
-      await exportFormTemplate('UL-QP-18-09', { validationId });
-    } catch {
-      toast({ variant: 'destructive', description: t('toast.error') });
-    } finally {
-      setExportingForm(false);
-    }
-  };
-
   return (
     <div className={getPageContainerClasses('detail')}>
       <Button
@@ -261,19 +247,12 @@ export default function ValidationDetailContent({
           <h1 className={PAGE_HEADER_TOKENS.title}>{t('validation.detail.title')}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportValidation}
-            disabled={exportingForm}
-          >
-            {exportingForm ? (
-              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <FileOutput className="mr-1 h-3.5 w-3.5" />
-            )}
-            {t('validation.actions.exportValidation')}
-          </Button>
+          <ExportFormButton
+            formNumber="UL-QP-18-09"
+            params={{ validationId }}
+            label={t('validation.actions.exportValidation')}
+            errorToastDescription={t('toast.error')}
+          />
           {validation.status === 'draft' && (
             <Button variant="outline" size="sm" onClick={openEditDialog}>
               <Pencil className="mr-1 h-3.5 w-3.5" />
