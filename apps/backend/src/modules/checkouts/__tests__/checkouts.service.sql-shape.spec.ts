@@ -68,7 +68,9 @@ describe('CheckoutsService — SQL shape regression', () => {
    * findAll() 호출 → buildQueryConditions 실행 → where(...) 의 첫 호출 인자를
    * 렌더링해 반환. 빈 조건일 경우 `{ sql: null }` 로 표현.
    */
-  async function captureWhereSql(query: CheckoutQueryDto) {
+  async function captureWhereSql(
+    query: CheckoutQueryDto
+  ): Promise<{ sql: string; params: readonly unknown[] } | { sql: null; params: [] }> {
     await service.findAll(query, false);
     const firstWhereCall = mockDrizzleHandle.whereCalls[0];
     expect(firstWhereCall).toBeDefined();
