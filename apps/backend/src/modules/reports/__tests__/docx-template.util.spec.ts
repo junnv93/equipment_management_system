@@ -88,44 +88,25 @@ describe('DocxTemplate', () => {
       expect(xml).toContain('&lt;Test &amp; &quot;Quotes&quot;&gt;');
     });
 
-    it('should no-op for out-of-bounds table index', () => {
+    it('should throw for out-of-bounds table index', () => {
       const buf = createTestDocxBuffer(SIMPLE_TABLE_XML);
       const tpl = new DocxTemplate(buf);
 
-      // Should not throw
-      tpl.setCellValue(99, 0, 0, 'value');
-
-      const output = tpl.toBuffer();
-      const zip = new PizZip(output);
-      const xml = zip.file('word/document.xml')!.asText();
-
-      expect(xml).toContain('Hello'); // unchanged
+      expect(() => tpl.setCellValue(99, 0, 0, 'value')).toThrow('table[99] 없음');
     });
 
-    it('should no-op for out-of-bounds row index', () => {
+    it('should throw for out-of-bounds row index', () => {
       const buf = createTestDocxBuffer(SIMPLE_TABLE_XML);
       const tpl = new DocxTemplate(buf);
 
-      tpl.setCellValue(0, 99, 0, 'value');
-
-      const output = tpl.toBuffer();
-      const zip = new PizZip(output);
-      const xml = zip.file('word/document.xml')!.asText();
-
-      expect(xml).toContain('Hello');
+      expect(() => tpl.setCellValue(0, 99, 0, 'value')).toThrow('row[99]');
     });
 
-    it('should no-op for out-of-bounds cell index', () => {
+    it('should throw for out-of-bounds cell index', () => {
       const buf = createTestDocxBuffer(SIMPLE_TABLE_XML);
       const tpl = new DocxTemplate(buf);
 
-      tpl.setCellValue(0, 0, 99, 'value');
-
-      const output = tpl.toBuffer();
-      const zip = new PizZip(output);
-      const xml = zip.file('word/document.xml')!.asText();
-
-      expect(xml).toContain('Hello');
+      expect(() => tpl.setCellValue(0, 0, 99, 'value')).toThrow('cell[99] 없음');
     });
   });
 
@@ -162,17 +143,11 @@ describe('DocxTemplate', () => {
       expect(xml).not.toContain('>A2<');
     });
 
-    it('should no-op for out-of-bounds table index', () => {
+    it('should throw for out-of-bounds table index', () => {
       const buf = createTestDocxBuffer(TWO_ROW_TABLE_XML);
       const tpl = new DocxTemplate(buf);
 
-      tpl.setDataRows(99, 0, [['X']], 0);
-
-      const output = tpl.toBuffer();
-      const zip = new PizZip(output);
-      const xml = zip.file('word/document.xml')!.asText();
-
-      expect(xml).toContain('A1'); // unchanged
+      expect(() => tpl.setDataRows(99, 0, [['X']], 0)).toThrow('table[99] 없음');
     });
   });
 
