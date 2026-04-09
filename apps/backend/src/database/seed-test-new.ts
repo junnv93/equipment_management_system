@@ -129,12 +129,14 @@ async function main(): Promise<void> {
       'teams',
     ];
 
-    // form_templates 보존 로직:
-    // main.ts:158 seedFromFilesystem 은 백엔드 부팅 시에만 실행되므로, 테스트 reseed 과정에서
-    // 한 번 삭제되면 재시드 경로가 없어 모든 export 테스트가 일괄 실패한다.
-    // 직접 truncate 하지 않더라도, users 테이블 `TRUNCATE CASCADE` 시
-    // form_templates.uploaded_by FK 경로로 함께 제거되므로, 메모리에 스냅샷 후 복구한다.
-    // uploaded_by 는 복원된 users 와 무관한 과거 FK 참조이므로 NULL 로 재설정한다.
+    // form_templates 보존:
+    // FK `uploaded_by` 는 `ON DELETE SET NULL` 이지만 (migration 0008), PostgreSQL 의
+    // `TRUNCATE ... CASCADE` 는 FK **action 과 무관하게** 참조 테이블 전체를 전파 truncate 한다
+    // (docs: "Automatically truncate all tables that have foreign-key references"). 따라서
+    // `TRUNCATE users CASCADE` 는 여전히 form_templates 를 비운다.
+    // FK 변경은 런타임 DELETE 경로(관리자 사용자 삭제 → 템플릿 보존) 에 대한 올바른 semantics
+    // 이지만, seed TRUNCATE 경로는 별도로 방어해야 하므로 메모리 스냅샷 후 복구한다.
+    // main.ts:158 seedFromFilesystem 은 부팅 시에만 실행되므로 재시드 경로가 없다.
     let formTemplatesSnapshot: (typeof schema.formTemplates.$inferSelect)[] = [];
     try {
       formTemplatesSnapshot = await db.select().from(schema.formTemplates);
@@ -162,7 +164,8 @@ async function main(): Promise<void> {
       }
     }
 
-    // form_templates 복구 (uploaded_by → NULL)
+    // form_templates 복구 — FK 는 ON DELETE SET NULL 이므로 복원 시 uploadedBy 도 그대로
+    // 유지 가능하지만, 복원된 users 세트가 달라졌을 수 있어 안전하게 NULL 로 재설정한다.
     if (formTemplatesSnapshot.length > 0) {
       await db
         .insert(schema.formTemplates)

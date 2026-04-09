@@ -44,8 +44,12 @@ export const formTemplates = pgTable(
     isCurrent: boolean('is_current').notNull().default(true),
     /** 개정으로 대체된 시점. 현행이면 null */
     supersededAt: timestamp('superseded_at'),
-    /** 업로드한 사용자 */
-    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'restrict' }),
+    /**
+     * 업로드한 사용자. 템플릿 자체는 "업로드 행위자" 와 독립된 시스템 리소스이므로
+     * 업로더 레코드 삭제/truncate 로 템플릿이 함께 사라지면 안 된다 (export 전체 실패).
+     * ON DELETE SET NULL: 업로더가 사라지면 참조만 NULL 로 해제, 템플릿은 보존.
+     */
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
     uploadedAt: timestamp('uploaded_at').defaultNow().notNull(),
     /** 보존연한 만료로 소프트 아카이브된 시점. null이면 활성 (UL-QP-03 §11) */
     archivedAt: timestamp('archived_at'),

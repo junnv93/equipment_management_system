@@ -846,8 +846,16 @@ export class EquipmentImportsService extends VersionedBaseService {
    * TOCTOU race condition 을 원천 차단한다. 기존 retry loop 는 TOCTOU window 가
    * 남아있어 worst-case 에서 동일 번호가 발급될 수 있었고, 순차 재시도 비용 또한 컸다.
    *
-   * Lock scope 는 site 단위 — 다른 사이트 receive() 는 병렬 처리 가능.
-   * classification 은 serial 카운터 공유(prefix 동일)이므로 lock key 에 포함하지 않는다.
+   * Lock scope 는 **site 단위** (classification 미포함). 근거:
+   *   1. 쿼리가 `TEMP-{SITE_CODE}-` prefix 만으로 조회한다 — classification 과 무관하게
+   *      같은 site 의 모든 번호를 경쟁 자원으로 취급.
+   *   2. `ORDER BY managementNumber DESC` 가 lexical 정렬이므로 class 가 섞인 경우
+   *      class 간 serial 이 sequential 하지 않을 수 있다 (예: E0003 보다 R0002 가 뒤). 이는
+   *      **원본 retry 로직의 기존 동작** 이며, TEMP 번호의 유일성 계약은 "site prefix 안에서
+   *      관리번호 문자열이 globally unique" 이지 "class 별 counter 가 monotonic" 이 아니다.
+   *   3. lock key 에 classification 을 추가하면 동일 site 의 다른 class 가 동시에 들어올 때
+   *      두 lock 이 독립적으로 동일 MAX(serial) 를 읽고 중복 번호를 생성할 수 있다 — site 단위
+   *      락이 유일성 보장의 필수 조건.
    *
    * @param site - 사이트 코드
    * @param classification - 장비 분류

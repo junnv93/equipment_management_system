@@ -16,6 +16,26 @@ interface AuthenticatedRequest extends Request {
   user?: AuthUser;
 }
 
+/**
+ * 응답 크기를 안전하게 추정한다. 로깅 인터셉터는 결코 핸들러 응답을 깨뜨려서는 안 되므로,
+ * serializable 하지 않은 모든 값(undefined, Buffer, Stream, circular ref, BigInt 등)을
+ * sentinel 로 폴백한다.
+ *
+ * - `undefined` → 0 (파일 다운로드, res.send, 204 No Content 등 stream/empty 응답)
+ * - `Buffer` → byteLength (직접 바이트 크기)
+ * - 그 외 직렬화 실패 → -1 (크기 미상 sentinel)
+ */
+function safeResponseSize(data: unknown): number {
+  if (data === undefined || data === null) return 0;
+  if (Buffer.isBuffer(data)) return data.byteLength;
+  try {
+    const json = JSON.stringify(data);
+    return typeof json === 'string' ? json.length : -1;
+  } catch {
+    return -1;
+  }
+}
+
 // 에러 타입
 interface HttpError extends Error {
   status?: number;
@@ -62,10 +82,10 @@ export class LoggingInterceptor implements NestInterceptor {
             method,
             url,
             responseTime,
-            // 민감한 데이터는 로깅하지 않도록 처리.
-            // data 가 undefined 인 경우(파일 다운로드, res.send, 204 No Content 등)
-            // JSON.stringify(undefined) === undefined → .length TypeError 를 일으키므로 방어.
-            responseSize: data === undefined ? 0 : JSON.stringify(data).length,
+            // 응답 크기 추정. 로깅은 결코 핸들러 응답을 깨뜨리면 안 되므로 throw-safe.
+            // undefined(파일 다운로드, res.send, 204), Buffer, Stream, BigInt, circular ref 등
+            // JSON.stringify 가 throw/misbehave 하는 모든 케이스에서 안전한 폴백 반환.
+            responseSize: safeResponseSize(data),
           });
 
           // info 레벨 로그 카운트 증가

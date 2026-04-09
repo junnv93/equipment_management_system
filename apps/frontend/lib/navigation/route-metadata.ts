@@ -39,9 +39,13 @@ export interface RouteMetadata {
   icon?: LucideIcon;
   /** 부모 경로 (예: "/") */
   parent?: string;
-  /** 동적 라우트 여부 ([id], [uuid] 등 포함) */
-  dynamic?: boolean;
-  /** 브레드크럼에서 숨김 여부 */
+  /**
+   * 브레드크럼에서 숨김 여부.
+   *
+   * NOTE: 과거 `dynamic: boolean` 필드는 제거됨. 동적 여부는 route 키에 `[` 포함 여부로
+   * SSOT 파생한다 (`isDynamicRoute`, `normalizeDynamicRoute`, `generate-breadcrumbs.ts`).
+   * 수동 플래그 누락으로 Next.js 16 `<Link>` 에 리터럴 템플릿이 유출되던 버그 클래스 방지.
+   */
   hidden?: boolean;
 }
 
@@ -75,7 +79,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/equipment/[id]': {
     labelKey: 'navigation.equipmentDetail',
     parent: '/equipment',
-    dynamic: true,
   },
   '/equipment/[id]/edit': {
     labelKey: 'navigation.equipmentEdit',
@@ -126,7 +129,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/calibration-plans/[uuid]': {
     labelKey: 'navigation.calibrationPlansDetail',
     parent: '/calibration-plans',
-    dynamic: true,
   },
 
   // ========================================
@@ -140,7 +142,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/non-conformances/[id]': {
     labelKey: 'navigation.nonConformancesDetail',
     parent: '/non-conformances',
-    dynamic: true,
   },
 
   // ========================================
@@ -166,7 +167,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/checkouts/[id]': {
     labelKey: 'navigation.checkoutsDetail',
     parent: '/checkouts',
-    dynamic: true,
   },
   '/checkouts/[id]/check': {
     labelKey: 'navigation.checkoutsCheck',
@@ -180,7 +180,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/checkouts/import/[id]': {
     labelKey: 'navigation.checkoutsImportDetail',
     parent: '/checkouts',
-    dynamic: true,
   },
 
   // Equipment Imports (Unified)
@@ -212,7 +211,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/software/[id]': {
     labelKey: 'navigation.softwareDetail',
     parent: '/software',
-    dynamic: true,
   },
   '/software/[id]/validation': {
     labelKey: 'navigation.softwareValidation',
@@ -221,7 +219,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/software/[id]/validation/[validationId]': {
     labelKey: 'navigation.softwareValidationDetail',
     parent: '/software/[id]/validation',
-    dynamic: true,
   },
 
   // ========================================
@@ -252,7 +249,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/cables/[id]': {
     labelKey: 'navigation.cablesDetail',
     parent: '/cables',
-    dynamic: true,
   },
 
   // ========================================
@@ -279,7 +275,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   '/teams/[id]': {
     labelKey: 'navigation.teamsDetail',
     parent: '/teams',
-    dynamic: true,
   },
   '/teams/[id]/edit': {
     labelKey: 'navigation.teamsEdit',
@@ -384,9 +379,9 @@ export const routeMap: Record<string, RouteMetadata> = {
  * isDynamicRoute('/equipment') // false
  */
 export function isDynamicRoute(pathname: string): boolean {
-  // pathname에서 동적 세그먼트가 있는지 확인
+  // SSOT: 동적 여부는 route 문자열에 `[` 가 포함되는지로 판단 (수동 flag 불필요).
   return Object.keys(routeMap).some((route) => {
-    if (!routeMap[route].dynamic) return false;
+    if (!route.includes('[')) return false;
 
     // [id], [uuid] 등을 정규식 패턴으로 변환
     const pattern = route.replace(/\[([^\]]+)\]/g, '[^/]+');
@@ -408,7 +403,8 @@ export function isDynamicRoute(pathname: string): boolean {
  */
 export function normalizeDynamicRoute(pathname: string): string {
   for (const route of Object.keys(routeMap)) {
-    if (!routeMap[route].dynamic) continue;
+    // SSOT: 동적 여부는 route 문자열에 `[` 가 포함되는지로 판단 (수동 flag 불필요).
+    if (!route.includes('[')) continue;
 
     // [id], [uuid] 등을 정규식 패턴으로 변환
     const pattern = route.replace(/\[([^\]]+)\]/g, '([^/]+)');
@@ -430,7 +426,7 @@ export function normalizeDynamicRoute(pathname: string): string {
  *
  * @example
  * getRouteMetadata('/equipment') // { labelKey: 'navigation.equipment', parent: '/', icon: Package2 }
- * getRouteMetadata('/equipment/abc-123') // { labelKey: 'navigation.equipmentDetail', parent: '/equipment', dynamic: true }
+ * getRouteMetadata('/equipment/abc-123') // { labelKey: 'navigation.equipmentDetail', parent: '/equipment' }
  */
 export function getRouteMetadata(pathname: string): RouteMetadata | undefined {
   // 먼저 정확한 경로로 찾기
