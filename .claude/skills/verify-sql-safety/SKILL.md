@@ -255,6 +255,35 @@ grep -rn "findMany({" apps/backend/src/modules --include="*.service.ts" -A 10 | 
 
 **FAIL 기준:** 공개 API에서 호출되는 findMany에 limit이 없으면 대량 데이터 반환 위험.
 
+### Step 9: 집계 함수 + `FOR UPDATE` 안티패턴 / 순차 번호 생성 직렬화
+
+PostgreSQL 은 `SELECT MAX(...) FROM t FOR UPDATE` 같이 집계 함수와 `FOR UPDATE` 를 동시에 쓸 수 없다 (`ERROR: FOR UPDATE is not allowed with aggregate functions`). 순차 관리번호 생성 (PNNNN, TEMP-XXX-YZZZZ 등) 에서 동시 삽입을 직렬화하려는 의도로 이 패턴이 반복 등장하지만 **런타임 전체 실패** 를 일으킨다.
+
+SSOT 해결책: `apps/backend/src/common/utils/advisory-lock.ts` 의 `acquireAdvisoryXactLock(tx, lockKey)`.
+
+```bash
+# 안티패턴 탐지 — 집계 + FOR UPDATE 조합
+grep -rn "MAX(" apps/backend/src/modules --include="*.service.ts" | grep -i "FOR UPDATE"
+
+# retry 루프 기반 TOCTOU 생성기 (대체 필요 후보)
+grep -rn "maxRetries\|for (let i = 0; i < " apps/backend/src/modules --include="*.service.ts" | grep -iE "management.*number|generate.*number|nextSerial"
+
+# advisory lock 미사용 + 순차 번호 생성 메서드
+grep -rn "private async generate.*Number\|private async generateUnique" apps/backend/src/modules --include="*.service.ts" -A 3 | grep -v "acquireAdvisoryXactLock"
+```
+
+**PASS 기준:**
+- `MAX(...)` + `FOR UPDATE` 조합 0 건
+- 순차 번호 생성 메서드는 반드시 트랜잭션 내부에서 `acquireAdvisoryXactLock` 선행 호출
+- retry 루프 기반 생성기는 advisory lock 기반으로 마이그레이션
+
+**FAIL 기준:**
+- 집계 + `FOR UPDATE` 동시 사용 (PostgreSQL 문법 오류 — 100% 런타임 실패)
+- `db.transaction` 밖에서 `acquireAdvisoryXactLock` 호출 (lock 즉시 해제 → 무효)
+- 동일 lockKey 문자열이 여러 도메인에서 재사용 (교차 차단으로 성능 저하)
+
+**Lock key 컨벤션:** `'{table}:{purpose}[:{scope}]'` — 예) `'test_software:management_number'`, `'equipment_imports:temp_number:suwon'`.
+
 ## Output Format
 
 ```markdown
@@ -268,6 +297,7 @@ grep -rn "findMany({" apps/backend/src/modules --include="*.service.ts" -A 10 | 
 | 6   | RBAC INNER JOIN            | PASS/FAIL | scope 우회 위치        |
 | 7   | 순환 의존성 모니터링       | PASS/WARN | 새 forwardRef 추가 여부 |
 | 8   | 무제한 쿼리 결과           | PASS/FAIL | limit 없는 목록 쿼리   |
+| 9   | 집계 + FOR UPDATE / 순차 번호 직렬화 | PASS/FAIL | MAX+FOR UPDATE + advisory-lock 미사용 |
 ```
 
 ## Exceptions
