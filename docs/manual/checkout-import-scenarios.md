@@ -422,3 +422,43 @@
 **S26-06 (overdue 자동 전이)** — `apps/backend/src/modules/notifications/schedulers/checkout-overdue-scheduler.ts:60`
 는 `@Cron EVERY_HOUR` + `onModuleInit` 만 노출하고 admin HTTP 트리거가 없어서 E2E 에서 force-run 불가.
 `wf-17-checkout-overdue-return` 이 간접적으로 커버. 설계 변경으로 admin trigger endpoint 추가 시 S26-06 활성화 권장.
+
+---
+
+## 부록: Suite-27 Equipment Import 자동 Checkout 추적 (E2E 자동화)
+
+**테스트 경로**: `apps/frontend/tests/e2e/features/checkouts/suite-27-import-return-checkout/s27-import-return-checkout.spec.ts`
+**커밋**: 2026-04-09 Round 2 (suite-26 후속, chromium-only)
+
+### WF-13 과의 관계
+
+`apps/frontend/tests/e2e/workflows/wf-13-equipment-import-full-cycle.spec.ts` 는 **happy path 전체 사이클**을 검증한다 (create → approve → receive → initiate-return → lifecycle → returned). Suite-27 은 WF-13 이 빠뜨린 **targeted assertions** 를 보강:
+
+- `returnCheckoutId` 링크 무결성 + `destination === vendorName` 검증
+- 최종 `equipment.status === inactive` gate (WF-13 에는 없음)
+- 권한 실패 경로 (quality_manager → 403)
+- 상태 불일치 (pending 에서 initiate-return → 400)
+- CAS version 경합
+
+### 시나리오 3 "자동 Checkout 생성" 단계 상태 매트릭스
+
+| 단계                         | import.status      | equipment.status | checkout.status                             | 백엔드 앵커                                                                               |
+| ---------------------------- | ------------------ | ---------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| receive 완료                 | `received`         | `reserved`       | —                                           | `equipment-imports.service.ts:receive`                                                    |
+| initiate-return              | `return_requested` | `available`      | auto `pending` (purpose=`return_to_vendor`) | `equipment-imports.service.ts:574`                                                        |
+| auto-checkout approve        | `return_requested` | `available`      | `approved`                                  | 표준 `checkouts.service.approve`                                                          |
+| auto-checkout start          | `return_requested` | `checked_out`    | `checked_out`                               | `checkouts.service.ts:1541`                                                               |
+| auto-checkout return         | `return_requested` | `checked_out`    | `returned`                                  | `checkouts.service.ts:1697`                                                               |
+| auto-checkout approve-return | `returned`         | `inactive`       | `return_approved`                           | `equipment-imports.service.ts:760` (`onReturnCompleted` → equipment INACTIVE at line 819) |
+
+**거절/에러 경로**:
+
+- `pending` / `approved` 상태에서 initiate-return 호출 → `400 IMPORT_ONLY_RECEIVED_CAN_RETURN` (`equipment-imports.service.ts:589`)
+- CREATE_CHECKOUT 권한 없는 역할 (예: quality_manager) → `403`
+- stale version 재전송 → `409 VersionConflict` 또는 `400` (pre-check 경로)
+
+### 알려진 갭
+
+**S27-08 (auto-checkout cancel rollback)** — `initiateReturn` 은 import → `return_requested` 전이 후 auto-checkout 을 생성하지만, **auto-checkout cancel 시 import 를 `received` 로 되돌리는 역방향 callback 이 존재하지 않는다**. `onReturnCompleted` 는 return-approve path 에만 연결되어 있다. `test.fixme` 로 표기. 설계 변경으로 cancel rollback callback 추가 시 활성화 권장. @see `equipment-imports.service.ts:760`
+
+**initiateReturn CAS 원자성 tech-debt** — `initiateReturn` 은 아직 `findOne 선검사` 패턴 사용 중 (bc7565cb 에서 equipment-imports.approve/reject 만 CasPrecondition 으로 원자화됨). 동시 initiate-return 시 400/409 가 비결정적. S27-07 assertion 이 이를 허용. 후속 작업으로 원자화 권장.

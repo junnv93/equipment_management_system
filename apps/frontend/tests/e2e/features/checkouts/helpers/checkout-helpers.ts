@@ -1379,6 +1379,154 @@ export async function getCheckoutSnapshot(
 }
 
 /**
+ * Equipment Import 반납 워크플로우 — received 상태까지 부트스트랩.
+ *
+ * 흐름: createPendingEquipmentImport → TM approve → TE receive (documents optional)
+ * → 반환: {importId, equipmentId(자동 생성), version}
+ *
+ * suite-27 전용 bootstrap (WF-13 과 비슷하지만 checkout-helpers 스타일 통일).
+ * @see apps/backend/src/modules/equipment-imports/equipment-imports.service.ts
+ */
+export async function createReceivedRentalImport(
+  page: Page,
+  requesterToken: string
+): Promise<{ importId: string; equipmentId: string; version: number; vendorName: string }> {
+  // 1. Create pending (RENTAL)
+  const vendorName = `S27 Vendor ${Date.now().toString(36)}`;
+  const now = new Date().toISOString();
+  const later = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const createResp = await page.request.post(`${BACKEND_URL}/api/equipment-imports`, {
+    headers: { Authorization: `Bearer ${requesterToken}`, 'Content-Type': 'application/json' },
+    data: {
+      sourceType: 'rental',
+      equipmentName: `S27 Equipment ${Date.now().toString(36)}`,
+      modelName: 'S27-MODEL',
+      manufacturer: 'S27 Mfr',
+      serialNumber: `S27-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      classification: 'fcc_emc_rf',
+      vendorName,
+      usagePeriodStart: now,
+      usagePeriodEnd: later,
+      reason: 'suite-27 E2E import return tracking',
+    },
+  });
+  if (createResp.status() !== 201) {
+    throw new Error(
+      `createReceivedRentalImport (create) failed: ${createResp.status()} ${await createResp.text()}`
+    );
+  }
+  const createdRaw = (await createResp.json()) as Record<string, unknown>;
+  const created = (createdRaw.data ?? createdRaw) as { id: string; version: number };
+
+  // 2. Approve (TM) — CAS aware
+  const { response: approveResp } = await apiPatch(
+    page,
+    `/api/equipment-imports/${created.id}/approve`,
+    { version: created.version },
+    'technical_manager'
+  );
+  if (!approveResp.ok()) {
+    throw new Error(`createReceivedRentalImport (approve) failed: ${approveResp.status()}`);
+  }
+
+  // 3. Receive — COMPLETE_EQUIPMENT_IMPORT 권한은 TM/LM 만 보유 (role-permissions.ts).
+  //    → technical_manager 로 수행. 자동 장비 생성.
+  const afterApprove = (await apiGet(
+    page,
+    `/api/equipment-imports/${created.id}`,
+    'technical_manager'
+  )) as { version?: number; data?: { version?: number } };
+  const approvedVersion =
+    (afterApprove.data?.version as number | undefined) ?? (afterApprove.version as number);
+  const { response: receiveResp } = await apiPost(
+    page,
+    `/api/equipment-imports/${created.id}/receive`,
+    {
+      version: approvedVersion,
+      receivingCondition: {
+        appearance: 'normal',
+        operation: 'normal',
+        accessories: 'complete',
+        notes: 'suite-27 receive',
+      },
+    },
+    'technical_manager'
+  );
+  if (!receiveResp.ok()) {
+    throw new Error(`createReceivedRentalImport (receive) failed: ${receiveResp.status()}`);
+  }
+
+  // 4. Fetch snapshot for equipmentId + fresh version
+  const snapshot = (await apiGet(
+    page,
+    `/api/equipment-imports/${created.id}`,
+    'test_engineer'
+  )) as {
+    equipmentId?: string;
+    version?: number;
+    data?: { equipmentId?: string; version?: number };
+  };
+  const snapData = (snapshot.data ?? snapshot) as { equipmentId?: string; version?: number };
+  if (!snapData.equipmentId) {
+    throw new Error(`createReceivedRentalImport: no equipmentId after receive`);
+  }
+  return {
+    importId: created.id,
+    equipmentId: snapData.equipmentId,
+    version: snapData.version as number,
+    vendorName,
+  };
+}
+
+/**
+ * POST /api/equipment-imports/:id/initiate-return — suite-27 전용 thin wrapper.
+ * 역할 명시가 필요할 때 (권한 실패 케이스) `role` 오버라이드.
+ */
+export async function requestImportReturn(
+  page: Page,
+  importId: string,
+  version: number,
+  role: string = 'test_engineer'
+): Promise<import('@playwright/test').APIResponse> {
+  const token = await getBackendToken(page, role);
+  return page.request.post(`${BACKEND_URL}/api/equipment-imports/${importId}/initiate-return`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { version },
+  });
+}
+
+/**
+ * Equipment Import 스냅샷 — suite-27 assertion 용.
+ * `returnCheckoutId` 링크 및 상태 확인.
+ */
+export async function getImportSnapshot(
+  page: Page,
+  importId: string,
+  role: string = 'test_engineer'
+): Promise<{
+  id: string;
+  status: string;
+  version: number;
+  returnCheckoutId: string | null;
+  equipmentId: string | null;
+  vendorName: string | null;
+}> {
+  const raw = (await apiGet(page, `/api/equipment-imports/${importId}`, role)) as Record<
+    string,
+    unknown
+  >;
+  const data = (raw.data ?? raw) as Record<string, unknown>;
+  return {
+    id: data.id as string,
+    status: data.status as string,
+    version: data.version as number,
+    returnCheckoutId: (data.returnCheckoutId as string | null) ?? null,
+    equipmentId: (data.equipmentId as string | null) ?? null,
+    vendorName: (data.vendorName as string | null) ?? null,
+  };
+}
+
+/**
  * 공용장비(`isShared=true`) 전용 PENDING CALIBRATION checkout 생성.
  *
  * 백엔드 `checkouts.service` 는 isShared 분기가 없으므로 실제 API 호출은
