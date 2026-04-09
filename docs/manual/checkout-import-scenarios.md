@@ -378,3 +378,47 @@
 5. **분기/예외**(거절, 취소, 부적합, CAS 충돌)는 본문 흐름을 끊지 말고 각 시나리오 끝의 "발생 가능한 분기" 표로 빼는 게 가독성이 좋습니다.
 
 6. **🔴 수동검증필요 표시가 있는 단계는 운영 가이드에 "월 1회 수동 점검 권장" 박스**를 넣어두면, 자동화 갭이 사고로 이어지는 것을 줄일 수 있습니다. 특히 **시나리오 2 전체**와 **시나리오 1의 취소 시 장비 복구**는 다음 PR에서 우선 자동화 대상입니다.
+
+---
+
+## 부록: Suite-26 공용장비 전용 워크플로우 (E2E 자동화)
+
+**테스트 경로**: `apps/frontend/tests/e2e/features/checkouts/suite-26-shared-equipment/s26-shared-equipment.spec.ts`
+**커밋**: 2026-04-09 Round 2 (suite-23/24/25 와 동일 패턴, chromium-only)
+
+### 핵심 발견
+
+백엔드 `checkouts.service.ts` 는 **`isShared` 분기가 0개**. 공용장비(`equipment.isShared = true`)는
+표준 checkout 파이프라인을 그대로 탄다. 따라서 본 스위트는 "공용장비 전용 워크플로우"가 아닌
+**characterization + regression lock** 이다 — 현재 동작을 명시적으로 고정하여 미래 회귀를 감지.
+
+### 시나리오 2 (공용장비) 의 실제 동작 매트릭스
+
+| 단계                          | checkout.status   | equipment.status | 비고                                                                                |
+| ----------------------------- | ----------------- | ---------------- | ----------------------------------------------------------------------------------- |
+| 1. 신청                       | `pending`         | `available`      | **hold 없음** — 공용 풀 불변식                                                      |
+| 2. 승인                       | `approved`        | `available`      | 승인만으로는 equipment 점유 없음 (`checkouts.service.ts:1539` 는 start 에서만 전이) |
+| 3. 반출 (start)               | `checked_out`     | `checked_out`    | equipment 상태 전이 시점                                                            |
+| 4. 반입 요청 (return)         | `returned`        | `checked_out`    | 최종 승인 전까지 점유 유지 (`checkouts.service.ts:1697` 주석)                       |
+| 5. 반입 승인 (approve-return) | `return_approved` | `available`      | 장비 복원 (`checkouts.service.ts:1783`)                                             |
+
+**거절 경로** (`checkouts.service.ts:1415`): `reject()` 는 `equipment.status` 를 건드리지 않는다.
+공용장비의 경우 PENDING 에서 hold 가 없었으므로 reject 후에도 equipment 는 그대로 `available`.
+→ 거절 직후 동일 장비로 즉시 재체크아웃 가능.
+
+### E2E 커버리지
+
+| #      | 케이스                                  | 상태            | 비고                                       |
+| ------ | --------------------------------------- | --------------- | ------------------------------------------ |
+| S26-01 | `?isShared=true` 목록 필터 정확성       | ✅ PASS         | `equipment.service.ts:230`                 |
+| S26-02 | 전체 생명주기 5단계 검증                | ✅ PASS         | equipment.status 전이 포함                 |
+| S26-03 | PENDING 거절 → equipment 불변 (no-hold) | ✅ PASS         | 공용 풀 불변식                             |
+| S26-04 | 거절 후 즉시 재체크아웃                 | ✅ PASS         | stuck 방지                                 |
+| S26-05 | cross-site 필터 (system_admin 기준)     | ✅ PASS         | Uiwang 장비가 `site=suwon` 필터에서 제외됨 |
+| S26-06 | overdue 자동 전이                       | 🟡 `test.fixme` | HTTP 트리거 없음                           |
+
+### 알려진 갭
+
+**S26-06 (overdue 자동 전이)** — `apps/backend/src/modules/notifications/schedulers/checkout-overdue-scheduler.ts:60`
+는 `@Cron EVERY_HOUR` + `onModuleInit` 만 노출하고 admin HTTP 트리거가 없어서 E2E 에서 force-run 불가.
+`wf-17-checkout-overdue-return` 이 간접적으로 커버. 설계 변경으로 admin trigger endpoint 추가 시 S26-06 활성화 권장.

@@ -1379,6 +1379,64 @@ export async function getCheckoutSnapshot(
 }
 
 /**
+ * 공용장비(`isShared=true`) 전용 PENDING CALIBRATION checkout 생성.
+ *
+ * 백엔드 `checkouts.service` 는 isShared 분기가 없으므로 실제 API 호출은
+ * `createPendingCalibrationCheckout` 와 동일하다. 이 래퍼의 가치는
+ * **사전 fail-fast 가드**: GET `/equipment/:id` 로 `isShared === true` 를
+ * 검증해 "공용이 아닌 장비가 suite-26 에 잘못 주입" 되는 실수를 초기에 잡는다.
+ *
+ * @see apps/backend/src/modules/checkouts/checkouts.service.ts — isShared 분기 0개
+ */
+export async function createPendingSharedCheckout(
+  page: Page,
+  token: string,
+  opts: { equipmentId: string; destination?: string; reason?: string }
+): Promise<{ id: string; version: number }> {
+  const equipmentResp = await page.request.get(`${BACKEND_URL}/api/equipment/${opts.equipmentId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!equipmentResp.ok()) {
+    throw new Error(
+      `createPendingSharedCheckout: GET equipment ${opts.equipmentId} failed (${equipmentResp.status()})`
+    );
+  }
+  const equipment = (await equipmentResp.json()) as { isShared?: boolean };
+  if (equipment.isShared !== true) {
+    throw new Error(
+      `createPendingSharedCheckout: equipment ${opts.equipmentId} is NOT shared — suite-26 invariant violated`
+    );
+  }
+  return createPendingCalibrationCheckout(page, token, opts);
+}
+
+/**
+ * 공용장비 목록 조회 — `?isShared=true[&site=...]`.
+ * `equipment.service.ts:230` 의 isShared 필터를 E2E 에서 직접 검증하기 위한 헬퍼.
+ */
+export async function listSharedEquipment(
+  page: Page,
+  token: string,
+  site?: string
+): Promise<Array<{ id: string; isShared: boolean; site: string }>> {
+  const url = new URL(`${BACKEND_URL}/api/equipment`);
+  url.searchParams.set('isShared', 'true');
+  url.searchParams.set('pageSize', '100');
+  if (site) url.searchParams.set('site', site);
+  const response = await page.request.get(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok()) {
+    throw new Error(`listSharedEquipment failed (${response.status()})`);
+  }
+  const body = (await response.json()) as {
+    items?: Array<{ id: string; isShared: boolean; site: string }>;
+    data?: Array<{ id: string; isShared: boolean; site: string }>;
+  };
+  return body.items ?? body.data ?? [];
+}
+
+/**
  * Create a pending RENTAL-type equipment_import (external vendor) via backend API.
  * Returns the created import's id and version for CAS operations.
  */
