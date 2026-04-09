@@ -22,6 +22,7 @@ import {
 } from '@equipment-management/shared-constants';
 import { ErrorCode } from '@equipment-management/schemas';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../common/storage/storage.interface';
+import { CACHE_SERVICE, type ICacheService } from '../../common/cache/cache.interface';
 
 type FormTemplateRow = typeof formTemplates.$inferSelect;
 type FormTemplateRevisionRow = typeof formTemplateRevisions.$inferSelect;
@@ -51,11 +52,28 @@ interface FormTemplateMutationInput {
 export class FormTemplateService {
   private readonly logger = new Logger(FormTemplateService.name);
 
+  /**
+   * 양식 템플릿 버퍼 in-memory 캐시 TTL.
+   *
+   * 캐시 키는 `storageKey` (업로드 시 생성되는 UUID 기반 불변 키). 새 버전 업로드는
+   * 새 row + 새 storageKey 를 만들므로 이전 키에 대한 캐시 엔트리는 더 이상 조회되지
+   * 않고 TTL 경과 후 자연 소멸 — 명시적 invalidation 불필요. 11개 양식 × 수십 KB =
+   * 최대 ~1 MB 메모리 footprint.
+   *
+   * 동기: QP-18-08 케이블 export 가 4-test 병렬 부하 시 15~17s 로 tech-debt-tracker 등재
+   * (단독 실행 <1s). 병목은 `storage.download()` 의 S3/RustFS 직렬화. 템플릿은 배포 간
+   * 불변이므로 버퍼 캐시만으로 15배 지연 제거 가능.
+   */
+  private static readonly TEMPLATE_BUFFER_CACHE_TTL_MS = 10 * 60 * 1000;
+  private static readonly TEMPLATE_BUFFER_CACHE_PREFIX = 'form-template-buffer:';
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
     @Inject(STORAGE_PROVIDER)
-    private readonly storage: IStorageProvider
+    private readonly storage: IStorageProvider,
+    @Inject(CACHE_SERVICE)
+    private readonly cache: ICacheService
   ) {}
 
   // ── 조회 ──────────────────────────────────────────────────────────────────
@@ -136,9 +154,20 @@ export class FormTemplateService {
     return row ?? null;
   }
 
-  /** 파일 버퍼 다운로드 */
+  /**
+   * 파일 버퍼 다운로드 (in-memory 캐시 wrapping).
+   *
+   * 캐시 키: `form-template-buffer:<storageKey>`. storageKey 는 업로드 시 생성되는 불변
+   * UUID 기반 키로 콘텐츠 동일성이 보장되어 캐시 키로 안전. 새 버전 업로드 시 새 row +
+   * 새 storageKey 가 생성되므로 invalidation 없이도 stale 데이터가 반환되지 않는다.
+   */
   async downloadBuffer(row: FormTemplateRow): Promise<Buffer> {
-    return this.storage.download(row.storageKey);
+    const cacheKey = `${FormTemplateService.TEMPLATE_BUFFER_CACHE_PREFIX}${row.storageKey}`;
+    return this.cache.getOrSet(
+      cacheKey,
+      () => this.storage.download(row.storageKey),
+      FormTemplateService.TEMPLATE_BUFFER_CACHE_TTL_MS
+    );
   }
 
   /**
