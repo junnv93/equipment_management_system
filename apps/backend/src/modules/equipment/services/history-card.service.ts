@@ -1,4 +1,10 @@
-import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { and, eq, desc } from 'drizzle-orm';
 import PizZip from 'pizzip';
 import type { AppDatabase } from '@equipment-management/db';
@@ -440,8 +446,15 @@ export class HistoryCardService {
             emptyCount++;
           }
         }
-        break; // 행을 찾았지만 빈 셀이 부족하면 종료
+        // 행을 찾았지만 빈 셀이 부족
+        throw new InternalServerErrorException(
+          `[UL-QP-18-02] 라벨 '${labelFragment}' 행에서 빈 셀[${emptyCellIndex}] 없음 (빈 셀 ${emptyCount}개 발견). 양식 셀 구조가 변경되었을 수 있습니다.`
+        );
       }
+      // 라벨을 포함하는 행 자체를 찾지 못함
+      throw new InternalServerErrorException(
+        `[UL-QP-18-02] 라벨 '${labelFragment}' 매칭 실패. 양식의 라벨 텍스트가 변경되었을 수 있습니다.`
+      );
     };
 
     // Row 2: 관리번호, 자산번호
@@ -469,8 +482,27 @@ export class HistoryCardService {
     injectCellAfterLabel('최초 설치 위치', eq.initialLocation, 0);
     injectCellAfterLabel('설 치  일', eq.installationDate, 0);
 
+    // ── 문자열 치환 헬퍼: 치환 실패 시 throw ──
+    const assertReplace = (pattern: string, replacement: string, desc: string): void => {
+      if (!xml.includes(pattern)) {
+        throw new InternalServerErrorException(
+          `[UL-QP-18-02] '${desc}' 패턴 '${pattern}' 매칭 실패. 양식이 변경되었을 수 있습니다.`
+        );
+      }
+      xml = xml.replace(pattern, replacement);
+    };
+
+    const assertReplaceRegex = (pattern: RegExp, replacement: string, desc: string): void => {
+      if (!pattern.test(xml)) {
+        throw new InternalServerErrorException(
+          `[UL-QP-18-02] '${desc}' 정규식 패턴 매칭 실패. 양식이 변경되었을 수 있습니다.`
+        );
+      }
+      xml = xml.replace(pattern, replacement);
+    };
+
     // 확인란: "/   /" → 날짜만 (YYYY/MM/DD)
-    xml = xml.replace('/   /', esc(eq.approvalDate));
+    assertReplace('/   /', esc(eq.approvalDate), '승인일자');
 
     // 확인란 서명: 제목행(vMerge restart)의 C2 빈 셀에 전자서명 이미지 or 이름
     if (data.approverSignaturePath) {
@@ -489,22 +521,22 @@ export class HistoryCardService {
 
     // 시방일치 여부: "□일치   □불일치" → 체크 표시
     if (eq.specMatch === '일치') {
-      xml = xml.replace('□일치   □불일치', '■일치   □불일치');
+      assertReplace('□일치   □불일치', '■일치   □불일치', '시방일치 체크박스');
     } else if (eq.specMatch === '불일치') {
-      xml = xml.replace('□일치   □불일치', '□일치   ■불일치');
+      assertReplace('□일치   □불일치', '□일치   ■불일치', '시방일치 체크박스');
     }
 
     // 교정필요 여부: "□필요   □불필요" → 체크 표시
     if (eq.calibrationRequired === '필요') {
-      xml = xml.replace('□필요   □불필요', '■필요   □불필요');
+      assertReplace('□필요   □불필요', '■필요   □불필요', '교정필요 체크박스');
     } else if (eq.calibrationRequired === '불필요') {
-      xml = xml.replace('□필요   □불필요', '□필요   ■불필요');
+      assertReplace('□필요   □불필요', '□필요   ■불필요', '교정필요 체크박스');
     }
 
     // S/W 매뉴얼 보관장소: "             )" 공백 패턴을 실제 위치로 교체
     // XML에서 "보관장소 :" 뒤의 공백+닫는괄호가 별도 <w:t>에 있음
     // 첫 번째만 교체 (2개 보관장소 중 첫 번째를 S/W, 두 번째를 매뉴얼로)
-    xml = xml.replace(/(<w:t[^>]*>)\s*\)/, `$1${esc(eq.manualLocation)})`);
+    assertReplaceRegex(/(<w:t[^>]*>)\s*\)/, `$1${esc(eq.manualLocation)})`, '보관장소');
 
     // ── 섹션 2~5: 기존 빈 행에 데이터 채우기 ──
     // 템플릿에 미리 생성된 빈 행(<w:r> 없는 셀)에 데이터를 주입한다.
@@ -525,7 +557,11 @@ export class HistoryCardService {
       emptyRowCount: number
     ): void => {
       const sectionPos = xml.indexOf(sectionMarker);
-      if (sectionPos === -1) return;
+      if (sectionPos === -1) {
+        throw new InternalServerErrorException(
+          `[UL-QP-18-02] 섹션 '${sectionMarker}' 매칭 실패. 양식의 섹션 제목이 변경되었을 수 있습니다.`
+        );
+      }
 
       // 제목행 + 헤더행 건너뛰기
       let pos = sectionPos;
