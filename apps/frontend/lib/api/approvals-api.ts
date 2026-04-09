@@ -454,44 +454,6 @@ class ApprovalsApi {
   }
 
   /**
-   * 반출 승인 대기 목록 조회
-   *
-   * @deprecated Use getPendingOutgoing() instead (consolidates checkouts + vendor returns)
-   *
-   * 팀 필터링: 백엔드에서 역할 기반 자동 필터링
-   */
-  private async getPendingCheckouts(_teamId?: string): Promise<ApprovalItem[]> {
-    try {
-      const response = await checkoutApi.getCheckouts({ statuses: 'pending' });
-      // PaginatedResponse uses 'data' field
-      const items = response.data || [];
-
-      return items.map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'outgoing'));
-    } catch {
-      return [];
-    }
-  }
-
-  /**
-   * 반입 승인 대기 목록 조회
-   *
-   * @deprecated Use getPendingIncoming() instead (consolidates returns + imports)
-   *
-   * 팀 필터링: 백엔드에서 역할 기반 자동 필터링
-   */
-  private async getPendingReturns(_teamId?: string): Promise<ApprovalItem[]> {
-    try {
-      const response = await checkoutApi.getPendingReturnApprovals();
-      // PaginatedResponse uses 'data' field
-      const items = response.data || [];
-
-      return items.map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'incoming'));
-    } catch {
-      return [];
-    }
-  }
-
-  /**
    * 교정계획서 검토 대기 목록 조회 (품질책임자)
    */
   private async getPendingPlanReviews(): Promise<ApprovalItem[]> {
@@ -576,27 +538,6 @@ class ApprovalsApi {
       const items = transformArrayResponse<Record<string, unknown>>(response);
 
       return items.map((item) => this.mapInspectionToApprovalItem(item));
-    } catch {
-      return [];
-    }
-  }
-
-  /**
-   * 공용/렌탈장비 사용 승인 대기 목록 조회
-   *
-   * @deprecated Use getPendingOutgoing() instead (consolidated into outgoing category)
-   */
-  private async getPendingCommonEquipment(): Promise<ApprovalItem[]> {
-    // 공용/렌탈장비는 체크아웃 시스템을 사용하므로 체크아웃 목록과 동일
-    // 타입 필터링이 필요하면 추가
-    try {
-      const response = await checkoutApi.getCheckouts({
-        statuses: 'pending',
-        // 추가 필터: purpose='rental' 등
-      });
-      const items = response.data || [];
-
-      return items.map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'outgoing'));
     } catch {
       return [];
     }
