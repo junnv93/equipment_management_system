@@ -126,7 +126,11 @@ wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다
 - 다운로드 임시 디렉토리 정리 (test.afterAll)
 ```
 
-### 🟡 MEDIUM — Export spec UI 갭 패턴 가드 (verify-* 스킬 보강)
+### ~~🟡 MEDIUM — Export spec UI 갭 패턴 가드 (verify-* 스킬 보강)~~ ✅ 해결 (2026-04-09 38차 세션)
+
+> 선택지 A 채택: `verify-e2e` Step 5b 에 allow-list 마커(`// @api-only: <사유>`) 룰 추가. 기존 35차 grep 가드에 marker 필터 단계 추가 + 2026-04-09 부분 해결 현황(wf-export-ui-download.spec.ts + expectFileDownload SSOT helper) 과 미커버 양식(QP-18-03/05/06/10 backend-only, QP-18-09 validation fixture) 명시. 의도된 API-only spec 은 마커로 명시적 opt-out, 미커버 양식은 silent drop 방지.
+
+<details><summary>원문 (참고용)</summary>
 
 ```
 배경: 31차에서 wf-19b/20b/21 3개 export spec이 모두 API-only로 정착한 패턴이 발견됨.
@@ -150,6 +154,8 @@ wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다
 선택: 단순 docs/development/E2E_PATTERNS.md 에 "export spec은 API + UI 다운로드 한 쌍으로
 작성" 가이드라인 명시만 해도 가능 (스킬 보강 vs 문서화 — 사용자 결정 필요)
 ```
+
+</details>
 
 ---
 

@@ -103,24 +103,35 @@ grep -rn "getByText.*\.first()\|getByRole.*status.*\.first()" \
 
 **근거:** WF-20 spec 작성 중 sticky header z-index 결함 + useToast 중복 aria-live 발화가 force/first 우회로 가려져 있던 것을 발견 (34차 부채 → 35차 헬퍼 추출 완료).
 
-### Step 5b: Export spec API-only 갭 (35차 추가)
+### Step 5b: Export spec API-only 갭 (35차 추가, 38차 개선)
 
 Export 양식 spec(`wf-*-export.spec.ts`, `*-cable-path-loss.spec.ts` 등)이 `page.request.get`/`page.request.post` 으로 **API 응답만** 검증하고 사용자 동선("내보내기" 버튼 → 브라우저 다운로드 트리거)을 cover 하지 않으면 WARN. 31차에서 wf-19b/20b/21 3개 spec이 모두 동일 함정에 빠진 것이 발견됨.
 
+**2026-04-09 부분 해결 현황:**
+- `apps/frontend/tests/e2e/shared/helpers/download-helpers.ts` 에 SSOT helper `expectFileDownload(page, trigger, {filenamePattern})` 신설
+- `wf-export-ui-download.spec.ts` 가 QP-18-01/07/08 3개 양식의 UI 동선 cover — 새 양식 추가 시 이 describe 에 한 케이스만 추가하면 가드 확장
+- 미커버 양식: QP-18-03/05/06/10 (UI 진입점 부재 — backend-only 설계), QP-18-09 (validation 상세 fixture 필요)
+- 의도적으로 API-only 로 남겨야 하는 spec 은 **allow-list 마커** 로 감사 로그에서 제외
+
 **탐지:**
 ```bash
-# export 키워드 + page.request 사용 + waitForEvent('download') 부재 → WARN
+# export 키워드 + page.request 사용 + (waitForEvent('download') OR expectFileDownload helper) 부재 → WARN
+# 단, 파일 상단에 `// @api-only: <사유>` 마커가 있으면 skip (의도적 API-only)
+# expectFileDownload 는 shared/helpers/download-helpers.ts 의 SSOT helper — 내부에서 waitForEvent 를 캡슐화하므로 동등 처리
 for f in $(grep -lE "UL-QP-1[89]|export|cable-path-loss" apps/frontend/tests/e2e/workflows --include="*.spec.ts" -r); do
-  if grep -q "page.request" "$f" && ! grep -q "waitForEvent.*download" "$f"; then
-    echo "WARN: $f — API-only export, no UI download flow"
+  if grep -q "page.request" "$f" && ! grep -qE "waitForEvent.*download|expectFileDownload" "$f"; then
+    if ! grep -qE "^// @api-only:" "$f"; then
+      echo "WARN: $f — API-only export, no UI download flow (add // @api-only: <사유> marker to suppress)"
+    fi
   fi
 done
 ```
 
-**WARN:** 동일 양식의 UI 다운로드 spec이 존재하지 않음 (한 양식당 API + UI 한 쌍 권장).
+**WARN:** 동일 양식의 UI 다운로드 spec 이 존재하지 않음 (한 양식당 API + UI 한 쌍 권장).
+**SUPPRESS:** 파일 첫 라인 `// @api-only: <사유>` 마커 — backend-only 설계 spec 에 사용. 사유 문자열 필수 — 빈 마커 금지.
 **FAIL 조건 없음** — 메타 가드. tech-debt-tracker.md 에 누적 트래킹.
 
-**근거:** API-only spec 은 backend regression 만 잡고, 한국어 filename UTF-8, 권한 가드 토스트, dropdown 선택 UX 등 사용자 경험 결함을 0건 cover 한다. WF-21 케이블 spec도 동일 패턴으로 작성되어 31차 후속 부채로 등재됨.
+**근거:** API-only spec 은 backend regression 만 잡고, 한국어 filename UTF-8, 권한 가드 토스트, dropdown 선택 UX 등 사용자 경험 결함을 0건 cover 한다. WF-21 케이블 spec도 동일 패턴으로 작성되어 31차 후속 부채로 등재됨. allow-list 마커는 **의도된 예외** 만 허용해 미커버 양식이 조용히 잊혀지는 것을 방지한다.
 
 ### Step 6: UUID 하드코딩
 
