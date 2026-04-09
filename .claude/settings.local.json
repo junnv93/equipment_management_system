@@ -23,7 +23,12 @@
       "Bash(mkdir -p .claude/exec-plans/completed)",
       "Bash(mv .claude/exec-plans/active/2026-04-09-e2e-suite-26-shared-equipment.md .claude/exec-plans/completed/)",
       "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-09-tech-debt-round3.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-09-tech-debt-round3.md)",
-      "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-08-db-fk-sweep.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-08-db-fk-sweep.md)"
+      "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-08-db-fk-sweep.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-08-db-fk-sweep.md)",
+      "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/feedback_memory_commit.md .claude/projects/-home-devuser-equipment-management-system/memory/)",
+      "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/MEMORY.md .claude/projects/-home-devuser-equipment-management-system/memory/)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
