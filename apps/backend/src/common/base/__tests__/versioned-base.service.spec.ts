@@ -97,6 +97,76 @@ describe('VersionedBaseService — onVersionConflict hook', () => {
     expect(service.hookCalls).toEqual([ENTITY_ID]);
   });
 
+  it('custom casColumnKey: casVersion 컬럼 기반 CAS 성공 경로', async () => {
+    // calibration-plans 처럼 version(개정) + casVersion(잠금) 2-컬럼 도메인
+    const customTable = {
+      id: { name: 'id' },
+      version: { name: 'version' },
+      casVersion: { name: 'cas_version' },
+    } as never;
+
+    const updateChain = {
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      returning: jest.fn().mockResolvedValue([{ id: ENTITY_ID, casVersion: 3 }]),
+    };
+    const db = {
+      update: jest.fn().mockReturnValue(updateChain),
+      select: jest.fn(),
+    } as unknown as AppDatabase;
+
+    class CasVersionService extends VersionedBaseService {
+      constructor(public readonly db: AppDatabase) {
+        super();
+      }
+      public call(id: string, casVersion: number): Promise<{ id: string; casVersion: number }> {
+        return this.updateWithVersion(
+          customTable,
+          id,
+          casVersion,
+          { status: 'submitted' },
+          'TestPlan',
+          undefined,
+          'TEST_PLAN_NOT_FOUND',
+          'casVersion'
+        );
+      }
+    }
+
+    const service = new CasVersionService(db);
+    const result = await service.call(ENTITY_ID, 2);
+    expect(result).toEqual({ id: ENTITY_ID, casVersion: 3 });
+    // SET 호출 인자에 casVersion 키가 포함되어야 함 (version 키 대신)
+    const setArg = updateChain.set.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(setArg).toHaveProperty('casVersion');
+    expect(setArg).not.toHaveProperty('version');
+    expect(setArg.status).toBe('submitted');
+  });
+
+  it('custom casColumnKey: 잘못된 키 전달 시 명시적 에러', async () => {
+    const db = buildDb([]);
+    class BadKeyService extends VersionedBaseService {
+      constructor(public readonly db: AppDatabase) {
+        super();
+      }
+      public call(): Promise<unknown> {
+        return this.updateWithVersion(
+          mockTable,
+          ENTITY_ID,
+          1,
+          {},
+          'Entity',
+          undefined,
+          'NOT_FOUND',
+          'nonExistentColumn'
+        );
+      }
+    }
+    await expect(new BadKeyService(db).call()).rejects.toThrow(
+      /does not expose column 'nonExistentColumn'/
+    );
+  });
+
   it('default no-op: hook override 없이도 정상 동작 (backward compat)', async () => {
     class NoOverrideService extends VersionedBaseService {
       constructor(public readonly db: AppDatabase) {

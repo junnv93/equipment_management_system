@@ -69,54 +69,16 @@ export class CalibrationPlansService extends VersionedBaseService {
   // ──────────────────────────────────────────────
 
   /**
-   * CAS 패턴으로 교정계획서 업데이트
+   * CAS 충돌 시 stale detail 캐시 무효화 훅 (VersionedBaseService 정책).
    *
-   * ⚠️ VersionedBaseService.updateWithVersion()을 사용하지 않는 이유:
-   *   calibration_plans 테이블은 `version`(계획서 개정 번호)과 `casVersion`(CAS 동시 수정 방지)을
-   *   별도 컬럼으로 분리합니다. 베이스 클래스는 `version` 컬럼을 CAS 키로 사용하므로,
-   *   여기서는 `casVersion` 컬럼 기반의 커스텀 CAS를 유지합니다.
+   * `calibration_plans` 는 `version`(계획서 개정 번호)과 `casVersion`(CAS 잠금)을
+   * 분리 사용하므로, `updateWithVersion(..., casColumnKey: 'casVersion')` 을 통해
+   * 베이스 클래스 SSOT 를 재사용한다. 본 훅은 베이스 클래스가 409 를 throw 하기
+   * 직전에 호출되어 detail 캐시를 invalidate — 재조회 시 stale snapshot 으로 인한
+   * 재시도 flakiness 방지.
    */
-  private async updatePlanWithCAS(
-    uuid: string,
-    expectedCasVersion: number,
-    updateData: Record<string, unknown>
-  ): Promise<typeof calibrationPlans.$inferSelect> {
-    const [updated] = await this.db
-      .update(calibrationPlans)
-      .set({
-        ...updateData,
-        casVersion: sql`cas_version + 1`,
-        updatedAt: new Date(),
-      } as Record<string, unknown>)
-      .where(
-        and(eq(calibrationPlans.id, uuid), eq(calibrationPlans.casVersion, expectedCasVersion))
-      )
-      .returning();
-
-    if (!updated) {
-      const [existing] = await this.db
-        .select({
-          id: calibrationPlans.id,
-          casVersion: calibrationPlans.casVersion,
-        })
-        .from(calibrationPlans)
-        .where(eq(calibrationPlans.id, uuid))
-        .limit(1);
-
-      if (!existing) {
-        throw new NotFoundException({
-          code: 'CALIBRATION_PLAN_NOT_FOUND',
-          message: 'Calibration plan not found',
-        });
-      }
-
-      // CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
-      this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${uuid}`);
-
-      throw createVersionConflictException(existing.casVersion as number, expectedCasVersion);
-    }
-
-    return updated;
+  protected async onVersionConflict(id: string): Promise<void> {
+    this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${id}`);
   }
 
   /**
@@ -460,7 +422,16 @@ export class CalibrationPlansService extends VersionedBaseService {
     }
 
     const { casVersion, ...updateData } = updateDto;
-    await this.updatePlanWithCAS(uuid, casVersion, updateData);
+    await this.updateWithVersion(
+      calibrationPlans,
+      uuid,
+      casVersion,
+      updateData,
+      '교정계획서',
+      undefined,
+      'CALIBRATION_PLAN_NOT_FOUND',
+      'casVersion'
+    );
 
     this.invalidatePlanCache(uuid);
     return this.findOne(uuid);
@@ -521,15 +492,24 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     const { casVersion, submittedBy } = submitDto;
 
-    await this.updatePlanWithCAS(uuid, casVersion, {
-      status: CPStatus.PENDING_REVIEW,
-      submittedAt: new Date(),
-      // 반려 후 재제출 시 반려 정보 초기화
-      rejectedBy: null,
-      rejectedAt: null,
-      rejectionReason: null,
-      rejectionStage: null,
-    });
+    await this.updateWithVersion(
+      calibrationPlans,
+      uuid,
+      casVersion,
+      {
+        status: CPStatus.PENDING_REVIEW,
+        submittedAt: new Date(),
+        // 반려 후 재제출 시 반려 정보 초기화
+        rejectedBy: null,
+        rejectedAt: null,
+        rejectionReason: null,
+        rejectionStage: null,
+      },
+      '교정계획서',
+      undefined,
+      'CALIBRATION_PLAN_NOT_FOUND',
+      'casVersion'
+    );
 
     // 📢 알림 이벤트 발행
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_SUBMITTED, {
@@ -567,12 +547,21 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     const { casVersion, reviewedBy, reviewComment } = reviewDto;
 
-    await this.updatePlanWithCAS(uuid, casVersion, {
-      status: CPStatus.PENDING_APPROVAL,
-      reviewedBy,
-      reviewedAt: new Date(),
-      reviewComment: reviewComment || null,
-    });
+    await this.updateWithVersion(
+      calibrationPlans,
+      uuid,
+      casVersion,
+      {
+        status: CPStatus.PENDING_APPROVAL,
+        reviewedBy,
+        reviewedAt: new Date(),
+        reviewComment: reviewComment || null,
+      },
+      '교정계획서',
+      undefined,
+      'CALIBRATION_PLAN_NOT_FOUND',
+      'casVersion'
+    );
 
     // 📢 알림 이벤트 발행
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_REVIEWED, {
@@ -610,11 +599,20 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     const { casVersion, approvedBy } = approveDto;
 
-    await this.updatePlanWithCAS(uuid, casVersion, {
-      status: CPStatus.APPROVED,
-      approvedBy,
-      approvedAt: new Date(),
-    });
+    await this.updateWithVersion(
+      calibrationPlans,
+      uuid,
+      casVersion,
+      {
+        status: CPStatus.APPROVED,
+        approvedBy,
+        approvedAt: new Date(),
+      },
+      '교정계획서',
+      undefined,
+      'CALIBRATION_PLAN_NOT_FOUND',
+      'casVersion'
+    );
 
     // 📢 알림 이벤트 발행
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_APPROVED, {
@@ -663,13 +661,22 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     const { casVersion, rejectedBy, rejectionReason } = rejectDto;
 
-    await this.updatePlanWithCAS(uuid, casVersion, {
-      status: CPStatus.REJECTED,
-      rejectedBy,
-      rejectedAt: new Date(),
-      rejectionReason,
-      rejectionStage,
-    });
+    await this.updateWithVersion(
+      calibrationPlans,
+      uuid,
+      casVersion,
+      {
+        status: CPStatus.REJECTED,
+        rejectedBy,
+        rejectedAt: new Date(),
+        rejectionReason,
+        rejectionStage,
+      },
+      '교정계획서',
+      undefined,
+      'CALIBRATION_PLAN_NOT_FOUND',
+      'casVersion'
+    );
 
     // 📢 알림 이벤트 발행
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_REJECTED, {

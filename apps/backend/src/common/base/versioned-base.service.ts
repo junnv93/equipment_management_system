@@ -102,6 +102,10 @@ export abstract class VersionedBaseService {
    */
   /**
    * @param tx  선택적 트랜잭션 컨텍스트 — 다중 테이블 원자성이 필요할 때 전달
+   * @param casColumnKey 선택적 CAS 컬럼 JS property 명 (default: 'version').
+   *                     `version` 컬럼이 도메인적 의미(예: 계획서 개정 번호)로 이미
+   *                     사용되어 별도 `casVersion` 컬럼을 CAS 잠금에 사용하는 테이블은
+   *                     `'casVersion'` 전달. WHERE / SET / SELECT 모두 이 컬럼 기준.
    */
   protected async updateWithVersion<T>(
     table: CasPgTable,
@@ -110,23 +114,30 @@ export abstract class VersionedBaseService {
     updateData: Record<string, unknown>,
     entityName: string,
     tx?: AppDatabase,
-    notFoundCode = 'ENTITY_NOT_FOUND'
+    notFoundCode = 'ENTITY_NOT_FOUND',
+    casColumnKey: string = 'version'
   ): Promise<T> {
     const executor = tx ?? this.db;
+    const casColumn = (table as unknown as Record<string, AnyPgColumn>)[casColumnKey];
+    if (!casColumn) {
+      throw new Error(
+        `updateWithVersion: table does not expose column '${casColumnKey}' for CAS lock`
+      );
+    }
 
     const [updated] = await executor
       .update(table)
       .set({
         ...updateData,
-        version: sql`version + 1`,
+        [casColumnKey]: sql`${casColumn} + 1`,
         updatedAt: new Date(),
       } as Record<string, unknown>)
-      .where(and(eq(table.id, id), eq(table.version, expectedVersion)))
+      .where(and(eq(table.id, id), eq(casColumn, expectedVersion)))
       .returning();
 
     if (!updated) {
       const [existing] = await executor
-        .select({ id: table.id, version: table.version })
+        .select({ id: table.id, version: casColumn })
         .from(table)
         .where(eq(table.id, id))
         .limit(1);
