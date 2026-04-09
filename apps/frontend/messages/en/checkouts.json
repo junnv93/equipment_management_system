@@ -61,9 +61,11 @@
     "next": "Next",
     "processing": "Processing...",
     "bulkApprove": "Approve All",
-    "viewDetail": "View Detail"
+    "viewDetail": "View Detail",
+    "exportForm": "Export Form"
   },
   "toasts": {
+    "exportFormError": "Failed to export checkout in/out confirmation form.",
     "approveSuccess": "Checkout request approved.",
     "approveError": "An error occurred during approval.",
     "versionConflict": "Already processed by another user",

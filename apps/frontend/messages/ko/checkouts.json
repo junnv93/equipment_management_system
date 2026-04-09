@@ -61,9 +61,11 @@
     "next": "다음",
     "processing": "처리 중...",
     "bulkApprove": "전체 승인",
-    "viewDetail": "상세 보기"
+    "viewDetail": "상세 보기",
+    "exportForm": "양식 내보내기"
   },
   "toasts": {
+    "exportFormError": "반·출입 확인서 내보내기에 실패했습니다.",
     "approveSuccess": "반출 요청이 승인되었습니다.",
     "approveError": "승인 처리 중 오류가 발생했습니다.",
     "versionConflict": "다른 사용자가 이미 처리했습니다",

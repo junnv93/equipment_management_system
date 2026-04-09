@@ -57,6 +57,7 @@ import {
   CheckoutPurposeValues as CPVal,
 } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
@@ -397,6 +398,22 @@ export default function CheckoutDetailClient({
           <XCircle className="mr-2 h-4 w-4" />
           {t('actions.returnReject')}
         </Button>
+      );
+    }
+
+    // UL-QP-18-06 반·출입 확인서 — 승인 이후 전 상태에서 export 허용
+    // 제외: pending/rejected (반출 사실 없음)
+    const nonExportableStatuses = [CSVal.PENDING, CSVal.REJECTED] as CheckoutStatus[];
+    if (!nonExportableStatuses.includes(checkout.status)) {
+      buttons.push(
+        <ExportFormButton
+          key="export-form"
+          formNumber="UL-QP-18-06"
+          params={{ checkoutId: checkout.id }}
+          label={t('actions.exportForm')}
+          errorToastDescription={t('toasts.exportFormError')}
+          size="default"
+        />
       );
     }
 

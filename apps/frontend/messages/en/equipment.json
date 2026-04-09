@@ -339,7 +339,9 @@
       "delete": "Delete",
       "editAriaLabel": "Edit self inspection from {date}",
       "confirmAriaLabel": "Confirm self inspection from {date}",
-      "deleteAriaLabel": "Delete self inspection from {date}"
+      "deleteAriaLabel": "Delete self inspection from {date}",
+      "exportForm": "Export Form",
+      "exportFormError": "Failed to export self inspection form."
     },
     "confirmDialog": {
       "title": "Confirm Self Inspection",
@@ -1264,6 +1266,8 @@
     "receiveConfirm": "Confirm Receipt",
     "initiateReturn": "Initiate Return",
     "viewReturnProgress": "View Return Progress",
+    "exportForm": "Export Form",
+    "exportFormError": "Failed to export shared equipment usage/return form.",
     "rejectDialog": {
       "title": "Reject Import Request",
       "description": "Please enter the rejection reason.",

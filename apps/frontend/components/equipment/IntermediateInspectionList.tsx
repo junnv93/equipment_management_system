@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
 import { FORM_CATALOG } from '@equipment-management/shared-constants';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -261,6 +262,14 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               {t('intermediateInspection.actions.reject')}
             </Button>
           </>
+        )}
+        {approvalStatus === 'approved' && (
+          <ExportFormButton
+            formNumber="UL-QP-18-03"
+            params={{ inspectionId: id }}
+            label={t('intermediateInspection.actions.exportForm')}
+            errorToastDescription={t('intermediateInspection.actions.exportFormError')}
+          />
         )}
       </div>
     );

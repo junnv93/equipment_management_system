@@ -645,7 +645,9 @@
       "submitAriaLabel": "Submit intermediate inspection from {date}",
       "reviewAriaLabel": "Review intermediate inspection from {date}",
       "approveAriaLabel": "Final approve intermediate inspection from {date}",
-      "rejectAriaLabel": "Reject intermediate inspection from {date}"
+      "rejectAriaLabel": "Reject intermediate inspection from {date}",
+      "exportForm": "Export Form",
+      "exportFormError": "Failed to export intermediate inspection form."
     },
     "status": {
       "draft": "Draft",

@@ -42,6 +42,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
 const SelfInspectionFormDialog = dynamic(
   () => import('@/components/inspections/SelfInspectionFormDialog'),
@@ -184,10 +185,20 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
             {t('selfInspection.title')}
             <FormNumberBadge formName={FORM_CATALOG['UL-QP-18-05'].name} />
           </CardTitle>
-          <Button size="sm" onClick={() => setIsFormOpen(true)}>
-            <FileText className="h-4 w-4 mr-1" />
-            {t('inspection.createButton')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {inspections.length > 0 && (
+              <ExportFormButton
+                formNumber="UL-QP-18-05"
+                params={{ equipmentId }}
+                label={t('selfInspection.actions.exportForm')}
+                errorToastDescription={t('selfInspection.actions.exportFormError')}
+              />
+            )}
+            <Button size="sm" onClick={() => setIsFormOpen(true)}>
+              <FileText className="h-4 w-4 mr-1" />
+              {t('inspection.createButton')}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {inspections.length === 0 ? (

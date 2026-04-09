@@ -39,6 +39,7 @@ import {
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
 interface Props {
   id: string;
@@ -507,6 +508,19 @@ export default function EquipmentImportDetail({ id }: Props) {
           >
             {t('equipmentImport.viewReturnProgress')}
           </Button>
+        )}
+
+        {/* UL-QP-18-10 공용장비 사용/반납 확인서 — pending/rejected/canceled 제외 */}
+        {!([EISVal.PENDING, EISVal.REJECTED, EISVal.CANCELED] as EquipmentImportStatus[]).includes(
+          status
+        ) && (
+          <ExportFormButton
+            formNumber="UL-QP-18-10"
+            params={{ importId: id }}
+            label={t('equipmentImport.exportForm')}
+            errorToastDescription={t('equipmentImport.exportFormError')}
+            size="default"
+          />
         )}
       </div>
 
