@@ -1,3 +1,4 @@
+import { InternalServerErrorException } from '@nestjs/common';
 import PizZip from 'pizzip';
 
 /**
@@ -13,10 +14,18 @@ export class DocxTemplate {
   private documentXml: string;
   private imageCounter = 0; // rId/docPr 충돌 방지용 인스턴스 카운터
   private nextRIdNum: number; // 기존 relationship max ID + 1
+  private formLabel: string; // 에러 메시지용 양식 식별자
 
-  constructor(content: Buffer) {
+  constructor(content: Buffer, formLabel = 'unknown') {
+    this.formLabel = formLabel;
     this.zip = new PizZip(content);
-    this.documentXml = this.zip.file('word/document.xml')!.asText();
+    const docFile = this.zip.file('word/document.xml');
+    if (!docFile) {
+      throw new InternalServerErrorException(
+        `[${formLabel}] 템플릿 구조 오류: word/document.xml 없음`
+      );
+    }
+    this.documentXml = docFile.asText();
 
     // 기존 relationship에서 최대 rId 번호 추출
     const rels = this.zip.file('word/_rels/document.xml.rels')?.asText() ?? '';
@@ -29,13 +38,25 @@ export class DocxTemplate {
    */
   setCellValue(tableIndex: number, rowIndex: number, cellIndex: number, value: string): void {
     const tables = this.parseTables();
-    if (tableIndex >= tables.length) return;
+    if (tableIndex >= tables.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellValue 실패: table[${tableIndex}] 없음 (총 ${tables.length}개)`
+      );
+    }
 
     const rows = this.parseRows(tables[tableIndex]);
-    if (rowIndex >= rows.length) return;
+    if (rowIndex >= rows.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellValue 실패: table[${tableIndex}].row[${rowIndex}] 없음 (총 ${rows.length}개)`
+      );
+    }
 
     const cells = this.parseCells(rows[rowIndex]);
-    if (cellIndex >= cells.length) return;
+    if (cellIndex >= cells.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellValue 실패: table[${tableIndex}].row[${rowIndex}].cell[${cellIndex}] 없음 (총 ${cells.length}개)`
+      );
+    }
 
     cells[cellIndex] = this.replaceCellText(cells[cellIndex], value);
     rows[rowIndex] = this.rebuildRow(rows[rowIndex], cells);
@@ -53,10 +74,18 @@ export class DocxTemplate {
     emptyRowCount: number
   ): void {
     const tables = this.parseTables();
-    if (tableIndex >= tables.length) return;
+    if (tableIndex >= tables.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setDataRows 실패: table[${tableIndex}] 없음 (총 ${tables.length}개)`
+      );
+    }
 
     const rows = this.parseRows(tables[tableIndex]);
-    if (templateRowIndex >= rows.length) return;
+    if (templateRowIndex >= rows.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setDataRows 실패: table[${tableIndex}].row[${templateRowIndex}] 없음 (총 ${rows.length}개)`
+      );
+    }
 
     const templateRow = rows[templateRowIndex];
 
@@ -94,13 +123,25 @@ export class DocxTemplate {
     const imageXml = this.buildInlineImageXml(rId);
 
     const tables = this.parseTables();
-    if (tableIndex >= tables.length) return;
+    if (tableIndex >= tables.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setSignatureImage 실패: table[${tableIndex}] 없음 (총 ${tables.length}개)`
+      );
+    }
 
     const rows = this.parseRows(tables[tableIndex]);
-    if (rowIndex >= rows.length) return;
+    if (rowIndex >= rows.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setSignatureImage 실패: table[${tableIndex}].row[${rowIndex}] 없음 (총 ${rows.length}개)`
+      );
+    }
 
     const cells = this.parseCells(rows[rowIndex]);
-    if (cellIndex >= cells.length) return;
+    if (cellIndex >= cells.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setSignatureImage 실패: table[${tableIndex}].row[${rowIndex}].cell[${cellIndex}] 없음 (총 ${cells.length}개)`
+      );
+    }
 
     cells[cellIndex] = this.replaceCellWithImage(cells[cellIndex], imageXml);
     rows[rowIndex] = this.rebuildRow(rows[rowIndex], cells);
