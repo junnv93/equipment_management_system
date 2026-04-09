@@ -13,6 +13,7 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import { acquireAdvisoryXactLock } from '../../common/utils/advisory-lock';
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
@@ -57,18 +58,20 @@ export class TestSoftwareService extends VersionedBaseService {
   }
 
   /**
-   * PNNNN 관리번호 생성
+   * PNNNN 관리번호 생성 — P0001부터 시작, 순차 증가.
    *
-   * SELECT ... FOR UPDATE로 동시 삽입 시 중복 방지.
-   * P0001부터 시작, 순차 증가.
+   * Advisory lock 으로 동시 삽입 직렬화:
+   * - `SELECT ... FOR UPDATE` 는 집계 함수(MAX) 와 호환 불가 → advisory lock 사용
+   * - 트랜잭션 내에서만 유효하며 COMMIT/ROLLBACK 시 자동 해제
+   * - 동일 lockKey 를 쓰는 트랜잭션끼리만 직렬화 → 다른 테이블 성능 영향 없음
+   *
+   * @see apps/backend/src/common/utils/advisory-lock.ts
    */
   private async generateNextManagementNumber(tx: AppDatabase): Promise<string> {
-    // PNNNN 형식에서 숫자 부분만 추출하여 MAX 계산
-    // FOR UPDATE로 동시 삽입 시 중복 방지 — 행 잠금으로 다른 트랜잭션의 동시 읽기 차단
+    await acquireAdvisoryXactLock(tx, 'test_software:management_number');
+
     const result = await tx.execute(
-      sql.raw(
-        `SELECT MAX(CAST(SUBSTRING(management_number FROM 'P([0-9]+)') AS INTEGER)) as max_num FROM test_software FOR UPDATE`
-      )
+      sql`SELECT MAX(CAST(SUBSTRING(management_number FROM 'P([0-9]+)') AS INTEGER)) as max_num FROM test_software`
     );
 
     const row = result.rows[0] as Record<string, unknown> | undefined;

@@ -46,6 +46,7 @@ import {
   type EquipmentImportListResult,
 } from './types/equipment-import.types';
 import { likeContains, likeStartsWith, safeIlike } from '../../common/utils/like-escape';
+import { acquireAdvisoryXactLock } from '../../common/utils/advisory-lock';
 import { DEFAULT_PAGE_SIZE, VALIDATION_RULES } from '@equipment-management/shared-constants';
 import { DocumentService } from '../../common/file-upload/document.service';
 import type { MulterFile } from '../../types/common.types';
@@ -839,58 +840,47 @@ export class EquipmentImportsService extends VersionedBaseService {
   }
 
   /**
-   * TEMP 관리번호 고유 생성 (중복 시 retry)
+   * TEMP 관리번호 고유 생성 — 사이트별 직렬화
+   *
+   * Advisory lock 으로 동일 (site) 에 대한 동시 receive() 요청을 직렬화하여
+   * TOCTOU race condition 을 원천 차단한다. 기존 retry loop 는 TOCTOU window 가
+   * 남아있어 worst-case 에서 동일 번호가 발급될 수 있었고, 순차 재시도 비용 또한 컸다.
+   *
+   * Lock scope 는 site 단위 — 다른 사이트 receive() 는 병렬 처리 가능.
+   * classification 은 serial 카운터 공유(prefix 동일)이므로 lock key 에 포함하지 않는다.
    *
    * @param site - 사이트 코드
    * @param classification - 장비 분류
-   * @param tx - 트랜잭션 컨텍스트 (receive() 내부에서 호출 시 tx 전달 필수 — 외부 커넥션 사용 시 race condition)
+   * @param tx - 트랜잭션 컨텍스트 (필수 — advisory lock 은 tx 내부에서만 유효)
+   * @see apps/backend/src/common/utils/advisory-lock.ts
    */
   private async generateUniqueTemporaryNumber(
     site: Site,
     classification: Classification,
-    tx?: AppDatabase
+    tx: AppDatabase
   ): Promise<string> {
-    const db = tx ?? this.db;
-    const maxRetries = 10;
+    await acquireAdvisoryXactLock(tx, `equipment_imports:temp_number:${site}`);
 
-    for (let i = 0; i < maxRetries; i++) {
-      // 현재 최대 일련번호 조회 (SSOT: TEMPORARY_EQUIPMENT_PREFIX + SITE_TO_CODE)
-      const tempPrefix = `${TEMPORARY_EQUIPMENT_PREFIX}${SITE_TO_CODE[site]}-`;
-      const result = await db
-        .select({ managementNumber: equipment.managementNumber })
-        .from(equipment)
-        .where(safeIlike(equipment.managementNumber, likeStartsWith(tempPrefix)))
-        .orderBy(desc(equipment.managementNumber))
-        .limit(1);
+    // 현재 최대 일련번호 조회 (SSOT: TEMPORARY_EQUIPMENT_PREFIX + SITE_TO_CODE)
+    const tempPrefix = `${TEMPORARY_EQUIPMENT_PREFIX}${SITE_TO_CODE[site]}-`;
+    const result = await tx
+      .select({ managementNumber: equipment.managementNumber })
+      .from(equipment)
+      .where(safeIlike(equipment.managementNumber, likeStartsWith(tempPrefix)))
+      .orderBy(desc(equipment.managementNumber))
+      .limit(1);
 
-      let nextSerial = 1;
-      if (result.length > 0 && result[0].managementNumber) {
-        // "TEMP-SUW-E0001" → extract serial
-        const match = result[0].managementNumber.match(/(\d{4})$/);
-        if (match) {
-          nextSerial = parseInt(match[1], 10) + 1;
-        }
-      }
-
-      const serialStr = String(nextSerial).padStart(4, '0');
-      const managementNumber = generateTemporaryManagementNumber(site, classification, serialStr);
-
-      // 중복 확인 (tx 내에서 실행되므로 tx 커넥션 사용)
-      const [existing] = await db
-        .select({ id: equipment.id })
-        .from(equipment)
-        .where(eq(equipment.managementNumber, managementNumber))
-        .limit(1);
-
-      if (!existing) {
-        return managementNumber;
+    let nextSerial = 1;
+    if (result.length > 0 && result[0].managementNumber) {
+      // "TEMP-SUW-E0001" → extract serial
+      const match = result[0].managementNumber.match(/(\d{4})$/);
+      if (match) {
+        nextSerial = parseInt(match[1], 10) + 1;
       }
     }
 
-    throw new BadRequestException({
-      code: 'IMPORT_TEMP_NUMBER_GENERATION_FAILED',
-      message: 'Failed to generate temporary management number. Please contact administrator.',
-    });
+    const serialStr = String(nextSerial).padStart(4, '0');
+    return generateTemporaryManagementNumber(site, classification, serialStr);
   }
 
   /**

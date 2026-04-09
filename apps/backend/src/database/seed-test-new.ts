@@ -114,7 +114,11 @@ async function main(): Promise<void> {
       'calibration_factors',
       'repair_history',
       'non_conformances',
-      'form_templates',
+      // form_templates 는 truncate 하지 않는다.
+      // main.ts:158 seedFromFilesystem 이 백엔드 부팅 시 docs/procedure/template/ 의 실제 파일로
+      // 시드하며, 이후에는 업로드/관리 API 를 통해서만 갱신된다. seed-test-new 는 백엔드 부팅
+      // '이후' 에 실행되므로 여기서 truncate 하면 재삽입 경로가 없어 export 테스트가 일괄 실패한다
+      // (FORM_TEMPLATE_NOT_FOUND). 템플릿은 테스트 상태가 아닌 시스템 자원이므로 보존한다.
       'checkout_items',
       'checkouts',
       'calibration_plan_items',
@@ -124,6 +128,19 @@ async function main(): Promise<void> {
       'users',
       'teams',
     ];
+
+    // form_templates 보존 로직:
+    // main.ts:158 seedFromFilesystem 은 백엔드 부팅 시에만 실행되므로, 테스트 reseed 과정에서
+    // 한 번 삭제되면 재시드 경로가 없어 모든 export 테스트가 일괄 실패한다.
+    // 직접 truncate 하지 않더라도, users 테이블 `TRUNCATE CASCADE` 시
+    // form_templates.uploaded_by FK 경로로 함께 제거되므로, 메모리에 스냅샷 후 복구한다.
+    // uploaded_by 는 복원된 users 와 무관한 과거 FK 참조이므로 NULL 로 재설정한다.
+    let formTemplatesSnapshot: (typeof schema.formTemplates.$inferSelect)[] = [];
+    try {
+      formTemplatesSnapshot = await db.select().from(schema.formTemplates);
+    } catch {
+      // form_templates 테이블이 아직 없으면 (최초 부팅 전) skip
+    }
 
     for (const table of tables) {
       try {
@@ -143,6 +160,14 @@ async function main(): Promise<void> {
           throw err;
         }
       }
+    }
+
+    // form_templates 복구 (uploaded_by → NULL)
+    if (formTemplatesSnapshot.length > 0) {
+      await db
+        .insert(schema.formTemplates)
+        .values(formTemplatesSnapshot.map((row) => ({ ...row, uploadedBy: null })));
+      console.log(`  ✓ form_templates 복구 (${formTemplatesSnapshot.length}건, uploaded_by=NULL)`);
     }
 
     // =========================================================================

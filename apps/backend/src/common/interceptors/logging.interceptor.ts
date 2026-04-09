@@ -62,8 +62,10 @@ export class LoggingInterceptor implements NestInterceptor {
             method,
             url,
             responseTime,
-            // 민감한 데이터는 로깅하지 않도록 처리
-            responseSize: JSON.stringify(data).length,
+            // 민감한 데이터는 로깅하지 않도록 처리.
+            // data 가 undefined 인 경우(파일 다운로드, res.send, 204 No Content 등)
+            // JSON.stringify(undefined) === undefined → .length TypeError 를 일으키므로 방어.
+            responseSize: data === undefined ? 0 : JSON.stringify(data).length,
           });
 
           // info 레벨 로그 카운트 증가

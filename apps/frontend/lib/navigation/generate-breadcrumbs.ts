@@ -98,7 +98,12 @@ export function generateBreadcrumbs(
     let isDynamic = false;
     let params: Record<string, string> | undefined;
 
-    if (routeMetadata.dynamic) {
+    // 동적 세그먼트 포함 여부를 route 문자열에서 직접 판단 (SSOT).
+    // routeMetadata.dynamic 플래그는 경로에 [param] 이 들어간 경우 자동으로 true 로 간주.
+    // 수동 플래그에 의존하지 않음으로써 "플래그 누락 → 리터럴 템플릿이 <Link href> 로 유출"
+    // 버그 클래스를 원천 차단한다.
+    const hasDynamicSegment = route.includes('[');
+    if (hasDynamicSegment) {
       // [id], [uuid] 등을 실제 값으로 교체
       actualHref = route;
       Object.keys(dynamicParams).forEach((paramName) => {
