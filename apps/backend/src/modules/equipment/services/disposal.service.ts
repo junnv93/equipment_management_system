@@ -55,6 +55,17 @@ export class DisposalService extends VersionedBaseService {
   }
 
   /**
+   * CAS 충돌 시 stale 캐시 광범위 무효화 훅 (VersionedBaseService 정책).
+   *
+   * disposal 도메인은 disposalRequests + equipment 멀티 엔티티가 연동되므로
+   * 특정 detail 키 단위 삭제로는 정합성 보장이 어려워 `CACHE_PREFIX + '*'` 로
+   * equipment 도메인 전체를 무효화한다 (기존 inline 정책과 동일 semantics).
+   */
+  protected async onVersionConflict(_id: string): Promise<void> {
+    this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
+  }
+
+  /**
    * 폐기 요청 생성
    *
    * @param equipmentId 장비 ID
@@ -208,57 +219,41 @@ export class DisposalService extends VersionedBaseService {
       });
     }
 
-    // 5. 트랜잭션: 검토 처리 (CAS: version 검증)
+    // 5. 트랜잭션: 검토 처리 (CAS: disposalRequests.version 검증은 베이스 클래스 위임)
     await this.db.transaction(async (tx) => {
       if (reviewDto.decision === 'approve') {
         // 승인: reviewStatus를 'reviewed'로 변경
-        const [updated] = await tx
-          .update(disposalRequests)
-          .set({
+        await this.updateWithVersion(
+          disposalRequests,
+          request.id,
+          reviewDto.version,
+          {
             reviewStatus: DRVal.REVIEWED,
             reviewedBy,
             reviewedAt: new Date(),
             reviewOpinion: reviewDto.opinion,
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(
-            and(
-              eq(disposalRequests.id, request.id),
-              eq(disposalRequests.version, reviewDto.version)
-            )
-          )
-          .returning();
-
-        if (!updated) {
-          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException(request.version + 1, request.version);
-        }
+          },
+          '폐기요청',
+          tx as AppDatabase,
+          'DISPOSAL_REQUEST_NOT_FOUND'
+        );
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
-        const [updated] = await tx
-          .update(disposalRequests)
-          .set({
+        await this.updateWithVersion(
+          disposalRequests,
+          request.id,
+          reviewDto.version,
+          {
             reviewStatus: DRVal.REJECTED,
             rejectedBy: reviewedBy,
             rejectedAt: new Date(),
             rejectionReason: reviewDto.opinion,
             rejectionStep: 'review',
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(
-            and(
-              eq(disposalRequests.id, request.id),
-              eq(disposalRequests.version, reviewDto.version)
-            )
-          )
-          .returning();
-
-        if (!updated) {
-          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException(request.version + 1, request.version);
-        }
+          },
+          '폐기요청',
+          tx as AppDatabase,
+          'DISPOSAL_REQUEST_NOT_FOUND'
+        );
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
         await tx
@@ -342,32 +337,24 @@ export class DisposalService extends VersionedBaseService {
       });
     }
 
-    // 2. 트랜잭션: 승인 처리 (CAS: version 검증)
+    // 2. 트랜잭션: 승인 처리 (CAS: disposalRequests.version 검증은 베이스 클래스 위임)
     await this.db.transaction(async (tx) => {
       if (approveDto.decision === 'approve') {
         // 승인: reviewStatus를 'approved'로 변경하고 장비 상태를 'disposed'로 변경
-        const [updated] = await tx
-          .update(disposalRequests)
-          .set({
+        await this.updateWithVersion(
+          disposalRequests,
+          request.id,
+          approveDto.version,
+          {
             reviewStatus: DRVal.APPROVED,
             approvedBy,
             approvedAt: new Date(),
             approvalComment: approveDto.comment || null,
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(
-            and(
-              eq(disposalRequests.id, request.id),
-              eq(disposalRequests.version, approveDto.version)
-            )
-          )
-          .returning();
-
-        if (!updated) {
-          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException(request.version + 1, request.version);
-        }
+          },
+          '폐기요청',
+          tx as AppDatabase,
+          'DISPOSAL_REQUEST_NOT_FOUND'
+        );
 
         // 장비 상태를 'disposed'로 변경 (version bump 필수 — 후속 CAS 업데이트 일관성)
         await tx
@@ -380,29 +367,21 @@ export class DisposalService extends VersionedBaseService {
           .where(eq(equipment.id, equipmentId));
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
-        const [updated] = await tx
-          .update(disposalRequests)
-          .set({
+        await this.updateWithVersion(
+          disposalRequests,
+          request.id,
+          approveDto.version,
+          {
             reviewStatus: DRVal.REJECTED,
             rejectedBy: approvedBy,
             rejectedAt: new Date(),
             rejectionReason: approveDto.comment || '승인 단계에서 반려',
             rejectionStep: 'approval',
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(
-            and(
-              eq(disposalRequests.id, request.id),
-              eq(disposalRequests.version, approveDto.version)
-            )
-          )
-          .returning();
-
-        if (!updated) {
-          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-          throw createVersionConflictException(request.version + 1, request.version);
-        }
+          },
+          '폐기요청',
+          tx as AppDatabase,
+          'DISPOSAL_REQUEST_NOT_FOUND'
+        );
 
         // 장비 상태 원복 (version bump 필수 — 후속 CAS 업데이트 일관성)
         await tx
@@ -530,24 +509,16 @@ export class DisposalService extends VersionedBaseService {
         throw createVersionConflictException(request.version + 1, request.version);
       }
 
-      // 장비 상태 원복 (CAS: version 조건으로 동시 수정 방지)
-      const [updatedEquipment] = await tx
-        .update(equipment)
-        .set({
-          status: ESVal.AVAILABLE,
-          version: sql`version + 1`,
-          updatedAt: new Date(),
-        } as Record<string, unknown>)
-        .where(and(eq(equipment.id, equipmentId), eq(equipment.version, currentEquipment.version)))
-        .returning();
-
-      if (!updatedEquipment) {
-        this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-        throw createVersionConflictException(
-          currentEquipment.version + 1,
-          currentEquipment.version
-        );
-      }
+      // 장비 상태 원복 (CAS: version 조건으로 동시 수정 방지 — 베이스 클래스 위임)
+      await this.updateWithVersion(
+        equipment,
+        equipmentId,
+        currentEquipment.version,
+        { status: ESVal.AVAILABLE },
+        '장비',
+        tx as AppDatabase,
+        'EQUIPMENT_NOT_FOUND'
+      );
     });
 
     // 4. 캐시 무효화 (SSOT: CacheInvalidationHelper — 장비 상세/목록 + 폐기 요청 + 대시보드)
