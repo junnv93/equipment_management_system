@@ -7,6 +7,10 @@
 
 ## 미완료 항목
 
+- [ ] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — `packages/db/src/schema/audit-logs.ts` — 2026-04-09 — UL-QP-18 장기 보관 요구 + write-heavy 누적 → 수년 후 테이블 비대화. PostgreSQL declarative partitioning (`createdAt` 기준 월/분기) 또는 아카이빙 잡 검토. 즉시 필요는 아니나 설계 판단 필요. 아키텍처 리뷰(2026-04-09)에서 발견
+
+- [ ] 감사로그 프론트엔드 가상화/무한스크롤 도입 — `apps/frontend/app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx` — 2026-04-09 — 현재 offset 페이지네이션 + 직접 `.map()` 렌더링. 대용량 환경에서 깊은 페이지 이동 시 누적 렌더 부담. `useInfiniteQuery` + 커서 기반 API + React Window/Virtuoso. 백엔드 `findAll()`에 `timestamp DESC` 커서 오버로드 필요 (기존 인덱스 재사용 가능). 별도 Mode 2 harness로 진행
+
 - [x] Frontend/Backend Dockerfile hardening 검증 — 해결: 2026-04-09 — `docker compose -f docker-compose.prod.yml build backend frontend` 실제 빌드 성공. 루트 원인 수정: `preinstall` 훅이 참조하는 `scripts/check-no-stale-lockfiles.mjs` 를 deps 레이어에 `COPY` 추가(backend/frontend 양쪽), prod-deps stage 는 husky(`prepare`) devDep 의존을 `--ignore-scripts` 로 건너뛰어 `--frozen-lockfile` 무결성만 유지. 2차 빌드 캐시 히트 **100%** (backend/frontend 모두 전 레이어 CACHED). 이미지 inspect 검증: Backend `USER=node` + `ENTRYPOINT=[/sbin/tini --]` + HEALTHCHECK `/api/monitoring/health` (30s/5s/3회) + `CMD=node apps/backend/dist/main.js`, 1.52GB. Frontend `USER=node` + `ENTRYPOINT=[/sbin/tini --]` + HEALTHCHECK `/api/health` + `CMD=node apps/frontend/server.js`, standalone server.js 경로 `/app/apps/frontend/server.js` 존재 확인, 344MB — 2026-04-09
 
 - [x] reports filter ALL 센티널 통일 — 해결: 2026-04-08 — `ALL_SENTINEL = '_all'` 상수를 `reports-filter-utils.ts` 에서 export 하고 `ReportsContent.tsx` 가 import 하여 단일 SSOT 통일. UI Select sentinel 과 URL strip 로직이 동일 상수 참조

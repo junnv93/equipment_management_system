@@ -57,10 +57,17 @@ export class AuditService {
   /**
    * 감사 로그 생성 (비동기)
    *
-   * 성능 영향을 최소화하기 위해 비동기로 처리합니다.
-   * 로그 저장 실패가 비즈니스 로직에 영향을 주지 않습니다.
+   * 성능 영향을 최소화하기 위해 비동기로 처리합니다. 로그 저장 실패는
+   * 단독 호출(tx 미지정) 시 비즈니스 로직에 영향을 주지 않습니다. 트랜잭션
+   * executor가 주입된 경우에는 호출자에게 에러를 전파하여 롤백을 허용합니다.
+   *
+   * 캐시 무효화는 수행하지 않습니다 — 감사 로그는 append-only이므로
+   * 리스트 캐시는 TTL(CACHE_TTL.MEDIUM) 만료에 위임합니다. 매 insert마다
+   * deleteByPrefix 호출은 write-heavy 워크로드에서 캐시 적중률을 0에 수렴시키고
+   * Redis CPU/메모리를 브루트포스로 소모합니다.
    */
-  async create(dto: CreateAuditLogDto): Promise<void> {
+  async create(dto: CreateAuditLogDto, tx?: AppDatabase): Promise<void> {
+    const executor = tx ?? this.db;
     try {
       // NewAuditLog 타입 호환성 문제 우회를 위해 객체를 직접 전달
       const newLog = {
@@ -79,37 +86,18 @@ export class AuditService {
         createdAt: new Date(),
       } as NewAuditLog;
 
-      await this.db.insert(auditLogs).values(newLog);
-
-      // 캐시 무효화 (append-only이므로 리스트 캐시만 무효화)
-      this.invalidateListCaches(dto.entityType, dto.entityId, dto.userId);
+      await executor.insert(auditLogs).values(newLog);
 
       this.logger.debug(
         `Audit log created: ${dto.userName}(${dto.userRole}) - ${dto.action} ${dto.entityType}(${dto.entityId})`
       );
     } catch (error) {
-      // 로그 저장 실패는 비즈니스 로직에 영향을 주지 않음
+      // 트랜잭션 executor 주입 시: 롤백을 위해 에러 전파
+      if (tx) {
+        throw error;
+      }
+      // 단독 호출: 로그 저장 실패가 비즈니스 로직에 영향을 주지 않음
       this.logger.error(`Failed to create audit log: ${error}`, error);
-    }
-  }
-
-  /**
-   * 리스트 캐시 무효화
-   * 새 로그 생성 시 관련 캐시를 삭제합니다.
-   */
-  private invalidateListCaches(entityType: string, entityId: string, userId: string | null): void {
-    // 전체 리스트 캐시 무효화 (필터 조합이 다양하므로 패턴 매칭)
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.AUDIT_LOGS}list:`);
-
-    // 특정 엔티티 캐시 무효화 (scope suffix 포함 모든 variant 삭제)
-    this.cacheService.deleteByPrefix(
-      `${CACHE_KEY_PREFIXES.AUDIT_LOGS}entity:${entityType}:${entityId}:`
-    );
-
-    // 특정 사용자 캐시 무효화 (scope suffix 포함 모든 variant 삭제)
-    // userId null = 익명/시스템 액션이므로 사용자별 캐시 무효화 대상 없음
-    if (userId) {
-      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:`);
     }
   }
 
@@ -396,39 +384,43 @@ export class AuditService {
     timestamp: string;
   }): Promise<void> {
     try {
-      // ① 감사 로그 생성
-      await this.create({
-        userId: payload.userId || null,
-        userName: payload.email,
-        userRole: 'system', // 로그인 시점에는 세션 역할 미확정
-        action: 'login',
-        entityType: 'user',
-        entityId: payload.userId || SYSTEM_USER_UUID,
-        entityName: payload.email,
-        details: {
-          additionalInfo: {
-            event: payload.event,
-            provider: payload.provider,
-            email: payload.email,
-          },
-        } satisfies AuditLogDetails,
-      });
-
-      // ② users.lastLogin 갱신 (유효한 userId만)
+      // ①+② 감사 로그 생성과 users.lastLogin 갱신을 단일 트랜잭션으로 원자 실행.
+      // 두 쓰기가 독립 실행될 경우 한쪽 실패 시 데이터 불일치 가능
+      // (예: lastLogin만 갱신되고 login 감사 로그가 누락 → 보안 조사 신뢰도 저하).
+      //
       // NOTE: updatedAt 미갱신 — lastLogin은 사용자 정보 변경이 아닌 로그인 활동 추적 전용.
       // updatedAt 갱신 시 사용자 목록의 "최근 변경" 정렬에 매 로그인이 노이즈로 반영됨.
       // NOTE: AuditService에서 users 직접 UPDATE — 순환 의존성(AuditModule↔UsersModule) 회피를 위한 의도적 설계.
       // UsersService에 캐시 도입 시 UsersService.updateLastLogin()으로 위임 필요.
-      if (payload.userId) {
-        await this.db
-          .update(users)
-          .set({ lastLogin: new Date() })
-          .where(eq(users.id, payload.userId));
-      }
+      await this.db.transaction(async (tx) => {
+        await this.create(
+          {
+            userId: payload.userId || null,
+            userName: payload.email,
+            userRole: 'system', // 로그인 시점에는 세션 역할 미확정
+            action: 'login',
+            entityType: 'user',
+            entityId: payload.userId || SYSTEM_USER_UUID,
+            entityName: payload.email,
+            details: {
+              additionalInfo: {
+                event: payload.event,
+                provider: payload.provider,
+                email: payload.email,
+              },
+            } satisfies AuditLogDetails,
+          },
+          tx as AppDatabase
+        );
+
+        if (payload.userId) {
+          await tx.update(users).set({ lastLogin: new Date() }).where(eq(users.id, payload.userId));
+        }
+      });
 
       this.logger.log(`[AUTH] Login success: ${payload.email} (provider: ${payload.provider})`);
     } catch (error) {
-      // 로그 저장 실패가 로그인 흐름에 영향 주지 않음
+      // 트랜잭션 실패 → 감사 로그 + lastLogin 모두 롤백됨. 로그인 흐름에는 영향 없음.
       this.logger.error(`Failed to log auth success event: ${error}`);
     }
   }

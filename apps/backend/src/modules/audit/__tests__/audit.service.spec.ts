@@ -11,6 +11,7 @@ describe('AuditService', () => {
     insert: jest.Mock;
     select: jest.Mock;
     update: jest.Mock;
+    transaction: jest.Mock;
   };
   let mockCacheService: Record<string, jest.Mock>;
 
@@ -67,6 +68,10 @@ describe('AuditService', () => {
       insert: jest.fn().mockReturnValue(insertChain),
       select: jest.fn(),
       update: jest.fn(),
+      // transaction(callback) → callback(mockDb) : tx는 동일 mockDb로 프록시
+      transaction: jest.fn().mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => {
+        return cb(mockDb);
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -81,7 +86,7 @@ describe('AuditService', () => {
   });
 
   describe('create', () => {
-    it('감사 로그를 생성하고 캐시를 무효화해야 한다', async () => {
+    it('감사 로그를 생성해야 한다 (append-only — 캐시 무효화 없음, TTL에 위임)', async () => {
       const dto = {
         userId: 'user-1',
         userName: '홍길동',
@@ -95,7 +100,8 @@ describe('AuditService', () => {
       await service.create(dto);
 
       expect(mockDb.insert).toHaveBeenCalled();
-      expect(mockCacheService.deleteByPrefix).toHaveBeenCalledTimes(3);
+      // write-heavy 워크로드에서 브루트포스 invalidation 제거 → deleteByPrefix 호출 0
+      expect(mockCacheService.deleteByPrefix).not.toHaveBeenCalled();
     });
 
     it('DB 에러 시 예외를 던지지 않아야 한다', async () => {
