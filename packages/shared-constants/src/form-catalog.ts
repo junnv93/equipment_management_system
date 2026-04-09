@@ -24,11 +24,23 @@ export interface FormCatalogEntry {
   retentionYears: number;
   /** 보존연한 표시 라벨 */
   retentionLabel: string;
-  /** 양식 내보내기 구현 여부 */
+  /**
+   * 양식 내보내기 구현 여부.
+   *
+   * **불변식**: `dedicatedEndpoint: true` 인 양식은 반드시 `implemented: true` 여야 한다.
+   * 전용 엔드포인트가 존재한다는 것은 export 기능이 실제로 제공된다는 뜻이므로,
+   * `implemented: false` 로 두면 목록 API(`/form-templates`)가 "미구현" 거짓 정보를 노출한다.
+   * (런타임 export 경로는 `dedicatedEndpoint` 가드가 `implemented` 체크보다 먼저 발동해
+   *  영향이 없지만, 카탈로그 SSOT 의 의미 정합성을 위해 동기화 필요.)
+   */
   implemented: boolean;
   /** 양식 카테고리 — 권장 관리자 안내용 (권한 강제 X) */
   category: FormCategory;
-  /** 전용 엔드포인트로 안내 (별도 API 경로 존재 시) */
+  /**
+   * 전용 엔드포인트로 안내 (별도 API 경로 존재 시).
+   * true 인 경우 통합 `exportForm` 경로는 `USE_DEDICATED_ENDPOINT` 로 차단되고,
+   * 호출자는 전용 엔드포인트(예: `GET /api/equipment/:uuid/history-card`) 를 사용해야 한다.
+   */
   dedicatedEndpoint?: boolean;
 }
 
@@ -46,7 +58,10 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
     name: '시험설비 이력카드',
     retentionYears: -1,
     retentionLabel: '영구보존',
-    implemented: false,
+    // 전용 엔드포인트 `GET /api/equipment/:uuid/history-card`
+    // (equipment-history.controller.ts + HistoryCardService) 가 구현되어 있으므로 true.
+    // UL-QP-19-01 연간교정계획서와 동일한 dedicated-endpoint 패턴.
+    implemented: true,
     category: 'technical',
     dedicatedEndpoint: true,
   },
@@ -132,6 +147,24 @@ export const FORM_CATALOG: Record<string, FormCatalogEntry> = {
 export type FormNumber = string;
 
 export const FORM_NUMBERS = Object.keys(FORM_CATALOG);
+
+/**
+ * 카탈로그 불변식 검증 (모듈 로드 시 1회).
+ *
+ * - `dedicatedEndpoint: true` → `implemented: true` 강제
+ *
+ * dedicated 엔드포인트가 존재한다는 것은 export 기능이 실제로 제공된다는 뜻이므로,
+ * `implemented: false` 조합은 목록 API 가 소비자에게 거짓 정보("미구현")를 노출한다.
+ * 향후 새 dedicated 양식 추가 시 자동으로 위반을 잡아낸다.
+ */
+for (const [formNumber, entry] of Object.entries(FORM_CATALOG)) {
+  if (entry.dedicatedEndpoint === true && entry.implemented !== true) {
+    throw new Error(
+      `FORM_CATALOG invariant violation: ${formNumber} has dedicatedEndpoint=true but implemented=false. ` +
+        `Dedicated endpoints imply the form is implemented — set implemented: true.`
+    );
+  }
+}
 
 export function isFormImplemented(formNumber: string): boolean {
   return FORM_CATALOG[formNumber]?.implemented === true;
