@@ -22,6 +22,9 @@ RUN corepack enable && corepack prepare pnpm@10.7.1 --activate
 # ----- deps (lockfile-only 레이어) -------------------------------------------
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# root package.json 의 `preinstall` 훅이 참조하는 스크립트. 파일이 거의 바뀌지
+# 않아 manifest 레이어 캐시 재사용률은 유지되면서 `MODULE_NOT_FOUND` 를 제거.
+COPY scripts/check-no-stale-lockfiles.mjs ./scripts/check-no-stale-lockfiles.mjs
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/db/package.json ./packages/db/
@@ -61,7 +64,9 @@ COPY apps/backend/package.json ./apps/backend/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared-constants/package.json ./packages/shared-constants/
-RUN pnpm install --frozen-lockfile --prod
+# --ignore-scripts: prod install 에선 husky(`prepare`)가 devDep 라 실패. lockfile
+# 무결성은 `--frozen-lockfile` 가 이미 보장하므로 preinstall 검증 중복 → 전체 스킵.
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # ----- production ------------------------------------------------------------
 FROM node:20-alpine AS production

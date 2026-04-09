@@ -22,6 +22,9 @@ RUN apk add --no-cache libc6-compat \
 # ----- deps (lockfile-only 레이어) -------------------------------------------
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# root package.json 의 `preinstall` 훅이 참조하는 스크립트. 파일이 거의 바뀌지
+# 않아 manifest 레이어 캐시 재사용률은 유지되면서 `MODULE_NOT_FOUND` 를 제거.
+COPY scripts/check-no-stale-lockfiles.mjs ./scripts/check-no-stale-lockfiles.mjs
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/schemas/package.json ./packages/schemas/
 COPY packages/shared-constants/package.json ./packages/shared-constants/

@@ -7,7 +7,7 @@
 
 ## 미완료 항목
 
-- [ ] Frontend/Backend Dockerfile hardening 검증 — 해결 in progress: 2026-04-08 — deps 통합/USER node/HEALTHCHECK/lockfile-only 레이어/tini ENTRYPOINT 적용 완료 (`apps/backend/docker/Dockerfile`, `apps/frontend/Dockerfile`). Dev 환경에서 `docker compose build` 미실행 (테스트 회귀 0). 다음 빌드 시 캐시 hit 율 확인 + standalone server.js 경로 검증 필요 — 2026-04-08
+- [x] Frontend/Backend Dockerfile hardening 검증 — 해결: 2026-04-09 — `docker compose -f docker-compose.prod.yml build backend frontend` 실제 빌드 성공. 루트 원인 수정: `preinstall` 훅이 참조하는 `scripts/check-no-stale-lockfiles.mjs` 를 deps 레이어에 `COPY` 추가(backend/frontend 양쪽), prod-deps stage 는 husky(`prepare`) devDep 의존을 `--ignore-scripts` 로 건너뛰어 `--frozen-lockfile` 무결성만 유지. 2차 빌드 캐시 히트 **100%** (backend/frontend 모두 전 레이어 CACHED). 이미지 inspect 검증: Backend `USER=node` + `ENTRYPOINT=[/sbin/tini --]` + HEALTHCHECK `/api/monitoring/health` (30s/5s/3회) + `CMD=node apps/backend/dist/main.js`, 1.52GB. Frontend `USER=node` + `ENTRYPOINT=[/sbin/tini --]` + HEALTHCHECK `/api/health` + `CMD=node apps/frontend/server.js`, standalone server.js 경로 `/app/apps/frontend/server.js` 존재 확인, 344MB — 2026-04-09
 
 - [x] reports filter ALL 센티널 통일 — 해결: 2026-04-08 — `ALL_SENTINEL = '_all'` 상수를 `reports-filter-utils.ts` 에서 export 하고 `ReportsContent.tsx` 가 import 하여 단일 SSOT 통일. UI Select sentinel 과 URL strip 로직이 동일 상수 참조
 - [x] reports `customDateRange` KST 하루 밀림 — 해결: 2026-04-08 — `new Date('yyyy-MM-dd')` (UTC) → `parseISO()` (로컬 자정) 전환. DatePicker 표시 정합성 확보
