@@ -7,6 +7,29 @@
 
 ---
 
+## 38차 후속 — stale 검증 아카이브 (2026-04-09)
+
+### ~~🟡 MEDIUM — use-management-number-check.ts setQueryData 안티패턴~~ ✅ 완료 (2026-04-09)
+
+> **검증 경로:**
+> 1. commit `6de70a67` — `refactor(frontend): replace manual cache access in useManagementNumberCheck with fetchQuery`
+> 2. `apps/frontend/hooks/use-management-number-check.ts:121-129` → `queryClient.fetchQuery({ queryKey, queryFn, staleTime, gcTime })` 사용 중. `useQuery` (L79-91) 와 동일한 `queryKeys.equipment.managementNumberCheck(value, excludeId)` + `CACHE_TIMES.SHORT/LONG` 을 공유해 SSOT 유지.
+> 3. `setQueryData` / `getQueryData` 직접 조작 0 hit — CLAUDE.md "onSuccess setQueryData 금지" 룰 우회 경로 제거 완료.
+>
+> 프롬프트가 지적했던 "별도 hook이 안티패턴 우회" 상황은 `fetchQuery` 전환으로 해소됨. `fetchQuery` 는 stale 내 캐시 적중 시 캐시 반환, 미스 시 queryFn 실행 후 캐시 기록 — TanStack Query 가 제공하는 정식 one-shot 경로이므로 TData ≠ TCachedData 리스크 없음.
+
+### ~~🟠 HIGH — UL-QP-19-01 exporters map 누락~~ ✅ STALE (2026-04-09)
+
+> **검증 경로:**
+> 1. `form-catalog.ts:121-129` → `UL-QP-19-01` 은 `implemented: true` + **`dedicatedEndpoint: true`** (프롬프트 작성 시점 이후 추가된 플래그)
+> 2. `form-template-export.service.ts:106-111` → `isFormDedicatedEndpoint()` 가드가 exporters 맵 조회 **이전** 단계에서 `USE_DEDICATED_ENDPOINT` BadRequestException 을 throw (가드 순서: catalog → dedicatedEndpoint → implemented → exporters)
+> 3. 전용 exporter 실존: `calibration-plans-export.service.ts:24,39,105` (`FormTemplateService.getTemplateBuffer('UL-QP-19-01')` 로 xlsx 템플릿 로드 → 파일명 `UL-QP-19-01_연간교정계획서_{year}_{site}_{date}.xlsx`)
+> 4. 전용 엔드포인트 실존: `calibration-plans.controller.ts:364` (`GET /api/calibration-plans/export`)
+>
+> 프롬프트가 주장한 "controller → isImplemented 통과 → exporters[key] undefined → NotImplementedException" 경로는 `dedicatedEndpoint` 가드에 의해 도달 불가. UL-QP-18-02 이력카드와 동일한 "전용 엔드포인트" 패턴으로, SSOT/책임분리/크로스 모듈 경계 모두 정상 상태. A/B 옵션 모두 불필요 (A=이중 경로로 SSOT 훼손, B=실동작 기능을 false 로 마킹하는 거짓 정보).
+
+---
+
 ## 36차 후속 — review-architecture Critical 1건 (2026-04-08)
 
 > **발견 배경**: Step B (커밋 f8e06b86, 0006_gray_sersi 마이그레이션) review-architecture 결과. dev DB는 통과(20행)했으나 운영 적용 전 사전 검증 필요.
