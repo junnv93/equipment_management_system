@@ -119,25 +119,14 @@ export function useManagementNumberCheck(
       }
 
       try {
-        // 캐시 확인
-        const cachedData = queryClient.getQueryData<ManagementNumberCheckResult>(
-          queryKeys.equipment.managementNumberCheck(value, excludeId)
-        );
-
-        if (cachedData) {
-          return cachedData;
-        }
-
-        // 캐시 없으면 API 호출
-        const result = await equipmentApi.checkManagementNumber(value, excludeId);
-
-        // 결과 캐싱
-        queryClient.setQueryData(
-          queryKeys.equipment.managementNumberCheck(value, excludeId),
-          result
-        );
-
-        return result;
+        // fetchQuery: staleTime 내 캐시 적중 시 캐시 반환, 그 외 queryFn 실행 후 캐시 기록.
+        // useQuery와 동일한 queryKey/staleTime을 공유하여 SSOT 유지.
+        return await queryClient.fetchQuery({
+          queryKey: queryKeys.equipment.managementNumberCheck(value, excludeId),
+          queryFn: () => equipmentApi.checkManagementNumber(value, excludeId),
+          staleTime: CACHE_TIMES.SHORT,
+          gcTime: CACHE_TIMES.LONG,
+        });
       } catch (err) {
         console.error('Management number check failed:', err);
         // 네트워크 에러 시 null 반환 (서버에서 최종 검증)
