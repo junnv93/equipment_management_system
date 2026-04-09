@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import { CalibrationPlansService } from './calibration-plans.service';
 import { FormTemplateService } from '../reports/form-template.service';
@@ -39,10 +39,12 @@ export class CalibrationPlansExportService {
     const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-19-01');
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
-    const sheet =
-      workbook.getWorksheet('연간 교정계획서') ||
-      workbook.getWorksheet('교정계획서') ||
-      workbook.worksheets[0];
+    const sheet = workbook.getWorksheet('연간 교정계획서') || workbook.getWorksheet('교정계획서');
+    if (!sheet) {
+      throw new InternalServerErrorException(
+        `[UL-QP-19-01] 워크시트 '연간 교정계획서' 없음. 양식의 시트명이 변경되었을 수 있습니다.`
+      );
+    }
 
     // Row 1~3: 병합 제목 (A1:J3) — 연도/사이트 정보 업데이트
     const headerCell = sheet.getRow(1).getCell(1);
