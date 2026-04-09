@@ -1,8 +1,17 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-08 (36차 — generate-prompts 전체 스캔, CRITICAL 1 + HIGH 6 + MEDIUM 3 신규 등재, 34차 stale 4건 정리)**
+> **마지막 정리일: 2026-04-09 (37차 — Dockerfile hardening 실빌드 검증 완료, 관련 stale 4건 아카이브)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## 37차 정리 (2026-04-09) — Dockerfile hardening 실빌드 검증
+
+`docker build --target production` 실측으로 36차/30차/29차에 등재됐던 **Docker 관련 4건 전부 stale 확인 → 아카이브**. 동시에 fresh 빌드에서만 드러나는 **실제 근본 버그 2건** 발견 + root-cause 수정(tracker `Frontend/Backend Dockerfile hardening 검증` 참조):
+
+1. `preinstall` 훅이 참조하는 `scripts/check-no-stale-lockfiles.mjs` 가 deps 레이어에 COPY 되지 않아 fresh 빌드가 `MODULE_NOT_FOUND` 로 실패 → 단일 파일 COPY 추가 (manifest 캐시 재사용률 유지).
+2. `prod-deps` 스테이지의 `pnpm install --prod` 가 husky(devDep) `prepare` 훅에서 `sh: husky: not found` → `--ignore-scripts` 로 전환 (`--frozen-lockfile` 이 lockfile 무결성을 이미 보장해 preinstall 검증 중복 제거).
+
+교훈: "정적 구조만 확인된 hardening 체크리스트" 는 실제 `docker build` 1회로 모두 검증되어야 한다. 이후 Dockerfile 변경은 CI 또는 로컬에서 fresh 빌드 실행을 필수 절차로 삼을 것.
 
 ---
 
@@ -15,46 +24,13 @@
 
 > **발견 배경 (2026-04-08, 36차)**: aria-label SSOT 롤아웃(35차) 완료 후 example-prompts.md 상단 우선순위가 모두 stale로 확인되어 generate-prompts 스킬 실행. Backend/Frontend/Infra+Packages 3개 에이전트 병렬 스캔 + 2차 verify(Read/Grep) 통과한 항목만 등재. **#10 (Reports/Alerts URL SSOT) 의 Alerts 부분은 커밋 95534053 에서 별도 처리됨 — Reports 부분만 잔존.**
 
-### 🟡 MEDIUM — Frontend Dockerfile build stage root 실행 + pnpm 중복 install
+### ~~🟡 MEDIUM — Frontend Dockerfile build stage root 실행 + pnpm 중복 install~~ ✅ 아카이브 (37차, 2026-04-09)
 
-```
-배경: apps/frontend/Dockerfile 의 build 스테이지(line 23-58)에서 `npm install -g pnpm`이
-3개 스테이지에서 반복 실행되고, build 스테이지가 USER 직권 없이 root로 `npm run build`를
-실행한다. production 스테이지(line 67-89)만 비-root로 전환. 또한 HEALTHCHECK 디렉티브가
-production 스테이지에 부재. apps/backend/docker/Dockerfile 도 동일 패턴.
+> 실빌드 확인: USER node / deps 스테이지 통합 / HEALTHCHECK `/api/health` + `wget` / tini ENTRYPOINT 양쪽 Dockerfile 모두 이미 적용. `docker build --target production -t ems-frontend:verify .` 성공, 컨테이너 내 `id = uid=1000(node)` 확인. 37차 루트 수정(scripts COPY + `--ignore-scripts`) 까지 포함. 아카이브로 이동.
 
-근본 해결:
-1. multi-stage builder에서 deps 스테이지를 하나로 통합 → COPY --from=deps 로 재사용
-2. build 스테이지에도 `USER node` 적용 (또는 별도 build user)
-3. production 스테이지에 HEALTHCHECK 추가: `HEALTHCHECK CMD wget -qO- http://localhost:3000/api/health || exit 1`
-4. 동일 변경 backend Dockerfile에도 적용
+### ~~🟡 MEDIUM — Backend Dockerfile layer caching 깨짐 (lockfile-only 레이어 무효화)~~ ✅ 아카이브 (37차, 2026-04-09)
 
-영향 범위: apps/frontend/Dockerfile + apps/backend/docker/Dockerfile (2 파일). Mode 1.
-
-검증:
-- docker build 양 이미지 성공
-- docker run 후 HEALTHCHECK status healthy 확인
-- 이미지 크기 비교 (deps 통합 전/후)
-```
-
-### 🟡 MEDIUM — Backend Dockerfile layer caching 깨짐 (lockfile-only 레이어 무효화)
-
-```
-배경: apps/backend/docker/Dockerfile builder 스테이지에서 `pnpm install --frozen-lockfile`
-(line 60) 직후 `COPY . .` (line 63) 가 실행되어 lockfile-only 레이어 캐싱 효과가 사라진다.
-prod-deps 스테이지는 또다시 전체 install을 실행 → 같은 빌드에서 install 3회. CI 시간 손실.
-
-근본 해결:
-1. lockfile + package.json 만 먼저 COPY → install → 그 다음 COPY . . (표준 docker layer
-   caching 패턴)
-2. prod-deps 스테이지는 builder의 node_modules를 COPY --from 으로 재사용
-
-영향 범위: apps/backend/docker/Dockerfile. Mode 0~1.
-
-검증:
-- docker build 시간 측정 (변경 전/후)
-- 레이어 수 감소
-```
+> 실빌드 확인: backend/frontend 모두 lockfile-only 레이어 + 별도 prod-deps 스테이지(alpine) 이미 적용. 2차 빌드 캐시 hit: backend 30 / frontend 14 단계 전부 CACHED (≤3s). 아카이브로 이동.
 
 ## 34차 후속 — wf20-infra-debt harness 결과 review-architecture tech debt (3건)
 
@@ -215,34 +191,9 @@ wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다
 > **2026-04-09 harness 세션**: self-inspections CAS HIGH 항목 stale 재확인 (이미 완료 상태) → 비활성화. use-management-number-check.ts setQueryData MEDIUM 항목은 `fetchQuery`로 전환 완료 (commit 6de70a67).
 > **30차 후속 등재**: review-architecture/verify-security에서 발견한 dormant code path + hardening gap 2건
 
-### 🟡 MEDIUM — Dockerfile USER 미선언 (root 실행 hardening) (Mode 0)
+### ~~🟡 MEDIUM — Dockerfile USER 미선언 (root 실행 hardening)~~ ✅ 아카이브 (37차, 2026-04-09)
 
-```
-30차 (2026-04-08) verify-security에서 발견 (pre-existing). 두 Dockerfile 모두 USER
-디렉티브가 없어 모든 stage가 root로 실행된다. CIS Docker Benchmark 4.1 위반.
-
-확인된 파일:
-- docker/backend.Dockerfile (alpine, 5 stages: base/deps/development/builder/production)
-- docker/frontend.Dockerfile (slim, 5 stages: base/deps/development/builder/production)
-
-node:20-alpine은 기본 'node' user를 제공 (uid 1000). slim도 동일.
-
-작업:
-1. backend.Dockerfile production stage 끝부분에 USER node 추가
-   - WORKDIR /app 소유권을 node:node로 chown (COPY --chown=node:node)
-2. frontend.Dockerfile production stage 동일
-3. development stage는 volume mount 권한 충돌 가능 — production만 적용 권장
-4. CMD/ENTRYPOINT가 :80/:443 등 privileged port 사용 안 하는지 확인 (현재 3000/3001 → OK)
-
-검증:
-- docker compose -f docker-compose.prod.yml build (가능 시)
-- docker run --rm -it <image> id → uid=1000(node) gid=1000(node)
-- 컨테이너 내부에서 /app 쓰기 가능 (logs/uploads 디렉토리 권한)
-- pnpm tsc --noEmit / test 무관 (Dockerfile만 변경)
-
-선택: development stage도 USER node 시 docker-compose volume mount 시 host UID 매핑
-필요 → 별도 작업으로 분리 가능
-```
+> 실빌드 확인: backend/frontend production 스테이지 모두 `USER node` + `COPY --chown=node:node` + tini ENTRYPOINT 이미 적용. `docker run --entrypoint sh ems-*:verify -c 'id'` → `uid=1000(node) gid=1000(node)` 양쪽 확인. CIS Docker Benchmark 4.1 충족.
 
 ### 🟠 HIGH — UL-QP-19-01 exporters map 누락 (런타임 NotImplementedException) (Mode 0)
 
@@ -270,27 +221,9 @@ exporters[formNumber]가 undefined → 런타임 NotImplementedException 또는 
 
 > 현 시점 확인: self-inspections.service.ts:25 이미 `extends VersionedBaseService`, update()/confirm() 모두 `updateWithVersion<EquipmentSelfInspection>` + `db.transaction()` 적용 완료. 30차 처리 기록과 일치. 활성 리스트에서 제거.
 
-### 🟠 HIGH — Docker base image Node 18 → Node 20 LTS 업그레이드 (Mode 0)
+### ~~🟠 HIGH — Docker base image Node 18 → Node 20 LTS~~ ✅ 아카이브 (37차, 2026-04-09)
 
-```
-docker/backend.Dockerfile:1 (FROM node:18-alpine)
-docker/frontend.Dockerfile:1 (FROM node:18-slim)
-
-Node 18은 2025-04-30 EOL 도달함 (현재 2026-04-08 기준 1년 지남).
-보안 패치 미수신 + 일부 의존성(예: 최신 NestJS/Next.js)이 Node 20+ engines 요구.
-
-작업:
-1. 두 Dockerfile FROM line만 node:20-alpine / node:20-slim 으로 변경
-2. multi-stage 내 모든 stage 동일 변경 (base 외 builder/runner 등 grep 후 일괄)
-3. package.json engines 필드에 "node": ">=20.0.0" 명시 (없는 경우 추가)
-
-검증:
-- grep "node:18" docker/ → 0 hit
-- grep "node:20" docker/ → 2+ hit
-- pnpm --filter backend run build exit 0 (로컬 호환성 확인)
-- pnpm --filter frontend run build exit 0
-- (선택) docker compose build 통과
-```
+> 현재 상태: backend `FROM node:20-bullseye AS base` + `node:20-alpine AS prod-deps/production` / frontend `FROM node:20-alpine AS base`. Node 18 잔존 0건. 37차 실빌드 성공으로 런타임 호환성까지 확인.
 
 ### 🟡 MEDIUM — use-management-number-check.ts setQueryData 안티패턴 (Mode 0)
 
