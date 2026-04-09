@@ -209,9 +209,10 @@ wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다
 
 ---
 
-## 현재 미해결 프롬프트: 3건 (29차 이월 1건 + 30차 후속 2건)
+## 현재 미해결 프롬프트: 2건 (29차 이월 1건 + 30차 후속 1건)
 
 > **30차 처리 (2026-04-08)**: #6 self-inspections CAS 통일 ✅ PASS, #7 Docker Node 20 LTS ✅ 완료, #8 setQueryData → false positive
+> **2026-04-09 harness 세션**: self-inspections CAS HIGH 항목 stale 재확인 (이미 완료 상태) → 비활성화. use-management-number-check.ts setQueryData MEDIUM 항목은 `fetchQuery`로 전환 완료 (commit 6de70a67).
 > **30차 후속 등재**: review-architecture/verify-security에서 발견한 dormant code path + hardening gap 2건
 
 ### 🟡 MEDIUM — Dockerfile USER 미선언 (root 실행 hardening) (Mode 0)
@@ -265,33 +266,9 @@ exporters[formNumber]가 undefined → 런타임 NotImplementedException 또는 
 - 옵션 B: form-catalog.ts UL-QP-19-01 implemented: false, isImplemented() 테스트 추가
 ```
 
-### 🟠 HIGH — self-inspections.service.ts CAS 중복 구현 (VersionedBaseService 미상속) (Mode 1)
+### ~~🟠 HIGH — self-inspections.service.ts CAS 중복 구현~~ ✅ STALE (2026-04-09 harness 세션 검증)
 
-```
-apps/backend/src/modules/self-inspections/self-inspections.service.ts:25 가 VersionedBaseService를
-상속하지 않고 수동으로 CAS를 구현하고 있다 (lines 185-192, 235, 295-302, 304-319).
-다른 12개 서비스(checkouts, calibration, equipment, disposal 등)는 모두 base class의
-updateWithVersion<T>() 헬퍼를 사용해 atomic check+update 한다.
-
-현재 패턴의 문제:
-1. 라인 185 pre-check + 라인 235 WHERE eq(version) 분리 → 두 단계 사이에 race window 존재
-2. createVersionConflictException() 수동 throw — 다른 서비스와 에러 메시지/코드 divergence 위험
-3. confirm() (라인 304-319)는 transaction으로 감싸지지 않음. checkout.approve(line 1821), calibration.approve(line 1188)는 transaction 사용
-
-작업:
-1. SelfInspectionsService extends VersionedBaseService 로 변경
-2. update()/confirm()의 manual CAS를 this.updateWithVersion<EquipmentSelfInspection>(...) 호출로 교체
-3. confirm()의 status update + items reload 를 this.db.transaction()으로 감싸기
-
-CAS 의미는 변경 금지 — 동일한 동시성 보장이어야 함.
-
-검증:
-- pnpm --filter backend exec tsc --noEmit exit 0
-- pnpm --filter backend run test -- --grep "self-inspection" exit 0
-- grep "extends VersionedBaseService" self-inspections.service.ts → 1 hit
-- grep "updateWithVersion" self-inspections.service.ts → 2+ hits
-- 회귀 0 (전체 backend test)
-```
+> 현 시점 확인: self-inspections.service.ts:25 이미 `extends VersionedBaseService`, update()/confirm() 모두 `updateWithVersion<EquipmentSelfInspection>` + `db.transaction()` 적용 완료. 30차 처리 기록과 일치. 활성 리스트에서 제거.
 
 ### 🟠 HIGH — Docker base image Node 18 → Node 20 LTS 업그레이드 (Mode 0)
 
