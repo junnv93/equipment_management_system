@@ -42,6 +42,7 @@ import {
   cleanupCheckoutPool,
   getCheckoutPool,
 } from '../helpers/checkout-helpers';
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
 test.describe('Suite 27: Equipment Import Auto Checkout Tracking', () => {
   test.describe.configure({ mode: 'serial' });
@@ -96,7 +97,7 @@ test.describe('Suite 27: Equipment Import Auto Checkout Tracking', () => {
     // purpose + destination 검증 — raw GET 으로 필드 접근
     const tmToken = await getBackendToken(page, 'technical_manager');
     const detailResp = await page.request.get(
-      `${process.env.BACKEND_URL ?? 'http://localhost:3001'}/api/checkouts/${snapshot.returnCheckoutId}`,
+      `${BASE_URLS.BACKEND}/api/checkouts/${snapshot.returnCheckoutId}`,
       { headers: { Authorization: `Bearer ${tmToken}` } }
     );
     expect(detailResp.ok()).toBeTruthy();
@@ -245,9 +246,9 @@ test.describe('Suite 27: Equipment Import Auto Checkout Tracking', () => {
     expect(checkoutSnap.status).toBe(CSVal.PENDING);
 
     // TM 토큰으로 checkout cancel API 호출
-    const tmToken = await getBackendToken(page, 'tech_manager');
+    const tmToken = await getBackendToken(page, 'technical_manager');
     const cancelResp = await page.request.patch(
-      `${process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:3001'}/api/checkouts/${checkoutId}/cancel`,
+      `${BASE_URLS.BACKEND}/api/checkouts/${checkoutId}/cancel`,
       {
         headers: { Authorization: `Bearer ${tmToken}` },
         data: { version: checkoutSnap.version },
