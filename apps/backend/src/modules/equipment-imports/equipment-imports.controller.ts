@@ -50,6 +50,8 @@ import {
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, EQUIPMENT_IMPORT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
@@ -92,14 +94,20 @@ export class EquipmentImportsController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_EQUIPMENT_IMPORTS)
-  @SiteScoped({ policy: EQUIPMENT_IMPORT_DATA_SCOPE })
+  @SiteScoped({ policy: EQUIPMENT_IMPORT_DATA_SCOPE, failLoud: true })
   @UsePipes(EquipmentImportQueryValidationPipe)
   @ApiOperation({
     summary: '장비 반입 목록 조회',
     description: 'sourceType 필터로 렌탈/내부공용 구분 조회 가능',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '목록 조회 성공' })
-  async findAll(@Query() query: EquipmentImportQueryDto): Promise<EquipmentImportListResult> {
+  async findAll(
+    @Query() query: EquipmentImportQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<EquipmentImportListResult> {
+    // failLoud: 인터셉터가 cross-site/cross-team 요청을 이미 403으로 거부.
+    query.site = scope.site as EquipmentImportQueryDto['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.equipmentImportsService.findAll(query);
   }
 

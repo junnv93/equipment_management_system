@@ -44,6 +44,8 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { Permission, USER_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { InternalServiceOnly } from '../../common/decorators/internal-service-only.decorator';
 
@@ -89,14 +91,19 @@ export class UsersController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_USERS)
-  @SiteScoped({ policy: USER_DATA_SCOPE })
+  @SiteScoped({ policy: USER_DATA_SCOPE, failLoud: true })
   @UsePipes(UserQueryValidationPipe)
   @ApiOperation({
     summary: '사용자 목록 조회',
     description: '사용자 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다.',
   })
   @ApiResponse({ status: 200, description: '사용자 목록 조회 성공' })
-  async findAll(@Query() query: UserQueryDto): Promise<PaginatedResponseType<User>> {
+  async findAll(
+    @Query() query: UserQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<PaginatedResponseType<User>> {
+    // failLoud: enforced scope.site 바인딩.
+    query.site = scope.site as UserQueryDto['site'];
     return this.usersService.findAll(query);
   }
 

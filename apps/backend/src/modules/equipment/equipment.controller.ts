@@ -39,6 +39,8 @@ import { UpdateStatusDto, UpdateStatusValidationPipe } from './dto/update-status
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { InternalServiceOnly } from '../../common/decorators/internal-service-only.decorator';
 import {
   Permission,
@@ -186,11 +188,16 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  @SiteScoped({ policy: EQUIPMENT_DATA_SCOPE })
+  @SiteScoped({ policy: EQUIPMENT_DATA_SCOPE, failLoud: true })
   @UsePipes(EquipmentQueryValidationPipe)
-  findAll(@Query() query: EquipmentQueryDto): Promise<EquipmentListResponse> {
-    // SiteScopeInterceptor가 역할별 query.site를 자동 주입합니다 (EQUIPMENT_DATA_SCOPE 정책).
-    // test_engineer → query.site = user.site, 그 외 → query.site 유지 (전체 접근)
+  findAll(
+    @Query() query: EquipmentQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<EquipmentListResponse> {
+    // failLoud: 인터셉터가 cross-site/cross-team 요청을 이미 403으로 거부.
+    // 통과한 enforced scope 값을 query 필드에 바인딩해 기존 service 로직에 전달.
+    query.site = scope.site as EquipmentQueryDto['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.equipmentService.findAll(query);
   }
 

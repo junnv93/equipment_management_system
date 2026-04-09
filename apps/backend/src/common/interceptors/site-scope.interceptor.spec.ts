@@ -7,6 +7,13 @@ import {
   EQUIPMENT_DATA_SCOPE,
   CHECKOUT_DATA_SCOPE,
   CALIBRATION_PLAN_DATA_SCOPE,
+  CALIBRATION_DATA_SCOPE,
+  NON_CONFORMANCE_DATA_SCOPE,
+  EQUIPMENT_IMPORT_DATA_SCOPE,
+  TEST_SOFTWARE_DATA_SCOPE,
+  USER_DATA_SCOPE,
+  NOTIFICATION_DATA_SCOPE,
+  DISPOSAL_DATA_SCOPE,
   AUDIT_LOG_SCOPE,
 } from '@equipment-management/shared-constants';
 
@@ -370,6 +377,69 @@ describe('SiteScopeInterceptor', () => {
       expect(() => interceptor.intercept(context as never, callHandler as never)).toThrow(
         ForbiddenException
       );
+    });
+  });
+
+  // failLoud 마이그레이션 커버리지: 18개 라우트 도메인별 cross-site 거부 정책 검증
+  // (각 정책이 enforceScope SSOT 를 통과하는지 확인 — 회귀 방지)
+  describe('failLoud cross-site rejection — domain coverage', () => {
+    const domainCases: Array<{
+      name: string;
+      policy: Parameters<typeof createInterceptor>[0];
+      siteField?: string;
+    }> = [
+      { name: 'checkouts', policy: { policy: CHECKOUT_DATA_SCOPE, failLoud: true } },
+      {
+        name: 'non-conformances',
+        policy: { policy: NON_CONFORMANCE_DATA_SCOPE, failLoud: true },
+      },
+      {
+        name: 'equipment-imports',
+        policy: { policy: EQUIPMENT_IMPORT_DATA_SCOPE, failLoud: true },
+      },
+      { name: 'calibration', policy: { policy: CALIBRATION_DATA_SCOPE, failLoud: true } },
+      {
+        name: 'calibration-plans (siteId)',
+        policy: {
+          policy: CALIBRATION_PLAN_DATA_SCOPE,
+          siteField: 'siteId',
+          failLoud: true,
+        },
+        siteField: 'siteId',
+      },
+      {
+        name: 'test-software',
+        policy: { policy: TEST_SOFTWARE_DATA_SCOPE, failLoud: true },
+      },
+      { name: 'users', policy: { policy: USER_DATA_SCOPE, failLoud: true } },
+      {
+        name: 'notifications (recipientSite)',
+        policy: {
+          policy: NOTIFICATION_DATA_SCOPE,
+          siteField: 'recipientSite',
+          failLoud: true,
+        },
+        siteField: 'recipientSite',
+      },
+      { name: 'disposal', policy: { policy: DISPOSAL_DATA_SCOPE, failLoud: true } },
+    ];
+
+    domainCases.forEach(({ name, policy, siteField }) => {
+      it(`${name}: suwon 사용자가 uiwang 명시 요청 → ForbiddenException`, () => {
+        const interceptor = createInterceptor(policy);
+        const { context, request } = createMockContext({
+          userId: 'u1',
+          roles: ['lab_manager'],
+          site: 'suwon',
+        });
+        request.query = { [siteField ?? 'site']: 'uiwang' };
+        const callHandler = createCallHandler();
+
+        expect(() => interceptor.intercept(context as never, callHandler as never)).toThrow(
+          ForbiddenException
+        );
+        expect(callHandler.handle).not.toHaveBeenCalled();
+      });
     });
   });
 });

@@ -1,7 +1,9 @@
-import { Controller, Get, HttpStatus, Query, Req } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Permission, DISPOSAL_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { DisposalService } from './services/disposal.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
@@ -24,7 +26,7 @@ export class DisposalRequestsController {
   constructor(private readonly disposalService: DisposalService) {}
 
   @Get('pending-review')
-  @SiteScoped({ policy: DISPOSAL_DATA_SCOPE })
+  @SiteScoped({ policy: DISPOSAL_DATA_SCOPE, failLoud: true })
   @ApiOperation({
     summary: '검토 대기 중인 폐기 요청 목록 조회',
     description:
@@ -37,15 +39,15 @@ export class DisposalRequestsController {
   @RequirePermissions(Permission.REVIEW_DISPOSAL)
   async getPendingReviewRequests(
     @Req() req: AuthenticatedRequest,
-    @Query('site') site?: string,
-    @Query('teamId') teamId?: string
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): Promise<unknown[]> {
+    // failLoud: enforced scope 값 직접 사용.
     const userId = extractUserId(req);
-    return this.disposalService.getPendingReviewRequests(userId, site, teamId);
+    return this.disposalService.getPendingReviewRequests(userId, scope.site, scope.teamId);
   }
 
   @Get('pending-approval')
-  @SiteScoped({ policy: DISPOSAL_DATA_SCOPE })
+  @SiteScoped({ policy: DISPOSAL_DATA_SCOPE, failLoud: true })
   @ApiOperation({
     summary: '최종 승인 대기 중인 폐기 요청 목록 조회',
     description:
@@ -56,7 +58,10 @@ export class DisposalRequestsController {
     description: '최종 승인 대기 목록 조회 성공',
   })
   @RequirePermissions(Permission.APPROVE_DISPOSAL)
-  async getPendingApprovalRequests(@Query('site') site?: string): Promise<unknown[]> {
-    return this.disposalService.getPendingApprovalRequests(site);
+  async getPendingApprovalRequests(
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<unknown[]> {
+    // failLoud: enforced scope.site 직접 사용.
+    return this.disposalService.getPendingApprovalRequests(scope.site);
   }
 }

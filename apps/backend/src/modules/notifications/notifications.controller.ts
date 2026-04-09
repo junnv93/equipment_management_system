@@ -19,6 +19,8 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, NOTIFICATION_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { CalibrationOverdueScheduler } from './schedulers/calibration-overdue-scheduler';
 import { CheckoutOverdueScheduler } from './schedulers/checkout-overdue-scheduler';
 import {
@@ -200,9 +202,15 @@ export class NotificationsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '관리자 알림 현황 조회 성공' })
   @RequirePermissions(Permission.CREATE_SYSTEM_NOTIFICATION)
-  @SiteScoped({ policy: NOTIFICATION_DATA_SCOPE, siteField: 'recipientSite' })
+  @SiteScoped({ policy: NOTIFICATION_DATA_SCOPE, siteField: 'recipientSite', failLoud: true })
   @UsePipes(NotificationQueryValidationPipe)
-  findAllAdmin(@Query() query: NotificationQueryInput): Promise<PaginatedNotificationResponse> {
+  findAllAdmin(
+    @Query() query: NotificationQueryInput,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<PaginatedNotificationResponse> {
+    // failLoud: enforced scope.site → 비표준 recipientSite 필드로 매핑.
+    query.recipientSite = scope.site;
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.notificationsService.findAllAdmin(query);
   }
 

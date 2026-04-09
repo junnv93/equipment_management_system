@@ -252,12 +252,15 @@ describe('EquipmentController', () => {
 
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);
 
-      // Act — SiteScopeInterceptor가 site 주입을 담당 (단위 테스트에서는 통합 생략)
-      const result = await controller.findAll(query);
+      // Act — failLoud: 인터셉터가 enforced scope 주입. 단위 테스트는 scope 직접 전달.
+      const scope = { site: 'suwon', teamId: undefined };
+      const result = await controller.findAll(query, scope);
 
       // Assert
       expect(result).toEqual(mockEquipmentList);
-      expect(equipmentService.findAll).toHaveBeenCalledWith(query);
+      expect(equipmentService.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ site: 'suwon' })
+      );
     });
 
     it('should filter equipment by status', async () => {
@@ -270,12 +273,15 @@ describe('EquipmentController', () => {
 
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);
 
-      // Act — SiteScopeInterceptor가 site 주입을 담당 (단위 테스트에서는 통합 생략)
-      const result = await controller.findAll(query);
+      // Act — failLoud: enforced scope 직접 전달
+      const scope = { site: 'suwon', teamId: undefined };
+      const result = await controller.findAll(query, scope);
 
       // Assert
       expect(result).toEqual(mockEquipmentList);
-      expect(equipmentService.findAll).toHaveBeenCalledWith(query);
+      expect(equipmentService.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'spare', site: 'suwon' })
+      );
     });
   });
 

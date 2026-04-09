@@ -43,6 +43,8 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
@@ -98,8 +100,11 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  findAll(@Query(CalibrationFactorQueryValidationPipe) query: CalibrationFactorQueryDto): Promise<{
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
+  findAll(
+    @Query(CalibrationFactorQueryValidationPipe) query: CalibrationFactorQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<{
     items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
@@ -109,6 +114,9 @@ export class CalibrationFactorsController {
       currentPage: number;
     };
   }> {
+    // failLoud: enforced scope 값을 query에 바인딩.
+    query.site = scope.site as CalibrationFactorQueryDto['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.calibrationFactorsService.findAll(query);
   }
 
@@ -121,8 +129,11 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTOR_REQUESTS)
-  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  findPendingApprovals(@Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto): Promise<{
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
+  findPendingApprovals(
+    @Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<{
     items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
@@ -132,7 +143,11 @@ export class CalibrationFactorsController {
       currentPage: number;
     };
   }> {
-    return this.calibrationFactorsService.findPendingApprovals(query.site, query.teamId);
+    // failLoud: enforced scope 값 직접 전달.
+    return this.calibrationFactorsService.findPendingApprovals(
+      scope.site,
+      scope.teamId ?? query.teamId
+    );
   }
 
   @Get('registry')
@@ -144,8 +159,11 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  getRegistry(@Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto): Promise<{
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
+  getRegistry(
+    @Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<{
     registry: {
       equipmentId: string;
       factors: CalibrationFactorRecord[];
@@ -155,7 +173,8 @@ export class CalibrationFactorsController {
     totalFactors: number;
     generatedAt: Date;
   }> {
-    return this.calibrationFactorsService.getRegistry(query.site, query.teamId);
+    // failLoud: enforced scope 값 직접 전달.
+    return this.calibrationFactorsService.getRegistry(scope.site, scope.teamId ?? query.teamId);
   }
 
   @Get('equipment/:equipmentUuid')

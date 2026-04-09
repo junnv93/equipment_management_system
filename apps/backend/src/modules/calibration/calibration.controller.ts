@@ -59,6 +59,8 @@ import {
   type IntermediateCheckStatus,
 } from '@equipment-management/schemas';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { FileUploadService } from '../../common/file-upload/file-upload.service';
 import { DocumentService } from '../../common/file-upload/document.service';
 import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
@@ -138,8 +140,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
-  findAll(@Query(CalibrationQueryValidationPipe) query: CalibrationQueryDto): Promise<{
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
+  findAll(
+    @Query(CalibrationQueryValidationPipe) query: CalibrationQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<{
     items: CalibrationRecord[];
     meta: {
       totalItems: number;
@@ -149,6 +154,9 @@ export class CalibrationController {
       currentPage: number;
     };
   }> {
+    // failLoud: 인터셉터가 cross-site/cross-team 요청을 이미 403으로 거부.
+    query.site = scope.site as CalibrationQueryDto['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.calibrationService.findAll(query);
   }
 
@@ -161,11 +169,18 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_REQUESTS)
-  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE, failLoud: true })
   findPendingApprovals(
-    @Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto
+    @Query(PendingApprovalsQueryPipe) query: PendingApprovalsQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): ReturnType<CalibrationService['findPendingApprovals']> {
-    return this.calibrationService.findPendingApprovals(1, 20, query.site, query.teamId);
+    // failLoud: enforced scope 값을 권한 차단 후 직접 전달.
+    return this.calibrationService.findPendingApprovals(
+      1,
+      20,
+      scope.site,
+      scope.teamId ?? query.teamId
+    );
   }
 
   @Get('intermediate-checks')

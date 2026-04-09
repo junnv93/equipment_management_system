@@ -29,6 +29,8 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, TEST_SOFTWARE_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import type { TestSoftware } from '@equipment-management/db/schema';
@@ -62,10 +64,14 @@ export class TestSoftwareController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_TEST_SOFTWARE)
-  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
+  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE, failLoud: true })
   findAll(
-    @Query(TestSoftwareQueryValidationPipe) query: TestSoftwareQueryInput
+    @Query(TestSoftwareQueryValidationPipe) query: TestSoftwareQueryInput,
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): ReturnType<TestSoftwareService['findAll']> {
+    // failLoud: enforced scope 값을 query에 바인딩.
+    query.site = scope.site as TestSoftwareQueryInput['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.testSoftwareService.findAll(query);
   }
 

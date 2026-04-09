@@ -116,9 +116,10 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.findAll.mockResolvedValue(expectedResult);
 
-      const result = await controller.findAll(query);
+      const scope = { site: undefined, teamId: undefined };
+      const result = await controller.findAll(query as never, scope);
 
-      expect(service.findAll).toHaveBeenCalledWith(query);
+      expect(service.findAll).toHaveBeenCalledWith(expect.objectContaining(query));
       expect(result).toEqual(expectedResult);
     });
 
@@ -129,9 +130,10 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.findAll.mockResolvedValue({ items: [], meta: {} });
 
-      await controller.findAll(query);
+      const scope = { site: undefined, teamId: undefined };
+      await controller.findAll(query as never, scope);
 
-      expect(service.findAll).toHaveBeenCalledWith(query);
+      expect(service.findAll).toHaveBeenCalledWith(expect.objectContaining(query));
     });
 
     it('should filter by approvalStatus', async () => {
@@ -141,9 +143,10 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.findAll.mockResolvedValue({ items: [], meta: {} });
 
-      await controller.findAll(query);
+      const scope = { site: undefined, teamId: undefined };
+      await controller.findAll(query as never, scope);
 
-      expect(service.findAll).toHaveBeenCalledWith(query);
+      expect(service.findAll).toHaveBeenCalledWith(expect.objectContaining(query));
     });
   });
 
@@ -161,7 +164,10 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.findPendingApprovals.mockResolvedValue(expectedResult);
 
-      const result = await controller.findPendingApprovals({});
+      const result = await controller.findPendingApprovals(
+        {},
+        { site: undefined, teamId: undefined }
+      );
 
       expect(service.findPendingApprovals).toHaveBeenCalled();
       expect(result).toEqual(expectedResult);
@@ -179,7 +185,7 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.getRegistry.mockResolvedValue(expectedResult);
 
-      const result = await controller.getRegistry({});
+      const result = await controller.getRegistry({}, { site: undefined, teamId: undefined });
 
       expect(service.getRegistry).toHaveBeenCalled();
       expect(result).toEqual(expectedResult);

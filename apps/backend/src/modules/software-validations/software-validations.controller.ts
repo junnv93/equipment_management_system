@@ -31,6 +31,8 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, TEST_SOFTWARE_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import type { SoftwareValidation } from '@equipment-management/db/schema/software-validations';
@@ -64,11 +66,15 @@ export class TestSoftwareValidationsController {
 
   @Get(':softwareId/validations')
   @RequirePermissions(Permission.VIEW_SOFTWARE_VALIDATIONS)
-  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
+  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE, failLoud: true })
   findByTestSoftware(
     @Param('softwareId', ParseUUIDPipe) softwareId: string,
-    @Query(ValidationQueryPipe) query: ValidationQueryInput
+    @Query(ValidationQueryPipe) query: ValidationQueryInput,
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): ReturnType<SoftwareValidationsService['findByTestSoftware']> {
+    // failLoud: enforced scope 값을 query에 바인딩.
+    query.site = scope.site as ValidationQueryInput['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.validationsService.findByTestSoftware(softwareId, query);
   }
 }
@@ -90,10 +96,14 @@ export class SoftwareValidationsController {
 
   @Get('pending')
   @RequirePermissions(Permission.APPROVE_SOFTWARE_VALIDATION)
-  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE })
+  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE, failLoud: true })
   findPending(
-    @Query(ValidationQueryPipe) query: ValidationQueryInput
+    @Query(ValidationQueryPipe) query: ValidationQueryInput,
+    @CurrentEnforcedScope() scope: EnforcedScope
   ): Promise<SoftwareValidation[]> {
+    // failLoud: enforced scope 값을 query에 바인딩.
+    query.site = scope.site as ValidationQueryInput['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.validationsService.findPending(query);
   }
 

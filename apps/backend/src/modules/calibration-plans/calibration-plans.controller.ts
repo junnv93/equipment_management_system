@@ -53,6 +53,8 @@ import {
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, CALIBRATION_PLAN_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId, enforceSiteAccess } from '../../common/utils';
@@ -98,11 +100,15 @@ export class CalibrationPlansController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 목록 조회 성공' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  @SiteScoped({ policy: CALIBRATION_PLAN_DATA_SCOPE, siteField: 'siteId' })
+  @SiteScoped({ policy: CALIBRATION_PLAN_DATA_SCOPE, siteField: 'siteId', failLoud: true })
   @UsePipes(CalibrationPlanQueryValidationPipe)
-  findAll(@Query() query: CalibrationPlanQueryInput): Promise<unknown> {
-    // SiteScopeInterceptor가 siteField: 'siteId' 옵션으로 query.siteId를 자동 주입합니다.
-    // includeSummary=true: 상태별 건수 요약 포함 (KPI 스트립용)
+  findAll(
+    @Query() query: CalibrationPlanQueryInput,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<unknown> {
+    // failLoud: enforced scope.site → 비표준 siteId 필드로 매핑.
+    query.siteId = scope.site as CalibrationPlanQueryInput['siteId'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.calibrationPlansService.findAll(query);
   }
 
@@ -113,9 +119,15 @@ export class CalibrationPlansController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '외부교정 대상 장비 목록 조회 성공' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  @SiteScoped({ policy: CALIBRATION_PLAN_DATA_SCOPE, siteField: 'siteId' })
+  @SiteScoped({ policy: CALIBRATION_PLAN_DATA_SCOPE, siteField: 'siteId', failLoud: true })
   @UsePipes(ExternalEquipmentQueryValidationPipe)
-  findExternalEquipment(@Query() query: ExternalEquipmentQueryInput): Promise<unknown> {
+  findExternalEquipment(
+    @Query() query: ExternalEquipmentQueryInput,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<unknown> {
+    // failLoud: enforced scope.site → 비표준 siteId 필드로 매핑.
+    query.siteId = scope.site as ExternalEquipmentQueryInput['siteId'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.calibrationPlansService.findExternalEquipment(query);
   }
 

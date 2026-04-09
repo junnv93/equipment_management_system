@@ -36,6 +36,8 @@ import { type NonConformance } from '@equipment-management/db/schema/non-conform
 import { NonConformanceStatusValues as NCStatusVal } from '@equipment-management/schemas';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { Permission, NON_CONFORMANCE_DATA_SCOPE } from '@equipment-management/shared-constants';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -89,9 +91,12 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  @SiteScoped({ policy: NON_CONFORMANCE_DATA_SCOPE })
+  @SiteScoped({ policy: NON_CONFORMANCE_DATA_SCOPE, failLoud: true })
   @UsePipes(NonConformanceQueryValidationPipe)
-  findAll(@Query() query: NonConformanceQueryDto): Promise<{
+  findAll(
+    @Query() query: NonConformanceQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<{
     items: NonConformance[];
     meta: {
       totalItems: number;
@@ -101,7 +106,9 @@ export class NonConformancesController {
       currentPage: number;
     };
   }> {
-    // SiteScopeInterceptor가 NON_CONFORMANCE_DATA_SCOPE 정책으로 query.site를 자동 주입합니다.
+    // failLoud: 인터셉터가 cross-site/cross-team 요청을 이미 403으로 거부.
+    query.site = scope.site as NonConformanceQueryDto['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.nonConformancesService.findAll(query);
   }
 

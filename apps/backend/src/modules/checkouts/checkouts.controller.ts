@@ -57,6 +57,8 @@ import {
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
+import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import { Permission, CHECKOUT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -135,7 +137,7 @@ export class CheckoutsController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
-  @SiteScoped({ policy: CHECKOUT_DATA_SCOPE })
+  @SiteScoped({ policy: CHECKOUT_DATA_SCOPE, failLoud: true })
   @UsePipes(CheckoutQueryValidationPipe)
   @ApiOperation({
     summary: '반출 목록 조회',
@@ -145,11 +147,13 @@ export class CheckoutsController {
       '?includeSummary=true 사용 시 요약 정보(total, pending, approved 등)도 함께 반환됩니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 목록 조회 성공' })
-  async findAll(@Query() query: CheckoutQueryDto): Promise<CheckoutListResponse> {
-    // SiteScopeInterceptor가 CHECKOUT_DATA_SCOPE 정책으로 query를 자동 주입합니다:
-    // test_engineer/technical_manager → query.teamId = user.teamId
-    // quality_manager/lab_manager    → query.site = user.site
-    // system_admin                   → 주입 없음 (전체 접근)
+  async findAll(
+    @Query() query: CheckoutQueryDto,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<CheckoutListResponse> {
+    // failLoud: 인터셉터가 cross-site/cross-team 요청을 이미 403으로 거부.
+    query.site = scope.site as CheckoutQueryDto['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
     return this.checkoutsService.findAll(query, query.includeSummary ?? false);
   }
 
