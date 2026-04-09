@@ -431,7 +431,8 @@ export function CalibrationPlanDetailClient({
           <CardContent className="pt-6">
             <div className="flex items-center gap-4 text-sm">
               <span>
-                {t('planDetail.approvalInfo.approver')}: {plan.approvedBy}
+                {t('planDetail.approvalInfo.approver')}:{' '}
+                {resolveDisplayName(plan.approvedByName, plan.approvedBy)}
               </span>
               <span>
                 {t('planDetail.approvalInfo.approvedAt')}:{' '}

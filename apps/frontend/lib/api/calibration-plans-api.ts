@@ -75,13 +75,16 @@ export interface CalibrationPlan {
   submittedAt: string | null;
   // 검토 단계 (품질책임자)
   reviewedBy: string | null;
+  reviewedByName: string | null;
   reviewedAt: string | null;
   reviewComment: string | null;
   // 승인 단계 (시험소장)
   approvedBy: string | null;
+  approvedByName: string | null;
   approvedAt: string | null;
   // 반려 정보
   rejectedBy: string | null;
+  rejectedByName: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
   rejectionStage: 'review' | 'approval' | null;

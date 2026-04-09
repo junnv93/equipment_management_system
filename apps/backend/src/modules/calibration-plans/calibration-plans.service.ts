@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, desc, sql, inArray, SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   VersionedBaseService,
@@ -253,15 +254,26 @@ export class CalibrationPlansService extends VersionedBaseService {
         const totalItems = count;
 
         const offset = (page - 1) * pageSize;
+        // users alias: 동일 테이블 다중 JOIN (작성자/검토자/승인자/반려자)
+        const approvedByUser = alias(users, 'approvedByUser');
+        const reviewedByUser = alias(users, 'reviewedByUser');
+        const rejectedByUser = alias(users, 'rejectedByUser');
+
         const rows = await this.db
           .select({
             plan: calibrationPlans,
             authorName: users.name,
             teamName: teams.name,
+            approvedByName: approvedByUser.name,
+            reviewedByName: reviewedByUser.name,
+            rejectedByName: rejectedByUser.name,
           })
           .from(calibrationPlans)
           .leftJoin(users, eq(calibrationPlans.createdBy, users.id))
           .leftJoin(teams, eq(calibrationPlans.teamId, teams.id))
+          .leftJoin(approvedByUser, eq(calibrationPlans.approvedBy, approvedByUser.id))
+          .leftJoin(reviewedByUser, eq(calibrationPlans.reviewedBy, reviewedByUser.id))
+          .leftJoin(rejectedByUser, eq(calibrationPlans.rejectedBy, rejectedByUser.id))
           .where(whereClause)
           .orderBy(desc(calibrationPlans.year), desc(calibrationPlans.createdAt))
           .limit(pageSize)
@@ -271,6 +283,9 @@ export class CalibrationPlansService extends VersionedBaseService {
           ...row.plan,
           authorName: row.authorName,
           teamName: row.teamName,
+          approvedByName: row.approvedByName,
+          reviewedByName: row.reviewedByName,
+          rejectedByName: row.rejectedByName,
         }));
 
         const result: CalibrationPlanListResult = {
@@ -350,16 +365,26 @@ export class CalibrationPlansService extends VersionedBaseService {
     return this.cacheService.getOrSet<CalibrationPlanDetail>(
       cacheKey,
       async () => {
-        // LEFT JOIN으로 작성자 이름/팀 이름 포함 (findAll과 동일 패턴)
+        // LEFT JOIN: 작성자/검토자/승인자/반려자 이름 + 팀 이름
+        const approvedByUser = alias(users, 'approvedByUser');
+        const reviewedByUser = alias(users, 'reviewedByUser');
+        const rejectedByUser = alias(users, 'rejectedByUser');
+
         const [row] = await this.db
           .select({
             plan: calibrationPlans,
             authorName: users.name,
             teamName: teams.name,
+            approvedByName: approvedByUser.name,
+            reviewedByName: reviewedByUser.name,
+            rejectedByName: rejectedByUser.name,
           })
           .from(calibrationPlans)
           .leftJoin(users, eq(calibrationPlans.createdBy, users.id))
           .leftJoin(teams, eq(calibrationPlans.teamId, teams.id))
+          .leftJoin(approvedByUser, eq(calibrationPlans.approvedBy, approvedByUser.id))
+          .leftJoin(reviewedByUser, eq(calibrationPlans.reviewedBy, reviewedByUser.id))
+          .leftJoin(rejectedByUser, eq(calibrationPlans.rejectedBy, rejectedByUser.id))
           .where(eq(calibrationPlans.id, uuid));
 
         if (!row) {
@@ -395,6 +420,9 @@ export class CalibrationPlansService extends VersionedBaseService {
           ...row.plan,
           authorName: row.authorName,
           teamName: row.teamName,
+          approvedByName: row.approvedByName,
+          reviewedByName: row.reviewedByName,
+          rejectedByName: row.rejectedByName,
           items: items.map((r) => ({
             ...r.item,
             equipment: r.equipment,

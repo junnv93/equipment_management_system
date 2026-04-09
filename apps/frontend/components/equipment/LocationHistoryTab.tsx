@@ -39,6 +39,7 @@ import { Permission } from '@equipment-management/shared-constants';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { isConflictError } from '@/lib/errors/equipment-errors';
+import { resolveDisplayName } from '@/lib/utils/display-name';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import {
   TIMELINE_TOKENS,
@@ -402,7 +403,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                           <User className="h-4 w-4" />
                           <span>
                             {t('locationHistoryTab.changedBy', {
-                              name: item.changedByName || item.changedBy || '',
+                              name: resolveDisplayName(item.changedByName, item.changedBy),
                             })}
                           </span>
                         </div>

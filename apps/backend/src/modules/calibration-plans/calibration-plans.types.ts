@@ -71,6 +71,9 @@ export type CalibrationPlanItemDetail = typeof calibrationPlanItems.$inferSelect
 export type CalibrationPlanDetail = typeof calibrationPlans.$inferSelect & {
   authorName: string | null;
   teamName: string | null;
+  approvedByName: string | null;
+  reviewedByName: string | null;
+  rejectedByName: string | null;
   items: CalibrationPlanItemDetail[];
 };
 
@@ -78,6 +81,9 @@ export type CalibrationPlanDetail = typeof calibrationPlans.$inferSelect & {
 export type CalibrationPlanListItem = typeof calibrationPlans.$inferSelect & {
   authorName: string | null;
   teamName: string | null;
+  approvedByName: string | null;
+  reviewedByName: string | null;
+  rejectedByName: string | null;
 };
 
 /** 교정계획서 상태별 요약 통계 — findAll(includeSummary=true) */

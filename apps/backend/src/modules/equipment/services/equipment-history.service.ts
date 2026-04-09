@@ -231,8 +231,19 @@ export class EquipmentHistoryService {
     const total = Number(countResult?.count ?? 0);
 
     const records = await this.db
-      .select()
+      .select({
+        id: equipmentLocationHistory.id,
+        equipmentId: equipmentLocationHistory.equipmentId,
+        changedAt: equipmentLocationHistory.changedAt,
+        previousLocation: equipmentLocationHistory.previousLocation,
+        newLocation: equipmentLocationHistory.newLocation,
+        notes: equipmentLocationHistory.notes,
+        changedBy: equipmentLocationHistory.changedBy,
+        changedByName: users.name,
+        createdAt: equipmentLocationHistory.createdAt,
+      })
       .from(equipmentLocationHistory)
+      .leftJoin(users, eq(equipmentLocationHistory.changedBy, users.id))
       .where(eq(equipmentLocationHistory.equipmentId, equipmentUuid))
       .orderBy(desc(equipmentLocationHistory.changedAt), desc(equipmentLocationHistory.createdAt))
       .limit(pageSize)
@@ -247,6 +258,7 @@ export class EquipmentHistoryService {
         newLocation: record.newLocation,
         notes: record.notes ?? undefined,
         changedBy: record.changedBy ?? undefined,
+        changedByName: record.changedByName ?? undefined,
         createdAt: record.createdAt,
       })),
       meta: buildPaginationMeta(total, pageSize, page),
@@ -409,8 +421,17 @@ export class EquipmentHistoryService {
     const total = Number(countResult?.count ?? 0);
 
     const records = await this.db
-      .select()
+      .select({
+        id: equipmentMaintenanceHistory.id,
+        equipmentId: equipmentMaintenanceHistory.equipmentId,
+        performedAt: equipmentMaintenanceHistory.performedAt,
+        content: equipmentMaintenanceHistory.content,
+        performedBy: equipmentMaintenanceHistory.performedBy,
+        performedByName: users.name,
+        createdAt: equipmentMaintenanceHistory.createdAt,
+      })
       .from(equipmentMaintenanceHistory)
+      .leftJoin(users, eq(equipmentMaintenanceHistory.performedBy, users.id))
       .where(eq(equipmentMaintenanceHistory.equipmentId, equipmentUuid))
       .orderBy(desc(equipmentMaintenanceHistory.performedAt))
       .limit(pageSize)
@@ -423,6 +444,7 @@ export class EquipmentHistoryService {
         performedAt: record.performedAt,
         content: record.content,
         performedBy: record.performedBy ?? undefined,
+        performedByName: record.performedByName ?? undefined,
         createdAt: record.createdAt,
       })),
       meta: buildPaginationMeta(total, pageSize, page),
@@ -495,8 +517,19 @@ export class EquipmentHistoryService {
     const total = Number(countResult?.count ?? 0);
 
     const records = await this.db
-      .select()
+      .select({
+        id: equipmentIncidentHistory.id,
+        equipmentId: equipmentIncidentHistory.equipmentId,
+        occurredAt: equipmentIncidentHistory.occurredAt,
+        incidentType: equipmentIncidentHistory.incidentType,
+        content: equipmentIncidentHistory.content,
+        reportedBy: equipmentIncidentHistory.reportedBy,
+        reportedByName: users.name,
+        createdAt: equipmentIncidentHistory.createdAt,
+        nonConformanceId: equipmentIncidentHistory.nonConformanceId,
+      })
       .from(equipmentIncidentHistory)
+      .leftJoin(users, eq(equipmentIncidentHistory.reportedBy, users.id))
       .where(eq(equipmentIncidentHistory.equipmentId, equipmentUuid))
       .orderBy(desc(equipmentIncidentHistory.occurredAt))
       .limit(pageSize)
@@ -510,6 +543,7 @@ export class EquipmentHistoryService {
         incidentType: record.incidentType,
         content: record.content,
         reportedBy: record.reportedBy ?? undefined,
+        reportedByName: record.reportedByName ?? undefined,
         createdAt: record.createdAt,
         nonConformanceId: record.nonConformanceId ?? undefined,
       })),
