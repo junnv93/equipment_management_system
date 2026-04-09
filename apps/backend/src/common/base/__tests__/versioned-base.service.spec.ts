@@ -143,29 +143,10 @@ describe('VersionedBaseService — onVersionConflict hook', () => {
     expect(setArg.status).toBe('submitted');
   });
 
-  it('custom casColumnKey: 잘못된 키 전달 시 명시적 에러', async () => {
-    const db = buildDb([]);
-    class BadKeyService extends VersionedBaseService {
-      constructor(public readonly db: AppDatabase) {
-        super();
-      }
-      public call(): Promise<unknown> {
-        return this.updateWithVersion(
-          mockTable,
-          ENTITY_ID,
-          1,
-          {},
-          'Entity',
-          undefined,
-          'NOT_FOUND',
-          'nonExistentColumn'
-        );
-      }
-    }
-    await expect(new BadKeyService(db).call()).rejects.toThrow(
-      /does not expose column 'nonExistentColumn'/
-    );
-  });
+  // NOTE: '잘못된 casColumnKey 런타임 에러' 테스트는 의도적으로 제거.
+  // 파라미터 타입이 `'version' | 'casVersion'` 리터럴 유니언으로 좁혀져 있어
+  // 오타/미지정 값은 TypeScript 컴파일 단계에서 차단된다. 런타임 가드는
+  // 안전망으로 유지되지만 정상 경로에서 도달 불가하므로 테스트 불필요.
 
   it('default no-op: hook override 없이도 정상 동작 (backward compat)', async () => {
     class NoOverrideService extends VersionedBaseService {

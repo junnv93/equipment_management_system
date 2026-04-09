@@ -106,6 +106,7 @@ export abstract class VersionedBaseService {
    *                     `version` 컬럼이 도메인적 의미(예: 계획서 개정 번호)로 이미
    *                     사용되어 별도 `casVersion` 컬럼을 CAS 잠금에 사용하는 테이블은
    *                     `'casVersion'` 전달. WHERE / SET / SELECT 모두 이 컬럼 기준.
+   *                     리터럴 유니언으로 좁혀져 오타는 컴파일 시 잡힌다.
    */
   protected async updateWithVersion<T>(
     table: CasPgTable,
@@ -115,10 +116,10 @@ export abstract class VersionedBaseService {
     entityName: string,
     tx?: AppDatabase,
     notFoundCode = 'ENTITY_NOT_FOUND',
-    casColumnKey: string = 'version'
+    casColumnKey: 'version' | 'casVersion' = 'version'
   ): Promise<T> {
     const executor = tx ?? this.db;
-    const casColumn = (table as unknown as Record<string, AnyPgColumn>)[casColumnKey];
+    const casColumn = (table as unknown as Record<string, AnyPgColumn | undefined>)[casColumnKey];
     if (!casColumn) {
       throw new Error(
         `updateWithVersion: table does not expose column '${casColumnKey}' for CAS lock`
@@ -136,8 +137,10 @@ export abstract class VersionedBaseService {
       .returning();
 
     if (!updated) {
+      // alias 는 casColumnKey 와 동일하게 유지 — 호출자가 의미적으로 올바른 키로 읽게 함.
+      // 성공 경로 반환값도 동일 컬럼명을 유지해 conflict response 와 정합성 확보.
       const [existing] = await executor
-        .select({ id: table.id, version: casColumn })
+        .select({ id: table.id, [casColumnKey]: casColumn })
         .from(table)
         .where(eq(table.id, id))
         .limit(1);
@@ -161,7 +164,10 @@ export abstract class VersionedBaseService {
         );
       }
 
-      throw createVersionConflictException(existing.version as number, expectedVersion);
+      throw createVersionConflictException(
+        (existing as Record<string, unknown>)[casColumnKey] as number,
+        expectedVersion
+      );
     }
 
     return updated as T;

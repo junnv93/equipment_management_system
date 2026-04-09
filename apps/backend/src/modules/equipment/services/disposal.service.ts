@@ -505,8 +505,23 @@ export class DisposalService extends VersionedBaseService {
         .returning({ id: disposalRequests.id });
 
       if (deleted.length === 0) {
+        // DELETE 실패 → 실제 현재 version 재조회 (updateWithVersion 의 SELECT 회수 패턴과 동일)
+        // `request.version + 1` 추정은 동시 2+회 갱신 시 오염되므로 금지.
+        const [current] = await tx
+          .select({ version: disposalRequests.version })
+          .from(disposalRequests)
+          .where(eq(disposalRequests.id, request.id))
+          .limit(1);
+
         this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
-        throw createVersionConflictException(request.version + 1, request.version);
+
+        if (!current) {
+          throw new NotFoundException({
+            code: 'DISPOSAL_REQUEST_NOT_FOUND',
+            message: `Disposal request not found. (ID: ${request.id})`,
+          });
+        }
+        throw createVersionConflictException(current.version, request.version);
       }
 
       // 장비 상태 원복 (CAS: version 조건으로 동시 수정 방지 — 베이스 클래스 위임)

@@ -7,14 +7,15 @@
 grep -rn "extends VersionedBaseService" apps/backend/src/modules --include="*.service.ts"
 ```
 
-**기대값:** checkouts, calibration, non-conformances, equipment-imports, disposal, software, equipment, calibration-factors, calibration-plans (9개)
+**기대값:** 13개 (2026-04-09 기준). 현재 상속 서비스: checkouts, calibration, non-conformances, equipment-imports, disposal, equipment, calibration-factors, calibration-plans, cables, test-software, intermediate-inspections, software-validations, self-inspections. 숫자 drift 시 `grep -rl "extends VersionedBaseService" apps/backend/src/modules --include="*.service.ts" | wc -l` 로 갱신.
 
 ```bash
-# 자체 CAS 구현 서비스
-grep -rn "updateWithVersion\|updatePlanWithCAS\|casVersion" apps/backend/src/modules --include="*.service.ts" | grep -v "extends VersionedBaseService" | grep "class\|updateWithVersion\|updatePlanWithCAS"
+# 자체 CAS 구현(raw tx.update + createVersionConflictException 패턴) 탐지
+# 기대값: 0 hit (2026-04-09 부로 전면 제거). 단 disposal.service.ts 의 DELETE-with-CAS 1 경로는 예외 — base class 가 update 만 지원해 유지.
+grep -rn "createVersionConflictException" apps/backend/src/modules --include="*.service.ts" | grep -v "disposal.service.ts"
 ```
 
-**기대값:** calibration-plans (VersionedBaseService 상속 + casVersion 필드 병용)
+**기대값:** calibration-plans 는 `updateWithVersion(..., casColumnKey: 'casVersion')` 호출로 통과. `updatePlanWithCAS` private helper 는 제거됨.
 
 ## Step 2: 상태 변경 DTO에 version 필드 포함 여부
 

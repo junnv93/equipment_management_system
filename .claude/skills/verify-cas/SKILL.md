@@ -39,7 +39,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 ### Step 1: CAS 적용 서비스 목록 확인
 
 VersionedBaseService를 상속하는 서비스와 자체 CAS 구현 서비스를 확인합니다.
-**기대값:** 9개 서비스 (checkouts, calibration, non-conformances, equipment-imports, disposal, software, equipment, calibration-factors, calibration-plans)
+**기대값:** 13개 서브클래스 (`grep -l "extends VersionedBaseService"` 기준). 2026-04-09 부로 자체 CAS 구현(`updatePlanWithCAS` 등) 전면 제거 — 모든 상태변경 도메인이 `VersionedBaseService.updateWithVersion` SSOT 를 통과한다. 신규 모듈도 베이스 클래스 상속 필수.
 
 상세: [references/cas-checks.md](references/cas-checks.md) Step 1
 
@@ -136,7 +136,7 @@ grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanc
 1. **TeamsService, UsersService** — 관리자 전용 CRUD, 동시 수정 위험 낮음
 2. **DashboardService, ReportsService** — 읽기 전용
 3. **NotificationsService** — append-only
-4. **CalibrationPlansService의 casVersion** — 의도적 설계 (plan revision과 CAS 분리)
+4. **CalibrationPlansService의 casVersion** — 의도적 설계 (plan revision과 CAS 분리). 2026-04-09 부로 `updateWithVersion(..., casColumnKey: 'casVersion')` 형태로 베이스 클래스 SSOT 를 통과한다. `version`(개정 번호) 와 `casVersion`(잠금) 이 분리된 신규 테이블은 동일 패턴 사용. `casColumnKey` 는 `'version' | 'casVersion'` 리터럴 유니언이라 오타는 컴파일 시 차단.
 5. **Create 작업** — 새 레코드 생성은 CAS 불필요
 6. **SettingsService** — 시스템 관리자 전용
 7. **크로스 테이블 version bump (CAS WHERE 없이)** — 트랜잭션 내 시스템 자동 처리, 사용자 경합 없음. 단 version bump 자체는 필수
