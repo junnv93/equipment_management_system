@@ -68,6 +68,7 @@ import { queryKeys } from '@/lib/api/query-config';
 import { createRepairHistory, type CreateRepairHistoryDto } from '@/lib/api/repair-history-api';
 import nonConformancesApi from '@/lib/api/non-conformances-api';
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
+import { resolveDisplayName } from '@/lib/utils/display-name';
 import {
   TIMELINE_TOKENS,
   getTimelineCardClasses,
@@ -856,7 +857,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                             <User className="h-4 w-4" />
                             <span>
                               {t('incidentHistoryTab.reporter', {
-                                name: item.reportedByName || item.reportedBy || '',
+                                name: resolveDisplayName(item.reportedByName, item.reportedBy),
                               })}
                             </span>
                           </div>

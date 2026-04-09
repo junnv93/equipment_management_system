@@ -38,6 +38,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { resolveDisplayName } from '@/lib/utils/display-name';
 import {
   TIMELINE_TOKENS,
   getTimelineCardClasses,
@@ -330,7 +331,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                           <User className="h-4 w-4" />
                           <span>
                             {t('maintenanceHistoryTab.performedBy', {
-                              name: item.performedByName || item.performedBy || '',
+                              name: resolveDisplayName(item.performedByName, item.performedBy),
                             })}
                           </span>
                         </div>

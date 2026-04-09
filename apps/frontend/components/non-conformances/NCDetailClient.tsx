@@ -58,6 +58,7 @@ import {
   NC_INFO_NOTICE_TOKENS,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import { resolveDisplayName } from '@/lib/utils/display-name';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
@@ -670,7 +671,10 @@ function InfoCards({ nc, onRepairRegister }: { nc: NonConformance; onRepairRegis
       <div className={NC_INFO_CARD_TOKENS.card}>
         <h3 className={NC_INFO_CARD_TOKENS.cardTitle}>{t('detail.infoCard.basicInfo')}</h3>
         <InfoRow label={t('fields.type')} value={t('ncType.' + nc.ncType)} />
-        <InfoRow label={t('fields.discoverer')} value={nc.discoverer?.name ?? nc.discoveredBy} />
+        <InfoRow
+          label={t('fields.discoverer')}
+          value={resolveDisplayName(nc.discoverer?.name, nc.discoveredBy)}
+        />
         <InfoRow label={t('fields.discoveredAt')} value={fmtDate(nc.discoveryDate)} />
         <div className={NC_INFO_CARD_TOKENS.infoRowVertical}>
           <span className={NC_INFO_CARD_TOKENS.infoLabel}>{t('fields.cause')}</span>
