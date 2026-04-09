@@ -63,6 +63,8 @@ export interface NotificationQueryParams {
   search?: string;
   page?: number;
   pageSize?: number;
+  site?: string;
+  teamId?: string;
 }
 
 /**
@@ -81,6 +83,8 @@ const notificationsApi = {
     if (params?.search) queryParams.set('search', params.search);
     if (params?.page) queryParams.set('page', String(params.page));
     if (params?.pageSize) queryParams.set('pageSize', String(params.pageSize));
+    if (params?.site) queryParams.set('site', params.site);
+    if (params?.teamId) queryParams.set('teamId', params.teamId);
 
     const qs = queryParams.toString();
     const url = `${API_ENDPOINTS.NOTIFICATIONS.LIST}${qs ? `?${qs}` : ''}`;

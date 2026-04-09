@@ -43,6 +43,7 @@ export interface TestSoftwareQuery {
   search?: string;
   manufacturer?: string;
   site?: string;
+  teamId?: string;
   page?: number;
   pageSize?: number;
   sort?: string;

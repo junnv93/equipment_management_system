@@ -151,6 +151,25 @@ describe('UsersService', () => {
       expect(result.items.length).toBeGreaterThan(0);
       expect(result.items.some((user) => user.id === createdUser.id)).toBe(true);
     });
+
+    it('should filter users by teamId (scope binding)', async () => {
+      // 기존 사용자 중 teamId가 있는 사용자를 찾아 그 teamId로 필터
+      const seed = await service.findAll({ page: 1, pageSize: 50 });
+      const withTeam = seed.items.find((u) => u.teamId);
+      if (!withTeam || !withTeam.teamId) {
+        // teamId를 가진 사용자가 없으면 스킵 (seed 상태 의존)
+        return;
+      }
+
+      const result = await service.findAll({
+        page: 1,
+        pageSize: 50,
+        teamId: withTeam.teamId,
+      });
+
+      expect(result.items.length).toBeGreaterThan(0);
+      expect(result.items.every((u) => u.teamId === withTeam.teamId)).toBe(true);
+    });
   });
 
   describe('findOne', () => {

@@ -102,6 +102,10 @@ export class UsersService {
       conditions.push(inArray(usersTable.teamId, teamList));
     }
 
+    if (query.teamId) {
+      conditions.push(eq(usersTable.teamId, query.teamId));
+    }
+
     if (query.site) {
       conditions.push(eq(usersTable.site, query.site));
     }

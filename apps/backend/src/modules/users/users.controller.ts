@@ -102,8 +102,9 @@ export class UsersController {
     @Query() query: UserQueryDto,
     @CurrentEnforcedScope() scope: EnforcedScope
   ): Promise<PaginatedResponseType<User>> {
-    // failLoud: enforced scope.site 바인딩.
+    // failLoud: enforced scope.site / scope.teamId 바인딩.
     query.site = scope.site as UserQueryDto['site'];
+    query.teamId = scope.teamId;
     return this.usersService.findAll(query);
   }
 

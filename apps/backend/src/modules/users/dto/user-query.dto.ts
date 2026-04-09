@@ -14,6 +14,7 @@ export const userQuerySchema = z.object({
   name: z.string().optional(),
   roles: z.string().optional(), // 쉼표로 구분된 역할 목록
   teams: z.string().optional(), // 쉼표로 구분된 팀 목록
+  teamId: z.string().uuid().optional(), // 단일 팀 필터 (scope 바인딩용)
   site: SiteEnum.optional(),
   department: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
@@ -54,6 +55,11 @@ export class UserQueryDto {
     example: 'rf,sar',
   })
   teams?: string;
+
+  @ApiPropertyOptional({
+    description: '단일 팀 필터 (scope 바인딩용 UUID)',
+  })
+  teamId?: string;
 
   @ApiPropertyOptional({
     description: '사이트 필터',

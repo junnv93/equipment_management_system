@@ -47,6 +47,8 @@ export interface CalibrationFactorQuery {
   sort?: string;
   page?: number;
   pageSize?: number;
+  site?: string;
+  teamId?: string;
 }
 
 export interface CreateCalibrationFactorDto {
