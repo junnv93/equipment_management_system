@@ -7,6 +7,10 @@
 
 ## 미완료 항목
 
+- [ ] `VERSION_CONFLICT` error code SSOT 부재 — `apps/frontend/tests/e2e/features/checkouts/suite-25-cas-concurrent-approval/s25-cas-concurrent-approval.spec.ts` — 2026-04-09 — 백엔드 `versioned-base.service.ts:35`에 상수로만 존재, `packages/schemas`·`packages/shared-constants`에 export 없음. e2e 스펙이 로컬 상수 `VERSION_CONFLICT_CODE`로 우회. 해결: schemas 패키지에 `CheckoutErrorCode` enum 추가 + 백엔드가 SSOT 사용하도록 리팩토링. 출처: harness `e2e-checkout-gap-round1` Round 2
+- [ ] `equipment-imports.service.approve` CAS 원자성 — `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts:314` — 2026-04-09 — `status !== PENDING` 선검사가 `updateWithVersion` 호출 이전, 트랜잭션 외부에 위치. 동시 승인 시 후행자가 400(status check) 또는 409(CAS) 중 비결정적으로 반환. 원자적 optimistic lock을 위해 status 조건을 `updateWithVersion`의 where 절에 병합 필요. 해결 후 s25-04 assertion을 "409 only"로 복원. 출처: harness `e2e-checkout-gap-round1` Round 2
+- [ ] s23/s24/s25 cross-project 실행 공백 — `apps/frontend/tests/e2e/features/checkouts/suite-2[345]-*/` — 2026-04-09 — chromium-only 게이팅으로 firefox/webkit 회귀 감지 불가. 백엔드 통합 성격이라 브라우저 의존성이 낮지만, 계약 레벨 회귀는 놓칠 수 있음. 기존 선례(history-registration, wf-35-cas-ui-recovery 등 18+) 따름. 출처: harness `e2e-checkout-gap-round1` Round 2
+
 - [ ] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — `packages/db/src/schema/audit-logs.ts` — 2026-04-09 — UL-QP-18 장기 보관 요구 + write-heavy 누적 → 수년 후 테이블 비대화. PostgreSQL declarative partitioning (`createdAt` 기준 월/분기) 또는 아카이빙 잡 검토. 즉시 필요는 아니나 설계 판단 필요. 아키텍처 리뷰(2026-04-09)에서 발견
 
 - [ ] 감사로그 프론트엔드 가상화/무한스크롤 도입 — `apps/frontend/app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx` — 2026-04-09 — 현재 offset 페이지네이션 + 직접 `.map()` 렌더링. 대용량 환경에서 깊은 페이지 이동 시 누적 렌더 부담. `useInfiniteQuery` + 커서 기반 API + React Window/Virtuoso. 백엔드 `findAll()`에 `timestamp DESC` 커서 오버로드 필요 (기존 인덱스 재사용 가능). 별도 Mode 2 harness로 진행

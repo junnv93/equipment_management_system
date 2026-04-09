@@ -9,7 +9,6 @@ import { Pool } from 'pg';
 import {
   CHECKOUT_STATUS_VALUES,
   CHECKOUT_STATUS_LABELS,
-  CHECKOUT_PURPOSE_VALUES,
   CHECKOUT_PURPOSE_LABELS,
   CheckoutPurposeValues as CPVal,
   CheckoutStatusValues as CSVal,
@@ -1211,4 +1210,204 @@ export async function getEquipmentStatusFromDetailPage(page: Page): Promise<stri
 export async function getCheckoutStatusFromDetailPage(page: Page): Promise<string> {
   const statusBadge = await page.getByTestId('checkout-status-badge').textContent();
   return statusBadge?.trim() || '';
+}
+
+// ============================================================================
+// Gap Round 1 Helpers (s23 / s24 / s25) — SSOT SSOT-only, arbitrary-user token
+// ============================================================================
+
+/**
+ * Fetch a backend JWT for an arbitrary test user email (bypassing role default).
+ * Uses /api/auth/test-login?email=... supported by TestAuthController.
+ */
+export async function getBackendTokenByEmail(page: Page, email: string): Promise<string> {
+  const url = `${BACKEND_URL}/api/auth/test-login?email=${encodeURIComponent(email)}`;
+  const response = await page.request.get(url);
+  if (!response.ok()) {
+    throw new Error(`test-login by email failed (${response.status()}): ${email}`);
+  }
+  const raw = await response.json();
+  const nested = (raw.data ?? raw) as Record<string, unknown>;
+  const token = nested.access_token as string | undefined;
+  if (!token) throw new Error(`No access_token in test-login response for ${email}`);
+  return token;
+}
+
+/**
+ * Create a pending RENTAL checkout via backend API.
+ * Returns the created checkout's id and version for CAS operations.
+ */
+export async function createPendingRentalCheckout(
+  page: Page,
+  token: string,
+  opts: {
+    equipmentId: string;
+    lenderTeamId: string;
+    lenderSiteId: string;
+    destination?: string;
+    reason?: string;
+  }
+): Promise<{ id: string; version: number }> {
+  const response = await page.request.post(`${BACKEND_URL}/api/checkouts`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: {
+      equipmentIds: [opts.equipmentId],
+      purpose: CPVal.RENTAL,
+      destination: opts.destination ?? 'Cross-team RBAC E2E',
+      phoneNumber: '010-0000-0000',
+      reason: opts.reason ?? 'E2E cross-team RBAC test',
+      expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      lenderTeamId: opts.lenderTeamId,
+      lenderSiteId: opts.lenderSiteId,
+    },
+  });
+  if (response.status() !== 201) {
+    const body = await response.text();
+    throw new Error(`createPendingRentalCheckout failed (${response.status()}): ${body}`);
+  }
+  const data = await response.json();
+  return { id: data.id as string, version: (data.version as number) ?? 1 };
+}
+
+/**
+ * Create a pending non-rental (CALIBRATION) checkout via backend API.
+ */
+export async function createPendingCalibrationCheckout(
+  page: Page,
+  token: string,
+  opts: { equipmentId: string; destination?: string; reason?: string }
+): Promise<{ id: string; version: number }> {
+  const response = await page.request.post(`${BACKEND_URL}/api/checkouts`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: {
+      equipmentIds: [opts.equipmentId],
+      purpose: CPVal.CALIBRATION,
+      destination: opts.destination ?? 'Cross-team CAL E2E',
+      phoneNumber: '010-0000-0000',
+      reason: opts.reason ?? 'E2E cross-team calibration',
+      expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  });
+  if (response.status() !== 201) {
+    const body = await response.text();
+    throw new Error(`createPendingCalibrationCheckout failed (${response.status()}): ${body}`);
+  }
+  const data = await response.json();
+  return { id: data.id as string, version: (data.version as number) ?? 1 };
+}
+
+/**
+ * Call PATCH /api/checkouts/:id/approve using a raw token (arbitrary user).
+ */
+export async function approveCheckoutAsUser(
+  page: Page,
+  token: string,
+  checkoutId: string,
+  version: number
+): Promise<import('@playwright/test').APIResponse> {
+  return page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/approve`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { version },
+  });
+}
+
+/**
+ * Call PATCH /api/checkouts/:id/reject using a raw token (arbitrary user).
+ */
+export async function rejectCheckoutAsUser(
+  page: Page,
+  token: string,
+  checkoutId: string,
+  version: number,
+  reason: string
+): Promise<import('@playwright/test').APIResponse> {
+  return page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/reject`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { version, reason },
+  });
+}
+
+/**
+ * Call PATCH /api/checkouts/:id/cancel using a raw token (arbitrary user).
+ */
+export async function cancelCheckoutAsUser(
+  page: Page,
+  token: string,
+  checkoutId: string,
+  version: number
+): Promise<import('@playwright/test').APIResponse> {
+  return page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/cancel`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { version },
+  });
+}
+
+/**
+ * Fetch equipment status via backend API (SSOT string value).
+ */
+export async function getEquipmentStatus(
+  page: Page,
+  token: string,
+  equipmentId: string
+): Promise<string> {
+  const response = await page.request.get(`${BACKEND_URL}/api/equipment/${equipmentId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok()) {
+    throw new Error(`getEquipmentStatus failed (${response.status()}) for ${equipmentId}`);
+  }
+  const data = await response.json();
+  return data.status as string;
+}
+
+/**
+ * Fetch checkout status + version via backend API.
+ */
+export async function getCheckoutSnapshot(
+  page: Page,
+  token: string,
+  checkoutId: string
+): Promise<{ status: string; version: number }> {
+  const response = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok()) {
+    throw new Error(`getCheckoutSnapshot failed (${response.status()}) for ${checkoutId}`);
+  }
+  const data = await response.json();
+  return { status: data.status as string, version: data.version as number };
+}
+
+/**
+ * Create a pending RENTAL-type equipment_import (external vendor) via backend API.
+ * Returns the created import's id and version for CAS operations.
+ */
+export async function createPendingEquipmentImport(
+  page: Page,
+  token: string
+): Promise<{ id: string; version: number }> {
+  const now = new Date().toISOString();
+  const later = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const response = await page.request.post(`${BACKEND_URL}/api/equipment-imports`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: {
+      sourceType: 'rental',
+      equipmentName: 'E2E CAS Import',
+      modelName: 'CAS-MODEL',
+      manufacturer: 'CAS Vendor',
+      serialNumber: `E2E-CAS-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      classification: 'fcc_emc_rf',
+      vendorName: 'CAS Vendor Co.',
+      usagePeriodStart: now,
+      usagePeriodEnd: later,
+      reason: 'E2E CAS concurrent approval test',
+    },
+  });
+  if (response.status() !== 201) {
+    const body = await response.text();
+    throw new Error(`createPendingEquipmentImport failed (${response.status()}): ${body}`);
+  }
+  const raw = await response.json();
+  const data = (raw.data ?? raw) as Record<string, unknown>;
+  return { id: data.id as string, version: (data.version as number) ?? 1 };
 }
