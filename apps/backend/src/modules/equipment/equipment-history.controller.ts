@@ -68,8 +68,9 @@ export class EquipmentHistoryController {
     const info = await this.equipmentHistoryService.getEquipmentSiteInfo(equipmentUuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
 
-    const buffer = await this.historyCardService.generateHistoryCard(equipmentUuid);
-    const filename = `이력카드_${equipmentUuid.slice(0, 8)}.docx`;
+    const { buffer, managementNumber, equipmentName } =
+      await this.historyCardService.generateHistoryCard(equipmentUuid);
+    const filename = `${managementNumber}_${equipmentName}_시험설비이력카드.docx`;
 
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

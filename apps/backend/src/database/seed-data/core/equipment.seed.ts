@@ -11,6 +11,9 @@ import { equipment } from '@equipment-management/db/schema';
 import { EquipmentStatus, ManagementMethod } from '@equipment-management/schemas';
 import { daysAgo, monthsAgo, daysLater, monthsLater } from '../../utils/date-helpers';
 import {
+  // Suwon users
+  USER_TECHNICAL_MANAGER_SUWON_ID,
+  USER_TECHNICAL_MANAGER_SUWON_DEPUTY_ID,
   // Suwon teams
   TEAM_FCC_EMC_RF_SUWON_ID,
   TEAM_GENERAL_EMC_SUWON_ID,
@@ -136,6 +139,8 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
       lastIntermediateCheckDate: monthsAgo(2),
       nextIntermediateCheckDate: daysLater(120),
       manualLocation: 'A동 201호 캐비닛',
+      managerId: USER_TECHNICAL_MANAGER_SUWON_ID,
+      deputyManagerId: USER_TECHNICAL_MANAGER_SUWON_DEPUTY_ID,
     }
   ),
 

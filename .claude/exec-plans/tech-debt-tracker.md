@@ -13,6 +13,14 @@
 - [x] `equipment-imports.service.initiateReturn` CAS 원자성 — 해결: 2026-04-09 — tech-debt-round3 harness. CasPrecondition `status=RECEIVED` 를 `updateWithVersion` WHERE 절에 병합. findOne 선검사 제거 (TOCTOU 해소). S27-07 assertion 을 409-only 로 엄격화
 - [x] auto-checkout cancel → import 롤백 callback 미구현 — 해결: 2026-04-09 — tech-debt-round3 harness. `onReturnCanceled(checkoutId)` 신규 콜백 구현 (`return_requested → received` 롤백 + `returnCheckoutId` null 초기화). `checkouts.service.cancel()` 에서 `RETURN_TO_VENDOR` purpose 취소 시 자동 호출. S27-08 fixme 제거, 실제 테스트 구현
 - [x] Seed 주석 오표기: `TRANSMITTER_UIW_W` — 해결: 2026-04-09 — 주석을 `// available, not shared` 로 보정
+- [x] ValidationDetailContent `isEditOpen` URL↔state 드리프트 — 해결: 2026-04-09 — tech-debt-round3 harness. `useState(searchParams.get('edit'))` → searchParams 직접 파생 + `router.replace` 양방향 동기화. URL이 SSOT
+- [x] form-data-parser.interceptor 빈 catch (silent swallow) — 해결: 2026-04-09 — tech-debt-round3 harness. `Logger.warn` + `BadRequestException` throw. `FORM_DATA_PARSE_FAILED` error code
+- [x] CLAUDE.md 420줄 엔트로피 → 295줄 — 해결: 2026-04-09 — tech-debt-round3 harness. Behavioral Guidelines, Production Checklist, PostToolUse Hook → `docs/references/` 분리. Deep-Dive References 테이블에 3건 추가
+- [x] S27-08 `'tech_manager'` 유효하지 않은 역할명 + `process.env` 직접 참조 — 해결: 2026-04-09 — `add7b0b4`. `'technical_manager'` 로 수정 + `BASE_URLS.BACKEND` SSOT import 통일. verify-implementation 이슈 #1/#2/#3
+
+- [ ] `onReturnCompleted`/`onReturnCanceled` 콜백 실패 시 silent swallow — `apps/backend/src/modules/checkouts/checkouts.service.ts:1795-1801,2177-2183` — 2026-04-09 — checkout 상태 커밋 후 콜백 실패 시 import 가 `RETURN_REQUESTED` 에 영구 잠금. 현재 `logger.warn` 으로만 처리. 수정안: (1) `logger.error` 격상으로 운영 알림 트리거, (2) compensation queue 등록, (3) scheduled job 으로 orphan 탐지. 출처: review-architecture Warning
+
+- [ ] `onReturnCanceled` CAS version race 조건 — `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts:882-903` — 2026-04-09 — 조회-업데이트 사이 다른 프로세스가 version 변경 시 rollback 실패 → ConflictException 이 checkouts.service catch 에서 swallow. 극히 드문 조건이지만 import 영구 잠금 가능. 수정안: 내부 retry 1회 또는 ConflictException 별도 처리. 출처: review-architecture Warning
 
 - [ ] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — `packages/db/src/schema/audit-logs.ts` — 2026-04-09 — UL-QP-18 장기 보관 요구 + write-heavy 누적 → 수년 후 테이블 비대화. PostgreSQL declarative partitioning (`createdAt` 기준 월/분기) 또는 아카이빙 잡 검토. 즉시 필요는 아니나 설계 판단 필요. 아키텍처 리뷰(2026-04-09)에서 발견
 

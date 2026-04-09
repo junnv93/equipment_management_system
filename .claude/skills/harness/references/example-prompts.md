@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-09 (37차 — Dockerfile hardening 실빌드 검증 완료, 관련 stale 4건 아카이브)**
+> **마지막 정리일: 2026-04-09 (38차 — QP-18-02 이력카드 export 검증 + QP-18-03/05 검증 프롬프트 등재)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -206,6 +206,63 @@ wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다
 > - 백엔드/프론트엔드/shared-constants tsc `--noEmit` 통과
 >
 > **검증**: `pnpm --filter {backend,frontend,shared-constants} exec tsc --noEmit` 3건 PASS. invariant 위반 throw 없음 = 카탈로그 정합성 확인.
+
+---
+
+## 38차 신규 — QP-18 양식 export 템플릿 매핑 검증 (2건)
+
+> **발견 배경 (2026-04-09, 38차)**: QP-18-02 이력카드 검증 과정에서 XML 마커 불일치(4개 이력 섹션 삽입 실패), DATA_START_ROW 오류(QP-19-01), 날짜 형식/폰트/파일명 등 다수 이슈 발견 및 수정. 동일 패턴의 잠재적 이슈가 QP-18-03(중간점검표), QP-18-05(자체점검표)에도 존재할 수 있음. 양식 템플릿 파일을 기준으로 코드 매핑의 정확성을 검증하는 프롬프트.
+
+### 🟡 MEDIUM — QP-18-03 중간점검표 DOCX 템플릿 ↔ 코드 매핑 검증
+
+```
+QP-18-02 이력카드 검증에서 발견된 패턴:
+- XML 텍스트 마커가 태그로 분리되어 검색 실패 (silent)
+- DocxTemplate.setDataRows가 기존 빈 행을 복제 vs 새 행 삽입 차이로 서식 깨짐
+- 날짜 형식/폰트가 양식 원본과 불일치
+
+QP-18-03 중간점검표 동일 검증 필요:
+1. v1.docx 템플릿 파일을 node로 파싱하여 실제 테이블/셀/텍스트 구조 확인
+2. form-template-export.service.ts의 exportIntermediateInspection (line 316~500)의
+   setCellValue/setDataRows 호출이 템플릿 셀 위치와 정확히 일치하는지 대조
+3. 시드 데이터로 실제 export 실행 → DOCX 파싱 → 모든 필드 값이 올바른 위치에 있는지 검증
+4. 날짜 형식, 폰트, 판정 라벨(합격/불합격), 서명 이미지 삽입 정상 동작 확인
+
+작업:
+- 템플릿 구조 파악 (node PizZip으로 XML 분석)
+- 코드 매핑 대조표 작성
+- 불일치 발견 시 수정 (양식이 기준, 코드를 양식에 맞춤)
+- Playwright E2E 테스트: 장비상세 → 중간점검 탭 → 내보내기 → DOCX 내용 검증
+
+검증:
+- pnpm tsc --noEmit exit 0
+- Backend E2E: DOCX 파싱 기반 필드별 검증
+- Playwright E2E: 브라우저 다운로드 + DOCX 내용 검증
+```
+
+### 🟡 MEDIUM — QP-18-05 자체점검표 DOCX 템플릿 ↔ 코드 매핑 검증
+
+```
+QP-18-05 자체점검표 검증 (QP-18-03과 동일 패턴):
+1. v1.docx 템플릿 파일 구조 확인 (3개 테이블: 장비정보+점검항목, 특기사항, 결재)
+2. form-template-export.service.ts의 exportSelfInspection (line 506~701)의
+   setCellValue/setDataRows 호출이 템플릿과 일치하는지 대조
+3. 특히 주의:
+   - 동적 점검항목 vs 레거시 fallback (4항목) 분기가 정상 동작하는지
+   - specialNotes JSONB 파싱이 다양한 데이터 shape에서 안전한지
+   - 비교정기기일 때 교정유효기간이 'N/A'로 정확히 표시되는지
+4. 시드 데이터로 실제 export → DOCX 내용 검증
+
+작업:
+- 템플릿 구조 파악
+- 코드 매핑 대조
+- 불일치 수정 (양식 기준)
+- E2E 테스트 작성
+
+검증:
+- pnpm tsc --noEmit exit 0
+- Backend E2E + Playwright E2E 통과
+```
 
 ---
 

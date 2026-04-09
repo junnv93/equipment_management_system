@@ -44,14 +44,14 @@ export class CalibrationPlansExportService {
       workbook.getWorksheet('교정계획서') ||
       workbook.worksheets[0];
 
-    // Row 1: 헤더 — 연도/사이트 정보 업데이트
+    // Row 1~3: 병합 제목 (A1:J3) — 연도/사이트 정보 업데이트
     const headerCell = sheet.getRow(1).getCell(1);
     const siteLabel = SITE_LABEL_MAP[plan.siteId] || plan.siteId;
     headerCell.value = `${plan.year}년 ${siteLabel} 연간 교정 계획서`;
 
-    // Row 2: 컬럼 헤더 (템플릿 보존)
-    // Row 3+: 데이터 행
-    const DATA_START_ROW = 3;
+    // Row 4~5: 컬럼 헤더 (템플릿 보존)
+    // Row 6+: 데이터 행
+    const DATA_START_ROW = 6;
 
     // 기존 데이터 행의 스타일 참조용 (Row 3 — 템플릿 원본 스타일)
     const styleRef = sheet.getRow(DATA_START_ROW);
@@ -61,7 +61,7 @@ export class CalibrationPlansExportService {
       cellStyles.push({ ...styleRef.getCell(c).style });
     }
 
-    // DB 데이터를 Row 3부터 덮어쓰기
+    // DB 데이터를 Row 6부터 덮어쓰기
     items.forEach((item: CalibrationPlanItemDetail, idx: number) => {
       const r = DATA_START_ROW + idx;
       const excelRow = sheet.getRow(r);

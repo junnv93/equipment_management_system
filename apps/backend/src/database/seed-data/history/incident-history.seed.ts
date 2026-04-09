@@ -16,6 +16,8 @@ import {
   INCIDENT_008_ID,
   INCIDENT_009_ID,
   INCIDENT_010_ID,
+  INCIDENT_011_ID,
+  EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
   EQUIP_POWER_METER_SUW_E_ID,
   EQUIP_COUPLER_SUW_E_ID,
   EQUIP_SIGNAL_INT_SUW_R_ID,
@@ -116,5 +118,15 @@ export const INCIDENT_HISTORY_SEED_DATA: (typeof equipmentIncidentHistory.$infer
     incidentType: 'repair',
     content: '클램프 접촉면 정제 및 재조립 완료. 주입 효율 100% 복구.',
     reportedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
+  },
+
+  // SUW-E0001 (스펙트럼 분석기) — 이력카드 검증용
+  {
+    id: INCIDENT_011_ID,
+    equipmentId: EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
+    occurredAt: daysAgo(7),
+    incidentType: 'malfunction',
+    content: 'RF 입력 포트 접촉 불량 발생. N-타입 커넥터 핀 마모 확인. 제조사 교체부품 수배 중.',
+    reportedBy: USER_TEST_ENGINEER_SUWON_ID,
   },
 ];
