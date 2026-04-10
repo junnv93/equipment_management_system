@@ -9,6 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { INSPECTION_TABLE, INSPECTION_SPACING } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 import type { ResultSection } from '@/lib/api/calibration-api';
 
 interface ResultSectionPreviewProps {
@@ -24,7 +26,7 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
 
     case 'text':
       return (
-        <div className="space-y-1">
+        <div className={INSPECTION_SPACING.tight}>
           {section.title && <h4 className="font-semibold">{section.title}</h4>}
           <p className="whitespace-pre-wrap text-sm text-muted-foreground">{section.content}</p>
         </div>
@@ -34,9 +36,9 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
       const td = section.tableData;
       if (!td) return null;
       return (
-        <div className="space-y-2">
+        <div className={INSPECTION_SPACING.field}>
           {section.title && <h4 className="font-semibold">{section.title}</h4>}
-          <div className="overflow-x-auto rounded border">
+          <div className={INSPECTION_TABLE.wrapper}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -47,9 +49,14 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
               </TableHeader>
               <TableBody>
                 {td.rows.map((row, ri) => (
-                  <TableRow key={ri}>
+                  <TableRow
+                    key={ri}
+                    className={cn(INSPECTION_TABLE.stripe, INSPECTION_TABLE.rowHover)}
+                  >
                     {row.map((cell, ci) => (
-                      <TableCell key={ci}>{cell}</TableCell>
+                      <TableCell key={ci} className={INSPECTION_TABLE.numericCell}>
+                        {cell}
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))}
@@ -62,7 +69,7 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
 
     case 'photo':
       return (
-        <div className="space-y-2">
+        <div className={INSPECTION_SPACING.field}>
           {section.title && <h4 className="font-semibold">{section.title}</h4>}
           {section.documentId ? (
             <p className="text-sm text-muted-foreground">
@@ -78,9 +85,9 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
       const rd = section.richTableData;
       if (!rd) return null;
       return (
-        <div className="space-y-2">
+        <div className={INSPECTION_SPACING.field}>
           {section.title && <h4 className="font-semibold">{section.title}</h4>}
-          <div className="overflow-x-auto rounded border">
+          <div className={INSPECTION_TABLE.wrapper}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -91,11 +98,14 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
               </TableHeader>
               <TableBody>
                 {rd.rows.map((row, ri) => (
-                  <TableRow key={ri}>
+                  <TableRow
+                    key={ri}
+                    className={cn(INSPECTION_TABLE.stripe, INSPECTION_TABLE.rowHover)}
+                  >
                     {row.map((cell, ci) => (
                       <TableCell key={ci}>
                         {cell.type === 'text' ? (
-                          cell.value
+                          <span className={INSPECTION_TABLE.numericCell}>{cell.value}</span>
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             [{t('types.photo')}: {cell.documentId?.slice(0, 8)}...]

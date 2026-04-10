@@ -342,6 +342,22 @@ export {
   type CalibrationTabType,
 } from './components/calibration';
 
+// Inspection
+export {
+  getJudgmentCardClasses,
+  getJudgmentBadgeClasses,
+  getResultTextClasses,
+  getResultBadgeClasses,
+  INSPECTION_EMPTY_STATE,
+  INSPECTION_SPACING,
+  INSPECTION_MOTION,
+  INSPECTION_ITEM_CARD,
+  INSPECTION_SECTION_CARD,
+  INSPECTION_TABLE,
+  INSPECTION_FOCUS,
+  INSPECTION_PREFILL,
+} from './components/inspection';
+
 // ============================================================================
 // Component Layer: Document (문서 관리)
 // ============================================================================

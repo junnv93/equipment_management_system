@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,12 +20,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, ImageIcon, Type } from 'lucide-react';
+import { INSPECTION_SPACING } from '@/lib/design-tokens';
+import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
+import { documentApi } from '@/lib/api/document-api';
+import { useToast } from '@/components/ui/use-toast';
 import type { ResultSection, CreateResultSectionDto, RichCell } from '@/lib/api/calibration-api';
-import { INSPECTION_RESULT_SECTION_TYPE_VALUES } from '@equipment-management/schemas';
+import VisualTableEditor from './VisualTableEditor';
 
-interface RichTableRow {
-  cells: Array<RichCell>;
+/**
+ * 사용자에게 노출되는 결과 형식 (프론트엔드 전용)
+ *
+ * 백엔드 sectionType과의 매핑:
+ * - 'table' → rich_table (통합)
+ * - 'text'  → text
+ * - 'photo' → photo
+ * - 'title' → title
+ */
+const SECTION_TYPE_OPTIONS = ['table', 'text', 'photo', 'title'] as const;
+type SectionTypeOption = (typeof SECTION_TYPE_OPTIONS)[number];
+
+/** 프론트엔드 타입 → 백엔드 sectionType 변환 */
+function toBackendType(frontendType: SectionTypeOption): string {
+  return frontendType === 'table' ? 'rich_table' : frontendType;
+}
+
+/** 백엔드 sectionType → 프론트엔드 타입 변환 */
+function toFrontendType(backendType: string): SectionTypeOption {
+  if (backendType === 'rich_table' || backendType === 'data_table') return 'table';
+  return backendType as SectionTypeOption;
 }
 
 interface ResultSectionFormDialogProps {
@@ -33,6 +55,8 @@ interface ResultSectionFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (dto: CreateResultSectionDto) => void;
   editTarget?: ResultSection | null;
+  /** 인라인 타입 선택에서 전달된 초기 sectionType */
+  initialSectionType?: string | null;
   nextSortOrder: number;
   isSubmitting?: boolean;
 }
@@ -42,65 +66,122 @@ export default function ResultSectionFormDialog({
   onOpenChange,
   onSubmit,
   editTarget,
+  initialSectionType,
   nextSortOrder,
   isSubmitting,
 }: ResultSectionFormDialogProps) {
   const t = useTranslations('calibration.resultSections');
+  const { toast } = useToast();
 
-  const [sectionType, setSectionType] = useState<string>(editTarget?.sectionType ?? 'title');
+  // ── Form state ──
+  const resolvedInitialType = initialSectionType
+    ? toFrontendType(initialSectionType)
+    : editTarget
+      ? toFrontendType(editTarget.sectionType)
+      : 'title';
+
+  const [sectionType, setSectionType] = useState<SectionTypeOption>(resolvedInitialType);
   const [title, setTitle] = useState(editTarget?.title ?? '');
   const [content, setContent] = useState(editTarget?.content ?? '');
-  const [pasteData, setPasteData] = useState('');
+
+  // photo state
   const [documentId, setDocumentId] = useState(editTarget?.documentId ?? '');
   const [imageWidthCm, setImageWidthCm] = useState(Number(editTarget?.imageWidthCm) || 12);
   const [imageHeightCm, setImageHeightCm] = useState(Number(editTarget?.imageHeightCm) || 9);
+  const [photoFiles, setPhotoFiles] = useState<UploadedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
-  // rich_table 상태
-  const defaultRichHeaders = editTarget?.richTableData?.headers ?? [''];
-  const defaultRichRows: RichTableRow[] = editTarget?.richTableData?.rows.map((r) => ({
-    cells: r,
-  })) ?? [{ cells: [{ type: 'text' as const, value: '' }] }];
-  const [richHeaders, setRichHeaders] = useState<string[]>(defaultRichHeaders);
-  const [richRows, setRichRows] = useState<RichTableRow[]>(defaultRichRows);
+  // table state (통합: data_table + rich_table → VisualTableEditor)
+  const getInitialHeaders = (): string[] => {
+    if (editTarget?.richTableData) return editTarget.richTableData.headers;
+    if (editTarget?.tableData) return editTarget.tableData.headers;
+    return ['', '', ''];
+  };
+  const getInitialRows = (): RichCell[][] => {
+    if (editTarget?.richTableData) return editTarget.richTableData.rows;
+    if (editTarget?.tableData) {
+      return editTarget.tableData.rows.map((row) =>
+        row.map((v) => ({ type: 'text' as const, value: v }))
+      );
+    }
+    return [['', '', ''].map(() => ({ type: 'text' as const, value: '' }))];
+  };
+  const [tableHeaders, setTableHeaders] = useState<string[]>(getInitialHeaders);
+  const [tableRows, setTableRows] = useState<RichCell[][]>(getInitialRows);
 
-  // 편집 대상 변경 시 폼 초기화
+  // ── Reset ──
   const resetForm = useCallback(() => {
-    setSectionType(editTarget?.sectionType ?? 'title');
+    const type = initialSectionType
+      ? toFrontendType(initialSectionType)
+      : editTarget
+        ? toFrontendType(editTarget.sectionType)
+        : 'title';
+    setSectionType(type);
     setTitle(editTarget?.title ?? '');
     setContent(editTarget?.content ?? '');
-    setPasteData('');
     setDocumentId(editTarget?.documentId ?? '');
     setImageWidthCm(Number(editTarget?.imageWidthCm) || 12);
     setImageHeightCm(Number(editTarget?.imageHeightCm) || 9);
-    setRichHeaders(editTarget?.richTableData?.headers ?? ['']);
-    setRichRows(
-      editTarget?.richTableData?.rows.map((r) => ({ cells: r })) ?? [
-        { cells: [{ type: 'text' as const, value: '' }] },
-      ]
-    );
-  }, [editTarget]);
+    setPhotoFiles([]);
+    setIsUploading(false);
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) resetForm();
-    onOpenChange(isOpen);
-  };
+    if (editTarget?.richTableData) {
+      setTableHeaders(editTarget.richTableData.headers);
+      setTableRows(editTarget.richTableData.rows);
+    } else if (editTarget?.tableData) {
+      setTableHeaders(editTarget.tableData.headers);
+      setTableRows(
+        editTarget.tableData.rows.map((row) =>
+          row.map((v) => ({ type: 'text' as const, value: v }))
+        )
+      );
+    } else {
+      setTableHeaders(['', '', '']);
+      setTableRows([['', '', ''].map(() => ({ type: 'text' as const, value: '' }))]);
+    }
+  }, [editTarget, initialSectionType]);
 
-  const parseTableData = (raw: string): { headers: string[]; rows: string[][] } | null => {
-    const lines = raw
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-    if (lines.length < 2) return null;
-    const delimiter = lines[0].includes('\t') ? '\t' : ',';
-    const headers = lines[0].split(delimiter).map((h) => h.trim());
-    const rows = lines.slice(1).map((line) => line.split(delimiter).map((c) => c.trim()));
-    return { headers, rows };
-  };
+  useEffect(() => {
+    if (open) resetForm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
+  // ── Photo upload ──
+  const handlePhotoFilesChange = useCallback(
+    async (files: UploadedFile[]) => {
+      setPhotoFiles(files);
+      const pendingFile = files.find((f) => f.status === 'pending');
+      if (!pendingFile) return;
+
+      setIsUploading(true);
+      try {
+        const doc = await documentApi.uploadDocument(pendingFile.file, 'inspection_photo');
+        setDocumentId(doc.id);
+        setPhotoFiles(
+          files.map((f) =>
+            f === pendingFile ? { ...f, status: 'success' as const, uuid: doc.id } : f
+          )
+        );
+      } catch {
+        setPhotoFiles(
+          files.map((f) =>
+            f === pendingFile ? { ...f, status: 'error' as const, error: t('toasts.error') } : f
+          )
+        );
+        toast({ variant: 'destructive', description: t('toasts.error') });
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [t, toast]
+  );
+
+  // ── Submit ──
   const handleSubmit = () => {
+    const backendType = toBackendType(sectionType);
     const dto: CreateResultSectionDto = {
       sortOrder: editTarget ? editTarget.sortOrder : nextSortOrder,
-      sectionType,
+      sectionType: backendType,
     };
 
     if (title) dto.title = title;
@@ -109,52 +190,74 @@ export default function ResultSectionFormDialog({
       case 'text':
         dto.content = content;
         break;
-      case 'data_table': {
-        // 편집 모드에서 pasteData가 비어있으면 기존 tableData 유지
-        if (pasteData) {
-          const parsed = parseTableData(pasteData);
-          if (parsed) dto.tableData = parsed;
-        } else if (editTarget?.tableData) {
-          dto.tableData = editTarget.tableData;
-        }
+      case 'table':
+        dto.richTableData = {
+          headers: tableHeaders.map((h) => h || `Col`),
+          rows: tableRows,
+        };
         break;
-      }
       case 'photo':
         if (documentId) dto.documentId = documentId;
         dto.imageWidthCm = imageWidthCm;
         dto.imageHeightCm = imageHeightCm;
-        break;
-      case 'rich_table':
-        dto.richTableData = {
-          headers: richHeaders.filter((h) => h.trim()),
-          rows: richRows.map((row) => row.cells),
-        };
         break;
     }
 
     onSubmit(dto);
   };
 
+  // ── Table change handler ──
+  const handleTableChange = useCallback((newHeaders: string[], newRows: RichCell[][]) => {
+    setTableHeaders(newHeaders);
+    setTableRows(newRows);
+  }, []);
+
+  // ── Render ──
+  const isInlineTypeEntry = !!initialSectionType && !!editTarget;
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={`max-h-[90vh] overflow-y-auto ${sectionType === 'table' ? 'sm:max-w-2xl' : 'sm:max-w-lg'}`}
+      >
         <DialogHeader>
-          <DialogTitle>{editTarget ? t('editSection') : t('addSection')}</DialogTitle>
+          <DialogTitle>
+            {isInlineTypeEntry
+              ? `${title} — ${t(`types.${toBackendType(sectionType)}`)}`
+              : editTarget
+                ? t('editSection')
+                : t('addSection')}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* 섹션 유형 선택 */}
-          {!editTarget && (
-            <div className="space-y-2">
-              <Label>{t('form.sectionType')}</Label>
-              <Select value={sectionType} onValueChange={setSectionType}>
+        <div className={`${INSPECTION_SPACING.group} py-2`}>
+          {/* 검사 항목명 — 인라인 타입 선택 진입 시 숨김 */}
+          {!isInlineTypeEntry && (
+            <div className={INSPECTION_SPACING.field}>
+              <Label>{t('form.inspectionItemName')}</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t('form.inspectionItemNamePlaceholder')}
+              />
+            </div>
+          )}
+
+          {/* 결과 형식 선택 */}
+          {!isInlineTypeEntry && (!editTarget || editTarget.sectionType === 'title') && (
+            <div className={INSPECTION_SPACING.field}>
+              <Label>{t('form.resultFormat')}</Label>
+              <Select
+                value={sectionType}
+                onValueChange={(v) => setSectionType(v as SectionTypeOption)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {INSPECTION_RESULT_SECTION_TYPE_VALUES.map((type) => (
+                  {SECTION_TYPE_OPTIONS.map((type) => (
                     <SelectItem key={type} value={type}>
-                      {t(`types.${type}`)}
+                      {t(`types.${toBackendType(type)}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -162,58 +265,35 @@ export default function ResultSectionFormDialog({
             </div>
           )}
 
-          {/* 제목 (모든 타입) */}
-          <div className="space-y-2">
-            <Label>{t('form.sectionTitle')}</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
+          {/* ── 타입별 콘텐츠 입력 ── */}
 
-          {/* 타입별 추가 필드 */}
           {sectionType === 'text' && (
-            <div className="space-y-2">
+            <div className={INSPECTION_SPACING.field}>
               <Label>{t('form.content')}</Label>
               <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} />
             </div>
           )}
 
-          {sectionType === 'data_table' && (
-            <div className="space-y-2">
-              <Label>{t('form.pasteData')}</Label>
-              <Textarea
-                value={pasteData}
-                onChange={(e) => setPasteData(e.target.value)}
-                rows={8}
-                placeholder="Freq (GHz)\tGain (dB)\tSpec\n1.0\t44.12\t45 ± 2.5"
-                className="font-mono text-xs"
-              />
-              {pasteData &&
-                (() => {
-                  const parsed = parseTableData(pasteData);
-                  if (!parsed) return null;
-                  return (
-                    <div className="rounded border p-2 text-xs">
-                      <p className="mb-1 font-semibold">{t('form.sectionTitle')}:</p>
-                      <p>
-                        {parsed.headers.join(' | ')} ({parsed.rows.length})
-                      </p>
-                    </div>
-                  );
-                })()}
-            </div>
+          {sectionType === 'table' && (
+            <VisualTableEditor
+              headers={tableHeaders}
+              rows={tableRows}
+              onChange={handleTableChange}
+            />
           )}
 
           {sectionType === 'photo' && (
             <>
-              <div className="space-y-2">
-                <Label>{t('form.selectFile')}</Label>
-                <Input
-                  value={documentId}
-                  onChange={(e) => setDocumentId(e.target.value)}
-                  placeholder="UUID"
-                />
-              </div>
+              <FileUpload
+                files={photoFiles}
+                onChange={handlePhotoFilesChange}
+                accept=".jpg,.jpeg,.png,.gif,.webp"
+                maxFiles={1}
+                label={t('form.selectFile')}
+                disabled={isUploading}
+              />
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className={INSPECTION_SPACING.field}>
                   <Label>{t('form.imageWidth')}</Label>
                   <Input
                     type="number"
@@ -223,7 +303,7 @@ export default function ResultSectionFormDialog({
                     max={30}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className={INSPECTION_SPACING.field}>
                   <Label>{t('form.imageHeight')}</Label>
                   <Input
                     type="number"
@@ -236,167 +316,13 @@ export default function ResultSectionFormDialog({
               </div>
             </>
           )}
-
-          {sectionType === 'rich_table' && (
-            <div className="space-y-3">
-              {/* 헤더 편집 */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{t('form.sectionTitle')}</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setRichHeaders([...richHeaders, '']);
-                      setRichRows(
-                        richRows.map((row) => ({
-                          cells: [...row.cells, { type: 'text' as const, value: '' }],
-                        }))
-                      );
-                    }}
-                  >
-                    <Plus className="mr-1 h-3 w-3" />
-                    {t('form.sectionTitle')}
-                  </Button>
-                </div>
-                <div className="flex gap-1">
-                  {richHeaders.map((h, hi) => (
-                    <Input
-                      key={hi}
-                      value={h}
-                      onChange={(e) => {
-                        const next = [...richHeaders];
-                        next[hi] = e.target.value;
-                        setRichHeaders(next);
-                      }}
-                      placeholder={`Col ${hi + 1}`}
-                      className="text-xs"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* 행 편집 */}
-              <div className="space-y-2">
-                {richRows.map((row, ri) => (
-                  <div key={ri} className="flex items-start gap-1">
-                    {row.cells.map((cell, ci) => (
-                      <div key={ci} className="flex-1 space-y-1">
-                        <div className="flex gap-0.5">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant={cell.type === 'text' ? 'default' : 'outline'}
-                            className="h-6 w-6"
-                            onClick={() => {
-                              const nextRows = [...richRows];
-                              nextRows[ri] = {
-                                cells: nextRows[ri].cells.map((c, i) =>
-                                  i === ci ? { type: 'text' as const, value: '' } : c
-                                ),
-                              };
-                              setRichRows(nextRows);
-                            }}
-                            aria-label={t('types.text')}
-                          >
-                            <Type className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant={cell.type === 'image' ? 'default' : 'outline'}
-                            className="h-6 w-6"
-                            onClick={() => {
-                              const nextRows = [...richRows];
-                              nextRows[ri] = {
-                                cells: nextRows[ri].cells.map((c, i) =>
-                                  i === ci ? { type: 'image' as const, documentId: '' } : c
-                                ),
-                              };
-                              setRichRows(nextRows);
-                            }}
-                            aria-label={t('types.photo')}
-                          >
-                            <ImageIcon className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        {cell.type === 'text' ? (
-                          <Input
-                            value={cell.value}
-                            onChange={(e) => {
-                              const nextRows = [...richRows];
-                              nextRows[ri] = {
-                                cells: nextRows[ri].cells.map((c, i) =>
-                                  i === ci ? { ...c, value: e.target.value } : c
-                                ),
-                              };
-                              setRichRows(nextRows);
-                            }}
-                            className="text-xs"
-                            placeholder={richHeaders[ci] || ''}
-                          />
-                        ) : (
-                          <Input
-                            value={cell.type === 'image' ? cell.documentId : ''}
-                            onChange={(e) => {
-                              const nextRows = [...richRows];
-                              nextRows[ri] = {
-                                cells: nextRows[ri].cells.map((c, i) =>
-                                  i === ci
-                                    ? { type: 'image' as const, documentId: e.target.value }
-                                    : c
-                                ),
-                              };
-                              setRichRows(nextRows);
-                            }}
-                            className="text-xs"
-                            placeholder="Document UUID"
-                          />
-                        )}
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="mt-7 h-6 w-6 text-destructive"
-                      onClick={() => setRichRows(richRows.filter((_, i) => i !== ri))}
-                      aria-label={t('deleteSection')}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setRichRows([
-                      ...richRows,
-                      {
-                        cells: richHeaders.map(() => ({
-                          type: 'text' as const,
-                          value: '',
-                        })),
-                      },
-                    ])
-                  }
-                >
-                  <Plus className="mr-1 h-3 w-3" />
-                  {t('addSection')}
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('form.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button onClick={handleSubmit} disabled={isSubmitting || isUploading}>
             {t('form.save')}
           </Button>
         </DialogFooter>

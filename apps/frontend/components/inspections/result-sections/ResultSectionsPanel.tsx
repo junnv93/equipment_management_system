@@ -3,9 +3,16 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, LayoutList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  INSPECTION_EMPTY_STATE,
+  INSPECTION_SPACING,
+  INSPECTION_SECTION_CARD,
+  ANIMATION_PRESETS,
+} from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -120,7 +127,7 @@ export default function ResultSectionsPanel({
 
   if (isLoading) {
     return (
-      <div className="space-y-2 p-4">
+      <div className={`${INSPECTION_SPACING.field} p-4`}>
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-20 w-full" />
       </div>
@@ -128,7 +135,7 @@ export default function ResultSectionsPanel({
   }
 
   return (
-    <div className="space-y-3">
+    <div className={INSPECTION_SPACING.group}>
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-muted-foreground">{t('title')}</h4>
         {canEdit && (
@@ -147,49 +154,64 @@ export default function ResultSectionsPanel({
       </div>
 
       {sections.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">{t('empty')}</p>
+        <div className={INSPECTION_EMPTY_STATE.container}>
+          <LayoutList className={INSPECTION_EMPTY_STATE.icon} aria-hidden="true" />
+          <p className={INSPECTION_EMPTY_STATE.title}>{t('empty')}</p>
+          <p className={INSPECTION_EMPTY_STATE.description}>{t('emptyDescription')}</p>
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className={INSPECTION_SPACING.field}>
           {sections.map((section, idx) => (
-            <Card key={section.id} className="relative">
+            <Card
+              key={section.id}
+              className={cn(
+                INSPECTION_SECTION_CARD.base,
+                ANIMATION_PRESETS.slideUpFade,
+                'motion-safe:duration-200'
+              )}
+            >
               <CardContent className="p-3">
                 <ResultSectionPreview section={section} />
                 {canEdit && (
-                  <div className="mt-2 flex gap-1">
+                  <div className={INSPECTION_SECTION_CARD.actions}>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7"
+                      className={INSPECTION_SECTION_CARD.actionButton}
                       disabled={idx === 0}
                       onClick={() => handleMove(section, 'up')}
+                      aria-label={t('moveUp')}
                     >
                       <ChevronUp className="h-3 w-3" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7"
+                      className={INSPECTION_SECTION_CARD.actionButton}
                       disabled={idx === sections.length - 1}
                       onClick={() => handleMove(section, 'down')}
+                      aria-label={t('moveDown')}
                     >
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7"
+                      className={INSPECTION_SECTION_CARD.actionButton}
                       onClick={() => {
                         setEditTarget(section);
                         setFormOpen(true);
                       }}
+                      aria-label={t('editSection')}
                     >
                       <Pencil className="h-3 w-3" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-7 w-7 text-destructive"
+                      className={cn(INSPECTION_SECTION_CARD.actionButton, 'text-destructive')}
                       onClick={() => setDeleteTarget(section)}
+                      aria-label={t('deleteSection')}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

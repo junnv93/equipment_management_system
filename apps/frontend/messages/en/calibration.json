@@ -635,6 +635,7 @@
       "addItem": "Add Item",
       "removeItem": "Remove",
       "noItems": "No inspection items added",
+      "noItemsDescription": "Select from presets or add custom items.",
       "selectPreset": "Select Preset",
       "customItem": "Custom Input"
     },
@@ -661,6 +662,15 @@
     "prefill": {
       "auto": "Auto",
       "tooltip": "Auto-filled from equipment master data. You can edit this value."
+    },
+    "measurementEquipment": {
+      "title": "Measurement Equipment List",
+      "searchPlaceholder": "Search equipment (ID/name)",
+      "managementNumber": "Management No.",
+      "equipmentName": "Equipment Name",
+      "calibrationDate": "Calibration Date",
+      "empty": "No measurement equipment added",
+      "emptyDescription": "Search and add the measurement equipment used for this inspection."
     },
     "cancel": "Cancel",
     "save": "Save",
@@ -696,21 +706,33 @@
     "deleteSection": "Delete Section",
     "deleteConfirm": "Delete this section?",
     "empty": "No result sections yet.",
+    "emptyDescription": "Add measurement data, photos, tables, and more.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "selectResultFormat": "Select result format",
     "types": {
       "title": "Title",
       "text": "Text",
       "data_table": "Data Table",
       "photo": "Photo",
-      "rich_table": "Rich Table"
+      "rich_table": "Table",
+      "table": "Table"
     },
     "form": {
-      "sectionType": "Section Type",
-      "sectionTitle": "Title",
+      "resultFormat": "Result Format",
+      "inspectionItemName": "Inspection Item",
+      "inspectionItemNamePlaceholder": "e.g., Frequency Response, Output Level, Visual Inspection",
       "content": "Content",
       "pasteData": "Paste data (tab-separated)",
       "imageWidth": "Image Width (cm)",
       "imageHeight": "Image Height (cm)",
       "selectFile": "Select File",
+      "columnHeaders": "Column Headers",
+      "addColumn": "Add Column",
+      "addRow": "Add Row",
+      "deleteRow": "Delete Row",
+      "preview": "Preview",
+      "applyPaste": "Apply Paste",
       "save": "Save",
       "cancel": "Cancel"
     },
