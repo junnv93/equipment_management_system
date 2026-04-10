@@ -1,7 +1,7 @@
 services:
   frontend:
     build:
-      context: .
+      context: ..
       dockerfile: apps/frontend/Dockerfile
       target: production
     restart: always
@@ -36,7 +36,7 @@ services:
 
   backend:
     build:
-      context: .
+      context: ..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
     restart: always
@@ -114,7 +114,7 @@ services:
       POSTGRES_DB: ${DB_NAME:-equipment_management}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-network
     healthcheck:
@@ -443,7 +443,7 @@ services:
   # ─────────────────────────────────────────────
   migration:
     build:
-      context: .
+      context: ..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
     command: ['node', 'apps/backend/dist/database/run-migration.js']

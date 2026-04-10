@@ -89,7 +89,7 @@ try {
 grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanceof ConflictException"
 ```
 
-**예외:** raw `tx.update` 로 CAS 를 수동 수행하는 경로(예: `equipment-imports.service.onReturnCompleted`, `onReturnCanceled`)
+**예외:** raw `tx.update` 로 CAS 를 수동 수행하는 경로(예: `equipment-imports.service.onReturnCompleted`, `onReturnCanceled`, `import-orphan-scheduler.detectAndRecover`)
 는 훅을 우회하므로 인라인 catch 유지가 정당함.
 
 **PASS:** updateWithVersion 호출 사이트에 boilerplate 없음 + 도메인이 캐시를 가지면 onVersionConflict override 존재.
@@ -141,4 +141,4 @@ grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanc
 6. **SettingsService** — 시스템 관리자 전용
 7. **크로스 테이블 version bump (CAS WHERE 없이)** — 트랜잭션 내 시스템 자동 처리, 사용자 경합 없음. 단 version bump 자체는 필수
 8. **CacheInvalidationHelper가 없는 읽기 전용 서비스** — version bump만 하고 캐시 무효화 불필요한 경우
-9. **raw `tx.update` 수동 CAS 경로** — `updateWithVersion` 우회 구조라 `onVersionConflict` 훅이 호출되지 않으므로 인라인 catch 유지가 정당 (예: `equipment-imports.service.onReturnCompleted`, `onReturnCanceled`)
+9. **raw `tx.update` 수동 CAS 경로** — `updateWithVersion` 우회 구조라 `onVersionConflict` 훅이 호출되지 않으므로 인라인 catch 유지가 정당 (예: `equipment-imports.service.onReturnCompleted`, `onReturnCanceled`, `import-orphan-scheduler.detectAndRecover`)

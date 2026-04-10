@@ -1,7 +1,7 @@
 # 내부 LAN 전용 프로덕션 설정
 # 외부 인터넷 노출 없이 유선 LAN 네트워크에서만 접근 가능
-# 사용법: docker compose -f docker-compose.lan.yml up -d
-# 마이그레이션: docker compose -f docker-compose.lan.yml --profile migration run --rm migration
+# 사용법: docker compose -f infra/docker-compose.lan.yml up -d
+# 마이그레이션: docker compose -f infra/docker-compose.lan.yml --profile migration run --rm migration
 
 services:
   # PostgreSQL Database (핵심 데이터 저장소)
@@ -80,7 +80,7 @@ services:
   # Backend API (NestJS)
   backend:
     build:
-      context: .
+      context: ..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
     container_name: equipment_backend_lan
@@ -138,7 +138,7 @@ services:
   # Frontend (Next.js)
   frontend:
     build:
-      context: .
+      context: ..
       dockerfile: apps/frontend/Dockerfile
       target: production
     container_name: equipment_frontend_lan
@@ -195,7 +195,7 @@ services:
   # DB 마이그레이션 (one-shot, 배포 시에만 실행)
   migration:
     build:
-      context: .
+      context: ..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
     container_name: equipment_migration_lan
