@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-10 (40차 — 중간점검 통합 워크플로우 UX 프롬프트 추가)**
+> **마지막 정리일: 2026-04-10 (41차 — 중간점검 통합 폼 완료, verify/review 후속 등재)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -282,7 +282,14 @@ QP-18-05 자체점검표 검증 (QP-18-03과 동일 패턴):
 > 장비 마스터 데이터에서 자동 적용 가능하고, 점검 항목은 9개 문서에서 반복되는 패턴이
 > 프리셋으로 제공 가능.
 
-### 🟠 HIGH — 중간점검 폼 통합 리디자인 (InspectionFormDialog → 통합 워크플로우)
+### ~~🟠 HIGH — 중간점검 폼 통합 리디자인 (InspectionFormDialog → 통합 워크플로우)~~ ✅ 완료 (2026-04-10 41차)
+
+> 검증: Mode 2 harness 실행. 1-step UX 구현 (inspection + resultSections 동시 생성).
+> 12개 프리셋 (9개 실제 문서 기반), 장비 마스터 prefill (중간점검 주기, 교정유효기간 기간 표시),
+> InlineResultSectionsEditor 통합, classification 교정기기 고정, "측정 결과 데이터" 리네이밍.
+> E2E 5/5 통과. tsc + build + backend test 559 전체 PASS.
+
+### 원문 (참고용)
 
 ```
 현재 문제:
@@ -345,6 +352,67 @@ Phase 4: 워크플로우 연결
 - E2E: 점검 생성 → 프리셋 항목 선택 → 결과 데이터 입력 → Export → DOCX 검증
 - 기존 wf-19c 테스트 회귀 없음
 - 9개 실제 문서 패턴 재현 가능 확인
+```
+
+---
+
+## 41차 신규 — 중간점검 폼 통합 후속 verify/review 이슈 (3건)
+
+> **발견 배경 (2026-04-10, 41차)**: 중간점검 폼 통합 리디자인 완료 후 verify-implementation + review-architecture 실행 결과. 이번 변경 범위 외 기존 코드의 SSOT 위반 3건 확인.
+
+### 🟡 MEDIUM — calibration-api.ts SSOT 타입 강화 (sectionType, inspectionType)
+
+```
+verify-ssot 발견:
+1. ResultSection.sectionType: string → InspectionResultSectionType
+2. ResultSection.inspectionType: 'intermediate' | 'self' → InspectionType
+3. CreateResultSectionDto.sectionType: string → InspectionResultSectionType
+4. ResultSectionsPanelProps.inspectionType: 'intermediate' | 'self' → InspectionType
+
+모두 packages/schemas에 SSOT 타입이 이미 존재하지만 프론트엔드에서 string
+또는 리터럴 유니언으로 재정의. CLAUDE.md Rule 0 위반.
+
+작업:
+1. calibration-api.ts: import { InspectionResultSectionType, InspectionType }
+2. ResultSection/CreateResultSectionDto 인터페이스 타입 교체
+3. ResultSectionsPanel/InlineResultSectionsEditor props 타입 교체
+
+검증:
+- pnpm tsc --noEmit exit 0
+- /verify-ssot PASS
+```
+
+### 🟡 MEDIUM — ResultSectionsPanel handleMove 레이스 컨디션
+
+```
+verify-implementation 발견 (ResultSectionsPanel.tsx:104-119):
+두 번의 순차 mutateAsync 사이에 첫 번째 PATCH 성공 시 onSuccess →
+invalidate() → 리스트 refetch → 동일 sortOrder 중간 상태 UI 노출.
+
+수정 방안 (택 1):
+A. 백엔드에 swap 전용 엔드포인트 추가 (단일 트랜잭션)
+B. 프론트에서 두 호출 사이 invalidate 억제 (optimistic update)
+C. 두 호출을 Promise.all로 병렬 처리 (서버 사이드 정합성 확인)
+
+검증:
+- 빠른 연속 클릭 시 sortOrder 깨짐 없음
+- 첫 번째만 성공/두 번째 실패 시 복구 동작 확인
+```
+
+### 🟢 LOW — QP-18-03 Export에 1-step 결과 섹션 반영 검증
+
+```
+1-step 폼으로 생성된 inspection + resultSections가 Export DOCX에
+정상 반영되는지 end-to-end 검증 필요.
+
+작업:
+1. E2E: 1-step 폼으로 점검 생성 (항목 + 결과 섹션 포함)
+2. Export 버튼 클릭 → DOCX 다운로드
+3. DOCX 파싱 → 결과 섹션 데이터 존재 확인
+
+검증:
+- Playwright E2E: 다운로드 + DOCX 내용 검증
+- 기존 wf-19c 테스트 회귀 없음
 ```
 
 ---
