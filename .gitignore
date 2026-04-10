@@ -147,6 +147,10 @@ apps/server/logs/
 # symlinks
 npm
 
+# Claude desktop / tool configs (local development only)
+claude_desktop_config.json
+*.skill
+
 # (Harness handoff files are now tracked for cross-PC sync)
 
 # embedded repositories

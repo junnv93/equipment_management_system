@@ -1,7 +1,0 @@
-server.host: '0.0.0.0'
-elasticsearch.hosts: ['http://elasticsearch:9200']
-kibana.index: '.kibana'
-# 로그 레벨
-logging.level: warning
-# 서버 이름 (식별용)
-server.name: 'equipment-management-kibana'
