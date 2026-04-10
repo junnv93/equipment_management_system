@@ -65,6 +65,9 @@ export * from './equipment-self-inspections';
 // 점검 항목 ↔ 문서 연결 (중간점검/자체점검 사진·그래프)
 export * from './inspection-document-items';
 
+// 점검 결과 섹션 (중간점검/자체점검 동적 콘텐츠)
+export * from './inspection-result-sections';
+
 // 양식 템플릿 스키마 (스토리지 기반)
 export * from './form-templates';
 export * from './form-template-revisions';

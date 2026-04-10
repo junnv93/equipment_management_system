@@ -85,6 +85,20 @@
       "when": 1775784530167,
       "tag": "0011_cultured_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1775787282562,
+      "tag": "0012_happy_argent",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1775873200000,
+      "tag": "0013_remove_dead_equipment_statuses",
+      "breakpoints": true
     }
   ]
 }
