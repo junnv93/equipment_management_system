@@ -271,7 +271,6 @@ const TIMELINE_COLORS = {
    ```
 
 5. 색상 대비 요구사항
-
    - 텍스트: 최소 4.5:1 대비율
    - UI 컴포넌트: 최소 3:1 대비율
    - 포커스 인디케이터: 2px solid ring

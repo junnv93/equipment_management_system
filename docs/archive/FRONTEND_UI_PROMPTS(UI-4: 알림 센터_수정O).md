@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > 📖 **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -15,7 +16,7 @@
 
 ### 프롬프트
 
-```
+````
 스킬 로드:
 /equipment-management
 /nextjs-16
@@ -82,9 +83,10 @@ Next.js 16 필수 패턴:
 
      return <NotificationListClient initialType={type} initialStatus={status} />;
    }
-   ```
+````
 
 2. 클라이언트 컴포넌트 (실시간 업데이트):
+
    ```typescript
    'use client';
    import { useEffect, useCallback } from 'react';
@@ -117,6 +119,7 @@ Next.js 16 필수 패턴:
    ```
 
 3. useActionState 읽음 처리:
+
    ```typescript
    'use client';
    import { useActionState } from 'react';
@@ -139,25 +142,31 @@ Next.js 16 필수 패턴:
    ```
 
 성능 최적화 요구사항 (/vercel-react-best-practices):
+
 1. **rerender-memo**: 개별 알림 아이템 메모이제이션
+
    ```typescript
    const MemoizedNotificationItem = memo(NotificationItem, (prev, next) => {
-     return prev.notification.id === next.notification.id &&
-            prev.notification.readAt === next.notification.readAt;
+     return (
+       prev.notification.id === next.notification.id &&
+       prev.notification.readAt === next.notification.readAt
+     );
    });
    ```
 
 2. **rerender-derived-state**: 읽지 않은 개수만 구독
+
    ```typescript
    // ❌ 전체 알림 배열 구독 (불필요한 리렌더)
    const notifications = useNotifications();
-   const unreadCount = notifications.filter(n => !n.readAt).length;
+   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
    // ✅ 파생 값만 구독
    const unreadCount = useNotificationUnreadCount();
    ```
 
 3. **client-event-listeners**: 전역 이벤트 리스너 중복 방지
+
    ```typescript
    // SSE 연결은 앱 레벨에서 한 번만
    useEffect(() => {
@@ -176,6 +185,7 @@ Next.js 16 필수 패턴:
    ```
 
 디자인 요구사항 (/frontend-design 스킬 활용):
+
 - 알림 벨 아이콘:
   - 읽지 않은 알림 뱃지: Brand Red (#CA0123) 배경
   - 뱃지 펄스 애니메이션 (새 알림 시)
@@ -197,6 +207,7 @@ Next.js 16 필수 패턴:
   - 시스템: UL Fog (#577E9E) + Info 아이콘
 
 접근성 요구사항 (/web-design-guidelines):
+
 - 알림 벨에 aria-label="알림 {count}개" 추가
 - 드롭다운에 role="menu" + aria-labelledby 추가
 - 개별 알림에 role="menuitem" 추가
@@ -207,23 +218,27 @@ Next.js 16 필수 패턴:
 - Tab/Arrow 키로 알림 목록 탐색
 
 제약사항:
+
 - 알림 클릭 시 관련 리소스 페이지로 이동
 - 읽음 처리 실패 시 재시도 로직
 - 알림 개수는 최대 99+로 표시
 - 실시간 업데이트: SSE 또는 폴링 (30초)
 
 검증:
+
 - 알림 드롭다운 동작 확인
 - 알림 클릭 시 이동 및 읽음 처리 확인
 - 전체 알림 페이지 필터 동작 확인
 
 Playwright 테스트:
+
 - 새 알림 발생 시 카운트 업데이트 확인
 - 알림 클릭 시 해당 페이지로 이동 확인
 - 읽음 처리 후 스타일 변경 확인
 
 완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
-```
+
+````
 
 ### 필수 가이드라인
 
@@ -247,7 +262,7 @@ DELETE /api/notifications/:id
 
 // SSE 연결 (실시간)
 GET /api/notifications/sse
-```
+````
 
 ---
 
@@ -268,9 +283,10 @@ const NOTIFICATION_TYPE_CONFIG = {
     // UL Green
     color: 'bg-[#00A451]/10 text-[#00A451] border-[#00A451]/20',
     icon: CheckCircle,
-    getLink: (data) => data.resourceType === 'equipment'
-      ? `/equipment/${data.resourceId}`
-      : `/calibration/${data.resourceId}`,
+    getLink: (data) =>
+      data.resourceType === 'equipment'
+        ? `/equipment/${data.resourceId}`
+        : `/calibration/${data.resourceId}`,
   },
   approval_rejected: {
     label: '반려',
@@ -361,9 +377,7 @@ const markAsRead = useMutation({
 
     queryClient.setQueryData(['notifications'], (old) => ({
       ...old,
-      items: old.items.map(n =>
-        n.id === id ? { ...n, readAt: new Date().toISOString() } : n
-      ),
+      items: old.items.map((n) => (n.id === id ? { ...n, readAt: new Date().toISOString() } : n)),
     }));
 
     queryClient.setQueryData(['notifications', 'unreadCount'], (old) =>

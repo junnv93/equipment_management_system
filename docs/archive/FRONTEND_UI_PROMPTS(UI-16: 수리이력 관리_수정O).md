@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -133,6 +134,7 @@ Playwright 테스트 (/playwright-skill 활용):
 ### 이행 체크리스트 UI-16
 
 **파일 생성:**
+
 - [ ] equipment/[id]/repair-history/page.tsx 구현됨 (Server Component, params Promise)
 - [ ] maintenance/page.tsx 구현됨 (Server Component)
 - [ ] maintenance/loading.tsx 생성됨
@@ -141,36 +143,43 @@ Playwright 테스트 (/playwright-skill 활용):
 - [ ] maintenance/[id]/page.tsx 구현됨 (Server Component, params Promise)
 
 **컴포넌트 생성:**
+
 - [ ] RepairHistoryTimeline.tsx 개선됨 (Server Component)
 - [ ] RepairHistoryClient.tsx 생성됨 ('use client')
 - [ ] RepairForm.tsx 생성됨 ('use client')
 
 **API 함수:**
+
 - [ ] repair-api.ts (Client) 생성됨
 - [ ] repair-api-server.ts (Server) 생성됨
 
 **기능 구현:**
+
 - [ ] 타임라인 UI 구현됨
 - [ ] 장비 상태 변경 연동됨
 - [ ] 비용 합계 표시 구현됨
 
 **디자인 관련:**
+
 - [ ] UL 색상 팔레트 사용됨 (수리 유형/상태별)
 - [ ] 수리 유형별 아이콘 적용됨
 - [ ] 반응형 타임라인 구현됨
 
 **에러 처리 관련:**
+
 - [ ] error.tsx 에러 핸들러 구현됨
 - [ ] API 에러 시 ErrorAlert 표시됨
 - [ ] 폼 제출 실패 시 필드별 에러 메시지 표시됨
 
 **성능 최적화 (vercel-react-best-practices):**
+
 - [ ] Server Component에서 초기 데이터 fetch 구현
 - [ ] 첨부파일 업로드 컴포넌트 dynamic import 적용
 - [ ] 타임라인 항목 많을 시 "더 보기" 또는 가상화 적용
 - [ ] optimistic update 적용
 
 **접근성 (web-design-guidelines):**
+
 - [ ] 타임라인 role="list" 구조화됨
 - [ ] 타임라인 항목에 aria-label 적용됨
 - [ ] 아이콘에 aria-hidden 및 텍스트 라벨 병행
@@ -182,6 +191,7 @@ Playwright 테스트 (/playwright-skill 활용):
 - [ ] 포커스 표시 스타일 적용됨
 
 **테스트:**
+
 - [ ] Playwright 테스트 작성됨 (repair-history.spec.ts)
 - [ ] 키보드 탐색 테스트 추가됨
 - [ ] aria-live 알림 테스트 추가됨

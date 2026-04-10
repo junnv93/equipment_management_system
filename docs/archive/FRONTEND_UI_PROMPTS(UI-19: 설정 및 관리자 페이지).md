@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -15,7 +16,7 @@
 
 ### 프롬프트
 
-```
+````
 스킬 로드:
 /equipment-management
 /nextjs-16
@@ -81,9 +82,10 @@ Next.js 16 필수 패턴:
 
      return <AuditLogListClient initialFilters={filters} />;
    }
-   ```
+````
 
 2. 동적 라우트 (로그 상세):
+
    ```typescript
    // apps/frontend/app/admin/audit-logs/[id]/page.tsx
    import { PageProps } from 'next';
@@ -98,6 +100,7 @@ Next.js 16 필수 패턴:
    ```
 
 3. useActionState 설정 저장:
+
    ```typescript
    'use client';
    import { useActionState } from 'react';
@@ -120,7 +123,9 @@ Next.js 16 필수 패턴:
    ```
 
 성능 최적화 요구사항 (/vercel-react-best-practices):
+
 1. **bundle-dynamic-imports**: diff 뷰어 동적 로딩
+
    ```typescript
    const DiffViewer = dynamic(() => import('./DiffViewer'), {
      loading: () => <Skeleton className="h-40" />,
@@ -129,6 +134,7 @@ Next.js 16 필수 패턴:
    ```
 
 2. **rerender-memo**: 감사 로그 아이템 메모이제이션
+
    ```typescript
    const MemoizedAuditLogItem = memo(AuditLogItem, (prev, next) => {
      return prev.log.id === next.log.id;
@@ -136,11 +142,12 @@ Next.js 16 필수 패턴:
    ```
 
 3. **async-parallel**: 설정 페이지 데이터 병렬 로딩
+
    ```typescript
    const [userSettings, notificationTypes, systemDefaults] = await Promise.all([
      getUserSettings(),
      getNotificationTypes(),
-     getSystemDefaults()
+     getSystemDefaults(),
    ]);
    ```
 
@@ -151,6 +158,7 @@ Next.js 16 필수 패턴:
    ```
 
 디자인 요구사항 (/frontend-design 스킬 활용):
+
 - 설정 레이아웃:
   - 왼쪽 사이드바: 설정 카테고리 메뉴
   - 현재 선택된 메뉴: UL Midnight Blue (#122C49) 배경
@@ -174,6 +182,7 @@ Next.js 16 필수 패턴:
   - 변경된 값 강조: 노란색 하이라이트
 
 접근성 요구사항 (/web-design-guidelines):
+
 - 토글 스위치에 role="switch" + aria-checked 추가
 - 설정 그룹에 role="group" + aria-labelledby 추가
 - 토글 변경 시 aria-live 영역에 상태 알림
@@ -184,22 +193,26 @@ Next.js 16 필수 패턴:
 - Tab 키로 토글 간 이동 가능
 
 제약사항:
+
 - 감사 로그는 읽기 전용 (수정/삭제 불가)
-- 관리자 권한 필수 (/admin/* 경로)
+- 관리자 권한 필수 (/admin/\* 경로)
 - 설정 변경 시 자동 저장 + 토스트 알림
 - 시스템 설정 변경 시 확인 모달 필수
 
 검증:
+
 - 설정 저장 테스트
 - 감사 로그 조회 테스트
 - pnpm tsc --noEmit
 
 Playwright 테스트:
+
 - 알림 설정 변경
 - 감사 로그 조회
 
 완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
-```
+
+````
 
 ### 필수 가이드라인
 
@@ -223,7 +236,7 @@ GET /api/admin/audit-logs?user={userId}&action={action}&startDate={date}&endDate
 
 // 감사 로그 상세 조회 (관리자)
 GET /api/admin/audit-logs/:id
-```
+````
 
 ---
 

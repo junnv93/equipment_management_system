@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -15,7 +16,7 @@
 
 ### 프롬프트
 
-```
+````
 스킬 로드:
 /equipment-management
 /nextjs-16
@@ -98,30 +99,35 @@ export default async function NonConformancePage(props: {
 
   return <NonConformanceClient equipment={equipment} nonConformances={nonConformances} />;
 }
-```
+````
 
 성능 최적화 (Vercel Best Practices):
+
 - 타임라인 목록에 가상화 또는 content-visibility 적용 검토
 - 폼 컴포넌트는 next/dynamic으로 동적 import
 - 첨부파일 업로드 시 이미지 미리보기는 next/image 사용
 - barrel import 피하기 (직접 import 권장)
 
 에러 처리:
+
 - API 에러 시 ErrorAlert 컴포넌트 표시
 - 폼 제출 실패 시 필드별 에러 메시지 표시
 - 401 응답 시 로그인 페이지 리다이렉트
 - 403 응답 시 "권한이 없습니다" 메시지 표시
 
 검증:
+
 - 부적합 등록 → 조치 → 복원 플로우
 - 장비 상태 변경 확인
 - pnpm tsc --noEmit
 
 Playwright 테스트:
+
 - 전체 부적합 관리 플로우
 
 완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
-```
+
+````
 
 ### 필수 가이드라인
 
@@ -163,7 +169,7 @@ Playwright 테스트:
 <form aria-describedby="form-error">
   {error && <div id="form-error" role="alert">{error}</div>}
 </form>
-```
+````
 
 **키보드 접근성 체크리스트**:
 
@@ -308,7 +314,9 @@ test.describe('부적합 장비 관리', () => {
 
     // 툴팁으로 이유 표시
     await testOperatorPage.hover('[data-testid="rental-button"]');
-    await expect(testOperatorPage.locator('[data-testid="disabled-tooltip"]')).toContainText('부적합');
+    await expect(testOperatorPage.locator('[data-testid="disabled-tooltip"]')).toContainText(
+      '부적합'
+    );
   });
 
   test('부적합 이력 타임라인', async ({ testOperatorPage }) => {
@@ -335,10 +343,12 @@ test.describe('부적합 장비 관리', () => {
     await fileInput.setInputFiles({
       name: 'evidence.pdf',
       mimeType: 'application/pdf',
-      buffer: Buffer.from('test content')
+      buffer: Buffer.from('test content'),
     });
 
-    await expect(testOperatorPage.locator('[data-testid="uploaded-file"]')).toContainText('evidence.pdf');
+    await expect(testOperatorPage.locator('[data-testid="uploaded-file"]')).toContainText(
+      'evidence.pdf'
+    );
   });
 });
 ```

@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > 📖 **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -15,7 +16,7 @@ PDF/Excel 출력 기능을 제공합니다.
 
 ### 프롬프트
 
-```
+````
 스킬 로드:
 /equipment-management
 /nextjs-16
@@ -79,9 +80,10 @@ Next.js 16 패턴 (필수):
      const planData = await getCalibrationPlan(id);
      return <CalibrationPlanPrint data={planData} />;
    }
-   ```
+````
 
 2. searchParams 패턴 (필터링)
+
    ```typescript
    // apps/frontend/app/reports/calibration-factors/page.tsx
    export default async function CalibrationFactorsReportPage(props: {
@@ -94,6 +96,7 @@ Next.js 16 패턴 (필수):
    ```
 
 3. useActionState 패턴 (내보내기 액션)
+
    ```typescript
    'use client';
    import { useActionState } from 'react';
@@ -119,6 +122,7 @@ Next.js 16 패턴 (필수):
    ```
 
 성능 최적화 (/vercel-react-best-practices 적용):
+
 1. `bundle-dynamic-imports`: PDF/Excel 라이브러리 동적 import
    ```typescript
    const PDFDocument = dynamic(() => import('@react-pdf/renderer'), {
@@ -138,10 +142,12 @@ Next.js 16 패턴 (필수):
 4. `js-cache-function-results`: Excel 생성 결과 캐싱
 
 라이브러리:
+
 - xlsx: Excel 파일 생성
 - @react-pdf/renderer 또는 브라우저 print() API
 
 디자인 요구사항 (/frontend-design 스킬 활용):
+
 - UL Solutions 브랜드 색상 적용:
   - 헤더 배경: Midnight Blue (#122C49)
   - 테이블 헤더: #122C49, 텍스트 White (#FFFFFF)
@@ -152,10 +158,19 @@ Next.js 16 패턴 (필수):
 - 인쇄 스타일 (A4 최적화):
   ```css
   @media print {
-    @page { size: A4; margin: 20mm; }
-    .print-header { position: running(header); }
-    .page-break { break-before: page; }
-    .no-print { display: none !important; }
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    .print-header {
+      position: running(header);
+    }
+    .page-break {
+      break-before: page;
+    }
+    .no-print {
+      display: none !important;
+    }
   }
   ```
 - 표: 테두리 (#D8D9DA), 헤더 배경색 (#122C49)
@@ -180,6 +195,7 @@ Next.js 16 패턴 (필수):
   ```
 
 접근성 요구사항 (/web-design-guidelines - WCAG 2.1 AA):
+
 1. 버튼 접근성
    ```typescript
    <Button
@@ -231,22 +247,26 @@ Next.js 16 패턴 (필수):
    - 진행률 표시: `aria-valuenow`, `aria-valuemin`, `aria-valuemax`
 
 제약사항:
+
 - PDF는 A4 크기 최적화
 - Excel은 5000행 이하 권장
 - 대용량 데이터는 서버 사이드 생성 고려
 
 검증:
+
 - PDF 다운로드 및 인쇄 확인
 - Excel 파일 생성 및 내용 확인
 - 인쇄 미리보기 동작 확인
 
 Playwright 테스트:
+
 - PDF 다운로드 트리거 확인
 - Excel 파일 생성 확인 (다운로드 후 파일 검증)
 - 인쇄 미리보기 모달 동작 확인
 
 완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
-```
+
+````
 
 ### 이행 체크리스트 UI-5
 
@@ -480,4 +500,4 @@ test.describe('Reports', () => {
     });
   });
 });
-```
+````

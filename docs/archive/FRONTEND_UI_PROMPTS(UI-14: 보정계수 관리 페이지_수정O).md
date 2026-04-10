@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -15,7 +16,7 @@
 
 ### 프롬프트
 
-```
+````
 스킬 로드:
 /equipment-management
 /nextjs-16
@@ -80,9 +81,10 @@ Next.js 16 필수 패턴:
      const factors = await getCalibrationFactors(id);
      return <CalibrationFactorListClient equipment={equipment} factors={factors} />;
    }
-   ```
+````
 
 2. 중첩 동적 라우트 (factorId 수정 페이지):
+
    ```typescript
    // apps/frontend/app/equipment/[id]/calibration-factors/[factorId]/edit/page.tsx
    import { PageProps } from 'next';
@@ -97,6 +99,7 @@ Next.js 16 필수 패턴:
    ```
 
 3. useActionState 폼 처리:
+
    ```typescript
    'use client';
    import { useActionState } from 'react';
@@ -120,7 +123,9 @@ Next.js 16 필수 패턴:
    ```
 
 성능 최적화 요구사항 (/vercel-react-best-practices):
+
 1. **bundle-dynamic-imports**: ParameterEditor 동적 로딩 (JSON 에디터 포함)
+
    ```typescript
    const ParameterEditor = dynamic(() => import('./ParameterEditor'), {
      loading: () => <Skeleton className="h-40 w-full" />,
@@ -129,15 +134,17 @@ Next.js 16 필수 패턴:
    ```
 
 2. **async-parallel**: 장비 정보와 보정계수 병렬 로딩
+
    ```typescript
    const [equipment, factors, history] = await Promise.all([
      getEquipment(id),
      getCalibrationFactors(id),
-     getFactorHistory(id)
+     getFactorHistory(id),
    ]);
    ```
 
 3. **rerender-memo**: 이력 타임라인 아이템 메모이제이션
+
    ```typescript
    const MemoizedHistoryItem = memo(HistoryItem);
    ```
@@ -145,12 +152,16 @@ Next.js 16 필수 패턴:
 4. **js-cache-function-results**: JSON 파싱 결과 캐싱
    ```typescript
    const parseParameters = useMemo(() => {
-     try { return JSON.parse(parametersJson); }
-     catch { return {}; }
+     try {
+       return JSON.parse(parametersJson);
+     } catch {
+       return {};
+     }
    }, [parametersJson]);
    ```
 
 디자인 요구사항 (/frontend-design 스킬 활용):
+
 - 파라미터 에디터:
   - JSON 모드 / 키-값 폼 모드 토글
   - JSON 에디터: 구문 강조, 에러 표시
@@ -168,6 +179,7 @@ Next.js 16 필수 패턴:
   - rejected: Brand Red (#CA0123) 배경
 
 접근성 요구사항 (/web-design-guidelines):
+
 - JSON 에디터에 role="textbox" + aria-multiline="true" 추가
 - 키-값 폼 행에 aria-label="파라미터 {index}" 추가
 - 토글 버튼에 aria-pressed 상태 표시
@@ -178,23 +190,27 @@ Next.js 16 필수 패턴:
 - Tab 키로 JSON 에디터 내부 탐색 가능
 
 제약사항:
+
 - 보정계수 이력 영구 보관 (삭제 불가)
 - 현재 적용 중인 계수 강조 (시각적 + aria-current)
 - JSON 파라미터 유효성 검증 필수
 
 검증:
+
 - 보정계수 등록 플로우
 - 승인 플로우
 - Excel 내보내기 테스트
 - pnpm tsc --noEmit
 
 Playwright 테스트:
+
 - 보정계수 등록/수정
 - 승인 플로우
 - Excel 다운로드
 
 완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
-```
+
+````
 
 ### 필수 가이드라인
 
@@ -224,7 +240,7 @@ GET /api/reports/calibration-factors?equipmentId={id}&type={type}&dateFrom={date
 
 // Excel 내보내기
 GET /api/reports/calibration-factors/export?format=xlsx&...filters
-```
+````
 
 ---
 

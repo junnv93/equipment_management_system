@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -137,7 +138,7 @@ test.describe('소프트웨어 관리대장', () => {
 
     // 만료 임박 알림 확인
     const expiringAlert = page.locator('[data-testid="license-expiring-alert"]');
-    if (await expiringAlert.count() > 0) {
+    if ((await expiringAlert.count()) > 0) {
       await expect(expiringAlert.first()).toContainText('만료 예정');
     }
 
