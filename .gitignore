@@ -63,6 +63,9 @@ apps/frontend/tests/e2e/.auth/
 # Temporary shell scripts at root
 /*.sh
 
+# Stray test/debug files at root
+/test-*.js
+
 # Development summary/report files at root (underscore and hyphen variants)
 /*_SUMMARY.md
 /*_COMPLETE.md
