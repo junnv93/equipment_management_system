@@ -24,6 +24,7 @@ describe('CheckoutsService', () => {
   let mockCacheService: Record<string, jest.Mock>;
   let mockEquipmentService: Record<string, jest.Mock>;
   let mockTeamsService: Record<string, jest.Mock>;
+  let mockImportsService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     // 매 테스트마다 새로운 mock 객체 생성
@@ -119,12 +120,14 @@ describe('CheckoutsService', () => {
         },
         {
           provide: EquipmentImportsService,
-          useValue: {
+          useValue: (mockImportsService = {
             findOne: jest.fn(),
             findAll: jest.fn(),
             create: jest.fn(),
             updateStatus: jest.fn(),
-          },
+            onReturnCompleted: jest.fn().mockResolvedValue(undefined),
+            onReturnCanceled: jest.fn().mockResolvedValue(undefined),
+          }),
         },
         {
           provide: EventEmitter2,
@@ -532,6 +535,90 @@ describe('CheckoutsService', () => {
       await expect(
         service.approveReturn(checkoutId, mockApproveReturnDto, mockReq)
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('callback error resilience', () => {
+    const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
+
+    it('cancel: 콜백 실패해도 checkout 상태는 canceled로 유지된다', async () => {
+      const pendingCheckout = {
+        id: checkoutId,
+        status: 'pending',
+        purpose: 'return_to_vendor',
+        requesterId: '550e8400-e29b-41d4-a716-446655440002',
+        version: 1,
+      };
+      const canceledCheckout = { ...pendingCheckout, status: 'canceled', version: 2 };
+
+      // findOne via getOrSet
+      mockCacheService.getOrSet.mockResolvedValue({ ...pendingCheckout });
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
+      // updateWithVersion (returning)
+      mockDrizzle.returning.mockResolvedValueOnce([canceledCheckout]);
+      // callback fails
+      mockImportsService.onReturnCanceled.mockRejectedValueOnce(new Error('CAS 실패'));
+      // getAffectedTeamIds
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
+
+      const result = await service.cancel(checkoutId, 1, mockReq);
+
+      expect(result.status).toBe('canceled');
+      expect(mockImportsService.onReturnCanceled).toHaveBeenCalledWith(checkoutId);
+    });
+
+    it('approveReturn: 콜백 실패해도 checkout 상태는 return_approved로 유지된다', async () => {
+      const returnedCheckout = {
+        id: checkoutId,
+        status: 'returned',
+        purpose: 'return_to_vendor',
+        requesterId: '550e8400-e29b-41d4-a716-446655440002',
+        version: 1,
+      };
+      const approvedReturn = { ...returnedCheckout, status: 'return_approved', version: 2 };
+
+      // findOne via getOrSet
+      mockCacheService.getOrSet.mockResolvedValue({ ...returnedCheckout });
+      // enforceScopeFromCheckout: 장비 사이트/팀 조회
+      mockDrizzle.limit.mockResolvedValueOnce([
+        { site: 'suwon', teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' },
+      ]);
+      // getCheckoutItemsWithFirstEquipment: where thenable
+      const originalThen = (mockDrizzle.where as unknown as Record<string, unknown>).then;
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = jest
+        .fn()
+        .mockImplementationOnce((resolve: (v: unknown) => void) =>
+          resolve([
+            {
+              equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+              equipmentName: 'Test Equipment',
+              managementNumber: 'SUW-E0001',
+            },
+          ])
+        )
+        .mockImplementation((resolve: (v: unknown) => void) => resolve([]));
+      // transaction → updateWithVersion + updateStatusBatch
+      mockDrizzle.returning.mockResolvedValueOnce([approvedReturn]);
+      mockEquipmentService.updateStatusBatch.mockResolvedValue([]);
+      // callback fails
+      mockImportsService.onReturnCompleted.mockRejectedValueOnce(new Error('콜백 실패'));
+      // getAffectedTeamIds
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
+
+      const result = await service.approveReturn(
+        checkoutId,
+        { version: 1, approverId: '550e8400-e29b-41d4-a716-446655440004', comment: '확인' },
+        mockReq
+      );
+
+      // 복원
+      (mockDrizzle.where as unknown as Record<string, unknown>).then = originalThen;
+
+      expect(result.status).toBe('return_approved');
+      expect(mockImportsService.onReturnCompleted).toHaveBeenCalledWith(checkoutId);
     });
   });
 

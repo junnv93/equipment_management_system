@@ -594,6 +594,24 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     emailStrategy: 'immediate',
   },
 
+  [NOTIFICATION_EVENTS.IMPORT_ORPHAN_DETECTED]: {
+    category: 'equipment_import',
+    priority: 'high',
+    titleTemplate: '반입 orphan 감지: {{equipmentName}}',
+    contentTemplate:
+      '{{equipmentName}} 반입이 RETURN_REQUESTED 상태에서 고아 상태로 감지되었습니다. 자동 복구를 시도합니다.',
+    recipientStrategy: {
+      type: 'permission',
+      permission: Permission.APPROVE_EQUIPMENT_IMPORT,
+      scope: 'all',
+    },
+    linkTemplate: '/equipment-imports',
+    entityType: 'equipment_import',
+    entityIdField: 'importId',
+    equipmentIdField: 'equipmentId',
+    emailStrategy: 'immediate',
+  },
+
   // ─── 소프트웨어 유효성 확인 (Software Validation) ───────────────────────
 
   [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED]: {

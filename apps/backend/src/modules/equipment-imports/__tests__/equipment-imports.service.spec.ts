@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { EquipmentImportsService } from '../equipment-imports.service';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { CheckoutsService } from '../../checkouts/checkouts.service';
@@ -239,6 +239,114 @@ describe('EquipmentImportsService', () => {
           rejectionReason: '불필요',
         } as never)
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('onReturnCanceled()', () => {
+    const MOCK_RETURN_IMPORT = {
+      ...MOCK_IMPORT,
+      status: 'return_requested',
+      returnCheckoutId: 'checkout-uuid-1',
+    };
+
+    it('첫 번째 시도에서 성공적으로 상태를 롤백한다', async () => {
+      mockDb.select.mockReturnValue(createSelectChain([MOCK_RETURN_IMPORT]));
+      const txUpdateChain = createUpdateChain([{ id: MOCK_RETURN_IMPORT.id }]);
+      mockDb.update.mockReturnValue(txUpdateChain);
+
+      await service.onReturnCanceled('checkout-uuid-1');
+
+      expect(mockDb.select).toHaveBeenCalled();
+      expect(mockDb.transaction).toHaveBeenCalled();
+    });
+
+    it('ConflictException 시 1회 재시도하여 성공한다', async () => {
+      // 매 시도마다 select가 호출되므로 2번 반환
+      mockDb.select
+        .mockReturnValueOnce(createSelectChain([MOCK_RETURN_IMPORT]))
+        .mockReturnValueOnce(createSelectChain([{ ...MOCK_RETURN_IMPORT, version: 2 }]));
+
+      let txCallCount = 0;
+      mockDb.transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+        txCallCount++;
+        if (txCallCount === 1) {
+          // 첫 번째 시도: CAS 실패 (returning 빈 배열 → ConflictException)
+          const failTx = {
+            ...mockDb,
+            update: jest.fn().mockReturnValue(createUpdateChain([])),
+          };
+          return fn(failTx);
+        }
+        // 두 번째 시도: 성공
+        const successTx = {
+          ...mockDb,
+          update: jest.fn().mockReturnValue(createUpdateChain([{ id: MOCK_RETURN_IMPORT.id }])),
+        };
+        return fn(successTx);
+      });
+
+      await service.onReturnCanceled('checkout-uuid-1');
+
+      expect(txCallCount).toBe(2);
+    });
+
+    it('ConflictException 재시도 후에도 실패하면 예외를 던진다', async () => {
+      mockDb.select.mockReturnValue(createSelectChain([MOCK_RETURN_IMPORT]));
+
+      // 모든 시도에서 CAS 실패
+      mockDb.transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+        const failTx = {
+          ...mockDb,
+          update: jest.fn().mockReturnValue(createUpdateChain([])),
+        };
+        return fn(failTx);
+      });
+
+      await expect(service.onReturnCanceled('checkout-uuid-1')).rejects.toThrow(ConflictException);
+    });
+
+    it('연결된 반입이 없으면 조용히 반환한다', async () => {
+      mockDb.select.mockReturnValue(createSelectChain([]));
+
+      await service.onReturnCanceled('non-existent-checkout');
+
+      expect(mockDb.transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onReturnCompleted()', () => {
+    const MOCK_RETURN_IMPORT = {
+      ...MOCK_IMPORT,
+      status: 'return_requested',
+      returnCheckoutId: 'checkout-uuid-1',
+      equipmentId: 'eq-uuid-1',
+    };
+
+    it('반납 완료 시 import 상태를 returned로 변경한다', async () => {
+      mockDb.select.mockReturnValue(createSelectChain([MOCK_RETURN_IMPORT]));
+      const txUpdateChain = createUpdateChain([{ id: MOCK_RETURN_IMPORT.id }]);
+      mockDb.update.mockReturnValue(txUpdateChain);
+
+      // tx 내부에서 select + update가 여러번 호출됨
+      mockDb.transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+        const tx = {
+          update: jest.fn().mockReturnValue(createUpdateChain([{ id: 'some-id' }])),
+          select: jest.fn().mockReturnValue(createSelectChain([{ version: 1 }])),
+        };
+        return fn(tx);
+      });
+
+      await service.onReturnCompleted('checkout-uuid-1');
+
+      expect(mockDb.transaction).toHaveBeenCalled();
+    });
+
+    it('연결된 반입이 없으면 조용히 반환한다', async () => {
+      mockDb.select.mockReturnValue(createSelectChain([]));
+
+      await service.onReturnCompleted('non-existent-checkout');
+
+      expect(mockDb.transaction).not.toHaveBeenCalled();
     });
   });
 });

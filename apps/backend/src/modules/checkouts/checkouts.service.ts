@@ -1795,8 +1795,9 @@ export class CheckoutsService extends VersionedBaseService {
         try {
           await this.rentalImportsService.onReturnCompleted(uuid);
         } catch (callbackError) {
-          this.logger.warn(
-            `렌탈 반입 완료 콜백 처리 중 오류: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`
+          this.logger.error(
+            `렌탈 반입 완료 콜백 실패 — checkoutId: ${uuid}, purpose: ${checkout.purpose}, error: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`,
+            callbackError instanceof Error ? callbackError.stack : undefined
           );
         }
       }
@@ -2177,8 +2178,9 @@ export class CheckoutsService extends VersionedBaseService {
         try {
           await this.rentalImportsService.onReturnCanceled(uuid);
         } catch (callbackError) {
-          this.logger.warn(
-            `렌탈 반입 취소 롤백 콜백 처리 중 오류: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`
+          this.logger.error(
+            `렌탈 반입 취소 롤백 콜백 실패 — checkoutId: ${uuid}, purpose: ${checkout.purpose}, error: ${callbackError instanceof Error ? callbackError.message : String(callbackError)}`,
+            callbackError instanceof Error ? callbackError.stack : undefined
           );
         }
       }

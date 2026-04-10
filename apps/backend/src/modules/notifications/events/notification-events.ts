@@ -56,6 +56,7 @@ export const NOTIFICATION_EVENTS = {
   IMPORT_CREATED: 'equipmentImport.created',
   IMPORT_APPROVED: 'equipmentImport.approved',
   IMPORT_REJECTED: 'equipmentImport.rejected',
+  IMPORT_ORPHAN_DETECTED: 'equipmentImport.orphanDetected',
 
   // ─── 소프트웨어 유효성 확인 (Software Validation) ───
   SOFTWARE_VALIDATION_SUBMITTED: 'softwareValidation.submitted',

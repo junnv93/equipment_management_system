@@ -861,55 +861,72 @@ export class EquipmentImportsService extends VersionedBaseService {
    * 단 returnCheckoutId 를 null 로 초기화하여 다음 반납 시도 가능하게 함)
    */
   async onReturnCanceled(checkoutId: string): Promise<void> {
-    const result = await this.db
-      .select()
-      .from(equipmentImports)
-      .where(eq(equipmentImports.returnCheckoutId, checkoutId))
-      .limit(1);
+    const MAX_RETRIES = 1;
 
-    if (result.length === 0) {
-      return; // 장비 반입과 연결되지 않은 checkout
-    }
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      // 매 시도마다 최신 상태 조회 (CAS race 방어)
+      const result = await this.db
+        .select()
+        .from(equipmentImports)
+        .where(eq(equipmentImports.returnCheckoutId, checkoutId))
+        .limit(1);
 
-    const equipmentImport = result[0];
-
-    this.logger.log(
-      `Return canceled for equipment import: ${equipmentImport.id} (checkoutId: ${checkoutId})`
-    );
-
-    // import 상태 롤백: return_requested → received + returnCheckoutId 초기화
-    try {
-      await this.db.transaction(async (tx) => {
-        const importResult = await tx
-          .update(equipmentImports)
-          .set({
-            status: EIVal.RECEIVED as EquipmentImportStatus,
-            returnCheckoutId: null,
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(equipmentImports.id, equipmentImport.id),
-              eq(equipmentImports.version, equipmentImport.version),
-              eq(equipmentImports.status, EIVal.RETURN_REQUESTED)
-            )
-          )
-          .returning({ id: equipmentImports.id });
-
-        if (importResult.length === 0) {
-          throw createVersionConflictException();
-        }
-      });
-    } catch (error) {
-      if (error instanceof ConflictException) {
-        this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
+      if (result.length === 0) {
+        return; // 장비 반입과 연결되지 않은 checkout
       }
-      throw error;
-    }
 
-    this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
-    await this.cacheInvalidationHelper.invalidateAllDashboard();
+      const equipmentImport = result[0];
+
+      if (attempt === 0) {
+        this.logger.log(
+          `Return canceled for equipment import: ${equipmentImport.id} (checkoutId: ${checkoutId})`
+        );
+      }
+
+      // import 상태 롤백: return_requested → received + returnCheckoutId 초기화
+      try {
+        await this.db.transaction(async (tx) => {
+          const importResult = await tx
+            .update(equipmentImports)
+            .set({
+              status: EIVal.RECEIVED as EquipmentImportStatus,
+              returnCheckoutId: null,
+              version: sql`version + 1`,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(equipmentImports.id, equipmentImport.id),
+                eq(equipmentImports.version, equipmentImport.version),
+                eq(equipmentImports.status, EIVal.RETURN_REQUESTED)
+              )
+            )
+            .returning({ id: equipmentImports.id });
+
+          if (importResult.length === 0) {
+            throw createVersionConflictException();
+          }
+        });
+
+        // 성공 — 캐시 무효화 후 종료
+        this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
+        await this.cacheInvalidationHelper.invalidateAllDashboard();
+        return;
+      } catch (error) {
+        if (error instanceof ConflictException && attempt < MAX_RETRIES) {
+          this.logger.warn(
+            `onReturnCanceled CAS conflict (attempt ${attempt + 1}/${MAX_RETRIES + 1}), retrying with fresh version — importId: ${equipmentImport.id}`
+          );
+          this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
+          continue;
+        }
+
+        if (error instanceof ConflictException) {
+          this.cacheInvalidationHelper.invalidateEquipmentImportsWithEquipment();
+        }
+        throw error;
+      }
+    }
   }
 
   /**
