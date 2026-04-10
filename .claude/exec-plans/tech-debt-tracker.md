@@ -7,6 +7,9 @@
 
 ## 미완료 항목
 
+- [ ] 감사로그 react-window 가상화 — `apps/frontend/components/audit-logs/AuditTimelineFeed.tsx` — 2026-04-10 — 현재 IntersectionObserver 무한 스크롤만 적용. 수백 건 누적 시 DOM 노드 과다. react-window VariableSizeList로 가상화 필요 (날짜 그룹 헤더 + 로그 엔트리 flat 배열 필요)
+- [ ] 감사로그 커서 모드 백엔드 unit test — `apps/backend/src/modules/audit/audit.service.ts:findAllCursor` — 2026-04-10 — findAllCursor keyset 조건, 커서 인코딩/디코딩, Invalid cursor fallback, summary 첫 페이지 only 검증
+
 - [x] `VERSION_CONFLICT` error code SSOT 부재 — 해결: 2026-04-09 — `bc7565cb` `ErrorCode.VersionConflict` 를 `packages/schemas/src/errors.ts` 에 추가. 백엔드 `versioned-base.service.ts` + E2E s25-cas-concurrent-approval 이 SSOT import 사용. 로컬 리터럴 제거
 - [x] `equipment-imports.service.approve` CAS 원자성 — 해결: 2026-04-09 — `bc7565cb` `CasPrecondition[]` 을 `VersionedBaseService.updateWithVersion` 에 추가. `equipment-imports.service.ts` approve/reject 가 status=PENDING 조건을 WHERE 절에 원자적 병합. s25-04 assertion 을 "409 only" 로 엄격화
 - [x] create history 응답에 `*Name` 필드 누락 — 해결: 2026-04-10 — `validateAndGetUserId` → `validateAndGetUser`로 리팩토링하여 name 포함 반환. create 응답에 `*ByName` 필드 추가. 타입-런타임 일치
@@ -20,13 +23,13 @@
 - [x] CLAUDE.md 420줄 엔트로피 → 295줄 — 해결: 2026-04-09 — tech-debt-round3 harness. Behavioral Guidelines, Production Checklist, PostToolUse Hook → `docs/references/` 분리. Deep-Dive References 테이블에 3건 추가
 - [x] S27-08 `'tech_manager'` 유효하지 않은 역할명 + `process.env` 직접 참조 — 해결: 2026-04-09 — `add7b0b4`. `'technical_manager'` 로 수정 + `BASE_URLS.BACKEND` SSOT import 통일. verify-implementation 이슈 #1/#2/#3
 
-- [ ] `onReturnCompleted`/`onReturnCanceled` 콜백 실패 시 silent swallow — `apps/backend/src/modules/checkouts/checkouts.service.ts:1795-1801,2177-2183` — 2026-04-09 — checkout 상태 커밋 후 콜백 실패 시 import 가 `RETURN_REQUESTED` 에 영구 잠금. 현재 `logger.warn` 으로만 처리. 수정안: (1) `logger.error` 격상으로 운영 알림 트리거, (2) compensation queue 등록, (3) scheduled job 으로 orphan 탐지. 출처: review-architecture Warning
+- [x] `onReturnCompleted`/`onReturnCanceled` 콜백 실패 시 silent swallow — 해결: 2026-04-10 — `logger.warn` → `logger.error` 격상 (checkoutId/purpose 포함). 6시간 주기 orphan detection scheduler 추가 (`import-orphan-scheduler.ts`). 콜백 에러 resilience unit test 추가. exec-plan: `checkout-callback-resilience`
 
-- [ ] `onReturnCanceled` CAS version race 조건 — `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts:882-903` — 2026-04-09 — 조회-업데이트 사이 다른 프로세스가 version 변경 시 rollback 실패 → ConflictException 이 checkouts.service catch 에서 swallow. 극히 드문 조건이지만 import 영구 잠금 가능. 수정안: 내부 retry 1회 또는 ConflictException 별도 처리. 출처: review-architecture Warning
+- [x] `onReturnCanceled` CAS version race 조건 — 해결: 2026-04-10 — `onReturnCanceled`에 1회 CAS retry 구현 (매 시도마다 re-read). ConflictException 시 fresh version으로 재시도. unit test 3건 추가 (성공/retry 성공/retry 실패). exec-plan: `checkout-callback-resilience`
 
-- [ ] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — `packages/db/src/schema/audit-logs.ts` — 2026-04-09 — UL-QP-18 장기 보관 요구 + write-heavy 누적 → 수년 후 테이블 비대화. PostgreSQL declarative partitioning (`createdAt` 기준 월/분기) 또는 아카이빙 잡 검토. 즉시 필요는 아니나 설계 판단 필요. 아키텍처 리뷰(2026-04-09)에서 발견
+- [ ] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — `packages/db/src/schema/audit-logs.ts` — 2026-04-09 — UL-QP-18 장기 보관 요구 + write-heavy 누적 → 수년 후 테이블 비대화. PostgreSQL declarative partitioning (`createdAt` 기준 월/분기) 또는 아카이빙 잡 검토. 2026-04-10 커서 페이지네이션 도입으로 deep-page OFFSET 성능 문제는 해결됨 — 파티셔닝은 순수 스토리지 관리 관점에서만 필요
 
-- [ ] 감사로그 프론트엔드 가상화/무한스크롤 도입 — `apps/frontend/app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx` — 2026-04-09 — 현재 offset 페이지네이션 + 직접 `.map()` 렌더링. 대용량 환경에서 깊은 페이지 이동 시 누적 렌더 부담. `useInfiniteQuery` + 커서 기반 API + React Window/Virtuoso. 백엔드 `findAll()`에 `timestamp DESC` 커서 오버로드 필요 (기존 인덱스 재사용 가능). 별도 Mode 2 harness로 진행
+- [x] 감사로그 프론트엔드 가상화/무한스크롤 도입 — 부분 해결: 2026-04-10 — 커서 기반 API(`findAllCursor`) + `useInfiniteQuery` + IntersectionObserver 무한 스크롤 구현 완료. offset 페이지네이션 버튼 제거. `(timestamp DESC, id DESC)` 복합 인덱스 추가. react-window 가상화는 별도 tech-debt으로 분리 (S1)
 
 - [x] Frontend/Backend Dockerfile hardening 검증 — 해결: 2026-04-09 — `docker compose -f docker-compose.prod.yml build backend frontend` 실제 빌드 성공. 루트 원인 수정: `preinstall` 훅이 참조하는 `scripts/check-no-stale-lockfiles.mjs` 를 deps 레이어에 `COPY` 추가(backend/frontend 양쪽), prod-deps stage 는 husky(`prepare`) devDep 의존을 `--ignore-scripts` 로 건너뛰어 `--frozen-lockfile` 무결성만 유지. 2차 빌드 캐시 히트 **100%** (backend/frontend 모두 전 레이어 CACHED). 이미지 inspect 검증: Backend `USER=node` + `ENTRYPOINT=[/sbin/tini --]` + HEALTHCHECK `/api/monitoring/health` (30s/5s/3회) + `CMD=node apps/backend/dist/main.js`, 1.52GB. Frontend `USER=node` + `ENTRYPOINT=[/sbin/tini --]` + HEALTHCHECK `/api/health` + `CMD=node apps/frontend/server.js`, standalone server.js 경로 `/app/apps/frontend/server.js` 존재 확인, 344MB — 2026-04-09
 

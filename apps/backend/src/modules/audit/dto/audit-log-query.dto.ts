@@ -32,6 +32,7 @@ export const auditLogQuerySchema = z.object({
     (val) => (val ? Number(val) : undefined),
     z.number().int().min(1).max(100).optional()
   ),
+  cursor: z.string().optional(),
 });
 
 export type AuditLogQueryInput = z.infer<typeof auditLogQuerySchema>;

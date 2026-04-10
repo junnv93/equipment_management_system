@@ -6,12 +6,19 @@ import type {
   AuditLogDetails,
   AuditLog,
   AuditLogFilter,
+  CursorPaginatedAuditLogsResponse,
   EntityAuditLogsResponse,
 } from '@equipment-management/schemas';
 import type { PaginatedResponse } from './types';
 
 // 하위 컴포넌트 re-export (audit-api를 통해 접근하는 파일들을 위해)
-export type { AuditLogDetails, AuditLog, AuditLogFilter, EntityAuditLogsResponse };
+export type {
+  AuditLogDetails,
+  AuditLog,
+  AuditLogFilter,
+  CursorPaginatedAuditLogsResponse,
+  EntityAuditLogsResponse,
+};
 
 /**
  * 감사 로그 API
@@ -37,6 +44,28 @@ export const auditApi = {
       : API_ENDPOINTS.AUDIT_LOGS.LIST;
     const response = await apiClient.get(url);
     return transformPaginatedResponse<AuditLog>(response);
+  },
+
+  /**
+   * 커서 기반 감사 로그 목록 조회
+   */
+  async getAuditLogsCursor(filter: AuditLogFilter = {}): Promise<CursorPaginatedAuditLogsResponse> {
+    const params = new URLSearchParams();
+
+    if (filter.userId) params.append('userId', filter.userId);
+    if (filter.entityType) params.append('entityType', filter.entityType);
+    if (filter.entityId) params.append('entityId', filter.entityId);
+    if (filter.action) params.append('action', filter.action);
+    if (filter.startDate) params.append('startDate', String(filter.startDate));
+    if (filter.endDate) params.append('endDate', String(filter.endDate));
+    if (filter.limit) params.append('limit', filter.limit.toString());
+    if (filter.cursor) params.append('cursor', filter.cursor);
+
+    const url = params.toString()
+      ? `${API_ENDPOINTS.AUDIT_LOGS.LIST}?${params.toString()}`
+      : API_ENDPOINTS.AUDIT_LOGS.LIST;
+    const response = await apiClient.get(url);
+    return transformSingleResponse<CursorPaginatedAuditLogsResponse>(response);
   },
 
   /**

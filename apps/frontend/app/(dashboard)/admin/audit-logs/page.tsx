@@ -11,17 +11,19 @@
  * - technical_manager: 소속 팀 로그만 (서버 강제)
  * - lab_manager: 소속 사이트 로그만 (서버 강제)
  * - quality_manager/system_admin: 전체 로그
+ *
+ * ✅ 커서 기반 무한 스크롤:
+ * - SSR 첫 페이지 → useInfiniteQuery initialData로 전달
  */
 import { Suspense } from 'react';
 import { TablePageSkeleton } from '@/components/ui/list-page-skeleton';
 import AuditLogsContent from './AuditLogsContent';
-import { getAuditLogsList } from '@/lib/api/audit-api-server';
+import { getAuditLogsListCursor } from '@/lib/api/audit-api-server';
 import {
-  convertFiltersToApiParams,
+  convertFiltersToCursorParams,
   parseAuditLogFiltersFromSearchParams,
 } from '@/lib/utils/audit-log-filter-utils';
-import type { PaginatedResponse } from '@/lib/api/types';
-import type { AuditLog } from '@/lib/api/audit-api';
+import type { CursorPaginatedAuditLogsResponse } from '@equipment-management/schemas';
 
 export default function AuditLogsPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -51,11 +53,11 @@ async function AuditLogsAsync({
 }) {
   const searchParams = await searchParamsPromise;
   const filters = parseAuditLogFiltersFromSearchParams(searchParams);
-  const apiParams = convertFiltersToApiParams(filters);
+  const cursorParams = convertFiltersToCursorParams(filters);
 
-  let initialData: PaginatedResponse<AuditLog> | null = null;
+  let initialData: CursorPaginatedAuditLogsResponse | null = null;
   try {
-    initialData = await getAuditLogsList(apiParams);
+    initialData = await getAuditLogsListCursor(cursorParams);
   } catch {
     // 403/401은 서버 API 클라이언트가 처리 (리다이렉트)
     // 기타 에러는 클라이언트에서 재시도

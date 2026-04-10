@@ -518,6 +518,7 @@ export const queryKeys = {
     all: ['audit-logs'] as const,
     lists: () => [...queryKeys.auditLogs.all, 'list'] as const,
     list: (filters: object) => [...queryKeys.auditLogs.lists(), filters] as const,
+    infiniteList: (filters: object) => [...queryKeys.auditLogs.all, 'infinite', filters] as const,
     detail: (id: string) => [...queryKeys.auditLogs.all, 'detail', id] as const,
   },
   settings: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ChevronRight, User, MonitorDot, History, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -74,15 +74,19 @@ interface AuditTimelineFeedProps {
   getEntityTypeLabel: (entityType: string) => string;
   /** 필터 전환 등으로 데이터 refetch 중일 때 로딩 오버레이 표시 */
   isRefetching?: boolean;
+  /** 다음 페이지 존재 여부 (무한 스크롤) */
+  hasNextPage?: boolean;
+  /** 다음 페이지 로딩 중 */
+  isFetchingNextPage?: boolean;
+  /** 다음 페이지 로드 콜백 */
+  onLoadMore?: () => void;
 }
 
 /**
- * 감사 로그 타임라인 피드
+ * 감사 로그 타임라인 피드 (무한 스크롤)
  *
- * - 날짜별 그룹 헤더 (오늘/어제/날짜)
- * - 각 엔트리: 시간 | 도트+선 | 행위자 + 액션배지 + 대상 + (diff 미리보기)
- * - 삭제 액션: 경계 강조 (위험 시각화)
- * - 행 클릭: 우측 슬라이드 패널 열기
+ * IntersectionObserver로 하단 센티널 감지 → onLoadMore 호출.
+ * 기존 날짜 그룹 헤더 + 타임라인 UI 유지.
  */
 export function AuditTimelineFeed({
   logs,
@@ -90,6 +94,9 @@ export function AuditTimelineFeed({
   getActionLabel,
   getEntityTypeLabel,
   isRefetching = false,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  onLoadMore,
 }: AuditTimelineFeedProps) {
   const t = useTranslations('audit');
   const tCommon = useTranslations('common');
@@ -110,6 +117,31 @@ export function AuditTimelineFeed({
     }
     return map;
   }, [groups]);
+
+  // ── 무한 스크롤: IntersectionObserver ────────────────────────
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+
+  const handleIntersect = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        onLoadMoreRef.current?.();
+      }
+    },
+    [hasNextPage, isFetchingNextPage]
+  );
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(handleIntersect, {
+      rootMargin: '200px',
+    });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [handleIntersect]);
 
   if (logs.length === 0) {
     return (
@@ -287,6 +319,14 @@ export function AuditTimelineFeed({
             </div>
           </div>
         ))}
+
+        {/* ── 무한 스크롤 센티널 ── */}
+        <div ref={sentinelRef} className="h-1" aria-hidden="true" />
+        {isFetchingNextPage && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
       </div>
     </div>
   );

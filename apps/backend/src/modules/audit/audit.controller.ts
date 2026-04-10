@@ -77,6 +77,12 @@ export class AuditController {
     type: String,
     description: '종료 날짜 (ISO 8601 형식)',
   })
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    type: String,
+    description: '커서 토큰 (page와 상호 배타, 커서 기반 페이지네이션)',
+  })
   @ApiResponse({ status: 200, description: '감사 로그 목록 조회 성공' })
   @ApiResponse({ status: 400, description: '잘못된 쿼리 파라미터' })
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
@@ -107,8 +113,14 @@ export class AuditController {
       userTeamId: scope.teamId,
     };
 
+    // cursor 파라미터 → 커서 모드, page 파라미터 → offset 모드 (하위 호환)
+    if (query.cursor !== undefined || query.page === undefined) {
+      const limit = Math.min(query.limit ?? 30, 100);
+      return this.auditService.findAllCursor(filter, query.cursor, limit);
+    }
+
     const pagination: PaginationOptions = {
-      page: query.page ?? 1,
+      page: query.page,
       limit: Math.min(query.limit ?? 20, 100),
     };
 

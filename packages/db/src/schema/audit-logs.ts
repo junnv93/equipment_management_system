@@ -90,6 +90,11 @@ export const auditLogs = pgTable(
       table.entityType,
       table.entityId
     ),
+    // 커서 기반 페이지네이션: (timestamp DESC, id DESC) keyset seek
+    timestampIdCursorIdx: index('audit_logs_timestamp_id_cursor_idx').on(
+      table.timestamp.desc(),
+      table.id.desc()
+    ),
   })
 );
 

@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, sql, or, lt, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   auditLogs,
@@ -18,6 +18,7 @@ import {
   type AuditEntityType,
   type CreateAuditLogDto,
   type AuditLogFilter,
+  type CursorPaginatedAuditLogsResponse,
 } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
@@ -114,40 +115,7 @@ export class AuditService {
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const conditions: SQL[] = [];
-
-        if (filter.userId) {
-          conditions.push(eq(auditLogs.userId, filter.userId));
-        }
-
-        if (filter.entityType) {
-          conditions.push(eq(auditLogs.entityType, filter.entityType));
-        }
-
-        if (filter.entityId) {
-          conditions.push(eq(auditLogs.entityId, filter.entityId));
-        }
-
-        if (filter.action) {
-          conditions.push(eq(auditLogs.action, filter.action));
-        }
-
-        if (filter.startDate) {
-          conditions.push(gte(auditLogs.timestamp, new Date(filter.startDate)));
-        }
-
-        if (filter.endDate) {
-          conditions.push(lte(auditLogs.timestamp, new Date(filter.endDate)));
-        }
-
-        // RBAC 스코프 필터 (서버 강제 — 클라이언트 우회 불가)
-        if (filter.userSite) {
-          conditions.push(eq(auditLogs.userSite, filter.userSite));
-        }
-        if (filter.userTeamId) {
-          conditions.push(eq(auditLogs.userTeamId, filter.userTeamId));
-        }
-
+        const conditions = this.buildFilterConditions(filter);
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
         // GROUP BY action + 페이지네이션 아이템을 병렬 실행
@@ -193,6 +161,138 @@ export class AuditService {
       },
       CACHE_TTL.MEDIUM
     );
+  }
+
+  /**
+   * 커서 기반 감사 로그 조회
+   *
+   * keyset pagination: (timestamp DESC, id DESC) 복합 커서로 O(1) seek.
+   * summary는 첫 페이지(cursor 없음)에서만 포함.
+   */
+  async findAllCursor(
+    filter: AuditLogFilter,
+    cursor?: string,
+    limit = 30
+  ): Promise<CursorPaginatedAuditLogsResponse> {
+    const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}cursor:${JSON.stringify(filter)}:${cursor ?? 'first'}:${limit}`;
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const conditions = this.buildFilterConditions(filter);
+
+        // 커서 디코딩 → keyset WHERE 조건 추가
+        let validCursor = false;
+        if (cursor) {
+          try {
+            const decoded = JSON.parse(Buffer.from(cursor, 'base64').toString('utf-8')) as {
+              t: string;
+              i: string;
+            };
+            const cursorTimestamp = new Date(decoded.t);
+            if (isNaN(cursorTimestamp.getTime()) || typeof decoded.i !== 'string') {
+              throw new Error('malformed cursor fields');
+            }
+            // (timestamp, id) < (cursor.t, cursor.i) — row value comparison
+            conditions.push(
+              or(
+                lt(auditLogs.timestamp, cursorTimestamp),
+                and(eq(auditLogs.timestamp, cursorTimestamp), lt(auditLogs.id, decoded.i))
+              )!
+            );
+            validCursor = true;
+          } catch {
+            this.logger.warn(`Invalid cursor token — treating as first page`);
+          }
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        // 첫 페이지(커서 없거나 무효): summary 병렬 실행, 유효한 후속 페이지: items만
+        const fetchLimit = limit + 1; // hasMore 감지용
+        const isFirstPage = !validCursor;
+
+        const [items, summaryResult] = await Promise.all([
+          this.db
+            .select()
+            .from(auditLogs)
+            .where(whereClause)
+            .orderBy(desc(auditLogs.timestamp), desc(auditLogs.id))
+            .limit(fetchLimit),
+          isFirstPage
+            ? this.db
+                .select({
+                  action: auditLogs.action,
+                  count: sql<number>`count(*)`,
+                })
+                .from(auditLogs)
+                .where(whereClause)
+                .groupBy(auditLogs.action)
+            : Promise.resolve(null),
+        ]);
+
+        const hasMore = items.length > limit;
+        const pageItems = hasMore ? items.slice(0, limit) : items;
+
+        // 다음 커서: 마지막 아이템의 (timestamp, id) 인코딩
+        let nextCursor: string | null = null;
+        if (hasMore && pageItems.length > 0) {
+          const lastItem = pageItems[pageItems.length - 1];
+          nextCursor = Buffer.from(
+            JSON.stringify({
+              t: new Date(lastItem.timestamp).toISOString(),
+              i: lastItem.id,
+            })
+          ).toString('base64');
+        }
+
+        // 첫 페이지 summary 파생
+        let summary: Record<string, number> | undefined;
+        if (summaryResult) {
+          summary = {};
+          for (const row of summaryResult) {
+            summary[row.action] = Number(row.count);
+          }
+        }
+
+        return { items: pageItems, nextCursor, hasMore, summary };
+      },
+      CACHE_TTL.MEDIUM
+    );
+  }
+
+  /**
+   * 필터 조건 빌드 (findAll, findAllCursor 공용)
+   */
+  private buildFilterConditions(filter: AuditLogFilter): SQL[] {
+    const conditions: SQL[] = [];
+
+    if (filter.userId) {
+      conditions.push(eq(auditLogs.userId, filter.userId));
+    }
+    if (filter.entityType) {
+      conditions.push(eq(auditLogs.entityType, filter.entityType));
+    }
+    if (filter.entityId) {
+      conditions.push(eq(auditLogs.entityId, filter.entityId));
+    }
+    if (filter.action) {
+      conditions.push(eq(auditLogs.action, filter.action));
+    }
+    if (filter.startDate) {
+      conditions.push(gte(auditLogs.timestamp, new Date(filter.startDate)));
+    }
+    if (filter.endDate) {
+      conditions.push(lte(auditLogs.timestamp, new Date(filter.endDate)));
+    }
+    if (filter.userSite) {
+      conditions.push(eq(auditLogs.userSite, filter.userSite));
+    }
+    if (filter.userTeamId) {
+      conditions.push(eq(auditLogs.userTeamId, filter.userTeamId));
+    }
+
+    return conditions;
   }
 
   /**

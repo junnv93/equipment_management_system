@@ -86,7 +86,7 @@ export function parseAuditLogFiltersFromSearchParams(
 }
 
 /**
- * UI 필터를 API 쿼리 파라미터로 변환
+ * UI 필터를 API 쿼리 파라미터로 변환 (offset 모드)
  * 빈 문자열 → undefined (파라미터 생략) — SSOT: AuditLogFilter (schemas)
  */
 export function convertFiltersToApiParams(filters: UIAuditLogFilters): AuditLogFilter {
@@ -98,6 +98,20 @@ export function convertFiltersToApiParams(filters: UIAuditLogFilters): AuditLogF
     endDate: filters.endDate || undefined,
     page: filters.page,
     limit: filters.limit,
+  };
+}
+
+/**
+ * UI 필터를 커서 모드 API 파라미터로 변환
+ * page/limit 제외 — 커서 모드에서는 cursor 토큰과 limit만 사용
+ */
+export function convertFiltersToCursorParams(filters: UIAuditLogFilters): AuditLogFilter {
+  return {
+    entityType: filters.entityType || undefined,
+    action: filters.action || undefined,
+    userId: filters.userId || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
   };
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
@@ -25,16 +25,19 @@ import { AuditTimelineFeed } from '@/components/audit-logs/AuditTimelineFeed';
 import { AuditDetailSheet } from '@/components/audit-logs/AuditDetailSheet';
 import { useToast } from '@/components/ui/use-toast';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { auditApi, type AuditLog } from '@/lib/api/audit-api';
+import {
+  auditApi,
+  type AuditLog,
+  type CursorPaginatedAuditLogsResponse,
+} from '@/lib/api/audit-api';
 import { apiClient } from '@/lib/api/api-client';
-import type { PaginatedResponse } from '@/lib/api/types';
 import {
   parseAuditLogFiltersFromSearchParams,
-  convertFiltersToApiParams,
+  convertFiltersToCursorParams,
   countActiveFilters,
   type UIAuditLogFilters,
 } from '@/lib/utils/audit-log-filter-utils';
-import { ChevronLeft, ChevronRight, RefreshCw, Download, Info } from 'lucide-react';
+import { RefreshCw, Download, Info } from 'lucide-react';
 import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES } from '@equipment-management/schemas';
 import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
 import {
@@ -42,13 +45,11 @@ import {
   resolveDataScope,
   AUDIT_LOG_SCOPE,
   API_ENDPOINTS,
-  DEFAULT_PAGE_SIZE,
 } from '@equipment-management/shared-constants';
 import {
   AUDIT_MOTION,
   AUDIT_FILTER_TOKENS,
   AUDIT_HEADER_TOKENS,
-  AUDIT_PAGINATION_TOKENS,
   AUDIT_TIMELINE_TOKENS,
   AUDIT_FILTER_RESET_TOKENS,
   getAuditActionChipClasses,
@@ -58,7 +59,7 @@ import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 interface AuditLogsContentProps {
-  initialData: PaginatedResponse<AuditLog> | null;
+  initialData: CursorPaginatedAuditLogsResponse | null;
 }
 
 export default function AuditLogsContent({ initialData }: AuditLogsContentProps) {
@@ -72,7 +73,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
 
   // URL이 SSOT — 필터 파싱
   const filters = parseAuditLogFiltersFromSearchParams(searchParams);
-  const apiParams = convertFiltersToApiParams(filters);
+  const cursorParams = convertFiltersToCursorParams(filters);
   const activeFilterCount = countActiveFilters(filters);
 
   // 역할 기반 스코프
@@ -89,13 +90,34 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // 감사 로그 목록 쿼리
-  const { data, refetch, isRefetching } = useQuery({
-    queryKey: queryKeys.auditLogs.list(apiParams),
-    queryFn: () => auditApi.getAuditLogs(apiParams),
-    placeholderData: initialData ?? undefined,
-    ...QUERY_CONFIG.AUDIT_LOGS,
-  });
+  // 커서 기반 무한 스크롤 쿼리
+  const { data, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: queryKeys.auditLogs.infiniteList(cursorParams),
+      queryFn: ({ pageParam }) =>
+        auditApi.getAuditLogsCursor({ ...cursorParams, cursor: pageParam, limit: 30 }),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      ...(initialData
+        ? {
+            initialData: {
+              pages: [initialData],
+              pageParams: [undefined],
+            },
+          }
+        : {}),
+      ...QUERY_CONFIG.AUDIT_LOGS,
+    });
+
+  // 전체 로그 flat 목록
+  const logs = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data?.pages]);
+
+  // summary는 첫 페이지에서만
+  const summary = data?.pages[0]?.summary;
+  const totalCount = useMemo(() => {
+    if (!summary) return 0;
+    return Object.values(summary).reduce((sum, count) => sum + count, 0);
+  }, [summary]);
 
   // URL 파라미터 업데이트 (필터)
   const updateFilters = useCallback(
@@ -108,18 +130,14 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
           newParams.set(key, String(value));
         }
       });
-      if (!('page' in updates)) newParams.delete('page');
+      // 커서 모드: page 파라미터 불필요
+      newParams.delete('page');
       router.push(`?${newParams.toString()}`);
     },
     [router, searchParams]
   );
 
   const handleReset = useCallback(() => router.push('?'), [router]);
-
-  const handlePageChange = useCallback(
-    (newPage: number) => updateFilters({ page: newPage }),
-    [updateFilters]
-  );
 
   const handleRowClick = (log: AuditLog) => {
     setSelectedLog(log);
@@ -130,11 +148,11 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
     setIsExporting(true);
     try {
       const params = new URLSearchParams({ format });
-      if (apiParams.userId) params.append('userId', apiParams.userId);
-      if (apiParams.entityType) params.append('entityType', apiParams.entityType);
-      if (apiParams.action) params.append('action', apiParams.action);
-      if (apiParams.startDate) params.append('startDate', String(apiParams.startDate));
-      if (apiParams.endDate) params.append('endDate', String(apiParams.endDate));
+      if (cursorParams.userId) params.append('userId', cursorParams.userId);
+      if (cursorParams.entityType) params.append('entityType', cursorParams.entityType);
+      if (cursorParams.action) params.append('action', cursorParams.action);
+      if (cursorParams.startDate) params.append('startDate', String(cursorParams.startDate));
+      if (cursorParams.endDate) params.append('endDate', String(cursorParams.endDate));
 
       const response = await apiClient.get(
         `${API_ENDPOINTS.AUDIT_LOGS.EXPORT}?${params.toString()}`,
@@ -159,14 +177,6 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
     }
   };
 
-  const logs = data?.data ?? [];
-  const pagination = data?.meta?.pagination ?? {
-    total: 0,
-    pageSize: DEFAULT_PAGE_SIZE,
-    currentPage: 1,
-    totalPages: 1,
-  };
-
   return (
     <div className={getPageContainerClasses('list')}>
       {/* ── 헤더 ──────────────────────────────────────────────── */}
@@ -186,7 +196,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
 
         <div className={AUDIT_HEADER_TOKENS.actionsGroup}>
           <span className={AUDIT_HEADER_TOKENS.statsBadge}>
-            {t('totalLogs', { count: pagination.total.toLocaleString() })}
+            {t('totalLogs', { count: totalCount.toLocaleString() })}
           </span>
           <Button
             variant="ghost"
@@ -219,8 +229,8 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
 
       {/* ── 요약 바 ────────────────────────────────────────────── */}
       <AuditSummaryBar
-        total={pagination.total}
-        actionCounts={data?.meta?.summary}
+        total={totalCount}
+        actionCounts={summary}
         activeAction={filters.action}
         onActionChange={(action) => updateFilters({ action })}
       />
@@ -335,7 +345,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
         </div>
       </div>
 
-      {/* ── 타임라인 피드 ────────────────────────────────────────── */}
+      {/* ── 타임라인 피드 (무한 스크롤) ──────────────────────────── */}
       <div className={AUDIT_TIMELINE_TOKENS.container}>
         <AuditTimelineFeed
           logs={logs}
@@ -343,50 +353,11 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
           getActionLabel={getActionLabel}
           getEntityTypeLabel={getEntityTypeLabel}
           isRefetching={isRefetching}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          onLoadMore={() => fetchNextPage()}
         />
       </div>
-
-      {/* ── 페이지네이션 ─────────────────────────────────────────── */}
-      {logs.length > 0 && (
-        <div className="flex items-center justify-between">
-          <div className={AUDIT_PAGINATION_TOKENS.info}>
-            {t('showingRange', {
-              total: pagination.total.toLocaleString(),
-              start: ((pagination.currentPage - 1) * pagination.pageSize + 1).toLocaleString(),
-              end: Math.min(
-                pagination.currentPage * pagination.pageSize,
-                pagination.total
-              ).toLocaleString(),
-            })}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage <= 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              {tc('pagination.previous')}
-            </Button>
-            <span className={AUDIT_PAGINATION_TOKENS.pageNumber}>
-              {tc('pagination.pageOf', {
-                current: pagination.currentPage,
-                total: pagination.totalPages,
-              })}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage >= pagination.totalPages}
-            >
-              {tc('pagination.next')}
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* ── 상세 슬라이드 패널 ───────────────────────────────────── */}
       <AuditDetailSheet open={sheetOpen} onOpenChange={setSheetOpen} log={selectedLog} />

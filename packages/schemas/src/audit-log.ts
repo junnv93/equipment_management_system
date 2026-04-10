@@ -213,6 +213,8 @@ export interface AuditLogFilter {
   endDate?: string | Date;
   page?: number;
   limit?: number;
+  /** 커서 기반 페이지네이션 토큰 (opaque base64). page와 상호 배타 */
+  cursor?: string;
   /** RBAC: 사이트 스코프 (lab_manager) — 서버 강제 */
   userSite?: string;
   /** RBAC: 팀 스코프 (technical_manager) — 서버 강제 */
@@ -236,6 +238,19 @@ export interface AuditLogPaginationMeta {
 export interface AuditLogsResponse {
   items: AuditLog[];
   meta: AuditLogPaginationMeta;
+}
+
+/**
+ * 커서 기반 페이지네이션 응답
+ *
+ * summary는 첫 페이지(cursor=undefined)에서만 포함.
+ * 후속 페이지는 items + nextCursor + hasMore만 반환.
+ */
+export interface CursorPaginatedAuditLogsResponse {
+  items: AuditLog[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  summary?: Record<string, number>;
 }
 
 /**

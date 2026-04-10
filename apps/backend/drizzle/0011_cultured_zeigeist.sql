@@ -1,0 +1,1 @@
+CREATE INDEX "audit_logs_timestamp_id_cursor_idx" ON "audit_logs" USING btree ("timestamp" DESC NULLS LAST,"id" DESC NULLS LAST);

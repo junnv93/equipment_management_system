@@ -13,9 +13,12 @@
  */
 
 import { createServerApiClient } from './server-api-client';
-import { transformPaginatedResponse } from './utils/response-transformers';
+import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import type { AuditLogFilter } from '@equipment-management/schemas';
+import type {
+  AuditLogFilter,
+  CursorPaginatedAuditLogsResponse,
+} from '@equipment-management/schemas';
 import type { PaginatedResponse } from './types';
 import type { AuditLog } from './audit-api';
 
@@ -42,4 +45,26 @@ export async function getAuditLogsList(
     : API_ENDPOINTS.AUDIT_LOGS.LIST;
   const response = await apiClient.get(url);
   return transformPaginatedResponse<AuditLog>(response);
+}
+
+/**
+ * 감사 로그 커서 기반 조회 (Server Component용 — 첫 페이지)
+ */
+export async function getAuditLogsListCursor(
+  query: AuditLogFilter = {}
+): Promise<CursorPaginatedAuditLogsResponse> {
+  const apiClient = await createServerApiClient();
+  const params = new URLSearchParams();
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '' && key !== 'page') {
+      params.append(key, String(value));
+    }
+  });
+
+  const url = params.toString()
+    ? `${API_ENDPOINTS.AUDIT_LOGS.LIST}?${params.toString()}`
+    : API_ENDPOINTS.AUDIT_LOGS.LIST;
+  const response = await apiClient.get(url);
+  return transformSingleResponse<CursorPaginatedAuditLogsResponse>(response);
 }
