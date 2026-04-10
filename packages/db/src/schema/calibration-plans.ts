@@ -95,6 +95,9 @@ export const calibrationPlans = pgTable(
       siteIdIdx: index('calibration_plans_site_id_idx').on(table.siteId),
       statusIdx: index('calibration_plans_status_idx').on(table.status),
       createdByIdx: index('calibration_plans_created_by_idx').on(table.createdBy),
+      approvedByIdx: index('calibration_plans_approved_by_idx').on(table.approvedBy),
+      reviewedByIdx: index('calibration_plans_reviewed_by_idx').on(table.reviewedBy),
+      rejectedByIdx: index('calibration_plans_rejected_by_idx').on(table.rejectedBy),
       parentPlanIdIdx: index('calibration_plans_parent_plan_id_idx').on(table.parentPlanId),
       isLatestVersionIdx: index('calibration_plans_is_latest_version_idx').on(
         table.isLatestVersion

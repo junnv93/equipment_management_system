@@ -136,9 +136,11 @@ export class EquipmentHistoryService {
 
   /**
    * 사용자가 데이터베이스에 존재하는지 확인
-   * 사용자가 존재하면 userId를 반환하고, 존재하지 않으면 null을 반환합니다.
+   * 사용자가 존재하면 { id, name }을 반환하고, 존재하지 않으면 null을 반환합니다.
    */
-  private async validateAndGetUserId(userId?: string): Promise<string | null> {
+  private async validateAndGetUser(
+    userId?: string
+  ): Promise<{ id: string; name: string | null } | null> {
     if (!userId) {
       return null;
     }
@@ -146,8 +148,9 @@ export class EquipmentHistoryService {
     try {
       const user = await this.db.query.users.findFirst({
         where: eq(users.id, userId),
+        columns: { id: true, name: true },
       });
-      return user ? userId : null;
+      return user ?? null;
     } catch {
       // 사용자 검증 실패 시 null 반환 (로그인한 사용자가 DB에 없을 수 있음)
       return null;
@@ -279,7 +282,7 @@ export class EquipmentHistoryService {
     dto: CreateLocationHistoryDto,
     userId?: string
   ): Promise<LocationHistoryResponseDto> {
-    const validatedUserId = await this.validateAndGetUserId(userId);
+    const validatedUser = await this.validateAndGetUser(userId);
 
     // 현재 장비 위치 조회
     const currentEquipment = await this.db.query.equipment.findFirst({
@@ -306,7 +309,7 @@ export class EquipmentHistoryService {
           previousLocation,
           newLocation: dto.newLocation,
           notes: dto.notes ?? null,
-          changedBy: validatedUserId,
+          changedBy: validatedUser?.id ?? null,
         })
         .returning();
 
@@ -332,6 +335,7 @@ export class EquipmentHistoryService {
       newLocation: record.newLocation,
       notes: record.notes ?? undefined,
       changedBy: record.changedBy ?? undefined,
+      changedByName: validatedUser?.name ?? undefined,
       createdAt: record.createdAt,
     };
   }
@@ -353,14 +357,14 @@ export class EquipmentHistoryService {
     userId?: string,
     tx?: AppDatabase
   ): Promise<void> {
-    const validatedUserId = await this.validateAndGetUserId(userId);
+    const validatedUser = await this.validateAndGetUser(userId);
     await (tx ?? this.db).insert(equipmentLocationHistory).values({
       equipmentId,
       changedAt: new Date(data.changedAt),
       previousLocation: data.previousLocation,
       newLocation: data.newLocation,
       notes: data.notes ?? null,
-      changedBy: validatedUserId,
+      changedBy: validatedUser?.id ?? null,
     });
   }
 
@@ -460,7 +464,7 @@ export class EquipmentHistoryService {
     userId?: string
   ): Promise<MaintenanceHistoryResponseDto> {
     // 사용자 ID 검증 (DB에 존재하지 않으면 null 설정)
-    const validatedUserId = await this.validateAndGetUserId(userId);
+    const validatedUser = await this.validateAndGetUser(userId);
 
     const [record] = await this.db
       .insert(equipmentMaintenanceHistory)
@@ -468,7 +472,7 @@ export class EquipmentHistoryService {
         equipmentId: equipmentUuid,
         performedAt: new Date(dto.performedAt),
         content: dto.content,
-        performedBy: validatedUserId,
+        performedBy: validatedUser?.id ?? null,
       })
       .returning();
 
@@ -478,6 +482,7 @@ export class EquipmentHistoryService {
       performedAt: record.performedAt,
       content: record.content,
       performedBy: record.performedBy ?? undefined,
+      performedByName: validatedUser?.name ?? undefined,
       createdAt: record.createdAt,
     };
   }
@@ -566,7 +571,7 @@ export class EquipmentHistoryService {
     userId?: string
   ): Promise<IncidentHistoryResponseDto> {
     // 사용자 ID 검증 (DB에 존재하지 않으면 null 설정)
-    const validatedUserId = await this.validateAndGetUserId(userId);
+    const validatedUser = await this.validateAndGetUser(userId);
 
     // UTC 기준 현재 날짜
     const today = getUtcStartOfDay();
@@ -587,7 +592,7 @@ export class EquipmentHistoryService {
           occurredAt: new Date(dto.occurredAt),
           incidentType: dto.incidentType,
           content: dto.content,
-          reportedBy: validatedUserId,
+          reportedBy: validatedUser?.id ?? null,
         })
         .returning();
 
@@ -616,7 +621,7 @@ export class EquipmentHistoryService {
             .values({
               equipmentId: equipmentUuid,
               discoveryDate: occurredDate.toISOString().split('T')[0],
-              discoveredBy: validatedUserId,
+              discoveredBy: validatedUser?.id ?? null,
               cause: dto.content,
               ncType: NonConformanceTypeEnum.enum.calibration_overdue,
               actionPlan:
@@ -679,7 +684,7 @@ export class EquipmentHistoryService {
         }
 
         // userId 검증 (부적합 생성 시 필수)
-        if (!validatedUserId) {
+        if (!validatedUser) {
           throw new BadRequestException(
             '부적합 생성 시 사용자 인증이 필요합니다. 로그인 후 다시 시도해주세요.'
           );
@@ -691,7 +696,7 @@ export class EquipmentHistoryService {
           .values({
             equipmentId: equipmentUuid,
             discoveryDate: occurredDate.toISOString().split('T')[0], // timestamp → date
-            discoveredBy: validatedUserId,
+            discoveredBy: validatedUser?.id ?? null,
             cause: dto.content,
             ncType: dto.incidentType as 'damage' | 'malfunction',
             actionPlan: dto.actionPlan ?? null,
@@ -732,6 +737,7 @@ export class EquipmentHistoryService {
         incidentType: record.incidentType,
         content: record.content,
         reportedBy: record.reportedBy ?? undefined,
+        reportedByName: validatedUser?.name ?? undefined,
         createdAt: record.createdAt,
         nonConformanceId, // 부적합 생성된 경우 ID 포함
       };
