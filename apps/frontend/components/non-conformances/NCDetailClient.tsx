@@ -633,15 +633,15 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
   switch (stepKey) {
     case NCVal.OPEN:
       dateStr = nc.discoveryDate;
-      actor = nc.discoverer?.name ?? null;
+      actor = resolveDisplayName(nc.discoverer?.name, nc.discoveredBy);
       break;
     case NCVal.CORRECTED:
       dateStr = nc.correctionDate;
-      actor = nc.corrector?.name ?? null;
+      actor = resolveDisplayName(nc.corrector?.name, nc.correctedBy);
       break;
     case NCVal.CLOSED:
       dateStr = nc.closedAt;
-      actor = nc.closer?.name ?? null;
+      actor = resolveDisplayName(nc.closer?.name, nc.closedBy);
       break;
   }
 

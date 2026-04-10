@@ -9,6 +9,8 @@
 
 - [x] `VERSION_CONFLICT` error code SSOT 부재 — 해결: 2026-04-09 — `bc7565cb` `ErrorCode.VersionConflict` 를 `packages/schemas/src/errors.ts` 에 추가. 백엔드 `versioned-base.service.ts` + E2E s25-cas-concurrent-approval 이 SSOT import 사용. 로컬 리터럴 제거
 - [x] `equipment-imports.service.approve` CAS 원자성 — 해결: 2026-04-09 — `bc7565cb` `CasPrecondition[]` 을 `VersionedBaseService.updateWithVersion` 에 추가. `equipment-imports.service.ts` approve/reject 가 status=PENDING 조건을 WHERE 절에 원자적 병합. s25-04 assertion 을 "409 only" 로 엄격화
+- [ ] create history 응답에 `*Name` 필드 누락 — `equipment-history.service.ts:327,475,728` — 2026-04-10 — INSERT returning()만 사용하여 JOIN 없음. onSettled 캐시 무효화로 실제 영향 없으나 낙관적 업데이트 도입 시 문제. 타입-런타임 불일치
+- [ ] calibration_plans FK 인덱스 미비 — `packages/db/src/schema/calibration-plans.ts` — 2026-04-10 — approvedBy/reviewedBy/rejectedBy에 인덱스 없음. 현재 데이터 규모에서 무해하나 disposal_requests 등과 비교 시 불일치
 - [ ] s23/s24/s25/s26/s27 multi-suite 병렬 실행 오염 — `apps/frontend/tests/e2e/features/checkouts/suite-2[3-7]-*/` — 2026-04-09 — 5개 스위트를 단일 invocation 으로 실행 시 공용 장비 (`EMC_RECEIVER_SUW_E` 등) 상태 충돌로 비결정적 실패. standalone 은 전부 OK. suite 간 장비 격리 설계 또는 장비 파티셔닝 필요. 기존 chromium-only 선례 확대. 출처: suite-26/27 세션 관찰
 - [x] `equipment-imports.service.initiateReturn` CAS 원자성 — 해결: 2026-04-09 — tech-debt-round3 harness. CasPrecondition `status=RECEIVED` 를 `updateWithVersion` WHERE 절에 병합. findOne 선검사 제거 (TOCTOU 해소). S27-07 assertion 을 409-only 로 엄격화
 - [x] auto-checkout cancel → import 롤백 callback 미구현 — 해결: 2026-04-09 — tech-debt-round3 harness. `onReturnCanceled(checkoutId)` 신규 콜백 구현 (`return_requested → received` 롤백 + `returnCheckoutId` null 초기화). `checkouts.service.cancel()` 에서 `RETURN_TO_VENDOR` purpose 취소 시 자동 호출. S27-08 fixme 제거, 실제 테스트 구현
