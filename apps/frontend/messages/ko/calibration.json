@@ -610,9 +610,9 @@
       "non_calibrated": "비교정기기"
     },
     "inspectionCycle": "점검 주기",
-    "inspectionCyclePlaceholder": "예: 6개월",
+    "inspectionCyclePlaceholder": "예: 6개월 (중간점검 주기)",
     "calibrationValidityPeriod": "교정 유효기간",
-    "validityPeriodPlaceholder": "예: 2026-12-31",
+    "validityPeriodPlaceholder": "예: 1년",
     "rejectionReasonPlaceholder": "반려 사유를 입력하세요",
     "overallResult": "종합 판정",
     "resultOptions": {
@@ -634,7 +634,10 @@
       },
       "addItem": "항목 추가",
       "removeItem": "삭제",
-      "noItems": "등록된 점검 항목이 없습니다"
+      "noItems": "등록된 점검 항목이 없습니다",
+      "noItemsDescription": "프리셋에서 선택하거나 직접 추가하세요.",
+      "selectPreset": "프리셋 선택",
+      "customItem": "직접 입력"
     },
     "actions": {
       "submit": "제출",
@@ -655,6 +658,19 @@
       "reviewed": "검토됨",
       "approved": "승인됨",
       "rejected": "반려됨"
+    },
+    "prefill": {
+      "auto": "자동",
+      "tooltip": "장비 마스터 데이터에서 자동 입력되었습니다. 수정 가능합니다."
+    },
+    "measurementEquipment": {
+      "title": "측정 장비 List",
+      "searchPlaceholder": "장비 검색 (관리번호/장비명)",
+      "managementNumber": "관리번호",
+      "equipmentName": "장비명",
+      "calibrationDate": "교정일자",
+      "empty": "등록된 측정 장비가 없습니다",
+      "emptyDescription": "점검에 사용한 측정 장비를 검색하여 추가하세요."
     },
     "cancel": "취소",
     "save": "저장",
@@ -682,5 +698,49 @@
     "description": "요청하신 교정계획서가 존재하지 않거나 삭제되었습니다.\n교정계획서 ID를 다시 확인해주세요.",
     "backToList": "교정계획서 목록으로",
     "backToHome": "홈으로 이동"
+  },
+  "resultSections": {
+    "title": "측정 결과 데이터",
+    "addSection": "섹션 추가",
+    "editSection": "섹션 수정",
+    "deleteSection": "섹션 삭제",
+    "deleteConfirm": "이 섹션을 삭제하시겠습니까?",
+    "empty": "등록된 결과 섹션이 없습니다.",
+    "emptyDescription": "측정 데이터, 사진, 테이블 등을 추가할 수 있습니다.",
+    "moveUp": "위로 이동",
+    "moveDown": "아래로 이동",
+    "selectResultFormat": "결과 형식 선택",
+    "types": {
+      "title": "제목",
+      "text": "텍스트",
+      "data_table": "데이터 테이블",
+      "photo": "사진",
+      "rich_table": "테이블",
+      "table": "테이블"
+    },
+    "form": {
+      "resultFormat": "결과 형식",
+      "inspectionItemName": "검사 항목명",
+      "inspectionItemNamePlaceholder": "예: 주파수 응답, 출력 레벨, 외관 상태",
+      "content": "내용",
+      "pasteData": "데이터 붙여넣기 (탭 구분)",
+      "imageWidth": "이미지 너비 (cm)",
+      "imageHeight": "이미지 높이 (cm)",
+      "selectFile": "파일 선택",
+      "columnHeaders": "열 헤더",
+      "addColumn": "열 추가",
+      "addRow": "행 추가",
+      "deleteRow": "행 삭제",
+      "preview": "미리보기",
+      "applyPaste": "붙여넣기 적용",
+      "save": "저장",
+      "cancel": "취소"
+    },
+    "toasts": {
+      "createSuccess": "섹션이 추가되었습니다.",
+      "updateSuccess": "섹션이 수정되었습니다.",
+      "deleteSuccess": "섹션이 삭제되었습니다.",
+      "error": "작업 중 오류가 발생했습니다."
+    }
   }
 }

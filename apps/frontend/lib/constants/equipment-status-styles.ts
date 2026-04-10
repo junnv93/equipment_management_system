@@ -32,13 +32,10 @@ export interface EquipmentStatusStyle {
 /**
  * 표시 상태 오버라이드 — UI에서 다른 상태의 라벨로 표시되는 경우
  *
- * calibration_scheduled: 교정 상태는 별도 D-day 배지로 표시하므로 "사용 가능"
- * calibration_overdue: 백엔드 스케줄러 전환 전 즉시 "부적합" 표시
+ * 현재 모든 상태가 1:1 매핑이므로 빈 맵.
+ * 추후 상태 표시 변환이 필요하면 여기에 추가.
  */
-export const DISPLAY_STATUS_OVERRIDES: Partial<Record<EquipmentStatus, EquipmentStatus>> = {
-  calibration_scheduled: 'available',
-  calibration_overdue: 'non_conforming',
-};
+export const DISPLAY_STATUS_OVERRIDES: Partial<Record<EquipmentStatus, EquipmentStatus>> = {};
 
 /**
  * 표시용 상태 반환 — i18n 라벨 조회 시 사용
@@ -123,7 +120,6 @@ export function getEquipmentStatusStyle(
  * - inactive: 비활성 상태
  */
 export const STATUS_SKIP_CALIBRATION_DISPLAY: EquipmentStatus[] = [
-  'retired',
   'non_conforming',
   'spare',
   'pending_disposal',
@@ -148,4 +144,4 @@ export function shouldDisplayCalibrationStatus(status: string | undefined | null
  *
  * CRITICAL: 이 상수를 직접 하드코딩하지 말 것 — 이 곳이 유일한 정의 위치
  */
-export const STATUS_NOT_ALLOWED_FOR_CHECKOUT: EquipmentStatus[] = ['checked_out', 'retired'];
+export const STATUS_NOT_ALLOWED_FOR_CHECKOUT: EquipmentStatus[] = ['checked_out'];

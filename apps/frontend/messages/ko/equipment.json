@@ -74,11 +74,9 @@
   "status": {
     "available": "사용 가능",
     "checked_out": "반출 중",
-    "calibration_scheduled": "교정 예정",
-    "calibration_overdue": "교정 기한 초과",
     "non_conforming": "부적합",
+    "calibration_overdue": "교정 기한 초과",
     "spare": "여분",
-    "retired": "폐기",
     "pending_disposal": "폐기 대기",
     "disposed": "폐기 완료",
     "temporary": "임시",
@@ -997,8 +995,7 @@
       "expectedReturnDateRequired": "반입 예정일을 입력하세요"
     },
     "disabledReasons": {
-      "checked_out": "이미 반출 중인 장비입니다",
-      "retired": "폐기된 장비입니다"
+      "checked_out": "이미 반출 중인 장비입니다"
     },
     "purpose": {
       "calibration": "교정",

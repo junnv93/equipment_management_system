@@ -24,6 +24,7 @@ import {
   intermediateInspectionEquipment,
 } from '@equipment-management/db/schema/intermediate-inspections';
 import { inspectionDocumentItems } from '@equipment-management/db/schema/inspection-document-items';
+import { inspectionResultSections } from '@equipment-management/db/schema/inspection-result-sections';
 import { documents } from '@equipment-management/db/schema/documents';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
@@ -33,7 +34,7 @@ import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cab
 import { softwareValidations } from '@equipment-management/db/schema/software-validations';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
-import { eq, desc, and, notInArray, inArray, sql, type SQL, asc } from 'drizzle-orm';
+import { eq, ne, desc, and, inArray, sql, type SQL, asc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import {
   DEFAULT_LOCALE,
@@ -47,7 +48,6 @@ import {
   CLASSIFICATION_TO_CODE,
   SOFTWARE_AVAILABILITY_LABELS,
   type Classification,
-  type EquipmentStatus,
   type SoftwareAvailability,
 } from '@equipment-management/schemas';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../common/storage/storage.interface';
@@ -169,11 +169,8 @@ export class FormTemplateExportService {
   private static readonly STATUS_TO_AVAILABILITY: Record<string, string> = {
     available: '사용',
     checked_out: '사용',
-    calibration_scheduled: '사용',
-    calibration_overdue: '사용',
     non_conforming: '고장',
     spare: '여분',
-    retired: '불용',
     pending_disposal: '불용',
     disposed: '불용',
     temporary: '사용',
@@ -218,9 +215,9 @@ export class FormTemplateExportService {
     // 활성 장비만 (isActive = true)
     conditions.push(eq(equipment.isActive, true));
 
-    // 퇴역/폐기 장비 숨기기
+    // 폐기 장비 숨기기
     if (params.showRetired !== 'true') {
-      conditions.push(notInArray(equipment.status, ['retired', 'disposed'] as EquipmentStatus[]));
+      conditions.push(ne(equipment.status, 'disposed'));
     }
 
     const rows = await this.db
@@ -569,6 +566,9 @@ export class FormTemplateExportService {
       approver?.name ?? '-'
     );
 
+    // 동적 결과 섹션 렌더링 (장비 유형별 가변 측정 결과)
+    await this.renderResultSections(doc, inspectionId, 'intermediate');
+
     const buffer = doc.toBuffer();
     return {
       buffer,
@@ -843,6 +843,9 @@ export class FormTemplateExportService {
       confirmer?.name ?? '-'
     );
 
+    // 동적 결과 섹션 렌더링 (장비 유형별 가변 측정 결과)
+    await this.renderResultSections(doc, record.id, 'self');
+
     const buffer = doc.toBuffer();
     return {
       buffer,
@@ -1042,6 +1045,125 @@ export class FormTemplateExportService {
     } catch {
       this.logger.warn(`Failed to load signature: ${signaturePath}, using name fallback`);
       doc.setCellValue(tableIndex, rowIndex, cellIndex, fallbackName);
+    }
+  }
+
+  // ============================================================================
+  // 동적 결과 섹션 렌더링 (중간점검/자체점검 공통)
+  // ============================================================================
+
+  private async renderResultSections(
+    doc: DocxTemplate,
+    inspectionId: string,
+    inspectionType: 'intermediate' | 'self'
+  ): Promise<void> {
+    const sections = await this.db
+      .select()
+      .from(inspectionResultSections)
+      .where(
+        and(
+          eq(inspectionResultSections.inspectionId, inspectionId),
+          eq(inspectionResultSections.inspectionType, inspectionType)
+        )
+      )
+      .orderBy(asc(inspectionResultSections.sortOrder));
+
+    if (sections.length === 0) return;
+
+    for (const section of sections) {
+      switch (section.sectionType) {
+        case 'title':
+          doc.appendParagraph(section.title ?? '', { bold: true, fontSize: 12 });
+          break;
+        case 'text':
+          if (section.title) {
+            doc.appendParagraph(section.title, { bold: true });
+          }
+          doc.appendParagraph(section.content ?? '');
+          break;
+        case 'data_table': {
+          const td = section.tableData as { headers: string[]; rows: string[][] } | null;
+          if (td) {
+            if (section.title) {
+              doc.appendParagraph(section.title, { bold: true });
+            }
+            doc.appendTable(td.headers, td.rows);
+          }
+          break;
+        }
+        case 'photo': {
+          if (section.title) {
+            doc.appendParagraph(section.title, { bold: true });
+          }
+          if (section.documentId) {
+            const imageResult = await this.loadDocumentImage(section.documentId);
+            if (imageResult) {
+              doc.appendImage(
+                imageResult.buffer,
+                imageResult.ext,
+                Number(section.imageWidthCm) || 12,
+                Number(section.imageHeightCm) || 9
+              );
+            }
+          }
+          break;
+        }
+        case 'rich_table': {
+          const rd = section.richTableData as {
+            headers: string[];
+            rows: Array<
+              Array<
+                | { type: 'text'; value: string }
+                | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number }
+              >
+            >;
+          } | null;
+          if (rd) {
+            if (section.title) {
+              doc.appendParagraph(section.title, { bold: true });
+            }
+            const resolvedRows = await Promise.all(
+              rd.rows.map((row) =>
+                Promise.all(
+                  row.map(async (cell) => {
+                    if (cell.type === 'text') return cell;
+                    const img = await this.loadDocumentImage(cell.documentId);
+                    if (!img) return { type: 'text' as const, value: '[image not found]' };
+                    return {
+                      type: 'image' as const,
+                      buffer: img.buffer,
+                      ext: img.ext,
+                      widthCm: cell.widthCm,
+                      heightCm: cell.heightCm,
+                    };
+                  })
+                )
+              )
+            );
+            doc.appendRichTable(rd.headers, resolvedRows);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  private async loadDocumentImage(
+    documentId: string
+  ): Promise<{ buffer: Buffer; ext: 'png' | 'jpeg' } | null> {
+    try {
+      const [doc] = await this.db
+        .select({ filePath: documents.filePath, mimeType: documents.mimeType })
+        .from(documents)
+        .where(eq(documents.id, documentId))
+        .limit(1);
+      if (!doc) return null;
+      const buffer = await this.storage.download(doc.filePath);
+      const ext = doc.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
+      return { buffer, ext };
+    } catch {
+      this.logger.warn(`Failed to load document image: ${documentId}`);
+      return null;
     }
   }
 

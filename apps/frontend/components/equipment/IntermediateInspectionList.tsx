@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { FileText, Send, CheckCircle, XCircle } from 'lucide-react';
@@ -28,6 +28,10 @@ import type { Equipment } from '@/lib/api/equipment-api';
 import type { InspectionApprovalStatus } from '@equipment-management/schemas';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { format } from 'date-fns';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
+import ResultSectionsPanel from '@/components/inspections/result-sections/ResultSectionsPanel';
 
 const InspectionFormDialog = dynamic(
   () => import('@/components/inspections/InspectionFormDialog'),
@@ -62,6 +66,8 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { can } = useAuth();
 
   const primaryQueryKey = queryKeys.equipment.intermediateInspections(equipmentId);
   const crossInvalidateKeys = [
@@ -336,34 +342,61 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
               </TableHeader>
               <TableBody>
                 {inspections.map((inspection) => (
-                  <TableRow key={inspection.id}>
-                    <TableCell className="tabular-nums">
-                      {format(new Date(inspection.inspectionDate), 'yyyy-MM-dd')}
-                    </TableCell>
-                    <TableCell>
-                      {inspection.overallResult ? (
-                        <Badge variant="outline">
+                  <Fragment key={inspection.id}>
+                    <TableRow
+                      className="cursor-pointer"
+                      onClick={() =>
+                        setExpandedId(expandedId === inspection.id ? null : inspection.id)
+                      }
+                    >
+                      <TableCell className="tabular-nums">
+                        <span className="mr-1 inline-block w-4">
+                          {expandedId === inspection.id ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </span>
+                        {format(new Date(inspection.inspectionDate), 'yyyy-MM-dd')}
+                      </TableCell>
+                      <TableCell>
+                        {inspection.overallResult ? (
+                          <Badge variant="outline">
+                            {t(
+                              `intermediateInspection.resultOptions.${inspection.overallResult}` as Parameters<
+                                typeof t
+                              >[0]
+                            )}
+                          </Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(inspection.approvalStatus)}>
                           {t(
-                            `intermediateInspection.resultOptions.${inspection.overallResult}` as Parameters<
+                            `intermediateInspection.status.${inspection.approvalStatus}` as Parameters<
                               typeof t
                             >[0]
                           )}
                         </Badge>
-                      ) : (
-                        '-'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(inspection.approvalStatus)}>
-                        {t(
-                          `intermediateInspection.status.${inspection.approvalStatus}` as Parameters<
-                            typeof t
-                          >[0]
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{renderActions(inspection)}</TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        {renderActions(inspection)}
+                      </TableCell>
+                    </TableRow>
+                    {expandedId === inspection.id && (
+                      <TableRow key={`${inspection.id}-sections`}>
+                        <TableCell colSpan={4} className="bg-muted/30 p-4">
+                          <ResultSectionsPanel
+                            inspectionId={inspection.id}
+                            inspectionType="intermediate"
+                            canEdit={can(Permission.UPDATE_CALIBRATION)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>

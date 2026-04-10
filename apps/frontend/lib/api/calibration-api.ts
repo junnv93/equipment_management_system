@@ -205,6 +205,43 @@ export interface IntermediateInspectionEquipmentRef {
   calibrationDate: string | null;
 }
 
+// ============================================================================
+// 결과 섹션 (동적 콘텐츠)
+// ============================================================================
+
+export type RichCell =
+  | { type: 'text'; value: string }
+  | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number };
+
+export interface ResultSection {
+  id: string;
+  inspectionId: string;
+  inspectionType: 'intermediate' | 'self';
+  sectionType: string;
+  sortOrder: number;
+  title: string | null;
+  content: string | null;
+  tableData: { headers: string[]; rows: string[][] } | null;
+  richTableData: { headers: string[]; rows: RichCell[][] } | null;
+  documentId: string | null;
+  imageWidthCm: string | null;
+  imageHeightCm: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateResultSectionDto {
+  sortOrder: number;
+  sectionType: string;
+  title?: string;
+  content?: string;
+  tableData?: { headers: string[]; rows: string[][] };
+  richTableData?: { headers: string[]; rows: RichCell[][] };
+  documentId?: string;
+  imageWidthCm?: number;
+  imageHeightCm?: number;
+}
+
 export interface CreateInspectionDto {
   inspectionDate: string;
   classification?: EquipmentClassification;
@@ -223,6 +260,7 @@ export interface CreateInspectionDto {
     equipmentId: string;
     calibrationDate?: string;
   }[];
+  resultSections?: CreateResultSectionDto[];
 }
 
 export interface UpdateInspectionDto extends Partial<CreateInspectionDto> {
@@ -455,6 +493,38 @@ const calibrationApi = {
         rejectionReason,
       });
       return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    resultSections: {
+      list: async (inspectionId: string): Promise<ResultSection[]> => {
+        const response = await apiClient.get(
+          API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.RESULT_SECTIONS.LIST(inspectionId)
+        );
+        return transformArrayResponse<ResultSection>(response);
+      },
+      create: async (inspectionId: string, dto: CreateResultSectionDto): Promise<ResultSection> => {
+        const response = await apiClient.post(
+          API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.RESULT_SECTIONS.CREATE(inspectionId),
+          dto
+        );
+        return transformSingleResponse<ResultSection>(response);
+      },
+      update: async (
+        inspectionId: string,
+        sectionId: string,
+        dto: Partial<CreateResultSectionDto>
+      ): Promise<ResultSection> => {
+        const response = await apiClient.patch(
+          API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.RESULT_SECTIONS.UPDATE(inspectionId, sectionId),
+          dto
+        );
+        return transformSingleResponse<ResultSection>(response);
+      },
+      delete: async (inspectionId: string, sectionId: string): Promise<void> => {
+        await apiClient.delete(
+          API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.RESULT_SECTIONS.DELETE(inspectionId, sectionId)
+        );
+      },
     },
   },
 };

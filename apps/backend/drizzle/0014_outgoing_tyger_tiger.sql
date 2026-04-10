@@ -1,0 +1,1 @@
+ALTER TABLE "inspection_result_sections" ADD COLUMN "rich_table_data" jsonb;

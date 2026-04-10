@@ -419,6 +419,16 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/api/self-inspections/${id}`,
     CONFIRM: (id: string) => `/api/self-inspections/${id}/confirm`,
     DELETE: (id: string) => `/api/self-inspections/${id}`,
+    RESULT_SECTIONS: {
+      LIST: (inspectionId: string) => `/api/self-inspections/${inspectionId}/result-sections`,
+      CREATE: (inspectionId: string) => `/api/self-inspections/${inspectionId}/result-sections`,
+      UPDATE: (inspectionId: string, sectionId: string) =>
+        `/api/self-inspections/${inspectionId}/result-sections/${sectionId}`,
+      DELETE: (inspectionId: string, sectionId: string) =>
+        `/api/self-inspections/${inspectionId}/result-sections/${sectionId}`,
+      UPLOAD_CSV: (inspectionId: string) =>
+        `/api/self-inspections/${inspectionId}/result-sections/upload-csv`,
+    },
   },
 
   // ============================================================================
@@ -449,6 +459,18 @@ export const API_ENDPOINTS = {
     REVIEW: (id: string) => `/api/intermediate-inspections/${id}/review`,
     APPROVE: (id: string) => `/api/intermediate-inspections/${id}/approve`,
     REJECT: (id: string) => `/api/intermediate-inspections/${id}/reject`,
+    RESULT_SECTIONS: {
+      LIST: (inspectionId: string) =>
+        `/api/intermediate-inspections/${inspectionId}/result-sections`,
+      CREATE: (inspectionId: string) =>
+        `/api/intermediate-inspections/${inspectionId}/result-sections`,
+      UPDATE: (inspectionId: string, sectionId: string) =>
+        `/api/intermediate-inspections/${inspectionId}/result-sections/${sectionId}`,
+      DELETE: (inspectionId: string, sectionId: string) =>
+        `/api/intermediate-inspections/${inspectionId}/result-sections/${sectionId}`,
+      UPLOAD_CSV: (inspectionId: string) =>
+        `/api/intermediate-inspections/${inspectionId}/result-sections/upload-csv`,
+    },
   },
 
   // ============================================================================

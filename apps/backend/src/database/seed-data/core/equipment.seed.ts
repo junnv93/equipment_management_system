@@ -110,7 +110,7 @@ function createEquipment(
 export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
   // =========================================================================
   // Suwon FCC EMC/RF (E) - 8 equipment
-  // Status distribution: available(4), non_conforming(1), spare(1), checked_out(1), calibration_overdue(1)
+  // Status distribution: available(4), non_conforming(2), spare(1), checked_out(1)
   // =========================================================================
 
   // Available + Calibration Overdue (3 months past) + 전체 필드 테스트용
@@ -231,7 +231,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'SUW-E0008',
     TEAM_FCC_EMC_RF_SUWON_ID,
     'suwon',
-    'calibration_overdue',
+    'non_conforming',
     'external_calibration',
     monthsAgo(15),
     daysAgo(45)
@@ -479,7 +479,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
 
   // =========================================================================
   // Uiwang General RF (W) - 4 equipment
-  // Status distribution: available(2), checked_out(1), calibration_overdue(1)
+  // Status distribution: available(2), checked_out(1), non_conforming(1)
   // =========================================================================
 
   // 공용장비 (다른 시험소에서 대여)
@@ -526,7 +526,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'UIW-W0004',
     TEAM_GENERAL_RF_UIWANG_ID,
     'uiwang',
-    'calibration_overdue',
+    'non_conforming',
     'external_calibration',
     monthsAgo(15),
     daysAgo(90)

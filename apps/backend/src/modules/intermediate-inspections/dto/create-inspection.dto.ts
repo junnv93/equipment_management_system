@@ -7,6 +7,7 @@ import {
   uuidString,
   VM,
 } from '@equipment-management/schemas';
+import { createResultSectionSchema } from './result-section.dto';
 
 const inspectionItemSchema = z.object({
   itemNumber: z.number().int().min(1),
@@ -35,6 +36,7 @@ export const createInspectionSchema = z.object({
   remarks: z.string().optional(),
   items: z.array(inspectionItemSchema).optional(),
   measurementEquipment: z.array(inspectionEquipmentSchema).optional(),
+  resultSections: z.array(createResultSectionSchema).optional(),
 });
 
 export type CreateInspectionInput = z.infer<typeof createInspectionSchema>;

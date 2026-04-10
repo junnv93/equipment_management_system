@@ -36,7 +36,7 @@ interface StatusSummaryStripProps {
  *
  * - 장비 목록 API 응답의 summary(statusCounts)를 사용하여 필터 스코프 일치 보장
  * - 클릭 → 상태 필터 즉시 적용 (onStatusChange 연결 시)
- * - 위기 상태(calibration_overdue, non_conforming) 카운트 빨간 강조
+ * - 위기 상태(non_conforming) 및 교정기한초과(derived) 카운트 빨간 강조
  * - 수평 스크롤 gradient 인디케이터 (스크롤 가능성 힌트)
  */
 export function StatusSummaryStrip({

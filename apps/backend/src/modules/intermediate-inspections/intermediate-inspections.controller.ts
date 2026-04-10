@@ -1,9 +1,11 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
   Body,
   Patch,
+  Delete,
   Param,
   UsePipes,
   Request,
@@ -14,12 +16,15 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IntermediateInspectionsService } from './intermediate-inspections.service';
+import { ResultSectionsService } from './result-sections.service';
 import {
   CreateInspectionPipe,
   UpdateInspectionPipe,
   SubmitInspectionPipe,
   ApproveInspectionPipe,
   RejectInspectionPipe,
+  CreateResultSectionPipe,
+  UpdateResultSectionPipe,
 } from './dto';
 import type {
   CreateInspectionInput,
@@ -27,6 +32,8 @@ import type {
   SubmitInspectionInput,
   ApproveInspectionInput,
   RejectInspectionInput,
+  CreateResultSectionInput,
+  UpdateResultSectionInput,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
@@ -34,7 +41,11 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
-import type { IntermediateInspection, DocumentRecord } from '@equipment-management/db/schema';
+import type {
+  IntermediateInspection,
+  DocumentRecord,
+  InspectionResultSection,
+} from '@equipment-management/db/schema';
 import { DocumentService } from '../../common/file-upload/document.service';
 import type { MulterFile } from '../../types/common.types';
 import type { InspectionDocumentItem } from '@equipment-management/db/schema';
@@ -135,7 +146,8 @@ export class CalibrationIntermediateInspectionsController {
 export class IntermediateInspectionsController {
   constructor(
     private readonly inspectionsService: IntermediateInspectionsService,
-    private readonly documentService: DocumentService
+    private readonly documentService: DocumentService,
+    private readonly resultSectionsService: ResultSectionsService
   ) {}
 
   @Get(':uuid')
@@ -291,6 +303,91 @@ export class IntermediateInspectionsController {
     return this.documentService.findByIntermediateInspectionId(
       uuid,
       type as 'inspection_photo' | 'inspection_graph' | 'measurement_data' | undefined
+    );
+  }
+
+  // ============================================================================
+  // 결과 섹션 (동적 콘텐츠)
+  // ============================================================================
+
+  @Get(':uuid/result-sections')
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  async getResultSections(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection[]> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.resultSectionsService.findByInspection(uuid, 'intermediate');
+  }
+
+  @Post(':uuid/result-sections')
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
+  @UsePipes(CreateResultSectionPipe)
+  async createResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: CreateResultSectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.resultSectionsService.create(uuid, 'intermediate', dto, userId);
+  }
+
+  @Patch(':uuid/result-sections/:sectionId')
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
+  @UsePipes(UpdateResultSectionPipe)
+  async updateResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
+    @Body() dto: UpdateResultSectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.resultSectionsService.update(sectionId, uuid, 'intermediate', dto);
+  }
+
+  @Delete(':uuid/result-sections/:sectionId')
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'delete', entityType: 'inspection_result_section' })
+  async deleteResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ success: boolean }> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    await this.resultSectionsService.delete(sectionId, uuid, 'intermediate');
+    return { success: true };
+  }
+
+  @Post(':uuid/result-sections/upload-csv')
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @UseInterceptors(FileInterceptor('file'))
+  @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
+  async uploadCsvResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @UploadedFile() file: MulterFile,
+    @Request() req: AuthenticatedRequest,
+    @Body('title') title?: string
+  ): Promise<InspectionResultSection> {
+    if (!file) {
+      throw new BadRequestException({ code: 'FILE_REQUIRED', message: 'CSV file is required.' });
+    }
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    const csvContent = file.buffer.toString('utf-8');
+    return this.resultSectionsService.createFromCsv(
+      uuid,
+      'intermediate',
+      csvContent,
+      title,
+      userId
     );
   }
 }

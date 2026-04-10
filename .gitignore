@@ -159,3 +159,7 @@ claude_desktop_config.json
 # embedded repositories
 equipment_management_system/ .kombai/
 .playwright-mcp/
+
+# 실제 양식 원본 (바이너리, 참조용만)
+docs/procedure/실제양식/
+init-postgres.sql

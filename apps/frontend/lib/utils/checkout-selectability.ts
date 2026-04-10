@@ -10,17 +10,12 @@
  */
 import type { EquipmentStatus, CheckoutPurpose } from '@equipment-management/schemas';
 import {
-  CheckoutPurposeValues as CPVal,
-  EquipmentStatusValues as ESVal,
-} from '@equipment-management/schemas';
-import {
   getAllowedStatusesForPurpose,
   getBlockedReasonKey,
   CHECKOUT_HIDDEN_STATUSES,
   type EquipmentSelectability,
 } from '@equipment-management/shared-constants';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { format } from 'date-fns';
 
 /**
  * 장비의 선택 가능 여부를 목적에 따라 판단
@@ -44,19 +39,6 @@ export function getEquipmentSelectability(
 
   // 허용 상태에 포함되면 선택 가능
   if (allowedStatuses.includes(status)) {
-    // 대여 + calibration_scheduled: 선택 가능하지만 교정 만료일 경고
-    if (purpose === CPVal.RENTAL && status === ESVal.CALIBRATION_SCHEDULED) {
-      const nextCalDate = equipment.nextCalibrationDate;
-      if (nextCalDate) {
-        const formatted = format(new Date(nextCalDate), 'yyyy.MM.dd');
-        return {
-          selectable: true,
-          warningKey: 'selectability.calibrationExpiryWarning',
-          warningParams: { date: formatted },
-        };
-      }
-    }
-
     return { selectable: true };
   }
 
@@ -82,7 +64,7 @@ export function getEquipmentSelectability(
 /**
  * 반출 신청 목록에서 표시할 장비만 필터링
  *
- * 운영 종료된 장비(retired, disposed, pending_disposal, temporary, inactive)는
+ * 운영 종료된 장비(disposed, pending_disposal, temporary, inactive)는
  * 목록에서 아예 제외합니다.
  *
  * @param equipments 전체 장비 목록

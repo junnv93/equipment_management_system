@@ -438,6 +438,12 @@ export const queryKeys = {
     byCalibration: (calibrationId: string) =>
       ['intermediate-inspections', 'calibration', calibrationId] as const,
     detail: (id: string) => ['intermediate-inspections', 'detail', id] as const,
+    resultSections: (inspectionId: string) =>
+      ['intermediate-inspections', 'detail', inspectionId, 'result-sections'] as const,
+  },
+  selfInspections: {
+    resultSections: (inspectionId: string) =>
+      ['self-inspections', 'detail', inspectionId, 'result-sections'] as const,
   },
   documents: {
     all: ['documents'] as const,

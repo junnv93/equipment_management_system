@@ -14,3 +14,11 @@ export {
   RejectInspectionPipe,
 } from './approve-inspection.dto';
 export type { ApproveInspectionInput, RejectInspectionInput } from './approve-inspection.dto';
+
+export {
+  createResultSectionSchema,
+  CreateResultSectionPipe,
+  updateResultSectionSchema,
+  UpdateResultSectionPipe,
+} from './result-section.dto';
+export type { CreateResultSectionInput, UpdateResultSectionInput } from './result-section.dto';

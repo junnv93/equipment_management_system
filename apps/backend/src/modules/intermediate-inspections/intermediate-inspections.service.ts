@@ -5,6 +5,7 @@ import {
   intermediateInspections,
   intermediateInspectionItems,
   intermediateInspectionEquipment,
+  inspectionResultSections,
   inspectionDocumentItems,
   calibrations,
   equipment,
@@ -119,6 +120,26 @@ export class IntermediateInspectionsService extends VersionedBaseService {
             inspectionId: created.id,
             equipmentId: equip.equipmentId,
             calibrationDate: equip.calibrationDate ? new Date(equip.calibrationDate) : null,
+          }))
+        );
+      }
+
+      // 결과 섹션 삽입 (1-step 폼에서 함께 전송된 경우)
+      if (dto.resultSections && dto.resultSections.length > 0) {
+        await tx.insert(inspectionResultSections).values(
+          dto.resultSections.map((section) => ({
+            inspectionId: created.id,
+            inspectionType: 'intermediate' as const,
+            sortOrder: section.sortOrder,
+            sectionType: section.sectionType,
+            title: section.title,
+            content: section.content,
+            tableData: section.tableData,
+            richTableData: section.richTableData,
+            documentId: section.documentId,
+            imageWidthCm: section.imageWidthCm?.toString(),
+            imageHeightCm: section.imageHeightCm?.toString(),
+            createdBy,
           }))
         );
       }

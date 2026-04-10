@@ -105,7 +105,6 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     const filterableStatuses = [
       'available',
       'checked_out',
-      'calibration_overdue',
       'non_conforming',
       'spare',
       'pending_disposal',

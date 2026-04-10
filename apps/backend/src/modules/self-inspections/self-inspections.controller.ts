@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -23,9 +24,14 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { SelfInspectionsService, type SelfInspectionWithItems } from './self-inspections.service';
+import { ResultSectionsService } from '../intermediate-inspections/result-sections.service';
 import { DocumentService } from '../../common/file-upload/document.service';
 import type { MulterFile } from '../../types/common.types';
-import type { DocumentRecord, InspectionDocumentItem } from '@equipment-management/db/schema';
+import type {
+  DocumentRecord,
+  InspectionDocumentItem,
+  InspectionResultSection,
+} from '@equipment-management/db/schema';
 import {
   CreateSelfInspectionPipe,
   type CreateSelfInspectionInput,
@@ -38,6 +44,11 @@ import {
   ConfirmSelfInspectionPipe,
   type ConfirmSelfInspectionInput,
 } from './dto/confirm-self-inspection.dto';
+import { CreateResultSectionPipe, UpdateResultSectionPipe } from '../intermediate-inspections/dto';
+import type {
+  CreateResultSectionInput,
+  UpdateResultSectionInput,
+} from '../intermediate-inspections/dto';
 
 /**
  * 장비별 자체점검 엔드포인트 (equipment 하위 리소스)
@@ -93,7 +104,8 @@ export class EquipmentSelfInspectionsController {
 export class SelfInspectionsController {
   constructor(
     private readonly selfInspectionsService: SelfInspectionsService,
-    private readonly documentService: DocumentService
+    private readonly documentService: DocumentService,
+    private readonly resultSectionsService: ResultSectionsService
   ) {}
 
   @Get(':uuid')
@@ -209,5 +221,89 @@ export class SelfInspectionsController {
       uuid,
       type as 'inspection_photo' | 'inspection_graph' | 'measurement_data' | undefined
     );
+  }
+
+  // ============================================================================
+  // 결과 섹션 (동적 콘텐츠)
+  // ============================================================================
+
+  @Get(':uuid/result-sections')
+  @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)
+  @ApiOperation({ summary: '자체점검 결과 섹션 목록' })
+  async getResultSections(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection[]> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.resultSectionsService.findByInspection(uuid, 'self');
+  }
+
+  @Post(':uuid/result-sections')
+  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
+  @UsePipes(CreateResultSectionPipe)
+  @ApiOperation({ summary: '자체점검 결과 섹션 추가' })
+  async createResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: CreateResultSectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.resultSectionsService.create(uuid, 'self', dto, userId);
+  }
+
+  @Patch(':uuid/result-sections/:sectionId')
+  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
+  @UsePipes(UpdateResultSectionPipe)
+  @ApiOperation({ summary: '자체점검 결과 섹션 수정' })
+  async updateResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
+    @Body() dto: UpdateResultSectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.resultSectionsService.update(sectionId, uuid, 'self', dto);
+  }
+
+  @Delete(':uuid/result-sections/:sectionId')
+  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @AuditLog({ action: 'delete', entityType: 'inspection_result_section' })
+  @ApiOperation({ summary: '자체점검 결과 섹션 삭제' })
+  async deleteResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('sectionId', ParseUUIDPipe) sectionId: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ success: boolean }> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    await this.resultSectionsService.delete(sectionId, uuid, 'self');
+    return { success: true };
+  }
+
+  @Post(':uuid/result-sections/upload-csv')
+  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @UseInterceptors(FileInterceptor('file'))
+  @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
+  @ApiOperation({ summary: '자체점검 CSV 업로드 → 데이터 테이블' })
+  async uploadCsvResultSection(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @UploadedFile() file: MulterFile,
+    @Request() req: AuthenticatedRequest,
+    @Body('title') title?: string
+  ): Promise<InspectionResultSection> {
+    if (!file) {
+      throw new BadRequestException({ code: 'FILE_REQUIRED', message: 'CSV file is required.' });
+    }
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    const csvContent = file.buffer.toString('utf-8');
+    return this.resultSectionsService.createFromCsv(uuid, 'self', csvContent, title, userId);
   }
 }

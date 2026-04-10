@@ -12,26 +12,25 @@ import { optionalUuid } from '../utils/fields';
  * 표준 상태값 (소문자 + 언더스코어):
  * - available: 사용 가능
  * - checked_out: 반출 중 (교정/수리/대여는 checkout_type으로 구분)
- * - calibration_scheduled: 교정 예정
- * - calibration_overdue: 교정 기한 초과
  * - non_conforming: 부적합 (임시적, 수리 후 복귀 가능)
  * - spare: 여분 (보유하고 있지만 상시 관리하지 않음)
- * - retired: 사용 중지 (영구 폐기) - deprecated, disposed 사용 권장
  * - pending_disposal: 폐기 대기 (시험소장 승인 전)
- * - disposed: 폐기 완료 (retired 대체)
+ * - disposed: 폐기 완료
  * - temporary: 임시 등록 (공용/렌탈장비)
  * - inactive: 비활성 (임시등록 장비 사용 완료)
+ *
+ * 제거된 상태 (DB enum에는 잔존, 앱에서 미사용):
+ * - retired → disposed로 통합
+ * - calibration_scheduled → nextCalibrationDate 기반 derived 필터로 대체
+ * - calibration_overdue → 스케줄러가 non_conforming으로 직접 전환
  *
  * @see docs/development/API_STANDARDS.md
  */
 export const EquipmentStatusEnum = z.enum([
   'available', // 사용 가능
   'checked_out', // 반출 중
-  'calibration_scheduled', // 교정 예정
-  'calibration_overdue', // 교정 기한 초과
   'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
   'spare', // 여분
-  'retired', // 사용 중지 (영구 폐기) - deprecated
   'pending_disposal', // 폐기 대기 (시험소장 승인 전)
   'disposed', // 폐기 완료
   'temporary', // 임시 등록 (공용/렌탈장비)

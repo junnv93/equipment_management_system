@@ -12,7 +12,7 @@ import {
 import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { EQUIPMENT_STATUS_VALUES, MANAGEMENT_METHOD_VALUES } from '@equipment-management/schemas';
+import { MANAGEMENT_METHOD_VALUES } from '@equipment-management/schemas';
 import type {
   EquipmentStatus,
   SpecMatch,
@@ -25,13 +25,25 @@ import { teams } from './teams';
  *
  * 테이블에서는 varchar.$type<EquipmentStatus>()를 사용하지만,
  * DB에 equipment_status enum 타입이 존재하므로 Drizzle 스키마에서 선언을 유지합니다.
- * 삭제 시 마이그레이션 생성 시 DROP TYPE이 발생할 수 있습니다.
  *
- * @see packages/schemas/src/enums.ts - EquipmentStatusEnum (SSOT)
+ * ⚠️ 하드코딩 이유: PostgreSQL enum은 값 제거가 불가.
+ * 앱 SSOT(EquipmentStatusEnum)에서 제거된 레거시 값도 PG 호환을 위해 유지.
+ * Zod 검증이 쓰기 경로에서 잘못된 값 유입을 차단합니다.
  */
-export const equipmentStatusEnum = pgEnum('equipment_status', [...EQUIPMENT_STATUS_VALUES] as [
-  string,
-  ...string[],
+export const equipmentStatusEnum = pgEnum('equipment_status', [
+  // Active statuses (앱 SSOT와 일치)
+  'available',
+  'checked_out',
+  'non_conforming',
+  'spare',
+  'pending_disposal',
+  'disposed',
+  'temporary',
+  'inactive',
+  // Legacy (앱에서 미사용, PG enum 호환성 유지)
+  'calibration_scheduled',
+  'calibration_overdue',
+  'retired',
 ]);
 
 /** @see packages/schemas/src/enums.ts - ManagementMethodEnum (SSOT) */

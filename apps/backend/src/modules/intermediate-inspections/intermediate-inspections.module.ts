@@ -5,6 +5,7 @@ import {
   IntermediateInspectionsController,
 } from './intermediate-inspections.controller';
 import { IntermediateInspectionsService } from './intermediate-inspections.service';
+import { ResultSectionsService } from './result-sections.service';
 
 @Module({
   controllers: [
@@ -12,7 +13,7 @@ import { IntermediateInspectionsService } from './intermediate-inspections.servi
     CalibrationIntermediateInspectionsController,
     IntermediateInspectionsController,
   ],
-  providers: [IntermediateInspectionsService],
-  exports: [IntermediateInspectionsService],
+  providers: [IntermediateInspectionsService, ResultSectionsService],
+  exports: [IntermediateInspectionsService, ResultSectionsService],
 })
 export class IntermediateInspectionsModule {}

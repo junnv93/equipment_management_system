@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-09 (38차 — QP-18-02 이력카드 export 검증 + QP-18-03/05 검증 프롬프트 등재)**
+> **마지막 정리일: 2026-04-10 (41차 — 중간점검 통합 폼 완료, verify/review 후속 등재)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -213,7 +213,11 @@ wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다
 
 > **발견 배경 (2026-04-09, 38차)**: QP-18-02 이력카드 검증 과정에서 XML 마커 불일치(4개 이력 섹션 삽입 실패), DATA_START_ROW 오류(QP-19-01), 날짜 형식/폰트/파일명 등 다수 이슈 발견 및 수정. 동일 패턴의 잠재적 이슈가 QP-18-03(중간점검표), QP-18-05(자체점검표)에도 존재할 수 있음. 양식 템플릿 파일을 기준으로 코드 매핑의 정확성을 검증하는 프롬프트.
 
-### 🟡 MEDIUM — QP-18-03 중간점검표 DOCX 템플릿 ↔ 코드 매핑 검증
+### ~~🟡 MEDIUM — QP-18-03 중간점검표 DOCX 템플릿 ↔ 코드 매핑 검증~~ ✅ 완료 (2026-04-10 39차)
+
+> 검증: 9개 실제 완성 문서(E0001~E0350)와 대조. wf-19c E2E 테스트 9/9 통과. DocxTemplate에 appendParagraph/appendTable/appendImage/appendRichTable 추가. renderResultSections로 동적 콘텐츠 Export 지원. 프론트엔드 ResultSectionsPanel UI 구현.
+
+### ~~원문 (참고용)~~
 
 ```
 QP-18-02 이력카드 검증에서 발견된 패턴:
@@ -240,7 +244,11 @@ QP-18-03 중간점검표 동일 검증 필요:
 - Playwright E2E: 브라우저 다운로드 + DOCX 내용 검증
 ```
 
-### 🟡 MEDIUM — QP-18-05 자체점검표 DOCX 템플릿 ↔ 코드 매핑 검증
+### ~~🟡 MEDIUM — QP-18-05 자체점검표 DOCX 템플릿 ↔ 코드 매핑 검증~~ ✅ 완료 (2026-04-10 39차)
+
+> 검증: QP-18-03과 동일하게 E2E 테스트 + 실제 문서 대조 완료. 자체점검 결과 섹션 CRUD, Export 동적 렌더링, SelfInspectionTab 통합 모두 정상.
+
+### ~~원문 (참고용)~~
 
 ```
 QP-18-05 자체점검표 검증 (QP-18-03과 동일 패턴):
@@ -262,6 +270,223 @@ QP-18-05 자체점검표 검증 (QP-18-03과 동일 패턴):
 검증:
 - pnpm tsc --noEmit exit 0
 - Backend E2E + Playwright E2E 통과
+```
+
+---
+
+## 40차 신규 — 중간점검 통합 워크플로우 UX 개선 (Mode 2)
+
+> **발견 배경 (2026-04-10, 40차)**: 9개 실제 완성 문서(E0001~E0350) 분석 결과,
+> 점검 항목·측정 장비·결과 섹션이 현재 2단계 UX(생성 → 목록 펼침)로 분리되어 있음.
+> 실무자가 한 화면에서 점검 전체를 완료할 수 없는 UX 갭. 또한 점검주기/교정유효기간은
+> 장비 마스터 데이터에서 자동 적용 가능하고, 점검 항목은 9개 문서에서 반복되는 패턴이
+> 프리셋으로 제공 가능.
+
+### ~~🟠 HIGH — 중간점검 폼 통합 리디자인 (InspectionFormDialog → 통합 워크플로우)~~ ✅ 완료 (2026-04-10 41차)
+
+> 검증: Mode 2 harness 실행. 1-step UX 구현 (inspection + resultSections 동시 생성).
+> 12개 프리셋 (9개 실제 문서 기반), 장비 마스터 prefill (중간점검 주기, 교정유효기간 기간 표시),
+> InlineResultSectionsEditor 통합, classification 교정기기 고정, "측정 결과 데이터" 리네이밍.
+> E2E 5/5 통과. tsc + build + backend test 559 전체 PASS.
+
+### 원문 (참고용)
+
+```
+현재 문제:
+1. 점검 생성(InspectionFormDialog) → 목록으로 돌아감 → 행 펼침 → 결과 섹션 추가
+   = 2단계 UX, 사용자가 점검 완료까지 왕복해야 함
+2. 점검주기/교정유효기간을 수동 입력해야 함 (장비 마스터에 이미 있는 데이터)
+3. 점검 항목을 매번 수동 입력 (9/9 문서에서 "외관 검사"가 반복됨)
+
+실제 문서 분석 결과 (C:\...\새 폴더, 9개 완성 문서):
+
+■ 점검 항목 프리셋 (9개 문서에서 추출):
+  - [9/9] 외관 검사 — 기준: 마모 상태 확인
+  - RF 입력 검사 — 기준: S/G Level ±1 dB
+  - DC 전압 출력 특성 검사 — 기준: Output 대비 0.1V
+  - 출력 특성 점검 — 기준: 제조사 선언 오차범위 이내
+  - VSWR 특성 — 기준: SWR < 2.0
+  - OBW 특성 검사 — 기준: 99% BW
+  - 정합 특성 검사 — 기준: VSWR < 1.2
+  - 신호 경로 특성 검사
+  - RF 출력 검사 — 기준: CW Level ±1 dB
+  - 장비 내부 자체 점검 프로그램
+
+■ 자동 적용 가능 필드:
+  - 점검주기: equipment.inspectionCycle 또는 calibrations 테이블
+  - 교정유효기간: calibrations.validUntil에서 계산
+  - 분류: equipment.calibrationRequired → 교정기기/비교정기기
+  - 관리팀/장비위치/모델명: equipment 마스터
+
+작업 (Mode 2 — 15+ 파일, 폼 구조 변경):
+
+Phase 1: 점검 항목 프리셋 SSOT
+  - packages/shared-constants/src/inspection-presets.ts (신규)
+    DEFAULT_INSPECTION_ITEMS: { checkItem, checkCriteria }[]
+    장비 분류별 기본 항목 매핑 (RF, DC, 패시브, OTA 등)
+  - 프론트엔드: 프리셋 Select + 커스텀 입력 토글
+
+Phase 2: InspectionFormDialog 통합 리디자인
+  - 자동 적용 필드: 점검주기, 교정유효기간, 분류를 장비/교정 데이터에서 prefill
+    (수동 오버라이드 가능하되 기본값 자동 설정)
+  - 점검 항목: 프리셋 선택 + 직접 입력 모드 전환
+    프리셋 선택 시 checkItem + checkCriteria 자동 채움
+  - 결과 섹션: 폼 하단에 ResultSectionsPanel 인라인 통합
+    (현재 목록 펼침 → 폼 내부로 이동)
+  - 측정 장비: 기존 장비 검색 Select 유지 (시스템에 등록된 장비에서 선택)
+
+Phase 3: 점검 항목별 결과 입력 UX
+  - 점검 항목마다:
+    a. checkResult: 텍스트 입력 (간단한 결과)
+    b. detailedResult: 접을 수 있는 상세 영역 (멀티라인)
+    c. 사진/그래프 첨부: 인라인 업로드 (기존 items/:itemId/photos API 재사용)
+    d. judgment: pass/fail Select
+  - 결과 섹션(data_table, photo 등): 항목 아래 또는 폼 하단에 통합
+
+Phase 4: 워크플로우 연결
+  - 생성 시 결과 섹션까지 한 번에 저장 (2단계 → 1단계)
+  - 편집 시에도 결과 섹션 인라인 표시
+
+검증:
+- pnpm tsc --noEmit + frontend/backend build PASS
+- E2E: 점검 생성 → 프리셋 항목 선택 → 결과 데이터 입력 → Export → DOCX 검증
+- 기존 wf-19c 테스트 회귀 없음
+- 9개 실제 문서 패턴 재현 가능 확인
+```
+
+---
+
+## 41차 신규 — 중간점검 폼 통합 후속 verify/review 이슈 (3건)
+
+> **발견 배경 (2026-04-10, 41차)**: 중간점검 폼 통합 리디자인 완료 후 verify-implementation + review-architecture 실행 결과. 이번 변경 범위 외 기존 코드의 SSOT 위반 3건 확인.
+
+### 🟡 MEDIUM — calibration-api.ts SSOT 타입 강화 (sectionType, inspectionType)
+
+```
+verify-ssot 발견:
+1. ResultSection.sectionType: string → InspectionResultSectionType
+2. ResultSection.inspectionType: 'intermediate' | 'self' → InspectionType
+3. CreateResultSectionDto.sectionType: string → InspectionResultSectionType
+4. ResultSectionsPanelProps.inspectionType: 'intermediate' | 'self' → InspectionType
+
+모두 packages/schemas에 SSOT 타입이 이미 존재하지만 프론트엔드에서 string
+또는 리터럴 유니언으로 재정의. CLAUDE.md Rule 0 위반.
+
+작업:
+1. calibration-api.ts: import { InspectionResultSectionType, InspectionType }
+2. ResultSection/CreateResultSectionDto 인터페이스 타입 교체
+3. ResultSectionsPanel/InlineResultSectionsEditor props 타입 교체
+
+검증:
+- pnpm tsc --noEmit exit 0
+- /verify-ssot PASS
+```
+
+### 🟡 MEDIUM — ResultSectionsPanel handleMove 레이스 컨디션
+
+```
+verify-implementation 발견 (ResultSectionsPanel.tsx:104-119):
+두 번의 순차 mutateAsync 사이에 첫 번째 PATCH 성공 시 onSuccess →
+invalidate() → 리스트 refetch → 동일 sortOrder 중간 상태 UI 노출.
+
+수정 방안 (택 1):
+A. 백엔드에 swap 전용 엔드포인트 추가 (단일 트랜잭션)
+B. 프론트에서 두 호출 사이 invalidate 억제 (optimistic update)
+C. 두 호출을 Promise.all로 병렬 처리 (서버 사이드 정합성 확인)
+
+검증:
+- 빠른 연속 클릭 시 sortOrder 깨짐 없음
+- 첫 번째만 성공/두 번째 실패 시 복구 동작 확인
+```
+
+### 🟢 LOW — QP-18-03 Export에 1-step 결과 섹션 반영 검증
+
+```
+1-step 폼으로 생성된 inspection + resultSections가 Export DOCX에
+정상 반영되는지 end-to-end 검증 필요.
+
+작업:
+1. E2E: 1-step 폼으로 점검 생성 (항목 + 결과 섹션 포함)
+2. Export 버튼 클릭 → DOCX 다운로드
+3. DOCX 파싱 → 결과 섹션 데이터 존재 확인
+
+검증:
+- Playwright E2E: 다운로드 + DOCX 내용 검증
+- 기존 wf-19c 테스트 회귀 없음
+```
+
+---
+
+## 39차 신규 — 결과 섹션 아키텍처 리뷰 후속 (4건)
+
+> **발견 배경 (2026-04-10, 39차)**: feat/inspection-result-sections 브랜치 review-architecture + verify-implementation 실행 결과. Critical 2건(Fragment key, mutation race)은 즉시 수정. 나머지 후속 작업 등재.
+
+### 🟠 HIGH — ResultSectionsPanel 캐시/에러 처리 강화 (Mode 1)
+
+```
+review-architecture 발견 (BE-C2 + FE-W3 + FE-W4):
+1. 결과 섹션 mutation 시 부모 점검 캐시 미무효화
+   - result-sections.service.ts: create/update/delete 후 parent inspection cache invalidate 없음
+   - ResultSectionsPanel.tsx: invalidateQueries가 결과 섹션 queryKey만 타겟
+2. CAS conflict (409) 에러 미처리 — 제네릭 toast만 표시
+3. staleTime/gcTime 미설정 — 매 mount마다 refetch
+
+작업:
+1. ResultSectionsPanel: invalidate 시 부모 queryKey도 포함
+   queryClient.invalidateQueries({ queryKey: queryKeys.intermediateInspections.detail(inspectionId) })
+2. mutation onError에 isConflictError 분기 추가
+3. useQuery에 QUERY_CONFIG 또는 staleTime 적용
+4. query-config.ts에 RESULT_SECTIONS config 엔트리 추가
+
+검증: pnpm tsc --noEmit + frontend build PASS
+```
+
+### 🟡 MEDIUM — rich_table 프론트엔드 폼 UI 구현 (Mode 1)
+
+```
+ResultSectionFormDialog의 SECTION_TYPES에 'rich_table'이 없어 UI에서 생성 불가.
+API + Export(appendRichTable)는 구현 완료.
+
+작업:
+1. ResultSectionFormDialog.tsx: SECTION_TYPES에 'rich_table' 추가
+2. RichTableSectionForm: 테이블 에디터 + 셀별 text/image 토글 + 이미지 업로드
+3. ResultSectionPreview.tsx rich_table case: 이미지 셀 렌더링
+
+검증:
+- 프론트엔드에서 rich_table 섹션 생성 → Export → DOCX에 셀 내 이미지 포함
+- pnpm tsc --noEmit + frontend build PASS
+```
+
+### 🟡 MEDIUM — ResultSectionsPanel N+1 쿼리 최적화 (Mode 1)
+
+```
+FE-W5: SelfInspectionTab에서 모든 점검 카드에 ResultSectionsPanel을 무조건 렌더링.
+각 패널이 독립 useQuery를 실행하여 N개 점검 × 1 API 호출 = N+1 문제.
+
+BE-W2: renderResultSections에서 photo/rich_table 이미지 로딩이 sequential.
+문서 ID를 미리 수집 → batch WHERE IN 쿼리 + Promise.all 다운로드로 최적화 가능.
+
+작업:
+1. SelfInspectionTab: ResultSectionsPanel을 펼치기 토글 뒤에 조건부 렌더 (lazy)
+2. renderResultSections: 이미지 documentId 선수집 → batch 조회
+3. CSV 업로드 fileSize 제한 추가 (1MB)
+
+검증: pnpm tsc --noEmit + backend build + backend test PASS
+```
+
+### 🟢 LOW — ResultSectionsPanel 접근성 + 타입 안전성 개선 (Mode 0)
+
+```
+FE-I10: 아이콘 버튼에 aria-label 누락 (이동/수정/삭제)
+BE-C1: result-sections.service.ts update()의 Record<string, unknown> → Partial 타입 개선
+BE-W5: updatedBy 감사 필드 누락
+
+작업:
+1. ResultSectionsPanel: 아이콘 버튼에 aria-label={t('...')} 추가
+2. result-sections.service.ts: updateData 타입을 Record에서 Partial<NewInspectionResultSection>로 변경
+3. DB 스키마에 updatedBy 컬럼 추가 (선택적)
+
+검증: pnpm tsc --noEmit + frontend build PASS
 ```
 
 ---

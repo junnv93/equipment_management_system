@@ -209,7 +209,7 @@ export class CacheInvalidationHelper {
   /**
    * 폐기 요청 처리 후 캐시 무효화
    *
-   * 폐기는 장비 상태를 'retired'로 변경하므로:
+   * 폐기는 장비 상태를 'disposed'로 변경하므로:
    * - 장비 상세/목록 캐시 무효화
    * - 폐기 요청 목록 캐시 무효화
    */

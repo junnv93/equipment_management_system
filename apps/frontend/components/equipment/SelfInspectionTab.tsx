@@ -12,6 +12,7 @@ import {
   type SelfInspection,
 } from '@/lib/api/self-inspection-api';
 import type { Equipment } from '@/lib/api/equipment-api';
+import ResultSectionsPanel from '@/components/inspections/result-sections/ResultSectionsPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
 import { FORM_CATALOG, Permission } from '@equipment-management/shared-constants';
@@ -306,6 +307,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                         {inspection.remarks}
                       </p>
                     )}
+
+                    <ResultSectionsPanel
+                      inspectionId={inspection.id}
+                      inspectionType="self"
+                      canEdit={can(Permission.CREATE_SELF_INSPECTION)}
+                    />
                   </div>
                 );
               })}

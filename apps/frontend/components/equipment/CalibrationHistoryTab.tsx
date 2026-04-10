@@ -29,7 +29,6 @@ import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { DocumentTypeValues } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
-import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
 import { CalibrationResultBadge } from './CalibrationResultBadge';
 import { CalibrationRegisterDialog } from './CalibrationRegisterDialog';
@@ -87,8 +86,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
   const canCreate = can(Permission.CREATE_CALIBRATION);
 
   const isOverdue =
-    equipment.status === ESVal.CALIBRATION_OVERDUE ||
-    (equipment.nextCalibrationDate != null && new Date(equipment.nextCalibrationDate) < new Date());
+    equipment.nextCalibrationDate != null && new Date(equipment.nextCalibrationDate) < new Date();
 
   if (isLoading) {
     return (

@@ -435,7 +435,7 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     await createTestEquipment(request, token, {
       managementNumber: retiredMgmtNumber,
       name: `Test Equipment A7 Retired ${timestamp}`,
-      status: ESVal.RETIRED,
+      status: ESVal.DISPOSED,
       nextCalibrationDate: sevenDaysAgo,
       calibrationRequired: 'required',
       isActive: true,

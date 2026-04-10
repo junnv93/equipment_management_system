@@ -95,34 +95,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     icon: FileOutput,
     labelKey: 'equipment.status.checked_out',
   },
-  calibration_scheduled: {
-    // UI는 "사용 가능"으로 표시 (교정 상태는 별도 배지)
-    card: {
-      className: getSemanticStatusClasses('ok'),
-      borderColor: getSemanticLeftBorderClasses('ok'),
-      statusBarColor: 'bg-brand-warning',
-    },
-    header: {
-      textColor: getSemanticContainerTextClasses('ok'),
-      bgClasses: 'bg-brand-ok/10 border-brand-ok',
-    },
-    icon: CheckCircle,
-    labelKey: 'equipment.status.available',
-  },
-  calibration_overdue: {
-    // UI는 "부적합"으로 표시
-    card: {
-      className: getSemanticStatusClasses('critical'),
-      borderColor: getSemanticLeftBorderClasses('critical'),
-      statusBarColor: 'bg-brand-critical',
-    },
-    header: {
-      textColor: getSemanticContainerTextClasses('critical'),
-      bgClasses: 'bg-brand-critical/10 border-brand-critical',
-    },
-    icon: XCircle,
-    labelKey: 'equipment.status.non_conforming',
-  },
   non_conforming: {
     card: {
       className: getSemanticStatusClasses('critical'),
@@ -136,6 +108,20 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     icon: XCircle,
     labelKey: 'equipment.status.non_conforming',
   },
+  // Derived 표시 전용 (status enum 아님) — nextCalibrationDate < today 카운트
+  calibration_overdue: {
+    card: {
+      className: getSemanticStatusClasses('critical'),
+      borderColor: getSemanticLeftBorderClasses('critical'),
+      statusBarColor: 'bg-brand-critical',
+    },
+    header: {
+      textColor: getSemanticContainerTextClasses('critical'),
+      bgClasses: 'bg-brand-critical/10 border-brand-critical',
+    },
+    icon: XCircle,
+    labelKey: 'equipment.status.calibration_overdue',
+  },
   spare: {
     card: {
       className: getSemanticStatusClasses('neutral'),
@@ -148,19 +134,6 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     },
     icon: Archive,
     labelKey: 'equipment.status.spare',
-  },
-  retired: {
-    card: {
-      className: getSemanticStatusClasses('neutral'),
-      borderColor: getSemanticLeftBorderClasses('neutral'),
-      statusBarColor: 'bg-brand-neutral/50',
-    },
-    header: {
-      textColor: getSemanticContainerTextClasses('neutral'),
-      bgClasses: 'bg-brand-neutral/20 border-brand-neutral',
-    },
-    icon: Ban,
-    labelKey: 'equipment.status.retired',
   },
   pending_disposal: {
     card: {
@@ -620,12 +593,10 @@ export const EQUIPMENT_TOOLBAR_TOKENS = {
 export const EQUIPMENT_STATUS_DISPLAY_ORDER = [
   'available',
   'checked_out',
-  'calibration_scheduled',
   'non_conforming',
-  'calibration_overdue',
+  'calibration_overdue', // Derived 카운트 (nextCalibrationDate < today) — status enum이 아닌 표시 전용
   'pending_disposal',
   'spare',
-  'retired',
   'disposed',
   'temporary',
   'inactive',
@@ -637,8 +608,8 @@ export const EQUIPMENT_STATUS_DISPLAY_ORDER = [
  * 이 상태들은 StatusSummaryStrip에서 count를 빨간색(brand-critical)으로 표시한다.
  */
 export const EQUIPMENT_CRITICAL_STATUSES = new Set<string>([
-  'calibration_overdue',
   'non_conforming',
+  'calibration_overdue', // Derived 카운트 — 빨간 강조 유지
 ]);
 
 // ============================================================================
@@ -871,10 +842,8 @@ export const EQUIPMENT_CARD_GRID_TOKENS = {
  * 장비 상태 배지 클래스 + 라벨 반환 (SSOT)
  *
  * equipment-status-styles.ts의 getEquipmentStatusStyle()를 design token으로 통합.
- * - 12개 상태의 className/label/borderColor/statusBarColor 반환
- * - nextCalibrationDate 기반 실시간 교정기한 초과 override
- * - calibration_scheduled → "사용 가능"으로 표시 (UL-QP-18)
- * - calibration_overdue → "부적합"으로 표시
+ * - 8개 상태의 className/label/borderColor/statusBarColor 반환
+ * - nextCalibrationDate 기반 실시간 교정기한 초과 override (스케줄러 실행 전 대비)
  */
 export function getEquipmentStatusTokenStyle(
   status: string | undefined | null,

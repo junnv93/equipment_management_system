@@ -14,10 +14,7 @@ export async function detectEquipmentStatus(page: Page): Promise<EquipmentStatus
     'non_conforming',
     'available',
     'checked_out',
-    'calibration_scheduled',
-    'calibration_overdue',
     'spare',
-    'retired',
   ];
 
   for (const status of possibleStatuses) {

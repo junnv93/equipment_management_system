@@ -91,7 +91,7 @@ export function AlertBanner({
             href={buildScopedEquipmentUrl(
               scope,
               FRONTEND_ROUTES.EQUIPMENT.LIST,
-              EquipmentStatusValues.CALIBRATION_OVERDUE
+              'calibration_overdue'
             )}
             className={T.chipWarning}
           >

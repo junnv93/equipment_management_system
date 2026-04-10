@@ -314,6 +314,124 @@ export class DocxTemplate {
     this.documentXml = this.documentXml.replace('</w:body>', `${sectionXml}</w:body>`);
   }
 
+  /**
+   * 문서 끝에 단락 추가
+   *
+   * 동적 결과 섹션의 제목/본문 텍스트 블록을 문서 끝에 삽입합니다.
+   * `<w:sectPr` 앞(없으면 `</w:body>` 앞)에 삽입하여 페이지 설정을 보존합니다.
+   */
+  appendParagraph(text: string, options?: { bold?: boolean; fontSize?: number }): void {
+    const rPrParts: string[] = [];
+    if (options?.bold) rPrParts.push('<w:b/>');
+    if (options?.fontSize) {
+      const halfPt = options.fontSize * 2;
+      rPrParts.push(`<w:sz w:val="${halfPt}"/><w:szCs w:val="${halfPt}"/>`);
+    }
+    const rPr = rPrParts.length > 0 ? `<w:rPr>${rPrParts.join('')}</w:rPr>` : '';
+    const paraXml = `<w:p><w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(text)}</w:t></w:r></w:p>`;
+    this.insertBeforeSectPr(paraXml);
+  }
+
+  /**
+   * 문서 끝에 테이블 추가
+   *
+   * 동적 데이터 테이블(RF 측정 데이터, DC 전압 등)을 문서 끝에 삽입합니다.
+   * 전체 너비, 단일 테두리, 헤더행 볼드 스타일을 적용합니다.
+   */
+  appendTable(headers: string[], rows: string[][]): void {
+    const borderAttr = 'w:val="single" w:sz="4" w:space="0" w:color="000000"';
+    const tblPr = `<w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top ${borderAttr}/><w:left ${borderAttr}/><w:bottom ${borderAttr}/><w:right ${borderAttr}/><w:insideH ${borderAttr}/><w:insideV ${borderAttr}/></w:tblBorders></w:tblPr>`;
+
+    const buildCell = (val: string, bold: boolean): string => {
+      const rPr = bold ? '<w:rPr><w:b/></w:rPr>' : '';
+      return `<w:tc><w:p><w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(val)}</w:t></w:r></w:p></w:tc>`;
+    };
+
+    const headerRow = `<w:tr>${headers.map((h) => buildCell(h, true)).join('')}</w:tr>`;
+    const dataRows = rows
+      .map((row) => `<w:tr>${row.map((c) => buildCell(c, false)).join('')}</w:tr>`)
+      .join('');
+
+    const tableXml = `<w:tbl>${tblPr}${headerRow}${dataRows}</w:tbl>`;
+    this.insertBeforeSectPr(tableXml);
+  }
+
+  /**
+   * 문서 끝에 리치 테이블 추가 (셀 내 이미지 포함)
+   *
+   * E0001 OBW 패턴: Data 열에 스크린샷 이미지가 들어간 테이블.
+   * 각 셀이 텍스트 또는 이미지 중 하나입니다.
+   */
+  appendRichTable(
+    headers: string[],
+    rows: Array<
+      Array<
+        | { type: 'text'; value: string }
+        | {
+            type: 'image';
+            buffer: Buffer;
+            ext: 'png' | 'jpeg';
+            widthCm?: number;
+            heightCm?: number;
+          }
+      >
+    >
+  ): void {
+    const borderAttr = 'w:val="single" w:sz="4" w:space="0" w:color="000000"';
+    const tblPr = `<w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top ${borderAttr}/><w:left ${borderAttr}/><w:bottom ${borderAttr}/><w:right ${borderAttr}/><w:insideH ${borderAttr}/><w:insideV ${borderAttr}/></w:tblBorders></w:tblPr>`;
+
+    const headerRow = `<w:tr>${headers.map((h) => `<w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
+
+    const dataRows = rows
+      .map((row) => {
+        const cells = row
+          .map((cell) => {
+            if (cell.type === 'text') {
+              return `<w:tc><w:p><w:r><w:t xml:space="preserve">${this.escapeXml(cell.value)}</w:t></w:r></w:p></w:tc>`;
+            }
+            const rId = this.addImageResource(cell.buffer, cell.ext);
+            const cx = Math.round((cell.widthCm ?? 8) * 360000);
+            const cy = Math.round((cell.heightCm ?? 6) * 360000);
+            const imageXml = this.buildSizedInlineImageXml(rId, cx, cy);
+            return `<w:tc><w:p><w:r>${imageXml}</w:r></w:p></w:tc>`;
+          })
+          .join('');
+        return `<w:tr>${cells}</w:tr>`;
+      })
+      .join('');
+
+    const tableXml = `<w:tbl>${tblPr}${headerRow}${dataRows}</w:tbl>`;
+    this.insertBeforeSectPr(tableXml);
+  }
+
+  /**
+   * 문서 끝에 이미지 추가
+   *
+   * 측정 그래프, OBW 캡처, 외관 사진 등을 문서 끝에 삽입합니다.
+   * 기존 addImageResource() 및 buildSizedInlineImageXml()을 재사용합니다.
+   */
+  appendImage(imageBuffer: Buffer, ext: 'png' | 'jpeg', widthCm = 12, heightCm = 9): void {
+    const rId = this.addImageResource(imageBuffer, ext);
+    const cx = Math.round(widthCm * 360000);
+    const cy = Math.round(heightCm * 360000);
+    const imageXml = this.buildSizedInlineImageXml(rId, cx, cy);
+    const paraXml = `<w:p><w:r>${imageXml}</w:r></w:p>`;
+    this.insertBeforeSectPr(paraXml);
+  }
+
+  /**
+   * `<w:sectPr` 앞에 XML 삽입 (없으면 `</w:body>` 앞 fallback)
+   */
+  private insertBeforeSectPr(xml: string): void {
+    const sectPrIdx = this.documentXml.lastIndexOf('<w:sectPr');
+    if (sectPrIdx !== -1) {
+      this.documentXml =
+        this.documentXml.slice(0, sectPrIdx) + xml + this.documentXml.slice(sectPrIdx);
+    } else {
+      this.documentXml = this.documentXml.replace('</w:body>', `${xml}</w:body>`);
+    }
+  }
+
   /** 최종 docx Buffer 반환 */
   toBuffer(): Buffer {
     this.zip.file('word/document.xml', this.documentXml);

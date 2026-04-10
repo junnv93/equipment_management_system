@@ -610,9 +610,9 @@
       "non_calibrated": "Non-Calibrated Equipment"
     },
     "inspectionCycle": "Inspection Cycle",
-    "inspectionCyclePlaceholder": "e.g. 6 months",
+    "inspectionCyclePlaceholder": "e.g. 6 months (inspection cycle)",
     "calibrationValidityPeriod": "Calibration Validity Period",
-    "validityPeriodPlaceholder": "e.g. 2026-12-31",
+    "validityPeriodPlaceholder": "e.g. 1 year",
     "rejectionReasonPlaceholder": "Enter rejection reason",
     "overallResult": "Overall Result",
     "resultOptions": {
@@ -634,7 +634,10 @@
       },
       "addItem": "Add Item",
       "removeItem": "Remove",
-      "noItems": "No inspection items added"
+      "noItems": "No inspection items added",
+      "noItemsDescription": "Select from presets or add custom items.",
+      "selectPreset": "Select Preset",
+      "customItem": "Custom Input"
     },
     "actions": {
       "submit": "Submit",
@@ -655,6 +658,19 @@
       "reviewed": "Reviewed",
       "approved": "Approved",
       "rejected": "Rejected"
+    },
+    "prefill": {
+      "auto": "Auto",
+      "tooltip": "Auto-filled from equipment master data. You can edit this value."
+    },
+    "measurementEquipment": {
+      "title": "Measurement Equipment List",
+      "searchPlaceholder": "Search equipment (ID/name)",
+      "managementNumber": "Management No.",
+      "equipmentName": "Equipment Name",
+      "calibrationDate": "Calibration Date",
+      "empty": "No measurement equipment added",
+      "emptyDescription": "Search and add the measurement equipment used for this inspection."
     },
     "cancel": "Cancel",
     "save": "Save",
@@ -682,5 +698,49 @@
     "description": "The requested calibration plan does not exist or has been deleted.\nPlease check the calibration plan ID.",
     "backToList": "Calibration plans list",
     "backToHome": "Go to home"
+  },
+  "resultSections": {
+    "title": "Measurement Data",
+    "addSection": "Add Section",
+    "editSection": "Edit Section",
+    "deleteSection": "Delete Section",
+    "deleteConfirm": "Delete this section?",
+    "empty": "No result sections yet.",
+    "emptyDescription": "Add measurement data, photos, tables, and more.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "selectResultFormat": "Select result format",
+    "types": {
+      "title": "Title",
+      "text": "Text",
+      "data_table": "Data Table",
+      "photo": "Photo",
+      "rich_table": "Table",
+      "table": "Table"
+    },
+    "form": {
+      "resultFormat": "Result Format",
+      "inspectionItemName": "Inspection Item",
+      "inspectionItemNamePlaceholder": "e.g., Frequency Response, Output Level, Visual Inspection",
+      "content": "Content",
+      "pasteData": "Paste data (tab-separated)",
+      "imageWidth": "Image Width (cm)",
+      "imageHeight": "Image Height (cm)",
+      "selectFile": "Select File",
+      "columnHeaders": "Column Headers",
+      "addColumn": "Add Column",
+      "addRow": "Add Row",
+      "deleteRow": "Delete Row",
+      "preview": "Preview",
+      "applyPaste": "Apply Paste",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "createSuccess": "Section added.",
+      "updateSuccess": "Section updated.",
+      "deleteSuccess": "Section deleted.",
+      "error": "An error occurred."
+    }
   }
 }
