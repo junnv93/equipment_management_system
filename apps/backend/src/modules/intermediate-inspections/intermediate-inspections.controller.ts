@@ -36,7 +36,11 @@ import type {
   UpdateResultSectionInput,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  EQUIPMENT_DATA_SCOPE,
+  userHasPermission,
+} from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
@@ -61,7 +65,7 @@ export class EquipmentIntermediateInspectionsController {
   constructor(private readonly inspectionsService: IntermediateInspectionsService) {}
 
   @Post(':uuid/intermediate-inspections')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({
     action: 'create',
     entityType: 'intermediate_inspection',
@@ -102,7 +106,7 @@ export class CalibrationIntermediateInspectionsController {
   constructor(private readonly inspectionsService: IntermediateInspectionsService) {}
 
   @Post(':uuid/intermediate-inspections')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({
     action: 'create',
     entityType: 'intermediate_inspection',
@@ -162,7 +166,7 @@ export class IntermediateInspectionsController {
   }
 
   @Patch(':uuid')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({
     action: 'update',
     entityType: 'intermediate_inspection',
@@ -180,9 +184,9 @@ export class IntermediateInspectionsController {
   }
 
   @Patch(':uuid/submit')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({
-    action: 'update',
+    action: 'submit',
     entityType: 'intermediate_inspection',
     entityIdPath: 'params.uuid',
   })
@@ -198,10 +202,48 @@ export class IntermediateInspectionsController {
     return this.inspectionsService.submit(uuid, dto.version, userId);
   }
 
-  @Patch(':uuid/review')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @Patch(':uuid/withdraw')
+  @RequirePermissions(Permission.WITHDRAW_INTERMEDIATE_INSPECTION)
   @AuditLog({
-    action: 'update',
+    action: 'withdraw',
+    entityType: 'intermediate_inspection',
+    entityIdPath: 'params.uuid',
+  })
+  @UsePipes(ApproveInspectionPipe)
+  async withdraw(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: ApproveInspectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.inspectionsService.withdraw(uuid, dto.version, userId);
+  }
+
+  @Patch(':uuid/resubmit')
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
+  @AuditLog({
+    action: 'resubmit',
+    entityType: 'intermediate_inspection',
+    entityIdPath: 'params.uuid',
+  })
+  @UsePipes(ApproveInspectionPipe)
+  async resubmit(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: ApproveInspectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<IntermediateInspection> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.inspectionsService.resubmit(uuid, dto.version, userId);
+  }
+
+  @Patch(':uuid/review')
+  @RequirePermissions(Permission.REVIEW_INTERMEDIATE_INSPECTION)
+  @AuditLog({
+    action: 'review',
     entityType: 'intermediate_inspection',
     entityIdPath: 'params.uuid',
   })
@@ -218,7 +260,7 @@ export class IntermediateInspectionsController {
   }
 
   @Patch(':uuid/approve')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.APPROVE_INTERMEDIATE_INSPECTION)
   @AuditLog({
     action: 'approve',
     entityType: 'intermediate_inspection',
@@ -237,7 +279,7 @@ export class IntermediateInspectionsController {
   }
 
   @Patch(':uuid/reject')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.REJECT_INTERMEDIATE_INSPECTION)
   @AuditLog({
     action: 'reject',
     entityType: 'intermediate_inspection',
@@ -255,12 +297,33 @@ export class IntermediateInspectionsController {
     return this.inspectionsService.reject(uuid, dto.version, userId, dto.rejectionReason);
   }
 
+  @Delete(':uuid')
+  @RequirePermissions(Permission.DELETE_INTERMEDIATE_INSPECTION)
+  @AuditLog({
+    action: 'delete',
+    entityType: 'intermediate_inspection',
+    entityIdPath: 'params.uuid',
+  })
+  async remove(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ success: boolean }> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    // 기술책임자/시험소장은 approved 포함 모든 상태에서 삭제 가능
+    const allowApproved = userHasPermission(
+      req.user?.roles,
+      Permission.REVIEW_INTERMEDIATE_INSPECTION
+    );
+    return this.inspectionsService.remove(uuid, allowApproved);
+  }
+
   // ============================================================================
   // 항목별 사진/문서 첨부
   // ============================================================================
 
   @Post(':uuid/items/:itemId/photos')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @UseInterceptors(FileInterceptor('file'))
   @AuditLog({ action: 'upload', entityType: 'document' })
   async uploadItemPhoto(
@@ -322,7 +385,7 @@ export class IntermediateInspectionsController {
   }
 
   @Post(':uuid/result-sections')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
   @UsePipes(CreateResultSectionPipe)
   async createResultSection(
@@ -337,7 +400,7 @@ export class IntermediateInspectionsController {
   }
 
   @Patch(':uuid/result-sections/:sectionId')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
   @UsePipes(UpdateResultSectionPipe)
   async updateResultSection(
@@ -352,7 +415,7 @@ export class IntermediateInspectionsController {
   }
 
   @Delete(':uuid/result-sections/:sectionId')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({ action: 'delete', entityType: 'inspection_result_section' })
   async deleteResultSection(
     @Param('uuid', ParseUUIDPipe) uuid: string,
@@ -366,7 +429,7 @@ export class IntermediateInspectionsController {
   }
 
   @Post(':uuid/result-sections/upload-csv')
-  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @UseInterceptors(FileInterceptor('file'))
   @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
   async uploadCsvResultSection(

@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, inArray } from 'drizzle-orm';
 import {
   intermediateInspections,
   intermediateInspectionItems,
@@ -521,6 +521,140 @@ export class IntermediateInspectionsService extends VersionedBaseService {
     this.invalidateCache(id, existing.equipmentId);
 
     return updated;
+  }
+
+  /**
+   * 제출 취소 (submitted → draft)
+   */
+  async withdraw(id: string, version: number, userId: string): Promise<IntermediateInspection> {
+    const existing = await this.findOne(id);
+
+    if (existing.approvalStatus !== 'submitted') {
+      throw new BadRequestException({
+        code: 'INVALID_STATUS_TRANSITION',
+        message: 'Only submitted inspections can be withdrawn.',
+      });
+    }
+
+    if (existing.submittedBy !== userId) {
+      throw new BadRequestException({
+        code: 'NOT_SUBMITTER',
+        message: 'Only the submitter can withdraw a submitted inspection.',
+      });
+    }
+
+    const updated = await this.updateWithVersion<IntermediateInspection>(
+      intermediateInspections,
+      id,
+      version,
+      {
+        approvalStatus: 'draft',
+        submittedAt: null,
+        submittedBy: null,
+      },
+      '중간점검',
+      undefined,
+      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+    );
+
+    this.invalidateCache(id, existing.equipmentId);
+
+    return updated;
+  }
+
+  /**
+   * 재제출 (rejected → draft)
+   */
+  async resubmit(id: string, version: number, userId: string): Promise<IntermediateInspection> {
+    const existing = await this.findOne(id);
+
+    if (existing.approvalStatus !== 'rejected') {
+      throw new BadRequestException({
+        code: 'INVALID_STATUS_TRANSITION',
+        message: 'Only rejected inspections can be resubmitted.',
+      });
+    }
+
+    const updated = await this.updateWithVersion<IntermediateInspection>(
+      intermediateInspections,
+      id,
+      version,
+      {
+        approvalStatus: 'draft',
+        rejectedAt: null,
+        rejectedBy: null,
+        rejectionReason: null,
+      },
+      '중간점검',
+      undefined,
+      'INTERMEDIATE_INSPECTION_NOT_FOUND'
+    );
+
+    this.invalidateCache(id, existing.equipmentId);
+
+    return updated;
+  }
+
+  /**
+   * 중간점검 삭제 (hard-delete, 하위 테이블 cascade)
+   *
+   * 시험실무자: draft/submitted/rejected 상태에서만 삭제 가능
+   * 기술책임자: 모든 상태에서 삭제 가능 (approved 포함)
+   * 삭제 가능 여부 판단은 컨트롤러에서 수행 (역할 기반)
+   */
+  async remove(id: string, allowApproved: boolean): Promise<{ success: boolean }> {
+    const existing = await this.findOne(id);
+
+    if (
+      !allowApproved &&
+      existing.approvalStatus !== 'draft' &&
+      existing.approvalStatus !== 'submitted' &&
+      existing.approvalStatus !== 'rejected'
+    ) {
+      throw new BadRequestException({
+        code: 'CANNOT_DELETE_APPROVED',
+        message: 'Cannot delete approved or reviewed inspections.',
+      });
+    }
+
+    await this.db.transaction(async (tx) => {
+      // inspectionDocumentItems 삭제 (polymorphic FK — cascade 없음)
+      const itemIds = await tx
+        .select({ id: intermediateInspectionItems.id })
+        .from(intermediateInspectionItems)
+        .where(eq(intermediateInspectionItems.inspectionId, id));
+      if (itemIds.length > 0) {
+        await tx.delete(inspectionDocumentItems).where(
+          and(
+            inArray(
+              inspectionDocumentItems.inspectionItemId,
+              itemIds.map((i) => i.id)
+            ),
+            eq(inspectionDocumentItems.inspectionItemType, 'intermediate')
+          )
+        );
+      }
+      // 하위 테이블 삭제
+      await tx
+        .delete(inspectionResultSections)
+        .where(
+          and(
+            eq(inspectionResultSections.inspectionId, id),
+            eq(inspectionResultSections.inspectionType, 'intermediate')
+          )
+        );
+      await tx
+        .delete(intermediateInspectionItems)
+        .where(eq(intermediateInspectionItems.inspectionId, id));
+      await tx
+        .delete(intermediateInspectionEquipment)
+        .where(eq(intermediateInspectionEquipment.inspectionId, id));
+      await tx.delete(intermediateInspections).where(eq(intermediateInspections.id, id));
+    });
+
+    this.invalidateCache(id, existing.equipmentId);
+
+    return { success: true };
   }
 
   /**

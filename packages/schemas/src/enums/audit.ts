@@ -51,6 +51,10 @@ export const AUDIT_ACTION_VALUES = [
   'link', // M:N 연결
   'unlink', // M:N 연결 해제
   'access_denied', // 권한/사이트 스코프 거부 (cross-site probing 추적)
+  'submit', // 제출 (워크플로우 전이)
+  'withdraw', // 제출 취소
+  'resubmit', // 재제출
+  'review', // 검토 (워크플로우 전이)
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES);

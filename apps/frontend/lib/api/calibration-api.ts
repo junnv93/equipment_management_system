@@ -177,6 +177,7 @@ export interface IntermediateInspection {
   remarks: string | null;
   approvalStatus: InspectionApprovalStatus;
   submittedAt: string | null;
+  submittedBy: string | null;
   reviewedAt: string | null;
   approvedAt: string | null;
   rejectedAt: string | null;
@@ -493,6 +494,25 @@ const calibrationApi = {
         rejectionReason,
       });
       return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    withdraw: async (id: string, version: number): Promise<IntermediateInspection> => {
+      const response = await apiClient.patch(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.WITHDRAW(id), {
+        version,
+      });
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    resubmit: async (id: string, version: number): Promise<IntermediateInspection> => {
+      const response = await apiClient.patch(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.RESUBMIT(id), {
+        version,
+      });
+      return transformSingleResponse<IntermediateInspection>(response);
+    },
+
+    delete: async (id: string): Promise<{ success: boolean }> => {
+      const response = await apiClient.delete(API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.DELETE(id));
+      return response.data as { success: boolean };
     },
 
     resultSections: {

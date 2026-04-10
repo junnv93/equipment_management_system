@@ -182,6 +182,16 @@ export enum Permission {
   DOWNLOAD_FORM_TEMPLATE_HISTORY = 'download:form-template-history',
 
   // ============================================================================
+  // 중간점검 관련 권한 (UL-QP-18-03 역할 분리)
+  // ============================================================================
+  SUBMIT_INTERMEDIATE_INSPECTION = 'submit:intermediate-inspection',
+  WITHDRAW_INTERMEDIATE_INSPECTION = 'withdraw:intermediate-inspection',
+  REVIEW_INTERMEDIATE_INSPECTION = 'review:intermediate-inspection',
+  APPROVE_INTERMEDIATE_INSPECTION = 'approve:intermediate-inspection',
+  REJECT_INTERMEDIATE_INSPECTION = 'reject:intermediate-inspection',
+  DELETE_INTERMEDIATE_INSPECTION = 'delete:intermediate-inspection',
+
+  // ============================================================================
   // 시스템 설정 관련 권한
   // ============================================================================
   MANAGE_SYSTEM_SETTINGS = 'manage:system:settings',
@@ -283,6 +293,13 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.VIEW_FORM_TEMPLATES]: '양식 조회',
   [Permission.MANAGE_FORM_TEMPLATES]: '양식 관리',
   [Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY]: '양식 개정 이력 다운로드',
+
+  [Permission.SUBMIT_INTERMEDIATE_INSPECTION]: '중간점검 제출',
+  [Permission.WITHDRAW_INTERMEDIATE_INSPECTION]: '중간점검 제출 취소',
+  [Permission.REVIEW_INTERMEDIATE_INSPECTION]: '중간점검 검토',
+  [Permission.APPROVE_INTERMEDIATE_INSPECTION]: '중간점검 승인',
+  [Permission.REJECT_INTERMEDIATE_INSPECTION]: '중간점검 반려',
+  [Permission.DELETE_INTERMEDIATE_INSPECTION]: '중간점검 삭제',
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',

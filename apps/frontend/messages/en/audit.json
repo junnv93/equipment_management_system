@@ -47,7 +47,11 @@
     "upload": "Upload",
     "download": "Download",
     "revision": "Revision",
-    "access_denied": "Access Denied"
+    "access_denied": "Access Denied",
+    "submit": "Submit",
+    "withdraw": "Withdraw",
+    "resubmit": "Resubmit",
+    "review": "Review"
   },
   "entityTypes": {
     "equipment": "Equipment",

@@ -47,7 +47,11 @@
     "upload": "업로드",
     "download": "다운로드",
     "revision": "개정",
-    "access_denied": "접근 거부"
+    "access_denied": "접근 거부",
+    "submit": "제출",
+    "withdraw": "제출 취소",
+    "resubmit": "재제출",
+    "review": "검토"
   },
   "entityTypes": {
     "equipment": "장비",

@@ -3,7 +3,7 @@
 import { Fragment, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Send, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Send, CheckCircle, XCircle, Undo2, Trash2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +67,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { can } = useAuth();
+  const { can, user } = useAuth();
 
   const primaryQueryKey = queryKeys.equipment.intermediateInspections(equipmentId);
   const crossInvalidateKeys = [
@@ -156,11 +156,60 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
     },
   });
 
+  const withdrawMutation = useOptimisticMutation<
+    IntermediateInspection,
+    { id: string; version: number },
+    IntermediateInspection[]
+  >({
+    mutationFn: ({ id, version }) => calibrationApi.intermediateInspections.withdraw(id, version),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: makeStatusUpdate('draft'),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: t('intermediateInspection.toasts.withdrawSuccess'),
+    errorMessage: t('intermediateInspection.toasts.withdrawError'),
+  });
+
+  const resubmitMutation = useOptimisticMutation<
+    IntermediateInspection,
+    { id: string; version: number },
+    IntermediateInspection[]
+  >({
+    mutationFn: ({ id, version }) => calibrationApi.intermediateInspections.resubmit(id, version),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: makeStatusUpdate('draft'),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: t('intermediateInspection.toasts.resubmitSuccess'),
+    errorMessage: t('intermediateInspection.toasts.resubmitError'),
+  });
+
+  const deleteMutation = useOptimisticMutation<
+    { success: boolean },
+    { id: string },
+    IntermediateInspection[]
+  >({
+    mutationFn: ({ id }) => calibrationApi.intermediateInspections.delete(id),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: (old, { id }) => (old ?? []).filter((item) => item.id !== id),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: t('intermediateInspection.toasts.deleteSuccess'),
+    errorMessage: t('intermediateInspection.toasts.deleteError'),
+  });
+
   const isPending =
     submitMutation.isPending ||
     reviewMutation.isPending ||
     approveMutation.isPending ||
-    rejectMutation.isPending;
+    rejectMutation.isPending ||
+    withdrawMutation.isPending ||
+    resubmitMutation.isPending ||
+    deleteMutation.isPending;
+
+  const canSubmit = can(Permission.SUBMIT_INTERMEDIATE_INSPECTION);
+  const canWithdraw = can(Permission.WITHDRAW_INTERMEDIATE_INSPECTION);
+  const canReview = can(Permission.REVIEW_INTERMEDIATE_INSPECTION);
+  const canApprove = can(Permission.APPROVE_INTERMEDIATE_INSPECTION);
+  const canReject = can(Permission.REJECT_INTERMEDIATE_INSPECTION);
+  const canDelete = can(Permission.DELETE_INTERMEDIATE_INSPECTION);
 
   const renderActions = (inspection: IntermediateInspection) => {
     const { id, version, approvalStatus } = inspection;
@@ -197,9 +246,17 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
       );
     }
 
+    // 삭제 버튼: 시험실무자(draft/submitted/rejected), 기술책임자(모든 상태)
+    const showDelete =
+      canDelete &&
+      (canReview ||
+        approvalStatus === 'draft' ||
+        approvalStatus === 'submitted' ||
+        approvalStatus === 'rejected');
+
     return (
       <div className="flex items-center gap-1">
-        {approvalStatus === 'draft' && (
+        {approvalStatus === 'draft' && canSubmit && (
           <Button
             size="sm"
             variant="outline"
@@ -213,61 +270,75 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
             {t('intermediateInspection.actions.submit')}
           </Button>
         )}
-        {approvalStatus === 'submitted' && (
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isPending}
-              aria-label={t('intermediateInspection.actions.reviewAriaLabel', {
-                date: inspectionDateLabel,
-              })}
-              onClick={() => reviewMutation.mutate({ id, version })}
-            >
-              <CheckCircle className="h-3 w-3 mr-1" />
-              {t('intermediateInspection.actions.review')}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={isPending}
-              aria-label={t('intermediateInspection.actions.rejectAriaLabel', {
-                date: inspectionDateLabel,
-              })}
-              onClick={() => setRejectingId(id)}
-            >
-              <XCircle className="h-3 w-3 mr-1" />
-              {t('intermediateInspection.actions.reject')}
-            </Button>
-          </>
+        {approvalStatus === 'submitted' && canWithdraw && inspection.submittedBy === user?.id && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            aria-label={t('intermediateInspection.actions.withdrawAriaLabel', {
+              date: inspectionDateLabel,
+            })}
+            onClick={() => withdrawMutation.mutate({ id, version })}
+          >
+            <Undo2 className="h-3 w-3 mr-1" />
+            {t('intermediateInspection.actions.withdraw')}
+          </Button>
         )}
-        {approvalStatus === 'reviewed' && (
-          <>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isPending}
-              aria-label={t('intermediateInspection.actions.approveAriaLabel', {
-                date: inspectionDateLabel,
-              })}
-              onClick={() => approveMutation.mutate({ id, version })}
-            >
-              <CheckCircle className="h-3 w-3 mr-1" />
-              {t('intermediateInspection.actions.approve')}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={isPending}
-              aria-label={t('intermediateInspection.actions.rejectAriaLabel', {
-                date: inspectionDateLabel,
-              })}
-              onClick={() => setRejectingId(id)}
-            >
-              <XCircle className="h-3 w-3 mr-1" />
-              {t('intermediateInspection.actions.reject')}
-            </Button>
-          </>
+        {approvalStatus === 'submitted' && canReview && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            aria-label={t('intermediateInspection.actions.reviewAriaLabel', {
+              date: inspectionDateLabel,
+            })}
+            onClick={() => reviewMutation.mutate({ id, version })}
+          >
+            <CheckCircle className="h-3 w-3 mr-1" />
+            {t('intermediateInspection.actions.review')}
+          </Button>
+        )}
+        {(approvalStatus === 'submitted' || approvalStatus === 'reviewed') && canReject && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isPending}
+            aria-label={t('intermediateInspection.actions.rejectAriaLabel', {
+              date: inspectionDateLabel,
+            })}
+            onClick={() => setRejectingId(id)}
+          >
+            <XCircle className="h-3 w-3 mr-1" />
+            {t('intermediateInspection.actions.reject')}
+          </Button>
+        )}
+        {approvalStatus === 'reviewed' && canApprove && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            aria-label={t('intermediateInspection.actions.approveAriaLabel', {
+              date: inspectionDateLabel,
+            })}
+            onClick={() => approveMutation.mutate({ id, version })}
+          >
+            <CheckCircle className="h-3 w-3 mr-1" />
+            {t('intermediateInspection.actions.approve')}
+          </Button>
+        )}
+        {approvalStatus === 'rejected' && canSubmit && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            aria-label={t('intermediateInspection.actions.resubmitAriaLabel', {
+              date: inspectionDateLabel,
+            })}
+            onClick={() => resubmitMutation.mutate({ id, version })}
+          >
+            <Undo2 className="h-3 w-3 mr-1" />
+            {t('intermediateInspection.actions.resubmit')}
+          </Button>
         )}
         {approvalStatus === 'approved' && (
           <ExportFormButton
@@ -276,6 +347,20 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
             label={t('intermediateInspection.actions.exportForm')}
             errorToastDescription={t('intermediateInspection.actions.exportFormError')}
           />
+        )}
+        {showDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isPending}
+            aria-label={t('intermediateInspection.actions.deleteAriaLabel', {
+              date: inspectionDateLabel,
+            })}
+            onClick={() => deleteMutation.mutate({ id })}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            {t('intermediateInspection.actions.delete')}
+          </Button>
         )}
       </div>
     );
@@ -391,7 +476,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
                           <ResultSectionsPanel
                             inspectionId={inspection.id}
                             inspectionType="intermediate"
-                            canEdit={can(Permission.UPDATE_CALIBRATION)}
+                            canEdit={canSubmit}
                           />
                         </TableCell>
                       </TableRow>

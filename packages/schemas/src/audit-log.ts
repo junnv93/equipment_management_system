@@ -64,6 +64,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   link: '연결',
   unlink: '연결 해제',
   access_denied: '접근 거부',
+  submit: '제출',
+  withdraw: '제출 취소',
+  resubmit: '재제출',
+  review: '검토',
 };
 
 /**
@@ -94,6 +98,10 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   link: 'bg-lime-100 text-lime-800',
   unlink: 'bg-stone-100 text-stone-800',
   access_denied: 'bg-red-100 text-red-800',
+  submit: 'bg-blue-100 text-blue-800',
+  withdraw: 'bg-gray-100 text-gray-800',
+  resubmit: 'bg-blue-100 text-blue-800',
+  review: 'bg-green-100 text-green-800',
 };
 
 // ============================================================================

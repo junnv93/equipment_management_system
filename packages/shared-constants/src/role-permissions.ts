@@ -32,7 +32,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 교정 관리
     Permission.VIEW_CALIBRATIONS,
     Permission.CREATE_CALIBRATION, // 교정 등록 (승인 대기 상태로 등록)
-    Permission.UPDATE_CALIBRATION, // 교정 수정 + 중간점검 작성 (UL-QP-18-03 점검자=TE)
+    Permission.UPDATE_CALIBRATION, // 교정 수정
+    // 중간점검 (UL-QP-18-03: 시험실무자 = 작성/제출/취소/삭제)
+    Permission.SUBMIT_INTERMEDIATE_INSPECTION,
+    Permission.WITHDRAW_INTERMEDIATE_INSPECTION,
+    Permission.DELETE_INTERMEDIATE_INSPECTION,
     // 팀 조회
     Permission.VIEW_TEAMS, // 팀 목록 조회 (장비 필터에 필요)
     // 알림 기본 권한
@@ -94,6 +98,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.UPDATE_CALIBRATION,
     Permission.APPROVE_CALIBRATION, // 교정 승인 권한
     Permission.VIEW_CALIBRATION_REQUESTS, // 교정 승인 대기 목록 조회
+    // 중간점검 (UL-QP-18-03: 기술책임자 = 검토/승인/반려/삭제)
+    Permission.REVIEW_INTERMEDIATE_INSPECTION,
+    Permission.APPROVE_INTERMEDIATE_INSPECTION,
+    Permission.REJECT_INTERMEDIATE_INSPECTION,
+    Permission.DELETE_INTERMEDIATE_INSPECTION,
     // 사용자/팀 관리
     Permission.VIEW_USERS,
     Permission.MANAGE_ROLES, // 자기 팀 내 역할 변경 (범위 제한은 서비스 레이어에서 시행)
@@ -221,6 +230,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.DELETE_CALIBRATION,
     Permission.APPROVE_CALIBRATION,
     Permission.VIEW_CALIBRATION_REQUESTS,
+    // 중간점검 (UL-QP-18-03: 시험소장 = 승인/반려)
+    Permission.APPROVE_INTERMEDIATE_INSPECTION,
+    Permission.REJECT_INTERMEDIATE_INSPECTION,
     // 보정계수
     Permission.VIEW_CALIBRATION_FACTORS,
     Permission.CREATE_CALIBRATION_FACTOR,

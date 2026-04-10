@@ -459,6 +459,9 @@ export const API_ENDPOINTS = {
     REVIEW: (id: string) => `/api/intermediate-inspections/${id}/review`,
     APPROVE: (id: string) => `/api/intermediate-inspections/${id}/approve`,
     REJECT: (id: string) => `/api/intermediate-inspections/${id}/reject`,
+    WITHDRAW: (id: string) => `/api/intermediate-inspections/${id}/withdraw`,
+    RESUBMIT: (id: string) => `/api/intermediate-inspections/${id}/resubmit`,
+    DELETE: (id: string) => `/api/intermediate-inspections/${id}`,
     RESULT_SECTIONS: {
       LIST: (inspectionId: string) =>
         `/api/intermediate-inspections/${inspectionId}/result-sections`,

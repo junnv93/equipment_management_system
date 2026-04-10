@@ -54,6 +54,10 @@ export const AUDIT_ACTION_BADGE_TOKENS: Record<AuditAction, string> = {
   link: getSemanticBadgeClasses('ok'),
   unlink: getSemanticBadgeClasses('neutral'),
   access_denied: getSemanticBadgeClasses('critical'),
+  submit: getSemanticBadgeClasses('info'),
+  withdraw: getSemanticBadgeClasses('neutral'),
+  resubmit: getSemanticBadgeClasses('info'),
+  review: getSemanticBadgeClasses('ok'),
 };
 
 /**
@@ -426,6 +430,10 @@ export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
   link: 'bg-brand-ok',
   unlink: 'bg-brand-text-muted',
   access_denied: 'bg-brand-critical',
+  submit: 'bg-brand-info',
+  withdraw: 'bg-brand-text-muted',
+  resubmit: 'bg-brand-info',
+  review: 'bg-brand-ok',
 };
 
 // ============================================================================

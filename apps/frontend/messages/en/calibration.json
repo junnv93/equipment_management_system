@@ -641,14 +641,20 @@
     },
     "actions": {
       "submit": "Submit",
+      "withdraw": "Withdraw",
+      "resubmit": "Resubmit",
       "review": "Review & Approve",
       "approve": "Final Approve",
       "reject": "Reject",
+      "delete": "Delete",
       "view": "View Record",
       "submitAriaLabel": "Submit intermediate inspection from {date}",
+      "withdrawAriaLabel": "Withdraw intermediate inspection from {date}",
+      "resubmitAriaLabel": "Resubmit intermediate inspection from {date}",
       "reviewAriaLabel": "Review intermediate inspection from {date}",
       "approveAriaLabel": "Final approve intermediate inspection from {date}",
       "rejectAriaLabel": "Reject intermediate inspection from {date}",
+      "deleteAriaLabel": "Delete intermediate inspection from {date}",
       "exportForm": "Export Form",
       "exportFormError": "Failed to export intermediate inspection form."
     },
@@ -689,6 +695,12 @@
       "approveError": "Failed to approve inspection.",
       "rejectSuccess": "Inspection rejected.",
       "rejectError": "Failed to reject inspection.",
+      "withdrawSuccess": "Submission withdrawn.",
+      "withdrawError": "Failed to withdraw submission.",
+      "resubmitSuccess": "Inspection resubmitted.",
+      "resubmitError": "Failed to resubmit inspection.",
+      "deleteSuccess": "Inspection record deleted.",
+      "deleteError": "Failed to delete inspection.",
       "versionConflict": "Already processed by another user.",
       "versionConflictDesc": "Data has been updated. Please check the latest status."
     }
