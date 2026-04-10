@@ -93,6 +93,11 @@ export class DocxTemplate {
     const newRows: string[] = [];
     for (const data of dataRows) {
       const cells = this.parseCells(templateRow);
+      if (data.length > cells.length) {
+        throw new InternalServerErrorException(
+          `[${this.formLabel}] setDataRows 실패: 데���터 열(${data.length}개)이 템플릿 셀(${cells.length}개)보다 많음. 양식의 열 구조가 변경되었을 수 있습니다.`
+        );
+      }
       data.forEach((val, ci) => {
         if (ci < cells.length) {
           cells[ci] = this.replaceCellText(cells[ci], val);

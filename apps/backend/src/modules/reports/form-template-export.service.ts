@@ -5,6 +5,7 @@ import {
   BadRequestException,
   NotImplementedException,
   ForbiddenException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import ExcelJS from 'exceljs';
@@ -237,9 +238,12 @@ export class FormTemplateExportService {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
     const sheet =
-      workbook.getWorksheet('시험설비 관리대장') ||
-      workbook.getWorksheet('시험설비 관리 대장') ||
-      workbook.worksheets[0];
+      workbook.getWorksheet('시험설비 관리대장') || workbook.getWorksheet('시험설비 관리 대장');
+    if (!sheet) {
+      throw new InternalServerErrorException(
+        `[UL-QP-18-01] 워크시트 '시험설비 관리대장' 없음. 양식의 시트명이 변경되었을 수 있습니다.`
+      );
+    }
 
     // Row 1: 헤더 업데이트 (팀명 + 날짜)
     const headerCell = sheet.getRow(1).getCell(1);
@@ -420,7 +424,7 @@ export class FormTemplateExportService {
 
     // docx 템플릿 로드 — 스토리지 기반
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-03');
-    const doc = new DocxTemplate(templateBuf);
+    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-03');
     const classificationLabel =
       inspection.classification === 'calibrated' ? '교정기기' : '비교정기기';
 
@@ -607,7 +611,7 @@ export class FormTemplateExportService {
 
     // docx 템플릿 로드 — 스토리지 기반
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-05');
-    const doc = new DocxTemplate(templateBuf);
+    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-05');
     const classificationLabel =
       eqRow.calibrationRequired === 'required' ? '교정기기' : '비교정기기';
 
@@ -795,7 +799,7 @@ export class FormTemplateExportService {
       : [null];
 
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-06');
-    const doc = new DocxTemplate(templateBuf);
+    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-06');
 
     // Row 2: 반출지 / 전화번호
     doc.setCellValue(0, 2, 1, checkout.destination ?? '-');
@@ -959,7 +963,7 @@ export class FormTemplateExportService {
 
     // DOCX 템플릿 로드 — T0: 10열 테이블 (R0=헤더, R1~R21=빈 데이터행)
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-07');
-    const doc = new DocxTemplate(templateBuf);
+    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-07');
 
     // T0 R0 = 헤더행 (보존), R1 = 템플�� 데이터행 (복제 기준)
     // 10열: 관리번호, SW명, 버전, 시험분야, 담당자(정.부), 설치일자, 제작사, 위치, 가용여부, 유효성확인대상
@@ -1095,7 +1099,7 @@ export class FormTemplateExportService {
 
     // docx 템플릿 로드
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-09');
-    const doc = new DocxTemplate(templateBuf);
+    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-09');
 
     // ── DOCX 구조 (9개 테이블) ──
     // T0~T2: 방법1 (공급자 시연)
@@ -1230,19 +1234,18 @@ export class FormTemplateExportService {
       .orderBy(cables.managementNumber)
       .limit(500);
 
-    // 템플릿 로드 시도 — 없으면 빈 워크북에서 생성
-    let workbook: ExcelJS.Workbook;
-    try {
-      const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-08');
-      workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
-    } catch {
-      workbook = new ExcelJS.Workbook();
-    }
+    // 템플릿 로드 — 실패 시 명시적 에러
+    const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-08');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
 
     // ── 시트 1: RF Conducted (목록) ──
-    const listSheet =
-      workbook.getWorksheet('RF Conducted') ?? workbook.addWorksheet('RF Conducted');
+    const listSheet = workbook.getWorksheet('RF Conducted');
+    if (!listSheet) {
+      throw new InternalServerErrorException(
+        `[UL-QP-18-08] 워크시트 'RF Conducted' 없음. 양식의 시트명이 변경되었을 수 있습니다.`
+      );
+    }
 
     const LIST_HEADERS = [
       'No',
@@ -1539,7 +1542,7 @@ export class FormTemplateExportService {
     };
 
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-10');
-    const doc = new DocxTemplate(templateBuf);
+    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-10');
 
     // ============== Part 1: 사용 확인서 (R0~R13) ==============
 

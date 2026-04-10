@@ -23,6 +23,8 @@ import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-c
 import { FormTemplateService } from '../../reports/form-template.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 
+const FORM_LABEL = 'UL-QP-18-02';
+
 const SPEC_MATCH_LABELS: Record<string, string> = {
   match: '일치',
   mismatch: '불일치',
@@ -395,7 +397,7 @@ export class HistoryCardService {
     if (!docFile) {
       throw new NotFoundException({
         code: 'TEMPLATE_STRUCTURE_INVALID',
-        message: 'UL-QP-18-02 템플릿 구조가 올바르지 않습니다 (word/document.xml 없음).',
+        message: `${FORM_LABEL} 템플릿 구조가 올바르지 않습니다 (word/document.xml 없음).`,
       });
     }
     let xml = docFile.asText();
@@ -448,12 +450,12 @@ export class HistoryCardService {
         }
         // 행을 찾았지만 빈 셀이 부족
         throw new InternalServerErrorException(
-          `[UL-QP-18-02] 라벨 '${labelFragment}' 행에서 빈 셀[${emptyCellIndex}] 없음 (빈 셀 ${emptyCount}개 발견). 양식 셀 구조가 변경되었을 수 있습니다.`
+          `[${FORM_LABEL}] 라벨 '${labelFragment}' 행에서 빈 셀[${emptyCellIndex}] 없음 (빈 셀 ${emptyCount}개 발견). 양식 셀 구조가 변경되었을 수 있습니다.`
         );
       }
       // 라벨을 포함하는 행 자체를 찾지 못함
       throw new InternalServerErrorException(
-        `[UL-QP-18-02] 라벨 '${labelFragment}' 매칭 실패. 양식의 라벨 텍스트가 변경되었을 수 있습니다.`
+        `[${FORM_LABEL}] 라벨 '${labelFragment}' 매칭 실패. 양식의 라벨 텍스트가 변경되었을 수 있습니다.`
       );
     };
 
@@ -484,21 +486,23 @@ export class HistoryCardService {
 
     // ── 문자열 치환 헬퍼: 치환 실패 시 throw ──
     const assertReplace = (pattern: string, replacement: string, desc: string): void => {
-      if (!xml.includes(pattern)) {
+      const result = xml.replace(pattern, replacement);
+      if (result === xml) {
         throw new InternalServerErrorException(
-          `[UL-QP-18-02] '${desc}' 패턴 '${pattern}' 매칭 실패. 양식이 변경되었을 수 있습니다.`
+          `[${FORM_LABEL}] '${desc}' 패턴 '${pattern}' 매칭 실패. 양식이 변경되었을 수 있습니다.`
         );
       }
-      xml = xml.replace(pattern, replacement);
+      xml = result;
     };
 
     const assertReplaceRegex = (pattern: RegExp, replacement: string, desc: string): void => {
-      if (!pattern.test(xml)) {
+      const result = xml.replace(pattern, replacement);
+      if (result === xml) {
         throw new InternalServerErrorException(
-          `[UL-QP-18-02] '${desc}' 정규식 패턴 매칭 실패. 양식이 변경되었을 수 있습니다.`
+          `[${FORM_LABEL}] '${desc}' 정규식 패턴 매칭 실패. 양식이 변경되었을 수 있습니다.`
         );
       }
-      xml = xml.replace(pattern, replacement);
+      xml = result;
     };
 
     // 확인란: "/   /" → 날짜만 (YYYY/MM/DD)
@@ -559,7 +563,7 @@ export class HistoryCardService {
       const sectionPos = xml.indexOf(sectionMarker);
       if (sectionPos === -1) {
         throw new InternalServerErrorException(
-          `[UL-QP-18-02] 섹션 '${sectionMarker}' 매칭 실패. 양식의 섹션 제목이 변경되었을 수 있습니다.`
+          `[${FORM_LABEL}] 섹션 '${sectionMarker}' 매칭 실패. 양식의 섹션 제목이 변경되었을 수 있습니다.`
         );
       }
 
@@ -567,7 +571,11 @@ export class HistoryCardService {
       let pos = sectionPos;
       for (let i = 0; i < skipTrCount; i++) {
         pos = xml.indexOf('</w:tr>', pos);
-        if (pos === -1) return;
+        if (pos === -1) {
+          throw new InternalServerErrorException(
+            `[${FORM_LABEL}] 섹션 '${sectionMarker}' 헤더 행 구조 불일치 (${skipTrCount}개 행 필요, ${i}개만 발견). 양식이 변경되었을 수 있습니다.`
+          );
+        }
         pos += '</w:tr>'.length;
       }
 
