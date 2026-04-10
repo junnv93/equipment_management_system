@@ -610,9 +610,9 @@
       "non_calibrated": "비교정기기"
     },
     "inspectionCycle": "점검 주기",
-    "inspectionCyclePlaceholder": "예: 6개월",
+    "inspectionCyclePlaceholder": "예: 6개월 (중간점검 주기)",
     "calibrationValidityPeriod": "교정 유효기간",
-    "validityPeriodPlaceholder": "예: 2026-12-31",
+    "validityPeriodPlaceholder": "예: 1년",
     "rejectionReasonPlaceholder": "반려 사유를 입력하세요",
     "overallResult": "종합 판정",
     "resultOptions": {
@@ -634,7 +634,9 @@
       },
       "addItem": "항목 추가",
       "removeItem": "삭제",
-      "noItems": "등록된 점검 항목이 없습니다"
+      "noItems": "등록된 점검 항목이 없습니다",
+      "selectPreset": "프리셋 선택",
+      "customItem": "직접 입력"
     },
     "actions": {
       "submit": "제출",
@@ -655,6 +657,10 @@
       "reviewed": "검토됨",
       "approved": "승인됨",
       "rejected": "반려됨"
+    },
+    "prefill": {
+      "auto": "자동",
+      "tooltip": "장비 마스터 데이터에서 자동 입력되었습니다. 수정 가능합니다."
     },
     "cancel": "취소",
     "save": "저장",
@@ -684,7 +690,7 @@
     "backToHome": "홈으로 이동"
   },
   "resultSections": {
-    "title": "점검 결과 섹션",
+    "title": "측정 결과 데이터",
     "addSection": "섹션 추가",
     "editSection": "섹션 수정",
     "deleteSection": "섹션 삭제",

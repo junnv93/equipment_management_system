@@ -260,6 +260,7 @@ export interface CreateInspectionDto {
     equipmentId: string;
     calibrationDate?: string;
   }[];
+  resultSections?: CreateResultSectionDto[];
 }
 
 export interface UpdateInspectionDto extends Partial<CreateInspectionDto> {

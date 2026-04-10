@@ -610,9 +610,9 @@
       "non_calibrated": "Non-Calibrated Equipment"
     },
     "inspectionCycle": "Inspection Cycle",
-    "inspectionCyclePlaceholder": "e.g. 6 months",
+    "inspectionCyclePlaceholder": "e.g. 6 months (inspection cycle)",
     "calibrationValidityPeriod": "Calibration Validity Period",
-    "validityPeriodPlaceholder": "e.g. 2026-12-31",
+    "validityPeriodPlaceholder": "e.g. 1 year",
     "rejectionReasonPlaceholder": "Enter rejection reason",
     "overallResult": "Overall Result",
     "resultOptions": {
@@ -634,7 +634,9 @@
       },
       "addItem": "Add Item",
       "removeItem": "Remove",
-      "noItems": "No inspection items added"
+      "noItems": "No inspection items added",
+      "selectPreset": "Select Preset",
+      "customItem": "Custom Input"
     },
     "actions": {
       "submit": "Submit",
@@ -655,6 +657,10 @@
       "reviewed": "Reviewed",
       "approved": "Approved",
       "rejected": "Rejected"
+    },
+    "prefill": {
+      "auto": "Auto",
+      "tooltip": "Auto-filled from equipment master data. You can edit this value."
     },
     "cancel": "Cancel",
     "save": "Save",
@@ -684,7 +690,7 @@
     "backToHome": "Go to home"
   },
   "resultSections": {
-    "title": "Result Sections",
+    "title": "Measurement Data",
     "addSection": "Add Section",
     "editSection": "Edit Section",
     "deleteSection": "Delete Section",

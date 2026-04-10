@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,11 +27,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { queryKeys } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
-import type { CreateInspectionDto } from '@/lib/api/calibration-api';
+import equipmentApi from '@/lib/api/equipment-api';
+import type { CreateInspectionDto, CreateResultSectionDto } from '@/lib/api/calibration-api';
 import type { InspectionJudgment, InspectionResult } from '@equipment-management/schemas';
+import CheckItemPresetSelect from './CheckItemPresetSelect';
+import InlineResultSectionsEditor from './InlineResultSectionsEditor';
 
 interface InspectionItemForm {
   checkItem: string;
@@ -48,6 +55,23 @@ interface InspectionFormDialogProps {
   calibrationId?: string;
 }
 
+/**
+ * 교정유효기간을 "N년" 형식으로 계산
+ * lastCalibrationDate ~ nextCalibrationDate 차이를 연 단위로 반올림
+ */
+function computeCalibrationValidityPeriod(
+  lastCalDate: string | Date | null | undefined,
+  nextCalDate: string | Date | null | undefined
+): string | null {
+  if (!lastCalDate || !nextCalDate) return null;
+  const last = new Date(lastCalDate);
+  const next = new Date(nextCalDate);
+  const diffMs = next.getTime() - last.getTime();
+  const diffYears = Math.round(diffMs / (365.25 * 24 * 60 * 60 * 1000));
+  if (diffYears <= 0) return null;
+  return `${diffYears}년`;
+}
+
 export default function InspectionFormDialog({
   open,
   onOpenChange,
@@ -60,13 +84,56 @@ export default function InspectionFormDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Form state
+  // Form state — classification은 항상 "교정기기"로 고정 (중간점검은 교정기기 전용)
   const [inspectionDate, setInspectionDate] = useState('');
   const [inspectionCycle, setInspectionCycle] = useState('');
   const [calibrationValidityPeriod, setCalibrationValidityPeriod] = useState('');
   const [overallResult, setOverallResult] = useState<InspectionResult | ''>('');
   const [remarks, setRemarks] = useState('');
   const [items, setItems] = useState<InspectionItemForm[]>([]);
+  const [resultSections, setResultSections] = useState<CreateResultSectionDto[]>([]);
+  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
+
+  // Fetch equipment data for prefill
+  const { data: equipment, isLoading: isEquipmentLoading } = useQuery({
+    queryKey: queryKeys.equipment.detail(equipmentId),
+    queryFn: () => equipmentApi.getEquipment(equipmentId),
+    enabled: open,
+  });
+
+  // Prefill from equipment master data when dialog opens
+  useEffect(() => {
+    if (!open || !equipment) return;
+
+    const newPrefilled: Record<string, boolean> = {};
+
+    // 점검주기: 중간점검 주기 (intermediateCheckCycle) 사용, fallback으로 교정주기의 절반
+    if (!inspectionCycle) {
+      if (equipment.intermediateCheckCycle) {
+        setInspectionCycle(`${equipment.intermediateCheckCycle}개월`);
+        newPrefilled.inspectionCycle = true;
+      } else if (equipment.calibrationCycle) {
+        const halfCycle = Math.round(Number(equipment.calibrationCycle) / 2);
+        setInspectionCycle(`${halfCycle}개월`);
+        newPrefilled.inspectionCycle = true;
+      }
+    }
+
+    // 교정유효기간: lastCalibrationDate ~ nextCalibrationDate 기간 (예: "1년")
+    if (!calibrationValidityPeriod) {
+      const period = computeCalibrationValidityPeriod(
+        equipment.lastCalibrationDate,
+        equipment.nextCalibrationDate
+      );
+      if (period) {
+        setCalibrationValidityPeriod(period);
+        newPrefilled.calibrationValidityPeriod = true;
+      }
+    }
+
+    setPrefilled(newPrefilled);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, equipment]);
 
   const resetForm = () => {
     setInspectionDate('');
@@ -75,6 +142,8 @@ export default function InspectionFormDialog({
     setOverallResult('');
     setRemarks('');
     setItems([]);
+    setResultSections([]);
+    setPrefilled({});
   };
 
   const tErrors = useTranslations('errors');
@@ -88,7 +157,6 @@ export default function InspectionFormDialog({
     },
     onSuccess: () => {
       toast({ description: t('intermediateInspection.toasts.createSuccess') });
-      // 교차 캐시 무효화: 점검 목록 + 교정 전체 + 장비 상세
       queryClient.invalidateQueries({
         queryKey: queryKeys.equipment.intermediateInspections(equipmentId),
       });
@@ -107,7 +175,6 @@ export default function InspectionFormDialog({
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      // NO_ACTIVE_CALIBRATION 에러 특별 처리
       const apiError = error as Error & { response?: { code?: string } };
       if (apiError.response?.code === 'NO_ACTIVE_CALIBRATION') {
         toast({
@@ -116,7 +183,6 @@ export default function InspectionFormDialog({
         });
         return;
       }
-      // VERSION_CONFLICT 에러 처리
       if (isConflictError(error)) {
         const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, tErrors);
         toast({
@@ -133,6 +199,10 @@ export default function InspectionFormDialog({
     },
   });
 
+  const handleAddPresetItem = (checkItem: string, checkCriteria: string) => {
+    setItems((prev) => [...prev, { checkItem, checkCriteria, checkResult: '', judgment: '' }]);
+  };
+
   const handleAddItem = () => {
     setItems((prev) => [
       ...prev,
@@ -148,12 +218,16 @@ export default function InspectionFormDialog({
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
   };
 
+  const hasInvalidItems = items.some(
+    (item) => !item.checkItem.trim() || !item.checkCriteria.trim()
+  );
+
   const handleSubmit = () => {
-    if (!inspectionDate) return;
+    if (!inspectionDate || hasInvalidItems) return;
 
     const dto: CreateInspectionDto = {
       inspectionDate,
-      classification: 'calibrated' as const,
+      classification: 'calibrated',
       ...(inspectionCycle ? { inspectionCycle } : {}),
       ...(calibrationValidityPeriod ? { calibrationValidityPeriod } : {}),
       ...(overallResult ? { overallResult } : {}),
@@ -169,14 +243,34 @@ export default function InspectionFormDialog({
             })),
           }
         : {}),
+      ...(resultSections.length > 0 ? { resultSections } : {}),
     };
 
     createMutation.mutate(dto);
   };
 
+  const renderPrefillBadge = (field: string) => {
+    if (!prefilled[field]) return null;
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="secondary" className="ml-2 text-xs font-normal">
+              <Info className="mr-1 h-3 w-3" />
+              {t('intermediateInspection.prefill.auto')}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('intermediateInspection.prefill.tooltip')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {t('intermediateInspection.formTitle')}
@@ -221,25 +315,50 @@ export default function InspectionFormDialog({
             </Select>
           </div>
 
-          {/* 점검 주기 + 교정 유효기간 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>{t('intermediateInspection.inspectionCycle')}</Label>
-              <Input
-                value={inspectionCycle}
-                onChange={(e) => setInspectionCycle(e.target.value)}
-                placeholder={t('intermediateInspection.inspectionCyclePlaceholder')}
-              />
+          {/* 점검 주기 + 교정 유효기간 (prefill) */}
+          {isEquipmentLoading ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>{t('intermediateInspection.calibrationValidityPeriod')}</Label>
-              <Input
-                value={calibrationValidityPeriod}
-                onChange={(e) => setCalibrationValidityPeriod(e.target.value)}
-                placeholder={t('intermediateInspection.validityPeriodPlaceholder')}
-              />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <Label>{t('intermediateInspection.inspectionCycle')}</Label>
+                  {renderPrefillBadge('inspectionCycle')}
+                </div>
+                <Input
+                  value={inspectionCycle}
+                  onChange={(e) => {
+                    setInspectionCycle(e.target.value);
+                    setPrefilled((prev) => ({ ...prev, inspectionCycle: false }));
+                  }}
+                  placeholder={t('intermediateInspection.inspectionCyclePlaceholder')}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <Label>{t('intermediateInspection.calibrationValidityPeriod')}</Label>
+                  {renderPrefillBadge('calibrationValidityPeriod')}
+                </div>
+                <Input
+                  value={calibrationValidityPeriod}
+                  onChange={(e) => {
+                    setCalibrationValidityPeriod(e.target.value);
+                    setPrefilled((prev) => ({ ...prev, calibrationValidityPeriod: false }));
+                  }}
+                  placeholder={t('intermediateInspection.validityPeriodPlaceholder')}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 점검 항목 동적 배열 */}
           <div className="space-y-3">
@@ -247,10 +366,19 @@ export default function InspectionFormDialog({
               <Label className="text-base font-semibold">
                 {t('intermediateInspection.items.title')}
               </Label>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddItem}>
-                <Plus className="h-4 w-4 mr-1" />
-                {t('intermediateInspection.items.addItem')}
-              </Button>
+              <div className="flex gap-2">
+                <CheckItemPresetSelect onSelect={handleAddPresetItem} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddItem}
+                  aria-label={t('intermediateInspection.items.addItem')}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t('intermediateInspection.items.addItem')}
+                </Button>
+              </div>
             </div>
 
             {items.length === 0 ? (
@@ -270,6 +398,7 @@ export default function InspectionFormDialog({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveItem(index)}
+                        aria-label={t('intermediateInspection.items.removeItem')}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -341,13 +470,20 @@ export default function InspectionFormDialog({
               rows={3}
             />
           </div>
+
+          {/* 측정 결과 데이터 인라인 */}
+          <Separator />
+          <InlineResultSectionsEditor sections={resultSections} onChange={setResultSections} />
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('intermediateInspection.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={!inspectionDate || createMutation.isPending}>
+          <Button
+            onClick={handleSubmit}
+            disabled={!inspectionDate || hasInvalidItems || createMutation.isPending}
+          >
             {createMutation.isPending
               ? t('intermediateInspection.saving')
               : t('intermediateInspection.save')}
