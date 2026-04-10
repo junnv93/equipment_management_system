@@ -229,24 +229,20 @@ The redesign moves away from generic SaaS aesthetics toward a visual language th
 ### Key Characteristics:
 
 1. **Technical Grid Patterns**
-
    - Subtle 24px grid suggesting technical drawings
    - Opacity at 1.5% for background texture without distraction
 
 2. **Monospace Typography**
-
    - Used strategically for data values, numbers, and technical codes
    - Reinforces precision and technical context
    - Maintains readability with sans-serif for labels
 
 3. **Strategic Color Usage**
-
    - UL Midnight Blue (#122C49) as primary accent
    - Applied to active states, icons, and interactive elements
    - Avoids color overload - neutral base with strategic highlights
 
 4. **Purposeful Micro-interactions**
-
    - Hover translate (1px) for navigation items
    - Icon scale (110%) on active states
    - Button scale (105% hover, 95% active) for tactile feedback

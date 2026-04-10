@@ -118,7 +118,6 @@ http://192.168.1.100:80
 **옵션 2: 도메인 이름 사용 (권장)**
 
 1. **hosts 파일 편집**
-
    - Windows: `C:\Windows\System32\drivers\etc\hosts`
    - Linux/Mac: `/etc/hosts`
 

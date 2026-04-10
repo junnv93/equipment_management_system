@@ -113,12 +113,10 @@ $ pnpm --filter backend run build
 ### 예상 동작
 
 - **Suwon FCC EMC/RF 기술책임자 로그인**:
-
   - Before: 부적합 재개 카운트 = 1 (NC_009 Uiwang 포함)
   - **After: 부적합 재개 카운트 = 0** (NC_009 Uiwang 제외)
 
 - **Uiwang General RF 기술책임자 로그인**:
-
   - Before: 부적합 재개 카운트 = 1 (NC_009 포함)
   - **After: 부적합 재개 카운트 = 1** (NC_009 포함, 자기 팀)
 
