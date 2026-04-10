@@ -108,7 +108,7 @@ export function buildScopedUrl(
 export function buildScopedEquipmentUrl(
   scope: DashboardScope,
   basePath: string,
-  status?: EquipmentStatus
+  status?: EquipmentStatus | string
 ): string {
   return buildScopedUrl(scope, basePath, status ? { status } : undefined);
 }

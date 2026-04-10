@@ -94,7 +94,13 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
                   <TableRow key={ri}>
                     {row.map((cell, ci) => (
                       <TableCell key={ci}>
-                        {cell.type === 'text' ? cell.value : `[${t('types.photo')}]`}
+                        {cell.type === 'text' ? (
+                          cell.value
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            [{t('types.photo')}: {cell.documentId?.slice(0, 8)}...]
+                          </span>
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>

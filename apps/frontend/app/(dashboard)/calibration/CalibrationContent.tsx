@@ -28,7 +28,6 @@ import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils'
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
 import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
-import { EquipmentStatusValues } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { CALIBRATION_DUE_STATUS_VALUES } from '@/lib/utils/calibration-filter-utils';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
@@ -206,14 +205,10 @@ export default function CalibrationContent({
         overdue={stats.overdue}
         upcoming={stats.upcoming}
         onOverdueAction={() =>
-          router.push(
-            `${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=${EquipmentStatusValues.CALIBRATION_OVERDUE}`
-          )
+          router.push(`${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=calibration_overdue`)
         }
         onUpcomingAction={() =>
-          router.push(
-            `${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=${EquipmentStatusValues.CALIBRATION_SCHEDULED}`
-          )
+          router.push(`${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=calibration_scheduled`)
         }
       />
 

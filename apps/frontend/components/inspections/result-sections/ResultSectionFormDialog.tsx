@@ -20,9 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { ResultSection, CreateResultSectionDto } from '@/lib/api/calibration-api';
+import { Plus, Trash2, ImageIcon, Type } from 'lucide-react';
+import type { ResultSection, CreateResultSectionDto, RichCell } from '@/lib/api/calibration-api';
+import { INSPECTION_RESULT_SECTION_TYPE_VALUES } from '@equipment-management/schemas';
 
-const SECTION_TYPES = ['title', 'text', 'data_table', 'photo'] as const;
+interface RichTableRow {
+  cells: Array<RichCell>;
+}
 
 interface ResultSectionFormDialogProps {
   open: boolean;
@@ -51,6 +55,14 @@ export default function ResultSectionFormDialog({
   const [imageWidthCm, setImageWidthCm] = useState(Number(editTarget?.imageWidthCm) || 12);
   const [imageHeightCm, setImageHeightCm] = useState(Number(editTarget?.imageHeightCm) || 9);
 
+  // rich_table 상태
+  const defaultRichHeaders = editTarget?.richTableData?.headers ?? [''];
+  const defaultRichRows: RichTableRow[] = editTarget?.richTableData?.rows.map((r) => ({
+    cells: r,
+  })) ?? [{ cells: [{ type: 'text' as const, value: '' }] }];
+  const [richHeaders, setRichHeaders] = useState<string[]>(defaultRichHeaders);
+  const [richRows, setRichRows] = useState<RichTableRow[]>(defaultRichRows);
+
   // 편집 대상 변경 시 폼 초기화
   const resetForm = useCallback(() => {
     setSectionType(editTarget?.sectionType ?? 'title');
@@ -60,6 +72,12 @@ export default function ResultSectionFormDialog({
     setDocumentId(editTarget?.documentId ?? '');
     setImageWidthCm(Number(editTarget?.imageWidthCm) || 12);
     setImageHeightCm(Number(editTarget?.imageHeightCm) || 9);
+    setRichHeaders(editTarget?.richTableData?.headers ?? ['']);
+    setRichRows(
+      editTarget?.richTableData?.rows.map((r) => ({ cells: r })) ?? [
+        { cells: [{ type: 'text' as const, value: '' }] },
+      ]
+    );
   }, [editTarget]);
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -106,6 +124,12 @@ export default function ResultSectionFormDialog({
         dto.imageWidthCm = imageWidthCm;
         dto.imageHeightCm = imageHeightCm;
         break;
+      case 'rich_table':
+        dto.richTableData = {
+          headers: richHeaders.filter((h) => h.trim()),
+          rows: richRows.map((row) => row.cells),
+        };
+        break;
     }
 
     onSubmit(dto);
@@ -128,7 +152,7 @@ export default function ResultSectionFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SECTION_TYPES.map((type) => (
+                  {INSPECTION_RESULT_SECTION_TYPE_VALUES.map((type) => (
                     <SelectItem key={type} value={type}>
                       {t(`types.${type}`)}
                     </SelectItem>
@@ -211,6 +235,160 @@ export default function ResultSectionFormDialog({
                 </div>
               </div>
             </>
+          )}
+
+          {sectionType === 'rich_table' && (
+            <div className="space-y-3">
+              {/* 헤더 편집 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>{t('form.sectionTitle')}</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setRichHeaders([...richHeaders, '']);
+                      setRichRows(
+                        richRows.map((row) => ({
+                          cells: [...row.cells, { type: 'text' as const, value: '' }],
+                        }))
+                      );
+                    }}
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    {t('form.sectionTitle')}
+                  </Button>
+                </div>
+                <div className="flex gap-1">
+                  {richHeaders.map((h, hi) => (
+                    <Input
+                      key={hi}
+                      value={h}
+                      onChange={(e) => {
+                        const next = [...richHeaders];
+                        next[hi] = e.target.value;
+                        setRichHeaders(next);
+                      }}
+                      placeholder={`Col ${hi + 1}`}
+                      className="text-xs"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* 행 편집 */}
+              <div className="space-y-2">
+                {richRows.map((row, ri) => (
+                  <div key={ri} className="flex items-start gap-1">
+                    {row.cells.map((cell, ci) => (
+                      <div key={ci} className="flex-1 space-y-1">
+                        <div className="flex gap-0.5">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant={cell.type === 'text' ? 'default' : 'outline'}
+                            className="h-6 w-6"
+                            onClick={() => {
+                              const nextRows = [...richRows];
+                              nextRows[ri] = {
+                                cells: nextRows[ri].cells.map((c, i) =>
+                                  i === ci ? { type: 'text' as const, value: '' } : c
+                                ),
+                              };
+                              setRichRows(nextRows);
+                            }}
+                            aria-label={t('types.text')}
+                          >
+                            <Type className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant={cell.type === 'image' ? 'default' : 'outline'}
+                            className="h-6 w-6"
+                            onClick={() => {
+                              const nextRows = [...richRows];
+                              nextRows[ri] = {
+                                cells: nextRows[ri].cells.map((c, i) =>
+                                  i === ci ? { type: 'image' as const, documentId: '' } : c
+                                ),
+                              };
+                              setRichRows(nextRows);
+                            }}
+                            aria-label={t('types.photo')}
+                          >
+                            <ImageIcon className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {cell.type === 'text' ? (
+                          <Input
+                            value={cell.value}
+                            onChange={(e) => {
+                              const nextRows = [...richRows];
+                              nextRows[ri] = {
+                                cells: nextRows[ri].cells.map((c, i) =>
+                                  i === ci ? { ...c, value: e.target.value } : c
+                                ),
+                              };
+                              setRichRows(nextRows);
+                            }}
+                            className="text-xs"
+                            placeholder={richHeaders[ci] || ''}
+                          />
+                        ) : (
+                          <Input
+                            value={cell.type === 'image' ? cell.documentId : ''}
+                            onChange={(e) => {
+                              const nextRows = [...richRows];
+                              nextRows[ri] = {
+                                cells: nextRows[ri].cells.map((c, i) =>
+                                  i === ci
+                                    ? { type: 'image' as const, documentId: e.target.value }
+                                    : c
+                                ),
+                              };
+                              setRichRows(nextRows);
+                            }}
+                            className="text-xs"
+                            placeholder="Document UUID"
+                          />
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="mt-7 h-6 w-6 text-destructive"
+                      onClick={() => setRichRows(richRows.filter((_, i) => i !== ri))}
+                      aria-label={t('deleteSection')}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setRichRows([
+                      ...richRows,
+                      {
+                        cells: richHeaders.map(() => ({
+                          type: 'text' as const,
+                          value: '',
+                        })),
+                      },
+                    ])
+                  }
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  {t('addSection')}
+                </Button>
+              </div>
+            </div>
           )}
         </div>
 

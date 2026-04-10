@@ -278,7 +278,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
           // ⚠️ 반드시 updateURL로 atomic 업데이트: setStatus + setCalibrationDueFilter를
           // 연속 호출하면 각각 router.push를 일으켜 두 번째가 첫 번째 스냅샷을 덮어쓰며
           // 한쪽 변경이 유실됨 (overdue → 다른 칩 클릭 시 overdue 필터가 남는 버그 원인).
-          if (key === 'calibration_overdue') {
+          if ((key as string) === 'calibration_overdue') {
             updateURL({ status: '', calibrationDueFilter: 'overdue', page: 1 });
             return;
           }
