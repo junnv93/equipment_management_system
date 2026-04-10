@@ -12,6 +12,7 @@ import type {
   InspectionResult,
   InspectionJudgment,
   EquipmentClassification,
+  InspectionResultSectionType,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
@@ -218,7 +219,7 @@ export interface ResultSection {
   id: string;
   inspectionId: string;
   inspectionType: 'intermediate' | 'self';
-  sectionType: string;
+  sectionType: InspectionResultSectionType;
   sortOrder: number;
   title: string | null;
   content: string | null;
@@ -233,7 +234,7 @@ export interface ResultSection {
 
 export interface CreateResultSectionDto {
   sortOrder: number;
-  sectionType: string;
+  sectionType: InspectionResultSectionType;
   title?: string;
   content?: string;
   tableData?: { headers: string[]; rows: string[][] };

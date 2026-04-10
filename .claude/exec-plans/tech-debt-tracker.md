@@ -7,9 +7,9 @@
 
 ## 미완료 항목
 
-- [ ] 중간점검 RBAC 세분화 — `apps/backend/src/modules/intermediate-inspections/intermediate-inspections.controller.ts` — 2026-04-10 — 모든 액션이 UPDATE_CALIBRATION 하나에 묶여 있음. Permission 6개 분리 필요 (submit/withdraw/review/approve/reject/delete). 프롬프트: `.claude/prompts/inspection-rbac-refinement.md`
-- [ ] sectionType string → schema enum 타입 강화 — `apps/frontend/lib/api/calibration-api.ts:ResultSection` — 2026-04-10 — sectionType이 string으로 정의되어 있어 toBackendType() 오타를 컴파일 시 감지 못함. InspectionResultSectionType enum import 필요
-- [ ] handleAddMeasurementEquipment .catch() 누락 — `apps/frontend/components/inspections/InspectionFormDialog.tsx:263` — 2026-04-10 — equipmentApi.getEquipment().then()에 .catch() 없음. 실패 시 unhandled promise rejection. queryClient.fetchQuery 사용 또는 .catch(toast) 추가
+- [x] 중간점검 RBAC 세분화 — 해결: 2026-04-10 — 6개 Permission 분리(SUBMIT/WITHDRAW/REVIEW/APPROVE/REJECT/DELETE_INTERMEDIATE_INSPECTION), 역할별 매핑(TE: submit/withdraw/delete, TM: review/approve/reject/delete, LM: approve/reject), withdraw/resubmit/delete 엔드포인트 신규, 프론트엔드 역할×상태 버튼 매트릭스. `feat/inspection-rbac-refinement` → main 병합
+- [x] sectionType string → schema enum 타입 강화 — 해결: 2026-04-10 — `InspectionResultSectionType` import, `ResultSection.sectionType` 및 `CreateResultSectionDto.sectionType` 타입 변경
+- [x] handleAddMeasurementEquipment .catch() 누락 — 해결: 2026-04-10 — `.catch(() => toast({variant:'destructive'}))` 추가
 - [ ] ResultSectionsPanel handleMove 레이스 컨디션 — `apps/frontend/components/inspections/result-sections/ResultSectionsPanel.tsx:104` — 2026-04-10 — 두 섹션 sortOrder 교환 시 순차 mutateAsync 2회 호출. 첫 번째 성공 후 두 번째 실패 시 불일치. 백엔드 batch swap 엔드포인트 또는 프론트엔드 optimistic 필요
 - [ ] 감사로그 react-window 가상화 — `apps/frontend/components/audit-logs/AuditTimelineFeed.tsx` — 2026-04-10 — 현재 IntersectionObserver 무한 스크롤만 적용. 수백 건 누적 시 DOM 노드 과다. react-window VariableSizeList로 가상화 필요 (날짜 그룹 헤더 + 로그 엔트리 flat 배열 필요)
 - [ ] 감사로그 커서 모드 백엔드 unit test — `apps/backend/src/modules/audit/audit.service.ts:findAllCursor` — 2026-04-10 — findAllCursor keyset 조건, 커서 인코딩/디코딩, Invalid cursor fallback, summary 첫 페이지 only 검증

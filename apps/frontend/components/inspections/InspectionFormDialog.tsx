@@ -259,19 +259,27 @@ export default function InspectionFormDialog({
     if (measurementEquipment.some((me) => me.equipmentId === equipmentId)) return;
 
     // 장비 정보 fetch
-    equipmentApi.getEquipment(equipmentId).then((eq: Equipment) => {
-      setMeasurementEquipment((prev) => [
-        ...prev,
-        {
-          equipmentId: String(eq.id),
-          equipmentName: eq.name,
-          managementNumber: eq.managementNumber ?? '',
-          calibrationDate: eq.lastCalibrationDate
-            ? String(eq.lastCalibrationDate).slice(0, 10)
-            : '',
-        },
-      ]);
-    });
+    equipmentApi
+      .getEquipment(equipmentId)
+      .then((eq: Equipment) => {
+        setMeasurementEquipment((prev) => [
+          ...prev,
+          {
+            equipmentId: String(eq.id),
+            equipmentName: eq.name,
+            managementNumber: eq.managementNumber ?? '',
+            calibrationDate: eq.lastCalibrationDate
+              ? String(eq.lastCalibrationDate).slice(0, 10)
+              : '',
+          },
+        ]);
+      })
+      .catch(() => {
+        toast({
+          variant: 'destructive',
+          description: t('intermediateInspection.toasts.createError'),
+        });
+      });
   };
 
   const handleRemoveMeasurementEquipment = (index: number) => {
