@@ -38,11 +38,8 @@ import type { ResolutionType } from './non-conformance';
 export const EquipmentStatusValues = {
   AVAILABLE: 'available',
   CHECKED_OUT: 'checked_out',
-  CALIBRATION_SCHEDULED: 'calibration_scheduled',
-  CALIBRATION_OVERDUE: 'calibration_overdue',
   NON_CONFORMING: 'non_conforming',
   SPARE: 'spare',
-  RETIRED: 'retired', // deprecated - DISPOSED 사용 권장
   PENDING_DISPOSAL: 'pending_disposal',
   DISPOSED: 'disposed',
   TEMPORARY: 'temporary',

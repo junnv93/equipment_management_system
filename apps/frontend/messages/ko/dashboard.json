@@ -233,9 +233,7 @@
     "available": "사용 가능",
     "inUse": "사용 중",
     "checkedOut": "반출 중",
-    "nonConforming": "부적합",
-    "calibrationScheduled": "교정 예정",
-    "retired": "폐기"
+    "nonConforming": "부적합"
   },
   "dday": {
     "today": "D-Day",
@@ -270,11 +268,9 @@
   "equipmentStatusLabels": {
     "available": "사용 가능",
     "checked_out": "반출 중",
-    "calibration_scheduled": "교정 예정",
-    "calibration_overdue": "교정 기한 초과",
     "non_conforming": "부적합",
+    "calibration_overdue": "교정 기한 초과",
     "spare": "여분",
-    "retired": "폐기",
     "pending_disposal": "폐기 대기",
     "disposed": "폐기 완료",
     "temporary": "임시",

@@ -45,7 +45,6 @@ export class DigestEmailScheduler {
   private readonly CALIBRATION_EXCLUDED_STATUSES = [
     EquipmentStatusEnum.enum.disposed,
     EquipmentStatusEnum.enum.pending_disposal,
-    EquipmentStatusEnum.enum.retired,
     EquipmentStatusEnum.enum.inactive,
   ];
 

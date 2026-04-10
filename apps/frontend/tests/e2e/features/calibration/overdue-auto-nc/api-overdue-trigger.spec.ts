@@ -421,13 +421,12 @@ test.describe('Backend API - Manual Overdue Check Trigger', () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // 1. Create 4 test equipment with status values: 'disposed', 'retired', 'pending_disposal', 'inactive'
+    // 1. Create 3 test equipment with excluded status values: 'disposed', 'pending_disposal', 'inactive'
     // 2. All have overdue calibration dates and calibrationRequired = 'required'
     const testEquipment = [
       { status: ESVal.DISPOSED as EquipmentStatus, label: 'DISPOSED' },
-      { status: ESVal.RETIRED as EquipmentStatus, label: 'RETIRED' },
       { status: ESVal.PENDING_DISPOSAL as EquipmentStatus, label: 'PENDING' },
-      { status: 'inactive' as EquipmentStatus, label: 'INACTIVE' },
+      { status: ESVal.INACTIVE as EquipmentStatus, label: 'INACTIVE' },
     ];
 
     const managementNumbers: string[] = [];

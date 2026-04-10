@@ -233,9 +233,7 @@
     "available": "Available",
     "inUse": "In Use",
     "checkedOut": "Checked Out",
-    "nonConforming": "Non-Conforming",
-    "calibrationScheduled": "Calibration Scheduled",
-    "retired": "Retired"
+    "nonConforming": "Non-Conforming"
   },
   "dday": {
     "today": "D-Day",
@@ -270,11 +268,9 @@
   "equipmentStatusLabels": {
     "available": "Available",
     "checked_out": "Checked Out",
-    "calibration_scheduled": "Calibration Scheduled",
-    "calibration_overdue": "Calibration Overdue",
     "non_conforming": "Non-Conforming",
+    "calibration_overdue": "Calibration Overdue",
     "spare": "Spare",
-    "retired": "Retired",
     "pending_disposal": "Pending Disposal",
     "disposed": "Disposed",
     "temporary": "Temporary",

@@ -20,7 +20,6 @@ import {
   CalibrationApprovalStatusEnum,
   NonConformanceStatusValues as NCStatusVal,
   NonConformanceTypeValues as NCTypeVal,
-  EquipmentStatusValues as ESVal,
   ResolutionTypeEnum,
   DEFAULT_LOCALE,
   type IntermediateCheckStatus,
@@ -497,13 +496,12 @@ export class CalibrationService extends VersionedBaseService {
     if (teamId) baseConditions.push(eq(schema.equipment.teamId, teamId));
     if (site) baseConditions.push(eq(schema.equipment.site, site));
 
-    // ✅ SSOT: 단일 FILTER 집계 쿼리 (3쿼리 → 1쿼리)
-    // overdueCount는 equipment.status 기반 — 장비 목록(status=calibration_overdue) 필터 결과와 일치
-    // (next_calibration_date 기반이면 스케줄러가 non_conforming으로 전환한 장비도 포함되어 불일치)
+    // ✅ SSOT: 단일 FILTER 집계 쿼리
+    // overdueCount는 date-derived (nextCalibrationDate < today)
     const [result] = await this.db
       .select({
         total: count(),
-        overdueCount: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = ${ESVal.CALIBRATION_OVERDUE}) as integer)`,
+        overdueCount: sql<number>`cast(count(*) filter (where ${schema.equipment.nextCalibrationDate} is not null and ${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp) as integer)`,
         dueInMonthCount: sql<number>`cast(count(*) filter (where ${schema.equipment.nextCalibrationDate} is not null and ${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater.toISOString()}::timestamp) as integer)`,
       })
       .from(schema.equipment)

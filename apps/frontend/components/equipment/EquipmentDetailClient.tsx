@@ -201,8 +201,7 @@ export function EquipmentDetailClient({
             />
           </div>
         ) : (
-          (equipment.status === ESVal.NON_CONFORMING ||
-            equipment.status === ESVal.CALIBRATION_OVERDUE) && (
+          equipment.status === ESVal.NON_CONFORMING && (
             <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
               <Alert variant="destructive" className={NC_BANNER_TOKENS.statusAlert}>
                 <AlertTriangle className={NC_BANNER_TOKENS.statusAlertIcon} />

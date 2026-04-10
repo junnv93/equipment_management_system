@@ -139,7 +139,6 @@ export function calculateCalibrationStatus(
  * SSOT: equipment-status-styles.ts의 STATUS_SKIP_CALIBRATION_DISPLAY
  */
 const STATUS_SKIP_CALIBRATION_DISPLAY: readonly string[] = [
-  ESVal.RETIRED,
   ESVal.NON_CONFORMING,
   ESVal.SPARE,
   ESVal.PENDING_DISPOSAL,

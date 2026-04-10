@@ -48,10 +48,10 @@ import {
  * 대시보드 카운트에서 제외할 장비 상태 (SSOT)
  *
  * 장비 목록의 showRetired=false 기본값과 일치시키기 위해
- * retired/disposed 상태를 모든 대시보드 쿼리에서 제외합니다.
+ * disposed 상태를 모든 대시보드 쿼리에서 제외합니다.
  * 이 상수를 수정하면 getSummary, getEquipmentByTeam, getEquipmentStatusStats에 동시 반영.
  */
-const DASHBOARD_EXCLUDED_STATUSES = [ESVal.RETIRED, ESVal.DISPOSED] as const;
+const DASHBOARD_EXCLUDED_STATUSES = [ESVal.DISPOSED] as const;
 
 @Injectable()
 export class DashboardService {

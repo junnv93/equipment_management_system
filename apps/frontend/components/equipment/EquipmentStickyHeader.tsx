@@ -69,7 +69,7 @@ export function EquipmentStickyHeader({
   const equipmentId = String(equipment.id);
 
   // 권한 계산 — SSOT: Permission enum + STATUS 조건 조합
-  const canEdit = can(Permission.UPDATE_EQUIPMENT) && equipment.status !== ESVal.RETIRED;
+  const canEdit = can(Permission.UPDATE_EQUIPMENT) && equipment.status !== ESVal.DISPOSED;
   const canDelete =
     can(Permission.DELETE_EQUIPMENT) &&
     !equipment.isShared &&

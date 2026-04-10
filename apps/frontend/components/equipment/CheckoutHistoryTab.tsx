@@ -202,10 +202,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
    * - 외부 대여(rental)는 available 상태에서만 가능
    */
   // SSOT: STATUS_NOT_ALLOWED_FOR_CHECKOUT (lib/constants/equipment-status-styles.ts)
-  const STATUS_ONLY_CALIBRATION_REPAIR: string[] = [
-    ESVal.NON_CONFORMING,
-    ESVal.CALIBRATION_OVERDUE,
-  ];
+  const STATUS_ONLY_CALIBRATION_REPAIR: string[] = [ESVal.NON_CONFORMING];
   const currentStatus = equipment.status || ESVal.AVAILABLE;
 
   const canCheckoutAnyPurpose = !STATUS_NOT_ALLOWED_FOR_CHECKOUT.includes(
@@ -223,7 +220,6 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
     if (!canCheckoutAnyPurpose) {
       if (currentStatus === ESVal.CHECKED_OUT)
         return t('checkoutHistoryTab.disabledReasons.checked_out');
-      if (currentStatus === ESVal.RETIRED) return t('checkoutHistoryTab.disabledReasons.retired');
     }
     return null;
   };

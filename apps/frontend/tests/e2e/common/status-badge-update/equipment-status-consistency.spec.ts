@@ -171,52 +171,52 @@ test.describe('Equipment Status Consistency', () => {
    *
    * See: EQUIPMENT_STATUS_CONSISTENCY_TEST_COMPLETE.md for details
    */
-  test.fixme(
-    'NC creation updates both detail and list pages consistently',
-    async ({ siteAdminPage: page, browser }) => {
-      const context = page.context();
-      // Step 1: Navigate to detail page and record initial status
-      await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-      const initialDetailStatus = await getDetailPageStatus(page);
-      console.log(`Initial detail page status: ${initialDetailStatus}`);
+  test.fixme('NC creation updates both detail and list pages consistently', async ({
+    siteAdminPage: page,
+    browser: _browser,
+  }) => {
+    const _context = page.context();
+    // Step 1: Navigate to detail page and record initial status
+    await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
+    const initialDetailStatus = await getDetailPageStatus(page);
+    console.log(`Initial detail page status: ${initialDetailStatus}`);
 
-      // Step 2: Navigate to list page and verify same status
-      await page.goto('/equipment');
-      const initialListStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
-      console.log(`Initial list page status: ${initialListStatus}`);
+    // Step 2: Navigate to list page and verify same status
+    await page.goto('/equipment');
+    const initialListStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
+    console.log(`Initial list page status: ${initialListStatus}`);
 
-      // ✅ ASSERTION 1: Initial consistency
-      expect(initialDetailStatus).toBe(initialListStatus);
+    // ✅ ASSERTION 1: Initial consistency
+    expect(initialDetailStatus).toBe(initialListStatus);
 
-      // Step 3: Create non-conformance (should change status to "부적합")
-      await createNonConformance(page, TEST_EQUIPMENT_ID);
+    // Step 3: Create non-conformance (should change status to "부적합")
+    await createNonConformance(page, TEST_EQUIPMENT_ID);
 
-      // Step 4: Navigate back to detail page
-      await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
+    // Step 4: Navigate back to detail page
+    await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
 
-      const updatedDetailStatus = await getDetailPageStatus(page);
-      console.log(`Updated detail page status: ${updatedDetailStatus}`);
+    const updatedDetailStatus = await getDetailPageStatus(page);
+    console.log(`Updated detail page status: ${updatedDetailStatus}`);
 
-      // ✅ ASSERTION 2: Detail page shows "부적합" (using SSOT)
-      expect(updatedDetailStatus).toContain(EQUIPMENT_STATUS_LABELS.non_conforming);
+    // ✅ ASSERTION 2: Detail page shows "부적합" (using SSOT)
+    expect(updatedDetailStatus).toContain(EQUIPMENT_STATUS_LABELS.non_conforming);
 
-      // Step 5: Navigate to list page
-      await page.goto('/equipment');
+    // Step 5: Navigate to list page
+    await page.goto('/equipment');
 
-      const updatedListStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
-      console.log(`Updated list page status: ${updatedListStatus}`);
+    const updatedListStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
+    console.log(`Updated list page status: ${updatedListStatus}`);
 
-      // ✅ ASSERTION 3: List page also shows "부적합" (using SSOT)
-      expect(updatedListStatus).toContain(EQUIPMENT_STATUS_LABELS.non_conforming);
+    // ✅ ASSERTION 3: List page also shows "부적합" (using SSOT)
+    expect(updatedListStatus).toContain(EQUIPMENT_STATUS_LABELS.non_conforming);
 
-      // ✅ ASSERTION 4: Final consistency
-      expect(updatedDetailStatus).toBe(updatedListStatus);
-    }
-  );
+    // ✅ ASSERTION 4: Final consistency
+    expect(updatedDetailStatus).toBe(updatedListStatus);
+  });
 
   test('Opening detail page in new tab shows consistent status', async ({
     siteAdminPage: page,
-    browser,
+    browser: _browser,
   }) => {
     const context = page.context();
 
@@ -282,35 +282,34 @@ test.describe('Equipment Status Consistency', () => {
    * FIXME: Same issue as test 1 - incorrect assumptions about NC creation
    * See test 1 comments and EQUIPMENT_STATUS_CONSISTENCY_TEST_COMPLETE.md
    */
-  test.fixme(
-    'Cache invalidation helper updates all affected queries',
-    async ({ siteAdminPage: page }) => {
-      // Step 1: Navigate to detail page
-      await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-      const initialStatus = await getDetailPageStatus(page);
+  test.fixme('Cache invalidation helper updates all affected queries', async ({
+    siteAdminPage: page,
+  }) => {
+    // Step 1: Navigate to detail page
+    await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
+    const _initialStatus = await getDetailPageStatus(page);
 
-      // Step 2: Keep list page open in background
-      await page.goto('/equipment');
+    // Step 2: Keep list page open in background
+    await page.goto('/equipment');
 
-      // Step 3: Create NC (triggers invalidateAfterNonConformanceCreation)
-      await createNonConformance(page, TEST_EQUIPMENT_ID);
+    // Step 3: Create NC (triggers invalidateAfterNonConformanceCreation)
+    await createNonConformance(page, TEST_EQUIPMENT_ID);
 
-      // Step 4: Reload list page (should show updated status)
-      await page.reload();
+    // Step 4: Reload list page (should show updated status)
+    await page.reload();
 
-      const listStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
+    const listStatus = await getListPageStatus(page, TEST_MANAGEMENT_NUMBER);
 
-      // ✅ ASSERTION: List page reflects NC creation (using SSOT)
-      expect(listStatus).toContain(EQUIPMENT_STATUS_LABELS.non_conforming);
+    // ✅ ASSERTION: List page reflects NC creation (using SSOT)
+    expect(listStatus).toContain(EQUIPMENT_STATUS_LABELS.non_conforming);
 
-      // Step 5: Navigate to detail page
-      await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
-      const detailStatus = await getDetailPageStatus(page);
+    // Step 5: Navigate to detail page
+    await page.goto(`/equipment/${TEST_EQUIPMENT_ID}`);
+    const detailStatus = await getDetailPageStatus(page);
 
-      // ✅ ASSERTION: Both pages consistent
-      expect(detailStatus).toBe(listStatus);
-    }
-  );
+    // ✅ ASSERTION: Both pages consistent
+    expect(detailStatus).toBe(listStatus);
+  });
 });
 
 test.describe('CalibrationOverdueScheduler Cache Invalidation', () => {
@@ -321,7 +320,7 @@ test.describe('CalibrationOverdueScheduler Cache Invalidation', () => {
     // POST /api/notifications/trigger-overdue-check
 
     // Step 1: Find equipment with overdue calibration
-    await page.goto('/equipment?status=calibration_scheduled');
+    await page.goto('/equipment?calibrationDue=overdue');
 
     // TODO: Implement scheduler trigger endpoint test
     // 1. Call POST /api/notifications/trigger-overdue-check

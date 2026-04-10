@@ -74,11 +74,9 @@
   "status": {
     "available": "Available",
     "checked_out": "Checked Out",
-    "calibration_scheduled": "Calibration Scheduled",
-    "calibration_overdue": "Calibration Overdue",
     "non_conforming": "Non-Conforming",
+    "calibration_overdue": "Calibration Overdue",
     "spare": "Spare",
-    "retired": "Retired",
     "pending_disposal": "Pending Disposal",
     "disposed": "Disposed",
     "temporary": "Temporary",
@@ -997,8 +995,7 @@
       "expectedReturnDateRequired": "Please enter expected return date"
     },
     "disabledReasons": {
-      "checked_out": "Equipment is already checked out",
-      "retired": "Equipment has been retired"
+      "checked_out": "Equipment is already checked out"
     },
     "purpose": {
       "calibration": "Calibration",

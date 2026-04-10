@@ -51,11 +51,8 @@ export const EQUIPMENT_STATUS_VALUES = EquipmentStatusEnum.options;
 export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
   available: '사용 가능',
   checked_out: '반출 중',
-  calibration_scheduled: '교정 예정',
-  calibration_overdue: '교정 기한 초과',
   non_conforming: '부적합',
   spare: '여분',
-  retired: '폐기', // deprecated - disposed 사용 권장
   pending_disposal: '폐기대기',
   disposed: '폐기완료',
   temporary: '임시등록',
@@ -64,15 +61,11 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
 
 /**
  * UI 필터에 표시할 장비 상태 목록
- * - deprecated, 시스템 생성, 내부 전용 상태는 제외
- * - retired: deprecated (disposed로 대체)
- * - calibration_scheduled: 시스템이 자동으로 생성하는 상태
- * - temporary, inactive: 내부 공용/렌탈 장비 워크플로 전용
+ * - temporary, inactive: 내부 공용/렌탈 장비 워크플로 전용이므로 제외
  */
 export const EQUIPMENT_STATUS_FILTER_OPTIONS: EquipmentStatus[] = [
   'available',
   'checked_out',
-  'calibration_overdue',
   'non_conforming',
   'spare',
   'pending_disposal',

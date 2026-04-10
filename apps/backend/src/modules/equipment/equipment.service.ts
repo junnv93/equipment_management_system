@@ -24,6 +24,7 @@ import {
   eq,
   and,
   or,
+  ne,
   desc,
   asc,
   sql,
@@ -241,9 +242,9 @@ export class EquipmentService extends VersionedBaseService {
       whereConditions.push(eq(equipment.status, status));
     }
 
-    // 퇴역/폐기 장비 숨기기 (showRetired=false이고 특정 상태 필터가 없을 때)
+    // 폐기 장비 숨기기 (showRetired=false이고 특정 상태 필터가 없을 때)
     if (showRetired === false && !status) {
-      whereConditions.push(notInArray(equipment.status, [ESVal.RETIRED, ESVal.DISPOSED]));
+      whereConditions.push(ne(equipment.status, ESVal.DISPOSED));
     }
 
     if (teamId) {
@@ -934,17 +935,10 @@ export class EquipmentService extends VersionedBaseService {
                   if (r.status) counts[r.status] = r.count;
                 });
 
-                // calibration_overdue 키는 derived 기준으로 덮어쓴다.
-                // - status enum 값은 스케줄러가 즉시 non_conforming으로 전이시켜 거의 0이 됨
-                // - "교정기한초과"는 status가 아닌 사실(nextCalibrationDate < today)이므로
-                //   부적합으로 전환된 장비도 카운트에 포함되어야 함
+                // 교정기한초과 카운트는 status enum이 아닌 날짜 기반 derived 값
+                // nextCalibrationDate < today인 장비를 카운트 (폐기/비활성 제외)
                 const today = getUtcStartOfDay();
-                const overdueExcluded = [
-                  ESVal.DISPOSED,
-                  ESVal.PENDING_DISPOSAL,
-                  ESVal.RETIRED,
-                  ESVal.INACTIVE,
-                ];
+                const overdueExcluded = [ESVal.DISPOSED, ESVal.PENDING_DISPOSAL, ESVal.INACTIVE];
                 const overdueResult = await this.db
                   .select({ count: sql<number>`cast(count(*) as integer)` })
                   .from(equipment)
@@ -956,7 +950,7 @@ export class EquipmentService extends VersionedBaseService {
                       notInArray(equipment.status, overdueExcluded)
                     )
                   );
-                counts[ESVal.CALIBRATION_OVERDUE] = Number(overdueResult[0]?.count || 0);
+                counts['calibration_overdue'] = Number(overdueResult[0]?.count || 0);
 
                 return counts;
               },

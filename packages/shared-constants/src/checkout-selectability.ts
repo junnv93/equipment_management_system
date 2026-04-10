@@ -25,8 +25,6 @@ export const CHECKOUT_MAX_EQUIPMENT_COUNT = 20;
  */
 export const CALIBRATION_REPAIR_ALLOWED_STATUSES: readonly EquipmentStatus[] = [
   'available',
-  'calibration_scheduled',
-  'calibration_overdue',
   'non_conforming',
   'spare',
 ] as const;
@@ -35,13 +33,8 @@ export const CALIBRATION_REPAIR_ALLOWED_STATUSES: readonly EquipmentStatus[] = [
  * 외부 대여 목적 반출 시 허용되는 장비 상태
  *
  * 다른 시험소에 빌려주는 경우, 정상 작동하는 장비만 가능
- * calibration_scheduled는 허용하되, 교정 만료일 경고 표시
  */
-export const RENTAL_ALLOWED_STATUSES: readonly EquipmentStatus[] = [
-  'available',
-  'spare',
-  'calibration_scheduled',
-] as const;
+export const RENTAL_ALLOWED_STATUSES: readonly EquipmentStatus[] = ['available', 'spare'] as const;
 
 /**
  * 목적별 허용 상태 매핑
@@ -76,7 +69,6 @@ export function getAllowedStatusesForPurpose(
  * 이 상태의 장비는 반출 신청 장비 선택 목록에 표시하지 않음
  */
 export const CHECKOUT_HIDDEN_STATUSES: readonly EquipmentStatus[] = [
-  'retired',
   'disposed',
   'pending_disposal',
   'temporary',
@@ -110,12 +102,6 @@ export const CHECKOUT_BLOCKED_REASONS: Partial<
 > = {
   checked_out: {
     default: { key: 'selectability.checkedOutBlocked' },
-  },
-  calibration_overdue: {
-    default: { key: '' }, // 교정/수리에서는 허용
-    purposeOverrides: {
-      rental: { key: 'selectability.calibrationOverdueRentalBlocked' },
-    },
   },
   non_conforming: {
     default: { key: '' }, // 교정/수리에서는 허용

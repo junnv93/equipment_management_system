@@ -18,7 +18,6 @@ import {
   CALIBRATION_STATUS_LABELS,
   CALIBRATION_APPROVAL_STATUS_LABELS,
   REPAIR_RESULT_LABELS,
-  EquipmentStatusValues as ESVal,
   CheckoutStatusValues as CSVal,
   CalibrationStatusEnum,
   type AuditAction,
@@ -265,14 +264,31 @@ export class ReportsService {
             .innerJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
             .where(and(...calConditions))
             .groupBy(calibrationsTable.status),
+          // 교정기한초과: date-derived (nextCalibrationDate < today, 폐기/비활성 제외)
           this.db
             .select({ cnt: count(equipmentTable.id) })
             .from(equipmentTable)
-            .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_OVERDUE), ...scopeConditions)),
+            .where(
+              and(
+                isNotNull(equipmentTable.nextCalibrationDate),
+                sql`${equipmentTable.nextCalibrationDate} < now()`,
+                sql`${equipmentTable.status} NOT IN ('disposed', 'pending_disposal', 'inactive')`,
+                ...scopeConditions
+              )
+            ),
+          // 교정예정(30일 이내): date-derived
           this.db
             .select({ cnt: count(equipmentTable.id) })
             .from(equipmentTable)
-            .where(and(eq(equipmentTable.status, ESVal.CALIBRATION_SCHEDULED), ...scopeConditions)),
+            .where(
+              and(
+                isNotNull(equipmentTable.nextCalibrationDate),
+                gte(equipmentTable.nextCalibrationDate, sql`now()`),
+                lte(equipmentTable.nextCalibrationDate, sql`now() + interval '30 days'`),
+                sql`${equipmentTable.status} NOT IN ('disposed', 'pending_disposal', 'inactive')`,
+                ...scopeConditions
+              )
+            ),
           this.db
             .select({ cnt: count(equipmentTable.id) })
             .from(equipmentTable)

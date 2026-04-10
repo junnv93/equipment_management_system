@@ -490,7 +490,7 @@ test.describe('Equipment List - Calibration Due Filters', () => {
       const url = new URL(route.request().url());
       const status = url.searchParams.get('status');
 
-      if (status === ESVal.CALIBRATION_OVERDUE) {
+      if (status === 'calibration_overdue') {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -500,13 +500,13 @@ test.describe('Equipment List - Calibration Due Filters', () => {
                 '1',
                 '기한 초과 장비 1',
                 yesterday.toISOString(),
-                ESVal.CALIBRATION_OVERDUE
+                'calibration_overdue'
               ),
               createMockEquipment(
                 '2',
                 '기한 초과 장비 2',
                 lastWeek.toISOString(),
-                ESVal.CALIBRATION_OVERDUE
+                'calibration_overdue'
               ),
             ],
             meta: { pagination: { total: 2, totalPages: 1, currentPage: 1 } },
@@ -707,7 +707,7 @@ test.describe('Equipment List - Calibration Due Date Display', () => {
               name: '초과 장비',
               managementNumber: 'MGT-002',
               modelName: 'Test Model',
-              status: ESVal.CALIBRATION_OVERDUE,
+              status: 'calibration_overdue',
               nextCalibrationDate: overdue5Days.toISOString(),
               location: '테스트 랩',
               isShared: false,
