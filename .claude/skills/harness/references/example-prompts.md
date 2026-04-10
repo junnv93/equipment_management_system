@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-10 (39차 — 점검 결과 섹션 프론트엔드 UI + rich_table + 아키텍처 리뷰 후속)**
+> **마지막 정리일: 2026-04-10 (40차 — 중간점검 통합 워크플로우 UX 프롬프트 추가)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -270,6 +270,81 @@ QP-18-05 자체점검표 검증 (QP-18-03과 동일 패턴):
 검증:
 - pnpm tsc --noEmit exit 0
 - Backend E2E + Playwright E2E 통과
+```
+
+---
+
+## 40차 신규 — 중간점검 통합 워크플로우 UX 개선 (Mode 2)
+
+> **발견 배경 (2026-04-10, 40차)**: 9개 실제 완성 문서(E0001~E0350) 분석 결과,
+> 점검 항목·측정 장비·결과 섹션이 현재 2단계 UX(생성 → 목록 펼침)로 분리되어 있음.
+> 실무자가 한 화면에서 점검 전체를 완료할 수 없는 UX 갭. 또한 점검주기/교정유효기간은
+> 장비 마스터 데이터에서 자동 적용 가능하고, 점검 항목은 9개 문서에서 반복되는 패턴이
+> 프리셋으로 제공 가능.
+
+### 🟠 HIGH — 중간점검 폼 통합 리디자인 (InspectionFormDialog → 통합 워크플로우)
+
+```
+현재 문제:
+1. 점검 생성(InspectionFormDialog) → 목록으로 돌아감 → 행 펼침 → 결과 섹션 추가
+   = 2단계 UX, 사용자가 점검 완료까지 왕복해야 함
+2. 점검주기/교정유효기간을 수동 입력해야 함 (장비 마스터에 이미 있는 데이터)
+3. 점검 항목을 매번 수동 입력 (9/9 문서에서 "외관 검사"가 반복됨)
+
+실제 문서 분석 결과 (C:\...\새 폴더, 9개 완성 문서):
+
+■ 점검 항목 프리셋 (9개 문서에서 추출):
+  - [9/9] 외관 검사 — 기준: 마모 상태 확인
+  - RF 입력 검사 — 기준: S/G Level ±1 dB
+  - DC 전압 출력 특성 검사 — 기준: Output 대비 0.1V
+  - 출력 특성 점검 — 기준: 제조사 선언 오차범위 이내
+  - VSWR 특성 — 기준: SWR < 2.0
+  - OBW 특성 검사 — 기준: 99% BW
+  - 정합 특성 검사 — 기준: VSWR < 1.2
+  - 신호 경로 특성 검사
+  - RF 출력 검사 — 기준: CW Level ±1 dB
+  - 장비 내부 자체 점검 프로그램
+
+■ 자동 적용 가능 필드:
+  - 점검주기: equipment.inspectionCycle 또는 calibrations 테이블
+  - 교정유효기간: calibrations.validUntil에서 계산
+  - 분류: equipment.calibrationRequired → 교정기기/비교정기기
+  - 관리팀/장비위치/모델명: equipment 마스터
+
+작업 (Mode 2 — 15+ 파일, 폼 구조 변경):
+
+Phase 1: 점검 항목 프리셋 SSOT
+  - packages/shared-constants/src/inspection-presets.ts (신규)
+    DEFAULT_INSPECTION_ITEMS: { checkItem, checkCriteria }[]
+    장비 분류별 기본 항목 매핑 (RF, DC, 패시브, OTA 등)
+  - 프론트엔드: 프리셋 Select + 커스텀 입력 토글
+
+Phase 2: InspectionFormDialog 통합 리디자인
+  - 자동 적용 필드: 점검주기, 교정유효기간, 분류를 장비/교정 데이터에서 prefill
+    (수동 오버라이드 가능하되 기본값 자동 설정)
+  - 점검 항목: 프리셋 선택 + 직접 입력 모드 전환
+    프리셋 선택 시 checkItem + checkCriteria 자동 채움
+  - 결과 섹션: 폼 하단에 ResultSectionsPanel 인라인 통합
+    (현재 목록 펼침 → 폼 내부로 이동)
+  - 측정 장비: 기존 장비 검색 Select 유지 (시스템에 등록된 장비에서 선택)
+
+Phase 3: 점검 항목별 결과 입력 UX
+  - 점검 항목마다:
+    a. checkResult: 텍스트 입력 (간단한 결과)
+    b. detailedResult: 접을 수 있는 상세 영역 (멀티라인)
+    c. 사진/그래프 첨부: 인라인 업로드 (기존 items/:itemId/photos API 재사용)
+    d. judgment: pass/fail Select
+  - 결과 섹션(data_table, photo 등): 항목 아래 또는 폼 하단에 통합
+
+Phase 4: 워크플로우 연결
+  - 생성 시 결과 섹션까지 한 번에 저장 (2단계 → 1단계)
+  - 편집 시에도 결과 섹션 인라인 표시
+
+검증:
+- pnpm tsc --noEmit + frontend/backend build PASS
+- E2E: 점검 생성 → 프리셋 항목 선택 → 결과 데이터 입력 → Export → DOCX 검증
+- 기존 wf-19c 테스트 회귀 없음
+- 9개 실제 문서 패턴 재현 가능 확인
 ```
 
 ---
