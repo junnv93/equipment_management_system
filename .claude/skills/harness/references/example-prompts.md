@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-09 (38차 — QP-18-02 이력카드 export 검증 + QP-18-03/05 검증 프롬프트 등재)**
+> **마지막 정리일: 2026-04-10 (39차 — 점검 결과 섹션 프론트엔드 UI + rich_table + 아키텍처 리뷰 후속)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -213,7 +213,11 @@ wf-21-cable-path-loss) 모두 page.request.get 으로 API 응답만 검증한다
 
 > **발견 배경 (2026-04-09, 38차)**: QP-18-02 이력카드 검증 과정에서 XML 마커 불일치(4개 이력 섹션 삽입 실패), DATA_START_ROW 오류(QP-19-01), 날짜 형식/폰트/파일명 등 다수 이슈 발견 및 수정. 동일 패턴의 잠재적 이슈가 QP-18-03(중간점검표), QP-18-05(자체점검표)에도 존재할 수 있음. 양식 템플릿 파일을 기준으로 코드 매핑의 정확성을 검증하는 프롬프트.
 
-### 🟡 MEDIUM — QP-18-03 중간점검표 DOCX 템플릿 ↔ 코드 매핑 검증
+### ~~🟡 MEDIUM — QP-18-03 중간점검표 DOCX 템플릿 ↔ 코드 매핑 검증~~ ✅ 완료 (2026-04-10 39차)
+
+> 검증: 9개 실제 완성 문서(E0001~E0350)와 대조. wf-19c E2E 테스트 9/9 통과. DocxTemplate에 appendParagraph/appendTable/appendImage/appendRichTable 추가. renderResultSections로 동적 콘텐츠 Export 지원. 프론트엔드 ResultSectionsPanel UI 구현.
+
+### ~~원문 (참고용)~~
 
 ```
 QP-18-02 이력카드 검증에서 발견된 패턴:
@@ -240,7 +244,11 @@ QP-18-03 중간점검표 동일 검증 필요:
 - Playwright E2E: 브라우저 다운로드 + DOCX 내용 검증
 ```
 
-### 🟡 MEDIUM — QP-18-05 자체점검표 DOCX 템플릿 ↔ 코드 매핑 검증
+### ~~🟡 MEDIUM — QP-18-05 자체점검표 DOCX 템플릿 ↔ 코드 매핑 검증~~ ✅ 완료 (2026-04-10 39차)
+
+> 검증: QP-18-03과 동일하게 E2E 테스트 + 실제 문서 대조 완료. 자체점검 결과 섹션 CRUD, Export 동적 렌더링, SelfInspectionTab 통합 모두 정상.
+
+### ~~원문 (참고용)~~
 
 ```
 QP-18-05 자체점검표 검증 (QP-18-03과 동일 패턴):
@@ -262,6 +270,80 @@ QP-18-05 자체점검표 검증 (QP-18-03과 동일 패턴):
 검증:
 - pnpm tsc --noEmit exit 0
 - Backend E2E + Playwright E2E 통과
+```
+
+---
+
+## 39차 신규 — 결과 섹션 아키텍처 리뷰 후속 (4건)
+
+> **발견 배경 (2026-04-10, 39차)**: feat/inspection-result-sections 브랜치 review-architecture + verify-implementation 실행 결과. Critical 2건(Fragment key, mutation race)은 즉시 수정. 나머지 후속 작업 등재.
+
+### 🟠 HIGH — ResultSectionsPanel 캐시/에러 처리 강화 (Mode 1)
+
+```
+review-architecture 발견 (BE-C2 + FE-W3 + FE-W4):
+1. 결과 섹션 mutation 시 부모 점검 캐시 미무효화
+   - result-sections.service.ts: create/update/delete 후 parent inspection cache invalidate 없음
+   - ResultSectionsPanel.tsx: invalidateQueries가 결과 섹션 queryKey만 타겟
+2. CAS conflict (409) 에러 미처리 — 제네릭 toast만 표시
+3. staleTime/gcTime 미설정 — 매 mount마다 refetch
+
+작업:
+1. ResultSectionsPanel: invalidate 시 부모 queryKey도 포함
+   queryClient.invalidateQueries({ queryKey: queryKeys.intermediateInspections.detail(inspectionId) })
+2. mutation onError에 isConflictError 분기 추가
+3. useQuery에 QUERY_CONFIG 또는 staleTime 적용
+4. query-config.ts에 RESULT_SECTIONS config 엔트리 추가
+
+검증: pnpm tsc --noEmit + frontend build PASS
+```
+
+### 🟡 MEDIUM — rich_table 프론트엔드 폼 UI 구현 (Mode 1)
+
+```
+ResultSectionFormDialog의 SECTION_TYPES에 'rich_table'이 없어 UI에서 생성 불가.
+API + Export(appendRichTable)는 구현 완료.
+
+작업:
+1. ResultSectionFormDialog.tsx: SECTION_TYPES에 'rich_table' 추가
+2. RichTableSectionForm: 테이블 에디터 + 셀별 text/image 토글 + 이미지 업로드
+3. ResultSectionPreview.tsx rich_table case: 이미지 셀 렌더링
+
+검증:
+- 프론트엔드에서 rich_table 섹션 생성 → Export → DOCX에 셀 내 이미지 포함
+- pnpm tsc --noEmit + frontend build PASS
+```
+
+### 🟡 MEDIUM — ResultSectionsPanel N+1 쿼리 최적화 (Mode 1)
+
+```
+FE-W5: SelfInspectionTab에서 모든 점검 카드에 ResultSectionsPanel을 무조건 렌더링.
+각 패널이 독립 useQuery를 실행하여 N개 점검 × 1 API 호출 = N+1 문제.
+
+BE-W2: renderResultSections에서 photo/rich_table 이미지 로딩이 sequential.
+문서 ID를 미리 수집 → batch WHERE IN 쿼리 + Promise.all 다운로드로 최적화 가능.
+
+작업:
+1. SelfInspectionTab: ResultSectionsPanel을 펼치기 토글 뒤에 조건부 렌더 (lazy)
+2. renderResultSections: 이미지 documentId 선수집 → batch 조회
+3. CSV 업로드 fileSize 제한 추가 (1MB)
+
+검증: pnpm tsc --noEmit + backend build + backend test PASS
+```
+
+### 🟢 LOW — ResultSectionsPanel 접근성 + 타입 안전성 개선 (Mode 0)
+
+```
+FE-I10: 아이콘 버튼에 aria-label 누락 (이동/수정/삭제)
+BE-C1: result-sections.service.ts update()의 Record<string, unknown> → Partial 타입 개선
+BE-W5: updatedBy 감사 필드 누락
+
+작업:
+1. ResultSectionsPanel: 아이콘 버튼에 aria-label={t('...')} 추가
+2. result-sections.service.ts: updateData 타입을 Record에서 Partial<NewInspectionResultSection>로 변경
+3. DB 스키마에 updatedBy 컬럼 추가 (선택적)
+
+검증: pnpm tsc --noEmit + frontend build PASS
 ```
 
 ---
