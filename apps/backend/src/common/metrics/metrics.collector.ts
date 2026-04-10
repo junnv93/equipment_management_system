@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, count, inArray } from 'drizzle-orm';
+import { eq, and, lt, count, inArray, isNotNull } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CheckoutStatusValues, EquipmentStatusValues } from '@equipment-management/schemas';
 import { MetricsService } from './metrics.service';
@@ -74,7 +74,12 @@ export class MetricsCollector {
     const [overdueResult] = await this.db
       .select({ count: count() })
       .from(schema.equipment)
-      .where(and(eq(schema.equipment.status, EquipmentStatusValues.CALIBRATION_OVERDUE)));
+      .where(
+        and(
+          isNotNull(schema.equipment.nextCalibrationDate),
+          lt(schema.equipment.nextCalibrationDate, new Date())
+        )
+      );
 
     const [nonConformingResult] = await this.db
       .select({ count: count() })
