@@ -71,6 +71,8 @@ export class DocumentsController {
         calibrationId: { type: 'string', format: 'uuid' },
         requestId: { type: 'string', format: 'uuid' },
         softwareValidationId: { type: 'string', format: 'uuid' },
+        intermediateInspectionId: { type: 'string', format: 'uuid' },
+        selfInspectionId: { type: 'string', format: 'uuid' },
         description: { type: 'string' },
       },
     },
@@ -86,6 +88,8 @@ export class DocumentsController {
     @Body('calibrationId') calibrationId?: string,
     @Body('requestId') requestId?: string,
     @Body('softwareValidationId') softwareValidationId?: string,
+    @Body('intermediateInspectionId') intermediateInspectionId?: string,
+    @Body('selfInspectionId') selfInspectionId?: string,
     @Body('description') description?: string
   ): Promise<{ document: DocumentRecord; message: string }> {
     if (!file) {
@@ -109,6 +113,8 @@ export class DocumentsController {
       calibrationId: calibrationId || undefined,
       requestId: requestId || undefined,
       softwareValidationId: softwareValidationId || undefined,
+      intermediateInspectionId: intermediateInspectionId || undefined,
+      selfInspectionId: selfInspectionId || undefined,
       description: description || undefined,
       uploadedBy: userId || undefined,
     });
@@ -126,6 +132,8 @@ export class DocumentsController {
   @ApiQuery({ name: 'calibrationId', required: false })
   @ApiQuery({ name: 'requestId', required: false })
   @ApiQuery({ name: 'softwareValidationId', required: false })
+  @ApiQuery({ name: 'intermediateInspectionId', required: false })
+  @ApiQuery({ name: 'selfInspectionId', required: false })
   @ApiQuery({ name: 'type', required: false, enum: DOCUMENT_TYPE_VALUES })
   @ApiQuery({
     name: 'includeCalibrations',
@@ -139,6 +147,8 @@ export class DocumentsController {
     @Query('calibrationId') calibrationId?: string,
     @Query('requestId') requestId?: string,
     @Query('softwareValidationId') softwareValidationId?: string,
+    @Query('intermediateInspectionId') intermediateInspectionId?: string,
+    @Query('selfInspectionId') selfInspectionId?: string,
     @Query('type') type?: string,
     @Query('includeCalibrations') includeCalibrations?: string
   ): Promise<DocumentRecord[]> {
@@ -163,6 +173,18 @@ export class DocumentsController {
       throw new BadRequestException({
         code: 'INVALID_UUID',
         message: 'Invalid softwareValidationId format.',
+      });
+    }
+    if (intermediateInspectionId && !uuidPattern.test(intermediateInspectionId)) {
+      throw new BadRequestException({
+        code: 'INVALID_UUID',
+        message: 'Invalid intermediateInspectionId format.',
+      });
+    }
+    if (selfInspectionId && !uuidPattern.test(selfInspectionId)) {
+      throw new BadRequestException({
+        code: 'INVALID_UUID',
+        message: 'Invalid selfInspectionId format.',
       });
     }
 
@@ -190,6 +212,15 @@ export class DocumentsController {
     }
     if (softwareValidationId) {
       return this.documentService.findBySoftwareValidationId(softwareValidationId, validType);
+    }
+    if (intermediateInspectionId) {
+      return this.documentService.findByIntermediateInspectionId(
+        intermediateInspectionId,
+        validType
+      );
+    }
+    if (selfInspectionId) {
+      return this.documentService.findBySelfInspectionId(selfInspectionId, validType);
     }
     return [];
   }

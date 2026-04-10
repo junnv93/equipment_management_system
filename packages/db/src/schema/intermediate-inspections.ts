@@ -108,6 +108,7 @@ export const intermediateInspectionItems = pgTable(
     checkItem: varchar('check_item', { length: 300 }).notNull(),
     checkCriteria: varchar('check_criteria', { length: 300 }),
     checkResult: varchar('check_result', { length: 300 }),
+    detailedResult: text('detailed_result'),
     judgment: varchar('judgment', { length: 10 }).$type<InspectionJudgment>(),
   },
   (table) => ({

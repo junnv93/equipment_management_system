@@ -126,6 +126,7 @@ export const selfInspectionItems = pgTable(
     checkResult: varchar('check_result', { length: 10 })
       .$type<SelfInspectionItemJudgment>()
       .notNull(),
+    detailedResult: text('detailed_result'),
   },
   (table) => ({
     inspectionIdIdx: index('self_inspection_items_inspection_id_idx').on(table.inspectionId),

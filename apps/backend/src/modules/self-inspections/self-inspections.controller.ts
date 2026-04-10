@@ -11,7 +11,10 @@ import {
   Request,
   HttpStatus,
   UsePipes,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
@@ -20,6 +23,9 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { SelfInspectionsService, type SelfInspectionWithItems } from './self-inspections.service';
+import { DocumentService } from '../../common/file-upload/document.service';
+import type { MulterFile } from '../../types/common.types';
+import type { DocumentRecord, InspectionDocumentItem } from '@equipment-management/db/schema';
 import {
   CreateSelfInspectionPipe,
   type CreateSelfInspectionInput,
@@ -85,7 +91,10 @@ export class EquipmentSelfInspectionsController {
 @Controller('self-inspections')
 @ApiBearerAuth()
 export class SelfInspectionsController {
-  constructor(private readonly selfInspectionsService: SelfInspectionsService) {}
+  constructor(
+    private readonly selfInspectionsService: SelfInspectionsService,
+    private readonly documentService: DocumentService
+  ) {}
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)
@@ -147,5 +156,58 @@ export class SelfInspectionsController {
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     await this.selfInspectionsService.delete(uuid);
     return { success: true };
+  }
+
+  // ============================================================================
+  // 항목별 사진/문서 첨부
+  // ============================================================================
+
+  @Post(':uuid/items/:itemId/photos')
+  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @UseInterceptors(FileInterceptor('file'))
+  @AuditLog({ action: 'upload', entityType: 'document' })
+  @ApiOperation({ summary: '자체점검 항목별 사진 업로드' })
+  async uploadItemPhoto(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @UploadedFile() file: MulterFile,
+    @Request() req: AuthenticatedRequest,
+    @Body('documentType') documentType?: string,
+    @Body('sortOrder') sortOrderStr?: string,
+    @Body('description') description?: string
+  ): Promise<{ document: DocumentRecord; link: InspectionDocumentItem }> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    const sortOrder = sortOrderStr ? parseInt(sortOrderStr, 10) : 0;
+    return this.selfInspectionsService.uploadItemPhoto(
+      uuid,
+      itemId,
+      file,
+      userId,
+      this.documentService,
+      {
+        documentType:
+          (documentType as 'inspection_photo' | 'inspection_graph') ?? 'inspection_photo',
+        sortOrder,
+        description,
+      }
+    );
+  }
+
+  @Get(':uuid/documents')
+  @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)
+  @ApiOperation({ summary: '자체점검 첨부 문서 목록' })
+  async getDocuments(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest,
+    @Query('type') type?: string
+  ): Promise<DocumentRecord[]> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.documentService.findBySelfInspectionId(
+      uuid,
+      type as 'inspection_photo' | 'inspection_graph' | 'measurement_data' | undefined
+    );
   }
 }

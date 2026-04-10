@@ -5,10 +5,16 @@ import {
   intermediateInspections,
   intermediateInspectionItems,
   intermediateInspectionEquipment,
+  inspectionDocumentItems,
   calibrations,
   equipment,
   type IntermediateInspection,
+  type DocumentRecord,
+  type InspectionDocumentItem,
 } from '@equipment-management/db/schema';
+import type { DocumentService } from '../../common/file-upload/document.service';
+import type { DocumentType } from '@equipment-management/schemas';
+import type { MulterFile } from '../../types/common.types';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -100,6 +106,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
             checkItem: item.checkItem,
             checkCriteria: item.checkCriteria,
             checkResult: item.checkResult ?? null,
+            detailedResult: item.detailedResult ?? null,
             judgment: item.judgment ?? null,
           }))
         );
@@ -329,6 +336,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
               checkItem: item.checkItem,
               checkCriteria: item.checkCriteria,
               checkResult: item.checkResult ?? null,
+              detailedResult: item.detailedResult ?? null,
               judgment: item.judgment ?? null,
             }))
           );
@@ -553,5 +561,59 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       });
     }
     return result;
+  }
+
+  // ============================================================================
+  // 항목별 사진 업로드
+  // ============================================================================
+
+  async uploadItemPhoto(
+    inspectionId: string,
+    itemId: string,
+    file: MulterFile,
+    userId: string,
+    documentService: DocumentService,
+    opts: { documentType: DocumentType; sortOrder: number; description?: string }
+  ): Promise<{ document: DocumentRecord; link: InspectionDocumentItem }> {
+    // 항목이 해당 점검에 속하는지 검증
+    const [item] = await this.db
+      .select({ id: intermediateInspectionItems.id })
+      .from(intermediateInspectionItems)
+      .where(
+        and(
+          eq(intermediateInspectionItems.id, itemId),
+          eq(intermediateInspectionItems.inspectionId, inspectionId)
+        )
+      )
+      .limit(1);
+
+    if (!item) {
+      throw new NotFoundException({
+        code: 'INSPECTION_ITEM_NOT_FOUND',
+        message: `Item ${itemId} not found in inspection ${inspectionId}.`,
+      });
+    }
+
+    // documents에 저장
+    const document = await documentService.createDocument(file, {
+      intermediateInspectionId: inspectionId,
+      documentType: opts.documentType,
+      description: opts.description,
+      uploadedBy: userId,
+      subdirectory: 'inspection-photos',
+    });
+
+    // 연결 테이블에 매핑
+    const [link] = await this.db
+      .insert(inspectionDocumentItems)
+      .values({
+        documentId: document.id,
+        inspectionItemId: itemId,
+        inspectionItemType: 'intermediate',
+        sortOrder: opts.sortOrder,
+      })
+      .returning();
+
+    return { document, link };
   }
 }

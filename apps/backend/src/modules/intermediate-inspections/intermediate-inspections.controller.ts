@@ -8,7 +8,11 @@ import {
   UsePipes,
   Request,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
+  Query,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { IntermediateInspectionsService } from './intermediate-inspections.service';
 import {
   CreateInspectionPipe,
@@ -30,7 +34,10 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
-import type { IntermediateInspection } from '@equipment-management/db/schema';
+import type { IntermediateInspection, DocumentRecord } from '@equipment-management/db/schema';
+import { DocumentService } from '../../common/file-upload/document.service';
+import type { MulterFile } from '../../types/common.types';
+import type { InspectionDocumentItem } from '@equipment-management/db/schema';
 
 /**
  * 장비별 중간점검 생성/조회 (nested route)
@@ -126,7 +133,10 @@ export class CalibrationIntermediateInspectionsController {
  */
 @Controller('intermediate-inspections')
 export class IntermediateInspectionsController {
-  constructor(private readonly inspectionsService: IntermediateInspectionsService) {}
+  constructor(
+    private readonly inspectionsService: IntermediateInspectionsService,
+    private readonly documentService: DocumentService
+  ) {}
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
@@ -231,5 +241,56 @@ export class IntermediateInspectionsController {
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
     return this.inspectionsService.reject(uuid, dto.version, userId, dto.rejectionReason);
+  }
+
+  // ============================================================================
+  // 항목별 사진/문서 첨부
+  // ============================================================================
+
+  @Post(':uuid/items/:itemId/photos')
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @UseInterceptors(FileInterceptor('file'))
+  @AuditLog({ action: 'upload', entityType: 'document' })
+  async uploadItemPhoto(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @UploadedFile() file: MulterFile,
+    @Request() req: AuthenticatedRequest,
+    @Body('documentType') documentType?: string,
+    @Body('sortOrder') sortOrderStr?: string,
+    @Body('description') description?: string
+  ): Promise<{ document: DocumentRecord; link: InspectionDocumentItem }> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    const sortOrder = sortOrderStr ? parseInt(sortOrderStr, 10) : 0;
+    return this.inspectionsService.uploadItemPhoto(
+      uuid,
+      itemId,
+      file,
+      userId,
+      this.documentService,
+      {
+        documentType:
+          (documentType as 'inspection_photo' | 'inspection_graph') ?? 'inspection_photo',
+        sortOrder,
+        description,
+      }
+    );
+  }
+
+  @Get(':uuid/documents')
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  async getDocuments(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest,
+    @Query('type') type?: string
+  ): Promise<DocumentRecord[]> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.documentService.findByIntermediateInspectionId(
+      uuid,
+      type as 'inspection_photo' | 'inspection_graph' | 'measurement_data' | undefined
+    );
   }
 }

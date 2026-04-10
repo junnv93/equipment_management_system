@@ -50,6 +50,7 @@ export const FILE_TYPES = [
     extensions: ['.xlsx'],
     magicBytes: [[0x50, 0x4b, 0x03, 0x04]], // PK ZIP
   },
+  { mime: 'text/csv', extensions: ['.csv'], magicBytes: [] }, // 텍스트 파일 — 매직바이트 없음
 ] as const satisfies readonly FileTypeEntry[];
 
 // ============================================================
@@ -136,6 +137,9 @@ export const DOCUMENT_FILE_RULES: Readonly<Record<DocumentType, DocumentFileRule
   other: ALL_DOCUMENTS_RULE,
   validation_vendor_attachment: ALL_DOCUMENTS_RULE,
   validation_test_data: ALL_DOCUMENTS_RULE,
+  inspection_photo: IMAGE_RULE,
+  inspection_graph: IMAGE_RULE,
+  measurement_data: ALL_DOCUMENTS_RULE,
 };
 
 /** 파일 업로드 제한 */

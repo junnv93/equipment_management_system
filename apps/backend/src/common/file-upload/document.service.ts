@@ -23,6 +23,8 @@ export interface CreateDocumentOptions {
   calibrationId?: string;
   requestId?: string;
   softwareValidationId?: string;
+  intermediateInspectionId?: string;
+  selfInspectionId?: string;
   description?: string;
   uploadedBy?: string;
   subdirectory?: string;
@@ -54,12 +56,14 @@ export class DocumentService {
       !options.equipmentId &&
       !options.calibrationId &&
       !options.requestId &&
-      !options.softwareValidationId
+      !options.softwareValidationId &&
+      !options.intermediateInspectionId &&
+      !options.selfInspectionId
     ) {
       throw new BadRequestException({
         code: 'DOCUMENT_OWNER_REQUIRED',
         message:
-          'At least one owner (equipmentId, calibrationId, requestId, or softwareValidationId) is required.',
+          'At least one owner (equipmentId, calibrationId, requestId, softwareValidationId, intermediateInspectionId, or selfInspectionId) is required.',
       });
     }
 
@@ -78,6 +82,8 @@ export class DocumentService {
         calibrationId: options.calibrationId,
         requestId: options.requestId,
         softwareValidationId: options.softwareValidationId,
+        intermediateInspectionId: options.intermediateInspectionId,
+        selfInspectionId: options.selfInspectionId,
         documentType: options.documentType,
         status: 'active' as DocumentStatus,
         fileName: savedFile.fileName,
@@ -230,6 +236,50 @@ export class DocumentService {
   ): Promise<DocumentRecord[]> {
     const conditions = [
       eq(documents.softwareValidationId, softwareValidationId),
+      eq(documents.status, 'active' as DocumentStatus),
+    ];
+    if (type) {
+      conditions.push(eq(documents.documentType, type));
+    }
+
+    return this.db
+      .select()
+      .from(documents)
+      .where(and(...conditions))
+      .orderBy(desc(documents.uploadedAt));
+  }
+
+  /**
+   * 중간점검별 문서 목록 (활성 문서만)
+   */
+  async findByIntermediateInspectionId(
+    intermediateInspectionId: string,
+    type?: DocumentType
+  ): Promise<DocumentRecord[]> {
+    const conditions = [
+      eq(documents.intermediateInspectionId, intermediateInspectionId),
+      eq(documents.status, 'active' as DocumentStatus),
+    ];
+    if (type) {
+      conditions.push(eq(documents.documentType, type));
+    }
+
+    return this.db
+      .select()
+      .from(documents)
+      .where(and(...conditions))
+      .orderBy(desc(documents.uploadedAt));
+  }
+
+  /**
+   * 자체점검별 문서 목록 (활성 문서만)
+   */
+  async findBySelfInspectionId(
+    selfInspectionId: string,
+    type?: DocumentType
+  ): Promise<DocumentRecord[]> {
+    const conditions = [
+      eq(documents.selfInspectionId, selfInspectionId),
       eq(documents.status, 'active' as DocumentStatus),
     ];
     if (type) {

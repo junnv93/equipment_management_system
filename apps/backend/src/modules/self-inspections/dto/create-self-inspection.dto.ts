@@ -10,6 +10,7 @@ const selfInspectionItemSchema = z.object({
   itemNumber: z.number().int().min(1),
   checkItem: z.string().min(1).max(300),
   checkResult: SelfInspectionItemJudgmentEnum,
+  detailedResult: z.string().optional(),
 });
 
 export const createSelfInspectionSchema = z.object({

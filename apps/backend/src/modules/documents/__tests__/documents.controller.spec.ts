@@ -148,6 +148,8 @@ describe('DocumentsController', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
+        undefined,
         'true'
       );
 

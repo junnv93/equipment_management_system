@@ -17,6 +17,7 @@ const inspectionItemSchema = z.object({
     .min(1, VM.required('점검 기준'))
     .max(300, VM.string.max('점검 기준', 300)),
   checkResult: z.string().max(300, VM.string.max('점검 결과', 300)).optional(),
+  detailedResult: z.string().optional(),
   judgment: InspectionJudgmentEnum.optional(),
 });
 

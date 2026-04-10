@@ -23,6 +23,8 @@ import {
   intermediateInspectionItems,
   intermediateInspectionEquipment,
 } from '@equipment-management/db/schema/intermediate-inspections';
+import { inspectionDocumentItems } from '@equipment-management/db/schema/inspection-document-items';
+import { documents } from '@equipment-management/db/schema/documents';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
@@ -445,10 +447,82 @@ export class FormTemplateExportService {
       String(item.itemNumber),
       item.checkItem,
       item.checkCriteria ?? '-',
-      item.checkResult ?? '-',
+      (item.detailedResult ?? item.checkResult) || '-',
       item.judgment === 'pass' ? '합격' : item.judgment === 'fail' ? '불합격' : '-',
     ]);
     doc.setDataRows(0, 6, itemData, 4); // 템플릿에 빈 행 4개 (Row 7~10)
+
+    // detailedResult가 멀티라인인 항목은 setCellMultilineText로 덮어쓰기
+    // setDataRows 후 행 인덱스: 헤더 6행(0~5) + 데이터 행 순서
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const resultText = item.detailedResult ?? item.checkResult;
+      if (resultText && resultText.includes('\n')) {
+        doc.setCellMultilineText(0, 6 + i, 3, resultText);
+      }
+    }
+
+    // 항목별 첨부 사진 조회 + 별도 섹션으로 추가
+    const itemPhotos = await this.db
+      .select({
+        inspectionItemId: inspectionDocumentItems.inspectionItemId,
+        sortOrder: inspectionDocumentItems.sortOrder,
+        filePath: documents.filePath,
+        mimeType: documents.mimeType,
+        originalFileName: documents.originalFileName,
+      })
+      .from(inspectionDocumentItems)
+      .innerJoin(documents, eq(inspectionDocumentItems.documentId, documents.id))
+      .where(
+        and(
+          inArray(
+            inspectionDocumentItems.inspectionItemId,
+            items.map((it) => it.id)
+          ),
+          eq(inspectionDocumentItems.inspectionItemType, 'intermediate'),
+          eq(documents.status, 'active')
+        )
+      )
+      .orderBy(inspectionDocumentItems.inspectionItemId, inspectionDocumentItems.sortOrder);
+
+    // 사진이 있는 항목만 별도 "첨부 사진" 섹션으로 추가
+    if (itemPhotos.length > 0) {
+      const photosByItem = new Map<string, typeof itemPhotos>();
+      for (const photo of itemPhotos) {
+        const existing = photosByItem.get(photo.inspectionItemId) ?? [];
+        existing.push(photo);
+        photosByItem.set(photo.inspectionItemId, existing);
+      }
+
+      for (const item of items) {
+        const photos = photosByItem.get(item.id);
+        if (!photos || photos.length === 0) continue;
+
+        const blocks: Array<
+          | { type: 'text'; value: string }
+          | {
+              type: 'image';
+              buffer: Buffer;
+              ext: 'png' | 'jpeg';
+              widthCm?: number;
+              heightCm?: number;
+            }
+        > = [];
+
+        for (const photo of photos) {
+          try {
+            const imgBuffer = await this.storage.download(photo.filePath);
+            const ext = photo.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
+            blocks.push({ type: 'image', buffer: imgBuffer, ext, widthCm: 12, heightCm: 9 });
+          } catch {
+            this.logger.warn(`Failed to load inspection photo: ${photo.filePath}`);
+            blocks.push({ type: 'text', value: `[사진 로드 실패: ${photo.originalFileName}]` });
+          }
+        }
+
+        doc.appendSection(`${item.itemNumber}. ${item.checkItem} — 첨부 사진`, blocks);
+      }
+    }
 
     // --- Table 1: 측정 장비 List ---
     // Row 0: 타이틀 (유지), Row 1: 헤더 (유지)
@@ -634,7 +708,7 @@ export class FormTemplateExportService {
       itemData = items.map((item) => [
         String(item.itemNumber),
         item.checkItem,
-        resultLabel(item.checkResult),
+        item.detailedResult ? item.detailedResult : resultLabel(item.checkResult),
       ]);
     } else {
       // 기존 고정 컬럼 fallback
@@ -646,6 +720,79 @@ export class FormTemplateExportService {
       ];
     }
     doc.setDataRows(0, 6, itemData, 6); // 템플릿에 빈 행 6개 (Row 7~12)
+
+    // detailedResult가 멀티라인인 항목은 setCellMultilineText로 덮어쓰기
+    if (items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.detailedResult && item.detailedResult.includes('\n')) {
+          doc.setCellMultilineText(0, 6 + i, 2, item.detailedResult);
+        }
+      }
+    }
+
+    // 항목별 첨부 사진 조회 + 별도 섹션으로 추가
+    if (items.length > 0) {
+      const selfItemPhotos = await this.db
+        .select({
+          inspectionItemId: inspectionDocumentItems.inspectionItemId,
+          sortOrder: inspectionDocumentItems.sortOrder,
+          filePath: documents.filePath,
+          mimeType: documents.mimeType,
+          originalFileName: documents.originalFileName,
+        })
+        .from(inspectionDocumentItems)
+        .innerJoin(documents, eq(inspectionDocumentItems.documentId, documents.id))
+        .where(
+          and(
+            inArray(
+              inspectionDocumentItems.inspectionItemId,
+              items.map((it) => it.id)
+            ),
+            eq(inspectionDocumentItems.inspectionItemType, 'self'),
+            eq(documents.status, 'active')
+          )
+        )
+        .orderBy(inspectionDocumentItems.inspectionItemId, inspectionDocumentItems.sortOrder);
+
+      if (selfItemPhotos.length > 0) {
+        const photosByItem = new Map<string, typeof selfItemPhotos>();
+        for (const photo of selfItemPhotos) {
+          const existing = photosByItem.get(photo.inspectionItemId) ?? [];
+          existing.push(photo);
+          photosByItem.set(photo.inspectionItemId, existing);
+        }
+
+        for (const item of items) {
+          const photos = photosByItem.get(item.id);
+          if (!photos || photos.length === 0) continue;
+
+          const blocks: Array<
+            | { type: 'text'; value: string }
+            | {
+                type: 'image';
+                buffer: Buffer;
+                ext: 'png' | 'jpeg';
+                widthCm?: number;
+                heightCm?: number;
+              }
+          > = [];
+
+          for (const photo of photos) {
+            try {
+              const imgBuffer = await this.storage.download(photo.filePath);
+              const ext = photo.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
+              blocks.push({ type: 'image', buffer: imgBuffer, ext, widthCm: 12, heightCm: 9 });
+            } catch {
+              this.logger.warn(`Failed to load inspection photo: ${photo.filePath}`);
+              blocks.push({ type: 'text', value: `[사진 로드 실패: ${photo.originalFileName}]` });
+            }
+          }
+
+          doc.appendSection(`${item.itemNumber}. ${item.checkItem} — 첨부 사진`, blocks);
+        }
+      }
+    }
 
     // --- Table 1: 기타 특기사항 (조치내용) ---
     // Row 0: 타이틀 (유지)

@@ -154,6 +154,166 @@ export class DocxTemplate {
     this.documentXml = this.rebuildDocument(tables);
   }
 
+  /**
+   * 멀티라인 텍스트��� 셀에 삽입 (줄바꿈 → 여러 <w:p>)
+   *
+   * 일반 setCellValue는 단일 <w:t>에 모든 텍스트를 넣지만,
+   * 이 메서드는 \n마다 새 <w:p>를 생성하여 Word에서 줄바꿈이 보입니다.
+   */
+  setCellMultilineText(
+    tableIndex: number,
+    rowIndex: number,
+    cellIndex: number,
+    text: string
+  ): void {
+    const tables = this.parseTables();
+    if (tableIndex >= tables.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellMultilineText 실패: table[${tableIndex}] 없음 (총 ${tables.length}개)`
+      );
+    }
+
+    const rows = this.parseRows(tables[tableIndex]);
+    if (rowIndex >= rows.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellMultilineText 실패: table[${tableIndex}].row[${rowIndex}] 없음 (총 ${rows.length}개)`
+      );
+    }
+
+    const cells = this.parseCells(rows[rowIndex]);
+    if (cellIndex >= cells.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellMultilineText 실패: table[${tableIndex}].row[${rowIndex}].cell[${cellIndex}] 없음 (총 ${cells.length}개)`
+      );
+    }
+
+    cells[cellIndex] = this.replaceCellWithMultilineText(cells[cellIndex], text);
+    rows[rowIndex] = this.rebuildRow(rows[rowIndex], cells);
+    tables[tableIndex] = this.rebuildTable(tables[tableIndex], rows);
+    this.documentXml = this.rebuildDocument(tables);
+  }
+
+  /**
+   * 이미지를 셀에 삽입 (크기 지정 가능)
+   *
+   * setSignatureImage의 일반화 버전. 서명(2.5×1.5cm) 외에
+   * 측정 그래프(12×9cm) 등 다양한 크기를 지원합니다.
+   */
+  setCellImage(
+    tableIndex: number,
+    rowIndex: number,
+    cellIndex: number,
+    imageBuffer: Buffer,
+    imageExt: 'png' | 'jpeg',
+    widthCm: number,
+    heightCm: number
+  ): void {
+    const rId = this.addImageResource(imageBuffer, imageExt);
+    const cx = Math.round(widthCm * 360000);
+    const cy = Math.round(heightCm * 360000);
+    const imageXml = this.buildSizedInlineImageXml(rId, cx, cy);
+
+    const tables = this.parseTables();
+    if (tableIndex >= tables.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellImage 실패: table[${tableIndex}] 없음 (총 ${tables.length}개)`
+      );
+    }
+
+    const rows = this.parseRows(tables[tableIndex]);
+    if (rowIndex >= rows.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellImage 실패: table[${tableIndex}].row[${rowIndex}] 없음 (총 ${rows.length}개)`
+      );
+    }
+
+    const cells = this.parseCells(rows[rowIndex]);
+    if (cellIndex >= cells.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellImage 실패: table[${tableIndex}].row[${rowIndex}].cell[${cellIndex}] 없음 (총 ${cells.length}개)`
+      );
+    }
+
+    cells[cellIndex] = this.replaceCellWithImage(cells[cellIndex], imageXml);
+    rows[rowIndex] = this.rebuildRow(rows[rowIndex], cells);
+    tables[tableIndex] = this.rebuildTable(tables[tableIndex], rows);
+    this.documentXml = this.rebuildDocument(tables);
+  }
+
+  /**
+   * 리치 콘텐츠를 셀에 삽입 (텍스트+이미지 교차 배치)
+   *
+   * 하나의 셀 안에 텍스트 단락과 이미지를 ���갈아 배치합니다.
+   * 예: 측정 결과 텍스트 → 그래프 이미지 → 추가 설명 텍스트
+   */
+  setCellRichContent(
+    tableIndex: number,
+    rowIndex: number,
+    cellIndex: number,
+    blocks: Array<
+      | { type: 'text'; value: string }
+      | { type: 'image'; buffer: Buffer; ext: 'png' | 'jpeg'; widthCm?: number; heightCm?: number }
+    >
+  ): void {
+    const tables = this.parseTables();
+    if (tableIndex >= tables.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellRichContent 실패: table[${tableIndex}] 없음 (총 ${tables.length}개)`
+      );
+    }
+
+    const rows = this.parseRows(tables[tableIndex]);
+    if (rowIndex >= rows.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellRichContent 실패: table[${tableIndex}].row[${rowIndex}] 없음 (총 ${rows.length}개)`
+      );
+    }
+
+    const cells = this.parseCells(rows[rowIndex]);
+    if (cellIndex >= cells.length) {
+      throw new InternalServerErrorException(
+        `[${this.formLabel}] setCellRichContent 실패: table[${tableIndex}].row[${rowIndex}].cell[${cellIndex}] 없음 (총 ${cells.length}개)`
+      );
+    }
+
+    cells[cellIndex] = this.replaceCellWithRichContent(cells[cellIndex], blocks);
+    rows[rowIndex] = this.rebuildRow(rows[rowIndex], cells);
+    tables[tableIndex] = this.rebuildTable(tables[tableIndex], rows);
+    this.documentXml = this.rebuildDocument(tables);
+  }
+
+  /**
+   * 문서 끝(테이블 바깥)에 섹션 추가
+   *
+   * 항목 테이블 아래에 "첨부 사진" 등의 별도 섹션을 추가할 때 사용.
+   * </w:body> 앞에 제목 + 블록(텍스트/이미지)을 삽입합니다.
+   */
+  appendSection(
+    title: string,
+    blocks: Array<
+      | { type: 'text'; value: string }
+      | { type: 'image'; buffer: Buffer; ext: 'png' | 'jpeg'; widthCm?: number; heightCm?: number }
+    >
+  ): void {
+    // 제목 단락 (볼드)
+    const titlePara = `<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(title)}</w:t></w:r></w:p>`;
+
+    // 블록 변환
+    const blockXmls = blocks.map((block) => {
+      if (block.type === 'text') {
+        return this.buildMultilineParagraphs('', '', block.value);
+      }
+      const rId = this.addImageResource(block.buffer, block.ext);
+      const cx = Math.round((block.widthCm ?? 12) * 360000);
+      const cy = Math.round((block.heightCm ?? 9) * 360000);
+      const imageXml = this.buildSizedInlineImageXml(rId, cx, cy);
+      return `<w:p><w:r>${imageXml}</w:r></w:p>`;
+    });
+
+    const sectionXml = titlePara + blockXmls.join('');
+    this.documentXml = this.documentXml.replace('</w:body>', `${sectionXml}</w:body>`);
+  }
+
   /** 최종 docx Buffer 반환 */
   toBuffer(): Buffer {
     this.zip.file('word/document.xml', this.documentXml);
@@ -255,6 +415,56 @@ export class DocxTemplate {
     return `${startTag}${tcPr}<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(newText)}</w:t></w:r></w:p></w:tc>`;
   }
 
+  /**
+   * 셀 내에 멀티라인 텍스트 삽입 — \n마다 별도 <w:p>
+   */
+  private replaceCellWithMultilineText(cellXml: string, text: string): string {
+    const tcPrMatch = cellXml.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/);
+    const tcPr = tcPrMatch ? tcPrMatch[0] : '';
+    const pPrMatch = cellXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+    const pPr = pPrMatch ? pPrMatch[0] : '';
+    const rPrMatch = cellXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
+    const rPr = rPrMatch ? rPrMatch[0] : '';
+    const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
+
+    const paragraphs = this.buildMultilineParagraphs(pPr, rPr, text);
+    return `${startTag}${tcPr}${paragraphs}</w:tc>`;
+  }
+
+  /**
+   * 리치 콘텐츠(텍스트+이미지)를 셀에 삽입
+   */
+  private replaceCellWithRichContent(
+    cellXml: string,
+    blocks: Array<
+      | { type: 'text'; value: string }
+      | { type: 'image'; buffer: Buffer; ext: 'png' | 'jpeg'; widthCm?: number; heightCm?: number }
+    >
+  ): string {
+    const tcPrMatch = cellXml.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/);
+    const tcPr = tcPrMatch ? tcPrMatch[0] : '';
+    const pPrMatch = cellXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+    const pPr = pPrMatch ? pPrMatch[0] : '';
+    const rPrMatch = cellXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
+    const rPr = rPrMatch ? rPrMatch[0] : '';
+    const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
+
+    const contentParts = blocks.map((block) => {
+      if (block.type === 'text') {
+        return this.buildMultilineParagraphs(pPr, rPr, block.value);
+      }
+      const rId = this.addImageResource(block.buffer, block.ext);
+      const cx = Math.round((block.widthCm ?? 12) * 360000);
+      const cy = Math.round((block.heightCm ?? 9) * 360000);
+      const imageXml = this.buildSizedInlineImageXml(rId, cx, cy);
+      return `<w:p>${pPr}<w:r>${imageXml}</w:r></w:p>`;
+    });
+
+    // 빈 블록일 경우 최소 하나의 빈 단락 필요 (Word 필수)
+    const content = contentParts.length > 0 ? contentParts.join('') : `<w:p>${pPr}</w:p>`;
+    return `${startTag}${tcPr}${content}</w:tc>`;
+  }
+
   private replaceCellWithImage(cellXml: string, imageXml: string): string {
     const tcPrMatch = cellXml.match(/<w:tcPr>[\s\S]*?<\/w:tcPr>/);
     const tcPr = tcPrMatch ? tcPrMatch[0] : '';
@@ -295,6 +505,29 @@ export class DocxTemplate {
     }
 
     return rId;
+  }
+
+  /**
+   * 텍스트를 \n 기준으로 분할하여 여러 <w:p> 요소 생성
+   */
+  private buildMultilineParagraphs(pPr: string, rPr: string, text: string): string {
+    const lines = text.split('\n');
+    return lines
+      .map(
+        (line) =>
+          `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(line)}</w:t></w:r></w:p>`
+      )
+      .join('');
+  }
+
+  /**
+   * 크기 지정 가능한 인라인 이미지 XML 생성
+   * @param cx 가로 크기 (EMU, 1cm = 360000)
+   * @param cy 세로 크기 (EMU)
+   */
+  private buildSizedInlineImageXml(rId: string, cx: number, cy: number): string {
+    const docPrId = this.imageCounter;
+    return `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${docPrId}" name="Image_${docPrId}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="image_${docPrId}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
   }
 
   private buildInlineImageXml(rId: string): string {

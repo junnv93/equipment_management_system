@@ -1,14 +1,20 @@
 import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import {
   equipmentSelfInspections,
   selfInspectionItems,
+  inspectionDocumentItems,
   equipment,
   type EquipmentSelfInspection,
   type NewEquipmentSelfInspection,
   type SelfInspectionItem,
+  type DocumentRecord,
+  type InspectionDocumentItem,
 } from '@equipment-management/db/schema';
+import type { DocumentService } from '../../common/file-upload/document.service';
+import type { DocumentType } from '@equipment-management/schemas';
+import type { MulterFile } from '../../types/common.types';
 import {
   SELF_INSPECTION_LEGACY_COLUMN_MAP,
   type SelfInspectionItemJudgment,
@@ -87,6 +93,7 @@ export class SelfInspectionsService extends VersionedBaseService {
             itemNumber: item.itemNumber,
             checkItem: item.checkItem,
             checkResult: item.checkResult,
+            detailedResult: item.detailedResult ?? null,
           }))
         )
         .returning();
@@ -233,6 +240,7 @@ export class SelfInspectionsService extends VersionedBaseService {
               itemNumber: item.itemNumber,
               checkItem: item.checkItem,
               checkResult: item.checkResult,
+              detailedResult: item.detailedResult ?? null,
             }))
           )
           .returning();
@@ -389,6 +397,55 @@ export class SelfInspectionsService extends VersionedBaseService {
       safety: itemMap.get('safety') ?? 'na',
       calibrationStatus: itemMap.get('calibrationStatus') ?? 'na',
     };
+  }
+
+  // ============================================================================
+  // 항목별 사진 업로드
+  // ============================================================================
+
+  async uploadItemPhoto(
+    inspectionId: string,
+    itemId: string,
+    file: MulterFile,
+    userId: string,
+    documentService: DocumentService,
+    opts: { documentType: DocumentType; sortOrder: number; description?: string }
+  ): Promise<{ document: DocumentRecord; link: InspectionDocumentItem }> {
+    // 항목이 해당 점검에 속하는지 검증
+    const [item] = await this.db
+      .select({ id: selfInspectionItems.id })
+      .from(selfInspectionItems)
+      .where(
+        and(eq(selfInspectionItems.id, itemId), eq(selfInspectionItems.inspectionId, inspectionId))
+      )
+      .limit(1);
+
+    if (!item) {
+      throw new NotFoundException({
+        code: 'INSPECTION_ITEM_NOT_FOUND',
+        message: `Item ${itemId} not found in self-inspection ${inspectionId}.`,
+      });
+    }
+
+    const document = await documentService.createDocument(file, {
+      selfInspectionId: inspectionId,
+      documentType: opts.documentType,
+      description: opts.description,
+      uploadedBy: userId,
+      subdirectory: 'inspection-photos',
+    });
+
+    const [link] = await this.db
+      .insert(inspectionDocumentItems)
+      .values({
+        documentId: document.id,
+        inspectionItemId: itemId,
+        inspectionItemType: 'self',
+        sortOrder: opts.sortOrder,
+      })
+      .returning();
+
+    return { document, link };
   }
 }
 

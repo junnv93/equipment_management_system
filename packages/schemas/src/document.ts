@@ -15,6 +15,9 @@ export const DOCUMENT_TYPE_VALUES = [
   'other', // 기타
   'validation_vendor_attachment', // 유효성확인 방법 1 — 공급자 제공 자료
   'validation_test_data', // 유효성확인 방법 2 — 시험 데이터
+  'inspection_photo', // 점검 사진 (중간점검/자체점검 항목별 사진)
+  'inspection_graph', // 점검 그래프 (측정 그래프 이미지)
+  'measurement_data', // 측정 데이터 (CSV 등 측정 원시 파일)
 ] as const;
 
 export const DocumentTypeEnum = z.enum(DOCUMENT_TYPE_VALUES);
@@ -31,6 +34,9 @@ export const DocumentTypeValues = {
   OTHER: 'other',
   VALIDATION_VENDOR_ATTACHMENT: 'validation_vendor_attachment',
   VALIDATION_TEST_DATA: 'validation_test_data',
+  INSPECTION_PHOTO: 'inspection_photo',
+  INSPECTION_GRAPH: 'inspection_graph',
+  MEASUREMENT_DATA: 'measurement_data',
 } as const satisfies Record<string, DocumentType>;
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
@@ -43,6 +49,9 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   other: '기타',
   validation_vendor_attachment: '유효성확인 공급자 자료',
   validation_test_data: '유효성확인 시험 데이터',
+  inspection_photo: '점검 사진',
+  inspection_graph: '점검 그래프',
+  measurement_data: '측정 데이터',
 };
 
 // ============================================================
@@ -68,6 +77,8 @@ export const documentSchema = z.object({
   calibrationId: nullableOptionalUuid(),
   requestId: nullableOptionalUuid(),
   softwareValidationId: nullableOptionalUuid(),
+  intermediateInspectionId: nullableOptionalUuid(),
+  selfInspectionId: nullableOptionalUuid(),
   documentType: DocumentTypeEnum,
   status: DocumentStatusEnum,
   fileName: z.string().max(255),
@@ -97,6 +108,8 @@ export const createDocumentInputSchema = z.object({
   calibrationId: optionalUuid(),
   requestId: optionalUuid(),
   softwareValidationId: optionalUuid(),
+  intermediateInspectionId: optionalUuid(),
+  selfInspectionId: optionalUuid(),
   documentType: DocumentTypeEnum,
   description: z.string().optional(),
 });

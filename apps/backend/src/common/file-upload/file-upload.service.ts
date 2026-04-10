@@ -34,6 +34,7 @@ export class FileUploadService implements OnModuleInit {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/csv',
   ];
 
   private readonly MAGIC_BYTES: Record<string, number[][]> = {

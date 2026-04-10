@@ -16,6 +16,8 @@ import { equipment } from './equipment';
 import { calibrations } from './calibrations';
 import { equipmentRequests } from './equipment-requests';
 import { softwareValidations } from './software-validations';
+import { intermediateInspections } from './intermediate-inspections';
+import { equipmentSelfInspections } from './equipment-self-inspections';
 import { users } from './users';
 
 /**
@@ -39,6 +41,13 @@ export const documents = pgTable(
     }),
     requestId: uuid('request_id').references(() => equipmentRequests.id, { onDelete: 'cascade' }),
     softwareValidationId: uuid('software_validation_id').references(() => softwareValidations.id, {
+      onDelete: 'cascade',
+    }),
+    intermediateInspectionId: uuid('intermediate_inspection_id').references(
+      () => intermediateInspections.id,
+      { onDelete: 'cascade' }
+    ),
+    selfInspectionId: uuid('self_inspection_id').references(() => equipmentSelfInspections.id, {
       onDelete: 'cascade',
     }),
 
@@ -97,6 +106,10 @@ export const documents = pgTable(
       table.softwareValidationId,
       table.documentType
     ),
+    intermediateInspectionIdIdx: index('documents_intermediate_inspection_id_idx').on(
+      table.intermediateInspectionId
+    ),
+    selfInspectionIdIdx: index('documents_self_inspection_id_idx').on(table.selfInspectionId),
     statusIdx: index('documents_status_idx').on(table.status),
     /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
     statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
@@ -125,6 +138,14 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   softwareValidation: one(softwareValidations, {
     fields: [documents.softwareValidationId],
     references: [softwareValidations.id],
+  }),
+  intermediateInspection: one(intermediateInspections, {
+    fields: [documents.intermediateInspectionId],
+    references: [intermediateInspections.id],
+  }),
+  selfInspection: one(equipmentSelfInspections, {
+    fields: [documents.selfInspectionId],
+    references: [equipmentSelfInspections.id],
   }),
   uploadedByUser: one(users, {
     fields: [documents.uploadedBy],
