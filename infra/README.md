@@ -49,6 +49,24 @@ docker compose -f infra/docker-compose.prod.yml up -d
 docker compose -f infra/docker-compose.prod.yml --profile migration run --rm migration
 ```
 
+## 필수 환경 변수
+
+프로덕션/LAN 배포 시 `.env` 파일에 다음 값이 필요합니다.
+
+| 변수                   | 설명                       | 예시                            |
+| ---------------------- | -------------------------- | ------------------------------- |
+| `DB_PASSWORD`          | PostgreSQL 비밀번호        | —                               |
+| `REDIS_PASSWORD`       | Redis 비밀번호             | —                               |
+| `JWT_SECRET`           | JWT 서명 키                | —                               |
+| `REFRESH_TOKEN_SECRET` | Refresh Token 서명 키      | —                               |
+| `INTERNAL_API_KEY`     | 내부 API 키 (SSR 통신용)   | —                               |
+| `S3_ACCESS_KEY`        | RustFS 접근 키             | —                               |
+| `S3_SECRET_KEY`        | RustFS 비밀 키             | —                               |
+| `FRONTEND_URL`         | 프론트엔드 공개 URL (CORS) | `https://equipment.example.com` |
+| `SERVER_LAN_IP`        | LAN 서버 IP (LAN 전용)     | `192.168.1.100`                 |
+
+> 전체 목록은 루트의 `.env.example` 참조
+
 ## Dockerfile 위치
 
 | 서비스   | Dockerfile 경로                  |

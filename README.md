@@ -43,6 +43,12 @@
 
 ## 빠른 시작
 
+### 사전 요구사항
+
+- Node.js 20+
+- pnpm 10+
+- Docker & Docker Compose
+
 ```bash
 # 1. 의존성 설치
 pnpm install
@@ -107,7 +113,7 @@ equipment-management-system/
 | **시작하기**        | [개발 환경 설정](docs/development/DEV_SETUP.md)               | 필수 소프트웨어, 환경 변수, DB 설정        |
 | **아키텍처**        | [ADR (Architecture Decision Records)](docs/adr/)              | 기술 선택 배경 및 설계 결정                |
 | **기능 프로세스**   | [docs/features/](docs/features/)                              | 주요 기능별 워크플로우 및 프로세스         |
-| **인프라**          | [Docker/배포 구성](docs/infrastructure/)                      | Docker Compose, 모니터링, 네트워크         |
+| **인프라**          | [Docker/배포 구성](infra/)                                    | Docker Compose, 모니터링, 네트워크         |
 | **백엔드 패턴**     | [backend-patterns.md](docs/references/backend-patterns.md)    | Zod 파이프라인, 예외 처리, 인증, 캐싱      |
 | **프론트엔드 패턴** | [frontend-patterns.md](docs/references/frontend-patterns.md)  | TanStack Query, Optimistic UI, 캐시 전략   |
 | **도메인 컨텍스트** | [domain-context.md](docs/references/domain-context.md)        | 역할 계층, 장비/반출 상태, 승인 워크플로우 |
