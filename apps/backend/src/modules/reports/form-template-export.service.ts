@@ -1108,6 +1108,42 @@ export class FormTemplateExportService {
           }
           break;
         }
+        case 'rich_table': {
+          const rd = section.richTableData as {
+            headers: string[];
+            rows: Array<
+              Array<
+                | { type: 'text'; value: string }
+                | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number }
+              >
+            >;
+          } | null;
+          if (rd) {
+            if (section.title) {
+              doc.appendParagraph(section.title, { bold: true });
+            }
+            const resolvedRows = await Promise.all(
+              rd.rows.map((row) =>
+                Promise.all(
+                  row.map(async (cell) => {
+                    if (cell.type === 'text') return cell;
+                    const img = await this.loadDocumentImage(cell.documentId);
+                    if (!img) return { type: 'text' as const, value: '[image not found]' };
+                    return {
+                      type: 'image' as const,
+                      buffer: img.buffer,
+                      ext: img.ext,
+                      widthCm: cell.widthCm,
+                      heightCm: cell.heightCm,
+                    };
+                  })
+                )
+              )
+            );
+            doc.appendRichTable(rd.headers, resolvedRows);
+          }
+          break;
+        }
       }
     }
   }

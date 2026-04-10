@@ -9,6 +9,7 @@ export const INSPECTION_RESULT_SECTION_TYPE_VALUES = [
   'text', // 텍스트 블록
   'photo', // 이미지 블록 (documents 테이블 참조)
   'data_table', // 데이터 테이블 (JSONB: headers + rows)
+  'rich_table', // 테이블 셀 내 이미지 포함 (E0001 OBW 패턴)
 ] as const;
 
 export const InspectionResultSectionTypeEnum = z.enum(INSPECTION_RESULT_SECTION_TYPE_VALUES);

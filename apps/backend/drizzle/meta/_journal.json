@@ -99,6 +99,13 @@
       "when": 1775873200000,
       "tag": "0013_remove_dead_equipment_statuses",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1775794390253,
+      "tag": "0014_outgoing_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }

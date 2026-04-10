@@ -53,6 +53,17 @@ export const inspectionResultSections = pgTable(
     imageWidthCm: decimal('image_width_cm', { precision: 4, scale: 1 }),
     imageHeightCm: decimal('image_height_cm', { precision: 4, scale: 1 }),
 
+    // rich_table: 셀 내 이미지 포함 테이블 (E0001 OBW 패턴)
+    richTableData: jsonb('rich_table_data').$type<{
+      headers: string[];
+      rows: Array<
+        Array<
+          | { type: 'text'; value: string }
+          | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number }
+        >
+      >;
+    }>(),
+
     // 감사 필드
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').defaultNow().notNull(),

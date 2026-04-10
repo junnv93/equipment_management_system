@@ -47,6 +47,7 @@ export class ResultSectionsService {
         title: dto.title,
         content: dto.content,
         tableData: dto.tableData,
+        richTableData: dto.richTableData,
         documentId: dto.documentId,
         imageWidthCm: dto.imageWidthCm?.toString(),
         imageHeightCm: dto.imageHeightCm?.toString(),
@@ -68,6 +69,7 @@ export class ResultSectionsService {
     if (dto.title !== undefined) updateData.title = dto.title;
     if (dto.content !== undefined) updateData.content = dto.content;
     if (dto.tableData !== undefined) updateData.tableData = dto.tableData;
+    if (dto.richTableData !== undefined) updateData.richTableData = dto.richTableData;
     if (dto.documentId !== undefined) updateData.documentId = dto.documentId;
     if (dto.imageWidthCm !== undefined) updateData.imageWidthCm = dto.imageWidthCm.toString();
     if (dto.imageHeightCm !== undefined) updateData.imageHeightCm = dto.imageHeightCm.toString();

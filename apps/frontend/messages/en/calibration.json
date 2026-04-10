@@ -682,5 +682,37 @@
     "description": "The requested calibration plan does not exist or has been deleted.\nPlease check the calibration plan ID.",
     "backToList": "Calibration plans list",
     "backToHome": "Go to home"
+  },
+  "resultSections": {
+    "title": "Result Sections",
+    "addSection": "Add Section",
+    "editSection": "Edit Section",
+    "deleteSection": "Delete Section",
+    "deleteConfirm": "Delete this section?",
+    "empty": "No result sections yet.",
+    "types": {
+      "title": "Title",
+      "text": "Text",
+      "data_table": "Data Table",
+      "photo": "Photo",
+      "rich_table": "Rich Table"
+    },
+    "form": {
+      "sectionType": "Section Type",
+      "sectionTitle": "Title",
+      "content": "Content",
+      "pasteData": "Paste data (tab-separated)",
+      "imageWidth": "Image Width (cm)",
+      "imageHeight": "Image Height (cm)",
+      "selectFile": "Select File",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "createSuccess": "Section added.",
+      "updateSuccess": "Section updated.",
+      "deleteSuccess": "Section deleted.",
+      "error": "An error occurred."
+    }
   }
 }

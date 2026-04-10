@@ -682,5 +682,37 @@
     "description": "요청하신 교정계획서가 존재하지 않거나 삭제되었습니다.\n교정계획서 ID를 다시 확인해주세요.",
     "backToList": "교정계획서 목록으로",
     "backToHome": "홈으로 이동"
+  },
+  "resultSections": {
+    "title": "점검 결과 섹션",
+    "addSection": "섹션 추가",
+    "editSection": "섹션 수정",
+    "deleteSection": "섹션 삭제",
+    "deleteConfirm": "이 섹션을 삭제하시겠습니까?",
+    "empty": "등록된 결과 섹션이 없습니다.",
+    "types": {
+      "title": "제목",
+      "text": "텍스트",
+      "data_table": "데이터 테이블",
+      "photo": "사진",
+      "rich_table": "리치 테이블"
+    },
+    "form": {
+      "sectionType": "섹션 유형",
+      "sectionTitle": "제목",
+      "content": "내용",
+      "pasteData": "데이터 붙여넣기 (탭 구분)",
+      "imageWidth": "이미지 너비 (cm)",
+      "imageHeight": "이미지 높이 (cm)",
+      "selectFile": "파일 선택",
+      "save": "저장",
+      "cancel": "취소"
+    },
+    "toasts": {
+      "createSuccess": "섹션이 추가되었습니다.",
+      "updateSuccess": "섹션이 수정되었습니다.",
+      "deleteSuccess": "섹션이 삭제되었습니다.",
+      "error": "작업 중 오류가 발생했습니다."
+    }
   }
 }

@@ -357,6 +357,54 @@ export class DocxTemplate {
   }
 
   /**
+   * 문서 끝에 리치 테이블 추가 (셀 내 이미지 포함)
+   *
+   * E0001 OBW 패턴: Data 열에 스크린샷 이미지가 들어간 테이블.
+   * 각 셀이 텍스트 또는 이미지 중 하나입니다.
+   */
+  appendRichTable(
+    headers: string[],
+    rows: Array<
+      Array<
+        | { type: 'text'; value: string }
+        | {
+            type: 'image';
+            buffer: Buffer;
+            ext: 'png' | 'jpeg';
+            widthCm?: number;
+            heightCm?: number;
+          }
+      >
+    >
+  ): void {
+    const borderAttr = 'w:val="single" w:sz="4" w:space="0" w:color="000000"';
+    const tblPr = `<w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top ${borderAttr}/><w:left ${borderAttr}/><w:bottom ${borderAttr}/><w:right ${borderAttr}/><w:insideH ${borderAttr}/><w:insideV ${borderAttr}/></w:tblBorders></w:tblPr>`;
+
+    const headerRow = `<w:tr>${headers.map((h) => `<w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
+
+    const dataRows = rows
+      .map((row) => {
+        const cells = row
+          .map((cell) => {
+            if (cell.type === 'text') {
+              return `<w:tc><w:p><w:r><w:t xml:space="preserve">${this.escapeXml(cell.value)}</w:t></w:r></w:p></w:tc>`;
+            }
+            const rId = this.addImageResource(cell.buffer, cell.ext);
+            const cx = Math.round((cell.widthCm ?? 8) * 360000);
+            const cy = Math.round((cell.heightCm ?? 6) * 360000);
+            const imageXml = this.buildSizedInlineImageXml(rId, cx, cy);
+            return `<w:tc><w:p><w:r>${imageXml}</w:r></w:p></w:tc>`;
+          })
+          .join('');
+        return `<w:tr>${cells}</w:tr>`;
+      })
+      .join('');
+
+    const tableXml = `<w:tbl>${tblPr}${headerRow}${dataRows}</w:tbl>`;
+    this.insertBeforeSectPr(tableXml);
+  }
+
+  /**
    * 문서 끝에 이미지 추가
    *
    * 측정 그래프, OBW 캡처, 외관 사진 등을 문서 끝에 삽입합니다.
