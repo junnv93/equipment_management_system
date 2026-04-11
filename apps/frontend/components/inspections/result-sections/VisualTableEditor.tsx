@@ -2,13 +2,14 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Trash2, Upload, ImageIcon, X } from 'lucide-react';
+import { Plus, Trash2, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { INSPECTION_SPACING, INSPECTION_TABLE, TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { documentApi } from '@/lib/api/document-api';
 import { useToast } from '@/components/ui/use-toast';
+import DocumentImage from '@/components/shared/DocumentImage';
 import type { RichCell } from '@/lib/api/calibration-api';
 
 // ============================================================================
@@ -283,11 +284,17 @@ export default function VisualTableEditor({ headers, rows, onChange }: VisualTab
                         )}
                       />
                     ) : (
-                      <div className="flex items-center gap-1 px-2 h-9">
-                        <ImageIcon className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="text-xs text-muted-foreground truncate">
-                          {cell.documentId ? cell.documentId.slice(0, 8) + '...' : '—'}
-                        </span>
+                      <div className="flex items-center gap-1 px-1 h-9">
+                        {cell.documentId ? (
+                          <DocumentImage
+                            documentId={cell.documentId}
+                            alt={t('types.photo')}
+                            className="h-7 w-7 rounded object-cover border border-border/60"
+                            fallbackClassName="h-7 w-7"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                         <Button
                           type="button"
                           size="icon"

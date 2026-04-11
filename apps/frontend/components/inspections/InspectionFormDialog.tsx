@@ -126,15 +126,23 @@ export default function InspectionFormDialog({
   });
 
   /**
-   * 장비별 직전 점검 조회 — 최신(DESC createdAt) 부터 정렬되어 오므로 [0] 이 가장 최근.
-   * detail 쿼리로 items 를 함께 가져오기 위해 2-step: list → latestId → detail
+   * 장비별 직전 "승인 완료된" 점검 조회.
+   *
+   * 승인 상태(`approvalStatus === 'approved'`) 인 점검만 prefill 소스로 사용한다.
+   * draft / pending / reviewed / rejected 는 아직 검증되지 않았거나 반려된 상태라
+   * 신뢰할 수 없는 구조를 복사할 위험이 있음.
+   *
+   * 백엔드는 DESC createdAt 로 정렬 — 앞에서부터 approved 인 첫 번째 항목이
+   * 가장 최근 승인된 점검이다. 같은 쿼리 결과를 재사용 (React Query 캐시 공유).
    */
   const { data: previousInspections } = useQuery({
     queryKey: queryKeys.equipment.intermediateInspections(equipmentId),
     queryFn: () => calibrationApi.intermediateInspections.listByEquipment(equipmentId),
     enabled: open,
   });
-  const latestInspectionId = previousInspections?.[0]?.id;
+  const latestInspectionId = previousInspections?.find(
+    (ins) => ins.approvalStatus === 'approved'
+  )?.id;
   const { data: latestInspection } = useQuery({
     queryKey: latestInspectionId
       ? queryKeys.intermediateInspections.detail(latestInspectionId)

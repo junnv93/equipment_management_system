@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import { INSPECTION_TABLE, INSPECTION_SPACING } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import DocumentImage from '@/components/shared/DocumentImage';
 import type { ResultSection } from '@/lib/api/calibration-api';
 
 interface ResultSectionPreviewProps {
@@ -72,9 +73,12 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
         <div className={INSPECTION_SPACING.field}>
           {section.title && <h4 className="font-semibold">{section.title}</h4>}
           {section.documentId ? (
-            <p className="text-sm text-muted-foreground">
-              [{t('types.photo')}] ID: {section.documentId}
-            </p>
+            <DocumentImage
+              documentId={section.documentId}
+              alt={section.title ?? t('types.photo')}
+              className="max-h-64 rounded-md border border-border/60 object-contain"
+              fallbackClassName="h-32"
+            />
           ) : (
             <p className="text-sm text-muted-foreground">({t('types.photo')})</p>
           )}
@@ -106,10 +110,15 @@ export default function ResultSectionPreview({ section }: ResultSectionPreviewPr
                       <TableCell key={ci}>
                         {cell.type === 'text' ? (
                           <span className={INSPECTION_TABLE.numericCell}>{cell.value}</span>
+                        ) : cell.documentId ? (
+                          <DocumentImage
+                            documentId={cell.documentId}
+                            alt={t('types.photo')}
+                            className="h-12 w-12 rounded object-cover border border-border/60"
+                            fallbackClassName="h-12 w-12"
+                          />
                         ) : (
-                          <span className="text-xs text-muted-foreground">
-                            [{t('types.photo')}: {cell.documentId?.slice(0, 8)}...]
-                          </span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
                     ))}

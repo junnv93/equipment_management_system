@@ -668,8 +668,8 @@
     "prefill": {
       "auto": "자동",
       "tooltip": "장비 마스터 데이터에서 자동 입력되었습니다. 수정 가능합니다.",
-      "usePreviousLabel": "직전 중간점검에서 항목·결과 섹션 불러오기",
-      "usePreviousDescription": "가장 최근 중간점검의 {count}개 항목을 자동으로 채웁니다. 측정값·판정은 비워둡니다. 체크 해제 시 초기화됩니다."
+      "usePreviousLabel": "직전 승인된 중간점검에서 항목·결과 섹션 불러오기",
+      "usePreviousDescription": "가장 최근 승인 완료된 중간점검의 {count}개 항목을 자동으로 채웁니다. 측정값·판정은 비워둡니다. 체크 해제 시 초기화됩니다."
     },
     "measurementEquipment": {
       "title": "측정 장비 List",
