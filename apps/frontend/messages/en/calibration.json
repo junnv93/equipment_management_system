@@ -667,7 +667,9 @@
     },
     "prefill": {
       "auto": "Auto",
-      "tooltip": "Auto-filled from equipment master data. You can edit this value."
+      "tooltip": "Auto-filled from equipment master data. You can edit this value.",
+      "usePreviousLabel": "Copy items and result sections from previous inspection",
+      "usePreviousDescription": "Automatically populates {count} items from the most recent intermediate inspection. Measurement values and judgments remain empty. Unchecking will clear them."
     },
     "measurementEquipment": {
       "title": "Measurement Equipment List",

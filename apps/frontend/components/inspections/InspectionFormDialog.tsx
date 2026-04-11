@@ -30,6 +30,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import { queryKeys } from '@/lib/api/query-config';
@@ -109,12 +110,40 @@ export default function InspectionFormDialog({
   const [resultSections, setResultSections] = useState<CreateResultSectionDto[]>([]);
   const [measurementEquipment, setMeasurementEquipment] = useState<MeasurementEquipmentForm[]>([]);
   const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
+  /**
+   * 직전 점검 prefill 사용 여부 (기본 on).
+   * 사용자가 체크박스로 off 하면 복사된 items/sections 를 초기화.
+   */
+  const [usePreviousInspection, setUsePreviousInspection] = useState(true);
+  /** 이번 dialog 세션에서 직전 점검 prefill 이 이미 적용됐는지 — 재적용 방지 */
+  const [previousInspectionApplied, setPreviousInspectionApplied] = useState(false);
 
   // Fetch equipment data for prefill
   const { data: equipment, isLoading: isEquipmentLoading } = useQuery({
     queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     enabled: open,
+  });
+
+  /**
+   * 장비별 직전 점검 조회 — 최신(DESC createdAt) 부터 정렬되어 오므로 [0] 이 가장 최근.
+   * detail 쿼리로 items 를 함께 가져오기 위해 2-step: list → latestId → detail
+   */
+  const { data: previousInspections } = useQuery({
+    queryKey: queryKeys.equipment.intermediateInspections(equipmentId),
+    queryFn: () => calibrationApi.intermediateInspections.listByEquipment(equipmentId),
+    enabled: open,
+  });
+  const latestInspectionId = previousInspections?.[0]?.id;
+  const { data: latestInspection } = useQuery({
+    queryKey: latestInspectionId
+      ? queryKeys.intermediateInspections.detail(latestInspectionId)
+      : ['intermediate-inspections', 'detail', 'disabled'],
+    queryFn: () =>
+      latestInspectionId
+        ? calibrationApi.intermediateInspections.detail(latestInspectionId)
+        : Promise.resolve(null),
+    enabled: open && !!latestInspectionId,
   });
 
   // Prefill from equipment master data when dialog opens
@@ -144,9 +173,63 @@ export default function InspectionFormDialog({
       }
     }
 
-    setPrefilled(newPrefilled);
+    setPrefilled((prev) => ({ ...prev, ...newPrefilled }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, equipment]);
+
+  /**
+   * 직전 점검 prefill — 같은 장비의 가장 최근 점검의 items / resultSections(title) 구조를 복사.
+   * - items: checkItem / checkCriteria 만 복사. checkResult / judgment 는 비워 이번 측정값만 입력하게 함.
+   * - resultSections: 각 item 에 대응되는 title 섹션 자동 생성 (기존 `handleAddPresetItem` 과 동일 패턴).
+   * - measurementEquipment: 매번 달라질 수 있으므로 복사하지 않음 (사용자가 필요 시 추가).
+   * 재적용 방지: previousInspectionApplied flag.
+   * 사용자가 체크박스를 off 로 바꾸면 items/sections 초기화.
+   */
+  useEffect(() => {
+    if (!open || !usePreviousInspection || previousInspectionApplied) return;
+    if (!latestInspection) return;
+    const prevItems = latestInspection.items ?? [];
+    if (prevItems.length === 0) return;
+    if (items.length > 0) return; // 사용자가 이미 수동 입력했으면 건드리지 않음
+
+    setItems(
+      prevItems.map((it) => ({
+        checkItem: it.checkItem ?? '',
+        checkCriteria: it.checkCriteria ?? '',
+        checkResult: '',
+        judgment: '',
+      }))
+    );
+    setResultSections((prev) => {
+      // 이미 사용자가 수동으로 섹션을 추가했다면 prepend, 아니면 새로 생성
+      const titleSections: CreateResultSectionDto[] = prevItems
+        .filter((it) => !!it.checkItem?.trim())
+        .map((it, idx) => ({
+          sortOrder: prev.length + idx,
+          sectionType: 'title' as const,
+          title: it.checkItem as string,
+        }));
+      return [...prev, ...titleSections];
+    });
+    setPrefilled((prev) => ({ ...prev, previousInspection: true }));
+    setPreviousInspectionApplied(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, usePreviousInspection, latestInspection, previousInspectionApplied]);
+
+  /**
+   * 사용자가 체크박스를 off 하면 이전 점검에서 복사된 items/sections 를 초기화.
+   * 사용자가 수동으로 추가한 내용도 함께 지워지는 걸 피하기 위해
+   * previousInspectionApplied 인 경우에만 동작.
+   */
+  const handleTogglePreviousInspection = (checked: boolean) => {
+    setUsePreviousInspection(checked);
+    if (!checked && previousInspectionApplied) {
+      setItems([]);
+      setResultSections([]);
+      setPrefilled((prev) => ({ ...prev, previousInspection: false }));
+      setPreviousInspectionApplied(false);
+    }
+  };
 
   const resetForm = () => {
     setInspectionDate('');
@@ -158,6 +241,8 @@ export default function InspectionFormDialog({
     setResultSections([]);
     setMeasurementEquipment([]);
     setPrefilled({});
+    setPreviousInspectionApplied(false);
+    setUsePreviousInspection(true);
   };
 
   const tErrors = useTranslations('errors');
@@ -460,6 +545,37 @@ export default function InspectionFormDialog({
                 </Button>
               </div>
             </div>
+
+            {/* 직전 점검 prefill 토글 — 해당 장비에 이전 점검이 존재할 때만 노출 */}
+            {latestInspection && latestInspection.items && latestInspection.items.length > 0 && (
+              <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/30 p-3">
+                <Checkbox
+                  id="use-previous-inspection"
+                  checked={usePreviousInspection}
+                  onCheckedChange={(checked) => handleTogglePreviousInspection(checked === true)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 space-y-0.5">
+                  <Label
+                    htmlFor="use-previous-inspection"
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    {t('intermediateInspection.prefill.usePreviousLabel')}
+                    {prefilled.previousInspection && (
+                      <Badge variant="secondary" className={cn(INSPECTION_PREFILL.badge, 'ml-2')}>
+                        <Info className={INSPECTION_PREFILL.icon} />
+                        {t('intermediateInspection.prefill.auto')}
+                      </Badge>
+                    )}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('intermediateInspection.prefill.usePreviousDescription', {
+                      count: latestInspection.items.length,
+                    })}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {items.length === 0 ? (
               <div className={INSPECTION_EMPTY_STATE.container}>
