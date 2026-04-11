@@ -37,7 +37,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertTriangle, CheckCircle2, FileText, Pencil, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
@@ -81,6 +89,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const [editTarget, setEditTarget] = useState<SelfInspection | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<SelfInspection | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SelfInspection | null>(null);
+  /**
+   * 지연 마운트: ResultSectionsPanel 은 펼친 카드에서만 렌더.
+   * 기존 무조건 렌더는 N 개 점검 × 1 API 호출(N+1) 을 유발했다.
+   * IntermediateInspectionList 의 expandedId 패턴과 동일.
+   */
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const canEdit = can(Permission.CREATE_SELF_INSPECTION);
   const canConfirm = can(Permission.CONFIRM_SELF_INSPECTION);
@@ -220,10 +234,28 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
 
                 const isConfirmed = inspection.status === 'confirmed';
                 const inspectionDateLabel = fmtDate(inspection.inspectionDate);
+                const isExpanded = expandedId === inspection.id;
                 return (
                   <div key={inspection.id} className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          aria-label={t('selfInspection.actions.toggleResultSections', {
+                            date: inspectionDateLabel,
+                          })}
+                          aria-expanded={isExpanded}
+                          onClick={() => setExpandedId(isExpanded ? null : inspection.id)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
                         <span className="font-medium">{inspectionDateLabel}</span>
                         <Badge className={STATUS_COLORS[inspection.status]}>
                           {t(`selfInspection.statusLabel.${inspection.status}`)}
@@ -308,11 +340,13 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                       </p>
                     )}
 
-                    <ResultSectionsPanel
-                      inspectionId={inspection.id}
-                      inspectionType="self"
-                      canEdit={can(Permission.CREATE_SELF_INSPECTION)}
-                    />
+                    {isExpanded && (
+                      <ResultSectionsPanel
+                        inspectionId={inspection.id}
+                        inspectionType="self"
+                        canEdit={can(Permission.CREATE_SELF_INSPECTION)}
+                      />
+                    )}
                   </div>
                 );
               })}

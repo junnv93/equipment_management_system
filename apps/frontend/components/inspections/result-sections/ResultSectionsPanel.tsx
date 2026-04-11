@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, LayoutList } from 'lucide-react';
+import type { InspectionType } from '@equipment-management/schemas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -25,16 +26,17 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import { selfInspectionResultSections } from '@/lib/api/self-inspection-api';
 import type { ResultSection, CreateResultSectionDto } from '@/lib/api/calibration-api';
+import { isConflictError } from '@/lib/api/error';
 import ResultSectionPreview from './ResultSectionPreview';
 import ResultSectionFormDialog from './ResultSectionFormDialog';
 
 interface ResultSectionsPanelProps {
   inspectionId: string;
-  inspectionType: 'intermediate' | 'self';
+  inspectionType: InspectionType;
   canEdit: boolean;
 }
 
@@ -64,9 +66,34 @@ export default function ResultSectionsPanel({
   const { data: sections = [], isLoading } = useQuery({
     queryKey,
     queryFn: () => api.list(inspectionId),
+    ...QUERY_CONFIG.RESULT_SECTIONS,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey });
+  /**
+   * mutation 완료 후 캐시 무효화
+   * - 섹션 자신의 queryKey
+   * - 부모 inspection detail (intermediate 의 경우) — 섹션 변경이 부모 요약 카운트/타임스탬프에 영향
+   * - self 의 경우 부모 detail queryKey 가 존재하지 않음 (equipment.selfInspections list 가 부모 역할) —
+   *   ResultSectionsPanel 은 equipmentId 를 알 수 없으므로 list-level invalidation 은 상위 컴포넌트가 담당
+   */
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey });
+    if (inspectionType === 'intermediate') {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.intermediateInspections.detail(inspectionId),
+      });
+    }
+  };
+
+  const handleMutationError = (error: unknown) => {
+    if (isConflictError(error)) {
+      toast({ variant: 'destructive', description: t('toasts.conflict') });
+      // 409 시 캐시 제거 후 강제 재조회로 UI 정합성 복원
+      queryClient.invalidateQueries({ queryKey });
+      return;
+    }
+    toast({ variant: 'destructive', description: t('toasts.error') });
+  };
 
   const createMutation = useMutation({
     mutationFn: (dto: CreateResultSectionDto) => api.create(inspectionId, dto),
@@ -75,7 +102,7 @@ export default function ResultSectionsPanel({
       setFormOpen(false);
       toast({ description: t('toasts.createSuccess') });
     },
-    onError: () => toast({ variant: 'destructive', description: t('toasts.error') }),
+    onError: handleMutationError,
   });
 
   const updateMutation = useMutation({
@@ -87,7 +114,7 @@ export default function ResultSectionsPanel({
       setEditTarget(null);
       toast({ description: t('toasts.updateSuccess') });
     },
-    onError: () => toast({ variant: 'destructive', description: t('toasts.error') }),
+    onError: handleMutationError,
   });
 
   const deleteMutation = useMutation({
@@ -97,7 +124,20 @@ export default function ResultSectionsPanel({
       setDeleteTarget(null);
       toast({ description: t('toasts.deleteSuccess') });
     },
-    onError: () => toast({ variant: 'destructive', description: t('toasts.error') }),
+    onError: handleMutationError,
+  });
+
+  /**
+   * 섹션 순서 변경 — 단일 원자 트랜잭션
+   * 기존 2-PATCH sortOrder swap 방식의 race condition 을 제거하기 위해
+   * 백엔드 reorder 엔드포인트 (서버 tx 안에서 0..N-1 재할당) 를 사용한다.
+   */
+  const reorderMutation = useMutation({
+    mutationFn: (sectionIds: string[]) => api.reorder(inspectionId, sectionIds),
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: handleMutationError,
   });
 
   const handleSubmit = (dto: CreateResultSectionDto) => {
@@ -108,21 +148,14 @@ export default function ResultSectionsPanel({
     }
   };
 
-  const handleMove = async (section: ResultSection, direction: 'up' | 'down') => {
+  const handleMove = (section: ResultSection, direction: 'up' | 'down') => {
     const idx = sections.findIndex((s) => s.id === section.id);
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= sections.length) return;
 
-    const swapTarget = sections[swapIdx];
-    // 두 섹션의 sortOrder를 순차 교환 (레이스 컨디션 방지)
-    await updateMutation.mutateAsync({
-      sectionId: section.id,
-      dto: { sortOrder: swapTarget.sortOrder },
-    });
-    await updateMutation.mutateAsync({
-      sectionId: swapTarget.id,
-      dto: { sortOrder: section.sortOrder },
-    });
+    const newOrder = sections.map((s) => s.id);
+    [newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]];
+    reorderMutation.mutate(newOrder);
   };
 
   if (isLoading) {
@@ -178,7 +211,7 @@ export default function ResultSectionsPanel({
                       size="icon"
                       variant="ghost"
                       className={INSPECTION_SECTION_CARD.actionButton}
-                      disabled={idx === 0}
+                      disabled={idx === 0 || reorderMutation.isPending}
                       onClick={() => handleMove(section, 'up')}
                       aria-label={t('moveUp')}
                     >
@@ -188,7 +221,7 @@ export default function ResultSectionsPanel({
                       size="icon"
                       variant="ghost"
                       className={INSPECTION_SECTION_CARD.actionButton}
-                      disabled={idx === sections.length - 1}
+                      disabled={idx === sections.length - 1 || reorderMutation.isPending}
                       onClick={() => handleMove(section, 'down')}
                       aria-label={t('moveDown')}
                     >

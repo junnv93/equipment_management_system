@@ -360,7 +360,11 @@ Phase 4: 워크플로우 연결
 
 > **발견 배경 (2026-04-10, 41차)**: 중간점검 폼 통합 리디자인 완료 후 verify-implementation + review-architecture 실행 결과. 이번 변경 범위 외 기존 코드의 SSOT 위반 3건 확인.
 
-### 🟡 MEDIUM — calibration-api.ts SSOT 타입 강화 (sectionType, inspectionType)
+### ~~🟡 MEDIUM — calibration-api.ts SSOT 타입 강화 (sectionType, inspectionType)~~ ✅ 완료 (2026-04-12 42차 harness Batch A1)
+
+> InspectionType SSOT (packages/schemas/src/enums/inspection-result-section.ts) 를 calibration-api.ts / ResultSectionsPanel.tsx / ResultSectionFormDialog.tsx / form-template-export.service.ts 모두에 적용. 'intermediate' | 'self' 리터럴 유니온 재정의 0건. sectionType 은 이미 SSOT 사용 중이라 교체 불필요 확인.
+
+<details><summary>원문</summary>
 
 ```
 verify-ssot 발견:
@@ -382,7 +386,13 @@ verify-ssot 발견:
 - /verify-ssot PASS
 ```
 
-### 🟡 MEDIUM — ResultSectionsPanel handleMove 레이스 컨디션
+</details>
+
+### ~~🟡 MEDIUM — ResultSectionsPanel handleMove 레이스 컨디션~~ ✅ 완료 (2026-04-12 42차 harness Batch A2)
+
+> 근본 해결: 백엔드에 `PATCH /result-sections/reorder` 엔드포인트 신설 (full-order 배열, 단일 tx 안에서 0..N-1 재할당). 프론트 handleMove 를 reorderMutation.mutate 단일 호출로 교체. A안/B안/C안 모두 기각하고 full-order 방식 채택 (pairwise swap 보다 확장성 + 원자성 우수).
+
+<details><summary>원문</summary>
 
 ```
 verify-implementation 발견 (ResultSectionsPanel.tsx:104-119):
@@ -398,6 +408,8 @@ C. 두 호출을 Promise.all로 병렬 처리 (서버 사이드 정합성 확인
 - 빠른 연속 클릭 시 sortOrder 깨짐 없음
 - 첫 번째만 성공/두 번째 실패 시 복구 동작 확인
 ```
+
+</details>
 
 ### 🟢 LOW — QP-18-03 Export에 1-step 결과 섹션 반영 검증
 
@@ -421,7 +433,11 @@ C. 두 호출을 Promise.all로 병렬 처리 (서버 사이드 정합성 확인
 
 > **발견 배경 (2026-04-10, 39차)**: feat/inspection-result-sections 브랜치 review-architecture + verify-implementation 실행 결과. Critical 2건(Fragment key, mutation race)은 즉시 수정. 나머지 후속 작업 등재.
 
-### 🟠 HIGH — ResultSectionsPanel 캐시/에러 처리 강화 (Mode 1)
+### ~~🟠 HIGH — ResultSectionsPanel 캐시/에러 처리 강화 (Mode 1)~~ ✅ 완료 (2026-04-12 42차 harness Batch A2)
+
+> ResultSectionsService 에 SimpleCacheService 주입 + create/update/delete/reorder 후 부모 IntermediateInspectionsService 캐시(`CACHE_KEY_PREFIXES.CALIBRATION + 'inspections:'` prefix) 무효화. self-inspections 는 cache 인프라 부재로 early return + 주석. ResultSectionsPanel 에 `QUERY_CONFIG.RESULT_SECTIONS` staleTime 도입 + isConflictError 분기로 409 → `toasts.conflict` 한/영 번역 + 강제 재조회. parent intermediate detail queryKey invalidate 포함. ko/en conflict 메시지 추가.
+
+<details><summary>원문</summary>
 
 ```
 review-architecture 발견 (BE-C2 + FE-W3 + FE-W4):
@@ -441,6 +457,8 @@ review-architecture 발견 (BE-C2 + FE-W3 + FE-W4):
 검증: pnpm tsc --noEmit + frontend build PASS
 ```
 
+</details>
+
 ### 🟡 MEDIUM — rich_table 프론트엔드 폼 UI 구현 (Mode 1)
 
 ```
@@ -457,7 +475,11 @@ API + Export(appendRichTable)는 구현 완료.
 - pnpm tsc --noEmit + frontend build PASS
 ```
 
-### 🟡 MEDIUM — ResultSectionsPanel N+1 쿼리 최적화 (Mode 1)
+### ~~🟡 MEDIUM — ResultSectionsPanel N+1 쿼리 최적화 (Mode 1)~~ ✅ 완료 (2026-04-12 42차 harness Batch A3)
+
+> FE: SelfInspectionTab 에 `expandedId` state + ChevronRight/Down 토글 버튼(aria-expanded + i18n) 추가, `{isExpanded && <ResultSectionsPanel}` 조건부 렌더로 N+1 제거. BE: `renderResultSections` 를 documentId 선수집 → `inArray(documents.id, ids)` batch SELECT → `Promise.allSettled(storage.download)` 병렬 다운로드 → `Map<id, {buffer, ext}>` 조회로 리팩토링. 두 컨트롤러의 CSV upload FileInterceptor 에 `FILE_UPLOAD_LIMITS.CSV_MAX_FILE_SIZE = 1MB` 적용.
+
+<details><summary>원문</summary>
 
 ```
 FE-W5: SelfInspectionTab에서 모든 점검 카드에 ResultSectionsPanel을 무조건 렌더링.
@@ -473,6 +495,8 @@ BE-W2: renderResultSections에서 photo/rich_table 이미지 로딩이 sequentia
 
 검증: pnpm tsc --noEmit + backend build + backend test PASS
 ```
+
+</details>
 
 ### 🟢 LOW — ResultSectionsPanel 접근성 + 타입 안전성 개선 (Mode 0)
 

@@ -752,7 +752,8 @@
       "createSuccess": "Section added.",
       "updateSuccess": "Section updated.",
       "deleteSuccess": "Section deleted.",
-      "error": "An error occurred."
+      "error": "An error occurred.",
+      "conflict": "Another user modified this first. Please refresh and try again."
     }
   }
 }

@@ -20,5 +20,11 @@ export {
   CreateResultSectionPipe,
   updateResultSectionSchema,
   UpdateResultSectionPipe,
+  reorderResultSectionsSchema,
+  ReorderResultSectionsPipe,
 } from './result-section.dto';
-export type { CreateResultSectionInput, UpdateResultSectionInput } from './result-section.dto';
+export type {
+  CreateResultSectionInput,
+  UpdateResultSectionInput,
+  ReorderResultSectionsInput,
+} from './result-section.dto';

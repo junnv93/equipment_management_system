@@ -160,6 +160,17 @@ export const selfInspectionResultSections = {
       API_ENDPOINTS.SELF_INSPECTIONS.RESULT_SECTIONS.DELETE(inspectionId, sectionId)
     );
   },
+  /**
+   * 결과 섹션 순서 재할당 (단일 원자 트랜잭션).
+   * @param sectionIds 변경 후 순서대로 정렬된 전체 섹션 ID 배열
+   */
+  reorder: async (inspectionId: string, sectionIds: string[]): Promise<ResultSection[]> => {
+    const response = await apiClient.patch(
+      API_ENDPOINTS.SELF_INSPECTIONS.RESULT_SECTIONS.REORDER(inspectionId),
+      { sectionIds }
+    );
+    return transformArrayResponse<ResultSection>(response);
+  },
 };
 
 // SSOT: 양식 내보내기 함수는 reports-api.ts로 이동됨 — re-export로 기존 소비자 호환 유지

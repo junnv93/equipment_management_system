@@ -146,6 +146,12 @@ export const DOCUMENT_FILE_RULES: Readonly<Record<DocumentType, DocumentFileRule
 export const FILE_UPLOAD_LIMITS = {
   /** 최대 파일 크기 (bytes) — 10MB */
   MAX_FILE_SIZE: 10 * 1024 * 1024,
+  /**
+   * CSV 전용 최대 파일 크기 (bytes) — 1MB
+   * 점검 결과 섹션의 CSV→데이터 테이블 업로드에 적용.
+   * 일반 문서보다 타이트한 제한으로 악성 대용량 CSV 방어.
+   */
+  CSV_MAX_FILE_SIZE: 1 * 1024 * 1024,
   /** 최대 파일 개수 */
   MAX_FILE_COUNT: 10,
 } as const;

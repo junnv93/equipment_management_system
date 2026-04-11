@@ -25,6 +25,7 @@ import {
   RejectInspectionPipe,
   CreateResultSectionPipe,
   UpdateResultSectionPipe,
+  ReorderResultSectionsPipe,
 } from './dto';
 import type {
   CreateInspectionInput,
@@ -34,11 +35,13 @@ import type {
   RejectInspectionInput,
   CreateResultSectionInput,
   UpdateResultSectionInput,
+  ReorderResultSectionsInput,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import {
   Permission,
   EQUIPMENT_DATA_SCOPE,
+  FILE_UPLOAD_LIMITS,
   userHasPermission,
 } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -399,6 +402,25 @@ export class IntermediateInspectionsController {
     return this.resultSectionsService.create(uuid, 'intermediate', dto, userId);
   }
 
+  /**
+   * ⚠️ 라우트 순서 주의: `/reorder` 는 반드시 `/:sectionId` **앞에** 선언해야 한다.
+   * NestJS Express 어댑터는 선언 순서대로 매치하므로, 역순이면 "reorder" 가
+   * ParseUUIDPipe 에 UUID 로 파싱되어 400 Bad Request 를 반환한다.
+   */
+  @Patch(':uuid/result-sections/reorder')
+  @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
+  @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
+  @UsePipes(ReorderResultSectionsPipe)
+  async reorderResultSections(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: ReorderResultSectionsInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection[]> {
+    const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.resultSectionsService.reorder(uuid, 'intermediate', dto);
+  }
+
   @Patch(':uuid/result-sections/:sectionId')
   @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
   @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
@@ -430,7 +452,9 @@ export class IntermediateInspectionsController {
 
   @Post(':uuid/result-sections/upload-csv')
   @RequirePermissions(Permission.SUBMIT_INTERMEDIATE_INSPECTION)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: FILE_UPLOAD_LIMITS.CSV_MAX_FILE_SIZE } })
+  )
   @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
   async uploadCsvResultSection(
     @Param('uuid', ParseUUIDPipe) uuid: string,

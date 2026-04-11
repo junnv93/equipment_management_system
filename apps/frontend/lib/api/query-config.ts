@@ -254,6 +254,18 @@ export const QUERY_CONFIG = {
   /** 승인 카운트 - SSE_BACKED (SSE approval-changed 이벤트로 실시간 무효화, 10분 폴백) */
   APPROVAL_COUNTS: REFETCH_STRATEGIES.SSE_BACKED,
 
+  /**
+   * 결과 섹션 (중간/자체점검 동적 콘텐츠) - NORMAL
+   * 편집 빈도가 낮고 mutation 후 자동 무효화로 갱신됨.
+   * 매 mount 마다 refetch 하지 않도록 MEDIUM staleTime 적용.
+   */
+  RESULT_SECTIONS: {
+    staleTime: CACHE_TIMES.MEDIUM,
+    gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
   /** 모니터링 - PERIODIC (5분 폴링, 시스템 상태 주기적 갱신) */
   MONITORING: {
     staleTime: CACHE_TIMES.SHORT,

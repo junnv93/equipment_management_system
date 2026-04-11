@@ -18,7 +18,11 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  EQUIPMENT_DATA_SCOPE,
+  FILE_UPLOAD_LIMITS,
+} from '@equipment-management/shared-constants';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
@@ -44,10 +48,15 @@ import {
   ConfirmSelfInspectionPipe,
   type ConfirmSelfInspectionInput,
 } from './dto/confirm-self-inspection.dto';
-import { CreateResultSectionPipe, UpdateResultSectionPipe } from '../intermediate-inspections/dto';
+import {
+  CreateResultSectionPipe,
+  UpdateResultSectionPipe,
+  ReorderResultSectionsPipe,
+} from '../intermediate-inspections/dto';
 import type {
   CreateResultSectionInput,
   UpdateResultSectionInput,
+  ReorderResultSectionsInput,
 } from '../intermediate-inspections/dto';
 
 /**
@@ -255,6 +264,25 @@ export class SelfInspectionsController {
     return this.resultSectionsService.create(uuid, 'self', dto, userId);
   }
 
+  /**
+   * ⚠️ 라우트 순서 주의: `/reorder` 는 반드시 `/:sectionId` **앞에** 선언해야 한다.
+   * 역순이면 "reorder" 가 ParseUUIDPipe 에 UUID 로 파싱되어 400 Bad Request.
+   */
+  @Patch(':uuid/result-sections/reorder')
+  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
+  @UsePipes(ReorderResultSectionsPipe)
+  @ApiOperation({ summary: '자체점검 결과 섹션 순서 재할당 (원자 트랜잭션)' })
+  async reorderResultSections(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: ReorderResultSectionsInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<InspectionResultSection[]> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.resultSectionsService.reorder(uuid, 'self', dto);
+  }
+
   @Patch(':uuid/result-sections/:sectionId')
   @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
   @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
@@ -288,7 +316,9 @@ export class SelfInspectionsController {
 
   @Post(':uuid/result-sections/upload-csv')
   @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: FILE_UPLOAD_LIMITS.CSV_MAX_FILE_SIZE } })
+  )
   @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
   @ApiOperation({ summary: '자체점검 CSV 업로드 → 데이터 테이블' })
   async uploadCsvResultSection(

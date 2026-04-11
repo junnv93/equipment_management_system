@@ -426,6 +426,9 @@ export const API_ENDPOINTS = {
         `/api/self-inspections/${inspectionId}/result-sections/${sectionId}`,
       DELETE: (inspectionId: string, sectionId: string) =>
         `/api/self-inspections/${inspectionId}/result-sections/${sectionId}`,
+      /** 순서 재할당 (단일 원자 트랜잭션) */
+      REORDER: (inspectionId: string) =>
+        `/api/self-inspections/${inspectionId}/result-sections/reorder`,
       UPLOAD_CSV: (inspectionId: string) =>
         `/api/self-inspections/${inspectionId}/result-sections/upload-csv`,
     },
@@ -471,6 +474,9 @@ export const API_ENDPOINTS = {
         `/api/intermediate-inspections/${inspectionId}/result-sections/${sectionId}`,
       DELETE: (inspectionId: string, sectionId: string) =>
         `/api/intermediate-inspections/${inspectionId}/result-sections/${sectionId}`,
+      /** 순서 재할당 (단일 원자 트랜잭션) */
+      REORDER: (inspectionId: string) =>
+        `/api/intermediate-inspections/${inspectionId}/result-sections/reorder`,
       UPLOAD_CSV: (inspectionId: string) =>
         `/api/intermediate-inspections/${inspectionId}/result-sections/upload-csv`,
     },

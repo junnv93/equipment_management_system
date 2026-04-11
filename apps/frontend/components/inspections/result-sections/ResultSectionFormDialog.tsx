@@ -25,6 +25,7 @@ import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 import { documentApi } from '@/lib/api/document-api';
 import { useToast } from '@/components/ui/use-toast';
 import type { ResultSection, CreateResultSectionDto, RichCell } from '@/lib/api/calibration-api';
+import type { InspectionResultSectionType } from '@equipment-management/schemas';
 import VisualTableEditor from './VisualTableEditor';
 
 /**
@@ -39,8 +40,8 @@ import VisualTableEditor from './VisualTableEditor';
 const SECTION_TYPE_OPTIONS = ['table', 'text', 'photo', 'title'] as const;
 type SectionTypeOption = (typeof SECTION_TYPE_OPTIONS)[number];
 
-/** 프론트엔드 타입 → 백엔드 sectionType 변환 */
-function toBackendType(frontendType: SectionTypeOption): string {
+/** 프론트엔드 타입 → 백엔드 sectionType 변환 (SSOT 타입 유지) */
+function toBackendType(frontendType: SectionTypeOption): InspectionResultSectionType {
   return frontendType === 'table' ? 'rich_table' : frontendType;
 }
 

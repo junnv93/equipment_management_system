@@ -338,6 +338,7 @@
       "editAriaLabel": "{date} 자체점검 기록 수정",
       "confirmAriaLabel": "{date} 자체점검 기록 확인 처리",
       "deleteAriaLabel": "{date} 자체점검 기록 삭제",
+      "toggleResultSections": "{date} 자체점검 결과 섹션 펼치기/접기",
       "exportForm": "양식 내보내기",
       "exportFormError": "자체점검 양식 내보내기에 실패했습니다."
     },

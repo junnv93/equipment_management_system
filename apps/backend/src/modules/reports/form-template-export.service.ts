@@ -49,6 +49,7 @@ import {
   SOFTWARE_AVAILABILITY_LABELS,
   type Classification,
   type SoftwareAvailability,
+  type InspectionType,
 } from '@equipment-management/schemas';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../common/storage/storage.interface';
 
@@ -1055,7 +1056,7 @@ export class FormTemplateExportService {
   private async renderResultSections(
     doc: DocxTemplate,
     inspectionId: string,
-    inspectionType: 'intermediate' | 'self'
+    inspectionType: InspectionType
   ): Promise<void> {
     const sections = await this.db
       .select()
@@ -1069,6 +1070,37 @@ export class FormTemplateExportService {
       .orderBy(asc(inspectionResultSections.sortOrder));
 
     if (sections.length === 0) return;
+
+    /**
+     * N+1 제거: photo/rich_table 섹션에서 참조되는 모든 documentId 를 선수집한 뒤
+     * 1회 batch SELECT + Promise.allSettled 로 병렬 다운로드한다.
+     * 기존 loadDocumentImage 를 섹션/셀마다 직렬 호출하던 경로를 대체.
+     */
+    const documentIdSet = new Set<string>();
+    for (const section of sections) {
+      if (section.sectionType === 'photo' && section.documentId) {
+        documentIdSet.add(section.documentId);
+      } else if (section.sectionType === 'rich_table') {
+        const rd = section.richTableData as {
+          headers: string[];
+          rows: Array<
+            Array<
+              | { type: 'text'; value: string }
+              | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number }
+            >
+          >;
+        } | null;
+        if (rd) {
+          for (const row of rd.rows) {
+            for (const cell of row) {
+              if (cell.type === 'image') documentIdSet.add(cell.documentId);
+            }
+          }
+        }
+      }
+    }
+
+    const imageCache = await this.loadDocumentImagesBatch(Array.from(documentIdSet));
 
     for (const section of sections) {
       switch (section.sectionType) {
@@ -1096,7 +1128,7 @@ export class FormTemplateExportService {
             doc.appendParagraph(section.title, { bold: true });
           }
           if (section.documentId) {
-            const imageResult = await this.loadDocumentImage(section.documentId);
+            const imageResult = imageCache.get(section.documentId);
             if (imageResult) {
               doc.appendImage(
                 imageResult.buffer,
@@ -1122,23 +1154,19 @@ export class FormTemplateExportService {
             if (section.title) {
               doc.appendParagraph(section.title, { bold: true });
             }
-            const resolvedRows = await Promise.all(
-              rd.rows.map((row) =>
-                Promise.all(
-                  row.map(async (cell) => {
-                    if (cell.type === 'text') return cell;
-                    const img = await this.loadDocumentImage(cell.documentId);
-                    if (!img) return { type: 'text' as const, value: '[image not found]' };
-                    return {
-                      type: 'image' as const,
-                      buffer: img.buffer,
-                      ext: img.ext,
-                      widthCm: cell.widthCm,
-                      heightCm: cell.heightCm,
-                    };
-                  })
-                )
-              )
+            const resolvedRows = rd.rows.map((row) =>
+              row.map((cell) => {
+                if (cell.type === 'text') return cell;
+                const img = imageCache.get(cell.documentId);
+                if (!img) return { type: 'text' as const, value: '[image not found]' };
+                return {
+                  type: 'image' as const,
+                  buffer: img.buffer,
+                  ext: img.ext,
+                  widthCm: cell.widthCm,
+                  heightCm: cell.heightCm,
+                };
+              })
             );
             doc.appendRichTable(rd.headers, resolvedRows);
           }
@@ -1148,23 +1176,41 @@ export class FormTemplateExportService {
     }
   }
 
-  private async loadDocumentImage(
-    documentId: string
-  ): Promise<{ buffer: Buffer; ext: 'png' | 'jpeg' } | null> {
-    try {
-      const [doc] = await this.db
-        .select({ filePath: documents.filePath, mimeType: documents.mimeType })
-        .from(documents)
-        .where(eq(documents.id, documentId))
-        .limit(1);
-      if (!doc) return null;
-      const buffer = await this.storage.download(doc.filePath);
-      const ext = doc.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
-      return { buffer, ext };
-    } catch {
-      this.logger.warn(`Failed to load document image: ${documentId}`);
-      return null;
+  /**
+   * 여러 documentId 에 대한 이미지를 1회 SELECT + 병렬 다운로드로 로드한다.
+   * 개별 다운로드 실패는 Map 에서 누락 — 렌더 단계가 `[image not found]` 로 fallback.
+   */
+  private async loadDocumentImagesBatch(
+    documentIds: string[]
+  ): Promise<Map<string, { buffer: Buffer; ext: 'png' | 'jpeg' }>> {
+    const result = new Map<string, { buffer: Buffer; ext: 'png' | 'jpeg' }>();
+    if (documentIds.length === 0) return result;
+
+    const rows = await this.db
+      .select({
+        id: documents.id,
+        filePath: documents.filePath,
+        mimeType: documents.mimeType,
+      })
+      .from(documents)
+      .where(inArray(documents.id, documentIds));
+
+    const downloads = await Promise.allSettled(
+      rows.map(async (row) => {
+        const buffer = await this.storage.download(row.filePath);
+        const ext = row.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
+        return { id: row.id, buffer, ext };
+      })
+    );
+
+    for (const outcome of downloads) {
+      if (outcome.status === 'fulfilled') {
+        result.set(outcome.value.id, { buffer: outcome.value.buffer, ext: outcome.value.ext });
+      } else {
+        this.logger.warn(`Failed to batch-load document image: ${String(outcome.reason)}`);
+      }
     }
+    return result;
   }
 
   // ============================================================================

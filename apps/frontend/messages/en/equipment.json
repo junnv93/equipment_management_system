@@ -338,6 +338,7 @@
       "editAriaLabel": "Edit self inspection from {date}",
       "confirmAriaLabel": "Confirm self inspection from {date}",
       "deleteAriaLabel": "Delete self inspection from {date}",
+      "toggleResultSections": "Toggle result sections for {date}",
       "exportForm": "Export Form",
       "exportFormError": "Failed to export self inspection form."
     },

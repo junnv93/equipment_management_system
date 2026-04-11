@@ -13,6 +13,7 @@ import type {
   InspectionJudgment,
   EquipmentClassification,
   InspectionResultSectionType,
+  InspectionType,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
@@ -218,7 +219,7 @@ export type RichCell =
 export interface ResultSection {
   id: string;
   inspectionId: string;
-  inspectionType: 'intermediate' | 'self';
+  inspectionType: InspectionType;
   sectionType: InspectionResultSectionType;
   sortOrder: number;
   title: string | null;
@@ -545,6 +546,17 @@ const calibrationApi = {
         await apiClient.delete(
           API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.RESULT_SECTIONS.DELETE(inspectionId, sectionId)
         );
+      },
+      /**
+       * 결과 섹션 순서 재할당 (단일 원자 트랜잭션).
+       * @param sectionIds 변경 후 순서대로 정렬된 전체 섹션 ID 배열
+       */
+      reorder: async (inspectionId: string, sectionIds: string[]): Promise<ResultSection[]> => {
+        const response = await apiClient.patch(
+          API_ENDPOINTS.INTERMEDIATE_INSPECTIONS.RESULT_SECTIONS.REORDER(inspectionId),
+          { sectionIds }
+        );
+        return transformArrayResponse<ResultSection>(response);
       },
     },
   },
