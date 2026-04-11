@@ -4,6 +4,7 @@ import { eq, and, asc, inArray } from 'drizzle-orm';
 import {
   inspectionResultSections,
   type InspectionResultSection,
+  type NewInspectionResultSection,
 } from '@equipment-management/db/schema';
 import type { InspectionType } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -92,7 +93,8 @@ export class ResultSectionsService {
     inspectionType: InspectionType,
     dto: UpdateResultSectionInput
   ): Promise<InspectionResultSection> {
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    // Partial<NewInspectionResultSection> 로 Record<string, unknown> 대체 — 필드명 오타/타입 안전성 확보
+    const updateData: Partial<NewInspectionResultSection> = { updatedAt: new Date() };
     if (dto.sortOrder !== undefined) updateData.sortOrder = dto.sortOrder;
     if (dto.sectionType !== undefined) updateData.sectionType = dto.sectionType;
     if (dto.title !== undefined) updateData.title = dto.title;
