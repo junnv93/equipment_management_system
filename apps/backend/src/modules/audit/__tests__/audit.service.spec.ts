@@ -306,4 +306,127 @@ describe('AuditService', () => {
       expect(mockDb.update).not.toHaveBeenCalled();
     });
   });
+
+  describe('findAllCursor', () => {
+    /** base64(JSON({t,i})) 커서 인코딩 — audit.service.ts:241-247 과 동일 포맷 */
+    const buildCursor = (timestamp: Date, id: string): string =>
+      Buffer.from(JSON.stringify({ t: timestamp.toISOString(), i: id })).toString('base64');
+
+    it('첫 페이지 (cursor 없음) — summary 포함, hasMore=false, nextCursor=null', async () => {
+      // isFirstPage=true → Promise.all 이 select 2회 호출 (items → summary)
+      const itemsChain = createSelectChain([sampleLog]);
+      const summaryChain = createSelectChain([{ action: 'approve', count: 5 }]);
+      let call = 0;
+      mockDb.select.mockImplementation(() => (++call === 1 ? itemsChain : summaryChain));
+
+      const result = await service.findAllCursor({}, undefined, 30);
+
+      expect(result.items).toEqual([sampleLog]);
+      expect(result.hasMore).toBe(false);
+      expect(result.nextCursor).toBeNull();
+      expect(result.summary).toEqual({ approve: 5 });
+      // fetchLimit = limit + 1 → hasMore 감지용 +1 row
+      expect(itemsChain.limit).toHaveBeenCalledWith(31);
+      // summary 쿼리는 groupBy(action) 호출
+      expect(summaryChain.groupBy).toHaveBeenCalled();
+    });
+
+    it('첫 페이지 — limit+1 fetch 로 hasMore=true, pageItems slice, nextCursor 인코딩', async () => {
+      // 3 rows 반환 + limit=2 → fetchLimit=3 → hasMore=true → pageItems 는 앞 2개
+      const manyRows = [
+        { ...sampleLog, id: 'log-a', timestamp: new Date('2025-05-09T10:00:00Z') },
+        { ...sampleLog, id: 'log-b', timestamp: new Date('2025-05-09T09:30:00Z') },
+        { ...sampleLog, id: 'log-c', timestamp: new Date('2025-05-09T09:00:00Z') },
+      ];
+      const itemsChain = createSelectChain(manyRows);
+      const summaryChain = createSelectChain([]);
+      let call = 0;
+      mockDb.select.mockImplementation(() => (++call === 1 ? itemsChain : summaryChain));
+
+      const result = await service.findAllCursor({}, undefined, 2);
+
+      expect(result.hasMore).toBe(true);
+      expect(result.items).toHaveLength(2);
+      expect(result.items[0].id).toBe('log-a');
+      expect(result.items[1].id).toBe('log-b');
+      expect(result.nextCursor).not.toBeNull();
+
+      // nextCursor 디코딩 → 마지막 pageItem(log-b) 의 (t, i)
+      const decoded = JSON.parse(Buffer.from(result.nextCursor!, 'base64').toString('utf-8')) as {
+        t: string;
+        i: string;
+      };
+      expect(decoded.i).toBe('log-b');
+      expect(new Date(decoded.t).toISOString()).toBe('2025-05-09T09:30:00.000Z');
+    });
+
+    it('유효한 cursor → 후속 페이지 경로 (summary 없음, select 1회만)', async () => {
+      const itemsChain = createSelectChain([sampleLog]);
+      mockDb.select.mockReturnValue(itemsChain);
+
+      const cursor = buildCursor(new Date('2025-05-10T10:00:00Z'), 'log-prev');
+      const result = await service.findAllCursor({}, cursor, 30);
+
+      // 후속 페이지: summary 미포함
+      expect(result.summary).toBeUndefined();
+      // items 쿼리만 호출 (summary 경로는 Promise.resolve(null) 로 skip)
+      expect(mockDb.select).toHaveBeenCalledTimes(1);
+      // keyset row-value WHERE 를 포함한 conditions 가 병합되어 where() 호출
+      expect(itemsChain.where).toHaveBeenCalled();
+      expect(result.items).toEqual([sampleLog]);
+    });
+
+    it('Invalid cursor (깨진 base64) → 첫 페이지로 fallback, summary 포함', async () => {
+      const itemsChain = createSelectChain([sampleLog]);
+      const summaryChain = createSelectChain([{ action: 'login', count: 1 }]);
+      let call = 0;
+      mockDb.select.mockImplementation(() => (++call === 1 ? itemsChain : summaryChain));
+
+      const result = await service.findAllCursor({}, 'not-valid-base64!!!', 30);
+
+      // fallback → 첫 페이지: summary 포함
+      expect(result.summary).toEqual({ login: 1 });
+      expect(result.items).toEqual([sampleLog]);
+      // select 2회 호출 확인 (items + summary)
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+    });
+
+    it('Invalid cursor (유효 base64, 필드 누락) → 첫 페이지로 fallback', async () => {
+      const itemsChain = createSelectChain([]);
+      const summaryChain = createSelectChain([]);
+      let call = 0;
+      mockDb.select.mockImplementation(() => (++call === 1 ? itemsChain : summaryChain));
+
+      // `i` 필드 누락 — typeof decoded.i !== 'string' 경로
+      const badCursor = Buffer.from(JSON.stringify({ t: new Date().toISOString() })).toString(
+        'base64'
+      );
+      const result = await service.findAllCursor({}, badCursor, 30);
+
+      // 첫 페이지로 fallback → summary 객체 반환 (빈 객체라도 undefined 는 아님)
+      expect(result.summary).toBeDefined();
+      expect(result.summary).toEqual({});
+      // select 2회 (items + summary) 확인 — 첫 페이지 경로로 진입
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+    });
+
+    it('필터 조건 (userId + entityType) → items/summary 모두에 WHERE 적용', async () => {
+      const itemsChain = createSelectChain([sampleLog]);
+      const summaryChain = createSelectChain([{ action: 'approve', count: 2 }]);
+      let call = 0;
+      mockDb.select.mockImplementation(() => (++call === 1 ? itemsChain : summaryChain));
+
+      await service.findAllCursor(
+        { userId: 'user-1', entityType: 'equipment', userSite: 'SUW' },
+        undefined,
+        30
+      );
+
+      // buildFilterConditions 가 3개 이상의 조건을 생성 → where() 가 양쪽 쿼리에서 호출
+      expect(itemsChain.where).toHaveBeenCalled();
+      expect(summaryChain.where).toHaveBeenCalled();
+      // order by 는 (timestamp DESC, id DESC) 복합 커서 — items 쿼리만
+      expect(itemsChain.orderBy).toHaveBeenCalled();
+    });
+  });
 });
