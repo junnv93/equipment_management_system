@@ -8,8 +8,6 @@ import {
   CalibrationRequiredEnum,
   CheckoutStatusEnum,
 } from '@equipment-management/schemas';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore — CALIBRATION_THRESHOLDS는 런타임에 존재하지만 tsconfig paths 미해석 (기존 calibration.service.ts와 동일 패턴)
 import { CALIBRATION_THRESHOLDS } from '@equipment-management/shared-constants';
 import { EmailService } from '../services/email.service';
 import {

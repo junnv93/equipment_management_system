@@ -82,8 +82,8 @@ export class MonitoringService implements OnModuleDestroy {
     responseTimeByEndpoint: new Map<string, number[]>(),
   };
 
-  // 메트릭 업데이트 간격 (30초)
-  private readonly updateInterval = 30000;
+  // 메트릭 업데이트 간격 (SSOT: shared-constants)
+  private readonly updateInterval = MONITORING_THRESHOLDS.METRICS_UPDATE_INTERVAL_MS;
 
   // 주기적 메트릭 수집 타이머 (OnModuleDestroy에서 정리)
   private metricsTimer: ReturnType<typeof setInterval> | null = null;

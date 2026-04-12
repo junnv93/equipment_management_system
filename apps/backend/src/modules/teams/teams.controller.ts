@@ -22,6 +22,18 @@ import { CreateTeamValidationPipe } from './dto/create-team.dto';
 import { UpdateTeamValidationPipe } from './dto/update-team.dto';
 import { TeamQueryValidationPipe } from './dto/team-query.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import type { Team } from '@equipment-management/schemas';
+
+interface TeamsControllerListResponse {
+  items: Team[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+  };
+}
 
 @ApiTags('teams')
 @ApiBearerAuth()
@@ -34,7 +46,7 @@ export class TeamsController {
   @UsePipes(TeamQueryValidationPipe)
   @ApiOperation({ summary: '모든 팀 조회' })
   @ApiResponse({ status: 200, description: '팀 목록 반환' })
-  async findAll(@Query() query: TeamQueryDto): Promise<unknown> {
+  async findAll(@Query() query: TeamQueryDto): Promise<TeamsControllerListResponse> {
     const result = await this.teamsService.findAll(query);
     return {
       items: result.items,
@@ -53,7 +65,7 @@ export class TeamsController {
   @ApiOperation({ summary: '특정 팀 조회' })
   @ApiResponse({ status: 200, description: '팀 정보 반환' })
   @ApiResponse({ status: 404, description: '팀을 찾을 수 없음' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<unknown> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Team> {
     const team = await this.teamsService.findOne(id);
 
     if (!team) {
@@ -79,7 +91,7 @@ export class TeamsController {
   @ApiOperation({ summary: '새 팀 등록' })
   @ApiResponse({ status: 201, description: '팀 생성 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
-  async create(@Body() createTeamDto: CreateTeamDto): Promise<unknown> {
+  async create(@Body() createTeamDto: CreateTeamDto): Promise<Team> {
     return this.teamsService.create(createTeamDto);
   }
 
@@ -98,7 +110,7 @@ export class TeamsController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTeamDto: UpdateTeamDto
-  ): Promise<unknown> {
+  ): Promise<Team> {
     const team = await this.teamsService.update(id, updateTeamDto);
 
     if (!team) {

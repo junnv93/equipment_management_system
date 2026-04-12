@@ -25,6 +25,7 @@
     "moduleResolution": "node",
     "paths": {
       "@equipment-management/schemas": ["../../packages/schemas/src"],
+      "@equipment-management/shared-constants": ["../../packages/shared-constants/src"],
       "@equipment-management/db": ["../../packages/db/src"],
       "@equipment-management/db/*": ["../../packages/db/src/*"]
     }

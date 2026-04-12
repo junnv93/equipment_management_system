@@ -1,8 +1,7 @@
-import * as dotenv from 'dotenv';
 import { Client } from 'pg';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-// .env 파일 로드
-dotenv.config();
+loadMonorepoEnv();
 
 /**
  * 사용자 역할 시스템 마이그레이션 스크립트
@@ -16,8 +15,7 @@ dotenv.config();
 async function migrateUserRoles(): Promise<void> {
   console.log('🔄 사용자 역할 시스템 마이그레이션 시작...');
 
-  const connectionString =
-    process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/equipment_management';
+  const connectionString = resolveDatabaseUrl();
 
   const client = new Client({ connectionString });
 

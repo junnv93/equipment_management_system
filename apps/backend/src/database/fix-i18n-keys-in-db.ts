@@ -9,9 +9,11 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { sql } from 'drizzle-orm';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/postgres_equipment';
+loadMonorepoEnv();
+
+const DATABASE_URL = resolveDatabaseUrl();
 
 async function fixI18nKeys(): Promise<void> {
   const pool = new Pool({ connectionString: DATABASE_URL });

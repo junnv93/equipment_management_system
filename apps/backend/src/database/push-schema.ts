@@ -1,14 +1,12 @@
 import { Client } from 'pg';
-import * as dotenv from 'dotenv';
+import { loadMonorepoEnv, resolveDatabaseUrl } from '@equipment-management/db/load-env';
 
-dotenv.config();
+loadMonorepoEnv();
 
 async function pushSchema(): Promise<void> {
   console.log('🔄 스키마를 데이터베이스에 적용 중...');
 
-  const connectionString =
-    process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres@localhost:5433/equipment_management';
+  const connectionString = resolveDatabaseUrl();
 
   const client = new Client({ connectionString });
 

@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import type { EmailContent } from '../config/notification-registry';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore — CALIBRATION_THRESHOLDS는 런타임에 존재 (기존 calibration.service.ts와 동일 패턴)
 import { CALIBRATION_THRESHOLDS } from '@equipment-management/shared-constants';
 
 /** 배치 이메일에 포함될 개별 장비 정보 */

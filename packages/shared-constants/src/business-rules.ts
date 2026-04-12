@@ -34,6 +34,8 @@ export const MONITORING_THRESHOLDS = {
   ERROR_RATE_WARNING_PERCENT: 1,
   /** 추적할 엔드포인트 최대 수 (메모리 누수 방지) */
   MAX_TRACKED_ENDPOINTS: 500,
+  /** 시스템 메트릭 갱신 간격 (ms) */
+  METRICS_UPDATE_INTERVAL_MS: 30_000,
 } as const;
 
 /**

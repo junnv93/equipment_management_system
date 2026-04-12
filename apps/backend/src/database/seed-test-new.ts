@@ -17,8 +17,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { sql } from 'drizzle-orm';
-import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as dotenv from 'dotenv';
 
 // Database schema
 import * as schema from '@equipment-management/db/schema';
@@ -68,12 +68,14 @@ import { NOTIFICATIONS_SEED_DATA } from './seed-data/admin/notifications.seed';
 // Utilities
 import { verifySeed, printVerificationResults } from './utils/verification';
 
-// Load environment
+// Load environment — seed는 tsconfig exclude이므로 loadMonorepoEnv 미사용, 직접 cascade
 dotenv.config({ path: path.resolve(__dirname, '../../../.env.test') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
+// DATABASE_URL이 없으면 DB_* 개별 변수로 조합 (resolveDatabaseUrl과 동일 로직)
 const DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
+  process.env.DATABASE_URL ||
+  `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'postgres'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'equipment_management'}`;
 
 console.log('\n🌱 E2E TEST SEED DATA GENERATION');
 console.log('='.repeat(80));

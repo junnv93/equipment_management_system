@@ -55,8 +55,9 @@ async function bootstrap(): Promise<void> {
   app.use(helmetConfigService.createHelmetMiddleware());
   app.use(cookieParser());
   app.use(compression());
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ extended: true, limit: '10mb' }));
+  const bodyLimit = configService.get<string>('BODY_SIZE_LIMIT') || '10mb';
+  app.use(json({ limit: bodyLimit }));
+  app.use(urlencoded({ extended: true, limit: bodyLimit }));
 
   // API 검증 파이프
   //

@@ -58,6 +58,14 @@ import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId, enforceSiteAccess } from '../../common/utils';
+import type {
+  CalibrationPlanDetail,
+  CalibrationPlanListResult,
+  CalibrationPlanDeleteResult,
+  CalibrationPlanItem,
+  ExternalCalibrationEquipment,
+  CalibrationPlanVersionHistoryItem,
+} from './calibration-plans.types';
 
 @ApiTags('교정계획서')
 @ApiBearerAuth()
@@ -86,7 +94,7 @@ export class CalibrationPlansController {
   create(
     @Body() createDto: CreateCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     // 사이트 제한 역할(TE/TM)은 자기 사이트용 계획서만 생성 가능
     enforceSiteAccess(req, createDto.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const createdBy = extractUserId(req);
@@ -105,7 +113,7 @@ export class CalibrationPlansController {
   findAll(
     @Query() query: CalibrationPlanQueryInput,
     @CurrentEnforcedScope() scope: EnforcedScope
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanListResult> {
     // failLoud: enforced scope.site → 비표준 siteId 필드로 매핑.
     query.siteId = scope.site as CalibrationPlanQueryInput['siteId'];
     if (scope.teamId) query.teamId = scope.teamId;
@@ -124,7 +132,7 @@ export class CalibrationPlansController {
   findExternalEquipment(
     @Query() query: ExternalEquipmentQueryInput,
     @CurrentEnforcedScope() scope: EnforcedScope
-  ): Promise<unknown> {
+  ): Promise<ExternalCalibrationEquipment[]> {
     // failLoud: enforced scope.site → 비표준 siteId 필드로 매핑.
     query.siteId = scope.site as ExternalEquipmentQueryInput['siteId'];
     if (scope.teamId) query.teamId = scope.teamId;
@@ -143,7 +151,7 @@ export class CalibrationPlansController {
   async findOne(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     // findOneBasic으로 경량 사이트 체크 후, findOne으로 전체 데이터 반환
     // findOne은 Cache-Aside(120s)이므로 캐시 히트 시 추가 비용 없음
     const basicPlan = await this.calibrationPlansService.findOneBasic(uuid);
@@ -167,7 +175,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateDto: UpdateCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.update(uuid, updateDto);
@@ -187,7 +195,7 @@ export class CalibrationPlansController {
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDeleteResult> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.remove(uuid);
@@ -208,7 +216,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest,
     @Body() _submitDto?: SubmitCalibrationPlanDto
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.submit(uuid);
@@ -231,7 +239,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() submitDto: SubmitForReviewDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const submittedBy = extractUserId(req);
@@ -255,7 +263,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() reviewDto: ReviewCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const reviewedBy = extractUserId(req);
@@ -278,7 +286,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const approvedBy = extractUserId(req);
@@ -302,7 +310,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectDto: RejectCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const rejectedBy = extractUserId(req);
@@ -327,7 +335,7 @@ export class CalibrationPlansController {
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
     @Body() confirmDto: ConfirmPlanItemDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanItem> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const confirmedBy = extractUserId(req);
@@ -352,7 +360,7 @@ export class CalibrationPlansController {
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
     @Body() updateDto: UpdateCalibrationPlanItemDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanItem> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.updateItem(uuid, itemUuid, updateDto);
@@ -404,7 +412,7 @@ export class CalibrationPlansController {
   async createNewVersion(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanDetail> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const createdBy = extractUserId(req);
@@ -423,7 +431,7 @@ export class CalibrationPlansController {
   async getVersionHistory(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
-  ): Promise<unknown> {
+  ): Promise<CalibrationPlanVersionHistoryItem[]> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.getVersionHistory(uuid);

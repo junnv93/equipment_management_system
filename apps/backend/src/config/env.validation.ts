@@ -11,6 +11,7 @@ export const envSchema = z
     // 애플리케이션 설정
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.coerce.number().default(3001),
+    BODY_SIZE_LIMIT: z.string().default('10mb'),
 
     // 데이터베이스 설정
     DB_HOST: z.string().default('localhost'),

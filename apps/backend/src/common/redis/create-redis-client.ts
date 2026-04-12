@@ -55,6 +55,9 @@ export function resolveRedisConfig(configService: ConfigService): RedisConnectio
  * REDIS_URL과 개별 옵션 분기, TLS 설정, 재시도 전략을 통일합니다.
  * 각 서비스는 독립적인 클라이언트 인스턴스를 소유하며 자체 라이프사이클을 관리합니다.
  */
+const RETRY_BASE_DELAY_MS = 100;
+const RETRY_MAX_DELAY_MS = 3000;
+
 export function createRedisClient(config: RedisConnectionConfig, loggerName: string): Redis {
   const logger = new Logger(loggerName);
 
@@ -69,7 +72,7 @@ export function createRedisClient(config: RedisConnectionConfig, loggerName: str
             logger.error(`Redis connection failed after ${config.maxRetries} retries`);
             return null;
           }
-          return Math.min(times * 100, 3000);
+          return Math.min(times * RETRY_BASE_DELAY_MS, RETRY_MAX_DELAY_MS);
         }
       : undefined;
 
