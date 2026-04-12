@@ -92,6 +92,7 @@ export const equipmentSelfInspections = pgTable(
     ),
     statusIdx: index('self_inspections_status_idx').on(table.status),
     inspectorIdIdx: index('self_inspections_inspector_id_idx').on(table.inspectorId),
+    confirmedByIdx: index('self_inspections_confirmed_by_idx').on(table.confirmedBy),
   })
 );
 

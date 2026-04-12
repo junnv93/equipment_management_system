@@ -27,7 +27,10 @@ export const formTemplateRevisions = pgTable(
     /** CAS 버전 필드 (낙관적 잠금) */
     version: integer('version').notNull().default(1),
   },
-  (table) => [index('form_template_revisions_form_template_id_idx').on(table.formTemplateId)]
+  (table) => [
+    index('form_template_revisions_form_template_id_idx').on(table.formTemplateId),
+    index('form_template_revisions_revised_by_idx').on(table.revisedBy),
+  ]
 );
 
 export const formTemplateRevisionsRelations = relations(formTemplateRevisions, ({ one }) => ({

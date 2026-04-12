@@ -96,6 +96,10 @@ export const cableLossMeasurements = pgTable(
     measurementDateIdx: index('cable_loss_measurements_measurement_date_idx').on(
       table.measurementDate
     ),
+    measuredByIdx: index('cable_loss_measurements_measured_by_idx').on(table.measuredBy),
+    measurementEquipmentIdIdx: index('cable_loss_measurements_measurement_equipment_id_idx').on(
+      table.measurementEquipmentId
+    ),
   })
 );
 

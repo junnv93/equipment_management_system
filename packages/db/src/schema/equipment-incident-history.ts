@@ -31,6 +31,7 @@ export const equipmentIncidentHistory = pgTable(
     equipmentIdIdx: index('incident_history_equipment_id_idx').on(table.equipmentId),
     // 부적합 연결 조회 최적화
     nonConformanceIdIdx: index('incident_history_nc_id_idx').on(table.nonConformanceId),
+    reportedByIdx: index('incident_history_reported_by_idx').on(table.reportedBy),
   })
 );
 

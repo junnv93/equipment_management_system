@@ -139,6 +139,13 @@ export const equipmentImports = pgTable(
         table.status,
         table.sourceType
       ),
+      // FK 인덱스
+      approverIdIdx: index('equipment_imports_approver_id_idx').on(table.approverId),
+      receivedByIdx: index('equipment_imports_received_by_idx').on(table.receivedBy),
+      equipmentIdIdx: index('equipment_imports_equipment_id_idx').on(table.equipmentId),
+      returnCheckoutIdIdx: index('equipment_imports_return_checkout_id_idx').on(
+        table.returnCheckoutId
+      ),
     };
   }
 );

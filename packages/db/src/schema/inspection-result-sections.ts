@@ -81,6 +81,9 @@ export const inspectionResultSections = pgTable(
       table.inspectionType,
       table.sortOrder
     ),
+    documentIdIdx: index('irs_document_id_idx').on(table.documentId),
+    createdByIdx: index('irs_created_by_idx').on(table.createdBy),
+    updatedByIdx: index('irs_updated_by_idx').on(table.updatedBy),
   })
 );
 

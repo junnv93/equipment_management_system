@@ -310,12 +310,7 @@ export class MonitoringService implements OnModuleDestroy {
         // 실제 Pool 메트릭 (pg Pool 이벤트 기반)
         connectionsCreated: poolMetrics.connectionsCreated,
         connectionErrors: poolMetrics.connectionErrors,
-        /**
-         * `connectionsAcquired` ≈ 쿼리 실행 근사치 — Pool `acquire` 이벤트 카운트.
-         * 정확한 쿼리 카운트는 `pg_stat_statements.calls` 필요.
-         * TODO(tech-debt): 필드명을 `connectionsAcquired` 로 rename — i18n/dashboard 연쇄
-         */
-        queriesExecuted: poolMetrics.connectionsAcquired,
+        connectionsAcquired: poolMetrics.connectionsAcquired,
         queriesFailed: poolMetrics.connectionErrors,
         // 아래 필드들은 pg Pool 에서 측정 불가 — null 로 "미측정" 명시
         avgQueryTime: null,
@@ -370,8 +365,7 @@ export class MonitoringService implements OnModuleDestroy {
             metrics: {
               connectionsCreated: poolMetrics.connectionsCreated,
               connectionErrors: poolMetrics.connectionErrors,
-              // connectionsAcquired ≈ 쿼리 근사치 (pg Pool acquire 이벤트)
-              queriesExecuted: poolMetrics.connectionsAcquired,
+              connectionsAcquired: poolMetrics.connectionsAcquired,
               queriesFailed: poolMetrics.connectionErrors,
               // pg Pool 레벨에서 측정 불가 → null (미측정)
               avgQueryTime: null,

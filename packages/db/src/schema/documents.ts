@@ -114,6 +114,7 @@ export const documents = pgTable(
     /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
     statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
     retentionExpiresAtIdx: index('documents_retention_expires_at_idx').on(table.retentionExpiresAt),
+    uploadedByIdx: index('documents_uploaded_by_idx').on(table.uploadedBy),
   })
 );
 

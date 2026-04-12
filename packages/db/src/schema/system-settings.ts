@@ -15,5 +15,8 @@ export const systemSettings = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
-  (table) => [index('idx_system_settings_lookup').on(table.category, table.site)]
+  (table) => [
+    index('idx_system_settings_lookup').on(table.category, table.site),
+    index('idx_system_settings_updated_by').on(table.updatedBy),
+  ]
 );

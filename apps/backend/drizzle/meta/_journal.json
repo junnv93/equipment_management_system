@@ -127,6 +127,20 @@
       "when": 1775959031227,
       "tag": "0017_shiny_lethal_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1775961127969,
+      "tag": "0018_same_thundra",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1775961163805,
+      "tag": "0019_right_forgotten_one",
+      "breakpoints": true
     }
   ]
 }

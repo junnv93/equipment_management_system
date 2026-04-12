@@ -69,8 +69,8 @@ export const nonConformances = pgTable(
     correctionContent: text('correction_content'), // 조치 내용
     correctionDate: date('correction_date'), // 조치 완료일
     correctedBy: uuid('corrected_by').references(() => users.id, {
-      onDelete: 'set null',
-    }), // 조치자 ID
+      onDelete: 'restrict',
+    }), // 조치자 ID — 감사 추적 영구 보존
 
     // 상태 관리
     status: varchar('status', { length: 20 })
@@ -80,15 +80,15 @@ export const nonConformances = pgTable(
 
     // 종료 정보 (기술책임자)
     closedBy: uuid('closed_by').references(() => users.id, {
-      onDelete: 'set null',
-    }), // 종료 승인자 ID (기술책임자)
+      onDelete: 'restrict',
+    }), // 종료 승인자 ID (기술책임자) — 감사 추적 영구 보존
     closedAt: timestamp('closed_at'), // 종료 시각
     closureNotes: text('closure_notes'), // 종료 메모
 
     // 반려 정보 (기술책임자 — 조치 불충분 시)
     rejectedBy: uuid('rejected_by').references(() => users.id, {
-      onDelete: 'set null',
-    }), // 반려자 ID (기술책임자)
+      onDelete: 'restrict',
+    }), // 반려자 ID (기술책임자) — 감사 추적 영구 보존
     rejectedAt: timestamp('rejected_at'), // 반려 시각
     rejectionReason: text('rejection_reason'), // 반려 사유
 

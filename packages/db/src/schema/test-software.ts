@@ -61,6 +61,11 @@ export const testSoftware = pgTable(
     testFieldIdx: index('test_software_test_field_idx').on(table.testField),
     availabilityIdx: index('test_software_availability_idx').on(table.availability),
     siteIdx: index('test_software_site_idx').on(table.site),
+    primaryManagerIdIdx: index('test_software_primary_manager_id_idx').on(table.primaryManagerId),
+    secondaryManagerIdIdx: index('test_software_secondary_manager_id_idx').on(
+      table.secondaryManagerId
+    ),
+    createdByIdx: index('test_software_created_by_idx').on(table.createdBy),
   })
 );
 

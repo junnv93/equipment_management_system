@@ -82,6 +82,10 @@ export const intermediateInspections = pgTable(
     ),
     inspectorIdIdx: index('intermediate_inspections_inspector_id_idx').on(table.inspectorId),
     createdByIdx: index('intermediate_inspections_created_by_idx').on(table.createdBy),
+    submittedByIdx: index('intermediate_inspections_submitted_by_idx').on(table.submittedBy),
+    reviewedByIdx: index('intermediate_inspections_reviewed_by_idx').on(table.reviewedBy),
+    approvedByIdx: index('intermediate_inspections_approved_by_idx').on(table.approvedBy),
+    rejectedByIdx: index('intermediate_inspections_rejected_by_idx').on(table.rejectedBy),
   })
 );
 

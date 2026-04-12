@@ -91,6 +91,17 @@ export const softwareValidations = pgTable(
     testSoftwareIdIdx: index('software_validations_test_software_id_idx').on(table.testSoftwareId),
     statusIdx: index('software_validations_status_idx').on(table.status),
     validationTypeIdx: index('software_validations_validation_type_idx').on(table.validationType),
+    receivedByIdx: index('software_validations_received_by_idx').on(table.receivedBy),
+    performedByIdx: index('software_validations_performed_by_idx').on(table.performedBy),
+    submittedByIdx: index('software_validations_submitted_by_idx').on(table.submittedBy),
+    technicalApproverIdIdx: index('software_validations_technical_approver_id_idx').on(
+      table.technicalApproverId
+    ),
+    qualityApproverIdIdx: index('software_validations_quality_approver_id_idx').on(
+      table.qualityApproverId
+    ),
+    rejectedByIdx: index('software_validations_rejected_by_idx').on(table.rejectedBy),
+    createdByIdx: index('software_validations_created_by_idx').on(table.createdBy),
   })
 );
 

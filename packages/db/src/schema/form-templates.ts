@@ -65,6 +65,7 @@ export const formTemplates = pgTable(
       .where(sql`${table.isCurrent} = true`),
     // 과거 번호 검색 일관성: formNumber는 전역 유니크 (역사적으로도 중복 불허)
     uniqueIndex('form_templates_form_number_unique').on(table.formNumber),
+    index('form_templates_uploaded_by_idx').on(table.uploadedBy),
   ]
 );
 

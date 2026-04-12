@@ -11,11 +11,9 @@
  *    값이 0" 으로 오해할 수 있으므로 `null` 로 명시한다. 향후 `pg_stat_statements`
  *    확장을 활성화하면 이 필드들이 실제 값으로 채워진다.
  *
- * 2. **`queriesExecuted` 는 근사치** — pg Pool 의 `acquire` 이벤트 카운트를
- *    매핑한다. 정확히는 "커넥션 획득 횟수" 이지만 일반적으로 쿼리 실행과
- *    1:1 에 가깝다. 향후 `connectionsAcquired` 로 rename 하는 것이 더 정확하나
- *    i18n / dashboard UX 연쇄 변경을 피하기 위해 본 SSOT 스프린트 범위에서
- *    제외. tech-debt-tracker 에 SHOULD 후속으로 등재.
+ * 2. **`connectionsAcquired`** — pg Pool 의 `acquire` 이벤트 카운트.
+ *    커넥션 획득 횟수이며, acquire-query-release 패턴에서 1 acquire ≈ 1 query.
+ *    정확한 쿼리 카운트는 `pg_stat_statements.calls` 필요.
  *
  * 3. **`ConnectionPoolMetrics` 는 재정의 금지** — `@equipment-management/db`
  *    에 이미 정의되어 있다. 본 파일은 그 위에 API 레이어 composite 타입만
@@ -38,13 +36,12 @@ export interface DatabaseMetrics {
   /** pg Pool `error` 이벤트 누적 카운트 */
   connectionErrors: number;
   /**
-   * pg Pool `acquire` 이벤트 누적 카운트 (≈ 쿼리 실행 근사치).
+   * pg Pool `acquire` 이벤트 누적 카운트.
    *
-   * 정확한 "실행된 쿼리 수" 가 아니지만, acquire-query-release 패턴에서
-   * 1 acquire ≈ 1 query 에 근사한다. 정확한 쿼리 카운트는
-   * `pg_stat_statements.calls` 필요.
+   * acquire-query-release 패턴에서 1 acquire ≈ 1 query 에 근사.
+   * 정확한 쿼리 카운트는 `pg_stat_statements.calls` 필요.
    */
-  queriesExecuted: number;
+  connectionsAcquired: number;
   /** 쿼리 실패 카운트 — pg Pool error 이벤트 재사용 (approx) */
   queriesFailed: number;
   /** 평균 쿼리 실행 시간 (ms) — pg Pool 미측정, `pg_stat_statements` 필요 */
@@ -96,7 +93,7 @@ export interface DatabaseDiagnostics {
 export interface HealthDatabaseMetrics {
   connectionsCreated: number;
   connectionErrors: number;
-  queriesExecuted: number;
+  connectionsAcquired: number;
   queriesFailed: number;
   avgQueryTime: number | null;
 }
@@ -175,7 +172,8 @@ export interface CacheStats {
 
 export interface SystemMetrics {
   hostname: string;
-  platform: NodeJS.Platform;
+  /** `os.platform()` 반환값 — Node 전용 타입 대신 string literal union 사용 (프론트엔드 호환) */
+  platform: 'aix' | 'darwin' | 'freebsd' | 'linux' | 'openbsd' | 'sunos' | 'win32' | (string & {});
   arch: string;
   release: string;
   nodeVersion: string;

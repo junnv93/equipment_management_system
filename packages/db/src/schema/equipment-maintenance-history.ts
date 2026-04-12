@@ -30,6 +30,7 @@ export const equipmentMaintenanceHistory = pgTable(
     ),
     // 날짜 범위 단독 쿼리 최적화 (equipmentId 없이 기간별 조회 시)
     performedAtIdx: index('maintenance_history_performed_at_idx').on(table.performedAt),
+    performedByIdx: index('maintenance_history_performed_by_idx').on(table.performedBy),
   })
 );
 

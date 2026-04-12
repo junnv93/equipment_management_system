@@ -42,7 +42,7 @@
     "connections": "Connections",
     "connectionsCreated": "Connections Created",
     "connectionErrors": "Connection Errors",
-    "queriesExecuted": "Queries Executed",
+    "connectionsAcquired": "Connections Acquired",
     "queriesFailed": "Queries Failed",
     "avgQueryTime": "Avg Query Time"
   },

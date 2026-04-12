@@ -73,8 +73,8 @@ export const calibrationFactors = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }), // 요청자 ID (시험실무자)
     approvedBy: uuid('approved_by').references(() => users.id, {
-      onDelete: 'set null',
-    }), // 승인자 ID (기술책임자)
+      onDelete: 'restrict',
+    }), // 승인자 ID (기술책임자) — 감사 추적 영구 보존
     requestedAt: timestamp('requested_at').defaultNow().notNull(), // 요청 시각
     approvedAt: timestamp('approved_at'), // 승인 시각
     approverComment: text('approver_comment'), // 승인/반려 시 코멘트

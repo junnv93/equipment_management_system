@@ -621,9 +621,9 @@ function DatabaseStatusSection({ data }: { data: MonitoringStatus }) {
 
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>
-            <p className="text-xs text-muted-foreground">{t('db.queriesExecuted')}</p>
+            <p className="text-xs text-muted-foreground">{t('db.connectionsAcquired')}</p>
             <p className={`text-lg font-bold ${FONT.kpi}`}>
-              {db.metrics.queriesExecuted.toLocaleString()}
+              {db.metrics.connectionsAcquired.toLocaleString()}
             </p>
           </div>
           <div className={`rounded-md border p-3 text-center ${ELEVATION_TOKENS.shadow.subtle}`}>

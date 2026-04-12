@@ -29,6 +29,7 @@ export const equipmentLocationHistory = pgTable(
       table.equipmentId,
       table.changedAt
     ),
+    changedByIdx: index('equipment_location_history_changed_by_idx').on(table.changedBy),
   })
 );
 

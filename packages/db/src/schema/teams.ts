@@ -34,6 +34,7 @@ export const teams = pgTable(
     siteIdx: index('teams_site_idx').on(table.site),
     // 분류별 팀 조회 최적화 (신규)
     classificationIdx: index('teams_classification_idx').on(table.classification),
+    leaderIdIdx: index('teams_leader_id_idx').on(table.leaderId),
   })
 );
 
