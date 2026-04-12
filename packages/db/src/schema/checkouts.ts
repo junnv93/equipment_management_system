@@ -105,6 +105,14 @@ export const checkouts = pgTable(
     ),
     // 대여 시 빌려주는 팀 조회 최적화
     lenderTeamIdIdx: index('checkouts_lender_team_id_idx').on(table.lenderTeamId),
+    // FK 인덱스: 승인자별 승인 대기 목록 필터 최적화 (checkouts.service.ts WHERE approverId)
+    approverIdx: index('checkouts_approver_id_idx').on(table.approverId),
+    // FK 인덱스: 반입 처리자별 조회
+    returnerIdx: index('checkouts_returner_id_idx').on(table.returnerId),
+    // FK 인덱스: 반입 최종 승인자별 조회
+    returnApprovedByIdx: index('checkouts_return_approved_by_idx').on(table.returnApprovedBy),
+    // FK 인덱스: 시험소간 대여 빌려준 측 확인자별 조회
+    lenderConfirmedByIdx: index('checkouts_lender_confirmed_by_idx').on(table.lenderConfirmedBy),
   })
 );
 
