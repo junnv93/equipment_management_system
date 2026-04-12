@@ -159,11 +159,26 @@ export class EquipmentService extends VersionedBaseService {
   }
 
   /**
+   * 스코프(global vs team)를 구조적 suffix 로 인코딩하는 캐시 키 접미사 목록.
+   *
+   * 불변식: 이 집합에 속한 suffix 의 키는 `<prefix><suffix>:g:<jsonParams>` 또는
+   * `<prefix><suffix>:t:<teamId>:<jsonParams>` 형태를 가진다. JSON params 에는
+   * `teamId` 가 포함되지 않는다 (구조적 segment 로 이미 인코딩됨).
+   *
+   * 이 불변식 덕에 `invalidateCache` 가 `deleteByPrefix` 만으로 정확한 스코프
+   * 단위 무효화를 수행할 수 있다 — JSON 직렬화 infix 에 대한 정규식 매칭 불필요.
+   */
+  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'count', 'statusCounts', 'team']);
+
+  /**
    * 캐시 키 생성 헬퍼 메서드
    *
    * Best Practice: 순환 참조 방지 + 결정론적 키 생성
    * - Object.keys().sort()로 키 순서 보장
    * - 정규화된 파라미터만 포함하여 불필요한 캐시 미스 방지
+   *
+   * 스코프 인식: SCOPE_AWARE_SUFFIXES 에 속한 suffix 는 params.teamId 를 구조적
+   * segment(`:t:<id>:` | `:g:`)로 이동시킨다. 호출자는 변경 없음 — 내부에서 자동 변환.
    */
   private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
     const baseKey = `${this.CACHE_PREFIX}${suffix}`;
@@ -171,8 +186,20 @@ export class EquipmentService extends VersionedBaseService {
       return baseKey;
     }
 
-    // 정규화된 파라미터로 결정론적 키 생성
+    // 정규화된 파라미터로 결정론적 키 생성 (empty/null 제거)
     const normalizedParams = this.normalizeCacheParams(params);
+
+    // 스코프 인식 suffix 의 경우 teamId 를 구조적 segment 로 추출
+    let scopeSegment = '';
+    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
+      const teamIdValue = normalizedParams.teamId;
+      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
+        scopeSegment = `:t:${teamIdValue}`;
+        delete normalizedParams.teamId;
+      } else {
+        scopeSegment = ':g';
+      }
+    }
 
     // 키 순서를 보장하기 위해 정렬
     const sortedParams = Object.keys(normalizedParams)
@@ -186,7 +213,7 @@ export class EquipmentService extends VersionedBaseService {
       );
 
     const safeParams = JSON.stringify(sortedParams);
-    return `${baseKey}:${safeParams}`;
+    return `${baseKey}${scopeSegment}:${safeParams}`;
   }
 
   /**
@@ -1360,11 +1387,16 @@ export class EquipmentService extends VersionedBaseService {
   /**
    * 캐시 무효화 헬퍼 메서드
    *
+   * 설계: 스코프(global vs team)는 `buildCacheKey` 에 의해 캐시 키의 **구조적
+   * segment** (`:g:` / `:t:<teamId>:`)로 인코딩된다. 따라서 정확한 스코프 단위
+   * 무효화를 `deleteByPrefix` 만으로 수행 가능 — 정규식 매칭/negative lookahead/
+   * JSON-infix 매칭 불필요.
+   *
    * @param equipmentId - 특정 장비 ID (detail 캐시 무효화)
    * @param teamId - 영향받는 팀 ID (선택적 무효화)
    */
   private async invalidateCache(equipmentId?: string, teamId?: string): Promise<void> {
-    // 개별 장비 detail 캐시 무효화
+    // 개별 장비 detail 캐시 무효화 (key shape 불변 — buildCacheKey compound key)
     if (equipmentId) {
       await this.cacheService.delete(this.buildCacheKey('detail', { uuid: equipmentId }));
       await this.cacheService.delete(
@@ -1373,18 +1405,22 @@ export class EquipmentService extends VersionedBaseService {
     }
 
     if (teamId) {
-      // 선택적 무효화: 해당 팀 관련 목록 캐시만 삭제
-      await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}.*"teamId":"${teamId}".*`);
-      // 팀 전용 캐시 삭제
-      await this.cacheService.delete(this.buildCacheKey('team', { teamId }));
+      // 팀 스코프: 해당 팀에 속한 list/count/statusCounts/team 캐시 전부 무효화.
+      // 키 shape: `equipment:<suffix>:t:<teamId>:<jsonParams>` → prefix 매칭으로 정확 커버
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:t:${teamId}:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:t:${teamId}:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}statusCounts:t:${teamId}:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}team:t:${teamId}:`);
     }
 
-    // 전체 집계/필터 없는 캐시는 항상 무효화 (calibration, all-ids 등)
-    await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}(calibration|all-ids)`);
-    // 팀 필터링이 없는 전체 목록/카운트도 무효화
-    await this.cacheService.deleteByPattern(
-      `${this.CACHE_PREFIX}(list|count|statusCounts):(?!.*teamId)`
-    );
+    // 글로벌 스코프: 팀 필터가 없는 목록/카운트/상태카운트 전부 무효화
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:g:`);
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:g:`);
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}statusCounts:g:`);
+
+    // 대시보드-수준 집계: calibration 만기 조회 캐시 + all-ids 단일 키
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}calibration:`);
+    this.cacheService.delete(this.buildCacheKey('all-ids'));
 
     // 대시보드 + 승인 카운트 교차 무효화
     await this.cacheInvalidationHelper.invalidateAllDashboard();

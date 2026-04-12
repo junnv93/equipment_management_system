@@ -140,7 +140,7 @@ describe('EquipmentService', () => {
       expect(result.name).toBe(createDto.name);
       expect(result.managementNumber).toBe(createDto.managementNumber);
       expect(mockDb.query.equipment.findFirst).toHaveBeenCalled();
-      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
+      expect(mockCacheService.deleteByPrefix).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when management number already exists', async () => {
@@ -301,7 +301,7 @@ describe('EquipmentService', () => {
       expect(result).toBeDefined();
       expect(result.name).toBe(updateDto.name);
       expect(result.location).toBe(updateDto.location);
-      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
+      expect(mockCacheService.deleteByPrefix).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when updating non-existent equipment', async () => {
@@ -332,7 +332,7 @@ describe('EquipmentService', () => {
 
       // Assert
       expect(result.isActive).toBe(false);
-      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
+      expect(mockCacheService.deleteByPrefix).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when removing non-existent equipment', async () => {
