@@ -71,6 +71,9 @@
 | disposal_requests UUID LIKE | `id NOT LIKE 'dddd%'` → `id::text NOT LIKE 'dddd%'` 캐스팅 필수. UUID 타입에 LIKE 연산자 사용 불가. | 2026-03-24 |
 | 장비 등록 위자드 구조 | 4단계 위자드 (기본→상태·위치→교정→이력·첨부). 파일 첨부는 Step3(인덱스). 수정 모드는 3단계(Step2에 첨부 합체). 각 스텝 필수 필드: Step0만 name/site/teamId. | 2026-03-26 |
 | 교정 등록 성적서번호 | certificateNumber는 교정이력 테이블 컬럼에 표시되지 않음. 기관명과 "성적서 다운로드" 버튼으로 검증. | 2026-03-26 |
+| intermediateInspectionItems Zod | `judgment` / `checkResult` 는 optional — 빈 문자열 전송 시 `expected one of "pass"\|"fail"` 400. draft 생성 시 필드 자체를 **생략**해야 함 (`'' as const` ❌). | 2026-04-12 |
+| 같은 파일 내 describe 병렬 | Playwright `fullyParallel: true` 는 한 파일의 describe 블록들도 병렬 실행. 세 describe 가 같은 calibration 에 seed/teardown 하면 afterAll 이 다음 beforeAll 을 파괴. **파일 최상단에 `test.describe.configure({ mode: 'serial' })`** 로 강제. | 2026-04-12 |
+| InspectionFormDialog 셀렉터 | 체크박스: `dialog.getByLabel('직전 승인된 중간점검에서 항목·결과 섹션 불러오기')` — shadcn Checkbox 는 button[role=checkbox] 이지만 label htmlFor 로 연결되어 있어 getByLabel 매칭 성공. items 는 `dialog.locator('input[value="..."]')` 로 검증. | 2026-04-12 |
 
 ---
 
