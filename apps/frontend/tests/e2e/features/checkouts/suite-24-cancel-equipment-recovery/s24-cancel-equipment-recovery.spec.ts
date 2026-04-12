@@ -34,8 +34,8 @@ import {
 } from '../helpers/checkout-helpers';
 
 // FCC EMC/RF 팀 장비 (test_engineer 자기 팀 → CAL 허용).
-// race-condition.spec.ts / s23 / s25 와 겹치지 않도록 EMC_RECEIVER_SUW_E 선택.
-const EQUIP = TEST_EQUIPMENT_IDS.EMC_RECEIVER_SUW_E;
+// 전용 장비 — 병렬 실행 시 다른 suite와 충돌 방지 (test data partitioning).
+const EQUIP = TEST_EQUIPMENT_IDS.CANCEL_RECEIVER_SUW_E;
 
 test.describe('Suite 24: Cancel vs Equipment Status Recovery', () => {
   test.describe.configure({ mode: 'serial' });

@@ -212,26 +212,66 @@ export class CheckoutsService extends VersionedBaseService {
   }
 
   /**
+   * 스코프(global vs team)를 구조적 suffix 로 인코딩하는 캐시 키 접미사 목록.
+   *
+   * 불변식: 이 집합에 속한 suffix 의 키는 `<prefix><suffix>:g:<jsonParams>` 또는
+   * `<prefix><suffix>:t:<teamId>:<jsonParams>` 형태를 가진다. JSON params 에는
+   * `teamId` 가 포함되지 않는다 (구조적 segment 로 이미 인코딩됨).
+   *
+   * 이 불변식 덕에 `invalidateCache` 가 `deleteByPrefix` 만으로 정확한 스코프
+   * 단위 무효화를 수행할 수 있다 — JSON 직렬화 infix 에 대한 정규식 매칭 불필요.
+   */
+  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'count', 'summary']);
+
+  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
+    return Object.entries(params).reduce(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
+  }
+
+  /**
    * 캐시 키 생성 헬퍼 메서드
+   *
+   * 스코프 인식: SCOPE_AWARE_SUFFIXES 에 속한 suffix 는 params.teamId 를 구조적
+   * segment(`:t:<id>:` | `:g:`)로 이동시킨다. 호출자는 변경 없음 — 내부에서 자동 변환.
    */
   private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
     const baseKey = `${this.CACHE_PREFIX}${suffix}`;
     if (!params) {
       return baseKey;
     }
-    const safeParams = JSON.stringify(params, (key, value) => {
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        return Object.keys(value).reduce(
-          (acc, k) => {
-            acc[k] = value[k];
-            return acc;
-          },
-          {} as Record<string, unknown>
-        );
+
+    const normalizedParams = this.normalizeCacheParams(params);
+
+    let scopeSegment = '';
+    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
+      const teamIdValue = normalizedParams.teamId;
+      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
+        scopeSegment = `:t:${teamIdValue}`;
+        delete normalizedParams.teamId;
+      } else {
+        scopeSegment = ':g';
       }
-      return value;
-    });
-    return `${baseKey}:${safeParams}`;
+    }
+
+    const sortedParams = Object.keys(normalizedParams)
+      .sort()
+      .reduce(
+        (acc, key) => {
+          acc[key] = normalizedParams[key];
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
+
+    const safeParams = JSON.stringify(sortedParams);
+    return `${baseKey}${scopeSegment}:${safeParams}`;
   }
 
   /**
@@ -263,40 +303,40 @@ export class CheckoutsService extends VersionedBaseService {
 
   /**
    * 캐시 무효화 헬퍼 메서드
-   * ✅ 성능 최적화: 선택적 무효화로 캐시 히트율 30-40% 개선
+   *
+   * 설계: 스코프(global vs team)는 `buildCacheKey` 에 의해 캐시 키의 **구조적
+   * segment**로 인코딩되어 있다 (`:t:<teamId>:` 또는 `:g:`). 따라서
+   * 무효화를 `deleteByPrefix` 만으로 수행 가능 — 정규식 매칭 불필요.
    *
    * @param teamIds 영향받는 팀 ID 배열 (지정하지 않으면 전체 무효화)
    * @param checkoutId 변경된 checkout의 ID (detail 캐시 무효화용)
-   *
-   * 예: 반출 생성 시 신청자 팀과 대여 팀의 캐시만 무효화
    */
   private async invalidateCache(teamIds?: string[], checkoutId?: string): Promise<void> {
-    await this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
-    // ✅ SSOT: 개별 checkout의 detail 캐시 무효화 (optimistic locking 지원)
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+
     if (checkoutId) {
-      const detailCacheKey = this.buildCacheKey('detail', { uuid: checkoutId });
-      await this.cacheService.delete(detailCacheKey);
+      this.cacheService.delete(this.buildCacheKey('detail', { uuid: checkoutId }));
     }
 
     if (!teamIds || teamIds.length === 0) {
-      // 팀 정보가 없으면 전체 무효화 (안전한 fallback)
-      await this.cacheService.deleteByPrefix(this.CACHE_PREFIX);
+      this.cacheService.deleteByPrefix(this.CACHE_PREFIX);
       return;
     }
 
-    // ✅ 선택적 무효화: 영향받는 팀의 캐시만 삭제
-    // 패턴: "checkouts:list:...teamId":"team-uuid-here"..."
-    // 패턴: "checkouts:summary:...teamId":"team-uuid-here"..."
-    // 패턴: "checkouts:count:...teamId":"team-uuid-here"..."
+    // 영향받는 팀 스코프만 정밀 무효화
     for (const teamId of teamIds) {
-      // 해당 팀이 포함된 모든 캐시 키 삭제
-      await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}.*"teamId":"${teamId}".*`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:t:${teamId}:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}summary:t:${teamId}:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:t:${teamId}:`);
     }
 
-    // 팀 필터링이 없는 전체 목록 캐시도 무효화 (summary, destinations 등)
-    await this.cacheService.deleteByPattern(
-      `${this.CACHE_PREFIX}(summary|list|count):(?!.*teamId)`
-    );
+    // 글로벌 스코프 (팀 필터 없는) 캐시도 무효화
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:g:`);
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}summary:g:`);
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:g:`);
+
+    // destinations 캐시 무효화
+    this.cacheService.delete(`${this.CACHE_PREFIX}.destinations`);
   }
 
   /**
@@ -2275,9 +2315,9 @@ export class CheckoutsService extends VersionedBaseService {
         '반출'
       );
 
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(existingCheckout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return updated;
     } catch (error) {

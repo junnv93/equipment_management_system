@@ -40,10 +40,10 @@ import {
 } from '../helpers/checkout-helpers';
 
 // 공용장비 (isShared=true) 풀 — shared-test-data.ts SSOT.
-// NETWORK_ANALYZER_SUW_E (eeee1003): FCC_EMC_RF_SUWON, suwon, is_shared=true, available — 주 대상
-// RECEIVER_UIW_W (eeee5001): Uiwang site, is_shared=true ("RF 수신기 (공용)") — cross-site filter 케이스
-// (TRANSMITTER_UIW_W 는 is_shared=false 라 제외 — shared-test-data.ts:44 주석이 상태만 표기)
-const PRIMARY_SHARED = TEST_EQUIPMENT_IDS.NETWORK_ANALYZER_SUW_E;
+// 전용 공용장비 — 병렬 실행 시 다른 suite와 충돌 방지 (test data partitioning).
+// SHARED_ANALYZER_SUW_E (eeee100c): FCC_EMC_RF_SUWON, suwon, is_shared=true, available — S26 전용
+// RECEIVER_UIW_W (eeee5001): Uiwang site, is_shared=true — cross-site filter 케이스 (read-only)
+const PRIMARY_SHARED = TEST_EQUIPMENT_IDS.SHARED_ANALYZER_SUW_E;
 const UIWANG_SHARED_REF = TEST_EQUIPMENT_IDS.RECEIVER_UIW_W;
 // 비공용 reference — S26-01 negative assertion 용
 const NON_SHARED = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;

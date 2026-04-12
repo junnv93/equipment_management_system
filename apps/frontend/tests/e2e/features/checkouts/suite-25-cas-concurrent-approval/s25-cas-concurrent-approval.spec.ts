@@ -35,8 +35,8 @@ const VERSION_CONFLICT_CODE = ErrorCode.VersionConflict;
 const IMPORT_STATUS_CANCELED = CSVal.CANCELED;
 
 // FCC EMC/RF 팀 장비 (test_engineer 자기 팀 → CAL 허용).
-// s23/s24/race-condition 과 겹치지 않도록 SPECTRUM_ANALYZER_SUW_E 선택.
-const EQUIP = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;
+// 전용 장비 — 병렬 실행 시 다른 suite와 충돌 방지 (test data partitioning).
+const EQUIP = TEST_EQUIPMENT_IDS.CAS_ANALYZER_SUW_E;
 
 test.describe('Suite 25: CAS Concurrent Approval', () => {
   test.describe.configure({ mode: 'serial' });

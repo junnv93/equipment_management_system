@@ -1,6 +1,6 @@
 /**
  * Equipment seed data
- * 32 equipment items distributed across:
+ * 36 equipment items distributed across:
  * - 8 status values (each with 2+ items)
  * - 6 classification codes (E, R, W, S, A, P)
  * - 3 sites (Suwon, Uiwang, Pyeongtaek)
@@ -32,6 +32,10 @@ import {
   EQUIP_FILTER_SUW_E_ID,
   EQUIP_ANTENNA_1_SUW_E_ID,
   EQUIP_COUPLER_SUW_E_ID,
+  EQUIP_RBAC_SIGNAL_GEN_SUW_E_ID,
+  EQUIP_CANCEL_RECEIVER_SUW_E_ID,
+  EQUIP_CAS_ANALYZER_SUW_E_ID,
+  EQUIP_SHARED_ANALYZER_SUW_E_ID,
   EQUIP_OSCILLOSCOPE_SUW_R_ID,
   EQUIP_POWER_SUPPLY_SUW_R_ID,
   EQUIP_MULTIMETER_SUW_R_ID,
@@ -109,7 +113,7 @@ function createEquipment(
 
 export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
   // =========================================================================
-  // Suwon FCC EMC/RF (E) - 8 equipment
+  // Suwon FCC EMC/RF (E) - 12 equipment (8 general + 4 dedicated E2E S23-S26)
   // Status distribution: available(4), non_conforming(2), spare(1), checked_out(1)
   // =========================================================================
 
@@ -235,6 +239,62 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'external_calibration',
     monthsAgo(15),
     daysAgo(45)
+  ),
+
+  // --- Dedicated E2E Checkout Suite Equipment (S23-S26) ---
+  // 병렬 실행 시 장비 상태 충돌 방지를 위한 전용 장비
+
+  // S23: Cross-Site RBAC (available)
+  createEquipment(
+    EQUIP_RBAC_SIGNAL_GEN_SUW_E_ID,
+    'RBAC 신호 발생기 (S23 전용)',
+    'SUW-E0009',
+    TEAM_FCC_EMC_RF_SUWON_ID,
+    'suwon',
+    'available',
+    'external_calibration',
+    monthsAgo(6),
+    daysLater(180)
+  ),
+
+  // S24: Cancel & Equipment Recovery (available)
+  createEquipment(
+    EQUIP_CANCEL_RECEIVER_SUW_E_ID,
+    'Cancel EMC 수신기 (S24 전용)',
+    'SUW-E0010',
+    TEAM_FCC_EMC_RF_SUWON_ID,
+    'suwon',
+    'available',
+    'external_calibration',
+    monthsAgo(6),
+    daysLater(180)
+  ),
+
+  // S25: CAS Concurrent Approval (available)
+  createEquipment(
+    EQUIP_CAS_ANALYZER_SUW_E_ID,
+    'CAS 스펙트럼 분석기 (S25 전용)',
+    'SUW-E0011',
+    TEAM_FCC_EMC_RF_SUWON_ID,
+    'suwon',
+    'available',
+    'external_calibration',
+    monthsAgo(6),
+    daysLater(180)
+  ),
+
+  // S26: Shared Equipment Workflow (available, isShared)
+  createEquipment(
+    EQUIP_SHARED_ANALYZER_SUW_E_ID,
+    '공용 네트워크 분석기 (S26 전용)',
+    'SUW-E0012',
+    TEAM_FCC_EMC_RF_SUWON_ID,
+    'suwon',
+    'available',
+    'external_calibration',
+    monthsAgo(6),
+    daysLater(180),
+    { isShared: true, sharedSource: 'other_lab' }
   ),
 
   // =========================================================================

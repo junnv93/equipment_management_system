@@ -38,7 +38,7 @@ import {
 // 전용 장비 — FCC EMC/RF 팀(Suwon) 소유.
 // RENTAL 은 requester 팀 ≠ lender 팀이어야 하므로 RENTAL 케이스의 requester 는
 // 의도적으로 General EMC TE 로 잡는다. CAL 회귀 케이스(S23-05)만 자기팀(FCC) TE 사용.
-const RBAC_EQUIP = TEST_EQUIPMENT_IDS.SIGNAL_GEN_SUW_E;
+const RBAC_EQUIP = TEST_EQUIPMENT_IDS.RBAC_SIGNAL_GEN_SUW_E;
 
 test.describe('Suite 23: Cross-Site / Cross-Team RBAC', () => {
   test.describe.configure({ mode: 'serial' });

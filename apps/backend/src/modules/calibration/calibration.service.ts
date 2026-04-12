@@ -5,7 +5,7 @@ import {
   createVersionConflictException,
 } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CACHE_KEY_PREFIXES, buildStableCacheKey } from '../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
@@ -671,11 +671,26 @@ export class CalibrationService extends VersionedBaseService {
       calibrationDueStatus,
     } = query;
 
-    // ✅ 캐시 키: 필터 파라미터 전체를 직렬화
-    const cacheKey = this.buildCacheKey(
-      'list',
-      `${equipmentId ?? ''}_${calibrationManagerId ?? ''}_${statuses ?? ''}_${calibrationAgency ?? ''}_${fromDate ?? ''}_${toDate ?? ''}_${nextFromDate ?? ''}_${nextToDate ?? ''}_${isPassed ?? ''}_${search ?? ''}_${sort}_${page}_${pageSize}_${approvalStatus ?? ''}_${teamId ?? ''}_${site ?? ''}_${calibrationDueStatus ?? ''}`
-    );
+    // ✅ 결정론적 캐시 키: buildStableCacheKey가 키 정렬 + null/undefined 자동 제거
+    const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.CALIBRATION, 'list', {
+      equipmentId,
+      calibrationManagerId,
+      statuses,
+      calibrationAgency,
+      fromDate,
+      toDate,
+      nextFromDate,
+      nextToDate,
+      isPassed,
+      search,
+      sort,
+      page,
+      pageSize,
+      approvalStatus,
+      teamId,
+      site,
+      calibrationDueStatus,
+    });
 
     return this.cacheService.getOrSet(cacheKey, () => this.findAllInternal(query), CACHE_TTL.SHORT);
   }

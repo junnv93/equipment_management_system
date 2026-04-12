@@ -26,6 +26,12 @@ export const TEST_EQUIPMENT_IDS = {
   ANTENNA_1_SUW_E: 'eeee1007-0007-4007-8007-000000000007', // checked_out
   COUPLER_SUW_E: 'eeee1008-0008-4008-8008-000000000008', // calibration_overdue
 
+  // Suwon FCC EMC/RF (E) — Dedicated E2E checkout suite equipment
+  RBAC_SIGNAL_GEN_SUW_E: 'eeee1009-0009-4009-8009-000000000009', // S23: available
+  CANCEL_RECEIVER_SUW_E: 'eeee100a-000a-400a-800a-00000000000a', // S24: available
+  CAS_ANALYZER_SUW_E: 'eeee100b-000b-400b-800b-00000000000b', // S25: available
+  SHARED_ANALYZER_SUW_E: 'eeee100c-000c-400c-800c-00000000000c', // S26: available, isShared
+
   // Suwon (General EMC - R)
   OSCILLOSCOPE_SUW_R: 'eeee2001-0001-4001-8001-000000000001', // available (overdue)
   POWER_SUPPLY_SUW_R: 'eeee2002-0002-4002-8002-000000000002', // available (due soon)
