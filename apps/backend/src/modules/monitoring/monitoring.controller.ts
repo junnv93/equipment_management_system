@@ -4,6 +4,13 @@ import { SKIP_ALL_THROTTLES } from '../../common/config/throttle.constants';
 import { Public } from '../auth/decorators/public.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
+import type {
+  SystemMetrics,
+  SystemDiagnostics,
+  HealthStatus,
+  HttpStats,
+  CacheStats,
+} from '@equipment-management/schemas';
 import { MonitoringService } from './monitoring.service';
 import { ClientErrorDto, ClientErrorPipe } from './dto/client-error.dto';
 
@@ -51,24 +58,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('metrics')
-  getMetrics(): {
-    hostname: string;
-    platform: NodeJS.Platform;
-    arch: string;
-    release: string;
-    nodeVersion: string;
-    nodeEnv: string | undefined;
-    cpu: { usage: number; loadAvg: number[] };
-    memory: { total: number; free: number; used: number; percentage: number };
-    uptime: number;
-    network: {
-      requestsPerMinute: number;
-      errorRate: number;
-      avgResponseTime: number;
-      isSimulated: boolean;
-    };
-    storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
-  } {
+  getMetrics(): SystemMetrics {
     return this.monitoringService.getSystemMetrics();
   }
 
@@ -78,65 +68,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('diagnostics')
-  getDiagnostics(): {
-    system: {
-      hostname: string;
-      platform: NodeJS.Platform;
-      arch: string;
-      release: string;
-      nodeVersion: string;
-      nodeEnv: string | undefined;
-      cpu: { usage: number; loadAvg: number[] };
-      memory: { total: number; free: number; used: number; percentage: number };
-      uptime: number;
-      network: {
-        requestsPerMinute: number;
-        errorRate: number;
-        avgResponseTime: number;
-        isSimulated: boolean;
-      };
-      storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
-    };
-    database: {
-      isSimulated: boolean;
-      status: string;
-      version: string;
-      connections: { active: number; idle: number; max: number };
-      metrics: {
-        connectionsCreated: number;
-        connectionErrors: number;
-        queriesExecuted: number;
-        queriesFailed: number;
-        avgQueryTime: number;
-        slowQueries: number;
-        queryCacheHitRate: number;
-        indexUsage: number;
-        deadlocks: number;
-        lockWaitTime: number;
-      };
-      tablesInfo: { name: string; rowCount: number; size: string }[];
-      replicationLag: number;
-    };
-    http: {
-      totalRequests: number;
-      successRequests: number;
-      errorRequests: number;
-      errorRate: number;
-      topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-    };
-    timestamp: string;
-    env: string | undefined;
-    logging: {
-      counts: { error: number; warn: number; info: number; debug: number; verbose: number };
-      lastErrors: never[];
-    };
-    performance: {
-      isSimulated: boolean;
-      responseTime: { avg: number; p95: number; p99: number };
-      throughput: number;
-    };
-    cache: { hits: number; misses: number; hitRate: number; size: number; maxSize: number };
-  } {
+  getDiagnostics(): SystemDiagnostics {
     return this.monitoringService.getDiagnostics();
   }
 
@@ -146,36 +78,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('status')
-  getStatus(): {
-    status: string;
-    timestamp: string;
-    services: {
-      database: {
-        status: string;
-        isSimulated: boolean;
-        metrics: {
-          connectionsCreated: number;
-          connectionErrors: number;
-          queriesExecuted: number;
-          queriesFailed: number;
-          avgQueryTime: number;
-        };
-      };
-      system: {
-        status: string;
-        uptime: string;
-        cpu: { usage: string; status: string };
-        memory: { usage: string; status: string };
-      };
-      api: { status: string; totalRequests: number; errorRate: string };
-      logging: {
-        status: string;
-        counts: { error: number; warn: number; info: number; debug: number; verbose: number };
-      };
-      cache: { status: string; hitRate: number };
-    };
-    lastChecked: string;
-  } {
+  getStatus(): HealthStatus {
     return this.monitoringService.getHealthStatus();
   }
 
@@ -185,13 +88,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('http-stats')
-  getHttpStats(): {
-    totalRequests: number;
-    successRequests: number;
-    errorRequests: number;
-    errorRate: number;
-    topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-  } {
+  getHttpStats(): HttpStats {
     return this.monitoringService.getHttpStats();
   }
 
@@ -201,13 +98,7 @@ export class MonitoringController {
    */
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('cache-stats')
-  getCacheStats(): {
-    hits: number;
-    misses: number;
-    hitRate: number;
-    size: number;
-    maxSize: number;
-  } {
+  getCacheStats(): CacheStats {
     return this.monitoringService.getCacheStats();
   }
 }

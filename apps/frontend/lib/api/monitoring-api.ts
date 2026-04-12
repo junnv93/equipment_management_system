@@ -1,105 +1,48 @@
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import type {
+  SystemMetrics,
+  SystemDiagnostics,
+  HealthStatus,
+  HttpStats,
+  CacheStats,
+} from '@equipment-management/schemas';
 import { transformSingleResponse } from './utils/response-transformers';
 
 // ============================================================================
-// 응답 타입 (monitoring.controller.ts 반환 타입 기준)
+// 응답 타입 별칭 — SSOT 는 @equipment-management/schemas
+// 기존 호출처 호환성을 위해 MonitoringXxx 별칭 유지. 신규 코드는 SSOT 이름을 직접 사용 권장.
 // ============================================================================
 
-export interface MonitoringMetrics {
-  hostname: string;
-  platform: NodeJS.Platform;
-  arch: string;
-  release: string;
-  nodeVersion: string;
-  nodeEnv: string | undefined;
-  cpu: { usage: number; loadAvg: number[] };
-  memory: { total: number; free: number; used: number; percentage: number };
-  uptime: number;
-  network: {
-    requestsPerMinute: number;
-    errorRate: number;
-    avgResponseTime: number;
-    isSimulated: boolean;
-  };
-  storage: {
-    diskUsage: number;
-    diskFree: number;
-    diskTotal: number;
-    isSimulated: boolean;
-  };
-}
-
-export interface MonitoringStatus {
-  status: string;
-  timestamp: string;
-  services: {
-    database: {
-      status: string;
-      isSimulated: boolean;
-      metrics: {
-        connectionsCreated: number;
-        connectionErrors: number;
-        queriesExecuted: number;
-        queriesFailed: number;
-        avgQueryTime: number;
-      };
-    };
-    system: {
-      status: string;
-      uptime: string;
-      cpu: { usage: string; status: string };
-      memory: { usage: string; status: string };
-    };
-    api: { status: string; totalRequests: number; errorRate: string };
-    logging: {
-      status: string;
-      counts: { error: number; warn: number; info: number; debug: number; verbose: number };
-    };
-    cache: { status: string; hitRate: number };
-  };
-  lastChecked: string;
-}
-
-export interface MonitoringHttpStats {
-  totalRequests: number;
-  successRequests: number;
-  errorRequests: number;
-  errorRate: number;
-  topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-}
-
-export interface MonitoringCacheStats {
-  hits: number;
-  misses: number;
-  hitRate: number;
-  size: number;
-  maxSize: number;
-}
+export type MonitoringMetrics = SystemMetrics;
+export type MonitoringDiagnostics = SystemDiagnostics;
+export type MonitoringStatus = HealthStatus;
+export type MonitoringHttpStats = HttpStats;
+export type MonitoringCacheStats = CacheStats;
 
 // ============================================================================
 // API Client
 // ============================================================================
 
 class MonitoringApi {
-  async getMetrics(): Promise<MonitoringMetrics> {
+  async getMetrics(): Promise<SystemMetrics> {
     const response = await apiClient.get(API_ENDPOINTS.MONITORING.METRICS);
-    return transformSingleResponse<MonitoringMetrics>(response);
+    return transformSingleResponse<SystemMetrics>(response);
   }
 
-  async getStatus(): Promise<MonitoringStatus> {
+  async getStatus(): Promise<HealthStatus> {
     const response = await apiClient.get(API_ENDPOINTS.MONITORING.STATUS);
-    return transformSingleResponse<MonitoringStatus>(response);
+    return transformSingleResponse<HealthStatus>(response);
   }
 
-  async getHttpStats(): Promise<MonitoringHttpStats> {
+  async getHttpStats(): Promise<HttpStats> {
     const response = await apiClient.get(API_ENDPOINTS.MONITORING.HTTP_STATS);
-    return transformSingleResponse<MonitoringHttpStats>(response);
+    return transformSingleResponse<HttpStats>(response);
   }
 
-  async getCacheStats(): Promise<MonitoringCacheStats> {
+  async getCacheStats(): Promise<CacheStats> {
     const response = await apiClient.get(API_ENDPOINTS.MONITORING.CACHE_STATS);
-    return transformSingleResponse<MonitoringCacheStats>(response);
+    return transformSingleResponse<CacheStats>(response);
   }
 }
 

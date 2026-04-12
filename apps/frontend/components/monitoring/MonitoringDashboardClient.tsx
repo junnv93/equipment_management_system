@@ -58,7 +58,14 @@ function formatUptime(seconds: number): string {
   return `${minutes}m`;
 }
 
-function formatMs(ms: number): string {
+/**
+ * ms 단위 시간 포맷터.
+ *
+ * `null` 입력은 "미측정" 으로 해석하여 em-dash 를 반환한다 — pg Pool 레벨에서
+ * 측정 불가한 DB 메트릭(avgQueryTime 등)이 프론트엔드에 nullable 로 노출됨.
+ */
+function formatMs(ms: number | null): string {
+  if (ms === null) return '—';
   if (ms < 1) return `${(ms * 1000).toFixed(0)}µs`;
   if (ms < 1000) return `${ms.toFixed(1)}ms`;
   return `${(ms / 1000).toFixed(2)}s`;

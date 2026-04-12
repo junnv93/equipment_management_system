@@ -10,6 +10,14 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { DrizzleService } from '../../database/drizzle.module';
 import { getErrorStack } from '../../common/utils/error';
 import { MONITORING_THRESHOLDS, UUID_PATTERN_SOURCE } from '@equipment-management/shared-constants';
+import type {
+  DatabaseDiagnostics,
+  HealthStatus,
+  HttpStats,
+  CacheStats,
+  SystemDiagnostics,
+  SystemMetrics,
+} from '@equipment-management/schemas';
 import { ClientErrorDto } from './dto/client-error.dto';
 
 const execFileAsync = promisify(execFile);
@@ -219,24 +227,7 @@ export class MonitoringService implements OnModuleDestroy {
   /**
    * 시스템 메트릭 조회
    */
-  getSystemMetrics(): {
-    hostname: string;
-    platform: NodeJS.Platform;
-    arch: string;
-    release: string;
-    nodeVersion: string;
-    nodeEnv: string | undefined;
-    cpu: { usage: number; loadAvg: number[] };
-    memory: { total: number; free: number; used: number; percentage: number };
-    uptime: number;
-    network: {
-      requestsPerMinute: number;
-      errorRate: number;
-      avgResponseTime: number;
-      isSimulated: boolean;
-    };
-    storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
-  } {
+  getSystemMetrics(): SystemMetrics {
     this.logger.log('시스템 메트릭 조회');
     const storageIsSimulated = this.metrics.storage.diskTotal === 0;
     return {
@@ -255,13 +246,7 @@ export class MonitoringService implements OnModuleDestroy {
   /**
    * HTTP 요청 통계 조회
    */
-  getHttpStats(): {
-    totalRequests: number;
-    successRequests: number;
-    errorRequests: number;
-    errorRate: number;
-    topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-  } {
+  getHttpStats(): HttpStats {
     // 엔드포인트별 평균 응답 시간 계산
     const avgResponseTimes = new Map<string, number>();
     this.httpStats.responseTimeByEndpoint.forEach((times, endpoint) => {
@@ -296,39 +281,18 @@ export class MonitoringService implements OnModuleDestroy {
   /**
    * 캐시 통계 조회 (SimpleCacheService 위임)
    */
-  getCacheStats(): {
-    hits: number;
-    misses: number;
-    hitRate: number;
-    size: number;
-    maxSize: number;
-  } {
+  getCacheStats(): CacheStats {
     return this.cacheService.getCacheStats();
   }
 
   /**
    * 데이터베이스 진단 정보 조회
+   *
+   * 미측정 필드(`avgQueryTime`, `slowQueries`, `queryCacheHitRate`, `indexUsage`,
+   * `deadlocks`, `lockWaitTime`, `replicationLag`) 는 `null` 로 반환.
+   * pg Pool 레벨에서는 측정 불가 — `pg_stat_statements` 등 확장 필요.
    */
-  getDatabaseDiagnostics(): {
-    isSimulated: boolean;
-    status: string;
-    version: string;
-    connections: { active: number; idle: number; max: number };
-    metrics: {
-      connectionsCreated: number;
-      connectionErrors: number;
-      queriesExecuted: number;
-      queriesFailed: number;
-      avgQueryTime: number;
-      slowQueries: number;
-      queryCacheHitRate: number;
-      indexUsage: number;
-      deadlocks: number;
-      lockWaitTime: number;
-    };
-    tablesInfo: { name: string; rowCount: number; size: string }[];
-    replicationLag: number;
-  } {
+  getDatabaseDiagnostics(): DatabaseDiagnostics {
     this.logger.log('데이터베이스 진단 정보 조회');
 
     const poolMetrics = this.drizzleService.getMetrics();
@@ -346,55 +310,30 @@ export class MonitoringService implements OnModuleDestroy {
         // 실제 Pool 메트릭 (pg Pool 이벤트 기반)
         connectionsCreated: poolMetrics.connectionsCreated,
         connectionErrors: poolMetrics.connectionErrors,
-        // connectionsAcquired ≈ 쿼리 실행 근사치 (Pool acquire = 쿼리 1회 실행 패턴)
+        /**
+         * `connectionsAcquired` ≈ 쿼리 실행 근사치 — Pool `acquire` 이벤트 카운트.
+         * 정확한 쿼리 카운트는 `pg_stat_statements.calls` 필요.
+         * TODO(tech-debt): 필드명을 `connectionsAcquired` 로 rename — i18n/dashboard 연쇄
+         */
         queriesExecuted: poolMetrics.connectionsAcquired,
         queriesFailed: poolMetrics.connectionErrors,
-        // pg Pool에서 측정 불가 — pg_stat_statements 확장 필요
-        avgQueryTime: 0,
-        slowQueries: 0,
-        queryCacheHitRate: 0,
-        indexUsage: 0,
-        deadlocks: 0,
-        lockWaitTime: 0,
+        // 아래 필드들은 pg Pool 에서 측정 불가 — null 로 "미측정" 명시
+        avgQueryTime: null,
+        slowQueries: null,
+        queryCacheHitRate: null,
+        indexUsage: null,
+        deadlocks: null,
+        lockWaitTime: null,
       },
       tablesInfo: [],
-      replicationLag: 0,
+      replicationLag: null,
     };
   }
 
   /**
    * 애플리케이션 전체 건강 상태 조회
    */
-  getHealthStatus(): {
-    status: string;
-    timestamp: string;
-    services: {
-      database: {
-        status: string;
-        isSimulated: boolean;
-        metrics: {
-          connectionsCreated: number;
-          connectionErrors: number;
-          queriesExecuted: number;
-          queriesFailed: number;
-          avgQueryTime: number;
-        };
-      };
-      system: {
-        status: string;
-        uptime: string;
-        cpu: { usage: string; status: string };
-        memory: { usage: string; status: string };
-      };
-      api: { status: string; totalRequests: number; errorRate: string };
-      logging: {
-        status: string;
-        counts: { error: number; warn: number; info: number; debug: number; verbose: number };
-      };
-      cache: { status: string; hitRate: number };
-    };
-    lastChecked: string;
-  } {
+  getHealthStatus(): HealthStatus {
     this.logger.log('애플리케이션 건강 상태 조회');
 
     // 임계치 설정
@@ -431,9 +370,11 @@ export class MonitoringService implements OnModuleDestroy {
             metrics: {
               connectionsCreated: poolMetrics.connectionsCreated,
               connectionErrors: poolMetrics.connectionErrors,
+              // connectionsAcquired ≈ 쿼리 근사치 (pg Pool acquire 이벤트)
               queriesExecuted: poolMetrics.connectionsAcquired,
               queriesFailed: poolMetrics.connectionErrors,
-              avgQueryTime: 0, // pg Pool 레벨에서 측정 불가
+              // pg Pool 레벨에서 측정 불가 → null (미측정)
+              avgQueryTime: null,
             },
           };
         })(),
@@ -470,71 +411,7 @@ export class MonitoringService implements OnModuleDestroy {
   /**
    * 상세 진단 정보 조회
    */
-  getDiagnostics(): {
-    system: {
-      hostname: string;
-      platform: NodeJS.Platform;
-      arch: string;
-      release: string;
-      nodeVersion: string;
-      nodeEnv: string | undefined;
-      cpu: { usage: number; loadAvg: number[] };
-      memory: { total: number; free: number; used: number; percentage: number };
-      uptime: number;
-      network: {
-        requestsPerMinute: number;
-        errorRate: number;
-        avgResponseTime: number;
-        isSimulated: boolean;
-      };
-      storage: { diskUsage: number; diskFree: number; diskTotal: number; isSimulated: boolean };
-    };
-    database: {
-      isSimulated: boolean;
-      status: string;
-      version: string;
-      connections: { active: number; idle: number; max: number };
-      metrics: {
-        connectionsCreated: number;
-        connectionErrors: number;
-        queriesExecuted: number;
-        queriesFailed: number;
-        avgQueryTime: number;
-        slowQueries: number;
-        queryCacheHitRate: number;
-        indexUsage: number;
-        deadlocks: number;
-        lockWaitTime: number;
-      };
-      tablesInfo: { name: string; rowCount: number; size: string }[];
-      replicationLag: number;
-    };
-    http: {
-      totalRequests: number;
-      successRequests: number;
-      errorRequests: number;
-      errorRate: number;
-      topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
-    };
-    timestamp: string;
-    env: string | undefined;
-    logging: {
-      counts: { error: number; warn: number; info: number; debug: number; verbose: number };
-      lastErrors: never[];
-    };
-    performance: {
-      isSimulated: boolean;
-      responseTime: { avg: number; p95: number; p99: number };
-      throughput: number;
-    };
-    cache: {
-      hits: number;
-      misses: number;
-      hitRate: number;
-      size: number;
-      maxSize: number;
-    };
-  } {
+  getDiagnostics(): SystemDiagnostics {
     this.logger.log('상세 진단 정보 조회');
     return {
       system: this.getSystemMetrics(),
