@@ -47,8 +47,8 @@ export const calibrationFactors = pgTable(
       .notNull()
       .references(() => equipment.id, { onDelete: 'restrict' }),
     calibrationId: uuid('calibration_id').references(() => calibrations.id, {
-      onDelete: 'set null',
-    }), // nullable - 교정 기록과 연결 (선택)
+      onDelete: 'restrict',
+    }), // nullable - 교정 기록과 연결 (선택) — 소프트 삭제 정책상 restrict 안전
 
     // 보정계수 정보
     factorType: varchar('factor_type', { length: 50 }).$type<CalibrationFactorType>().notNull(),

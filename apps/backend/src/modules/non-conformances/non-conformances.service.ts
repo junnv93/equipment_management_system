@@ -55,6 +55,12 @@ export class NonConformancesService extends VersionedBaseService {
 
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.NON_CONFORMANCES;
 
+  /**
+   * scope-aware 캐시 접미사: teamId를 구조적 segment(`:t:<id>:` | `:g:`)로
+   * 인코딩하여 deleteByPrefix만으로 정확한 스코프 단위 무효화 가능
+   */
+  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list']);
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
@@ -65,8 +71,63 @@ export class NonConformancesService extends VersionedBaseService {
     super();
   }
 
-  private buildCacheKey(type: string, id: string): string {
-    return `${this.CACHE_PREFIX}${type}:${id}`;
+  /**
+   * scope-aware 캐시 키 생성
+   *
+   * SCOPE_AWARE_SUFFIXES에 속한 suffix는 params.teamId를 구조적
+   * segment(`:t:<id>:` | `:g:`)로 인코딩. 호출자는 변경 없음.
+   */
+  private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
+    const baseKey = `${this.CACHE_PREFIX}${suffix}`;
+    if (!params) {
+      return baseKey;
+    }
+
+    const normalizedParams = this.normalizeCacheParams(params);
+
+    let scopeSegment = '';
+    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
+      const teamIdValue = normalizedParams.teamId;
+      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
+        scopeSegment = `:t:${teamIdValue}`;
+        delete normalizedParams.teamId;
+      } else {
+        scopeSegment = ':g';
+      }
+    }
+
+    const sortedParams = Object.keys(normalizedParams)
+      .sort()
+      .reduce(
+        (acc, key) => {
+          acc[key] = normalizedParams[key];
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
+
+    return `${baseKey}${scopeSegment}:${JSON.stringify(sortedParams)}`;
+  }
+
+  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
+    return Object.entries(params).reduce(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
+  }
+
+  /**
+   * 캐시 무효화 헬퍼
+   *
+   * detail은 ID 지정 삭제, list는 prefix 삭제로 전체 스코프 무효화.
+   */
+  private invalidateListCache(): void {
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
   }
 
   /**
@@ -75,7 +136,7 @@ export class NonConformancesService extends VersionedBaseService {
    * 가 단일 정책을 공유 → catch boilerplate 제거.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    await this.cacheService.delete(this.buildCacheKey('detail', id));
+    await this.cacheService.delete(this.buildCacheKey('detail', { id }));
   }
 
   /**
@@ -235,7 +296,8 @@ export class NonConformancesService extends VersionedBaseService {
       return nonConformance;
     });
 
-    // 캐시 무효화 (장비 상태 non_conforming으로 변경됨)
+    // 캐시 무효화 (장비 상태 non_conforming으로 변경됨 + 목록 캐시)
+    this.invalidateListCache();
     await this.cacheInvalidationHelper
       .invalidateAfterNonConformanceCreation(createDto.equipmentId)
       .catch((err) =>
@@ -313,133 +375,153 @@ export class NonConformancesService extends VersionedBaseService {
       pageSize = DEFAULT_PAGE_SIZE,
     } = query;
 
-    // buildListConditions()로 data/count/summary 쿼리 필터 일관성 보장 (site/teamId 포함)
-    const filterParams = { equipmentId, status, ncType, search, pendingClose, site, teamId };
-
-    // Use Drizzle relational query to include user→team relations
-    const items = await this.db.query.nonConformances.findMany({
-      where: () => and(...this.buildListConditions(filterParams)),
-      with: {
-        equipment: {
-          columns: {
-            id: true,
-            name: true,
-            managementNumber: true,
-          },
-        },
-        repairHistory: {
-          columns: {
-            id: true,
-            repairDate: true,
-            repairDescription: true,
-            repairResult: true,
-          },
-        },
-        discoverer: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-          with: {
-            team: true, // ← Critical: includes team relation
-          },
-        },
-        corrector: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-          with: {
-            team: true, // ← Critical: includes team relation
-          },
-        },
-        closer: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-          with: {
-            team: true, // ← Critical: includes team relation
-          },
-        },
-        rejector: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-          },
-          with: {
-            team: true,
-          },
-        },
-      },
-      orderBy: (nc, { desc: descFn, asc: ascFn }) => {
-        const [sortField, sortDirection] = sort.split('.');
-        const isAsc = sortDirection === 'asc';
-
-        switch (sortField) {
-          case 'discoveryDate':
-            return isAsc ? [ascFn(nc.discoveryDate)] : [descFn(nc.discoveryDate)];
-          case 'status':
-            return isAsc ? [ascFn(nc.status)] : [descFn(nc.status)];
-          case 'createdAt':
-            return isAsc ? [ascFn(nc.createdAt)] : [descFn(nc.createdAt)];
-          case 'updatedAt':
-            return isAsc ? [ascFn(nc.updatedAt)] : [descFn(nc.updatedAt)];
-          default:
-            return [descFn(nc.discoveryDate)];
-        }
-      },
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
+    const cacheKey = this.buildCacheKey('list', {
+      equipmentId,
+      status,
+      ncType,
+      site,
+      teamId,
+      search,
+      pendingClose,
+      sort,
+      includeSummary,
+      page,
+      pageSize,
     });
 
-    // Count 쿼리 — buildListConditions() SSOT로 data 쿼리와 동일한 필터 보장
-    const [{ total: totalItems }] = await this.db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(nonConformances)
-      .where(and(...this.buildListConditions(filterParams)));
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        // buildListConditions()로 data/count/summary 쿼리 필터 일관성 보장 (site/teamId 포함)
+        const filterParams = { equipmentId, status, ncType, search, pendingClose, site, teamId };
 
-    // Summary 집계 (includeSummary=true일 때만)
-    // ✅ status 필터 제외한 기본 조건으로 전체 상태별 건수 반환
-    // buildListConditions() SSOT: site/teamId도 서브쿼리로 통일 (innerJoin 불필요)
-    let summary: Record<string, number> | undefined;
-    if (includeSummary) {
-      const summaryFilterParams = { equipmentId, ncType, search, site, teamId };
+        // Use Drizzle relational query to include user→team relations
+        const items = await this.db.query.nonConformances.findMany({
+          where: () => and(...this.buildListConditions(filterParams)),
+          with: {
+            equipment: {
+              columns: {
+                id: true,
+                name: true,
+                managementNumber: true,
+              },
+            },
+            repairHistory: {
+              columns: {
+                id: true,
+                repairDate: true,
+                repairDescription: true,
+                repairResult: true,
+              },
+            },
+            discoverer: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+              },
+              with: {
+                team: true,
+              },
+            },
+            corrector: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+              },
+              with: {
+                team: true,
+              },
+            },
+            closer: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+              },
+              with: {
+                team: true,
+              },
+            },
+            rejector: {
+              columns: {
+                id: true,
+                name: true,
+                email: true,
+              },
+              with: {
+                team: true,
+              },
+            },
+          },
+          orderBy: (nc, { desc: descFn, asc: ascFn }) => {
+            const [sortField, sortDirection] = sort.split('.');
+            const isAsc = sortDirection === 'asc';
 
-      const summaryRows = await this.db
-        .select({
-          status: nonConformances.status,
-          count: sql<number>`count(*)::int`,
-        })
-        .from(nonConformances)
-        .where(and(...this.buildListConditions(summaryFilterParams)))
-        .groupBy(nonConformances.status);
+            switch (sortField) {
+              case 'discoveryDate':
+                return isAsc ? [ascFn(nc.discoveryDate)] : [descFn(nc.discoveryDate)];
+              case 'status':
+                return isAsc ? [ascFn(nc.status)] : [descFn(nc.status)];
+              case 'createdAt':
+                return isAsc ? [ascFn(nc.createdAt)] : [descFn(nc.createdAt)];
+              case 'updatedAt':
+                return isAsc ? [ascFn(nc.updatedAt)] : [descFn(nc.updatedAt)];
+              default:
+                return [descFn(nc.discoveryDate)];
+            }
+          },
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+        });
 
-      summary = {
-        [NonConformanceStatus.OPEN]: 0,
-        [NonConformanceStatus.CORRECTED]: 0,
-        [NonConformanceStatus.CLOSED]: 0,
-      };
-      for (const row of summaryRows) {
-        summary[row.status] = row.count;
-      }
-    }
+        // Count 쿼리 — buildListConditions() SSOT로 data 쿼리와 동일한 필터 보장
+        const [{ total: totalItems }] = await this.db
+          .select({ total: sql<number>`count(*)::int` })
+          .from(nonConformances)
+          .where(and(...this.buildListConditions(filterParams)));
 
-    return {
-      items,
-      meta: {
-        totalItems,
-        itemCount: items.length,
-        itemsPerPage: pageSize,
-        totalPages: Math.ceil(totalItems / pageSize),
-        currentPage: page,
+        // Summary 집계 (includeSummary=true일 때만)
+        // ✅ status 필터 제외한 기본 조건으로 전체 상태별 건수 반환
+        // buildListConditions() SSOT: site/teamId도 서브쿼리로 통일 (innerJoin 불필요)
+        let summary: Record<string, number> | undefined;
+        if (includeSummary) {
+          const summaryFilterParams = { equipmentId, ncType, search, site, teamId };
+
+          const summaryRows = await this.db
+            .select({
+              status: nonConformances.status,
+              count: sql<number>`count(*)::int`,
+            })
+            .from(nonConformances)
+            .where(and(...this.buildListConditions(summaryFilterParams)))
+            .groupBy(nonConformances.status);
+
+          summary = {
+            [NonConformanceStatus.OPEN]: 0,
+            [NonConformanceStatus.CORRECTED]: 0,
+            [NonConformanceStatus.CLOSED]: 0,
+          };
+          for (const row of summaryRows) {
+            summary[row.status] = row.count;
+          }
+        }
+
+        return {
+          items,
+          meta: {
+            totalItems,
+            itemCount: items.length,
+            itemsPerPage: pageSize,
+            totalPages: Math.ceil(totalItems / pageSize),
+            currentPage: page,
+          },
+          ...(summary && { summary }),
+        };
       },
-      ...(summary && { summary }),
-    };
+      CACHE_TTL.LONG
+    );
   }
 
   /**
@@ -504,7 +586,7 @@ export class NonConformancesService extends VersionedBaseService {
    * 단일 부적합 조회 (cache-aside)
    */
   async findOne(id: string): Promise<NonConformanceDetail> {
-    const cacheKey = this.buildCacheKey('detail', id);
+    const cacheKey = this.buildCacheKey('detail', { id });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -626,8 +708,9 @@ export class NonConformancesService extends VersionedBaseService {
       'Non-conformance'
     );
 
-    // 성공 경로: detail 캐시 삭제
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    // 성공 경로: detail + list 캐시 삭제
+    this.cacheService.delete(this.buildCacheKey('detail', { id }));
+    this.invalidateListCache();
 
     // 상태 변경 시 교차 엔티티 캐시 무효화 (대시보드, 장비 상세 등)
     if (statusChanged) {
@@ -735,8 +818,9 @@ export class NonConformancesService extends VersionedBaseService {
         return { updated, equipmentStatusRestored };
       });
 
-    // 성공 시 detail 캐시 삭제
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    // 성공 시 detail + list 캐시 삭제
+    this.cacheService.delete(this.buildCacheKey('detail', { id }));
+    this.invalidateListCache();
 
     // 캐시 무효화 (장비 상태가 available로 복원되었으면 equipmentStatusChanged=true)
     await this.cacheInvalidationHelper
@@ -789,8 +873,9 @@ export class NonConformancesService extends VersionedBaseService {
       'Non-conformance'
     );
 
-    // 성공 시 detail 캐시 삭제
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    // 성공 시 detail + list 캐시 삭제
+    this.cacheService.delete(this.buildCacheKey('detail', { id }));
+    this.invalidateListCache();
 
     // 캐시 무효화 (장비 상태는 변경되지 않음 — non_conforming 유지)
     await this.cacheInvalidationHelper
@@ -832,8 +917,9 @@ export class NonConformancesService extends VersionedBaseService {
       'NC_NOT_FOUND'
     );
 
-    // detail 캐시 무효화
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    // detail + list 캐시 무효화
+    this.cacheService.delete(this.buildCacheKey('detail', { id }));
+    this.invalidateListCache();
 
     // 교차 엔티티 캐시 무효화 (대시보드, 장비 상세의 부적합 목록)
     await this.cacheInvalidationHelper
@@ -883,7 +969,15 @@ export class NonConformancesService extends VersionedBaseService {
       'NC_NOT_FOUND'
     );
 
-    this.cacheService.delete(this.buildCacheKey('detail', ncId));
+    this.cacheService.delete(this.buildCacheKey('detail', { id: ncId }));
+    this.invalidateListCache();
+
+    // repairHistoryId 변경은 pendingClose 필터 결과에 영향 → 대시보드 캐시 무효화
+    await this.cacheInvalidationHelper
+      .invalidateAfterNonConformanceStatusChange(nc.equipmentId, false)
+      .catch((err) =>
+        this.logger.warn(`Cache invalidation failed after NC linkRepair: ${err.message}`)
+      );
   }
 
   /**
@@ -925,7 +1019,8 @@ export class NonConformancesService extends VersionedBaseService {
       'NC_NOT_FOUND'
     );
 
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    this.cacheService.delete(this.buildCacheKey('detail', { id }));
+    this.invalidateListCache();
 
     // 📢 알림 이벤트 발행 (조치 완료 — 승인 요청)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTED, {

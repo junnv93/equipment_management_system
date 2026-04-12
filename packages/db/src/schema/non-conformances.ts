@@ -50,8 +50,8 @@ export const nonConformances = pgTable(
     // 부적합 발견 정보
     discoveryDate: date('discovery_date').notNull(), // 발견일
     discoveredBy: uuid('discovered_by').references(() => users.id, {
-      onDelete: 'set null',
-    }), // 발견자 ID (시험실무자 또는 null for 시스템 자동 생성)
+      onDelete: 'restrict',
+    }), // 발견자 ID (시험실무자 또는 null for 시스템 자동 생성) — 감사 추적 영구 보존
     cause: text('cause').notNull(), // 부적합 원인
 
     // 부적합 유형 및 해결 방법

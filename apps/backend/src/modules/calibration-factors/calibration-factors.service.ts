@@ -48,6 +48,12 @@ export interface CalibrationFactorRecord {
 export class CalibrationFactorsService extends VersionedBaseService {
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION_FACTORS;
 
+  /**
+   * scope-aware 캐시 접미사: teamId를 구조적 segment로 인코딩하여
+   * deleteByPrefix만으로 정확한 스코프 단위 무효화 가능
+   */
+  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'registry']);
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
@@ -58,8 +64,70 @@ export class CalibrationFactorsService extends VersionedBaseService {
     super();
   }
 
-  private buildCacheKey(type: string, id: string): string {
-    return `${this.CACHE_PREFIX}${type}:${id}`;
+  /**
+   * scope-aware 캐시 키 생성
+   *
+   * SCOPE_AWARE_SUFFIXES에 속한 suffix는 params.teamId를 구조적
+   * segment(`:t:<id>:` | `:g:`)로 인코딩. 호출자는 변경 없음.
+   */
+  private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
+    const baseKey = `${this.CACHE_PREFIX}${suffix}`;
+    if (!params) {
+      return baseKey;
+    }
+
+    const normalizedParams = this.normalizeCacheParams(params);
+
+    let scopeSegment = '';
+    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
+      const teamIdValue = normalizedParams.teamId;
+      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
+        scopeSegment = `:t:${teamIdValue}`;
+        delete normalizedParams.teamId;
+      } else {
+        scopeSegment = ':g';
+      }
+    }
+
+    const sortedParams = Object.keys(normalizedParams)
+      .sort()
+      .reduce(
+        (acc, key) => {
+          acc[key] = normalizedParams[key];
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
+
+    return `${baseKey}${scopeSegment}:${JSON.stringify(sortedParams)}`;
+  }
+
+  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
+    return Object.entries(params).reduce(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
+  }
+
+  /**
+   * 캐시 무효화 헬퍼
+   *
+   * detail은 ID 지정 삭제, list/registry는 prefix 삭제로 전체 스코프 무효화.
+   * equipment 키(findByEquipment)도 prefix로 일괄 무효화.
+   */
+  private invalidateCache(factorId?: string): void {
+    if (factorId) {
+      this.cacheService.delete(this.buildCacheKey('detail', { id: factorId }));
+    }
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}registry:`);
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}equipment:`);
+    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
   }
 
   /**
@@ -67,7 +135,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
    * approve/reject/remove 모든 updateWithVersion 경로가 단일 정책 공유.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    this.cacheService.delete(this.buildCacheKey('detail', { id }));
   }
 
   /**
@@ -104,7 +172,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
       })
       .returning();
 
-    this.cacheService.deleteByPrefix(this.CACHE_PREFIX);
+    this.invalidateCache();
+    await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     return this.normalize(newFactor);
   }
@@ -132,10 +201,17 @@ export class CalibrationFactorsService extends VersionedBaseService {
       pageSize = DEFAULT_PAGE_SIZE,
     } = query;
 
-    const cacheKey = this.buildCacheKey(
-      'list',
-      `${equipmentId ?? ''}_${approvalStatus ?? ''}_${factorType ?? ''}_${search ?? ''}_${site ?? ''}_${teamId ?? ''}_${sort}_${page}_${pageSize}`
-    );
+    const cacheKey = this.buildCacheKey('list', {
+      equipmentId,
+      approvalStatus,
+      factorType,
+      search,
+      site,
+      teamId,
+      sort,
+      page,
+      pageSize,
+    });
 
     return this.cacheService.getOrSet(
       cacheKey,
@@ -206,7 +282,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
 
   // 단일 보정계수 조회 (cache-aside)
   async findOne(id: string): Promise<CalibrationFactorRecord> {
-    const cacheKey = this.buildCacheKey('detail', id);
+    const cacheKey = this.buildCacheKey('detail', { id });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -298,7 +374,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     totalFactors: number;
     generatedAt: Date;
   }> {
-    const cacheKey = this.buildCacheKey('registry', `${site || 'all'}_${teamId || 'all'}`);
+    const cacheKey = this.buildCacheKey('registry', { site, teamId });
 
     return this.cacheService.getOrSet(
       cacheKey,
@@ -403,10 +479,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
       '보정계수'
     );
 
-    this.cacheService.delete(this.buildCacheKey('detail', id));
-    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
-    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'registry:');
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+    this.invalidateCache(id);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
@@ -447,10 +520,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
       '보정계수'
     );
 
-    this.cacheService.delete(this.buildCacheKey('detail', id));
-    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
-    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'registry:');
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+    this.invalidateCache(id);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
@@ -477,10 +547,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
       '보정계수'
     );
 
-    this.cacheService.delete(this.buildCacheKey('detail', id));
-    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
-    this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'registry:');
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+    this.invalidateCache(id);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     return { id, deleted: true };

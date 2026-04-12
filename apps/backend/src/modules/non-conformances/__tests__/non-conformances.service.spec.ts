@@ -74,6 +74,7 @@ describe('NonConformancesService', () => {
       set: jest.fn(),
       delete: jest.fn(),
       deleteByPattern: jest.fn(),
+      deleteByPrefix: jest.fn(),
       getOrSet: jest
         .fn()
         .mockImplementation((_key: string, factory: () => Promise<unknown>) => factory()),
