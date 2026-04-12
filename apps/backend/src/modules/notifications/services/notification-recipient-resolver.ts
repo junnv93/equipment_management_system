@@ -102,15 +102,15 @@ export class NotificationRecipientResolver {
       scopeToRoles.set(effectiveScope, [...existing, role]);
     }
 
-    // 3. 각 scope 그룹별로 DB 조회 후 합산
-    const allIds: string[] = [];
-    for (const [scope, roles] of scopeToRoles) {
-      const ids = await this.queryByRolesAndScope(roles, scope, payload);
-      allIds.push(...ids);
-    }
+    // 3. 각 scope 그룹별로 DB 조회 (scope 간 독립이므로 병렬화)
+    const idsByScope = await Promise.all(
+      Array.from(scopeToRoles.entries()).map(([scope, roles]) =>
+        this.queryByRolesAndScope(roles, scope, payload)
+      )
+    );
 
     // 4. 중복 제거 + 발행자 제외
-    return [...new Set(allIds)].filter((id) => id !== actorId);
+    return [...new Set(idsByScope.flat())].filter((id) => id !== actorId);
   }
 
   /**
