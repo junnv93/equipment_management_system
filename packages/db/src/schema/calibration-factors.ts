@@ -69,8 +69,12 @@ export const calibrationFactors = pgTable(
       .$type<CalibrationFactorApprovalStatus>()
       .notNull()
       .default('pending'),
-    requestedBy: uuid('requested_by').notNull(), // 요청자 ID (시험실무자)
-    approvedBy: uuid('approved_by'), // 승인자 ID (기술책임자)
+    requestedBy: uuid('requested_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }), // 요청자 ID (시험실무자)
+    approvedBy: uuid('approved_by').references(() => users.id, {
+      onDelete: 'set null',
+    }), // 승인자 ID (기술책임자)
     requestedAt: timestamp('requested_at').defaultNow().notNull(), // 요청 시각
     approvedAt: timestamp('approved_at'), // 승인 시각
     approverComment: text('approver_comment'), // 승인/반려 시 코멘트
@@ -101,6 +105,9 @@ export const calibrationFactors = pgTable(
       effectiveDateIdx: index('calibration_factors_effective_date_idx').on(table.effectiveDate),
       // 소프트 삭제 필터링 최적화
       deletedAtIdx: index('calibration_factors_deleted_at_idx').on(table.deletedAt),
+      // FK 인덱스: 요청자/승인자별 조회 최적화
+      requestedByIdx: index('calibration_factors_requested_by_idx').on(table.requestedBy),
+      approvedByIdx: index('calibration_factors_approved_by_idx').on(table.approvedBy),
     };
   }
 );

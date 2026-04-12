@@ -49,7 +49,9 @@ export const nonConformances = pgTable(
 
     // 부적합 발견 정보
     discoveryDate: date('discovery_date').notNull(), // 발견일
-    discoveredBy: uuid('discovered_by'), // 발견자 ID (시험실무자 또는 null for 시스템 자동 생성)
+    discoveredBy: uuid('discovered_by').references(() => users.id, {
+      onDelete: 'set null',
+    }), // 발견자 ID (시험실무자 또는 null for 시스템 자동 생성)
     cause: text('cause').notNull(), // 부적합 원인
 
     // 부적합 유형 및 해결 방법
@@ -66,7 +68,9 @@ export const nonConformances = pgTable(
     // 조치 완료 정보
     correctionContent: text('correction_content'), // 조치 내용
     correctionDate: date('correction_date'), // 조치 완료일
-    correctedBy: uuid('corrected_by'), // 조치자 ID
+    correctedBy: uuid('corrected_by').references(() => users.id, {
+      onDelete: 'set null',
+    }), // 조치자 ID
 
     // 상태 관리
     status: varchar('status', { length: 20 })
@@ -75,12 +79,16 @@ export const nonConformances = pgTable(
       .default('open'), // 'open' | 'corrected' | 'closed'
 
     // 종료 정보 (기술책임자)
-    closedBy: uuid('closed_by'), // 종료 승인자 ID (기술책임자)
+    closedBy: uuid('closed_by').references(() => users.id, {
+      onDelete: 'set null',
+    }), // 종료 승인자 ID (기술책임자)
     closedAt: timestamp('closed_at'), // 종료 시각
     closureNotes: text('closure_notes'), // 종료 메모
 
     // 반려 정보 (기술책임자 — 조치 불충분 시)
-    rejectedBy: uuid('rejected_by'), // 반려자 ID (기술책임자)
+    rejectedBy: uuid('rejected_by').references(() => users.id, {
+      onDelete: 'set null',
+    }), // 반려자 ID (기술책임자)
     rejectedAt: timestamp('rejected_at'), // 반려 시각
     rejectionReason: text('rejection_reason'), // 반려 사유
 
@@ -115,6 +123,11 @@ export const nonConformances = pgTable(
       deletedAtIdx: index('non_conformances_deleted_at_idx').on(table.deletedAt),
       // 목록 정렬 최적화 (ORDER BY created_at DESC)
       createdAtIdx: index('non_conformances_created_at_idx').on(table.createdAt),
+      // FK 인덱스: 사용자별 조회 최적화
+      discoveredByIdx: index('non_conformances_discovered_by_idx').on(table.discoveredBy),
+      correctedByIdx: index('non_conformances_corrected_by_idx').on(table.correctedBy),
+      closedByIdx: index('non_conformances_closed_by_idx').on(table.closedBy),
+      rejectedByIdx: index('non_conformances_rejected_by_idx').on(table.rejectedBy),
       // TOCTOU 방지: 동일 장비 + 동일 NC 타입에 open 상태 중복 차단
       equipmentNcTypeOpenUnique: uniqueIndex('non_conformances_equipment_nc_type_open_unique')
         .on(table.equipmentId, table.ncType)

@@ -12,6 +12,7 @@ import { relations } from 'drizzle-orm';
 import { REPAIR_RESULT_VALUES } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { nonConformances } from './non-conformances';
+import { users } from './users';
 
 /**
  * 장비 수리 이력 테이블
@@ -42,10 +43,14 @@ export const repairHistory = pgTable(
     // 소프트 삭제
     isDeleted: boolean('is_deleted').default(false).notNull(),
     deletedAt: timestamp('deleted_at'),
-    deletedBy: uuid('deleted_by'),
+    deletedBy: uuid('deleted_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
 
     // 시스템 필드
-    createdBy: uuid('created_by').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
@@ -62,6 +67,9 @@ export const repairHistory = pgTable(
         table.equipmentId,
         table.repairDate
       ),
+      // FK 인덱스: 생성자/삭제자별 조회 최적화
+      createdByIdx: index('repair_history_created_by_idx').on(table.createdBy),
+      deletedByIdx: index('repair_history_deleted_by_idx').on(table.deletedBy),
     };
   }
 );
