@@ -30,7 +30,11 @@
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
       "Bash(mkdir -p /home/devuser/equipment_management_system/.claude/exec-plans/completed)",
-      "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-10-checkout-callback-resilience.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-10-checkout-callback-resilience.md)"
+      "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-10-checkout-callback-resilience.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-10-checkout-callback-resilience.md)",
+      "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/MEMORY.md .claude/projects/-home-devuser-equipment-management-system/memory/MEMORY.md)",
+      "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/feedback_main_branch_default.md .claude/projects/-home-devuser-equipment-management-system/memory/feedback_main_branch_default.md)",
+      "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/feedback_nest_route_order.md .claude/projects/-home-devuser-equipment-management-system/memory/feedback_nest_route_order.md)",
+      "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/project_next_todo.md .claude/projects/-home-devuser-equipment-management-system/memory/project_next_todo.md)"
     ],
     "deny": [],
     "ask": []
