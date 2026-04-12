@@ -5,8 +5,9 @@
 - [최신화 요청 해석](feedback_repo_sync.md) — "최신화"는 main pull이 아닌 최근 작업 브랜치로 이동 포함
 - [장비 FW vs 시험용 SW](domain_software_distinction.md) — 펌웨어(장비속성)와 시험용프로그램(독립레지스트리)은 완전히 다른 개념, M:N 관계
 - [멀티세션 워크플로우](feedback_session_workflow.md) — 세션 시작/마무리/PC이동 시 체크리스트 자동 실행
-- [main 직접 작업 기본](feedback_main_branch_default.md) — 브랜치+PR은 CLAUDE.md 예외 케이스만, 기본은 main 직접 commit+push
+- [main 직접 작업 기본](feedback_main_branch_default.md) — 브랜치+PR은 사실상 금지, Mode 2 대규모 변경조차 main 직접 작업 (2026-04-12 재확인)
+- [NestJS 라우트 순서](feedback_nest_route_order.md) — 정적 경로(/reorder, /bulk)는 /:id 보다 먼저 선언. 역순이면 ParseUUIDPipe 400
 - [임시방편 금지](feedback_no_bandaid_fixes.md) — band-aid fix 대신 근본 해결책 우선, threshold 낮추기 등 금지
-- [다음 세션 TODO](project_next_todo.md) — 2026-04-09 마무리 시점: dirty files 검토 + ValidationDetailContent URL 드리프트 / form-data-parser silent swallow / CLAUDE.md 엔트로피
+- [다음 세션 TODO](project_next_todo.md) — 2026-04-10: feat/inspection-result-sections PR 머지 + DB 마이그레이션 0013 적용 + QP-18 export 검증
 - [양식이 기준](feedback_form_is_master.md) — 레포트 export 시 양식 템플릿이 SSOT, DB/코드를 양식에 맞춤 (양식 수정 금지)
 - [메모리 파일 커밋](feedback_memory_commit.md) — 1인 개발자, PC 이동 시 메모리 공유 필요 → 세션 마무리 시 함께 커밋+푸시
