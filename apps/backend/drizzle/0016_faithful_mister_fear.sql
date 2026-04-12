@@ -1,0 +1,2 @@
+ALTER TABLE "inspection_result_sections" ADD COLUMN "updated_by" uuid;--> statement-breakpoint
+ALTER TABLE "inspection_result_sections" ADD CONSTRAINT "inspection_result_sections_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

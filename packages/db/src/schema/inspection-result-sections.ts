@@ -66,6 +66,12 @@ export const inspectionResultSections = pgTable(
 
     // 감사 필드
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    /**
+     * 마지막 수정자 (nullable — 기존 row 는 NULL 로 남아 있음, soft migration).
+     * create 시에는 createdBy 와 동일 값을 기록 (최초 생성자가 곧 마지막 수정자).
+     * update / reorder 경로에서 갱신.
+     */
+    updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },

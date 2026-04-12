@@ -81,6 +81,8 @@ export class ResultSectionsService {
         imageWidthCm: dto.imageWidthCm?.toString(),
         imageHeightCm: dto.imageHeightCm?.toString(),
         createdBy,
+        // 최초 생성 시 createdBy == updatedBy. 후속 update/reorder 에서 갱신됨.
+        updatedBy: createdBy,
       })
       .returning();
     this.invalidateParentCache(inspectionId, inspectionType);
@@ -91,10 +93,14 @@ export class ResultSectionsService {
     sectionId: string,
     inspectionId: string,
     inspectionType: InspectionType,
-    dto: UpdateResultSectionInput
+    dto: UpdateResultSectionInput,
+    updatedBy: string
   ): Promise<InspectionResultSection> {
     // Partial<NewInspectionResultSection> 로 Record<string, unknown> 대체 — 필드명 오타/타입 안전성 확보
-    const updateData: Partial<NewInspectionResultSection> = { updatedAt: new Date() };
+    const updateData: Partial<NewInspectionResultSection> = {
+      updatedAt: new Date(),
+      updatedBy,
+    };
     if (dto.sortOrder !== undefined) updateData.sortOrder = dto.sortOrder;
     if (dto.sectionType !== undefined) updateData.sectionType = dto.sectionType;
     if (dto.title !== undefined) updateData.title = dto.title;
@@ -166,7 +172,8 @@ export class ResultSectionsService {
   async reorder(
     inspectionId: string,
     inspectionType: InspectionType,
-    input: ReorderResultSectionsInput
+    input: ReorderResultSectionsInput,
+    updatedBy: string
   ): Promise<InspectionResultSection[]> {
     const { sectionIds } = input;
 
@@ -223,7 +230,7 @@ export class ResultSectionsService {
         for (let i = 0; i < sectionIds.length; i++) {
           await tx
             .update(inspectionResultSections)
-            .set({ sortOrder: i, updatedAt: now })
+            .set({ sortOrder: i, updatedAt: now, updatedBy })
             .where(
               and(
                 eq(inspectionResultSections.id, sectionIds[i]),

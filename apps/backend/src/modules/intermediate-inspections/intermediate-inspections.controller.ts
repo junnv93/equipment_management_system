@@ -418,7 +418,8 @@ export class IntermediateInspectionsController {
   ): Promise<InspectionResultSection[]> {
     const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.resultSectionsService.reorder(uuid, 'intermediate', dto);
+    const userId = extractUserId(req);
+    return this.resultSectionsService.reorder(uuid, 'intermediate', dto, userId);
   }
 
   @Patch(':uuid/result-sections/:sectionId')
@@ -433,7 +434,8 @@ export class IntermediateInspectionsController {
   ): Promise<InspectionResultSection> {
     const info = await this.inspectionsService.getEquipmentSiteInfoByInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.resultSectionsService.update(sectionId, uuid, 'intermediate', dto);
+    const userId = extractUserId(req);
+    return this.resultSectionsService.update(sectionId, uuid, 'intermediate', dto, userId);
   }
 
   @Delete(':uuid/result-sections/:sectionId')

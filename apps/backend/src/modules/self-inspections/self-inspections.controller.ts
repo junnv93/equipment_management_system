@@ -280,7 +280,8 @@ export class SelfInspectionsController {
   ): Promise<InspectionResultSection[]> {
     const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.resultSectionsService.reorder(uuid, 'self', dto);
+    const userId = extractUserId(req);
+    return this.resultSectionsService.reorder(uuid, 'self', dto, userId);
   }
 
   @Patch(':uuid/result-sections/:sectionId')
@@ -296,7 +297,8 @@ export class SelfInspectionsController {
   ): Promise<InspectionResultSection> {
     const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    return this.resultSectionsService.update(sectionId, uuid, 'self', dto);
+    const userId = extractUserId(req);
+    return this.resultSectionsService.update(sectionId, uuid, 'self', dto, userId);
   }
 
   @Delete(':uuid/result-sections/:sectionId')
