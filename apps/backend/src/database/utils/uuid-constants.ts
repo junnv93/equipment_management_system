@@ -61,7 +61,7 @@ export const USER_TEST_ENGINEER_PYEONGTAEK_ID = '00000000-0000-0000-0000-0000000
 export const USER_TECHNICAL_MANAGER_PYEONGTAEK_ID = '00000000-0000-0000-0000-000000000014';
 
 // =============================================================================
-// EQUIPMENT (32 equipment across statuses, sites, classifications)
+// EQUIPMENT (36 equipment across statuses, sites, classifications)
 // Pattern: eeeeNNNN-NNNN-NNNN-NNNN-NNNNNNNNNNNN
 // =============================================================================
 

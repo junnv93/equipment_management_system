@@ -206,6 +206,23 @@ grep -nA3 "시드 데이터 로딩\|seed.*load" apps/frontend/tests/e2e/global-s
 
 **예외:** 시드 성공 이후의 부가 단계(예: overdue scheduler 트리거)는 warn 유지 가능 — 단 그 이유가 주석으로 명시되어야 함 ("optional enrichment — test seeds already cover...").
 
+### Step 14: 장비 파티셔닝 (E2E 장비 격리)
+
+상태를 mutate하는 checkout E2E suite(S23-S27 등)는 **전용 장비**를 사용해야 한다.
+공용 장비(SPECTRUM_ANALYZER_SUW_E 등)를 여러 suite가 동시 mutate하면 병렬 실행 시 비결정적 실패.
+
+**탐지:**
+```bash
+# S23-S27 spec에서 사용하는 장비 ID가 전용 상수인지 확인
+grep -n "TEST_EQUIPMENT_IDS\." apps/frontend/tests/e2e/features/checkouts/suite-2[3-7]-*/*.spec.ts \
+  | grep -v "RBAC_\|CANCEL_\|CAS_\|SHARED_\|RECEIVER_UIW\|SPECTRUM_ANALYZER.*NON_SHARED" \
+  && echo "❌ S23-S27이 공용 장비를 primary로 사용 중"
+```
+
+**PASS:** S23-S27의 primary 장비가 전용 상수(`RBAC_SIGNAL_GEN_SUW_E`, `CANCEL_RECEIVER_SUW_E`, `CAS_ANALYZER_SUW_E`, `SHARED_ANALYZER_SUW_E`). read-only 참조(NON_SHARED, UIWANG_SHARED_REF)는 면제.
+
+**불변식:** "상태를 mutate하는 E2E suite는 전용 장비를 소유하며 다른 suite와 공유하지 않는다."
+
 ## Output Format
 
 ```markdown
@@ -227,6 +244,7 @@ grep -nA3 "시드 데이터 로딩\|seed.*load" apps/frontend/tests/e2e/global-s
 | 12b | 캐시 일관성 테스트      | PASS/INFO | 뮤테이션 후 목록 갱신 검증    |
 | 12c | 사이트 접근 제어 범위   | PASS/WARN | GET + mutation 모두 검증      |
 | 13  | global-setup fail-fast  | PASS/FAIL | 시드 실패가 warn-and-continue |
+| 14  | 장비 파티셔닝           | PASS/FAIL | S23-S27 공용 장비 사용        |
 ```
 
 ## Exceptions

@@ -5,7 +5,7 @@
  * Usage:
  *   pnpm --filter backend run db:seed
  *
- * Phase 1: Teams (7), Users (16), Equipment (32), Calibrations (18), NC (10)
+ * Phase 1: Teams (7), Users (16), Equipment (36), Calibrations (18), NC (10)
  * Phase 2: Repair History (8), Calibration Factors (12), Checkouts (68), Cal Plans (6+12)
  * Phase 3: Disposal Equipment (21), Disposal Requests (15)
  * Phase 4: Software History (8), Location History (10), Maintenance History (10),
@@ -189,7 +189,7 @@ async function main(): Promise<void> {
     await db.insert(schema.users).values(USERS_SEED_DATA);
 
     // Equipment (32 records)
-    console.log('  → Equipment (32)');
+    console.log('  → Equipment (36)');
     await db.insert(schema.equipment).values(EQUIPMENT_SEED_DATA);
 
     // =========================================================================
