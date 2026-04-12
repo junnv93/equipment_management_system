@@ -1,0 +1,568 @@
+[
+  {
+    "file": "SUW-E0001_Receiver_SG",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0001",
+      "location": "Chamber 1",
+      "equipmentName": "RECEIVER, EMI",
+      "modelName": "ESU 40",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "장비 내부 자체 점검 프로그램",
+        "checkCriteria": "장비 내부 점검",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 3,
+        "checkItem": "RF 입력 검사",
+        "checkCriteria": "S/G Level의약 |±1| dB",
+        "checkResult": "Min : 0.03 dBMax : 0.88 dB",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 4,
+        "checkItem": "OBW 특성 검사",
+        "checkCriteria": "99% BW(MHz)",
+        "checkResult": "20 MHz : 17.9515 MHz : 13.4610 MHz : 8.975 MHz : 4.62",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0178",
+        "name": "Signal Generator (E8257D)",
+        "calibrationDate": "2025-12-30"
+      },
+      {
+        "number": "2",
+        "managementNumber": "SUW-E0313",
+        "name": "Signal Generator (SMBV100A)",
+        "calibrationDate": "2025-07-21"
+      }
+    ],
+    "approval": {
+      "inspectionDate": "2026-01-13",
+      "inspector": "박상미",
+      "remarks": ""
+    },
+    "dataTables": [
+      {
+        "headers": ["Freq(MHz)", "SG Level(dBm)", "Reading(dBm)", "Deviation(dB)"],
+        "rows": [
+          ["10", "0", "0.16", "0.16"],
+          ["100", "0", "0.15", "0.15"],
+          ["300", "0", "0.14", "0.14"],
+          ["500", "0", "0.11", "0.11"],
+          ["1000", "0", "0.02", "0.02"],
+          ["2000", "0", "-0.07", "0.07"],
+          ["3000", "0", "0.09", "0.09"],
+          ["4000", "0", "0.13", "0.13"],
+          ["5000", "0", "-0.46", "0.46"],
+          ["6000", "0", "-0.60", "0.60"],
+          ["8000", "0", "-0.66", "0.66"],
+          ["10000", "0", "-0.49", "0.49"],
+          ["12000", "0", "-0.88", "0.88"],
+          ["14000", "0", "-0.80", "0.80"],
+          ["16000", "0", "-0.56", "0.56"],
+          ["18000", "0", "-0.87", "0.87"],
+          ["20000", "0", "-0.76", "0.76"],
+          ["22000", "0", "-0.32", "0.32"],
+          ["24000", "0", "-0.62", "0.62"],
+          ["26000", "0", "0.08", "0.08"],
+          ["28000", "0", "0.09", "0.09"],
+          ["30000", "0", "-0.09", "0.09"],
+          ["32000", "0", "-0.03", "0.03"],
+          ["34000", "0", "-0.60", "0.60"],
+          ["36000", "0", "-0.57", "0.57"],
+          ["38000", "0", "-0.09", "0.09"],
+          ["40000", "0", "0.72", "0.72"]
+        ],
+        "rowCount": 27
+      },
+      {
+        "headers": ["Freq (MHz)", "BW", "99% BW Reading(MHz)", "Data"],
+        "rows": [
+          ["2400", "20 M", "17.95"],
+          ["15 M", "13.46"],
+          ["10 M", "8.97"],
+          ["2400", "5 M", "4.62"]
+        ],
+        "rowCount": 4
+      }
+    ],
+    "mediaCount": 6
+  },
+  {
+    "file": "SUW-E0048_Power supply",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0048",
+      "location": "RF Room 1",
+      "equipmentName": "Power Supply",
+      "modelName": "E3640A",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "DC 전압 출력 특성 검사",
+        "checkCriteria": "Output 대비0.1| V",
+        "checkResult": "Min : 0.004 VMax : 0.01 V",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0104",
+        "name": "Digital Multimeter(17B)",
+        "calibrationDate": "2025-07-25"
+      }
+    ],
+    "approval": {
+      "inspectionDate": "2026-01-14",
+      "inspector": "박상미",
+      "remarks": ""
+    },
+    "dataTables": [
+      {
+        "headers": ["DC (V)", "Multimeter (V)", "Deviation (V)"],
+        "rows": [
+          ["1.00", "0.996", "0.004"],
+          ["2.00", "1.995", "0.005"],
+          ["3.00", "2.994", "0.006"],
+          ["4.00", "3.990", "0.01"],
+          ["5.00", "4.990", "0.01"],
+          ["6.00", "5.990", "0.01"],
+          ["7.00", "6.990", "0.01"],
+          ["8.00", "7.990", "0.01"],
+          ["9.00", "8.990", "0.01"],
+          ["10.00", "9.990", "0.01"],
+          ["11.00", "10.990", "0.01"],
+          ["12.00", "11.990", "0.01"],
+          ["13.00", "12.990", "0.01"],
+          ["14.00", "13.990", "0.01"],
+          ["15.00", "14.990", "0.01"],
+          ["16.00", "15.990", "0.01"],
+          ["17.00", "16.990", "0.01"],
+          ["18.00", "17.990", "0.01"],
+          ["19.00", "18.990", "0.01"],
+          ["20.00", "19.990", "0.01"]
+        ],
+        "rowCount": 20
+      }
+    ],
+    "mediaCount": 2
+  },
+  {
+    "file": "SUW-E0076_Step att",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0076",
+      "location": "RF Room 1",
+      "equipmentName": "Step Attenuator",
+      "modelName": "AF119A-99-34",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "출력 특성 점검",
+        "checkCriteria": "제조사 선언 오차범위 이내 일 것.(DC-18 GHz : -33 dB ~ -34.9 dB 이내)",
+        "checkResult": "Min : -34.81 dBMax : -33.54 dB",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0281",
+        "name": "NETWORK ANALYZER (N5225B)",
+        "calibrationDate": "2025-12-30"
+      }
+    ],
+    "approval": {
+      "inspector": "관 리 번 호",
+      "remarks": "SUW-E0281"
+    },
+    "dataTables": [
+      {
+        "headers": ["점 검 일", "2026-01-21", "결재", "담당", "검토", "승인"],
+        "rows": [["점 검 자", "박상미"], ["특기사항"]],
+        "rowCount": 2
+      }
+    ],
+    "mediaCount": 5
+  },
+  {
+    "file": "SUW-E0103_Digital mult",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0103",
+      "location": "Chamber 2",
+      "equipmentName": "Digital Multimeter",
+      "modelName": "17B",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "입력 전압 점검",
+        "checkCriteria": "Output 대비0.1| V",
+        "checkResult": "Min : 0.007 VMax : 0.03 V",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0099",
+        "name": "Power Supply (E3640A)",
+        "calibrationDate": "2025-07-23"
+      }
+    ],
+    "approval": {
+      "inspectionDate": "2026-01-13",
+      "inspector": "박상미",
+      "remarks": ""
+    },
+    "dataTables": [
+      {
+        "headers": ["DC (V)", "Multimeter (V)", "Deviation (V)"],
+        "rows": [
+          ["1.00", "0.993", "0.007"],
+          ["2.00", "1.991", "0.009"],
+          ["3.00", "2.989", "0.011"],
+          ["4.00", "3.986", "0.014"],
+          ["5.00", "4.980", "0.2"],
+          ["6.00", "5.980", "0.2"],
+          ["7.00", "6.980", "0.2"],
+          ["8.00", "7.980", "0.2"],
+          ["9.00", "8.980", "0.2"],
+          ["10.00", "9.980", "0.2"],
+          ["11.00", "10.980", "0.2"],
+          ["12.00", "11.980", "0.2"],
+          ["13.00", "12.980", "0.2"],
+          ["14.00", "13.980", "0.2"],
+          ["15.00", "14.980", "0.2"],
+          ["16.00", "15.980", "0.2"],
+          ["17.00", "16.970", "0.3"],
+          ["18.00", "17.970", "0.3"],
+          ["19.00", "18.970", "0.3"],
+          ["20.00", "19.970", "0.3"]
+        ],
+        "rowCount": 20
+      }
+    ],
+    "mediaCount": 2
+  },
+  {
+    "file": "SUW-E0247_OTA cham",
+    "info": {
+      "classification": "비교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0247",
+      "location": "mmWave 1",
+      "equipmentName": "mmWave OTA Test Chamber",
+      "modelName": "BJ-8827-UL2",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "N/A"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "VSWR 특성",
+        "checkCriteria": "SWR &lt; 2.0",
+        "checkResult": "Port 1 : 1.81Port 2 : 1.90",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0281",
+        "name": "Network Analyzer (N5225B)",
+        "calibrationDate": "2025-12-30"
+      }
+    ],
+    "approval": {
+      "inspector": "관 리 번 호",
+      "remarks": "SUW-E0281"
+    },
+    "dataTables": [
+      {
+        "headers": ["점 검 일", "2026-01-21", "결재", "담당", "검토", "승인"],
+        "rows": [["점 검 자", "박상미"], ["특기사항"]],
+        "rowCount": 2
+      }
+    ],
+    "mediaCount": 7
+  },
+  {
+    "file": "SUW-E0280_Power sensor",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0280",
+      "location": "mmWave 1",
+      "equipmentName": "Power Sensor",
+      "modelName": "NRP8S",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "입력 특성 검사",
+        "checkCriteria": "S/G Level의|±1| dB",
+        "checkResult": "Min: 0.01 dB Max: 0.13 dB",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0178",
+        "name": "SIGNAL GENRATOR (E8257D)",
+        "calibrationDate": "2025-12-30"
+      }
+    ],
+    "approval": {
+      "inspectionDate": "2026-02-09",
+      "inspector": "박상미",
+      "remarks": ""
+    },
+    "dataTables": [
+      {
+        "headers": ["Freq(MHz)", "SG Level(dBm)", "Reading(dBm)", "Deviation(dB)"],
+        "rows": [
+          ["10", "0", "0.03", "0.03"],
+          ["100", "0", "0.02", "0.02"],
+          ["300", "0", "0.01", "0.01"],
+          ["500", "0", "-0.01", "0.01"],
+          ["1000", "0", "-0.01", "0.01"],
+          ["2000", "0", "0.02", "0.02"],
+          ["3000", "0", "-0.04", "0.04"],
+          ["4000", "0", "-0.05", "0.05"],
+          ["5000", "0", "-0.06", "0.06"],
+          ["6000", "0", "-0.08", "0.08"],
+          ["8000", "0", "-0.13", "0.13"]
+        ],
+        "rowCount": 11
+      }
+    ],
+    "mediaCount": 3
+  },
+  {
+    "file": "SUW-E0287_Direc coupler",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0287",
+      "location": "mmWave 1",
+      "equipmentName": "Directional Coupler",
+      "modelName": "87301C",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "신호 경로 특성 검사",
+        "checkCriteria": "제조사 선언 오차범위Out Port/-10 dB Port: ± 1.9 dB 이내",
+        "checkResult": "Out PortMin : -0.88 dBMax : -0.34 dB-10 dB PortMin : -10.75 dBMax : -10.04 dB",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0281",
+        "name": "NETWORK ANALYZER (N5225B)",
+        "calibrationDate": "2025-12-30"
+      }
+    ],
+    "approval": {
+      "inspector": "관 리 번 호",
+      "remarks": "SUW-E0281"
+    },
+    "dataTables": [
+      {
+        "headers": ["점 검 일", "2026-01-21", "결재", "담당", "검토", "승인"],
+        "rows": [["점 검 자", "박상미"], ["특기사항"]],
+        "rowCount": 2
+      }
+    ],
+    "mediaCount": 6
+  },
+  {
+    "file": "SUW-E0289_Call box",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0289",
+      "location": "RF Room 1",
+      "equipmentName": "Call Box",
+      "modelName": "CMW500",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "RF 출력 검사",
+        "checkCriteria": "CW Level의약 |±1| dB",
+        "checkResult": "Min : 0.23 dBMax : 0.48 dB",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0249",
+        "name": "Spectrum Analyzer (N9040A)",
+        "calibrationDate": "2025-12-30"
+      }
+    ],
+    "approval": {
+      "inspectionDate": "2026-01-21",
+      "inspector": "박상미",
+      "remarks": ""
+    },
+    "dataTables": [
+      {
+        "headers": ["Freq(MHz)", "CW Level (dBm)", "Reading (dBm)", "Deviation(dB)"],
+        "rows": [
+          ["600", "0", "-0.23", "0.23"],
+          ["700", "0", "-0.32", "0.32"],
+          ["850", "0", "-0.27", "0.27"],
+          ["1700", "0", "-0.38", "0.38"],
+          ["1900", "0", "-0.37", "0.37"],
+          ["2500", "0", "-0.40", "0.40"],
+          ["3500", "0", "-0.48", "0.48"]
+        ],
+        "rowCount": 7
+      }
+    ],
+    "mediaCount": 2
+  },
+  {
+    "file": "SUW-E0350_Term",
+    "info": {
+      "classification": "교정기기",
+      "team": "RF",
+      "managementNumber": "SUW-E0350",
+      "location": "RF Room 3",
+      "equipmentName": "Termination",
+      "modelName": "N/A",
+      "inspectionCycle": "6개월",
+      "calibrationValidityPeriod": "1년"
+    },
+    "items": [
+      {
+        "itemNumber": 1,
+        "checkItem": "외관 검사",
+        "checkCriteria": "마모 상태 확인",
+        "checkResult": "이상 없음",
+        "judgment": "pass"
+      },
+      {
+        "itemNumber": 2,
+        "checkItem": "정합 특성 검사",
+        "checkCriteria": "VSWR &lt; 1.2",
+        "checkResult": "Min : 1.01Max : 1.12",
+        "judgment": "pass"
+      }
+    ],
+    "measureEquipment": [
+      {
+        "number": "1",
+        "managementNumber": "SUW-E0281",
+        "name": "NETWORK ANALYZER (N5225B)",
+        "calibrationDate": "2025-12-30"
+      }
+    ],
+    "approval": {
+      "inspector": "관 리 번 호",
+      "remarks": "SUW-E0281"
+    },
+    "dataTables": [
+      {
+        "headers": ["점 검 일", "2026-01-23", "결재", "담당", "검토", "승인"],
+        "rows": [["점 검 자", "박상미"], ["특이사항"]],
+        "rowCount": 2
+      }
+    ],
+    "mediaCount": 4
+  }
+]
