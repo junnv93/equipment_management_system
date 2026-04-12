@@ -160,6 +160,18 @@ function AuditTimelineRow({
   const dotColor = AUDIT_TIMELINE_DOT_COLORS[log.action] ?? 'bg-brand-text-muted';
   const diff = item.diff;
 
+  /**
+   * 가상화 재마운트 jitter 방지:
+   * 초기 `staggerCap` 개 row 에만 fadeIn 을 적용하고, 그 이후는 애니메이션 없이
+   * 즉시 표시한다. 빠른 스크롤 시 row 가 언마운트/재마운트 되어도 동일 flatIdx 면
+   * 일관되게 동작(처음 N개는 항상 fadeIn, N+1 부터는 항상 즉시 표시)하여
+   * 느낌상의 jitter 가 사라진다.
+   *
+   * `ANIMATION_PRESETS.fadeIn` 은 이미 `motion-safe:` prefix 를 포함하므로
+   * `prefers-reduced-motion` 환경에서는 이 레이어와 독립적으로 애니메이션이 꺼진다.
+   */
+  const shouldAnimate = item.flatIdx < VIRTUALIZATION.staggerCap;
+
   return (
     <div style={style}>
       <div
@@ -167,15 +179,12 @@ function AuditTimelineRow({
         className={cn(
           AUDIT_TIMELINE_TOKENS.entry,
           isDelete && AUDIT_TIMELINE_TOKENS.dangerEntry,
-          ANIMATION_PRESETS.fadeIn,
-          'motion-safe:duration-200'
+          shouldAnimate && ANIMATION_PRESETS.fadeIn,
+          shouldAnimate && 'motion-safe:duration-200'
         )}
         style={{
           gridTemplateColumns: AUDIT_TIMELINE_TOKENS.entryGridCols,
-          animationDelay: getStaggerDelay(
-            Math.min(item.flatIdx, VIRTUALIZATION.staggerCap),
-            'list'
-          ),
+          ...(shouldAnimate ? { animationDelay: getStaggerDelay(item.flatIdx, 'list') } : {}),
         }}
         onClick={() => onLogClick(log)}
         tabIndex={0}
