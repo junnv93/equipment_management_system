@@ -74,56 +74,14 @@ verify-ssot 위반: 10+ 컴포넌트에서 status/role 파라미터가 string으
 - /verify-ssot PASS
 ```
 
-### 🟡 MEDIUM — approvals-api.ts unsafe cast 제거: relation 타입 확장 (Mode 1)
+### ~~🟡 MEDIUM — approvals-api.ts unsafe cast 제거: relation 타입 확장 (Mode 1)~~ ✅ 완료 (2026-04-12 45차 harness)
 
-```
-approvals-api.ts에서 백엔드 joined relation 접근 시 `as unknown as Record<string, unknown>`
-unsafe cast를 4곳에서 사용. 백엔드 API 응답 타입에 relation 필드가 누락되어 발생.
-
-확인된 위치:
-1. approvals-api.ts:988 — calibration.registeredByUser (Record cast)
-2. approvals-api.ts:1097 — nc.corrector (Record cast)
-3. approvals-api.ts:1100 — nc.discoverer (Record cast)
-4. approvals-api.ts:1295 — item.requester (Record cast)
-
-추가 확인된 unsafe cast (동일 패턴):
-5. settings/notifications/NotificationsContent.tsx:114,118,129 — preferences cast
-
-근본 원인:
-- 백엔드 응답 타입(Calibration, NonConformance, EquipmentImport)에 join된 user/team relation 타입 미정의
-- 프론트엔드 인터페이스가 백엔드 실제 응답 shape를 반영하지 않음
-
-작업:
-1. 프론트엔드 타입 확장: CalibrationWithRelations, NCWithRelations 등 relation 포함 인터페이스 정의
-   (또는 기존 인터페이스에 optional relation 필드 추가)
-2. approvals-api.ts: unsafe cast → 타입 가드 또는 optional chaining으로 교체
-3. NotificationsContent.tsx: NotificationPreferences 타입 정의 + cast 제거
-4. SSOT: relation 타입은 백엔드 select join 구조와 1:1 매핑
-
-검증:
-- pnpm tsc --noEmit exit 0
-- grep 'as unknown as Record' apps/frontend/lib/api/approvals-api.ts → 0 hit
-- grep 'as unknown as' apps/frontend/app/.*/NotificationsContent.tsx → 0 hit
+> NC: nc.corrector/nc.discoverer 직접 접근 (NCRelatedUser 이미 정의됨). Calibration: registeredByUser/approvedByUser relation 필드 추가. EquipmentImport: requester relation 필드 추가. NotificationsContent: `as unknown as Record` double-cast → preferences?.digestTime 직접 접근. 4건 unsafe double-cast 제거. Evaluator 잔존 single-cast 10건(checkout/disposal/equipment-request)은 tech-debt SHOULD로 기록.
 ```
 
-### 🟢 LOW — notification scheduler partial failure 내성 강화 (Mode 0)
+### ~~🟢 LOW — notification scheduler partial failure 내성 강화~~ ✅ FALSE POSITIVE (2026-04-12 45차 세션)
 
-```
-calibration-overdue-scheduler.ts:302-320에서 장비별 알림 전송 시
-unique constraint 중복(23505)은 건너뛰지만, 그 외 에러 발생 시 전체 배치가 중단됨.
-
-확인된 위치:
-- modules/notifications/schedulers/calibration-overdue-scheduler.ts:302-320
-
-작업:
-1. 개별 장비 알림 전송을 Promise.allSettled() 또는 try-catch per-item으로 래핑
-2. 실패한 장비 목록을 로그에 기록 (일부 성공 + 부분 실패 허용)
-3. 전체 배치 실패가 아닌 개별 실패로 격리
-
-검증:
-- pnpm tsc --noEmit exit 0
-- 백엔드 유닛 테스트 PASS
-```
+> 검증: calibration-overdue-scheduler.ts:289-341 — 알림 발송(L289-305)과 장비 처리(L313-341) 모두 개별 try-catch로 이미 격리됨. 23505 이외의 에러도 error 로그 + skip으로 처리되어 배치가 중단되지 않음. per-item 내성이 이미 구현된 상태.
 
 ---
 
