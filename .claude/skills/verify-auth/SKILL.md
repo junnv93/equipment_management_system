@@ -92,7 +92,28 @@ POST/PATCH/DELETE 엔드포인트에 Permission Guard가 적용되어 있는지 
 | 8   | SYSTEM_USER_UUID 사용       | PASS/FAIL | UUID 컬럼에 비-UUID 하드코딩    |
 | 9   | AuthenticatedRequest 옵셔널 | PASS/FAIL | req?: 또는 req!. 사용 위치      |
 | 10  | enforceSiteAccess 적용      | PASS/FAIL | 누락 mutation 컨트롤러          |
+| 11  | 라우트 선언 순서            | PASS/FAIL | 정적 sub-path 가 /:param 뒤에 선언된 위치 |
 ```
+
+### Step 11: 라우트 선언 순서 검증
+
+동일 prefix 아래에 정적 sub-path (`/reorder`, `/upload-csv`, `/bulk`, `/search`, `/counts`)와
+파라미터 path (`/:sectionId`, `/:id`)가 공존할 때, **정적 경로가 파라미터 경로보다 먼저 선언**되어야 한다.
+NestJS Express 어댑터는 데코레이터 선언 순서대로 라우트를 등록하므로, 역순이면 `"reorder"` 같은
+리터럴이 `ParseUUIDPipe` 에 UUID 로 파싱되어 즉시 400 Bad Request 를 반환한다.
+
+**탐지 방법:**
+```bash
+# 컨트롤러 파일에서 같은 prefix 의 정적/파라미터 라우트 쌍 탐지
+grep -n "@(Get|Post|Patch|Delete|Put)(" apps/backend/src/modules/**/*.controller.ts \
+  | grep -E "/:.*/" \
+  | # 같은 prefix 의 정적 경로가 파라미터 경로 뒤(더 큰 라인 번호)에 나오면 WARN
+```
+
+**PASS:** 정적 라우트가 파라미터 라우트 앞에 선언되어 있음.
+**FAIL:** `@Patch(':uuid/result-sections/:sectionId')` 뒤에 `@Patch(':uuid/result-sections/reorder')` 가 선언됨.
+
+**배경:** 2026-04-12 harness evaluator 1차 FAIL 사유. `feedback_nest_route_order.md` 영구화.
 
 ## Exceptions
 

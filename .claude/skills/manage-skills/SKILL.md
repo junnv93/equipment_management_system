@@ -28,7 +28,7 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | 스킬                    | 설명                                   | 커버 파일 패턴                                                         |
 | ----------------------- | -------------------------------------- | ---------------------------------------------------------------------- |
 | `verify-cas`            | CAS(Optimistic Locking) 패턴 검증      | `apps/backend/src/modules/**/*.service.ts`, `*/dto/**/*.dto.ts`       |
-| `verify-auth`           | 서버 사이드 인증/인가 패턴 검증        | `apps/backend/src/**/*.controller.ts`, `*/dto/**/*.dto.ts`            |
+| `verify-auth`           | 서버 사이드 인증/인가 + 라우트 선언 순서 검증 | `apps/backend/src/**/*.controller.ts`, `*/dto/**/*.dto.ts`            |
 | `verify-zod`            | Zod 검증 패턴 검증                     | `*/dto/**/*.dto.ts`, `apps/backend/src/common/pipes/*.ts`             |
 | `verify-ssot`           | SSOT 임포트 패턴 검증                  | `apps/backend/src/**/*.ts`, `apps/frontend/**/*.ts(x)`                |
 | `verify-hardcoding`     | SSOT 하드코딩 탐지                     | `apps/frontend/lib/api/**`, `apps/backend/src/**/*.service.ts`        |
