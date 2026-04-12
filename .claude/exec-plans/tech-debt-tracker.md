@@ -41,6 +41,12 @@
 
 - [x] `onReturnCanceled` CAS version race 조건 — 해결: 2026-04-10 — `onReturnCanceled`에 1회 CAS retry 구현 (매 시도마다 re-read). ConflictException 시 fresh version으로 재시도. unit test 3건 추가 (성공/retry 성공/retry 실패). exec-plan: `checkout-callback-resilience`
 
+- [x] onDelete 정책 잔여 2개 FK (discoveredBy, calibrationId) set null → restrict 통일 — 해결: 2026-04-12 — Mode 2 harness `ondelete-cache-scope-unify`. non_conformances.discovered_by + calibration_factors.calibration_id 2개 FK를 restrict로 변경. 스키마 파일 업데이트 + manual migration `20260412_unify_nc_cf_fk_on_delete_restrict.sql`. 불변식: "사용자/교정 참조 FK는 restrict (소프트 삭제 정책)". 44 suites / 565 tests PASS
+- [x] non-conformances/calibration-factors scope-aware 캐시 패턴 소급 — 해결: 2026-04-12 — Mode 2 harness `ondelete-cache-scope-unify`. NC: findAll list 캐싱 신규 추가 + 7개 mutation에 invalidateListCache. CF: buildCacheKey scope-aware 업그레이드 + invalidateCache 헬퍼. checkouts 참조 패턴과 동일 구조(SCOPE_AWARE_SUFFIXES, teamId→:t:/:g: segment). 불변식: "스코프는 키 구조로 인코딩, JSON params에 미포함"
+- [ ] buildCacheKey 3곳 복제 → 공통 유틸 추출 검토 — checkouts/non-conformances/calibration-factors 서비스에 동일 buildCacheKey+normalizeCacheParams 로직 복제 — 2026-04-12
+- [ ] NC close/rejectCorrection/update 이벤트+직접호출 이중 캐시 무효화 → 이벤트 단일 경로 통일 검토 — non-conformances.service.ts:822,877,716 — 2026-04-12
+- [ ] onVersionConflict async 처리 차이 (NC: await, CF: no await) 통일 — non-conformances.service.ts:138 vs calibration-factors.service.ts:137 — 2026-04-12
+
 - [~] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — 보류(justified): 2026-04-12 — 현재 20행/160KB, 내부 데스크탑 배포. 커서 페이지네이션(timestampIdCursorIdx) + 8개 인덱스 + react-window 가상화 이미 도입. PostgreSQL은 수백만 행까지 인덱스 기반으로 처리 가능. Drizzle ORM은 declarative partitioning 미지원이라 raw SQL + 스키마 우회 필요 → 복잡도 대비 이득 없음. **트리거 기준: audit_logs > 100만 행 또는 테이블 크기 > 1GB 시 재검토.** `SELECT COUNT(*), pg_size_pretty(pg_total_relation_size('audit_logs')) FROM audit_logs;` 로 확인
 
 - [x] 감사로그 프론트엔드 가상화/무한스크롤 도입 — 부분 해결: 2026-04-10 — 커서 기반 API(`findAllCursor`) + `useInfiniteQuery` + IntersectionObserver 무한 스크롤 구현 완료. offset 페이지네이션 버튼 제거. `(timestamp DESC, id DESC)` 복합 인덱스 추가. react-window 가상화는 별도 tech-debt으로 분리 (S1)
