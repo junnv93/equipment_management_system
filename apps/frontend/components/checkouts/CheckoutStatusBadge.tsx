@@ -7,6 +7,7 @@ import {
   RENTAL_IMPORT_STATUS_BADGE_TOKENS,
   DEFAULT_CHECKOUT_BADGE,
 } from '@/lib/design-tokens';
+import type { CheckoutStatus, EquipmentImportStatus } from '@equipment-management/schemas';
 
 // ============================================================================
 // Component
@@ -14,7 +15,7 @@ import {
 
 interface CheckoutStatusBadgeProps {
   /** 상태 값 */
-  status: string;
+  status: CheckoutStatus | EquipmentImportStatus;
   /** 'checkout'(기본) 또는 'rental' */
   type?: 'checkout' | 'rental';
   /** 추가 className */

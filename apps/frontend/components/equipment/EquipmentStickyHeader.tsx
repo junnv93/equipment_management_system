@@ -86,7 +86,7 @@ export function EquipmentStickyHeader({
     );
 
   // 상태 정규화: DISPLAY_STATUS_OVERRIDES SSOT 사용
-  const getStatusToken = (status: string) => {
+  const getStatusToken = (status: EquipmentStatus) => {
     const final = getDisplayStatus(status as EquipmentStatus);
     const token = EQUIPMENT_STATUS_TOKENS[final] || DEFAULT_STATUS_CONFIG;
     return {

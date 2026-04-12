@@ -38,6 +38,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/lib/errors/equipment-errors';
 import { type SemanticColorKey, getSemanticStatusClasses } from '@/lib/design-tokens';
+import type { CalibrationStatus, CalibrationApprovalStatus } from '@equipment-management/schemas';
 
 export interface CalibrationRecord {
   id: string;
@@ -46,8 +47,8 @@ export interface CalibrationRecord {
   calibrationAgency?: string;
   certificateNumber?: string;
   result?: string; // lowercase: 'pass', 'fail', 'conditional'
-  status: string;
-  approvalStatus?: string;
+  status: CalibrationStatus;
+  approvalStatus?: CalibrationApprovalStatus;
 }
 
 // 교정 이력 생성 입력 타입
@@ -70,14 +71,14 @@ interface CalibrationHistorySectionProps {
   isCreateMode?: boolean; // 등록 모드 여부
 }
 
-const STATUS_SEMANTIC: Record<string, SemanticColorKey> = {
+const STATUS_SEMANTIC: Partial<Record<CalibrationStatus, SemanticColorKey>> = {
   scheduled: 'info',
   in_progress: 'warning',
   completed: 'ok',
   failed: 'critical',
 };
 
-const APPROVAL_STATUS_SEMANTIC: Record<string, SemanticColorKey> = {
+const APPROVAL_STATUS_SEMANTIC: Record<CalibrationApprovalStatus, SemanticColorKey> = {
   pending_approval: 'warning',
   approved: 'ok',
   rejected: 'critical',
@@ -89,14 +90,14 @@ const RESULT_SEMANTIC: Record<string, SemanticColorKey> = {
   conditional: 'warning',
 };
 
-const STATUS_LABEL_KEYS: Record<string, string> = {
+const STATUS_LABEL_KEYS: Partial<Record<CalibrationStatus, string>> = {
   scheduled: 'statusScheduled',
   in_progress: 'statusInProgress',
   completed: 'statusCompleted',
   failed: 'statusFailed',
 };
 
-const APPROVAL_LABEL_KEYS: Record<string, string> = {
+const APPROVAL_LABEL_KEYS: Record<CalibrationApprovalStatus, string> = {
   pending_approval: 'approvalPending',
   approved: 'approvalApproved',
   rejected: 'approvalRejected',
@@ -340,7 +341,7 @@ export function CalibrationHistorySection({
                         variant="outline"
                         className={
                           STATUS_SEMANTIC[item.status]
-                            ? getSemanticStatusClasses(STATUS_SEMANTIC[item.status])
+                            ? getSemanticStatusClasses(STATUS_SEMANTIC[item.status]!)
                             : 'bg-muted'
                         }
                       >

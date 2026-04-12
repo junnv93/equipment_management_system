@@ -80,7 +80,7 @@ const StatusBadge = memo(function StatusBadge({
   status,
   nextCalibrationDate,
 }: {
-  status: string;
+  status: EquipmentStatus;
   nextCalibrationDate?: string | Date | null;
 }) {
   const t = useTranslations('equipment');

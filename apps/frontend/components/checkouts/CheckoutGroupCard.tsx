@@ -30,6 +30,7 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
+  type CheckoutStatus,
 } from '@equipment-management/schemas';
 import {
   CHECKOUT_MOTION,
@@ -47,7 +48,7 @@ import { FONT, getManagementNumberClasses } from '@/lib/design-tokens';
 // ============================================================================
 
 /** 렌탈 그룹 헤더 인라인 진행 표시 (5원) */
-function RentalFlowInline({ status }: { status: string }) {
+function RentalFlowInline({ status }: { status: CheckoutStatus }) {
   const t = useTranslations('checkouts');
   const isFullyDone = status === CSVal.LENDER_RECEIVED;
   const currentIdx = isFullyDone ? 5 : (RENTAL_FLOW_INLINE_TOKENS.statusToStep[status] ?? -1);

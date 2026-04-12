@@ -1,5 +1,6 @@
 import 'next-auth';
 import 'next-auth/jwt';
+import type { UserRole } from '@equipment-management/schemas';
 
 /**
  * 사이트 코드 타입
@@ -10,8 +11,8 @@ type SiteCode = 'suwon' | 'uiwang' | 'pyeongtaek';
 declare module 'next-auth' {
   interface User {
     id: string;
-    role: string;
-    roles: string[];
+    role: UserRole;
+    roles: UserRole[];
     department?: string;
     site?: SiteCode;
     teamId?: string;
@@ -27,8 +28,8 @@ declare module 'next-auth' {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role: string;
-      roles: string[];
+      role: UserRole;
+      roles: UserRole[];
       department?: string;
       site?: SiteCode;
       teamId?: string;
@@ -42,8 +43,8 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
-    role?: string;
-    roles?: string[];
+    role?: UserRole;
+    roles?: UserRole[];
     department?: string;
     site?: SiteCode;
     teamId?: string;

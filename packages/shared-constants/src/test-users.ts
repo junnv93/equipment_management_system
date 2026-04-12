@@ -10,6 +10,8 @@
  * UUID 원본: apps/backend/src/database/utils/uuid-constants.ts
  */
 
+import type { UserRole } from '@equipment-management/schemas';
+
 /** SemanticColorKey와 호환되는 색상 키 유니온 (shared-constants는 design-token에 의존 불가) */
 export type TestUserSemanticColor =
   | 'ok'
@@ -23,7 +25,7 @@ export type TestUserSemanticColor =
 
 export interface TestUserEntry {
   email: string;
-  role: string;
+  role: UserRole;
   label: string;
   semanticColor: TestUserSemanticColor;
 }

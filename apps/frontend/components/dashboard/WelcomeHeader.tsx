@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { User, Shield, ShieldCheck, Crown } from 'lucide-react';
-import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { UserRoleValues as URVal, type UserRole } from '@equipment-management/schemas';
 import { DASHBOARD_WELCOME_TOKENS as T, getRoleBadgeClasses } from '@/lib/design-tokens';
 
 interface WelcomeHeaderProps {
@@ -28,7 +28,7 @@ const ROLE_ICONS: Record<string, React.ElementType> = {
   [URVal.SYSTEM_ADMIN]: Crown,
 };
 
-function getRoleInfo(role: string): RoleInfo {
+function getRoleInfo(role: UserRole): RoleInfo {
   const badge = getRoleBadgeClasses(role);
   const icon = ROLE_ICONS[role] || User;
   return { ...badge, icon };
@@ -62,7 +62,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   }
 
   const userName = session?.user?.name || t('defaultUser');
-  const userRole = session?.user?.role?.toLowerCase() || 'user';
+  const userRole = session?.user?.role ?? URVal.TEST_ENGINEER;
   const role = getRoleInfo(userRole);
   const RoleIcon = role.icon;
 

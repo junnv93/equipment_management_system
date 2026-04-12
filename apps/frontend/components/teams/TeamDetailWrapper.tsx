@@ -83,7 +83,7 @@ export function TeamDetailWrapper({ teamId }: TeamDetailWrapperProps) {
         user
           ? {
               userId: user.id || '',
-              role: user.role || '',
+              role: user.role,
               teamId: user.teamId,
               site: user.site,
             }

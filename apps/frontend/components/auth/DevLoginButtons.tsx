@@ -15,6 +15,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { useTranslations } from 'next-intl';
 import { TEST_USERS_BY_TEAM, DEFAULT_TEST_TEAM_KEY } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 
 interface DevLoginButtonsProps {
   callbackUrl?: string;
@@ -30,7 +31,7 @@ export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
   const [selectedTeam, setSelectedTeam] = useState<string>(DEFAULT_TEST_TEAM_KEY);
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
 
-  const handleLogin = async (email: string, role: string) => {
+  const handleLogin = async (email: string, role: UserRole) => {
     setLoadingEmail(email);
     try {
       // Use email-based login for more precise user selection

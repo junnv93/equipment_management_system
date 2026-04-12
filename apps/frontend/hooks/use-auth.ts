@@ -17,8 +17,6 @@ import {
   type Permission,
   hasPermission,
 } from '@equipment-management/shared-constants';
-import { type UserRole } from '@equipment-management/schemas';
-
 export function useAuth() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -38,7 +36,7 @@ export function useAuth() {
   const can = useCallback(
     (permission: Permission): boolean => {
       if (!userRole) return false;
-      return hasPermission(userRole as UserRole, permission);
+      return hasPermission(userRole, permission);
     },
     [userRole]
   );

@@ -29,7 +29,7 @@ class ServerUnavailableError extends CredentialsSignin {
   code = AUTH_ERROR_CODE.SERVER_UNAVAILABLE;
 }
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import { UserRoleValues as URVal, type UserRole } from '@equipment-management/schemas';
 
 /**
  * Azure AD 프로필 확장 타입
@@ -45,8 +45,8 @@ interface AzureADProfile extends Profile {
  * authorize 함수에서 반환하는 사용자 객체 타입
  */
 interface AuthorizedUser extends User {
-  role: string;
-  roles: string[];
+  role: UserRole;
+  roles: UserRole[];
   department?: string;
   site?: 'suwon' | 'uiwang' | 'pyeongtaek';
   teamId?: string;
@@ -438,8 +438,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           token.id = user.id;
           token.email = user.email ?? undefined;
           token.name = user.name ?? undefined;
-          token.roles = azureProfile?.roles || ['USER'];
-          token.role = token.roles[0] || 'USER';
+          token.roles = (azureProfile?.roles ?? [URVal.TEST_ENGINEER]) as UserRole[];
+          token.role = token.roles[0] ?? URVal.TEST_ENGINEER;
           token.department = azureProfile?.department;
           token.site = authUser.site;
           token.teamId = authUser.teamId;
@@ -509,8 +509,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     async session({ session, token }): Promise<Session> {
       if (session.user) {
         session.user.id = token.id ?? '';
-        session.user.role = token.role ?? 'USER';
-        session.user.roles = token.roles ?? ['USER'];
+        session.user.role = token.role ?? URVal.TEST_ENGINEER;
+        session.user.roles = token.roles ?? [URVal.TEST_ENGINEER];
         session.user.department = token.department;
         session.user.site = token.site;
         session.user.teamId = token.teamId;

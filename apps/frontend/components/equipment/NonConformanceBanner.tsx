@@ -6,10 +6,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 import { NC_BANNER_TOKENS } from '@/lib/design-tokens';
+import type { NonConformanceStatus } from '@equipment-management/schemas';
 
 interface NonConformance {
   id: string;
-  status: string;
+  status: NonConformanceStatus;
   cause: string;
   discoveryDate: string | Date;
 }

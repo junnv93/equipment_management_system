@@ -33,7 +33,10 @@ const EquipmentRow = memo(
     const { fmtDate } = useDateFormatter();
     // 상태에 따른 뱃지 스타일 (SSOT: equipment-status-styles.ts)
     // 실시간 교정기한 초과 체크 포함
-    const getStatusBadge = (status: string, nextCalibrationDate?: string | Date | null) => {
+    const getStatusBadge = (
+      status: EquipmentStatus,
+      nextCalibrationDate?: string | Date | null
+    ) => {
       const style = getEquipmentStatusTokenStyle(status, nextCalibrationDate);
       const displayStatus = getDisplayStatus((status || 'available') as EquipmentStatus);
       return (

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 import type { TeamDetail as TeamDetailType, TeamMember } from '@/lib/api/teams-api';
 import { SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
@@ -24,7 +25,7 @@ const DeleteTeamModal = dynamic(
 
 export interface CurrentUserInfo {
   userId: string;
-  role: string;
+  role: UserRole;
   teamId?: string;
   site?: string;
 }
