@@ -54,6 +54,13 @@ interface BaseEquipmentImport {
   version: number;
   createdAt: string;
   updatedAt: string;
+  // Relation 필드 (findAll with 절에서 반환)
+  requester?: {
+    id: string;
+    name: string;
+    email: string;
+    team: { id: string; name: string } | null;
+  } | null;
 }
 
 /**

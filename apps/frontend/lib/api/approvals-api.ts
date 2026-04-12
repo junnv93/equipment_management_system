@@ -981,25 +981,21 @@ class ApprovalsApi {
   }
 
   private mapCalibrationToApprovalItem(calibration: Calibration): ApprovalItem {
-    // Note: Calibration 타입에는 equipment 조인 정보가 없음
-    // 필요시 별도로 장비 정보를 조회해야 함
-
-    // registeredByUser 관계를 통해 사용자 정보 추출
-    const registeredByUser = (calibration as unknown as Record<string, unknown>)
-      .registeredByUser as Record<string, unknown> | undefined;
-    const team = registeredByUser?.team as Record<string, unknown> | undefined;
+    // registeredByUser relation (pending approvals 응답에 포함)
+    const registeredByUser = calibration.registeredByUser;
+    const team = registeredByUser?.team;
 
     return {
       id: calibration.id,
       category: 'calibration',
       status: this.mapCalibrationStatus(calibration.approvalStatus),
       requesterId: calibration.registeredBy || '',
-      requesterName: registeredByUser?.name
-        ? String(registeredByUser.name)
-        : calibration.registeredByRole === URVal.TEST_ENGINEER
+      requesterName:
+        registeredByUser?.name ??
+        (calibration.registeredByRole === URVal.TEST_ENGINEER
           ? 'Test Engineer'
-          : 'Technical Manager',
-      requesterTeam: team?.name ? String(team.name) : '',
+          : 'Technical Manager'),
+      requesterTeam: team?.name ?? '',
       requestedAt: calibration.createdAt,
       summary: `Equipment (${calibration.equipmentId}) Calibration Record`,
       summaryData: { type: 'calibration', equipmentId: calibration.equipmentId },
@@ -1093,23 +1089,17 @@ class ApprovalsApi {
   }
 
   private mapNonConformanceToApprovalItem(nc: NonConformance): ApprovalItem {
-    // 백엔드 relation 이름: corrector, discoverer (correctedByUser/discoveredByUser가 아님)
-    const corrector = (nc as unknown as Record<string, unknown>).corrector as
-      | Record<string, unknown>
-      | undefined;
-    const discoverer = (nc as unknown as Record<string, unknown>).discoverer as
-      | Record<string, unknown>
-      | undefined;
-    const user = corrector || discoverer;
-    const team = user?.team as Record<string, unknown> | undefined;
+    // NonConformance 타입에 corrector/discoverer relation이 이미 정의됨 (NCRelatedUser)
+    const user = nc.corrector || nc.discoverer;
+    const team = user?.team;
 
     return {
       id: nc.id,
       category: 'nonconformity',
       status: 'pending', // corrected 상태 = 승인 대기
       requesterId: nc.correctedBy || nc.discoveredBy || '',
-      requesterName: user?.name ? String(user.name) : 'Unknown',
-      requesterTeam: team?.name ? String(team.name) : '',
+      requesterName: user?.name ?? 'Unknown',
+      requesterTeam: team?.name ?? '',
       requestedAt: nc.correctionDate || nc.discoveryDate,
       summary: `${nc.cause} (Corrected)`,
       summaryData: { type: 'non_conformance', cause: nc.cause },
@@ -1291,11 +1281,9 @@ class ApprovalsApi {
     item: EquipmentImport,
     category: 'incoming'
   ): ApprovalItem {
-    // requester 관계를 통해 사용자 정보 추출
-    const requester = (item as unknown as Record<string, unknown>).requester as
-      | Record<string, unknown>
-      | undefined;
-    const team = requester?.team as Record<string, unknown> | undefined;
+    // requester relation (findAll with 절에서 반환)
+    const requester = item.requester;
+    const team = requester?.team;
 
     // Summary varies by source type
     const isRental = item.sourceType === EISrcVal.RENTAL;
@@ -1311,8 +1299,8 @@ class ApprovalsApi {
       category,
       status: UASVal.PENDING,
       requesterId: item.requesterId,
-      requesterName: requester?.name ? String(requester.name) : 'Requester',
-      requesterTeam: team?.name ? String(team.name) : '',
+      requesterName: requester?.name ?? 'Requester',
+      requesterTeam: team?.name ?? '',
       requestedAt: item.createdAt,
       summary,
       summaryData: {

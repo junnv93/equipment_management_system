@@ -108,25 +108,25 @@ export default function NotificationsContent() {
   }
 
   // 서버 데이터와 기본값 병합
+  const prefs = preferences as Partial<Record<string, unknown>> | undefined;
   const categoryValues = Object.fromEntries(
     NOTIFICATION_CATEGORIES.map((cat) => {
       const field = NOTIFICATION_CATEGORY_FORM_FIELDS[cat];
-      return [field, (preferences as unknown as Record<string, unknown>)?.[field] ?? true];
+      return [field, prefs?.[field] ?? true];
     })
   ) as Record<string, boolean>;
 
-  const digestTime = (preferences as unknown as Record<string, unknown>)?.digestTime;
-  const validDigestTime = DIGEST_TIME_OPTIONS.includes(
-    digestTime as (typeof DIGEST_TIME_OPTIONS)[number]
-  )
-    ? (digestTime as (typeof DIGEST_TIME_OPTIONS)[number])
-    : DEFAULT_DIGEST_TIME;
+  const digestTime = preferences?.digestTime;
+  const validDigestTime =
+    digestTime && DIGEST_TIME_OPTIONS.includes(digestTime as (typeof DIGEST_TIME_OPTIONS)[number])
+      ? (digestTime as (typeof DIGEST_TIME_OPTIONS)[number])
+      : DEFAULT_DIGEST_TIME;
 
-  const mergedValues = Object.assign({}, categoryDefaults, categoryValues, {
+  const mergedValues: NotificationFormValues = Object.assign({}, categoryDefaults, categoryValues, {
     emailEnabled: preferences?.emailEnabled ?? false,
     inAppEnabled: preferences?.inAppEnabled ?? true,
     digestTime: validDigestTime,
-  }) as unknown as NotificationFormValues;
+  }) as NotificationFormValues;
 
   return <NotificationsForm initialPreferences={mergedValues} />;
 }

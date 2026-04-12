@@ -49,6 +49,14 @@ export interface Calibration {
   team?: string;
   teamId?: string;
   teamName?: string;
+  // Relation 필드 (pending approvals 등 join 포함 응답)
+  registeredByUser?: {
+    id: string;
+    name: string;
+    email: string;
+    team: { id: string; name: string } | null;
+  } | null;
+  approvedByUser?: { id: string; name: string; email: string } | null;
 }
 
 export interface CalibrationHistory {
