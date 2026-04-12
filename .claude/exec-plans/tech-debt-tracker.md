@@ -41,7 +41,7 @@
 
 - [x] `onReturnCanceled` CAS version race 조건 — 해결: 2026-04-10 — `onReturnCanceled`에 1회 CAS retry 구현 (매 시도마다 re-read). ConflictException 시 fresh version으로 재시도. unit test 3건 추가 (성공/retry 성공/retry 실패). exec-plan: `checkout-callback-resilience`
 
-- [ ] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — `packages/db/src/schema/audit-logs.ts` — 2026-04-09 — UL-QP-18 장기 보관 요구 + write-heavy 누적 → 수년 후 테이블 비대화. PostgreSQL declarative partitioning (`createdAt` 기준 월/분기) 또는 아카이빙 잡 검토. 2026-04-10 커서 페이지네이션 도입으로 deep-page OFFSET 성능 문제는 해결됨 — 파티셔닝은 순수 스토리지 관리 관점에서만 필요
+- [~] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — 보류(justified): 2026-04-12 — 현재 20행/160KB, 내부 데스크탑 배포. 커서 페이지네이션(timestampIdCursorIdx) + 8개 인덱스 + react-window 가상화 이미 도입. PostgreSQL은 수백만 행까지 인덱스 기반으로 처리 가능. Drizzle ORM은 declarative partitioning 미지원이라 raw SQL + 스키마 우회 필요 → 복잡도 대비 이득 없음. **트리거 기준: audit_logs > 100만 행 또는 테이블 크기 > 1GB 시 재검토.** `SELECT COUNT(*), pg_size_pretty(pg_total_relation_size('audit_logs')) FROM audit_logs;` 로 확인
 
 - [x] 감사로그 프론트엔드 가상화/무한스크롤 도입 — 부분 해결: 2026-04-10 — 커서 기반 API(`findAllCursor`) + `useInfiniteQuery` + IntersectionObserver 무한 스크롤 구현 완료. offset 페이지네이션 버튼 제거. `(timestamp DESC, id DESC)` 복합 인덱스 추가. react-window 가상화는 별도 tech-debt으로 분리 (S1)
 

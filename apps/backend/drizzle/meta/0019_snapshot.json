@@ -265,12 +265,8 @@
           "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -333,12 +329,8 @@
           "name": "cable_loss_data_points_measurement_id_cable_loss_measurements_id_fk",
           "tableFrom": "cable_loss_data_points",
           "tableTo": "cable_loss_measurements",
-          "columnsFrom": [
-            "measurement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["measurement_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -348,10 +340,7 @@
         "cable_loss_data_points_measurement_freq_unique": {
           "name": "cable_loss_data_points_measurement_freq_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "measurement_id",
-            "frequency_mhz"
-          ]
+          "columns": ["measurement_id", "frequency_mhz"]
         }
       },
       "policies": {},
@@ -474,12 +463,8 @@
           "name": "cable_loss_measurements_cable_id_cables_id_fk",
           "tableFrom": "cable_loss_measurements",
           "tableTo": "cables",
-          "columnsFrom": [
-            "cable_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["cable_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -487,12 +472,8 @@
           "name": "cable_loss_measurements_measured_by_users_id_fk",
           "tableFrom": "cable_loss_measurements",
           "tableTo": "users",
-          "columnsFrom": [
-            "measured_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["measured_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -500,12 +481,8 @@
           "name": "cable_loss_measurements_measurement_equipment_id_equipment_id_fk",
           "tableFrom": "cable_loss_measurements",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "measurement_equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["measurement_equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -704,12 +681,8 @@
           "name": "cables_measured_by_users_id_fk",
           "tableFrom": "cables",
           "tableTo": "users",
-          "columnsFrom": [
-            "measured_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["measured_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -717,12 +690,8 @@
           "name": "cables_created_by_users_id_fk",
           "tableFrom": "cables",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1003,12 +972,8 @@
           "name": "calibration_factors_equipment_id_equipment_id_fk",
           "tableFrom": "calibration_factors",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1016,12 +981,8 @@
           "name": "calibration_factors_calibration_id_calibrations_id_fk",
           "tableFrom": "calibration_factors",
           "tableTo": "calibrations",
-          "columnsFrom": [
-            "calibration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["calibration_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1029,12 +990,8 @@
           "name": "calibration_factors_requested_by_users_id_fk",
           "tableFrom": "calibration_factors",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1042,12 +999,8 @@
           "name": "calibration_factors_approved_by_users_id_fk",
           "tableFrom": "calibration_factors",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1229,12 +1182,8 @@
           "name": "calibration_plan_items_plan_id_calibration_plans_id_fk",
           "tableFrom": "calibration_plan_items",
           "tableTo": "calibration_plans",
-          "columnsFrom": [
-            "plan_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["plan_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1242,12 +1191,8 @@
           "name": "calibration_plan_items_equipment_id_equipment_id_fk",
           "tableFrom": "calibration_plan_items",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1255,12 +1200,8 @@
           "name": "calibration_plan_items_confirmed_by_users_id_fk",
           "tableFrom": "calibration_plan_items",
           "tableTo": "users",
-          "columnsFrom": [
-            "confirmed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["confirmed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1584,12 +1525,8 @@
           "name": "calibration_plans_created_by_users_id_fk",
           "tableFrom": "calibration_plans",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1597,12 +1534,8 @@
           "name": "calibration_plans_reviewed_by_users_id_fk",
           "tableFrom": "calibration_plans",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1610,12 +1543,8 @@
           "name": "calibration_plans_approved_by_users_id_fk",
           "tableFrom": "calibration_plans",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1623,12 +1552,8 @@
           "name": "calibration_plans_rejected_by_users_id_fk",
           "tableFrom": "calibration_plans",
           "tableTo": "users",
-          "columnsFrom": [
-            "rejected_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rejected_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1897,12 +1822,8 @@
           "name": "calibrations_equipment_id_equipment_id_fk",
           "tableFrom": "calibrations",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1910,12 +1831,8 @@
           "name": "calibrations_technician_id_users_id_fk",
           "tableFrom": "calibrations",
           "tableTo": "users",
-          "columnsFrom": [
-            "technician_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["technician_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1923,12 +1840,8 @@
           "name": "calibrations_registered_by_users_id_fk",
           "tableFrom": "calibrations",
           "tableTo": "users",
-          "columnsFrom": [
-            "registered_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["registered_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1936,12 +1849,8 @@
           "name": "calibrations_approved_by_users_id_fk",
           "tableFrom": "calibrations",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2058,12 +1967,8 @@
           "name": "checkout_items_checkout_id_checkouts_id_fk",
           "tableFrom": "checkout_items",
           "tableTo": "checkouts",
-          "columnsFrom": [
-            "checkout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["checkout_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2071,12 +1976,8 @@
           "name": "checkout_items_equipment_id_equipment_id_fk",
           "tableFrom": "checkout_items",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2456,12 +2357,8 @@
           "name": "checkouts_requester_id_users_id_fk",
           "tableFrom": "checkouts",
           "tableTo": "users",
-          "columnsFrom": [
-            "requester_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requester_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2469,12 +2366,8 @@
           "name": "checkouts_approver_id_users_id_fk",
           "tableFrom": "checkouts",
           "tableTo": "users",
-          "columnsFrom": [
-            "approver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approver_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2482,12 +2375,8 @@
           "name": "checkouts_returner_id_users_id_fk",
           "tableFrom": "checkouts",
           "tableTo": "users",
-          "columnsFrom": [
-            "returner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["returner_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2495,12 +2384,8 @@
           "name": "checkouts_lender_team_id_teams_id_fk",
           "tableFrom": "checkouts",
           "tableTo": "teams",
-          "columnsFrom": [
-            "lender_team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lender_team_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2508,12 +2393,8 @@
           "name": "checkouts_return_approved_by_users_id_fk",
           "tableFrom": "checkouts",
           "tableTo": "users",
-          "columnsFrom": [
-            "return_approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["return_approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2521,12 +2402,8 @@
           "name": "checkouts_lender_confirmed_by_users_id_fk",
           "tableFrom": "checkouts",
           "tableTo": "users",
-          "columnsFrom": [
-            "lender_confirmed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["lender_confirmed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2661,12 +2538,8 @@
           "name": "condition_checks_checkout_id_checkouts_id_fk",
           "tableFrom": "condition_checks",
           "tableTo": "checkouts",
-          "columnsFrom": [
-            "checkout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["checkout_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2674,12 +2547,8 @@
           "name": "condition_checks_checked_by_users_id_fk",
           "tableFrom": "condition_checks",
           "tableTo": "users",
-          "columnsFrom": [
-            "checked_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["checked_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2939,12 +2808,8 @@
           "name": "disposal_requests_equipment_id_equipment_id_fk",
           "tableFrom": "disposal_requests",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2952,12 +2817,8 @@
           "name": "disposal_requests_requested_by_users_id_fk",
           "tableFrom": "disposal_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2965,12 +2826,8 @@
           "name": "disposal_requests_reviewed_by_users_id_fk",
           "tableFrom": "disposal_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2978,12 +2835,8 @@
           "name": "disposal_requests_approved_by_users_id_fk",
           "tableFrom": "disposal_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2991,12 +2844,8 @@
           "name": "disposal_requests_rejected_by_users_id_fk",
           "tableFrom": "disposal_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "rejected_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rejected_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -3425,12 +3274,8 @@
           "name": "documents_equipment_id_equipment_id_fk",
           "tableFrom": "documents",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3438,12 +3283,8 @@
           "name": "documents_calibration_id_calibrations_id_fk",
           "tableFrom": "documents",
           "tableTo": "calibrations",
-          "columnsFrom": [
-            "calibration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["calibration_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3451,12 +3292,8 @@
           "name": "documents_request_id_equipment_requests_id_fk",
           "tableFrom": "documents",
           "tableTo": "equipment_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3464,12 +3301,8 @@
           "name": "documents_software_validation_id_software_validations_id_fk",
           "tableFrom": "documents",
           "tableTo": "software_validations",
-          "columnsFrom": [
-            "software_validation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["software_validation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3477,12 +3310,8 @@
           "name": "documents_intermediate_inspection_id_intermediate_inspections_id_fk",
           "tableFrom": "documents",
           "tableTo": "intermediate_inspections",
-          "columnsFrom": [
-            "intermediate_inspection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["intermediate_inspection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3490,12 +3319,8 @@
           "name": "documents_self_inspection_id_equipment_self_inspections_id_fk",
           "tableFrom": "documents",
           "tableTo": "equipment_self_inspections",
-          "columnsFrom": [
-            "self_inspection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["self_inspection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3503,12 +3328,8 @@
           "name": "documents_parent_document_id_documents_id_fk",
           "tableFrom": "documents",
           "tableTo": "documents",
-          "columnsFrom": [
-            "parent_document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_document_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3516,12 +3337,8 @@
           "name": "documents_uploaded_by_users_id_fk",
           "tableFrom": "documents",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3693,12 +3510,8 @@
           "name": "equipment_attachments_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_attachments",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -3706,12 +3519,8 @@
           "name": "equipment_attachments_request_id_equipment_requests_id_fk",
           "tableFrom": "equipment_attachments",
           "tableTo": "equipment_requests",
-          "columnsFrom": [
-            "request_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["request_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4133,12 +3942,8 @@
           "name": "equipment_imports_requester_id_users_id_fk",
           "tableFrom": "equipment_imports",
           "tableTo": "users",
-          "columnsFrom": [
-            "requester_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requester_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4146,12 +3951,8 @@
           "name": "equipment_imports_team_id_teams_id_fk",
           "tableFrom": "equipment_imports",
           "tableTo": "teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4159,12 +3960,8 @@
           "name": "equipment_imports_approver_id_users_id_fk",
           "tableFrom": "equipment_imports",
           "tableTo": "users",
-          "columnsFrom": [
-            "approver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approver_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4172,12 +3969,8 @@
           "name": "equipment_imports_received_by_users_id_fk",
           "tableFrom": "equipment_imports",
           "tableTo": "users",
-          "columnsFrom": [
-            "received_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["received_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4185,12 +3978,8 @@
           "name": "equipment_imports_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_imports",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4198,12 +3987,8 @@
           "name": "equipment_imports_return_checkout_id_checkouts_id_fk",
           "tableFrom": "equipment_imports",
           "tableTo": "checkouts",
-          "columnsFrom": [
-            "return_checkout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["return_checkout_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4321,12 +4106,8 @@
           "name": "equipment_incident_history_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_incident_history",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4334,12 +4115,8 @@
           "name": "equipment_incident_history_reported_by_users_id_fk",
           "tableFrom": "equipment_incident_history",
           "tableTo": "users",
-          "columnsFrom": [
-            "reported_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reported_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4347,12 +4124,8 @@
           "name": "equipment_incident_history_non_conformance_id_non_conformances_id_fk",
           "tableFrom": "equipment_incident_history",
           "tableTo": "non_conformances",
-          "columnsFrom": [
-            "non_conformance_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["non_conformance_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4491,12 +4264,8 @@
           "name": "equipment_location_history_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_location_history",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4504,12 +4273,8 @@
           "name": "equipment_location_history_changed_by_users_id_fk",
           "tableFrom": "equipment_location_history",
           "tableTo": "users",
-          "columnsFrom": [
-            "changed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["changed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4621,12 +4386,8 @@
           "name": "equipment_maintenance_history_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_maintenance_history",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4634,12 +4395,8 @@
           "name": "equipment_maintenance_history_performed_by_users_id_fk",
           "tableFrom": "equipment_maintenance_history",
           "tableTo": "users",
-          "columnsFrom": [
-            "performed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["performed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4865,12 +4622,8 @@
           "name": "equipment_requests_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_requests",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4878,12 +4631,8 @@
           "name": "equipment_requests_requested_by_users_id_fk",
           "tableFrom": "equipment_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -4891,12 +4640,8 @@
           "name": "equipment_requests_approved_by_users_id_fk",
           "tableFrom": "equipment_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5129,12 +4874,8 @@
           "name": "equipment_self_inspections_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_self_inspections",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -5142,12 +4883,8 @@
           "name": "equipment_self_inspections_inspector_id_users_id_fk",
           "tableFrom": "equipment_self_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "inspector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["inspector_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -5155,12 +4892,8 @@
           "name": "equipment_self_inspections_confirmed_by_users_id_fk",
           "tableFrom": "equipment_self_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "confirmed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["confirmed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -5235,12 +4968,8 @@
           "name": "self_inspection_items_inspection_id_equipment_self_inspections_id_fk",
           "tableFrom": "self_inspection_items",
           "tableTo": "equipment_self_inspections",
-          "columnsFrom": [
-            "inspection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["inspection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5316,12 +5045,8 @@
           "name": "equipment_test_software_equipment_id_equipment_id_fk",
           "tableFrom": "equipment_test_software",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5329,12 +5054,8 @@
           "name": "equipment_test_software_test_software_id_test_software_id_fk",
           "tableFrom": "equipment_test_software",
           "tableTo": "test_software",
-          "columnsFrom": [
-            "test_software_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["test_software_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5975,12 +5696,8 @@
           "name": "equipment_team_id_teams_id_fk",
           "tableFrom": "equipment",
           "tableTo": "teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -5988,12 +5705,8 @@
           "name": "equipment_manager_id_users_id_fk",
           "tableFrom": "equipment",
           "tableTo": "users",
-          "columnsFrom": [
-            "manager_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["manager_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -6001,12 +5714,8 @@
           "name": "equipment_deputy_manager_id_users_id_fk",
           "tableFrom": "equipment",
           "tableTo": "users",
-          "columnsFrom": [
-            "deputy_manager_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deputy_manager_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -6014,12 +5723,8 @@
           "name": "equipment_requested_by_users_id_fk",
           "tableFrom": "equipment",
           "tableTo": "users",
-          "columnsFrom": [
-            "requested_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requested_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -6027,12 +5732,8 @@
           "name": "equipment_approved_by_users_id_fk",
           "tableFrom": "equipment",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6042,9 +5743,7 @@
         "equipment_management_number_unique": {
           "name": "equipment_management_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "management_number"
-          ]
+          "columns": ["management_number"]
         }
       },
       "policies": {},
@@ -6144,12 +5843,8 @@
           "name": "form_template_revisions_form_template_id_form_templates_id_fk",
           "tableFrom": "form_template_revisions",
           "tableTo": "form_templates",
-          "columnsFrom": [
-            "form_template_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["form_template_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -6157,12 +5852,8 @@
           "name": "form_template_revisions_revised_by_users_id_fk",
           "tableFrom": "form_template_revisions",
           "tableTo": "users",
-          "columnsFrom": [
-            "revised_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["revised_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -6335,12 +6026,8 @@
           "name": "form_templates_uploaded_by_users_id_fk",
           "tableFrom": "form_templates",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6465,12 +6152,8 @@
           "name": "teams_leader_id_users_id_fk",
           "tableFrom": "teams",
           "tableTo": "users",
-          "columnsFrom": [
-            "leader_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["leader_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6688,9 +6371,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -7081,12 +6762,8 @@
           "name": "non_conformances_equipment_id_equipment_id_fk",
           "tableFrom": "non_conformances",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7094,12 +6771,8 @@
           "name": "non_conformances_discovered_by_users_id_fk",
           "tableFrom": "non_conformances",
           "tableTo": "users",
-          "columnsFrom": [
-            "discovered_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["discovered_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7107,12 +6780,8 @@
           "name": "non_conformances_corrected_by_users_id_fk",
           "tableFrom": "non_conformances",
           "tableTo": "users",
-          "columnsFrom": [
-            "corrected_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["corrected_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7120,12 +6789,8 @@
           "name": "non_conformances_closed_by_users_id_fk",
           "tableFrom": "non_conformances",
           "tableTo": "users",
-          "columnsFrom": [
-            "closed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["closed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7133,12 +6798,8 @@
           "name": "non_conformances_rejected_by_users_id_fk",
           "tableFrom": "non_conformances",
           "tableTo": "users",
-          "columnsFrom": [
-            "rejected_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rejected_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -7374,12 +7035,8 @@
           "name": "test_software_primary_manager_id_users_id_fk",
           "tableFrom": "test_software",
           "tableTo": "users",
-          "columnsFrom": [
-            "primary_manager_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["primary_manager_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7387,12 +7044,8 @@
           "name": "test_software_secondary_manager_id_users_id_fk",
           "tableFrom": "test_software",
           "tableTo": "users",
-          "columnsFrom": [
-            "secondary_manager_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["secondary_manager_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7400,12 +7053,8 @@
           "name": "test_software_created_by_users_id_fk",
           "tableFrom": "test_software",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -7787,12 +7436,8 @@
           "name": "software_validations_test_software_id_test_software_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "test_software",
-          "columnsFrom": [
-            "test_software_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["test_software_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7800,12 +7445,8 @@
           "name": "software_validations_received_by_users_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "users",
-          "columnsFrom": [
-            "received_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["received_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7813,12 +7454,8 @@
           "name": "software_validations_performed_by_users_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "users",
-          "columnsFrom": [
-            "performed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["performed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7826,12 +7463,8 @@
           "name": "software_validations_submitted_by_users_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "users",
-          "columnsFrom": [
-            "submitted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submitted_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7839,12 +7472,8 @@
           "name": "software_validations_technical_approver_id_users_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "users",
-          "columnsFrom": [
-            "technical_approver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["technical_approver_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7852,12 +7481,8 @@
           "name": "software_validations_quality_approver_id_users_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "users",
-          "columnsFrom": [
-            "quality_approver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["quality_approver_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7865,12 +7490,8 @@
           "name": "software_validations_rejected_by_users_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "users",
-          "columnsFrom": [
-            "rejected_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rejected_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -7878,12 +7499,8 @@
           "name": "software_validations_created_by_users_id_fk",
           "tableFrom": "software_validations",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -8084,12 +7701,8 @@
           "name": "repair_history_equipment_id_equipment_id_fk",
           "tableFrom": "repair_history",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -8097,12 +7710,8 @@
           "name": "repair_history_deleted_by_users_id_fk",
           "tableFrom": "repair_history",
           "tableTo": "users",
-          "columnsFrom": [
-            "deleted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deleted_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -8110,12 +7719,8 @@
           "name": "repair_history_created_by_users_id_fk",
           "tableFrom": "repair_history",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -8264,12 +7869,8 @@
           "name": "notification_preferences_user_id_users_id_fk",
           "tableFrom": "notification_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8279,9 +7880,7 @@
         "notification_preferences_user_id_unique": {
           "name": "notification_preferences_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -8573,12 +8172,8 @@
           "name": "notifications_recipient_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "recipient_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recipient_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8586,12 +8181,8 @@
           "name": "notifications_team_id_teams_id_fk",
           "tableFrom": "notifications",
           "tableTo": "teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8599,12 +8190,8 @@
           "name": "notifications_equipment_id_equipment_id_fk",
           "tableFrom": "notifications",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8612,12 +8199,8 @@
           "name": "notifications_actor_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "actor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -8673,12 +8256,8 @@
           "name": "user_preferences_user_id_users_id_fk",
           "tableFrom": "user_preferences",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8688,9 +8267,7 @@
         "user_preferences_user_id_unique": {
           "name": "user_preferences_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -8796,12 +8373,8 @@
           "name": "system_settings_updated_by_users_id_fk",
           "tableFrom": "system_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -8879,12 +8452,8 @@
           "name": "intermediate_inspection_equipment_inspection_id_intermediate_inspections_id_fk",
           "tableFrom": "intermediate_inspection_equipment",
           "tableTo": "intermediate_inspections",
-          "columnsFrom": [
-            "inspection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["inspection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8892,12 +8461,8 @@
           "name": "intermediate_inspection_equipment_equipment_id_equipment_id_fk",
           "tableFrom": "intermediate_inspection_equipment",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -8984,12 +8549,8 @@
           "name": "intermediate_inspection_items_inspection_id_intermediate_inspections_id_fk",
           "tableFrom": "intermediate_inspection_items",
           "tableTo": "intermediate_inspections",
-          "columnsFrom": [
-            "inspection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["inspection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -9311,12 +8872,8 @@
           "name": "intermediate_inspections_calibration_id_calibrations_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "calibrations",
-          "columnsFrom": [
-            "calibration_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["calibration_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -9324,12 +8881,8 @@
           "name": "intermediate_inspections_equipment_id_equipment_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "equipment",
-          "columnsFrom": [
-            "equipment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["equipment_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -9337,12 +8890,8 @@
           "name": "intermediate_inspections_inspector_id_users_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "inspector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["inspector_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -9350,12 +8899,8 @@
           "name": "intermediate_inspections_submitted_by_users_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "submitted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submitted_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -9363,12 +8908,8 @@
           "name": "intermediate_inspections_reviewed_by_users_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -9376,12 +8917,8 @@
           "name": "intermediate_inspections_approved_by_users_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -9389,12 +8926,8 @@
           "name": "intermediate_inspections_rejected_by_users_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "rejected_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["rejected_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -9402,12 +8935,8 @@
           "name": "intermediate_inspections_created_by_users_id_fk",
           "tableFrom": "intermediate_inspections",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -9505,12 +9034,8 @@
           "name": "inspection_document_items_document_id_documents_id_fk",
           "tableFrom": "inspection_document_items",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -9704,12 +9229,8 @@
           "name": "inspection_result_sections_document_id_documents_id_fk",
           "tableFrom": "inspection_result_sections",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -9717,12 +9238,8 @@
           "name": "inspection_result_sections_created_by_users_id_fk",
           "tableFrom": "inspection_result_sections",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -9730,12 +9247,8 @@
           "name": "inspection_result_sections_updated_by_users_id_fk",
           "tableFrom": "inspection_result_sections",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -9751,29 +9264,17 @@
     "public.attachment_type": {
       "name": "attachment_type",
       "schema": "public",
-      "values": [
-        "inspection_report",
-        "history_card",
-        "other"
-      ]
+      "values": ["inspection_report", "history_card", "other"]
     },
     "public.approval_status": {
       "name": "approval_status",
       "schema": "public",
-      "values": [
-        "pending_approval",
-        "approved",
-        "rejected"
-      ]
+      "values": ["pending_approval", "approved", "rejected"]
     },
     "public.request_type": {
       "name": "request_type",
       "schema": "public",
-      "values": [
-        "create",
-        "update",
-        "delete"
-      ]
+      "values": ["create", "update", "delete"]
     },
     "public.equipment_status": {
       "name": "equipment_status",
