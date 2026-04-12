@@ -15,6 +15,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 
@@ -48,11 +49,10 @@ export interface CalibrationFactorRecord {
 export class CalibrationFactorsService extends VersionedBaseService {
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION_FACTORS;
 
-  /**
-   * scope-aware 캐시 접미사: teamId를 구조적 segment로 인코딩하여
-   * deleteByPrefix만으로 정확한 스코프 단위 무효화 가능
-   */
-  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'registry']);
+  private readonly buildCacheKey = createScopeAwareCacheKeyBuilder(
+    CACHE_KEY_PREFIXES.CALIBRATION_FACTORS,
+    new Set(['list', 'registry'])
+  );
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
@@ -62,56 +62,6 @@ export class CalibrationFactorsService extends VersionedBaseService {
     private readonly eventEmitter: EventEmitter2
   ) {
     super();
-  }
-
-  /**
-   * scope-aware 캐시 키 생성
-   *
-   * SCOPE_AWARE_SUFFIXES에 속한 suffix는 params.teamId를 구조적
-   * segment(`:t:<id>:` | `:g:`)로 인코딩. 호출자는 변경 없음.
-   */
-  private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
-    const baseKey = `${this.CACHE_PREFIX}${suffix}`;
-    if (!params) {
-      return baseKey;
-    }
-
-    const normalizedParams = this.normalizeCacheParams(params);
-
-    let scopeSegment = '';
-    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
-      const teamIdValue = normalizedParams.teamId;
-      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
-        scopeSegment = `:t:${teamIdValue}`;
-        delete normalizedParams.teamId;
-      } else {
-        scopeSegment = ':g';
-      }
-    }
-
-    const sortedParams = Object.keys(normalizedParams)
-      .sort()
-      .reduce(
-        (acc, key) => {
-          acc[key] = normalizedParams[key];
-          return acc;
-        },
-        {} as Record<string, unknown>
-      );
-
-    return `${baseKey}${scopeSegment}:${JSON.stringify(sortedParams)}`;
-  }
-
-  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
-    return Object.entries(params).reduce(
-      (acc, [key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          acc[key] = value;
-        }
-        return acc;
-      },
-      {} as Record<string, unknown>
-    );
   }
 
   /**
@@ -135,7 +85,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
    * approve/reject/remove 모든 updateWithVersion 경로가 단일 정책 공유.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(this.buildCacheKey('detail', { id }));
+    await this.cacheService.delete(this.buildCacheKey('detail', { id }));
   }
 
   /**

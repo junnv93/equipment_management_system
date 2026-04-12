@@ -45,6 +45,7 @@ import {
 } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
@@ -137,84 +138,10 @@ export class EquipmentService extends VersionedBaseService {
     return typeof teamId === 'string' ? teamId : String(teamId);
   }
 
-  /**
-   * 캐시 키용 파라미터 정규화
-   *
-   * Best Practice: undefined/null/빈 문자열 제거하여 캐시 키를 일관되게 생성
-   *
-   * @param params 쿼리 파라미터 객체
-   * @returns 정규화된 파라미터 객체
-   */
-  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
-    return Object.entries(params).reduce(
-      (acc, [key, value]) => {
-        // undefined, null, 빈 문자열 제거
-        if (value !== undefined && value !== null && value !== '') {
-          acc[key] = value;
-        }
-        return acc;
-      },
-      {} as Record<string, unknown>
-    );
-  }
-
-  /**
-   * 스코프(global vs team)를 구조적 suffix 로 인코딩하는 캐시 키 접미사 목록.
-   *
-   * 불변식: 이 집합에 속한 suffix 의 키는 `<prefix><suffix>:g:<jsonParams>` 또는
-   * `<prefix><suffix>:t:<teamId>:<jsonParams>` 형태를 가진다. JSON params 에는
-   * `teamId` 가 포함되지 않는다 (구조적 segment 로 이미 인코딩됨).
-   *
-   * 이 불변식 덕에 `invalidateCache` 가 `deleteByPrefix` 만으로 정확한 스코프
-   * 단위 무효화를 수행할 수 있다 — JSON 직렬화 infix 에 대한 정규식 매칭 불필요.
-   */
-  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'count', 'statusCounts', 'team']);
-
-  /**
-   * 캐시 키 생성 헬퍼 메서드
-   *
-   * Best Practice: 순환 참조 방지 + 결정론적 키 생성
-   * - Object.keys().sort()로 키 순서 보장
-   * - 정규화된 파라미터만 포함하여 불필요한 캐시 미스 방지
-   *
-   * 스코프 인식: SCOPE_AWARE_SUFFIXES 에 속한 suffix 는 params.teamId 를 구조적
-   * segment(`:t:<id>:` | `:g:`)로 이동시킨다. 호출자는 변경 없음 — 내부에서 자동 변환.
-   */
-  private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
-    const baseKey = `${this.CACHE_PREFIX}${suffix}`;
-    if (!params) {
-      return baseKey;
-    }
-
-    // 정규화된 파라미터로 결정론적 키 생성 (empty/null 제거)
-    const normalizedParams = this.normalizeCacheParams(params);
-
-    // 스코프 인식 suffix 의 경우 teamId 를 구조적 segment 로 추출
-    let scopeSegment = '';
-    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
-      const teamIdValue = normalizedParams.teamId;
-      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
-        scopeSegment = `:t:${teamIdValue}`;
-        delete normalizedParams.teamId;
-      } else {
-        scopeSegment = ':g';
-      }
-    }
-
-    // 키 순서를 보장하기 위해 정렬
-    const sortedParams = Object.keys(normalizedParams)
-      .sort()
-      .reduce(
-        (acc, key) => {
-          acc[key] = normalizedParams[key];
-          return acc;
-        },
-        {} as Record<string, unknown>
-      );
-
-    const safeParams = JSON.stringify(sortedParams);
-    return `${baseKey}${scopeSegment}:${safeParams}`;
-  }
+  private readonly buildCacheKey = createScopeAwareCacheKeyBuilder(
+    CACHE_KEY_PREFIXES.EQUIPMENT,
+    new Set(['list', 'count', 'statusCounts', 'team'])
+  );
 
   /**
    * 쿼리 조건 빌더
@@ -873,7 +800,7 @@ export class EquipmentService extends VersionedBaseService {
    *
    * ✅ Best Practices:
    * - 캐시 키에 모든 파라미터 자동 포함 (새 필터 추가 시 수동 작업 불필요)
-   * - normalizeCacheParams()로 undefined/null 제거하여 일관된 캐시 키 생성
+   * - buildCacheKey가 undefined/null 자동 제거하여 일관된 캐시 키 생성
    * - 정렬된 키로 결정론적 캐시 히트 보장
    *
    * @param queryParams 쿼리 파라미터
@@ -885,7 +812,7 @@ export class EquipmentService extends VersionedBaseService {
     // 캐시 키 생성
     // ✅ Best Practice: 모든 쿼리 파라미터를 자동으로 포함 (SSOT)
     // - 새 필터 추가 시 수동으로 캐시 키에 추가할 필요 없음
-    // - normalizeCacheParams()가 undefined/null/빈 문자열 자동 제거
+    // - buildCacheKey가 undefined/null/빈 문자열 자동 제거
     // - 휴먼 에러 방지 및 유지보수성 향상
     const cacheKey = this.buildCacheKey('list', {
       ...queryParams,

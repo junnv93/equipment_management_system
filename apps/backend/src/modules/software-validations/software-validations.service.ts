@@ -49,7 +49,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
    * 6개 updateWithVersion 경로(update/submit/review/approve/reject/etc) 단일 정책 공유.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    await this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   private async getSoftwareName(testSoftwareId: string): Promise<string> {

@@ -19,6 +19,7 @@ import {
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
@@ -55,11 +56,10 @@ export class NonConformancesService extends VersionedBaseService {
 
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.NON_CONFORMANCES;
 
-  /**
-   * scope-aware 캐시 접미사: teamId를 구조적 segment(`:t:<id>:` | `:g:`)로
-   * 인코딩하여 deleteByPrefix만으로 정확한 스코프 단위 무효화 가능
-   */
-  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list']);
+  private readonly buildCacheKey = createScopeAwareCacheKeyBuilder(
+    CACHE_KEY_PREFIXES.NON_CONFORMANCES,
+    new Set(['list'])
+  );
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
@@ -69,56 +69,6 @@ export class NonConformancesService extends VersionedBaseService {
     private readonly eventEmitter: EventEmitter2
   ) {
     super();
-  }
-
-  /**
-   * scope-aware 캐시 키 생성
-   *
-   * SCOPE_AWARE_SUFFIXES에 속한 suffix는 params.teamId를 구조적
-   * segment(`:t:<id>:` | `:g:`)로 인코딩. 호출자는 변경 없음.
-   */
-  private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
-    const baseKey = `${this.CACHE_PREFIX}${suffix}`;
-    if (!params) {
-      return baseKey;
-    }
-
-    const normalizedParams = this.normalizeCacheParams(params);
-
-    let scopeSegment = '';
-    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
-      const teamIdValue = normalizedParams.teamId;
-      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
-        scopeSegment = `:t:${teamIdValue}`;
-        delete normalizedParams.teamId;
-      } else {
-        scopeSegment = ':g';
-      }
-    }
-
-    const sortedParams = Object.keys(normalizedParams)
-      .sort()
-      .reduce(
-        (acc, key) => {
-          acc[key] = normalizedParams[key];
-          return acc;
-        },
-        {} as Record<string, unknown>
-      );
-
-    return `${baseKey}${scopeSegment}:${JSON.stringify(sortedParams)}`;
-  }
-
-  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
-    return Object.entries(params).reduce(
-      (acc, [key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          acc[key] = value;
-        }
-        return acc;
-      },
-      {} as Record<string, unknown>
-    );
   }
 
   /**
@@ -822,13 +772,8 @@ export class NonConformancesService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', { id }));
     this.invalidateListCache();
 
-    // 캐시 무효화 (장비 상태가 available로 복원되었으면 equipmentStatusChanged=true)
-    await this.cacheInvalidationHelper
-      .invalidateAfterNonConformanceStatusChange(
-        nonConformance.equipmentId,
-        result.equipmentStatusRestored
-      )
-      .catch((err) => this.logger.warn(`Cache invalidation failed after NC close: ${err.message}`));
+    // cross-entity 캐시 무효화는 NC_CLOSED 이벤트 → CacheEventListener가 처리
+    // (장비 상세/목록/대시보드 캐시 — CACHE_INVALIDATION_REGISTRY 참조)
 
     // 📢 알림 이벤트 발행 (부적합 종료)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CLOSED, {
@@ -877,12 +822,7 @@ export class NonConformancesService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', { id }));
     this.invalidateListCache();
 
-    // 캐시 무효화 (장비 상태는 변경되지 않음 — non_conforming 유지)
-    await this.cacheInvalidationHelper
-      .invalidateAfterNonConformanceStatusChange(nonConformance.equipmentId, false)
-      .catch((err) =>
-        this.logger.warn(`Cache invalidation failed after NC rejection: ${err.message}`)
-      );
+    // cross-entity 캐시 무효화는 NC_CORRECTION_REJECTED 이벤트 → CacheEventListener가 처리
 
     // 📢 알림 이벤트 발행 (조치 반려)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED, {
@@ -1021,6 +961,13 @@ export class NonConformancesService extends VersionedBaseService {
 
     this.cacheService.delete(this.buildCacheKey('detail', { id }));
     this.invalidateListCache();
+
+    // 교차 엔티티 캐시 무효화 (대시보드, 장비 상세의 부적합 상태)
+    await this.cacheInvalidationHelper
+      .invalidateAfterNonConformanceStatusChange(nc.equipmentId, false)
+      .catch((err) =>
+        this.logger.warn(`Cache invalidation failed after NC markCorrected: ${err.message}`)
+      );
 
     // 📢 알림 이벤트 발행 (조치 완료 — 승인 요청)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTED, {

@@ -54,7 +54,7 @@ export class TestSoftwareService extends VersionedBaseService {
    * update/toggleAvailability 등 모든 updateWithVersion 경로가 단일 정책 공유.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    await this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   /**

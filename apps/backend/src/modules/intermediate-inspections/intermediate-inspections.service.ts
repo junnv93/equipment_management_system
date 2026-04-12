@@ -55,7 +55,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
    * 5개 updateWithVersion 경로(update/finalize/approve/reject/remove) 단일 정책 공유.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    await this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   /**

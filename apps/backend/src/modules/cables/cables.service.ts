@@ -40,7 +40,7 @@ export class CablesService extends VersionedBaseService {
    * 모든 updateWithVersion 호출 경로가 단일 정책 공유 → catch boilerplate 제거.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    await this.cacheService.delete(this.buildCacheKey('detail', id));
   }
 
   private invalidateCache(id?: string): void {

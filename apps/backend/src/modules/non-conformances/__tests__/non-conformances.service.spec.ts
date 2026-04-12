@@ -5,6 +5,7 @@ import { NonConformanceStatus } from '../dto/non-conformance-query.dto';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
 
 describe('NonConformancesService', () => {
   let service: NonConformancesService;
@@ -31,6 +32,7 @@ describe('NonConformancesService', () => {
   let mockDb: any;
   let mockCacheInvalidationHelper: Record<string, jest.Mock>;
   let mockCacheService: Record<string, jest.Mock>;
+  let mockEventEmitter: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     // 매 테스트마다 새로운 chain 객체 생성
@@ -69,6 +71,12 @@ describe('NonConformancesService', () => {
       invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
     };
 
+    mockEventEmitter = {
+      emit: jest.fn(),
+      emitAsync: jest.fn().mockResolvedValue([]),
+      on: jest.fn(),
+    };
+
     mockCacheService = {
       get: jest.fn().mockReturnValue(undefined),
       set: jest.fn(),
@@ -86,14 +94,7 @@ describe('NonConformancesService', () => {
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: CacheInvalidationHelper, useValue: mockCacheInvalidationHelper },
         { provide: SimpleCacheService, useValue: mockCacheService },
-        {
-          provide: EventEmitter2,
-          useValue: {
-            emit: jest.fn(),
-            emitAsync: jest.fn().mockResolvedValue([]),
-            on: jest.fn(),
-          },
-        },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
 
@@ -398,9 +399,11 @@ describe('NonConformancesService', () => {
 
       expect(result.status).toBe(NonConformanceStatus.OPEN);
       expect(mockCacheService.delete).toHaveBeenCalled();
-      expect(
-        mockCacheInvalidationHelper.invalidateAfterNonConformanceStatusChange
-      ).toHaveBeenCalledWith('eq-uuid', false);
+      // cross-entity 캐시 무효화는 NC_CORRECTION_REJECTED 이벤트 → CacheEventListener가 처리
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED,
+        expect.objectContaining({ ncId: 'nc-uuid', equipmentId: 'eq-uuid' })
+      );
     });
 
     it('should throw BadRequestException when rejecting closed NC', async () => {

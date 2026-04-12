@@ -392,9 +392,74 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<boolean> {
-    const result = await this.db.delete(usersTable).where(eq(usersTable.id, id)).returning();
+    // Application-level pre-check: 핵심 restrict FK 테이블 검사
+    await this.checkUserReferences(id);
 
-    return result.length > 0;
+    try {
+      const result = await this.db.delete(usersTable).where(eq(usersTable.id, id)).returning();
+      return result.length > 0;
+    } catch (error: unknown) {
+      // Race condition 방어: 동시 요청으로 pre-check 이후 참조가 생긴 경우
+      if (this.isForeignKeyViolation(error)) {
+        const tableName = this.extractReferencingTable(error);
+        throw new BadRequestException(
+          `사용자를 삭제할 수 없습니다. 관련 데이터가 존재합니다${tableName ? ` (${tableName})` : ''}. 사용자를 비활성화하세요.`
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * restrict FK로 사용자를 참조하는 핵심 테이블 사전 검사
+   *
+   * 모든 테이블을 검사하지 않고 가장 빈번한 4개 테이블만 검사.
+   * 나머지 테이블은 try-catch의 DB-level FK violation으로 커버.
+   */
+  private async checkUserReferences(userId: string): Promise<void> {
+    const [result] = await this.db
+      .select({
+        hasCalibrations: sql<boolean>`EXISTS(SELECT 1 FROM calibrations WHERE registered_by = ${userId} OR approved_by = ${userId} OR technician_id = ${userId} LIMIT 1)`,
+        hasCheckouts: sql<boolean>`EXISTS(SELECT 1 FROM checkouts WHERE requester_id = ${userId} OR approver_id = ${userId} OR returner_id = ${userId} LIMIT 1)`,
+        hasNonConformances: sql<boolean>`EXISTS(SELECT 1 FROM non_conformances WHERE discovered_by = ${userId} OR corrected_by = ${userId} OR closed_by = ${userId} LIMIT 1)`,
+        hasCalibrationFactors: sql<boolean>`EXISTS(SELECT 1 FROM calibration_factors WHERE requested_by = ${userId} OR approved_by = ${userId} LIMIT 1)`,
+      })
+      .from(sql`(SELECT 1) AS dummy`);
+
+    const referencingTables: string[] = [];
+    if (result.hasCalibrations) referencingTables.push('calibrations');
+    if (result.hasCheckouts) referencingTables.push('checkouts');
+    if (result.hasNonConformances) referencingTables.push('non_conformances');
+    if (result.hasCalibrationFactors) referencingTables.push('calibration_factors');
+
+    if (referencingTables.length > 0) {
+      throw new BadRequestException(
+        `사용자를 삭제할 수 없습니다. 관련 데이터가 존재합니다 (${referencingTables.join(', ')}). 사용자를 비활성화하세요.`
+      );
+    }
+  }
+
+  private isForeignKeyViolation(error: unknown): boolean {
+    return (
+      error !== null &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error as { code: string }).code === '23503'
+    );
+  }
+
+  private extractReferencingTable(error: unknown): string | null {
+    if (
+      error !== null &&
+      typeof error === 'object' &&
+      'detail' in error &&
+      typeof (error as { detail: unknown }).detail === 'string'
+    ) {
+      // PostgreSQL detail format: '... on table "non_conformances" ...'
+      const match = (error as { detail: string }).detail.match(/table "(\w+)"/);
+      return match?.[1] ?? null;
+    }
+    return null;
   }
 
   // 사용자 활성/비활성화

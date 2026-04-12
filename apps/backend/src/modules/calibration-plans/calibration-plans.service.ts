@@ -79,7 +79,7 @@ export class CalibrationPlansService extends VersionedBaseService {
    * 재시도 flakiness 방지.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${id}`);
+    await this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${id}`);
   }
 
   /**

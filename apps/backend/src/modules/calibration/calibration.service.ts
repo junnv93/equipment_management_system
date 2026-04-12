@@ -5,7 +5,8 @@ import {
   createVersionConflictException,
 } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { CACHE_KEY_PREFIXES, buildStableCacheKey } from '../../common/cache/cache-key-prefixes';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
@@ -118,27 +119,26 @@ export class CalibrationService extends VersionedBaseService {
   // 캐시 관리
   // ============================================================================
 
-  private buildCacheKey(type: string, id?: string): string {
-    return id
-      ? `${CACHE_KEY_PREFIXES.CALIBRATION}${type}:${id}`
-      : `${CACHE_KEY_PREFIXES.CALIBRATION}${type}`;
-  }
+  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION;
+
+  private readonly buildCacheKey = createScopeAwareCacheKeyBuilder(
+    CACHE_KEY_PREFIXES.CALIBRATION,
+    new Set(['list'])
+  );
 
   /**
    * VersionedBaseService 훅 override — 409 발생 시 detail 캐시 자동 무효화.
    * update/approve/reject/completeIntermediateCheck 모든 updateWithVersion 경로 단일 정책.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    this.cacheService.delete(this.buildCacheKey('detail', id));
+    await this.cacheService.delete(this.buildCacheKey('detail', { id }));
   }
 
   private invalidateCalibrationCache(id?: string): void {
     if (id) {
-      this.cacheService.delete(this.buildCacheKey('detail', id));
+      this.cacheService.delete(this.buildCacheKey('detail', { id }));
     }
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}list:`);
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:`);
-    this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}intermediate-checks:`);
+    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
   }
 
@@ -266,7 +266,7 @@ export class CalibrationService extends VersionedBaseService {
    * ✅ checkout 모듈의 findOne 패턴과 동일
    */
   async findOne(id: string): Promise<CalibrationRecord> {
-    const cacheKey = this.buildCacheKey('detail', id);
+    const cacheKey = this.buildCacheKey('detail', { id });
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -458,7 +458,7 @@ export class CalibrationService extends VersionedBaseService {
         .returning({ id: schema.calibrations.id });
 
       if (result.length === 0) {
-        this.cacheService.delete(this.buildCacheKey('detail', id));
+        this.cacheService.delete(this.buildCacheKey('detail', { id }));
         throw createVersionConflictException(calibration.version as number, version);
       }
     } else {
@@ -671,8 +671,8 @@ export class CalibrationService extends VersionedBaseService {
       calibrationDueStatus,
     } = query;
 
-    // ✅ 결정론적 캐시 키: buildStableCacheKey가 키 알파벳 정렬로 순서 무관 안정 직렬화
-    const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.CALIBRATION, 'list', {
+    // scope-aware 캐시 키: teamId가 구조적 segment로 인코딩됨
+    const cacheKey = this.buildCacheKey('list', {
       equipmentId,
       calibrationManagerId,
       statuses,

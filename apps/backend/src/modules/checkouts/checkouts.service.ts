@@ -41,6 +41,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { EquipmentService } from '../equipment/equipment.service';
 import { TeamsService } from '../teams/teams.service';
 import { EquipmentImportsService } from '../equipment-imports/equipment-imports.service';
@@ -211,68 +212,10 @@ export class CheckoutsService extends VersionedBaseService {
     await this.cacheService.delete(this.buildCacheKey('detail', { uuid: id }));
   }
 
-  /**
-   * 스코프(global vs team)를 구조적 suffix 로 인코딩하는 캐시 키 접미사 목록.
-   *
-   * 불변식: 이 집합에 속한 suffix 의 키는 `<prefix><suffix>:g:<jsonParams>` 또는
-   * `<prefix><suffix>:t:<teamId>:<jsonParams>` 형태를 가진다. JSON params 에는
-   * `teamId` 가 포함되지 않는다 (구조적 segment 로 이미 인코딩됨).
-   *
-   * 이 불변식 덕에 `invalidateCache` 가 `deleteByPrefix` 만으로 정확한 스코프
-   * 단위 무효화를 수행할 수 있다 — JSON 직렬화 infix 에 대한 정규식 매칭 불필요.
-   */
-  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'summary']);
-
-  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
-    return Object.entries(params).reduce(
-      (acc, [key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          acc[key] = value;
-        }
-        return acc;
-      },
-      {} as Record<string, unknown>
-    );
-  }
-
-  /**
-   * 캐시 키 생성 헬퍼 메서드
-   *
-   * 스코프 인식: SCOPE_AWARE_SUFFIXES 에 속한 suffix 는 params.teamId 를 구조적
-   * segment(`:t:<id>:` | `:g:`)로 이동시킨다. 호출자는 변경 없음 — 내부에서 자동 변환.
-   */
-  private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
-    const baseKey = `${this.CACHE_PREFIX}${suffix}`;
-    if (!params) {
-      return baseKey;
-    }
-
-    const normalizedParams = this.normalizeCacheParams(params);
-
-    let scopeSegment = '';
-    if (this.SCOPE_AWARE_SUFFIXES.has(suffix)) {
-      const teamIdValue = normalizedParams.teamId;
-      if (typeof teamIdValue === 'string' && teamIdValue.length > 0) {
-        scopeSegment = `:t:${teamIdValue}`;
-        delete normalizedParams.teamId;
-      } else {
-        scopeSegment = ':g';
-      }
-    }
-
-    const sortedParams = Object.keys(normalizedParams)
-      .sort()
-      .reduce(
-        (acc, key) => {
-          acc[key] = normalizedParams[key];
-          return acc;
-        },
-        {} as Record<string, unknown>
-      );
-
-    const safeParams = JSON.stringify(sortedParams);
-    return `${baseKey}${scopeSegment}:${safeParams}`;
-  }
+  private readonly buildCacheKey = createScopeAwareCacheKeyBuilder(
+    CACHE_KEY_PREFIXES.CHECKOUTS,
+    new Set(['list', 'summary'])
+  );
 
   /**
    * 반출에서 영향받는 팀 ID 추출
