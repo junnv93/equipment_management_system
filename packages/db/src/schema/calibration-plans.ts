@@ -13,7 +13,7 @@ import {
   CALIBRATION_PLAN_STATUS_VALUES,
   REJECTION_STAGE_VALUES,
 } from '@equipment-management/schemas';
-import type { CalibrationPlanStatus } from '@equipment-management/schemas';
+import type { CalibrationPlanStatus, RejectionStage } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
 import { teams } from './teams';
@@ -68,7 +68,7 @@ export const calibrationPlans = pgTable(
     rejectedBy: uuid('rejected_by').references(() => users.id, { onDelete: 'restrict' }), // 반려자 ID
     rejectedAt: timestamp('rejected_at'), // 반려 일시
     rejectionReason: text('rejection_reason'), // 반려 사유
-    rejectionStage: varchar('rejection_stage', { length: 20 }), // 'review' | 'approval'
+    rejectionStage: varchar('rejection_stage', { length: 20 }).$type<RejectionStage>(),
 
     // 버전 관리
     version: integer('version').default(1).notNull(), // 버전 번호 (계획서 개정)

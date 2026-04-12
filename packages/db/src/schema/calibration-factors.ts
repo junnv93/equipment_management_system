@@ -15,6 +15,10 @@ import {
   CALIBRATION_FACTOR_TYPE_VALUES,
   CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
 } from '@equipment-management/schemas';
+import type {
+  CalibrationFactorType,
+  CalibrationFactorApprovalStatus,
+} from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { calibrations } from './calibrations';
 import { users } from './users';
@@ -47,7 +51,7 @@ export const calibrationFactors = pgTable(
     }), // nullable - 교정 기록과 연결 (선택)
 
     // 보정계수 정보
-    factorType: varchar('factor_type', { length: 50 }).notNull(), // 'antenna_gain' | 'cable_loss' | 'path_loss' | 'amplifier_gain' | 'other'
+    factorType: varchar('factor_type', { length: 50 }).$type<CalibrationFactorType>().notNull(),
     factorName: varchar('factor_name', { length: 200 }).notNull(), // 사용자 정의 이름 (예: "3GHz 안테나 이득")
     factorValue: decimal('factor_value', { precision: 15, scale: 6 }).notNull(), // 수치 값
     unit: varchar('unit', { length: 20 }).notNull(), // 단위 (dB, dBi, dBm 등)
@@ -61,7 +65,10 @@ export const calibrationFactors = pgTable(
     expiryDate: date('expiry_date'), // 만료일 (nullable, 교정 주기에 따라)
 
     // 승인 프로세스
-    approvalStatus: varchar('approval_status', { length: 20 }).notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
+    approvalStatus: varchar('approval_status', { length: 20 })
+      .$type<CalibrationFactorApprovalStatus>()
+      .notNull()
+      .default('pending'),
     requestedBy: uuid('requested_by').notNull(), // 요청자 ID (시험실무자)
     approvedBy: uuid('approved_by'), // 승인자 ID (기술책임자)
     requestedAt: timestamp('requested_at').defaultNow().notNull(), // 요청 시각
