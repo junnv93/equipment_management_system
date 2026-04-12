@@ -50,6 +50,7 @@
 - [x] onVersionConflict async 처리 차이 통일 — 해결: 2026-04-12 — Mode 1 harness `cache-arch-unification`. 6개 서비스(calibration/calibration-factors/software-validations/calibration-plans/cables/test-software/intermediate-inspections)에 `await` 추가. 불변식: "onVersionConflict는 await로 캐시 삭제 완료를 보장"
 - [x] scope-aware-cache-key.ts 단위 테스트 추가 — 해결: 2026-04-12 — 50차 세션(cache-arch-unification)에서 11개 테스트 작성 완료 (normalizeCacheParams 3 + createScopeAwareCacheKeyBuilder 8). edge cases 포함
 - [x] onVersionConflict await 누락 (equipment-imports/disposal) — 해결: 2026-04-12 — 50차 세션(cache-arch-unification)에서 await 추가 완료 확인
+- [~] Redis 전환 대비: disposal.service.ts cancelDisposalRequest 내 deleteByPattern await 누락 + calibration.service.ts invalidateCalibrationCache 내 delete/deleteByPrefix await 누락 — 보류(justified): 2026-04-12 — SimpleCacheService(Map 기반)는 동기이므로 현재 영향 없음. Redis 전환 시 일괄 await 추가 필요. 출처: review-architecture W1/W2
 
 - [~] `audit_logs` 테이블 장기 보관 파티셔닝 전략 — 보류(justified): 2026-04-12 — 현재 20행/160KB, 내부 데스크탑 배포. 커서 페이지네이션(timestampIdCursorIdx) + 8개 인덱스 + react-window 가상화 이미 도입. PostgreSQL은 수백만 행까지 인덱스 기반으로 처리 가능. Drizzle ORM은 declarative partitioning 미지원이라 raw SQL + 스키마 우회 필요 → 복잡도 대비 이득 없음. **트리거 기준: audit_logs > 100만 행 또는 테이블 크기 > 1GB 시 재검토.** `SELECT COUNT(*), pg_size_pretty(pg_total_relation_size('audit_logs')) FROM audit_logs;` 로 확인
 
