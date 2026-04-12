@@ -134,12 +134,38 @@ export class CalibrationService extends VersionedBaseService {
     await this.cacheService.delete(this.buildCacheKey('detail', { id }));
   }
 
-  private invalidateCalibrationCache(id?: string): void {
+  /**
+   * 캐시 무효화 헬퍼
+   *
+   * equipmentId가 제공되면 해당 장비의 teamId를 조회하여
+   * team-scoped + global scope만 정밀 무효화.
+   * equipmentId 없으면 전체 list: prefix broad 무효화 (fallback).
+   */
+  private async invalidateCalibrationCache(id?: string, equipmentId?: string): Promise<void> {
     if (id) {
       this.cacheService.delete(this.buildCacheKey('detail', { id }));
     }
-    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
+
+    if (equipmentId) {
+      const teamId = await this.resolveEquipmentTeamId(equipmentId);
+      if (teamId) {
+        this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:t:${teamId}:`);
+      }
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:g:`);
+    } else {
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:`);
+    }
+
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
+  }
+
+  private async resolveEquipmentTeamId(equipmentId: string): Promise<string | null> {
+    const [row] = await this.db
+      .select({ teamId: schema.equipment.teamId })
+      .from(schema.equipment)
+      .where(eq(schema.equipment.id, equipmentId))
+      .limit(1);
+    return row?.teamId ?? null;
   }
 
   /**
@@ -335,7 +361,7 @@ export class CalibrationService extends VersionedBaseService {
       `교정 기록 등록: ${inserted.id} (장비: ${inserted.equipmentId}, 등록자: ${inserted.registeredBy})`
     );
 
-    this.invalidateCalibrationCache();
+    await this.invalidateCalibrationCache(undefined, inserted.equipmentId);
 
     // 📢 알림 이벤트 발행 (교정 등록 → 승인자에게 알림)
     // equipForCreate 재사용 (이중 DB 조회 방지)
@@ -366,8 +392,8 @@ export class CalibrationService extends VersionedBaseService {
    * ✅ DB update 사용 (기존 인메모리 배열 조작 → DB update로 수정)
    */
   async update(id: string, updateCalibrationDto: UpdateCalibrationDto): Promise<CalibrationRecord> {
-    // 먼저 존재 여부 확인
-    await this.findOne(id);
+    // 먼저 존재 여부 확인 + equipmentId 캐시 무효화용 보존
+    const existing = await this.findOne(id);
 
     // DTO → DB 컬럼 매핑 (부분 업데이트)
     const updateData: Record<string, unknown> = {};
@@ -436,7 +462,7 @@ export class CalibrationService extends VersionedBaseService {
       }
     }
 
-    this.invalidateCalibrationCache(id);
+    await this.invalidateCalibrationCache(id, existing.equipmentId);
     return this.findOne(id);
   }
 
@@ -466,7 +492,7 @@ export class CalibrationService extends VersionedBaseService {
       await this.db.delete(schema.calibrations).where(eq(schema.calibrations.id, id));
     }
 
-    this.invalidateCalibrationCache(id);
+    await this.invalidateCalibrationCache(id, calibration.equipmentId);
     return { id, deleted: true };
   }
 
@@ -1144,8 +1170,8 @@ export class CalibrationService extends VersionedBaseService {
       'Calibration record'
     );
 
-    // 캐시 무효화 (교정 자체)
-    this.invalidateCalibrationCache(id);
+    // 캐시 무효화 (교정 자체) — calibration.equipmentId로 team-scoped 정밀 무효화
+    await this.invalidateCalibrationCache(id, calibration.equipmentId);
 
     // 장비 정보 1회 조회 — 교정일 업데이트 + 알림 이벤트 공용 (이중 DB 호출 방지)
     const [approvedEquip] = await this.db
@@ -1371,8 +1397,8 @@ export class CalibrationService extends VersionedBaseService {
       'Calibration record'
     );
 
-    // 캐시 무효화 (교정 자체)
-    this.invalidateCalibrationCache(id);
+    // 캐시 무효화 (교정 자체) — calibration.equipmentId로 team-scoped 정밀 무효화
+    await this.invalidateCalibrationCache(id, calibration.equipmentId);
     // 교차 엔티티: 반려는 equipment 상태 변경 없음 — 대시보드 승인 카운트만 영향
     await this.invalidateAfterCalibrationRejection();
 
@@ -1490,7 +1516,7 @@ export class CalibrationService extends VersionedBaseService {
       'Calibration record'
     );
 
-    this.invalidateCalibrationCache(id);
+    await this.invalidateCalibrationCache(id, calibration.equipmentId);
 
     this.eventEmitter.emit(NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED, {
       calibrationId: id,

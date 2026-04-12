@@ -78,7 +78,7 @@ export class EquipmentImportsService extends VersionedBaseService {
    * 가 단일 정책을 공유 → 누락된 catch boilerplate 위험 제거.
    */
   protected async onVersionConflict(_id: string): Promise<void> {
-    this.cacheInvalidationHelper.invalidateAllEquipmentImports();
+    await this.cacheInvalidationHelper.invalidateAllEquipmentImports();
   }
 
   /**

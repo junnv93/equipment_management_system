@@ -62,7 +62,7 @@ export class DisposalService extends VersionedBaseService {
    * equipment 도메인 전체를 무효화한다 (기존 inline 정책과 동일 semantics).
    */
   protected async onVersionConflict(_id: string): Promise<void> {
-    this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
+    await this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
   }
 
   /**
