@@ -128,7 +128,8 @@ export class FormTemplateExportService {
       'UL-QP-18-01': (p, f) => this.exportEquipmentRegistry(p, f),
       'UL-QP-18-03': (p, f) => this.exportIntermediateInspection(p, f),
       'UL-QP-18-05': (p, f) => this.exportSelfInspection(p, f),
-      'UL-QP-18-06': (p, f) => this.exportCheckout(p, f),
+      'UL-QP-18-06': (p, f) =>
+        p.importId ? this.exportRentalImportAsCheckoutForm(p, f) : this.exportCheckout(p, f),
       'UL-QP-18-07': (p, f) => this.exportSoftwareRegistry(p, f),
       'UL-QP-18-08': (p, f) => this.exportCablePathLoss(p, f),
       'UL-QP-18-09': (p, f) => this.exportSoftwareValidation(p, f),
@@ -534,18 +535,19 @@ export class FormTemplateExportService {
     doc.setDataRows(1, 2, meData, 3); // 빈 행 3개 (Row 3~5)
 
     // --- Table 2: 점검 결과 및 결재 ---
-    // Row 0: [1]=점검일, [4]=담당서명, [5]=검토서명, [6]=승인서명
+    // Row 0: [1]=점검일, [4]=담당(텍스트), [5]=검토(텍스트), [6]=승인(텍스트)
     doc.setCellValue(2, 0, 1, this.formatDate(inspection.inspectionDate));
-    // Row 1: [1]=점검자
+    // Row 1: [1]=점검자, [4]=담당서명, [5]=검토서명, [6]=승인서명
     doc.setCellValue(2, 1, 1, inspector?.name ?? '-');
     // Row 2: [1]=특이사항
     doc.setCellValue(2, 2, 1, inspection.remarks ?? '-');
 
-    // 결재란 서명 이미지 삽입 (담당/검토 = 점검자, 승인 = 기술책임자)
+    // 결재란 서명 이미지 삽입 — Row 1 (담당/검토/승인 텍스트 아래 행)
+    // Row 0의 담당/검토/승인 텍스트는 유지하고, 바로 아래 Row 1에 서명 삽입
     await this.insertDocxSignature(
       doc,
       2,
-      0,
+      1,
       4,
       inspector?.signaturePath ?? null,
       inspector?.name ?? '-'
@@ -553,7 +555,7 @@ export class FormTemplateExportService {
     await this.insertDocxSignature(
       doc,
       2,
-      0,
+      1,
       5,
       inspector?.signaturePath ?? null,
       inspector?.name ?? '-'
@@ -561,13 +563,14 @@ export class FormTemplateExportService {
     await this.insertDocxSignature(
       doc,
       2,
-      0,
+      1,
       6,
       approver?.signaturePath ?? null,
       approver?.name ?? '-'
     );
 
     // 동적 결과 섹션 렌더링 (장비 유형별 가변 측정 결과)
+    // 내부에서 섹션 유무 판단 후 템플릿 예시 텍스트 제거 + 페이지 나누기 처리
     await this.renderResultSections(doc, inspectionId, 'intermediate');
 
     const buffer = doc.toBuffer();
@@ -818,11 +821,11 @@ export class FormTemplateExportService {
     doc.setCellValue(2, 1, 1, inspector?.name ?? '-');
     doc.setCellValue(2, 2, 1, record.remarks ?? '-');
 
-    // 결재란 서명 (담당/검토 = 점검자, 승인 = 기술책임자)
+    // 결재란 서명 — Row 1 (담당/검토/승인 텍스트 아래 행)
     await this.insertDocxSignature(
       doc,
       2,
-      0,
+      1,
       4,
       inspector?.signaturePath ?? null,
       inspector?.name ?? '-'
@@ -830,7 +833,7 @@ export class FormTemplateExportService {
     await this.insertDocxSignature(
       doc,
       2,
-      0,
+      1,
       5,
       inspector?.signaturePath ?? null,
       inspector?.name ?? '-'
@@ -838,7 +841,7 @@ export class FormTemplateExportService {
     await this.insertDocxSignature(
       doc,
       2,
-      0,
+      1,
       6,
       confirmer?.signaturePath ?? null,
       confirmer?.name ?? '-'
@@ -1071,6 +1074,9 @@ export class FormTemplateExportService {
 
     if (sections.length === 0) return;
 
+    // 결과 섹션이 있을 때만: 템플릿 예시 텍스트 제거 + 2페이지 시작 페이지 나누기
+    doc.removeTemplateExampleTextAndInsertPageBreak();
+
     /**
      * N+1 제거: photo/rich_table 섹션에서 참조되는 모든 documentId 를 선수집한 뒤
      * 1회 batch SELECT + Promise.allSettled 로 병렬 다운로드한다.
@@ -1102,22 +1108,34 @@ export class FormTemplateExportService {
 
     const imageCache = await this.loadDocumentImagesBatch(Array.from(documentIdSet));
 
+    // 템플릿의 numbering 매핑 (글머리 기호 스타일)
+    const { heading: headingNumId } = doc.bulletNumIds;
+
     for (const section of sections) {
       switch (section.sectionType) {
         case 'title':
-          doc.appendParagraph(section.title ?? '', { bold: true, fontSize: 12 });
+          doc.appendParagraph(section.title ?? '', {
+            bold: true,
+            fontSize: 12,
+            numId: headingNumId,
+          });
           break;
-        case 'text':
+        case 'text': {
           if (section.title) {
-            doc.appendParagraph(section.title, { bold: true });
+            doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
           }
-          doc.appendParagraph(section.content ?? '');
+          // 멀티라인: 각 행을 별도 단락으로. ※/■는 그냥 문자 — numbering 변환하지 않음.
+          const lines = (section.content ?? '').split('\n');
+          for (const line of lines) {
+            doc.appendParagraph(line.trim());
+          }
           break;
+        }
         case 'data_table': {
           const td = section.tableData as { headers: string[]; rows: string[][] } | null;
           if (td) {
             if (section.title) {
-              doc.appendParagraph(section.title, { bold: true });
+              doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
             }
             doc.appendTable(td.headers, td.rows);
           }
@@ -1125,7 +1143,7 @@ export class FormTemplateExportService {
         }
         case 'photo': {
           if (section.title) {
-            doc.appendParagraph(section.title, { bold: true });
+            doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
           }
           if (section.documentId) {
             const imageResult = imageCache.get(section.documentId);
@@ -1152,7 +1170,7 @@ export class FormTemplateExportService {
           } | null;
           if (rd) {
             if (section.title) {
-              doc.appendParagraph(section.title, { bold: true });
+              doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
             }
             const resolvedRows = rd.rows.map((row) =>
               row.map((cell) => {
@@ -1770,6 +1788,180 @@ export class FormTemplateExportService {
   }
 
   // ============================================================================
+  // UL-QP-18-06 (rental import): 렌탈 반입 → 장비 반·출입 확인서 매핑
+  // 렌탈 장비는 QP-18-10(공용) 이 아니라 QP-18-06(반출입) 양식을 사용한다.
+  // 반출 = 업체에서 장비 출고(수령), 반입 = 업체로 장비 반납(반환)
+  // ============================================================================
+
+  private async exportRentalImportAsCheckoutForm(
+    params: Record<string, string>,
+    filter: EnforcedScope
+  ): Promise<ExportResult> {
+    const entry = FORM_CATALOG['UL-QP-18-06'];
+    const importId = params.importId;
+    if (!importId) {
+      throw new BadRequestException({
+        code: 'MISSING_IMPORT_ID',
+        message: 'importId query parameter is required for rental import export.',
+      });
+    }
+
+    const [imp] = await this.db
+      .select()
+      .from(equipmentImports)
+      .where(eq(equipmentImports.id, importId))
+      .limit(1);
+
+    if (!imp) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        message: 'Equipment import not found.',
+      });
+    }
+
+    if (imp.sourceType !== 'rental') {
+      throw new BadRequestException({
+        code: 'INVALID_SOURCE_TYPE',
+        message:
+          'QP-18-06 form is only for rental imports. Use QP-18-10 for internal shared equipment.',
+      });
+    }
+
+    // 스코프 경계 강제
+    if (filter.site && imp.site !== filter.site) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        message: 'Equipment import not found or not accessible from your site.',
+      });
+    }
+    if (filter.teamId && imp.teamId !== filter.teamId) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        message: 'Equipment import not found or not accessible from your team.',
+      });
+    }
+
+    // 신청자 조회
+    const [requester] = await this.db
+      .select({ name: users.name, signaturePath: users.signatureImagePath })
+      .from(users)
+      .where(eq(users.id, imp.requesterId))
+      .limit(1);
+
+    // 승인자 조회
+    const [approver] = imp.approverId
+      ? await this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, imp.approverId))
+          .limit(1)
+      : [null];
+
+    // 반납 checkout 에서 반납 완료 날짜 조회 (있으면)
+    let returnDate: Date | null = null;
+    if (imp.returnCheckoutId) {
+      const [returnCheckout] = await this.db
+        .select({ actualReturnDate: checkouts.actualReturnDate })
+        .from(checkouts)
+        .where(eq(checkouts.id, imp.returnCheckoutId))
+        .limit(1);
+      returnDate = returnCheckout?.actualReturnDate ?? null;
+    }
+
+    // 상태확인 jsonb 파싱
+    const receivingCondition = (imp.receivingCondition ?? {}) as {
+      appearance?: string;
+      operation?: string;
+    };
+    const returnedCondition = (imp.returnedCondition ?? {}) as {
+      appearance?: string;
+      abnormality?: string;
+    };
+
+    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-06');
+    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-06');
+
+    // Row 2: 반출지(=업체명) / 전화번호(=업체연락처)
+    doc.setCellValue(0, 2, 1, imp.vendorName ?? '-');
+    doc.setCellValue(0, 2, 3, imp.vendorContact ?? '-');
+    // Row 3: 반출주소 (렌탈 반입에는 별도 주소 필드 없음)
+    doc.setCellValue(0, 3, 1, '-');
+    // Row 4: 반출사유
+    doc.setCellValue(0, 4, 1, imp.reason ?? '-');
+
+    // Row 5: 반출 확인 문장 + 날짜 (=수령일)
+    const checkoutDateStr = this.formatQp1806Date(imp.receivedAt);
+    doc.setCellValue(
+      0,
+      5,
+      0,
+      `아래 목록과 같이 측정장비를 반출하였음을 확인합니다.    ${checkoutDateStr}    반출자 : ${requester?.name ?? '-'}`
+    );
+
+    // Row 9~22: 장비 목록 14행 (렌탈 반입은 단일 장비 → 1번 행만)
+    // 상태확인: 모든 항목이 정상이면 "양호", 하나라도 이상이면 "이상 있음"
+    const condBefore =
+      receivingCondition.appearance === 'normal' && receivingCondition.operation === 'normal'
+        ? '양호'
+        : receivingCondition.appearance
+          ? '이상 있음'
+          : '-';
+    const condAfter =
+      returnedCondition.appearance === 'normal' && returnedCondition.abnormality === 'none'
+        ? '양호'
+        : returnedCondition.appearance
+          ? '이상 있음'
+          : '-';
+    const managementLabel = imp.externalIdentifier ?? imp.serialNumber ?? '-';
+
+    for (let i = 0; i < 14; i++) {
+      const rowIdx = 9 + i;
+      if (i === 0) {
+        doc.setCellValue(0, rowIdx, 1, imp.equipmentName ?? '-');
+        doc.setCellValue(0, rowIdx, 2, imp.modelName ?? '-');
+        doc.setCellValue(0, rowIdx, 3, imp.quantityOut != null ? String(imp.quantityOut) : '-');
+        doc.setCellValue(0, rowIdx, 4, managementLabel);
+        doc.setCellValue(0, rowIdx, 5, condBefore);
+        doc.setCellValue(0, rowIdx, 6, condAfter);
+      } else {
+        doc.setCellValue(0, rowIdx, 1, '-');
+        doc.setCellValue(0, rowIdx, 2, '-');
+        doc.setCellValue(0, rowIdx, 3, '-');
+        doc.setCellValue(0, rowIdx, 4, '-');
+        doc.setCellValue(0, rowIdx, 5, '-');
+        doc.setCellValue(0, rowIdx, 6, '-');
+      }
+    }
+
+    // Row 23: 특기사항
+    doc.setCellValue(0, 23, 1, imp.returnedAbnormalDetails ?? '-');
+
+    // Row 24: 반입 확인 문장 + 날짜 (=반납 완료일)
+    const returnDateStr = this.formatQp1806Date(returnDate);
+    doc.setCellValue(
+      0,
+      24,
+      0,
+      `상기 목록과 같이 측정장비를 이상없이 반입하였음을 확인합니다.    ${returnDateStr}    반입자 : ${requester?.name ?? '-'}`
+    );
+
+    // Row 1: 작성/승인 결재란 (반출 시점)
+    await this.insertDocxSignature(doc, 0, 1, 1, requester?.signaturePath ?? null, '(서명)');
+    await this.insertDocxSignature(doc, 0, 1, 2, approver?.signaturePath ?? null, '(서명)');
+
+    // Row 25: 작성/승인 결재란 (반입 시점)
+    await this.insertDocxSignature(doc, 0, 25, 1, requester?.signaturePath ?? null, '(서명)');
+    await this.insertDocxSignature(doc, 0, 25, 2, approver?.signaturePath ?? null, '(서명)');
+
+    const buffer = doc.toBuffer();
+    return {
+      buffer,
+      mimeType: DOCX_MIME,
+      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+    };
+  }
+
+  // ============================================================================
   // UL-QP-18-10: 공용 장비 사용/반납 확인서 (DOCX — 단일 테이블 25행, Part1+Part2)
   // ============================================================================
 
@@ -1796,6 +1988,15 @@ export class FormTemplateExportService {
       throw new NotFoundException({
         code: 'EQUIPMENT_IMPORT_NOT_FOUND',
         message: 'Equipment import not found.',
+      });
+    }
+
+    // 렌탈 반입은 QP-18-06 사용 — QP-18-10은 공용장비(internal_shared) 전용
+    if (imp.sourceType === 'rental') {
+      throw new BadRequestException({
+        code: 'INVALID_SOURCE_TYPE',
+        message:
+          'Rental imports must use QP-18-06 (장비반출입확인서). QP-18-10 is for internal shared equipment only.',
       });
     }
 
@@ -1836,9 +2037,8 @@ export class FormTemplateExportService {
       .where(eq(teams.id, imp.teamId))
       .limit(1);
 
-    // 사용 출처 식별: rental → vendorName, internal_shared → ownerDepartment
-    const sourceLabel =
-      imp.sourceType === 'rental' ? (imp.vendorName ?? '-') : (imp.ownerDepartment ?? '-');
+    // 사용 출처 식별: internal_shared 전용 (rental은 위 가드에서 차단됨)
+    const sourceLabel = imp.ownerDepartment ?? '-';
 
     // 관리번호: rental은 externalIdentifier, internal_shared는 serialNumber 우선
     const managementLabel = imp.externalIdentifier ?? imp.serialNumber ?? '-';
@@ -1855,6 +2055,13 @@ export class FormTemplateExportService {
       accessories?: string;
       notes?: string;
     };
+
+    // jsonb enum → 한국어
+    const ko = (v: string | undefined): string =>
+      ({ normal: '정상', abnormal: '이상', none: '없음', complete: '완비', incomplete: '불완전' })[
+        v ?? ''
+      ] ??
+      (v || '-');
 
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-10');
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-10');
@@ -1895,7 +2102,7 @@ export class FormTemplateExportService {
         doc.setCellValue(0, rowIdx, 2, imp.modelName ?? '-');
         doc.setCellValue(0, rowIdx, 3, imp.quantityOut != null ? String(imp.quantityOut) : '-');
         doc.setCellValue(0, rowIdx, 4, managementLabel);
-        doc.setCellValue(0, rowIdx, 5, receivingCondition.appearance ?? '-');
+        doc.setCellValue(0, rowIdx, 5, ko(receivingCondition.appearance));
         doc.setCellValue(0, rowIdx, 6, '-');
       } else {
         doc.setCellValue(0, rowIdx, 1, '-');
@@ -1926,8 +2133,8 @@ export class FormTemplateExportService {
           imp.quantityReturned != null ? String(imp.quantityReturned) : '-'
         );
         doc.setCellValue(0, rowIdx, 4, managementLabel);
-        doc.setCellValue(0, rowIdx, 5, returnedCondition.appearance ?? '-');
-        doc.setCellValue(0, rowIdx, 6, returnedCondition.abnormality ?? '-');
+        doc.setCellValue(0, rowIdx, 5, ko(returnedCondition.appearance));
+        doc.setCellValue(0, rowIdx, 6, ko(returnedCondition.abnormality));
       } else {
         doc.setCellValue(0, rowIdx, 1, '-');
         doc.setCellValue(0, rowIdx, 2, '-');

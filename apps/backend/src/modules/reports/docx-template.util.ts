@@ -9,12 +9,34 @@ import PizZip from 'pizzip';
  *
  * XML 구조: <w:tbl> → <w:tr ...>(<w:trPr/>)(<w:tc>...</w:tc>)+</w:tr> → ...
  */
+/**
+ * 동적 콘텐츠(appendParagraph, appendTable 등)에 적용할 굴림체 폰트 rPr.
+ * 원본 양식이 굴림체/굴림을 사용하므로 동적 생성 콘텐츠도 일치시킨다.
+ */
+const GULIM_FONT_RPR = '<w:rFonts w:ascii="굴림체" w:eastAsia="굴림체" w:hAnsi="굴림체"/>';
+
+/**
+ * 양식 템플릿의 numbering.xml에서 추출한 bullet 타입별 numId 매핑.
+ * appendParagraph에서 bullet 옵션 사용 시 참조.
+ */
+export interface BulletNumIds {
+  /** Wingdings bullet — 대제목/소제목용 (측정 결과, RF 입력 검사 등) */
+  heading?: number;
+  /** ※ bullet — 참고사항용 */
+  note?: number;
+  /** ■ bullet — 확인사항용 */
+  check?: number;
+}
+
 export class DocxTemplate {
   private zip: PizZip;
   private documentXml: string;
   private imageCounter = 0; // rId/docPr 충돌 방지용 인스턴스 카운터
   private nextRIdNum: number; // 기존 relationship max ID + 1
   private formLabel: string; // 에러 메시지용 양식 식별자
+
+  /** 템플릿의 numbering.xml에서 파싱한 bullet numId 매핑 */
+  readonly bulletNumIds: BulletNumIds;
 
   constructor(content: Buffer, formLabel = 'unknown') {
     this.formLabel = formLabel;
@@ -31,6 +53,45 @@ export class DocxTemplate {
     const rels = this.zip.file('word/_rels/document.xml.rels')?.asText() ?? '';
     const ids = [...rels.matchAll(/Id="rId(\d+)"/g)].map((m) => Number(m[1]));
     this.nextRIdNum = ids.length > 0 ? Math.max(...ids) + 1 : 100;
+
+    // numbering.xml에서 bullet 문자 → numId 매핑 구축
+    this.bulletNumIds = this.parseBulletNumIds();
+  }
+
+  /**
+   * numbering.xml 파싱: abstractNum의 lvlText(bullet 문자)별로 numId를 역매핑.
+   *
+   * 원본 양식 구조:
+   * - Wingdings bullet → heading (대제목/소제목)
+   * - ※ → note (참고사항)
+   * - ■ → check (확인사항)
+   */
+  private parseBulletNumIds(): BulletNumIds {
+    const numXml = this.zip.file('word/numbering.xml')?.asText() ?? '';
+    if (!numXml) return {};
+
+    // abstractNumId → lvlText 매핑
+    const abstractBullets = new Map<string, string>();
+    const abstractMatches = numXml.matchAll(
+      /w:abstractNumId="(\d+)"[\s\S]*?<w:lvlText w:val="([^"]*)"/g
+    );
+    for (const m of abstractMatches) {
+      abstractBullets.set(m[1], m[2]);
+    }
+
+    // numId → abstractNumId 매핑
+    const result: BulletNumIds = {};
+    const numMatches = numXml.matchAll(/w:numId="(\d+)"[\s\S]*?w:abstractNumId w:val="(\d+)"/g);
+    for (const m of numMatches) {
+      const numId = Number(m[1]);
+      const lvlText = abstractBullets.get(m[2]) ?? '';
+
+      if (lvlText === '※' && !result.note) result.note = numId;
+      else if (lvlText === '■' && !result.check) result.check = numId;
+      else if (lvlText !== '※' && lvlText !== '■' && lvlText !== '' && !result.heading)
+        result.heading = numId;
+    }
+    return result;
   }
 
   /**
@@ -295,13 +356,14 @@ export class DocxTemplate {
       | { type: 'image'; buffer: Buffer; ext: 'png' | 'jpeg'; widthCm?: number; heightCm?: number }
     >
   ): void {
-    // 제목 단락 (볼드)
-    const titlePara = `<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(title)}</w:t></w:r></w:p>`;
+    // 제목 단락 (볼드 + 굴림체)
+    const titlePara = `<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:rPr>${GULIM_FONT_RPR}<w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(title)}</w:t></w:r></w:p>`;
 
     // 블록 변환
+    const fontRPr = `<w:rPr>${GULIM_FONT_RPR}</w:rPr>`;
     const blockXmls = blocks.map((block) => {
       if (block.type === 'text') {
-        return this.buildMultilineParagraphs('', '', block.value);
+        return this.buildMultilineParagraphs('', fontRPr, block.value);
       }
       const rId = this.addImageResource(block.buffer, block.ext);
       const cx = Math.round((block.widthCm ?? 12) * 360000);
@@ -320,15 +382,34 @@ export class DocxTemplate {
    * 동적 결과 섹션의 제목/본문 텍스트 블록을 문서 끝에 삽입합니다.
    * `<w:sectPr` 앞(없으면 `</w:body>` 앞)에 삽입하여 페이지 설정을 보존합니다.
    */
-  appendParagraph(text: string, options?: { bold?: boolean; fontSize?: number }): void {
-    const rPrParts: string[] = [];
+  appendParagraph(
+    text: string,
+    options?: {
+      bold?: boolean;
+      fontSize?: number;
+      /** 템플릿 numbering의 numId — 글머리 기호 스타일 적용 */
+      numId?: number;
+      /** 이 단락 앞에 페이지 나누기 삽입 */
+      pageBreakBefore?: boolean;
+    }
+  ): void {
+    const rPrParts: string[] = [GULIM_FONT_RPR];
     if (options?.bold) rPrParts.push('<w:b/>');
     if (options?.fontSize) {
       const halfPt = options.fontSize * 2;
       rPrParts.push(`<w:sz w:val="${halfPt}"/><w:szCs w:val="${halfPt}"/>`);
     }
-    const rPr = rPrParts.length > 0 ? `<w:rPr>${rPrParts.join('')}</w:rPr>` : '';
-    const paraXml = `<w:p><w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(text)}</w:t></w:r></w:p>`;
+    const rPr = `<w:rPr>${rPrParts.join('')}</w:rPr>`;
+
+    const pPrParts: string[] = [];
+    if (options?.pageBreakBefore) pPrParts.push('<w:pageBreakBefore/>');
+    if (options?.numId) {
+      pPrParts.push(`<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${options.numId}"/></w:numPr>`);
+    }
+    pPrParts.push(`<w:rPr>${GULIM_FONT_RPR}</w:rPr>`);
+    const pPr = pPrParts.length > 0 ? `<w:pPr>${pPrParts.join('')}</w:pPr>` : '';
+
+    const paraXml = `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(text)}</w:t></w:r></w:p>`;
     this.insertBeforeSectPr(paraXml);
   }
 
@@ -343,7 +424,9 @@ export class DocxTemplate {
     const tblPr = `<w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top ${borderAttr}/><w:left ${borderAttr}/><w:bottom ${borderAttr}/><w:right ${borderAttr}/><w:insideH ${borderAttr}/><w:insideV ${borderAttr}/></w:tblBorders></w:tblPr>`;
 
     const buildCell = (val: string, bold: boolean): string => {
-      const rPr = bold ? '<w:rPr><w:b/></w:rPr>' : '';
+      const rPr = bold
+        ? `<w:rPr>${GULIM_FONT_RPR}<w:b/></w:rPr>`
+        : `<w:rPr>${GULIM_FONT_RPR}</w:rPr>`;
       return `<w:tc><w:p><w:r>${rPr}<w:t xml:space="preserve">${this.escapeXml(val)}</w:t></w:r></w:p></w:tc>`;
     };
 
@@ -380,14 +463,14 @@ export class DocxTemplate {
     const borderAttr = 'w:val="single" w:sz="4" w:space="0" w:color="000000"';
     const tblPr = `<w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders><w:top ${borderAttr}/><w:left ${borderAttr}/><w:bottom ${borderAttr}/><w:right ${borderAttr}/><w:insideH ${borderAttr}/><w:insideV ${borderAttr}/></w:tblBorders></w:tblPr>`;
 
-    const headerRow = `<w:tr>${headers.map((h) => `<w:tc><w:p><w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
+    const headerRow = `<w:tr>${headers.map((h) => `<w:tc><w:p><w:r><w:rPr>${GULIM_FONT_RPR}<w:b/></w:rPr><w:t xml:space="preserve">${this.escapeXml(h)}</w:t></w:r></w:p></w:tc>`).join('')}</w:tr>`;
 
     const dataRows = rows
       .map((row) => {
         const cells = row
           .map((cell) => {
             if (cell.type === 'text') {
-              return `<w:tc><w:p><w:r><w:t xml:space="preserve">${this.escapeXml(cell.value)}</w:t></w:r></w:p></w:tc>`;
+              return `<w:tc><w:p><w:r><w:rPr>${GULIM_FONT_RPR}</w:rPr><w:t xml:space="preserve">${this.escapeXml(cell.value)}</w:t></w:r></w:p></w:tc>`;
             }
             const rId = this.addImageResource(cell.buffer, cell.ext);
             const cx = Math.round((cell.widthCm ?? 8) * 360000);
@@ -417,6 +500,32 @@ export class DocxTemplate {
     const imageXml = this.buildSizedInlineImageXml(rId, cx, cy);
     const paraXml = `<w:p><w:r>${imageXml}</w:r></w:p>`;
     this.insertBeforeSectPr(paraXml);
+  }
+
+  /**
+   * 마지막 테이블 뒤의 모든 단락(템플릿 예시 텍스트)을 제거하고,
+   * 그 자리에 페이지 나누기 단락을 삽입.
+   *
+   * 양식 템플릿에 "측정 결과", 예시 비고 등이 포함되어 있을 수 있는데,
+   * 동적 결과 섹션으로 교체해야 하므로 예시 텍스트를 먼저 제거한다.
+   * 이후 appendParagraph/appendTable 등으로 동적 콘텐츠가 삽입된다.
+   */
+  removeTemplateExampleTextAndInsertPageBreak(): void {
+    // 마지막 </w:tbl> 찾기
+    const lastTblEnd = this.documentXml.lastIndexOf('</w:tbl>');
+    if (lastTblEnd < 0) return;
+    const afterTbl = lastTblEnd + '</w:tbl>'.length;
+
+    // sectPr 또는 </w:body> 찾기
+    const sectPrIdx = this.documentXml.indexOf('<w:sectPr', afterTbl);
+    const bodyEndIdx = this.documentXml.indexOf('</w:body>', afterTbl);
+    const cutEnd = sectPrIdx >= 0 ? sectPrIdx : bodyEndIdx;
+    if (cutEnd < 0) return;
+
+    // 마지막 테이블 뒤 ~ sectPr 앞 사이의 모든 단락을 제거하고 페이지 나누기 삽입
+    const pageBreakPara = `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
+    this.documentXml =
+      this.documentXml.slice(0, afterTbl) + pageBreakPara + this.documentXml.slice(cutEnd);
   }
 
   /**
@@ -523,9 +632,10 @@ export class DocxTemplate {
     const pPrMatch = cellXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
     const pPr = pPrMatch ? pPrMatch[0] : '';
 
-    // 첫 번째 rPr 보존
+    // 첫 번째 rPr 보존 — 폰트를 굴림체로 강제 교체 (템플릿 셀의 Times New Roman 등 대체)
     const rPrMatch = cellXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
-    const rPr = rPrMatch ? rPrMatch[0] : '';
+    let rPr = rPrMatch ? rPrMatch[0] : '';
+    rPr = DocxTemplate.forceGulimFont(rPr);
 
     // 셀 시작 태그만 캡처 — <w:tc> 또는 <w:tc attr="..."> (내부 자식 태그 포함 방지)
     const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
@@ -542,7 +652,8 @@ export class DocxTemplate {
     const pPrMatch = cellXml.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
     const pPr = pPrMatch ? pPrMatch[0] : '';
     const rPrMatch = cellXml.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
-    const rPr = rPrMatch ? rPrMatch[0] : '';
+    let rPr = rPrMatch ? rPrMatch[0] : '';
+    rPr = DocxTemplate.forceGulimFont(rPr);
     const startTag = cellXml.match(/^<w:tc(?:\s[^>]*)?>/)?.[0] ?? '<w:tc>';
 
     const paragraphs = this.buildMultilineParagraphs(pPr, rPr, text);
@@ -623,6 +734,18 @@ export class DocxTemplate {
     }
 
     return rId;
+  }
+
+  /**
+   * rPr 내 폰트를 굴림체로 강제 교체.
+   * 기존 rFonts가 있으면 교체, 없으면 추가.
+   */
+  private static forceGulimFont(rPr: string): string {
+    if (!rPr) return `<w:rPr>${GULIM_FONT_RPR}</w:rPr>`;
+    if (rPr.includes('<w:rFonts')) {
+      return rPr.replace(/<w:rFonts[^/]*\/>/g, GULIM_FONT_RPR);
+    }
+    return rPr.replace('<w:rPr>', `<w:rPr>${GULIM_FONT_RPR}`);
   }
 
   /**

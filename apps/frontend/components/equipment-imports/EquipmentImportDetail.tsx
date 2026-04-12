@@ -510,12 +510,12 @@ export default function EquipmentImportDetail({ id }: Props) {
           </Button>
         )}
 
-        {/* UL-QP-18-10 공용장비 사용/반납 확인서 — pending/rejected/canceled 제외 */}
+        {/* 양식 분기: rental → QP-18-06(반출입확인서), internal_shared → QP-18-10(공용장비) */}
         {!([EISVal.PENDING, EISVal.REJECTED, EISVal.CANCELED] as EquipmentImportStatus[]).includes(
           status
         ) && (
           <ExportFormButton
-            formNumber="UL-QP-18-10"
+            formNumber={isRental ? 'UL-QP-18-06' : 'UL-QP-18-10'}
             params={{ importId: id }}
             label={t('equipmentImport.exportForm')}
             errorToastDescription={t('equipmentImport.exportFormError')}
