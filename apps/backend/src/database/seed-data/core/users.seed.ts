@@ -32,6 +32,7 @@ import {
   TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID,
 } from '../../utils/uuid-constants';
 
+/** signatureImagePath — 시드 실행 시 generateSignatureImages()가 물리 PNG 생성 후 DB UPDATE */
 export const USERS_SEED_DATA: (typeof users.$inferInsert)[] = [
   // =========================================================================
   // Suwon FCC EMC/RF Team (5 users)

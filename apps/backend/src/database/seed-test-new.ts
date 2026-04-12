@@ -39,6 +39,7 @@ import {
   CHECKOUTS_SEED_DATA,
   CHECKOUT_ITEMS_SEED_DATA,
 } from './seed-data/operations/checkouts.seed';
+import { EQUIPMENT_IMPORTS_SEED_DATA } from './seed-data/operations/equipment-imports.seed';
 
 // Phase 2 seed data modules
 import {
@@ -64,6 +65,9 @@ import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-reques
 import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
 import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
 import { NOTIFICATIONS_SEED_DATA } from './seed-data/admin/notifications.seed';
+
+// Signature PNG generation
+import { generateSignatureImages } from './seed-data/core/generate-signatures';
 
 // Utilities
 import { verifySeed, printVerificationResults } from './utils/verification';
@@ -121,6 +125,7 @@ async function main(): Promise<void> {
       // 시드하며, 이후에는 업로드/관리 API 를 통해서만 갱신된다. seed-test-new 는 백엔드 부팅
       // '이후' 에 실행되므로 여기서 truncate 하면 재삽입 경로가 없어 export 테스트가 일괄 실패한다
       // (FORM_TEMPLATE_NOT_FOUND). 템플릿은 테스트 상태가 아닌 시스템 자원이므로 보존한다.
+      'equipment_imports',
       'checkout_items',
       'checkouts',
       'calibration_plan_items',
@@ -188,6 +193,25 @@ async function main(): Promise<void> {
     console.log(`  → Users (${USERS_SEED_DATA.length})`);
     await db.insert(schema.users).values(USERS_SEED_DATA);
 
+    // Signature PNGs — 물리 파일 생성 후 users.signature_image_path UPDATE
+    console.log(`  → Generating signature PNGs (${USERS_SEED_DATA.length})`);
+    try {
+      const uploadsDir = path.resolve(__dirname, '../../uploads');
+      const sigUsers = USERS_SEED_DATA.map((u) => ({ id: u.id!, name: u.name }));
+      const pathMap = await generateSignatureImages(sigUsers, uploadsDir);
+      for (const [userId, sigPath] of pathMap) {
+        await db
+          .update(schema.users)
+          .set({ signatureImagePath: sigPath, updatedAt: new Date() })
+          .where(sql`id = ${userId}`);
+      }
+      console.log(`    ✅ ${pathMap.size}명 서명 이미지 생성 + DB 경로 저장 완료`);
+    } catch (err) {
+      console.warn(
+        `    ⚠️ Signature generation skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
     // Equipment (32 records)
     console.log('  → Equipment (36)');
     await db.insert(schema.equipment).values(EQUIPMENT_SEED_DATA);
@@ -224,6 +248,10 @@ async function main(): Promise<void> {
     await db.insert(schema.checkouts).values(CHECKOUTS_SEED_DATA);
     console.log('  → Checkout Items (equipment associations)');
     await db.insert(schema.checkoutItems).values(CHECKOUT_ITEMS_SEED_DATA);
+
+    // Equipment Imports (10)
+    console.log(`  → Equipment Imports (${EQUIPMENT_IMPORTS_SEED_DATA.length})`);
+    await db.insert(schema.equipmentImports).values(EQUIPMENT_IMPORTS_SEED_DATA);
 
     // ✅ equipment.status 동기화 — checkout.status='checked_out'인 장비의 equipment.status도 'checked_out'으로 설정
     // 런타임에는 CheckoutsService.startCheckout()이 이 동기화를 수행하지만, 시드 데이터는 직접 INSERT하므로 별도 동기화 필요
