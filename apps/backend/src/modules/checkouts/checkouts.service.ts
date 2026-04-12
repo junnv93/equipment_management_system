@@ -221,7 +221,7 @@ export class CheckoutsService extends VersionedBaseService {
    * 이 불변식 덕에 `invalidateCache` 가 `deleteByPrefix` 만으로 정확한 스코프
    * 단위 무효화를 수행할 수 있다 — JSON 직렬화 infix 에 대한 정규식 매칭 불필요.
    */
-  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'count', 'summary']);
+  private readonly SCOPE_AWARE_SUFFIXES = new Set(['list', 'summary']);
 
   private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
     return Object.entries(params).reduce(
@@ -327,13 +327,11 @@ export class CheckoutsService extends VersionedBaseService {
     for (const teamId of teamIds) {
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:t:${teamId}:`);
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}summary:t:${teamId}:`);
-      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:t:${teamId}:`);
     }
 
     // 글로벌 스코프 (팀 필터 없는) 캐시도 무효화
     this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:g:`);
     this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}summary:g:`);
-    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:g:`);
 
     // destinations 캐시 무효화
     this.cacheService.delete(`${this.CACHE_PREFIX}.destinations`);

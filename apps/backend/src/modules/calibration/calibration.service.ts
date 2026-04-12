@@ -671,7 +671,7 @@ export class CalibrationService extends VersionedBaseService {
       calibrationDueStatus,
     } = query;
 
-    // ✅ 결정론적 캐시 키: buildStableCacheKey가 키 정렬 + null/undefined 자동 제거
+    // ✅ 결정론적 캐시 키: buildStableCacheKey가 키 알파벳 정렬로 순서 무관 안정 직렬화
     const cacheKey = buildStableCacheKey(CACHE_KEY_PREFIXES.CALIBRATION, 'list', {
       equipmentId,
       calibrationManagerId,
