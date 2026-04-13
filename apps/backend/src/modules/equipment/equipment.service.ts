@@ -38,6 +38,7 @@ import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
 import type { AppDatabase } from '@equipment-management/db';
 import {
+  BATCH_QUERY_LIMITS,
   CACHE_TTL,
   DEFAULT_PAGE_SIZE,
   isEligibleAsEquipmentManager,
@@ -1180,10 +1181,10 @@ export class EquipmentService extends VersionedBaseService {
       .where(and(...whereConditions))
       .returning({ id: equipment.id, teamId: equipment.teamId });
 
-    // 캐시 무효화 (트랜잭션 외부에서 실행해도 안전 — 최악의 경우 cache miss)
-    for (const row of updated) {
-      await this.invalidateCache(row.id, row.teamId ?? undefined);
-    }
+    // 캐시 무효화 — O(unique teams) 배치 최적화 (글로벌/대시보드는 1회만)
+    await this.invalidateCacheBatch(
+      updated.map((row) => ({ equipmentId: row.id, teamId: row.teamId ?? undefined }))
+    );
 
     return updated;
   }
@@ -1323,34 +1324,63 @@ export class EquipmentService extends VersionedBaseService {
    * @param teamId - 영향받는 팀 ID (선택적 무효화)
    */
   private async invalidateCache(equipmentId?: string, teamId?: string): Promise<void> {
-    // 개별 장비 detail 캐시 무효화 (key shape 불변 — buildCacheKey compound key)
-    if (equipmentId) {
-      await this.cacheService.delete(this.buildCacheKey('detail', { uuid: equipmentId }));
-      await this.cacheService.delete(
-        this.buildCacheKey('detail', { uuid: equipmentId, includeTeam: true })
-      );
+    await this.invalidateCacheBatch(equipmentId ? [{ equipmentId, teamId }] : []);
+    // equipmentId 없는 global-only 무효화 (invalidateCachePublic 경로)
+    if (!equipmentId) {
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:g:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:g:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}statusCounts:g:`);
+      this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}calibration:`);
+      this.cacheService.delete(this.buildCacheKey('all-ids'));
+      await this.cacheInvalidationHelper.invalidateAllDashboard();
     }
+  }
 
-    if (teamId) {
-      // 팀 스코프: 해당 팀에 속한 list/count/statusCounts/team 캐시 전부 무효화.
-      // 키 shape: `equipment:<suffix>:t:<teamId>:<jsonParams>` → prefix 매칭으로 정확 커버
+  /**
+   * 배치 캐시 무효화 — O(unique teams) 최적화
+   *
+   * batchStatusUpdate에서 N rows 처리 시:
+   * - detail 캐시: 각 row별 병렬 삭제 (row별 고유 키)
+   * - team-scoped prefix: unique teamId당 1회만 삭제 (N rows → unique 수로 감소)
+   * - global/dashboard: entries 전체에 대해 1회만 실행 (루프 밖)
+   *
+   * @param entries - 무효화할 장비 목록 ({ equipmentId, teamId? }[])
+   */
+  private async invalidateCacheBatch(
+    entries: { equipmentId: string; teamId?: string }[]
+  ): Promise<void> {
+    if (entries.length === 0) return;
+
+    // 1) detail 캐시: row별 고유 — 병렬 삭제
+    await Promise.all(
+      entries.map((e) =>
+        Promise.all([
+          this.cacheService.delete(this.buildCacheKey('detail', { uuid: e.equipmentId })),
+          this.cacheService.delete(
+            this.buildCacheKey('detail', { uuid: e.equipmentId, includeTeam: true })
+          ),
+        ])
+      )
+    );
+
+    // 2) team-scoped prefix: unique teamId당 1회
+    const uniqueTeamIds = [...new Set(entries.map((e) => e.teamId).filter(Boolean))] as string[];
+    uniqueTeamIds.forEach((teamId) => {
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:t:${teamId}:`);
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:t:${teamId}:`);
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}statusCounts:t:${teamId}:`);
       this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}team:t:${teamId}:`);
-    }
+    });
 
-    // 글로벌 스코프: 팀 필터가 없는 목록/카운트/상태카운트 전부 무효화
-    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:g:`);
-    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:g:`);
-    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}statusCounts:g:`);
-
-    // 대시보드-수준 집계: calibration 만기 조회 캐시 + all-ids 단일 키
-    this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}calibration:`);
-    this.cacheService.delete(this.buildCacheKey('all-ids'));
-
-    // 대시보드 + 승인 카운트 교차 무효화
-    await this.cacheInvalidationHelper.invalidateAllDashboard();
+    // 3) global + dashboard: 전체에 대해 1회만 실행
+    await Promise.all([
+      Promise.resolve(this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}list:g:`)),
+      Promise.resolve(this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}count:g:`)),
+      Promise.resolve(this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}statusCounts:g:`)),
+      Promise.resolve(this.cacheService.deleteByPrefix(`${this.CACHE_PREFIX}calibration:`)),
+      this.cacheService.delete(this.buildCacheKey('all-ids')),
+      this.cacheInvalidationHelper.invalidateAllDashboard(),
+    ]);
   }
 
   /**
@@ -1612,7 +1642,7 @@ export class EquipmentService extends VersionedBaseService {
           return await this.db.query.equipment.findMany({
             where: and(...conditions),
             orderBy: asc(equipment.nextCalibrationDate),
-            limit: 500,
+            limit: BATCH_QUERY_LIMITS.CALIBRATION_DUE_EQUIPMENT,
           });
         } catch (error) {
           this.logger.error(
