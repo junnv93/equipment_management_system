@@ -571,4 +571,16 @@ export const queryKeys = {
     equipment: (id?: string) => [...queryKeys.breadcrumbs.all, 'equipment', id] as const,
     resource: (type: string, id?: string) => [...queryKeys.breadcrumbs.all, type, id] as const,
   },
+  /**
+   * 스토리지 파일 서빙 쿼리 키 (FilesController: GET /api/files/:subdir/:filename)
+   *
+   * 캐싱 전략:
+   * - staleTime: MEDIUM(5분) — 서명/장비사진은 자주 바뀌지 않음
+   * - gcTime: SHORT(1분) — Blob URL은 GC 시 revoke 필요 (StorageImage 컴포넌트가 처리)
+   * - storageKey: '{subdir}/{uuid}.{ext}' 형식 (DB 저장값 그대로 사용)
+   */
+  storageFiles: {
+    all: ['storageFiles'] as const,
+    url: (storageKey: string) => [...queryKeys.storageFiles.all, storageKey] as const,
+  },
 } as const;

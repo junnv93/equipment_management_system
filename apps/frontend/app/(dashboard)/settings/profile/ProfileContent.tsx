@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { fetchStorageFileUrl } from '@/lib/utils/file-url';
+import StorageImage from '@/components/shared/StorageImage';
 import {
   API_ENDPOINTS,
   getPermissions,
@@ -158,35 +158,6 @@ function SignatureCard({
   const hasSignature = !!profile.signatureImagePath;
   const isLoading = uploadMutation.isPending || deleteMutation.isPending;
 
-  // 서명 이미지 URL — apiClient를 통해 직접 백엔드 호출 후 blob/presigned URL 획득
-  // (<img src="/api/files/..."> 직접 사용 불가: Next.js rewrite가 /api 제거 → 404)
-  const [signatureImgUrl, setSignatureImgUrl] = useState<string | null>(null);
-  const signatureIsBlobRef = useRef(false);
-  useEffect(() => {
-    if (!profile.signatureImagePath) {
-      setSignatureImgUrl(null);
-      return;
-    }
-    let cancelled = false;
-    fetchStorageFileUrl(profile.signatureImagePath).then(({ url, isBlob }) => {
-      if (cancelled) {
-        if (isBlob) window.URL.revokeObjectURL(url);
-        return;
-      }
-      signatureIsBlobRef.current = isBlob;
-      setSignatureImgUrl(url);
-    });
-    return () => {
-      cancelled = true;
-      if (signatureIsBlobRef.current && signatureImgUrl) {
-        window.URL.revokeObjectURL(signatureImgUrl);
-        signatureIsBlobRef.current = false;
-      }
-    };
-    // profile.signatureImagePath 변경 시 재요청 (업로드/삭제 후 invalidateQueries로 트리거)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.signatureImagePath]);
-
   return (
     <Card className={getSettingsCardClasses()}>
       <CardHeader className={getSettingsCardHeaderClasses()}>
@@ -215,12 +186,12 @@ function SignatureCard({
         {hasSignature ? (
           <div className={`${getSettingsFormItemClasses()} ${SETTINGS_FORM_ITEM_TOKENS.layout}`}>
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="rounded-md border border-border/50 bg-muted/30 p-3 flex items-center justify-center shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element -- blob/presigned URL은 next/image 미지원 */}
-                <img
-                  src={signatureImgUrl ?? undefined}
+              <div className="rounded-md border border-border/50 bg-muted/30 p-3 flex items-center justify-center shadow-sm min-w-[80px] min-h-[48px]">
+                <StorageImage
+                  storageKey={profile.signatureImagePath}
                   alt={t('profile.signature.title')}
                   className="max-h-12 max-w-[160px] object-contain"
+                  fallbackClassName="h-12 w-20"
                 />
               </div>
               <div className={SETTINGS_FORM_ITEM_TOKENS.labelWrapper}>
