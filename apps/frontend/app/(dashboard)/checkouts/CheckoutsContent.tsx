@@ -127,8 +127,10 @@ export default function CheckoutsContent({
   }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 확인 필요 건수 — pageSize: 1로 최소 데이터만 fetch (count만 필요)
+  // ⚠️ pendingCount 전용 키 사용: pending 전체 목록(PendingChecksClient)과 캐시 충돌 방지
+  // pending()과 동일 키 사용 시 pageSize:1 결과가 전체 목록 캐시를 오염시켜 1건만 표시되는 버그 발생
   const { data: pendingChecksData } = useQuery({
-    queryKey: queryKeys.checkouts.pending(),
+    queryKey: queryKeys.checkouts.pendingCount(),
     queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
     staleTime: CACHE_TIMES.SHORT,
   });

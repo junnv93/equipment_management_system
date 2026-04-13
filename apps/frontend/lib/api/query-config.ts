@@ -417,6 +417,8 @@ export const queryKeys = {
     inbound: (filters: object = {}) => [...queryKeys.checkouts.all, 'inbound', filters] as const,
     destinations: () => [...queryKeys.checkouts.all, 'destinations'] as const,
     pending: (role?: string) => [...queryKeys.checkouts.all, 'pending', role] as const,
+    /** 확인 필요 건수 전용 (count만 필요한 요약 위젯용, pageSize:1 fetch) — pending 전체 목록 캐시와 분리 */
+    pendingCount: () => [...queryKeys.checkouts.all, 'pending-count'] as const,
     returnPending: () => [...queryKeys.checkouts.all, 'return-pending'] as const,
     summary: (params: object = {}) => [...queryKeys.checkouts.all, 'summary', params] as const,
   },
