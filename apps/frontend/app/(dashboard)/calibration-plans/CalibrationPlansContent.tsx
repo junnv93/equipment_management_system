@@ -1,11 +1,20 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -25,16 +34,7 @@ import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filter
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import {
-  Plus,
-  FileText,
-  Calendar,
-  Building2,
-  Users,
-  ClipboardList,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Plus, FileText, Users, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
@@ -75,6 +75,7 @@ export default function CalibrationPlansContent({
   initialData,
   initialFilters,
 }: CalibrationPlansContentProps) {
+  const router = useRouter();
   const currentYear = new Date().getFullYear();
   const { session, can } = useAuth();
   const { fmtDate } = useDateFormatter();
@@ -372,7 +373,7 @@ export default function CalibrationPlansContent({
         </div>
       </div>
 
-      {/* ── 계획서 목록 (컴팩트 로우) ────────────────────────────── */}
+      {/* ── 계획서 목록 ────────────────────────────── */}
       <div className={CALIBRATION_PLAN_LIST_TOKENS.container.wrapper}>
         {isLoading ? (
           <div className="p-4 space-y-3">
@@ -400,79 +401,55 @@ export default function CalibrationPlansContent({
             )}
           </div>
         ) : (
-          <>
-            {/* 헤더 행 */}
-            <div className={CALIBRATION_PLAN_LIST_TOKENS.container.header}>
-              <span className={CALIBRATION_PLAN_LIST_TOKENS.firstCellPadding}>
-                {t('plansList.table.year')}
-              </span>
-              <span>{t('plansList.table.site')}</span>
-              <span>{t('planCreate.fields.team')}</span>
-              <span>{t('plansList.table.status')}</span>
-              <span>{t('plansList.table.author')}</span>
-              <span>{t('plansList.table.createdAt')}</span>
-              <span className="text-right">{t('plansList.table.action')}</span>
-            </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('plansList.table.year')}</TableHead>
+                <TableHead>{t('plansList.table.site')}</TableHead>
+                <TableHead>{t('planCreate.fields.team')}</TableHead>
+                <TableHead>{t('plansList.table.status')}</TableHead>
+                <TableHead>{t('plansList.table.author')}</TableHead>
+                <TableHead>{t('plansList.table.createdAt')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {plans.map((plan: CalibrationPlan, index: number) => {
+                const key = plan.id || `plan-fallback-${plan.year}-${plan.siteId}-${index}`;
+                const teamName =
+                  plan.teamName ||
+                  (plan.teamId ? teams.find((tm) => tm.id === plan.teamId)?.name : null);
 
-            {/* 데이터 행 */}
-            {plans.map((plan: CalibrationPlan, index: number) => {
-              const key = plan.id || `plan-fallback-${plan.year}-${plan.siteId}-${index}`;
-              const teamName =
-                plan.teamName ||
-                (plan.teamId ? teams.find((tm) => tm.id === plan.teamId)?.name : null);
-
-              return (
-                <Link
-                  key={key}
-                  href={plan.id ? `/calibration-plans/${plan.id}` : '#'}
-                  className={cn(
-                    CALIBRATION_PLAN_LIST_TOKENS.container.base,
-                    CALIBRATION_PLAN_LIST_TOKENS.container.desktop,
-                    CALIBRATION_PLAN_LIST_TOKENS.container.mobile,
-                    CALIBRATION_PLAN_LIST_TOKENS.hover,
-                    'cursor-pointer no-underline text-inherit'
-                  )}
-                >
-                  {/* 연도 */}
-                  <div className={CALIBRATION_PLAN_LIST_TOKENS.yearCell}>
-                    <Calendar
-                      className={cn(CALIBRATION_PLAN_LIST_TOKENS.mobileIcon, 'inline mr-1.5')}
-                    />
-                    {t('plansList.yearUnit', { year: plan.year })}
-                  </div>
-
-                  {/* 시험소 */}
-                  <div className={CALIBRATION_PLAN_LIST_TOKENS.siteCell}>
-                    <Building2 className={CALIBRATION_PLAN_LIST_TOKENS.mobileIcon} />
-                    {siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId}
-                  </div>
-
-                  {/* 팀 */}
-                  <div className={CALIBRATION_PLAN_LIST_TOKENS.teamCell}>{teamName || '-'}</div>
-
-                  {/* 상태 배지 — Design Token 사용 */}
-                  <div>
-                    <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
-                      {t(`planStatus.${plan.status}`)}
-                    </Badge>
-                  </div>
-
-                  {/* 작성자 — authorName 우선, UUID 폴백 */}
-                  <div className={cn(CALIBRATION_PLAN_LIST_TOKENS.authorCell, 'truncate')}>
-                    {resolveDisplayName(plan.authorName, plan.createdBy)}
-                  </div>
-
-                  {/* 작성일 */}
-                  <div className={CALIBRATION_PLAN_LIST_TOKENS.dateCell}>
-                    {fmtDate(plan.createdAt)}
-                  </div>
-
-                  {/* 빈 셀 (그리드 정렬 유지) */}
-                  <div />
-                </Link>
-              );
-            })}
-          </>
+                return (
+                  <TableRow
+                    key={key}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      if (plan.id) router.push(`/calibration-plans/${plan.id}`);
+                    }}
+                  >
+                    <TableCell className="font-semibold tabular-nums">
+                      {t('plansList.yearUnit', { year: plan.year })}
+                    </TableCell>
+                    <TableCell>
+                      {siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{teamName || '-'}</TableCell>
+                    <TableCell>
+                      <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
+                        {t(`planStatus.${plan.status}`)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="truncate max-w-[160px]">
+                      {resolveDisplayName(plan.authorName, plan.createdBy)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">
+                      {fmtDate(plan.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </div>
 
