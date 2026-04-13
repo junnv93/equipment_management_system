@@ -1,8 +1,306 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-12 (45차 — 기존 프롬프트 전수 STALE 확인 + 3-agent 병렬 스캔 재실행)**
+> **마지막 정리일: 2026-04-13 (46차 — 시간복잡도 harness Mode 2 리뷰 결과 14건 → 5개 아키텍처 프롬프트)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## 46차 신규 — 시간복잡도 리뷰 결과 (5건, 2026-04-13)
+
+> **발견 배경 (2026-04-13, 46차)**: harness Mode 2 시간복잡도 리뷰 (Planner→Generator→Evaluator 2회 루프, 14개 서비스 파일 분석). 14건 이슈를 근본 원인 기반 5개 아키텍처 프롬프트로 그루핑. 분석 보고서: `.claude/exec-plans/completed/2026-04-13-time-complexity-review.md`
+
+### 🔴 CRITICAL — data-migration 배치 INSERT + 공유 chunkArray SSOT (Mode 2)
+
+```
+시간복잡도 이슈 C1+C2+C3: data-migration.service.ts 4개 INSERT 루프가 row별 개별
+tx.insert().values(entity)를 수행 → O(2n) DB 왕복. chunkArray는 private 메서드로
+공유 불가. 교정/수리/사고 이력 INSERT 블록은 테이블명만 다른 copy-paste 3종.
+validateAndGetUser를 N번 호출하나 userId는 마이그레이션 내내 동일.
+
+확인된 위치:
+1. data-migration.service.ts:183-213 — execute() validRows 루프 내 개별 INSERT + createLocationHistoryInternal
+2. data-migration.service.ts:432-465 — executeMultiSheet() chunk 이중 루프 내 개별 INSERT
+3. data-migration.service.ts:512-544 — 교정이력 chunk 루프 내 개별 INSERT
+4. data-migration.service.ts:569-596 — 수리이력 동일 패턴
+5. data-migration.service.ts:621-648 — 사고이력 동일 패턴
+6. data-migration.service.ts:866-872 — private chunkArray (공유 불가)
+7. equipment-history.service.ts:349-369 — createLocationHistoryInternal: validateAndGetUser per row
+
+작업:
+1. 공유 유틸리티 신규 생성:
+   apps/backend/src/common/utils/chunk-array.ts
+   export function chunkArray<T>(arr: T[], size: number): T[][]
+   data-migration.service.ts의 private chunkArray 제거 → import 교체
+
+2. SSOT 상수 추가 (packages/shared-constants/src/business-rules.ts):
+   BATCH_QUERY_LIMITS에 MIGRATION_CHUNK_SIZE: 100 추가
+   data-migration.service.ts의 하드코딩 CHUNK_SIZE: 100 → BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE 교체
+
+3. 배치 INSERT 전환 (Drizzle db.insert(table).values([...array])):
+   - execute(): chunk 단위 배치 INSERT로 전환. tx.insert(equipment).values(chunk.map(buildEntity))
+   - equipment INSERT는 .returning({ id, managementNumber })로 managementNumber→id Map 재구성
+   - executeMultiSheet() 장비 시트: 동일 배치 패턴
+
+4. 교정/수리/사고 3종 copy-paste 통합:
+   private insertHistoryBatch<T>(tx, table, rows: T[], buildValues: (row) => object): Promise<void>
+   3개 시트 처리 블록 → 헬퍼 1회 호출로 통합
+
+5. createLocationHistoryBatch 신설 (equipment-history.service.ts):
+   createLocationHistoryBatch(entries: { equipmentId: string; data: ... }[], userId: string, tx): Promise<void>
+   validateAndGetUser 1회 호출 → 배치 INSERT
+   data-migration.service.ts에서 위치이력 필요한 rows 수집 후 일괄 호출
+
+주의:
+- equipment INSERT .returning() 필요 — managementNumber→id Map 재구성 후 이력 INSERT에 사용
+- All-or-Nothing 트랜잭션 시맨틱 유지 (기존 tx 파라미터 패턴 그대로)
+- createLocationHistoryInternal 단건 API는 유지 (다른 호출처 있음)
+
+검증:
+- pnpm --filter backend run tsc --noEmit && pnpm --filter backend run test
+- pnpm --filter backend run test -- --testPathPattern='data-migration'
+- grep 'private chunkArray' apps/backend/src/modules/data-migration → 0 hit
+- grep 'for.*of validRows\|for.*of chunk' apps/backend/src/modules/data-migration/services/data-migration.service.ts → INSERT 관련 0 hit
+- grep 'MIGRATION_CHUNK_SIZE' packages/shared-constants → 1 hit (정의), grep 'MIGRATION_CHUNK_SIZE' apps/backend → 1+ hit (사용)
+```
+
+### 🟠 HIGH — QUERY_SAFETY_LIMITS SSOT 상수 도입 + limit 없는 findMany 전수 조사 (Mode 1)
+
+```
+시간복잡도 이슈 H1+H2+H4+L3: 4개 서비스 메서드에 limit 없는 findMany/select가 존재.
+데이터 증가 시 무제한 결과 반환 → OOM 또는 응답 지연. limit 값이 각 서비스에 
+하드코딩되거나 누락된 상태. BATCH_QUERY_LIMITS에는 스케줄러용 상수만 있고
+일반 API 쿼리 안전 상한이 없음.
+
+확인된 위치:
+1. apps/backend/src/modules/audit/audit.service.ts:361-365
+   findByEntity(): .select().from(auditLogs).where(...).orderBy(desc(...)) — limit 없음
+   (findAll cursor pagination은 있으나 엔티티별 단순 조회 API는 미적용)
+2. apps/backend/src/modules/equipment/services/equipment-attachment.service.ts:120-132
+   findByEquipmentId / findByRequestId: findMany({ where: ... }) — limit 없음
+3. apps/backend/src/modules/calibration-factors/calibration-factors.service.ts:352
+   getRegistry(): 전체 보정계수 조회, JS 인메모리 그루핑 — CACHE_TTL.VERY_LONG 캐시 있으나 cold start 시 풀스캔
+4. apps/backend/src/modules/checkouts/checkouts.service.ts:2108-2118
+   getConditionChecks(): limit 없음
+
+작업:
+1. packages/shared-constants/src/business-rules.ts에 QUERY_SAFETY_LIMITS 추가:
+   export const QUERY_SAFETY_LIMITS = {
+     /** 엔티티별 감사 로그 최대 조회 수 */
+     AUDIT_LOGS_PER_ENTITY: 500,
+     /** 장비별 첨부파일 최대 조회 수 */
+     ATTACHMENTS_PER_ENTITY: 100,
+     /** 보정계수 대장 최대 조회 수 (cold cache 보호) */
+     CALIBRATION_FACTORS_REGISTRY: 1000,
+     /** 반출별 상태확인 최대 조회 수 */
+     CONDITION_CHECKS_PER_CHECKOUT: 100,
+   } as const;
+   packages/shared-constants/src/index.ts에 export 추가
+
+2. 각 서비스에 limit 적용:
+   - audit.service.ts:365 → .limit(QUERY_SAFETY_LIMITS.AUDIT_LOGS_PER_ENTITY)
+   - equipment-attachment.service.ts:121,130 → limit: QUERY_SAFETY_LIMITS.ATTACHMENTS_PER_ENTITY
+   - calibration-factors.service.ts:352 → .limit(QUERY_SAFETY_LIMITS.CALIBRATION_FACTORS_REGISTRY)
+   - checkouts.service.ts:2118 → .limit(QUERY_SAFETY_LIMITS.CONDITION_CHECKS_PER_CHECKOUT)
+
+3. 전수 조사 (추가 누락 탐지):
+   grep -rn 'findMany\|\.select()\.from(' apps/backend/src/modules --include='*.service.ts' |
+   grep -v '\.limit\|spec\.ts\|BATCH_QUERY_LIMITS\|REPORT_EXPORT_ROW_LIMIT'
+   발견 시 동일 QUERY_SAFETY_LIMITS에 상수 추가 후 적용
+
+주의:
+- QUERY_SAFETY_LIMITS는 "무제한 방지" 목적. 페이지네이션이 이미 적용된 메서드는 제외
+- findByEntity limit 이후 호출자 UI가 "더 보기" 필요한지 도메인 판단 필요
+  (현재 감사 로그 UI가 페이지네이션 없이 전체 표시라면 별도 cursor 도입 검토)
+- getRegistry는 캐시 TTL이 VERY_LONG이므로 실 운영 영향은 낮음 — 방어적 추가
+
+검증:
+- pnpm --filter backend run tsc --noEmit && pnpm --filter shared-constants run tsc --noEmit
+- pnpm --filter backend run test
+- grep 'QUERY_SAFETY_LIMITS' packages/shared-constants/src/business-rules.ts → 1 hit (정의)
+- grep 'QUERY_SAFETY_LIMITS' apps/backend/src/modules → 4+ hit (사용)
+- 전수 조사 grep 결과 limit 누락 0건 확인
+```
+
+### 🟠 HIGH — batchStatusUpdate 캐시 무효화 O(n) → O(unique teams) + Promise.all 병렬화 (Mode 1)
+
+```
+시간복잡도 이슈 H3: equipment.service.ts batchStatusUpdate (line 1183-1186)가
+for (const row of updated) { await this.invalidateCache(row.id, row.teamId) } 패턴.
+invalidateCache 내부 (line 1325-1354): detail 2건 + team prefix 4건 + global prefix 3건 +
+all-ids + invalidateAllDashboard → N rows 처리 시 global/dashboard가 N번 중복 호출.
+단순 배치 업데이트임에도 캐시 무효화 비용이 O(n)으로 선형 증가.
+
+확인된 위치:
+- apps/backend/src/modules/equipment/equipment.service.ts:1183-1186 (루프)
+- apps/backend/src/modules/equipment/equipment.service.ts:1325-1354 (invalidateCache 구현)
+
+작업:
+1. private invalidateCacheBatch(entries: { equipmentId: string; teamId?: string }[]): Promise<void>
+   메서드 신설 (equipment.service.ts):
+
+   구현 로직:
+   a) detail 캐시 (row별 고유): Promise.all(entries.map(e => Promise.all([
+        this.cacheService.delete(`equipment:detail:${e.equipmentId}`),
+        this.cacheService.delete(`equipment:detail:uuid:${e.equipmentId}`)
+      ])))
+
+   b) team-scoped prefix (unique teamId당 1회):
+      const uniqueTeamIds = [...new Set(entries.map(e => e.teamId).filter(Boolean))];
+      await Promise.all(uniqueTeamIds.flatMap(teamId => [
+        this.cacheService.deleteByPrefix(`equipment:list:team:${teamId}`),
+        this.cacheService.deleteByPrefix(`equipment:count:team:${teamId}`),
+        ...
+      ]));
+
+   c) global prefix + all-ids + dashboard: 1회만 실행 (루프 밖)
+      await Promise.all([
+        this.cacheService.deleteByPrefix('equipment:list:global'),
+        this.cacheService.deleteByPrefix('equipment:count:global'),
+        this.cacheService.deleteByPrefix('equipment:statusCounts'),
+        this.cacheService.delete('equipment:all-ids'),
+        this.cacheInvalidationHelper.invalidateAllDashboard(),
+      ]);
+
+2. batchStatusUpdate line 1184-1186 교체:
+   await this.invalidateCacheBatch(
+     updated.map(row => ({ equipmentId: row.id, teamId: row.teamId ?? undefined }))
+   );
+
+3. 기존 단건 invalidateCache를 invalidateCacheBatch([{equipmentId, teamId}])로 위임 (DRY):
+   private async invalidateCache(equipmentId: string, teamId?: string): Promise<void> {
+     return this.invalidateCacheBatch([{ equipmentId, teamId }]);
+   }
+
+주의:
+- invalidateCache 단건 호출처 다수 (create/update/delete 등) — 시그니처 변경 없이 위임 패턴 사용
+- deleteByPrefix는 in-memory SimpleCacheService 기준. Redis 전환 시 이 최적화가 더 중요해짐
+- dashboard invalidation은 all-ids 이후 실행 순서 유지 (현재 Promise.all로 통합 OK)
+
+검증:
+- pnpm --filter backend run tsc --noEmit && pnpm --filter backend run test
+- grep 'for.*of updated.*invalidateCache\|await.*invalidateCache.*for' apps/backend/src/modules/equipment/equipment.service.ts → 0 hit
+- invalidateCacheBatch 단위 테스트: N rows 업데이트 시 invalidateAllDashboard 1회 호출 확인
+```
+
+### 🟡 MEDIUM — DB WHERE push-down: JS 인메모리 필터 → Drizzle gte/lt 조건 (Mode 1)
+
+```
+시간복잡도 이슈 M1+M2+M4: DB에서 필터 가능한 조건을 JS에서 후처리하는 2가지 패턴.
+
+패턴 1 — calibration-plans.service.ts:
+- line 166-177: externalEquipments 전체 조회 후 JS .filter(nextDate >= startOfYear && nextDate < endOfYear)
+  startOfYear/endOfYear는 line 156-157에 이미 계산됨 → SQL WHERE로 push-down 가능
+- line 869-876: 동일 패턴 반복 (getEligibleEquipments 메서드, year 파라미터 조건부)
+
+패턴 2 — calibration.service.ts:
+- line 1603-1622: flattenedItems에 대해 .filter() 3회 독립 실행
+  overdueCount (.filter then .length), pendingCount (.filter then .length), dueCount (.filter then .length)
+  동일 배열 3번 순회 O(3n) → 단일 reduce O(n)으로 통합 가능
+
+작업:
+1. calibration-plans.service.ts line 166-177:
+   현재:
+     const externalEquipments = await this.db.query.equipment.findMany({ where: ... });
+     const filteredEquipments = externalEquipments.filter(eq => { ... nextDate >= startOfYear ... });
+   변경:
+     WHERE 조건에 추가: and(...existingConditions,
+       gte(equipment.nextCalibrationDate, startOfYear.toISOString()),
+       lt(equipment.nextCalibrationDate, endOfYear.toISOString())
+     )
+     JS .filter() 블록 제거 (filteredEquipments → 직접 externalEquipments 사용)
+
+2. calibration-plans.service.ts line 869-876 동일 패턴:
+   if (year) 조건부이므로: year가 있을 때 conditions 배열에 gte/lt 추가
+   JS result.filter(...) 블록 제거
+
+3. calibration.service.ts line 1603-1622:
+   현재:
+     const overdueCount = flattenedItems.filter(cal => ...).length;
+     const pendingCount = flattenedItems.filter(cal => ...).length;
+     const dueCount = flattenedItems.filter(cal => ...).length;
+   변경:
+     const { overdueCount, pendingCount, dueCount } = flattenedItems.reduce(
+       (acc, cal) => {
+         if (!cal.intermediateCheckDate) return acc;
+         const d = getUtcStartOfDay(new Date(cal.intermediateCheckDate));
+         const ts = d.getTime();
+         if (ts < today.getTime()) acc.overdueCount++;
+         if (ts >= today.getTime()) acc.pendingCount++;
+         if (ts <= today.getTime()) acc.dueCount++;
+         return acc;
+       },
+       { overdueCount: 0, pendingCount: 0, dueCount: 0 }
+     );
+
+주의:
+- nextCalibrationDate 컬럼 타입 확인 (date → 'YYYY-MM-DD' 문자열 비교 vs timestamp → ISO 비교)
+  Drizzle gte/lt는 JS Date 또는 ISO string 모두 처리 — 기존 JS Date 비교와 시맨틱 동일 확인
+- null nextCalibrationDate는 gte/lt가 자동으로 false → 기존 `if (!eq.nextCalibrationDate) return false`와 동일
+- reduce의 overdueCount/pendingCount/dueCount 판정 조건이 기존 3개 filter와 정확히 일치하는지 검증
+
+검증:
+- pnpm --filter backend run tsc --noEmit && pnpm --filter backend run test
+- pnpm --filter backend run test -- --testPathPattern='calibration-plans|calibration.service'
+- grep '\.filter.*nextDate\|\.filter.*startOfYear' apps/backend/src/modules/calibration-plans → 0 hit
+- grep 'overdueCount.*filter\|pendingCount.*filter' apps/backend/src/modules/calibration → 0 hit
+```
+
+### 🟢 LOW — Frontend 반복 Array.find → useMemo Map lookup + 이중 순회 통합 (Mode 0)
+
+```
+시간복잡도 이슈 M3+L1+L2: Frontend 컴포넌트에서 배열 반복 탐색 패턴.
+
+위치 1 — EquipmentFilters.tsx:235-283:
+- 7개 getXxxLabel useCallback 각각이 options.find(opt => opt.value === value) O(k) 수행
+  (getStatusLabel, getSiteLabel, getManagementMethodLabel, getClassificationLabel,
+   getSharedLabel, getCalibrationDueLabel, getTeamLabel)
+- 7개가 모두 동일 패턴: 옵션 배열 → value로 find → label 반환
+
+위치 2 — TeamListContent.tsx:108-112:
+- useMemo 2개가 동일 teams 배열을 각각 순회:
+  const totalMemberCount = useMemo(() => teams.reduce(...), [teams]);
+  const noLeaderCount = useMemo(() => teams.filter(...).length, [teams]); ← 별도 순회
+
+위치 3 — TeamListContent.tsx:307-311 (SitePanel):
+- 동일 이중 순회 패턴 반복
+
+작업:
+1. EquipmentFilters.tsx:
+   7개 옵션 배열 각각에 useMemo Map<value, label> 추가:
+   const statusLabelMap = useMemo(
+     () => new Map(statusOptions.map(opt => [opt.value, opt.label])),
+     [statusOptions]
+   );
+   ... (getSiteLabel, getManagementMethodLabel 등 동일)
+   7개 getXxxLabel useCallback → map.get(value) ?? value 인라인 표현 또는 단순 헬퍼로 교체
+   useCallback 의존성 배열 단순화 (Map은 useMemo로 안정 참조)
+
+2. TeamListContent.tsx line 108-112:
+   2개 useMemo → 1개로 통합:
+   const { totalMemberCount, noLeaderCount } = useMemo(() => {
+     let members = 0, noLeader = 0;
+     for (const team of teams) {
+       members += team.memberCount ?? 0;
+       if (!team.leaderName) noLeader++;
+     }
+     return { totalMemberCount: members, noLeaderCount: noLeader };
+   }, [teams]);
+
+3. TeamListContent.tsx line 307-311 (SitePanel):
+   동일 패턴 적용
+
+주의:
+- 실질 성능 영향은 미미 (옵션 배열 크기 ≤ 수십 개, 팀 수 ≤ 수백 개)
+- 주 목적: 코드 간결화 + Map lookup 패턴 일관성
+- useCallback → map.get 인라인 전환 시 memo된 자식 컴포넌트에 전달 중인지 확인
+  (콜백 props로 쓰인다면 useCallback 제거보다 useMemo Map + useCallback 유지가 안전)
+
+검증:
+- pnpm --filter frontend run tsc --noEmit
+- grep '\.find.*opt.*value.*===\|options\.find' apps/frontend/components/equipment/EquipmentFilters.tsx → 0 hit
+- grep 'noLeaderCount.*filter\|totalMemberCount.*reduce' apps/frontend/components/teams/TeamListContent.tsx → 단일 useMemo 내 확인
+```
+
+---
 
 ## 37차 정리 (2026-04-09) — Dockerfile hardening 실빌드 검증
 

@@ -1,24 +1,20 @@
 ---
 name: 다음 세션 TODO
-description: 47차 세션 — 전자서명 미리보기 아키텍처 완료, 다음 우선순위 정리
+description: 49차 세션 — pending-checks 캐시 오염 버그 2계층 근본 해결 완료 + 실 브라우저 검증, 다음 우선순위 정리
 type: project
-originSessionId: 4b4c12f2-47e1-4c44-9623-7d9f534fffbb
+originSessionId: 56619c88-95aa-4ece-bcda-886c418d062a
 ---
-2026-04-13 47차 세션 완료.
+2026-04-13 49차 세션 완료.
 
 ## 최근 세션 성과
 
-### 47차: 전자서명 미리보기 아키텍처 개선 (feat/files-serve-endpoint, PR #195)
-- **백엔드** `GET /api/files/:subdir/:filename` 엔드포인트 신규 (FilesController)
-  - S3/RustFS: JSON { presignedUrl } 반환 (documents API와 동일 패턴)
-  - Local FS: 바이너리 스트리밍 + Cache-Control: private, max-age=3600
-  - Path traversal 방지, @SkipPermissions + 전역 JwtAuthGuard
-- **SSOT** `API_ENDPOINTS.FILES.SERVE` 추가, `EXTENSION_TO_MIME` 교체 (verify-hardcoding 이슈 해결)
-- **프론트** `StorageImage` 공유 컴포넌트 + `fetchStorageFileUrl` 유틸
-  - TanStack Query (staleTime=MEDIUM, gcTime=SHORT) + queryKeys.storageFiles SSOT
-  - Blob URL 생명주기 관리 (useRef + useEffect revoke)
-- **ProfileContent**: 인라인 blob URL 로직 → <StorageImage> 교체 (DRY)
-- **verify-* 스킬** 3개 업데이트 (verify-hardcoding, verify-security, verify-frontend-state)
+### 49차: pending-checks 버그 실 브라우저 검증 + 근본 해결 확인
+- **실 브라우저 재현**: E2E 통과 후에도 실 브라우저에서 전체=1건 bug 지속 확인
+- **진짜 원인 확인**: CheckoutsContent가 `queryKeys.checkouts.pending()` 키로 `pageSize:1` 캐시 → 동일 키 충돌
+- **수정**: `pendingCount()` 전용 키 분리 (`['checkouts', 'pending-count']`)
+- **E2E TC-06~TC-09** 추가 (탭 전환 + 반출 목록→확인 필요 경로 캐시 일관성)
+- **verify-frontend-state Step 12** 추가: pageSize:1 count 전용 키 분리 패턴
+- **모든 커밋 push 완료**: `e607dffb` (3개 커밋)
 
 ## 다음 우선순위
 
