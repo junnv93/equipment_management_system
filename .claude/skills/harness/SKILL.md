@@ -18,6 +18,7 @@ OpenAI "Harness Engineering" 패턴 적용.
 5. **Reuse existing infrastructure** — 새 검증 로직 작성 금지. verify-*, review-* 스킬을 orchestrate
 6. **Repository is the record system** — 실행 계획, 완료된 작업, 기술 부채는 모두 `.claude/exec-plans/`에 버전 관리. 외부 채팅/문서에 있는 컨텍스트는 에이전트가 볼 수 없음
 7. **Repair cost < waiting cost** — SHOULD 기준 실패는 루프 차단 없이 후속 PR로 처리
+8. **Advisor 패턴: 전략은 비싸게, 실행은 싸게** — Planner(전략적 판단)는 `model: "opus"`, Evaluator(기계적 검증)는 `model: "sonnet"`. Generator는 메인 컨텍스트(opus)에서 직접 실행. 비용 절감과 품질을 동시에 달성
 
 ## References
 
@@ -60,7 +61,9 @@ Report determination to user in one line and confirm before proceeding. Mode 0 e
 
 Mode 1 → skip to Step 3.
 
-Launch Planner Agent with the following directives:
+Launch Planner Agent with `model: "opus"` (전략적 설계 판단 — advisor 역할).
+
+Directives:
 
 - Read CLAUDE.md for project rules and architecture
 - Explore related existing code (similar modules, established patterns)
@@ -101,7 +104,10 @@ Proceed to Step 5 when implementation is complete.
 
 ## Step 5: Run Evaluator
 
-**CRITICAL: Launch as independent Agent.** Do NOT self-evaluate.
+**CRITICAL: Launch as independent Agent with `model: "sonnet"`.** Do NOT self-evaluate.
+
+Evaluator는 기계적 검증(grep 패턴, tsc, 빌드, 체크리스트 대조)이 주 업무이므로 sonnet이 적합하다.
+verify-* 스킬은 Grep 기반 패턴 매칭이고, MUST/SHOULD 판정은 바이너리 결과이므로 opus 수준의 판단력이 불필요하다.
 
 Evaluator Agent prompt must include these directives:
 
@@ -249,13 +255,25 @@ Quarterly recommended.
 ## Skill Dependency Map
 
 ```
-harness (this skill — orchestrator only)
-  ├── verify-implementation → 13 verify-* skills (unchanged)
-  ├── review-architecture (Mode 2, unchanged)
-  ├── review-design (frontend changes, unchanged)
-  ├── playwright-e2e (frontend runtime verification, Step 5)
-  └── git-commit (post-success, unchanged)
+harness (this skill — orchestrator, runs in main context as opus)
+  │
+  ├── [Step 2] Planner Agent (model: opus) — 전략적 설계 판단
+  ├── [Step 4] Generator — 메인 컨텍스트에서 직접 실행 (opus)
+  ├── [Step 5] Evaluator Agent (model: sonnet) — 기계적 검증
+  │     ├── verify-implementation → 13 verify-* skills
+  │     ├── review-architecture (Mode 2)
+  │     ├── review-design (frontend changes)
+  │     └── playwright-e2e (frontend runtime verification)
+  └── [Step 7] git-commit (post-success)
 ```
+
+### Model Selection Rationale (Advisor 패턴)
+
+| Role | Model | 근거 |
+|------|-------|------|
+| Planner | `opus` | 아키텍처 결정, 파일 구조 설계, 트레이드오프 판단 — 최고 지능 필요 |
+| Generator | `opus` (main) | 코드 작성 품질이 루프 반복 횟수를 결정 — 한 번에 맞추는 게 경제적 |
+| Evaluator | `sonnet` | Grep 패턴 매칭, tsc/빌드 실행, 체크리스트 대조 — 바이너리 판정에 opus 불필요 |
 
 ---
 
