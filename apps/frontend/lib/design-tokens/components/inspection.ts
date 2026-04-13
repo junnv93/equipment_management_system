@@ -37,6 +37,7 @@ const JUDGMENT_SEMANTIC_MAP: Record<string, SemanticColorKey> = {
   pass: 'ok',
   fail: 'critical',
   conditional: 'warning',
+  na: 'neutral',
 };
 
 /**

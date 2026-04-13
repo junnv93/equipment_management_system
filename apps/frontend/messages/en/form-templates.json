@@ -8,7 +8,8 @@
     "lastUpload": "Last Registered",
     "filename": "Filename",
     "actions": "Actions",
-    "noTemplate": "Not Registered"
+    "noTemplate": "Not Registered",
+    "menuAriaLabel": "Actions menu for {formName}"
   },
   "stats": {
     "total": "Total Forms",

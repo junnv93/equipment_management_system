@@ -60,6 +60,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  getJudgmentBadgeClasses,
+  getSemanticBadgeClasses,
+  type SemanticColorKey,
+} from '@/lib/design-tokens';
 
 const SelfInspectionFormDialog = dynamic(
   () => import('@/components/inspections/SelfInspectionFormDialog'),
@@ -70,16 +75,11 @@ interface SelfInspectionTabProps {
   equipment: Equipment;
 }
 
-const JUDGMENT_COLORS: Record<string, string> = {
-  pass: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  fail: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  na: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  confirmed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+/** 자체점검 상태 → 시멘틱 색상 매핑 */
+const STATUS_SEMANTIC_MAP: Record<string, SemanticColorKey> = {
+  draft: 'neutral',
+  completed: 'info',
+  confirmed: 'ok',
 };
 
 /** 기존 고정 컬럼 fallback 항목 — i18n 키 사용 */
@@ -265,10 +265,14 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                           )}
                         </Button>
                         <span className="font-medium">{inspectionDateLabel}</span>
-                        <Badge className={STATUS_COLORS[inspection.status]}>
+                        <Badge
+                          className={getSemanticBadgeClasses(
+                            STATUS_SEMANTIC_MAP[inspection.status] ?? 'neutral'
+                          )}
+                        >
                           {t(`selfInspection.statusLabel.${inspection.status}`)}
                         </Badge>
-                        <Badge className={JUDGMENT_COLORS[inspection.overallResult]}>
+                        <Badge className={getJudgmentBadgeClasses(inspection.overallResult)}>
                           {t(`selfInspection.judgment.${inspection.overallResult}`)}
                         </Badge>
                       </div>
@@ -330,7 +334,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                             <TableCell>{item.itemNumber}</TableCell>
                             <TableCell>{item.checkItem}</TableCell>
                             <TableCell>
-                              <Badge className={JUDGMENT_COLORS[item.checkResult]}>
+                              <Badge className={getJudgmentBadgeClasses(item.checkResult)}>
                                 {t(`selfInspection.judgment.${item.checkResult}`)}
                               </Badge>
                             </TableCell>

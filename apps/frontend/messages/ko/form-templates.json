@@ -8,7 +8,8 @@
     "lastUpload": "최종 등록",
     "filename": "파일명",
     "actions": "작업",
-    "noTemplate": "미등록"
+    "noTemplate": "미등록",
+    "menuAriaLabel": "{formName} 양식 작업 메뉴"
   },
   "stats": {
     "total": "전체 양식",

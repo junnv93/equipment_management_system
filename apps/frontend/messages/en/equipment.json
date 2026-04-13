@@ -716,6 +716,7 @@
       "checking": "Checking..."
     },
     "deleteError": "Failed to delete document.",
+    "menuAriaLabel": "Actions menu for {fileName}",
     "preview": "Preview",
     "previewError": "Unable to load preview.",
     "previewNotSupported": "Preview is not supported for this file type.",

@@ -144,7 +144,7 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          aria-label={`${t('table.actions')} ${tpl.formName}`}
+                          aria-label={t('table.menuAriaLabel', { formName: tpl.formName })}
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
                         </Button>
