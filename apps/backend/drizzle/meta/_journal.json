@@ -141,6 +141,13 @@
       "when": 1775961163805,
       "tag": "0019_right_forgotten_one",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1776081838686,
+      "tag": "0020_volatile_odin",
+      "breakpoints": true
     }
   ]
 }
