@@ -278,8 +278,8 @@
     "calibration": "Equipment ({equipmentId}) Calibration Record",
     "checkoutOutgoing": "{equipmentNames} Checkout Request",
     "checkoutIncoming": "{equipmentNames} Return Pending",
-    "equipmentImportRental": "{equipmentName} Rental Import ({vendor})",
-    "equipmentImportShared": "{equipmentName} Shared Equipment Import ({department})"
+    "equipmentImportRental": "{equipment} Rental Import ({vendor})",
+    "equipmentImportShared": "{equipment} Shared Equipment Import ({department})"
   },
   "unknown": "Unknown",
   "defaults": {
