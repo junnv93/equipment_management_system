@@ -6,6 +6,7 @@ import { FileUploadService } from '../../../common/file-upload/file-upload.servi
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type { MulterFile } from '../../../types/common.types';
 import type { AttachmentType } from '@equipment-management/schemas';
+import { QUERY_SAFETY_LIMITS } from '@equipment-management/shared-constants';
 
 /**
  * 장비 첨부 파일 서비스
@@ -120,6 +121,7 @@ export class EquipmentAttachmentService {
   async findByEquipmentId(equipmentId: string): Promise<EquipmentAttachment[]> {
     return this.db.query.equipmentAttachments.findMany({
       where: eq(equipmentAttachments.equipmentId, equipmentId),
+      limit: QUERY_SAFETY_LIMITS.ATTACHMENTS_PER_ENTITY,
     });
   }
 
@@ -129,6 +131,7 @@ export class EquipmentAttachmentService {
   async findByRequestId(requestId: string): Promise<EquipmentAttachment[]> {
     return this.db.query.equipmentAttachments.findMany({
       where: eq(equipmentAttachments.requestId, requestId),
+      limit: QUERY_SAFETY_LIMITS.ATTACHMENTS_PER_ENTITY,
     });
   }
 

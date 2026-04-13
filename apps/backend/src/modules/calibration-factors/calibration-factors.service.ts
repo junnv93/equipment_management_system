@@ -10,7 +10,11 @@ import {
   RejectCalibrationFactorDto,
 } from './dto/approve-calibration-factor.dto';
 import { CalibrationFactorApprovalStatusValues } from '@equipment-management/schemas';
-import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  DEFAULT_PAGE_SIZE,
+  QUERY_SAFETY_LIMITS,
+} from '@equipment-management/shared-constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -301,7 +305,8 @@ export class CalibrationFactorsService extends VersionedBaseService {
               lte(calibrationFactors.effectiveDate, today),
               or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))
             )
-          );
+          )
+          .limit(QUERY_SAFETY_LIMITS.CALIBRATION_FACTORS_REGISTRY);
 
         const factors = records.map(this.normalize.bind(this));
         return { equipmentId: equipmentUuid, factors, count: factors.length };
@@ -349,7 +354,9 @@ export class CalibrationFactorsService extends VersionedBaseService {
               .innerJoin(equipment, eq(calibrationFactors.equipmentId, equipment.id))
           : this.db.select().from(calibrationFactors);
 
-        const rows = await query.where(and(...conditions));
+        const rows = await query
+          .where(and(...conditions))
+          .limit(QUERY_SAFETY_LIMITS.CALIBRATION_FACTORS_REGISTRY);
 
         // JOIN 시 { calibration_factors, equipment } 구조로 반환되므로 정규화
         const records = rows.map((row: Record<string, unknown>) =>

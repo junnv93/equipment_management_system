@@ -59,6 +59,23 @@ export const CALIBRATION_THRESHOLDS = {
 } as const;
 
 /**
+ * API 쿼리 안전 상한 — 무제한 조회로 인한 OOM/응답 지연 방지
+ *
+ * 페이지네이션이 없는 엔티티별 단순 조회 메서드에 적용.
+ * 페이지네이션이 이미 적용된 메서드(cursor/offset)는 별도 limit 불필요.
+ */
+export const QUERY_SAFETY_LIMITS = {
+  /** 엔티티별 감사 로그 최대 조회 수 */
+  AUDIT_LOGS_PER_ENTITY: 500,
+  /** 장비별 첨부파일 최대 조회 수 */
+  ATTACHMENTS_PER_ENTITY: 100,
+  /** 보정계수 대장 최대 조회 수 (cold cache 보호) */
+  CALIBRATION_FACTORS_REGISTRY: 1000,
+  /** 반출별 상태확인 최대 조회 수 */
+  CONDITION_CHECKS_PER_CHECKOUT: 100,
+} as const;
+
+/**
  * 스케줄러/배치 조회 제한
  */
 export const BATCH_QUERY_LIMITS = {

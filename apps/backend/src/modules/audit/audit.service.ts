@@ -22,6 +22,7 @@ import {
 } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
+  QUERY_SAFETY_LIMITS,
   USER_ROLE_LABELS,
   type UserRole,
   type ResolvedDataScope,
@@ -362,7 +363,8 @@ export class AuditService {
           .select()
           .from(auditLogs)
           .where(and(...conditions))
-          .orderBy(desc(auditLogs.timestamp));
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(QUERY_SAFETY_LIMITS.AUDIT_LOGS_PER_ENTITY);
       },
       CACHE_TTL.MEDIUM
     );

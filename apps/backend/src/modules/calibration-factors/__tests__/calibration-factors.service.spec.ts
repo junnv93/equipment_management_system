@@ -316,7 +316,6 @@ describe('CalibrationFactorsService', () => {
   describe('findByEquipment', () => {
     it('should return current active factors for equipment', async () => {
       const activeChain = createChain([MOCK_FACTOR]);
-      activeChain.where.mockResolvedValue([MOCK_FACTOR]);
       mockDb.select.mockReturnValue(activeChain);
 
       const result = await service.findByEquipment('eq-uuid-001');
@@ -330,7 +329,6 @@ describe('CalibrationFactorsService', () => {
   describe('getRegistry', () => {
     it('should group factors by equipment', async () => {
       const registryChain = createChain([MOCK_FACTOR]);
-      registryChain.where.mockResolvedValue([MOCK_FACTOR]);
       mockDb.select.mockReturnValue(registryChain);
 
       const result = await service.getRegistry();

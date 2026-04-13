@@ -16,7 +16,7 @@ import {
   users,
 } from '@equipment-management/db/schema';
 import { UserRoleValues, ApprovalStatusValues } from '@equipment-management/schemas';
-import { DASHBOARD_ITEM_LIMIT } from '@equipment-management/shared-constants';
+import { DASHBOARD_ITEM_LIMIT, QUERY_SAFETY_LIMITS } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createVersionConflictException } from '../../../common/base/versioned-base.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
@@ -343,6 +343,7 @@ export class EquipmentApprovalService {
       try {
         attachments = await this.db.query.equipmentAttachments.findMany({
           where: eq(equipmentAttachments.requestId, request.id),
+          limit: QUERY_SAFETY_LIMITS.ATTACHMENTS_PER_ENTITY,
         });
       } catch (attachmentError) {
         this.logger.warn(`첨부 파일 조회 실패 (승인 플로우에 영향 없음): ${attachmentError}`);

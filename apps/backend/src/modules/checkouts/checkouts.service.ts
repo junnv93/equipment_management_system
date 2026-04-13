@@ -30,6 +30,7 @@ import {
   CHECKOUT_DATA_SCOPE,
   DEFAULT_PAGE_SIZE,
   MAX_PAGE_SIZE,
+  QUERY_SAFETY_LIMITS,
   getAllowedStatusesForPurpose,
   Permission,
 } from '@equipment-management/shared-constants';
@@ -2115,7 +2116,8 @@ export class CheckoutsService extends VersionedBaseService {
       .from(conditionChecks)
       .leftJoin(schema.users, eq(schema.users.id, conditionChecks.checkedBy))
       .where(eq(conditionChecks.checkoutId, uuid))
-      .orderBy(asc(conditionChecks.checkedAt));
+      .orderBy(asc(conditionChecks.checkedAt))
+      .limit(QUERY_SAFETY_LIMITS.CONDITION_CHECKS_PER_CHECKOUT);
 
     return rows.map((row) => ({
       ...row.check,
