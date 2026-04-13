@@ -101,7 +101,8 @@
     "tooltipReject": "반려",
     "tooltipDetail": "상세 보기",
     "colSummary": "요약",
-    "colActions": "작업"
+    "colActions": "작업",
+    "menuAriaLabel": "{summary} 승인 작업 메뉴"
   },
   "sidebar": {
     "ariaLabel": "승인 카테고리 네비게이션"

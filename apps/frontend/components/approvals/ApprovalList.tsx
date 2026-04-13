@@ -2,13 +2,10 @@
 
 import { CheckCircle2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { ApprovalRow } from './ApprovalRow';
-import {
-  APPROVAL_EMPTY_STATE_TOKENS,
-  APPROVAL_MOTION,
-  APPROVAL_ROW_TOKENS,
-} from '@/lib/design-tokens';
+import { APPROVAL_EMPTY_STATE_TOKENS, APPROVAL_MOTION } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
 interface ApprovalListProps {
@@ -44,36 +41,16 @@ export function ApprovalList({
 
   if (isLoading) {
     return (
-      <div className={APPROVAL_ROW_TOKENS.listContainer}>
-        {/* Column header skeleton */}
-        <div className={APPROVAL_ROW_TOKENS.container.header}>
-          <Skeleton className="h-4 w-4" />
-          <div />
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-12" />
-          <Skeleton className="h-4 w-10" />
-          <Skeleton className="h-4 w-16" />
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="p-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton
+              key={i}
+              className="h-12 w-full rounded-lg"
+              style={{ animationDelay: APPROVAL_MOTION.listStagger(i) }}
+            />
+          ))}
         </div>
-        {/* Row skeletons */}
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className={`${APPROVAL_ROW_TOKENS.container.base} ${APPROVAL_ROW_TOKENS.container.desktop}`}
-            style={{ animationDelay: APPROVAL_MOTION.listStagger(i) }}
-          >
-            <Skeleton className="h-4 w-4" />
-            <div />
-            <div className="space-y-1">
-              <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-3 w-32" />
-            </div>
-            <Skeleton className="h-5 w-24 hidden lg:block" />
-            <Skeleton className="h-5 w-16 hidden lg:block" />
-            <Skeleton className="h-5 w-12 hidden lg:block" />
-            <Skeleton className="h-5 w-20 hidden lg:block" />
-          </div>
-        ))}
       </div>
     );
   }
@@ -105,38 +82,35 @@ export function ApprovalList({
   }
 
   return (
-    <div className={APPROVAL_ROW_TOKENS.listContainer} data-testid="approval-list">
-      {/* Column headers — desktop only */}
-      <div className={APPROVAL_ROW_TOKENS.container.header}>
-        <div /> {/* checkbox col */}
-        <div /> {/* urgency bar col */}
-        <div>{t('row.colSummary')}</div>
-        <div>{t('item.requester')}</div>
-        <div>{t('item.requestDate')}</div>
-        <div>{t('item.elapsedLabel')}</div>
-        <div>{t('row.colActions')}</div>
-      </div>
-
-      {/* Rows */}
-      {items.map((item, index) => (
-        <div
-          key={item.id}
-          className={`${APPROVAL_MOTION.listItemEnter} [content-visibility:auto] [contain-intrinsic-size:0_64px]`}
-          style={{ animationDelay: APPROVAL_MOTION.listStagger(index) }}
-        >
-          <ApprovalRow
-            item={item}
-            isSelected={selectedItems.includes(item.id)}
-            isMutating={processingIds.has(item.id)}
-            isExiting={exitingIds.get(item.id) || false}
-            onToggleSelect={() => onToggleSelect(item.id)}
-            onApprove={() => onApprove(item)}
-            onReject={() => onReject(item)}
-            onViewDetail={() => onViewDetail(item)}
-            actionLabel={actionLabel}
-          />
-        </div>
-      ))}
+    <div className="border border-border rounded-lg overflow-hidden" data-testid="approval-list">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10" />
+            <TableHead>{t('row.colSummary')}</TableHead>
+            <TableHead className="hidden lg:table-cell">{t('item.requester')}</TableHead>
+            <TableHead className="hidden lg:table-cell">{t('item.requestDate')}</TableHead>
+            <TableHead className="hidden lg:table-cell">{t('item.elapsedLabel')}</TableHead>
+            <TableHead className="w-12 text-right">{t('row.colActions')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((item) => (
+            <ApprovalRow
+              key={item.id}
+              item={item}
+              isSelected={selectedItems.includes(item.id)}
+              isMutating={processingIds.has(item.id)}
+              isExiting={exitingIds.get(item.id) || false}
+              onToggleSelect={() => onToggleSelect(item.id)}
+              onApprove={() => onApprove(item)}
+              onReject={() => onReject(item)}
+              onViewDetail={() => onViewDetail(item)}
+              actionLabel={actionLabel}
+            />
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

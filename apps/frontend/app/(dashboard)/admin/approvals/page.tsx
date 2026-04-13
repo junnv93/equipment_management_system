@@ -72,32 +72,9 @@ function ApprovalsLoadingFallback() {
           </div>
 
           {/* Row list skeleton */}
-          <div className="border border-border rounded-lg overflow-hidden">
-            <div className="hidden lg:grid lg:grid-cols-[32px_4px_1fr_140px_100px_80px_auto] lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border">
-              <Skeleton className="h-4 w-4" />
-              <div />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-12" />
-              <Skeleton className="h-4 w-10" />
-              <Skeleton className="h-4 w-16" />
-            </div>
+          <div className="border border-border rounded-lg overflow-hidden p-4 space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div
-                key={i}
-                className="lg:grid lg:grid-cols-[32px_4px_1fr_140px_100px_80px_auto] lg:gap-3 lg:px-4 lg:py-3 border-b border-border last:border-b-0"
-              >
-                <Skeleton className="h-4 w-4" />
-                <div />
-                <div className="space-y-1">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-                <Skeleton className="h-5 w-24 hidden lg:block" />
-                <Skeleton className="h-5 w-16 hidden lg:block" />
-                <Skeleton className="h-5 w-12 hidden lg:block" />
-                <Skeleton className="h-5 w-20 hidden lg:block" />
-              </div>
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
             ))}
           </div>
         </div>

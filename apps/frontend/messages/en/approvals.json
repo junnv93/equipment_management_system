@@ -101,7 +101,8 @@
     "tooltipReject": "Reject",
     "tooltipDetail": "View detail",
     "colSummary": "Summary",
-    "colActions": "Actions"
+    "colActions": "Actions",
+    "menuAriaLabel": "Actions menu for {summary}"
   },
   "sidebar": {
     "ariaLabel": "Approval categories navigation"
