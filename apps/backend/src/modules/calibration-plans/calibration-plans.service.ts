@@ -6,7 +6,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { eq, and, desc, sql, inArray, SQL } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, gte, lt, SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { AppDatabase } from '@equipment-management/db';
 import {
@@ -160,21 +160,17 @@ export class CalibrationPlansService extends VersionedBaseService {
         eq(equipment.site, siteId),
         eq(equipment.managementMethod, 'external_calibration'),
         eq(equipment.isActive, true),
+        // null nextCalibrationDate는 gte/lt가 자동으로 false → 기존 if 체크와 동일 동작
+        gte(equipment.nextCalibrationDate, startOfYear.toISOString()),
+        lt(equipment.nextCalibrationDate, endOfYear.toISOString()),
       ];
 
-      // 차기교정일이 해당 연도 내인 장비만 포함
-      const externalEquipments = await tx
+      // 차기교정일이 해당 연도 내인 장비만 포함 (WHERE push-down)
+      const filteredEquipments = await tx
         .select()
         .from(equipment)
         .where(and(...conditions))
         .orderBy(equipment.nextCalibrationDate);
-
-      // 해당 연도에 교정 예정인 장비만 필터링
-      const filteredEquipments = externalEquipments.filter((eq) => {
-        if (!eq.nextCalibrationDate) return false;
-        const nextDate = new Date(eq.nextCalibrationDate);
-        return nextDate >= startOfYear && nextDate < endOfYear;
-      });
 
       // 3. 항목 생성 (스냅샷 저장)
       if (filteredEquipments.length > 0) {
@@ -847,7 +843,13 @@ export class CalibrationPlansService extends VersionedBaseService {
       conditions.push(eq(equipment.teamId, teamId));
     }
 
-    let result = await this.db
+    if (year) {
+      // null nextCalibrationDate는 gte/lt가 자동으로 false → 기존 if 체크와 동일 동작
+      conditions.push(gte(equipment.nextCalibrationDate, new Date(year, 0, 1).toISOString()));
+      conditions.push(lt(equipment.nextCalibrationDate, new Date(year + 1, 0, 1).toISOString()));
+    }
+
+    const result = await this.db
       .select({
         id: equipment.id,
         name: equipment.name,
@@ -864,17 +866,6 @@ export class CalibrationPlansService extends VersionedBaseService {
       .from(equipment)
       .where(and(...conditions))
       .orderBy(equipment.nextCalibrationDate);
-
-    // 연도 필터가 있으면 해당 연도에 교정 예정인 장비만 반환
-    if (year) {
-      const startOfYear = new Date(year, 0, 1);
-      const endOfYear = new Date(year + 1, 0, 1);
-      result = result.filter((eq) => {
-        if (!eq.nextCalibrationDate) return false;
-        const nextDate = new Date(eq.nextCalibrationDate);
-        return nextDate >= startOfYear && nextDate < endOfYear;
-      });
-    }
 
     return result;
   }
