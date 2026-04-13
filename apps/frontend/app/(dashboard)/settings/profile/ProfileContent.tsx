@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import StorageImage from '@/components/shared/StorageImage';
 import {
   API_ENDPOINTS,
   getPermissions,
@@ -185,11 +186,12 @@ function SignatureCard({
         {hasSignature ? (
           <div className={`${getSettingsFormItemClasses()} ${SETTINGS_FORM_ITEM_TOKENS.layout}`}>
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <div className="rounded-md border border-border/50 bg-muted/30 p-3 flex items-center justify-center shadow-sm">
-                <img
-                  src={`/api/files/${profile.signatureImagePath}`}
+              <div className="rounded-md border border-border/50 bg-muted/30 p-3 flex items-center justify-center shadow-sm min-w-[80px] min-h-[48px]">
+                <StorageImage
+                  storageKey={profile.signatureImagePath}
                   alt={t('profile.signature.title')}
                   className="max-h-12 max-w-[160px] object-contain"
+                  fallbackClassName="h-12 w-20"
                 />
               </div>
               <div className={SETTINGS_FORM_ITEM_TOKENS.labelWrapper}>
