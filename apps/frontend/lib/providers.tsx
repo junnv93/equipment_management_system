@@ -10,9 +10,11 @@ import { CACHE_TIMES } from '@/lib/api/query-config';
 import { patchPerformanceMeasure } from '@/lib/utils/patch-performance-measure';
 import {
   AUTH_ERROR_CODE,
+  AUTH_EVENT,
   SESSION_SYNC_CHANNEL,
   SESSION_SYNC_MESSAGE,
   type SessionSyncMessageType,
+  FRONTEND_ROUTES,
 } from '@equipment-management/shared-constants';
 import { useIdleTimeout } from '@/hooks/use-idle-timeout';
 import { IdleTimeoutDialog } from '@/components/auth/IdleTimeoutDialog';
@@ -51,12 +53,32 @@ interface ProvidersProps {
  * - SessionProvider refetchInterval(5분)로 주기적 JWT 콜백 트리거
  * - session.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED 감지 시 자동 로그아웃
  */
+/**
+ * 안전한 signOut — 이중 호출 방지
+ *
+ * 여러 경로(이벤트 핸들러, status 전환, BroadcastChannel)가 동시에
+ * signOut을 트리거할 수 있음. 첫 번째 호출만 실행하고 나머지는 무시.
+ */
+const isSigningOutRef = { current: false };
+
+function safeSignOut() {
+  if (isSigningOutRef.current) return;
+  isSigningOutRef.current = true;
+  clearTokenCache();
+  signOut({ callbackUrl: FRONTEND_ROUTES.AUTH.LOGIN });
+}
+
 function AuthSync({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const statusRef = useRef(status);
+  const wasAuthenticatedRef = useRef(false);
 
   useEffect(() => {
     statusRef.current = status;
+    if (status === 'authenticated') {
+      wasAuthenticatedRef.current = true;
+      isSigningOutRef.current = false; // 재인증 시 guard 리셋
+    }
   }, [status]);
 
   useEffect(() => {
@@ -66,27 +88,38 @@ function AuthSync({ children }: { children: ReactNode }) {
     }
   }, [status]);
 
+  // 세션 상실 감지: authenticated → unauthenticated 전환 시 로그인 리다이렉트
+  // 시나리오: JWT 만료, auth 엔드포인트 장애, 쿠키 삭제 등
+  // loading → unauthenticated 전환은 무시 (proxy.ts가 초기 진입 시 처리)
+  useEffect(() => {
+    if (status === 'unauthenticated' && wasAuthenticatedRef.current) {
+      const loginPath = FRONTEND_ROUTES.AUTH.LOGIN;
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith(loginPath)) {
+        safeSignOut();
+      }
+    }
+  }, [status]);
+
   // Refresh Token 만료 감지 → 자동 로그아웃
   useEffect(() => {
     if (session?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
       console.error('[AuthSync] Refresh token expired, signing out...');
-      signOut({ callbackUrl: '/login' });
+      safeSignOut();
     }
   }, [session?.error]);
 
   // 세션 만료 이벤트 SSOT 핸들러 (api-client, authenticated-client-provider에서 발생)
-  // loading 중 401은 세션 복원 과정이므로 무시
+  // loading/unauthenticated 상태: 세션 복원 과정이거나 이미 로그아웃됨 → 무시
   useEffect(() => {
     const handleSessionExpired = () => {
       if (statusRef.current === 'authenticated') {
-        clearTokenCache();
-        signOut({ callbackUrl: '/login' });
+        safeSignOut();
       }
     };
 
-    window.addEventListener('auth:session-expired', handleSessionExpired);
+    window.addEventListener(AUTH_EVENT.SESSION_EXPIRED, handleSessionExpired);
     return () => {
-      window.removeEventListener('auth:session-expired', handleSessionExpired);
+      window.removeEventListener(AUTH_EVENT.SESSION_EXPIRED, handleSessionExpired);
     };
   }, []);
 
@@ -155,8 +188,7 @@ function AuthSync({ children }: { children: ReactNode }) {
         (type === SESSION_SYNC_MESSAGE.LOGOUT || type === SESSION_SYNC_MESSAGE.IDLE_LOGOUT) &&
         statusRef.current === 'authenticated'
       ) {
-        clearTokenCache();
-        signOut({ callbackUrl: '/login' });
+        safeSignOut();
       }
     };
     return () => ch.close();

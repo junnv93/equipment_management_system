@@ -27,6 +27,8 @@ export {
   type SessionSyncMessageType,
   AUTH_ERROR_CODE,
   type AuthErrorCode,
+  AUTH_EVENT,
+  type AuthEventType,
 } from './auth-token';
 
 // 역할 관련

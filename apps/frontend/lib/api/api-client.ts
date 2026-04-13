@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getSession } from 'next-auth/react';
-import { AUTH_ERROR_CODE } from '@equipment-management/shared-constants';
+import { AUTH_ERROR_CODE, AUTH_EVENT } from '@equipment-management/shared-constants';
 // ✅ 일관된 에러 처리: 공통 유틸리티 사용
 import { createApiError, unwrapResponseData } from './utils/response-transformers';
 import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
@@ -160,7 +160,7 @@ apiClient.interceptors.response.use(
         if (session?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
           // Refresh token 확실히 만료 — AuthSync SSOT 핸들러로 위임
           if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('auth:session-expired'));
+            window.dispatchEvent(new CustomEvent(AUTH_EVENT.SESSION_EXPIRED));
           }
           return Promise.reject(error);
         }
@@ -173,14 +173,16 @@ apiClient.interceptors.response.use(
 
         // 세션 자체가 없음 (미인증) — 세션 만료로 처리
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('auth:session-expired'));
+          window.dispatchEvent(new CustomEvent(AUTH_EVENT.SESSION_EXPIRED));
         }
         return Promise.reject(error);
       } catch (refreshError) {
-        // 네트워크 에러 (백엔드/NextAuth 일시 다운)
-        // → session-expired 발생시키지 않고 원래 에러만 전파
-        // → SessionProvider refetchInterval이 복구 후 자동 갱신
-        console.warn('[API Client] 토큰 갱신 중 네트워크 에러 (일시적):', refreshError);
+        // getSession() 호출 자체가 실패 (auth 엔드포인트 404, HTML 응답 등)
+        // → 세션 복구 불가능 — 로그인 페이지로 안내
+        console.error('[API Client] 세션 조회 실패 — 재로그인 필요:', refreshError);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent(AUTH_EVENT.SESSION_EXPIRED));
+        }
         return Promise.reject(error);
       }
     }

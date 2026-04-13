@@ -95,6 +95,21 @@ export const SESSION_SYNC_MESSAGE = {
 export type SessionSyncMessageType =
   (typeof SESSION_SYNC_MESSAGE)[keyof typeof SESSION_SYNC_MESSAGE];
 
+// ─── Auth Client Events (브라우저 CustomEvent 이름 — SSOT) ────────────────────
+
+/**
+ * 브라우저 CustomEvent 이름 (SSOT).
+ * api-client.ts, authenticated-client-provider.tsx에서 dispatch →
+ * providers.tsx(AuthSync)에서 listen.
+ * 문자열 리터럴을 여러 파일에 흩뿌리지 않고, 이 객체를 단일 소스로 참조.
+ */
+export const AUTH_EVENT = {
+  /** 세션 복구 불가 (getSession() null/throw) → 재로그인 필요 */
+  SESSION_EXPIRED: 'auth:session-expired',
+} as const;
+
+export type AuthEventType = (typeof AUTH_EVENT)[keyof typeof AUTH_EVENT];
+
 // ─── Auth Error Codes (NextAuth ↔ UI 공유) ──────────────────────────────────
 
 /**

@@ -3,7 +3,7 @@
 import { createContext, useContext, useMemo, ReactNode } from 'react';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { useSession, getSession } from 'next-auth/react';
-import { AUTH_ERROR_CODE } from '@equipment-management/shared-constants';
+import { AUTH_ERROR_CODE, AUTH_EVENT } from '@equipment-management/shared-constants';
 import { createApiError, unwrapResponseData } from './utils/response-transformers';
 import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 
@@ -82,7 +82,7 @@ export function AuthenticatedClientProvider({ children }: AuthenticatedClientPro
             if (freshSession?.error === AUTH_ERROR_CODE.REFRESH_TOKEN_EXPIRED) {
               // Refresh token 확실히 만료 — 세션 만료 처리
               if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('auth:session-expired'));
+                window.dispatchEvent(new CustomEvent(AUTH_EVENT.SESSION_EXPIRED));
               }
             } else if (freshSession?.accessToken) {
               // 토큰 갱신 성공 → 재시도
@@ -91,13 +91,16 @@ export function AuthenticatedClientProvider({ children }: AuthenticatedClientPro
             } else {
               // 세션 자체가 없음 (미인증)
               if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('auth:session-expired'));
+                window.dispatchEvent(new CustomEvent(AUTH_EVENT.SESSION_EXPIRED));
               }
             }
-          } catch {
-            // 네트워크 에러 — session-expired 미발생, 원래 에러만 전파
-            // SessionProvider refetchInterval이 복구 후 자동 갱신
-            console.warn('[AuthClient] 토큰 갱신 중 네트워크 에러 (일시적)');
+          } catch (refreshError) {
+            // getSession() 호출 자체가 실패 (auth 엔드포인트 404, HTML 응답 등)
+            // → 세션 복구 불가능 — 로그인 페이지로 안내
+            console.error('[AuthClient] 세션 조회 실패 — 재로그인 필요:', refreshError);
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent(AUTH_EVENT.SESSION_EXPIRED));
+            }
           }
         }
 
