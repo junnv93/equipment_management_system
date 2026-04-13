@@ -84,6 +84,35 @@ grep -rn "@/hooks/use-toast" apps/frontend --include="*.ts" --include="*.tsx"
 
 **PASS:** 0 hit.
 
+### Step 12: count 전용 쿼리 키 분리 (pageSize:1 캐시 오염 방지)
+
+`pageSize: 1`로 total count만 조회하는 쿼리가 전체 목록 쿼리와 **동일한 queryKey**를 사용하면, 1건 응답이 전체 목록 캐시를 오염시켜 올바른 데이터가 보이지 않는 버그를 유발한다.
+
+**규칙:**
+- `pageSize: 1` + 총 건수만 사용하는 위젯 → `pendingCount()`, `summaryCount()` 등 전용 키 사용
+- 동일 엔티티의 전체 목록 쿼리와 키가 겹치면 안 됨
+
+**검증:**
+```bash
+# pageSize: 1 쿼리 중 전용 count 키를 쓰지 않고 일반 목록 키를 재사용하는 패턴 탐지
+grep -rn "pageSize.*1\b" apps/frontend --include="*.tsx" --include="*.ts" -B 3 | grep "queryKey" | grep -v "Count\|count\|summary\|Summary"
+```
+
+**참고 패턴 (정상):**
+```typescript
+// ✅ 전용 키 사용
+queryKey: queryKeys.checkouts.pendingCount(),     // ['checkouts', 'pending-count']
+queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
+
+// ❌ 목록 키 재사용 (오염 위험)
+queryKey: queryKeys.checkouts.pending(),          // ['checkouts', 'pending', undefined]
+queryFn: () => checkoutApi.getPendingChecks({ pageSize: 1 }),
+```
+
+**배경**: `CheckoutsContent.tsx`에서 `pending()` 키로 `pageSize:1` 결과를 캐시 → `PendingChecksClient`가 동일 키의 1건 캐시를 사용해 전체 탭에서 1건만 표시되던 버그 발생 (2026-04-13 수정).
+
+**PASS:** pageSize:1 쿼리가 전용 count 키를 사용하거나 0건.
+
 ### Step 11: E2E 토스트 매칭은 expectToastVisible helper 사용
 
 Radix Toast 는 의도적으로 시각 토스트(`<li role="status">`) + visually-hidden status mirror (`<span role="status" aria-live="assertive">`) 를 동시에 노출한다 (스크린리더 a11y). 따라서 `page.getByText('...').first()` 같은 직접 매칭은 strict mode 충돌을 우회할 뿐 의도(시각 발화 검증)가 코드에 드러나지 않고, mirror span 의 "Notification " 접두사 변경 시 silent break 위험이 있다.
@@ -122,6 +151,7 @@ grep -rn "getByText.*되었\|getByText.*완료\|getByText.*실패.*\.first()" \
 | 9   | useAuth().can() 권한 SSOT  | PASS/FAIL | hasPermission 직접 import 위치 |
 | 10  | useToast SSOT 단일 경로    | PASS/FAIL | `@/hooks/use-toast` import 위치 |
 | 11  | E2E 토스트 helper 사용     | PASS/FAIL | 토스트 텍스트 직접 .first() 위치 |
+| 12  | count 전용 쿼리 키 분리    | PASS/FAIL | pageSize:1 쿼리가 목록 키 재사용하는 위치 |
 ```
 
 ## Exceptions
