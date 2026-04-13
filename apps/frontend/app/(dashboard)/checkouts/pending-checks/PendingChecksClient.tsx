@@ -23,6 +23,12 @@ type PendingCheckRole = 'all' | 'lender' | 'borrower';
 
 interface PendingChecksClientProps {
   initialData: PaginatedResponse<Checkout>;
+  /**
+   * 서버가 initialData를 fetch할 때 사용한 role.
+   * activeRole과 일치할 때만 placeholderData로 사용 — role 불일치로 인한
+   * 잘못된 데이터 플래시를 방지한다.
+   */
+  initialRole: PendingCheckRole;
 }
 
 /**
@@ -58,7 +64,10 @@ const PENDING_CHECK_KEY_MAP: Partial<
  *
  * 현재 사용자가 확인해야 할 대여 건 목록을 표시합니다.
  */
-export default function PendingChecksClient({ initialData }: PendingChecksClientProps) {
+export default function PendingChecksClient({
+  initialData,
+  initialRole,
+}: PendingChecksClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,7 +86,9 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
         params.set('role', role);
       }
       const query = params.toString();
-      router.push(query ? `${pathname}?${query}` : pathname);
+      // router.replace: 탭 전환은 URL 상태 변경이므로 히스토리 스택에 추가할 필요 없다.
+      // push를 쓰면 뒤로가기 시 탭 사이를 순회하게 되어 UX가 나빠진다.
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     },
     [router, pathname, searchParams]
   );
@@ -86,16 +97,15 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
   const apiRole = activeRole === 'all' ? undefined : activeRole;
 
   // 확인 필요 목록 조회
-  // placeholderData는 'all' 탭에서만 사용: 서버가 role 없이 fetch한 initialData는
-  // 'all' 탭의 쿼리와 동일한 조건이므로 안전하다.
-  // 'lender'/'borrower' 탭에서 initialData를 placeholder로 쓰면 필터링되지 않은
-  // 전체 데이터가 잠깐 표시되어 잘못된 카드 목록이 보이는 버그가 발생한다.
+  // placeholderData는 서버가 fetch한 role(initialRole)과 현재 탭(activeRole)이 일치할 때만 사용.
+  // 서버는 URL role에 맞는 데이터를 fetch하므로 initialData는 initialRole 전용 데이터다.
+  // role 불일치 시 undefined → 올바른 데이터가 아닌 것이 잠깐 보이는 버그를 차단한다.
   const { data: checksData, isLoading } = useQuery({
     queryKey: queryKeys.checkouts.pending(apiRole),
     queryFn: async () => {
       return checkoutApi.getPendingChecks(apiRole ? { role: apiRole } : {});
     },
-    placeholderData: activeRole === 'all' ? initialData : undefined,
+    placeholderData: activeRole === initialRole ? initialData : undefined,
     staleTime: CACHE_TIMES.SHORT,
   });
 
