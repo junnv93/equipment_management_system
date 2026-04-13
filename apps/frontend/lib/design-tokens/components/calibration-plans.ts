@@ -190,9 +190,15 @@ export const CALIBRATION_PLAN_LIST_TOKENS = {
   hover: ['hover:bg-muted/40', TRANSITION_PRESETS.fastBg].join(' '),
   /** 첫 번째 셀 좌측 여백 — 데이터 행과 헤더 행에서 공유 */
   firstCellPadding: 'pl-1',
+  /**
+   * 모바일 전용 장식 아이콘 — 데스크탑에서는 헤더가 컨텍스트를 제공하므로 숨김.
+   * 이 클래스를 사용하지 않고 아이콘을 데스크탑에서 표시하면
+   * 아이콘+gap이 텍스트를 오른쪽으로 밀어 헤더-데이터 정렬이 깨짐.
+   */
+  mobileIcon: 'h-3.5 w-3.5 text-muted-foreground lg:hidden',
   /** 연도 셀 (강조) */
   yearCell: 'font-semibold tabular-nums pl-1',
-  /** 사이트 셀 */
+  /** 사이트 셀 — 모바일: 아이콘+텍스트, 데스크탑: 텍스트만 */
   siteCell: 'flex items-center gap-1.5 text-sm',
   /** 팀 셀 (optional) */
   teamCell: 'text-sm text-muted-foreground truncate',

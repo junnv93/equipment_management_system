@@ -435,13 +435,15 @@ export default function CalibrationPlansContent({
                 >
                   {/* 연도 */}
                   <div className={CALIBRATION_PLAN_LIST_TOKENS.yearCell}>
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground inline mr-1.5 lg:hidden" />
+                    <Calendar
+                      className={cn(CALIBRATION_PLAN_LIST_TOKENS.mobileIcon, 'inline mr-1.5')}
+                    />
                     {t('plansList.yearUnit', { year: plan.year })}
                   </div>
 
                   {/* 시험소 */}
                   <div className={CALIBRATION_PLAN_LIST_TOKENS.siteCell}>
-                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <Building2 className={CALIBRATION_PLAN_LIST_TOKENS.mobileIcon} />
                     {siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId}
                   </div>
 
