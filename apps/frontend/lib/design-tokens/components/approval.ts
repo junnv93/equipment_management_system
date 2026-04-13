@@ -353,7 +353,7 @@ export const APPROVAL_ROW_TOKENS = {
   container: {
     base: 'group relative border-b border-border last:border-b-0',
     desktop: `lg:grid ${APPROVAL_ROW_GRID_COLS} lg:items-center lg:gap-3 lg:px-4 lg:py-3`,
-    mobile: 'flex flex-col gap-2 p-4 lg:p-0',
+    mobile: 'flex flex-col gap-2 px-4 py-4 lg:px-0 lg:py-0',
     /** 헤더 행 (컬럼 라벨) — uppercase + tracking으로 데이터 테이블 위계 강화 */
     header: `hidden lg:grid ${APPROVAL_ROW_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2.5 bg-muted/50 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider`,
   },

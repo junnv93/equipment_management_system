@@ -180,7 +180,7 @@ export const CALIBRATION_PLAN_LIST_TOKENS = {
   container: {
     base: 'group relative border-b border-border last:border-b-0',
     desktop: `lg:grid ${CALIBRATION_PLAN_LIST_GRID_COLS} lg:items-center lg:gap-3 lg:px-4 lg:py-3`,
-    mobile: 'flex flex-col gap-2 p-4 lg:p-0',
+    mobile: 'flex flex-col gap-2 px-4 py-4 lg:px-0 lg:py-0',
     /** 헤더 행 — AP-03: 타이포 드라마 — uppercase tracking-wide로 데이터 행과 구분 */
     header: `hidden lg:grid ${CALIBRATION_PLAN_LIST_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wide`,
     /** 목록 외곽 래퍼 — AP-04: 깊이 차등 — raised surface */
