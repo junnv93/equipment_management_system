@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Res, Inject, NotFoundException } from '@nestjs/common';
 import type { Response } from 'express';
 import * as path from 'path';
+import { EXTENSION_TO_MIME } from '@equipment-management/shared-constants';
 import { STORAGE_PROVIDER, IStorageProvider } from '../storage/storage.interface';
 import { FileUploadService } from './file-upload.service';
 import { SkipPermissions } from '../../modules/auth/decorators/skip-permissions.decorator';
@@ -35,23 +36,6 @@ import { SkipPermissions } from '../../modules/auth/decorators/skip-permissions.
  */
 @Controller('files')
 export class FilesController {
-  /**
-   * Content-Type MIME 매핑 (FileUploadService.allowedMimeTypes 와 동기화)
-   * mime-types 패키지 미의존 — direct dep에 없는 transitive 패키지 사용 지양
-   */
-  private static readonly MIME_MAP: Readonly<Record<string, string>> = {
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.pdf': 'application/pdf',
-    '.doc': 'application/msword',
-    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    '.xls': 'application/vnd.ms-excel',
-    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    '.csv': 'text/csv',
-  };
-
   constructor(
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
     private readonly fileUploadService: FileUploadService
@@ -90,7 +74,7 @@ export class FilesController {
     // [Local FS] 버퍼 스트리밍
     const buffer = await this.fileUploadService.readFile(storageKey);
     const ext = path.extname(safeFilename).toLowerCase();
-    const contentType = FilesController.MIME_MAP[ext] ?? 'application/octet-stream';
+    const contentType = EXTENSION_TO_MIME.get(ext) ?? 'application/octet-stream';
 
     res.set({
       'Content-Type': contentType,
