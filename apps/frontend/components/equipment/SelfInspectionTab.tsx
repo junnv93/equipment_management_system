@@ -43,6 +43,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
+  MoreHorizontal,
   Pencil,
   Trash2,
 } from 'lucide-react';
@@ -52,6 +53,13 @@ import { useToast } from '@/components/ui/use-toast';
 import { isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const SelfInspectionFormDialog = dynamic(
   () => import('@/components/inspections/SelfInspectionFormDialog'),
@@ -264,50 +272,48 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                           {t(`selfInspection.judgment.${inspection.overallResult}`)}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-1">
-                        {canEdit && !isConfirmed && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            aria-label={t('selfInspection.actions.editAriaLabel', {
-                              date: inspectionDateLabel,
-                            })}
-                            onClick={() => setEditTarget(inspection)}
-                          >
-                            <Pencil className="h-4 w-4 mr-1" />
-                            {t('selfInspection.actions.edit')}
-                          </Button>
-                        )}
-                        {canConfirm && !isConfirmed && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            aria-label={t('selfInspection.actions.confirmAriaLabel', {
-                              date: inspectionDateLabel,
-                            })}
-                            onClick={() => setConfirmTarget(inspection)}
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            {t('selfInspection.actions.confirm')}
-                          </Button>
-                        )}
-                        {canEdit && !isConfirmed && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            aria-label={t('selfInspection.actions.deleteAriaLabel', {
-                              date: inspectionDateLabel,
-                            })}
-                            onClick={() => setDeleteTarget(inspection)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1 text-destructive" />
-                            {t('selfInspection.actions.delete')}
-                          </Button>
-                        )}
-                      </div>
+                      {!isConfirmed && (canEdit || canConfirm) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              aria-label={t('selfInspection.actions.menuAriaLabel', {
+                                date: inspectionDateLabel,
+                              })}
+                            >
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canEdit && (
+                              <DropdownMenuItem onClick={() => setEditTarget(inspection)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                {t('selfInspection.actions.edit')}
+                              </DropdownMenuItem>
+                            )}
+                            {canConfirm && (
+                              <DropdownMenuItem onClick={() => setConfirmTarget(inspection)}>
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                {t('selfInspection.actions.confirm')}
+                              </DropdownMenuItem>
+                            )}
+                            {canEdit && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteTarget(inspection)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {t('selfInspection.actions.delete')}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
 
                     <Table>

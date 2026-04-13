@@ -338,6 +338,7 @@
       "editAriaLabel": "Edit self inspection from {date}",
       "confirmAriaLabel": "Confirm self inspection from {date}",
       "deleteAriaLabel": "Delete self inspection from {date}",
+      "menuAriaLabel": "Actions menu for {date} self inspection",
       "toggleResultSections": "Toggle result sections for {date}",
       "exportForm": "Export Form",
       "exportFormError": "Failed to export self inspection form."
@@ -364,7 +365,10 @@
     "selfTitle": "Self Inspection Records",
     "noActiveCalibration": "No active calibration record found. Cannot create intermediate inspection.",
     "createButton": "Create Inspection Record",
-    "notApplicable": "This equipment is not subject to inspection (Management method: N/A)"
+    "notApplicable": "This equipment is not subject to inspection (Management method: N/A)",
+    "emptyDescription": "Create an inspection record to manage intermediate check results.",
+    "expand": "Expand details",
+    "collapse": "Collapse details"
   },
   "form": {
     "basicInfo": {

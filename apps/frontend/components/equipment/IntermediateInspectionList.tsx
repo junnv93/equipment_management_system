@@ -3,7 +3,17 @@
 import { Fragment, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Send, CheckCircle, XCircle, Undo2, Trash2 } from 'lucide-react';
+import {
+  ClipboardList,
+  FileText,
+  Send,
+  CheckCircle,
+  XCircle,
+  Undo2,
+  Trash2,
+  MoreHorizontal,
+  Download,
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +21,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormNumberBadge } from '@/components/form-templates/FormNumberBadge';
 import { FORM_CATALOG } from '@equipment-management/shared-constants';
-import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -21,6 +37,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useToast } from '@/components/ui/use-toast';
+import { exportFormTemplate } from '@/lib/api/reports-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import type { IntermediateInspection } from '@/lib/api/calibration-api';
@@ -31,6 +49,17 @@ import { format } from 'date-fns';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils';
+import {
+  INSPECTION_EMPTY_STATE,
+  INSPECTION_SPACING,
+  INSPECTION_TABLE,
+  INSPECTION_FOCUS,
+  getResultBadgeClasses,
+  getSemanticBadgeClasses,
+  getSemanticLeftBorderClasses,
+  type SemanticColorKey,
+} from '@/lib/design-tokens';
 import ResultSectionsPanel from '@/components/inspections/result-sections/ResultSectionsPanel';
 
 const InspectionFormDialog = dynamic(
@@ -38,21 +67,14 @@ const InspectionFormDialog = dynamic(
   { ssr: false }
 );
 
-function getStatusBadgeVariant(
-  status: InspectionApprovalStatus
-): 'default' | 'secondary' | 'destructive' | 'outline' {
-  switch (status) {
-    case 'approved':
-      return 'default';
-    case 'submitted':
-    case 'reviewed':
-      return 'secondary';
-    case 'rejected':
-      return 'destructive';
-    default:
-      return 'outline';
-  }
-}
+/** 승인 상태 → 시멘틱 색상 키 매핑 */
+const APPROVAL_SEMANTIC_MAP: Record<InspectionApprovalStatus, SemanticColorKey> = {
+  draft: 'neutral',
+  submitted: 'info',
+  reviewed: 'purple',
+  approved: 'ok',
+  rejected: 'critical',
+};
 
 interface IntermediateInspectionListProps {
   equipment: Equipment;
@@ -68,6 +90,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { can, user } = useAuth();
+  const { toast } = useToast();
 
   const primaryQueryKey = queryKeys.equipment.intermediateInspections(equipmentId);
   const crossInvalidateKeys = [
@@ -211,10 +234,24 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   const canReject = can(Permission.REJECT_INTERMEDIATE_INSPECTION);
   const canDelete = can(Permission.DELETE_INTERMEDIATE_INSPECTION);
 
+  const canExport = can(Permission.EXPORT_REPORTS);
+
+  const handleExport = async (inspectionId: string) => {
+    try {
+      await exportFormTemplate('UL-QP-18-03', { inspectionId });
+    } catch {
+      toast({
+        variant: 'destructive',
+        description: t('intermediateInspection.actions.exportFormError'),
+      });
+    }
+  };
+
   const renderActions = (inspection: IntermediateInspection) => {
     const { id, version, approvalStatus } = inspection;
     const inspectionDateLabel = format(new Date(inspection.inspectionDate), 'yyyy-MM-dd');
 
+    // 반려 사유 입력 모드 — 인라인 표시
     if (rejectingId === id) {
       return (
         <div className="flex items-center gap-2">
@@ -246,7 +283,7 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
       );
     }
 
-    // 삭제 버튼: 시험실무자(draft/submitted/rejected), 기술책임자(모든 상태)
+    // 삭제 가시성: 시험실무자(draft/submitted/rejected), 기술책임자(모든 상태)
     const showDelete =
       canDelete &&
       (canReview ||
@@ -254,123 +291,130 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
         approvalStatus === 'submitted' ||
         approvalStatus === 'rejected');
 
+    // 메뉴 아이템 수집
+    const items: Array<{
+      key: string;
+      icon: React.ReactNode;
+      label: string;
+      onClick: () => void;
+      destructive?: boolean;
+    }> = [];
+
+    if (approvalStatus === 'draft' && canSubmit) {
+      items.push({
+        key: 'submit',
+        icon: <Send className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.submit'),
+        onClick: () => submitMutation.mutate({ id, version }),
+      });
+    }
+    if (approvalStatus === 'submitted' && canWithdraw && inspection.submittedBy === user?.id) {
+      items.push({
+        key: 'withdraw',
+        icon: <Undo2 className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.withdraw'),
+        onClick: () => withdrawMutation.mutate({ id, version }),
+      });
+    }
+    if (approvalStatus === 'submitted' && canReview) {
+      items.push({
+        key: 'review',
+        icon: <CheckCircle className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.review'),
+        onClick: () => reviewMutation.mutate({ id, version }),
+      });
+    }
+    if ((approvalStatus === 'submitted' || approvalStatus === 'reviewed') && canReject) {
+      items.push({
+        key: 'reject',
+        icon: <XCircle className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.reject'),
+        onClick: () => setRejectingId(id),
+      });
+    }
+    if (approvalStatus === 'reviewed' && canApprove) {
+      items.push({
+        key: 'approve',
+        icon: <CheckCircle className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.approve'),
+        onClick: () => approveMutation.mutate({ id, version }),
+      });
+    }
+    if (approvalStatus === 'rejected' && canSubmit) {
+      items.push({
+        key: 'resubmit',
+        icon: <Undo2 className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.resubmit'),
+        onClick: () => resubmitMutation.mutate({ id, version }),
+      });
+    }
+    if (approvalStatus === 'approved' && canExport) {
+      items.push({
+        key: 'export',
+        icon: <Download className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.exportForm'),
+        onClick: () => handleExport(id),
+      });
+    }
+    if (showDelete) {
+      items.push({
+        key: 'delete',
+        icon: <Trash2 className="h-4 w-4 mr-2" />,
+        label: t('intermediateInspection.actions.delete'),
+        onClick: () => deleteMutation.mutate({ id }),
+        destructive: true,
+      });
+    }
+
+    if (items.length === 0) return null;
+
+    const destructiveItems = items.filter((i) => i.destructive);
+    const normalItems = items.filter((i) => !i.destructive);
+
     return (
-      <div className="flex items-center gap-1">
-        {approvalStatus === 'draft' && canSubmit && (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            aria-label={t('intermediateInspection.actions.submitAriaLabel', {
-              date: inspectionDateLabel,
-            })}
-            onClick={() => submitMutation.mutate({ id, version })}
-          >
-            <Send className="h-3 w-3 mr-1" />
-            {t('intermediateInspection.actions.submit')}
-          </Button>
-        )}
-        {approvalStatus === 'submitted' && canWithdraw && inspection.submittedBy === user?.id && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            aria-label={t('intermediateInspection.actions.withdrawAriaLabel', {
-              date: inspectionDateLabel,
-            })}
-            onClick={() => withdrawMutation.mutate({ id, version })}
-          >
-            <Undo2 className="h-3 w-3 mr-1" />
-            {t('intermediateInspection.actions.withdraw')}
-          </Button>
-        )}
-        {approvalStatus === 'submitted' && canReview && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            aria-label={t('intermediateInspection.actions.reviewAriaLabel', {
-              date: inspectionDateLabel,
-            })}
-            onClick={() => reviewMutation.mutate({ id, version })}
-          >
-            <CheckCircle className="h-3 w-3 mr-1" />
-            {t('intermediateInspection.actions.review')}
-          </Button>
-        )}
-        {(approvalStatus === 'submitted' || approvalStatus === 'reviewed') && canReject && (
-          <Button
-            size="sm"
             variant="ghost"
+            size="icon"
+            className="h-7 w-7"
             disabled={isPending}
-            aria-label={t('intermediateInspection.actions.rejectAriaLabel', {
+            aria-label={t('intermediateInspection.actions.menuAriaLabel', {
               date: inspectionDateLabel,
             })}
-            onClick={() => setRejectingId(id)}
           >
-            <XCircle className="h-3 w-3 mr-1" />
-            {t('intermediateInspection.actions.reject')}
+            <MoreHorizontal className="h-3.5 w-3.5" />
           </Button>
-        )}
-        {approvalStatus === 'reviewed' && canApprove && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            aria-label={t('intermediateInspection.actions.approveAriaLabel', {
-              date: inspectionDateLabel,
-            })}
-            onClick={() => approveMutation.mutate({ id, version })}
-          >
-            <CheckCircle className="h-3 w-3 mr-1" />
-            {t('intermediateInspection.actions.approve')}
-          </Button>
-        )}
-        {approvalStatus === 'rejected' && canSubmit && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isPending}
-            aria-label={t('intermediateInspection.actions.resubmitAriaLabel', {
-              date: inspectionDateLabel,
-            })}
-            onClick={() => resubmitMutation.mutate({ id, version })}
-          >
-            <Undo2 className="h-3 w-3 mr-1" />
-            {t('intermediateInspection.actions.resubmit')}
-          </Button>
-        )}
-        {approvalStatus === 'approved' && (
-          <ExportFormButton
-            formNumber="UL-QP-18-03"
-            params={{ inspectionId: id }}
-            label={t('intermediateInspection.actions.exportForm')}
-            errorToastDescription={t('intermediateInspection.actions.exportFormError')}
-          />
-        )}
-        {showDelete && (
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={isPending}
-            aria-label={t('intermediateInspection.actions.deleteAriaLabel', {
-              date: inspectionDateLabel,
-            })}
-            onClick={() => deleteMutation.mutate({ id })}
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            {t('intermediateInspection.actions.delete')}
-          </Button>
-        )}
-      </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {normalItems.map((item) => (
+            <DropdownMenuItem key={item.key} onClick={item.onClick} disabled={isPending}>
+              {item.icon}
+              {item.label}
+            </DropdownMenuItem>
+          ))}
+          {destructiveItems.length > 0 && normalItems.length > 0 && <DropdownMenuSeparator />}
+          {destructiveItems.map((item) => (
+            <DropdownMenuItem
+              key={item.key}
+              onClick={item.onClick}
+              disabled={isPending}
+              className="text-destructive focus:text-destructive"
+            >
+              {item.icon}
+              {item.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   };
 
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="p-6">
-          <Skeleton className="h-8 w-1/3 mb-4" />
+        <CardContent className={cn('p-6', INSPECTION_SPACING.field)}>
+          <Skeleton className="h-8 w-1/3" />
           <Skeleton className="h-32 w-full" />
         </CardContent>
       </Card>
@@ -410,81 +454,116 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
         </CardHeader>
         <CardContent>
           {!inspections?.length ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">
-              {t('intermediateInspection.noRecords')}
-            </p>
+            <div className={INSPECTION_EMPTY_STATE.container}>
+              <ClipboardList className={INSPECTION_EMPTY_STATE.icon} aria-hidden="true" />
+              <p className={INSPECTION_EMPTY_STATE.title}>
+                {t('intermediateInspection.noRecords')}
+              </p>
+              <p className={INSPECTION_EMPTY_STATE.description}>
+                {tEquip('inspection.emptyDescription')}
+              </p>
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('intermediateInspection.inspectionDate')}</TableHead>
-                  <TableHead>{t('intermediateInspection.overallResult')}</TableHead>
-                  <TableHead>{t('content.intermediateChecks.table.status')}</TableHead>
-                  <TableHead className="text-right">
-                    {t('content.intermediateChecks.table.action')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inspections.map((inspection) => (
-                  <Fragment key={inspection.id}>
-                    <TableRow
-                      className="cursor-pointer"
-                      onClick={() =>
-                        setExpandedId(expandedId === inspection.id ? null : inspection.id)
-                      }
-                    >
-                      <TableCell className="tabular-nums">
-                        <span className="mr-1 inline-block w-4">
-                          {expandedId === inspection.id ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
+            <div className={INSPECTION_TABLE.wrapper}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky top-0 bg-background z-10">
+                      {t('intermediateInspection.inspectionDate')}
+                    </TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10">
+                      {t('intermediateInspection.overallResult')}
+                    </TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10">
+                      {t('content.intermediateChecks.table.status')}
+                    </TableHead>
+                    <TableHead className="sticky top-0 bg-background z-10 text-right">
+                      {t('content.intermediateChecks.table.action')}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {inspections.map((inspection) => {
+                    const semanticColor = APPROVAL_SEMANTIC_MAP[inspection.approvalStatus];
+                    return (
+                      <Fragment key={inspection.id}>
+                        <TableRow
+                          className={cn(
+                            'cursor-pointer',
+                            INSPECTION_TABLE.stripe,
+                            INSPECTION_TABLE.rowHover,
+                            `border-l-2 ${getSemanticLeftBorderClasses(semanticColor)}`,
+                            INSPECTION_FOCUS
                           )}
-                        </span>
-                        {format(new Date(inspection.inspectionDate), 'yyyy-MM-dd')}
-                      </TableCell>
-                      <TableCell>
-                        {inspection.overallResult ? (
-                          <Badge variant="outline">
-                            {t(
-                              `intermediateInspection.resultOptions.${inspection.overallResult}` as Parameters<
-                                typeof t
-                              >[0]
+                          tabIndex={0}
+                          onClick={() =>
+                            setExpandedId(expandedId === inspection.id ? null : inspection.id)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setExpandedId(expandedId === inspection.id ? null : inspection.id);
+                            }
+                          }}
+                        >
+                          <TableCell className={INSPECTION_TABLE.numericCell}>
+                            <span className="mr-1 inline-block w-4">
+                              {expandedId === inspection.id ? (
+                                <ChevronDown className="h-3 w-3" />
+                              ) : (
+                                <ChevronRight className="h-3 w-3" />
+                              )}
+                              <span className="sr-only">
+                                {expandedId === inspection.id
+                                  ? tEquip('inspection.collapse')
+                                  : tEquip('inspection.expand')}
+                              </span>
+                            </span>
+                            {format(new Date(inspection.inspectionDate), 'yyyy-MM-dd')}
+                          </TableCell>
+                          <TableCell>
+                            {inspection.overallResult ? (
+                              <Badge className={getResultBadgeClasses(inspection.overallResult)}>
+                                {t(
+                                  `intermediateInspection.resultOptions.${inspection.overallResult}` as Parameters<
+                                    typeof t
+                                  >[0]
+                                )}
+                              </Badge>
+                            ) : (
+                              '-'
                             )}
-                          </Badge>
-                        ) : (
-                          '-'
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getSemanticBadgeClasses(semanticColor)}>
+                              {t(
+                                `intermediateInspection.status.${inspection.approvalStatus}` as Parameters<
+                                  typeof t
+                                >[0]
+                              )}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            {renderActions(inspection)}
+                          </TableCell>
+                        </TableRow>
+                        {expandedId === inspection.id && (
+                          <TableRow key={`${inspection.id}-sections`}>
+                            <TableCell colSpan={4} className="bg-muted/30 p-4">
+                              <ResultSectionsPanel
+                                inspectionId={inspection.id}
+                                inspectionType="intermediate"
+                                canEdit={canSubmit}
+                              />
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(inspection.approvalStatus)}>
-                          {t(
-                            `intermediateInspection.status.${inspection.approvalStatus}` as Parameters<
-                              typeof t
-                            >[0]
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        {renderActions(inspection)}
-                      </TableCell>
-                    </TableRow>
-                    {expandedId === inspection.id && (
-                      <TableRow key={`${inspection.id}-sections`}>
-                        <TableCell colSpan={4} className="bg-muted/30 p-4">
-                          <ResultSectionsPanel
-                            inspectionId={inspection.id}
-                            inspectionType="intermediate"
-                            canEdit={canSubmit}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </Fragment>
-                ))}
-              </TableBody>
-            </Table>
+                      </Fragment>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -6,7 +6,19 @@ import { Check, ChevronRight, Circle } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-const DropdownMenu = DropdownMenuPrimitive.Root;
+/**
+ * DropdownMenu — modal={false} 기본값
+ *
+ * Radix UI 기본값은 modal=true로 body에 overflow:hidden을 설정하여
+ * 스크롤바가 사라지면서 페이지가 좌우로 덜컹거리는 문제가 발생.
+ * DropdownMenu는 Dialog와 달리 배경 차단이 불필요하므로 modal=false가 적절.
+ */
+function DropdownMenu({
+  modal = false,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>) {
+  return <DropdownMenuPrimitive.Root modal={modal} {...props} />;
+}
 
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 

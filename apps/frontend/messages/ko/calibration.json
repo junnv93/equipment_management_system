@@ -656,7 +656,8 @@
       "rejectAriaLabel": "{date} 중간점검 반려",
       "deleteAriaLabel": "{date} 중간점검 삭제",
       "exportForm": "양식 내보내기",
-      "exportFormError": "중간점검 양식 내보내기에 실패했습니다."
+      "exportFormError": "중간점검 양식 내보내기에 실패했습니다.",
+      "menuAriaLabel": "{date} 중간점검 작업 메뉴"
     },
     "status": {
       "draft": "작성 중",

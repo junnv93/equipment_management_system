@@ -25,11 +25,19 @@ import {
   File,
   History,
   ShieldCheck,
+  MoreHorizontal,
 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { DocumentType } from '@equipment-management/schemas';
 import { DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
 import { formatFileSize } from '@/lib/utils/format';
@@ -190,39 +198,42 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
                         {fmtDate(doc.uploadedAt)}
                       </TableCell>
                       <TableCell>
-                        <div className={DOCUMENT_TABLE.actionsCell}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleDownload(doc)}
-                            aria-label={`${t('attachmentsTab.download')} ${doc.originalFileName}`}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          {doc.revisionNumber > 1 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
-                              aria-label={`${t('attachmentsTab.revisionHistory')} ${doc.originalFileName}`}
-                              onClick={() => setRevisionDocId(doc.id)}
+                              className="h-7 w-7"
+                              aria-label={`${t('attachmentsTab.tableHeaders.actions')} ${doc.originalFileName}`}
                             >
-                              <History className="h-4 w-4" />
+                              <MoreHorizontal className="h-3.5 w-3.5" />
                             </Button>
-                          )}
-                          {canDelete && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(doc.id)}
-                              aria-label={`${t('attachmentsTab.delete')} ${doc.originalFileName}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleDownload(doc)}>
+                              <Download className="h-4 w-4 mr-2" />
+                              {t('attachmentsTab.download')}
+                            </DropdownMenuItem>
+                            {doc.revisionNumber > 1 && (
+                              <DropdownMenuItem onClick={() => setRevisionDocId(doc.id)}>
+                                <History className="h-4 w-4 mr-2" />
+                                {t('attachmentsTab.revisionHistory')}
+                              </DropdownMenuItem>
+                            )}
+                            {canDelete && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(doc.id)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {t('attachmentsTab.delete')}
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );

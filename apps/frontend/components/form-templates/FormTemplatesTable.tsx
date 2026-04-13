@@ -2,10 +2,16 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Download, Upload, History, FilePlus } from 'lucide-react';
+import { Download, Upload, History, FilePlus, MoreHorizontal } from 'lucide-react';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -17,11 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { downloadFormTemplateById } from '@/lib/api/form-templates-api';
 import type { FormTemplateListItem } from '@/lib/api/form-templates-api';
-import {
-  FORM_TEMPLATES_TABLE_TOKENS,
-  FORM_TEMPLATES_STATUS_TOKENS,
-  FORM_TEMPLATES_MOTION,
-} from '@/lib/design-tokens';
+import { FORM_TEMPLATES_TABLE_TOKENS, FORM_TEMPLATES_STATUS_TOKENS } from '@/lib/design-tokens';
 import FormTemplateUploadDialog, { type UploadDialogMode } from './FormTemplateUploadDialog';
 import FormTemplateHistoryDialog from './FormTemplateHistoryDialog';
 import { useToast } from '@/components/ui/use-toast';
@@ -136,75 +138,65 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
 
                   {/* 액션 */}
                   <TableCell className="text-right">
-                    <div className={FORM_TEMPLATES_TABLE_TOKENS.actionGroup}>
-                      {tpl.current && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
-                          onClick={async () => {
-                            try {
-                              await downloadFormTemplateById(tpl.current!.id);
-                            } catch {
-                              toast({
-                                variant: 'destructive',
-                                description: tCommon('errors.downloadFailed'),
-                              });
-                            }
-                          }}
-                          aria-label={`${t('download')} ${tpl.formName}`}
+                          size="icon"
+                          className="h-7 w-7"
+                          aria-label={`${t('table.actions')} ${tpl.formName}`}
                         >
-                          <Download className="h-3.5 w-3.5" />
-                          {t('download')}
+                          <MoreHorizontal className="h-3.5 w-3.5" />
                         </Button>
-                      )}
-                      {canManage && !tpl.current && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
-                          onClick={() => setUploadTarget({ template: tpl, mode: 'create' })}
-                          aria-label={`${t('register')} ${tpl.formName}`}
-                        >
-                          <FilePlus className="h-3.5 w-3.5" />
-                          {t('register')}
-                        </Button>
-                      )}
-                      {canManage && tpl.current && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {tpl.current && (
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                await downloadFormTemplateById(tpl.current!.id);
+                              } catch {
+                                toast({
+                                  variant: 'destructive',
+                                  description: tCommon('errors.downloadFailed'),
+                                });
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            {t('download')}
+                          </DropdownMenuItem>
+                        )}
+                        {canManage && !tpl.current && (
+                          <DropdownMenuItem
                             onClick={() => setUploadTarget({ template: tpl, mode: 'create' })}
-                            aria-label={`${t('revise')} ${tpl.formName}`}
                           >
-                            <FilePlus className="h-3.5 w-3.5" />
-                            {t('revise')}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
-                            onClick={() => setUploadTarget({ template: tpl, mode: 'replace' })}
-                            aria-label={`${t('replace')} ${tpl.formName}`}
-                          >
-                            <Upload className="h-3.5 w-3.5" />
-                            {t('replace')}
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`${FORM_TEMPLATES_TABLE_TOKENS.actionBtn} ${FORM_TEMPLATES_MOTION.buttonPress}`}
-                        onClick={() => setHistoryTarget(tpl)}
-                        aria-label={`${t('history')} ${tpl.formName}`}
-                      >
-                        <History className="h-3.5 w-3.5" />
-                        {t('history')}
-                      </Button>
-                    </div>
+                            <FilePlus className="h-4 w-4 mr-2" />
+                            {t('register')}
+                          </DropdownMenuItem>
+                        )}
+                        {canManage && tpl.current && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => setUploadTarget({ template: tpl, mode: 'create' })}
+                            >
+                              <FilePlus className="h-4 w-4 mr-2" />
+                              {t('revise')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setUploadTarget({ template: tpl, mode: 'replace' })}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              {t('replace')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuItem onClick={() => setHistoryTarget(tpl)}>
+                          <History className="h-4 w-4 mr-2" />
+                          {t('history')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );

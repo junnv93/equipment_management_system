@@ -338,6 +338,7 @@
       "editAriaLabel": "{date} 자체점검 기록 수정",
       "confirmAriaLabel": "{date} 자체점검 기록 확인 처리",
       "deleteAriaLabel": "{date} 자체점검 기록 삭제",
+      "menuAriaLabel": "{date} 자체점검 작업 메뉴",
       "toggleResultSections": "{date} 자체점검 결과 섹션 펼치기/접기",
       "exportForm": "양식 내보내기",
       "exportFormError": "자체점검 양식 내보내기에 실패했습니다."
@@ -364,7 +365,10 @@
     "selfTitle": "자체점검 기록",
     "noActiveCalibration": "활성 교정 기록이 없어 중간점검을 생성할 수 없습니다",
     "createButton": "점검 기록 작성",
-    "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: 비대상)"
+    "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: 비대상)",
+    "emptyDescription": "중간점검 결과를 관리하려면 점검 기록을 작성하세요.",
+    "expand": "상세 펼치기",
+    "collapse": "상세 접기"
   },
   "form": {
     "basicInfo": {

@@ -656,7 +656,8 @@
       "rejectAriaLabel": "Reject intermediate inspection from {date}",
       "deleteAriaLabel": "Delete intermediate inspection from {date}",
       "exportForm": "Export Form",
-      "exportFormError": "Failed to export intermediate inspection form."
+      "exportFormError": "Failed to export intermediate inspection form.",
+      "menuAriaLabel": "Actions menu for {date} intermediate inspection"
     },
     "status": {
       "draft": "Draft",
