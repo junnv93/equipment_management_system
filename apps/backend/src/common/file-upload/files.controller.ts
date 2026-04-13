@@ -1,23 +1,45 @@
-import { Controller, Get, Param, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Res, Inject, NotFoundException } from '@nestjs/common';
 import type { Response } from 'express';
 import * as path from 'path';
+import { STORAGE_PROVIDER, IStorageProvider } from '../storage/storage.interface';
 import { FileUploadService } from './file-upload.service';
 import { SkipPermissions } from '../../modules/auth/decorators/skip-permissions.decorator';
 
 /**
- * 파일 서빙 컨트롤러
+ * 파일 서빙 컨트롤러 — 인증된 사용자에게 스토리지 파일 제공
  *
- * 스토리지에 저장된 파일을 인증된 사용자에게 제공합니다.
- * JwtAuthGuard는 전역 적용이므로 별도 가드 불필요.
- * SkipPermissions: 파일 읽기는 특정 권한이 아닌 인증만 요구.
+ * 스토리지 드라이버에 따라 두 가지 전략을 자동 선택:
  *
- * URL 패턴: GET /files/{*path}
- * 프론트엔드 접근: /api/files/{storageKey}
- * → Next.js rewrite → backend GET /files/{storageKey}
+ * [S3 / RustFS] → JSON { presignedUrl } 반환
+ *   - 문서 API(documents/:id/download)와 동일 패턴 (SSOT)
+ *   - 클라이언트가 arraybuffer 수신 후 JSON 파싱 → presignedUrl 직접 사용
+ *   - 앱 서버가 S3 바이트를 프록시하지 않아 메모리·CPU 절약
+ *
+ * [Local FS] → binary 스트리밍
+ *   - 단일 서버 온프레미스 환경 (개발 / 수원 사무소 배포)
+ *   - Cache-Control: private, max-age=3600
+ *
+ * 프론트엔드 접근 패턴:
+ *   apiClient.get('/api/files/:subdir/:filename', { responseType: 'arraybuffer' })
+ *   → content-type이 application/json → JSON 파싱 → presignedUrl 사용
+ *   → 그 외 → Blob URL 생성 (언마운트 시 revoke)
+ *   ※ <img src="/api/files/..."> 직접 사용 불가 — Next.js rewrite가 /api 제거함
+ *
+ * 보안:
+ *   - 전역 JwtAuthGuard — 미인증 요청 401
+ *   - SkipPermissions — 특정 권한 불필요, 인증만으로 충분
+ *   - Path traversal 방지 — subdir/filename 분리 파라미터
+ *
+ * URL: GET /api/files/:subdir/:filename
+ * 스토리지 키: {subdir}/{uuid}.{ext}  (FileUploadService.saveFile() SSOT)
  */
 @Controller('files')
 export class FilesController {
-  private static readonly MIME_MAP: Record<string, string> = {
+  /**
+   * Content-Type MIME 매핑 (FileUploadService.allowedMimeTypes 와 동기화)
+   * mime-types 패키지 미의존 — direct dep에 없는 transitive 패키지 사용 지양
+   */
+  private static readonly MIME_MAP: Readonly<Record<string, string>> = {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
@@ -30,25 +52,44 @@ export class FilesController {
     '.csv': 'text/csv',
   };
 
-  constructor(private readonly fileUploadService: FileUploadService) {}
+  constructor(
+    @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
+    private readonly fileUploadService: FileUploadService
+  ) {}
 
-  @Get('{*path}')
+  /**
+   * GET /api/files/:subdir/:filename
+   *
+   * Express 5 named wildcard({*path})는 NestJS @Get()에서 동작하지 않으므로
+   * 두 파라미터로 분리. 스토리지 키 포맷({subdir}/{filename})과 1:1 대응.
+   */
+  @Get(':subdir/:filename')
   @SkipPermissions()
-  async serveFile(@Param('path') filePath: string, @Res() res: Response): Promise<void> {
-    // Path traversal 방지: '..' 세그먼트 제거
-    const sanitized = filePath
-      .replace(/\\/g, '/')
-      .split('/')
-      .filter((seg) => seg !== '' && seg !== '.' && seg !== '..')
-      .join('/');
+  async serveFile(
+    @Param('subdir') subdir: string,
+    @Param('filename') filename: string,
+    @Res() res: Response
+  ): Promise<void> {
+    // Path traversal 방지 — 각 파라미터에 슬래시/점 차단
+    const safeSubdir = subdir.replace(/[./\\]/g, '');
+    const safeFilename = filename.replace(/[/\\]/g, '');
 
-    if (!sanitized) {
+    if (!safeSubdir || !safeFilename) {
       throw new NotFoundException({ code: 'FILE_NOT_FOUND', message: 'File not found.' });
     }
 
-    const buffer = await this.fileUploadService.readFile(sanitized);
+    const storageKey = `${safeSubdir}/${safeFilename}`;
 
-    const ext = path.extname(sanitized).toLowerCase();
+    // [S3 / RustFS] JSON { presignedUrl } 반환 — documents 엔드포인트와 동일 패턴
+    if (this.storage.supportsPresignedUrl() && this.storage.getPresignedDownloadUrl) {
+      const presignedUrl = await this.storage.getPresignedDownloadUrl(storageKey, safeFilename);
+      res.json({ presignedUrl });
+      return;
+    }
+
+    // [Local FS] 버퍼 스트리밍
+    const buffer = await this.fileUploadService.readFile(storageKey);
+    const ext = path.extname(safeFilename).toLowerCase();
     const contentType = FilesController.MIME_MAP[ext] ?? 'application/octet-stream';
 
     res.set({
