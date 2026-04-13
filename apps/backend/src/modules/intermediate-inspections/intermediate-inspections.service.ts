@@ -565,7 +565,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   /**
    * 재제출 (rejected → draft)
    */
-  async resubmit(id: string, version: number, userId: string): Promise<IntermediateInspection> {
+  async resubmit(id: string, version: number, _userId: string): Promise<IntermediateInspection> {
     const existing = await this.findOne(id);
 
     if (existing.approvalStatus !== 'rejected') {
