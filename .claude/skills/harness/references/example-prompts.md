@@ -1,10 +1,10 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (56차 — 54차 신규 2건 완료. E2E storageState 전환 ✅ + stale TODO 제거 ✅. SHOULD S3 data-migration 824줄 ✅. 55차 신규 1건 대기)**
+> **마지막 정리일: 2026-04-14 (57차 — 55차 AuditLog.userRole SSOT ✅ + 52차 equipment.repairHistory 컬럼 제거 ✅. 모든 항목 완료.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
-## 55차 신규 — 54차 harness 중 발견 (1건, 2026-04-14)
+## ~~55차 신규 — 54차 harness 중 발견 (1건, 2026-04-14)~~ ✅ 완료 (2026-04-14)
 
 > **발견 배경 (2026-04-14, 54차 harness 중)**: frontend tsc 검증 중 pre-existing 에러 발견.
 > `AuditTimelineFeed.tsx:252` `roleLabel(log.userRole)` — `log.userRole: string` vs `roleLabel: (role: UserRole) => string` 타입 불일치.
