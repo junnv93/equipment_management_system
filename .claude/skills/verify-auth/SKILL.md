@@ -131,3 +131,4 @@ grep -n "@(Get|Post|Patch|Delete|Put)(" apps/backend/src/modules/**/*.controller
 10. **UsersController의 `@SkipPermissions()` PATCH** — 본인 설정만 변경하므로 정상
 11. **TestAuthController** — 개발/테스트 전용, 프로덕션 미등록
 12. **UsersController의 `POST/DELETE me/signature`** — `@SkipPermissions()` + `@AuditLog` + `req.user.userId` 추출, 본인 서명만 변경하므로 정상
+13. **UsersController의 `POST sync`** — `@InternalServiceOnly()` 가드 전용 엔드포인트. JWT 인증 불필요, `@RequirePermissions` 불필요. `@AuditLog` 적용됨 (행위자는 `Anonymous User`/시스템으로 기록 — 의도된 설계)

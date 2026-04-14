@@ -175,3 +175,4 @@ grep -rn "getByText.*되었\|getByText.*완료\|getByText.*실패.*\.first()" \
 17. **Server Component에서의 hasPermission 직접 사용** — 훅 사용 불가
 18. **이벤트 핸들러 내 setQueryData 캐시 프라이밍** — LeaderCombobox.tsx 성능 최적화
 19. **StorageImage.tsx의 useRef+useEffect blob URL revoke** — TanStack Query(gcTime=SHORT) 캐시 만료 후 blob URL 메모리 해제를 위한 의도적 패턴. `data.isBlob` 조건부 revoke + 언마운트 클린업이 정상.
+20. **DocumentPreviewDialog.tsx의 blobUrlRef+useEffect cleanup** — presigned/blob URL 미리보기용. `blobUrlRef.current`에 현재 blob URL 추적, cleanup에서 `revokeObjectURL` 호출. deps: `[open, doc?.id]`. 이 패턴은 stale closure 방지를 위한 ref 기반 cleanup으로 정상.
