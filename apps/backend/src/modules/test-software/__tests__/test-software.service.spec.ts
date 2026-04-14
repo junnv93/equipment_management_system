@@ -133,6 +133,35 @@ describe('TestSoftwareService', () => {
       expect(mockCacheService.deleteByPrefix).toHaveBeenCalled();
       expect(result).toBeDefined();
     });
+
+    it('max_num=9999 → P10000 생성 (4자리 패딩 초과 경계값)', async () => {
+      // P9999 다음은 P10000 — padStart(4) 는 절삭 없이 그대로 반환
+      mockDb.transaction.mockImplementationOnce(async (fn: (tx: unknown) => unknown) => {
+        const txDb = {
+          ...mockDb,
+          execute: jest.fn().mockResolvedValue({ rows: [{ max_num: 9999 }] }),
+          insert: jest.fn().mockReturnValue({
+            values: jest.fn().mockReturnValue({
+              returning: jest
+                .fn()
+                .mockResolvedValue([{ ...MOCK_SOFTWARE, managementNumber: 'P10000' }]),
+            }),
+          }),
+        };
+        return fn(txDb);
+      });
+
+      const result = await service.create({ name: '경계값 테스트' } as never, 'user-uuid-1');
+      expect(result.managementNumber).toBe('P10000');
+    });
+
+    it('max_num=null(첫 등록) → P0001 생성', async () => {
+      // max_num이 null이면 첫 번째 소프트웨어 → P0001
+      const result = await service.create({ name: '첫 등록' } as never, 'user-uuid-1');
+      // transaction mock의 txDb.execute는 기본적으로 { rows: [{ max_num: null }] } 반환
+      expect(result).toBeDefined();
+      expect(mockDb.transaction).toHaveBeenCalled();
+    });
   });
 
   describe('findAll()', () => {

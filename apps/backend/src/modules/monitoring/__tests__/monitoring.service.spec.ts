@@ -5,6 +5,7 @@ import { MetricsService } from '../../../common/metrics/metrics.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { DrizzleService } from '../../../database/drizzle.module';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
+import { MONITORING_THRESHOLDS } from '@equipment-management/shared-constants';
 
 describe('MonitoringService', () => {
   let service: MonitoringService;
@@ -146,6 +147,35 @@ describe('MonitoringService', () => {
       const stats = service.getHttpStats();
       const topEndpoints = stats.topEndpoints;
       expect(topEndpoints.some((e) => e.endpoint === '/api/equipment/:id')).toBe(true);
+    });
+
+    it('MAX_TRACKED_ENDPOINTS 초과 시 최소 요청 수 엔트리를 제거한다', () => {
+      const max = MONITORING_THRESHOLDS.MAX_TRACKED_ENDPOINTS;
+
+      // max-1개 엔드포인트를 각 2번씩 기록 (count=2)
+      for (let i = 0; i < max - 1; i++) {
+        service.recordHttpRequest(`/api/fill-${i}`, 200, 10);
+        service.recordHttpRequest(`/api/fill-${i}`, 200, 10);
+      }
+
+      // sentinel: count=1 (최소값 → 초과 시 제거 대상)
+      service.recordHttpRequest('/api/sentinel-min-count', 200, 10);
+      // Map 크기 == max (정확히 경계)
+
+      const internalMap = (
+        service as unknown as { httpStats: { requestsByEndpoint: Map<string, number> } }
+      ).httpStats.requestsByEndpoint;
+      expect(internalMap.size).toBe(max);
+
+      // 새 엔드포인트를 추가 → 크기가 max+1이 되어 enforceEndpointMapLimit 발동
+      service.recordHttpRequest('/api/trigger-eviction', 200, 10);
+
+      // 크기는 다시 max로 유지
+      expect(internalMap.size).toBe(max);
+      // 최소 count 엔트리(sentinel)가 제거됨
+      expect(internalMap.has('/api/sentinel-min-count')).toBe(false);
+      // 새로 추가한 엔드포인트는 남아 있음
+      expect(internalMap.has('/api/trigger-eviction')).toBe(true);
     });
   });
 

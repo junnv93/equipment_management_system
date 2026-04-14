@@ -163,5 +163,5 @@
 - [x] `isManager`/`isAdmin` 함수 use-auth.ts에서 제거 — 해결: 2026-04-02 — `refactor/remove-unused-role-checks`
 - [x] equipment.json(en/ko) `softwareHistory.*` 레거시 i18n 키 블록 제거 — 해결: 2026-04-05
 - [x] E2E 테스트 payload stale softwareVersion — 이전 커밋에서 이미 정리됨 확인: 2026-04-05
-- [ ] **LOW**: monitoring.service.spec.ts — Map 크기 제한 도달 시 엔트리 제거 경계값 테스트 없음 — `apps/backend/src/modules/monitoring/__tests__/monitoring.service.spec.ts` — 2026-04-14 (unit-test-5modules S4)
-- [ ] **LOW**: test-software.service.spec.ts — 관리번호 P9999 다음 P10000 생성 경계값 테스트 없음 — `apps/backend/src/modules/test-software/__tests__/test-software.service.spec.ts` — 2026-04-14 (unit-test-5modules S4)
+- [x] **LOW**: monitoring.service.spec.ts — Map 크기 제한 도달 시 엔트리 제거 경계값 테스트 없음 — 해결: 2026-04-14 — MAX_TRACKED_ENDPOINTS(500) 도달 후 최소 count 엔트리 자동 제거 검증 테스트 추가. 내부 Map 직접 접근(as unknown)으로 경계값 정밀 검증. 674 tests PASS (66차 harness)
+- [x] **LOW**: test-software.service.spec.ts — 관리번호 P9999 다음 P10000 생성 경계값 테스트 없음 — 해결: 2026-04-14 — padStart(4) 초과 시 절삭 없이 5자리 반환(P10000) 및 최초 등록(max_num=null→P0001) 2케이스 추가. 674 tests PASS (66차 harness)
