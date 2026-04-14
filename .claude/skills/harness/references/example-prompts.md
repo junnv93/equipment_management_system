@@ -165,7 +165,7 @@ line 14의 `import { z } from 'zod'`도 확인 필요 (z.string() 등 실제 사
 > FALSE POSITIVE: `zod workspace:*`(root pnpm.overrides `^4.3.5`로 오버라이드 정상), 컴포넌트 단위 테스트 전체 부재(E2E 의존 의도적 설계·227개 파일 일괄 작성 비실용), next-auth 5.0.0-beta(Next.js App Router 대응 의도적 선택), lodash 전체 패키지(`lodash/debounce` sub-path import → tree-shaking 정상).
 > 검증 통과 4건 등재.
 
-### 🟠 HIGH — cables/monitoring/software-validations/test-software/intermediate-inspections 5개 모듈 단위 테스트 완전 부재 (Mode 2)
+### ~~🟠 HIGH — cables/monitoring/software-validations/test-software/intermediate-inspections 5개 모듈 단위 테스트 완전 부재 (Mode 2)~~ ✅ 완료 (2026-04-14, harness 2 iterations PASS, 671/671)
 
 ```
 테스트 커버리지 gap:
