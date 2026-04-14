@@ -175,3 +175,4 @@ rg "\.xlsx|\.docx" apps/frontend/lib/api/ --type ts -n | grep -v "node_modules\|
 5. **response DTO의 ApiResponse 재사용** — 응답 타입 정의에서 래핑 정상
 6. **`primitives.ts`의 JSDoc 주석** — easing SSOT 정의 문서 면제
 7. **`.limit(1)` 단일 레코드 조회** — 페이지네이션이 아닌 단건 조회 면제
+8. **백엔드 서비스 서버사이드 역할 레이블** — `audit.service.ts formatLogMessage()` 및 `reports.service.ts` 보고서 행 생성에서 `AuditLogUserRole` 특수값(`'system'`, `'unknown'`)에 대한 `'시스템'`, `'알 수 없음'` 한국어 레이블 직접 사용은 허용. 백엔드 텍스트 생성 전용이며 브라우저 i18n 시스템을 경유할 수 없음. `USER_ROLE_LABELS`가 커버하지 않는 특수값이므로 인라인 처리가 정상 설계.

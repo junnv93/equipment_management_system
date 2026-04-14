@@ -236,6 +236,7 @@ const schema = useMemo(() => createSchema(t), [t]);
 | `useSiteLabels()` | `t('siteLabel.${site}')` | `equipment.json: siteLabel.*` |
 | `useClassificationLabels()` | `t('classification.${cls}')` | `equipment.json: classification.*` |
 | `useCalibrationMethodLabels()` | `t('filters.calibrationMethodLabel.${method}')` | `equipment.json: filters.calibrationMethodLabel.*` |
+| `AuditTimelineFeed/AuditDetailSheet/AuditLogDetailDialog/PrintableAuditReport` | `tCommon('userRoles.${role}')` | `common.json: userRoles.*` — **AuditLogUserRole 전체 포함 필수**: `test_engineer`, `technical_manager`, `quality_manager`, `lab_manager`, `system_admin`, `system`, `unknown` |
 
 ```bash
 # 동적 키 패턴 탐지 — t(`xxx.${...}`) 형태

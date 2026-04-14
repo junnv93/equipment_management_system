@@ -40,6 +40,11 @@ grep -rn "type AuditAction\s*=\|enum AuditAction\|type AuditEntityType\s*=\|enum
 ```
 
 ```bash
+# 로컬 AuditLogUserRole 재정의 탐지 (packages/schemas/src/audit-log.ts 외 선언 금지)
+grep -rn "type AuditLogUserRole\s*=" apps/backend/src apps/frontend packages/db --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|// "
+```
+
+```bash
 # 로컬 FIELD_LABELS / ENTITY_ROUTES 재정의 탐지
 grep -rn "FIELD_LABELS\s*=\|ENTITY_ROUTES\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
 ```
