@@ -1,0 +1,1 @@
+CREATE INDEX "incident_history_occurred_at_idx" ON "equipment_incident_history" USING btree ("occurred_at");

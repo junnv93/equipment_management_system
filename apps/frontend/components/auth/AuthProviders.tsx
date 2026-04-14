@@ -14,36 +14,6 @@ interface AuthProvidersProps {
   children: (state: AuthProvidersState) => React.ReactNode;
 }
 
-export function AuthProviders({ children }: AuthProvidersProps) {
-  const [state, setState] = useState<AuthProvidersState>({
-    hasAzureAD: false,
-    hasCredentials: false,
-    providers: null,
-    isLoading: true,
-  });
-
-  useEffect(() => {
-    const loadProviders = async () => {
-      try {
-        const providers = await getProviders();
-        setState({
-          hasAzureAD: !!providers?.['azure-ad'],
-          hasCredentials: !!providers?.credentials,
-          providers,
-          isLoading: false,
-        });
-      } catch (error) {
-        console.error('Failed to load auth providers:', error);
-        setState((prev) => ({ ...prev, isLoading: false }));
-      }
-    };
-
-    loadProviders();
-  }, []);
-
-  return <>{children(state)}</>;
-}
-
 export function useAuthProviders() {
   const [state, setState] = useState<AuthProvidersState>({
     hasAzureAD: false,
@@ -53,23 +23,35 @@ export function useAuthProviders() {
   });
 
   useEffect(() => {
-    const loadProviders = async () => {
-      try {
-        const providers = await getProviders();
-        setState({
-          hasAzureAD: !!providers?.['azure-ad'],
-          hasCredentials: !!providers?.credentials,
-          providers,
-          isLoading: false,
-        });
-      } catch (error) {
-        console.error('Failed to load auth providers:', error);
-        setState((prev) => ({ ...prev, isLoading: false }));
-      }
-    };
+    let cancelled = false;
 
-    loadProviders();
+    getProviders()
+      .then((providers) => {
+        if (!cancelled) {
+          setState({
+            hasAzureAD: !!providers?.['azure-ad'],
+            hasCredentials: !!providers?.credentials,
+            providers,
+            isLoading: false,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load auth providers:', error);
+        if (!cancelled) {
+          setState((prev) => ({ ...prev, isLoading: false }));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return state;
+}
+
+export function AuthProviders({ children }: AuthProvidersProps) {
+  const state = useAuthProviders();
+  return <>{children(state)}</>;
 }

@@ -1,8 +1,256 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (57차 — 55차 AuditLog.userRole SSOT ✅ + 52차 equipment.repairHistory 컬럼 제거 ✅. 모든 항목 완료.)**
+> **마지막 정리일: 2026-04-14 (60차 — 59차 5건 전부 완료 확인. AuthProviders/DocumentPreviewDialog/syncUser AuditLog는 이미 적용됨. incident_history 복합 인덱스 + CI SHA 핀닝 완료.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## ~~59차 신규 — generate-prompts 3-agent 병렬 스캔 (5건, 2026-04-14)~~ ✅ 전부 완료 (2026-04-14, 60차)
+
+> **발견 배경 (2026-04-14, 59차)**: 업계표준 6개 차원(N+1·Guard·메모리누수·DB인덱스·번들·관측성) 기준 스캔.
+> FALSE POSITIVE: N+1(inArray 배치 이미 적용), design-tokens barrel(named re-export → webpack tree-shaking 정상), monitoring rename(이름 적절), audit_logs 파티셔닝(인덱스 완비·규모 불충분), Permission 미사용(82개 전부 사용).
+> 검증 통과 5건 등재. → AuthProviders/DocumentPreviewDialog/syncUser는 이전 세션에 이미 적용됨. incident_history 복합 인덱스 + CI SHA 핀닝 60차에서 완료.
+
+### ~~🟠 HIGH — AuthProviders.tsx useEffect 비동기 누락 cleanup + 동일 코드 2중 정의 (Mode 0)~~ ✅ 완료 (이전 세션)
+
+```
+메모리 누수 이슈:
+- components/auth/AuthProviders.tsx:25-42 (AuthProviders 컴포넌트)
+- components/auth/AuthProviders.tsx:55-72 (useAuthProviders 훅)
+
+두 위치 모두 useEffect 내에서 getProviders() 비동기 API 호출 후
+AbortController 또는 cancelled 플래그가 없음. 로그인 페이지에서 빠르게
+이동 시 언마운트 후 setState 실행 가능 (React 18 경고 없지만 메모리 잔존).
+
+추가: 두 export가 완전히 동일한 로직을 중복 구현 — DRY 위반.
+
+위치 1 (컴포넌트, line 25-42):
+  useEffect(() => {
+    const loadProviders = async () => {
+      const providers = await getProviders();  // AbortController 없음
+      setState({ ... });                        // 언마운트 후 실행 가능
+    };
+    loadProviders();
+  }, []);
+
+위치 2 (훅, line 55-72): 동일 패턴 반복 (copy-paste)
+
+작업:
+1. useAuthProviders 훅 내부에 cancelled 플래그 추가:
+   useEffect(() => {
+     let cancelled = false;
+     const loadProviders = async () => {
+       try {
+         const providers = await getProviders();
+         if (cancelled) return;
+         setState({ hasAzureAD: !!providers?.['azure-ad'], ... });
+       } catch (error) {
+         if (cancelled) return;
+         setState((prev) => ({ ...prev, isLoading: false }));
+       }
+     };
+     loadProviders();
+     return () => { cancelled = true; };
+   }, []);
+
+2. AuthProviders 컴포넌트(line 17-44)를 useAuthProviders 훅 사용으로 교체:
+   export function AuthProviders({ children }: AuthProvidersProps) {
+     const state = useAuthProviders();
+     return <>{children(state)}</>;
+   }
+   (중복 useEffect 제거 → DRY)
+
+주의:
+- getProviders()는 NextAuth의 /api/auth/providers 엔드포인트 호출
+  로그인 페이지 외에서도 AuthProviders가 마운트되는지 확인
+- 타입 변경 없음 — AuthProvidersState 인터페이스 유지
+
+검증:
+- pnpm --filter frontend run tsc --noEmit
+- grep 'useEffect' apps/frontend/components/auth/AuthProviders.tsx → 1 hit (훅에만)
+- grep 'cancelled' apps/frontend/components/auth/AuthProviders.tsx → 1 hit
+```
+
+### ~~🟡 MEDIUM — DocumentPreviewDialog blob URL stale closure revoke 누락 (Mode 0)~~ ✅ 완료 (이전 세션 + blobUrlRef 수정)
+
+```
+메모리 누수 이슈:
+- components/shared/DocumentPreviewDialog.tsx:50-62
+
+useEffect cleanup에서 isBlob/previewUrl을 사용하지만 두 변수가 deps에
+포함되지 않아 항상 초기값(false/null)이 클로저에 고착됨.
+→ revokeObjectURL이 절대 호출되지 않음.
+다수의 문서를 연속으로 열 경우 blob URL 메모리 누수 누적.
+
+현재 코드 (line 50-62):
+  useEffect(() => {
+    if (open && doc) { loadPreview(); }
+    return () => {
+      if (isBlob && previewUrl) {           // 항상 false/null (stale closure)
+        window.URL.revokeObjectURL(previewUrl);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup on unmount only
+  }, [open, doc?.id]);
+
+작업:
+useEffect를 두 개로 분리:
+
+1) 로드 effect (기존 deps 유지):
+   useEffect(() => {
+     if (open && doc) {
+       setImageZoom(1);
+       setImageRotation(0);
+       loadPreview();
+     }
+   }, [open, doc?.id, loadPreview]);
+
+2) cleanup-only effect (ref 패턴으로 stale closure 해결):
+   const blobCleanupRef = useRef<{ url: string | null; isBlob: boolean }>({
+     url: null,
+     isBlob: false,
+   });
+   // previewUrl/isBlob state 업데이트와 함께 ref도 동기화:
+   //   blobCleanupRef.current = { url: result.url, isBlob: result.isBlob };
+   useEffect(() => {
+     return () => {
+       if (blobCleanupRef.current.isBlob && blobCleanupRef.current.url) {
+         window.URL.revokeObjectURL(blobCleanupRef.current.url);
+         blobCleanupRef.current = { url: null, isBlob: false };
+       }
+     };
+   }, []);  // 언마운트 시 1회만
+
+주의:
+- loadPreview (useCallback) deps에 [doc, t] 포함됨 — 분리 후 deps 배열 정확히 유지
+- DocumentImage.tsx의 cancelled 플래그 패턴과 일관성 확인
+  (같은 파일이므로 참조 패턴 맞춤)
+
+검증:
+- pnpm --filter frontend run tsc --noEmit
+- 다수 문서 연속 open/close 시 DevTools Memory 탭 blob: URL 잔존 여부 확인
+```
+
+### ~~🟡 MEDIUM — users.controller.ts syncUser @AuditLog 누락 (Mode 0)~~ ✅ 완료 (이전 세션)
+
+```
+Guard/AuditLog 이슈:
+- apps/backend/src/modules/users/users.controller.ts:75-89
+
+@InternalServiceOnly() @Post('sync') syncUser — NextAuth 로그인 시
+사용자 DB upsert (생성 또는 업데이트)를 수행하는 내부 엔드포인트.
+IDOR 위험은 없으나 사용자 생성/업데이트가 감사 로그에 기록되지 않음.
+→ 보안 이벤트 추적 공백 (언제 누가 처음 로그인했는지 audit 불가).
+
+현재 코드:
+  @InternalServiceOnly()
+  @Post('sync')
+  @UsePipes(CreateUserValidationPipe)
+  async syncUser(@Body() createUserDto: CreateUserDto): Promise<User>
+  // @AuditLog 없음
+
+작업:
+syncUser 메서드에 @AuditLog 추가:
+  @InternalServiceOnly()
+  @Post('sync')
+  @UsePipes(CreateUserValidationPipe)
+  @AuditLog({ action: AuditAction.CREATE, entityType: AuditEntityType.USER })
+  async syncUser(@Body() createUserDto: CreateUserDto): Promise<User>
+
+주의:
+- @InternalServiceOnly()는 @SkipPermissions() + @SkipAuditUser() 계열인지
+  확인 (AuditLog 데코레이터 병행 가능 여부)
+- syncUser는 upsert이므로 CREATE 또는 UPDATE 중 어느 action이 적절한지
+  판단 필요 (CREATE로 통일하거나 서비스 반환값으로 분기)
+- 내부 API Key 인증이므로 req.user가 없을 수 있음 — AuditLog 데코레이터가
+  userId 없는 경우를 처리하는지 확인 (시스템 행위자 처리)
+
+검증:
+- pnpm --filter backend run tsc --noEmit
+- pnpm --filter backend run test -- --testPathPattern='users.controller'
+- grep '@AuditLog' apps/backend/src/modules/users/users.controller.ts → syncUser 위치에 1 hit
+```
+
+### ~~🟡 MEDIUM — equipment_incident_history occurredAt 복합 인덱스 누락 (Mode 0 + DB)~~ ✅ 완료 (2026-04-14, 60차, migration 0023)
+
+```
+DB 인덱스 이슈:
+- packages/db/src/schema/equipment-incident-history.ts:29-35
+
+equipment_incident_history 테이블 인덱스 현황:
+  - equipmentIdIdx: (equipment_id) ✅
+  - nonConformanceIdIdx: (non_conformance_id) ✅
+  - reportedByIdx: (reported_by) ✅
+  - occurredAt: ❌ 인덱스 없음
+
+equipment_maintenance_history는 equipmentPerformedAtIdx (equipment_id + performed_at)
+복합 인덱스가 있는데, 동일 패턴의 equipment_incident_history만 누락.
+
+장비 상세 페이지에서 "기간별 사고 이력 조회"는
+WHERE equipment_id = ? ORDER BY occurred_at DESC 패턴 사용.
+현재는 equipment_id 단일 인덱스 후 occurred_at 정렬 → filesort 발생.
+
+작업:
+packages/db/src/schema/equipment-incident-history.ts의 인덱스 정의에 추가:
+  equipmentOccurredAtIdx: index('incident_history_equipment_occurred_at_idx').on(
+    table.equipmentId,
+    table.occurredAt
+  ),
+
+이후 마이그레이션 생성 및 적용:
+  pnpm --filter backend run db:generate
+  pnpm --filter backend run db:migrate
+
+주의:
+- equipmentIdIdx 단일 인덱스는 유지 (NC 연결 조회 등 occurred_at 없는 경우 사용)
+- 복합 인덱스 (equipment_id, occurred_at) 추가 시 단일 equipment_id 조회도
+  커버 인덱스로 처리됨 → equipmentIdIdx를 제거해도 되지만 명시성 유지 권장
+
+검증:
+- pnpm --filter backend run db:generate → 새 마이그레이션 파일 생성 확인
+- pnpm --filter backend run db:migrate → 성공
+- pnpm --filter backend run tsc --noEmit
+- grep 'incident_history_equipment_occurred_at_idx' packages/db/src → 1 hit
+```
+
+### ~~🟡 MEDIUM — CI download-artifact@v4 SHA 핀닝 누락 (Mode 0)~~ ✅ 완료 (2026-04-14, 60차 — v7 SHA 37930b1c로 핀닝, upload-artifact v7과 major 버전 통일)
+
+```
+CI 보안 이슈:
+- .github/workflows/main.yml:189
+
+actions/download-artifact@v4 가 플로팅 태그(@v4) 사용.
+동일 워크플로우의 다른 모든 actions는 SHA 핀닝됨:
+  - actions/checkout: SHA 핀닝 ✅
+  - actions/setup-node: SHA 핀닝 ✅
+  - actions/cache: SHA 핀닝 ✅
+  - actions/upload-artifact: SHA 핀닝 ✅ (예상)
+  - download-artifact@v4: ❌ 플로팅 태그
+
+공급망 공격(Supply Chain Attack) 방어 정책 불일치.
+v4 태그가 악성 커밋으로 교체되면 CI 파이프라인 전체 영향.
+
+작업:
+main.yml:189를 SHA 핀닝으로 교체:
+  현재:
+    uses: actions/download-artifact@v4
+  변경:
+    uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+
+SHA 확인 방법:
+  https://github.com/actions/download-artifact/releases 에서 최신 v4 릴리즈 SHA 확인
+  또는: gh api repos/actions/download-artifact/git/ref/tags/v4.3.0 --jq '.object.sha'
+
+주의:
+- upload-artifact와 download-artifact는 같은 major 버전(@v4)이어야 아티팩트 호환
+  SHA 핀닝 후에도 major 버전 일치 확인 (v4.x.x)
+- 워크플로우 내 download-artifact 호출이 여러 곳인지 전수 확인:
+  grep 'download-artifact' .github/workflows/ -r
+
+검증:
+- grep 'download-artifact@v4' .github/workflows/ -r → 0 hit
+- grep 'download-artifact@[a-f0-9]\{40\}' .github/workflows/ -r → 1+ hit
+- CI 파이프라인 정상 실행 확인
+```
 
 ## ~~55차 신규 — 54차 harness 중 발견 (1건, 2026-04-14)~~ ✅ 완료 (2026-04-14)
 

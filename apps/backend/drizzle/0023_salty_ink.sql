@@ -1,0 +1,2 @@
+DROP INDEX "incident_history_occurred_at_idx";--> statement-breakpoint
+CREATE INDEX "incident_history_equipment_occurred_at_idx" ON "equipment_incident_history" USING btree ("equipment_id","occurred_at");

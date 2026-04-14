@@ -75,6 +75,7 @@ export class UsersController {
   @InternalServiceOnly()
   @Post('sync')
   @UsePipes(CreateUserValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'response.id' })
   @ApiOperation({
     summary: '사용자 동기화 (Upsert)',
     description:

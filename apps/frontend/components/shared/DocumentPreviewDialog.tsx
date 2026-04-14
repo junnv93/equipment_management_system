@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ export function DocumentPreviewDialog({
 }: DocumentPreviewDialogProps) {
   const t = useTranslations('equipment.attachmentsTab');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isBlob, setIsBlob] = useState(false);
+  const blobUrlRef = useRef<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imageZoom, setImageZoom] = useState(1);
@@ -38,8 +38,10 @@ export function DocumentPreviewDialog({
     setError(null);
     try {
       const result = await documentApi.getPreviewUrl(doc.id);
+      if (result.isBlob) {
+        blobUrlRef.current = result.url;
+      }
       setPreviewUrl(result.url);
-      setIsBlob(result.isBlob);
     } catch {
       setError(t('previewError'));
     } finally {
@@ -54,11 +56,12 @@ export function DocumentPreviewDialog({
       loadPreview();
     }
     return () => {
-      if (isBlob && previewUrl) {
-        window.URL.revokeObjectURL(previewUrl);
+      if (blobUrlRef.current) {
+        window.URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup on unmount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps 최소화로 open/doc 변경 시만 재실행, cleanup은 ref로 stale closure 해결
   }, [open, doc?.id]);
 
   const handleDownload = async () => {

@@ -29,6 +29,11 @@ export const equipmentIncidentHistory = pgTable(
   (table) => ({
     // 장비별 사고 이력 조회 최적화
     equipmentIdIdx: index('incident_history_equipment_id_idx').on(table.equipmentId),
+    // 장비별 기간 조회 최적화: WHERE equipment_id = ? ORDER BY occurred_at DESC (커버 인덱스)
+    equipmentOccurredAtIdx: index('incident_history_equipment_occurred_at_idx').on(
+      table.equipmentId,
+      table.occurredAt
+    ),
     // 부적합 연결 조회 최적화
     nonConformanceIdIdx: index('incident_history_nc_id_idx').on(table.nonConformanceId),
     reportedByIdx: index('incident_history_reported_by_idx').on(table.reportedBy),
