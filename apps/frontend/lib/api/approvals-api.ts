@@ -69,8 +69,10 @@ interface EquipmentRequestApprovalRow {
   requester?: { name?: string; team?: { name?: string } };
 }
 
-/** 교정계획서 응답 행 — 백엔드 CalibrationPlan (플랫 LEFT JOIN 포함) */
+/** 교정계획서 응답 행 — 백엔드 CalibrationPlan (플랫 LEFT JOIN 포함)
+ * [key: string]: unknown — ApprovalItem.details: Record<string, unknown> 호환 필요 */
 interface CalibrationPlanApprovalRow {
+  [key: string]: unknown;
   id: string;
   status?: string;
   createdBy?: string;
@@ -81,8 +83,10 @@ interface CalibrationPlanApprovalRow {
   teamName?: string;
 }
 
-/** 소프트웨어 검증 응답 행 — 백엔드 SoftwareValidation (플랫 LEFT JOIN 포함) */
+/** 소프트웨어 검증 응답 행 — 백엔드 SoftwareValidation (플랫 LEFT JOIN 포함)
+ * [key: string]: unknown — ApprovalItem.details: Record<string, unknown> 호환 필요 */
 interface SoftwareValidationApprovalRow {
+  [key: string]: unknown;
   id: string;
   changedBy?: string;
   changerName?: string;
@@ -92,8 +96,10 @@ interface SoftwareValidationApprovalRow {
   softwareName?: string;
 }
 
-/** 중간점검 응답 행 — 백엔드 IntermediateCheck (플랫 LEFT JOIN 포함) */
+/** 중간점검 응답 행 — 백엔드 IntermediateCheck (플랫 LEFT JOIN 포함)
+ * [key: string]: unknown — ApprovalItem.details: Record<string, unknown> 호환 필요 */
 interface InspectionApprovalRow {
+  [key: string]: unknown;
   id?: string;
   calibrationId?: string;
   teamName?: string;
