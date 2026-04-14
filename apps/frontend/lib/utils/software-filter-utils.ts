@@ -27,13 +27,16 @@ export interface UITestSoftwareFilters {
   pageSize: number;
 }
 
+/** Select 컴포넌트 "전체" 센티널 값 (reports-filter-utils.ALL_SENTINEL와 동일 패턴) */
+export const ALL_SENTINEL = '_all';
+
 export const DEFAULT_UI_FILTERS: UITestSoftwareFilters = {
   search: '',
   testField: '',
   availability: '',
   manufacturer: '',
   page: 1,
-  pageSize: 20,
+  pageSize: DEFAULT_PAGE_SIZE,
 };
 
 /**

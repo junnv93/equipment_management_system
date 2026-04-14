@@ -34,12 +34,11 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   parseTestSoftwareFiltersFromSearchParams,
   convertFiltersToApiParams,
+  ALL_SENTINEL,
   type UITestSoftwareFilters,
 } from '@/lib/utils/software-filter-utils';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
-
-const ALL_VALUE = '__ALL__';
 
 export default function TestSoftwareListContent() {
   const t = useTranslations('software');
@@ -55,7 +54,7 @@ export default function TestSoftwareListContent() {
   const updateFilter = useCallback(
     (key: keyof UITestSoftwareFilters, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (value && value !== ALL_VALUE) {
+      if (value && value !== ALL_SENTINEL) {
         params.set(key, value);
       } else {
         params.delete(key);
@@ -148,14 +147,14 @@ export default function TestSoftwareListContent() {
           />
         </div>
         <Select
-          value={uiFilters.testField || ALL_VALUE}
-          onValueChange={(v) => updateFilter('testField', v === ALL_VALUE ? '' : v)}
+          value={uiFilters.testField || ALL_SENTINEL}
+          onValueChange={(v) => updateFilter('testField', v === ALL_SENTINEL ? '' : v)}
         >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder={t('list.filters.testField')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_VALUE}>{t('list.filters.allTestFields')}</SelectItem>
+            <SelectItem value={ALL_SENTINEL}>{t('list.filters.allTestFields')}</SelectItem>
             {TEST_FIELD_VALUES.map((field) => (
               <SelectItem key={field} value={field}>
                 {t(`testField.${field}`)}
@@ -164,14 +163,14 @@ export default function TestSoftwareListContent() {
           </SelectContent>
         </Select>
         <Select
-          value={uiFilters.availability || ALL_VALUE}
-          onValueChange={(v) => updateFilter('availability', v === ALL_VALUE ? '' : v)}
+          value={uiFilters.availability || ALL_SENTINEL}
+          onValueChange={(v) => updateFilter('availability', v === ALL_SENTINEL ? '' : v)}
         >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder={t('list.filters.availability')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL_VALUE}>{t('list.filters.allAvailability')}</SelectItem>
+            <SelectItem value={ALL_SENTINEL}>{t('list.filters.allAvailability')}</SelectItem>
             {SOFTWARE_AVAILABILITY_VALUES.map((av) => (
               <SelectItem key={av} value={av}>
                 {t(`availability.${av}`)}
