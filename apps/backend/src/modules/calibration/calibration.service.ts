@@ -1600,25 +1600,26 @@ export class CalibrationService extends VersionedBaseService {
       teamName: row.teamName || undefined,
     }));
 
+    const { overdueCount, pendingCount, dueCount } = flattenedItems.reduce(
+      (acc, cal) => {
+        if (!cal.intermediateCheckDate) return acc;
+        const ts = getUtcStartOfDay(new Date(cal.intermediateCheckDate)).getTime();
+        const todayTs = today.getTime();
+        if (ts < todayTs) acc.overdueCount++;
+        if (ts >= todayTs) acc.pendingCount++;
+        if (ts <= todayTs) acc.dueCount++;
+        return acc;
+      },
+      { overdueCount: 0, pendingCount: 0, dueCount: 0 }
+    );
+
     return {
       items: flattenedItems,
       meta: {
         totalItems: flattenedItems.length,
-        overdueCount: flattenedItems.filter((cal) => {
-          if (!cal.intermediateCheckDate) return false;
-          const d = getUtcStartOfDay(new Date(cal.intermediateCheckDate));
-          return d.getTime() < today.getTime();
-        }).length,
-        pendingCount: flattenedItems.filter((cal) => {
-          if (!cal.intermediateCheckDate) return false;
-          const d = getUtcStartOfDay(new Date(cal.intermediateCheckDate));
-          return d.getTime() >= today.getTime();
-        }).length,
-        dueCount: flattenedItems.filter((cal) => {
-          if (!cal.intermediateCheckDate) return false;
-          const d = getUtcStartOfDay(new Date(cal.intermediateCheckDate));
-          return d.getTime() <= today.getTime();
-        }).length,
+        overdueCount,
+        pendingCount,
+        dueCount,
       },
     };
   }
