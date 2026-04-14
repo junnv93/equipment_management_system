@@ -7,6 +7,7 @@
 
 ## 미완료 항목
 
+- [ ] **LOW**: `performance.integration.spec.ts` Rule 1 위반 — `equipment_management_test` 별도 DB 사용 → 단일 DB 패턴으로 수정 필요 — `apps/backend/src/database/tests/performance.integration.spec.ts` — 2026-04-14 (63차 발견)
 - [ ] **SHOULD**: `audit.controller.ts` 반환 타입 `Promise<unknown>` 4건 → 구체적 타입 명시 — `apps/backend/src/modules/audit/audit.controller.ts` (findAll/findOne/findByEntity/findByUser) — 2026-04-14 (verify-ssot Step 2a)
 - [ ] **SHOULD**: `users.controller.ts` SIGNATURE_ALLOWED_TYPES/SIGNATURE_MAX_SIZE 하드코딩 → shared-constants 상수화 — `apps/backend/src/modules/users/users.controller.ts:~185` — 2026-04-14 (verify-hardcoding, 도메인 정책 상수)
 - [ ] **SHOULD**: pnpm audit critical 2건(Axios) + high 1건(Next.js) 취약점 — `package.json` (pnpm.overrides 미티게이션 확인 또는 버전 업그레이드) — 2026-04-14 (verify-security)

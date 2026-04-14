@@ -90,8 +90,8 @@
     "@types/pg": "^8.20.0",
     "@types/pizzip": "^3.1.2",
     "@types/supertest": "^7.2.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
     "drizzle-kit": "^0.31.10",
     "drizzle-zod": "^0.8.3",
     "eslint": "^8.42.0",
@@ -157,7 +157,11 @@
       "^@equipment-management/shared-constants/(.*)$": "<rootDir>/../../../packages/shared-constants/src/$1"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "src/**/*.ts",
+      "!src/**/*.spec.ts",
+      "!src/**/*.d.ts",
+      "!src/main.ts",
+      "!src/database/migrations/**"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",

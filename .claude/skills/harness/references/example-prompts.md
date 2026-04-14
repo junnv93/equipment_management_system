@@ -159,7 +159,7 @@ line 14의 `import { z } from 'zod'`도 확인 필요 (z.string() 등 실제 사
 
 ---
 
-## 61차 신규 — 테스트 커버리지 + 의존성 감사 스캔 (4건, 2026-04-14)
+## 61차 신규 — 테스트 커버리지 + 의존성 감사 스캔 (4건, 2026-04-14) [HIGH 1건 진행중, 나머지 3건 완료]
 
 > **발견 배경 (2026-04-14, 61차)**: 테스트 커버리지 + 의존성 감사 3-agent 병렬 스캔 + 2차 검증.
 > FALSE POSITIVE: `zod workspace:*`(root pnpm.overrides `^4.3.5`로 오버라이드 정상), 컴포넌트 단위 테스트 전체 부재(E2E 의존 의도적 설계·227개 파일 일괄 작성 비실용), next-auth 5.0.0-beta(Next.js App Router 대응 의도적 선택), lodash 전체 패키지(`lodash/debounce` sub-path import → tree-shaking 정상).
@@ -216,7 +216,7 @@ line 14의 `import { z } from 'zod'`도 확인 필요 (z.string() 등 실제 사
 - pnpm --filter backend run tsc --noEmit
 ```
 
-### 🟡 MEDIUM — CI unit-test job에서 frontend jest 미실행 (Mode 0)
+### ~~🟡 MEDIUM — CI unit-test job에서 frontend jest 미실행 (Mode 0)~~ ✅ 완료 (2026-04-14, 63차)
 
 ```
 CI 커버리지 gap:
@@ -253,7 +253,7 @@ main.yml unit-test job의 "Run Unit Tests (with coverage)" step 이후에 추가
 - CI 파이프라인 로컬 시뮬레이션: pnpm --filter frontend run test -- --passWithNoTests → exit 0
 ```
 
-### 🟡 MEDIUM — backend jest collectCoverageFrom 너무 광범위 (Mode 0)
+### ~~🟡 MEDIUM — backend jest collectCoverageFrom 너무 광범위 (Mode 0)~~ ✅ 완료 (2026-04-14, 63차)
 
 ```
 Coverage 설정 이슈:
@@ -294,7 +294,7 @@ apps/backend/package.json의 collectCoverageFrom을 src/ 기준으로 좁힘:
 - grep '"collectCoverageFrom"' apps/backend/package.json → src/** 패턴 확인
 ```
 
-### 🟡 MEDIUM — @typescript-eslint v6(backend) vs v8(frontend) major 버전 불일치 (Mode 0)
+### ~~🟡 MEDIUM — @typescript-eslint v6(backend) vs v8(frontend) major 버전 불일치 (Mode 0)~~ ✅ 완료 (2026-04-14, 63차)
 
 ```
 의존성 불일치:

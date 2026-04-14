@@ -647,7 +647,13 @@ export class DataMigrationService {
   // ── Private Methods ──────────────────────────────────────────────────────────
 
   /** generateErrorReport 전달용 행 매핑 (단일/멀티시트 공통) */
-  private toErrorReportRows(rows: MigrationRowPreview[]) {
+  private toErrorReportRows(rows: MigrationRowPreview[]): Array<{
+    rowNumber: number;
+    status: string;
+    managementNumber?: string;
+    errors: Array<{ field: string; message: string }>;
+    data: Record<string, unknown>;
+  }> {
     return rows.map((r) => ({
       rowNumber: r.rowNumber,
       status: r.status,
@@ -722,7 +728,12 @@ export class DataMigrationService {
   }
 
   /** 행별 결과 집계 */
-  private buildSummary(rows: MigrationRowPreview[]) {
+  private buildSummary(rows: MigrationRowPreview[]): {
+    validRows: number;
+    errorRows: number;
+    duplicateRows: number;
+    warningRows: number;
+  } {
     const counts = { validRows: 0, errorRows: 0, duplicateRows: 0, warningRows: 0 };
     for (const row of rows) {
       if (row.status === 'valid') counts.validRows++;
