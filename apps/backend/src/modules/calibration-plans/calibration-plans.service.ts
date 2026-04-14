@@ -161,8 +161,8 @@ export class CalibrationPlansService extends VersionedBaseService {
         eq(equipment.managementMethod, 'external_calibration'),
         eq(equipment.isActive, true),
         // null nextCalibrationDate는 gte/lt가 자동으로 false → 기존 if 체크와 동일 동작
-        gte(equipment.nextCalibrationDate, startOfYear.toISOString()),
-        lt(equipment.nextCalibrationDate, endOfYear.toISOString()),
+        gte(equipment.nextCalibrationDate, startOfYear),
+        lt(equipment.nextCalibrationDate, endOfYear),
       ];
 
       // 차기교정일이 해당 연도 내인 장비만 포함 (WHERE push-down)
@@ -845,8 +845,8 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     if (year) {
       // null nextCalibrationDate는 gte/lt가 자동으로 false → 기존 if 체크와 동일 동작
-      conditions.push(gte(equipment.nextCalibrationDate, new Date(year, 0, 1).toISOString()));
-      conditions.push(lt(equipment.nextCalibrationDate, new Date(year + 1, 0, 1).toISOString()));
+      conditions.push(gte(equipment.nextCalibrationDate, new Date(year, 0, 1)));
+      conditions.push(lt(equipment.nextCalibrationDate, new Date(year + 1, 0, 1)));
     }
 
     const result = await this.db
