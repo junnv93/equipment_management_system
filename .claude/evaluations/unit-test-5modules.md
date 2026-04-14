@@ -9,7 +9,7 @@ verdict: PASS
 | ID | Criterion | Result | Evidence |
 |----|-----------|--------|----------|
 | M1 | TypeScript 컴파일 통과 | PASS | `tsc --noEmit` 0 errors |
-| M2 | 전체 백엔드 테스트 통과 | PASS | 668/668 tests, 50 suites |
+| M2 | 전체 백엔드 테스트 통과 | PASS | 671/671 tests, 50 suites |
 | M3 | 최소 describe 블록 수 | PASS | cables 8≥7; monitoring 9≥8; software-validations 9=9; test-software 9=9; intermediate-inspections 12=12 |
 | M4 | 각 describe 블록에 최소 1개 it | PASS | 5개 파일 전체 빈 describe 없음 |
 | M5 | 상태 전이 BadRequestException ≥3 per spec | PASS | software-validations 6개; intermediate-inspections 9개+ |

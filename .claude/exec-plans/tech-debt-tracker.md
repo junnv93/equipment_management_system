@@ -162,3 +162,5 @@
 - [x] `isManager`/`isAdmin` 함수 use-auth.ts에서 제거 — 해결: 2026-04-02 — `refactor/remove-unused-role-checks`
 - [x] equipment.json(en/ko) `softwareHistory.*` 레거시 i18n 키 블록 제거 — 해결: 2026-04-05
 - [x] E2E 테스트 payload stale softwareVersion — 이전 커밋에서 이미 정리됨 확인: 2026-04-05
+- [ ] **LOW**: monitoring.service.spec.ts — Map 크기 제한 도달 시 엔트리 제거 경계값 테스트 없음 — `apps/backend/src/modules/monitoring/__tests__/monitoring.service.spec.ts` — 2026-04-14 (unit-test-5modules S4)
+- [ ] **LOW**: test-software.service.spec.ts — 관리번호 P9999 다음 P10000 생성 경계값 테스트 없음 — `apps/backend/src/modules/test-software/__tests__/test-software.service.spec.ts` — 2026-04-14 (unit-test-5modules S4)
