@@ -509,6 +509,7 @@
   "planCreate": {
     "title": "교정계획서 작성",
     "description": "새로운 연간 교정계획서를 작성합니다. 외부교정 대상 장비가 자동으로 로드됩니다.",
+    "backToList": "교정계획 목록으로 돌아가기",
     "basicInfo": {
       "title": "기본 정보",
       "description": "계획서의 연도와 시험소를 선택하세요"

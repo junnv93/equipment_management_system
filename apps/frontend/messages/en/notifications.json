@@ -141,6 +141,7 @@
     "delete": "Delete",
     "moreActions": "More actions",
     "filterNotifications": "Filter notifications",
+    "notificationSettings": "Go to notification settings",
     "priorityLabels": {
       "high": "High",
       "medium": "Medium",

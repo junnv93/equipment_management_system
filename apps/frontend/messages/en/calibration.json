@@ -509,6 +509,7 @@
   "planCreate": {
     "title": "Create Calibration Plan",
     "description": "Create a new annual calibration plan. External calibration equipment will be loaded automatically.",
+    "backToList": "Back to calibration plans",
     "basicInfo": {
       "title": "Basic Information",
       "description": "Select the year and laboratory for the plan"
