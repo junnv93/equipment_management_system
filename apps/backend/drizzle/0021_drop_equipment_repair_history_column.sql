@@ -1,0 +1,2 @@
+ALTER TABLE "non_conformances" ADD CONSTRAINT "non_conformances_repair_history_id_repair_history_id_fk" FOREIGN KEY ("repair_history_id") REFERENCES "public"."repair_history"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "equipment" DROP COLUMN "repair_history";

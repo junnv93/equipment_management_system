@@ -129,7 +129,6 @@ export const equipment = pgTable(
     calibrationResult: text('calibration_result'), // 교정 결과
     correctionFactor: varchar('correction_factor', { length: 50 }), // 보정계수
     intermediateCheckSchedule: timestamp('intermediate_check_schedule'), // 중간점검일정
-    repairHistory: text('repair_history'), // @deprecated — repair_history 테이블 사용. 마이그레이션 후 제거 예정
 
     // 공용장비 필드 (프롬프트 8-1)
     // @see packages/schemas/src/enums.ts - SharedSourceEnum
