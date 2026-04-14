@@ -59,7 +59,9 @@ export const nonConformances = pgTable(
     resolutionType: varchar('resolution_type', { length: 50 }), // 해결 방법 (repair | recalibration | replacement | disposal | other)
 
     // 연결된 조치 기록
-    repairHistoryId: uuid('repair_history_id'), // 수리 기록 ID (1:1 관계)
+    repairHistoryId: uuid('repair_history_id').references(() => repairHistory.id, {
+      onDelete: 'set null',
+    }), // 수리 기록 ID (1:1 관계) — ON DELETE SET NULL (soft delete 정책)
     calibrationId: uuid('calibration_id'), // 교정 기록 ID (향후 확장용)
 
     // 조치 계획
