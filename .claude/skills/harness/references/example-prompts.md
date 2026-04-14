@@ -181,7 +181,7 @@ all-ids + invalidateAllDashboard → N rows 처리 시 global/dashboard가 N번 
 - invalidateCacheBatch 단위 테스트: N rows 업데이트 시 invalidateAllDashboard 1회 호출 확인
 ```
 
-### 🟡 MEDIUM — DB WHERE push-down: JS 인메모리 필터 → Drizzle gte/lt 조건 (Mode 1)
+### ~~🟡 MEDIUM — DB WHERE push-down: JS 인메모리 필터 → Drizzle gte/lt 조건 (Mode 1)~~ ✅ 완료 (2026-04-14 51차, commits 324c8813 + 7afc05be)
 
 ```
 시간복잡도 이슈 M1+M2+M4: DB에서 필터 가능한 조건을 JS에서 후처리하는 2가지 패턴.
