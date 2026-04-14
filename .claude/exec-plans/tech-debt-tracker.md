@@ -16,7 +16,7 @@
 - [x] **SHOULD**: `audit.controller.ts` 반환 타입 `Promise<unknown>` 4건 → 구체적 타입 명시 — 해결: 이전 세션 완료 (64차 확인)
 - [x] **SHOULD**: `users.controller.ts` SIGNATURE_ALLOWED_TYPES/SIGNATURE_MAX_SIZE 하드코딩 → shared-constants 상수화 — 해결: 2026-04-14 — 로컬 static 상수 제거 → `SIGNATURE_UPLOAD_LIMITS` (shared-constants) 사용 (64차 nc-route-debt harness)
 - [x] **SHOULD**: pnpm audit critical 2건(Axios) + high 1건(Next.js) 취약점 — 해결: 2026-04-14 — axios 1.14→1.15.0, next 16.2.2→16.2.3, next-intl 4.9.0→4.9.1, follow-redirects override >=1.16.0 추가. pnpm audit "No known vulnerabilities found" (65차 harness)
-- [ ] **LOW**: `AuthProviders.tsx` `getProviders()` → useState (NextAuth 설정값, TanStack Query 전환 검토) — `apps/frontend/components/auth/AuthProviders.tsx:25-48` — 2026-04-14 (verify-frontend-state, NextAuth 특수케이스로 낮은 우선순위)
+- [x] **LOW**: `AuthProviders.tsx` `getProviders()` → useState (NextAuth 설정값, TanStack Query 전환 검토) — 해결: 2026-04-14 — `useEffect+cancelled` 제거, `useQuery({staleTime:Infinity})` 전환으로 자동 캐싱 + 프로젝트 패턴 통일. tsc PASS (66차 harness)
 - [x] **SHOULD**: `ReportsContent.tsx` `additionalParams` 인라인 조건 로직 → `convertFiltersToApiParams` 위임 — 해결: 2026-04-14 — 4개 reportType-별 if 블록 제거, `convertFiltersToApiParams(filters)` 위임으로 SSOT 복원. handleReportTypeChange 리셋이 자연스럽게 필터링. tsc PASS (65차 harness)
 
 - [x] **SHOULD**: calibration.service.ts 정밀 scope 무효화 — 해결: 2026-04-12 — `invalidateCalibrationCache(id?, equipmentId?)` 시그니처 변경, `resolveEquipmentTeamId` 헬퍼 추가, 6개 호출 사이트에 equipmentId 전달. team-scoped (`:t:<teamId>:`) + global (`:g:`) 정밀 무효화 구현.

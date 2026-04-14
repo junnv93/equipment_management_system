@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getProviders } from 'next-auth/react';
 
 interface AuthProvidersState {
@@ -14,41 +14,19 @@ interface AuthProvidersProps {
   children: (state: AuthProvidersState) => React.ReactNode;
 }
 
-export function useAuthProviders() {
-  const [state, setState] = useState<AuthProvidersState>({
-    hasAzureAD: false,
-    hasCredentials: false,
-    providers: null,
-    isLoading: true,
+export function useAuthProviders(): AuthProvidersState {
+  const { data: providers, isLoading } = useQuery({
+    queryKey: ['auth', 'providers'],
+    queryFn: getProviders,
+    staleTime: Infinity, // 런타임에 변경되지 않는 서버 설정값
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    getProviders()
-      .then((providers) => {
-        if (!cancelled) {
-          setState({
-            hasAzureAD: !!providers?.['azure-ad'],
-            hasCredentials: !!providers?.credentials,
-            providers,
-            isLoading: false,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to load auth providers:', error);
-        if (!cancelled) {
-          setState((prev) => ({ ...prev, isLoading: false }));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return state;
+  return {
+    hasAzureAD: !!providers?.['azure-ad'],
+    hasCredentials: !!providers?.credentials,
+    providers: providers ?? null,
+    isLoading,
+  };
 }
 
 export function AuthProviders({ children }: AuthProvidersProps) {
