@@ -4,6 +4,7 @@ import {
   AUDIT_ACTION_VALUES,
   AUDIT_ENTITY_TYPE_VALUES,
   type AuditLogUserRole,
+  type AuditLogDetails,
 } from '@equipment-management/schemas';
 import { users } from './users';
 
@@ -13,15 +14,7 @@ export const auditAction = AUDIT_ACTION_VALUES;
 /** @see packages/schemas/src/enums.ts - AuditEntityTypeEnum (SSOT) */
 export const auditEntityType = AUDIT_ENTITY_TYPE_VALUES;
 
-/**
- * 감사 로그 상세 정보 타입
- */
-export interface AuditLogDetails {
-  previousValue?: Record<string, unknown>;
-  newValue?: Record<string, unknown>;
-  requestId?: string;
-  additionalInfo?: Record<string, unknown>;
-}
+export type { AuditLogDetails };
 
 /**
  * 감사 로그 테이블 스키마

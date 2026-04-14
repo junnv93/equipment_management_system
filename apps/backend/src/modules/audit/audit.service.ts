@@ -257,7 +257,7 @@ export class AuditService {
           }
         }
 
-        return { items: pageItems as unknown as SchemasAuditLog[], nextCursor, hasMore, summary };
+        return { items: pageItems as SchemasAuditLog[], nextCursor, hasMore, summary };
       },
       CACHE_TTL.MEDIUM
     );
