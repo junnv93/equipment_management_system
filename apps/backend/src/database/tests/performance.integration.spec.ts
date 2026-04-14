@@ -21,11 +21,11 @@ describe('Database Performance', () => {
       ],
     }).compile();
 
-    // 테스트를 위한 임시 DB 풀 생성
+    // Rule 1: 단일 DB 아키텍처 — 개발 DB(equipment_management)에서 직접 실행
     pool = new pg.Pool({
       connectionString:
         process.env.DATABASE_URL ||
-        'postgres://postgres:postgres@localhost:5432/equipment_management_test',
+        'postgres://postgres:postgres@localhost:5432/equipment_management',
     });
     // Note: drizzle-orm/postgres-js expects postgres.js client, not pg.Pool
     // This test file uses raw pg.Pool queries, so db variable is not used
