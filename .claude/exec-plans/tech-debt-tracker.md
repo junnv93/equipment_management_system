@@ -7,7 +7,7 @@
 
 ## 미완료 항목
 
-- [ ] **LOW**: `performance.integration.spec.ts` Rule 1 위반 — `equipment_management_test` 별도 DB 사용 → 단일 DB 패턴으로 수정 필요 — `apps/backend/src/database/tests/performance.integration.spec.ts` — 2026-04-14 (63차 발견)
+- [x] **LOW**: `performance.integration.spec.ts` Rule 1 위반 — 해결: 2026-04-14 — `equipment_management_test` → `equipment_management` 폴백 수정, Rule 1 단일 DB 아키텍처 준수 (65차 harness)
 - [x] **SHOULD**: `error-reporter.ts:105` `process.env.NEXT_PUBLIC_API_URL` 직접 접근 → `api-config.ts`의 `API_BASE_URL` import로 교체 — 해결: 2026-04-14 (64차 nc-route-debt harness)
 - [x] **SHOULD**: `history-card.service.ts` `.limit(50)` 매직 넘버 7건 → shared-constants 상수화 — 해결: 2026-04-14 — `HISTORY_CARD_QUERY_LIMIT = 50` (shared-constants/business-rules) 7곳 교체 (64차 nc-route-debt harness)
 - [x] **SHOULD**: `form-template-export.service.ts` `.limit(1000)/.limit(500)` 매직 넘버 → shared-constants 상수화 — 해결: 2026-04-14 — `EXPORT_QUERY_LIMITS.FULL_EXPORT/SECTION_EXPORT` 교체 (이전 세션 완료, 64차 확인)
