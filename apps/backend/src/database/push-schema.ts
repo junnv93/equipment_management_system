@@ -130,7 +130,6 @@ async function pushSchema(): Promise<void> {
         calibration_result text,
         correction_factor varchar(50),
         intermediate_check_schedule timestamp,
-        repair_history text,
         is_shared boolean DEFAULT false NOT NULL,
         shared_source varchar(50),
         created_at timestamp DEFAULT now(),

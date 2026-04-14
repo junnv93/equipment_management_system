@@ -217,7 +217,9 @@
     "technical_manager": "Technical Manager",
     "quality_manager": "Quality Manager",
     "lab_manager": "Lab Manager",
-    "system_admin": "System Admin"
+    "system_admin": "System Admin",
+    "system": "System",
+    "unknown": "Unknown"
   },
   "userStatus": {
     "active": "Active",

@@ -217,7 +217,9 @@
     "technical_manager": "기술책임자",
     "quality_manager": "품질책임자",
     "lab_manager": "시험소장",
-    "system_admin": "시스템 관리자"
+    "system_admin": "시스템 관리자",
+    "system": "시스템",
+    "unknown": "알 수 없음"
   },
   "userStatus": {
     "active": "활성",
