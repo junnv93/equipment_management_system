@@ -1,6 +1,6 @@
 'use client';
 
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -231,56 +231,34 @@ function EquipmentFiltersComponent({
     return count;
   }, [filters.managementMethod, filters.classification, filters.isShared, filters.teamId]);
 
-  // 활성 필터 배지 라벨 함수들
-  const getStatusLabel = useCallback(
-    (status: EquipmentStatus) => {
-      return statusOptions.find((opt) => opt.value === status)?.label || status;
-    },
+  // 활성 필터 배지 라벨 — options.find() O(k) → Map.get() O(1)
+  const statusLabelMap = useMemo(
+    () => new Map(statusOptions.map((opt) => [opt.value, opt.label])),
     [statusOptions]
   );
-
-  const getSiteLabel = useCallback(
-    (site: Site) => {
-      return siteOptions.find((opt) => opt.value === site)?.label || site;
-    },
+  const siteLabelMap = useMemo(
+    () => new Map(siteOptions.map((opt) => [opt.value, opt.label])),
     [siteOptions]
   );
-
-  const getManagementMethodLabel = useCallback(
-    (method: ManagementMethod) => {
-      return managementMethodOptions.find((opt) => opt.value === method)?.label || method;
-    },
+  const managementMethodLabelMap = useMemo(
+    () => new Map(managementMethodOptions.map((opt) => [opt.value, opt.label])),
     [managementMethodOptions]
   );
-
-  const getClassificationLabel = useCallback(
-    (classification: Classification) => {
-      return (
-        classificationOptions.find((opt) => opt.value === classification)?.label || classification
-      );
-    },
+  const classificationLabelMap = useMemo(
+    () => new Map(classificationOptions.map((opt) => [opt.value, opt.label])),
     [classificationOptions]
   );
-
-  const getSharedLabel = useCallback(
-    (isShared: 'all' | 'shared' | 'normal') => {
-      return sharedOptions.find((opt) => opt.value === isShared)?.label || isShared;
-    },
+  const sharedLabelMap = useMemo(
+    () => new Map(sharedOptions.map((opt) => [opt.value, opt.label])),
     [sharedOptions]
   );
-
-  const getCalibrationDueLabel = useCallback(
-    (filter: CalibrationDueFilter) => {
-      return calibrationDueOptions.find((opt) => opt.value === filter)?.label || filter;
-    },
+  const calibrationDueLabelMap = useMemo(
+    () => new Map(calibrationDueOptions.map((opt) => [opt.value, opt.label])),
     [calibrationDueOptions]
   );
-
-  const getTeamLabel = useCallback(
-    (teamId: string) => {
-      return teamOptions.find((opt) => opt.value === teamId)?.label || t('filters.unknownTeam');
-    },
-    [teamOptions, t]
+  const teamLabelMap = useMemo(
+    () => new Map(teamOptions.map((opt) => [opt.value, opt.label])),
+    [teamOptions]
   );
 
   return (
@@ -463,20 +441,26 @@ function EquipmentFiltersComponent({
         >
           {filters.site && !isSiteFixed && (
             <ActiveFilterBadge
-              label={t('filters.badgeSite', { label: getSiteLabel(filters.site) })}
+              label={t('filters.badgeSite', {
+                label: siteLabelMap.get(filters.site) ?? filters.site,
+              })}
               onRemove={() => onSiteChange('')}
             />
           )}
           {filters.status && (
             <ActiveFilterBadge
-              label={t('filters.badgeStatus', { label: getStatusLabel(filters.status) })}
+              label={t('filters.badgeStatus', {
+                label: statusLabelMap.get(filters.status) ?? filters.status,
+              })}
               onRemove={() => onStatusChange('')}
             />
           )}
           {filters.managementMethod && (
             <ActiveFilterBadge
               label={t('filters.badgeCalibration', {
-                label: getManagementMethodLabel(filters.managementMethod),
+                label:
+                  managementMethodLabelMap.get(filters.managementMethod) ??
+                  filters.managementMethod,
               })}
               onRemove={() => onManagementMethodChange('')}
             />
@@ -484,28 +468,34 @@ function EquipmentFiltersComponent({
           {filters.classification && (
             <ActiveFilterBadge
               label={t('filters.badgeClassification', {
-                label: getClassificationLabel(filters.classification),
+                label: classificationLabelMap.get(filters.classification) ?? filters.classification,
               })}
               onRemove={() => onClassificationChange('')}
             />
           )}
           {filters.isShared !== 'all' && (
             <ActiveFilterBadge
-              label={t('filters.badgeShared', { label: getSharedLabel(filters.isShared) })}
+              label={t('filters.badgeShared', {
+                label: sharedLabelMap.get(filters.isShared) ?? filters.isShared,
+              })}
               onRemove={() => onIsSharedChange('all')}
             />
           )}
           {filters.calibrationDueFilter !== 'all' && (
             <ActiveFilterBadge
               label={t('filters.badgeCalibrationDue', {
-                label: getCalibrationDueLabel(filters.calibrationDueFilter),
+                label:
+                  calibrationDueLabelMap.get(filters.calibrationDueFilter) ??
+                  filters.calibrationDueFilter,
               })}
               onRemove={() => onCalibrationDueFilterChange('all')}
             />
           )}
           {filters.teamId && (
             <ActiveFilterBadge
-              label={t('filters.badgeTeam', { label: getTeamLabel(filters.teamId) })}
+              label={t('filters.badgeTeam', {
+                label: teamLabelMap.get(filters.teamId) ?? t('filters.unknownTeam'),
+              })}
               onRemove={() => onTeamIdChange('')}
             />
           )}

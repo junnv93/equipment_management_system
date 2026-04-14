@@ -104,12 +104,16 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
     return groups;
   }, [teams]);
 
-  // 전체 통계
-  const totalMemberCount = useMemo(
-    () => teams.reduce((acc, team) => acc + (team.memberCount || 0), 0),
-    [teams]
-  );
-  const noLeaderCount = useMemo(() => teams.filter((team) => !team.leaderName).length, [teams]);
+  // 전체 통계 — 단일 순회로 통합
+  const { totalMemberCount, noLeaderCount } = useMemo(() => {
+    let memberCount = 0;
+    let noLeader = 0;
+    for (const team of teams) {
+      memberCount += team.memberCount ?? 0;
+      if (!team.leaderName) noLeader++;
+    }
+    return { totalMemberCount: memberCount, noLeaderCount: noLeader };
+  }, [teams]);
 
   if (error) {
     return (
@@ -304,11 +308,15 @@ function SitePanel({
   t,
 }: SitePanelProps) {
   const siteLabels = useSiteLabels();
-  const memberCount = useMemo(
-    () => teams.reduce((acc, team) => acc + (team.memberCount || 0), 0),
-    [teams]
-  );
-  const noLeaderCount = useMemo(() => teams.filter((team) => !team.leaderName).length, [teams]);
+  const { memberCount, noLeaderCount } = useMemo(() => {
+    let count = 0;
+    let noLeader = 0;
+    for (const team of teams) {
+      count += team.memberCount ?? 0;
+      if (!team.leaderName) noLeader++;
+    }
+    return { memberCount: count, noLeaderCount: noLeader };
+  }, [teams]);
 
   return (
     <div className={SITE_PANEL_TOKENS.panel}>
