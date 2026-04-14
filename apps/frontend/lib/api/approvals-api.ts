@@ -37,9 +37,71 @@ import equipmentApi from './equipment-api';
 import { transformArrayResponse, transformSingleResponse } from './utils/response-transformers';
 
 // ============================================================================
-// Disposal API 페이로드 타입 (SSOT: 백엔드 DTO와 일치)
-// @see apps/backend/src/modules/equipment/dto/disposal.dto.ts
+// Approval Mapper 전용 백엔드 응답 DTO 인터페이스 (@internal — approvals-api 전용)
+// 각 타입은 백엔드가 반환하는 플랫/중첩 응답 형태를 TypeScript로 표현.
+// Record<string, unknown> 캐스트를 제거하기 위한 SSOT 타입 정의.
 // ============================================================================
+
+/** 폐기 요청 응답 행 — 백엔드 DisposalRequest + relations */
+interface DisposalApprovalRow {
+  id: string;
+  requestedBy?: string;
+  requestedAt?: string;
+  reason?: string;
+  reasonDetail?: string;
+  equipmentId?: string;
+  reviewOpinion?: string;
+  reviewedAt?: string;
+  equipment?: { name?: string; managementNumber?: string };
+  requester?: { name?: string; team?: { name?: string } };
+}
+
+/** 장비 요청 응답 행 — 백엔드 EquipmentRequest + relations */
+interface EquipmentRequestApprovalRow {
+  id: string;
+  requestType?: string;
+  requestedBy?: string;
+  requestedAt?: string;
+  approvalStatus?: string;
+  requestData?: string | Record<string, string>;
+  equipmentId?: string;
+  equipment?: { name?: string };
+  requester?: { name?: string; team?: { name?: string } };
+}
+
+/** 교정계획서 응답 행 — 백엔드 CalibrationPlan (플랫 LEFT JOIN 포함) */
+interface CalibrationPlanApprovalRow {
+  id: string;
+  status?: string;
+  createdBy?: string;
+  createdAt?: string;
+  year?: string | number;
+  siteId?: string;
+  authorName?: string;
+  teamName?: string;
+}
+
+/** 소프트웨어 검증 응답 행 — 백엔드 SoftwareValidation (플랫 LEFT JOIN 포함) */
+interface SoftwareValidationApprovalRow {
+  id: string;
+  changedBy?: string;
+  changerName?: string;
+  teamName?: string;
+  changedAt?: string;
+  createdAt?: string;
+  softwareName?: string;
+}
+
+/** 중간점검 응답 행 — 백엔드 IntermediateCheck (플랫 LEFT JOIN 포함) */
+interface InspectionApprovalRow {
+  id?: string;
+  calibrationId?: string;
+  teamName?: string;
+  team?: string;
+  nextIntermediateCheckDate?: string;
+  createdAt?: string;
+  equipmentName?: string;
+}
 
 // ============================================================================
 // 통합 승인 상태 타입
@@ -459,7 +521,7 @@ class ApprovalsApi {
   private async getPendingPlanReviews(): Promise<ApprovalItem[]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.CALIBRATION_PLANS.PENDING_REVIEW);
-      const items = transformArrayResponse<Record<string, unknown>>(response);
+      const items = transformArrayResponse<CalibrationPlanApprovalRow>(response);
 
       return items.map((item) => this.mapPlanToApprovalItem(item, 'plan_review'));
     } catch {
@@ -473,7 +535,7 @@ class ApprovalsApi {
   private async getPendingPlanFinals(): Promise<ApprovalItem[]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.CALIBRATION_PLANS.PENDING_APPROVAL);
-      const items = transformArrayResponse<Record<string, unknown>>(response);
+      const items = transformArrayResponse<CalibrationPlanApprovalRow>(response);
 
       return items.map((item) => this.mapPlanToApprovalItem(item, 'plan_final'));
     } catch {
@@ -487,7 +549,7 @@ class ApprovalsApi {
   private async getPendingEquipmentApprovals(_teamId?: string): Promise<ApprovalItem[]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING);
-      const items = transformArrayResponse<Record<string, unknown>>(response);
+      const items = transformArrayResponse<EquipmentRequestApprovalRow>(response);
       return items.map((item) => this.mapEquipmentRequestToApprovalItem(item));
     } catch {
       return [];
@@ -500,7 +562,7 @@ class ApprovalsApi {
   private async getPendingSoftwareApprovals(): Promise<ApprovalItem[]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.SOFTWARE_VALIDATIONS.PENDING);
-      const items = transformArrayResponse<Record<string, unknown>>(response);
+      const items = transformArrayResponse<SoftwareValidationApprovalRow>(response);
 
       return items.map((item) => this.mapSoftwareToApprovalItem(item));
     } catch {
@@ -535,7 +597,7 @@ class ApprovalsApi {
       const response = await apiClient.get(
         `${API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL}?${params.toString()}`
       );
-      const items = transformArrayResponse<Record<string, unknown>>(response);
+      const items = transformArrayResponse<InspectionApprovalRow>(response);
 
       return items.map((item) => this.mapInspectionToApprovalItem(item));
     } catch {
@@ -549,7 +611,7 @@ class ApprovalsApi {
   private async getPendingDisposalReviews(): Promise<ApprovalItem[]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.DISPOSAL.PENDING_REVIEW);
-      const items = transformArrayResponse<Record<string, unknown>>(response);
+      const items = transformArrayResponse<DisposalApprovalRow>(response);
 
       return items.map((item) => this.mapDisposalToApprovalItem(item, 'disposal_review'));
     } catch {
@@ -563,7 +625,7 @@ class ApprovalsApi {
   private async getPendingDisposalFinals(): Promise<ApprovalItem[]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.DISPOSAL.PENDING_APPROVAL);
-      const items = transformArrayResponse<Record<string, unknown>>(response);
+      const items = transformArrayResponse<DisposalApprovalRow>(response);
 
       return items.map((item) => this.mapDisposalToApprovalItem(item, 'disposal_final'));
     } catch {
@@ -964,20 +1026,20 @@ class ApprovalsApi {
 
   /**
    * Type guard: Check if data is a Checkout
+   * typeof !== 'object' 이후 in 연산자가 직접 동작 — Record 캐스트 불필요
    */
   private isCheckout(data: unknown): data is Checkout {
     if (!data || typeof data !== 'object') return false;
-    const obj = data as Record<string, unknown>;
-    return 'equipmentIds' in obj || 'destination' in obj || 'purpose' in obj;
+    return 'equipmentIds' in data || 'destination' in data || 'purpose' in data;
   }
 
   /**
    * Type guard: Check if data is an EquipmentImport
+   * typeof !== 'object' 이후 in 연산자가 직접 동작 — Record 캐스트 불필요
    */
   private isEquipmentImport(data: unknown): data is EquipmentImport {
     if (!data || typeof data !== 'object') return false;
-    const obj = data as Record<string, unknown>;
-    return 'sourceType' in obj && ('vendorName' in obj || 'ownerDepartment' in obj);
+    return 'sourceType' in data && ('vendorName' in data || 'ownerDepartment' in data);
   }
 
   private mapCalibrationToApprovalItem(calibration: Calibration): ApprovalItem {
@@ -1016,10 +1078,8 @@ class ApprovalsApi {
     category: 'outgoing' | 'incoming'
   ): ApprovalItem {
     const equipmentNames = checkout.equipment?.map((e) => e.name).join(', ') || 'Equipment';
-
-    // user.team 관계를 통해 팀 정보 추출
-    const user = checkout.user as Record<string, unknown> | undefined;
-    const team = user?.team as Record<string, unknown> | undefined;
+    // user.team: checkout-api.ts의 Checkout.user에 team 필드 추가됨 — 캐스트 불필요
+    const team = checkout.user?.team;
 
     return {
       id: checkout.id,
@@ -1027,7 +1087,7 @@ class ApprovalsApi {
       status: this.mapCheckoutStatus(checkout.status),
       requesterId: checkout.requesterId || checkout.userId || '',
       requesterName: checkout.user?.name || 'Unknown',
-      requesterTeam: team?.name ? String(team.name) : '',
+      requesterTeam: team?.name ?? '',
       requestedAt: checkout.createdAt,
       summary:
         category === 'outgoing'
@@ -1046,42 +1106,42 @@ class ApprovalsApi {
   }
 
   private mapPlanToApprovalItem(
-    plan: Record<string, unknown>,
+    plan: CalibrationPlanApprovalRow,
     category: 'plan_review' | 'plan_final'
   ): ApprovalItem {
     // 백엔드 findAll()이 LEFT JOIN으로 플랫 필드 반환: authorName, teamName
-    const siteId = String(plan.siteId || '');
+    const siteId = plan.siteId ?? '';
     const siteLabel = SITE_LABELS[siteId as keyof typeof SITE_LABELS] || siteId;
 
     return {
-      id: String(plan.id),
+      id: plan.id,
       category,
-      status: this.mapPlanStatus(String(plan.status)),
-      requesterId: String(plan.createdBy || ''),
-      requesterName: plan.authorName ? String(plan.authorName) : 'Unknown',
-      requesterTeam: plan.teamName ? String(plan.teamName) : '',
-      requestedAt: String(plan.createdAt || ''),
-      summary: `${plan.year || ''} ${siteLabel} Calibration Plan`,
-      summaryData: { type: 'calibration_plan', year: String(plan.year || ''), siteId },
+      status: this.mapPlanStatus(plan.status ?? ''),
+      requesterId: plan.createdBy ?? '',
+      requesterName: plan.authorName ?? 'Unknown',
+      requesterTeam: plan.teamName ?? '',
+      requestedAt: plan.createdAt ?? '',
+      summary: `${plan.year ?? ''} ${siteLabel} Calibration Plan`,
+      summaryData: { type: 'calibration_plan', year: String(plan.year ?? ''), siteId },
       details: plan,
       originalData: plan,
     };
   }
 
-  private mapSoftwareToApprovalItem(item: Record<string, unknown>): ApprovalItem {
+  private mapSoftwareToApprovalItem(item: SoftwareValidationApprovalRow): ApprovalItem {
     // 백엔드 findHistory()가 LEFT JOIN으로 플랫 필드 반환: changerName, teamName, equipmentName
     return {
-      id: String(item.id),
+      id: item.id,
       category: 'software_validation',
       status: 'pending_review',
-      requesterId: String(item.changedBy || ''),
-      requesterName: item.changerName ? String(item.changerName) : 'Unknown',
-      requesterTeam: item.teamName ? String(item.teamName) : '',
-      requestedAt: String(item.changedAt || item.createdAt || ''),
-      summary: `${item.softwareName || 'Software'} Change Request`,
+      requesterId: item.changedBy ?? '',
+      requesterName: item.changerName ?? 'Unknown',
+      requesterTeam: item.teamName ?? '',
+      requestedAt: item.changedAt ?? item.createdAt ?? '',
+      summary: `${item.softwareName ?? 'Software'} Change Request`,
       summaryData: {
         type: 'software_validation',
-        softwareName: String(item.softwareName || 'Software'),
+        softwareName: item.softwareName ?? 'Software',
       },
       details: item,
       originalData: item,
@@ -1118,44 +1178,44 @@ class ApprovalsApi {
     };
   }
 
-  private mapInspectionToApprovalItem(item: Record<string, unknown>): ApprovalItem {
+  private mapInspectionToApprovalItem(item: InspectionApprovalRow): ApprovalItem {
     // 백엔드 findAllIntermediateChecks()가 플랫 필드 반환: equipmentName, team, teamName
     return {
-      id: String(item.calibrationId || item.id),
+      id: item.calibrationId ?? item.id ?? '',
       category: 'inspection',
       status: 'pending',
       requesterId: '',
       requesterName: 'Auto Alert',
-      requesterTeam: item.teamName ? String(item.teamName) : item.team ? String(item.team) : '',
-      requestedAt: String(item.nextIntermediateCheckDate || item.createdAt || ''),
-      summary: `${item.equipmentName || 'Equipment'} Intermediate Check`,
-      summaryData: { type: 'inspection', equipmentName: String(item.equipmentName || 'Equipment') },
+      requesterTeam: item.teamName ?? item.team ?? '',
+      requestedAt: item.nextIntermediateCheckDate ?? item.createdAt ?? '',
+      summary: `${item.equipmentName ?? 'Equipment'} Intermediate Check`,
+      summaryData: { type: 'inspection', equipmentName: item.equipmentName ?? 'Equipment' },
       details: item,
       originalData: item,
     };
   }
 
   private mapDisposalToApprovalItem(
-    item: Record<string, unknown>,
+    item: DisposalApprovalRow,
     category: 'disposal_review' | 'disposal_final'
   ): ApprovalItem {
-    const equipment = item.equipment as Record<string, unknown> | undefined;
-    const requester = item.requester as Record<string, unknown> | undefined;
-    const team = requester?.team as Record<string, unknown> | undefined;
+    const equipment = item.equipment;
+    const requester = item.requester;
+    const team = requester?.team;
 
     return {
-      id: String(item.id),
+      id: item.id,
       category,
       status: category === 'disposal_review' ? UASVal.PENDING : UASVal.REVIEWED,
-      requesterId: String(item.requestedBy || ''),
-      requesterName: requester?.name ? String(requester.name) : 'Unknown',
-      requesterTeam: team?.name ? String(team.name) : '',
-      requestedAt: String(item.requestedAt || ''),
-      summary: `${equipment?.name || 'Equipment'} (${equipment?.managementNumber || ''}) Disposal ${category === 'disposal_review' ? 'Review' : 'Approval'}`,
+      requesterId: item.requestedBy ?? '',
+      requesterName: requester?.name ?? 'Unknown',
+      requesterTeam: team?.name ?? '',
+      requestedAt: item.requestedAt ?? '',
+      summary: `${equipment?.name ?? 'Equipment'} (${equipment?.managementNumber ?? ''}) Disposal ${category === 'disposal_review' ? 'Review' : 'Approval'}`,
       summaryData: {
         type: 'disposal',
-        equipmentName: String(equipment?.name || 'Equipment'),
-        managementNumber: String(equipment?.managementNumber || ''),
+        equipmentName: equipment?.name ?? 'Equipment',
+        managementNumber: equipment?.managementNumber ?? '',
         step: category === 'disposal_review' ? ('review' as const) : ('final' as const),
       },
       details: {
@@ -1170,20 +1230,23 @@ class ApprovalsApi {
     };
   }
 
-  private mapEquipmentRequestToApprovalItem(item: Record<string, unknown>): ApprovalItem {
-    const requester = item.requester as Record<string, unknown> | undefined;
-    const equipment = item.equipment as Record<string, unknown> | undefined;
-    const requestType = String(item.requestType || 'create');
+  private mapEquipmentRequestToApprovalItem(item: EquipmentRequestApprovalRow): ApprovalItem {
+    const requester = item.requester;
+    const equipment = item.equipment;
+    const requestType = item.requestType ?? 'create';
 
     // requestData에서 장비명 추출 시도
     let equipmentName = '';
     if (equipment?.name) {
-      equipmentName = String(equipment.name);
+      equipmentName = equipment.name;
     } else if (item.requestData) {
       try {
         const data =
           typeof item.requestData === 'string' ? JSON.parse(item.requestData) : item.requestData;
-        equipmentName = data.name || data.equipmentName || '';
+        equipmentName =
+          (data as Record<string, string>).name ??
+          (data as Record<string, string>).equipmentName ??
+          '';
       } catch {
         // JSON 파싱 실패 무시
       }
@@ -1194,16 +1257,13 @@ class ApprovalsApi {
       : `Equipment ${requestType} Request`;
 
     return {
-      id: String(item.id),
+      id: item.id,
       category: 'equipment',
-      status: this.mapEquipmentRequestStatus(String(item.approvalStatus || '')),
-      requesterId: String(item.requestedBy || ''),
-      requesterName: requester?.name ? String(requester.name) : 'Unknown',
-      requesterTeam: (() => {
-        const team = requester?.team as Record<string, unknown> | undefined;
-        return team?.name ? String(team.name) : '';
-      })(),
-      requestedAt: String(item.requestedAt || ''),
+      status: this.mapEquipmentRequestStatus(item.approvalStatus ?? ''),
+      requesterId: item.requestedBy ?? '',
+      requesterName: requester?.name ?? 'Unknown',
+      requesterTeam: requester?.team?.name ?? '',
+      requestedAt: item.requestedAt ?? '',
       summary,
       summaryData: { type: 'equipment_request', equipmentName, requestType },
       details: {

@@ -47,6 +47,7 @@ export interface Checkout {
     name: string;
     email: string;
     department: string;
+    team?: { name: string };
   };
   destination: string; // ✅ 백엔드 필드명에 맞게 수정 (location → destination)
   location?: string; // 레거시 호환성
