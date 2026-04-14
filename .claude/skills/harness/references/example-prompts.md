@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (62차 — 팀관리 페이지 성능 분석 스캔 완료. teams Promise.all 병렬화 + 복합 인덱스 harness 완료. CI turbo·drizzle-zod는 이미 구현됨으로 아카이브.)**
+> **마지막 정리일: 2026-04-14 (63차 — @typescript-eslint v8 + CI turbo캐시 + drizzle-zod 정리 완료. verify-implementation 14개 PASS (hardcoding 2건·filters 2건 pre-existing tech-debt 등재). review-architecture PASS. manage-skills 추가불필요.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
