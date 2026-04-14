@@ -49,50 +49,52 @@ export class TeamsService {
     const pageSize = query.pageSize || DEFAULT_PAGE_SIZE;
     const offset = (page - 1) * pageSize;
 
-    // 1) Count 쿼리 (JOIN 없이 teams 테이블만 — 정확한 팀 수)
-    const [{ total }] = await this.db
-      .select({ total: count() })
-      .from(teamsTable)
-      .where(whereClause);
+    // Count 쿼리와 데이터 쿼리를 병렬 실행 (독립적이므로 Promise.all 적용)
+    const [countResult, rows] = await Promise.all([
+      // 1) Count 쿼리 (JOIN 없이 teams 테이블만 — 정확한 팀 수)
+      this.db.select({ total: count() }).from(teamsTable).where(whereClause),
 
-    // 2) 데이터 쿼리 (DB 레벨 LIMIT/OFFSET)
-    const rows = await this.db
-      .select({
-        id: teamsTable.id,
-        name: teamsTable.name,
-        classification: teamsTable.classification,
-        site: teamsTable.site,
-        classificationCode: teamsTable.classificationCode,
-        description: teamsTable.description,
-        leaderId: teamsTable.leaderId,
-        createdAt: teamsTable.createdAt,
-        updatedAt: teamsTable.updatedAt,
-        // COUNT(DISTINCT ...) to avoid double-counting with multiple JOINs
-        memberCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${usersTable.isActive} = true THEN ${usersTable.id} END), 0)::int`,
-        equipmentCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${equipmentTable.isActive} = true THEN ${equipmentTable.id} END), 0)::int`,
-        // MAX() for leaderName since we're grouping - all rows will have same value
-        leaderName: sql<
-          string | null
-        >`MAX(CASE WHEN ${usersTable.id} = ${teamsTable.leaderId} THEN ${usersTable.name} END)`,
-      })
-      .from(teamsTable)
-      .leftJoin(usersTable, eq(usersTable.teamId, teamsTable.id))
-      .leftJoin(equipmentTable, eq(equipmentTable.teamId, teamsTable.id))
-      .where(whereClause)
-      .groupBy(
-        teamsTable.id,
-        teamsTable.name,
-        teamsTable.classification,
-        teamsTable.site,
-        teamsTable.classificationCode,
-        teamsTable.description,
-        teamsTable.leaderId,
-        teamsTable.createdAt,
-        teamsTable.updatedAt
-      )
-      .orderBy(teamsTable.name)
-      .limit(pageSize)
-      .offset(offset);
+      // 2) 데이터 쿼리 (DB 레벨 LIMIT/OFFSET)
+      this.db
+        .select({
+          id: teamsTable.id,
+          name: teamsTable.name,
+          classification: teamsTable.classification,
+          site: teamsTable.site,
+          classificationCode: teamsTable.classificationCode,
+          description: teamsTable.description,
+          leaderId: teamsTable.leaderId,
+          createdAt: teamsTable.createdAt,
+          updatedAt: teamsTable.updatedAt,
+          // COUNT(DISTINCT ...) to avoid double-counting with multiple JOINs
+          memberCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${usersTable.isActive} = true THEN ${usersTable.id} END), 0)::int`,
+          equipmentCount: sql<number>`COALESCE(COUNT(DISTINCT CASE WHEN ${equipmentTable.isActive} = true THEN ${equipmentTable.id} END), 0)::int`,
+          // MAX() for leaderName since we're grouping - all rows will have same value
+          leaderName: sql<
+            string | null
+          >`MAX(CASE WHEN ${usersTable.id} = ${teamsTable.leaderId} THEN ${usersTable.name} END)`,
+        })
+        .from(teamsTable)
+        .leftJoin(usersTable, eq(usersTable.teamId, teamsTable.id))
+        .leftJoin(equipmentTable, eq(equipmentTable.teamId, teamsTable.id))
+        .where(whereClause)
+        .groupBy(
+          teamsTable.id,
+          teamsTable.name,
+          teamsTable.classification,
+          teamsTable.site,
+          teamsTable.classificationCode,
+          teamsTable.description,
+          teamsTable.leaderId,
+          teamsTable.createdAt,
+          teamsTable.updatedAt
+        )
+        .orderBy(teamsTable.name)
+        .limit(pageSize)
+        .offset(offset),
+    ]);
+
+    const total = countResult[0].total;
 
     const items: Team[] = rows.map((row) => this.toTeam(row));
     const totalPages = Math.ceil(total / pageSize);

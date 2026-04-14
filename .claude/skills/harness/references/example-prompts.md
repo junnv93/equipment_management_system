@@ -1,8 +1,163 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (61차 — 테스트 커버리지 + 의존성 감사 스캔. 5개 모듈 테스트 완전 부재·CI frontend jest 미포함·backend collectCoverageFrom·@typescript-eslint 버전 불일치 4건 신규 등재.)**
+> **마지막 정리일: 2026-04-14 (62차 — 팀관리 페이지 성능 분석 스캔 완료. teams Promise.all 병렬화 + 복합 인덱스 harness 완료. CI turbo·drizzle-zod는 이미 구현됨으로 아카이브.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## ~~62차 신규 — 팀관리 페이지 성능 분석 스캔 (4건, 2026-04-14)~~ ✅ 전부 완료 (2026-04-14, 62차)
+
+> **발견 배경 (2026-04-14, 62차)**: 팀 관리 설정 페이지 체감 느림 → 성능 분석 3-agent 병렬 스캔 + 2차 검증.
+> FALSE POSITIVE: 프론트엔드 placeholderData 누락(필터/종속 쿼리는 placeholderData 불필요·맥락상 정상), 대형 컴포넌트 분리(기능 완결형 의도적 설계), CI 액션 버전(v4-v7 모두 최신), users (teamId, isActive) 복합 인덱스(단일 teamIdx 충분·critical 아님).
+> 이미 구현됨: CI build job turbo-cache(이전 세션에서 완료), drizzle-zod 데드 임포트(이전 세션에서 제거됨).
+> harness 완료 2건: teams.service.ts Promise.all 병렬화 + 복합 인덱스 마이그레이션.
+
+### 🟠 HIGH — teams.service.ts findAll 직렬 DB 쿼리 → Promise.all 병렬화 (Mode 0)
+
+```
+성능 이슈:
+- apps/backend/src/modules/teams/teams.service.ts:52-95
+
+findAll() 메서드에서 count 쿼리(line 53-56)와 data 쿼리(line 59-95)가 직렬 실행됨:
+  const [{ total }] = await this.db.select({ total: count() })... // 1st — blocks
+  const rows = await this.db.select(...).leftJoin(users).leftJoin(equipment)... // 2nd — waits
+
+두 쿼리는 완전히 독립적(서로 결과에 의존 없음) → Promise.all로 병렬 실행 가능.
+DashboardService는 이미 Promise.allSettled 병렬 패턴 사용 (line 629-647 참조).
+
+작업:
+findAll() 메서드의 count 쿼리와 data 쿼리를 Promise.all로 병렬 실행:
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [countResult, rows] = await Promise.all([
+    this.db.select({ total: count() }).from(teamsTable).where(whereClause),
+    this.db
+      .select({ ... })
+      .from(teamsTable)
+      .leftJoin(usersTable, eq(usersTable.teamId, teamsTable.id))
+      .leftJoin(equipmentTable, eq(equipmentTable.teamId, teamsTable.id))
+      .where(whereClause)
+      .groupBy(...)
+      .orderBy(teamsTable.name)
+      .limit(pageSize)
+      .offset(offset),
+  ]);
+
+  const total = countResult[0].total;
+
+반환값 구조는 기존과 동일하게 유지.
+
+검증:
+- pnpm --filter backend run tsc --noEmit → exit 0
+- pnpm --filter backend run test -- --testPathPattern='teams' → 기존 테스트 통과
+- 변경 전후 findAll 반환 타입 동일 확인
+```
+
+### 🟡 MEDIUM — teams 테이블 (site, classification) 복합 인덱스 누락 (Mode 2)
+
+```
+DB 인덱스 이슈:
+- packages/db/src/schema/teams.ts:32-38
+
+현재 teams 테이블 인덱스:
+  siteIdx: index('teams_site_idx').on(table.site)             // 단일
+  classificationIdx: index('teams_classification_idx').on(table.classification) // 단일 (중복)
+  leaderIdIdx: index('teams_leader_id_idx').on(table.leaderId)
+
+teams.service.ts findAll() 쿼리 패턴:
+  WHERE site = ? AND classification = ?  (site + classification 동시 필터)
+  LEFT JOIN users ON users.team_id = teams.id
+  LEFT JOIN equipment ON equipment.team_id = teams.id
+  GROUP BY teams.id, ...
+
+문제:
+- site + classification 동시 필터 시 두 단일 인덱스를 merge하거나 하나만 사용 → sequential scan 발생
+- classificationIdx 단독으로는 카디널리티 낮아 효율 떨어짐
+- 복합 인덱스 (site, classification)로 두 필터를 covering index scan으로 처리 가능
+
+작업:
+packages/db/src/schema/teams.ts 인덱스 섹션 수정:
+1. siteClassificationIdx: index('teams_site_classification_idx').on(table.site, table.classification) 추가
+2. classificationIdx 제거 (복합 인덱스 leading prefix로 커버됨)
+
+이후 마이그레이션 생성 + 적용:
+  pnpm --filter backend run db:generate
+  pnpm --filter backend run db:migrate
+
+검증:
+- pnpm --filter backend run tsc --noEmit → exit 0
+- pnpm --filter backend run db:generate → 새 migration SQL 파일 생성
+  (DROP INDEX teams_classification_idx + CREATE INDEX teams_site_classification_idx 포함)
+- pnpm --filter backend run db:migrate → exit 0
+- pnpm --filter backend run test → exit 0
+```
+
+### 🟡 MEDIUM — CI build job turbo 캐시 누락 (Mode 0)
+
+```
+CI 성능 이슈:
+- .github/workflows/main.yml:225-257
+
+build job에 node-modules-cache(line 239-247)는 있으나 turbo-cache가 없음.
+quality-gate job(line 62-69)과 unit-test job(line 169-176)에는 turbo-cache 존재:
+  - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+    id: turbo-cache
+    with:
+      path: .turbo
+      key: ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
+      restore-keys: |
+        ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-
+        ${{ runner.os }}-turbo-
+
+build job은 pnpm build (turbo 기반)를 실행하므로 이전 turbo 캐시가 있으면
+변경되지 않은 패키지 빌드를 skip할 수 있음. 현재는 매번 전체 재빌드.
+
+작업:
+build job의 node-modules-cache step(line 239) 앞에 turbo-cache step 추가:
+(quality-gate job의 turbo-cache 블록을 그대로 복사 — 동일한 key/restore-keys 사용)
+
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+        id: turbo-cache
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-turbo-
+
+검증:
+- .github/workflows/main.yml의 build job에 turbo-cache step 존재 확인
+- grep -n 'turbo-cache' .github/workflows/main.yml → quality-gate, unit-test, build 3곳 모두 hit
+- YAML 문법 유효성: cat .github/workflows/main.yml | python3 -c "import sys,yaml; yaml.safe_load(sys.stdin)" → exit 0
+```
+
+### 🟢 LOW — packages/db equipment.ts drizzle-zod 데드 임포트 제거 (Mode 0)
+
+```
+데드 임포트:
+- packages/db/src/schema/equipment.ts:13
+
+현재:
+  import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+
+line 190-196 주석에 명시:
+  "Zod v4 호환: drizzle-zod의 createInsertSchema는 타입 인스턴스화가 과도하게 깊어지는 문제"
+  → 사용 중단, @equipment-management/schemas 사용으로 전환 완료
+
+createInsertSchema, createSelectSchema는 파일 어디에서도 호출되지 않음.
+line 14의 `import { z } from 'zod'`도 확인 필요 (z.string() 등 실제 사용 여부).
+
+작업:
+1. packages/db/src/schema/equipment.ts:13의 drizzle-zod import 라인 제거
+2. z import(line 14)가 파일 내에서 실제 사용되는지 확인 후 미사용이면 함께 제거
+
+검증:
+- pnpm --filter @equipment-management/db run tsc --noEmit → exit 0
+- pnpm --filter backend run tsc --noEmit → exit 0
+- grep 'drizzle-zod' packages/db/src/schema/equipment.ts → 0 hit
+```
+
+---
 
 ## 61차 신규 — 테스트 커버리지 + 의존성 감사 스캔 (4건, 2026-04-14)
 

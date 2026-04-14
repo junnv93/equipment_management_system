@@ -30,10 +30,14 @@ export const teams = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => ({
-    // 사이트별 팀 조회 최적화
+    // 사이트별 팀 조회 최적화 (site 단독 필터용)
     siteIdx: index('teams_site_idx').on(table.site),
-    // 분류별 팀 조회 최적화 (신규)
-    classificationIdx: index('teams_classification_idx').on(table.classification),
+    // site + classification 동시 필터 covering index scan 최적화
+    // classificationIdx 단독보다 복합 인덱스가 효율적 (카디널리티 낮은 classification 선행 방지)
+    siteClassificationIdx: index('teams_site_classification_idx').on(
+      table.site,
+      table.classification
+    ),
     leaderIdIdx: index('teams_leader_id_idx').on(table.leaderId),
   })
 );
