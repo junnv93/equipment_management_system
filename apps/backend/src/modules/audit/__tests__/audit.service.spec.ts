@@ -90,7 +90,7 @@ describe('AuditService', () => {
       const dto = {
         userId: 'user-1',
         userName: '홍길동',
-        userRole: 'technical_manager',
+        userRole: 'technical_manager' as const,
         action: 'approve' as const,
         entityType: 'equipment' as const,
         entityId: 'eq-1',

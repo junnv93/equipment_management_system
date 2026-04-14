@@ -41,6 +41,7 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | `verify-sql-safety`     | SQL 안전성 검증                        | `apps/backend/src/modules/**/*.service.ts`                             |
 | `verify-e2e`            | E2E 테스트 패턴 검증                   | `tests/e2e/**/*.spec.ts`, `tests/e2e/shared/**`, `global-setup.ts`    |
 | `verify-seed-integrity` | 시드 인프라 3자 SSOT 삼각형 정합성     | `database/seed-data/**/*.seed.ts`, `seed-test-new.ts`, `verification.ts` |
+| `verify-workflows`      | 크리티컬 워크플로우 E2E 커버리지 검증  | `docs/workflows/critical-workflows.md`, `tests/e2e/workflows/**/*.spec.ts` |
 
 ## 워크플로우
 

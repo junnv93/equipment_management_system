@@ -31,6 +31,15 @@ export const SYSTEM_USER_UUID = '00000000-0000-0000-0000-000000000000';
 import type { AuditAction, AuditEntityType, UserRole } from './enums';
 export type { AuditAction, AuditEntityType, UserRole };
 
+/**
+ * 감사 로그 행위자 역할 유니온 타입
+ *
+ * - UserRole: 정상 인증된 사용자의 역할
+ * - 'system': 스케줄러·시스템 자동화 이벤트 (userId = SYSTEM_USER_UUID)
+ * - 'unknown': 인증 미확정 이벤트 (로그인 실패, 접근 거부 등)
+ */
+export type AuditLogUserRole = UserRole | 'system' | 'unknown';
+
 // ============================================================================
 // 감사 로그 액션
 // ============================================================================
@@ -172,7 +181,8 @@ export interface AuditLog {
   /** 행위자 ID. nullable: 사용자 삭제 시 SET NULL (감사 보존). userName 등 비정규화 컬럼으로 식별 */
   userId: string | null;
   userName: string;
-  userRole: UserRole;
+  /** 행위자 역할. @see AuditLogUserRole */
+  userRole: AuditLogUserRole;
   action: string;
   entityType: string;
   entityId: string;
@@ -193,8 +203,8 @@ export interface CreateAuditLogDto {
   /** 행위자 ID. null = 시스템/익명 (FK SET NULL 정책). userName/userRole로 식별 */
   userId: string | null;
   userName: string;
-  /** 행위자 역할 문자열. 유효 값: UserRole enum 또는 'system'(시스템 이벤트), 'unknown'(역할 미확정) */
-  userRole: string;
+  /** 행위자 역할. @see AuditLogUserRole */
+  userRole: AuditLogUserRole;
   action: string;
   entityType: string;
   entityId: string;

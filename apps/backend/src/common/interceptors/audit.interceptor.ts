@@ -14,7 +14,11 @@ import { tap } from 'rxjs/operators';
 import { AUDIT_LOG_KEY, AuditLogMetadata } from '../decorators/audit-log.decorator';
 import { SKIP_AUDIT_KEY } from '../decorators/skip-audit.decorator';
 import { AuditService } from '../../modules/audit/audit.service';
-import type { AuditAction, CreateAuditLogDto } from '@equipment-management/schemas';
+import type {
+  AuditAction,
+  AuditLogUserRole,
+  CreateAuditLogDto,
+} from '@equipment-management/schemas';
 import { AuditLogDetails } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
 import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
@@ -190,7 +194,7 @@ export class AuditInterceptor implements NestInterceptor {
     const auditLogDto: CreateAuditLogDto = {
       userId: user?.userId ?? null,
       userName: user?.name || 'Anonymous User',
-      userRole: user?.roles?.[0] || 'unknown',
+      userRole: (user?.roles?.[0] ?? 'unknown') as AuditLogUserRole,
       action: 'access_denied',
       entityType: metadata.entityType,
       entityId,
@@ -299,7 +303,7 @@ export class AuditInterceptor implements NestInterceptor {
       userId: user?.userId ?? null,
       userName: user?.name || 'Anonymous User',
       // SSOT: JwtUser.roles (배열의 첫 번째 역할)
-      userRole: user?.roles?.[0] || 'unknown',
+      userRole: (user?.roles?.[0] ?? 'unknown') as AuditLogUserRole,
       action: metadata.action,
       entityType: metadata.entityType,
       entityId,

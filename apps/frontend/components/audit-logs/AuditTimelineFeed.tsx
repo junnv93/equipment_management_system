@@ -18,7 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { SYSTEM_USER_UUID } from '@equipment-management/schemas';
-import type { AuditLog, AuditAction, UserRole } from '@equipment-management/schemas';
+import type { AuditLog, AuditAction, AuditLogUserRole } from '@equipment-management/schemas';
 
 /**
  * 가상화 레이아웃 상수 (row 높이 리터럴 인라인 하드코딩 금지)
@@ -122,7 +122,7 @@ type AuditRowProps = {
   diffArrowLabel: string;
   groupCountLabel: (count: number) => string;
   diffSummaryLabel: (args: { field: string; from: string; to: string }) => string;
-  roleLabel: (role: UserRole) => string;
+  roleLabel: (role: AuditLogUserRole) => string;
 };
 
 function AuditTimelineRow({
@@ -404,7 +404,7 @@ export function AuditTimelineFeed({
       groupCountLabel: (count: number) => t('timeline.groupCount', { count }),
       diffSummaryLabel: (args: { field: string; from: string; to: string }) =>
         t('timeline.diffSummary', args),
-      roleLabel: (role: UserRole) => tCommon(`userRoles.${role}`),
+      roleLabel: (role: AuditLogUserRole) => tCommon(`userRoles.${role}`),
     }),
     [flatItems, onLogClick, getActionLabel, getEntityTypeLabel, t, tCommon]
   );
