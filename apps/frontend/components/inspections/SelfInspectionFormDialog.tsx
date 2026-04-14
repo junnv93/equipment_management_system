@@ -47,6 +47,11 @@ interface SelfInspectionItemForm {
   checkResult: SelfInspectionItemJudgment | '';
 }
 
+interface SpecialNoteForm {
+  content: string;
+  date: string;
+}
+
 interface SelfInspectionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -71,6 +76,8 @@ export default function SelfInspectionFormDialog({
   const [inspectionDate, setInspectionDate] = useState('');
   const [overallResult, setOverallResult] = useState<SelfInspectionResult | ''>('');
   const [remarks, setRemarks] = useState('');
+  const [inspectionCycle, setInspectionCycle] = useState(6);
+  const [specialNotes, setSpecialNotes] = useState<SpecialNoteForm[]>([]);
   const [items, setItems] = useState<SelfInspectionItemForm[]>(
     DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({ checkItem: name, checkResult: '' }))
   );
@@ -79,6 +86,8 @@ export default function SelfInspectionFormDialog({
     setInspectionDate('');
     setOverallResult('');
     setRemarks('');
+    setInspectionCycle(6);
+    setSpecialNotes([]);
     setItems(DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({ checkItem: name, checkResult: '' })));
   };
 
@@ -89,6 +98,12 @@ export default function SelfInspectionFormDialog({
       setInspectionDate(initialData.inspectionDate?.slice(0, 10) ?? '');
       setOverallResult(initialData.overallResult ?? '');
       setRemarks(initialData.remarks ?? '');
+      setInspectionCycle(initialData.inspectionCycle ?? 6);
+      setSpecialNotes(
+        Array.isArray(initialData.specialNotes)
+          ? initialData.specialNotes.map((n) => ({ content: n.content, date: n.date ?? '' }))
+          : []
+      );
       const seeded =
         initialData.items && initialData.items.length > 0
           ? initialData.items.map((it) => ({
@@ -186,12 +201,16 @@ export default function SelfInspectionFormDialog({
     const payload = {
       inspectionDate,
       overallResult: overallResult as SelfInspectionResult,
+      inspectionCycle,
       items: items.map((item, idx) => ({
         itemNumber: idx + 1,
         checkItem: item.checkItem,
         checkResult: item.checkResult as SelfInspectionItemJudgment,
       })),
       ...(remarks ? { remarks } : {}),
+      ...(specialNotes.length > 0
+        ? { specialNotes: specialNotes.map((n) => ({ content: n.content, date: n.date || null })) }
+        : {}),
     };
 
     if (isEdit && initialData) {
@@ -215,8 +234,8 @@ export default function SelfInspectionFormDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 점검일 + 종합결과 */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* 점검일 + 종합결과 + 점검 주기 */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>{t('selfInspection.date')}</Label>
               <Input
@@ -240,6 +259,16 @@ export default function SelfInspectionFormDialog({
                   <SelectItem value="fail">{t('selfInspection.judgment.fail')}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('selfInspection.inspectionCycle.label')}</Label>
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={inspectionCycle}
+                onChange={(e) => setInspectionCycle(Number(e.target.value))}
+              />
             </div>
           </div>
 
@@ -301,6 +330,64 @@ export default function SelfInspectionFormDialog({
               placeholder={t('selfInspection.form.remarksPlaceholder')}
               rows={3}
             />
+          </div>
+
+          {/* 기타 특기사항 (QP-18-05 섹션 3) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">
+                {t('selfInspection.specialNotes.label')}
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSpecialNotes((prev) => [...prev, { content: '', date: '' }])}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                {t('selfInspection.specialNotes.addButton')}
+              </Button>
+            </div>
+            {specialNotes.length > 0 && (
+              <div className="space-y-2">
+                {specialNotes.map((note, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
+                      {index + 1}
+                    </span>
+                    <Input
+                      value={note.content}
+                      onChange={(e) =>
+                        setSpecialNotes((prev) =>
+                          prev.map((n, i) => (i === index ? { ...n, content: e.target.value } : n))
+                        )
+                      }
+                      placeholder={t('selfInspection.specialNotes.contentPlaceholder')}
+                      className="flex-1"
+                    />
+                    <Input
+                      value={note.date}
+                      onChange={(e) =>
+                        setSpecialNotes((prev) =>
+                          prev.map((n, i) => (i === index ? { ...n, date: e.target.value } : n))
+                        )
+                      }
+                      placeholder={t('selfInspection.specialNotes.datePlaceholder')}
+                      className="w-36"
+                      type="date"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSpecialNotes((prev) => prev.filter((_, i) => i !== index))}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

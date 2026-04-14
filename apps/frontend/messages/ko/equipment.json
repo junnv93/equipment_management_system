@@ -310,8 +310,9 @@
     },
     "statusLabel": {
       "draft": "초안",
-      "completed": "완료",
-      "confirmed": "확인됨"
+      "submitted": "제출됨",
+      "approved": "승인됨",
+      "rejected": "반려됨"
     },
     "form": {
       "title": "자체점검 기록 작성",
@@ -333,23 +334,45 @@
     },
     "actions": {
       "edit": "수정",
-      "confirm": "확인",
+      "submit": "제출",
+      "withdraw": "제출 취소",
+      "approve": "승인",
+      "reject": "반려",
+      "resubmit": "재제출",
       "delete": "삭제",
       "editAriaLabel": "{date} 자체점검 기록 수정",
-      "confirmAriaLabel": "{date} 자체점검 기록 확인 처리",
+      "submitAriaLabel": "{date} 자체점검 제출",
+      "withdrawAriaLabel": "{date} 자체점검 제출 취소",
+      "approveAriaLabel": "{date} 자체점검 승인",
+      "rejectAriaLabel": "{date} 자체점검 반려",
+      "resubmitAriaLabel": "{date} 자체점검 재제출",
       "deleteAriaLabel": "{date} 자체점검 기록 삭제",
       "menuAriaLabel": "{date} 자체점검 작업 메뉴",
       "toggleResultSections": "{date} 자체점검 결과 섹션 펼치기/접기",
       "exportForm": "양식 내보내기",
       "exportFormError": "자체점검 양식 내보내기에 실패했습니다."
     },
-    "confirmDialog": {
-      "title": "자체점검 확인",
-      "message": "이 자체점검 기록을 확인 처리하시겠습니까? 확인 후에는 수정/삭제할 수 없습니다.",
-      "action": "확인 처리",
-      "cancel": "취소",
-      "success": "자체점검이 확인되었습니다.",
-      "error": "확인 처리에 실패했습니다."
+    "toast": {
+      "submitSuccess": "자체점검이 제출되었습니다.",
+      "submitError": "제출에 실패했습니다.",
+      "withdrawSuccess": "제출이 취소되었습니다.",
+      "withdrawError": "제출 취소에 실패했습니다.",
+      "approveSuccess": "자체점검이 승인되었습니다.",
+      "approveError": "승인에 실패했습니다.",
+      "rejectSuccess": "자체점검이 반려되었습니다.",
+      "rejectError": "반려에 실패했습니다.",
+      "resubmitSuccess": "재제출되었습니다. 수정 후 다시 제출하세요.",
+      "resubmitError": "재제출에 실패했습니다.",
+      "deleteSuccess": "자체점검 기록이 삭제되었습니다.",
+      "deleteError": "삭제에 실패했습니다."
+    },
+    "rejectDialog": {
+      "title": "자체점검 반려",
+      "message": "반려 사유를 입력하세요. 담당자에게 전달됩니다.",
+      "reasonLabel": "반려 사유",
+      "reasonPlaceholder": "반려 사유를 구체적으로 입력하세요",
+      "action": "반려",
+      "cancel": "취소"
     },
     "deleteDialog": {
       "title": "자체점검 삭제",
@@ -358,6 +381,15 @@
       "cancel": "취소",
       "success": "자체점검 기록이 삭제되었습니다.",
       "error": "삭제에 실패했습니다."
+    },
+    "specialNotes": {
+      "label": "기타 특기사항",
+      "addButton": "항목 추가",
+      "contentPlaceholder": "조치 내용을 입력하세요",
+      "datePlaceholder": "날짜 (선택)"
+    },
+    "inspectionCycle": {
+      "label": "점검 주기 (개월)"
     }
   },
   "inspection": {

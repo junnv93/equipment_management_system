@@ -1097,8 +1097,27 @@ export async function updateSelfInspection(
   return resp.json();
 }
 
-/** 자체점검 확인 (TM) — CAS-Aware */
-export async function confirmSelfInspection(
+/** 자체점검 제출 (TE: draft → submitted) — CAS-Aware */
+export async function submitSelfInspection(
+  page: Page,
+  inspectionId: string,
+  role = 'test_engineer'
+) {
+  const detailResp = await apiGet(page, `/api/self-inspections/${inspectionId}`, role);
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  const resp = await apiPatch(
+    page,
+    `/api/self-inspections/${inspectionId}/submit`,
+    { version },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 자체점검 승인 (TM: submitted → approved) — CAS-Aware */
+export async function approveSelfInspection(
   page: Page,
   inspectionId: string,
   role = 'technical_manager'
@@ -1108,8 +1127,28 @@ export async function confirmSelfInspection(
   const version = extractVersion(detail);
   const resp = await apiPatch(
     page,
-    `/api/self-inspections/${inspectionId}/confirm`,
+    `/api/self-inspections/${inspectionId}/approve`,
     { version },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
+/** 자체점검 반려 (TM: submitted → rejected) — CAS-Aware */
+export async function rejectSelfInspection(
+  page: Page,
+  inspectionId: string,
+  rejectionReason: string,
+  role = 'technical_manager'
+) {
+  const detailResp = await apiGet(page, `/api/self-inspections/${inspectionId}`, role);
+  const detail = await detailResp.json();
+  const version = extractVersion(detail);
+  const resp = await apiPatch(
+    page,
+    `/api/self-inspections/${inspectionId}/reject`,
+    { version, rejectionReason },
     role
   );
   expect(resp.ok()).toBeTruthy();

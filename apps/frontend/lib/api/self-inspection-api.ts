@@ -31,9 +31,16 @@ export interface SelfInspection {
   items: SelfInspectionItem[];
   inspectionCycle: number;
   nextInspectionDate: string | null;
-  status: SelfInspectionStatus;
-  confirmedBy: string | null;
-  confirmedAt: string | null;
+  /** 결재 상태 (QP-18-05 워크플로우: draft → submitted → approved) */
+  approvalStatus: SelfInspectionStatus;
+  submittedBy: string | null;
+  submittedAt: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  createdBy: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -112,10 +119,35 @@ export async function updateSelfInspection(
   return transformSingleResponse(response);
 }
 
-export async function confirmSelfInspection(id: string, version: number): Promise<SelfInspection> {
-  const response = await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.CONFIRM(id), {
+export async function submitSelfInspection(id: string, version: number): Promise<SelfInspection> {
+  const response = await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.SUBMIT(id), { version });
+  return transformSingleResponse(response);
+}
+
+export async function withdrawSelfInspection(id: string, version: number): Promise<SelfInspection> {
+  const response = await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.WITHDRAW(id), { version });
+  return transformSingleResponse(response);
+}
+
+export async function approveSelfInspection(id: string, version: number): Promise<SelfInspection> {
+  const response = await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.APPROVE(id), { version });
+  return transformSingleResponse(response);
+}
+
+export async function rejectSelfInspection(
+  id: string,
+  version: number,
+  rejectionReason: string
+): Promise<SelfInspection> {
+  const response = await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.REJECT(id), {
     version,
+    rejectionReason,
   });
+  return transformSingleResponse(response);
+}
+
+export async function resubmitSelfInspection(id: string, version: number): Promise<SelfInspection> {
+  const response = await apiClient.patch(API_ENDPOINTS.SELF_INSPECTIONS.RESUBMIT(id), { version });
   return transformSingleResponse(response);
 }
 

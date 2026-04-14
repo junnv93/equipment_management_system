@@ -310,8 +310,9 @@
     },
     "statusLabel": {
       "draft": "Draft",
-      "completed": "Completed",
-      "confirmed": "Confirmed"
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "rejected": "Rejected"
     },
     "form": {
       "title": "Self Inspection Record",
@@ -333,23 +334,45 @@
     },
     "actions": {
       "edit": "Edit",
-      "confirm": "Confirm",
+      "submit": "Submit",
+      "withdraw": "Withdraw",
+      "approve": "Approve",
+      "reject": "Reject",
+      "resubmit": "Resubmit",
       "delete": "Delete",
       "editAriaLabel": "Edit self inspection from {date}",
-      "confirmAriaLabel": "Confirm self inspection from {date}",
+      "submitAriaLabel": "Submit self inspection from {date}",
+      "withdrawAriaLabel": "Withdraw self inspection from {date}",
+      "approveAriaLabel": "Approve self inspection from {date}",
+      "rejectAriaLabel": "Reject self inspection from {date}",
+      "resubmitAriaLabel": "Resubmit self inspection from {date}",
       "deleteAriaLabel": "Delete self inspection from {date}",
       "menuAriaLabel": "Actions menu for {date} self inspection",
       "toggleResultSections": "Toggle result sections for {date}",
       "exportForm": "Export Form",
       "exportFormError": "Failed to export self inspection form."
     },
-    "confirmDialog": {
-      "title": "Confirm Self Inspection",
-      "message": "Mark this self inspection as confirmed? It cannot be edited or deleted afterward.",
-      "action": "Confirm",
-      "cancel": "Cancel",
-      "success": "Self inspection has been confirmed.",
-      "error": "Failed to confirm self inspection."
+    "toast": {
+      "submitSuccess": "Self inspection submitted successfully.",
+      "submitError": "Failed to submit.",
+      "withdrawSuccess": "Submission withdrawn.",
+      "withdrawError": "Failed to withdraw.",
+      "approveSuccess": "Self inspection approved.",
+      "approveError": "Failed to approve.",
+      "rejectSuccess": "Self inspection rejected.",
+      "rejectError": "Failed to reject.",
+      "resubmitSuccess": "Reverted to draft. Edit and resubmit.",
+      "resubmitError": "Failed to resubmit.",
+      "deleteSuccess": "Self inspection record deleted.",
+      "deleteError": "Failed to delete."
+    },
+    "rejectDialog": {
+      "title": "Reject Self Inspection",
+      "message": "Enter a reason for rejection. It will be shared with the submitter.",
+      "reasonLabel": "Rejection Reason",
+      "reasonPlaceholder": "Enter a specific reason for rejection",
+      "action": "Reject",
+      "cancel": "Cancel"
     },
     "deleteDialog": {
       "title": "Delete Self Inspection",
@@ -358,6 +381,15 @@
       "cancel": "Cancel",
       "success": "Self inspection record deleted.",
       "error": "Failed to delete self inspection record."
+    },
+    "specialNotes": {
+      "label": "Special Notes",
+      "addButton": "Add Item",
+      "contentPlaceholder": "Enter action taken",
+      "datePlaceholder": "Date (optional)"
+    },
+    "inspectionCycle": {
+      "label": "Inspection Cycle (months)"
     }
   },
   "inspection": {

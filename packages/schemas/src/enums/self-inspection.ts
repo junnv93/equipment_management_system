@@ -34,9 +34,10 @@ export type SelfInspectionResult = z.infer<typeof SelfInspectionResultEnum>;
 // ============================================================================
 
 export const SELF_INSPECTION_STATUS_VALUES = [
-  'draft', // 초안
-  'completed', // 점검 완료
-  'confirmed', // 확인 완료 (기술책임자)
+  'draft', // 초안 (작성 중, 수정 가능)
+  'submitted', // 제출됨 (담당+검토 = 시험실무자)
+  'approved', // 승인됨 (기술책임자)
+  'rejected', // 반려됨
 ] as const;
 
 export const SelfInspectionStatusEnum = z.enum(SELF_INSPECTION_STATUS_VALUES);

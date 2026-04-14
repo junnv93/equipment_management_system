@@ -431,7 +431,11 @@ export const API_ENDPOINTS = {
     BY_EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/self-inspections`,
     GET: (id: string) => `/api/self-inspections/${id}`,
     UPDATE: (id: string) => `/api/self-inspections/${id}`,
-    CONFIRM: (id: string) => `/api/self-inspections/${id}/confirm`,
+    SUBMIT: (id: string) => `/api/self-inspections/${id}/submit`,
+    WITHDRAW: (id: string) => `/api/self-inspections/${id}/withdraw`,
+    APPROVE: (id: string) => `/api/self-inspections/${id}/approve`,
+    REJECT: (id: string) => `/api/self-inspections/${id}/reject`,
+    RESUBMIT: (id: string) => `/api/self-inspections/${id}/resubmit`,
     DELETE: (id: string) => `/api/self-inspections/${id}`,
     RESULT_SECTIONS: {
       LIST: (inspectionId: string) => `/api/self-inspections/${inspectionId}/result-sections`,

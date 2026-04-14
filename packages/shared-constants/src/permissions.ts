@@ -170,8 +170,13 @@ export enum Permission {
   // 자체점검 관련 권한 (UL-QP-18-05)
   // ============================================================================
   VIEW_SELF_INSPECTIONS = 'view:self-inspections',
-  CREATE_SELF_INSPECTION = 'create:self-inspection',
-  CONFIRM_SELF_INSPECTION = 'confirm:self-inspection',
+  /** 시험실무자: 생성/수정/제출/재제출/사진업로드/결과섹션 관리 */
+  SUBMIT_SELF_INSPECTION = 'submit:self-inspection',
+  WITHDRAW_SELF_INSPECTION = 'withdraw:self-inspection',
+  /** 기술책임자: 승인 */
+  APPROVE_SELF_INSPECTION = 'approve:self-inspection',
+  REJECT_SELF_INSPECTION = 'reject:self-inspection',
+  DELETE_SELF_INSPECTION = 'delete:self-inspection',
 
   // ============================================================================
   // 양식 템플릿 관련 권한
@@ -287,8 +292,11 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.CANCEL_EQUIPMENT_IMPORT]: '장비 반입 취소',
 
   [Permission.VIEW_SELF_INSPECTIONS]: '자체점검 조회',
-  [Permission.CREATE_SELF_INSPECTION]: '자체점검 등록',
-  [Permission.CONFIRM_SELF_INSPECTION]: '자체점검 확인',
+  [Permission.SUBMIT_SELF_INSPECTION]: '자체점검 제출',
+  [Permission.WITHDRAW_SELF_INSPECTION]: '자체점검 제출 취소',
+  [Permission.APPROVE_SELF_INSPECTION]: '자체점검 승인',
+  [Permission.REJECT_SELF_INSPECTION]: '자체점검 반려',
+  [Permission.DELETE_SELF_INSPECTION]: '자체점검 삭제',
 
   [Permission.VIEW_FORM_TEMPLATES]: '양식 조회',
   [Permission.MANAGE_FORM_TEMPLATES]: '양식 관리',

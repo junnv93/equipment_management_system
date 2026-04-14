@@ -176,6 +176,13 @@
       "when": 1776140852380,
       "tag": "0024_calm_maximus",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1776200000000,
+      "tag": "0025_self_inspection_approval_workflow",
+      "breakpoints": true
     }
   ]
 }

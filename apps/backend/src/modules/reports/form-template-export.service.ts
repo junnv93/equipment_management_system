@@ -578,7 +578,7 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+      filename: `${entry.formNumber}_${entry.name}_${inspection.managementNumber}_${inspection.equipmentName}.docx`,
     };
   }
 
@@ -673,11 +673,19 @@ export class FormTemplateExportService {
       .where(eq(users.id, record.inspectorId))
       .limit(1);
 
-    const [confirmer] = record.confirmedBy
+    // submitter = 담당+검토(동일인), approver = 승인 (QP-18-05 결재 구조)
+    const [submitter] = record.submittedBy
       ? await this.db
           .select({ name: users.name, signaturePath: users.signatureImagePath })
           .from(users)
-          .where(eq(users.id, record.confirmedBy))
+          .where(eq(users.id, record.submittedBy))
+          .limit(1)
+      : [null];
+    const [approver] = record.approvedBy
+      ? await this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, record.approvedBy))
           .limit(1)
       : [null];
 
@@ -822,30 +830,30 @@ export class FormTemplateExportService {
     doc.setCellValue(2, 1, 1, inspector?.name ?? '-');
     doc.setCellValue(2, 2, 1, record.remarks ?? '-');
 
-    // 결재란 서명 — Row 1 (담당/검토/승인 텍스트 아래 행)
+    // 결재란 서명 (QP-18-05): 담당(Cell4)=submitter, 검토(Cell5)=submitter, 승인(Cell6)=approver
     await this.insertDocxSignature(
       doc,
       2,
       1,
       4,
-      inspector?.signaturePath ?? null,
-      inspector?.name ?? '-'
+      submitter?.signaturePath ?? null,
+      submitter?.name ?? '-'
     );
     await this.insertDocxSignature(
       doc,
       2,
       1,
       5,
-      inspector?.signaturePath ?? null,
-      inspector?.name ?? '-'
+      submitter?.signaturePath ?? null,
+      submitter?.name ?? '-'
     );
     await this.insertDocxSignature(
       doc,
       2,
       1,
       6,
-      confirmer?.signaturePath ?? null,
-      confirmer?.name ?? '-'
+      approver?.signaturePath ?? null,
+      approver?.name ?? '-'
     );
 
     // 동적 결과 섹션 렌더링 (장비 유형별 가변 측정 결과)
@@ -855,7 +863,7 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+      filename: `${entry.formNumber}_${entry.name}_${eqRow.managementNumber}_${eqRow.name}.docx`,
     };
   }
 
@@ -1023,7 +1031,7 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+      filename: `${entry.formNumber}_${entry.name}.docx`,
     };
   }
 
@@ -1526,7 +1534,7 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${record.validationType}_${new Date().toISOString().split('T')[0]}.docx`,
+      filename: `${entry.formNumber}_${entry.name}_${record.validationType}.docx`,
     };
   }
 
@@ -1958,7 +1966,7 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+      filename: `${entry.formNumber}_${entry.name}.docx`,
     };
   }
 
@@ -2162,7 +2170,7 @@ export class FormTemplateExportService {
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${new Date().toISOString().split('T')[0]}.docx`,
+      filename: `${entry.formNumber}_${entry.name}.docx`,
     };
   }
 }

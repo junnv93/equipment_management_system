@@ -45,9 +45,15 @@ import {
   type UpdateSelfInspectionInput,
 } from './dto/update-self-inspection.dto';
 import {
-  ConfirmSelfInspectionPipe,
-  type ConfirmSelfInspectionInput,
-} from './dto/confirm-self-inspection.dto';
+  SubmitSelfInspectionPipe,
+  type SubmitSelfInspectionInput,
+} from './dto/submit-self-inspection.dto';
+import {
+  ApproveSelfInspectionPipe,
+  RejectSelfInspectionPipe,
+  type ApproveSelfInspectionInput,
+  type RejectSelfInspectionInput,
+} from './dto/approve-self-inspection.dto';
 import {
   CreateResultSectionPipe,
   UpdateResultSectionPipe,
@@ -69,7 +75,7 @@ export class EquipmentSelfInspectionsController {
   constructor(private readonly selfInspectionsService: SelfInspectionsService) {}
 
   @Post(':uuid/self-inspections')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @AuditLog({ action: 'create', entityType: 'self_inspection' })
   @UsePipes(CreateSelfInspectionPipe)
   @ApiOperation({ summary: '자체점검 기록 생성' })
@@ -119,8 +125,8 @@ export class SelfInspectionsController {
 
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_SELF_INSPECTIONS)
-  @ApiOperation({ summary: '자��점검 상세 조회' })
-  @ApiParam({ name: 'uuid', description: '���체점검 UUID' })
+  @ApiOperation({ summary: '자체점검 상세 조회' })
+  @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
   async findById(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
@@ -131,10 +137,10 @@ export class SelfInspectionsController {
   }
 
   @Patch(':uuid')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @AuditLog({ action: 'update', entityType: 'self_inspection' })
   @UsePipes(UpdateSelfInspectionPipe)
-  @ApiOperation({ summary: '자체점검 수정 (확인 전만 가능)' })
+  @ApiOperation({ summary: '자체점검 수정 (draft 상태에서만 가능)' })
   @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
@@ -147,27 +153,100 @@ export class SelfInspectionsController {
     return this.selfInspectionsService.update(uuid, dto, userId);
   }
 
-  @Patch(':uuid/confirm')
-  @RequirePermissions(Permission.CONFIRM_SELF_INSPECTION)
+  /**
+   * ⚠️ 라우트 순서 주의: submit/withdraw/approve/reject/resubmit 은
+   * 반드시 `/:sectionId` 패턴보다 앞에 선언해야 한다.
+   */
+
+  @Patch(':uuid/submit')
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @AuditLog({ action: 'update', entityType: 'self_inspection' })
-  @UsePipes(ConfirmSelfInspectionPipe)
-  @ApiOperation({ summary: '자체점검 확인 (기술책임자)' })
+  @UsePipes(SubmitSelfInspectionPipe)
+  @ApiOperation({ summary: '자체점검 제출 (시험실무자: 담당+검토)' })
   @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
-  async confirm(
+  async submit(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() dto: ConfirmSelfInspectionInput,
+    @Body() dto: SubmitSelfInspectionInput,
     @Request() req: AuthenticatedRequest
   ): Promise<SelfInspectionWithItems> {
     const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
     const userId = extractUserId(req);
-    return this.selfInspectionsService.confirm(uuid, userId, dto.version);
+    return this.selfInspectionsService.submit(uuid, dto.version, userId);
+  }
+
+  @Patch(':uuid/withdraw')
+  @RequirePermissions(Permission.WITHDRAW_SELF_INSPECTION)
+  @AuditLog({ action: 'update', entityType: 'self_inspection' })
+  @UsePipes(SubmitSelfInspectionPipe)
+  @ApiOperation({ summary: '자체점검 제출 취소 (제출자 본인만 가능)' })
+  @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
+  async withdraw(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: SubmitSelfInspectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<SelfInspectionWithItems> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.selfInspectionsService.withdraw(uuid, dto.version, userId);
+  }
+
+  @Patch(':uuid/approve')
+  @RequirePermissions(Permission.APPROVE_SELF_INSPECTION)
+  @AuditLog({ action: 'update', entityType: 'self_inspection' })
+  @UsePipes(ApproveSelfInspectionPipe)
+  @ApiOperation({ summary: '자체점검 승인 (기술책임자)' })
+  @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
+  async approve(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: ApproveSelfInspectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<SelfInspectionWithItems> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.selfInspectionsService.approve(uuid, dto.version, userId);
+  }
+
+  @Patch(':uuid/reject')
+  @RequirePermissions(Permission.REJECT_SELF_INSPECTION)
+  @AuditLog({ action: 'update', entityType: 'self_inspection' })
+  @UsePipes(RejectSelfInspectionPipe)
+  @ApiOperation({ summary: '자체점검 반려 (기술책임자, submitted 상태에서만)' })
+  @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
+  async reject(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: RejectSelfInspectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<SelfInspectionWithItems> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.selfInspectionsService.reject(uuid, dto.version, userId, dto.rejectionReason);
+  }
+
+  @Patch(':uuid/resubmit')
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
+  @AuditLog({ action: 'update', entityType: 'self_inspection' })
+  @UsePipes(SubmitSelfInspectionPipe)
+  @ApiOperation({ summary: '자체점검 재제출 (rejected → draft 후 재편집 → submit)' })
+  @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
+  async resubmit(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: SubmitSelfInspectionInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<SelfInspectionWithItems> {
+    const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    const userId = extractUserId(req);
+    return this.selfInspectionsService.resubmit(uuid, dto.version, userId);
   }
 
   @Delete(':uuid')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.DELETE_SELF_INSPECTION)
   @AuditLog({ action: 'delete', entityType: 'self_inspection' })
-  @ApiOperation({ summary: '자체점검 삭제 (확인 전만 가능)' })
+  @ApiOperation({ summary: '자체점검 삭제' })
   @ApiParam({ name: 'uuid', description: '자체점검 UUID' })
   async delete(
     @Param('uuid', ParseUUIDPipe) uuid: string,
@@ -175,7 +254,10 @@ export class SelfInspectionsController {
   ): Promise<{ success: boolean }> {
     const info = await this.selfInspectionsService.getEquipmentSiteInfoBySelfInspectionId(uuid);
     enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
-    await this.selfInspectionsService.delete(uuid);
+    // 관리자·기술책임자는 approved 건도 삭제 가능
+    const allowApproved =
+      req.user?.roles?.some((r) => r === 'system_admin' || r === 'technical_manager') ?? false;
+    await this.selfInspectionsService.delete(uuid, allowApproved);
     return { success: true };
   }
 
@@ -184,7 +266,7 @@ export class SelfInspectionsController {
   // ============================================================================
 
   @Post(':uuid/items/:itemId/photos')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @UseInterceptors(FileInterceptor('file'))
   @AuditLog({ action: 'upload', entityType: 'document' })
   @ApiOperation({ summary: '자체점검 항목별 사진 업로드' })
@@ -249,7 +331,7 @@ export class SelfInspectionsController {
   }
 
   @Post(':uuid/result-sections')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @AuditLog({ action: 'create', entityType: 'inspection_result_section' })
   @UsePipes(CreateResultSectionPipe)
   @ApiOperation({ summary: '자체점검 결과 섹션 추가' })
@@ -269,7 +351,7 @@ export class SelfInspectionsController {
    * 역순이면 "reorder" 가 ParseUUIDPipe 에 UUID 로 파싱되어 400 Bad Request.
    */
   @Patch(':uuid/result-sections/reorder')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
   @UsePipes(ReorderResultSectionsPipe)
   @ApiOperation({ summary: '자체점검 결과 섹션 순서 재할당 (원자 트랜잭션)' })
@@ -285,7 +367,7 @@ export class SelfInspectionsController {
   }
 
   @Patch(':uuid/result-sections/:sectionId')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @AuditLog({ action: 'update', entityType: 'inspection_result_section' })
   @UsePipes(UpdateResultSectionPipe)
   @ApiOperation({ summary: '자체점검 결과 섹션 수정' })
@@ -302,7 +384,7 @@ export class SelfInspectionsController {
   }
 
   @Delete(':uuid/result-sections/:sectionId')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @AuditLog({ action: 'delete', entityType: 'inspection_result_section' })
   @ApiOperation({ summary: '자체점검 결과 섹션 삭제' })
   async deleteResultSection(
@@ -317,7 +399,7 @@ export class SelfInspectionsController {
   }
 
   @Post(':uuid/result-sections/upload-csv')
-  @RequirePermissions(Permission.CREATE_SELF_INSPECTION)
+  @RequirePermissions(Permission.SUBMIT_SELF_INSPECTION)
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: FILE_UPLOAD_LIMITS.CSV_MAX_FILE_SIZE } })
   )

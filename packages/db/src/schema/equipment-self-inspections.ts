@@ -27,7 +27,9 @@ import { users } from './users';
  * 자체점검표 (UL-QP-18-05, 섹션 8.6)
  *
  * 장비에 대한 정기 자체점검 기록 관리
- * 워크플로우: draft → completed → confirmed (기술책임자 확인)
+ * 워크플로우: draft → submitted(담당+검토=시험실무자) → approved(승인=기술책임자)
+ *            submitted → rejected(반려) → resubmit → draft
+ *            submitted → withdraw → draft (제출자 본인만)
  */
 export const equipmentSelfInspections = pgTable(
   'equipment_self_inspections',
@@ -45,7 +47,7 @@ export const equipmentSelfInspections = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
 
-    // 점검 항목 판정
+    // 점검 항목 판정 (레거시 고정 컬럼 — 하위 호환)
     appearance: varchar('appearance', { length: 10 }).$type<SelfInspectionItemJudgment>().notNull(),
     functionality: varchar('functionality', { length: 10 })
       .$type<SelfInspectionItemJudgment>()
@@ -55,7 +57,7 @@ export const equipmentSelfInspections = pgTable(
       .$type<SelfInspectionItemJudgment>()
       .notNull(),
 
-    // 전체 결���
+    // 전체 결과
     overallResult: varchar('overall_result', { length: 10 })
       .$type<SelfInspectionResult>()
       .notNull(),
@@ -69,13 +71,27 @@ export const equipmentSelfInspections = pgTable(
     inspectionCycle: integer('inspection_cycle').notNull().default(6),
     nextInspectionDate: date('next_inspection_date'),
 
-    // 상태 및 확인
-    status: varchar('status', { length: 20 })
+    // 결재 프로세스 (QP-18-05 섹션 4: 담당/검토/승인)
+    approvalStatus: varchar('approval_status', { length: 20 })
       .$type<SelfInspectionStatus>()
       .notNull()
       .default('draft'),
-    confirmedBy: uuid('confirmed_by').references(() => users.id, { onDelete: 'restrict' }),
-    confirmedAt: timestamp('confirmed_at'),
+
+    // 제출 (담당+검토 = 시험실무자 동일인)
+    submittedAt: timestamp('submitted_at'),
+    submittedBy: uuid('submitted_by').references(() => users.id, { onDelete: 'restrict' }),
+
+    // 승인 (기술책임자)
+    approvedAt: timestamp('approved_at'),
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'restrict' }),
+
+    // 반려
+    rejectedAt: timestamp('rejected_at'),
+    rejectedBy: uuid('rejected_by').references(() => users.id, { onDelete: 'restrict' }),
+    rejectionReason: text('rejection_reason'),
+
+    // 생성자
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -90,9 +106,11 @@ export const equipmentSelfInspections = pgTable(
     nextInspectionDateIdx: index('self_inspections_next_inspection_date_idx').on(
       table.nextInspectionDate
     ),
-    statusIdx: index('self_inspections_status_idx').on(table.status),
+    approvalStatusIdx: index('self_inspections_approval_status_idx').on(table.approvalStatus),
     inspectorIdIdx: index('self_inspections_inspector_id_idx').on(table.inspectorId),
-    confirmedByIdx: index('self_inspections_confirmed_by_idx').on(table.confirmedBy),
+    submittedByIdx: index('self_inspections_submitted_by_idx').on(table.submittedBy),
+    approvedByIdx: index('self_inspections_approved_by_idx').on(table.approvedBy),
+    rejectedByIdx: index('self_inspections_rejected_by_idx').on(table.rejectedBy),
   })
 );
 
@@ -153,10 +171,25 @@ export const equipmentSelfInspectionsRelations = relations(
       references: [users.id],
       relationName: 'selfInspectionInspector',
     }),
-    confirmer: one(users, {
-      fields: [equipmentSelfInspections.confirmedBy],
+    submitter: one(users, {
+      fields: [equipmentSelfInspections.submittedBy],
       references: [users.id],
-      relationName: 'selfInspectionConfirmer',
+      relationName: 'selfInspectionSubmitter',
+    }),
+    approver: one(users, {
+      fields: [equipmentSelfInspections.approvedBy],
+      references: [users.id],
+      relationName: 'selfInspectionApprover',
+    }),
+    rejector: one(users, {
+      fields: [equipmentSelfInspections.rejectedBy],
+      references: [users.id],
+      relationName: 'selfInspectionRejector',
+    }),
+    creator: one(users, {
+      fields: [equipmentSelfInspections.createdBy],
+      references: [users.id],
+      relationName: 'selfInspectionCreator',
     }),
     items: many(selfInspectionItems),
   })

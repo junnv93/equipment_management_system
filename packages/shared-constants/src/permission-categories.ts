@@ -118,8 +118,11 @@ export const PERMISSION_CATEGORIES: Record<PermissionCategoryKey, readonly Permi
   ],
   selfInspections: [
     Permission.VIEW_SELF_INSPECTIONS,
-    Permission.CREATE_SELF_INSPECTION,
-    Permission.CONFIRM_SELF_INSPECTION,
+    Permission.SUBMIT_SELF_INSPECTION,
+    Permission.WITHDRAW_SELF_INSPECTION,
+    Permission.APPROVE_SELF_INSPECTION,
+    Permission.REJECT_SELF_INSPECTION,
+    Permission.DELETE_SELF_INSPECTION,
   ],
   system: [Permission.MANAGE_SYSTEM_SETTINGS, Permission.VIEW_SYSTEM_SETTINGS],
 };

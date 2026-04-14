@@ -1,6 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { SelfInspectionsService } from '../self-inspections.service';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { createMockCacheService } from '../../../common/testing/mock-providers';
 
 // ---------------------------------------------------------------------------
 // Drizzle ORM chain mock
@@ -38,6 +45,7 @@ const createDrizzleChain = (finalValue: unknown): Record<string, jest.Mock> => {
 const EQUIPMENT_ID = 'eq-uuid-1';
 const INSPECTION_ID = 'insp-uuid-1';
 const USER_ID = 'user-uuid-1';
+const OTHER_USER_ID = 'user-uuid-2';
 
 const MOCK_EQUIPMENT = { id: EQUIPMENT_ID };
 
@@ -55,12 +63,26 @@ const MOCK_INSPECTION = {
   specialNotes: null,
   inspectionCycle: 6,
   nextInspectionDate: '2026-07-15',
-  status: 'completed',
-  confirmedBy: null,
-  confirmedAt: null,
+  approvalStatus: 'draft',
+  submittedBy: null,
+  submittedAt: null,
+  approvedBy: null,
+  approvedAt: null,
+  rejectedBy: null,
+  rejectedAt: null,
+  rejectionReason: null,
+  createdBy: USER_ID,
   version: 1,
   createdAt: new Date('2026-01-15'),
   updatedAt: new Date('2026-01-15'),
+};
+
+const MOCK_INSPECTION_SUBMITTED = {
+  ...MOCK_INSPECTION,
+  approvalStatus: 'submitted',
+  submittedBy: USER_ID,
+  submittedAt: new Date('2026-01-16'),
+  version: 2,
 };
 
 const MOCK_ITEMS = [
@@ -81,21 +103,25 @@ const MOCK_ITEMS = [
 ];
 
 // ---------------------------------------------------------------------------
+// SimpleCacheService mock
+// ---------------------------------------------------------------------------
+const mockCacheService = createMockCacheService();
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 describe('SelfInspectionsService', () => {
   let service: SelfInspectionsService;
   let mockDb: Record<string, unknown>;
-  let chain: ReturnType<typeof createDrizzleChain>;
 
   beforeEach(async () => {
-    chain = createDrizzleChain([MOCK_INSPECTION]);
+    jest.clearAllMocks();
 
     mockDb = {
-      select: jest.fn().mockReturnValue(chain),
-      insert: jest.fn().mockReturnValue(chain),
-      update: jest.fn().mockReturnValue(chain),
-      delete: jest.fn().mockReturnValue(chain),
+      select: jest.fn().mockReturnValue(createDrizzleChain([MOCK_INSPECTION])),
+      insert: jest.fn().mockReturnValue(createDrizzleChain([MOCK_INSPECTION])),
+      update: jest.fn().mockReturnValue(createDrizzleChain([MOCK_INSPECTION])),
+      delete: jest.fn().mockReturnValue(createDrizzleChain([])),
       transaction: jest
         .fn()
         .mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(mockDb)),
@@ -105,7 +131,11 @@ describe('SelfInspectionsService', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SelfInspectionsService, { provide: 'DRIZZLE_INSTANCE', useValue: mockDb }],
+      providers: [
+        SelfInspectionsService,
+        { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
+        { provide: SimpleCacheService, useValue: mockCacheService },
+      ],
     }).compile();
 
     service = module.get<SelfInspectionsService>(SelfInspectionsService);
@@ -126,11 +156,8 @@ describe('SelfInspectionsService', () => {
     };
 
     it('should create self-inspection with items', async () => {
-      // equipment lookup returns a row
       (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain([MOCK_EQUIPMENT]));
-      // inside transaction: insert inspection → returning
       const txInsertChain = createDrizzleChain([MOCK_INSPECTION]);
-      // inside transaction: insert items → returning
       const txItemsChain = createDrizzleChain(MOCK_ITEMS);
       (mockDb.insert as jest.Mock)
         .mockReturnValueOnce(txInsertChain)
@@ -209,15 +236,12 @@ describe('SelfInspectionsService', () => {
       overallResult: 'fail' as const,
     };
 
-    it('should update inspection with CAS', async () => {
+    it('should update draft inspection with CAS', async () => {
       const updatedInspection = { ...MOCK_INSPECTION, overallResult: 'fail', version: 2 };
-      // findById: select inspection, select items
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
-      // transaction: update returning, then select items
       (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([updatedInspection]));
-      // items re-fetch inside tx
       (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
 
       const result = await service.update(INSPECTION_ID, updateDto, USER_ID);
@@ -226,13 +250,10 @@ describe('SelfInspectionsService', () => {
     });
 
     it('should throw ConflictException on version mismatch', async () => {
-      // findById select inspection (현재 v=2) + items
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([{ ...MOCK_INSPECTION, version: 2 }]))
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
-      // updateWithVersion: WHERE version=1 매칭 0건 → []
       (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([]));
-      // updateWithVersion fallback: 현재 version 재조회
       (mockDb.select as jest.Mock).mockReturnValueOnce(
         createDrizzleChain([{ id: INSPECTION_ID, version: 2 }])
       );
@@ -242,9 +263,11 @@ describe('SelfInspectionsService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
-    it('should throw BadRequestException when already confirmed', async () => {
+    it('should throw BadRequestException when not in draft status', async () => {
       (mockDb.select as jest.Mock)
-        .mockReturnValueOnce(createDrizzleChain([{ ...MOCK_INSPECTION, status: 'confirmed' }]))
+        .mockReturnValueOnce(
+          createDrizzleChain([{ ...MOCK_INSPECTION, approvalStatus: 'submitted' }])
+        )
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
 
       await expect(service.update(INSPECTION_ID, updateDto, USER_ID)).rejects.toThrow(
@@ -254,59 +277,184 @@ describe('SelfInspectionsService', () => {
   });
 
   // -----------------------------------------------------------------------
-  // confirm()
+  // submit() — draft → submitted
   // -----------------------------------------------------------------------
-  describe('confirm()', () => {
-    it('should confirm a completed inspection', async () => {
-      const confirmedInspection = {
-        ...MOCK_INSPECTION,
-        status: 'confirmed',
-        confirmedBy: USER_ID,
-        version: 2,
-      };
-      // findById
+  describe('submit()', () => {
+    it('should submit a draft inspection', async () => {
+      const submittedInspection = { ...MOCK_INSPECTION_SUBMITTED };
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
-      // update
-      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([confirmedInspection]));
-      // items refetch
+      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([submittedInspection]));
       (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
 
-      const result = await service.confirm(INSPECTION_ID, USER_ID, 1);
+      const result = await service.submit(INSPECTION_ID, 1, USER_ID);
 
-      expect(result.status).toBe('confirmed');
-      expect(result.confirmedBy).toBe(USER_ID);
+      expect(result.approvalStatus).toBe('submitted');
+      expect(result.submittedBy).toBe(USER_ID);
     });
 
-    it('should throw BadRequestException when already confirmed', async () => {
+    it('should throw BadRequestException when not in draft status', async () => {
       (mockDb.select as jest.Mock)
-        .mockReturnValueOnce(createDrizzleChain([{ ...MOCK_INSPECTION, status: 'confirmed' }]))
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION_SUBMITTED]))
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
 
-      await expect(service.confirm(INSPECTION_ID, USER_ID, 1)).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw BadRequestException when status is not completed', async () => {
-      (mockDb.select as jest.Mock)
-        .mockReturnValueOnce(createDrizzleChain([{ ...MOCK_INSPECTION, status: 'draft' }]))
-        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
-
-      await expect(service.confirm(INSPECTION_ID, USER_ID, 1)).rejects.toThrow(BadRequestException);
+      await expect(service.submit(INSPECTION_ID, 2, USER_ID)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException on version mismatch', async () => {
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
-      // updateWithVersion: WHERE version=999 매칭 0건 → []
       (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([]));
-      // fallback select
       (mockDb.select as jest.Mock).mockReturnValueOnce(
         createDrizzleChain([{ id: INSPECTION_ID, version: 1 }])
       );
 
-      await expect(service.confirm(INSPECTION_ID, USER_ID, 999)).rejects.toThrow(ConflictException);
+      await expect(service.submit(INSPECTION_ID, 999, USER_ID)).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // withdraw() — submitted → draft (제출자만)
+  // -----------------------------------------------------------------------
+  describe('withdraw()', () => {
+    it('should withdraw a submitted inspection by the submitter', async () => {
+      const draftInspection = { ...MOCK_INSPECTION };
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION_SUBMITTED]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([draftInspection]));
+      (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      const result = await service.withdraw(INSPECTION_ID, 2, USER_ID);
+
+      expect(result.approvalStatus).toBe('draft');
+    });
+
+    it('should throw ForbiddenException when not the submitter', async () => {
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION_SUBMITTED]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      await expect(service.withdraw(INSPECTION_ID, 2, OTHER_USER_ID)).rejects.toThrow(
+        ForbiddenException
+      );
+    });
+
+    it('should throw BadRequestException when not in submitted status', async () => {
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      await expect(service.withdraw(INSPECTION_ID, 1, USER_ID)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // approve() — submitted → approved
+  // -----------------------------------------------------------------------
+  describe('approve()', () => {
+    it('should approve a submitted inspection', async () => {
+      const approvedInspection = {
+        ...MOCK_INSPECTION_SUBMITTED,
+        approvalStatus: 'approved',
+        approvedBy: OTHER_USER_ID,
+        approvedAt: new Date(),
+        version: 3,
+      };
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION_SUBMITTED]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([approvedInspection]));
+      (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      const result = await service.approve(INSPECTION_ID, 2, OTHER_USER_ID);
+
+      expect(result.approvalStatus).toBe('approved');
+      expect(result.approvedBy).toBe(OTHER_USER_ID);
+    });
+
+    it('should throw BadRequestException when not in submitted status', async () => {
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      await expect(service.approve(INSPECTION_ID, 1, OTHER_USER_ID)).rejects.toThrow(
+        BadRequestException
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // reject() — submitted → rejected
+  // -----------------------------------------------------------------------
+  describe('reject()', () => {
+    it('should reject a submitted inspection with a reason', async () => {
+      const rejectedInspection = {
+        ...MOCK_INSPECTION_SUBMITTED,
+        approvalStatus: 'rejected',
+        rejectedBy: OTHER_USER_ID,
+        rejectedAt: new Date(),
+        rejectionReason: '점검 항목 누락',
+        version: 3,
+      };
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION_SUBMITTED]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([rejectedInspection]));
+      (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      const result = await service.reject(INSPECTION_ID, 2, OTHER_USER_ID, '점검 항목 누락');
+
+      expect(result.approvalStatus).toBe('rejected');
+      expect(result.rejectionReason).toBe('점검 항목 누락');
+    });
+
+    it('should throw BadRequestException when not in submitted status', async () => {
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      await expect(service.reject(INSPECTION_ID, 1, OTHER_USER_ID, '사유')).rejects.toThrow(
+        BadRequestException
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // resubmit() — rejected → draft
+  // -----------------------------------------------------------------------
+  describe('resubmit()', () => {
+    it('should resubmit a rejected inspection', async () => {
+      const rejectedInspection = {
+        ...MOCK_INSPECTION,
+        approvalStatus: 'rejected',
+        rejectedBy: OTHER_USER_ID,
+        rejectionReason: '점검 항목 누락',
+        version: 3,
+      };
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([rejectedInspection]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+      (mockDb.update as jest.Mock).mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]));
+      (mockDb.select as jest.Mock).mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      const result = await service.resubmit(INSPECTION_ID, 3, USER_ID);
+
+      expect(result.approvalStatus).toBe('draft');
+    });
+
+    it('should throw BadRequestException when not in rejected status', async () => {
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+
+      await expect(service.resubmit(INSPECTION_ID, 1, USER_ID)).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 
@@ -314,20 +462,35 @@ describe('SelfInspectionsService', () => {
   // delete()
   // -----------------------------------------------------------------------
   describe('delete()', () => {
-    it('should delete a non-confirmed inspection', async () => {
+    it('should delete a draft inspection (allowApproved=false)', async () => {
       (mockDb.select as jest.Mock)
         .mockReturnValueOnce(createDrizzleChain([MOCK_INSPECTION]))
-        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS))
+        // transaction 내부: selfInspectionItems id 조회
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS.map((i) => ({ id: i.id }))));
 
-      await expect(service.delete(INSPECTION_ID)).resolves.toBeUndefined();
+      await expect(service.delete(INSPECTION_ID, false)).resolves.toBeUndefined();
     });
 
-    it('should throw BadRequestException when confirmed', async () => {
+    it('should throw BadRequestException when approved and allowApproved=false', async () => {
       (mockDb.select as jest.Mock)
-        .mockReturnValueOnce(createDrizzleChain([{ ...MOCK_INSPECTION, status: 'confirmed' }]))
+        .mockReturnValueOnce(
+          createDrizzleChain([{ ...MOCK_INSPECTION, approvalStatus: 'approved' }])
+        )
         .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS));
 
-      await expect(service.delete(INSPECTION_ID)).rejects.toThrow(BadRequestException);
+      await expect(service.delete(INSPECTION_ID, false)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should delete an approved inspection when allowApproved=true', async () => {
+      (mockDb.select as jest.Mock)
+        .mockReturnValueOnce(
+          createDrizzleChain([{ ...MOCK_INSPECTION, approvalStatus: 'approved' }])
+        )
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS))
+        .mockReturnValueOnce(createDrizzleChain(MOCK_ITEMS.map((i) => ({ id: i.id }))));
+
+      await expect(service.delete(INSPECTION_ID, true)).resolves.toBeUndefined();
     });
   });
 

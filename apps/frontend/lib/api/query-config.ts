@@ -456,6 +456,9 @@ export const queryKeys = {
       ['intermediate-inspections', 'detail', inspectionId, 'result-sections'] as const,
   },
   selfInspections: {
+    all: ['self-inspections'] as const,
+    byEquipment: (equipmentId: string) => ['self-inspections', 'equipment', equipmentId] as const,
+    detail: (id: string) => ['self-inspections', 'detail', id] as const,
     resultSections: (inspectionId: string) =>
       ['self-inspections', 'detail', inspectionId, 'result-sections'] as const,
   },

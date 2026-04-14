@@ -67,6 +67,9 @@ export const CACHE_KEY_PREFIXES = {
 
   /** data-migration.service.ts — single/multi 세션 캐시 */
   DATA_MIGRATION: 'data-migration:',
+
+  /** self-inspections.service.ts */
+  SELF_INSPECTIONS: 'self-inspections:',
 } as const;
 
 export type CacheKeyPrefix = (typeof CACHE_KEY_PREFIXES)[keyof typeof CACHE_KEY_PREFIXES];

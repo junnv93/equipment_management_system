@@ -63,9 +63,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 장비 반입 (렌탈 + 내부 공용)
     Permission.VIEW_EQUIPMENT_IMPORTS,
     Permission.CREATE_EQUIPMENT_IMPORT,
-    // 자체점검 (UL-QP-18-05)
+    // 자체점검 (UL-QP-18-05: 시험실무자 = 생성/수정/제출/제출취소/재제출/삭제)
     Permission.VIEW_SELF_INSPECTIONS,
-    Permission.CREATE_SELF_INSPECTION,
+    Permission.SUBMIT_SELF_INSPECTION,
+    Permission.WITHDRAW_SELF_INSPECTION,
+    Permission.DELETE_SELF_INSPECTION,
     // 보고서 내보내기
     Permission.EXPORT_REPORTS,
     // 양식 템플릿
@@ -153,10 +155,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_AUDIT_LOGS,
     // 시스템 설정 (조회만)
     Permission.VIEW_SYSTEM_SETTINGS,
-    // 자체점검 (UL-QP-18-05)
+    // 자체점검 (UL-QP-18-05: 기술책임자 = 승인/반려/삭제)
     Permission.VIEW_SELF_INSPECTIONS,
-    Permission.CREATE_SELF_INSPECTION,
-    Permission.CONFIRM_SELF_INSPECTION,
+    Permission.APPROVE_SELF_INSPECTION,
+    Permission.REJECT_SELF_INSPECTION,
+    Permission.DELETE_SELF_INSPECTION,
     // 양식 템플릿
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
@@ -291,10 +294,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 시스템 설정
     Permission.VIEW_SYSTEM_SETTINGS,
     Permission.MANAGE_SYSTEM_SETTINGS,
-    // 자체점검
+    // 자체점검 (UL-QP-18-05: 연구실장 = 전체 권한)
     Permission.VIEW_SELF_INSPECTIONS,
-    Permission.CREATE_SELF_INSPECTION,
-    Permission.CONFIRM_SELF_INSPECTION,
+    Permission.SUBMIT_SELF_INSPECTION,
+    Permission.WITHDRAW_SELF_INSPECTION,
+    Permission.APPROVE_SELF_INSPECTION,
+    Permission.REJECT_SELF_INSPECTION,
+    Permission.DELETE_SELF_INSPECTION,
     // 양식 템플릿
     Permission.VIEW_FORM_TEMPLATES,
     Permission.MANAGE_FORM_TEMPLATES,
