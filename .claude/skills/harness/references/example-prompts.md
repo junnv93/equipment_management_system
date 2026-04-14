@@ -1,16 +1,197 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (67차 — 3-agent 병렬 스캔 + 2차 검증. icon-only aria-label 2건 + docker-compose.prod.yml floating tags 8건 등재. FALSE POSITIVE 7건 제거. 62차 ~~취소선~~ 누락 4건 수정.)**
+> **마지막 정리일: 2026-04-14 (68차 — 3-agent 병렬 스캔 + 2차 검증. 장비 이력 탭 staleTime + audit limit SSOT + dashboard days SSOT + repair-history relations 4건 등재. FALSE POSITIVE 5건: error.tsx 누락(부모 커버), process.env 부트스트랩 필수, CalibrationRegisterDialog cast(react-hook-form 패턴), 이력 탭 이미 QUERY_CONFIG.HISTORY 정의됨(누락만), Korean 주석(정상).)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
-## 67차 신규 — 3-agent 병렬 스캔 (2건, 2026-04-14)
+## 68차 신규 — 3-agent 병렬 스캔 (4건, 2026-04-14)
+
+> **발견 배경 (2026-04-14, 68차)**: Backend/Frontend/Infra 3-agent 병렬 스캔 + 2차 검증(Read/Grep).
+> FALSE POSITIVE 5건 제거: admin/* error.tsx 누락(부모 admin/error.tsx 커버), checkouts/* error.tsx 누락(부모 checkouts/error.tsx 커버), process.env in drizzle/index.ts(NestJS DI 미적용 부트스트랩 필수), CalibrationRegisterDialog as unknown as(react-hook-form input/output 이중 제네릭 패턴), Korean text in comments(정상).
+> 검증 통과 4건 등재.
+
+### 🟡 MEDIUM — 장비 이력 탭 3개 useQuery QUERY_CONFIG.HISTORY spread 누락 (Mode 0)
+
+```
+TanStack Query staleTime 누락:
+- apps/frontend/components/equipment/LocationHistoryTab.tsx:98-102
+- apps/frontend/components/equipment/MaintenanceHistoryTab.tsx:89-93
+- apps/frontend/components/equipment/IncidentHistoryTab.tsx:183-187
+
+세 탭 모두 useQuery에 staleTime/gcTime 없음:
+  const { data: history = [], isLoading } = useQuery({
+    queryKey: queryKeys.equipment.locationHistory(equipmentId),
+    queryFn: () => equipmentApi.getLocationHistory(equipmentId),
+    enabled: !!equipmentId,
+    // staleTime 없음 → 탭 전환마다 불필요 refetch
+  });
+
+lib/api/query-config.ts에 QUERY_CONFIG.HISTORY가 이미 정의됨 (line 195-200):
+  HISTORY: {
+    staleTime: CACHE_TIMES.MEDIUM,
+    gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  }
+
+장비 상세 페이지에서 위치/유지보수/사고 탭을 전환할 때마다 API 재호출 발생.
+
+작업:
+3개 탭의 useQuery에 `...QUERY_CONFIG.HISTORY` spread 추가:
+
+  import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+  // (queryKeys는 이미 import됨 — QUERY_CONFIG만 추가)
+
+  const { data: history = [], isLoading } = useQuery({
+    queryKey: queryKeys.equipment.locationHistory(equipmentId),
+    queryFn: () => equipmentApi.getLocationHistory(equipmentId),
+    enabled: !!equipmentId,
+    ...QUERY_CONFIG.HISTORY,  // staleTime + gcTime + refetchOnWindowFocus + retry
+  });
+
+동일 패턴을 MaintenanceHistoryTab.tsx, IncidentHistoryTab.tsx에도 적용.
+
+검증:
+- pnpm --filter frontend run tsc --noEmit → exit 0
+- grep -n 'QUERY_CONFIG.HISTORY\|staleTime' apps/frontend/components/equipment/LocationHistoryTab.tsx → 1 hit
+- grep -n 'QUERY_CONFIG.HISTORY\|staleTime' apps/frontend/components/equipment/MaintenanceHistoryTab.tsx → 1 hit
+- grep -n 'QUERY_CONFIG.HISTORY\|staleTime' apps/frontend/components/equipment/IncidentHistoryTab.tsx → 1 hit
+```
+
+### 🟡 MEDIUM — audit.service.ts cursor/user limit 하드코딩 → QUERY_SAFETY_LIMITS SSOT (Mode 0)
+
+```
+하드코딩 이슈:
+- apps/backend/src/modules/audit/audit.service.ts:177 — limit = 30 (cursor page size)
+- apps/backend/src/modules/audit/audit.service.ts:379 — limit = 100 (findByUser)
+
+현재:
+  async findAllCursor(filter, cursor?, limit = 30, scope?): Promise<CursorPaginatedResult>
+  async findByUser(userId, limit = 100, scope?): Promise<AuditLog[]>
+
+QUERY_SAFETY_LIMITS (packages/shared-constants/src/business-rules.ts:67)에
+AUDIT_LOGS_PER_ENTITY: 500 이 있으나, cursor page size(30)와 by-user limit(100)은
+별도 상수가 없음. 두 값이 코드에 박혀 있어 SSOT 위반.
+
+작업:
+1. packages/shared-constants/src/business-rules.ts의 QUERY_SAFETY_LIMITS에 추가:
+   AUDIT_CURSOR_PAGE_SIZE: 30,   // cursor 기반 페이지 크기 (UI UX 최적화 값)
+   AUDIT_LOGS_BY_USER: 100,      // 사용자별 최근 감사 로그 최대 수
+
+2. audit.service.ts에서 import 추가 후 교체:
+   import { ..., QUERY_SAFETY_LIMITS } from '@equipment-management/shared-constants';
+
+   async findAllCursor(filter, cursor?, limit = QUERY_SAFETY_LIMITS.AUDIT_CURSOR_PAGE_SIZE, ...)
+   async findByUser(userId, limit = QUERY_SAFETY_LIMITS.AUDIT_LOGS_BY_USER, ...)
+
+주의:
+- 기존 limit 값(30, 100)은 그대로 유지 — 상수명만 추가, 기능 변경 없음
+- findByUser limit = 100은 AUDIT_LOGS_PER_ENTITY(=500)와 다른 의미 (by-user 최근 로그 vs per-entity 전체)
+  → 별도 상수로 분리 필요
+
+검증:
+- pnpm --filter backend run tsc --noEmit → exit 0
+- pnpm --filter @equipment-management/shared-constants run tsc --noEmit → exit 0
+- grep 'limit = 30\|limit = 100' apps/backend/src/modules/audit/audit.service.ts → 0 hit
+- grep 'AUDIT_CURSOR_PAGE_SIZE\|AUDIT_LOGS_BY_USER' packages/shared-constants → 1 hit each
+```
+
+### 🟡 MEDIUM — dashboard.service.ts `days = 30` → CALIBRATION_THRESHOLDS.WARNING_DAYS SSOT (Mode 0)
+
+```
+하드코딩 이슈:
+- apps/backend/src/modules/dashboard/dashboard.service.ts:355 — days: number = 30
+- apps/backend/src/modules/dashboard/dashboard.service.ts:626 — days = 30
+
+현재:
+  async getUpcomingCheckoutReturns(days: number = 30, teamId?: string, ...)
+  async getCalibrationDueItems(teamId?: string, siteId?: string, days = 30)
+
+CALIBRATION_THRESHOLDS.WARNING_DAYS = 30 이 이미 packages/shared-constants/src/business-rules.ts:54에 정의됨.
+dashboard.service.ts는 @equipment-management/schemas를 import하지만 @equipment-management/shared-constants는 import하지 않음 → 30이 하드코딩됨.
+
+30일은 "교정 기한 임박 경고 기간"의 비즈니스 규칙이므로 변경 시 한 곳에서만 관리해야 함.
+
+작업:
+1. dashboard.service.ts 상단에 import 추가:
+   import { CALIBRATION_THRESHOLDS } from '@equipment-management/shared-constants';
+
+2. 두 메서드의 기본값 교체:
+   async getUpcomingCheckoutReturns(
+     days: number = CALIBRATION_THRESHOLDS.WARNING_DAYS,
+     ...
+   )
+   async getCalibrationDueItems(
+     ...,
+     days = CALIBRATION_THRESHOLDS.WARNING_DAYS
+   )
+
+주의:
+- @equipment-management/shared-constants는 package.json에 이미 의존성으로 있어야 함
+  (다른 모듈에서 사용 중이므로 추가 불필요)
+- 기본값만 교체 — 함수 시그니처/반환 타입 변경 없음
+
+검증:
+- pnpm --filter backend run tsc --noEmit → exit 0
+- grep 'days = 30\|days: number = 30' apps/backend/src/modules/dashboard/dashboard.service.ts → 0 hit
+- grep 'CALIBRATION_THRESHOLDS' apps/backend/src/modules/dashboard/dashboard.service.ts → 2 hit
+```
+
+### 🟢 LOW — repair-history Drizzle relations createdByUser/deletedByUser 미완성 (Mode 0)
+
+```
+스키마 정합성 이슈:
+- packages/db/src/schema/repair-history.ts:87-98
+
+현재 repairHistoryRelations:
+  export const repairHistoryRelations = relations(repairHistory, ({ one }) => ({
+    equipment: one(equipment, { ... }),
+    nonConformance: one(nonConformances, { ... }),
+    // createdByUser: 없음 ← createdBy FK 존재 (line 51, NOT NULL)
+    // deletedByUser: 없음 ← deletedBy FK 존재 (line 46, nullable)
+  }));
+
+repairHistory 스키마:
+  - deletedBy: uuid('deleted_by').references(() => users.id, { onDelete: 'set null' }) // line 46
+  - createdBy: uuid('created_by')                                                       // line 51
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' })
+
+users는 이미 import됨 (line 15). 다른 테이블(notifications, equipment 등)은 user FK에
+대한 relations를 정의하는데 repair-history만 누락. .query API에서 createdByUser/deletedByUser
+with 절 사용 불가 (type-safe join 미지원).
+
+작업:
+packages/db/src/schema/repair-history.ts의 repairHistoryRelations에 추가:
+  createdByUser: one(users, {
+    fields: [repairHistory.createdBy],
+    references: [users.id],
+    relationName: 'repair_history_created_by',
+  }),
+  deletedByUser: one(users, {
+    fields: [repairHistory.deletedBy],
+    references: [users.id],
+    relationName: 'repair_history_deleted_by',
+  }),
+
+주의:
+- DB 마이그레이션 필요 없음 — Drizzle relations()는 런타임 타입 메타데이터만 변경
+- repair-history.service.ts가 현재 raw select 쿼리 사용 → 즉각적 동작 변경 없음
+  (향후 .query.repairHistory.findMany({ with: { createdByUser: true } }) 사용 가능해짐)
+
+검증:
+- pnpm --filter @equipment-management/db run tsc --noEmit → exit 0
+- pnpm --filter backend run tsc --noEmit → exit 0
+- grep 'createdByUser\|deletedByUser' packages/db/src/schema/repair-history.ts → 2 hit
+```
+
+## ~~67차 신규 — 3-agent 병렬 스캔 (2건, 2026-04-14)~~ ✅ 전부 완료 (commit 0482fd49)
 
 > **발견 배경 (2026-04-14, 67차)**: Backend/Frontend/Infra 3-agent 병렬 스캔 + 2차 검증(Read/Grep).
 > FALSE POSITIVE 7건 제거: error.tsx 누락((dashboard)/error.tsx가 모든 하위 경로 커버), loading.tsx 누락(TanStack Query 컴포넌트 레벨 처리), repair-history FK(nullable deletedBy vs NOT NULL createdBy — 의도적), documents FK(equipment restrict + workflow cascade — 의도적), equipment-imports FK(audit trail semantics — 의도적), NC FK(이미 검토됨), 대형 컴포넌트(기능 완결형 의도적 설계 — 62차 확인).
-> 검증 통과 2건 등재.
+> 검증 통과 2건 → commit 0482fd49에서 완료.
 
-### 🟡 MEDIUM — icon-only Button/Link aria-label 누락 2건 (Mode 0)
+### ~~🟡 MEDIUM — icon-only Button/Link aria-label 누락 2건 (Mode 0)~~ ✅ 완료 (2026-04-14, 67차)
 
 ```
 접근성 이슈:
@@ -63,7 +244,7 @@
 - grep 'planCreate.backToList\|notificationSettings' apps/frontend/messages → 2 hit (ko + en)
 ```
 
-### 🟡 MEDIUM — docker-compose.prod.yml floating 이미지 태그 8건 (Mode 0)
+### ~~🟡 MEDIUM — docker-compose.prod.yml floating 이미지 태그 8건 (Mode 0)~~ ✅ 완료 (2026-04-14, 67차)
 
 ```
 프로덕션 안정성 이슈:
