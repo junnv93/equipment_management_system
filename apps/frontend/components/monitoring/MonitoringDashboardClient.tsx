@@ -64,6 +64,21 @@ function formatUptime(seconds: number): string {
  * `null` 입력은 "미측정" 으로 해석하여 em-dash 를 반환한다 — pg Pool 레벨에서
  * 측정 불가한 DB 메트릭(avgQueryTime 등)이 프론트엔드에 nullable 로 노출됨.
  */
+/** 백엔드 인프라 상태 문자열 — HealthStatus API 응답값 */
+type ServiceStatus =
+  | 'ok'
+  | 'up'
+  | 'healthy'
+  | 'connected'
+  | 'running'
+  | 'operational'
+  | 'warning'
+  | 'degraded'
+  | 'critical'
+  | 'down'
+  | 'error'
+  | (string & Record<never, never>); // 미래 확장 허용 (string 낙타 대비)
+
 function formatMs(ms: number | null): string {
   if (ms === null) return '—';
   if (ms < 1) return `${(ms * 1000).toFixed(0)}µs`;
@@ -71,7 +86,9 @@ function formatMs(ms: number | null): string {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-function getStatusColor(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusColor(
+  status: ServiceStatus
+): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status.toLowerCase()) {
     case 'ok':
     case 'up':
@@ -92,7 +109,7 @@ function getStatusColor(status: string): 'default' | 'secondary' | 'destructive'
   }
 }
 
-function getStatusIcon(status: string) {
+function getStatusIcon(status: ServiceStatus) {
   switch (status.toLowerCase()) {
     case 'ok':
     case 'up':
@@ -136,7 +153,7 @@ function getKpiTextColor(
 }
 
 /** 백엔드 상태 문자열 → i18n 키 매핑 */
-function getStatusTranslationKey(status: string): string {
+function getStatusTranslationKey(status: ServiceStatus): string {
   const map: Record<string, string> = {
     ok: 'ok',
     up: 'up',
