@@ -23,6 +23,8 @@ import type {
 } from './return-condition';
 import type { DisposalReviewStatus } from './disposal';
 import type { UserStatus } from './shared';
+import type { CableStatus } from './cable';
+import type { InspectionApprovalStatus } from './intermediate-inspection';
 import type { ManagementMethod } from './equipment';
 import type { ResolutionType } from './non-conformance';
 
@@ -370,3 +372,24 @@ export const DisposalReviewStatusValues = {
   APPROVED: 'approved',
   REJECTED: 'rejected',
 } as const;
+
+/**
+ * 케이블 상태 값 객체 (dot-notation 접근용)
+ * @example CableStatusValues.ACTIVE // 'active'
+ */
+export const CableStatusValues = {
+  ACTIVE: 'active',
+  RETIRED: 'retired',
+} as const satisfies Record<string, CableStatus>;
+
+/**
+ * 중간점검 승인 상태 값 객체 (dot-notation 접근용)
+ * @example InspectionApprovalStatusValues.DRAFT // 'draft'
+ */
+export const InspectionApprovalStatusValues = {
+  DRAFT: 'draft',
+  SUBMITTED: 'submitted',
+  REVIEWED: 'reviewed',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const satisfies Record<string, InspectionApprovalStatus>;

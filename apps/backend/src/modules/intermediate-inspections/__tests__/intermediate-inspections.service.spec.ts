@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { IntermediateInspectionsService } from '../intermediate-inspections.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
+import { InspectionApprovalStatusValues } from '@equipment-management/schemas';
 
 const MOCK_INSPECTION = {
   id: 'insp-uuid-1',
@@ -15,7 +16,7 @@ const MOCK_INSPECTION = {
   calibrationValidityPeriod: null,
   overallResult: null,
   remarks: null,
-  approvalStatus: 'draft' as const,
+  approvalStatus: InspectionApprovalStatusValues.DRAFT,
   submittedAt: null,
   submittedBy: null,
   reviewedAt: null,
@@ -51,12 +52,12 @@ describe('IntermediateInspectionsService', () => {
 
   const createSelectChain = (value: unknown): Record<string, jest.Mock> => {
     const chain: Record<string, jest.Mock> = {};
-    const methods = ['select', 'from', 'where', 'limit', 'orderBy', 'offset'];
+    const methods = ['select', 'from', 'where', 'limit', 'leftJoin', 'orderBy', 'offset'];
     for (const m of methods) {
       chain[m] = jest.fn().mockReturnValue(chain);
     }
-    chain.limit.mockResolvedValue(Array.isArray(value) ? value : [value]);
-    chain.orderBy.mockResolvedValue(Array.isArray(value) ? value : [value]);
+    // then 프로퍼티만으로 async 해결 — limit/orderBy.mockResolvedValue는
+    // 중간 체인 메서드를 Promise로 바꿔서 이후 체이닝을 파괴하므로 사용하지 않는다
     (chain as Record<string, unknown>).then = (resolve: (v: unknown) => void) =>
       resolve(Array.isArray(value) ? value : [value]);
     return chain;
@@ -148,13 +149,85 @@ describe('IntermediateInspectionsService', () => {
     });
   });
 
-  describe('findByCalibration()', () => {
-    it('교정 ID로 점검 목록을 반환한다', async () => {
-      mockDb.select.mockReturnValueOnce(createSelectChain([MOCK_INSPECTION]));
+  describe('createByEquipment()', () => {
+    it('장비에 연결된 교정으로 점검을 생성한다', async () => {
+      // 승인된 교정 select → found
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ id: 'cal-uuid-1' }]));
+      // create() 내부 calibration 존재 확인 select
+      mockDb.select.mockReturnValueOnce(
+        createSelectChain([{ id: 'cal-uuid-1', equipmentId: 'eq-uuid-1' }])
+      );
+      mockDb.insert
+        .mockReturnValueOnce({
+          values: jest.fn().mockReturnValue({
+            returning: jest.fn().mockResolvedValue([MOCK_INSPECTION]),
+          }),
+        })
+        .mockReturnValueOnce({ values: jest.fn().mockResolvedValue([]) })
+        .mockReturnValueOnce({ values: jest.fn().mockResolvedValue([]) });
 
-      const result = await service.findByCalibration('cal-uuid-1');
+      const result = await service.createByEquipment(
+        'eq-uuid-1',
+        { inspectionDate: '2024-06-01', items: [] } as never,
+        'user-uuid-1'
+      );
 
-      expect(Array.isArray(result)).toBe(true);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('insp-uuid-1');
+    });
+
+    it('교정이 없으면 NotFoundException을 던진다', async () => {
+      // approved calibration select → not found
+      mockDb.select.mockReturnValueOnce(createSelectChain([]));
+      // fallback any calibration select → not found
+      mockDb.select.mockReturnValueOnce(createSelectChain([]));
+
+      await expect(
+        service.createByEquipment(
+          'non-existent-eq',
+          { inspectionDate: '2024-06-01', items: [] } as never,
+          'user-uuid-1'
+        )
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createByCalibration()', () => {
+    it('교정 ID로 equipmentId를 조회하여 점검을 생성한다', async () => {
+      // calibration lookup → found
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ equipmentId: 'eq-uuid-1' }]));
+      // create() 내부 calibration 존재 확인 select
+      mockDb.select.mockReturnValueOnce(
+        createSelectChain([{ id: 'cal-uuid-1', equipmentId: 'eq-uuid-1' }])
+      );
+      mockDb.insert
+        .mockReturnValueOnce({
+          values: jest.fn().mockReturnValue({
+            returning: jest.fn().mockResolvedValue([MOCK_INSPECTION]),
+          }),
+        })
+        .mockReturnValueOnce({ values: jest.fn().mockResolvedValue([]) })
+        .mockReturnValueOnce({ values: jest.fn().mockResolvedValue([]) });
+
+      const result = await service.createByCalibration(
+        'cal-uuid-1',
+        { inspectionDate: '2024-06-01', items: [] } as never,
+        'user-uuid-1'
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    it('교정이 없으면 NotFoundException을 던진다', async () => {
+      mockDb.select.mockReturnValueOnce(createSelectChain([]));
+
+      await expect(
+        service.createByCalibration(
+          'non-existent-cal',
+          { inspectionDate: '2024-06-01', items: [] } as never,
+          'user-uuid-1'
+        )
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -191,7 +264,10 @@ describe('IntermediateInspectionsService', () => {
     });
 
     it('draft가 아닌 상태에서 BadRequestException을 던진다', async () => {
-      const submitted = { ...MOCK_INSPECTION, approvalStatus: 'submitted' as const };
+      const submitted = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([submitted]))
         .mockReturnValueOnce(createSelectChain([]))
@@ -199,6 +275,27 @@ describe('IntermediateInspectionsService', () => {
 
       await expect(service.update('insp-uuid-1', { version: 1 } as never)).rejects.toThrow(
         BadRequestException
+      );
+    });
+
+    it('버전 불일치 시 ConflictException을 던진다', async () => {
+      // findOne: draft 상태 확인 (3 selects)
+      mockDb.select
+        .mockReturnValueOnce(createSelectChain([MOCK_INSPECTION]))
+        .mockReturnValueOnce(createSelectChain([]))
+        .mockReturnValueOnce(createSelectChain([]))
+        // updateWithVersion 내부 SELECT: record exists with different version → CAS conflict
+        .mockReturnValueOnce(createSelectChain([{ id: 'insp-uuid-1', version: 2 }]));
+      mockDb.update.mockReturnValueOnce({
+        set: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            returning: jest.fn().mockResolvedValue([]), // 0 rows — CAS miss
+          }),
+        }),
+      });
+
+      await expect(service.update('insp-uuid-1', { version: 1 } as never)).rejects.toThrow(
+        ConflictException
       );
     });
   });
@@ -209,7 +306,10 @@ describe('IntermediateInspectionsService', () => {
         .mockReturnValueOnce(createSelectChain([MOCK_INSPECTION]))
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
-      const updated = { ...MOCK_INSPECTION, approvalStatus: 'submitted' };
+      const updated = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
+      };
       mockDb.update.mockReturnValueOnce(mockUpdateChain(updated));
 
       await service.submit('insp-uuid-1', 1, 'user-uuid-1');
@@ -217,7 +317,10 @@ describe('IntermediateInspectionsService', () => {
     });
 
     it('draft가 아닌 상태에서 BadRequestException을 던진다', async () => {
-      const submitted = { ...MOCK_INSPECTION, approvalStatus: 'submitted' as const };
+      const submitted = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([submitted]))
         .mockReturnValueOnce(createSelectChain([]))
@@ -231,12 +334,15 @@ describe('IntermediateInspectionsService', () => {
 
   describe('review()', () => {
     it('submitted → reviewed 상태 전이', async () => {
-      const submitted = { ...MOCK_INSPECTION, approvalStatus: 'submitted' as const };
+      const submitted = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([submitted]))
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
-      const updated = { ...submitted, approvalStatus: 'reviewed' };
+      const updated = { ...submitted, approvalStatus: InspectionApprovalStatusValues.REVIEWED };
       mockDb.update.mockReturnValueOnce(mockUpdateChain(updated));
 
       await service.review('insp-uuid-1', 1, 'reviewer-uuid-1');
@@ -257,12 +363,15 @@ describe('IntermediateInspectionsService', () => {
 
   describe('approve()', () => {
     it('reviewed → approved 상태 전이', async () => {
-      const reviewed = { ...MOCK_INSPECTION, approvalStatus: 'reviewed' as const };
+      const reviewed = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.REVIEWED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([reviewed]))
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
-      const updated = { ...reviewed, approvalStatus: 'approved' };
+      const updated = { ...reviewed, approvalStatus: InspectionApprovalStatusValues.APPROVED };
       mockDb.update.mockReturnValueOnce(mockUpdateChain(updated));
 
       await service.approve('insp-uuid-1', 1, 'approver-uuid-1');
@@ -283,13 +392,16 @@ describe('IntermediateInspectionsService', () => {
 
   describe('reject()', () => {
     it('submitted → rejected 상태 전이', async () => {
-      const submitted = { ...MOCK_INSPECTION, approvalStatus: 'submitted' as const };
+      const submitted = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([submitted]))
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
       mockDb.update.mockReturnValueOnce(
-        mockUpdateChain({ ...submitted, approvalStatus: 'rejected' })
+        mockUpdateChain({ ...submitted, approvalStatus: InspectionApprovalStatusValues.REJECTED })
       );
 
       await service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '기준 미달');
@@ -297,13 +409,16 @@ describe('IntermediateInspectionsService', () => {
     });
 
     it('reviewed → rejected 상태 전이', async () => {
-      const reviewed = { ...MOCK_INSPECTION, approvalStatus: 'reviewed' as const };
+      const reviewed = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.REVIEWED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([reviewed]))
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
       mockDb.update.mockReturnValueOnce(
-        mockUpdateChain({ ...reviewed, approvalStatus: 'rejected' })
+        mockUpdateChain({ ...reviewed, approvalStatus: InspectionApprovalStatusValues.REJECTED })
       );
 
       await service.reject('insp-uuid-1', 1, 'reviewer-uuid-1', '미달');
@@ -326,7 +441,7 @@ describe('IntermediateInspectionsService', () => {
     it('submitted → draft 상태 전이 (제출자 일치)', async () => {
       const submitted = {
         ...MOCK_INSPECTION,
-        approvalStatus: 'submitted' as const,
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
         submittedBy: 'user-uuid-1',
       };
       mockDb.select
@@ -334,7 +449,11 @@ describe('IntermediateInspectionsService', () => {
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
       mockDb.update.mockReturnValueOnce(
-        mockUpdateChain({ ...submitted, approvalStatus: 'draft', submittedBy: null })
+        mockUpdateChain({
+          ...submitted,
+          approvalStatus: InspectionApprovalStatusValues.DRAFT,
+          submittedBy: null,
+        })
       );
 
       await service.withdraw('insp-uuid-1', 1, 'user-uuid-1');
@@ -344,7 +463,7 @@ describe('IntermediateInspectionsService', () => {
     it('제출자 불일치 시 BadRequestException을 던진다', async () => {
       const submitted = {
         ...MOCK_INSPECTION,
-        approvalStatus: 'submitted' as const,
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
         submittedBy: 'other-user',
       };
       mockDb.select
@@ -371,12 +490,17 @@ describe('IntermediateInspectionsService', () => {
 
   describe('resubmit()', () => {
     it('rejected → draft 상태 전이', async () => {
-      const rejected = { ...MOCK_INSPECTION, approvalStatus: 'rejected' as const };
+      const rejected = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.REJECTED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([rejected]))
         .mockReturnValueOnce(createSelectChain([]))
         .mockReturnValueOnce(createSelectChain([]));
-      mockDb.update.mockReturnValueOnce(mockUpdateChain({ ...rejected, approvalStatus: 'draft' }));
+      mockDb.update.mockReturnValueOnce(
+        mockUpdateChain({ ...rejected, approvalStatus: InspectionApprovalStatusValues.DRAFT })
+      );
 
       await service.resubmit('insp-uuid-1', 1, 'user-uuid-1');
       expect(mockDb.update).toHaveBeenCalled();
@@ -409,7 +533,10 @@ describe('IntermediateInspectionsService', () => {
     });
 
     it('allowApproved=false, approved 상태 삭제 시 BadRequestException', async () => {
-      const approved = { ...MOCK_INSPECTION, approvalStatus: 'approved' as const };
+      const approved = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.APPROVED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([approved]))
         .mockReturnValueOnce(createSelectChain([]))
@@ -419,7 +546,10 @@ describe('IntermediateInspectionsService', () => {
     });
 
     it('allowApproved=true, approved 상태도 삭제 가능', async () => {
-      const approved = { ...MOCK_INSPECTION, approvalStatus: 'approved' as const };
+      const approved = {
+        ...MOCK_INSPECTION,
+        approvalStatus: InspectionApprovalStatusValues.APPROVED,
+      };
       mockDb.select
         .mockReturnValueOnce(createSelectChain([approved]))
         .mockReturnValueOnce(createSelectChain([]))
