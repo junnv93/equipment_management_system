@@ -1,8 +1,107 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-13 (46차 — 시간복잡도 harness Mode 2 리뷰 결과 14건 → 5개 아키텍처 프롬프트)**
+> **마지막 정리일: 2026-04-14 (52차 — 3-agent 병렬 스캔 + 2차 검증. 46차 신규 5건 전부 완료. 신규 3건 등재)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## 52차 신규 — generate-prompts 3-agent 병렬 스캔 (3건, 2026-04-14)
+
+> **발견 배경 (2026-04-14, 52차)**: 46차 신규 5건 전부 완료 후 재스캔. Backend/Frontend/Infra 3-agent 병렬 스캔 + 2차 검증. FALSE POSITIVE 제거: error.tsx 누락(부모 /admin/, /settings/ 커버), NC calibrationId(의도적 확장용), intermediate-inspections 복합 인덱스(개별 인덱스로 충분). 검증 통과 3건 등재.
+
+### 🟡 MEDIUM — NC repairHistoryId Drizzle 스키마-DB FK 불일치 (Mode 0)
+
+```
+스키마-DB drift: non_conformances.repairHistoryId가 실제 DB에는
+FK 제약(ON DELETE SET NULL)이 있으나 Drizzle 스키마에 .references() 미반영.
+
+확인된 위치:
+1. packages/db/src/schema/non-conformances.ts:62
+   repairHistoryId: uuid('repair_history_id'), // .references() 없음
+2. apps/backend/drizzle/manual/20260126_add_nc_repair_workflow.sql:14-17
+   ADD CONSTRAINT fk_non_conformances_repair_history
+   FOREIGN KEY (repair_history_id) REFERENCES repair_history(id) ON DELETE SET NULL;
+   → 실제 DB에 FK 존재
+
+작업:
+1. packages/db/src/schema/non-conformances.ts:62 수정:
+   repairHistoryId: uuid('repair_history_id').references(
+     () => repairHistory.id, { onDelete: 'set null' }
+   ), // 수리 기록 ID (1:1 관계) — ON DELETE SET NULL (soft delete 정책)
+2. repairHistory import 확인 (같은 파일 import 섹션)
+
+주의:
+- calibrationId(line 63)는 의도적 "향후 확장용" — 변경 금지
+- .references() 추가 시 Drizzle migration 생성에서 drift 감지 안 되도록
+  db:generate 후 빈 migration 여부 확인 (실제 DB와 이미 일치)
+- DB migration 필요 없음 — 스키마 선언 정합성만 복원
+
+검증:
+- pnpm --filter backend run tsc --noEmit (타입 체크)
+- grep -n 'references.*repairHistory' packages/db/src/schema/non-conformances.ts → 1 hit
+- cd apps/backend && pnpm db:generate → diff 없거나 빈 migration
+```
+
+### 🟢 LOW — equipment.repairHistory deprecated 컬럼 스키마 정리 (Mode 1)
+
+```
+equipment.ts:132에 deprecated text 컬럼 잔존:
+  repairHistory: text('repair_history'), // @deprecated — repair_history 테이블 사용. 마이그레이션 후 제거 예정
+
+확인된 위치:
+1. packages/db/src/schema/equipment.ts:132 — 컬럼 정의 (deprecated)
+2. 실제 사용처 0건 (grep 확인) — repair-history.service.ts는 repairHistory 테이블 사용
+
+작업:
+1. packages/db/src/schema/equipment.ts:132 — 컬럼 정의 삭제
+2. apps/backend/drizzle/ 에 마이그레이션 생성:
+   pnpm db:generate → "drop column repair_history from equipment" 마이그레이션 확인
+   (또는 manual migration으로 ALTER TABLE equipment DROP COLUMN repair_history;)
+
+주의:
+- DB에 실제 컬럼이 존재하므로 마이그레이션 필수 (스키마 삭제만으로는 부족)
+- pnpm db:reset 실행 시 자동 정리되므로 개발 환경은 무방
+- 운영 적용 시 ALTER TABLE equipment DROP COLUMN repair_history 실행 필요
+  (데이터 손실 없음 — 컬럼 사용처 0건 검증됨)
+
+검증:
+- pnpm --filter backend run tsc --noEmit
+- grep -n 'repairHistory.*text\|repair_history.*text' packages/db/src/schema/equipment.ts → 0 hit
+- pnpm --filter backend run test (컬럼 참조 없으므로 테스트 영향 없어야 함)
+```
+
+### 🟢 LOW — CI shared packages 중복 빌드 최적화 (Mode 0)
+
+```
+.github/workflows/main.yml에서 pnpm build --filter "@equipment-management/*"가
+quality-gate job(line 85)과 unit-test job(line 178)에서 각각 실행됨.
+GitHub Actions는 job 간 파일시스템을 공유하지 않으므로 실질적 중복 빌드.
+
+확인된 위치:
+1. .github/workflows/main.yml:85
+   run: pnpm build --filter "@equipment-management/*"  ← quality-gate job
+2. .github/workflows/main.yml:178
+   run: pnpm build --filter "@equipment-management/*"  ← unit-test job (needs: quality-gate)
+
+작업:
+1. unit-test job에서 shared packages 빌드 결과를 quality-gate에서 캐시/아티팩트로 전달:
+   옵션 A — actions/upload-artifact → download-artifact 패턴:
+     quality-gate: upload-artifact packages/*/dist
+     unit-test: download-artifact 후 빌드 스텝 제거
+   옵션 B — npm/dist를 node_modules 캐시에 포함:
+     key에 packages/**/src/**의 해시 추가하면 dist 변경 감지 가능
+   
+   현실적 최적선: 옵션 A (가장 명확)
+
+주의:
+- unit-test가 needs: quality-gate이므로 아티팩트 타이밍 문제 없음
+- build job(line 232)은 전체 앱 빌드 — 별개 스텝이라 유지
+
+검증:
+- 워크플로우 YAML 유효성: grep 'pnpm build.*@equipment-management' .github/workflows/main.yml → 1 hit (quality-gate만)
+- unit-test job에서 Build Shared Packages 스텝 없음
+```
+
+---
 
 ## 46차 신규 — 시간복잡도 리뷰 결과 (5건, 2026-04-13)
 
