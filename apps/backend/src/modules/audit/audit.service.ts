@@ -19,6 +19,7 @@ import {
   type CreateAuditLogDto,
   type AuditLogFilter,
   type CursorPaginatedAuditLogsResponse,
+  type AuditLog as SchemasAuditLog,
 } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
@@ -256,7 +257,7 @@ export class AuditService {
           }
         }
 
-        return { items: pageItems, nextCursor, hasMore, summary };
+        return { items: pageItems as unknown as SchemasAuditLog[], nextCursor, hasMore, summary };
       },
       CACHE_TTL.MEDIUM
     );
