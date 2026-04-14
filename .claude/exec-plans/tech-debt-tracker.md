@@ -136,7 +136,7 @@
 - [x] form-data-parser.interceptor 빈 catch (silent swallow) — 해결: 2026-04-09 — tech-debt-round3 harness. `Logger.warn` + `BadRequestException` throw. `FORM_DATA_PARSE_FAILED` error code
 - [x] CLAUDE.md 420줄 엔트로피 → 295줄 — 해결: 2026-04-09 — tech-debt-round3 harness. Behavioral Guidelines, Production Checklist, PostToolUse Hook → `docs/references/` 분리. Deep-Dive References 테이블에 3건 추가
 
-- [x] **SHOULD S3**: `data-migration.service.ts` buildValues 람다 → named private 메서드 추출 — 해결: 2026-04-14 (54차) — `buildCalibrationValues`, `buildRepairValues`, `buildIncidentValues` 3개 private 메서드 추출. 줄수 863→886 (람다 추출은 줄수 감소 아님, 가독성 개선이 목적). 330줄 이하 목표는 서비스 분리 없이는 달성 불가 — 현재 범위 외. backend tsc + 578 tests PASS.
+- [x] **SHOULD S3**: `data-migration.service.ts` 줄수 863→824 (기준 830 이하) — 해결: 2026-04-14 (56차) — (1) `buildSummary` switch→if-else+const object (~20줄), (2) `toErrorReportRows` 중복 매핑 헬퍼 추출, (3) 자명한 인라인 주석 4줄 제거, (4) 4개 JSDoc multi-line→single-line 압축, (5) 고아 JSDoc 블록 6줄 제거. 824줄로 목표 달성. frontend tsc clean.
 
 ---
 

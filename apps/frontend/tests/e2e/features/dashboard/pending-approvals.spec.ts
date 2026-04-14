@@ -21,6 +21,9 @@
  */
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
+import path from 'path';
+
+const AUTH_DIR = path.join(__dirname, '../../.auth');
 
 test.describe('Pending Approvals Card', () => {
   // Run tests on all browsers
@@ -110,105 +113,52 @@ test.describe('Pending Approvals Card', () => {
     test.use({ storageState: undefined }); // Clear session between tests
 
     test('4.3 Verify role-specific approval categories', async ({ browser }) => {
-      const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+      const allCategories = ['장비', '교정', '반출', '보정계수', '소프트웨어'];
 
-      // TODO: callback/test-login 직접 호출 → auth.fixture storageState 전환 필요
-      // fetchBackendToken()은 backend JWT만 반환하므로 NextAuth 세션이 필요한 이 테스트에는 사용 불가
-      // Helper function to login and check categories
-      async function loginAndCheckCategories(role: string, expectedCategories: string[]) {
-        // Create a new context and page for each login
-        const context = await browser.newContext({ baseURL });
+      /** storageState 기반 역할별 카테고리 가시성 검증 */
+      async function checkCategoriesForRole(
+        storageStatePath: string,
+        expectedCategories: string[]
+      ) {
+        const context = await browser.newContext({ storageState: storageStatePath });
         const page = await context.newPage();
 
-        // Get CSRF token
-        const csrfResponse = await page.request.get(`${baseURL}/api/auth/csrf`);
-        const { csrfToken } = await csrfResponse.json();
-
-        // Login via NextAuth callback
-        const loginResponse = await page.request.post(
-          `${baseURL}/api/auth/callback/test-login?callbackUrl=/`,
-          {
-            form: {
-              role: role,
-              csrfToken: csrfToken,
-              json: 'true',
-            },
-          }
-        );
-
-        // Manually add cookies from login response
-        const setCookieHeaders = loginResponse.headers()['set-cookie'];
-        if (setCookieHeaders) {
-          const cookies = setCookieHeaders.split('\n').map((cookieStr: string) => {
-            const parts = cookieStr.split(';');
-            const [name, ...valueParts] = parts[0].split('=');
-            const value = valueParts.join('=');
-            return {
-              name: name.trim(),
-              value,
-              domain: 'localhost',
-              path: '/',
-            };
-          });
-          await context.addCookies(cookies);
-        }
-
-        // Navigate to dashboard
-        await page.goto(`${baseURL}/`);
+        await page.goto('/');
         await page.waitForLoadState('load');
 
-        // Wait for dashboard to load
-        const roleBadgeMap: Record<string, string> = {
-          test_engineer: '시험실무자',
-          technical_manager: '기술책임자',
-          lab_manager: '시험소 관리자',
-        };
-
-        const roleBadge = page
-          .locator(`text=${roleBadgeMap[role]}`)
-          .or(page.locator('text=시험소장'));
-        await expect(roleBadge.first()).toBeVisible({ timeout: 10000 });
-
-        // Check visible categories
         for (const category of expectedCategories) {
           const categoryLink = page.getByRole('link', { name: new RegExp(`${category}.*건`) });
           await expect(categoryLink).toBeVisible({ timeout: 5000 });
         }
 
-        // Verify categories that should NOT be visible
-        const allCategories = ['장비', '교정', '반출', '보정계수', '소프트웨어'];
         const invisibleCategories = allCategories.filter(
           (cat) => !expectedCategories.includes(cat)
         );
-
         for (const category of invisibleCategories) {
           const categoryLink = page.getByRole('link', { name: new RegExp(`${category}.*건`) });
-          const count = await categoryLink.count();
-          expect(count).toBe(0);
+          await expect(categoryLink).toHaveCount(0);
         }
 
-        console.log(
-          `✅ ${role} sees ${expectedCategories.length} categories: ${expectedCategories.join(', ')}`
-        );
-
-        // Cleanup
         await context.close();
       }
 
-      // 1. Login as test_engineer
-      // 2. Navigate to dashboard and check visible categories
-      // Expected: test_engineer sees: 장비, 교정, 반출 (3 categories)
-      await loginAndCheckCategories('test_engineer', ['장비', '교정', '반출']);
+      // test_engineer: 장비, 교정, 반출 (3개)
+      await checkCategoriesForRole(path.join(AUTH_DIR, 'test-engineer.json'), [
+        '장비',
+        '교정',
+        '반출',
+      ]);
 
-      // 3. Logout and login as technical_manager
-      // 4. Navigate to dashboard and check visible categories
-      // Expected: technical_manager sees: 장비, 교정, 반출, 보정계수 (4 categories)
-      await loginAndCheckCategories('technical_manager', ['장비', '교정', '반출', '보정계수']);
+      // technical_manager: 장비, 교정, 반출, 보정계수 (4개)
+      await checkCategoriesForRole(path.join(AUTH_DIR, 'technical-manager.json'), [
+        '장비',
+        '교정',
+        '반출',
+        '보정계수',
+      ]);
 
-      // 5. Logout and login as lab_manager
-      // 6. Navigate to dashboard and check visible categories
-      // Expected: lab_manager sees all 5 categories including 소프트웨어
-      await loginAndCheckCategories('lab_manager', [
+      // lab_manager: 전체 5개
+      await checkCategoriesForRole(path.join(AUTH_DIR, 'lab-manager.json'), [
         '장비',
         '교정',
         '반출',

@@ -111,13 +111,5 @@ test.describe('Exceptions - Group D', () => {
     // 1. API call succeeded (200 response)
     // 2. Disposal request was deleted
     // 3. Equipment status reverted to 'available'
-    //
-    // Note: The UI may show stale "폐기 진행 중" status due to backend cache not being invalidated.
-    // This is a known backend issue - the cancelDisposalRequest method needs to invalidate
-    // the equipment cache after the database transaction completes.
-    //
-    // TODO: Add cache invalidation to DisposalService.cancelDisposalRequest()
-    //   await this.cacheService.invalidate(`equipment:${equipmentId}`);
-    //   await this.cacheService.invalidate(`equipment:list:*`);
   });
 });

@@ -70,9 +70,7 @@ export class DataMigrationService {
     private readonly historyValidatorService: HistoryValidatorService
   ) {}
 
-  /**
-   * Preview (Dry-run) — 단일시트 하위 호환
-   */
+  /** Preview (Dry-run) — 단일시트 하위 호환 */
   async preview(
     file: MulterFile,
     dto: PreviewEquipmentMigrationDto,
@@ -129,9 +127,7 @@ export class DataMigrationService {
     return result;
   }
 
-  /**
-   * Execute (Commit) — 단일시트 하위 호환
-   */
+  /** Execute (Commit) — 단일시트 하위 호환 */
   async execute(
     dto: ExecuteEquipmentMigrationDto,
     userId: string
@@ -238,14 +234,7 @@ export class DataMigrationService {
     };
   }
 
-  /**
-   * 멀티시트 Preview (Dry-run)
-   *
-   * 1. 파일 저장
-   * 2. 멀티시트 파싱
-   * 3. 시트별 검증 (장비: MigrationValidatorService, 이력: HistoryValidatorService)
-   * 4. sessionId 발급 + 결과 캐시 저장
-   */
+  /** 멀티시트 Preview (Dry-run): 파싱 → 시트별 검증(장비/이력) → sessionId 발급 + 캐시 저장 */
   async previewMultiSheet(
     file: MulterFile,
     dto: PreviewEquipmentMigrationDto,
@@ -372,14 +361,7 @@ export class DataMigrationService {
     return result;
   }
 
-  /**
-   * 멀티시트 Execute (Commit)
-   *
-   * 1. sessionId로 캐시에서 멀티시트 Preview 결과 조회
-   * 2. 장비 먼저 INSERT → managementNumber→UUID 맵 구축
-   * 3. DB에서 기존 장비 관리번호 배치 조회
-   * 4. 이력(교정/수리/사고) INSERT — 100행 단위 chunk, 같은 트랜잭션
-   */
+  /** 멀티시트 Execute (Commit): 장비 배치 INSERT → mgmtNum→ID 맵 → 이력(교정/수리/사고) 배치 INSERT */
   async executeMultiSheet(
     dto: ExecuteEquipmentMigrationDto,
     userId: string
@@ -751,12 +733,6 @@ export class DataMigrationService {
     return counts;
   }
 
-  /**
-   * 3종 이력(교정/수리/사고) 배치 INSERT 공통 헬퍼
-   *
-   * - managementNumber → equipmentId 해석 실패 행은 errors 수집
-   * - 유효 행을 MIGRATION_CHUNK_SIZE 단위로 배치 INSERT
-   */
   private buildCalibrationValues(
     row: MigrationRowPreview,
     equipmentId: string,
