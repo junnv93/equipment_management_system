@@ -112,26 +112,6 @@ export class NonConformancesController {
     return this.nonConformancesService.findAll(query);
   }
 
-  @Get(':uuid')
-  @ApiOperation({
-    summary: '부적합 상세 조회',
-    description: '특정 부적합의 상세 정보를 조회합니다.',
-  })
-  @ApiParam({ name: 'uuid', description: '부적합 ID (UUID)' })
-  @ApiResponse({ status: HttpStatus.OK, description: '부적합 상세 조회 성공' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '부적합을 찾을 수 없음' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  async findOne(
-    @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Request() req: AuthenticatedRequest
-  ): Promise<NonConformance> {
-    const basic = await this.nonConformancesService.findOneBasic(uuid);
-    enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
-    return this.nonConformancesService.findOne(uuid);
-  }
-
   @Get('equipment/:equipmentUuid')
   @ApiOperation({
     summary: '장비별 열린 부적합 조회',
@@ -150,6 +130,26 @@ export class NonConformancesController {
       await this.nonConformancesService.getEquipmentSiteAndTeam(equipmentUuid);
     enforceSiteAccess(req, equipSite, NON_CONFORMANCE_DATA_SCOPE, equipTeamId);
     return this.nonConformancesService.findOpenByEquipment(equipmentUuid);
+  }
+
+  @Get(':uuid')
+  @ApiOperation({
+    summary: '부적합 상세 조회',
+    description: '특정 부적합의 상세 정보를 조회합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '부적합 ID (UUID)' })
+  @ApiResponse({ status: HttpStatus.OK, description: '부적합 상세 조회 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '부적합을 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<NonConformance> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
+    return this.nonConformancesService.findOne(uuid);
   }
 
   @AuditLog({

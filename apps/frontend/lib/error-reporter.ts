@@ -17,6 +17,8 @@
  * ```
  */
 
+import { API_BASE_URL } from '@/lib/config/api-config';
+
 export type ErrorSeverity = 'error' | 'warning' | 'info';
 
 export interface ErrorContext {
@@ -102,7 +104,7 @@ export function reportError(error: Error, context?: ErrorContext): void {
     timestamp: new Date().toISOString(),
   });
 
-  const backendUrl = `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/monitoring/client-errors`;
+  const backendUrl = `${API_BASE_URL}/api/monitoring/client-errors`;
 
   if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
     navigator.sendBeacon(backendUrl, new Blob([payload], { type: 'application/json' }));

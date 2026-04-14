@@ -46,15 +46,16 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { CurrentEnforcedScope } from '../../common/decorators/current-scope.decorator';
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
-import { Permission, USER_DATA_SCOPE } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  USER_DATA_SCOPE,
+  SIGNATURE_UPLOAD_LIMITS,
+} from '@equipment-management/shared-constants';
 import { InternalServiceOnly } from '../../common/decorators/internal-service-only.decorator';
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-  private static readonly SIGNATURE_MAX_SIZE = 2 * 1024 * 1024; // 2MB
-  private static readonly SIGNATURE_ALLOWED_TYPES = ['image/png', 'image/jpeg'];
-
   constructor(
     private readonly usersService: UsersService,
     private readonly fileUploadService: FileUploadService
@@ -212,13 +213,15 @@ export class UsersController {
         message: 'Signature image file is required.',
       });
     }
-    if (!UsersController.SIGNATURE_ALLOWED_TYPES.includes(file.mimetype)) {
+    if (
+      !(SIGNATURE_UPLOAD_LIMITS.ALLOWED_MIME_TYPES as readonly string[]).includes(file.mimetype)
+    ) {
       throw new BadRequestException({
         code: 'INVALID_FILE_TYPE',
         message: 'Only PNG and JPEG formats are allowed for signatures.',
       });
     }
-    if (file.size > UsersController.SIGNATURE_MAX_SIZE) {
+    if (file.size > SIGNATURE_UPLOAD_LIMITS.MAX_SIZE_BYTES) {
       throw new BadRequestException({
         code: 'FILE_TOO_LARGE',
         message: 'Signature image must be under 2MB.',

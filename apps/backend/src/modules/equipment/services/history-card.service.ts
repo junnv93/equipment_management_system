@@ -19,7 +19,11 @@ import { equipmentIncidentHistory } from '@equipment-management/db/schema/equipm
 import { documents } from '@equipment-management/db/schema/documents';
 import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
-import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
+import {
+  DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
+  HISTORY_CARD_QUERY_LIMIT,
+} from '@equipment-management/shared-constants';
 import { FormTemplateService } from '../../reports/form-template.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 
@@ -231,7 +235,7 @@ export class HistoryCardService {
         .from(calibrations)
         .where(eq(calibrations.equipmentId, equipmentId))
         .orderBy(desc(calibrations.calibrationDate))
-        .limit(50),
+        .limit(HISTORY_CARD_QUERY_LIMIT),
       this.db
         .select({
           checkoutDate: checkouts.checkoutDate,
@@ -244,37 +248,37 @@ export class HistoryCardService {
         .innerJoin(checkouts, eq(checkoutItems.checkoutId, checkouts.id))
         .where(eq(checkoutItems.equipmentId, equipmentId))
         .orderBy(desc(checkouts.createdAt))
-        .limit(50),
+        .limit(HISTORY_CARD_QUERY_LIMIT),
       this.db
         .select()
         .from(repairHistory)
         .where(eq(repairHistory.equipmentId, equipmentId))
         .orderBy(desc(repairHistory.repairDate))
-        .limit(50),
+        .limit(HISTORY_CARD_QUERY_LIMIT),
       this.db
         .select()
         .from(nonConformances)
         .where(eq(nonConformances.equipmentId, equipmentId))
         .orderBy(desc(nonConformances.createdAt))
-        .limit(50),
+        .limit(HISTORY_CARD_QUERY_LIMIT),
       this.db
         .select()
         .from(equipmentLocationHistory)
         .where(eq(equipmentLocationHistory.equipmentId, equipmentId))
         .orderBy(desc(equipmentLocationHistory.changedAt))
-        .limit(50),
+        .limit(HISTORY_CARD_QUERY_LIMIT),
       this.db
         .select()
         .from(equipmentMaintenanceHistory)
         .where(eq(equipmentMaintenanceHistory.equipmentId, equipmentId))
         .orderBy(desc(equipmentMaintenanceHistory.performedAt))
-        .limit(50),
+        .limit(HISTORY_CARD_QUERY_LIMIT),
       this.db
         .select()
         .from(equipmentIncidentHistory)
         .where(eq(equipmentIncidentHistory.equipmentId, equipmentId))
         .orderBy(desc(equipmentIncidentHistory.occurredAt))
-        .limit(50),
+        .limit(HISTORY_CARD_QUERY_LIMIT),
       this.db
         .select({ filePath: documents.filePath })
         .from(documents)

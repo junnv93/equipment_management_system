@@ -15,6 +15,9 @@ import { TEST_FIELD_VALUES, SOFTWARE_AVAILABILITY_VALUES } from '@equipment-mana
 import { DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import type { TestSoftwareQuery } from '@/lib/api/software-api';
 
+/** API 쿼리 파라미터 타입 (convertFiltersToApiParams 반환값) */
+export type ApiTestSoftwareFilters = TestSoftwareQuery;
+
 export interface UITestSoftwareFilters {
   search: string;
   testField: TestField | '';
@@ -67,7 +70,7 @@ export function parseTestSoftwareFiltersFromSearchParams(
 /**
  * UI 필터 → API 쿼리 파라미터 변환
  */
-export function toApiFilters(ui: UITestSoftwareFilters): TestSoftwareQuery {
+export function convertFiltersToApiParams(ui: UITestSoftwareFilters): ApiTestSoftwareFilters {
   return {
     ...(ui.search ? { search: ui.search } : {}),
     ...(ui.testField ? { testField: ui.testField } : {}),

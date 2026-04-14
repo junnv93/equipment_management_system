@@ -147,6 +147,38 @@ export function parseReportsFiltersFromSearchParams(
 }
 
 /**
+ * API 쿼리 파라미터 타입 (convertFiltersToApiParams 반환값)
+ *
+ * generateReport의 additionalParams 및 직접 파라미터로 전달할 수 있는 형태.
+ * reportType·format·dateRange는 별도 인수로 전달하므로 여기서 제외.
+ */
+export interface ApiReportsFilters {
+  site?: string;
+  teamId?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+/**
+ * UI 필터 → API 쿼리 파라미터 변환
+ *
+ * dateRange가 'custom'인 경우 customDateFrom/To를 startDate/endDate로 변환.
+ * 빈 문자열 필드는 undefined로 정규화하여 API 파라미터에서 제외.
+ */
+export function convertFiltersToApiParams(filters: UIReportsFilters): ApiReportsFilters {
+  const result: ApiReportsFilters = {};
+  if (filters.site) result.site = filters.site;
+  if (filters.teamId) result.teamId = filters.teamId;
+  if (filters.status) result.status = filters.status;
+  if (filters.dateRange === 'custom') {
+    if (filters.customDateFrom) result.startDate = filters.customDateFrom;
+    if (filters.customDateTo) result.endDate = filters.customDateTo;
+  }
+  return result;
+}
+
+/**
  * 활성 필터 개수 (reportType / dateRange / format 등 보고서 정의 자체는 제외하고
  * 서브필터만 카운트)
  */

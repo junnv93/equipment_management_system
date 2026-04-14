@@ -76,6 +76,32 @@ export const QUERY_SAFETY_LIMITS = {
 } as const;
 
 /**
+ * 보고서 폼 내보내기(form-template-export) 조회 제한
+ *
+ * 엑셀/PDF 양식 생성 시 적용되는 상한.
+ * 보고 기간 내 전체 데이터를 포함해야 하므로 QUERY_SAFETY_LIMITS보다 크게 설정.
+ */
+export const EXPORT_QUERY_LIMITS = {
+  /** 전체 목록 내보내기 최대 건수 (기간별 장비/교정 이력 집계) */
+  FULL_EXPORT: 1000,
+  /** 섹션별 내보내기 최대 건수 (세부 이력 테이블) */
+  SECTION_EXPORT: 500,
+} as const;
+
+/**
+ * 서명 이미지 업로드 제한 — UL-QP-18 서명 품질 기준
+ *
+ * 사용자 서명 이미지 업로드 시 적용되는 파일 형식/크기 정책.
+ * 변경 시 관련 UI 안내 문구도 함께 수정해야 함.
+ */
+export const SIGNATURE_UPLOAD_LIMITS = {
+  /** 최대 파일 크기 (bytes) — 2 MB */
+  MAX_SIZE_BYTES: 2 * 1024 * 1024,
+  /** 허용 MIME 타입 */
+  ALLOWED_MIME_TYPES: ['image/png', 'image/jpeg'] as const,
+} as const;
+
+/**
  * 스케줄러/배치 조회 제한
  */
 export const BATCH_QUERY_LIMITS = {
@@ -115,3 +141,17 @@ export const REPORT_UTILIZATION_THRESHOLDS = {
   /** 저가동률 기준 (%) */
   LOW: 20,
 } as const;
+
+/**
+ * 이력카드 조회 상한 — 장비별 이력 조회 OOM 방지
+ *
+ * 이력카드 생성 시 각 이력 섹션(교정/반출/수리/부적합 등)에 적용되는 상한.
+ * docx 렌더링 성능을 고려한 값으로, 현장 운영 데이터 기준 충분한 여유.
+ */
+export const HISTORY_CARD_QUERY_LIMITS = {
+  /** 이력카드 섹션(교정/반출/수리/부적합/위치이동/유지보수/사고) 최대 조회 건수 */
+  SECTION_ITEMS: 50,
+} as const;
+
+/** @deprecated Use HISTORY_CARD_QUERY_LIMITS.SECTION_ITEMS instead */
+export const HISTORY_CARD_QUERY_LIMIT = HISTORY_CARD_QUERY_LIMITS.SECTION_ITEMS;

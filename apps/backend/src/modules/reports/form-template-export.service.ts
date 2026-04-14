@@ -39,6 +39,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import {
   DEFAULT_LOCALE,
   DEFAULT_TIMEZONE,
+  EXPORT_QUERY_LIMITS,
   FORM_CATALOG,
   isFormImplemented,
   isFormDedicatedEndpoint,
@@ -227,7 +228,7 @@ export class FormTemplateExportService {
       .from(equipment)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(equipment.managementNumber)
-      .limit(1000);
+      .limit(EXPORT_QUERY_LIMITS.FULL_EXPORT);
 
     const formatDate = (d: Date | null | undefined): string => {
       if (!d) return 'N/A';
@@ -1292,7 +1293,7 @@ export class FormTemplateExportService {
       .leftJoin(secondaryManager, eq(testSoftware.secondaryManagerId, secondaryManager.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(asc(testSoftware.managementNumber))
-      .limit(1000);
+      .limit(EXPORT_QUERY_LIMITS.FULL_EXPORT);
 
     // DOCX 템플릿 로드 — T0: 10열 테이블 (R0=헤더, R1~R21=빈 데이터행)
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-07');
@@ -1565,7 +1566,7 @@ export class FormTemplateExportService {
       .from(cables)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(cables.managementNumber)
-      .limit(500);
+      .limit(EXPORT_QUERY_LIMITS.SECTION_EXPORT);
 
     // 템플릿 로드 — 실패 시 명시적 에러
     const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-08');

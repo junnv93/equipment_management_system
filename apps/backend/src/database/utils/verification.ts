@@ -38,6 +38,7 @@ import { CALIBRATION_FACTORS_SEED_DATA } from '../seed-data/calibration/calibrat
 import { SOFTWARE_VALIDATIONS_SEED_DATA } from '../seed-data/software/software-validations.seed';
 import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from '../seed-data/software/equipment-test-software.seed';
 import { DISPOSAL_REQUESTS_SEED_DATA } from '../seed-data/disposal/disposal-requests.seed';
+import { EQUIPMENT_IMPORTS_SEED_DATA } from '../seed-data/operations/equipment-imports.seed';
 
 interface VerificationResult {
   passed: boolean;
@@ -335,6 +336,15 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
         'Disposal Requests count',
         'disposal_requests',
         DISPOSAL_REQUESTS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Equipment Imports count',
+        'equipment_imports',
+        EQUIPMENT_IMPORTS_SEED_DATA.length
       )
     );
 

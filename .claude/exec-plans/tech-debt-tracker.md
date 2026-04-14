@@ -8,13 +8,13 @@
 ## 미완료 항목
 
 - [ ] **LOW**: `performance.integration.spec.ts` Rule 1 위반 — `equipment_management_test` 별도 DB 사용 → 단일 DB 패턴으로 수정 필요 — `apps/backend/src/database/tests/performance.integration.spec.ts` — 2026-04-14 (63차 발견)
-- [ ] **SHOULD**: `error-reporter.ts:105` `process.env.NEXT_PUBLIC_API_URL` 직접 접근 → `api-config.ts`의 `API_BASE_URL` import로 교체 — `apps/frontend/lib/error-reporter.ts:105` — 2026-04-14 (verify-hardcoding, 63차)
-- [ ] **SHOULD**: `history-card.service.ts` `.limit(50)` 매직 넘버 7건 → shared-constants 상수화 — `apps/backend/src/modules/equipment/services/history-card.service.ts:234,247,253,259,265,271,277` — 2026-04-14 (verify-hardcoding, 63차)
-- [ ] **SHOULD**: `form-template-export.service.ts` `.limit(1000)/.limit(500)` 매직 넘버 → shared-constants 상수화 — `apps/backend/src/modules/reports/form-template-export.service.ts:230,1295,1568` — 2026-04-14 (verify-hardcoding, 63차)
-- [ ] **SHOULD**: `reports-filter-utils.ts` `convertFiltersToApiParams` + `ApiReportsFilters` 누락 → 필터 SSOT 패턴 완성 — `apps/frontend/lib/utils/reports-filter-utils.ts` — 2026-04-14 (verify-filters, 63차)
-- [ ] **SHOULD**: `software-filter-utils.ts` `toApiFilters` 비표준 명칭 → `convertFiltersToApiParams` + `ApiTestSoftwareFilters` 인터페이스 추가 — `apps/frontend/lib/utils/software-filter-utils.ts` — 2026-04-14 (verify-filters, 63차)
-- [ ] **SHOULD**: `audit.controller.ts` 반환 타입 `Promise<unknown>` 4건 → 구체적 타입 명시 — `apps/backend/src/modules/audit/audit.controller.ts` (findAll/findOne/findByEntity/findByUser) — 2026-04-14 (verify-ssot Step 2a)
-- [ ] **SHOULD**: `users.controller.ts` SIGNATURE_ALLOWED_TYPES/SIGNATURE_MAX_SIZE 하드코딩 → shared-constants 상수화 — `apps/backend/src/modules/users/users.controller.ts:~185` — 2026-04-14 (verify-hardcoding, 도메인 정책 상수)
+- [x] **SHOULD**: `error-reporter.ts:105` `process.env.NEXT_PUBLIC_API_URL` 직접 접근 → `api-config.ts`의 `API_BASE_URL` import로 교체 — 해결: 2026-04-14 (64차 nc-route-debt harness)
+- [x] **SHOULD**: `history-card.service.ts` `.limit(50)` 매직 넘버 7건 → shared-constants 상수화 — 해결: 2026-04-14 — `HISTORY_CARD_QUERY_LIMIT = 50` (shared-constants/business-rules) 7곳 교체 (64차 nc-route-debt harness)
+- [x] **SHOULD**: `form-template-export.service.ts` `.limit(1000)/.limit(500)` 매직 넘버 → shared-constants 상수화 — 해결: 2026-04-14 — `EXPORT_QUERY_LIMITS.FULL_EXPORT/SECTION_EXPORT` 교체 (이전 세션 완료, 64차 확인)
+- [x] **SHOULD**: `reports-filter-utils.ts` `convertFiltersToApiParams` + `ApiReportsFilters` 누락 → 필터 SSOT 패턴 완성 — 해결: 2026-04-14 — `ApiReportsFilters` 인터페이스 + `convertFiltersToApiParams` 함수 추가 (64차 nc-route-debt harness)
+- [x] **SHOULD**: `software-filter-utils.ts` `toApiFilters` 비표준 명칭 → `convertFiltersToApiParams` + `ApiTestSoftwareFilters` 인터페이스 추가 — 해결: 2026-04-14 — 함수 rename + `ApiTestSoftwareFilters` 타입 추가 + `TestSoftwareListContent.tsx` 소비자 업데이트 (64차 nc-route-debt harness)
+- [x] **SHOULD**: `audit.controller.ts` 반환 타입 `Promise<unknown>` 4건 → 구체적 타입 명시 — 해결: 이전 세션 완료 (64차 확인)
+- [x] **SHOULD**: `users.controller.ts` SIGNATURE_ALLOWED_TYPES/SIGNATURE_MAX_SIZE 하드코딩 → shared-constants 상수화 — 해결: 2026-04-14 — 로컬 static 상수 제거 → `SIGNATURE_UPLOAD_LIMITS` (shared-constants) 사용 (64차 nc-route-debt harness)
 - [ ] **SHOULD**: pnpm audit critical 2건(Axios) + high 1건(Next.js) 취약점 — `package.json` (pnpm.overrides 미티게이션 확인 또는 버전 업그레이드) — 2026-04-14 (verify-security)
 - [ ] **LOW**: `AuthProviders.tsx` `getProviders()` → useState (NextAuth 설정값, TanStack Query 전환 검토) — `apps/frontend/components/auth/AuthProviders.tsx:25-48` — 2026-04-14 (verify-frontend-state, NextAuth 특수케이스로 낮은 우선순위)
 

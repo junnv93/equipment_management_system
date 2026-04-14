@@ -33,7 +33,7 @@ import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-consta
 import { useAuth } from '@/hooks/use-auth';
 import {
   parseTestSoftwareFiltersFromSearchParams,
-  toApiFilters,
+  convertFiltersToApiParams,
   type UITestSoftwareFilters,
 } from '@/lib/utils/software-filter-utils';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -50,7 +50,7 @@ export default function TestSoftwareListContent() {
   const canCreate = can(Permission.CREATE_TEST_SOFTWARE);
 
   const uiFilters = parseTestSoftwareFiltersFromSearchParams(searchParams);
-  const apiFilters = toApiFilters(uiFilters);
+  const apiFilters = convertFiltersToApiParams(uiFilters);
 
   const updateFilter = useCallback(
     (key: keyof UITestSoftwareFilters, value: string) => {

@@ -7,7 +7,13 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
-import { AuditService, AuditLogFilter, PaginationOptions } from './audit.service';
+import {
+  AuditService,
+  AuditLogFilter,
+  PaginationOptions,
+  PaginationMeta,
+  type AuditActionCounts,
+} from './audit.service';
 import { AuditLogQueryValidationPipe, type AuditLogQueryInput } from './dto/audit-log-query.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import {
@@ -19,7 +25,9 @@ import {
   AUDIT_ACTION_VALUES,
   AUDIT_ENTITY_TYPE_VALUES,
   type UserRole,
+  type CursorPaginatedAuditLogsResponse,
 } from '@equipment-management/schemas';
+import type { AuditLog } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest } from '../../types/auth';
 
 /**
@@ -90,7 +98,10 @@ export class AuditController {
   async findAll(
     @Request() req: AuthenticatedRequest,
     @Query() query: AuditLogQueryInput
-  ): Promise<unknown> {
+  ): Promise<
+    | CursorPaginatedAuditLogsResponse
+    | { items: AuditLog[]; meta: PaginationMeta; summary: AuditActionCounts }
+  > {
     // SSOT: resolveDataScope()로 역할별 스코프 해석 — switch/if 없음
     const scope = resolveDataScope(
       {
@@ -141,7 +152,7 @@ export class AuditController {
   async findOne(
     @Request() req: AuthenticatedRequest,
     @Param('id', ParseUUIDPipe) id: string
-  ): Promise<unknown> {
+  ): Promise<AuditLog> {
     const scope = resolveDataScope(
       {
         role: req.user.roles[0] as UserRole,
@@ -172,7 +183,7 @@ export class AuditController {
     @Request() req: AuthenticatedRequest,
     @Param('entityType') entityType: string,
     @Param('entityId', ParseUUIDPipe) entityId: string
-  ): Promise<unknown> {
+  ): Promise<{ items: AuditLog[]; formattedLogs: string[] }> {
     const scope = resolveDataScope(
       {
         role: req.user.roles[0] as UserRole,
@@ -208,7 +219,7 @@ export class AuditController {
     @Request() req: AuthenticatedRequest,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Query('limit') limit?: string
-  ): Promise<unknown> {
+  ): Promise<{ items: AuditLog[]; formattedLogs: string[] }> {
     const scope = resolveDataScope(
       {
         role: req.user.roles[0] as UserRole,
