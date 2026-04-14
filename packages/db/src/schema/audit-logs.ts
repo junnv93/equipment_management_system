@@ -1,6 +1,10 @@
 import { pgTable, varchar, timestamp, text, uuid, json, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES } from '@equipment-management/schemas';
+import {
+  AUDIT_ACTION_VALUES,
+  AUDIT_ENTITY_TYPE_VALUES,
+  type AuditLogUserRole,
+} from '@equipment-management/schemas';
 import { users } from './users';
 
 /** @see packages/schemas/src/enums.ts - AuditActionEnum (SSOT) */
@@ -39,7 +43,7 @@ export const auditLogs = pgTable(
     // 비정규화된 userName/userRole/userSite/userTeamId 컬럼이 실제 표시에 사용된다.
     userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
     userName: varchar('user_name', { length: 100 }).notNull(),
-    userRole: varchar('user_role', { length: 50 }).notNull(),
+    userRole: varchar('user_role', { length: 50 }).notNull().$type<AuditLogUserRole>(),
 
     // 액션 정보
     action: varchar('action', { length: 50 }).notNull(),
