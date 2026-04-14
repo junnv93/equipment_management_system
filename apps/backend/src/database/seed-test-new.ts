@@ -230,6 +230,10 @@ async function main(): Promise<void> {
     // =========================================================================
     console.log('\n📋 Phase 1B: Inserting operations...');
 
+    // Repair History (8) — non_conformances가 repair_history_id FK를 참조하므로 먼저 삽입
+    console.log('  → Repair History (8)');
+    await db.insert(schema.repairHistory).values(REPAIR_HISTORY_SEED_DATA);
+
     // Non-Conformances (10)
     console.log('  → Non-Conformances (10)');
     await db.insert(schema.nonConformances).values(NON_CONFORMANCES_SEED_DATA);
@@ -273,10 +277,6 @@ async function main(): Promise<void> {
     // PHASE 2: EXTENDED ENTITIES (Partially Implemented)
     // =========================================================================
     console.log('\n📋 Phase 2: Inserting extended entities...');
-
-    // Repair History (8)
-    console.log('  → Repair History (8)');
-    await db.insert(schema.repairHistory).values(REPAIR_HISTORY_SEED_DATA);
 
     // Calibration Factors (12)
     console.log('  → Calibration Factors (12)');
