@@ -10,7 +10,7 @@
 > `AuditTimelineFeed.tsx:252` `roleLabel(log.userRole)` — `log.userRole: string` vs `roleLabel: (role: UserRole) => string` 타입 불일치.
 > 근본 원인: `packages/schemas/src/audit-log.ts:175,196` `userRole: string` → `UserRole` SSOT 타입으로 좁혀야 함.
 
-### 🟡 MEDIUM — AuditLog.userRole SSOT 타입 불일치 (packages/schemas → frontend) (Mode 0)
+### ~~🟡 MEDIUM — AuditLog.userRole SSOT 타입 불일치 (packages/schemas → frontend) (Mode 0)~~ ✅ 완료 (2026-04-14 55차)
 
 ```
 frontend tsc TS2345 에러:
