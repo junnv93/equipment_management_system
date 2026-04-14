@@ -369,6 +369,38 @@ export class EquipmentHistoryService {
   }
 
   /**
+   * 위치 변동 이력 배치 추가 (마이그레이션 전용)
+   *
+   * validateAndGetUser를 1회만 호출하고 단일 배치 INSERT로 처리.
+   * equipment.location 동기화 없음 — 마이그레이션 트랜잭션 내 호출자가 관리.
+   */
+  async createLocationHistoryBatch(
+    entries: Array<{
+      equipmentId: string;
+      changedAt: string;
+      newLocation: string;
+      previousLocation: string | null;
+      notes?: string;
+    }>,
+    userId: string,
+    tx?: AppDatabase
+  ): Promise<void> {
+    if (entries.length === 0) return;
+
+    const validatedUser = await this.validateAndGetUser(userId);
+    const batchValues = entries.map((entry) => ({
+      equipmentId: entry.equipmentId,
+      changedAt: new Date(entry.changedAt),
+      previousLocation: entry.previousLocation,
+      newLocation: entry.newLocation,
+      notes: entry.notes ?? null,
+      changedBy: validatedUser?.id ?? null,
+    }));
+
+    await (tx ?? this.db).insert(equipmentLocationHistory).values(batchValues);
+  }
+
+  /**
    * 위치 변동 이력 삭제
    *
    * 삭제 후 resolveLatestLocation → syncEquipmentLocation (SSOT 헬퍼).

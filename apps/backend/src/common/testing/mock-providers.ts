@@ -64,6 +64,7 @@ export const createMockFileUploadService = (): Record<string, jest.Mock> => ({
 
 export const createMockEquipmentHistoryService = (): Record<string, jest.Mock> => ({
   createLocationHistoryInternal: jest.fn().mockResolvedValue(undefined),
+  createLocationHistoryBatch: jest.fn().mockResolvedValue(undefined),
   getLocationHistory: jest.fn().mockResolvedValue([]),
   getMaintenanceHistory: jest.fn().mockResolvedValue([]),
   getIncidentHistory: jest.fn().mockResolvedValue([]),

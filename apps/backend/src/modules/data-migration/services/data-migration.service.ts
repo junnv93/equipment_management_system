@@ -18,7 +18,7 @@ import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { EquipmentHistoryService } from '../../equipment/services/equipment-history.service';
-import { calculateNextCalibrationDate } from '../../../common/utils';
+import { calculateNextCalibrationDate, chunkArray } from '../../../common/utils';
 import type {
   MigrationPreviewResult,
   MigrationExecuteResult,
@@ -32,6 +32,7 @@ import type {
 import { ExcelParserService } from './excel-parser.service';
 import { MigrationValidatorService } from './migration-validator.service';
 import { HistoryValidatorService } from './history-validator.service';
+import { BATCH_QUERY_LIMITS } from '@equipment-management/shared-constants';
 import type { PreviewEquipmentMigrationDto } from '../dto/preview-migration.dto';
 import type { ExecuteEquipmentMigrationDto } from '../dto/execute-migration.dto';
 
@@ -43,9 +44,6 @@ const SESSION_TTL_MS = 3600 * 1000;
 /** SSOT: CACHE_KEY_PREFIXES.DATA_MIGRATION + 세그먼트 */
 const SESSION_CACHE_KEY_PREFIX = `${CACHE_KEY_PREFIXES.DATA_MIGRATION}session:`;
 const MULTI_SESSION_CACHE_KEY_PREFIX = `${CACHE_KEY_PREFIXES.DATA_MIGRATION}multi-session:`;
-
-/** 배치 INSERT 청크 크기 */
-const CHUNK_SIZE = 100;
 
 /**
  * 데이터 마이그레이션 오케스트레이터 서비스
@@ -181,36 +179,39 @@ export class DataMigrationService {
 
     // 단일 트랜잭션 — All-or-Nothing (개별 행 실패 시 전체 롤백)
     await this.db.transaction(async (tx) => {
-      for (const row of validRows) {
-        const entity = this.buildEntityFromRow(row, userId);
+      const locationEntries: Parameters<
+        typeof this.equipmentHistoryService.createLocationHistoryBatch
+      >[0] = [];
 
-        const [created] = await tx
+      const chunks = chunkArray(validRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
+      for (const chunk of chunks) {
+        const entities = chunk.map(
+          (row) => this.buildEntityFromRow(row, userId) as typeof equipment.$inferInsert
+        );
+        const createdRows = await tx
           .insert(equipment)
-          .values(entity as typeof equipment.$inferInsert)
-          .returning();
+          .values(entities)
+          .returning({ id: equipment.id, managementNumber: equipment.managementNumber });
 
-        // 위치 이력 SSOT 동기화
-        if (row.data.initialLocation || row.data.location) {
-          const resolvedLocation = (row.data.initialLocation || row.data.location) as string;
-          const changedAt = (
-            (row.data.installationDate as Date | undefined) ?? new Date()
-          ).toISOString();
-
-          await this.equipmentHistoryService.createLocationHistoryInternal(
-            created.id,
-            {
-              changedAt,
-              newLocation: resolvedLocation,
+        for (let i = 0; i < chunk.length; i++) {
+          const row = chunk[i];
+          const created = createdRows[i];
+          if (row.data.initialLocation || row.data.location) {
+            locationEntries.push({
+              equipmentId: created.id,
+              changedAt: (
+                (row.data.installationDate as Date | undefined) ?? new Date()
+              ).toISOString(),
+              newLocation: (row.data.initialLocation || row.data.location) as string,
               previousLocation: null,
               notes: '데이터 마이그레이션',
-            },
-            userId,
-            tx
-          );
+            });
+          }
         }
-
-        createdCount++;
       }
+
+      await this.equipmentHistoryService.createLocationHistoryBatch(locationEntries, userId, tx);
+      createdCount = validRows.length;
     });
 
     // 장비 목록 + 대시보드 캐시 무효화 (대량 등록으로 KPI 변경됨)
@@ -428,42 +429,44 @@ export class DataMigrationService {
         let createdCount = 0;
         const sheetErrors: MigrationRowPreview[] = [...errorRowsForSheet];
 
-        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
-        for (const chunk of chunks) {
-          for (const row of chunk) {
-            const entity = this.buildEntityFromRow(row, userId);
-            const [created] = await tx
-              .insert(equipment)
-              .values(entity as typeof equipment.$inferInsert)
-              .returning();
+        const locationEntries: Parameters<
+          typeof this.equipmentHistoryService.createLocationHistoryBatch
+        >[0] = [];
+
+        const equipChunks = chunkArray(validRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
+        for (const chunk of equipChunks) {
+          const entities = chunk.map(
+            (row) => this.buildEntityFromRow(row, userId) as typeof equipment.$inferInsert
+          );
+          const createdRows = await tx
+            .insert(equipment)
+            .values(entities)
+            .returning({ id: equipment.id, managementNumber: equipment.managementNumber });
+
+          for (let i = 0; i < chunk.length; i++) {
+            const row = chunk[i];
+            const created = createdRows[i];
 
             if (row.managementNumber) {
               mgmtNumToId.set(row.managementNumber, created.id);
             }
 
-            // 위치 이력 SSOT 동기화
             if (row.data.initialLocation || row.data.location) {
-              const resolvedLocation = (row.data.initialLocation || row.data.location) as string;
-              const changedAt = (
-                (row.data.installationDate as Date | undefined) ?? new Date()
-              ).toISOString();
-
-              await this.equipmentHistoryService.createLocationHistoryInternal(
-                created.id,
-                {
-                  changedAt,
-                  newLocation: resolvedLocation,
-                  previousLocation: null,
-                  notes: '데이터 마이그레이션',
-                },
-                userId,
-                tx
-              );
+              locationEntries.push({
+                equipmentId: created.id,
+                changedAt: (
+                  (row.data.installationDate as Date | undefined) ?? new Date()
+                ).toISOString(),
+                newLocation: (row.data.initialLocation || row.data.location) as string,
+                previousLocation: null,
+                notes: '데이터 마이그레이션',
+              });
             }
-
-            createdCount++;
           }
         }
+
+        await this.equipmentHistoryService.createLocationHistoryBatch(locationEntries, userId, tx);
+        createdCount = validRows.length;
 
         sheetSummaries.push({
           sheetType: 'equipment',
@@ -505,45 +508,27 @@ export class DataMigrationService {
         if (sheet.sheetType !== 'calibration') continue;
 
         const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
-        let createdCount = 0;
         const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
 
-        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
-        for (const chunk of chunks) {
-          for (const row of chunk) {
-            const mgmtNum = row.managementNumber;
-            const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
-
-            if (!equipmentId) {
-              sheetErrors.push({
-                ...row,
-                status: 'error',
-                errors: [
-                  {
-                    field: 'managementNumber',
-                    message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
-                    code: 'EQUIPMENT_NOT_FOUND',
-                  },
-                ],
-              });
-              continue;
-            }
-
-            await tx.insert(calibrations).values({
-              equipmentId,
-              calibrationDate: row.data.calibrationDate as Date,
-              agencyName: row.data.agencyName as string | undefined,
-              certificateNumber: row.data.certificateNumber as string | undefined,
-              result: row.data.result as string | undefined,
-              cost: row.data.cost !== undefined ? String(row.data.cost) : undefined,
-              notes: row.data.notes as string | undefined,
-              status: 'completed',
-              approvalStatus: 'approved',
-              registeredBy: userId,
-            });
-            createdCount++;
-          }
-        }
+        const { createdCount, errors } = await this.insertHistoryBatch(
+          tx,
+          calibrations,
+          validRows,
+          mgmtNumToId,
+          (row, equipmentId) => ({
+            equipmentId,
+            calibrationDate: row.data.calibrationDate as Date,
+            agencyName: row.data.agencyName as string | undefined,
+            certificateNumber: row.data.certificateNumber as string | undefined,
+            result: row.data.result as string | undefined,
+            cost: row.data.cost !== undefined ? String(row.data.cost) : undefined,
+            notes: row.data.notes as string | undefined,
+            status: 'completed',
+            approvalStatus: 'approved',
+            registeredBy: userId,
+          })
+        );
+        sheetErrors.push(...errors);
 
         sheetSummaries.push({
           sheetType: 'calibration',
@@ -561,41 +546,23 @@ export class DataMigrationService {
         if (sheet.sheetType !== 'repair') continue;
 
         const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
-        let createdCount = 0;
         const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
 
-        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
-        for (const chunk of chunks) {
-          for (const row of chunk) {
-            const mgmtNum = row.managementNumber;
-            const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
-
-            if (!equipmentId) {
-              sheetErrors.push({
-                ...row,
-                status: 'error',
-                errors: [
-                  {
-                    field: 'managementNumber',
-                    message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
-                    code: 'EQUIPMENT_NOT_FOUND',
-                  },
-                ],
-              });
-              continue;
-            }
-
-            await tx.insert(repairHistory).values({
-              equipmentId,
-              repairDate: row.data.repairDate as Date,
-              repairDescription: row.data.repairDescription as string,
-              repairResult: row.data.repairResult as string | undefined,
-              notes: row.data.notes as string | undefined,
-              createdBy: userId,
-            });
-            createdCount++;
-          }
-        }
+        const { createdCount, errors } = await this.insertHistoryBatch(
+          tx,
+          repairHistory,
+          validRows,
+          mgmtNumToId,
+          (row, equipmentId) => ({
+            equipmentId,
+            repairDate: row.data.repairDate as Date,
+            repairDescription: row.data.repairDescription as string,
+            repairResult: row.data.repairResult as string | undefined,
+            notes: row.data.notes as string | undefined,
+            createdBy: userId,
+          })
+        );
+        sheetErrors.push(...errors);
 
         sheetSummaries.push({
           sheetType: 'repair',
@@ -613,40 +580,22 @@ export class DataMigrationService {
         if (sheet.sheetType !== 'incident') continue;
 
         const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
-        let createdCount = 0;
         const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
 
-        const chunks = this.chunkArray(validRows, CHUNK_SIZE);
-        for (const chunk of chunks) {
-          for (const row of chunk) {
-            const mgmtNum = row.managementNumber;
-            const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
-
-            if (!equipmentId) {
-              sheetErrors.push({
-                ...row,
-                status: 'error',
-                errors: [
-                  {
-                    field: 'managementNumber',
-                    message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
-                    code: 'EQUIPMENT_NOT_FOUND',
-                  },
-                ],
-              });
-              continue;
-            }
-
-            await tx.insert(equipmentIncidentHistory).values({
-              equipmentId,
-              occurredAt: row.data.occurredAt as Date,
-              incidentType: row.data.incidentType as string,
-              content: row.data.content as string,
-              reportedBy: userId,
-            });
-            createdCount++;
-          }
-        }
+        const { createdCount, errors } = await this.insertHistoryBatch(
+          tx,
+          equipmentIncidentHistory,
+          validRows,
+          mgmtNumToId,
+          (row, equipmentId) => ({
+            equipmentId,
+            occurredAt: row.data.occurredAt as Date,
+            incidentType: row.data.incidentType as string,
+            content: row.data.content as string,
+            reportedBy: userId,
+          })
+        );
+        sheetErrors.push(...errors);
 
         sheetSummaries.push({
           sheetType: 'incident',
@@ -861,13 +810,53 @@ export class DataMigrationService {
   }
 
   /**
-   * 배열을 지정된 크기의 청크로 분할
+   * 3종 이력(교정/수리/사고) 배치 INSERT 공통 헬퍼
+   *
+   * - managementNumber → equipmentId 해석 실패 행은 errors 수집
+   * - 유효 행을 MIGRATION_CHUNK_SIZE 단위로 배치 INSERT
    */
-  private chunkArray<T>(arr: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < arr.length; i += size) {
-      chunks.push(arr.slice(i, i + size));
+  private async insertHistoryBatch(
+    tx: AppDatabase,
+    table: typeof calibrations | typeof repairHistory | typeof equipmentIncidentHistory,
+    rows: MigrationRowPreview[],
+    mgmtNumToId: Map<string, string>,
+    buildValues: (row: MigrationRowPreview, equipmentId: string) => object
+  ): Promise<{ createdCount: number; errors: MigrationRowPreview[] }> {
+    const errors: MigrationRowPreview[] = [];
+    const validValues: object[] = [];
+
+    for (const row of rows) {
+      const mgmtNum = row.managementNumber;
+      const equipmentId = mgmtNum ? mgmtNumToId.get(mgmtNum) : undefined;
+
+      if (!equipmentId) {
+        errors.push({
+          ...row,
+          status: 'error' as const,
+          errors: [
+            {
+              field: 'managementNumber',
+              message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
+              code: 'EQUIPMENT_NOT_FOUND',
+            },
+          ],
+        });
+        continue;
+      }
+
+      validValues.push(buildValues(row, equipmentId));
     }
-    return chunks;
+
+    if (validValues.length === 0) return { createdCount: 0, errors };
+
+    const chunks = chunkArray(validValues, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
+    for (const chunk of chunks) {
+      // union table 타입을 Drizzle에 전달; buildValues가 올바른 shape를 보장
+      await (tx.insert(table) as unknown as { values: (v: object[]) => Promise<void> }).values(
+        chunk
+      );
+    }
+
+    return { createdCount: validValues.length, errors };
   }
 }

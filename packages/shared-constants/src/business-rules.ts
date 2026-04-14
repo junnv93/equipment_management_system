@@ -85,6 +85,8 @@ export const BATCH_QUERY_LIMITS = {
   UPCOMING_CALIBRATIONS: 100,
   /** 교정 예정 장비 전체 조회 (스케줄러용) */
   CALIBRATION_DUE_EQUIPMENT: 500,
+  /** 데이터 마이그레이션 배치 INSERT 청크 크기 */
+  MIGRATION_CHUNK_SIZE: 100,
 } as const;
 
 /**

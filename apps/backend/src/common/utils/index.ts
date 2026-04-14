@@ -8,3 +8,4 @@ export * from './enforce-site-access';
 export * from './drizzle-sql';
 export * from './advisory-lock';
 export * from './excel-buffer';
+export * from './chunk-array';
