@@ -7,6 +7,11 @@
 
 ## 미완료 항목
 
+- [ ] **SHOULD**: `audit.controller.ts` 반환 타입 `Promise<unknown>` 4건 → 구체적 타입 명시 — `apps/backend/src/modules/audit/audit.controller.ts` (findAll/findOne/findByEntity/findByUser) — 2026-04-14 (verify-ssot Step 2a)
+- [ ] **SHOULD**: `users.controller.ts` SIGNATURE_ALLOWED_TYPES/SIGNATURE_MAX_SIZE 하드코딩 → shared-constants 상수화 — `apps/backend/src/modules/users/users.controller.ts:~185` — 2026-04-14 (verify-hardcoding, 도메인 정책 상수)
+- [ ] **SHOULD**: pnpm audit critical 2건(Axios) + high 1건(Next.js) 취약점 — `package.json` (pnpm.overrides 미티게이션 확인 또는 버전 업그레이드) — 2026-04-14 (verify-security)
+- [ ] **LOW**: `AuthProviders.tsx` `getProviders()` → useState (NextAuth 설정값, TanStack Query 전환 검토) — `apps/frontend/components/auth/AuthProviders.tsx:25-48` — 2026-04-14 (verify-frontend-state, NextAuth 특수케이스로 낮은 우선순위)
+
 - [x] **SHOULD**: calibration.service.ts 정밀 scope 무효화 — 해결: 2026-04-12 — `invalidateCalibrationCache(id?, equipmentId?)` 시그니처 변경, `resolveEquipmentTeamId` 헬퍼 추가, 6개 호출 사이트에 equipmentId 전달. team-scoped (`:t:<teamId>:`) + global (`:g:`) 정밀 무효화 구현.
 - [x] users.service.remove() FK restrict 안전 가드 + calibration 캐시 scope-aware — 해결: 2026-04-12 — Mode 2 harness `ondelete-cache-scope`. (1) `remove()` 에 application-level pre-check 추가: calibrations/checkouts/non_conformances/calibration_factors 4개 테이블 EXISTS 검사 → BadRequestException with 테이블명. try-catch DB-level guard 유지 (race condition 방어). (2) calibration.service.ts buildCacheKey → scope-aware 패턴(`:t:<teamId>:` | `:g:`) 적용, buildStableCacheKey 제거, dead prefix(pending/intermediate-checks) 제거. 2회 반복 (MUST-1 pre-check 누락 → 추가). 44 suites / 565 tests PASS
 - [x] onDelete 정책 불일치: nc/calibration_factors 승인자 FK set null → restrict 통일 — 해결: 2026-04-12 — Mode 0 direct. calibration_factors.approvedBy + non_conformances(correctedBy/closedBy/rejectedBy) 4개 FK를 `set null` → `restrict` 변경. discoveredBy만 set null 유지(시스템 자동 생성 NC). 마이그레이션 `0019_right_forgotten_one.sql` — DROP+re-ADD 패턴. calibration-plans/disposal-requests 등 동일 비즈니스 의미 테이블과 정책 일관성 확보. 불변식: "사용자 행위를 기록하는 승인/조치/반려 FK는 restrict (감사 추적 영구 보존)". 565 tests PASS
