@@ -43,7 +43,10 @@
       "Bash(mkdir -p /home/devuser/equipment_management_system/.claude/contracts)",
       "Bash(cat)",
       "Bash(rm \"/home/devuser/equipment_management_system/.claude/skills/equipment-management/references/auth-architecture.md.backup.20260211_215222\")",
-      "Bash(rm \"/home/devuser/equipment_management_system/.claude/skills/equipment-management/references/frontend-patterns.md.backup.20260211_215222\")"
+      "Bash(rm \"/home/devuser/equipment_management_system/.claude/skills/equipment-management/references/frontend-patterns.md.backup.20260211_215222\")",
+      "Bash(rm /home/devuser/equipment_management_system/.claude/contracts/tech-debt-68.md)",
+      "Bash(rm /home/devuser/equipment_management_system/.claude/evaluations/tech-debt-68.md)",
+      "Bash(git -C /home/devuser/equipment_management_system status --short)"
     ],
     "deny": [],
     "ask": []
