@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +99,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     queryKey: queryKeys.equipment.locationHistory(equipmentId),
     queryFn: () => equipmentApi.getLocationHistory(equipmentId),
     enabled: !!equipmentId,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   // 위치 변동 이력 생성 (equipment.location 동기화 포함)

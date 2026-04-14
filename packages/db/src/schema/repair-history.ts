@@ -95,4 +95,14 @@ export const repairHistoryRelations = relations(repairHistory, ({ one }) => ({
     references: [nonConformances.repairHistoryId],
     relationName: 'nonConformanceRepair',
   }),
+  createdByUser: one(users, {
+    fields: [repairHistory.createdBy],
+    references: [users.id],
+    relationName: 'repair_history_created_by',
+  }),
+  deletedByUser: one(users, {
+    fields: [repairHistory.deletedBy],
+    references: [users.id],
+    relationName: 'repair_history_deleted_by',
+  }),
 }));

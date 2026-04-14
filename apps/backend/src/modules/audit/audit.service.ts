@@ -174,7 +174,7 @@ export class AuditService {
   async findAllCursor(
     filter: AuditLogFilter,
     cursor?: string,
-    limit = 30
+    limit: number = QUERY_SAFETY_LIMITS.AUDIT_CURSOR_PAGE_SIZE
   ): Promise<CursorPaginatedAuditLogsResponse> {
     const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}cursor:${JSON.stringify(filter)}:${cursor ?? 'first'}:${limit}`;
 
@@ -376,7 +376,11 @@ export class AuditService {
    *
    * scope가 있으면 userSite/userTeamId WHERE 조건 추가 — 타 사이트/팀 접근 차단
    */
-  async findByUser(userId: string, limit = 100, scope?: ResolvedDataScope): Promise<AuditLog[]> {
+  async findByUser(
+    userId: string,
+    limit: number = QUERY_SAFETY_LIMITS.AUDIT_LOGS_BY_USER,
+    scope?: ResolvedDataScope
+  ): Promise<AuditLog[]> {
     const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
     const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:${scopeKey}`;
 

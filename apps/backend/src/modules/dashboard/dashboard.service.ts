@@ -19,6 +19,7 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { ApprovalsService } from '../approvals/approvals.service';
 import {
   CACHE_TTL,
+  CALIBRATION_THRESHOLDS,
   DASHBOARD_ITEM_LIMIT,
   DASHBOARD_ACTIVITIES_LIMIT,
 } from '@equipment-management/shared-constants';
@@ -352,7 +353,7 @@ export class DashboardService {
    * 반납 예정 반출 조회 (달력용, 다음 N일 이내)
    */
   async getUpcomingCheckoutReturns(
-    days: number = 30,
+    days: number = CALIBRATION_THRESHOLDS.WARNING_DAYS,
     teamId?: string,
     site?: string
   ): Promise<{ items: UpcomingCheckoutReturnDto[]; hasMore: boolean }> {
@@ -623,7 +624,7 @@ export class DashboardService {
     userRole: UserRole,
     site: string | undefined,
     teamId?: string,
-    days = 30,
+    days: number = CALIBRATION_THRESHOLDS.WARNING_DAYS,
     activitiesLimit = 20
   ): Promise<import('./dto/dashboard-response.dto').DashboardAggregateDto> {
     const [

@@ -65,8 +65,12 @@ export const CALIBRATION_THRESHOLDS = {
  * 페이지네이션이 이미 적용된 메서드(cursor/offset)는 별도 limit 불필요.
  */
 export const QUERY_SAFETY_LIMITS = {
-  /** 엔티티별 감사 로그 최대 조회 수 */
+  /** 엔티티별 감사 로그 최대 조회 수 (findByEntity) */
   AUDIT_LOGS_PER_ENTITY: 500,
+  /** cursor 기반 감사 로그 페이지 크기 (UI/UX 최적화) */
+  AUDIT_CURSOR_PAGE_SIZE: 30,
+  /** 사용자별 최근 감사 로그 최대 수 (findByUser) */
+  AUDIT_LOGS_BY_USER: 100,
   /** 장비별 첨부파일 최대 조회 수 */
   ATTACHMENTS_PER_ENTITY: 100,
   /** 보정계수 대장 최대 조회 수 (cold cache 보호) */

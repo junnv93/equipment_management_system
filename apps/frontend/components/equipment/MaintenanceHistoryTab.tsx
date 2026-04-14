@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +90,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     queryKey: queryKeys.equipment.maintenanceHistory(equipmentId),
     queryFn: () => equipmentApi.getMaintenanceHistory(equipmentId),
     enabled: !!equipmentId,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   // 유지보수 이력 생성

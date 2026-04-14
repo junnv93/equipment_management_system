@@ -64,7 +64,7 @@ import {
 } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { createRepairHistory, type CreateRepairHistoryDto } from '@/lib/api/repair-history-api';
 import nonConformancesApi from '@/lib/api/non-conformances-api';
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
@@ -184,6 +184,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     queryKey: queryKeys.equipment.incidentHistory(equipmentId), // ✅ 표준화된 키
     queryFn: () => equipmentApi.getIncidentHistory(equipmentId),
     enabled: !!equipmentId,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   // 열린 부적합 목록 조회 (수리 이력 연결용)
