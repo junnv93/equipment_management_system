@@ -1249,10 +1249,13 @@ class ApprovalsApi {
       try {
         const data =
           typeof item.requestData === 'string' ? JSON.parse(item.requestData) : item.requestData;
+        const parsed = data as { name?: unknown; equipmentName?: unknown };
         equipmentName =
-          (data as Record<string, string>).name ??
-          (data as Record<string, string>).equipmentName ??
-          '';
+          typeof parsed.name === 'string'
+            ? parsed.name
+            : typeof parsed.equipmentName === 'string'
+              ? parsed.equipmentName
+              : '';
       } catch {
         // JSON 파싱 실패 무시
       }

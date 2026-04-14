@@ -190,6 +190,7 @@
     "requestDetail": "Request Detail",
     "attachments": "Attachments",
     "approvalHistory": "Approval History",
+    "downloadAttachment": "Download {filename}",
     "close": "Close",
     "reject": "Reject"
   },

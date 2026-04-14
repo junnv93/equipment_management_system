@@ -78,21 +78,16 @@ export class DataMigrationService {
     dto: PreviewEquipmentMigrationDto,
     userId: string
   ): Promise<MigrationPreviewResult> {
-    // 파일 저장
     const savedFile = await this.fileUploadService.saveFile(file, 'data-migration');
-
-    // Excel 파싱
     const rawRows = await this.excelParserService.parseBuffer(file.buffer);
     const mappedRows = this.excelParserService.mapRows(rawRows);
 
-    // 배치 검증
     const rowPreviews = await this.migrationValidatorService.validateBatch(mappedRows, {
       autoGenerateManagementNumber: dto.autoGenerateManagementNumber ?? false,
       defaultSite: dto.defaultSite,
       skipDuplicates: dto.skipDuplicates ?? true,
     });
 
-    // 집계
     const summary = this.buildSummary(rowPreviews);
 
     // 인식되지 않은 컬럼 집계 (중복 제거)
@@ -515,18 +510,7 @@ export class DataMigrationService {
           calibrations,
           validRows,
           mgmtNumToId,
-          (row, equipmentId) => ({
-            equipmentId,
-            calibrationDate: row.data.calibrationDate as Date,
-            agencyName: row.data.agencyName as string | undefined,
-            certificateNumber: row.data.certificateNumber as string | undefined,
-            result: row.data.result as string | undefined,
-            cost: row.data.cost !== undefined ? String(row.data.cost) : undefined,
-            notes: row.data.notes as string | undefined,
-            status: 'completed',
-            approvalStatus: 'approved',
-            registeredBy: userId,
-          })
+          (row, equipmentId) => this.buildCalibrationValues(row, equipmentId, userId)
         );
         sheetErrors.push(...errors);
 
@@ -553,14 +537,7 @@ export class DataMigrationService {
           repairHistory,
           validRows,
           mgmtNumToId,
-          (row, equipmentId) => ({
-            equipmentId,
-            repairDate: row.data.repairDate as Date,
-            repairDescription: row.data.repairDescription as string,
-            repairResult: row.data.repairResult as string | undefined,
-            notes: row.data.notes as string | undefined,
-            createdBy: userId,
-          })
+          (row, equipmentId) => this.buildRepairValues(row, equipmentId, userId)
         );
         sheetErrors.push(...errors);
 
@@ -587,13 +564,7 @@ export class DataMigrationService {
           equipmentIncidentHistory,
           validRows,
           mgmtNumToId,
-          (row, equipmentId) => ({
-            equipmentId,
-            occurredAt: row.data.occurredAt as Date,
-            incidentType: row.data.incidentType as string,
-            content: row.data.content as string,
-            reportedBy: userId,
-          })
+          (row, equipmentId) => this.buildIncidentValues(row, equipmentId, userId)
         );
         sheetErrors.push(...errors);
 
@@ -660,15 +631,7 @@ export class DataMigrationService {
       const errorRows = singleSession.previewResult.rows.filter(
         (r) => r.status === 'error' || r.status === 'duplicate'
       );
-      return this.excelParserService.generateErrorReport(
-        errorRows.map((r) => ({
-          rowNumber: r.rowNumber,
-          status: r.status,
-          managementNumber: r.managementNumber,
-          errors: r.errors.map((e) => ({ field: e.field, message: e.message })),
-          data: r.data,
-        }))
-      );
+      return this.excelParserService.generateErrorReport(this.toErrorReportRows(errorRows));
     }
 
     const multiSession = this.cacheService.get<MultiSheetMigrationSession>(
@@ -685,21 +648,11 @@ export class DataMigrationService {
     const errorRows: MigrationRowPreview[] = [];
     for (const sheet of multiSession.sheets) {
       for (const row of sheet.rows) {
-        if (row.status === 'error' || row.status === 'duplicate') {
-          errorRows.push(row);
-        }
+        if (row.status === 'error' || row.status === 'duplicate') errorRows.push(row);
       }
     }
 
-    return this.excelParserService.generateErrorReport(
-      errorRows.map((r) => ({
-        rowNumber: r.rowNumber,
-        status: r.status,
-        managementNumber: r.managementNumber,
-        errors: r.errors.map((e) => ({ field: e.field, message: e.message })),
-        data: r.data,
-      }))
-    );
+    return this.excelParserService.generateErrorReport(this.toErrorReportRows(errorRows));
   }
 
   /**
@@ -710,6 +663,17 @@ export class DataMigrationService {
   }
 
   // ── Private Methods ──────────────────────────────────────────────────────────
+
+  /** generateErrorReport 전달용 행 매핑 (단일/멀티시트 공통) */
+  private toErrorReportRows(rows: MigrationRowPreview[]) {
+    return rows.map((r) => ({
+      rowNumber: r.rowNumber,
+      status: r.status,
+      managementNumber: r.managementNumber,
+      errors: r.errors.map((e) => ({ field: e.field, message: e.message })),
+      data: r.data,
+    }));
+  }
 
   /**
    * MigrationRowPreview → DB INSERT 엔티티 빌드
@@ -775,38 +739,16 @@ export class DataMigrationService {
     return entity as Partial<typeof equipment.$inferInsert>;
   }
 
-  /**
-   * 행별 결과 집계
-   */
-  private buildSummary(rows: MigrationRowPreview[]): {
-    validRows: number;
-    errorRows: number;
-    duplicateRows: number;
-    warningRows: number;
-  } {
-    let validRows = 0;
-    let errorRows = 0;
-    let duplicateRows = 0;
-    let warningRows = 0;
-
+  /** 행별 결과 집계 */
+  private buildSummary(rows: MigrationRowPreview[]) {
+    const counts = { validRows: 0, errorRows: 0, duplicateRows: 0, warningRows: 0 };
     for (const row of rows) {
-      switch (row.status) {
-        case 'valid':
-          validRows++;
-          break;
-        case 'error':
-          errorRows++;
-          break;
-        case 'duplicate':
-          duplicateRows++;
-          break;
-        case 'warning':
-          warningRows++;
-          break;
-      }
+      if (row.status === 'valid') counts.validRows++;
+      else if (row.status === 'error') counts.errorRows++;
+      else if (row.status === 'duplicate') counts.duplicateRows++;
+      else if (row.status === 'warning') counts.warningRows++;
     }
-
-    return { validRows, errorRows, duplicateRows, warningRows };
+    return counts;
   }
 
   /**
@@ -815,6 +757,50 @@ export class DataMigrationService {
    * - managementNumber → equipmentId 해석 실패 행은 errors 수집
    * - 유효 행을 MIGRATION_CHUNK_SIZE 단위로 배치 INSERT
    */
+  private buildCalibrationValues(
+    row: MigrationRowPreview,
+    equipmentId: string,
+    userId: string
+  ): object {
+    return {
+      equipmentId,
+      calibrationDate: row.data.calibrationDate as Date,
+      agencyName: row.data.agencyName as string | undefined,
+      certificateNumber: row.data.certificateNumber as string | undefined,
+      result: row.data.result as string | undefined,
+      cost: row.data.cost !== undefined ? String(row.data.cost) : undefined,
+      notes: row.data.notes as string | undefined,
+      status: 'completed',
+      approvalStatus: 'approved',
+      registeredBy: userId,
+    };
+  }
+
+  private buildRepairValues(row: MigrationRowPreview, equipmentId: string, userId: string): object {
+    return {
+      equipmentId,
+      repairDate: row.data.repairDate as Date,
+      repairDescription: row.data.repairDescription as string,
+      repairResult: row.data.repairResult as string | undefined,
+      notes: row.data.notes as string | undefined,
+      createdBy: userId,
+    };
+  }
+
+  private buildIncidentValues(
+    row: MigrationRowPreview,
+    equipmentId: string,
+    userId: string
+  ): object {
+    return {
+      equipmentId,
+      occurredAt: row.data.occurredAt as Date,
+      incidentType: row.data.incidentType as string,
+      content: row.data.content as string,
+      reportedBy: userId,
+    };
+  }
+
   private async insertHistoryBatch(
     tx: AppDatabase,
     table: typeof calibrations | typeof repairHistory | typeof equipmentIncidentHistory,

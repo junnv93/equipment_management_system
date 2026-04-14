@@ -190,6 +190,7 @@
     "requestDetail": "요청 상세",
     "attachments": "첨부 파일",
     "approvalHistory": "승인 이력",
+    "downloadAttachment": "{filename} 다운로드",
     "close": "닫기",
     "reject": "반려"
   },

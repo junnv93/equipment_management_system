@@ -140,7 +140,9 @@ export default function ApprovalDetailModal({
                           type="button"
                           size="sm"
                           variant="ghost"
-                          aria-label={`${attachment.filename} download`}
+                          aria-label={t('detail.downloadAttachment', {
+                            filename: attachment.filename,
+                          })}
                           onClick={() => window.open(attachment.url, '_blank')}
                         >
                           <Download className="h-4 w-4" aria-hidden="true" />
