@@ -53,6 +53,7 @@ import { ReportsStatsSection } from '@/components/reports/ReportsStatsSection';
 import { useReportsFilters } from '@/hooks/use-reports-filters';
 import {
   ALL_SENTINEL,
+  convertFiltersToApiParams,
   type UIReportsFilters,
   type ReportCalibrationStatus,
 } from '@/lib/utils/reports-filter-utils';
@@ -151,40 +152,18 @@ export default function ReportsContent(_props: ReportsContentProps) {
       return;
     }
 
-    let startDateStr: string | undefined;
-    let endDateStr: string | undefined;
-
-    if (dateRange === 'custom' && customDateRange?.from && customDateRange?.to) {
-      startDateStr = format(customDateRange.from, 'yyyy-MM-dd');
-      endDateStr = format(customDateRange.to, 'yyyy-MM-dd');
-    }
-
-    const additionalParams: Record<string, string> = {};
-
-    if (reportType === 'equipment_inventory') {
-      if (site) additionalParams.site = site;
-      if (teamId) additionalParams.teamId = teamId;
-    }
-
-    if (reportType === 'calibration_status') {
-      if (status) additionalParams.status = status;
-    }
-
-    if (reportType === 'utilization_report') {
-      if (site) additionalParams.site = site;
-    }
-
-    if (reportType === 'team_equipment') {
-      if (site) additionalParams.site = site;
-      if (teamId) additionalParams.teamId = teamId;
-    }
+    // SSOT: 필터-API 파라미터 변환은 convertFiltersToApiParams에 위임.
+    // handleReportTypeChange가 관련없는 필드를 이미 reset하므로
+    // reportType별 조건 분기 없이 설정된 필드만 자연스럽게 전달됨.
+    const { startDate, endDate, ...subFilters } = convertFiltersToApiParams(filters);
+    const additionalParams = subFilters as Record<string, string>;
 
     generateReportMutation({
       reportType: reportType as ReportType,
       format: reportFormat,
       dateRange,
-      startDate: startDateStr,
-      endDate: endDateStr,
+      startDate,
+      endDate,
       additionalParams,
     });
   };
