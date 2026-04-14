@@ -176,3 +176,4 @@ grep -rn "getByText.*되었\|getByText.*완료\|getByText.*실패.*\.first()" \
 18. **이벤트 핸들러 내 setQueryData 캐시 프라이밍** — LeaderCombobox.tsx 성능 최적화
 19. **StorageImage.tsx의 useRef+useEffect blob URL revoke** — TanStack Query(gcTime=SHORT) 캐시 만료 후 blob URL 메모리 해제를 위한 의도적 패턴. `data.isBlob` 조건부 revoke + 언마운트 클린업이 정상.
 20. **DocumentPreviewDialog.tsx의 blobUrlRef+useEffect cleanup** — presigned/blob URL 미리보기용. `blobUrlRef.current`에 현재 blob URL 추적, cleanup에서 `revokeObjectURL` 호출. deps: `[open, doc?.id]`. 이 패턴은 stale closure 방지를 위한 ref 기반 cleanup으로 정상.
+21. **`staleTime: Infinity` (런타임 불변 서버 설정값)** — `QUERY_CONFIG` 프리셋이 없는 값이지만, 앱 재시작 없이 변경되지 않는 서버 설정(NextAuth 인증 제공자 목록, 기능 플래그 등)에 대해 `staleTime: Infinity`를 주석과 함께 직접 사용하는 것은 정상. 예: `AuthProviders.tsx`의 `useQuery({ queryFn: getProviders, staleTime: Infinity })`. 주석 없이 사용하면 QUERY_CONFIG 프리셋 누락으로 보고.
