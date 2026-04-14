@@ -136,9 +136,7 @@
 - [x] form-data-parser.interceptor 빈 catch (silent swallow) — 해결: 2026-04-09 — tech-debt-round3 harness. `Logger.warn` + `BadRequestException` throw. `FORM_DATA_PARSE_FAILED` error code
 - [x] CLAUDE.md 420줄 엔트로피 → 295줄 — 해결: 2026-04-09 — tech-debt-round3 harness. Behavioral Guidelines, Production Checklist, PostToolUse Hook → `docs/references/` 분리. Deep-Dive References 테이블에 3건 추가
 
-- [ ] **SHOULD S3**: `data-migration.service.ts` 줄수 863줄 (기준 830줄 이하) — `apps/backend/src/modules/data-migration/services/data-migration.service.ts` — 2026-04-14
-  - 원인: `insertHistoryBatch` 헬퍼로 3종 이력 통합 성공했으나, 각 `buildValues` 람다(10~20줄)가 절감분 상쇄
-  - 수리 방법: 각 이력 타입의 `buildValues`를 별도 private 메서드로 추출
+- [x] **SHOULD S3**: `data-migration.service.ts` buildValues 람다 → named private 메서드 추출 — 해결: 2026-04-14 (54차) — `buildCalibrationValues`, `buildRepairValues`, `buildIncidentValues` 3개 private 메서드 추출. 줄수 863→886 (람다 추출은 줄수 감소 아님, 가독성 개선이 목적). 330줄 이하 목표는 서비스 분리 없이는 달성 불가 — 현재 범위 외. backend tsc + 578 tests PASS.
 
 ---
 

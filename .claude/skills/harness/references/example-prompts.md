@@ -1,8 +1,55 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (52차 — 3-agent 병렬 스캔 + 2차 검증. 46차 신규 5건 전부 완료. 신규 3건 등재)**
+> **마지막 정리일: 2026-04-14 (54차 — 3-agent 병렬 스캔 + 2차 검증. 52차 신규 3건 완료 확인. FALSE POSITIVE 11건 기록. 신규 2건 등재)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## 54차 신규 — generate-prompts 3-agent 병렬 스캔 (2건, 2026-04-14)
+
+> **발견 배경 (2026-04-14, 54차)**: 52차 3건 완료 확인 후 재스캔. Backend/Frontend/Infra 3-agent 병렬 스캔 + 2차 검증(Read/Grep). FALSE POSITIVE 비율: ~85% (11/13건). 코드베이스 품질 양호 확인. 검증 통과 LOW 2건만 등재.
+> FALSE POSITIVE 패턴 (재발 방지): @AuditLog 누락 주장(이미 전부 적용됨), error.tsx 누락(부모 디렉토리 상속됨), Docker healthcheck mismatch(/api/health 라우트 존재), FK 불일치(checkouts=restrict/calibrations=set null은 의도적 설계).
+
+### 🟢 LOW — E2E auth.fixture storageState 전환 미완 (Mode 0)
+
+```
+2개 spec 파일에 callback/test-login 직접 호출이 잔존:
+
+1. apps/frontend/tests/e2e/features/dashboard/pending-approvals.spec.ts:115
+   // TODO: callback/test-login 직접 호출 → auth.fixture storageState 전환 필요
+2. apps/frontend/tests/e2e/features/calibration/overdue-auto-nc/e2e-workflow.spec.ts:216-217
+   // TODO: auth.fixture storageState 전환 필요
+
+auth.fixture storageState 패턴: 세션 쿠키를 파일로 캐시해 매 테스트마다 로그인 왕복 제거.
+기존 spec들(wf-*, wf-*b 등)은 이미 전환 완료. 미전환 2건만 잔존.
+
+작업:
+- 각 spec에서 직접 login 호출 → fixtures/auth.fixture.ts의 adminPage/managerPage/userPage 사용
+- storageState 파일 경로: playwright/.auth/{admin,manager,user}.json (이미 존재)
+- global-setup.ts에서 공통 storageState 생성 — 개별 테스트에서 재생성 불필요
+
+검증:
+- pnpm --filter frontend run test:e2e --grep 'pending-approvals|overdue-auto-nc' 통과
+- grep 'callback/test-login' apps/frontend/tests/e2e → 0 hit
+```
+
+### 🟢 LOW — 07-cancel-by-requester.spec.ts stale TODO 제거 (Mode 0)
+
+```
+apps/frontend/tests/e2e/features/approvals/disposal-requests/validation/07-cancel-by-requester.spec.ts:119
+  // TODO: Add cache invalidation to DisposalService.cancelDisposalRequest()
+
+검증 결과: disposal.service.ts:540 에 이미
+  await this.cacheInvalidationHelper.invalidateAfterDisposal(equipmentId);
+가 구현되어 있음 → TODO가 STALE. 주석 제거만 필요.
+
+작업:
+- 119번 줄 TODO 주석 1줄 삭제
+
+검증:
+- pnpm --filter frontend run test:e2e --grep '07-cancel-by-requester' 통과
+```
+
+---
 
 ## 52차 신규 — generate-prompts 3-agent 병렬 스캔 (3건, 2026-04-14)
 
