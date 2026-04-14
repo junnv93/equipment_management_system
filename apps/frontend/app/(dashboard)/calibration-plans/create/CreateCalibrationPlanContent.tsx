@@ -167,9 +167,9 @@ export default function CreateCalibrationPlanContent() {
   return (
     <div className={getPageContainerClasses()}>
       <div className={CALIBRATION_PLAN_CREATE_TOKENS.header.container}>
-        <Button variant="ghost" size="icon" asChild>
+        <Button variant="ghost" size="icon" asChild aria-label={t('planCreate.backToList')}>
           <Link href="/calibration-plans">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Link>
         </Button>
         <div>

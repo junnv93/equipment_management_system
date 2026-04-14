@@ -280,9 +280,9 @@ export default function AlertsContent() {
           <Button variant="outline" size="icon" aria-label={t('filterNotifications')}>
             <Filter className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" asChild>
+          <Button variant="outline" size="icon" asChild aria-label={t('notificationSettings')}>
             <Link href="/settings/notifications">
-              <Settings className="h-4 w-4" />
+              <Settings className="h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>
         </div>

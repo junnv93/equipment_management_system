@@ -99,7 +99,7 @@ services:
         max-file: '5'
 
   postgres:
-    image: postgres:15
+    image: postgres:15.13-alpine # pinned 2026-04-14; 메이저 업그레이드 시 volume 데이터 비호환
     restart: always
     # SSL Configuration (optional — Docker internal network does not require SSL):
     # 1. Mount certificate files:
@@ -137,7 +137,7 @@ services:
         max-file: '5'
 
   redis:
-    image: redis:alpine
+    image: redis:7.4-alpine # pinned 2026-04-14
     restart: always
     # TLS Configuration (optional — Docker internal network does not require TLS):
     # 1. Mount certs and update command:
@@ -168,7 +168,7 @@ services:
         max-file: '5'
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:latest # TODO: 공개 릴리즈 태그 확인 후 핀닝 — github.com/rustfs/rustfs/releases
     restart: always
     command: server /data --console-address ":9001"
     environment:
@@ -198,7 +198,7 @@ services:
         max-file: '5'
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.27-alpine # pinned 2026-04-14
     restart: always
     ports:
       - '80:80'
@@ -251,7 +251,7 @@ services:
   # Prometheus/Grafana 접근은 Nginx 리버스 프록시를 통해서만
   # ─────────────────────────────────────────────
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.55.1 # pinned 2026-04-14
     restart: always
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -282,7 +282,7 @@ services:
         max-file: '3'
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.4.0 # pinned 2026-04-14; loki/promtail 2.9.4와 호환
     restart: always
     volumes:
       - grafana_data:/var/lib/grafana
