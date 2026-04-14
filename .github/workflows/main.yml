@@ -84,6 +84,17 @@ jobs:
       - name: Build Shared Packages
         run: pnpm build --filter "@equipment-management/*"
 
+      - name: Upload Shared Package Dists
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: shared-packages-dist
+          path: |
+            packages/schemas/dist
+            packages/shared-constants/dist
+            packages/db/dist
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Lint — Backend (CI mode, no auto-fix)
         run: pnpm --filter backend run lint:ci
 
@@ -174,8 +185,10 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/pnpm-lock.yaml') }}
           fail-on-cache-miss: true
 
-      - name: Build Shared Packages
-        run: pnpm build --filter "@equipment-management/*"
+      - name: Download Shared Package Dists
+        uses: actions/download-artifact@v4
+        with:
+          name: shared-packages-dist
 
       - name: Run DB Migrations
         run: pnpm --filter backend exec drizzle-kit push --force
