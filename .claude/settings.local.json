@@ -39,7 +39,9 @@
       "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-13-time-complexity-review.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-13-time-complexity-review.md)",
       "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/feedback_form_is_master.md .claude/projects/-home-devuser-equipment-management-system/memory/feedback_form_is_master.md)",
       "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/project_next_todo.md /home/devuser/equipment_management_system/.claude/projects/-home-devuser-equipment-management-system/memory/project_next_todo.md)",
-      "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-14-data-migration-batch.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-14-data-migration-batch.md)"
+      "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-14-data-migration-batch.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-14-data-migration-batch.md)",
+      "Bash(mkdir -p /home/devuser/equipment_management_system/.claude/contracts)",
+      "Bash(cat)"
     ],
     "deny": [],
     "ask": []

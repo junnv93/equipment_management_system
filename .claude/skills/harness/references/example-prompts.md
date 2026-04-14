@@ -1,8 +1,186 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (60차 — 59차 5건 전부 완료 확인. AuthProviders/DocumentPreviewDialog/syncUser AuditLog는 이미 적용됨. incident_history 복합 인덱스 + CI SHA 핀닝 완료.)**
+> **마지막 정리일: 2026-04-14 (61차 — 테스트 커버리지 + 의존성 감사 스캔. 5개 모듈 테스트 완전 부재·CI frontend jest 미포함·backend collectCoverageFrom·@typescript-eslint 버전 불일치 4건 신규 등재.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## 61차 신규 — 테스트 커버리지 + 의존성 감사 스캔 (4건, 2026-04-14)
+
+> **발견 배경 (2026-04-14, 61차)**: 테스트 커버리지 + 의존성 감사 3-agent 병렬 스캔 + 2차 검증.
+> FALSE POSITIVE: `zod workspace:*`(root pnpm.overrides `^4.3.5`로 오버라이드 정상), 컴포넌트 단위 테스트 전체 부재(E2E 의존 의도적 설계·227개 파일 일괄 작성 비실용), next-auth 5.0.0-beta(Next.js App Router 대응 의도적 선택), lodash 전체 패키지(`lodash/debounce` sub-path import → tree-shaking 정상).
+> 검증 통과 4건 등재.
+
+### 🟠 HIGH — cables/monitoring/software-validations/test-software/intermediate-inspections 5개 모듈 단위 테스트 완전 부재 (Mode 2)
+
+```
+테스트 커버리지 gap:
+현재 24개 모듈 중 아래 5개 모듈에 *.spec.ts 파일이 전혀 없음
+(find apps/backend/src/modules/{cables,monitoring,software-validations,test-software,intermediate-inspections} -name "*.spec.ts" → 0 hit):
+
+1. cables/ — cables.service.ts + cables.controller.ts (케이블 교정 CRUD + 측정값 관리)
+2. monitoring/ — monitoring.service.ts + monitoring.controller.ts (시스템 헬스·메트릭·DB진단)
+3. software-validations/ — software-validations.service.ts (create/submit/review/approve/reject 등 승인 워크플로)
+4. test-software/ — test-software.service.ts (소프트웨어 CRUD + toggleAvailability + 장비 연결)
+5. intermediate-inspections/ — intermediate-inspections.service.ts (중간점검 create/submit/review/approve/reject/withdraw/resubmit)
+
+작업:
+각 모듈별 __tests__/<module>.service.spec.ts 생성 (기존 패턴:
+  approvals/__tests__/approvals.service.spec.ts,
+  non-conformances/__tests__/non-conformances.service.spec.ts 참조):
+
+1. cables/__tests__/cables.service.spec.ts
+   - create, findAll, findOne, update (CRUD 기본)
+   - addMeasurement, findMeasurements (측정값)
+   - onVersionConflict (CAS 409 처리)
+
+2. monitoring/__tests__/monitoring.service.spec.ts
+   - getHealth, getSystemMetrics, getDatabaseDiagnostics
+   - recordHttpRequest, recordLogEntry, recordClientError
+
+3. software-validations/__tests__/software-validations.service.spec.ts
+   - submit, review, approve, reject (승인 워크플로 상태 전이)
+   - findPending (미결 목록 조회)
+
+4. test-software/__tests__/test-software.service.spec.ts
+   - create, findAll, update
+   - toggleAvailability, linkEquipment, unlinkEquipment
+
+5. intermediate-inspections/__tests__/intermediate-inspections.service.spec.ts
+   - createByEquipment, createByCalibration (출처별 생성)
+   - submit → review → approve/reject 전이
+   - withdraw, resubmit
+
+공통 패턴:
+- MockDatabaseService + MockCacheService 사용 (기존 spec 참조)
+- 상태 전이 시 잘못된 상태에서 호출 시 예외 발생 테스트 포함
+- @AuditLog 인터셉터는 mock 처리
+
+검증:
+- pnpm --filter backend run test -- --testPathPattern='cables|monitoring|software-validations|test-software|intermediate-inspections'
+- 각 spec 파일 최소 5개 describe 블록 이상
+- pnpm --filter backend run tsc --noEmit
+```
+
+### 🟡 MEDIUM — CI unit-test job에서 frontend jest 미실행 (Mode 0)
+
+```
+CI 커버리지 gap:
+- .github/workflows/main.yml:198-214
+
+unit-test job (line 130-)에서 테스트 실행 step:
+  현재: pnpm --filter backend run test:cov (line 199)
+  → backend coverage artifact만 수집 (apps/backend/coverage/, line 213-214)
+  → frontend jest 테스트는 CI에서 한 번도 실행되지 않음
+
+frontend jest 현황:
+  - apps/frontend/jest.config.js: coverageThreshold 80% 설정
+  - 테스트 파일: lib/ 하위 4개 (equipment-filter-utils, reports-filter-utils,
+    equipment-errors, visual-feedback)
+  - testMatch: '**/__tests__/**/*.test.ts?(x)'
+
+작업:
+main.yml unit-test job의 "Run Unit Tests (with coverage)" step 이후에 추가:
+
+      - name: Run Frontend Unit Tests
+        run: pnpm --filter frontend run test -- --passWithNoTests
+        env:
+          NODE_ENV: test
+
+주의:
+- --passWithNoTests: 향후 테스트 추가 전까지 0건이어도 통과
+- frontend coverage artifact 별도 업로드는 선택사항 (현재 4개 파일만 있으므로 생략 가능)
+- frontend jest는 jest-environment-jsdom 사용 → CI에서 별도 패키지 불필요
+  (next/jest가 jsdom 포함)
+
+검증:
+- .github/workflows/main.yml에서 frontend 테스트 step 존재 확인
+- grep 'filter frontend run test' .github/workflows/main.yml → 1 hit
+- CI 파이프라인 로컬 시뮬레이션: pnpm --filter frontend run test -- --passWithNoTests → exit 0
+```
+
+### 🟡 MEDIUM — backend jest collectCoverageFrom 너무 광범위 (Mode 0)
+
+```
+Coverage 설정 이슈:
+- apps/backend/package.json:159-164
+
+현재 설정:
+  "collectCoverageFrom": [
+    "**/*.(t|j)s"
+  ]
+
+문제:
+- 루트 기준 모든 .ts/.js 파일 포함 → node_modules/, dist/, test/ 디렉토리까지 포함
+- 테스트 spec 파일 자체도 coverage 대상 (spec이 spec을 커버하는 이상 통계)
+- dist/ 컴파일 결과물 포함 시 라인 수 중복 측정
+- CI에서 coverage artifact 크기 불필요하게 증가
+
+작업:
+apps/backend/package.json의 collectCoverageFrom을 src/ 기준으로 좁힘:
+
+  "collectCoverageFrom": [
+    "src/**/*.ts",
+    "!src/**/*.spec.ts",
+    "!src/**/*.d.ts",
+    "!src/main.ts",
+    "!src/database/migrations/**"
+  ]
+
+주의:
+- 현재 coverageThreshold: branches 20%, functions/lines/statements 25%
+  → src/ 범위로 좁히면 실제 커버리지 비율이 낮아질 수 있음
+  → 변경 후 pnpm --filter backend run test:cov 실행 후 실제 % 확인 필요
+  → threshold를 낮추는 임시방편 금지 — 측정 정확도 개선이 목적
+
+검증:
+- pnpm --filter backend run test:cov → 정상 실행
+- coverage/lcov-report/index.html 에서 coverage 출처 확인
+  (src/ 파일만 집계되는지)
+- grep '"collectCoverageFrom"' apps/backend/package.json → src/** 패턴 확인
+```
+
+### 🟡 MEDIUM — @typescript-eslint v6(backend) vs v8(frontend) major 버전 불일치 (Mode 0)
+
+```
+의존성 불일치:
+- apps/backend/package.json:93-94
+- apps/frontend/package.json:77-78
+
+현재:
+  backend:  "@typescript-eslint/eslint-plugin": "^6.0.0"
+            "@typescript-eslint/parser": "^6.0.0"
+  frontend: "@typescript-eslint/eslint-plugin": "^8.53.1"
+            "@typescript-eslint/parser": "^8.53.1"
+
+문제:
+- 2개 major 버전 차이 (v6 → v8)
+- v7/v8에서 추가된 lint 규칙이 backend에만 미적용
+  (예: @typescript-eslint/no-unsafe-* 강화, prefer-nullish-coalescing 변경)
+- eslint 버전도 확인 필요 (v8 eslint-plugin은 eslint >=8 요구)
+- 모노레포에서 같은 규칙셋 기대 시 다른 결과 발생
+
+작업:
+apps/backend/package.json devDependencies 버전 업:
+
+  "@typescript-eslint/eslint-plugin": "^8.53.1",
+  "@typescript-eslint/parser": "^8.53.1",
+
+이후 lint 통과 확인:
+
+주의:
+- backend .eslintrc.js (또는 eslint.config.js) 에서 parserOptions.project 설정 확인
+  v8에서 project 옵션 변경사항 있음
+- 업그레이드 후 새로 발생하는 lint 에러는 auto-fix 우선,
+  auto-fix 불가 시 suppress 금지 — 실제 수정 필요
+- pnpm install 후 peerDependency 경고 없어야 함
+
+검증:
+- pnpm install → peer dependency 경고 없음
+- pnpm --filter backend run lint → 0 error (warning은 허용)
+- pnpm --filter backend run tsc --noEmit → exit 0
+```
+
+---
 
 ## ~~59차 신규 — generate-prompts 3-agent 병렬 스캔 (5건, 2026-04-14)~~ ✅ 전부 완료 (2026-04-14, 60차)
 
