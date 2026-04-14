@@ -56,6 +56,7 @@ pnpm run migrate
 ```
 
 이 명령은 다음 작업을 수행합니다:
+
 - MySQL 데이터베이스에서 데이터 추출
 - PostgreSQL 스키마 생성
 - PostgreSQL 데이터베이스로 데이터 이전
@@ -115,4 +116,4 @@ pnpm run db:push
 ```bash
 cd apps/backend
 pnpm run start:dev
-``` 
+```

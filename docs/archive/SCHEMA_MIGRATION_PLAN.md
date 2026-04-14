@@ -5,12 +5,10 @@
 현재 프로젝트에서 동일한 데이터 구조가 3곳에서 정의되어 있습니다:
 
 1. **Drizzle 스키마** (`packages/db/src/schema/`)
-
    - 데이터베이스 테이블 정의
    - 마이그레이션 생성의 기준
 
 2. **Zod 스키마** (`packages/schemas/src/`)
-
    - 런타임 검증
    - TypeScript 타입 추론
 

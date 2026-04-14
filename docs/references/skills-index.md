@@ -34,6 +34,7 @@
 ## Workflow Orchestrators
 
 - **generate-prompts** — 코드베이스 스캔 → verify → harness 프롬프트 생성, auto-archive, false positive filtering
+- **git-commit** — 변경 분석 → conventional commit 메시지 생성 + main 직접/브랜치+PR 자동 판단
 - **manage-skills** — 스킬 유지보수 (커버리지 갭 분석, 생성/업데이트, CLAUDE.md 관리)
 - **playwright-e2e** — E2E 워크플로우 (plan→generate→execute→heal→report, 순차 에이전트, auth.fixture)
 - **harness** — 3-Agent orchestrator (Planner→Generator→Evaluator, auto mode 0/1/2, contract 기반, max 3 retry, load-bearing)

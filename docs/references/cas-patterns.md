@@ -6,16 +6,16 @@
 
 ### CAS 적용 엔티티
 
-| Table              | Service                 | Key File                                                 |
-| ------------------ | ----------------------- | -------------------------------------------------------- |
-| equipment          | EquipmentService        | `modules/equipment/equipment.service.ts`                 |
-| checkouts          | CheckoutsService        | `modules/checkouts/checkouts.service.ts`                 |
-| calibrations       | CalibrationService      | `modules/calibration/calibration.service.ts`             |
-| non_conformances   | NonConformancesService  | `modules/non-conformances/non-conformances.service.ts`   |
-| disposal_requests  | DisposalService         | `modules/equipment/services/disposal.service.ts`         |
-| equipment_imports  | EquipmentImportsService | `modules/equipment-imports/equipment-imports.service.ts` |
-| equipment_requests | EquipmentService        | `modules/equipment/equipment.service.ts`                 |
-| software_history   | SoftwareService         | `modules/software/software.service.ts`                   |
+| Table                | Service                    | Key File                                                       |
+| -------------------- | -------------------------- | -------------------------------------------------------------- |
+| equipment            | EquipmentService           | `modules/equipment/equipment.service.ts`                       |
+| checkouts            | CheckoutsService           | `modules/checkouts/checkouts.service.ts`                       |
+| calibrations         | CalibrationService         | `modules/calibration/calibration.service.ts`                   |
+| non_conformances     | NonConformancesService     | `modules/non-conformances/non-conformances.service.ts`         |
+| disposal_requests    | DisposalService            | `modules/equipment/services/disposal.service.ts`               |
+| equipment_imports    | EquipmentImportsService    | `modules/equipment-imports/equipment-imports.service.ts`       |
+| equipment_requests   | EquipmentService           | `modules/equipment/equipment.service.ts`                       |
+| software_validations | SoftwareValidationsService | `modules/software-validations/software-validations.service.ts` |
 
 ### Backend CAS Pattern
 

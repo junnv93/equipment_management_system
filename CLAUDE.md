@@ -54,7 +54,7 @@ equipment_management_system/
 ├── apps/
 │   ├── backend/                 # NestJS API (Port 3001)
 │   │   ├── src/
-│   │   │   ├── modules/         # 18 Feature modules
+│   │   │   ├── modules/         # 24 Feature modules
 │   │   │   ├── common/          # Shared: guards, pipes, filters, interceptors, decorators, cache
 │   │   │   └── database/        # Drizzle ORM setup
 │   │   └── test/                # E2E tests
@@ -78,27 +78,33 @@ equipment_management_system/
     └── development/             # Development guides
 ```
 
-### Backend Modules (18)
+### Backend Modules (24)
 
 | Module | Path | Description |
 |---|---|---|
 | `approvals` | `modules/approvals/` | 통합 승인 관리 (1-step, 2-step, 3-step) |
 | `audit` | `modules/audit/` | 감사 로그 |
 | `auth` | `modules/auth/` | JWT + Azure AD, Guards, RBAC |
+| `cables` | `modules/cables/` | 케이블 관리 |
 | `calibration` | `modules/calibration/` | 교정 기록 관리 |
 | `calibration-factors` | `modules/calibration-factors/` | 교정 인자 관리 |
 | `calibration-plans` | `modules/calibration-plans/` | 교정 계획 (3단계 승인) |
 | `checkouts` | `modules/checkouts/` | 반출 관리 (교정/수리/렌탈) |
 | `dashboard` | `modules/dashboard/` | 대시보드 통계 |
+| `data-migration` | `modules/data-migration/` | 데이터 마이그레이션 유틸리티 |
+| `documents` | `modules/documents/` | 문서 관리 (SHA-256, Presigned URL, 버전 관리) |
 | `equipment` | `modules/equipment/` | 장비 CRUD + 폐기 + 수리이력 |
 | `equipment-imports` | `modules/equipment-imports/` | 장비 반입 (구 rental-imports) |
+| `intermediate-inspections` | `modules/intermediate-inspections/` | 중간 점검 관리 |
 | `monitoring` | `modules/monitoring/` | 시스템 모니터링 |
 | `non-conformances` | `modules/non-conformances/` | 부적합 관리 |
 | `notifications` | `modules/notifications/` | 알림 서비스 |
 | `reports` | `modules/reports/` | 리포트 생성 |
+| `self-inspections` | `modules/self-inspections/` | 자체 점검 관리 |
 | `settings` | `modules/settings/` | 시스템/교정 설정 관리 |
-| `software` | `modules/software/` | 소프트웨어 관리 |
+| `software-validations` | `modules/software-validations/` | 시험용 소프트웨어 유효성 검증 |
 | `teams` | `modules/teams/` | 팀 관리 |
+| `test-software` | `modules/test-software/` | 시험용 소프트웨어 관리 (P-number 레지스트리) |
 | `users` | `modules/users/` | 사용자 관리 |
 
 ### Ports

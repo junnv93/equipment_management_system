@@ -41,7 +41,9 @@
       "Bash(cp /home/devuser/.claude/projects/-home-devuser-equipment-management-system/memory/project_next_todo.md /home/devuser/equipment_management_system/.claude/projects/-home-devuser-equipment-management-system/memory/project_next_todo.md)",
       "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-14-data-migration-batch.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-14-data-migration-batch.md)",
       "Bash(mkdir -p /home/devuser/equipment_management_system/.claude/contracts)",
-      "Bash(cat)"
+      "Bash(cat)",
+      "Bash(rm \"/home/devuser/equipment_management_system/.claude/skills/equipment-management/references/auth-architecture.md.backup.20260211_215222\")",
+      "Bash(rm \"/home/devuser/equipment_management_system/.claude/skills/equipment-management/references/frontend-patterns.md.backup.20260211_215222\")"
     ],
     "deny": [],
     "ask": []

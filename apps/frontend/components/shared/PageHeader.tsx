@@ -59,9 +59,9 @@ export function PageHeader({
     return (
       <div className={SUB_PAGE_HEADER_TOKENS.container}>
         {backUrl ? (
-          <Button variant="outline" size="icon" asChild>
-            <Link href={backUrl} aria-label={backLabel}>
-              <ArrowLeft className="h-4 w-4" />
+          <Button variant="outline" size="icon" asChild aria-label={backLabel}>
+            <Link href={backUrl}>
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>
         ) : (

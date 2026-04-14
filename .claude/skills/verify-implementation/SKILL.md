@@ -36,6 +36,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 이스케이프, N+1                          |
 | 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지                       |
 | 14 | `verify-seed-integrity` | backend  | 시드 인프라 3자 SSOT 정합성 (seed-data↔seed-test-new↔verification) |
+| 15 | `verify-workflows`      | e2e      | 워크플로우 E2E 커버리지 — critical-workflows.md 대비 테스트 매핑    |
 
 ## 워크플로우
 

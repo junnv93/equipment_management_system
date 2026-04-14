@@ -22,9 +22,9 @@
 
 ## 공유 패키지 (packages/)
 
-- `packages/api-client/`: API 클라이언트 라이브러리
-- `packages/schemas/`: 공유 데이터 스키마 및 타입 (Zod)
+- `packages/schemas/`: 공유 Zod 스키마 + 열거형 (SSOT)
 - `packages/db/`: Drizzle ORM 스키마 및 마이그레이션
+- `packages/shared-constants/`: 권한(Permission), API 엔드포인트 상수
 
 ## Docker 관련 파일
 
