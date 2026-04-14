@@ -8,7 +8,7 @@
 
 > **발견 배경 (2026-04-13, 46차)**: harness Mode 2 시간복잡도 리뷰 (Planner→Generator→Evaluator 2회 루프, 14개 서비스 파일 분석). 14건 이슈를 근본 원인 기반 5개 아키텍처 프롬프트로 그루핑. 분석 보고서: `.claude/exec-plans/completed/2026-04-13-time-complexity-review.md`
 
-### 🔴 CRITICAL — data-migration 배치 INSERT + 공유 chunkArray SSOT (Mode 2)
+### ~~🔴 CRITICAL — data-migration 배치 INSERT + 공유 chunkArray SSOT (Mode 2)~~ ✅ 완료 (2026-04-14 52차 harness)
 
 ```
 시간복잡도 이슈 C1+C2+C3: data-migration.service.ts 4개 INSERT 루프가 row별 개별
@@ -244,7 +244,7 @@ all-ids + invalidateAllDashboard → N rows 처리 시 global/dashboard가 N번 
 - grep 'overdueCount.*filter\|pendingCount.*filter' apps/backend/src/modules/calibration → 0 hit
 ```
 
-### 🟢 LOW — Frontend 반복 Array.find → useMemo Map lookup + 이중 순회 통합 (Mode 0)
+### ~~🟢 LOW — Frontend 반복 Array.find → useMemo Map lookup + 이중 순회 통합 (Mode 0)~~ ✅ 완료 (2026-04-12 46차, commit 341adfeb)
 
 ```
 시간복잡도 이슈 M3+L1+L2: Frontend 컴포넌트에서 배열 반복 탐색 패턴.
@@ -336,7 +336,7 @@ all-ids + invalidateAllDashboard → N rows 처리 시 global/dashboard가 N번 
 > 2차 검증(Read/Grep)으로 FALSE POSITIVE 필터: .env 시크릿 노출(비추적), NC N+1(단일 호출), inspection FK(설계 의도) 등 제거.
 > 검증 통과한 신규 이슈 3건 등재.
 
-### 🟡 MEDIUM — Frontend loose typing: `status: string` / `role: string` → SSOT enum 적용 (Mode 1)
+### ~~🟡 MEDIUM — Frontend loose typing: `status: string` / `role: string` → SSOT enum 적용 (Mode 1)~~ ✅ 완료 (2026-04-12 45차, commit 48f303f8)
 
 ```
 verify-ssot 위반: 10+ 컴포넌트에서 status/role 파라미터가 string으로 선언됨.
