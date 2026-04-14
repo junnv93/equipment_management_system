@@ -312,7 +312,7 @@ services:
         max-file: '3'
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.8.2 # pinned 2026-04-14
     restart: always
     volumes:
       - /proc:/host/proc:ro
@@ -337,7 +337,7 @@ services:
         max-file: '3'
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.49.2 # pinned 2026-04-14
     restart: always
     volumes:
       - /:/rootfs:ro
@@ -359,7 +359,7 @@ services:
         max-file: '3'
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.28.0 # pinned 2026-04-14
     restart: always
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro

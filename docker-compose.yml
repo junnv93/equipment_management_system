@@ -4,7 +4,7 @@
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15.13-alpine # pinned 2026-04-14; infra/docker-compose.prod.yml과 버전 통일
     container_name: postgres_equipment
     restart: unless-stopped
     environment:
@@ -25,7 +25,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:alpine
+    image: redis:7.4-alpine # pinned 2026-04-14; infra/docker-compose.prod.yml과 버전 통일
     container_name: redis_equipment
     restart: unless-stopped
     ports:
@@ -41,7 +41,7 @@ services:
       retries: 5
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:latest # TODO: 공개 릴리즈 태그 확인 후 핀닝 — github.com/rustfs/rustfs/releases
     container_name: rustfs_equipment
     restart: unless-stopped
     command: server /data --console-address ":9001"
