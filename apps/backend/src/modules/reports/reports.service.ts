@@ -1036,7 +1036,12 @@ export class ReportsService {
       rows: rows.map((r) => ({
         timestampStr: fmtTs(r.timestamp),
         userName: r.userName,
-        roleLabel: USER_ROLE_LABELS[r.userRole as UserRole] ?? r.userRole,
+        roleLabel:
+          r.userRole === 'system'
+            ? '시스템'
+            : r.userRole === 'unknown'
+              ? '알 수 없음'
+              : (USER_ROLE_LABELS[r.userRole as UserRole] ?? r.userRole),
         actionLabel: AUDIT_ACTION_LABELS[r.action as AuditAction] ?? r.action,
         entityTypeLabel: AUDIT_ENTITY_TYPE_LABELS[r.entityType as AuditEntityType] ?? r.entityType,
         entityName: r.entityName ?? '-',

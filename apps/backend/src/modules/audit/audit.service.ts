@@ -414,7 +414,12 @@ export class AuditService {
     const formattedDate = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate().toString().padStart(2, '0')}일 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
     // SSOT 레이블 사용
-    const roleName = USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole;
+    const roleName =
+      log.userRole === 'system'
+        ? '시스템'
+        : log.userRole === 'unknown'
+          ? '알 수 없음'
+          : (USER_ROLE_LABELS[log.userRole as UserRole] ?? log.userRole);
     const actionName = AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action;
     const entityTypeName =
       AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] || log.entityType;
