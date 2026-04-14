@@ -115,24 +115,25 @@ export class UsersService {
     const pageSize = query.pageSize || DEFAULT_PAGE_SIZE;
     const offset = (page - 1) * pageSize;
 
-    // 1) Count 쿼리
-    const [{ total }] = await this.db
-      .select({ total: count() })
-      .from(usersTable)
-      .where(whereClause);
-
-    // 2) DB 레벨 정렬 + 페이지네이션
+    // 정렬 설정 (Promise.all 전에 동기 처리)
     const sortConfig = parseSortString(query.sort);
     const sortColumn = UsersService.getSortColumn(sortConfig?.field);
     const sortDirection = sortConfig?.direction === 'desc' ? desc : asc;
 
-    const rows = await this.db
-      .select()
-      .from(usersTable)
-      .where(whereClause)
-      .orderBy(sortDirection(sortColumn))
-      .limit(pageSize)
-      .offset(offset);
+    // Count 쿼리와 데이터 쿼리를 병렬 실행 (독립적이므로 Promise.all 적용)
+    const [countResult, rows] = await Promise.all([
+      // 1) Count 쿼리
+      this.db.select({ total: count() }).from(usersTable).where(whereClause),
+      // 2) DB 레벨 정렬 + 페이지네이션
+      this.db
+        .select()
+        .from(usersTable)
+        .where(whereClause)
+        .orderBy(sortDirection(sortColumn))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
+    const total = countResult[0].total;
 
     const items = rows.map((user) => this.toUser(user));
     const totalPages = Math.ceil(total / pageSize);

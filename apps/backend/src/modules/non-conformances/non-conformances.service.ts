@@ -345,109 +345,113 @@ export class NonConformancesService extends VersionedBaseService {
         // buildListConditions()로 data/count/summary 쿼리 필터 일관성 보장 (site/teamId 포함)
         const filterParams = { equipmentId, status, ncType, search, pendingClose, site, teamId };
 
+        // summary 조건 분기를 위해 미리 선언
+        const summaryFilterParams = { equipmentId, ncType, search, site, teamId };
+
+        // data + count (+ 조건부 summary) 병렬 실행
         // Use Drizzle relational query to include user→team relations
-        const items = await this.db.query.nonConformances.findMany({
-          where: () => and(...this.buildListConditions(filterParams)),
-          with: {
-            equipment: {
-              columns: {
-                id: true,
-                name: true,
-                managementNumber: true,
+        const [items, [{ total: totalItems }], summaryRows] = await Promise.all([
+          this.db.query.nonConformances.findMany({
+            where: () => and(...this.buildListConditions(filterParams)),
+            with: {
+              equipment: {
+                columns: {
+                  id: true,
+                  name: true,
+                  managementNumber: true,
+                },
+              },
+              repairHistory: {
+                columns: {
+                  id: true,
+                  repairDate: true,
+                  repairDescription: true,
+                  repairResult: true,
+                },
+              },
+              discoverer: {
+                columns: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+                with: {
+                  team: true,
+                },
+              },
+              corrector: {
+                columns: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+                with: {
+                  team: true,
+                },
+              },
+              closer: {
+                columns: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+                with: {
+                  team: true,
+                },
+              },
+              rejector: {
+                columns: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+                with: {
+                  team: true,
+                },
               },
             },
-            repairHistory: {
-              columns: {
-                id: true,
-                repairDate: true,
-                repairDescription: true,
-                repairResult: true,
-              },
-            },
-            discoverer: {
-              columns: {
-                id: true,
-                name: true,
-                email: true,
-              },
-              with: {
-                team: true,
-              },
-            },
-            corrector: {
-              columns: {
-                id: true,
-                name: true,
-                email: true,
-              },
-              with: {
-                team: true,
-              },
-            },
-            closer: {
-              columns: {
-                id: true,
-                name: true,
-                email: true,
-              },
-              with: {
-                team: true,
-              },
-            },
-            rejector: {
-              columns: {
-                id: true,
-                name: true,
-                email: true,
-              },
-              with: {
-                team: true,
-              },
-            },
-          },
-          orderBy: (nc, { desc: descFn, asc: ascFn }) => {
-            const [sortField, sortDirection] = sort.split('.');
-            const isAsc = sortDirection === 'asc';
+            orderBy: (nc, { desc: descFn, asc: ascFn }) => {
+              const [sortField, sortDirection] = sort.split('.');
+              const isAsc = sortDirection === 'asc';
 
-            switch (sortField) {
-              case 'discoveryDate':
-                return isAsc ? [ascFn(nc.discoveryDate)] : [descFn(nc.discoveryDate)];
-              case 'status':
-                return isAsc ? [ascFn(nc.status)] : [descFn(nc.status)];
-              case 'createdAt':
-                return isAsc ? [ascFn(nc.createdAt)] : [descFn(nc.createdAt)];
-              case 'updatedAt':
-                return isAsc ? [ascFn(nc.updatedAt)] : [descFn(nc.updatedAt)];
-              default:
-                return [descFn(nc.discoveryDate)];
-            }
-          },
-          limit: pageSize,
-          offset: (page - 1) * pageSize,
-        });
+              switch (sortField) {
+                case 'discoveryDate':
+                  return isAsc ? [ascFn(nc.discoveryDate)] : [descFn(nc.discoveryDate)];
+                case 'status':
+                  return isAsc ? [ascFn(nc.status)] : [descFn(nc.status)];
+                case 'createdAt':
+                  return isAsc ? [ascFn(nc.createdAt)] : [descFn(nc.createdAt)];
+                case 'updatedAt':
+                  return isAsc ? [ascFn(nc.updatedAt)] : [descFn(nc.updatedAt)];
+                default:
+                  return [descFn(nc.discoveryDate)];
+              }
+            },
+            limit: pageSize,
+            offset: (page - 1) * pageSize,
+          }),
+          // Count 쿼리 — buildListConditions() SSOT로 data 쿼리와 동일한 필터 보장
+          this.db
+            .select({ total: sql<number>`count(*)::int` })
+            .from(nonConformances)
+            .where(and(...this.buildListConditions(filterParams))),
+          // Summary 집계 (includeSummary=true일 때만)
+          // ✅ status 필터 제외한 기본 조건으로 전체 상태별 건수 반환
+          // buildListConditions() SSOT: site/teamId도 서브쿼리로 통일 (innerJoin 불필요)
+          includeSummary
+            ? this.db
+                .select({
+                  status: nonConformances.status,
+                  count: sql<number>`count(*)::int`,
+                })
+                .from(nonConformances)
+                .where(and(...this.buildListConditions(summaryFilterParams)))
+                .groupBy(nonConformances.status)
+            : Promise.resolve([] as { status: string; count: number }[]),
+        ]);
 
-        // Count 쿼리 — buildListConditions() SSOT로 data 쿼리와 동일한 필터 보장
-        const [{ total: totalItems }] = await this.db
-          .select({ total: sql<number>`count(*)::int` })
-          .from(nonConformances)
-          .where(and(...this.buildListConditions(filterParams)));
-
-        // Summary 집계 (includeSummary=true일 때만)
-        // ✅ status 필터 제외한 기본 조건으로 전체 상태별 건수 반환
-        // buildListConditions() SSOT: site/teamId도 서브쿼리로 통일 (innerJoin 불필요)
         let summary: Record<string, number> | undefined;
         if (includeSummary) {
-          const summaryFilterParams = { equipmentId, ncType, search, site, teamId };
-
-          const summaryRows = await this.db
-            .select({
-              status: nonConformances.status,
-              count: sql<number>`count(*)::int`,
-            })
-            .from(nonConformances)
-            .where(and(...this.buildListConditions(summaryFilterParams)))
-            .groupBy(nonConformances.status);
-
           summary = {
             [NonConformanceStatus.OPEN]: 0,
             [NonConformanceStatus.CORRECTED]: 0,

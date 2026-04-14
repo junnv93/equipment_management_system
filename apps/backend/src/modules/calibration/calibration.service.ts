@@ -849,16 +849,7 @@ export class CalibrationService extends VersionedBaseService {
       }
     }
 
-    // ========== 2. Count total items ==========
-    const countResult = await this.db
-      .select({ count: count() })
-      .from(schema.calibrations)
-      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
-      .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
-
-    const totalItems = Number(countResult[0]?.count || 0);
-    const totalPages = Math.ceil(totalItems / pageSize);
+    const whereArg = whereConditions.length > 0 ? and(...whereConditions) : undefined;
     const offset = (page - 1) * pageSize;
 
     // ========== 3. Build ORDER BY ==========
@@ -881,23 +872,34 @@ export class CalibrationService extends VersionedBaseService {
       orderByClause = desc(schema.calibrations.calibrationDate);
     }
 
-    // ========== 4. Fetch data with JOINs ==========
+    // ========== 2+4. Count + Fetch data 병렬 실행 ==========
     // ✅ Phase 4: 전체 행 조회 후 transformDbToRecord()로 정규화
-    const rows = await this.db
-      .select({
-        calibration: schema.calibrations,
-        equipmentName: schema.equipment.name,
-        managementNumber: schema.equipment.managementNumber,
-        teamId: schema.equipment.teamId,
-        teamName: schema.teams.name,
-      })
-      .from(schema.calibrations)
-      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
-      .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
-      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
-      .orderBy(orderByClause)
-      .limit(pageSize)
-      .offset(offset);
+    const [countResult, rows] = await Promise.all([
+      this.db
+        .select({ count: count() })
+        .from(schema.calibrations)
+        .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+        .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+        .where(whereArg),
+      this.db
+        .select({
+          calibration: schema.calibrations,
+          equipmentName: schema.equipment.name,
+          managementNumber: schema.equipment.managementNumber,
+          teamId: schema.equipment.teamId,
+          teamName: schema.teams.name,
+        })
+        .from(schema.calibrations)
+        .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+        .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+        .where(whereArg)
+        .orderBy(orderByClause)
+        .limit(pageSize)
+        .offset(offset),
+    ]);
+
+    const totalItems = Number(countResult[0]?.count || 0);
+    const totalPages = Math.ceil(totalItems / pageSize);
 
     const items: CalibrationRecord[] = rows.map((row) => ({
       ...this.transformDbToRecord(row.calibration),
@@ -1057,14 +1059,6 @@ export class CalibrationService extends VersionedBaseService {
       whereConditions.push(eq(schema.equipment.teamId, teamId));
     }
 
-    // ========== 2. Count (equipment JOIN 항상 포함 — findAll과 동일) ==========
-    const [{ count: totalItems }] = await this.db
-      .select({ count: count() })
-      .from(schema.calibrations)
-      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
-      .where(and(...whereConditions));
-
-    const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
 
     // ========== 3. Fetch data with JOINs (DB-level 필터링 + 페이지네이션) ==========
@@ -1073,32 +1067,42 @@ export class CalibrationService extends VersionedBaseService {
     const approver = aliasedTable(schema.users, 'approver');
     const registrarTeam = aliasedTable(schema.teams, 'registrar_team');
 
-    const rows = await this.db
-      .select({
-        calibration: schema.calibrations,
-        equipmentName: schema.equipment.name,
-        managementNumber: schema.equipment.managementNumber,
-        equipmentTeamId: schema.equipment.teamId,
-        // registeredByUser
-        registrarId: registrar.id,
-        registrarName: registrar.name,
-        registrarEmail: registrar.email,
-        registrarTeamId: registrarTeam.id,
-        registrarTeamName: registrarTeam.name,
-        // approvedByUser
-        approverId: approver.id,
-        approverName: approver.name,
-        approverEmail: approver.email,
-      })
-      .from(schema.calibrations)
-      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
-      .leftJoin(registrar, eq(schema.calibrations.registeredBy, registrar.id))
-      .leftJoin(registrarTeam, eq(registrar.teamId, registrarTeam.id))
-      .leftJoin(approver, eq(schema.calibrations.approvedBy, approver.id))
-      .where(and(...whereConditions))
-      .orderBy(desc(schema.calibrations.createdAt))
-      .limit(pageSize)
-      .offset(offset);
+    // ========== 2+3. Count + Fetch data 병렬 실행 ==========
+    const [[{ count: totalItems }], rows] = await Promise.all([
+      this.db
+        .select({ count: count() })
+        .from(schema.calibrations)
+        .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+        .where(and(...whereConditions)),
+      this.db
+        .select({
+          calibration: schema.calibrations,
+          equipmentName: schema.equipment.name,
+          managementNumber: schema.equipment.managementNumber,
+          equipmentTeamId: schema.equipment.teamId,
+          // registeredByUser
+          registrarId: registrar.id,
+          registrarName: registrar.name,
+          registrarEmail: registrar.email,
+          registrarTeamId: registrarTeam.id,
+          registrarTeamName: registrarTeam.name,
+          // approvedByUser
+          approverId: approver.id,
+          approverName: approver.name,
+          approverEmail: approver.email,
+        })
+        .from(schema.calibrations)
+        .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+        .leftJoin(registrar, eq(schema.calibrations.registeredBy, registrar.id))
+        .leftJoin(registrarTeam, eq(registrar.teamId, registrarTeam.id))
+        .leftJoin(approver, eq(schema.calibrations.approvedBy, approver.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(schema.calibrations.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / pageSize);
 
     // ========== 4. Transform (findAll 패턴 + user relations) ==========
     const transformedItems = rows.map((row) => ({
