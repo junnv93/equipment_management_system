@@ -22,7 +22,6 @@ GET    /api/documents/:id/verify   — SHA-256 무결성 검증
 POST   /api/documents/:id/revisions — 개정 업로드
 GET    /api/documents/:id/revisions — 개정 이력 (재귀 CTE)
 ```
-
 ## 구현 요청
 
 ### Phase 1: 독립 문서 관리 페이지 (`/documents`)
