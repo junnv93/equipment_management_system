@@ -122,7 +122,7 @@ sudo ufw status
 ### 3.1 환경변수 설정
 
 ```bash
-cd /home/kmjkds/equipment_management_system
+cd /opt/equipment_management_system
 
 # 템플릿 복사
 cp .env.production.template .env.production
@@ -270,7 +270,7 @@ http://equipment.suwon.local
 crontab -e
 
 # 매일 새벽 2시에 자동 백업 (아래 라인 추가)
-0 2 * * * /home/kmjkds/equipment_management_system/scripts/backup-database.sh
+0 2 * * * /opt/equipment_management_system/scripts/backup-database.sh
 ```
 
 ### 5.2 수동 백업

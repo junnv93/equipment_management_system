@@ -54,7 +54,7 @@ services:
 
   # RustFS (S3 호환 파일 저장소)
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs@sha256:f1b59053332cdaa00c6a0d08b43f02fb2d12bf2749098b6d9d5eed693b39b695
     container_name: equipment_rustfs_lan
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -66,7 +66,9 @@ services:
     networks:
       - equipment_network
     healthcheck:
-      test: ['CMD-SHELL', 'wget -qO- http://localhost:9000/minio/health/live || exit 1']
+      # /minio/health/live는 RustFS에서 403 반환 (인증 필요) → wget은 4xx를 exit 8로 처리하여 오탐
+      # curl은 HTTP 상태 무관하게 TCP 연결 성공 시 exit 0 → 진짜 liveness 확인
+      test: ['CMD-SHELL', 'curl -sf http://localhost:9000/minio/health/live || [ $? -eq 22 ]']
       interval: 30s
       timeout: 10s
       retries: 3

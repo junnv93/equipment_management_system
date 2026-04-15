@@ -5,7 +5,7 @@
 ### 1단계: 환경변수 설정 (2분)
 
 ```bash
-cd /home/kmjkds/equipment_management_system
+cd /opt/equipment_management_system
 
 # 환경변수 템플릿 복사
 cp .env.production.template .env.production
@@ -152,10 +152,10 @@ After=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/kmjkds/equipment_management_system
+WorkingDirectory=/opt/equipment_management_system
 ExecStart=/usr/bin/docker compose -f docker-compose.lan.yml up -d
 ExecStop=/usr/bin/docker compose -f docker-compose.lan.yml stop
-User=kmjkds
+User=${YOUR_USER}  # 실제 배포 PC의 리눅스 사용자명으로 변경
 
 [Install]
 WantedBy=multi-user.target
