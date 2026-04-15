@@ -1,6 +1,6 @@
 ---
 name: verify-workflows
-description: Verifies cross-feature workflow E2E test coverage against critical-workflows.md checklist. Checks WF-01~WF-16 coverage, step completeness, role correctness, side-effect verification, and status transition assertions. Run after adding workflow tests or before PR.
+description: Verifies cross-feature workflow E2E test coverage against critical-workflows.md checklist. Checks WF-01~WF-35 coverage, step completeness, role correctness, side-effect verification, and status transition assertions. Run after adding workflow tests or before PR.
 disable-model-invocation: true
 argument-hint: '[선택사항: WF-03, WF-10 등 특정 워크플로우 번호]'
 ---
@@ -38,14 +38,14 @@ argument-hint: '[선택사항: WF-03, WF-10 등 특정 워크플로우 번호]'
 **검사:**
 ```bash
 # workflows/ 디렉토리에서 WF 번호별 파일 존재 확인
-for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16; do
+for wf in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 25 33 35; do
   ls apps/frontend/tests/e2e/workflows/wf-${wf}-*.spec.ts 2>/dev/null
 done
 ```
 
 **PASS:** P0 워크플로우(WF-03, WF-10, WF-11) 100% 커버
 **WARN:** P1 워크플로우(WF-07, WF-08, WF-12, WF-13) 일부 미커버. WF-13 cancel 롤백 경로 추가됨 (onReturnCanceled + suite-27 S27-08)
-**INFO:** P2~P3 미커버
+**INFO:** WF-20 자체점검 결재 워크플로우(P3): wf-20-self-inspection-confirmation.spec.ts, wf-20-self-inspection-ui.spec.ts, wf-20b-self-inspection-export.spec.ts 3파일 커버 (draft→submitted→approved, rejected→resubmit, export)
 
 ### Step 2: 단계 완전성
 

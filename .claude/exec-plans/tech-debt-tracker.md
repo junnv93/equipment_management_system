@@ -7,7 +7,7 @@
 
 ## 미완료 항목
 
-*(없음)*
+- [ ] SelfInspectionTab 뮤테이션 6개를 `useOptimisticMutation`으로 교체 — `apps/frontend/components/equipment/SelfInspectionTab.tsx:151-244` — 2026-04-15 (IntermediateInspectionList 패턴 일치, 기능 이상 없음, UX 개선)
 
 ---
 
