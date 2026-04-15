@@ -1,0 +1,153 @@
+# LAN 프로덕션 override
+#
+# 사내 LAN 단일 VM 배포 (nginx:9000 단일 포트). ADR-0004 참조.
+# - postgres/redis/rustfs: bind-mount to /var/lib/equipment-system/* (호스트 백업 용이)
+# - Redis AOF + requirepass (ADR-0005 매트릭스의 prod parity)
+# - backend / frontend / nginx / migration 서비스 추가
+#
+# Secret 주입 (ADR-0005 Accepted, Phase C 완료):
+#   pnpm compose:lan 사용 → docker compose --env-file=/run/secrets/lan.env 로 실행
+#   직접 실행 시: pnpm secrets:decrypt lan && docker compose --env-file=/run/secrets/lan.env -f base.yml -f lan.override.yml up -d
+#   상세: ../secrets/README.md
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-postgres_equipment}
+    volumes:
+      - /var/lib/equipment-system/postgres:/var/lib/postgresql/data
+      - /var/lib/equipment-system/backups:/backups
+
+  redis:
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    volumes:
+      - /var/lib/equipment-system/redis:/data
+
+  rustfs:
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - /var/lib/equipment-system/rustfs:/data
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: apps/backend/docker/Dockerfile
+      target: production
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-postgres_equipment}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      PERMISSIONS_GUARD_MODE: DENY
+      FRONTEND_URL: http://${SERVER_LAN_IP:-192.168.1.100}:9000
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: http://rustfs:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-equipment-files}
+    volumes:
+      - /var/lib/equipment-system/logs/backend:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/monitoring/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: apps/frontend/Dockerfile
+      target: production
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://${SERVER_LAN_IP:-192.168.1.100}:9000
+      NEXTAUTH_URL: http://${SERVER_LAN_IP:-192.168.1.100}:9000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      INTERNAL_BACKEND_URL: http://backend:3001
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/api/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  nginx:
+    image: nginx:1.27-alpine # SSOT — prod와 통일
+    restart: unless-stopped
+    stop_grace_period: 10s
+    ports:
+      - '9000:9000'
+    volumes:
+      - ../nginx/lan.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  migration:
+    build:
+      context: ../..
+      dockerfile: apps/backend/docker/Dockerfile
+      target: production
+    command: ['node', 'apps/backend/dist/database/run-migration.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-postgres_equipment}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    profiles:
+      - migration

@@ -274,6 +274,7 @@ export async function middleware(request: NextRequest) { ... }
 | Behavioral Guidelines | [behavioral-guidelines.md](docs/references/behavioral-guidelines.md) | 4 guidelines: think first, minimal code, surgical changes, goal-based |
 | Production Checklist | [production-checklist.md](docs/references/production-checklist.md) | Backend/Frontend endpoint/feature checklists |
 | PostToolUse Hook | [post-tool-use-hook.md](docs/references/post-tool-use-hook.md) | Prettier auto-run, git diff verification |
+| Secret 관리 (sops+age) | [secret-backup.md](docs/operations/secret-backup.md), [secret-rotation.md](docs/operations/secret-rotation.md) | ADR-0005, `infra/secrets/*.sops.yaml`, `pnpm compose:lan`, pre-commit gitleaks |
 
 ---
 

@@ -1,0 +1,31 @@
+# sops + age Secret 암호화 정책 (ADR-0005)
+#
+# 사용법:
+#   - 암호화 편집:  pnpm secrets:edit ENV=lan
+#   - 복호화 (호스트 tmpfs): pnpm secrets:decrypt lan
+#   - 키 교체 / 추가: .sops.yaml 의 keys: 수정 후 pnpm secrets:rotate-key
+#
+# Recipients 는 age public key ("age1..." 접두사). 여러 개를 등록해 1개 분실 시
+# 다른 키로 복호화 가능하도록 이중화한다. 등록 절차는
+# docs/operations/secret-backup.md 참조.
+#
+# 현 등록 현황 (2026-04-15):
+#   - pc_primary: 현 maintainer primary PC (WSL2)
+#   - pc_secondary: TODO — 추가 PC 키 생성 후 등록
+#   - backup_usb:   TODO — 외장 USB 암호화 볼륨 내 키 생성 후 등록
+#
+#   ⚠ 현재 recipient 가 1개뿐이므로 이 키 분실 시 복구 불가.
+#     docs/operations/secret-backup.md §"이중 백업 절차" 를 즉시 수행할 것.
+
+keys:
+  - &pc_primary age1ts2rpha0f7rjlslevf62t604q2gh7s68mt90h6lg70250pr4w59qzzk5tc
+
+creation_rules:
+  - path_regex: ^infra/secrets/lan\.env\.sops\.yaml$
+    key_groups:
+      - age:
+          - *pc_primary
+  - path_regex: ^infra/secrets/prod\.env\.sops\.yaml$
+    key_groups:
+      - age:
+          - *pc_primary

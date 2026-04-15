@@ -1,79 +1,19 @@
-# 개발 환경용 Docker Compose
-# PostgreSQL과 Redis만 Docker로 실행
-# 백엔드/프론트엔드는 로컬에서 pnpm dev로 실행
+# Docker Compose — Dev entry point (include shim)
+#
+# 실제 서비스 정의는 infra/compose/{base,dev.override}.yml에 SSOT로 있다.
+# 이 파일은 `pnpm dev` 및 `docker compose up` 편의를 위한 shim일 뿐.
+#
+# 새 서비스를 추가하려면 먼저 base.yml (공통) 또는 dev.override.yml (dev 전용)에 기술하고,
+# 다른 환경 override도 함께 업데이트한다.
+#
+# 관련 문서:
+#   - infra/compose/base.yml             (SSOT — postgres/redis/rustfs 공통)
+#   - infra/compose/dev.override.yml     (dev: 포트 노출, ephemeral redis)
+#   - docs/adr/0004-docker-compose-over-kubernetes.md
+#   - docs/references/redis-persistence-matrix.md
 
-services:
-  postgres:
-    image: postgres:15.13-alpine # pinned 2026-04-14; infra/docker-compose.prod.yml과 버전 통일
-    container_name: postgres_equipment
-    restart: unless-stopped
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: equipment_management
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./infra/init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - app-network
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 5s
-      timeout: 5s
-      retries: 5
+name: equipment-management-system
 
-  redis:
-    image: redis:7.4-alpine # pinned 2026-04-14; infra/docker-compose.prod.yml과 버전 통일
-    container_name: redis_equipment
-    restart: unless-stopped
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  rustfs:
-    image: rustfs/rustfs:latest # TODO: 공개 릴리즈 태그 확인 후 핀닝 — github.com/rustfs/rustfs/releases
-    container_name: rustfs_equipment
-    restart: unless-stopped
-    command: server
-    environment:
-      RUSTFS_ACCESS_KEY: rustfsadmin
-      RUSTFS_SECRET_KEY: rustfsadmin
-      RUSTFS_VOLUMES: /data
-      RUSTFS_CONSOLE_ENABLE: 'true'
-      RUSTFS_CONSOLE_ADDRESS: ':9001'
-    ports:
-      - '9000:9000'
-      - '9001:9001'
-    volumes:
-      - rustfs_data:/data
-    networks:
-      - app-network
-    healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'curl -s --max-time 3 -o /dev/null -w "%{http_code}" http://localhost:9000/ | grep -qE "^[234]"',
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
-networks:
-  app-network:
-    driver: bridge
-
-volumes:
-  postgres_data:
-  redis_data:
-  rustfs_data:
+include:
+  - infra/compose/base.yml
+  - infra/compose/dev.override.yml

@@ -1,0 +1,75 @@
+# Docker Compose Base — postgres / redis / rustfs SSOT
+#
+# 이 파일은 `include:`를 통해 dev / lan / prod 각 최상위 compose에 병합된다.
+# 환경별 차이점은 `infra/compose/{dev,lan,prod}.override.yml`에서만 기술한다.
+# 원칙:
+#   - 이미지 태그/digest는 이 파일이 진실의 원천
+#   - healthcheck · 공통 env 기본값 · logging · restart 정책 공통
+#   - 바인드/네임드 볼륨의 "source"는 override가 결정 (테스트/프로덕션 차이)
+#   - container_name 미지정 — 프로젝트 scope로 자동 생성하여 충돌 방지
+#
+# 경로: 이 파일 기준 상대경로 (`../healthchecks`, `../init-postgres.sql`)
+
+x-default-logging: &default-logging
+  driver: 'json-file'
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-default-healthcheck: &default-healthcheck
+  interval: ${HEALTHCHECK_INTERVAL:-30s}
+  timeout: ${HEALTHCHECK_TIMEOUT_DUR:-10s}
+  retries: 5
+
+services:
+  postgres:
+    image: postgres:15.13-alpine # SSOT 2026-04-14; 메이저 업그레이드 시 volume 비호환
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_DB: ${DB_NAME:-equipment_management}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - ../healthchecks:/healthchecks:ro
+      - ../init-postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      <<: *default-healthcheck
+      test: ['CMD', '/healthchecks/postgres-liveness.sh']
+      start_period: ${HEALTHCHECK_START_PERIOD:-20s}
+    logging: *default-logging
+
+  redis:
+    image: redis:7.4-alpine # SSOT 2026-04-14; RDB 포맷 드리프트 방지용 정확한 minor pin
+    restart: unless-stopped
+    stop_grace_period: 10s
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - ../healthchecks:/healthchecks:ro
+    healthcheck:
+      <<: *default-healthcheck
+      test: ['CMD', '/healthchecks/redis-liveness.sh']
+      start_period: ${HEALTHCHECK_START_PERIOD:-5s}
+    logging: *default-logging
+
+  rustfs:
+    # Digest 핀닝 — SSOT. 업그레이드 시 이 줄만 바꾸면 전 환경 전파.
+    image: rustfs/rustfs@sha256:f1b59053332cdaa00c6a0d08b43f02fb2d12bf2749098b6d9d5eed693b39b695
+    restart: unless-stopped
+    stop_grace_period: 30s
+    command: server
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-rustfsadmin}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_CONSOLE_ENABLE: 'true'
+      RUSTFS_CONSOLE_ADDRESS: ':9001'
+    volumes:
+      - ../healthchecks:/healthchecks:ro
+    healthcheck:
+      <<: *default-healthcheck
+      test: ['CMD', '/healthchecks/rustfs-liveness.sh']
+      retries: 3
+      start_period: ${HEALTHCHECK_START_PERIOD:-20s}
+    logging: *default-logging

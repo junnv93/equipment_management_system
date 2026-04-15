@@ -1,0 +1,43 @@
+# Dev 환경 override
+#
+# base.yml의 postgres/redis/rustfs에 개발 전용 설정을 덧붙인다.
+# - 호스트 포트 노출 (로컬 backend/frontend가 접근)
+# - Redis는 ephemeral (ADR-0005와 redis-persistence-matrix.md)
+# - 볼륨은 named volume (프로젝트 scope)
+# - 빠른 healthcheck interval
+
+services:
+  postgres:
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      interval: ${HEALTHCHECK_INTERVAL:-10s}
+      timeout: ${HEALTHCHECK_TIMEOUT_DUR:-5s}
+      start_period: ${HEALTHCHECK_START_PERIOD:-10s}
+
+  redis:
+    # Ephemeral — RDB/AOF 비활성화. docs/references/redis-persistence-matrix.md 참조.
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      interval: ${HEALTHCHECK_INTERVAL:-10s}
+      timeout: ${HEALTHCHECK_TIMEOUT_DUR:-5s}
+      start_period: ${HEALTHCHECK_START_PERIOD:-5s}
+
+  rustfs:
+    ports:
+      - '${RUSTFS_PORT:-9000}:9000'
+      - '${RUSTFS_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - rustfs_data:/data
+    healthcheck:
+      interval: ${HEALTHCHECK_INTERVAL:-10s}
+      timeout: ${HEALTHCHECK_TIMEOUT_DUR:-5s}
+      start_period: ${HEALTHCHECK_START_PERIOD:-15s}
+
+volumes:
+  postgres_data:
+  rustfs_data:

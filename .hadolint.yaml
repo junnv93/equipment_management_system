@@ -1,0 +1,12 @@
+failure-threshold: error
+
+# Rule severity overrides (프로젝트 정책)
+override:
+  warning:
+    - DL3059 # Multiple consecutive RUN commands — build 속도 최적화용, 과하지 않으면 허용
+
+# DL3018 — apk add 버전 고정: alpine base 이미지는 이미 버전 고정이고
+# 보안 업데이트는 base image 교체로 받는 것이 합리적. error가 아닌 warning이므로
+# 프로젝트 정책상 이 규칙은 ignore한다 (ADR 추가 없이 관행).
+ignored:
+  - DL3018

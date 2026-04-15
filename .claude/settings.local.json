@@ -46,7 +46,9 @@
       "Bash(rm \"/home/devuser/equipment_management_system/.claude/skills/equipment-management/references/frontend-patterns.md.backup.20260211_215222\")",
       "Bash(rm /home/devuser/equipment_management_system/.claude/contracts/tech-debt-68.md)",
       "Bash(rm /home/devuser/equipment_management_system/.claude/evaluations/tech-debt-68.md)",
-      "Bash(git -C /home/devuser/equipment_management_system status --short)"
+      "Bash(git -C /home/devuser/equipment_management_system status --short)",
+      "Bash(mkdir -p /home/kmjkds/equipment_management_system/.claude/exec-plans/completed)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-15-docker-infra-standards.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/)"
     ],
     "deny": [],
     "ask": []

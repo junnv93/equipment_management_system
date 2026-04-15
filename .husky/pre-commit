@@ -1,1 +1,34 @@
+#!/usr/bin/env sh
+# Pre-commit gate:
+#   1. sops 파일이 암호화된 상태로만 커밋되도록 검증 (Phase C, ADR-0005)
+#   2. gitleaks 로 평문 secret 커밋 차단 (설치되지 않았다면 경고만)
+#   3. lint-staged (포맷 + lint)
+
+set -e
+
+# 1. sops 파일 암호화 상태 검증
+STAGED_SOPS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^infra/secrets/.*\.sops\.yaml$' || true)
+if [ -n "$STAGED_SOPS" ]; then
+  for f in $STAGED_SOPS; do
+    if ! git show ":$f" | grep -q '^sops:'; then
+      printf '❌ %s 가 sops 포맷이 아닙니다 (암호화 누락). 커밋 중단.\n' "$f" >&2
+      printf '   수정: pnpm secrets:edit ENV=%s\n' "$(echo "$f" | sed -E 's|.*/([^/]+)\.env\.sops\.yaml|\1|')" >&2
+      exit 1
+    fi
+  done
+fi
+
+# 2. gitleaks protect (설치된 경우만)
+if command -v gitleaks >/dev/null 2>&1; then
+  # staged 변경분에 한해 스캔 — repo 전체는 CI 가 담당
+  if ! gitleaks protect --staged --redact --no-banner --exit-code=1 2>/dev/null; then
+    printf '❌ gitleaks: staged 변경분에 평문 secret 의심 패턴 감지. 커밋 중단.\n' >&2
+    printf '   오탐이면 .gitleaks.toml allowlist 사용\n' >&2
+    exit 1
+  fi
+else
+  printf '⚠  gitleaks 미설치 — 평문 secret 자동 검출 비활성화 (docs/operations/secret-backup.md 참조)\n' >&2
+fi
+
+# 3. lint-staged
 pnpm lint-staged

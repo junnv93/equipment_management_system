@@ -1,0 +1,10 @@
+# gitleaks allowlist (fingerprint 기반)
+#
+# 문서: https://github.com/gitleaks/gitleaks#gitleaksignore
+# 형식: <commit>:<file>:<rule>:<start-line>
+#
+# 추가 전 반드시 실제 secret 이 아닌지 확인하라.
+# Phase C (ADR-0005) 이후: 진짜 secret 은 sops 로만, 테스트 fixture 는 이 파일로만.
+
+# 테스트용 의도적 fake JWT — "WRONG_SIGNATURE" 명시된 invalid 토큰, security.spec.ts 에서 JWT 검증 실패 플로우 테스트 용도
+1bb6ece6eea9f35bdfaf78f1fb3bec3d05c7ce31:apps/frontend/tests/e2e/security.spec.ts:jwt:33
