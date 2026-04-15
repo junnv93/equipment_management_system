@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { queryKeys } from '@/lib/api/query-config';
 import {
@@ -67,9 +67,7 @@ import {
 } from 'lucide-react';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/components/ui/use-toast';
 import { isConflictError } from '@/lib/api/error';
-import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import {
   DropdownMenu,
@@ -83,6 +81,8 @@ import {
   getSemanticBadgeClasses,
   type SemanticColorKey,
 } from '@/lib/design-tokens';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import type { SelfInspectionStatus } from '@equipment-management/schemas';
 
 const SelfInspectionFormDialog = dynamic(
   () => import('@/components/inspections/SelfInspectionFormDialog'),
@@ -104,13 +104,12 @@ const STATUS_SEMANTIC_MAP: Record<string, SemanticColorKey> = {
 /** 기존 고정 컬럼 fallback 항목 — i18n 키 사용 */
 const LEGACY_ITEM_KEYS = ['appearance', 'functionality', 'safety', 'calibrationStatus'] as const;
 
+type SelfInspectionCache = { data: SelfInspection[]; total: number };
+
 export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
   const t = useTranslations('equipment');
-  const tErrors = useTranslations('errors');
   const { fmtDate } = useDateFormatter();
   const { can, user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const equipmentId = String(equipment.id);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SelfInspection | null>(null);
@@ -132,119 +131,119 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
 
   const inspections = data?.data ?? [];
 
-  const handleConflictError = () => {
-    const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, tErrors);
-    toast({
-      title: conflictInfo.title,
-      description: conflictInfo.message,
-      variant: 'destructive',
+  // 짧은 alias (코드 가독성)
+  const tSI = (key: string) => t(`selfInspection.${key}` as Parameters<typeof t>[0]);
+
+  const primaryQueryKey = queryKeys.equipment.selfInspections(equipmentId);
+  const crossInvalidateKeys = [queryKeys.equipment.detail(equipmentId)] as const;
+
+  // 승인 상태 전이를 위한 optimistic update 헬퍼
+  const makeStatusUpdate =
+    (targetStatus: SelfInspectionStatus) =>
+    (
+      old: SelfInspectionCache | undefined,
+      { id }: { id: string; version: number }
+    ): SelfInspectionCache => ({
+      data: (old?.data ?? []).map((item) =>
+        item.id === id ? { ...item, approvalStatus: targetStatus } : item
+      ),
+      total: old?.total ?? 0,
     });
-    queryClient.removeQueries({ queryKey: queryKeys.equipment.selfInspections(equipmentId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.equipment.selfInspections(equipmentId) });
-  };
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.equipment.selfInspections(equipmentId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.equipment.detail(equipmentId) });
-  };
-
-  const submitMutation = useMutation({
-    mutationFn: (t: SelfInspection) => submitSelfInspection(t.id, t.version),
-    onSuccess: () => {
-      toast({ description: tSI('toast.submitSuccess') });
-      invalidate();
-    },
-    onError: (error: Error) => {
-      if (isConflictError(error)) {
-        handleConflictError();
-        return;
-      }
-      toast({ variant: 'destructive', description: tSI('toast.submitError') });
-    },
+  const submitMutation = useOptimisticMutation<
+    SelfInspection,
+    { id: string; version: number },
+    SelfInspectionCache
+  >({
+    mutationFn: ({ id, version }) => submitSelfInspection(id, version),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: makeStatusUpdate('submitted'),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: tSI('toast.submitSuccess'),
+    errorMessage: tSI('toast.submitError'),
   });
 
-  const withdrawMutation = useMutation({
-    mutationFn: (t: SelfInspection) => withdrawSelfInspection(t.id, t.version),
-    onSuccess: () => {
-      toast({ description: tSI('toast.withdrawSuccess') });
-      invalidate();
-    },
-    onError: (error: Error) => {
-      if (isConflictError(error)) {
-        handleConflictError();
-        return;
-      }
-      toast({ variant: 'destructive', description: tSI('toast.withdrawError') });
-    },
+  const withdrawMutation = useOptimisticMutation<
+    SelfInspection,
+    { id: string; version: number },
+    SelfInspectionCache
+  >({
+    mutationFn: ({ id, version }) => withdrawSelfInspection(id, version),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: makeStatusUpdate('draft'),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: tSI('toast.withdrawSuccess'),
+    errorMessage: tSI('toast.withdrawError'),
   });
 
-  const approveMutation = useMutation({
-    mutationFn: (t: SelfInspection) => approveSelfInspection(t.id, t.version),
-    onSuccess: () => {
-      toast({ description: tSI('toast.approveSuccess') });
-      invalidate();
-    },
-    onError: (error: Error) => {
-      if (isConflictError(error)) {
-        handleConflictError();
-        return;
-      }
-      toast({ variant: 'destructive', description: tSI('toast.approveError') });
-    },
+  const approveMutation = useOptimisticMutation<
+    SelfInspection,
+    { id: string; version: number },
+    SelfInspectionCache
+  >({
+    mutationFn: ({ id, version }) => approveSelfInspection(id, version),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: makeStatusUpdate('approved'),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: tSI('toast.approveSuccess'),
+    errorMessage: tSI('toast.approveError'),
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: (t: SelfInspection) => rejectSelfInspection(t.id, t.version, rejectReason),
-    onSuccess: () => {
-      toast({ description: tSI('toast.rejectSuccess') });
-      invalidate();
+  const rejectMutation = useOptimisticMutation<
+    SelfInspection,
+    { id: string; version: number; reason: string },
+    SelfInspectionCache
+  >({
+    mutationFn: ({ id, version, reason }) => rejectSelfInspection(id, version, reason),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: (old, { id, reason }) => ({
+      data: (old?.data ?? []).map((item) =>
+        item.id === id
+          ? { ...item, approvalStatus: 'rejected' as const, rejectionReason: reason }
+          : item
+      ),
+      total: old?.total ?? 0,
+    }),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: tSI('toast.rejectSuccess'),
+    errorMessage: tSI('toast.rejectError'),
+    onSuccessCallback: () => {
       setRejectTarget(null);
       setRejectReason('');
     },
-    onError: (error: Error) => {
-      if (isConflictError(error)) {
-        handleConflictError();
-        setRejectTarget(null);
-        return;
-      }
-      toast({ variant: 'destructive', description: tSI('toast.rejectError') });
+    onErrorCallback: (error) => {
+      if (isConflictError(error)) setRejectTarget(null);
     },
   });
 
-  const resubmitMutation = useMutation({
-    mutationFn: (t: SelfInspection) => resubmitSelfInspection(t.id, t.version),
-    onSuccess: () => {
-      toast({ description: tSI('toast.resubmitSuccess') });
-      invalidate();
-    },
-    onError: (error: Error) => {
-      if (isConflictError(error)) {
-        handleConflictError();
-        return;
-      }
-      toast({ variant: 'destructive', description: tSI('toast.resubmitError') });
-    },
+  const resubmitMutation = useOptimisticMutation<
+    SelfInspection,
+    { id: string; version: number },
+    SelfInspectionCache
+  >({
+    mutationFn: ({ id, version }) => resubmitSelfInspection(id, version),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: makeStatusUpdate('draft'),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: tSI('toast.resubmitSuccess'),
+    errorMessage: tSI('toast.resubmitError'),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (t: SelfInspection) => deleteSelfInspection(t.id),
-    onSuccess: () => {
-      toast({ description: tSI('toast.deleteSuccess') });
-      invalidate();
-      setDeleteTarget(null);
-    },
-    onError: (error: Error) => {
-      if (isConflictError(error)) {
-        handleConflictError();
-        setDeleteTarget(null);
-        return;
-      }
-      toast({ variant: 'destructive', description: tSI('toast.deleteError') });
+  const deleteMutation = useOptimisticMutation<void, { id: string }, SelfInspectionCache>({
+    mutationFn: ({ id }) => deleteSelfInspection(id),
+    queryKey: primaryQueryKey,
+    optimisticUpdate: (old, { id }) => ({
+      data: (old?.data ?? []).filter((item) => item.id !== id),
+      total: (old?.total ?? 1) - 1,
+    }),
+    invalidateKeys: crossInvalidateKeys,
+    successMessage: tSI('toast.deleteSuccess'),
+    errorMessage: tSI('toast.deleteError'),
+    onSuccessCallback: () => setDeleteTarget(null),
+    onErrorCallback: (error) => {
+      if (isConflictError(error)) setDeleteTarget(null);
     },
   });
-
-  // 짧은 alias (코드 가독성)
-  const tSI = (key: string) => t(`selfInspection.${key}` as Parameters<typeof t>[0]);
 
   if (isLoading) {
     return (
@@ -403,7 +402,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                               )}
                               {canDoSubmit && (
                                 <DropdownMenuItem
-                                  onClick={() => submitMutation.mutate(inspection)}
+                                  onClick={() =>
+                                    submitMutation.mutate({
+                                      id: inspection.id,
+                                      version: inspection.version,
+                                    })
+                                  }
                                   disabled={submitMutation.isPending}
                                 >
                                   <SendHorizontal className="h-4 w-4 mr-2" />
@@ -412,7 +416,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                               )}
                               {canDoWithdraw && (
                                 <DropdownMenuItem
-                                  onClick={() => withdrawMutation.mutate(inspection)}
+                                  onClick={() =>
+                                    withdrawMutation.mutate({
+                                      id: inspection.id,
+                                      version: inspection.version,
+                                    })
+                                  }
                                   disabled={withdrawMutation.isPending}
                                 >
                                   <Undo2 className="h-4 w-4 mr-2" />
@@ -421,7 +430,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                               )}
                               {canDoApprove && (
                                 <DropdownMenuItem
-                                  onClick={() => approveMutation.mutate(inspection)}
+                                  onClick={() =>
+                                    approveMutation.mutate({
+                                      id: inspection.id,
+                                      version: inspection.version,
+                                    })
+                                  }
                                   disabled={approveMutation.isPending}
                                 >
                                   <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -441,7 +455,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
                               )}
                               {canDoResubmit && (
                                 <DropdownMenuItem
-                                  onClick={() => resubmitMutation.mutate(inspection)}
+                                  onClick={() =>
+                                    resubmitMutation.mutate({
+                                      id: inspection.id,
+                                      version: inspection.version,
+                                    })
+                                  }
                                   disabled={resubmitMutation.isPending}
                                 >
                                   <RotateCcw className="h-4 w-4 mr-2" />
@@ -590,7 +609,12 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
               variant="destructive"
               disabled={!rejectReason.trim() || rejectMutation.isPending}
               onClick={() => {
-                if (rejectTarget) rejectMutation.mutate(rejectTarget);
+                if (rejectTarget)
+                  rejectMutation.mutate({
+                    id: rejectTarget.id,
+                    version: rejectTarget.version,
+                    reason: rejectReason,
+                  });
               }}
             >
               {tSI('rejectDialog.action')}
@@ -612,7 +636,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
               disabled={deleteMutation.isPending}
               onClick={(e) => {
                 e.preventDefault();
-                if (deleteTarget) deleteMutation.mutate(deleteTarget);
+                if (deleteTarget) deleteMutation.mutate({ id: deleteTarget.id });
               }}
             >
               {tSI('deleteDialog.action')}
