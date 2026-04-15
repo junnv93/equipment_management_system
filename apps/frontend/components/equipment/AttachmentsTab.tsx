@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { DOCUMENT_TABLE, DOCUMENT_EMPTY_STATE } from '@/lib/design-tokens';
 import {
   DropdownMenu,
@@ -81,7 +81,7 @@ export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
     queryKey: queryKeys.documents.byEquipment(equipmentId),
     queryFn: () => documentApi.getEquipmentDocuments(equipmentId),
     enabled: !!equipmentId,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_DOCUMENTS,
   });
 
   const handleDownload = async (doc: DocumentRecord) => {

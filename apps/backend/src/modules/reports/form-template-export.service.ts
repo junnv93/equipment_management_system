@@ -389,40 +389,37 @@ export class FormTemplateExportService {
       .where(eq(equipment.managementNumber, inspection.managementNumber!))
       .limit(1);
 
-    // 점검자, 승인자 정보 조회
-    const [inspector] = inspection.inspectorId
-      ? await this.db
-          .select({ name: users.name, signaturePath: users.signatureImagePath })
-          .from(users)
-          .where(eq(users.id, inspection.inspectorId))
-          .limit(1)
-      : [null];
-
-    const [approver] = inspection.approvedById
-      ? await this.db
-          .select({ name: users.name, signaturePath: users.signatureImagePath })
-          .from(users)
-          .where(eq(users.id, inspection.approvedById))
-          .limit(1)
-      : [null];
-
-    // 점검 항목
-    const items = await this.db
-      .select()
-      .from(intermediateInspectionItems)
-      .where(eq(intermediateInspectionItems.inspectionId, inspectionId))
-      .orderBy(intermediateInspectionItems.itemNumber);
-
-    // 측정 장비 목록
-    const measureEquipment = await this.db
-      .select({
-        managementNumber: equipment.managementNumber,
-        equipmentName: equipment.name,
-        calibrationDate: intermediateInspectionEquipment.calibrationDate,
-      })
-      .from(intermediateInspectionEquipment)
-      .innerJoin(equipment, eq(intermediateInspectionEquipment.equipmentId, equipment.id))
-      .where(eq(intermediateInspectionEquipment.inspectionId, inspectionId));
+    // 점검자, 승인자, 점검 항목, 측정 장비 — 독립 쿼리 병렬 실행
+    const [[inspector], [approver], items, measureEquipment] = await Promise.all([
+      inspection.inspectorId
+        ? this.db
+            .select({ name: users.name, signaturePath: users.signatureImagePath })
+            .from(users)
+            .where(eq(users.id, inspection.inspectorId))
+            .limit(1)
+        : Promise.resolve([null] as [null]),
+      inspection.approvedById
+        ? this.db
+            .select({ name: users.name, signaturePath: users.signatureImagePath })
+            .from(users)
+            .where(eq(users.id, inspection.approvedById))
+            .limit(1)
+        : Promise.resolve([null] as [null]),
+      this.db
+        .select()
+        .from(intermediateInspectionItems)
+        .where(eq(intermediateInspectionItems.inspectionId, inspectionId))
+        .orderBy(intermediateInspectionItems.itemNumber),
+      this.db
+        .select({
+          managementNumber: equipment.managementNumber,
+          equipmentName: equipment.name,
+          calibrationDate: intermediateInspectionEquipment.calibrationDate,
+        })
+        .from(intermediateInspectionEquipment)
+        .innerJoin(equipment, eq(intermediateInspectionEquipment.equipmentId, equipment.id))
+        .where(eq(intermediateInspectionEquipment.inspectionId, inspectionId)),
+    ]);
 
     // docx 템플릿 로드 — 스토리지 기반
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-03');
@@ -939,27 +936,22 @@ export class FormTemplateExportService {
       });
     }
 
-    // 상태 확인 기록 (per-checkout, 단계별 fallback 용)
-    const condChecks = await this.db
-      .select()
-      .from(conditionChecks)
-      .where(eq(conditionChecks.checkoutId, checkoutId));
-
-    // 작성자(신청자) 조회
-    const [requester] = await this.db
-      .select({ name: users.name, signaturePath: users.signatureImagePath })
-      .from(users)
-      .where(eq(users.id, checkout.requesterId))
-      .limit(1);
-
-    // 승인자 조회
-    const [approver] = checkout.approverId
-      ? await this.db
-          .select({ name: users.name, signaturePath: users.signatureImagePath })
-          .from(users)
-          .where(eq(users.id, checkout.approverId))
-          .limit(1)
-      : [null];
+    // 상태 확인 기록, 작성자(신청자), 승인자 — 독립 쿼리 병렬 실행
+    const [condChecks, [requester], [approver]] = await Promise.all([
+      this.db.select().from(conditionChecks).where(eq(conditionChecks.checkoutId, checkoutId)),
+      this.db
+        .select({ name: users.name, signaturePath: users.signatureImagePath })
+        .from(users)
+        .where(eq(users.id, checkout.requesterId))
+        .limit(1),
+      checkout.approverId
+        ? this.db
+            .select({ name: users.name, signaturePath: users.signatureImagePath })
+            .from(users)
+            .where(eq(users.id, checkout.approverId))
+            .limit(1)
+        : Promise.resolve([null] as [null]),
+    ]);
 
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-06');
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-06');

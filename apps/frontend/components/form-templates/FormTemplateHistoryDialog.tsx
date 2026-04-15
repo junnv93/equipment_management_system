@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   listFormTemplateHistoryByName,
   listFormTemplateRevisionsByName,
@@ -45,14 +45,14 @@ export default function FormTemplateHistoryDialog({
     queryKey: queryKeys.formTemplates.historyByName(formName),
     queryFn: () => listFormTemplateHistoryByName(formName),
     enabled: open,
-    ...REFETCH_STRATEGIES.STATIC,
+    ...QUERY_CONFIG.FORM_TEMPLATES,
   });
 
   const { data: revisions } = useQuery({
     queryKey: queryKeys.formTemplates.revisionsByName(formName),
     queryFn: () => listFormTemplateRevisionsByName(formName),
     enabled: open,
-    ...REFETCH_STRATEGIES.STATIC,
+    ...QUERY_CONFIG.FORM_TEMPLATES,
   });
 
   const changeSummaryByFormNumber = new Map(

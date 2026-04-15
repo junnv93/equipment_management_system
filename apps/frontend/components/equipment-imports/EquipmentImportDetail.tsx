@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { EquipmentImportCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -69,6 +69,7 @@ export default function EquipmentImportDetail({ id }: Props) {
   const { data: equipmentImport, isLoading } = useQuery({
     queryKey: queryKeys.equipmentImports.detail(id),
     queryFn: () => equipmentImportApi.getOne(id),
+    ...QUERY_CONFIG.EQUIPMENT_DETAIL,
   });
 
   // Breadcrumb dynamic label

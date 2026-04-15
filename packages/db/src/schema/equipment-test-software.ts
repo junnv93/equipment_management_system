@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { testSoftware } from './test-software';
@@ -31,6 +31,11 @@ export const equipmentTestSoftware = pgTable(
   (table) => ({
     uniqueEquipmentSoftware: uniqueIndex('equipment_test_software_unique_idx').on(
       table.equipmentId,
+      table.testSoftwareId
+    ),
+    // testSoftwareId 단독 조회용 역방향 인덱스 — "이 SW가 사용되는 장비 목록" 쿼리 최적화
+    // (unique idx의 leading column이 equipmentId이므로 역방향 탐색 시 full scan 발생)
+    testSoftwareIdIdx: index('equipment_test_software_test_software_id_idx').on(
       table.testSoftwareId
     ),
   })

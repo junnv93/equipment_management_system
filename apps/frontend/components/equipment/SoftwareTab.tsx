@@ -21,7 +21,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { DocumentTypeValues } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import testSoftwareApi from '@/lib/api/software-api';
 import { TestSoftwareCombobox } from '@/components/ui/test-software-combobox';
@@ -47,7 +47,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
     queryKey: queryKeys.documents.byEquipment(equipmentId),
     queryFn: () => documentApi.getEquipmentDocuments(equipmentId),
     enabled: !!equipmentId,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_DOCUMENTS,
   });
 
   const manuals = useMemo(
@@ -63,7 +63,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
     queryKey: queryKeys.testSoftware.byEquipment(equipmentId),
     queryFn: () => testSoftwareApi.listByEquipment(equipmentId),
     enabled: !!equipmentId,
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   const linkMutation = useMutation({

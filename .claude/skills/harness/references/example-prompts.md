@@ -1,8 +1,41 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-14 (68차 — 3-agent 병렬 스캔 + 2차 검증. 장비 이력 탭 staleTime + audit limit SSOT + dashboard days SSOT + repair-history relations 4건 등재 → 전부 완료. FALSE POSITIVE 5건: error.tsx 누락(부모 커버), process.env 부트스트랩 필수, CalibrationRegisterDialog cast(react-hook-form 패턴), 이력 탭 이미 QUERY_CONFIG.HISTORY 정의됨(누락만), Korean 주석(정상).)**
+> **마지막 정리일: 2026-04-15 (70차 — 3-agent 병렬 스캔 + 2차 검증. form-template-export Promise.all + 장비 탭 QUERY_CONFIG spread + FormTemplates FORM_TEMPLATES SSOT + equipment_test_software 역방향 인덱스 4건 등재 → 전부 완료. FALSE POSITIVE: process.env NestJS 부트스트랩 필수, as unknown as Zod 패턴, 테스트 as any 허용 패턴.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## ~~70차 신규 — 3-agent 병렬 스캔 (4건, 2026-04-15)~~ ✅ 전부 완료 (2026-04-15, Mode 1 harness)
+
+> **발견 배경 (2026-04-15, 70차)**: 68차 항목 전부 소진 후 신규 3-agent 병렬 스캔 + 2차 검증.
+> FALSE POSITIVE 제거: rustfs :latest(릴리즈 없어 TODO 유지), process.env(NestJS 부트스트랩 필수), as unknown as(Zod 패턴), 테스트 as any(허용).
+> 검증 통과 4건 → Mode 1 harness 1 iteration PASS (683/683 tests).
+
+### ~~🟡 MEDIUM — form-template-export.service.ts 순차 await → Promise.all 병렬화 (Mode 0)~~ ✅ 완료 (2026-04-15, 70차)
+
+```
+intermediate export: inspector + approver + items + measureEquipment 4개 → Promise.all
+checkout export: condChecks + requester + approver 3개 → Promise.all
+각 export 20-60ms 단축 예상
+```
+
+### ~~🟡 MEDIUM — 장비 상세 탭 6개 + FormTemplates 3개 QUERY_CONFIG spread 누락 (Mode 0)~~ ✅ 완료 (2026-04-15, 70차)
+
+```
+query-config.ts: EQUIPMENT_DOCUMENTS(LONG) + FORM_TEMPLATES(=REFETCH_STRATEGIES.STATIC) 추가
+AttachmentsTab, CalibrationHistoryTab(2건), CheckoutHistoryTab(누락), SoftwareTab(2건), EquipmentImportDetail → QUERY_CONFIG spread
+FormTemplatesContent, FormTemplatesArchivedTable, FormTemplateHistoryDialog(2건) → FORM_TEMPLATES
+```
+
+### ~~🟡 MEDIUM — equipment_test_software testSoftwareId 역방향 인덱스 누락 (Mode 1+DB)~~ ✅ 완료 (2026-04-15, 70차, migration 0026)
+
+```
+packages/db/src/schema/equipment-test-software.ts:
+  testSoftwareIdIdx: index('equipment_test_software_test_software_id_idx').on(table.testSoftwareId)
+migration 0026_test_software_id_idx.sql: CREATE INDEX IF NOT EXISTS ... ON equipment_test_software(test_software_id)
+test-software.service.ts:433, 477 testSoftwareId 역방향 조회 성능 개선
+```
+
+---
 
 ## ~~68차 신규 — 3-agent 병렬 스캔 (4건, 2026-04-14)~~ ✅ 전부 완료 (2026-04-14)
 

@@ -274,6 +274,17 @@ export const QUERY_CONFIG = {
     refetchOnWindowFocus: true,
     retry: 2,
   },
+
+  /** 장비 문서/첨부파일 - LONG (업로드·삭제 mutation 후에만 변경) */
+  EQUIPMENT_DOCUMENTS: {
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  },
+
+  /** 양식 템플릿 목록/이력 - STATIC (관리자 업로드 시에만 변경) */
+  FORM_TEMPLATES: REFETCH_STRATEGIES.STATIC,
 } as const;
 
 /**

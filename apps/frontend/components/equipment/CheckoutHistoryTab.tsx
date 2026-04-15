@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { UserSelectableCheckoutPurposeEnum } from '@equipment-management/schemas';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,6 +123,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
     queryKey: queryKeys.equipment.checkoutHistory(equipmentId),
     queryFn: () => checkoutApi.getEquipmentCheckouts(equipmentId),
     enabled: !!equipmentId,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   // 반출 신청

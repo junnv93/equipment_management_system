@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { listArchivedFormTemplates, downloadFormTemplateById } from '@/lib/api/form-templates-api';
 import {
   FORM_TEMPLATES_TABLE_TOKENS,
@@ -46,7 +46,7 @@ export default function FormTemplatesArchivedTable() {
   } = useQuery({
     queryKey: queryKeys.formTemplates.archived(),
     queryFn: listArchivedFormTemplates,
-    ...REFETCH_STRATEGIES.STATIC,
+    ...QUERY_CONFIG.FORM_TEMPLATES,
   });
 
   if (isLoading) {

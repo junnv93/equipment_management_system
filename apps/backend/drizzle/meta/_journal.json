@@ -183,6 +183,13 @@
       "when": 1776200000000,
       "tag": "0025_self_inspection_approval_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1776211200000,
+      "tag": "0026_test_software_id_idx",
+      "breakpoints": true
     }
   ]
 }

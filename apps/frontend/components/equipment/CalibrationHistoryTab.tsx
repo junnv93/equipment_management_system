@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { AlertTriangle, Calendar, FileText, FileSpreadsheet, Download } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   CONTENT_TOKENS,
   CALIBRATION_TABLE,
@@ -57,7 +57,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
     enabled: !!equipmentId,
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   // 장비의 모든 문서를 단일 API 호출로 조회 → calibrationId로 그룹핑
@@ -66,7 +66,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     queryKey: queryKeys.documents.byEquipment(equipmentId),
     queryFn: () => documentApi.getEquipmentDocuments(equipmentId, { includeCalibrations: true }),
     enabled: calibrations.length > 0,
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_DOCUMENTS,
   });
 
   // calibrationId → documents[] 그룹핑 (O(n) Map)

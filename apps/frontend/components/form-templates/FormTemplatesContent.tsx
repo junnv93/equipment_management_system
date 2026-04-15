@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { FileText, AlertCircle, FileX2, RefreshCw, Archive } from 'lucide-react';
-import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { listFormTemplates } from '@/lib/api/form-templates-api';
 import {
   getPageContainerClasses,
@@ -63,7 +63,7 @@ export default function FormTemplatesContent() {
     queryKey: queryKeys.formTemplates.list(),
     queryFn: listFormTemplates,
     enabled: view === 'active',
-    ...REFETCH_STRATEGIES.STATIC,
+    ...QUERY_CONFIG.FORM_TEMPLATES,
   });
 
   const totalCount = templates?.length ?? 0;
