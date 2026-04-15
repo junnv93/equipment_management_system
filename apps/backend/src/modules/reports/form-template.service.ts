@@ -581,16 +581,19 @@ export class FormTemplateService {
           }
           this.logger.log(`Self-healed template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
         } else {
-          await this.db.insert(formTemplates).values({
-            formName: entry.name,
-            formNumber,
-            storageKey,
-            originalFilename: matchingFile,
-            mimeType,
-            fileSize: buffer.length,
-            isCurrent: true,
-            uploadedBy: null,
-          });
+          await this.db
+            .insert(formTemplates)
+            .values({
+              formName: entry.name,
+              formNumber,
+              storageKey,
+              originalFilename: matchingFile,
+              mimeType,
+              fileSize: buffer.length,
+              isCurrent: true,
+              uploadedBy: null,
+            })
+            .onConflictDoNothing();
           this.logger.log(`Seeded template: ${entry.name} (${formNumber}) ← ${matchingFile}`);
         }
       } catch (err) {
