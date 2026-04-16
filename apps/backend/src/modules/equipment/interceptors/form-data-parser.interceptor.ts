@@ -59,7 +59,14 @@ export class FormDataParserInterceptor implements NestInterceptor {
 
       // 숫자 필드 처리
       // ⚠️ teamId는 UUID 문자열이므로 숫자 변환 대상에서 제외
-      const numberFields = ['calibrationCycle', 'purchaseYear', 'price', 'intermediateCheckCycle'];
+      const numberFields = [
+        'calibrationCycle',
+        'purchaseYear',
+        'price',
+        'intermediateCheckCycle',
+        'managementSerialNumber',
+        'version', // CAS optimistic locking — multipart form-data에서 string으로 전송됨
+      ];
 
       for (const field of numberFields) {
         if (request.body[field] && typeof request.body[field] === 'string') {

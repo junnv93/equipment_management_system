@@ -687,7 +687,7 @@ export class EquipmentService extends VersionedBaseService {
       if (existingEquipment) {
         throw new BadRequestException({
           code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
-          message: `Management number ${createEquipmentDto.managementNumber} is already in use.`,
+          message: `관리번호 ${createEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`,
         });
       }
 
@@ -1218,7 +1218,7 @@ export class EquipmentService extends VersionedBaseService {
         if (duplicateCheck) {
           throw new BadRequestException({
             code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
-            message: `Management number ${updateEquipmentDto.managementNumber} is already in use.`,
+            message: `관리번호 ${updateEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`,
           });
         }
       }
@@ -1268,7 +1268,7 @@ export class EquipmentService extends VersionedBaseService {
           'EQUIPMENT_NOT_FOUND'
         );
 
-        // 2. 위치 변경 감지 → 이력 + SSOT sync (version 미변경 — updateWithVersion이 이미 처리)
+        // 2. 위치 변경 감지 → 이력 INSERT + equipment.location SSOT 동기화
         if (locationChanged && updateEquipmentDto.location) {
           await this.equipmentHistoryService.createLocationHistoryInternal(
             uuid,
@@ -1281,6 +1281,12 @@ export class EquipmentService extends VersionedBaseService {
             userId,
             tx
           );
+          // SSOT: equipment.location을 최신 위치 이력 값으로 동기화
+          // createLocationHistoryInternal은 history INSERT만 수행 — location 컬럼은 여기서 직접 동기화
+          await tx
+            .update(equipment)
+            .set({ location: updateEquipmentDto.location, updatedAt: new Date() })
+            .where(eq(equipment.id, uuid));
         }
 
         // 3. 동기화된 최종 결과 반환

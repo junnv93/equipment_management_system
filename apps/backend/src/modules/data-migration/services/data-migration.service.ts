@@ -738,6 +738,30 @@ export class DataMigrationService {
       ) {
         this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.EQUIPMENT}detail:`);
       }
+      // 시험용 소프트웨어가 등록된 경우 목록 캐시 무효화
+      if (
+        sheetSummaries.some(
+          (s) => s.sheetType === MIGRATION_SHEET_TYPE.TEST_SOFTWARE && s.createdCount > 0
+        )
+      ) {
+        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
+      }
+      // 교정 인자가 등록된 경우 목록 캐시 무효화
+      if (
+        sheetSummaries.some(
+          (s) => s.sheetType === MIGRATION_SHEET_TYPE.CALIBRATION_FACTOR && s.createdCount > 0
+        )
+      ) {
+        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.CALIBRATION_FACTORS);
+      }
+      // 부적합이 등록된 경우 목록 캐시 무효화
+      if (
+        sheetSummaries.some(
+          (s) => s.sheetType === MIGRATION_SHEET_TYPE.NON_CONFORMANCE && s.createdCount > 0
+        )
+      ) {
+        this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.NON_CONFORMANCES);
+      }
 
       // 세션 상태 → completed (에러 리포트 접근용으로 캐시 유지)
       session.status = 'completed';
