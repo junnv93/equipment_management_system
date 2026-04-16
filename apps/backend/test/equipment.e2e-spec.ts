@@ -412,6 +412,7 @@ describe('EquipmentController (e2e)', () => {
     it('should return 404 when updating non-existent equipment', async () => {
       const updateData = {
         name: 'Updated Name',
+        version: 1,
       };
 
       const nonExistentUuid = '00000000-0000-0000-0000-000000000000';

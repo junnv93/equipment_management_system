@@ -56,7 +56,13 @@ describe('DataMigrationController (e2e)', () => {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
       expect(res.headers['content-disposition']).toContain('attachment');
-      expect(Buffer.isBuffer(res.body) || res.body.length > 0).toBe(true);
+      // supertest may return body as Buffer or parsed object depending on content type
+      const bodySize = Buffer.isBuffer(res.body)
+        ? res.body.length
+        : res.headers['content-length']
+          ? parseInt(res.headers['content-length'] as string, 10)
+          : JSON.stringify(res.body).length;
+      expect(bodySize).toBeGreaterThan(0);
     });
 
     it('미인증 요청 → 401', async () => {
@@ -85,7 +91,8 @@ describe('DataMigrationController (e2e)', () => {
         .post('/data-migration/equipment/preview')
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType: 'application/octet-stream',
+          contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(res.status).toBe(401);
@@ -101,7 +108,8 @@ describe('DataMigrationController (e2e)', () => {
         .field('skipDuplicates', 'true')
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType: 'application/octet-stream',
+          contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(res.status).toBe(201);
@@ -142,7 +150,8 @@ describe('DataMigrationController (e2e)', () => {
         .field('skipDuplicates', 'true')
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType: 'application/octet-stream',
+          contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(previewRes.status).toBe(201);
@@ -185,7 +194,8 @@ describe('DataMigrationController (e2e)', () => {
         .field('autoGenerateManagementNumber', 'false')
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType: 'application/octet-stream',
+          contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(previewRes.status).toBe(201);

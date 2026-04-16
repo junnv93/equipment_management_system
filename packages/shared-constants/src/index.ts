@@ -157,6 +157,7 @@ export {
   SIGNATURE_UPLOAD_LIMITS,
   EXPORT_QUERY_LIMITS,
   HISTORY_CARD_QUERY_LIMIT,
+  MIGRATION_SESSION_TTL_MS,
 } from './business-rules';
 
 // 보안 상수 (로그인 제한, 잠금 정책)

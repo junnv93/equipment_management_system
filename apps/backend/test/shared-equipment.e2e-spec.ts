@@ -166,9 +166,16 @@ describe('SharedEquipmentController (e2e)', () => {
 
       const sharedEquipmentUuid = createdSharedEquipmentUuids[0];
 
+      // version은 CAS에 필수 — 공용장비 차단(403)은 version 검증 이후에 실행됨
+      const sharedDetail = await request(ctx.app.getHttpServer())
+        .get(`/equipment/${sharedEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+      const currentVersion = sharedDetail.body.version ?? 1;
+
       const updateDto = {
         name: '수정 시도 - 차단되어야 함',
         location: 'New Location',
+        version: currentVersion,
       };
 
       const response = await request(ctx.app.getHttpServer())

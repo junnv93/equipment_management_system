@@ -86,8 +86,8 @@ describe('UsersController (e2e)', () => {
     });
   });
 
-  describe('/users/:id (PATCH) - Update Own Profile', () => {
-    it('should update own profile by id', async () => {
+  describe('/users/:id (PATCH) - Update User Profile', () => {
+    it('should update user profile by id (admin token required)', async () => {
       const updatedName = `Updated Name ${crypto.randomBytes(4).toString('hex')}`;
       const updateData = {
         name: updatedName,
@@ -95,7 +95,7 @@ describe('UsersController (e2e)', () => {
 
       const response = await request(ctx.app.getHttpServer())
         .patch(`/users/${userId}`)
-        .set('Authorization', `Bearer ${userAccessToken}`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
         .send(updateData)
         .expect(200);
 
@@ -111,9 +111,17 @@ describe('UsersController (e2e)', () => {
 
       await request(ctx.app.getHttpServer())
         .patch(`/users/${userId}`)
-        .set('Authorization', `Bearer ${userAccessToken}`)
+        .set('Authorization', `Bearer ${adminAccessToken}`)
         .send(invalidUpdateData)
         .expect(400);
+    });
+
+    it('should return 403 for test_engineer updating users', async () => {
+      await request(ctx.app.getHttpServer())
+        .patch(`/users/${userId}`)
+        .set('Authorization', `Bearer ${userAccessToken}`)
+        .send({ name: 'Should Fail' })
+        .expect(403);
     });
   });
 

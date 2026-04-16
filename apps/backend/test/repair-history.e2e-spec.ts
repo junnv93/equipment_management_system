@@ -32,9 +32,6 @@ describe('RepairHistoryController (e2e)', () => {
       const createDto = {
         repairDate: new Date().toISOString().split('T')[0],
         repairDescription: 'E2E 테스트 수리 내용 - 전원부 교체 작업 완료',
-        repairedBy: '홍길동',
-        repairCompany: '키사이트 코리아',
-        cost: 500000,
         repairResult: 'completed',
         notes: '보증 기간 내 무상 수리',
       };
@@ -47,9 +44,6 @@ describe('RepairHistoryController (e2e)', () => {
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
       expect(response.body.repairDescription).toBe(createDto.repairDescription);
-      expect(response.body.repairedBy).toBe(createDto.repairedBy);
-      expect(response.body.repairCompany).toBe(createDto.repairCompany);
-      expect(response.body.cost).toBe(createDto.cost);
       expect(response.body.repairResult).toBe(createDto.repairResult);
 
       if (response.body.id) {
@@ -61,7 +55,6 @@ describe('RepairHistoryController (e2e)', () => {
       const createDto = {
         repairDate: new Date().toISOString().split('T')[0],
         repairDescription: '짧은 내용',
-        repairedBy: '홍길동',
       };
 
       const response = await request(ctx.app.getHttpServer())
@@ -159,15 +152,13 @@ describe('RepairHistoryController (e2e)', () => {
   });
 
   describe('GET /equipment/:uuid/repair-history/summary', () => {
-    it('should return repair cost summary', async () => {
+    it('should return repair summary', async () => {
       const response = await request(ctx.app.getHttpServer())
         .get(`/equipment/${testEquipmentUuid}/repair-history/summary`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('totalCost');
       expect(response.body).toHaveProperty('count');
-      expect(typeof response.body.totalCost).toBe('number');
       expect(typeof response.body.count).toBe('number');
     });
   });
@@ -201,7 +192,6 @@ describe('RepairHistoryController (e2e)', () => {
 
         const updateDto = {
           repairDescription: 'E2E 테스트 - 수정된 수리 내용',
-          cost: 750000,
           repairResult: 'completed',
           notes: '수정된 비고',
         };
@@ -213,7 +203,6 @@ describe('RepairHistoryController (e2e)', () => {
           .expect(200);
 
         expect(response.body.repairDescription).toBe(updateDto.repairDescription);
-        expect(response.body.cost).toBe(updateDto.cost);
         expect(response.body.notes).toBe(updateDto.notes);
       }
     });
@@ -223,7 +212,7 @@ describe('RepairHistoryController (e2e)', () => {
         const repairId = createdRepairHistoryIds[0];
 
         const updateDto = {
-          cost: 800000,
+          notes: '부분 업데이트 테스트',
         };
 
         const response = await request(ctx.app.getHttpServer())
@@ -232,7 +221,7 @@ describe('RepairHistoryController (e2e)', () => {
           .send(updateDto)
           .expect(200);
 
-        expect(response.body.cost).toBe(updateDto.cost);
+        expect(response.body.notes).toBe(updateDto.notes);
       }
     });
 

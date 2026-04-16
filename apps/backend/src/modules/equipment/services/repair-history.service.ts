@@ -238,6 +238,18 @@ export class RepairHistoryService {
   }
 
   /**
+   * 장비별 수리 이력 요약 (건수)
+   */
+  async getSummary(equipmentUuid: string): Promise<{ count: number }> {
+    const [result] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(repairHistory)
+      .where(and(eq(repairHistory.equipmentId, equipmentUuid), eq(repairHistory.isDeleted, false)));
+
+    return { count: Number(result.count) };
+  }
+
+  /**
    * 최근 수리 이력 조회
    */
   async getRecentRepairs(equipmentUuid: string, limit: number = 5): Promise<RepairHistoryRecord[]> {

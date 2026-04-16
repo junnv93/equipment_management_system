@@ -246,8 +246,8 @@ describe('CalibrationFactorsController (e2e)', () => {
           .patch(`/calibration-factors/${factorId}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: testUserId,
             approverComment: 'E2E 테스트 승인 완료',
+            version: createResponse.body.version,
           })
           .expect(200);
 
@@ -281,8 +281,8 @@ describe('CalibrationFactorsController (e2e)', () => {
           .patch(`/calibration-factors/${factorId}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: testUserId,
             rejectionReason: 'E2E 테스트 반려 사유',
+            version: createResponse.body.version,
           })
           .expect(200);
 
@@ -313,7 +313,7 @@ describe('CalibrationFactorsController (e2e)', () => {
           .patch(`/calibration-factors/${factorId}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: testUserId,
+            version: createResponse.body.version,
           })
           .expect(400);
       }
@@ -337,9 +337,10 @@ describe('CalibrationFactorsController (e2e)', () => {
 
       if (createResponse.status === 201 && createResponse.body.id) {
         const factorId = createResponse.body.id;
+        const factorVersion = createResponse.body.version;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/calibration-factors/${factorId}`)
+          .delete(`/calibration-factors/${factorId}?version=${factorVersion}`)
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 

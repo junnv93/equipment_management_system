@@ -35,7 +35,7 @@ describe('Equipment Approval Process (e2e)', () => {
           await request(ctx.app.getHttpServer())
             .post(`/equipment/requests/${requestUuid}/reject`)
             .set('Authorization', `Bearer ${technicalManagerToken}`)
-            .send({ rejectionReason: '테스트 정리' });
+            .send({ rejectionReason: '테스트 정리', version: 1 });
         } catch {
           // 이미 처리된 경우 무시
         }
@@ -204,7 +204,8 @@ describe('Equipment Approval Process (e2e)', () => {
 
       const response = await request(ctx.app.getHttpServer())
         .post(`/equipment/requests/${testRequestUuid}/approve`)
-        .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`);
+        .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`)
+        .send({ version: 1 });
 
       expect([200, 201]).toContain(response.status);
       expect(response.body.approvalStatus).toBe('approved');
@@ -219,14 +220,14 @@ describe('Equipment Approval Process (e2e)', () => {
       const rejectWithoutReason = await request(ctx.app.getHttpServer())
         .post(`/equipment/requests/${testRequestUuid}/reject`)
         .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`)
-        .send({});
+        .send({ version: 1 });
 
       expect([400, 422]).toContain(rejectWithoutReason.status);
 
       const rejectWithReason = await request(ctx.app.getHttpServer())
         .post(`/equipment/requests/${testRequestUuid}/reject`)
         .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`)
-        .send({ rejectionReason: 'E2E 테스트 반려 사유' });
+        .send({ rejectionReason: 'E2E 테스트 반려 사유', version: 1 });
 
       expect([200, 201]).toContain(rejectWithReason.status);
       expect(rejectWithReason.body.approvalStatus).toBe('rejected');
@@ -324,9 +325,15 @@ describe('Equipment Approval Process (e2e)', () => {
         return;
       }
 
+      // GET current version for CAS
+      const equipDetail = await request(ctx.app.getHttpServer())
+        .get(`/equipment/${testEquipmentUuid}`)
+        .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`);
+
       const updateData = {
         name: '수정된 장비명',
         location: '수정된 위치',
+        version: equipDetail.body.version ?? 1,
       };
 
       const response = await request(ctx.app.getHttpServer())

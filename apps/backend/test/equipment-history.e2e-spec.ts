@@ -84,7 +84,8 @@ describe('EquipmentHistoryController (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body).toHaveProperty('items');
+        expect(Array.isArray(response.body.items)).toBe(true);
       });
 
       it('should return sorted by changedAt desc', async () => {
@@ -114,10 +115,11 @@ describe('EquipmentHistoryController (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body).toHaveProperty('items');
+        expect(Array.isArray(response.body.items)).toBe(true);
 
-        if (response.body.length >= 2) {
-          const dates = response.body.map(
+        if (response.body.items.length >= 2) {
+          const dates = response.body.items.map(
             (item: Record<string, unknown>) => new Date(item.changedAt as string).getTime(),
           );
           for (let i = 0; i < dates.length - 1; i++) {
@@ -202,7 +204,8 @@ describe('EquipmentHistoryController (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body).toHaveProperty('items');
+        expect(Array.isArray(response.body.items)).toBe(true);
       });
     });
 
@@ -329,7 +332,8 @@ describe('EquipmentHistoryController (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body).toHaveProperty('items');
+        expect(Array.isArray(response.body.items)).toBe(true);
       });
     });
 
@@ -414,19 +418,19 @@ describe('EquipmentHistoryController (e2e)', () => {
           .get(`/equipment/${equipmentUuid}/location-history`)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(locationHistoryResponse.status).toBe(200);
-        expect(locationHistoryResponse.body.length).toBeGreaterThanOrEqual(1);
+        expect(locationHistoryResponse.body.items.length).toBeGreaterThanOrEqual(1);
 
         const maintenanceHistoryResponse = await request(ctx.app.getHttpServer())
           .get(`/equipment/${equipmentUuid}/maintenance-history`)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(maintenanceHistoryResponse.status).toBe(200);
-        expect(maintenanceHistoryResponse.body.length).toBeGreaterThanOrEqual(1);
+        expect(maintenanceHistoryResponse.body.items.length).toBeGreaterThanOrEqual(1);
 
         const incidentHistoryResponse = await request(ctx.app.getHttpServer())
           .get(`/equipment/${equipmentUuid}/incident-history`)
           .set('Authorization', `Bearer ${accessToken}`);
         expect(incidentHistoryResponse.status).toBe(200);
-        expect(incidentHistoryResponse.body.length).toBeGreaterThanOrEqual(2);
+        expect(incidentHistoryResponse.body.items.length).toBeGreaterThanOrEqual(2);
       } finally {
         await request(ctx.app.getHttpServer())
           .delete(`/equipment/${equipmentUuid}`)

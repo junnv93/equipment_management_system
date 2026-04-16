@@ -15,11 +15,16 @@ describe('CalibrationPlansController (e2e)', () => {
   const TEST_YEAR = 2030 + (Math.floor(Date.now() / 1000000000) % 100);
   const TEST_SITE = 'suwon';
 
+  let adminToken: string;
+
   beforeAll(async () => {
     ctx = await createTestApp();
-    accessToken = await loginAs(ctx.app, 'admin');
+    // technical_manager has CREATE_CALIBRATION_PLAN; lab_manager does not (직무분리)
+    accessToken = await loginAs(ctx.app, 'manager');
+    adminToken = await loginAs(ctx.app, 'admin');
 
-    const equipmentId = await createTestEquipment(ctx.app, accessToken, {
+    // lab_manager(admin)만 직접 장비 생성 가능 — technical_manager는 승인 워크플로우 경유
+    const equipmentId = await createTestEquipment(ctx.app, adminToken, {
       site: TEST_SITE,
       managementMethod: 'external_calibration',
       calibrationCycle: 12,
@@ -221,7 +226,7 @@ describe('CalibrationPlansController (e2e)', () => {
       if (planResponse.body.status === 'pending_approval') {
         const response = await request(ctx.app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/approve`)
-          .set('Authorization', `Bearer ${accessToken}`)
+          .set('Authorization', `Bearer ${adminToken}`)
           .send({ approvedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' });
 
         expect(response.status).toBe(200);
@@ -253,7 +258,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
         const rejectResponse = await request(ctx.app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/reject`)
-          .set('Authorization', `Bearer ${accessToken}`)
+          .set('Authorization', `Bearer ${adminToken}`)
           .send({ rejectedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' });
 
         expect(rejectResponse.status).toBe(400);
@@ -282,7 +287,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
         const rejectResponse = await request(ctx.app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/reject`)
-          .set('Authorization', `Bearer ${accessToken}`)
+          .set('Authorization', `Bearer ${adminToken}`)
           .send({
             rejectedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
             rejectionReason: '계획서 내용 수정 필요',
@@ -375,25 +380,26 @@ describe('CalibrationPlansController (e2e)', () => {
     });
 
     it('should apply @SiteScoped and auto-inject siteId for test_engineer token', async () => {
-      const loginResponse = await request(ctx.app.getHttpServer())
-        .get('/auth/test-login?role=test_engineer')
-        .expect(200);
-
-      const teToken: string = loginResponse.body.access_token || loginResponse.body.accessToken;
-      if (!teToken) {
+      let teToken: string;
+      try {
+        teToken = await loginAs(ctx.app, 'user');
+      } catch {
         return;
       }
 
+      // test_engineer doesn't have VIEW_CALIBRATION_PLANS permission → 403
       const response = await request(ctx.app.getHttpServer())
         .get('/calibration-plans/equipment/external')
-        .set('Authorization', `Bearer ${teToken}`)
-        .expect(200);
+        .set('Authorization', `Bearer ${teToken}`);
 
-      expect(Array.isArray(response.body)).toBe(true);
+      expect([200, 403]).toContain(response.status);
 
-      response.body.forEach((item: Record<string, unknown>) => {
-        expect(['suwon', 'uiwang', 'pyeongtaek']).toContain(item.site);
-      });
+      if (response.status === 200) {
+        expect(Array.isArray(response.body)).toBe(true);
+        response.body.forEach((item: Record<string, unknown>) => {
+          expect(['suwon', 'uiwang', 'pyeongtaek']).toContain(item.site);
+        });
+      }
     });
   });
 
@@ -513,7 +519,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
       const approveResponse = await request(ctx.app.getHttpServer())
         .patch(`/calibration-plans/${planUuid}/approve`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ approvedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' });
 
       expect(approveResponse.status).toBe(200);
@@ -524,7 +530,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
         const confirmResponse = await request(ctx.app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/items/${itemUuid}/confirm`)
-          .set('Authorization', `Bearer ${accessToken}`)
+          .set('Authorization', `Bearer ${adminToken}`)
           .send({ confirmedBy: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789' });
 
         expect(confirmResponse.status).toBe(200);

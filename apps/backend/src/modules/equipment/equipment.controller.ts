@@ -52,11 +52,16 @@ import { UserRoleValues, AttachmentTypeEnum } from '@equipment-management/schema
 import {
   type UserRole,
   type DocumentType,
+  type ApprovalStatus,
   ApprovalStatusEnum,
   ApprovalStatusValues,
 } from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
+import {
+  CreateSharedEquipmentValidationPipe,
+  type CreateSharedEquipmentDto,
+} from './dto/create-shared-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
@@ -82,6 +87,39 @@ export class EquipmentController {
     private readonly attachmentService: EquipmentAttachmentService,
     private readonly documentService: DocumentService
   ) {}
+
+  @Post('shared')
+  @ApiOperation({
+    summary: '공용장비 등록',
+    description: '공용장비를 등록합니다. isShared=true가 강제 설정됩니다.',
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '공용장비 등록 성공' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
+  @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @AuditLog({
+    action: 'create',
+    entityType: 'equipment',
+    entityIdPath: 'response.equipment.id',
+    entityNamePath: 'body.name',
+  })
+  @UsePipes(CreateSharedEquipmentValidationPipe)
+  async createShared(
+    @Body() dto: CreateSharedEquipmentDto,
+    @Req() req: AuthenticatedRequest
+  ): Promise<{ equipment: Equipment }> {
+    const userId = extractUserId(req);
+
+    // 공용장비 강제 설정 — sharedSource 필수(Zod 검증됨), initialLocation 서비스 기본값
+    const sharedDto: CreateEquipmentDto = {
+      ...dto,
+      isShared: true,
+      approvalStatus: ApprovalStatusValues.APPROVED as ApprovalStatus,
+      initialLocation: dto.location || (dto.site as string) || 'unknown',
+    };
+
+    const created = await this.equipmentService.create(sharedDto, userId);
+    return { equipment: created };
+  }
 
   @Post()
   @ApiOperation({
@@ -315,10 +353,16 @@ export class EquipmentController {
     @UploadedFiles() files: MulterFile[] | undefined,
     @Req() req: AuthenticatedRequest
   ): Promise<EquipmentCreateOrRequestResult> {
-    // ✅ 공용장비도 수정 가능하도록 isShared 체크 제거
-    // (렌탈 장비는 수령 후 교정 정보 업데이트 필요)
     const existingEquipment = await this.equipmentService.findOne(uuid);
     enforceSiteAccess(req, existingEquipment.site, EQUIPMENT_DATA_SCOPE, existingEquipment.teamId);
+
+    // 공용장비 수정 차단
+    if (existingEquipment.isShared) {
+      throw new ForbiddenException({
+        code: 'EQUIPMENT_SHARED_CANNOT_UPDATE',
+        message: '공용장비는 수정할 수 없습니다.',
+      });
+    }
 
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? '';
@@ -400,7 +444,7 @@ export class EquipmentController {
     if (existingEquipment.isShared) {
       throw new ForbiddenException({
         code: 'EQUIPMENT_SHARED_CANNOT_DELETE',
-        message: 'Shared equipment cannot be deleted.',
+        message: '공용장비는 삭제할 수 없습니다.',
       });
     }
 

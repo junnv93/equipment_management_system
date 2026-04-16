@@ -23,7 +23,7 @@ describe('AuditLogsController (e2e)', () => {
   describe('GET /audit-logs', () => {
     it('should return audit logs list for admin', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs')
+        .get('/audit-logs?page=1')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       // 감사 로그 테이블이 비어있을 수 있음
@@ -49,7 +49,7 @@ describe('AuditLogsController (e2e)', () => {
 
     it('should support filtering by entityType', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?entityType=equipment')
+        .get('/audit-logs?page=1&entityType=equipment')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
@@ -61,7 +61,7 @@ describe('AuditLogsController (e2e)', () => {
 
     it('should support filtering by action', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?action=create')
+        .get('/audit-logs?page=1&action=create')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
@@ -78,7 +78,7 @@ describe('AuditLogsController (e2e)', () => {
 
       const response = await request(ctx.app.getHttpServer())
         .get(
-          `/audit-logs?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
+          `/audit-logs?page=1&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
         )
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
@@ -167,7 +167,7 @@ describe('AuditLogsController (e2e)', () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       const logsResponse = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?entityType=equipment&action=create&limit=5')
+        .get('/audit-logs?page=1&entityType=equipment&action=create&limit=5')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (logsResponse.status === 200 && logsResponse.body.items.length > 0) {

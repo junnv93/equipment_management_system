@@ -173,9 +173,15 @@ describe('NonConformancesController (e2e)', () => {
       if (createdNonConformanceIds.length > 0) {
         const ncId = createdNonConformanceIds[0];
 
+        // GET current version for CAS
+        const current = await request(ctx.app.getHttpServer())
+          .get(`/non-conformances/${ncId}`)
+          .set('Authorization', `Bearer ${accessToken}`);
+
         const updateDto = {
           correctionContent: 'E2E 테스트 시정 조치 내용',
           status: 'corrected',
+          version: current.body.version,
         };
 
         const response = await request(ctx.app.getHttpServer())
@@ -194,9 +200,14 @@ describe('NonConformancesController (e2e)', () => {
       if (createdNonConformanceIds.length > 0) {
         const ncId = createdNonConformanceIds[0];
 
+        // GET current version for CAS
+        const current = await request(ctx.app.getHttpServer())
+          .get(`/non-conformances/${ncId}`)
+          .set('Authorization', `Bearer ${accessToken}`);
+
         const closeDto = {
-          closedBy: testUserId,
           closureNotes: 'E2E 테스트 종료 메모',
+          version: current.body.version,
         };
 
         const response = await request(ctx.app.getHttpServer())
@@ -215,9 +226,14 @@ describe('NonConformancesController (e2e)', () => {
       if (createdNonConformanceIds.length > 0) {
         const ncId = createdNonConformanceIds[0];
 
+        // GET current version for CAS
+        const current = await request(ctx.app.getHttpServer())
+          .get(`/non-conformances/${ncId}`)
+          .set('Authorization', `Bearer ${accessToken}`);
+
         const closeDto = {
-          closedBy: testUserId,
           closureNotes: '중복 종료 시도',
+          version: current.body.version,
         };
 
         await request(ctx.app.getHttpServer())
@@ -248,9 +264,10 @@ describe('NonConformancesController (e2e)', () => {
 
       if (createResponse.status === 201 && createResponse.body.id) {
         const ncId = createResponse.body.id;
+        const ncVersion = createResponse.body.version;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/non-conformances/${ncId}`)
+          .delete(`/non-conformances/${ncId}?version=${ncVersion}`)
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -271,7 +288,7 @@ describe('NonConformancesController (e2e)', () => {
     it('should return 404 when deleting non-existent non-conformance', async () => {
       const fakeUuid = generateUUID();
       await request(ctx.app.getHttpServer())
-        .delete(`/non-conformances/${fakeUuid}`)
+        .delete(`/non-conformances/${fakeUuid}?version=1`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -310,8 +327,11 @@ describe('NonConformancesController (e2e)', () => {
         expect([400, 403]).toContain(rentalResponse.status);
 
         if (ncResponse.body.id) {
+          const ncDetail = await request(ctx.app.getHttpServer())
+            .get(`/non-conformances/${ncResponse.body.id}`)
+            .set('Authorization', `Bearer ${accessToken}`);
           await request(ctx.app.getHttpServer())
-            .delete(`/non-conformances/${ncResponse.body.id}`)
+            .delete(`/non-conformances/${ncResponse.body.id}?version=${ncDetail.body.version}`)
             .set('Authorization', `Bearer ${accessToken}`);
         }
       }
@@ -388,8 +408,7 @@ describe('NonConformancesController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           repairDate: new Date().toISOString(),
-          repairDescription: '센서 교체 완료',
-          repairedBy: '홍길동',
+          repairDescription: '센서 교체 완료 — 파손 부품 교체 작업',
           repairResult: 'completed',
           nonConformanceId: workflowTestNcId,
         });
@@ -424,6 +443,11 @@ describe('NonConformancesController (e2e)', () => {
 
       const noRepairNcId = ncResponse.body.id;
 
+      // GET current version for CAS
+      const noRepairCurrent = await request(ctx.app.getHttpServer())
+        .get(`/non-conformances/${noRepairNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
       const updateResponse = await request(ctx.app.getHttpServer())
         .patch(`/non-conformances/${noRepairNcId}`)
         .set('Authorization', `Bearer ${accessToken}`)
@@ -431,7 +455,7 @@ describe('NonConformancesController (e2e)', () => {
           status: 'corrected',
           correctionContent: '조치 완료',
           correctionDate: new Date().toISOString().split('T')[0],
-          correctedBy: testUserId,
+          version: noRepairCurrent.body.version,
         });
 
       if (updateResponse.status === 200) {
@@ -439,16 +463,20 @@ describe('NonConformancesController (e2e)', () => {
           .patch(`/non-conformances/${noRepairNcId}/close`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            closedBy: testUserId,
             closureNotes: '종료 시도',
+            version: updateResponse.body.version,
           });
 
         expect(closeResponse.status).toBe(400);
         expect(closeResponse.body.message).toContain('수리');
       }
 
+      // GET latest version before delete
+      const noRepairLatest = await request(ctx.app.getHttpServer())
+        .get(`/non-conformances/${noRepairNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
       await request(ctx.app.getHttpServer())
-        .delete(`/non-conformances/${noRepairNcId}`)
+        .delete(`/non-conformances/${noRepairNcId}?version=${noRepairLatest.body.version}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
       await request(ctx.app.getHttpServer())
@@ -498,8 +526,11 @@ describe('NonConformancesController (e2e)', () => {
 
       expect(repair2Response.status).toBe(400);
 
+      const oneToOneLatest = await request(ctx.app.getHttpServer())
+        .get(`/non-conformances/${oneToOneNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
       await request(ctx.app.getHttpServer())
-        .delete(`/non-conformances/${oneToOneNcId}`)
+        .delete(`/non-conformances/${oneToOneNcId}?version=${oneToOneLatest.body.version}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
       await request(ctx.app.getHttpServer())
@@ -525,22 +556,27 @@ describe('NonConformancesController (e2e)', () => {
 
       const closedTestNcId = ncResponse.body.id;
 
-      await request(ctx.app.getHttpServer())
+      // GET current version for CAS
+      const closedTestCurrent = await request(ctx.app.getHttpServer())
+        .get(`/non-conformances/${closedTestNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      const updateForClose = await request(ctx.app.getHttpServer())
         .patch(`/non-conformances/${closedTestNcId}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           status: 'corrected',
           correctionContent: '조치 완료',
           correctionDate: new Date().toISOString().split('T')[0],
-          correctedBy: testUserId,
+          version: closedTestCurrent.body.version,
         });
 
       const closeResponse = await request(ctx.app.getHttpServer())
         .patch(`/non-conformances/${closedTestNcId}/close`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
-          closedBy: testUserId,
           closureNotes: '종료',
+          version: updateForClose.body.version,
         });
 
       expect(closeResponse.status).toBe(200);
@@ -564,12 +600,17 @@ describe('NonConformancesController (e2e)', () => {
 
     it('should restore equipment status to available after closing last non-conformance', async () => {
       if (workflowTestNcId) {
+        // GET current version for CAS
+        const wfCurrent = await request(ctx.app.getHttpServer())
+          .get(`/non-conformances/${workflowTestNcId}`)
+          .set('Authorization', `Bearer ${accessToken}`);
+
         const closeResponse = await request(ctx.app.getHttpServer())
           .patch(`/non-conformances/${workflowTestNcId}/close`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            closedBy: testUserId,
             closureNotes: '워크플로우 테스트 완료',
+            version: wfCurrent.body.version,
           });
 
         expect(closeResponse.status).toBe(200);

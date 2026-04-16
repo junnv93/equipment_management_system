@@ -159,11 +159,14 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
     });
 
     it('should create incident + non-conformance + change status', async () => {
+      // 현재 날짜 사용 — 과거 이력은 장비 상태를 변경하지 않음
+      const today = new Date().toISOString().split('T')[0];
+
       const response = await request(ctx.app.getHttpServer())
         .post(`/equipment/${testEquipmentId}/incident-history`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
-          occurredAt: '2026-01-26',
+          occurredAt: today,
           incidentType: 'malfunction',
           content: '전원부 고장',
           createNonConformance: true,
@@ -214,7 +217,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toContain(
-        '부적합은 손상 또는 오작동 유형에서만 생성할 수 있습니다',
+        'Non-conformance can only be created for damage or malfunction incident types',
       );
     });
 

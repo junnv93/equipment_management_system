@@ -86,6 +86,23 @@ export class RepairHistoryController {
     return this.repairHistoryService.create(equipmentUuid, createDto, createdBy);
   }
 
+  @Get('equipment/:uuid/repair-history/summary')
+  @ApiOperation({
+    summary: '수리 이력 요약',
+    description: '특정 장비의 수리 이력 요약(건수)을 조회합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '장비 UUID' })
+  @ApiResponse({ status: HttpStatus.OK, description: '수리 이력 요약 조회 성공' })
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  async getSummary(
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ count: number }> {
+    const info = await this.repairHistoryService.getEquipmentSiteInfo(equipmentUuid);
+    enforceSiteAccess(req, info.site, EQUIPMENT_DATA_SCOPE, info.teamId);
+    return this.repairHistoryService.getSummary(equipmentUuid);
+  }
+
   @Get('equipment/:uuid/repair-history/recent')
   @ApiOperation({
     summary: '최근 수리 이력 조회',

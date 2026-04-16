@@ -76,14 +76,11 @@ describe('Equipment Filters (e2e)', () => {
         });
     });
 
-    it('잘못된 classification 값은 무시됨 (전체 장비 반환)', () => {
+    it('잘못된 classification 값은 Zod 검증 실패 (400)', () => {
       return request(ctx.app.getHttpServer())
         .get('/equipment?classification=invalid_value')
         .set('Authorization', `Bearer ${authToken}`)
-        .expect(200)
-        .expect((res) => {
-          expect(res.body).toHaveProperty('items');
-        });
+        .expect(400);
     });
   });
 
@@ -252,17 +249,17 @@ describe('Equipment Filters (e2e)', () => {
   });
 
   describe('GET /equipment - 상태 필터 (EQUIPMENT_STATUS_FILTER_OPTIONS)', () => {
-    const testStatuses = [
+    // Valid EquipmentStatus values from SSOT (EquipmentStatusEnum)
+    const validStatuses = [
       'available',
       'checked_out',
-      'calibration_overdue',
       'non_conforming',
       'spare',
       'pending_disposal',
       'disposed',
     ];
 
-    testStatuses.forEach((status) => {
+    validStatuses.forEach((status) => {
       it(`status=${status} 필터 적용`, () => {
         return request(ctx.app.getHttpServer())
           .get(`/equipment?status=${status}`)
@@ -280,11 +277,18 @@ describe('Equipment Filters (e2e)', () => {
       });
     });
 
-    it('deprecated status=retired는 여전히 지원', () => {
+    it('calibration_overdue는 유효한 EquipmentStatus가 아님 (Zod 400)', () => {
+      return request(ctx.app.getHttpServer())
+        .get('/equipment?status=calibration_overdue')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(400);
+    });
+
+    it('retired는 유효한 EquipmentStatus가 아님 (Zod 400)', () => {
       return request(ctx.app.getHttpServer())
         .get('/equipment?status=retired')
         .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
+        .expect(400);
     });
   });
 
@@ -311,11 +315,11 @@ describe('Equipment Filters (e2e)', () => {
   });
 
   describe('GET /equipment - 파라미터 검증', () => {
-    it('음수 페이지는 서버 에러 발생', () => {
+    it('음수 페이지는 Zod 검증 실패 (400)', () => {
       return request(ctx.app.getHttpServer())
         .get('/equipment?page=-1')
         .set('Authorization', `Bearer ${authToken}`)
-        .expect(500);
+        .expect(400);
     });
   });
 });

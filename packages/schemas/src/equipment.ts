@@ -127,8 +127,10 @@ export const createEquipmentSchema = baseEquipmentSchema.extend({
   initialLocation: z.string().min(1),
 });
 
-// 장비 업데이트 스키마
-export const updateEquipmentSchema = baseEquipmentSchema.partial();
+// 장비 업데이트 스키마 — version 필수 (CAS 낙관적 잠금)
+export const updateEquipmentSchema = baseEquipmentSchema.partial().extend({
+  version: z.number().int().positive(),
+});
 
 // 장비 조회용 스키마
 // DB 스키마 (packages/db/src/schema/equipment.ts)와 동기화
@@ -157,7 +159,7 @@ export const equipmentFilterSchema = z.object({
   classification: ClassificationEnum.optional(), // 분류 필터 (fcc_emc_rf, general_emc 등)
   classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드 필터
   managementMethod: ManagementMethodEnum.optional(), // 관리 방법 필터 (외부교정/자체점검/비대상)
-  calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이내 교정 임박
+  calibrationDue: z.coerce.number().int().optional(), // 숫자(일)로 변환 - 양수: N일 이내 임박, 음수: N일 초과
   calibrationDueAfter: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이후 교정 여유
   calibrationOverdue: z
     .preprocess((val) => {
