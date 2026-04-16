@@ -13,7 +13,7 @@ description: |
 ## 프로젝트 컨텍스트
 
 - **개발 환경**: 1인 개발자 (개발 + 테스트 동일인)
-- **DB 구조**: **단일 DB** — `postgres_equipment` (포트 5432). 테스트 DB 분리 제안 금지.
+- **DB 구조**: **단일 DB** — `equipment_management` (포트 5432). 테스트 DB 분리 제안 금지. 컨테이너 접근은 `docker compose exec postgres` 사용.
 - **기술 스택**: NestJS, Drizzle ORM, PostgreSQL, Next.js 16 (App Router), React 19, TailwindCSS, NextAuth.js, pnpm workspace
 - **인증**: NextAuth를 단일 인증 소스로 사용. localStorage 토큰 사용 금지.
 

@@ -22,14 +22,14 @@
 
 ## 월간 점검 (수동)
 
-| 항목                       | 점검 방법                                                    | 예상 소요 시간 |
-| -------------------------- | ------------------------------------------------------------ | -------------- |
-| PostgreSQL VACUUM/ANALYZE  | `docker exec postgres psql -U postgres -c "VACUUM ANALYZE;"` | 가변           |
-| 로그 인덱스 용량           | Kibana → Management → Index Management                       | 10분           |
-| Elasticsearch 인덱스 정리  | 30일 이상 인덱스 삭제                                        | 15분           |
-| GitHub Actions 사용량 확인 | Settings → Billing → Actions (2,000분/월 무료)               | 5분            |
-| 보안 의존성 리뷰           | OWASP 리포트 아티팩트 검토                                   | 30분           |
-| JWT_SECRET 로테이션 검토   | 이상 징후 없으면 유지, 있으면 로테이션                       | 가변           |
+| 항목                       | 점검 방법                                                            | 예상 소요 시간 |
+| -------------------------- | -------------------------------------------------------------------- | -------------- |
+| PostgreSQL VACUUM/ANALYZE  | `docker compose exec postgres psql -U postgres -c "VACUUM ANALYZE;"` | 가변           |
+| 로그 인덱스 용량           | Kibana → Management → Index Management                               | 10분           |
+| Elasticsearch 인덱스 정리  | 30일 이상 인덱스 삭제                                                | 15분           |
+| GitHub Actions 사용량 확인 | Settings → Billing → Actions (2,000분/월 무료)                       | 5분            |
+| 보안 의존성 리뷰           | OWASP 리포트 아티팩트 검토                                           | 30분           |
+| JWT_SECRET 로테이션 검토   | 이상 징후 없으면 유지, 있으면 로테이션                               | 가변           |
 
 ## 이상 징후 대응 절차
 
@@ -60,7 +60,7 @@ docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compo
 docker compose -f docker-compose.prod.yml ps postgres
 
 # 연결 테스트
-docker exec postgres pg_isready -U postgres
+docker compose exec postgres pg_isready -U postgres
 
 # 로그 확인
 docker compose -f docker-compose.prod.yml logs postgres --tail=50

@@ -62,25 +62,25 @@
 
 ```bash
 # 1. Backup database
-pg_dump postgres_equipment > backup_$(date +%Y%m%d_%H%M%S).sql
+docker compose -f docker-compose.lan.yml exec -T postgres pg_dump -U postgres equipment_management > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 2. Apply migration
 cd apps/backend
 pnpm run db:migrate:manual
 
 # 3. Verify migration
-psql postgres_equipment -c "\d checkouts"
+docker compose -f docker-compose.lan.yml exec -T postgres psql -U postgres -d equipment_management -c "\d checkouts"
 # Should show: version | integer | not null | 1
 
 # 4. Check data
-psql postgres_equipment -c "SELECT id, version FROM checkouts LIMIT 5;"
+docker compose -f docker-compose.lan.yml exec -T postgres psql -U postgres -d equipment_management -c "SELECT id, version FROM checkouts LIMIT 5;"
 # All rows should have version=1
 ```
 
 **Rollback if needed**:
 
 ```bash
-psql postgres_equipment < apps/backend/drizzle/manual/rollback_20260212_add_checkout_version.sql
+docker compose -f docker-compose.lan.yml exec -T postgres psql -U postgres -d equipment_management < apps/backend/drizzle/manual/rollback_20260212_add_checkout_version.sql
 ```
 
 ### 2. Backend Deployment
@@ -252,14 +252,14 @@ pm2 restart backend
 
 ```bash
 # Apply rollback migration
-psql postgres_equipment < apps/backend/drizzle/manual/rollback_20260212_add_checkout_version.sql
+docker compose -f docker-compose.lan.yml exec -T postgres psql -U postgres -d equipment_management < apps/backend/drizzle/manual/rollback_20260212_add_checkout_version.sql
 
 # Verify
-psql postgres_equipment -c "\d checkouts"
+docker compose -f docker-compose.lan.yml exec -T postgres psql -U postgres -d equipment_management -c "\d checkouts"
 # version column should be gone
 
 # Restore from backup if needed
-psql postgres_equipment < backup_YYYYMMDD_HHMMSS.sql
+docker compose -f docker-compose.lan.yml exec -T postgres psql -U postgres -d equipment_management < backup_YYYYMMDD_HHMMSS.sql
 ```
 
 ---

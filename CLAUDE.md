@@ -189,14 +189,15 @@ type UserRole = 'ADMIN' | 'USER' | 'MANAGER'; // Wrong values!
 
 ```
 ✅ CORRECT:
-- Single DB: postgres_equipment (port 5432)
+- Single DB: equipment_management (port 5432)
 - DB commands: pnpm db:migrate
 - Tests run on development DB
+- 컨테이너 접근: docker compose exec postgres psql ...
 
 ❌ NEVER SUGGEST:
 - "테스트 DB와 개발 DB를 분리해야..."
-- postgres_equipment_test (removed)
-- localhost:5434 (not used)
+- 별도 테스트 DB (removed)
+- 하드코딩된 컨테이너 이름 (docker compose 서비스명 사용)
 ```
 
 ### Rule 2: Server-Side User Extraction (Security)

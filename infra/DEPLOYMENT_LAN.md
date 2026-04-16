@@ -180,28 +180,22 @@ docker ps
 
 ```bash
 # 모든 컨테이너가 "Up" 상태여야 함
-CONTAINER ID   IMAGE                        STATUS
-abcd1234       equipment_frontend_prod      Up 2 minutes
-efgh5678       equipment_backend_prod       Up 2 minutes (healthy)
-ijkl9012       equipment_postgres_prod      Up 2 minutes (healthy)
-mnop3456       equipment_redis_prod         Up 2 minutes (healthy)
-qrst7890       equipment_nginx_prod         Up 2 minutes
+CONTAINER ID   IMAGE                                   STATUS
+abcd1234       equipment-management-system-lan-frontend-1   Up 2 minutes
+efgh5678       equipment-management-system-lan-backend-1    Up 2 minutes (healthy)
+ijkl9012       equipment-management-system-lan-postgres-1   Up 2 minutes (healthy)
+mnop3456       equipment-management-system-lan-redis-1      Up 2 minutes (healthy)
+qrst7890       equipment-management-system-lan-nginx-1      Up 2 minutes
 ```
 
 ### 3.4 DB 마이그레이션 실행
 
 ```bash
-# Backend 컨테이너 접속
-docker exec -it equipment_backend_prod sh
+# migration 프로필로 마이그레이션 실행
+docker compose -f docker-compose.lan.yml --profile migration run --rm migration
 
-# 마이그레이션 실행
-npm run db:migrate
-
-# 시드 데이터 로딩 (선택사항)
-npm run db:seed
-
-# 컨테이너 종료
-exit
+# 또는 Backend 컨테이너에서 직접 실행
+docker compose -f docker-compose.lan.yml exec backend sh -c "npm run db:migrate"
 ```
 
 ---
@@ -360,7 +354,7 @@ du -sh /var/lib/equipment-system/*
 du -sh /var/lib/equipment-system/backups
 
 # PostgreSQL 데이터 크기
-docker exec equipment_postgres_prod du -sh /var/lib/postgresql/data
+docker compose -f docker-compose.lan.yml exec postgres du -sh /var/lib/postgresql/data
 ```
 
 ### 7.2 정리 작업
@@ -434,10 +428,10 @@ docker compose -f docker-compose.lan.yml up -d --force-recreate
 
 ```bash
 # PostgreSQL 컨테이너 로그 확인
-docker logs equipment_postgres_prod
+docker compose -f docker-compose.lan.yml logs postgres
 
 # 컨테이너 내부 접속하여 확인
-docker exec -it equipment_postgres_prod psql -U postgres -d postgres_equipment
+docker compose -f docker-compose.lan.yml exec postgres psql -U postgres -d equipment_management
 ```
 
 ### 9.3 디스크 용량 부족
@@ -457,10 +451,10 @@ find /var/lib/equipment-system/backups -name "*.sql.gz" -mtime +60 -delete
 docker stats
 
 # PostgreSQL 성능 분석
-docker exec equipment_postgres_prod psql -U postgres -d postgres_equipment -c "SELECT * FROM pg_stat_activity;"
+docker compose -f docker-compose.lan.yml exec postgres psql -U postgres -d equipment_management -c "SELECT * FROM pg_stat_activity;"
 
 # Redis 캐시 초기화
-docker exec equipment_redis_prod redis-cli -a ${REDIS_PASSWORD} FLUSHALL
+docker compose -f docker-compose.lan.yml exec redis redis-cli -a ${REDIS_PASSWORD} FLUSHALL
 ```
 
 ---

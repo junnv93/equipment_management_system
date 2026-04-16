@@ -12,9 +12,8 @@ async function testConnection() {
   // 여러 연결 문자열 시도
   const connectionStrings = [
     process.env.DATABASE_URL,
-    'postgresql://postgres:postgres@localhost:5432/equipment_management',
-    'postgresql://postgres:postgres@localhost:5433/equipment_management',
-    'postgresql://postgres:postgres@postgres:5432/equipment_management', // Docker 내부
+    `postgresql://${process.env.DB_USER ?? 'postgres'}:${process.env.DB_PASSWORD ?? 'postgres'}@localhost:${process.env.DB_PORT ?? '5432'}/${process.env.DB_NAME ?? 'equipment_management'}`,
+    `postgresql://${process.env.DB_USER ?? 'postgres'}:${process.env.DB_PASSWORD ?? 'postgres'}@postgres:5432/${process.env.DB_NAME ?? 'equipment_management'}`, // Docker 내부
   ].filter(Boolean);
 
   console.log('🔍 데이터베이스 연결 테스트 시작...\n');

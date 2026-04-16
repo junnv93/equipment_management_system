@@ -22,11 +22,11 @@
 
 ### 1. 필수 소프트웨어 설치
 
-| 소프트웨어 | 버전  | 설치 방법                           |
-| ---------- | ----- | ----------------------------------- |
-| Node.js    | 20+   | `nvm install --lts`                 |
-| pnpm       | 10+   | `npm install -g pnpm@latest`        |
-| Docker     | 최신  | https://docs.docker.com/get-docker/ |
+| 소프트웨어 | 버전 | 설치 방법                           |
+| ---------- | ---- | ----------------------------------- |
+| Node.js    | 20+  | `nvm install --lts`                 |
+| pnpm       | 10+  | `npm install -g pnpm@latest`        |
+| Docker     | 최신 | https://docs.docker.com/get-docker/ |
 
 > **참고**: Node.js 18도 동작하지만, 20+ 버전을 권장합니다.
 
@@ -160,11 +160,13 @@ SMTP_FROM=noreply@example.com
 **증상**: `Port 3000 is in use` 또는 `EADDRINUSE: address already in use :::3001`
 
 **원인**:
+
 - 이전 개발 서버가 완전히 종료되지 않음
 - 포트 3000이나 3001이 다른 프로세스에서 사용 중
 - Next.js lock 파일 남아있음
 
 **해결**:
+
 ```bash
 # 방법 1: 포트 3000, 3001, 3002 모두 정리 (권장)
 fuser -k 3000/tcp 3001/tcp 3002/tcp 2>/dev/null && echo "포트 정리 완료" || echo "포트 사용 중인 프로세스 없음"
@@ -187,11 +189,13 @@ pnpm dev
 **증상**: API 호출 시 `Cannot use a pool after calling end on the pool` 에러
 
 **원인**:
+
 - 백엔드 서버가 오래 실행되면서 DB 연결이 끊어짐
 - Docker PostgreSQL이 재시작되었는데 백엔드가 연결 풀을 갱신 못함
 - 핫 리로드 중 DB 풀이 제대로 정리되지 않음
 
 **해결**:
+
 ```bash
 # 백엔드 서버 재시작
 lsof -ti:3001 | xargs kill -9
@@ -205,18 +209,20 @@ pnpm --filter backend dev
 **증상**: 프론트엔드에서 `HTTP 상태: 500` 에러
 
 **체크리스트**:
+
 ```bash
 # 1. 백엔드 서버 실행 확인
 lsof -ti:3001  # 프로세스 ID가 출력되면 실행 중
 
 # 2. DB 컨테이너 상태 확인
-docker compose ps  # postgres_equipment가 healthy인지 확인
+docker compose ps  # postgres 서비스가 healthy인지 확인
 
 # 3. 백엔드 로그 확인 (터미널에서)
 # 에러 메시지를 보고 원인 파악
 ```
 
 **해결 (순서대로 시도)**:
+
 ```bash
 # 1단계: 백엔드만 재시작
 lsof -ti:3001 | xargs kill -9
@@ -231,7 +237,6 @@ docker compose down && docker compose up -d
 pnpm dev
 ```
 
-
 ---
 
 ### 🟡 Docker 문제
@@ -239,6 +244,7 @@ pnpm dev
 **증상**: DB 연결 실패, 컨테이너가 시작되지 않음
 
 **진단**:
+
 ```bash
 # 컨테이너 상태 확인
 docker compose ps
@@ -249,6 +255,7 @@ docker compose logs redis
 ```
 
 **해결**:
+
 ```bash
 # 컨테이너 재시작
 docker compose down && docker compose up -d
@@ -265,6 +272,7 @@ pnpm --filter backend db:migrate  # 스키마 재적용
 **증상**: `connection refused`, `ECONNREFUSED`
 
 **체크리스트**:
+
 ```bash
 # 1. Docker 컨테이너 실행 확인
 docker compose ps  # STATUS가 "Up" + "(healthy)"인지 확인
@@ -278,6 +286,7 @@ cat apps/backend/.env | grep DB_
 ```
 
 **해결**:
+
 ```bash
 # Docker가 꺼져있다면
 docker compose up -d
@@ -293,11 +302,13 @@ docker compose restart postgres
 **증상**: `Unable to acquire lock at /apps/frontend/.next/dev/lock` 에러
 
 **원인**:
+
 - 이전 Next.js 서버가 비정상 종료됨
 - lock 파일이 남아있어서 새 서버가 시작 불가
 - `pnpm dev` 실행 중 Ctrl+C로 종료했을 때 발생 가능
 
 **해결**:
+
 ```bash
 # Next.js lock 파일 삭제
 rm -rf apps/frontend/.next/dev/lock
@@ -318,6 +329,7 @@ pnpm dev
 **증상**: 코드 변경 후 예상치 못한 동작, 캐시 문제
 
 **해결**:
+
 ```bash
 # Next.js 캐시 삭제
 rm -rf apps/frontend/.next
@@ -336,6 +348,7 @@ pnpm dev
 **증상**: 모듈을 찾을 수 없음, 타입 에러
 
 **해결**:
+
 ```bash
 # 전체 재설치
 rm -rf node_modules apps/*/node_modules packages/*/node_modules
@@ -349,6 +362,7 @@ pnpm install
 **증상**: 테이블이 없음, 스키마 불일치
 
 **해결**:
+
 ```bash
 # 마이그레이션 실행
 pnpm --filter backend db:migrate
@@ -362,6 +376,7 @@ pnpm --filter backend db:generate
 ### 🟢 pnpm 설치 오류
 
 **해결**:
+
 ```bash
 # pnpm 캐시 정리
 pnpm store prune
@@ -377,14 +392,14 @@ pnpm install
 
 문제 발생 시 아래 순서대로 시도:
 
-| 순서 | 명령어 | 설명 |
-|------|--------|------|
-| 0 | `fuser -k 3000/tcp 3001/tcp 3002/tcp 2>/dev/null && rm -rf apps/frontend/.next/dev/lock` | **포트 및 lock 파일 정리 (가장 먼저!)** |
-| 1 | `pnpm dev` | 전체 개발 서버 재시작 |
-| 2 | `docker compose restart postgres` | DB 재시작 |
-| 3 | `docker compose down && docker compose up -d && pnpm dev` | DB/Redis 전체 재시작 |
-| 4 | `rm -rf apps/frontend/.next apps/backend/dist && pnpm dev` | 빌드 캐시 삭제 후 재시작 |
-| 5 | `rm -rf node_modules pnpm-lock.yaml && pnpm install && pnpm dev` | 의존성 전체 재설치 |
+| 순서 | 명령어                                                                                   | 설명                                    |
+| ---- | ---------------------------------------------------------------------------------------- | --------------------------------------- |
+| 0    | `fuser -k 3000/tcp 3001/tcp 3002/tcp 2>/dev/null && rm -rf apps/frontend/.next/dev/lock` | **포트 및 lock 파일 정리 (가장 먼저!)** |
+| 1    | `pnpm dev`                                                                               | 전체 개발 서버 재시작                   |
+| 2    | `docker compose restart postgres`                                                        | DB 재시작                               |
+| 3    | `docker compose down && docker compose up -d && pnpm dev`                                | DB/Redis 전체 재시작                    |
+| 4    | `rm -rf apps/frontend/.next apps/backend/dist && pnpm dev`                               | 빌드 캐시 삭제 후 재시작                |
+| 5    | `rm -rf node_modules pnpm-lock.yaml && pnpm install && pnpm dev`                         | 의존성 전체 재설치                      |
 
 ---
 

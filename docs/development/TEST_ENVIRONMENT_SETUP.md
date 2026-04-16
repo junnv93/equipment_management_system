@@ -19,7 +19,7 @@ docker compose up -d
 
 ```bash
 # 컨테이너 내부에서 확인
-docker exec postgres_equipment psql -U postgres -d equipment_management -c "SELECT 1;"
+docker compose exec postgres psql -U postgres -d equipment_management -c "SELECT 1;"
 
 # 호스트에서 직접 연결 확인
 psql -h localhost -p 5432 -U postgres -d equipment_management
@@ -70,7 +70,6 @@ PostgreSQL connection test failed: password authentication failed for user "post
    ```
 
 2. 연결 정보 확인:
-
    - 호스트: `localhost`
    - 포트: `5432`
    - 사용자: `postgres`

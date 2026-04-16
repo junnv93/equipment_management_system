@@ -2,7 +2,7 @@
 -- 인덱스 최적화 마이그레이션 (2026-03-12)
 -- =============================================================================
 -- 목적: 중복 인덱스 제거 + 신규 성능 인덱스 추가
--- 실행: psql -d postgres_equipment -f 20260312_index_optimization.sql
+-- 실행: docker compose exec -T postgres psql -U postgres -d equipment_management < 20260312_index_optimization.sql
 -- 참고: CONCURRENTLY 사용 → 트랜잭션 외부에서 실행 필요
 -- =============================================================================
 

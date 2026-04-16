@@ -22,7 +22,7 @@ services:
   postgres:
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME:-postgres_equipment}
+      POSTGRES_DB: ${DB_NAME:-equipment_management}
     volumes:
       - /var/lib/equipment-system/postgres:/var/lib/postgresql/data
       - /var/lib/equipment-system/backups:/backups
@@ -67,7 +67,7 @@ services:
       - /tmp
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-postgres_equipment}
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-equipment_management}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
@@ -184,7 +184,7 @@ services:
     command: ['node', 'apps/backend/dist/database/run-migration.js']
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-postgres_equipment}
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-equipment_management}
     depends_on:
       postgres:
         condition: service_healthy

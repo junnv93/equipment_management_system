@@ -1,5 +1,5 @@
 -- Reset specific checkouts to 'pending' status for E2E tests
--- Run this with: psql -U postgres -d postgres_equipment -f reset-checkout-status.sql
+-- Run this with: docker compose exec postgres psql -U postgres -d equipment_management -f -
 
 UPDATE checkouts
 SET status = 'pending',

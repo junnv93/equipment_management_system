@@ -23,7 +23,7 @@
 ```
 ✅ 개발 DB = 테스트 DB (통합됨)
 ✅ 포트: 5432
-✅ 컨테이너: postgres_equipment
+✅ 컨테이너 접근: docker compose exec postgres ... (서비스명 기반)
 ✅ 데이터베이스명: equipment_management
 ```
 
@@ -596,8 +596,8 @@ pnpm test         # 단위 테스트
 ### Docker
 
 ```bash
-docker ps                           # 컨테이너 확인 (postgres_equipment만 있어야 함)
-docker exec postgres_equipment ...  # DB 작업
+docker compose ps                          # 서비스 상태 확인
+docker compose exec postgres psql -U postgres -d equipment_management  # DB 작업
 ```
 
 ---
@@ -643,7 +643,7 @@ docker exec postgres_equipment ...  # DB 작업
 - **변경**: 테스트 DB 제거, 단일 DB로 통합
 - **이유**: 1인 개발, 개발 데이터 중요도 낮음, 관리 복잡도 제거
 - **영향**:
-  - postgres_equipment_test 컨테이너 제거
+  - 테스트 전용 DB 컨테이너 제거
   - .env.test 업데이트 (5432 포트 사용)
   - 모든 스크립트 단일 DB 기준으로 수정
   - 문서 업데이트
@@ -652,9 +652,9 @@ docker exec postgres_equipment ...  # DB 작업
 
 ## 💡 트러블슈팅
 
-### "postgres_equipment_test를 찾을 수 없습니다"
+### "테스트 DB 컨테이너를 찾을 수 없습니다"
 
-**정상입니다.** 테스트 DB 컨테이너는 제거되었습니다. postgres_equipment만 사용합니다.
+**정상입니다.** 테스트 DB 컨테이너는 제거되었습니다. 단일 DB(equipment_management)만 사용합니다.
 
 ### "테스트 실행 시 DB 연결 오류"
 
@@ -698,7 +698,7 @@ pnpm test:e2e
 ```bash
 git clone <repo>
 pnpm install
-docker-compose up -d      # postgres_equipment만 실행됨
+docker compose up -d      # postgres + redis + rustfs 서비스 실행
 pnpm db:push
 ```
 

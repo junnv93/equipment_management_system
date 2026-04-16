@@ -1,8 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # 시스템 헬스체크 스크립트
 # 모든 서비스 상태, 디스크 사용량, 백업 상태 확인
+#
+# LAN 프로덕션 환경 전용. docker compose 서비스명 기반으로 동작 (컨테이너 이름 불필요).
+#
+# 사용법:
+#   bash scripts/healthcheck.sh
+#   COMPOSE_FILE=infra/docker-compose.lan.yml bash scripts/healthcheck.sh
 
-set -e
+set -euo pipefail
 
 # 색상 코드
 RED='\033[0;31m'
@@ -11,11 +17,23 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # ============================================
-# 설정
+# 설정 — 환경변수로 오버라이드 가능
 # ============================================
-BACKUP_DIR="/var/lib/equipment-system/backups"
-DATA_DIR="/var/lib/equipment-system"
-COMPOSE_FILE="docker-compose.lan.yml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/infra/docker-compose.lan.yml}"
+BACKUP_DIR="${BACKUP_DIR:-/var/lib/equipment-system/backups}"
+DATA_DIR="${DATA_DIR:-/var/lib/equipment-system}"
+
+# SSOT: .env 기본값과 동일
+DB_NAME="${DB_NAME:-equipment_management}"
+DB_USER="${DB_USER:-postgres}"
+
+# docker compose 명령 래퍼
+dc() {
+  docker compose -f "$COMPOSE_FILE" "$@"
+}
 
 # ============================================
 # 헬스체크 함수
@@ -39,33 +57,30 @@ check_containers() {
     echo "2. 컨테이너 상태"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    CONTAINERS=(
-        "equipment_postgres_prod"
-        "equipment_redis_prod"
-        "equipment_backend_prod"
-        "equipment_frontend_prod"
-        "equipment_nginx_prod"
+    # docker compose 서비스명 기반 — 컨테이너 이름에 의존하지 않음
+    SERVICES=(
+        "postgres"
+        "redis"
+        "backend"
+        "frontend"
+        "nginx"
+        "rustfs"
     )
 
     ALL_RUNNING=true
-    for container in "${CONTAINERS[@]}"; do
-        if docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
-            STATUS=$(docker inspect --format='{{.State.Status}}' "$container")
-            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
+    for service in "${SERVICES[@]}"; do
+        local status
+        status=$(dc ps --format '{{.Status}}' "$service" 2>/dev/null | head -1)
 
-            if [ "$STATUS" = "running" ]; then
-                if [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; then
-                    echo -e "${GREEN}✓${NC} $container (${STATUS})"
-                else
-                    echo -e "${YELLOW}⚠${NC} $container (${STATUS}, health: ${HEALTH})"
-                    ALL_RUNNING=false
-                fi
-            else
-                echo -e "${RED}✗${NC} $container (${STATUS})"
-                ALL_RUNNING=false
-            fi
+        if [[ -z "$status" ]]; then
+            echo -e "${RED}✗${NC} $service (not found)"
+            ALL_RUNNING=false
+        elif echo "$status" | grep -qi "up.*healthy"; then
+            echo -e "${GREEN}✓${NC} $service ($status)"
+        elif echo "$status" | grep -qi "up"; then
+            echo -e "${YELLOW}⚠${NC} $service ($status)"
         else
-            echo -e "${RED}✗${NC} $container (not found)"
+            echo -e "${RED}✗${NC} $service ($status)"
             ALL_RUNNING=false
         fi
     done
@@ -80,6 +95,11 @@ check_disk() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "3. 디스크 사용량"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+    if [ ! -d "$DATA_DIR" ]; then
+        echo -e "${YELLOW}⚠ 데이터 디렉토리 $DATA_DIR 가 없습니다${NC}"
+        return 0
+    fi
 
     # 전체 디스크
     TOTAL_USAGE=$(df -h "${DATA_DIR}" | awk 'NR==2 {print $5}' | sed 's/%//')
@@ -112,14 +132,14 @@ check_backup() {
         return 1
     fi
 
-    BACKUP_COUNT=$(find "${BACKUP_DIR}" -name "postgres_equipment_*.sql.gz" 2>/dev/null | wc -l)
+    BACKUP_COUNT=$(find "${BACKUP_DIR}" -name "*.sql.gz" 2>/dev/null | wc -l)
 
     if [ "$BACKUP_COUNT" -eq 0 ]; then
         echo -e "${RED}✗ 백업 파일이 없습니다!${NC}"
         return 1
     fi
 
-    LATEST_BACKUP=$(ls -t "${BACKUP_DIR}"/postgres_equipment_*.sql.gz 2>/dev/null | head -1)
+    LATEST_BACKUP=$(find "${BACKUP_DIR}" -name "*.sql.gz" -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
     BACKUP_SIZE=$(du -h "$LATEST_BACKUP" 2>/dev/null | cut -f1)
     BACKUP_TIME=$(stat -c %y "$LATEST_BACKUP" 2>/dev/null | cut -d'.' -f1)
     BACKUP_AGE_HOURS=$(( ( $(date +%s) - $(stat -c %Y "$LATEST_BACKUP") ) / 3600 ))
@@ -165,11 +185,11 @@ check_network() {
         echo -e "${RED}✗${NC} Backend (Port 3001) 응답 없음"
     fi
 
-    # Nginx
-    if curl -s -o /dev/null -w "%{http_code}" http://localhost:80/health | grep -q "200"; then
-        echo -e "${GREEN}✓${NC} Nginx (Port 80) 정상"
+    # Nginx (LAN: port 9000)
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost:9000/health | grep -q "200"; then
+        echo -e "${GREEN}✓${NC} Nginx (Port 9000) 정상"
     else
-        echo -e "${RED}✗${NC} Nginx (Port 80) 응답 없음"
+        echo -e "${RED}✗${NC} Nginx (Port 9000) 응답 없음"
     fi
 }
 
@@ -179,20 +199,20 @@ check_database() {
     echo "7. 데이터베이스 상태"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-    DB_SIZE=$(docker exec equipment_postgres_prod psql -U postgres -d postgres_equipment -t -c \
-        "SELECT pg_size_pretty(pg_database_size('postgres_equipment'));" 2>/dev/null | xargs)
+    DB_SIZE=$(dc exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c \
+        "SELECT pg_size_pretty(pg_database_size('$DB_NAME'));" 2>/dev/null | xargs)
 
-    TABLE_COUNT=$(docker exec equipment_postgres_prod psql -U postgres -d postgres_equipment -t -c \
+    TABLE_COUNT=$(dc exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c \
         "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | xargs)
 
-    CONNECTION_COUNT=$(docker exec equipment_postgres_prod psql -U postgres -d postgres_equipment -t -c \
-        "SELECT count(*) FROM pg_stat_activity WHERE datname = 'postgres_equipment';" 2>/dev/null | xargs)
+    CONNECTION_COUNT=$(dc exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" -t -c \
+        "SELECT count(*) FROM pg_stat_activity WHERE datname = '$DB_NAME';" 2>/dev/null | xargs)
 
     echo "DB 크기: ${DB_SIZE}"
     echo "테이블 수: ${TABLE_COUNT}개"
     echo "활성 연결: ${CONNECTION_COUNT}개"
 
-    if [ "$CONNECTION_COUNT" -gt 50 ]; then
+    if [ "${CONNECTION_COUNT:-0}" -gt 50 ]; then
         echo -e "${YELLOW}⚠ DB 연결 수가 많습니다${NC}"
     else
         echo -e "${GREEN}✓ DB 정상${NC}"
@@ -208,6 +228,7 @@ echo "║  장비 관리 시스템 헬스체크            ║"
 echo "╚════════════════════════════════════════╝"
 echo ""
 echo "점검 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "Compose:  $COMPOSE_FILE"
 echo ""
 
 FAILED=false
