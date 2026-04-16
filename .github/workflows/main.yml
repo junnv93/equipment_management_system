@@ -124,6 +124,49 @@ jobs:
             exit 1
           fi
 
+      # ─── 인프라 린터 (셸 스크립트, Dockerfile, Compose, healthcheck 테스트) ───
+
+      - name: Install Infra Lint Tools
+        # shellcheck: ubuntu-latest 기본 포함
+        # hadolint, sops: 바이너리 다운로드 필요
+        run: |
+          curl -fsSL -o /usr/local/bin/hadolint \
+            "https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64"
+          chmod +x /usr/local/bin/hadolint
+
+      - name: Infra — ShellCheck (셸 스크립트 정적 분석)
+        run: |
+          shellcheck --severity=warning \
+            infra/scripts/*.sh \
+            infra/healthchecks/*.sh
+
+      - name: Infra — Hadolint (Dockerfile 린트)
+        # .hadolint.yaml 설정 자동 참조
+        run: |
+          hadolint apps/backend/docker/Dockerfile
+          hadolint apps/frontend/Dockerfile
+
+      - name: Infra — dclint (Docker Compose 린트)
+        # docker-compose.yml + infra/compose/ 하위 전수 검사
+        run: npx --yes dclint docker-compose.yml infra/compose/ -r
+
+      - name: Infra — Bats (healthcheck 단위 테스트)
+        # infra/healthchecks/tests/*.bats 실행 — 헬스체크 스크립트 단위 검증
+        run: npx --yes bats infra/healthchecks/tests/
+
+      - name: Infra — SOPS Secret 복호화 검증
+        # SOPS_AGE_KEY GitHub Actions secret 설정 후 활성화
+        # 복호화 가능 여부만 확인 (값 노출 없음)
+        if: env.SOPS_AGE_KEY != ''
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          curl -fsSL -o /usr/local/bin/sops \
+            "https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64"
+          chmod +x /usr/local/bin/sops
+          sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > /dev/null
+          echo "SOPS decrypt verification passed"
+
   # ─────────────────────────────────────────────
   # Gate 3a: 유닛 테스트 (quality-gate 후 병렬)
   # ─────────────────────────────────────────────
