@@ -16,6 +16,7 @@ import { ExcelParserService } from '../services/excel-parser.service';
 import { MigrationValidatorService } from '../services/migration-validator.service';
 import { HistoryValidatorService } from '../services/history-validator.service';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
+import { FkResolutionService } from '../services/fk-resolution.service';
 
 const createSelectChain = (finalValue: unknown): Record<string, jest.Mock> => {
   const chain: Record<string, jest.Mock> = {};
@@ -74,6 +75,10 @@ describe('DataMigrationService', () => {
       validateCalibrationBatch: jest.fn().mockReturnValue([]),
       validateRepairBatch: jest.fn().mockReturnValue([]),
       validateIncidentBatch: jest.fn().mockReturnValue([]),
+      validateCableBatch: jest.fn().mockReturnValue([]),
+      validateTestSoftwareBatch: jest.fn().mockReturnValue([]),
+      validateCalibrationFactorBatch: jest.fn().mockReturnValue([]),
+      validateNonConformanceBatch: jest.fn().mockReturnValue([]),
     };
 
     mockDb = {
@@ -101,6 +106,10 @@ describe('DataMigrationService', () => {
         { provide: ExcelParserService, useValue: mockExcelParserService },
         { provide: MigrationValidatorService, useValue: mockMigrationValidatorService },
         { provide: HistoryValidatorService, useValue: mockHistoryValidatorService },
+        {
+          provide: FkResolutionService,
+          useValue: { resolveEquipmentFks: jest.fn().mockResolvedValue([]) },
+        },
       ],
     }).compile();
 
