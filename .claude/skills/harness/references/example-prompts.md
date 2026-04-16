@@ -1,8 +1,92 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-15 (70차 — 3-agent 병렬 스캔 + 2차 검증. form-template-export Promise.all + 장비 탭 QUERY_CONFIG spread + FormTemplates FORM_TEMPLATES SSOT + equipment_test_software 역방향 인덱스 4건 등재 → 전부 완료. FALSE POSITIVE: process.env NestJS 부트스트랩 필수, as unknown as Zod 패턴, 테스트 as any 허용 패턴.)**
+> **마지막 정리일: 2026-04-16 (71차 — 백엔드 E2E 테스트 인프라 근본 재설계. Redis 6380→6379, admin 시드 SSOT 전환, 20개 spec 파일 마이그레이션.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
+
+## 71차 신규 — 백엔드 E2E 테스트 인프라 근본 재설계 (1건, 2026-04-16)
+
+> **발견 배경 (2026-04-16)**: data-migration harness 중 `pnpm test:e2e` 전면 실패 확인. 근본 원인: (1) 14/20 파일이 Redis 6380 하드코딩 (Docker는 6379), (2) `admin@example.com` DB row 부재 → JWT sub 빈 문자열 → 500, (3) 기존 SSOT (`test-users.ts`, `seed-test-new.ts`)가 백엔드 E2E에서 미사용.
+> 프론트엔드 E2E는 `global-setup.ts`에서 seed 실행으로 이미 해결 완료 — 동일 패턴을 백엔드에 적용.
+> `equipment.e2e-spec.ts` 등 기존 spec 파일도 동일 이유로 전면 실패 확인 (본 이슈는 data-migration 전용이 아님).
+
+### 🔴 CRITICAL — 백엔드 E2E 20개 suite 전면 실패: Redis 포트 불일치 + admin 시드 부재 + SSOT 미사용 (Mode 2)
+
+```
+근본 원인 3가지 (검증 완료):
+
+1. Redis 포트 불일치
+   - 14/20 파일: process.env.REDIS_URL = 'redis://localhost:6380' (하드코딩)
+   - jest-setup.ts:12: REDIS_PORT = '6379' (올바르지만 개별 파일의 REDIS_URL이 우선)
+   - docker compose: 6379만 노출 (infra/compose/dev.override.yml:24)
+   - resolveRedisConfig() (create-redis-client.ts:34): REDIS_URL 우선 → REDIS_HOST+PORT 폴백
+   검증: grep -rn "redis://localhost:6380" apps/backend/test/ → 14 hit
+
+2. admin@example.com DB row 부재
+   - auth.service.ts:194: findByEmail('admin@example.com') → null
+   - auth.service.ts:204: 폴백 id: '' → JWT sub 빈 문자열
+   - 보호 엔드포인트: users.findOne(id='') → 500 (invalid uuid)
+   - 유일한 해결 사례: history-card-export.e2e-spec.ts:44-59 (인라인 upsert)
+   검증: 모든 E2E 에러 로그 "params: ['', 1]" 확인
+
+3. SSOT 미사용 (기존 자산이 있음에도)
+   - packages/shared-constants/src/test-users.ts: 16명 × 3사이트 × 5역할 SSOT 정의
+   - apps/backend/src/database/seed-test-new.ts: 300+ 레코드 전체 시드
+   - test-auth.controller.ts:48-77: /auth/test-login?email= 엔드포인트 (DB 기반 JWT)
+   - 프론트엔드 global-setup.ts:95: seed-test-new.ts 실행으로 해결 완료
+   검증: grep -rn "DEFAULT_ROLE_EMAILS\|loginAsRole" apps/backend/test/ → 0 hit
+
+아키텍처 해결 (3 레이어):
+
+Layer 1 — 환경변수 중앙화 (setupFiles)
+  - apps/backend/test/e2e-env.ts 신규: 모든 env 설정 (REDIS_HOST/PORT, JWT, Azure AD, DEV_*_PASSWORD)
+  - 핵심: delete process.env.REDIS_URL → resolveRedisConfig()이 REDIS_HOST+PORT에서 해석
+  - jest-e2e.json: "setupFiles": ["<rootDir>/e2e-env.ts"] 추가 (테스트 파일 로드 전 실행)
+  - 20개 spec 파일에서 process.env 블록 전량 삭제
+
+Layer 2 — 글로벌 시드 (globalSetup)
+  - apps/backend/test/global-setup.ts 신규: seed-test-new.ts를 execFileSync로 1회 실행
+  - jest-e2e.json: "globalSetup": "<rootDir>/global-setup.ts" 추가
+  - 인라인 admin upsert 로직 삭제 (history-card-export.e2e-spec.ts:44-59 — 글로벌 시드가 대체)
+  - ⚠️ 시나리오 전용 DB 셋업은 유지 (삭제 대상 아님):
+    site-permissions.e2e-spec.ts:75-120 (크로스 사이트 장비 생성)
+    equipment-approval.e2e-spec.ts:83-95 (승인 워크플로우 테스트 데이터)
+    team-filter.e2e-spec.ts:43 (팀 필터 전용 데이터)
+    → 이들은 admin upsert가 아닌 테스트 시나리오별 fixture이므로 반드시 보존
+
+Layer 3 — 인증 헬퍼 SSOT화
+  - apps/backend/test/helpers/test-auth.ts 신규:
+    loginAsRole(app, role), loginAsEmail(app, email)
+    getLabManagerToken(app), getSystemAdminToken(app), getTechManagerToken(app), getTestEngineerToken(app)
+  - SSOT: DEFAULT_ROLE_EMAILS (shared-constants) → /auth/test-login 엔드포인트
+  - jest-e2e.json moduleNameMapper에 @equipment-management/shared-constants 추가 (현재 누락)
+  - 이메일 마이그레이션: admin@example.com → lab.manager@example.com, manager@ → tech.manager@, user@ → test.engineer@
+  - 크로스 사이트: site-permissions/shared-equipment 등은 uiwang(user1@)/pyeongtaek(test.engineer.pyeongtaek@) 토큰 병행
+
+추가 설정:
+  - jest-e2e.json: "testTimeout": 60000 (Nest bootstrap + DB seed + 20개 suite 순차 실행 대응)
+  - jest-e2e.json: "maxWorkers": 1 (MUST — 단일 DB 아키텍처에서 병렬 실행 시 시드 데이터 오염 방지)
+  - jest-setup.ts: 환경변수 블록 삭제 (e2e-env.ts로 이관), 커스텀 matcher만 유지
+
+⚠️ auth.e2e-spec.ts 특수 처리:
+  - 이 파일은 /auth/login 엔드포인트 자체를 테스트 → 레거시 이메일(admin@example.com) + 비밀번호(admin123)가 테스트 subject로 필요
+  - process.env 블록 삭제, 인증 헬퍼 전환은 동일 적용
+  - 단, 로그인 테스트 케이스에서 사용하는 레거시 이메일/비밀번호는 테스트 입력값이므로 유지
+  - 인증된 API 호출이 필요한 케이스만 SSOT 헬퍼(getLabManagerToken 등) 사용
+
+수정 파일: 신규 3 + 수정 22 = 25 파일 (jest-e2e.json + jest-setup.ts + 20 spec + 3 신규)
+미변경: docker-compose.yml(6379 유지), auth.service.ts(dev 편의용), test-users.ts/seed-test-new.ts(이미 SSOT)
+
+검증 (MUST — 전부 통과해야 완료):
+  - pnpm --filter backend exec tsc --noEmit 통과
+  - grep -rn "redis://localhost:6380" apps/backend/test/ → 0 hit
+  - grep -rn "process.env.REDIS_URL" apps/backend/test/*.e2e-spec.ts → 0 hit (e2e-env.ts 제외)
+  - grep -rn "admin@example.com" apps/backend/test/*.e2e-spec.ts → 0 hit (auth.e2e-spec.ts의 테스트 입력값 제외)
+  - jest-e2e.json에 "maxWorkers": 1 확인
+  - pnpm --filter backend run test:e2e -- --listTests → 20개 파일 나열
+  - pnpm --filter backend run test:e2e -- --testPathPattern=equipment.e2e-spec → PASS (스모크)
+  - pnpm --filter backend run test:e2e → 전체 20 suite 통과
+```
 
 ## ~~70차 신규 — 3-agent 병렬 스캔 (4건, 2026-04-15)~~ ✅ 전부 완료 (2026-04-15, Mode 1 harness)
 
