@@ -231,25 +231,13 @@ describe('Site Permissions (e2e)', () => {
 
     beforeAll(async () => {
       if (adminToken) {
-        const rfEquipmentResponse = await request(ctx.app.getHttpServer())
-          .post('/equipment')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send({
-            name: 'E2E Test RF Equipment',
-            managementNumber: `E2E-RF-${Date.now()}`,
-            modelName: 'RF Test Model',
-            manufacturer: 'RF Manufacturer',
-            serialNumber: `SN-RF-${Date.now()}`,
-            status: 'available',
-            location: 'RF Test Location',
-            initialLocation: 'RF Test Location',
-            site: 'suwon',
-            approvalStatus: 'approved',
-          });
-
-        if (rfEquipmentResponse.status === 201 && rfEquipmentResponse.body?.id) {
-          rfEquipmentUuid = rfEquipmentResponse.body.id;
-        }
+        rfEquipmentUuid = await createTestEquipment(ctx.app, adminToken, {
+          name: 'E2E Test RF Equipment',
+          modelName: 'RF Test Model',
+          manufacturer: 'RF Manufacturer',
+          location: 'RF Test Location',
+          initialLocation: 'RF Test Location',
+        });
       }
     });
 

@@ -3,6 +3,7 @@
 import request from 'supertest';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
+import { createTestEquipment } from './helpers/test-fixtures';
 
 describe('SharedEquipmentController (e2e)', () => {
   let ctx: TestAppContext;
@@ -180,38 +181,31 @@ describe('SharedEquipmentController (e2e)', () => {
     });
 
     it('should allow updating normal equipment', async () => {
-      const normalEquipmentResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+      const normalEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
+
+      // 최신 version 조회
+      const detail = await request(ctx.app.getHttpServer())
+        .get(`/equipment/${normalEquipmentUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          name: `E2E 일반장비 수정 테스트 ${Date.now()}`,
-          managementNumber: `NORMAL-E2E-${Date.now()}`,
-          site: 'suwon',
-          initialLocation: 'Test Location',
-          status: 'available',
-        });
+        .expect(200);
 
-      if (normalEquipmentResponse.status === 201 && normalEquipmentResponse.body?.id) {
-        const normalEquipmentUuid = normalEquipmentResponse.body.id;
+      const updateDto = {
+        name: '수정된 일반장비 이름',
+        location: 'Updated Location',
+        approvalStatus: 'approved',
+        version: detail.body.version,
+      };
 
-        const updateDto = {
-          name: '수정된 일반장비 이름',
-          location: 'Updated Location',
-          approvalStatus: 'approved',
-          version: normalEquipmentResponse.body.version ?? 1,
-        };
+      const updateResponse = await request(ctx.app.getHttpServer())
+        .patch(`/equipment/${normalEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(updateDto);
 
-        const updateResponse = await request(ctx.app.getHttpServer())
-          .patch(`/equipment/${normalEquipmentUuid}`)
-          .set('Authorization', `Bearer ${accessToken}`)
-          .send(updateDto);
+      expect([200, 201]).toContain(updateResponse.status);
 
-        expect([200, 201]).toContain(updateResponse.status);
-
-        await request(ctx.app.getHttpServer())
-          .delete(`/equipment/${normalEquipmentUuid}`)
-          .set('Authorization', `Bearer ${accessToken}`);
-      }
+      await request(ctx.app.getHttpServer())
+        .delete(`/equipment/${normalEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`);
     });
   });
 
@@ -232,26 +226,13 @@ describe('SharedEquipmentController (e2e)', () => {
     });
 
     it('should allow deleting normal equipment', async () => {
-      const normalEquipmentResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
-        .set('Authorization', `Bearer ${accessToken}`)
-        .send({
-          name: `E2E 일반장비 삭제 테스트 ${Date.now()}`,
-          managementNumber: `NORMAL-DEL-E2E-${Date.now()}`,
-          site: 'suwon',
-          initialLocation: 'Test Location',
-          status: 'available',
-        });
+      const normalEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
 
-      if (normalEquipmentResponse.status === 201 && normalEquipmentResponse.body?.id) {
-        const normalEquipmentUuid = normalEquipmentResponse.body.id;
+      const deleteResponse = await request(ctx.app.getHttpServer())
+        .delete(`/equipment/${normalEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`);
 
-        const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/equipment/${normalEquipmentUuid}`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect([200, 202]).toContain(deleteResponse.status);
-      }
+      expect([200, 202]).toContain(deleteResponse.status);
     });
   });
 

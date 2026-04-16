@@ -3,6 +3,7 @@
 import request from 'supertest';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { createTestEquipment } from './helpers/test-fixtures';
 
 describe('AuditLogsController (e2e)', () => {
   let ctx: TestAppContext;
@@ -161,32 +162,18 @@ describe('AuditLogsController (e2e)', () => {
 
   describe('Audit Log Integration', () => {
     it('should create audit log when equipment is created', async () => {
-      const equipmentResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
-        .set('Authorization', `Bearer ${adminAccessToken}`)
-        .send({
-          name: 'Audit Test Equipment',
-          managementNumber: `AUDIT-TEST-${Date.now()}`,
-          modelName: 'Test Model',
-          manufacturer: 'Test Manufacturer',
-          status: 'available',
-          site: 'suwon',
-          initialLocation: 'Test Location',
-          approvalStatus: 'approved',
-        });
+      await createTestEquipment(ctx.app, adminAccessToken);
 
-      if (equipmentResponse.status === 201) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-        const logsResponse = await request(ctx.app.getHttpServer())
-          .get('/audit-logs?entityType=equipment&action=create&limit=5')
-          .set('Authorization', `Bearer ${adminAccessToken}`);
+      const logsResponse = await request(ctx.app.getHttpServer())
+        .get('/audit-logs?entityType=equipment&action=create&limit=5')
+        .set('Authorization', `Bearer ${adminAccessToken}`);
 
-        if (logsResponse.status === 200 && logsResponse.body.items.length > 0) {
-          const recentLog = logsResponse.body.items[0];
-          expect(recentLog.action).toBe('create');
-          expect(recentLog.entityType).toBe('equipment');
-        }
+      if (logsResponse.status === 200 && logsResponse.body.items.length > 0) {
+        const recentLog = logsResponse.body.items[0];
+        expect(recentLog.action).toBe('create');
+        expect(recentLog.entityType).toBe('equipment');
       }
     });
   });

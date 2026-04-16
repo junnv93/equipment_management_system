@@ -1,9 +1,9 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
-import * as crypto from 'crypto';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
 
 describe('CalibrationPlansController (e2e)', () => {
@@ -19,29 +19,15 @@ describe('CalibrationPlansController (e2e)', () => {
     ctx = await createTestApp();
     accessToken = await loginAs(ctx.app, 'admin');
 
-    // 테스트용 외부교정 장비 생성
-    const equipmentData = {
-      name: `Calibration Plan Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
-      managementNumber: `CP-MN-${crypto.randomBytes(8).toString('hex')}`,
-      status: 'available',
+    const equipmentId = await createTestEquipment(ctx.app, accessToken, {
       site: TEST_SITE,
       managementMethod: 'external_calibration',
       calibrationCycle: 12,
       lastCalibrationDate: new Date(`${TEST_YEAR - 1}-06-01`).toISOString(),
       nextCalibrationDate: new Date(`${TEST_YEAR}-06-01`).toISOString(),
       calibrationAgency: 'Test Agency',
-      initialLocation: 'Test Location',
-      approvalStatus: 'approved',
-    };
-
-    const equipmentResponse = await request(ctx.app.getHttpServer())
-      .post('/equipment')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .send(equipmentData);
-
-    if (equipmentResponse.status === 201) {
-      tracker.track('equipment', equipmentResponse.body.id);
-    }
+    });
+    tracker.track('equipment', equipmentId);
   });
 
   afterAll(async () => {
