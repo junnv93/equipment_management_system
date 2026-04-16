@@ -82,8 +82,11 @@ services:
 
   rustfs:
     <<: *default-security
-    # Digest 핀닝 — SSOT. 업그레이드 시 이 줄만 바꾸면 전 환경 전파.
-    image: rustfs/rustfs@sha256:f1b59053332cdaa00c6a0d08b43f02fb2d12bf2749098b6d9d5eed693b39b695
+    # 커스텀 이미지 — healthcheck 스크립트 내장, bind mount 불필요
+    # base image digest는 Dockerfile ARG로 관리 (SSOT)
+    build:
+      context: ..
+      dockerfile: rustfs/Dockerfile
     restart: unless-stopped
     stop_grace_period: 30s
     read_only: true
@@ -97,8 +100,6 @@ services:
       RUSTFS_VOLUMES: /data
       RUSTFS_CONSOLE_ENABLE: 'true'
       RUSTFS_CONSOLE_ADDRESS: ':9001'
-    volumes:
-      - ../healthchecks:/healthchecks:ro
     healthcheck:
       <<: *default-healthcheck
       test: ['CMD', '/healthchecks/rustfs-liveness.sh']
