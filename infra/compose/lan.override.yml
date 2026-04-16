@@ -26,8 +26,12 @@ services:
     volumes:
       - /var/lib/equipment-system/postgres:/var/lib/postgresql/data
       - /var/lib/equipment-system/backups:/backups
+    networks:
+      - data-network
 
   redis:
+    networks:
+      - data-network
     command:
       - redis-server
       - --appendonly
@@ -47,6 +51,8 @@ services:
       RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
     volumes:
       - /var/lib/equipment-system/rustfs:/data
+    networks:
+      - data-network
 
   backend:
     <<: *security
@@ -89,6 +95,9 @@ services:
         condition: service_healthy
       rustfs:
         condition: service_healthy
+    networks:
+      - app-network
+      - data-network
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/monitoring/health || exit 1']
       interval: 30s
@@ -122,6 +131,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - app-network
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:3000/api/health || exit 1']
       interval: 30s
@@ -153,6 +164,8 @@ services:
         condition: service_healthy
       backend:
         condition: service_healthy
+    networks:
+      - app-network
     logging:
       driver: 'json-file'
       options:
@@ -175,6 +188,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - data-network
     restart: 'no'
     profiles:
       - migration
+
+networks:
+  # DB 계층 — postgres/redis/rustfs 격리, 인터넷 접근 차단
+  data-network:
+    internal: true
+  # 앱 계층 — backend/frontend/nginx, Azure AD 외부 호출 허용
+  app-network:

@@ -29,7 +29,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - app-network
+      - data-network
     deploy:
       resources:
         limits:
@@ -53,7 +53,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - app-network
+      - data-network
     deploy:
       resources:
         limits:
@@ -70,7 +70,7 @@ services:
     volumes:
       - rustfs_data:/data
     networks:
-      - app-network
+      - data-network
     deploy:
       resources:
         limits:
@@ -168,6 +168,7 @@ services:
         condition: service_healthy
     networks:
       - app-network
+      - data-network
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO- http://localhost:3001/api/monitoring/health || exit 1']
       interval: 30s
@@ -463,15 +464,21 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - app-network
+      - data-network
     restart: 'no'
     profiles:
       - migration
 
 networks:
-  app-network:
+  # DB 계층 — postgres/redis/rustfs 격리, 인터넷 접근 차단
+  data-network:
     internal: true
+  # 앱 계층 — backend(SMTP 외부 발신), frontend, nginx
+  # internal: false (기본값) — backend가 SMTP 릴레이 등 외부 서비스 호출 가능
+  app-network:
+  # 퍼블릭 계층 — nginx Let's Encrypt, certbot 갱신
   web-public:
+  # 모니터링 계층 — prometheus/grafana/loki 등 격리
   monitoring-network:
     internal: true
 
