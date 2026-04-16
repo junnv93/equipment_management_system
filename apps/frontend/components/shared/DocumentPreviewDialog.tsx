@@ -34,6 +34,11 @@ export function DocumentPreviewDialog({
 
   const loadPreview = useCallback(async () => {
     if (!doc) return;
+    // retry 시 이전 blob URL 누수 방지 — 새 요청 전 기존 blob revoke
+    if (blobUrlRef.current) {
+      window.URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
     setIsLoading(true);
     setError(null);
     try {

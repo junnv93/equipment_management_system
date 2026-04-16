@@ -8,6 +8,7 @@ interface AuthProvidersState {
   hasCredentials: boolean;
   providers: Awaited<ReturnType<typeof getProviders>>;
   isLoading: boolean;
+  error: Error | null;
 }
 
 interface AuthProvidersProps {
@@ -15,7 +16,11 @@ interface AuthProvidersProps {
 }
 
 export function useAuthProviders(): AuthProvidersState {
-  const { data: providers, isLoading } = useQuery({
+  const {
+    data: providers,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['auth', 'providers'],
     queryFn: getProviders,
     staleTime: Infinity, // 런타임에 변경되지 않는 서버 설정값
@@ -26,6 +31,7 @@ export function useAuthProviders(): AuthProvidersState {
     hasCredentials: !!providers?.credentials,
     providers: providers ?? null,
     isLoading,
+    error,
   };
 }
 
