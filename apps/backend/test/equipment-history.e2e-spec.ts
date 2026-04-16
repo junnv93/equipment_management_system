@@ -11,11 +11,6 @@ describe('EquipmentHistoryController (e2e)', () => {
   let ctx: TestAppContext;
   let accessToken: string;
   let testEquipmentUuid: string;
-  const createdHistoryIds: { location: string[]; maintenance: string[]; incident: string[] } = {
-    location: [],
-    maintenance: [],
-    incident: [],
-  };
   const tracker = new ResourceTracker();
 
   beforeAll(async () => {
@@ -28,29 +23,6 @@ describe('EquipmentHistoryController (e2e)', () => {
   });
 
   afterAll(async () => {
-    // 이력 삭제 (전용 엔드포인트)
-    if (ctx?.app && accessToken) {
-      try {
-        for (const historyId of createdHistoryIds.location) {
-          await request(ctx.app.getHttpServer())
-            .delete(`/equipment/location-history/${historyId}`)
-            .set('Authorization', `Bearer ${accessToken}`);
-        }
-        for (const historyId of createdHistoryIds.maintenance) {
-          await request(ctx.app.getHttpServer())
-            .delete(`/equipment/maintenance-history/${historyId}`)
-            .set('Authorization', `Bearer ${accessToken}`);
-        }
-        for (const historyId of createdHistoryIds.incident) {
-          await request(ctx.app.getHttpServer())
-            .delete(`/equipment/incident-history/${historyId}`)
-            .set('Authorization', `Bearer ${accessToken}`);
-        }
-      } catch {
-        // 정리 실패는 무시
-      }
-    }
-
     await tracker.cleanupAll(ctx.app, accessToken);
     await closeTestApp(ctx?.app);
   });
@@ -75,7 +47,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         expect(response.body.newLocation).toBe(historyData.newLocation);
         expect(response.body.notes).toBe(historyData.notes);
 
-        createdHistoryIds.location.push(response.body.id);
+        tracker.track('location-history', response.body.id);
       });
 
       it('should fail without required newLocation field', async () => {
@@ -129,13 +101,13 @@ describe('EquipmentHistoryController (e2e)', () => {
           .post(`/equipment/${testEquipmentUuid}/location-history`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData1);
-        createdHistoryIds.location.push(res1.body.id);
+        tracker.track('location-history', res1.body.id);
 
         const res2 = await request(ctx.app.getHttpServer())
           .post(`/equipment/${testEquipmentUuid}/location-history`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData2);
-        createdHistoryIds.location.push(res2.body.id);
+        tracker.track('location-history', res2.body.id);
 
         const response = await request(ctx.app.getHttpServer())
           .get(`/equipment/${testEquipmentUuid}/location-history`)
@@ -206,7 +178,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         expect(response.body).toHaveProperty('id');
         expect(response.body.content).toBe(historyData.content);
 
-        createdHistoryIds.maintenance.push(response.body.id);
+        tracker.track('maintenance-history', response.body.id);
       });
 
       it('should fail without required content field', async () => {
@@ -278,7 +250,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         expect(response.body.incidentType).toBe('damage');
         expect(response.body.content).toBe(historyData.content);
 
-        createdHistoryIds.incident.push(response.body.id);
+        tracker.track('incident-history', response.body.id);
       });
 
       it('should create malfunction incident successfully', async () => {
@@ -296,7 +268,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         expect(response.status).toBe(201);
         expect(response.body.incidentType).toBe('malfunction');
 
-        createdHistoryIds.incident.push(response.body.id);
+        tracker.track('incident-history', response.body.id);
       });
 
       it('should create change incident successfully', async () => {
@@ -314,7 +286,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         expect(response.status).toBe(201);
         expect(response.body.incidentType).toBe('change');
 
-        createdHistoryIds.incident.push(response.body.id);
+        tracker.track('incident-history', response.body.id);
       });
 
       it('should create repair incident successfully', async () => {
@@ -332,7 +304,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         expect(response.status).toBe(201);
         expect(response.body.incidentType).toBe('repair');
 
-        createdHistoryIds.incident.push(response.body.id);
+        tracker.track('incident-history', response.body.id);
       });
 
       it('should fail without required incidentType field', async () => {

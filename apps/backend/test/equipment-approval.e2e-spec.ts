@@ -19,30 +19,13 @@ describe('Equipment Approval Process (e2e)', () => {
   let sql: postgres.Sql;
 
   beforeAll(async () => {
-    try {
-      await fs.mkdir(testUploadDir, { recursive: true });
-    } catch {
-      // 이미 존재하는 경우 무시
-    }
-
-    // 테스트 DB에 테스트 사용자 시드 (승인 프로세스에서 외래 키 제약 조건 충족을 위해)
+    await fs.mkdir(testUploadDir, { recursive: true });
     sql = await seedTestUsers();
-
     ctx = await createTestApp();
 
     siteAdminToken = await loginAs(ctx.app, 'admin');
-
-    try {
-      technicalManagerToken = await loginAs(ctx.app, 'manager');
-    } catch {
-      technicalManagerToken = siteAdminToken;
-    }
-
-    try {
-      testOperatorToken = await loginAs(ctx.app, 'user');
-    } catch {
-      testOperatorToken = siteAdminToken;
-    }
+    technicalManagerToken = await loginAs(ctx.app, 'manager').catch(() => siteAdminToken);
+    testOperatorToken = await loginAs(ctx.app, 'user').catch(() => siteAdminToken);
   });
 
   afterAll(async () => {

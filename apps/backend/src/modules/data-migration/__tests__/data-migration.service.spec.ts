@@ -16,7 +16,6 @@ import { ExcelParserService } from '../services/excel-parser.service';
 import { MigrationValidatorService } from '../services/migration-validator.service';
 import { HistoryValidatorService } from '../services/history-validator.service';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
-import type { MulterFile } from '../../../types/common.types';
 
 const createSelectChain = (finalValue: unknown): Record<string, jest.Mock> => {
   const chain: Record<string, jest.Mock> = {};
@@ -44,33 +43,6 @@ const createSelectChain = (finalValue: unknown): Record<string, jest.Mock> => {
   (chain as Record<string, unknown>).then = (resolve: (v: unknown) => void) => resolve(finalValue);
   return chain;
 };
-
-const MOCK_USER_ID = 'user-uuid-1';
-const MOCK_SESSION_ID = 'session-uuid-1';
-
-const MOCK_VALID_ROW = {
-  rowNumber: 2,
-  status: 'valid' as const,
-  data: {
-    managementNumber: 'SUW-E0001',
-    name: '오실로스코프',
-    site: 'SUW',
-  },
-  errors: [],
-  warnings: [],
-  managementNumber: 'SUW-E0001',
-};
-
-function makeMockFile(name = 'test.xlsx'): MulterFile {
-  return {
-    fieldname: 'file',
-    originalname: name,
-    encoding: '7bit',
-    mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    buffer: Buffer.from('mock-excel'),
-    size: 1024,
-  } as MulterFile;
-}
 
 describe('DataMigrationService', () => {
   let service: DataMigrationService;
