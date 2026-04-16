@@ -6,6 +6,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import {
+  EquipmentCacheInvalidation,
+  DashboardCacheInvalidation,
+} from '@/lib/api/cache-invalidation';
+import {
   dataMigrationApi,
   type PreviewOptions,
   type ExecuteOptions,
@@ -39,13 +43,14 @@ function resolveExecuteErrorMessage(
  */
 export function usePreviewMigration() {
   const { toast } = useToast();
+  const t = useTranslations('data-migration');
 
   return useMutation<MultiSheetPreviewResult, Error, { file: File; options: PreviewOptions }>({
     mutationFn: ({ file, options }) => dataMigrationApi.previewEquipmentMigration(file, options),
     onError: (error) => {
       toast({
-        title: '파일 분석 실패',
-        description: getErrorMessage(error, '파일 업로드 또는 파싱 중 오류가 발생했습니다.'),
+        title: t('toast.previewErrorTitle'),
+        description: getErrorMessage(error, t('toast.previewErrorDescription')),
         variant: 'destructive',
       });
     },
@@ -56,7 +61,7 @@ export function usePreviewMigration() {
  * 멀티시트 Execute(Commit) mutation hook
  *
  * sessionId로 캐시된 Preview 결과를 DB에 일괄 INSERT.
- * 성공 시 equipment·dashboard 캐시를 무효화하여 목록/통계를 갱신.
+ * 성공 시 equipment·dashboard·이력 관련 캐시를 무효화하여 목록/통계를 갱신.
  */
 export function useExecuteMigration() {
   const queryClient = useQueryClient();
@@ -67,20 +72,22 @@ export function useExecuteMigration() {
     mutationFn: (options) => dataMigrationApi.executeEquipmentMigration(options),
     onSuccess: async (data) => {
       toast({
-        title: '마이그레이션 완료',
-        description: `장비 ${data.totalCreated}건이 등록되었습니다.`,
+        title: t('toast.executeSuccessTitle'),
+        description: t('toast.executeSuccessDescription', { count: data.totalCreated }),
       });
 
-      // equipment·dashboard 캐시 무효화 (등록 후 목록/통계 갱신)
+      // 장비·대시보드·이력 관련 캐시 전체 무효화
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.equipment.all }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all }),
+        EquipmentCacheInvalidation.invalidateAll(queryClient),
+        DashboardCacheInvalidation.invalidateAll(queryClient),
+        queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.nonConformances.all }),
       ]);
     },
     onError: (error) => {
       toast({
-        title: '마이그레이션 실패',
-        description: resolveExecuteErrorMessage(error, t, '데이터 등록 중 오류가 발생했습니다.'),
+        title: t('toast.executeErrorTitle'),
+        description: resolveExecuteErrorMessage(error, t, t('toast.executeErrorDescription')),
         variant: 'destructive',
       });
     },
@@ -92,13 +99,14 @@ export function useExecuteMigration() {
  */
 export function useDownloadErrorReport() {
   const { toast } = useToast();
+  const t = useTranslations('data-migration');
 
   return useMutation<void, Error, string>({
     mutationFn: (sessionId) => dataMigrationApi.downloadErrorReport(sessionId),
     onError: (error) => {
       toast({
-        title: '에러 리포트 다운로드 실패',
-        description: getErrorMessage(error, '다운로드 중 오류가 발생했습니다.'),
+        title: t('toast.errorReportFailedTitle'),
+        description: getErrorMessage(error, t('toast.errorReportFailedDescription')),
         variant: 'destructive',
       });
     },
@@ -110,13 +118,14 @@ export function useDownloadErrorReport() {
  */
 export function useDownloadMigrationTemplate() {
   const { toast } = useToast();
+  const t = useTranslations('data-migration');
 
   return useMutation<void, Error, void>({
     mutationFn: () => dataMigrationApi.downloadTemplate(),
     onError: (error) => {
       toast({
-        title: '템플릿 다운로드 실패',
-        description: getErrorMessage(error, '다운로드 중 오류가 발생했습니다.'),
+        title: t('toast.templateFailedTitle'),
+        description: getErrorMessage(error, t('toast.templateFailedDescription')),
         variant: 'destructive',
       });
     },

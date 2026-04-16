@@ -98,5 +98,17 @@
     "executeFailed": "데이터 등록에 실패했습니다.",
     "downloadFailed": "다운로드에 실패했습니다.",
     "sessionExpired": "세션이 만료되었습니다. 파일을 다시 업로드해주세요."
+  },
+  "toast": {
+    "previewErrorTitle": "파일 분석 실패",
+    "previewErrorDescription": "파일 업로드 또는 파싱 중 오류가 발생했습니다.",
+    "executeSuccessTitle": "마이그레이션 완료",
+    "executeSuccessDescription": "장비 {count}건이 등록되었습니다.",
+    "executeErrorTitle": "마이그레이션 실패",
+    "executeErrorDescription": "데이터 등록 중 오류가 발생했습니다.",
+    "errorReportFailedTitle": "에러 리포트 다운로드 실패",
+    "errorReportFailedDescription": "다운로드 중 오류가 발생했습니다.",
+    "templateFailedTitle": "템플릿 다운로드 실패",
+    "templateFailedDescription": "다운로드 중 오류가 발생했습니다."
   }
 }

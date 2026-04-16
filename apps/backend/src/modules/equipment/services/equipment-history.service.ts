@@ -139,14 +139,16 @@ export class EquipmentHistoryService {
    * 사용자가 존재하면 { id, name }을 반환하고, 존재하지 않으면 null을 반환합니다.
    */
   private async validateAndGetUser(
-    userId?: string
+    userId?: string,
+    queryRunner?: AppDatabase
   ): Promise<{ id: string; name: string | null } | null> {
     if (!userId) {
       return null;
     }
 
+    const executor = queryRunner ?? this.db;
     try {
-      const user = await this.db.query.users.findFirst({
+      const user = await executor.query.users.findFirst({
         where: eq(users.id, userId),
         columns: { id: true, name: true },
       });
@@ -387,7 +389,7 @@ export class EquipmentHistoryService {
   ): Promise<void> {
     if (entries.length === 0) return;
 
-    const validatedUser = await this.validateAndGetUser(userId);
+    const validatedUser = await this.validateAndGetUser(userId, tx);
     const batchValues = entries.map((entry) => ({
       equipmentId: entry.equipmentId,
       changedAt: new Date(entry.changedAt),

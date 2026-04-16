@@ -511,7 +511,7 @@ export class DataMigrationService {
   /**
    * 에러 리포트 Excel 버퍼 반환 (멀티시트 세션 기준)
    */
-  async getErrorReport(sessionId: string): Promise<Buffer> {
+  async getErrorReport(sessionId: string, userId: string): Promise<Buffer> {
     const session = this.cacheService.get<MultiSheetMigrationSession>(
       `${MULTI_SESSION_CACHE_KEY_PREFIX}${sessionId}`
     );
@@ -520,6 +520,13 @@ export class DataMigrationService {
       throw new NotFoundException({
         code: MigrationErrorCode.SESSION_NOT_FOUND,
         message: '에러 리포트 세션을 찾을 수 없습니다.',
+      });
+    }
+
+    if (session.userId !== userId) {
+      throw new ForbiddenException({
+        code: MigrationErrorCode.SESSION_OWNERSHIP_DENIED,
+        message: '본인이 생성한 마이그레이션 세션의 에러 리포트만 다운로드할 수 있습니다.',
       });
     }
 

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { DataMigrationService } from '../services/data-migration.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
@@ -141,7 +141,17 @@ describe('DataMigrationService', () => {
     it('세션이 없으면 NotFoundException을 던진다', async () => {
       mockCacheService.get.mockReturnValue(null);
 
-      await expect(service.getErrorReport('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getErrorReport('nonexistent', 'user-1')).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('세션 소유자가 아니면 ForbiddenException을 던진다', async () => {
+      mockCacheService.get.mockReturnValue({ userId: 'owner-id', sheets: [] });
+
+      await expect(service.getErrorReport('session-1', 'other-user')).rejects.toThrow(
+        ForbiddenException
+      );
     });
   });
 

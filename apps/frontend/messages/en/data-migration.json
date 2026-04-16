@@ -98,5 +98,17 @@
     "executeFailed": "Failed to register data.",
     "downloadFailed": "Download failed.",
     "sessionExpired": "Session expired. Please re-upload the file."
+  },
+  "toast": {
+    "previewErrorTitle": "File Analysis Failed",
+    "previewErrorDescription": "An error occurred during file upload or parsing.",
+    "executeSuccessTitle": "Migration Complete",
+    "executeSuccessDescription": "{count} equipment items have been registered.",
+    "executeErrorTitle": "Migration Failed",
+    "executeErrorDescription": "An error occurred during data registration.",
+    "errorReportFailedTitle": "Error Report Download Failed",
+    "errorReportFailedDescription": "An error occurred during download.",
+    "templateFailedTitle": "Template Download Failed",
+    "templateFailedDescription": "An error occurred during download."
   }
 }

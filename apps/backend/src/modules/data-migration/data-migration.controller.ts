@@ -153,9 +153,10 @@ export class DataMigrationController {
   @ApiResponse({ status: HttpStatus.OK, description: 'xlsx 파일 다운로드' })
   async downloadErrorReport(
     @Param('sessionId', ParseUUIDPipe) sessionId: string,
+    @Request() req: AuthenticatedRequest,
     @Res() res: Response
   ): Promise<void> {
-    const buffer = await this.dataMigrationService.getErrorReport(sessionId);
+    const buffer = await this.dataMigrationService.getErrorReport(sessionId, req.user.userId);
     const dateStr = new Date().toISOString().split('T')[0];
     res.setHeader(
       'Content-Type',
