@@ -17,6 +17,14 @@ import {
   INCIDENT_COLUMN_MAPPING,
 } from '../constants/incident-column-mapping';
 import { detectSheetType, type MigrationSheetType } from '../constants/sheet-config';
+import { MigrationErrorCode } from '@equipment-management/shared-constants';
+import {
+  SiteEnum,
+  ManagementMethodEnum,
+  CalibrationRequiredEnum,
+  REPAIR_RESULT_VALUES,
+  INCIDENT_TYPE_VALUES,
+} from '@equipment-management/schemas';
 
 export interface ParsedSheet {
   sheetType: MigrationSheetType;
@@ -45,7 +53,7 @@ export class ExcelParserService {
     const sheet = workbook.getWorksheet(1);
     if (!sheet) {
       throw new BadRequestException({
-        code: 'MIGRATION_EMPTY_FILE',
+        code: MigrationErrorCode.EMPTY_FILE,
         message: '파일에 시트가 없습니다.',
       });
     }
@@ -53,7 +61,7 @@ export class ExcelParserService {
     const rowCount = sheet.rowCount;
     if (rowCount < 2) {
       throw new BadRequestException({
-        code: 'MIGRATION_NO_DATA_ROWS',
+        code: MigrationErrorCode.NO_DATA_ROWS,
         message: '데이터 행이 없습니다. 헤더 행 포함 최소 2행이 필요합니다.',
       });
     }
@@ -71,7 +79,7 @@ export class ExcelParserService {
 
     if (columnIndexToHeader.size === 0) {
       throw new BadRequestException({
-        code: 'MIGRATION_NO_HEADERS',
+        code: MigrationErrorCode.NO_HEADERS,
         message: '헤더 행(1행)이 비어 있습니다.',
       });
     }
@@ -134,7 +142,7 @@ export class ExcelParserService {
 
     if (results.length === 0) {
       throw new BadRequestException({
-        code: 'MIGRATION_EMPTY_FILE',
+        code: MigrationErrorCode.EMPTY_FILE,
         message: '데이터가 있는 시트가 없습니다.',
       });
     }
@@ -464,20 +472,14 @@ export class ExcelParserService {
       content: '운반 중 케이블 손상',
     });
 
-    // ── 참고값 시트 ──────────────────────────────────────────────────────────
+    // ── 참고값 시트 (SSOT: enum 기반 동적 생성 — enum 추가 시 자동 반영) ──
     const refSheet = workbook.addWorksheet('참고값');
     refSheet.addRow(['필드명', '허용값']);
-    refSheet.addRow(['사이트(site)', 'suwon | uiwang | pyeongtaek']);
-    refSheet.addRow([
-      '관리방법(managementMethod)',
-      'external_calibration | self_inspection | not_applicable',
-    ]);
-    refSheet.addRow(['교정필요(calibrationRequired)', 'required | not_required']);
-    refSheet.addRow(['수리결과(repairResult)', 'completed(완료) | partial(부분) | failed(실패)']);
-    refSheet.addRow([
-      '사고유형(incidentType)',
-      'damage(손상) | malfunction(오작동) | change(변경) | repair(수리)',
-    ]);
+    refSheet.addRow(['사이트(site)', SiteEnum.options.join(' | ')]);
+    refSheet.addRow(['관리방법(managementMethod)', ManagementMethodEnum.options.join(' | ')]);
+    refSheet.addRow(['교정필요(calibrationRequired)', CalibrationRequiredEnum.options.join(' | ')]);
+    refSheet.addRow(['수리결과(repairResult)', REPAIR_RESULT_VALUES.join(' | ')]);
+    refSheet.addRow(['사고유형(incidentType)', INCIDENT_TYPE_VALUES.join(' | ')]);
     refSheet.addRow(['날짜 형식', 'YYYY-MM-DD 또는 YYYY.MM.DD']);
     refSheet.getColumn(1).width = 35;
     refSheet.getColumn(2).width = 70;

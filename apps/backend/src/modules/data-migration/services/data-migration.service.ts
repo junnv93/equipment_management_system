@@ -5,8 +5,11 @@ import {
   parseManagementNumber,
   EquipmentStatusEnum,
   ApprovalStatusValues,
+  CalibrationStatusEnum,
+  CalibrationApprovalStatusValues,
 } from '@equipment-management/schemas';
 import type { Site } from '@equipment-management/schemas';
+import { MigrationErrorCode } from '@equipment-management/shared-constants';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { calibrations } from '@equipment-management/db/schema/calibrations';
 import { repairHistory } from '@equipment-management/db/schema/repair-history';
@@ -18,11 +21,12 @@ import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { EquipmentHistoryService } from '../../equipment/services/equipment-history.service';
-import { calculateNextCalibrationDate, chunkArray } from '../../../common/utils';
+import {
+  calculateNextCalibrationDate,
+  chunkArray,
+  bulkInsertInChunks,
+} from '../../../common/utils';
 import type {
-  MigrationPreviewResult,
-  MigrationExecuteResult,
-  MigrationSession,
   MigrationRowPreview,
   MultiSheetPreviewResult,
   MultiSheetExecuteResult,
@@ -42,7 +46,6 @@ const EQUIPMENT_COLUMNS = new Set(Object.keys(getTableColumns(equipment)));
 /** 세션 캐시 TTL: 1시간 (ms) */
 const SESSION_TTL_MS = 3600 * 1000;
 /** SSOT: CACHE_KEY_PREFIXES.DATA_MIGRATION + 세그먼트 */
-const SESSION_CACHE_KEY_PREFIX = `${CACHE_KEY_PREFIXES.DATA_MIGRATION}session:`;
 const MULTI_SESSION_CACHE_KEY_PREFIX = `${CACHE_KEY_PREFIXES.DATA_MIGRATION}multi-session:`;
 
 /**
@@ -70,170 +73,6 @@ export class DataMigrationService {
     private readonly historyValidatorService: HistoryValidatorService
   ) {}
 
-  /** Preview (Dry-run) — 단일시트 하위 호환 */
-  async preview(
-    file: MulterFile,
-    dto: PreviewEquipmentMigrationDto,
-    userId: string
-  ): Promise<MigrationPreviewResult> {
-    const savedFile = await this.fileUploadService.saveFile(file, 'data-migration');
-    const rawRows = await this.excelParserService.parseBuffer(file.buffer);
-    const mappedRows = this.excelParserService.mapRows(rawRows);
-
-    const rowPreviews = await this.migrationValidatorService.validateBatch(mappedRows, {
-      autoGenerateManagementNumber: dto.autoGenerateManagementNumber ?? false,
-      defaultSite: dto.defaultSite,
-      skipDuplicates: dto.skipDuplicates ?? true,
-    });
-
-    const summary = this.buildSummary(rowPreviews);
-
-    // 인식되지 않은 컬럼 집계 (중복 제거)
-    const unmappedColumnsSet = new Set<string>();
-    for (const row of mappedRows) {
-      row.unmappedColumns.forEach((col) => unmappedColumnsSet.add(col));
-    }
-
-    const result: MigrationPreviewResult = {
-      sessionId: uuidv4(),
-      fileName: file.originalname,
-      totalRows: rawRows.length,
-      ...summary,
-      unmappedColumns: Array.from(unmappedColumnsSet),
-      rows: rowPreviews,
-    };
-
-    // 세션 캐시 저장
-    const session: MigrationSession = {
-      sessionId: result.sessionId,
-      userId,
-      filePath: savedFile.filePath,
-      originalFileName: file.originalname,
-      previewResult: result,
-      createdAt: new Date(),
-    };
-    this.cacheService.set(
-      `${SESSION_CACHE_KEY_PREFIX}${result.sessionId}`,
-      session,
-      SESSION_TTL_MS
-    );
-
-    this.logger.log(
-      `Preview complete: sessionId=${result.sessionId}, ` +
-        `total=${result.totalRows}, valid=${result.validRows}, ` +
-        `errors=${result.errorRows}, duplicates=${result.duplicateRows}`
-    );
-
-    return result;
-  }
-
-  /** Execute (Commit) — 단일시트 하위 호환 */
-  async execute(
-    dto: ExecuteEquipmentMigrationDto,
-    userId: string
-  ): Promise<MigrationExecuteResult> {
-    // 세션 조회
-    const session = this.cacheService.get<MigrationSession>(
-      `${SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`
-    );
-    if (!session) {
-      throw new NotFoundException({
-        code: 'MIGRATION_SESSION_NOT_FOUND',
-        message: '마이그레이션 세션을 찾을 수 없습니다. 파일을 다시 업로드하세요.',
-      });
-    }
-
-    if (session.userId !== userId) {
-      throw new ForbiddenException({
-        code: 'MIGRATION_SESSION_OWNERSHIP_DENIED',
-        message: '본인이 생성한 마이그레이션 세션만 실행할 수 있습니다.',
-      });
-    }
-
-    // 유효 행 추출
-    const validRows = this.migrationValidatorService.filterValidRows(
-      session.previewResult.rows,
-      dto.selectedRows
-    );
-
-    if (validRows.length === 0) {
-      return {
-        sessionId: dto.sessionId,
-        createdCount: 0,
-        skippedCount: session.previewResult.duplicateRows,
-        errorCount: session.previewResult.errorRows,
-        errors: session.previewResult.rows.filter((r) => r.status === 'error'),
-      };
-    }
-
-    let createdCount = 0;
-
-    // 단일 트랜잭션 — All-or-Nothing (개별 행 실패 시 전체 롤백)
-    await this.db.transaction(async (tx) => {
-      const locationEntries: Parameters<
-        typeof this.equipmentHistoryService.createLocationHistoryBatch
-      >[0] = [];
-
-      const chunks = chunkArray(validRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
-      for (const chunk of chunks) {
-        const entities = chunk.map(
-          (row) => this.buildEntityFromRow(row, userId) as typeof equipment.$inferInsert
-        );
-        const createdRows = await tx
-          .insert(equipment)
-          .values(entities)
-          .returning({ id: equipment.id, managementNumber: equipment.managementNumber });
-
-        for (let i = 0; i < chunk.length; i++) {
-          const row = chunk[i];
-          const created = createdRows[i];
-          if (row.data.initialLocation || row.data.location) {
-            locationEntries.push({
-              equipmentId: created.id,
-              changedAt: (
-                (row.data.installationDate as Date | undefined) ?? new Date()
-              ).toISOString(),
-              newLocation: (row.data.initialLocation || row.data.location) as string,
-              previousLocation: null,
-              notes: '데이터 마이그레이션',
-            });
-          }
-        }
-      }
-
-      await this.equipmentHistoryService.createLocationHistoryBatch(locationEntries, userId, tx);
-      createdCount = validRows.length;
-    });
-
-    // 장비 목록 + 대시보드 캐시 무효화 (대량 등록으로 KPI 변경됨)
-    await Promise.all([
-      this.cacheInvalidationHelper.invalidateEquipmentLists(),
-      this.cacheInvalidationHelper.invalidateAllDashboard(),
-    ]);
-
-    // 세션 캐시 삭제
-    this.cacheService.delete(`${SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`);
-
-    const skippedCount =
-      session.previewResult.totalRows - validRows.length - session.previewResult.errorRows;
-
-    this.logger.log(
-      `Execute complete: sessionId=${dto.sessionId}, created=${createdCount}, skipped=${skippedCount}`
-    );
-
-    const errorRows = session.previewResult.rows.filter(
-      (r) => r.status === 'error' || r.status === 'duplicate'
-    );
-
-    return {
-      sessionId: dto.sessionId,
-      createdCount,
-      skippedCount,
-      errorCount: errorRows.length,
-      errors: errorRows,
-    };
-  }
-
   /** 멀티시트 Preview (Dry-run): 파싱 → 시트별 검증(장비/이력) → sessionId 발급 + 캐시 저장 */
   async previewMultiSheet(
     file: MulterFile,
@@ -245,7 +84,7 @@ export class DataMigrationService {
     // 비-시스템관리자: defaultSite는 반드시 자신의 사이트와 일치해야 함
     if (!isSystemAdmin && userSite && dto.defaultSite && dto.defaultSite !== userSite) {
       throw new ForbiddenException({
-        code: 'MIGRATION_SITE_ACCESS_DENIED',
+        code: MigrationErrorCode.SITE_ACCESS_DENIED,
         message: '자신의 사이트 데이터만 마이그레이션할 수 있습니다.',
       });
     }
@@ -311,6 +150,29 @@ export class DataMigrationService {
         );
       }
 
+      // DB 중복 검사: 기존 장비 참조 행만 대상 (신규 장비는 DB에 없으므로 제외)
+      const existingMgmtNums = [
+        ...new Set(
+          rowPreviews
+            .filter(
+              (r) =>
+                (r.status === 'valid' || r.status === 'warning') &&
+                r.managementNumber &&
+                !equipmentMgmtNumbers.has(r.managementNumber)
+            )
+            .map((r) => r.managementNumber!)
+        ),
+      ];
+
+      if (existingMgmtNums.length > 0) {
+        const previewMgmtNumToId = await this.resolveExistingMgmtNumToId(existingMgmtNums);
+        rowPreviews = await this.markPreviewHistoryDuplicates(
+          rowPreviews,
+          parsedSheet.sheetType,
+          previewMgmtNumToId
+        );
+      }
+
       const summary = this.buildSummary(rowPreviews);
       sheetResults.push({
         sheetType: parsedSheet.sheetType,
@@ -371,14 +233,14 @@ export class DataMigrationService {
     );
     if (!session) {
       throw new NotFoundException({
-        code: 'MIGRATION_SESSION_NOT_FOUND',
+        code: MigrationErrorCode.SESSION_NOT_FOUND,
         message: '마이그레이션 세션을 찾을 수 없습니다. 파일을 다시 업로드하세요.',
       });
     }
 
     if (session.userId !== userId) {
       throw new ForbiddenException({
-        code: 'MIGRATION_SESSION_OWNERSHIP_DENIED',
+        code: MigrationErrorCode.SESSION_OWNERSHIP_DENIED,
         message: '본인이 생성한 마이그레이션 세션만 실행할 수 있습니다.',
       });
     }
@@ -484,15 +346,29 @@ export class DataMigrationService {
       for (const sheet of session.sheets) {
         if (sheet.sheetType !== 'calibration') continue;
 
-        const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
+        const candidateRows = sheet.rows.filter(
+          (r) => r.status === 'valid' || r.status === 'warning'
+        );
         const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
 
+        // DB 중복 검사: (equipmentId, calibrationDate) 동일 레코드 차단
+        const { toInsert: calToInsert, duplicates: calDuplicates } =
+          await this.filterCalibrationDuplicates(candidateRows, mgmtNumToId, (ids) =>
+            tx
+              .select({
+                equipmentId: calibrations.equipmentId,
+                calibrationDate: calibrations.calibrationDate,
+              })
+              .from(calibrations)
+              .where(inArray(calibrations.equipmentId, ids))
+          );
+        sheetErrors.push(...calDuplicates);
+
         const { createdCount, errors } = await this.insertHistoryBatch(
-          tx,
-          calibrations,
-          validRows,
+          calToInsert,
           mgmtNumToId,
-          (row, equipmentId) => this.buildCalibrationValues(row, equipmentId, userId)
+          (row, equipmentId) => this.buildCalibrationValues(row, equipmentId, userId),
+          (chunk) => tx.insert(calibrations).values(chunk as (typeof calibrations.$inferInsert)[])
         );
         sheetErrors.push(...errors);
 
@@ -511,15 +387,29 @@ export class DataMigrationService {
       for (const sheet of session.sheets) {
         if (sheet.sheetType !== 'repair') continue;
 
-        const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
+        const candidateRows = sheet.rows.filter(
+          (r) => r.status === 'valid' || r.status === 'warning'
+        );
         const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
 
+        // DB 중복 검사: (equipmentId, repairDate) 동일 레코드 차단
+        const { toInsert: repairToInsert, duplicates: repairDuplicates } =
+          await this.filterRepairDuplicates(candidateRows, mgmtNumToId, (ids) =>
+            tx
+              .select({
+                equipmentId: repairHistory.equipmentId,
+                repairDate: repairHistory.repairDate,
+              })
+              .from(repairHistory)
+              .where(inArray(repairHistory.equipmentId, ids))
+          );
+        sheetErrors.push(...repairDuplicates);
+
         const { createdCount, errors } = await this.insertHistoryBatch(
-          tx,
-          repairHistory,
-          validRows,
+          repairToInsert,
           mgmtNumToId,
-          (row, equipmentId) => this.buildRepairValues(row, equipmentId, userId)
+          (row, equipmentId) => this.buildRepairValues(row, equipmentId, userId),
+          (chunk) => tx.insert(repairHistory).values(chunk as (typeof repairHistory.$inferInsert)[])
         );
         sheetErrors.push(...errors);
 
@@ -538,15 +428,33 @@ export class DataMigrationService {
       for (const sheet of session.sheets) {
         if (sheet.sheetType !== 'incident') continue;
 
-        const validRows = sheet.rows.filter((r) => r.status === 'valid' || r.status === 'warning');
+        const candidateRows = sheet.rows.filter(
+          (r) => r.status === 'valid' || r.status === 'warning'
+        );
         const sheetErrors: MigrationRowPreview[] = sheet.rows.filter((r) => r.status === 'error');
 
+        // DB 중복 검사: (equipmentId, occurredAt, incidentType) 동일 레코드 차단
+        const { toInsert: incidentToInsert, duplicates: incidentDuplicates } =
+          await this.filterIncidentDuplicates(candidateRows, mgmtNumToId, (ids) =>
+            tx
+              .select({
+                equipmentId: equipmentIncidentHistory.equipmentId,
+                occurredAt: equipmentIncidentHistory.occurredAt,
+                incidentType: equipmentIncidentHistory.incidentType,
+              })
+              .from(equipmentIncidentHistory)
+              .where(inArray(equipmentIncidentHistory.equipmentId, ids))
+          );
+        sheetErrors.push(...incidentDuplicates);
+
         const { createdCount, errors } = await this.insertHistoryBatch(
-          tx,
-          equipmentIncidentHistory,
-          validRows,
+          incidentToInsert,
           mgmtNumToId,
-          (row, equipmentId) => this.buildIncidentValues(row, equipmentId, userId)
+          (row, equipmentId) => this.buildIncidentValues(row, equipmentId, userId),
+          (chunk) =>
+            tx
+              .insert(equipmentIncidentHistory)
+              .values(chunk as (typeof equipmentIncidentHistory.$inferInsert)[])
         );
         sheetErrors.push(...errors);
 
@@ -601,34 +509,22 @@ export class DataMigrationService {
   }
 
   /**
-   * 에러 리포트 Excel 버퍼 반환
+   * 에러 리포트 Excel 버퍼 반환 (멀티시트 세션 기준)
    */
   async getErrorReport(sessionId: string): Promise<Buffer> {
-    // 단일시트 세션 우선 조회, 없으면 멀티시트 세션 폴백
-    const singleSession = this.cacheService.get<MigrationSession>(
-      `${SESSION_CACHE_KEY_PREFIX}${sessionId}`
-    );
-
-    if (singleSession) {
-      const errorRows = singleSession.previewResult.rows.filter(
-        (r) => r.status === 'error' || r.status === 'duplicate'
-      );
-      return this.excelParserService.generateErrorReport(this.toErrorReportRows(errorRows));
-    }
-
-    const multiSession = this.cacheService.get<MultiSheetMigrationSession>(
+    const session = this.cacheService.get<MultiSheetMigrationSession>(
       `${MULTI_SESSION_CACHE_KEY_PREFIX}${sessionId}`
     );
 
-    if (!multiSession) {
+    if (!session) {
       throw new NotFoundException({
-        code: 'MIGRATION_SESSION_NOT_FOUND',
+        code: MigrationErrorCode.SESSION_NOT_FOUND,
         message: '에러 리포트 세션을 찾을 수 없습니다.',
       });
     }
 
     const errorRows: MigrationRowPreview[] = [];
-    for (const sheet of multiSession.sheets) {
+    for (const sheet of session.sheets) {
       for (const row of sheet.rows) {
         if (row.status === 'error' || row.status === 'duplicate') errorRows.push(row);
       }
@@ -748,7 +644,7 @@ export class DataMigrationService {
     row: MigrationRowPreview,
     equipmentId: string,
     userId: string
-  ): object {
+  ): Partial<typeof calibrations.$inferInsert> {
     return {
       equipmentId,
       calibrationDate: row.data.calibrationDate as Date,
@@ -757,13 +653,17 @@ export class DataMigrationService {
       result: row.data.result as string | undefined,
       cost: row.data.cost !== undefined ? String(row.data.cost) : undefined,
       notes: row.data.notes as string | undefined,
-      status: 'completed',
-      approvalStatus: 'approved',
+      status: CalibrationStatusEnum.enum.completed,
+      approvalStatus: CalibrationApprovalStatusValues.APPROVED,
       registeredBy: userId,
     };
   }
 
-  private buildRepairValues(row: MigrationRowPreview, equipmentId: string, userId: string): object {
+  private buildRepairValues(
+    row: MigrationRowPreview,
+    equipmentId: string,
+    userId: string
+  ): Partial<typeof repairHistory.$inferInsert> {
     return {
       equipmentId,
       repairDate: row.data.repairDate as Date,
@@ -778,7 +678,7 @@ export class DataMigrationService {
     row: MigrationRowPreview,
     equipmentId: string,
     userId: string
-  ): object {
+  ): Partial<typeof equipmentIncidentHistory.$inferInsert> {
     return {
       equipmentId,
       occurredAt: row.data.occurredAt as Date,
@@ -788,15 +688,20 @@ export class DataMigrationService {
     };
   }
 
-  private async insertHistoryBatch(
-    tx: AppDatabase,
-    table: typeof calibrations | typeof repairHistory | typeof equipmentIncidentHistory,
+  /**
+   * 이력 행 배치 INSERT 헬퍼
+   *
+   * bulkInsertInChunks를 사용해 `unknown as` 캐스팅 없이 타입 안전하게 처리.
+   * 호출자가 table-specific insertFn을 제공 → union 타입 문제 회피.
+   */
+  private async insertHistoryBatch<T extends object>(
     rows: MigrationRowPreview[],
     mgmtNumToId: Map<string, string>,
-    buildValues: (row: MigrationRowPreview, equipmentId: string) => object
+    buildValues: (row: MigrationRowPreview, equipmentId: string) => T,
+    insertFn: (chunk: T[]) => Promise<unknown>
   ): Promise<{ createdCount: number; errors: MigrationRowPreview[] }> {
     const errors: MigrationRowPreview[] = [];
-    const validValues: object[] = [];
+    const validValues: T[] = [];
 
     for (const row of rows) {
       const mgmtNum = row.managementNumber;
@@ -810,7 +715,7 @@ export class DataMigrationService {
             {
               field: 'managementNumber',
               message: `장비를 찾을 수 없습니다: ${mgmtNum ?? '(없음)'}`,
-              code: 'EQUIPMENT_NOT_FOUND',
+              code: MigrationErrorCode.EQUIPMENT_NOT_FOUND,
             },
           ],
         });
@@ -822,14 +727,251 @@ export class DataMigrationService {
 
     if (validValues.length === 0) return { createdCount: 0, errors };
 
-    const chunks = chunkArray(validValues, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
-    for (const chunk of chunks) {
-      // union table 타입을 Drizzle에 전달; buildValues가 올바른 shape를 보장
-      await (tx.insert(table) as unknown as { values: (v: object[]) => Promise<void> }).values(
-        chunk
+    await bulkInsertInChunks(insertFn, validValues);
+
+    return { createdCount: validValues.length, errors };
+  }
+
+  // ── DB 중복 검사 헬퍼 ────────────────────────────────────────────────────────
+
+  /**
+   * 관리번호 배열 → 기존 장비 ID 맵 (Preview 단계 전용)
+   * Execute 단계에서는 mgmtNumToId가 이미 트랜잭션 내에서 구축됨.
+   */
+  private async resolveExistingMgmtNumToId(mgmtNumbers: string[]): Promise<Map<string, string>> {
+    if (mgmtNumbers.length === 0) return new Map();
+    const rows = await this.db
+      .select({ managementNumber: equipment.managementNumber, id: equipment.id })
+      .from(equipment)
+      .where(inArray(equipment.managementNumber, mgmtNumbers));
+    return new Map(rows.map((r) => [r.managementNumber, r.id]));
+  }
+
+  /**
+   * Preview 단계 이력 DB 중복 마킹 (기존 장비 참조 행 전용)
+   * valid/warning 행 중 DB에 이미 존재하는 항목을 'duplicate'로 변환.
+   */
+  private async markPreviewHistoryDuplicates(
+    rowPreviews: MigrationRowPreview[],
+    sheetType: 'calibration' | 'repair' | 'incident',
+    mgmtNumToId: Map<string, string>
+  ): Promise<MigrationRowPreview[]> {
+    let filterResult: { toInsert: MigrationRowPreview[]; duplicates: MigrationRowPreview[] };
+
+    if (sheetType === 'calibration') {
+      filterResult = await this.filterCalibrationDuplicates(rowPreviews, mgmtNumToId, (ids) =>
+        this.db
+          .select({
+            equipmentId: calibrations.equipmentId,
+            calibrationDate: calibrations.calibrationDate,
+          })
+          .from(calibrations)
+          .where(inArray(calibrations.equipmentId, ids))
+      );
+    } else if (sheetType === 'repair') {
+      filterResult = await this.filterRepairDuplicates(rowPreviews, mgmtNumToId, (ids) =>
+        this.db
+          .select({
+            equipmentId: repairHistory.equipmentId,
+            repairDate: repairHistory.repairDate,
+          })
+          .from(repairHistory)
+          .where(inArray(repairHistory.equipmentId, ids))
+      );
+    } else {
+      filterResult = await this.filterIncidentDuplicates(rowPreviews, mgmtNumToId, (ids) =>
+        this.db
+          .select({
+            equipmentId: equipmentIncidentHistory.equipmentId,
+            occurredAt: equipmentIncidentHistory.occurredAt,
+            incidentType: equipmentIncidentHistory.incidentType,
+          })
+          .from(equipmentIncidentHistory)
+          .where(inArray(equipmentIncidentHistory.equipmentId, ids))
       );
     }
 
-    return { createdCount: validValues.length, errors };
+    // 원본 순서(rowNumber) 유지하면서 duplicate 마킹 반영
+    const duplicateByRowNum = new Map(filterResult.duplicates.map((r) => [r.rowNumber, r]));
+    return rowPreviews.map((r) => duplicateByRowNum.get(r.rowNumber) ?? r);
+  }
+
+  /**
+   * 교정 이력 DB 중복 필터
+   * (equipmentId, calibrationDate) 복합키 기준으로 기존 레코드와 비교.
+   */
+  private async filterCalibrationDuplicates(
+    rows: MigrationRowPreview[],
+    mgmtNumToId: Map<string, string>,
+    queryFn: (ids: string[]) => Promise<Array<{ equipmentId: string; calibrationDate: Date }>>
+  ): Promise<{ toInsert: MigrationRowPreview[]; duplicates: MigrationRowPreview[] }> {
+    const equipmentIds = [
+      ...new Set(
+        rows
+          .map((r) => (r.managementNumber ? mgmtNumToId.get(r.managementNumber) : undefined))
+          .filter((id): id is string => id !== undefined)
+      ),
+    ];
+
+    if (equipmentIds.length === 0) return { toInsert: rows, duplicates: [] };
+
+    const existing = await queryFn(equipmentIds);
+    const existingKeys = new Set(
+      existing.map((r) => `${r.equipmentId}:${r.calibrationDate.getTime()}`)
+    );
+
+    const toInsert: MigrationRowPreview[] = [];
+    const duplicates: MigrationRowPreview[] = [];
+
+    for (const row of rows) {
+      if (row.status === 'error') {
+        toInsert.push(row);
+        continue;
+      }
+      const equipmentId = row.managementNumber ? mgmtNumToId.get(row.managementNumber) : undefined;
+      if (!equipmentId) {
+        toInsert.push(row);
+        continue;
+      }
+      const date = row.data.calibrationDate as Date | undefined;
+      if (date instanceof Date && existingKeys.has(`${equipmentId}:${date.getTime()}`)) {
+        duplicates.push({
+          ...row,
+          status: 'duplicate' as const,
+          errors: [
+            {
+              field: 'calibrationDate',
+              message: `이미 동일 날짜(${date.toLocaleDateString('ko-KR')})의 교정 기록이 존재합니다.`,
+              code: MigrationErrorCode.HISTORY_DB_DUPLICATE,
+            },
+          ],
+        });
+      } else {
+        toInsert.push(row);
+      }
+    }
+
+    return { toInsert, duplicates };
+  }
+
+  /**
+   * 수리 이력 DB 중복 필터
+   * (equipmentId, repairDate) 복합키 기준으로 기존 레코드와 비교.
+   */
+  private async filterRepairDuplicates(
+    rows: MigrationRowPreview[],
+    mgmtNumToId: Map<string, string>,
+    queryFn: (ids: string[]) => Promise<Array<{ equipmentId: string; repairDate: Date }>>
+  ): Promise<{ toInsert: MigrationRowPreview[]; duplicates: MigrationRowPreview[] }> {
+    const equipmentIds = [
+      ...new Set(
+        rows
+          .map((r) => (r.managementNumber ? mgmtNumToId.get(r.managementNumber) : undefined))
+          .filter((id): id is string => id !== undefined)
+      ),
+    ];
+
+    if (equipmentIds.length === 0) return { toInsert: rows, duplicates: [] };
+
+    const existing = await queryFn(equipmentIds);
+    const existingKeys = new Set(existing.map((r) => `${r.equipmentId}:${r.repairDate.getTime()}`));
+
+    const toInsert: MigrationRowPreview[] = [];
+    const duplicates: MigrationRowPreview[] = [];
+
+    for (const row of rows) {
+      if (row.status === 'error') {
+        toInsert.push(row);
+        continue;
+      }
+      const equipmentId = row.managementNumber ? mgmtNumToId.get(row.managementNumber) : undefined;
+      if (!equipmentId) {
+        toInsert.push(row);
+        continue;
+      }
+      const date = row.data.repairDate as Date | undefined;
+      if (date instanceof Date && existingKeys.has(`${equipmentId}:${date.getTime()}`)) {
+        duplicates.push({
+          ...row,
+          status: 'duplicate' as const,
+          errors: [
+            {
+              field: 'repairDate',
+              message: `이미 동일 날짜(${date.toLocaleDateString('ko-KR')})의 수리 기록이 존재합니다.`,
+              code: MigrationErrorCode.HISTORY_DB_DUPLICATE,
+            },
+          ],
+        });
+      } else {
+        toInsert.push(row);
+      }
+    }
+
+    return { toInsert, duplicates };
+  }
+
+  /**
+   * 사고 이력 DB 중복 필터
+   * (equipmentId, occurredAt, incidentType) 복합키 기준으로 기존 레코드와 비교.
+   */
+  private async filterIncidentDuplicates(
+    rows: MigrationRowPreview[],
+    mgmtNumToId: Map<string, string>,
+    queryFn: (
+      ids: string[]
+    ) => Promise<Array<{ equipmentId: string; occurredAt: Date; incidentType: string }>>
+  ): Promise<{ toInsert: MigrationRowPreview[]; duplicates: MigrationRowPreview[] }> {
+    const equipmentIds = [
+      ...new Set(
+        rows
+          .map((r) => (r.managementNumber ? mgmtNumToId.get(r.managementNumber) : undefined))
+          .filter((id): id is string => id !== undefined)
+      ),
+    ];
+
+    if (equipmentIds.length === 0) return { toInsert: rows, duplicates: [] };
+
+    const existing = await queryFn(equipmentIds);
+    const existingKeys = new Set(
+      existing.map((r) => `${r.equipmentId}:${r.occurredAt.getTime()}:${r.incidentType}`)
+    );
+
+    const toInsert: MigrationRowPreview[] = [];
+    const duplicates: MigrationRowPreview[] = [];
+
+    for (const row of rows) {
+      if (row.status === 'error') {
+        toInsert.push(row);
+        continue;
+      }
+      const equipmentId = row.managementNumber ? mgmtNumToId.get(row.managementNumber) : undefined;
+      if (!equipmentId) {
+        toInsert.push(row);
+        continue;
+      }
+      const date = row.data.occurredAt as Date | undefined;
+      const incidentType = row.data.incidentType as string | undefined;
+      if (
+        date instanceof Date &&
+        incidentType &&
+        existingKeys.has(`${equipmentId}:${date.getTime()}:${incidentType}`)
+      ) {
+        duplicates.push({
+          ...row,
+          status: 'duplicate' as const,
+          errors: [
+            {
+              field: 'occurredAt',
+              message: `이미 동일 날짜(${date.toLocaleDateString('ko-KR')})·유형(${incidentType})의 사고 기록이 존재합니다.`,
+              code: MigrationErrorCode.HISTORY_DB_DUPLICATE,
+            },
+          ],
+        });
+      } else {
+        toInsert.push(row);
+      }
+    }
+
+    return { toInsert, duplicates };
   }
 }

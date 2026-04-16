@@ -9,3 +9,4 @@ export * from './drizzle-sql';
 export * from './advisory-lock';
 export * from './excel-buffer';
 export * from './chunk-array';
+export * from './bulk-insert-in-chunks';

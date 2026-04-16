@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { MappedRow } from '../types/data-migration.types';
 import type { MigrationRowPreview } from '@equipment-management/schemas';
 import { REPAIR_RESULT_VALUES, INCIDENT_TYPE_VALUES } from '@equipment-management/schemas';
+import { MigrationErrorCode } from '@equipment-management/shared-constants';
 
 const calibrationRowSchema = z.object({
   managementNumber: z.string().min(1),
@@ -68,7 +69,7 @@ export class HistoryValidatorService {
           errors.push({
             field: issue.path.join('.') || 'unknown',
             message: issue.message,
-            code: 'VALIDATION_ERROR',
+            code: MigrationErrorCode.VALIDATION_ERROR,
           });
         }
       }

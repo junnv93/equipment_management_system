@@ -152,6 +152,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   self_inspection: '자체점검',
   form_template: '양식 템플릿',
   inspection_result_section: '점검 결과 섹션',
+  data_migration_session: '데이터 마이그레이션',
 };
 
 // ============================================================================

@@ -18,6 +18,7 @@ import type {
   ManagementNumberGroup,
 } from '../types/data-migration.types';
 import { EQUIPMENT_COLUMN_MAPPING } from '../constants/equipment-column-mapping';
+import { MigrationErrorCode } from '@equipment-management/shared-constants';
 
 /**
  * 마이그레이션 행 검증 서비스
@@ -128,7 +129,7 @@ export class MigrationValidatorService {
           {
             field: 'managementNumber',
             message: `파일 내 중복 관리번호입니다. (첫 번째 발생: ${firstRow}행)`,
-            code: 'IN_FILE_DUPLICATE',
+            code: MigrationErrorCode.IN_FILE_DUPLICATE,
           },
         ],
         warnings: [],
@@ -147,7 +148,7 @@ export class MigrationValidatorService {
           {
             field: 'managementNumber',
             message: `이미 등록된 관리번호입니다.`,
-            code: 'DB_DUPLICATE',
+            code: MigrationErrorCode.DB_DUPLICATE,
           },
         ],
         warnings: [],

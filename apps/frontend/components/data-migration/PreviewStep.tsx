@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, Download, ChevronDown, ChevronUp, Info } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { dataMigrationApi } from '@/lib/api/data-migration-api';
+import { useExecuteMigration, useDownloadErrorReport } from '@/hooks/use-data-migration';
 import type {
   MultiSheetPreviewResult,
   MultiSheetExecuteResult,
@@ -26,14 +25,8 @@ import type {
   MigrationRowPreview,
   MigrationSheetType,
   PreviewOptions,
-  ExecuteOptions,
 } from '@/lib/api/data-migration-api';
 import { useToast } from '@/components/ui/use-toast';
-import { mapBackendErrorCode, EquipmentErrorCode, ApiError } from '@/lib/errors/equipment-errors';
-import {
-  EquipmentCacheInvalidation,
-  DashboardCacheInvalidation,
-} from '@/lib/api/cache-invalidation';
 
 interface PreviewStepProps {
   preview: MultiSheetPreviewResult;
@@ -340,35 +333,8 @@ export default function PreviewStep({
     () => new Set(selectableEquipmentRows.map((r) => r.rowNumber))
   );
 
-  const queryClient = useQueryClient();
-
-  const executeMutation = useMutation({
-    mutationFn: (executeOptions: ExecuteOptions) =>
-      dataMigrationApi.executeEquipmentMigration(executeOptions),
-    onSuccess: async (result) => {
-      await Promise.all([
-        EquipmentCacheInvalidation.invalidateAll(queryClient),
-        DashboardCacheInvalidation.invalidateAll(queryClient),
-      ]);
-      onExecuteComplete(result);
-    },
-    onError: (err) => {
-      const code =
-        err instanceof ApiError ? mapBackendErrorCode(err.code) : EquipmentErrorCode.UNKNOWN_ERROR;
-      if (code === EquipmentErrorCode.NOT_FOUND) {
-        toast({ variant: 'destructive', description: t('errors.sessionExpired') });
-      } else {
-        toast({ variant: 'destructive', description: t('errors.executeFailed') });
-      }
-    },
-  });
-
-  const errorReportMutation = useMutation({
-    mutationFn: () => dataMigrationApi.downloadErrorReport(preview.sessionId),
-    onError: () => {
-      toast({ variant: 'destructive', description: t('errors.downloadFailed') });
-    },
-  });
+  const executeMutation = useExecuteMigration();
+  const errorReportMutation = useDownloadErrorReport();
 
   const toggleAll = () => {
     if (selectableEquipmentRows.every((r) => selectedRowNumbers.has(r.rowNumber))) {
@@ -395,11 +361,14 @@ export default function PreviewStep({
       toast({ variant: 'destructive', description: t('preview.noValidRows') });
       return;
     }
-    executeMutation.mutate({
-      sessionId: preview.sessionId,
-      ...options,
-      selectedRows: Array.from(selectedRowNumbers),
-    });
+    executeMutation.mutate(
+      {
+        sessionId: preview.sessionId,
+        ...options,
+        selectedRows: Array.from(selectedRowNumbers),
+      },
+      { onSuccess: (result) => onExecuteComplete(result) }
+    );
   };
 
   const hasErrors = preview.errorRows > 0;
@@ -484,7 +453,7 @@ export default function PreviewStep({
             {hasErrors && (
               <Button
                 variant="outline"
-                onClick={() => errorReportMutation.mutate()}
+                onClick={() => errorReportMutation.mutate(preview.sessionId)}
                 disabled={errorReportMutation.isPending}
               >
                 <Download className="mr-2 h-4 w-4" />
@@ -570,7 +539,7 @@ export default function PreviewStep({
           {hasErrors && (
             <Button
               variant="outline"
-              onClick={() => errorReportMutation.mutate()}
+              onClick={() => errorReportMutation.mutate(preview.sessionId)}
               disabled={errorReportMutation.isPending}
             >
               <Download className="mr-2 h-4 w-4" />

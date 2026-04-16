@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Upload, FileSpreadsheet, X, Download } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -18,9 +17,9 @@ import {
 import { SITE_VALUES } from '@equipment-management/schemas';
 import { FILE_UPLOAD_LIMITS } from '@equipment-management/shared-constants';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
-import { dataMigrationApi } from '@/lib/api/data-migration-api';
 import type { PreviewOptions, MultiSheetPreviewResult } from '@/lib/api/data-migration-api';
 import { useToast } from '@/components/ui/use-toast';
+import { usePreviewMigration, useDownloadMigrationTemplate } from '@/hooks/use-data-migration';
 
 interface FileUploadStepProps {
   onPreviewComplete: (result: MultiSheetPreviewResult, options: PreviewOptions) => void;
@@ -37,23 +36,8 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
     skipDuplicates: true,
   });
 
-  const previewMutation = useMutation({
-    mutationFn: ({ file, opts }: { file: File; opts: PreviewOptions }) =>
-      dataMigrationApi.previewEquipmentMigration(file, opts),
-    onSuccess: (result, { opts }) => {
-      onPreviewComplete(result, opts);
-    },
-    onError: () => {
-      toast({ variant: 'destructive', description: t('errors.previewFailed') });
-    },
-  });
-
-  const templateMutation = useMutation({
-    mutationFn: dataMigrationApi.downloadTemplate,
-    onError: () => {
-      toast({ variant: 'destructive', description: t('errors.downloadFailed') });
-    },
-  });
+  const previewMutation = usePreviewMigration();
+  const templateMutation = useDownloadMigrationTemplate();
 
   const validateAndSetFile = useCallback(
     (file: File) => {
@@ -90,7 +74,10 @@ export default function FileUploadStep({ onPreviewComplete }: FileUploadStepProp
       toast({ variant: 'destructive', description: t('errors.fileRequired') });
       return;
     }
-    previewMutation.mutate({ file: selectedFile, opts: options });
+    previewMutation.mutate(
+      { file: selectedFile, options },
+      { onSuccess: (result) => onPreviewComplete(result, options) }
+    );
   };
 
   const isPending = previewMutation.isPending;

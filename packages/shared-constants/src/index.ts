@@ -258,3 +258,9 @@ export {
   type FormCategory,
   type FormNumber,
 } from './form-catalog';
+
+// 에러 코드 (백엔드 throw payload.code + 프론트엔드 비교 SSOT)
+export {
+  MigrationErrorCode,
+  type MigrationErrorCode as MigrationErrorCodeType,
+} from './error-codes';

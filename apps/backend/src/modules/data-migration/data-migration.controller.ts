@@ -26,7 +26,7 @@ import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, MigrationErrorCode } from '@equipment-management/shared-constants';
 import { UserRoleValues } from '@equipment-management/schemas';
 import { AuthenticatedRequest } from '../../types/auth';
 import type { MulterFile } from '../../types/common.types';
@@ -54,7 +54,11 @@ export class DataMigrationController {
    */
   @Post('equipment/preview')
   @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
-  @AuditLog({ action: 'upload', entityType: 'equipment', entityIdPath: 'response.sessionId' })
+  @AuditLog({
+    action: 'upload',
+    entityType: 'data_migration_session',
+    entityIdPath: 'response.sessionId',
+  })
   @UseInterceptors(FileInterceptor('file', MULTER_UTF8_OPTIONS))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
@@ -72,7 +76,7 @@ export class DataMigrationController {
   ): Promise<MultiSheetPreviewResult> {
     if (!file) {
       throw new BadRequestException({
-        code: 'MIGRATION_FILE_REQUIRED',
+        code: MigrationErrorCode.FILE_REQUIRED,
         message: '파일이 업로드되지 않았습니다.',
       });
     }
@@ -93,7 +97,7 @@ export class DataMigrationController {
   @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
   @AuditLog({
     action: 'create',
-    entityType: 'equipment',
+    entityType: 'data_migration_session',
     entityIdPath: 'request.body.sessionId',
   })
   @ApiOperation({

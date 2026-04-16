@@ -42,6 +42,7 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   self_inspection: (id) => `/equipment/${id}?tab=self-inspection`,
   form_template: () => `/reports/form-templates`,
   inspection_result_section: (id) => `/calibration/intermediate-checks?selected=${id}`,
+  data_migration_session: () => `/admin/data-migration`,
 };
 
 /**

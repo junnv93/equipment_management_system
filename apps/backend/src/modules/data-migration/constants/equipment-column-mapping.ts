@@ -5,7 +5,9 @@
  * Excel 헤더가 여기 정의된 alias와 일치하면 자동으로 DB 필드에 매핑됨.
  *
  * ⚠️ DB 필드명은 반드시 Drizzle 스키마(camelCase)를 따름
+ * ⚠️ alias map의 value는 SSOT enum 타입으로 강제 — 신규 enum 값 추가 시 tsc가 누락 감지
  */
+import type { Site, ManagementMethod, CalibrationRequired } from '@equipment-management/schemas';
 
 /** 값 변환 함수 타입 */
 type TransformFn = (value: unknown) => unknown;
@@ -45,64 +47,76 @@ export function parseExcelDate(value: unknown): Date | undefined {
   return undefined;
 }
 
+/**
+ * 사이트명 alias → Site enum 매핑 (SSOT 타입 강제)
+ * Key: Excel 헤더 alias (한/영 소문자 정규화)
+ * Value: Site enum 값 — schemas에 사이트 추가 시 tsc가 타입 오류로 누락 감지
+ */
+const SITE_MAP: Record<string, Site> = {
+  수원: 'suwon',
+  suwon: 'suwon',
+  suw: 'suwon',
+  수원랩: 'suwon',
+  의왕: 'uiwang',
+  uiwang: 'uiwang',
+  uiw: 'uiwang',
+  의왕랩: 'uiwang',
+  평택: 'pyeongtaek',
+  pyeongtaek: 'pyeongtaek',
+  pyt: 'pyeongtaek',
+  평택랩: 'pyeongtaek',
+};
+
 /** 사이트명 정규화 (한/영 → DB enum 값) */
-export function mapSiteValue(value: unknown): string | undefined {
+export function mapSiteValue(value: unknown): Site | undefined {
   if (!value || typeof value !== 'string') return undefined;
-  const normalized = value.trim().toLowerCase();
-  const SITE_MAP: Record<string, string> = {
-    수원: 'suwon',
-    suwon: 'suwon',
-    suw: 'suwon',
-    수원랩: 'suwon',
-    의왕: 'uiwang',
-    uiwang: 'uiwang',
-    uiw: 'uiwang',
-    의왕랩: 'uiwang',
-    평택: 'pyeongtaek',
-    pyeongtaek: 'pyeongtaek',
-    pyt: 'pyeongtaek',
-    평택랩: 'pyeongtaek',
-  };
-  return SITE_MAP[normalized];
+  return SITE_MAP[value.trim().toLowerCase()];
 }
+
+/**
+ * 관리방법 alias → ManagementMethod enum 매핑 (SSOT 타입 강제)
+ * Value: ManagementMethod enum 값 — schemas 변경 시 tsc가 타입 오류로 누락 감지
+ */
+const METHOD_MAP: Record<string, ManagementMethod> = {
+  '외부 교정': 'external_calibration',
+  외부교정: 'external_calibration',
+  external_calibration: 'external_calibration',
+  external: 'external_calibration',
+  '자체 점검': 'self_inspection',
+  자체점검: 'self_inspection',
+  self_inspection: 'self_inspection',
+  self: 'self_inspection',
+  비대상: 'not_applicable',
+  not_applicable: 'not_applicable',
+  'n/a': 'not_applicable',
+  na: 'not_applicable',
+};
 
 /** 교정 방법 정규화 (한/영 → DB enum 값) */
-export function mapManagementMethod(value: unknown): string | undefined {
+export function mapManagementMethod(value: unknown): ManagementMethod | undefined {
   if (!value || typeof value !== 'string') return undefined;
-  const normalized = value.trim().toLowerCase();
-  const METHOD_MAP: Record<string, string> = {
-    '외부 교정': 'external_calibration',
-    외부교정: 'external_calibration',
-    external_calibration: 'external_calibration',
-    external: 'external_calibration',
-    '자체 점검': 'self_inspection',
-    자체점검: 'self_inspection',
-    self_inspection: 'self_inspection',
-    self: 'self_inspection',
-    비대상: 'not_applicable',
-    not_applicable: 'not_applicable',
-    'n/a': 'not_applicable',
-    na: 'not_applicable',
-  };
-  return METHOD_MAP[normalized];
+  return METHOD_MAP[value.trim().toLowerCase()];
 }
 
+/**
+ * 교정필요 여부 alias → CalibrationRequired enum 매핑 (SSOT 타입 강제)
+ */
+const CALIBRATION_REQUIRED_MAP: Record<string, CalibrationRequired> = {
+  필요: 'required',
+  required: 'required',
+  y: 'required',
+  yes: 'required',
+  불필요: 'not_required',
+  비대상: 'not_required',
+  not_required: 'not_required',
+  n: 'not_required',
+  no: 'not_required',
+};
+
 /** 교정 필요 여부 정규화 */
-export function mapCalibrationRequired(value: unknown): string | undefined {
+export function mapCalibrationRequired(value: unknown): CalibrationRequired | undefined {
   if (!value || typeof value !== 'string') return undefined;
-  const normalized = value.trim().toLowerCase();
-  const MAP: Record<string, string> = {
-    필요: 'required',
-    required: 'required',
-    y: 'required',
-    yes: 'required',
-    불필요: 'not_required',
-    비대상: 'not_required',
-    not_required: 'not_required',
-    n: 'not_required',
-    no: 'not_required',
-  };
-  return MAP[normalized];
+  return CALIBRATION_REQUIRED_MAP[value.trim().toLowerCase()];
 }
 
 /** 숫자 변환 (문자열 숫자 → number) */
