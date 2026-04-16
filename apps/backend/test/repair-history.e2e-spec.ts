@@ -2,8 +2,6 @@
 
 // 환경 변수 설정 (모듈 import 전에 설정)
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
-process.env.DATABASE_URL =
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5433/equipment_management';
 process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6380';
 process.env.JWT_SECRET =
   process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-tests-minimum-32-characters-long';
