@@ -86,8 +86,10 @@ export interface MultiSheetMigrationSession {
   status: MigrationSessionStatus;
   /** 업로드된 Excel 파일의 스토리지 키 (Execute 완료 후 삭제) */
   filePath?: string;
-  /** FK 해석 결과: 행 인덱스 → 해석된 managerId/deputyManagerId/teamId */
+  /** FK 해석 결과 (장비): 행 인덱스 → 해석된 managerId/deputyManagerId/teamId */
   fkResolutions?: Map<number, FkResolutionResult>;
+  /** FK 해석 결과 (시험용 SW): 행 인덱스 → 해석된 primaryManagerId/secondaryManagerId */
+  testSoftwareFkResolutions?: Map<number, FkResolutionResult>;
   /** FK 해석 요약 (프론트엔드 표시용) */
   fkResolutionSummary?: FkResolutionSummary;
   sheets: {

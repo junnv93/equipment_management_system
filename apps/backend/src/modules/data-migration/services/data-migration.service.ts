@@ -173,6 +173,48 @@ export class DataMigrationService {
       }
     }
 
+    // FK 해석: 시험용 SW 시트의 주담당자/부담당자 UUID 해석
+    let testSoftwareFkResolutions: Map<number, FkResolutionResult> | undefined;
+    const testSoftwareSheet = sheetResults.find(
+      (s) => s.sheetType === MIGRATION_SHEET_TYPE.TEST_SOFTWARE
+    );
+    if (testSoftwareSheet) {
+      const validRows = testSoftwareSheet.rows.filter((r) => INSERTABLE_STATUSES.has(r.status));
+      const hasFkFields = validRows.some(
+        (r) =>
+          r.data.primaryManagerEmail ||
+          r.data.primaryManagerName ||
+          r.data.secondaryManagerEmail ||
+          r.data.secondaryManagerName
+      );
+      if (hasFkFields) {
+        const resolved = await this.fkResolutionService.resolveBatch(validRows, {
+          managerEmail: 'primaryManagerEmail',
+          managerName: 'primaryManagerName',
+          deputyEmail: 'secondaryManagerEmail',
+          deputyName: 'secondaryManagerName',
+        });
+        testSoftwareFkResolutions = resolved.results;
+
+        // FK 요약에 합산 (장비 + 시험용 SW)
+        if (fkResolutionSummary) {
+          fkResolutionSummary.resolvedManagers += resolved.summary.resolvedManagers;
+          fkResolutionSummary.unresolvedManagers += resolved.summary.unresolvedManagers;
+          fkResolutionSummary.resolvedDeputyManagers += resolved.summary.resolvedDeputyManagers;
+          fkResolutionSummary.unresolvedDeputyManagers += resolved.summary.unresolvedDeputyManagers;
+        } else {
+          fkResolutionSummary = resolved.summary;
+        }
+
+        for (const [idx, res] of resolved.results) {
+          const row = validRows[idx];
+          if (row && res.warnings.length > 0) {
+            row.warnings.push(...res.warnings);
+          }
+        }
+      }
+    }
+
     // 장비 시트가 없을 때: 이력 행의 관리번호를 DB에서 검증하여 merge
     if (equipmentMgmtNumbers.size === 0) {
       const historyMgmtNums = new Set<string>();
@@ -287,6 +329,7 @@ export class DataMigrationService {
       status: 'preview',
       filePath: savedFile.filePath,
       fkResolutions,
+      testSoftwareFkResolutions,
       fkResolutionSummary,
       sheets: sheetResults.map((s) => ({
         sheetType: s.sheetType,
@@ -633,7 +676,10 @@ export class DataMigrationService {
             (r) => r.status === MIGRATION_ROW_STATUS.ERROR
           );
 
-          const values = candidateRows.map((row) => this.buildTestSoftwareValues(row, userId));
+          const values = candidateRows.map((row, idx) => {
+            const fkResult = session.testSoftwareFkResolutions?.get(idx);
+            return this.buildTestSoftwareValues(row, userId, fkResult);
+          });
           if (values.length > 0) {
             await bulkInsertInChunks(
               (chunk) =>
@@ -1029,6 +1075,7 @@ export class DataMigrationService {
       serialNumber: row.data.serialNumber as string | undefined,
       location: row.data.location as string | undefined,
       site: row.data.site as CableInsert['site'],
+      lastMeasurementDate: row.data.lastMeasurementDate as Date | undefined,
       status: 'active',
       createdBy: userId,
       version: 1,
@@ -1038,7 +1085,8 @@ export class DataMigrationService {
   /** 시험용 소프트웨어 행 → DB values 변환 (독립 엔티티) */
   private buildTestSoftwareValues(
     row: MigrationRowPreview,
-    userId: string
+    userId: string,
+    fkResult?: FkResolutionResult
   ): Partial<typeof testSoftware.$inferInsert> {
     type TsInsert = typeof testSoftware.$inferInsert;
     return {
@@ -1052,6 +1100,8 @@ export class DataMigrationService {
       requiresValidation: (row.data.requiresValidation as boolean | undefined) ?? true,
       availability: 'available',
       site: row.data.site as TsInsert['site'],
+      primaryManagerId: fkResult?.managerId,
+      secondaryManagerId: fkResult?.deputyManagerId,
       createdBy: userId,
       version: 1,
     };
@@ -1099,6 +1149,7 @@ export class DataMigrationService {
       cause: row.data.cause as string,
       actionPlan: row.data.actionPlan as string | undefined,
       correctionContent: row.data.correctionContent as string | undefined,
+      resolutionType: row.data.resolutionType as NcInsert['resolutionType'],
       correctionDate: correctionDate?.toISOString() ?? null,
       correctedBy: correctionDate ? userId : undefined,
       status: correctionDate ? 'closed' : 'open',

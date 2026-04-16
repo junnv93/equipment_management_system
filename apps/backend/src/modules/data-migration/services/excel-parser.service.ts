@@ -53,6 +53,7 @@ import {
   TEST_FIELD_VALUES,
   CALIBRATION_FACTOR_TYPE_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
+  RESOLUTION_TYPE_VALUES,
   MIGRATION_ROW_STATUS,
 } from '@equipment-management/schemas';
 
@@ -667,6 +668,7 @@ export class ExcelParserService {
     refSheet.addRow([REFERENCE_LABELS.TEST_FIELD, TEST_FIELD_VALUES.join(' | ')]);
     refSheet.addRow([REFERENCE_LABELS.FACTOR_TYPE, CALIBRATION_FACTOR_TYPE_VALUES.join(' | ')]);
     refSheet.addRow([REFERENCE_LABELS.NC_TYPE, NON_CONFORMANCE_TYPE_VALUES.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.RESOLUTION_TYPE, RESOLUTION_TYPE_VALUES.join(' | ')]);
     refSheet.addRow([REFERENCE_LABELS.DATE_FORMAT, REFERENCE_LABELS.DATE_FORMAT_VALUE]);
     refSheet.getColumn(1).width = 35;
     refSheet.getColumn(2).width = 70;

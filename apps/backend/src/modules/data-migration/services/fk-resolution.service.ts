@@ -58,10 +58,17 @@ export class FkResolutionService {
    * 배치 FK 해석: 행 데이터에서 담당자/부담당자/팀 UUID를 해석하여 주입
    *
    * @param rows - Preview 통과한 행 데이터 배열 (data 필드에 managerEmail/managerName 등 포함)
+   * @param fieldNames - 커스텀 필드명 (시험용 SW 등 manager/deputy 필드명이 다른 경우)
    * @returns 행 인덱스 → FkResolutionResult 맵 + 요약
    */
   async resolveBatch(
-    rows: Array<{ data: Record<string, unknown> }>
+    rows: Array<{ data: Record<string, unknown> }>,
+    fieldNames?: {
+      managerEmail?: string;
+      managerName?: string;
+      deputyEmail?: string;
+      deputyName?: string;
+    }
   ): Promise<{ results: Map<number, FkResolutionResult>; summary: FkResolutionSummary }> {
     const summary: FkResolutionSummary = {
       resolvedManagers: 0,
@@ -73,6 +80,12 @@ export class FkResolutionService {
     };
     const results = new Map<number, FkResolutionResult>();
 
+    // 필드명 기본값 (장비: managerEmail/managerName/deputyManagerEmail/deputyManagerName)
+    const mgrEmailField = fieldNames?.managerEmail ?? 'managerEmail';
+    const mgrNameField = fieldNames?.managerName ?? 'managerName';
+    const depEmailField = fieldNames?.deputyEmail ?? 'deputyManagerEmail';
+    const depNameField = fieldNames?.deputyName ?? 'deputyManagerName';
+
     // 1. 고유 이메일/이름 수집 (배치 조회 최적화)
     const emails = new Set<string>();
     const names = new Set<string>();
@@ -80,10 +93,10 @@ export class FkResolutionService {
 
     for (const row of rows) {
       const d = row.data;
-      if (d.managerEmail) emails.add(String(d.managerEmail).trim().toLowerCase());
-      if (d.deputyManagerEmail) emails.add(String(d.deputyManagerEmail).trim().toLowerCase());
-      if (d.managerName) names.add(String(d.managerName).trim());
-      if (d.deputyManagerName) names.add(String(d.deputyManagerName).trim());
+      if (d[mgrEmailField]) emails.add(String(d[mgrEmailField]).trim().toLowerCase());
+      if (d[depEmailField]) emails.add(String(d[depEmailField]).trim().toLowerCase());
+      if (d[mgrNameField]) names.add(String(d[mgrNameField]).trim());
+      if (d[depNameField]) names.add(String(d[depNameField]).trim());
       const site = d.site as string | undefined;
       const classification = d.classificationCode as string | undefined;
       if (site && classification) siteClassPairs.add(`${site}:${classification}`);
@@ -100,8 +113,8 @@ export class FkResolutionService {
       const result: FkResolutionResult = { warnings: [] };
 
       // 담당자 해석: 이메일 우선, 이름 폴백
-      const mgrEmail = d.managerEmail ? String(d.managerEmail).trim().toLowerCase() : undefined;
-      const mgrName = d.managerName ? String(d.managerName).trim() : undefined;
+      const mgrEmail = d[mgrEmailField] ? String(d[mgrEmailField]).trim().toLowerCase() : undefined;
+      const mgrName = d[mgrNameField] ? String(d[mgrNameField]).trim() : undefined;
       if (mgrEmail || mgrName) {
         const resolved = this.resolveUser(mgrEmail, mgrName, emailToUser, nameToUsers, '담당자');
         result.managerId = resolved.userId;
@@ -111,10 +124,8 @@ export class FkResolutionService {
       }
 
       // 부담당자 해석
-      const depEmail = d.deputyManagerEmail
-        ? String(d.deputyManagerEmail).trim().toLowerCase()
-        : undefined;
-      const depName = d.deputyManagerName ? String(d.deputyManagerName).trim() : undefined;
+      const depEmail = d[depEmailField] ? String(d[depEmailField]).trim().toLowerCase() : undefined;
+      const depName = d[depNameField] ? String(d[depNameField]).trim() : undefined;
       if (depEmail || depName) {
         const resolved = this.resolveUser(depEmail, depName, emailToUser, nameToUsers, '부담당자');
         result.deputyManagerId = resolved.userId;

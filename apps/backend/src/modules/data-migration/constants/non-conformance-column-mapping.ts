@@ -39,6 +39,10 @@ export const NON_CONFORMANCE_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['시정일', '조치완료일', 'Correction Date'],
     transform: parseExcelDate,
   },
+  {
+    dbField: 'resolutionType',
+    aliases: ['해결방법', '해결유형', '조치유형', 'Resolution Type', 'Resolution Method'],
+  },
 ];
 
 export const NON_CONFORMANCE_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(

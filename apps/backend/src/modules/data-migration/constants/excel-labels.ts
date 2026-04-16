@@ -52,6 +52,7 @@ export const REFERENCE_LABELS = {
   TEST_FIELD: '시험분야(testField)',
   FACTOR_TYPE: '인자유형(factorType)',
   NC_TYPE: '부적합유형(ncType)',
+  RESOLUTION_TYPE: '해결방법(resolutionType)',
   DATE_FORMAT: '날짜 형식',
   DATE_FORMAT_VALUE: 'YYYY-MM-DD 또는 YYYY.MM.DD',
 } as const;

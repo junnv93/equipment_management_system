@@ -8,6 +8,7 @@ import {
   CABLE_CONNECTOR_TYPE_VALUES,
   CALIBRATION_FACTOR_TYPE_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
+  RESOLUTION_TYPE_VALUES,
   MIGRATION_ROW_STATUS,
 } from '@equipment-management/schemas';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
@@ -74,6 +75,7 @@ const nonConformanceRowSchema = z.object({
   actionPlan: z.string().optional(),
   correctionContent: z.string().optional(),
   correctionDate: z.date().optional(),
+  resolutionType: z.enum([...RESOLUTION_TYPE_VALUES] as [string, ...string[]]).optional(),
 });
 
 @Injectable()
