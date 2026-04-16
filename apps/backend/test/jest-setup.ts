@@ -2,19 +2,42 @@
 
 export {};
 
-// E2E 테스트 환경 변수 설정 (단일 DB 사용: 개발 DB = 테스트 DB)
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-testing';
+// ──────────────────────────────────────────────────────
+// E2E 테스트 환경 변수 (모든 테스트 파일에 일괄 적용)
+// setupFilesAfterEnv로 실행되므로 개별 파일에서 설정 불필요
+// ──────────────────────────────────────────────────────
+
+// Core
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
+process.env.JWT_SECRET =
+  process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-tests-minimum-32-characters-long';
+process.env.NEXTAUTH_SECRET =
+  process.env.NEXTAUTH_SECRET ||
+  'test-nextauth-secret-key-for-e2e-tests-minimum-32-characters-long';
+
+// Database (단일 DB: 개발 DB = 테스트 DB)
+process.env.DATABASE_URL =
+  process.env.DATABASE_URL ||
+  'postgresql://postgres:postgres@localhost:5432/equipment_management';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'postgres';
+
+// Redis (docker compose 기본 포트: 6379)
 process.env.REDIS_HOST = process.env.REDIS_HOST || 'localhost';
 process.env.REDIS_PORT = process.env.REDIS_PORT || '6379';
+process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+// Azure AD (테스트용 더미 값)
+process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-id-for-e2e-tests';
+process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
 
 // 로컬 로그인 테스트용 비밀번호 (프로덕션에서는 Azure AD 전용)
 process.env.DEV_ADMIN_PASSWORD = process.env.DEV_ADMIN_PASSWORD || 'admin123';
 process.env.DEV_MANAGER_PASSWORD = process.env.DEV_MANAGER_PASSWORD || 'manager123';
 process.env.DEV_USER_PASSWORD = process.env.DEV_USER_PASSWORD || 'user123';
+
+// File upload
+process.env.UPLOAD_DIR = process.env.UPLOAD_DIR || './test-uploads';
 
 // Jest 전역 타입들을 명시적으로 설정합니다
 // eslint-disable-next-line @typescript-eslint/no-namespace

@@ -1,51 +1,33 @@
 /// <reference types="jest" />
 
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
-import * as crypto from 'crypto';
+import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
+import { TEST_USERS } from './helpers/test-auth';
 
 describe('AuthController (e2e)', () => {
-  let app: INestApplication;
-  const adminEmail = 'admin@example.com';
-  const adminPassword = 'admin123';
-  const managerEmail = 'manager@example.com';
-  const managerPassword = 'manager123';
-  const userEmail = 'user@example.com';
-  const userPassword = 'user123';
+  let ctx: TestAppContext;
 
   beforeAll(async () => {
-    // 테스트 환경 변수 설정
-    process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-testing';
-    process.env.NODE_ENV = 'test';
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    
-    await app.init();
+    ctx = await createTestApp();
   });
 
   afterAll(async () => {
-    await app.close();
+    await closeTestApp(ctx?.app);
   });
 
   describe('/auth/login (POST)', () => {
     it('should login admin with valid credentials', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: adminEmail,
-          password: adminPassword,
+          email: TEST_USERS.admin.email,
+          password: TEST_USERS.admin.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(adminEmail);
+      expect(response.body.user.email).toBe(TEST_USERS.admin.email);
       expect(response.body.user.name).toBe('관리자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
@@ -54,17 +36,17 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should login manager with valid credentials', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: managerEmail,
-          password: managerPassword,
+          email: TEST_USERS.manager.email,
+          password: TEST_USERS.manager.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(managerEmail);
+      expect(response.body.user.email).toBe(TEST_USERS.manager.email);
       expect(response.body.user.name).toBe('기술책임자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
@@ -73,17 +55,17 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should login user with valid credentials', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: userEmail,
-          password: userPassword,
+          email: TEST_USERS.user.email,
+          password: TEST_USERS.user.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(userEmail);
+      expect(response.body.user.email).toBe(TEST_USERS.user.email);
       expect(response.body.user.name).toBe('시험실무자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
@@ -92,13 +74,13 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should not login with invalid credentials', async () => {
-      await request(app.getHttpServer())
+      await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: adminEmail,
+          email: TEST_USERS.admin.email,
           password: 'wrongpassword',
         })
-        .expect(401); // Unauthorized
+        .expect(401);
     });
   });
 
@@ -106,53 +88,45 @@ describe('AuthController (e2e)', () => {
     let accessToken: string;
 
     beforeAll(async () => {
-      // 테스트를 위한 로그인
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: adminEmail,
-          password: adminPassword,
+          email: TEST_USERS.admin.email,
+          password: TEST_USERS.admin.password,
         });
 
       accessToken = response.body.access_token;
     });
 
     it('should get user profile with valid token', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/auth/profile')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body.email).toBe(adminEmail);
+      expect(response.body.email).toBe(TEST_USERS.admin.email);
       expect(response.body.roles).toContain('lab_manager');
     });
 
     it('should not get user profile without token', async () => {
-      await request(app.getHttpServer())
-        .get('/auth/profile')
-        .expect(401); // Unauthorized
+      await request(ctx.app.getHttpServer()).get('/auth/profile').expect(401);
     });
 
     it('should not get user profile with invalid token', async () => {
-      await request(app.getHttpServer())
+      await request(ctx.app.getHttpServer())
         .get('/auth/profile')
         .set('Authorization', 'Bearer invalid-token')
-        .expect(401); // Unauthorized
+        .expect(401);
     });
   });
 
   describe('/auth/test (GET)', () => {
     it('should return test message', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/auth/test')
-        .expect(200);
+      const response = await request(ctx.app.getHttpServer()).get('/auth/test').expect(200);
 
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('timestamp');
     });
   });
-
-  // Azure AD 로그인 테스트는 실제 Azure AD 인증이 필요하므로 E2E 테스트에서는 생략
-  // 이 부분은 단위 테스트나 통합 테스트로 별도 테스트
-}); 
+});

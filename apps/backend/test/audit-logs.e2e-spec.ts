@@ -1,83 +1,27 @@
 /// <reference types="jest" />
 
-// 환경 변수 설정 (모듈 import 전에 설정)
-process.env.NODE_ENV = process.env.NODE_ENV || 'test';
-process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6380';
-process.env.JWT_SECRET =
-  process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-tests-minimum-32-characters-long';
-process.env.NEXTAUTH_SECRET =
-  process.env.NEXTAUTH_SECRET ||
-  'test-nextauth-secret-key-for-e2e-tests-minimum-32-characters-long';
-process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-id-for-e2e-tests';
-process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
-
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
+import { loginAs } from './helpers/test-auth';
 
 describe('AuditLogsController (e2e)', () => {
-  let app: INestApplication;
+  let ctx: TestAppContext;
   let adminAccessToken: string;
   let userAccessToken: string;
 
-  const adminEmail = 'admin@example.com';
-  const adminPassword = 'admin123';
-  const userEmail = 'user@example.com';
-  const userPassword = 'user123';
-
   beforeAll(async () => {
-    console.log('Audit Logs E2E Test Environment:');
-    console.log(`   DATABASE_URL: ${process.env.DATABASE_URL}`);
-    console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-
-    // 관리자 로그인
-    const adminLoginResponse = await request(app.getHttpServer()).post('/auth/login').send({
-      email: adminEmail,
-      password: adminPassword,
-    });
-
-    if (adminLoginResponse.status !== 200 && adminLoginResponse.status !== 201) {
-      console.error('Admin login failed:', adminLoginResponse.body);
-      throw new Error(`Admin login failed with status ${adminLoginResponse.status}`);
-    }
-
-    adminAccessToken =
-      adminLoginResponse.body.access_token || adminLoginResponse.body.accessToken;
-    if (!adminAccessToken) {
-      throw new Error('Failed to obtain admin access token');
-    }
-
-    // 일반 사용자 로그인 시도 (권한 테스트용)
-    try {
-      const userLoginResponse = await request(app.getHttpServer()).post('/auth/login').send({
-        email: userEmail,
-        password: userPassword,
-      });
-
-      if (userLoginResponse.status === 200 || userLoginResponse.status === 201) {
-        userAccessToken =
-          userLoginResponse.body.access_token || userLoginResponse.body.accessToken;
-      }
-    } catch (e) {
-      console.log('User login not available for permission test');
-    }
+    ctx = await createTestApp();
+    adminAccessToken = await loginAs(ctx.app, 'admin');
+    userAccessToken = await loginAs(ctx.app, 'user');
   });
 
   afterAll(async () => {
-    await app.close();
+    await closeTestApp(ctx?.app);
   });
 
   describe('GET /audit-logs', () => {
     it('should return audit logs list for admin', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/audit-logs')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
@@ -92,7 +36,7 @@ describe('AuditLogsController (e2e)', () => {
     });
 
     it('should support pagination', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/audit-logs?page=1&limit=10')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
@@ -103,12 +47,11 @@ describe('AuditLogsController (e2e)', () => {
     });
 
     it('should support filtering by entityType', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/audit-logs?entityType=equipment')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
-        // 모든 항목이 equipment 타입이어야 함
         response.body.items.forEach((item: Record<string, unknown>) => {
           expect(item.entityType).toBe('equipment');
         });
@@ -116,12 +59,11 @@ describe('AuditLogsController (e2e)', () => {
     });
 
     it('should support filtering by action', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/audit-logs?action=create')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
-        // 모든 항목이 create 액션이어야 함
         response.body.items.forEach((item: Record<string, unknown>) => {
           expect(item.action).toBe('create');
         });
@@ -133,14 +75,13 @@ describe('AuditLogsController (e2e)', () => {
       startDate.setDate(startDate.getDate() - 7);
       const endDate = new Date();
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(
-          `/audit-logs?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+          `/audit-logs?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
         )
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
-        // 모든 항목이 날짜 범위 내에 있어야 함
         response.body.items.forEach((item: Record<string, unknown>) => {
           const itemDate = new Date(item.timestamp as string);
           expect(itemDate >= startDate && itemDate <= endDate).toBe(true);
@@ -149,18 +90,12 @@ describe('AuditLogsController (e2e)', () => {
     });
 
     it('should reject unauthenticated requests', async () => {
-      const response = await request(app.getHttpServer()).get('/audit-logs');
-
+      const response = await request(ctx.app.getHttpServer()).get('/audit-logs');
       expect(response.status).toBe(401);
     });
 
     it('should reject non-admin users', async () => {
-      if (!userAccessToken) {
-        console.log('Skipping permission test - no user token available');
-        return;
-      }
-
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/audit-logs')
         .set('Authorization', `Bearer ${userAccessToken}`);
 
@@ -172,11 +107,10 @@ describe('AuditLogsController (e2e)', () => {
     it('should return audit logs for specific entity', async () => {
       const testEntityId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(`/audit-logs/entity/equipment/${testEntityId}`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
-      // 해당 엔티티의 로그가 없을 수 있음
       expect([200, 403]).toContain(response.status);
 
       if (response.status === 200) {
@@ -188,7 +122,7 @@ describe('AuditLogsController (e2e)', () => {
     });
 
     it('should validate UUID format', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/audit-logs/entity/equipment/invalid-uuid')
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
@@ -200,11 +134,10 @@ describe('AuditLogsController (e2e)', () => {
     it('should return audit logs for specific user', async () => {
       const testUserId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(`/audit-logs/user/${testUserId}`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
-      // 해당 사용자의 로그가 없을 수 있음
       expect([200, 403]).toContain(response.status);
 
       if (response.status === 200) {
@@ -216,7 +149,7 @@ describe('AuditLogsController (e2e)', () => {
     it('should support limit parameter', async () => {
       const testUserId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(`/audit-logs/user/${testUserId}?limit=5`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
@@ -228,8 +161,7 @@ describe('AuditLogsController (e2e)', () => {
 
   describe('Audit Log Integration', () => {
     it('should create audit log when equipment is created', async () => {
-      // 장비 생성
-      const equipmentResponse = await request(app.getHttpServer())
+      const equipmentResponse = await request(ctx.app.getHttpServer())
         .post('/equipment')
         .set('Authorization', `Bearer ${adminAccessToken}`)
         .send({
@@ -243,16 +175,13 @@ describe('AuditLogsController (e2e)', () => {
         });
 
       if (equipmentResponse.status === 201) {
-        // 잠시 대기 (비동기 로그 기록)
         await new Promise((resolve) => setTimeout(resolve, 500));
 
-        // 감사 로그 확인
-        const logsResponse = await request(app.getHttpServer())
+        const logsResponse = await request(ctx.app.getHttpServer())
           .get('/audit-logs?entityType=equipment&action=create&limit=5')
           .set('Authorization', `Bearer ${adminAccessToken}`);
 
         if (logsResponse.status === 200 && logsResponse.body.items.length > 0) {
-          // 최근 로그 확인
           const recentLog = logsResponse.body.items[0];
           expect(recentLog.action).toBe('create');
           expect(recentLog.entityType).toBe('equipment');

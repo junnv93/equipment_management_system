@@ -1,81 +1,32 @@
 /// <reference types="jest" />
 
-// 환경 변수 설정 (모듈 import 전에 설정)
-process.env.NODE_ENV = process.env.NODE_ENV || 'test';
-process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6380';
-process.env.JWT_SECRET =
-  process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-tests-minimum-32-characters-long';
-process.env.NEXTAUTH_SECRET =
-  process.env.NEXTAUTH_SECRET ||
-  'test-nextauth-secret-key-for-e2e-tests-minimum-32-characters-long';
-process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-id-for-e2e-tests';
-process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
-
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
+import { loginAs } from './helpers/test-auth';
+import { ResourceTracker } from './helpers/test-cleanup';
 
 describe('CablesController (e2e) — WF-21', () => {
-  let app: INestApplication;
+  let ctx: TestAppContext;
   let accessToken: string;
+  const tracker = new ResourceTracker();
   const createdCableIds: string[] = [];
-  const testUserEmail = 'admin@example.com';
-  const testUserPassword = 'admin123';
   const uniqueSuffix = Date.now();
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-
-    // 로그인
-    const loginResponse = await request(app.getHttpServer()).post('/auth/login').send({
-      email: testUserEmail,
-      password: testUserPassword,
-    });
-
-    if (loginResponse.status !== 200 && loginResponse.status !== 201) {
-      console.error('Login failed:', loginResponse.body);
-      throw new Error(`Login failed with status ${loginResponse.status}`);
-    }
-
-    accessToken = loginResponse.body.access_token || loginResponse.body.accessToken;
-    if (!accessToken) {
-      throw new Error('Failed to obtain access token');
-    }
+    ctx = await createTestApp();
+    accessToken = await loginAs(ctx.app, 'admin');
   }, 30000);
 
   afterAll(async () => {
-    // 테스트 데이터 정리 (측정은 CASCADE로 삭제됨)
-    // cables 테이블에 DELETE 엔드포인트가 없으므로 retired로 마킹
-    for (const id of createdCableIds) {
-      try {
-        // 최신 version 조회 후 retired 처리
-        const detail = await request(app.getHttpServer())
-          .get(`/cables/${id}`)
-          .set('Authorization', `Bearer ${accessToken}`);
-        if (detail.status === 200) {
-          await request(app.getHttpServer())
-            .patch(`/cables/${id}`)
-            .set('Authorization', `Bearer ${accessToken}`)
-            .send({ version: detail.body.version, status: 'retired' });
-        }
-      } catch {
-        // cleanup 실패는 무시
-      }
-    }
-    await app.close();
+    await tracker.cleanupAll(ctx.app, accessToken);
+    await closeTestApp(ctx?.app);
   }, 15000);
 
   // ─── WF-21 #1: 케이블 등록 ───
 
   describe('POST /cables (Create)', () => {
     it('should create a cable with valid data', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/cables')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -95,10 +46,11 @@ describe('CablesController (e2e) — WF-21', () => {
       expect(response.body.version).toBe(1);
       expect(response.body.id).toBeDefined();
       createdCableIds.push(response.body.id);
+      tracker.track('cable', response.body.id);
     });
 
     it('should create a second cable for list/export tests', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/cables')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -113,10 +65,11 @@ describe('CablesController (e2e) — WF-21', () => {
 
       expect(response.status).toBe(201);
       createdCableIds.push(response.body.id);
+      tracker.track('cable', response.body.id);
     });
 
     it('should reject creation without managementNumber', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/cables')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ length: '1.0' });
@@ -129,7 +82,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
   describe('GET /cables (List)', () => {
     it('should return paginated cable list', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/cables')
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ pageSize: 10 });
@@ -141,7 +94,7 @@ describe('CablesController (e2e) — WF-21', () => {
     });
 
     it('should filter by connectorType', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/cables')
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ connectorType: 'K' });
@@ -153,7 +106,7 @@ describe('CablesController (e2e) — WF-21', () => {
     });
 
     it('should filter by status', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/cables')
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ status: 'active' });
@@ -165,7 +118,7 @@ describe('CablesController (e2e) — WF-21', () => {
     });
 
     it('should search by managementNumber', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/cables')
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ search: `E020K-${uniqueSuffix}` });
@@ -181,7 +134,7 @@ describe('CablesController (e2e) — WF-21', () => {
   describe('GET /cables/:id (Detail)', () => {
     it('should return cable detail with latestDataPoints', async () => {
       const id = createdCableIds[0];
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
@@ -192,7 +145,7 @@ describe('CablesController (e2e) — WF-21', () => {
     });
 
     it('should return 404 for non-existent cable', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/cables/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${accessToken}`);
 
@@ -205,11 +158,11 @@ describe('CablesController (e2e) — WF-21', () => {
   describe('PATCH /cables/:id (Update with CAS)', () => {
     it('should update cable with correct version', async () => {
       const id = createdCableIds[0];
-      const detail = await request(app.getHttpServer())
+      const detail = await request(ctx.app.getHttpServer())
         .get(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .patch(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -225,7 +178,7 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should reject update with stale version (409 VERSION_CONFLICT)', async () => {
       const id = createdCableIds[0];
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .patch(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -242,7 +195,7 @@ describe('CablesController (e2e) — WF-21', () => {
   describe('POST /cables/:id/measurements (Add Measurement)', () => {
     it('should add measurement with data points in a transaction', async () => {
       const id = createdCableIds[0];
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post(`/cables/${id}/measurements`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -265,7 +218,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should update cable.lastMeasurementDate after measurement', async () => {
       const id = createdCableIds[0];
-      const detail = await request(app.getHttpServer())
+      const detail = await request(ctx.app.getHttpServer())
         .get(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
@@ -276,7 +229,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should list measurements for a cable', async () => {
       const id = createdCableIds[0];
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(`/cables/${id}/measurements`)
         .set('Authorization', `Bearer ${accessToken}`);
 
@@ -287,23 +240,22 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should return latestDataPoints in detail after measurement', async () => {
       const id = createdCableIds[0];
-      const detail = await request(app.getHttpServer())
+      const detail = await request(ctx.app.getHttpServer())
         .get(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(detail.status).toBe(200);
       expect(detail.body.latestDataPoints.length).toBe(6);
-      // 주파수 오름차순 정렬 확인
       for (let i = 1; i < detail.body.latestDataPoints.length; i++) {
         expect(detail.body.latestDataPoints[i].frequencyMhz).toBeGreaterThan(
-          detail.body.latestDataPoints[i - 1].frequencyMhz
+          detail.body.latestDataPoints[i - 1].frequencyMhz,
         );
       }
     });
 
     it('should also add measurement to second cable for export coverage', async () => {
       const id = createdCableIds[1];
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post(`/cables/${id}/measurements`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -322,21 +274,20 @@ describe('CablesController (e2e) — WF-21', () => {
 
   describe('GET /reports/export/form/UL-QP-18-08 (Excel Export)', () => {
     it('should export QP-18-08 as xlsx', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/reports/export/form/UL-QP-18-08')
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ site: 'suwon' });
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toContain(
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
-      // Excel 파일은 바이너리이므로 body 크기로 검증
       expect(response.body).toBeDefined();
     });
 
     it('should export with connectorType filter', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/reports/export/form/UL-QP-18-08')
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ connectorType: 'K', site: 'suwon' });
@@ -346,12 +297,11 @@ describe('CablesController (e2e) — WF-21', () => {
     });
 
     it('should export with status=retired (empty dataset edge case)', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/reports/export/form/UL-QP-18-08')
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ status: 'retired', site: 'suwon' });
 
-      // 빈 데이터셋도 정상 응답 (시트 1만 있는 Excel)
       expect(response.status).toBe(200);
     });
   });
@@ -361,11 +311,11 @@ describe('CablesController (e2e) — WF-21', () => {
   describe('PATCH /cables/:id (Retire)', () => {
     it('should retire a cable', async () => {
       const id = createdCableIds[1];
-      const detail = await request(app.getHttpServer())
+      const detail = await request(ctx.app.getHttpServer())
         .get(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .patch(`/cables/${id}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
