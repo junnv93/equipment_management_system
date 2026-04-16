@@ -61,7 +61,7 @@ describe('HistoryValidatorService', () => {
       expect(result[0].status).toBe('error');
     });
 
-    it('장비 시트에 없는 관리번호는 warning을 포함한다', () => {
+    it('장비 시트/DB에 없는 관리번호는 error 상태를 반환한다', () => {
       const rows = [
         makeMappedRow(2, {
           managementNumber: 'UNKNOWN-001',
@@ -71,10 +71,9 @@ describe('HistoryValidatorService', () => {
 
       const result = service.validateCalibrationBatch(rows, VALID_MGMT_NUMBERS);
 
-      // 경고 상태 또는 warnings에 메시지 포함
-      const hasWarning =
-        result[0].status === 'warning' || result[0].warnings.some((w) => w.includes('UNKNOWN-001'));
-      expect(hasWarning).toBe(true);
+      // 알 수 없는 관리번호는 부모 장비가 없으므로 이력 import 불가 → error
+      expect(result[0].status).toBe('error');
+      expect(result[0].errors.some((e) => e.field === 'managementNumber')).toBe(true);
     });
 
     it('빈 validManagementNumbers Set이면 크로스 검증을 건너뛴다', () => {
