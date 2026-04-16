@@ -10,6 +10,14 @@
 #   직접 실행 시: pnpm secrets:decrypt lan && docker compose --env-file=/run/secrets/lan.env -f base.yml -f lan.override.yml up -d
 #   상세: ../secrets/README.md
 
+# SYNC: base.yml x-security — YAML anchor는 파일 경계 불가, 동일 값 재정의
+# 변경 시 base.yml · prod.override.yml 동시 업데이트 필수 (CI verify-compose-security.sh 검증)
+x-security: &security
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   postgres:
     environment:
@@ -41,12 +49,16 @@ services:
       - /var/lib/equipment-system/rustfs:/data
 
   backend:
+    <<: *security
     build:
       context: ../..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
     restart: unless-stopped
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/${DB_NAME:-postgres_equipment}
@@ -68,6 +80,7 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET:-equipment-files}
     volumes:
+      # read_only 예외: 로그 파일 쓰기 필요 — 호스트 bind mount로 영속화 (호스트 백업 용이)
       - /var/lib/equipment-system/logs/backend:/app/logs
     depends_on:
       postgres:
@@ -89,12 +102,16 @@ services:
         max-file: '5'
 
   frontend:
+    <<: *security
     build:
       context: ../..
       dockerfile: apps/frontend/Dockerfile
       target: production
     restart: unless-stopped
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://${SERVER_LAN_IP:-192.168.1.100}:9000
@@ -118,9 +135,15 @@ services:
         max-file: '5'
 
   nginx:
+    <<: *security
     image: nginx:1.27-alpine # SSOT — prod와 통일
     restart: unless-stopped
     stop_grace_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /run
     ports:
       - '9000:9000'
     volumes:
@@ -137,10 +160,14 @@ services:
         max-file: '5'
 
   migration:
+    <<: *security
     build:
       context: ../..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
+    read_only: true
+    tmpfs:
+      - /tmp
     command: ['node', 'apps/backend/dist/database/run-migration.js']
     environment:
       NODE_ENV: production

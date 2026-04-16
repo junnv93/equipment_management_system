@@ -21,11 +21,30 @@ x-default-healthcheck: &default-healthcheck
   timeout: ${HEALTHCHECK_TIMEOUT_DUR:-10s}
   retries: 5
 
+# 컨테이너 보안 하드닝 — 모든 서비스에 YAML merge로 적용
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   postgres:
+    <<: *default-security
     image: postgres:15.13-alpine # SSOT 2026-04-14; 메이저 업그레이드 시 volume 비호환
     restart: unless-stopped
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run/postgresql
+    # postgres entrypoint가 chown/chmod 수행 — 최소 필요 capability 복원
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_DB: ${DB_NAME:-equipment_management}
@@ -40,9 +59,17 @@ services:
     logging: *default-logging
 
   redis:
+    <<: *default-security
     image: redis:7.4-alpine # SSOT 2026-04-14; RDB 포맷 드리프트 방지용 정확한 minor pin
     restart: unless-stopped
     stop_grace_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+    # redis entrypoint가 gosu로 사용자 전환 — 최소 필요 capability 복원
+    cap_add:
+      - SETGID
+      - SETUID
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     volumes:
@@ -54,10 +81,15 @@ services:
     logging: *default-logging
 
   rustfs:
+    <<: *default-security
     # Digest 핀닝 — SSOT. 업그레이드 시 이 줄만 바꾸면 전 환경 전파.
     image: rustfs/rustfs@sha256:f1b59053332cdaa00c6a0d08b43f02fb2d12bf2749098b6d9d5eed693b39b695
     restart: unless-stopped
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /logs
     command: server
     environment:
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-rustfsadmin}

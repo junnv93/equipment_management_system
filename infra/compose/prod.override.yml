@@ -11,6 +11,14 @@
 #   직접 실행 시: pnpm secrets:decrypt prod && docker compose --env-file=/run/secrets/prod.env -f base.yml -f prod.override.yml up -d
 #   상세: ../secrets/README.md
 
+# SYNC: base.yml x-security — YAML anchor는 파일 경계 불가, 동일 값 재정의
+# 변경 시 base.yml · lan.override.yml 동시 업데이트 필수 (CI verify-compose-security.sh 검증)
+x-security: &security
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
 services:
   postgres:
     restart: always
@@ -72,12 +80,16 @@ services:
           memory: 256m
 
   frontend:
+    <<: *security
     build:
       context: ../..
       dockerfile: apps/frontend/Dockerfile
       target: production
     restart: always
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=/api
@@ -108,12 +120,16 @@ services:
         max-file: '5'
 
   backend:
+    <<: *security
     build:
       context: ../..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
     restart: always
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
@@ -172,8 +188,14 @@ services:
         max-file: '5'
 
   nginx:
+    <<: *security
     image: nginx:1.27-alpine
     restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /run
     ports:
       - '80:80'
       - '443:443'
@@ -205,8 +227,12 @@ services:
         max-file: '5'
 
   certbot:
+    <<: *security
     image: certbot/certbot
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - ../certbot/conf:/etc/letsencrypt
       - ../certbot/www:/var/www/certbot
@@ -220,8 +246,12 @@ services:
         max-file: '3'
 
   prometheus:
+    <<: *security
     image: prom/prometheus:v2.55.1
     restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../monitoring/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
@@ -249,8 +279,12 @@ services:
         max-file: '3'
 
   grafana:
+    <<: *security
     image: grafana/grafana:11.4.0
     restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - grafana_data:/var/lib/grafana
       - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -277,8 +311,10 @@ services:
         max-file: '3'
 
   node-exporter:
+    <<: *security
     image: prom/node-exporter:v1.8.2
     restart: always
+    read_only: true
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -302,8 +338,10 @@ services:
         max-file: '3'
 
   cadvisor:
+    <<: *security
     image: gcr.io/cadvisor/cadvisor:v0.49.2
     restart: always
+    # read_only 예외: /var/run (rw) 마운트 필요 — cgroup/device 메트릭 수집에 쓰기 접근 사용
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -324,8 +362,12 @@ services:
         max-file: '3'
 
   alertmanager:
+    <<: *security
     image: prom/alertmanager:v0.28.0
     restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - ../monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
@@ -347,8 +389,12 @@ services:
         max-file: '3'
 
   loki:
+    <<: *security
     image: grafana/loki:2.9.4
     restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
     volumes:
       - ../monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
@@ -375,8 +421,10 @@ services:
         max-file: '3'
 
   promtail:
+    <<: *security
     image: grafana/promtail:2.9.4
     restart: always
+    read_only: true
     volumes:
       - ../monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
@@ -399,10 +447,14 @@ services:
         max-file: '3'
 
   migration:
+    <<: *security
     build:
       context: ../..
       dockerfile: apps/backend/docker/Dockerfile
       target: production
+    read_only: true
+    tmpfs:
+      - /tmp
     command: ['node', 'apps/backend/dist/database/run-migration.js']
     environment:
       - NODE_ENV=production

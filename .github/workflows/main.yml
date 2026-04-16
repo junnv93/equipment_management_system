@@ -22,6 +22,8 @@ permissions:
 
 env:
   NODE_VERSION: '20'
+  HADOLINT_VERSION: 'v2.12.0'
+  SOPS_VERSION: 'v3.9.4'
 
 jobs:
   # ─────────────────────────────────────────────
@@ -128,10 +130,10 @@ jobs:
 
       - name: Install Infra Lint Tools
         # shellcheck: ubuntu-latest 기본 포함
-        # hadolint, sops: 바이너리 다운로드 필요
+        # hadolint: 바이너리 다운로드 (버전은 env.HADOLINT_VERSION)
         run: |
           curl -fsSL -o /usr/local/bin/hadolint \
-            "https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64"
+            "https://github.com/hadolint/hadolint/releases/download/${{ env.HADOLINT_VERSION }}/hadolint-Linux-x86_64"
           chmod +x /usr/local/bin/hadolint
 
       - name: Infra — ShellCheck (셸 스크립트 정적 분석)
@@ -154,15 +156,19 @@ jobs:
         # infra/healthchecks/tests/*.bats 실행 — 헬스체크 스크립트 단위 검증
         run: npx --yes bats infra/healthchecks/tests/
 
+      - name: Infra — Compose 보안 하드닝 검증
+        # x-security anchor 동기화 + 서비스별 cap_drop/no-new-privileges 전수 검사
+        run: bash infra/scripts/verify-compose-security.sh
+
       - name: Infra — SOPS Secret 복호화 검증
         # SOPS_AGE_KEY GitHub Actions secret 설정 후 활성화
         # 복호화 가능 여부만 확인 (값 노출 없음)
-        if: env.SOPS_AGE_KEY != ''
+        if: ${{ secrets.SOPS_AGE_KEY != '' }}
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           curl -fsSL -o /usr/local/bin/sops \
-            "https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64"
+            "https://github.com/getsops/sops/releases/download/${{ env.SOPS_VERSION }}/sops-${{ env.SOPS_VERSION }}.linux.amd64"
           chmod +x /usr/local/bin/sops
           sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > /dev/null
           echo "SOPS decrypt verification passed"
