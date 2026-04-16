@@ -91,3 +91,28 @@ updates:
     commit-message:
       prefix: 'build'
       include: 'scope'
+
+  # Infrastructure Docker images (postgres, redis, nginx, monitoring, rustfs)
+  - package-ecosystem: 'docker'
+    directory: '/infra/compose'
+    schedule:
+      interval: 'weekly'
+      day: 'friday'
+    labels:
+      - 'dependencies'
+      - 'docker'
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
+
+  - package-ecosystem: 'docker'
+    directory: '/infra/rustfs'
+    schedule:
+      interval: 'weekly'
+      day: 'friday'
+    labels:
+      - 'dependencies'
+      - 'docker'
+    commit-message:
+      prefix: 'build'
+      include: 'scope'
