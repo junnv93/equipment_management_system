@@ -34,13 +34,11 @@ describe('Team Filter E2E', () => {
         .expect(200);
 
       expect(response.body).toBeDefined();
-      expect(response.body.data).toBeDefined();
-      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.items).toBeDefined();
+      expect(Array.isArray(response.body.items)).toBe(true);
 
-      const teams = response.body.data;
-      const allSuwon = teams.every(
-        (team: Record<string, unknown>) => team.site === 'suwon',
-      );
+      const teams = response.body.items;
+      const allSuwon = teams.every((team: Record<string, unknown>) => team.site === 'suwon');
       expect(allSuwon).toBe(true);
     });
 
@@ -52,13 +50,11 @@ describe('Team Filter E2E', () => {
         .expect(200);
 
       expect(response.body).toBeDefined();
-      expect(response.body.data).toBeDefined();
-      expect(Array.isArray(response.body.data)).toBe(true);
+      expect(response.body.items).toBeDefined();
+      expect(Array.isArray(response.body.items)).toBe(true);
 
-      const teams = response.body.data;
-      const allUiwang = teams.every(
-        (team: Record<string, unknown>) => team.site === 'uiwang',
-      );
+      const teams = response.body.items;
+      const allUiwang = teams.every((team: Record<string, unknown>) => team.site === 'uiwang');
       expect(allUiwang).toBe(true);
     });
 
@@ -69,15 +65,11 @@ describe('Team Filter E2E', () => {
         .set('Authorization', `Bearer ${labManagerToken}`)
         .expect(200);
 
-      const teams = response.body.data;
+      const teams = response.body.items;
       expect(teams.length).toBeGreaterThan(0);
 
-      const hasSuwon = teams.some(
-        (team: Record<string, unknown>) => team.site === 'suwon',
-      );
-      const hasUiwang = teams.some(
-        (team: Record<string, unknown>) => team.site === 'uiwang',
-      );
+      const hasSuwon = teams.some((team: Record<string, unknown>) => team.site === 'suwon');
+      const hasUiwang = teams.some((team: Record<string, unknown>) => team.site === 'uiwang');
 
       expect(hasSuwon).toBe(true);
       expect(hasUiwang).toBe(true);
@@ -90,7 +82,7 @@ describe('Team Filter E2E', () => {
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
 
-      const teams = response.body.data;
+      const teams = response.body.items;
       teams.forEach((team: Record<string, unknown>) => {
         expect(team.site).toBe('suwon');
       });
@@ -103,10 +95,10 @@ describe('Team Filter E2E', () => {
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
 
-      expect(response.body.data.length).toBeLessThanOrEqual(2);
-      expect(response.body.meta.pagination).toBeDefined();
-      expect(Number(response.body.meta.pagination.pageSize)).toBe(2);
-      expect(Number(response.body.meta.pagination.page)).toBe(1);
+      expect(response.body.items.length).toBeLessThanOrEqual(2);
+      expect(response.body.meta).toBeDefined();
+      expect(Number(response.body.meta.itemsPerPage)).toBe(2);
+      expect(Number(response.body.meta.currentPage)).toBe(1);
     });
   });
 
@@ -118,7 +110,7 @@ describe('Team Filter E2E', () => {
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
 
-      const firstTeam = listResponse.body.data[0];
+      const firstTeam = listResponse.body.items[0];
       expect(firstTeam).toBeDefined();
 
       const detailResponse = await request(ctx.app.getHttpServer())
@@ -126,10 +118,10 @@ describe('Team Filter E2E', () => {
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
 
-      expect(detailResponse.body.data).toBeDefined();
-      expect(detailResponse.body.data.id).toBe(firstTeam.id);
-      expect(detailResponse.body.data.name).toBe(firstTeam.name);
-      expect(detailResponse.body.data.site).toBe('suwon');
+      expect(detailResponse.body).toBeDefined();
+      expect(detailResponse.body.id).toBe(firstTeam.id);
+      expect(detailResponse.body.name).toBe(firstTeam.name);
+      expect(detailResponse.body.site).toBe('suwon');
     });
   });
 });

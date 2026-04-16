@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AppModule } from '../../src/app.module';
 
 export interface TestAppContext {

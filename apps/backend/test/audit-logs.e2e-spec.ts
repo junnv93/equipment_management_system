@@ -171,6 +171,7 @@ describe('AuditLogsController (e2e)', () => {
           manufacturer: 'Test Manufacturer',
           status: 'available',
           site: 'suwon',
+          initialLocation: 'Test Location',
           approvalStatus: 'approved',
         });
 

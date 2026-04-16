@@ -39,6 +39,10 @@ process.env.DEV_USER_PASSWORD = process.env.DEV_USER_PASSWORD || 'user123';
 // File upload
 process.env.UPLOAD_DIR = process.env.UPLOAD_DIR || './test-uploads';
 
+// Internal API Key (테스트에서 ThrottlerGuard bypass)
+process.env.INTERNAL_API_KEY =
+  process.env.INTERNAL_API_KEY || 'test-internal-api-key-for-e2e-minimum-32-chars-long';
+
 // Jest 전역 타입들을 명시적으로 설정합니다
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare global {

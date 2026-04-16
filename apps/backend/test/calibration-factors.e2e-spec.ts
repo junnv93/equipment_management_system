@@ -1,138 +1,34 @@
 /// <reference types="jest" />
 
-// 환경 변수 설정 (모듈 import 전에 설정)
-process.env.NODE_ENV = process.env.NODE_ENV || 'test';
-process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6380';
-process.env.JWT_SECRET =
-  process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-tests-minimum-32-characters-long';
-process.env.NEXTAUTH_SECRET =
-  process.env.NEXTAUTH_SECRET ||
-  'test-nextauth-secret-key-for-e2e-tests-minimum-32-characters-long';
-process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-id-for-e2e-tests';
-process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
-
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
+import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
+import { createTestEquipment } from './helpers/test-fixtures';
+import { ResourceTracker } from './helpers/test-cleanup';
 
 describe('CalibrationFactorsController (e2e)', () => {
-  let app: INestApplication;
+  let ctx: TestAppContext;
   let accessToken: string;
-  let createdFactorIds: string[] = [];
+  const createdFactorIds: string[] = [];
   let testEquipmentUuid: string;
-  // ✅ 기본값 설정: UUID v4 형식 (DTO에서 @IsUUID('4') 사용)
-  // AuthService의 '00000000-...-000000000001'은 UUID v4가 아니므로 직접 생성
-  let testUserId: string = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-  const testUserEmail = 'admin@example.com';
-  const testUserPassword = 'admin123';
-
-  // UUID v4 형식 생성 함수
-  const generateUUID = (): string => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  };
-
-  // UUID 형식 검증 함수
-  const isValidUUID = (str: string): boolean => {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-  };
+  const testUserId = TEST_USER_IDS.admin;
+  const tracker = new ResourceTracker();
 
   beforeAll(async () => {
-    console.log('📊 Calibration Factors E2E Test Environment:');
-    console.log(`   DATABASE_URL: ${process.env.DATABASE_URL}`);
-    console.log(`   NODE_ENV: ${process.env.NODE_ENV}`);
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
-
-    // 로그인
-    const loginResponse = await request(app.getHttpServer()).post('/auth/login').send({
-      email: testUserEmail,
-      password: testUserPassword,
+    ctx = await createTestApp();
+    accessToken = await loginAs(ctx.app, 'admin');
+    testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+      name: 'E2E Test Equipment for Calibration Factors',
     });
-
-    if (loginResponse.status !== 200 && loginResponse.status !== 201) {
-      console.error('Login failed:', loginResponse.body);
-      throw new Error(`Login failed with status ${loginResponse.status}`);
-    }
-
-    accessToken = loginResponse.body.access_token || loginResponse.body.accessToken;
-    if (!accessToken) {
-      throw new Error('Failed to obtain access token');
-    }
-
-    // 테스트용 장비 생성
-    const equipmentResponse = await request(app.getHttpServer())
-      .post('/equipment')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .send({
-        name: 'E2E Test Equipment for Calibration Factors',
-        managementNumber: `E2E-CF-${Date.now()}`,
-        modelName: 'Test Model',
-        manufacturer: 'Test Manufacturer',
-        serialNumber: `SN-CF-${Date.now()}`,
-        status: 'available',
-        location: 'Test Location',
-        site: 'suwon',
-        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
-      });
-
-    if (equipmentResponse.status === 201 && equipmentResponse.body?.id) {
-      testEquipmentUuid = equipmentResponse.body.id;
-    } else {
-      console.error('Equipment creation failed:', {
-        status: equipmentResponse.status,
-        body: equipmentResponse.body,
-      });
-      throw new Error('Failed to create test equipment');
-    }
-
-    // 테스트용 사용자 ID 설정
-    const loginUserId = loginResponse.body.user?.id;
-    if (loginUserId && isValidUUID(loginUserId)) {
-      testUserId = loginUserId;
-    } else {
-      testUserId = generateUUID();
-      console.warn(`⚠️ Generated test UUID: ${testUserId}`);
-    }
+    tracker.track('equipment', testEquipmentUuid);
   });
 
   afterAll(async () => {
-    // 테스트로 생성된 보정계수 정리
-    if (app && accessToken) {
-      for (const factorId of createdFactorIds) {
-        try {
-          await request(app.getHttpServer())
-            .delete(`/calibration-factors/${factorId}`)
-            .set('Authorization', `Bearer ${accessToken}`);
-        } catch (error) {
-          // 이미 삭제된 경우 무시
-        }
-      }
+    for (const factorId of createdFactorIds) {
+      tracker.track('calibration-factor', factorId);
     }
-
-    // 테스트용 장비 삭제
-    if (app && accessToken && testEquipmentUuid) {
-      try {
-        await request(app.getHttpServer())
-          .delete(`/equipment/${testEquipmentUuid}`)
-          .set('Authorization', `Bearer ${accessToken}`);
-      } catch (error) {
-        // 이미 삭제된 경우 무시
-      }
-    }
-
-    if (app) {
-      await app.close();
-    }
+    await tracker.cleanupAll(ctx.app, accessToken);
+    await closeTestApp(ctx?.app);
   });
 
   describe('POST /calibration-factors', () => {
@@ -147,18 +43,10 @@ describe('CalibrationFactorsController (e2e)', () => {
         requestedBy: testUserId,
       };
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
-
-      if (response.status !== 201) {
-        console.error('Create calibration factor failed:', {
-          status: response.status,
-          body: response.body,
-          requestData: createDto,
-        });
-      }
 
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
@@ -184,7 +72,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         requestedBy: testUserId,
       };
 
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
@@ -208,7 +96,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         requestedBy: testUserId,
       };
 
-      await request(app.getHttpServer())
+      await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto)
@@ -218,7 +106,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('GET /calibration-factors', () => {
     it('should return a list of calibration factors', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -231,7 +119,7 @@ describe('CalibrationFactorsController (e2e)', () => {
     });
 
     it('should filter by equipmentId', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(`/calibration-factors?equipmentId=${testEquipmentUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -242,7 +130,7 @@ describe('CalibrationFactorsController (e2e)', () => {
     });
 
     it('should filter by approvalStatus', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/calibration-factors?approvalStatus=pending')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -255,7 +143,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('GET /calibration-factors/pending', () => {
     it('should return pending calibration factors', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/calibration-factors/pending')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -269,7 +157,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('GET /calibration-factors/registry', () => {
     it('should return calibration factor registry', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get('/calibration-factors/registry')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -284,7 +172,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('GET /calibration-factors/equipment/:equipmentUuid', () => {
     it('should return factors for specific equipment', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(ctx.app.getHttpServer())
         .get(`/calibration-factors/equipment/${testEquipmentUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -299,8 +187,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('GET /calibration-factors/:uuid', () => {
     it('should return a calibration factor by UUID', async () => {
-      // 먼저 보정계수 생성
-      const createResponse = await request(app.getHttpServer())
+      const createResponse = await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -317,7 +204,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         const factorId = createResponse.body.id;
         createdFactorIds.push(factorId);
 
-        const response = await request(app.getHttpServer())
+        const response = await request(ctx.app.getHttpServer())
           .get(`/calibration-factors/${factorId}`)
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
@@ -328,8 +215,8 @@ describe('CalibrationFactorsController (e2e)', () => {
     });
 
     it('should return 404 for non-existent factor UUID', async () => {
-      const fakeUuid = 'non-existent-uuid-id';
-      await request(app.getHttpServer())
+      const fakeUuid = '00000000-0000-4000-8000-000000000000';
+      await request(ctx.app.getHttpServer())
         .get(`/calibration-factors/${fakeUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
@@ -338,8 +225,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('PATCH /calibration-factors/:uuid/approve', () => {
     it('should approve a pending calibration factor', async () => {
-      // 보정계수 생성
-      const createResponse = await request(app.getHttpServer())
+      const createResponse = await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -356,8 +242,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         const factorId = createResponse.body.id;
         createdFactorIds.push(factorId);
 
-        // 승인
-        const approveResponse = await request(app.getHttpServer())
+        const approveResponse = await request(ctx.app.getHttpServer())
           .patch(`/calibration-factors/${factorId}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
@@ -375,8 +260,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('PATCH /calibration-factors/:uuid/reject', () => {
     it('should reject a pending calibration factor with reason', async () => {
-      // 보정계수 생성
-      const createResponse = await request(app.getHttpServer())
+      const createResponse = await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -393,8 +277,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         const factorId = createResponse.body.id;
         createdFactorIds.push(factorId);
 
-        // 반려
-        const rejectResponse = await request(app.getHttpServer())
+        const rejectResponse = await request(ctx.app.getHttpServer())
           .patch(`/calibration-factors/${factorId}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
@@ -409,8 +292,7 @@ describe('CalibrationFactorsController (e2e)', () => {
     });
 
     it('should reject factor rejection without reason', async () => {
-      // 보정계수 생성
-      const createResponse = await request(app.getHttpServer())
+      const createResponse = await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -427,13 +309,11 @@ describe('CalibrationFactorsController (e2e)', () => {
         const factorId = createResponse.body.id;
         createdFactorIds.push(factorId);
 
-        // 반려 사유 없이 반려 시도 (400 에러 예상)
-        await request(app.getHttpServer())
+        await request(ctx.app.getHttpServer())
           .patch(`/calibration-factors/${factorId}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testUserId,
-            // rejectionReason 누락
           })
           .expect(400);
       }
@@ -442,8 +322,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
   describe('DELETE /calibration-factors/:uuid', () => {
     it('should soft delete a calibration factor', async () => {
-      // 보정계수 생성
-      const createResponse = await request(app.getHttpServer())
+      const createResponse = await request(ctx.app.getHttpServer())
         .post('/calibration-factors')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
@@ -459,8 +338,7 @@ describe('CalibrationFactorsController (e2e)', () => {
       if (createResponse.status === 201 && createResponse.body.id) {
         const factorId = createResponse.body.id;
 
-        // 삭제
-        const deleteResponse = await request(app.getHttpServer())
+        const deleteResponse = await request(ctx.app.getHttpServer())
           .delete(`/calibration-factors/${factorId}`)
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
@@ -468,8 +346,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         expect(deleteResponse.body.id).toBe(factorId);
         expect(deleteResponse.body.deleted).toBe(true);
 
-        // 삭제 후 조회 시 404 예상
-        await request(app.getHttpServer())
+        await request(ctx.app.getHttpServer())
           .get(`/calibration-factors/${factorId}`)
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(404);
