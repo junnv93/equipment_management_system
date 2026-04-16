@@ -53,7 +53,7 @@ export class DataMigrationController {
    * xlsx 파일 업로드 → 시트별 행별 검증 → sessionId 발급
    */
   @Post('equipment/preview')
-  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @RequirePermissions(Permission.PERFORM_DATA_MIGRATION)
   @AuditLog({
     action: 'upload',
     entityType: 'data_migration_session',
@@ -94,7 +94,7 @@ export class DataMigrationController {
    * sessionId로 캐시된 Preview 결과를 이용해 DB에 실제 INSERT
    */
   @Post('equipment/execute')
-  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @RequirePermissions(Permission.PERFORM_DATA_MIGRATION)
   @AuditLog({
     action: 'create',
     entityType: 'data_migration_session',
@@ -119,7 +119,7 @@ export class DataMigrationController {
    * NOTE: 고정 경로이므로 `:sessionId` 파라미터 경로보다 반드시 먼저 선언해야 함
    */
   @Get('equipment/template')
-  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @RequirePermissions(Permission.PERFORM_DATA_MIGRATION)
   @SkipResponseTransform()
   @ApiOperation({
     summary: '입력 템플릿 다운로드',
@@ -143,7 +143,7 @@ export class DataMigrationController {
    * 에러 리포트 Excel 다운로드
    */
   @Get('equipment/:sessionId/error-report')
-  @RequirePermissions(Permission.MANAGE_SYSTEM_SETTINGS)
+  @RequirePermissions(Permission.PERFORM_DATA_MIGRATION)
   @SkipResponseTransform()
   @ApiParam({ name: 'sessionId', description: 'Preview에서 발급된 세션 ID' })
   @ApiOperation({

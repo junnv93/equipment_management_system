@@ -382,7 +382,7 @@ export class AuditService {
     scope?: ResolvedDataScope
   ): Promise<AuditLog[]> {
     const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
-    const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:${scopeKey}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.AUDIT_LOGS}user:${userId}:${limit}:${scopeKey}`;
 
     return this.cacheService.getOrSet(
       cacheKey,

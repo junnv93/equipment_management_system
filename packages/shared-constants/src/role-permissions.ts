@@ -294,6 +294,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 시스템 설정
     Permission.VIEW_SYSTEM_SETTINGS,
     Permission.MANAGE_SYSTEM_SETTINGS,
+    // 데이터 마이그레이션 (SYSTEM_ADMIN 전용)
+    Permission.PERFORM_DATA_MIGRATION,
     // 자체점검 (UL-QP-18-05: 연구실장 = 전체 권한)
     Permission.VIEW_SELF_INSPECTIONS,
     Permission.SUBMIT_SELF_INSPECTION,

@@ -8,6 +8,8 @@ import {
   CLASSIFICATION_TO_CODE,
   type Site,
   type Classification,
+  MIGRATION_ROW_STATUS,
+  INSERTABLE_STATUSES,
 } from '@equipment-management/schemas';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import type { AppDatabase } from '@equipment-management/db';
@@ -96,7 +98,7 @@ export class MigrationValidatorService {
     previews: MigrationRowPreview[],
     selectedRowNumbers?: number[]
   ): MigrationRowPreview[] {
-    const validStatuses = new Set(['valid', 'warning']);
+    const validStatuses = INSERTABLE_STATUSES;
     return previews.filter((p) => {
       if (!validStatuses.has(p.status)) return false;
       if (selectedRowNumbers && !selectedRowNumbers.includes(p.rowNumber)) return false;
@@ -123,7 +125,7 @@ export class MigrationValidatorService {
       const firstRow = inFileDuplicates.get(row.rowNumber)!;
       return {
         rowNumber: row.rowNumber,
-        status: 'duplicate',
+        status: MIGRATION_ROW_STATUS.DUPLICATE,
         data,
         errors: [
           {
@@ -142,7 +144,7 @@ export class MigrationValidatorService {
     if (mgmtNum && existingInDb.has(mgmtNum)) {
       return {
         rowNumber: row.rowNumber,
-        status: 'duplicate',
+        status: MIGRATION_ROW_STATUS.DUPLICATE,
         data,
         errors: [
           {
@@ -177,7 +179,12 @@ export class MigrationValidatorService {
 
     return {
       rowNumber: row.rowNumber,
-      status: errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'valid',
+      status:
+        errors.length > 0
+          ? MIGRATION_ROW_STATUS.ERROR
+          : warnings.length > 0
+            ? MIGRATION_ROW_STATUS.WARNING
+            : MIGRATION_ROW_STATUS.VALID,
       data,
       errors,
       warnings,

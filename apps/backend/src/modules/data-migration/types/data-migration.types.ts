@@ -71,6 +71,10 @@ export interface MigrationSession {
 }
 
 import type { MigrationSheetType } from '../constants/sheet-config';
+import type { FkResolutionResult, FkResolutionSummary } from '../services/fk-resolution.service';
+
+/** 세션 상태 */
+export type MigrationSessionStatus = 'preview' | 'executing' | 'completed' | 'failed';
 
 /** 멀티시트 세션 데이터 — 메모리 캐시 (내부 전용) */
 export interface MultiSheetMigrationSession {
@@ -78,6 +82,14 @@ export interface MultiSheetMigrationSession {
   fileName: string;
   uploadedAt: Date;
   userId: string;
+  /** 세션 처리 상태 (이중 실행 방지) */
+  status: MigrationSessionStatus;
+  /** 업로드된 Excel 파일의 스토리지 키 (Execute 완료 후 삭제) */
+  filePath?: string;
+  /** FK 해석 결과: 행 인덱스 → 해석된 managerId/deputyManagerId/teamId */
+  fkResolutions?: Map<number, FkResolutionResult>;
+  /** FK 해석 요약 (프론트엔드 표시용) */
+  fkResolutionSummary?: FkResolutionSummary;
   sheets: {
     sheetType: MigrationSheetType;
     sheetName: string;

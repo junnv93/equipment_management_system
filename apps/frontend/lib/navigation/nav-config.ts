@@ -148,7 +148,7 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Upload,
         href: FRONTEND_ROUTES.ADMIN.DATA_MIGRATION,
         labelKey: 'adminDataMigration',
-        requiredPermission: Permission.MANAGE_SYSTEM_SETTINGS,
+        requiredPermission: Permission.PERFORM_DATA_MIGRATION,
       },
       {
         icon: Users,

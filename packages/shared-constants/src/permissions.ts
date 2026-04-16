@@ -201,6 +201,11 @@ export enum Permission {
   // ============================================================================
   MANAGE_SYSTEM_SETTINGS = 'manage:system:settings',
   VIEW_SYSTEM_SETTINGS = 'view:system:settings',
+
+  // ============================================================================
+  // 데이터 마이그레이션 권한 (SYSTEM_ADMIN 전용)
+  // ============================================================================
+  PERFORM_DATA_MIGRATION = 'perform:data:migration',
 }
 
 /**
@@ -310,5 +315,6 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.DELETE_INTERMEDIATE_INSPECTION]: '중간점검 삭제',
 
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
+  [Permission.PERFORM_DATA_MIGRATION]: '데이터 마이그레이션 실행',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',
 };

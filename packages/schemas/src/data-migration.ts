@@ -6,8 +6,22 @@
  * apps/backend/src/modules/data-migration/types/ 에서 별도 관리.
  */
 
-/** 행별 처리 상태 */
-export type MigrationRowStatus = 'valid' | 'error' | 'duplicate' | 'warning';
+/** 행별 처리 상태 상수 */
+export const MIGRATION_ROW_STATUS = {
+  VALID: 'valid',
+  ERROR: 'error',
+  DUPLICATE: 'duplicate',
+  WARNING: 'warning',
+} as const;
+
+/** 행별 처리 상태 타입 */
+export type MigrationRowStatus = (typeof MIGRATION_ROW_STATUS)[keyof typeof MIGRATION_ROW_STATUS];
+
+/** INSERT 가능한 상태 집합 */
+export const INSERTABLE_STATUSES = new Set<MigrationRowStatus>([
+  MIGRATION_ROW_STATUS.VALID,
+  MIGRATION_ROW_STATUS.WARNING,
+]);
 
 /** 행별 검증 에러 */
 export interface RowFieldError {
@@ -61,8 +75,20 @@ export interface MigrationExecuteResult {
   errors: MigrationRowPreview[];
 }
 
+/** 멀티시트 마이그레이션 시트 타입 상수 */
+export const MIGRATION_SHEET_TYPE = {
+  EQUIPMENT: 'equipment',
+  CALIBRATION: 'calibration',
+  REPAIR: 'repair',
+  INCIDENT: 'incident',
+  CABLE: 'cable',
+  TEST_SOFTWARE: 'test_software',
+  CALIBRATION_FACTOR: 'calibration_factor',
+  NON_CONFORMANCE: 'non_conformance',
+} as const;
+
 /** 멀티시트 마이그레이션 시트 타입 */
-export type MigrationSheetType = 'equipment' | 'calibration' | 'repair' | 'incident';
+export type MigrationSheetType = (typeof MIGRATION_SHEET_TYPE)[keyof typeof MIGRATION_SHEET_TYPE];
 
 /** 단일 시트 Preview 결과 */
 export interface SheetPreviewResult {
@@ -77,6 +103,16 @@ export interface SheetPreviewResult {
   rows: MigrationRowPreview[];
 }
 
+/** FK 해석 요약 (담당자/부담당자/팀 자동 매칭 결과) */
+export interface FkResolutionSummaryDto {
+  resolvedManagers: number;
+  unresolvedManagers: number;
+  resolvedDeputyManagers: number;
+  unresolvedDeputyManagers: number;
+  resolvedTeams: number;
+  unresolvedTeams: number;
+}
+
 /** 멀티시트 Preview 응답 */
 export interface MultiSheetPreviewResult {
   sessionId: string;
@@ -86,6 +122,8 @@ export interface MultiSheetPreviewResult {
   totalRows: number;
   validRows: number;
   errorRows: number;
+  /** FK 자동 해석 요약 (담당자/부담당자/팀) */
+  fkResolutionSummary?: FkResolutionSummaryDto;
 }
 
 /** 멀티시트 Execute 응답 */

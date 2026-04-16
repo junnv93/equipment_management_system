@@ -119,6 +119,9 @@ export const BATCH_QUERY_LIMITS = {
   MIGRATION_CHUNK_SIZE: 100,
 } as const;
 
+/** 마이그레이션 세션 캐시 유효 시간 (1시간) */
+export const MIGRATION_SESSION_TTL_MS = 3_600_000;
+
 /**
  * 대시보드 KPI 임계값 — UL-QP-18 시험소 운영 기준
  */

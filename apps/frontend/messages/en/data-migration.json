@@ -36,7 +36,11 @@
     "equipment": "Equipment",
     "calibration": "Calibration History",
     "repair": "Repair History",
-    "incident": "Incident History"
+    "incident": "Incident History",
+    "cable": "Cables",
+    "test_software": "Test Software",
+    "calibration_factor": "Calibration Factors",
+    "non_conformance": "Non-Conformances"
   },
   "preview": {
     "title": "Preview Results",
@@ -75,7 +79,14 @@
     "backButton": "Re-upload",
     "loading": "Registering...",
     "noValidRows": "No items available for registration.",
-    "downloadErrorReport": "Download Error Report"
+    "downloadErrorReport": "Download Error Report",
+    "downloadMigrationReport": "Download Migration Report",
+    "fkResolution": {
+      "title": "Manager/Team Auto-Matching",
+      "managers": "Manager: {resolved} resolved / {unresolved} unresolved",
+      "deputies": "Deputy: {resolved} resolved / {unresolved} unresolved",
+      "teams": "Team: {resolved} resolved / {unresolved} unresolved"
+    }
   },
   "result": {
     "title": "Migration Complete",

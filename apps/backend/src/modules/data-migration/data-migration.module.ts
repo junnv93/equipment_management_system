@@ -4,6 +4,7 @@ import { DataMigrationService } from './services/data-migration.service';
 import { ExcelParserService } from './services/excel-parser.service';
 import { MigrationValidatorService } from './services/migration-validator.service';
 import { HistoryValidatorService } from './services/history-validator.service';
+import { FkResolutionService } from './services/fk-resolution.service';
 import { EquipmentModule } from '../equipment/equipment.module';
 import { CacheModule } from '../../common/cache/cache.module';
 
@@ -27,6 +28,7 @@ import { CacheModule } from '../../common/cache/cache.module';
     ExcelParserService,
     MigrationValidatorService,
     HistoryValidatorService,
+    FkResolutionService,
   ],
 })
 export class DataMigrationModule {}

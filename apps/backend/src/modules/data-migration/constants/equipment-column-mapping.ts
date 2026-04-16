@@ -302,6 +302,45 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['펌웨어버전', 'FW Version', 'Firmware Version'],
   },
   {
+    dbField: 'externalIdentifier',
+    aliases: ['외부식별번호', '소유처번호', '외부번호', 'External ID', 'External Identifier'],
+  },
+  {
+    dbField: 'equipmentType',
+    aliases: ['장비유형', '장비타입', '유형', 'Equipment Type', 'Type'],
+  },
+  {
+    dbField: 'calibrationResult',
+    aliases: ['교정결과', '교정 결과', 'Calibration Result'],
+  },
+  {
+    dbField: 'correctionFactor',
+    aliases: ['보정계수', '보정 계수', 'Correction Factor'],
+  },
+  {
+    dbField: 'isShared',
+    aliases: ['공용여부', '공용', 'Shared', 'Is Shared'],
+    transform: toBoolean,
+  },
+  {
+    dbField: 'sharedSource',
+    aliases: ['공용출처', '공용 출처', 'Shared Source'],
+  },
+  {
+    dbField: 'owner',
+    aliases: ['소유처', '소유자', 'Owner'],
+  },
+  {
+    dbField: 'usagePeriodStart',
+    aliases: ['사용시작일', '사용 시작일', 'Usage Start', 'Usage Period Start'],
+    transform: parseExcelDate,
+  },
+  {
+    dbField: 'usagePeriodEnd',
+    aliases: ['사용종료일', '사용 종료일', 'Usage End', 'Usage Period End'],
+    transform: parseExcelDate,
+  },
+  {
     dbField: 'specMatch',
     aliases: ['시방일치', 'Spec Match', '시방 일치'],
     transform: mapSpecMatch,
@@ -329,6 +368,24 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
   {
     dbField: 'technicalManager',
     aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
+  },
+
+  // FK 해석용 가상 필드 (DB 컬럼에 직접 매핑되지 않음, FkResolutionService가 해석)
+  {
+    dbField: 'managerEmail',
+    aliases: ['담당자이메일', '담당자 이메일', 'Manager Email'],
+  },
+  {
+    dbField: 'managerName',
+    aliases: ['담당자', '담당자명', 'Manager', 'Manager Name'],
+  },
+  {
+    dbField: 'deputyManagerEmail',
+    aliases: ['부담당자이메일', '부담당자 이메일', 'Deputy Manager Email'],
+  },
+  {
+    dbField: 'deputyManagerName',
+    aliases: ['부담당자', '부담당자명', 'Deputy Manager', 'Deputy Manager Name'],
   },
 ];
 

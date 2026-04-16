@@ -412,6 +412,29 @@ export default function PreviewStep({
           ))}
         </div>
 
+        {preview.fkResolutionSummary && (
+          <Alert variant="default" className="py-2">
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              {t('preview.fkResolution.title')}:{' '}
+              {t('preview.fkResolution.managers', {
+                resolved: preview.fkResolutionSummary.resolvedManagers,
+                unresolved: preview.fkResolutionSummary.unresolvedManagers,
+              })}
+              {' / '}
+              {t('preview.fkResolution.deputies', {
+                resolved: preview.fkResolutionSummary.resolvedDeputyManagers,
+                unresolved: preview.fkResolutionSummary.unresolvedDeputyManagers,
+              })}
+              {' / '}
+              {t('preview.fkResolution.teams', {
+                resolved: preview.fkResolutionSummary.resolvedTeams,
+                unresolved: preview.fkResolutionSummary.unresolvedTeams,
+              })}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {equipmentSheet.unmappedColumns.length > 0 && (
           <Alert variant="default">
             <AlertTriangle className="h-4 w-4" />
@@ -450,16 +473,14 @@ export default function PreviewStep({
             <Button variant="outline" onClick={onBack}>
               {t('preview.backButton')}
             </Button>
-            {hasErrors && (
-              <Button
-                variant="outline"
-                onClick={() => errorReportMutation.mutate(preview.sessionId)}
-                disabled={errorReportMutation.isPending}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {t('preview.downloadErrorReport')}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => errorReportMutation.mutate(preview.sessionId)}
+              disabled={errorReportMutation.isPending}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t('preview.downloadMigrationReport')}
+            </Button>
           </div>
           <Button onClick={handleExecute} disabled={!someSelected || executeMutation.isPending}>
             {executeMutation.isPending
@@ -493,6 +514,30 @@ export default function PreviewStep({
           </Card>
         ))}
       </div>
+
+      {/* FK 해석 요약 */}
+      {preview.fkResolutionSummary && (
+        <Alert variant="default" className="py-2">
+          <Info className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            {t('preview.fkResolution.title')}:{' '}
+            {t('preview.fkResolution.managers', {
+              resolved: preview.fkResolutionSummary.resolvedManagers,
+              unresolved: preview.fkResolutionSummary.unresolvedManagers,
+            })}
+            {' / '}
+            {t('preview.fkResolution.deputies', {
+              resolved: preview.fkResolutionSummary.resolvedDeputyManagers,
+              unresolved: preview.fkResolutionSummary.unresolvedDeputyManagers,
+            })}
+            {' / '}
+            {t('preview.fkResolution.teams', {
+              resolved: preview.fkResolutionSummary.resolvedTeams,
+              unresolved: preview.fkResolutionSummary.unresolvedTeams,
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* 시트별 탭 */}
       <Card>

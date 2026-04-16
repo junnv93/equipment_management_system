@@ -28,6 +28,11 @@ export const CALIBRATION_COLUMN_MAPPING: ColumnMappingEntry[] = [
     transform: toNumber,
   },
   { dbField: 'notes', aliases: ['비고', '메모', 'Notes', 'Remarks'] },
+  {
+    dbField: 'completionDate',
+    aliases: ['교정완료일', '완료일', 'Completion Date', 'Cal Completion Date'],
+    transform: parseExcelDate,
+  },
 ];
 
 export const CALIBRATION_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(

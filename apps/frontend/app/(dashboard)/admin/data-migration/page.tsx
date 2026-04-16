@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { getServerAuthSession } from '@/lib/auth/server-session';
-import { UserRoleValues } from '@equipment-management/schemas';
+import { type UserRole } from '@equipment-management/schemas';
+import { Permission, hasPermission } from '@equipment-management/shared-constants';
 import EquipmentMigrationWizard from '@/components/data-migration/EquipmentMigrationWizard';
 
 export default async function DataMigrationPage() {
@@ -12,7 +13,7 @@ export default async function DataMigrationPage() {
     redirect('/login');
   }
 
-  if (session.user.role !== UserRoleValues.SYSTEM_ADMIN) {
+  if (!hasPermission(session.user.role as UserRole, Permission.PERFORM_DATA_MIGRATION)) {
     redirect('/dashboard');
   }
 

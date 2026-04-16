@@ -36,7 +36,11 @@
     "equipment": "장비 등록",
     "calibration": "교정 이력",
     "repair": "수리 이력",
-    "incident": "사고 이력"
+    "incident": "사고 이력",
+    "cable": "케이블",
+    "test_software": "시험용 소프트웨어",
+    "calibration_factor": "교정 인자",
+    "non_conformance": "부적합"
   },
   "preview": {
     "title": "미리보기 결과",
@@ -75,7 +79,14 @@
     "backButton": "다시 업로드",
     "loading": "등록 중...",
     "noValidRows": "등록 가능한 항목이 없습니다.",
-    "downloadErrorReport": "오류 리포트 다운로드"
+    "downloadErrorReport": "오류 리포트 다운로드",
+    "downloadMigrationReport": "결과 리포트 다운로드",
+    "fkResolution": {
+      "title": "담당자/팀 자동 매칭",
+      "managers": "담당자 {resolved}명 해석 / {unresolved}명 미해석",
+      "deputies": "부담당자 {resolved}명 해석 / {unresolved}명 미해석",
+      "teams": "팀 {resolved}건 해석 / {unresolved}건 미해석"
+    }
   },
   "result": {
     "title": "마이그레이션 완료",

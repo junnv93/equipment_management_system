@@ -16,14 +16,44 @@ import {
   INCIDENT_ALIAS_INDEX,
   INCIDENT_COLUMN_MAPPING,
 } from '../constants/incident-column-mapping';
+import { CABLE_ALIAS_INDEX, CABLE_COLUMN_MAPPING } from '../constants/cable-column-mapping';
+import {
+  TEST_SOFTWARE_ALIAS_INDEX,
+  TEST_SOFTWARE_COLUMN_MAPPING,
+} from '../constants/test-software-column-mapping';
+import {
+  CALIBRATION_FACTOR_ALIAS_INDEX,
+  CALIBRATION_FACTOR_COLUMN_MAPPING,
+} from '../constants/calibration-factor-column-mapping';
+import {
+  NON_CONFORMANCE_ALIAS_INDEX,
+  NON_CONFORMANCE_COLUMN_MAPPING,
+} from '../constants/non-conformance-column-mapping';
 import { detectSheetType, type MigrationSheetType } from '../constants/sheet-config';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
+import {
+  EXCEL_COLORS,
+  EXCEL_PAGE_SETUP,
+  EXCEL_HEADER_ROW_HEIGHT,
+} from '../constants/excel-styling';
+import {
+  EXCEL_SHEET_NAMES,
+  REPORT_META_HEADERS,
+  SUMMARY_LABELS,
+  REFERENCE_LABELS,
+  STATUS_LABELS,
+} from '../constants/excel-labels';
 import {
   SiteEnum,
   ManagementMethodEnum,
   CalibrationRequiredEnum,
   REPAIR_RESULT_VALUES,
   INCIDENT_TYPE_VALUES,
+  CABLE_CONNECTOR_TYPE_VALUES,
+  TEST_FIELD_VALUES,
+  CALIBRATION_FACTOR_TYPE_VALUES,
+  NON_CONFORMANCE_TYPE_VALUES,
+  MIGRATION_ROW_STATUS,
 } from '@equipment-management/schemas';
 
 export interface ParsedSheet {
@@ -158,6 +188,14 @@ export class ExcelParserService {
         return REPAIR_ALIAS_INDEX;
       case 'incident':
         return INCIDENT_ALIAS_INDEX;
+      case 'cable':
+        return CABLE_ALIAS_INDEX;
+      case 'test_software':
+        return TEST_SOFTWARE_ALIAS_INDEX;
+      case 'calibration_factor':
+        return CALIBRATION_FACTOR_ALIAS_INDEX;
+      case 'non_conformance':
+        return NON_CONFORMANCE_ALIAS_INDEX;
       default:
         return COLUMN_ALIAS_INDEX;
     }
@@ -277,13 +315,52 @@ export class ExcelParserService {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Equipment Management System';
 
-    const sheet = workbook.addWorksheet('에러 리포트', {
-      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    // ── 요약 시트 ──────────────────────────────────────────────────────────────
+    const summarySheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.SUMMARY, {
+      pageSetup: EXCEL_PAGE_SETUP,
+    });
+
+    const validCount = rows.filter((r) => r.status === MIGRATION_ROW_STATUS.VALID).length;
+    const warningCount = rows.filter((r) => r.status === MIGRATION_ROW_STATUS.WARNING).length;
+    const errorCount = rows.filter((r) => r.status === MIGRATION_ROW_STATUS.ERROR).length;
+    const duplicateCount = rows.filter((r) => r.status === MIGRATION_ROW_STATUS.DUPLICATE).length;
+
+    summarySheet.columns = [
+      { header: SUMMARY_LABELS.ITEM, key: 'label', width: 25 },
+      { header: SUMMARY_LABELS.COUNT, key: 'count', width: 15 },
+    ];
+
+    const summaryHeaderRow = summarySheet.getRow(1);
+    summaryHeaderRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: EXCEL_COLORS.NAVY_HEADER },
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    summarySheet.addRow({ label: SUMMARY_LABELS.TOTAL, count: rows.length });
+    summarySheet.addRow({ label: SUMMARY_LABELS.SUCCESS, count: validCount });
+    summarySheet.addRow({ label: SUMMARY_LABELS.WARNING, count: warningCount });
+    summarySheet.addRow({ label: SUMMARY_LABELS.ERROR, count: errorCount });
+    summarySheet.addRow({ label: SUMMARY_LABELS.DUPLICATE, count: duplicateCount });
+
+    // ── 상세 결과 시트 ────────────────────────────────────────────────────────
+    const sheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.MIGRATION_RESULT, {
+      pageSetup: EXCEL_PAGE_SETUP,
     });
 
     // 헤더 정의
     const dataColumns = EQUIPMENT_COLUMN_MAPPING.map((entry) => entry.aliases[0]);
-    const allHeaders = ['행번호', '처리결과', '에러 상세', '관리번호', ...dataColumns];
+    const allHeaders = [
+      REPORT_META_HEADERS.ROW_NUMBER,
+      REPORT_META_HEADERS.RESULT,
+      REPORT_META_HEADERS.ERROR_DETAIL,
+      REPORT_META_HEADERS.MANAGEMENT_NUMBER,
+      ...dataColumns,
+    ];
 
     sheet.columns = allHeaders.map((header, idx) => ({
       header,
@@ -294,8 +371,12 @@ export class ExcelParserService {
     // 헤더 스타일
     const headerRow = sheet.getRow(1);
     headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: EXCEL_COLORS.NAVY_HEADER },
+      };
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       cell.border = {
         top: { style: 'thin' },
@@ -304,7 +385,7 @@ export class ExcelParserService {
         right: { style: 'thin' },
       };
     });
-    headerRow.height = 28;
+    headerRow.height = EXCEL_HEADER_ROW_HEIGHT;
 
     // 데이터 행
     for (const row of rows) {
@@ -321,22 +402,30 @@ export class ExcelParserService {
       ]);
 
       // 에러 행: 연한 빨간 배경
-      if (row.status === 'error') {
+      if (row.status === MIGRATION_ROW_STATUS.ERROR) {
         sheetRow.eachCell((cell) => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: EXCEL_COLORS.ERROR_FILL },
+          };
         });
-      } else if (row.status === 'duplicate') {
+      } else if (row.status === MIGRATION_ROW_STATUS.DUPLICATE) {
         sheetRow.eachCell((cell) => {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: EXCEL_COLORS.DUPLICATE_FILL },
+          };
         });
       }
 
       sheetRow.eachCell((cell) => {
         cell.border = {
-          top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
-          left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
-          bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
-          right: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+          top: { style: 'thin', color: { argb: EXCEL_COLORS.BORDER } },
+          left: { style: 'thin', color: { argb: EXCEL_COLORS.BORDER } },
+          bottom: { style: 'thin', color: { argb: EXCEL_COLORS.BORDER } },
+          right: { style: 'thin', color: { argb: EXCEL_COLORS.BORDER } },
         };
         cell.alignment = { vertical: 'top', wrapText: true };
       });
@@ -354,8 +443,8 @@ export class ExcelParserService {
     workbook.creator = 'Equipment Management System';
 
     // ── 장비 등록 시트 ──────────────────────────────────────────────────────────
-    const equipSheet = workbook.addWorksheet('장비 등록', {
-      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    const equipSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.EQUIPMENT, {
+      pageSetup: EXCEL_PAGE_SETUP,
     });
 
     const equipColumns = EQUIPMENT_COLUMN_MAPPING.map((entry) => ({
@@ -369,11 +458,13 @@ export class ExcelParserService {
     const equipHeaderRow = equipSheet.getRow(1);
     equipHeaderRow.eachCell((cell, colIdx) => {
       const entry = EQUIPMENT_COLUMN_MAPPING[colIdx - 1];
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: entry?.required ? 'FF1D4ED8' : 'FF2563EB' },
+        fgColor: {
+          argb: entry?.required ? EXCEL_COLORS.REQUIRED_HEADER : EXCEL_COLORS.OPTIONAL_HEADER,
+        },
       };
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       cell.border = {
@@ -383,7 +474,7 @@ export class ExcelParserService {
         right: { style: 'thin' },
       };
     });
-    equipHeaderRow.height = 28;
+    equipHeaderRow.height = EXCEL_HEADER_ROW_HEIGHT;
 
     equipSheet.addRow({
       name: '네트워크 분석기',
@@ -402,8 +493,8 @@ export class ExcelParserService {
     });
 
     // ── 교정 이력 시트 ──────────────────────────────────────────────────────────
-    const calSheet = workbook.addWorksheet('교정 이력', {
-      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    const calSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.CALIBRATION, {
+      pageSetup: EXCEL_PAGE_SETUP,
     });
     calSheet.columns = [
       { header: '관리번호 *', key: 'managementNumber', width: 20 },
@@ -429,8 +520,8 @@ export class ExcelParserService {
     });
 
     // ── 수리 이력 시트 ──────────────────────────────────────────────────────────
-    const repairSheet = workbook.addWorksheet('수리 이력', {
-      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    const repairSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.REPAIR, {
+      pageSetup: EXCEL_PAGE_SETUP,
     });
     repairSheet.columns = [
       { header: '관리번호 *', key: 'managementNumber', width: 20 },
@@ -452,8 +543,8 @@ export class ExcelParserService {
     });
 
     // ── 사고 이력 시트 ──────────────────────────────────────────────────────────
-    const incidentSheet = workbook.addWorksheet('사고 이력', {
-      pageSetup: { paperSize: 9, orientation: 'landscape' },
+    const incidentSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.INCIDENT, {
+      pageSetup: EXCEL_PAGE_SETUP,
     });
     incidentSheet.columns = [
       { header: '관리번호 *', key: 'managementNumber', width: 20 },
@@ -472,15 +563,111 @@ export class ExcelParserService {
       content: '운반 중 케이블 손상',
     });
 
+    // ── 케이블 시트 ──────────────────────────────────────────────────────────────
+    const cableSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.CABLE, {
+      pageSetup: EXCEL_PAGE_SETUP,
+    });
+    cableSheet.columns = CABLE_COLUMN_MAPPING.map((entry) => ({
+      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      key: entry.dbField,
+      width: 22,
+    }));
+    this.applyHeaderStyle(
+      cableSheet,
+      CABLE_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    cableSheet.addRow({
+      managementNumber: 'CBL-001',
+      length: '0.50',
+      connectorType: 'N',
+      frequencyRangeMin: '0',
+      frequencyRangeMax: '18000',
+      serialNumber: 'SN-CBL-001',
+      location: '수원랩 A동',
+      site: 'suwon',
+    });
+
+    // ── 시험용 소프트웨어 시트 ─────────────────────────────────────────────────
+    const swSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.TEST_SOFTWARE, {
+      pageSetup: EXCEL_PAGE_SETUP,
+    });
+    swSheet.columns = TEST_SOFTWARE_COLUMN_MAPPING.map((entry) => ({
+      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      key: entry.dbField,
+      width: 22,
+    }));
+    this.applyHeaderStyle(
+      swSheet,
+      TEST_SOFTWARE_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    swSheet.addRow({
+      managementNumber: 'P0001',
+      name: 'EUT Monitor',
+      testField: 'emc',
+      softwareVersion: '2.1.0',
+      manufacturer: 'Keysight',
+      site: 'suwon',
+    });
+
+    // ── 교정 인자 시트 ─────────────────────────────────────────────────────────
+    const cfSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.CALIBRATION_FACTOR, {
+      pageSetup: EXCEL_PAGE_SETUP,
+    });
+    cfSheet.columns = CALIBRATION_FACTOR_COLUMN_MAPPING.map((entry) => ({
+      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      key: entry.dbField,
+      width: 22,
+    }));
+    this.applyHeaderStyle(
+      cfSheet,
+      CALIBRATION_FACTOR_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    cfSheet.addRow({
+      managementNumber: 'SUW-E0001',
+      factorType: 'antenna_factor',
+      factorName: 'AF 30MHz',
+      factorValue: '25.3',
+      unit: 'dB/m',
+      effectiveDate: '2024-01-15',
+    });
+
+    // ── 부적합 시트 ────────────────────────────────────────────────────────────
+    const ncSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.NON_CONFORMANCE, {
+      pageSetup: EXCEL_PAGE_SETUP,
+    });
+    ncSheet.columns = NON_CONFORMANCE_COLUMN_MAPPING.map((entry) => ({
+      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      key: entry.dbField,
+      width: 22,
+    }));
+    this.applyHeaderStyle(
+      ncSheet,
+      NON_CONFORMANCE_COLUMN_MAPPING.map((e) => !!e.required)
+    );
+    ncSheet.addRow({
+      managementNumber: 'SUW-E0001',
+      discoveryDate: '2024-03-01',
+      ncType: 'equipment_damage',
+      cause: '교정 결과 기준 초과',
+      actionPlan: '재교정 실시',
+    });
+
     // ── 참고값 시트 (SSOT: enum 기반 동적 생성 — enum 추가 시 자동 반영) ──
-    const refSheet = workbook.addWorksheet('참고값');
-    refSheet.addRow(['필드명', '허용값']);
-    refSheet.addRow(['사이트(site)', SiteEnum.options.join(' | ')]);
-    refSheet.addRow(['관리방법(managementMethod)', ManagementMethodEnum.options.join(' | ')]);
-    refSheet.addRow(['교정필요(calibrationRequired)', CalibrationRequiredEnum.options.join(' | ')]);
-    refSheet.addRow(['수리결과(repairResult)', REPAIR_RESULT_VALUES.join(' | ')]);
-    refSheet.addRow(['사고유형(incidentType)', INCIDENT_TYPE_VALUES.join(' | ')]);
-    refSheet.addRow(['날짜 형식', 'YYYY-MM-DD 또는 YYYY.MM.DD']);
+    const refSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.REFERENCE);
+    refSheet.addRow([REFERENCE_LABELS.FIELD_NAME, REFERENCE_LABELS.ALLOWED_VALUES]);
+    refSheet.addRow([REFERENCE_LABELS.SITE, SiteEnum.options.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.MANAGEMENT_METHOD, ManagementMethodEnum.options.join(' | ')]);
+    refSheet.addRow([
+      REFERENCE_LABELS.CALIBRATION_REQUIRED,
+      CalibrationRequiredEnum.options.join(' | '),
+    ]);
+    refSheet.addRow([REFERENCE_LABELS.REPAIR_RESULT, REPAIR_RESULT_VALUES.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.INCIDENT_TYPE, INCIDENT_TYPE_VALUES.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.CONNECTOR_TYPE, CABLE_CONNECTOR_TYPE_VALUES.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.TEST_FIELD, TEST_FIELD_VALUES.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.FACTOR_TYPE, CALIBRATION_FACTOR_TYPE_VALUES.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.NC_TYPE, NON_CONFORMANCE_TYPE_VALUES.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.DATE_FORMAT, REFERENCE_LABELS.DATE_FORMAT_VALUE]);
     refSheet.getColumn(1).width = 35;
     refSheet.getColumn(2).width = 70;
 
@@ -492,11 +679,11 @@ export class ExcelParserService {
     const headerRow = sheet.getRow(1);
     headerRow.eachCell((cell, colIdx) => {
       const isRequired = requiredFlags[colIdx - 1] ?? false;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.font = { bold: true, color: { argb: EXCEL_COLORS.WHITE } };
       cell.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: isRequired ? 'FF1D4ED8' : 'FF2563EB' },
+        fgColor: { argb: isRequired ? EXCEL_COLORS.REQUIRED_HEADER : EXCEL_COLORS.OPTIONAL_HEADER },
       };
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       cell.border = {
@@ -506,16 +693,10 @@ export class ExcelParserService {
         right: { style: 'thin' },
       };
     });
-    headerRow.height = 28;
+    headerRow.height = EXCEL_HEADER_ROW_HEIGHT;
   }
 
   private getStatusLabel(status: string): string {
-    const labels: Record<string, string> = {
-      valid: '성공',
-      error: '오류',
-      duplicate: '중복',
-      warning: '경고',
-    };
-    return labels[status] ?? status;
+    return STATUS_LABELS[status] ?? status;
   }
 }
