@@ -48,7 +48,11 @@
       "Bash(rm /home/devuser/equipment_management_system/.claude/evaluations/tech-debt-68.md)",
       "Bash(git -C /home/devuser/equipment_management_system status --short)",
       "Bash(mkdir -p /home/kmjkds/equipment_management_system/.claude/exec-plans/completed)",
-      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-15-docker-infra-standards.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/)"
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-15-docker-infra-standards.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/)",
+      "Bash(sed -i 's/69차/70차/g' .claude/skills/harness/references/example-prompts.md .claude/exec-plans/tech-debt-tracker.md)",
+      "Bash(sed -i 's/tech-debt-69/tech-debt-70/g' .claude/contracts/tech-debt-69.md)",
+      "Bash(mv .claude/contracts/tech-debt-69.md .claude/contracts/tech-debt-70.md)",
+      "Bash(mv .claude/evaluations/tech-debt-69.md .claude/evaluations/tech-debt-70.md)"
     ],
     "deny": [],
     "ask": []
