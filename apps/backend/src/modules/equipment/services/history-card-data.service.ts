@@ -21,7 +21,6 @@ import {
   MANAGEMENT_METHOD_LABELS,
   CALIBRATION_RESULT_LABELS,
 } from '@equipment-management/schemas';
-import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 import { EquipmentTimelineService } from './equipment-timeline.service';
 import type { TimelineEntry } from './equipment-timeline.types';
 
@@ -132,13 +131,8 @@ export class HistoryCardDataService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
-    @Inject(STORAGE_PROVIDER)
-    private readonly _storage: IStorageProvider,
     private readonly timelineService: EquipmentTimelineService
-  ) {
-    // storage는 Phase 5 renderer에서 사용 — 현재 unused placeholder
-    void this._storage;
-  }
+  ) {}
 
   async aggregate(equipmentId: string): Promise<HistoryCardData> {
     const [equipmentRow] = await this.db

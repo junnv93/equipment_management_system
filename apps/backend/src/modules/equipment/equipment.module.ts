@@ -10,6 +10,7 @@ import { EquipmentAttachmentService } from './services/equipment-attachment.serv
 import { RepairHistoryService } from './services/repair-history.service';
 import { HistoryCardService } from './services/history-card.service';
 import { HistoryCardDataService } from './services/history-card-data.service';
+import { HistoryCardRendererService } from './services/history-card-renderer.service';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import { EquipmentTimelineService } from './services/equipment-timeline.service';
 import { DisposalService } from './services/disposal.service';
@@ -42,6 +43,7 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     DisposalService,
     HistoryCardService,
     HistoryCardDataService,
+    HistoryCardRendererService,
     QRAccessService,
     InternalApiKeyGuard,
   ],
