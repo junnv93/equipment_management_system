@@ -107,3 +107,42 @@ await db.transaction(async (tx) => {
 
 // CAS 단일 테이블 업데이트는 트랜잭션 불필요 (WHERE절 원자성)
 ```
+
+### Event Emission: `emit` vs `emitAsync`
+
+**73차 근본 수정으로 도메인 서비스는 `await eventEmitter.emitAsync(...)` 패턴이 기본.** 단, 이 규칙은 리스너가 **Promise를 반환하도록 등록된 경우에만** 의미가 있다.
+
+| 리스너                      | 등록 형태                                                                 | emitAsync 효과                                              |
+| --------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `CacheEventListener`        | `async (payload) => await handler(...)` → Promise 반환                    | **실제로 await** — read-after-write cache invalidation 보장 |
+| `NotificationEventListener` | `(payload) => { dispatcher.dispatch(...).catch(...) }` → `undefined` 반환 | emitAsync로 호출해도 **fire-and-forget** (Promise 없음)     |
+
+→ 알림 전송은 현재 구조상 best-effort이며, HTTP 응답이 알림 전송 완료를 보장하지 않는다. 캐시 무효화는 보장된다.
+
+#### Scheduler 예외 — 의도적 `emit` 유지
+
+`apps/backend/src/modules/notifications/schedulers/*.ts` 의 6개 emit 호출은 `emit()` (fire-and-forget) 을 유지한다. 근거:
+
+1. **cron context, HTTP response 경로 아님** — 응답자가 없으므로 await 의미가 없다.
+2. **알림 실패가 배치 로직을 차단하지 않아야 함** — 일부 알림 실패로 전체 배치가 중단되면 이후 대상 처리 누락.
+3. **NotificationEventListener 콜백이 sync 이므로 emitAsync로 바꿔도 동작 동일** — 혼란만 초래.
+
+스케줄러 emit 호출 위치:
+
+- `calibration-overdue-scheduler.ts` (1곳)
+- `checkout-overdue-scheduler.ts` (1곳)
+- `import-orphan-scheduler.ts` (1곳)
+- `intermediate-check-scheduler.ts` (3곳)
+
+### SSE 일관성 보장 범위
+
+| 보장                      | 설명                                                                                                                                                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ✅ Cache read-after-write | 도메인 서비스가 `await emitAsync(...)` → `CacheEventListener` async 콜백이 await 됨. 요청 응답 시점엔 캐시 무효화 완료.                                                                                                        |
+| ❌ SSE read-after-write   | `NotificationDispatcher` 는 `NotificationEventListener` sync 콜백 안에서 fire-and-forget 실행. 요청 응답 시점에 SSE 푸시 완료 보장 없음. 클라이언트는 TanStack Query의 `refetchOnWindowFocus` / interval 을 fallback으로 의존. |
+
+설계 이유:
+
+- SSE 푸시는 RxJS `Subject.next()` (sync) 이지만 그 이전 단계(DB insert → dispatch)가 HTTP 응답 경로에 포함되면 모든 mutation 지연이 커짐.
+- read-after-write가 반드시 필요한 도메인(승인 워크플로우 등)은 응답 자체가 상태를 반환하므로 SSE에 의존할 필요 없음.
+- 진행 바 / 실시간 피드백이 필요한 경우 프론트엔드에서 optimistic update + 캐시 무효화 조합으로 해결.

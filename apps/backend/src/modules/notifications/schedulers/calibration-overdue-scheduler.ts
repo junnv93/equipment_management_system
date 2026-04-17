@@ -286,6 +286,10 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
           this.logger.debug(`장비 ${equip.managementNumber}(${equip.id}): 캐시 무효화 완료`);
 
           // 3-3. 알림 이벤트 발행 (레지스트리 기반 수신자 자동 해석)
+          // 스케줄러 컨텍스트 — fire-and-forget 의도:
+          // HTTP response 경로 아님, 알림 전송 실패가 배치 로직을 차단하지 않는다.
+          // NotificationEventListener 콜백은 sync 이므로 emitAsync로 바꿔도 동작 동일.
+          // 자세한 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
           try {
             this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_OVERDUE, {
               equipmentId: equip.id,

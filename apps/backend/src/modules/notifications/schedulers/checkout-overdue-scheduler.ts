@@ -172,6 +172,8 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
           managementNumber: '',
         };
 
+        // 스케줄러 컨텍스트 — fire-and-forget (cron, HTTP response 없음).
+        // 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_OVERDUE, {
           checkoutId: checkout.id,
           equipmentId: item.equipmentId,

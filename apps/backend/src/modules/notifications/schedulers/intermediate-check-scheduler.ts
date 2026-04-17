@@ -19,6 +19,12 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
  * → 서버 재시작, 멀티 인스턴스에서도 안전
  *
  * 성능: 배치 중복 체크 + Promise.all 병렬 로딩으로 N+1 방지
+ *
+ * 이벤트 발행 정책:
+ *   이 파일의 `eventEmitter.emit()` 호출 3곳 모두 **fire-and-forget 의도**.
+ *   cron 컨텍스트이며 HTTP response 경로가 아니므로 알림 전송 실패가 배치 로직을 차단하지 않음.
+ *   또한 NotificationEventListener 콜백이 sync 등록 형태이므로 emitAsync로 바꿔도 동작 동일.
+ *   자세한 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
  */
 @Injectable()
 export class IntermediateCheckScheduler {
@@ -168,6 +174,8 @@ export class IntermediateCheckScheduler {
             site: '',
           };
 
+          // 스케줄러 컨텍스트 — fire-and-forget (cron, HTTP response 없음).
+          // 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
           this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
             calibrationId: calibration.id,
             equipmentId: calibration.equipmentId,
@@ -293,6 +301,8 @@ export class IntermediateCheckScheduler {
             site: '',
           };
 
+          // 스케줄러 컨텍스트 — fire-and-forget (cron, HTTP response 없음).
+          // 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
           this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
             calibrationId: calibration.id,
             equipmentId: calibration.equipmentId,
@@ -372,6 +382,8 @@ export class IntermediateCheckScheduler {
             site: '',
           };
 
+          // 스케줄러 컨텍스트 — fire-and-forget (cron, HTTP response 없음).
+          // 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
           this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
             calibrationId: calibration.id,
             equipmentId: calibration.equipmentId,

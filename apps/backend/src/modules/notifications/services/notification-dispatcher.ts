@@ -220,6 +220,10 @@ export class NotificationDispatcher {
       }
 
       // === Stage 5: 캐시 무효화 + SSE 푸시 (개별 사용자별 격리) ===
+      // SSE 푸시는 RxJS `Subject.next()` (sync) 이지만 이 메서드 전체가 NotificationEventListener의
+      // sync 콜백 안에서 fire-and-forget 실행되므로, HTTP 응답 시점에 SSE 푸시 완료 보장 없음.
+      // 구독자가 없는 유저에게는 pushToUser 가 no-op (line 242 근처 warn 로그).
+      // 자세한 정책: docs/references/backend-patterns.md "SSE 일관성 보장 범위".
       for (const userId of enabledIds) {
         this.cacheService.delete(`${CACHE_KEY_PREFIXES.NOTIFICATION}unread:${userId}`);
       }
