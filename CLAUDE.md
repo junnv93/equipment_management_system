@@ -296,7 +296,7 @@ Components: feature-grouped (`equipment/`, `checkouts/`, `calibration/`, `non-co
 
 This project has 25+ custom Claude Code skills in `.claude/skills/` organized by role:
 - **Domain guides**: equipment-management, nextjs-16
-- **Verify skills (16)**: verify-cas / -auth / -zod / -ssot / -hardcoding / -frontend-state / -nextjs / -design-tokens / -security / -i18n / -sql-safety / -e2e / -seed-integrity / -workflows / -filters / -implementation
+- **Verify skills (17)**: verify-cas / -auth / -zod / -ssot / -hardcoding / -frontend-state / -nextjs / -design-tokens / -security / -i18n / -sql-safety / -e2e / -seed-integrity / -workflows / -filters / -cache-events / -implementation
 - **Review skills**: review-architecture, review-design
 - **Orchestrators**: generate-prompts, manage-skills, playwright-e2e, harness
 
