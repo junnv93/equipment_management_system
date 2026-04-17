@@ -3,10 +3,8 @@
 import request from 'supertest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import postgres from 'postgres';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
-import { seedTestUsers } from './helpers/test-fixtures';
 
 describe('Equipment Approval Process (e2e)', () => {
   let ctx: TestAppContext;
@@ -16,11 +14,10 @@ describe('Equipment Approval Process (e2e)', () => {
   const createdRequestUuids: string[] = [];
   const createdEquipmentUuids: string[] = [];
   const testUploadDir = path.join(process.cwd(), 'test-uploads');
-  let sql: postgres.Sql;
 
   beforeAll(async () => {
     await fs.mkdir(testUploadDir, { recursive: true });
-    sql = await seedTestUsers();
+    // globalSetup(jest-global-setup.ts)이 팀 + 사용자 시딩을 담당
     ctx = await createTestApp();
 
     siteAdminToken = await loginAs(ctx.app, 'admin');
@@ -65,10 +62,6 @@ describe('Equipment Approval Process (e2e)', () => {
     }
 
     await closeTestApp(ctx?.app);
-
-    if (sql) {
-      await sql.end();
-    }
   });
 
   describe('장비 등록 요청 프로세스', () => {
@@ -236,15 +229,50 @@ describe('Equipment Approval Process (e2e)', () => {
   });
 
   describe('파일 업로드', () => {
+    // 공유 장비 UUID — 업로드 테스트 전체가 동일 장비에 첨부 (owner 필수)
+    // /equipment/attachments는 equipmentId/calibrationId/requestId 중 최소 하나 필요
+    let uploadTestEquipmentUuid: string;
+
+    beforeAll(async () => {
+      const createResponse = await request(ctx.app.getHttpServer())
+        .post('/equipment')
+        .set('Authorization', `Bearer ${siteAdminToken}`)
+        .send({
+          name: 'E2E 업로드 테스트 장비',
+          managementNumber: `E2E-UPLOAD-${Date.now()}`,
+          modelName: 'Upload Model',
+          manufacturer: 'Upload Manufacturer',
+          serialNumber: `SN-UPLOAD-${Date.now()}`,
+          location: '테스트 위치',
+          initialLocation: '테스트 위치',
+          site: 'suwon',
+          equipmentType: '테스트 장비',
+          approvalStatus: 'approved',
+          status: 'available',
+        });
+
+      if (createResponse.status === 201 && createResponse.body.id) {
+        uploadTestEquipmentUuid = createResponse.body.id;
+        createdEquipmentUuids.push(uploadTestEquipmentUuid);
+      }
+    });
+
+    // 최소 유효 PDF magic bytes — 파일 내용 검증 통과용
+    // %PDF-1.4 헤더 + 최소 구조 (magic number 매칭만 필요)
+    const MINIMAL_PDF = Buffer.from(
+      '%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF',
+      'utf-8'
+    );
+
     it('파일을 업로드할 수 있어야 합니다', async () => {
-      const testFileContent = Buffer.from('Test file content for E2E test');
       const testFilePath = path.join(testUploadDir, 'test-file.pdf');
-      await fs.writeFile(testFilePath, testFileContent);
+      await fs.writeFile(testFilePath, MINIMAL_PDF);
 
       const response = await request(ctx.app.getHttpServer())
         .post('/equipment/attachments')
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .attach('file', testFilePath)
+        .field('equipmentId', uploadTestEquipmentUuid)
         .field('attachmentType', 'inspection_report')
         .field('description', 'E2E 테스트 파일');
 
@@ -257,7 +285,9 @@ describe('Equipment Approval Process (e2e)', () => {
     });
 
     it('파일 크기 제한을 초과하면 업로드가 실패해야 합니다', async () => {
-      const largeFileContent = Buffer.alloc(11 * 1024 * 1024, 'x');
+      // 11MB PDF: 유효 헤더 + 큰 페이로드 → 크기 제한(10MB) 초과
+      const padding = Buffer.alloc(11 * 1024 * 1024 - MINIMAL_PDF.length, 0x20);
+      const largeFileContent = Buffer.concat([MINIMAL_PDF, padding]);
       const largeFilePath = path.join(testUploadDir, 'large-file.pdf');
       await fs.writeFile(largeFilePath, largeFileContent);
 
@@ -265,6 +295,7 @@ describe('Equipment Approval Process (e2e)', () => {
         .post('/equipment/attachments')
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .attach('file', largeFilePath)
+        .field('equipmentId', uploadTestEquipmentUuid)
         .field('attachmentType', 'inspection_report');
 
       expect(response.status).toBe(400);
@@ -282,6 +313,7 @@ describe('Equipment Approval Process (e2e)', () => {
         .post('/equipment/attachments')
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .attach('file', invalidFilePath)
+        .field('equipmentId', uploadTestEquipmentUuid)
         .field('attachmentType', 'inspection_report');
 
       expect(response.status).toBe(400);

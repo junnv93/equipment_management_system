@@ -312,19 +312,18 @@ describe('NonConformancesController (e2e)', () => {
         });
 
       if (ncResponse.status === 201) {
-        const rentalResponse = await request(ctx.app.getHttpServer())
-          .post('/rentals')
+        // /checkouts: NC 장비는 체크아웃 차단(400 BadRequestException) 또는 403 권한 거부
+        const checkoutResponse = await request(ctx.app.getHttpServer())
+          .post('/checkouts')
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            equipmentId: blockTestEquipmentUuid,
-            borrowerId: testUserId,
-            expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-              .toISOString()
-              .split('T')[0],
-            loanDate: new Date().toISOString().split('T')[0],
+            equipmentIds: [blockTestEquipmentUuid],
+            type: 'calibration',
+            reason: 'NC 차단 테스트 체크아웃',
+            expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
           });
 
-        expect([400, 403]).toContain(rentalResponse.status);
+        expect([400, 403]).toContain(checkoutResponse.status);
 
         if (ncResponse.body.id) {
           const ncDetail = await request(ctx.app.getHttpServer())
@@ -507,7 +506,7 @@ describe('NonConformancesController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           repairDate: new Date().toISOString(),
-          repairDescription: '첫 번째 수리',
+          repairDescription: '첫 번째 수리 — 부품 교체 작업', // min(10) 준수
           repairResult: 'partial',
           nonConformanceId: oneToOneNcId,
         });

@@ -90,7 +90,10 @@ describe('CalibrationFactorsService', () => {
           provide: CacheInvalidationHelper,
           useValue: { invalidateAllDashboard: jest.fn().mockResolvedValue(undefined) },
         },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn(), emitAsync: jest.fn().mockResolvedValue(true) },
+        },
       ],
     }).compile();
 

@@ -1,9 +1,13 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import postgres from 'postgres';
-import { TEST_USER_DETAILS } from './test-auth';
+import { TEAM_PLACEHOLDER_ID } from '../../src/database/utils/uuid-constants';
 
-/** 장비 생성 기본값 — CreateEquipmentDto 필수 필드 포함 */
+/**
+ * 장비 생성 기본값 — CreateEquipmentDto 필수 필드 포함
+ *
+ * ⚠️ teamId 필수: team-scoped 필터(calibration-plans equipment.teamId, intermediate-checks 등)에서
+ * 결과 empty가 되지 않도록 TEAM_PLACEHOLDER_ID에 소속시킨다. override로 다른 팀 지정 가능.
+ */
 const DEFAULT_EQUIPMENT = {
   modelName: 'Test Model',
   manufacturer: 'Test Manufacturer',
@@ -12,6 +16,7 @@ const DEFAULT_EQUIPMENT = {
   initialLocation: 'Test Location',
   site: 'suwon' as const,
   approvalStatus: 'approved' as const,
+  teamId: TEAM_PLACEHOLDER_ID,
 };
 
 /**
@@ -114,32 +119,5 @@ export async function createTestCheckout(
   return response.body.id;
 }
 
-/**
- * 테스트 사용자를 DB에 직접 시딩합니다.
- * 승인 프로세스 등에서 외래 키 제약 조건 충족을 위해 사용합니다.
- *
- * @returns postgres.Sql 인스턴스 (afterAll에서 sql.end()로 정리)
- */
-export async function seedTestUsers(): Promise<postgres.Sql> {
-  const sql = postgres(process.env.DATABASE_URL as string);
-
-  for (const user of TEST_USER_DETAILS) {
-    try {
-      await sql`
-        INSERT INTO users (id, email, name, role, site, location, created_at, updated_at)
-        VALUES (${user.id}, ${user.email}, ${user.name}, ${user.role}, ${user.site}, ${user.location}, NOW(), NOW())
-        ON CONFLICT (id) DO UPDATE SET
-          email = EXCLUDED.email,
-          name = EXCLUDED.name,
-          role = EXCLUDED.role,
-          site = EXCLUDED.site,
-          location = EXCLUDED.location,
-          updated_at = NOW()
-      `;
-    } catch {
-      // 시드 실패 무시 — 이미 존재하는 경우
-    }
-  }
-
-  return sql;
-}
+// seedTestUsers, seedTestTeam은 제거됨 — jest-global-setup.ts가 모든 E2E 테스트 전에 1회 자동 시딩.
+// 개별 스위트에서 beforeAll로 수동 시딩할 필요 없음 (test-fixtures 설계의 SSOT 강화).

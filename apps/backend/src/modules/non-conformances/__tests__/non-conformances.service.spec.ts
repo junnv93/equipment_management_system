@@ -400,7 +400,7 @@ describe('NonConformancesService', () => {
       expect(result.status).toBe(NonConformanceStatus.OPEN);
       expect(mockCacheService.delete).toHaveBeenCalled();
       // cross-entity 캐시 무효화는 NC_CORRECTION_REJECTED 이벤트 → CacheEventListener가 처리
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED,
         expect.objectContaining({ ncId: 'nc-uuid', equipmentId: 'eq-uuid' })
       );

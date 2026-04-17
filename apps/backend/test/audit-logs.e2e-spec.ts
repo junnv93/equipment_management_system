@@ -2,7 +2,7 @@
 
 import request from 'supertest';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
-import { loginAs } from './helpers/test-auth';
+import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 
 describe('AuditLogsController (e2e)', () => {
@@ -106,7 +106,7 @@ describe('AuditLogsController (e2e)', () => {
 
   describe('GET /audit-logs/entity/:entityType/:entityId', () => {
     it('should return audit logs for specific entity', async () => {
-      const testEntityId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const testEntityId = TEST_USER_IDS.admin;
 
       const response = await request(ctx.app.getHttpServer())
         .get(`/audit-logs/entity/equipment/${testEntityId}`)
@@ -133,7 +133,7 @@ describe('AuditLogsController (e2e)', () => {
 
   describe('GET /audit-logs/user/:userId', () => {
     it('should return audit logs for specific user', async () => {
-      const testUserId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const testUserId = TEST_USER_IDS.admin;
 
       const response = await request(ctx.app.getHttpServer())
         .get(`/audit-logs/user/${testUserId}`)
@@ -148,7 +148,7 @@ describe('AuditLogsController (e2e)', () => {
     });
 
     it('should support limit parameter', async () => {
-      const testUserId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const testUserId = TEST_USER_IDS.admin;
 
       const response = await request(ctx.app.getHttpServer())
         .get(`/audit-logs/user/${testUserId}?limit=5`)

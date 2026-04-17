@@ -186,7 +186,7 @@ describe('SoftwareValidationsService', () => {
 
       await service.submit('val-uuid-1', 1, 'user-uuid-1');
 
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('submitted'),
         expect.any(Object)
       );
@@ -212,7 +212,7 @@ describe('SoftwareValidationsService', () => {
 
       await service.approve('val-uuid-1', 1, 'approver-uuid-1');
 
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('approved'),
         expect.any(Object)
       );
@@ -235,7 +235,7 @@ describe('SoftwareValidationsService', () => {
 
       await service.qualityApprove('val-uuid-1', 1, 'qa-uuid-1');
 
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('quality'),
         expect.any(Object)
       );
@@ -258,7 +258,7 @@ describe('SoftwareValidationsService', () => {
 
       await service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '미달');
 
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('rejected'),
         expect.any(Object)
       );
@@ -273,7 +273,7 @@ describe('SoftwareValidationsService', () => {
 
       await service.reject('val-uuid-1', 1, 'reviewer-uuid-1', '기준 미달');
 
-      expect(mockEventEmitter.emit).toHaveBeenCalled();
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalled();
     });
 
     it('draft/quality_approved 상태에서 BadRequestException을 던진다', async () => {

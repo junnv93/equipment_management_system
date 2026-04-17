@@ -187,7 +187,7 @@ describe('CalibrationPlansService', () => {
 
       await service.submitForReview('plan-uuid-1', { casVersion: 1, submittedBy: 'user-1' });
 
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('calibrationPlan'),
         expect.objectContaining({ planId: 'plan-uuid-1' })
       );
@@ -232,7 +232,7 @@ describe('CalibrationPlansService', () => {
       } as never);
 
       expect(result).toBeDefined();
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('calibrationPlan'),
         expect.objectContaining({ planId: 'plan-uuid-1' })
       );
@@ -277,7 +277,7 @@ describe('CalibrationPlansService', () => {
       } as never);
 
       expect(result).toBeDefined();
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('calibrationPlan'),
         expect.objectContaining({ planId: 'plan-uuid-1' })
       );

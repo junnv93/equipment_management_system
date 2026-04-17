@@ -94,7 +94,10 @@ describe('EquipmentService', () => {
         },
         {
           provide: CacheInvalidationHelper,
-          useValue: { invalidateAllDashboard: jest.fn().mockResolvedValue(undefined) },
+          useValue: {
+            invalidateAllDashboard: jest.fn().mockResolvedValue(undefined),
+            invalidateEquipmentDetail: jest.fn().mockResolvedValue(undefined),
+          },
         },
         {
           provide: EquipmentHistoryService,

@@ -251,30 +251,28 @@ describe('SharedEquipmentController (e2e)', () => {
 
       const sharedEquipmentUuid = createdSharedEquipmentUuids[0];
 
-      const testUserId = TEST_USER_IDS.admin;
-
-      const rentalDto = {
-        equipmentId: sharedEquipmentUuid,
-        borrowerId: testUserId,
-        expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
-        loanDate: new Date().toISOString().split('T')[0],
+      // /rentals 엔드포인트는 체크아웃 모듈로 교체됨 (/checkouts)
+      const checkoutDto = {
+        equipmentIds: [sharedEquipmentUuid],
+        type: 'calibration',
+        reason: '공용장비 체크아웃 허용 테스트',
+        expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/rentals')
+        .post('/checkouts')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send(rentalDto);
+        .send(checkoutDto);
 
       if (response.status === 201) {
         expect(response.body).toHaveProperty('id');
 
         if (response.body.id) {
+          // 체크아웃 반납은 /checkouts/:id/return 사용
           await request(ctx.app.getHttpServer())
-            .patch(`/rentals/${response.body.id}/return`)
+            .patch(`/checkouts/${response.body.id}/return`)
             .set('Authorization', `Bearer ${accessToken}`)
-            .send({ returnDate: new Date().toISOString().split('T')[0] });
+            .send({ returnDate: new Date().toISOString() });
         }
       }
     });

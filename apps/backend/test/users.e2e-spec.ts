@@ -2,8 +2,9 @@
 
 import request from 'supertest';
 import * as crypto from 'crypto';
+import postgres from 'postgres';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
-import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
+import { loginAs, TEST_USER_IDS, TEST_USER_DETAILS } from './helpers/test-auth';
 
 describe('UsersController (e2e)', () => {
   let ctx: TestAppContext;
@@ -21,6 +22,20 @@ describe('UsersController (e2e)', () => {
   });
 
   afterAll(async () => {
+    // 테스트에서 변경된 사용자 이름을 원래 값으로 복원 (DB 오염 방지)
+    const restoreSql = postgres(process.env.DATABASE_URL as string);
+    try {
+      for (const user of TEST_USER_DETAILS) {
+        await restoreSql`
+          UPDATE users SET name = ${user.name}, updated_at = NOW()
+          WHERE id = ${user.id}
+        `;
+      }
+    } catch {
+      // 복원 실패는 무시 — globalSetup이 다음 실행에서 재시딩
+    } finally {
+      await restoreSql.end();
+    }
     await closeTestApp(ctx?.app);
   });
 

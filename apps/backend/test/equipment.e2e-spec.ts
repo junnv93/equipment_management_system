@@ -547,9 +547,9 @@ describe('EquipmentController (e2e)', () => {
       expect(foundEquipment).toBeDefined();
       expect(foundEquipment.name).toBe(updateData.name);
 
-      // 5. DELETE
+      // 5. DELETE — PATCH 후 version이 증가했으므로 최신 version 전달 (CAS 계약)
       const deleteResponse = await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${equipmentUuid}`)
+        .delete(`/equipment/${equipmentUuid}?version=${updateResponse.body.version}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(202);
 

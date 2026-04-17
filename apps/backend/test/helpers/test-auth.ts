@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { TEAM_PLACEHOLDER_ID } from '../../src/database/utils/uuid-constants';
 
 /** 테스트 사용자 역할 */
 export type TestRole = 'admin' | 'manager' | 'user';
@@ -11,14 +12,27 @@ export const TEST_USERS: Record<TestRole, { email: string; password: string }> =
   user: { email: 'user@example.com', password: 'user123' },
 };
 
-/** 시드된 테스트 사용자 UUID (AuthService/시드 데이터와 동일) */
+/**
+ * 테스트 전용 UUID — uuid-constants.ts 프로덕션 UUID와 충돌 없음.
+ *
+ * ⚠️ 이전 값은 프로덕션 시드와 충돌했음:
+ * - admin 'f47ac10b-...-d479' = USER_TEST_ENGINEER_UIWANG_ID (역할 불일치)
+ * - manager 'a1b2c3d4-...-6789' = TEAM_GENERAL_RF_UIWANG_ID (팀 UUID!)
+ * 'e2e' 접두사 패턴으로 분리하여 SSOT 위반 해소.
+ */
 export const TEST_USER_IDS: Record<TestRole, string> = {
-  admin: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-  manager: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
-  user: '12345678-1234-4567-8901-234567890abc',
+  admin: 'e2e00000-0000-4000-8000-000000000001',
+  manager: 'e2e00000-0000-4000-8000-000000000002',
+  user: 'e2e00000-0000-4000-8000-000000000003',
 };
 
-/** 시드 사용자 상세 정보 (DB 시딩에 사용) */
+/**
+ * 시드 사용자 상세 정보 (DB 시딩에 사용)
+ *
+ * ⚠️ teamId 필수: team-scoped 기능(calibration-plans, disposals, intermediate-checks 등)은
+ * `CALIBRATION_PLAN_DATA_SCOPE: { type: 'team' }` + `failLoud: true`로 인해
+ * user.teamId가 null이면 403 Forbidden을 반환한다. 모든 테스트 사용자는 TEAM_PLACEHOLDER_ID에 소속시킨다.
+ */
 export const TEST_USER_DETAILS = [
   {
     id: TEST_USER_IDS.admin,
@@ -27,6 +41,7 @@ export const TEST_USER_DETAILS = [
     role: 'lab_manager',
     site: 'suwon',
     location: '수원랩',
+    teamId: TEAM_PLACEHOLDER_ID,
   },
   {
     id: TEST_USER_IDS.manager,
@@ -35,6 +50,7 @@ export const TEST_USER_DETAILS = [
     role: 'technical_manager',
     site: 'suwon',
     location: '수원랩',
+    teamId: TEAM_PLACEHOLDER_ID,
   },
   {
     id: TEST_USER_IDS.user,
@@ -43,6 +59,7 @@ export const TEST_USER_DETAILS = [
     role: 'test_engineer',
     site: 'suwon',
     location: '수원랩',
+    teamId: TEAM_PLACEHOLDER_ID,
   },
 ] as const;
 

@@ -218,7 +218,7 @@ describe('EquipmentImportsService', () => {
       await service.approve('import-uuid-1', 'approver-1', { version: 1 } as never);
 
       // 이벤트명 NOTIFICATION_EVENTS.IMPORT_APPROVED = "equipmentImport.approved"
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
         expect.stringContaining('Import'),
         expect.objectContaining({ importId: 'import-uuid-1' })
       );

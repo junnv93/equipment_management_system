@@ -1,11 +1,15 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
-import { eq as eqOp } from 'drizzle-orm';
-import { users } from '@equipment-management/db/schema/users';
-import type { AppDatabase } from '@equipment-management/db';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { createTestEquipment } from './helpers/test-fixtures';
+import { ResourceTracker } from './helpers/test-cleanup';
+import {
+  USER_TECHNICAL_MANAGER_SUWON_ID,
+  USER_TEST_ENGINEER_SUWON_ID,
+  USER_TECHNICAL_MANAGER_UIWANG_ID,
+} from '../src/database/utils/uuid-constants';
 
 /**
  * 운영 책임자 역할 제한 E2E 테스트
@@ -16,88 +20,86 @@ import { loginAs } from './helpers/test-auth';
 describe('Equipment Manager Role Constraint (e2e)', () => {
   let ctx: TestAppContext;
   let accessToken: string;
-
-  // 시드 UUID 상수
-  const TECH_MANAGER_SUWON = '00000000-0000-0000-0000-000000000002';
-  const TEST_ENGINEER_SUWON = '00000000-0000-0000-0000-000000000001';
-  const TECH_MANAGER_UIWANG = 'f47ac10b-58cc-4372-a567-0e02b2c3d478';
+  let testEquipmentUuid: string;
+  const tracker = new ResourceTracker();
 
   beforeAll(async () => {
     ctx = await createTestApp();
-
-    // admin@example.com 사용자가 DB에 존재하도록 보장
-    const db = ctx.module.get<AppDatabase>('DRIZZLE_INSTANCE');
-    const [existing] = await db
-      .select()
-      .from(users)
-      .where(eqOp(users.email, 'admin@example.com'))
-      .limit(1);
-    if (!existing) {
-      await db.insert(users).values({
-        email: 'admin@example.com',
-        name: '관리자 (E2E)',
-        role: 'lab_manager',
-        site: 'suwon',
-        isActive: true,
-      });
-    }
-
+    // globalSetup이 admin@example.com 사용자를 시딩하므로 loginAs 직접 사용 가능
     accessToken = await loginAs(ctx.app, 'admin');
+
+    // 시드 장비 의존 대신 자체 생성 — 테스트 자급자족
+    testEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
+    tracker.track('equipment', testEquipmentUuid);
   }, 30000);
 
   afterAll(async () => {
+    await tracker.cleanupAll(ctx.app, accessToken);
     await closeTestApp(ctx?.app);
   });
 
+  /** 장비의 현재 CAS version을 조회합니다. */
+  async function getEquipmentVersion(): Promise<number> {
+    const detail = await request(ctx.app.getHttpServer())
+      .get(`/equipment/${testEquipmentUuid}`)
+      .set('Authorization', `Bearer ${accessToken}`);
+    return detail.body.version;
+  }
+
   it('기술책임자를 운영 책임자(정)로 지정 — 허용', async () => {
+    const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch('/equipment/eeee1001-0001-4001-8001-000000000001')
+      .patch(`/equipment/${testEquipmentUuid}`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .field('managerId', TECH_MANAGER_SUWON)
-      .field('version', '1');
+      .field('managerId', USER_TECHNICAL_MANAGER_SUWON_ID)
+      .field('version', String(version));
 
     expect(resp.status).not.toBe(400);
   });
 
   it('시험실무자를 운영 책임자(정)로 지정 — 거부 (EQUIPMENT_MANAGER_ROLE_INSUFFICIENT)', async () => {
+    const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch('/equipment/eeee1001-0001-4001-8001-000000000001')
+      .patch(`/equipment/${testEquipmentUuid}`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .field('managerId', TEST_ENGINEER_SUWON)
-      .field('version', '1');
+      .field('managerId', USER_TEST_ENGINEER_SUWON_ID)
+      .field('version', String(version));
 
     expect(resp.status).toBe(400);
     expect(resp.body.code).toBe('EQUIPMENT_MANAGER_ROLE_INSUFFICIENT');
   });
 
   it('시험실무자를 운영 책임자(부)로 지정 — 거부', async () => {
+    const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch('/equipment/eeee1001-0001-4001-8001-000000000001')
+      .patch(`/equipment/${testEquipmentUuid}`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .field('deputyManagerId', TEST_ENGINEER_SUWON)
-      .field('version', '1');
+      .field('deputyManagerId', USER_TEST_ENGINEER_SUWON_ID)
+      .field('version', String(version));
 
     expect(resp.status).toBe(400);
     expect(resp.body.code).toBe('EQUIPMENT_MANAGER_ROLE_INSUFFICIENT');
   });
 
   it('다른 사이트 기술책임자를 운영 책임자로 지정 — 거부 (EQUIPMENT_MANAGER_SITE_MISMATCH)', async () => {
+    const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch('/equipment/eeee1001-0001-4001-8001-000000000001')
+      .patch(`/equipment/${testEquipmentUuid}`)
       .set('Authorization', `Bearer ${accessToken}`)
-      .field('managerId', TECH_MANAGER_UIWANG)
-      .field('version', '1');
+      .field('managerId', USER_TECHNICAL_MANAGER_UIWANG_ID)
+      .field('version', String(version));
 
     expect(resp.status).toBe(400);
     expect(resp.body.code).toBe('EQUIPMENT_MANAGER_SITE_MISMATCH');
   });
 
   it('존재하지 않는 사용자를 운영 책임자로 지정 — 거부 (EQUIPMENT_MANAGER_NOT_FOUND)', async () => {
+    const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch('/equipment/eeee1001-0001-4001-8001-000000000001')
+      .patch(`/equipment/${testEquipmentUuid}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .field('managerId', '00000000-0000-0000-0000-ffffffffffff')
-      .field('version', '1');
+      .field('version', String(version));
 
     expect(resp.status).toBe(400);
     expect(resp.body.code).toBe('EQUIPMENT_MANAGER_NOT_FOUND');
