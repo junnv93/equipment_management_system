@@ -391,3 +391,76 @@ AuditLogDiffViewer가 tAudit.raw('fieldLabels')로 단일 조회
 ```
 
 **예외:** `fieldLabels`가 폼 레이블(필드 이름이 아닌 폼 입력 라벨)을 가리키는 경우는 허용. 단, audit log diff viewer에서 참조되는 엔티티 타입(equipment, calibration, checkout, calibration_plan, non_conformance, disposal 등)의 필드 라벨은 반드시 `audit.fieldLabels`에만 위치.
+
+## Step 10: audit SSOT enum ↔ i18n 동기화 검증
+
+`packages/schemas/src/enums/audit.ts`의 SSOT enum 값이 `audit.json`의 해당 키 집합과 동기화되는지 검증합니다. 이 검사가 없으면 backend에서 새 entityType이나 action을 추가해도 프론트엔드 i18n이 자동으로 드리프트됩니다.
+
+### 10a: AUDIT_ENTITY_TYPE_VALUES ↔ audit.entityTypes
+
+```bash
+node -e "
+const fs = require('fs');
+
+// SSOT enum 파싱 (packages/schemas)
+const enumFile = fs.readFileSync('packages/schemas/src/enums/audit.ts', 'utf8');
+const entityMatch = enumFile.match(/AUDIT_ENTITY_TYPE_VALUES\s*=\s*\[([\s\S]*?)\]\s*as\s*const/);
+const ssotEntities = [...entityMatch[1].matchAll(/'([^']+)'/g)].map(m => m[1]).sort();
+
+// i18n 키 (en 기준 — Step 2가 en/ko 일치를 보장)
+const auditEn = JSON.parse(fs.readFileSync('apps/frontend/messages/en/audit.json', 'utf8'));
+const i18nEntityTypes = Object.keys(auditEn.entityTypes || {}).sort();
+const i18nFieldLabels = Object.keys(auditEn.fieldLabels || {}).sort();
+
+// entityTypes 비교
+const missingET = ssotEntities.filter(e => !i18nEntityTypes.includes(e));
+const extraET = i18nEntityTypes.filter(e => !ssotEntities.includes(e));
+
+// fieldLabels 비교 (SSOT에 있는 모든 entityType에 fieldLabels 섹션 필요)
+const missingFL = ssotEntities.filter(e => !i18nFieldLabels.includes(e));
+
+let pass = true;
+if (missingET.length) { pass = false; console.log('FAIL: entityTypes 누락 (SSOT에 있지만 i18n에 없음):'); missingET.forEach(e => console.log('  - ' + e)); }
+if (extraET.length) { console.log('INFO: entityTypes 추가 (i18n에 있지만 SSOT에 없음):'); extraET.forEach(e => console.log('  - ' + e)); }
+if (missingFL.length) { pass = false; console.log('FAIL: fieldLabels 섹션 누락:'); missingFL.forEach(e => console.log('  - ' + e)); }
+if (pass) console.log('PASS: 모든 SSOT entityType이 audit.json entityTypes + fieldLabels에 존재 (' + ssotEntities.length + '개)');
+"
+```
+
+### 10b: AUDIT_ACTION_VALUES ↔ audit.actions
+
+```bash
+node -e "
+const fs = require('fs');
+
+const enumFile = fs.readFileSync('packages/schemas/src/enums/audit.ts', 'utf8');
+const actionMatch = enumFile.match(/AUDIT_ACTION_VALUES\s*=\s*\[([\s\S]*?)\]\s*as\s*const/);
+const ssotActions = [...actionMatch[1].matchAll(/'([^']+)'/g)].map(m => m[1]).sort();
+
+const auditEn = JSON.parse(fs.readFileSync('apps/frontend/messages/en/audit.json', 'utf8'));
+const i18nActions = Object.keys(auditEn.actions || {}).sort();
+
+const missing = ssotActions.filter(a => !i18nActions.includes(a));
+const extra = i18nActions.filter(a => !ssotActions.includes(a));
+
+let pass = true;
+if (missing.length) { pass = false; console.log('FAIL: actions 누락 (SSOT에 있지만 i18n에 없음):'); missing.forEach(a => console.log('  - ' + a)); }
+if (extra.length) { console.log('INFO: actions 추가 (i18n에 있지만 SSOT에 없음):'); extra.forEach(a => console.log('  - ' + a)); }
+if (pass) console.log('PASS: 모든 SSOT action이 audit.json actions에 존재 (' + ssotActions.length + '개)');
+"
+```
+
+**PASS 기준:**
+- 10a: `AUDIT_ENTITY_TYPE_VALUES`의 모든 값이 `audit.entityTypes` 키와 `audit.fieldLabels` 섹션에 존재
+- 10b: `AUDIT_ACTION_VALUES`의 모든 값이 `audit.actions` 키에 존재
+
+**FAIL 기준:** SSOT enum에 있지만 i18n에 없는 값 → audit.json에 키 추가 필요
+
+**INFO:** i18n에 있지만 SSOT에 없는 값(예: `disposal`)은 경고만. 실제 사용 중이면 유지, 미사용이면 정리 검토.
+
+**fieldLabels 빈 객체 허용:** export/upload-only entityType(예: `report`, `data_migration_session`)은 diff가 발생하지 않으므로 `fieldLabels`가 빈 객체 `{}`여도 PASS. 핵심은 섹션 자체가 존재하여 드리프트를 추적할 수 있는 것.
+
+**아키텍처 배경:**
+- `AuditLogDiffViewer`는 `tAudit.raw('fieldLabels')[entityType]?.[field] ?? field` 폴백을 사용
+- 폴백이 있으므로 fieldLabels 누락이 런타임 에러는 아니지만, raw key가 사용자에게 표시됨
+- 이 검사는 "코드가 동작하는가"가 아니라 "사용자 경험이 완전한가"를 보장

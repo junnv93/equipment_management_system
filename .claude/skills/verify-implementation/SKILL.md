@@ -32,7 +32,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 8  | `verify-filters`        | frontend | URL-driven 필터 SSOT                                     |
 | 9  | `verify-design-tokens`  | frontend | Design Token 3-Layer                                     |
 | 10 | `verify-security`       | both     | 보안 — Helmet CSP, Security Headers                       |
-| 11 | `verify-i18n`           | frontend | i18n — en/ko 키 쌍, 동적 키 커버리지                      |
+| 11 | `verify-i18n`           | frontend | i18n — en/ko 키 쌍, 동적 키 커버리지, audit SSOT enum 동기화 |
 | 12 | `verify-sql-safety`     | backend  | SQL 안전성 — LIKE 이스케이프, N+1                          |
 | 13 | `verify-e2e`            | e2e      | E2E 테스트 패턴 + 아키텍처 커버리지                       |
 | 14 | `verify-seed-integrity` | backend  | 시드 인프라 3자 SSOT 정합성 (seed-data↔seed-test-new↔verification) |
