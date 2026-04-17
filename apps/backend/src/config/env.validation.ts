@@ -96,6 +96,28 @@ export const envSchema = z
 export type EnvConfig = z.infer<typeof envSchema>;
 
 /**
+ * env-sync drift 검증용 시나리오
+ *
+ * envSchema 의 `.refine()` 은 조건부 required (NODE_ENV=production, STORAGE_DRIVER=s3)
+ * 를 강제하지만, 빈 객체로 safeParse 하면 기본값(`NODE_ENV: development`) 때문에
+ * 해당 refine 이 trigger 되지 않는다. 따라서 `scripts/verify-env-sync.ts` 는 각
+ * 시나리오를 **모두** safeParse 하여 required 키의 union 을 추출해야 .env.example
+ * drift 를 완전 커버한다.
+ *
+ * 새 `.refine()` 을 envSchema 에 추가하면 반드시 여기에도 대응 시나리오를 추가하라.
+ */
+export const ENV_SYNC_SCENARIOS = {
+  /** 기본 (development) — always-required 키만 */
+  base: {},
+  /** 프로덕션 — FRONTEND_URL refine 활성화 */
+  production: { NODE_ENV: 'production' },
+  /** S3 스토리지 — S3_* refine 활성화 */
+  s3Storage: { STORAGE_DRIVER: 's3' },
+  /** 프로덕션 + S3 — 모든 refine 활성화 */
+  productionS3: { NODE_ENV: 'production', STORAGE_DRIVER: 's3' },
+} as const satisfies Record<string, Record<string, string>>;
+
+/**
  * 환경 변수 검증 함수
  *
  * ConfigModule.forRoot()의 validate 옵션에서 사용됩니다.

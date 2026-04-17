@@ -1,24 +1,22 @@
 #!/usr/bin/env tsx
 /**
- * ENV SSOT 동기화 검증
+ * ENV SSOT 동기화 검증 (2-tier scan)
  *
  * env.validation.ts (zod schema, 런타임 검증 SSOT) 와 .env.example (로컬 스캐폴드)
- * 간 drift를 방지한다. zod schema가 required인 키가 .env.example에 누락되면 실패.
+ * 간 drift 를 방지한다. 두 가지 required 유형을 모두 커버한다:
+ *   1. 항상 required  — top-level `z.string().min(N)` (path.length === 1)
+ *   2. 조건부 required — `.refine()` 으로 NODE_ENV=production / STORAGE_DRIVER=s3 등
+ *      상황에서만 필수가 되는 키 (refine 위반은 path=[], message 로만 전달)
+ *
+ * ENV_SYNC_SCENARIOS (env.validation.ts 에 export) 의 각 시나리오로 safeParse 를
+ * 반복 실행해 두 유형을 모두 수집한다.
+ *
+ * `.env.example` 에서는 "주석 처리된 플레이스홀더" (`# KEY=value`) 도 문서화된
+ * 키로 인정한다 — 조건부 required 는 보통 프로덕션/S3 시나리오 가이드 주석 형태로
+ * 존재하기 때문.
  *
  * 사용법:
  *   pnpm verify:env-sync
- *
- * 실행 흐름:
- *   1. apps/backend/src/config/env.validation.ts 의 envSchema 를 dynamic import
- *   2. safeParse({}) 로 required 키 자동 추출 (수동 리스트 유지 불필요)
- *   3. .env.example 을 라인 단위로 파싱하여 존재하는 키 수집
- *   4. required \ example 의 차집합이 비어있지 않으면 exit 1
- *
- * 이 스크립트가 실패하면 추가/변경된 환경 변수에 대해 다음을 전부 업데이트해야 함:
- *   - .env.example (이 스크립트가 체크)
- *   - apps/backend/.env (로컬 개발용 — git ignored)
- *   - infra/secrets/lan.env.sops.yaml  (`pnpm secrets:edit ENV=lan`)
- *   - infra/secrets/prod.env.sops.yaml (`pnpm secrets:edit ENV=prod`)
  */
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -27,40 +25,107 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
 
+interface ZodIssue {
+  code: string;
+  path: (string | number)[];
+  message: string;
+}
+
 interface EnvSchemaModule {
   envSchema: {
-    safeParse: (value: unknown) => { success: boolean; error?: { issues: { path: (string | number)[] }[] } };
+    safeParse: (value: unknown) => { success: boolean; error?: { issues: ZodIssue[] } };
+    _def?: unknown;
   };
+  ENV_SYNC_SCENARIOS: Record<string, Record<string, string>>;
+}
+
+function extractKeysFromIssues(issues: ZodIssue[], knownKeys: Set<string>): Set<string> {
+  const keys = new Set<string>();
+  for (const issue of issues) {
+    // top-level required: path === ['KEY']
+    if (issue.path.length === 1) {
+      keys.add(String(issue.path[0]));
+      continue;
+    }
+    // refine 위반 (path === []): message 에서 UPPER_SNAKE_CASE 토큰 추출
+    if (issue.path.length === 0 && issue.code === 'custom') {
+      const tokens = issue.message.match(/[A-Z][A-Z0-9_]{2,}/g) ?? [];
+      for (const token of tokens) {
+        if (knownKeys.has(token)) keys.add(token);
+      }
+    }
+  }
+  return keys;
 }
 
 async function main(): Promise<void> {
   const schemaPath = resolve(repoRoot, 'apps/backend/src/config/env.validation.ts');
-  const { envSchema } = (await import(schemaPath)) as EnvSchemaModule;
+  const { envSchema, ENV_SYNC_SCENARIOS } = (await import(schemaPath)) as EnvSchemaModule;
 
-  const parsed = envSchema.safeParse({});
-  const requiredKeys = parsed.success
-    ? []
-    : [...new Set(parsed.error!.issues.filter((i) => i.path.length === 1).map((i) => String(i.path[0])))];
+  // envSchema shape 에 선언된 모든 키 (refine 메시지 파싱용 화이트리스트).
+  // ZodObject.shape 는 public API. ZodEffects(.refine) 로 감싸인 경우 innerType 을 따라간다.
+  const knownKeys = collectShapeKeys(envSchema);
 
+  // Step 1: `{}` 로 top-level required (invalid_type) 수집.
+  const baseParsed = envSchema.safeParse({});
+  const alwaysRequired = baseParsed.success
+    ? new Set<string>()
+    : extractKeysFromIssues(baseParsed.error!.issues, knownKeys);
+
+  // Step 2: 시나리오별 refine 위반 수집.
+  // zod v4 는 top-level invalid_type 이 있으면 refine 을 skip 하므로,
+  // alwaysRequired 키를 stub 값으로 채워 refine 까지 도달시킨다.
+  const stub: Record<string, string> = {};
+  for (const key of alwaysRequired) stub[key] = 'x'.repeat(64);
+
+  const requiredKeys = new Set<string>(alwaysRequired);
+  const scenarioResults: Array<{ name: string; keys: string[] }> = [
+    { name: 'base (always-required)', keys: [...alwaysRequired].sort() },
+  ];
+  for (const [name, input] of Object.entries(ENV_SYNC_SCENARIOS)) {
+    if (name === 'base') continue;
+    const parsed = envSchema.safeParse({ ...stub, ...input });
+    if (parsed.success) {
+      scenarioResults.push({ name, keys: [] });
+      continue;
+    }
+    const scenarioKeys = extractKeysFromIssues(parsed.error!.issues, knownKeys);
+    // alwaysRequired 는 이미 stub 으로 채워서 안 나오지만 방어적으로 diff.
+    const refineOnly = [...scenarioKeys].filter((k) => !alwaysRequired.has(k));
+    for (const k of refineOnly) requiredKeys.add(k);
+    scenarioResults.push({ name, keys: refineOnly.sort() });
+  }
+
+  // 3) .env.example 의 키 집합 수집 (주석 플레이스홀더 포함)
   const exampleContent = readFileSync(resolve(repoRoot, '.env.example'), 'utf-8');
   const exampleKeys = new Set<string>();
   for (const rawLine of exampleContent.split('\n')) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-    const key = line.split('=')[0];
-    if (key) exampleKeys.add(key);
+    const stripped = rawLine.replace(/^#\s*/, '').trim();
+    if (!stripped) continue;
+    const eq = stripped.indexOf('=');
+    if (eq < 0) continue;
+    const key = stripped.slice(0, eq).trim();
+    if (/^[A-Z_][A-Z0-9_]*$/.test(key)) exampleKeys.add(key);
   }
 
-  const missing = requiredKeys.filter((k) => !exampleKeys.has(k));
+  // 4) diff
+  const missing = [...requiredKeys].filter((k) => !exampleKeys.has(k)).sort();
   if (missing.length > 0) {
+    const scenarioLines = scenarioResults
+      .filter((s) => s.keys.length > 0)
+      .map((s) => `    - [${s.name}] ${s.keys.join(', ')}`);
     const lines = [
       '❌ env-sync: .env.example 에 envSchema 의 required 키가 누락되었습니다.',
       '',
+      '누락:',
       ...missing.map((k) => `  - ${k}`),
       '',
+      '시나리오별 required (참고):',
+      ...scenarioLines,
+      '',
       '수정 방법:',
-      '  1. .env.example 에 해당 키와 플레이스홀더 값을 추가 (openssl 생성 가이드 주석 포함)',
-      '  2. apps/backend/.env 에도 실제 개발용 값 설정',
+      '  1. .env.example 에 해당 키와 플레이스홀더 값 추가 (조건부 required 는 주석 형태 OK)',
+      '  2. apps/backend/.env 에 실제 개발용 값 설정',
       '  3. infra/secrets/{lan,prod}.env.sops.yaml 에 pnpm secrets:edit 로 반영',
       '',
       '이 게이트는 env.validation.ts 가 SSOT 임을 강제합니다.',
@@ -69,7 +134,26 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log(`✔ env-sync: required 환경변수 ${requiredKeys.length}개 모두 .env.example 에 존재`);
+  console.log(
+    `✔ env-sync: required 환경변수 ${requiredKeys.size}개 (${scenarioResults.length}개 시나리오 union) 모두 .env.example 에 존재`
+  );
+}
+
+/**
+ * envSchema shape 에 선언된 top-level 키를 수집.
+ * `.refine()` 은 ZodEffects 로 감싸서 shape 에 직접 접근이 안 되므로 innerType 을 따라간다.
+ */
+function collectShapeKeys(schema: unknown): Set<string> {
+  type ShapeLike = { shape?: Record<string, unknown>; _def?: { schema?: unknown; innerType?: unknown } };
+  let current: ShapeLike | undefined = schema as ShapeLike;
+  // ZodEffects 는 ._def.schema (v3) 또는 ._def.innerType 로 내부 object 를 보유
+  for (let i = 0; i < 8 && current && !current.shape; i += 1) {
+    const next = current._def?.schema ?? current._def?.innerType;
+    if (!next) break;
+    current = next as ShapeLike;
+  }
+  if (!current?.shape) return new Set();
+  return new Set(Object.keys(current.shape));
 }
 
 main().catch((err) => {
