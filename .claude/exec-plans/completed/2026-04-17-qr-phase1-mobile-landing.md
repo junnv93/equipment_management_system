@@ -4,8 +4,12 @@
 - 생성: 2026-04-17T00:00:00+09:00
 - 모드: Mode 2 (Planner → Generator → Evaluator)
 - Slug: `qr-phase1-mobile-landing`
-- 예상 변경: 18~22개 파일 (신규 12~14, 수정 6~8)
+- 완료: 2026-04-17 (harness Evaluator PASS — M-8 제외 전 MUST 통과)
+- 실제 변경: 40 파일 (신규 16, 수정 24)
 - 소스 플랜: `/home/kmjkds/.claude/plans/qr-parallel-puppy.md` (사용자 승인)
+
+## ⚠️ Git 커밋 귀속 주의
+HEAD 커밋 `7a6255d1`에 QR Phase 1 전체가 포함되었지만, 메시지는 병렬 세션(history-card-qp1802)의 data-migration 작업을 설명한다. 같은 워크트리에서 lint-staged 실행 중 staged 파일이 병합 커밋된 결과 — 기능/빌드/테스트 영향 없음. QR Phase 1의 실제 파일 목록은 이 exec-plan의 "전체 변경 파일 요약" 섹션 참조.
 
 ## 설계 철학
 장비에 부착된 QR을 스캔한 현장 사용자가 로그인 복귀 후 **장비별 모바일 액션 시트**로 주요 워크플로우(조회/반출/반납/부적합)에 한 손으로 진입할 수 있도록 "단일 진입점(`/e/:mgmt`)"과 **모든 Phase가 공유할 SSOT 인프라**(QR 설정·URL 빌더·라우트·i18n·PWA 프리미티브)를 이번 Phase에서 완결한다. Phase 2/3는 인프라를 **소비**만 한다.
