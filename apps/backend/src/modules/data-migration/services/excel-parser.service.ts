@@ -5,7 +5,8 @@ import type { RawExcelRow, MappedRow } from '../types/data-migration.types';
 import {
   COLUMN_ALIAS_INDEX,
   EQUIPMENT_COLUMN_MAPPING,
-  ALL_DEPRECATED_ALIASES,
+  DEPRECATED_ALIAS_BY_SHEET,
+  getTemplateHeader,
   type ColumnMappingEntry,
 } from '../constants/equipment-column-mapping';
 import {
@@ -59,7 +60,6 @@ import {
   SITE_LABELS,
   MANAGEMENT_METHOD_LABELS,
   CALIBRATION_REQUIRED_LABELS,
-  SPEC_MATCH_LABELS,
   REPAIR_RESULT_LABELS,
   INCIDENT_TYPE_LABELS,
   CALIBRATION_FACTOR_TYPE_LABELS,
@@ -165,7 +165,8 @@ export class ExcelParserService {
    * 원시 행 배열을 DB 필드명으로 매핑
    */
   mapRows(rawRows: RawExcelRow[]): MappedRow[] {
-    return rawRows.map((raw) => this.mapSingleRow(raw, COLUMN_ALIAS_INDEX));
+    const deprecatedAliases = DEPRECATED_ALIAS_BY_SHEET['equipment'] ?? new Set<string>();
+    return rawRows.map((raw) => this.mapSingleRow(raw, COLUMN_ALIAS_INDEX, deprecatedAliases));
   }
 
   /**
@@ -181,10 +182,11 @@ export class ExcelParserService {
       const sheetType = detectSheetType(sheet.name);
       if (sheetType === null) return; // 인식 불가 시트 스킵 (참고값, 설명 시트 등)
       const aliasIndex = this.getAliasIndexForType(sheetType);
+      const deprecatedAliases = DEPRECATED_ALIAS_BY_SHEET[sheetType] ?? new Set<string>();
 
       if (sheet.rowCount < 2) return; // 빈 시트 스킵
 
-      const { rows, unmappedColumns } = this.parseSheet(sheet, aliasIndex);
+      const { rows, unmappedColumns } = this.parseSheet(sheet, aliasIndex, deprecatedAliases);
       if (rows.length === 0) return; // 데이터 없는 시트 스킵
 
       results.push({ sheetType, sheetName: sheet.name, rows, unmappedColumns });
@@ -202,6 +204,8 @@ export class ExcelParserService {
 
   private getAliasIndexForType(type: MigrationSheetType): Map<string, ColumnMappingEntry> {
     switch (type) {
+      case 'equipment':
+        return COLUMN_ALIAS_INDEX;
       case 'calibration':
         return CALIBRATION_ALIAS_INDEX;
       case 'repair':
@@ -216,8 +220,10 @@ export class ExcelParserService {
         return CALIBRATION_FACTOR_ALIAS_INDEX;
       case 'non_conformance':
         return NON_CONFORMANCE_ALIAS_INDEX;
-      default:
-        return COLUMN_ALIAS_INDEX;
+      default: {
+        const _exhaustive: never = type;
+        throw new Error(`Unknown sheet type: ${_exhaustive}`);
+      }
     }
   }
 
@@ -226,7 +232,8 @@ export class ExcelParserService {
    */
   private parseSheet(
     sheet: ExcelJS.Worksheet,
-    aliasIndex: Map<string, ColumnMappingEntry>
+    aliasIndex: Map<string, ColumnMappingEntry>,
+    deprecatedAliases: Set<string>
   ): { rows: MappedRow[]; unmappedColumns: string[] } {
     const headerRow = sheet.getRow(1);
     const columnIndexToHeader: Map<number, string> = new Map();
@@ -263,7 +270,11 @@ export class ExcelParserService {
         rawData[header] = this.extractCellValue(cell);
       });
 
-      const mapped = this.mapSingleRow({ rowNumber: dataRowNumber, rawData }, aliasIndex);
+      const mapped = this.mapSingleRow(
+        { rowNumber: dataRowNumber, rawData },
+        aliasIndex,
+        deprecatedAliases
+      );
       mapped.unmappedColumns.forEach((col) => globalUnmapped.add(col));
       rows.push(mapped);
     });
@@ -273,8 +284,14 @@ export class ExcelParserService {
 
   /**
    * 단일 행 매핑 (header alias → dbField + transform)
+   *
+   * @param deprecatedAliases 해당 시트의 deprecated alias Set (크로스시트 오염 방지)
    */
-  private mapSingleRow(raw: RawExcelRow, aliasIndex: Map<string, ColumnMappingEntry>): MappedRow {
+  private mapSingleRow(
+    raw: RawExcelRow,
+    aliasIndex: Map<string, ColumnMappingEntry>,
+    deprecatedAliases: Set<string>
+  ): MappedRow {
     const mappedData: Record<string, unknown> = {};
     const unmappedColumns: string[] = [];
 
@@ -283,8 +300,8 @@ export class ExcelParserService {
       const entry = aliasIndex.get(key);
 
       if (!entry) {
-        // 폐기된 컬럼은 경고 없이 무시 (기존 Excel 호환)
-        if (!ALL_DEPRECATED_ALIASES.has(key)) {
+        // 해당 시트의 폐기된 컬럼만 경고 없이 무시 (크로스시트 오염 방지)
+        if (!deprecatedAliases.has(key)) {
           unmappedColumns.push(header);
         }
         continue;
@@ -471,7 +488,7 @@ export class ExcelParserService {
     });
 
     const equipColumns = EQUIPMENT_COLUMN_MAPPING.map((entry) => ({
-      header: entry.headerLabel ?? `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      header: getTemplateHeader(entry),
       key: entry.dbField,
       width: 22,
     }));
@@ -519,14 +536,11 @@ export class ExcelParserService {
     const calSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.CALIBRATION, {
       pageSetup: EXCEL_PAGE_SETUP,
     });
-    calSheet.columns = [
-      { header: '관리번호 *', key: 'managementNumber', width: 20 },
-      { header: '교정일 *', key: 'calibrationDate', width: 18 },
-      { header: '교정기관', key: 'agencyName', width: 20 },
-      { header: '성적서번호', key: 'certificateNumber', width: 20 },
-      { header: '교정결과', key: 'result', width: 20 },
-      { header: '비고', key: 'notes', width: 30 },
-    ];
+    calSheet.columns = CALIBRATION_COLUMN_MAPPING.map((entry) => ({
+      header: getTemplateHeader(entry),
+      key: entry.dbField,
+      width: 22,
+    }));
     this.applyHeaderStyle(
       calSheet,
       CALIBRATION_COLUMN_MAPPING.map((e) => !!e.required)
@@ -544,13 +558,11 @@ export class ExcelParserService {
     const repairSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.REPAIR, {
       pageSetup: EXCEL_PAGE_SETUP,
     });
-    repairSheet.columns = [
-      { header: '관리번호 *', key: 'managementNumber', width: 20 },
-      { header: '수리일 *', key: 'repairDate', width: 18 },
-      { header: '수리내용 *', key: 'repairDescription', width: 40 },
-      { header: '수리결과(완료/부분/실패)', key: 'repairResult', width: 25 },
-      { header: '비고', key: 'notes', width: 30 },
-    ];
+    repairSheet.columns = REPAIR_COLUMN_MAPPING.map((entry) => ({
+      header: getTemplateHeader(entry),
+      key: entry.dbField,
+      width: 22,
+    }));
     this.applyHeaderStyle(
       repairSheet,
       REPAIR_COLUMN_MAPPING.map((e) => !!e.required)
@@ -567,12 +579,11 @@ export class ExcelParserService {
     const incidentSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.INCIDENT, {
       pageSetup: EXCEL_PAGE_SETUP,
     });
-    incidentSheet.columns = [
-      { header: '관리번호 *', key: 'managementNumber', width: 20 },
-      { header: '발생일 *', key: 'occurredAt', width: 18 },
-      { header: '사고유형(손상/오작동/변경/수리) *', key: 'incidentType', width: 35 },
-      { header: '내용 *', key: 'content', width: 50 },
-    ];
+    incidentSheet.columns = INCIDENT_COLUMN_MAPPING.map((entry) => ({
+      header: getTemplateHeader(entry),
+      key: entry.dbField,
+      width: 22,
+    }));
     this.applyHeaderStyle(
       incidentSheet,
       INCIDENT_COLUMN_MAPPING.map((e) => !!e.required)
@@ -589,7 +600,7 @@ export class ExcelParserService {
       pageSetup: EXCEL_PAGE_SETUP,
     });
     cableSheet.columns = CABLE_COLUMN_MAPPING.map((entry) => ({
-      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      header: getTemplateHeader(entry),
       key: entry.dbField,
       width: 22,
     }));
@@ -613,7 +624,7 @@ export class ExcelParserService {
       pageSetup: EXCEL_PAGE_SETUP,
     });
     swSheet.columns = TEST_SOFTWARE_COLUMN_MAPPING.map((entry) => ({
-      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      header: getTemplateHeader(entry),
       key: entry.dbField,
       width: 22,
     }));
@@ -635,7 +646,7 @@ export class ExcelParserService {
       pageSetup: EXCEL_PAGE_SETUP,
     });
     cfSheet.columns = CALIBRATION_FACTOR_COLUMN_MAPPING.map((entry) => ({
-      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      header: getTemplateHeader(entry),
       key: entry.dbField,
       width: 22,
     }));
@@ -657,7 +668,7 @@ export class ExcelParserService {
       pageSetup: EXCEL_PAGE_SETUP,
     });
     ncSheet.columns = NON_CONFORMANCE_COLUMN_MAPPING.map((entry) => ({
-      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      header: getTemplateHeader(entry),
       key: entry.dbField,
       width: 22,
     }));
