@@ -59,6 +59,14 @@ pnpm secrets:decrypt prod
 
 `.husky/pre-push` 의 `pnpm verify:env-sync` 가 **1과 2의 drift 를 자동 검증**합니다. sops 파일(4)은 age 키 소유자만 열 수 있으므로 수동 동기화 — 새 required 키를 추가한 PR 을 merge 하기 전에 **반드시** `pnpm secrets:edit` 로 양쪽 sops 파일에 반영하세요.
 
+CI 파이프라인(`.github/workflows/main.yml`)은 `SOPS_AGE_KEY` 가 설정된 경우 sops 파일을 복호화한 뒤 `pnpm verify:env-sync --file <tmpfile>` 로 4번 계층까지 실측 검증합니다. 로컬에서 sops 파일의 envSchema 동기화를 확인하려면:
+
+```bash
+TMP=$(mktemp) && sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > "$TMP"
+pnpm verify:env-sync --file "$TMP"
+rm -f "$TMP"
+```
+
 ### 예시: 새 required 시크릿 추가 플로우
 
 ```bash
