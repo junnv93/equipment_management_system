@@ -63,7 +63,10 @@ import { SOFTWARE_VALIDATIONS_SEED_DATA } from './seed-data/software/software-va
 import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from './seed-data/software/equipment-test-software.seed';
 import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-requests.seed';
 import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
-import { EQUIPMENT_DOCUMENTS_SEED_DATA } from './seed-data/history/equipment-documents.seed';
+import {
+  EQUIPMENT_DOCUMENTS_SEED_DATA,
+  SEED_PLACEHOLDER_PHOTO_PATH,
+} from './seed-data/history/equipment-documents.seed';
 import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
 import { NOTIFICATIONS_SEED_DATA } from './seed-data/admin/notifications.seed';
 
@@ -512,6 +515,49 @@ async function main(): Promise<void> {
     } catch (err) {
       console.warn(
         `  ⚠️ Additional documents seed skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
+    // seed 문서가 참조하는 파일이 없으면 개발용 placeholder 이미지 생성.
+    // uploadDir = UPLOAD_DIR 환경변수 (기본: ./uploads) — LocalStorageProvider와 동일 경로 규칙.
+    // 이력카드 렌더러가 이 이미지를 실제로 읽어 DOCX에 삽입하고, 프론트 다운로드 버튼도 작동하도록.
+    try {
+      const { default: sharp } = await import('sharp');
+      const { promises: fs } = await import('fs');
+      const path = await import('path');
+
+      const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? './uploads');
+      const placeholderAbsPath = path.join(uploadDir, SEED_PLACEHOLDER_PHOTO_PATH);
+
+      // 이미 존재하면 skip — 로컬 수정사항 보존
+      let alreadyExists = false;
+      try {
+        await fs.access(placeholderAbsPath);
+        alreadyExists = true;
+      } catch {
+        /* not exist → 생성 */
+      }
+
+      if (!alreadyExists) {
+        await fs.mkdir(path.dirname(placeholderAbsPath), { recursive: true });
+        // 800×600 연회색 JPEG — 4:3 비율 (이력카드 사진 영역 12.75×9.56cm와 자연스럽게 매칭)
+        await sharp({
+          create: {
+            width: 800,
+            height: 600,
+            channels: 3,
+            background: { r: 220, g: 220, b: 220 },
+          },
+        })
+          .jpeg({ quality: 75 })
+          .toFile(placeholderAbsPath);
+        console.log(`  ✅ placeholder 이미지 생성: ${SEED_PLACEHOLDER_PHOTO_PATH}`);
+      } else {
+        console.log(`  ↺  placeholder 이미지 존재 (재생성 skip): ${SEED_PLACEHOLDER_PHOTO_PATH}`);
+      }
+    } catch (err) {
+      console.warn(
+        `  ⚠️ Placeholder image generation skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
       );
     }
 
