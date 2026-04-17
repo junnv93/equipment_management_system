@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SimpleCacheService } from './simple-cache.service';
 import { CACHE_KEY_PREFIXES } from './cache-key-prefixes';
+import { buildDetailCachePattern } from './cache-patterns';
 
 /**
  * 중앙화된 캐시 무효화 헬퍼
@@ -69,17 +70,14 @@ export class CacheInvalidationHelper {
   }
 
   /**
-   * 특정 장비 상세 캐시 무효화
+   * 특정 장비 상세 캐시 무효화.
    *
-   * 캐시 키는 `equipment:detail:{"includeTeam":false,"uuid":"<id>"}` 또는
-   * `{"includeTeam":true,"uuid":"<id>"}` 형식 (JSON.stringify + sorted keys).
-   * includeTeam 이 uuid 보다 알파벳 순 앞섬에 주의 — uuid를 선두로 가정하는 정규식은 매칭 실패.
-   *
-   * 패턴: equipment:detail:.*"uuid":"<id>".* → 키 내 어느 위치든 매칭.
+   * JSON-key-order-agnostic 패턴은 `cache-patterns.ts`의 공용 빌더로 SSOT.
+   * 키 내 파라미터 추가/재정렬에도 안전하게 매칭한다.
    */
   async invalidateEquipmentDetail(equipmentId: string): Promise<void> {
     await this.cacheService.deleteByPattern(
-      `^${CACHE_KEY_PREFIXES.EQUIPMENT}detail:.*"uuid":"${equipmentId}".*`
+      buildDetailCachePattern(CACHE_KEY_PREFIXES.EQUIPMENT, 'uuid', equipmentId)
     );
     this.logger.debug(`✓ Invalidated equipment detail: ${equipmentId}`);
   }
@@ -295,8 +293,11 @@ export class CacheInvalidationHelper {
     equipmentId?: string
   ): Promise<void> {
     // deleteByPattern은 동기 (in-memory cache) — tasks 밖에서 직접 호출
+    // JSON-key-order-agnostic 패턴은 `cache-patterns.ts` SSOT 사용.
+    // 과거 인라인 정규식 `{"uuid":"<id>".*` 는 detail 키에 uuid 외 파라미터가 추가되면
+    // silent break 하는 잠재 버그였음 — 공용 빌더로 치환하여 재발 방지.
     this.cacheService.deleteByPattern(
-      `${CACHE_KEY_PREFIXES.CHECKOUTS}detail:\\{"uuid":"${checkoutId}".*`
+      buildDetailCachePattern(CACHE_KEY_PREFIXES.CHECKOUTS, 'uuid', checkoutId)
     );
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CHECKOUTS}list:*`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CHECKOUTS}count:*`);
