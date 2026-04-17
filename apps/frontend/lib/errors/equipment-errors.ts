@@ -39,6 +39,7 @@ export enum EquipmentErrorCode {
   // 리소스 에러
   NOT_FOUND = 'NOT_FOUND',
   EQUIPMENT_NOT_FOUND = 'EQUIPMENT_NOT_FOUND',
+  FORM_TEMPLATE_NOT_FOUND = 'FORM_TEMPLATE_NOT_FOUND',
 
   // 서버/네트워크 에러
   SERVER_ERROR = 'SERVER_ERROR',
@@ -207,6 +208,15 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     actionLabel: '장비 목록으로',
     actionHref: '/equipment',
     severity: 'error',
+  },
+  [EquipmentErrorCode.FORM_TEMPLATE_NOT_FOUND]: {
+    title: '양식 파일 없음',
+    message: '양식 템플릿 파일이 스토리지에 없습니다.',
+    solutions: [
+      '시스템 관리자에게 해당 양식의 스토리지 등록을 요청하세요',
+      '이미 요청한 경우 관리자 처리가 완료될 때까지 잠시 후 다시 시도해주세요',
+    ],
+    severity: 'warning',
   },
 
   // 서버/네트워크 에러
@@ -462,6 +472,7 @@ export function httpStatusToErrorCode(status: number): EquipmentErrorCode {
 export const ERROR_CODE_TO_HTTP_STATUS: Partial<Record<EquipmentErrorCode, number>> = {
   [EquipmentErrorCode.NOT_FOUND]: 404,
   [EquipmentErrorCode.EQUIPMENT_NOT_FOUND]: 404,
+  [EquipmentErrorCode.FORM_TEMPLATE_NOT_FOUND]: 404,
   [EquipmentErrorCode.UNAUTHORIZED]: 401,
   [EquipmentErrorCode.SESSION_EXPIRED]: 401,
   [EquipmentErrorCode.PERMISSION_DENIED]: 403,
@@ -563,7 +574,7 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     VERSION_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
 
     // 양식 템플릿 에러
-    FORM_TEMPLATE_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    FORM_TEMPLATE_NOT_FOUND: EquipmentErrorCode.FORM_TEMPLATE_NOT_FOUND,
     FORM_NUMBER_ALREADY_EXISTS: EquipmentErrorCode.DUPLICATE_ERROR,
     FORM_HISTORY_DOWNLOAD_FORBIDDEN: EquipmentErrorCode.PERMISSION_DENIED,
     INVALID_FORM_NAME: EquipmentErrorCode.VALIDATION_ERROR,

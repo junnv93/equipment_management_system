@@ -4,7 +4,11 @@ import { createContext, useContext, useMemo, ReactNode } from 'react';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { useSession, getSession } from 'next-auth/react';
 import { AUTH_ERROR_CODE, AUTH_EVENT } from '@equipment-management/shared-constants';
-import { createApiError, unwrapResponseData } from './utils/response-transformers';
+import {
+  createApiError,
+  parseBlobErrorData,
+  unwrapResponseData,
+} from './utils/response-transformers';
 import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 
 /**
@@ -103,6 +107,9 @@ export function AuthenticatedClientProvider({ children }: AuthenticatedClientPro
             }
           }
         }
+
+        // Blob 응답 에러 파싱 (responseType: 'blob' + non-2xx)
+        await parseBlobErrorData(error);
 
         // 공통 에러 변환
         const apiError = createApiError(error);

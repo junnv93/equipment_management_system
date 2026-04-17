@@ -196,6 +196,70 @@ export function transformArrayResponse<T>(
 }
 
 /**
+ * Blob 응답 에러의 본문을 파싱하여 `error.response.data`를 일반 객체로 치환한다.
+ *
+ * `responseType: 'blob'`로 요청 시 서버가 non-2xx + JSON body를 반환해도
+ * axios는 응답 본문을 Blob으로 래핑하기 때문에 `createApiError`의 동기 검사가
+ * `code`/`message` 필드를 읽지 못하고 generic `UNKNOWN_ERROR`로 폴백하는 문제를 해결한다.
+ *
+ * - Blob이 아니면 no-op (원본 error 그대로 반환)
+ * - Blob이면 text 추출 후 JSON.parse 시도
+ *   - 성공 → `error.response.data`를 파싱 결과로 치환 → 정상 에러 흐름
+ *   - 실패 → `{ message: <text> }`로 치환 (plain text 응답 대응)
+ *
+ * 모든 인터셉터(api-client / server-api-client / authenticated-client-provider)는
+ * `createApiError` 호출 직전 이 함수를 `await`해야 한다.
+ */
+export async function parseBlobErrorData(error: unknown): Promise<void> {
+  if (!error || typeof error !== 'object' || !('response' in error)) return;
+  const axiosError = error as { response?: { data?: unknown } };
+  const data = axiosError.response?.data;
+  if (!(data instanceof Blob)) return;
+
+  const text = await readBlobAsText(data);
+  if (text === null) return;
+
+  if (!text) {
+    axiosError.response!.data = {};
+    return;
+  }
+
+  try {
+    axiosError.response!.data = JSON.parse(text);
+  } catch {
+    axiosError.response!.data = { message: text };
+  }
+}
+
+/**
+ * Blob → text 변환 (브라우저/jsdom/테스트 환경 모두 호환).
+ *
+ * `Blob.text()`는 환경별 지원이 불안정 (jsdom MessageChannel 관련 오류 발생 가능)
+ * → `arrayBuffer()` + `TextDecoder` 폴백, 그도 실패하면 null 반환.
+ */
+async function readBlobAsText(blob: Blob): Promise<string | null> {
+  try {
+    if (typeof blob.text === 'function') {
+      // 최신 환경은 Blob.text() 로 즉시 반환
+      return await blob.text();
+    }
+  } catch {
+    // fall through to arrayBuffer path
+  }
+
+  try {
+    if (typeof blob.arrayBuffer === 'function') {
+      const buffer = await blob.arrayBuffer();
+      return new TextDecoder('utf-8').decode(buffer);
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+/**
  * 에러를 ApiError 객체로 변환
  *
  * @param error 원본 에러

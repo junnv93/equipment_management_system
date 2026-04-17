@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
 import { exportFormTemplate } from '@/lib/api/reports-api';
+import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 
 /**
  * UL-QP-18 form template 다운로드 버튼 (SSOT).
@@ -60,8 +61,8 @@ export function ExportFormButton({
     setExporting(true);
     try {
       await exportFormTemplate(formNumber, params);
-    } catch {
-      toast({ variant: 'destructive', description: errorToastDescription });
+    } catch (err) {
+      toast({ variant: 'destructive', ...getDownloadErrorToast(err, errorToastDescription) });
     } finally {
       setExporting(false);
     }

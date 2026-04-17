@@ -25,6 +25,7 @@ import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { isConflictError } from '@/lib/api/error';
+import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { resolveDisplayName } from '@/lib/utils/display-name';
@@ -260,10 +261,10 @@ export function CalibrationPlanDetailClient({
   const handleExportExcel = async () => {
     try {
       await calibrationPlansApi.downloadExcel(planUuid);
-    } catch {
+    } catch (err) {
       toast({
         variant: 'destructive',
-        description: tCommon('errors.downloadFailed'),
+        ...getDownloadErrorToast(err, tCommon('errors.downloadFailed')),
       });
     }
   };

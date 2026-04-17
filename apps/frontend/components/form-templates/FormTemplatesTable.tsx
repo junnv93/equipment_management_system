@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { downloadFormTemplateById } from '@/lib/api/form-templates-api';
 import type { FormTemplateListItem } from '@/lib/api/form-templates-api';
+import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 import { FORM_TEMPLATES_TABLE_TOKENS, FORM_TEMPLATES_STATUS_TOKENS } from '@/lib/design-tokens';
 import FormTemplateUploadDialog, { type UploadDialogMode } from './FormTemplateUploadDialog';
 import FormTemplateHistoryDialog from './FormTemplateHistoryDialog';
@@ -155,10 +156,10 @@ export default function FormTemplatesTable({ templates }: FormTemplatesTableProp
                             onClick={async () => {
                               try {
                                 await downloadFormTemplateById(tpl.current!.id);
-                              } catch {
+                              } catch (err) {
                                 toast({
                                   variant: 'destructive',
-                                  description: tCommon('errors.downloadFailed'),
+                                  ...getDownloadErrorToast(err, tCommon('errors.downloadFailed')),
                                 });
                               }
                             }}

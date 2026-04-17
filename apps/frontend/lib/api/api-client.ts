@@ -2,7 +2,11 @@ import axios from 'axios';
 import { getSession } from 'next-auth/react';
 import { AUTH_ERROR_CODE, AUTH_EVENT } from '@equipment-management/shared-constants';
 // ✅ 일관된 에러 처리: 공통 유틸리티 사용
-import { createApiError, unwrapResponseData } from './utils/response-transformers';
+import {
+  createApiError,
+  parseBlobErrorData,
+  unwrapResponseData,
+} from './utils/response-transformers';
 import { API_BASE_URL, API_TIMEOUTS } from '../config/api-config';
 
 /**
@@ -186,6 +190,11 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
     }
+
+    // ✅ Blob 응답 에러(responseType: 'blob')는 본문이 Blob으로 래핑되므로
+    //    createApiError 동기 검사가 code/message를 읽지 못한다.
+    //    JSON 파싱하여 일반 객체로 치환 후 기존 에러 흐름에 합류시킨다.
+    await parseBlobErrorData(error);
 
     // ✅ 공통 에러 변환 유틸리티 사용: ApiError로 변환하여 상세 정보 유지
     const apiError = createApiError(error);

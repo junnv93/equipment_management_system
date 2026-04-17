@@ -30,7 +30,11 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
-import { createApiError, unwrapResponseData } from './utils/response-transformers';
+import {
+  createApiError,
+  parseBlobErrorData,
+  unwrapResponseData,
+} from './utils/response-transformers';
 import {
   getServerAuthSession,
   getServerAuthHeaders as getAuthHeaders,
@@ -104,6 +108,9 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
     // SSOT: unwrapResponseData — 3개 API 클라이언트 공유
     unwrapResponseData,
     async (error) => {
+      // Blob 응답 에러 파싱 (responseType: 'blob' + non-2xx)
+      await parseBlobErrorData(error);
+
       // ✅ 공통 에러 변환 유틸리티 사용
       const apiError = createApiError(error);
 

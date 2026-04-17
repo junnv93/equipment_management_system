@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
 import { exportFormTemplate } from '@/lib/api/reports-api';
+import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi from '@/lib/api/calibration-api';
 import type { IntermediateInspection } from '@/lib/api/calibration-api';
@@ -239,10 +240,10 @@ export function IntermediateInspectionList({ equipment }: IntermediateInspection
   const handleExport = async (inspectionId: string) => {
     try {
       await exportFormTemplate('UL-QP-18-03', { inspectionId });
-    } catch {
+    } catch (err) {
       toast({
         variant: 'destructive',
-        description: t('intermediateInspection.actions.exportFormError'),
+        ...getDownloadErrorToast(err, t('intermediateInspection.actions.exportFormError')),
       });
     }
   };
