@@ -54,7 +54,8 @@
       "Bash(mv .claude/contracts/tech-debt-69.md .claude/contracts/tech-debt-70.md)",
       "Bash(mv .claude/evaluations/tech-debt-69.md .claude/evaluations/tech-debt-70.md)",
       "Bash(mv /home/devuser/equipment_management_system/.claude/exec-plans/active/2026-04-16-e2e-infra-redesign.md /home/devuser/equipment_management_system/.claude/exec-plans/completed/2026-04-16-e2e-infra-redesign.md)",
-      "Bash(pnpm --filter backend run tsc --noEmit)"
+      "Bash(pnpm --filter backend run tsc --noEmit)",
+      "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-17-session-74-followups.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-17-session-74-followups.md)"
     ],
     "deny": [],
     "ask": []
