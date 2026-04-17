@@ -15,21 +15,40 @@
 
 글로벌 ValidationPipe 없음. 엔드포인트별 `ZodValidationPipe` 사용.
 
+#### DTO 작성 결정 트리 (신규 DTO 필수)
+
+**원칙: 신규 DTO 는 항상 `createZodDto(Schema)` 패턴을 써라.** 이유:
+
+- `z.infer<typeof Schema>` 로 만든 type alias 는 **런타임 값이 아니다** → `@ApiBody({ type: Dto })` 에서 참조 시 TypeScript `TS2693` (`only refers to a type, but is being used as a value`) 로 Nest 부팅이 차단된다 (실측 버그).
+- `nestjs-zod` 의 `createZodDto` 는 zod schema 를 감싼 class 를 반환하며 `_OPENAPI_METADATA_FACTORY` 를 내장 → Swagger 가 별도 패치 없이 메타를 자동 파생 → **SSOT 1개 (zod schema) 로 validation / TS type / OpenAPI schema 전부 파생**된다.
+- 기존 수동 class DTO + `@ApiProperty` 는 동일 필드를 zod schema 와 class 양쪽에 써야 해서 drift 위험. 신규는 쓰지 말 것. 기존 class DTO 는 **해당 모듈 작업 시 기회가 될 때 점진 마이그레이션** (리팩터를 위한 리팩터 금지).
+
 ```typescript
-// DTO 파일 구조: Zod schema → Type inference → Pipe → Swagger class
+// DTO 파일 구조: Zod schema → createZodDto class → Pipe → Swagger-ready
+import { createZodDto } from 'nestjs-zod';
+
 export const updateEquipmentSchema = z.object({
   name: z.string().min(1),
   ...versionedSchema, // CAS version 포함
 });
-export type UpdateEquipmentDto = z.infer<typeof updateEquipmentSchema>;
+// class 기반 — @ApiBody({ type: Dto }) 의 런타임 값으로 사용 가능
+export class UpdateEquipmentDto extends createZodDto(updateEquipmentSchema) {}
 export const UpdateEquipmentPipe = new ZodValidationPipe(updateEquipmentSchema);
 
-// Controller에서 사용
+// Controller
+@Post()
 @UsePipes(UpdateEquipmentPipe)
+@ApiBody({ type: UpdateEquipmentDto }) // ← class 이므로 OK, Swagger 메타는 zod schema 에서 자동 파생
 update(@Body() dto: UpdateEquipmentDto) { ... }
 ```
 
-**Key File:** `common/pipes/zod-validation.pipe.ts`
+Swagger 메타의 nullable/$ref/enum 정합성은 `main.ts` 에서 `cleanupOpenApiDoc(SwaggerModule.createDocument(...))` 로 후처리한다 (이미 적용됨).
+
+**Key Files:**
+
+- `common/pipes/zod-validation.pipe.ts` — project ZodValidationPipe
+- `modules/checkouts/dto/handover-token.dto.ts` — createZodDto 적용 예시
+- `main.ts` — cleanupOpenApiDoc 후처리
 
 ### Error Handling: GlobalExceptionFilter
 

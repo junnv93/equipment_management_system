@@ -39,6 +39,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/audit/dto/audit-log-query.dto.ts`         | Query DTO 참조 구현 (targets: ['query'] 포함)   |
 | `apps/backend/src/modules/checkouts/checkouts.controller.ts`        | Controller Pipe 적용 참조 (@UsePipes 패턴)      |
 | `apps/backend/src/modules/equipment/equipment.controller.ts`        | Controller Pipe 적용 참조 (파라미터 Pipe 패턴)  |
+| `apps/backend/src/modules/checkouts/dto/handover-token.dto.ts`      | createZodDto 기반 class DTO 참조 구현 (신규 권장) |
 
 ## Workflow
 
@@ -231,6 +232,53 @@ export type CreateEquipmentDto = z.infer<typeof createEquipmentSchema>;
 export const CreateEquipmentPipe = new ZodValidationPipe(createEquipmentSchema);
 ```
 
+### Step 9: type-only DTO 의 runtime value 위치 사용 탐지
+
+`z.infer<typeof Schema>` 로 만든 type alias 는 **런타임 값이 아니다**. 이것을 Swagger `@ApiBody({ type: Dto })` / `@ApiResponse({ type: Dto })` / `@ApiProperty({ type: Dto })` 등 런타임 value 위치에 쓰면 TypeScript `TS2693` (`only refers to a type, but is being used as a value`) 로 **Nest 부팅이 차단**된다. 실측 발생 버그 (2026-04-17, checkouts.controller.ts `verifyHandoverToken`).
+
+해결책 두 가지:
+1. **신규 DTO (권장)**: `nestjs-zod` 의 `createZodDto(Schema)` 로 class 생성 — 런타임 값 + TS 타입 + Swagger 메타를 한 SSOT 에서 파생.
+2. **기존 수동 class DTO**: 유지 (점진 마이그레이션 대상).
+
+```bash
+# type 으로만 선언된 DTO 를 @ApiBody/@ApiResponse/@ApiProperty 의 type 필드에 사용하는 패턴 탐지
+# 1) type-only DTO 이름 수집
+grep -rnE "^export type ([A-Z][A-Za-z0-9]*Dto) = z\.infer" apps/backend/src/modules --include="*.dto.ts" \
+  | sed -E 's/.*export type ([A-Z][A-Za-z0-9]*Dto) = .*/\1/' | sort -u > /tmp/type_only_dtos.txt
+
+# 2) 컨트롤러에서 @ApiBody({ type: Dto }) / @ApiResponse({ type: Dto }) / @ApiProperty({ type: Dto }) 에 쓰인 Dto 수집
+grep -rnE "@Api(Body|Response|Property)\(\{[^)]*type:\s*([A-Z][A-Za-z0-9]*Dto)" apps/backend/src/modules --include="*.controller.ts" \
+  | grep -oE "type:\s*[A-Z][A-Za-z0-9]*Dto" | sed -E 's/type:\s*//' | sort -u > /tmp/api_runtime_dtos.txt
+
+# 3) 교집합 = TS2693 위험
+comm -12 /tmp/type_only_dtos.txt /tmp/api_runtime_dtos.txt
+```
+
+**PASS 기준:** 교집합 0건.
+
+**FAIL 기준:** 하나라도 나오면 해당 DTO 를 `export class X extends createZodDto(Schema) {}` 로 전환.
+
+```typescript
+// ❌ WRONG — type-only + runtime value 혼용 → TS2693
+export const VerifyHandoverTokenSchema = z.object({ token: z.string().min(1) });
+export type VerifyHandoverTokenDto = z.infer<typeof VerifyHandoverTokenSchema>;
+
+@ApiBody({ type: VerifyHandoverTokenDto }) // ← only refers to a type, but is being used as a value
+verifyHandoverToken(@Body() dto: VerifyHandoverTokenDto) { ... }
+
+// ✅ CORRECT — createZodDto class 패턴 (신규 DTO 권장)
+import { createZodDto } from 'nestjs-zod';
+export const VerifyHandoverTokenSchema = z.object({ token: z.string().min(1) });
+export class VerifyHandoverTokenDto extends createZodDto(VerifyHandoverTokenSchema) {}
+
+@ApiBody({ type: VerifyHandoverTokenDto }) // ← class 이므로 runtime value OK
+verifyHandoverToken(@Body() dto: VerifyHandoverTokenDto) { ... }
+```
+
+Swagger OpenAPI 메타의 nullable/$ref/enum 정합성은 `apps/backend/src/main.ts` 의 `cleanupOpenApiDoc()` 후처리로 보정된다.
+
+**참고:** `docs/references/backend-patterns.md` "DTO 작성 결정 트리" 섹션.
+
 ## Output Format
 
 ```markdown
@@ -244,6 +292,7 @@ export const CreateEquipmentPipe = new ZodValidationPipe(createEquipmentSchema);
 | 6   | Query DTO 패턴 일관성          | PASS/INFO | z.coerce/preprocess 혼용   |
 | 7   | Response DTO 불필요 Pipe       | PASS/FAIL | 불필요 Pipe 위치           |
 | 8   | z.infer 타입 export            | PASS/FAIL | 타입 누락 DTO 목록         |
+| 9   | type-only DTO runtime 위치 사용 | PASS/FAIL | TS2693 위험 DTO 목록       |
 ```
 
 ## Exceptions
@@ -259,3 +308,4 @@ export const CreateEquipmentPipe = new ZodValidationPipe(createEquipmentSchema);
 7. **프로젝트 전체 z.coerce vs z.preprocess 차이** — 파일 간 패턴 차이는 허용 (기존 코드 존중). 동일 파일 내 혼용만 위반
 8. **login.dto.ts, user.dto.ts (auth 모듈)** — 인증 DTO는 NestJS Passport 연동으로 별도 패턴 가능
 9. **multipart/form-data 엔드포인트 (파일 업로드)** — `@UseInterceptors(FileInterceptor)` + `@UploadedFile()` 패턴은 DTO 디렉토리 대신 Swagger `@ApiBody({ schema })` 인라인 스키마 허용. documents.controller.ts 등 파일 업로드 전용 엔드포인트가 이에 해당
+10. **`createZodDto(Schema)` 기반 class DTO** — class 자체가 schema 를 캡슐화하므로 별도 `z.infer<typeof>` export 가 없어도 Step 8 위반 아님. `z.infer` 가 필요한 곳에서는 `InstanceType<typeof Dto>` 또는 `z.infer<typeof Schema>` 둘 다 허용
