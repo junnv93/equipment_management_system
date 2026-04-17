@@ -37,7 +37,6 @@ export const baseCalibrationSchema = z.object({
   certificateFile: z.string().optional(),
   notes: z.string().optional(),
   results: z.string().optional(),
-  cost: z.number().optional(),
 });
 
 // 교정 생성 스키마

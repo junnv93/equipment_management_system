@@ -112,7 +112,7 @@ async function pushSchema(): Promise<void> {
         purchase_date timestamp,
         price integer,
         supplier varchar(100),
-        contact_info varchar(100),
+        supplier_contact varchar(100),
         software_version varchar(50),
         firmware_version varchar(50),
         software_name varchar(200),
