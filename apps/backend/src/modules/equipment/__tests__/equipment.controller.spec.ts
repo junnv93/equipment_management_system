@@ -3,6 +3,7 @@ import { EquipmentController } from '../equipment.controller';
 import { EquipmentService } from '../equipment.service';
 import { EquipmentApprovalService } from '../services/equipment-approval.service';
 import { EquipmentAttachmentService } from '../services/equipment-attachment.service';
+import { QRAccessService } from '../services/qr-access.service';
 import { DocumentService } from '../../../common/file-upload/document.service';
 import { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import { EquipmentQueryDto } from '../dto/equipment-query.dto';
@@ -82,6 +83,7 @@ describe('EquipmentController', () => {
             create: jest.fn(),
             findAll: jest.fn(),
             findOne: jest.fn(),
+            findByManagementNumber: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
           },
@@ -112,6 +114,12 @@ describe('EquipmentController', () => {
             getDocumentsByEquipment: jest.fn(),
             createDocument: jest.fn(),
             deleteDocument: jest.fn(),
+          },
+        },
+        {
+          provide: QRAccessService,
+          useValue: {
+            resolveAllowedActions: jest.fn(),
           },
         },
       ],
@@ -415,6 +423,98 @@ describe('EquipmentController', () => {
         controller.remove(uuid, undefined, mockReq as AuthenticatedRequest)
       ).rejects.toThrow(NotFoundException);
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
+    });
+  });
+
+  describe('findByManagementNumber (QR 모바일 랜딩)', () => {
+    let qrAccessService: QRAccessService;
+
+    beforeEach(() => {
+      qrAccessService = controller['qrAccessService'];
+    });
+
+    const sameSiteReq = {
+      user: {
+        roles: ['test_engineer'],
+        userId: 'user-uuid',
+        email: 'user@example.com',
+        site: 'suwon',
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any as AuthenticatedRequest;
+    const crossSiteReq = {
+      user: {
+        roles: ['test_engineer'],
+        userId: 'user-uuid',
+        email: 'user@example.com',
+        site: 'uiwang',
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any as AuthenticatedRequest;
+
+    it('returns equipment detail with server-computed allowedActions for same-site user', async () => {
+      const mgmt = 'SUW-E0001';
+      const equipmentWithTeam = { ...mockEquipment, team: null };
+      jest
+        .spyOn(equipmentService, 'findByManagementNumber')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockResolvedValue(equipmentWithTeam as any);
+      jest
+        .spyOn(qrAccessService, 'resolveAllowedActions')
+        .mockResolvedValue(['view_detail', 'view_qr', 'request_checkout']);
+
+      const result = await controller.findByManagementNumber(mgmt, sameSiteReq);
+
+      expect(result.managementNumber).toBe('EQP-TEST-001');
+      expect(result.allowedActions).toEqual(['view_detail', 'view_qr', 'request_checkout']);
+      expect(equipmentService.findByManagementNumber).toHaveBeenCalledWith(mgmt, true);
+      expect(qrAccessService.resolveAllowedActions).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'test-uuid', site: 'suwon', status: 'available' }),
+        sameSiteReq.user
+      );
+    });
+
+    it('returns 404 NotFoundException when equipment does not exist', async () => {
+      jest.spyOn(equipmentService, 'findByManagementNumber').mockRejectedValue(
+        new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: 'Equipment with management number SUW-E9999 not found.',
+        })
+      );
+
+      await expect(controller.findByManagementNumber('SUW-E9999', sameSiteReq)).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('allows cross-site read but excludes request_checkout from allowedActions', async () => {
+      const mgmt = 'SUW-E0001'; // 장비는 수원, 요청자는 의왕
+      const equipmentWithTeam = { ...mockEquipment, team: null };
+      jest
+        .spyOn(equipmentService, 'findByManagementNumber')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .mockResolvedValue(equipmentWithTeam as any);
+      // QRAccessService가 cross-site를 인지하고 request_checkout 제외
+      jest
+        .spyOn(qrAccessService, 'resolveAllowedActions')
+        .mockResolvedValue(['view_detail', 'view_qr']);
+
+      const result = await controller.findByManagementNumber(mgmt, crossSiteReq);
+
+      expect(result.allowedActions).not.toContain('request_checkout');
+      expect(result.allowedActions).toEqual(['view_detail', 'view_qr']);
+    });
+
+    it('propagates BadRequestException via ParseManagementNumberPipe for invalid format', async () => {
+      // ParseManagementNumberPipe는 NestJS 가 컨트롤러 호출 전에 적용하므로,
+      // 이 단위 테스트는 파이프를 직접 호출하여 검증한다.
+      const { ParseManagementNumberPipe } = await import('../dto/management-number-param.pipe');
+      const pipe = new ParseManagementNumberPipe();
+
+      expect(() =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        pipe.transform('INVALID-XYZ', { type: 'param', data: 'mgmt', metatype: String } as any)
+      ).toThrow(BadRequestException);
     });
   });
 });

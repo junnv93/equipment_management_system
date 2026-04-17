@@ -51,7 +51,8 @@
     "submit": "Submit",
     "withdraw": "Withdraw",
     "resubmit": "Resubmit",
-    "review": "Review"
+    "review": "Review",
+    "read": "View"
   },
   "entityTypes": {
     "equipment": "Equipment",

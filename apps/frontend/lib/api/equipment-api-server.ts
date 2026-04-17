@@ -68,6 +68,11 @@ const getEquipmentCached = cache(async (id: string | number) => {
   return api.getEquipment(id);
 });
 
+const getEquipmentByManagementNumberCached = cache(async (managementNumber: string) => {
+  const api = await getApi();
+  return api.getEquipmentByManagementNumber(managementNumber);
+});
+
 const getEquipmentListCached = cache(
   async (query: Parameters<EquipmentApiMethods['getEquipmentList']>[0]) => {
     const api = await getApi();
@@ -98,6 +103,17 @@ export async function getEquipmentList(
  */
 export async function getEquipment(...args: Parameters<EquipmentApiMethods['getEquipment']>) {
   return getEquipmentCached(args[0]);
+}
+
+/**
+ * 관리번호 기반 장비 조회 (Server Component용, React.cache 적용).
+ * QR 모바일 랜딩(`/e/:mgmt`)의 Page와 generateMetadata가 같은 요청에서
+ * 호출될 때 한 번만 실제 fetch가 나간다.
+ */
+export async function getEquipmentByManagementNumber(
+  ...args: Parameters<EquipmentApiMethods['getEquipmentByManagementNumber']>
+) {
+  return getEquipmentByManagementNumberCached(args[0]);
 }
 
 export async function createEquipment(...args: Parameters<EquipmentApiMethods['createEquipment']>) {

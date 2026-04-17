@@ -58,6 +58,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     'monitoring',
     'cables',
     'form-templates',
+    'qr',
   ];
 
   const loadedMessages: Record<string, Record<string, unknown>> = {};

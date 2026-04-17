@@ -1076,6 +1076,70 @@ export class EquipmentService extends VersionedBaseService {
   }
 
   /**
+   * 관리번호로 장비 조회 (QR 모바일 랜딩 진입점).
+   *
+   * `findOne(uuid)`와 동일한 반환 shape을 유지하여 컨트롤러/프론트엔드에서
+   * 단일 로직으로 처리 가능. 관리번호는 스키마 레벨에서 unique이므로
+   * 중복 안전. 사이트 스코프는 컨트롤러의 `enforceSiteAccess`로 적용된다.
+   *
+   * 캐시: `findOne`과 별도 키(`detail-by-mgmt`). 쓰기 무효화 시 두 키 모두 제거 필요
+   * (현 단계는 read-only 라우트이므로 무효화 대상 아님).
+   */
+  async findByManagementNumber(
+    managementNumber: string,
+    includeTeam = false
+  ): Promise<Equipment & { team?: Team | null; deputyManagerName?: string | null }> {
+    const cacheKey = this.buildCacheKey('detail-by-mgmt', {
+      managementNumber,
+      includeTeam,
+    });
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        try {
+          const equipmentData = await this.db.query.equipment.findFirst({
+            where: and(
+              eq(equipment.managementNumber, managementNumber),
+              eq(equipment.isActive, true)
+            ),
+            with: includeTeam ? { team: true } : undefined,
+          });
+
+          if (!equipmentData) {
+            throw new NotFoundException({
+              code: 'EQUIPMENT_NOT_FOUND',
+              message: `Equipment with management number ${managementNumber} not found.`,
+            });
+          }
+
+          let deputyManagerName: string | null = null;
+          if (equipmentData.deputyManagerId) {
+            const [deputy] = await this.db
+              .select({ name: users.name })
+              .from(users)
+              .where(eq(users.id, equipmentData.deputyManagerId))
+              .limit(1);
+            deputyManagerName = deputy?.name ?? null;
+          }
+
+          return { ...equipmentData, deputyManagerName };
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            throw error;
+          }
+
+          this.logger.error(
+            `관리번호 기반 장비 조회 오류: ${error instanceof Error ? error.message : String(error)}`
+          );
+          throw error;
+        }
+      },
+      CACHE_TTL.LONG
+    );
+  }
+
+  /**
    * 여러 장비를 배치 조회 (캐시 우선 + 미스만 DB 조회)
    *
    * @param uuids 장비 UUID 배열

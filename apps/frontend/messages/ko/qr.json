@@ -1,0 +1,53 @@
+{
+  "mobileActionSheet": {
+    "title": "장비 액션",
+    "description": "이 장비에서 수행 가능한 작업",
+    "actions": {
+      "viewDetail": {
+        "label": "상세 정보 보기",
+        "description": "장비 전체 정보, 이력 및 탭 이동"
+      },
+      "viewQr": {
+        "label": "QR 코드 보기",
+        "description": "이 장비의 QR 코드 확인 및 인쇄"
+      },
+      "requestCheckout": {
+        "label": "반출 신청",
+        "description": "교정/수리/대여용 반출 요청"
+      },
+      "markCheckoutReturned": {
+        "label": "반납 기록",
+        "description": "현재 대여 중인 장비의 반납 처리"
+      },
+      "reportNc": {
+        "label": "부적합 신고",
+        "description": "현장 결함/고장 등록"
+      }
+    },
+    "noActions": "수행 가능한 작업이 없습니다",
+    "noActionsDescription": "현재 계정으로 이 장비에서 가능한 작업이 없습니다. 관리자에게 문의하세요."
+  },
+  "qrDisplay": {
+    "title": "장비 QR 코드",
+    "description": "스마트폰 카메라로 스캔하면 모바일 랜딩 페이지로 이동합니다.",
+    "buttonLabel": "QR 보기",
+    "buttonAriaLabel": "장비 QR 코드 보기 및 인쇄",
+    "altText": "{name} ({managementNumber}) QR 코드",
+    "printButton": "인쇄"
+  },
+  "landing": {
+    "loadingLabel": "장비 정보를 불러오는 중...",
+    "summaryTitle": "장비 요약",
+    "managementNumberLabel": "관리번호",
+    "teamLabel": "소속 팀",
+    "siteLabel": "사이트",
+    "statusLabel": "상태",
+    "nextCalibrationLabel": "다음 교정 예정",
+    "notFoundTitle": "장비를 찾을 수 없습니다",
+    "notFoundBody": "관리번호를 확인하거나 QR 라벨이 훼손되지 않았는지 확인하세요. 임시 등록 장비(TEMP-*)는 데스크톱에서 조회하세요.",
+    "notFoundInvalidTitle": "유효하지 않은 관리번호",
+    "notFoundInvalidBody": "관리번호 형식이 올바르지 않습니다. 예: SUW-E0001",
+    "retryScan": "다시 스캔",
+    "goToEquipmentList": "전체 장비 목록"
+  }
+}

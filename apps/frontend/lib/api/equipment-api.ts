@@ -19,6 +19,7 @@ import type {
   EquipmentAttachment,
   IncidentType,
 } from '@equipment-management/schemas';
+import type { QRAllowedAction } from '@equipment-management/shared-constants';
 import {
   transformPaginatedResponse,
   transformSingleResponse,
@@ -247,6 +248,19 @@ const equipmentApi = {
   getEquipment: async (id: string): Promise<Equipment> => {
     const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.GET(id));
     return transformSingleResponse<Equipment>(response);
+  },
+
+  /**
+   * 관리번호 기반 장비 단건 조회 (QR 모바일 랜딩).
+   *
+   * 응답 shape에 `allowedActions: QRAllowedAction[]`가 포함됨 — 프론트는
+   * 이 배열로 CTA를 렌더링하며 권한 판정을 중복 수행하지 않는다.
+   */
+  getEquipmentByManagementNumber: async (
+    mgmt: string
+  ): Promise<Equipment & { allowedActions: QRAllowedAction[] }> => {
+    const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.BY_MANAGEMENT_NUMBER(mgmt));
+    return transformSingleResponse<Equipment & { allowedActions: QRAllowedAction[] }>(response);
   },
 
   // 장비 상세 조회 (별칭 - 하위 호환성)

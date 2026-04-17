@@ -77,6 +77,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   withdraw: '제출 취소',
   resubmit: '재제출',
   review: '검토',
+  read: '조회',
 };
 
 /**
@@ -111,6 +112,7 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   withdraw: 'bg-gray-100 text-gray-800',
   resubmit: 'bg-blue-100 text-blue-800',
   review: 'bg-green-100 text-green-800',
+  read: 'bg-gray-100 text-gray-800',
 };
 
 // ============================================================================

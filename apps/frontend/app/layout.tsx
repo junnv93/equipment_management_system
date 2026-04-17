@@ -45,6 +45,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Equipment Management System',
   description: 'Integrated equipment management system for laboratories',
+  manifest: '/manifest.json',
 };
 
 /**
@@ -60,6 +61,9 @@ export const viewport: Viewport = {
     { media: '(prefers-color-scheme: dark)', color: '#0A1C30' },
   ],
   colorScheme: 'light dark',
+  // iOS safe-area(노치/홈 인디케이터) 대응 — `--safe-area-inset-*` CSS 변수가 env(safe-area-inset-*)
+  // 값을 채우려면 viewport-fit=cover가 필요. globals.css의 .safe-area-* 유틸과 함께 사용.
+  viewportFit: 'cover',
 };
 
 /**

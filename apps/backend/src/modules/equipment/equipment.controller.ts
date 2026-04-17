@@ -68,11 +68,15 @@ import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.dto';
 import { ApproveRequestBodyPipe, type ApproveRequestBodyDto } from './dto/approve-request-body.dto';
+import { ParseManagementNumberPipe } from './dto/management-number-param.pipe';
+import { Throttle } from '@nestjs/throttler';
 import type {
   EquipmentCreateOrRequestResult,
   EquipmentDetailResult,
+  EquipmentQRLandingResult,
   EquipmentRequestDetailResult,
 } from './equipment.controller.types';
+import { QRAccessService } from './services/qr-access.service';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { EquipmentRequest } from '@equipment-management/db/schema/equipment-requests';
 import { DocumentService } from '../../common/file-upload/document.service';
@@ -85,7 +89,8 @@ export class EquipmentController {
     private readonly equipmentService: EquipmentService,
     private readonly approvalService: EquipmentApprovalService,
     private readonly attachmentService: EquipmentAttachmentService,
-    private readonly documentService: DocumentService
+    private readonly documentService: DocumentService,
+    private readonly qrAccessService: QRAccessService
   ) {}
 
   @Post('shared')
@@ -292,6 +297,70 @@ export class EquipmentController {
       managementNumber.trim(),
       excludeId
     );
+  }
+
+  /**
+   * 관리번호 기반 장비 단건 조회 (QR 모바일 랜딩 진입점 전용).
+   *
+   * - 경로: `GET /equipment/by-management-number/:mgmt`
+   * - 응답 shape: `EquipmentDetailResult` (UUID 조회와 동일)
+   * - 권한: `VIEW_EQUIPMENT`
+   * - 사이트 스코프: `enforceSiteAccess`로 교차 사이트 차단 (다른 사이트 장비 조회 시 ForbiddenException)
+   * - Rate limit: 1분당 60회 (enumeration 방어; 정상 현장 스캔은 충분히 여유)
+   *
+   * 라우트 순서 주의: Nest Router가 `/:uuid`보다 먼저 매칭되도록
+   * `@Get(':uuid')` 위쪽에 선언되어야 한다.
+   */
+  @Get('by-management-number/:mgmt')
+  @Throttle({ long: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({
+    summary: '관리번호로 장비 조회',
+    description:
+      'QR 모바일 랜딩 등 관리번호 기반 진입점에서 사용. 응답 shape은 UUID 기반 상세와 동일합니다.',
+  })
+  @ApiParam({
+    name: 'mgmt',
+    description: '관리번호 (예: SUW-E0001)',
+    type: String,
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '장비 조회 성공' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 관리번호 형식' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '장비를 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @AuditLog({
+    action: 'read',
+    entityType: 'equipment',
+    entityIdPath: 'response.id',
+    entityNamePath: 'response.name',
+  })
+  async findByManagementNumber(
+    @Param('mgmt', ParseManagementNumberPipe) managementNumber: string,
+    @Req() req: AuthenticatedRequest
+  ): Promise<EquipmentQRLandingResult> {
+    // Cross-site 조회 허용 — QR 모바일 랜딩은 타 사이트 장비(대여/인수인계 중)에도
+    // 제한된 액션으로 접근 가능해야 한다. 액션 레벨 제어는 QRAccessService가 담당.
+    const equipmentWithTeam = await this.equipmentService.findByManagementNumber(
+      managementNumber,
+      true
+    );
+
+    const allowedActions = await this.qrAccessService.resolveAllowedActions(
+      {
+        id: equipmentWithTeam.id,
+        site: equipmentWithTeam.site,
+        status: equipmentWithTeam.status,
+      },
+      req.user
+    );
+
+    const { team, ...equipmentData } = equipmentWithTeam;
+    return {
+      ...equipmentData,
+      teamName: team?.name || null,
+      allowedActions,
+    };
   }
 
   @Get(':uuid')

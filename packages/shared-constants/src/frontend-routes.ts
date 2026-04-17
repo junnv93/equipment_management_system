@@ -26,7 +26,25 @@ export const FRONTEND_ROUTES = {
     CREATE: '/equipment/create',
     DETAIL: (id: string) => `/equipment/${id}`,
     EDIT: (id: string) => `/equipment/${id}/edit`,
+    /**
+     * 관리번호 기반 모바일 QR 랜딩 (Phase 1).
+     * 경로 prefix(`/e/`)는 `EQUIPMENT_QR_PATH_PREFIX` in `qr-url.ts`와 일치해야 함 — 변경 시 동반 수정.
+     */
+    BY_MGMT: (mgmt: string) => `/e/${encodeURIComponent(mgmt)}`,
   },
+
+  /**
+   * QR 스캐너 페이지 (Phase 2에서 구현).
+   * Phase 1에서 SSOT 사전 등록 — 후속 Phase의 merge churn 감소 목적.
+   */
+  SCAN: '/scan',
+
+  /**
+   * 인수인계 QR 확인 페이지 (Phase 3, 서명 토큰 기반).
+   * 토큰은 URL param이 아닌 query string(`?token=...`)으로 전달.
+   */
+  HANDOVER: (token?: string) =>
+    token ? `/handover?token=${encodeURIComponent(token)}` : '/handover',
 
   // ============================================================================
   // 반출 관리 (교정/수리/대여)

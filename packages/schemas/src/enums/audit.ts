@@ -28,6 +28,7 @@ import { z } from 'zod';
  * - cancel: 취소
  * - login: 로그인
  * - logout: 로그아웃
+ * - read: 민감 조회 (QR 모바일 랜딩 등 책임 추적이 필요한 단일 리소스 조회)
  *
  * @see docs/development/API_STANDARDS.md
  */
@@ -55,6 +56,7 @@ export const AUDIT_ACTION_VALUES = [
   'withdraw', // 제출 취소
   'resubmit', // 재제출
   'review', // 검토 (워크플로우 전이)
+  'read', // 민감 조회 (QR 모바일 랜딩, 단일 리소스 조회 등 책임 추적 필요 시)
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES);

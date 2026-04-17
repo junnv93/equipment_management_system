@@ -314,6 +314,12 @@ export const queryKeys = {
       [...queryKeys.equipment.detail(id), 'history', type] as const,
     managementNumberCheck: (value?: string, excludeId?: string) =>
       [...queryKeys.equipment.all, 'management-number-check', value, excludeId] as const,
+    /**
+     * 관리번호 기반 단건 조회 (QR 모바일 랜딩 `/e/:mgmt`).
+     * `detail(id)`과 별도 캐시 — 관리번호는 secondary key이며 UUID와 다른 라이프사이클.
+     */
+    byManagementNumber: (mgmt: string) =>
+      [...queryKeys.equipment.all, 'by-management-number', mgmt] as const,
     // Sub-resources (nested under detail)
     nonConformances: (id: string) =>
       [...queryKeys.equipment.detail(id), 'non-conformances'] as const,

@@ -1,0 +1,53 @@
+{
+  "mobileActionSheet": {
+    "title": "Equipment actions",
+    "description": "Actions available for this equipment",
+    "actions": {
+      "viewDetail": {
+        "label": "View details",
+        "description": "Full equipment information, history, and tabs"
+      },
+      "viewQr": {
+        "label": "View QR code",
+        "description": "View and print this equipment's QR code"
+      },
+      "requestCheckout": {
+        "label": "Request checkout",
+        "description": "Request checkout for calibration, repair, or rental"
+      },
+      "markCheckoutReturned": {
+        "label": "Mark as returned",
+        "description": "Record return of equipment you currently have checked out"
+      },
+      "reportNc": {
+        "label": "Report non-conformance",
+        "description": "Report a defect or malfunction found in the field"
+      }
+    },
+    "noActions": "No actions available",
+    "noActionsDescription": "Your account has no available actions on this equipment. Contact an administrator."
+  },
+  "qrDisplay": {
+    "title": "Equipment QR code",
+    "description": "Scan with a phone camera to open the mobile landing page.",
+    "buttonLabel": "QR",
+    "buttonAriaLabel": "View and print equipment QR code",
+    "altText": "QR code for {name} ({managementNumber})",
+    "printButton": "Print"
+  },
+  "landing": {
+    "loadingLabel": "Loading equipment...",
+    "summaryTitle": "Equipment summary",
+    "managementNumberLabel": "Management number",
+    "teamLabel": "Team",
+    "siteLabel": "Site",
+    "statusLabel": "Status",
+    "nextCalibrationLabel": "Next calibration",
+    "notFoundTitle": "Equipment not found",
+    "notFoundBody": "Verify the management number or check the QR label for damage. Temporary equipment (TEMP-*) can only be accessed from desktop.",
+    "notFoundInvalidTitle": "Invalid management number",
+    "notFoundInvalidBody": "Management number format is invalid. Example: SUW-E0001",
+    "retryScan": "Scan again",
+    "goToEquipmentList": "Equipment list"
+  }
+}

@@ -9,6 +9,7 @@ import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { EquipmentRequest } from '@equipment-management/db/schema/equipment-requests';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type { users, equipment as equipmentTable } from '@equipment-management/db/schema';
+import type { QRAllowedAction } from '@equipment-management/shared-constants';
 
 type UserSelect = typeof users.$inferSelect;
 type EquipmentSelect = typeof equipmentTable.$inferSelect;
@@ -25,6 +26,16 @@ export type EquipmentCreateOrRequestResult =
 /** findOne() — 장비 상세 + teamName (team relation → teamName 변환) */
 export type EquipmentDetailResult = Omit<Equipment, never> & {
   teamName: string | null;
+};
+
+/**
+ * findByManagementNumber() — QR 모바일 랜딩 전용 상세.
+ *
+ * 기존 상세 shape에 서버 계산 `allowedActions` 배열을 추가. 프론트는 배열을
+ * 순회하며 CTA 렌더링 — 역할/권한 중복 판정 금지.
+ */
+export type EquipmentQRLandingResult = EquipmentDetailResult & {
+  allowedActions: QRAllowedAction[];
 };
 
 /** findRequestByUuid() — 요청 상세 + Relations */

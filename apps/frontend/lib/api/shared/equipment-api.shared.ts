@@ -17,7 +17,7 @@
  */
 
 import type { AxiosInstance } from 'axios';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, type QRAllowedAction } from '@equipment-management/shared-constants';
 import {
   transformPaginatedResponse,
   transformSingleResponse,
@@ -68,6 +68,13 @@ export interface EquipmentApiMethods {
   // 기본 CRUD
   getEquipmentList: (query?: EquipmentQuery) => Promise<PaginatedResponse<Equipment>>;
   getEquipment: (id: string | number) => Promise<Equipment>;
+  /**
+   * 관리번호 기반 장비 단건 조회 (QR 모바일 랜딩).
+   * 응답에 서버 계산 `allowedActions` 포함.
+   */
+  getEquipmentByManagementNumber: (
+    managementNumber: string
+  ) => Promise<Equipment & { allowedActions: QRAllowedAction[] }>;
   createEquipment: (data: CreateEquipmentDto) => Promise<EquipmentMutationResponse>;
   updateEquipment: (
     id: string | number,
@@ -141,6 +148,15 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
     getEquipment: async (id: string | number): Promise<Equipment> => {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.GET(String(id)));
       return transformSingleResponse<Equipment>(response);
+    },
+
+    getEquipmentByManagementNumber: async (
+      managementNumber: string
+    ): Promise<Equipment & { allowedActions: QRAllowedAction[] }> => {
+      const response = await apiClient.get(
+        API_ENDPOINTS.EQUIPMENT.BY_MANAGEMENT_NUMBER(managementNumber)
+      );
+      return transformSingleResponse<Equipment & { allowedActions: QRAllowedAction[] }>(response);
     },
 
     createEquipment: async (data: CreateEquipmentDto): Promise<EquipmentMutationResponse> => {

@@ -16,6 +16,7 @@ import {
   getDisplayStatus,
 } from '@/lib/constants/equipment-status-styles';
 import { DisposalButton } from './disposal/DisposalButton';
+import { EquipmentQRButton } from './EquipmentQRButton';
 import { useDisposalPermissions } from '@/hooks/use-disposal-permissions';
 import {
   EquipmentStatusValues as ESVal,
@@ -223,6 +224,12 @@ export function EquipmentStickyHeader({
 
         {/* 오른쪽: 액션 버튼 */}
         <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.actions}>
+          <EquipmentQRButton
+            managementNumber={equipment.managementNumber}
+            displayName={equipment.name}
+            subLabel={equipment.teamName ?? undefined}
+            size="sm"
+          />
           <Button
             variant="outline"
             size="sm"
