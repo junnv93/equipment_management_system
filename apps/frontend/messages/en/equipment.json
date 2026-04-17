@@ -1185,7 +1185,12 @@
       "causeRequired": "Please enter the non-conformance cause.",
       "actionPlan": "Action Plan",
       "actionPlanPlaceholder": "Enter action plan (optional).",
+      "photos": "Site Photos (Optional)",
+      "photosHint": "Attach problem photos. Mobile devices open the rear camera directly.",
+      "photosSelected": "{count} file(s) selected",
+      "photoDescription": "Non-conformance report photo",
       "registering": "Registering...",
+      "uploadingPhotos": "Uploading photos...",
       "register": "Register",
       "cancel": "Cancel"
     },
@@ -1208,7 +1213,8 @@
       "createSuccess": "Non-conformance has been registered.",
       "createError": "Failed to register non-conformance.",
       "updateSuccess": "Non-conformance record has been updated.",
-      "updateError": "Failed to update record."
+      "updateError": "Failed to update record.",
+      "photoPartialFailed": "{failed} photo(s) failed to upload. Others were saved."
     },
     "ncStatus": {
       "open": "Open",

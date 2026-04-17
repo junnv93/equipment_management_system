@@ -25,6 +25,7 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { NonConformanceCacheInvalidation } from '@/lib/api/cache-invalidation';
 import NCEditDialog from '@/components/non-conformances/NCEditDialog';
 import NCRepairDialog from '@/components/non-conformances/NCRepairDialog';
+import { NCDocumentsSection } from '@/components/non-conformances/NCDocumentsSection';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { Permission } from '@equipment-management/shared-constants';
@@ -459,6 +460,9 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           )}
         </CollapsibleSection>
       )}
+
+      {/* 첨부 문서 (현장 사진 등) */}
+      <NCDocumentsSection nonConformanceId={nc.id} />
 
       {/* 액션 바 */}
       {!isClosed && (

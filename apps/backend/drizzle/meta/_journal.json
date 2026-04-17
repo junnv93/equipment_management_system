@@ -218,6 +218,13 @@
       "when": 1776729600001,
       "tag": "0030_add_documents_non_conformance_id",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1776816000000,
+      "tag": "0031_add_self_inspection_snapshot",
+      "breakpoints": true
     }
   ]
 }

@@ -486,6 +486,7 @@ export const queryKeys = {
     byEquipment: (equipmentId: string) => ['documents', 'equipment', equipmentId] as const,
     byRequest: (requestId: string) => ['documents', 'request', requestId] as const,
     byValidation: (validationId: string) => ['documents', 'validation', validationId] as const,
+    byNonConformance: (ncId: string) => ['documents', 'non-conformance', ncId] as const,
   },
   reports: {
     all: ['reports'] as const,

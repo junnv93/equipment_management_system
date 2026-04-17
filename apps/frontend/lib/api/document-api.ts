@@ -23,7 +23,7 @@ export interface IntegrityResult {
 
 export const documentApi = {
   /**
-   * 범용 문서 업로드 (장비/교정/요청)
+   * 범용 문서 업로드 — 장비/교정/요청/유효성확인/점검/부적합 소유자 중 하나 이상 필수
    */
   uploadDocument: async (
     file: File,
@@ -33,6 +33,9 @@ export const documentApi = {
       calibrationId?: string;
       requestId?: string;
       softwareValidationId?: string;
+      intermediateInspectionId?: string;
+      selfInspectionId?: string;
+      nonConformanceId?: string;
       description?: string;
     }
   ): Promise<DocumentRecord> => {
@@ -44,12 +47,29 @@ export const documentApi = {
     if (options?.requestId) formData.append('requestId', options.requestId);
     if (options?.softwareValidationId)
       formData.append('softwareValidationId', options.softwareValidationId);
+    if (options?.intermediateInspectionId)
+      formData.append('intermediateInspectionId', options.intermediateInspectionId);
+    if (options?.selfInspectionId) formData.append('selfInspectionId', options.selfInspectionId);
+    if (options?.nonConformanceId) formData.append('nonConformanceId', options.nonConformanceId);
     if (options?.description) formData.append('description', options.description);
 
     const response = await apiClient.post(API_ENDPOINTS.DOCUMENTS.UPLOAD, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return transformSingleResponse<{ document: DocumentRecord }>(response).document;
+  },
+
+  /**
+   * 부적합(NC)별 문서 목록 조회 — NCDetailClient Documents 탭에서 사용
+   */
+  getNonConformanceDocuments: async (
+    nonConformanceId: string,
+    type?: DocumentType
+  ): Promise<DocumentRecord[]> => {
+    const params: Record<string, string> = { nonConformanceId };
+    if (type) params.type = type;
+    const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.BASE, { params });
+    return transformArrayResponse<DocumentRecord>(response);
   },
 
   /**

@@ -1,5 +1,7 @@
 import type { EquipmentStatus, ManagementMethod, UserRole } from './equipment';
 import { EquipmentStatusEnum, ManagementMethodEnum, UserRoleEnum } from './equipment';
+import type { EquipmentClassification, InspectionJudgment } from './intermediate-inspection';
+import type { SelfInspectionItemJudgment } from './self-inspection';
 import type { CheckoutStatus, CheckoutPurpose } from './checkout';
 import type {
   CalibrationApprovalStatus,
@@ -500,3 +502,81 @@ export const EQUIPMENT_IMPORT_STATUS_LABELS: Record<EquipmentImportStatus, strin
   returned: '반납 완료',
   canceled: '취소됨',
 };
+
+// ============================================================================
+// UL-QP-18 양식 전용 라벨 SSOT (서버 사이드 렌더러 전용)
+//
+// 프론트엔드 UI 사용 금지 — i18n 메시지(equipment.classification.*, ...) 사용.
+// 양식 원본 참조: docs/procedure/template/UL-QP-18-0{1,3,5}*.{docx,xlsx}
+// ============================================================================
+
+/**
+ * 장비 분류 라벨 — UL-QP-18-03/18-05 양식 헤더 "분류" 셀 출력용.
+ *
+ * 값: 교정기기 / 비교정기기 (양식 원본 T0 R0 C1 선택지 고정).
+ * 이 라벨은 양식 원본 텍스트와 동일해야 하므로 i18n 번역 대상이 아님.
+ */
+export const QP18_CLASSIFICATION_LABELS: Record<
+  EquipmentClassification,
+  '교정기기' | '비교정기기'
+> = {
+  calibrated: '교정기기',
+  non_calibrated: '비교정기기',
+};
+
+/**
+ * 중간점검 판정 라벨 — UL-QP-18-03 양식 T0 R5 C4 "판정 (합격/불합격)" 출력용.
+ *
+ * 양식 원본 표기: "합격" / "불합격" 고정. 빈 값은 '-'로 표시.
+ */
+export const INSPECTION_JUDGMENT_LABELS: Record<InspectionJudgment, '합격' | '불합격'> = {
+  pass: '합격',
+  fail: '불합격',
+};
+
+/**
+ * 자체점검 항목 판정 라벨 — UL-QP-18-05 양식 T0 R5+ "점검 결과" 출력용.
+ *
+ * 양식 원본 표기: "이상 없음" / "부적합" / "N/A" 고정.
+ * SELF_INSPECTION_ITEM_JUDGMENT_VALUES ('pass', 'fail', 'na')와 1:1 매핑.
+ */
+export const SELF_INSPECTION_RESULT_LABELS: Record<
+  SelfInspectionItemJudgment,
+  '이상 없음' | '부적합' | 'N/A'
+> = {
+  pass: '이상 없음',
+  fail: '부적합',
+  na: 'N/A',
+};
+
+/**
+ * UL-QP-18-01 시험설비 관리대장 "가용 여부" 컬럼 라벨.
+ *
+ * 양식 원본 선택지: 사용 / 고장 / 여분 (3종). 시스템 상태가 더 세분화되어 있어
+ * 양식 렌더 시 축약 매핑 필요:
+ * - 'available' | 'checked_out' | 'temporary' → '사용'
+ * - 'non_conforming' → '고장'
+ * - 'spare' | 'inactive' → '여분'
+ * - 'pending_disposal' | 'disposed' → '불용' (양식 원본에 없으나 showRetired=true 시 표시)
+ */
+export const EQUIPMENT_AVAILABILITY_LABELS: Record<EquipmentStatus, string> = {
+  available: '사용',
+  checked_out: '사용',
+  non_conforming: '고장',
+  spare: '여분',
+  pending_disposal: '불용',
+  disposed: '불용',
+  temporary: '사용',
+  inactive: '여분',
+};
+
+/**
+ * UL-QP-18-01 시험설비 관리대장 "중간점검 대상" 컬럼 라벨.
+ *
+ * 양식 원본 선택지: O / X 고정. boolean → 한글 O/X 매핑.
+ * Record<string, ...> 대신 명시 튜플로 타입 안전성 확보.
+ */
+export const INTERMEDIATE_CHECK_YESNO_LABELS = {
+  true: 'O',
+  false: 'X',
+} as const satisfies Record<'true' | 'false', 'O' | 'X'>;

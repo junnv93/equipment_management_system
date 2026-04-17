@@ -6,13 +6,16 @@ import { useTranslations } from 'next-intl';
 import {
   MANUAL_NC_TYPES,
   NonConformanceStatusValues as NCStatusVal,
+  DocumentTypeValues,
   type NonConformanceType,
 } from '@equipment-management/schemas';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import nonConformancesApi, { type NonConformance } from '@/lib/api/non-conformances-api';
+import { documentApi } from '@/lib/api/document-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -84,6 +87,9 @@ export function CreateNonConformanceForm({
     ncType: 'other' as NonConformanceType,
     actionPlan: '',
   });
+  const [photos, setPhotos] = useState<File[]>([]);
+  // Photo upload는 별도 토스트/상태 (NC는 optimistic, 사진은 NC 생성 이후 실제 업로드)
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
 
   // 접근성: autoFocus 시 첫 필드(ncType Select trigger)로 focus 이동.
   // 딥링크 자동 오픈된 폼을 키보드/스크린리더 사용자가 즉시 인지하도록 보조.
@@ -121,8 +127,37 @@ export function CreateNonConformanceForm({
     invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
     successMessage: t('nonConformanceManagement.toasts.createSuccess'),
     errorMessage: t('nonConformanceManagement.toasts.createError'),
-    onSuccessCallback: () => {
+    onSuccessCallback: async (createdNc) => {
+      // 사진 첨부: NC 생성 후 반환된 id로 병렬 업로드.
+      // Promise.allSettled — 일부 실패해도 나머지 진행 + partial 토스트.
+      if (photos.length > 0 && createdNc?.id) {
+        setIsUploadingPhotos(true);
+        const results = await Promise.allSettled(
+          photos.map((file) =>
+            documentApi.uploadDocument(file, DocumentTypeValues.EQUIPMENT_PHOTO, {
+              nonConformanceId: createdNc.id,
+              description: t('nonConformanceManagement.form.photoDescription'),
+            })
+          )
+        );
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        setIsUploadingPhotos(false);
+
+        if (failed > 0) {
+          toast({
+            title: t('nonConformanceManagement.toasts.photoPartialFailed', { failed }),
+            variant: 'destructive',
+          });
+        }
+
+        // NC 첨부 목록 캐시 무효화 — Documents 탭이 nonConformanceId로 조회
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.documents.byNonConformance(createdNc.id),
+        });
+      }
+
       setForm({ cause: '', ncType: 'other', actionPlan: '' });
+      setPhotos([]);
       // 교차 엔티티 캐시 무효화 (장비 목록, NC 전체 목록, 대시보드 KPI)
       EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(queryClient, equipmentId);
       onSuccess?.();
@@ -149,7 +184,14 @@ export function CreateNonConformanceForm({
 
   const handleCancel = () => {
     setForm({ cause: '', ncType: 'other', actionPlan: '' });
+    setPhotos([]);
     onCancel?.();
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    setPhotos(Array.from(files));
   };
 
   return (
@@ -201,11 +243,39 @@ export function CreateNonConformanceForm({
           placeholder={t('nonConformanceManagement.form.actionPlanPlaceholder')}
         />
       </div>
+      <div>
+        <Label htmlFor="nc-photos">{t('nonConformanceManagement.form.photos')}</Label>
+        <Input
+          id="nc-photos"
+          type="file"
+          accept="image/*"
+          multiple
+          // capture='environment' — 모바일(QR 현장)에서 후면 카메라 직접 실행. 데스크톱은 파일 선택.
+          capture="environment"
+          onChange={handlePhotoChange}
+          className="mt-1.5"
+          aria-describedby="nc-photos-hint"
+        />
+        <p id="nc-photos-hint" className="text-xs text-muted-foreground mt-1.5">
+          {t('nonConformanceManagement.form.photosHint')}
+        </p>
+        {photos.length > 0 && (
+          <p className="text-xs text-muted-foreground mt-1" aria-live="polite">
+            {t('nonConformanceManagement.form.photosSelected', { count: photos.length })}
+          </p>
+        )}
+      </div>
       <div className="flex gap-3">
-        <Button variant="destructive" onClick={handleSubmit} disabled={createMutation.isPending}>
-          {createMutation.isPending
-            ? t('nonConformanceManagement.form.registering')
-            : t('nonConformanceManagement.form.register')}
+        <Button
+          variant="destructive"
+          onClick={handleSubmit}
+          disabled={createMutation.isPending || isUploadingPhotos}
+        >
+          {isUploadingPhotos
+            ? t('nonConformanceManagement.form.uploadingPhotos')
+            : createMutation.isPending
+              ? t('nonConformanceManagement.form.registering')
+              : t('nonConformanceManagement.form.register')}
         </Button>
         {onCancel && (
           <Button variant="outline" onClick={handleCancel}>

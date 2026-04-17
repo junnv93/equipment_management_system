@@ -16,6 +16,7 @@ import {
   SELF_INSPECTION_STATUS_VALUES,
 } from '@equipment-management/schemas';
 import type {
+  EquipmentClassification,
   SelfInspectionItemJudgment,
   SelfInspectionResult,
   SelfInspectionStatus,
@@ -46,6 +47,17 @@ export const equipmentSelfInspections = pgTable(
     inspectorId: uuid('inspector_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
+
+    // 장비 분류 snapshot (UL-QP-18-05 양식 헤더 "분류").
+    // 장비 마스터(equipment.calibrationRequired)는 재교정 결정 변경 시 drift 가능 →
+    // 점검 기록 시점 값을 snapshot으로 보존하여 과거 양식 재출력 시 불변 보장.
+    // 중간점검(intermediate_inspections.classification)과 동일 SSOT 패턴.
+    classification: varchar('classification', { length: 20 }).$type<EquipmentClassification>(),
+
+    // 교정 유효기간 snapshot (UL-QP-18-05 양식 헤더 "교정유효기간").
+    // 점검 기록 시점의 교정 유효기간 문자열(예: '1년', 'N/A')을 보존.
+    // 비교정기기는 'N/A', 교정기기는 '1년' 등 자유 포맷.
+    calibrationValidityPeriod: varchar('calibration_validity_period', { length: 50 }),
 
     // 점검 항목 판정 (레거시 고정 컬럼 — 하위 호환)
     appearance: varchar('appearance', { length: 10 }).$type<SelfInspectionItemJudgment>().notNull(),

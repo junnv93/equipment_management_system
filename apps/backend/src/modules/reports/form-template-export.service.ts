@@ -47,6 +47,12 @@ import {
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import {
   CLASSIFICATION_TO_CODE,
+  EQUIPMENT_AVAILABILITY_LABELS,
+  INSPECTION_JUDGMENT_LABELS,
+  INTERMEDIATE_CHECK_YESNO_LABELS,
+  MANAGEMENT_METHOD_LABELS,
+  QP18_CLASSIFICATION_LABELS,
+  SELF_INSPECTION_RESULT_LABELS,
   SOFTWARE_AVAILABILITY_LABELS,
   type Classification,
   type SoftwareAvailability,
@@ -160,25 +166,10 @@ export class FormTemplateExportService {
   // ============================================================================
   // UL-QP-18-01: 시험설비 관리 대장
   // ============================================================================
-
-  /** QP-18-01 enum → 한국어 변환 */
-  private static readonly MANAGEMENT_METHOD_LABELS: Record<string, string> = {
-    external_calibration: '외부교정',
-    self_inspection: '자체점검',
-    not_applicable: '비대상',
-  };
-
-  /** 장비 상태 → QP-18-01 가용여부 (3가지) */
-  private static readonly STATUS_TO_AVAILABILITY: Record<string, string> = {
-    available: '사용',
-    checked_out: '사용',
-    non_conforming: '고장',
-    spare: '여분',
-    pending_disposal: '불용',
-    disposed: '불용',
-    temporary: '사용',
-    inactive: '여분',
-  };
+  // 라벨은 @equipment-management/schemas SSOT 사용:
+  // - MANAGEMENT_METHOD_LABELS — 관리방법 한국어
+  // - EQUIPMENT_AVAILABILITY_LABELS — 장비 상태 → 가용여부 (사용/고장/여분/불용)
+  // - INTERMEDIATE_CHECK_YESNO_LABELS — 중간점검 대상 O/X
 
   private async exportEquipmentRegistry(
     params: Record<string, string>,
@@ -271,11 +262,12 @@ export class FormTemplateExportService {
     rows.forEach((row, idx) => {
       const r = DATA_START_ROW + idx;
       const excelRow = sheet.getRow(r);
+      const mm = row.managementMethod as keyof typeof MANAGEMENT_METHOD_LABELS | null | undefined;
       const values: (string | number)[] = [
         row.managementNumber,
         row.assetNumber ?? 'N/A',
         row.name,
-        FormTemplateExportService.MANAGEMENT_METHOD_LABELS[row.managementMethod ?? ''] ?? 'N/A',
+        mm && mm in MANAGEMENT_METHOD_LABELS ? MANAGEMENT_METHOD_LABELS[mm] : 'N/A',
         formatDate(row.lastCalibrationDate),
         row.calibrationAgency ?? 'N/A',
         row.calibrationCycle ?? 'N/A',
@@ -286,8 +278,8 @@ export class FormTemplateExportService {
         row.serialNumber ?? '-',
         row.description ?? '-',
         row.location ?? '-',
-        row.needsIntermediateCheck ? 'O' : 'X',
-        FormTemplateExportService.STATUS_TO_AVAILABILITY[row.status] ?? '사용',
+        INTERMEDIATE_CHECK_YESNO_LABELS[row.needsIntermediateCheck ? 'true' : 'false'],
+        EQUIPMENT_AVAILABILITY_LABELS[row.status] ?? '사용',
       ];
 
       values.forEach((val, c) => {
@@ -424,8 +416,9 @@ export class FormTemplateExportService {
     // docx 템플릿 로드 — 스토리지 기반
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-03');
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-03');
+    // 분류 snapshot → SSOT 라벨. null/missing 시 '비교정기기' default (비파괴 fallback).
     const classificationLabel =
-      inspection.classification === 'calibrated' ? '교정기기' : '비교정기기';
+      QP18_CLASSIFICATION_LABELS[inspection.classification ?? 'non_calibrated'];
 
     // --- Table 0: 장비 정보 헤더 + 점검 항목 ---
     // Row 0~3: 장비 정보 (값만 교체 — 셀[1], 셀[3])
@@ -445,7 +438,7 @@ export class FormTemplateExportService {
       item.checkItem,
       item.checkCriteria ?? '-',
       (item.detailedResult ?? item.checkResult) || '-',
-      item.judgment === 'pass' ? '합격' : item.judgment === 'fail' ? '불합격' : '-',
+      item.judgment ? INSPECTION_JUDGMENT_LABELS[item.judgment] : '-',
     ]);
     doc.setDataRows(0, 6, itemData, 4); // 템플릿에 빈 행 4개 (Row 7~10)
 
@@ -696,8 +689,13 @@ export class FormTemplateExportService {
     // docx 템플릿 로드 — 스토리지 기반
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-05');
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-05');
-    const classificationLabel =
-      eqRow.calibrationRequired === 'required' ? '교정기기' : '비교정기기';
+    // 분류/교정유효기간: snapshot(record) 우선, 없으면 장비 마스터 fallback.
+    // snapshot은 기록 시점 값 보존(drift 방지) — 2026-04-17 Phase 1 마이그레이션 추가.
+    const classification =
+      record.classification ??
+      (eqRow.calibrationRequired === 'required' ? 'calibrated' : 'non_calibrated');
+    const classificationLabel = QP18_CLASSIFICATION_LABELS[classification];
+    const validityPeriodLabel = record.calibrationValidityPeriod ?? '-';
 
     // --- Table 0: 장비 정보 헤더 + 점검 항목 ---
     doc.setCellValue(0, 0, 1, classificationLabel);
@@ -707,11 +705,13 @@ export class FormTemplateExportService {
     doc.setCellValue(0, 2, 1, eqRow.name ?? '-');
     doc.setCellValue(0, 2, 3, eqRow.modelName ?? '-');
     doc.setCellValue(0, 3, 1, `${record.inspectionCycle}개월`);
-    doc.setCellValue(0, 3, 3, classificationLabel === '비교정기기' ? 'N/A' : '-');
+    doc.setCellValue(0, 3, 3, validityPeriodLabel);
     // Row 4: 구분행, Row 5: 헤더행 (유지)
     // Row 6+: 데이터 행 — 유연 항목 or 레거시 fallback
     const resultLabel = (r: string): string =>
-      r === 'pass' ? '이상 없음' : r === 'fail' ? '부적합' : 'N/A';
+      r === 'pass' || r === 'fail' || r === 'na'
+        ? SELF_INSPECTION_RESULT_LABELS[r as keyof typeof SELF_INSPECTION_RESULT_LABELS]
+        : SELF_INSPECTION_RESULT_LABELS.na;
 
     let itemData: string[][];
     if (items.length > 0) {

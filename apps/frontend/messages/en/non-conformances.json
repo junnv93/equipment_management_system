@@ -169,6 +169,18 @@
       "actorLabel": " · Closed by: {name}",
       "empty": "No closure notes."
     },
+    "attachments": {
+      "title": "Attachments",
+      "hint": "Upload site photos or supporting evidence.",
+      "upload": "Upload",
+      "uploading": "Uploading...",
+      "loading": "Loading...",
+      "empty": "No attachments.",
+      "downloadLabel": "Download {name}",
+      "uploadSuccess": "{count} photo(s) uploaded successfully",
+      "uploadPartialFailed": "{failed} photo(s) failed to upload. Others were saved.",
+      "defaultDescription": "Non-conformance evidence photo"
+    },
     "infoCard": {
       "basicInfo": "Basic Information",
       "repairLinked": "✓ Repair Linked",

@@ -1185,7 +1185,12 @@
       "causeRequired": "부적합 원인을 입력해주세요.",
       "actionPlan": "조치 계획",
       "actionPlanPlaceholder": "조치 계획을 입력해주세요. (선택)",
+      "photos": "현장 사진 (선택)",
+      "photosHint": "문제 상황 사진을 첨부하세요. 모바일에서는 후면 카메라로 바로 촬영됩니다.",
+      "photosSelected": "{count}장 선택됨",
+      "photoDescription": "부적합 신고 첨부 사진",
       "registering": "등록 중...",
+      "uploadingPhotos": "사진 업로드 중...",
       "register": "등록",
       "cancel": "취소"
     },
@@ -1208,7 +1213,8 @@
       "createSuccess": "부적합이 등록되었습니다.",
       "createError": "부적합 등록에 실패했습니다.",
       "updateSuccess": "부적합 기록이 수정되었습니다.",
-      "updateError": "업데이트에 실패했습니다."
+      "updateError": "업데이트에 실패했습니다.",
+      "photoPartialFailed": "사진 {failed}장 업로드 실패. 나머지는 저장되었습니다."
     },
     "ncStatus": {
       "open": "등록됨",
