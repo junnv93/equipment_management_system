@@ -49,5 +49,66 @@
     "notFoundInvalidBody": "Management number format is invalid. Example: SUW-E0001",
     "retryScan": "Scan again",
     "goToEquipmentList": "Equipment list"
+  },
+  "labelPrint": {
+    "title": "Bulk QR label print",
+    "selectedCount": "{count, plural, =0 {No equipment selected} one {Print QR label (#)} other {Print QR labels (#)}}",
+    "buttonAriaLabel": "Generate and download QR label PDF for {count} selected equipment",
+    "generate": "Generate PDF",
+    "generating": "Generating PDF...",
+    "progress": "{done}/{total} labels processed",
+    "downloadReady": "{count} QR labels downloaded",
+    "generationFailed": "QR label PDF generation failed. Please try again.",
+    "exceedMaxBatchTitle": "Large batch confirmation",
+    "exceedMaxBatchBody": "Selected count {count} exceeds recommended maximum {max}. Proceeding may slow down the browser.",
+    "confirm": "Continue",
+    "cancel": "Cancel"
+  },
+  "scanner": {
+    "title": "QR Scan",
+    "initializing": "Initializing camera...",
+    "scanningHint": "Align the equipment QR code in the center",
+    "cameraDenied": "Camera access denied",
+    "cameraDeniedBody": "Allow camera permission in your browser settings, or enter the management number manually below.",
+    "cameraUnavailable": "Camera unavailable",
+    "cameraUnavailableBody": "Not on HTTPS or device has no camera. Enter the management number manually.",
+    "cameraRegionAriaLabel": "QR scanner camera region",
+    "manualEntryTitle": "Manual entry",
+    "manualEntryBody": "If the QR is damaged or hard to scan, type the management number from the label.",
+    "manualEntryLabel": "Management number or URL",
+    "manualEntryPlaceholder": "SUW-E0001 or full URL",
+    "manualEntrySubmit": "Go",
+    "retryCamera": "Retry camera",
+    "invalidFormat": "Invalid management number format (e.g. SUW-E0001)",
+    "genericError": "Scanner failed to load. Use manual entry instead."
+  },
+  "ncrQuick": {
+    "title": "Report non-conformance",
+    "description": "Log a defect or anomaly found for {equipmentName}.",
+    "fields": {
+      "ncType": {
+        "label": "Non-conformance type",
+        "placeholder": "Select type..."
+      },
+      "cause": {
+        "label": "Symptom / cause",
+        "placeholder": "Briefly describe the defect or anomaly"
+      },
+      "discoveryDate": {
+        "label": "Discovery date"
+      },
+      "photos": {
+        "label": "Attach photos (optional)",
+        "hint": "Take photos of the defective area or select existing images (max 3)"
+      }
+    },
+    "submit": "Submit NCR",
+    "submitting": "Submitting...",
+    "cancel": "Cancel",
+    "successToast": "Non-conformance for {equipmentName} submitted",
+    "successToastWithPhotos": "Non-conformance with photos submitted for {equipmentName}",
+    "submitFailed": "Failed to submit non-conformance. Please try again.",
+    "photoUploadPartialFail": "NCR saved but {count} photo(s) failed to upload",
+    "photoFailList": "Failed uploads: {files}"
   }
 }

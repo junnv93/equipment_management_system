@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { EquipmentQRCode } from '@/components/equipment/EquipmentQRCode';
 import { MobileBottomSheet } from './MobileBottomSheet';
+import { MobileNCRQuickForm } from '@/components/non-conformances/MobileNCRQuickForm';
 
 interface EquipmentActionSheetProps {
   equipmentId: string;
@@ -55,8 +56,10 @@ export function EquipmentActionSheet({
 }: EquipmentActionSheetProps) {
   const t = useTranslations('qr.mobileActionSheet');
   const tQr = useTranslations('qr.qrDisplay');
+  const tNcr = useTranslations('qr.ncrQuick');
   const router = useRouter();
   const [qrOpen, setQrOpen] = React.useState(false);
+  const [ncrOpen, setNcrOpen] = React.useState(false);
 
   const sortedActions = React.useMemo(
     () =>
@@ -87,9 +90,8 @@ export function EquipmentActionSheet({
           );
           return;
         case 'report_nc':
-          router.push(
-            `${FRONTEND_ROUTES.NON_CONFORMANCES.LIST}?equipmentId=${equipmentId}&action=create`
-          );
+          // Phase 2: placeholder 라우팅을 시트 오픈으로 교체 (모바일 UX — 라우트 이동 제거)
+          setNcrOpen(true);
           return;
       }
     },
@@ -156,6 +158,20 @@ export function EquipmentActionSheet({
             subLabel={teamName ?? undefined}
           />
         </div>
+      </MobileBottomSheet>
+
+      <MobileBottomSheet
+        open={ncrOpen}
+        onOpenChange={setNcrOpen}
+        title={tNcr('title')}
+        hideDescription
+      >
+        <MobileNCRQuickForm
+          equipmentId={equipmentId}
+          equipmentName={equipmentName}
+          onSuccess={() => setNcrOpen(false)}
+          onCancel={() => setNcrOpen(false)}
+        />
       </MobileBottomSheet>
     </>
   );

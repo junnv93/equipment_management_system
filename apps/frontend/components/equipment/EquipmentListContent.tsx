@@ -18,6 +18,7 @@ import {
   EquipmentEmptyState,
 } from '@/components/equipment/EquipmentEmptyState';
 import { StatusSummaryStrip } from '@/components/equipment/StatusSummaryStrip';
+import { BulkLabelPrintButton } from '@/components/equipment/BulkLabelPrintButton';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -190,6 +191,10 @@ const ResultsInfoBar = memo(function ResultsInfoBar({
  * - Radix UI 컴포넌트(Select, Collapsible)의 ID mismatch 방지
  * - page.tsx에서 <ClientOnly> wrapper 적용
  */
+// NOTE: `useBulkSelection`은 Phase 2 프리미티브로 도입됐으며, per-row 체크박스
+// 통합은 디자인 리뷰(card/table 뷰 동시 고려) 후 Phase 2.5에서 진행. 현재는
+// "현재 페이지 items 전체"를 QR 라벨 PDF 배치로 소비하는 단일 툴바 버튼만 제공.
+
 export function EquipmentListContent({ initialData }: EquipmentListContentProps) {
   const t = useTranslations('equipment');
   const {
@@ -327,6 +332,14 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
       />
+
+      {/* 벌크 액션 바 — 현재 페이지 QR 라벨 일괄 인쇄
+       * (per-row 체크박스 + useBulkSelection 완전 통합은 Phase 2.5 UI 디자인 리뷰 후) */}
+      {items.length > 0 && (
+        <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
+          <BulkLabelPrintButton selectedItems={items} variant="outline" />
+        </div>
+      )}
 
       {/* 장비 목록 (테이블 또는 카드) */}
       {items.length === 0 ? (

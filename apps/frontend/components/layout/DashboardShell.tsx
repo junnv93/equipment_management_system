@@ -32,6 +32,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
 import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
 import { GlobalSearchTrigger } from '@/components/layout/GlobalSearchTrigger';
+import { MobileScanTrigger } from '@/components/layout/MobileScanTrigger';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -340,6 +341,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             }
             rightContent={
               <div className={cn('flex items-center', getHeaderSpacingClass())}>
+                <MobileScanTrigger />
                 <ThemeToggle />
                 <NotificationsDropdown />
                 <UserProfileDropdown />

@@ -40,6 +40,16 @@ interface FileUploadProps {
   description?: string;
   attachmentType?: string;
   showProgress?: boolean;
+  /**
+   * 모바일 `<input type="file">`의 HTML `capture` 속성 힌트.
+   *
+   * - `'environment'`: 후면 카메라 바로 활성화 (QR Phase 2 NCR 현장 결함 사진)
+   * - `'user'`: 전면 카메라
+   * - 지정 없음: 파일 선택 다이얼로그 기본 (데스크톱/파일 첨부)
+   *
+   * 기존 사용처는 undefined이므로 attribute가 렌더링되지 않아 영향 없음.
+   */
+  capture?: 'environment' | 'user';
 }
 
 /**
@@ -87,6 +97,7 @@ export function FileUpload({
   description,
   attachmentType: _attachmentType = 'other',
   showProgress = true,
+  capture,
 }: FileUploadProps) {
   const t = useTranslations('common.fileUpload');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -309,6 +320,7 @@ export function FileUpload({
         className="hidden"
         onChange={(e) => handleFileSelect(e.target.files)}
         disabled={disabled}
+        {...(capture ? { capture } : {})}
       />
 
       {/* 에러 메시지 */}
