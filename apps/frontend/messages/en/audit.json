@@ -114,7 +114,17 @@
       "assetNumber": "Asset Number",
       "notes": "Notes",
       "registeredBy": "Registered By",
-      "registeredByName": "Registered By"
+      "registeredByName": "Registered By",
+      "technicalManager": "Technical Manager (Primary)",
+      "deputyManagerId": "Technical Manager (Deputy)",
+      "initialLocation": "Initial Installation Location",
+      "installationDate": "Installation Date",
+      "supplier": "Supplier",
+      "supplierContact": "Supplier Contact",
+      "specMatch": "Spec Match",
+      "accessories": "Accessories",
+      "description": "Equipment Spec",
+      "serialNumber": "Serial Number"
     },
     "calibration": {
       "equipmentId": "Equipment",

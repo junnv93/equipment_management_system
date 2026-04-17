@@ -211,6 +211,22 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
               <dt className={tokens.dtLabel}>{t('fields.location')}</dt>
               <dd className={tokens.ddValue}>{equipment.location || '-'}</dd>
 
+              {equipment.initialLocation && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.initialLocation')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.initialLocation}</dd>
+                </>
+              )}
+
+              {equipment.installationDate && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.installationDate')}</dt>
+                  <dd className={`${tokens.ddMono} ${getTimestampClasses()}`}>
+                    {fmtDate(equipment.installationDate)}
+                  </dd>
+                </>
+              )}
+
               <dt className={tokens.dtLabel}>{t('fields.specMatch')}</dt>
               <dd className={tokens.ddValue}>
                 {equipment.specMatch === 'match'
@@ -219,6 +235,20 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                     ? t('basicInfoTab.specMatchMismatch')
                     : '-'}
               </dd>
+
+              {equipment.supplier && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.supplier')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.supplier}</dd>
+                </>
+              )}
+
+              {equipment.supplierContact && (
+                <>
+                  <dt className={tokens.dtLabel}>{t('fields.supplierContact')}</dt>
+                  <dd className={tokens.ddValue}>{equipment.supplierContact}</dd>
+                </>
+              )}
 
               {equipment.isShared !== undefined && (
                 <>

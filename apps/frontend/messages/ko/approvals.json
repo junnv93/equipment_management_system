@@ -225,7 +225,7 @@
     "equipmentName": "장비명",
     "modelName": "모델명",
     "serialNumber": "일련번호",
-    "manufacturer": "제조사",
+    "manufacturer": "제조사명",
     "purchaseYear": "구입년도",
     "specification": "장비사양",
     "calibrationDate": "교정일",

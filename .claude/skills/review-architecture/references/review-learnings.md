@@ -206,6 +206,11 @@
 - **설명**: `SimpleCacheService.deleteByPrefix()`는 `void`를 반환하지만 `RedisCacheService.deleteByPrefix()`는 `Promise<void>`를 반환. 인터페이스 `deleteByPrefix(prefix: string): void | Promise<void>`. `void`를 `Promise<unknown>[]` 배열에 `push()`하면 TypeScript 에러 TS2345 발생. 패턴: `await Promise.all(invalidations)` 완료 후 `deleteByPrefix()` 를 별도 동기 호출로 분리.
 - **체크리스트 반영**: ⏳ 관찰 중 (1회)
 
+### [2026-04-17] alias 역색인 Map 충돌 — 동일 alias 두 ColumnMappingEntry 중복 등록
+- **발견 위치**: `apps/backend/src/modules/data-migration/constants/equipment-column-mapping.ts:350, 356`
+- **설명**: `buildAliasIndex()`는 `Map.set()`을 사용하므로 동일 alias는 나중에 등록된 항목이 이전 항목을 덮어씀. `technicalManager`(직접 DB 컬럼 매핑)와 `managerName`(FK 해석 가상 필드)이 모두 `'운영책임자(정)'` alias를 보유하여, Excel 파서가 해당 헤더를 항상 `managerName` FK 경로로만 라우팅하게 됨. 의도가 불분명할 경우 alias 중복이 조용히 경로를 바꿔 버그로 이어짐.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 review-checklist.md 섹션 6 "모듈 패턴 일관성" 또는 섹션 1에 승격
+
 ### [2026-03-31] `readonly const` 배열 `as [string, ...string[]]` 직접 캐스팅 실패
 - **발견 위치**: `apps/backend/src/modules/data-migration/services/history-validator.service.ts:21,28`
 - **설명**: `packages/schemas`의 SSOT enum 배열(`REPAIR_RESULT_VALUES`, `INCIDENT_TYPE_VALUES`)은 `readonly [...]` 타입. Zod `z.enum(VALUES as [string, ...string[]])`로 직접 캐스팅하면 `readonly` → mutable 변환 불가 에러(TS2352). `[...VALUES] as [string, ...string[]]` (spread로 mutable 복사 후 캐스팅) 패턴으로 해결.
@@ -302,3 +307,4 @@
 | 2026-03-31 | 수정 완료 | executeMultiSheet() 트랜잭션 내 try-catch 제거 (equipment/calibration/repair/incident 4섹션) | data-migration.service.ts |
 | 2026-03-31 | 수정 완료 | getErrorReport() — multi-sheet 세션 fallback 추가 (MULTI_SESSION_CACHE_KEY_PREFIX) | data-migration.service.ts |
 | 2026-03-31 | 수정 완료 | calibration 캐시 무효화 — executeMultiSheet 완료 후 deleteByPrefix 추가 | data-migration.service.ts |
+| 2026-04-17 | 안티패턴 | alias 중복 충돌 — 동일 alias가 두 ColumnMappingEntry에 등록 시 buildAliasIndex Map에서 나중 것이 이김. equipment-column-mapping.ts에서 `운영책임자(정)`이 technicalManager(직접 DB 필드)와 managerName(FK 가상 필드)에 동시 등록됨 | review-learnings.md |

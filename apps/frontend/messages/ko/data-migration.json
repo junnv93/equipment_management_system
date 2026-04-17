@@ -84,7 +84,7 @@
     "fkResolution": {
       "title": "담당자/팀 자동 매칭",
       "managers": "담당자 {resolved}명 해석 / {unresolved}명 미해석",
-      "deputies": "부담당자 {resolved}명 해석 / {unresolved}명 미해석",
+      "deputies": "운영책임자 (부) {resolved}명 해석 / {unresolved}명 미해석",
       "teams": "팀 {resolved}건 해석 / {unresolved}건 미해석"
     }
   },
