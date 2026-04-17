@@ -10,6 +10,7 @@ import {
 import { NonConformancesService } from '../../non-conformances/non-conformances.service';
 import { NonConformanceStatus } from '../../non-conformances/dto/non-conformance-query.dto';
 import { RepairResultValues } from '@equipment-management/schemas';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 
 const RepairResultEnum = RepairResultValues;
 
@@ -22,7 +23,8 @@ export class RepairHistoryService {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
     @Inject(forwardRef(() => NonConformancesService))
-    private nonConformancesService: NonConformancesService
+    private nonConformancesService: NonConformancesService,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper
   ) {}
 
   /**
@@ -181,6 +183,10 @@ export class RepairHistoryService {
       }
     }
 
+    // 이력카드/장비 상세의 UL-QP-18-02 이력 섹션에 반영되도록 캐시 무효화
+    // (equipment_history.service 및 non_conformance 경로와 동일 SSOT 사용)
+    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentUuid, false, false);
+
     return newRecord;
   }
 
@@ -219,6 +225,12 @@ export class RepairHistoryService {
       }
     }
 
+    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
+      existing.equipmentId,
+      false,
+      false
+    );
+
     return updatedRecord;
   }
 
@@ -226,13 +238,19 @@ export class RepairHistoryService {
    * 수리 이력 삭제 (소프트 삭제)
    */
   async remove(uuid: string, deletedBy: string): Promise<{ deleted: boolean; id: string }> {
-    await this.findOne(uuid);
+    const existing = await this.findOne(uuid);
 
     const now = new Date();
     await this.db
       .update(repairHistory)
       .set({ isDeleted: true, deletedAt: now, deletedBy, updatedAt: now })
       .where(eq(repairHistory.id, uuid));
+
+    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
+      existing.equipmentId,
+      false,
+      false
+    );
 
     return { deleted: true, id: uuid };
   }
