@@ -24,33 +24,15 @@ import {
   DEFAULT_TIMEZONE,
   HISTORY_CARD_QUERY_LIMIT,
 } from '@equipment-management/shared-constants';
+import {
+  SPEC_MATCH_LABELS,
+  CALIBRATION_REQUIRED_LABELS,
+  MANAGEMENT_METHOD_LABELS,
+  CALIBRATION_RESULT_LABELS,
+} from '@equipment-management/schemas';
 import { FormTemplateService } from '../../reports/form-template.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
-
-const FORM_LABEL = 'UL-QP-18-02';
-
-const SPEC_MATCH_LABELS: Record<string, string> = {
-  match: '일치',
-  mismatch: '불일치',
-};
-
-const CALIBRATION_REQUIRED_LABELS: Record<string, string> = {
-  required: '필요',
-  not_required: '불필요',
-};
-
-const MANAGEMENT_METHOD_LABELS: Record<string, string> = {
-  external_calibration: '외부교정',
-  self_inspection: '자체점검',
-  not_applicable: '비대상',
-};
-
-const CALIBRATION_RESULT_LABELS: Record<string, string> = {
-  pass: '적합',
-  fail: '부적합',
-  conditional: '조건부 적합',
-  pending: '대기',
-};
+import { FORM_NUMBER as FORM_LABEL } from './history-card.layout';
 
 interface HistoryCardEquipmentInfo {
   managementNumber: string;
@@ -325,13 +307,17 @@ export class HistoryCardService {
         manufacturerContact: equipmentRow.manufacturerContact ?? '-',
         supplier: equipmentRow.supplier ?? '-',
         supplierContact: equipmentRow.supplierContact ?? '-',
-        specMatch: SPEC_MATCH_LABELS[equipmentRow.specMatch ?? ''] ?? '-',
-        calibrationRequired:
-          CALIBRATION_REQUIRED_LABELS[equipmentRow.calibrationRequired ?? ''] ?? '-',
+        specMatch: equipmentRow.specMatch ? SPEC_MATCH_LABELS[equipmentRow.specMatch] : '-',
+        calibrationRequired: equipmentRow.calibrationRequired
+          ? CALIBRATION_REQUIRED_LABELS[equipmentRow.calibrationRequired]
+          : '-',
         calibrationCycle: equipmentRow.calibrationCycle
           ? `${equipmentRow.calibrationCycle}개월`
           : '-',
-        managementMethod: MANAGEMENT_METHOD_LABELS[equipmentRow.managementMethod ?? ''] ?? '-',
+        managementMethod: equipmentRow.managementMethod
+          ? ((MANAGEMENT_METHOD_LABELS as Record<string, string>)[equipmentRow.managementMethod] ??
+            '-')
+          : '-',
         manualLocation: equipmentRow.manualLocation ?? '-',
         initialLocation: equipmentRow.initialLocation ?? '-',
         needsIntermediateCheck: equipmentRow.needsIntermediateCheck ? 'O' : 'X',
@@ -342,7 +328,9 @@ export class HistoryCardService {
         calibrationDate: formatDate(row.calibrationDate),
         nextCalibrationDate: formatDate(row.nextCalibrationDate),
         status: row.status ?? '-',
-        result: CALIBRATION_RESULT_LABELS[row.result ?? ''] ?? row.result ?? '-',
+        result: row.result
+          ? ((CALIBRATION_RESULT_LABELS as Record<string, string>)[row.result] ?? row.result)
+          : '-',
         agency: row.agencyName ?? '',
         technicianId: row.technicianId ?? '-',
         certificateNumber: row.certificateNumber ?? '-',

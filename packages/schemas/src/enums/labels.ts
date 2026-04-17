@@ -16,6 +16,7 @@ import type {
 } from './non-conformance';
 import type { TestField, SoftwareAvailability, ValidationStatus } from './software';
 import type { IncidentType } from './incident';
+import type { TimelineEntryType } from '../equipment-history';
 import type { NotificationPriority } from './notification';
 import type {
   ReturnCondition,
@@ -319,6 +320,25 @@ export const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
   change: '변경',
   repair: '수리',
   calibration_overdue: '교정 기한 초과',
+};
+
+/**
+ * 통합 이력 엔트리 유형 라벨 (UL-QP-18-02 이력카드 "손상/오작동/변경/수리" 섹션용).
+ *
+ * IncidentType 5종 + 단독 레코드 2종을 합쳐 이력카드 행 prefix로 사용.
+ * 예: `[수리] N-타입 커넥터 핀 교체` / `[부적합] 측정 오차 0.5dB 초과`
+ *
+ * @remarks 서버 사이드 전용 (docx 렌더링). 프론트엔드 UI는 i18n 메시지 사용.
+ * @see packages/schemas/src/equipment-history.ts — TimelineEntryTypeEnum
+ */
+export const TIMELINE_ENTRY_TYPE_LABELS: Record<TimelineEntryType, string> = {
+  damage: '손상',
+  malfunction: '오작동',
+  change: '변경',
+  repair: '수리',
+  calibration_overdue: '교정 기한 초과',
+  repair_record: '수리',
+  non_conformance: '부적합',
 };
 
 /**
