@@ -416,34 +416,19 @@ export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
   },
 ];
 
-/** 폐기된 장비 컬럼 alias 역색인 — DEPRECATED_EQUIPMENT_COLUMNS에서 자동 생성 */
-const DEPRECATED_EQUIPMENT_ALIAS_INDEX: Set<string> = new Set(
-  DEPRECATED_EQUIPMENT_COLUMNS.flatMap((e) => e.aliases.map((a) => a.toLowerCase().trim()))
-);
+import { DEPRECATED_CALIBRATION_COLUMNS } from './calibration-column-mapping';
+import { DEPRECATED_TEST_SOFTWARE_COLUMNS } from './test-software-column-mapping';
 
-/** 교정 시트 폐기 alias (cost 제거) */
-const DEPRECATED_CALIBRATION_ALIASES: Set<string> = new Set([
-  '교정비용',
-  '비용',
-  'cost',
-  'calibration cost',
-]);
-
-/** 시험용 SW 폐기 alias (이메일 제거) */
-const DEPRECATED_TEST_SOFTWARE_ALIASES: Set<string> = new Set([
-  '주담당자이메일',
-  '주담당자 이메일',
-  'primary manager email',
-  '부담당자이메일',
-  '부담당자 이메일',
-  'secondary manager email',
-]);
+/** alias 배열에서 Set 자동 추출 (SSOT 패턴 — 모든 deprecated 정의에 공통 적용) */
+function buildAliasSet(columns: ColumnMappingEntry[]): Set<string> {
+  return new Set(columns.flatMap((e) => e.aliases.map((a) => a.toLowerCase().trim())));
+}
 
 /** 모든 시트 통합 폐기 alias — ExcelParserService에서 import하여 사용 */
 export const ALL_DEPRECATED_ALIASES: Set<string> = new Set([
-  ...DEPRECATED_EQUIPMENT_ALIAS_INDEX,
-  ...DEPRECATED_CALIBRATION_ALIASES,
-  ...DEPRECATED_TEST_SOFTWARE_ALIASES,
+  ...buildAliasSet(DEPRECATED_EQUIPMENT_COLUMNS),
+  ...buildAliasSet(DEPRECATED_CALIBRATION_COLUMNS),
+  ...buildAliasSet(DEPRECATED_TEST_SOFTWARE_COLUMNS),
 ]);
 
 /**

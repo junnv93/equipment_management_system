@@ -63,3 +63,17 @@ export const TEST_SOFTWARE_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Ma
     entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
   )
 );
+
+/**
+ * 시험용 SW 시트에서 제거된 컬럼 정의 (SSOT: 하드코딩 Set 아닌 배열 기반 자동 추출)
+ */
+export const DEPRECATED_TEST_SOFTWARE_COLUMNS: ColumnMappingEntry[] = [
+  {
+    dbField: 'primaryManagerEmail',
+    aliases: ['주담당자이메일', '주담당자 이메일', 'Primary Manager Email'],
+  },
+  {
+    dbField: 'secondaryManagerEmail',
+    aliases: ['부담당자이메일', '부담당자 이메일', 'Secondary Manager Email'],
+  },
+];

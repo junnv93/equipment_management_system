@@ -35,3 +35,14 @@ export const CALIBRATION_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
     entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
   )
 );
+
+/**
+ * 교정 시트에서 제거된 컬럼 정의 (SSOT: 하드코딩 Set 아닌 배열 기반 자동 추출)
+ */
+export const DEPRECATED_CALIBRATION_COLUMNS: ColumnMappingEntry[] = [
+  {
+    dbField: 'cost',
+    aliases: ['교정비용', '비용', 'Cost', 'Calibration Cost'],
+    transform: toNumber,
+  },
+];
