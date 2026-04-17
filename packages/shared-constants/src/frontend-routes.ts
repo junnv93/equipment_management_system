@@ -12,6 +12,43 @@
 
 import type { ApprovalCategory } from '@equipment-management/schemas';
 
+/**
+ * 범용 Intent URL 쿼리 파라미터 상수 — SSOT.
+ *
+ * 특정 UI 상태(생성 폼 오픈, 상세 모달 오픈 등)를 URL에 표현하여 딥링크 공유·브라우저
+ * 히스토리·진입점 통합을 가능하게 한다. Linear/Notion/GitHub이 채택한 패턴.
+ *
+ * 사용처:
+ * - `FRONTEND_ROUTES.EQUIPMENT.NON_CONFORMANCES_CREATE(id)` 빌더
+ * - 진입 페이지에서 `useSearchParams().get(QUERY_INTENTS.ACTION) === QUERY_INTENTS.ACTIONS.CREATE` 감지
+ *
+ * 새 intent 추가 시 `ACTIONS`에 값만 추가 — 리터럴 문자열 하드코딩 금지.
+ */
+export const QUERY_INTENTS = {
+  ACTION: 'action',
+  ACTIONS: {
+    CREATE: 'create',
+  },
+} as const;
+
+/**
+ * 반출(checkout) 목록 페이지의 URL 쿼리 파라미터 상수.
+ *
+ * 내 반출/활성 필터 등 목록 뷰 상태를 딥링크로 공유하기 위한 SSOT.
+ * `FRONTEND_ROUTES.CHECKOUTS.LIST_MINE_ACTIVE` 빌더가 조합.
+ */
+export const CHECKOUT_QUERY_PARAMS = {
+  SCOPE: 'scope',
+  VIEW: 'view',
+  EQUIPMENT_ID: 'equipmentId',
+  SCOPE_VALUES: {
+    MINE: 'mine',
+  },
+  VIEW_VALUES: {
+    ACTIVE: 'active',
+  },
+} as const;
+
 export const FRONTEND_ROUTES = {
   // ============================================================================
   // 대시보드
@@ -31,6 +68,14 @@ export const FRONTEND_ROUTES = {
      * 경로 prefix(`/e/`)는 `EQUIPMENT_QR_PATH_PREFIX` in `qr-url.ts`와 일치해야 함 — 변경 시 동반 수정.
      */
     BY_MGMT: (mgmt: string) => `/e/${encodeURIComponent(mgmt)}`,
+    /** 장비별 부적합 관리 페이지 (목록 + 인라인 생성 폼). */
+    NON_CONFORMANCES: (id: string) => `/equipment/${id}/non-conformance`,
+    /**
+     * 장비별 부적합 생성 딥링크. `?action=create` 파라미터가 생성 폼을 자동 오픈.
+     * 사용: QR 모바일 랜딩, 이메일 알림, 대시보드 quick action 등 모든 진입점 공유.
+     */
+    NON_CONFORMANCES_CREATE: (id: string) =>
+      `/equipment/${id}/non-conformance?${QUERY_INTENTS.ACTION}=${QUERY_INTENTS.ACTIONS.CREATE}`,
   },
 
   /**
@@ -61,6 +106,20 @@ export const FRONTEND_ROUTES = {
     CHECK: (id: string) => `/checkouts/${id}/check`,
     RETURN: (id: string) => `/checkouts/${id}/return`,
     PENDING_CHECKS: '/checkouts/pending-checks',
+    /**
+     * "내가 현재 반출 중인 장비" 딥링크. QR 랜딩의 `mark_checkout_returned` CTA,
+     * 대시보드 "내 반출" 빠른 이동 등 공유.
+     *
+     * @param equipmentId 선택적. 특정 장비로 필터링 (QR 진입 시 해당 장비 하이라이트).
+     */
+    LIST_MINE_ACTIVE: (equipmentId?: string) => {
+      const params = new URLSearchParams({
+        [CHECKOUT_QUERY_PARAMS.SCOPE]: CHECKOUT_QUERY_PARAMS.SCOPE_VALUES.MINE,
+        [CHECKOUT_QUERY_PARAMS.VIEW]: CHECKOUT_QUERY_PARAMS.VIEW_VALUES.ACTIVE,
+      });
+      if (equipmentId) params.set(CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID, equipmentId);
+      return `/checkouts?${params.toString()}`;
+    },
   },
 
   // ============================================================================

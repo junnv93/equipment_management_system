@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { QUERY_INTENTS } from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
@@ -108,20 +109,15 @@ export default function NonConformanceManagementClient({
     return () => clearDynamicLabel(equipmentId);
   }, [equipmentId, equipment, setDynamicLabel, clearDynamicLabel]);
 
-  // 부적합 등록 폼 상태
-  const [showCreateForm, setShowCreateForm] = useState(false);
-
-  // URL 딥링크: `?action=create` 진입 시 생성 폼 자동 오픈 (QR 모바일 랜딩/이메일 알림/대시보드
-  // quick action 등 범용 intent URL 패턴).
-  // 초기 URL에서만 감지 — 폼 닫기 후 URL이 바뀌지 않아도 다시 강제 오픈되지 않음.
-  useEffect(() => {
-    if (searchParams.get('action') === 'create') {
-      setShowCreateForm(true);
-    }
-    // searchParams 의존성은 의도적으로 생략 — 최초 마운트 시 1회만 반응
-    // (사용자가 X 버튼으로 폼을 닫았는데 URL이 그대로면 다시 열리는 UX 회피)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 부적합 등록 폼 상태.
+  //
+  // URL 딥링크(`?action=create`)로 진입 시 폼 자동 오픈. `useState` lazy initializer로
+  // 초기 URL 파라미터를 "한 번만" 읽어 상태 seed — useEffect + eslint-disable 안티패턴 회피.
+  // 사용자가 폼을 닫은 뒤 URL이 남아있어도 재오픈 강제 없음 (lazy init은 마운트 시 1회).
+  //
+  // 범용 intent URL 패턴 (QR 모바일 랜딩 / 이메일 알림 / 대시보드 quick action 공유 SSOT).
+  const openedViaDeeplink = searchParams.get(QUERY_INTENTS.ACTION) === QUERY_INTENTS.ACTIONS.CREATE;
+  const [showCreateForm, setShowCreateForm] = useState(() => openedViaDeeplink);
   // 업데이트 폼 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [updateForm, setUpdateForm] = useState({
@@ -316,12 +312,13 @@ export default function NonConformanceManagementClient({
 
       {/* 부적합 등록 폼 — 추출 컴포넌트 재사용 (QR 모바일 랜딩/이메일 알림 등 모든 진입점 공유) */}
       {showCreateForm && (
-        <Card className="p-6 mb-6">
-          <h2 className="text-lg font-semibold tracking-tight mb-4">
+        <Card className="p-6 mb-6" role="region" aria-labelledby="nc-create-form-title">
+          <h2 id="nc-create-form-title" className="text-lg font-semibold tracking-tight mb-4">
             {t('nonConformanceManagement.register')}
           </h2>
           <CreateNonConformanceForm
             equipmentId={equipmentId}
+            autoFocus={openedViaDeeplink}
             onSuccess={() => setShowCreateForm(false)}
             onCancel={() => setShowCreateForm(false)}
           />

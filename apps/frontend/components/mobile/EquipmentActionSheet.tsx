@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronRight, Eye, QrCode, PackageOpen, PackageCheck, AlertTriangle } from 'lucide-react';
 import {
   FRONTEND_ROUTES,
+  CHECKOUT_QUERY_PARAMS,
   QR_ACTION_I18N_KEYS,
   QR_ACTION_PRIORITY,
   type QRAllowedAction,
@@ -76,20 +77,19 @@ export function EquipmentActionSheet({
           setQrOpen(true);
           return;
         case 'request_checkout':
-          // ?equipmentId= 프리필은 CreateCheckoutContent가 처리 (기존 동작)
-          router.push(`${FRONTEND_ROUTES.CHECKOUTS.CREATE}?equipmentId=${equipmentId}`);
-          return;
-        case 'mark_checkout_returned':
-          // 장비를 반출 중인 사용자의 active checkout으로 안내.
-          // 상세 검색은 목록 페이지에서 필터로 해결 — Phase 1 범위에서 직접 링크는 목록으로.
+          // `?equipmentId=` 프리필은 CreateCheckoutContent가 처리 (기존 동작)
           router.push(
-            `${FRONTEND_ROUTES.CHECKOUTS.LIST}?equipmentId=${equipmentId}&scope=mine&view=active`
+            `${FRONTEND_ROUTES.CHECKOUTS.CREATE}?${CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID}=${encodeURIComponent(equipmentId)}`
           );
           return;
+        case 'mark_checkout_returned':
+          // "내가 현재 반출 중인 장비" 딥링크 — 빌더가 scope/view/equipmentId 조합 캡슐화.
+          router.push(FRONTEND_ROUTES.CHECKOUTS.LIST_MINE_ACTIVE(equipmentId));
+          return;
         case 'report_nc':
-          // 기존 NC 관리 페이지로 이동 — `?action=create` 딥링크가 생성 폼 자동 오픈.
+          // 기존 NC 관리 페이지로 이동 — 빌더가 `?action=create` intent 조합.
           // 원칙: QR은 경로. 기존 서비스/UI/폼은 재정의하지 않고 재사용만.
-          router.push(`/equipment/${equipmentId}/non-conformance?action=create`);
+          router.push(FRONTEND_ROUTES.EQUIPMENT.NON_CONFORMANCES_CREATE(equipmentId));
           return;
       }
     },

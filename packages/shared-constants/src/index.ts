@@ -80,8 +80,14 @@ export {
 // API 엔드포인트
 export { API_ENDPOINTS, type ApiEndpoints } from './api-endpoints';
 
-// 프론트엔드 라우트
-export { FRONTEND_ROUTES, type FrontendRoutes, getApprovalPageUrl } from './frontend-routes';
+// 프론트엔드 라우트 + URL intent 상수
+export {
+  FRONTEND_ROUTES,
+  type FrontendRoutes,
+  getApprovalPageUrl,
+  QUERY_INTENTS,
+  CHECKOUT_QUERY_PARAMS,
+} from './frontend-routes';
 
 // 반출 목적별 장비 선택 가능성 규칙
 export {

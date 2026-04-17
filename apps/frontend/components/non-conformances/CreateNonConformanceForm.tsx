@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import {
@@ -42,6 +42,12 @@ interface CreateNonConformanceFormProps {
   onSuccess?: () => void;
   /** 취소 버튼 클릭 시 호출. 미제공 시 취소 버튼 숨김. */
   onCancel?: () => void;
+  /**
+   * 마운트 시 첫 입력 필드(ncType Select)로 focus 이동.
+   * `?action=create` 딥링크 진입 시 활성화 권장 — 키보드/스크린리더 사용자의
+   * "폼이 자동 오픈됨" 인지 보조.
+   */
+  autoFocus?: boolean;
 }
 
 /**
@@ -67,6 +73,7 @@ export function CreateNonConformanceForm({
   equipmentId,
   onSuccess,
   onCancel,
+  autoFocus = false,
 }: CreateNonConformanceFormProps) {
   const t = useTranslations('non-conformances');
   const queryClient = useQueryClient();
@@ -77,6 +84,13 @@ export function CreateNonConformanceForm({
     ncType: 'other' as NonConformanceType,
     actionPlan: '',
   });
+
+  // 접근성: autoFocus 시 첫 필드(ncType Select trigger)로 focus 이동.
+  // 딥링크 자동 오픈된 폼을 키보드/스크린리더 사용자가 즉시 인지하도록 보조.
+  const ncTypeTriggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (autoFocus) ncTypeTriggerRef.current?.focus();
+  }, [autoFocus]);
 
   const createMutation = useOptimisticMutation<
     NonConformance,
@@ -148,7 +162,7 @@ export function CreateNonConformanceForm({
           value={form.ncType}
           onValueChange={(v) => setForm({ ...form, ncType: v as NonConformanceType })}
         >
-          <SelectTrigger id="nc-type" className="mt-1.5">
+          <SelectTrigger id="nc-type" ref={ncTypeTriggerRef} className="mt-1.5">
             <SelectValue placeholder={t('nonConformanceManagement.form.ncTypePlaceholder')} />
           </SelectTrigger>
           <SelectContent>

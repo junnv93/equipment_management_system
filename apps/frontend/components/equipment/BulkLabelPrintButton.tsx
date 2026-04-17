@@ -91,7 +91,6 @@ export function BulkLabelPrintButton({
         variant: 'destructive',
         description: t('generationFailed'),
       });
-      // eslint-disable-next-line no-console
       console.error('generateLabelPdf failed', error);
       // 재시도 가능하도록 idle로 복귀
       window.setTimeout(() => setPhase('idle'), 1200);
