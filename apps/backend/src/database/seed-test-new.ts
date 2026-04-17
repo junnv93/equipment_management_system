@@ -63,6 +63,7 @@ import { SOFTWARE_VALIDATIONS_SEED_DATA } from './seed-data/software/software-va
 import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from './seed-data/software/equipment-test-software.seed';
 import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-requests.seed';
 import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
+import { EQUIPMENT_DOCUMENTS_SEED_DATA } from './seed-data/history/equipment-documents.seed';
 import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
 import { NOTIFICATIONS_SEED_DATA } from './seed-data/admin/notifications.seed';
 
@@ -498,6 +499,19 @@ async function main(): Promise<void> {
     } catch (err) {
       console.warn(
         `  ⚠️ Document sync skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
+    // equipment_attachments.attachment_type에 없는 타입(equipment_photo 등)은 별도 seed
+    // UL-QP-18-02 이력카드 "장비 사진" 셀 검증용
+    try {
+      await db.insert(schema.documents).values(EQUIPMENT_DOCUMENTS_SEED_DATA);
+      console.log(
+        `  ✅ ${EQUIPMENT_DOCUMENTS_SEED_DATA.length}건 추가 문서 시드 (equipment_photo 등 특수 타입)`
+      );
+    } catch (err) {
+      console.warn(
+        `  ⚠️ Additional documents seed skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
       );
     }
 

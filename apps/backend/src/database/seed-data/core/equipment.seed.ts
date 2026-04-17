@@ -14,6 +14,7 @@ import {
   // Suwon users
   USER_TECHNICAL_MANAGER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_DEPUTY_ID,
+  USER_LAB_MANAGER_SUWON_ID,
   // Suwon teams
   TEAM_FCC_EMC_RF_SUWON_ID,
   TEAM_GENERAL_EMC_SUWON_ID,
@@ -118,6 +119,8 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
   // =========================================================================
 
   // Available + Calibration Overdue (3 months past) + 전체 필드 테스트용
+  // UL-QP-18-02 이력카드 "모든 셀이 채워진" reference 장비 — SUW-E0001로 고정
+  // 모든 스키마 필드 + 관계(test_software/document_photo/manager/deputy/approver+signature) 완비
   createEquipment(
     EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
     '스펙트럼 분석기',
@@ -129,10 +132,16 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     monthsAgo(3),
     daysAgo(10),
     {
+      assetNumber: 'AST-2023-001',
+      manufacturer: 'Keysight Technologies',
+      modelName: 'N9020B MXA Signal Analyzer',
+      serialNumber: 'MY12345678',
+      description: 'RF 신호 스펙트럼 측정 및 주파수 분석 (9 kHz ~ 26.5 GHz)',
       manufacturerContact: '02-1234-5678',
       supplier: 'Keysight Technologies Korea',
       supplierContact: '031-987-6543',
       accessories: 'RF 케이블 3m x2, N-SMA 어댑터, 전용 캐리어 케이스',
+      firmwareVersion: 'A.25.41',
       technicalManager: '김기술',
       initialLocation: 'SUWON Lab A-201',
       installationDate: new Date('2023-06-15'),
@@ -145,6 +154,9 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
       manualLocation: 'A동 201호 캐비닛',
       managerId: USER_TECHNICAL_MANAGER_SUWON_ID,
       deputyManagerId: USER_TECHNICAL_MANAGER_SUWON_DEPUTY_ID,
+      // Phase 1 approvedAt — 승인 시점 SSOT (이력카드 "확인" 서명란 일자 출력)
+      approvedBy: USER_LAB_MANAGER_SUWON_ID,
+      approvedAt: monthsAgo(6),
     }
   ),
 
