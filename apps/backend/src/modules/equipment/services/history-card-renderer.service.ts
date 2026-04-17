@@ -28,6 +28,7 @@ import {
   EQUIPMENT_PHOTO_CELL_WIDTH_EMU,
   EQUIPMENT_PHOTO_MAX_HEIGHT_EMU,
   EQUIPMENT_PHOTO_MIN_HEIGHT_EMU,
+  DRAWING_IDS,
 } from './history-card.layout';
 import type { HistoryCardData, HistoryCardEquipmentInfo } from './history-card-data.service';
 
@@ -164,14 +165,14 @@ export class HistoryCardRendererService {
     }
 
     const ext = signaturePath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
-    const fileName = `approver_signature.${ext}`;
-    const rId = 'rIdApproverSig';
+    const { relationshipId: rId, docPrId, fileBaseName } = DRAWING_IDS.APPROVER_SIGNATURE;
+    const fileName = `${fileBaseName}.${ext}`;
     addImageResource(zip, imageBuffer, fileName, ext, rId);
 
     const drawing = buildInlineDrawingXml(
       rId,
       fileName,
-      101,
+      docPrId,
       IMAGE_DIMENSIONS.APPROVER_SIGNATURE.cx,
       IMAGE_DIMENSIONS.APPROVER_SIGNATURE.cy
     );
@@ -336,11 +337,11 @@ export class HistoryCardRendererService {
     );
 
     const ext = photoPath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
-    const fileName = `equipment_photo.${ext}`;
-    const rId = 'rIdEquipPhoto';
+    const { relationshipId: rId, docPrId, fileBaseName } = DRAWING_IDS.EQUIPMENT_PHOTO;
+    const fileName = `${fileBaseName}.${ext}`;
     addImageResource(zip, imageBuffer, fileName, ext, rId);
 
-    const drawing = buildInlineDrawingXml(rId, fileName, 100, cx, cy);
+    const drawing = buildInlineDrawingXml(rId, fileName, docPrId, cx, cy);
 
     // "사진" 텍스트가 있는 셀의 다음 셀에 삽입 (양식 내 고정 레이아웃)
     const anchorIdx = xml.indexOf(EQUIPMENT_PHOTO_ANCHOR);
