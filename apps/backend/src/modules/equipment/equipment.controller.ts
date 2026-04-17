@@ -209,7 +209,10 @@ export class EquipmentController {
     if (isLabManager) {
       // DTO에 approvalStatus가 없어도 자동으로 approved 처리
       const approvedDto = { ...createEquipmentDto, approvalStatus: ApprovalStatusValues.APPROVED };
-      return this.equipmentService.create(approvedDto, userId);
+      const created = await this.equipmentService.create(approvedDto, userId);
+      // UL-QP-18-02 이력카드 "확인" 서명란 SSOT — 자체 승인 시에도 동일 경로로 기록
+      await this.equipmentService.markApprovalMeta(created.id, userId);
+      return created;
     }
 
     // 일반 사용자는 승인 요청 생성
@@ -467,7 +470,10 @@ export class EquipmentController {
 
     // 시스템 관리자는 직접 승인 가능
     if (isAdmin && updateEquipmentDto.approvalStatus === ApprovalStatusEnum.enum.approved) {
-      return this.equipmentService.update(uuid, updateEquipmentDto, userId);
+      const updated = await this.equipmentService.update(uuid, updateEquipmentDto, userId);
+      // UL-QP-18-02 이력카드 "확인" 서명란 SSOT — 관리자 직접 승인도 동일 경로
+      await this.equipmentService.markApprovalMeta(uuid, userId);
+      return updated;
     }
 
     // 시험실무자는 승인 요청 생성

@@ -1562,6 +1562,35 @@ export class EquipmentService extends VersionedBaseService {
    *
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    */
+  /**
+   * 장비 승인 메타 SSOT 업데이트 — `approvedBy` + `approvedAt` 을 단일 지점에서 기록한다.
+   *
+   * UL-QP-18-02 이력카드 "확인" 서명란의 승인일/승인자 정확성을 보장하기 위해
+   * 모든 승인 경로(등록 요청 승인 / 시험소장 자체 승인 / 시스템관리자 직접 update)가
+   * 이 메서드를 경유해야 한다.
+   *
+   * 트랜잭션 컨텍스트가 있으면 `tx` 로 전달하여 원자성 보장 (예: approveRequest 내부).
+   * tx 없이 호출되면 기본 DB 커넥션 사용 (예: controller 의 lab_manager 자체 승인).
+   *
+   * 주의: 이 메서드는 CAS 검증을 수행하지 않는다 — 승인 메타 기록은 version 변경과 분리되어
+   * 다른 승인 경로의 equipmentService.create/update 이후 후처리로 실행된다.
+   *
+   * @param equipmentId 대상 장비 UUID
+   * @param approvedBy 승인자 사용자 UUID
+   * @param tx 선택적 Drizzle 트랜잭션 (없으면 this.db 사용)
+   */
+  async markApprovalMeta(
+    equipmentId: string,
+    approvedBy: string,
+    tx?: Parameters<Parameters<AppDatabase['transaction']>[0]>[0]
+  ): Promise<void> {
+    const dbOrTx = tx ?? this.db;
+    await dbOrTx
+      .update(equipment)
+      .set({ approvedBy, approvedAt: new Date() })
+      .where(eq(equipment.id, equipmentId));
+  }
+
   async updateStatus(uuid: string, status: EquipmentStatus, version: number): Promise<Equipment> {
     try {
       // 기존 장비 조회 (교정 상태 검증을 위해)
