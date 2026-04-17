@@ -1,5 +1,5 @@
 import type { ColumnMappingEntry } from './equipment-column-mapping';
-import { parseExcelDate } from './equipment-column-mapping';
+import { parseExcelDate, buildAliasIndex } from './equipment-column-mapping';
 import { REPAIR_RESULT_VALUES } from '@equipment-management/schemas';
 
 function mapRepairResult(value: unknown): string | undefined {
@@ -46,8 +46,5 @@ export const REPAIR_COLUMN_MAPPING: ColumnMappingEntry[] = [
   { dbField: 'notes', aliases: ['비고', '메모', 'Notes', 'Remarks'] },
 ];
 
-export const REPAIR_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  REPAIR_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
-);
+export const REPAIR_ALIAS_INDEX: Map<string, ColumnMappingEntry> =
+  buildAliasIndex(REPAIR_COLUMN_MAPPING);

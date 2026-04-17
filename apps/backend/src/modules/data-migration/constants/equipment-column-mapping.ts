@@ -419,24 +419,91 @@ export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
 import { DEPRECATED_CALIBRATION_COLUMNS } from './calibration-column-mapping';
 import { DEPRECATED_TEST_SOFTWARE_COLUMNS } from './test-software-column-mapping';
 
+// ── SSOT: 템플릿 헤더 생성 ────────────────────────────────────────────────────
+
+/**
+ * ColumnMappingEntry → Excel 템플릿 헤더 텍스트 (SSOT)
+ *
+ * generateTemplate()과 buildAliasIndex() 양쪽에서 이 함수 하나만 호출하여
+ * 헤더 생성 공식이 단일 지점에만 존재하도록 보장한다.
+ *
+ * 규칙:
+ * - headerLabel이 있으면 그대로 사용 (예: "사이트(수원/의왕/평택) *")
+ * - 없으면 aliases[0] + 필수 표시 (예: "장비명 *", "자산번호")
+ */
+export function getTemplateHeader(entry: ColumnMappingEntry): string {
+  return entry.headerLabel ?? `${entry.aliases[0]}${entry.required ? ' *' : ''}`;
+}
+
+// ── SSOT: deprecated alias Set 빌드 ───────────────────────────────────────────
+
 /** alias 배열에서 Set 자동 추출 (SSOT 패턴 — 모든 deprecated 정의에 공통 적용) */
-function buildAliasSet(columns: ColumnMappingEntry[]): Set<string> {
+export function buildAliasSet(columns: ColumnMappingEntry[]): Set<string> {
   return new Set(columns.flatMap((e) => e.aliases.map((a) => a.toLowerCase().trim())));
 }
 
-/** 모든 시트 통합 폐기 alias — ExcelParserService에서 import하여 사용 */
+/**
+ * 시트별 deprecated alias Set (크로스시트 오염 방지)
+ *
+ * ALL_DEPRECATED_ALIASES(통합)를 사용하면 교정 시트의 deprecated "교정비용"이
+ * 장비 시트에서 경고 없이 무시되는 크로스시트 오염이 발생한다.
+ * 시트별로 해당 시트의 deprecated만 적용하여 정확한 unmapped 경고를 제공.
+ */
+export const DEPRECATED_EQUIPMENT_ALIAS_SET = buildAliasSet(DEPRECATED_EQUIPMENT_COLUMNS);
+export const DEPRECATED_CALIBRATION_ALIAS_SET = buildAliasSet(DEPRECATED_CALIBRATION_COLUMNS);
+export const DEPRECATED_TEST_SOFTWARE_ALIAS_SET = buildAliasSet(DEPRECATED_TEST_SOFTWARE_COLUMNS);
+
+/** 시트 타입 → deprecated alias Set 매핑 (ExcelParserService에서 사용) */
+export const DEPRECATED_ALIAS_BY_SHEET: Record<string, Set<string>> = {
+  equipment: DEPRECATED_EQUIPMENT_ALIAS_SET,
+  calibration: DEPRECATED_CALIBRATION_ALIAS_SET,
+  test_software: DEPRECATED_TEST_SOFTWARE_ALIAS_SET,
+  // deprecated가 없는 시트는 빈 Set — 미등록 컬럼은 전부 unmapped 경고
+  repair: new Set(),
+  incident: new Set(),
+  cable: new Set(),
+  calibration_factor: new Set(),
+  non_conformance: new Set(),
+};
+
+/**
+ * 모든 시트 통합 폐기 alias (하위 호환용 — 신규 코드는 DEPRECATED_ALIAS_BY_SHEET 사용 권장)
+ * @deprecated DEPRECATED_ALIAS_BY_SHEET를 사용하세요
+ */
 export const ALL_DEPRECATED_ALIASES: Set<string> = new Set([
-  ...buildAliasSet(DEPRECATED_EQUIPMENT_COLUMNS),
-  ...buildAliasSet(DEPRECATED_CALIBRATION_COLUMNS),
-  ...buildAliasSet(DEPRECATED_TEST_SOFTWARE_COLUMNS),
+  ...DEPRECATED_EQUIPMENT_ALIAS_SET,
+  ...DEPRECATED_CALIBRATION_ALIAS_SET,
+  ...DEPRECATED_TEST_SOFTWARE_ALIAS_SET,
 ]);
+
+// ── SSOT: alias 역색인 빌드 ──────────────────────────────────────────────────
+
+/**
+ * ColumnMappingEntry[] → alias 역색인 빌드 (대소문자 무시, 공백 트림)
+ *
+ * aliases + getTemplateHeader() 결과를 모두 등록하여
+ * generateTemplate()이 생성하는 헤더로 import해도 정상 매핑되게 한다.
+ *
+ * getTemplateHeader()를 단일 진실의 소스로 사용하므로
+ * 헤더 생성 공식이 변경되어도 인덱스가 자동 동기화된다.
+ */
+export function buildAliasIndex(mapping: ColumnMappingEntry[]): Map<string, ColumnMappingEntry> {
+  const index = new Map<string, ColumnMappingEntry>();
+  for (const entry of mapping) {
+    // 1. 기본 aliases
+    for (const alias of entry.aliases) {
+      index.set(alias.toLowerCase().trim(), entry);
+    }
+    // 2. 템플릿 헤더 (getTemplateHeader SSOT 사용)
+    const templateHeader = getTemplateHeader(entry).toLowerCase().trim();
+    index.set(templateHeader, entry);
+  }
+  return index;
+}
 
 /**
  * alias → ColumnMappingEntry 역색인 (대소문자 무시, 공백 트림)
  * Excel 헤더 파싱 시 O(1) 조회용
  */
-export const COLUMN_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  EQUIPMENT_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
-);
+export const COLUMN_ALIAS_INDEX: Map<string, ColumnMappingEntry> =
+  buildAliasIndex(EQUIPMENT_COLUMN_MAPPING);

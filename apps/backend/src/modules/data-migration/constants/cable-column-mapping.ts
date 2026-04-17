@@ -2,7 +2,12 @@
  * 케이블 Excel 컬럼 매핑
  */
 import type { ColumnMappingEntry } from './equipment-column-mapping';
-import { parseExcelDate, toInteger, mapSiteValue } from './equipment-column-mapping';
+import {
+  parseExcelDate,
+  toInteger,
+  mapSiteValue,
+  buildAliasIndex,
+} from './equipment-column-mapping';
 
 export const CABLE_COLUMN_MAPPING: ColumnMappingEntry[] = [
   {
@@ -48,8 +53,5 @@ export const CABLE_COLUMN_MAPPING: ColumnMappingEntry[] = [
   },
 ];
 
-export const CABLE_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  CABLE_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
-);
+export const CABLE_ALIAS_INDEX: Map<string, ColumnMappingEntry> =
+  buildAliasIndex(CABLE_COLUMN_MAPPING);

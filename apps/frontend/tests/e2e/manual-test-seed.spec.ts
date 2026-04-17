@@ -34,13 +34,19 @@ test('setup page for manual testing', async ({ page }) => {
           attributes[key.toLowerCase()] = val;
         }
       }
+      const rawSameSite = (attributes['samesite'] || 'Lax').toLowerCase();
+      const sameSiteMap: Record<string, 'Strict' | 'Lax' | 'None'> = {
+        strict: 'Strict',
+        lax: 'Lax',
+        none: 'None',
+      };
       return {
         name: name.trim(),
         value,
         domain: 'localhost',
         path: attributes['path'] || '/',
         httpOnly: parts.some((p) => p.trim().toLowerCase() === 'httponly'),
-        sameSite: (attributes['samesite'] || 'Lax') as 'Lax' | 'Strict' | 'None',
+        sameSite: sameSiteMap[rawSameSite] || 'Lax',
         expires: attributes['expires']
           ? new Date(attributes['expires']).getTime() / 1000
           : undefined,

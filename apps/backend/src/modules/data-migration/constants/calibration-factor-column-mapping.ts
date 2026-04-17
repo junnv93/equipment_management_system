@@ -2,7 +2,7 @@
  * 교정 인자 Excel 컬럼 매핑
  */
 import type { ColumnMappingEntry } from './equipment-column-mapping';
-import { parseExcelDate, toNumber } from './equipment-column-mapping';
+import { parseExcelDate, toNumber, buildAliasIndex } from './equipment-column-mapping';
 
 export const CALIBRATION_FACTOR_COLUMN_MAPPING: ColumnMappingEntry[] = [
   {
@@ -44,8 +44,6 @@ export const CALIBRATION_FACTOR_COLUMN_MAPPING: ColumnMappingEntry[] = [
   },
 ];
 
-export const CALIBRATION_FACTOR_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  CALIBRATION_FACTOR_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
+export const CALIBRATION_FACTOR_ALIAS_INDEX: Map<string, ColumnMappingEntry> = buildAliasIndex(
+  CALIBRATION_FACTOR_COLUMN_MAPPING
 );

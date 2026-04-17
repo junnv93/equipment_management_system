@@ -1,5 +1,5 @@
 import type { ColumnMappingEntry } from './equipment-column-mapping';
-import { parseExcelDate } from './equipment-column-mapping';
+import { parseExcelDate, buildAliasIndex } from './equipment-column-mapping';
 import { INCIDENT_TYPE_VALUES } from '@equipment-management/schemas';
 
 function mapIncidentType(value: unknown): string | undefined {
@@ -42,8 +42,5 @@ export const INCIDENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
   { dbField: 'content', aliases: ['내용', '사고내용', 'Content', 'Description'], required: true },
 ];
 
-export const INCIDENT_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  INCIDENT_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
-);
+export const INCIDENT_ALIAS_INDEX: Map<string, ColumnMappingEntry> =
+  buildAliasIndex(INCIDENT_COLUMN_MAPPING);

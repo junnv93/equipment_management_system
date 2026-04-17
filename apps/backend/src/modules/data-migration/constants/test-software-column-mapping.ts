@@ -2,7 +2,12 @@
  * 시험용 소프트웨어 Excel 컬럼 매핑
  */
 import type { ColumnMappingEntry } from './equipment-column-mapping';
-import { parseExcelDate, toBoolean, mapSiteValue } from './equipment-column-mapping';
+import {
+  parseExcelDate,
+  toBoolean,
+  mapSiteValue,
+  buildAliasIndex,
+} from './equipment-column-mapping';
 
 export const TEST_SOFTWARE_COLUMN_MAPPING: ColumnMappingEntry[] = [
   {
@@ -58,10 +63,8 @@ export const TEST_SOFTWARE_COLUMN_MAPPING: ColumnMappingEntry[] = [
   },
 ];
 
-export const TEST_SOFTWARE_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  TEST_SOFTWARE_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
+export const TEST_SOFTWARE_ALIAS_INDEX: Map<string, ColumnMappingEntry> = buildAliasIndex(
+  TEST_SOFTWARE_COLUMN_MAPPING
 );
 
 /**

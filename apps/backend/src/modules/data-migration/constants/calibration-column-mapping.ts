@@ -1,5 +1,5 @@
 import type { ColumnMappingEntry } from './equipment-column-mapping';
-import { parseExcelDate, toNumber } from './equipment-column-mapping';
+import { parseExcelDate, toNumber, buildAliasIndex } from './equipment-column-mapping';
 
 export const CALIBRATION_COLUMN_MAPPING: ColumnMappingEntry[] = [
   {
@@ -30,10 +30,8 @@ export const CALIBRATION_COLUMN_MAPPING: ColumnMappingEntry[] = [
   },
 ];
 
-export const CALIBRATION_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  CALIBRATION_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
+export const CALIBRATION_ALIAS_INDEX: Map<string, ColumnMappingEntry> = buildAliasIndex(
+  CALIBRATION_COLUMN_MAPPING
 );
 
 /**

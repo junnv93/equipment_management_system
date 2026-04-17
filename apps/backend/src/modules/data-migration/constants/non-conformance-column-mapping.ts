@@ -2,7 +2,7 @@
  * 부적합 관리 Excel 컬럼 매핑
  */
 import type { ColumnMappingEntry } from './equipment-column-mapping';
-import { parseExcelDate } from './equipment-column-mapping';
+import { parseExcelDate, buildAliasIndex } from './equipment-column-mapping';
 
 export const NON_CONFORMANCE_COLUMN_MAPPING: ColumnMappingEntry[] = [
   {
@@ -45,8 +45,6 @@ export const NON_CONFORMANCE_COLUMN_MAPPING: ColumnMappingEntry[] = [
   },
 ];
 
-export const NON_CONFORMANCE_ALIAS_INDEX: Map<string, ColumnMappingEntry> = new Map(
-  NON_CONFORMANCE_COLUMN_MAPPING.flatMap((entry) =>
-    entry.aliases.map((alias) => [alias.toLowerCase().trim(), entry])
-  )
+export const NON_CONFORMANCE_ALIAS_INDEX: Map<string, ColumnMappingEntry> = buildAliasIndex(
+  NON_CONFORMANCE_COLUMN_MAPPING
 );
