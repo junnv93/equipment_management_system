@@ -113,6 +113,12 @@ jobs:
         # 모든 컨트롤러 엔드포인트에 @RequirePermissions/@SkipPermissions/@Public 보장
         run: pnpm security:check
 
+      - name: ENV SSOT — env-sync Check
+        # envSchema (런타임 SSOT) 의 required 키가 .env.example 에 전부 존재하는지 검증.
+        # 누락 시 신규 PC/LAN/Prod 부팅이 envSchema.safeParse 실패로 차단되므로 이 단계에서 미리 잡음.
+        # 상세 워크플로: infra/secrets/README.md "ENV SSOT 동기화 체크리스트"
+        run: pnpm verify:env-sync
+
       - name: Drizzle — Schema Drift Check
         # schema.ts ↔ drizzle/meta snapshot 동기화 검증.
         # 누군가 schema.ts만 고치고 `drizzle-kit generate`를 깜빡하면 여기서 잡힙니다.

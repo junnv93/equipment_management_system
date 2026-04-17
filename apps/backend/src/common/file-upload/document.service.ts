@@ -25,6 +25,7 @@ export interface CreateDocumentOptions {
   softwareValidationId?: string;
   intermediateInspectionId?: string;
   selfInspectionId?: string;
+  nonConformanceId?: string;
   description?: string;
   uploadedBy?: string;
   subdirectory?: string;
@@ -58,12 +59,13 @@ export class DocumentService {
       !options.requestId &&
       !options.softwareValidationId &&
       !options.intermediateInspectionId &&
-      !options.selfInspectionId
+      !options.selfInspectionId &&
+      !options.nonConformanceId
     ) {
       throw new BadRequestException({
         code: 'DOCUMENT_OWNER_REQUIRED',
         message:
-          'At least one owner (equipmentId, calibrationId, requestId, softwareValidationId, intermediateInspectionId, or selfInspectionId) is required.',
+          'At least one owner (equipmentId, calibrationId, requestId, softwareValidationId, intermediateInspectionId, selfInspectionId, or nonConformanceId) is required.',
       });
     }
 
@@ -84,6 +86,7 @@ export class DocumentService {
         softwareValidationId: options.softwareValidationId,
         intermediateInspectionId: options.intermediateInspectionId,
         selfInspectionId: options.selfInspectionId,
+        nonConformanceId: options.nonConformanceId,
         documentType: options.documentType,
         status: 'active' as DocumentStatus,
         fileName: savedFile.fileName,
@@ -272,6 +275,28 @@ export class DocumentService {
   }
 
   /**
+   * 부적합(NC)별 문서 목록 (활성 문서만) — QR 현장 사진, 원인 분석 보고서 등
+   */
+  async findByNonConformanceId(
+    nonConformanceId: string,
+    type?: DocumentType
+  ): Promise<DocumentRecord[]> {
+    const conditions = [
+      eq(documents.nonConformanceId, nonConformanceId),
+      eq(documents.status, 'active' as DocumentStatus),
+    ];
+    if (type) {
+      conditions.push(eq(documents.documentType, type));
+    }
+
+    return this.db
+      .select()
+      .from(documents)
+      .where(and(...conditions))
+      .orderBy(desc(documents.uploadedAt));
+  }
+
+  /**
    * 자체점검별 문서 목록 (활성 문서만)
    */
   async findBySelfInspectionId(
@@ -347,6 +372,9 @@ export class DocumentService {
           calibrationId: parentDoc.calibrationId,
           requestId: parentDoc.requestId,
           softwareValidationId: parentDoc.softwareValidationId,
+          intermediateInspectionId: parentDoc.intermediateInspectionId,
+          selfInspectionId: parentDoc.selfInspectionId,
+          nonConformanceId: parentDoc.nonConformanceId,
           documentType: parentDoc.documentType as DocumentType,
           status: 'active' as DocumentStatus,
           fileName: savedFile.fileName,
@@ -562,6 +590,9 @@ export class DocumentService {
     }
     if (options.softwareValidationId) {
       return `validation/${options.softwareValidationId}`;
+    }
+    if (options.nonConformanceId) {
+      return `non-conformance/${options.nonConformanceId}`;
     }
     return 'equipment';
   }

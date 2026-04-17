@@ -113,6 +113,7 @@ export class CheckoutsController {
       '발급 권한은 해당 체크아웃의 신청자(requester) 또는 승인자(approver) + 관리자 역할.',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: IssueHandoverTokenDto, required: false })
   @ApiResponse({ status: HttpStatus.CREATED, description: '토큰 발급 성공' })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
@@ -176,13 +177,7 @@ export class CheckoutsController {
       '스캔으로 수신한 서명 토큰을 검증하고 jti를 1회 소비합니다. 성공 시 checkoutId와 purpose를 ' +
       '반환하며, 프론트엔드는 이 정보로 기존 condition-check 페이지로 redirect합니다.',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { token: { type: 'string', minLength: 1 } },
-      required: ['token'],
-    },
-  })
+  @ApiBody({ type: VerifyHandoverTokenDto })
   @ApiResponse({ status: HttpStatus.OK, description: '검증 성공 + jti 소비' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '무효 토큰' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '만료 토큰' })

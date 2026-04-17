@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { HelmetConfigService } from './common/middleware/helmet-config';
@@ -139,7 +140,8 @@ async function bootstrap(): Promise<void> {
       .addTag('보고서', '통계 및 보고서 생성')
       .build();
 
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    // nestjs-zod createZodDto로 파생된 DTO의 OpenAPI 메타를 정규화 (nullable/$ref/enum 정합성)
+    const document = cleanupOpenApiDoc(SwaggerModule.createDocument(app, swaggerConfig));
     SwaggerModule.setup('api/docs', app, document, {
       swaggerOptions: {
         persistAuthorization: true,

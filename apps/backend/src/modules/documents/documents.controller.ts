@@ -73,6 +73,7 @@ export class DocumentsController {
         softwareValidationId: { type: 'string', format: 'uuid' },
         intermediateInspectionId: { type: 'string', format: 'uuid' },
         selfInspectionId: { type: 'string', format: 'uuid' },
+        nonConformanceId: { type: 'string', format: 'uuid' },
         description: { type: 'string' },
       },
     },
@@ -90,6 +91,7 @@ export class DocumentsController {
     @Body('softwareValidationId') softwareValidationId?: string,
     @Body('intermediateInspectionId') intermediateInspectionId?: string,
     @Body('selfInspectionId') selfInspectionId?: string,
+    @Body('nonConformanceId') nonConformanceId?: string,
     @Body('description') description?: string
   ): Promise<{ document: DocumentRecord; message: string }> {
     if (!file) {
@@ -115,6 +117,7 @@ export class DocumentsController {
       softwareValidationId: softwareValidationId || undefined,
       intermediateInspectionId: intermediateInspectionId || undefined,
       selfInspectionId: selfInspectionId || undefined,
+      nonConformanceId: nonConformanceId || undefined,
       description: description || undefined,
       uploadedBy: userId || undefined,
     });
@@ -134,6 +137,7 @@ export class DocumentsController {
   @ApiQuery({ name: 'softwareValidationId', required: false })
   @ApiQuery({ name: 'intermediateInspectionId', required: false })
   @ApiQuery({ name: 'selfInspectionId', required: false })
+  @ApiQuery({ name: 'nonConformanceId', required: false })
   @ApiQuery({ name: 'type', required: false, enum: DOCUMENT_TYPE_VALUES })
   @ApiQuery({
     name: 'includeCalibrations',
@@ -149,6 +153,7 @@ export class DocumentsController {
     @Query('softwareValidationId') softwareValidationId?: string,
     @Query('intermediateInspectionId') intermediateInspectionId?: string,
     @Query('selfInspectionId') selfInspectionId?: string,
+    @Query('nonConformanceId') nonConformanceId?: string,
     @Query('type') type?: string,
     @Query('includeCalibrations') includeCalibrations?: string
   ): Promise<DocumentRecord[]> {
@@ -187,6 +192,12 @@ export class DocumentsController {
         message: 'Invalid selfInspectionId format.',
       });
     }
+    if (nonConformanceId && !uuidPattern.test(nonConformanceId)) {
+      throw new BadRequestException({
+        code: 'INVALID_UUID',
+        message: 'Invalid nonConformanceId format.',
+      });
+    }
 
     // documentType 검증 — 무효값 시 400 에러
     if (type && !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(type)) {
@@ -221,6 +232,9 @@ export class DocumentsController {
     }
     if (selfInspectionId) {
       return this.documentService.findBySelfInspectionId(selfInspectionId, validType);
+    }
+    if (nonConformanceId) {
+      return this.documentService.findByNonConformanceId(nonConformanceId, validType);
     }
     return [];
   }

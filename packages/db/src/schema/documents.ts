@@ -18,6 +18,7 @@ import { equipmentRequests } from './equipment-requests';
 import { softwareValidations } from './software-validations';
 import { intermediateInspections } from './intermediate-inspections';
 import { equipmentSelfInspections } from './equipment-self-inspections';
+import { nonConformances } from './non-conformances';
 import { users } from './users';
 
 /**
@@ -48,6 +49,10 @@ export const documents = pgTable(
       { onDelete: 'cascade' }
     ),
     selfInspectionId: uuid('self_inspection_id').references(() => equipmentSelfInspections.id, {
+      onDelete: 'cascade',
+    }),
+    // 부적합(NC) 첨부 — QR 현장 사진, 원인 분석 보고서 등. NC 삭제 시 cascade(첨부도 함께 소프트 삭제는 서비스 레이어 책임).
+    nonConformanceId: uuid('non_conformance_id').references(() => nonConformances.id, {
       onDelete: 'cascade',
     }),
 
@@ -110,6 +115,12 @@ export const documents = pgTable(
       table.intermediateInspectionId
     ),
     selfInspectionIdIdx: index('documents_self_inspection_id_idx').on(table.selfInspectionId),
+    nonConformanceIdIdx: index('documents_non_conformance_id_idx').on(table.nonConformanceId),
+    /** NC 첨부 조회 — 상세 페이지 Documents 탭이 typ별 필터링 자주 사용 */
+    nonConformanceTypeIdx: index('documents_non_conformance_type_idx').on(
+      table.nonConformanceId,
+      table.documentType
+    ),
     statusIdx: index('documents_status_idx').on(table.status),
     /** purgeDeletedDocuments 쿼리 최적화: WHERE status='deleted' AND updatedAt < cutoff */
     statusUpdatedAtIdx: index('documents_status_updated_at_idx').on(table.status, table.updatedAt),
@@ -147,6 +158,10 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   selfInspection: one(equipmentSelfInspections, {
     fields: [documents.selfInspectionId],
     references: [equipmentSelfInspections.id],
+  }),
+  nonConformance: one(nonConformances, {
+    fields: [documents.nonConformanceId],
+    references: [nonConformances.id],
   }),
   uploadedByUser: one(users, {
     fields: [documents.uploadedBy],

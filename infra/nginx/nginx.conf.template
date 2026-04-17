@@ -121,17 +121,35 @@ http {
 
         # ─────────────────────────────────────────────
         # 보안 헤더
+        #
+        # CSP 정책: edge(Nginx)가 SSOT. 업스트림(Next.js) 헤더는 hide 후 재설정.
+        # Permissions-Policy: QR 스캐너(html5-qrcode)가 카메라 self-origin 필요 → camera=(self)
+        # CSP directives 근거:
+        #   - script-src 'unsafe-inline'  — Next.js 16 hydration 인라인 스크립트.
+        #                                   nonce 기반 이관은 별도 Phase (example-prompts.md TODO).
+        #   - img-src data: blob:         — avatar placeholder, QR SVG blob
+        #   - media-src blob: mediastream: — camera MediaStream + Blob URL
+        #   - connect-src 'self'          — /api (backend) + /api/notifications/stream(SSE) 동일 오리진
+        #   - worker-src blob:            — PWA 서비스워커 + future pdf.js worker
+        #   - frame-ancestors 'none'      — X-Frame-Options SAMEORIGIN 보완(CSP 3 표준)
+        #   - upgrade-insecure-requests   — mixed-content 방지(HTTPS 환경)
+        #   - object-src 'none'           — 레거시 플러그인 차단
+        #   - base-uri 'self'             — <base> 하이재킹 방지
         # ─────────────────────────────────────────────
+        proxy_hide_header Content-Security-Policy;
+        proxy_hide_header Permissions-Policy;
         add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-XSS-Protection "0" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+        add_header Permissions-Policy "camera=(self), microphone=(), geolocation=()" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob: mediastream:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests" always;
 
-        # 전역 연결/요청 제한
+        # 전역 연결 제한(conn-level만 서버 레벨에 둠)
+        # Rate limit(limit_req)은 location별로 선언 — nginx가 'off' 파라미터를 지원하지 않아
+        # /health, /429.html 등 제외 location을 표현할 수 없기 때문. zone=api/auth/global 중 필요 시 선택.
         limit_conn conn_limit 20;
-        limit_req zone=global burst=200 nodelay;
 
         # ─────────────────────────────────────────────
         # 인증 엔드포인트 — 엄격한 Rate Limiting (Brute-force 방지)
@@ -209,6 +227,7 @@ http {
         # 나머지 모든 요청 → Frontend
         # ─────────────────────────────────────────────
         location / {
+            limit_req zone=global burst=200 nodelay;
             proxy_pass http://frontend;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
@@ -225,18 +244,21 @@ http {
                 proxy_pass http://frontend;
                 proxy_set_header Host $host;
                 expires 7d;
+                # 정적 자산은 CSP 불필요(실행 컨텍스트 없음), 성능 우선.
+                # 보안 헤더는 상위 location에서 재선언(nginx add_header 비상속).
                 add_header Cache-Control "public, immutable";
                 add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
                 add_header X-Content-Type-Options "nosniff" always;
                 add_header X-Frame-Options "SAMEORIGIN" always;
                 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-                add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+                add_header Permissions-Policy "camera=(self), microphone=(), geolocation=()" always;
             }
         }
 
         # Health check endpoint (Rate Limiting 제외)
+        # nginx limit_req는 'off' 파라미터 미지원 — server-level limit_req를 제거하고
+        # 각 location이 필요 시 개별 선언하는 구조(위 location 블록 참조). /health는 선언 없음 → 무제한.
         location /health {
-            limit_req off;
             access_log off;
             return 200 "healthy\n";
             add_header Content-Type text/plain;

@@ -6,9 +6,10 @@
 #   git push --no-verify
 #
 # What runs:
-#   1. TypeScript type check (all packages)
-#   2. Backend unit tests
-#   3. Frontend unit tests
+#   1. ENV SSOT sync (env.validation.ts ↔ .env.example drift 방지)
+#   2. TypeScript type check (all packages)
+#   3. Backend unit tests
+#   4. Frontend unit tests
 #
 # Skipped (still rely on GitHub Actions for these):
 #   - E2E tests (too slow for every push)
@@ -16,6 +17,9 @@
 #   - CodeQL / Secret Scan (server-side only)
 
 set -e
+
+echo "▶ pre-push: env-sync check..."
+pnpm verify:env-sync
 
 echo "▶ pre-push: TypeScript check..."
 pnpm tsc --noEmit

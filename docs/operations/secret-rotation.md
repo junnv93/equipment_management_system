@@ -10,6 +10,7 @@
 | `REDIS_PASSWORD`                  | 180일                    | 중                                            | Redis 재시작, 세션 캐시 소실       |
 | `JWT_SECRET`                      | 180일 또는 유출 의심 시  | 고                                            | **모든 사용자 재로그인 필수**      |
 | `REFRESH_TOKEN_SECRET`            | 180일                    | 고                                            | **모든 refresh token 무효화**      |
+| `HANDOVER_TOKEN_SECRET`           | 180일 또는 유출 의심 시  | 저 (TTL 10분이라 롤링 자연 소멸)              | 진행 중 handover 토큰만 무효화     |
 | `INTERNAL_API_KEY`                | 90일                     | 저 (`INTERNAL_API_KEY_PREVIOUS` 로 롤링)      | 서비스 간 다운타임 없음            |
 | `AZURE_AD_CLIENT_SECRET`          | Azure 정책 (보통 24개월) | 저                                            | 재로그인 필요 없음 (서버 재시작만) |
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | 180일                    | 중                                            | RustFS 재시작 필요                 |
@@ -38,6 +39,18 @@ git pull
 pnpm secrets:decrypt lan
 docker compose -f infra/compose/base.yml -f infra/compose/lan.override.yml up -d --force-recreate backend frontend
 ```
+
+## Handover 토큰 Secret 회전 (저위험)
+
+`HANDOVER_TOKEN_SECRET`은 1회성 + TTL 10분 토큰 서명 키. 회전 시 유일한 영향은 **현재 사용 중인 발급 토큰 무효화**뿐이며, 최대 10분 후 자연 소멸.
+
+```bash
+pnpm secrets:edit ENV=lan                 # HANDOVER_TOKEN_SECRET 교체
+git commit -am "chore(secrets): rotate HANDOVER_TOKEN_SECRET for lan"
+pnpm compose:lan                           # backend 재시작 — 진행 중 handover 토큰만 실패
+```
+
+재발급 안내: 인수인계 진행 중 사용자는 `/handover?token=...` 접근 시 `Invalid token` → 대여자에게 QR 재발급 요청.
 
 ## 0-다운타임 회전 (`INTERNAL_API_KEY` 만 가능)
 
