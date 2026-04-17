@@ -79,9 +79,10 @@ export class SelfInspectionsService extends VersionedBaseService {
     dto: CreateSelfInspectionInput,
     inspectorId: string
   ): Promise<SelfInspectionWithItems> {
-    // 장비 존재 확인
+    // 장비 존재 확인 + snapshot 소스 값 조회
+    // calibrationRequired는 UL-QP-18-05 양식 헤더 "분류" snapshot 기본값 derivation에 필요.
     const [eqRow] = await this.db
-      .select({ id: equipment.id })
+      .select({ id: equipment.id, calibrationRequired: equipment.calibrationRequired })
       .from(equipment)
       .where(eq(equipment.id, equipmentId))
       .limit(1);
@@ -102,6 +103,13 @@ export class SelfInspectionsService extends VersionedBaseService {
     // items에서 기존 고정 컬럼 값 추출 (하위 호환)
     const legacyValues = this.extractLegacyValues(dto);
 
+    // UL-QP-18-05 양식 헤더 snapshot — 장비 마스터 drift 방지.
+    // DTO 명시값 > 장비 마스터 derivation 순 fallback.
+    const classificationSnapshot =
+      dto.classification ??
+      (eqRow.calibrationRequired === 'required' ? 'calibrated' : 'non_calibrated');
+    const validityPeriodSnapshot = dto.calibrationValidityPeriod ?? null;
+
     return await this.db.transaction(async (tx) => {
       const [created] = await tx
         .insert(equipmentSelfInspections)
@@ -118,6 +126,8 @@ export class SelfInspectionsService extends VersionedBaseService {
           specialNotes: dto.specialNotes ?? null,
           inspectionCycle: cycle,
           nextInspectionDate,
+          classification: classificationSnapshot,
+          calibrationValidityPeriod: validityPeriodSnapshot,
           approvalStatus: 'draft',
           createdBy: inspectorId,
         })

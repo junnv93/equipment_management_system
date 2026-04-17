@@ -246,3 +246,23 @@ await db.transaction(async (tx) => {
 4. **Graceful fallback**: 서명/사진 다운로드 실패 시 텍스트로 fallback (PII 유출 없음, 렌더링 차단 없음).
 5. **양식-DB 매핑 문서**: `docs/manual/report-export-mapping.md §3.2` 참조 — 각 양식 필드가 어느 DB 컬럼에 매핑되는지 갱신된 표 유지.
 6. **양식 통합 인덱스**: `docs/manual/forms-index.md` — 모든 UL-QP 양식의 구현 상태/엔드포인트/매핑표/구현 파일을 한눈에 탐색. 새 양식 추가 시 체크리스트 제공.
+
+### XLSX 내보내기 3-way 분리 아키텍처 (UL-QP-18-01 기준)
+
+XLSX 양식도 DOCX와 동일한 3-way 분리를 적용한다. ExcelJS 워크북 조작은 공용 `xlsx-helper.ts`로 표준화하여 `equipment-registry-renderer.service.ts` 외 장래 UL-QP-19-01 연간 교정계획서 등도 동일 패턴으로 확장 가능.
+
+| 레이어       | 위치                                                                                     | 책임                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Orchestrator | `modules/reports/form-template-export.service.ts` `exportEquipmentRegistry` (dispatcher) | data → template → renderer 3단계 조합                                       |
+| Data Service | `modules/reports/services/equipment-registry-data.service.ts`                            | `filter`/`params` → equipment rows (필터/정렬/스코프 강제)                  |
+| Renderer     | `modules/reports/services/equipment-registry-renderer.service.ts`                        | ExcelJS 워크북 + 스타일 복제 + 행 주입 (COLUMNS layout 기반)                |
+| XLSX Helper  | `modules/reports/xlsx-helper.ts`                                                         | `loadWorksheetByName`/`captureRowStyles`/`writeDataRow`/`clearTrailingRows` |
+| Layout SSOT  | `modules/reports/layouts/equipment-registry.layout.ts`                                   | SHEET_NAMES (시트명 변종 fallback), COLUMNS tuple, DATA_START_ROW 등        |
+
+**양식 3종 확장 (2026-04-17):** UL-QP-18-01/03/05 모두 동일 3-way 분리 완료.
+
+- UL-QP-18-03 중간점검표: `modules/intermediate-inspections/services/*.{layout,export-data,renderer}.ts`
+- UL-QP-18-05 자체점검표: `modules/self-inspections/services/*.{layout,export-data,renderer}.ts`
+- UL-QP-18-01 시험설비 관리대장: `modules/reports/{layouts,services}/equipment-registry.*.ts`
+
+**SSOT 라벨**: 모든 한국어 라벨은 `packages/schemas/src/enums/labels.ts`에서 import (예: `QP18_CLASSIFICATION_LABELS`, `INSPECTION_JUDGMENT_LABELS`, `SELF_INSPECTION_RESULT_LABELS`, `EQUIPMENT_AVAILABILITY_LABELS`, `INTERMEDIATE_CHECK_YESNO_LABELS`). 인라인 리터럴 금지.

@@ -34,6 +34,14 @@ import { NON_CONFORMANCES_SEED_DATA } from './seed-data/operations/non-conforman
 
 // Phase 2 seed data modules (IMPLEMENTED)
 import { REPAIR_HISTORY_SEED_DATA } from './seed-data/operations/repair-history.seed';
+import {
+  SELF_INSPECTIONS_SEED_DATA,
+  SELF_INSPECTION_ITEMS_SEED_DATA,
+} from './seed-data/operations/self-inspections.seed';
+import {
+  INTERMEDIATE_INSPECTIONS_SEED_DATA,
+  INTERMEDIATE_INSPECTION_ITEMS_SEED_DATA,
+} from './seed-data/operations/intermediate-inspections.seed';
 import { CALIBRATION_FACTORS_SEED_DATA } from './seed-data/calibration/calibration-factors.seed';
 import {
   CHECKOUTS_SEED_DATA,
@@ -241,6 +249,18 @@ async function main(): Promise<void> {
     // Non-Conformances (10)
     console.log('  → Non-Conformances (10)');
     await db.insert(schema.nonConformances).values(NON_CONFORMANCES_SEED_DATA);
+
+    // Intermediate Inspections (UL-QP-18-03) — calibration FK 필요하므로 calibrations 이후
+    console.log('  → Intermediate Inspections (1)');
+    await db.insert(schema.intermediateInspections).values(INTERMEDIATE_INSPECTIONS_SEED_DATA);
+    await db
+      .insert(schema.intermediateInspectionItems)
+      .values(INTERMEDIATE_INSPECTION_ITEMS_SEED_DATA);
+
+    // Self Inspections (UL-QP-18-05) — equipment FK만 필요
+    console.log('  → Self Inspections (1)');
+    await db.insert(schema.equipmentSelfInspections).values(SELF_INSPECTIONS_SEED_DATA);
+    await db.insert(schema.selfInspectionItems).values(SELF_INSPECTION_ITEMS_SEED_DATA);
 
     // Form Templates: main.ts:158 seedFromFilesystem이 백엔드 부팅 시 docs/procedure/template/의
     // 실제 파일로 시드함. placeholder seed는 다운로드 시 ENOENT를 일으켜 제거됨.

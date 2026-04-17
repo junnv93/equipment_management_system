@@ -402,6 +402,27 @@ export const EQ_SW_LINK_007_ID = '77770007-0007-4007-8007-000000000007';
 export const EQ_SW_LINK_008_ID = '77770008-0008-4008-8008-000000000008';
 
 // =============================================================================
+// INTERMEDIATE INSPECTIONS (UL-QP-18-03)
+// Pattern: ii0NNNNN-...
+// =============================================================================
+
+export const INTERMEDIATE_INSPECTION_001_ID = '91110001-0001-4001-8001-000000000001';
+export const INTERMEDIATE_INSPECTION_ITEM_001_A_ID = '91110001-1001-4001-8001-000000000001';
+export const INTERMEDIATE_INSPECTION_ITEM_001_B_ID = '91110001-1002-4001-8001-000000000002';
+export const INTERMEDIATE_INSPECTION_ITEM_001_C_ID = '91110001-1003-4001-8001-000000000003';
+
+// =============================================================================
+// SELF INSPECTIONS (UL-QP-18-05)
+// Pattern: 9555NNNN-...
+// =============================================================================
+
+export const SELF_INSPECTION_001_ID = '95550001-0001-4001-8001-000000000001';
+export const SELF_INSPECTION_ITEM_001_A_ID = '95550001-1001-4001-8001-000000000001';
+export const SELF_INSPECTION_ITEM_001_B_ID = '95550001-1002-4001-8001-000000000002';
+export const SELF_INSPECTION_ITEM_001_C_ID = '95550001-1003-4001-8001-000000000003';
+export const SELF_INSPECTION_ITEM_001_D_ID = '95550001-1004-4001-8001-000000000004';
+
+// =============================================================================
 // TEAM SPECIAL ID (placeholder team for test users)
 // =============================================================================
 
