@@ -1,5 +1,20 @@
-import { InternalServerErrorException } from '@nestjs/common';
+import { InternalServerErrorException, Logger } from '@nestjs/common';
 import type PizZip from 'pizzip';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import type { AppDatabase } from '@equipment-management/db';
+import type { InspectionType } from '@equipment-management/schemas';
+import { inspectionResultSections } from '@equipment-management/db/schema/inspection-result-sections';
+import { documents } from '@equipment-management/db/schema/documents';
+import type { DocxTemplate } from './docx-template.util';
+import type { IStorageProvider } from '../../common/storage/storage.interface';
+
+/**
+ * 공통 로거 — 이 파일의 공유 헬퍼(insertDocxSignature 등) 내부 경고 출력용.
+ *
+ * 양식별 렌더러 서비스가 자체 `Logger`를 쓰는 것과 달리, 헬퍼 함수는
+ * 단일 모듈 논리 이름으로 로그를 남겨 운영자가 grep 가능하도록 한다.
+ */
+const helperLogger = new Logger('DocxXmlHelper');
 
 /**
  * DOCX XML 조작 범용 유틸리티.
@@ -385,4 +400,242 @@ export function formatYmdSlash(d: Date | string | null | undefined): string {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${y}/${m}/${day}`;
+}
+
+// ============================================================================
+// DOCX 셀 서명 이미지 삽입 (tableIndex/rowIndex/cellIndex 좌표 기반).
+//
+// `DocxTemplate.setSignatureImage`(이미지) / `setCellValue`(텍스트 fallback) 두 경로를 래핑.
+// 스토리지 다운로드 실패 시 이름 텍스트로 fallback (graceful degradation).
+//
+// 사용처:
+// - intermediate-inspection-renderer.service.ts
+// - self-inspection-renderer.service.ts
+// - form-template-export.service.ts (UL-QP-18-06 반출확인서)
+// ============================================================================
+
+/**
+ * 결재란 서명 셀(tableIdx, rowIdx, cellIdx)에 이미지 또는 이름 텍스트를 삽입.
+ *
+ * @param doc DocxTemplate 인스턴스
+ * @param tableIdx 0-based 테이블 인덱스
+ * @param rowIdx 0-based 행 인덱스
+ * @param cellIdx 0-based 셀 인덱스
+ * @param signaturePath 스토리지 경로 (null이면 이름만 표시)
+ * @param fallbackName 이미지 로드 실패/미지정 시 표시할 텍스트 (보통 사용자 이름)
+ * @param storage IStorageProvider
+ */
+export async function insertDocxSignature(
+  doc: DocxTemplate,
+  tableIdx: number,
+  rowIdx: number,
+  cellIdx: number,
+  signaturePath: string | null,
+  fallbackName: string,
+  storage: IStorageProvider
+): Promise<void> {
+  if (!signaturePath) {
+    doc.setCellValue(tableIdx, rowIdx, cellIdx, fallbackName);
+    return;
+  }
+  try {
+    const imageBuffer = await storage.download(signaturePath);
+    const ext = signaturePath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
+    doc.setSignatureImage(tableIdx, rowIdx, cellIdx, imageBuffer, ext);
+  } catch {
+    helperLogger.warn(`Failed to load signature: ${signaturePath}, using name fallback`);
+    doc.setCellValue(tableIdx, rowIdx, cellIdx, fallbackName);
+  }
+}
+
+// ============================================================================
+// 동적 결과 섹션 렌더링 (중간점검/자체점검 공용).
+//
+// inspection_result_sections 테이블을 순회하며 DocxTemplate의 append* 메서드로 주입.
+// N+1 방지를 위해 모든 사진/rich_table 이미지 documentId를 사전 수집 후 batch 다운로드.
+// ============================================================================
+
+type InspectionResultSectionImageCache = Map<string, { buffer: Buffer; ext: 'png' | 'jpeg' }>;
+
+/**
+ * 여러 documentId에 대한 이미지를 1회 SELECT + 병렬 다운로드로 로드한다.
+ * 개별 다운로드 실패는 Map에서 누락 — 렌더 단계가 `[image not found]`로 fallback.
+ *
+ * @param documentIds 로드할 document PK 배열
+ * @param storage IStorageProvider
+ * @param db AppDatabase
+ */
+export async function loadDocumentImagesBatch(
+  documentIds: string[],
+  storage: IStorageProvider,
+  db: AppDatabase
+): Promise<InspectionResultSectionImageCache> {
+  const result: InspectionResultSectionImageCache = new Map();
+  if (documentIds.length === 0) return result;
+
+  const rows = await db
+    .select({
+      id: documents.id,
+      filePath: documents.filePath,
+      mimeType: documents.mimeType,
+    })
+    .from(documents)
+    .where(inArray(documents.id, documentIds));
+
+  const downloads = await Promise.allSettled(
+    rows.map(async (row) => {
+      const buffer = await storage.download(row.filePath);
+      const ext = row.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
+      return { id: row.id, buffer, ext };
+    })
+  );
+
+  for (const outcome of downloads) {
+    if (outcome.status === 'fulfilled') {
+      result.set(outcome.value.id, { buffer: outcome.value.buffer, ext: outcome.value.ext });
+    } else {
+      helperLogger.warn(`Failed to batch-load document image: ${String(outcome.reason)}`);
+    }
+  }
+  return result;
+}
+
+type RichTableData = {
+  headers: string[];
+  rows: Array<
+    Array<
+      | { type: 'text'; value: string }
+      | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number }
+    >
+  >;
+};
+
+/**
+ * inspection_result_sections 테이블의 섹션들을 DocxTemplate에 순차 주입.
+ *
+ * 섹션이 없으면 no-op. 섹션이 있으면 템플릿 예시 텍스트 제거 + 페이지 나누기 후 렌더.
+ *
+ * @param doc DocxTemplate 인스턴스
+ * @param inspectionId 중간점검 또는 자체점검 PK
+ * @param inspectionType 'intermediate' | 'self'
+ * @param db AppDatabase
+ * @param storage IStorageProvider
+ */
+export async function renderResultSections(
+  doc: DocxTemplate,
+  inspectionId: string,
+  inspectionType: InspectionType,
+  db: AppDatabase,
+  storage: IStorageProvider
+): Promise<void> {
+  const sections = await db
+    .select()
+    .from(inspectionResultSections)
+    .where(
+      and(
+        eq(inspectionResultSections.inspectionId, inspectionId),
+        eq(inspectionResultSections.inspectionType, inspectionType)
+      )
+    )
+    .orderBy(asc(inspectionResultSections.sortOrder));
+
+  if (sections.length === 0) return;
+
+  // 결과 섹션이 있을 때만: 템플릿 예시 텍스트 제거 + 2페이지 시작 페이지 나누기
+  doc.removeTemplateExampleTextAndInsertPageBreak();
+
+  // N+1 방지: 섹션 내 모든 이미지 documentId 선수집
+  const documentIdSet = new Set<string>();
+  for (const section of sections) {
+    if (section.sectionType === 'photo' && section.documentId) {
+      documentIdSet.add(section.documentId);
+    } else if (section.sectionType === 'rich_table') {
+      const rd = section.richTableData as RichTableData | null;
+      if (rd) {
+        for (const row of rd.rows) {
+          for (const cell of row) {
+            if (cell.type === 'image') documentIdSet.add(cell.documentId);
+          }
+        }
+      }
+    }
+  }
+
+  const imageCache = await loadDocumentImagesBatch(Array.from(documentIdSet), storage, db);
+
+  // 템플릿의 numbering 매핑 (글머리 기호 스타일)
+  const { heading: headingNumId } = doc.bulletNumIds;
+
+  for (const section of sections) {
+    switch (section.sectionType) {
+      case 'title':
+        doc.appendParagraph(section.title ?? '', {
+          bold: true,
+          fontSize: 12,
+          numId: headingNumId,
+        });
+        break;
+      case 'text': {
+        if (section.title) {
+          doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
+        }
+        const lines = (section.content ?? '').split('\n');
+        for (const line of lines) {
+          doc.appendParagraph(line.trim());
+        }
+        break;
+      }
+      case 'data_table': {
+        const td = section.tableData as { headers: string[]; rows: string[][] } | null;
+        if (td) {
+          if (section.title) {
+            doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
+          }
+          doc.appendTable(td.headers, td.rows);
+        }
+        break;
+      }
+      case 'photo': {
+        if (section.title) {
+          doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
+        }
+        if (section.documentId) {
+          const imageResult = imageCache.get(section.documentId);
+          if (imageResult) {
+            doc.appendImage(
+              imageResult.buffer,
+              imageResult.ext,
+              Number(section.imageWidthCm) || 12,
+              Number(section.imageHeightCm) || 9
+            );
+          }
+        }
+        break;
+      }
+      case 'rich_table': {
+        const rd = section.richTableData as RichTableData | null;
+        if (rd) {
+          if (section.title) {
+            doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
+          }
+          const resolvedRows = rd.rows.map((row) =>
+            row.map((cell) => {
+              if (cell.type === 'text') return cell;
+              const img = imageCache.get(cell.documentId);
+              if (!img) return { type: 'text' as const, value: '[image not found]' };
+              return {
+                type: 'image' as const,
+                buffer: img.buffer,
+                ext: img.ext,
+                widthCm: cell.widthCm,
+                heightCm: cell.heightCm,
+              };
+            })
+          );
+          doc.appendRichTable(rd.headers, resolvedRows);
+        }
+        break;
+      }
+    }
+  }
 }

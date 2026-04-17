@@ -12,20 +12,9 @@ import ExcelJS from 'exceljs';
 import { toExcelLoadableBuffer } from '../../common/utils';
 import type { AppDatabase } from '@equipment-management/db';
 import { DocxTemplate } from './docx-template.util';
+import { insertDocxSignature } from './docx-xml-helper';
 import { FormTemplateService } from './form-template.service';
 import { equipment } from '@equipment-management/db/schema/equipment';
-import {
-  equipmentSelfInspections,
-  selfInspectionItems,
-} from '@equipment-management/db/schema/equipment-self-inspections';
-import {
-  intermediateInspections,
-  intermediateInspectionItems,
-  intermediateInspectionEquipment,
-} from '@equipment-management/db/schema/intermediate-inspections';
-import { inspectionDocumentItems } from '@equipment-management/db/schema/inspection-document-items';
-import { inspectionResultSections } from '@equipment-management/db/schema/inspection-result-sections';
-import { documents } from '@equipment-management/db/schema/documents';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
@@ -34,7 +23,7 @@ import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cab
 import { softwareValidations } from '@equipment-management/db/schema/software-validations';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
-import { eq, ne, desc, and, inArray, sql, type SQL, asc } from 'drizzle-orm';
+import { eq, desc, and, inArray, sql, type SQL, asc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import {
   DEFAULT_LOCALE,
@@ -46,19 +35,19 @@ import {
 } from '@equipment-management/shared-constants';
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import {
-  CLASSIFICATION_TO_CODE,
-  EQUIPMENT_AVAILABILITY_LABELS,
-  INSPECTION_JUDGMENT_LABELS,
-  INTERMEDIATE_CHECK_YESNO_LABELS,
-  MANAGEMENT_METHOD_LABELS,
-  QP18_CLASSIFICATION_LABELS,
-  SELF_INSPECTION_RESULT_LABELS,
   SOFTWARE_AVAILABILITY_LABELS,
-  type Classification,
   type SoftwareAvailability,
-  type InspectionType,
 } from '@equipment-management/schemas';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../common/storage/storage.interface';
+import { IntermediateInspectionExportDataService } from '../intermediate-inspections/services/intermediate-inspection-export-data.service';
+import { IntermediateInspectionRendererService } from '../intermediate-inspections/services/intermediate-inspection-renderer.service';
+import { SelfInspectionExportDataService } from '../self-inspections/services/self-inspection-export-data.service';
+import { SelfInspectionRendererService } from '../self-inspections/services/self-inspection-renderer.service';
+import { EquipmentRegistryDataService } from './services/equipment-registry-data.service';
+import { EquipmentRegistryRendererService } from './services/equipment-registry-renderer.service';
+import { FORM_NUMBER as INTERMEDIATE_FORM_NUMBER } from '../intermediate-inspections/services/intermediate-inspection.layout';
+import { FORM_NUMBER as SELF_FORM_NUMBER } from '../self-inspections/services/self-inspection.layout';
+import { FORM_NUMBER as REGISTRY_FORM_NUMBER } from './layouts/equipment-registry.layout';
 
 interface ExportResult {
   buffer: Buffer;
@@ -84,7 +73,13 @@ export class FormTemplateExportService {
     private readonly db: AppDatabase,
     @Inject(STORAGE_PROVIDER)
     private readonly storage: IStorageProvider,
-    private readonly formTemplateService: FormTemplateService
+    private readonly formTemplateService: FormTemplateService,
+    private readonly intermediateDataService: IntermediateInspectionExportDataService,
+    private readonly intermediateRenderer: IntermediateInspectionRendererService,
+    private readonly selfInspectionDataService: SelfInspectionExportDataService,
+    private readonly selfInspectionRenderer: SelfInspectionRendererService,
+    private readonly equipmentRegistryData: EquipmentRegistryDataService,
+    private readonly equipmentRegistryRenderer: EquipmentRegistryRendererService
   ) {}
 
   /**
@@ -164,151 +159,22 @@ export class FormTemplateExportService {
   }
 
   // ============================================================================
-  // UL-QP-18-01: 시험설비 관리 대장
+  // UL-QP-18-01: 시험설비 관리 대장 (dispatcher — 구현은 services/equipment-registry-*.ts)
   // ============================================================================
-  // 라벨은 @equipment-management/schemas SSOT 사용:
-  // - MANAGEMENT_METHOD_LABELS — 관리방법 한국어
-  // - EQUIPMENT_AVAILABILITY_LABELS — 장비 상태 → 가용여부 (사용/고장/여분/불용)
-  // - INTERMEDIATE_CHECK_YESNO_LABELS — 중간점검 대상 O/X
 
   private async exportEquipmentRegistry(
     params: Record<string, string>,
     filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-01'];
-    const conditions: SQL<unknown>[] = [];
-
-    if (filter.site) {
-      conditions.push(eq(equipment.site, filter.site));
-    }
-    if (filter.teamId) {
-      conditions.push(eq(equipment.teamId, filter.teamId));
-    }
-    if (params.status) {
-      conditions.push(sql`${equipment.status} = ${params.status}`);
-    }
-    if (params.managementMethod) {
-      conditions.push(eq(equipment.managementMethod, params.managementMethod));
-    }
-    if (params.classification && params.classification in CLASSIFICATION_TO_CODE) {
-      const code = CLASSIFICATION_TO_CODE[params.classification as Classification];
-      conditions.push(eq(equipment.classificationCode, code));
-    }
-    if (params.manufacturer) {
-      conditions.push(eq(equipment.manufacturer, params.manufacturer));
-    }
-    if (params.location) {
-      conditions.push(eq(equipment.location, params.location));
-    }
-    if (params.isShared === 'true') {
-      conditions.push(eq(equipment.isShared, true));
-    } else if (params.isShared === 'false') {
-      conditions.push(eq(equipment.isShared, false));
-    }
-
-    // 활성 장비만 (isActive = true)
-    conditions.push(eq(equipment.isActive, true));
-
-    // 폐기 장비 숨기기
-    if (params.showRetired !== 'true') {
-      conditions.push(ne(equipment.status, 'disposed'));
-    }
-
-    const rows = await this.db
-      .select()
-      .from(equipment)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(equipment.managementNumber)
-      .limit(EXPORT_QUERY_LIMITS.FULL_EXPORT);
-
-    const formatDate = (d: Date | null | undefined): string => {
-      if (!d) return 'N/A';
-      return new Date(d).toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE });
-    };
-
-    // 템플릿 파일 로드 (양식 서식 보존) — 스토리지 기반
-    const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-01');
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
-    const sheet =
-      workbook.getWorksheet('시험설비 관리대장') || workbook.getWorksheet('시험설비 관리 대장');
-    if (!sheet) {
-      throw new InternalServerErrorException(
-        `[UL-QP-18-01] 워크시트 '시험설비 관리대장' 없음. 양식의 시트명이 변경되었을 수 있습니다.`
-      );
-    }
-
-    // Row 1: 헤더 업데이트 (팀명 + 날짜)
-    const headerCell = sheet.getRow(1).getCell(1);
-    const teamLabel = filter.teamId ? '' : '(전체)';
-    headerCell.value = `${teamLabel} 시험설비 관리대장`;
-    const dateCell = sheet.getRow(1).getCell(14);
-    if (dateCell) {
-      dateCell.value = `최종 업데이트 일자 : ${new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE })}`;
-    }
-
-    // Row 1: 팀명+날짜 헤더, Row 2: 컬럼 헤더 (템플릿 보존)
-    // Row 3+: 기존 데이터를 DB 데이터로 덮어쓰기
-    const DATA_START_ROW = 3;
-
-    // 기존 데이터 행의 스타일 참조용 (Row 3 — 템플릿 원본 스타일)
-    const styleRef = sheet.getRow(DATA_START_ROW);
-    const cellStyles: Partial<ExcelJS.Style>[] = [];
-    for (let c = 1; c <= 16; c++) {
-      cellStyles.push({ ...styleRef.getCell(c).style });
-    }
-
-    // DB 데이터를 Row 3부터 덮어쓰기
-    rows.forEach((row, idx) => {
-      const r = DATA_START_ROW + idx;
-      const excelRow = sheet.getRow(r);
-      const mm = row.managementMethod as keyof typeof MANAGEMENT_METHOD_LABELS | null | undefined;
-      const values: (string | number)[] = [
-        row.managementNumber,
-        row.assetNumber ?? 'N/A',
-        row.name,
-        mm && mm in MANAGEMENT_METHOD_LABELS ? MANAGEMENT_METHOD_LABELS[mm] : 'N/A',
-        formatDate(row.lastCalibrationDate),
-        row.calibrationAgency ?? 'N/A',
-        row.calibrationCycle ?? 'N/A',
-        formatDate(row.nextCalibrationDate),
-        row.manufacturer ?? '-',
-        row.purchaseYear ?? '-',
-        row.modelName ?? '-',
-        row.serialNumber ?? '-',
-        row.description ?? '-',
-        row.location ?? '-',
-        INTERMEDIATE_CHECK_YESNO_LABELS[row.needsIntermediateCheck ? 'true' : 'false'],
-        EQUIPMENT_AVAILABILITY_LABELS[row.status] ?? '사용',
-      ];
-
-      values.forEach((val, c) => {
-        const cell = excelRow.getCell(c + 1);
-        cell.value = val;
-        if (cellStyles[c]) {
-          Object.assign(cell.style, cellStyles[c]);
-        }
-      });
-
-      excelRow.commit();
-    });
-
-    // 남은 기존 템플릿 행 비우기 (DB 데이터보다 템플릿 행이 더 많은 경우)
-    const templateDataEnd = sheet.rowCount;
-    for (let r = DATA_START_ROW + rows.length; r <= templateDataEnd; r++) {
-      const excelRow = sheet.getRow(r);
-      for (let c = 1; c <= 16; c++) {
-        excelRow.getCell(c).value = null;
-      }
-      excelRow.commit();
-    }
-
-    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+    const data = await this.equipmentRegistryData.getData(params, filter);
+    const templateBuffer = await this.formTemplateService.getTemplateBuffer(REGISTRY_FORM_NUMBER);
+    const buffer = await this.equipmentRegistryRenderer.render(data, templateBuffer, filter);
     return { buffer, mimeType: XLSX_MIME, filename: this.makeFilename(entry) };
   }
 
   // ============================================================================
-  // UL-QP-18-03: 중간점검표
+  // UL-QP-18-03: 중간점검표 (dispatcher — 구현은 intermediate-inspections/services/*)
   // ============================================================================
 
   private async exportIntermediateInspection(
@@ -323,257 +189,18 @@ export class FormTemplateExportService {
         message: 'inspectionId query parameter is required for intermediate inspection export.',
       });
     }
-
-    // 점검 기록 + 장비 정보 조회
-    const [inspection] = await this.db
-      .select({
-        id: intermediateInspections.id,
-        inspectionDate: intermediateInspections.inspectionDate,
-        classification: intermediateInspections.classification,
-        inspectionCycle: intermediateInspections.inspectionCycle,
-        calibrationValidityPeriod: intermediateInspections.calibrationValidityPeriod,
-        overallResult: intermediateInspections.overallResult,
-        remarks: intermediateInspections.remarks,
-        approvalStatus: intermediateInspections.approvalStatus,
-        approvedAt: intermediateInspections.approvedAt,
-        // 장비 정보
-        equipmentName: equipment.name,
-        equipmentModel: equipment.modelName,
-        managementNumber: equipment.managementNumber,
-        equipmentLocation: equipment.location,
-        equipmentSite: equipment.site,
-        equipmentTeamId: equipment.teamId,
-        // 점검자
-        inspectorId: intermediateInspections.inspectorId,
-        approvedById: intermediateInspections.approvedBy,
-      })
-      .from(intermediateInspections)
-      .innerJoin(equipment, eq(intermediateInspections.equipmentId, equipment.id))
-      .where(eq(intermediateInspections.id, inspectionId))
-      .limit(1);
-
-    if (!inspection) {
-      throw new NotFoundException({
-        code: 'INSPECTION_NOT_FOUND',
-        message: `Intermediate inspection ${inspectionId} not found.`,
-      });
-    }
-
-    // 스코프 경계 강제 (site 또는 team) — 경계 밖은 존재 은닉(404)
-    if (filter.site && inspection.equipmentSite !== filter.site) {
-      throw new NotFoundException({
-        code: 'INSPECTION_NOT_FOUND',
-        message: 'Inspection not accessible from your site.',
-      });
-    }
-    if (filter.teamId && inspection.equipmentTeamId !== filter.teamId) {
-      throw new NotFoundException({
-        code: 'INSPECTION_NOT_FOUND',
-        message: 'Inspection not accessible from your team.',
-      });
-    }
-
-    // 팀 정보 조회
-    const [teamRow] = await this.db
-      .select({ teamName: teams.name })
-      .from(equipment)
-      .innerJoin(teams, eq(equipment.teamId, teams.id))
-      .where(eq(equipment.managementNumber, inspection.managementNumber!))
-      .limit(1);
-
-    // 점검자, 승인자, 점검 항목, 측정 장비 — 독립 쿼리 병렬 실행
-    const [[inspector], [approver], items, measureEquipment] = await Promise.all([
-      inspection.inspectorId
-        ? this.db
-            .select({ name: users.name, signaturePath: users.signatureImagePath })
-            .from(users)
-            .where(eq(users.id, inspection.inspectorId))
-            .limit(1)
-        : Promise.resolve([null] as [null]),
-      inspection.approvedById
-        ? this.db
-            .select({ name: users.name, signaturePath: users.signatureImagePath })
-            .from(users)
-            .where(eq(users.id, inspection.approvedById))
-            .limit(1)
-        : Promise.resolve([null] as [null]),
-      this.db
-        .select()
-        .from(intermediateInspectionItems)
-        .where(eq(intermediateInspectionItems.inspectionId, inspectionId))
-        .orderBy(intermediateInspectionItems.itemNumber),
-      this.db
-        .select({
-          managementNumber: equipment.managementNumber,
-          equipmentName: equipment.name,
-          calibrationDate: intermediateInspectionEquipment.calibrationDate,
-        })
-        .from(intermediateInspectionEquipment)
-        .innerJoin(equipment, eq(intermediateInspectionEquipment.equipmentId, equipment.id))
-        .where(eq(intermediateInspectionEquipment.inspectionId, inspectionId)),
-    ]);
-
-    // docx 템플릿 로드 — 스토리지 기반
-    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-03');
-    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-03');
-    // 분류 snapshot → SSOT 라벨. null/missing 시 '비교정기기' default (비파괴 fallback).
-    const classificationLabel =
-      QP18_CLASSIFICATION_LABELS[inspection.classification ?? 'non_calibrated'];
-
-    // --- Table 0: 장비 정보 헤더 + 점검 항목 ---
-    // Row 0~3: 장비 정보 (값만 교체 — 셀[1], 셀[3])
-    doc.setCellValue(0, 0, 1, classificationLabel);
-    doc.setCellValue(0, 0, 3, teamRow?.teamName ?? '-');
-    doc.setCellValue(0, 1, 1, inspection.managementNumber ?? '-');
-    doc.setCellValue(0, 1, 3, inspection.equipmentLocation ?? '-');
-    doc.setCellValue(0, 2, 1, inspection.equipmentName ?? '-');
-    doc.setCellValue(0, 2, 3, inspection.equipmentModel ?? '-');
-    doc.setCellValue(0, 3, 1, inspection.inspectionCycle ?? '-');
-    doc.setCellValue(0, 3, 3, inspection.calibrationValidityPeriod ?? '-');
-    // Row 4: 구분행 (유지)
-    // Row 5: 헤더행 (유지)
-    // Row 6~: 데이터 행 — 템플릿 Row[6]을 복제, Row[7~10] 빈 행 제거
-    const itemData = items.map((item) => [
-      String(item.itemNumber),
-      item.checkItem,
-      item.checkCriteria ?? '-',
-      (item.detailedResult ?? item.checkResult) || '-',
-      item.judgment ? INSPECTION_JUDGMENT_LABELS[item.judgment] : '-',
-    ]);
-    doc.setDataRows(0, 6, itemData, 4); // 템플릿에 빈 행 4개 (Row 7~10)
-
-    // detailedResult가 멀티라인인 항목은 setCellMultilineText로 덮어쓰기
-    // setDataRows 후 행 인덱스: 헤더 6행(0~5) + 데이터 행 순서
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const resultText = item.detailedResult ?? item.checkResult;
-      if (resultText && resultText.includes('\n')) {
-        doc.setCellMultilineText(0, 6 + i, 3, resultText);
-      }
-    }
-
-    // 항목별 첨부 사진 조회 + 별도 섹션으로 추가
-    const itemPhotos = await this.db
-      .select({
-        inspectionItemId: inspectionDocumentItems.inspectionItemId,
-        sortOrder: inspectionDocumentItems.sortOrder,
-        filePath: documents.filePath,
-        mimeType: documents.mimeType,
-        originalFileName: documents.originalFileName,
-      })
-      .from(inspectionDocumentItems)
-      .innerJoin(documents, eq(inspectionDocumentItems.documentId, documents.id))
-      .where(
-        and(
-          inArray(
-            inspectionDocumentItems.inspectionItemId,
-            items.map((it) => it.id)
-          ),
-          eq(inspectionDocumentItems.inspectionItemType, 'intermediate'),
-          eq(documents.status, 'active')
-        )
-      )
-      .orderBy(inspectionDocumentItems.inspectionItemId, inspectionDocumentItems.sortOrder);
-
-    // 사진이 있는 항목만 별도 "첨부 사진" 섹션으로 추가
-    if (itemPhotos.length > 0) {
-      const photosByItem = new Map<string, typeof itemPhotos>();
-      for (const photo of itemPhotos) {
-        const existing = photosByItem.get(photo.inspectionItemId) ?? [];
-        existing.push(photo);
-        photosByItem.set(photo.inspectionItemId, existing);
-      }
-
-      for (const item of items) {
-        const photos = photosByItem.get(item.id);
-        if (!photos || photos.length === 0) continue;
-
-        const blocks: Array<
-          | { type: 'text'; value: string }
-          | {
-              type: 'image';
-              buffer: Buffer;
-              ext: 'png' | 'jpeg';
-              widthCm?: number;
-              heightCm?: number;
-            }
-        > = [];
-
-        for (const photo of photos) {
-          try {
-            const imgBuffer = await this.storage.download(photo.filePath);
-            const ext = photo.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
-            blocks.push({ type: 'image', buffer: imgBuffer, ext, widthCm: 12, heightCm: 9 });
-          } catch {
-            this.logger.warn(`Failed to load inspection photo: ${photo.filePath}`);
-            blocks.push({ type: 'text', value: `[사진 로드 실패: ${photo.originalFileName}]` });
-          }
-        }
-
-        doc.appendSection(`${item.itemNumber}. ${item.checkItem} — 첨부 사진`, blocks);
-      }
-    }
-
-    // --- Table 1: 측정 장비 List ---
-    // Row 0: 타이틀 (유지), Row 1: 헤더 (유지)
-    // Row 2~: 데이터 행 — 템플릿 Row[2]를 복제, Row[3~5] 빈 행 제거
-    const meData = measureEquipment.map((me, idx) => [
-      String(idx + 1),
-      me.managementNumber ?? '-',
-      me.equipmentName ?? '-',
-      this.formatDate(me.calibrationDate),
-    ]);
-    doc.setDataRows(1, 2, meData, 3); // 빈 행 3개 (Row 3~5)
-
-    // --- Table 2: 점검 결과 및 결재 ---
-    // Row 0: [1]=점검일, [4]=담당(텍스트), [5]=검토(텍스트), [6]=승인(텍스트)
-    doc.setCellValue(2, 0, 1, this.formatDate(inspection.inspectionDate));
-    // Row 1: [1]=점검자, [4]=담당서명, [5]=검토서명, [6]=승인서명
-    doc.setCellValue(2, 1, 1, inspector?.name ?? '-');
-    // Row 2: [1]=특이사항
-    doc.setCellValue(2, 2, 1, inspection.remarks ?? '-');
-
-    // 결재란 서명 이미지 삽입 — Row 1 (담당/검토/승인 텍스트 아래 행)
-    // Row 0의 담당/검토/승인 텍스트는 유지하고, 바로 아래 Row 1에 서명 삽입
-    await this.insertDocxSignature(
-      doc,
-      2,
-      1,
-      4,
-      inspector?.signaturePath ?? null,
-      inspector?.name ?? '-'
-    );
-    await this.insertDocxSignature(
-      doc,
-      2,
-      1,
-      5,
-      inspector?.signaturePath ?? null,
-      inspector?.name ?? '-'
-    );
-    await this.insertDocxSignature(
-      doc,
-      2,
-      1,
-      6,
-      approver?.signaturePath ?? null,
-      approver?.name ?? '-'
-    );
-
-    // 동적 결과 섹션 렌더링 (장비 유형별 가변 측정 결과)
-    // 내부에서 섹션 유무 판단 후 템플릿 예시 텍스트 제거 + 페이지 나누기 처리
-    await this.renderResultSections(doc, inspectionId, 'intermediate');
-
-    const buffer = doc.toBuffer();
+    const data = await this.intermediateDataService.getData(inspectionId, filter);
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(INTERMEDIATE_FORM_NUMBER);
+    const buffer = await this.intermediateRenderer.render(data, templateBuf);
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${inspection.managementNumber}_${inspection.equipmentName}.docx`,
+      filename: `${entry.formNumber}_${entry.name}_${data.managementNumber}_${data.equipmentName}.docx`,
     };
   }
 
   // ============================================================================
-  // UL-QP-18-05: 자체점검표
+  // UL-QP-18-05: 자체점검표 (dispatcher — 구현은 self-inspections/services/*)
   // ============================================================================
 
   private async exportSelfInspection(
@@ -588,279 +215,17 @@ export class FormTemplateExportService {
         message: 'equipmentId query parameter is required for self-inspection export.',
       });
     }
-
-    // 장비 정보 조회 (헤더용)
-    const [eqRow] = await this.db
-      .select({
-        id: equipment.id,
-        name: equipment.name,
-        modelName: equipment.modelName,
-        managementNumber: equipment.managementNumber,
-        location: equipment.location,
-        site: equipment.site,
-        calibrationRequired: equipment.calibrationRequired,
-        teamId: equipment.teamId,
-      })
-      .from(equipment)
-      .where(
-        (() => {
-          // 스코프 경계를 WHERE 조건에 직접 적용 — 경계 밖은 단순히 "없는 것"으로 은닉
-          const conditions: SQL<unknown>[] = [eq(equipment.id, equipmentId)];
-          if (filter.site) conditions.push(eq(equipment.site, filter.site));
-          if (filter.teamId) conditions.push(eq(equipment.teamId, filter.teamId));
-          return and(...conditions);
-        })()
-      )
-      .limit(1);
-
-    if (!eqRow) {
-      throw new NotFoundException({
-        code: 'EQUIPMENT_NOT_FOUND',
-        message: 'Equipment not found or not accessible from your site.',
-      });
-    }
-
-    // 팀 정보
-    const [teamRow] = eqRow.teamId
-      ? await this.db
-          .select({ teamName: teams.name })
-          .from(teams)
-          .where(eq(teams.id, eqRow.teamId))
-          .limit(1)
-      : [null];
-
-    // 대상 점검 기록: inspectionId가 있으면 해당 건(+장비 소속 검증), 없으면 최근 1건
-    const inspectionId = params.inspectionId;
-    const [record] = inspectionId
-      ? await this.db
-          .select()
-          .from(equipmentSelfInspections)
-          .where(
-            and(
-              eq(equipmentSelfInspections.id, inspectionId),
-              eq(equipmentSelfInspections.equipmentId, equipmentId) // 사이트 우회 방지
-            )
-          )
-          .limit(1)
-      : await this.db
-          .select()
-          .from(equipmentSelfInspections)
-          .where(eq(equipmentSelfInspections.equipmentId, equipmentId))
-          .orderBy(desc(equipmentSelfInspections.inspectionDate))
-          .limit(1);
-
-    if (!record) {
-      throw new NotFoundException({
-        code: 'SELF_INSPECTION_NOT_FOUND',
-        message: 'No self-inspection records found for this equipment.',
-      });
-    }
-
-    // 점검자/확인자 정보
-    const [inspector] = await this.db
-      .select({ name: users.name, signaturePath: users.signatureImagePath })
-      .from(users)
-      .where(eq(users.id, record.inspectorId))
-      .limit(1);
-
-    // submitter = 담당+검토(동일인), approver = 승인 (QP-18-05 결재 구조)
-    const [submitter] = record.submittedBy
-      ? await this.db
-          .select({ name: users.name, signaturePath: users.signatureImagePath })
-          .from(users)
-          .where(eq(users.id, record.submittedBy))
-          .limit(1)
-      : [null];
-    const [approver] = record.approvedBy
-      ? await this.db
-          .select({ name: users.name, signaturePath: users.signatureImagePath })
-          .from(users)
-          .where(eq(users.id, record.approvedBy))
-          .limit(1)
-      : [null];
-
-    // 점검 항목 (자식 테이블)
-    const items = await this.db
-      .select()
-      .from(selfInspectionItems)
-      .where(eq(selfInspectionItems.inspectionId, record.id))
-      .orderBy(selfInspectionItems.itemNumber);
-
-    // docx 템플릿 로드 — 스토리지 기반
-    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-05');
-    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-05');
-    // 분류/교정유효기간: snapshot(record) 우선, 없으면 장비 마스터 fallback.
-    // snapshot은 기록 시점 값 보존(drift 방지) — 2026-04-17 Phase 1 마이그레이션 추가.
-    const classification =
-      record.classification ??
-      (eqRow.calibrationRequired === 'required' ? 'calibrated' : 'non_calibrated');
-    const classificationLabel = QP18_CLASSIFICATION_LABELS[classification];
-    const validityPeriodLabel = record.calibrationValidityPeriod ?? '-';
-
-    // --- Table 0: 장비 정보 헤더 + 점검 항목 ---
-    doc.setCellValue(0, 0, 1, classificationLabel);
-    doc.setCellValue(0, 0, 3, teamRow?.teamName ?? '-');
-    doc.setCellValue(0, 1, 1, eqRow.managementNumber ?? '-');
-    doc.setCellValue(0, 1, 3, eqRow.location ?? '-');
-    doc.setCellValue(0, 2, 1, eqRow.name ?? '-');
-    doc.setCellValue(0, 2, 3, eqRow.modelName ?? '-');
-    doc.setCellValue(0, 3, 1, `${record.inspectionCycle}개월`);
-    doc.setCellValue(0, 3, 3, validityPeriodLabel);
-    // Row 4: 구분행, Row 5: 헤더행 (유지)
-    // Row 6+: 데이터 행 — 유연 항목 or 레거시 fallback
-    const resultLabel = (r: string): string =>
-      r === 'pass' || r === 'fail' || r === 'na'
-        ? SELF_INSPECTION_RESULT_LABELS[r as keyof typeof SELF_INSPECTION_RESULT_LABELS]
-        : SELF_INSPECTION_RESULT_LABELS.na;
-
-    let itemData: string[][];
-    if (items.length > 0) {
-      itemData = items.map((item) => [
-        String(item.itemNumber),
-        item.checkItem,
-        item.detailedResult ? item.detailedResult : resultLabel(item.checkResult),
-      ]);
-    } else {
-      // 기존 고정 컬럼 fallback
-      itemData = [
-        ['1', '외관검사', resultLabel(record.appearance)],
-        ['2', '기능 점검', resultLabel(record.functionality)],
-        ['3', '안전 점검', resultLabel(record.safety)],
-        ['4', '교정 상태 점검', resultLabel(record.calibrationStatus)],
-      ];
-    }
-    doc.setDataRows(0, 6, itemData, 6); // 템플릿에 빈 행 6개 (Row 7~12)
-
-    // detailedResult가 멀티라인인 항목은 setCellMultilineText로 덮어쓰기
-    if (items.length > 0) {
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.detailedResult && item.detailedResult.includes('\n')) {
-          doc.setCellMultilineText(0, 6 + i, 2, item.detailedResult);
-        }
-      }
-    }
-
-    // 항목별 첨부 사진 조회 + 별도 섹션으로 추가
-    if (items.length > 0) {
-      const selfItemPhotos = await this.db
-        .select({
-          inspectionItemId: inspectionDocumentItems.inspectionItemId,
-          sortOrder: inspectionDocumentItems.sortOrder,
-          filePath: documents.filePath,
-          mimeType: documents.mimeType,
-          originalFileName: documents.originalFileName,
-        })
-        .from(inspectionDocumentItems)
-        .innerJoin(documents, eq(inspectionDocumentItems.documentId, documents.id))
-        .where(
-          and(
-            inArray(
-              inspectionDocumentItems.inspectionItemId,
-              items.map((it) => it.id)
-            ),
-            eq(inspectionDocumentItems.inspectionItemType, 'self'),
-            eq(documents.status, 'active')
-          )
-        )
-        .orderBy(inspectionDocumentItems.inspectionItemId, inspectionDocumentItems.sortOrder);
-
-      if (selfItemPhotos.length > 0) {
-        const photosByItem = new Map<string, typeof selfItemPhotos>();
-        for (const photo of selfItemPhotos) {
-          const existing = photosByItem.get(photo.inspectionItemId) ?? [];
-          existing.push(photo);
-          photosByItem.set(photo.inspectionItemId, existing);
-        }
-
-        for (const item of items) {
-          const photos = photosByItem.get(item.id);
-          if (!photos || photos.length === 0) continue;
-
-          const blocks: Array<
-            | { type: 'text'; value: string }
-            | {
-                type: 'image';
-                buffer: Buffer;
-                ext: 'png' | 'jpeg';
-                widthCm?: number;
-                heightCm?: number;
-              }
-          > = [];
-
-          for (const photo of photos) {
-            try {
-              const imgBuffer = await this.storage.download(photo.filePath);
-              const ext = photo.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
-              blocks.push({ type: 'image', buffer: imgBuffer, ext, widthCm: 12, heightCm: 9 });
-            } catch {
-              this.logger.warn(`Failed to load inspection photo: ${photo.filePath}`);
-              blocks.push({ type: 'text', value: `[사진 로드 실패: ${photo.originalFileName}]` });
-            }
-          }
-
-          doc.appendSection(`${item.itemNumber}. ${item.checkItem} — 첨부 사진`, blocks);
-        }
-      }
-    }
-
-    // --- Table 1: 기타 특기사항 (조치내용) ---
-    // Row 0: 타이틀 (유지)
-    // Row 1~: 데이터 행 — 템플릿 Row[1]을 복제, Row[2~3] 빈 행 제거
-    // JSONB 런타임 안전 파싱 (레거시 데이터 shape 불일치 방어)
-    const rawNotes = record.specialNotes;
-    const specialNotes = Array.isArray(rawNotes)
-      ? (rawNotes as { content?: string; date?: string | null }[]).filter(
-          (n) => typeof n?.content === 'string'
-        )
-      : null;
-    const noteData =
-      specialNotes && specialNotes.length > 0
-        ? specialNotes.map((note, idx) => [String(idx + 1), note.content ?? '-', note.date ?? '-'])
-        : record.remarks
-          ? [['1', record.remarks, '-']]
-          : [['', '-', '-']];
-    doc.setDataRows(1, 1, noteData, 2); // 빈 행 2개 (Row 2~3)
-
-    // --- Table 2: 점검 결과 및 결재 ---
-    doc.setCellValue(2, 0, 1, this.formatDate(record.inspectionDate));
-    doc.setCellValue(2, 1, 1, inspector?.name ?? '-');
-    doc.setCellValue(2, 2, 1, record.remarks ?? '-');
-
-    // 결재란 서명 (QP-18-05): 담당(Cell4)=submitter, 검토(Cell5)=submitter, 승인(Cell6)=approver
-    await this.insertDocxSignature(
-      doc,
-      2,
-      1,
-      4,
-      submitter?.signaturePath ?? null,
-      submitter?.name ?? '-'
+    const data = await this.selfInspectionDataService.getData(
+      equipmentId,
+      params.inspectionId,
+      filter
     );
-    await this.insertDocxSignature(
-      doc,
-      2,
-      1,
-      5,
-      submitter?.signaturePath ?? null,
-      submitter?.name ?? '-'
-    );
-    await this.insertDocxSignature(
-      doc,
-      2,
-      1,
-      6,
-      approver?.signaturePath ?? null,
-      approver?.name ?? '-'
-    );
-
-    // 동적 결과 섹션 렌더링 (장비 유형별 가변 측정 결과)
-    await this.renderResultSections(doc, record.id, 'self');
-
-    const buffer = doc.toBuffer();
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(SELF_FORM_NUMBER);
+    const buffer = await this.selfInspectionRenderer.render(data, templateBuf);
     return {
       buffer,
       mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${eqRow.managementNumber}_${eqRow.name}.docx`,
+      filename: `${entry.formNumber}_${entry.name}_${data.managementNumber}_${data.equipmentName}.docx`,
     };
   }
 
@@ -1012,12 +377,44 @@ export class FormTemplateExportService {
     );
 
     // Row 1: 작성/승인 결재란 (반출 시점)
-    await this.insertDocxSignature(doc, 0, 1, 1, requester?.signaturePath ?? null, '(서명)');
-    await this.insertDocxSignature(doc, 0, 1, 2, approver?.signaturePath ?? null, '(서명)');
+    await insertDocxSignature(
+      doc,
+      0,
+      1,
+      1,
+      requester?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
+    await insertDocxSignature(
+      doc,
+      0,
+      1,
+      2,
+      approver?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
 
     // Row 25: 작성/승인 결재란 (반입 시점)
-    await this.insertDocxSignature(doc, 0, 25, 1, requester?.signaturePath ?? null, '(서명)');
-    await this.insertDocxSignature(doc, 0, 25, 2, approver?.signaturePath ?? null, '(서명)');
+    await insertDocxSignature(
+      doc,
+      0,
+      25,
+      1,
+      requester?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
+    await insertDocxSignature(
+      doc,
+      0,
+      25,
+      2,
+      approver?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
 
     const buffer = doc.toBuffer();
     return {
@@ -1027,210 +424,9 @@ export class FormTemplateExportService {
     };
   }
 
-  // ============================================================================
-  // docx 서명 삽입 헬퍼
-  // ============================================================================
-
-  private async insertDocxSignature(
-    doc: DocxTemplate,
-    tableIndex: number,
-    rowIndex: number,
-    cellIndex: number,
-    signaturePath: string | null,
-    fallbackName: string
-  ): Promise<void> {
-    if (!signaturePath) {
-      doc.setCellValue(tableIndex, rowIndex, cellIndex, fallbackName);
-      return;
-    }
-    try {
-      const imageBuffer = await this.storage.download(signaturePath);
-      const ext = signaturePath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
-      doc.setSignatureImage(tableIndex, rowIndex, cellIndex, imageBuffer, ext);
-    } catch {
-      this.logger.warn(`Failed to load signature: ${signaturePath}, using name fallback`);
-      doc.setCellValue(tableIndex, rowIndex, cellIndex, fallbackName);
-    }
-  }
-
-  // ============================================================================
-  // 동적 결과 섹션 렌더링 (중간점검/자체점검 공통)
-  // ============================================================================
-
-  private async renderResultSections(
-    doc: DocxTemplate,
-    inspectionId: string,
-    inspectionType: InspectionType
-  ): Promise<void> {
-    const sections = await this.db
-      .select()
-      .from(inspectionResultSections)
-      .where(
-        and(
-          eq(inspectionResultSections.inspectionId, inspectionId),
-          eq(inspectionResultSections.inspectionType, inspectionType)
-        )
-      )
-      .orderBy(asc(inspectionResultSections.sortOrder));
-
-    if (sections.length === 0) return;
-
-    // 결과 섹션이 있을 때만: 템플릿 예시 텍스트 제거 + 2페이지 시작 페이지 나누기
-    doc.removeTemplateExampleTextAndInsertPageBreak();
-
-    /**
-     * N+1 제거: photo/rich_table 섹션에서 참조되는 모든 documentId 를 선수집한 뒤
-     * 1회 batch SELECT + Promise.allSettled 로 병렬 다운로드한다.
-     * 기존 loadDocumentImage 를 섹션/셀마다 직렬 호출하던 경로를 대체.
-     */
-    const documentIdSet = new Set<string>();
-    for (const section of sections) {
-      if (section.sectionType === 'photo' && section.documentId) {
-        documentIdSet.add(section.documentId);
-      } else if (section.sectionType === 'rich_table') {
-        const rd = section.richTableData as {
-          headers: string[];
-          rows: Array<
-            Array<
-              | { type: 'text'; value: string }
-              | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number }
-            >
-          >;
-        } | null;
-        if (rd) {
-          for (const row of rd.rows) {
-            for (const cell of row) {
-              if (cell.type === 'image') documentIdSet.add(cell.documentId);
-            }
-          }
-        }
-      }
-    }
-
-    const imageCache = await this.loadDocumentImagesBatch(Array.from(documentIdSet));
-
-    // 템플릿의 numbering 매핑 (글머리 기호 스타일)
-    const { heading: headingNumId } = doc.bulletNumIds;
-
-    for (const section of sections) {
-      switch (section.sectionType) {
-        case 'title':
-          doc.appendParagraph(section.title ?? '', {
-            bold: true,
-            fontSize: 12,
-            numId: headingNumId,
-          });
-          break;
-        case 'text': {
-          if (section.title) {
-            doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
-          }
-          // 멀티라인: 각 행을 별도 단락으로. ※/■는 그냥 문자 — numbering 변환하지 않음.
-          const lines = (section.content ?? '').split('\n');
-          for (const line of lines) {
-            doc.appendParagraph(line.trim());
-          }
-          break;
-        }
-        case 'data_table': {
-          const td = section.tableData as { headers: string[]; rows: string[][] } | null;
-          if (td) {
-            if (section.title) {
-              doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
-            }
-            doc.appendTable(td.headers, td.rows);
-          }
-          break;
-        }
-        case 'photo': {
-          if (section.title) {
-            doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
-          }
-          if (section.documentId) {
-            const imageResult = imageCache.get(section.documentId);
-            if (imageResult) {
-              doc.appendImage(
-                imageResult.buffer,
-                imageResult.ext,
-                Number(section.imageWidthCm) || 12,
-                Number(section.imageHeightCm) || 9
-              );
-            }
-          }
-          break;
-        }
-        case 'rich_table': {
-          const rd = section.richTableData as {
-            headers: string[];
-            rows: Array<
-              Array<
-                | { type: 'text'; value: string }
-                | { type: 'image'; documentId: string; widthCm?: number; heightCm?: number }
-              >
-            >;
-          } | null;
-          if (rd) {
-            if (section.title) {
-              doc.appendParagraph(section.title, { bold: true, numId: headingNumId });
-            }
-            const resolvedRows = rd.rows.map((row) =>
-              row.map((cell) => {
-                if (cell.type === 'text') return cell;
-                const img = imageCache.get(cell.documentId);
-                if (!img) return { type: 'text' as const, value: '[image not found]' };
-                return {
-                  type: 'image' as const,
-                  buffer: img.buffer,
-                  ext: img.ext,
-                  widthCm: cell.widthCm,
-                  heightCm: cell.heightCm,
-                };
-              })
-            );
-            doc.appendRichTable(rd.headers, resolvedRows);
-          }
-          break;
-        }
-      }
-    }
-  }
-
-  /**
-   * 여러 documentId 에 대한 이미지를 1회 SELECT + 병렬 다운로드로 로드한다.
-   * 개별 다운로드 실패는 Map 에서 누락 — 렌더 단계가 `[image not found]` 로 fallback.
-   */
-  private async loadDocumentImagesBatch(
-    documentIds: string[]
-  ): Promise<Map<string, { buffer: Buffer; ext: 'png' | 'jpeg' }>> {
-    const result = new Map<string, { buffer: Buffer; ext: 'png' | 'jpeg' }>();
-    if (documentIds.length === 0) return result;
-
-    const rows = await this.db
-      .select({
-        id: documents.id,
-        filePath: documents.filePath,
-        mimeType: documents.mimeType,
-      })
-      .from(documents)
-      .where(inArray(documents.id, documentIds));
-
-    const downloads = await Promise.allSettled(
-      rows.map(async (row) => {
-        const buffer = await this.storage.download(row.filePath);
-        const ext = row.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
-        return { id: row.id, buffer, ext };
-      })
-    );
-
-    for (const outcome of downloads) {
-      if (outcome.status === 'fulfilled') {
-        result.set(outcome.value.id, { buffer: outcome.value.buffer, ext: outcome.value.ext });
-      } else {
-        this.logger.warn(`Failed to batch-load document image: ${String(outcome.reason)}`);
-      }
-    }
-    return result;
-  }
+  // 공유 헬퍼(insertDocxSignature/renderResultSections/loadDocumentImagesBatch)는
+  // docx-xml-helper.ts로 이관됨. exportCheckout/exportRentalImportAsCheckoutForm/
+  // exportEquipmentImport는 상단 import의 `insertDocxSignature`를 직접 사용한다.
 
   // ============================================================================
   // UL-QP-18-07: 시험용 소프트웨어 관리대장 (DOCX — 10열 단일 테이블)
@@ -1512,13 +708,14 @@ export class FormTemplateExportService {
       // T8: 승인란
       doc.setCellValue(8, 0, 1, this.formatDate(record.testDate));
       doc.setCellValue(8, 1, 1, performer?.name ?? '-');
-      await this.insertDocxSignature(
+      await insertDocxSignature(
         doc,
         8,
         2,
         1,
         techApprover?.signaturePath ?? null,
-        techApprover?.name ?? '-'
+        techApprover?.name ?? '-',
+        this.storage
       );
     }
 
@@ -1947,12 +1144,44 @@ export class FormTemplateExportService {
     );
 
     // Row 1: 작성/승인 결재란 (반출 시점)
-    await this.insertDocxSignature(doc, 0, 1, 1, requester?.signaturePath ?? null, '(서명)');
-    await this.insertDocxSignature(doc, 0, 1, 2, approver?.signaturePath ?? null, '(서명)');
+    await insertDocxSignature(
+      doc,
+      0,
+      1,
+      1,
+      requester?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
+    await insertDocxSignature(
+      doc,
+      0,
+      1,
+      2,
+      approver?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
 
     // Row 25: 작성/승인 결재란 (반입 시점)
-    await this.insertDocxSignature(doc, 0, 25, 1, requester?.signaturePath ?? null, '(서명)');
-    await this.insertDocxSignature(doc, 0, 25, 2, approver?.signaturePath ?? null, '(서명)');
+    await insertDocxSignature(
+      doc,
+      0,
+      25,
+      1,
+      requester?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
+    await insertDocxSignature(
+      doc,
+      0,
+      25,
+      2,
+      approver?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
 
     const buffer = doc.toBuffer();
     return {
@@ -2070,8 +1299,24 @@ export class FormTemplateExportService {
     // ============== Part 1: 사용 확인서 (R0~R13) ==============
 
     // R1: 결재란 (작성=requester, 승인=approver) — Part1
-    await this.insertDocxSignature(doc, 0, 1, 1, requester?.signaturePath ?? null, '(서명)');
-    await this.insertDocxSignature(doc, 0, 1, 2, approver?.signaturePath ?? null, '(서명)');
+    await insertDocxSignature(
+      doc,
+      0,
+      1,
+      1,
+      requester?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
+    await insertDocxSignature(
+      doc,
+      0,
+      1,
+      2,
+      approver?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
 
     // R2: 사용부서 / 사용자
     doc.setCellValue(0, 2, 1, team?.name ?? sourceLabel);
@@ -2118,8 +1363,24 @@ export class FormTemplateExportService {
     // ============== Part 2: 반납 확인서 (R14~R24) ==============
 
     // R15: 결재란 — Part2
-    await this.insertDocxSignature(doc, 0, 15, 1, requester?.signaturePath ?? null, '(서명)');
-    await this.insertDocxSignature(doc, 0, 15, 2, approver?.signaturePath ?? null, '(서명)');
+    await insertDocxSignature(
+      doc,
+      0,
+      15,
+      1,
+      requester?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
+    await insertDocxSignature(
+      doc,
+      0,
+      15,
+      2,
+      approver?.signaturePath ?? null,
+      '(서명)',
+      this.storage
+    );
 
     // R18~R22: Part2 반납 데이터 행 5개
     for (let i = 0; i < 5; i++) {
