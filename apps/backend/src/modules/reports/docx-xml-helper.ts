@@ -319,6 +319,62 @@ export function buildInlineDrawingXml(
 }
 
 /**
+ * 이미지 원본 비율을 유지하면서 셀 박스(cellWidth × [minHeight, maxHeight])에 맞춘 최적 치수 계산.
+ *
+ * 알고리즘:
+ * 1. cellWidth를 기본 가로로 두고 원본 비율로 세로 계산 (naturalCy)
+ * 2. naturalCy > maxHeight → 세로를 max로 고정, 가로를 비율에 맞게 축소 (세로가 긴 사진 대응)
+ * 3. naturalCy < minHeight → 세로를 min으로 고정, 가로는 cellWidth 상한으로 (가로가 매우 긴 사진 대응)
+ * 4. 위 둘 다 아니면 cellWidth × naturalCy (대부분의 4:3 / 16:9 사진)
+ *
+ * 원본이 0이거나 읽기 실패 시 기본 4:3 fallback: cellWidth × (cellWidth × 3/4).
+ *
+ * @param originalWidth 원본 이미지 픽셀 가로 (sharp metadata.width)
+ * @param originalHeight 원본 이미지 픽셀 세로 (sharp metadata.height)
+ * @param cellWidthEmu 목표 셀 가로 EMU
+ * @param maxHeightEmu 세로 상한 EMU
+ * @param minHeightEmu 세로 하한 EMU
+ * @returns `{ cx, cy }` EMU 정수
+ */
+export function calculateAspectFitDimensions(
+  originalWidth: number | undefined,
+  originalHeight: number | undefined,
+  cellWidthEmu: number,
+  maxHeightEmu: number,
+  minHeightEmu: number
+): { cx: number; cy: number } {
+  // 원본 메타데이터 없음 → 4:3 기본값
+  if (!originalWidth || !originalHeight || originalWidth <= 0 || originalHeight <= 0) {
+    const fallbackCy = Math.round((cellWidthEmu * 3) / 4);
+    return {
+      cx: cellWidthEmu,
+      cy: Math.max(minHeightEmu, Math.min(maxHeightEmu, fallbackCy)),
+    };
+  }
+
+  const naturalCy = Math.round(cellWidthEmu * (originalHeight / originalWidth));
+
+  if (naturalCy > maxHeightEmu) {
+    // 세로 상한 초과 → 세로 고정, 가로 축소 (원본 비율 유지)
+    return {
+      cx: Math.round(maxHeightEmu * (originalWidth / originalHeight)),
+      cy: maxHeightEmu,
+    };
+  }
+
+  if (naturalCy < minHeightEmu) {
+    // 세로 하한 미만 → 세로 고정, 가로는 cellWidth 상한 (가로 매우 긴 파노라마 대응)
+    const cxCandidate = Math.round(minHeightEmu * (originalWidth / originalHeight));
+    return {
+      cx: Math.min(cellWidthEmu, cxCandidate),
+      cy: minHeightEmu,
+    };
+  }
+
+  return { cx: cellWidthEmu, cy: naturalCy };
+}
+
+/**
  * YYYY/MM/DD 포맷 (Date | string | null 모두 수용).
  */
 export function formatYmdSlash(d: Date | string | null | undefined): string {

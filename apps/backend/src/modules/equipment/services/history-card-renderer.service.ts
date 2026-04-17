@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import PizZip from 'pizzip';
+import sharp from 'sharp';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 import {
   FormRenderError,
@@ -11,6 +12,7 @@ import {
   fillSectionEmptyRows,
   addImageResource,
   buildInlineDrawingXml,
+  calculateAspectFitDimensions,
   formatYmdSlash,
 } from '../../reports/docx-xml-helper';
 import {
@@ -23,6 +25,9 @@ import {
   SECTIONS,
   IMAGE_DIMENSIONS,
   EQUIPMENT_PHOTO_ANCHOR,
+  EQUIPMENT_PHOTO_CELL_WIDTH_EMU,
+  EQUIPMENT_PHOTO_MAX_HEIGHT_EMU,
+  EQUIPMENT_PHOTO_MIN_HEIGHT_EMU,
 } from './history-card.layout';
 import type { HistoryCardData, HistoryCardEquipmentInfo } from './history-card-data.service';
 
@@ -287,6 +292,13 @@ export class HistoryCardRendererService {
   }
 
   // ── 장비사진 ──────────────────────────────────────────────────────
+  /**
+   * 장비 사진을 원본 비율을 유지한 채 셀 가로에 맞춰 삽입한다.
+   *
+   * - 가로: 셀 가로(EQUIPMENT_PHOTO_CELL_WIDTH_EMU = 12.75cm) 기본
+   * - 세로: sharp로 원본 크기 읽어 비율 계산 후 [MIN, MAX] 클램프
+   * - 메타데이터 읽기 실패 시 4:3 기본값 fallback (calculateAspectFitDimensions)
+   */
   private async injectEquipmentPhoto(
     zip: PizZip,
     xml: string,
@@ -302,18 +314,33 @@ export class HistoryCardRendererService {
       return xml;
     }
 
+    // 원본 치수 추출 — 실패해도 렌더링은 진행 (fallback 4:3)
+    let originalWidth: number | undefined;
+    let originalHeight: number | undefined;
+    try {
+      const meta = await sharp(imageBuffer).metadata();
+      originalWidth = meta.width;
+      originalHeight = meta.height;
+    } catch (err) {
+      this.logger.warn(
+        `sharp metadata read failed for ${photoPath}: ${err instanceof Error ? err.message : 'unknown'}`
+      );
+    }
+
+    const { cx, cy } = calculateAspectFitDimensions(
+      originalWidth,
+      originalHeight,
+      EQUIPMENT_PHOTO_CELL_WIDTH_EMU,
+      EQUIPMENT_PHOTO_MAX_HEIGHT_EMU,
+      EQUIPMENT_PHOTO_MIN_HEIGHT_EMU
+    );
+
     const ext = photoPath.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
     const fileName = `equipment_photo.${ext}`;
     const rId = 'rIdEquipPhoto';
     addImageResource(zip, imageBuffer, fileName, ext, rId);
 
-    const drawing = buildInlineDrawingXml(
-      rId,
-      fileName,
-      100,
-      IMAGE_DIMENSIONS.EQUIPMENT_PHOTO.cx,
-      IMAGE_DIMENSIONS.EQUIPMENT_PHOTO.cy
-    );
+    const drawing = buildInlineDrawingXml(rId, fileName, 100, cx, cy);
 
     // "사진" 텍스트가 있는 셀의 다음 셀에 삽입 (양식 내 고정 레이아웃)
     const anchorIdx = xml.indexOf(EQUIPMENT_PHOTO_ANCHOR);

@@ -30,13 +30,32 @@ export const RUN_RPR_XML =
 
 /**
  * 이미지 EMU 치수 (English Metric Units, 1 cm = 360000 EMU).
- * - 장비 사진: 12cm × 9cm (양식 사진 영역 고정)
- * - 승인자 서명: 2.5cm × 1.5cm (결재란 서명 영역)
+ *
+ * - 승인자 서명: 2.5cm × 1.5cm 고정 (결재란 서명 영역)
+ * - 장비 사진: **동적 계산** — 셀 가로에 맞추고 원본 비율 유지 (아래 EQUIPMENT_PHOTO_* 상수 참조)
  */
 export const IMAGE_DIMENSIONS = {
-  EQUIPMENT_PHOTO: { cx: 4320000, cy: 3240000 },
   APPROVER_SIGNATURE: { cx: 900000, cy: 540000 },
 } as const;
+
+/**
+ * 장비 사진 영역 제약 (UL-QP-18-02 양식 실측 기반).
+ *
+ * 렌더러가 `sharp`로 원본 이미지 치수를 읽어 비율을 유지한 채 다음 제약 내에서 cx/cy를 계산:
+ * - 가로: 셀 가로(CELL_WIDTH_EMU)에 맞춤 — 세로가 허용 범위 내일 때
+ * - 세로: 원본 비율로 계산 후 [MIN_HEIGHT_EMU, MAX_HEIGHT_EMU]로 클램프
+ *   * 세로가 상한을 넘으면 세로를 max로 고정하고 가로를 비율에 맞게 축소
+ *   * 세로가 하한 미만이면 세로를 min으로 고정하고 가로는 셀 가로를 상한으로 제한
+ *
+ * **실측 방법** (변경 시 재측정 필수):
+ * 1. 원본 docx → `PizZip(buf).file('word/document.xml').asText()`
+ * 2. "사진" 텍스트가 있는 셀의 **다음 셀** `<w:tcW w:w="7226" w:type="dxa"/>` 추출
+ * 3. EMU 변환: `dxa × 635` (dxa = 1/20pt, EMU = 1/914400inch, 1pt=12700EMU → 1dxa=635EMU)
+ * 4. 현재 측정값: 7226 dxa → 4,588,510 EMU = 12.75cm
+ */
+export const EQUIPMENT_PHOTO_CELL_WIDTH_EMU = 4_588_510 as const; // 12.75cm (셀 가로 실측)
+export const EQUIPMENT_PHOTO_MAX_HEIGHT_EMU = 3_600_000 as const; // 10cm (양식 레이아웃 보호 상한)
+export const EQUIPMENT_PHOTO_MIN_HEIGHT_EMU = 1_080_000 as const; // 3cm (식별 가능성 하한)
 
 /**
  * 기본정보 셀 주입용 라벨 fragment + 대상 빈 셀 인덱스.
