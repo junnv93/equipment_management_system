@@ -300,11 +300,43 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
     ],
   },
+  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
+      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
+    ],
+  },
   [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
     patterns: [
       { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
       { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
     ],
+  },
+
+  // ─── 교정 인자 (Calibration Factor) ───
+  [NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED]: {
+    actions: [
+      { method: 'invalidateAllDashboard' },
+      { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
+    ],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}*` }],
+  },
+  [NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED]: {
+    actions: [{ method: 'invalidateAllDashboard' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION_FACTORS}*` }],
+  },
+
+  // ─── 중간 점검 (Intermediate Check) ───
+  [NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED]: {
+    actions: [
+      {
+        method: 'invalidateAfterEquipmentUpdate',
+        equipmentIdField: 'equipmentId',
+        statusChanged: true,
+      },
+    ],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}*` }],
   },
 };

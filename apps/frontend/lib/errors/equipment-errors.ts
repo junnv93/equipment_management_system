@@ -561,6 +561,13 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     IMPORT_END_DATE_BEFORE_START: EquipmentErrorCode.VALIDATION_ERROR,
     IMPORT_TEMP_NUMBER_GENERATION_FAILED: EquipmentErrorCode.SERVER_ERROR,
     VERSION_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
+
+    // 양식 템플릿 에러
+    FORM_TEMPLATE_NOT_FOUND: EquipmentErrorCode.NOT_FOUND,
+    FORM_NUMBER_ALREADY_EXISTS: EquipmentErrorCode.DUPLICATE_ERROR,
+    FORM_HISTORY_DOWNLOAD_FORBIDDEN: EquipmentErrorCode.PERMISSION_DENIED,
+    INVALID_FORM_NAME: EquipmentErrorCode.VALIDATION_ERROR,
+    INVALID_FORM_NUMBER_FORMAT: EquipmentErrorCode.VALIDATION_ERROR,
   };
 
   return mappings[normalizedCode] || EquipmentErrorCode.UNKNOWN_ERROR;

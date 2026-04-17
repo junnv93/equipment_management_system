@@ -79,7 +79,7 @@ export class CacheInvalidationHelper {
    */
   async invalidateEquipmentDetail(equipmentId: string): Promise<void> {
     await this.cacheService.deleteByPattern(
-      `^${CACHE_KEY_PREFIXES.EQUIPMENT}detail:.*"uuid":"${equipmentId}"`
+      `^${CACHE_KEY_PREFIXES.EQUIPMENT}detail:.*"uuid":"${equipmentId}".*`
     );
     this.logger.debug(`✓ Invalidated equipment detail: ${equipmentId}`);
   }
