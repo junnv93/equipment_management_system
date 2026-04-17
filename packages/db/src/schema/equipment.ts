@@ -121,6 +121,11 @@ export const equipment = pgTable(
     approvalStatus: varchar('approval_status', { length: 50 }).default('approved'), // 'pending_approval' | 'approved' | 'rejected'
     requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }), // 요청자 ID
     approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }), // 승인자 ID
+    // UL-QP-18-02 이력카드 "확인" 서명란 승인일 SSOT.
+    // equipment.updatedAt과 개념 분리: updatedAt은 모든 수정(위치/상태) 시 갱신되지만,
+    // approvedAt은 승인 시점에만 기록되어 이력카드 signature panel의 정확한 출력 보장.
+    // legacy 데이터는 null 유지 — 서비스 레이어에서 `approvedAt ?? updatedAt`으로 graceful fallback.
+    approvedAt: timestamp('approved_at'), // 승인 일시
 
     // 추가 필수 필드 (프롬프트 3 요구사항)
     equipmentType: varchar('equipment_type', { length: 50 }), // 장비 타입

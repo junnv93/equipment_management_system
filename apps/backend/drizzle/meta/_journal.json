@@ -204,6 +204,13 @@
       "when": 1776652900000,
       "tag": "0028_drop_calibrations_cost",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1776729600000,
+      "tag": "0029_add_equipment_approved_at",
+      "breakpoints": true
     }
   ]
 }

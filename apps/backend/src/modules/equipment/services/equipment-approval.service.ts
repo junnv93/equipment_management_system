@@ -436,11 +436,18 @@ export class EquipmentApprovalService {
         }
 
         // CAS 선점 성공 → 요청 타입에 따라 장비 작업 실행
+        // UL-QP-18-02 이력카드 "확인" 서명란 승인일 SSOT: 승인 시점에 equipment.approvedAt + approvedBy 세팅.
+        // equipmentService.create/update가 approvalStatus를 관리하므로 승인 후 별도 UPDATE로 승인 메타만 기록.
+        const approvalTimestamp = new Date();
         if (request.requestType === 'create') {
           const requestData = deserializeRequestData('create', request.requestData);
           const newEquipment = await this.equipmentService.create(requestData, request.requestedBy);
           // 요청에 연결된 문서(사진/매뉴얼)를 신규 장비로 소유 이전
           await this.documentService.transferDocumentsToEquipment(requestUuid, newEquipment.id);
+          await tx
+            .update(equipment)
+            .set({ approvedBy, approvedAt: approvalTimestamp })
+            .where(eq(equipment.id, newEquipment.id));
         } else if (request.requestType === 'update') {
           const equipmentData = this.requireEquipmentId(request.equipmentId);
           const currentEquipment = await tx.query.equipment.findFirst({
@@ -456,6 +463,10 @@ export class EquipmentApprovalService {
           // CAS: 요청 생성 시의 version은 stale → 현재 DB version으로 교체
           requestData.version = currentEquipment.version;
           await this.equipmentService.update(currentEquipment.id, requestData, request.requestedBy);
+          await tx
+            .update(equipment)
+            .set({ approvedBy, approvedAt: approvalTimestamp })
+            .where(eq(equipment.id, currentEquipment.id));
         } else if (request.requestType === 'delete') {
           const equipmentId = this.requireEquipmentId(request.equipmentId);
           const currentEquipment = await tx.query.equipment.findFirst({
