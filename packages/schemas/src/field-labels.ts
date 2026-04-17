@@ -19,7 +19,6 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     managementNumber: '관리번호',
     modelNumber: '모델번호',
     manufacturer: '제조사명',
-    serial: '일련번호',
     classification: '분류',
     site: '사이트',
     team: '팀',
