@@ -57,10 +57,14 @@ export async function apiPatch(
   });
 }
 
-/** 응답 body에서 version(또는 casVersion) 추출 */
+/**
+ * 응답 body에서 version 필드 추출 (일반 CAS 테이블: equipment, checkouts, disposal 등).
+ *
+ * calibration_plans는 casVersion 필드 별도 사용 — extractCasVersion 사용.
+ */
 export function extractVersion(body: Record<string, unknown>): number {
   const data = (body.data ?? body) as Record<string, unknown>;
-  const version = data.version ?? data.casVersion;
+  const version = data.version;
   if (typeof version !== 'number') {
     throw new Error(`version 필드 없음: ${JSON.stringify(body).slice(0, 300)}`);
   }
@@ -468,14 +472,20 @@ export async function conditionCheck(
 // Calibration Plan API (3단계 승인)
 // ============================================================================
 
-/** casVersion 추출 (교정계획서 전용) */
+/**
+ * casVersion 추출 (calibration_plans 전용).
+ *
+ * calibration_plans는 `version`(개정번호, createNewVersion에서만 증가)과
+ * `casVersion`(낙관적 락, 모든 상태 변경에서 증가) 을 분리 사용한다.
+ * 상태 변경 API는 casVersion을 요구하므로 이 헬퍼를 사용해야 한다.
+ */
 export function extractCasVersion(body: Record<string, unknown>): number {
   const data = (body.data ?? body) as Record<string, unknown>;
-  const ver = data.casVersion ?? data.version;
-  if (typeof ver !== 'number') {
+  const casVersion = data.casVersion;
+  if (typeof casVersion !== 'number') {
     throw new Error(`casVersion 필드 없음: ${JSON.stringify(body).slice(0, 300)}`);
   }
-  return ver;
+  return casVersion;
 }
 
 /** 교정계획서 검토 요청 (TM → QM) — CAS-Aware */

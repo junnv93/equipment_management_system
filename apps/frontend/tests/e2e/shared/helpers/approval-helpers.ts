@@ -96,16 +96,36 @@ export async function apiDelete(page: Page, path: string, role: string) {
 // ============================================================================
 
 /**
- * API 응답에서 version 필드를 추출한다.
+ * API 응답에서 CAS lock 필드를 추출한다.
  * ResponseTransformInterceptor의 { success, data } 래핑을 자동 처리.
+ *
+ * 대부분 테이블은 `version` 필드를 CAS lock으로 사용한다.
+ * calibration_plans만 `casVersion` 필드 + `version`(개정번호) 이중 사용 구조이므로
+ * 해당 엔티티는 extractCasVersion을 사용해야 한다.
  */
 export function extractVersion(body: Record<string, unknown>): number {
   const data = (body.data ?? body) as Record<string, unknown>;
-  const version = data.version ?? data.casVersion;
+  const version = data.version;
   if (typeof version !== 'number') {
     throw new Error(`version 필드 없음: ${JSON.stringify(body).slice(0, 200)}`);
   }
   return version;
+}
+
+/**
+ * calibration_plans 전용 — CAS lock 필드(`casVersion`)를 추출한다.
+ *
+ * calibration_plans는 `version`(개정번호, createNewVersion에서만 증가) 과
+ * `casVersion`(낙관적 락, 모든 상태 변경에서 증가) 을 분리 사용한다.
+ * 일반 extractVersion과 섞어 쓰지 않도록 전용 함수 제공.
+ */
+export function extractCasVersion(body: Record<string, unknown>): number {
+  const data = (body.data ?? body) as Record<string, unknown>;
+  const casVersion = data.casVersion;
+  if (typeof casVersion !== 'number') {
+    throw new Error(`casVersion 필드 없음: ${JSON.stringify(body).slice(0, 200)}`);
+  }
+  return casVersion;
 }
 
 /**
@@ -234,11 +254,7 @@ export async function apiSubmitPlanForReview(
   role = 'technical_manager'
 ) {
   const plan = await getCalibrationPlan(page, planId, role);
-  const data = (plan.data ?? plan) as Record<string, unknown>;
-  const casVersion = data.casVersion ?? data.version;
-  if (typeof casVersion !== 'number') {
-    throw new Error(`casVersion 필드 없음: ${JSON.stringify(plan).slice(0, 200)}`);
-  }
+  const casVersion = extractCasVersion(plan);
   return apiPost(
     page,
     `/api/calibration-plans/${planId}/submit-for-review`,
@@ -261,11 +277,7 @@ export async function apiReviewCalibrationPlan(
   role = 'quality_manager'
 ) {
   const plan = await getCalibrationPlan(page, planId, role);
-  const data = (plan.data ?? plan) as Record<string, unknown>;
-  const casVersion = data.casVersion ?? data.version;
-  if (typeof casVersion !== 'number') {
-    throw new Error(`casVersion 필드 없음: ${JSON.stringify(plan).slice(0, 200)}`);
-  }
+  const casVersion = extractCasVersion(plan);
   return apiPatch(
     page,
     `/api/calibration-plans/${planId}/review`,
@@ -283,11 +295,7 @@ export async function apiReviewCalibrationPlan(
  */
 export async function apiApproveCalibrationPlan(page: Page, planId: string, role = 'lab_manager') {
   const plan = await getCalibrationPlan(page, planId, role);
-  const data = (plan.data ?? plan) as Record<string, unknown>;
-  const casVersion = data.casVersion ?? data.version;
-  if (typeof casVersion !== 'number') {
-    throw new Error(`casVersion 필드 없음: ${JSON.stringify(plan).slice(0, 200)}`);
-  }
+  const casVersion = extractCasVersion(plan);
   return apiPatch(
     page,
     `/api/calibration-plans/${planId}/approve`,
@@ -309,11 +317,7 @@ export async function apiRejectCalibrationPlan(
   role = 'quality_manager'
 ) {
   const plan = await getCalibrationPlan(page, planId, role);
-  const data = (plan.data ?? plan) as Record<string, unknown>;
-  const casVersion = data.casVersion ?? data.version;
-  if (typeof casVersion !== 'number') {
-    throw new Error(`casVersion 필드 없음: ${JSON.stringify(plan).slice(0, 200)}`);
-  }
+  const casVersion = extractCasVersion(plan);
   return apiPatch(
     page,
     `/api/calibration-plans/${planId}/reject`,
