@@ -6,6 +6,7 @@ import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app'
 import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
+import { getWorkerUniqueYear } from './helpers/test-isolation';
 
 describe('CalibrationPlansController (e2e)', () => {
   let ctx: TestAppContext;
@@ -13,9 +14,13 @@ describe('CalibrationPlansController (e2e)', () => {
   const createdPlanIds: string[] = [];
   const tracker = new ResourceTracker();
 
-  // 스키마 year min=2020, max=2100. 테스트 격리용 유니크 값이되 범위 내 유지.
-  // 2030 + (timestamp/1B % 100)은 현재 시점(2026+)에서 2106 생성 → 400. 70으로 하향.
-  const TEST_YEAR = 2030 + (Math.floor(Date.now() / 1000000000) % 70);
+  // 스키마 허용 연도 [2020, 2100]. 이 스펙은 base year에서 +1/+10/+11/+20/+30/+50 파생 사용.
+  // getWorkerUniqueYear는 JEST_WORKER_ID + crypto.randomInt 조합으로
+  // (a) worker 간 슬롯 격리 (b) 재실행 간 고유값을 보장.
+  // 기존 "2030 + (Date.now()/1B % 70)" 방식은 ~11일 주기로만 변해 병렬 worker 충돌 및
+  // TEST_YEAR + 100이 schema.max 초과하여 silent skip되던 버그를 동시 해결.
+  const TEST_YEAR_MAX_DERIVATION = 50;
+  const TEST_YEAR = getWorkerUniqueYear({ maxDerivation: TEST_YEAR_MAX_DERIVATION });
   const TEST_SITE = 'suwon';
 
   let adminToken: string;
@@ -30,13 +35,12 @@ describe('CalibrationPlansController (e2e)', () => {
     // DELETE API는 draft 상태만 허용하므로, pending_review/approved 등으로 남은 경우 API가 작동하지 않음.
     // 테스트 격리를 위해 DB 직접 삭제 사용 (FK CASCADE로 plan_items도 삭제됨).
     //
-    // 테스트 내부에서 TEST_YEAR, TEST_YEAR+10, TEST_YEAR+20, TEST_YEAR+100 등 여러 파생 연도를 쓰므로
-    // 범위 전체를 정리 (TEST_YEAR ~ TEST_YEAR+100, suwon).
+    // 테스트 내부 파생 연도 범위: TEST_YEAR ~ TEST_YEAR + TEST_YEAR_MAX_DERIVATION.
     const cleanupSql = postgres(process.env.DATABASE_URL as string);
     try {
       await cleanupSql`
         DELETE FROM calibration_plans
-        WHERE year BETWEEN ${TEST_YEAR} AND ${TEST_YEAR + 100}
+        WHERE year BETWEEN ${TEST_YEAR} AND ${TEST_YEAR + TEST_YEAR_MAX_DERIVATION}
           AND site_id = ${TEST_SITE}
       `;
     } finally {
@@ -537,7 +541,8 @@ describe('CalibrationPlansController (e2e)', () => {
       //   2. QM/LM(품질·시험소장): pending_review → pending_approval (review)
       //   3. LM(시험소장): pending_approval → approved (approve)
       // admin(lab_manager)는 REVIEW_CALIBRATION_PLAN + APPROVE_CALIBRATION_PLAN 모두 보유.
-      const newYear = TEST_YEAR + 100;
+      // TEST_YEAR + 30: 헬퍼의 maxDerivation 제한 내 (schema year max 준수 보장).
+      const newYear = TEST_YEAR + TEST_YEAR_MAX_DERIVATION;
       const createResponse = await request(ctx.app.getHttpServer())
         .post('/calibration-plans')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -547,9 +552,7 @@ describe('CalibrationPlansController (e2e)', () => {
           createdBy: TEST_USER_IDS.admin,
         });
 
-      if (createResponse.status !== 201) {
-        return;
-      }
+      expect(createResponse.status).toBe(201);
 
       const planUuid = createResponse.body.id;
       createdPlanIds.push(planUuid);
