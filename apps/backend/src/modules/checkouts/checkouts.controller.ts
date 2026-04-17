@@ -114,7 +114,11 @@ export class CheckoutsController {
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: IssueHandoverTokenDto, required: false })
-  @ApiResponse({ status: HttpStatus.CREATED, description: '토큰 발급 성공' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: '토큰 발급 성공',
+    type: IssueHandoverTokenResponse,
+  })
   @ApiResponse({
     status: HttpStatus.FORBIDDEN,
     description: '체크아웃 관계자가 아님 또는 전이 불가능한 상태',
@@ -178,7 +182,11 @@ export class CheckoutsController {
       '반환하며, 프론트엔드는 이 정보로 기존 condition-check 페이지로 redirect합니다.',
   })
   @ApiBody({ type: VerifyHandoverTokenDto })
-  @ApiResponse({ status: HttpStatus.OK, description: '검증 성공 + jti 소비' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '검증 성공 + jti 소비',
+    type: VerifyHandoverTokenResponse,
+  })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '무효 토큰' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '만료 토큰' })
   @ApiResponse({ status: HttpStatus.CONFLICT, description: '이미 소비된 토큰' })

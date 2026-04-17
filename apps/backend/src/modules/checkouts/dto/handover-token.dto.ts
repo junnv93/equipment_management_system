@@ -37,18 +37,21 @@ export const IssueHandoverTokenValidationPipe = new ZodValidationPipe(IssueHando
 export const VerifyHandoverTokenValidationPipe = new ZodValidationPipe(VerifyHandoverTokenSchema);
 
 /**
- * 토큰 발급 응답 shape.
+ * 토큰 발급 응답 shape. zod SSOT — Swagger @ApiResponse({ type }) / controller / service 반환 타입
+ * 전부 이 schema 로부터 파생된다.
  */
-export interface IssueHandoverTokenResponse {
-  token: string;
-  expiresAt: string; // ISO timestamp
-  purpose: HandoverTokenPurpose;
-}
+export const IssueHandoverTokenResponseSchema = z.object({
+  token: z.string().min(1),
+  expiresAt: z.string(), // ISO timestamp (서버 생성 보장)
+  purpose: HandoverTokenPurposeEnum,
+});
+export class IssueHandoverTokenResponse extends createZodDto(IssueHandoverTokenResponseSchema) {}
 
 /**
- * 토큰 검증 응답 shape. 검증 성공 시 redirect에 필요한 최소 정보만 반환.
+ * 토큰 검증 응답 shape. 검증 성공 시 redirect 에 필요한 최소 정보만 반환.
  */
-export interface VerifyHandoverTokenResponse {
-  checkoutId: string;
-  purpose: HandoverTokenPurpose;
-}
+export const VerifyHandoverTokenResponseSchema = z.object({
+  checkoutId: z.string().uuid(),
+  purpose: HandoverTokenPurposeEnum,
+});
+export class VerifyHandoverTokenResponse extends createZodDto(VerifyHandoverTokenResponseSchema) {}
