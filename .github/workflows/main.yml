@@ -166,18 +166,38 @@ jobs:
         # x-security anchor 동기화 + 서비스별 cap_drop/no-new-privileges 전수 검사
         run: bash infra/scripts/verify-compose-security.sh
 
-      - name: Infra — SOPS Secret 복호화 검증
-        # SOPS_AGE_KEY GitHub Actions secret 설정 후 활성화
-        # 복호화 가능 여부만 확인 (값 노출 없음)
+      - name: Infra — SOPS 바이너리 설치
+        # 다음 2개 step (lan, prod) 에서 공용. 단일 설치로 빌드 시간 절약.
         if: ${{ secrets.SOPS_AGE_KEY != '' }}
-        env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           curl -fsSL -o /usr/local/bin/sops \
             "https://github.com/getsops/sops/releases/download/${{ env.SOPS_VERSION }}/sops-${{ env.SOPS_VERSION }}.linux.amd64"
           chmod +x /usr/local/bin/sops
-          sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > /dev/null
-          echo "SOPS decrypt verification passed"
+
+      - name: Infra — SOPS (lan.env.sops.yaml) 복호화 + envSchema 동기화 검증
+        # 1) 복호화 가능성 (값 노출 없이 $RUNNER_TEMP 하위 tmpfile 로만)
+        # 2) 복호화된 .env 파일의 키 집합이 env.validation.ts envSchema 의 required 와 일치하는지
+        # 두 번째 검증은 verify-env-sync --file 로 위임하여 pre-push 와 동일한 2-tier scan 재사용.
+        if: ${{ secrets.SOPS_AGE_KEY != '' }}
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          TMPFILE="$RUNNER_TEMP/lan.env"
+          sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > "$TMPFILE"
+          pnpm verify:env-sync --file "$TMPFILE"
+          rm -f "$TMPFILE"
+          echo "lan.env.sops.yaml: decrypt + envSchema sync OK"
+
+      - name: Infra — SOPS (prod.env.sops.yaml) 복호화 + envSchema 동기화 검증
+        if: ${{ secrets.SOPS_AGE_KEY != '' }}
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          TMPFILE="$RUNNER_TEMP/prod.env"
+          sops decrypt --output-type dotenv infra/secrets/prod.env.sops.yaml > "$TMPFILE"
+          pnpm verify:env-sync --file "$TMPFILE"
+          rm -f "$TMPFILE"
+          echo "prod.env.sops.yaml: decrypt + envSchema sync OK"
 
   # ─────────────────────────────────────────────
   # Gate 3a: 유닛 테스트 (quality-gate 후 병렬)
