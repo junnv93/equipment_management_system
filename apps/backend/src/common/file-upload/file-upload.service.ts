@@ -9,6 +9,7 @@ import {
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import { STORAGE_PROVIDER, IStorageProvider } from '../storage/storage.interface';
 
@@ -80,7 +81,7 @@ export class FileUploadService implements OnModuleInit {
   private validateFile(file: MulterFile): void {
     if (!file.buffer || file.buffer.length === 0) {
       throw new BadRequestException({
-        code: 'FILE_EMPTY',
+        code: ErrorCode.FileEmpty,
         message: '빈 파일은 업로드할 수 없습니다.',
       });
     }
@@ -88,14 +89,14 @@ export class FileUploadService implements OnModuleInit {
     if (file.size > this.maxFileSize) {
       const maxMB = this.maxFileSize / 1024 / 1024;
       throw new BadRequestException({
-        code: 'FILE_SIZE_EXCEEDED',
+        code: ErrorCode.FileTooLarge,
         message: `파일 크기는 ${maxMB}MB를 초과할 수 없습니다.`,
       });
     }
 
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException({
-        code: 'FILE_FORMAT_NOT_ALLOWED',
+        code: ErrorCode.InvalidFileType,
         message: `허용되지 않은 파일 형식입니다. 허용 형식: ${this.allowedMimeTypes.join(', ')}`,
       });
     }
@@ -118,7 +119,7 @@ export class FileUploadService implements OnModuleInit {
 
     if (!matches) {
       throw new BadRequestException({
-        code: 'FILE_CONTENT_MISMATCH',
+        code: ErrorCode.FileContentMismatch,
         message: '파일 내용이 선언된 형식과 일치하지 않습니다.',
       });
     }
@@ -174,7 +175,7 @@ export class FileUploadService implements OnModuleInit {
         error instanceof Error ? error.stack : undefined
       );
       throw new InternalServerErrorException({
-        code: 'FILE_SAVE_FAILED',
+        code: ErrorCode.FileSaveFailed,
         message: 'Failed to save file due to a server error.',
       });
     }
@@ -220,7 +221,7 @@ export class FileUploadService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`Failed to read file: ${filePath}`, error);
       throw new BadRequestException({
-        code: 'FILE_READ_FAILED',
+        code: ErrorCode.FileReadFailed,
         message: 'Failed to read file.',
       });
     }

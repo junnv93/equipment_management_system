@@ -11,33 +11,24 @@
  */
 import postgres from 'postgres';
 import {
-  // Teams (6 production + 1 placeholder)
-  TEAM_PLACEHOLDER_ID,
-  TEAM_FCC_EMC_RF_SUWON_ID,
-  TEAM_GENERAL_EMC_SUWON_ID,
-  TEAM_SAR_SUWON_ID,
-  TEAM_AUTOMOTIVE_EMC_SUWON_ID,
-  TEAM_GENERAL_RF_UIWANG_ID,
-  TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID,
   // Users (manager-role-constraint에 필요한 핵심 사용자)
   USER_TEST_ENGINEER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
   USER_LAB_MANAGER_SUWON_ID,
   USER_TECHNICAL_MANAGER_UIWANG_ID,
   USER_TEST_ENGINEER_UIWANG_ID,
+  TEAM_FCC_EMC_RF_SUWON_ID,
+  TEAM_GENERAL_RF_UIWANG_ID,
 } from '../src/database/utils/uuid-constants';
+import { TEAMS_SEED_DATA } from '../src/database/seed-data/core/teams.seed';
 import { TEST_USER_DETAILS } from './helpers/test-auth';
 
-/** 팀 시드 데이터 — uuid-constants + teams.seed.ts 구조 기반 */
-const TEAMS_SEED = [
-  { id: TEAM_PLACEHOLDER_ID, name: 'Test Team', classification: 'general_emc', classificationCode: 'R', site: 'suwon', description: 'Placeholder team for E2E test users' },
-  { id: TEAM_FCC_EMC_RF_SUWON_ID, name: 'FCC EMC/RF', classification: 'fcc_emc_rf', classificationCode: 'E', site: 'suwon', description: 'FCC EMC/RF Team - Suwon' },
-  { id: TEAM_GENERAL_EMC_SUWON_ID, name: 'General EMC', classification: 'general_emc', classificationCode: 'R', site: 'suwon', description: 'General EMC Team - Suwon' },
-  { id: TEAM_SAR_SUWON_ID, name: 'SAR', classification: 'sar', classificationCode: 'S', site: 'suwon', description: 'SAR Team - Suwon' },
-  { id: TEAM_AUTOMOTIVE_EMC_SUWON_ID, name: 'Automotive EMC', classification: 'automotive_emc', classificationCode: 'A', site: 'suwon', description: 'Automotive EMC Team - Suwon' },
-  { id: TEAM_GENERAL_RF_UIWANG_ID, name: 'General RF', classification: 'general_rf', classificationCode: 'W', site: 'uiwang', description: 'General RF Team - Uiwang' },
-  { id: TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID, name: 'Automotive EMC', classification: 'automotive_emc', classificationCode: 'A', site: 'pyeongtaek', description: 'Automotive EMC Team - Pyeongtaek' },
-];
+/**
+ * 팀 시드 데이터 — seed-data/core/teams.seed.ts의 SSOT 재사용.
+ * 이전에는 globalSetup에 팀 메타데이터(name/classification 등)를 별도 하드코딩했으나
+ * SSOT 위반으로 발견(73차 verify). 이제 `TEAMS_SEED_DATA`를 직접 import.
+ */
+const TEAMS_SEED = TEAMS_SEED_DATA;
 
 /**
  * 프로덕션 핵심 사용자 — manager-role-constraint E2E 테스트에 필요.
@@ -60,10 +51,21 @@ export default async function globalSetup(): Promise<void> {
 
   try {
     // 1. 팀 시딩 (7개: placeholder + production 6개)
+    // TEAMS_SEED_DATA는 teams.$inferInsert 타입이므로 id/description이 optional.
+    // seed-data는 항상 명시하므로 non-null assertion 안전.
     for (const team of TEAMS_SEED) {
       await sql`
         INSERT INTO teams (id, name, classification, site, classification_code, description, created_at, updated_at)
-        VALUES (${team.id}, ${team.name}, ${team.classification}, ${team.site}, ${team.classificationCode}, ${team.description}, NOW(), NOW())
+        VALUES (
+          ${team.id ?? null},
+          ${team.name},
+          ${team.classification},
+          ${team.site},
+          ${team.classificationCode ?? null},
+          ${team.description ?? null},
+          NOW(),
+          NOW()
+        )
         ON CONFLICT (id) DO NOTHING
       `;
     }
