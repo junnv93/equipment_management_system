@@ -10,6 +10,7 @@ import {
   HttpStatus,
   HttpCode,
   UsePipes,
+  UseInterceptors,
   ParseUUIDPipe,
   BadRequestException,
   Request,
@@ -22,6 +23,7 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { ZodResponse, ZodSerializerInterceptor } from 'nestjs-zod';
 import {
   CheckoutsService,
   CheckoutWithMeta,
@@ -79,6 +81,9 @@ import { ErrorCode } from '@equipment-management/schemas';
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
 @Controller('checkouts')
+// ZodResponse 파일럿 (checkouts handover 2 엔드포인트).
+// 글로벌 승격 조건은 docs/references/backend-patterns.md "ZodResponse 적용 조건" 참조.
+@UseInterceptors(ZodSerializerInterceptor)
 export class CheckoutsController {
   constructor(
     private readonly checkoutsService: CheckoutsService,
@@ -114,7 +119,7 @@ export class CheckoutsController {
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: IssueHandoverTokenDto, required: false })
-  @ApiResponse({
+  @ZodResponse({
     status: HttpStatus.CREATED,
     description: '토큰 발급 성공',
     type: IssueHandoverTokenResponse,
@@ -182,7 +187,7 @@ export class CheckoutsController {
       '반환하며, 프론트엔드는 이 정보로 기존 condition-check 페이지로 redirect합니다.',
   })
   @ApiBody({ type: VerifyHandoverTokenDto })
-  @ApiResponse({
+  @ZodResponse({
     status: HttpStatus.OK,
     description: '검증 성공 + jti 소비',
     type: VerifyHandoverTokenResponse,
