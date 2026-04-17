@@ -1,0 +1,126 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { AlertCircle, Loader2, QrCode } from 'lucide-react';
+import { FRONTEND_ROUTES, HANDOVER_QR_TOKEN_PARAM } from '@equipment-management/shared-constants';
+import { ErrorCode } from '@equipment-management/schemas';
+import { Button } from '@/components/ui/button';
+import checkoutApi from '@/lib/api/checkout-api';
+
+type PageState =
+  | { phase: 'verifying' }
+  | { phase: 'redirecting' }
+  | { phase: 'error'; code: string };
+
+/**
+ * QR 인수인계 중계 페이지 — **"QR은 경로" 원칙의 가장 순수한 구현**.
+ *
+ * 역할:
+ * 1. URL `?token=...` 파라미터 추출
+ * 2. `checkoutApi.verifyHandoverToken(token)` 호출 (백엔드가 jti 소비)
+ * 3. 성공 시 `router.replace(FRONTEND_ROUTES.CHECKOUTS.CHECK(checkoutId))`로 redirect
+ * 4. 실패 시 case별 에러 UI (재시도 불가 — 토큰 1회용)
+ *
+ * 이 페이지는 **condition-check 폼/로직을 일절 렌더하지 않는다.**
+ * 모든 워크플로우는 기존 `/checkouts/[id]/check` 페이지로 위임.
+ */
+export default function HandoverRedirectPage() {
+  const t = useTranslations('qr.handover');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [state, setState] = useState<PageState>({ phase: 'verifying' });
+
+  useEffect(() => {
+    const token = searchParams.get(HANDOVER_QR_TOKEN_PARAM);
+    if (!token) {
+      setState({ phase: 'error', code: ErrorCode.HandoverTokenInvalid });
+      return;
+    }
+
+    let mounted = true;
+    (async () => {
+      try {
+        const { checkoutId } = await checkoutApi.verifyHandoverToken(token);
+        if (!mounted) return;
+        setState({ phase: 'redirecting' });
+        router.replace(FRONTEND_ROUTES.CHECKOUTS.CHECK(checkoutId));
+      } catch (error) {
+        if (!mounted) return;
+        const code = resolveErrorCode(error);
+        setState({ phase: 'error', code });
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router, searchParams]);
+
+  if (state.phase === 'verifying' || state.phase === 'redirecting') {
+    return (
+      <div
+        className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 py-8 text-center safe-area-bottom"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" aria-hidden="true" />
+        <h1 className="text-lg font-semibold text-foreground">
+          {state.phase === 'verifying' ? t('verifyingTitle') : t('redirectingTitle')}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {state.phase === 'verifying' ? t('verifyingBody') : t('redirectingBody')}
+        </p>
+      </div>
+    );
+  }
+
+  // error phase
+  const titleKey = errorCodeToTitleKey(state.code);
+  const bodyKey = errorCodeToBodyKey(state.code);
+
+  return (
+    <div className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 py-8 text-center safe-area-bottom">
+      <AlertCircle className="h-10 w-10 text-brand-critical" aria-hidden="true" />
+      <h1 className="text-lg font-semibold text-foreground" role="alert">
+        {t(titleKey)}
+      </h1>
+      <p className="text-sm text-muted-foreground">{t(bodyKey)}</p>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <Link href={FRONTEND_ROUTES.CHECKOUTS.LIST}>
+          <Button variant="outline" className="min-h-[var(--touch-target-min)]">
+            {t('backToCheckouts')}
+          </Button>
+        </Link>
+        <Link href={FRONTEND_ROUTES.SCAN}>
+          <Button className="min-h-[var(--touch-target-min)]">
+            <QrCode className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            {t('rescan')}
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function resolveErrorCode(error: unknown): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { data?: { code?: string } } }).response;
+    return response?.data?.code ?? ErrorCode.HandoverTokenInvalid;
+  }
+  return ErrorCode.HandoverTokenInvalid;
+}
+
+function errorCodeToTitleKey(code: string): 'expiredTitle' | 'consumedTitle' | 'invalidTitle' {
+  if (code === ErrorCode.HandoverTokenExpired) return 'expiredTitle';
+  if (code === ErrorCode.HandoverTokenConsumed) return 'consumedTitle';
+  return 'invalidTitle';
+}
+
+function errorCodeToBodyKey(code: string): 'expiredBody' | 'consumedBody' | 'invalidBody' {
+  if (code === ErrorCode.HandoverTokenExpired) return 'expiredBody';
+  if (code === ErrorCode.HandoverTokenConsumed) return 'consumedBody';
+  return 'invalidBody';
+}

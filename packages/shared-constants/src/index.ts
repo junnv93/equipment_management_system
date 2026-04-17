@@ -283,7 +283,15 @@ export {
 } from './qr-config';
 
 // QR URL 빌더 / 파서 (FE/BE 공용 SSOT)
-export { EQUIPMENT_QR_PATH_PREFIX, buildEquipmentQRUrl, parseEquipmentQRUrl } from './qr-url';
+export {
+  EQUIPMENT_QR_PATH_PREFIX,
+  HANDOVER_QR_PATH,
+  HANDOVER_QR_TOKEN_PARAM,
+  buildEquipmentQRUrl,
+  parseEquipmentQRUrl,
+  buildHandoverQRUrl,
+  parseHandoverQRUrl,
+} from './qr-url';
 
 // QR 모바일 랜딩 액션 권한 (FE/BE 공용 SSOT — 서버가 계산, 클라이언트는 렌더)
 export {

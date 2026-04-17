@@ -81,5 +81,34 @@
     "retryCamera": "Retry camera",
     "invalidFormat": "Invalid management number format (e.g. SUW-E0001)",
     "genericError": "Scanner failed to load. Use manual entry instead."
+  },
+  "handover": {
+    "buttonLabel": "Handover QR",
+    "buttonAriaLabel": "Issue handover QR token for the other party to scan",
+    "dialogTitle": "QR Handover",
+    "dialogDescription": "The other party can scan this QR with their phone to go directly to the condition check page.",
+    "purpose": {
+      "borrower_receive": "Borrower confirms receipt of equipment (borrower_receive step)",
+      "borrower_return": "Borrower confirms return (borrower_return step)",
+      "lender_receive": "Lender confirms received return (lender_receive step)"
+    },
+    "issuing": "Issuing token...",
+    "issueFailed": "Failed to issue handover token. Please try again.",
+    "qrAltText": "QR handover code",
+    "countdown": "Remaining: {minutes}m {seconds}s",
+    "instructions": "Single-use QR, expires in 10 minutes. Consumed immediately when the other party scans it.",
+    "expiredTitle": "Token expired",
+    "reissue": "Reissue",
+    "verifyingTitle": "Verifying QR",
+    "verifyingBody": "Validating the handover token.",
+    "redirectingTitle": "Redirecting",
+    "redirectingBody": "Taking you to the condition check page.",
+    "invalidTitle": "Invalid QR",
+    "invalidBody": "QR format is invalid or tampered. Ask the other party to issue a new QR.",
+    "expiredBody": "This QR has expired (>10 minutes). Ask the other party to issue a new QR.",
+    "consumedTitle": "QR already used",
+    "consumedBody": "This QR has already been consumed once and cannot be reused. Ask the other party to issue a new QR.",
+    "backToCheckouts": "Back to checkouts",
+    "rescan": "Scan again"
   }
 }

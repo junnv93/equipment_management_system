@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { CheckoutsController } from './checkouts.controller';
 import { CheckoutsService } from './checkouts.service';
+import { HandoverTokenService } from './services/handover-token.service';
 import { EquipmentModule } from '../equipment/equipment.module';
 import { TeamsModule } from '../teams/teams.module';
 import { CacheModule } from '../../common/cache/cache.module';
@@ -14,7 +15,7 @@ import { EquipmentImportsModule } from '../equipment-imports/equipment-imports.m
     forwardRef(() => EquipmentImportsModule), // 순환 의존성 방지 (렌탈 반납 콜백)
   ],
   controllers: [CheckoutsController],
-  providers: [CheckoutsService],
+  providers: [CheckoutsService, HandoverTokenService],
   exports: [CheckoutsService],
 })
 export class CheckoutsModule {}

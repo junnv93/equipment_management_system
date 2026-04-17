@@ -101,6 +101,16 @@ export enum ErrorCode {
   NetworkError = 'NETWORK_ERROR',
   TimeoutError = 'TIMEOUT_ERROR',
   ServiceUnavailable = 'SERVICE_UNAVAILABLE',
+
+  // ============================================================================
+  // Handover 서명 토큰 (QR Phase 3 인수인계) — jti 기반 1회용
+  // ============================================================================
+  /** 서명 불일치, 포맷 오류 등 유효하지 않은 토큰. */
+  HandoverTokenInvalid = 'HANDOVER_TOKEN_INVALID',
+  /** 10분 TTL 초과. */
+  HandoverTokenExpired = 'HANDOVER_TOKEN_EXPIRED',
+  /** 이미 한 번 소비된 토큰 (재사용 시도 차단). */
+  HandoverTokenConsumed = 'HANDOVER_TOKEN_CONSUMED',
 }
 
 // HTTP 상태 코드와 에러 코드 매핑
@@ -166,6 +176,10 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.InvalidFormNumberFormat]: 400,
 
   // 네트워크/시스템 에러
+  [ErrorCode.HandoverTokenInvalid]: 400,
+  [ErrorCode.HandoverTokenExpired]: 401,
+  [ErrorCode.HandoverTokenConsumed]: 409,
+
   [ErrorCode.NetworkError]: 503,
   [ErrorCode.TimeoutError]: 504,
   [ErrorCode.ServiceUnavailable]: 503,

@@ -23,6 +23,15 @@ import { parseManagementNumber } from '@equipment-management/schemas';
 export const EQUIPMENT_QR_PATH_PREFIX = '/e/' as const;
 
 /**
+ * Handover QR URL 경로 (token은 query string으로 전달).
+ *
+ * `/handover?token={jwt}` 형식은 `FRONTEND_ROUTES.HANDOVER(token)`와 일치.
+ * QR 페이로드 파싱 시 URL path prefix + token 파라미터 양쪽 매칭.
+ */
+export const HANDOVER_QR_PATH = '/handover' as const;
+export const HANDOVER_QR_TOKEN_PARAM = 'token' as const;
+
+/**
  * 장비 QR URL을 생성합니다.
  *
  * @param managementNumber 유효한 관리번호 (예: 'SUW-E0001')
@@ -70,6 +79,48 @@ export function buildEquipmentQRUrl(managementNumber: string, appUrl: string): s
  * parseEquipmentQRUrl('https://other.com/foo')
  * // → null
  */
+/**
+ * Handover 인수인계 QR URL을 생성합니다.
+ *
+ * @param token 서명된 JWT 토큰 (백엔드 `POST /checkouts/:uuid/handover-token` 응답)
+ * @param appUrl 애플리케이션 베이스 URL (프론트/백엔드 주입 방식 동일)
+ * @throws {Error} 인자 누락 시
+ *
+ * @example
+ * buildHandoverQRUrl('eyJhbGciOi...', 'https://ems.example.com')
+ * // → 'https://ems.example.com/handover?token=eyJhbGciOi...'
+ */
+export function buildHandoverQRUrl(token: string, appUrl: string): string {
+  if (!token || token.trim() === '') {
+    throw new Error('buildHandoverQRUrl: `token` is required');
+  }
+  if (!appUrl || appUrl.trim() === '') {
+    throw new Error(
+      'buildHandoverQRUrl: `appUrl` is required. ' +
+        'Frontend callers must pass `NEXT_PUBLIC_APP_URL` or `window.location.origin`; ' +
+        'backend callers must pass `FRONTEND_URL`.'
+    );
+  }
+  const normalizedBase = appUrl.replace(/\/+$/, '');
+  return `${normalizedBase}${HANDOVER_QR_PATH}?${HANDOVER_QR_TOKEN_PARAM}=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Handover QR URL을 역파싱합니다.
+ *
+ * @returns 파싱 성공 시 `{ token }`, 실패 시 `null`
+ */
+export function parseHandoverQRUrl(url: string): { token: string } | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname !== HANDOVER_QR_PATH) return null;
+    const token = parsed.searchParams.get(HANDOVER_QR_TOKEN_PARAM);
+    return token && token.trim() !== '' ? { token } : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parseEquipmentQRUrl(url: string): { managementNumber: string } | null {
   let pathname: string;
   try {

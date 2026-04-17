@@ -124,6 +124,10 @@ export const API_ENDPOINTS = {
     CONDITION_CHECKS: (id: string) => `/api/checkouts/${id}/condition-checks`,
     // 확인 필요 목록 조회
     PENDING_CHECKS: '/api/checkouts/pending-checks',
+    /** QR 인수인계 토큰 발급 (POST) — 대여자/차용자가 호출, 10분 TTL jti 1회용 */
+    HANDOVER_TOKEN: (id: string) => `/api/checkouts/${id}/handover-token`,
+    /** QR 인수인계 토큰 검증 + 소비 (POST) — 스캔 진입점이 호출 */
+    HANDOVER_VERIFY: '/api/checkouts/handover/verify',
     // 반출지 목록 조회 (DB에서 실제 사용된 값들)
     DESTINATIONS: '/api/checkouts/destinations',
   },

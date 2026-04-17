@@ -34,6 +34,11 @@ export const envSchema = z
     JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
     JWT_EXPIRATION: z.string().default('1d'),
 
+    // Handover QR 토큰 (QR Phase 3) — 인수인계 1회용 서명 토큰. JWT_SECRET과 분리된 별도 secret.
+    HANDOVER_TOKEN_SECRET: z
+      .string()
+      .min(32, 'HANDOVER_TOKEN_SECRET must be at least 32 characters'),
+
     // Internal API 설정 (서비스 간 통신)
     INTERNAL_API_KEY: z.string().min(32, 'INTERNAL_API_KEY must be at least 32 characters'),
     INTERNAL_API_KEY_PREVIOUS: z.string().optional(),

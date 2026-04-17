@@ -15,6 +15,22 @@ import type {
   AccessoriesStatus,
 } from '@equipment-management/schemas';
 
+// ✅ Handover 토큰 타입 (QR Phase 3) — DTO shape은 백엔드와 동일 SSOT 재사용 대상.
+// 프론트에서 백엔드 DTO를 직접 import할 수 없으므로 구조만 로컬 재정의.
+// 변경 시 apps/backend/.../dto/handover-token.dto.ts와 동기화 필수.
+export type HandoverTokenPurpose = 'borrower_receive' | 'borrower_return' | 'lender_receive';
+
+export interface IssueHandoverTokenResponse {
+  token: string;
+  expiresAt: string;
+  purpose: HandoverTokenPurpose;
+}
+
+export interface VerifyHandoverTokenResponse {
+  checkoutId: string;
+  purpose: HandoverTokenPurpose;
+}
+
 /**
  * ✅ Phase 2: Server-Driven UI
  * 서버가 계산한 사용자별 가능한 액션
@@ -478,6 +494,32 @@ const checkoutApi = {
     const url = `${API_ENDPOINTS.CHECKOUTS.PENDING_CHECKS}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get(url);
     return transformPaginatedResponse<Checkout>(response);
+  },
+
+  /**
+   * QR 인수인계 토큰 발급 — 10분 TTL, jti 기반 1회용 서명 토큰.
+   * 체크아웃 상태에 따라 purpose가 자동 도출되므로 DTO는 선택적.
+   */
+  issueHandoverToken: async (
+    checkoutId: string,
+    purpose?: HandoverTokenPurpose
+  ): Promise<IssueHandoverTokenResponse> => {
+    const response = await apiClient.post(
+      API_ENDPOINTS.CHECKOUTS.HANDOVER_TOKEN(checkoutId),
+      purpose ? { purpose } : {}
+    );
+    return transformSingleResponse<IssueHandoverTokenResponse>(response);
+  },
+
+  /**
+   * QR 인수인계 토큰 검증 + 소비 — `/handover` 중계 페이지가 호출.
+   * 성공 시 checkoutId + purpose 반환, 실패 case는 HTTP status로 구분.
+   */
+  verifyHandoverToken: async (token: string): Promise<VerifyHandoverTokenResponse> => {
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.HANDOVER_VERIFY, {
+      token,
+    });
+    return transformSingleResponse<VerifyHandoverTokenResponse>(response);
   },
 };
 

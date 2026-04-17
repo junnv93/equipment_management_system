@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   CheckCheck,
   XCircle,
+  QrCode,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +63,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
+import { HandoverQRDisplay } from '@/components/checkouts/HandoverQRDisplay';
 
 interface CheckoutDetailClientProps {
   checkout: Checkout;
@@ -82,6 +84,7 @@ export default function CheckoutDetailClient({
   conditionChecks,
 }: CheckoutDetailClientProps) {
   const t = useTranslations('checkouts');
+  const tQr = useTranslations('qr.handover');
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const { can } = useAuth();
@@ -120,6 +123,7 @@ export default function CheckoutDetailClient({
     rejectReturn: false,
   });
   const [rejectReason, setRejectReason] = useState('');
+  const [handoverQrOpen, setHandoverQrOpen] = useState(false);
   const [returnRejectReason, setReturnRejectReason] = useState('');
 
   // 장비별 반출 전 상태 기록 (Phase 3)
@@ -361,6 +365,28 @@ export default function CheckoutDetailClient({
             <FileText className="mr-2 h-4 w-4" />
             {t('actions.conditionCheck')}
           </Link>
+        </Button>
+      );
+    }
+
+    // Handover QR — 대여 목적에서 인수인계가 필요한 상태일 때 QR 발급 버튼 노출.
+    // 원칙: QR은 경로. 버튼이 열어주는 다이얼로그는 토큰+QR만 렌더하고,
+    //        condition-check 워크플로우는 기존 `/checkouts/{id}/check` 페이지가 담당.
+    if (
+      checkout.purpose === CPVal.RENTAL &&
+      (
+        [CSVal.LENDER_CHECKED, CSVal.CHECKED_OUT, CSVal.BORROWER_RETURNED] as CheckoutStatus[]
+      ).includes(checkout.status)
+    ) {
+      buttons.push(
+        <Button
+          key="handover-qr"
+          variant="outline"
+          onClick={() => setHandoverQrOpen(true)}
+          aria-label={tQr('buttonAriaLabel')}
+        >
+          <QrCode className="mr-2 h-4 w-4" aria-hidden="true" />
+          {tQr('buttonLabel')}
         </Button>
       );
     }
@@ -927,6 +953,14 @@ export default function CheckoutDetailClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Handover QR 다이얼로그 — 버튼 클릭 시 토큰 발급 + QR 표시.
+          condition-check UI는 렌더하지 않음 (QR은 경로 원칙). */}
+      <HandoverQRDisplay
+        checkoutId={checkout.id}
+        open={handoverQrOpen}
+        onOpenChange={setHandoverQrOpen}
+      />
     </div>
   );
 }
