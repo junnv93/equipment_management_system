@@ -206,27 +206,6 @@
       "rejectedBy": "Rejected By",
       "rejectionReason": "Rejection Reason"
     },
-    "disposal": {
-      "equipmentId": "Equipment",
-      "equipmentName": "Equipment Name",
-      "reason": "Disposal Reason",
-      "reasonDetail": "Reason Detail",
-      "reviewStatus": "Review Status",
-      "requestedBy": "Requested By",
-      "requestedByName": "Requested By",
-      "requestedAt": "Requested At",
-      "reviewedBy": "Reviewed By",
-      "reviewedByName": "Reviewed By",
-      "reviewedAt": "Reviewed At",
-      "reviewOpinion": "Review Opinion",
-      "approvedBy": "Approved By",
-      "approvedByName": "Approved By",
-      "approvedAt": "Approved At",
-      "approvalComment": "Approval Comment",
-      "rejectedBy": "Rejected By",
-      "rejectionReason": "Rejection Reason",
-      "rejectionStep": "Rejection Step"
-    },
     "user": {
       "name": "Name",
       "email": "Email",

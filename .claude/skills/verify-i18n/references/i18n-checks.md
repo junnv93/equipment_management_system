@@ -390,7 +390,7 @@ AuditLogDiffViewer가 tAudit.raw('fieldLabels')로 단일 조회
 다른 namespace에 fieldLabels가 있으면 → audit.json과 드리프트 위험
 ```
 
-**예외:** `fieldLabels`가 폼 레이블(필드 이름이 아닌 폼 입력 라벨)을 가리키는 경우는 허용. 단, audit log diff viewer에서 참조되는 엔티티 타입(equipment, calibration, checkout, calibration_plan, non_conformance, disposal 등)의 필드 라벨은 반드시 `audit.fieldLabels`에만 위치.
+**예외:** `fieldLabels`가 폼 레이블(필드 이름이 아닌 폼 입력 라벨)을 가리키는 경우는 허용. 단, audit log diff viewer에서 참조되는 엔티티 타입(equipment, calibration, checkout, calibration_plan, non_conformance 등)의 필드 라벨은 반드시 `audit.fieldLabels`에만 위치.
 
 ## Step 10: audit SSOT enum ↔ i18n 동기화 검증
 
@@ -412,18 +412,20 @@ const auditEn = JSON.parse(fs.readFileSync('apps/frontend/messages/en/audit.json
 const i18nEntityTypes = Object.keys(auditEn.entityTypes || {}).sort();
 const i18nFieldLabels = Object.keys(auditEn.fieldLabels || {}).sort();
 
-// entityTypes 비교
+// 정방향: SSOT에 있지만 i18n에 없음
 const missingET = ssotEntities.filter(e => !i18nEntityTypes.includes(e));
-const extraET = i18nEntityTypes.filter(e => !ssotEntities.includes(e));
-
-// fieldLabels 비교 (SSOT에 있는 모든 entityType에 fieldLabels 섹션 필요)
 const missingFL = ssotEntities.filter(e => !i18nFieldLabels.includes(e));
 
+// 역방향: i18n에 있지만 SSOT에 없음 (orphan — 죽은 코드)
+const orphanET = i18nEntityTypes.filter(e => !ssotEntities.includes(e));
+const orphanFL = i18nFieldLabels.filter(e => !ssotEntities.includes(e));
+
 let pass = true;
-if (missingET.length) { pass = false; console.log('FAIL: entityTypes 누락 (SSOT에 있지만 i18n에 없음):'); missingET.forEach(e => console.log('  - ' + e)); }
-if (extraET.length) { console.log('INFO: entityTypes 추가 (i18n에 있지만 SSOT에 없음):'); extraET.forEach(e => console.log('  - ' + e)); }
-if (missingFL.length) { pass = false; console.log('FAIL: fieldLabels 섹션 누락:'); missingFL.forEach(e => console.log('  - ' + e)); }
-if (pass) console.log('PASS: 모든 SSOT entityType이 audit.json entityTypes + fieldLabels에 존재 (' + ssotEntities.length + '개)');
+if (missingET.length) { pass = false; console.log('FAIL: entityTypes 누락 (SSOT → i18n):'); missingET.forEach(e => console.log('  - ' + e)); }
+if (orphanET.length) { pass = false; console.log('FAIL: entityTypes orphan (i18n에 있지만 SSOT에 없음 — 삭제 필요):'); orphanET.forEach(e => console.log('  - ' + e)); }
+if (missingFL.length) { pass = false; console.log('FAIL: fieldLabels 섹션 누락 (SSOT → i18n):'); missingFL.forEach(e => console.log('  - ' + e)); }
+if (orphanFL.length) { pass = false; console.log('FAIL: fieldLabels orphan (i18n에 있지만 SSOT에 없음 — 삭제 필요):'); orphanFL.forEach(e => console.log('  - ' + e)); }
+if (pass) console.log('PASS: entityTypes/fieldLabels 양방향 동기화 완료 (' + ssotEntities.length + '개)');
 "
 ```
 
@@ -440,23 +442,24 @@ const ssotActions = [...actionMatch[1].matchAll(/'([^']+)'/g)].map(m => m[1]).so
 const auditEn = JSON.parse(fs.readFileSync('apps/frontend/messages/en/audit.json', 'utf8'));
 const i18nActions = Object.keys(auditEn.actions || {}).sort();
 
+// 정방향 + 역방향
 const missing = ssotActions.filter(a => !i18nActions.includes(a));
-const extra = i18nActions.filter(a => !ssotActions.includes(a));
+const orphan = i18nActions.filter(a => !ssotActions.includes(a));
 
 let pass = true;
-if (missing.length) { pass = false; console.log('FAIL: actions 누락 (SSOT에 있지만 i18n에 없음):'); missing.forEach(a => console.log('  - ' + a)); }
-if (extra.length) { console.log('INFO: actions 추가 (i18n에 있지만 SSOT에 없음):'); extra.forEach(a => console.log('  - ' + a)); }
-if (pass) console.log('PASS: 모든 SSOT action이 audit.json actions에 존재 (' + ssotActions.length + '개)');
+if (missing.length) { pass = false; console.log('FAIL: actions 누락 (SSOT → i18n):'); missing.forEach(a => console.log('  - ' + a)); }
+if (orphan.length) { pass = false; console.log('FAIL: actions orphan (i18n에 있지만 SSOT에 없음 — 삭제 필요):'); orphan.forEach(a => console.log('  - ' + a)); }
+if (pass) console.log('PASS: actions 양방향 동기화 완료 (' + ssotActions.length + '개)');
 "
 ```
 
 **PASS 기준:**
-- 10a: `AUDIT_ENTITY_TYPE_VALUES`의 모든 값이 `audit.entityTypes` 키와 `audit.fieldLabels` 섹션에 존재
-- 10b: `AUDIT_ACTION_VALUES`의 모든 값이 `audit.actions` 키에 존재
+- 10a: `AUDIT_ENTITY_TYPE_VALUES` ↔ `audit.entityTypes` + `audit.fieldLabels` 양방향 일치
+- 10b: `AUDIT_ACTION_VALUES` ↔ `audit.actions` 양방향 일치
 
-**FAIL 기준:** SSOT enum에 있지만 i18n에 없는 값 → audit.json에 키 추가 필요
+**FAIL 기준 (정방향):** SSOT enum에 있지만 i18n에 없는 값 → audit.json에 키 추가 필요
 
-**INFO:** i18n에 있지만 SSOT에 없는 값(예: `disposal`)은 경고만. 실제 사용 중이면 유지, 미사용이면 정리 검토.
+**FAIL 기준 (역방향 — orphan):** i18n에 있지만 SSOT enum에 없는 값 → audit.json에서 삭제 필요. orphan 키는 audit diff viewer에서 절대 참조되지 않는 죽은 코드이며, 유지보수 시 혼란을 유발함.
 
 **fieldLabels 빈 객체 허용:** export/upload-only entityType(예: `report`, `data_migration_session`)은 diff가 발생하지 않으므로 `fieldLabels`가 빈 객체 `{}`여도 PASS. 핵심은 섹션 자체가 존재하여 드리프트를 추적할 수 있는 것.
 

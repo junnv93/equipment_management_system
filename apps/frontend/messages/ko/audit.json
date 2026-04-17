@@ -206,27 +206,6 @@
       "rejectedBy": "반려자",
       "rejectionReason": "반려 사유"
     },
-    "disposal": {
-      "equipmentId": "장비",
-      "equipmentName": "장비명",
-      "reason": "폐기 사유",
-      "reasonDetail": "상세 사유",
-      "reviewStatus": "검토 상태",
-      "requestedBy": "요청자",
-      "requestedByName": "요청자",
-      "requestedAt": "요청 시각",
-      "reviewedBy": "검토자",
-      "reviewedByName": "검토자",
-      "reviewedAt": "검토 시각",
-      "reviewOpinion": "검토 의견",
-      "approvedBy": "승인자",
-      "approvedByName": "승인자",
-      "approvedAt": "승인 시각",
-      "approvalComment": "승인 의견",
-      "rejectedBy": "반려자",
-      "rejectionReason": "반려 사유",
-      "rejectionStep": "반려 단계"
-    },
     "user": {
       "name": "이름",
       "email": "이메일",
