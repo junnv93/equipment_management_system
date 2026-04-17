@@ -170,3 +170,24 @@ await db.transaction(async (tx) => {
 - SSE 푸시는 RxJS `Subject.next()` (sync) 이지만 그 이전 단계(DB insert → dispatch)가 HTTP 응답 경로에 포함되면 모든 mutation 지연이 커짐.
 - read-after-write가 반드시 필요한 도메인(승인 워크플로우 등)은 응답 자체가 상태를 반환하므로 SSE에 의존할 필요 없음.
 - 진행 바 / 실시간 피드백이 필요한 경우 프론트엔드에서 optimistic update + 캐시 무효화 조합으로 해결.
+
+### DOCX 내보내기 3-way 분리 아키텍처 (UL-QP-18-02 기준)
+
+양식 DOCX 내보내기는 **집계 / 렌더링 / 범용 유틸**의 3-way로 분리한다. UL-QP-18-02 시험설비 이력카드가 이 패턴의 표준 구현이며, 향후 다른 양식(QP-18-06/07/09 등) 추가 시 동일 구조를 따른다.
+
+| 레이어       | 위치                                                          | 책임                                                                       |
+| ------------ | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Orchestrator | `modules/equipment/services/history-card.service.ts` (~40줄)  | 3단계 조합만 (data → template → renderer → buffer)                         |
+| Data Service | `modules/equipment/services/history-card-data.service.ts`     | DB 쿼리 + 관계 조인 + 라벨 변환 + 병합 헬퍼 (주요기능/S/W)                 |
+| Renderer     | `modules/equipment/services/history-card-renderer.service.ts` | DOCX XML 주입 (layout.ts 상수 기반) + 이미지 삽입                          |
+| XML Helper   | `modules/reports/docx-xml-helper.ts`                          | 양식 간 공용 XML 유틸 (inject/replace/fill/image resource/drawing builder) |
+| Layout SSOT  | `modules/equipment/services/history-card.layout.ts`           | 셀 라벨 fragment, 섹션 제목, 빈 행 수, 체크박스 패턴, 이미지 치수          |
+| Timeline     | `modules/equipment/services/equipment-timeline.service.ts`    | incident + repair + non_conformances 병합 (FK 역참조 중복 제거)            |
+
+**설계 원칙:**
+
+1. **SSOT**: 양식 매직 문자열은 전부 layout.ts에 집중 — 양식 개정 시 서비스 코드 수정 없이 상수만 교체.
+2. **순수 함수 레이어**: `mergeTimeline`, `mergeAccessoriesAndFunctions`, `mergeManualAndSoftware`는 export된 순수 함수로 유닛 테스트가 가능하다. DB 접근 없이 row만 받아 결과 반환.
+3. **구조화 예외**: `FormRenderError` (docx-xml-helper) — `InternalServerErrorException` 상속 + `code: FORM_TEMPLATE_RENDER_FAILED` + formLabel/context 포함. 양식 개정으로 매칭이 깨질 때 운영자가 즉시 식별 가능.
+4. **Graceful fallback**: 서명/사진 다운로드 실패 시 텍스트로 fallback (PII 유출 없음, 렌더링 차단 없음).
+5. **양식-DB 매핑 문서**: `docs/manual/report-export-mapping.md §3.2` 참조 — 각 양식 필드가 어느 DB 컬럼에 매핑되는지 갱신된 표 유지.
