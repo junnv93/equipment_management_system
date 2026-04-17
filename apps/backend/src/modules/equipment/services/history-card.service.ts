@@ -5,161 +5,36 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { and, eq, desc } from 'drizzle-orm';
 import PizZip from 'pizzip';
-import type { AppDatabase } from '@equipment-management/db';
-import { equipment } from '@equipment-management/db/schema/equipment';
-import { calibrations } from '@equipment-management/db/schema/calibrations';
-import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
-import { repairHistory } from '@equipment-management/db/schema/repair-history';
-import { nonConformances } from '@equipment-management/db/schema/non-conformances';
-import { equipmentLocationHistory } from '@equipment-management/db/schema/equipment-location-history';
-import { equipmentMaintenanceHistory } from '@equipment-management/db/schema/equipment-maintenance-history';
-import { equipmentIncidentHistory } from '@equipment-management/db/schema/equipment-incident-history';
-import { documents } from '@equipment-management/db/schema/documents';
-import { teams } from '@equipment-management/db/schema/teams';
-import { users } from '@equipment-management/db/schema/users';
-import {
-  DEFAULT_LOCALE,
-  DEFAULT_TIMEZONE,
-  HISTORY_CARD_QUERY_LIMIT,
-} from '@equipment-management/shared-constants';
-import {
-  SPEC_MATCH_LABELS,
-  CALIBRATION_REQUIRED_LABELS,
-  MANAGEMENT_METHOD_LABELS,
-  CALIBRATION_RESULT_LABELS,
-} from '@equipment-management/schemas';
 import { FormTemplateService } from '../../reports/form-template.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../../common/storage/storage.interface';
 import { FORM_NUMBER as FORM_LABEL } from './history-card.layout';
-
-interface HistoryCardEquipmentInfo {
-  managementNumber: string;
-  name: string;
-  modelName: string;
-  manufacturer: string;
-  serialNumber: string;
-  status: string;
-  site: string;
-  location: string;
-  teamName: string;
-  managerName: string;
-  deputyManagerName: string;
-  purchaseYear: string;
-  installationDate: string;
-  description: string;
-  assetNumber: string;
-  accessories: string;
-  manufacturerContact: string;
-  supplier: string;
-  supplierContact: string;
-  specMatch: string;
-  calibrationRequired: string;
-  calibrationCycle: string;
-  managementMethod: string;
-  manualLocation: string;
-  initialLocation: string;
-  needsIntermediateCheck: string;
-  approverName: string;
-  approvalDate: string;
-}
-
-interface HistoryCardCalibration {
-  [key: string]: string;
-  calibrationDate: string;
-  nextCalibrationDate: string;
-  status: string;
-  result: string;
-  agency: string;
-  technicianId: string;
-  certificateNumber: string;
-}
-
-interface HistoryCardCheckout {
-  [key: string]: string;
-  checkoutDate: string;
-  returnDate: string;
-  purpose: string;
-  destination: string;
-  status: string;
-}
-
-interface HistoryCardRepair {
-  [key: string]: string;
-  repairDate: string;
-  description: string;
-  result: string;
-  notes: string;
-}
-
-interface HistoryCardNonConformance {
-  [key: string]: string;
-  discoveryDate: string;
-  ncType: string;
-  cause: string;
-  status: string;
-  correctionContent: string;
-  actionPlan: string;
-}
-
-interface HistoryCardLocationHistory {
-  [key: string]: string;
-  changedAt: string;
-  previousLocation: string;
-  newLocation: string;
-  notes: string;
-}
-
-interface HistoryCardMaintenanceHistory {
-  [key: string]: string;
-  performedAt: string;
-  content: string;
-}
-
-interface HistoryCardIncidentHistory {
-  [key: string]: string;
-  occurredAt: string;
-  incidentType: string;
-  content: string;
-}
-
-interface HistoryCardData {
-  equipment: HistoryCardEquipmentInfo;
-  calibrations: HistoryCardCalibration[];
-  checkouts: HistoryCardCheckout[];
-  repairs: HistoryCardRepair[];
-  nonConformances: HistoryCardNonConformance[];
-  locationHistory: HistoryCardLocationHistory[];
-  maintenanceHistory: HistoryCardMaintenanceHistory[];
-  incidentHistory: HistoryCardIncidentHistory[];
-  approverSignaturePath: string | null;
-  equipmentPhotoPath: string | null;
-  generatedAt: string;
-}
+import { HistoryCardDataService, type HistoryCardData } from './history-card-data.service';
 
 /**
- * 시험설비 이력카드 (UL-QP-18-02) docx 내보내기 서비스
+ * 시험설비 이력카드 (UL-QP-18-02) docx 내보내기 서비스 (orchestrator).
  *
- * 5개 테이블(equipment, calibrations, checkouts, repair_history, non_conformances)
- * 데이터를 통합하여 docx 이력카드를 생성합니다.
+ * 데이터 집계는 `HistoryCardDataService`에 위임하고, 이 서비스는 템플릿 로딩 + DOCX 렌더링만 담당.
+ * Phase 5에서 렌더링 로직도 `HistoryCardRendererService` + `DocxXmlHelper`로 분리될 예정.
+ *
+ * @see docs/procedure/양식/QP-18-02_시험설비이력카드.md
+ * @see docs/procedure/절차서/장비관리절차서.md §7.7 §9.9
  */
 @Injectable()
 export class HistoryCardService {
   private readonly logger = new Logger(HistoryCardService.name);
 
   constructor(
-    @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase,
     @Inject(STORAGE_PROVIDER)
     private readonly storage: IStorageProvider,
-    private readonly formTemplateService: FormTemplateService
+    private readonly formTemplateService: FormTemplateService,
+    private readonly dataService: HistoryCardDataService
   ) {}
 
   async generateHistoryCard(
     equipmentId: string
   ): Promise<{ buffer: Buffer; managementNumber: string; equipmentName: string }> {
-    const data = await this.aggregateData(equipmentId);
+    const data = await this.dataService.aggregate(equipmentId);
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-02');
     const buffer = await this.renderDocx(data, templateBuf);
     return {
@@ -169,213 +44,7 @@ export class HistoryCardService {
     };
   }
 
-  private async aggregateData(equipmentId: string): Promise<HistoryCardData> {
-    const [equipmentRow] = await this.db
-      .select()
-      .from(equipment)
-      .where(eq(equipment.id, equipmentId))
-      .limit(1);
-
-    if (!equipmentRow) {
-      throw new NotFoundException(`장비를 찾을 수 없습니다: ${equipmentId}`);
-    }
-
-    // 팀/담당자/부담당자/승인자 정보
-    const [team] = equipmentRow.teamId
-      ? await this.db.select().from(teams).where(eq(teams.id, equipmentRow.teamId)).limit(1)
-      : [null];
-
-    const [manager] = equipmentRow.managerId
-      ? await this.db.select().from(users).where(eq(users.id, equipmentRow.managerId)).limit(1)
-      : [null];
-
-    const [deputyManager] = equipmentRow.deputyManagerId
-      ? await this.db
-          .select()
-          .from(users)
-          .where(eq(users.id, equipmentRow.deputyManagerId))
-          .limit(1)
-      : [null];
-
-    const [approver] = equipmentRow.approvedBy
-      ? await this.db.select().from(users).where(eq(users.id, equipmentRow.approvedBy)).limit(1)
-      : [null];
-
-    // 이력 데이터 병렬 조회 (독립 쿼리 8개 — Promise.all)
-    const [
-      calibrationRows,
-      checkoutRows,
-      repairRows,
-      ncRows,
-      locationRows,
-      maintenanceRows,
-      incidentRows,
-      [photoDoc],
-    ] = await Promise.all([
-      this.db
-        .select()
-        .from(calibrations)
-        .where(eq(calibrations.equipmentId, equipmentId))
-        .orderBy(desc(calibrations.calibrationDate))
-        .limit(HISTORY_CARD_QUERY_LIMIT),
-      this.db
-        .select({
-          checkoutDate: checkouts.checkoutDate,
-          actualReturnDate: checkouts.actualReturnDate,
-          purpose: checkouts.purpose,
-          destination: checkouts.destination,
-          status: checkouts.status,
-        })
-        .from(checkoutItems)
-        .innerJoin(checkouts, eq(checkoutItems.checkoutId, checkouts.id))
-        .where(eq(checkoutItems.equipmentId, equipmentId))
-        .orderBy(desc(checkouts.createdAt))
-        .limit(HISTORY_CARD_QUERY_LIMIT),
-      this.db
-        .select()
-        .from(repairHistory)
-        .where(eq(repairHistory.equipmentId, equipmentId))
-        .orderBy(desc(repairHistory.repairDate))
-        .limit(HISTORY_CARD_QUERY_LIMIT),
-      this.db
-        .select()
-        .from(nonConformances)
-        .where(eq(nonConformances.equipmentId, equipmentId))
-        .orderBy(desc(nonConformances.createdAt))
-        .limit(HISTORY_CARD_QUERY_LIMIT),
-      this.db
-        .select()
-        .from(equipmentLocationHistory)
-        .where(eq(equipmentLocationHistory.equipmentId, equipmentId))
-        .orderBy(desc(equipmentLocationHistory.changedAt))
-        .limit(HISTORY_CARD_QUERY_LIMIT),
-      this.db
-        .select()
-        .from(equipmentMaintenanceHistory)
-        .where(eq(equipmentMaintenanceHistory.equipmentId, equipmentId))
-        .orderBy(desc(equipmentMaintenanceHistory.performedAt))
-        .limit(HISTORY_CARD_QUERY_LIMIT),
-      this.db
-        .select()
-        .from(equipmentIncidentHistory)
-        .where(eq(equipmentIncidentHistory.equipmentId, equipmentId))
-        .orderBy(desc(equipmentIncidentHistory.occurredAt))
-        .limit(HISTORY_CARD_QUERY_LIMIT),
-      this.db
-        .select({ filePath: documents.filePath })
-        .from(documents)
-        .where(
-          and(
-            eq(documents.equipmentId, equipmentId),
-            eq(documents.documentType, 'equipment_photo'),
-            eq(documents.status, 'active'),
-            eq(documents.isLatest, true)
-          )
-        )
-        .orderBy(desc(documents.createdAt))
-        .limit(1),
-    ]);
-
-    const formatDate = (d: Date | string | null | undefined): string => {
-      if (!d) return '-';
-      const date = d instanceof Date ? d : new Date(d);
-      if (Number.isNaN(date.getTime())) return '-';
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${y}/${m}/${day}`;
-    };
-
-    return {
-      equipment: {
-        managementNumber: equipmentRow.managementNumber ?? '-',
-        name: equipmentRow.name,
-        modelName: equipmentRow.modelName ?? '-',
-        manufacturer: equipmentRow.manufacturer ?? '-',
-        serialNumber: equipmentRow.serialNumber ?? '-',
-        status: equipmentRow.status,
-        site: equipmentRow.site ?? '-',
-        location: equipmentRow.location ?? '-',
-        teamName: team?.name ?? '-',
-        managerName: manager?.name ?? '-',
-        deputyManagerName: deputyManager?.name ?? '-',
-        purchaseYear: equipmentRow.purchaseYear ? String(equipmentRow.purchaseYear) : '-',
-        installationDate: formatDate(equipmentRow.installationDate),
-        description: equipmentRow.description ?? '-',
-        assetNumber: equipmentRow.assetNumber ?? '-',
-        accessories: equipmentRow.accessories ?? '-',
-        manufacturerContact: equipmentRow.manufacturerContact ?? '-',
-        supplier: equipmentRow.supplier ?? '-',
-        supplierContact: equipmentRow.supplierContact ?? '-',
-        specMatch: equipmentRow.specMatch ? SPEC_MATCH_LABELS[equipmentRow.specMatch] : '-',
-        calibrationRequired: equipmentRow.calibrationRequired
-          ? CALIBRATION_REQUIRED_LABELS[equipmentRow.calibrationRequired]
-          : '-',
-        calibrationCycle: equipmentRow.calibrationCycle
-          ? `${equipmentRow.calibrationCycle}개월`
-          : '-',
-        managementMethod: equipmentRow.managementMethod
-          ? ((MANAGEMENT_METHOD_LABELS as Record<string, string>)[equipmentRow.managementMethod] ??
-            '-')
-          : '-',
-        manualLocation: equipmentRow.manualLocation ?? '-',
-        initialLocation: equipmentRow.initialLocation ?? '-',
-        needsIntermediateCheck: equipmentRow.needsIntermediateCheck ? 'O' : 'X',
-        approverName: approver?.name ?? '-',
-        approvalDate: formatDate(equipmentRow.updatedAt),
-      },
-      calibrations: calibrationRows.map((row) => ({
-        calibrationDate: formatDate(row.calibrationDate),
-        nextCalibrationDate: formatDate(row.nextCalibrationDate),
-        status: row.status ?? '-',
-        result: row.result
-          ? ((CALIBRATION_RESULT_LABELS as Record<string, string>)[row.result] ?? row.result)
-          : '-',
-        agency: row.agencyName ?? '',
-        technicianId: row.technicianId ?? '-',
-        certificateNumber: row.certificateNumber ?? '-',
-      })),
-      checkouts: checkoutRows.map((row) => ({
-        checkoutDate: formatDate(row.checkoutDate),
-        returnDate: formatDate(row.actualReturnDate),
-        purpose: row.purpose ?? '-',
-        destination: row.destination ?? '-',
-        status: row.status,
-      })),
-      repairs: repairRows.map((row) => ({
-        repairDate: formatDate(row.repairDate),
-        description: row.repairDescription ?? '-',
-        result: row.repairResult ?? '-',
-        notes: row.notes ?? '-',
-      })),
-      nonConformances: ncRows.map((row) => ({
-        discoveryDate: row.discoveryDate ?? '-',
-        ncType: row.ncType ?? '-',
-        cause: row.cause ?? '-',
-        status: row.status,
-        correctionContent: row.correctionContent ?? '-',
-        actionPlan: row.actionPlan ?? '-',
-      })),
-      locationHistory: locationRows.map((row) => ({
-        changedAt: formatDate(row.changedAt),
-        previousLocation: row.previousLocation ?? '-',
-        newLocation: row.newLocation,
-        notes: row.notes ?? '-',
-      })),
-      maintenanceHistory: maintenanceRows.map((row) => ({
-        performedAt: formatDate(row.performedAt),
-        content: row.content,
-      })),
-      incidentHistory: incidentRows.map((row) => ({
-        occurredAt: formatDate(row.occurredAt),
-        incidentType: row.incidentType,
-        content: row.content,
-      })),
-      approverSignaturePath: approver?.signatureImagePath ?? null,
-      equipmentPhotoPath: photoDoc?.filePath ?? null,
-      generatedAt: new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE }),
-    };
-  }
+  // aggregateData: Phase 4에서 HistoryCardDataService로 분리됨.
 
   /**
    * 템플릿 기반 docx 생성
@@ -634,10 +303,14 @@ export class HistoryCardService {
       8
     );
 
-    // 손상/오작동/변경/수리 내역: 제목(1)+헤더(1)=2 건너뛰기, 빈 행 8개
+    // 손상/오작동/변경/수리 내역 (통합): 제목(1)+헤더(1)=2 건너뛰기, 빈 행 8개
+    // UL-QP-18 §9.9 개정14: incident + repair + non_conformances를 합쳐 표시 (Phase 3 timeline 서비스)
     fillSectionRows(
       '장비 손상, 오작동',
-      data.incidentHistory.map((inc) => [inc.occurredAt, inc.content]),
+      data.timeline.map((entry) => [
+        formatTimelineDate(entry.occurredAt),
+        `[${entry.label}] ${entry.content}`,
+      ]),
       2,
       8
     );
@@ -834,4 +507,16 @@ export class HistoryCardService {
     }
     return xml;
   }
+}
+
+/**
+ * timeline entry의 Date를 YYYY/MM/DD 문자열로 포맷.
+ * Phase 5에서 `DocxXmlHelper`로 이동 예정.
+ */
+function formatTimelineDate(d: Date): string {
+  if (Number.isNaN(d.getTime())) return '-';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}/${m}/${day}`;
 }
