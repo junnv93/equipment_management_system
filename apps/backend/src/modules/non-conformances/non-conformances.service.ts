@@ -256,7 +256,7 @@ export class NonConformancesService extends VersionedBaseService {
 
     // 📢 알림 이벤트 발행 (부적합 등록) — 트랜잭션 내 최신 장비 데이터 사용
     const equip = equipmentData!;
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CREATED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CREATED, {
       ncId: result.id,
       equipmentId: createDto.equipmentId,
       equipmentName: equip.name ?? '',
@@ -780,7 +780,9 @@ export class NonConformancesService extends VersionedBaseService {
     // (장비 상세/목록/대시보드 캐시 — CACHE_INVALIDATION_REGISTRY 참조)
 
     // 📢 알림 이벤트 발행 (부적합 종료)
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CLOSED, {
+    // emitAsync: cross-entity 캐시 무효화(equipment detail/list) 리스너 완료까지 await.
+    // emit(fire-and-forget)은 HTTP 응답 후에도 캐시가 stale할 수 있어 read-after-write 일관성 훼손.
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CLOSED, {
       ncId: id,
       equipmentId: nonConformance.equipmentId,
       equipmentName: '',
@@ -829,7 +831,7 @@ export class NonConformancesService extends VersionedBaseService {
     // cross-entity 캐시 무효화는 NC_CORRECTION_REJECTED 이벤트 → CacheEventListener가 처리
 
     // 📢 알림 이벤트 발행 (조치 반려)
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED, {
       ncId: id,
       equipmentId: nonConformance.equipmentId,
       equipmentName: '',
@@ -974,7 +976,7 @@ export class NonConformancesService extends VersionedBaseService {
       );
 
     // 📢 알림 이벤트 발행 (조치 완료 — 승인 요청)
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CORRECTED, {
       ncId: id,
       equipmentId: nc.equipmentId,
       equipmentName: '',

@@ -160,14 +160,33 @@ export class FormTemplateService {
    * 캐시 키: `form-template-buffer:<storageKey>`. storageKey 는 업로드 시 생성되는 불변
    * UUID 기반 키로 콘텐츠 동일성이 보장되어 캐시 키로 안전. 새 버전 업로드 시 새 row +
    * 새 storageKey 가 생성되므로 invalidation 없이도 stale 데이터가 반환되지 않는다.
+   *
+   * 스토리지 파일 누락(ENOENT)은 500 대신 NotFoundException(404)으로 변환 — DB 메타데이터는
+   * 있으나 물리 파일이 없는 데이터 드리프트 상황을 클라이언트에 의미있게 전달.
+   * (원인: 파일 시스템 복구 실패, S3 객체 삭제, 테스트 환경 reset 등)
    */
   async downloadBuffer(row: FormTemplateRow): Promise<Buffer> {
     const cacheKey = `${FormTemplateService.TEMPLATE_BUFFER_CACHE_PREFIX}${row.storageKey}`;
-    return this.cache.getOrSet(
-      cacheKey,
-      () => this.storage.download(row.storageKey),
-      FormTemplateService.TEMPLATE_BUFFER_CACHE_TTL_MS
-    );
+    try {
+      return await this.cache.getOrSet(
+        cacheKey,
+        () => this.storage.download(row.storageKey),
+        FormTemplateService.TEMPLATE_BUFFER_CACHE_TTL_MS
+      );
+    } catch (err) {
+      const code = (err as { code?: string } | undefined)?.code;
+      const errCause = (err as { cause?: { code?: string } } | undefined)?.cause?.code;
+      if (code === 'ENOENT' || errCause === 'ENOENT' || code === 'NoSuchKey') {
+        this.logger.error(
+          `양식 파일 누락 (storageKey=${row.storageKey}, formNumber=${row.formNumber}): ${err instanceof Error ? err.message : String(err)}`
+        );
+        throw new NotFoundException({
+          code: ErrorCode.FormTemplateNotFound,
+          message: `양식 템플릿 파일이 스토리지에 없습니다. 관리자에게 문의하세요. (${row.formNumber})`,
+        });
+      }
+      throw err;
+    }
   }
 
   /**

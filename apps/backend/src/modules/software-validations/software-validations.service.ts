@@ -339,7 +339,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swName = await this.getSoftwareName(existing.testSoftwareId);
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED, {
       validationId: id,
       testSoftwareId: existing.testSoftwareId,
       softwareName: swName,
@@ -382,7 +382,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swNameApprove = await this.getSoftwareName(existing.testSoftwareId);
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED, {
       validationId: id,
       testSoftwareId: existing.testSoftwareId,
       softwareName: swNameApprove,
@@ -429,7 +429,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swNameQA = await this.getSoftwareName(existing.testSoftwareId);
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED, {
       validationId: id,
       testSoftwareId: existing.testSoftwareId,
       softwareName: swNameQA,
@@ -481,7 +481,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swNameReject = await this.getSoftwareName(existing.testSoftwareId);
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED, {
       validationId: id,
       testSoftwareId: existing.testSoftwareId,
       softwareName: swNameReject,

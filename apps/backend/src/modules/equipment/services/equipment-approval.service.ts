@@ -100,7 +100,7 @@ export class EquipmentApprovalService {
       }
 
       // 📢 알림 이벤트 발행
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_CREATED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_CREATED, {
         requestId: request.id,
         equipmentId: '',
         equipmentName: createDto.name || '신규 장비',
@@ -475,7 +475,7 @@ export class EquipmentApprovalService {
 
       // 📢 알림 이벤트 발행
       const displayData = parseRequestDataForDisplay(request.requestData);
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_APPROVED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_APPROVED, {
         requestId: requestUuid,
         equipmentId: request.equipmentId ?? '',
         equipmentName: displayData.name || 'Equipment',
@@ -583,7 +583,7 @@ export class EquipmentApprovalService {
 
       // 📢 알림 이벤트 발행
       const rejectDisplayData = parseRequestDataForDisplay(request.requestData);
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_REJECTED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_REJECTED, {
         requestId: requestUuid,
         equipmentId: request.equipmentId ?? '',
         equipmentName: rejectDisplayData.name || 'Equipment',

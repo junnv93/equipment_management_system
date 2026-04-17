@@ -120,8 +120,9 @@ export class EquipmentService extends VersionedBaseService {
    * 모든 updateWithVersion 경로(update/updateStatus/syncFromExternal 등)가 단일 정책 공유.
    */
   protected async onVersionConflict(id: string): Promise<void> {
-    await this.cacheService.delete(this.buildCacheKey('detail', { uuid: id }));
-    await this.cacheService.delete(this.buildCacheKey('detail', { uuid: id, includeTeam: true }));
+    // findOne의 캐시 키는 `{uuid, includeTeam: false|true}` 형식 (includeTeam 항상 포함).
+    // exact-key delete 대신 정규식 기반 무효화로 두 변형(false/true)을 모두 커버.
+    await this.cacheInvalidationHelper.invalidateEquipmentDetail(id);
   }
 
   // calculateNextCalibrationDate → common/utils/date-utils.ts (SSOT)
@@ -1357,16 +1358,12 @@ export class EquipmentService extends VersionedBaseService {
   ): Promise<void> {
     if (entries.length === 0) return;
 
-    // 1) detail 캐시: row별 고유 — 병렬 삭제
+    // 1) detail 캐시: row별 고유 — 병렬 삭제.
+    // findOne은 `buildCacheKey('detail', { uuid, includeTeam })`로 저장하는데 includeTeam이 false(기본)여도 키에 포함됨
+    // (normalizeCacheParams는 false를 보존). exact-key delete 2개(uuid만, uuid+includeTeam:true)로는
+    // 기본 케이스 `{uuid, includeTeam:false}`를 놓침 → 정규식 기반 무효화로 전환.
     await Promise.all(
-      entries.map((e) =>
-        Promise.all([
-          this.cacheService.delete(this.buildCacheKey('detail', { uuid: e.equipmentId })),
-          this.cacheService.delete(
-            this.buildCacheKey('detail', { uuid: e.equipmentId, includeTeam: true })
-          ),
-        ])
-      )
+      entries.map((e) => this.cacheInvalidationHelper.invalidateEquipmentDetail(e.equipmentId))
     );
 
     // 2) team-scoped prefix: unique teamId당 1회

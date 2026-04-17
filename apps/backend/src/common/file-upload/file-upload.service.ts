@@ -73,23 +73,31 @@ export class FileUploadService implements OnModuleInit {
 
   /**
    * 파일 유효성 검사
+   *
+   * i18n: 에러 메시지는 한국어 원문 + 영문 기술 정보 병기 패턴을 따른다
+   * (다른 모듈의 한국어 에러 메시지 정책과 일치).
    */
   private validateFile(file: MulterFile): void {
     if (!file.buffer || file.buffer.length === 0) {
       throw new BadRequestException({
         code: 'FILE_EMPTY',
-        message: 'Empty file is not allowed.',
+        message: '빈 파일은 업로드할 수 없습니다.',
       });
     }
 
     if (file.size > this.maxFileSize) {
-      throw new BadRequestException(`File size cannot exceed ${this.maxFileSize / 1024 / 1024}MB.`);
+      const maxMB = this.maxFileSize / 1024 / 1024;
+      throw new BadRequestException({
+        code: 'FILE_SIZE_EXCEEDED',
+        message: `파일 크기는 ${maxMB}MB를 초과할 수 없습니다.`,
+      });
     }
 
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `File format not allowed. Allowed formats: ${this.allowedMimeTypes.join(', ')}`
-      );
+      throw new BadRequestException({
+        code: 'FILE_FORMAT_NOT_ALLOWED',
+        message: `허용되지 않은 파일 형식입니다. 허용 형식: ${this.allowedMimeTypes.join(', ')}`,
+      });
     }
 
     this.validateMagicBytes(file);
@@ -111,7 +119,7 @@ export class FileUploadService implements OnModuleInit {
     if (!matches) {
       throw new BadRequestException({
         code: 'FILE_CONTENT_MISMATCH',
-        message: 'File content does not match the declared format.',
+        message: '파일 내용이 선언된 형식과 일치하지 않습니다.',
       });
     }
   }

@@ -366,7 +366,7 @@ export class CalibrationService extends VersionedBaseService {
     // 📢 알림 이벤트 발행 (교정 등록 → 승인자에게 알림)
     // equipForCreate 재사용 (이중 DB 조회 방지)
     try {
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_CREATED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_CREATED, {
         calibrationId: inserted.id,
         equipmentId: inserted.equipmentId,
         equipmentName: equipForCreate?.name ?? '',
@@ -1200,7 +1200,7 @@ export class CalibrationService extends VersionedBaseService {
     );
 
     // 📢 알림 이벤트 발행 (교정 승인) — approvedEquip 재사용
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_APPROVED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_APPROVED, {
       calibrationId: id,
       equipmentId: calibration.equipmentId,
       equipmentName: approvedEquip?.name ?? '',
@@ -1419,7 +1419,7 @@ export class CalibrationService extends VersionedBaseService {
       .where(eq(schema.equipment.id, calibration.equipmentId))
       .limit(1);
 
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_REJECTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_REJECTED, {
       calibrationId: id,
       equipmentId: calibration.equipmentId,
       equipmentName: rejectedEquip?.name ?? '',
@@ -1522,7 +1522,7 @@ export class CalibrationService extends VersionedBaseService {
 
     await this.invalidateCalibrationCache(id, calibration.equipmentId);
 
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED, {
       calibrationId: id,
       equipmentId: calibration.equipmentId,
       equipmentName: '',

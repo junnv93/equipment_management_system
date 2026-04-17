@@ -31,13 +31,17 @@ export class CacheEventListener implements OnModuleInit {
     const eventNames = Object.keys(CACHE_INVALIDATION_REGISTRY);
 
     for (const eventName of eventNames) {
-      this.eventEmitter.on(eventName, (payload: Record<string, unknown>) => {
-        this.handleEvent(eventName, payload).catch((err) => {
+      // async 콜백: Promise 반환 → emitter.emitAsync(...)가 await하여 read-after-write 일관성 보장.
+      // 에러는 내부에서 catch하여 로그만 남기고 resolve (비즈니스 로직 차단 금지 원칙 유지).
+      this.eventEmitter.on(eventName, async (payload: Record<string, unknown>) => {
+        try {
+          await this.handleEvent(eventName, payload);
+        } catch (err) {
           this.logger.error(
             `캐시 무효화 실패 [${eventName}]: ${err instanceof Error ? err.message : String(err)}`,
             err instanceof Error ? err.stack : undefined
           );
-        });
+        }
       });
     }
 

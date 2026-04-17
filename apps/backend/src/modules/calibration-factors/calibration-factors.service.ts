@@ -439,7 +439,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.invalidateCache(id);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED, {
       factorId: id,
       equipmentId: factor.equipmentId,
       actorId: approveDto.approverId,
@@ -480,7 +480,7 @@ export class CalibrationFactorsService extends VersionedBaseService {
     this.invalidateCache(id);
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_FACTOR_REJECTED, {
       factorId: id,
       equipmentId: factor.equipmentId,
       actorId: rejectDto.approverId,

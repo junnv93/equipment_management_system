@@ -536,7 +536,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     );
 
     // 📢 알림 이벤트 발행
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_SUBMITTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_PLAN_SUBMITTED, {
       planId: uuid,
       year: plan.year,
       site: plan.siteId,
@@ -588,7 +588,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     );
 
     // 📢 알림 이벤트 발행
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_REVIEWED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_PLAN_REVIEWED, {
       planId: uuid,
       year: plan.year,
       site: plan.siteId,
@@ -639,7 +639,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     );
 
     // 📢 알림 이벤트 발행
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_APPROVED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_PLAN_APPROVED, {
       planId: uuid,
       year: plan.year,
       site: plan.siteId,
@@ -703,7 +703,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     );
 
     // 📢 알림 이벤트 발행
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_PLAN_REJECTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_PLAN_REJECTED, {
       planId: uuid,
       year: plan.year,
       site: plan.siteId,

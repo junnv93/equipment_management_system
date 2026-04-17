@@ -140,7 +140,7 @@ export class DisposalService extends VersionedBaseService {
     );
 
     // 📢 알림 이벤트 발행 (폐기 요청)
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REQUESTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.DISPOSAL_REQUESTED, {
       disposalId: result.id,
       equipmentId,
       equipmentName: equipmentItem.name ?? '',
@@ -276,7 +276,7 @@ export class DisposalService extends VersionedBaseService {
 
     // 📢 알림 이벤트 발행 (폐기 검토)
     if (reviewDto.decision === 'approve') {
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REVIEWED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.DISPOSAL_REVIEWED, {
         disposalId: request.id,
         equipmentId,
         equipmentName: equipmentItem.name ?? '',
@@ -289,7 +289,7 @@ export class DisposalService extends VersionedBaseService {
         timestamp: new Date(),
       });
     } else {
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REJECTED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.DISPOSAL_REJECTED, {
         disposalId: request.id,
         equipmentId,
         equipmentName: equipmentItem.name ?? '',
@@ -414,7 +414,7 @@ export class DisposalService extends VersionedBaseService {
     ]);
 
     if (approveDto.decision === 'approve') {
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_APPROVED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.DISPOSAL_APPROVED, {
         disposalId: request.id,
         equipmentId,
         equipmentName: equipmentItem?.name ?? '',
@@ -427,7 +427,7 @@ export class DisposalService extends VersionedBaseService {
         timestamp: new Date(),
       });
     } else {
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REJECTED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.DISPOSAL_REJECTED, {
         disposalId: request.id,
         equipmentId,
         equipmentName: equipmentItem?.name ?? '',

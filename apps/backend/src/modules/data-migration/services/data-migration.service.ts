@@ -432,7 +432,7 @@ export class DataMigrationService {
 
           const equipChunks = chunkArray(validRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
           for (const chunk of equipChunks) {
-            const entities = chunk.map((row, i) => {
+            const entities = chunk.map((row) => {
               // FK 해석 결과 주입: validRows 전체 인덱스 기준
               const globalIdx = validRows.indexOf(row);
               const fkResult = session.fkResolutions?.get(globalIdx);

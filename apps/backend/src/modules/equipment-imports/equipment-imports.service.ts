@@ -152,7 +152,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     this.logger.log(`Equipment import created: ${created.id} (sourceType: ${created.sourceType})`);
 
     // 📢 알림 이벤트 발행 (장비 반입 신청)
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_CREATED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_CREATED, {
       importId: created.id,
       equipmentName: dto.equipmentName,
       managementNumber: '',
@@ -343,7 +343,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     this.logger.log(`Equipment import approved: ${id} (sourceType: ${updated.sourceType})`);
 
     // 📢 알림 이벤트 발행 (장비 반입 승인)
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_APPROVED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_APPROVED, {
       importId: id,
       equipmentName: updated.equipmentName,
       managementNumber: '',
@@ -397,7 +397,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     await this.cacheInvalidationHelper.invalidateAllDashboard();
 
     // 📢 알림 이벤트 발행 (장비 반입 거절)
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_REJECTED, {
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.IMPORT_REJECTED, {
       importId: id,
       equipmentName: updated.equipmentName,
       managementNumber: '',

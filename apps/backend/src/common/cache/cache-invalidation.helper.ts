@@ -71,15 +71,15 @@ export class CacheInvalidationHelper {
   /**
    * 특정 장비 상세 캐시 무효화
    *
-   * 패턴: equipment:detail:{"uuid":"<equipmentId>"...}
+   * 캐시 키는 `equipment:detail:{"includeTeam":false,"uuid":"<id>"}` 또는
+   * `{"includeTeam":true,"uuid":"<id>"}` 형식 (JSON.stringify + sorted keys).
+   * includeTeam 이 uuid 보다 알파벳 순 앞섬에 주의 — uuid를 선두로 가정하는 정규식은 매칭 실패.
    *
-   * 참고:
-   * - SimpleCacheService의 캐시 키는 JSON 문자열 포함
-   * - 정규식 패턴으로 UUID 매칭
+   * 패턴: equipment:detail:.*"uuid":"<id>".* → 키 내 어느 위치든 매칭.
    */
   async invalidateEquipmentDetail(equipmentId: string): Promise<void> {
     await this.cacheService.deleteByPattern(
-      `${CACHE_KEY_PREFIXES.EQUIPMENT}detail:\\{"uuid":"${equipmentId}".*`
+      `^${CACHE_KEY_PREFIXES.EQUIPMENT}detail:.*"uuid":"${equipmentId}"`
     );
     this.logger.debug(`✓ Invalidated equipment detail: ${equipmentId}`);
   }

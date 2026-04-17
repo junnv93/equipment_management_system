@@ -1248,7 +1248,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       // 📢 알림 이벤트 발행 (fire-and-forget) — equipmentMap 재사용 (DB 0회)
       const firstEquipment = equipmentMap.get(createCheckoutDto.equipmentIds[0]);
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_CREATED, {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_CREATED, {
         checkoutId: newCheckout.id,
         equipmentId: createCheckoutDto.equipmentIds[0],
         equipmentName: firstEquipment?.name,
@@ -1364,7 +1364,7 @@ export class CheckoutsService extends VersionedBaseService {
       // 📢 알림 이벤트 발행 — items/equipmentMap 재사용 (DB 0회)
       if (items.length > 0) {
         const firstEquip = equipmentMap.get(items[0].equipmentId);
-        this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_APPROVED, {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_APPROVED, {
           checkoutId: uuid,
           equipmentId: items[0].equipmentId,
           equipmentName: firstEquip?.name,
@@ -1446,7 +1446,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       // 📢 알림 이벤트 발행
       if (rejectItems.length > 0 && rejectFirstEquip) {
-        this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_REJECTED, {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_REJECTED, {
           checkoutId: uuid,
           equipmentId: rejectItems[0].equipmentId,
           equipmentName: rejectFirstEquip.name,
@@ -1554,7 +1554,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       // 📢 알림 이벤트 발행 — JOIN 결과 재사용 (DB 0회)
       if (items.length > 0 && firstEquipment) {
-        this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_STARTED, {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_STARTED, {
           checkoutId: uuid,
           equipmentId: items[0].equipmentId,
           equipmentName: firstEquipment.name,
@@ -1686,7 +1686,7 @@ export class CheckoutsService extends VersionedBaseService {
       const { items: returnItems, firstEquipment: returnFirstEquip } =
         await this.getCheckoutItemsWithFirstEquipment(uuid);
       if (returnItems.length > 0 && returnFirstEquip) {
-        this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_RETURNED, {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_RETURNED, {
           checkoutId: uuid,
           equipmentId: returnItems[0].equipmentId,
           equipmentName: returnFirstEquip.name,
@@ -1790,7 +1790,7 @@ export class CheckoutsService extends VersionedBaseService {
 
       // 📢 알림 이벤트 발행 — JOIN 결과 재사용 (DB 0회)
       if (items.length > 0 && firstEquipment) {
-        this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED, {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED, {
           checkoutId: uuid,
           equipmentId: items[0].equipmentId,
           equipmentName: firstEquipment.name,
@@ -1917,7 +1917,7 @@ export class CheckoutsService extends VersionedBaseService {
       const firstEquipId = items[0]?.equipmentId;
       const rejectReturnEquip = firstEquipId ? equipmentMap.get(firstEquipId) : undefined;
       if (items.length > 0) {
-        this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED, {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED, {
           checkoutId: uuid,
           equipmentId: firstEquipId,
           equipmentName: rejectReturnEquip?.name ?? null,
