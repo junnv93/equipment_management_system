@@ -74,7 +74,8 @@
     "settings": "설정",
     "notification": "알림",
     "report": "보고서",
-    "document": "문서"
+    "document": "문서",
+    "software_validation": "소프트웨어 유효성 확인"
   },
   "timeline": {
     "today": "오늘",
@@ -249,6 +250,36 @@
       "unit": "단위",
       "effectiveDate": "적용일",
       "notes": "비고"
+    },
+    "software_validation": {
+      "validationType": "유효성 확인 유형",
+      "status": "상태",
+      "softwareVersion": "소프트웨어 버전",
+      "testDate": "시험일",
+      "infoDate": "입수 일자",
+      "softwareAuthor": "제작자",
+      "vendorName": "공급업체명",
+      "vendorSummary": "공급자 시연 요약",
+      "receivedBy": "접수자",
+      "receivedDate": "접수일",
+      "attachmentNote": "첨부 비고",
+      "referenceDocuments": "참조 문서",
+      "operatingUnitDescription": "운영 단위 설명",
+      "softwareComponents": "소프트웨어 구성",
+      "hardwareComponents": "하드웨어 구성",
+      "acquisitionFunctions": "획득 기능",
+      "processingFunctions": "프로세싱 기능",
+      "controlFunctions": "제어 기능",
+      "performedBy": "시험 수행자",
+      "submittedAt": "제출 시각",
+      "submittedBy": "제출자",
+      "technicalApproverId": "기술책임자",
+      "technicalApprovedAt": "기술 승인 시각",
+      "qualityApproverId": "품질책임자",
+      "qualityApprovedAt": "품질 승인 시각",
+      "rejectedBy": "반려자",
+      "rejectedAt": "반려 시각",
+      "rejectionReason": "반려 사유"
     }
   },
   "detail": {

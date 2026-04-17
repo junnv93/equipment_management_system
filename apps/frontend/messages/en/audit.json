@@ -74,7 +74,8 @@
     "settings": "Settings",
     "notification": "Notification",
     "report": "Report",
-    "document": "Document"
+    "document": "Document",
+    "software_validation": "Software Validation"
   },
   "timeline": {
     "today": "Today",
@@ -249,6 +250,36 @@
       "unit": "Unit",
       "effectiveDate": "Effective Date",
       "notes": "Notes"
+    },
+    "software_validation": {
+      "validationType": "Validation Type",
+      "status": "Status",
+      "softwareVersion": "Software Version",
+      "testDate": "Test Date",
+      "infoDate": "Received Date",
+      "softwareAuthor": "Author",
+      "vendorName": "Vendor Name",
+      "vendorSummary": "Vendor Demonstration Summary",
+      "receivedBy": "Received By",
+      "receivedDate": "Received Date",
+      "attachmentNote": "Attachment Note",
+      "referenceDocuments": "Reference Documents",
+      "operatingUnitDescription": "Operating Unit Description",
+      "softwareComponents": "Software Components",
+      "hardwareComponents": "Hardware Components",
+      "acquisitionFunctions": "Acquisition Functions",
+      "processingFunctions": "Processing Functions",
+      "controlFunctions": "Control Functions",
+      "performedBy": "Performed By",
+      "submittedAt": "Submitted At",
+      "submittedBy": "Submitted By",
+      "technicalApproverId": "Technical Approver",
+      "technicalApprovedAt": "Technical Approved At",
+      "qualityApproverId": "Quality Approver",
+      "qualityApprovedAt": "Quality Approved At",
+      "rejectedBy": "Rejected By",
+      "rejectedAt": "Rejected At",
+      "rejectionReason": "Rejection Reason"
     }
   },
   "detail": {
