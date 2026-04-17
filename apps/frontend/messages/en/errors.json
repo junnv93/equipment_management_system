@@ -81,6 +81,14 @@
     "solutions": ["Check if the equipment ID is correct", "The equipment may have been deleted"],
     "actionLabel": "Go to Equipment List"
   },
+  "FORM_TEMPLATE_NOT_FOUND": {
+    "title": "Form Template Not Found",
+    "message": "The form template file is not available in storage.",
+    "solutions": [
+      "Contact the system administrator to register the form template in storage",
+      "If already requested, wait until the administrator completes processing and retry"
+    ]
+  },
   "SERVER_ERROR": {
     "title": "Server Error",
     "message": "An error occurred on the server.",

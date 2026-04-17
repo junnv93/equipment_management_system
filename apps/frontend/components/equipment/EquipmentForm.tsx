@@ -8,6 +8,8 @@ import dynamic from 'next/dynamic';
 import {
   type EquipmentStatus,
   type Site,
+  type CreateEquipmentInput,
+  type UpdateEquipmentInput,
   createEquipmentSchema,
   updateEquipmentSchema,
   UserRoleValues as URVal,
@@ -134,8 +136,12 @@ type PendingCalibrationHistoryItem = PendingHistoryItem<CreateCalibrationHistory
 
 interface EquipmentFormProps {
   initialData?: Partial<FormValues & { uuid?: string }>;
+  /**
+   * 제출 핸들러. isEdit에 따라 CreateEquipmentInput 또는 UpdateEquipmentInput 타입의
+   * sanitize된 데이터가 전달됨. 호출자는 union으로 받아 내부에서 narrow.
+   */
   onSubmit: (
-    data: Record<string, unknown>,
+    data: CreateEquipmentInput | UpdateEquipmentInput,
     files?: UploadedFile[],
     pendingHistory?: PendingHistoryData,
     documentFiles?: { photos: File[]; manuals: File[] }
@@ -898,8 +904,10 @@ export function EquipmentForm({
     };
     const hasDocFiles = docFiles.photos.length > 0 || docFiles.manuals.length > 0;
 
+    // Zod schema 기반 sanitize를 거친 processedData를 union 타입으로 표면화.
+    // isEdit에 따라 callers는 내부에서 narrow (version 유무 등) 가능.
     await onSubmit(
-      processedData,
+      processedData as unknown as CreateEquipmentInput | UpdateEquipmentInput,
       allFiles.length > 0 ? allFiles : undefined,
       pendingHistory,
       hasDocFiles ? docFiles : undefined

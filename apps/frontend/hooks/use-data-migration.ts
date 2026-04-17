@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
+import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 import {
   EquipmentCacheInvalidation,
   DashboardCacheInvalidation,
@@ -104,9 +105,11 @@ export function useDownloadErrorReport() {
   return useMutation<void, Error, string>({
     mutationFn: (sessionId) => dataMigrationApi.downloadErrorReport(sessionId),
     onError: (error) => {
+      const fallbackDescription = getErrorMessage(error, t('toast.errorReportFailedDescription'));
+      const { title, description } = getDownloadErrorToast(error, fallbackDescription);
       toast({
-        title: t('toast.errorReportFailedTitle'),
-        description: getErrorMessage(error, t('toast.errorReportFailedDescription')),
+        title: title ?? t('toast.errorReportFailedTitle'),
+        description,
         variant: 'destructive',
       });
     },
@@ -123,9 +126,11 @@ export function useDownloadMigrationTemplate() {
   return useMutation<void, Error, void>({
     mutationFn: () => dataMigrationApi.downloadTemplate(),
     onError: (error) => {
+      const fallbackDescription = getErrorMessage(error, t('toast.templateFailedDescription'));
+      const { title, description } = getDownloadErrorToast(error, fallbackDescription);
       toast({
-        title: t('toast.templateFailedTitle'),
-        description: getErrorMessage(error, t('toast.templateFailedDescription')),
+        title: title ?? t('toast.templateFailedTitle'),
+        description,
         variant: 'destructive',
       });
     },

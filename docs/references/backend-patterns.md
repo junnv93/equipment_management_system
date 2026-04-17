@@ -96,6 +96,30 @@ cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentId, statusChange
 
 **Key:** `CacheInvalidationHelper` (`common/cache/cache-invalidation.helper.ts`) — 엔티티 간 교차 무효화
 
+#### JSON-key-order-agnostic detail 캐시 패턴 (SSOT)
+
+`buildCacheKey(prefix, params)` 는 `JSON.stringify` + sorted keys 기반 문자열 생성. 동일 `uuid`라도 추가 파라미터 존재 여부/이름에 따라 정렬 위치가 달라짐:
+
+```
+equipment:detail:{"uuid":"abc-123"}
+equipment:detail:{"includeTeam":false,"uuid":"abc-123"}
+```
+
+→ detail 캐시 무효화 시 `{"uuid":"..."}` 처럼 키 순서를 가정한 정규식을 사용하면 향후 파라미터 추가 시 silent break.
+
+**해결 (SSOT):** `common/cache/cache-patterns.ts` 의 공용 빌더 사용.
+
+```typescript
+import { buildDetailCachePattern } from 'common/cache/cache-patterns';
+import { CACHE_KEY_PREFIXES } from 'common/cache/cache-key-prefixes';
+
+await cacheService.deleteByPattern(
+  buildDetailCachePattern(CACHE_KEY_PREFIXES.EQUIPMENT, 'uuid', equipmentId)
+);
+```
+
+현재 적용: equipment detail, checkouts detail. 새 엔티티의 detail 무효화가 필요하면 **반드시 이 헬퍼를 경유**한다. 단위 테스트는 `common/cache/__tests__/cache-patterns.spec.ts`.
+
 ### Transaction
 
 ```typescript

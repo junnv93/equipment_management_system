@@ -12,7 +12,7 @@ import { useUpdateEquipment } from '@/hooks/use-equipment';
 import { useQueryClient } from '@tanstack/react-query';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
-import type { UpdateEquipmentInput } from '@equipment-management/schemas';
+import type { CreateEquipmentInput, UpdateEquipmentInput } from '@equipment-management/schemas';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { uploadEquipmentDocuments } from '@/lib/utils/document-upload-utils';
 import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -46,7 +46,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
   const [submitError, setSubmitError] = useState<ApiError | Error | null>(null);
 
   const handleSubmit = async (
-    data: UpdateEquipmentInput,
+    data: CreateEquipmentInput | UpdateEquipmentInput,
     files?: Array<{ file: File }>,
     _pendingHistory?: unknown,
     documentFiles?: { photos: File[]; manuals: File[] }
@@ -56,9 +56,11 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
 
     try {
       const fileList = files?.map((f) => f.file);
+      // isEdit=true 모드이므로 EquipmentForm은 항상 UpdateEquipmentInput 형태로 sanitize하여 전달.
+      // version은 상단 equipment props에서 받아 병합 (CAS 기반 낙관적 락).
       const result = await updateEquipment.mutateAsync({
         id: equipmentId,
-        data: { ...data, version: equipment.version ?? 1 },
+        data: { ...(data as UpdateEquipmentInput), version: equipment.version ?? 1 },
         files: fileList,
       });
 

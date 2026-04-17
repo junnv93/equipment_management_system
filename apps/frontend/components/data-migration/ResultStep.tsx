@@ -9,6 +9,7 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { dataMigrationApi } from '@/lib/api/data-migration-api';
 import type { MultiSheetExecuteResult, MigrationSheetType } from '@/lib/api/data-migration-api';
 import { useToast } from '@/components/ui/use-toast';
+import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
 
 interface ResultStepProps {
   result: MultiSheetExecuteResult;
@@ -27,8 +28,11 @@ export default function ResultStep({ result, onReset }: ResultStepProps) {
   const handleDownloadErrorReport = async () => {
     try {
       await dataMigrationApi.downloadErrorReport(result.sessionId);
-    } catch {
-      toast({ variant: 'destructive', description: t('errors.downloadFailed') });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        ...getDownloadErrorToast(err, t('errors.downloadFailed')),
+      });
     }
   };
 
