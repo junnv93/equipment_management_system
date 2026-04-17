@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
@@ -30,8 +30,6 @@ import {
 import {
   EquipmentStatusValues as ESVal,
   NonConformanceStatusValues as NCStatusVal,
-  MANUAL_NC_TYPES,
-  type NonConformanceType,
 } from '@equipment-management/schemas';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -43,7 +41,6 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -54,15 +51,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-
-/** NC 유형 enum → i18n 키 매핑 (UI 표시용 — i18n 키가 camelCase이므로 매핑 필요) */
-const NC_TYPE_I18N_KEY: Record<string, string> = {
-  damage: 'damage',
-  malfunction: 'malfunction',
-  calibration_failure: 'calibrationFailure',
-  measurement_error: 'measurementError',
-  other: 'other',
-};
+import { CreateNonConformanceForm } from '@/components/non-conformances/CreateNonConformanceForm';
 
 interface NonConformanceManagementClientProps {
   equipmentId: string;
@@ -78,9 +67,9 @@ export default function NonConformanceManagementClient({
   initialNonConformances,
 }: NonConformanceManagementClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { can } = useAuth();
-  const { toast } = useToast();
   const canCreateNC = can(Permission.CREATE_NON_CONFORMANCE);
   const canEditNC = can(Permission.CLOSE_NON_CONFORMANCE);
   const t = useTranslations('equipment');
@@ -121,11 +110,18 @@ export default function NonConformanceManagementClient({
 
   // 부적합 등록 폼 상태
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    cause: '',
-    ncType: 'other' as NonConformanceType,
-    actionPlan: '',
-  });
+
+  // URL 딥링크: `?action=create` 진입 시 생성 폼 자동 오픈 (QR 모바일 랜딩/이메일 알림/대시보드
+  // quick action 등 범용 intent URL 패턴).
+  // 초기 URL에서만 감지 — 폼 닫기 후 URL이 바뀌지 않아도 다시 강제 오픈되지 않음.
+  useEffect(() => {
+    if (searchParams.get('action') === 'create') {
+      setShowCreateForm(true);
+    }
+    // searchParams 의존성은 의도적으로 생략 — 최초 마운트 시 1회만 반응
+    // (사용자가 X 버튼으로 폼을 닫았는데 URL이 그대로면 다시 열리는 UX 회피)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // 업데이트 폼 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [updateForm, setUpdateForm] = useState({
@@ -133,58 +129,8 @@ export default function NonConformanceManagementClient({
     status: '' as 'open' | 'corrected' | '',
   });
 
-  // 부적합 등록 mutation - Optimistic Update 패턴
-  const createMutation = useOptimisticMutation<
-    NonConformance,
-    {
-      equipmentId: string;
-      discoveryDate: string;
-      cause: string;
-      ncType: NonConformanceType;
-      actionPlan?: string;
-    },
-    { data: NonConformance[] }
-  >({
-    mutationFn: (data) => nonConformancesApi.createNonConformance(data),
-    queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
-    optimisticUpdate: (old, data) => {
-      const newItem: NonConformance = {
-        id: 'temp-' + Date.now(),
-        ...data,
-        status: 'open',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } as NonConformance;
-
-      return {
-        data: [...(old?.data || []), newItem],
-      };
-    },
-    invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
-    successMessage: t('nonConformanceManagement.toasts.createSuccess'),
-    errorMessage: t('nonConformanceManagement.toasts.createError'),
-    onSuccessCallback: () => {
-      setShowCreateForm(false);
-      setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
-      // 교차 엔티티 캐시 무효화 (장비 목록, NC 전체 목록, 대시보드 KPI)
-      EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(queryClient, equipmentId);
-    },
-  });
-
-  const handleCreate = () => {
-    if (!createForm.cause.trim()) {
-      toast({ title: t('nonConformanceManagement.form.causeRequired'), variant: 'destructive' });
-      return;
-    }
-
-    createMutation.mutate({
-      equipmentId,
-      discoveryDate: new Date().toISOString().split('T')[0],
-      cause: createForm.cause,
-      ncType: createForm.ncType,
-      actionPlan: createForm.actionPlan || undefined,
-    });
-  };
+  // 부적합 생성 로직은 <CreateNonConformanceForm/>로 추출되어 아래 JSX에서 렌더됨.
+  // 이 컴포넌트는 폼 렌더 책임만 가지며, 생성 mutation/form state/validation은 추출 컴포넌트 내부에 캡슐화됨.
 
   // 부적합 수정 mutation - Optimistic Update + CAS 패턴
   const updateMutation = useOptimisticMutation<
@@ -368,87 +314,17 @@ export default function NonConformanceManagementClient({
         </div>
       </div>
 
-      {/* 부적합 등록 폼 */}
+      {/* 부적합 등록 폼 — 추출 컴포넌트 재사용 (QR 모바일 랜딩/이메일 알림 등 모든 진입점 공유) */}
       {showCreateForm && (
         <Card className="p-6 mb-6">
           <h2 className="text-lg font-semibold tracking-tight mb-4">
             {t('nonConformanceManagement.register')}
           </h2>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="nc-type">
-                {t('nonConformanceManagement.form.ncType')}{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={createForm.ncType}
-                onValueChange={(v) =>
-                  setCreateForm({ ...createForm, ncType: v as NonConformanceType })
-                }
-              >
-                <SelectTrigger id="nc-type" className="mt-1.5">
-                  <SelectValue placeholder={t('nonConformanceManagement.form.ncTypePlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {MANUAL_NC_TYPES.map((ncType) => (
-                    <SelectItem key={ncType} value={ncType}>
-                      {t(`nonConformanceManagement.form.${NC_TYPE_I18N_KEY[ncType]}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {t('nonConformanceManagement.form.ncTypeHint')}
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="nc-cause">
-                {t('nonConformanceManagement.form.cause')}{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="nc-cause"
-                value={createForm.cause}
-                onChange={(e) => setCreateForm({ ...createForm, cause: e.target.value })}
-                rows={3}
-                className="mt-1.5"
-                placeholder={t('nonConformanceManagement.form.causePlaceholder')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="nc-action-plan">
-                {t('nonConformanceManagement.form.actionPlan')}
-              </Label>
-              <Textarea
-                id="nc-action-plan"
-                value={createForm.actionPlan}
-                onChange={(e) => setCreateForm({ ...createForm, actionPlan: e.target.value })}
-                rows={2}
-                className="mt-1.5"
-                placeholder={t('nonConformanceManagement.form.actionPlanPlaceholder')}
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="destructive"
-                onClick={handleCreate}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending
-                  ? t('nonConformanceManagement.form.registering')
-                  : t('nonConformanceManagement.form.register')}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCreateForm(false);
-                  setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
-                }}
-              >
-                {t('nonConformanceManagement.form.cancel')}
-              </Button>
-            </div>
-          </div>
+          <CreateNonConformanceForm
+            equipmentId={equipmentId}
+            onSuccess={() => setShowCreateForm(false)}
+            onCancel={() => setShowCreateForm(false)}
+          />
         </Card>
       )}
 

@@ -81,34 +81,5 @@
     "retryCamera": "Retry camera",
     "invalidFormat": "Invalid management number format (e.g. SUW-E0001)",
     "genericError": "Scanner failed to load. Use manual entry instead."
-  },
-  "ncrQuick": {
-    "title": "Report non-conformance",
-    "description": "Log a defect or anomaly found for {equipmentName}.",
-    "fields": {
-      "ncType": {
-        "label": "Non-conformance type",
-        "placeholder": "Select type..."
-      },
-      "cause": {
-        "label": "Symptom / cause",
-        "placeholder": "Briefly describe the defect or anomaly"
-      },
-      "discoveryDate": {
-        "label": "Discovery date"
-      },
-      "photos": {
-        "label": "Attach photos (optional)",
-        "hint": "Take photos of the defective area or select existing images (max 3)"
-      }
-    },
-    "submit": "Submit NCR",
-    "submitting": "Submitting...",
-    "cancel": "Cancel",
-    "successToast": "Non-conformance for {equipmentName} submitted",
-    "successToastWithPhotos": "Non-conformance with photos submitted for {equipmentName}",
-    "submitFailed": "Failed to submit non-conformance. Please try again.",
-    "photoUploadPartialFail": "NCR saved but {count} photo(s) failed to upload",
-    "photoFailList": "Failed uploads: {files}"
   }
 }

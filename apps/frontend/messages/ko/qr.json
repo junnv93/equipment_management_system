@@ -81,34 +81,5 @@
     "retryCamera": "카메라 다시 시도",
     "invalidFormat": "올바른 관리번호 형식이 아닙니다 (예: SUW-E0001)",
     "genericError": "스캐너 로딩 중 오류가 발생했습니다. 수동 입력을 이용하세요."
-  },
-  "ncrQuick": {
-    "title": "부적합 신고",
-    "description": "{equipmentName}에서 발견된 결함 또는 이상을 등록합니다.",
-    "fields": {
-      "ncType": {
-        "label": "부적합 유형",
-        "placeholder": "유형 선택..."
-      },
-      "cause": {
-        "label": "증상 / 원인",
-        "placeholder": "발견된 결함이나 이상 증상을 간단히 기술해주세요"
-      },
-      "discoveryDate": {
-        "label": "발견 일자"
-      },
-      "photos": {
-        "label": "사진 첨부 (선택)",
-        "hint": "결함 부위를 카메라로 촬영하거나 기존 이미지를 선택하세요 (최대 3장)"
-      }
-    },
-    "submit": "부적합 등록",
-    "submitting": "등록 중...",
-    "cancel": "취소",
-    "successToast": "{equipmentName} 부적합이 등록되었습니다",
-    "successToastWithPhotos": "{equipmentName} 부적합 + 사진이 등록되었습니다",
-    "submitFailed": "부적합 등록에 실패했습니다. 다시 시도해주세요",
-    "photoUploadPartialFail": "NCR은 등록됐지만 사진 {count}건 업로드 실패",
-    "photoFailList": "업로드 실패한 사진: {files}"
   }
 }

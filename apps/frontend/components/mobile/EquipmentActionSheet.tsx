@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { EquipmentQRCode } from '@/components/equipment/EquipmentQRCode';
 import { MobileBottomSheet } from './MobileBottomSheet';
-import { MobileNCRQuickForm } from '@/components/non-conformances/MobileNCRQuickForm';
 
 interface EquipmentActionSheetProps {
   equipmentId: string;
@@ -56,10 +55,8 @@ export function EquipmentActionSheet({
 }: EquipmentActionSheetProps) {
   const t = useTranslations('qr.mobileActionSheet');
   const tQr = useTranslations('qr.qrDisplay');
-  const tNcr = useTranslations('qr.ncrQuick');
   const router = useRouter();
   const [qrOpen, setQrOpen] = React.useState(false);
-  const [ncrOpen, setNcrOpen] = React.useState(false);
 
   const sortedActions = React.useMemo(
     () =>
@@ -90,8 +87,9 @@ export function EquipmentActionSheet({
           );
           return;
         case 'report_nc':
-          // Phase 2: placeholder 라우팅을 시트 오픈으로 교체 (모바일 UX — 라우트 이동 제거)
-          setNcrOpen(true);
+          // 기존 NC 관리 페이지로 이동 — `?action=create` 딥링크가 생성 폼 자동 오픈.
+          // 원칙: QR은 경로. 기존 서비스/UI/폼은 재정의하지 않고 재사용만.
+          router.push(`/equipment/${equipmentId}/non-conformance?action=create`);
           return;
       }
     },
@@ -158,20 +156,6 @@ export function EquipmentActionSheet({
             subLabel={teamName ?? undefined}
           />
         </div>
-      </MobileBottomSheet>
-
-      <MobileBottomSheet
-        open={ncrOpen}
-        onOpenChange={setNcrOpen}
-        title={tNcr('title')}
-        hideDescription
-      >
-        <MobileNCRQuickForm
-          equipmentId={equipmentId}
-          equipmentName={equipmentName}
-          onSuccess={() => setNcrOpen(false)}
-          onCancel={() => setNcrOpen(false)}
-        />
       </MobileBottomSheet>
     </>
   );
