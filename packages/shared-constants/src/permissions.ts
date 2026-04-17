@@ -87,6 +87,10 @@ export enum Permission {
   CREATE_NON_CONFORMANCE = 'create:non-conformance',
   UPDATE_NON_CONFORMANCE = 'update:non-conformance',
   CLOSE_NON_CONFORMANCE = 'close:non-conformance',
+  /** NC 첨부(현장 사진 등) 업로드 — CREATE_NON_CONFORMANCE 권한자라면 첨부도 가능해야 맥락 일치 */
+  UPLOAD_NON_CONFORMANCE_ATTACHMENT = 'upload:non-conformance-attachment',
+  /** NC 첨부 삭제 — 신고자(혹은 기술책임자)만. UPDATE_NON_CONFORMANCE와 동등한 쓰기 권한 레벨 */
+  DELETE_NON_CONFORMANCE_ATTACHMENT = 'delete:non-conformance-attachment',
 
   // ============================================================================
   // 시험용 소프트웨어 관련 권한
@@ -248,6 +252,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.CREATE_NON_CONFORMANCE]: '부적합 등록',
   [Permission.UPDATE_NON_CONFORMANCE]: '부적합 수정',
   [Permission.CLOSE_NON_CONFORMANCE]: '부적합 종료',
+  [Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT]: '부적합 첨부 업로드',
+  [Permission.DELETE_NON_CONFORMANCE_ATTACHMENT]: '부적합 첨부 삭제',
 
   [Permission.VIEW_TEST_SOFTWARE]: '시험용 소프트웨어 조회',
   [Permission.CREATE_TEST_SOFTWARE]: '시험용 소프트웨어 등록',

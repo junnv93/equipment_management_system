@@ -122,21 +122,13 @@ http {
         # ─────────────────────────────────────────────
         # 보안 헤더
         #
-        # CSP 정책: edge(Nginx)가 SSOT. 업스트림(Next.js) 헤더는 hide 후 재설정.
-        # Permissions-Policy: QR 스캐너(html5-qrcode)가 카메라 self-origin 필요 → camera=(self)
-        # CSP directives 근거:
-        #   - script-src 'unsafe-inline'  — Next.js 16 hydration 인라인 스크립트.
-        #                                   nonce 기반 이관은 별도 Phase (example-prompts.md TODO).
-        #   - img-src data: blob:         — avatar placeholder, QR SVG blob
-        #   - media-src blob: mediastream: — camera MediaStream + Blob URL
-        #   - connect-src 'self'          — /api (backend) + /api/notifications/stream(SSE) 동일 오리진
-        #   - worker-src blob:            — PWA 서비스워커 + future pdf.js worker
-        #   - frame-ancestors 'none'      — X-Frame-Options SAMEORIGIN 보완(CSP 3 표준)
-        #   - upgrade-insecure-requests   — mixed-content 방지(HTTPS 환경)
-        #   - object-src 'none'           — 레거시 플러그인 차단
-        #   - base-uri 'self'             — <base> 하이재킹 방지
+        # CSP: Next.js proxy.ts가 per-request nonce 기반 CSP를 주입(SSOT).
+        #      Nginx는 pass-through — 여기서 Content-Security-Policy add_header 금지.
+        #      정적 CSP는 nonce 지원 불가 → 반드시 업스트림 헤더를 보존해야 함.
+        # Report-To: proxy.ts가 설정 → pass-through.
+        # Permissions-Policy: 정적 헤더 → Nginx(edge)가 SSOT. 업스트림 중복 방지.
+        # 기타 정적 보안 헤더는 edge에서 강제(업스트림 누락 방어).
         # ─────────────────────────────────────────────
-        proxy_hide_header Content-Security-Policy;
         proxy_hide_header Permissions-Policy;
         add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
@@ -144,7 +136,6 @@ http {
         add_header X-XSS-Protection "0" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(self), microphone=(), geolocation=()" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob: mediastream:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests" always;
 
         # 전역 연결 제한(conn-level만 서버 레벨에 둠)
         # Rate limit(limit_req)은 location별로 선언 — nginx가 'off' 파라미터를 지원하지 않아

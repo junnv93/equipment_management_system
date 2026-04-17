@@ -2,12 +2,33 @@
 
 이 문서는 이 레포의 Drizzle 마이그레이션 작업 규칙과 히스토리 정비 사유를 기록합니다.
 
-## 상태 (2026-04-07 기준)
+## 상태 (2026-04-07 baseline squash / 2026-04-18 업데이트)
 
-- `apps/backend/drizzle/0000_baseline.sql` 한 파일이 **현재 스키마 전체**를 나타냅니다.
-- `__drizzle_migrations` 테이블에는 baseline 한 row만 존재합니다 (hash 정합성 확보됨).
-- 이전 마이그레이션들(0000~0005)은 `drizzle/archive_pre_baseline/`에 감사 목적으로 보존되어 있습니다.
+- `apps/backend/drizzle/0000_baseline.sql` 한 파일이 **baseline 시점의 전체 스키마**를 나타냅니다.
+- 이후 2026-04-18 현재까지 0001~0031 까지 **증분 migration + `meta/_journal.json` entry** 가 누적되어 있습니다.
+- `drizzle/meta/NNNN_snapshot.json` 은 **0024까지만 존재**합니다(0025~0031 snapshot 누락).
+  - 원인: baseline squash 이후 일부 migration이 drizzle-kit generate의 TTY 요구사항으로 인해 **수동 SQL 파일 + journal entry** 로 추가되었습니다. snapshot 생성은 TTY 환경에서 `db:generate`를 재실행해야 가능합니다.
+  - 영향: **현재 `drizzle-kit check` 는 "Everything's fine" 통과** (journal + SQL 정합성만 검증). 다만 향후 `db:generate` 실행 시 diff가 last available snapshot(0024)부터 계산되어 **이미 적용된 0025~0031 변경이 "변경사항 없음"으로 누락될 위험**이 있습니다.
+- `__drizzle_migrations` 테이블에는 baseline(0000) + 0001~0031 row가 정상 기록되어 있습니다.
 - `drizzle/manual/`은 drizzle-kit이 자동으로 읽지 않는 수동 SQL 파일 저장소이며 이번 정비와 무관합니다.
+
+### 재정비(snapshot 복원) 절차 — TTY 환경 필수
+
+**실행 조건**: 로컬 WSL2/Terminal (interactive TTY). Claude Code bash 세션 등 non-interactive 환경에서는 불가.
+
+```bash
+# 1) 현재 스키마로 스냅샷 재구성 (drizzle-kit이 existing migrations를 인식해 diff 재계산)
+cd apps/backend
+pnpm db:generate    # TTY 환경에서 실행 — "rename? [y/n]" 프롬프트 대응
+
+# 2) 생성된 결과가 "No changes"여야 함 (정상).
+#    새 migration이 생성됐다면 schema 변경이 있다는 뜻 — 검토 후 commit.
+
+# 3) 누락된 snapshot 파일들이 drizzle/meta/에 채워졌는지 확인
+ls apps/backend/drizzle/meta/*.json | tail -5
+```
+
+현재 운영 중인 코드에는 영향 없음 (journal-based 실행 경로로 migration 적용). 다만 **snapshot 복원은 다음 schema 변경 전 수행 권장** — 변경 diff 정확도 확보.
 
 ## 왜 baseline squash를 했나
 

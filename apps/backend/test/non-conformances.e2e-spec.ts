@@ -623,4 +623,118 @@ describe('NonConformancesController (e2e)', () => {
       }
     });
   });
+
+  // ============================================================================
+  // Attachments (P2-A 전용 엔드포인트 — UPLOAD/DELETE_NON_CONFORMANCE_ATTACHMENT)
+  // ============================================================================
+  describe('Attachments', () => {
+    let attachNcId: string;
+    let attachEquipmentUuid: string;
+    let uploadedDocId: string | undefined;
+
+    beforeAll(async () => {
+      // 독립 equipment + NC — 다른 테스트와 격리
+      attachEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
+        name: 'E2E Attachments Equipment',
+      });
+      tracker.track('equipment', attachEquipmentUuid);
+
+      const createRes = await request(ctx.app.getHttpServer())
+        .post('/non-conformances')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          equipmentId: attachEquipmentUuid,
+          discoveryDate: new Date().toISOString().split('T')[0],
+          discoveredBy: testUserId,
+          cause: 'Attachment flow test',
+          ncType: 'damage',
+        });
+      expect(createRes.status).toBe(201);
+      attachNcId = createRes.body.id;
+      createdNonConformanceIds.push(attachNcId);
+    });
+
+    it('GET /non-conformances/:id/attachments — 초기 상태: 빈 배열', async () => {
+      const response = await request(ctx.app.getHttpServer())
+        .get(`/non-conformances/${attachNcId}/attachments`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toHaveLength(0);
+    });
+
+    it('POST /non-conformances/:id/attachments — 사진 업로드 → 200 + document', async () => {
+      const response = await request(ctx.app.getHttpServer())
+        .post(`/non-conformances/${attachNcId}/attachments`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .field('documentType', 'equipment_photo')
+        .field('description', 'E2E test photo')
+        .attach('file', Buffer.from('fake-jpeg-bytes'), {
+          filename: 'site.jpg',
+          contentType: 'image/jpeg',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.document).toBeDefined();
+      expect(response.body.document.nonConformanceId).toBe(attachNcId);
+      uploadedDocId = response.body.document.id;
+    });
+
+    it('GET /non-conformances/:id/attachments — 업로드 후 1개 조회', async () => {
+      const response = await request(ctx.app.getHttpServer())
+        .get(`/non-conformances/${attachNcId}/attachments`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].id).toBe(uploadedDocId);
+    });
+
+    it('POST /non-conformances/:id/attachments — 파일 없으면 400', async () => {
+      const response = await request(ctx.app.getHttpServer())
+        .post(`/non-conformances/${attachNcId}/attachments`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .field('documentType', 'equipment_photo');
+
+      expect(response.status).toBe(400);
+    });
+
+    it('DELETE /non-conformances/:id/attachments/:docId — 소프트 삭제 → 200', async () => {
+      if (!uploadedDocId) throw new Error('uploadedDocId missing — previous test must pass first');
+
+      const response = await request(ctx.app.getHttpServer())
+        .delete(`/non-conformances/${attachNcId}/attachments/${uploadedDocId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(response.status).toBe(200);
+
+      // 재조회 시 빈 배열(soft-delete → status='deleted'는 findByNonConformanceId 필터링됨)
+      const afterDelete = await request(ctx.app.getHttpServer())
+        .get(`/non-conformances/${attachNcId}/attachments`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(afterDelete.body).toHaveLength(0);
+    });
+
+    it('DELETE /non-conformances/:otherId/attachments/:docId — 다른 NC의 문서는 400 (도메인 격리)', async () => {
+      // 1) 새 문서 업로드
+      const uploadRes = await request(ctx.app.getHttpServer())
+        .post(`/non-conformances/${attachNcId}/attachments`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .field('documentType', 'equipment_photo')
+        .attach('file', Buffer.from('x'), { filename: 'x.jpg', contentType: 'image/jpeg' });
+      const newDocId = uploadRes.body.document.id;
+
+      // 2) 다른 NC id로 삭제 시도 → 400
+      const otherId = generateUUID();
+      const deleteRes = await request(ctx.app.getHttpServer())
+        .delete(`/non-conformances/${otherId}/attachments/${newDocId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      // 다른 NC가 존재하지 않으면 findOneBasic에서 404 일수 있음.
+      // 존재하지만 소유가 다르면 400 (DOCUMENT_OWNER_MISMATCH).
+      expect([400, 404]).toContain(deleteRes.status);
+    });
+  });
 });

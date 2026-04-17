@@ -46,6 +46,7 @@ import { IntermediateInspectionsModule } from './modules/intermediate-inspection
 import { CablesModule } from './modules/cables/cables.module';
 import { SelfInspectionsModule } from './modules/self-inspections/self-inspections.module';
 import { FormTemplateModule } from './modules/reports/form-template.module';
+import { SecurityModule } from './modules/security/security.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { FormTemplateModule } from './modules/reports/form-template.module';
     EquipmentImportsModule, // Unified rental + internal shared imports
     ApprovalsModule, // Unified approval counts API
     SettingsModule, // System + calibration settings
+    SecurityModule, // CSP violation report 등 브라우저 보안 리포팅 엔드포인트
     DocumentsModule, // 통합 문서 관리 (다운로드, 무결성 검증, 버전 관리)
     DataMigrationModule, // 데이터 마이그레이션 (Excel 일괄 등록)
     SoftwareValidationsModule, // 소프트웨어 유효성 확인 (UL-QP-18-09)

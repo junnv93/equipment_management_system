@@ -12,9 +12,24 @@ import {
   HttpStatus,
   UsePipes,
   BadRequestException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { NonConformancesService } from './non-conformances.service';
+import { DocumentService } from '../../common/file-upload/document.service';
+import type { DocumentRecord } from '@equipment-management/db/schema/documents';
+import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
+import type { MulterFile } from '../../types/common.types';
 import {
   CreateNonConformanceDto,
   CreateNonConformanceValidationPipe,
@@ -48,7 +63,10 @@ import { extractUserId } from '../../common/utils/extract-user';
 @ApiBearerAuth()
 @Controller('non-conformances')
 export class NonConformancesController {
-  constructor(private readonly nonConformancesService: NonConformancesService) {}
+  constructor(
+    private readonly nonConformancesService: NonConformancesService,
+    private readonly documentService: DocumentService
+  ) {}
 
   @AuditLog({
     action: 'create',
@@ -273,5 +291,121 @@ export class NonConformancesController {
       });
     }
     return this.nonConformancesService.remove(uuid, version);
+  }
+
+  // ============================================================================
+  // 첨부 관리 (현장 사진 등) — NC 전용 permission 경계
+  // ============================================================================
+
+  /**
+   * NC에 연결된 첨부(사진/증빙) 목록 조회.
+   * Site scoping: NC 자체 VIEW 권한이면 첨부도 동일 범위 조회 허용.
+   */
+  @Get(':uuid/attachments')
+  @ApiOperation({ summary: 'NC 첨부 목록 조회', description: '특정 부적합의 첨부 문서 목록' })
+  @ApiParam({ name: 'uuid', description: '부적합 ID (UUID)' })
+  @ApiResponse({ status: HttpStatus.OK, description: '첨부 목록 조회 성공' })
+  @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
+  async listAttachments(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest,
+    @Query('type') type?: string
+  ): Promise<DocumentRecord[]> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
+
+    if (type && !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(type)) {
+      throw new BadRequestException({
+        code: 'INVALID_DOCUMENT_TYPE',
+        message: `Invalid document type: ${type}`,
+      });
+    }
+    return this.documentService.findByNonConformanceId(uuid, type as DocumentType | undefined);
+  }
+
+  /**
+   * NC 첨부 업로드. Multipart `file` + `documentType` 필수.
+   * 전용 permission(UPLOAD_NON_CONFORMANCE_ATTACHMENT)으로 범용 document 업로드와 분리된 권한 경계.
+   */
+  @Post(':uuid/attachments')
+  @ApiOperation({ summary: 'NC 첨부 업로드', description: '현장 사진 등 증빙 파일 업로드' })
+  @ApiParam({ name: 'uuid', description: '부적합 ID (UUID)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'documentType'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        documentType: { type: 'string', enum: [...DOCUMENT_TYPE_VALUES] },
+        description: { type: 'string' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @RequirePermissions(Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT)
+  @AuditLog({ action: 'upload', entityType: 'document', entityIdPath: 'params.uuid' })
+  async uploadAttachment(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @UploadedFile() file: MulterFile,
+    @Body('documentType') documentType: string,
+    @Request() req: AuthenticatedRequest,
+    @Body('description') description?: string
+  ): Promise<{ document: DocumentRecord; message: string }> {
+    if (!file) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_FILE_REQUIRED',
+        message: 'File is required.',
+      });
+    }
+    if (!documentType || !(DOCUMENT_TYPE_VALUES as readonly string[]).includes(documentType)) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_TYPE_INVALID',
+        message: `Invalid documentType. Allowed: ${DOCUMENT_TYPE_VALUES.join(', ')}`,
+      });
+    }
+
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
+
+    const userId = extractUserId(req);
+    const document = await this.documentService.createDocument(file, {
+      documentType: documentType as DocumentType,
+      nonConformanceId: uuid,
+      description: description || undefined,
+      uploadedBy: userId || undefined,
+    });
+    return { document, message: '첨부가 업로드되었습니다.' };
+  }
+
+  /**
+   * NC 첨부 삭제(논리 삭제). 권한 체크는 전용 permission에 위임.
+   * 도메인 격리: 삭제할 document가 실제로 이 NC 소유인지 DB에서 재확인.
+   */
+  @Delete(':uuid/attachments/:documentId')
+  @ApiOperation({ summary: 'NC 첨부 삭제', description: '첨부를 소프트 삭제합니다.' })
+  @ApiParam({ name: 'uuid', description: '부적합 ID (UUID)' })
+  @ApiParam({ name: 'documentId', description: '문서 ID (UUID)' })
+  @RequirePermissions(Permission.DELETE_NON_CONFORMANCE_ATTACHMENT)
+  @AuditLog({ action: 'delete', entityType: 'document', entityIdPath: 'params.documentId' })
+  async deleteAttachment(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ message: string }> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
+
+    // 도메인 격리: documentId가 이 NC 소유인지 확인 (다른 NC/엔티티 첨부 삭제 방지)
+    const doc = await this.documentService.findByIdAnyStatus(documentId);
+    if (doc.nonConformanceId !== uuid) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_OWNER_MISMATCH',
+        message: 'Document does not belong to this non-conformance.',
+      });
+    }
+
+    await this.documentService.deleteDocument(documentId);
+    return { message: '첨부가 삭제되었습니다.' };
   }
 }

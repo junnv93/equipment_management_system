@@ -229,6 +229,10 @@ export const API_ENDPOINTS = {
     CLOSE: (id: string) => `/api/non-conformances/${id}/close`,
     REJECT_CORRECTION: (id: string) => `/api/non-conformances/${id}/reject-correction`,
     EQUIPMENT: (equipmentId: string) => `/api/non-conformances/equipment/${equipmentId}`,
+    /** NC 전용 첨부 엔드포인트 — NC permission 경계 준수 (범용 /documents와 분리) */
+    ATTACHMENTS: (id: string) => `/api/non-conformances/${id}/attachments`,
+    ATTACHMENT: (id: string, documentId: string) =>
+      `/api/non-conformances/${id}/attachments/${documentId}`,
   },
 
   // ============================================================================

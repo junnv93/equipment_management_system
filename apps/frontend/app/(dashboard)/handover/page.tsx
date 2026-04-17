@@ -105,11 +105,32 @@ export default function HandoverRedirectPage() {
   );
 }
 
+/**
+ * 에러 구분 우선순위:
+ * 1. apiClient 인터셉터가 생성한 ApiError: statusCode 필드 사용 (401/409 명확)
+ * 2. 원본 axios error: response.status / response.data.code 읽기
+ * 3. 모두 실패: Invalid (안전한 기본값)
+ *
+ * HTTP status를 우선 기준으로 사용하는 이유:
+ * - backend는 HANDOVER_TOKEN_EXPIRED → 401, HANDOVER_TOKEN_CONSUMED → 409로 매핑 (SSOT).
+ * - frontend ApiError는 backend 문자열 code를 EquipmentErrorCode enum으로 narrow해 원본 손실.
+ *   status는 보존되므로 이를 1차 소스로 사용 → defense-in-depth.
+ */
 function resolveErrorCode(error: unknown): string {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const response = (error as { response?: { data?: { code?: string } } }).response;
-    return response?.data?.code ?? ErrorCode.HandoverTokenInvalid;
-  }
+  const err = error as {
+    statusCode?: number;
+    response?: { status?: number; data?: { code?: string } };
+  } | null;
+
+  const status = err?.statusCode ?? err?.response?.status;
+  if (status === 401) return ErrorCode.HandoverTokenExpired;
+  if (status === 409) return ErrorCode.HandoverTokenConsumed;
+
+  // fallback: backend code 직접 조회 (axios raw error 경로)
+  const code = err?.response?.data?.code;
+  if (code === ErrorCode.HandoverTokenExpired) return ErrorCode.HandoverTokenExpired;
+  if (code === ErrorCode.HandoverTokenConsumed) return ErrorCode.HandoverTokenConsumed;
+
   return ErrorCode.HandoverTokenInvalid;
 }
 

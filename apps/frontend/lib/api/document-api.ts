@@ -60,16 +60,51 @@ export const documentApi = {
   },
 
   /**
-   * 부적합(NC)별 문서 목록 조회 — NCDetailClient Documents 탭에서 사용
+   * 부적합(NC)별 문서 목록 조회 — NC 전용 엔드포인트(NC permission 경계 준수).
    */
   getNonConformanceDocuments: async (
     nonConformanceId: string,
     type?: DocumentType
   ): Promise<DocumentRecord[]> => {
-    const params: Record<string, string> = { nonConformanceId };
+    const params: Record<string, string> = {};
     if (type) params.type = type;
-    const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.BASE, { params });
+    const response = await apiClient.get(
+      API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(nonConformanceId),
+      { params }
+    );
     return transformArrayResponse<DocumentRecord>(response);
+  },
+
+  /**
+   * NC 첨부 업로드 — 전용 permission(UPLOAD_NON_CONFORMANCE_ATTACHMENT) 경로.
+   */
+  uploadNonConformanceAttachment: async (
+    nonConformanceId: string,
+    file: File,
+    documentType: DocumentType,
+    description?: string
+  ): Promise<DocumentRecord> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    if (description) formData.append('description', description);
+
+    const response = await apiClient.post(
+      API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(nonConformanceId),
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return transformSingleResponse<{ document: DocumentRecord }>(response).document;
+  },
+
+  /**
+   * NC 첨부 삭제 — 전용 permission(DELETE_NON_CONFORMANCE_ATTACHMENT) 경로.
+   */
+  deleteNonConformanceAttachment: async (
+    nonConformanceId: string,
+    documentId: string
+  ): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENT(nonConformanceId, documentId));
   },
 
   /**
@@ -122,6 +157,31 @@ export const documentApi = {
     if (options?.includeCalibrations) params.includeCalibrations = 'true';
     const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.BASE, { params });
     return transformArrayResponse<DocumentRecord>(response);
+  },
+
+  /**
+   * 문서 프리뷰용 ObjectURL 획득 — 이미지 썸네일/<img src> 등에 사용.
+   *
+   * - S3 드라이버: presigned URL을 그대로 반환 (브라우저가 직접 fetch, 크기 제한 없음)
+   * - Local 드라이버: 백엔드 proxy 다운로드 → Blob URL 반환 (caller가 revoke 필요)
+   *
+   * caller는 반환된 URL이 blob: 접두사인 경우 unmount/교체 시 `URL.revokeObjectURL` 호출.
+   */
+  fetchDocumentObjectUrl: async (documentId: string): Promise<string> => {
+    const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.DOWNLOAD(documentId), {
+      responseType: 'arraybuffer',
+    });
+
+    const contentType = (response.headers['content-type'] as string) ?? '';
+
+    if (contentType.includes('application/json')) {
+      const text = new TextDecoder().decode(response.data as ArrayBuffer);
+      const { presignedUrl } = JSON.parse(text) as { presignedUrl: string };
+      return presignedUrl;
+    }
+
+    const blob = new Blob([response.data as ArrayBuffer], { type: contentType });
+    return window.URL.createObjectURL(blob);
   },
 
   /**

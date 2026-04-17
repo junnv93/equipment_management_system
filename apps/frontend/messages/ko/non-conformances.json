@@ -179,7 +179,15 @@
       "downloadLabel": "{name} 다운로드",
       "uploadSuccess": "사진 {count}장 업로드 완료",
       "uploadPartialFailed": "사진 {failed}장 업로드 실패. 나머지는 저장되었습니다.",
-      "defaultDescription": "부적합 증빙 사진"
+      "defaultDescription": "부적합 증빙 사진",
+      "deleteLabel": "{name} 삭제",
+      "deleteConfirmTitle": "첨부 삭제",
+      "deleteConfirmBody": "{name} 파일을 삭제하시겠습니까? 삭제 후에도 감사 추적 목적으로 30일간 복구 가능합니다.",
+      "deleteCancel": "취소",
+      "deleteConfirm": "삭제",
+      "deleting": "삭제 중...",
+      "deleteSuccess": "첨부가 삭제되었습니다.",
+      "deleteError": "삭제에 실패했습니다."
     },
     "infoCard": {
       "basicInfo": "기본 정보",

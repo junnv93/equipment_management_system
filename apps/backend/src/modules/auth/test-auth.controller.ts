@@ -1,5 +1,8 @@
-import { Controller, Get, Post, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { Throttle } from '@nestjs/throttler';
+import { randomUUID } from 'crypto';
 import { DEFAULT_ROLE_EMAILS, ALL_TEST_EMAILS } from '@equipment-management/shared-constants';
 import { THROTTLE_PRESETS } from '../../common/config/throttle.constants';
 import { AuthService, AuthResponse } from './auth.service';
@@ -20,7 +23,8 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 export class TestAuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly configService: ConfigService
   ) {}
 
   /**
@@ -98,6 +102,60 @@ export class TestAuthController {
     return {
       cleared: true,
       message: `Cleared ${size} cache entries`,
+    };
+  }
+
+  /**
+   * [TEST ONLY] 만료된 handover 서명 토큰 강제 발급 — E2E 토큰 만료 시나리오 전용.
+   *
+   * 보안 가드:
+   * - NODE_ENV !== production 체크 (프로덕션에서 403)
+   * - TestAuthController 자체가 AuthModule에 production 시 미등록 (기본 정책)
+   * - Body에 checkoutId + expSecondsAgo(과거 경과 초) 명시. jti는 랜덤 발급.
+   *
+   * 실제 HandoverTokenService.issue()는 미래 exp로만 발급 가능하므로 테스트에서는
+   * HANDOVER_TOKEN_SECRET을 직접 읽어 과거 exp로 sign.
+   */
+  @Post('forge-handover-token')
+  @Public()
+  @SkipPermissions()
+  async forgeHandoverToken(
+    @Body() body: { checkoutId?: string; expSecondsAgo?: number }
+  ): Promise<{ token: string; note: string }> {
+    const env = process.env.NODE_ENV;
+    if (env !== 'development' && env !== 'test') {
+      throw new ForbiddenException('forge-handover-token is only available in dev/test');
+    }
+
+    const checkoutId = body?.checkoutId;
+    if (!checkoutId) {
+      throw new ForbiddenException('checkoutId is required');
+    }
+    const expSecondsAgo = Math.max(1, Number(body?.expSecondsAgo ?? 60));
+
+    const secret = this.configService.get<string>('HANDOVER_TOKEN_SECRET');
+    if (!secret) {
+      throw new ForbiddenException('HANDOVER_TOKEN_SECRET not configured');
+    }
+
+    const jwt = new JwtService({
+      secret,
+      signOptions: { algorithm: 'HS256' },
+    });
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expiredPayload = {
+      checkoutId,
+      purpose: 'borrower_receive' as const,
+      jti: randomUUID(),
+      iss: 'test-auth-forge',
+      iat: nowSec - expSecondsAgo - 10,
+      exp: nowSec - expSecondsAgo, // 과거 exp → jwt.verify가 TokenExpiredError
+    };
+
+    const token = await jwt.signAsync(expiredPayload, { noTimestamp: true });
+    return {
+      token,
+      note: `Expired handover token forged — exp=${expSecondsAgo}s ago. Dev/test only.`,
     };
   }
 }

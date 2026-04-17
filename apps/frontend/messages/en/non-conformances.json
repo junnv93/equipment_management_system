@@ -179,7 +179,15 @@
       "downloadLabel": "Download {name}",
       "uploadSuccess": "{count} photo(s) uploaded successfully",
       "uploadPartialFailed": "{failed} photo(s) failed to upload. Others were saved.",
-      "defaultDescription": "Non-conformance evidence photo"
+      "defaultDescription": "Non-conformance evidence photo",
+      "deleteLabel": "Delete {name}",
+      "deleteConfirmTitle": "Delete Attachment",
+      "deleteConfirmBody": "Delete {name}? Recoverable for 30 days after deletion for audit trail.",
+      "deleteCancel": "Cancel",
+      "deleteConfirm": "Delete",
+      "deleting": "Deleting...",
+      "deleteSuccess": "Attachment deleted.",
+      "deleteError": "Failed to delete attachment."
     },
     "infoCard": {
       "basicInfo": "Basic Information",

@@ -78,7 +78,9 @@ export function CreateNonConformanceForm({
   onCancel,
   autoFocus = false,
 }: CreateNonConformanceFormProps) {
-  const t = useTranslations('non-conformances');
+  // 이 폼은 equipment 상세 페이지의 NC 탭에서 사용 → `equipment.nonConformanceManagement.*` 네임스페이스 SSOT.
+  // 부모 컴포넌트(NonConformanceManagementClient)와 동일 네임스페이스 공유.
+  const t = useTranslations('equipment');
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -132,12 +134,15 @@ export function CreateNonConformanceForm({
       // Promise.allSettled — 일부 실패해도 나머지 진행 + partial 토스트.
       if (photos.length > 0 && createdNc?.id) {
         setIsUploadingPhotos(true);
+        // 전용 엔드포인트 사용 — UPLOAD_NON_CONFORMANCE_ATTACHMENT permission 경계
         const results = await Promise.allSettled(
           photos.map((file) =>
-            documentApi.uploadDocument(file, DocumentTypeValues.EQUIPMENT_PHOTO, {
-              nonConformanceId: createdNc.id,
-              description: t('nonConformanceManagement.form.photoDescription'),
-            })
+            documentApi.uploadNonConformanceAttachment(
+              createdNc.id,
+              file,
+              DocumentTypeValues.EQUIPMENT_PHOTO,
+              t('nonConformanceManagement.form.photoDescription')
+            )
           )
         );
         const failed = results.filter((r) => r.status === 'rejected').length;

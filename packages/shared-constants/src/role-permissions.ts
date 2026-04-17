@@ -46,6 +46,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_NON_CONFORMANCES,
     Permission.CREATE_NON_CONFORMANCE, // 부적합 등록
     Permission.UPDATE_NON_CONFORMANCE, // 부적합 수정 (원인 분석, 조치)
+    Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT, // 현장 사진/증빙 업로드
+    Permission.DELETE_NON_CONFORMANCE_ATTACHMENT, // 자신이 올린 첨부 삭제
     // 보정계수
     Permission.VIEW_CALIBRATION_FACTORS,
     Permission.CREATE_CALIBRATION_FACTOR,
@@ -118,6 +120,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_NON_CONFORMANCE,
     Permission.UPDATE_NON_CONFORMANCE,
     Permission.CLOSE_NON_CONFORMANCE, // 부적합 종료
+    Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT,
+    Permission.DELETE_NON_CONFORMANCE_ATTACHMENT,
     // 보정계수
     Permission.VIEW_CALIBRATION_FACTORS,
     Permission.CREATE_CALIBRATION_FACTOR,
@@ -246,6 +250,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_NON_CONFORMANCE,
     Permission.UPDATE_NON_CONFORMANCE,
     Permission.CLOSE_NON_CONFORMANCE,
+    Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT,
+    Permission.DELETE_NON_CONFORMANCE_ATTACHMENT,
     // 시험용 소프트웨어
     Permission.VIEW_TEST_SOFTWARE,
     Permission.CREATE_TEST_SOFTWARE,

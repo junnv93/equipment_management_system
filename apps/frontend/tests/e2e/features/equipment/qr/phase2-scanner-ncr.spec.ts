@@ -72,4 +72,35 @@ test.describe('QR Phase 2 — Scanner + NCR Deep Link', () => {
       await expect(ncTypeTrigger).toBeVisible({ timeout: 10_000 });
     });
   });
+
+  test.describe('벌크 QR 라벨 PDF 다운로드', () => {
+    test('장비 목록 페이지 벌크 라벨 버튼 → PDF 다운로드 트리거', async ({ testOperatorPage }) => {
+      await testOperatorPage.goto(FRONTEND_ROUTES.EQUIPMENT.LIST);
+      await testOperatorPage.waitForLoadState('networkidle');
+
+      // BulkLabelPrintButton은 현재 페이지 아이템 전체 기반.
+      // aria-label="buttonAriaLabel" 패턴(i18n) — "선택" 또는 "selected" 키워드로 locator 구성
+      const bulkButton = testOperatorPage.getByRole('button', { name: /선택|selected/i }).first();
+      if ((await bulkButton.count()) === 0) {
+        test.skip(true, 'BulkLabelPrintButton 미노출 환경 — 장비 데이터 부재 가능');
+        return;
+      }
+
+      const downloadPromise = testOperatorPage.waitForEvent('download', { timeout: 30_000 });
+      await bulkButton.click();
+
+      // maxBatch 초과 시 confirm 다이얼로그 — 존재하면 confirm 클릭
+      const confirmDialog = testOperatorPage.getByRole('alertdialog');
+      if ((await confirmDialog.count()) > 0 && (await confirmDialog.isVisible())) {
+        await testOperatorPage.getByRole('button', { name: /확인|confirm|인쇄/i }).click();
+      }
+
+      const download = await downloadPromise;
+      const path = await download.path();
+      expect(path).toBeTruthy();
+      const fileName = download.suggestedFilename();
+      // 파일명 패턴: `equipment-labels-YYYY-MM-DD.pdf`
+      expect(fileName).toMatch(/equipment-labels-\d{4}-\d{2}-\d{2}\.pdf/);
+    });
+  });
 });
