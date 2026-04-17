@@ -355,3 +355,39 @@ grep -rn "'[가-힣]" apps/frontend/lib/navigation/ --include="*.ts" --include="
 
 **PASS 기준:** 0개 결과 (네비게이션 유틸리티에 하드코딩된 한국어 없음).
 **FAIL 기준:** 발견 시 `undefined` 반환으로 대체하여 i18n 시스템에 폴백 위임.
+
+## Step 9: fieldLabels cross-namespace 중복 탐지
+
+`audit.fieldLabels`가 전체 엔티티 필드 라벨의 SSOT입니다. 다른 namespace 파일(approvals, checkouts 등)에 동일한 `fieldLabels` 블록이 중복 정의되어 있으면 동기화 드리프트가 발생합니다.
+
+```bash
+# audit.json 외 다른 파일에 fieldLabels 키가 있는지 탐지 (en 기준)
+node -e "
+const fs = require('fs');
+const path = require('path');
+const enDir = 'apps/frontend/messages/en';
+const files = fs.readdirSync(enDir).filter(f => f.endsWith('.json') && f !== 'audit.json');
+let found = false;
+for (const f of files) {
+  const data = JSON.parse(fs.readFileSync(path.join(enDir, f), 'utf8'));
+  if ('fieldLabels' in data) {
+    console.log('FAIL: fieldLabels 중복 정의 발견: ' + f);
+    found = true;
+  }
+}
+if (!found) console.log('PASS: audit.json 외 fieldLabels 중복 없음');
+"
+```
+
+**PASS 기준:** `audit.json` 외 파일에 `fieldLabels` 최상위 키 없음.
+
+**FAIL 기준:** 다른 namespace에 `fieldLabels` 발견 시 해당 블록을 `audit.json`으로 이전하고 중복 제거.
+
+**패턴 설명:**
+```
+audit.fieldLabels = 전체 엔티티 필드 라벨의 SSOT
+AuditLogDiffViewer가 tAudit.raw('fieldLabels')로 단일 조회
+다른 namespace에 fieldLabels가 있으면 → audit.json과 드리프트 위험
+```
+
+**예외:** `fieldLabels`가 폼 레이블(필드 이름이 아닌 폼 입력 라벨)을 가리키는 경우는 허용. 단, audit log diff viewer에서 참조되는 엔티티 타입(equipment, calibration, checkout, calibration_plan, non_conformance, disposal 등)의 필드 라벨은 반드시 `audit.fieldLabels`에만 위치.
