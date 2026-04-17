@@ -157,6 +157,7 @@ export {
   SIGNATURE_UPLOAD_LIMITS,
   EXPORT_QUERY_LIMITS,
   HISTORY_CARD_QUERY_LIMIT,
+  HISTORY_CARD_QUERY_LIMITS,
   MIGRATION_SESSION_TTL_MS,
 } from './business-rules';
 
@@ -265,3 +266,23 @@ export {
   MigrationErrorCode,
   type MigrationErrorCode as MigrationErrorCodeType,
 } from './error-codes';
+
+// QR 코드 및 라벨 인쇄 설정 (FE 컴포넌트 + Phase 2 라벨 PDF 공유)
+export {
+  QR_CONFIG,
+  LABEL_CONFIG,
+  getLabelCellDimensions,
+  type QrConfig,
+  type LabelConfig,
+} from './qr-config';
+
+// QR URL 빌더 / 파서 (FE/BE 공용 SSOT)
+export { EQUIPMENT_QR_PATH_PREFIX, buildEquipmentQRUrl, parseEquipmentQRUrl } from './qr-url';
+
+// QR 모바일 랜딩 액션 권한 (FE/BE 공용 SSOT — 서버가 계산, 클라이언트는 렌더)
+export {
+  QR_ACTION_VALUES,
+  QR_ACTION_I18N_KEYS,
+  QR_ACTION_PRIORITY,
+  type QRAllowedAction,
+} from './qr-access';

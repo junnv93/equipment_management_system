@@ -10,7 +10,9 @@ import { EquipmentAttachmentService } from './services/equipment-attachment.serv
 import { RepairHistoryService } from './services/repair-history.service';
 import { HistoryCardService } from './services/history-card.service';
 import { EquipmentHistoryService } from './services/equipment-history.service';
+import { EquipmentTimelineService } from './services/equipment-timeline.service';
 import { DisposalService } from './services/disposal.service';
+import { QRAccessService } from './services/qr-access.service';
 import { RepairHistoryController } from './repair-history.controller';
 import { EquipmentHistoryController } from './equipment-history.controller';
 import { CacheModule } from '../../common/cache/cache.module';
@@ -35,8 +37,10 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     EquipmentAttachmentService,
     RepairHistoryService,
     EquipmentHistoryService,
+    EquipmentTimelineService,
     DisposalService,
     HistoryCardService,
+    QRAccessService,
     InternalApiKeyGuard,
   ],
   exports: [
@@ -45,6 +49,7 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     EquipmentAttachmentService,
     RepairHistoryService,
     EquipmentHistoryService,
+    EquipmentTimelineService,
     DisposalService,
   ],
 })
