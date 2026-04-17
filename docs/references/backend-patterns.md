@@ -191,3 +191,4 @@ await db.transaction(async (tx) => {
 3. **구조화 예외**: `FormRenderError` (docx-xml-helper) — `InternalServerErrorException` 상속 + `code: FORM_TEMPLATE_RENDER_FAILED` + formLabel/context 포함. 양식 개정으로 매칭이 깨질 때 운영자가 즉시 식별 가능.
 4. **Graceful fallback**: 서명/사진 다운로드 실패 시 텍스트로 fallback (PII 유출 없음, 렌더링 차단 없음).
 5. **양식-DB 매핑 문서**: `docs/manual/report-export-mapping.md §3.2` 참조 — 각 양식 필드가 어느 DB 컬럼에 매핑되는지 갱신된 표 유지.
+6. **양식 통합 인덱스**: `docs/manual/forms-index.md` — 모든 UL-QP 양식의 구현 상태/엔드포인트/매핑표/구현 파일을 한눈에 탐색. 새 양식 추가 시 체크리스트 제공.
