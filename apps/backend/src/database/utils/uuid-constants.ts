@@ -186,6 +186,8 @@ export const NC_007_ID = 'aaaa0007-0007-0007-0007-000000000007';
 export const NC_008_ID = 'aaaa0008-0008-0008-0008-000000000008';
 export const NC_009_ID = 'aaaa0009-0009-0009-0009-000000000009';
 export const NC_010_ID = 'aaaa000a-000a-000a-000a-00000000000a';
+// SUW-E0001 통합 이력 검증용 — FK 역참조 중복 제거 규칙 (repair와 1:1 연결)
+export const NC_011_ID = 'aaaa000b-000b-000b-000b-00000000000b';
 
 // =============================================================================
 // REPAIR HISTORY (8 repairs)
@@ -200,6 +202,8 @@ export const REPAIR_005_ID = 'dddd0005-0005-0005-0005-000000000005'; // standalo
 export const REPAIR_006_ID = 'dddd0006-0006-0006-0006-000000000006'; // standalone
 export const REPAIR_007_ID = 'dddd0007-0007-0007-0007-000000000007'; // standalone
 export const REPAIR_008_ID = 'dddd0008-0008-0008-0008-000000000008'; // standalone
+// SUW-E0001 통합 이력 검증용 — NC와 1:1 FK 연결
+export const REPAIR_009_ID = 'dddd0009-0009-0009-0009-000000000009';
 
 // =============================================================================
 // CHECKOUTS (15 checkouts)

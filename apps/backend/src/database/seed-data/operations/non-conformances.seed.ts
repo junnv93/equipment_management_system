@@ -27,12 +27,15 @@ import {
   EQUIP_EMC_RECEIVER_SUW_E_ID,
   EQUIP_RECEIVER_UIW_W_ID,
   EQUIP_AMPLIFIER_UIW_W_ID,
+  EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
   USER_TEST_ENGINEER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
   REPAIR_001_ID,
   REPAIR_002_ID,
   REPAIR_003_ID,
   REPAIR_004_ID,
+  REPAIR_009_ID,
+  NC_011_ID,
 } from '../../utils/uuid-constants';
 
 function createNC(
@@ -219,6 +222,25 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
       closedAt: daysAgo(20),
       closureNotes: '장기 수리 완료',
       resolutionType: 'other',
+    }
+  ),
+
+  // ── SUW-E0001 통합 이력 e2e 검증용 ──
+  // repair_history.REPAIR_009와 1:1 연결 → FK 역참조 중복 제거 규칙 검증
+  // 이력카드 §5 통합 섹션: repair 행만 표시되고 이 NC는 별도 행 생략되어야 함
+  createNC(
+    NC_011_ID,
+    EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
+    daysAgo(15),
+    'damage',
+    'RF 입력 포트 접촉 불량 — 커넥터 핀 마모',
+    'corrected',
+    {
+      resolutionType: 'repair',
+      repairHistoryId: REPAIR_009_ID,
+      correctionContent: 'N-타입 커넥터 핀 교체',
+      correctionDate: toDateString(daysAgo(14)),
+      correctedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
     }
   ),
 ];

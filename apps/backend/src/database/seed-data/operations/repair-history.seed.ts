@@ -14,6 +14,7 @@ import {
   REPAIR_006_ID,
   REPAIR_007_ID,
   REPAIR_008_ID,
+  REPAIR_009_ID,
   EQUIP_HARNESS_COUPLER_SUW_A_ID,
   EQUIP_CURRENT_PROBE_SUW_A_ID,
   EQUIP_RECEIVER_UIW_W_ID,
@@ -22,6 +23,7 @@ import {
   EQUIP_OSCILLOSCOPE_SUW_R_ID,
   EQUIP_POWER_SUPPLY_SUW_R_ID,
   EQUIP_SAR_SYSTEM_SUW_S_ID,
+  EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
 } from '../../utils/uuid-constants';
 
@@ -138,5 +140,21 @@ export const REPAIR_HISTORY_SEED_DATA: (typeof repairHistory.$inferInsert)[] = [
     createdBy: USER_TECHNICAL_MANAGER_SUWON_ID,
     createdAt: daysAgo(55),
     updatedAt: daysAgo(50),
+  },
+
+  // ── SUW-E0001 (스펙트럼 분석기) 통합 이력 e2e 검증용 ──
+  // NC_011이 이 repair를 repairHistoryId로 참조 → FK 중복 제거 규칙 검증
+  // 이력카드 통합 섹션에 repair 행만 나오고 NC는 별도 행으로 나오지 않아야 함
+  {
+    id: REPAIR_009_ID,
+    equipmentId: EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
+    repairDate: daysAgo(14),
+    repairDescription: 'N-타입 입력 커넥터 핀 교체',
+    repairResult: 'completed',
+    notes: '제조사 교체부품 수배 → 교체 완료, RF 특성 재검증 통과',
+    isDeleted: false,
+    createdBy: USER_TECHNICAL_MANAGER_SUWON_ID,
+    createdAt: daysAgo(14),
+    updatedAt: daysAgo(13),
   },
 ];
