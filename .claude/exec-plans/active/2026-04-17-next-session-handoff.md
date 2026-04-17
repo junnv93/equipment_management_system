@@ -1,7 +1,8 @@
-# 다음 세션 인계 노트 (73차 → 74차)
+# 다음 세션 인계 노트 (73~74차 → 75차)
 
 **작성일**: 2026-04-17
-**이전 세션 커밋**: `ea048c4e`, `19bc114b`, `699a7dc8` (3건, main 브랜치, unpushed)
+**74차 세션 커밋**: `42f76fb4`, `35b0b641` (main, pushed)
+**73차 세션 커밋**: `ea048c4e`, `19bc114b`, `699a7dc8`, `2716354b` (main, pushed)
 
 ---
 
@@ -26,13 +27,12 @@
 
 ## 차기 세션 우선 작업
 
-### P0 — Push 필요
+### P0 — 완료 (74차에서 처리)
 
-3개 unpushed 커밋을 main에 push.
-```bash
-git push origin main
-```
-(pre-push hook이 자동 검증)
+- ✅ 모든 커밋 push 완료 (pre-push hook 통과)
+- ✅ tsc 0 errors, unit 50/50 suites 677 tests, E2E 22/22 suites 287 tests (3회 연속 동일)
+- ✅ 아키텍처 리뷰 완료 — Critical 0건 (C-2 cable 경로는 사문화 코드, 동작 영향 없음)
+- ✅ SSOT grep 검증: 구 UUID `f47ac10b-...`, `a1b2c3d4-...` → test/ 하위 0 matches
 
 ### P1 — 남은 기술 부채
 
@@ -106,13 +106,15 @@ apps/backend/test/
 
 ---
 
-## 최근 커밋 (73차)
+## 최근 커밋 (73~74차)
 
 ```
+35b0b641 refactor: globalSetup TEAMS_SEED SSOT 정렬 + file-upload ErrorCode import
+42f76fb4 fix(test): 아키텍처 리뷰 대응 — users DB_URL fallback + calibration-plans casVersion/export 수정
+2716354b docs: 73차 → 74차 인계 노트 추가
 699a7dc8 docs: 73차 — harness 실행 산출물 (contracts/evaluations/exec-plans)
 19bc114b test: 73차 — 테스트 인프라 SSOT + E2E/unit 통합 수정
 ea048c4e refactor(backend): 73차 — 이벤트/캐시 일관성 + i18n + 양식 다운로드 복원력
-2b79ff2c fix(data-migration): 컬럼 매핑 완전성 보강 — NC resolutionType, SW FK 해석
 ```
 
-74차 시작 시 `git pull origin main` 또는 이미 push 완료면 `git log --oneline -10`으로 확인.
+75차 시작 시 `git log --oneline -10`으로 확인.
