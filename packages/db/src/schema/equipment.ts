@@ -104,7 +104,7 @@ export const equipment = pgTable(
 
     // 추가 정보
     supplier: varchar('supplier', { length: 100 }),
-    contactInfo: varchar('contact_info', { length: 100 }),
+    supplierContact: varchar('supplier_contact', { length: 100 }), // 공급사 연락처 (UL-QP-18-02)
     firmwareVersion: varchar('firmware_version', { length: 50 }),
     manualLocation: text('manual_location'),
     accessories: text('accessories'),

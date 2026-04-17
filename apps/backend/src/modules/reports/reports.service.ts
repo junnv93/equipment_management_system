@@ -727,7 +727,6 @@ export class ReportsService {
         status: calibrationsTable.status,
         approvalStatus: calibrationsTable.approvalStatus,
         result: calibrationsTable.result,
-        cost: calibrationsTable.cost,
         nextCalibrationDate: calibrationsTable.nextCalibrationDate,
       })
       .from(calibrationsTable)
@@ -767,7 +766,6 @@ export class ReportsService {
         statusLabel: CALIBRATION_STATUS_LABELS[r.status] ?? r.status,
         approvalStatus: APPROVAL_LABELS[r.approvalStatus] ?? r.approvalStatus,
         result: r.result ?? '-',
-        costStr: r.cost ? `${Number(r.cost).toLocaleString(DEFAULT_LOCALE)}원` : '-',
         nextCalibrationStr: fmtDate(r.nextCalibrationDate),
       })),
     };

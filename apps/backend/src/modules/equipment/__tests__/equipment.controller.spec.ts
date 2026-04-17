@@ -45,7 +45,7 @@ describe('EquipmentController', () => {
     purchaseYear: null,
     price: null,
     supplier: null,
-    contactInfo: null,
+    supplierContact: null,
     firmwareVersion: null,
     manualLocation: null,
     accessories: null,

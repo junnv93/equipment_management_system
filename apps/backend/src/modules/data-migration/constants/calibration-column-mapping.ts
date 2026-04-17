@@ -22,11 +22,6 @@ export const CALIBRATION_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['성적서번호', '인증서번호', 'Certificate Number', 'Cert No'],
   },
   { dbField: 'result', aliases: ['교정결과', '결과', 'Result', 'Calibration Result'] },
-  {
-    dbField: 'cost',
-    aliases: ['교정비용', '비용', 'Cost', 'Calibration Cost'],
-    transform: toNumber,
-  },
   { dbField: 'notes', aliases: ['비고', '메모', 'Notes', 'Remarks'] },
   {
     dbField: 'completionDate',

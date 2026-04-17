@@ -123,7 +123,7 @@ export interface FormValues {
   classification?: Classification;
   managementSerialNumberStr?: string; // 일련번호 (4자리 문자열)
   supplier?: string;
-  contactInfo?: string;
+  supplierContact?: string;
   firmwareVersion?: string;
   manualLocation?: string;
   accessories?: string;

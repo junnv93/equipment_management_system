@@ -324,7 +324,7 @@ export class HistoryCardService {
         accessories: equipmentRow.accessories ?? '-',
         manufacturerContact: equipmentRow.manufacturerContact ?? '-',
         supplier: equipmentRow.supplier ?? '-',
-        supplierContact: equipmentRow.contactInfo ?? '-',
+        supplierContact: equipmentRow.supplierContact ?? '-',
         specMatch: SPEC_MATCH_LABELS[equipmentRow.specMatch ?? ''] ?? '-',
         calibrationRequired:
           CALIBRATION_REQUIRED_LABELS[equipmentRow.calibrationRequired ?? ''] ?? '-',

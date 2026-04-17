@@ -131,7 +131,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     {
       manufacturerContact: '02-1234-5678',
       supplier: 'Keysight Technologies Korea',
-      contactInfo: '031-987-6543',
+      supplierContact: '031-987-6543',
       accessories: 'RF 케이블 3m x2, N-SMA 어댑터, 전용 캐리어 케이스',
       technicalManager: '김기술',
       initialLocation: 'SUWON Lab A-201',

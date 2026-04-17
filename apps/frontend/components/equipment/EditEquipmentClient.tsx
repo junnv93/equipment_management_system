@@ -160,7 +160,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
     teamId: typeof equipment.teamId === 'number' ? equipment.teamId : equipment.teamId || undefined,
     site: equipment.site || undefined,
     supplier: equipment.supplier || undefined,
-    contactInfo: equipment.contactInfo || undefined,
+    supplierContact: equipment.supplierContact || undefined,
     firmwareVersion: equipment.firmwareVersion || undefined,
     manualLocation: equipment.manualLocation || undefined,
     accessories: equipment.accessories || undefined,

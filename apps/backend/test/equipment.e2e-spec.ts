@@ -89,7 +89,7 @@ describe('EquipmentController (e2e)', () => {
         managementMethod: 'external_calibration',
         purchaseYear: 2023,
         supplier: 'Test Supplier',
-        contactInfo: 'test@example.com',
+        supplierContact: 'test@example.com',
         firmwareVersion: 'v2.0.0',
         manualLocation: '/manuals/test.pdf',
         accessories: 'Test Accessories',

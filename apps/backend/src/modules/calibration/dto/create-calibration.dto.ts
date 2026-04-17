@@ -31,7 +31,6 @@ export const calibrationBaseSchema = z.object({
   certificateNumber: z.string().max(100).optional(),
   certificatePath: z.string().max(500).optional(),
   result: CalibrationResultEnum.optional(),
-  cost: z.number().min(0).optional(),
   notes: z.string().optional(),
   intermediateCheckDate: z.coerce.date().optional(),
   registeredBy: optionalUuid(),
@@ -106,9 +105,6 @@ export class CreateCalibrationDto {
     required: false,
   })
   result?: CalibrationResult;
-
-  @ApiProperty({ description: '교정 비용', required: false })
-  cost?: number;
 
   @ApiProperty({ description: '교정 결과 메모', required: false })
   notes?: string;

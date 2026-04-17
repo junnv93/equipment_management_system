@@ -19,7 +19,6 @@ const calibrationRowSchema = z.object({
   agencyName: z.string().optional(),
   certificateNumber: z.string().optional(),
   result: z.string().optional(),
-  cost: z.number().optional(),
   notes: z.string().optional(),
 });
 

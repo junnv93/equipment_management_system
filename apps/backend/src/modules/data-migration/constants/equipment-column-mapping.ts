@@ -8,6 +8,12 @@
  * ⚠️ alias map의 value는 SSOT enum 타입으로 강제 — 신규 enum 값 추가 시 tsc가 누락 감지
  */
 import type { Site, ManagementMethod, CalibrationRequired } from '@equipment-management/schemas';
+import {
+  SITE_LABELS,
+  MANAGEMENT_METHOD_LABELS,
+  CALIBRATION_REQUIRED_LABELS,
+  SPEC_MATCH_LABELS,
+} from '@equipment-management/schemas';
 
 /** 값 변환 함수 타입 */
 type TransformFn = (value: unknown) => unknown;
@@ -16,12 +22,19 @@ type TransformFn = (value: unknown) => unknown;
 export interface ColumnMappingEntry {
   /** DB 필드명 (camelCase) */
   dbField: string;
-  /** 인식할 Excel 헤더 alias 목록 */
+  /** 인식할 Excel 헤더 alias 목록 (첫 번째가 primary label) */
   aliases: string[];
   /** 선택적 값 변환 함수 */
   transform?: TransformFn;
   /** 필수 여부 */
   required?: boolean;
+  /** 템플릿 헤더에 표시할 텍스트 (미지정 시 aliases[0] + 필수 표시 자동 생성) */
+  headerLabel?: string;
+}
+
+/** SSOT 라벨 맵에서 한국어 요약 생성 */
+function enumHintFromLabels(labels: Record<string, string>): string {
+  return Object.values(labels).join('/');
 }
 
 // ── 변환 유틸리티 ─────────────────────────────────────────────────────────────
@@ -162,74 +175,38 @@ export function toBoolean(value: unknown): boolean | undefined {
 /**
  * 장비 Excel 컬럼 매핑 테이블
  *
- * 순서: 필수 필드 → 식별 필드 → 교정 필드 → 부가 정보
+ * 순서: 사이트(필수) → UL-QP-18-01 관리대장 열 순서 → 추가 필드 → FK 해석용 가상 필드
+ * 열 순서는 관리대장에서 복사-붙여넣기 편의를 위해 최적화됨.
  */
 export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
-  // 필수
+  // ── 사이트 (필수, 맨 앞 — 사용자 요청) ─────────────────────────────────────
+  {
+    dbField: 'site',
+    aliases: ['사이트', 'Site', '시험소', '위치(사이트)', '사업장'],
+    transform: mapSiteValue,
+    required: true,
+    headerLabel: `사이트(${enumHintFromLabels(SITE_LABELS)}) *`,
+  },
+
+  // ── UL-QP-18-01 관리대장 열 순서 (1~15열) ─────────────────────────────────
+  {
+    dbField: 'managementNumber',
+    aliases: ['관리번호', '장비번호', 'Management Number', 'Mgmt No.', 'Mgmt No', '관리 번호'],
+  },
+  {
+    dbField: 'assetNumber',
+    aliases: ['자산번호', '자산 번호', 'Asset Number', 'Asset No.', 'Asset No'],
+  },
   {
     dbField: 'name',
     aliases: ['장비명', '장비 명', 'Equipment Name', 'Name', '기기명'],
     required: true,
   },
   {
-    dbField: 'site',
-    aliases: ['사이트', 'Site', '시험소', '위치(사이트)', '사업장'],
-    transform: mapSiteValue,
-    required: true,
-  },
-  {
-    dbField: 'initialLocation',
-    aliases: [
-      '설치위치',
-      '위치',
-      '보관위치',
-      'Location',
-      'Initial Location',
-      '설치 위치',
-      '보관 위치',
-    ],
-    required: true,
-  },
-
-  // 관리번호 (자동생성 옵션 없을 때 필수)
-  {
-    dbField: 'managementNumber',
-    aliases: ['관리번호', '장비번호', 'Management Number', 'Mgmt No.', 'Mgmt No', '관리 번호'],
-  },
-
-  // 식별 정보
-  {
-    dbField: 'modelName',
-    aliases: ['모델명', '모델', 'Model', 'Model Name', '기종'],
-  },
-  {
-    dbField: 'manufacturer',
-    aliases: ['제조사', '제조업체', 'Manufacturer', 'Maker'],
-  },
-  {
-    dbField: 'serialNumber',
-    aliases: ['일련번호', '시리얼번호', 'Serial Number', 'S/N', 'SN', '일련 번호'],
-  },
-  {
-    dbField: 'assetNumber',
-    aliases: ['자산번호', '자산 번호', 'Asset Number', 'Asset No.', 'Asset No'],
-  },
-
-  // 교정 정보
-  {
     dbField: 'managementMethod',
     aliases: ['관리방법', '교정방법', '관리 방법', 'Calibration Method', 'Cal Method'],
     transform: mapManagementMethod,
-  },
-  {
-    dbField: 'calibrationRequired',
-    aliases: ['교정필요', '교정 필요', '교정여부', 'Calibration Required', 'Cal Required'],
-    transform: mapCalibrationRequired,
-  },
-  {
-    dbField: 'calibrationCycle',
-    aliases: ['교정주기', '교정 주기', 'Calibration Cycle', 'Cal Cycle', '주기(개월)', '주기'],
-    transform: toInteger,
+    headerLabel: `관리방법(${enumHintFromLabels(MANAGEMENT_METHOD_LABELS)})`,
   },
   {
     dbField: 'lastCalibrationDate',
@@ -244,20 +221,76 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     transform: parseExcelDate,
   },
   {
+    dbField: 'calibrationAgency',
+    aliases: ['교정기관', '교정 기관', 'Calibration Agency', 'Cal Agency', '교정처'],
+  },
+  {
+    dbField: 'calibrationCycle',
+    aliases: ['교정주기', '교정 주기', 'Calibration Cycle', 'Cal Cycle', '주기(개월)', '주기'],
+    transform: toInteger,
+  },
+  {
     dbField: 'nextCalibrationDate',
     aliases: ['차기교정일', '차기 교정일', '다음교정일', 'Next Calibration Date', 'Next Cal Date'],
     transform: parseExcelDate,
   },
   {
-    dbField: 'calibrationAgency',
-    aliases: ['교정기관', '교정 기관', 'Calibration Agency', 'Cal Agency', '교정처'],
+    dbField: 'manufacturer',
+    aliases: ['제조사', '제조업체', 'Manufacturer', 'Maker'],
   },
-
-  // 구매/수입 정보
   {
     dbField: 'purchaseYear',
     aliases: ['구입년도', '구입 년도', '취득년도', 'Purchase Year', 'Year'],
     transform: toInteger,
+  },
+  {
+    dbField: 'modelName',
+    aliases: ['모델명', '모델', 'Model', 'Model Name', '기종'],
+  },
+  {
+    dbField: 'serialNumber',
+    aliases: ['일련번호', '시리얼번호', 'Serial Number', 'S/N', 'SN', '일련 번호'],
+  },
+  {
+    dbField: 'description',
+    aliases: ['장비사양', '사양', '설명', 'Description', 'Specification', 'Spec'],
+  },
+  {
+    dbField: 'initialLocation',
+    aliases: [
+      '설치위치',
+      '위치',
+      '보관위치',
+      'Location',
+      'Initial Location',
+      '설치 위치',
+      '보관 위치',
+    ],
+    required: true,
+  },
+  {
+    dbField: 'needsIntermediateCheck',
+    aliases: ['중간점검필요', '중간 점검 필요', 'Needs Intermediate Check'],
+    transform: toBoolean,
+    headerLabel: '중간점검필요(예/아니오)',
+  },
+
+  // ── 관리대장에 없는 추가 필드 ────────────────────────────────────────────────
+  {
+    dbField: 'calibrationRequired',
+    aliases: ['교정필요', '교정 필요', '교정여부', 'Calibration Required', 'Cal Required'],
+    transform: mapCalibrationRequired,
+    headerLabel: `교정필요(${enumHintFromLabels(CALIBRATION_REQUIRED_LABELS)})`,
+  },
+  {
+    dbField: 'calibrationResult',
+    aliases: ['교정결과', '교정 결과', 'Calibration Result'],
+  },
+  {
+    dbField: 'specMatch',
+    aliases: ['시방일치', 'Spec Match', '시방 일치'],
+    transform: mapSpecMatch,
+    headerLabel: `시방일치(${enumHintFromLabels(SPEC_MATCH_LABELS)})`,
   },
   {
     dbField: 'price',
@@ -266,18 +299,20 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
   },
   {
     dbField: 'supplier',
-    aliases: ['구입처', '공급업체', '납품업체', 'Supplier', 'Vendor'],
+    aliases: ['공급사', '구입처', '공급업체', '납품업체', 'Supplier', 'Vendor'],
+  },
+  {
+    dbField: 'supplierContact',
+    aliases: ['공급사 연락처', '연락처', 'Contact Info', 'Supplier Contact', 'Contact Information'],
+  },
+  {
+    dbField: 'manufacturerContact',
+    aliases: ['제조사연락처', '제조사 연락처', 'Manufacturer Contact'],
   },
   {
     dbField: 'installationDate',
     aliases: ['설치일자', '설치일', '도입일', 'Installation Date', 'Install Date'],
     transform: parseExcelDate,
-  },
-
-  // 추가 정보
-  {
-    dbField: 'description',
-    aliases: ['장비사양', '사양', '설명', 'Description', 'Specification', 'Spec'],
   },
   {
     dbField: 'accessories',
@@ -288,30 +323,61 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['매뉴얼위치', '매뉴얼 위치', 'Manual Location'],
   },
   {
-    dbField: 'manufacturerContact',
-    aliases: ['제조사연락처', '제조사 연락처', 'Manufacturer Contact', 'Contact'],
-  },
-  {
-    dbField: 'contactInfo',
-    aliases: ['연락처', 'Contact Info', 'Contact Information'],
-  },
-
-  // 펌웨어 정보
-  {
     dbField: 'firmwareVersion',
     aliases: ['펌웨어버전', 'FW Version', 'Firmware Version'],
-  },
-  {
-    dbField: 'externalIdentifier',
-    aliases: ['외부식별번호', '소유처번호', '외부번호', 'External ID', 'External Identifier'],
   },
   {
     dbField: 'equipmentType',
     aliases: ['장비유형', '장비타입', '유형', 'Equipment Type', 'Type'],
   },
   {
-    dbField: 'calibrationResult',
-    aliases: ['교정결과', '교정 결과', 'Calibration Result'],
+    dbField: 'intermediateCheckCycle',
+    aliases: ['중간점검주기', '중간 점검 주기', 'Intermediate Check Cycle'],
+    transform: toInteger,
+  },
+  {
+    dbField: 'lastIntermediateCheckDate',
+    aliases: ['최종중간점검일', '최종 중간점검일', 'Last Intermediate Check Date'],
+    transform: parseExcelDate,
+  },
+  {
+    dbField: 'nextIntermediateCheckDate',
+    aliases: ['차기중간점검일', '차기 중간점검일', 'Next Intermediate Check Date'],
+    transform: parseExcelDate,
+  },
+  {
+    dbField: 'technicalManager',
+    aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
+  },
+
+  // ── FK 해석용 가상 필드 (DB 컬럼에 직접 매핑 안 됨, FkResolutionService가 해석) ──
+  {
+    dbField: 'managerName',
+    aliases: ['운영책임자(정)', '담당자', '담당자명', '운영책임자 정', 'Manager', 'Manager Name'],
+  },
+  {
+    dbField: 'deputyManagerName',
+    aliases: [
+      '운영책임자(부)',
+      '부담당자',
+      '부담당자명',
+      '운영책임자 부',
+      'Deputy Manager',
+      'Deputy Manager Name',
+    ],
+  },
+];
+
+// ── 폐기된 컬럼 정의 (SSOT: 제거된 매핑 엔트리에서 alias 자동 추출) ──────────
+
+/**
+ * 마이그레이션 템플릿에서 제거되었지만 기존 Excel 호환을 위해 무시할 컬럼 정의.
+ * 이 배열에서 DEPRECATED_ALIAS_INDEX가 자동 생성됨 — 하드코딩 Set 아님.
+ */
+export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
+  {
+    dbField: 'externalIdentifier',
+    aliases: ['외부식별번호', '소유처번호', '외부번호', 'External ID', 'External Identifier'],
   },
   {
     dbField: 'correctionFactor',
@@ -341,53 +407,44 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     transform: parseExcelDate,
   },
   {
-    dbField: 'specMatch',
-    aliases: ['시방일치', 'Spec Match', '시방 일치'],
-    transform: mapSpecMatch,
-  },
-  {
-    dbField: 'needsIntermediateCheck',
-    aliases: ['중간점검필요', '중간 점검 필요', 'Needs Intermediate Check'],
-    transform: toBoolean,
-  },
-  {
-    dbField: 'intermediateCheckCycle',
-    aliases: ['중간점검주기', '중간 점검 주기', 'Intermediate Check Cycle'],
-    transform: toInteger,
-  },
-  {
-    dbField: 'lastIntermediateCheckDate',
-    aliases: ['최종중간점검일', '최종 중간점검일', 'Last Intermediate Check Date'],
-    transform: parseExcelDate,
-  },
-  {
-    dbField: 'nextIntermediateCheckDate',
-    aliases: ['차기중간점검일', '차기 중간점검일', 'Next Intermediate Check Date'],
-    transform: parseExcelDate,
-  },
-  {
-    dbField: 'technicalManager',
-    aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
-  },
-
-  // FK 해석용 가상 필드 (DB 컬럼에 직접 매핑되지 않음, FkResolutionService가 해석)
-  {
     dbField: 'managerEmail',
     aliases: ['담당자이메일', '담당자 이메일', 'Manager Email'],
-  },
-  {
-    dbField: 'managerName',
-    aliases: ['담당자', '담당자명', 'Manager', 'Manager Name'],
   },
   {
     dbField: 'deputyManagerEmail',
     aliases: ['부담당자이메일', '부담당자 이메일', 'Deputy Manager Email'],
   },
-  {
-    dbField: 'deputyManagerName',
-    aliases: ['부담당자', '부담당자명', 'Deputy Manager', 'Deputy Manager Name'],
-  },
 ];
+
+/** 폐기된 장비 컬럼 alias 역색인 — DEPRECATED_EQUIPMENT_COLUMNS에서 자동 생성 */
+const DEPRECATED_EQUIPMENT_ALIAS_INDEX: Set<string> = new Set(
+  DEPRECATED_EQUIPMENT_COLUMNS.flatMap((e) => e.aliases.map((a) => a.toLowerCase().trim()))
+);
+
+/** 교정 시트 폐기 alias (cost 제거) */
+const DEPRECATED_CALIBRATION_ALIASES: Set<string> = new Set([
+  '교정비용',
+  '비용',
+  'cost',
+  'calibration cost',
+]);
+
+/** 시험용 SW 폐기 alias (이메일 제거) */
+const DEPRECATED_TEST_SOFTWARE_ALIASES: Set<string> = new Set([
+  '주담당자이메일',
+  '주담당자 이메일',
+  'primary manager email',
+  '부담당자이메일',
+  '부담당자 이메일',
+  'secondary manager email',
+]);
+
+/** 모든 시트 통합 폐기 alias — ExcelParserService에서 import하여 사용 */
+export const ALL_DEPRECATED_ALIASES: Set<string> = new Set([
+  ...DEPRECATED_EQUIPMENT_ALIAS_INDEX,
+  ...DEPRECATED_CALIBRATION_ALIASES,
+  ...DEPRECATED_TEST_SOFTWARE_ALIASES,
+]);
 
 /**
  * alias → ColumnMappingEntry 역색인 (대소문자 무시, 공백 트림)

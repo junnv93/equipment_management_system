@@ -67,7 +67,7 @@
     "initialLocation": "최초 설치 위치",
     "installationDate": "설치 일시",
     "supplier": "공급사",
-    "contactInfo": "연락처",
+    "supplierContact": "공급사 연락처",
     "externalIdentifier": "소유처 원본 번호",
     "managementMethod": "관리 방법"
   },
@@ -485,7 +485,7 @@
       "deputyManagerPlaceholder": "부담당자 선택",
       "deputyManagerDescription": "운영 책임자(부) — 기술책임자 중 선택",
       "supplierPlaceholder": "예: ABC 공급사",
-      "contactPlaceholder": "예: 02-1234-5678",
+      "supplierContactPlaceholder": "예: 02-1234-5678",
       "swVersionPlaceholder": "예: v1.0.0",
       "fwVersionPlaceholder": "예: v2.1.0",
       "manualLocationPlaceholder": "예: /docs/manuals/equipment-001.pdf 또는 서버 경로",

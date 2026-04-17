@@ -5,6 +5,7 @@ import type { RawExcelRow, MappedRow } from '../types/data-migration.types';
 import {
   COLUMN_ALIAS_INDEX,
   EQUIPMENT_COLUMN_MAPPING,
+  ALL_DEPRECATED_ALIASES,
   type ColumnMappingEntry,
 } from '../constants/equipment-column-mapping';
 import {
@@ -55,7 +56,25 @@ import {
   NON_CONFORMANCE_TYPE_VALUES,
   RESOLUTION_TYPE_VALUES,
   MIGRATION_ROW_STATUS,
+  SITE_LABELS,
+  MANAGEMENT_METHOD_LABELS,
+  CALIBRATION_REQUIRED_LABELS,
+  SPEC_MATCH_LABELS,
+  REPAIR_RESULT_LABELS,
+  INCIDENT_TYPE_LABELS,
+  CALIBRATION_FACTOR_TYPE_LABELS,
+  NON_CONFORMANCE_TYPE_LABELS,
+  RESOLUTION_TYPE_LABELS,
+  TEST_FIELD_LABELS,
 } from '@equipment-management/schemas';
+
+/** SSOT enum + 라벨 → "value(한국어)" 형식 */
+function formatEnumWithLabels<T extends string>(
+  values: readonly T[],
+  labels: Partial<Record<T, string>>
+): string {
+  return values.map((v) => (labels[v] ? `${v}(${labels[v]})` : v)).join(' | ');
+}
 
 export interface ParsedSheet {
   sheetType: MigrationSheetType;
@@ -264,7 +283,10 @@ export class ExcelParserService {
       const entry = aliasIndex.get(key);
 
       if (!entry) {
-        unmappedColumns.push(header);
+        // 폐기된 컬럼은 경고 없이 무시 (기존 Excel 호환)
+        if (!ALL_DEPRECATED_ALIASES.has(key)) {
+          unmappedColumns.push(header);
+        }
         continue;
       }
 
@@ -449,7 +471,7 @@ export class ExcelParserService {
     });
 
     const equipColumns = EQUIPMENT_COLUMN_MAPPING.map((entry) => ({
-      header: `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
+      header: entry.headerLabel ?? `${entry.aliases[0]}${entry.required ? ' *' : ''}`,
       key: entry.dbField,
       width: 22,
     }));
@@ -478,19 +500,19 @@ export class ExcelParserService {
     equipHeaderRow.height = EXCEL_HEADER_ROW_HEIGHT;
 
     equipSheet.addRow({
-      name: '네트워크 분석기',
       site: 'suwon',
-      initialLocation: '수원랩 A동 102호',
       managementNumber: 'SUW-E0001',
-      modelName: 'N5247A',
-      manufacturer: 'Keysight',
-      serialNumber: 'MY12345678',
+      name: '네트워크 분석기',
       managementMethod: 'external_calibration',
-      calibrationRequired: 'required',
-      calibrationCycle: '12',
       lastCalibrationDate: '2024-01-15',
       calibrationAgency: 'HCT',
+      calibrationCycle: '12',
+      manufacturer: 'Keysight',
       purchaseYear: '2020',
+      modelName: 'N5247A',
+      serialNumber: 'MY12345678',
+      initialLocation: '수원랩 A동 102호',
+      supplier: 'Keysight Korea',
     });
 
     // ── 교정 이력 시트 ──────────────────────────────────────────────────────────
@@ -503,7 +525,6 @@ export class ExcelParserService {
       { header: '교정기관', key: 'agencyName', width: 20 },
       { header: '성적서번호', key: 'certificateNumber', width: 20 },
       { header: '교정결과', key: 'result', width: 20 },
-      { header: '교정비용', key: 'cost', width: 15 },
       { header: '비고', key: 'notes', width: 30 },
     ];
     this.applyHeaderStyle(
@@ -516,7 +537,6 @@ export class ExcelParserService {
       agencyName: 'HCT',
       certificateNumber: 'HCT-2024-001',
       result: '합격',
-      cost: '500000',
       notes: '정기 교정',
     });
 
@@ -653,25 +673,46 @@ export class ExcelParserService {
       actionPlan: '재교정 실시',
     });
 
-    // ── 참고값 시트 (SSOT: enum 기반 동적 생성 — enum 추가 시 자동 반영) ──
+    // ── 참고값 시트 (SSOT: enum + 라벨 맵 기반 이중언어 동적 생성) ──────────
     const refSheet = workbook.addWorksheet(EXCEL_SHEET_NAMES.REFERENCE);
     refSheet.addRow([REFERENCE_LABELS.FIELD_NAME, REFERENCE_LABELS.ALLOWED_VALUES]);
-    refSheet.addRow([REFERENCE_LABELS.SITE, SiteEnum.options.join(' | ')]);
-    refSheet.addRow([REFERENCE_LABELS.MANAGEMENT_METHOD, ManagementMethodEnum.options.join(' | ')]);
+    refSheet.addRow([REFERENCE_LABELS.SITE, formatEnumWithLabels(SiteEnum.options, SITE_LABELS)]);
+    refSheet.addRow([
+      REFERENCE_LABELS.MANAGEMENT_METHOD,
+      formatEnumWithLabels(ManagementMethodEnum.options, MANAGEMENT_METHOD_LABELS),
+    ]);
     refSheet.addRow([
       REFERENCE_LABELS.CALIBRATION_REQUIRED,
-      CalibrationRequiredEnum.options.join(' | '),
+      formatEnumWithLabels(CalibrationRequiredEnum.options, CALIBRATION_REQUIRED_LABELS),
     ]);
-    refSheet.addRow([REFERENCE_LABELS.REPAIR_RESULT, REPAIR_RESULT_VALUES.join(' | ')]);
-    refSheet.addRow([REFERENCE_LABELS.INCIDENT_TYPE, INCIDENT_TYPE_VALUES.join(' | ')]);
+    refSheet.addRow([
+      REFERENCE_LABELS.REPAIR_RESULT,
+      formatEnumWithLabels(REPAIR_RESULT_VALUES, REPAIR_RESULT_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.INCIDENT_TYPE,
+      formatEnumWithLabels(INCIDENT_TYPE_VALUES, INCIDENT_TYPE_LABELS),
+    ]);
     refSheet.addRow([REFERENCE_LABELS.CONNECTOR_TYPE, CABLE_CONNECTOR_TYPE_VALUES.join(' | ')]);
-    refSheet.addRow([REFERENCE_LABELS.TEST_FIELD, TEST_FIELD_VALUES.join(' | ')]);
-    refSheet.addRow([REFERENCE_LABELS.FACTOR_TYPE, CALIBRATION_FACTOR_TYPE_VALUES.join(' | ')]);
-    refSheet.addRow([REFERENCE_LABELS.NC_TYPE, NON_CONFORMANCE_TYPE_VALUES.join(' | ')]);
-    refSheet.addRow([REFERENCE_LABELS.RESOLUTION_TYPE, RESOLUTION_TYPE_VALUES.join(' | ')]);
+    refSheet.addRow([
+      REFERENCE_LABELS.TEST_FIELD,
+      formatEnumWithLabels(TEST_FIELD_VALUES, TEST_FIELD_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.FACTOR_TYPE,
+      formatEnumWithLabels(CALIBRATION_FACTOR_TYPE_VALUES, CALIBRATION_FACTOR_TYPE_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.NC_TYPE,
+      formatEnumWithLabels(NON_CONFORMANCE_TYPE_VALUES, NON_CONFORMANCE_TYPE_LABELS),
+    ]);
+    refSheet.addRow([
+      REFERENCE_LABELS.RESOLUTION_TYPE,
+      formatEnumWithLabels(RESOLUTION_TYPE_VALUES, RESOLUTION_TYPE_LABELS),
+    ]);
     refSheet.addRow([REFERENCE_LABELS.DATE_FORMAT, REFERENCE_LABELS.DATE_FORMAT_VALUE]);
     refSheet.getColumn(1).width = 35;
-    refSheet.getColumn(2).width = 70;
+    refSheet.getColumn(2).width = 80;
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);

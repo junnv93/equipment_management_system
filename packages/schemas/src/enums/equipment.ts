@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { optionalUuid } from '../utils/fields';
+import type { CalibrationRequired, SpecMatch } from './calibration';
 
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH: 장비 상태 열거형
@@ -191,6 +192,22 @@ export const SITE_LABELS: Record<Site, string> = {
   suwon: '수원',
   uiwang: '의왕',
   pyeongtaek: '평택',
+};
+
+/**
+ * 교정필요 여부 라벨 (서버 사이드 전용)
+ */
+export const CALIBRATION_REQUIRED_LABELS: Record<CalibrationRequired, string> = {
+  required: '필요',
+  not_required: '불필요',
+};
+
+/**
+ * 시방일치 여부 라벨 (서버 사이드 전용)
+ */
+export const SPEC_MATCH_LABELS: Record<SpecMatch, string> = {
+  match: '일치',
+  mismatch: '불일치',
 };
 
 /**

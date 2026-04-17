@@ -84,7 +84,7 @@ export const baseEquipmentSchema = z.object({
 
   // 추가 정보
   supplier: z.string().optional(),
-  contactInfo: z.string().optional(),
+  supplierContact: z.string().optional(), // 공급사 연락처 (UL-QP-18-02)
   firmwareVersion: z.string().optional(),
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),

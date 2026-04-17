@@ -67,7 +67,7 @@
     "initialLocation": "Initial Location",
     "installationDate": "Installation Date",
     "supplier": "Supplier",
-    "contactInfo": "Contact",
+    "supplierContact": "Supplier Contact",
     "externalIdentifier": "External Identifier",
     "managementMethod": "Management Method"
   },
@@ -485,7 +485,7 @@
       "deputyManagerPlaceholder": "Select deputy manager",
       "deputyManagerDescription": "Deputy operations manager — select from technical managers",
       "supplierPlaceholder": "e.g. ABC Supply Co.",
-      "contactPlaceholder": "e.g. +1-234-567-8900",
+      "supplierContactPlaceholder": "e.g. +1-234-567-8900",
       "swVersionPlaceholder": "e.g. v1.0.0",
       "fwVersionPlaceholder": "e.g. v2.1.0",
       "manualLocationPlaceholder": "e.g. /docs/manuals/equipment-001.pdf or server path",

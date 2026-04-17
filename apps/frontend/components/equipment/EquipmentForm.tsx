@@ -437,7 +437,7 @@ export function EquipmentForm({
       teamId: effectiveTeamId,
       site: effectiveSite,
       supplier: initialData?.supplier || '',
-      contactInfo: initialData?.contactInfo || '',
+      supplierContact: initialData?.supplierContact || '',
       firmwareVersion: initialData?.firmwareVersion || '',
       manualLocation: initialData?.manualLocation || '',
       accessories: initialData?.accessories || '',
@@ -819,7 +819,7 @@ export function EquipmentForm({
         managementMethod: data.managementMethod,
         teamId: data.teamId, // optional().nullable() - 빈 문자열 → undefined
         supplier: data.supplier,
-        contactInfo: data.contactInfo,
+        supplierContact: data.supplierContact,
         firmwareVersion: data.firmwareVersion,
         manualLocation: data.manualLocation,
         accessories: data.accessories,

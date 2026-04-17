@@ -79,7 +79,6 @@ export interface CalibrationRecord {
   certificateNumber: string | null;
   certificatePath: string | null;
   result: string | null;
-  cost: number | null;
   notes: string | null;
   approvalStatus: string;
   registeredBy: string | null;
@@ -215,7 +214,6 @@ export class CalibrationService extends VersionedBaseService {
       certificateNumber: row.certificateNumber,
       certificatePath: row.certificatePath,
       result: row.result?.toLowerCase() ?? null,
-      cost: row.cost ? Number(row.cost) : null,
       notes: row.notes,
       approvalStatus: row.approvalStatus,
       registeredBy: row.registeredBy,
@@ -263,7 +261,6 @@ export class CalibrationService extends VersionedBaseService {
       certificateNumber: dto.certificateNumber || null,
       certificatePath: dto.certificatePath || null,
       result: normalizedResult,
-      cost: dto.cost?.toString() || null,
       notes: dto.notes || null,
       intermediateCheckDate: dto.intermediateCheckDate
         ? dto.intermediateCheckDate instanceof Date
@@ -424,9 +421,6 @@ export class CalibrationService extends VersionedBaseService {
     }
     if (updateCalibrationDto.result !== undefined) {
       updateData.result = updateCalibrationDto.result;
-    }
-    if (updateCalibrationDto.cost !== undefined) {
-      updateData.cost = updateCalibrationDto.cost?.toString();
     }
     if (updateCalibrationDto.intermediateCheckDate !== undefined) {
       updateData.intermediateCheckDate = updateCalibrationDto.intermediateCheckDate

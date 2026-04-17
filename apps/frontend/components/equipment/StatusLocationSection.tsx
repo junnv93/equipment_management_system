@@ -344,16 +344,16 @@ export function StatusLocationSection({
             )}
           />
 
-          {/* 연락처 */}
+          {/* 공급사 연락처 */}
           <FormField
             control={control}
-            name="contactInfo"
+            name="supplierContact"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('fields.contactInfo')}</FormLabel>
+                <FormLabel>{t('fields.supplierContact')}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={t('form.statusLocation.contactPlaceholder')}
+                    placeholder={t('form.statusLocation.supplierContactPlaceholder')}
                     {...field}
                     value={field.value || ''}
                   />

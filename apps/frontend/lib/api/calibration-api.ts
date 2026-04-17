@@ -28,7 +28,6 @@ export interface Calibration {
   certificateNumber?: string;
   certificatePath?: string;
   result?: string; // lowercase: 'pass', 'fail', 'conditional'
-  cost?: number;
   notes?: string;
   // 승인 프로세스 필드
   approvalStatus?: CalibrationApprovalStatus;
@@ -101,7 +100,6 @@ export interface CreateCalibrationDto {
   certificateNumber?: string;
   result?: string; // lowercase: 'pass', 'fail', 'conditional'
   notes?: string;
-  cost?: number;
   calibrationManagerId?: string;
   // 승인 프로세스 필드
   registeredBy?: string;

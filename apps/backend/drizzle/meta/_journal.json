@@ -190,6 +190,20 @@
       "when": 1776211200000,
       "tag": "0026_test_software_id_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1776652800000,
+      "tag": "0027_rename_contact_info_to_supplier_contact",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1776652900000,
+      "tag": "0028_drop_calibrations_cost",
+      "breakpoints": true
     }
   ]
 }

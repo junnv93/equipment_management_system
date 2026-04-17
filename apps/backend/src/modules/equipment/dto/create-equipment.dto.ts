@@ -148,8 +148,8 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
   @ApiPropertyOptional({ description: '공급사' })
   supplier?: string;
 
-  @ApiPropertyOptional({ description: '연락처' })
-  contactInfo?: string;
+  @ApiPropertyOptional({ description: '공급사 연락처' })
+  supplierContact?: string;
 
   @ApiPropertyOptional({ description: '펌웨어 버전' })
   firmwareVersion?: string;

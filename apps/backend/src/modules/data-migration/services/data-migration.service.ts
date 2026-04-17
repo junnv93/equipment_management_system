@@ -1023,7 +1023,6 @@ export class DataMigrationService {
       agencyName: row.data.agencyName as string | undefined,
       certificateNumber: row.data.certificateNumber as string | undefined,
       result: row.data.result as string | undefined,
-      cost: row.data.cost !== undefined ? String(row.data.cost) : undefined,
       notes: row.data.notes as string | undefined,
       status: CalibrationStatusEnum.enum.completed,
       approvalStatus: CalibrationApprovalStatusValues.APPROVED,

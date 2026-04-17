@@ -47,17 +47,10 @@ export const TEST_SOFTWARE_COLUMN_MAPPING: ColumnMappingEntry[] = [
     aliases: ['사이트', 'Site'],
     transform: mapSiteValue,
   },
-  {
-    dbField: 'primaryManagerEmail',
-    aliases: ['주담당자이메일', '주담당자 이메일', 'Primary Manager Email'],
-  },
+  // FK 해석용 가상 필드 (이름만 — 이메일은 Azure AD에서 매핑)
   {
     dbField: 'primaryManagerName',
     aliases: ['주담당자', '주담당자명', 'Primary Manager', 'Primary Manager Name'],
-  },
-  {
-    dbField: 'secondaryManagerEmail',
-    aliases: ['부담당자이메일', '부담당자 이메일', 'Secondary Manager Email'],
   },
   {
     dbField: 'secondaryManagerName',
