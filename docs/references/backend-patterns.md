@@ -44,11 +44,46 @@ update(@Body() dto: UpdateEquipmentDto) { ... }
 
 Swagger 메타의 nullable/$ref/enum 정합성은 `main.ts` 에서 `cleanupOpenApiDoc(SwaggerModule.createDocument(...))` 로 후처리한다 (이미 적용됨).
 
+#### 기존 class-DTO 전환 조건
+
+"리팩터를 위한 리팩터" 는 금지이지만, 다음 트리거 중 **하나라도** 해당하면 해당 모듈을 건드리는 PR 에서 `createZodDto` 로 전환한다:
+
+1. **`any` 타입 사용** — DTO 필드 / 반환 타입에 `any` 가 포함된 경우. Zod schema 로 옮기면 런타임·TS 양쪽에서 타입이 강제된다.
+2. **Swagger ↔ TS drift 발견** — `@ApiProperty()` 수동 선언이 실제 필드와 어긋났거나, OpenAPI 출력과 Controller 반환 타입이 불일치한 경우. SSOT 분산이 drift 의 근본 원인이므로 class DTO 단일 파생 패턴으로 정리.
+3. **Zod schema + class DTO 중복 정의** — 동일 필드 목록이 zod schema 와 수동 DTO class 양쪽에 써 있는 경우. `createZodDto(Schema)` 로 병합.
+
+트리거가 없는 모듈은 그대로 둔다. 전환을 위해 별도 PR 을 내지 않는다 — 해당 모듈 작업 시에만 처리.
+
 **Key Files:**
 
 - `common/pipes/zod-validation.pipe.ts` — project ZodValidationPipe
 - `modules/checkouts/dto/handover-token.dto.ts` — createZodDto 적용 예시
 - `main.ts` — cleanupOpenApiDoc 후처리
+
+#### ZodResponse 적용 조건 (파일럿 단계)
+
+**파일럿 커버리지:** `modules/checkouts/checkouts.controller.ts` handover 2 엔드포인트 (2026-04-17 도입).
+
+`@ApiResponse({ type })` 수동 선언 대신 `@ZodResponse({ status, description, type })` 를 쓰면 Swagger 메타 + ZodSerializerInterceptor 직렬화 + TS 반환 타입이 **단일 zod schema 에서 파생**된다. 다만 범용 도입은 성급하다. 다음 조건을 **모두** 만족할 때만 전환:
+
+1. **응답 DTO 가 이미 `createZodDto`** — 기존 manual class DTO 는 먼저 위 "전환 조건" 3건을 통과해야 함.
+2. **2xx 응답만 전환** — `@ZodResponse` 는 성공 응답 전용. 4xx 에러 shape 은 `GlobalExceptionFilter` 가 관리하므로 기존 `@ApiResponse` 유지.
+3. **컨트롤러 단위 `@UseInterceptors(ZodSerializerInterceptor)` 선행** — 글로벌 등록은 전수 영향 범위가 크므로 파일럿 기간에는 컨트롤러 단위만 허용.
+
+**피해야 할 상황:**
+
+- ZodSerializerInterceptor 미등록 컨트롤러에서 `@ZodResponse` 만 도입 → Swagger 만 바뀌고 직렬화는 기존대로라 SSOT 주장 무효.
+- nestjs-zod 5.x 는 `$ref` 이름에 `_Output` 접미사를 붙인다. 외부 OpenAPI 클라이언트 제너레이터가 `<Name>` 을 직접 참조하고 있다면 **break change**. 자동 생성 SDK 가 있으면 먼저 regen 파이프라인을 확인.
+- 응답 스키마에 `z.object({...}).strict()` 가 아닌 `passthrough()` 가 섞이면 `additionalProperties:false` 보장이 깨짐. 응답 DTO 는 strict 로만.
+
+**실측 성공 기준 (파일럿):**
+
+- Swagger `/api/docs-json` 의 `components.schemas.<Name>_Output` 이 기존 `<Name>` 대비 `properties` / `required` / `enum` 100% 동일.
+- 차이는 `_Output` 접미사 + `additionalProperties:false` 로만 한정 (Zod strict 의 긍정적 부산물 — 기록만).
+- `pnpm --filter backend test -- <module>` 회귀 0건.
+- Controller 반환 타입은 기존 `createZodDto` class 그대로 유지 (zod inferred 와 동치).
+
+**글로벌 승격 조건:** 파일럿 2주 무회귀 + 3개 이상 컨트롤러 적용 + 외부 클라이언트 SDK 영향 조사 완료 후 `app.module.ts` 의 `APP_INTERCEPTOR` 로 승격.
 
 ### Error Handling: GlobalExceptionFilter
 
