@@ -86,6 +86,7 @@ describe('EquipmentController', () => {
             findByManagementNumber: jest.fn(),
             update: jest.fn(),
             remove: jest.fn(),
+            markApprovalMeta: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
