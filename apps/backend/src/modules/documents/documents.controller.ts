@@ -314,7 +314,7 @@ export class DocumentsController {
     description: '기본 sm(200px)',
   })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  @AuditLog({ action: 'thumbnail', entityType: 'document', entityIdPath: 'params.id' })
+  @AuditLog({ action: 'read', entityType: 'document', entityIdPath: 'params.id' })
   @SkipResponseTransform()
   async thumbnail(
     @Param('id', ParseUUIDPipe) id: string,
