@@ -137,6 +137,144 @@ function drawTruncated(
 }
 
 /**
+ * 업계 표준 3단계 auto-fit 파이프라인으로 값 텍스트를 렌더링.
+ *
+ * Brother P-touch / Avery DesignPro / Seagull BarTender / Zebra 공통 방식:
+ *   Step 1. preferredFontPx로 측정 → 맞으면 그대로 그림
+ *   Step 2. 1px씩 줄여 minFontPx까지 시도 → shrink-to-fit
+ *   Step 3. maxLines > 1이면 줄바꿈 시도
+ *            - 한국어(CJK): 문자 단위 wrap (어절 경계 없음)
+ *            - 영숫자: 공백 단위 word-wrap → 줄 내 char-wrap fallback
+ *   Step 4. 최종적으로도 초과 → drawTruncated("…")
+ *
+ * @returns 실제로 사용된 { linesUsed, fontPxUsed } — 수직 센터링 재계산에 사용
+ */
+function renderValueWithAutoFit(
+  c: OffscreenCanvasRenderingContext2D,
+  text: string,
+  x: number,
+  startY: number,
+  maxWidth: number,
+  opts: {
+    preferredFontPx: number;
+    minFontPx: number;
+    maxLines: number;
+    lineHeightRatio: number;
+    bold: boolean;
+    fontStack: string;
+    color: string;
+  }
+): { linesUsed: number; fontPxUsed: number } {
+  const { preferredFontPx, minFontPx, bold, fontStack, color, lineHeightRatio, maxLines } = opts;
+  const prefix = bold ? 'bold ' : '';
+
+  const setFont = (px: number): void => {
+    c.font = `${prefix}${px}px ${fontStack}`;
+  };
+
+  // ── Step 1 & 2: 폰트 축소 시도 ─────────────────────────────
+  let fontPx = preferredFontPx;
+  setFont(fontPx);
+
+  while (fontPx > minFontPx && c.measureText(text).width > maxWidth) {
+    fontPx -= 1;
+    setFont(fontPx);
+  }
+
+  // 단일 줄로 맞으면 바로 그림
+  if (c.measureText(text).width <= maxWidth) {
+    c.fillStyle = color;
+    c.fillText(text, x, startY);
+    return { linesUsed: 1, fontPxUsed: fontPx };
+  }
+
+  // ── Step 3: 줄바꿈 (maxLines > 1인 경우) ──────────────────
+  if (maxLines > 1) {
+    const lines = splitIntoLines(c, text, maxWidth, maxLines);
+    const lineH = Math.round(fontPx * lineHeightRatio);
+    c.fillStyle = color;
+    lines.forEach((line, i) => {
+      drawTruncated(c, line, x, startY + i * lineH, maxWidth);
+    });
+    return { linesUsed: lines.length, fontPxUsed: fontPx };
+  }
+
+  // ── Step 4: 말줄임 fallback ────────────────────────────────
+  c.fillStyle = color;
+  drawTruncated(c, text, x, startY, maxWidth);
+  return { linesUsed: 1, fontPxUsed: fontPx };
+}
+
+/**
+ * 텍스트를 maxLines 이내의 줄 배열로 분할.
+ *
+ * 한국어(CJK, U+1100–U+9FFF 범위): 문자 단위 wrap
+ * 영숫자/혼합: 공백 기준 word-wrap → 줄 내 char-wrap fallback
+ * 마지막 줄이 maxLines일 때는 drawTruncated가 ellipsis를 처리.
+ */
+function splitIntoLines(
+  c: OffscreenCanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number
+): string[] {
+  const isCjk = (char: string): boolean => {
+    const cp = char.codePointAt(0) ?? 0;
+    return (
+      (cp >= 0x1100 && cp <= 0x11ff) || // 한글 자모
+      (cp >= 0x3130 && cp <= 0x318f) || // 호환 자모
+      (cp >= 0xac00 && cp <= 0xd7af) || // 한글 완성형
+      (cp >= 0x4e00 && cp <= 0x9fff) || // CJK 통합 한자
+      (cp >= 0x3000 && cp <= 0x303f) // CJK 기호·구두점
+    );
+  };
+
+  const hasAnyCjk = [...text].some(isCjk);
+  const lines: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0 && lines.length < maxLines) {
+    let lineEnd = remaining.length;
+
+    if (c.measureText(remaining).width <= maxWidth) {
+      lines.push(remaining);
+      break;
+    }
+
+    if (!hasAnyCjk) {
+      // Word-wrap: 공백 단위로 역방향 탐색
+      const words = remaining.split(' ');
+      let line = '';
+      let wordIdx = 0;
+      while (wordIdx < words.length) {
+        const candidate = line.length > 0 ? `${line} ${words[wordIdx]}` : words[wordIdx];
+        if (c.measureText(candidate).width > maxWidth && line.length > 0) break;
+        line = candidate;
+        wordIdx += 1;
+      }
+      lineEnd = line.length;
+    }
+
+    // CJK 또는 word-wrap이 실패한 경우: char-wrap
+    if (lineEnd === remaining.length || lineEnd === 0) {
+      let end = 0;
+      while (
+        end < remaining.length &&
+        c.measureText(remaining.slice(0, end + 1)).width <= maxWidth
+      ) {
+        end += 1;
+      }
+      lineEnd = Math.max(end, 1);
+    }
+
+    lines.push(remaining.slice(0, lineEnd));
+    remaining = remaining.slice(lineEnd).trimStart();
+  }
+
+  return lines.length > 0 ? lines : [text];
+}
+
+/**
  * 라벨 셀 1개를 OffscreenCanvas로 렌더링하여 PNG data URL 반환.
  *
  * 구조:
@@ -196,26 +334,33 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
   const fieldLabelPx = ptToPx(cell.fieldLabelFontPt);
   const rowGap = mmToPx(cell.rowGapMm);
 
+  // minFontPx·maxLines는 SSOT(LABEL_CONFIG.cell)에서 직접 참조 — 하드코딩 금지
   const rows = [
     {
       label: cell.tableFieldLabels.mgmtNo,
       value: item.managementNumber,
       valueFontPx: ptToPx(cell.mgmtFontPt),
+      minFontPx: ptToPx(cell.mgmtMinFontPt),
+      maxLines: 1,
       bold: true,
     },
     {
       label: cell.tableFieldLabels.name,
       value: item.equipmentName,
       valueFontPx: ptToPx(cell.nameFontPt),
+      minFontPx: ptToPx(cell.nameMinFontPt),
+      maxLines: cell.nameMaxLines,
       bold: false,
     },
     {
       label: cell.tableFieldLabels.serialNo,
       value: item.serialNumber ?? '—',
       valueFontPx: ptToPx(cell.serialFontPt),
+      minFontPx: ptToPx(cell.serialMinFontPt),
+      maxLines: 1,
       bold: false,
     },
-  ] as const;
+  ];
 
   const rowH = Math.floor(cellH / rows.length);
 
@@ -234,22 +379,28 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
       c.stroke();
     }
 
-    // 행 내 텍스트 수직 센터링
+    // 행 내 텍스트 수직 센터링 — preferred 폰트 크기 기준 (물리 라벨은 px-perfect 불필요)
     const contentH = fieldLabelPx + rowGap + row.valueFontPx;
     const topOffset = Math.round((actualRowH - contentH) / 2);
 
     const labelY = rowY + topOffset;
     const valueY = labelY + fieldLabelPx + rowGap;
 
-    // 필드명 (소문자 회색)
+    // 필드명 (소문자 회색) — 필드명은 짧아 shrink 불필요, truncate만 적용
     c.font = `${fieldLabelPx}px ${cell.fontStack}`;
     c.fillStyle = cell.fieldLabelColor;
     drawTruncated(c, row.label, textX + innerPad, labelY, textMaxW);
 
-    // 값 (검정, 관리번호는 bold)
-    c.font = `${row.bold ? 'bold ' : ''}${row.valueFontPx}px ${cell.fontStack}`;
-    c.fillStyle = cell.fieldValueColor;
-    drawTruncated(c, row.value, textX + innerPad, valueY, textMaxW);
+    // 값 — 업계 표준 3단계 auto-fit: shrink-to-fit → wrap → truncate
+    renderValueWithAutoFit(c, row.value, textX + innerPad, valueY, textMaxW, {
+      preferredFontPx: row.valueFontPx,
+      minFontPx: row.minFontPx,
+      maxLines: row.maxLines,
+      lineHeightRatio: cell.lineHeightRatio,
+      bold: row.bold,
+      fontStack: cell.fontStack,
+      color: cell.fieldValueColor,
+    });
   });
 
   const blob = await canvas.convertToBlob({ type: 'image/png' });

@@ -101,6 +101,25 @@ export const LABEL_CONFIG = {
      * 인쇄 DPI가 높을수록 0에 가까워도 되나, 150dpi 기준 1px이 안전.
      */
     qrModuleOverlapPx: 1,
+
+    // ─── Auto-fit 텍스트 렌더링 — 업계 표준 3단계 파이프라인 (SSOT) ────────
+    // Brother P-touch / Avery DesignPro / Seagull BarTender / Zebra 공통 방식:
+    //   ① shrink-to-fit (폰트 축소) → ② multi-line wrap → ③ ellipsis fallback
+
+    /** 관리번호 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 */
+    mgmtMinFontPt: 8,
+    /** 장비명 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 */
+    nameMinFontPt: 6,
+    /** 일련번호 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 */
+    serialMinFontPt: 6,
+    /**
+     * 장비명 최대 줄 수.
+     * 관리번호·일련번호는 줄바꿈 시 오독 위험 → 1로 고정.
+     * 장비명은 한국어 자연어 설명 → 2줄 허용.
+     */
+    nameMaxLines: 2,
+    /** 다중 줄 렌더링 시 폰트 크기 대비 줄 높이 배율 (CSS line-height 동등) */
+    lineHeightRatio: 1.15,
   },
   /**
    * 한 번의 PDF 생성 작업에서 허용되는 최대 장비 수.
