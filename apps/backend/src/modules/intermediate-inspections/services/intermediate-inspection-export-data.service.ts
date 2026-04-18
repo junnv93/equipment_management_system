@@ -124,27 +124,19 @@ export class IntermediateInspectionExportDataService {
       })
       .from(intermediateInspections)
       .innerJoin(equipment, eq(intermediateInspections.equipmentId, equipment.id))
-      .where(eq(intermediateInspections.id, inspectionId))
+      .where(
+        and(
+          eq(intermediateInspections.id, inspectionId),
+          filter.site ? eq(equipment.site, filter.site) : undefined,
+          filter.teamId ? eq(equipment.teamId, filter.teamId) : undefined
+        )
+      )
       .limit(1);
 
     if (!inspection) {
       throw new NotFoundException({
         code: 'INSPECTION_NOT_FOUND',
         message: `Intermediate inspection ${inspectionId} not found.`,
-      });
-    }
-
-    // 스코프 경계 강제 (site / team) — 경계 밖은 존재 은닉(404)
-    if (filter.site && inspection.equipmentSite !== filter.site) {
-      throw new NotFoundException({
-        code: 'INSPECTION_NOT_FOUND',
-        message: 'Inspection not accessible from your site.',
-      });
-    }
-    if (filter.teamId && inspection.equipmentTeamId !== filter.teamId) {
-      throw new NotFoundException({
-        code: 'INSPECTION_NOT_FOUND',
-        message: 'Inspection not accessible from your team.',
       });
     }
 
