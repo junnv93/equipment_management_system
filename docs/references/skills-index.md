@@ -11,7 +11,7 @@
 
 - **verify-cas** — CAS/Optimistic Locking (version, VersionedBaseService, cache invalidation on 409)
 - **verify-auth** — 서버사이드 인증 (req.user.userId, @RequirePermissions, @AuditLog)
-- **verify-zod** — Zod validation (ZodValidationPipe, controller pipe, query DTO consistency)
+- **verify-zod** — Zod validation (ZodValidationPipe, controller pipe, query DTO consistency, ZodResponse ↔ ZodSerializerInterceptor pairing, 2xx-only ZodResponse)
 - **verify-ssot** — SSOT import source (package imports, no local redefinitions, lucide-react)
 - **verify-hardcoding** — 하드코딩 탐지 (API paths, queryKeys, env, cache keys, token TTL, ErrorCode, Korean UI)
 - **verify-frontend-state** — TanStack Query (no onSuccess setQueryData, dynamic imports)

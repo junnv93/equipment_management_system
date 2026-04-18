@@ -1,6 +1,6 @@
 ---
 name: verify-zod
-description: Verifies Zod validation pattern compliance — ZodValidationPipe usage (no class-validator), versionedSchema inclusion in state-change DTOs, controller pipe application, query DTO consistency. Run after adding/modifying DTOs or controller endpoints.
+description: Verifies Zod validation pattern compliance — ZodValidationPipe usage (no class-validator), versionedSchema inclusion in state-change DTOs, controller pipe application, query DTO consistency, ZodResponse ↔ ZodSerializerInterceptor pairing, 2xx-only ZodResponse scope. Run after adding/modifying DTOs or controller endpoints.
 disable-model-invocation: true
 argument-hint: '[선택사항: 특정 모듈명]'
 ---
@@ -19,6 +19,8 @@ argument-hint: '[선택사항: 특정 모듈명]'
 6. **Query DTO z.coerce/z.preprocess 일관성** — 동일 파일 내 혼용 탐지
 7. **Response DTO 불필요한 Pipe** — 응답 DTO에 ValidationPipe가 있으면 안 됨
 8. **z.infer 타입 export 누락** — schema 정의 파일에 타입 추출 누락 탐지
+9. **type-only DTO runtime 위치 사용** — `@Api{Body,Response,Property}({ type })` 런타임 위치에 `z.infer` type alias 사용 금지 (TS2693)
+10. **ZodResponse ↔ ZodSerializerInterceptor pairing + 2xx 전용 스코프** — `@ZodResponse` 사용 메서드는 같은 메서드에 `@UseInterceptors(ZodSerializerInterceptor)` 명시, 4xx 응답은 `@ApiResponse` 유지
 
 ## When to Run
 
@@ -279,6 +281,60 @@ Swagger OpenAPI 메타의 nullable/$ref/enum 정합성은 `apps/backend/src/main
 
 **참고:** `docs/references/backend-patterns.md` "DTO 작성 결정 트리" 섹션.
 
+### Step 10: ZodResponse ↔ ZodSerializerInterceptor pairing + 2xx 전용 스코프
+
+`@ZodResponse` 는 Swagger 메타만 제공하고, 실제 응답 직렬화는 **반드시 `ZodSerializerInterceptor`** 가 담당한다. 따라서 `@ZodResponse` 가 붙은 메서드에 `@UseInterceptors(ZodSerializerInterceptor)` 가 없으면 Swagger 만 바뀌고 payload 는 pass-through 되어 SSOT 주장이 무효가 된다.
+
+또한 `@ZodResponse` 는 **2xx 응답 전용**이다. 4xx 에러 응답은 `GlobalExceptionFilter` 가 shape 을 관리하므로 기존 `@ApiResponse` 로 유지해야 한다.
+
+```bash
+# 10.a — @ZodResponse 가 붙은 메서드에 @UseInterceptors(ZodSerializerInterceptor) 가 메서드 단위 또는 클래스 단위로 있는지
+# (현재는 "파일럿 격리 원칙"으로 메서드 단위 권장 — backend-patterns.md 참조)
+# 각 controller 에서 @ZodResponse 사용 위치 ↔ ZodSerializerInterceptor 동반 여부 대조
+grep -rnE "@ZodResponse\(" apps/backend/src/modules --include="*.controller.ts" | awk -F: '{print $1}' | sort -u > /tmp/zodresponse_files.txt
+for f in $(cat /tmp/zodresponse_files.txt); do
+  if ! grep -q "ZodSerializerInterceptor" "$f"; then
+    echo "MISSING INTERCEPTOR: $f"
+  fi
+done
+```
+
+**PASS 기준:** `@ZodResponse` 를 사용하는 모든 컨트롤러 파일에 `ZodSerializerInterceptor` import + 적용이 존재.
+
+```bash
+# 10.b — @ZodResponse 가 4xx status 를 커버하고 있지 않은지 (잘못된 스코프)
+grep -rn -A3 "@ZodResponse(" apps/backend/src/modules --include="*.controller.ts" \
+  | grep -E "status:\s*(HttpStatus\.(BAD_REQUEST|UNAUTHORIZED|FORBIDDEN|NOT_FOUND|CONFLICT|GONE|UNPROCESSABLE_ENTITY|TOO_MANY_REQUESTS|INTERNAL_SERVER_ERROR)|[45][0-9][0-9])"
+```
+
+**PASS 기준:** 0건 (4xx 응답은 `@ApiResponse` 로만 선언).
+
+**FAIL 기준:** `@ZodResponse` 에 4xx 가 사용되면 즉시 수정 — `GlobalExceptionFilter` 가 관리하는 에러 shape 과 충돌.
+
+```typescript
+// ❌ WRONG — @ZodResponse 만 있고 interceptor 누락 → Swagger 만 바뀌고 직렬화 안 됨
+@Post('handover/verify')
+@ZodResponse({ status: HttpStatus.OK, type: VerifyHandoverTokenResponse })
+verifyHandoverToken(...) { ... }
+
+// ❌ WRONG — @ZodResponse 가 4xx 커버 (GlobalExceptionFilter 충돌)
+@Post()
+@UseInterceptors(ZodSerializerInterceptor)
+@ZodResponse({ status: HttpStatus.BAD_REQUEST, type: ErrorDto })  // ← 4xx 는 @ApiResponse 로
+create(...) { ... }
+
+// ✅ CORRECT — 메서드 단위 interceptor + 2xx only
+@Post('handover/verify')
+@UseInterceptors(ZodSerializerInterceptor)
+@ZodResponse({ status: HttpStatus.OK, description: '...', type: VerifyHandoverTokenResponse })
+@ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '무효 토큰' })
+verifyHandoverToken(...) { ... }
+```
+
+**파일럿 단계 추가 규율 (2026-04-17):** `ZodSerializerInterceptor` 는 **메서드 단위** `@UseInterceptors` 로만 허용. 클래스 단위/글로벌 적용은 금지 — 다른 메서드에 `@ZodResponse` 가 실수로 추가될 때 자동으로 작동하여 반환 객체 불일치 시 500 발생 위험.
+
+**참고:** `docs/references/backend-patterns.md` "ZodResponse 적용 조건" 섹션.
+
 ## Output Format
 
 ```markdown
@@ -293,6 +349,7 @@ Swagger OpenAPI 메타의 nullable/$ref/enum 정합성은 `apps/backend/src/main
 | 7   | Response DTO 불필요 Pipe       | PASS/FAIL | 불필요 Pipe 위치           |
 | 8   | z.infer 타입 export            | PASS/FAIL | 타입 누락 DTO 목록         |
 | 9   | type-only DTO runtime 위치 사용 | PASS/FAIL | TS2693 위험 DTO 목록       |
+| 10  | ZodResponse pairing + 2xx only | PASS/FAIL | interceptor 누락 / 4xx 사용 |
 ```
 
 ## Exceptions
@@ -309,3 +366,4 @@ Swagger OpenAPI 메타의 nullable/$ref/enum 정합성은 `apps/backend/src/main
 8. **login.dto.ts, user.dto.ts (auth 모듈)** — 인증 DTO는 NestJS Passport 연동으로 별도 패턴 가능
 9. **multipart/form-data 엔드포인트 (파일 업로드)** — `@UseInterceptors(FileInterceptor)` + `@UploadedFile()` 패턴은 DTO 디렉토리 대신 Swagger `@ApiBody({ schema })` 인라인 스키마 허용. documents.controller.ts 등 파일 업로드 전용 엔드포인트가 이에 해당
 10. **`createZodDto(Schema)` 기반 class DTO** — class 자체가 schema 를 캡슐화하므로 별도 `z.infer<typeof>` export 가 없어도 Step 8 위반 아님. `z.infer` 가 필요한 곳에서는 `InstanceType<typeof Dto>` 또는 `z.infer<typeof Schema>` 둘 다 허용
+11. **`ZodSerializerInterceptor` 클래스 단위/글로벌 등록** — 파일럿 단계(2026-04-17~)에서는 금지. 메서드 단위 `@UseInterceptors` 만 허용. 승격 조건은 `docs/references/backend-patterns.md` "ZodResponse 적용 조건" 의 글로벌 승격 조건 3건 충족 후. Step 10 검증 시 클래스 단위 등록이 발견되면 승격 조건 통과 여부 확인
