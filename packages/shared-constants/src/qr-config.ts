@@ -56,10 +56,17 @@ export const LABEL_CONFIG = {
   cell: {
     qrSizeMm: 25,
     textPaddingLeftMm: 2,
-    fontFamily: 'helvetica' as const,
+    /**
+     * CSS font-stack — OffscreenCanvas 렌더링 시 사용.
+     * 한국 Windows(맑은 고딕), macOS(Apple SD Gothic Neo), Linux(Noto Sans KR) 순 fallback.
+     */
+    fontStack:
+      '"맑은 고딕", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "나눔고딕", sans-serif',
     nameFontPt: 9,
     mgmtFontPt: 11,
     siteFontPt: 7,
+    /** 라벨 셀 OffscreenCanvas 렌더링 해상도. 인쇄 품질 조정 시 여기만 수정. */
+    printDpi: 150,
   },
   /**
    * 한 번의 PDF 생성 작업에서 허용되는 최대 장비 수.
