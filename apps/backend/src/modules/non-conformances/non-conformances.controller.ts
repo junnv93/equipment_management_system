@@ -25,9 +25,14 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import { NonConformancesService } from './non-conformances.service';
 import { DocumentService } from '../../common/file-upload/document.service';
+import {
+  NOTIFICATION_EVENTS,
+  type NCAttachmentCacheEvent,
+} from '../notifications/events/notification-events';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
@@ -66,7 +71,8 @@ import { extractUserId } from '../../common/utils/extract-user';
 export class NonConformancesController {
   constructor(
     private readonly nonConformancesService: NonConformancesService,
-    private readonly documentService: DocumentService
+    private readonly documentService: DocumentService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   @AuditLog({
@@ -376,6 +382,13 @@ export class NonConformancesController {
       description: description || undefined,
       uploadedBy: userId || undefined,
     });
+    const uploadPayload: NCAttachmentCacheEvent = {
+      ncId: uuid,
+      equipmentId: basic.equipmentId,
+      documentId: document.id,
+      actorId: userId,
+    };
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED, uploadPayload);
     return { document, message: '첨부가 업로드되었습니다.' };
   }
 
@@ -407,6 +420,13 @@ export class NonConformancesController {
     }
 
     await this.documentService.deleteDocument(documentId);
+    const deletePayload: NCAttachmentCacheEvent = {
+      ncId: uuid,
+      equipmentId: basic.equipmentId,
+      documentId,
+      actorId: extractUserId(req),
+    };
+    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_ATTACHMENT_DELETED, deletePayload);
     return { message: '첨부가 삭제되었습니다.' };
   }
 }

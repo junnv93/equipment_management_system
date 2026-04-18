@@ -165,6 +165,38 @@ describe('CacheEventListener', () => {
         true
       );
     });
+
+    it('nonConformance.attachmentUploaded → 장비 상태 변경 없는 NC 무효화', async () => {
+      eventEmitter.emit(NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED, {
+        ncId: 'nc-1',
+        equipmentId: 'eq-4',
+        documentId: 'doc-1',
+        actorId: 'user-1',
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockHelper.invalidateAfterNonConformanceStatusChange).toHaveBeenCalledWith(
+        'eq-4',
+        false
+      );
+    });
+
+    it('nonConformance.attachmentDeleted → 장비 상태 변경 없는 NC 무효화', async () => {
+      eventEmitter.emit(NOTIFICATION_EVENTS.NC_ATTACHMENT_DELETED, {
+        ncId: 'nc-1',
+        equipmentId: 'eq-4',
+        documentId: 'doc-1',
+        actorId: 'user-1',
+      });
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockHelper.invalidateAfterNonConformanceStatusChange).toHaveBeenCalledWith(
+        'eq-4',
+        false
+      );
+    });
   });
 
   describe('disposal 이벤트', () => {

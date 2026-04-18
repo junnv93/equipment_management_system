@@ -146,11 +146,14 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
    * 대상 페이지에서 stale 캐시가 표시될 수 있습니다.
    * 네비게이션이 필요하면 onSettledCallback을 사용하세요.
    *
+   * async 함수를 전달하면 onSuccess 완료 시점까지 await합니다.
+   * 사진 업로드처럼 onSuccess 단계에서 비동기 작업이 필요할 때 사용하세요.
+   *
    * @example
    * onSuccessCallback: (data) => setDetailModalItem(null)
-   * onSuccessCallback: (data) => setIsDialogOpen(false)
+   * onSuccessCallback: async (data) => { await uploadPhotos(data.id); closeModal(); }
    */
-  onSuccessCallback?: (data: TData, variables: TVariables) => void;
+  onSuccessCallback?: (data: TData, variables: TVariables) => void | Promise<void>;
 
   /**
    * 에러 시 추가 콜백 (선택사항)
@@ -284,7 +287,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
      *   - create: TData = Equipment → TCachedData = { data: Equipment[] } (crash!)
      * setQueryData는 unknown을 수용하므로 TypeScript가 이 불일치를 잡지 못합니다.
      */
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
       // 1. 성공 토스트 표시
       if (successMessage) {
         const message =
@@ -295,8 +298,8 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
         });
       }
 
-      // 2. 커스텀 성공 콜백
-      onSuccessCallback?.(data, variables);
+      // 2. 커스텀 성공 콜백 — async 반환 시 await하여 모달 조기 닫힘 방지
+      await onSuccessCallback?.(data, variables);
     },
 
     /**

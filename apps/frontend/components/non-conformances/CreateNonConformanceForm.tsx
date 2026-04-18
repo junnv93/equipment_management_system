@@ -153,7 +153,7 @@ export function CreateNonConformanceForm({
         }
 
         // NC 첨부 목록 캐시 무효화 — Documents 탭이 nonConformanceId로 조회
-        queryClient.invalidateQueries({
+        await queryClient.invalidateQueries({
           queryKey: queryKeys.documents.byNonConformance(createdNc.id),
         });
       }

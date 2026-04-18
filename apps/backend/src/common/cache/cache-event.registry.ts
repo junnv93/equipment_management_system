@@ -229,6 +229,24 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       },
     ],
   },
+  [NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED]: {
+    actions: [
+      {
+        method: 'invalidateAfterNonConformanceStatusChange',
+        equipmentIdField: 'equipmentId',
+        equipmentStatusChanged: false,
+      },
+    ],
+  },
+  [NOTIFICATION_EVENTS.NC_ATTACHMENT_DELETED]: {
+    actions: [
+      {
+        method: 'invalidateAfterNonConformanceStatusChange',
+        equipmentIdField: 'equipmentId',
+        equipmentStatusChanged: false,
+      },
+    ],
+  },
 
   // ─── 장비 요청 (Equipment Request) ───
   [NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_CREATED]: {
