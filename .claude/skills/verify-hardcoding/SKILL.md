@@ -141,7 +141,7 @@ grep -n "errorCorrectionLevel\s*[:=]\s*['\"]" \
   apps/frontend/lib/qr/generate-label-pdf.worker.ts \
   2>/dev/null \
   | grep -v "QR_CONFIG\|LABEL_CONFIG\|qr-config"
-grep -n "qrSizeMm\s*[:=]\s*[0-9]\|cols\s*[:=]\s*[0-9]\|rows\s*[:=]\s*[0-9]\|pageWidthMm\s*[:=]\s*[0-9]\|maxBatch\s*[:=]\s*[0-9]" \
+grep -n "qrSizeMm\s*[:=]\s*[0-9]\|cols\s*[:=]\s*[0-9]\|rows\s*[:=]\s*[0-9]\|pageWidthMm\s*[:=]\s*[0-9]\|maxBatch\s*[:=]\s*[0-9]\|qrForegroundColor\s*[:=]\s*['\"\`]\|qrBackgroundColor\s*[:=]\s*['\"\`]\|cellBackgroundColor\s*[:=]\s*['\"\`]\|qrModuleOverlapPx\s*[:=]\s*[0-9]" \
   apps/frontend/lib/qr/generate-label-pdf.ts \
   apps/frontend/lib/qr/generate-label-pdf.worker.ts \
   2>/dev/null \
