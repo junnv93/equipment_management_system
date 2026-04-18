@@ -18,6 +18,10 @@ import {
   MIGRATION_SHEET_TYPE,
   MIGRATION_SESSION_STATUS,
   INSERTABLE_STATUSES,
+  CableStatusEnum,
+  SoftwareAvailabilityEnum,
+  CalibrationFactorApprovalStatusValues,
+  NonConformanceStatusEnum,
 } from '@equipment-management/schemas';
 import type { Site, MigrationSheetType } from '@equipment-management/schemas';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
@@ -432,10 +436,12 @@ export class DataMigrationService {
           >[0] = [];
 
           const equipChunks = chunkArray(validRows, BATCH_QUERY_LIMITS.MIGRATION_CHUNK_SIZE);
+          let chunkOffset = 0;
           for (const chunk of equipChunks) {
-            const entities = chunk.map((row) => {
-              // FK 해석 결과 주입: validRows 전체 인덱스 기준
-              const globalIdx = validRows.indexOf(row);
+            const entities = chunk.map((row, chunkIdx) => {
+              // Preview의 fkResolutions Map key = validRows의 numeric index
+              // indexOf(row) 대신 chunkOffset + chunkIdx로 명시적 계산 (O(1), object identity 불의존)
+              const globalIdx = chunkOffset + chunkIdx;
               const fkResult = session.fkResolutions?.get(globalIdx);
               return this.buildEntityFromRow(
                 row,
@@ -468,6 +474,7 @@ export class DataMigrationService {
                 });
               }
             }
+            chunkOffset += chunk.length;
           }
 
           await this.equipmentHistoryService.createLocationHistoryBatch(
@@ -818,18 +825,6 @@ export class DataMigrationService {
         MIGRATION_SESSION_TTL_MS
       );
 
-      // 업로드된 임시 파일 삭제 (스토리지 누적 방지)
-      if (session.filePath) {
-        try {
-          await this.fileUploadService.deleteFile(session.filePath);
-        } catch (e) {
-          this.logger.warn(
-            `마이그레이션 임시 파일 삭제 실패: ${session.filePath}`,
-            e instanceof Error ? e.message : String(e)
-          );
-        }
-      }
-
       this.logger.log(
         `MultiSheet Execute complete: sessionId=${dto.sessionId}, ` +
           `created=${totalCreated}, skipped=${totalSkipped}, errors=${totalErrors}`
@@ -852,6 +847,18 @@ export class DataMigrationService {
         MIGRATION_SESSION_TTL_MS
       );
       throw error;
+    } finally {
+      // 업로드된 임시 파일 삭제 — 성공/실패 모두 실행하여 스토리지 누적 방지
+      if (session.filePath) {
+        try {
+          await this.fileUploadService.deleteFile(session.filePath);
+        } catch (e) {
+          this.logger.warn(
+            `마이그레이션 임시 파일 삭제 실패: ${session.filePath}`,
+            e instanceof Error ? e.message : String(e)
+          );
+        }
+      }
     }
   }
 
@@ -948,10 +955,10 @@ export class DataMigrationService {
       updatedAt: new Date(),
     };
 
-    // location: initialLocation 값을 현재 위치로 설정 (location_history에도 별도 기록)
-    const initialLocation = data.initialLocation as string | undefined;
-    if (initialLocation) {
-      entity['location'] = initialLocation;
+    // location: initialLocation 우선, fallback으로 Excel 'location' 직접입력도 반영
+    const resolvedLocation = (data.initialLocation ?? data.location) as string | undefined;
+    if (resolvedLocation) {
+      entity['location'] = resolvedLocation;
     }
 
     // FK 해석 결과 주입 (FkResolutionService가 Preview 시 해석)
@@ -974,7 +981,7 @@ export class DataMigrationService {
       'id',
       'createdAt',
       'updatedAt',
-      'location', // 위에서 initialLocation 기반으로 설정 완료
+      'location', // initialLocation ?? location 기반으로 설정 완료
       'managerId', // FK 해석으로 처리
       'deputyManagerId', // FK 해석으로 처리
       'teamId', // FK 해석으로 처리
@@ -1076,7 +1083,7 @@ export class DataMigrationService {
       location: row.data.location as string | undefined,
       site: row.data.site as CableInsert['site'],
       lastMeasurementDate: row.data.lastMeasurementDate as Date | undefined,
-      status: 'active',
+      status: CableStatusEnum.enum.active,
       createdBy: userId,
       version: 1,
     };
@@ -1098,7 +1105,7 @@ export class DataMigrationService {
       location: row.data.location as string | undefined,
       installedAt: row.data.installedAt as TsInsert['installedAt'],
       requiresValidation: (row.data.requiresValidation as boolean | undefined) ?? true,
-      availability: 'available',
+      availability: SoftwareAvailabilityEnum.enum.available,
       site: row.data.site as TsInsert['site'],
       primaryManagerId: fkResult?.managerId,
       secondaryManagerId: fkResult?.deputyManagerId,
@@ -1124,7 +1131,7 @@ export class DataMigrationService {
       unit: row.data.unit as string,
       effectiveDate: effectiveDate.toISOString(),
       expiryDate: expiryDate?.toISOString() ?? null,
-      approvalStatus: 'approved',
+      approvalStatus: CalibrationFactorApprovalStatusValues.APPROVED,
       requestedBy: userId,
       approvedBy: userId,
       approvedAt: new Date(),
@@ -1152,7 +1159,9 @@ export class DataMigrationService {
       resolutionType: row.data.resolutionType as NcInsert['resolutionType'],
       correctionDate: correctionDate?.toISOString() ?? null,
       correctedBy: correctionDate ? userId : undefined,
-      status: correctionDate ? 'closed' : 'open',
+      status: correctionDate
+        ? NonConformanceStatusEnum.enum.closed
+        : NonConformanceStatusEnum.enum.open,
       closedBy: correctionDate ? userId : undefined,
       closedAt: correctionDate ? new Date() : undefined,
       version: 1,

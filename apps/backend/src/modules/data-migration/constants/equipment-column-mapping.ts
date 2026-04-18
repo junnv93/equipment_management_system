@@ -349,32 +349,6 @@ export const EQUIPMENT_COLUMN_MAPPING: ColumnMappingEntry[] = [
     dbField: 'technicalManager',
     aliases: ['기술책임자', 'Technical Manager', '기술 책임자'],
   },
-
-  // ── FK 해석용 가상 필드 (DB 컬럼에 직접 매핑 안 됨, FkResolutionService가 해석) ──
-  {
-    dbField: 'managerName',
-    aliases: ['운영책임자(정)', '담당자', '담당자명', '운영책임자 정', 'Manager', 'Manager Name'],
-  },
-  {
-    dbField: 'deputyManagerName',
-    aliases: [
-      '운영책임자(부)',
-      '부담당자',
-      '부담당자명',
-      '운영책임자 부',
-      'Deputy Manager',
-      'Deputy Manager Name',
-    ],
-  },
-];
-
-// ── 폐기된 컬럼 정의 (SSOT: 제거된 매핑 엔트리에서 alias 자동 추출) ──────────
-
-/**
- * 마이그레이션 템플릿에서 제거되었지만 기존 Excel 호환을 위해 무시할 컬럼 정의.
- * 이 배열에서 DEPRECATED_ALIAS_INDEX가 자동 생성됨 — 하드코딩 Set 아님.
- */
-export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
   {
     dbField: 'externalIdentifier',
     aliases: ['외부식별번호', '소유처번호', '외부번호', 'External ID', 'External Identifier'],
@@ -406,6 +380,23 @@ export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
     aliases: ['사용종료일', '사용 종료일', 'Usage End', 'Usage Period End'],
     transform: parseExcelDate,
   },
+
+  // ── FK 해석용 가상 필드 (DB 컬럼에 직접 매핑 안 됨, FkResolutionService가 해석) ──
+  {
+    dbField: 'managerName',
+    aliases: ['운영책임자(정)', '담당자', '담당자명', '운영책임자 정', 'Manager', 'Manager Name'],
+  },
+  {
+    dbField: 'deputyManagerName',
+    aliases: [
+      '운영책임자(부)',
+      '부담당자',
+      '부담당자명',
+      '운영책임자 부',
+      'Deputy Manager',
+      'Deputy Manager Name',
+    ],
+  },
   {
     dbField: 'managerEmail',
     aliases: ['담당자이메일', '담당자 이메일', 'Manager Email'],
@@ -415,6 +406,15 @@ export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [
     aliases: ['부담당자이메일', '부담당자 이메일', 'Deputy Manager Email'],
   },
 ];
+
+// ── 폐기된 컬럼 정의 (SSOT: 제거된 매핑 엔트리에서 alias 자동 추출) ──────────
+
+/**
+ * 마이그레이션 템플릿에서 제거되었지만 기존 Excel 호환을 위해 무시할 컬럼 정의.
+ * 이 배열에서 DEPRECATED_ALIAS_INDEX가 자동 생성됨 — 하드코딩 Set 아님.
+ */
+export const DEPRECATED_EQUIPMENT_COLUMNS: ColumnMappingEntry[] = [];
+// 모든 항목이 EQUIPMENT_COLUMN_MAPPING으로 승격됨 — DEPRECATED_EQUIPMENT_ALIAS_SET export는 유지
 
 import { DEPRECATED_CALIBRATION_COLUMNS } from './calibration-column-mapping';
 import { DEPRECATED_TEST_SOFTWARE_COLUMNS } from './test-software-column-mapping';

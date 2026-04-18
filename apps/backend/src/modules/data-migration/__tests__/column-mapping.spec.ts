@@ -150,16 +150,21 @@ describe('Deprecated Aliases - Sheet Isolation', () => {
     }
   });
 
-  it('대표적인 deprecated 장비 컬럼이 시트별 Set에 포함되어야 한다', () => {
-    const equipmentDeprecated = [
+  it('모든 장비 deprecated 컬럼이 active 매핑으로 승격되어 DEPRECATED Set이 비어야 한다', () => {
+    // 9개 항목(externalIdentifier 등)이 EQUIPMENT_COLUMN_MAPPING으로 승격됨
+    expect(DEPRECATED_EQUIPMENT_ALIAS_SET.size).toBe(0);
+  });
+
+  it('승격된 장비 컬럼 alias가 active alias index에 존재해야 한다', () => {
+    const promotedAliases = [
       '공용여부',
       '담당자이메일',
       '부담당자이메일',
       '소유처',
       '외부식별번호',
     ];
-    for (const header of equipmentDeprecated) {
-      expect(DEPRECATED_EQUIPMENT_ALIAS_SET.has(header.toLowerCase())).toBe(true);
+    for (const header of promotedAliases) {
+      expect(COLUMN_ALIAS_INDEX.has(header.toLowerCase())).toBe(true);
     }
   });
 });
