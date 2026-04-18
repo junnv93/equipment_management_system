@@ -33,6 +33,7 @@ import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from '@equipment-management/schemas';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 /**
  * Per-request CSP nonce 생성 + strict-dynamic 정책 주입 (업계 표준 nonce-based CSP).
@@ -51,14 +52,21 @@ import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from '@equipment-management/schemas
  * - dev 전용 'unsafe-eval' — HMR/Turbopack eval 허용 (prod 제외)
  */
 function buildCspHeader(nonce: string, isDev: boolean, reportEndpointPath: string): string {
+  // Next.js 16 Turbopack dev는 HMR inline script 일부가 nonce 주입을 받지 못함.
+  // - dev: 'unsafe-inline' 허용 (로컬 편의). prod는 제외.
+  // - prod: 'nonce-${nonce}' + 'strict-dynamic' 로 strict CSP.
+  //         CSP3 브라우저는 'nonce' 있을 때 'unsafe-inline' 무시하므로 실질 strict 보장.
+  const scriptSrc = isDev
+    ? `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+  const styleSrc = isDev
+    ? `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`
+    : `style-src 'self' 'nonce-${nonce}'`;
+
   const directives = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
-    // 주의: next/font + Tailwind는 런타임 inline style을 거의 생성하지 않지만,
-    //       3rd-party 컴포넌트 회귀 최소화를 위해 nonce + 'unsafe-inline' 병기.
-    //       'nonce' 존재 시 브라우저는 nonce 없는 inline을 차단하는 CSP3 브라우저에서만
-    //       'unsafe-inline'이 무시됨 → defense-in-depth.
-    `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
+    scriptSrc,
+    styleSrc,
     `img-src 'self' data: blob:`,
     `font-src 'self' data:`,
     `media-src 'self' blob: mediastream:`, // QR scanner MediaStream + blob PDF/QR
@@ -106,7 +114,7 @@ export async function proxy(request: NextRequest) {
     // CSP per-request nonce (Next.js 16 공식 패턴)
     const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
     const isDev = process.env.NODE_ENV === 'development';
-    const cspHeader = buildCspHeader(nonce, isDev, '/api/security/csp-report');
+    const cspHeader = buildCspHeader(nonce, isDev, API_ENDPOINTS.SECURITY.CSP_REPORT);
 
     // x-next-intl-locale 헤더를 request에 주입
     // → i18n/request.ts가 cookies() 없이 requestLocale 파라미터로 locale을 읽을 수 있음
@@ -124,12 +132,14 @@ export async function proxy(request: NextRequest) {
     // 브라우저가 실행할 CSP는 response 헤더
     response.headers.set('Content-Security-Policy', cspHeader);
     // Report-To: report-to directive 보조 (레거시 report-uri와 병행)
+    // RFC 8941: endpoints[].url은 절대 URL 필수 — 상대 경로는 일부 브라우저에서 무시됨
+    const reportAbsoluteUrl = `${request.nextUrl.origin}${API_ENDPOINTS.SECURITY.CSP_REPORT}`;
     response.headers.set(
       'Report-To',
       JSON.stringify({
         group: 'csp-endpoint',
         max_age: 10886400,
-        endpoints: [{ url: '/api/security/csp-report' }],
+        endpoints: [{ url: reportAbsoluteUrl }],
         include_subdomains: true,
       })
     );

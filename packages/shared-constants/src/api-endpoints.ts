@@ -539,6 +539,14 @@ export const API_ENDPOINTS = {
     /** 보존연한 만료로 소프트 아카이브된 양식 목록 (UL-QP-03 §11) */
     ARCHIVED: '/api/form-templates/archived',
   },
+
+  // ============================================================================
+  // 보안 리포팅 (CSP violation 수집 등)
+  // ============================================================================
+  SECURITY: {
+    /** CSP violation report 수집 — proxy.ts report-uri + Report-To directive의 SSOT 경로 */
+    CSP_REPORT: '/api/security/csp-report',
+  },
 } as const;
 
 /**

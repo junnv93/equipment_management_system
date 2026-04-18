@@ -23,7 +23,7 @@ import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cab
 import { softwareValidations } from '@equipment-management/db/schema/software-validations';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
-import { eq, desc, and, inArray, sql, type SQL, asc } from 'drizzle-orm';
+import { eq, and, inArray, sql, type SQL, asc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import {
   DEFAULT_LOCALE,

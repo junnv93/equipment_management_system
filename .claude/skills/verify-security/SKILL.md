@@ -31,8 +31,10 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 
 | File | Purpose |
 |------|---------|
-| `apps/backend/src/common/middleware/helmet-config.ts` | Helmet CSP 설정 |
-| `apps/frontend/next.config.js` | Next.js Security Headers |
+| `apps/frontend/proxy.ts` | CSP nonce SSOT (per-request nonce + strict-dynamic) |
+| `apps/backend/src/modules/security/security.controller.ts` | CSP violation report 수집 |
+| `apps/backend/src/common/config/throttle.constants.ts` | Named throttler 설정 + `throttleAllNamed()` |
+| `apps/frontend/next.config.js` | 정적 보안 헤더 (CSP는 proxy.ts로 이관됨) |
 | `apps/backend/src/modules/auth/guards/permissions.guard.ts` | PermissionsGuard |
 | `apps/backend/src/modules/auth/decorators/public.decorator.ts` | @Public() 데코레이터 |
 | `apps/backend/src/common/guards/internal-api-key.guard.ts` | InternalApiKey Guard |
@@ -46,9 +48,10 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 
 각 Step의 bash 명령어, 코드 예시: [references/step-details.md](references/step-details.md) 참조
 
-### Step 1: Helmet CSP 프로덕션 강화
+### Step 1: CSP nonce SSOT (proxy.ts)
 
-**PASS:** scriptSrc 환경별 분리, 프로덕션 `["'self'"]`만. **FAIL:** 구분 없이 unsafe-* 포함.
+**PASS:** `proxy.ts`가 `API_ENDPOINTS.SECURITY.CSP_REPORT` SSOT 경로 사용, `buildCspHeader(nonce, isDev, ...)` 환경별 분기, prod에서 `'unsafe-eval'` 없음, `connect-src` dev에서만 `ws: wss:` 허용.
+**FAIL:** 하드코딩된 CSP report 경로, prod에서 `unsafe-eval`, dev/prod 분기 없는 `connect-src`.
 
 ### Step 2: Next.js Security Headers
 
@@ -117,4 +120,6 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 10. **lab_manager/system_admin의 bypassRoles** — UL-QP-18 직무 정의에 따름
 11. **test-login/test-cache-clear의 `@Public()` + `@SkipPermissions()`** — 테스트 전용 엔드포인트
 12. **UsersController의 `POST/DELETE me/signature`** — `@SkipPermissions()` 사용하나 `req.user.userId`로 본인만 변경, MIME 타입(PNG/JPEG) + 2MB 크기 제한 적용
+13. **SecurityController의 `POST csp-report`** — `@Public()` + `@Post` 정상. CSP violation은 브라우저가 인증 없이 전송. `throttleAllNamed(THROTTLE_PRESETS.CSP_REPORT)`로 rate limit 적용
+14. **forge-handover-token의 `@Public()` + `@Post`** — TestAuthController 자체가 dev/test에서만 등록 + endpoint-level NODE_ENV 이중 가드
 13. **FilesController의 `GET /api/files/:subdir/:filename`** — `@SkipPermissions()` 사용하나 전역 JwtAuthGuard로 인증 보장 (미인증 401). 특정 권한 불필요, 인증된 사용자 전체 허용이 의도적 설계. Path traversal 방지(`safeSubdir`/`safeFilename`) 적용.

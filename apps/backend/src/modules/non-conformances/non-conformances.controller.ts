@@ -25,6 +25,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import { NonConformancesService } from './non-conformances.service';
 import { DocumentService } from '../../common/file-upload/document.service';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
@@ -342,7 +343,7 @@ export class NonConformancesController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', MULTER_UTF8_OPTIONS))
   @RequirePermissions(Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT)
   @AuditLog({ action: 'upload', entityType: 'document', entityIdPath: 'params.uuid' })
   async uploadAttachment(

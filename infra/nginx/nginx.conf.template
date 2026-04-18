@@ -122,11 +122,12 @@ http {
         # ─────────────────────────────────────────────
         # 보안 헤더
         #
-        # CSP: Next.js proxy.ts가 per-request nonce 기반 CSP를 주입(SSOT).
-        #      Nginx는 pass-through — 여기서 Content-Security-Policy add_header 금지.
-        #      정적 CSP는 nonce 지원 불가 → 반드시 업스트림 헤더를 보존해야 함.
+        # CSP 핸드오프 설계 (2026-04-18):
+        #   SSOT = proxy.ts (per-request nonce 기반).
+        #   Nginx는 CSP를 건드리지 않는다 (proxy_hide_header CSP 없음, add_header CSP 없음).
+        #   이유: 정적 CSP는 nonce 불가 → 업스트림 헤더를 그대로 보존해야 XSS 방어 유지.
         # Report-To: proxy.ts가 설정 → pass-through.
-        # Permissions-Policy: 정적 헤더 → Nginx(edge)가 SSOT. 업스트림 중복 방지.
+        # Permissions-Policy: 정적 헤더 → Nginx(edge)가 SSOT. proxy_hide_header로 업스트림 중복 방지.
         # 기타 정적 보안 헤더는 edge에서 강제(업스트림 누락 방어).
         # ─────────────────────────────────────────────
         proxy_hide_header Permissions-Policy;

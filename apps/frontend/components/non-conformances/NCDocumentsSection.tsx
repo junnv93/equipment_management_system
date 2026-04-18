@@ -5,6 +5,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { FileIcon, Paperclip, Trash2, Upload } from 'lucide-react';
 import { DocumentTypeValues } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { Button } from '@/components/ui/button';
@@ -39,6 +41,11 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
   const t = useTranslations('non-conformances.detail.attachments');
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { can } = useAuth();
+  // SSOT: NC 전용 permission 경계 — backend REST (UPLOAD/DELETE_NON_CONFORMANCE_ATTACHMENT)와 1:1 대응.
+  // UI에서 사전 차단 → 403 응답 전 UX 명확화 (버튼 숨김/비활성화).
+  const canUpload = can(Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT);
+  const canDelete = can(Permission.DELETE_NON_CONFORMANCE_ATTACHMENT);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<DocumentRecord | null>(null);
@@ -68,6 +75,7 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
     setIsUploading(false);
 
     const failed = results.filter((r) => r.status === 'rejected').length;
+    const succeeded = results.length - failed;
     if (failed > 0) {
       toast({
         title: t('uploadPartialFailed', { failed }),
@@ -77,9 +85,12 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
       toast({ title: t('uploadSuccess', { count: files.length }) });
     }
 
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.documents.byNonConformance(nonConformanceId),
-    });
+    // 하나라도 성공한 경우만 invalidate — 전체 실패 시 불필요 서버 재조회 방지
+    if (succeeded > 0) {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.documents.byNonConformance(nonConformanceId),
+      });
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -110,16 +121,18 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
           {t('title')}
           <span className="text-xs text-muted-foreground font-normal">({docs.length})</span>
         </h3>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          aria-describedby="nc-attach-hint"
-        >
-          <Upload className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-          {isUploading ? t('uploading') : t('upload')}
-        </Button>
+        {canUpload && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            aria-describedby="nc-attach-hint"
+          >
+            <Upload className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+            {isUploading ? t('uploading') : t('upload')}
+          </Button>
+        )}
         <Input
           ref={fileInputRef}
           type="file"
@@ -152,15 +165,17 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
               <p className="text-xs text-muted-foreground truncate" title={doc.originalFileName}>
                 {doc.originalFileName}
               </p>
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                onClick={() => setPendingDelete(doc)}
-                aria-label={t('deleteLabel', { name: doc.originalFileName })}
-              >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                  onClick={() => setPendingDelete(doc)}
+                  aria-label={t('deleteLabel', { name: doc.originalFileName })}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -200,10 +215,31 @@ function AttachmentThumbnail({
   downloadLabel: string;
 }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLButtonElement>(null);
   const isImage = (doc.mimeType ?? '').startsWith('image/');
 
+  // IntersectionObserver — 뷰포트 진입 시에만 fetch 시작 (N+1 → lazy load)
   useEffect(() => {
-    if (!isImage) return;
+    const el = containerRef.current;
+    if (!el || !isImage) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' } // 뷰포트 200px 전에 미리 로드
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isImage]);
+
+  // 뷰포트 진입 후에만 이미지 fetch — 불필요한 네트워크 요청 방지
+  useEffect(() => {
+    if (!isImage || !isVisible) return;
     let cancelled = false;
     let objectUrl: string | null = null;
 
@@ -225,16 +261,18 @@ function AttachmentThumbnail({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [doc.id, isImage]);
+  }, [doc.id, isImage, isVisible]);
 
   return (
     <button
+      ref={containerRef}
       type="button"
       onClick={() => documentApi.downloadDocument(doc.id, doc.originalFileName)}
       className="w-full aspect-square rounded-md border bg-muted overflow-hidden flex items-center justify-center hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       aria-label={downloadLabel}
     >
       {isImage && previewUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- blob:/presigned URL은 next/image 최적화 불가 (동적 URL, 크기 미지정)
         <img
           src={previewUrl}
           alt={doc.originalFileName}

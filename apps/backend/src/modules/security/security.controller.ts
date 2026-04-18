@@ -3,12 +3,14 @@ import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
+import { THROTTLE_PRESETS, throttleAllNamed } from '../../common/config/throttle.constants';
 
 /**
  * CSP violation report — `Content-Security-Policy` + `Report-To` 헤더의 수집 엔드포인트.
  *
  * 설계:
- * - **SSOT**: `proxy.ts`의 `report-uri` directive와 경로 일치(`/api/security/csp-report`).
+ * - **SSOT**: 경로는 `API_ENDPOINTS.SECURITY.CSP_REPORT`(shared-constants)이 단일 소스.
+ *           proxy.ts의 report-uri/Report-To가 이 상수를 참조.
  * - **Public**: CSP violation은 브라우저가 인증 없이 POST하므로 `@Public()` 필수.
  * - **Throttled**: 악의적 flood 방지 (분당 10/IP). `@Throttle` 데코레이터로 guard 통과.
  * - **Schema flexible**: 브라우저 구현별 payload 차이(`csp-report` 구 스펙 vs Reporting API 신 스펙)
@@ -26,7 +28,7 @@ export class SecurityController {
 
   @Post('csp-report')
   @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle(throttleAllNamed(THROTTLE_PRESETS.CSP_REPORT))
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiExcludeEndpoint()
   @SkipResponseTransform()

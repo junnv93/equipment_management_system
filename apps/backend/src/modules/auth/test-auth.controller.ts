@@ -88,8 +88,8 @@ export class TestAuthController {
   @Public()
   @SkipPermissions()
   testCacheClear(): { cleared: boolean; message: string } {
-    // staging 환경 보호: development/test에서만 캐시 클리어 허용
-    const env = process.env.NODE_ENV;
+    // Fail-closed: NODE_ENV 미설정/빈값 시 'production'으로 간주 → 차단
+    const env = (process.env.NODE_ENV || 'production').trim().toLowerCase();
     if (env !== 'development' && env !== 'test') {
       throw new ForbiddenException(
         'Cache clear is only available in development/test environments'
@@ -122,7 +122,8 @@ export class TestAuthController {
   async forgeHandoverToken(
     @Body() body: { checkoutId?: string; expSecondsAgo?: number }
   ): Promise<{ token: string; note: string }> {
-    const env = process.env.NODE_ENV;
+    // Fail-closed: NODE_ENV 미설정/빈값 시 'production'으로 간주 → 차단
+    const env = (process.env.NODE_ENV || 'production').trim().toLowerCase();
     if (env !== 'development' && env !== 'test') {
       throw new ForbiddenException('forge-handover-token is only available in dev/test');
     }

@@ -164,7 +164,11 @@ export function CreateNonConformanceForm({
       setForm({ cause: '', ncType: 'other', actionPlan: '' });
       setPhotos([]);
       // 교차 엔티티 캐시 무효화 (장비 목록, NC 전체 목록, 대시보드 KPI)
-      EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(queryClient, equipmentId);
+      // await 필수 — 무효화 완료 전 onSuccess(모달 닫기) 시 Navigate-Before-Invalidate 안티패턴
+      await EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(
+        queryClient,
+        equipmentId
+      );
       onSuccess?.();
     },
   });

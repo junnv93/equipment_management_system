@@ -632,6 +632,13 @@ describe('NonConformancesController (e2e)', () => {
     let attachEquipmentUuid: string;
     let uploadedDocId: string | undefined;
 
+    // 최소 유효 JPEG magic bytes — FileUploadService 파일 내용 검증 통과용
+    // JPEG SOI(FF D8 FF E0) + APP0 marker + minimal JFIF header
+    const MINIMAL_JPEG = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+      0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+    ]);
+
     beforeAll(async () => {
       // 독립 equipment + NC — 다른 테스트와 격리
       attachEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
@@ -670,7 +677,7 @@ describe('NonConformancesController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .field('documentType', 'equipment_photo')
         .field('description', 'E2E test photo')
-        .attach('file', Buffer.from('fake-jpeg-bytes'), {
+        .attach('file', MINIMAL_JPEG, {
           filename: 'site.jpg',
           contentType: 'image/jpeg',
         });
@@ -723,7 +730,7 @@ describe('NonConformancesController (e2e)', () => {
         .post(`/non-conformances/${attachNcId}/attachments`)
         .set('Authorization', `Bearer ${accessToken}`)
         .field('documentType', 'equipment_photo')
-        .attach('file', Buffer.from('x'), { filename: 'x.jpg', contentType: 'image/jpeg' });
+        .attach('file', MINIMAL_JPEG, { filename: 'x.jpg', contentType: 'image/jpeg' });
       const newDocId = uploadRes.body.document.id;
 
       // 2) 다른 NC id로 삭제 시도 → 400

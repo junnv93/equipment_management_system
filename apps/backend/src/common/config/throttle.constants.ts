@@ -47,4 +47,20 @@ export const THROTTLE_PRESETS = {
   LOGIN: { limit: 5, ttl: THROTTLE_WINDOW_MS },
   TOKEN_REFRESH: { limit: 10, ttl: THROTTLE_WINDOW_MS },
   TEST_LOGIN: { limit: 100, ttl: THROTTLE_WINDOW_MS },
+  /** CSP violation report — @Public 엔드포인트이므로 엄격 제한. 분당 10회/IP */
+  CSP_REPORT: { limit: 10, ttl: THROTTLE_WINDOW_MS },
 } as const;
+
+/**
+ * Named throttler 환경에서 특정 프리셋을 모든 throttler에 적용하는 헬퍼.
+ * `@Throttle({ default: ... })`은 named throttler에서 무효 → 이 함수로 short/medium/long 전부 오버라이드.
+ */
+export function throttleAllNamed(preset: {
+  limit: number;
+  ttl: number;
+}): Record<string, { limit: number; ttl: number }> {
+  return Object.fromEntries(THROTTLER_CONFIGS.map((c) => [c.name, preset])) as Record<
+    string,
+    { limit: number; ttl: number }
+  >;
+}
