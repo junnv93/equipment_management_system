@@ -47,6 +47,19 @@ function post(message: OutboundMessage, transfer?: Transferable[]): void {
   }
 }
 
+/**
+ * Web Worker 환경에서 Blob을 data URL로 변환.
+ * document 없이 FileReader를 사용해 DOM 의존성 제거.
+ */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer> {
   const { pdf, cell } = LABEL_CONFIG;
   const { widthMm, heightMm, perPage } = getLabelCellDimensions();
@@ -72,12 +85,19 @@ async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer
     const cellX = pdf.marginMm + col * (widthMm + pdf.gutterMm);
     const cellY = pdf.marginMm + row * (heightMm + pdf.gutterMm);
 
-    // QR dataURL
-    const qrDataUrl = await QRCode.toDataURL(buildEquipmentQRUrl(item.managementNumber, appUrl), {
-      errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
-      margin: QR_CONFIG.margin,
-      scale: QR_CONFIG.scale,
-    });
+    // QR dataURL — OffscreenCanvas 사용 (Web Worker에서 document.createElement('canvas') 불가)
+    const qrOffscreen = new OffscreenCanvas(1, 1);
+    await (QRCode.toCanvas as (canvas: unknown, text: string, options: object) => Promise<void>)(
+      qrOffscreen,
+      buildEquipmentQRUrl(item.managementNumber, appUrl),
+      {
+        errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
+        margin: QR_CONFIG.margin,
+        scale: QR_CONFIG.scale,
+      }
+    );
+    const qrBlob = await qrOffscreen.convertToBlob({ type: 'image/png' });
+    const qrDataUrl = await blobToDataUrl(qrBlob);
 
     // QR 왼쪽 정렬
     doc.addImage(qrDataUrl, 'PNG', cellX, cellY, cell.qrSizeMm, cell.qrSizeMm);
