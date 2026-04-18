@@ -48,6 +48,13 @@ export function BulkLabelPrintButton({
   const t = useTranslations('qr.labelPrint');
   const [phase, setPhase] = React.useState<Phase>('idle');
   const [progress, setProgress] = React.useState({ done: 0, total: 0 });
+  const errorTimerRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (errorTimerRef.current !== null) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
 
   const count = selectedItems.length;
   const disabled = count === 0 || phase === 'generating';
@@ -89,8 +96,8 @@ export function BulkLabelPrintButton({
         description: t('generationFailed'),
       });
       console.error('generateLabelPdf failed', error);
-      // 재시도 가능하도록 idle로 복귀
-      window.setTimeout(() => setPhase('idle'), 1200);
+      // 재시도 가능하도록 idle로 복귀 (unmount 시 clearTimeout으로 누수 방지)
+      errorTimerRef.current = window.setTimeout(() => setPhase('idle'), 1200);
     }
   }, [count, selectedItems, onComplete, t]);
 
@@ -145,7 +152,6 @@ export function BulkLabelPrintButton({
             <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                setPhase('idle');
                 void runGeneration();
               }}
             >
