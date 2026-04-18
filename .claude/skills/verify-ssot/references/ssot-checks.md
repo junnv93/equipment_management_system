@@ -50,6 +50,14 @@ grep -rn "FIELD_LABELS\s*=\|ENTITY_ROUTES\s*=" apps/backend/src apps/frontend --
 ```
 
 ```bash
+# UL-QP-18 양식 라벨 SSOT 로컬 재정의 탐지 (QP18_*_LABELS / EQUIPMENT_AVAILABILITY_LABELS /
+# INTERMEDIATE_CHECK_YESNO_LABELS / INSPECTION_JUDGMENT_LABELS / SELF_INSPECTION_RESULT_LABELS)
+# 모두 packages/schemas/src/enums/labels.ts SSOT에서 import되어야 함.
+# renderer 서비스 파일이 Record<..., '교정기기'|...> 형태로 재선언하면 drift 위험.
+grep -rn "QP18_[A-Z_]*_LABELS\s*:\s*Record\|EQUIPMENT_AVAILABILITY_LABELS\s*:\s*Record\|INTERMEDIATE_CHECK_YESNO_LABELS\s*=\|INSPECTION_JUDGMENT_LABELS\s*:\s*Record\|SELF_INSPECTION_RESULT_LABELS\s*:\s*Record" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "packages/schemas\|@equipment-management/schemas\|node_modules\|import\|re-export\|// "
+```
+
+```bash
 # 로컬 DataScopeType / resolveDataScope / PERMISSION_CATEGORIES 재정의 탐지
 grep -rn "type DataScopeType\s*=\|AUDIT_LOG_SCOPE\s*=\|resolveDataScope\s*=\|PERMISSION_CATEGORIES\s*[=:]" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
 ```
