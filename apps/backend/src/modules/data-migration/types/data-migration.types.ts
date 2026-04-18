@@ -9,6 +9,7 @@
 // API 계약 타입 import (로컬 인터페이스에서 참조) + re-export (모듈 내부 단일 진입점)
 import type {
   MigrationRowStatus,
+  MigrationSessionStatus,
   RowFieldError,
   MigrationRowPreview,
   MigrationPreviewResult,
@@ -20,6 +21,7 @@ import type {
 
 export type {
   MigrationRowStatus,
+  MigrationSessionStatus,
   RowFieldError,
   MigrationRowPreview,
   MigrationPreviewResult,
@@ -72,9 +74,6 @@ export interface MigrationSession {
 
 import type { MigrationSheetType } from '../constants/sheet-config';
 import type { FkResolutionResult, FkResolutionSummary } from '../services/fk-resolution.service';
-
-/** 세션 상태 */
-export type MigrationSessionStatus = 'preview' | 'executing' | 'completed' | 'failed';
 
 /** 멀티시트 세션 데이터 — 메모리 캐시 (내부 전용) */
 export interface MultiSheetMigrationSession {

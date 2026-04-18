@@ -16,6 +16,7 @@ import {
   CalibrationApprovalStatusValues,
   MIGRATION_ROW_STATUS,
   MIGRATION_SHEET_TYPE,
+  MIGRATION_SESSION_STATUS,
   INSERTABLE_STATUSES,
 } from '@equipment-management/schemas';
 import type { Site, MigrationSheetType } from '@equipment-management/schemas';
@@ -326,7 +327,7 @@ export class DataMigrationService {
       fileName: file.originalname,
       uploadedAt: new Date(),
       userId,
-      status: 'preview',
+      status: MIGRATION_SESSION_STATUS.PREVIEW,
       filePath: savedFile.filePath,
       fkResolutions,
       testSoftwareFkResolutions,
@@ -374,19 +375,19 @@ export class DataMigrationService {
     }
 
     // 세션 상태 머신: 이중 실행 방지
-    if (session.status === 'executing') {
+    if (session.status === MIGRATION_SESSION_STATUS.EXECUTING) {
       throw new ConflictException({
         code: MigrationErrorCode.SESSION_ALREADY_EXECUTING,
         message: '이미 실행 중인 세션입니다. 완료될 때까지 기다려주세요.',
       });
     }
-    if (session.status === 'completed') {
+    if (session.status === MIGRATION_SESSION_STATUS.COMPLETED) {
       throw new ConflictException({
         code: MigrationErrorCode.SESSION_ALREADY_COMPLETED,
         message: '이미 완료된 세션입니다. 추가 마이그레이션은 새로 업로드하세요.',
       });
     }
-    if (session.status === 'failed') {
+    if (session.status === MIGRATION_SESSION_STATUS.FAILED) {
       throw new ConflictException({
         code: MigrationErrorCode.SESSION_FAILED,
         message: '실패한 세션입니다. 파일을 다시 업로드하세요.',
@@ -394,7 +395,7 @@ export class DataMigrationService {
     }
 
     // CAS: status → executing 전환
-    session.status = 'executing';
+    session.status = MIGRATION_SESSION_STATUS.EXECUTING;
     this.cacheService.set(
       `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,
       session,
@@ -810,7 +811,7 @@ export class DataMigrationService {
       }
 
       // 세션 상태 → completed (에러 리포트 접근용으로 캐시 유지)
-      session.status = 'completed';
+      session.status = MIGRATION_SESSION_STATUS.COMPLETED;
       this.cacheService.set(
         `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,
         session,
@@ -844,7 +845,7 @@ export class DataMigrationService {
       };
     } catch (error) {
       // 트랜잭션 실패 시 세션 상태 → failed
-      session.status = 'failed';
+      session.status = MIGRATION_SESSION_STATUS.FAILED;
       this.cacheService.set(
         `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,
         session,

@@ -75,6 +75,18 @@ export interface MigrationExecuteResult {
   errors: MigrationRowPreview[];
 }
 
+/** 마이그레이션 세션 상태 상수 */
+export const MIGRATION_SESSION_STATUS = {
+  PREVIEW: 'preview',
+  EXECUTING: 'executing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const;
+
+/** 마이그레이션 세션 상태 타입 */
+export type MigrationSessionStatus =
+  (typeof MIGRATION_SESSION_STATUS)[keyof typeof MIGRATION_SESSION_STATUS];
+
 /** 멀티시트 마이그레이션 시트 타입 상수 */
 export const MIGRATION_SHEET_TYPE = {
   EQUIPMENT: 'equipment',
