@@ -4,9 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient, useMutation, UseMutationOptions } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { safeCallback } from './lib/safe-callback';
 
-interface MutationWithRefreshOptions<TData, TVariables, TContext>
-  extends Omit<UseMutationOptions<TData, Error, TVariables, TContext>, 'onSuccess' | 'onError'> {
+interface MutationWithRefreshOptions<TData, TVariables, TContext> extends Omit<
+  UseMutationOptions<TData, Error, TVariables, TContext>,
+  'onSuccess' | 'onError'
+> {
   /**
    * 성공 시 무효화할 쿼리 키 목록
    */
@@ -91,8 +94,11 @@ export function useMutationWithRefresh<TData = unknown, TVariables = void, TCont
         });
       }
 
-      // 3. 추가 콜백
-      onSuccessCallback?.(data, variables, context);
+      // 3. 추가 콜백 — throw해도 성공 토스트를 뒤집지 않음
+      await safeCallback(
+        () => onSuccessCallback?.(data, variables, context),
+        'useMutationWithRefresh.onSuccess'
+      );
     },
     onError: (error, variables, context) => {
       // 에러 메시지 추출 (ApiError 포함 모든 에러 타입 처리)
@@ -106,8 +112,11 @@ export function useMutationWithRefresh<TData = unknown, TVariables = void, TCont
         variant: 'destructive',
       });
 
-      // 추가 콜백
-      onErrorCallback?.(error, variables, context);
+      // 추가 콜백 — throw해도 에러 경로를 방해하지 않음
+      await safeCallback(
+        () => onErrorCallback?.(error, variables, context),
+        'useMutationWithRefresh.onError'
+      );
     },
     onSettled: async () => {
       // 클라이언트 캐시 무효화 — 항상 실행 (성공/실패 무관)

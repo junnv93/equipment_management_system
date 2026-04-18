@@ -60,6 +60,7 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage, isConflictError } from '@/lib/api/error';
 import { EquipmentErrorCode, getLocalizedErrorInfo } from '@/lib/errors/equipment-errors';
+import { safeCallback } from './lib/safe-callback';
 
 /**
  * Optimistic Mutation 옵션
@@ -246,7 +247,7 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
      * - 스냅샷은 mutation 전 로컬 데이터이므로 실제 서버 상태와 다를 수 있음
      * - SSOT 원칙: onSettled의 invalidateQueries가 서버 최신 데이터로 동기화
      */
-    onError: (error, variables) => {
+    onError: async (error, variables) => {
       // 1. 에러 토스트 표시 (409 충돌은 전용 메시지)
       if (isConflictError(error)) {
         const conflictInfo = getLocalizedErrorInfo(EquipmentErrorCode.VERSION_CONFLICT, t);
@@ -270,8 +271,11 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
         });
       }
 
-      // 2. 커스텀 에러 콜백
-      onErrorCallback?.(error, variables);
+      // 2. 커스텀 에러 콜백 — throw해도 에러 경로를 방해하지 않음
+      await safeCallback(
+        () => onErrorCallback?.(error, variables),
+        'useOptimisticMutation.onError'
+      );
     },
 
     /**
@@ -298,8 +302,11 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
         });
       }
 
-      // 2. 커스텀 성공 콜백 — async 반환 시 await하여 모달 조기 닫힘 방지
-      await onSuccessCallback?.(data, variables);
+      // 2. 커스텀 성공 콜백 — throw해도 성공 토스트를 뒤집지 않음
+      await safeCallback(
+        () => onSuccessCallback?.(data, variables),
+        'useOptimisticMutation.onSuccess'
+      );
     },
 
     /**

@@ -106,4 +106,66 @@ describe('useOptimisticMutation', () => {
     await waitFor(() => expect(executionOrder).toContain('upload-done'));
     expect(result.current.isSuccess).toBe(true);
   });
+
+  it('onSuccessCallback이 reject해도 성공 상태를 유지하고 에러를 로깅한다 (AD-7 regression)', async () => {
+    const { Wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData(['items'], [] as Item[]);
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const rejectingCallback = jest.fn().mockRejectedValue(new Error('callback-boom'));
+
+    const { result } = renderHook(
+      () =>
+        useOptimisticMutation<Item, Item, Item[]>({
+          mutationFn: async (vars) => vars,
+          queryKey: ['items'],
+          optimisticUpdate: (old, vars) => [...(old ?? []), vars],
+          onSuccessCallback: rejectingCallback,
+        }),
+      { wrapper: Wrapper }
+    );
+
+    act(() => {
+      result.current.mutate({ id: '3' });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(rejectingCallback).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith('[useOptimisticMutation.onSuccess]', 'callback-boom');
+    expect(result.current.isError).toBe(false);
+
+    errorSpy.mockRestore();
+  });
+
+  it('onErrorCallback이 reject해도 에러 상태를 유지한다 (AD-7 regression)', async () => {
+    const { Wrapper, queryClient } = makeWrapper();
+    queryClient.setQueryData(['items'], [] as Item[]);
+
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const rejectingErrorCallback = jest.fn().mockRejectedValue(new Error('error-callback-boom'));
+
+    const { result } = renderHook(
+      () =>
+        useOptimisticMutation<Item, Item, Item[]>({
+          mutationFn: async () => {
+            throw new Error('mutation-fail');
+          },
+          queryKey: ['items'],
+          optimisticUpdate: (old) => old ?? [],
+          onErrorCallback: rejectingErrorCallback,
+        }),
+      { wrapper: Wrapper }
+    );
+
+    act(() => {
+      result.current.mutate({ id: '4' });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(rejectingErrorCallback).toHaveBeenCalled();
+    // 에러 콜백 throw가 별도 로그로 흡수됨
+    expect(errorSpy).toHaveBeenCalledWith('[useOptimisticMutation.onError]', 'error-callback-boom');
+
+    errorSpy.mockRestore();
+  });
 });
