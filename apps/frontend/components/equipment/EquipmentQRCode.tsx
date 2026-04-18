@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { QR_CONFIG, buildEquipmentQRUrl } from '@equipment-management/shared-constants';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { queryKeys } from '@/lib/api/query-config';
 
 interface EquipmentQRCodeProps {
   managementNumber: string;
@@ -53,14 +54,13 @@ export function EquipmentQRCode({
   }, []);
 
   const { data: svgMarkup, isLoading } = useQuery({
-    queryKey: ['qr-code-svg', managementNumber, appUrl],
+    queryKey: queryKeys.qr.svg(managementNumber, appUrl),
     queryFn: async () => {
       const url = buildEquipmentQRUrl(managementNumber, appUrl);
       return QRCode.toString(url, {
         type: 'svg',
         errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
         margin: QR_CONFIG.margin,
-        scale: QR_CONFIG.scale,
       });
     },
     enabled: !!managementNumber && !!appUrl,

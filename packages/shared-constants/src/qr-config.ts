@@ -21,8 +21,6 @@
 export const QR_CONFIG = {
   errorCorrectionLevel: 'H' as const,
   margin: 1,
-  /** @deprecated Phase 1 이후 수동 렌더링으로 대체 — SSOT 엔트로피 방지를 위해 다음 마이너에서 제거 예정 */
-  scale: 4,
 } as const;
 
 /**

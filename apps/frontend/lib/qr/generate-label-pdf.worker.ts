@@ -283,7 +283,11 @@ function splitIntoLines(
  *   - 셀·행 사이 구분선 (LABEL_CONFIG.cell.borderColor)
  *   - 텍스트는 maxWidth 초과 시 "…"로 잘림 → 겹침 없음
  */
-async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<string> {
+async function renderCellToDataUrl(
+  item: LabelItem,
+  appUrl: string,
+  canvas: OffscreenCanvas
+): Promise<string> {
   const { cell } = LABEL_CONFIG;
   const { widthMm, heightMm } = getLabelCellDimensions();
 
@@ -297,7 +301,6 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
   const innerPad = mmToPx(cell.tableCellPaddingMm);
   const textMaxW = cellW - textX - innerPad;
 
-  const canvas = new OffscreenCanvas(cellW, cellH);
   const c = canvas.getContext('2d');
   if (!c) throw new Error('OffscreenCanvas 2D context unavailable');
 
@@ -417,6 +420,9 @@ async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer
     format: pdf.pageSize,
   });
 
+  // 모든 셀은 동일 크기 — OffscreenCanvas를 한 번 생성 후 재사용하여 GC 압박 방지
+  const cellCanvas = new OffscreenCanvas(mmToPx(widthMm), mmToPx(heightMm));
+
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
     const onPage = index % perPage;
@@ -430,7 +436,7 @@ async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer
     const cellX = pdf.marginMm + col * (widthMm + pdf.gutterMm);
     const cellY = pdf.marginMm + row * (heightMm + pdf.gutterMm);
 
-    const cellDataUrl = await renderCellToDataUrl(item, appUrl);
+    const cellDataUrl = await renderCellToDataUrl(item, appUrl, cellCanvas);
     doc.addImage(cellDataUrl, 'PNG', cellX, cellY, widthMm, heightMm);
 
     if ((index + 1) % 10 === 0 || index === items.length - 1) {

@@ -67,7 +67,6 @@ export function HandoverQRDisplay({
         type: 'svg',
         errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
         margin: QR_CONFIG.margin,
-        scale: QR_CONFIG.scale,
       });
       setSvgMarkup(svg);
       setPhase('ready');
