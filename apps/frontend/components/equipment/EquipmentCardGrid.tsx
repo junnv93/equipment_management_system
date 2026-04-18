@@ -91,6 +91,7 @@ const EquipmentCard = memo(function EquipmentCard({
   selection?: RowSelectionAPI<Equipment>;
 }) {
   const t = useTranslations('equipment');
+  const tCommon = useTranslations('common');
   const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
   // design token SSOT: 실시간 교정기한 초과 체크 포함
@@ -137,7 +138,9 @@ const EquipmentCard = memo(function EquipmentCard({
               checked={selection.isSelected(equipment.id)}
               onCheckedChange={() => selection.toggle(equipment.id, equipment)}
               disabled={equipment.status === EquipmentStatusEnum.enum.disposed}
-              aria-label={equipment.name || equipment.managementNumber || equipment.id}
+              aria-label={tCommon('bulk.selectRow', {
+                name: equipment.name || equipment.managementNumber || equipment.id,
+              })}
               className="mt-0.5 shrink-0"
             />
           )}
