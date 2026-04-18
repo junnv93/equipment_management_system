@@ -301,6 +301,9 @@ export class DocumentsController {
     lg: 800,
   };
 
+  /** WebP 품질 (0–100). 80 = 파일크기/화질 균형점. */
+  private static readonly THUMBNAIL_WEBP_QUALITY = 80;
+
   @Get(':id/thumbnail')
   @ApiOperation({ summary: '이미지 문서 썸네일 (WebP)' })
   @ApiParam({ name: 'id', description: '문서 ID (UUID)' })
@@ -311,6 +314,7 @@ export class DocumentsController {
     description: '기본 sm(200px)',
   })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @AuditLog({ action: 'thumbnail', entityType: 'document', entityIdPath: 'params.id' })
   @SkipResponseTransform()
   async thumbnail(
     @Param('id', ParseUUIDPipe) id: string,
@@ -331,7 +335,10 @@ export class DocumentsController {
 
     // S3/Local 공통 경로: sharp 처리를 위해 항상 서버에서 원본 다운로드
     const originalBuffer = await this.storageProvider.download(document.filePath);
-    const webpBuffer = await sharp(originalBuffer).resize(width).webp({ quality: 80 }).toBuffer();
+    const webpBuffer = await sharp(originalBuffer)
+      .resize(width)
+      .webp({ quality: DocumentsController.THUMBNAIL_WEBP_QUALITY })
+      .toBuffer();
 
     res.set({
       'Content-Type': 'image/webp',
