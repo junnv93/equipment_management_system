@@ -157,6 +157,33 @@ React.useEffect(() => { return () => { if (timerRef.current !== null) clearTimeo
 timerRef.current = window.setTimeout(() => setPhase('idle'), 1200);
 ```
 
+### Step 14: QUERY_CONFIG 스프레드 오버라이드
+
+`{ ...QUERY_CONFIG.XXX, extraKey: value }` 패턴은 프리셋에 없는 옵션을 추가하는 오버라이드입니다. 이 경우 QUERY_CONFIG 프리셋 자체가 불완전하거나, 개별 쿼리가 특수 요구사항을 가진 것입니다. 두 경우 모두 **명시적인 주석**이 없으면 추후 유지보수자가 의도를 파악할 수 없습니다.
+
+**규칙:**
+- `{ ...QUERY_CONFIG.XXX, someKey: value }` 형태로 추가 옵션을 덧붙이는 경우 → 이유 주석 필수
+- 주석 없이 오버라이드 → INFO (QUERY_CONFIG 프리셋 확장 검토 권장)
+
+**탐지:**
+```bash
+# QUERY_CONFIG 스프레드 후 추가 옵션 붙이는 패턴 (trailing comma = 추가 키 존재)
+grep -rn "\.\.\.\bQUERY_CONFIG\.\w\+," apps/frontend --include="*.tsx" --include="*.ts"
+```
+
+**정상 패턴 (주석 포함):**
+```typescript
+useQuery({
+  queryKey: ...,
+  queryFn: ...,
+  // 목록 전환 시 stale 데이터 즉시 노출 방지 — QUERY_CONFIG.EQUIPMENT_LIST에 없는 옵션
+  ...QUERY_CONFIG.EQUIPMENT_LIST,
+  refetchOnMount: 'always',
+});
+```
+
+**INFO:** 스프레드 오버라이드가 반복되면 QUERY_CONFIG에 새 프리셋 추가 검토.
+
 ## Output Format
 
 ```markdown
@@ -179,6 +206,7 @@ timerRef.current = window.setTimeout(() => setPhase('idle'), 1200);
 | 11  | E2E 토스트 helper 사용     | PASS/FAIL | 토스트 텍스트 직접 .first() 위치 |
 | 13  | 타이머 cleanup (useRef)    | PASS/FAIL | window.setTimeout + setState 직접 호출 위치 |
 | 12  | count 전용 쿼리 키 분리    | PASS/FAIL | pageSize:1 쿼리가 목록 키 재사용하는 위치 |
+| 14  | QUERY_CONFIG 스프레드 오버라이드 | PASS/INFO | `...QUERY_CONFIG.XXX, extraKey` 주석 없는 위치 |
 ```
 
 ## Exceptions
