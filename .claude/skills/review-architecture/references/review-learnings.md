@@ -216,6 +216,16 @@
 - **설명**: `packages/schemas`의 SSOT enum 배열(`REPAIR_RESULT_VALUES`, `INCIDENT_TYPE_VALUES`)은 `readonly [...]` 타입. Zod `z.enum(VALUES as [string, ...string[]])`로 직접 캐스팅하면 `readonly` → mutable 변환 불가 에러(TS2352). `[...VALUES] as [string, ...string[]]` (spread로 mutable 복사 후 캐스팅) 패턴으로 해결.
 - **체크리스트 반영**: ⏳ 관찰 중 (1회)
 
+### [2026-04-18] per-row selection 리렌더 최적화 패턴 — stable ref 분해 대입
+- **발견 위치**: `apps/frontend/components/common/RowSelectCell.tsx:38,47`, `apps/frontend/components/equipment/EquipmentCardGrid.tsx:138`
+- **설명**: `selection` 객체 전체를 useCallback deps에 포함하거나 카드 props로 전달하면, `selected` Set 변경 시 `isSelectedFn` 새 참조 → `selection` 객체 참조 변경으로 인식 → `memo`로 감싸도 현재 페이지 전체 row/카드 리렌더. 올바른 패턴: `const { toggle, isSelected } = selection`으로 분해 후 deps에 개별 함수 참조 사용. 카드 컴포넌트는 `isSelected: boolean` + `toggle: fn` props로 분리하여 선택된 카드만 re-render.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 review-checklist.md 섹션 5a(프론트엔드 성능)에 승격
+
+### [2026-04-18] aria-selected 동적 바인딩 누락 — grid role 접근성
+- **발견 위치**: `apps/frontend/components/equipment/EquipmentTable.tsx:281`
+- **설명**: `role="row"`에 `aria-selected={false}` 하드코딩. WCAG 2.1 grid 패턴에서 선택 모드가 활성화될 때 선택된 row는 `aria-selected={true}`를 요구. 스크린리더가 선택 상태를 인식 불가. `selection?.isSelected(id)` 동적 반영 필요. selection prop이 없을 때(선택 모드 비활성)는 `undefined`로 제거하는 것이 올바름.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 5a(접근성) 또는 섹션 7에 승격
+
 ### [2026-04-18] EventEmitter2 emitAsync 위치 — 컨트롤러 금지, 서비스 전용 ✅ 해소
 - **발견 위치**: `apps/backend/src/modules/non-conformances/non-conformances.controller.ts:391,429`
 - **설명**: 프로젝트 전체에서 `EventEmitter2.emitAsync`는 서비스 계층에서만 발행(`checkouts.service.ts` 등). 컨트롤러에 직접 주입하면 도메인 이벤트 발행 위치가 분산되어 찾기 어려워짐. 컨트롤러는 HTTP 매핑, 서비스는 도메인 이벤트 발행 책임.
@@ -320,3 +330,8 @@
 | 2026-04-17 | 안티패턴 | alias 중복 충돌 — 동일 alias가 두 ColumnMappingEntry에 등록 시 buildAliasIndex Map에서 나중 것이 이김. equipment-column-mapping.ts에서 `운영책임자(정)`이 technicalManager(직접 DB 필드)와 managerName(FK 가상 필드)에 동시 등록됨 | review-learnings.md |
 | 2026-04-18 | 안티패턴 | EventEmitter2 emitAsync 컨트롤러 직접 발행 — 서비스 전용 패턴 위반 (non-conformances.controller.ts) | review-learnings.md |
 | 2026-04-18 | 안티패턴 | async onSuccessCallback reject → onError 재진입 — try/catch 격리 필요 (use-optimistic-mutation.ts) | review-learnings.md |
+| 2026-04-18 | 안티패턴 | per-row selection: selection 객체 전체 deps → 무관한 row 전체 리렌더 (RowSelectCell, EquipmentCard) | review-learnings.md |
+| 2026-04-18 | 수정 완료 | RowSelectCell `selection` 분해 대입, EquipmentCard `isSelected(bool)+toggle(fn)` 분리로 무관 리렌더 제거 | RowSelectCell.tsx, EquipmentCardGrid.tsx |
+| 2026-04-18 | 안티패턴 | `aria-selected={false}` 하드코딩 — 선택 모드 활성 시에도 false로 스크린리더 선택 상태 미반영 | review-learnings.md |
+| 2026-04-18 | 수정 완료 | `aria-selected={selection?.isSelected(id)}` 동적 반영 (WCAG grid role 접근성) | EquipmentTable.tsx |
+| 2026-04-18 | 안티패턴 | resolveUser 반복 쿼리 — 역할별 Promise.all은 됐으나 동일 userId 중복 + 다른 엔드포인트는 직렬(form-template-export.service.ts) | tech-debt-tracker 등록 |
