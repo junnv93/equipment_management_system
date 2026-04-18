@@ -76,7 +76,7 @@ import {
   HandoverTokenPurpose,
 } from './dto/handover-token.dto';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { ErrorCode } from '@equipment-management/schemas';
+import { ErrorCode, type CheckoutStatus } from '@equipment-management/schemas';
 
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
@@ -87,21 +87,25 @@ export class CheckoutsController {
     private readonly handoverTokenService: HandoverTokenService
   ) {}
 
-  /**
-   * 현재 체크아웃 상태로부터 handover 토큰의 용도(purpose)를 도출.
-   * SSOT — 상태→purpose 매핑을 한 곳에서만 관리.
-   */
-  private derivePurposeFromStatus(status: string): HandoverTokenPurpose | null {
-    switch (status) {
-      case 'lender_checked':
-        return 'borrower_receive';
-      case 'checked_out':
-        return 'borrower_return';
-      case 'borrower_returned':
-        return 'lender_receive';
-      default:
-        return null;
-    }
+  /** 체크아웃 상태 → handover 토큰 purpose 매핑. Record로 완전 열거 — 새 상태 추가 시 컴파일 에러. */
+  private static readonly PURPOSE_BY_STATUS: Record<CheckoutStatus, HandoverTokenPurpose | null> = {
+    lender_checked: 'borrower_receive',
+    checked_out: 'borrower_return',
+    borrower_returned: 'lender_receive',
+    pending: null,
+    approved: null,
+    rejected: null,
+    borrower_received: null,
+    in_use: null,
+    lender_received: null,
+    returned: null,
+    return_approved: null,
+    overdue: null,
+    canceled: null,
+  };
+
+  private derivePurposeFromStatus(status: CheckoutStatus): HandoverTokenPurpose | null {
+    return CheckoutsController.PURPOSE_BY_STATUS[status];
   }
 
   @Post(':uuid/handover-token')
@@ -154,7 +158,7 @@ export class CheckoutsController {
     }
 
     // 상태로부터 purpose 도출 — DTO가 명시한 purpose가 있으면 일치 여부 검증.
-    const derivedPurpose = this.derivePurposeFromStatus(String(checkout.status));
+    const derivedPurpose = this.derivePurposeFromStatus(checkout.status as CheckoutStatus);
     if (!derivedPurpose) {
       throw new BadRequestException({
         code: ErrorCode.BadRequest,
