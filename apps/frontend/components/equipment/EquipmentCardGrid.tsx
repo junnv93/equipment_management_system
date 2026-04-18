@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -84,16 +84,23 @@ const SkeletonCard = memo(function SkeletonCard() {
 const EquipmentCard = memo(function EquipmentCard({
   equipment,
   searchTerm,
-  selection,
+  isSelected,
+  toggle,
 }: {
   equipment: Equipment;
   searchTerm?: string;
-  selection?: RowSelectionAPI<Equipment>;
+  /** 선택 모드가 활성일 때만 전달 — boolean primitive로 해당 카드만 리렌더 */
+  isSelected?: boolean;
+  /** stable useCallback ref (useRowSelection.toggle) */
+  toggle?: (id: string, item: Equipment) => void;
 }) {
   const t = useTranslations('equipment');
   const tCommon = useTranslations('common');
   const tCal = useTranslations('calibration');
   const { fmtDate } = useDateFormatter();
+  const handleToggle = useCallback(() => {
+    toggle?.(equipment.id, equipment);
+  }, [toggle, equipment]);
   // design token SSOT: 실시간 교정기한 초과 체크 포함
   const style = getEquipmentStatusTokenStyle(equipment.status, equipment.nextCalibrationDate);
 
@@ -133,10 +140,10 @@ const EquipmentCard = memo(function EquipmentCard({
         {/* 관리번호 1차 식별자 위계 */}
         <div className="flex justify-between items-start gap-2">
           {/* per-row 체크박스 (카드 좌측 상단) */}
-          {selection && (
+          {toggle !== undefined && (
             <Checkbox
-              checked={selection.isSelected(equipment.id)}
-              onCheckedChange={() => selection.toggle(equipment.id, equipment)}
+              checked={isSelected ?? false}
+              onCheckedChange={handleToggle}
               disabled={equipment.status === EquipmentStatusEnum.enum.disposed}
               aria-label={tCommon('bulk.selectRow', {
                 name: equipment.name || equipment.managementNumber || equipment.id,
@@ -301,6 +308,9 @@ function EquipmentCardGridComponent({
   selection,
 }: EquipmentCardGridProps) {
   const t = useTranslations('equipment');
+  // stable ref 추출 — selection 객체 전체 전달 시 선택 변경마다 전체 카드 리렌더되므로 분해
+  const toggleFn = selection?.toggle;
+  const isSelectedFn = selection?.isSelected;
   if (isLoading) {
     return (
       <div
@@ -341,7 +351,12 @@ function EquipmentCardGridComponent({
     >
       {items.map((equipment) => (
         <div key={equipment.id} className={EQUIPMENT_CARD_PERFORMANCE_CLASSES}>
-          <EquipmentCard equipment={equipment} searchTerm={searchTerm} selection={selection} />
+          <EquipmentCard
+            equipment={equipment}
+            searchTerm={searchTerm}
+            isSelected={isSelectedFn?.(equipment.id)}
+            toggle={toggleFn}
+          />
         </div>
       ))}
     </div>

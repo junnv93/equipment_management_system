@@ -31,20 +31,21 @@ export function RowSelectCell<T>({
 }: RowSelectCellProps<T>): React.ReactElement {
   const t = useTranslations('common');
   const key = keyFn(item);
-  const checked = selection.isSelected(key);
+  const { isSelected, toggle } = selection;
+  const checked = isSelected(key);
 
   const handleChange = useCallback(() => {
-    selection.toggle(key, item);
-  }, [selection, key, item]);
+    toggle(key, item);
+  }, [toggle, key, item]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        selection.toggle(key, item);
+        toggle(key, item);
       }
     },
-    [selection, key, item]
+    [toggle, key, item]
   );
 
   // i18n 키를 dotted path로 resolve (e.g. 'bulk.selectRow' → t('bulk.selectRow', args))

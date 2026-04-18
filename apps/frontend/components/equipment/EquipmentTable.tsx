@@ -278,7 +278,7 @@ const EquipmentRow = memo(function EquipmentRow({
     <TableRow
       className={`${EQUIPMENT_TABLE_TOKENS.rowStripe} ${EQUIPMENT_TABLE_TOKENS.rowHover} cursor-pointer focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary/20`}
       role="row"
-      aria-selected={false}
+      aria-selected={selection ? selection.isSelected(equipment.id) : undefined}
       data-testid="equipment-row"
       onClick={handleRowClick}
     >
