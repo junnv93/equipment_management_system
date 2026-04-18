@@ -7,7 +7,6 @@ import {
 } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
 import { toExcelLoadableBuffer } from '../../../common/utils';
-import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
 import {
   captureRowStyles,
   clearTrailingRows,
@@ -43,23 +42,34 @@ import type {
  */
 @Injectable()
 export class EquipmentRegistryRendererService {
-  async render(
-    data: EquipmentRegistryData,
-    templateBuffer: Buffer,
-    filter: EnforcedScope
-  ): Promise<Buffer> {
+  async render(data: EquipmentRegistryData, templateBuffer: Buffer): Promise<Buffer> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
     const sheet = loadWorksheetByName(workbook, SHEET_NAMES, FORM_NUMBER);
 
-    // Row 1: 헤더 업데이트 (팀명 prefix + 제목) — 기존 L243 동작 보존
+    // Row 1: 제목 — 팀 필터 시 "[팀명] 시험설비 관리대장", 전체 시 "(전체) 시험설비 관리대장"
     const headerCell = sheet.getRow(1).getCell(1);
-    const teamLabel = filter.teamId ? '' : TITLE_ALL_SUFFIX;
-    headerCell.value = `${teamLabel} ${TITLE_PREFIX}`;
+    const titlePrefix = data.teamName ?? TITLE_ALL_SUFFIX;
+    headerCell.value = `${titlePrefix} ${TITLE_PREFIX}`;
 
-    const dateCell = sheet.getRow(UPDATE_DATE_CELL.row).getCell(UPDATE_DATE_CELL.col);
-    if (dateCell) {
-      dateCell.value = `최종 업데이트 일자 : ${new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE })}`;
+    // Row 1: 기존 템플릿 날짜 셀을 content-search로 찾아 갱신
+    // UPDATE_DATE_CELL.col 하드코딩 대신 "최종 업데이트 일자" 텍스트가 있는 셀을 탐색
+    const row1 = sheet.getRow(1);
+    const dateStr = new Date().toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE });
+    let dateUpdated = false;
+    for (let c = 2; c <= COLUMN_COUNT; c++) {
+      const cell = row1.getCell(c);
+      const val = cell.value;
+      if (typeof val === 'string' && val.includes('최종 업데이트 일자')) {
+        cell.value = `최종 업데이트 일자 : ${dateStr}`;
+        dateUpdated = true;
+        break;
+      }
+    }
+    if (!dateUpdated) {
+      // fallback: layout 상수 위치 (템플릿 셀 미탐지 시)
+      sheet.getRow(UPDATE_DATE_CELL.row).getCell(UPDATE_DATE_CELL.col).value =
+        `최종 업데이트 일자 : ${dateStr}`;
     }
 
     // 템플릿 원본 Row 3의 스타일 추출 (데이터 행 서식 참조)

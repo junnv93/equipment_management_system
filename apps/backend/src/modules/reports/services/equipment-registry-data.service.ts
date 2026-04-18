@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment } from '@equipment-management/db/schema/equipment';
+import { teams } from '@equipment-management/db/schema/teams';
 import { CLASSIFICATION_TO_CODE, type Classification } from '@equipment-management/schemas';
 import { EXPORT_QUERY_LIMITS } from '@equipment-management/shared-constants';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
@@ -15,6 +16,8 @@ export type EquipmentRegistryRow = typeof equipment.$inferSelect;
 
 export interface EquipmentRegistryData {
   rows: EquipmentRegistryRow[];
+  /** filter.teamId 가 설정된 경우 조회된 팀 이름 (제목/파일명에 사용) */
+  teamName?: string;
 }
 
 /**
@@ -72,13 +75,22 @@ export class EquipmentRegistryDataService {
       conditions.push(ne(equipment.status, 'disposed'));
     }
 
-    const rows = await this.db
-      .select()
-      .from(equipment)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(equipment.managementNumber)
-      .limit(EXPORT_QUERY_LIMITS.FULL_EXPORT);
+    const [rows, teamResult] = await Promise.all([
+      this.db
+        .select()
+        .from(equipment)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(equipment.managementNumber)
+        .limit(EXPORT_QUERY_LIMITS.FULL_EXPORT),
+      filter.teamId
+        ? this.db
+            .select({ name: teams.name })
+            .from(teams)
+            .where(eq(teams.id, filter.teamId))
+            .limit(1)
+        : Promise.resolve([] as { name: string }[]),
+    ]);
 
-    return { rows };
+    return { rows, teamName: teamResult[0]?.name };
   }
 }

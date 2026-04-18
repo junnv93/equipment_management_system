@@ -169,8 +169,25 @@ export class FormTemplateExportService {
     const entry = FORM_CATALOG['UL-QP-18-01'];
     const data = await this.equipmentRegistryData.getData(params, filter);
     const templateBuffer = await this.formTemplateService.getTemplateBuffer(REGISTRY_FORM_NUMBER);
-    const buffer = await this.equipmentRegistryRenderer.render(data, templateBuffer, filter);
-    return { buffer, mimeType: XLSX_MIME, filename: this.makeFilename(entry) };
+    const buffer = await this.equipmentRegistryRenderer.render(data, templateBuffer);
+    return {
+      buffer,
+      mimeType: XLSX_MIME,
+      filename: this.makeRegistryFilename(entry, filter, data.teamName),
+    };
+  }
+
+  private makeRegistryFilename(
+    entry: { formNumber: string; name: string },
+    filter: EnforcedScope,
+    teamName?: string
+  ): string {
+    const date = new Date().toISOString().split('T')[0];
+    const parts: string[] = [entry.formNumber, entry.name];
+    if (filter.site) parts.push(filter.site);
+    if (teamName) parts.push(teamName.replace(/[\/\\:*?"<>|]/g, '-'));
+    parts.push(date);
+    return `${parts.join('_')}.xlsx`;
   }
 
   // ============================================================================
