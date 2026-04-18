@@ -23,7 +23,7 @@ import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cab
 import { softwareValidations } from '@equipment-management/db/schema/software-validations';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
-import { eq, and, inArray, sql, type SQL, asc } from 'drizzle-orm';
+import { eq, and, inArray, or, sql, type SQL, asc } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import {
   DEFAULT_LOCALE,
@@ -37,6 +37,7 @@ import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import {
   SOFTWARE_AVAILABILITY_LABELS,
   type SoftwareAvailability,
+  CableStatusValues,
 } from '@equipment-management/schemas';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../common/storage/storage.interface';
 import { IntermediateInspectionExportDataService } from '../intermediate-inspections/services/intermediate-inspection-export-data.service';
@@ -48,6 +49,7 @@ import { EquipmentRegistryRendererService } from './services/equipment-registry-
 import { FORM_NUMBER as INTERMEDIATE_FORM_NUMBER } from '../intermediate-inspections/services/intermediate-inspection.layout';
 import { FORM_NUMBER as SELF_FORM_NUMBER } from '../self-inspections/services/self-inspection.layout';
 import { FORM_NUMBER as REGISTRY_FORM_NUMBER } from './layouts/equipment-registry.layout';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 interface ExportResult {
   buffer: Buffer;
@@ -487,9 +489,13 @@ export class FormTemplateExportService {
 
     // 검색어 필터 (관리번호, SW명, 제작사 ILIKE)
     if (params.search) {
-      const term = `%${params.search}%`;
+      const pattern = likeContains(params.search);
       conditions.push(
-        sql`(${testSoftware.managementNumber} ILIKE ${term} OR ${testSoftware.name} ILIKE ${term} OR ${testSoftware.manufacturer} ILIKE ${term})`
+        or(
+          safeIlike(testSoftware.managementNumber, pattern),
+          safeIlike(testSoftware.name, pattern),
+          safeIlike(testSoftware.manufacturer, pattern)
+        )!
       );
     }
 
@@ -639,9 +645,12 @@ export class FormTemplateExportService {
     type ResolvedUser = { name: string; signaturePath: string | null };
     const userIdSet = [
       ...new Set(
-        [record.receivedBy, record.performedBy, record.technicalApproverId].filter(
-          (id): id is string => id !== null
-        )
+        [
+          record.receivedBy,
+          record.performedBy,
+          record.technicalApproverId,
+          record.qualityApproverId,
+        ].filter((id): id is string => id !== null)
       ),
     ];
     const userMap = new Map<string, ResolvedUser>();
@@ -659,6 +668,9 @@ export class FormTemplateExportService {
     const performer = record.performedBy ? (userMap.get(record.performedBy) ?? null) : null;
     const techApprover = record.technicalApproverId
       ? (userMap.get(record.technicalApproverId) ?? null)
+      : null;
+    const qualityApprover = record.qualityApproverId
+      ? (userMap.get(record.qualityApproverId) ?? null)
       : null;
 
     // docx 템플릿 로드
@@ -739,9 +751,18 @@ export class FormTemplateExportService {
       // T7: 수락 기준
       // (보통 비어있거나 템플릿 유지)
 
-      // T8: 승인란
+      // T8: 승인란 — R0=Date, R1=Performer, R2=TechApprover(col 1)+QualityApprover(col 0)
       doc.setCellValue(8, 0, 1, this.formatDate(record.testDate));
       doc.setCellValue(8, 1, 1, performer?.name ?? '-');
+      await insertDocxSignature(
+        doc,
+        8,
+        2,
+        0,
+        qualityApprover?.signaturePath ?? null,
+        qualityApprover?.name ?? '-',
+        this.storage
+      );
       await insertDocxSignature(
         doc,
         8,
@@ -789,7 +810,7 @@ export class FormTemplateExportService {
       conditions.push(sql`${cables.status} = ${params.status}`);
     } else {
       // 기본: active 케이블만
-      conditions.push(eq(cables.status, 'active'));
+      conditions.push(eq(cables.status, CableStatusValues.ACTIVE));
     }
 
     const cableRows = await this.db
@@ -1073,21 +1094,21 @@ export class FormTemplateExportService {
       });
     }
 
-    // 신청자 조회
-    const [requester] = await this.db
-      .select({ name: users.name, signaturePath: users.signatureImagePath })
-      .from(users)
-      .where(eq(users.id, imp.requesterId))
-      .limit(1);
-
-    // 승인자 조회
-    const [approver] = imp.approverId
-      ? await this.db
-          .select({ name: users.name, signaturePath: users.signatureImagePath })
-          .from(users)
-          .where(eq(users.id, imp.approverId))
-          .limit(1)
-      : [null];
+    // 신청자/승인자 병렬 조회
+    const [[requester], [approver]] = await Promise.all([
+      this.db
+        .select({ name: users.name, signaturePath: users.signatureImagePath })
+        .from(users)
+        .where(eq(users.id, imp.requesterId))
+        .limit(1),
+      imp.approverId
+        ? this.db
+            .select({ name: users.name, signaturePath: users.signatureImagePath })
+            .from(users)
+            .where(eq(users.id, imp.approverId))
+            .limit(1)
+        : Promise.resolve([null] as [null]),
+    ]);
 
     // 반납 checkout 에서 반납 완료 날짜 조회 (있으면)
     let returnDate: Date | null = null;
@@ -1278,21 +1299,21 @@ export class FormTemplateExportService {
       });
     }
 
-    // 신청자 (사용자=신청자=반납자 동일 가정 — 스키마에 별도 반납자 없음)
-    const [requester] = await this.db
-      .select({ name: users.name, signaturePath: users.signatureImagePath })
-      .from(users)
-      .where(eq(users.id, imp.requesterId))
-      .limit(1);
-
-    // 승인자 (nullable)
-    const [approver] = imp.approverId
-      ? await this.db
-          .select({ name: users.name, signaturePath: users.signatureImagePath })
-          .from(users)
-          .where(eq(users.id, imp.approverId))
-          .limit(1)
-      : [null];
+    // 신청자/승인자 병렬 조회 (신청자=반납자 동일 가정 — 스키마에 별도 반납자 없음)
+    const [[requester], [approver]] = await Promise.all([
+      this.db
+        .select({ name: users.name, signaturePath: users.signatureImagePath })
+        .from(users)
+        .where(eq(users.id, imp.requesterId))
+        .limit(1),
+      imp.approverId
+        ? this.db
+            .select({ name: users.name, signaturePath: users.signatureImagePath })
+            .from(users)
+            .where(eq(users.id, imp.approverId))
+            .limit(1)
+        : Promise.resolve([null] as [null]),
+    ]);
 
     // 사용 부서 (teams JOIN)
     const [team] = await this.db

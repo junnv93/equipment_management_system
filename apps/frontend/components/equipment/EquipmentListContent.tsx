@@ -23,7 +23,7 @@ import { BulkActionBar } from '@/components/common/BulkActionBar';
 import { useRowSelection } from '@/hooks/use-bulk-selection';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { EquipmentStatusEnum } from '@equipment-management/schemas';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import { EQUIPMENT_TOOLBAR_TOKENS, EQUIPMENT_STATS_STRIP_TOKENS } from '@/lib/design-tokens';
@@ -227,8 +227,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
     queryKey: queryKeys.equipment.list(queryFilters),
     queryFn: () => equipmentApi.getEquipmentList(queryFilters),
     placeholderData: initialData,
-    retry: 3,
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.EQUIPMENT_LIST,
     refetchOnMount: 'always',
   });
 

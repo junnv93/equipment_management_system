@@ -3,7 +3,11 @@ import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
-import { CLASSIFICATION_TO_CODE, type Classification } from '@equipment-management/schemas';
+import {
+  CLASSIFICATION_TO_CODE,
+  EquipmentStatusValues,
+  type Classification,
+} from '@equipment-management/schemas';
 import { EXPORT_QUERY_LIMITS } from '@equipment-management/shared-constants';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
 
@@ -89,7 +93,7 @@ export class EquipmentRegistryDataService {
 
     // 폐기 장비 숨기기 (showRetired=true일 때만 포함)
     if (params.showRetired !== 'true') {
-      conditions.push(ne(equipment.status, 'disposed'));
+      conditions.push(ne(equipment.status, EquipmentStatusValues.DISPOSED));
     }
 
     const [rows, teamResult] = await Promise.all([
