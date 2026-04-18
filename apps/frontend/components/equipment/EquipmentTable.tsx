@@ -20,6 +20,9 @@ import {
 } from '@/components/ui/table';
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { EquipmentFilters } from '@/hooks/useEquipmentFilters';
+import type { RowSelectionAPI } from '@/hooks/use-bulk-selection';
+import { RowSelectCell } from '@/components/common/RowSelectCell';
+import { Checkbox } from '@/components/ui/checkbox';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
 import { usePrefetchDetail } from '@/hooks/use-prefetch-detail';
 import { HighlightText } from '@/components/shared/HighlightText';
@@ -71,6 +74,7 @@ interface EquipmentTableProps {
   sortOrder: 'asc' | 'desc';
   onSort: (column: EquipmentFilters['sortBy'], order: 'asc' | 'desc') => void;
   searchTerm?: string;
+  selection?: RowSelectionAPI<Equipment>;
 }
 
 /**
@@ -192,9 +196,11 @@ const SkeletonRow = memo(function SkeletonRow() {
 const EquipmentRow = memo(function EquipmentRow({
   equipment,
   searchTerm,
+  selection,
 }: {
   equipment: Equipment;
   searchTerm?: string;
+  selection?: RowSelectionAPI<Equipment>;
 }) {
   const t = useTranslations('equipment');
   const { fmtDate } = useDateFormatter();
@@ -275,6 +281,18 @@ const EquipmentRow = memo(function EquipmentRow({
       data-testid="equipment-row"
       onClick={handleRowClick}
     >
+      {/* per-row 체크박스 */}
+      {selection && (
+        <RowSelectCell
+          item={equipment}
+          keyFn={(e) => e.id}
+          selection={selection}
+          ariaLabelKey="bulk.selectRow"
+          ariaLabelArgs={(e) => ({ name: e.name || e.managementNumber || e.id })}
+          disabled={equipment.status === 'DISPOSED'}
+        />
+      )}
+
       {/* 상태 인디케이터 바 — 색상이 상태 배지와 대응 (tooltip으로 상태명 표시) */}
       <TableCell className={EQUIPMENT_TABLE_TOKENS.statusBar.cell} aria-hidden="true">
         <div
@@ -360,14 +378,35 @@ function EquipmentTableComponent({
   sortOrder,
   onSort,
   searchTerm,
+  selection,
 }: EquipmentTableProps) {
   const t = useTranslations('equipment');
+  const tCommon = useTranslations('common');
 
   return (
     <div className={EQUIPMENT_TABLE_TOKENS.container}>
       <Table role="grid" aria-label={t('table.ariaLabel')} className="[&_td]:py-2 [&_td]:px-3">
         <TableHeader>
           <TableRow role="row" className={EQUIPMENT_TABLE_TOKENS.headerRow}>
+            {/* select-all 체크박스 헤더 */}
+            {selection && (
+              <TableHead className="w-10 [&:has([role=checkbox])]:pr-0">
+                <Checkbox
+                  checked={
+                    selection.isIndeterminate ? 'indeterminate' : selection.isAllPageSelected
+                  }
+                  onCheckedChange={(checked) => {
+                    if (checked) selection.selectAllOnPage();
+                    else selection.clear();
+                  }}
+                  aria-label={
+                    selection.isAllPageSelected
+                      ? tCommon('bulk.deselectAll')
+                      : tCommon('bulk.selectAll')
+                  }
+                />
+              </TableHead>
+            )}
             {COLUMNS.map((col) => {
               // 상태 바 헤더: 빈 셀
               if (col.key === 'statusBar') {
@@ -406,13 +445,21 @@ function EquipmentTableComponent({
             Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={COLUMNS.length} className="h-24 text-center">
+              <TableCell
+                colSpan={COLUMNS.length + (selection ? 1 : 0)}
+                className="h-24 text-center"
+              >
                 <p className="text-muted-foreground">{t('list.noItems')}</p>
               </TableCell>
             </TableRow>
           ) : (
             items.map((equipment) => (
-              <EquipmentRow key={equipment.id} equipment={equipment} searchTerm={searchTerm} />
+              <EquipmentRow
+                key={equipment.id}
+                equipment={equipment}
+                searchTerm={searchTerm}
+                selection={selection}
+              />
             ))
           )}
         </TableBody>

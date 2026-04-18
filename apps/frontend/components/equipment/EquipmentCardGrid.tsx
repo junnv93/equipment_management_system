@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Equipment } from '@/lib/api/equipment-api';
+import type { RowSelectionAPI } from '@/hooks/use-bulk-selection';
+import { Checkbox } from '@/components/ui/checkbox';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
 import { UsagePeriodBadge } from './UsagePeriodBadge';
 import { HighlightText } from '@/components/shared/HighlightText';
@@ -34,6 +36,7 @@ interface EquipmentCardGridProps {
   items: Equipment[];
   isLoading: boolean;
   searchTerm?: string;
+  selection?: RowSelectionAPI<Equipment>;
 }
 
 /**
@@ -80,9 +83,11 @@ const SkeletonCard = memo(function SkeletonCard() {
 const EquipmentCard = memo(function EquipmentCard({
   equipment,
   searchTerm,
+  selection,
 }: {
   equipment: Equipment;
   searchTerm?: string;
+  selection?: RowSelectionAPI<Equipment>;
 }) {
   const t = useTranslations('equipment');
   const tCal = useTranslations('calibration');
@@ -125,6 +130,16 @@ const EquipmentCard = memo(function EquipmentCard({
       <CardHeader className="pb-2">
         {/* 관리번호 1차 식별자 위계 */}
         <div className="flex justify-between items-start gap-2">
+          {/* per-row 체크박스 (카드 좌측 상단) */}
+          {selection && (
+            <Checkbox
+              checked={selection.isSelected(equipment.id)}
+              onCheckedChange={() => selection.toggle(equipment.id, equipment)}
+              disabled={equipment.status === 'DISPOSED'}
+              aria-label={equipment.name || equipment.managementNumber || equipment.id}
+              className="mt-0.5 shrink-0"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <p
               className={`text-xs ${getManagementNumberClasses()} tracking-wider`}

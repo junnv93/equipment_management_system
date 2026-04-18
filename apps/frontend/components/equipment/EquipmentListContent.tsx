@@ -19,6 +19,8 @@ import {
 } from '@/components/equipment/EquipmentEmptyState';
 import { StatusSummaryStrip } from '@/components/equipment/StatusSummaryStrip';
 import { BulkLabelPrintButton } from '@/components/equipment/BulkLabelPrintButton';
+import { BulkActionBar } from '@/components/common/BulkActionBar';
+import { useRowSelection } from '@/hooks/use-bulk-selection';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -191,10 +193,6 @@ const ResultsInfoBar = memo(function ResultsInfoBar({
  * - Radix UI 컴포넌트(Select, Collapsible)의 ID mismatch 방지
  * - page.tsx에서 <ClientOnly> wrapper 적용
  */
-// NOTE: `useBulkSelection`은 Phase 2 프리미티브로 도입됐으며, per-row 체크박스
-// 통합은 디자인 리뷰(card/table 뷰 동시 고려) 후 Phase 2.5에서 진행. 현재는
-// "현재 페이지 items 전체"를 QR 라벨 PDF 배치로 소비하는 단일 툴바 버튼만 제공.
-
 export function EquipmentListContent({ initialData }: EquipmentListContentProps) {
   const t = useTranslations('equipment');
   const {
@@ -242,6 +240,12 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
 
   const items = data?.data || [];
   const statusCounts = data?.meta?.summary;
+
+  // per-row 선택 — DISPOSED 장비는 선택 불가, 필터 변경 시 자동 초기화
+  const selection = useRowSelection<Equipment>(items, (e) => e.id, {
+    isSelectable: (e) => e.status !== 'DISPOSED',
+    resetOn: [queryFilters],
+  });
 
   if (error) {
     return <ErrorAlert error={error} title={t('list.loadError')} onRetry={() => refetch()} />;
@@ -333,13 +337,24 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         sortOrder={filters.sortOrder}
       />
 
-      {/* 벌크 액션 바 — 현재 페이지 QR 라벨 일괄 인쇄
-       * (per-row 체크박스 + useBulkSelection 완전 통합은 Phase 2.5 UI 디자인 리뷰 후) */}
-      {items.length > 0 && (
-        <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
-          <BulkLabelPrintButton selectedItems={items} variant="outline" />
-        </div>
-      )}
+      {/* 벌크 액션 바 — per-row 선택 시 표시 */}
+      <BulkActionBar
+        selectedCount={selection.count}
+        totalCount={items.length}
+        isAllPageSelected={selection.isAllPageSelected}
+        isIndeterminate={selection.isIndeterminate}
+        onSelectAll={selection.selectAllOnPage}
+        onClear={selection.clear}
+        variant="inline"
+        className="print:hidden"
+        actions={
+          <BulkLabelPrintButton
+            selectedItems={selection.selectedItems as Equipment[]}
+            onComplete={selection.clear}
+            variant="outline"
+          />
+        }
+      />
 
       {/* 장비 목록 (테이블 또는 카드) */}
       {items.length === 0 ? (
@@ -362,9 +377,15 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
               sortOrder={filters.sortOrder}
               onSort={setSort}
               searchTerm={filters.search}
+              selection={selection}
             />
           ) : (
-            <EquipmentCardGrid items={items} isLoading={isFetching} searchTerm={filters.search} />
+            <EquipmentCardGrid
+              items={items}
+              isLoading={isFetching}
+              searchTerm={filters.search}
+              selection={selection}
+            />
           )}
 
           <EquipmentPagination
