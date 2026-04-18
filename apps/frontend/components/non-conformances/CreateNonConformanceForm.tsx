@@ -61,8 +61,7 @@ interface CreateNonConformanceFormProps {
  *   이 컴포넌트를 공유. 폼 로직 중복 0.
  * - **Optimistic update + CAS + cross-entity invalidation** — `useOptimisticMutation` SSOT
  *   패턴 사용. `setQueryData` 직접 호출 0.
- * - **i18n**: `non-conformances.nonConformanceManagement.*` 네임스페이스 재사용.
- *   QR 경로도 동일 문자열을 쓰므로 별도 네임스페이스 불필요.
+ * - **i18n**: `non-conformances.management.*` 네임스페이스 (SSOT).
  *
  * ## 사용 예
  * ```tsx
@@ -78,9 +77,7 @@ export function CreateNonConformanceForm({
   onCancel,
   autoFocus = false,
 }: CreateNonConformanceFormProps) {
-  // 이 폼은 equipment 상세 페이지의 NC 탭에서 사용 → `equipment.nonConformanceManagement.*` 네임스페이스 SSOT.
-  // 부모 컴포넌트(NonConformanceManagementClient)와 동일 네임스페이스 공유.
-  const t = useTranslations('equipment');
+  const t = useTranslations('non-conformances');
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -127,8 +124,8 @@ export function CreateNonConformanceForm({
       };
     },
     invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
-    successMessage: t('nonConformanceManagement.toasts.createSuccess'),
-    errorMessage: t('nonConformanceManagement.toasts.createError'),
+    successMessage: t('management.toasts.createSuccess'),
+    errorMessage: t('management.toasts.createError'),
     onSuccessCallback: async (createdNc) => {
       // 사진 첨부: NC 생성 후 반환된 id로 병렬 업로드.
       // Promise.allSettled — 일부 실패해도 나머지 진행 + partial 토스트.
@@ -141,7 +138,7 @@ export function CreateNonConformanceForm({
               createdNc.id,
               file,
               DocumentTypeValues.EQUIPMENT_PHOTO,
-              t('nonConformanceManagement.form.photoDescription')
+              t('management.form.photoDescription')
             )
           )
         );
@@ -150,7 +147,7 @@ export function CreateNonConformanceForm({
 
         if (failed > 0) {
           toast({
-            title: t('nonConformanceManagement.toasts.photoPartialFailed', { failed }),
+            title: t('management.toasts.photoPartialFailed', { failed }),
             variant: 'destructive',
           });
         }
@@ -176,7 +173,7 @@ export function CreateNonConformanceForm({
   const handleSubmit = () => {
     if (!form.cause.trim()) {
       toast({
-        title: t('nonConformanceManagement.form.causeRequired'),
+        title: t('management.form.causeRequired'),
         variant: 'destructive',
       });
       return;
@@ -207,30 +204,28 @@ export function CreateNonConformanceForm({
     <div className="space-y-4">
       <div>
         <Label htmlFor="nc-type">
-          {t('nonConformanceManagement.form.ncType')} <span className="text-destructive">*</span>
+          {t('management.form.ncType')} <span className="text-destructive">*</span>
         </Label>
         <Select
           value={form.ncType}
           onValueChange={(v) => setForm({ ...form, ncType: v as NonConformanceType })}
         >
           <SelectTrigger id="nc-type" ref={ncTypeTriggerRef} className="mt-1.5">
-            <SelectValue placeholder={t('nonConformanceManagement.form.ncTypePlaceholder')} />
+            <SelectValue placeholder={t('management.form.ncTypePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
             {MANUAL_NC_TYPES.map((ncType) => (
               <SelectItem key={ncType} value={ncType}>
-                {t(`nonConformanceManagement.form.${NC_TYPE_I18N_KEY[ncType]}`)}
+                {t(`management.form.${NC_TYPE_I18N_KEY[ncType]}`)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground mt-1.5">
-          {t('nonConformanceManagement.form.ncTypeHint')}
-        </p>
+        <p className="text-xs text-muted-foreground mt-1.5">{t('management.form.ncTypeHint')}</p>
       </div>
       <div>
         <Label htmlFor="nc-cause">
-          {t('nonConformanceManagement.form.cause')} <span className="text-destructive">*</span>
+          {t('management.form.cause')} <span className="text-destructive">*</span>
         </Label>
         <Textarea
           id="nc-cause"
@@ -238,22 +233,22 @@ export function CreateNonConformanceForm({
           onChange={(e) => setForm({ ...form, cause: e.target.value })}
           rows={3}
           className="mt-1.5"
-          placeholder={t('nonConformanceManagement.form.causePlaceholder')}
+          placeholder={t('management.form.causePlaceholder')}
         />
       </div>
       <div>
-        <Label htmlFor="nc-action-plan">{t('nonConformanceManagement.form.actionPlan')}</Label>
+        <Label htmlFor="nc-action-plan">{t('management.form.actionPlan')}</Label>
         <Textarea
           id="nc-action-plan"
           value={form.actionPlan}
           onChange={(e) => setForm({ ...form, actionPlan: e.target.value })}
           rows={2}
           className="mt-1.5"
-          placeholder={t('nonConformanceManagement.form.actionPlanPlaceholder')}
+          placeholder={t('management.form.actionPlanPlaceholder')}
         />
       </div>
       <div>
-        <Label htmlFor="nc-photos">{t('nonConformanceManagement.form.photos')}</Label>
+        <Label htmlFor="nc-photos">{t('management.form.photos')}</Label>
         <Input
           id="nc-photos"
           type="file"
@@ -266,11 +261,11 @@ export function CreateNonConformanceForm({
           aria-describedby="nc-photos-hint"
         />
         <p id="nc-photos-hint" className="text-xs text-muted-foreground mt-1.5">
-          {t('nonConformanceManagement.form.photosHint')}
+          {t('management.form.photosHint')}
         </p>
         {photos.length > 0 && (
           <p className="text-xs text-muted-foreground mt-1" aria-live="polite">
-            {t('nonConformanceManagement.form.photosSelected', { count: photos.length })}
+            {t('management.form.photosSelected', { count: photos.length })}
           </p>
         )}
       </div>
@@ -281,14 +276,14 @@ export function CreateNonConformanceForm({
           disabled={createMutation.isPending || isUploadingPhotos}
         >
           {isUploadingPhotos
-            ? t('nonConformanceManagement.form.uploadingPhotos')
+            ? t('management.form.uploadingPhotos')
             : createMutation.isPending
-              ? t('nonConformanceManagement.form.registering')
-              : t('nonConformanceManagement.form.register')}
+              ? t('management.form.registering')
+              : t('management.form.register')}
         </Button>
         {onCancel && (
           <Button variant="outline" onClick={handleCancel}>
-            {t('nonConformanceManagement.form.cancel')}
+            {t('management.form.cancel')}
           </Button>
         )}
       </div>

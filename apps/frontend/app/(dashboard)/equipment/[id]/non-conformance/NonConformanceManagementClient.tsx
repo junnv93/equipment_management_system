@@ -73,7 +73,7 @@ export default function NonConformanceManagementClient({
   const { can } = useAuth();
   const canCreateNC = can(Permission.CREATE_NON_CONFORMANCE);
   const canEditNC = can(Permission.CLOSE_NON_CONFORMANCE);
-  const t = useTranslations('equipment');
+  const t = useTranslations('non-conformances');
   const { fmtDate } = useDateFormatter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
@@ -161,8 +161,8 @@ export default function NonConformanceManagementClient({
       };
     },
     invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
-    successMessage: t('nonConformanceManagement.toasts.updateSuccess'),
-    errorMessage: t('nonConformanceManagement.toasts.updateError'),
+    successMessage: t('management.toasts.updateSuccess'),
+    errorMessage: t('management.toasts.updateError'),
     onSuccessCallback: () => {
       setEditingId(null);
       setUpdateForm({ correctionContent: '', status: '' });
@@ -180,7 +180,7 @@ export default function NonConformanceManagementClient({
       !nc.repairHistoryId &&
       updateForm.status === NCStatusVal.CORRECTED
     ) {
-      const userChoice = window.confirm(t('nonConformanceManagement.confirm.repairRequired'));
+      const userChoice = window.confirm(t('management.confirm.repairRequired'));
 
       if (userChoice) {
         router.push(`/equipment/${equipmentId}/repair-history`);
@@ -263,17 +263,13 @@ export default function NonConformanceManagementClient({
                 <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
               </div>
               <div>
-                <h3 className="font-medium text-foreground">
-                  {t('nonConformanceManagement.loadError')}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {t('nonConformanceManagement.loadErrorDesc')}
-                </p>
+                <h3 className="font-medium text-foreground">{t('management.loadError')}</h3>
+                <p className="text-sm text-muted-foreground">{t('management.loadErrorDesc')}</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-              {t('nonConformanceManagement.retry')}
+              {t('management.retry')}
             </Button>
           </div>
         </Card>
@@ -290,11 +286,11 @@ export default function NonConformanceManagementClient({
           className={`inline-flex items-center text-muted-foreground hover:text-foreground mb-4 ${TRANSITION_PRESETS.fastColor}`}
         >
           <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
-          {t('nonConformanceManagement.backToEquipment')}
+          {t('management.backToEquipment')}
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('nonConformanceManagement.title')}</h1>
+            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('management.title')}</h1>
             {equipment && (
               <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>
                 {equipment.name} ({equipment.managementNumber})
@@ -304,7 +300,7 @@ export default function NonConformanceManagementClient({
           {canCreateNC && equipment?.status !== ESVal.NON_CONFORMING && (
             <Button variant="destructive" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-              {t('nonConformanceManagement.register')}
+              {t('management.register')}
             </Button>
           )}
         </div>
@@ -314,7 +310,7 @@ export default function NonConformanceManagementClient({
       {showCreateForm && (
         <Card className="p-6 mb-6" role="region" aria-labelledby="nc-create-form-title">
           <h2 id="nc-create-form-title" className="text-lg font-semibold tracking-tight mb-4">
-            {t('nonConformanceManagement.register')}
+            {t('management.register')}
           </h2>
           <CreateNonConformanceForm
             equipmentId={equipmentId}
@@ -335,10 +331,10 @@ export default function NonConformanceManagementClient({
               </div>
             </div>
             <h3 className="mt-4 text-base font-medium tracking-tight text-foreground">
-              {t('nonConformanceManagement.empty')}
+              {t('management.empty')}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-              {t('nonConformanceManagement.emptyDesc')}
+              {t('management.emptyDesc')}
             </p>
           </Card>
         ) : (
@@ -355,11 +351,11 @@ export default function NonConformanceManagementClient({
                     {getStatusIcon(nc.status)}
                   </div>
                   <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
-                    {t(`nonConformanceManagement.ncStatus.${nc.status}` as Parameters<typeof t>[0])}
+                    {t(`management.ncStatus.${nc.status}` as Parameters<typeof t>[0])}
                   </span>
                 </div>
                 <time dateTime={nc.discoveryDate} className="text-sm text-muted-foreground">
-                  {t('nonConformanceManagement.discoveryDate', {
+                  {t('management.discoveryDate', {
                     date: fmtDate(nc.discoveryDate),
                   })}
                 </time>
@@ -368,13 +364,13 @@ export default function NonConformanceManagementClient({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded">
-                    {t(`nonConformanceManagement.ncType.${nc.ncType}` as Parameters<typeof t>[0])}
+                    {t(`management.ncType.${nc.ncType}` as Parameters<typeof t>[0])}
                   </span>
                   {nc.resolutionType && (
                     <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded">
-                      {t('nonConformanceManagement.resolution', {
+                      {t('management.resolution', {
                         type: t(
-                          `nonConformanceManagement.resolutionType.${nc.resolutionType}` as Parameters<
+                          `management.resolutionType.${nc.resolutionType}` as Parameters<
                             typeof t
                           >[0]
                         ),
@@ -386,7 +382,7 @@ export default function NonConformanceManagementClient({
                       href={`/equipment/${equipmentId}/repair-history`}
                       className={NC_REPAIR_LINKED_TOKENS.badge}
                     >
-                      {t('nonConformanceManagement.repairLinked')}
+                      {t('management.repairLinked')}
                     </Link>
                   )}
                 </div>
@@ -401,7 +397,7 @@ export default function NonConformanceManagementClient({
                       />
                       <div>
                         <p className={`font-medium ${getSemanticContainerTextClasses('critical')}`}>
-                          {t('nonConformanceManagement.rejectionTitle')}
+                          {t('management.rejectionTitle')}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                           {nc.rejectionReason}
@@ -411,7 +407,7 @@ export default function NonConformanceManagementClient({
                             dateTime={nc.rejectedAt}
                             className={`text-xs ${getSemanticContainerTextClasses('critical')} mt-1 block`}
                           >
-                            {t('nonConformanceManagement.rejectionDate', {
+                            {t('management.rejectionDate', {
                               date: fmtDate(nc.rejectedAt),
                             })}
                           </time>
@@ -423,7 +419,7 @@ export default function NonConformanceManagementClient({
 
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground">
-                    {t('nonConformanceManagement.causeLabel')}
+                    {t('management.causeLabel')}
                   </h4>
                   <p className="text-foreground mt-1 leading-relaxed">{nc.cause}</p>
                 </div>
@@ -431,7 +427,7 @@ export default function NonConformanceManagementClient({
                 {nc.actionPlan && (
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">
-                      {t('nonConformanceManagement.actionPlanLabel')}
+                      {t('management.actionPlanLabel')}
                     </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.actionPlan}</p>
                   </div>
@@ -440,7 +436,7 @@ export default function NonConformanceManagementClient({
                 {nc.correctionContent && (
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">
-                      {t('nonConformanceManagement.correctionLabel')}
+                      {t('management.correctionLabel')}
                     </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.correctionContent}</p>
                     {nc.correctionDate && (
@@ -448,7 +444,7 @@ export default function NonConformanceManagementClient({
                         dateTime={nc.correctionDate}
                         className="text-sm text-muted-foreground mt-1 block"
                       >
-                        {t('nonConformanceManagement.correctionDate', {
+                        {t('management.correctionDate', {
                           date: fmtDate(nc.correctionDate),
                         })}
                       </time>
@@ -459,7 +455,7 @@ export default function NonConformanceManagementClient({
                 {nc.closureNotes && (
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground">
-                      {t('nonConformanceManagement.closureNotesLabel')}
+                      {t('management.closureNotesLabel')}
                     </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.closureNotes}</p>
                     {nc.closedAt && (
@@ -467,7 +463,7 @@ export default function NonConformanceManagementClient({
                         dateTime={nc.closedAt}
                         className="text-sm text-muted-foreground mt-1 block"
                       >
-                        {t('nonConformanceManagement.closureDate', {
+                        {t('management.closureDate', {
                           date: fmtDate(nc.closedAt),
                         })}
                       </time>
@@ -493,15 +489,11 @@ export default function NonConformanceManagementClient({
                           <p
                             className={`font-medium ${getSemanticContainerTextClasses('warning')}`}
                           >
-                            {t('nonConformanceManagement.repairNeeded')}
+                            {t('management.repairNeeded')}
                           </p>
                           <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                            {t('nonConformanceManagement.repairNeededDesc', {
-                              type: t(
-                                `nonConformanceManagement.ncType.${nc.ncType}` as Parameters<
-                                  typeof t
-                                >[0]
-                              ),
+                            {t('management.repairNeededDesc', {
+                              type: t(`management.ncType.${nc.ncType}` as Parameters<typeof t>[0]),
                             })}
                           </p>
                           <Button variant="default" size="sm" className="mt-3" asChild>
@@ -509,7 +501,7 @@ export default function NonConformanceManagementClient({
                               href={`/equipment/${equipmentId}/repair-history?ncId=${nc.id}&autoOpen=true`}
                             >
                               <Wrench className="h-4 w-4 mr-2" aria-hidden="true" />
-                              {t('nonConformanceManagement.registerRepair')}
+                              {t('management.registerRepair')}
                             </Link>
                           </Button>
                         </div>
@@ -518,12 +510,12 @@ export default function NonConformanceManagementClient({
                   ) : (
                     <div data-testid="nc-repair-linked" className={NC_REPAIR_LINKED_TOKENS.text}>
                       <CheckCircle className="h-4 w-4" aria-hidden="true" />
-                      {t('nonConformanceManagement.repairLinkedApproval')}
+                      {t('management.repairLinkedApproval')}
                       <Link
                         href={`/equipment/${equipmentId}/repair-history`}
                         className="text-primary hover:underline ml-2"
                       >
-                        {t('nonConformanceManagement.viewRepairHistory')}
+                        {t('management.viewRepairHistory')}
                       </Link>
                     </div>
                   )}
@@ -535,7 +527,7 @@ export default function NonConformanceManagementClient({
                 <div className="mt-4 pt-4 border-t border-border space-y-4">
                   <div>
                     <Label htmlFor={`correction-${nc.id}`}>
-                      {t('nonConformanceManagement.update.correction')}
+                      {t('management.update.correction')}
                     </Label>
                     <Textarea
                       id={`correction-${nc.id}`}
@@ -545,13 +537,11 @@ export default function NonConformanceManagementClient({
                       }
                       rows={2}
                       className="mt-1.5"
-                      placeholder={t('nonConformanceManagement.update.correctionPlaceholder')}
+                      placeholder={t('management.update.correctionPlaceholder')}
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`status-${nc.id}`}>
-                      {t('nonConformanceManagement.update.statusChange')}
-                    </Label>
+                    <Label htmlFor={`status-${nc.id}`}>{t('management.update.statusChange')}</Label>
                     <Select
                       value={updateForm.status || '_keep'}
                       onValueChange={(v) =>
@@ -562,16 +552,12 @@ export default function NonConformanceManagementClient({
                       }
                     >
                       <SelectTrigger id={`status-${nc.id}`} className="mt-1.5">
-                        <SelectValue
-                          placeholder={t('nonConformanceManagement.update.keepStatus')}
-                        />
+                        <SelectValue placeholder={t('management.update.keepStatus')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="_keep">
-                          {t('nonConformanceManagement.update.keepStatus')}
-                        </SelectItem>
+                        <SelectItem value="_keep">{t('management.update.keepStatus')}</SelectItem>
                         <SelectItem value="corrected">
-                          {t('nonConformanceManagement.update.corrected')}
+                          {t('management.update.corrected')}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -579,8 +565,8 @@ export default function NonConformanceManagementClient({
                   <div className="flex gap-3">
                     <Button onClick={() => handleUpdate(nc.id)} disabled={updateMutation.isPending}>
                       {updateMutation.isPending
-                        ? t('nonConformanceManagement.update.saving')
-                        : t('nonConformanceManagement.update.save')}
+                        ? t('management.update.saving')
+                        : t('management.update.save')}
                     </Button>
                     <Button
                       variant="outline"
@@ -589,7 +575,7 @@ export default function NonConformanceManagementClient({
                         setUpdateForm({ correctionContent: '', status: '' });
                       }}
                     >
-                      {t('nonConformanceManagement.update.cancel')}
+                      {t('management.update.cancel')}
                     </Button>
                   </div>
                 </div>
@@ -600,7 +586,7 @@ export default function NonConformanceManagementClient({
                 <div className="mt-4 pt-4 border-t border-border">
                   <Button variant="secondary" size="sm" onClick={() => startEditing(nc)}>
                     <FileText className="h-4 w-4 mr-2" aria-hidden="true" />
-                    {t('nonConformanceManagement.editRecord')}
+                    {t('management.editRecord')}
                   </Button>
                 </div>
               )}
