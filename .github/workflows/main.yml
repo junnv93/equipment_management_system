@@ -109,6 +109,12 @@ jobs:
       - name: TypeScript — Frontend
         run: pnpm --filter frontend run type-check
 
+      - name: Self-Audit — 아키텍처 원칙 위반 감지
+        # 7대 체크: 하드코딩 URL / SSOT 우회 / role 리터럴 / setQueryData in onSuccess
+        # --all 모드: 전체 codebase 스캔 (local --no-verify 우회 방지)
+        # 상세: docs/references/self-audit.md
+        run: node scripts/self-audit.mjs --all
+
       - name: Security — Endpoint Annotation Check
         # 모든 컨트롤러 엔드포인트에 @RequirePermissions/@SkipPermissions/@Public 보장
         run: pnpm security:check

@@ -32,3 +32,6 @@ fi
 
 # 3. lint-staged
 pnpm lint-staged
+
+# 4. self-audit — 7대 아키텍처 원칙 위반 감지 (staged 파일만)
+node scripts/self-audit.mjs --staged
