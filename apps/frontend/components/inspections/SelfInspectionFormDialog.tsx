@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isConflictError } from '@/lib/api/error';
@@ -36,11 +36,23 @@ import {
   type SelfInspection,
   type UpdateSelfInspectionDto,
 } from '@/lib/api/self-inspection-api';
+import type { Equipment } from '@/lib/api/equipment-api';
 import type {
+  EquipmentClassification,
   SelfInspectionItemJudgment,
   SelfInspectionResult,
 } from '@equipment-management/schemas';
 import { DEFAULT_SELF_INSPECTION_ITEMS } from '@equipment-management/schemas';
+
+/**
+ * equipment.calibrationRequired → EquipmentClassification 매핑.
+ * 서버 로직(self-inspections.service.ts createSelfInspection)과 동일:
+ *   dto.classification ?? (calibrationRequired === 'required' ? 'calibrated' : 'non_calibrated')
+ */
+function deriveClassification(equipment?: Equipment): EquipmentClassification | '' {
+  if (!equipment?.calibrationRequired) return '';
+  return equipment.calibrationRequired === 'required' ? 'calibrated' : 'non_calibrated';
+}
 
 interface SelfInspectionItemForm {
   checkItem: string;
@@ -56,6 +68,8 @@ interface SelfInspectionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   equipmentId: string;
+  /** 장비 마스터 — create 모드에서 snapshot 초기값 derive에 사용 */
+  equipment?: Equipment;
   /** edit 모드일 때 전달; 미전달이면 create 모드 */
   initialData?: SelfInspection;
 }
@@ -64,6 +78,7 @@ export default function SelfInspectionFormDialog({
   open,
   onOpenChange,
   equipmentId,
+  equipment,
   initialData,
 }: SelfInspectionFormDialogProps) {
   const t = useTranslations('equipment');
@@ -81,17 +96,23 @@ export default function SelfInspectionFormDialog({
   const [items, setItems] = useState<SelfInspectionItemForm[]>(
     DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({ checkItem: name, checkResult: '' }))
   );
+  // UL-QP-18-05 양식 헤더 snapshot — create 시 장비 마스터에서 derive, edit 시 기존값 복원
+  const [classification, setClassification] = useState<EquipmentClassification | ''>('');
+  const [calibrationValidityPeriod, setCalibrationValidityPeriod] = useState('');
 
-  const resetForm = () => {
+  // useCallback: equipment가 바뀔 때만 새 참조 생성 → useEffect deps 안정성 보장
+  const resetForm = useCallback(() => {
     setInspectionDate('');
     setOverallResult('');
     setRemarks('');
     setInspectionCycle(6);
     setSpecialNotes([]);
     setItems(DEFAULT_SELF_INSPECTION_ITEMS.map((name) => ({ checkItem: name, checkResult: '' })));
-  };
+    setClassification(deriveClassification(equipment));
+    setCalibrationValidityPeriod('');
+  }, [equipment]);
 
-  // edit 모드: dialog가 열릴 때 initialData로 폼 채우기
+  // edit/create 모드: dialog가 열릴 때 데이터 채우기
   useEffect(() => {
     if (!open) return;
     if (initialData) {
@@ -115,10 +136,13 @@ export default function SelfInspectionFormDialog({
               checkResult: '' as const,
             }));
       setItems(seeded);
+      // snapshot 복원: edit 시 기존 기록값 표시 (없으면 장비 마스터 derive)
+      setClassification(initialData.classification ?? deriveClassification(equipment));
+      setCalibrationValidityPeriod(initialData.calibrationValidityPeriod ?? '');
     } else {
       resetForm();
     }
-  }, [open, initialData]);
+  }, [open, initialData, resetForm, equipment]);
 
   const handleMutationError = (error: Error, fallbackKey: 'createError' | 'updateError') => {
     if (isConflictError(error)) {
@@ -211,6 +235,9 @@ export default function SelfInspectionFormDialog({
       ...(specialNotes.length > 0
         ? { specialNotes: specialNotes.map((n) => ({ content: n.content, date: n.date || null })) }
         : {}),
+      // UL-QP-18-05 헤더 snapshot — 명시적으로 전달하여 서버 auto-derive 대신 사용자 확인값 저장
+      ...(classification ? { classification: classification as EquipmentClassification } : {}),
+      ...(calibrationValidityPeriod ? { calibrationValidityPeriod } : {}),
     };
 
     if (isEdit && initialData) {
@@ -269,6 +296,43 @@ export default function SelfInspectionFormDialog({
                 value={inspectionCycle}
                 onChange={(e) => setInspectionCycle(Number(e.target.value))}
               />
+            </div>
+          </div>
+
+          {/* 양식 헤더 snapshot (UL-QP-18-05 T0 R0 C1: 분류 / T0 R3 C3: 교정유효기간) */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              {t('selfInspection.form.snapshotSectionLabel')}
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('selfInspection.snapshotClassificationLabel')}</Label>
+                <Select
+                  value={classification}
+                  onValueChange={(v) => setClassification(v as EquipmentClassification)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('selfInspection.form.selectClassification')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="calibrated">
+                      {t('selfInspection.snapshotClassificationCalibrated')}
+                    </SelectItem>
+                    <SelectItem value="non_calibrated">
+                      {t('selfInspection.snapshotClassificationNonCalibrated')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('selfInspection.snapshotCalibrationValidityPeriodLabel')}</Label>
+                <Input
+                  value={calibrationValidityPeriod}
+                  onChange={(e) => setCalibrationValidityPeriod(e.target.value)}
+                  placeholder={t('selfInspection.form.calibrationValidityPeriodPlaceholder')}
+                  maxLength={50}
+                />
+              </div>
             </div>
           </div>
 

@@ -558,6 +558,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
           open={isFormOpen}
           onOpenChange={setIsFormOpen}
           equipmentId={equipmentId}
+          equipment={equipment}
         />
       )}
 
@@ -566,6 +567,7 @@ export function SelfInspectionTab({ equipment }: SelfInspectionTabProps) {
           open={!!editTarget}
           onOpenChange={(open) => !open && setEditTarget(null)}
           equipmentId={equipmentId}
+          equipment={equipment}
           initialData={editTarget}
         />
       )}

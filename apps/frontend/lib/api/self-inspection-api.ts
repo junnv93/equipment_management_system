@@ -2,6 +2,7 @@ import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { transformSingleResponse } from './utils/response-transformers';
 import type {
+  EquipmentClassification,
   SelfInspectionItemJudgment,
   SelfInspectionResult,
   SelfInspectionStatus,
@@ -26,6 +27,10 @@ export interface SelfInspection {
   safety: SelfInspectionItemJudgment;
   calibrationStatus: SelfInspectionItemJudgment;
   overallResult: SelfInspectionResult;
+  /** UL-QP-18-05 양식 헤더 snapshot: 교정기기 / 비교정기기 */
+  classification: EquipmentClassification | null;
+  /** UL-QP-18-05 양식 헤더 snapshot: 교정 유효기간 (예: '1년', 'N/A') */
+  calibrationValidityPeriod: string | null;
   remarks: string | null;
   specialNotes: SpecialNote[] | null;
   items: SelfInspectionItem[];
@@ -59,6 +64,10 @@ export interface CreateSelfInspectionDto {
   remarks?: string;
   specialNotes?: SpecialNote[];
   inspectionCycle?: number;
+  /** UL-QP-18-05 헤더 snapshot — 미전달 시 서버가 장비 마스터에서 derive */
+  classification?: EquipmentClassification;
+  /** UL-QP-18-05 헤더 snapshot — 교정 유효기간 */
+  calibrationValidityPeriod?: string;
   // 하위 호환
   appearance?: SelfInspectionItemJudgment;
   functionality?: SelfInspectionItemJudgment;
@@ -74,6 +83,10 @@ export interface UpdateSelfInspectionDto {
   remarks?: string;
   specialNotes?: SpecialNote[];
   inspectionCycle?: number;
+  /** UL-QP-18-05 헤더 snapshot */
+  classification?: EquipmentClassification;
+  /** UL-QP-18-05 헤더 snapshot — 교정 유효기간 */
+  calibrationValidityPeriod?: string;
   appearance?: SelfInspectionItemJudgment;
   functionality?: SelfInspectionItemJudgment;
   safety?: SelfInspectionItemJudgment;
