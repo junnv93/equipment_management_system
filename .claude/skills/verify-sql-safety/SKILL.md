@@ -44,7 +44,8 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `packages/shared-constants/src/pagination.ts`                                 | SSOT 페이지네이션 상수 (DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE 등)                                    |
 | `apps/backend/src/common/file-upload/document.service.ts`                     | CTE 재귀 쿼리 (개정 이력), inArray 배치 쿼리 (장비+교정 통합 문서), LIMIT 배치 purge (purgeDeletedDocuments) |
 | `apps/backend/src/modules/checkouts/checkout-scope.util.ts`                   | Checkout 스코프 SSOT 헬퍼 — list/KPI/action 가드가 동일 3-case predicate 공유 (Step 6a 참조) |
-| `apps/backend/src/modules/reports/form-template-export.service.ts`            | ILIKE 검색 사용 (exportSoftwareRegistry params.search — safeIlike 미사용 이슈 발견 2026-04-18) |
+| `apps/backend/src/modules/reports/form-template-export.service.ts`            | ILIKE 검색 사용 (exportSoftwareRegistry params.search — safeIlike+likeContains+or() 적용 완료 2026-04-19) |
+| `apps/backend/src/modules/reports/services/equipment-registry-data.service.ts` | SSOT 상수 사용 (ne(equipment.status, EquipmentStatusValues.DISPOSED) — EquipmentStatusValues SSOT 적용 완료 2026-04-19) |
 
 ## Workflow
 

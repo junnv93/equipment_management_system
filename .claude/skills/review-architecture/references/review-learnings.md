@@ -236,6 +236,26 @@
 - **설명**: `await onSuccessCallback?.()` 패턴에서 callback이 throw하면 TanStack Query가 mutation error로 재처리 → `onError` 재실행 → 성공 토스트 + 에러 토스트 중복 표시. `Promise.allSettled` 사용처는 throw 안 하지만 `invalidateQueries` 실패 등 예외 경로는 위험. callback 에러를 try/catch로 격리해야 함.
 - **체크리스트 반영**: ✅ 해소 — `safeCallback` 헬퍼 신설로 use-optimistic-mutation/use-mutation-with-refresh 양쪽 모두 에러 격리
 
+### [2026-04-19] appUrl 도출 로직 3곳 중복 — getAppUrl() 유틸 SSOT 부재
+- **발견 위치**: `apps/frontend/components/equipment/EquipmentQRCode.tsx:49`, `apps/frontend/components/checkouts/HandoverQRDisplay.tsx:50`, `apps/frontend/components/equipment/BulkLabelPrintButton.tsx:66`
+- **설명**: `process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin` 패턴이 3곳에 중복. fallback 로직 변경 시 3곳 모두 수정 필요. `apps/frontend/lib/utils/app-url.ts`에 `getAppUrl()` 유틸 추출 권장.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 7 "프론트엔드 상태 아키텍처"에 승격
+
+### [2026-04-19] sql raw 템플릿 → eq() 미사용 (enum 필터)
+- **발견 위치**: `apps/backend/src/modules/reports/form-template-export.service.ts:803-810`, `apps/backend/src/modules/reports/services/equipment-registry-data.service.ts:70`
+- **설명**: `cables.site`, `cables.connectorType`, `equipment.status` 필터에 Drizzle `eq()` 대신 `` sql`${column} = ${value}` `` raw 템플릿 사용. SQL 인젝션 위험은 없으나(parameterized), 잘못된 enum 값 입력 시 400 대신 빈 결과를 반환하고 컴파일 타임 enum 타입 체크도 동작하지 않음. 같은 파일에서 `eq(cables.status, CableStatusValues.ACTIVE)` 올바른 패턴도 혼재하여 불일치.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 5a "안티패턴" 또는 verify-sql-safety 확장으로 승격
+
+### [2026-04-19] HandoverQRDisplay appUrl 빈 문자열 가드 없음
+- **발견 위치**: `apps/frontend/components/checkouts/HandoverQRDisplay.tsx:58-78`
+- **설명**: `issueAndRender`에 `!appUrl` 가드가 없어 SSR/hydration 경쟁 조건에서 `buildHandoverQRUrl(token, '')` 호출 → throw → error 화면 순간 표시 가능. `EquipmentQRCode.tsx:66`의 `enabled: !!managementNumber && !!appUrl` 패턴과 대칭성 부재. 다이얼로그는 클릭 시점 실행이라 재현 확률은 낮으나 수비적 코드 추가 권장.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회)
+
+### [2026-04-19] QUERY_CONFIG 인라인 오버라이드 — refetchOnMount 분산
+- **발견 위치**: `apps/frontend/components/equipment/EquipmentListContent.tsx:226-232`
+- **설명**: `...QUERY_CONFIG.EQUIPMENT_LIST, refetchOnMount: 'always'` 패턴으로 SSOT 밖에서 캐시 전략을 오버라이드. 추후 `QUERY_CONFIG.EQUIPMENT_LIST`를 변경할 때 충돌 여부를 인지하기 어려움. `refetchOnMount: 'always'`와 이유(상세 페이지 방문 후 복귀 최신 상태 보장)를 QUERY_CONFIG 정의에 통합하는 것이 올바른 SSOT.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 7 "캐시 전략 SSOT"에 승격
+
 ### [2026-04-14] AuditLogUserRole 확장 소비처 미갱신 — 'system'/'unknown' 라벨 누락
 - **발견 위치**: `audit.service.ts:417`, `reports.service.ts:1039`, `messages/ko|en/common.json userRoles`
 - **설명**: `AuditLogUserRole = UserRole | 'system' | 'unknown'` 타입을 소비하는 3개 계층에서 'system'/'unknown' 특수 값을 처리하지 않아 영문 원문이 그대로 노출됨. (1) 백엔드 `USER_ROLE_LABELS[role as UserRole]`는 'system'/'unknown'에 대해 `undefined` 반환 후 fallback으로 원문 반환. (2) frontend i18n `userRoles.system` 키 미등록. 수정: 백엔드는 'system'/'unknown' 분기를 `as UserRole` 이전에 추가, frontend i18n에 키 추가.
@@ -335,3 +355,7 @@
 | 2026-04-18 | 안티패턴 | `aria-selected={false}` 하드코딩 — 선택 모드 활성 시에도 false로 스크린리더 선택 상태 미반영 | review-learnings.md |
 | 2026-04-18 | 수정 완료 | `aria-selected={selection?.isSelected(id)}` 동적 반영 (WCAG grid role 접근성) | EquipmentTable.tsx |
 | 2026-04-18 | 안티패턴 | resolveUser 반복 쿼리 — 역할별 Promise.all은 됐으나 동일 userId 중복 + 다른 엔드포인트는 직렬(form-template-export.service.ts) | tech-debt-tracker 등록 |
+| 2026-04-19 | 안티패턴 | appUrl 도출 로직 3곳 중복 — EquipmentQRCode/HandoverQRDisplay/BulkLabelPrintButton | review-learnings.md |
+| 2026-04-19 | 안티패턴 | sql raw 템플릿 → eq() 미사용 (enum 필터) — form-template-export:803-810, registry-data:70 | review-learnings.md |
+| 2026-04-19 | 안티패턴 | HandoverQRDisplay appUrl 빈 문자열 가드 없음 — EquipmentQRCode.enabled 패턴과 비대칭 | review-learnings.md |
+| 2026-04-19 | 안티패턴 | QUERY_CONFIG 인라인 오버라이드 — refetchOnMount:'always' SSOT 밖에서 분산 | review-learnings.md |
