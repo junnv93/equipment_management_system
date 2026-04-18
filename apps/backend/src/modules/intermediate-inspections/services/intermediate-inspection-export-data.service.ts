@@ -148,13 +148,15 @@ export class IntermediateInspectionExportDataService {
       });
     }
 
-    // 팀 정보 조회
-    const [teamRow] = await this.db
-      .select({ teamName: teams.name })
-      .from(equipment)
-      .innerJoin(teams, eq(equipment.teamId, teams.id))
-      .where(eq(equipment.managementNumber, inspection.managementNumber!))
-      .limit(1);
+    // 팀 정보 조회 — equipment.teamId 직접 JOIN (managementNumber는 중복 가능성이 있어 PK로 부적합).
+    // equipmentTeamId는 위 inspection select에서 이미 확보됨.
+    const [teamRow] = inspection.equipmentTeamId
+      ? await this.db
+          .select({ teamName: teams.name })
+          .from(teams)
+          .where(eq(teams.id, inspection.equipmentTeamId))
+          .limit(1)
+      : [null];
 
     // 점검자, 승인자, 점검 항목, 측정 장비 — 독립 쿼리 병렬 실행
     const [[inspectorRow], [approverRow], itemRows, measureEquipmentRows] = await Promise.all([
