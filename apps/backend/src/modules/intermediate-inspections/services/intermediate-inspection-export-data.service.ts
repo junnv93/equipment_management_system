@@ -119,7 +119,6 @@ export class IntermediateInspectionExportDataService {
         overallResult: intermediateInspections.overallResult,
         remarks: intermediateInspections.remarks,
         approvalStatus: intermediateInspections.approvalStatus,
-        approvedAt: intermediateInspections.approvedAt,
         equipmentName: equipment.name,
         equipmentModel: equipment.modelName,
         managementNumber: equipment.managementNumber,
