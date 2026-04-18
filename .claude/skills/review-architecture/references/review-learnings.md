@@ -216,6 +216,16 @@
 - **설명**: `packages/schemas`의 SSOT enum 배열(`REPAIR_RESULT_VALUES`, `INCIDENT_TYPE_VALUES`)은 `readonly [...]` 타입. Zod `z.enum(VALUES as [string, ...string[]])`로 직접 캐스팅하면 `readonly` → mutable 변환 불가 에러(TS2352). `[...VALUES] as [string, ...string[]]` (spread로 mutable 복사 후 캐스팅) 패턴으로 해결.
 - **체크리스트 반영**: ⏳ 관찰 중 (1회)
 
+### [2026-04-18] EventEmitter2 emitAsync 위치 — 컨트롤러 금지, 서비스 전용
+- **발견 위치**: `apps/backend/src/modules/non-conformances/non-conformances.controller.ts:391,429`
+- **설명**: 프로젝트 전체에서 `EventEmitter2.emitAsync`는 서비스 계층에서만 발행(`checkouts.service.ts` 등). 컨트롤러에 직접 주입하면 도메인 이벤트 발행 위치가 분산되어 찾기 어려워짐. 컨트롤러는 HTTP 매핑, 서비스는 도메인 이벤트 발행 책임.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 6 "모듈 간 패턴 일관성"에 승격
+
+### [2026-04-18] async onSuccessCallback reject → onError 재진입 — 에러 격리 필요
+- **발견 위치**: `apps/frontend/hooks/use-optimistic-mutation.ts:302`
+- **설명**: `await onSuccessCallback?.()` 패턴에서 callback이 throw하면 TanStack Query가 mutation error로 재처리 → `onError` 재실행 → 성공 토스트 + 에러 토스트 중복 표시. `Promise.allSettled` 사용처는 throw 안 하지만 `invalidateQueries` 실패 등 예외 경로는 위험. callback 에러를 try/catch로 격리해야 함.
+- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 7 "Mutation 라이프사이클"에 승격
+
 ### [2026-04-14] AuditLogUserRole 확장 소비처 미갱신 — 'system'/'unknown' 라벨 누락
 - **발견 위치**: `audit.service.ts:417`, `reports.service.ts:1039`, `messages/ko|en/common.json userRoles`
 - **설명**: `AuditLogUserRole = UserRole | 'system' | 'unknown'` 타입을 소비하는 3개 계층에서 'system'/'unknown' 특수 값을 처리하지 않아 영문 원문이 그대로 노출됨. (1) 백엔드 `USER_ROLE_LABELS[role as UserRole]`는 'system'/'unknown'에 대해 `undefined` 반환 후 fallback으로 원문 반환. (2) frontend i18n `userRoles.system` 키 미등록. 수정: 백엔드는 'system'/'unknown' 분기를 `as UserRole` 이전에 추가, frontend i18n에 키 추가.
@@ -308,3 +318,5 @@
 | 2026-03-31 | 수정 완료 | getErrorReport() — multi-sheet 세션 fallback 추가 (MULTI_SESSION_CACHE_KEY_PREFIX) | data-migration.service.ts |
 | 2026-03-31 | 수정 완료 | calibration 캐시 무효화 — executeMultiSheet 완료 후 deleteByPrefix 추가 | data-migration.service.ts |
 | 2026-04-17 | 안티패턴 | alias 중복 충돌 — 동일 alias가 두 ColumnMappingEntry에 등록 시 buildAliasIndex Map에서 나중 것이 이김. equipment-column-mapping.ts에서 `운영책임자(정)`이 technicalManager(직접 DB 필드)와 managerName(FK 가상 필드)에 동시 등록됨 | review-learnings.md |
+| 2026-04-18 | 안티패턴 | EventEmitter2 emitAsync 컨트롤러 직접 발행 — 서비스 전용 패턴 위반 (non-conformances.controller.ts) | review-learnings.md |
+| 2026-04-18 | 안티패턴 | async onSuccessCallback reject → onError 재진입 — try/catch 격리 필요 (use-optimistic-mutation.ts) | review-learnings.md |

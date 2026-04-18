@@ -30,7 +30,8 @@ description: 이벤트 기반 캐시 무효화 아키텍처 검증 — emit/emit
 | `apps/backend/src/common/cache/cache-invalidation.helper.ts` | helper 메서드 |
 | `apps/backend/src/common/cache/cache-patterns.ts` | `buildDetailCachePattern` 등 SSOT 빌더 |
 | `apps/backend/src/modules/notifications/events/notification-events.ts` | `NOTIFICATION_EVENTS` 상수 |
-| `apps/backend/src/modules/**/*.service.ts` | `emitAsync` 발행처 |
+| `apps/backend/src/modules/**/*.service.ts` | `emitAsync` 발행처 (SSOT 위치) |
+| `apps/backend/src/modules/**/*.controller.ts` | `emitAsync` 컨트롤러 발행 탐지 대상 (Step 4a) |
 
 ## Workflow
 
@@ -109,6 +110,36 @@ grep -rnP 'this\.eventEmitter\.emit\(NOTIFICATION_EVENTS' \
 **기대 결과**: 빈 출력. 있으면 `await emitAsync(...)`로 전환 여부 검토.
 
 **예외**: 리스너가 캐시 무효화 대상이 아니고 순수 알림만 발행하는 이벤트는 `emit` 허용 (주석으로 명시 권장).
+
+### Step 4a: emitAsync 발행 위치 — 서비스 계층 전용 (Warning)
+
+`emitAsync`는 서비스 계층에서만 호출되어야 한다. 컨트롤러가 `EventEmitter2`를 직접 주입하여 발행하면 도메인 이벤트 책임이 두 계층으로 분산된다.
+
+```bash
+# 컨트롤러에서 emitAsync 직접 호출 탐지
+grep -rnP 'this\.eventEmitter\.emitAsync\(NOTIFICATION_EVENTS' \
+  apps/backend/src/modules/ \
+  --include="*.controller.ts"
+```
+
+**기대 결과**: 빈 출력. 출력이 있으면 해당 로직을 서비스 메서드로 이동 권장.
+
+**올바른 패턴**: 컨트롤러는 서비스 메서드만 호출. 서비스가 비즈니스 로직 + `emitAsync` 담당.
+```typescript
+// ✅ 서비스
+async uploadAttachment(ncId: string, ...) {
+  const doc = await this.documentService.createDocument(...);
+  await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED, { ... });
+  return doc;
+}
+// ✅ 컨트롤러
+@Post(':uuid/attachments')
+async uploadAttachment(...) {
+  return this.service.uploadAttachment(uuid, ...);  // emitAsync는 서비스 내부
+}
+```
+
+**알려진 예외**: `apps/backend/src/modules/non-conformances/non-conformances.controller.ts` — tech-debt CACHE_EVENTS 분리 항목 해결 전까지 임시 허용.
 
 ### Step 5: CacheInvalidationAction method enum 일치 (Info)
 
