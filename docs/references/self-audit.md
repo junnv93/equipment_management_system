@@ -84,18 +84,32 @@ const equipment = data as Equipment; // zod parse 후 타입 단언
 
 **의도**: `QR_CONFIG`/`LABEL_CONFIG` 등 shared-constants SSOT를 로컬에서 재정의하면 설정이 분리되어 일관성 파괴.
 
-**감지 패턴**:
+**감지 패턴** (`--staged` + `--all`):
 
 - `QR_CONFIG = {` — 로컬 객체 리터럴로 재정의
 - `LABEL_CONFIG = {` — 로컬 객체 리터럴로 재정의
+- `FRONTEND_ROUTES = {` — 로컬 재정의
+
+**감지 패턴** (`--staged` only, 기존 위반 2건은 tracker 추적 중):
+
+- `queryKey: ['...']` — 문자열 리터럴로 시작하는 queryKey 배열 직접 구성
 
 **올바른 대안**:
 
 ```typescript
-import { QR_CONFIG } from '@equipment-management/shared-constants';
+import { QR_CONFIG, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+
+// queryKey: queryKeys 빌더 경유
+import { queryKeys } from '@/lib/api/query-config';
+useQuery({ queryKey: queryKeys.equipment.detail(id), ... });
 ```
 
 **제외**: `packages/shared-constants/` (정의 파일 자체)
+
+**기존 tracked 위반** (`--staged` only 이유):
+
+- `EquipmentQRCode.tsx:56` — Phase 5.4에서 수정 예정
+- `AuthProviders.tsx:24` — Phase 5.4에서 수정 예정
 
 ---
 

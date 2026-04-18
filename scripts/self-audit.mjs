@@ -192,7 +192,8 @@ function checkAnyType(file, lines) {
 // ─── 체크 ④ SSOT 우회 — 로컬 재정의 ──────────────────────────────────────
 // --staged, --all 모두 적용
 
-const SSOT_BYPASS_PATTERNS = [
+// --staged, --all 양쪽 모두 적용
+const SSOT_BYPASS_PATTERNS_ALL = [
   {
     re: /\bQR_CONFIG\s*[=:]\s*\{/,
     desc: 'QR_CONFIG 로컬 재정의 — packages/shared-constants의 QR_CONFIG SSOT 경유 필요',
@@ -201,16 +202,36 @@ const SSOT_BYPASS_PATTERNS = [
     re: /\bLABEL_CONFIG\s*[=:]\s*\{/,
     desc: 'LABEL_CONFIG 로컬 재정의 — SSOT 경유 필요',
   },
+  {
+    re: /\bFRONTEND_ROUTES\s*=\s*\{/,
+    desc: 'FRONTEND_ROUTES 로컬 재정의 — packages/shared-constants의 FRONTEND_ROUTES SSOT 경유 필요',
+  },
+];
+
+// --staged 에서만 적용 (기존 위반은 tracker에서 관리: EquipmentQRCode.tsx:56, AuthProviders.tsx:24)
+const SSOT_BYPASS_PATTERNS_STAGED = [
+  {
+    re: /queryKey\s*:\s*\[['"`]/,
+    desc: "queryKey 배열에 문자열 리터럴 직접 사용 — queryKeys.*(id) 빌더 경유 필요 (lib/api/query-config.ts)",
+  },
 ];
 
 function checkSsotBypass(file, lines) {
   if (isTestFile(file)) return;
   if (isSsotDefinitionFile(file)) return; // SSOT 정의 파일 자체는 제외
   const stripped = stripComments(lines.join('\n')).split('\n');
+
   stripped.forEach((line, i) => {
-    for (const { re, desc } of SSOT_BYPASS_PATTERNS) {
+    for (const { re, desc } of SSOT_BYPASS_PATTERNS_ALL) {
       if (re.test(line)) {
         fail('④ SSOT 우회', file, i + 1, desc);
+      }
+    }
+    if (isStaged) {
+      for (const { re, desc } of SSOT_BYPASS_PATTERNS_STAGED) {
+        if (re.test(line)) {
+          fail('④ SSOT 우회', file, i + 1, desc);
+        }
       }
     }
   });
@@ -336,7 +357,7 @@ for (const [check, items] of Object.entries(byCheck)) {
   }
 }
 
-console.error('\n─'.repeat(68));
+console.error('-'.repeat(68));
 console.error('\n💡 수정 방법:');
 console.error('  1. 위반 항목을 직접 수정 후 재시도');
 console.error('  2. 불가피한 예외: docs/references/self-audit.md "예외 승인 절차" 참조');

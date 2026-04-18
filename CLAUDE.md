@@ -276,6 +276,7 @@ export async function middleware(request: NextRequest) { ... }
 | Production Checklist | [production-checklist.md](docs/references/production-checklist.md) | Backend/Frontend endpoint/feature checklists |
 | PostToolUse Hook | [post-tool-use-hook.md](docs/references/post-tool-use-hook.md) | Prettier auto-run, git diff verification |
 | Secret 관리 (sops+age) | [secret-backup.md](docs/operations/secret-backup.md), [secret-rotation.md](docs/operations/secret-rotation.md) | ADR-0005, `infra/secrets/*.sops.yaml`, `pnpm compose:lan`, pre-commit gitleaks |
+| Self-Audit (pre-commit gate) | [self-audit.md](docs/references/self-audit.md) | 7대 체크: 하드코딩URL/eslint-disable/any/SSOT우회/role리터럴/setQueryData/a11y, 예외 승인 절차 |
 
 ---
 
