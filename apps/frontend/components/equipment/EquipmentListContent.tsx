@@ -325,7 +325,20 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
               className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[280px]"
             />
           }
-          slotAfter={isClient ? <ViewToggle view={view} onChange={setView} /> : undefined}
+          slotAfter={
+            isClient ? (
+              <>
+                <ViewToggle view={view} onChange={setView} />
+                <BulkLabelPrintButton
+                  selectedItems={
+                    selection.count > 0 ? (selection.selectedItems as Equipment[]) : items
+                  }
+                  onComplete={selection.count > 0 ? selection.clear : undefined}
+                  variant="outline"
+                />
+              </>
+            ) : undefined
+          }
         />
       </div>
 
@@ -338,7 +351,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         sortOrder={filters.sortOrder}
       />
 
-      {/* 벌크 액션 바 — per-row 선택 시 표시 */}
+      {/* 벌크 액션 바 — per-row 선택 시 표시 (QR 인쇄는 toolbar 상시 노출) */}
       <BulkActionBar
         selectedCount={selection.count}
         totalCount={items.length}
@@ -348,13 +361,6 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         onClear={selection.clear}
         variant="inline"
         className="print:hidden"
-        actions={
-          <BulkLabelPrintButton
-            selectedItems={selection.selectedItems as Equipment[]}
-            onComplete={selection.clear}
-            variant="outline"
-          />
-        }
       />
 
       {/* 장비 목록 (테이블 또는 카드) */}
