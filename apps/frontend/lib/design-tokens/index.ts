@@ -496,6 +496,9 @@ export {
   type ApprovalKpiVariant,
 } from './components/approval';
 
+// BulkActionBar (공용 — 도메인 무관)
+export { BULK_ACTION_BAR_TOKENS } from './components/bulk-action-bar';
+
 // Audit
 export {
   AUDIT_ACTION_BADGE_TOKENS,

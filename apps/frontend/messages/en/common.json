@@ -275,5 +275,13 @@
     "typeToSearch": "Type to search equipment",
     "noResults": "No results found",
     "clearAriaLabel": "Clear selection"
+  },
+  "bulk": {
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "selected": "{count} selected",
+    "selectedOf": "{count}/{total} selected",
+    "clearSelection": "Clear Selection",
+    "selectRow": "Select {name}"
   }
 }

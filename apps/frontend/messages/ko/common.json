@@ -275,5 +275,13 @@
     "typeToSearch": "장비명을 입력하여 검색하세요",
     "noResults": "검색 결과가 없습니다",
     "clearAriaLabel": "선택 해제"
+  },
+  "bulk": {
+    "selectAll": "전체 선택",
+    "deselectAll": "전체 해제",
+    "selected": "{count}개 선택됨",
+    "selectedOf": "{count}/{total}개 선택됨",
+    "clearSelection": "선택 해제",
+    "selectRow": "{name} 선택"
   }
 }
