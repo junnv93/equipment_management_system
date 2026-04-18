@@ -39,6 +39,12 @@ import { SOFTWARE_VALIDATIONS_SEED_DATA } from '../seed-data/software/software-v
 import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from '../seed-data/software/equipment-test-software.seed';
 import { DISPOSAL_REQUESTS_SEED_DATA } from '../seed-data/disposal/disposal-requests.seed';
 import { EQUIPMENT_IMPORTS_SEED_DATA } from '../seed-data/operations/equipment-imports.seed';
+import {
+  INTERMEDIATE_INSPECTIONS_SEED_DATA,
+  INTERMEDIATE_INSPECTION_ITEMS_SEED_DATA,
+  INTERMEDIATE_INSPECTION_EQUIPMENT_SEED_DATA,
+  INSPECTION_RESULT_SECTIONS_SEED_DATA,
+} from '../seed-data/operations/intermediate-inspections.seed';
 
 interface VerificationResult {
   passed: boolean;
@@ -345,6 +351,47 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
         'Equipment Imports count',
         'equipment_imports',
         EQUIPMENT_IMPORTS_SEED_DATA.length
+      )
+    );
+
+    // =========================================================================
+    // Intermediate Inspections (UL-QP-18-03) — 전 테이블 SSOT 검증
+    // =========================================================================
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Intermediate Inspections count',
+        'intermediate_inspections',
+        INTERMEDIATE_INSPECTIONS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Intermediate Inspection Items count',
+        'intermediate_inspection_items',
+        INTERMEDIATE_INSPECTION_ITEMS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Intermediate Inspection Equipment count',
+        'intermediate_inspection_equipment',
+        INTERMEDIATE_INSPECTION_EQUIPMENT_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Inspection Result Sections (intermediate) count',
+        'inspection_result_sections',
+        INSPECTION_RESULT_SECTIONS_SEED_DATA.length,
+        "inspection_type = 'intermediate'"
       )
     );
 

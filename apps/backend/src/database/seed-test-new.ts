@@ -41,6 +41,8 @@ import {
 import {
   INTERMEDIATE_INSPECTIONS_SEED_DATA,
   INTERMEDIATE_INSPECTION_ITEMS_SEED_DATA,
+  INTERMEDIATE_INSPECTION_EQUIPMENT_SEED_DATA,
+  INSPECTION_RESULT_SECTIONS_SEED_DATA,
 } from './seed-data/operations/intermediate-inspections.seed';
 import { CALIBRATION_FACTORS_SEED_DATA } from './seed-data/calibration/calibration-factors.seed';
 import {
@@ -132,6 +134,8 @@ async function main(): Promise<void> {
       'calibration_factors',
       'repair_history',
       'non_conformances',
+      'intermediate_inspection_equipment',
+      'inspection_result_sections',
       // form_templates 는 truncate 하지 않는다.
       // main.ts:158 seedFromFilesystem 이 백엔드 부팅 시 docs/procedure/template/ 의 실제 파일로
       // 시드하며, 이후에는 업로드/관리 API 를 통해서만 갱신된다. seed-test-new 는 백엔드 부팅
@@ -251,11 +255,15 @@ async function main(): Promise<void> {
     await db.insert(schema.nonConformances).values(NON_CONFORMANCES_SEED_DATA);
 
     // Intermediate Inspections (UL-QP-18-03) — calibration FK 필요하므로 calibrations 이후
-    console.log('  → Intermediate Inspections (1)');
+    console.log(`  → Intermediate Inspections (${INTERMEDIATE_INSPECTIONS_SEED_DATA.length})`);
     await db.insert(schema.intermediateInspections).values(INTERMEDIATE_INSPECTIONS_SEED_DATA);
     await db
       .insert(schema.intermediateInspectionItems)
       .values(INTERMEDIATE_INSPECTION_ITEMS_SEED_DATA);
+    await db
+      .insert(schema.intermediateInspectionEquipment)
+      .values(INTERMEDIATE_INSPECTION_EQUIPMENT_SEED_DATA);
+    await db.insert(schema.inspectionResultSections).values(INSPECTION_RESULT_SECTIONS_SEED_DATA);
 
     // Self Inspections (UL-QP-18-05) — equipment FK만 필요
     console.log('  → Self Inspections (1)');

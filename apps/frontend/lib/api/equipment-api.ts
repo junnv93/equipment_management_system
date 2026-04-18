@@ -41,7 +41,7 @@ import { createFormData as createFormDataUtil } from '../utils/form-data-utils';
  * @see packages/schemas/src/equipment.ts - EquipmentResponse
  */
 export type Equipment = Omit<SchemaEquipmentResponse, 'id' | 'createdAt' | 'updatedAt'> & {
-  id: string | number; // 백엔드에서 UUID로 반환되지만 레거시 호환성 유지
+  id: string;
   // 프론트엔드 전용 추가 필드
   model?: string; // 하위 호환성 (modelName의 별칭)
   image?: string; // 이미지 URL
