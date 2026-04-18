@@ -1,4 +1,5 @@
 import { NOTIFICATION_EVENTS } from '../../modules/notifications/events/notification-events';
+import { CACHE_EVENTS } from './cache-events';
 import { CACHE_KEY_PREFIXES } from './cache-key-prefixes';
 
 /**
@@ -17,6 +18,7 @@ export interface CacheInvalidationAction {
     | 'invalidateAfterEquipmentUpdate'
     | 'invalidateAfterNonConformanceCreation'
     | 'invalidateAfterNonConformanceStatusChange'
+    | 'invalidateNcDerivedCaches'
     | 'invalidateAfterDisposal'
     | 'invalidateAfterCalibrationPlanUpdate';
 
@@ -229,21 +231,19 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       },
     ],
   },
-  [NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED]: {
+  [CACHE_EVENTS.NC_ATTACHMENT_UPLOADED]: {
     actions: [
       {
-        method: 'invalidateAfterNonConformanceStatusChange',
+        method: 'invalidateNcDerivedCaches',
         equipmentIdField: 'equipmentId',
-        equipmentStatusChanged: false,
       },
     ],
   },
-  [NOTIFICATION_EVENTS.NC_ATTACHMENT_DELETED]: {
+  [CACHE_EVENTS.NC_ATTACHMENT_DELETED]: {
     actions: [
       {
-        method: 'invalidateAfterNonConformanceStatusChange',
+        method: 'invalidateNcDerivedCaches',
         equipmentIdField: 'equipmentId',
-        equipmentStatusChanged: false,
       },
     ],
   },

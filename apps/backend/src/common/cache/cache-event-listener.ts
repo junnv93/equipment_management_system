@@ -123,6 +123,12 @@ export class CacheEventListener implements OnModuleInit {
         return;
       }
 
+      case 'invalidateNcDerivedCaches': {
+        const equipmentId = this.extractField(payload, action.equipmentIdField ?? 'equipmentId');
+        if (equipmentId) return this.cacheHelper.invalidateNcDerivedCaches(equipmentId);
+        return;
+      }
+
       case 'invalidateAfterDisposal': {
         const equipmentId = this.extractField(payload, action.equipmentIdField ?? 'equipmentId');
         if (equipmentId) return this.cacheHelper.invalidateAfterDisposal(equipmentId);

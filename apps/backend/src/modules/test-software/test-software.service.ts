@@ -400,11 +400,6 @@ export class TestSoftwareService extends VersionedBaseService {
 
       this.invalidateLinkCaches(testSoftwareId, dto.equipmentId);
 
-      this.eventEmitter.emit('test-software.equipment.linked', {
-        testSoftwareId,
-        equipmentId: dto.equipmentId,
-      });
-
       return link;
     } catch (error) {
       // PostgreSQL unique_violation: 23505
@@ -444,11 +439,6 @@ export class TestSoftwareService extends VersionedBaseService {
     }
 
     this.invalidateLinkCaches(testSoftwareId, equipmentId);
-
-    this.eventEmitter.emit('test-software.equipment.unlinked', {
-      testSoftwareId,
-      equipmentId,
-    });
   }
 
   /**

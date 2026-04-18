@@ -22,6 +22,11 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
+import { CACHE_EVENTS, type NCAttachmentCachePayload } from '../../common/cache/cache-events';
+import { DocumentService } from '../../common/file-upload/document.service';
+import type { DocumentRecord } from '@equipment-management/db/schema/documents';
+import { type DocumentType } from '@equipment-management/schemas';
+import type { MulterFile } from '../../types/common.types';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { equipmentBelongsToSite, equipmentBelongsToTeam } from '../../common/utils/site-filter';
 import {
@@ -66,7 +71,8 @@ export class NonConformancesService extends VersionedBaseService {
     protected readonly db: AppDatabase,
     private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly cacheService: SimpleCacheService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly documentService: DocumentService
   ) {
     super();
   }
@@ -1036,5 +1042,56 @@ export class NonConformancesService extends VersionedBaseService {
         message: `${nc.ncType} type requires an approved calibration record before correction`,
       });
     }
+  }
+
+  // ============================================================================
+  // 첨부 관리 (Service 계층 — Controller는 라우팅/가드만)
+  // ============================================================================
+
+  async listAttachments(ncId: string, type?: DocumentType): Promise<DocumentRecord[]> {
+    return this.documentService.findByNonConformanceId(ncId, type);
+  }
+
+  async uploadAttachment(
+    ncId: string,
+    file: MulterFile,
+    documentType: string,
+    actorId: string | null,
+    equipmentId: string,
+    description?: string
+  ): Promise<{ document: DocumentRecord; message: string }> {
+    const document = await this.documentService.createDocument(file, {
+      documentType: documentType as DocumentType,
+      nonConformanceId: ncId,
+      description: description || undefined,
+      uploadedBy: actorId || undefined,
+    });
+    const payload: NCAttachmentCachePayload = {
+      ncId,
+      equipmentId,
+      documentId: document.id,
+      actorId,
+    };
+    await this.eventEmitter.emitAsync(CACHE_EVENTS.NC_ATTACHMENT_UPLOADED, payload);
+    return { document, message: '첨부가 업로드되었습니다.' };
+  }
+
+  async deleteAttachment(
+    ncId: string,
+    documentId: string,
+    actorId: string | null,
+    equipmentId: string
+  ): Promise<{ message: string }> {
+    const doc = await this.documentService.findByIdAnyStatus(documentId);
+    if (doc.nonConformanceId !== ncId) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_OWNER_MISMATCH',
+        message: 'Document does not belong to this non-conformance.',
+      });
+    }
+    await this.documentService.deleteDocument(documentId);
+    const payload: NCAttachmentCachePayload = { ncId, equipmentId, documentId, actorId };
+    await this.eventEmitter.emitAsync(CACHE_EVENTS.NC_ATTACHMENT_DELETED, payload);
+    return { message: '첨부가 삭제되었습니다.' };
   }
 }

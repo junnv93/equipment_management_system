@@ -4,6 +4,7 @@ import { CacheEventListener } from '../cache-event-listener';
 import { CacheInvalidationHelper } from '../cache-invalidation.helper';
 import { SimpleCacheService } from '../simple-cache.service';
 import { NOTIFICATION_EVENTS } from '../../../modules/notifications/events/notification-events';
+import { CACHE_EVENTS } from '../cache-events';
 import { CACHE_INVALIDATION_REGISTRY } from '../cache-event.registry';
 import { CACHE_KEY_PREFIXES } from '../cache-key-prefixes';
 
@@ -22,6 +23,7 @@ describe('CacheEventListener', () => {
       invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
       invalidateAfterNonConformanceCreation: jest.fn().mockResolvedValue(undefined),
       invalidateAfterNonConformanceStatusChange: jest.fn().mockResolvedValue(undefined),
+      invalidateNcDerivedCaches: jest.fn().mockResolvedValue(undefined),
       invalidateAfterDisposal: jest.fn().mockResolvedValue(undefined),
       invalidateAfterCalibrationPlanUpdate: jest.fn().mockResolvedValue(undefined),
     };
@@ -166,8 +168,8 @@ describe('CacheEventListener', () => {
       );
     });
 
-    it('nonConformance.attachmentUploaded → 장비 상태 변경 없는 NC 무효화', async () => {
-      eventEmitter.emit(NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED, {
+    it('nonConformance.attachmentUploaded (CACHE_EVENT) → invalidateNcDerivedCaches 호출', async () => {
+      eventEmitter.emit(CACHE_EVENTS.NC_ATTACHMENT_UPLOADED, {
         ncId: 'nc-1',
         equipmentId: 'eq-4',
         documentId: 'doc-1',
@@ -176,14 +178,12 @@ describe('CacheEventListener', () => {
 
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(mockHelper.invalidateAfterNonConformanceStatusChange).toHaveBeenCalledWith(
-        'eq-4',
-        false
-      );
+      expect(mockHelper.invalidateNcDerivedCaches).toHaveBeenCalledWith('eq-4');
+      expect(mockHelper.invalidateAfterNonConformanceStatusChange).not.toHaveBeenCalled();
     });
 
-    it('nonConformance.attachmentDeleted → 장비 상태 변경 없는 NC 무효화', async () => {
-      eventEmitter.emit(NOTIFICATION_EVENTS.NC_ATTACHMENT_DELETED, {
+    it('nonConformance.attachmentDeleted (CACHE_EVENT) → invalidateNcDerivedCaches 호출', async () => {
+      eventEmitter.emit(CACHE_EVENTS.NC_ATTACHMENT_DELETED, {
         ncId: 'nc-1',
         equipmentId: 'eq-4',
         documentId: 'doc-1',
@@ -192,10 +192,17 @@ describe('CacheEventListener', () => {
 
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(mockHelper.invalidateAfterNonConformanceStatusChange).toHaveBeenCalledWith(
-        'eq-4',
-        false
-      );
+      expect(mockHelper.invalidateNcDerivedCaches).toHaveBeenCalledWith('eq-4');
+      expect(mockHelper.invalidateAfterNonConformanceStatusChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SSOT 교차 검증 (regression)', () => {
+    it('CACHE_EVENTS의 모든 값이 CACHE_INVALIDATION_REGISTRY에 등재됨', () => {
+      const registryKeys = new Set(Object.keys(CACHE_INVALIDATION_REGISTRY));
+      for (const eventValue of Object.values(CACHE_EVENTS)) {
+        expect(registryKeys.has(eventValue)).toBe(true);
+      }
     });
   });
 

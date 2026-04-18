@@ -238,6 +238,17 @@ export class CacheInvalidationHelper {
    * - 특정 계획 상세 캐시
    * - 모든 목록 캐시 (상태/필터 변경 영향)
    */
+  /**
+   * NC 첨부 업로드/삭제 후 파생 캐시 무효화
+   *
+   * 첨부 변경은 장비 상태를 바꾸지 않으므로 상세 캐시만 무효화.
+   * 미래 NC 목록 캐시 추가 시 이 메서드에 확장.
+   */
+  async invalidateNcDerivedCaches(equipmentId: string): Promise<void> {
+    await this.invalidateEquipmentDetail(equipmentId);
+    this.logger.debug(`✓ Invalidated NC-derived caches for equipment: ${equipmentId}`);
+  }
+
   async invalidateAfterCalibrationPlanUpdate(planId: string): Promise<void> {
     await Promise.all([
       this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planId}`),

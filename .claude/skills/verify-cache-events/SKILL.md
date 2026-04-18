@@ -129,7 +129,7 @@ grep -rnP 'this\.eventEmitter\.emitAsync\(NOTIFICATION_EVENTS' \
 // ✅ 서비스
 async uploadAttachment(ncId: string, ...) {
   const doc = await this.documentService.createDocument(...);
-  await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED, { ... });
+  await this.eventEmitter.emitAsync(CACHE_EVENTS.NC_ATTACHMENT_UPLOADED, { ... });
   return doc;
 }
 // ✅ 컨트롤러
@@ -139,7 +139,7 @@ async uploadAttachment(...) {
 }
 ```
 
-**알려진 예외**: `apps/backend/src/modules/non-conformances/non-conformances.controller.ts` — tech-debt CACHE_EVENTS 분리 항목 해결 전까지 임시 허용.
+**재발 방지**: `.eslintrc.js` `overrides[].files = ["**/*.controller.ts"]` → `no-restricted-syntax`로 빌드 타임 차단. 예외 없음.
 
 ### Step 5: CacheInvalidationAction method enum 일치 (Info)
 

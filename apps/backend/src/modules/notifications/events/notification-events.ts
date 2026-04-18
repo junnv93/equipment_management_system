@@ -40,8 +40,6 @@ export const NOTIFICATION_EVENTS = {
   NC_CORRECTED: 'nonConformance.corrected',
   NC_CLOSED: 'nonConformance.closed',
   NC_CORRECTION_REJECTED: 'nonConformance.correctionRejected',
-  NC_ATTACHMENT_UPLOADED: 'nonConformance.attachmentUploaded',
-  NC_ATTACHMENT_DELETED: 'nonConformance.attachmentDeleted',
 
   // ─── 장비 요청 (Equipment Request) ───
   EQUIPMENT_REQUEST_CREATED: 'equipment.requestCreated',
@@ -232,14 +230,6 @@ export interface SystemNotificationEvent extends BaseNotificationEvent {
   title: string;
   content: string;
   priority?: string;
-}
-
-/** NC 첨부 업로드/삭제 캐시 무효화 전용 페이로드 (알림 생성 없음) */
-export interface NCAttachmentCacheEvent {
-  ncId: string;
-  equipmentId: string;
-  documentId: string;
-  actorId: string | null;
 }
 
 /** 모든 이벤트 페이로드의 유니언 */

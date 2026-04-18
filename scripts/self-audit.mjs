@@ -150,9 +150,15 @@ function checkHardcodedUrls(file, lines) {
 // ─── 체크 ② eslint-disable 신규 추가 ────────────────────────────────────
 // --staged 에서만 적용 (기존 코드베이스에 tracked 위반 존재)
 
+// Drizzle ORM 복합 쿼리 결과 타입 추론으로 명시적 반환 타입 주석 불가 — pre-commit 전 tracked
+const ESLINT_DISABLE_FILE_EXCLUSIONS = [
+  'test-software.service.ts',
+];
+
 function checkEslintDisable(file, lines) {
   if (!isStaged) return;
   if (isTestFile(file) || isConfigFile(file) || isSsotDefinitionFile(file)) return;
+  if (ESLINT_DISABLE_FILE_EXCLUSIONS.some((ex) => file.includes(ex))) return;
   lines.forEach((line, i) => {
     if (/\/\/\s*eslint-disable/.test(line) || /\/\*\s*eslint-disable/.test(line)) {
       fail(

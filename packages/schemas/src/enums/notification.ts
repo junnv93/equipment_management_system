@@ -38,8 +38,6 @@ export const NOTIFICATION_TYPE_VALUES = [
   'non_conformance_corrected', // 부적합 조치 완료
   'non_conformance_closed', // 부적합 종료
   'non_conformance_correction_rejected', // 조치 반려
-  'non_conformance_attachment_uploaded', // NC 첨부 업로드 (캐시 무효화 전용)
-  'non_conformance_attachment_deleted', // NC 첨부 삭제 (캐시 무효화 전용)
 
   // ─── 장비 요청 (Equipment Request) ───
   'equipment_request_created', // 장비 요청 등록

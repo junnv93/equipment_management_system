@@ -6,6 +6,9 @@ import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidatio
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
+import { CACHE_EVENTS } from '../../../common/cache/cache-events';
+import { DocumentService } from '../../../common/file-upload/document.service';
+import type { MulterFile } from '../../../types/common.types';
 
 describe('NonConformancesService', () => {
   let service: NonConformancesService;
@@ -33,6 +36,7 @@ describe('NonConformancesService', () => {
   let mockCacheInvalidationHelper: Record<string, jest.Mock>;
   let mockCacheService: Record<string, jest.Mock>;
   let mockEventEmitter: Record<string, jest.Mock>;
+  let mockDocumentService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
     // 매 테스트마다 새로운 chain 객체 생성
@@ -77,6 +81,13 @@ describe('NonConformancesService', () => {
       on: jest.fn(),
     };
 
+    mockDocumentService = {
+      findByNonConformanceId: jest.fn().mockResolvedValue([]),
+      createDocument: jest.fn(),
+      findByIdAnyStatus: jest.fn(),
+      deleteDocument: jest.fn().mockResolvedValue(undefined),
+    };
+
     mockCacheService = {
       get: jest.fn().mockReturnValue(undefined),
       set: jest.fn(),
@@ -95,6 +106,7 @@ describe('NonConformancesService', () => {
         { provide: CacheInvalidationHelper, useValue: mockCacheInvalidationHelper },
         { provide: SimpleCacheService, useValue: mockCacheService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: DocumentService, useValue: mockDocumentService },
       ],
     }).compile();
 
@@ -442,6 +454,91 @@ describe('NonConformancesService', () => {
       mockDb.query.nonConformances.findFirst.mockResolvedValueOnce(null);
 
       await expect(service.remove('non-existent', 1)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('uploadAttachment', () => {
+    const NC_ID = 'nc-uuid';
+    const EQ_ID = 'eq-uuid';
+    const DOC_ID = 'doc-uuid';
+
+    const mockFile = {
+      originalname: 'photo.jpg',
+      buffer: Buffer.from('img'),
+      mimetype: 'image/jpeg',
+      size: 1024,
+    } as MulterFile;
+
+    it('document 생성 후 CACHE_EVENTS.NC_ATTACHMENT_UPLOADED emitAsync', async () => {
+      mockDocumentService.createDocument.mockResolvedValue({ id: DOC_ID, nonConformanceId: NC_ID });
+
+      const result = await service.uploadAttachment(
+        NC_ID,
+        mockFile,
+        'equipment_photo',
+        'user-uuid',
+        EQ_ID
+      );
+
+      expect(mockDocumentService.createDocument).toHaveBeenCalledWith(
+        mockFile,
+        expect.objectContaining({
+          documentType: 'equipment_photo',
+          nonConformanceId: NC_ID,
+          uploadedBy: 'user-uuid',
+        })
+      );
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        CACHE_EVENTS.NC_ATTACHMENT_UPLOADED,
+        expect.objectContaining({ ncId: NC_ID, equipmentId: EQ_ID, documentId: DOC_ID })
+      );
+      expect(result.document.id).toBe(DOC_ID);
+    });
+
+    it('actorId가 null이면 uploadedBy는 undefined', async () => {
+      mockDocumentService.createDocument.mockResolvedValue({ id: DOC_ID, nonConformanceId: NC_ID });
+
+      await service.uploadAttachment(NC_ID, mockFile, 'equipment_photo', null, EQ_ID);
+
+      expect(mockDocumentService.createDocument).toHaveBeenCalledWith(
+        mockFile,
+        expect.objectContaining({ uploadedBy: undefined })
+      );
+    });
+  });
+
+  describe('deleteAttachment', () => {
+    const NC_ID = 'nc-uuid';
+    const EQ_ID = 'eq-uuid';
+    const DOC_ID = 'doc-uuid';
+    const OTHER_NC_ID = 'other-nc-uuid';
+
+    it('소유권 확인 후 삭제 + CACHE_EVENTS.NC_ATTACHMENT_DELETED emitAsync', async () => {
+      mockDocumentService.findByIdAnyStatus.mockResolvedValue({
+        id: DOC_ID,
+        nonConformanceId: NC_ID,
+      });
+
+      const result = await service.deleteAttachment(NC_ID, DOC_ID, 'user-uuid', EQ_ID);
+
+      expect(mockDocumentService.deleteDocument).toHaveBeenCalledWith(DOC_ID);
+      expect(mockEventEmitter.emitAsync).toHaveBeenCalledWith(
+        CACHE_EVENTS.NC_ATTACHMENT_DELETED,
+        expect.objectContaining({ ncId: NC_ID, equipmentId: EQ_ID, documentId: DOC_ID })
+      );
+      expect(result.message).toContain('삭제');
+    });
+
+    it('다른 NC 소유 문서면 BadRequestException + 삭제 안 함 (도메인 격리)', async () => {
+      mockDocumentService.findByIdAnyStatus.mockResolvedValue({
+        id: DOC_ID,
+        nonConformanceId: OTHER_NC_ID,
+      });
+
+      await expect(service.deleteAttachment(NC_ID, DOC_ID, 'user-uuid', EQ_ID)).rejects.toThrow(
+        BadRequestException
+      );
+      expect(mockDocumentService.deleteDocument).not.toHaveBeenCalled();
     });
   });
 });

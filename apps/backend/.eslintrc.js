@@ -67,4 +67,21 @@ module.exports = {
       },
     ],
   },
+  overrides: [
+    {
+      // Controllers must NOT emit events — event dispatch belongs in Service layer (AD-8)
+      files: ['**/*.controller.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector:
+              "CallExpression[callee.type='MemberExpression'][callee.property.name='emitAsync']",
+            message:
+              'Controllers must not call emitAsync. Move event emission to the Service layer.',
+          },
+        ],
+      },
+    },
+  ],
 };

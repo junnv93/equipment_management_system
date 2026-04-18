@@ -25,14 +25,8 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
 import { NonConformancesService } from './non-conformances.service';
-import { DocumentService } from '../../common/file-upload/document.service';
-import {
-  NOTIFICATION_EVENTS,
-  type NCAttachmentCacheEvent,
-} from '../notifications/events/notification-events';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
@@ -69,11 +63,7 @@ import { extractUserId } from '../../common/utils/extract-user';
 @ApiBearerAuth()
 @Controller('non-conformances')
 export class NonConformancesController {
-  constructor(
-    private readonly nonConformancesService: NonConformancesService,
-    private readonly documentService: DocumentService,
-    private readonly eventEmitter: EventEmitter2
-  ) {}
+  constructor(private readonly nonConformancesService: NonConformancesService) {}
 
   @AuditLog({
     action: 'create',
@@ -327,7 +317,7 @@ export class NonConformancesController {
         message: `Invalid document type: ${type}`,
       });
     }
-    return this.documentService.findByNonConformanceId(uuid, type as DocumentType | undefined);
+    return this.nonConformancesService.listAttachments(uuid, type as DocumentType | undefined);
   }
 
   /**
@@ -375,21 +365,14 @@ export class NonConformancesController {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
     enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
 
-    const userId = extractUserId(req);
-    const document = await this.documentService.createDocument(file, {
-      documentType: documentType as DocumentType,
-      nonConformanceId: uuid,
-      description: description || undefined,
-      uploadedBy: userId || undefined,
-    });
-    const uploadPayload: NCAttachmentCacheEvent = {
-      ncId: uuid,
-      equipmentId: basic.equipmentId,
-      documentId: document.id,
-      actorId: userId,
-    };
-    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_ATTACHMENT_UPLOADED, uploadPayload);
-    return { document, message: '첨부가 업로드되었습니다.' };
+    return this.nonConformancesService.uploadAttachment(
+      uuid,
+      file,
+      documentType,
+      extractUserId(req),
+      basic.equipmentId,
+      description
+    );
   }
 
   /**
@@ -410,23 +393,11 @@ export class NonConformancesController {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
     enforceSiteAccess(req, basic.equipmentSite, NON_CONFORMANCE_DATA_SCOPE, basic.equipmentTeamId);
 
-    // 도메인 격리: documentId가 이 NC 소유인지 확인 (다른 NC/엔티티 첨부 삭제 방지)
-    const doc = await this.documentService.findByIdAnyStatus(documentId);
-    if (doc.nonConformanceId !== uuid) {
-      throw new BadRequestException({
-        code: 'DOCUMENT_OWNER_MISMATCH',
-        message: 'Document does not belong to this non-conformance.',
-      });
-    }
-
-    await this.documentService.deleteDocument(documentId);
-    const deletePayload: NCAttachmentCacheEvent = {
-      ncId: uuid,
-      equipmentId: basic.equipmentId,
+    return this.nonConformancesService.deleteAttachment(
+      uuid,
       documentId,
-      actorId: extractUserId(req),
-    };
-    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_ATTACHMENT_DELETED, deletePayload);
-    return { message: '첨부가 삭제되었습니다.' };
+      extractUserId(req),
+      basic.equipmentId
+    );
   }
 }
