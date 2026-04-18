@@ -1,13 +1,7 @@
-import { LABEL_CONFIG } from '@equipment-management/shared-constants';
+import { LABEL_CONFIG, type LabelItem } from '@equipment-management/shared-constants';
 import { LabelBatchExceededError } from './label-batch-error';
 
-export interface LabelItem {
-  managementNumber: string;
-  equipmentName: string;
-  serialNumber?: string;
-  /** @deprecated subLabel은 새 테이블 레이아웃에서 사용되지 않습니다 */
-  subLabel?: string;
-}
+export type { LabelItem } from '@equipment-management/shared-constants';
 
 export interface GenerateLabelPdfOptions {
   items: LabelItem[];

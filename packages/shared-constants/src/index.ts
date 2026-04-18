@@ -273,13 +273,14 @@ export {
   type MigrationErrorCode as MigrationErrorCodeType,
 } from './error-codes';
 
-// QR 코드 및 라벨 인쇄 설정 (FE 컴포넌트 + Phase 2 라벨 PDF 공유)
+// QR 코드 및 라벨 인쇄 설정 (FE 컴포넌트 + 라벨 PDF 공유)
 export {
   QR_CONFIG,
   LABEL_CONFIG,
   getLabelCellDimensions,
   type QrConfig,
   type LabelConfig,
+  type LabelItem,
 } from './qr-config';
 
 // QR URL 빌더 / 파서 (FE/BE 공용 SSOT)

@@ -79,6 +79,16 @@ export const LABEL_CONFIG = {
     },
     /** 라벨 셀 OffscreenCanvas 렌더링 해상도. 인쇄 품질 조정 시 여기만 수정. */
     printDpi: 150,
+    /** 테이블 셀 내부 좌우 여백 (mm) — px 환산은 Worker의 mmToPx() 사용 */
+    tableCellPaddingMm: 0.9,
+    /** 필드명↔값 사이 세로 간격 (mm) */
+    rowGapMm: 0.35,
+    /** 셀 외곽선·구분선 색상 */
+    borderColor: '#e0e0e0' as const,
+    /** 필드명(label) 텍스트 색상 */
+    fieldLabelColor: '#888888' as const,
+    /** 필드값(value) 텍스트 색상 */
+    fieldValueColor: '#111111' as const,
   },
   /**
    * 한 번의 PDF 생성 작업에서 허용되는 최대 장비 수.
@@ -109,3 +119,10 @@ export function getLabelCellDimensions(): {
 
 export type QrConfig = typeof QR_CONFIG;
 export type LabelConfig = typeof LABEL_CONFIG;
+
+/** QR 라벨 PDF 생성 입력 — 메인 스레드·Worker 공유 타입 (SSOT) */
+export interface LabelItem {
+  managementNumber: string;
+  equipmentName: string;
+  serialNumber?: string;
+}

@@ -29,15 +29,8 @@ import {
   LABEL_CONFIG,
   getLabelCellDimensions,
   buildEquipmentQRUrl,
+  type LabelItem,
 } from '@equipment-management/shared-constants';
-
-export interface LabelItem {
-  managementNumber: string;
-  equipmentName: string;
-  serialNumber?: string;
-  /** @deprecated 새 테이블 레이아웃에서 사용되지 않습니다 */
-  subLabel?: string;
-}
 
 type InboundMessage = {
   type: 'generate';
@@ -109,7 +102,7 @@ function drawTruncated(
  * 구조:
  *   - 좌측: QR 코드 (셀 높이 방향 수직 정렬)
  *   - 우측: 관리번호·장비명·일련번호 3행 테이블 (행 높이 균등 분할, 텍스트 수직 센터링)
- *   - 셀·행 사이 구분선 (#e0e0e0)
+ *   - 셀·행 사이 구분선 (LABEL_CONFIG.cell.borderColor)
  *   - 텍스트는 maxWidth 초과 시 "…"로 잘림 → 겹침 없음
  */
 async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<string> {
@@ -123,7 +116,7 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
 
   // 텍스트 영역 시작 X 및 내부 여백
   const textX = qrPx + padPx;
-  const innerPad = 6; // px — 테이블 셀 내부 좌우 여백
+  const innerPad = mmToPx(cell.tableCellPaddingMm);
   const textMaxW = cellW - textX - innerPad;
 
   const canvas = new OffscreenCanvas(cellW, cellH);
@@ -137,7 +130,7 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
   c.fillRect(0, 0, cellW, cellH);
 
   // ─── 셀 외곽 테두리 ──────────────────────────────────────────
-  c.strokeStyle = '#e0e0e0';
+  c.strokeStyle = cell.borderColor;
   c.lineWidth = 1;
   c.strokeRect(0.5, 0.5, cellW - 1, cellH - 1);
 
@@ -159,7 +152,7 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
 
   // ─── QR↔텍스트 세로 구분선 ──────────────────────────────────
   const dividerX = qrPx + Math.round(padPx / 2);
-  c.strokeStyle = '#e0e0e0';
+  c.strokeStyle = cell.borderColor;
   c.lineWidth = 1;
   c.beginPath();
   c.moveTo(dividerX, 0);
@@ -168,7 +161,7 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
 
   // ─── 테이블 행 렌더링 ────────────────────────────────────────
   const fieldLabelPx = ptToPx(cell.fieldLabelFontPt);
-  const rowGap = 2; // 필드명↔값 사이 세로 간격(px)
+  const rowGap = mmToPx(cell.rowGapMm);
 
   const rows = [
     {
@@ -200,7 +193,7 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
 
     // 행 구분선 (첫 행 제외)
     if (i > 0) {
-      c.strokeStyle = '#e0e0e0';
+      c.strokeStyle = cell.borderColor;
       c.lineWidth = 1;
       c.beginPath();
       c.moveTo(dividerX, rowY);
@@ -217,12 +210,12 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
 
     // 필드명 (소문자 회색)
     c.font = `${fieldLabelPx}px ${cell.fontStack}`;
-    c.fillStyle = '#888888';
+    c.fillStyle = cell.fieldLabelColor;
     drawTruncated(c, row.label, textX + innerPad, labelY, textMaxW);
 
     // 값 (검정, 관리번호는 bold)
     c.font = `${row.bold ? 'bold ' : ''}${row.valueFontPx}px ${cell.fontStack}`;
-    c.fillStyle = '#111111';
+    c.fillStyle = cell.fieldValueColor;
     drawTruncated(c, row.value, textX + innerPad, valueY, textMaxW);
   });
 
