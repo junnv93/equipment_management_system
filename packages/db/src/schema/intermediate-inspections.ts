@@ -27,10 +27,10 @@ export const intermediateInspections = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom().notNull(),
 
-    // 대상 교정 및 장비
-    calibrationId: uuid('calibration_id')
-      .notNull()
-      .references(() => calibrations.id, { onDelete: 'restrict' }),
+    // 대상 교정 및 장비 (calibrationId는 nullable — needsIntermediateCheck=true 비교정 장비 지원)
+    calibrationId: uuid('calibration_id').references(() => calibrations.id, {
+      onDelete: 'restrict',
+    }),
     equipmentId: uuid('equipment_id')
       .notNull()
       .references(() => equipment.id, { onDelete: 'restrict' }),

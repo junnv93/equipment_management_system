@@ -60,24 +60,27 @@ export class IntermediateInspectionsService extends VersionedBaseService {
 
   /**
    * 중간점검 생성 (draft 상태) — 3테이블 트랜잭션 삽입
+   * calibrationId는 null 허용 — needsIntermediateCheck=true 비교정 장비 지원
    */
   async create(
-    dto: CreateInspectionInput & { calibrationId: string },
+    dto: CreateInspectionInput & { calibrationId: string | null },
     equipmentId: string,
     createdBy: string
   ): Promise<IntermediateInspection> {
-    // calibrationId 존재 확인
-    const [cal] = await this.db
-      .select({ id: calibrations.id, equipmentId: calibrations.equipmentId })
-      .from(calibrations)
-      .where(eq(calibrations.id, dto.calibrationId))
-      .limit(1);
+    // calibrationId가 있을 때만 존재 확인
+    if (dto.calibrationId) {
+      const [cal] = await this.db
+        .select({ id: calibrations.id })
+        .from(calibrations)
+        .where(eq(calibrations.id, dto.calibrationId))
+        .limit(1);
 
-    if (!cal) {
-      throw new NotFoundException({
-        code: 'CALIBRATION_NOT_FOUND',
-        message: `Calibration with UUID ${dto.calibrationId} not found.`,
-      });
+      if (!cal) {
+        throw new NotFoundException({
+          code: 'CALIBRATION_NOT_FOUND',
+          message: `Calibration with UUID ${dto.calibrationId} not found.`,
+        });
+      }
     }
 
     const result = await this.db.transaction(async (tx) => {
@@ -193,14 +196,29 @@ export class IntermediateInspectionsService extends VersionedBaseService {
   /**
    * 장비 기반 중간점검 생성 — 최신 승인된 교정을 자동 조회
    *
-   * 승인된 교정 우선, 없으면 가장 최근 교정을 사용.
-   * 교정 기록이 전혀 없으면 NO_ACTIVE_CALIBRATION 에러.
+   * needsIntermediateCheck=true 장비에만 허용.
+   * 교정 장비: 승인된 교정 우선, 없으면 최신 교정 사용.
+   * 비교정 장비(needsIntermediateCheck=true): calibrationId=null로 생성.
    */
   async createByEquipment(
     equipmentId: string,
     dto: Omit<CreateInspectionInput, 'calibrationId'>,
     createdBy: string
   ): Promise<IntermediateInspection> {
+    // needsIntermediateCheck 게이트
+    const [equip] = await this.db
+      .select({ needsIntermediateCheck: equipment.needsIntermediateCheck })
+      .from(equipment)
+      .where(eq(equipment.id, equipmentId))
+      .limit(1);
+
+    if (!equip?.needsIntermediateCheck) {
+      throw new BadRequestException({
+        code: 'INTERMEDIATE_INSPECTION_NOT_REQUIRED',
+        message: `Equipment ${equipmentId} does not require intermediate inspection.`,
+      });
+    }
+
     // 승인된 교정 우선 조회
     let [calibration] = await this.db
       .select({ id: calibrations.id })
@@ -221,14 +239,10 @@ export class IntermediateInspectionsService extends VersionedBaseService {
         .limit(1);
     }
 
-    if (!calibration) {
-      throw new NotFoundException({
-        code: 'NO_ACTIVE_CALIBRATION',
-        message: `Equipment ${equipmentId} has no calibration records. Cannot create intermediate inspection.`,
-      });
-    }
+    // 교정 기록 없는 비교정 장비: calibrationId=null로 생성
+    const calibrationId = calibration?.id ?? null;
 
-    return this.create({ ...dto, calibrationId: calibration.id }, equipmentId, createdBy);
+    return this.create({ ...dto, calibrationId }, equipmentId, createdBy);
   }
 
   /**

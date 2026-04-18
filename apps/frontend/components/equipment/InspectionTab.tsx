@@ -10,16 +10,16 @@ interface InspectionTabProps {
 }
 
 /**
- * 통합 점검 탭 — 장비의 관리 방법에 따라 적절한 점검 UI를 표시
+ * 통합 점검 탭 — 장비의 점검 대상 여부 및 관리 방법에 따라 적절한 점검 UI를 표시
  *
- * - 외부교정 (external_calibration) → 중간점검 (UL-QP-18-03)
+ * - needsIntermediateCheck=true → 중간점검 (UL-QP-18-03) — 관리방법 무관
  * - 자체점검 (self_inspection) → 자체점검 (UL-QP-18-05)
- * - 비대상 (not_applicable) → 점검 불필요
+ * - 그 외 → 점검 불필요
  */
 export function InspectionTab({ equipment }: InspectionTabProps) {
   const t = useTranslations('equipment');
 
-  if (equipment.managementMethod === 'external_calibration') {
+  if (equipment.needsIntermediateCheck) {
     return <IntermediateInspectionList equipment={equipment} />;
   }
 
