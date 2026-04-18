@@ -100,7 +100,7 @@ export function useMutationWithRefresh<TData = unknown, TVariables = void, TCont
         'useMutationWithRefresh.onSuccess'
       );
     },
-    onError: (error, variables, context) => {
+    onError: async (error, variables, context) => {
       // 에러 메시지 추출 (ApiError 포함 모든 에러 타입 처리)
       const errorMessage = getErrorMessage(error, '알 수 없는 오류가 발생했습니다.');
 
