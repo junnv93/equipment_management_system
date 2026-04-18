@@ -68,7 +68,7 @@ Swagger 메타의 nullable/$ref/enum 정합성은 `main.ts` 에서 `cleanupOpenA
 
 1. **응답 DTO 가 이미 `createZodDto`** — 기존 manual class DTO 는 먼저 위 "전환 조건" 3건을 통과해야 함.
 2. **2xx 응답만 전환** — `@ZodResponse` 는 성공 응답 전용. 4xx 에러 shape 은 `GlobalExceptionFilter` 가 관리하므로 기존 `@ApiResponse` 유지.
-3. **컨트롤러 단위 `@UseInterceptors(ZodSerializerInterceptor)` 선행** — 글로벌 등록은 전수 영향 범위가 크므로 파일럿 기간에는 컨트롤러 단위만 허용.
+3. **메서드 단위 `@UseInterceptors(ZodSerializerInterceptor)` 적용** — 파일럿 기간에는 **`@ZodResponse` 를 붙이는 메서드에만** interceptor 를 붙여 "의도적 활성화" 를 강제한다. 클래스 레벨로 붙이면 다른 개발자가 `@ZodResponse` 만 추가했을 때 interceptor 가 "자동으로" 작동하여 실수 유입 경로가 된다 (반환 객체와 schema 불일치 시 직렬화 500). 글로벌 등록은 승격 조건 충족 후에만.
 
 **피해야 할 상황:**
 

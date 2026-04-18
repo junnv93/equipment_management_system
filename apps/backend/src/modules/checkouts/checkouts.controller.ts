@@ -81,9 +81,6 @@ import { ErrorCode } from '@equipment-management/schemas';
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
 @Controller('checkouts')
-// ZodResponse 파일럿 (checkouts handover 2 엔드포인트).
-// 글로벌 승격 조건은 docs/references/backend-patterns.md "ZodResponse 적용 조건" 참조.
-@UseInterceptors(ZodSerializerInterceptor)
 export class CheckoutsController {
   constructor(
     private readonly checkoutsService: CheckoutsService,
@@ -110,6 +107,9 @@ export class CheckoutsController {
   @Post(':uuid/handover-token')
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @UsePipes(IssueHandoverTokenValidationPipe)
+  // ZodResponse 파일럿: 메서드 단위 interceptor 로 활성화 강제 (clase-wide 시 실수 유입 위험).
+  // 승격 조건: docs/references/backend-patterns.md "ZodResponse 적용 조건".
+  @UseInterceptors(ZodSerializerInterceptor)
   @AuditLog({ action: 'create', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: 'QR 인수인계 토큰 발급',
@@ -174,6 +174,7 @@ export class CheckoutsController {
   @Post('handover/verify')
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @UsePipes(VerifyHandoverTokenValidationPipe)
+  @UseInterceptors(ZodSerializerInterceptor)
   @HttpCode(HttpStatus.OK)
   @AuditLog({
     action: 'read',
