@@ -141,14 +141,14 @@ grep -n "errorCorrectionLevel\s*[:=]\s*['\"]" \
   apps/frontend/lib/qr/generate-label-pdf.worker.ts \
   2>/dev/null \
   | grep -v "QR_CONFIG\|LABEL_CONFIG\|qr-config"
-grep -n "qrSizeMm\s*[:=]\s*[0-9]\|cols\s*[:=]\s*[0-9]\|rows\s*[:=]\s*[0-9]\|pageWidthMm\s*[:=]\s*[0-9]\|maxBatch\s*[:=]\s*[0-9]\|qrForegroundColor\s*[:=]\s*['\"\`]\|qrBackgroundColor\s*[:=]\s*['\"\`]\|cellBackgroundColor\s*[:=]\s*['\"\`]\|qrModuleOverlapPx\s*[:=]\s*[0-9]" \
+grep -n "qrSizeMm\s*[:=]\s*[0-9]\|cols\s*[:=]\s*[0-9]\|rows\s*[:=]\s*[0-9]\|pageWidthMm\s*[:=]\s*[0-9]\|maxBatch\s*[:=]\s*[0-9]\|qrForegroundColor\s*[:=]\s*['\"\`]\|qrBackgroundColor\s*[:=]\s*['\"\`]\|cellBackgroundColor\s*[:=]\s*['\"\`]\|qrModuleOverlapPx\s*[:=]\s*[0-9]\|mgmtMinFontPt\s*[:=]\s*[0-9]\|nameMinFontPt\s*[:=]\s*[0-9]\|serialMinFontPt\s*[:=]\s*[0-9]\|nameMaxLines\s*[:=]\s*[0-9]\|lineHeightRatio\s*[:=]\s*[0-9]\|mgmtFontPt\s*[:=]\s*[0-9]\|nameFontPt\s*[:=]\s*[0-9]\|serialFontPt\s*[:=]\s*[0-9]\|fieldLabelFontPt\s*[:=]\s*[0-9]" \
   apps/frontend/lib/qr/generate-label-pdf.ts \
   apps/frontend/lib/qr/generate-label-pdf.worker.ts \
   2>/dev/null \
   | grep -v "QR_CONFIG\|LABEL_CONFIG\|qr-config\|// \|* "
 ```
 
-**PASS:** 빈 출력. **FAIL:** `errorCorrectionLevel: 'H'`, `cols: 3`, `qrSizeMm: 25` 등 하드코딩 리터럴 할당.
+**PASS:** 빈 출력. **FAIL:** `errorCorrectionLevel: 'H'`, `cols: 3`, `qrSizeMm: 25`, `mgmtMinFontPt: 8`, `nameMaxLines: 2` 등 하드코딩 리터럴 할당.
 
 **예외**: `qr-config.ts` 자체, SSOT에서 destructure한 변수를 통한 속성 접근(`cell.qrSizeMm`, `pdf.cols`)은 SSOT-compliant.
 

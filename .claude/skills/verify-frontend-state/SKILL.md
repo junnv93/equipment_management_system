@@ -131,6 +131,32 @@ grep -rn "getByText.*되었\|getByText.*완료\|getByText.*실패.*\.first()" \
 
 **PASS:** 토스트 텍스트에 직접 `.first()` 적용된 매칭 0건. helper 우회만 한정 검출.
 
+### Step 13: 비동기 타이머 cleanup (useRef + clearTimeout)
+
+컴포넌트 내에서 `window.setTimeout`으로 상태를 변경하는 경우, unmount 후에도 타이머가 실행되면 `setPhase` 등의 setState가 호출됩니다. 이를 방지하려면 `useRef<number | null>`로 타이머 ID를 추적하고 `useEffect` cleanup에서 `clearTimeout`을 호출해야 합니다.
+
+**규칙:**
+- `window.setTimeout(() => setState(...), N)` 패턴 → `useRef<number | null>` + `clearTimeout` + `useEffect` cleanup 필수
+- `useRef` 없이 직접 `window.setTimeout` → FAIL
+
+**탐지:**
+```bash
+# cleanup 없는 직접 setTimeout으로 상태 변경 패턴
+grep -rn "window\.setTimeout.*setPhase\|window\.setTimeout.*setState\|window\.setTimeout.*set[A-Z]" \
+  apps/frontend/components --include="*.tsx" --include="*.ts"
+```
+
+**PASS:** 0건이거나 모두 `timerRef.current = window.setTimeout(...)` + `clearTimeout` cleanup 패턴.
+**FAIL:** `window.setTimeout(() => setXxx(...), N)` 직접 호출.
+
+**정상 패턴 (BulkLabelPrintButton.tsx 기준):**
+```typescript
+const timerRef = React.useRef<number | null>(null);
+React.useEffect(() => { return () => { if (timerRef.current !== null) clearTimeout(timerRef.current); }; }, []);
+// catch 블록
+timerRef.current = window.setTimeout(() => setPhase('idle'), 1200);
+```
+
 ## Output Format
 
 ```markdown
@@ -151,6 +177,7 @@ grep -rn "getByText.*되었\|getByText.*완료\|getByText.*실패.*\.first()" \
 | 9   | useAuth().can() 권한 SSOT  | PASS/FAIL | hasPermission 직접 import 위치 |
 | 10  | useToast SSOT 단일 경로    | PASS/FAIL | `@/hooks/use-toast` import 위치 |
 | 11  | E2E 토스트 helper 사용     | PASS/FAIL | 토스트 텍스트 직접 .first() 위치 |
+| 13  | 타이머 cleanup (useRef)    | PASS/FAIL | window.setTimeout + setState 직접 호출 위치 |
 | 12  | count 전용 쿼리 키 분리    | PASS/FAIL | pageSize:1 쿼리가 목록 키 재사용하는 위치 |
 ```
 
