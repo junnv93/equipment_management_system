@@ -239,6 +239,40 @@ export const documentApi = {
   },
 
   /**
+   * 이미지 문서 썸네일 URL 반환 — `<img src>` 직접 사용 가능.
+   *
+   * 백엔드가 서버사이드에서 sharp로 WebP 변환 후 반환.
+   * `Cache-Control: immutable` — 동일 ID는 내용 불변 보장, 브라우저 장기 캐시 가능.
+   *
+   * 비이미지 문서 ID를 전달하면 백엔드가 400을 반환합니다.
+   */
+  fetchDocumentThumbnailUrl: (documentId: string, size: 'sm' | 'md' | 'lg' = 'sm'): string => {
+    // Authorization 헤더가 필요하므로 apiClient.get을 쓰지 않고 Next.js 미들웨어 프록시 경유.
+    // 백엔드 엔드포인트가 쿠키 기반 세션 없이 JWT를 요구하므로
+    // 브라우저 <img src>에서 Authorization 헤더를 추가할 수 없음.
+    // → 프론트엔드 API 라우트(/api/documents/[id]/thumbnail)를 통한 서버사이드 프록시 필요 시 변경.
+    // 현재는 apiClient 기반 Blob URL 방식으로 제공.
+    return API_ENDPOINTS.DOCUMENTS.THUMBNAIL(documentId, size);
+  },
+
+  /**
+   * 이미지 문서 썸네일 Blob URL 획득 — `<img src>` 또는 CSS background로 사용.
+   *
+   * JWT Authorization 헤더가 필요하므로 apiClient로 fetch 후 Blob URL 생성.
+   * caller는 unmount 시 `URL.revokeObjectURL(url)` 호출 필요.
+   */
+  fetchDocumentThumbnailBlobUrl: async (
+    documentId: string,
+    size: 'sm' | 'md' | 'lg' = 'sm'
+  ): Promise<string> => {
+    const response = await apiClient.get(API_ENDPOINTS.DOCUMENTS.THUMBNAIL(documentId, size), {
+      responseType: 'arraybuffer',
+    });
+    const blob = new Blob([response.data as ArrayBuffer], { type: 'image/webp' });
+    return window.URL.createObjectURL(blob);
+  },
+
+  /**
    * 문서 미리보기 URL 반환 (인라인 표시용)
    *
    * - S3: 백엔드가 JSON { presignedUrl } 반환 → presignedUrl을 직접 src로 사용

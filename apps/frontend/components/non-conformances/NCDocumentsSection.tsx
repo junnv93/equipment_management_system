@@ -237,20 +237,20 @@ function AttachmentThumbnail({
     return () => observer.disconnect();
   }, [isImage]);
 
-  // 뷰포트 진입 후에만 이미지 fetch — 불필요한 네트워크 요청 방지
+  // 뷰포트 진입 후에만 썸네일 fetch — 백엔드 sharp WebP 200px 리사이징 경유
   useEffect(() => {
     if (!isImage || !isVisible) return;
     let cancelled = false;
     let objectUrl: string | null = null;
 
     documentApi
-      .fetchDocumentObjectUrl(doc.id)
+      .fetchDocumentThumbnailBlobUrl(doc.id, 'sm')
       .then((url) => {
         if (cancelled) {
-          if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+          URL.revokeObjectURL(url);
           return;
         }
-        objectUrl = url.startsWith('blob:') ? url : null;
+        objectUrl = url;
         setPreviewUrl(url);
       })
       .catch(() => {

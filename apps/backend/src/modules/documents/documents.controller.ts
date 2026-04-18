@@ -14,6 +14,7 @@ import {
   ParseUUIDPipe,
   BadRequestException,
 } from '@nestjs/common';
+import sharp from 'sharp';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -287,6 +288,58 @@ export class DocumentsController {
       ...(document.fileHash ? { 'X-File-Hash': document.fileHash } : {}),
     });
     res.send(buffer);
+  }
+
+  // ============================================================================
+  // 썸네일
+  // ============================================================================
+
+  /** 썸네일 크기 프리셋 (px width). 고정 프리셋으로 임의 resize 방지. */
+  private static readonly THUMBNAIL_SIZES: Record<string, number> = {
+    sm: 200,
+    md: 400,
+    lg: 800,
+  };
+
+  @Get(':id/thumbnail')
+  @ApiOperation({ summary: '이미지 문서 썸네일 (WebP)' })
+  @ApiParam({ name: 'id', description: '문서 ID (UUID)' })
+  @ApiQuery({
+    name: 'size',
+    required: false,
+    enum: ['sm', 'md', 'lg'],
+    description: '기본 sm(200px)',
+  })
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @SkipResponseTransform()
+  async thumbnail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('size') size: string = 'sm',
+    @Res() res: Response
+  ): Promise<void> {
+    const document = await this.documentService.findByIdAnyStatus(id);
+
+    if (!document.mimeType.startsWith('image/')) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_NOT_IMAGE',
+        message: 'Thumbnail is only available for image documents.',
+      });
+    }
+
+    const width =
+      DocumentsController.THUMBNAIL_SIZES[size] ?? DocumentsController.THUMBNAIL_SIZES['sm'];
+
+    // S3/Local 공통 경로: sharp 처리를 위해 항상 서버에서 원본 다운로드
+    const originalBuffer = await this.storageProvider.download(document.filePath);
+    const webpBuffer = await sharp(originalBuffer).resize(width).webp({ quality: 80 }).toBuffer();
+
+    res.set({
+      'Content-Type': 'image/webp',
+      'Content-Length': String(webpBuffer.length),
+      // UUID 기반 문서 ID는 내용이 바뀌면 새 ID를 발급하므로 영구 캐시 안전
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    });
+    res.send(webpBuffer);
   }
 
   // ============================================================================

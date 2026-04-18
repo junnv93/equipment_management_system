@@ -168,6 +168,8 @@ export const API_ENDPOINTS = {
     UPLOAD: '/api/documents',
     DETAIL: (id: string) => `/api/documents/${id}`,
     DOWNLOAD: (id: string) => `/api/documents/${id}/download`,
+    THUMBNAIL: (id: string, size?: 'sm' | 'md' | 'lg') =>
+      `/api/documents/${id}/thumbnail${size && size !== 'sm' ? `?size=${size}` : ''}`,
     VERIFY: (id: string) => `/api/documents/${id}/verify`,
     REVISIONS: (id: string) => `/api/documents/${id}/revisions`,
   },
