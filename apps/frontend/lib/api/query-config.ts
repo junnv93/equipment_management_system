@@ -344,8 +344,6 @@ export const queryKeys = {
       [...queryKeys.equipment.detail(id), 'self-inspections'] as const,
     intermediateInspections: (id: string) =>
       [...queryKeys.equipment.detail(id), 'intermediate-inspections'] as const,
-    qrCodeSvg: (managementNumber: string, appUrl: string) =>
-      [...queryKeys.equipment.all, 'qr-code-svg', managementNumber, appUrl] as const,
   },
   calibrationPlans: {
     all: ['calibrationPlans'] as const,
