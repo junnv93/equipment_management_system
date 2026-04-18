@@ -223,6 +223,47 @@ grep -n "TEST_EQUIPMENT_IDS\." apps/frontend/tests/e2e/features/checkouts/suite-
 
 **불변식:** "상태를 mutate하는 E2E suite는 전용 장비를 소유하며 다른 suite와 공유하지 않는다."
 
+### Step 15: Backend Jest/supertest E2E 헬퍼 패턴 (2026-04-18 추가)
+
+`apps/backend/test/` 하위 Jest + supertest 기반 E2E 테스트의 인증/인프라 패턴 검증.
+
+**15a: loginAs() SSOT — DEFAULT_ROLE_EMAILS 경유**
+
+```bash
+# test-auth.ts가 DEFAULT_ROLE_EMAILS를 shared-constants에서 import하는지 확인
+grep -n "DEFAULT_ROLE_EMAILS" apps/backend/test/helpers/test-auth.ts
+# → 1건 이상 (SSOT 경유)
+
+# 하드코딩 이메일로 직접 인증하는 패턴 탐지 (auth.e2e-spec.ts 제외)
+grep -rn "admin@example\.com\|manager@example\.com\|user@example\.com" \
+  apps/backend/test/*.e2e-spec.ts | grep -v auth.e2e-spec.ts
+# → 0건
+```
+
+**PASS:** `loginAs()` 가 `/auth/test-login?role=<role>` 엔드포인트 경유 + `DEFAULT_ROLE_EMAILS` SSOT 사용. **FAIL:** hardcoded credential 직접 사용.
+
+**예외:** `auth.e2e-spec.ts` — `/auth/login` 엔드포인트 자체를 테스트하므로 로컬 `LEGACY_LOGIN_USERS` 사용 정당.
+
+**15b: TEST_USER_IDS 프로덕션 UUID 정합**
+
+```bash
+# TEST_USER_IDS가 uuid-constants.ts에서 import하는지 확인
+grep -n "uuid-constants\|USER_LAB_MANAGER\|USER_TECHNICAL_MANAGER\|USER_TEST_ENGINEER" \
+  apps/backend/test/helpers/test-auth.ts
+# → production UUID 상수 import 확인
+```
+
+**PASS:** `TEST_USER_IDS`가 `uuid-constants.ts`의 production UUID 상수 경유 (e2e00000-... 형태 금지). **근거:** `/auth/test-login`이 DB lookup → JWT sub = 실제 DB UUID. e2e UUID를 쓰면 `TEST_USER_IDS.admin !== req.user.userId`.
+
+**15c: jest-e2e.json maxWorkers:1 필수**
+
+```bash
+grep "maxWorkers" apps/backend/test/jest-e2e.json
+# → "maxWorkers": 1
+```
+
+**PASS:** `"maxWorkers": 1`. **FAIL:** 없거나 1 초과. 단일 DB 아키텍처에서 병렬 실행은 시드 데이터 경합 → 비결정적 실패.
+
 ## Output Format
 
 ```markdown
@@ -245,6 +286,9 @@ grep -n "TEST_EQUIPMENT_IDS\." apps/frontend/tests/e2e/features/checkouts/suite-
 | 12c | 사이트 접근 제어 범위   | PASS/WARN | GET + mutation 모두 검증      |
 | 13  | global-setup fail-fast  | PASS/FAIL | 시드 실패가 warn-and-continue |
 | 14  | 장비 파티셔닝           | PASS/FAIL | S23-S27 공용 장비 사용        |
+| 15a | Backend loginAs SSOT    | PASS/FAIL | hardcoded credential 탐지     |
+| 15b | TEST_USER_IDS UUID 정합 | PASS/FAIL | e2e UUID 사용 탐지            |
+| 15c | jest-e2e.json maxWorkers| PASS/FAIL | maxWorkers != 1               |
 ```
 
 ## Exceptions

@@ -29,7 +29,8 @@ description: 이벤트 기반 캐시 무효화 아키텍처 검증 — emit/emit
 | `apps/backend/src/common/cache/cache-event-listener.ts` | 이벤트 리스너 (async Promise 반환 필수) |
 | `apps/backend/src/common/cache/cache-invalidation.helper.ts` | helper 메서드 |
 | `apps/backend/src/common/cache/cache-patterns.ts` | `buildDetailCachePattern` 등 SSOT 빌더 |
-| `apps/backend/src/modules/notifications/events/notification-events.ts` | `NOTIFICATION_EVENTS` 상수 |
+| `apps/backend/src/common/cache/cache-events.ts` | `CACHE_EVENTS` 상수 (캐시 전용 이벤트 SSOT) |
+| `apps/backend/src/modules/notifications/events/notification-events.ts` | `NOTIFICATION_EVENTS` 상수 (알림+캐시 복합 이벤트) |
 | `apps/backend/src/modules/**/*.service.ts` | `emitAsync` 발행처 (SSOT 위치) |
 | `apps/backend/src/modules/**/*.controller.ts` | `emitAsync` 컨트롤러 발행 탐지 대상 (Step 4a) |
 
@@ -40,12 +41,12 @@ description: 이벤트 기반 캐시 무효화 아키텍처 검증 — emit/emit
 서비스가 `emitAsync`로 발행하는 이벤트 상수가 모두 `CACHE_INVALIDATION_REGISTRY`에 등록되어 있는지 확인한다.
 
 ```bash
-# 서비스에서 emitAsync 발행하는 이벤트명 추출
-grep -rhoP 'emitAsync\(NOTIFICATION_EVENTS\.\K[A-Z_]+' \
+# 서비스에서 emitAsync 발행하는 이벤트명 추출 (NOTIFICATION_EVENTS + CACHE_EVENTS 양쪽)
+grep -rhoP 'emitAsync\((NOTIFICATION_EVENTS|CACHE_EVENTS)\.\K[A-Z_]+' \
   apps/backend/src/modules/ | sort -u > /tmp/emitted.txt
 
-# 레지스트리에 등록된 이벤트명 추출
-grep -oP '\[NOTIFICATION_EVENTS\.\K[A-Z_]+' \
+# 레지스트리에 등록된 이벤트명 추출 (NOTIFICATION_EVENTS + CACHE_EVENTS 양쪽)
+grep -oP '\[(NOTIFICATION_EVENTS|CACHE_EVENTS)\.\K[A-Z_]+' \
   apps/backend/src/common/cache/cache-event.registry.ts | sort -u > /tmp/registered.txt
 
 # 발행은 되지만 레지스트리 누락 (dead coverage)
@@ -100,8 +101,8 @@ grep -rnP 'deleteByPattern\(`[^`]*detail:\\\\\{' \
 cross-entity 캐시 무효화 필요한 이벤트는 `emitAsync` 사용 필수. 대시보드 통계만 영향 있는 이벤트는 `emit` 허용(스케줄러 계열).
 
 ```bash
-# 서비스 파일에서 emit (fire-and-forget) 호출 탐지 (스케줄러 제외)
-grep -rnP 'this\.eventEmitter\.emit\(NOTIFICATION_EVENTS' \
+# 서비스 파일에서 emit (fire-and-forget) 호출 탐지 (스케줄러 제외, NOTIFICATION/CACHE 양쪽)
+grep -rnP 'this\.eventEmitter\.emit\((NOTIFICATION_EVENTS|CACHE_EVENTS)' \
   apps/backend/src/modules/ \
   --include="*.service.ts" \
   | grep -v "schedulers/"
@@ -116,8 +117,8 @@ grep -rnP 'this\.eventEmitter\.emit\(NOTIFICATION_EVENTS' \
 `emitAsync`는 서비스 계층에서만 호출되어야 한다. 컨트롤러가 `EventEmitter2`를 직접 주입하여 발행하면 도메인 이벤트 책임이 두 계층으로 분산된다.
 
 ```bash
-# 컨트롤러에서 emitAsync 직접 호출 탐지
-grep -rnP 'this\.eventEmitter\.emitAsync\(NOTIFICATION_EVENTS' \
+# 컨트롤러에서 emitAsync 직접 호출 탐지 (NOTIFICATION_EVENTS + CACHE_EVENTS 양쪽)
+grep -rnP 'this\.eventEmitter\.emitAsync\((NOTIFICATION_EVENTS|CACHE_EVENTS)' \
   apps/backend/src/modules/ \
   --include="*.controller.ts"
 ```

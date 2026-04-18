@@ -115,6 +115,35 @@ grep -rn "switch.*scope\.type\|scope\.type === 'team'\|scope\.type === 'site'" a
 
 상세: [references/ssot-checks.md](references/ssot-checks.md) Step 5~13
 
+### Step 15: data-migration SSOT 검증 (2026-04-18 추가)
+
+`MIGRATION_SESSION_STATUS` / `MigrationRowStatus` / `MIGRATION_SHEET_TYPE` 등 마이그레이션 상수가
+`packages/schemas/src/data-migration.ts` SSOT에서만 정의·소비되는지 확인.
+
+**15a: MIGRATION_SESSION_STATUS 로컬 재정의 금지**
+```bash
+# data-migration.types.ts에서 로컬 union type 재정의 없어야 함
+grep -rn "MigrationSessionStatus\s*=" \
+  apps/backend/src/modules/data-migration/types/data-migration.types.ts
+# 결과: 0건 (import/re-export 라인만 존재해야 함)
+```
+
+**15b: 서비스 레이어 raw 리터럴 금지**
+```bash
+# data-migration.service.ts에서 session status raw 리터럴 사용 없어야 함
+grep -rn "'preview'\|'executing'\|'completed'\|'failed'" \
+  apps/backend/src/modules/data-migration/services/data-migration.service.ts \
+  | grep -v "import\|//\|test"
+# 결과: 0건 (MIGRATION_SESSION_STATUS.PREVIEW 등 상수 경유)
+```
+
+**15c: SSOT 소스 확인**
+```bash
+# MIGRATION_SESSION_STATUS가 schemas에 존재해야 함
+grep -n "MIGRATION_SESSION_STATUS" packages/schemas/src/data-migration.ts
+# 결과: 1건+ (export const 정의)
+```
+
 ## Output Format
 
 ```markdown
@@ -139,6 +168,7 @@ grep -rn "switch.*scope\.type\|scope\.type === 'team'\|scope\.type === 'site'" a
 | 12  | Test User Constants SSOT      | PASS/FAIL | 로컬 재정의 위치                       |
 | 13  | DocumentTypeValues SSOT       | PASS/FAIL | 문자열 하드코딩 위치                   |
 | 14  | Scope enforcement SSOT        | PASS/FAIL | 로컬 enforceScope/EnforcedScope 재정의 또는 controller inline scope helper |
+| 15  | data-migration SSOT           | PASS/FAIL | MigrationSessionStatus 로컬 재정의 또는 raw 리터럴 사용 위치 |
 ```
 
 ## Exceptions
