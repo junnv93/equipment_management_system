@@ -21,6 +21,7 @@
 export const QR_CONFIG = {
   errorCorrectionLevel: 'H' as const,
   margin: 1,
+  /** @deprecated Phase 1 이후 수동 렌더링으로 대체 — SSOT 엔트로피 방지를 위해 다음 마이너에서 제거 예정 */
   scale: 4,
 } as const;
 
@@ -83,12 +84,23 @@ export const LABEL_CONFIG = {
     tableCellPaddingMm: 0.9,
     /** 필드명↔값 사이 세로 간격 (mm) */
     rowGapMm: 0.35,
+    /** 라벨 셀 전체 배경 색상 (종이 기본색) */
+    cellBackgroundColor: '#ffffff' as const,
     /** 셀 외곽선·구분선 색상 */
     borderColor: '#e0e0e0' as const,
     /** 필드명(label) 텍스트 색상 */
     fieldLabelColor: '#888888' as const,
     /** 필드값(value) 텍스트 색상 */
     fieldValueColor: '#111111' as const,
+    /** QR 모듈 전경(dark) 색상 — contrast ratio 21:1 (AA+AAA 최대) */
+    qrForegroundColor: '#000000' as const,
+    /** QR 배경(light) 색상 — 인쇄 중성 흰색 */
+    qrBackgroundColor: '#ffffff' as const,
+    /**
+     * QR 모듈당 서브픽셀 오버랩(px) — 서브픽셀 경계의 흰 선 artifact 방지.
+     * 인쇄 DPI가 높을수록 0에 가까워도 되나, 150dpi 기준 1px이 안전.
+     */
+    qrModuleOverlapPx: 1,
   },
   /**
    * 한 번의 PDF 생성 작업에서 허용되는 최대 장비 수.

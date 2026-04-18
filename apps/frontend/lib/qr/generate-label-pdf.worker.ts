@@ -23,7 +23,7 @@
  */
 
 import jsPDF from 'jspdf';
-import QRCode from 'qrcode';
+import QRCode, { type QRCode as QRCodeData } from 'qrcode';
 import {
   QR_CONFIG,
   LABEL_CONFIG,
@@ -71,6 +71,46 @@ function mmToPx(mm: number): number {
 /** LABEL_CONFIG.cell.printDpi 기준 pt → px 변환 (하드코딩 금지). */
 function ptToPx(pt: number): number {
   return Math.round((pt * LABEL_CONFIG.cell.printDpi) / 72);
+}
+
+/**
+ * QR 모듈 매트릭스를 OffscreenCanvas 2D context에 직접 렌더링.
+ *
+ * `qrcode` 라이브러리의 `toCanvas`/`toDataURL`은 내부적으로
+ * `document.createElement('canvas')` fallback에 도달해 Web Worker에서
+ * "You need to specify a canvas element" 에러를 유발한다.
+ * 유일한 DOM-free 공개 API인 `QRCode.create()`가 반환한 BitMatrix를
+ * 직접 렌더링하여 이 의존성을 제거한다.
+ * (업계 표준: Zebra ZPL·Brother raster SDK·Seagull BarTender 모두
+ *  QR 계산과 픽셀 렌더링을 분리하여 실행 환경 독립성을 확보)
+ */
+function renderQrToCanvas(
+  ctx: OffscreenCanvasRenderingContext2D,
+  qrData: QRCodeData,
+  x: number,
+  y: number,
+  sizePx: number
+): void {
+  const { cell } = LABEL_CONFIG;
+  const { size, data } = qrData.modules;
+  const quietZone = QR_CONFIG.margin;
+  const totalModules = size + quietZone * 2;
+  const modulePx = sizePx / totalModules;
+  const overlap = cell.qrModuleOverlapPx;
+
+  ctx.fillStyle = cell.qrBackgroundColor;
+  ctx.fillRect(x, y, sizePx, sizePx);
+
+  ctx.fillStyle = cell.qrForegroundColor;
+  for (let r = 0; r < size; r += 1) {
+    for (let col = 0; col < size; col += 1) {
+      if (data[r * size + col] !== 0) {
+        const mx = x + (col + quietZone) * modulePx;
+        const my = y + (r + quietZone) * modulePx;
+        ctx.fillRect(mx, my, modulePx + overlap, modulePx + overlap);
+      }
+    }
+  }
 }
 
 /**
@@ -126,7 +166,7 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
   c.textBaseline = 'top';
 
   // ─── 배경 ───────────────────────────────────────────────────
-  c.fillStyle = '#ffffff';
+  c.fillStyle = cell.cellBackgroundColor;
   c.fillRect(0, 0, cellW, cellH);
 
   // ─── 셀 외곽 테두리 ──────────────────────────────────────────
@@ -135,19 +175,12 @@ async function renderCellToDataUrl(item: LabelItem, appUrl: string): Promise<str
   c.strokeRect(0.5, 0.5, cellW - 1, cellH - 1);
 
   // ─── QR 코드 (수직 중앙 정렬) ────────────────────────────────
-  const qrCanvas = new OffscreenCanvas(1, 1);
-  await (QRCode.toCanvas as (canvas: unknown, text: string, options: object) => Promise<void>)(
-    qrCanvas,
-    buildEquipmentQRUrl(item.managementNumber, appUrl),
-    {
-      errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
-      margin: QR_CONFIG.margin,
-      scale: QR_CONFIG.scale,
-    }
-  );
+  const qrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
+    errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
+  });
   const qrY = Math.round((cellH - qrPx) / 2);
   c.imageSmoothingEnabled = false; // QR은 이진 이미지 — 스무딩 비활성화로 선명도 유지
-  c.drawImage(qrCanvas, 0, qrY, qrPx, qrPx);
+  renderQrToCanvas(c, qrData, 0, qrY, qrPx);
   c.imageSmoothingEnabled = true;
 
   // ─── QR↔텍스트 세로 구분선 ──────────────────────────────────
