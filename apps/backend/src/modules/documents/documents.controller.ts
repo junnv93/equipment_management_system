@@ -73,7 +73,6 @@ export class DocumentsController {
         softwareValidationId: { type: 'string', format: 'uuid' },
         intermediateInspectionId: { type: 'string', format: 'uuid' },
         selfInspectionId: { type: 'string', format: 'uuid' },
-        nonConformanceId: { type: 'string', format: 'uuid' },
         description: { type: 'string' },
       },
     },
@@ -105,6 +104,17 @@ export class DocumentsController {
       throw new BadRequestException({
         code: 'DOCUMENT_TYPE_INVALID',
         message: `Invalid documentType. Allowed: ${DOCUMENT_TYPE_VALUES.join(', ')}`,
+      });
+    }
+
+    // 도메인 격리 — NC 첨부는 전용 엔드포인트(`POST /non-conformances/:id/attachments`)만 사용.
+    // 범용 /documents에서 nonConformanceId 수신 시 permission 경계 우회 가능성(CREATE_EQUIPMENT만으로 NC 첨부).
+    // 400 + 명확한 메시지로 전용 경로 유도.
+    if (nonConformanceId) {
+      throw new BadRequestException({
+        code: 'NC_ATTACHMENT_WRONG_ENDPOINT',
+        message:
+          'Non-conformance attachments must use POST /non-conformances/:id/attachments (dedicated permission boundary).',
       });
     }
 

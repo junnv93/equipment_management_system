@@ -113,6 +113,28 @@ describe('DocumentsController', () => {
         BadRequestException
       );
     });
+
+    it('nonConformanceId 전달 시 NC_ATTACHMENT_WRONG_ENDPOINT로 차단 (permission 경계)', async () => {
+      const file = makeMockFile();
+      const req = makeReq();
+      const ncId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+      await expect(
+        controller.uploadDocument(
+          file,
+          'equipment_photo',
+          req,
+          undefined, // equipmentId
+          undefined, // calibrationId
+          undefined, // requestId
+          undefined, // softwareValidationId
+          undefined, // intermediateInspectionId
+          undefined, // selfInspectionId
+          ncId // nonConformanceId
+        )
+      ).rejects.toThrow(BadRequestException);
+      expect(mockDocumentService.createDocument).not.toHaveBeenCalled();
+    });
   });
 
   // ─── list ─────────────────────────────────────────────────────────────────

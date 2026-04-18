@@ -174,7 +174,6 @@ export class CheckoutsController {
   @Post('handover/verify')
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @UsePipes(VerifyHandoverTokenValidationPipe)
-  @UseInterceptors(ZodSerializerInterceptor)
   @HttpCode(HttpStatus.OK)
   @AuditLog({
     action: 'read',

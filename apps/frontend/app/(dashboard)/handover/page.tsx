@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -26,12 +26,19 @@ type PageState =
  *
  * 이 페이지는 **condition-check 폼/로직을 일절 렌더하지 않는다.**
  * 모든 워크플로우는 기존 `/checkouts/[id]/check` 페이지로 위임.
+ *
+ * 1회용 토큰 보호 — StrictMode double-invoke 방지:
+ * React 18+ StrictMode 개발 모드 또는 dependency 변화 시 useEffect가 2회 실행될 수 있음.
+ * 각 실행이 verify 호출 → 첫 호출이 jti 소비 → 두번째 호출이 Consumed(409)로 실패하며
+ * 사용자는 "이미 사용된 QR" 에러를 보게 됨. 모듈 레벨이 아닌 **useRef로 1회 실행 보장**.
+ * (module-level flag는 동일 페이지 2회 방문 시 재시도 불가능 → UX 깨짐)
  */
 export default function HandoverRedirectPage() {
   const t = useTranslations('qr.handover');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<PageState>({ phase: 'verifying' });
+  const verifyStartedRef = useRef<string | null>(null);
 
   useEffect(() => {
     const token = searchParams.get(HANDOVER_QR_TOKEN_PARAM);
@@ -39,6 +46,10 @@ export default function HandoverRedirectPage() {
       setState({ phase: 'error', code: ErrorCode.HandoverTokenInvalid });
       return;
     }
+
+    // 이미 이 토큰으로 verify를 시작했으면 재실행 금지 (React StrictMode + dependency churn 방어)
+    if (verifyStartedRef.current === token) return;
+    verifyStartedRef.current = token;
 
     let mounted = true;
     (async () => {
