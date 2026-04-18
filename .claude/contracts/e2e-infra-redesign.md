@@ -1,38 +1,32 @@
-# 스프린트 계약: Backend E2E 테스트 인프라 재설계
+---
+slug: e2e-infra-redesign
+phase: Phase 1 (Harness Master Roadmap 2026-04-18)
+---
 
-## 생성 시점
-2026-04-16T09:00:00+09:00
+# Contract — E2E 인프라 재설계 (Phase 1)
 
-## 성공 기준
+## MUST Criteria (전부 통과 필요)
 
-### 필수 (MUST) — 실패 시 루프 재진입
-- [ ] `pnpm --filter backend run tsc --noEmit` 에러 0
-- [ ] `pnpm --filter backend run build` 성공
-- [ ] `pnpm --filter backend run test:e2e` 전체 22개 파일 기존 테스트 통과 (새 테스트 추가 없음 — 기존 테스트 기능 유지)
-- [ ] 환경변수 중앙화: 22개 테스트 파일에서 `process.env.` 직접 설정 코드 0건 (jest-setup.ts에만 존재)
-- [ ] 앱 부트스트랩 중앙화: `Test.createTestingModule` 호출이 `test/helpers/test-app.ts`에만 존재 (22개 파일에서 제거)
-- [ ] 인증 중앙화: `/auth/login` 직접 호출이 `test/helpers/test-auth.ts`에만 존재 (auth.e2e-spec.ts의 테스트 케이스 내 로그인 테스트는 예외)
-- [ ] UUID 중복 제거: `generateUUID()`, `isValidUUID()` 함수가 `test/helpers/test-utils.ts`에만 존재
-- [ ] 신규 헬퍼 파일 5개 생성 확인: test-app.ts, test-auth.ts, test-fixtures.ts, test-cleanup.ts, test-utils.ts
-- [ ] `any` 타입 사용 금지 (TypeScript strict 규칙 준수)
-- [ ] REDIS_URL 포트 통일: 모든 테스트에서 동일한 Redis 포트 사용
+| ID | 검증 기준 | 검증 명령 |
+|----|-----------|-----------|
+| M1 | `pnpm --filter backend exec tsc --noEmit` → exit 0 | CLI |
+| M2 | spec 파일 내 `admin@example.com` 0건 (auth.e2e-spec.ts LEGACY_LOGIN_USERS 제외) | `grep -rn "admin@example.com" apps/backend/test/*.e2e-spec.ts` |
+| M3 | `test-auth.ts` 에 하드코딩 이메일 리터럴 없음 | `grep -n "admin@example\|manager@example\|user@example" apps/backend/test/helpers/test-auth.ts` |
+| M4 | `loginAs()` 가 `GET /auth/test-login?role=...` 사용 | `grep -n "test-login" apps/backend/test/helpers/test-auth.ts` |
+| M5 | `jest-e2e.json` 에 `"maxWorkers": 1` 포함 | `grep "maxWorkers" apps/backend/test/jest-e2e.json` |
+| M6 | `users.e2e-spec.ts` 에 하드코딩 DB URL fallback 없음 | `grep "postgresql://postgres:postgres" apps/backend/test/users.e2e-spec.ts` |
+| M7 | `history-card-export.e2e-spec.ts` 에 `admin@example.com` 인라인 upsert 없음 | `grep "admin@example" apps/backend/test/history-card-export.e2e-spec.ts` |
+| M8 | `TEST_USER_IDS` 가 프로덕션 UUID 사용 (`00000000-...`) | `grep "e2e00000" apps/backend/test/helpers/test-auth.ts` → 0 hit |
+| M9 | `site-permissions.e2e-spec.ts` 에서 `loginWithCredentials` 미사용 | `grep "loginWithCredentials" apps/backend/test/site-permissions.e2e-spec.ts` → 0 hit |
 
-### 권장 (SHOULD) — 실패 시 tech-debt-tracker 기록, 루프 차단 없음
-- [ ] review-architecture Critical 이슈 0개
-- [ ] `pnpm --filter backend run lint` 에러 0
-- [ ] 각 테스트 파일의 beforeAll이 15줄 이하로 축소 (헬퍼 호출만)
-- [ ] ResourceTracker를 사용하는 파일에서 afterAll이 10줄 이하로 축소
-- [ ] console.log 디버그 출력 최소화 (환경 정보 출력 제거, 에러 시에만 출력)
-- [ ] 공유 헬퍼 파일에 JSDoc 주석 포함
+## SHOULD Criteria (실패 시 루프 차단 없음 — tech-debt-tracker 등록)
 
-### 적용 verify 스킬
-변경 파일 경로 기반 자동 선택:
-- verify-hardcoding: 환경변수 하드코딩 제거 확인
-- verify-ssot: 타입/상수 SSOT 준수 확인
-- verify-implementation: 전체 구현 정합성
+| ID | 기준 |
+|----|------|
+| S1 | `jest-e2e.json` 에 `"testTimeout": 60000` 포함 |
+| S2 | `calibration-plans.e2e-spec.ts` DATABASE_URL `as string` 타입 단언 → throw guard |
 
-## 종료 조건
-- 필수 기준 전체 PASS → 성공
-- 동일 이슈 2회 연속 FAIL → 설계 문제 (수동 개입 요청)
-- 3회 반복 초과 → 수동 개입 요청
-- SHOULD 실패는 종료 조건에 영향 없음 — tech-debt-tracker.md에 기록
+## 제외 사항 (false positive 방지)
+
+- `auth.e2e-spec.ts` 내 `admin@example.com` — `/auth/login` 엔드포인트 테스트용 `LEGACY_LOGIN_USERS` 로컬 상수 허용
+- `jest-global-setup.ts` PRODUCTION_USERS_SEED 내 `lab.manager@example.com` — DB 시딩용, SSOT 검사 제외

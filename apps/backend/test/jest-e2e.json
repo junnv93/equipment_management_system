@@ -1,5 +1,7 @@
 {
   "globalSetup": "<rootDir>/jest-global-setup.ts",
+  "maxWorkers": 1,
+  "testTimeout": 60000,
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",

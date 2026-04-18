@@ -3,7 +3,6 @@
 import request from 'supertest';
 import PizZip from 'pizzip';
 import { eq as eqOp } from 'drizzle-orm';
-import { users } from '@equipment-management/db/schema/users';
 import { equipment as equipmentTable } from '@equipment-management/db/schema/equipment';
 import type { AppDatabase } from '@equipment-management/db';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
@@ -21,24 +20,6 @@ describe('History Card Export (QP-18-02) - SUW-E0001', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-
-    // admin@example.com 사용자가 DB에 존재하도록 보장
-    const db = ctx.module.get<AppDatabase>('DRIZZLE_INSTANCE');
-    const [existing] = await db
-      .select()
-      .from(users)
-      .where(eqOp(users.email, 'admin@example.com'))
-      .limit(1);
-    if (!existing) {
-      await db.insert(users).values({
-        email: 'admin@example.com',
-        name: '관리자 (E2E)',
-        role: 'lab_manager',
-        site: 'suwon',
-        isActive: true,
-      });
-    }
-
     accessToken = await loginAs(ctx.app, 'admin');
   }, 30000);
 

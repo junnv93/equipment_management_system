@@ -23,9 +23,9 @@ describe('UsersController (e2e)', () => {
 
   afterAll(async () => {
     // 테스트에서 변경된 사용자 이름을 원래 값으로 복원 (DB 오염 방지)
-    const restoreSql = postgres(
-      process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management',
-    );
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) throw new Error('DATABASE_URL is not set');
+    const restoreSql = postgres(databaseUrl);
     try {
       for (const user of TEST_USER_DETAILS) {
         await restoreSql`

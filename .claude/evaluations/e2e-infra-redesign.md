@@ -1,11 +1,56 @@
-# 평가 리포트: e2e-infra-redesign
+# Evaluation Report — e2e-infra-redesign
 
-## 메타데이터
-- 평가일: 2026-04-16
-- 평가자: QA Agent (skeptical)
-- 대상 계약: `.claude/contracts/e2e-infra-redesign.md`
-- 이터레이션: 2
-- 결론: **PASS** — 필수 기준 전체 통과
+**Date**: 2026-04-18
+**Iteration**: 1 (현재 계약 기준: e2e-infra-redesign.md Phase 1 Harness Master Roadmap)
+
+> 주의: 이 파일은 이전 평가(2026-04-16, 구 계약 기준)를 새 계약(M1-M9)으로 재평가한 결과로 교체되었습니다.
+
+---
+
+## MUST Criteria
+
+| ID | Criterion | Verdict | Evidence |
+|----|-----------|---------|----------|
+| M1 | tsc exit 0 (test/ scope) | PASS | 유일한 오류 2건은 `non-conformances-attachments.controller.spec.ts` 내 `NC_ATTACHMENT_UPLOADED`/`NC_ATTACHMENT_DELETED` — 계약서 명시 제외 대상. 해당 오류 필터링 후 추가 오류 없음 |
+| M2 | admin@example.com 잔존 0 (auth.e2e-spec.ts 제외) | PASS | `grep -rn "admin@example.com" apps/backend/test/*.e2e-spec.ts \| grep -v auth.e2e-spec.ts` → 0건 |
+| M3 | test-auth.ts 하드코딩 이메일 없음 | PASS | `grep -n "admin@example\|manager@example\|user@example" apps/backend/test/helpers/test-auth.ts` → 0건. 이메일은 `DEFAULT_ROLE_EMAILS['lab_manager']` 등 SSOT 경유 확인 |
+| M4 | loginAs()가 GET /auth/test-login?role=… 사용 | PASS | `test-auth.ts:84` — `request(app.getHttpServer()).get(\`/auth/test-login?role=${canonicalRole}\`)` 확인 |
+| M5 | jest-e2e.json "maxWorkers": 1 | PASS | `jest-e2e.json:2` — `"maxWorkers": 1` 확인 |
+| M6 | users.e2e-spec.ts 하드코딩 DB URL 없음 | PASS | `grep "postgresql://postgres:postgres" apps/backend/test/users.e2e-spec.ts` → 0건 |
+| M7 | history-card-export.e2e-spec.ts admin@example.com 인라인 upsert 없음 | PASS | `grep "admin@example" apps/backend/test/history-card-export.e2e-spec.ts` → 0건. `loginAs(ctx.app, 'admin')` 사용 확인 (`history-card-export.e2e-spec.ts:23`) |
+| M8 | TEST_USER_IDS 프로덕션 UUID 사용 (e2e00000 패턴 없음) | PASS | `grep "e2e00000" apps/backend/test/helpers/test-auth.ts` → 0건. `test-auth.ts:34-38` — `USER_LAB_MANAGER_SUWON_ID` (`00000000-...-000003`) 등 `uuid-constants.ts` 프로덕션 UUID 경유 |
+| M9 | site-permissions.e2e-spec.ts loginWithCredentials 미사용 | PASS | `grep "loginWithCredentials" apps/backend/test/site-permissions.e2e-spec.ts` → 0건. `loginAs()` 사용 확인 |
+
+## SHOULD Criteria
+
+| ID | Criterion | Verdict | Notes |
+|----|-----------|---------|-------|
+| S1 | jest-e2e.json "testTimeout": 60000 | PASS | `jest-e2e.json:3` — `"testTimeout": 60000` 확인 |
+| S2 | calibration-plans DATABASE_URL `as string` → throw guard | PASS | `calibration-plans.e2e-spec.ts:39-40` — `const databaseUrl = process.env.DATABASE_URL; if (!databaseUrl) throw new Error('DATABASE_URL is not set');` — throw guard 패턴 사용, `as string` 타입 단언 없음 |
+
+## Additional Checks
+
+**test-auth.ts 검증:**
+- `TEST_USERS`는 `DEFAULT_ROLE_EMAILS` SSOT에서 파생 — PASS (`test-auth.ts:22-26`, `DEFAULT_ROLE_EMAILS['lab_manager']` 등)
+- `TEST_USER_IDS`는 `uuid-constants.ts` 프로덕션 UUID 임포트 — PASS (`test-auth.ts:5-8`, `34-38`: `USER_LAB_MANAGER_SUWON_ID` = `00000000-...-000003`)
+- `loginAs()`는 `GET /auth/test-login?role=…` 사용 — PASS (`test-auth.ts:84-86`)
+
+**auth.e2e-spec.ts 검증:**
+- `TEST_USERS` 미임포트 — PASS (test-auth 관련 import 문 없음)
+- `LEGACY_LOGIN_USERS` 로컬 상수 존재 — PASS (`auth.e2e-spec.ts:11-15`)
+- `admin@example.com`이 `LEGACY_LOGIN_USERS` 정의 내에만 존재 — PASS (M2 예외 조건 충족)
+
+**history-card-export.e2e-spec.ts 검증:**
+- 인라인 admin@example.com upsert 블록 제거됨 — PASS
+- `loginAs(ctx.app, 'admin')` 사용 유지 — PASS (`history-card-export.e2e-spec.ts:23`)
+
+## Overall Verdict
+
+**PASS**
+
+## Issues Found (FAIL items only)
+
+없음. MUST 기준 M1-M9 전체 통과. SHOULD 기준 S1-S2 전체 통과.
 
 ---
 

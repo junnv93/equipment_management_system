@@ -2,7 +2,17 @@
 
 import request from 'supertest';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
-import { TEST_USERS } from './helpers/test-auth';
+
+/**
+ * /auth/login 엔드포인트 자체를 테스트하는 spec.
+ * auth.service.ts 가 DEV_*_PASSWORD 환경변수로 검증하는 레거시 로컬 로그인 전용.
+ * 다른 spec의 loginAs() 와 달리 실제 비밀번호 검증 흐름을 테스트함.
+ */
+const LEGACY_LOGIN_USERS = {
+  admin: { email: 'admin@example.com', password: 'admin123' },
+  manager: { email: 'manager@example.com', password: 'manager123' },
+  user: { email: 'user@example.com', password: 'user123' },
+} as const;
 
 describe('AuthController (e2e)', () => {
   let ctx: TestAppContext;
@@ -20,14 +30,14 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: TEST_USERS.admin.email,
-          password: TEST_USERS.admin.password,
+          email: LEGACY_LOGIN_USERS.admin.email,
+          password: LEGACY_LOGIN_USERS.admin.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(TEST_USERS.admin.email);
+      expect(response.body.user.email).toBe(LEGACY_LOGIN_USERS.admin.email);
       expect(response.body.user.name).toBe('관리자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
@@ -39,14 +49,14 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: TEST_USERS.manager.email,
-          password: TEST_USERS.manager.password,
+          email: LEGACY_LOGIN_USERS.manager.email,
+          password: LEGACY_LOGIN_USERS.manager.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(TEST_USERS.manager.email);
+      expect(response.body.user.email).toBe(LEGACY_LOGIN_USERS.manager.email);
       expect(response.body.user.name).toBe('기술책임자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
@@ -58,14 +68,14 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: TEST_USERS.user.email,
-          password: TEST_USERS.user.password,
+          email: LEGACY_LOGIN_USERS.user.email,
+          password: LEGACY_LOGIN_USERS.user.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(TEST_USERS.user.email);
+      expect(response.body.user.email).toBe(LEGACY_LOGIN_USERS.user.email);
       expect(response.body.user.name).toBe('시험실무자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
@@ -77,7 +87,7 @@ describe('AuthController (e2e)', () => {
       await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: TEST_USERS.admin.email,
+          email: LEGACY_LOGIN_USERS.admin.email,
           password: 'wrongpassword',
         })
         .expect(401);
@@ -91,8 +101,8 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: TEST_USERS.admin.email,
-          password: TEST_USERS.admin.password,
+          email: LEGACY_LOGIN_USERS.admin.email,
+          password: LEGACY_LOGIN_USERS.admin.password,
         });
 
       accessToken = response.body.access_token;
@@ -105,7 +115,7 @@ describe('AuthController (e2e)', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body.email).toBe(TEST_USERS.admin.email);
+      expect(response.body.email).toBe(LEGACY_LOGIN_USERS.admin.email);
       expect(response.body.roles).toContain('lab_manager');
     });
 

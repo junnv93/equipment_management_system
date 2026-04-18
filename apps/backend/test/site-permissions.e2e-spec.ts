@@ -2,7 +2,7 @@
 
 import request from 'supertest';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
-import { loginAs, loginWithCredentials } from './helpers/test-auth';
+import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 
 describe('Site Permissions (e2e)', () => {
@@ -18,10 +18,9 @@ describe('Site Permissions (e2e)', () => {
     adminToken = await loginAs(ctx.app, 'admin');
 
     try {
-      const result = await loginWithCredentials(ctx.app, 'user1@example.com', 'user123');
-      testOperatorToken = result.token;
+      testOperatorToken = await loginAs(ctx.app, 'user');
     } catch {
-      // user1 로그인 실패 시 undefined
+      // 로그인 실패 시 undefined
     }
 
     try {

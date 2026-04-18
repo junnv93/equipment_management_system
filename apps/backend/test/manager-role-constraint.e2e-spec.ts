@@ -25,7 +25,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    // globalSetup이 admin@example.com 사용자를 시딩하므로 loginAs 직접 사용 가능
+    // globalSetup이 lab_manager 역할 사용자를 시딩하므로 loginAs 직접 사용 가능
     accessToken = await loginAs(ctx.app, 'admin');
 
     // 시드 장비 의존 대신 자체 생성 — 테스트 자급자족

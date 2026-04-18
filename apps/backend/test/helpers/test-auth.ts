@@ -1,37 +1,48 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { TEAM_PLACEHOLDER_ID } from '../../src/database/utils/uuid-constants';
+import { DEFAULT_ROLE_EMAILS } from '@equipment-management/shared-constants';
+import {
+  USER_LAB_MANAGER_SUWON_ID,
+  USER_TECHNICAL_MANAGER_SUWON_ID,
+  USER_TEST_ENGINEER_SUWON_ID,
+  TEAM_FCC_EMC_RF_SUWON_ID,
+} from '../../src/database/utils/uuid-constants';
 
 /** 테스트 사용자 역할 */
 export type TestRole = 'admin' | 'manager' | 'user';
 
-/** 역할별 테스트 사용자 정보 */
-export const TEST_USERS: Record<TestRole, { email: string; password: string }> = {
-  admin: { email: 'admin@example.com', password: 'admin123' },
-  manager: { email: 'manager@example.com', password: 'manager123' },
-  user: { email: 'user@example.com', password: 'user123' },
+/** TestRole → canonical UserRole 매핑 (shared-constants DEFAULT_ROLE_EMAILS 키) */
+const CANONICAL_ROLE: Record<TestRole, string> = {
+  admin: 'lab_manager',
+  manager: 'technical_manager',
+  user: 'test_engineer',
+};
+
+/** 역할별 테스트 사용자 이메일 — DEFAULT_ROLE_EMAILS SSOT에서 파생 */
+export const TEST_USERS: Record<TestRole, { email: string }> = {
+  admin: { email: DEFAULT_ROLE_EMAILS['lab_manager'] },
+  manager: { email: DEFAULT_ROLE_EMAILS['technical_manager'] },
+  user: { email: DEFAULT_ROLE_EMAILS['test_engineer'] },
 };
 
 /**
- * 테스트 전용 UUID — uuid-constants.ts 프로덕션 UUID와 충돌 없음.
+ * 테스트 전용 UUID — 프로덕션 시드 UUID와 일치.
  *
- * ⚠️ 이전 값은 프로덕션 시드와 충돌했음:
- * - admin 'f47ac10b-...-d479' = USER_TEST_ENGINEER_UIWANG_ID (역할 불일치)
- * - manager 'a1b2c3d4-...-6789' = TEAM_GENERAL_RF_UIWANG_ID (팀 UUID!)
- * 'e2e' 접두사 패턴으로 분리하여 SSOT 위반 해소.
+ * generateTestTokenByEmail 은 DB 조회 후 프로덕션 UUID 기반 JWT를 발급하므로
+ * TEST_USER_IDS 도 프로덕션 UUID여야 /users/{uuid} 등 API 호출이 정합성 유지.
  */
 export const TEST_USER_IDS: Record<TestRole, string> = {
-  admin: 'e2e00000-0000-4000-8000-000000000001',
-  manager: 'e2e00000-0000-4000-8000-000000000002',
-  user: 'e2e00000-0000-4000-8000-000000000003',
+  admin: USER_LAB_MANAGER_SUWON_ID,
+  manager: USER_TECHNICAL_MANAGER_SUWON_ID,
+  user: USER_TEST_ENGINEER_SUWON_ID,
 };
 
 /**
  * 시드 사용자 상세 정보 (DB 시딩에 사용)
  *
- * ⚠️ teamId 필수: team-scoped 기능(calibration-plans, disposals, intermediate-checks 등)은
- * `CALIBRATION_PLAN_DATA_SCOPE: { type: 'team' }` + `failLoud: true`로 인해
- * user.teamId가 null이면 403 Forbidden을 반환한다. 모든 테스트 사용자는 TEAM_PLACEHOLDER_ID에 소속시킨다.
+ * ⚠️ teamId 필수: team-scoped 기능(calibration-plans 등)은
+ * user.teamId가 null이면 403을 반환한다.
+ * TEAM_FCC_EMC_RF_SUWON_ID (수원 FCC EMC/RF 팀) 사용.
  */
 export const TEST_USER_DETAILS = [
   {
@@ -41,7 +52,7 @@ export const TEST_USER_DETAILS = [
     role: 'lab_manager',
     site: 'suwon',
     location: '수원랩',
-    teamId: TEAM_PLACEHOLDER_ID,
+    teamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
     id: TEST_USER_IDS.manager,
@@ -50,7 +61,7 @@ export const TEST_USER_DETAILS = [
     role: 'technical_manager',
     site: 'suwon',
     location: '수원랩',
-    teamId: TEAM_PLACEHOLDER_ID,
+    teamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
     id: TEST_USER_IDS.user,
@@ -59,37 +70,36 @@ export const TEST_USER_DETAILS = [
     role: 'test_engineer',
     site: 'suwon',
     location: '수원랩',
-    teamId: TEAM_PLACEHOLDER_ID,
+    teamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 ] as const;
 
 /**
  * 지정된 역할로 로그인하여 액세스 토큰을 반환합니다.
- *
- * @param app - NestJS 앱 인스턴스
- * @param role - 로그인할 역할 (admin, manager, user)
- * @returns JWT 액세스 토큰
- * @throws 로그인 실패 시 에러
+ * /auth/test-login?role=<canonicalRole> 패스워드리스 엔드포인트 경유.
  */
 export async function loginAs(app: INestApplication, role: TestRole): Promise<string> {
-  const { email, password } = TEST_USERS[role];
+  const canonicalRole = CANONICAL_ROLE[role];
 
-  const loginResponse = await request(app.getHttpServer()).post('/auth/login').send({
-    email,
-    password,
-  });
+  const response = await request(app.getHttpServer()).get(
+    `/auth/test-login?role=${canonicalRole}`,
+  );
 
-  if (loginResponse.status !== 200 && loginResponse.status !== 201) {
-    throw new Error(`Login failed for ${role} (${email}): status ${loginResponse.status}`);
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(
+      `test-login failed for ${role} (role=${canonicalRole}): status ${response.status} — ${JSON.stringify(response.body)}`,
+    );
   }
 
   const token =
-    loginResponse.body.data?.accessToken ||
-    loginResponse.body.access_token ||
-    loginResponse.body.accessToken;
+    response.body.data?.accessToken ||
+    response.body.access_token ||
+    response.body.accessToken;
 
   if (!token) {
-    throw new Error(`No access token in response for ${role} (${email})`);
+    throw new Error(
+      `No access token in test-login response for ${role} (role=${canonicalRole})`,
+    );
   }
 
   return token;
@@ -97,7 +107,7 @@ export async function loginAs(app: INestApplication, role: TestRole): Promise<st
 
 /**
  * 특정 이메일/비밀번호로 직접 로그인합니다.
- * TEST_USERS에 없는 사용자 (예: user1@example.com)에 사용합니다.
+ * /auth/login 엔드포인트 테스트 시 사용.
  */
 export async function loginWithCredentials(
   app: INestApplication,

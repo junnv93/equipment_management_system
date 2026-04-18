@@ -36,7 +36,9 @@ describe('CalibrationPlansController (e2e)', () => {
     // 테스트 격리를 위해 DB 직접 삭제 사용 (FK CASCADE로 plan_items도 삭제됨).
     //
     // 테스트 내부 파생 연도 범위: TEST_YEAR ~ TEST_YEAR + TEST_YEAR_MAX_DERIVATION.
-    const cleanupSql = postgres(process.env.DATABASE_URL as string);
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) throw new Error('DATABASE_URL is not set');
+    const cleanupSql = postgres(databaseUrl);
     try {
       await cleanupSql`
         DELETE FROM calibration_plans
