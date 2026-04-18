@@ -454,6 +454,16 @@ export class FormTemplateExportService {
     filter: EnforcedScope
   ): Promise<ExportResult> {
     const entry = FORM_CATALOG['UL-QP-18-07'];
+
+    // testSoftware는 site 단위 리소스 — teamId 스코프로 경계를 설정할 방법이 없음
+    if (filter.teamId) {
+      throw new ForbiddenException({
+        code: 'SCOPE_RESOURCE_MISMATCH',
+        message:
+          '팀 스코프 사용자는 소프트웨어 관리대장 리포트를 조회할 수 없습니다 (site 단위 리소스).',
+      });
+    }
+
     const conditions: SQL<unknown>[] = [];
 
     if (filter.site) {
@@ -625,24 +635,31 @@ export class FormTemplateExportService {
       });
     }
 
-    // 관련 사용자 정보 일괄 조회 (receivedBy, performedBy, technicalApprover, qualityApprover)
-    const resolveUser = async (
-      userId: string | null
-    ): Promise<{ name: string; signaturePath: string | null } | null> => {
-      if (!userId) return null;
-      const [u] = await this.db
-        .select({ name: users.name, signaturePath: users.signatureImagePath })
+    // 관련 사용자 정보 일괄 조회 — 단일 inArray 쿼리로 N+1 제거
+    type ResolvedUser = { name: string; signaturePath: string | null };
+    const userIdSet = [
+      ...new Set(
+        [record.receivedBy, record.performedBy, record.technicalApproverId].filter(
+          (id): id is string => id !== null
+        )
+      ),
+    ];
+    const userMap = new Map<string, ResolvedUser>();
+    if (userIdSet.length > 0) {
+      const userRows = await this.db
+        .select({ id: users.id, name: users.name, signaturePath: users.signatureImagePath })
         .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      return u ?? null;
-    };
+        .where(inArray(users.id, userIdSet));
+      for (const u of userRows) {
+        userMap.set(u.id, { name: u.name, signaturePath: u.signaturePath });
+      }
+    }
 
-    const [receiver, performer, techApprover] = await Promise.all([
-      resolveUser(record.receivedBy),
-      resolveUser(record.performedBy),
-      resolveUser(record.technicalApproverId),
-    ]);
+    const receiver = record.receivedBy ? (userMap.get(record.receivedBy) ?? null) : null;
+    const performer = record.performedBy ? (userMap.get(record.performedBy) ?? null) : null;
+    const techApprover = record.technicalApproverId
+      ? (userMap.get(record.technicalApproverId) ?? null)
+      : null;
 
     // docx 템플릿 로드
     const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-09');
