@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { getTableColumns, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -148,6 +149,17 @@ export class DataMigrationService {
           rows: rowPreviews,
         });
       }
+    }
+
+    // 장비 시트는 1개만 지원 — FK 해석 Map이 단일 validRows 인덱스 기준으로 구성되기 때문
+    const equipmentSheets = sheetResults.filter(
+      (s) => s.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT
+    );
+    if (equipmentSheets.length > 1) {
+      throw new BadRequestException({
+        code: MigrationErrorCode.MULTIPLE_EQUIPMENT_SHEETS,
+        message: '장비 시트는 1개만 허용됩니다.',
+      });
     }
 
     // FK 해석: 장비 시트의 유효 행에서 담당자/부담당자/팀 UUID 해석

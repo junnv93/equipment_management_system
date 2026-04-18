@@ -107,6 +107,9 @@ describe('Template Round-Trip', () => {
 
 describe('Deprecated Aliases - Sheet Isolation', () => {
   it('장비 시트 deprecated alias가 장비 alias index에 없어야 한다', () => {
+    // 모든 항목이 active 승격됨 — DEPRECATED가 비어있으면 이 루프는 실행되지 않음
+    // 아래 단언이 실제 "empty" 계약을 명시적으로 보장
+    expect(DEPRECATED_EQUIPMENT_COLUMNS).toHaveLength(0);
     for (const entry of DEPRECATED_EQUIPMENT_COLUMNS) {
       for (const alias of entry.aliases) {
         expect(COLUMN_ALIAS_INDEX.has(alias.toLowerCase().trim())).toBe(false);

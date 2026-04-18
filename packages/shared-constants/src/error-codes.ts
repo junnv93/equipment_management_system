@@ -35,6 +35,8 @@ export const MigrationErrorCode = {
   HISTORY_DB_DUPLICATE: 'HISTORY_DB_DUPLICATE',
   /** Zod 스키마 유효성 검사 실패 — 행별 필드 에러 */
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  /** 장비 시트가 2개 이상 포함된 경우 — FK 인덱스 단일 시트 계약 위반 */
+  MULTIPLE_EQUIPMENT_SHEETS: 'MIGRATION_MULTIPLE_EQUIPMENT_SHEETS',
 } as const;
 
 export type MigrationErrorCode = (typeof MigrationErrorCode)[keyof typeof MigrationErrorCode];
