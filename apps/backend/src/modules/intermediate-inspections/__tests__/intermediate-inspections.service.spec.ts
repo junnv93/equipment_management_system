@@ -151,6 +151,8 @@ describe('IntermediateInspectionsService', () => {
 
   describe('createByEquipment()', () => {
     it('장비에 연결된 교정으로 점검을 생성한다', async () => {
+      // needsIntermediateCheck 조회 → true
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ needsIntermediateCheck: true }]));
       // 승인된 교정 select → found
       mockDb.select.mockReturnValueOnce(createSelectChain([{ id: 'cal-uuid-1' }]));
       // create() 내부 calibration 존재 확인 select
@@ -176,19 +178,43 @@ describe('IntermediateInspectionsService', () => {
       expect(result.id).toBe('insp-uuid-1');
     });
 
-    it('교정이 없으면 NotFoundException을 던진다', async () => {
+    it('needsIntermediateCheck=false 장비는 BadRequestException을 던진다', async () => {
+      // needsIntermediateCheck 조회 → false
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ needsIntermediateCheck: false }]));
+
+      await expect(
+        service.createByEquipment(
+          'non-applicable-eq',
+          { inspectionDate: '2024-06-01', items: [] } as never,
+          'user-uuid-1'
+        )
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('교정 없는 비교정 장비는 calibrationId=null로 점검을 생성한다', async () => {
+      // needsIntermediateCheck 조회 → true
+      mockDb.select.mockReturnValueOnce(createSelectChain([{ needsIntermediateCheck: true }]));
       // approved calibration select → not found
       mockDb.select.mockReturnValueOnce(createSelectChain([]));
       // fallback any calibration select → not found
       mockDb.select.mockReturnValueOnce(createSelectChain([]));
+      mockDb.insert
+        .mockReturnValueOnce({
+          values: jest.fn().mockReturnValue({
+            returning: jest.fn().mockResolvedValue([{ ...MOCK_INSPECTION, calibrationId: null }]),
+          }),
+        })
+        .mockReturnValueOnce({ values: jest.fn().mockResolvedValue([]) })
+        .mockReturnValueOnce({ values: jest.fn().mockResolvedValue([]) });
 
-      await expect(
-        service.createByEquipment(
-          'non-existent-eq',
-          { inspectionDate: '2024-06-01', items: [] } as never,
-          'user-uuid-1'
-        )
-      ).rejects.toThrow(NotFoundException);
+      const result = await service.createByEquipment(
+        'non-calib-eq',
+        { inspectionDate: '2024-06-01', items: [] } as never,
+        'user-uuid-1'
+      );
+
+      expect(result).toBeDefined();
+      expect(result.calibrationId).toBeNull();
     });
   });
 
