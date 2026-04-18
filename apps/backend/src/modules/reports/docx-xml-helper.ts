@@ -1,10 +1,6 @@
 import { InternalServerErrorException, Logger } from '@nestjs/common';
 import type PizZip from 'pizzip';
-import { and, asc, eq, inArray } from 'drizzle-orm';
-import type { AppDatabase } from '@equipment-management/db';
-import type { InspectionType } from '@equipment-management/schemas';
-import { inspectionResultSections } from '@equipment-management/db/schema/inspection-result-sections';
-import { documents } from '@equipment-management/db/schema/documents';
+import type { InspectionResultSection } from '@equipment-management/db/schema/inspection-result-sections';
 import type { DocxTemplate } from './docx-template.util';
 import type { IStorageProvider } from '../../common/storage/storage.interface';
 
@@ -458,35 +454,41 @@ export async function insertDocxSignature(
 type InspectionResultSectionImageCache = Map<string, { buffer: Buffer; ext: 'png' | 'jpeg' }>;
 
 /**
- * 여러 documentId에 대한 이미지를 1회 SELECT + 병렬 다운로드로 로드한다.
+ * Data Service가 선조회한 결과 섹션 데이터.
+ *
+ * Renderer는 이 객체를 renderResultSections에 전달하여 DB 접근 없이
+ * 순수 template injection을 수행한다.
+ */
+export interface InspectionResultSectionPreFetched {
+  /** inspection_result_sections 행 (sortOrder 오름차순 정렬 완료) */
+  sections: InspectionResultSection[];
+  /**
+   * documentId → { filePath, mimeType }
+   * Data Service가 documents 테이블에서 선조회.
+   * 이미지 다운로드는 Renderer가 storage 경유로 수행.
+   */
+  documentPaths: Map<string, { filePath: string; mimeType: string }>;
+}
+
+/**
+ * 사전 수집된 document 경로 맵으로 이미지를 병렬 다운로드한다.
  * 개별 다운로드 실패는 Map에서 누락 — 렌더 단계가 `[image not found]`로 fallback.
  *
- * @param documentIds 로드할 document PK 배열
+ * @param documentPaths Data Service가 선조회한 documentId → { filePath, mimeType } 맵
  * @param storage IStorageProvider
- * @param db AppDatabase
  */
-export async function loadDocumentImagesBatch(
-  documentIds: string[],
-  storage: IStorageProvider,
-  db: AppDatabase
+async function downloadSectionImages(
+  documentPaths: Map<string, { filePath: string; mimeType: string }>,
+  storage: IStorageProvider
 ): Promise<InspectionResultSectionImageCache> {
   const result: InspectionResultSectionImageCache = new Map();
-  if (documentIds.length === 0) return result;
-
-  const rows = await db
-    .select({
-      id: documents.id,
-      filePath: documents.filePath,
-      mimeType: documents.mimeType,
-    })
-    .from(documents)
-    .where(inArray(documents.id, documentIds));
+  if (documentPaths.size === 0) return result;
 
   const downloads = await Promise.allSettled(
-    rows.map(async (row) => {
-      const buffer = await storage.download(row.filePath);
-      const ext = row.mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
-      return { id: row.id, buffer, ext };
+    Array.from(documentPaths.entries()).map(async ([id, { filePath, mimeType }]) => {
+      const buffer = await storage.download(filePath);
+      const ext = mimeType === 'image/png' ? ('png' as const) : ('jpeg' as const);
+      return { id, buffer, ext };
     })
   );
 
@@ -511,57 +513,28 @@ type RichTableData = {
 };
 
 /**
- * inspection_result_sections 테이블의 섹션들을 DocxTemplate에 순차 주입.
+ * Data Service가 선조회한 결과 섹션을 DocxTemplate에 순차 주입.
  *
  * 섹션이 없으면 no-op. 섹션이 있으면 템플릿 예시 텍스트 제거 + 페이지 나누기 후 렌더.
+ * DB 접근 없음 — 이미지 파일 다운로드만 storage 경유로 수행.
  *
  * @param doc DocxTemplate 인스턴스
- * @param inspectionId 중간점검 또는 자체점검 PK
- * @param inspectionType 'intermediate' | 'self'
- * @param db AppDatabase
+ * @param prefetched Data Service가 선조회한 섹션 + document 경로 데이터
  * @param storage IStorageProvider
  */
 export async function renderResultSections(
   doc: DocxTemplate,
-  inspectionId: string,
-  inspectionType: InspectionType,
-  db: AppDatabase,
+  prefetched: InspectionResultSectionPreFetched,
   storage: IStorageProvider
 ): Promise<void> {
-  const sections = await db
-    .select()
-    .from(inspectionResultSections)
-    .where(
-      and(
-        eq(inspectionResultSections.inspectionId, inspectionId),
-        eq(inspectionResultSections.inspectionType, inspectionType)
-      )
-    )
-    .orderBy(asc(inspectionResultSections.sortOrder));
+  const { sections } = prefetched;
 
   if (sections.length === 0) return;
 
   // 결과 섹션이 있을 때만: 템플릿 예시 텍스트 제거 + 2페이지 시작 페이지 나누기
   doc.removeTemplateExampleTextAndInsertPageBreak();
 
-  // N+1 방지: 섹션 내 모든 이미지 documentId 선수집
-  const documentIdSet = new Set<string>();
-  for (const section of sections) {
-    if (section.sectionType === 'photo' && section.documentId) {
-      documentIdSet.add(section.documentId);
-    } else if (section.sectionType === 'rich_table') {
-      const rd = section.richTableData as RichTableData | null;
-      if (rd) {
-        for (const row of rd.rows) {
-          for (const cell of row) {
-            if (cell.type === 'image') documentIdSet.add(cell.documentId);
-          }
-        }
-      }
-    }
-  }
-
-  const imageCache = await loadDocumentImagesBatch(Array.from(documentIdSet), storage, db);
+  const imageCache = await downloadSectionImages(prefetched.documentPaths, storage);
 
   // 템플릿의 numbering 매핑 (글머리 기호 스타일)
   const { heading: headingNumId } = doc.bulletNumIds;

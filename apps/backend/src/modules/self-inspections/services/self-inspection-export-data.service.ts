@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import {
@@ -7,6 +7,7 @@ import {
   selfInspectionItems,
 } from '@equipment-management/db/schema/equipment-self-inspections';
 import { inspectionDocumentItems } from '@equipment-management/db/schema/inspection-document-items';
+import { inspectionResultSections } from '@equipment-management/db/schema/inspection-result-sections';
 import { documents } from '@equipment-management/db/schema/documents';
 import { teams } from '@equipment-management/db/schema/teams';
 import { users } from '@equipment-management/db/schema/users';
@@ -15,6 +16,7 @@ import type {
   SelfInspectionItemJudgment,
 } from '@equipment-management/schemas';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE } from '@equipment-management/shared-constants';
+import type { InspectionResultSectionPreFetched } from '../../reports/docx-xml-helper';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
 
 /** 자체점검표(UL-QP-18-05) 헤더 셀 값 집합. */
@@ -67,7 +69,7 @@ export interface SelfInspectionItemPhoto {
 
 /** 렌더러가 소비할 자체점검 양식 전체 데이터. */
 export interface SelfInspectionExportData {
-  /** 자체점검 기록 PK (렌더러가 renderResultSections 호출 시 사용) */
+  /** 자체점검 기록 PK */
   recordId: string;
   managementNumber: string;
   equipmentName: string;
@@ -80,6 +82,11 @@ export interface SelfInspectionExportData {
   inspector: SelfInspectionSigner;
   submitter: SelfInspectionSigner;
   approver: SelfInspectionSigner;
+  /**
+   * 동적 결과 섹션 선조회 데이터.
+   * Renderer가 renderResultSections 호출 시 전달 — DB 접근 불필요.
+   */
+  resultSections: InspectionResultSectionPreFetched;
 }
 
 /**
@@ -167,33 +174,44 @@ export class SelfInspectionExportDataService {
       });
     }
 
-    // 점검자/제출자/승인자 정보 — 독립 쿼리 병렬 실행
-    const [[inspectorRow], [submitterRow], [approverRow], itemRows] = await Promise.all([
-      this.db
-        .select({ name: users.name, signaturePath: users.signatureImagePath })
-        .from(users)
-        .where(eq(users.id, record.inspectorId))
-        .limit(1),
-      record.submittedBy
-        ? this.db
-            .select({ name: users.name, signaturePath: users.signatureImagePath })
-            .from(users)
-            .where(eq(users.id, record.submittedBy))
-            .limit(1)
-        : Promise.resolve([null] as [null]),
-      record.approvedBy
-        ? this.db
-            .select({ name: users.name, signaturePath: users.signatureImagePath })
-            .from(users)
-            .where(eq(users.id, record.approvedBy))
-            .limit(1)
-        : Promise.resolve([null] as [null]),
-      this.db
-        .select()
-        .from(selfInspectionItems)
-        .where(eq(selfInspectionItems.inspectionId, record.id))
-        .orderBy(selfInspectionItems.itemNumber),
-    ]);
+    // 점검자/제출자/승인자/점검항목/결과섹션 — 독립 쿼리 병렬 실행
+    const [[inspectorRow], [submitterRow], [approverRow], itemRows, sectionRows] =
+      await Promise.all([
+        this.db
+          .select({ name: users.name, signaturePath: users.signatureImagePath })
+          .from(users)
+          .where(eq(users.id, record.inspectorId))
+          .limit(1),
+        record.submittedBy
+          ? this.db
+              .select({ name: users.name, signaturePath: users.signatureImagePath })
+              .from(users)
+              .where(eq(users.id, record.submittedBy))
+              .limit(1)
+          : Promise.resolve([null] as [null]),
+        record.approvedBy
+          ? this.db
+              .select({ name: users.name, signaturePath: users.signatureImagePath })
+              .from(users)
+              .where(eq(users.id, record.approvedBy))
+              .limit(1)
+          : Promise.resolve([null] as [null]),
+        this.db
+          .select()
+          .from(selfInspectionItems)
+          .where(eq(selfInspectionItems.inspectionId, record.id))
+          .orderBy(selfInspectionItems.itemNumber),
+        this.db
+          .select()
+          .from(inspectionResultSections)
+          .where(
+            and(
+              eq(inspectionResultSections.inspectionId, record.id),
+              eq(inspectionResultSections.inspectionType, 'self')
+            )
+          )
+          .orderBy(asc(inspectionResultSections.sortOrder)),
+      ] as const);
 
     // snapshot 우선, 없으면 장비 마스터에서 fallback
     const classification: EquipmentClassification =
@@ -285,6 +303,45 @@ export class SelfInspectionExportDataService {
             .orderBy(inspectionDocumentItems.inspectionItemId, inspectionDocumentItems.sortOrder)
         : [];
 
+    // 섹션 내 이미지 documentId 수집 → documents 테이블에서 경로 선조회
+    // (sectionRows는 위 Promise.all에서 병렬 취득)
+    const sectionDocumentIdSet = new Set<string>();
+    for (const section of sectionRows) {
+      if (section.sectionType === 'photo' && section.documentId) {
+        sectionDocumentIdSet.add(section.documentId);
+      } else if (section.sectionType === 'rich_table') {
+        const rd = section.richTableData as {
+          rows: Array<Array<{ type: string; documentId?: string }>>;
+        } | null;
+        if (rd) {
+          for (const row of rd.rows) {
+            for (const cell of row) {
+              if (cell.type === 'image' && cell.documentId) {
+                sectionDocumentIdSet.add(cell.documentId);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const sectionDocIds = Array.from(sectionDocumentIdSet);
+    const sectionDocRows =
+      sectionDocIds.length > 0
+        ? await this.db
+            .select({
+              id: documents.id,
+              filePath: documents.filePath,
+              mimeType: documents.mimeType,
+            })
+            .from(documents)
+            .where(inArray(documents.id, sectionDocIds))
+        : [];
+
+    const sectionDocumentPaths = new Map(
+      sectionDocRows.map((r) => [r.id, { filePath: r.filePath, mimeType: r.mimeType }])
+    );
+
     return {
       recordId: record.id,
       managementNumber: eqRow.managementNumber ?? '-',
@@ -315,6 +372,10 @@ export class SelfInspectionExportDataService {
       approver: {
         name: approverRow?.name ?? '-',
         signaturePath: approverRow?.signaturePath ?? null,
+      },
+      resultSections: {
+        sections: sectionRows,
+        documentPaths: sectionDocumentPaths,
       },
     };
   }

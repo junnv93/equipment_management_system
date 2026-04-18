@@ -424,7 +424,7 @@ export class FormTemplateExportService {
     };
   }
 
-  // 공유 헬퍼(insertDocxSignature/renderResultSections/loadDocumentImagesBatch)는
+  // 공유 헬퍼(insertDocxSignature/renderResultSections)는
   // docx-xml-helper.ts로 이관됨. exportCheckout/exportRentalImportAsCheckoutForm/
   // exportEquipmentImport는 상단 import의 `insertDocxSignature`를 직접 사용한다.
 

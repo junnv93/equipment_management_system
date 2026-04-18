@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { AppDatabase } from '@equipment-management/db';
 import {
   QP18_CLASSIFICATION_LABELS,
   SELF_INSPECTION_RESULT_LABELS,
@@ -31,15 +30,13 @@ import type { SelfInspectionExportData } from './self-inspection-export-data.ser
  * 4. T1 R1+: 기타 특기사항 (3열 — 번호/내용/일자)
  * 5. T2 R0~R2: 결재 + 점검일/점검자/특기사항
  * 6. 결재란 서명 이미지 (담당=submitter, 검토=submitter, 승인=approver)
- * 7. renderResultSections(recordId, 'self')
+ * 7. renderResultSections(data.resultSections) — DB 접근 없음, 선조회 데이터 주입
  */
 @Injectable()
 export class SelfInspectionRendererService {
   private readonly logger = new Logger(SelfInspectionRendererService.name);
 
   constructor(
-    @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase,
     @Inject(STORAGE_PROVIDER)
     private readonly storage: IStorageProvider
   ) {}
@@ -59,8 +56,8 @@ export class SelfInspectionRendererService {
     this.injectSignOff(doc, data);
     await this.injectSignatures(doc, data);
 
-    // 동적 결과 섹션 (장비 유형별 가변 측정 결과)
-    await renderResultSections(doc, data.recordId, 'self', this.db, this.storage);
+    // 동적 결과 섹션 (Data Service 선조회 데이터 — DB 접근 없음)
+    await renderResultSections(doc, data.resultSections, this.storage);
 
     return doc.toBuffer();
   }

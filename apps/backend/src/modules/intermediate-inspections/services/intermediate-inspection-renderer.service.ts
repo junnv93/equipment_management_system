@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { AppDatabase } from '@equipment-management/db';
 import {
   QP18_CLASSIFICATION_LABELS,
   INSPECTION_JUDGMENT_LABELS,
@@ -31,15 +30,13 @@ import type { IntermediateInspectionExportData } from './intermediate-inspection
  * 4. T1 R2+: 측정 장비 List (4열)
  * 5. T2 R0~R2: 결재 + 점검일/점검자/특기사항
  * 6. 결재란 서명 이미지 (담당/검토/승인)
- * 7. renderResultSections(inspectionId, 'intermediate')
+ * 7. renderResultSections(data.resultSections) — DB 접근 없음, 선조회 데이터 주입
  */
 @Injectable()
 export class IntermediateInspectionRendererService {
   private readonly logger = new Logger(IntermediateInspectionRendererService.name);
 
   constructor(
-    @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase,
     @Inject(STORAGE_PROVIDER)
     private readonly storage: IStorageProvider
   ) {}
@@ -59,8 +56,8 @@ export class IntermediateInspectionRendererService {
     this.injectSignOff(doc, data);
     await this.injectSignatures(doc, data);
 
-    // 동적 결과 섹션 (장비 유형별 가변 측정 결과)
-    await renderResultSections(doc, data.inspectionId, 'intermediate', this.db, this.storage);
+    // 동적 결과 섹션 (Data Service 선조회 데이터 — DB 접근 없음)
+    await renderResultSections(doc, data.resultSections, this.storage);
 
     return doc.toBuffer();
   }
