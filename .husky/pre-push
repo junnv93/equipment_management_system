@@ -7,9 +7,10 @@
 #
 # What runs:
 #   1. ENV SSOT sync (env.validation.ts ↔ .env.example drift 방지)
-#   2. TypeScript type check (all packages)
-#   3. Backend unit tests
-#   4. Frontend unit tests
+#   2. SOPS sync (SOPS_AGE_KEY env + sops binary 존재 시에만 — 선택적)
+#   3. TypeScript type check (all packages)
+#   4. Backend unit tests
+#   5. Frontend unit tests
 #
 # Skipped (still rely on GitHub Actions for these):
 #   - E2E tests (too slow for every push)
@@ -20,6 +21,18 @@ set -e
 
 echo "▶ pre-push: env-sync check..."
 pnpm verify:env-sync
+
+# SOPS 검증 — 로컬에 SOPS_AGE_KEY가 설정되어 있고 sops 바이너리가 있을 때만 실행.
+# 없으면 조용히 스킵 (CI 왕복 전에 드리프트 조기 감지).
+if [ -n "${SOPS_AGE_KEY:-}" ] && command -v sops >/dev/null 2>&1; then
+  echo "▶ pre-push: SOPS sync check (lan + prod)..."
+  _sops_tmp="$(mktemp)"
+  sops decrypt --output-type dotenv infra/secrets/lan.env.sops.yaml > "$_sops_tmp" 2>/dev/null \
+    && pnpm verify:env-sync --file "$_sops_tmp"
+  sops decrypt --output-type dotenv infra/secrets/prod.env.sops.yaml > "$_sops_tmp" 2>/dev/null \
+    && pnpm verify:env-sync --file "$_sops_tmp"
+  rm -f "$_sops_tmp"
+fi
 
 echo "▶ pre-push: TypeScript check..."
 pnpm tsc --noEmit

@@ -166,6 +166,16 @@ jobs:
         # x-security anchor 동기화 + 서비스별 cap_drop/no-new-privileges 전수 검사
         run: bash infra/scripts/verify-compose-security.sh
 
+      - name: Infra — SOPS 게이트 상태 확인
+        # SOPS_AGE_KEY 미등록 시 경고 출력 (silently skip 방지).
+        # 1인 solo 프로젝트에서는 intentional — fork/신규 레포 셋업 시 경고로 인지 가능.
+        # secret 등록: GitHub 레포 Settings → Secrets → SOPS_AGE_KEY
+        if: ${{ secrets.SOPS_AGE_KEY == '' }}
+        run: |
+          echo "::warning title=SOPS 검증 SKIPPED::SOPS_AGE_KEY secret가 GitHub에 등록되지 않았습니다."
+          echo "::warning::lan.env.sops.yaml / prod.env.sops.yaml 검증이 이 실행에서 건너뜁니다."
+          echo "::warning::등록 방법: 레포 Settings → Secrets → New secret → SOPS_AGE_KEY"
+
       - name: Infra — SOPS 바이너리 설치
         # 다음 2개 step (lan, prod) 에서 공용. 단일 설치로 빌드 시간 절약.
         if: ${{ secrets.SOPS_AGE_KEY != '' }}
