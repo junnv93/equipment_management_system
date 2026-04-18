@@ -30,6 +30,7 @@ import {
 } from '@/lib/design-tokens';
 import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
+import { EquipmentStatusEnum } from '@equipment-management/schemas';
 import type { ManagementMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
@@ -135,7 +136,7 @@ const EquipmentCard = memo(function EquipmentCard({
             <Checkbox
               checked={selection.isSelected(equipment.id)}
               onCheckedChange={() => selection.toggle(equipment.id, equipment)}
-              disabled={equipment.status === 'DISPOSED'}
+              disabled={equipment.status === EquipmentStatusEnum.enum.disposed}
               aria-label={equipment.name || equipment.managementNumber || equipment.id}
               className="mt-0.5 shrink-0"
             />
@@ -290,7 +291,12 @@ const EquipmentCard = memo(function EquipmentCard({
  * - 검색어 하이라이팅
  * - 스켈레톤 로딩
  */
-function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentCardGridProps) {
+function EquipmentCardGridComponent({
+  items,
+  isLoading,
+  searchTerm,
+  selection,
+}: EquipmentCardGridProps) {
   const t = useTranslations('equipment');
   if (isLoading) {
     return (
@@ -332,7 +338,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
     >
       {items.map((equipment) => (
         <div key={equipment.id} className={EQUIPMENT_CARD_PERFORMANCE_CLASSES}>
-          <EquipmentCard equipment={equipment} searchTerm={searchTerm} />
+          <EquipmentCard equipment={equipment} searchTerm={searchTerm} selection={selection} />
         </div>
       ))}
     </div>

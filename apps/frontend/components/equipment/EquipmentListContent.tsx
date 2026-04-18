@@ -24,6 +24,7 @@ import { useRowSelection } from '@/hooks/use-bulk-selection';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { EquipmentStatusEnum } from '@equipment-management/schemas';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import { EQUIPMENT_TOOLBAR_TOKENS, EQUIPMENT_STATS_STRIP_TOKENS } from '@/lib/design-tokens';
 
@@ -243,7 +244,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
 
   // per-row 선택 — DISPOSED 장비는 선택 불가, 필터 변경 시 자동 초기화
   const selection = useRowSelection<Equipment>(items, (e) => e.id, {
-    isSelectable: (e) => e.status !== 'DISPOSED',
+    isSelectable: (e) => e.status !== EquipmentStatusEnum.enum.disposed,
     resetOn: [queryFilters],
   });
 

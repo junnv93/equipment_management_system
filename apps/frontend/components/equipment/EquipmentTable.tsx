@@ -36,6 +36,7 @@ import {
 } from '@/lib/design-tokens';
 import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
+import { EquipmentStatusEnum } from '@equipment-management/schemas';
 import type { ManagementMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 /**
@@ -289,7 +290,7 @@ const EquipmentRow = memo(function EquipmentRow({
           selection={selection}
           ariaLabelKey="bulk.selectRow"
           ariaLabelArgs={(e) => ({ name: e.name || e.managementNumber || e.id })}
-          disabled={equipment.status === 'DISPOSED'}
+          disabled={equipment.status === EquipmentStatusEnum.enum.disposed}
         />
       )}
 
