@@ -216,15 +216,15 @@
 - **설명**: `packages/schemas`의 SSOT enum 배열(`REPAIR_RESULT_VALUES`, `INCIDENT_TYPE_VALUES`)은 `readonly [...]` 타입. Zod `z.enum(VALUES as [string, ...string[]])`로 직접 캐스팅하면 `readonly` → mutable 변환 불가 에러(TS2352). `[...VALUES] as [string, ...string[]]` (spread로 mutable 복사 후 캐스팅) 패턴으로 해결.
 - **체크리스트 반영**: ⏳ 관찰 중 (1회)
 
-### [2026-04-18] EventEmitter2 emitAsync 위치 — 컨트롤러 금지, 서비스 전용
+### [2026-04-18] EventEmitter2 emitAsync 위치 — 컨트롤러 금지, 서비스 전용 ✅ 해소
 - **발견 위치**: `apps/backend/src/modules/non-conformances/non-conformances.controller.ts:391,429`
 - **설명**: 프로젝트 전체에서 `EventEmitter2.emitAsync`는 서비스 계층에서만 발행(`checkouts.service.ts` 등). 컨트롤러에 직접 주입하면 도메인 이벤트 발행 위치가 분산되어 찾기 어려워짐. 컨트롤러는 HTTP 매핑, 서비스는 도메인 이벤트 발행 책임.
-- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 6 "모듈 간 패턴 일관성"에 승격
+- **체크리스트 반영**: ✅ 해소 — ESLint `no-restricted-syntax` 빌드 타임 차단 추가 + NonConformancesService에 uploadAttachment/deleteAttachment 신설로 이관 완료
 
-### [2026-04-18] async onSuccessCallback reject → onError 재진입 — 에러 격리 필요
+### [2026-04-18] async onSuccessCallback reject → onError 재진입 — 에러 격리 필요 ✅ 해소
 - **발견 위치**: `apps/frontend/hooks/use-optimistic-mutation.ts:302`
 - **설명**: `await onSuccessCallback?.()` 패턴에서 callback이 throw하면 TanStack Query가 mutation error로 재처리 → `onError` 재실행 → 성공 토스트 + 에러 토스트 중복 표시. `Promise.allSettled` 사용처는 throw 안 하지만 `invalidateQueries` 실패 등 예외 경로는 위험. callback 에러를 try/catch로 격리해야 함.
-- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 7 "Mutation 라이프사이클"에 승격
+- **체크리스트 반영**: ✅ 해소 — `safeCallback` 헬퍼 신설로 use-optimistic-mutation/use-mutation-with-refresh 양쪽 모두 에러 격리
 
 ### [2026-04-14] AuditLogUserRole 확장 소비처 미갱신 — 'system'/'unknown' 라벨 누락
 - **발견 위치**: `audit.service.ts:417`, `reports.service.ts:1039`, `messages/ko|en/common.json userRoles`

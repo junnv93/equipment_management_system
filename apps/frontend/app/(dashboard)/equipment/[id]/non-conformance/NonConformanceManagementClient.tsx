@@ -163,11 +163,14 @@ export default function NonConformanceManagementClient({
     invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
     successMessage: t('management.toasts.updateSuccess'),
     errorMessage: t('management.toasts.updateError'),
-    onSuccessCallback: () => {
+    onSuccessCallback: async () => {
       setEditingId(null);
       setUpdateForm({ correctionContent: '', status: '' });
       // 교차 엔티티 캐시 무효화 (상태 변경 시 장비 목록/대시보드 갱신)
-      EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(queryClient, equipmentId);
+      await EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(
+        queryClient,
+        equipmentId
+      );
     },
   });
 
