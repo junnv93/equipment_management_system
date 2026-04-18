@@ -17,6 +17,7 @@ import {
 } from './helpers/workflow-helpers';
 import { TEST_CALIBRATION_IDS, BASE_URLS } from '../shared/constants/shared-test-data';
 import { getBackendToken } from '../shared/helpers/api-helpers';
+import PizZip from 'pizzip';
 
 const WF_CALIBRATION_ID = TEST_CALIBRATION_IDS.CALIB_001;
 const BACKEND_URL = BASE_URLS.BACKEND;
@@ -97,5 +98,38 @@ test.describe('WF-19b: 중간점검표 양식 내보내기 (QP-18-03)', () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(resp.status()).toBe(400);
+  });
+
+  test('Step 4: SSOT 라벨 회귀 — DOCX XML에 INSPECTION_JUDGMENT_LABELS 값 포함', async ({
+    testOperatorPage: tePage,
+  }) => {
+    // Step 1에서 생성한 inspectionId 재사용 (judgment: 'pass' → '합격')
+    expect(inspectionId, 'Step 1에서 inspectionId가 설정되어야 함').toBeTruthy();
+    await clearBackendCache();
+
+    const token = await getBackendToken(tePage, 'test_engineer');
+    const resp = await tePage.request.get(
+      `${BACKEND_URL}/api/reports/export/form/UL-QP-18-03?inspectionId=${inspectionId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    expect(resp.status()).toBe(200);
+
+    const docxBuffer = await resp.body();
+
+    // PizZip으로 word/document.xml 파싱 → SSOT 라벨 값 검증
+    const zip = new PizZip(docxBuffer);
+    const docXml = zip.file('word/document.xml')?.asText();
+    expect(docXml, 'document.xml이 존재해야 함').toBeTruthy();
+
+    // INSPECTION_JUDGMENT_LABELS: pass → '합격', fail → '불합격'
+    // 점검 생성 시 judgment: 'pass' 2건 → 문서에 '합격' 라벨이 반드시 포함
+    expect(docXml).toContain('합격');
+
+    // 교정 유효기간 snapshot — 생성 시 calibrationValidityPeriod: '1년' 전달
+    expect(docXml).toContain('1년');
+
+    // classification snapshot — 생성 시 classification: 'calibrated'
+    // 양식 헤더에는 QP18_CLASSIFICATION_LABELS → '교정기기'로 렌더
+    expect(docXml).toContain('교정기기');
   });
 });

@@ -27,6 +27,7 @@ import {
 } from './helpers/workflow-helpers';
 import { TEST_EQUIPMENT_IDS, TEST_TEAM_IDS, BASE_URLS } from '../shared/constants/shared-test-data';
 import { getBackendToken } from '../shared/helpers/api-helpers';
+import PizZip from 'pizzip';
 
 const WF_EQUIPMENT_ID = TEST_EQUIPMENT_IDS.TRANSMITTER_UIW_W;
 const BACKEND_URL = BASE_URLS.BACKEND;
@@ -47,7 +48,7 @@ test.describe('WF-20b: 자체점검표 양식 내보내기 (QP-18-05)', () => {
   test('Step 1: draft 상태 자체점검 export → 200 + DOCX (서명 빈칸)', async ({
     testOperatorPage: page,
   }) => {
-    // draft 상태로 점검 생성
+    // draft 상태로 점검 생성 — snapshot 필드 명시적 전달 (UL-QP-18-05 헤더 T0 R0 C1 / T0 R3 C3)
     await createSelfInspection(page, WF_EQUIPMENT_ID, {
       inspectionDate: today,
       items: [
@@ -58,6 +59,9 @@ test.describe('WF-20b: 자체점검표 양식 내보내기 (QP-18-05)', () => {
       ],
       overallResult: 'pass',
       specialNotes: [{ content: '측정장비: NETWORK ANALYZER, 상태 양호', date: today }],
+      // UL-QP-18-05 양식 헤더 snapshot — 장비 마스터 drift 방지
+      classification: 'calibrated',
+      calibrationValidityPeriod: '1년',
     });
     await clearBackendCache();
 
@@ -144,6 +148,33 @@ test.describe('WF-20b: 자체점검표 양식 내보내기 (QP-18-05)', () => {
     );
     const body = await resp.body();
     expect(body.length).toBeGreaterThan(1000);
+  });
+
+  test('Step 3b: SSOT 라벨 회귀 — DOCX XML에 snapshot 값 포함 (교정기기 / 1년)', async ({
+    testOperatorPage: page,
+  }) => {
+    // Step 1에서 생성한 점검의 latest export 재활용
+    // (snapshot: classification='calibrated'→'교정기기', calibrationValidityPeriod='1년')
+    await clearBackendCache();
+
+    const token = await getBackendToken(page, 'test_engineer');
+    const resp = await page.request.get(
+      `${BACKEND_URL}/api/reports/export/form/UL-QP-18-05?equipmentId=${WF_EQUIPMENT_ID}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    expect(resp.status()).toBe(200);
+
+    const docxBuffer = await resp.body();
+    const zip = new PizZip(docxBuffer);
+    const docXml = zip.file('word/document.xml')?.asText();
+    expect(docXml, 'document.xml이 존재해야 함').toBeTruthy();
+
+    // QP18_CLASSIFICATION_LABELS: 'calibrated' → '교정기기' (양식 T0 R0 C1)
+    expect(docXml).toContain('교정기기');
+    // calibrationValidityPeriod snapshot: '1년' (양식 T0 R3 C3)
+    expect(docXml).toContain('1년');
+    // SELF_INSPECTION_RESULT_LABELS: 'pass' → '이상 없음' (점검 항목 결과)
+    expect(docXml).toContain('이상 없음');
   });
 
   test('Step 4: QP-18-10 공용장비 사용/반납 확인서 export → 200', async ({
