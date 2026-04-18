@@ -4,6 +4,8 @@ import { LabelBatchExceededError } from './label-batch-error';
 export interface LabelItem {
   managementNumber: string;
   equipmentName: string;
+  serialNumber?: string;
+  /** @deprecated subLabel은 새 테이블 레이아웃에서 사용되지 않습니다 */
   subLabel?: string;
 }
 

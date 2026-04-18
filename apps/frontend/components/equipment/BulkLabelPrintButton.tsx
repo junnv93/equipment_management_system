@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Printer, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { LABEL_CONFIG } from '@equipment-management/shared-constants';
-import { SITE_LABELS, type Site } from '@equipment-management/schemas';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -62,9 +61,7 @@ export function BulkLabelPrintButton({
         items: selectedItems.map((e) => ({
           managementNumber: e.managementNumber,
           equipmentName: e.name,
-          subLabel: e.site
-            ? `${SITE_LABELS[e.site as Site] ?? ''}${e.teamName ? ' · ' + e.teamName : ''}`
-            : (e.teamName ?? undefined),
+          serialNumber: e.serialNumber ?? undefined,
         })),
         appUrl,
         onProgress: (done, total) => setProgress({ done, total }),

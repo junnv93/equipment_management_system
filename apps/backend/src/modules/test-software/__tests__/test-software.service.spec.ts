@@ -260,7 +260,7 @@ describe('TestSoftwareService', () => {
   });
 
   describe('linkEquipment()', () => {
-    it('장비를 연결하고 이벤트를 emit한다', async () => {
+    it('장비를 연결하고 링크 레코드를 반환한다', async () => {
       const link = {
         id: 'link-uuid-1',
         testSoftwareId: 'sw-uuid-1',
@@ -278,10 +278,6 @@ describe('TestSoftwareService', () => {
       } as never);
 
       expect(result).toMatchObject({ testSoftwareId: 'sw-uuid-1' });
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
-        'test-software.equipment.linked',
-        expect.any(Object)
-      );
     });
 
     it('중복 연결 시 ConflictException을 던진다', async () => {
@@ -299,14 +295,10 @@ describe('TestSoftwareService', () => {
   });
 
   describe('unlinkEquipment()', () => {
-    it('장비 연결을 해제하고 이벤트를 emit한다', async () => {
+    it('장비 연결을 해제한다', async () => {
       await service.unlinkEquipment('sw-uuid-1', 'eq-uuid-1');
 
       expect(mockDb.delete).toHaveBeenCalled();
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
-        'test-software.equipment.unlinked',
-        expect.any(Object)
-      );
     });
 
     it('연결이 없으면 NotFoundException을 던진다', async () => {

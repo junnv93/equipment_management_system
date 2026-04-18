@@ -3,8 +3,8 @@
  *
  * ⚠️ 이 파일이 QR 생성/라벨 레이아웃의 단일 소스입니다.
  * - 프론트엔드 EquipmentQRCode 컴포넌트는 QR_CONFIG 사용
- * - 라벨 PDF 생성 (Web Worker, Phase 2)은 LABEL_CONFIG 사용
- * - 셀 치수 하드코딩 금지 — 모두 여기서 참조
+ * - 라벨 PDF 생성 (Web Worker)은 LABEL_CONFIG 사용
+ * - 셀 치수·폰트 크기·필드명 하드코딩 금지 — 모두 여기서 참조
  */
 
 /**
@@ -13,7 +13,6 @@
  * errorCorrectionLevel 'H':
  *   - 최대 30% 훼손 복구
  *   - 물리 라벨(먼지, 스크래치, 접힘)을 고려한 선택
- *   - 낮은 레벨('L' 7%, 'M' 15%, 'Q' 25%, 'H' 30%) 중 최상
  *
  * margin 1:
  *   - 최소 quiet zone (standard는 4 모듈이지만 라벨 공간 절약)
@@ -28,20 +27,20 @@ export const QR_CONFIG = {
 /**
  * A4 라벨 시트 PDF 레이아웃 (SSOT)
  *
- * 기준:
- *   - A4: 210 × 297mm
- *   - 페이지 여백: 10mm (상하좌우)
- *   - 유효 영역: 190 × 277mm
- *   - 그리드: 4 columns × 7 rows = 28 labels/page
- *   - 셀 간 gutter: 3mm
- *   - 셀 크기: (190 - 3*3)/4 ≈ 45.25mm × (277 - 3*6)/7 ≈ 37mm
+ * 그리드 기준 (cols × rows = 페이지 당 라벨 수):
+ *   - 3 × 5 = 15 labels/page
+ *   - 셀 크기: (190 - 3*2)/3 ≈ 61.3mm × (277 - 3*4)/5 = 53mm
  *
- * 각 셀 내부 레이아웃 (EquipmentQRCode 인쇄와 동일):
- *   - QR: 25 × 25mm (좌측)
- *   - 텍스트 영역 (우측, ~18mm):
- *       - 장비명 (9pt, 2줄 truncate)
- *       - 관리번호 (11pt, bold, monospace)
- *       - 사이트·팀 (7pt)
+ * 각 셀 내부 레이아웃:
+ *   ┌─────────────────────────────────────────┐
+ *   │         │ 관리번호 │ SUW-E0001          │
+ *   │  [QR]   │─────────┼────────────────────│
+ *   │  25×25mm│ 장비명   │ 오실로스코프       │
+ *   │         │─────────┼────────────────────│
+ *   │         │ 일련번호 │ SN-12345           │
+ *   └─────────────────────────────────────────┘
+ *
+ * 페이지 당 라벨 수 변경: cols/rows 수정 → getLabelCellDimensions()가 자동 재계산.
  */
 export const LABEL_CONFIG = {
   pdf: {
@@ -49,8 +48,10 @@ export const LABEL_CONFIG = {
     pageWidthMm: 210,
     pageHeightMm: 297,
     marginMm: 10,
-    cols: 4,
-    rows: 7,
+    /** 열 수 — 변경 시 셀 크기가 자동 재계산됨 */
+    cols: 3,
+    /** 행 수 — 변경 시 셀 크기가 자동 재계산됨 */
+    rows: 5,
     gutterMm: 3,
   },
   cell: {
@@ -62,16 +63,26 @@ export const LABEL_CONFIG = {
      */
     fontStack:
       '"맑은 고딕", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "나눔고딕", sans-serif',
-    nameFontPt: 9,
+    /** 테이블 필드명(관리번호·장비명·일련번호) 폰트 크기 */
+    fieldLabelFontPt: 6,
+    /** 관리번호 값 폰트 크기 */
     mgmtFontPt: 11,
-    siteFontPt: 7,
+    /** 장비명 값 폰트 크기 */
+    nameFontPt: 9,
+    /** 일련번호 값 폰트 크기 */
+    serialFontPt: 8,
+    /** 테이블 필드명 레이블 — 하드코딩 금지 */
+    tableFieldLabels: {
+      mgmtNo: '관리번호' as const,
+      name: '장비명' as const,
+      serialNo: '일련번호' as const,
+    },
     /** 라벨 셀 OffscreenCanvas 렌더링 해상도. 인쇄 품질 조정 시 여기만 수정. */
     printDpi: 150,
   },
   /**
    * 한 번의 PDF 생성 작업에서 허용되는 최대 장비 수.
-   * 초과 시 사용자에게 배치 분할 확인을 요구 (Phase 2 generate-label-pdf.ts).
-   * 메모리 + Web Worker 진행률 UX를 고려한 보수적 상한.
+   * 초과 시 사용자에게 배치 분할 확인을 요구.
    */
   maxBatch: 500,
 } as const;
