@@ -540,7 +540,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                           {isCheckoutExportable(checkout.status) && (
                             <ExportFormButton
                               formNumber="UL-QP-18-06"
-                              params={{ checkoutId: String(checkout.id) }}
+                              params={{ checkoutId: checkout.id }}
                               label={tCheckouts('actions.exportForm')}
                               errorToastDescription={tCheckouts('toasts.exportFormError')}
                               size="sm"
