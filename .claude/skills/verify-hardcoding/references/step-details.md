@@ -83,6 +83,12 @@ grep -rn "'equipment:\|'checkouts:\|'calibration:\|'dashboard:\|'disposal-reques
 grep -rn "'checkout:\|'calibration:\|'disposal-requests:\|'equipment-imports:" apps/backend/src/common/cache/cache-event.registry.ts | grep -v "CACHE_KEY_PREFIXES\|// "
 ```
 
+```bash
+# CABLES_CACHE_PREFIX 우회 — 인라인 복합 조합 패턴 탐지 (2026-04-19 추가)
+# cables.service.ts와 data-migration.service.ts 모두 CABLES_CACHE_PREFIX SSOT 사용 필수
+grep -rn '${CACHE_KEY_PREFIXES.CALIBRATION}cables:' apps/backend/src/modules apps/backend/src/common --include="*.ts" | grep -v "cable-key-prefixes\|// "
+```
+
 ## Step 9: APPROVAL_KPI 임계값
 
 ```bash

@@ -46,6 +46,8 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/checkouts/checkout-scope.util.ts`                   | Checkout 스코프 SSOT 헬퍼 — list/KPI/action 가드가 동일 3-case predicate 공유 (Step 6a 참조) |
 | `apps/backend/src/modules/reports/form-template-export.service.ts`            | ILIKE 검색 사용 (exportSoftwareRegistry params.search — safeIlike+likeContains+or() 적용 완료 2026-04-19) |
 | `apps/backend/src/modules/reports/services/equipment-registry-data.service.ts` | SSOT 상수 사용 (ne(equipment.status, EquipmentStatusValues.DISPOSED) — EquipmentStatusValues SSOT 적용 완료 2026-04-19) |
+| `apps/backend/src/modules/data-migration/services/fk-resolution.service.ts` | ILIKE 이름 검색 (users.name) — safeIlike + likeContains 사용 (2026-04-19 적용) |
+| `apps/backend/src/modules/cables/cables.service.ts` | 케이블 ILIKE 검색 — safeIlike + likeContains + CABLES_CACHE_PREFIX SSOT 사용 |
 
 ## Workflow
 

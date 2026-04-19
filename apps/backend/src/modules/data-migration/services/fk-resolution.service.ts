@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
-import { eq, ilike, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
+import { safeIlike, likeContains } from '../../../common/utils/like-escape';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
@@ -212,7 +213,7 @@ export class FkResolutionService {
       const rows = await this.db
         .select({ id: users.id, email: users.email, name: users.name })
         .from(users)
-        .where(and(ilike(users.name, name), eq(users.isActive, true)));
+        .where(and(safeIlike(users.name, likeContains(name)), eq(users.isActive, true)));
 
       if (rows.length > 0) {
         result.set(

@@ -1,30 +1,20 @@
-import { test } from '@playwright/test';
+import { test } from '../../../shared/fixtures/auth.fixture';
+import { TEST_EQUIPMENT_IDS } from '../../../shared/constants/shared-test-data';
 
-test('open inspection form for viewing', async ({ page }) => {
-  // storageState로 인증
-  const fs = await import('fs');
-  const path = await import('path');
-  const statePath = path.join(__dirname, '../../../.auth/test-engineer.json');
-  if (fs.existsSync(statePath)) {
-    const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
-    if (state.cookies) {
-      await page.context().addCookies(state.cookies);
-    }
-  }
+const EQUIPMENT_ID = TEST_EQUIPMENT_IDS.SPECTRUM_ANALYZER_SUW_E;
 
-  await page.goto(
-    'http://localhost:3000/equipment/eeee1001-0001-4001-8001-000000000001?tab=inspection'
-  );
+// 수동 디버그 전용 — inspection-form-unified.spec.ts가 자동화 커버리지 담당
+// CI에서 실행하려면 page.pause() 제거 후 test.skip 해제
+test.skip('seed 장비로 점검폼 시각 확인 (수동 디버그)', async ({ testOperatorPage }) => {
+  await testOperatorPage.goto(`/equipment/${EQUIPMENT_ID}?tab=inspection`);
 
-  // 점검 기록 작성 버튼 클릭
-  const btn = page.getByRole('button', { name: /점검 기록 작성/ });
+  const btn = testOperatorPage.getByRole('button', { name: /점검 기록 작성/ });
   await btn.waitFor({ state: 'visible', timeout: 10000 });
   await btn.click();
 
-  // 폼 다이얼로그가 열릴 때까지 대기
-  const dialog = page.getByRole('dialog');
+  const dialog = testOperatorPage.getByRole('dialog');
   await dialog.waitFor({ state: 'visible', timeout: 5000 });
 
-  // 여기서 멈춤 - 브라우저에서 확인 가능
-  await page.pause();
+  // 브라우저에서 직접 확인하려면 아래 주석 해제:
+  // await testOperatorPage.pause();
 });

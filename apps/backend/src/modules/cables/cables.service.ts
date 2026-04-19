@@ -11,7 +11,7 @@ import {
 } from '@equipment-management/db/schema';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
-import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+import { CABLES_CACHE_PREFIX } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import type { CreateCableInput } from './dto/create-cable.dto';
@@ -21,7 +21,7 @@ import type { CreateMeasurementInput } from './dto/create-measurement.dto';
 
 @Injectable()
 export class CablesService extends VersionedBaseService {
-  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CALIBRATION + 'cables:';
+  private readonly CACHE_PREFIX = CABLES_CACHE_PREFIX;
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')

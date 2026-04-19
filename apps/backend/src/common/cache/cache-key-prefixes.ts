@@ -72,6 +72,14 @@ export const CACHE_KEY_PREFIXES = {
   SELF_INSPECTIONS: 'self-inspections:',
 } as const;
 
+/**
+ * 케이블 캐시 프리픽스 — CALIBRATION 하위 네임스페이스 복합 키 SSOT
+ *
+ * cables.service.ts와 data-migration.service.ts 양쪽에서 참조.
+ * 객체 리터럴 내 자기 참조 불가로 CACHE_KEY_PREFIXES 외부에 선언.
+ */
+export const CABLES_CACHE_PREFIX = `${CACHE_KEY_PREFIXES.CALIBRATION}cables:` as const;
+
 export type CacheKeyPrefix = (typeof CACHE_KEY_PREFIXES)[keyof typeof CACHE_KEY_PREFIXES];
 
 /**

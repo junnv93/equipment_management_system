@@ -38,7 +38,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import type { MulterFile } from '../../../types/common.types';
 import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
-import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
+import { CACHE_KEY_PREFIXES, CABLES_CACHE_PREFIX } from '../../../common/cache/cache-key-prefixes';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { EquipmentHistoryService } from '../../equipment/services/equipment-history.service';
 import {
@@ -845,11 +845,10 @@ export class DataMigrationService {
         this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.NON_CONFORMANCES);
       }
       // 케이블이 등록된 경우 목록 캐시 무효화
-      // CablesService는 CALIBRATION 복합 프리픽스(`${CACHE_KEY_PREFIXES.CALIBRATION}cables:`)를 사용
       if (
         sheetSummaries.some((s) => s.sheetType === MIGRATION_SHEET_TYPE.CABLE && s.createdCount > 0)
       ) {
-        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}cables:`);
+        this.cacheService.deleteByPrefix(CABLES_CACHE_PREFIX);
       }
 
       // 세션 상태 → completed (에러 리포트 접근용으로 캐시 유지)

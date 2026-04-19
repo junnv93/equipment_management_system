@@ -555,6 +555,9 @@ export class DocumentService {
 
     let totalPurged = 0;
     let totalFailed = 0;
+    // 배치 내 모든 파일 삭제 실패 시 무한루프 방지 — 연속 실패 2회면 중단
+    let consecutiveFullFailBatches = 0;
+    const MAX_CONSECUTIVE_FULL_FAIL = 2;
 
     for (;;) {
       const batch = await this.db
@@ -566,6 +569,8 @@ export class DocumentService {
         .limit(BATCH_SIZE);
 
       if (batch.length === 0) break;
+
+      let batchSucceeded = 0;
 
       for (const doc of batch) {
         try {
@@ -582,6 +587,7 @@ export class DocumentService {
         try {
           await this.db.delete(documents).where(eq(documents.id, doc.id));
           totalPurged++;
+          batchSucceeded++;
         } catch (error) {
           // 파일은 삭제됐지만 DB 삭제 실패 — 다음 실행에서 파일 미존재로 스킵됨
           totalFailed++;
@@ -589,6 +595,19 @@ export class DocumentService {
             `Failed to hard-delete document record ${doc.id}: ${error instanceof Error ? error.message : String(error)}`
           );
         }
+      }
+
+      // 배치 내 성공 0건: 전체 실패 배치로 간주
+      if (batchSucceeded === 0) {
+        consecutiveFullFailBatches++;
+        if (consecutiveFullFailBatches >= MAX_CONSECUTIVE_FULL_FAIL) {
+          this.logger.error(
+            `purgeDeletedDocuments: ${MAX_CONSECUTIVE_FULL_FAIL} consecutive full-fail batches — aborting to prevent infinite loop`
+          );
+          break;
+        }
+      } else {
+        consecutiveFullFailBatches = 0;
       }
 
       // 마지막 배치가 BATCH_SIZE 미만이면 종료
