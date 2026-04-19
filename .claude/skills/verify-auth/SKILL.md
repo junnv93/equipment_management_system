@@ -93,6 +93,7 @@ POST/PATCH/DELETE 엔드포인트에 Permission Guard가 적용되어 있는지 
 | 9   | AuthenticatedRequest 옵셔널 | PASS/FAIL | req?: 또는 req!. 사용 위치      |
 | 10  | enforceSiteAccess 적용      | PASS/FAIL | 누락 mutation 컨트롤러          |
 | 11  | 라우트 선언 순서            | PASS/FAIL | 정적 sub-path 가 /:param 뒤에 선언된 위치 |
+| 12  | assertIndependentApprover   | PASS/FAIL | 승인 워크플로우 모듈 approve() 미적용 목록 |
 ```
 
 ### Step 11: 라우트 선언 순서 검증
@@ -114,6 +115,35 @@ grep -n "@(Get|Post|Patch|Delete|Put)(" apps/backend/src/modules/**/*.controller
 **FAIL:** `@Patch(':uuid/result-sections/:sectionId')` 뒤에 `@Patch(':uuid/result-sections/reorder')` 가 선언됨.
 
 **배경:** 2026-04-12 harness evaluator 1차 FAIL 사유. `feedback_nest_route_order.md` 영구화.
+
+### Step 12: assertIndependentApprover 적용 확인 (ISO 17025 §6.2.2)
+
+승인 워크플로우가 있는 모듈의 `approve()` 서비스 메서드에서 `assertIndependentApprover` (또는 인라인 동등 검사)가 적용되어 있는지 확인합니다.
+
+```bash
+# 승인 워크플로우 모듈 서비스에서 approve 메서드 파악
+grep -rn "async approve(" \
+  apps/backend/src/modules/calibration-plans \
+  apps/backend/src/modules/intermediate-inspections \
+  apps/backend/src/modules/equipment-imports \
+  apps/backend/src/modules/self-inspections \
+  apps/backend/src/modules/software-validations \
+  --include="*.service.ts"
+
+# 위 파일들에 assertIndependentApprover 임포트 존재 확인
+grep -rn "assertIndependentApprover" \
+  apps/backend/src/modules/calibration-plans \
+  apps/backend/src/modules/intermediate-inspections \
+  apps/backend/src/modules/equipment-imports \
+  apps/backend/src/modules/self-inspections \
+  apps/backend/src/modules/software-validations \
+  --include="*.service.ts"
+```
+
+**PASS:** approve()가 있는 각 서비스 파일에 `assertIndependentApprover` 임포트가 존재하거나 인라인 동등 검사(`if (submittedBy === approverId) throw ForbiddenException`)가 있어야 함.
+**FAIL:** approve()가 있으나 독립성 검사가 전혀 없는 서비스 파일.
+
+**배경:** ISO/IEC 17025 §6.2.2 인원 독립성 요구. 공통 헬퍼: `apps/backend/src/common/guards/assert-independent-approver.ts`
 
 ## Exceptions
 

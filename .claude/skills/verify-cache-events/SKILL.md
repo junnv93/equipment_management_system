@@ -169,6 +169,7 @@ comm -23 /tmp/methods.txt /tmp/helper_methods.txt
 2. **NotificationDispatcher 리스너** — 순수 알림 발송, 캐시 무효화 대상 아님. 레지스트리 등록 불필요.
 3. **테스트 spec의 `eventEmitter.emit()` 호출** — 테스트 내부에서 실제 리스너 트리거 용도. 검증 대상 아님.
 4. **`NOTIFICATION_EVENTS` 상수 중 미발행 이벤트** — 단순 dead code, 본 스킬 범위 외 (verify-ssot에서 커버 가능).
+5. **도메인 리스너의 직접 `deleteByPrefix` 호출** — 이벤트가 `CACHE_INVALIDATION_REGISTRY`에 등록되어 있더라도, DB 업데이트와 캐시 무효화를 같은 트랜잭션에 묶어야 하는 도메인 리스너(`@OnEvent` + `@Injectable()`)는 `cacheService.deleteByPrefix()`를 직접 호출할 수 있다. 예: `SoftwareValidationListener` — `latestValidationId` DB 갱신 + `TEST_SOFTWARE` 캐시 직접 삭제. 레지스트리 에 이미 등록된 이벤트에 추가 캐시 무효화를 하는 것이므로 Step 1 위반이 아님.
 
 ## Severity
 
