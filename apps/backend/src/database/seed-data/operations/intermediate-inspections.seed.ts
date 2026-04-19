@@ -35,8 +35,6 @@ import {
   INTERMEDIATE_INSPECTION_EQUIPMENT_002_B_ID,
   INSPECTION_RESULT_SECTION_001_ID,
   INSPECTION_RESULT_SECTION_002_ID,
-  INSPECTION_RESULT_SECTION_003_ID,
-  INSPECTION_RESULT_SECTION_004_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
   USER_LAB_MANAGER_SUWON_ID,
 } from '../../utils/uuid-constants';
@@ -214,13 +212,14 @@ export const INTERMEDIATE_INSPECTION_EQUIPMENT_SEED_DATA: (typeof intermediateIn
 
 // =============================================================================
 // 동적 결과 섹션 (inspection_result_sections) — INSPECTION_002 전용
-// inspectionType='intermediate', 4개 섹션 — ■ 글머리 구조 검증용
-// 섹션 구성: 측정환경(text) → 측정결과(text) → 출력특성 상세(data_table) → 특이사항(text)
+// inspectionType='intermediate', 2개 섹션 — 보충 정보만 (측정결과는 렌더러가 items SSOT로 자동 생성)
+// 섹션 구성: 측정환경(text) → 특이사항(text)
+// ■ 측정 결과 항목별 나열은 intermediate-inspection-renderer.service.ts injectItemsSummary() 담당
 // =============================================================================
 
 export const INSPECTION_RESULT_SECTIONS_SEED_DATA: (typeof inspectionResultSections.$inferInsert)[] =
   [
-    // ■ 측정 환경
+    // ■ 측정 환경 — 점검 당일 환경 조건 (항목 데이터와 무관한 보충 정보)
     {
       id: INSPECTION_RESULT_SECTION_001_ID,
       inspectionId: INTERMEDIATE_INSPECTION_002_ID,
@@ -235,54 +234,12 @@ export const INSPECTION_RESULT_SECTIONS_SEED_DATA: (typeof inspectionResultSecti
       createdAt: daysAgo(30),
       updatedAt: daysAgo(30),
     },
-    // ■ 측정 결과 — 5개 점검 항목별 결과 나열
+    // ■ 특이사항 — 부적합 항목 조치 기록 (항목 데이터와 무관한 보충 정보)
     {
       id: INSPECTION_RESULT_SECTION_002_ID,
       inspectionId: INTERMEDIATE_INSPECTION_002_ID,
       inspectionType: 'intermediate',
       sortOrder: 2,
-      sectionType: 'text',
-      title: '측정 결과',
-      content:
-        '1. 외관 검사: 이상 없음 (적합)\n' +
-        '2. 주파수 정확도: 0.18 ppm — 기준 ±0.5 ppm 이내 (적합)\n' +
-        '3. 출력 특성: Min -0.8 dB / Max +1.2 dB — 기준 ±2.5 dB 이내 (적합)\n' +
-        '4. 위상 잡음: -98 dBc/Hz @1 GHz 10 kHz offset — 기준 -100 dBc/Hz 이하 초과 (부적합)\n' +
-        '5. 레벨 정확도: 0.25 dB — 기준 ±0.5 dB 이내 (적합)',
-      createdBy: USER_TECHNICAL_MANAGER_SUWON_ID,
-      updatedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
-      createdAt: daysAgo(30),
-      updatedAt: daysAgo(30),
-    },
-    // ■ 출력 특성 주파수별 상세 — 항목 3 detailedResult 기반 데이터 테이블
-    {
-      id: INSPECTION_RESULT_SECTION_003_ID,
-      inspectionId: INTERMEDIATE_INSPECTION_002_ID,
-      inspectionType: 'intermediate',
-      sortOrder: 3,
-      sectionType: 'data_table',
-      title: '출력 특성 주파수별 상세 (항목 3)',
-      tableData: {
-        headers: ['주파수', '측정값 (dB)', '기준 (dB)', '판정'],
-        rows: [
-          ['100 MHz', '-0.3', '±2.5', '합격'],
-          ['500 MHz', '-0.5', '±2.5', '합격'],
-          ['1 GHz', '+0.8', '±2.5', '합격'],
-          ['3 GHz', '+1.2', '±2.5', '합격'],
-          ['6 GHz', '-0.8', '±2.5', '합격'],
-        ],
-      },
-      createdBy: USER_TECHNICAL_MANAGER_SUWON_ID,
-      updatedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
-      createdAt: daysAgo(30),
-      updatedAt: daysAgo(30),
-    },
-    // ■ 특이사항 — 위상 잡음 부적합 조치 기록
-    {
-      id: INSPECTION_RESULT_SECTION_004_ID,
-      inspectionId: INTERMEDIATE_INSPECTION_002_ID,
-      inspectionType: 'intermediate',
-      sortOrder: 4,
       sectionType: 'text',
       title: '특이사항',
       content:

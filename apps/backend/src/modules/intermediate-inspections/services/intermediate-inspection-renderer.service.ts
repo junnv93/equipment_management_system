@@ -30,7 +30,8 @@ import type { IntermediateInspectionExportData } from './intermediate-inspection
  * 4. T1 R2+: 측정 장비 List (4열)
  * 5. T2 R0~R2: 결재 + 점검일/점검자/특기사항
  * 6. 결재란 서명 이미지 (담당/검토/승인)
- * 7. renderResultSections(data.resultSections) — DB 접근 없음, 선조회 데이터 주입
+ * 7. 페이지 나누기 + ■ 측정 결과 자동 생성 (data.items SSOT — DB 섹션과 중복 방지)
+ * 8. renderResultSections(data.resultSections, skipPageBreak) — 보충 섹션(환경/특이사항 등)
  */
 @Injectable()
 export class IntermediateInspectionRendererService {
@@ -56,8 +57,9 @@ export class IntermediateInspectionRendererService {
     this.injectSignOff(doc, data);
     await this.injectSignatures(doc, data);
 
-    // 동적 결과 섹션 (Data Service 선조회 데이터 — DB 접근 없음)
-    await renderResultSections(doc, data.resultSections, this.storage);
+    // 2페이지: ■ 측정 결과 (items SSOT 자동 생성) + 보충 섹션 (DB)
+    this.injectItemsSummary(doc, data);
+    await renderResultSections(doc, data.resultSections, this.storage, { skipPageBreak: true });
 
     return doc.toBuffer();
   }
@@ -245,6 +247,33 @@ export class IntermediateInspectionRendererService {
       data.approver.name,
       this.storage
     );
+  }
+
+  /**
+   * 2페이지 시작: 페이지 나누기 후 ■ 측정 결과 자동 생성.
+   * data.items(SSOT)를 직접 읽어 항목별 결과를 나열 — inspection_result_sections에 중복 저장 불필요.
+   */
+  private injectItemsSummary(doc: DocxTemplate, data: IntermediateInspectionExportData): void {
+    if (data.items.length === 0) return;
+
+    doc.removeTemplateExampleTextAndInsertPageBreak();
+
+    const { check: checkNumId } = doc.bulletNumIds;
+
+    doc.appendParagraph('측정 결과', { bold: true, numId: checkNumId });
+
+    for (const item of data.items) {
+      const judgmentLabel = item.judgment ? INSPECTION_JUDGMENT_LABELS[item.judgment] : '-';
+      doc.appendParagraph(
+        `${item.itemNumber}. ${item.checkItem}: ${item.resultText} (${judgmentLabel})`
+      );
+
+      if (item.rawMultilineResult) {
+        for (const line of item.rawMultilineResult.split('\n')) {
+          if (line.trim()) doc.appendParagraph(`    ${line.trim()}`);
+        }
+      }
+    }
   }
 }
 

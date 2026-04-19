@@ -525,14 +525,17 @@ type RichTableData = {
 export async function renderResultSections(
   doc: DocxTemplate,
   prefetched: InspectionResultSectionPreFetched,
-  storage: IStorageProvider
+  storage: IStorageProvider,
+  options?: { skipPageBreak?: boolean }
 ): Promise<void> {
   const { sections } = prefetched;
 
   if (sections.length === 0) return;
 
-  // 결과 섹션이 있을 때만: 템플릿 예시 텍스트 제거 + 2페이지 시작 페이지 나누기
-  doc.removeTemplateExampleTextAndInsertPageBreak();
+  // 페이지 나누기는 호출자가 이미 삽입한 경우 건너뜀 (skipPageBreak=true)
+  if (!options?.skipPageBreak) {
+    doc.removeTemplateExampleTextAndInsertPageBreak();
+  }
 
   const imageCache = await downloadSectionImages(prefetched.documentPaths, storage);
 
