@@ -27,8 +27,8 @@ export const QR_CONFIG = {
  * A4 라벨 시트 PDF 레이아웃 (SSOT)
  *
  * 그리드 기준 (cols × rows = 페이지 당 라벨 수):
- *   - 3 × 5 = 15 labels/page
- *   - 셀 크기: (190 - 3*2)/3 ≈ 61.3mm × (277 - 3*4)/5 = 53mm
+ *   - 2 × 6 = 12 labels/page
+ *   - 셀 크기: (190 - 3*1)/2 = 93.5mm × (277 - 3*5)/6 ≈ 43.7mm
  *
  * 각 셀 내부 레이아웃 (qrPaddingLeftMm=2 기준):
  *   ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐  ← 절제선 (jsPDF 레이어)
@@ -50,9 +50,9 @@ export const LABEL_CONFIG = {
     pageHeightMm: 297,
     marginMm: 10,
     /** 열 수 — 변경 시 셀 크기가 자동 재계산됨 */
-    cols: 3,
+    cols: 2,
     /** 행 수 — 변경 시 셀 크기가 자동 재계산됨 */
-    rows: 5,
+    rows: 6,
     gutterMm: 3,
     /**
      * 절제선(가위 커팅 가이드) 설정 — 업계 표준 점선 스펙 (SSOT)
