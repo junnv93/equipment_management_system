@@ -135,6 +135,11 @@
 - **설명**: 같은 도메인의 `EquipmentImportDetail`은 모든 mutation에서 fresh fetch 패턴을 사용하지만, `ReceiveEquipmentImportForm`만 `equipmentImport!.version` (캐시 stale 버전) 사용. 이미 승격 완료된 안티패턴의 3번째 재발.
 - **체크리스트 반영**: ✅ 승격 완료 (이미 섹션 2 "Frontend 계층"에 등재) — 재발 빈도 +1 기록
 
+### [2026-04-19] Stale CAS 버전 사용 — TestSoftwareDetailContent.toggleMutation (4차 재발)
+- **발견 위치**: `apps/frontend/app/(dashboard)/software/[id]/TestSoftwareDetailContent.tsx:184`
+- **설명**: `toggleMutation.mutationFn: () => testSoftwareApi.toggleAvailability(id, software?.version ?? 0)` — `software`는 useQuery 캐시 스냅샷이므로 다른 세션에서 수정 후 이 페이지가 열려 있으면 VERSION_CONFLICT 발생. `mutationFn` 내부에서 fresh fetch 후 version 추출 필요.
+- **체크리스트 반영**: ✅ 승격 완료 (이미 섹션 2 "Frontend 계층" 등재) — **4차 재발 확인**
+
 ### [2026-03-30] photoThumbnails queryKey에 photoIds 미포함 — 파생 쿼리 stale 문제
 - **발견 위치**: `apps/frontend/components/equipment/BasicInfoTab.tsx:99`, `lib/api/query-config.ts:394`
 - **설명**: `queryKey`가 `equipmentId`만 포함하고 실제 의존성(`photos` 배열)을 미포함. 사진 추가/삭제 후 동일 `equipmentId`에 대해 캐시가 유효하다고 판단하여 새 사진 썸네일이 표시되지 않음. `photos.map(p => p.id).join(',')`을 queryKey에 포함하여 해결. **파생 쿼리(다른 쿼리 결과에 의존하는 쿼리)는 의존 데이터를 queryKey에 반영해야 함**.
@@ -252,9 +257,9 @@
 - **체크리스트 반영**: ⏳ 관찰 중 (1회)
 
 ### [2026-04-19] QUERY_CONFIG 인라인 오버라이드 — refetchOnMount 분산
-- **발견 위치**: `apps/frontend/components/equipment/EquipmentListContent.tsx:226-232`
-- **설명**: `...QUERY_CONFIG.EQUIPMENT_LIST, refetchOnMount: 'always'` 패턴으로 SSOT 밖에서 캐시 전략을 오버라이드. 추후 `QUERY_CONFIG.EQUIPMENT_LIST`를 변경할 때 충돌 여부를 인지하기 어려움. `refetchOnMount: 'always'`와 이유(상세 페이지 방문 후 복귀 최신 상태 보장)를 QUERY_CONFIG 정의에 통합하는 것이 올바른 SSOT.
-- **체크리스트 반영**: ⏳ 관찰 중 (1회) — 2회 이상 발견 시 섹션 7 "캐시 전략 SSOT"에 승격
+- **발견 위치**: `apps/frontend/components/equipment/EquipmentListContent.tsx:226-232` (1차), `apps/frontend/app/(dashboard)/software/[id]/TestSoftwareDetailContent.tsx:74` (2차 — `staleTime: CACHE_TIMES.MEDIUM` 인라인)
+- **설명**: `...QUERY_CONFIG.XXX, 추가키` 패턴으로 SSOT 밖에서 캐시 전략을 오버라이드. 추후 QUERY_CONFIG 변경 시 충돌 여부를 인지하기 어려움. SoftwareTab.tsx의 동일 쿼리는 `QUERY_CONFIG.HISTORY`를 사용하므로 같은 데이터에 서로 다른 전략이 적용되는 비대칭 발생.
+- **체크리스트 반영**: ✅ **2차 재발 → 섹션 7 "캐시 전략 SSOT" 승격**
 
 ### [2026-04-14] AuditLogUserRole 확장 소비처 미갱신 — 'system'/'unknown' 라벨 누락
 - **발견 위치**: `audit.service.ts:417`, `reports.service.ts:1039`, `messages/ko|en/common.json userRoles`
@@ -359,3 +364,6 @@
 | 2026-04-19 | 안티패턴 | sql raw 템플릿 → eq() 미사용 (enum 필터) — form-template-export:803-810, registry-data:70 | review-learnings.md |
 | 2026-04-19 | 안티패턴 | HandoverQRDisplay appUrl 빈 문자열 가드 없음 — EquipmentQRCode.enabled 패턴과 비대칭 | review-learnings.md |
 | 2026-04-19 | 안티패턴 | QUERY_CONFIG 인라인 오버라이드 — refetchOnMount:'always' SSOT 밖에서 분산 | review-learnings.md |
+| 2026-04-19 | 재발 (4차) | Stale CAS 버전 사용 — TestSoftwareDetailContent.toggleMutation (software?.version 캡처) | review-learnings.md |
+| 2026-04-19 | 재발 (2차) → 승격 | QUERY_CONFIG 인라인 오버라이드 — TestSoftwareDetailContent.linkedEquipment staleTime 인라인 | review-learnings.md → 섹션 7 승격 |
+| 2026-04-19 | 안티패턴 | TestSoftwareDetailContent detail 쿼리에 TEST_SOFTWARE_LIST 프리셋 오사용 (TEST_SOFTWARE_DETAIL 존재) | review-learnings.md |
