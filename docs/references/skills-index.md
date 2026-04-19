@@ -24,6 +24,8 @@
 - **verify-seed-integrity** — Seed 3-way SSOT triangle (seed-test-new wiring + Phase 0 truncate + verification.ts checkCount)
 - **verify-workflows** — Cross-feature workflow E2E coverage (WF-01~WF-16, 역할, 상태 전이)
 - **verify-filters** — URL-driven filter SSOT (filter-utils, hooks, page.tsx server parsing)
+- **verify-qr-ssot** — QR URL 빌더/파서·설정·액션이 SSOT(qr-url.ts, qr-config.ts, qr-access.ts) 경유하는지 검증
+- **verify-handover-security** — Handover/OneTimeToken 보안 (시크릿 분리, jti nonce 소비, TTL SSOT, 권한 가드, 토큰 영속화 금지)
 - **verify-implementation** — 통합 실행 (모든 verify-\* 순차 실행 + 결합 리포트)
 
 ## Review Skills (심층 분석)
