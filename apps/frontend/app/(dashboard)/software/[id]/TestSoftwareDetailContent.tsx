@@ -233,7 +233,7 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
     { key: 'testField', value: t(`testField.${software.testField}`) },
     { key: 'primaryManager', value: software.primaryManagerName },
     { key: 'secondaryManager', value: software.secondaryManagerName },
-    { key: 'installedAt', value: software.installedAt },
+    { key: 'installedAt', value: software.installedAt ? fmtDate(software.installedAt) : null },
     { key: 'manufacturer', value: software.manufacturer },
     { key: 'location', value: software.location },
     {
