@@ -8,6 +8,7 @@ import { Providers } from '@/lib/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { DEFAULT_LOCALE } from '@equipment-management/schemas';
 import { LocaleHtmlSync } from '@/components/i18n/LocaleHtmlSync';
+import { PWAInstallBanner } from '@/components/pwa/PWAInstallBanner';
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
@@ -111,6 +112,7 @@ async function IntlProvider({ children }: { children: React.ReactNode }) {
       <Providers>
         <div className="min-h-screen bg-background flex flex-col">{children}</div>
         <Toaster />
+        <PWAInstallBanner />
       </Providers>
     </NextIntlClientProvider>
   );

@@ -4,6 +4,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 });
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+const withSerwist = require('@serwist/next').default;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -68,4 +69,9 @@ const nextConfig = {
   },
 };
 
-module.exports = withBundleAnalyzer(withNextIntl(nextConfig));
+module.exports = withSerwist({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  // 개발 환경에서는 서비스워커 비활성 — HMR 캐싱 충돌 방지
+  disable: process.env.NODE_ENV === 'development',
+})(withBundleAnalyzer(withNextIntl(nextConfig)));
