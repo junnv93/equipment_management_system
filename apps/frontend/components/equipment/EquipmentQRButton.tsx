@@ -61,7 +61,7 @@ export function EquipmentQRButton({
   const [open, setOpen] = React.useState(false);
   const [printMode, setPrintMode] = React.useState<PrintMode>('sampler');
   const [layoutMode, setLayoutMode] = React.useState<LabelLayoutMode>('full');
-  const [sizePreset, setSizePreset] = React.useState<LabelSizePreset>('standard');
+  const [sizePreset, setSizePreset] = React.useState<LabelSizePreset>('medium');
   const [isGenerating, setIsGenerating] = React.useState(false);
   const appUrl = React.useMemo(getAppUrl, []);
 
@@ -239,17 +239,19 @@ export function EquipmentQRButton({
                   onValueChange={(v) => setSizePreset(v as LabelSizePreset)}
                   className="space-y-1.5"
                 >
-                  {(['standard', 'medium', 'small'] as const).map((preset) => (
-                    <div key={preset} className="flex items-center space-x-2">
-                      <RadioGroupItem value={preset} id={`size-${preset}`} />
-                      <Label
-                        htmlFor={`size-${preset}`}
-                        className="cursor-pointer text-sm font-normal"
-                      >
-                        {t(`size.${preset}`)}
-                      </Label>
-                    </div>
-                  ))}
+                  {(['xl', 'large', 'medium', 'small', 'xs', 'xxs', 'micro'] as const).map(
+                    (preset) => (
+                      <div key={preset} className="flex items-center space-x-2">
+                        <RadioGroupItem value={preset} id={`size-${preset}`} />
+                        <Label
+                          htmlFor={`size-${preset}`}
+                          className="cursor-pointer text-sm font-normal"
+                        >
+                          {t(`size.${preset}`)}
+                        </Label>
+                      </div>
+                    )
+                  )}
                 </RadioGroup>
               </fieldset>
 

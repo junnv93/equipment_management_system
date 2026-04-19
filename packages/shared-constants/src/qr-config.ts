@@ -162,6 +162,12 @@ export const LABEL_CONFIG = {
     /** 다중 줄 렌더링 시 폰트 크기 대비 줄 높이 배율 (CSS line-height 동등) */
     lineHeightRatio: 1.15,
     /**
+     * 폰트 스케일 기준 라벨 높이 (mm) — LABEL_SIZE_PRESETS.xl.heightMm.
+     * Worker는 `heightMm / referenceLabelHeightMm` 비율로 valueFontPx를 보정하여
+     * auto-fit 파이프라인의 시작점을 라벨 크기에 적합하게 조정한다.
+     */
+    referenceLabelHeightMm: 43.7,
+    /**
      * topOffset 하한값 — 실제 사용 폰트·줄 수 기반 contentH가 rowH를 초과해도
      * 텍스트가 셀 상단 경계 밖으로 나가지 않도록 clamp.
      * 0: 상단 정렬 (최소 클리핑). 음수 허용 시 이 값을 낮춤.
@@ -211,8 +217,8 @@ export interface LabelItem {
 // 개별 장비 상세 페이지에서만 아래 preset/layoutMode를 선택할 수 있음.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 단일 라벨 크기 프리셋 — 물리 라벨 용도에 따른 3단계 */
-export type LabelSizePreset = 'standard' | 'medium' | 'small';
+/** 단일 라벨 크기 프리셋 — 7단계 */
+export type LabelSizePreset = 'xl' | 'large' | 'medium' | 'small' | 'xs' | 'xxs' | 'micro';
 
 /** 단일 라벨 레이아웃 모드 */
 export type LabelLayoutMode = 'full' | 'qrOnly';
@@ -220,37 +226,45 @@ export type LabelLayoutMode = 'full' | 'qrOnly';
 /**
  * 단일 라벨 크기 프리셋 정의 (SSOT).
  *
- * | preset   | widthMm × heightMm | qrSizeMm | 권장 용도                     |
- * |----------|--------------------|----------|-------------------------------|
- * | standard | 93.5 × 43.7        | 25       | 일반 장비 (A4 시트 일괄 기준) |
- * | medium   | 60 × 30            | 20       | 중형 장비, 케이스 등          |
- * | small    | 50 × 15            | 12       | 소형·초소형 장비 (최소 규격)  |
+ * | preset | widthMm × heightMm | qrSizeMm | 권장 용도                          |
+ * |--------|--------------------|----------|------------------------------------|
+ * | xl     | 93.5 × 43.7        | 25       | 일반 장비 (A4 시트 일괄 기준)      |
+ * | large  | 80 × 38            | 22       | 대형 계측기기                      |
+ * | medium | 60 × 28            | 18       | 중형 장비                          |
+ * | small  | 50 × 20            | 14       | 소형 장비                          |
+ * | xs     | 42 × 18            | 12       | 휴대용·소형 부착                   |
+ * | xxs    | 36 × 15            | 10       | 케이블·부품                        |
+ * | micro  | 30 × 12            | 9        | 초소형 (QR only 자동 전환)         |
  *
  * qrSizeMm 최솟값 근거:
  *   URL ~30자 + errorCorrectionLevel H → 33×33 모듈.
- *   300dpi 기준 스캔 신뢰 하한 ~12mm (모듈당 약 0.36mm ≥ 0.25mm 안전 마진).
+ *   300dpi 기준 스캔 신뢰 하한 ~9mm (모듈당 약 0.27mm ≥ 0.25mm 안전 마진).
  */
 export const LABEL_SIZE_PRESETS: Record<
   LabelSizePreset,
   { widthMm: number; heightMm: number; qrSizeMm: number }
 > = {
-  standard: { widthMm: 93.5, heightMm: 43.7, qrSizeMm: 25 },
-  medium: { widthMm: 60, heightMm: 30, qrSizeMm: 20 },
-  small: { widthMm: 50, heightMm: 15, qrSizeMm: 12 },
+  xl: { widthMm: 93.5, heightMm: 43.7, qrSizeMm: 25 },
+  large: { widthMm: 80, heightMm: 38, qrSizeMm: 22 },
+  medium: { widthMm: 60, heightMm: 28, qrSizeMm: 18 },
+  small: { widthMm: 50, heightMm: 20, qrSizeMm: 14 },
+  xs: { widthMm: 42, heightMm: 18, qrSizeMm: 12 },
+  xxs: { widthMm: 36, heightMm: 15, qrSizeMm: 10 },
+  micro: { widthMm: 30, heightMm: 12, qrSizeMm: 9 },
 };
 
 /**
  * 레이아웃 모드 최소 크기 제약 (SSOT).
  *
- * 'full' 하한을 소형 라벨(30×15mm)이 포함되도록 낮춤.
- * auto-fit 파이프라인이 폰트를 자동 축소하여 공간에 맞춤.
+ * full.minHeightMm=13: micro(12mm)는 3행 텍스트가 물리적으로 불가능 → qrOnly 자동 전환.
+ * auto-fit 파이프라인이 나머지 크기에서 폰트를 자동 축소하여 공간에 맞춤.
  */
 export const LABEL_LAYOUT_CONSTRAINTS: Record<
   LabelLayoutMode,
   { minWidthMm: number; minHeightMm: number }
 > = {
-  full: { minWidthMm: 25, minHeightMm: 12 },
-  qrOnly: { minWidthMm: 15, minHeightMm: 15 },
+  full: { minWidthMm: 25, minHeightMm: 13 },
+  qrOnly: { minWidthMm: 15, minHeightMm: 9 },
 };
 
 /**
@@ -288,13 +302,18 @@ export function resolveLayoutMode(
  *
  * A4 usable: 190mm × 277mm (margin 10mm).
  * 가로: cols=1이므로 각 라벨이 단독 배치, 모두 190mm 이내 ✓
- * 세로 합계 (headerHeightMm=7, groupGapMm=6 분할):
- *   7 + 43.7 + 6 + 7 + 30 + 6 + 7 + 15 = 121.7mm < 277mm ✓
+ * 세로 합계 (headerHeightMm=7, groupGapMm=6):
+ *   (7+43.7)+(7+38)+(7+28)+(7+20)+(7+18)+(7+15)+(7+12) + 6×6 = 259.7mm
+ *   marginMm=10 기준 최종 바닥 269.7mm < 297mm ✓
  */
 export const LABEL_SAMPLER_LAYOUT: Record<LabelSizePreset, { rows: number; cols: number }> = {
-  standard: { rows: 1, cols: 1 },
+  xl: { rows: 1, cols: 1 },
+  large: { rows: 1, cols: 1 },
   medium: { rows: 1, cols: 1 },
   small: { rows: 1, cols: 1 },
+  xs: { rows: 1, cols: 1 },
+  xxs: { rows: 1, cols: 1 },
+  micro: { rows: 1, cols: 1 },
 } as const;
 
 /**
@@ -329,5 +348,5 @@ export type LabelSamplerLayout = typeof LABEL_SAMPLER_LAYOUT;
  * `LabelSizePreset[]` 타입 보장을 위해 명시적 함수로 분리한다.
  */
 export function getSamplerPresetOrder(): LabelSizePreset[] {
-  return ['standard', 'medium', 'small'];
+  return ['xl', 'large', 'medium', 'small', 'xs', 'xxs', 'micro'];
 }

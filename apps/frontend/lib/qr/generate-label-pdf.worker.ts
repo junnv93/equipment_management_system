@@ -470,12 +470,28 @@ async function renderCellToDataUrl(
     const rowGap = mmToPx(cell.rowGapMm);
     const rowH = Math.floor(cellH / 3); // 3행 균등 분할
 
+    // 라벨 높이 비례 폰트 스케일 — 소형 라벨에서 auto-fit 시작점을 적정화.
+    // shrink-to-fit이 수평 overflow를 처리하고, 이 스케일은 수직 공간 예측을 보정한다.
+    const heightScale = Math.min(1, heightMm / cell.referenceLabelHeightMm);
+    const mgmtFontPx = Math.max(
+      ptToPx(cell.mgmtMinFontPt),
+      Math.round(ptToPx(cell.mgmtFontPt) * heightScale)
+    );
+    const nameFontPx = Math.max(
+      ptToPx(cell.nameMinFontPt),
+      Math.round(ptToPx(cell.nameFontPt) * heightScale)
+    );
+    const serialFontPx = Math.max(
+      ptToPx(cell.serialMinFontPt),
+      Math.round(ptToPx(cell.serialFontPt) * heightScale)
+    );
+
     // Pass 1 — Spec: 행별 렌더링 설정
     const specs: RowSpec[] = [
       {
         label: cell.tableFieldLabels.mgmtNo,
         value: item.managementNumber,
-        valueFontPx: ptToPx(cell.mgmtFontPt),
+        valueFontPx: mgmtFontPx,
         minFontPx: ptToPx(cell.mgmtMinFontPt),
         maxLinesCap: 1,
         bold: true,
@@ -483,7 +499,7 @@ async function renderCellToDataUrl(
       {
         label: cell.tableFieldLabels.name,
         value: item.equipmentName,
-        valueFontPx: ptToPx(cell.nameFontPt),
+        valueFontPx: nameFontPx,
         minFontPx: ptToPx(cell.nameMinFontPt),
         maxLinesCap: cell.nameMaxLinesCap,
         bold: false,
@@ -491,7 +507,7 @@ async function renderCellToDataUrl(
       {
         label: cell.tableFieldLabels.serialNo,
         value: item.serialNumber ?? '—',
-        valueFontPx: ptToPx(cell.serialFontPt),
+        valueFontPx: serialFontPx,
         minFontPx: ptToPx(cell.serialMinFontPt),
         maxLinesCap: 1,
         bold: false,
