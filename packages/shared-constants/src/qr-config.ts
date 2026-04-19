@@ -4,7 +4,7 @@
  * ⚠️ 이 파일이 QR 생성/라벨 레이아웃의 단일 소스입니다.
  * - 프론트엔드 EquipmentQRCode 컴포넌트는 QR_CONFIG 사용
  * - 라벨 PDF 생성 (Web Worker)은 LABEL_CONFIG 사용
- * - 셀 치수·폰트 크기·필드명 하드코딩 금지 — 모두 여기서 참조
+ * - 셀 치수·폰트 크기·필드명·절제선 하드코딩 금지 — 모두 여기서 참조
  */
 
 /**
@@ -30,16 +30,18 @@ export const QR_CONFIG = {
  *   - 3 × 5 = 15 labels/page
  *   - 셀 크기: (190 - 3*2)/3 ≈ 61.3mm × (277 - 3*4)/5 = 53mm
  *
- * 각 셀 내부 레이아웃:
- *   ┌─────────────────────────────────────────┐
- *   │         │ 관리번호 │ SUW-E0001          │
- *   │  [QR]   │─────────┼────────────────────│
- *   │  25×25mm│ 장비명   │ 오실로스코프       │
- *   │         │─────────┼────────────────────│
- *   │         │ 일련번호 │ SN-12345           │
- *   └─────────────────────────────────────────┘
+ * 각 셀 내부 레이아웃 (qrPaddingLeftMm=2 기준):
+ *   ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐  ← 절제선 (jsPDF 레이어)
+ *   ╎  ▪▫▪  │ 관리번호 │ SUW-E0001            ╎
+ *   ╎  [QR] │──────────┼──────────────────────╎
+ *   ╎  25mm │ 장비명   │ 오실로스코프         ╎
+ *   ╎       │──────────┼──────────────────────╎
+ *   ╎       │ 일련번호 │ SN-12345             ╎
+ *   └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘
+ *   ↑ QR 좌측 qrPaddingLeftMm 여백
  *
  * 페이지 당 라벨 수 변경: cols/rows 수정 → getLabelCellDimensions()가 자동 재계산.
+ * 절제선 스타일 변경: pdf.cutLine 수정 → Worker가 자동 반영.
  */
 export const LABEL_CONFIG = {
   pdf: {
@@ -52,8 +54,36 @@ export const LABEL_CONFIG = {
     /** 행 수 — 변경 시 셀 크기가 자동 재계산됨 */
     rows: 5,
     gutterMm: 3,
+    /**
+     * 절제선(가위 커팅 가이드) 설정 — 업계 표준 점선 스펙 (SSOT)
+     *
+     * 물리 라벨 시트 업계 표준 (Avery, Brother, Zebra 공통):
+     *   - 셀 사이 gutter 중앙에 점선 렌더링 (jsPDF 레이어)
+     *   - 셀 OffscreenCanvas에 포함하지 않음 → gutter 영역을 셀이 알 수 없기 때문
+     *   - 외곽 실선(borderColor) 제거 → 절제선이 경계 역할 대체
+     *
+     * ISO 11093 / ANSI MH10.8 라벨 시트 커팅 가이드 스펙 근거:
+     *   - dash 2mm / gap 1mm: 물리 프린터 최소 해상도(300dpi)에서 식별 가능한 최소 dash
+     *   - 색상 #aaaaaa: CMYK 0/0/0/33 — 프린터 토너 절약 + 시각적 가이드 균형
+     *   - 굵기 0.2mm: 헤어라인(0.1mm) 대비 가독성 + 인쇄물 오염 시 유지
+     */
+    cutLine: {
+      /** 점선 dash 길이 (mm) */
+      dashMm: 2,
+      /** 점선 gap 길이 (mm) */
+      gapMm: 1,
+      /** 절제선 색상 (hex) — CMYK 0/0/0/33 근사 */
+      color: '#aaaaaa' as const,
+      /** 절제선 굵기 (mm) */
+      lineWidthMm: 0.2,
+    },
   },
   cell: {
+    /**
+     * QR 코드 좌측 패딩 (mm) — 절제선과의 시각적 분리 확보.
+     * gutterMm(3mm) 기준 약 2/3 여백 → 인쇄 후 QR이 절제선에 닿지 않음.
+     */
+    qrPaddingLeftMm: 2,
     qrSizeMm: 25,
     textPaddingLeftMm: 2,
     /**
@@ -76,16 +106,24 @@ export const LABEL_CONFIG = {
       name: '장비명' as const,
       serialNo: '일련번호' as const,
     },
-    /** 라벨 셀 OffscreenCanvas 렌더링 해상도. 인쇄 품질 조정 시 여기만 수정. */
-    printDpi: 150,
+    /**
+     * 라벨 셀 OffscreenCanvas 렌더링 해상도.
+     * 200dpi: 물리 프린터 기본 해상도(300dpi)에서 업스케일 없이 선명한 텍스트 보장.
+     * 150dpi 대비 파일 크기 1.78배 증가, 텍스트 가장자리 anti-aliasing 품질 향상.
+     */
+    printDpi: 200,
     /** 테이블 셀 내부 좌우 여백 (mm) — px 환산은 Worker의 mmToPx() 사용 */
     tableCellPaddingMm: 0.9,
     /** 필드명↔값 사이 세로 간격 (mm) */
     rowGapMm: 0.35,
     /** 라벨 셀 전체 배경 색상 (종이 기본색) */
     cellBackgroundColor: '#ffffff' as const,
-    /** 셀 외곽선·구분선 색상 */
-    borderColor: '#e0e0e0' as const,
+    /**
+     * 셀 내부 구분선 색상 (QR↔텍스트 세로선, 행 가로선).
+     * #c0c0c0: 일반 레이저/잉크젯 프린터에서 식별 가능한 최소 명도.
+     * 기존 #e0e0e0은 저품질 프린터에서 소실됨 → #c0c0c0으로 상향.
+     */
+    borderColor: '#c0c0c0' as const,
     /** 필드명(label) 텍스트 색상 */
     fieldLabelColor: '#888888' as const,
     /** 필드값(value) 텍스트 색상 */
@@ -96,7 +134,7 @@ export const LABEL_CONFIG = {
     qrBackgroundColor: '#ffffff' as const,
     /**
      * QR 모듈당 서브픽셀 오버랩(px) — 서브픽셀 경계의 흰 선 artifact 방지.
-     * 인쇄 DPI가 높을수록 0에 가까워도 되나, 150dpi 기준 1px이 안전.
+     * 200dpi 기준 1px 유지 (300dpi 이상에서는 0으로 감소 가능).
      */
     qrModuleOverlapPx: 1,
 

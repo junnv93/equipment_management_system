@@ -5,17 +5,22 @@
  *
  * 렌더링 전략:
  *   각 라벨 셀을 OffscreenCanvas로 완전 렌더링(QR + 테이블)한 뒤 PNG로 변환하여 jsPDF에 삽입.
- *   jsPDF는 페이지 레이아웃(여백·페이지 추가·이미지 배치)만 담당.
+ *   jsPDF는 페이지 레이아웃(여백·페이지 추가·이미지 배치)과 절제선 렌더링을 담당.
  *   텍스트 렌더링은 브라우저 CJK 폰트 스택에 위임 → 한국어 깨짐 없음.
  *
- * 셀 레이아웃:
- *   ┌─────────────────────────────────────────┐
- *   │         │ 관리번호 │ SUW-E0001          │
- *   │  [QR]   │─────────┼────────────────────│
- *   │  25×25mm│ 장비명   │ 오실로스코프       │
- *   │         │─────────┼────────────────────│
- *   │         │ 일련번호 │ SN-12345           │
- *   └─────────────────────────────────────────┘
+ * 셀 레이아웃 (qrPaddingLeftMm=2 기준):
+ *   ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐  ← 절제선 (jsPDF 레이어)
+ *   ╎  ▪▫▪  │ 관리번호 │ SUW-E0001            ╎
+ *   ╎  [QR] │──────────┼──────────────────────╎
+ *   ╎  25mm │ 장비명   │ 오실로스코프         ╎
+ *   ╎       │──────────┼──────────────────────╎
+ *   ╎       │ 일련번호 │ SN-12345             ╎
+ *   └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘
+ *   ↑ qrPaddingLeftMm 여백
+ *
+ * 레이어 구조 (아래→위):
+ *   1. 셀 PNG 이미지 (OffscreenCanvas — QR + 내부 구분선 + 텍스트)
+ *   2. 절제선 점선 (jsPDF — gutter 중앙, 페이지 전체 span)
  *
  * 메시지 프로토콜:
  *   main → worker: `{ type: 'generate', items, appUrl }`
@@ -71,6 +76,18 @@ function mmToPx(mm: number): number {
 /** LABEL_CONFIG.cell.printDpi 기준 pt → px 변환 (하드코딩 금지). */
 function ptToPx(pt: number): number {
   return Math.round((pt * LABEL_CONFIG.cell.printDpi) / 72);
+}
+
+/**
+ * CSS hex 색상 문자열을 jsPDF setDrawColor/setFillColor용 RGB 튜플로 변환.
+ * '#rrggbb' 형식만 지원 (LABEL_CONFIG 색상값 규격).
+ */
+function hexToRgb(hex: string): [number, number, number] {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
 }
 
 /**
@@ -278,9 +295,9 @@ function splitIntoLines(
  * 라벨 셀 1개를 OffscreenCanvas로 렌더링하여 PNG data URL 반환.
  *
  * 구조:
- *   - 좌측: QR 코드 (셀 높이 방향 수직 정렬)
+ *   - 좌측: QR 코드 (qrPaddingLeftMm 여백 후 시작, 셀 높이 방향 수직 정렬)
  *   - 우측: 관리번호·장비명·일련번호 3행 테이블 (행 높이 균등 분할, 텍스트 수직 센터링)
- *   - 셀·행 사이 구분선 (LABEL_CONFIG.cell.borderColor)
+ *   - 내부 구분선만 렌더링 (외곽 실선 없음 — 절제선이 jsPDF 레이어에서 경계 담당)
  *   - 텍스트는 maxWidth 초과 시 "…"로 잘림 → 겹침 없음
  */
 async function renderCellToDataUrl(
@@ -293,11 +310,12 @@ async function renderCellToDataUrl(
 
   const cellW = mmToPx(widthMm);
   const cellH = mmToPx(heightMm);
+  const qrLeftPx = mmToPx(cell.qrPaddingLeftMm);
   const qrPx = mmToPx(cell.qrSizeMm);
   const padPx = mmToPx(cell.textPaddingLeftMm);
 
-  // 텍스트 영역 시작 X 및 내부 여백
-  const textX = qrPx + padPx;
+  // QR 좌측 패딩을 반영한 텍스트 영역 시작 X 및 내부 여백
+  const textX = qrLeftPx + qrPx + padPx;
   const innerPad = mmToPx(cell.tableCellPaddingMm);
   const textMaxW = cellW - textX - innerPad;
 
@@ -310,22 +328,21 @@ async function renderCellToDataUrl(
   c.fillStyle = cell.cellBackgroundColor;
   c.fillRect(0, 0, cellW, cellH);
 
-  // ─── 셀 외곽 테두리 ──────────────────────────────────────────
-  c.strokeStyle = cell.borderColor;
-  c.lineWidth = 1;
-  c.strokeRect(0.5, 0.5, cellW - 1, cellH - 1);
+  // ─── 셀 외곽 테두리 없음 ─────────────────────────────────────
+  // 절제선(pdf.cutLine)이 jsPDF 레이어에서 경계 역할을 대체한다.
+  // strokeRect 제거 → 셀 이미지가 gutter 영역을 침범하지 않음.
 
-  // ─── QR 코드 (수직 중앙 정렬) ────────────────────────────────
+  // ─── QR 코드 (qrPaddingLeftMm 여백, 수직 중앙 정렬) ─────────
   const qrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
     errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
   });
   const qrY = Math.round((cellH - qrPx) / 2);
   c.imageSmoothingEnabled = false; // QR은 이진 이미지 — 스무딩 비활성화로 선명도 유지
-  renderQrToCanvas(c, qrData, 0, qrY, qrPx);
+  renderQrToCanvas(c, qrData, qrLeftPx, qrY, qrPx);
   c.imageSmoothingEnabled = true;
 
   // ─── QR↔텍스트 세로 구분선 ──────────────────────────────────
-  const dividerX = qrPx + Math.round(padPx / 2);
+  const dividerX = qrLeftPx + qrPx + Math.round(padPx / 2);
   c.strokeStyle = cell.borderColor;
   c.lineWidth = 1;
   c.beginPath();
@@ -410,9 +427,52 @@ async function renderCellToDataUrl(
   return blobToDataUrl(blob);
 }
 
+/**
+ * 현재 PDF 페이지에 절제선(커팅 가이드)을 렌더링.
+ *
+ * 업계 표준 (Avery 5160 / Brother DK / Zebra ZT):
+ *   - 열 사이·행 사이 gutter 중앙에 점선 렌더링
+ *   - 페이지 전체 span (0 → pageWidthMm, 0 → pageHeightMm)
+ *   - 셀 PNG 이미지 상위 레이어 → 이미지 위에 렌더링되어 가시성 확보
+ *
+ * jsPDF 상태 변경 (setDrawColor·setLineWidth·setLineDashPattern)은
+ * 함수 종료 전 원상복구하여 호출자 컨텍스트를 오염시키지 않는다.
+ */
+function renderCutLines(doc: jsPDF, widthMm: number, heightMm: number): void {
+  const { pdf } = LABEL_CONFIG;
+  const { cutLine } = pdf;
+
+  const [r, g, b] = hexToRgb(cutLine.color);
+
+  // ─── jsPDF 상태 설정 ────────────────────────────────────────
+  doc.setLineDashPattern([cutLine.dashMm, cutLine.gapMm], 0);
+  doc.setDrawColor(r, g, b);
+  doc.setLineWidth(cutLine.lineWidthMm);
+
+  // ─── 수직 절제선 (열 사이) ────────────────────────────────────
+  // 위치: marginMm + col * (widthMm + gutterMm) - gutterMm/2
+  for (let col = 1; col < pdf.cols; col += 1) {
+    const x = pdf.marginMm + col * (widthMm + pdf.gutterMm) - pdf.gutterMm / 2;
+    doc.line(x, 0, x, pdf.pageHeightMm);
+  }
+
+  // ─── 수평 절제선 (행 사이) ────────────────────────────────────
+  // 위치: marginMm + row * (heightMm + gutterMm) - gutterMm/2
+  for (let row = 1; row < pdf.rows; row += 1) {
+    const y = pdf.marginMm + row * (heightMm + pdf.gutterMm) - pdf.gutterMm / 2;
+    doc.line(0, y, pdf.pageWidthMm, y);
+  }
+
+  // ─── jsPDF 상태 원상복구 ─────────────────────────────────────
+  doc.setLineDashPattern([], 0);
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.2); // jsPDF 기본값
+}
+
 async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer> {
   const { pdf } = LABEL_CONFIG;
   const { widthMm, heightMm, perPage } = getLabelCellDimensions();
+  const totalPages = Math.ceil(items.length / perPage);
 
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -423,25 +483,31 @@ async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer
   // 모든 셀은 동일 크기 — OffscreenCanvas를 한 번 생성 후 재사용하여 GC 압박 방지
   const cellCanvas = new OffscreenCanvas(mmToPx(widthMm), mmToPx(heightMm));
 
-  for (let index = 0; index < items.length; index += 1) {
-    const item = items[index];
-    const onPage = index % perPage;
-    const row = Math.floor(onPage / pdf.cols);
-    const col = onPage % pdf.cols;
+  for (let pageIdx = 0; pageIdx < totalPages; pageIdx += 1) {
+    if (pageIdx > 0) doc.addPage();
 
-    if (index > 0 && onPage === 0) {
-      doc.addPage();
+    const pageStart = pageIdx * perPage;
+    const pageEnd = Math.min(pageStart + perPage, items.length);
+
+    // ─── 셀 이미지 배치 ─────────────────────────────────────────
+    for (let i = pageStart; i < pageEnd; i += 1) {
+      const onPage = i - pageStart;
+      const row = Math.floor(onPage / pdf.cols);
+      const col = onPage % pdf.cols;
+
+      const cellX = pdf.marginMm + col * (widthMm + pdf.gutterMm);
+      const cellY = pdf.marginMm + row * (heightMm + pdf.gutterMm);
+
+      const cellDataUrl = await renderCellToDataUrl(items[i], appUrl, cellCanvas);
+      doc.addImage(cellDataUrl, 'PNG', cellX, cellY, widthMm, heightMm);
+
+      if ((i + 1) % 10 === 0 || i === items.length - 1) {
+        post({ type: 'progress', done: i + 1, total: items.length });
+      }
     }
 
-    const cellX = pdf.marginMm + col * (widthMm + pdf.gutterMm);
-    const cellY = pdf.marginMm + row * (heightMm + pdf.gutterMm);
-
-    const cellDataUrl = await renderCellToDataUrl(item, appUrl, cellCanvas);
-    doc.addImage(cellDataUrl, 'PNG', cellX, cellY, widthMm, heightMm);
-
-    if ((index + 1) % 10 === 0 || index === items.length - 1) {
-      post({ type: 'progress', done: index + 1, total: items.length });
-    }
+    // ─── 절제선 (셀 이미지 상위 레이어) ─────────────────────────
+    renderCutLines(doc, widthMm, heightMm);
   }
 
   return doc.output('arraybuffer');
