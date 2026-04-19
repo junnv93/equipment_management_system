@@ -99,8 +99,15 @@ describe('DocumentService', () => {
       deleteFile: jest.fn().mockResolvedValue(undefined),
     };
 
-    // NestJS DI 없이 직접 생성 — 이 서비스의 의존성은 2개뿐 (mockDb, fileUploadService)
-    service = new DocumentService(mockDb, mockFileUploadService);
+    const mockStorageProvider = {
+      ensureContainer: jest.fn().mockResolvedValue(undefined),
+      upload: jest.fn().mockResolvedValue(undefined),
+      download: jest.fn().mockResolvedValue(Buffer.from('test')),
+      delete: jest.fn().mockResolvedValue(undefined),
+      supportsPresignedUrl: jest.fn().mockReturnValue(false),
+    };
+
+    service = new DocumentService(mockDb, mockFileUploadService, mockStorageProvider);
   });
 
   // ============================================================================
