@@ -302,8 +302,7 @@ function splitIntoLines(
  * 라벨 셀 1개를 OffscreenCanvas로 렌더링하여 PNG data URL 반환.
  *
  * layoutMode에 따른 렌더링:
- *   - 'full'   : QR + 관리번호/장비명/일련번호 3행 테이블 (기존 동작)
- *   - 'minimal': QR + 관리번호 1행 테이블
+ *   - 'full'   : QR + 관리번호/장비명/일련번호 3행 테이블 (auto-fit 폰트 축소)
  *   - 'qrOnly' : QR 중앙 정렬만, 텍스트/구분선 없음
  *
  * qrSizeMm가 주어지면 LABEL_CONFIG.cell.qrSizeMm를 override한다 (단일 라벨 크기 프리셋).
@@ -353,7 +352,7 @@ async function renderCellToDataUrl(
     renderQrToCanvas(c, qrData, qrX, qrY, qrPx);
     c.imageSmoothingEnabled = true;
   } else {
-    // full / minimal — QR 좌측 패딩 + 수직 중앙 정렬
+    // full — QR 좌측 패딩 + 수직 중앙 정렬
     const qrLeftPx = mmToPx(cell.qrPaddingLeftMm);
     const padPx = mmToPx(cell.textPaddingLeftMm);
     const qrY = Math.round((cellH - qrPx) / 2);
@@ -377,45 +376,32 @@ async function renderCellToDataUrl(
     const fieldLabelPx = ptToPx(cell.fieldLabelFontPt);
     const rowGap = mmToPx(cell.rowGapMm);
 
-    const rows =
-      layoutMode === 'full'
-        ? [
-            {
-              label: cell.tableFieldLabels.mgmtNo,
-              value: item.managementNumber,
-              valueFontPx: ptToPx(cell.mgmtFontPt),
-              minFontPx: ptToPx(cell.mgmtMinFontPt),
-              maxLines: 1,
-              bold: true,
-            },
-            {
-              label: cell.tableFieldLabels.name,
-              value: item.equipmentName,
-              valueFontPx: ptToPx(cell.nameFontPt),
-              minFontPx: ptToPx(cell.nameMinFontPt),
-              maxLines: cell.nameMaxLines,
-              bold: false,
-            },
-            {
-              label: cell.tableFieldLabels.serialNo,
-              value: item.serialNumber ?? '—',
-              valueFontPx: ptToPx(cell.serialFontPt),
-              minFontPx: ptToPx(cell.serialMinFontPt),
-              maxLines: 1,
-              bold: false,
-            },
-          ]
-        : // minimal — 관리번호 1행만
-          [
-            {
-              label: cell.tableFieldLabels.mgmtNo,
-              value: item.managementNumber,
-              valueFontPx: ptToPx(cell.mgmtFontPt),
-              minFontPx: ptToPx(cell.mgmtMinFontPt),
-              maxLines: 1,
-              bold: true,
-            },
-          ];
+    const rows = [
+      {
+        label: cell.tableFieldLabels.mgmtNo,
+        value: item.managementNumber,
+        valueFontPx: ptToPx(cell.mgmtFontPt),
+        minFontPx: ptToPx(cell.mgmtMinFontPt),
+        maxLines: 1,
+        bold: true,
+      },
+      {
+        label: cell.tableFieldLabels.name,
+        value: item.equipmentName,
+        valueFontPx: ptToPx(cell.nameFontPt),
+        minFontPx: ptToPx(cell.nameMinFontPt),
+        maxLines: cell.nameMaxLines,
+        bold: false,
+      },
+      {
+        label: cell.tableFieldLabels.serialNo,
+        value: item.serialNumber ?? '—',
+        valueFontPx: ptToPx(cell.serialFontPt),
+        minFontPx: ptToPx(cell.serialMinFontPt),
+        maxLines: 1,
+        bold: false,
+      },
+    ];
 
     const rowH = Math.floor(cellH / rows.length);
 

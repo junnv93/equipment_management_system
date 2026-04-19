@@ -37,7 +37,6 @@
     "layoutModeLabel": "Print layout",
     "layoutMode": {
       "full": "QR + full info (ID · name · serial)",
-      "minimal": "QR + management number",
       "qrOnly": "QR only"
     },
     "sizePresetLabel": "Label size",
@@ -49,7 +48,6 @@
     "fallbackNotice": "Layout auto-adjusted for selected size: {mode}",
     "fallbackMode": {
       "full": "QR + full info",
-      "minimal": "QR + management number",
       "qrOnly": "QR only"
     },
     "downloadPdf": "Download PDF"

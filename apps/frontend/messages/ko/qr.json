@@ -37,7 +37,6 @@
     "layoutModeLabel": "인쇄 양식",
     "layoutMode": {
       "full": "QR + 전체 정보 (관리번호·장비명·일련번호)",
-      "minimal": "QR + 관리번호",
       "qrOnly": "QR만"
     },
     "sizePresetLabel": "라벨 크기",
@@ -49,7 +48,6 @@
     "fallbackNotice": "선택한 크기가 작아 양식이 자동 조정되었습니다: {mode}",
     "fallbackMode": {
       "full": "QR + 전체 정보",
-      "minimal": "QR + 관리번호",
       "qrOnly": "QR만"
     },
     "downloadPdf": "PDF 다운로드"

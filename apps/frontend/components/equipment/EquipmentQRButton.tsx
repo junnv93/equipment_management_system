@@ -36,7 +36,7 @@ interface EquipmentQRButtonProps {
 /**
  * "QR 보기/인쇄" 버튼 + 다이얼로그.
  *
- * 양식 선택(full/minimal/qrOnly)과 크기 프리셋(standard/medium/small)을 조합하여
+ * 양식 선택(full/qrOnly)과 크기 프리셋(standard/medium/small)을 조합하여
  * 단일 라벨 PDF를 생성한다. 크기와 레이아웃이 호환되지 않으면 자동 fallback 처리.
  *
  * i18n 네임스페이스: `qr.qrDisplay.*`.
@@ -133,7 +133,7 @@ export function EquipmentQRButton({
               onValueChange={(v) => setLayoutMode(v as LabelLayoutMode)}
               className="space-y-1.5"
             >
-              {(['full', 'minimal', 'qrOnly'] as const).map((mode) => (
+              {(['full', 'qrOnly'] as const).map((mode) => (
                 <div key={mode} className="flex items-center space-x-2">
                   <RadioGroupItem value={mode} id={`layout-${mode}`} />
                   <Label htmlFor={`layout-${mode}`} className="cursor-pointer text-sm font-normal">

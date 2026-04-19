@@ -142,8 +142,8 @@ export const LABEL_CONFIG = {
     // Brother P-touch / Avery DesignPro / Seagull BarTender / Zebra 공통 방식:
     //   ① shrink-to-fit (폰트 축소) → ② multi-line wrap → ③ ellipsis fallback
 
-    /** 관리번호 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 */
-    mgmtMinFontPt: 8,
+    /** 관리번호 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 (소형 라벨 대응) */
+    mgmtMinFontPt: 6,
     /** 장비명 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 */
     nameMinFontPt: 6,
     /** 일련번호 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 */
@@ -203,8 +203,8 @@ export interface LabelItem {
 /** 단일 라벨 크기 프리셋 — 물리 라벨 용도에 따른 3단계 */
 export type LabelSizePreset = 'standard' | 'medium' | 'small';
 
-/** 단일 라벨 레이아웃 모드 — 가용 공간에 따른 3단 단계적 축약 */
-export type LabelLayoutMode = 'full' | 'minimal' | 'qrOnly';
+/** 단일 라벨 레이아웃 모드 */
+export type LabelLayoutMode = 'full' | 'qrOnly';
 
 /**
  * 단일 라벨 크기 프리셋 정의 (SSOT).
@@ -231,21 +231,20 @@ export const LABEL_SIZE_PRESETS: Record<
 /**
  * 레이아웃 모드 최소 크기 제약 (SSOT).
  *
- * 셀 크기가 아래 한계 미만이면 해당 모드를 사용할 수 없음.
- * resolveLayoutMode()가 자동 fallback 계산에 사용.
+ * 'full' 하한을 소형 라벨(30×15mm)이 포함되도록 낮춤.
+ * auto-fit 파이프라인이 폰트를 자동 축소하여 공간에 맞춤.
  */
 export const LABEL_LAYOUT_CONSTRAINTS: Record<
   LabelLayoutMode,
   { minWidthMm: number; minHeightMm: number }
 > = {
-  full: { minWidthMm: 50, minHeightMm: 30 },
-  minimal: { minWidthMm: 30, minHeightMm: 18 },
+  full: { minWidthMm: 25, minHeightMm: 12 },
   qrOnly: { minWidthMm: 15, minHeightMm: 15 },
 };
 
 /**
  * 요청한 레이아웃 모드가 선택한 크기 프리셋에서 가능한지 확인하고
- * 불가능하면 자동으로 단계를 낮춘다 (full → minimal → qrOnly).
+ * 불가능하면 자동으로 단계를 낮춘다 (full → qrOnly).
  *
  * @returns mode — 실제 사용할 모드, fallback — 자동 축소 여부
  */
@@ -254,7 +253,7 @@ export function resolveLayoutMode(
   preset: LabelSizePreset
 ): { mode: LabelLayoutMode; fallback: boolean } {
   const { widthMm, heightMm } = LABEL_SIZE_PRESETS[preset];
-  const order: LabelLayoutMode[] = ['full', 'minimal', 'qrOnly'];
+  const order: LabelLayoutMode[] = ['full', 'qrOnly'];
   const startIdx = order.indexOf(requested);
 
   for (let i = startIdx; i < order.length; i += 1) {
