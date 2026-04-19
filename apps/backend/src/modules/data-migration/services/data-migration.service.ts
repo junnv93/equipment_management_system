@@ -19,10 +19,10 @@ import {
   MIGRATION_SHEET_TYPE,
   MIGRATION_SESSION_STATUS,
   INSERTABLE_STATUSES,
-  CableStatusEnum,
-  SoftwareAvailabilityEnum,
+  CableStatusValues,
+  SoftwareAvailabilityValues,
   CalibrationFactorApprovalStatusValues,
-  NonConformanceStatusEnum,
+  NonConformanceStatusValues,
 } from '@equipment-management/schemas';
 import type { Site, MigrationSheetType } from '@equipment-management/schemas';
 import { MigrationErrorCode } from '@equipment-management/shared-constants';
@@ -1118,7 +1118,7 @@ export class DataMigrationService {
       location: row.data.location as string | undefined,
       site: row.data.site as CableInsert['site'],
       lastMeasurementDate: row.data.lastMeasurementDate as Date | undefined,
-      status: CableStatusEnum.enum.active,
+      status: CableStatusValues.ACTIVE,
       createdBy: userId,
       version: 1,
     };
@@ -1140,7 +1140,7 @@ export class DataMigrationService {
       location: row.data.location as string | undefined,
       installedAt: row.data.installedAt as TsInsert['installedAt'],
       requiresValidation: (row.data.requiresValidation as boolean | undefined) ?? true,
-      availability: SoftwareAvailabilityEnum.enum.available,
+      availability: SoftwareAvailabilityValues.AVAILABLE,
       site: row.data.site as TsInsert['site'],
       primaryManagerId: fkResult?.managerId,
       secondaryManagerId: fkResult?.deputyManagerId,
@@ -1194,9 +1194,7 @@ export class DataMigrationService {
       resolutionType: row.data.resolutionType as NcInsert['resolutionType'],
       correctionDate: correctionDate?.toISOString() ?? null,
       correctedBy: correctionDate ? userId : undefined,
-      status: correctionDate
-        ? NonConformanceStatusEnum.enum.closed
-        : NonConformanceStatusEnum.enum.open,
+      status: correctionDate ? NonConformanceStatusValues.CLOSED : NonConformanceStatusValues.OPEN,
       closedBy: correctionDate ? userId : undefined,
       closedAt: correctionDate ? new Date() : undefined,
       version: 1,
