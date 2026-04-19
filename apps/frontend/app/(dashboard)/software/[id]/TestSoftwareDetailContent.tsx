@@ -5,7 +5,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit2, ToggleLeft, FileCheck, Package, Plus, Unlink } from 'lucide-react';
+import {
+  ArrowLeft,
+  Edit2,
+  ToggleLeft,
+  FileCheck,
+  Package,
+  Plus,
+  Unlink,
+  AlertTriangle,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -277,6 +286,19 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
           </Link>
         </div>
       </div>
+
+      {/* 재검증 필요 배너 (ISO/IEC 17025 §6.4.13) */}
+      {software.requiresValidation && !software.latestValidationId && (
+        <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="text-sm">{t('detail.revalidationRequired')}</span>
+          <Link href={FRONTEND_ROUTES.SOFTWARE.VALIDATION(id)} className="ml-auto">
+            <Button variant="outline" size="sm">
+              {t('detail.goToValidation')}
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Detail Card */}
       <Card>

@@ -46,7 +46,7 @@ import {
   DOCUMENT_TABLE,
   DOCUMENT_EMPTY_STATE,
 } from '@/lib/design-tokens';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, FORM_CATALOG } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { DocumentTypeValues, DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
 import type { ValidationStatus, DocumentType } from '@equipment-management/schemas';
@@ -260,7 +260,7 @@ export default function ValidationDetailContent({
         </div>
         <div className="flex items-center gap-2">
           <ExportFormButton
-            formNumber="UL-QP-18-09"
+            formNumber={FORM_CATALOG['UL-QP-18-09'].formNumber}
             params={{ validationId }}
             label={t('validation.actions.exportValidation')}
             errorToastDescription={t('toast.error')}
@@ -564,9 +564,9 @@ export default function ValidationDetailContent({
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label={`${t('validation.documents.download')} ${doc.originalFileName}`}
                               className="h-8 w-8"
                               onClick={() => handleDownload(doc)}
-                              aria-label={`${t('validation.documents.download')} ${doc.originalFileName}`}
                             >
                               <Download className="h-4 w-4" />
                             </Button>
@@ -574,9 +574,9 @@ export default function ValidationDetailContent({
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                aria-label={`${t('validation.documents.delete')} ${doc.originalFileName}`}
                                 className="h-8 w-8 text-destructive hover:text-destructive"
                                 onClick={() => handleDeleteDoc(doc.id)}
-                                aria-label={`${t('validation.documents.delete')} ${doc.originalFileName}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

@@ -298,6 +298,31 @@ export const QUERY_CONFIG = {
 
   /** 양식 템플릿 목록/이력 - STATIC (관리자 업로드 시에만 변경) */
   FORM_TEMPLATES: REFETCH_STRATEGIES.STATIC,
+
+  /** 소프트웨어 유효성 확인 목록 - SHORT (pending 탭은 승인 대기 빈도 높음) */
+  SOFTWARE_VALIDATION_LIST: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
+  /** 소프트웨어 유효성 확인 대기 목록 - IMPORTANT (승인자 UX: 빠른 갱신) */
+  SOFTWARE_VALIDATION_PENDING: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchInterval: REFETCH_INTERVALS.IMPORTANT,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
+  /** 소프트웨어 유효성 확인 상세 - MEDIUM (CAS 보호, mutation 후 무효화) */
+  SOFTWARE_VALIDATION_DETAIL: {
+    staleTime: CACHE_TIMES.MEDIUM,
+    gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
 } as const;
 
 /**
@@ -538,8 +563,11 @@ export const queryKeys = {
   },
   softwareValidations: {
     all: ['software-validations'] as const,
+    lists: () => [...queryKeys.softwareValidations.all, 'list'] as const,
+    list: (filters: object) => [...queryKeys.softwareValidations.lists(), filters] as const,
     byTestSoftware: (softwareId: string) =>
       [...queryKeys.softwareValidations.all, 'by-software', softwareId] as const,
+    pending: (site?: string) => [...queryKeys.softwareValidations.all, 'pending', site] as const,
     details: () => [...queryKeys.softwareValidations.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.softwareValidations.details(), id] as const,
   },

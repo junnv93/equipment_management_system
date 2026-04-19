@@ -56,8 +56,9 @@ import { isConflictError } from '@/lib/api/error';
 import { VALIDATION_TYPE_VALUES } from '@equipment-management/schemas';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
+import { useAuth } from '@/hooks/use-auth';
 
 interface FunctionItem {
   [key: string]: string;
@@ -92,6 +93,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { can, user } = useAuth();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRejectOpen, setIsRejectOpen] = useState(false);
@@ -289,10 +291,12 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
             {software?.name} — {t('validation.subtitle')}
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('validation.createButton')}
-        </Button>
+        {can(Permission.CREATE_SOFTWARE_VALIDATION) && (
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('validation.createButton')}
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -349,33 +353,37 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                     <div className="flex items-center gap-1">
                       {v.status === 'draft' && (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(
-                                `${FRONTEND_ROUTES.SOFTWARE.VALIDATION_DETAIL(softwareId, v.id)}?edit=true`
-                              );
-                            }}
-                          >
-                            <Pencil className="mr-1 h-3.5 w-3.5" />
-                            {t('validation.actions.edit')}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              submitMutation.mutate({ id: v.id, version: v.version });
-                            }}
-                            disabled={submitMutation.isPending}
-                          >
-                            {t('validation.actions.submit')}
-                          </Button>
+                          {can(Permission.CREATE_SOFTWARE_VALIDATION) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `${FRONTEND_ROUTES.SOFTWARE.VALIDATION_DETAIL(softwareId, v.id)}?edit=true`
+                                );
+                              }}
+                            >
+                              <Pencil className="mr-1 h-3.5 w-3.5" />
+                              {t('validation.actions.edit')}
+                            </Button>
+                          )}
+                          {can(Permission.SUBMIT_SOFTWARE_VALIDATION) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                submitMutation.mutate({ id: v.id, version: v.version });
+                              }}
+                              disabled={submitMutation.isPending}
+                            >
+                              {t('validation.actions.submit')}
+                            </Button>
+                          )}
                         </>
                       )}
-                      {v.status === 'submitted' && (
+                      {v.status === 'submitted' && can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
                         <>
                           <Button
                             variant="outline"
@@ -384,7 +392,13 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                               e.stopPropagation();
                               approveMutation.mutate({ id: v.id, version: v.version });
                             }}
-                            disabled={approveMutation.isPending}
+                            // ISO 17025 §6.2.2: 제출자는 승인 불가 (서버 가드 UI 대칭)
+                            disabled={approveMutation.isPending || v.submittedBy === user?.id}
+                            title={
+                              v.submittedBy === user?.id
+                                ? t('validation.actions.selfApprovalForbidden')
+                                : undefined
+                            }
                           >
                             {t('validation.actions.approve')}
                           </Button>
@@ -400,7 +414,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                           </Button>
                         </>
                       )}
-                      {v.status === 'approved' && (
+                      {v.status === 'approved' && can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -408,7 +422,15 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                             e.stopPropagation();
                             qualityApproveMutation.mutate({ id: v.id, version: v.version });
                           }}
-                          disabled={qualityApproveMutation.isPending}
+                          // ISO 17025 §6.2.2: 기술 승인자는 품질 승인 불가 (서버 가드 UI 대칭)
+                          disabled={
+                            qualityApproveMutation.isPending || v.technicalApproverId === user?.id
+                          }
+                          title={
+                            v.technicalApproverId === user?.id
+                              ? t('validation.actions.dualApprovalForbidden')
+                              : undefined
+                          }
                         >
                           {t('validation.actions.qualityApprove')}
                         </Button>
