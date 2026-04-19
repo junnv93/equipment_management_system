@@ -214,15 +214,23 @@ export default function TestSoftwareListContent() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('list.columns.managementNumber')}</TableHead>
-                <TableHead>{t('list.columns.name')}</TableHead>
-                <TableHead>{t('list.columns.version')}</TableHead>
-                <TableHead>{t('list.columns.testField')}</TableHead>
-                <TableHead>{t('list.columns.manager')}</TableHead>
-                <TableHead>{t('list.columns.manufacturer')}</TableHead>
-                <TableHead>{t('list.columns.location')}</TableHead>
-                <TableHead>{t('list.columns.requiresValidation')}</TableHead>
-                <TableHead>{t('list.columns.availability')}</TableHead>
+                <TableHead className="whitespace-nowrap">
+                  {t('list.columns.managementNumber')}
+                </TableHead>
+                <TableHead className="whitespace-nowrap">{t('list.columns.name')}</TableHead>
+                <TableHead className="whitespace-nowrap">{t('list.columns.version')}</TableHead>
+                <TableHead className="whitespace-nowrap">{t('list.columns.testField')}</TableHead>
+                <TableHead className="whitespace-nowrap">{t('list.columns.manager')}</TableHead>
+                <TableHead className="whitespace-nowrap">
+                  {t('list.columns.manufacturer')}
+                </TableHead>
+                <TableHead className="whitespace-nowrap">{t('list.columns.location')}</TableHead>
+                <TableHead className="whitespace-nowrap">
+                  {t('list.columns.requiresValidation')}
+                </TableHead>
+                <TableHead className="whitespace-nowrap">
+                  {t('list.columns.availability')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -243,19 +251,42 @@ export default function TestSoftwareListContent() {
                   </TableCell>
                   <TableCell>{t(`testField.${sw.testField}`)}</TableCell>
                   <TableCell>
-                    {formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
+                    <span
+                      className="block max-w-[180px] truncate"
+                      title={formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
+                    >
+                      {formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
+                    </span>
                   </TableCell>
                   <TableCell>{sw.manufacturer || '-'}</TableCell>
                   <TableCell>{sw.location || '-'}</TableCell>
-                  <TableCell className="text-center font-medium">
-                    {sw.requiresValidation
-                      ? t('list.requiresValidationYes')
-                      : t('list.requiresValidationNo')}
+                  <TableCell className="text-center">
+                    {sw.requiresValidation ? (
+                      <Badge
+                        variant="outline"
+                        className="border-green-600 bg-green-50 text-green-700"
+                      >
+                        {t('list.requiresValidationYes')}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-gray-400 bg-gray-50 text-gray-500">
+                        {t('list.requiresValidationNo')}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={sw.availability === 'available' ? 'default' : 'secondary'}>
-                      {t(`availability.${sw.availability}`)}
-                    </Badge>
+                    {sw.availability === 'available' ? (
+                      <Badge
+                        variant="outline"
+                        className="border-green-600 bg-green-50 text-green-700"
+                      >
+                        {t(`availability.${sw.availability}`)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-red-500 bg-red-50 text-red-600">
+                        {t(`availability.${sw.availability}`)}
+                      </Badge>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
