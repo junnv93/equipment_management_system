@@ -34,11 +34,14 @@
       "name": "소프트웨어명",
       "version": "버전",
       "testField": "시험분야",
-      "primaryManager": "담당자(정)",
+      "manager": "담당자(정, 부)",
+      "requiresValidation": "자체 유효성 검증 대상",
       "manufacturer": "제작사",
       "location": "위치",
       "availability": "가용여부"
     },
+    "requiresValidationYes": "O",
+    "requiresValidationNo": "X",
     "filters": {
       "testField": "시험분야",
       "availability": "가용여부",

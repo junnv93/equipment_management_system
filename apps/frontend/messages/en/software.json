@@ -34,11 +34,14 @@
       "name": "Software Name",
       "version": "Version",
       "testField": "Test Field",
-      "primaryManager": "Primary Manager",
+      "manager": "Manager (Primary, Secondary)",
+      "requiresValidation": "Self-Validation Required",
       "manufacturer": "Manufacturer",
       "location": "Location",
       "availability": "Availability"
     },
+    "requiresValidationYes": "O",
+    "requiresValidationNo": "X",
     "filters": {
       "testField": "Test Field",
       "availability": "Availability",

@@ -40,6 +40,16 @@ import {
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
+function formatManagers(
+  primary: string | null | undefined,
+  secondary: string | null | undefined
+): string {
+  if (primary && secondary) return `${primary}, ${secondary}`;
+  if (primary) return primary;
+  if (secondary) return secondary;
+  return '-';
+}
+
 export default function TestSoftwareListContent() {
   const t = useTranslations('software');
   const router = useRouter();
@@ -208,7 +218,8 @@ export default function TestSoftwareListContent() {
                 <TableHead>{t('list.columns.name')}</TableHead>
                 <TableHead>{t('list.columns.version')}</TableHead>
                 <TableHead>{t('list.columns.testField')}</TableHead>
-                <TableHead>{t('list.columns.primaryManager')}</TableHead>
+                <TableHead>{t('list.columns.manager')}</TableHead>
+                <TableHead>{t('list.columns.requiresValidation')}</TableHead>
                 <TableHead>{t('list.columns.manufacturer')}</TableHead>
                 <TableHead>{t('list.columns.location')}</TableHead>
                 <TableHead>{t('list.columns.availability')}</TableHead>
@@ -231,7 +242,14 @@ export default function TestSoftwareListContent() {
                     </Badge>
                   </TableCell>
                   <TableCell>{t(`testField.${sw.testField}`)}</TableCell>
-                  <TableCell>{sw.primaryManagerName || '-'}</TableCell>
+                  <TableCell>
+                    {formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
+                  </TableCell>
+                  <TableCell className="text-center font-medium">
+                    {sw.requiresValidation
+                      ? t('list.requiresValidationYes')
+                      : t('list.requiresValidationNo')}
+                  </TableCell>
                   <TableCell>{sw.manufacturer || '-'}</TableCell>
                   <TableCell>{sw.location || '-'}</TableCell>
                   <TableCell>
