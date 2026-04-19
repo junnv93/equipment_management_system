@@ -61,6 +61,7 @@ export const NOTIFICATION_TYPE_VALUES = [
   'software_validation_approved', // 유효성 확인 승인
   'software_validation_rejected', // 유효성 확인 반려
   'software_validation_quality_approved', // 유효성 확인 품질 승인
+  'test_software_revalidation_required', // 소프트웨어 버전 변경 → 재검증 필요 (ISO 17025 §6.4.13)
 
   // ─── 중간점검 (Intermediate Check) ───
   'intermediate_check_completed', // 중간점검 완료

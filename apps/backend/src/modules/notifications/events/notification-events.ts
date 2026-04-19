@@ -63,6 +63,7 @@ export const NOTIFICATION_EVENTS = {
   SOFTWARE_VALIDATION_APPROVED: 'softwareValidation.approved',
   SOFTWARE_VALIDATION_REJECTED: 'softwareValidation.rejected',
   SOFTWARE_VALIDATION_QUALITY_APPROVED: 'softwareValidation.qualityApproved',
+  TEST_SOFTWARE_REVALIDATION_REQUIRED: 'testSoftware.revalidationRequired',
 
   // ─── 중간점검 (Intermediate Check) ───
   INTERMEDIATE_CHECK_COMPLETED: 'intermediateCheck.completed',

@@ -1,5 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { SoftwareValidationsService } from '../software-validations.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -204,7 +209,11 @@ describe('SoftwareValidationsService', () => {
 
   describe('approve()', () => {
     it('submitted → approved 상태 전이 및 이벤트 emit', async () => {
-      const submittedValidation = { ...MOCK_VALIDATION, status: ValidationStatusValues.SUBMITTED };
+      const submittedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.SUBMITTED,
+        submittedBy: 'submitter-uuid',
+      };
       mockDb.select.mockReturnValueOnce(createSelectChain([submittedValidation]));
       const updated = { ...submittedValidation, status: ValidationStatusValues.APPROVED };
       mockDb.update.mockReturnValueOnce(mockUpdateChain(updated));
@@ -223,11 +232,28 @@ describe('SoftwareValidationsService', () => {
         BadRequestException
       );
     });
+
+    it('제출자가 본인 유효성 확인 승인 시 ForbiddenException (ISO 17025 §6.2.2)', async () => {
+      const submittedBySelf = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.SUBMITTED,
+        submittedBy: 'user-uuid-self',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([submittedBySelf]));
+
+      await expect(service.approve('val-uuid-1', 1, 'user-uuid-self')).rejects.toThrow(
+        ForbiddenException
+      );
+    });
   });
 
   describe('qualityApprove()', () => {
     it('approved → quality_approved 상태 전이 및 이벤트 emit', async () => {
-      const approvedValidation = { ...MOCK_VALIDATION, status: ValidationStatusValues.APPROVED };
+      const approvedValidation = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.APPROVED,
+        technicalApproverId: 'tech-approver-uuid',
+      };
       mockDb.select.mockReturnValueOnce(createSelectChain([approvedValidation]));
       const updated = { ...approvedValidation, status: ValidationStatusValues.QUALITY_APPROVED };
       mockDb.update.mockReturnValueOnce(mockUpdateChain(updated));
@@ -244,6 +270,19 @@ describe('SoftwareValidationsService', () => {
     it('approved가 아닌 상태에서 BadRequestException을 던진다', async () => {
       await expect(service.qualityApprove('val-uuid-1', 1, 'qa-uuid-1')).rejects.toThrow(
         BadRequestException
+      );
+    });
+
+    it('기술 승인자가 품질 승인 시도 시 ForbiddenException (이중 승인 금지, ISO 17025 §6.2.2)', async () => {
+      const approvedBySame = {
+        ...MOCK_VALIDATION,
+        status: ValidationStatusValues.APPROVED,
+        technicalApproverId: 'same-person-uuid',
+      };
+      mockDb.select.mockReturnValueOnce(createSelectChain([approvedBySame]));
+
+      await expect(service.qualityApprove('val-uuid-1', 1, 'same-person-uuid')).rejects.toThrow(
+        ForbiddenException
       );
     });
   });
@@ -311,6 +350,26 @@ describe('SoftwareValidationsService', () => {
 
       const result = await service.findPending({ site: 'suwon' } as never);
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('findAll()', () => {
+    it('페이지네이션 + 필터가 적용된 목록과 total을 반환한다', async () => {
+      // getOrSet passes through, select returns mock data
+      const selectDataChain = createSelectChain([MOCK_VALIDATION]);
+      const selectCountChain = createSelectChain([{ total: 1 }]);
+      mockDb.select.mockReturnValueOnce(selectDataChain).mockReturnValueOnce(selectCountChain);
+
+      const result = await service.findAll({ status: 'draft' } as never);
+      expect(result.data).toBeDefined();
+      expect(result.total).toBeDefined();
+    });
+
+    it('사이트 필터 적용 시 scoped SW가 없으면 { data: [], total: 0 } 반환', async () => {
+      mockDb.select.mockReturnValueOnce(createSelectChain([]));
+
+      const result = await service.findAll({ site: 'suwon' } as never);
+      expect(result).toEqual({ data: [], total: 0 });
     });
   });
 });

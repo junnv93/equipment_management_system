@@ -1,6 +1,13 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, or, desc, asc, sql, inArray, count } from 'drizzle-orm';
 import {
   softwareValidations,
   testSoftware,
@@ -19,6 +26,7 @@ import type { ValidationQueryInput } from './dto/validation-query.dto';
 
 @Injectable()
 export class SoftwareValidationsService extends VersionedBaseService {
+  private readonly logger = new Logger(SoftwareValidationsService.name);
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS;
 
   constructor(
@@ -339,15 +347,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swName = await this.getSoftwareName(existing.testSoftwareId);
-    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED, {
-      validationId: id,
-      testSoftwareId: existing.testSoftwareId,
-      softwareName: swName,
-      submittedBy: submitterId,
-      actorId: submitterId,
-      actorName: '',
-      timestamp: new Date(),
-    });
+    try {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
+        softwareName: swName,
+        submittedBy: submitterId,
+        actorId: submitterId,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    } catch (err) {
+      this.logger.error('submit event listener error', err);
+    }
 
     return updated;
   }
@@ -362,6 +374,14 @@ export class SoftwareValidationsService extends VersionedBaseService {
       throw new BadRequestException({
         code: 'INVALID_STATUS_TRANSITION',
         message: 'Only submitted validations can be approved.',
+      });
+    }
+
+    // ISO/IEC 17025 §6.2.2 — 독립성: 제출자와 기술 승인자가 같으면 금지
+    if (existing.submittedBy === approverId) {
+      throw new ForbiddenException({
+        code: 'SELF_APPROVAL_FORBIDDEN',
+        message: 'The submitter cannot technically approve their own validation.',
       });
     }
 
@@ -382,15 +402,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swNameApprove = await this.getSoftwareName(existing.testSoftwareId);
-    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED, {
-      validationId: id,
-      testSoftwareId: existing.testSoftwareId,
-      softwareName: swNameApprove,
-      submittedBy: existing.submittedBy,
-      actorId: approverId,
-      actorName: '',
-      timestamp: new Date(),
-    });
+    try {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
+        softwareName: swNameApprove,
+        submittedBy: existing.submittedBy,
+        actorId: approverId,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    } catch (err) {
+      this.logger.error('approve event listener error', err);
+    }
 
     return updated;
   }
@@ -412,6 +436,14 @@ export class SoftwareValidationsService extends VersionedBaseService {
       });
     }
 
+    // ISO/IEC 17025 §6.2.2 — 기술 승인자와 품질 승인자가 같으면 금지
+    if (existing.technicalApproverId === approverId) {
+      throw new ForbiddenException({
+        code: 'DUAL_APPROVAL_SAME_PERSON_FORBIDDEN',
+        message: 'The technical approver cannot also provide quality approval.',
+      });
+    }
+
     const updated = await this.updateWithVersion<SoftwareValidation>(
       softwareValidations,
       id,
@@ -429,15 +461,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swNameQA = await this.getSoftwareName(existing.testSoftwareId);
-    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED, {
-      validationId: id,
-      testSoftwareId: existing.testSoftwareId,
-      softwareName: swNameQA,
-      submittedBy: existing.submittedBy,
-      actorId: approverId,
-      actorName: '',
-      timestamp: new Date(),
-    });
+    try {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
+        softwareName: swNameQA,
+        submittedBy: existing.submittedBy,
+        actorId: approverId,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    } catch (err) {
+      this.logger.error('qualityApprove event listener error', err);
+    }
 
     return updated;
   }
@@ -481,16 +517,20 @@ export class SoftwareValidationsService extends VersionedBaseService {
     this.invalidateCache(id);
 
     const swNameReject = await this.getSoftwareName(existing.testSoftwareId);
-    await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED, {
-      validationId: id,
-      testSoftwareId: existing.testSoftwareId,
-      softwareName: swNameReject,
-      submittedBy: existing.submittedBy,
-      actorId: rejectedById,
-      actorName: '',
-      timestamp: new Date(),
-      reason,
-    });
+    try {
+      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
+        softwareName: swNameReject,
+        submittedBy: existing.submittedBy,
+        actorId: rejectedById,
+        actorName: '',
+        timestamp: new Date(),
+        reason,
+      });
+    } catch (err) {
+      this.logger.error('reject event listener error', err);
+    }
 
     return updated;
   }
@@ -576,6 +616,60 @@ export class SoftwareValidationsService extends VersionedBaseService {
           .from(softwareValidations)
           .where(and(...conditions))
           .orderBy(desc(softwareValidations.submittedAt));
+      },
+      CACHE_TTL.SHORT
+    );
+  }
+
+  /**
+   * 전체 유효성 확인 목록 조회 (필터 + 페이지네이션)
+   */
+  async findAll(
+    query: ValidationQueryInput = {} as ValidationQueryInput
+  ): Promise<{ data: SoftwareValidation[]; total: number }> {
+    const { site, status, validationType, page = 1, pageSize = DEFAULT_PAGE_SIZE } = query;
+    const cacheKey = this.buildCacheKey(
+      'list',
+      `${site ?? 'all'}:${status ?? 'all'}:${validationType ?? 'all'}:${page}:${pageSize}`
+    );
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const conditions: ReturnType<typeof eq>[] = [];
+
+        if (site) {
+          const scopedIds = await this.resolveScopedSoftwareIds(site);
+          if (scopedIds.length === 0) return { data: [], total: 0 };
+          conditions.push(
+            inArray(softwareValidations.testSoftwareId, scopedIds) as ReturnType<typeof eq>
+          );
+        }
+
+        if (status) {
+          conditions.push(eq(softwareValidations.status, status) as ReturnType<typeof eq>);
+        }
+
+        if (validationType) {
+          conditions.push(
+            eq(softwareValidations.validationType, validationType) as ReturnType<typeof eq>
+          );
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const [data, [{ total }]] = await Promise.all([
+          this.db
+            .select()
+            .from(softwareValidations)
+            .where(whereClause)
+            .orderBy(desc(softwareValidations.createdAt))
+            .limit(pageSize)
+            .offset((page - 1) * pageSize),
+          this.db.select({ total: count() }).from(softwareValidations).where(whereClause),
+        ]);
+
+        return { data, total: Number(total) };
       },
       CACHE_TTL.SHORT
     );

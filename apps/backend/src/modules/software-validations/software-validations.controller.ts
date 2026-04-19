@@ -94,6 +94,18 @@ export class TestSoftwareValidationsController {
 export class SoftwareValidationsController {
   constructor(private readonly validationsService: SoftwareValidationsService) {}
 
+  @Get()
+  @RequirePermissions(Permission.VIEW_SOFTWARE_VALIDATIONS)
+  @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE, failLoud: true })
+  findAll(
+    @Query(ValidationQueryPipe) query: ValidationQueryInput,
+    @CurrentEnforcedScope() scope: EnforcedScope
+  ): Promise<{ data: SoftwareValidation[]; total: number }> {
+    query.site = scope.site as ValidationQueryInput['site'];
+    if (scope.teamId) query.teamId = scope.teamId;
+    return this.validationsService.findAll(query);
+  }
+
   @Get('pending')
   @RequirePermissions(Permission.APPROVE_SOFTWARE_VALIDATION)
   @SiteScoped({ policy: TEST_SOFTWARE_DATA_SCOPE, failLoud: true })
