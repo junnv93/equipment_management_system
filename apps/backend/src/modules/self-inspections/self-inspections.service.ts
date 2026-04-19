@@ -30,6 +30,7 @@ import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { assertIndependentApprover } from '../../common/guards/assert-independent-approver';
 import type { CreateSelfInspectionInput } from './dto/create-self-inspection.dto';
 import type { UpdateSelfInspectionInput } from './dto/update-self-inspection.dto';
 
@@ -417,6 +418,8 @@ export class SelfInspectionsService extends VersionedBaseService {
         message: 'Only submitted inspections can be approved.',
       });
     }
+
+    assertIndependentApprover(existing.submittedBy, userId);
 
     const updated = await this.updateWithVersion<EquipmentSelfInspection>(
       equipmentSelfInspections,

@@ -51,6 +51,7 @@ import { DEFAULT_PAGE_SIZE, VALIDATION_RULES } from '@equipment-management/share
 import { DocumentService } from '../../common/file-upload/document.service';
 import type { MulterFile } from '../../types/common.types';
 import { DocumentTypeValues } from '@equipment-management/schemas';
+import { assertIndependentApprover } from '../../common/guards/assert-independent-approver';
 
 type EquipmentImport = typeof equipmentImports.$inferSelect;
 
@@ -309,6 +310,10 @@ export class EquipmentImportsService extends VersionedBaseService {
     approverId: string,
     dto: ApproveEquipmentImportDto
   ): Promise<EquipmentImport> {
+    // ISO 17025 §6.2.2: 신청자 본인 승인 금지
+    const existing = await this.findOne(id);
+    assertIndependentApprover(existing.requesterId, approverId);
+
     // ✅ CAS + precondition atomicity:
     // status=PENDING 검사를 updateWithVersion WHERE 절에 병합한다. 동시 승인 시
     // 선검사 윈도우 레이스가 사라지고, 후행자는 항상 결정적으로 409(VERSION_CONFLICT)

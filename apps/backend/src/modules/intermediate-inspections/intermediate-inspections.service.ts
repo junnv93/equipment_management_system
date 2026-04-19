@@ -20,6 +20,7 @@ import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { assertIndependentApprover } from '../../common/guards/assert-independent-approver';
 import type { CreateInspectionInput } from './dto/create-inspection.dto';
 import type { UpdateInspectionInput } from './dto/update-inspection.dto';
 
@@ -479,6 +480,8 @@ export class IntermediateInspectionsService extends VersionedBaseService {
         message: 'Only reviewed inspections can be approved.',
       });
     }
+
+    assertIndependentApprover(existing.submittedBy, userId);
 
     const updated = await this.updateWithVersion<IntermediateInspection>(
       intermediateInspections,

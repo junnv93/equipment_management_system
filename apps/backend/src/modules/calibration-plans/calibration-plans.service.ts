@@ -49,6 +49,7 @@ import type {
   CalibrationPlanVersionHistoryItem,
 } from './calibration-plans.types';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import { assertIndependentApprover } from '../../common/guards/assert-independent-approver';
 
 @Injectable()
 export class CalibrationPlansService extends VersionedBaseService {
@@ -622,6 +623,7 @@ export class CalibrationPlansService extends VersionedBaseService {
     }
 
     const { casVersion, approvedBy } = approveDto;
+    assertIndependentApprover(plan.createdBy, approvedBy);
 
     await this.updateWithVersion(
       calibrationPlans,
