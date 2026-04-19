@@ -20,7 +20,6 @@ import { equipmentImports } from '@equipment-management/db/schema/equipment-impo
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
 import { testSoftware } from '@equipment-management/db/schema/test-software';
 import { cables, cableLossDataPoints } from '@equipment-management/db/schema/cables';
-import { softwareValidations } from '@equipment-management/db/schema/software-validations';
 import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
 import { eq, and, inArray, or, sql, type SQL, asc } from 'drizzle-orm';
@@ -53,6 +52,8 @@ import { EquipmentRegistryRendererService } from './services/equipment-registry-
 import { FORM_NUMBER as INTERMEDIATE_FORM_NUMBER } from '../intermediate-inspections/services/intermediate-inspection.layout';
 import { FORM_NUMBER as SELF_FORM_NUMBER } from '../self-inspections/services/self-inspection.layout';
 import { FORM_NUMBER as REGISTRY_FORM_NUMBER } from './layouts/equipment-registry.layout';
+import { SoftwareValidationExportDataService } from '../software-validations/services/software-validation-export-data.service';
+import { SoftwareValidationRendererService } from '../software-validations/services/software-validation-renderer.service';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 interface ExportResult {
@@ -85,7 +86,9 @@ export class FormTemplateExportService {
     private readonly selfInspectionDataService: SelfInspectionExportDataService,
     private readonly selfInspectionRenderer: SelfInspectionRendererService,
     private readonly equipmentRegistryData: EquipmentRegistryDataService,
-    private readonly equipmentRegistryRenderer: EquipmentRegistryRendererService
+    private readonly equipmentRegistryRenderer: EquipmentRegistryRendererService,
+    private readonly swValidationData: SoftwareValidationExportDataService,
+    private readonly swValidationRenderer: SoftwareValidationRendererService
   ) {}
 
   /**
@@ -572,215 +575,8 @@ export class FormTemplateExportService {
     params: Record<string, string>,
     filter: EnforcedScope
   ): Promise<ExportResult> {
-    const entry = FORM_CATALOG['UL-QP-18-09'];
-    const validationId = params.validationId;
-    if (!validationId) {
-      throw new BadRequestException({
-        code: 'MISSING_VALIDATION_ID',
-        message: 'validationId query parameter is required for software validation export.',
-      });
-    }
-
-    // Software validation은 site 단위 리소스(testSoftware에 teamId 없음).
-    // Team 스코프로는 경계를 결정할 방법이 없으므로 DB 접근 전 명시적 403.
-    // exportSoftwareRegistry(UL-QP-18-07)와 동일한 early-reject 패턴 유지.
-    if (filter.teamId) {
-      throw new ForbiddenException({
-        code: 'SCOPE_RESOURCE_MISMATCH',
-        message:
-          '팀 스코프 사용자는 소프트웨어 유효성 확인 리포트를 조회할 수 없습니다 (site 단위 리소스).',
-      });
-    }
-
-    // 유효성 확인 기록 + 대상 소프트웨어 정보 조회
-    const [record] = await this.db
-      .select({
-        id: softwareValidations.id,
-        validationType: softwareValidations.validationType,
-        status: softwareValidations.status,
-        softwareVersion: softwareValidations.softwareVersion,
-        testDate: softwareValidations.testDate,
-        infoDate: softwareValidations.infoDate,
-        softwareAuthor: softwareValidations.softwareAuthor,
-        // 방법 1: 공급자 시연
-        vendorName: softwareValidations.vendorName,
-        vendorSummary: softwareValidations.vendorSummary,
-        receivedBy: softwareValidations.receivedBy,
-        receivedDate: softwareValidations.receivedDate,
-        attachmentNote: softwareValidations.attachmentNote,
-        // 방법 2: 자체 시험
-        referenceDocuments: softwareValidations.referenceDocuments,
-        operatingUnitDescription: softwareValidations.operatingUnitDescription,
-        softwareComponents: softwareValidations.softwareComponents,
-        hardwareComponents: softwareValidations.hardwareComponents,
-        acquisitionFunctions: softwareValidations.acquisitionFunctions,
-        processingFunctions: softwareValidations.processingFunctions,
-        controlFunctions: softwareValidations.controlFunctions,
-        performedBy: softwareValidations.performedBy,
-        // 승인
-        submittedBy: softwareValidations.submittedBy,
-        technicalApproverId: softwareValidations.technicalApproverId,
-        qualityApproverId: softwareValidations.qualityApproverId,
-        // 소프트웨어 정보
-        softwareName: testSoftware.name,
-        softwareSite: testSoftware.site,
-      })
-      .from(softwareValidations)
-      .innerJoin(testSoftware, eq(softwareValidations.testSoftwareId, testSoftware.id))
-      .where(
-        and(
-          eq(softwareValidations.id, validationId),
-          filter.site ? eq(testSoftware.site, filter.site as Site) : undefined
-        )
-      )
-      .limit(1);
-
-    if (!record) {
-      throw new NotFoundException({
-        code: 'VALIDATION_NOT_FOUND',
-        message: `Software validation ${validationId} not found.`,
-      });
-    }
-
-    // 관련 사용자 정보 일괄 조회 — 단일 inArray 쿼리로 N+1 제거
-    type ResolvedUser = { name: string; signaturePath: string | null };
-    const userIdSet = [
-      ...new Set(
-        [
-          record.receivedBy,
-          record.performedBy,
-          record.technicalApproverId,
-          record.qualityApproverId,
-        ].filter((id): id is string => id !== null)
-      ),
-    ];
-    const userMap = new Map<string, ResolvedUser>();
-    if (userIdSet.length > 0) {
-      const userRows = await this.db
-        .select({ id: users.id, name: users.name, signaturePath: users.signatureImagePath })
-        .from(users)
-        .where(inArray(users.id, userIdSet));
-      for (const u of userRows) {
-        userMap.set(u.id, { name: u.name, signaturePath: u.signaturePath });
-      }
-    }
-
-    const receiver = record.receivedBy ? (userMap.get(record.receivedBy) ?? null) : null;
-    const performer = record.performedBy ? (userMap.get(record.performedBy) ?? null) : null;
-    const techApprover = record.technicalApproverId
-      ? (userMap.get(record.technicalApproverId) ?? null)
-      : null;
-    const qualityApprover = record.qualityApproverId
-      ? (userMap.get(record.qualityApproverId) ?? null)
-      : null;
-
-    // docx 템플릿 로드
-    const templateBuf = await this.formTemplateService.getTemplateBuffer(entry.formNumber);
-    const doc = new DocxTemplate(templateBuf, 'UL-QP-18-09');
-
-    // ── DOCX 구조 (9개 테이블) ──
-    // T0~T2: 방법1 (공급자 시연)
-    //   T0: 기본정보 (3행2열) — R0: Vendor, R1: SW Name, R2: Version/Date
-    //   T1: 검증내용 (5행2열) — R0: infoDate+Summary, R1~R4: 상세
-    //   T2: 수령정보 (3행2열) — R0: Receiver, R1: Date, R2: Attachments
-    // T3~T8: 방법2 (자체 시험)
-    //   T3: 기본정보 (7행2열) — R0: Name, R1: Author, R2: Version, R3: References, R4: Operating, R5: SW, R6: HW
-    //   T4: 획득기능 (3행2열) — R0: Name, R1: Means, R2: Criteria
-    //   T5: 프로세싱기능 (3행2열) — R0: Name, R1: Means, R2: Criteria
-    //   T6: 제어기능 (4행4열) — R0: Header, R1~R3: Data
-    //   T7: 수락기준 (1행2열) — R0: Criteria
-    //   T8: 승인란 (3행2열) — R0: Date, R1: Performer, R2: Authorizer
-
-    if (record.validationType === 'vendor') {
-      // ── 방법 1: 공급자 시연 (T0~T2) ──
-      // T0: 기본 정보
-      doc.setCellValue(0, 0, 1, record.vendorName ?? '-');
-      doc.setCellValue(0, 1, 1, `${record.softwareName} ${record.softwareVersion ?? ''}`);
-      doc.setCellValue(
-        0,
-        2,
-        1,
-        `${record.softwareVersion ?? '-'} / ${this.formatDate(record.infoDate)}`
-      );
-
-      // T1: 검증 내용 — R0 col1: infoDate, R0 col1도 Summary와 같은 행
-      doc.setCellValue(1, 0, 0, this.formatDate(record.infoDate));
-      doc.setCellValue(1, 0, 1, record.vendorSummary ?? '-');
-
-      // T2: 수령 정보
-      doc.setCellValue(2, 0, 1, receiver?.name ?? '-');
-      doc.setCellValue(2, 1, 1, this.formatDate(record.receivedDate));
-      doc.setCellValue(2, 2, 1, record.attachmentNote ?? '-');
-    } else {
-      // ── 방법 2: UL 자체 유효성확인 시험 (T3~T8) ──
-      // T3: 기본 정보 (7행)
-      doc.setCellValue(3, 0, 1, `${record.softwareName} ${record.softwareVersion ?? ''}`);
-      doc.setCellValue(3, 1, 1, record.softwareAuthor ?? '-');
-      doc.setCellValue(3, 2, 1, record.softwareVersion ?? '-');
-      doc.setCellValue(3, 3, 1, record.referenceDocuments ?? '-');
-      doc.setCellValue(3, 4, 1, record.operatingUnitDescription ?? '-');
-      doc.setCellValue(3, 5, 1, record.softwareComponents ?? '-');
-      doc.setCellValue(3, 6, 1, record.hardwareComponents ?? '-');
-
-      // T4: 획득 기능 (Acquisition) — R0=헤더 유지, 각 행 cell[1]에 값
-      const acqFunctions = this.parseJsonbFunctionArray(record.acquisitionFunctions);
-      if (acqFunctions.length > 0) {
-        const acq = acqFunctions[0];
-        doc.setCellValue(4, 0, 1, acq.name);
-        doc.setCellValue(4, 1, 1, acq.criteria);
-        doc.setCellValue(4, 2, 1, acq.result);
-      }
-
-      // T5: 프로세싱 기능 (Processing)
-      const procFunctions = this.parseJsonbFunctionArray(record.processingFunctions);
-      if (procFunctions.length > 0) {
-        const proc = procFunctions[0];
-        doc.setCellValue(5, 0, 1, proc.name);
-        doc.setCellValue(5, 1, 1, proc.criteria);
-        doc.setCellValue(5, 2, 1, proc.result);
-      }
-
-      // T6: 제어 기능 (Control) — 4행4열, R0=헤더, R1~R3=데이터
-      const ctrlFunctions = this.parseJsonbFunctionArray(record.controlFunctions);
-      if (ctrlFunctions.length > 0) {
-        const ctrl = ctrlFunctions[0];
-        doc.setCellValue(6, 1, 0, ctrl.name);
-        doc.setCellValue(6, 1, 1, ctrl.criteria);
-        doc.setCellValue(6, 1, 2, ctrl.result);
-      }
-
-      // T7: 수락 기준
-      // (보통 비어있거나 템플릿 유지)
-
-      // T8: 승인란 — R0=Date, R1=Performer, R2=TechApprover(col 1)+QualityApprover(col 0)
-      doc.setCellValue(8, 0, 1, this.formatDate(record.testDate));
-      doc.setCellValue(8, 1, 1, performer?.name ?? '-');
-      await insertDocxSignature(
-        doc,
-        8,
-        2,
-        0,
-        qualityApprover?.signaturePath ?? null,
-        qualityApprover?.name ?? '-',
-        this.storage
-      );
-      await insertDocxSignature(
-        doc,
-        8,
-        2,
-        1,
-        techApprover?.signaturePath ?? null,
-        techApprover?.name ?? '-',
-        this.storage
-      );
-    }
-
-    const buffer = doc.toBuffer();
-    return {
-      buffer,
-      mimeType: DOCX_MIME,
-      filename: `${entry.formNumber}_${entry.name}_${record.validationType}.docx`,
-    };
+    const data = await this.swValidationData.fetchExportData(params.validationId ?? '', filter);
+    return this.swValidationRenderer.render(data);
   }
 
   // ============================================================================
@@ -1010,35 +806,6 @@ export class FormTemplateExportService {
 
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
     return { buffer, mimeType: XLSX_MIME, filename: this.makeFilename(entry) };
-  }
-
-  /**
-   * JSONB 기능 검증 배열 안전 파싱
-   * DB의 acquisitionFunctions/processingFunctions/controlFunctions 컬럼은
-   * JSONB 타입이며 [{name, criteria, result}] 형태를 기대합니다.
-   */
-  private parseJsonbFunctionArray(
-    raw: unknown
-  ): { name: string; criteria: string; result: string }[] {
-    if (!raw) return [];
-    try {
-      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .filter(
-          (item: unknown): item is { name: string; criteria: string; result: string } =>
-            typeof item === 'object' &&
-            item !== null &&
-            typeof (item as Record<string, unknown>).name === 'string'
-        )
-        .map((item) => ({
-          name: item.name,
-          criteria: item.criteria ?? '-',
-          result: item.result ?? '-',
-        }));
-    } catch {
-      return [];
-    }
   }
 
   // ============================================================================
