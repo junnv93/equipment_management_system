@@ -8,6 +8,13 @@
  */
 
 /**
+ * XL 라벨 높이 (mm) — 폰트 스케일 기준이자 xl preset의 heightMm SSOT.
+ * LABEL_CONFIG.cell.referenceLabelHeightMm 과 LABEL_SIZE_PRESETS.xl.heightMm
+ * 양쪽이 이 값을 참조하여 drift를 방지한다.
+ */
+const XL_LABEL_HEIGHT_MM = 43.7;
+
+/**
  * QR 코드 생성 옵션 (qrcode 라이브러리 전달)
  *
  * errorCorrectionLevel 'H':
@@ -166,7 +173,7 @@ export const LABEL_CONFIG = {
      * Worker는 `heightMm / referenceLabelHeightMm` 비율로 valueFontPx를 보정하여
      * auto-fit 파이프라인의 시작점을 라벨 크기에 적합하게 조정한다.
      */
-    referenceLabelHeightMm: 43.7,
+    referenceLabelHeightMm: XL_LABEL_HEIGHT_MM,
     /**
      * topOffset 하한값 — 실제 사용 폰트·줄 수 기반 contentH가 rowH를 초과해도
      * 텍스트가 셀 상단 경계 밖으로 나가지 않도록 clamp.
@@ -244,7 +251,7 @@ export const LABEL_SIZE_PRESETS: Record<
   LabelSizePreset,
   { widthMm: number; heightMm: number; qrSizeMm: number }
 > = {
-  xl: { widthMm: 93.5, heightMm: 43.7, qrSizeMm: 25 },
+  xl: { widthMm: 93.5, heightMm: XL_LABEL_HEIGHT_MM, qrSizeMm: 25 },
   large: { widthMm: 80, heightMm: 38, qrSizeMm: 22 },
   medium: { widthMm: 60, heightMm: 28, qrSizeMm: 18 },
   small: { widthMm: 50, heightMm: 20, qrSizeMm: 14 },

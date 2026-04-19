@@ -408,7 +408,8 @@ async function renderCellToDataUrl(
     heightMm: number;
     layoutMode: LabelLayoutMode;
     qrSizeMm: number;
-  }
+  },
+  precomputedQrData?: QRCodeData
 ): Promise<string> {
   const { cell } = LABEL_CONFIG;
   const { widthMm, heightMm, layoutMode, qrSizeMm } = opts;
@@ -430,10 +431,12 @@ async function renderCellToDataUrl(
   c.lineWidth = 1;
   c.strokeRect(0.5, 0.5, cellW - 1, cellH - 1);
 
-  // ─── QR 코드 ─────────────────────────────────────────────────
-  const qrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
-    errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
-  });
+  // ─── QR 코드 — 상위에서 주입된 경우 재사용(sampler/batch 성능 최적화) ───
+  const qrData =
+    precomputedQrData ??
+    QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
+      errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
+    });
   const qrPx = mmToPx(qrSizeMm);
   c.imageSmoothingEnabled = false;
 
@@ -725,6 +728,11 @@ async function buildSamplerPdf(
   // jsPDF pt→mm: 1pt = 0.353mm
   const headerFontMm = sampler.headerFontPt * 0.353;
 
+  // 동일 managementNumber에 대해 QR BitMatrix를 1회만 계산 (7 preset × Reed-Solomon 절약)
+  const sharedQrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
+    errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
+  });
+
   let currentY = pdf.marginMm;
   let doneCount = 0;
 
@@ -758,12 +766,13 @@ async function buildSamplerPdf(
         const cellX = pdf.marginMm + col * (widthMm + sampler.labelGapMm);
         const cellY = currentY + row * (heightMm + sampler.labelGapMm);
 
-        const cellDataUrl = await renderCellToDataUrl(item, appUrl, cellCanvas, {
-          widthMm,
-          heightMm,
-          layoutMode: 'full',
-          qrSizeMm,
-        });
+        const cellDataUrl = await renderCellToDataUrl(
+          item,
+          appUrl,
+          cellCanvas,
+          { widthMm, heightMm, layoutMode: 'full', qrSizeMm },
+          sharedQrData
+        );
         doc.addImage(cellDataUrl, 'PNG', cellX, cellY, widthMm, heightMm);
 
         doneCount += 1;
