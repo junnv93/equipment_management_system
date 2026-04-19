@@ -118,25 +118,201 @@ export class DataMigrationService {
 
     const savedFile = await this.fileUploadService.saveFile(file, 'data-migration');
 
-    const parsedSheets = await this.excelParserService.parseMultiSheetBuffer(file.buffer);
+    try {
+      const parsedSheets = await this.excelParserService.parseMultiSheetBuffer(file.buffer);
 
-    // 장비 시트 유효 관리번호 Set 구축 (이력 시트 크로스 검증용)
-    const equipmentMgmtNumbers = new Set<string>();
-    const sheetResults: SheetPreviewResult[] = [];
+      // 장비 시트 유효 관리번호 Set 구축 (이력 시트 크로스 검증용)
+      const equipmentMgmtNumbers = new Set<string>();
+      const sheetResults: SheetPreviewResult[] = [];
 
-    for (const parsedSheet of parsedSheets) {
-      if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT) {
-        const rowPreviews = await this.migrationValidatorService.validateBatch(parsedSheet.rows, {
-          autoGenerateManagementNumber: dto.autoGenerateManagementNumber ?? false,
-          defaultSite: effectiveSite,
-          skipDuplicates: dto.skipDuplicates ?? true,
-        });
+      for (const parsedSheet of parsedSheets) {
+        if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT) {
+          const rowPreviews = await this.migrationValidatorService.validateBatch(parsedSheet.rows, {
+            autoGenerateManagementNumber: dto.autoGenerateManagementNumber ?? false,
+            defaultSite: effectiveSite,
+            skipDuplicates: dto.skipDuplicates ?? true,
+          });
 
-        // 유효 관리번호 수집
-        for (const row of rowPreviews) {
-          if (row.managementNumber && INSERTABLE_STATUSES.has(row.status)) {
-            equipmentMgmtNumbers.add(row.managementNumber);
+          // 유효 관리번호 수집
+          for (const row of rowPreviews) {
+            if (row.managementNumber && INSERTABLE_STATUSES.has(row.status)) {
+              equipmentMgmtNumbers.add(row.managementNumber);
+            }
           }
+
+          const summary = this.buildSummary(rowPreviews);
+          sheetResults.push({
+            sheetType: parsedSheet.sheetType,
+            sheetName: parsedSheet.sheetName,
+            totalRows: parsedSheet.rows.length,
+            ...summary,
+            unmappedColumns: parsedSheet.unmappedColumns,
+            rows: rowPreviews,
+          });
+        }
+      }
+
+      // 장비 시트는 1개만 지원 — FK 해석 Map이 단일 validRows 인덱스 기준으로 구성되기 때문
+      const equipmentSheets = sheetResults.filter(
+        (s) => s.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT
+      );
+      if (equipmentSheets.length > 1) {
+        throw new BadRequestException({
+          code: MigrationErrorCode.MULTIPLE_EQUIPMENT_SHEETS,
+          message: '장비 시트는 1개만 허용됩니다.',
+        });
+      }
+
+      // FK 해석: 장비 시트의 유효 행에서 담당자/부담당자/팀 UUID 해석
+      let fkResolutions: Map<number, FkResolutionResult> | undefined;
+      let fkResolutionSummary: import('./fk-resolution.service').FkResolutionSummary | undefined;
+      const equipmentSheet = sheetResults.find(
+        (s) => s.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT
+      );
+      if (equipmentSheet) {
+        const validRows = equipmentSheet.rows.filter((r) => INSERTABLE_STATUSES.has(r.status));
+        const hasFkFields = validRows.some(
+          (r) =>
+            r.data.managerEmail ||
+            r.data.managerName ||
+            r.data.deputyManagerEmail ||
+            r.data.deputyManagerName
+        );
+        if (hasFkFields) {
+          const resolved = await this.fkResolutionService.resolveBatch(validRows);
+          fkResolutions = resolved.results;
+          fkResolutionSummary = resolved.summary;
+
+          // FK 해석 경고를 행의 warnings에 추가
+          for (const [idx, res] of resolved.results) {
+            const row = validRows[idx];
+            if (row && res.warnings.length > 0) {
+              row.warnings.push(...res.warnings);
+            }
+          }
+        }
+      }
+
+      // FK 해석: 시험용 SW 시트의 주담당자/부담당자 UUID 해석
+      let testSoftwareFkResolutions: Map<number, FkResolutionResult> | undefined;
+      const testSoftwareSheet = sheetResults.find(
+        (s) => s.sheetType === MIGRATION_SHEET_TYPE.TEST_SOFTWARE
+      );
+      if (testSoftwareSheet) {
+        const validRows = testSoftwareSheet.rows.filter((r) => INSERTABLE_STATUSES.has(r.status));
+        const hasFkFields = validRows.some(
+          (r) =>
+            r.data.primaryManagerEmail ||
+            r.data.primaryManagerName ||
+            r.data.secondaryManagerEmail ||
+            r.data.secondaryManagerName
+        );
+        if (hasFkFields) {
+          const resolved = await this.fkResolutionService.resolveBatch(validRows, {
+            managerEmail: 'primaryManagerEmail',
+            managerName: 'primaryManagerName',
+            deputyEmail: 'secondaryManagerEmail',
+            deputyName: 'secondaryManagerName',
+          });
+          testSoftwareFkResolutions = resolved.results;
+
+          // FK 요약에 합산 (장비 + 시험용 SW)
+          if (fkResolutionSummary) {
+            fkResolutionSummary.resolvedManagers += resolved.summary.resolvedManagers;
+            fkResolutionSummary.unresolvedManagers += resolved.summary.unresolvedManagers;
+            fkResolutionSummary.resolvedDeputyManagers += resolved.summary.resolvedDeputyManagers;
+            fkResolutionSummary.unresolvedDeputyManagers +=
+              resolved.summary.unresolvedDeputyManagers;
+          } else {
+            fkResolutionSummary = resolved.summary;
+          }
+
+          for (const [idx, res] of resolved.results) {
+            const row = validRows[idx];
+            if (row && res.warnings.length > 0) {
+              row.warnings.push(...res.warnings);
+            }
+          }
+        }
+      }
+
+      // 장비 시트가 없을 때: 이력 행의 관리번호를 DB에서 검증하여 merge
+      if (equipmentMgmtNumbers.size === 0) {
+        const historyMgmtNums = new Set<string>();
+        for (const ps of parsedSheets) {
+          if (ps.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT) continue;
+          for (const row of ps.rows) {
+            const mn = row.mappedData?.managementNumber as string | undefined;
+            if (mn) historyMgmtNums.add(mn);
+          }
+        }
+        if (historyMgmtNums.size > 0) {
+          const dbMgmtNumToId = await this.resolveExistingMgmtNumToId([...historyMgmtNums]);
+          for (const mn of dbMgmtNumToId.keys()) {
+            equipmentMgmtNumbers.add(mn);
+          }
+        }
+      }
+
+      // 이력 시트 처리 (장비 시트 완료 후)
+      for (const parsedSheet of parsedSheets) {
+        if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT) continue;
+
+        let rowPreviews: MigrationRowPreview[];
+
+        if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.CALIBRATION) {
+          rowPreviews = this.historyValidatorService.validateCalibrationBatch(
+            parsedSheet.rows,
+            equipmentMgmtNumbers
+          );
+        } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.REPAIR) {
+          rowPreviews = this.historyValidatorService.validateRepairBatch(
+            parsedSheet.rows,
+            equipmentMgmtNumbers
+          );
+        } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.INCIDENT) {
+          rowPreviews = this.historyValidatorService.validateIncidentBatch(
+            parsedSheet.rows,
+            equipmentMgmtNumbers
+          );
+        } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.CABLE) {
+          rowPreviews = this.historyValidatorService.validateCableBatch(parsedSheet.rows);
+        } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.TEST_SOFTWARE) {
+          rowPreviews = this.historyValidatorService.validateTestSoftwareBatch(parsedSheet.rows);
+        } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.CALIBRATION_FACTOR) {
+          rowPreviews = this.historyValidatorService.validateCalibrationFactorBatch(
+            parsedSheet.rows,
+            equipmentMgmtNumbers
+          );
+        } else {
+          // NON_CONFORMANCE
+          rowPreviews = this.historyValidatorService.validateNonConformanceBatch(
+            parsedSheet.rows,
+            equipmentMgmtNumbers
+          );
+        }
+
+        // DB 중복 검사: 기존 장비 참조 행만 대상 (신규 장비는 DB에 없으므로 제외)
+        const existingMgmtNums = [
+          ...new Set(
+            rowPreviews
+              .filter(
+                (r) =>
+                  INSERTABLE_STATUSES.has(r.status) &&
+                  r.managementNumber &&
+                  !equipmentMgmtNumbers.has(r.managementNumber)
+              )
+              .map((r) => r.managementNumber!)
+          ),
+        ];
+
+        if (existingMgmtNums.length > 0) {
+          const previewMgmtNumToId = await this.resolveExistingMgmtNumToId(existingMgmtNums);
+          rowPreviews = await this.markPreviewHistoryDuplicates(
+            rowPreviews,
+            parsedSheet.sheetType,
+            previewMgmtNumToId
+          );
         }
 
         const summary = this.buildSummary(rowPreviews);
@@ -149,223 +325,63 @@ export class DataMigrationService {
           rows: rowPreviews,
         });
       }
-    }
 
-    // 장비 시트는 1개만 지원 — FK 해석 Map이 단일 validRows 인덱스 기준으로 구성되기 때문
-    const equipmentSheets = sheetResults.filter(
-      (s) => s.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT
-    );
-    if (equipmentSheets.length > 1) {
-      throw new BadRequestException({
-        code: MigrationErrorCode.MULTIPLE_EQUIPMENT_SHEETS,
-        message: '장비 시트는 1개만 허용됩니다.',
-      });
-    }
+      const sessionId = uuidv4();
+      const totalRows = sheetResults.reduce((acc, s) => acc + s.totalRows, 0);
+      const validRows = sheetResults.reduce((acc, s) => acc + s.validRows, 0);
+      const errorRows = sheetResults.reduce((acc, s) => acc + s.errorRows, 0);
 
-    // FK 해석: 장비 시트의 유효 행에서 담당자/부담당자/팀 UUID 해석
-    let fkResolutions: Map<number, FkResolutionResult> | undefined;
-    let fkResolutionSummary: import('./fk-resolution.service').FkResolutionSummary | undefined;
-    const equipmentSheet = sheetResults.find((s) => s.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT);
-    if (equipmentSheet) {
-      const validRows = equipmentSheet.rows.filter((r) => INSERTABLE_STATUSES.has(r.status));
-      const hasFkFields = validRows.some(
-        (r) =>
-          r.data.managerEmail ||
-          r.data.managerName ||
-          r.data.deputyManagerEmail ||
-          r.data.deputyManagerName
+      const result: MultiSheetPreviewResult = {
+        sessionId,
+        fileName: file.originalname,
+        sheets: sheetResults,
+        totalRows,
+        validRows,
+        errorRows,
+        fkResolutionSummary,
+      };
+
+      // 멀티시트 세션 캐시 저장
+      const session: MultiSheetMigrationSession = {
+        sessionId,
+        fileName: file.originalname,
+        uploadedAt: new Date(),
+        userId,
+        status: MIGRATION_SESSION_STATUS.PREVIEW,
+        filePath: savedFile.filePath,
+        fkResolutions,
+        testSoftwareFkResolutions,
+        fkResolutionSummary,
+        sheets: sheetResults.map((s) => ({
+          sheetType: s.sheetType,
+          sheetName: s.sheetName,
+          rows: s.rows,
+        })),
+      };
+      this.cacheService.set(
+        `${MULTI_SESSION_CACHE_KEY_PREFIX}${sessionId}`,
+        session,
+        MIGRATION_SESSION_TTL_MS
       );
-      if (hasFkFields) {
-        const resolved = await this.fkResolutionService.resolveBatch(validRows);
-        fkResolutions = resolved.results;
-        fkResolutionSummary = resolved.summary;
 
-        // FK 해석 경고를 행의 warnings에 추가
-        for (const [idx, res] of resolved.results) {
-          const row = validRows[idx];
-          if (row && res.warnings.length > 0) {
-            row.warnings.push(...res.warnings);
-          }
-        }
-      }
-    }
-
-    // FK 해석: 시험용 SW 시트의 주담당자/부담당자 UUID 해석
-    let testSoftwareFkResolutions: Map<number, FkResolutionResult> | undefined;
-    const testSoftwareSheet = sheetResults.find(
-      (s) => s.sheetType === MIGRATION_SHEET_TYPE.TEST_SOFTWARE
-    );
-    if (testSoftwareSheet) {
-      const validRows = testSoftwareSheet.rows.filter((r) => INSERTABLE_STATUSES.has(r.status));
-      const hasFkFields = validRows.some(
-        (r) =>
-          r.data.primaryManagerEmail ||
-          r.data.primaryManagerName ||
-          r.data.secondaryManagerEmail ||
-          r.data.secondaryManagerName
+      this.logger.log(
+        `MultiSheet Preview complete: sessionId=${sessionId}, ` +
+          `sheets=${sheetResults.length}, total=${totalRows}, valid=${validRows}, errors=${errorRows}`
       );
-      if (hasFkFields) {
-        const resolved = await this.fkResolutionService.resolveBatch(validRows, {
-          managerEmail: 'primaryManagerEmail',
-          managerName: 'primaryManagerName',
-          deputyEmail: 'secondaryManagerEmail',
-          deputyName: 'secondaryManagerName',
-        });
-        testSoftwareFkResolutions = resolved.results;
 
-        // FK 요약에 합산 (장비 + 시험용 SW)
-        if (fkResolutionSummary) {
-          fkResolutionSummary.resolvedManagers += resolved.summary.resolvedManagers;
-          fkResolutionSummary.unresolvedManagers += resolved.summary.unresolvedManagers;
-          fkResolutionSummary.resolvedDeputyManagers += resolved.summary.resolvedDeputyManagers;
-          fkResolutionSummary.unresolvedDeputyManagers += resolved.summary.unresolvedDeputyManagers;
-        } else {
-          fkResolutionSummary = resolved.summary;
-        }
-
-        for (const [idx, res] of resolved.results) {
-          const row = validRows[idx];
-          if (row && res.warnings.length > 0) {
-            row.warnings.push(...res.warnings);
-          }
-        }
+      return result;
+    } catch (e) {
+      // 파싱/검증 중 에러 발생 시 업로드된 임시 파일 정리 (세션 캐시에 저장되지 않아 executeMultiSheet가 참조 불가)
+      try {
+        await this.fileUploadService.deleteFile(savedFile.filePath);
+      } catch (cleanupError) {
+        this.logger.warn(
+          `Preview 실패 후 임시 파일 삭제 실패: ${savedFile.filePath}`,
+          cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+        );
       }
+      throw e;
     }
-
-    // 장비 시트가 없을 때: 이력 행의 관리번호를 DB에서 검증하여 merge
-    if (equipmentMgmtNumbers.size === 0) {
-      const historyMgmtNums = new Set<string>();
-      for (const ps of parsedSheets) {
-        if (ps.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT) continue;
-        for (const row of ps.rows) {
-          const mn = row.mappedData?.managementNumber as string | undefined;
-          if (mn) historyMgmtNums.add(mn);
-        }
-      }
-      if (historyMgmtNums.size > 0) {
-        const dbMgmtNumToId = await this.resolveExistingMgmtNumToId([...historyMgmtNums]);
-        for (const mn of dbMgmtNumToId.keys()) {
-          equipmentMgmtNumbers.add(mn);
-        }
-      }
-    }
-
-    // 이력 시트 처리 (장비 시트 완료 후)
-    for (const parsedSheet of parsedSheets) {
-      if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.EQUIPMENT) continue;
-
-      let rowPreviews: MigrationRowPreview[];
-
-      if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.CALIBRATION) {
-        rowPreviews = this.historyValidatorService.validateCalibrationBatch(
-          parsedSheet.rows,
-          equipmentMgmtNumbers
-        );
-      } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.REPAIR) {
-        rowPreviews = this.historyValidatorService.validateRepairBatch(
-          parsedSheet.rows,
-          equipmentMgmtNumbers
-        );
-      } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.INCIDENT) {
-        rowPreviews = this.historyValidatorService.validateIncidentBatch(
-          parsedSheet.rows,
-          equipmentMgmtNumbers
-        );
-      } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.CABLE) {
-        rowPreviews = this.historyValidatorService.validateCableBatch(parsedSheet.rows);
-      } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.TEST_SOFTWARE) {
-        rowPreviews = this.historyValidatorService.validateTestSoftwareBatch(parsedSheet.rows);
-      } else if (parsedSheet.sheetType === MIGRATION_SHEET_TYPE.CALIBRATION_FACTOR) {
-        rowPreviews = this.historyValidatorService.validateCalibrationFactorBatch(
-          parsedSheet.rows,
-          equipmentMgmtNumbers
-        );
-      } else {
-        // NON_CONFORMANCE
-        rowPreviews = this.historyValidatorService.validateNonConformanceBatch(
-          parsedSheet.rows,
-          equipmentMgmtNumbers
-        );
-      }
-
-      // DB 중복 검사: 기존 장비 참조 행만 대상 (신규 장비는 DB에 없으므로 제외)
-      const existingMgmtNums = [
-        ...new Set(
-          rowPreviews
-            .filter(
-              (r) =>
-                INSERTABLE_STATUSES.has(r.status) &&
-                r.managementNumber &&
-                !equipmentMgmtNumbers.has(r.managementNumber)
-            )
-            .map((r) => r.managementNumber!)
-        ),
-      ];
-
-      if (existingMgmtNums.length > 0) {
-        const previewMgmtNumToId = await this.resolveExistingMgmtNumToId(existingMgmtNums);
-        rowPreviews = await this.markPreviewHistoryDuplicates(
-          rowPreviews,
-          parsedSheet.sheetType,
-          previewMgmtNumToId
-        );
-      }
-
-      const summary = this.buildSummary(rowPreviews);
-      sheetResults.push({
-        sheetType: parsedSheet.sheetType,
-        sheetName: parsedSheet.sheetName,
-        totalRows: parsedSheet.rows.length,
-        ...summary,
-        unmappedColumns: parsedSheet.unmappedColumns,
-        rows: rowPreviews,
-      });
-    }
-
-    const sessionId = uuidv4();
-    const totalRows = sheetResults.reduce((acc, s) => acc + s.totalRows, 0);
-    const validRows = sheetResults.reduce((acc, s) => acc + s.validRows, 0);
-    const errorRows = sheetResults.reduce((acc, s) => acc + s.errorRows, 0);
-
-    const result: MultiSheetPreviewResult = {
-      sessionId,
-      fileName: file.originalname,
-      sheets: sheetResults,
-      totalRows,
-      validRows,
-      errorRows,
-      fkResolutionSummary,
-    };
-
-    // 멀티시트 세션 캐시 저장
-    const session: MultiSheetMigrationSession = {
-      sessionId,
-      fileName: file.originalname,
-      uploadedAt: new Date(),
-      userId,
-      status: MIGRATION_SESSION_STATUS.PREVIEW,
-      filePath: savedFile.filePath,
-      fkResolutions,
-      testSoftwareFkResolutions,
-      fkResolutionSummary,
-      sheets: sheetResults.map((s) => ({
-        sheetType: s.sheetType,
-        sheetName: s.sheetName,
-        rows: s.rows,
-      })),
-    };
-    this.cacheService.set(
-      `${MULTI_SESSION_CACHE_KEY_PREFIX}${sessionId}`,
-      session,
-      MIGRATION_SESSION_TTL_MS
-    );
-
-    this.logger.log(
-      `MultiSheet Preview complete: sessionId=${sessionId}, ` +
-        `sheets=${sheetResults.length}, total=${totalRows}, valid=${validRows}, errors=${errorRows}`
-    );
-
-    return result;
   }
 
   /** 멀티시트 Execute (Commit): 장비 배치 INSERT → mgmtNum→ID 맵 → 이력(교정/수리/사고) 배치 INSERT */
@@ -828,6 +844,13 @@ export class DataMigrationService {
       ) {
         this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.NON_CONFORMANCES);
       }
+      // 케이블이 등록된 경우 목록 캐시 무효화
+      // CablesService는 CALIBRATION 복합 프리픽스(`${CACHE_KEY_PREFIXES.CALIBRATION}cables:`)를 사용
+      if (
+        sheetSummaries.some((s) => s.sheetType === MIGRATION_SHEET_TYPE.CABLE && s.createdCount > 0)
+      ) {
+        this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION}cables:`);
+      }
 
       // 세션 상태 → completed (에러 리포트 접근용으로 캐시 유지)
       session.status = MIGRATION_SESSION_STATUS.COMPLETED;
@@ -1272,7 +1295,7 @@ export class DataMigrationService {
           .from(repairHistory)
           .where(inArray(repairHistory.equipmentId, ids))
       );
-    } else {
+    } else if (sheetType === MIGRATION_SHEET_TYPE.INCIDENT) {
       filterResult = await this.filterIncidentDuplicates(rowPreviews, mgmtNumToId, (ids) =>
         this.db
           .select({
@@ -1283,6 +1306,10 @@ export class DataMigrationService {
           .from(equipmentIncidentHistory)
           .where(inArray(equipmentIncidentHistory.equipmentId, ids))
       );
+    } else {
+      // CABLE / TEST_SOFTWARE / CALIBRATION_FACTOR / NON_CONFORMANCE:
+      // 독립 엔티티 — equipment FK 기반 중복 필터 없음. 모두 삽입 대상.
+      filterResult = { toInsert: rowPreviews, duplicates: [] };
     }
 
     // 원본 순서(rowNumber) 유지하면서 duplicate 마킹 반영

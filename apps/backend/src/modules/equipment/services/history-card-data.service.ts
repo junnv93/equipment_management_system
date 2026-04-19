@@ -20,6 +20,7 @@ import {
   CALIBRATION_REQUIRED_LABELS,
   MANAGEMENT_METHOD_LABELS,
   CALIBRATION_RESULT_LABELS,
+  DocumentTypeValues,
 } from '@equipment-management/schemas';
 import { EquipmentTimelineService } from './equipment-timeline.service';
 import type { TimelineEntry } from './equipment-timeline.types';
@@ -199,7 +200,7 @@ export class HistoryCardDataService {
         .where(
           and(
             eq(documents.equipmentId, equipmentId),
-            eq(documents.documentType, 'equipment_photo'),
+            eq(documents.documentType, DocumentTypeValues.EQUIPMENT_PHOTO),
             eq(documents.status, 'active'),
             eq(documents.isLatest, true)
           )
