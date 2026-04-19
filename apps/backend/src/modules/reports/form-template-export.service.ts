@@ -37,6 +37,10 @@ import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import {
   SOFTWARE_AVAILABILITY_LABELS,
   type SoftwareAvailability,
+  type TestField,
+  type Site,
+  type CableConnectorType,
+  type CableStatus,
   CableStatusValues,
 } from '@equipment-management/schemas';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../../common/storage/storage.interface';
@@ -472,14 +476,11 @@ export class FormTemplateExportService {
       conditions.push(eq(testSoftware.site, filter.site));
     }
 
-    // 시험분야 필터 (varchar.$type<TestField> — raw string 비교)
     if (params.testField) {
-      conditions.push(sql`${testSoftware.testField} = ${params.testField}`);
+      conditions.push(eq(testSoftware.testField, params.testField as TestField));
     }
-
-    // 가용 여부 필터 (varchar.$type<SoftwareAvailability> — raw string 비교)
     if (params.availability) {
-      conditions.push(sql`${testSoftware.availability} = ${params.availability}`);
+      conditions.push(eq(testSoftware.availability, params.availability as SoftwareAvailability));
     }
 
     // 제작사 필터
@@ -801,13 +802,13 @@ export class FormTemplateExportService {
     const conditions: SQL<unknown>[] = [];
 
     if (filter.site) {
-      conditions.push(sql`${cables.site} = ${filter.site}`);
+      conditions.push(eq(cables.site, filter.site as Site));
     }
     if (params.connectorType) {
-      conditions.push(sql`${cables.connectorType} = ${params.connectorType}`);
+      conditions.push(eq(cables.connectorType, params.connectorType as CableConnectorType));
     }
     if (params.status) {
-      conditions.push(sql`${cables.status} = ${params.status}`);
+      conditions.push(eq(cables.status, params.status as CableStatus));
     } else {
       // 기본: active 케이블만
       conditions.push(eq(cables.status, CableStatusValues.ACTIVE));
