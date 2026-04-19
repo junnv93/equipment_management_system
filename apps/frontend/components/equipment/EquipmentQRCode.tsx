@@ -3,18 +3,22 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import QRCode from 'qrcode';
-import { Printer } from 'lucide-react';
+import { Printer, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { QR_CONFIG, buildEquipmentQRUrl } from '@equipment-management/shared-constants';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { queryKeys } from '@/lib/api/query-config';
 import { getAppUrl } from '@/lib/qr/app-url';
+import { generateLabelPdf } from '@/lib/qr/generate-label-pdf';
+import { toast } from '@/components/ui/use-toast';
 
 interface EquipmentQRCodeProps {
   managementNumber: string;
   /** 화면/인쇄용 이름 (alt + 인쇄 레이아웃에 표시). 일반적으로 장비명 전달. */
   displayName?: string;
+  /** 일련번호 — PDF 라벨 테이블 세 번째 행에 표시. */
+  serialNumber?: string;
   /** 사이트·팀 메타(옵션) — 인쇄 레이아웃에 보조 라인으로 표시. */
   subLabel?: string;
   /** 렌더 크기(px). 기본 240 — 모바일 화면 밀도에 적합. 인쇄 시 SVG가 벡터라 크기 무관. */
@@ -40,14 +44,17 @@ interface EquipmentQRCodeProps {
 export function EquipmentQRCode({
   managementNumber,
   displayName,
+  serialNumber,
   subLabel,
   sizePx = 240,
   hidePrintButton = false,
   className,
 }: EquipmentQRCodeProps) {
   const t = useTranslations('qr.qrDisplay');
+  const tLabel = useTranslations('qr.labelPrint');
 
   const appUrl = React.useMemo(getAppUrl, []);
+  const [isGenerating, setIsGenerating] = React.useState(false);
 
   const { data: svgMarkup, isLoading } = useQuery({
     queryKey: queryKeys.qr.svg(managementNumber, appUrl),
@@ -64,9 +71,31 @@ export function EquipmentQRCode({
     gcTime: Infinity,
   });
 
-  const handlePrint = React.useCallback(() => {
-    window.print();
-  }, []);
+  const handlePrint = React.useCallback(async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await generateLabelPdf({
+        items: [{ managementNumber, equipmentName: displayName ?? managementNumber, serialNumber }],
+        appUrl,
+      });
+      const url = URL.createObjectURL(blob);
+      try {
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `equipment-label-${managementNumber}-${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+      toast({ description: tLabel('downloadReady', { count: 1 }) });
+    } catch {
+      toast({ variant: 'destructive', description: tLabel('generationFailed') });
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [managementNumber, displayName, serialNumber, appUrl, tLabel]);
 
   return (
     <div className={cn('flex flex-col items-center gap-3', className)}>
@@ -103,10 +132,15 @@ export function EquipmentQRCode({
           type="button"
           variant="outline"
           size="sm"
-          onClick={handlePrint}
+          onClick={() => void handlePrint()}
+          disabled={isGenerating}
           className="print:hidden"
         >
-          <Printer className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          {isGenerating ? (
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Printer className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          )}
           {t('printButton')}
         </Button>
       )}

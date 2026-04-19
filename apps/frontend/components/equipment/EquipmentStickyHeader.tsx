@@ -227,6 +227,7 @@ export function EquipmentStickyHeader({
           <EquipmentQRButton
             managementNumber={equipment.managementNumber}
             displayName={equipment.name}
+            serialNumber={equipment.serialNumber ?? undefined}
             subLabel={equipment.teamName ?? undefined}
             size="sm"
           />

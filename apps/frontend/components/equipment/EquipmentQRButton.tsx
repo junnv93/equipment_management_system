@@ -17,6 +17,7 @@ import { EquipmentQRCode } from './EquipmentQRCode';
 interface EquipmentQRButtonProps {
   managementNumber: string;
   displayName?: string;
+  serialNumber?: string;
   subLabel?: string;
   /** 버튼 크기 변형. 기본 `sm` — sticky 헤더/툴바에 적합. */
   size?: 'sm' | 'default';
@@ -35,6 +36,7 @@ interface EquipmentQRButtonProps {
 export function EquipmentQRButton({
   managementNumber,
   displayName,
+  serialNumber,
   subLabel,
   size = 'sm',
   iconOnly = false,
@@ -65,6 +67,7 @@ export function EquipmentQRButton({
           <EquipmentQRCode
             managementNumber={managementNumber}
             displayName={displayName}
+            serialNumber={serialNumber}
             subLabel={subLabel}
           />
         </div>
