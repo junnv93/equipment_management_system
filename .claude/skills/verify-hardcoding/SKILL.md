@@ -171,6 +171,30 @@ grep -n "qrSizeMm\s*[:=]\s*[0-9]\|cols\s*[:=]\s*[0-9]\|rows\s*[:=]\s*[0-9]\|page
 
 **예외**: `qr-config.ts` 자체, SSOT에서 destructure한 변수를 통한 속성 접근(`cell.qrSizeMm`, `pdf.cols`)은 SSOT-compliant.
 
+### Step 21b: QR 라벨 폰트 스케일 / 단위 변환 매직넘버 탐지 (2026-04-19 추가)
+
+Worker의 `mmToPx` / `ptToPx` 변환 함수와 `heightScale` 계산이 SSOT 상수를 경유해야 한다.
+직접 DPI 숫자(`200`) / mm 변환계수(`25.4`) / pt 변환계수(`72`) 인라인 사용은 허용 (물리 표준값).
+그러나 라벨 기준 높이(`XL_LABEL_HEIGHT_MM` = 43.7)를 하드코딩하거나
+`LABEL_SIZE_PRESETS`에 등록되지 않은 임의 프리셋 치수를 인라인 사용하는 것은 FAIL.
+
+```bash
+# 43.7 하드코딩 (XL_LABEL_HEIGHT_MM 우회)
+grep -rn "43\.7" \
+  apps/frontend/lib/qr/ --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules\|qr-config.ts\|\.spec\."
+
+# LABEL_SIZE_PRESETS에 없는 임의 widthMm/heightMm 상수 직접 할당
+# (qrSizeMm는 Step 21에서 이미 커버, 여기서는 레이아웃 치수)
+grep -n "widthMm\s*[:=]\s*[0-9]\|heightMm\s*[:=]\s*[0-9]" \
+  apps/frontend/lib/qr/generate-label-pdf.ts \
+  apps/frontend/lib/qr/generate-label-pdf.worker.ts \
+  2>/dev/null \
+  | grep -v "LABEL_SIZE_PRESETS\|getLabelCellDimensions\|LABEL_SAMPLER_LAYOUT\|qr-config\|// \|* "
+```
+
+**PASS:** 모두 0건. **FAIL:** `43.7` 인라인, 또는 SSOT를 거치지 않는 임의 치수 할당.
+
 ### Step 20: 파일 확장자/MIME 타입 SSOT
 
 **탐지 명령어:**
@@ -208,6 +232,7 @@ rg "\.xlsx|\.docx" apps/frontend/lib/api/ --type ts -n | grep -v "node_modules\|
 | 19  | FORM_CATALOG 양식 번호 SSOT   | PASS/FAIL | 하드코딩 양식 번호 위치                |
 | 19b | getTemplateBuffer 인자 SSOT   | PASS/WARN | 문자열 리터럴 직접 전달 위치           |
 | 20  | 파일 확장자/MIME 타입 SSOT    | PASS/FAIL | 하드코딩 확장자 배열 위치              |
+| 21b | QR 라벨 폰트 스케일 매직넘버  | PASS/FAIL | 43.7 인라인 또는 SSOT 외 치수 할당 위치 |
 ```
 
 ## Exceptions

@@ -84,6 +84,88 @@ grep -rn "qrSize\|errorCorrectionLevel\|margin:" --include="*.ts" --include="*.t
   apps/frontend/ | grep -v node_modules | grep -v qr-config.ts | grep -v ".spec."
 ```
 
+### Step 3a: LabelSizePreset 7종 SSOT 준수 탐지 (2026-04-19 추가)
+
+`LabelSizePreset` / `LABEL_SIZE_PRESETS` / `LABEL_SAMPLER_LAYOUT`은 `qr-config.ts` SSOT에서
+7종(`xl | large | medium | small | xs | xxs | micro`) 정의. 다른 파일에서 이 목록을 재정의하거나
+인라인 union type으로 중복 선언하면 drift가 발생한다.
+
+```bash
+# LabelSizePreset 로컬 재정의 금지
+grep -rn "LabelSizePreset\s*=" \
+  apps/frontend --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules\|qr-config.ts\|\.d\.ts"
+# LABEL_SIZE_PRESETS 인라인 객체 정의 금지
+grep -rn "LABEL_SIZE_PRESETS\s*[=:{]" \
+  apps/frontend --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules\|qr-config.ts\|\.d\.ts"
+```
+
+**PASS:** 0건 (import만 존재).
+
+### Step 3b: XL_LABEL_HEIGHT_MM SSOT drift 탐지 (2026-04-19 추가)
+
+`XL_LABEL_HEIGHT_MM`은 `qr-config.ts`의 `const` — `LABEL_CONFIG.cell.referenceLabelHeightMm`과
+`LABEL_SIZE_PRESETS.xl.heightMm`이 이 값을 공통 참조하여 drift를 방지한다.
+Worker 또는 다른 파일에서 `43.7` / `referenceLabelHeightMm` 값을 하드코딩하는 패턴을 탐지한다.
+
+```bash
+# 43.7 매직넘버 직접 할당 탐지
+grep -rn "43\.7\|referenceLabelHeightMm\s*[:=]\s*[0-9]" \
+  apps/frontend/lib/qr/ --include="*.ts" --include="*.tsx" \
+  | grep -v "node_modules\|qr-config.ts\|\.spec\."
+# heightScale 계산이 SSOT 경유 (referenceLabelHeightMm을 직접 숫자로 대체 금지)
+grep -n "heightScale" \
+  apps/frontend/lib/qr/generate-label-pdf.worker.ts 2>/dev/null \
+  | grep -v "referenceLabelHeightMm\|cell\."
+```
+
+**PASS:** 첫 번째 명령어 0건, 두 번째 명령어 0건.
+
+### Step 3c: precomputedQrData 주입 패턴 준수 탐지 (2026-04-19 추가)
+
+sampler/batch 모드에서 동일 장비의 QR을 반복 계산하지 않도록 `renderCellToDataUrl`에
+`precomputedQrData?` 파라미터를 주입하는 패턴을 유지해야 한다.
+Worker 내에서 `QRCode.create()` 직접 호출이 `precomputedQrData ?? ...` 패턴 없이
+루프 내에서 반복 호출되는지 탐지한다.
+
+```bash
+# renderCellToDataUrl 시그니처에 precomputedQrData 파라미터 확인
+grep -n "precomputedQrData" \
+  apps/frontend/lib/qr/generate-label-pdf.worker.ts 2>/dev/null
+```
+
+**PASS:** `precomputedQrData` 관련 라인이 함수 시그니처 + 사용부 양쪽에 존재.
+**FAIL:** 시그니처에 없거나 함수 내부에서 `QRCode.create()` 조건 없이 직접 호출.
+
+### Step 3d: getSamplerPresetOrder() ↔ i18n 키 동기화 탐지 (2026-04-19 추가)
+
+`getSamplerPresetOrder()`가 반환하는 7개 preset 순서가 i18n 파일
+(`sampler.header.{preset}`, `size.{preset}`)와 동기화되어야 한다.
+Worker는 `samplerHeaders`를 메인 스레드로부터 주입받으므로, 주입 측(`EquipmentQRButton.tsx`)이
+`getSamplerPresetOrder()`를 경유하는지 확인한다.
+
+```bash
+# EquipmentQRButton에서 getSamplerPresetOrder() 경유 확인
+grep -n "getSamplerPresetOrder\|sampler\.header\." \
+  apps/frontend/components/equipment/EquipmentQRButton.tsx 2>/dev/null
+# i18n 파일에 7개 키 모두 존재 확인 (en/ko 동일)
+node -e "
+const en = require('./apps/frontend/messages/en/qr.json');
+const ko = require('./apps/frontend/messages/ko/qr.json');
+const order = ['xl','large','medium','small','xs','xxs','micro'];
+const enKeys = Object.keys(en.qrDisplay?.sampler?.header ?? {});
+const koKeys = Object.keys(ko.qrDisplay?.sampler?.header ?? {});
+const enSizeKeys = Object.keys(en.qrDisplay?.size ?? {});
+const koSizeKeys = Object.keys(ko.qrDisplay?.size ?? {});
+const missing = order.filter(p => !enKeys.includes(p) || !koKeys.includes(p) || !enSizeKeys.includes(p) || !koSizeKeys.includes(p));
+console.log(missing.length === 0 ? 'PASS: 7개 키 모두 존재' : 'FAIL: 누락=' + missing.join(','));
+" 2>/dev/null
+```
+
+**PASS:** `getSamplerPresetOrder()` 사용 확인, i18n 7개 키 모두 존재.
+**FAIL:** 고정 배열 직접 선언 또는 i18n 키 누락.
+
 ### Step 4: QR 액션 재정의 탐지
 
 **PASS:** 프론트 액션 배열이 `QR_ACTION_VALUES` import 경유.
@@ -141,6 +223,10 @@ grep -rn "equipment\.status\|\.status === " \
 | 1   | QR URL 인라인 조합                | PASS/FAIL | 우회 파일명:라인                      |
 | 2   | QR 경로 상수 하드코딩             | PASS/FAIL | '/e/' 또는 '/handover' 리터럴 건수    |
 | 3   | QR 설정 매직넘버                  | PASS/FAIL | 인라인 픽셀/mm 값 위치                |
+| 3a  | LabelSizePreset 7종 로컬 재정의   | PASS/FAIL | 로컬 union/preset 재정의 위치         |
+| 3b  | XL_LABEL_HEIGHT_MM SSOT drift     | PASS/FAIL | 43.7 하드코딩 또는 referenceLabelHeightMm 인라인 위치 |
+| 3c  | precomputedQrData 주입 패턴       | PASS/FAIL | QRCode.create() 루프 내 중복 호출 위치 |
+| 3d  | getSamplerPresetOrder ↔ i18n 동기화 | PASS/FAIL | 고정 배열 대체 또는 i18n 키 누락      |
 | 4   | QR 액션 재정의                    | PASS/FAIL | 인라인 액션 배열 위치                 |
 | 5   | appUrl 직접 접근                  | PASS/FAIL | getAppUrl() 우회 위치                 |
 | 6   | FRONTEND_ROUTES 빌더 우회         | PASS/FAIL | 인라인 URL 조합 위치                  |
@@ -150,8 +236,10 @@ grep -rn "equipment\.status\|\.status === " \
 ## Exceptions
 
 1. **`qr-url.ts` 내부** — 경로 상수 원본 정의 위치, 자체 탐지 제외
-2. **`qr-config.ts` 내부** — 설정 상수 원본 정의, 자체 탐지 제외
+2. **`qr-config.ts` 내부** — 설정 상수 원본 정의, 자체 탐지 제외 (XL_LABEL_HEIGHT_MM 포함)
 3. **`qr-access.ts` 내부** — 액션 enum 원본 정의, 자체 탐지 제외
 4. **`frontend-routes.ts` 내부** — 딥링크 빌더 원본 정의, 자체 탐지 제외
 5. **`.spec.ts` / `.e2e-spec.ts`** — 테스트 픽스처의 인라인 값은 허용
 6. **`app-url.ts` 내부** — `process.env.NEXT_PUBLIC_APP_URL` 원본 접근 위치
+7. **Worker 내 `precomputedQrData ?? QRCode.create(...)` 1회 조건부 호출** — `renderCellToDataUrl` 함수 내부의 null coalesce 패턴은 정상 (재사용 주입 패턴의 fallback)
+8. **`getSamplerPresetOrder()` 반환값의 스프레드/매핑** — `getSamplerPresetOrder().map(...)` 형태로 SSOT를 소비하는 패턴은 정상 (재정의가 아닌 소비)
