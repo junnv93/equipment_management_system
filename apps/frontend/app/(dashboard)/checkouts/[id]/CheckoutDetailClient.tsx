@@ -59,6 +59,7 @@ import {
 } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
+import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
@@ -427,10 +428,7 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // UL-QP-18-06 반·출입 확인서 — 승인 이후 전 상태에서 export 허용
-    // 제외: pending/rejected (반출 사실 없음)
-    const nonExportableStatuses = [CSVal.PENDING, CSVal.REJECTED] as CheckoutStatus[];
-    if (!nonExportableStatuses.includes(checkout.status)) {
+    if (isCheckoutExportable(checkout.status)) {
       buttons.push(
         <ExportFormButton
           key="export-form"

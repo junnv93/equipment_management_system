@@ -38,6 +38,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus, FileOutput, Calendar, ArrowRight, User, AlertTriangle } from 'lucide-react';
+import { ExportFormButton } from '@/components/shared/ExportFormButton';
+import { isCheckoutExportable } from '@/lib/utils/checkout-exportability';
 import type { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { type CreateCheckoutDto, type Checkout } from '@/lib/api/checkout-api';
 import { addDays } from 'date-fns';
@@ -94,6 +96,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('equipment');
+  const tCheckouts = useTranslations('checkouts');
   const { fmtDate } = useDateFormatter();
 
   // 폼 설정 — 동적 Zod 스키마 (i18n 검증 메시지)
@@ -519,9 +522,9 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                 <Card className={getTimelineCardClasses()}>
                   <CardContent className="p-4">
                     <div className="space-y-3">
-                      {/* 헤더: 목적 및 상태 */}
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1 flex-1">
+                      {/* 헤더: 목적, 상태 및 액션 */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1 flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="text-xs">
                               {t(`checkoutHistoryTab.purpose.${checkout.purpose}` as const)}
@@ -531,6 +534,18 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                           <h4 className="text-lg font-semibold text-foreground">
                             {checkout.destination || checkout.location}
                           </h4>
+                        </div>
+                        {/* action slot: 미래 row-level 액션도 이 영역에 합류 */}
+                        <div className="flex-shrink-0">
+                          {isCheckoutExportable(checkout.status) && (
+                            <ExportFormButton
+                              formNumber="UL-QP-18-06"
+                              params={{ checkoutId: String(checkout.id) }}
+                              label={tCheckouts('actions.exportForm')}
+                              errorToastDescription={tCheckouts('toasts.exportFormError')}
+                              size="sm"
+                            />
+                          )}
                         </div>
                       </div>
 
