@@ -153,6 +153,8 @@ function checkHardcodedUrls(file, lines) {
 // Drizzle ORM 복합 쿼리 결과 타입 추론으로 명시적 반환 타입 주석 불가 — pre-commit 전 tracked
 const ESLINT_DISABLE_FILE_EXCLUSIONS = [
   'test-software.service.ts',
+  // blob:/presigned URL은 next/image 최적화 불가 — @next/next/no-img-element 허용
+  'NCDocumentsSection.tsx',
 ];
 
 function checkEslintDisable(file, lines) {

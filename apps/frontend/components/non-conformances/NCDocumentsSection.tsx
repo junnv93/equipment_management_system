@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { FileIcon, Paperclip, Trash2, Upload } from 'lucide-react';
 import { DocumentTypeValues } from '@equipment-management/schemas';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { Permission } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
@@ -169,9 +170,9 @@ export function NCDocumentsSection({ nonConformanceId }: NCDocumentsSectionProps
                 <Button
                   variant="destructive"
                   size="icon"
-                  className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                  onClick={() => setPendingDelete(doc)}
                   aria-label={t('deleteLabel', { name: doc.originalFileName })}
+                  className={`absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 ${TRANSITION_PRESETS.fastOpacity}`}
+                  onClick={() => setPendingDelete(doc)}
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </Button>

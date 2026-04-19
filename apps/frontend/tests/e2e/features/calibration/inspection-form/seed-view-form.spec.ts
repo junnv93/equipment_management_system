@@ -15,13 +15,15 @@ test('open inspection form for viewing', async ({ page }) => {
   await page.goto(
     'http://localhost:3000/equipment/eeee1001-0001-4001-8001-000000000001?tab=inspection'
   );
-  await page.waitForTimeout(3000);
 
   // 점검 기록 작성 버튼 클릭
   const btn = page.getByRole('button', { name: /점검 기록 작성/ });
-  await btn.waitFor({ timeout: 10000 });
+  await btn.waitFor({ state: 'visible', timeout: 10000 });
   await btn.click();
-  await page.waitForTimeout(1000);
+
+  // 폼 다이얼로그가 열릴 때까지 대기
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor({ state: 'visible', timeout: 5000 });
 
   // 여기서 멈춤 - 브라우저에서 확인 가능
   await page.pause();

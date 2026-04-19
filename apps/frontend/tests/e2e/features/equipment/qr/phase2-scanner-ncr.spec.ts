@@ -76,7 +76,7 @@ test.describe('QR Phase 2 — Scanner + NCR Deep Link', () => {
   test.describe('벌크 QR 라벨 PDF 다운로드', () => {
     test('장비 목록 페이지 벌크 라벨 버튼 → PDF 다운로드 트리거', async ({ testOperatorPage }) => {
       await testOperatorPage.goto(FRONTEND_ROUTES.EQUIPMENT.LIST);
-      await testOperatorPage.waitForLoadState('networkidle');
+      await testOperatorPage.waitForLoadState('load');
 
       // BulkLabelPrintButton은 현재 페이지 아이템 전체 기반.
       // aria-label="buttonAriaLabel" 패턴(i18n) — "선택" 또는 "selected" 키워드로 locator 구성
