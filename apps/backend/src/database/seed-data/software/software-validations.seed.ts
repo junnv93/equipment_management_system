@@ -182,17 +182,44 @@ export const SOFTWARE_VALIDATIONS_SEED_DATA: SeedRow[] = [
     operatingUnitDescription: 'DASY8 통합 SAR 측정 시스템',
     softwareComponents: 'DASY8 Core v8.0.1, cDASY6 Module v6.5',
     hardwareComponents: 'EX3DV5 프로브, cSAR3D 스캐너, SAM v4.5 팬텀',
-    acquisitionFunctions: JSON.stringify([
-      { name: '프로브 데이터 수집', criteria: '±0.5dB 이내', result: 'pass' },
-      { name: '위치 정밀도', criteria: '±0.2mm', result: 'pass' },
-    ]),
-    processingFunctions: JSON.stringify([
-      { name: 'SAR 외삽', criteria: 'IEEE 기준 불확도 이내', result: 'pass' },
-      { name: '피크 검출', criteria: '1g/10g 정규화', result: 'pass' },
-    ]),
-    controlFunctions: JSON.stringify([
-      { name: '로봇 암 제어', criteria: '충돌 방지 정상', result: 'pass' },
-    ]),
+    acquisitionFunctions: [
+      {
+        name: '프로브 데이터 수집',
+        independentMethod: '교정된 기준 프로브(NIST traceable)로 동일 조건 독립 측정',
+        acceptanceCriteria: '±0.5dB 이내',
+        result: 'pass',
+      },
+      {
+        name: '위치 정밀도',
+        independentMethod: '레이저 거리 측정기로 좌표 독립 검증',
+        acceptanceCriteria: '±0.2mm',
+        result: 'pass',
+      },
+    ],
+    processingFunctions: [
+      {
+        name: 'SAR 외삽',
+        independentMethod: 'IEEE Std 1528 기준 수식으로 수동 계산 후 비교',
+        acceptanceCriteria: 'IEEE 기준 불확도 이내',
+        result: 'pass',
+      },
+      {
+        name: '피크 검출',
+        independentMethod: '동일 데이터셋에 대해 MATLAB 스크립트로 독립 산출',
+        acceptanceCriteria: '1g/10g 정규화 기준 일치',
+        result: 'pass',
+      },
+    ],
+    controlFunctions: [
+      {
+        equipmentFunction: '로봇 암 이동 제어',
+        expectedFunction: '지정 좌표로 프로브 이동, 충돌 방지 정지',
+        observedFunction: '지정 좌표 도달 확인, 경계 접근 시 자동 정지 확인',
+        independentMethod: '스케일 자 및 육안으로 이동 거리·정지 동작 독립 검증',
+        acceptanceCriteria: '충돌 방지 정상 동작, 위치 오차 ±1mm 이내',
+        result: 'pass',
+      },
+    ],
     performedBy: USER_TEST_ENGINEER_SUWON_SAR_ID,
     submittedAt: new Date('2026-03-28'),
     submittedBy: USER_TEST_ENGINEER_SUWON_SAR_ID,
@@ -213,12 +240,22 @@ export const SOFTWARE_VALIDATIONS_SEED_DATA: SeedRow[] = [
     operatingUnitDescription: 'HAC/음향 시험 시스템 (SoundCheck + 마이크 어레이)',
     softwareComponents: 'SoundCheck v22.0.1, TTS Module v5.0',
     hardwareComponents: 'GRAS 45CB 음향 커플러, NTi Audio XL2',
-    acquisitionFunctions: JSON.stringify([
-      { name: '음압 레벨 측정', criteria: '±1dB', result: 'pass' },
-    ]),
-    processingFunctions: JSON.stringify([
-      { name: 'HAC 등급 산출', criteria: 'ANSI M/T Rating', result: 'pass' },
-    ]),
+    acquisitionFunctions: [
+      {
+        name: '음압 레벨 측정',
+        independentMethod: '교정된 기준 마이크로폰(GRAS 40AO)으로 동일 조건 독립 측정',
+        acceptanceCriteria: '±1dB 이내',
+        result: 'pass',
+      },
+    ],
+    processingFunctions: [
+      {
+        name: 'HAC 등급 산출',
+        independentMethod: 'ANSI C63.19 수식으로 수동 계산 후 비교',
+        acceptanceCriteria: 'ANSI M/T Rating 일치',
+        result: 'pass',
+      },
+    ],
     performedBy: USER_TEST_ENGINEER_SUWON_ID,
     submittedAt: new Date('2026-03-10'),
     submittedBy: USER_TEST_ENGINEER_SUWON_ID,
@@ -241,13 +278,28 @@ export const SOFTWARE_VALIDATIONS_SEED_DATA: SeedRow[] = [
     operatingUnitDescription: 'RF 출력 검증 시스템 (스펙트럼 분석기 + 파워 미터)',
     softwareComponents: 'UL Power Verification v4.2.0, Data Logger v2.1',
     hardwareComponents: 'R&S FSW26 스펙트럼 분석기, R&S NRPxxS 파워 센서',
-    acquisitionFunctions: JSON.stringify([
-      { name: '출력 레벨 측정', criteria: '±0.3dB', result: 'pass' },
-      { name: '주파수 정확도', criteria: '±1kHz', result: 'pass' },
-    ]),
-    processingFunctions: JSON.stringify([
-      { name: '최대 출력 계산', criteria: 'FCC 기준 이내', result: 'pass' },
-    ]),
+    acquisitionFunctions: [
+      {
+        name: '출력 레벨 측정',
+        independentMethod: 'R&S NRPxxS 파워 센서로 소프트웨어와 독립적으로 직접 측정',
+        acceptanceCriteria: '±0.3dB 이내',
+        result: 'pass',
+      },
+      {
+        name: '주파수 정확도',
+        independentMethod: '주파수 카운터로 반송파 주파수 독립 측정',
+        acceptanceCriteria: '±1kHz 이내',
+        result: 'pass',
+      },
+    ],
+    processingFunctions: [
+      {
+        name: '최대 출력 계산',
+        independentMethod: 'FCC Part 2.1046 수식으로 측정 데이터 수동 재계산',
+        acceptanceCriteria: 'FCC 기준 이내',
+        result: 'pass',
+      },
+    ],
     performedBy: USER_TEST_ENGINEER_SUWON_ID,
     submittedAt: new Date('2026-01-25'),
     submittedBy: USER_TEST_ENGINEER_SUWON_ID,
@@ -272,9 +324,14 @@ export const SOFTWARE_VALIDATIONS_SEED_DATA: SeedRow[] = [
     operatingUnitDescription: 'EMC 시험실 자동화 시스템 (턴테이블 + 안테나 마스트)',
     softwareComponents: 'EMC32 Core v12.30.01, EMS Control v5.2',
     hardwareComponents: 'R&S ESR EMI 수신기, EMCO 3115 안테나',
-    acquisitionFunctions: JSON.stringify([
-      { name: '방사 방해 측정', criteria: 'CISPR 32 Class B', result: 'fail' },
-    ]),
+    acquisitionFunctions: [
+      {
+        name: '방사 방해 측정',
+        independentMethod: '교정된 EMI 수신기로 소프트웨어 자동화 없이 수동 스캔',
+        acceptanceCriteria: 'CISPR 32 Class B 한계치 이내',
+        result: 'fail',
+      },
+    ],
     performedBy: USER_TEST_ENGINEER_SUWON_ID,
     submittedAt: new Date('2026-03-05'),
     submittedBy: USER_TEST_ENGINEER_SUWON_ID,
