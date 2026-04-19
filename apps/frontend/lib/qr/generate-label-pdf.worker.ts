@@ -328,9 +328,12 @@ async function renderCellToDataUrl(
   c.fillStyle = cell.cellBackgroundColor;
   c.fillRect(0, 0, cellW, cellH);
 
-  // ─── 셀 외곽 테두리 없음 ─────────────────────────────────────
-  // 절제선(pdf.cutLine)이 jsPDF 레이어에서 경계 역할을 대체한다.
-  // strokeRect 제거 → 셀 이미지가 gutter 영역을 침범하지 않음.
+  // ─── 셀 외곽 테두리 ──────────────────────────────────────────
+  // 테이블 콘텐츠 경계를 나타내는 실선. 절취선(점선, jsPDF 레이어)과 별개.
+  // 절취선은 gutter 중앙에, 외곽 테두리는 셀 이미지 경계에 위치 → 겹치지 않음.
+  c.strokeStyle = cell.borderColor;
+  c.lineWidth = 1;
+  c.strokeRect(0.5, 0.5, cellW - 1, cellH - 1);
 
   // ─── QR 코드 (qrPaddingLeftMm 여백, 수직 중앙 정렬) ─────────
   const qrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
