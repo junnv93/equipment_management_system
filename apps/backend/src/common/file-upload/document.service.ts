@@ -7,6 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
+import sharp from 'sharp';
 import { eq, and, desc, sql, or, inArray, lt } from 'drizzle-orm';
 import { documents } from '@equipment-management/db/schema';
 import { calibrations } from '@equipment-management/db/schema';
@@ -15,7 +16,18 @@ import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
 import { FileUploadService } from './file-upload.service';
+import { STORAGE_PROVIDER, type IStorageProvider } from '../storage/storage.interface';
 import type { MulterFile } from '../../types/common.types';
+
+export type DownloadInfo =
+  | { type: 'presigned'; url: string; fileName: string }
+  | {
+      type: 'buffer';
+      buffer: Buffer;
+      mimeType: string;
+      fileName: string;
+      fileHash: string | null;
+    };
 
 export interface CreateDocumentOptions {
   documentType: DocumentType;
@@ -42,10 +54,14 @@ export interface DocumentWithIntegrity {
 export class DocumentService {
   private readonly logger = new Logger(DocumentService.name);
 
+  /** WebP 품질 (0–100). 80 = 파일크기/화질 균형점. */
+  static readonly THUMBNAIL_WEBP_QUALITY = 80;
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: AppDatabase,
-    private readonly fileUploadService: FileUploadService
+    private readonly fileUploadService: FileUploadService,
+    @Inject(STORAGE_PROVIDER) private readonly storageProvider: IStorageProvider
   ) {}
 
   /**
@@ -472,6 +488,56 @@ export class DocumentService {
   }
 
   /**
+   * 다운로드 정보 반환.
+   * S3 드라이버: Presigned URL (JSON 응답용). Local 드라이버: 파일 버퍼.
+   * 컨트롤러는 type 필드로 분기하여 HTTP 응답만 처리.
+   */
+  async downloadWithPresign(id: string): Promise<DownloadInfo> {
+    const document = await this.findByIdAnyStatus(id);
+
+    if (
+      this.storageProvider.supportsPresignedUrl() &&
+      this.storageProvider.getPresignedDownloadUrl
+    ) {
+      const url = await this.storageProvider.getPresignedDownloadUrl(
+        document.filePath,
+        document.originalFileName
+      );
+      return { type: 'presigned', url, fileName: document.originalFileName };
+    }
+
+    const buffer = await this.fileUploadService.readFile(document.filePath);
+    return {
+      type: 'buffer',
+      buffer,
+      mimeType: document.mimeType,
+      fileName: document.originalFileName,
+      fileHash: document.fileHash,
+    };
+  }
+
+  /**
+   * 썸네일 WebP 버퍼 반환.
+   * 이미지 타입 검증 + 스토리지 다운로드 + sharp 변환을 서비스 레이어에서 처리.
+   */
+  async getThumbnailBuffer(id: string, width: number): Promise<Buffer> {
+    const document = await this.findByIdAnyStatus(id);
+
+    if (!document.mimeType.startsWith('image/')) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_NOT_IMAGE',
+        message: 'Thumbnail is only available for image documents.',
+      });
+    }
+
+    const originalBuffer = await this.storageProvider.download(document.filePath);
+    return sharp(originalBuffer)
+      .resize(width)
+      .webp({ quality: DocumentService.THUMBNAIL_WEBP_QUALITY })
+      .toBuffer();
+  }
+
+  /**
    * 보존 기간이 지난 soft-deleted 문서의 물리 파일 삭제 + DB 하드 삭제
    *
    * 설계:
@@ -490,8 +556,7 @@ export class DocumentService {
     let totalPurged = 0;
     let totalFailed = 0;
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    for (;;) {
       const batch = await this.db
         .select({ id: documents.id, filePath: documents.filePath })
         .from(documents)

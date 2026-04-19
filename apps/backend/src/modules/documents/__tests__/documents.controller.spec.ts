@@ -200,17 +200,14 @@ describe('DocumentsController', () => {
   // ─── download ─────────────────────────────────────────────────────────────
 
   describe('download()', () => {
-    it('Local 드라이버: readFile로 파일을 읽어 응답을 전송한다', async () => {
-      mockStorageProvider.supportsPresignedUrl.mockReturnValue(false);
-      const docRecord = {
-        id: MOCK_DOC_ID,
-        filePath: 'equipment/report.pdf',
-        originalFileName: 'report.pdf',
+    it('Local 드라이버: downloadWithPresign이 buffer를 반환하면 res.send로 전송한다', async () => {
+      mockDocumentService.downloadWithPresign.mockResolvedValue({
+        type: 'buffer',
+        buffer: Buffer.from('pdf-content'),
         mimeType: 'application/pdf',
+        fileName: 'report.pdf',
         fileHash: 'abc123',
-      };
-      mockDocumentService.findByIdAnyStatus.mockResolvedValue(docRecord);
-      mockFileUploadService.readFile.mockResolvedValue(Buffer.from('pdf-content'));
+      });
 
       const mockRes = {
         set: jest.fn(),
@@ -220,23 +217,16 @@ describe('DocumentsController', () => {
 
       await controller.download(MOCK_DOC_ID, mockRes);
 
-      expect(mockFileUploadService.readFile).toHaveBeenCalledWith(docRecord.filePath);
+      expect(mockDocumentService.downloadWithPresign).toHaveBeenCalledWith(MOCK_DOC_ID);
       expect(mockRes.send).toHaveBeenCalled();
     });
 
-    it('S3 드라이버: presigned URL을 JSON으로 반환한다', async () => {
-      mockStorageProvider.supportsPresignedUrl.mockReturnValue(true);
-      mockStorageProvider.getPresignedDownloadUrl = jest
-        .fn()
-        .mockResolvedValue('https://s3.example.com/presigned');
-      const docRecord = {
-        id: MOCK_DOC_ID,
-        filePath: 'equipment/report.pdf',
-        originalFileName: 'report.pdf',
-        mimeType: 'application/pdf',
-        fileHash: null,
-      };
-      mockDocumentService.findByIdAnyStatus.mockResolvedValue(docRecord);
+    it('S3 드라이버: downloadWithPresign이 presigned URL을 반환하면 res.json으로 응답한다', async () => {
+      mockDocumentService.downloadWithPresign.mockResolvedValue({
+        type: 'presigned',
+        url: 'https://s3.example.com/presigned',
+        fileName: 'report.pdf',
+      });
 
       const mockRes = {
         set: jest.fn(),
@@ -246,6 +236,7 @@ describe('DocumentsController', () => {
 
       await controller.download(MOCK_DOC_ID, mockRes);
 
+      expect(mockDocumentService.downloadWithPresign).toHaveBeenCalledWith(MOCK_DOC_ID);
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({ presignedUrl: 'https://s3.example.com/presigned' })
       );

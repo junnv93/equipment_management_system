@@ -100,6 +100,14 @@ export const createMockDocumentService = (): Record<string, jest.Mock> => ({
     .mockResolvedValue({ valid: true, expectedHash: 'abc', actualHash: 'abc' }),
   transferDocumentsToEquipment: jest.fn().mockResolvedValue(0),
   purgeDeletedDocuments: jest.fn().mockResolvedValue({ purged: 0, failed: 0 }),
+  downloadWithPresign: jest.fn().mockResolvedValue({
+    type: 'buffer',
+    buffer: Buffer.from('test'),
+    mimeType: 'image/jpeg',
+    fileName: 'photo.jpg',
+    fileHash: 'abc123',
+  }),
+  getThumbnailBuffer: jest.fn().mockResolvedValue(Buffer.from('webp')),
 });
 
 export const createMockSettingsService = (): Record<string, jest.Mock> => ({

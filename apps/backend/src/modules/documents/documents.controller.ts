@@ -5,7 +5,6 @@ import {
   Delete,
   Param,
   Res,
-  Inject,
   Body,
   Request,
   Query,
@@ -14,7 +13,6 @@ import {
   ParseUUIDPipe,
   BadRequestException,
 } from '@nestjs/common';
-import sharp from 'sharp';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -27,8 +25,6 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { DocumentService } from '../../common/file-upload/document.service';
-import { FileUploadService } from '../../common/file-upload/file-upload.service';
-import { STORAGE_PROVIDER, IStorageProvider } from '../../common/storage/storage.interface';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -44,11 +40,7 @@ import type { DocumentWithIntegrity } from '../../common/file-upload/document.se
 @ApiBearerAuth()
 @Controller('documents')
 export class DocumentsController {
-  constructor(
-    private readonly documentService: DocumentService,
-    private readonly fileUploadService: FileUploadService,
-    @Inject(STORAGE_PROVIDER) private readonly storageProvider: IStorageProvider
-  ) {}
+  constructor(private readonly documentService: DocumentService) {}
 
   // ============================================================================
   // 업로드
@@ -261,33 +253,24 @@ export class DocumentsController {
   @AuditLog({ action: 'download', entityType: 'document', entityIdPath: 'params.id' })
   @SkipResponseTransform()
   async download(@Param('id', ParseUUIDPipe) id: string, @Res() res: Response): Promise<void> {
-    const document = await this.documentService.findByIdAnyStatus(id);
+    const info = await this.documentService.downloadWithPresign(id);
 
-    // S3 드라이버: Presigned URL을 JSON으로 반환
-    // 302 redirect 대신 JSON 응답 — Axios가 redirect 시 Authorization 헤더를 S3에 전달하면 서명 충돌 발생
-    if (
-      this.storageProvider.supportsPresignedUrl() &&
-      this.storageProvider.getPresignedDownloadUrl
-    ) {
-      const url = await this.storageProvider.getPresignedDownloadUrl(
-        document.filePath,
-        document.originalFileName
-      );
-      res.json({ presignedUrl: url, fileName: document.originalFileName });
+    if (info.type === 'presigned') {
+      // S3 드라이버: Presigned URL을 JSON으로 반환
+      // 302 redirect 대신 JSON 응답 — Axios가 redirect 시 Authorization 헤더를 S3에 전달하면 서명 충돌 발생
+      res.json({ presignedUrl: info.url, fileName: info.fileName });
       return;
     }
 
     // Local 드라이버: 서버 프록시 다운로드
-    const buffer = await this.fileUploadService.readFile(document.filePath);
-    const encodedFileName = encodeURIComponent(document.originalFileName);
-
+    const encodedFileName = encodeURIComponent(info.fileName);
     res.set({
-      'Content-Type': document.mimeType,
+      'Content-Type': info.mimeType,
       'Content-Disposition': `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
-      'Content-Length': String(buffer.length),
-      ...(document.fileHash ? { 'X-File-Hash': document.fileHash } : {}),
+      'Content-Length': String(info.buffer.length),
+      ...(info.fileHash ? { 'X-File-Hash': info.fileHash } : {}),
     });
-    res.send(buffer);
+    res.send(info.buffer);
   }
 
   // ============================================================================
@@ -300,9 +283,6 @@ export class DocumentsController {
     md: 400,
     lg: 800,
   };
-
-  /** WebP 품질 (0–100). 80 = 파일크기/화질 균형점. */
-  private static readonly THUMBNAIL_WEBP_QUALITY = 80;
 
   @Get(':id/thumbnail')
   @ApiOperation({ summary: '이미지 문서 썸네일 (WebP)' })
@@ -321,24 +301,10 @@ export class DocumentsController {
     @Query('size') size: string = 'sm',
     @Res() res: Response
   ): Promise<void> {
-    const document = await this.documentService.findByIdAnyStatus(id);
-
-    if (!document.mimeType.startsWith('image/')) {
-      throw new BadRequestException({
-        code: 'DOCUMENT_NOT_IMAGE',
-        message: 'Thumbnail is only available for image documents.',
-      });
-    }
-
     const width =
       DocumentsController.THUMBNAIL_SIZES[size] ?? DocumentsController.THUMBNAIL_SIZES['sm'];
 
-    // S3/Local 공통 경로: sharp 처리를 위해 항상 서버에서 원본 다운로드
-    const originalBuffer = await this.storageProvider.download(document.filePath);
-    const webpBuffer = await sharp(originalBuffer)
-      .resize(width)
-      .webp({ quality: DocumentsController.THUMBNAIL_WEBP_QUALITY })
-      .toBuffer();
+    const webpBuffer = await this.documentService.getThumbnailBuffer(id, width);
 
     res.set({
       'Content-Type': 'image/webp',
