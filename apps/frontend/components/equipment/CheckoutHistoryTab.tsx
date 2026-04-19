@@ -519,7 +519,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
 
               {/* 컨텐츠 */}
               <div className="flex-1 pb-8">
-                <Card className={getTimelineCardClasses()}>
+                <Card className={getTimelineCardClasses()} data-timeline-card>
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       {/* 헤더: 목적, 상태 및 액션 */}
