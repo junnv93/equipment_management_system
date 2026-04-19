@@ -37,7 +37,12 @@ import {
   ALL_SENTINEL,
   type UITestSoftwareFilters,
 } from '@/lib/utils/software-filter-utils';
-import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
+  SOFTWARE_AVAILABILITY_BADGE_TOKENS,
+  SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS,
+} from '@/lib/design-tokens';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 
 function formatManagers(
@@ -261,32 +266,27 @@ export default function TestSoftwareListContent() {
                   <TableCell>{sw.manufacturer || '-'}</TableCell>
                   <TableCell>{sw.location || '-'}</TableCell>
                   <TableCell className="text-center">
-                    {sw.requiresValidation ? (
-                      <Badge
-                        variant="outline"
-                        className="border-green-600 bg-green-50 text-green-700"
-                      >
-                        {t('list.requiresValidationYes')}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-gray-400 bg-gray-50 text-gray-500">
-                        {t('list.requiresValidationNo')}
-                      </Badge>
-                    )}
+                    <Badge
+                      className={
+                        sw.requiresValidation
+                          ? SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.yes
+                          : SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.no
+                      }
+                    >
+                      {sw.requiresValidation
+                        ? t('list.requiresValidationYes')
+                        : t('list.requiresValidationNo')}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    {sw.availability === 'available' ? (
-                      <Badge
-                        variant="outline"
-                        className="border-green-600 bg-green-50 text-green-700"
-                      >
-                        {t(`availability.${sw.availability}`)}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-red-500 bg-red-50 text-red-600">
-                        {t(`availability.${sw.availability}`)}
-                      </Badge>
-                    )}
+                    <Badge
+                      className={
+                        SOFTWARE_AVAILABILITY_BADGE_TOKENS[sw.availability] ??
+                        SOFTWARE_AVAILABILITY_BADGE_TOKENS.unavailable
+                      }
+                    >
+                      {t(`availability.${sw.availability}`)}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}

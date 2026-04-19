@@ -17,6 +17,7 @@
 import { TRANSITION_PRESETS } from '../motion';
 import {
   getSemanticStatusClasses,
+  getSemanticBadgeClasses,
   getSemanticLeftBorderClasses,
   getSemanticContainerColorClasses,
 } from '../brand';
@@ -165,6 +166,26 @@ export const SOFTWARE_APPROVAL_BADGE_TOKENS: Record<string, string> = {
   pending: getSemanticStatusClasses('warning'),
   approved: getSemanticStatusClasses('ok'),
   rejected: getSemanticStatusClasses('critical'),
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7-a. 가용여부 배지 (available / unavailable)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** UL-QP-18-07 소프트웨어 관리대장 — 가용여부 뱃지 색상 SSOT */
+export const SOFTWARE_AVAILABILITY_BADGE_TOKENS: Record<string, string> = {
+  available: getSemanticBadgeClasses('ok'),
+  unavailable: getSemanticBadgeClasses('critical'),
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7-b. 자체 유효성 검증 대상 배지 (requiresValidation)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** O = 검증 대상(ok), X = 비대상(muted) */
+export const SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS = {
+  yes: getSemanticBadgeClasses('ok'),
+  no: 'border rounded-md px-2 py-0.5 text-xs font-medium border-border text-muted-foreground',
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────

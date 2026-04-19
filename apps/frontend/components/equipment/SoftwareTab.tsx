@@ -25,7 +25,13 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import testSoftwareApi from '@/lib/api/software-api';
 import { TestSoftwareCombobox } from '@/components/ui/test-software-combobox';
-import { TIMELINE_TOKENS, DOCUMENT_DISPLAY, TRANSITION_PRESETS } from '@/lib/design-tokens';
+import {
+  TIMELINE_TOKENS,
+  DOCUMENT_DISPLAY,
+  TRANSITION_PRESETS,
+  SOFTWARE_AVAILABILITY_BADGE_TOKENS,
+  SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS,
+} from '@/lib/design-tokens';
 import type { Equipment } from '@/lib/api/equipment-api';
 
 function formatManagers(
@@ -313,18 +319,28 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                         </td>
                         <td className="py-2 pr-4">
                           <Badge
-                            variant={sw.availability === 'available' ? 'default' : 'secondary'}
-                            className="text-xs"
+                            className={
+                              SOFTWARE_AVAILABILITY_BADGE_TOKENS[sw.availability] ??
+                              SOFTWARE_AVAILABILITY_BADGE_TOKENS.unavailable
+                            }
                           >
                             {sw.availability === 'available'
                               ? t('softwareTab.available')
                               : t('softwareTab.unavailable')}
                           </Badge>
                         </td>
-                        <td className="py-2 pr-4 text-center font-medium">
-                          {sw.requiresValidation
-                            ? t('softwareTab.requiresValidationYes')
-                            : t('softwareTab.requiresValidationNo')}
+                        <td className="py-2 pr-4 text-center">
+                          <Badge
+                            className={
+                              sw.requiresValidation
+                                ? SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.yes
+                                : SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS.no
+                            }
+                          >
+                            {sw.requiresValidation
+                              ? t('softwareTab.requiresValidationYes')
+                              : t('softwareTab.requiresValidationNo')}
+                          </Badge>
                         </td>
                         <td className="py-2">
                           <Button
