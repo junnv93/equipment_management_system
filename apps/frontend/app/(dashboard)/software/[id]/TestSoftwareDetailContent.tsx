@@ -158,7 +158,7 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
     mutationFn: (data) => testSoftwareApi.update(id, data),
     queryKey: queryKeys.testSoftware.detail(id),
     optimisticUpdate: (old, data) => {
-      if (!old) return old!;
+      if (!old) throw new Error('optimisticUpdate: cache miss on detail page');
       const { version: _v, ...fields } = data;
       return { ...old, ...fields };
     },
@@ -174,7 +174,7 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
     },
     queryKey: queryKeys.testSoftware.detail(id),
     optimisticUpdate: (old) => {
-      if (!old) return old!;
+      if (!old) throw new Error('optimisticUpdate: cache miss on detail page');
       return {
         ...old,
         availability: old.availability === 'available' ? 'unavailable' : 'available',
