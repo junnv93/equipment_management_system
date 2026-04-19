@@ -60,8 +60,8 @@ export interface FormTemplateSearchResult {
 // ── 조회 ──────────────────────────────────────────────────────────────────
 
 export async function listFormTemplates(): Promise<FormTemplateListItem[]> {
-  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.LIST);
-  return response.data?.data ?? response.data;
+  const response = await apiClient.get<FormTemplateListItem[]>(API_ENDPOINTS.FORM_TEMPLATES.LIST);
+  return response.data;
 }
 
 /**
@@ -69,35 +69,40 @@ export async function listFormTemplates(): Promise<FormTemplateListItem[]> {
  * archivedAt 내림차순. 파일은 보존되지만 활성 목록에서 제외됨.
  */
 export async function listArchivedFormTemplates(): Promise<FormTemplateHistoryItem[]> {
-  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.ARCHIVED);
-  return response.data?.data ?? response.data;
+  const response = await apiClient.get<FormTemplateHistoryItem[]>(
+    API_ENDPOINTS.FORM_TEMPLATES.ARCHIVED
+  );
+  return response.data;
 }
 
 export async function listFormTemplateHistoryByName(
   formName: string
 ): Promise<FormTemplateHistoryItem[]> {
-  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.HISTORY_BY_NAME, {
-    params: { formName },
-  });
-  return response.data?.data ?? response.data;
+  const response = await apiClient.get<FormTemplateHistoryItem[]>(
+    API_ENDPOINTS.FORM_TEMPLATES.HISTORY_BY_NAME,
+    { params: { formName } }
+  );
+  return response.data;
 }
 
 export async function listFormTemplateRevisionsByName(
   formName: string
 ): Promise<FormTemplateRevisionItem[]> {
-  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.REVISIONS_BY_NAME, {
-    params: { formName },
-  });
-  return response.data?.data ?? response.data;
+  const response = await apiClient.get<FormTemplateRevisionItem[]>(
+    API_ENDPOINTS.FORM_TEMPLATES.REVISIONS_BY_NAME,
+    { params: { formName } }
+  );
+  return response.data;
 }
 
 export async function searchFormTemplateByNumber(
   formNumber: string
 ): Promise<FormTemplateSearchResult> {
-  const response = await apiClient.get(API_ENDPOINTS.FORM_TEMPLATES.SEARCH_BY_NUMBER, {
-    params: { formNumber },
-  });
-  return response.data?.data ?? response.data;
+  const response = await apiClient.get<FormTemplateSearchResult>(
+    API_ENDPOINTS.FORM_TEMPLATES.SEARCH_BY_NUMBER,
+    { params: { formNumber } }
+  );
+  return response.data;
 }
 
 // ── 다운로드 ──────────────────────────────────────────────────────────────

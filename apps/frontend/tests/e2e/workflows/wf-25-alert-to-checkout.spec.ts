@@ -24,6 +24,8 @@
 import { test, expect } from '../shared/fixtures/auth.fixture';
 
 test.describe('WF-25: alerts → 장비 상세 → 반출 신청 cross-flow', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test('TE: /alerts 의 장비 알림 → 장비 상세 → 반출 신청 → 폼 prefill 검증', async ({
     testOperatorPage: page,
   }) => {

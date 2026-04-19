@@ -581,6 +581,17 @@ export class FormTemplateExportService {
       });
     }
 
+    // Software validation은 site 단위 리소스(testSoftware에 teamId 없음).
+    // Team 스코프로는 경계를 결정할 방법이 없으므로 DB 접근 전 명시적 403.
+    // exportSoftwareRegistry(UL-QP-18-07)와 동일한 early-reject 패턴 유지.
+    if (filter.teamId) {
+      throw new ForbiddenException({
+        code: 'SCOPE_RESOURCE_MISMATCH',
+        message:
+          '팀 스코프 사용자는 소프트웨어 유효성 확인 리포트를 조회할 수 없습니다 (site 단위 리소스).',
+      });
+    }
+
     // 유효성 확인 기록 + 대상 소프트웨어 정보 조회
     const [record] = await this.db
       .select({
@@ -626,15 +637,6 @@ export class FormTemplateExportService {
       });
     }
 
-    // Software validation은 site 단위 리소스(testSoftware에 teamId 없음).
-    // Team 스코프로는 경계를 결정할 방법이 없으므로 명시적 403.
-    if (filter.teamId) {
-      throw new ForbiddenException({
-        code: 'SCOPE_RESOURCE_MISMATCH',
-        message:
-          '팀 스코프 사용자는 소프트웨어 유효성 확인 리포트를 조회할 수 없습니다 (site 단위 리소스).',
-      });
-    }
     if (filter.site && record.softwareSite !== filter.site) {
       throw new NotFoundException({
         code: 'VALIDATION_NOT_FOUND',
@@ -649,6 +651,7 @@ export class FormTemplateExportService {
         [
           record.receivedBy,
           record.performedBy,
+          record.submittedBy,
           record.technicalApproverId,
           record.qualityApproverId,
         ].filter((id): id is string => id !== null)

@@ -60,6 +60,8 @@ async function fillAndSave(page: Page, textarea: ReturnType<Page['getByRole']>, 
 
 // 다탭 CAS 는 엔진 무관 로직이므로 chromium 외 프로젝트에서는 스킵 (중복 비용 회피)
 test.describe('WF-35: CAS 충돌 UI 복구 (다탭 시뮬레이션)', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test('다탭 동시 편집 → 페이지B 409 토스트 → refetch → 재시도 성공', async ({ browser }) => {
     const projectName = test.info().project.name.toLowerCase();
     test.skip(

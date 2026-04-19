@@ -56,7 +56,7 @@ import {
 import { CHECKOUT_009_ID } from '../shared/constants/test-checkout-ids';
 
 test.describe('WF-Export-UI: 양식 export 사용자 클릭 동선', () => {
-  test.describe.configure({ mode: 'parallel' });
+  test.describe.configure({ mode: 'serial' });
 
   test('QP-18-01 장비 관리대장 — testEngineer 클릭 → docx 다운로드 + 파일명 가드', async ({
     testOperatorPage: page,
