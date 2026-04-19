@@ -273,12 +273,10 @@ function AttachmentThumbnail({
       aria-label={downloadLabel}
     >
       {isImage && previewUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- blob:/presigned URL은 next/image 최적화 불가 (동적 URL, 크기 미지정)
-        <img
-          src={previewUrl}
-          alt={doc.originalFileName}
-          className="h-full w-full object-cover"
-          loading="lazy"
+        <div
+          aria-hidden="true"
+          style={{ backgroundImage: `url(${previewUrl})` }}
+          className="h-full w-full bg-cover bg-center"
         />
       ) : (
         <FileIcon className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
