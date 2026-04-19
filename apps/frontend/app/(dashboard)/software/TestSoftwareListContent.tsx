@@ -219,9 +219,9 @@ export default function TestSoftwareListContent() {
                 <TableHead>{t('list.columns.version')}</TableHead>
                 <TableHead>{t('list.columns.testField')}</TableHead>
                 <TableHead>{t('list.columns.manager')}</TableHead>
-                <TableHead>{t('list.columns.requiresValidation')}</TableHead>
                 <TableHead>{t('list.columns.manufacturer')}</TableHead>
                 <TableHead>{t('list.columns.location')}</TableHead>
+                <TableHead>{t('list.columns.requiresValidation')}</TableHead>
                 <TableHead>{t('list.columns.availability')}</TableHead>
               </TableRow>
             </TableHeader>
@@ -245,13 +245,13 @@ export default function TestSoftwareListContent() {
                   <TableCell>
                     {formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
                   </TableCell>
+                  <TableCell>{sw.manufacturer || '-'}</TableCell>
+                  <TableCell>{sw.location || '-'}</TableCell>
                   <TableCell className="text-center font-medium">
                     {sw.requiresValidation
                       ? t('list.requiresValidationYes')
                       : t('list.requiresValidationNo')}
                   </TableCell>
-                  <TableCell>{sw.manufacturer || '-'}</TableCell>
-                  <TableCell>{sw.location || '-'}</TableCell>
                   <TableCell>
                     <Badge variant={sw.availability === 'available' ? 'default' : 'secondary'}>
                       {t(`availability.${sw.availability}`)}
