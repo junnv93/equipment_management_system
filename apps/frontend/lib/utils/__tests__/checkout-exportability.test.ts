@@ -23,7 +23,7 @@ describe('isCheckoutExportable()', () => {
     expect(isCheckoutExportable(status)).toBe(true);
   });
 
-  it('전체 상태 매트릭스: pending/rejected만 false', () => {
+  it('전체 상태 매트릭스: pending/rejected/canceled만 false', () => {
     const results = CHECKOUT_STATUS_VALUES.map((s) => ({
       status: s,
       exportable: isCheckoutExportable(s as CheckoutStatus),
