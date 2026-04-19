@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import checkoutApi, { type HandoverTokenPurpose } from '@/lib/api/checkout-api';
+import { getAppUrl } from '@/lib/qr/app-url';
 
 interface HandoverQRDisplayProps {
   checkoutId: string;
@@ -47,15 +48,15 @@ export function HandoverQRDisplay({
   const [remainingSec, setRemainingSec] = useState(0);
   const expiresAtRef = useRef<number | null>(null);
 
-  const appUrl = useMemo(() => {
-    const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-    if (envUrl) return envUrl;
-    if (typeof window !== 'undefined') return window.location.origin;
-    return '';
-  }, []);
+  const appUrl = useMemo(getAppUrl, []);
 
   // useCallback으로 useEffect deps 완전 선언 — eslint-disable 안티패턴 회피.
   const issueAndRender = useCallback(async () => {
+    if (!appUrl) {
+      setPhase('error');
+      setErrorMessage(null);
+      return;
+    }
     setPhase('loading');
     setErrorMessage(null);
     try {

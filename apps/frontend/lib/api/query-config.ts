@@ -139,6 +139,19 @@ export const QUERY_CONFIG = {
     retry: 3,
   },
 
+  /**
+   * 장비 목록 (즉시 갱신) — 상세 페이지 이탈 후 목록 복귀 시 항상 최신 데이터 보장.
+   * EQUIPMENT_LIST 기반 + refetchOnMount: 'always'.
+   * 사용처: 상세→목록 복귀 UX가 필요한 리스트 컴포넌트.
+   */
+  EQUIPMENT_LIST_FRESH: {
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always' as const,
+    retry: 3,
+  },
+
   /** 장비 상세 - NORMAL (mutation 후 자동 무효화) */
   EQUIPMENT_DETAIL: {
     staleTime: CACHE_TIMES.MEDIUM,

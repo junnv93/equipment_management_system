@@ -9,6 +9,7 @@ import { QR_CONFIG, buildEquipmentQRUrl } from '@equipment-management/shared-con
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { queryKeys } from '@/lib/api/query-config';
+import { getAppUrl } from '@/lib/qr/app-url';
 
 interface EquipmentQRCodeProps {
   managementNumber: string;
@@ -46,12 +47,7 @@ export function EquipmentQRCode({
 }: EquipmentQRCodeProps) {
   const t = useTranslations('qr.qrDisplay');
 
-  const appUrl = React.useMemo(() => {
-    const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-    if (envUrl) return envUrl;
-    if (typeof window !== 'undefined') return window.location.origin;
-    return '';
-  }, []);
+  const appUrl = React.useMemo(getAppUrl, []);
 
   const { data: svgMarkup, isLoading } = useQuery({
     queryKey: queryKeys.qr.svg(managementNumber, appUrl),

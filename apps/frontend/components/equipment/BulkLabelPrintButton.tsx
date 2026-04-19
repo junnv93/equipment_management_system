@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { generateLabelPdf } from '@/lib/qr/generate-label-pdf';
+import { getAppUrl } from '@/lib/qr/app-url';
 import { toast } from '@/components/ui/use-toast';
 
 interface BulkLabelPrintButtonProps {
@@ -63,7 +64,7 @@ export function BulkLabelPrintButton({
     setPhase('generating');
     setProgress({ done: 0, total: count });
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
+      const appUrl = getAppUrl();
       const blob = await generateLabelPdf({
         items: selectedItems.map((e) => ({
           managementNumber: e.managementNumber,

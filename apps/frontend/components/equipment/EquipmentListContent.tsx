@@ -221,14 +221,12 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
 
   // 장비 목록 쿼리
   // ✅ queryFilters에 showRetired가 useEquipmentFilters에서 자동 주입됨 (useUserPreferences 연동)
-  // ✅ QUERY_CONFIG.EQUIPMENT_LIST: staleTime LONG(5분)+gcTime VERY_LONG+refetchOnWindowFocus false
-  // ✅ refetchOnMount: 'always' — 상세 페이지에서 변경 후 목록 복귀 시 최신 상태 보장
+  // ✅ QUERY_CONFIG.EQUIPMENT_LIST_FRESH: 상세 페이지 이탈 후 목록 복귀 시 항상 최신 상태 보장
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.equipment.list(queryFilters),
     queryFn: () => equipmentApi.getEquipmentList(queryFilters),
     placeholderData: initialData,
-    ...QUERY_CONFIG.EQUIPMENT_LIST,
-    refetchOnMount: 'always',
+    ...QUERY_CONFIG.EQUIPMENT_LIST_FRESH,
   });
 
   const paginationInfo = useMemo(() => {

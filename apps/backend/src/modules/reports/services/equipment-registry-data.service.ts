@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
+import { and, eq, ne, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
@@ -7,6 +7,7 @@ import {
   CLASSIFICATION_TO_CODE,
   EquipmentStatusValues,
   type Classification,
+  type EquipmentStatus,
 } from '@equipment-management/schemas';
 import { EXPORT_QUERY_LIMITS } from '@equipment-management/shared-constants';
 import type { EnforcedScope } from '../../../common/scope/scope-enforcer';
@@ -67,7 +68,7 @@ export class EquipmentRegistryDataService {
       conditions.push(eq(equipment.teamId, filter.teamId));
     }
     if (params.status) {
-      conditions.push(sql`${equipment.status} = ${params.status}`);
+      conditions.push(eq(equipment.status, params.status as EquipmentStatus));
     }
     if (params.managementMethod) {
       conditions.push(eq(equipment.managementMethod, params.managementMethod));
