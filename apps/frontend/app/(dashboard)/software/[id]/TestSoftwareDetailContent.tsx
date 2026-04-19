@@ -29,12 +29,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
 import testSoftwareApi, {
+  type TestSoftware,
   type UpdateTestSoftwareDto,
   type LinkedEquipment,
 } from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { UserCombobox } from '@/components/ui/user-combobox';
-import { isConflictError } from '@/lib/api/error';
 import { TEST_FIELD_VALUES, SITE_VALUES } from '@equipment-management/schemas';
 import type { TestField, Site } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -43,7 +44,6 @@ import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-consta
 import { useAuth } from '@/hooks/use-auth';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { EquipmentCombobox } from '@/components/ui/equipment-combobox';
-import { CACHE_TIMES } from '@/lib/api/query-config';
 
 interface TestSoftwareDetailContentProps {
   id: string;
@@ -67,14 +67,14 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
   const { data: software, isLoading } = useQuery({
     queryKey: queryKeys.testSoftware.detail(id),
     queryFn: () => testSoftwareApi.get(id),
-    ...QUERY_CONFIG.TEST_SOFTWARE_LIST,
+    ...QUERY_CONFIG.TEST_SOFTWARE_DETAIL,
   });
 
   // M:N 연결된 장비
   const { data: linkedEquipment = [] } = useQuery({
     queryKey: queryKeys.testSoftware.linkedEquipment(id),
     queryFn: () => testSoftwareApi.listLinkedEquipment(id),
-    staleTime: CACHE_TIMES.MEDIUM,
+    ...QUERY_CONFIG.HISTORY,
   });
 
   const invalidateLinkCaches = (equipmentId?: string) => {
@@ -154,42 +154,34 @@ export default function TestSoftwareDetailContent({ id }: TestSoftwareDetailCont
     }
   };
 
-  const handleMutationError = (error: Error) => {
-    if (isConflictError(error)) {
-      toast({
-        title: t('toast.versionConflict'),
-        description: t('toast.versionConflictDesc'),
-        variant: 'destructive',
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.detail(id) });
-    } else {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    }
-  };
-
-  const updateMutation = useMutation({
-    mutationFn: (data: UpdateTestSoftwareDto) => testSoftwareApi.update(id, data),
-    onSuccess: () => {
-      toast({ title: t('toast.updateSuccess') });
-      setIsEditOpen(false);
+  const updateMutation = useOptimisticMutation<TestSoftware, UpdateTestSoftwareDto, TestSoftware>({
+    mutationFn: (data) => testSoftwareApi.update(id, data),
+    queryKey: queryKeys.testSoftware.detail(id),
+    optimisticUpdate: (old, data) => {
+      if (!old) return old!;
+      const { version: _v, ...fields } = data;
+      return { ...old, ...fields };
     },
-    onError: handleMutationError,
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.lists() });
-    },
+    invalidateKeys: [queryKeys.testSoftware.lists()],
+    successMessage: t('toast.updateSuccess'),
+    onSuccessCallback: () => setIsEditOpen(false),
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: () => testSoftwareApi.toggleAvailability(id, software?.version ?? 0),
-    onSuccess: () => {
-      toast({ title: t('toast.toggleSuccess') });
+  const toggleMutation = useOptimisticMutation<TestSoftware, void, TestSoftware>({
+    mutationFn: () => {
+      const current = queryClient.getQueryData<TestSoftware>(queryKeys.testSoftware.detail(id));
+      return testSoftwareApi.toggleAvailability(id, current?.version ?? 0);
     },
-    onError: handleMutationError,
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.testSoftware.lists() });
+    queryKey: queryKeys.testSoftware.detail(id),
+    optimisticUpdate: (old) => {
+      if (!old) return old!;
+      return {
+        ...old,
+        availability: old.availability === 'available' ? 'unavailable' : 'available',
+      };
     },
+    invalidateKeys: [queryKeys.testSoftware.lists()],
+    successMessage: t('toast.toggleSuccess'),
   });
 
   const handleEditSubmit = () => {
