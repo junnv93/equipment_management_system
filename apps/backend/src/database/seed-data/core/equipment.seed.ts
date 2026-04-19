@@ -1,10 +1,11 @@
 /**
  * Equipment seed data
- * 36 equipment items distributed across:
+ * 37 equipment items distributed across:
  * - 8 status values (each with 2+ items)
  * - 6 classification codes (E, R, W, S, A, P)
  * - 3 sites (Suwon, Uiwang, Pyeongtaek)
  * - Various calibration date ranges
+ * - SUW-E0013: needsIntermediateCheck=true + not_applicable (M6 검증 픽스처)
  */
 
 import { equipment } from '@equipment-management/db/schema';
@@ -61,6 +62,7 @@ import {
   EQUIP_AMPLIFIER_UIW_W_ID,
   EQUIP_TEST_HARNESS_PYT_A_ID,
   EQUIP_POWER_AMP_PYT_A_ID,
+  EQUIP_REF_JIG_SUW_E_ID,
 } from '../../utils/uuid-constants';
 
 const now = new Date();
@@ -631,6 +633,35 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'external_calibration',
     monthsAgo(10),
     daysLater(60)
+  ),
+
+  // =========================================================================
+  // Suwon FCC EMC/RF (E) — 비교정 중간점검 대상 기준 치구 (SUW-E0013)
+  // needsIntermediateCheck=true + managementMethod=not_applicable + 교정 기록 없음
+  // M6 검증 픽스처: db:reset 후 POST /equipment/:id/intermediate-inspections → 201 + calibrationId IS NULL
+  // =========================================================================
+
+  createEquipment(
+    EQUIP_REF_JIG_SUW_E_ID,
+    '기준 치구',
+    'SUW-E0013',
+    TEAM_FCC_EMC_RF_SUWON_ID,
+    'suwon',
+    'available',
+    'not_applicable',
+    undefined, // 교정 기록 없음
+    undefined,
+    {
+      needsIntermediateCheck: true,
+      intermediateCheckCycle: 6,
+      lastIntermediateCheckDate: monthsAgo(3),
+      nextIntermediateCheckDate: daysLater(90),
+      calibrationRequired: 'not_required',
+      calibrationCycle: undefined,
+      description: '비교정 대상 기준 치구 — 주기적 중간점검(UL-QP-18-03) 필요, 교정 기록 없음',
+      manufacturer: 'In-House',
+      modelName: 'REF-JIG-001',
+    }
   ),
 
   // NOTE: 시험용 소프트웨어(EMC32, DASY6)는 소프트웨어 관리 모듈에서 관리.

@@ -80,6 +80,8 @@ export const EQUIP_RBAC_SIGNAL_GEN_SUW_E_ID = 'eeee1009-0009-4009-8009-000000000
 export const EQUIP_CANCEL_RECEIVER_SUW_E_ID = 'eeee100a-000a-400a-800a-00000000000a'; // S24: Cancel test
 export const EQUIP_CAS_ANALYZER_SUW_E_ID = 'eeee100b-000b-400b-800b-00000000000b'; // S25: CAS test
 export const EQUIP_SHARED_ANALYZER_SUW_E_ID = 'eeee100c-000c-400c-800c-00000000000c'; // S26: Shared equipment test
+// 비교정 중간점검 대상 기준 치구 — needsIntermediateCheck=true + 교정 기록 없음 (M6 검증 픽스처)
+export const EQUIP_REF_JIG_SUW_E_ID = 'eeee100d-000d-400d-800d-00000000000d'; // available, not_applicable, needsIntermediateCheck=true
 
 // Suwon equipment (General EMC - R) [6 equipment]
 export const EQUIP_OSCILLOSCOPE_SUW_R_ID = 'eeee2001-0001-4001-8001-000000000001'; // available (overdue)
