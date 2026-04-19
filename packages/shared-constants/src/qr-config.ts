@@ -224,7 +224,7 @@ export type LabelLayoutMode = 'full' | 'qrOnly';
  * |----------|--------------------|----------|-------------------------------|
  * | standard | 93.5 × 43.7        | 25       | 일반 장비 (A4 시트 일괄 기준) |
  * | medium   | 60 × 30            | 20       | 중형 장비, 케이스 등          |
- * | small    | 30 × 15            | 12       | 소형·초소형 장비 (최소 규격)  |
+ * | small    | 50 × 15            | 12       | 소형·초소형 장비 (최소 규격)  |
  *
  * qrSizeMm 최솟값 근거:
  *   URL ~30자 + errorCorrectionLevel H → 33×33 모듈.
@@ -236,7 +236,7 @@ export const LABEL_SIZE_PRESETS: Record<
 > = {
   standard: { widthMm: 93.5, heightMm: 43.7, qrSizeMm: 25 },
   medium: { widthMm: 60, heightMm: 30, qrSizeMm: 20 },
-  small: { widthMm: 30, heightMm: 15, qrSizeMm: 12 },
+  small: { widthMm: 50, heightMm: 15, qrSizeMm: 12 },
 };
 
 /**
@@ -274,4 +274,60 @@ export function resolveLayoutMode(
     }
   }
   return { mode: 'qrOnly', fallback: true };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 사이즈 샘플러 설정 — SSOT
+// A4 1페이지에 모든 크기 변형을 실물 크기로 배치하여 사용자가 직접 잘라 사용.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 사이즈 샘플러 — preset별 라벨 배치 (rows × cols).
+ *
+ * 사용자가 사이즈를 비교·선택할 수 있도록 각 preset을 정확히 1개씩 배치.
+ *
+ * A4 usable: 190mm × 277mm (margin 10mm).
+ * 가로: cols=1이므로 각 라벨이 단독 배치, 모두 190mm 이내 ✓
+ * 세로 합계 (headerHeightMm=7, groupGapMm=6 분할):
+ *   7 + 43.7 + 6 + 7 + 30 + 6 + 7 + 15 = 121.7mm < 277mm ✓
+ */
+export const LABEL_SAMPLER_LAYOUT: Record<LabelSizePreset, { rows: number; cols: number }> = {
+  standard: { rows: 1, cols: 1 },
+  medium: { rows: 1, cols: 1 },
+  small: { rows: 1, cols: 1 },
+} as const;
+
+/**
+ * 사이즈 샘플러 스타일/여백 설정 — SSOT.
+ *
+ * Worker와 UI 모두 이 상수를 통해 참조하므로 하드코딩 금지.
+ */
+export const LABEL_SAMPLER_CONFIG = {
+  /** 그룹 헤더 텍스트 폰트 크기 (pt) — 라벨 위 크기 설명 텍스트 */
+  headerFontPt: 8,
+  /** 헤더 텍스트 색상 — 본문 라벨과 시각적 구분 */
+  headerColor: '#555555' as const,
+  /** 헤더 영역 세로 높이 (mm) — 헤더 텍스트 + 하단 여백 포함 */
+  headerHeightMm: 7,
+  /** 크기 그룹 사이 세로 여백 (mm) — 구분선 포함 */
+  groupGapMm: 6,
+  /** 같은 그룹 내 라벨 간 여백 (mm) — 절제 여유 공간 */
+  labelGapMm: 2,
+  /** 그룹 사이 구분선 색상 */
+  dividerColor: '#dddddd' as const,
+  /** 구분선 굵기 (mm) — 헤어라인보다 약간 두껍게, 시각 구분 최소화 */
+  dividerLineWidthMm: 0.3,
+} as const;
+
+export type LabelSamplerConfig = typeof LABEL_SAMPLER_CONFIG;
+export type LabelSamplerLayout = typeof LABEL_SAMPLER_LAYOUT;
+
+/**
+ * 샘플러 렌더링 순서 — 큰 크기부터 위→아래 배치.
+ *
+ * `Object.keys(LABEL_SAMPLER_LAYOUT)`은 TypeScript에서 `string[]`을 반환하므로
+ * `LabelSizePreset[]` 타입 보장을 위해 명시적 함수로 분리한다.
+ */
+export function getSamplerPresetOrder(): LabelSizePreset[] {
+  return ['standard', 'medium', 'small'];
 }

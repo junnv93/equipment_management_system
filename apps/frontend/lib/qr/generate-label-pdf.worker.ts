@@ -42,6 +42,9 @@ import {
   QR_CONFIG,
   LABEL_CONFIG,
   LABEL_SIZE_PRESETS,
+  LABEL_SAMPLER_LAYOUT,
+  LABEL_SAMPLER_CONFIG,
+  getSamplerPresetOrder,
   getLabelCellDimensions,
   buildEquipmentQRUrl,
   type LabelItem,
@@ -53,10 +56,16 @@ type InboundMessage = {
   type: 'generate';
   items: LabelItem[];
   appUrl: string;
-  /** 'single': 개별 라벨 1장 (크기/레이아웃 선택 가능). 'batch': 기존 A4 시트 일괄. */
-  mode?: 'single' | 'batch';
+  /**
+   * 'single': 개별 라벨 1장 (sizePreset + layoutMode 선택 가능).
+   * 'batch': A4 시트 2×6 그리드 일괄.
+   * 'sampler': A4 1페이지에 모든 크기 변형 배치 (items[0]만 사용).
+   */
+  mode?: 'single' | 'batch' | 'sampler';
   sizePreset?: LabelSizePreset;
   layoutMode?: LabelLayoutMode;
+  /** sampler 모드 전용 — 메인 스레드에서 i18n 빌드한 preset별 헤더 문자열 */
+  samplerHeaders?: Record<LabelSizePreset, string>;
 };
 
 type OutboundMessage =
@@ -670,6 +679,96 @@ async function buildBatchPdf(items: LabelItem[], appUrl: string): Promise<ArrayB
   return doc.output('arraybuffer');
 }
 
+/**
+ * 사이즈 샘플러 PDF 생성 — A4 1페이지에 모든 크기 변형 배치.
+ *
+ * getSamplerPresetOrder()를 순회하여 각 preset별로:
+ *   1. 헤더 텍스트 (메인 스레드에서 주입 — Worker는 i18n-free 유지)
+ *   2. rows × cols 라벨 그리드 (renderCellToDataUrl 재사용)
+ *   3. 그룹 사이 구분선 + 여백
+ *
+ * 절취선(renderCutLines) 없음 — 크기별 배치가 다르므로 자유 커팅.
+ */
+async function buildSamplerPdf(
+  item: LabelItem,
+  appUrl: string,
+  samplerHeaders: Record<LabelSizePreset, string>
+): Promise<ArrayBuffer> {
+  const { pdf } = LABEL_CONFIG;
+  const sampler = LABEL_SAMPLER_CONFIG;
+  const presets = getSamplerPresetOrder();
+
+  // 전체 라벨 수 계산 (진행률 기준)
+  const totalLabels = presets.reduce((acc, preset) => {
+    const { rows, cols } = LABEL_SAMPLER_LAYOUT[preset];
+    return acc + rows * cols;
+  }, 0);
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: pdf.pageSize });
+
+  // jsPDF pt→mm: 1pt = 0.353mm
+  const headerFontMm = sampler.headerFontPt * 0.353;
+
+  let currentY = pdf.marginMm;
+  let doneCount = 0;
+
+  for (let gi = 0; gi < presets.length; gi += 1) {
+    const preset = presets[gi];
+    const { widthMm, heightMm, qrSizeMm } = LABEL_SIZE_PRESETS[preset];
+    const { rows, cols } = LABEL_SAMPLER_LAYOUT[preset];
+
+    // ─── 그룹 구분선 (첫 그룹 제외) ───────────────────────────────
+    if (gi > 0) {
+      const [r, g, b] = hexToRgb(sampler.dividerColor);
+      doc.setDrawColor(r, g, b);
+      doc.setLineWidth(sampler.dividerLineWidthMm);
+      doc.setLineDashPattern([], 0);
+      doc.line(pdf.marginMm, currentY, pdf.pageWidthMm - pdf.marginMm, currentY);
+      currentY += sampler.groupGapMm / 2;
+    }
+
+    // ─── 헤더 텍스트 ──────────────────────────────────────────────
+    doc.setFontSize(sampler.headerFontPt);
+    const [hr, hg, hb] = hexToRgb(sampler.headerColor);
+    doc.setTextColor(hr, hg, hb);
+    doc.text(samplerHeaders[preset], pdf.marginMm, currentY + headerFontMm);
+    currentY += sampler.headerHeightMm;
+
+    // ─── 라벨 그리드 (같은 preset의 canvas 재사용) ──────────────────
+    const cellCanvas = new OffscreenCanvas(mmToPx(widthMm), mmToPx(heightMm));
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const cellX = pdf.marginMm + col * (widthMm + sampler.labelGapMm);
+        const cellY = currentY + row * (heightMm + sampler.labelGapMm);
+
+        const cellDataUrl = await renderCellToDataUrl(item, appUrl, cellCanvas, {
+          widthMm,
+          heightMm,
+          layoutMode: 'full',
+          qrSizeMm,
+        });
+        doc.addImage(cellDataUrl, 'PNG', cellX, cellY, widthMm, heightMm);
+
+        doneCount += 1;
+        post({ type: 'progress', done: doneCount, total: totalLabels });
+      }
+    }
+
+    currentY += rows * heightMm + (rows - 1) * sampler.labelGapMm;
+
+    // 마지막 그룹이 아니면 그룹 사이 여백 절반 추가 (구분선과 합산)
+    if (gi < presets.length - 1) {
+      currentY += sampler.groupGapMm / 2;
+    }
+  }
+
+  // 텍스트 색상 원상복구
+  doc.setTextColor(0, 0, 0);
+
+  return doc.output('arraybuffer');
+}
+
 ctx.addEventListener('message', async (event: MessageEvent<InboundMessage>) => {
   const { data } = event;
   if (data.type !== 'generate') return;
@@ -689,6 +788,11 @@ ctx.addEventListener('message', async (event: MessageEvent<InboundMessage>) => {
         throw new Error('sizePreset and layoutMode are required for single mode');
       }
       pdfBytes = await buildSinglePdf(data.items[0], data.appUrl, data.sizePreset, data.layoutMode);
+    } else if (data.mode === 'sampler') {
+      if (!data.samplerHeaders) {
+        throw new Error('samplerHeaders is required for sampler mode');
+      }
+      pdfBytes = await buildSamplerPdf(data.items[0], data.appUrl, data.samplerHeaders);
     } else {
       if (data.items.length > LABEL_CONFIG.maxBatch) {
         throw new Error(

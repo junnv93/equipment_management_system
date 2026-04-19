@@ -281,11 +281,16 @@ export {
   LABEL_LAYOUT_CONSTRAINTS,
   getLabelCellDimensions,
   resolveLayoutMode,
+  LABEL_SAMPLER_LAYOUT,
+  LABEL_SAMPLER_CONFIG,
+  getSamplerPresetOrder,
   type QrConfig,
   type LabelConfig,
   type LabelItem,
   type LabelSizePreset,
   type LabelLayoutMode,
+  type LabelSamplerConfig,
+  type LabelSamplerLayout,
 } from './qr-config';
 
 // QR URL 빌더 / 파서 (FE/BE 공용 SSOT)

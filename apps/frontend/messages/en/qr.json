@@ -34,6 +34,20 @@
     "buttonAriaLabel": "View and print equipment QR code",
     "altText": "QR code for {name} ({managementNumber})",
     "printButton": "Print",
+    "printModeLabel": "Print mode",
+    "printMode": {
+      "sampler": "Size sampler (all sizes on one page)",
+      "samplerDescription": "Print and cut out the size you prefer.",
+      "custom": "Specific size",
+      "customDescription": "Choose layout and size manually."
+    },
+    "sampler": {
+      "header": {
+        "standard": "Standard ({widthMm} × {heightMm} mm)",
+        "medium": "Medium ({widthMm} × {heightMm} mm)",
+        "small": "Small ({widthMm} × {heightMm} mm)"
+      }
+    },
     "layoutModeLabel": "Print layout",
     "layoutMode": {
       "full": "QR + full info (ID · name · serial)",
@@ -43,14 +57,15 @@
     "size": {
       "standard": "Standard (93.5 × 43.7 mm)",
       "medium": "Medium (60 × 30 mm)",
-      "small": "Small (30 × 15 mm)"
+      "small": "Small (50 × 15 mm)"
     },
     "fallbackNotice": "Layout auto-adjusted for selected size: {mode}",
     "fallbackMode": {
       "full": "QR + full info",
       "qrOnly": "QR only"
     },
-    "downloadPdf": "Download PDF"
+    "downloadPdf": "Download PDF",
+    "downloadFailed": "Failed to generate PDF. Please try again later."
   },
   "landing": {
     "loadingLabel": "Loading equipment...",

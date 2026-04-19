@@ -19,12 +19,19 @@ export interface GenerateLabelPdfOptions {
   /**
    * 'single': 개별 라벨 1장 (sizePreset + layoutMode 적용).
    * 'batch': A4 시트 2×6 그리드 일괄 (기본값, BulkLabelPrintButton 경로).
+   * 'sampler': A4 1페이지에 모든 크기 변형 배치 (items[0]만 사용, samplerHeaders 필수).
    */
-  mode?: 'single' | 'batch';
+  mode?: 'single' | 'batch' | 'sampler';
   /** single 모드에서 사용할 크기 프리셋 */
   sizePreset?: LabelSizePreset;
   /** single 모드에서 사용할 레이아웃 모드 */
   layoutMode?: LabelLayoutMode;
+  /**
+   * sampler 모드 전용 — preset별 헤더 문자열.
+   * 메인 스레드에서 useTranslations()로 빌드 후 Worker에 주입한다.
+   * Worker는 next-intl 의존 불가이므로 i18n 책임을 메인 스레드가 담당.
+   */
+  samplerHeaders?: Record<LabelSizePreset, string>;
 }
 
 /**
@@ -35,10 +42,24 @@ export interface GenerateLabelPdfOptions {
  * - PDF 바이트는 `Transferable ArrayBuffer`로 수신하여 Blob 복사본 없이 즉시 래핑.
  *
  * @throws {LabelBatchExceededError} items 개수가 maxBatch 초과
- * @throws {Error} Worker 로딩/실행 실패, QR/PDF 생성 실패
+ * @throws {Error} Worker 로딩/실행 실패, QR/PDF 생성 실패, sampler 모드 samplerHeaders 누락
  */
 export async function generateLabelPdf(options: GenerateLabelPdfOptions): Promise<Blob> {
-  const { items, appUrl, onProgress, mode = 'batch', sizePreset, layoutMode } = options;
+  const {
+    items,
+    appUrl,
+    onProgress,
+    mode = 'batch',
+    sizePreset,
+    layoutMode,
+    samplerHeaders,
+  } = options;
+
+  if (mode === 'sampler') {
+    if (!samplerHeaders) {
+      throw new Error('samplerHeaders is required for sampler mode');
+    }
+  }
 
   if (items.length > LABEL_CONFIG.maxBatch) {
     throw new LabelBatchExceededError(items.length);
@@ -80,6 +101,14 @@ export async function generateLabelPdf(options: GenerateLabelPdfOptions): Promis
       reject(new Error(event.message || 'Worker execution failed'));
     };
 
-    worker.postMessage({ type: 'generate', items, appUrl, mode, sizePreset, layoutMode });
+    worker.postMessage({
+      type: 'generate',
+      items,
+      appUrl,
+      mode,
+      sizePreset,
+      layoutMode,
+      samplerHeaders,
+    });
   });
 }
