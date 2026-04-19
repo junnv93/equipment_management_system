@@ -144,6 +144,37 @@ grep -n "MIGRATION_SESSION_STATUS" packages/schemas/src/data-migration.ts
 # 결과: 1건+ (export const 정의)
 ```
 
+### Step 16: 도메인 유틸 상수 SSOT 검증 (2026-04-19 추가)
+
+`isCheckoutExportable` / `NON_EXPORTABLE_CHECKOUT_STATUSES` 등 도메인 유틸 파일에서 추출된 상수가
+다른 파일에서 로컬 재정의 없이 SSOT 헬퍼를 경유하는지 확인.
+
+**16a: NON_EXPORTABLE_CHECKOUT_STATUSES 로컬 재정의 금지**
+```bash
+# checkout-exportability.ts 외 파일에서 NON_EXPORTABLE 상수를 로컬 정의하면 SSOT 위반
+grep -rn "NON_EXPORTABLE_CHECKOUT_STATUSES\s*=" \
+  apps/frontend --include="*.ts" --include="*.tsx" \
+  | grep -v "checkout-exportability.ts"
+# 결과: 0건
+```
+
+**16b: nonExportableStatuses 인라인 배열 금지 (이전 인라인 규칙 잔재 탐지)**
+```bash
+# CheckoutDetailClient 등에서 [CSVal.PENDING, CSVal.REJECTED] 인라인 배열로 판단하는 패턴 잔재 없어야 함
+grep -rn "nonExportableStatuses\s*=" \
+  apps/frontend --include="*.ts" --include="*.tsx"
+# 결과: 0건 (isCheckoutExportable() SSOT 경유)
+```
+
+**16c: SSOT 소비 확인**
+```bash
+# isCheckoutExportable이 사용되는 모든 파일이 checkout-exportability.ts에서 import하는지 확인
+grep -rn "isCheckoutExportable" \
+  apps/frontend --include="*.ts" --include="*.tsx" \
+  | grep -v "checkout-exportability"
+# 결과: import 라인만 존재 (정의 라인 없어야 함)
+```
+
 ## Output Format
 
 ```markdown
@@ -169,6 +200,7 @@ grep -n "MIGRATION_SESSION_STATUS" packages/schemas/src/data-migration.ts
 | 13  | DocumentTypeValues SSOT       | PASS/FAIL | 문자열 하드코딩 위치                   |
 | 14  | Scope enforcement SSOT        | PASS/FAIL | 로컬 enforceScope/EnforcedScope 재정의 또는 controller inline scope helper |
 | 15  | data-migration SSOT           | PASS/FAIL | MigrationSessionStatus 로컬 재정의 또는 raw 리터럴 사용 위치 |
+| 16  | 도메인 유틸 상수 SSOT         | PASS/FAIL | NON_EXPORTABLE_CHECKOUT_STATUSES 등 로컬 재정의 위치 |
 ```
 
 ## Exceptions

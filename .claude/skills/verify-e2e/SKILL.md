@@ -264,6 +264,37 @@ grep "maxWorkers" apps/backend/test/jest-e2e.json
 
 **PASS:** `"maxWorkers": 1`. **FAIL:** 없거나 1 초과. 단일 DB 아키텍처에서 병렬 실행은 시드 데이터 경합 → 비결정적 실패.
 
+### Step 16: E2E data-* 셀렉터 × 컴포넌트 attribute 일관성 (2026-04-19 추가)
+
+E2E spec이 `[data-xxx]` 커스텀 attribute 셀렉터를 사용할 때, 해당 컴포넌트 구현에
+동일 attribute가 실제로 부착되어 있는지 확인.
+
+**16a: data-timeline-card 셀렉터 일관성**
+```bash
+# E2E spec에서 [data-timeline-card] 셀렉터를 사용하는지 확인
+grep -rn "data-timeline-card" \
+  apps/frontend/tests/e2e --include="*.spec.ts"
+
+# 컴포넌트에서 실제 attribute가 부착되어 있는지 확인 (동일 개수 이상이어야 함)
+grep -rn "data-timeline-card" \
+  apps/frontend/components --include="*.tsx"
+# 결과: 1건 이상 (spec 사용 수 ≤ 컴포넌트 정의 수)
+```
+
+**16b: 신규 data-* 셀렉터 드리프트 탐지**
+```bash
+# E2E spec에서 사용하는 모든 data-* 셀렉터 목록 추출
+grep -rn '\[data-[a-z]' \
+  apps/frontend/tests/e2e --include="*.spec.ts" \
+  | grep -oE 'data-[a-z-]+' | sort -u
+
+# 각 셀렉터가 컴포넌트/레이아웃 파일에 존재하는지 수동 확인
+# (자동화 불가 — 셀렉터마다 별도 grep 필요)
+```
+
+**PASS:** spec의 `[data-xxx]` 셀렉터가 컴포넌트에 attribute로 실재함.
+**FAIL:** spec이 존재하지 않는 attribute를 참조 → 셀렉터가 항상 0 match → 결과가 false negative.
+
 ## Output Format
 
 ```markdown
@@ -289,6 +320,7 @@ grep "maxWorkers" apps/backend/test/jest-e2e.json
 | 15a | Backend loginAs SSOT    | PASS/FAIL | hardcoded credential 탐지     |
 | 15b | TEST_USER_IDS UUID 정합 | PASS/FAIL | e2e UUID 사용 탐지            |
 | 15c | jest-e2e.json maxWorkers| PASS/FAIL | maxWorkers != 1               |
+| 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
 ```
 
 ## Exceptions

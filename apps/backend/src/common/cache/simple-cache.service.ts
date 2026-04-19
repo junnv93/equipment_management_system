@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { HttpException } from '@nestjs/common';
 import { getErrorMessage } from '../utils/error';
+import { retryTransient } from '../utils/retry-transient';
 import type { ICacheService } from './cache.interface';
 
 interface CacheItem<T> {
@@ -172,7 +173,7 @@ export class SimpleCacheService implements ICacheService, OnModuleDestroy {
 
     // 3. 새 factory 실행 — inflight에 등록하여 중복 실행 방지
     this.logger.debug(`Cache miss for key: ${key}, fetching data...`);
-    const promise = factory()
+    const promise = retryTransient(factory)
       .then((value) => {
         // Cache both positive and negative results (negative cache with shorter TTL to prevent stampede)
         const effectiveTtl = value === undefined || value === null ? Math.min(ttl, 10_000) : ttl;

@@ -45,7 +45,7 @@ export function resolveRedisConfig(configService: ConfigService): RedisConnectio
     password: configService.get<string>('REDIS_PASSWORD'),
     tlsEnabled,
     tlsRejectUnauthorized: configService.get<string>('REDIS_TLS_REJECT_UNAUTHORIZED') !== 'false',
-    maxRetries: 0,
+    maxRetries: 10,
   };
 }
 
@@ -79,6 +79,14 @@ export function createRedisClient(config: RedisConnectionConfig, loggerName: str
   const sharedOptions = {
     tls: tlsConfig,
     lazyConnect: true as const,
+    keepAlive: 30_000,
+    noDelay: true,
+    connectTimeout: 10_000,
+    reconnectOnError: (err: Error): boolean => {
+      return /READONLY|ETIMEDOUT|EPIPE|Connection is closed|ECONNRESET/i.test(err.message);
+    },
+    enableOfflineQueue: true,
+    maxRetriesPerRequest: 3,
     ...(retryStrategy ? { retryStrategy } : {}),
   };
 

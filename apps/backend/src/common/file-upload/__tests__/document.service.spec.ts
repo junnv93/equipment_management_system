@@ -99,15 +99,7 @@ describe('DocumentService', () => {
       deleteFile: jest.fn().mockResolvedValue(undefined),
     };
 
-    const mockStorageProvider = {
-      ensureContainer: jest.fn().mockResolvedValue(undefined),
-      upload: jest.fn().mockResolvedValue(undefined),
-      download: jest.fn().mockResolvedValue(Buffer.from('test')),
-      delete: jest.fn().mockResolvedValue(undefined),
-      supportsPresignedUrl: jest.fn().mockReturnValue(false),
-    };
-
-    service = new DocumentService(mockDb, mockFileUploadService, mockStorageProvider);
+    service = new DocumentService(mockDb, mockFileUploadService);
   });
 
   // ============================================================================

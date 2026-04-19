@@ -10,3 +10,4 @@ export * from './advisory-lock';
 export * from './excel-buffer';
 export * from './chunk-array';
 export * from './bulk-insert-in-chunks';
+export * from './retry-transient';

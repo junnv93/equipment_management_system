@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy, HttpException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { getErrorMessage } from '../utils/error';
+import { retryTransient } from '../utils/retry-transient';
 import { resolveRedisConfig, createRedisClient } from '../redis';
 import type { ICacheService } from './cache.interface';
 
@@ -108,7 +109,7 @@ export class RedisCacheService implements ICacheService, OnModuleDestroy {
 
     this.logger.debug(`Cache miss for key: ${key}, fetching data...`);
     try {
-      const value = await factory();
+      const value = await retryTransient(factory);
       if (value !== undefined && value !== null) {
         await this.set(key, value, ttl);
       }
