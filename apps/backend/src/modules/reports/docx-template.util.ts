@@ -347,7 +347,9 @@ export class DocxTemplate {
    * 문서 끝(테이블 바깥)에 섹션 추가
    *
    * 항목 테이블 아래에 "첨부 사진" 등의 별도 섹션을 추가할 때 사용.
-   * </w:body> 앞에 제목 + 블록(텍스트/이미지)을 삽입합니다.
+   * `<w:sectPr` 앞(없으면 `</w:body>` 앞)에 제목 + 블록(텍스트/이미지)을 삽입합니다.
+   * OOXML 규격상 `<w:sectPr>`는 `<w:body>`의 마지막 직접 자식이어야 하므로
+   * `insertBeforeSectPr`를 경유합니다.
    */
   appendSection(
     title: string,
@@ -373,7 +375,7 @@ export class DocxTemplate {
     });
 
     const sectionXml = titlePara + blockXmls.join('');
-    this.documentXml = this.documentXml.replace('</w:body>', `${sectionXml}</w:body>`);
+    this.insertBeforeSectPr(sectionXml);
   }
 
   /**
