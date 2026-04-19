@@ -536,8 +536,8 @@ export async function renderResultSections(
 
   const imageCache = await downloadSectionImages(prefetched.documentPaths, storage);
 
-  // 템플릿의 numbering 매핑 (글머리 기호 스타일)
-  const { heading: headingNumId } = doc.bulletNumIds;
+  // 섹션 제목 글머리: ■ (check) — Wingdings(heading)는 폰트 미설치 시 □로 fallback됨
+  const { check: headingNumId } = doc.bulletNumIds;
 
   for (const section of sections) {
     switch (section.sectionType) {
