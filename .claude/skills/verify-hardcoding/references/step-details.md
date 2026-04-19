@@ -209,16 +209,22 @@ SSOT: `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE`, `DASHBOARD_ITEM_LIMIT`, `SELECTOR_PA
 ## Step 18: unwrapResponseData SSOT
 
 ```bash
+# 3개 axios 클라이언트 파일에서 봉투 수동 언래핑 패턴 탐지 (unwrapResponseData 경유해야 함)
 grep -rn "'success' in\|\.success ==" apps/frontend/lib/api/api-client.ts apps/frontend/lib/api/server-api-client.ts apps/frontend/lib/api/authenticated-client-provider.tsx | grep -v "unwrapResponseData\|response-transformers\|// "
 ```
 
 ```bash
+# 3개 클라이언트 파일에 unwrapResponseData 호출 존재 확인
 grep -rn "unwrapResponseData" apps/frontend/lib/api/api-client.ts apps/frontend/lib/api/server-api-client.ts apps/frontend/lib/api/authenticated-client-provider.tsx
 ```
 
 ```bash
-grep -rn "return response\.data" apps/frontend/lib/api --include="*.ts" | grep -v "response-transformers\|node_modules\|// \|\.blob\|Blob\|response\.data\.\|response\.data?"
+# 이중 언래핑 패턴 탐지: response.data?.data 또는 response.data.data
+# (axios interceptor가 이미 ApiResponse<T> 봉투를 unwrap했으므로 .data.data는 undefined)
+grep -rn "response\.data?\.\(data\|success\|message\)" apps/frontend/lib/api --include="*.ts" | grep -v "response-transformers\|node_modules\|// "
 ```
+
+> **`return response.data` 단순 반환 패턴은 정상**: API 함수에서 `return response.data`(명시적 제네릭 사용)는 인터셉터 언래핑 후 타입 T를 그대로 반환하는 올바른 패턴. FAIL 대상은 `.data.data` 이중 접근이다.
 
 ## Step 19: FORM_CATALOG 양식 번호 SSOT
 
@@ -237,3 +243,21 @@ if (formNumber === 'UL-QP-18-01') { ... }
 const entry = FORM_CATALOG[formNumber as keyof typeof FORM_CATALOG];
 if (entry?.implemented) { ... }
 ```
+
+## Step 19b: getTemplateBuffer 인자 SSOT
+
+```bash
+# getTemplateBuffer에 양식 번호 문자열 리터럴 직접 전달 탐지
+grep -rn "getTemplateBuffer('[A-Z]" apps/backend/src/modules --include="*.ts" | grep -v "// "
+```
+
+```typescript
+// ❌ WRONG — 문자열 리터럴 직접 전달
+const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-06');
+
+// ✅ CORRECT — 레이아웃 파일에서 FORM_NUMBER 상수 import
+import { FORM_NUMBER as CHECKOUT_FORM_NUMBER } from './layouts/checkout.layout';
+const templateBuf = await this.formTemplateService.getTemplateBuffer(CHECKOUT_FORM_NUMBER);
+```
+
+**현재 baseline (2026-04-19):** `form-template-export.service.ts`에서 `getTemplateBuffer('UL-QP-18-06')` 2건, `'UL-QP-18-07'` 1건, `'UL-QP-18-08'` 1건, `'UL-QP-18-09'` 1건, `'UL-QP-18-10'` 1건 — 총 6건. tech-debt LOW 등재됨. 각 export 전용 layout 파일 생성 후 상수화 예정.
