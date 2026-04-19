@@ -147,6 +147,8 @@ TypeScript 가 잡지만(필수 속성 에러), `Record<string, ...>` 로 약타
   `AUDIT_TIMELINE_DOT_COLORS` (loose) + i18n `audit.actionLabels.*`
 - `EquipmentStatus` ↔ `EQUIPMENT_STATUS_BADGE_TOKENS` + i18n `equipment.statusLabels.*`
 - `CheckoutStatus`, `CalibrationStatus`, `NCStatus` 등 동일 패턴
+- `SOFTWARE_AVAILABILITY_VALUES` ↔ `SOFTWARE_AVAILABILITY_BADGE_TOKENS` (loose `Record<string, string>`) — 신규 상태 추가 시 TypeScript 미탐지
+- `SoftwareValidationRequired`(boolean flag, `true/false` 키) ↔ `SOFTWARE_VALIDATION_REQUIRED_BADGE_TOKENS` (loose) — `yes`/`no` 2개 키만 허용
 
 **탐지 (예시 — audit):**
 ```bash
