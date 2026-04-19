@@ -46,6 +46,50 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 
 **PASS:** 상태 변경 mutation에 useOptimisticMutation 사용. INFO: 단순 API는 직접 사용 가능.
 
+**제네릭 타입 패턴:** `useOptimisticMutation<ResponseType, RequestType, OptimisticType>` — 3개 타입 인자 명시 필수.
+
+**invalidateKeys 배열 구문:** 추가 캐시 무효화는 `invalidateKeys: [queryKeys.xxx.lists()]` 옵션으로 처리. 훅 외부에서 별도 `invalidateQueries` 호출 불필요.
+
+**정상 패턴:**
+```typescript
+const updateMutation = useOptimisticMutation<Entity, UpdateDto, Entity>({
+  mutationFn: async (dto) => api.update(id, dto),
+  queryKey: queryKeys.entity.detail(id),
+  optimisticUpdate: (old, dto) => ({ ...old, ...dto }),
+  invalidateKeys: [queryKeys.entity.lists()],
+});
+```
+
+### Step 3b: CAS stale closure 금지 (4차 재발 패턴)
+
+CAS version을 렌더 시점 캡처(stale closure)로 사용하면 다른 세션에서 수정 후 이 페이지가 열려 있을 때 항상 VERSION_CONFLICT 발생.
+
+**탐지:**
+```bash
+# mutationFn 클로저가 외부 변수 version을 캡처하는 패턴
+grep -rn "mutationFn.*version\|\.version\s*\?" apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" -B 2 | grep -v "getQueryData"
+```
+
+**❌ 금지 — stale closure:**
+```typescript
+const toggleMutation = useOptimisticMutation({
+  mutationFn: () => api.toggle(id, entity?.version ?? 0), // entity는 렌더 캡처
+});
+```
+
+**✅ 올바른 패턴 — mutationFn 내부 fresh read:**
+```typescript
+const toggleMutation = useOptimisticMutation({
+  mutationFn: () => {
+    const current = queryClient.getQueryData<Entity>(queryKeys.entity.detail(id));
+    return api.toggle(id, current?.version ?? 0); // 호출 시점 최신 버전
+  },
+});
+```
+
+**PASS:** mutationFn 클로저에서 `entity?.version` 형태 캡처 0건. 또는 `queryClient.getQueryData` 경유.
+
 ### Step 4: invalidateQueries 위치 + (4b) Navigate-Before-Invalidate
 
 **PASS:** useOptimisticMutation 소비자가 별도 invalidateQueries 미호출. `invalidateQueries`에 `await` 있거나 `router.push`보다 먼저 완료 보장.
