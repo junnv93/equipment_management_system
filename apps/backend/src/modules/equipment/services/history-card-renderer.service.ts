@@ -14,6 +14,7 @@ import {
   buildInlineDrawingXml,
   calculateAspectFitDimensions,
   formatYmdSlash,
+  stripExplicitPageBreakParas,
 } from '../../reports/docx-xml-helper';
 import {
   FORM_NUMBER,
@@ -67,6 +68,7 @@ export class HistoryCardRendererService {
     }
     let xml = docFile.asText();
 
+    xml = stripExplicitPageBreakParas(xml);
     xml = this.injectBasicInfo(xml, data.equipment);
     xml = this.injectApprovalDate(xml, data.equipment.approvalDate);
     xml = await this.injectApproverSignature(

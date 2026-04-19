@@ -398,6 +398,22 @@ export function formatYmdSlash(d: Date | string | null | undefined): string {
   return `${y}/${m}/${day}`;
 }
 
+/**
+ * 양식 템플릿에 내장된 명시적 페이지 나누기 단락을 제거한다.
+ *
+ * `<w:br w:type="page"/>` 를 포함하면서 `<w:t>` 텍스트가 없는 단락만 대상으로 한다.
+ * 텍스트가 함께 있는 단락(e.g. 제목 + 페이지 나누기)은 제거하지 않는다.
+ * Word가 내용 길이에 따라 자동으로 페이지를 나누도록 위임한다.
+ */
+export function stripExplicitPageBreakParas(xml: string): string {
+  return xml.replace(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g, (para) => {
+    if (para.includes('<w:br w:type="page"/>') && !para.includes('<w:t')) {
+      return '';
+    }
+    return para;
+  });
+}
+
 // ============================================================================
 // DOCX 셀 서명 이미지 삽입 (tableIndex/rowIndex/cellIndex 좌표 기반).
 //

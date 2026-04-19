@@ -505,12 +505,12 @@ export class DocxTemplate {
   }
 
   /**
-   * 마지막 테이블 뒤의 모든 단락(템플릿 예시 텍스트)을 제거하고,
-   * 그 자리에 페이지 나누기 단락을 삽입.
+   * 마지막 테이블 뒤의 모든 단락(템플릿 예시 텍스트)을 제거한다.
    *
    * 양식 템플릿에 "측정 결과", 예시 비고 등이 포함되어 있을 수 있는데,
    * 동적 결과 섹션으로 교체해야 하므로 예시 텍스트를 먼저 제거한다.
    * 이후 appendParagraph/appendTable 등으로 동적 콘텐츠가 삽입된다.
+   * Word가 내용 길이에 따라 자동으로 페이지를 나누도록 hard pageBreak를 삽입하지 않는다.
    */
   removeTemplateExampleTextAndInsertPageBreak(): void {
     // 마지막 </w:tbl> 찾기
@@ -524,10 +524,8 @@ export class DocxTemplate {
     const cutEnd = sectPrIdx >= 0 ? sectPrIdx : bodyEndIdx;
     if (cutEnd < 0) return;
 
-    // 마지막 테이블 뒤 ~ sectPr 앞 사이의 모든 단락을 제거하고 페이지 나누기 삽입
-    const pageBreakPara = `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
-    this.documentXml =
-      this.documentXml.slice(0, afterTbl) + pageBreakPara + this.documentXml.slice(cutEnd);
+    // 마지막 테이블 뒤 ~ sectPr 앞 사이의 모든 단락 제거 (pageBreak 없이)
+    this.documentXml = this.documentXml.slice(0, afterTbl) + this.documentXml.slice(cutEnd);
   }
 
   /**
