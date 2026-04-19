@@ -651,7 +651,6 @@ export class FormTemplateExportService {
         [
           record.receivedBy,
           record.performedBy,
-          record.submittedBy,
           record.technicalApproverId,
           record.qualityApproverId,
         ].filter((id): id is string => id !== null)
