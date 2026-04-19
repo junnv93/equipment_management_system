@@ -1,12 +1,30 @@
-import { LABEL_CONFIG, type LabelItem } from '@equipment-management/shared-constants';
+import {
+  LABEL_CONFIG,
+  type LabelItem,
+  type LabelLayoutMode,
+  type LabelSizePreset,
+} from '@equipment-management/shared-constants';
 import { LabelBatchExceededError } from './label-batch-error';
 
-export type { LabelItem } from '@equipment-management/shared-constants';
+export type {
+  LabelItem,
+  LabelLayoutMode,
+  LabelSizePreset,
+} from '@equipment-management/shared-constants';
 
 export interface GenerateLabelPdfOptions {
   items: LabelItem[];
   appUrl: string;
   onProgress?: (done: number, total: number) => void;
+  /**
+   * 'single': 개별 라벨 1장 (sizePreset + layoutMode 적용).
+   * 'batch': A4 시트 2×6 그리드 일괄 (기본값, BulkLabelPrintButton 경로).
+   */
+  mode?: 'single' | 'batch';
+  /** single 모드에서 사용할 크기 프리셋 */
+  sizePreset?: LabelSizePreset;
+  /** single 모드에서 사용할 레이아웃 모드 */
+  layoutMode?: LabelLayoutMode;
 }
 
 /**
@@ -20,7 +38,7 @@ export interface GenerateLabelPdfOptions {
  * @throws {Error} Worker 로딩/실행 실패, QR/PDF 생성 실패
  */
 export async function generateLabelPdf(options: GenerateLabelPdfOptions): Promise<Blob> {
-  const { items, appUrl, onProgress } = options;
+  const { items, appUrl, onProgress, mode = 'batch', sizePreset, layoutMode } = options;
 
   if (items.length > LABEL_CONFIG.maxBatch) {
     throw new LabelBatchExceededError(items.length);
@@ -62,6 +80,6 @@ export async function generateLabelPdf(options: GenerateLabelPdfOptions): Promis
       reject(new Error(event.message || 'Worker execution failed'));
     };
 
-    worker.postMessage({ type: 'generate', items, appUrl });
+    worker.postMessage({ type: 'generate', items, appUrl, mode, sizePreset, layoutMode });
   });
 }

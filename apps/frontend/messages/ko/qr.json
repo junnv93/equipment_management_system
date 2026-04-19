@@ -33,7 +33,26 @@
     "buttonLabel": "QR 보기",
     "buttonAriaLabel": "장비 QR 코드 보기 및 인쇄",
     "altText": "{name} ({managementNumber}) QR 코드",
-    "printButton": "인쇄"
+    "printButton": "인쇄",
+    "layoutModeLabel": "인쇄 양식",
+    "layoutMode": {
+      "full": "QR + 전체 정보 (관리번호·장비명·일련번호)",
+      "minimal": "QR + 관리번호",
+      "qrOnly": "QR만"
+    },
+    "sizePresetLabel": "라벨 크기",
+    "size": {
+      "standard": "표준 (93.5 × 43.7mm)",
+      "medium": "중형 (60 × 30mm)",
+      "small": "소형 (30 × 15mm)"
+    },
+    "fallbackNotice": "선택한 크기가 작아 양식이 자동 조정되었습니다: {mode}",
+    "fallbackMode": {
+      "full": "QR + 전체 정보",
+      "minimal": "QR + 관리번호",
+      "qrOnly": "QR만"
+    },
+    "downloadPdf": "PDF 다운로드"
   },
   "landing": {
     "loadingLabel": "장비 정보를 불러오는 중...",

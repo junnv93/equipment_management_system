@@ -33,7 +33,26 @@
     "buttonLabel": "QR",
     "buttonAriaLabel": "View and print equipment QR code",
     "altText": "QR code for {name} ({managementNumber})",
-    "printButton": "Print"
+    "printButton": "Print",
+    "layoutModeLabel": "Print layout",
+    "layoutMode": {
+      "full": "QR + full info (ID · name · serial)",
+      "minimal": "QR + management number",
+      "qrOnly": "QR only"
+    },
+    "sizePresetLabel": "Label size",
+    "size": {
+      "standard": "Standard (93.5 × 43.7 mm)",
+      "medium": "Medium (60 × 30 mm)",
+      "small": "Small (30 × 15 mm)"
+    },
+    "fallbackNotice": "Layout auto-adjusted for selected size: {mode}",
+    "fallbackMode": {
+      "full": "QR + full info",
+      "minimal": "QR + management number",
+      "qrOnly": "QR only"
+    },
+    "downloadPdf": "Download PDF"
   },
   "landing": {
     "loadingLabel": "Loading equipment...",

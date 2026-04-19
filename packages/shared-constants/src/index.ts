@@ -277,10 +277,15 @@ export {
 export {
   QR_CONFIG,
   LABEL_CONFIG,
+  LABEL_SIZE_PRESETS,
+  LABEL_LAYOUT_CONSTRAINTS,
   getLabelCellDimensions,
+  resolveLayoutMode,
   type QrConfig,
   type LabelConfig,
   type LabelItem,
+  type LabelSizePreset,
+  type LabelLayoutMode,
 } from './qr-config';
 
 // QR URL 빌더 / 파서 (FE/BE 공용 SSOT)

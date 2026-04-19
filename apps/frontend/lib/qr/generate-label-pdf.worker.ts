@@ -32,15 +32,22 @@ import QRCode, { type QRCode as QRCodeData } from 'qrcode';
 import {
   QR_CONFIG,
   LABEL_CONFIG,
+  LABEL_SIZE_PRESETS,
   getLabelCellDimensions,
   buildEquipmentQRUrl,
   type LabelItem,
+  type LabelLayoutMode,
+  type LabelSizePreset,
 } from '@equipment-management/shared-constants';
 
 type InboundMessage = {
   type: 'generate';
   items: LabelItem[];
   appUrl: string;
+  /** 'single': 개별 라벨 1장 (크기/레이아웃 선택 가능). 'batch': 기존 A4 시트 일괄. */
+  mode?: 'single' | 'batch';
+  sizePreset?: LabelSizePreset;
+  layoutMode?: LabelLayoutMode;
 };
 
 type OutboundMessage =
@@ -294,30 +301,29 @@ function splitIntoLines(
 /**
  * 라벨 셀 1개를 OffscreenCanvas로 렌더링하여 PNG data URL 반환.
  *
- * 구조:
- *   - 좌측: QR 코드 (qrPaddingLeftMm 여백 후 시작, 셀 높이 방향 수직 정렬)
- *   - 우측: 관리번호·장비명·일련번호 3행 테이블 (행 높이 균등 분할, 텍스트 수직 센터링)
- *   - 내부 구분선만 렌더링 (외곽 실선 없음 — 절제선이 jsPDF 레이어에서 경계 담당)
- *   - 텍스트는 maxWidth 초과 시 "…"로 잘림 → 겹침 없음
+ * layoutMode에 따른 렌더링:
+ *   - 'full'   : QR + 관리번호/장비명/일련번호 3행 테이블 (기존 동작)
+ *   - 'minimal': QR + 관리번호 1행 테이블
+ *   - 'qrOnly' : QR 중앙 정렬만, 텍스트/구분선 없음
+ *
+ * qrSizeMm가 주어지면 LABEL_CONFIG.cell.qrSizeMm를 override한다 (단일 라벨 크기 프리셋).
  */
 async function renderCellToDataUrl(
   item: LabelItem,
   appUrl: string,
-  canvas: OffscreenCanvas
+  canvas: OffscreenCanvas,
+  opts: {
+    widthMm: number;
+    heightMm: number;
+    layoutMode: LabelLayoutMode;
+    qrSizeMm: number;
+  }
 ): Promise<string> {
   const { cell } = LABEL_CONFIG;
-  const { widthMm, heightMm } = getLabelCellDimensions();
+  const { widthMm, heightMm, layoutMode, qrSizeMm } = opts;
 
   const cellW = mmToPx(widthMm);
   const cellH = mmToPx(heightMm);
-  const qrLeftPx = mmToPx(cell.qrPaddingLeftMm);
-  const qrPx = mmToPx(cell.qrSizeMm);
-  const padPx = mmToPx(cell.textPaddingLeftMm);
-
-  // QR 좌측 패딩을 반영한 텍스트 영역 시작 X 및 내부 여백
-  const textX = qrLeftPx + qrPx + padPx;
-  const innerPad = mmToPx(cell.tableCellPaddingMm);
-  const textMaxW = cellW - textX - innerPad;
 
   const c = canvas.getContext('2d');
   if (!c) throw new Error('OffscreenCanvas 2D context unavailable');
@@ -329,102 +335,124 @@ async function renderCellToDataUrl(
   c.fillRect(0, 0, cellW, cellH);
 
   // ─── 셀 외곽 테두리 ──────────────────────────────────────────
-  // 테이블 콘텐츠 경계를 나타내는 실선. 절취선(점선, jsPDF 레이어)과 별개.
-  // 절취선은 gutter 중앙에, 외곽 테두리는 셀 이미지 경계에 위치 → 겹치지 않음.
   c.strokeStyle = cell.borderColor;
   c.lineWidth = 1;
   c.strokeRect(0.5, 0.5, cellW - 1, cellH - 1);
 
-  // ─── QR 코드 (qrPaddingLeftMm 여백, 수직 중앙 정렬) ─────────
+  // ─── QR 코드 ─────────────────────────────────────────────────
   const qrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
     errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
   });
-  const qrY = Math.round((cellH - qrPx) / 2);
-  c.imageSmoothingEnabled = false; // QR은 이진 이미지 — 스무딩 비활성화로 선명도 유지
-  renderQrToCanvas(c, qrData, qrLeftPx, qrY, qrPx);
-  c.imageSmoothingEnabled = true;
+  const qrPx = mmToPx(qrSizeMm);
+  c.imageSmoothingEnabled = false;
 
-  // ─── QR↔텍스트 세로 구분선 ──────────────────────────────────
-  const dividerX = qrLeftPx + qrPx + Math.round(padPx / 2);
-  c.strokeStyle = cell.borderColor;
-  c.lineWidth = 1;
-  c.beginPath();
-  c.moveTo(dividerX, 0);
-  c.lineTo(dividerX, cellH);
-  c.stroke();
+  if (layoutMode === 'qrOnly') {
+    // QR을 셀 중앙에 배치, 텍스트/구분선 없음
+    const qrX = Math.round((cellW - qrPx) / 2);
+    const qrY = Math.round((cellH - qrPx) / 2);
+    renderQrToCanvas(c, qrData, qrX, qrY, qrPx);
+    c.imageSmoothingEnabled = true;
+  } else {
+    // full / minimal — QR 좌측 패딩 + 수직 중앙 정렬
+    const qrLeftPx = mmToPx(cell.qrPaddingLeftMm);
+    const padPx = mmToPx(cell.textPaddingLeftMm);
+    const qrY = Math.round((cellH - qrPx) / 2);
+    renderQrToCanvas(c, qrData, qrLeftPx, qrY, qrPx);
+    c.imageSmoothingEnabled = true;
 
-  // ─── 테이블 행 렌더링 ────────────────────────────────────────
-  const fieldLabelPx = ptToPx(cell.fieldLabelFontPt);
-  const rowGap = mmToPx(cell.rowGapMm);
+    // QR↔텍스트 세로 구분선
+    const dividerX = qrLeftPx + qrPx + Math.round(padPx / 2);
+    const textX = qrLeftPx + qrPx + padPx;
+    const innerPad = mmToPx(cell.tableCellPaddingMm);
+    const textMaxW = cellW - textX - innerPad;
 
-  // minFontPx·maxLines는 SSOT(LABEL_CONFIG.cell)에서 직접 참조 — 하드코딩 금지
-  const rows = [
-    {
-      label: cell.tableFieldLabels.mgmtNo,
-      value: item.managementNumber,
-      valueFontPx: ptToPx(cell.mgmtFontPt),
-      minFontPx: ptToPx(cell.mgmtMinFontPt),
-      maxLines: 1,
-      bold: true,
-    },
-    {
-      label: cell.tableFieldLabels.name,
-      value: item.equipmentName,
-      valueFontPx: ptToPx(cell.nameFontPt),
-      minFontPx: ptToPx(cell.nameMinFontPt),
-      maxLines: cell.nameMaxLines,
-      bold: false,
-    },
-    {
-      label: cell.tableFieldLabels.serialNo,
-      value: item.serialNumber ?? '—',
-      valueFontPx: ptToPx(cell.serialFontPt),
-      minFontPx: ptToPx(cell.serialMinFontPt),
-      maxLines: 1,
-      bold: false,
-    },
-  ];
+    c.strokeStyle = cell.borderColor;
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(dividerX, 0);
+    c.lineTo(dividerX, cellH);
+    c.stroke();
 
-  const rowH = Math.floor(cellH / rows.length);
+    // ─── 테이블 행 정의 ───────────────────────────────────────
+    const fieldLabelPx = ptToPx(cell.fieldLabelFontPt);
+    const rowGap = mmToPx(cell.rowGapMm);
 
-  rows.forEach((row, i) => {
-    const rowY = i * rowH;
-    // 마지막 행은 floor() 나머지 픽셀을 흡수
-    const actualRowH = i === rows.length - 1 ? cellH - rowY : rowH;
+    const rows =
+      layoutMode === 'full'
+        ? [
+            {
+              label: cell.tableFieldLabels.mgmtNo,
+              value: item.managementNumber,
+              valueFontPx: ptToPx(cell.mgmtFontPt),
+              minFontPx: ptToPx(cell.mgmtMinFontPt),
+              maxLines: 1,
+              bold: true,
+            },
+            {
+              label: cell.tableFieldLabels.name,
+              value: item.equipmentName,
+              valueFontPx: ptToPx(cell.nameFontPt),
+              minFontPx: ptToPx(cell.nameMinFontPt),
+              maxLines: cell.nameMaxLines,
+              bold: false,
+            },
+            {
+              label: cell.tableFieldLabels.serialNo,
+              value: item.serialNumber ?? '—',
+              valueFontPx: ptToPx(cell.serialFontPt),
+              minFontPx: ptToPx(cell.serialMinFontPt),
+              maxLines: 1,
+              bold: false,
+            },
+          ]
+        : // minimal — 관리번호 1행만
+          [
+            {
+              label: cell.tableFieldLabels.mgmtNo,
+              value: item.managementNumber,
+              valueFontPx: ptToPx(cell.mgmtFontPt),
+              minFontPx: ptToPx(cell.mgmtMinFontPt),
+              maxLines: 1,
+              bold: true,
+            },
+          ];
 
-    // 행 구분선 (첫 행 제외)
-    if (i > 0) {
-      c.strokeStyle = cell.borderColor;
-      c.lineWidth = 1;
-      c.beginPath();
-      c.moveTo(dividerX, rowY);
-      c.lineTo(cellW, rowY);
-      c.stroke();
-    }
+    const rowH = Math.floor(cellH / rows.length);
 
-    // 행 내 텍스트 수직 센터링 — preferred 폰트 크기 기준 (물리 라벨은 px-perfect 불필요)
-    const contentH = fieldLabelPx + rowGap + row.valueFontPx;
-    const topOffset = Math.round((actualRowH - contentH) / 2);
+    rows.forEach((row, i) => {
+      const rowY = i * rowH;
+      const actualRowH = i === rows.length - 1 ? cellH - rowY : rowH;
 
-    const labelY = rowY + topOffset;
-    const valueY = labelY + fieldLabelPx + rowGap;
+      if (i > 0) {
+        c.strokeStyle = cell.borderColor;
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(dividerX, rowY);
+        c.lineTo(cellW, rowY);
+        c.stroke();
+      }
 
-    // 필드명 (소문자 회색) — 필드명은 짧아 shrink 불필요, truncate만 적용
-    c.font = `${fieldLabelPx}px ${cell.fontStack}`;
-    c.fillStyle = cell.fieldLabelColor;
-    drawTruncated(c, row.label, textX + innerPad, labelY, textMaxW);
+      const contentH = fieldLabelPx + rowGap + row.valueFontPx;
+      const topOffset = Math.round((actualRowH - contentH) / 2);
 
-    // 값 — 업계 표준 3단계 auto-fit: shrink-to-fit → wrap → truncate
-    renderValueWithAutoFit(c, row.value, textX + innerPad, valueY, textMaxW, {
-      preferredFontPx: row.valueFontPx,
-      minFontPx: row.minFontPx,
-      maxLines: row.maxLines,
-      lineHeightRatio: cell.lineHeightRatio,
-      bold: row.bold,
-      fontStack: cell.fontStack,
-      color: cell.fieldValueColor,
+      const labelY = rowY + topOffset;
+      const valueY = labelY + fieldLabelPx + rowGap;
+
+      c.font = `${fieldLabelPx}px ${cell.fontStack}`;
+      c.fillStyle = cell.fieldLabelColor;
+      drawTruncated(c, row.label, textX + innerPad, labelY, textMaxW);
+
+      renderValueWithAutoFit(c, row.value, textX + innerPad, valueY, textMaxW, {
+        preferredFontPx: row.valueFontPx,
+        minFontPx: row.minFontPx,
+        maxLines: row.maxLines,
+        lineHeightRatio: cell.lineHeightRatio,
+        bold: row.bold,
+        fontStack: cell.fontStack,
+        color: cell.fieldValueColor,
+      });
     });
-  });
+  }
 
   const blob = await canvas.convertToBlob({ type: 'image/png' });
   return blobToDataUrl(blob);
@@ -472,7 +500,41 @@ function renderCutLines(doc: jsPDF, widthMm: number, heightMm: number): void {
   doc.setLineWidth(0.2); // jsPDF 기본값
 }
 
-async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer> {
+/**
+ * 단일 라벨 PDF 생성 — 상세 페이지 개별 인쇄용.
+ *
+ * A4 좌상단에 선택된 크기로 라벨 1장 배치.
+ * 절취선 없음 (단일 라벨 → gutter 개념 없음), 단일 페이지.
+ */
+async function buildSinglePdf(
+  item: LabelItem,
+  appUrl: string,
+  sizePreset: LabelSizePreset,
+  layoutMode: LabelLayoutMode
+): Promise<ArrayBuffer> {
+  const { pdf } = LABEL_CONFIG;
+  const { widthMm, heightMm, qrSizeMm } = LABEL_SIZE_PRESETS[sizePreset];
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: pdf.pageSize });
+
+  const cellCanvas = new OffscreenCanvas(mmToPx(widthMm), mmToPx(heightMm));
+  const cellDataUrl = await renderCellToDataUrl(item, appUrl, cellCanvas, {
+    widthMm,
+    heightMm,
+    layoutMode,
+    qrSizeMm,
+  });
+  doc.addImage(cellDataUrl, 'PNG', pdf.marginMm, pdf.marginMm, widthMm, heightMm);
+
+  post({ type: 'progress', done: 1, total: 1 });
+  return doc.output('arraybuffer');
+}
+
+/**
+ * 일괄 인쇄 PDF 생성 — A4 시트 2×6 그리드.
+ * 기존 동작 유지 (BulkLabelPrintButton 경로).
+ */
+async function buildBatchPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer> {
   const { pdf } = LABEL_CONFIG;
   const { widthMm, heightMm, perPage } = getLabelCellDimensions();
   const totalPages = Math.ceil(items.length / perPage);
@@ -492,7 +554,6 @@ async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer
     const pageStart = pageIdx * perPage;
     const pageEnd = Math.min(pageStart + perPage, items.length);
 
-    // ─── 셀 이미지 배치 ─────────────────────────────────────────
     for (let i = pageStart; i < pageEnd; i += 1) {
       const onPage = i - pageStart;
       const row = Math.floor(onPage / pdf.cols);
@@ -501,7 +562,12 @@ async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer
       const cellX = pdf.marginMm + col * (widthMm + pdf.gutterMm);
       const cellY = pdf.marginMm + row * (heightMm + pdf.gutterMm);
 
-      const cellDataUrl = await renderCellToDataUrl(items[i], appUrl, cellCanvas);
+      const cellDataUrl = await renderCellToDataUrl(items[i], appUrl, cellCanvas, {
+        widthMm,
+        heightMm,
+        layoutMode: 'full',
+        qrSizeMm: LABEL_CONFIG.cell.qrSizeMm,
+      });
       doc.addImage(cellDataUrl, 'PNG', cellX, cellY, widthMm, heightMm);
 
       if ((i + 1) % 10 === 0 || i === items.length - 1) {
@@ -509,7 +575,6 @@ async function buildPdf(items: LabelItem[], appUrl: string): Promise<ArrayBuffer
       }
     }
 
-    // ─── 절제선 (셀 이미지 상위 레이어) ─────────────────────────
     renderCutLines(doc, widthMm, heightMm);
   }
 
@@ -527,13 +592,24 @@ ctx.addEventListener('message', async (event: MessageEvent<InboundMessage>) => {
     if (!Array.isArray(data.items) || data.items.length === 0) {
       throw new Error('items must be a non-empty array');
     }
-    if (data.items.length > LABEL_CONFIG.maxBatch) {
-      throw new Error(
-        `items length ${data.items.length} exceeds LABEL_CONFIG.maxBatch ${LABEL_CONFIG.maxBatch}`
-      );
+
+    let pdfBytes: ArrayBuffer;
+
+    if (data.mode === 'single') {
+      if (!data.sizePreset || !data.layoutMode) {
+        throw new Error('sizePreset and layoutMode are required for single mode');
+      }
+      pdfBytes = await buildSinglePdf(data.items[0], data.appUrl, data.sizePreset, data.layoutMode);
+    } else {
+      // batch mode (default) — 기존 경로 유지
+      if (data.items.length > LABEL_CONFIG.maxBatch) {
+        throw new Error(
+          `items length ${data.items.length} exceeds LABEL_CONFIG.maxBatch ${LABEL_CONFIG.maxBatch}`
+        );
+      }
+      pdfBytes = await buildBatchPdf(data.items, data.appUrl);
     }
 
-    const pdfBytes = await buildPdf(data.items, data.appUrl);
     post({ type: 'done', pdfBytes }, [pdfBytes]);
   } catch (error) {
     post({

@@ -193,3 +193,75 @@ export interface LabelItem {
   equipmentName: string;
   serialNumber?: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 단일 라벨 인쇄 — 양식/크기 선택 (SSOT)
+// 일괄 인쇄(BulkLabelPrintButton)는 getLabelCellDimensions() + 'full' 고정 사용.
+// 개별 장비 상세 페이지에서만 아래 preset/layoutMode를 선택할 수 있음.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 단일 라벨 크기 프리셋 — 물리 라벨 용도에 따른 3단계 */
+export type LabelSizePreset = 'standard' | 'medium' | 'small';
+
+/** 단일 라벨 레이아웃 모드 — 가용 공간에 따른 3단 단계적 축약 */
+export type LabelLayoutMode = 'full' | 'minimal' | 'qrOnly';
+
+/**
+ * 단일 라벨 크기 프리셋 정의 (SSOT).
+ *
+ * | preset   | widthMm × heightMm | qrSizeMm | 권장 용도                     |
+ * |----------|--------------------|----------|-------------------------------|
+ * | standard | 93.5 × 43.7        | 25       | 일반 장비 (A4 시트 일괄 기준) |
+ * | medium   | 60 × 30            | 20       | 중형 장비, 케이스 등          |
+ * | small    | 30 × 15            | 12       | 소형·초소형 장비 (최소 규격)  |
+ *
+ * qrSizeMm 최솟값 근거:
+ *   URL ~30자 + errorCorrectionLevel H → 33×33 모듈.
+ *   300dpi 기준 스캔 신뢰 하한 ~12mm (모듈당 약 0.36mm ≥ 0.25mm 안전 마진).
+ */
+export const LABEL_SIZE_PRESETS: Record<
+  LabelSizePreset,
+  { widthMm: number; heightMm: number; qrSizeMm: number }
+> = {
+  standard: { widthMm: 93.5, heightMm: 43.7, qrSizeMm: 25 },
+  medium: { widthMm: 60, heightMm: 30, qrSizeMm: 20 },
+  small: { widthMm: 30, heightMm: 15, qrSizeMm: 12 },
+};
+
+/**
+ * 레이아웃 모드 최소 크기 제약 (SSOT).
+ *
+ * 셀 크기가 아래 한계 미만이면 해당 모드를 사용할 수 없음.
+ * resolveLayoutMode()가 자동 fallback 계산에 사용.
+ */
+export const LABEL_LAYOUT_CONSTRAINTS: Record<
+  LabelLayoutMode,
+  { minWidthMm: number; minHeightMm: number }
+> = {
+  full: { minWidthMm: 50, minHeightMm: 30 },
+  minimal: { minWidthMm: 30, minHeightMm: 18 },
+  qrOnly: { minWidthMm: 15, minHeightMm: 15 },
+};
+
+/**
+ * 요청한 레이아웃 모드가 선택한 크기 프리셋에서 가능한지 확인하고
+ * 불가능하면 자동으로 단계를 낮춘다 (full → minimal → qrOnly).
+ *
+ * @returns mode — 실제 사용할 모드, fallback — 자동 축소 여부
+ */
+export function resolveLayoutMode(
+  requested: LabelLayoutMode,
+  preset: LabelSizePreset
+): { mode: LabelLayoutMode; fallback: boolean } {
+  const { widthMm, heightMm } = LABEL_SIZE_PRESETS[preset];
+  const order: LabelLayoutMode[] = ['full', 'minimal', 'qrOnly'];
+  const startIdx = order.indexOf(requested);
+
+  for (let i = startIdx; i < order.length; i += 1) {
+    const c = LABEL_LAYOUT_CONSTRAINTS[order[i]];
+    if (widthMm >= c.minWidthMm && heightMm >= c.minHeightMm) {
+      return { mode: order[i], fallback: i !== startIdx };
+    }
+  }
+  return { mode: 'qrOnly', fallback: true };
+}
