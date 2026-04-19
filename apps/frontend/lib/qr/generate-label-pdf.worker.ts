@@ -8,6 +8,15 @@
  *   jsPDF는 페이지 레이아웃(여백·페이지 추가·이미지 배치)과 절제선 렌더링을 담당.
  *   텍스트 렌더링은 브라우저 CJK 폰트 스택에 위임 → 한국어 깨짐 없음.
  *
+ * 텍스트 렌더링 파이프라인 (Measure-Draw 두 패스 분리):
+ *   Pass 1 — Spec:    RowSpec[] 구성 (행별 설정)
+ *   Pass 2 — Measure: measureValue()로 실제 fontPx·줄 수·라인 배열 확정 (캔버스 side-effect 없음)
+ *   Pass 3 — Layout:  측정 결과 기반으로 Y 좌표·topOffset 계산 (clamp 적용)
+ *   Pass 4 — Draw:    drawValue()로 확정된 좌표에 렌더링
+ *
+ * 이 패턴은 Brother P-touch / Avery DesignPro / Zebra BarTender의 공통 방식으로,
+ * topOffset이 음수가 되어 텍스트가 셀 경계 밖으로 나가는 오버플로우를 구조적으로 방지한다.
+ *
  * 셀 레이아웃 (qrPaddingLeftMm=2 기준):
  *   ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐  ← 절제선 (jsPDF 레이어)
  *   ╎  ▪▫▪  │ 관리번호 │ SUW-E0001            ╎
@@ -105,11 +114,9 @@ function hexToRgb(hex: string): [number, number, number] {
  * "You need to specify a canvas element" 에러를 유발한다.
  * 유일한 DOM-free 공개 API인 `QRCode.create()`가 반환한 BitMatrix를
  * 직접 렌더링하여 이 의존성을 제거한다.
- * (업계 표준: Zebra ZPL·Brother raster SDK·Seagull BarTender 모두
- *  QR 계산과 픽셀 렌더링을 분리하여 실행 환경 독립성을 확보)
  */
 function renderQrToCanvas(
-  ctx: OffscreenCanvasRenderingContext2D,
+  c: OffscreenCanvasRenderingContext2D,
   qrData: QRCodeData,
   x: number,
   y: number,
@@ -122,16 +129,16 @@ function renderQrToCanvas(
   const modulePx = sizePx / totalModules;
   const overlap = cell.qrModuleOverlapPx;
 
-  ctx.fillStyle = cell.qrBackgroundColor;
-  ctx.fillRect(x, y, sizePx, sizePx);
+  c.fillStyle = cell.qrBackgroundColor;
+  c.fillRect(x, y, sizePx, sizePx);
 
-  ctx.fillStyle = cell.qrForegroundColor;
+  c.fillStyle = cell.qrForegroundColor;
   for (let r = 0; r < size; r += 1) {
     for (let col = 0; col < size; col += 1) {
       if (data[r * size + col] !== 0) {
         const mx = x + (col + quietZone) * modulePx;
         const my = y + (r + quietZone) * modulePx;
-        ctx.fillRect(mx, my, modulePx + overlap, modulePx + overlap);
+        c.fillRect(mx, my, modulePx + overlap, modulePx + overlap);
       }
     }
   }
@@ -152,81 +159,11 @@ function drawTruncated(
     c.fillText(text, x, y);
     return;
   }
-  // 문자 단위 이진 탐색보다 선형이 단순하고 라벨 텍스트는 짧으므로 충분
   let truncated = text;
   while (truncated.length > 0 && c.measureText(truncated + '…').width > maxWidth) {
     truncated = truncated.slice(0, -1);
   }
   c.fillText(truncated + '…', x, y);
-}
-
-/**
- * 업계 표준 3단계 auto-fit 파이프라인으로 값 텍스트를 렌더링.
- *
- * Brother P-touch / Avery DesignPro / Seagull BarTender / Zebra 공통 방식:
- *   Step 1. preferredFontPx로 측정 → 맞으면 그대로 그림
- *   Step 2. 1px씩 줄여 minFontPx까지 시도 → shrink-to-fit
- *   Step 3. maxLines > 1이면 줄바꿈 시도
- *            - 한국어(CJK): 문자 단위 wrap (어절 경계 없음)
- *            - 영숫자: 공백 단위 word-wrap → 줄 내 char-wrap fallback
- *   Step 4. 최종적으로도 초과 → drawTruncated("…")
- *
- * @returns 실제로 사용된 { linesUsed, fontPxUsed } — 수직 센터링 재계산에 사용
- */
-function renderValueWithAutoFit(
-  c: OffscreenCanvasRenderingContext2D,
-  text: string,
-  x: number,
-  startY: number,
-  maxWidth: number,
-  opts: {
-    preferredFontPx: number;
-    minFontPx: number;
-    maxLines: number;
-    lineHeightRatio: number;
-    bold: boolean;
-    fontStack: string;
-    color: string;
-  }
-): { linesUsed: number; fontPxUsed: number } {
-  const { preferredFontPx, minFontPx, bold, fontStack, color, lineHeightRatio, maxLines } = opts;
-  const prefix = bold ? 'bold ' : '';
-
-  const setFont = (px: number): void => {
-    c.font = `${prefix}${px}px ${fontStack}`;
-  };
-
-  // ── Step 1 & 2: 폰트 축소 시도 ─────────────────────────────
-  let fontPx = preferredFontPx;
-  setFont(fontPx);
-
-  while (fontPx > minFontPx && c.measureText(text).width > maxWidth) {
-    fontPx -= 1;
-    setFont(fontPx);
-  }
-
-  // 단일 줄로 맞으면 바로 그림
-  if (c.measureText(text).width <= maxWidth) {
-    c.fillStyle = color;
-    c.fillText(text, x, startY);
-    return { linesUsed: 1, fontPxUsed: fontPx };
-  }
-
-  // ── Step 3: 줄바꿈 (maxLines > 1인 경우) ──────────────────
-  if (maxLines > 1) {
-    const lines = splitIntoLines(c, text, maxWidth, maxLines);
-    const lineH = Math.round(fontPx * lineHeightRatio);
-    c.fillStyle = color;
-    lines.forEach((line, i) => {
-      drawTruncated(c, line, x, startY + i * lineH, maxWidth);
-    });
-    return { linesUsed: lines.length, fontPxUsed: fontPx };
-  }
-
-  // ── Step 4: 말줄임 fallback ────────────────────────────────
-  c.fillStyle = color;
-  drawTruncated(c, text, x, startY, maxWidth);
-  return { linesUsed: 1, fontPxUsed: fontPx };
 }
 
 /**
@@ -245,11 +182,11 @@ function splitIntoLines(
   const isCjk = (char: string): boolean => {
     const cp = char.codePointAt(0) ?? 0;
     return (
-      (cp >= 0x1100 && cp <= 0x11ff) || // 한글 자모
-      (cp >= 0x3130 && cp <= 0x318f) || // 호환 자모
-      (cp >= 0xac00 && cp <= 0xd7af) || // 한글 완성형
-      (cp >= 0x4e00 && cp <= 0x9fff) || // CJK 통합 한자
-      (cp >= 0x3000 && cp <= 0x303f) // CJK 기호·구두점
+      (cp >= 0x1100 && cp <= 0x11ff) ||
+      (cp >= 0x3130 && cp <= 0x318f) ||
+      (cp >= 0xac00 && cp <= 0xd7af) ||
+      (cp >= 0x4e00 && cp <= 0x9fff) ||
+      (cp >= 0x3000 && cp <= 0x303f)
     );
   };
 
@@ -266,7 +203,6 @@ function splitIntoLines(
     }
 
     if (!hasAnyCjk) {
-      // Word-wrap: 공백 단위로 역방향 탐색
       const words = remaining.split(' ');
       let line = '';
       let wordIdx = 0;
@@ -279,7 +215,6 @@ function splitIntoLines(
       lineEnd = line.length;
     }
 
-    // CJK 또는 word-wrap이 실패한 경우: char-wrap
     if (lineEnd === remaining.length || lineEnd === 0) {
       let end = 0;
       while (
@@ -298,11 +233,159 @@ function splitIntoLines(
   return lines.length > 0 ? lines : [text];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Measure-Draw 분리 아키텍처 타입 정의
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** measureValue()의 반환 타입 — 실제 사용된 폰트·줄 정보 (side-effect free). */
+interface MeasureResult {
+  fontPxUsed: number;
+  linesUsed: number;
+  lines: string[];
+}
+
+/** 행 렌더링 설정 (Pass 1 — Spec). */
+interface RowSpec {
+  label: string;
+  value: string;
+  valueFontPx: number;
+  minFontPx: number;
+  maxLinesCap: number;
+  bold: boolean;
+}
+
+/** 행 측정 결과 (Pass 2 — Measure). */
+interface RowMeasured extends RowSpec {
+  measured: MeasureResult;
+}
+
+/** 행 레이아웃 결과 (Pass 3 — Layout). */
+interface RowLaidOut extends RowMeasured {
+  rowY: number;
+  actualRowH: number;
+  labelY: number;
+  valueY: number;
+  contentH: number;
+  topOffset: number;
+}
+
+/**
+ * rowHeight 기준 장비명 최대 줄 수를 동적으로 계산.
+ *
+ * 순수 함수 — OffscreenCanvas 미사용, 산술 계산만.
+ * rowH가 작은 소형 라벨에서 자동으로 줄 수를 줄여 오버플로우를 방지한다.
+ *
+ * @returns [1, cap] 범위로 clamp된 최대 줄 수
+ */
+function computeMaxLines(params: {
+  rowH: number;
+  fieldLabelPx: number;
+  rowGapPx: number;
+  valueMinFontPx: number;
+  lineHeightRatio: number;
+  cap: number;
+}): number {
+  const { rowH, fieldLabelPx, rowGapPx, valueMinFontPx, lineHeightRatio, cap } = params;
+  const available = rowH - fieldLabelPx - rowGapPx;
+  const lineH = Math.round(valueMinFontPx * lineHeightRatio);
+  if (lineH <= 0) return 1;
+  const n = Math.floor(available / lineH);
+  return Math.min(Math.max(n, 1), cap);
+}
+
+/**
+ * 텍스트의 실제 렌더링 크기를 측정한다 (Measure pass — pure).
+ *
+ * 캔버스에 어떤 픽셀도 그리지 않는다. c.font 설정은 측정을 위한 것으로,
+ * draw pass에서 덮어쓰므로 외부 상태 오염이 없다.
+ * splitIntoLines()와 shrink-to-fit 로직을 재사용하여 실제 사용될 값을 확정한다.
+ */
+function measureValue(
+  c: OffscreenCanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  opts: {
+    preferredFontPx: number;
+    minFontPx: number;
+    maxLines: number;
+    lineHeightRatio: number;
+    bold: boolean;
+    fontStack: string;
+  }
+): MeasureResult {
+  const { preferredFontPx, minFontPx, bold, fontStack, maxLines } = opts;
+  const prefix = bold ? 'bold ' : '';
+
+  const setFont = (px: number): void => {
+    c.font = `${prefix}${px}px ${fontStack}`;
+  };
+
+  // Step 1 & 2: shrink-to-fit
+  let fontPx = preferredFontPx;
+  setFont(fontPx);
+
+  while (fontPx > minFontPx && c.measureText(text).width > maxWidth) {
+    fontPx -= 1;
+    setFont(fontPx);
+  }
+
+  // 단일 줄로 맞으면 바로 반환
+  if (c.measureText(text).width <= maxWidth) {
+    return { fontPxUsed: fontPx, linesUsed: 1, lines: [text] };
+  }
+
+  // Step 3: 줄바꿈 시도
+  if (maxLines > 1) {
+    const lines = splitIntoLines(c, text, maxWidth, maxLines);
+    return { fontPxUsed: fontPx, linesUsed: lines.length, lines };
+  }
+
+  // Step 4: 단일 줄 말줄임 — 원본 텍스트 반환 (drawTruncated가 draw 패스에서 처리)
+  return { fontPxUsed: fontPx, linesUsed: 1, lines: [text] };
+}
+
+/**
+ * measureValue()의 측정 결과를 사용하여 텍스트를 캔버스에 렌더링한다 (Draw pass).
+ *
+ * 측정은 이미 완료되었으므로 폰트 재측정 없이 drawTruncated/fillText만 수행.
+ * c.font와 c.fillStyle을 설정 후 복구하지 않는다 — 호출자(행 루프)가 각 행마다 재설정.
+ */
+function drawValue(
+  c: OffscreenCanvasRenderingContext2D,
+  measured: MeasureResult,
+  x: number,
+  startY: number,
+  maxWidth: number,
+  opts: {
+    bold: boolean;
+    fontStack: string;
+    color: string;
+    lineHeightRatio: number;
+  }
+): void {
+  const { fontPxUsed, lines, linesUsed } = measured;
+  const { bold, fontStack, color, lineHeightRatio } = opts;
+  const prefix = bold ? 'bold ' : '';
+
+  c.font = `${prefix}${fontPxUsed}px ${fontStack}`;
+  c.fillStyle = color;
+
+  if (linesUsed === 1) {
+    drawTruncated(c, lines[0], x, startY, maxWidth);
+    return;
+  }
+
+  const lineH = Math.round(fontPxUsed * lineHeightRatio);
+  lines.forEach((line, i) => {
+    drawTruncated(c, line, x, startY + i * lineH, maxWidth);
+  });
+}
+
 /**
  * 라벨 셀 1개를 OffscreenCanvas로 렌더링하여 PNG data URL 반환.
  *
  * layoutMode에 따른 렌더링:
- *   - 'full'   : QR + 관리번호/장비명/일련번호 3행 테이블 (auto-fit 폰트 축소)
+ *   - 'full'   : QR + 관리번호/장비명/일련번호 3행 테이블 (Measure-Draw 두 패스)
  *   - 'qrOnly' : QR 중앙 정렬만, 텍스트/구분선 없음
  *
  * qrSizeMm가 주어지면 LABEL_CONFIG.cell.qrSizeMm를 override한다 (단일 라벨 크기 프리셋).
@@ -372,17 +455,20 @@ async function renderCellToDataUrl(
     c.lineTo(dividerX, cellH);
     c.stroke();
 
-    // ─── 테이블 행 정의 ───────────────────────────────────────
+    // ─── 텍스트 렌더링 파이프라인 (Measure-Draw 두 패스) ─────────────────
+
     const fieldLabelPx = ptToPx(cell.fieldLabelFontPt);
     const rowGap = mmToPx(cell.rowGapMm);
+    const rowH = Math.floor(cellH / 3); // 3행 균등 분할
 
-    const rows = [
+    // Pass 1 — Spec: 행별 렌더링 설정
+    const specs: RowSpec[] = [
       {
         label: cell.tableFieldLabels.mgmtNo,
         value: item.managementNumber,
         valueFontPx: ptToPx(cell.mgmtFontPt),
         minFontPx: ptToPx(cell.mgmtMinFontPt),
-        maxLines: 1,
+        maxLinesCap: 1,
         bold: true,
       },
       {
@@ -390,7 +476,7 @@ async function renderCellToDataUrl(
         value: item.equipmentName,
         valueFontPx: ptToPx(cell.nameFontPt),
         minFontPx: ptToPx(cell.nameMinFontPt),
-        maxLines: cell.nameMaxLines,
+        maxLinesCap: cell.nameMaxLinesCap,
         bold: false,
       },
       {
@@ -398,44 +484,71 @@ async function renderCellToDataUrl(
         value: item.serialNumber ?? '—',
         valueFontPx: ptToPx(cell.serialFontPt),
         minFontPx: ptToPx(cell.serialMinFontPt),
-        maxLines: 1,
+        maxLinesCap: 1,
         bold: false,
       },
     ];
 
-    const rowH = Math.floor(cellH / rows.length);
+    // Pass 2 — Measure: 실제 폰트 크기·줄 수 확정 (캔버스 side-effect 없음)
+    const measuredRows: RowMeasured[] = specs.map((spec) => {
+      const dynamicMaxLines = computeMaxLines({
+        rowH,
+        fieldLabelPx,
+        rowGapPx: rowGap,
+        valueMinFontPx: spec.minFontPx,
+        lineHeightRatio: cell.lineHeightRatio,
+        cap: spec.maxLinesCap,
+      });
+      const measured = measureValue(c, spec.value, textMaxW, {
+        preferredFontPx: spec.valueFontPx,
+        minFontPx: spec.minFontPx,
+        maxLines: dynamicMaxLines,
+        lineHeightRatio: cell.lineHeightRatio,
+        bold: spec.bold,
+        fontStack: cell.fontStack,
+      });
+      return { ...spec, measured };
+    });
 
-    rows.forEach((row, i) => {
+    // Pass 3 — Layout: 실제 측정값 기반 Y 좌표 계산 (topOffset clamp 적용)
+    const laidOutRows: RowLaidOut[] = measuredRows.map((row, i) => {
       const rowY = i * rowH;
-      const actualRowH = i === rows.length - 1 ? cellH - rowY : rowH;
+      const actualRowH = i === specs.length - 1 ? cellH - rowY : rowH;
 
-      if (i > 0) {
-        c.strokeStyle = cell.borderColor;
-        c.lineWidth = 1;
-        c.beginPath();
-        c.moveTo(dividerX, rowY);
-        c.lineTo(cellW, rowY);
-        c.stroke();
-      }
-
-      const contentH = fieldLabelPx + rowGap + row.valueFontPx;
-      const topOffset = Math.round((actualRowH - contentH) / 2);
+      const lineH = Math.round(row.measured.fontPxUsed * cell.lineHeightRatio);
+      const valueBlockH = row.measured.linesUsed * lineH;
+      const contentH = fieldLabelPx + rowGap + valueBlockH;
+      const topOffset = Math.max(cell.topOffsetClampMin, Math.round((actualRowH - contentH) / 2));
 
       const labelY = rowY + topOffset;
       const valueY = labelY + fieldLabelPx + rowGap;
 
+      return { ...row, rowY, actualRowH, labelY, valueY, contentH, topOffset };
+    });
+
+    // Pass 4 — Draw: 확정된 좌표에 렌더링
+    laidOutRows.forEach((row, i) => {
+      // 행 구분선 (첫 행 제외)
+      if (i > 0) {
+        c.strokeStyle = cell.borderColor;
+        c.lineWidth = 1;
+        c.beginPath();
+        c.moveTo(dividerX, row.rowY);
+        c.lineTo(cellW, row.rowY);
+        c.stroke();
+      }
+
+      // 필드명 (label)
       c.font = `${fieldLabelPx}px ${cell.fontStack}`;
       c.fillStyle = cell.fieldLabelColor;
-      drawTruncated(c, row.label, textX + innerPad, labelY, textMaxW);
+      drawTruncated(c, row.label, textX + innerPad, row.labelY, textMaxW);
 
-      renderValueWithAutoFit(c, row.value, textX + innerPad, valueY, textMaxW, {
-        preferredFontPx: row.valueFontPx,
-        minFontPx: row.minFontPx,
-        maxLines: row.maxLines,
-        lineHeightRatio: cell.lineHeightRatio,
+      // 필드값 (value) — draw pass
+      drawValue(c, row.measured, textX + innerPad, row.valueY, textMaxW, {
         bold: row.bold,
         fontStack: cell.fontStack,
         color: cell.fieldValueColor,
+        lineHeightRatio: cell.lineHeightRatio,
       });
     });
   }
@@ -451,9 +564,6 @@ async function renderCellToDataUrl(
  *   - 열 사이·행 사이 gutter 중앙에 점선 렌더링
  *   - 페이지 전체 span (0 → pageWidthMm, 0 → pageHeightMm)
  *   - 셀 PNG 이미지 상위 레이어 → 이미지 위에 렌더링되어 가시성 확보
- *
- * jsPDF 상태 변경 (setDrawColor·setLineWidth·setLineDashPattern)은
- * 함수 종료 전 원상복구하여 호출자 컨텍스트를 오염시키지 않는다.
  */
 function renderCutLines(doc: jsPDF, widthMm: number, heightMm: number): void {
   const { pdf } = LABEL_CONFIG;
@@ -461,29 +571,23 @@ function renderCutLines(doc: jsPDF, widthMm: number, heightMm: number): void {
 
   const [r, g, b] = hexToRgb(cutLine.color);
 
-  // ─── jsPDF 상태 설정 ────────────────────────────────────────
   doc.setLineDashPattern([cutLine.dashMm, cutLine.gapMm], 0);
   doc.setDrawColor(r, g, b);
   doc.setLineWidth(cutLine.lineWidthMm);
 
-  // ─── 수직 절제선 (열 사이) ────────────────────────────────────
-  // 위치: marginMm + col * (widthMm + gutterMm) - gutterMm/2
   for (let col = 1; col < pdf.cols; col += 1) {
     const x = pdf.marginMm + col * (widthMm + pdf.gutterMm) - pdf.gutterMm / 2;
     doc.line(x, 0, x, pdf.pageHeightMm);
   }
 
-  // ─── 수평 절제선 (행 사이) ────────────────────────────────────
-  // 위치: marginMm + row * (heightMm + gutterMm) - gutterMm/2
   for (let row = 1; row < pdf.rows; row += 1) {
     const y = pdf.marginMm + row * (heightMm + pdf.gutterMm) - pdf.gutterMm / 2;
     doc.line(0, y, pdf.pageWidthMm, y);
   }
 
-  // ─── jsPDF 상태 원상복구 ─────────────────────────────────────
   doc.setLineDashPattern([], 0);
   doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.2); // jsPDF 기본값
+  doc.setLineWidth(0.2);
 }
 
 /**
@@ -531,7 +635,6 @@ async function buildBatchPdf(items: LabelItem[], appUrl: string): Promise<ArrayB
     format: pdf.pageSize,
   });
 
-  // 모든 셀은 동일 크기 — OffscreenCanvas를 한 번 생성 후 재사용하여 GC 압박 방지
   const cellCanvas = new OffscreenCanvas(mmToPx(widthMm), mmToPx(heightMm));
 
   for (let pageIdx = 0; pageIdx < totalPages; pageIdx += 1) {
@@ -587,7 +690,6 @@ ctx.addEventListener('message', async (event: MessageEvent<InboundMessage>) => {
       }
       pdfBytes = await buildSinglePdf(data.items[0], data.appUrl, data.sizePreset, data.layoutMode);
     } else {
-      // batch mode (default) — 기존 경로 유지
       if (data.items.length > LABEL_CONFIG.maxBatch) {
         throw new Error(
           `items length ${data.items.length} exceeds LABEL_CONFIG.maxBatch ${LABEL_CONFIG.maxBatch}`

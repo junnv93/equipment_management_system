@@ -149,13 +149,24 @@ export const LABEL_CONFIG = {
     /** 일련번호 값 폰트 최소 크기 (pt) — shrink-to-fit 하한 */
     serialMinFontPt: 6,
     /**
-     * 장비명 최대 줄 수.
-     * 관리번호·일련번호는 줄바꿈 시 오독 위험 → 1로 고정.
-     * 장비명은 한국어 자연어 설명 → 2줄 허용.
+     * 장비명 최대 줄 수 상한 (cap).
+     * 실제 줄 수는 computeMaxLines()가 rowH 기준으로 동적 결정하며, 이 값이 상한이 됨.
+     * 관리번호·일련번호는 maxLines=1로 고정 (줄바꿈 시 오독 위험).
+     */
+    nameMaxLinesCap: 2,
+    /**
+     * @deprecated Use `nameMaxLinesCap` + `computeMaxLines()` for row-height-aware limit.
+     * 하위 호환을 위해 유지 — Worker는 이 값을 직접 사용하지 않음.
      */
     nameMaxLines: 2,
     /** 다중 줄 렌더링 시 폰트 크기 대비 줄 높이 배율 (CSS line-height 동등) */
     lineHeightRatio: 1.15,
+    /**
+     * topOffset 하한값 — 실제 사용 폰트·줄 수 기반 contentH가 rowH를 초과해도
+     * 텍스트가 셀 상단 경계 밖으로 나가지 않도록 clamp.
+     * 0: 상단 정렬 (최소 클리핑). 음수 허용 시 이 값을 낮춤.
+     */
+    topOffsetClampMin: 0,
   },
   /**
    * 한 번의 PDF 생성 작업에서 허용되는 최대 장비 수.
