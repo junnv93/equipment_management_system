@@ -330,7 +330,10 @@
       "editTitle": "Edit Self Inspection Record",
       "update": "Save Changes",
       "updateSuccess": "Self inspection record updated successfully.",
-      "updateError": "Failed to update self inspection record."
+      "updateError": "Failed to update self inspection record.",
+      "calibrationValidityPeriodPlaceholder": "e.g. 1 year, N/A",
+      "selectClassification": "Select classification",
+      "snapshotSectionLabel": "Form Header Information (UL-QP-18-05)"
     },
     "actions": {
       "edit": "Edit",
@@ -717,6 +720,10 @@
     "unlinkSuccess": "Software unlinked successfully",
     "linkError": "Error occurred while linking",
     "alreadyLinked": "Software is already linked",
+    "colManager": "Manager (Primary, Secondary)",
+    "colRequiresValidation": "Self-Validation Required",
+    "requiresValidationYes": "O",
+    "requiresValidationNo": "X",
     "colActions": "Actions",
     "cancel": "Cancel"
   },

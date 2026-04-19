@@ -25,8 +25,18 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import testSoftwareApi from '@/lib/api/software-api';
 import { TestSoftwareCombobox } from '@/components/ui/test-software-combobox';
-import { TIMELINE_TOKENS, DOCUMENT_DISPLAY } from '@/lib/design-tokens';
+import { TIMELINE_TOKENS, DOCUMENT_DISPLAY, TRANSITION_PRESETS } from '@/lib/design-tokens';
 import type { Equipment } from '@/lib/api/equipment-api';
+
+function formatManagers(
+  primary: string | null | undefined,
+  secondary: string | null | undefined
+): string {
+  if (primary && secondary) return `${primary}, ${secondary}`;
+  if (primary) return primary;
+  if (secondary) return secondary;
+  return '-';
+}
 
 interface SoftwareTabProps {
   equipment: Equipment;
@@ -264,10 +274,16 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                         {t('softwareTab.colVersion')}
                       </th>
                       <th className="pb-2 pr-4 font-medium text-muted-foreground">
+                        {t('softwareTab.colManager')}
+                      </th>
+                      <th className="pb-2 pr-4 font-medium text-muted-foreground">
                         {t('softwareTab.colTestField')}
                       </th>
                       <th className="pb-2 pr-4 font-medium text-muted-foreground">
                         {t('softwareTab.colAvailability')}
+                      </th>
+                      <th className="pb-2 pr-4 font-medium text-muted-foreground">
+                        {t('softwareTab.colRequiresValidation')}
                       </th>
                       <th className="pb-2 font-medium text-muted-foreground">
                         {t('softwareTab.colActions')}
@@ -287,6 +303,9 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                         </td>
                         <td className="py-2 pr-4">{sw.name}</td>
                         <td className="py-2 pr-4 font-mono text-xs">{sw.softwareVersion ?? '-'}</td>
+                        <td className="py-2 pr-4 text-sm">
+                          {formatManagers(sw.primaryManagerName, sw.secondaryManagerName)}
+                        </td>
                         <td className="py-2 pr-4">
                           <Badge variant="outline" className="text-xs">
                             {sw.testField}
@@ -301,6 +320,11 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
                               ? t('softwareTab.available')
                               : t('softwareTab.unavailable')}
                           </Badge>
+                        </td>
+                        <td className="py-2 pr-4 text-center font-medium">
+                          {sw.requiresValidation
+                            ? t('softwareTab.requiresValidationYes')
+                            : t('softwareTab.requiresValidationNo')}
                         </td>
                         <td className="py-2">
                           <Button
@@ -321,7 +345,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
               <div className="flex justify-end">
                 <Link
                   href={FRONTEND_ROUTES.SOFTWARE.LIST}
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className={`inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.fastColor}`}
                 >
                   {t('softwareTab.goToRegistry')}
                   <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -334,7 +358,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
               <p className={TIMELINE_TOKENS.empty.text}>{t('softwareTab.emptyRelatedSoftware')}</p>
               <Link
                 href={FRONTEND_ROUTES.SOFTWARE.LIST}
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-2"
+                className={`inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.fastColor} mt-2`}
               >
                 {t('softwareTab.goToRegistry')}
                 <ExternalLink className="h-3 w-3" aria-hidden="true" />
