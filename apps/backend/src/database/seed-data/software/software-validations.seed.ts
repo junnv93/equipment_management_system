@@ -103,27 +103,30 @@ export const SOFTWARE_VALIDATIONS_SEED_DATA: SeedRow[] = [
     createdBy: USER_TEST_ENGINEER_SUWON_ID,
   },
 
-  // V-004: quality_approved — 최종 승인 완료
+  // V-004: quality_approved — P0045 공식 작성 사례 (절차서 원문 근거)
+  // 출처: docs/procedure/P0045 시험 소프트웨어의 유효성확인-IECSoft-2_6-U.docx
+  // 방법 1 (공급자 시연), IECSoft v2_6-U, 공급자 Newtons4th Ltd, 수령일 2021-09-22
   {
     id: SW_VALID_004_ID,
     testSoftwareId: TEST_SOFTWARE_IECSOFT_ID, // IECSoft (EMC)
     validationType: 'vendor',
     status: 'quality_approved',
-    softwareVersion: '2.5a',
-    testDate: new Date('2026-01-15'),
-    infoDate: new Date('2025-12-01'),
-    softwareAuthor: 'Ametek CTS',
-    vendorName: 'Ametek CTS GmbH',
-    vendorSummary: 'IECSoft 전도성 방해 시험 SW. 공급자 시연 및 교차 검증 완료.',
+    softwareVersion: '2_6-U',
+    testDate: new Date('2021-09-22'),
+    infoDate: new Date('2021-09-22'),
+    softwareAuthor: 'Newtons4th Ltd',
+    vendorName: 'Newtons4th Ltd',
+    vendorSummary:
+      'IECSoft v2_6-U 전도성 방해 시험 자동화 소프트웨어. 공급자(Newtons4th Ltd) 시연 및 설명서 검토 완료. 측정 불확도 산출, 교정 추적성, 한계치 적용 기능 확인.',
     receivedBy: USER_TEST_ENGINEER_SUWON_ID,
-    receivedDate: new Date('2025-12-10'),
-    attachmentNote: '시연 보고서 + 비교 시험 데이터 첨부',
-    submittedAt: new Date('2026-01-20'),
+    receivedDate: new Date('2021-09-22'),
+    attachmentNote: 'IECSoft v2_6-U 공급자 제공 사용설명서 및 시연 결과 보고서 스캔본 첨부',
+    submittedAt: new Date('2021-09-23'),
     submittedBy: USER_TEST_ENGINEER_SUWON_ID,
     technicalApproverId: USER_TECHNICAL_MANAGER_SUWON_ID,
-    technicalApprovedAt: new Date('2026-01-25'),
+    technicalApprovedAt: new Date('2021-09-24'),
     qualityApproverId: USER_QUALITY_MANAGER_SUWON_ID,
-    qualityApprovedAt: new Date('2026-02-01'),
+    qualityApprovedAt: new Date('2021-09-25'),
     createdBy: USER_TEST_ENGINEER_SUWON_ID,
   },
 
