@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { ChevronRight, Eye, QrCode, PackageOpen, PackageCheck, AlertTriangle } from 'lucide-react';
 import {
   FRONTEND_ROUTES,
-  CHECKOUT_QUERY_PARAMS,
   QR_ACTION_I18N_KEYS,
   QR_ACTION_PRIORITY,
   type QRAllowedAction,
@@ -77,10 +76,7 @@ export function EquipmentActionSheet({
           setQrOpen(true);
           return;
         case 'request_checkout':
-          // `?equipmentId=` 프리필은 CreateCheckoutContent가 처리 (기존 동작)
-          router.push(
-            `${FRONTEND_ROUTES.CHECKOUTS.CREATE}?${CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID}=${encodeURIComponent(equipmentId)}`
-          );
+          router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE_FOR_EQUIPMENT(equipmentId));
           return;
         case 'mark_checkout_returned':
           // "내가 현재 반출 중인 장비" 딥링크 — 빌더가 scope/view/equipmentId 조합 캡슐화.

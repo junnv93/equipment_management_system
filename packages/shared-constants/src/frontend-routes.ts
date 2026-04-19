@@ -76,6 +76,24 @@ export const FRONTEND_ROUTES = {
      */
     NON_CONFORMANCES_CREATE: (id: string) =>
       `/equipment/${id}/non-conformance?${QUERY_INTENTS.ACTION}=${QUERY_INTENTS.ACTIONS.CREATE}`,
+    /**
+     * 장비별 자체점검 생성 딥링크. `?action=create` 파라미터가 점검 등록 다이얼로그를 자동 오픈.
+     * 장비 상세 탭 내 인라인 폼 — 전용 서브라우트 없음.
+     */
+    SELF_INSPECTION_CREATE: (id: string) =>
+      `/equipment/${id}?${QUERY_INTENTS.ACTION}=${QUERY_INTENTS.ACTIONS.CREATE}&intent=self_inspection`,
+    /**
+     * 장비별 중간점검 생성 딥링크. `?action=create` 파라미터가 점검 등록 다이얼로그를 자동 오픈.
+     * 장비 상세 탭 내 인라인 폼 — 전용 서브라우트 없음.
+     */
+    INTERMEDIATE_INSPECTION_CREATE: (id: string) =>
+      `/equipment/${id}?${QUERY_INTENTS.ACTION}=${QUERY_INTENTS.ACTIONS.CREATE}&intent=intermediate_inspection`,
+    /**
+     * 장비 요청(폐기/수리/이전) 생성 딥링크. `?action=create` 파라미터가 요청 폼을 자동 오픈.
+     * 장비 상세 탭 내 인라인 폼 — 전용 서브라우트 없음.
+     */
+    EQUIPMENT_REQUEST_CREATE: (id: string) =>
+      `/equipment/${id}?${QUERY_INTENTS.ACTION}=${QUERY_INTENTS.ACTIONS.CREATE}&intent=equipment_request`,
   },
 
   /**
@@ -120,6 +138,14 @@ export const FRONTEND_ROUTES = {
       if (equipmentId) params.set(CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID, equipmentId);
       return `/checkouts?${params.toString()}`;
     },
+    /**
+     * 반출 신청 생성 딥링크 — 특정 장비를 프리셀렉션한 채로 /checkouts/create 진입.
+     * QR 랜딩의 `request_checkout` CTA, 장비 상세 "반출 신청" 버튼 등 모든 진입점 공유.
+     *
+     * `CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID` 파라미터를 `CreateCheckoutContent`가 읽어 자동 선택.
+     */
+    CREATE_FOR_EQUIPMENT: (equipmentId: string) =>
+      `/checkouts/create?${CHECKOUT_QUERY_PARAMS.EQUIPMENT_ID}=${encodeURIComponent(equipmentId)}`,
   },
 
   // ============================================================================
@@ -139,6 +165,12 @@ export const FRONTEND_ROUTES = {
     CREATE: '/calibration-plans/create',
     DETAIL: (id: string) => `/calibration-plans/${id}`,
     EDIT: (id: string) => `/calibration-plans/${id}/edit`,
+    /**
+     * 교정계획 생성 딥링크 — 특정 장비를 사전 선택한 채로 /calibration-plans/create 진입.
+     * QR 랜딩 및 장비 상세 "교정계획 등록" CTA 공유.
+     */
+    CREATE_FOR_EQUIPMENT: (equipmentId: string) =>
+      `/calibration-plans/create?${QUERY_INTENTS.ACTION}=${QUERY_INTENTS.ACTIONS.CREATE}&equipmentId=${encodeURIComponent(equipmentId)}`,
   },
 
   // ============================================================================
