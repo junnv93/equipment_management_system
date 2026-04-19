@@ -357,4 +357,36 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     ],
     patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}*` }],
   },
+
+  // ─── 수리 이력 (Repair History) ───
+  [CACHE_EVENTS.REPAIR_HISTORY_CREATED]: {
+    actions: [
+      {
+        method: 'invalidateAfterEquipmentUpdate',
+        equipmentIdField: 'equipmentId',
+        statusChanged: false,
+        teamIdChanged: false,
+      },
+    ],
+  },
+  [CACHE_EVENTS.REPAIR_HISTORY_UPDATED]: {
+    actions: [
+      {
+        method: 'invalidateAfterEquipmentUpdate',
+        equipmentIdField: 'equipmentId',
+        statusChanged: false,
+        teamIdChanged: false,
+      },
+    ],
+  },
+  [CACHE_EVENTS.REPAIR_HISTORY_DELETED]: {
+    actions: [
+      {
+        method: 'invalidateAfterEquipmentUpdate',
+        equipmentIdField: 'equipmentId',
+        statusChanged: false,
+        teamIdChanged: false,
+      },
+    ],
+  },
 };

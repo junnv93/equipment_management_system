@@ -341,7 +341,7 @@ export class FormTemplateExportService {
         : Promise.resolve([null] as [null]),
     ]);
 
-    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-06');
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(entry.formNumber);
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-06');
 
     // Row 2: 반출지 / 전화번호
@@ -526,7 +526,7 @@ export class FormTemplateExportService {
       .limit(EXPORT_QUERY_LIMITS.FULL_EXPORT);
 
     // DOCX 템플릿 로드 — T0: 10열 테이블 (R0=헤더, R1~R21=빈 데이터행)
-    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-07');
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(entry.formNumber);
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-07');
 
     // T0 R0 = 헤더행 (보존), R1 = 템플�� 데이터행 (복제 기준)
@@ -627,20 +627,18 @@ export class FormTemplateExportService {
       })
       .from(softwareValidations)
       .innerJoin(testSoftware, eq(softwareValidations.testSoftwareId, testSoftware.id))
-      .where(eq(softwareValidations.id, validationId))
+      .where(
+        and(
+          eq(softwareValidations.id, validationId),
+          filter.site ? eq(testSoftware.site, filter.site as Site) : undefined
+        )
+      )
       .limit(1);
 
     if (!record) {
       throw new NotFoundException({
         code: 'VALIDATION_NOT_FOUND',
         message: `Software validation ${validationId} not found.`,
-      });
-    }
-
-    if (filter.site && record.softwareSite !== filter.site) {
-      throw new NotFoundException({
-        code: 'VALIDATION_NOT_FOUND',
-        message: 'Validation not accessible from your site.',
       });
     }
 
@@ -677,7 +675,7 @@ export class FormTemplateExportService {
       : null;
 
     // docx 템플릿 로드
-    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-09');
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(entry.formNumber);
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-09');
 
     // ── DOCX 구조 (9개 테이블) ──
@@ -824,7 +822,7 @@ export class FormTemplateExportService {
       .limit(EXPORT_QUERY_LIMITS.SECTION_EXPORT);
 
     // 템플릿 로드 — 실패 시 명시적 에러
-    const templateBuffer = await this.formTemplateService.getTemplateBuffer('UL-QP-18-08');
+    const templateBuffer = await this.formTemplateService.getTemplateBuffer(entry.formNumber);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
 
@@ -1134,7 +1132,7 @@ export class FormTemplateExportService {
       abnormality?: string;
     };
 
-    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-06');
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(entry.formNumber);
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-06');
 
     // Row 2: 반출지(=업체명) / 전화번호(=업체연락처)
@@ -1351,7 +1349,7 @@ export class FormTemplateExportService {
       ] ??
       (v || '-');
 
-    const templateBuf = await this.formTemplateService.getTemplateBuffer('UL-QP-18-10');
+    const templateBuf = await this.formTemplateService.getTemplateBuffer(entry.formNumber);
     const doc = new DocxTemplate(templateBuf, 'UL-QP-18-10');
 
     // ============== Part 1: 사용 확인서 (R0~R13) ==============

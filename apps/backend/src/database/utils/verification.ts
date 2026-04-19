@@ -45,6 +45,10 @@ import {
   INTERMEDIATE_INSPECTION_EQUIPMENT_SEED_DATA,
   INSPECTION_RESULT_SECTIONS_SEED_DATA,
 } from '../seed-data/operations/intermediate-inspections.seed';
+import {
+  SELF_INSPECTIONS_SEED_DATA,
+  SELF_INSPECTION_ITEMS_SEED_DATA,
+} from '../seed-data/operations/self-inspections.seed';
 
 interface VerificationResult {
   passed: boolean;
@@ -392,6 +396,28 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
         'inspection_result_sections',
         INSPECTION_RESULT_SECTIONS_SEED_DATA.length,
         "inspection_type = 'intermediate'"
+      )
+    );
+
+    // =========================================================================
+    // Self Inspections (UL-QP-18-05) — 전 테이블 SSOT 검증
+    // =========================================================================
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Self Inspections count',
+        'equipment_self_inspections',
+        SELF_INSPECTIONS_SEED_DATA.length
+      )
+    );
+
+    checks.push(
+      await checkCount(
+        pool,
+        'Self Inspection Items count',
+        'self_inspection_items',
+        SELF_INSPECTION_ITEMS_SEED_DATA.length
       )
     );
 

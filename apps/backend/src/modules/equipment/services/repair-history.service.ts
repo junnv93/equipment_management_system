@@ -10,7 +10,8 @@ import {
 import { NonConformancesService } from '../../non-conformances/non-conformances.service';
 import { NonConformanceStatus } from '../../non-conformances/dto/non-conformance-query.dto';
 import { RepairResultValues } from '@equipment-management/schemas';
-import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { CACHE_EVENTS, type RepairHistoryCachePayload } from '../../../common/cache/cache-events';
 
 const RepairResultEnum = RepairResultValues;
 
@@ -24,7 +25,7 @@ export class RepairHistoryService {
     private readonly db: AppDatabase,
     @Inject(forwardRef(() => NonConformancesService))
     private nonConformancesService: NonConformancesService,
-    private readonly cacheInvalidationHelper: CacheInvalidationHelper
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   /**
@@ -183,9 +184,9 @@ export class RepairHistoryService {
       }
     }
 
-    // 이력카드/장비 상세의 UL-QP-18-02 이력 섹션에 반영되도록 캐시 무효화
-    // (equipment_history.service 및 non_conformance 경로와 동일 SSOT 사용)
-    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentUuid, false, false);
+    await this.eventEmitter.emitAsync(CACHE_EVENTS.REPAIR_HISTORY_CREATED, {
+      equipmentId: equipmentUuid,
+    } satisfies RepairHistoryCachePayload);
 
     return newRecord;
   }
@@ -225,11 +226,9 @@ export class RepairHistoryService {
       }
     }
 
-    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
-      existing.equipmentId,
-      false,
-      false
-    );
+    await this.eventEmitter.emitAsync(CACHE_EVENTS.REPAIR_HISTORY_UPDATED, {
+      equipmentId: existing.equipmentId,
+    } satisfies RepairHistoryCachePayload);
 
     return updatedRecord;
   }
@@ -246,11 +245,9 @@ export class RepairHistoryService {
       .set({ isDeleted: true, deletedAt: now, deletedBy, updatedAt: now })
       .where(eq(repairHistory.id, uuid));
 
-    await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
-      existing.equipmentId,
-      false,
-      false
-    );
+    await this.eventEmitter.emitAsync(CACHE_EVENTS.REPAIR_HISTORY_DELETED, {
+      equipmentId: existing.equipmentId,
+    } satisfies RepairHistoryCachePayload);
 
     return { deleted: true, id: uuid };
   }

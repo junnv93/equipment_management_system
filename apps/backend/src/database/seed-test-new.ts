@@ -134,6 +134,10 @@ async function main(): Promise<void> {
       'calibration_factors',
       'repair_history',
       'non_conformances',
+      'self_inspection_items',
+      'equipment_self_inspections',
+      'intermediate_inspection_items',
+      'intermediate_inspections',
       'intermediate_inspection_equipment',
       'inspection_result_sections',
       // form_templates 는 truncate 하지 않는다.

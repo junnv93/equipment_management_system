@@ -11,6 +11,11 @@ export const CACHE_EVENTS = {
   // ─── 부적합 첨부 (NC Attachment) ───
   NC_ATTACHMENT_UPLOADED: 'nonConformance.attachmentUploaded',
   NC_ATTACHMENT_DELETED: 'nonConformance.attachmentDeleted',
+
+  // ─── 수리 이력 (Repair History) ───
+  REPAIR_HISTORY_CREATED: 'repairHistory.created',
+  REPAIR_HISTORY_UPDATED: 'repairHistory.updated',
+  REPAIR_HISTORY_DELETED: 'repairHistory.deleted',
 } as const;
 
 export type CacheEventName = (typeof CACHE_EVENTS)[keyof typeof CACHE_EVENTS];
@@ -21,4 +26,9 @@ export interface NCAttachmentCachePayload {
   equipmentId: string;
   documentId: string;
   actorId: string | null;
+}
+
+/** 수리 이력 캐시 이벤트 페이로드 */
+export interface RepairHistoryCachePayload {
+  equipmentId: string;
 }
