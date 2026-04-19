@@ -15,6 +15,10 @@ describe('isCheckoutExportable()', () => {
     expect(isCheckoutExportable('rejected')).toBe(false);
   });
 
+  it('canceled → false (반출 취소, 확인서 export 불필요)', () => {
+    expect(isCheckoutExportable('canceled')).toBe(false);
+  });
+
   it.each(EXPORTABLE_STATUSES)('"%s" → true (반출 사실 존재, 확인서 export 가능)', (status) => {
     expect(isCheckoutExportable(status)).toBe(true);
   });
@@ -25,17 +29,17 @@ describe('isCheckoutExportable()', () => {
       exportable: isCheckoutExportable(s as CheckoutStatus),
     }));
     const nonExportable = results.filter((r) => !r.exportable).map((r) => r.status);
-    expect(nonExportable).toEqual(['pending', 'rejected']);
+    expect(nonExportable).toEqual(['pending', 'rejected', 'canceled']);
   });
 });
 
 describe('NON_EXPORTABLE_CHECKOUT_STATUSES', () => {
-  it('pending과 rejected만 포함', () => {
-    expect(NON_EXPORTABLE_CHECKOUT_STATUSES).toEqual(['pending', 'rejected']);
+  it('pending, rejected, canceled 포함', () => {
+    expect(NON_EXPORTABLE_CHECKOUT_STATUSES).toEqual(['pending', 'rejected', 'canceled']);
   });
 
-  it('CheckoutStatus 중 11개는 제외되지 않음', () => {
+  it('CheckoutStatus 중 10개는 제외되지 않음', () => {
     const totalStatuses = CHECKOUT_STATUS_VALUES.length;
-    expect(totalStatuses - NON_EXPORTABLE_CHECKOUT_STATUSES.length).toBe(11);
+    expect(totalStatuses - NON_EXPORTABLE_CHECKOUT_STATUSES.length).toBe(10);
   });
 });
