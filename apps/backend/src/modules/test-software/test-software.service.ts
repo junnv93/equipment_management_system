@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, desc, sql, asc } from 'drizzle-orm';
 import {
@@ -14,6 +14,7 @@ import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-const
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { acquireAdvisoryXactLock } from '../../common/utils/advisory-lock';
+import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
@@ -23,10 +24,13 @@ import type { LinkEquipmentInput } from './dto/link-equipment.dto';
 export type TestSoftwareWithManagers = TestSoftware & {
   primaryManagerName: string | null;
   secondaryManagerName: string | null;
+  latestValidationId?: string | null;
+  latestValidatedAt?: Date | null;
 };
 
 @Injectable()
 export class TestSoftwareService extends VersionedBaseService {
+  private readonly logger = new Logger(TestSoftwareService.name);
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.TEST_SOFTWARE;
 
   constructor(
@@ -187,6 +191,8 @@ export class TestSoftwareService extends VersionedBaseService {
               availability: testSoftware.availability,
               requiresValidation: testSoftware.requiresValidation,
               site: testSoftware.site,
+              latestValidationId: testSoftware.latestValidationId,
+              latestValidatedAt: testSoftware.latestValidatedAt,
               version: testSoftware.version,
               createdAt: testSoftware.createdAt,
               updatedAt: testSoftware.updatedAt,
@@ -243,6 +249,8 @@ export class TestSoftwareService extends VersionedBaseService {
             availability: testSoftware.availability,
             requiresValidation: testSoftware.requiresValidation,
             site: testSoftware.site,
+            latestValidationId: testSoftware.latestValidationId,
+            latestValidatedAt: testSoftware.latestValidatedAt,
             version: testSoftware.version,
             createdAt: testSoftware.createdAt,
             updatedAt: testSoftware.updatedAt,
@@ -288,6 +296,8 @@ export class TestSoftwareService extends VersionedBaseService {
             availability: testSoftware.availability,
             requiresValidation: testSoftware.requiresValidation,
             site: testSoftware.site,
+            latestValidationId: testSoftware.latestValidationId,
+            latestValidatedAt: testSoftware.latestValidatedAt,
             version: testSoftware.version,
             createdAt: testSoftware.createdAt,
             updatedAt: testSoftware.updatedAt,
@@ -310,7 +320,12 @@ export class TestSoftwareService extends VersionedBaseService {
   async update(id: string, dto: UpdateTestSoftwareInput): Promise<TestSoftware> {
     const { version, ...updateFields } = dto;
 
-    // Build update data, converting installedAt string to Date if present
+    const existing = await this.findOne(id);
+
+    const softwareVersionChanged =
+      updateFields.softwareVersion !== undefined &&
+      updateFields.softwareVersion !== existing.softwareVersion;
+
     const updateData: Record<string, unknown> = {};
     if (updateFields.name !== undefined) updateData.name = updateFields.name;
     if (updateFields.softwareVersion !== undefined)
@@ -331,6 +346,12 @@ export class TestSoftwareService extends VersionedBaseService {
       updateData.requiresValidation = updateFields.requiresValidation;
     if (updateFields.site !== undefined) updateData.site = updateFields.site;
 
+    // ISO/IEC 17025 §6.4.13: 버전 변경 시 latestValidationId nullify (재검증 필요 신호)
+    if (softwareVersionChanged) {
+      updateData.latestValidationId = null;
+      updateData.latestValidatedAt = null;
+    }
+
     const updated = await this.updateWithVersion<TestSoftware>(
       testSoftware,
       id,
@@ -342,6 +363,21 @@ export class TestSoftwareService extends VersionedBaseService {
     );
 
     this.invalidateCache(id);
+
+    if (softwareVersionChanged) {
+      try {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.TEST_SOFTWARE_REVALIDATION_REQUIRED, {
+          testSoftwareId: id,
+          softwareName: existing.name,
+          previousVersion: existing.softwareVersion,
+          newVersion: updateFields.softwareVersion,
+          primaryManagerId: existing.primaryManagerId,
+          timestamp: new Date(),
+        });
+      } catch (err) {
+        this.logger.error('revalidation event listener error', err);
+      }
+    }
 
     return updated;
   }
