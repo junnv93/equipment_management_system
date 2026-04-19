@@ -401,7 +401,7 @@
     "selfTitle": "Self Inspection Records",
     "noActiveCalibration": "No active calibration record found. Cannot create intermediate inspection.",
     "createButton": "Create Inspection Record",
-    "notApplicable": "This equipment is not subject to inspection (Management method: N/A)",
+    "notApplicable": "This equipment is not subject to inspection (Management method: {method})",
     "emptyDescription": "Create an inspection record to manage intermediate check results.",
     "expand": "Expand details",
     "collapse": "Collapse details"

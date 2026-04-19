@@ -404,7 +404,7 @@
     "selfTitle": "자체점검 기록",
     "noActiveCalibration": "활성 교정 기록이 없어 중간점검을 생성할 수 없습니다",
     "createButton": "점검 기록 작성",
-    "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: 비대상)",
+    "notApplicable": "이 장비는 점검 대상이 아닙니다 (관리 방법: {method})",
     "emptyDescription": "중간점검 결과를 관리하려면 점검 기록을 작성하세요.",
     "expand": "상세 펼치기",
     "collapse": "상세 접기"

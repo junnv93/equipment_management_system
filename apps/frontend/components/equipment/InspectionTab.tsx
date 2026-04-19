@@ -27,10 +27,12 @@ export function InspectionTab({ equipment }: InspectionTabProps) {
     return <SelfInspectionTab equipment={equipment} />;
   }
 
-  // not_applicable (비대상)
+  const methodLabel = t(`managementMethodLabel.${equipment.managementMethod}`);
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <p className="text-muted-foreground text-sm">{t('inspection.notApplicable')}</p>
+      <p className="text-muted-foreground text-sm">
+        {t('inspection.notApplicable', { method: methodLabel })}
+      </p>
     </div>
   );
 }
