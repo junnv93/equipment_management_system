@@ -9,10 +9,19 @@
 
 /**
  * XL 라벨 높이 (mm) — 폰트 스케일 기준이자 xl preset의 heightMm SSOT.
- * LABEL_CONFIG.cell.referenceLabelHeightMm 과 LABEL_SIZE_PRESETS.xl.heightMm
+ * LABEL_CONFIG.scaling.referenceLabelHeightMm 과 LABEL_SIZE_PRESETS.xl.heightMm
  * 양쪽이 이 값을 참조하여 drift를 방지한다.
  */
 const XL_LABEL_HEIGHT_MM = 43.7;
+
+/**
+ * 포인트(pt) → 밀리미터(mm) 변환 계수 (SSOT).
+ *
+ * 1 pt = 1/72 inch = 25.4/72 mm ≈ 0.35278 mm.
+ * jsPDF는 mm 단위로 동작하므로, pt 기반 폰트 크기를 mm 위치로 변환할 때 사용한다.
+ * `ptToPx()`(DPI 기반 픽셀 변환)와는 별도의 변환 — jsPDF 레이어 전용.
+ */
+export const PT_TO_MM = 25.4 / 72;
 
 /**
  * QR 코드 생성 옵션 (qrcode 라이브러리 전달)
@@ -169,17 +178,21 @@ export const LABEL_CONFIG = {
     /** 다중 줄 렌더링 시 폰트 크기 대비 줄 높이 배율 (CSS line-height 동등) */
     lineHeightRatio: 1.15,
     /**
-     * 폰트 스케일 기준 라벨 높이 (mm) — LABEL_SIZE_PRESETS.xl.heightMm.
-     * Worker는 `heightMm / referenceLabelHeightMm` 비율로 valueFontPx를 보정하여
-     * auto-fit 파이프라인의 시작점을 라벨 크기에 적합하게 조정한다.
-     */
-    referenceLabelHeightMm: XL_LABEL_HEIGHT_MM,
-    /**
      * topOffset 하한값 — 실제 사용 폰트·줄 수 기반 contentH가 rowH를 초과해도
      * 텍스트가 셀 상단 경계 밖으로 나가지 않도록 clamp.
      * 0: 상단 정렬 (최소 클리핑). 음수 허용 시 이 값을 낮춤.
      */
     topOffsetClampMin: 0,
+  },
+  /**
+   * 폰트 스케일 보정 기준값 — auto-fit 파이프라인 전용.
+   *
+   * Worker는 `heightMm / scaling.referenceLabelHeightMm` 비율로 valueFontPx를 보정하여
+   * auto-fit 파이프라인의 시작점을 라벨 크기에 적합하게 조정한다.
+   * 렌더링 파라미터(cell)와 분리된 독립 네임스페이스.
+   */
+  scaling: {
+    referenceLabelHeightMm: XL_LABEL_HEIGHT_MM,
   },
   /**
    * 한 번의 PDF 생성 작업에서 허용되는 최대 장비 수.

@@ -283,6 +283,7 @@ export {
   resolveLayoutMode,
   LABEL_SAMPLER_LAYOUT,
   LABEL_SAMPLER_CONFIG,
+  PT_TO_MM,
   getSamplerPresetOrder,
   type QrConfig,
   type LabelConfig,

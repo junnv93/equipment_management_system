@@ -59,13 +59,13 @@
     },
     "sizePresetLabel": "라벨 크기",
     "size": {
-      "xl": "특대형 (93.5 × 43.7mm)",
-      "large": "대형 (80 × 38mm)",
-      "medium": "중형 (60 × 28mm)",
-      "small": "소형 (50 × 20mm)",
-      "xs": "소소형 (42 × 18mm)",
-      "xxs": "극소형 (36 × 15mm)",
-      "micro": "초소형 QR 전용 (30 × 12mm)"
+      "xl": "특대형 ({widthMm} × {heightMm} mm)",
+      "large": "대형 ({widthMm} × {heightMm} mm)",
+      "medium": "중형 ({widthMm} × {heightMm} mm)",
+      "small": "소형 ({widthMm} × {heightMm} mm)",
+      "xs": "소소형 ({widthMm} × {heightMm} mm)",
+      "xxs": "극소형 ({widthMm} × {heightMm} mm)",
+      "micro": "초소형 QR 전용 ({widthMm} × {heightMm} mm)"
     },
     "fallbackNotice": "선택한 크기가 작아 양식이 자동 조정되었습니다: {mode}",
     "fallbackMode": {

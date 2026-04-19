@@ -105,7 +105,7 @@ grep -rn "LABEL_SIZE_PRESETS\s*[=:{]" \
 
 ### Step 3b: XL_LABEL_HEIGHT_MM SSOT drift 탐지 (2026-04-19 추가)
 
-`XL_LABEL_HEIGHT_MM`은 `qr-config.ts`의 `const` — `LABEL_CONFIG.cell.referenceLabelHeightMm`과
+`XL_LABEL_HEIGHT_MM`은 `qr-config.ts`의 `const` — `LABEL_CONFIG.scaling.referenceLabelHeightMm`과
 `LABEL_SIZE_PRESETS.xl.heightMm`이 이 값을 공통 참조하여 drift를 방지한다.
 Worker 또는 다른 파일에서 `43.7` / `referenceLabelHeightMm` 값을 하드코딩하는 패턴을 탐지한다.
 
@@ -117,7 +117,7 @@ grep -rn "43\.7\|referenceLabelHeightMm\s*[:=]\s*[0-9]" \
 # heightScale 계산이 SSOT 경유 (referenceLabelHeightMm을 직접 숫자로 대체 금지)
 grep -n "heightScale" \
   apps/frontend/lib/qr/generate-label-pdf.worker.ts 2>/dev/null \
-  | grep -v "referenceLabelHeightMm\|cell\."
+  | grep -v "referenceLabelHeightMm\|scaling\."
 ```
 
 **PASS:** 첫 번째 명령어 0건, 두 번째 명령어 0건.

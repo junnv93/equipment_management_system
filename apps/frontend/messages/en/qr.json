@@ -59,13 +59,13 @@
     },
     "sizePresetLabel": "Label size",
     "size": {
-      "xl": "XL (93.5 × 43.7 mm)",
-      "large": "Large (80 × 38 mm)",
-      "medium": "Medium (60 × 28 mm)",
-      "small": "Small (50 × 20 mm)",
-      "xs": "XS (42 × 18 mm)",
-      "xxs": "XXS (36 × 15 mm)",
-      "micro": "Micro QR-only (30 × 12 mm)"
+      "xl": "XL ({widthMm} × {heightMm} mm)",
+      "large": "Large ({widthMm} × {heightMm} mm)",
+      "medium": "Medium ({widthMm} × {heightMm} mm)",
+      "small": "Small ({widthMm} × {heightMm} mm)",
+      "xs": "XS ({widthMm} × {heightMm} mm)",
+      "xxs": "XXS ({widthMm} × {heightMm} mm)",
+      "micro": "Micro QR-only ({widthMm} × {heightMm} mm)"
     },
     "fallbackNotice": "Layout auto-adjusted for selected size: {mode}",
     "fallbackMode": {

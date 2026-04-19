@@ -239,17 +239,20 @@ export function EquipmentQRButton({
                   onValueChange={(v) => setSizePreset(v as LabelSizePreset)}
                   className="space-y-1.5"
                 >
-                  {getSamplerPresetOrder().map((preset) => (
-                    <div key={preset} className="flex items-center space-x-2">
-                      <RadioGroupItem value={preset} id={`size-${preset}`} />
-                      <Label
-                        htmlFor={`size-${preset}`}
-                        className="cursor-pointer text-sm font-normal"
-                      >
-                        {t(`size.${preset}`)}
-                      </Label>
-                    </div>
-                  ))}
+                  {getSamplerPresetOrder().map((preset) => {
+                    const { widthMm, heightMm } = LABEL_SIZE_PRESETS[preset];
+                    return (
+                      <div key={preset} className="flex items-center space-x-2">
+                        <RadioGroupItem value={preset} id={`size-${preset}`} />
+                        <Label
+                          htmlFor={`size-${preset}`}
+                          className="cursor-pointer text-sm font-normal"
+                        >
+                          {t(`size.${preset}`, { widthMm, heightMm })}
+                        </Label>
+                      </div>
+                    );
+                  })}
                 </RadioGroup>
               </fieldset>
 

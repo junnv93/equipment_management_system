@@ -44,6 +44,7 @@ import {
   LABEL_SIZE_PRESETS,
   LABEL_SAMPLER_LAYOUT,
   LABEL_SAMPLER_CONFIG,
+  PT_TO_MM,
   getSamplerPresetOrder,
   getLabelCellDimensions,
   buildEquipmentQRUrl,
@@ -475,7 +476,7 @@ async function renderCellToDataUrl(
 
     // 라벨 높이 비례 폰트 스케일 — 소형 라벨에서 auto-fit 시작점을 적정화.
     // shrink-to-fit이 수평 overflow를 처리하고, 이 스케일은 수직 공간 예측을 보정한다.
-    const heightScale = Math.min(1, heightMm / cell.referenceLabelHeightMm);
+    const heightScale = Math.min(1, heightMm / LABEL_CONFIG.scaling.referenceLabelHeightMm);
     const mgmtFontPx = Math.max(
       ptToPx(cell.mgmtMinFontPt),
       Math.round(ptToPx(cell.mgmtFontPt) * heightScale)
@@ -725,8 +726,7 @@ async function buildSamplerPdf(
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: pdf.pageSize });
 
-  // jsPDF pt→mm: 1pt = 0.353mm
-  const headerFontMm = sampler.headerFontPt * 0.353;
+  const headerFontMm = sampler.headerFontPt * PT_TO_MM;
 
   // 동일 managementNumber에 대해 QR BitMatrix를 1회만 계산 (7 preset × Reed-Solomon 절약)
   const sharedQrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
