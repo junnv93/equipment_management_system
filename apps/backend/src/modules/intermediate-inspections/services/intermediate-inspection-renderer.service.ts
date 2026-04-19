@@ -48,7 +48,6 @@ export class IntermediateInspectionRendererService {
     // --- T0: 헤더 + 점검 항목 ---
     this.injectHeader(doc, data);
     this.injectItems(doc, data);
-    await this.appendItemPhotos(doc, data);
 
     // --- T1: 측정 장비 List ---
     this.injectMeasureEquipment(doc, data);
@@ -57,6 +56,12 @@ export class IntermediateInspectionRendererService {
     this.injectSignOff(doc, data);
     await this.injectSignatures(doc, data);
 
+    // 템플릿 예시 텍스트 제거 — appendSection 호출 전 반드시 먼저 실행
+    // (이후 insertBeforeSectPr 기반 삽입이 해당 영역을 덮어쓰지 않도록)
+    doc.removeTemplateExampleTextAndInsertPageBreak();
+
+    // 동적 콘텐츠 삽입 (제거 이후)
+    await this.appendItemPhotos(doc, data);
     // 2페이지: ■ 측정 결과 (items SSOT 자동 생성) + 보충 섹션 (DB)
     this.injectItemsSummary(doc, data);
     await renderResultSections(doc, data.resultSections, this.storage, { skipPageBreak: true });
@@ -255,8 +260,6 @@ export class IntermediateInspectionRendererService {
    */
   private injectItemsSummary(doc: DocxTemplate, data: IntermediateInspectionExportData): void {
     if (data.items.length === 0) return;
-
-    doc.removeTemplateExampleTextAndInsertPageBreak();
 
     const { check: checkNumId } = doc.bulletNumIds;
 

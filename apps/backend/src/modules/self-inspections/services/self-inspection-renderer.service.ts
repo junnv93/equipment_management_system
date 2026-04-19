@@ -47,7 +47,6 @@ export class SelfInspectionRendererService {
     // --- T0: 헤더 + 점검 항목 ---
     this.injectHeader(doc, data);
     this.injectItems(doc, data);
-    await this.appendItemPhotos(doc, data);
 
     // --- T1: 기타 특기사항 ---
     this.injectSpecialNotes(doc, data);
@@ -56,8 +55,13 @@ export class SelfInspectionRendererService {
     this.injectSignOff(doc, data);
     await this.injectSignatures(doc, data);
 
-    // 동적 결과 섹션 (Data Service 선조회 데이터 — DB 접근 없음)
-    await renderResultSections(doc, data.resultSections, this.storage);
+    // 템플릿 예시 텍스트 제거 — appendSection 호출 전 반드시 먼저 실행
+    doc.removeTemplateExampleTextAndInsertPageBreak();
+
+    // 동적 콘텐츠 삽입 (제거 이후)
+    await this.appendItemPhotos(doc, data);
+    // skipPageBreak: true — 위에서 이미 removeTemplateExampleText 호출함
+    await renderResultSections(doc, data.resultSections, this.storage, { skipPageBreak: true });
 
     return doc.toBuffer();
   }
