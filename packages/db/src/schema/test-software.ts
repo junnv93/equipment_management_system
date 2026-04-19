@@ -49,6 +49,10 @@ export const testSoftware = pgTable(
     // 등록자
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
 
+    // 유효성 확인 연계 (ISO/IEC 17025 §6.4.13 재검증 추적)
+    latestValidationId: uuid('latest_validation_id'),
+    latestValidatedAt: timestamp('latest_validated_at'),
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
