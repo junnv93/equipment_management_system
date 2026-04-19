@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { ValidationTypeEnum, uuidString, VM } from '@equipment-management/schemas';
+import {
+  ValidationTypeEnum,
+  uuidString,
+  VM,
+  acquisitionOrProcessingArraySchema,
+  controlItemArraySchema,
+} from '@equipment-management/schemas';
 
 const datePattern = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD);
 
@@ -41,9 +47,9 @@ export const createValidationSchema = z
     operatingUnitDescription: z.string().optional(),
     softwareComponents: z.string().optional(),
     hardwareComponents: z.string().optional(),
-    acquisitionFunctions: z.array(z.record(z.string(), z.unknown())).optional(),
-    processingFunctions: z.array(z.record(z.string(), z.unknown())).optional(),
-    controlFunctions: z.array(z.record(z.string(), z.unknown())).optional(),
+    acquisitionFunctions: acquisitionOrProcessingArraySchema.optional(),
+    processingFunctions: acquisitionOrProcessingArraySchema.optional(),
+    controlFunctions: controlItemArraySchema.optional(),
     performedBy: uuidString(VM.uuid.invalid('수행자')).optional(),
   })
   .superRefine((data, ctx) => {

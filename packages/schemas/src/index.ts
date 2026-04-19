@@ -59,3 +59,9 @@ export { uuidString, optionalUuid, nullableOptionalUuid } from './utils/fields';
 
 // Common base types
 export type { PaginatedResponseType, PaginatedResponse, SoftDeleteEntity } from './common/base';
+
+// ============================================================
+// Software Validation (UL-QP-18-09)
+// ============================================================
+
+export * from './software-validation';

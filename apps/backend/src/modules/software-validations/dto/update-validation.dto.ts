@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { ValidationTypeEnum, uuidString, VM } from '@equipment-management/schemas';
+import {
+  ValidationTypeEnum,
+  uuidString,
+  VM,
+  acquisitionOrProcessingArraySchema,
+  controlItemArraySchema,
+} from '@equipment-management/schemas';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 export const updateValidationSchema = z.object({
@@ -30,9 +36,9 @@ export const updateValidationSchema = z.object({
   operatingUnitDescription: z.string().optional(),
   softwareComponents: z.string().optional(),
   hardwareComponents: z.string().optional(),
-  acquisitionFunctions: z.array(z.record(z.string(), z.unknown())).optional(),
-  processingFunctions: z.array(z.record(z.string(), z.unknown())).optional(),
-  controlFunctions: z.array(z.record(z.string(), z.unknown())).optional(),
+  acquisitionFunctions: acquisitionOrProcessingArraySchema.optional(),
+  processingFunctions: acquisitionOrProcessingArraySchema.optional(),
+  controlFunctions: controlItemArraySchema.optional(),
   performedBy: uuidString(VM.uuid.invalid('수행자')).optional(),
 });
 
