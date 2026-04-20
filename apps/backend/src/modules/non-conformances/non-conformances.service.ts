@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Inject, Logger } from '@nestjs/common';
-import { eq, and, isNull, SQL, ne, sql, or, notInArray, isNotNull } from 'drizzle-orm';
+import { eq, and, isNull, SQL, ne, sql, or, notInArray, isNotNull, inArray } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import {
   nonConformances,
@@ -599,6 +599,7 @@ export class NonConformancesService extends VersionedBaseService {
    * 장비별 열린 부적합 조회
    */
   async findOpenByEquipment(equipmentId: string): Promise<NonConformance[]> {
+    // corrected 상태는 수정됐지만 미검증 — open과 함께 "활성 부적합"으로 취급
     const results = await this.db
       .select()
       .from(nonConformances)
@@ -606,7 +607,10 @@ export class NonConformancesService extends VersionedBaseService {
         and(
           eq(nonConformances.equipmentId, equipmentId),
           isNull(nonConformances.deletedAt),
-          eq(nonConformances.status, NonConformanceStatus.OPEN)
+          inArray(nonConformances.status, [
+            NonConformanceStatus.OPEN,
+            NonConformanceStatus.CORRECTED,
+          ])
         )
       );
 
@@ -617,6 +621,7 @@ export class NonConformancesService extends VersionedBaseService {
    * 장비가 부적합 상태인지 확인
    */
   async isEquipmentNonConforming(equipmentId: string): Promise<boolean> {
+    // corrected 상태는 수정됐지만 미검증 — open과 함께 "활성 부적합"으로 취급
     const [row] = await this.db
       .select({ exists: sql<number>`1` })
       .from(nonConformances)
@@ -624,7 +629,10 @@ export class NonConformancesService extends VersionedBaseService {
         and(
           eq(nonConformances.equipmentId, equipmentId),
           isNull(nonConformances.deletedAt),
-          eq(nonConformances.status, NonConformanceStatus.OPEN)
+          inArray(nonConformances.status, [
+            NonConformanceStatus.OPEN,
+            NonConformanceStatus.CORRECTED,
+          ])
         )
       )
       .limit(1);

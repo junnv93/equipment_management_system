@@ -5,7 +5,10 @@ import { eq, and, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { equipment, equipmentIncidentHistory } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
-import { NOTIFICATION_CONFIG } from '@equipment-management/shared-constants';
+import {
+  NOTIFICATION_CONFIG,
+  EXCLUDED_OVERDUE_EQUIPMENT_STATUSES,
+} from '@equipment-management/shared-constants';
 import {
   EquipmentStatusEnum,
   NonConformanceStatusEnum,
@@ -42,15 +45,6 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
 @Injectable()
 export class CalibrationOverdueScheduler implements OnModuleInit {
   private readonly logger = new Logger(CalibrationOverdueScheduler.name);
-
-  // 제외할 장비 상태 목록 (SSOT enum 참조)
-  // 이미 부적합이거나 폐기/비활성인 장비는 NC 생성 대상에서 제외
-  private readonly EXCLUDED_STATUSES = [
-    EquipmentStatusEnum.enum.non_conforming,
-    EquipmentStatusEnum.enum.disposed,
-    EquipmentStatusEnum.enum.pending_disposal,
-    EquipmentStatusEnum.enum.inactive,
-  ];
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
@@ -148,7 +142,7 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
             eq(equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
             sql`${equipment.nextCalibrationDate} IS NOT NULL`,
             sql`${equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`,
-            notInArray(equipment.status, this.EXCLUDED_STATUSES)
+            notInArray(equipment.status, [...EXCLUDED_OVERDUE_EQUIPMENT_STATUSES])
           )
         );
 

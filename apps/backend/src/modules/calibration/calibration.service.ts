@@ -37,6 +37,7 @@ import {
   CALIBRATION_THRESHOLDS,
   DEFAULT_PAGE_SIZE,
   SELECTOR_PAGE_SIZE,
+  EXCLUDED_OVERDUE_EQUIPMENT_STATUSES,
 } from '@equipment-management/shared-constants';
 import {
   getUtcStartOfDay,
@@ -58,6 +59,7 @@ import {
   asc,
   SQL,
   isNull,
+  notInArray,
   aliasedTable,
 } from 'drizzle-orm';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
@@ -692,10 +694,14 @@ export class CalibrationService extends VersionedBaseService {
 
     // ✅ SSOT: 단일 FILTER 집계 쿼리
     // overdueCount는 date-derived (nextCalibrationDate < today)
+    // EXCLUDED_OVERDUE_EQUIPMENT_STATUSES 상태(non_conforming 등)는 이미 NC 처리된 장비 — 이중 계상 방지
+    const excludedStatusFilter = notInArray(schema.equipment.status, [
+      ...EXCLUDED_OVERDUE_EQUIPMENT_STATUSES,
+    ]);
     const [result] = await this.db
       .select({
         total: count(),
-        overdueCount: sql<number>`cast(count(*) filter (where ${schema.equipment.nextCalibrationDate} is not null and ${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp) as integer)`,
+        overdueCount: sql<number>`cast(count(*) filter (where ${schema.equipment.nextCalibrationDate} is not null and ${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp and ${excludedStatusFilter}) as integer)`,
         dueInMonthCount: sql<number>`cast(count(*) filter (where ${schema.equipment.nextCalibrationDate} is not null and ${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater.toISOString()}::timestamp) as integer)`,
       })
       .from(schema.equipment)
@@ -735,6 +741,7 @@ export class CalibrationService extends VersionedBaseService {
       eq(schema.equipment.calibrationRequired, CalibrationRequiredEnum.enum.required),
       sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
       sql`${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`,
+      notInArray(schema.equipment.status, [...EXCLUDED_OVERDUE_EQUIPMENT_STATUSES]),
     ];
     if (teamId) whereConditions.push(eq(schema.equipment.teamId, teamId));
     if (site) whereConditions.push(eq(schema.equipment.site, site));

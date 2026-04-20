@@ -312,3 +312,6 @@ export {
   QR_ACTION_PRIORITY,
   type QRAllowedAction,
 } from './qr-access';
+
+// 교정기한 초과 대상 제외 장비 상태 (Scheduler + API 공유 SSOT)
+export { EXCLUDED_OVERDUE_EQUIPMENT_STATUSES } from './calibration-overdue';
