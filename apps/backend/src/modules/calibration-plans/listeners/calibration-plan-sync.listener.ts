@@ -20,6 +20,16 @@ export class CalibrationPlanSyncListener {
 
   @OnEvent(CACHE_EVENTS.CALIBRATION_CREATED, { async: true })
   async handleCalibrationCreated(payload: CalibrationCachePayload): Promise<void> {
+    // tx 내에서 이미 planItemId가 직접 링크된 경우 year-scope 재갱신 불필요
+    if (payload.linkedPlanItemId) {
+      this.logger.debug('교정계획서 실적 동기화 스킵 — tx 내부 직접 링크 완료', {
+        calibrationId: payload.calibrationId,
+        linkedPlanItemId: payload.linkedPlanItemId,
+        reason: 'already-linked-in-tx',
+      });
+      return;
+    }
+
     try {
       const updated = await this.calibrationPlansService.recordActualCalibrationDate(
         payload.equipmentId,

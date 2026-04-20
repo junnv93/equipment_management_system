@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, REFETCH_STRATEGIES } from '@/lib/api/query-config';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import calibrationPlansApi, { CalibrationPlanVersion } from '@/lib/api/calibration-plans-api';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +44,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
     queryKey: queryKeys.calibrationPlans.versions(planUuid),
     queryFn: () => calibrationPlansApi.getVersionHistory(planUuid),
     enabled: !!planUuid,
+    ...REFETCH_STRATEGIES.STATIC,
   });
 
   // 버전이 1개 이하면 히스토리 표시 안함

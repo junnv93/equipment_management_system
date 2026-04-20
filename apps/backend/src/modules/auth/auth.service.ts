@@ -130,6 +130,10 @@ export class AuthService {
       'admin@example.com': process.env.DEV_ADMIN_PASSWORD,
       'manager@example.com': process.env.DEV_MANAGER_PASSWORD,
       'user@example.com': process.env.DEV_USER_PASSWORD,
+      // 시드 DB canonical emails — DB 조회로 site/location/teamId 포함 응답 가능
+      'lab.manager@example.com': process.env.DEV_ADMIN_PASSWORD,
+      'tech.manager@example.com': process.env.DEV_MANAGER_PASSWORD,
+      'test.engineer@example.com': process.env.DEV_USER_PASSWORD,
     };
 
     // 비밀번호 검증용 최소 사용자 정보 (DB 조회 키로만 사용)
@@ -137,6 +141,15 @@ export class AuthService {
       'admin@example.com': { roles: [UserRoleValues.LAB_MANAGER], name: '관리자' },
       'manager@example.com': { roles: [UserRoleValues.TECHNICAL_MANAGER], name: '기술책임자' },
       'user@example.com': { roles: [UserRoleValues.TEST_ENGINEER], name: '시험실무자' },
+      'lab.manager@example.com': { roles: [UserRoleValues.LAB_MANAGER], name: '시험소장 (Suwon)' },
+      'tech.manager@example.com': {
+        roles: [UserRoleValues.TECHNICAL_MANAGER],
+        name: '기술책임자 (Suwon)',
+      },
+      'test.engineer@example.com': {
+        roles: [UserRoleValues.TEST_ENGINEER],
+        name: '시험실무자 (Suwon)',
+      },
     };
 
     const defaults = testUserDefaults[loginDto.email];

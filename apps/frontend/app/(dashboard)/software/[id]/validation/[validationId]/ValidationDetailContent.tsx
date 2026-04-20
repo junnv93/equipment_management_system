@@ -39,7 +39,7 @@ import { softwareValidationApi } from '@/lib/api/software-api';
 import type { UpdateSoftwareValidationDto } from '@/lib/api/software-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
 import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
-import { isConflictError } from '@/lib/api/error';
+import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import {
   getPageContainerClasses,
   PAGE_HEADER_TOKENS,
@@ -121,9 +121,12 @@ export default function ValidationDetailContent({
     ...QUERY_CONFIG.SOFTWARE_VALIDATION_DETAIL,
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (data: UpdateSoftwareValidationDto) =>
-      softwareValidationApi.update(validationId, data),
+  const updateMutation = useCasGuardedMutation<
+    Awaited<ReturnType<typeof softwareValidationApi.update>>,
+    Omit<UpdateSoftwareValidationDto, 'version'>
+  >({
+    fetchCasVersion: () => softwareValidationApi.get(validationId).then((v) => v.version),
+    mutationFn: (data, version) => softwareValidationApi.update(validationId, { ...data, version }),
     onSuccess: () => {
       toast({ title: t('toast.updateSuccess') });
       setIsEditOpen(false);
@@ -134,15 +137,8 @@ export default function ValidationDetailContent({
         queryKey: queryKeys.softwareValidations.byTestSoftware(softwareId),
       });
     },
-    onError: (error) => {
-      if (isConflictError(error)) {
-        toast({ title: t('toast.versionConflict'), variant: 'destructive' });
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.softwareValidations.detail(validationId),
-        });
-      } else {
-        toast({ title: t('toast.error'), variant: 'destructive' });
-      }
+    onError: () => {
+      toast({ title: t('toast.error'), variant: 'destructive' });
     },
   });
 
@@ -215,8 +211,7 @@ export default function ValidationDetailContent({
 
   const handleUpdate = () => {
     if (!validation || !editForm) return;
-    const data: UpdateSoftwareValidationDto = {
-      version: validation.version,
+    const data: Omit<UpdateSoftwareValidationDto, 'version'> = {
       ...(editForm.softwareVersion ? { softwareVersion: editForm.softwareVersion } : {}),
       ...(editForm.testDate ? { testDate: editForm.testDate } : {}),
       ...(editForm.vendorName ? { vendorName: editForm.vendorName } : {}),

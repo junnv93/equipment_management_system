@@ -637,7 +637,53 @@ export class CalibrationService extends VersionedBaseService {
     }
 
     await this.invalidateCalibrationCache(id, existing.equipmentId);
+
+    // 캐시 무효화 이벤트 (CACHE_EVENTS 채널)
+    try {
+      const teamId = (await this.resolveEquipmentTeamId(existing.equipmentId)) ?? '';
+      await this.eventEmitter.emitAsync(CACHE_EVENTS.CALIBRATION_UPDATED, {
+        calibrationId: id,
+        equipmentId: existing.equipmentId,
+        calibrationDate: existing.calibrationDate,
+        teamId,
+        actorId: existing.calibrationManagerId ?? '',
+      });
+    } catch (error) {
+      this.logger.warn(`교정 수정 캐시 이벤트 발행 실패 (calibrationId: ${id}): ${error}`);
+    }
+
     return this.findOne(id);
+  }
+
+  /**
+   * 교정 인증서 문서 업로드/개정 후 캐시 이벤트 발행
+   * Controller uploadDocuments에서 호출 (Service 계층 emit SSOT)
+   */
+  async recordCertificateDocuments(
+    calibrationId: string,
+    documentIds: string[],
+    actorId: string,
+    isRevision: boolean
+  ): Promise<void> {
+    try {
+      const calibration = await this.findOne(calibrationId);
+      const eventName = isRevision
+        ? CACHE_EVENTS.CALIBRATION_CERTIFICATE_REVISED
+        : CACHE_EVENTS.CALIBRATION_CERTIFICATE_UPLOADED;
+
+      await this.eventEmitter.emitAsync(eventName, {
+        calibrationId,
+        equipmentId: calibration.equipmentId,
+        calibrationDate: calibration.calibrationDate,
+        teamId: calibration.teamId ?? '',
+        actorId,
+        documentIds,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `교정 인증서 캐시 이벤트 발행 실패 (calibrationId: ${calibrationId}): ${error}`
+      );
+    }
   }
 
   /**

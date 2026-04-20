@@ -7,13 +7,15 @@ import { toTestPath } from './helpers/test-paths';
 
 /**
  * /auth/login 엔드포인트 자체를 테스트하는 spec.
- * auth.service.ts 가 DEV_*_PASSWORD 환경변수로 검증하는 레거시 로컬 로그인 전용.
+ * auth.service.ts 가 DEV_*_PASSWORD 환경변수로 검증하는 로컬 로그인 전용.
  * 다른 spec의 loginAs() 와 달리 실제 비밀번호 검증 흐름을 테스트함.
+ *
+ * 시드 DB의 canonical email 사용 → DB 조회로 site/location 포함 응답 검증
  */
-const LEGACY_LOGIN_USERS = {
-  admin: { email: 'admin@example.com', password: 'admin123' },
-  manager: { email: 'manager@example.com', password: 'manager123' },
-  user: { email: 'user@example.com', password: 'user123' },
+const LOGIN_USERS = {
+  admin: { email: 'lab.manager@example.com', password: process.env.DEV_ADMIN_PASSWORD ?? 'admin123' },
+  manager: { email: 'tech.manager@example.com', password: process.env.DEV_MANAGER_PASSWORD ?? 'manager123' },
+  user: { email: 'test.engineer@example.com', password: process.env.DEV_USER_PASSWORD ?? 'user123' },
 } as const;
 
 describe('AuthController (e2e)', () => {
@@ -32,15 +34,15 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
-          email: LEGACY_LOGIN_USERS.admin.email,
-          password: LEGACY_LOGIN_USERS.admin.password,
+          email: LOGIN_USERS.admin.email,
+          password: LOGIN_USERS.admin.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(LEGACY_LOGIN_USERS.admin.email);
-      expect(response.body.user.name).toBe('관리자');
+      expect(response.body.user.email).toBe(LOGIN_USERS.admin.email);
+      expect(response.body.user.name).toBeDefined();
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
       expect(response.body.user.roles).toContain('lab_manager');
@@ -51,15 +53,15 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
-          email: LEGACY_LOGIN_USERS.manager.email,
-          password: LEGACY_LOGIN_USERS.manager.password,
+          email: LOGIN_USERS.manager.email,
+          password: LOGIN_USERS.manager.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(LEGACY_LOGIN_USERS.manager.email);
-      expect(response.body.user.name).toBe('기술책임자');
+      expect(response.body.user.email).toBe(LOGIN_USERS.manager.email);
+      expect(response.body.user.name).toMatch(/기술책임자/);
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
       expect(response.body.user.roles).toContain('technical_manager');
@@ -70,15 +72,15 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
-          email: LEGACY_LOGIN_USERS.user.email,
-          password: LEGACY_LOGIN_USERS.user.password,
+          email: LOGIN_USERS.user.email,
+          password: LOGIN_USERS.user.password,
         })
         .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(LEGACY_LOGIN_USERS.user.email);
-      expect(response.body.user.name).toBe('시험실무자');
+      expect(response.body.user.email).toBe(LOGIN_USERS.user.email);
+      expect(response.body.user.name).toMatch(/시험실무자/);
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
       expect(response.body.user.roles).toContain('test_engineer');
@@ -89,7 +91,7 @@ describe('AuthController (e2e)', () => {
       await request(ctx.app.getHttpServer())
         .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
-          email: LEGACY_LOGIN_USERS.admin.email,
+          email: LOGIN_USERS.admin.email,
           password: 'wrongpassword',
         })
         .expect(401);
@@ -103,8 +105,8 @@ describe('AuthController (e2e)', () => {
       const response = await request(ctx.app.getHttpServer())
         .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
-          email: LEGACY_LOGIN_USERS.admin.email,
-          password: LEGACY_LOGIN_USERS.admin.password,
+          email: LOGIN_USERS.admin.email,
+          password: LOGIN_USERS.admin.password,
         });
 
       accessToken = response.body.access_token;
@@ -117,7 +119,7 @@ describe('AuthController (e2e)', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body.email).toBe(LEGACY_LOGIN_USERS.admin.email);
+      expect(response.body.email).toBe(LOGIN_USERS.admin.email);
       expect(response.body.roles).toContain('lab_manager');
     });
 

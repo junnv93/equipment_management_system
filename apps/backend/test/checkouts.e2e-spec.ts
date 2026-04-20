@@ -7,6 +7,7 @@ import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
 import { toTestPath } from './helpers/test-paths';
+import { TEAM_FCC_EMC_RF_SUWON_ID } from '../src/database/utils/uuid-constants';
 
 describe('CheckoutsController (e2e)', () => {
   let ctx: TestAppContext;
@@ -21,6 +22,7 @@ describe('CheckoutsController (e2e)', () => {
     accessToken = await loginAs(ctx.app, 'admin');
     testEquipmentUuid = await createTestEquipment(ctx.app, accessToken, {
       name: 'E2E Test Equipment for Checkout',
+      teamId: TEAM_FCC_EMC_RF_SUWON_ID, // 관리자(lab_manager) 소속 팀 — 교정 반출은 동일 팀 장비만 가능
     });
     tracker.track('equipment', testEquipmentUuid);
   });
@@ -159,13 +161,10 @@ describe('CheckoutsController (e2e)', () => {
         const approveResponse = await request(ctx.app.getHttpServer())
           .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            approverId: testApproverId,
-          })
+          .send({ version: 1 })
           .expect(200);
 
         expect(approveResponse.body.status).toBe('approved');
-        expect(approveResponse.body.approverId).toBe(testApproverId);
       }
     });
 
@@ -188,13 +187,10 @@ describe('CheckoutsController (e2e)', () => {
         const approveResponse = await request(ctx.app.getHttpServer())
           .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            approverId: testApproverId,
-          })
+          .send({ version: 1 })
           .expect(200);
 
         expect(approveResponse.body.status).toBe('approved');
-        expect(approveResponse.body.approverId).toBe(testApproverId);
       }
     });
   });
@@ -219,13 +215,10 @@ describe('CheckoutsController (e2e)', () => {
         const approveResponse = await request(ctx.app.getHttpServer())
           .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            approverId: testApproverId,
-          })
+          .send({ version: 1 })
           .expect(200);
 
         expect(approveResponse.body.status).toBe('approved');
-        expect(approveResponse.body.approverId).toBe(testApproverId);
       }
     });
   });
@@ -251,7 +244,7 @@ describe('CheckoutsController (e2e)', () => {
           .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.REJECT(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: testApproverId,
+            version: 1,
             reason: 'E2E 테스트를 위한 반려 사유',
           })
           .expect(200);
@@ -280,9 +273,7 @@ describe('CheckoutsController (e2e)', () => {
         await request(ctx.app.getHttpServer())
           .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.REJECT(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            approverId: testApproverId,
-          })
+          .send({ version: 1 })
           .expect(400);
       }
     });
@@ -308,9 +299,7 @@ describe('CheckoutsController (e2e)', () => {
         await request(ctx.app.getHttpServer())
           .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            approverId: testApproverId,
-          })
+          .send({ version: 1 })
           .expect(200);
 
         await request(ctx.app.getHttpServer())

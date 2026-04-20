@@ -600,7 +600,7 @@ export class CalibrationController {
     @Request() req: AuthenticatedRequest
   ): Promise<{ documents: DocumentRecord[]; message: string }> {
     await this.enforceCalibrationAccess(uuid, req);
-    await this.calibrationService.findOne(uuid);
+    const existingCalibration = await this.calibrationService.findOne(uuid);
 
     if (!files || files.length === 0) {
       throw new BadRequestException({
@@ -654,6 +654,18 @@ export class CalibrationController {
     }));
 
     const docs = await this.documentService.createDocuments(files, options);
+
+    // 인증서 문서 업로드/개정 시 캐시 이벤트 발행 (SSOT: Service 계층 emit)
+    const hasCertificate = documentTypes.includes('calibration_certificate' as DocumentType);
+    if (hasCertificate) {
+      const isRevision = existingCalibration.certificatePath !== null;
+      await this.calibrationService.recordCertificateDocuments(
+        uuid,
+        docs.map((d) => d.id),
+        userId,
+        isRevision
+      );
+    }
 
     return {
       documents: docs,
