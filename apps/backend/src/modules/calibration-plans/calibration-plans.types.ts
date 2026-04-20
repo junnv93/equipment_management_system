@@ -62,9 +62,10 @@ export type CalibrationPlanEquipmentSnapshot = Pick<
   | 'calibrationAgency'
 >;
 
-/** 교정계획서 항목 (장비 스냅샷 포함) */
+/** 교정계획서 항목 (장비 스냅샷 + 확인자 이름 포함) */
 export type CalibrationPlanItemDetail = typeof calibrationPlanItems.$inferSelect & {
   equipment: CalibrationPlanEquipmentSnapshot;
+  confirmedByName: string | null;
 };
 
 /** 교정계획서 상세 — findOne() 반환 타입 */

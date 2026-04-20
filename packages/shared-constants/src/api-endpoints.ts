@@ -191,6 +191,7 @@ export const API_ENDPOINTS = {
     ITEMS: (id: string) => `/api/calibration-plans/${id}/items`,
     CONFIRM_ITEM: (planId: string, itemId: string) =>
       `/api/calibration-plans/${planId}/items/${itemId}/confirm`,
+    CONFIRM_ALL_ITEMS: (planId: string) => `/api/calibration-plans/${planId}/items/confirm-all`,
     UPDATE_ITEM: (planId: string, itemId: string) =>
       `/api/calibration-plans/${planId}/items/${itemId}`,
     NEW_VERSION: (id: string) => `/api/calibration-plans/${id}/new-version`,

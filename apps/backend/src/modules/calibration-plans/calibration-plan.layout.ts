@@ -6,7 +6,7 @@
  * ⚠️ 컬럼 헤더 문자열은 **원본 xlsx 실측값**과 1:1 일치해야 한다.
  *    양식 개정 시 ExcelJS로 워크시트를 로드해 `sheet.getRow(5).values`로 실측.
  *
- * @see docs/procedure/template/UL-QP-19-01 연간교정계획서.xlsx — 원본 양식
+ * @see docs/procedure/template/UL-QP-19-01(00) 연간 교정계획서.xlsx — 원본 양식 (2026-04-20 교체)
  *
  * 프론트엔드 미참조: 양식 셀 레이아웃은 UI에 노출되지 않음.
  */
@@ -18,7 +18,7 @@ export const FORM_NUMBER = 'UL-QP-19-01' as const;
  * 허용되는 워크시트명 — 양식 변종(시트명 차이) 대응.
  *
  * 매칭 순서대로 탐색하며, 처음 일치하는 시트를 반환.
- * UL-QP-19-01(01) 신규 양식은 시트명이 'Sheet1'이므로 최우선 후보에 배치.
+ * UL-QP-19-01(00) 양식은 시트명이 'Sheet1'이므로 최우선 후보에 배치.
  */
 export const SHEET_NAMES = ['Sheet1', '연간 교정계획서', '교정계획서'] as const;
 
@@ -46,6 +46,14 @@ export const DATA_END_ROW = 32 as const;
 
 /** 총 컬럼 수 (A~J = 10열) — 스타일 복제/클리어 시 사용 */
 export const COLUMN_COUNT = 10 as const;
+
+/**
+ * 확인란 열 위치 (1-based, I열 = 9).
+ *
+ * 렌더러에서 확인자 서명 주입 및 shrinkToFit 적용 시 이 상수를 참조.
+ * 양식 개정으로 열 위치가 바뀌면 여기만 수정.
+ */
+export const CONFIRMED_COL = 9 as const;
 
 /**
  * 템플릿이 사전 서식(pre-formatted)한 데이터 행 수.

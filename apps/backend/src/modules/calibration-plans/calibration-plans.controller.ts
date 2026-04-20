@@ -33,11 +33,13 @@ import {
   RejectCalibrationPlanDto,
   SubmitCalibrationPlanDto,
   ConfirmPlanItemDto,
+  ConfirmAllPlanItemsDto,
   SubmitForReviewDto,
   ReviewCalibrationPlanDto,
   CalibrationPlanQueryValidationPipe,
   ExternalEquipmentQueryValidationPipe,
 } from './dto';
+import type { ConfirmAllPlanItemsResult } from './dto';
 import type { CalibrationPlanQueryInput, ExternalEquipmentQueryInput } from './dto';
 import { CreateCalibrationPlanValidationPipe } from './dto/create-calibration-plan.dto';
 import {
@@ -50,6 +52,7 @@ import {
   ApproveCalibrationPlanValidationPipe,
   RejectCalibrationPlanValidationPipe,
   ConfirmPlanItemValidationPipe,
+  ConfirmAllPlanItemsValidationPipe,
 } from './dto/approve-calibration-plan.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, CALIBRATION_PLAN_DATA_SCOPE } from '@equipment-management/shared-constants';
@@ -317,6 +320,30 @@ export class CalibrationPlansController {
     enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const rejectedBy = extractUserId(req);
     return this.calibrationPlansService.reject(uuid, { ...rejectDto, rejectedBy });
+  }
+
+  @Patch(':uuid/items/confirm-all')
+  @ApiOperation({
+    summary: '항목 일괄 확인',
+    description:
+      '실적 기록이 연결된 미확인 항목 전체를 한 번에 확인합니다 (기술책임자). 승인된 계획서만 가능.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
+  @ApiResponse({ status: HttpStatus.OK, description: '일괄 확인 성공, confirmedCount 반환' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: 'CAS 버전 충돌' })
+  @RequirePermissions(Permission.CONFIRM_CALIBRATION_PLAN_ITEM)
+  @UsePipes(ConfirmAllPlanItemsValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
+  async confirmAllItems(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() confirmAllDto: ConfirmAllPlanItemsDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<ConfirmAllPlanItemsResult> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
+    const confirmedBy = extractUserId(req);
+    return this.calibrationPlansService.confirmAllItems(uuid, { ...confirmAllDto, confirmedBy });
   }
 
   @Patch(':uuid/items/:itemUuid/confirm')

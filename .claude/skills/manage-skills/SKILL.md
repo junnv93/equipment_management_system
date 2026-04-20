@@ -43,6 +43,8 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | `verify-seed-integrity` | 시드 인프라 3자 SSOT 삼각형 정합성     | `database/seed-data/**/*.seed.ts`, `seed-test-new.ts`, `verification.ts` |
 | `verify-workflows`      | 크리티컬 워크플로우 E2E 커버리지 검증  | `docs/workflows/critical-workflows.md`, `tests/e2e/workflows/**/*.spec.ts` |
 | `verify-cache-events`   | 이벤트 기반 캐시 무효화 아키텍처 검증  | `cache-event.registry.ts`, `cache-event-listener.ts`, `cache-invalidation.helper.ts`, `cache-patterns.ts` |
+| `verify-handover-security` | QR 기반 인수인계 토큰 보안 검증 — 시크릿 분리, jti 소비, TTL SSOT | `HandoverTokenService`, `OneTimeTokenService`, handover 컨트롤러 |
+| `verify-qr-ssot`        | QR URL/설정/액션 SSOT 경유 검증 — 인라인 URL·경로 하드코딩 탐지 | `qr-url.ts`, `qr-config.ts`, `qr-access.ts`, QR 관련 서비스/컴포넌트 |
 
 ## 워크플로우
 

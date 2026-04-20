@@ -38,6 +38,8 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 14 | `verify-seed-integrity` | backend  | 시드 인프라 3자 SSOT 정합성 (seed-data↔seed-test-new↔verification) |
 | 15 | `verify-workflows`      | e2e      | 워크플로우 E2E 커버리지 — critical-workflows.md 대비 테스트 매핑    |
 | 16 | `verify-cache-events`   | backend  | 이벤트 기반 캐시 무효화 — 레지스트리 커버리지, 리스너 async, SSOT 패턴 |
+| 17 | `verify-handover-security` | backend | QR 인수인계 토큰 — 시크릿 분리, jti nonce 소비, TTL SSOT, dev 엔드포인트 이중 가드 |
+| 18 | `verify-qr-ssot`        | both     | QR URL/설정/액션 SSOT — 인라인 URL·경로·액션 배열 하드코딩 탐지 |
 
 ## 워크플로우
 

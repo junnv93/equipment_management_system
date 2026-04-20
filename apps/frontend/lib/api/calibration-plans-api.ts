@@ -49,6 +49,7 @@ export interface CalibrationPlanItem {
   // 확인
   confirmedBy: string | null;
   confirmedAt: string | null;
+  confirmedByName: string | null;
   // 실적
   actualCalibrationId: string | null;
   actualCalibrationDate: string | null;
@@ -322,6 +323,16 @@ const calibrationPlansApi = {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid), data)
       .then((res) => transformSingleResponse<CalibrationPlanItem>(res));
+  },
+
+  // 항목 일괄 확인
+  confirmAllPlanItems: async (
+    planUuid: string,
+    data: { casVersion: number }
+  ): Promise<{ confirmedCount: number }> => {
+    return apiClient
+      .patch(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ALL_ITEMS(planUuid), data)
+      .then((res) => (res.data as { data: { confirmedCount: number } }).data);
   },
 
   // 항목 수정

@@ -288,6 +288,34 @@ grep -rn "private async generate.*Number\|private async generateUnique" apps/bac
 
 **Lock key 컨벤션:** `'{table}:{purpose}[:{scope}]'` — 예) `'test_software:management_number'`, `'equipment_imports:temp_number:suwon'`.
 
+### Step 10: `as const` 배열 + Drizzle `inArray`/`notInArray` spread 누락 탐지
+
+`as const` 로 선언된 배열은 TypeScript `readonly` 튜플이 된다. Drizzle의 `inArray(col, arr)` / `notInArray(col, arr)` 시그니처는 `unknown[]` (mutable) 을 요구하므로, `readonly` 배열을 그대로 전달하면 **TS2345 컴파일 에러**가 발생한다. `[...CONST_ARRAY]` spread로 mutable 복사본을 생성해야 한다.
+
+```bash
+# as const 상수가 inArray/notInArray에 직접 전달되는 패턴 탐지
+# (spread 없이 상수 식별자만 전달 — 대문자로 시작하는 SSOT 상수)
+grep -rn "notInArray\|inArray" apps/backend/src/ packages/ --include="*.ts" \
+  | grep -E "notInArray\([^,]+,\s*[A-Z_]{3,}\b[^.]" \
+  | grep -v "\.\.\." \
+  | grep -v "spec\.ts\|\.spec\."
+```
+
+**PASS 기준:** `as const` SSOT 상수(대문자 식별자)를 `inArray`/`notInArray`에 전달할 때 `[...CONST]` spread 사용.
+
+**FAIL 기준:** `notInArray(col, EXCLUDED_STATUSES)` 처럼 spread 없이 직접 전달 → 컴파일 에러 또는 런타임 타입 미스매치.
+
+```typescript
+// ❌ WRONG — readonly tuple → mutable array 불일치
+export const EXCLUDED_OVERDUE_EQUIPMENT_STATUSES = [...] as const;
+notInArray(equipment.status, EXCLUDED_OVERDUE_EQUIPMENT_STATUSES); // TS2345
+
+// ✅ CORRECT — spread로 mutable 복사
+notInArray(equipment.status, [...EXCLUDED_OVERDUE_EQUIPMENT_STATUSES]);
+```
+
+**예외:** `inArray(col, variableArray)` — `let`/`const arr = [...]` 형태의 mutable 배열은 spread 불필요.
+
 ## Output Format
 
 ```markdown
@@ -302,6 +330,7 @@ grep -rn "private async generate.*Number\|private async generateUnique" apps/bac
 | 7   | 순환 의존성 모니터링       | PASS/WARN | 새 forwardRef 추가 여부 |
 | 8   | 무제한 쿼리 결과           | PASS/FAIL | limit 없는 목록 쿼리   |
 | 9   | 집계 + FOR UPDATE / 순차 번호 직렬화 | PASS/FAIL | MAX+FOR UPDATE + advisory-lock 미사용 |
+| 10  | as const 배열 spread 누락           | PASS/FAIL | readonly 튜플 → mutable 변환 누락 위치 |
 ```
 
 ## Exceptions

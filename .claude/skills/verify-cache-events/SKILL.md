@@ -142,6 +142,41 @@ async uploadAttachment(...) {
 
 **재발 방지**: `.eslintrc.js` `overrides[].files = ["**/*.controller.ts"]` → `no-restricted-syntax`로 빌드 타임 차단. 예외 없음.
 
+### Step 5a: 이벤트 페이로드 완전성 — 장비 필드 하드코딩 탐지 (Warning)
+
+장비 관련 이벤트를 `emitAsync`할 때 `equipmentName`, `managementNumber`, `teamId` 필드를 `''` 빈 문자열로 하드코딩하면 알림/감사 로그에서 장비 정보가 누락된다. 반드시 DB에서 해당 필드를 SELECT한 뒤 이벤트에 전달해야 한다.
+
+```bash
+# 이벤트 페이로드에서 equipmentName/managementNumber/teamId 빈 문자열 하드코딩 탐지
+grep -rn "emitAsync" apps/backend/src/modules/ --include="*.service.ts" -A 10 \
+  | grep -E "equipmentName:\s*''|managementNumber:\s*''|teamId:\s*''" \
+  | grep -v "actorName"
+```
+
+**PASS 기준:** 빈 출력. 모든 장비 이벤트 페이로드의 `equipmentName`/`managementNumber`/`teamId`가 DB 쿼리 결과에서 채워짐.
+
+**FAIL 기준:** `equipmentName: ''` 패턴 발견 → `equip` 쿼리 select절에 `name`, `managementNumber`, `teamId` 포함 후 `equip?.name ?? ''` 형태로 전달.
+
+```typescript
+// ❌ WRONG — 빈 문자열 하드코딩
+await this.eventEmitter.emitAsync(EVENT, {
+  equipmentName: '',       // 알림에서 장비명 누락
+  managementNumber: '',
+});
+
+// ✅ CORRECT — DB에서 조회한 값 사용
+const [equip] = await tx
+  .select({ id: e.id, name: e.name, managementNumber: e.managementNumber, teamId: e.teamId })
+  .from(schema.equipment).where(eq(e.id, equipmentId));
+await this.eventEmitter.emitAsync(EVENT, {
+  equipmentName: equip?.name ?? '',
+  managementNumber: equip?.managementNumber ?? '',
+  teamId: equip?.teamId ?? '',
+});
+```
+
+**예외:** `actorName: ''` — NotificationDispatcher가 actorId로 DB에서 actorName을 조회하므로 의도된 빈 문자열. 이 검사에서 제외.
+
 ### Step 5: CacheInvalidationAction method enum 일치 (Info)
 
 `CACHE_INVALIDATION_REGISTRY`의 `method` 필드가 `CacheInvalidationHelper`에 실제 존재하는 메서드인지 확인.

@@ -422,6 +422,7 @@ export class CalibrationService extends VersionedBaseService {
         await this.eventEmitter.emitAsync(CACHE_EVENTS.CALIBRATION_CREATED, {
           calibrationId: result.calibration.id,
           equipmentId: result.calibration.equipmentId,
+          calibrationDate: result.calibration.calibrationDate,
           teamId: equipForCreate?.teamId ?? '',
           actorId,
           documentIds: result.documents.map((d) => d.id),

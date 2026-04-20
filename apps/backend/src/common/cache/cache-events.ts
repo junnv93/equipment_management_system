@@ -58,6 +58,7 @@ export interface SwValidationCachePayload {
 export interface CalibrationCachePayload {
   calibrationId: string;
   equipmentId: string;
+  calibrationDate: Date;
   teamId: string;
   actorId: string;
   documentIds?: string[];

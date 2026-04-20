@@ -69,7 +69,7 @@ export class CalibrationPlanRendererService {
 
     items.forEach((item: CalibrationPlanItemDetail, idx: number) => {
       const rowIdx = Layout.DATA_START_ROW + idx;
-      const confirmedSignature = item.confirmedBy ? (plan.authorName ?? '-') : '-';
+      const confirmedSignature = item.confirmedBy ? (item.confirmedByName ?? '-') : '-';
       const values: (string | number | null)[] = [
         item.sequenceNumber,
         item.equipment?.managementNumber ?? '-',
@@ -86,10 +86,10 @@ export class CalibrationPlanRendererService {
       ];
       writeDataRow(sheet, rowIdx, values, styles);
 
-      // 확인란(I열=9)에 shrink-to-fit 적용 — 셀 너비(7.6)보다 긴 이름 대응
+      // 확인란에 shrink-to-fit 적용 — 셀 너비보다 긴 이름 대응
       if (item.confirmedBy) {
-        const iCell = sheet.getRow(rowIdx).getCell(9);
-        iCell.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true };
+        const confirmedCell = sheet.getRow(rowIdx).getCell(Layout.CONFIRMED_COL);
+        confirmedCell.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true };
       }
     });
 

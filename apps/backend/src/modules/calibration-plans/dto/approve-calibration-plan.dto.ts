@@ -162,3 +162,27 @@ export class ConfirmPlanItemDto {
   @ApiPropertyOptional({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
   casVersion?: number;
 }
+
+/**
+ * 일괄 확인 스키마 — actualCalibrationId가 연결된 모든 미확인 항목을 한 번에 확인.
+ * ⚠️ confirmedBy는 서버에서 JWT로 추출
+ */
+export const confirmAllPlanItemsSchema = z.object({
+  casVersion: z.number().int().positive(VM.number.positive('casVersion')),
+});
+
+export type ConfirmAllPlanItemsInput = z.infer<typeof confirmAllPlanItemsSchema>;
+/** 서비스 내부용 (controller가 userId 주입) */
+export type ConfirmAllPlanItemsPayload = ConfirmAllPlanItemsInput & { confirmedBy: string };
+export const ConfirmAllPlanItemsValidationPipe = new ZodValidationPipe(confirmAllPlanItemsSchema);
+
+/** 일괄 확인 DTO (Swagger 문서화용) */
+export class ConfirmAllPlanItemsDto {
+  @ApiProperty({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
+  casVersion: number;
+}
+
+/** 일괄 확인 응답 */
+export interface ConfirmAllPlanItemsResult {
+  confirmedCount: number;
+}

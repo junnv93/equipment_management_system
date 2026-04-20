@@ -38,6 +38,8 @@ import type {
   ApproveCalibrationPlanPayload,
   RejectCalibrationPlanPayload,
   ConfirmPlanItemPayload,
+  ConfirmAllPlanItemsPayload,
+  type ConfirmAllPlanItemsResult,
 } from './dto';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import type {
@@ -392,7 +394,8 @@ export class CalibrationPlansService extends VersionedBaseService {
           });
         }
 
-        // 항목 조회 (장비 정보 포함)
+        // 항목 조회 (장비 정보 + 확인자 이름 포함)
+        const confirmedByUser = alias(users, 'confirmedByUser');
         const items = await this.db
           .select({
             item: calibrationPlanItems,
@@ -408,9 +411,11 @@ export class CalibrationPlansService extends VersionedBaseService {
               calibrationCycle: equipment.calibrationCycle,
               calibrationAgency: equipment.calibrationAgency,
             },
+            confirmedByName: confirmedByUser.name,
           })
           .from(calibrationPlanItems)
           .innerJoin(equipment, eq(calibrationPlanItems.equipmentId, equipment.id))
+          .leftJoin(confirmedByUser, eq(calibrationPlanItems.confirmedBy, confirmedByUser.id))
           .where(eq(calibrationPlanItems.planId, row.plan.id))
           .orderBy(calibrationPlanItems.sequenceNumber);
 
@@ -424,6 +429,7 @@ export class CalibrationPlansService extends VersionedBaseService {
           items: items.map((r) => ({
             ...r.item,
             equipment: r.equipment,
+            confirmedByName: r.confirmedByName,
           })),
         };
       },
@@ -788,6 +794,54 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     this.invalidatePlanCache(planUuid);
     return updated;
+  }
+
+  /**
+   * 항목 일괄 확인 (approved 계획서의 실적 연결 항목 전체)
+   *
+   * actualCalibrationId IS NOT NULL AND confirmedBy IS NULL 조건의 항목을
+   * 단일 UPDATE로 원자적 처리. Promise.all loop 사용 금지 (중간 CAS 충돌 위험).
+   */
+  async confirmAllItems(
+    planUuid: string,
+    payload: ConfirmAllPlanItemsPayload
+  ): Promise<ConfirmAllPlanItemsResult> {
+    const plan = await this.findOneBasic(planUuid);
+
+    if (plan.status !== CPStatus.APPROVED) {
+      throw new BadRequestException({
+        code: 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM',
+        message: 'Only approved plans can have items confirmed.',
+      });
+    }
+
+    if (plan.casVersion !== payload.casVersion) {
+      this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planUuid}`);
+      throw createVersionConflictException(plan.casVersion as number, payload.casVersion);
+    }
+
+    const now = new Date();
+    const updated = await this.db
+      .update(calibrationPlanItems)
+      .set({
+        confirmedBy: payload.confirmedBy,
+        confirmedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(calibrationPlanItems.planId, plan.id),
+          sql`${calibrationPlanItems.confirmedBy} IS NULL`,
+          sql`${calibrationPlanItems.actualCalibrationId} IS NOT NULL`
+        )
+      )
+      .returning({ id: calibrationPlanItems.id });
+
+    if (updated.length > 0) {
+      this.invalidatePlanCache(planUuid);
+    }
+
+    return { confirmedCount: updated.length };
   }
 
   /**
