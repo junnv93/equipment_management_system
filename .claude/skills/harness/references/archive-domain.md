@@ -5,6 +5,92 @@
 
 ---
 
+## ~~2026-04-17 신규 — QR Phase 1-3 후속 개선 (10건)~~ ✅ 전체 완료 (2026-04-20)
+
+> **발견 배경**: QR 모바일 워크플로우 Phase 1-3 완료 후 "SSOT/비하드코딩/워크플로우/성능/보안/접근성" 자체 감사에서 도출. 2-agent 병렬 verify (SHOULD 항목 + 시스템 와이드 구조적 개선). 모든 항목 `confirmed` — file:line 증거 포함.
+> **원칙 준수**: (1) QR은 경로 (feedback_qr_is_path_not_workflow.md) — QR 시나리오 전용 새 워크플로우 추가 금지, 기존 서비스로 연결만. (2) 커밋 전 자체 감사 (feedback_pre_commit_self_audit.md) — SSOT/하드코딩/eslint-disable/a11y/워크플로우 재사용/성능/검증 7항목.
+
+### ~~🟠 HIGH — `documents.nonConformanceId` FK 도입 + NCR 첨부 모듈 완결 (Mode 2)~~ ✅ 완료 (2026-04-18)
+
+```
+조치: schema + migration 0030 + DocumentService.findByNonConformanceId + NC 전용 엔드포인트(ATTACHMENTS)
++ Permission UPLOAD/DELETE_NON_CONFORMANCE_ATTACHMENT 신설 + CreateNonConformanceForm photos
++ NCDocumentsSection 썸네일/삭제 UI + i18n 이관.
+```
+
+### ~~🟠 HIGH — CSP `media-src 'self' blob:` + sops `HANDOVER_TOKEN_SECRET` 추가 (Mode 1)~~ ✅ 완료 (2026-04-18)
+
+```
+조치: CSP nonce 기반 재설계(proxy.ts SSOT, strict-dynamic), report-uri 엔드포인트(SecurityController),
+nginx pass-through, 기존 camera=() 카메라 차단 버그 + limit_req off 문법 버그 병행 수정.
+```
+
+### ~~🟠 HIGH — QR Phase 1-3 Playwright E2E 시나리오 3종 (Mode 1)~~ ✅ 완료 (2026-04-18)
+
+```
+조치: phase1-mobile-landing.spec.ts / phase2-scanner-ncr.spec.ts / phase3-handover.spec.ts
+verify 500 수정(ZodSerializerInterceptor 제거) + Phase 3 API-level 재설계. 10/10 PASS.
+Phase 2 벌크 PDF는 EquipmentList UI 사전 selection 필요(별도 UI 작업으로 이연).
+```
+
+### ~~🟡 MEDIUM — Per-row 체크박스 + BulkActionBar 프리미티브 추출 (Mode 1)~~ ✅ 완료 (2026-04-18)
+
+```
+조치: useRowSelection SSOT 훅 (snapshot LRU, isSelectable, resetOn, isAllPageSelected, isIndeterminate).
+Generic BulkActionBar + RowSelectCell 컴포넌트 신설.
+EquipmentTable/EquipmentCardGrid 양쪽 연결, EquipmentListContent에서 단일 인스턴스 공유.
+```
+
+### ~~🟡 MEDIUM — Intent URL 파라미터 일반화 + 타 모듈 확산 (Mode 2)~~ ✅ 완료 (2026-04-19)
+
+```
+조치: FRONTEND_ROUTES에 딥링크 빌더 5종 추가
+(CHECKOUTS.CREATE_FOR_EQUIPMENT / CALIBRATION_PLANS.CREATE_FOR_EQUIPMENT /
+EQUIPMENT.SELF_INSPECTION_CREATE / INTERMEDIATE_INSPECTION_CREATE / EQUIPMENT_REQUEST_CREATE).
+EquipmentActionSheet request_checkout 하드코딩 → 빌더 교체.
+```
+
+### ~~🟡 MEDIUM — Handover 토큰 모델 → 범용 1회성 서명 토큰 프리미티브 추출 (Mode 2)~~ ✅ 완료 (2026-04-19)
+
+```
+조치: common/one-time-token/ 신설 OneTimeTokenService<T> (JWT HS256 + Redis jti nonce).
+HandoverTokenService가 얇은 래퍼로 리팩토링 — 공개 API 불변, 6 tests PASS.
+```
+
+### ~~🟡 MEDIUM — verify-qr-ssot + verify-handover-security 검증 스킬 신설 (Mode 1)~~ ✅ 완료 (2026-04-19)
+
+```
+조치: verify-qr-ssot 7단계(URL 빌더/경로 상수/설정 매직넘버/액션/appUrl/딥링크 빌더/서버 판정 중복).
+verify-handover-security 7단계(시크릿 분리/OneTimeToken위임/jti 원자성/TTL SSOT/권한 가드/토큰 영속화/dev 엔드포인트).
+드라이런 전 항목 PASS.
+```
+
+### ~~🟡 MEDIUM — PWA 완결 (아이콘 PNG + 서비스워커 + Install Prompt) (Mode 1)~~ ✅ 완료 (2026-04-19)
+
+```
+조치: @serwist/next@9.5.7 도입, app/sw.ts(precache+defaultCache+/~offline fallback),
+app/~offline/page.tsx(정적 fallback), hooks/usePWAInstall.ts(BeforeInstallPromptEvent+standalone 감지),
+components/pwa/PWAInstallBanner.tsx(고정 하단 배너, layout.tsx 등록),
+public/icons/manifest-{192,512}.png(SVG→PNG). tsc 0 errors.
+```
+
+### ~~🟢 LOW — Lighthouse/axe-core/번들 크기 배포 게이트 통합 (Mode 1)~~ ✅ 완료 (2026-04-20)
+
+```
+조치: .github/workflows/performance-audit.yml + accessibility-audit.yml + bundle-size.yml 3종 신규.
+docs/operations/performance-budgets.md SSOT (Lighthouse/CWV/axe/bundle 임계값).
+```
+
+### ~~🟢 LOW — pre-commit self-audit 7항목 자동화 스크립트 (Mode 0)~~ ✅ 완료 (2026-04-18)
+
+```
+조치: scripts/self-audit.mjs 신규 — 7대 체크(하드코딩 URL/eslint-disable/any타입/SSOT우회/role리터럴/setQueryData/a11y).
+.husky/pre-commit + main.yml quality-gate 양방향 게이트.
+--all exit 0 (1702파일), --staged 위반 차단 확인.
+```
+
+---
+
 ## ~~70차 신규 — 3-agent 병렬 스캔 (4건, 2026-04-15)~~ ✅ 전부 완료 (2026-04-15, Mode 1 harness)
 
 > **발견 배경 (2026-04-15, 70차)**: 68차 항목 전부 소진 후 신규 3-agent 병렬 스캔 + 2차 검증.

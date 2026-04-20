@@ -295,6 +295,78 @@ useQuery({
 
 **INFO:** 스프레드 오버라이드가 반복되면 QUERY_CONFIG에 새 프리셋 추가 검토.
 
+### Step 16: raw async mutation 금지 — delete/simple mutation도 useMutation 필수 (2026-04-21 추가)
+
+파일 삭제·연결 해제 등 optimistic update가 불필요한 mutation도 **`useMutation`으로 감싸야 한다**.
+raw `async/await` 직접 호출은 `isPending` 기반 중복 요청 방지, `onError` 에러 처리, 버튼 비활성화가 불가능하다.
+
+**탐지:**
+```bash
+# onClick/handler 내부에서 await api.delete/remove/unlink 직접 호출 탐지
+grep -rn "await.*api\.\(delete\|remove\|unlink\)" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "mutationFn\|mutation\.\|useMutation\|test\|spec\|node_modules"
+```
+
+**❌ 금지 — raw async:**
+```typescript
+const handleDelete = async (id: string) => {
+  if (!confirm(t('deleteConfirm'))) return;
+  await documentApi.deleteDocument(id);  // 중복 요청 방지 불가, 로딩 상태 없음
+};
+```
+
+**✅ 올바른 패턴 — useMutation:**
+```typescript
+const deleteMutation = useMutation({
+  mutationFn: (id: string) => documentApi.deleteDocument(id),
+  onSuccess: () => { toast({ title: t('deleteSuccess') }); invalidateDocs(); },
+  onError: () => { toast({ title: t('deleteError'), variant: 'destructive' }); },
+});
+const handleDelete = (id: string) => {
+  if (!confirm(t('deleteConfirm'))) return;
+  deleteMutation.mutate(id);
+};
+// 버튼: disabled={deleteMutation.isPending}
+```
+
+**PASS:** onClick 핸들러에서 raw `await api.delete/remove/unlink` 직접 호출 0건.
+**근거:** 2026-04-21 harness C-1 — `ValidationDocumentsSection.tsx` delete handler가 raw async로 작성되어 버튼 중복 클릭 시 race condition 발생. `useMutation` 교체로 `isPending` 로딩 + 에러 분기 제공.
+
+### Step 17: useQuery isError 분기 + 에러 UI 필수 (2026-04-21 추가)
+
+`useQuery`로 데이터를 가져오는 컴포넌트는 `isError` 상태를 명시적으로 처리해야 한다.
+로딩/빈 상태만 분기하고 에러 상태를 누락하면 네트워크 오류 시 빈 상태 UI가 표시되어
+"데이터 없음"과 "데이터 로드 실패"를 사용자가 구분할 수 없다.
+
+**탐지:**
+```bash
+# isLoading을 사용하지만 isError는 사용하지 않는 컴포넌트 파일 탐지
+grep -rln "isLoading\b" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" \
+  | xargs grep -L "isError" \
+  | grep -v "node_modules\|\.test\.\|\.spec\."
+```
+
+**❌ 금지 — isError 누락:**
+```typescript
+const { data: docs = [], isLoading } = useQuery({ ... });
+// isLoading → skeleton, docs.length === 0 → 빈 상태
+// 에러 상태 없음 → 네트워크 오류를 "빈 상태"로 오인
+```
+
+**✅ 올바른 패턴:**
+```typescript
+const { data: docs = [], isLoading, isError } = useQuery({ ... });
+return isLoading ? <Skeleton /> : isError ? <ErrorUI /> : docs.length === 0 ? <Empty /> : <List />;
+```
+
+**PASS:** `isLoading`을 사용하는 컴포넌트가 `isError`도 구조분해하고 에러 분기 렌더링 포함.
+**INFO:** 에러를 상위 `error.tsx` Error Boundary로 bubble up하는 경우 `isError` 분기 생략 가능.
+**근거:** 2026-04-21 harness W-2 — `ValidationDocumentsSection.tsx` 첨부파일 로드 실패 시 빈 상태와 동일한 UI. `isError` 분기 추가 후 에러/빈 상태 구분 가능.
+
 ## Output Format
 
 ```markdown
@@ -319,6 +391,8 @@ useQuery({
 | 12  | count 전용 쿼리 키 분리    | PASS/FAIL | pageSize:1 쿼리가 목록 키 재사용하는 위치 |
 | 14  | QUERY_CONFIG 스프레드 오버라이드 | PASS/INFO | `...QUERY_CONFIG.XXX, extraKey` 주석 없는 위치 |
 | 15  | useCasGuardedMutation 패턴    | PASS/INFO | onError 중복 VERSION_CONFLICT 처리 또는 수동 casVersion 조합 위치 |
+| 16  | raw async mutation 금지    | PASS/FAIL | onClick에서 await api.delete/remove/unlink 직접 호출 위치 |
+| 17  | useQuery isError 분기      | PASS/INFO | isLoading 사용 컴포넌트에서 isError 누락 위치 |
 ```
 
 ## Exceptions

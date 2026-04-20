@@ -176,7 +176,19 @@ done
 
 ### Step 10: Backend URL 하드코딩
 
-**PASS:** `shared-test-data.ts` 외 localhost URL 0건.
+`tests/e2e/scripts/` 유틸리티 스크립트도 검사 범위에 포함. spec 파일이 아니어서 `--include="*.spec.ts"` 단독 grep으로는 탐지되지 않는 맹점 존재.
+
+**탐지:**
+```bash
+# spec 파일 + scripts/ 유틸리티 스크립트 모두 검사
+grep -rn "localhost:3001\|localhost:3000" \
+  apps/frontend/tests/e2e \
+  --include="*.ts" --include="*.spec.ts" \
+  | grep -v "shared-test-data\|process\.env\|// "
+```
+
+**PASS:** 0건. `BASE_URLS.BACKEND` 또는 `process.env.NEXT_PUBLIC_API_URL` 폴백 경유.
+**근거 (2026-04-21 수정):** `tests/e2e/scripts/generate-inspection-docx.ts` 등 scripts/ 파일이 `const BACKEND = 'http://localhost:3001'` 하드코딩을 가지고 있었음. `BASE_URLS.BACKEND` SSOT 경유로 수정됨.
 
 ### Step 11b: TEST_USERS_BY_TEAM SSOT
 

@@ -1,10 +1,10 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-20 (정합화 완료 — 37차 Dockerfile hardening 섹션 archive-infra.md 이동. 미완료 3건: Lighthouse 게이트, 커밋 귀속 복구(사용자 결정 대기), sticky-header CSS 변수(트리거 조건 미달).)**
+> **마지막 정리일: 2026-04-21 (QR Phase 1-3 후속 개선 섹션 9건 전체 archive-domain.md 이동. 미완료 1건: sticky-header CSS 변수(트리거 조건 미달).)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
-## 2026-04-17 신규 — QR Phase 1-3 후속 개선 (10건) [8건 완료, 1건 미완료, 1건 사용자 결정 대기]
+## 2026-04-17 신규 — QR Phase 1-3 후속 개선 (10건) [9건 완료, 1건 사용자 결정 대기]
 
 > **발견 배경**: QR 모바일 워크플로우 Phase 1-3 완료 후 "SSOT/비하드코딩/워크플로우/성능/보안/접근성" 자체 감사에서 도출. 2-agent 병렬 verify (SHOULD 항목 + 시스템 와이드 구조적 개선). 모든 항목 `confirmed` — file:line 증거 포함.
 > **원칙 준수**: (1) QR은 경로 (feedback_qr_is_path_not_workflow.md) — QR 시나리오 전용 새 워크플로우 추가 금지, 기존 서비스로 연결만. (2) 커밋 전 자체 감사 (feedback_pre_commit_self_audit.md) — SSOT/하드코딩/eslint-disable/a11y/워크플로우 재사용/성능/검증 7항목.
@@ -312,7 +312,7 @@
 추정: Mode 1 / 6-8 파일 (+ 아이콘 에셋) / ~4시간.
 ```
 
-### 🟢 LOW — Lighthouse/axe-core/번들 크기 배포 게이트 통합 (Mode 1)
+### ~~🟢 LOW — Lighthouse/axe-core/번들 크기 배포 게이트 통합 (Mode 1)~~ ✅ 완료 (2026-04-20)
 
 ```
 문제:
