@@ -15,11 +15,12 @@
 export const FORM_NUMBER = 'UL-QP-19-01' as const;
 
 /**
- * 허용되는 워크시트명 — 양식 변종(띄어쓰기 차이) 대응.
+ * 허용되는 워크시트명 — 양식 변종(시트명 차이) 대응.
  *
  * 매칭 순서대로 탐색하며, 처음 일치하는 시트를 반환.
+ * UL-QP-19-01(01) 신규 양식은 시트명이 'Sheet1'이므로 최우선 후보에 배치.
  */
-export const SHEET_NAMES = ['연간 교정계획서', '교정계획서'] as const;
+export const SHEET_NAMES = ['Sheet1', '연간 교정계획서', '교정계획서'] as const;
 
 /**
  * 데이터 주입 시작 행 (1-based).
@@ -29,6 +30,19 @@ export const SHEET_NAMES = ['연간 교정계획서', '교정계획서'] as cons
  * - Row 6+: 데이터 (덮어쓰기)
  */
 export const DATA_START_ROW = 6 as const;
+
+/**
+ * 데이터 영역 마지막 행 (1-based, 포함).
+ *
+ * UL-QP-19-01(01) 양식 기준:
+ * - Row 6~32: 데이터 영역 (최대 27개 항목)
+ * - Row 33: 빈 구분 행
+ * - Row 34+: 특기사항/작성·검토·승인 서명란 (clearTrailingRows 보호 필요)
+ *
+ * ⚠️ clearTrailingRows 호출 시 반드시 이 값을 상한으로 사용할 것.
+ *    sheet.rowCount를 상한으로 쓰면 서명란이 파괴됨.
+ */
+export const DATA_END_ROW = 32 as const;
 
 /** 총 컬럼 수 (A~J = 10열) — 스타일 복제/클리어 시 사용 */
 export const COLUMN_COUNT = 10 as const;

@@ -45,13 +45,18 @@ export class CalibrationPlanRendererService {
       fallbackToFirst: true,
     });
 
-    // Row 1 제목 업데이트
-    sheet.getRow(1).getCell(1).value = `${plan.year}년 ${siteLabel} 연간 교정 계획서`;
+    // Row 1 제목 업데이트 — rich text 덮어쓰기 후 폰트 명시 복원
+    const titleCell = sheet.getRow(1).getCell(1);
+    titleCell.value = `${plan.year}년 ${siteLabel} 연간 교정 계획서`;
+    titleCell.font = { bold: true, size: 18, name: '맑은 고딕', charset: 129 };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     // 첫 데이터 행 스타일 참조 (템플릿 보존용)
     const styles = captureRowStyles(sheet, Layout.DATA_START_ROW, Layout.COLUMN_COUNT);
 
     items.forEach((item: CalibrationPlanItemDetail, idx: number) => {
+      const rowIdx = Layout.DATA_START_ROW + idx;
+      const confirmedSignature = item.confirmedBy ? (plan.authorName ?? '-') : '-';
       const values: (string | number | null)[] = [
         item.sequenceNumber,
         item.equipment?.managementNumber ?? '-',
@@ -61,18 +66,25 @@ export class CalibrationPlanRendererService {
         item.snapshotCalibrationAgency ?? '-',
         this.formatDate(item.plannedCalibrationDate),
         item.plannedCalibrationAgency ?? '-',
-        item.confirmedBy ? 'O' : '-',
+        confirmedSignature,
         item.actualCalibrationDate
-          ? this.formatDate(item.actualCalibrationDate)
+          ? this.formatDotDate(item.actualCalibrationDate)
           : (item.notes ?? '-'),
       ];
-      writeDataRow(sheet, Layout.DATA_START_ROW + idx, values, styles);
+      writeDataRow(sheet, rowIdx, values, styles);
+
+      // 확인란(I열=9)에 shrink-to-fit 적용 — 셀 너비(7.6)보다 긴 이름 대응
+      if (item.confirmedBy) {
+        const iCell = sheet.getRow(rowIdx).getCell(9);
+        iCell.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true };
+      }
     });
 
+    // DATA_END_ROW를 상한으로 — Row 34+ 서명란(작성/검토/승인) 보호
     clearTrailingRows(
       sheet,
       Layout.DATA_START_ROW + items.length,
-      sheet.rowCount,
+      Layout.DATA_END_ROW,
       Layout.COLUMN_COUNT
     );
 
@@ -92,5 +104,24 @@ export class CalibrationPlanRendererService {
     if (!d) return '-';
     const date = typeof d === 'string' ? new Date(d) : d;
     return date.toLocaleDateString(DEFAULT_LOCALE, { timeZone: DEFAULT_TIMEZONE });
+  }
+
+  /**
+   * 비고란 교정일자 형식: "2026.02.21" (YYYY.MM.DD, 제로패딩).
+   *
+   * UL-QP-19-01 양식 관례를 따르며, DEFAULT_TIMEZONE 기준으로 날짜를 계산하여
+   * UTC/로컬 오프셋에 의한 날짜 오차를 방지.
+   */
+  private formatDotDate(d: Date | string | null | undefined): string {
+    if (!d) return '-';
+    const date = typeof d === 'string' ? new Date(d) : d;
+    const parts = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: DEFAULT_TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+    // ko-KR 출력 예: "2026. 02. 21." → 공백/마지막 점 제거 → "2026.02.21"
+    return parts.replace(/\s+/g, '').replace(/\.$/, '');
   }
 }
