@@ -33,6 +33,7 @@ description: 이벤트 기반 캐시 무효화 아키텍처 검증 — emit/emit
 | `apps/backend/src/modules/notifications/events/notification-events.ts` | `NOTIFICATION_EVENTS` 상수 (알림+캐시 복합 이벤트) |
 | `apps/backend/src/modules/**/*.service.ts` | `emitAsync` 발행처 (SSOT 위치) |
 | `apps/backend/src/modules/**/*.controller.ts` | `emitAsync` 컨트롤러 발행 탐지 대상 (Step 4a) |
+| `apps/backend/src/modules/**/listeners/*.listener.ts` | best-effort 도메인 동기화 리스너 (`@OnEvent({ async: true })` 패턴) |
 
 ## Workflow
 
@@ -205,6 +206,7 @@ comm -23 /tmp/methods.txt /tmp/helper_methods.txt
 3. **테스트 spec의 `eventEmitter.emit()` 호출** — 테스트 내부에서 실제 리스너 트리거 용도. 검증 대상 아님.
 4. **`NOTIFICATION_EVENTS` 상수 중 미발행 이벤트** — 단순 dead code, 본 스킬 범위 외 (verify-ssot에서 커버 가능).
 5. **도메인 리스너의 직접 `deleteByPrefix` 호출** — 이벤트가 `CACHE_INVALIDATION_REGISTRY`에 등록되어 있더라도, DB 업데이트와 캐시 무효화를 같은 트랜잭션에 묶어야 하는 도메인 리스너(`@OnEvent` + `@Injectable()`)는 `cacheService.deleteByPrefix()`를 직접 호출할 수 있다. 예: `SoftwareValidationListener` — `latestValidationId` DB 갱신 + `TEST_SOFTWARE` 캐시 직접 삭제. 레지스트리 에 이미 등록된 이벤트에 추가 캐시 무효화를 하는 것이므로 Step 1 위반이 아님.
+6. **도메인 리스너의 `@OnEvent({ async: true })` best-effort 동기화** — `CalibrationPlanSyncListener`처럼 `@OnEvent(EVENT, { async: true })` + `async handle(): Promise<void>` 패턴은 EventEmitter2가 내부적으로 await을 처리. 이 리스너는 캐시 무효화가 아닌 **교차 도메인 DB 동기화**(calibration 생성 → calibration_plan_items.actualCalibrationDate 갱신) 목적이며, best-effort(실패해도 원본 트랜잭션에 영향 없음)으로 설계됨. `CACHE_INVALIDATION_REGISTRY` 등록 불필요, Step 1 검사 제외. 파일: `modules/*/listeners/*.listener.ts`.
 
 ## Severity
 

@@ -161,9 +161,9 @@
 - **체크리스트 반영**: ⏳ 관찰 중 (1회)
 
 ### [2026-03-30] mapBackendErrorCode 에러 코드 매핑 누락 — 새 서비스 에러 코드 미매핑
-- **발견 빈도**: 3회 (1차: IMPORT_ONLY_* 등 9개 / 2차: IMPORT_END_DATE_BEFORE_START / 3차: MIGRATION_* 5개 — 모두 2026-03-30~31)
+- **발견 빈도**: 4회 (1차: IMPORT_ONLY_* 등 9개 / 2차: IMPORT_END_DATE_BEFORE_START / 3차: MIGRATION_* 5개 / 4차: CALIBRATION_PLAN_* + CALIBRATION_* 18개 — 2026-04-20)
 - **설명**: 백엔드 서비스에 새 에러 코드(BadRequestException with custom `code`)를 추가할 때 프론트엔드 `mapBackendErrorCode`에 매핑을 추가하지 않는 패턴. 사용자에게 "알 수 없는 오류" 표시됨. 신규 모듈 구현 완료 후 에러 코드 매핑 동시 추가가 관행으로 정착해야 함.
-- **체크리스트 반영**: ✅ 섹션 8 "에러 전파 체인"에 이미 등재됨 — 재발 빈도 +1 (3차)
+- **체크리스트 반영**: ✅ 섹션 8 "에러 전파 체인"에 이미 등재됨 — **재발 빈도 +1 (4차)** → verify-hardcoding Step 10에 누락 목록 명시
 
 ### [2026-03-30] completeReturn() equipment UPDATE에 CAS version 조건 누락
 - **발견 빈도**: 1회 (equipment-imports.service.ts: completeReturn)
@@ -367,3 +367,6 @@
 | 2026-04-19 | 재발 (4차) | Stale CAS 버전 사용 — TestSoftwareDetailContent.toggleMutation (software?.version 캡처) | review-learnings.md |
 | 2026-04-19 | 재발 (2차) → 승격 | QUERY_CONFIG 인라인 오버라이드 — TestSoftwareDetailContent.linkedEquipment staleTime 인라인 | review-learnings.md → 섹션 7 승격 |
 | 2026-04-19 | 안티패턴 | TestSoftwareDetailContent detail 쿼리에 TEST_SOFTWARE_LIST 프리셋 오사용 (TEST_SOFTWARE_DETAIL 존재) | review-learnings.md |
+| 2026-04-20 | 재발 (4차) | mapBackendErrorCode 누락 — CALIBRATION_PLAN_* + CALIBRATION_* 18개 에러 코드 미매핑 (calibration-plans 모듈) | review-learnings.md + verify-hardcoding Step 10 누락 목록 추가 |
+| 2026-04-20 | 새 패턴 | `@OnEvent({ async: true })` 도메인 동기화 리스너 — CalibrationPlanSyncListener (best-effort, CACHE_INVALIDATION_REGISTRY 제외) | verify-cache-events Exceptions #6 추가 |
+| 2026-04-20 | 새 패턴 | `actualCalibrationId` FK 참조 시드 정합성 + bulk-confirm 2건 시나리오 보장 | verify-seed-integrity Step 8 추가 |
