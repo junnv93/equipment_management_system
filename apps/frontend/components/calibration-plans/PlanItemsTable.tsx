@@ -130,6 +130,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
     mutationFn: (itemUuid, casVersion) =>
       calibrationPlansApi.confirmPlanItem(planUuid, itemUuid, { casVersion }),
     onSuccess: () => {
+      setOptimisticConfirmedId(null);
       toast({
         title: t('planDetail.toasts.confirmItemSuccess'),
         description: t('planDetail.toasts.confirmItemSuccessDesc'),

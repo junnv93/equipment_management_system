@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -93,6 +93,9 @@ export function CalibrationPlanDetailClient({
   const tCommon = useTranslations('common');
   const { fmtDate, fmtDateTime } = useDateFormatter();
 
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [isHeaderStuck, setIsHeaderStuck] = useState(false);
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
@@ -133,6 +136,20 @@ export function CalibrationPlanDetailClient({
       clearDynamicLabel(planUuid);
     };
   }, [plan, planUuid, setDynamicLabel, clearDynamicLabel, t, tEquip]);
+
+  // Sticky 헤더 stuck 감지 — IntersectionObserver rootMargin '-1px' 패턴
+  // 헤더 ref가 scroll container 상단에 닿는 순간 isIntersecting=false → border/shadow 표시
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const scrollContainer = document.getElementById('main-content');
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsHeaderStuck(!entry.isIntersecting),
+      { root: scrollContainer, rootMargin: '-1px 0px 0px 0px', threshold: 1 }
+    );
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
 
   /**
    * 상태 변경 후 공통 캐시 무효화
@@ -289,11 +306,13 @@ export function CalibrationPlanDetailClient({
 
   return (
     <div className={getPageContainerClasses()}>
-      {/* 헤더 — Sticky 액션바 */}
+      {/* 헤더 — Sticky 액션바 (IntersectionObserver로 stuck 감지 → border/shadow 조건부 표시) */}
       <div
+        ref={headerRef}
         className={cn(
           CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.container,
-          'sticky top-0 z-10 bg-background pb-3 border-b'
+          'sticky top-0 z-10 bg-background pb-3 transition-shadow',
+          isHeaderStuck && 'border-b shadow-sm'
         )}
       >
         <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.titleArea}>
@@ -502,8 +521,8 @@ export function CalibrationPlanDetailClient({
             </Label>
             <Textarea
               id="reject-reason"
-              aria-required
-              minLength={10}
+              aria-required="true"
+              aria-describedby="reject-reason-hint"
               className="mt-2"
               rows={3}
               placeholder={t('planDetail.dialogs.reject.reasonPlaceholder')}
@@ -511,6 +530,8 @@ export function CalibrationPlanDetailClient({
               onChange={(e) => setRejectionReason(e.target.value)}
             />
             <p
+              id="reject-reason-hint"
+              aria-live="polite"
               className={cn(
                 'text-xs mt-1 text-right',
                 rejectionReason.trim().length < 10
