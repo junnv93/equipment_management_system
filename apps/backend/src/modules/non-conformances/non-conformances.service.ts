@@ -34,7 +34,6 @@ import {
   NonConformanceStatusValues as NonConformanceStatus,
   type NonConformanceStatus as NonConformanceStatusType,
   type NonConformanceType,
-  REPAIR_REQUIRING_NC_TYPES,
   getNCPrerequisite,
   getNCTypesRequiring,
   ResolutionTypeEnum,
@@ -554,7 +553,7 @@ export class NonConformancesService extends VersionedBaseService {
           where: and(eq(nonConformances.id, id), isNull(nonConformances.deletedAt)),
           with: {
             equipment: {
-              columns: { id: true, name: true, managementNumber: true },
+              columns: { id: true, name: true, managementNumber: true, teamId: true },
             },
             repairHistory: {
               columns: {
@@ -791,9 +790,9 @@ export class NonConformancesService extends VersionedBaseService {
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CLOSED, {
       ncId: id,
       equipmentId: nonConformance.equipmentId,
-      equipmentName: '',
-      managementNumber: '',
-      reporterTeamId: '',
+      equipmentName: (nonConformance as NonConformanceDetail).equipment?.name ?? '',
+      managementNumber: (nonConformance as NonConformanceDetail).equipment?.managementNumber ?? '',
+      reporterTeamId: (nonConformance as NonConformanceDetail).equipment?.teamId ?? '',
       actorId: closedBy,
       actorName: '',
       timestamp: new Date(),
@@ -840,9 +839,9 @@ export class NonConformancesService extends VersionedBaseService {
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED, {
       ncId: id,
       equipmentId: nonConformance.equipmentId,
-      equipmentName: '',
-      managementNumber: '',
-      reporterTeamId: '',
+      equipmentName: (nonConformance as NonConformanceDetail).equipment?.name ?? '',
+      managementNumber: (nonConformance as NonConformanceDetail).equipment?.managementNumber ?? '',
+      reporterTeamId: (nonConformance as NonConformanceDetail).equipment?.teamId ?? '',
       reason: dto.rejectionReason,
       actorId: rejectedBy,
       actorName: '',
@@ -985,9 +984,9 @@ export class NonConformancesService extends VersionedBaseService {
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.NC_CORRECTED, {
       ncId: id,
       equipmentId: nc.equipmentId,
-      equipmentName: '',
-      managementNumber: '',
-      reporterTeamId: '',
+      equipmentName: (nc as NonConformanceDetail).equipment?.name ?? '',
+      managementNumber: (nc as NonConformanceDetail).equipment?.managementNumber ?? '',
+      reporterTeamId: (nc as NonConformanceDetail).equipment?.teamId ?? '',
       actorId: correctionData.correctedBy,
       actorName: '',
       timestamp: new Date(),
@@ -1005,14 +1004,6 @@ export class NonConformancesService extends VersionedBaseService {
       .limit(1);
 
     return results[0] || null;
-  }
-
-  /**
-   * 부적합 유형이 수리를 필요로 하는지 확인
-   * @deprecated validateCorrectionPrerequisite 사용 권장
-   */
-  private requiresRepair(ncType: string): boolean {
-    return (REPAIR_REQUIRING_NC_TYPES as readonly string[]).includes(ncType);
   }
 
   /**

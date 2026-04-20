@@ -1335,45 +1335,63 @@ export class CalibrationService extends VersionedBaseService {
       });
     }
 
-    // ✅ CAS: DB 기반 optimistic locking — 409 시 캐시 무효화는 onVersionConflict() 훅이 처리.
-    await this.updateWithVersion(
-      schema.calibrations,
-      id,
-      approveDto.version,
-      {
-        approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
-        approvedBy: approveDto.approverId,
-        approverComment: approveDto.approverComment,
-      },
-      'Calibration record'
-    );
+    // 단일 outer transaction: calibration CAS + equipment 교정일 갱신 + NC 자동 조치
+    // all-or-nothing 보장 — 어느 한 단계라도 실패하면 전체 롤백
+    let approvedEquip:
+      | {
+          name: string;
+          managementNumber: string | null;
+          teamId: string | null;
+          site: string;
+          calibrationCycle: number | null;
+        }
+      | undefined;
 
-    // 캐시 무효화 (교정 자체) — calibration.equipmentId로 team-scoped 정밀 무효화
+    await this.db.transaction(async (tx) => {
+      // ✅ CAS: tx 인자 전달로 calibration update가 outer tx에 참여
+      // 409 시 캐시 무효화는 onVersionConflict() 훅이 처리.
+      await this.updateWithVersion(
+        schema.calibrations,
+        id,
+        approveDto.version,
+        {
+          approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
+          approvedBy: approveDto.approverId,
+          approverComment: approveDto.approverComment,
+        },
+        'Calibration record',
+        tx
+      );
+
+      // tx 내 장비 정보 조회 — 교정일 업데이트 + 알림 이벤트 공용 (이중 DB 호출 방지)
+      const [equip] = await tx
+        .select({
+          name: schema.equipment.name,
+          managementNumber: schema.equipment.managementNumber,
+          teamId: schema.equipment.teamId,
+          site: schema.equipment.site,
+          calibrationCycle: schema.equipment.calibrationCycle,
+        })
+        .from(schema.equipment)
+        .where(eq(schema.equipment.id, calibration.equipmentId))
+        .limit(1);
+      approvedEquip = equip;
+
+      // 장비 교정일 자동 업데이트 + NC 자동 조치 (동일 tx 공유)
+      await this.updateEquipmentCalibrationDates(
+        tx,
+        calibration.equipmentId,
+        calibration.calibrationDate,
+        id,
+        approveDto.approverId,
+        equip?.calibrationCycle ?? undefined
+      );
+    });
+
+    // tx 커밋 이후: 캐시 무효화 + 이벤트 발행
     await this.invalidateCalibrationCache(id, calibration.equipmentId);
 
-    // 장비 정보 1회 조회 — 교정일 업데이트 + 알림 이벤트 공용 (이중 DB 호출 방지)
-    const [approvedEquip] = await this.db
-      .select({
-        name: schema.equipment.name,
-        managementNumber: schema.equipment.managementNumber,
-        teamId: schema.equipment.teamId,
-        site: schema.equipment.site,
-        calibrationCycle: schema.equipment.calibrationCycle,
-      })
-      .from(schema.equipment)
-      .where(eq(schema.equipment.id, calibration.equipmentId))
-      .limit(1);
-
-    // 장비 교정일 자동 업데이트 및 교정 기한 초과 부적합 자동 조치
-    await this.updateEquipmentCalibrationDates(
-      calibration.equipmentId,
-      calibration.calibrationDate,
-      id,
-      approveDto.approverId,
-      approvedEquip?.calibrationCycle ?? undefined
-    );
-
-    // 📢 알림 이벤트 발행 (교정 승인) — approvedEquip 재사용
+    // 📢 알림 이벤트 발행 (교정 승인) — tx 내 조회한 approvedEquip 재사용
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_APPROVED, {
       calibrationId: id,
       equipmentId: calibration.equipmentId,
@@ -1398,8 +1416,11 @@ export class CalibrationService extends VersionedBaseService {
    * 장비의 교정일자를 자동 업데이트합니다.
    * 교정 승인 시 호출되어 장비의 lastCalibrationDate를 갱신하고,
    * nextCalibrationDate는 calibrationDate + calibrationCycle(개월)로 계산합니다.
+   *
+   * 반드시 outer transaction 내에서 호출해야 합니다 (approveCalibration의 단일 tx 일부).
    */
   private async updateEquipmentCalibrationDates(
+    tx: Parameters<Parameters<AppDatabase['transaction']>[0]>[0],
     equipmentId: string,
     calibrationDate: Date,
     calibrationId?: string,
@@ -1408,10 +1429,10 @@ export class CalibrationService extends VersionedBaseService {
     preloadedCycle?: number
   ): Promise<void> {
     try {
-      // 장비의 교정 주기: 호출자가 전달하면 재사용, 아니면 조회
+      // 장비의 교정 주기: 호출자가 전달하면 재사용, 아니면 tx로 조회
       let cycle = preloadedCycle;
       if (cycle === undefined) {
-        const [equip] = await this.db
+        const [equip] = await tx
           .select({ calibrationCycle: schema.equipment.calibrationCycle })
           .from(schema.equipment)
           .where(eq(schema.equipment.id, equipmentId))
@@ -1423,56 +1444,45 @@ export class CalibrationService extends VersionedBaseService {
       const nextCalibrationDate =
         calculateNextCalibrationDate(calibrationDate, cycle) ?? calibrationDate;
 
-      // ✅ W-13: 장비 업데이트 + NC 조치를 하나의 트랜잭션으로 감싸기
-      // CAS 면제: 교정 승인 콜백에 의한 교정일 자동 갱신 (시스템 트리거)
-      // calibration 엔티티에서 이미 CAS를 통과한 후 실행되므로,
-      // equipment에 대한 별도 CAS는 불필요. 교정일은 시스템 계산값이며 사용자 입력이 아님.
-      await this.db.transaction(async (tx) => {
-        // 과거 교정이력 승인 시 최신 교정일을 더 오래된 날짜로 덮어쓰지 않도록 조건부 갱신
-        // WHERE lastCalibrationDate IS NULL OR lastCalibrationDate < calibrationDate
-        const [updated] = await tx
-          .update(schema.equipment)
-          .set({
-            lastCalibrationDate: calibrationDate,
-            nextCalibrationDate,
-            updatedAt: new Date(),
-            version: sql`${schema.equipment.version} + 1`,
-          })
-          .where(
-            and(
-              eq(schema.equipment.id, equipmentId),
-              or(
-                isNull(schema.equipment.lastCalibrationDate),
-                lt(schema.equipment.lastCalibrationDate, calibrationDate)
-              )
+      // outer tx 공유 — 별도 db.transaction 불필요
+      // 과거 교정이력 승인 시 최신 교정일을 더 오래된 날짜로 덮어쓰지 않도록 조건부 갱신
+      const [updated] = await tx
+        .update(schema.equipment)
+        .set({
+          lastCalibrationDate: calibrationDate,
+          nextCalibrationDate,
+          updatedAt: new Date(),
+          version: sql`${schema.equipment.version} + 1`,
+        })
+        .where(
+          and(
+            eq(schema.equipment.id, equipmentId),
+            or(
+              isNull(schema.equipment.lastCalibrationDate),
+              lt(schema.equipment.lastCalibrationDate, calibrationDate)
             )
           )
-          .returning({ id: schema.equipment.id });
+        )
+        .returning({ id: schema.equipment.id });
 
-        if (updated) {
-          this.logger.log(
-            `장비 교정일 업데이트 완료: ${equipmentId}, ` +
-              `lastCalibrationDate: ${calibrationDate}, ` +
-              `nextCalibrationDate: ${nextCalibrationDate}`
-          );
-        } else {
-          this.logger.log(
-            `장비 교정일 업데이트 건너뜀 (최신 이력 아님): ${equipmentId}, calibrationDate: ${calibrationDate}`
-          );
-        }
+      if (updated) {
+        this.logger.log(
+          `장비 교정일 업데이트 완료: ${equipmentId}, ` +
+            `lastCalibrationDate: ${calibrationDate}, ` +
+            `nextCalibrationDate: ${nextCalibrationDate}`
+        );
+      } else {
+        this.logger.log(
+          `장비 교정일 업데이트 건너뜀 (최신 이력 아님): ${equipmentId}, calibrationDate: ${calibrationDate}`
+        );
+      }
 
-        // NC 해결: 장비 교정일 갱신 여부와 무관하게 처리
-        // 이유: 최신 교정이력이 아닌 과거 이력 승인 시 updated=undefined(날짜 미갱신)이지만
-        //       교정 승인 자체는 완료되었으므로 NC는 종료되어야 함
-        if (calibrationId) {
-          await this.markCalibrationOverdueAsCorrectedTx(
-            tx,
-            equipmentId,
-            calibrationId,
-            approverId
-          );
-        }
-      });
+      // NC 해결: 장비 교정일 갱신 여부와 무관하게 처리
+      // 이유: 최신 교정이력이 아닌 과거 이력 승인 시 updated=undefined(날짜 미갱신)이지만
+      //       교정 승인 자체는 완료되었으므로 NC는 종료되어야 함
+      if (calibrationId) {
+        await this.markCalibrationOverdueAsCorrectedTx(tx, equipmentId, calibrationId, approverId);
+      }
     } catch (error) {
       this.logger.error(`장비 교정일 업데이트 실패: ${equipmentId}`, error);
       throw error;

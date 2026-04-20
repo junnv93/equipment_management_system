@@ -11,7 +11,6 @@ import {
   NonConformanceStatusEnum,
   NonConformanceTypeEnum,
   IncidentTypeEnum,
-  ResolutionTypeEnum,
   DEFAULT_LOCALE,
   CalibrationRequiredEnum,
 } from '@equipment-management/schemas';
@@ -358,78 +357,5 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
       );
       throw error;
     }
-  }
-
-  /**
-   * 특정 장비에 대해 교정 기한 초과 부적합이 있는지 확인
-   * CalibrationService에서 교정 승인 시 호출
-   */
-  async findOpenCalibrationOverdueNc(equipmentId: string): Promise<{
-    id: string;
-    equipmentId: string;
-    status: string;
-    ncType: string;
-  } | null> {
-    const result = await this.db
-      .select({
-        id: nonConformances.id,
-        equipmentId: nonConformances.equipmentId,
-        status: nonConformances.status,
-        ncType: nonConformances.ncType,
-      })
-      .from(nonConformances)
-      .where(
-        and(
-          eq(nonConformances.equipmentId, equipmentId),
-          eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
-          isNull(nonConformances.deletedAt),
-          eq(nonConformances.status, NonConformanceStatusEnum.enum.open)
-        )
-      )
-      .limit(1);
-
-    return result[0] || null;
-  }
-
-  /**
-   * 교정 완료 시 calibration_overdue 부적합 자동 조치 완료 처리
-   *
-   * @param equipmentId 장비 ID
-   * @param calibrationId 교정 기록 ID (연결용)
-   * @param correctedBy 조치자 ID
-   */
-  async markCalibrationOverdueAsCorrected(
-    equipmentId: string,
-    calibrationId: string,
-    correctedBy: string
-  ): Promise<void> {
-    const nc = await this.findOpenCalibrationOverdueNc(equipmentId);
-
-    if (!nc) {
-      this.logger.debug(`장비 ${equipmentId}: open calibration_overdue 부적합 없음`);
-      return;
-    }
-
-    const today = new Date();
-
-    await this.db
-      .update(nonConformances)
-      .set({
-        status: NonConformanceStatusEnum.enum.corrected,
-        resolutionType: ResolutionTypeEnum.enum.recalibration,
-        calibrationId,
-        correctionContent: this.i18n.t(
-          'system.calibrationOverdue.correctionContent',
-          DEFAULT_LOCALE
-        ),
-        correctionDate: today.toISOString().split('T')[0],
-        correctedBy,
-        updatedAt: today,
-      })
-      .where(eq(nonConformances.id, nc.id));
-
-    this.logger.log(
-      `장비 ${equipmentId}: calibration_overdue 부적합(${nc.id}) corrected 상태로 변경 완료`
-    );
   }
 }

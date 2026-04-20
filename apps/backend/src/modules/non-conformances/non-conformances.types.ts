@@ -14,7 +14,7 @@ type UserSummary = Pick<User, 'id' | 'name' | 'email'> & { team: Team | null };
 
 /** findOne 반환 타입 — 부적합 + 관련 엔티티 관계 */
 export type NonConformanceDetail = NonConformance & {
-  equipment: Pick<Equipment, 'id' | 'name' | 'managementNumber'> | null;
+  equipment: Pick<Equipment, 'id' | 'name' | 'managementNumber' | 'teamId'> | null;
   repairHistory: Pick<
     RepairHistory,
     'id' | 'repairDate' | 'repairDescription' | 'repairResult'
