@@ -207,7 +207,7 @@ export class CalibrationService extends VersionedBaseService {
    *   - certificateNumber → certificateNumber (동일)
    *   - notes → notes (동일)
    */
-  private transformDbToRecord(row: CalibrationRow): CalibrationRecord {
+  private transformDbToRecord(row: CalibrationRow, certDocPath?: string | null): CalibrationRecord {
     return {
       id: row.id,
       equipmentId: row.equipmentId,
@@ -217,7 +217,7 @@ export class CalibrationService extends VersionedBaseService {
       status: row.status,
       calibrationAgency: row.agencyName || '',
       certificateNumber: row.certificateNumber,
-      certificatePath: row.certificatePath,
+      certificatePath: certDocPath !== undefined ? certDocPath : row.certificatePath,
       result: row.result?.toLowerCase() ?? null,
       notes: row.notes,
       approvalStatus: row.approvalStatus,
@@ -299,7 +299,12 @@ export class CalibrationService extends VersionedBaseService {
       cacheKey,
       async () => {
         const [row] = await this.db
-          .select()
+          .select({
+            calibration: schema.calibrations,
+            certDocPath: sql<
+              string | null
+            >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
+          })
           .from(schema.calibrations)
           .where(eq(schema.calibrations.id, id))
           .limit(1);
@@ -311,7 +316,7 @@ export class CalibrationService extends VersionedBaseService {
           });
         }
 
-        return this.transformDbToRecord(row);
+        return this.transformDbToRecord(row.calibration, row.certDocPath);
       },
       CACHE_TTL.LONG
     );
@@ -434,8 +439,11 @@ export class CalibrationService extends VersionedBaseService {
         );
       }
 
+      const certDocPath =
+        result.documents.find((d) => d.documentType === 'calibration_certificate')?.filePath ??
+        null;
       return {
-        calibration: this.transformDbToRecord(result.calibration),
+        calibration: this.transformDbToRecord(result.calibration, certDocPath),
         documents: result.documents,
       };
     } catch (error) {
@@ -954,6 +962,9 @@ export class CalibrationService extends VersionedBaseService {
           managementNumber: schema.equipment.managementNumber,
           teamId: schema.equipment.teamId,
           teamName: schema.teams.name,
+          certDocPath: sql<
+            string | null
+          >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
         })
         .from(schema.calibrations)
         .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
@@ -968,7 +979,7 @@ export class CalibrationService extends VersionedBaseService {
     const totalPages = Math.ceil(totalItems / pageSize);
 
     const items: CalibrationRecord[] = rows.map((row) => ({
-      ...this.transformDbToRecord(row.calibration),
+      ...this.transformDbToRecord(row.calibration, row.certDocPath),
       equipmentName: row.equipmentName || undefined,
       managementNumber: row.managementNumber || undefined,
       team: row.teamName || undefined,
@@ -1156,6 +1167,9 @@ export class CalibrationService extends VersionedBaseService {
           approverId: approver.id,
           approverName: approver.name,
           approverEmail: approver.email,
+          certDocPath: sql<
+            string | null
+          >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
         })
         .from(schema.calibrations)
         .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
@@ -1172,7 +1186,7 @@ export class CalibrationService extends VersionedBaseService {
 
     // ========== 4. Transform (findAll 패턴 + user relations) ==========
     const transformedItems = rows.map((row) => ({
-      ...this.transformDbToRecord(row.calibration),
+      ...this.transformDbToRecord(row.calibration, row.certDocPath),
       equipmentName: row.equipmentName || undefined,
       managementNumber: row.managementNumber || undefined,
       teamId: row.equipmentTeamId || undefined,
@@ -1519,7 +1533,12 @@ export class CalibrationService extends VersionedBaseService {
     const futureDate = getUtcEndOfDay(addDaysUtc(today, days));
 
     const rows = await this.db
-      .select()
+      .select({
+        calibration: schema.calibrations,
+        certDocPath: sql<
+          string | null
+        >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
+      })
       .from(schema.calibrations)
       .where(
         and(
@@ -1530,7 +1549,7 @@ export class CalibrationService extends VersionedBaseService {
       )
       .orderBy(asc(schema.calibrations.intermediateCheckDate));
 
-    return rows.map((row) => this.transformDbToRecord(row));
+    return rows.map((row) => this.transformDbToRecord(row.calibration, row.certDocPath));
   }
 
   /**
@@ -1600,7 +1619,7 @@ export class CalibrationService extends VersionedBaseService {
     });
 
     return {
-      calibration: this.transformDbToRecord(updated),
+      calibration: this.transformDbToRecord(updated, calibration.certificatePath),
       message: '중간점검이 완료되었습니다.',
     };
   }
@@ -1653,6 +1672,9 @@ export class CalibrationService extends VersionedBaseService {
         equipmentTeamId: schema.equipment.teamId,
         equipmentSite: schema.equipment.site,
         teamName: schema.teams.name,
+        certDocPath: sql<
+          string | null
+        >`(SELECT d.file_path FROM documents d WHERE d.calibration_id = ${schema.calibrations.id} AND d.document_type = 'calibration_certificate' AND d.is_latest = true ORDER BY d.updated_at DESC LIMIT 1)`,
       })
       .from(schema.calibrations)
       .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
@@ -1662,7 +1684,7 @@ export class CalibrationService extends VersionedBaseService {
 
     // 플래튼: JOIN 결과 → CalibrationRecord
     const flattenedItems: CalibrationRecord[] = rows.map((row) => ({
-      ...this.transformDbToRecord(row.calibration),
+      ...this.transformDbToRecord(row.calibration, row.certDocPath),
       equipmentName: row.equipmentName || undefined,
       managementNumber: row.equipmentMgmtNo || undefined,
       team: row.teamName || undefined,

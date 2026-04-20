@@ -112,7 +112,7 @@ describe('CalibrationService', () => {
   let chain: ReturnType<typeof createSelectChain>;
 
   beforeEach(async () => {
-    chain = createSelectChain([MOCK_CALIBRATION_ROW]);
+    chain = createSelectChain([{ calibration: MOCK_CALIBRATION_ROW, certDocPath: null }]);
     mockCacheService = createMockCacheService();
     mockEventEmitter = createMockEventEmitter();
     mockFileUploadService = {
@@ -268,7 +268,7 @@ describe('CalibrationService', () => {
     it('pending_approval이 아닌 교정 승인 시 BadRequestException을 던진다', async () => {
       // findOne이 이미 승인된 교정 반환
       const alreadyApproved = { ...MOCK_CALIBRATION_ROW, approvalStatus: 'approved' };
-      chain.limit.mockResolvedValueOnce([alreadyApproved]);
+      chain.limit.mockResolvedValueOnce([{ calibration: alreadyApproved, certDocPath: null }]);
 
       await expect(
         service.approveCalibration('cal-uuid-1', {
