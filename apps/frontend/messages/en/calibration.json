@@ -818,5 +818,18 @@
     "fileRequired": "Please attach the calibration certificate file.",
     "nextDateMustBeAfter": "Next calibration date must be after the calibration date.",
     "intermediateCheckDateInvalid": "Intermediate check date must be between the calibration date and next calibration date."
+  },
+  "errors": {
+    "fileRequired": "Calibration certificate file is required.",
+    "certificateRequired": "A calibration_certificate document type is required.",
+    "documentTypeCountMismatch": "Document type count does not match the number of files.",
+    "documentTypeInvalid": "Invalid document type.",
+    "fileLimitExceeded": "File upload limit exceeded.",
+    "duplicateSameDay": "A calibration record for this equipment on the same date already exists.",
+    "txFailed": "An error occurred while saving the calibration record. Please try again.",
+    "notFound": "Calibration record not found.",
+    "endpointDeprecated": "This feature is no longer supported. Please use the calibration registration form.",
+    "planItemNotExecuted": "Items without a linked calibration record cannot be confirmed.",
+    "unknown": "An unknown error occurred."
   }
 }

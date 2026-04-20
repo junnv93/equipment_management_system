@@ -264,6 +264,20 @@ grep "maxWorkers" apps/backend/test/jest-e2e.json
 
 **PASS:** `"maxWorkers": 1`. **FAIL:** 없거나 1 초과. 단일 DB 아키텍처에서 병렬 실행은 시드 데이터 경합 → 비결정적 실패.
 
+**15d: toTestPath(API_ENDPOINTS.*) SSOT — E2E spec 하드코딩 경로 금지 (2026-04-20 추가)**
+
+`apps/backend/test/helpers/test-paths.ts`의 `toTestPath()`가 API_ENDPOINTS → supertest 경로 변환 SSOT.
+spec에서 `.get('/api/...')` 등 문자열 리터럴로 직접 경로를 사용하면 엔드포인트 변경 시 sync 누락 위험.
+
+```bash
+# E2E spec에서 하드코딩된 /api/ 경로 직접 사용 탐지
+grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`]/api/" \
+  apps/backend/test --include="*.e2e-spec.ts"
+# 결과: 0건 (모두 toTestPath(API_ENDPOINTS.*) 경유)
+```
+
+**PASS:** 0건. **FAIL:** `/api/` 문자열 리터럴 직접 사용.
+
 ### Step 16: E2E data-* 셀렉터 × 컴포넌트 attribute 일관성 (2026-04-19 추가)
 
 E2E spec이 `[data-xxx]` 커스텀 attribute 셀렉터를 사용할 때, 해당 컴포넌트 구현에
@@ -320,6 +334,7 @@ grep -rn '\[data-[a-z]' \
 | 15a | Backend loginAs SSOT    | PASS/FAIL | hardcoded credential 탐지     |
 | 15b | TEST_USER_IDS UUID 정합 | PASS/FAIL | e2e UUID 사용 탐지            |
 | 15c | jest-e2e.json maxWorkers| PASS/FAIL | maxWorkers != 1               |
+| 15d | toTestPath SSOT (E2E)   | PASS/FAIL | /api/ 하드코딩 경로 직접 사용 |
 | 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
 ```
 

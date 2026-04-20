@@ -202,6 +202,28 @@ grep -rn "isCheckoutExportable" \
 # 결과: import 라인만 존재 (정의 라인 없어야 함)
 ```
 
+### Step 18: E2E test-paths SSOT 검증 (2026-04-20 추가)
+
+`apps/backend/test/helpers/test-paths.ts`의 `toTestPath()`가 API_ENDPOINTS → supertest 경로 변환 SSOT.
+다른 헬퍼/spec 파일에서 동일 변환 로직을 재정의하거나 경로를 직접 조립하면 SSOT 위반.
+
+**18a: toTestPath 로컬 재정의 금지**
+```bash
+grep -rn "function toTestPath\|const toTestPath\s*=" \
+  apps/backend/test \
+  | grep -v "test-paths.ts"
+# 결과: 0건 (test-paths.ts 외 정의 없어야 함)
+```
+
+**18b: spec 파일 내 /api/ 하드코딩 직접 사용 금지**
+```bash
+grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`]\/api\/" \
+  apps/backend/test --include="*.e2e-spec.ts"
+# 결과: 0건 (모두 toTestPath(API_ENDPOINTS.*) 경유)
+```
+
+**PASS:** 재정의 0건 + 하드코딩 0건. **FAIL:** test-paths.ts 외 `toTestPath` 정의 또는 `/api/` 직접 사용.
+
 ## Output Format
 
 ```markdown
