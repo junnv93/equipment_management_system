@@ -130,9 +130,20 @@
   "validation": {
     "title": "Software Validations",
     "subtitle": "UL-QP-18-09 Software Validation Records",
+    "globalTitle": "All Software Validations",
+    "globalSubtitle": "UL-QP-18-09 — All validation records across software",
     "createButton": "New Validation",
     "empty": "No validation records",
     "backToDetail": "Back to Software Detail",
+    "selfApprovalForbidden": "You cannot approve a validation you submitted",
+    "dualApprovalForbidden": "Technical and quality approvals must be by different people",
+    "revalidationRequired": "Revalidation required",
+    "goToValidation": "Go to Validations",
+    "notFound": {
+      "title": "Validation not found",
+      "description": "The requested validation record does not exist.",
+      "backToList": "Back to All Validations"
+    },
     "columns": {
       "type": "Validation Type",
       "status": "Status",

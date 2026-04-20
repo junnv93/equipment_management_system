@@ -26,6 +26,7 @@ import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
+import { buildContentDisposition } from '../../common/http/content-disposition.util';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import { HistoryCardService } from './services/history-card.service';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
@@ -74,7 +75,7 @@ export class EquipmentHistoryController {
 
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Disposition': buildContentDisposition(filename),
       'Content-Length': buffer.length,
     });
     res.send(buffer);

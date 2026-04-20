@@ -32,6 +32,7 @@
   "checkoutsImportShared": "Internal Shared Import",
   "checkoutsImportReceive": "Receive Confirmation",
   "software": "Software Management",
+  "softwareValidations": "SW Validations",
   "cables": "Cable Management",
   "cablesCreate": "Register Cable",
   "cablesDetail": "Cable Detail",

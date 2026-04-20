@@ -23,6 +23,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { MULTER_UTF8_OPTIONS } from '../../common/file-upload/file-upload.module';
+import { buildContentDisposition } from '../../common/http/content-disposition.util';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
@@ -134,7 +135,7 @@ export class DataMigrationController {
     );
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename="equipment-migration-template.xlsx"'
+      buildContentDisposition('equipment-migration-template.xlsx')
     );
     res.send(buffer);
   }
@@ -162,7 +163,10 @@ export class DataMigrationController {
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
-    res.setHeader('Content-Disposition', `attachment; filename="migration-errors-${dateStr}.xlsx"`);
+    res.setHeader(
+      'Content-Disposition',
+      buildContentDisposition(`migration-errors-${dateStr}.xlsx`)
+    );
     res.send(buffer);
   }
 }

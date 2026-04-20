@@ -304,33 +304,19 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   },
 
   // ─── 소프트웨어 유효성 확인 (Software Validation) ───
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_SUBMITTED]: {
+  // 서비스 레이어(invalidateCache)가 sw-validations:list/detail/pending + approvals + test-software:detail 를
+  // 동기적으로 무효화하므로 registry 항목은 대시보드 카운트 갱신만 담당.
+  [CACHE_EVENTS.SW_VALIDATION_SUBMITTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
-    ],
   },
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_APPROVED]: {
+  [CACHE_EVENTS.SW_VALIDATION_APPROVED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
-    ],
   },
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_QUALITY_APPROVED]: {
+  [CACHE_EVENTS.SW_VALIDATION_QUALITY_APPROVED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
-    ],
   },
-  [NOTIFICATION_EVENTS.SOFTWARE_VALIDATION_REJECTED]: {
+  [CACHE_EVENTS.SW_VALIDATION_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [
-      { pattern: `${CACHE_KEY_PREFIXES.SOFTWARE_VALIDATIONS}*` },
-      { pattern: `${CACHE_KEY_PREFIXES.APPROVALS}*` },
-    ],
   },
 
   // ─── 교정 인자 (Calibration Factor) ───

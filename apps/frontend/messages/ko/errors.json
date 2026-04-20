@@ -203,6 +203,15 @@
     "NON_EXPORTABLE_VALIDATION_STATUS": "해당 상태의 유효성 확인은 내보낼 수 없습니다.",
     "MISSING_VALIDATION_ID": "유효성 확인 ID가 필요합니다.",
     "SCOPE_RESOURCE_MISMATCH": "요청한 유효성 확인에 접근할 권한이 없습니다.",
-    "unknown": "유효성 확인 처리 중 오류가 발생했습니다."
+    "unknown": "유효성 확인 처리 중 오류가 발생했습니다.",
+    "selfApprovalForbidden": "본인이 제출한 유효성 확인은 승인할 수 없습니다 (ISO/IEC 17025 §6.2.2)",
+    "dualApprovalForbidden": "기술 승인자와 품질 승인자는 서로 다른 사람이어야 합니다",
+    "itemLimitExceededAcquisition": "획득 기능 항목은 유효성 확인 당 1개만 허용됩니다",
+    "itemLimitExceededProcessing": "처리 기능 항목은 유효성 확인 당 1개만 허용됩니다",
+    "itemLimitExceededControl": "제어 기능 항목은 유효성 확인 당 최대 3개까지 허용됩니다",
+    "versionConflict": "다른 사용자가 이미 수정했습니다. 다시 로드 후 시도해 주세요.",
+    "submitFailed": "승인 요청에 실패했습니다",
+    "approvalFailed": "유효성 확인 승인에 실패했습니다",
+    "revalidationFailed": "재검증 요청에 실패했습니다"
   }
 }

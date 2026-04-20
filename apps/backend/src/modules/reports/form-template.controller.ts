@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { buildContentDisposition } from '../../common/http/content-disposition.util';
 import { FormTemplateService } from './form-template.service';
 import {
   CreateFormTemplatePipe,
@@ -226,7 +227,7 @@ export class FormTemplateController {
 
     res.set({
       'Content-Type': row.mimeType,
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(row.originalFilename)}`,
+      'Content-Disposition': buildContentDisposition(row.originalFilename),
       'Content-Length': buffer.length,
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     });

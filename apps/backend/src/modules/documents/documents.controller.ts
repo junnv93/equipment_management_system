@@ -32,6 +32,7 @@ import { Permission } from '@equipment-management/shared-constants';
 import { DOCUMENT_TYPE_VALUES, type DocumentType } from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
+import { buildContentDisposition } from '../../common/http/content-disposition.util';
 import { extractUserId } from '../../common/utils/extract-user';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { DocumentWithIntegrity } from '../../common/file-upload/document.service';
@@ -263,10 +264,9 @@ export class DocumentsController {
     }
 
     // Local 드라이버: 서버 프록시 다운로드
-    const encodedFileName = encodeURIComponent(info.fileName);
     res.set({
       'Content-Type': info.mimeType,
-      'Content-Disposition': `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
+      'Content-Disposition': buildContentDisposition(info.fileName),
       'Content-Length': String(info.buffer.length),
       ...(info.fileHash ? { 'X-File-Hash': info.fileHash } : {}),
     });

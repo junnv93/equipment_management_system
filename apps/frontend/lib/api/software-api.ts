@@ -28,6 +28,8 @@ export interface TestSoftware {
   location: string | null;
   availability: SoftwareAvailability;
   requiresValidation: boolean;
+  latestValidationId: string | null;
+  latestValidatedAt: string | null;
   site: string | null;
   version: number;
   createdAt: string;
@@ -200,6 +202,14 @@ const testSoftwareApi = {
 };
 
 const softwareValidationApi = {
+  listAll: async (
+    params?: Record<string, string>
+  ): Promise<PaginatedResponse<SoftwareValidation>> => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiClient
+      .get(`${API_ENDPOINTS.SOFTWARE_VALIDATIONS.LIST_ALL}${query}`)
+      .then((res) => transformPaginatedResponse<SoftwareValidation>(res));
+  },
   list: async (softwareId: string): Promise<PaginatedResponse<SoftwareValidation>> => {
     return apiClient
       .get(API_ENDPOINTS.SOFTWARE_VALIDATIONS.LIST(softwareId))

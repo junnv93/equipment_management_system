@@ -194,6 +194,20 @@ export const FRONTEND_ROUTES = {
   },
 
   // ============================================================================
+  // 소프트웨어 유효성 확인 글로벌 뷰 (UL-QP-18-09)
+  // 개별 소프트웨어와 무관하게 모든 유효성 확인 레코드를 조회/관리하는 전역 페이지.
+  // ============================================================================
+  SOFTWARE_VALIDATIONS: {
+    LIST: '/software-validations',
+    DETAIL: (id: string) => `/software-validations/${id}`,
+    /** 특정 소프트웨어의 유효성 확인 목록으로 필터링된 진입 */
+    BY_SOFTWARE: (softwareId: string) =>
+      `/software-validations?softwareId=${encodeURIComponent(softwareId)}`,
+    /** 재검증 필요 항목만 필터링 */
+    REVALIDATION_REQUIRED: '/software-validations?status=revalidation_required',
+  },
+
+  // ============================================================================
   // 케이블/경로손실 관리 (UL-QP-18-08)
   // ============================================================================
   CABLES: {

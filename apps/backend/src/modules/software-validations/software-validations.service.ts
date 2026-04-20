@@ -1,11 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, or, desc, asc, sql, inArray, count } from 'drizzle-orm';
 import {
@@ -20,6 +13,8 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
+import { CACHE_EVENTS } from '../../common/cache/cache-events';
+import { assertIndependentApprover } from '../../common/guards/assert-independent-approver';
 import type { CreateValidationInput } from './dto/create-validation.dto';
 import type { UpdateValidationInput } from './dto/update-validation.dto';
 import type { ValidationQueryInput } from './dto/validation-query.dto';
@@ -42,14 +37,19 @@ export class SoftwareValidationsService extends VersionedBaseService {
     return `${this.CACHE_PREFIX}${type}:${id}`;
   }
 
-  private invalidateCache(id?: string): void {
+  private invalidateCache(id?: string, testSoftwareId?: string): void {
     if (id) {
       this.cacheService.delete(this.buildCacheKey('detail', id));
     }
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'pending:');
     this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
+    // testSoftwareId가 있으면 해당 detail 키만 무효화 (전체 prefix flush 방지)
+    if (testSoftwareId) {
+      this.cacheService.delete(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:${testSoftwareId}`);
+    } else {
+      this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
+    }
   }
 
   /**
@@ -120,7 +120,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       })
       .returning();
 
-    this.invalidateCache();
+    this.invalidateCache(undefined, testSoftwareId);
 
     return created;
   }
@@ -312,7 +312,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       'SOFTWARE_VALIDATION_NOT_FOUND'
     );
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.testSoftwareId);
 
     return updated;
   }
@@ -344,7 +344,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       'SOFTWARE_VALIDATION_NOT_FOUND'
     );
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.testSoftwareId);
 
     const swName = await this.getSoftwareName(existing.testSoftwareId);
     try {
@@ -356,6 +356,10 @@ export class SoftwareValidationsService extends VersionedBaseService {
         actorId: submitterId,
         actorName: '',
         timestamp: new Date(),
+      });
+      await this.eventEmitter.emitAsync(CACHE_EVENTS.SW_VALIDATION_SUBMITTED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
       });
     } catch (err) {
       this.logger.error('submit event listener error', err);
@@ -378,12 +382,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
     }
 
     // ISO/IEC 17025 §6.2.2 — 독립성: 제출자와 기술 승인자가 같으면 금지
-    if (existing.submittedBy === approverId) {
-      throw new ForbiddenException({
-        code: 'SELF_APPROVAL_FORBIDDEN',
-        message: 'The submitter cannot technically approve their own validation.',
-      });
-    }
+    assertIndependentApprover(existing.submittedBy ?? '', approverId, 'SELF_APPROVAL_FORBIDDEN');
 
     const updated = await this.updateWithVersion<SoftwareValidation>(
       softwareValidations,
@@ -399,7 +398,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       'SOFTWARE_VALIDATION_NOT_FOUND'
     );
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.testSoftwareId);
 
     const swNameApprove = await this.getSoftwareName(existing.testSoftwareId);
     try {
@@ -411,6 +410,10 @@ export class SoftwareValidationsService extends VersionedBaseService {
         actorId: approverId,
         actorName: '',
         timestamp: new Date(),
+      });
+      await this.eventEmitter.emitAsync(CACHE_EVENTS.SW_VALIDATION_APPROVED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
       });
     } catch (err) {
       this.logger.error('approve event listener error', err);
@@ -437,12 +440,11 @@ export class SoftwareValidationsService extends VersionedBaseService {
     }
 
     // ISO/IEC 17025 §6.2.2 — 기술 승인자와 품질 승인자가 같으면 금지
-    if (existing.technicalApproverId === approverId) {
-      throw new ForbiddenException({
-        code: 'DUAL_APPROVAL_SAME_PERSON_FORBIDDEN',
-        message: 'The technical approver cannot also provide quality approval.',
-      });
-    }
+    assertIndependentApprover(
+      existing.technicalApproverId ?? '',
+      approverId,
+      'DUAL_APPROVAL_SAME_PERSON_FORBIDDEN'
+    );
 
     const updated = await this.updateWithVersion<SoftwareValidation>(
       softwareValidations,
@@ -458,7 +460,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       'SOFTWARE_VALIDATION_NOT_FOUND'
     );
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.testSoftwareId);
 
     const swNameQA = await this.getSoftwareName(existing.testSoftwareId);
     try {
@@ -470,6 +472,10 @@ export class SoftwareValidationsService extends VersionedBaseService {
         actorId: approverId,
         actorName: '',
         timestamp: new Date(),
+      });
+      await this.eventEmitter.emitAsync(CACHE_EVENTS.SW_VALIDATION_QUALITY_APPROVED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
       });
     } catch (err) {
       this.logger.error('qualityApprove event listener error', err);
@@ -514,7 +520,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       'SOFTWARE_VALIDATION_NOT_FOUND'
     );
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.testSoftwareId);
 
     const swNameReject = await this.getSoftwareName(existing.testSoftwareId);
     try {
@@ -527,6 +533,10 @@ export class SoftwareValidationsService extends VersionedBaseService {
         actorName: '',
         timestamp: new Date(),
         reason,
+      });
+      await this.eventEmitter.emitAsync(CACHE_EVENTS.SW_VALIDATION_REJECTED, {
+        validationId: id,
+        testSoftwareId: existing.testSoftwareId,
       });
     } catch (err) {
       this.logger.error('reject event listener error', err);
@@ -563,7 +573,7 @@ export class SoftwareValidationsService extends VersionedBaseService {
       'SOFTWARE_VALIDATION_NOT_FOUND'
     );
 
-    this.invalidateCache(id);
+    this.invalidateCache(id, existing.testSoftwareId);
 
     return updated;
   }

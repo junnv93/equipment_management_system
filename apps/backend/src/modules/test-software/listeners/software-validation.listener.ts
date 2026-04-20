@@ -43,7 +43,8 @@ export class SoftwareValidationListener {
         })
         .where(eq(testSoftware.id, event.testSoftwareId));
 
-      this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.TEST_SOFTWARE);
+      // 품질 승인된 소프트웨어의 detail 캐시만 정확히 무효화 (전체 prefix flush 방지)
+      this.cacheService.delete(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:${event.testSoftwareId}`);
     } catch (err) {
       this.logger.error(
         `Failed to update latestValidationId for testSoftware ${event.testSoftwareId}`,

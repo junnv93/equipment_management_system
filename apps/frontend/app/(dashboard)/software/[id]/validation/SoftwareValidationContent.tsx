@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import {
@@ -43,7 +43,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/components/ui/use-toast';
 import {
   softwareValidationApi,
   type SoftwareValidation,
@@ -51,8 +50,9 @@ import {
 } from '@/lib/api/software-api';
 import testSoftwareApi from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
+import type { PaginatedResponse } from '@/lib/api/types';
 import { UserCombobox } from '@/components/ui/user-combobox';
-import { isConflictError } from '@/lib/api/error';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { VALIDATION_TYPE_VALUES } from '@equipment-management/schemas';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -91,8 +91,6 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
   const t = useTranslations('software');
   const { fmtDate } = useDateFormatter();
   const router = useRouter();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { can, user } = useAuth();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -132,33 +130,40 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
 
   const validations = validationsData?.data ?? [];
 
-  const invalidateValidations = () => {
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.softwareValidations.byTestSoftware(softwareId),
-    });
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.approvals.all,
-    });
-  };
+  type ValidationCache = PaginatedResponse<SoftwareValidation>;
 
-  const handleMutationError = (error: Error) => {
-    if (isConflictError(error)) {
-      toast({
-        title: t('toast.versionConflict'),
-        description: t('toast.versionConflictDesc'),
-        variant: 'destructive',
-      });
-    } else {
-      toast({ title: t('toast.error'), description: error.message, variant: 'destructive' });
-    }
-    invalidateValidations();
-  };
+  const listQueryKey = queryKeys.softwareValidations.byTestSoftware(softwareId);
+  const commonInvalidateKeys = [
+    queryKeys.approvals.all,
+    queryKeys.testSoftware.detail(softwareId),
+  ] as const;
 
-  const createMutation = useMutation({
-    mutationFn: (data: CreateSoftwareValidationDto) =>
-      softwareValidationApi.create(softwareId, data),
-    onSuccess: () => {
-      toast({ title: t('toast.validationCreateSuccess') });
+  const makeStatusUpdate =
+    (status: SoftwareValidation['status']) =>
+    (old: ValidationCache | undefined, { id }: { id: string; version: number }) =>
+      old
+        ? { ...old, data: old.data.map((v) => (v.id === id ? { ...v, status } : v)) }
+        : ({
+            data: [],
+            meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 1 } },
+          } as ValidationCache);
+
+  const createMutation = useOptimisticMutation<
+    SoftwareValidation,
+    CreateSoftwareValidationDto,
+    ValidationCache
+  >({
+    mutationFn: (data) => softwareValidationApi.create(softwareId, data),
+    queryKey: listQueryKey,
+    optimisticUpdate: (old) =>
+      old ??
+      ({
+        data: [],
+        meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 1 } },
+      } as ValidationCache),
+    invalidateKeys: commonInvalidateKeys,
+    successMessage: t('toast.validationCreateSuccess'),
+    onSuccessCallback: () => {
       setIsCreateOpen(false);
       setCreateForm({
         validationType: '',
@@ -179,53 +184,71 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
         controlFunctions: [],
       });
     },
-    onError: handleMutationError,
-    onSettled: invalidateValidations,
   });
 
-  const submitMutation = useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      softwareValidationApi.submit(id, version),
-    onSuccess: () => toast({ title: t('toast.validationSubmitSuccess') }),
-    onError: handleMutationError,
-    onSettled: invalidateValidations,
+  const submitMutation = useOptimisticMutation<
+    SoftwareValidation,
+    { id: string; version: number },
+    ValidationCache
+  >({
+    mutationFn: ({ id, version }) => softwareValidationApi.submit(id, version),
+    queryKey: listQueryKey,
+    optimisticUpdate: makeStatusUpdate('submitted'),
+    invalidateKeys: commonInvalidateKeys,
+    successMessage: t('toast.validationSubmitSuccess'),
   });
 
-  const approveMutation = useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      softwareValidationApi.approve(id, version),
-    onSuccess: () => toast({ title: t('toast.validationApproveSuccess') }),
-    onError: handleMutationError,
-    onSettled: invalidateValidations,
+  const approveMutation = useOptimisticMutation<
+    SoftwareValidation,
+    { id: string; version: number },
+    ValidationCache
+  >({
+    mutationFn: ({ id, version }) => softwareValidationApi.approve(id, version),
+    queryKey: listQueryKey,
+    optimisticUpdate: makeStatusUpdate('approved'),
+    invalidateKeys: commonInvalidateKeys,
+    successMessage: t('toast.validationApproveSuccess'),
   });
 
-  const qualityApproveMutation = useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      softwareValidationApi.qualityApprove(id, version),
-    onSuccess: () => toast({ title: t('toast.validationApproveSuccess') }),
-    onError: handleMutationError,
-    onSettled: invalidateValidations,
+  const qualityApproveMutation = useOptimisticMutation<
+    SoftwareValidation,
+    { id: string; version: number },
+    ValidationCache
+  >({
+    mutationFn: ({ id, version }) => softwareValidationApi.qualityApprove(id, version),
+    queryKey: listQueryKey,
+    optimisticUpdate: makeStatusUpdate('quality_approved'),
+    invalidateKeys: commonInvalidateKeys,
+    successMessage: t('toast.validationApproveSuccess'),
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: ({ id, version, reason }: { id: string; version: number; reason: string }) =>
-      softwareValidationApi.reject(id, version, reason),
-    onSuccess: () => {
-      toast({ title: t('toast.validationRejectSuccess') });
+  const rejectMutation = useOptimisticMutation<
+    SoftwareValidation,
+    { id: string; version: number; reason: string },
+    ValidationCache
+  >({
+    mutationFn: ({ id, version, reason }) => softwareValidationApi.reject(id, version, reason),
+    queryKey: listQueryKey,
+    optimisticUpdate: makeStatusUpdate('rejected'),
+    invalidateKeys: commonInvalidateKeys,
+    successMessage: t('toast.validationRejectSuccess'),
+    onSuccessCallback: () => {
       setIsRejectOpen(false);
       setRejectTarget(null);
       setRejectionReason('');
     },
-    onError: handleMutationError,
-    onSettled: invalidateValidations,
   });
 
-  const reviseMutation = useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      softwareValidationApi.revise(id, version),
-    onSuccess: () => toast({ title: t('toast.validationCreateSuccess') }),
-    onError: handleMutationError,
-    onSettled: invalidateValidations,
+  const reviseMutation = useOptimisticMutation<
+    SoftwareValidation,
+    { id: string; version: number },
+    ValidationCache
+  >({
+    mutationFn: ({ id, version }) => softwareValidationApi.revise(id, version),
+    queryKey: listQueryKey,
+    optimisticUpdate: makeStatusUpdate('draft'),
+    invalidateKeys: commonInvalidateKeys,
+    successMessage: t('toast.validationCreateSuccess'),
   });
 
   const handleCreate = () => {

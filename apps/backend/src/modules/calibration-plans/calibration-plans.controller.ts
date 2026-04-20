@@ -22,6 +22,7 @@ import {
   ApiBearerAuth,
   ApiProduces,
 } from '@nestjs/swagger';
+import { buildContentDisposition } from '../../common/http/content-disposition.util';
 import { CalibrationPlansService } from './calibration-plans.service';
 import { CalibrationPlansExportService } from './calibration-plans-export.service';
 import {
@@ -389,7 +390,7 @@ export class CalibrationPlansController {
 
     res.set({
       'Content-Type': mimeType,
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Disposition': buildContentDisposition(filename),
       'Content-Length': buffer.length,
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     });

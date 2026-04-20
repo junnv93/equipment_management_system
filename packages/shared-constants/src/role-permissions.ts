@@ -131,11 +131,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_TEST_SOFTWARE,
     Permission.CREATE_TEST_SOFTWARE,
     Permission.UPDATE_TEST_SOFTWARE,
-    // 소프트웨어 유효성 확인
+    // 소프트웨어 유효성 확인 (§6.2.2: 기술 승인 담당 — 제출자와 독립)
     Permission.VIEW_SOFTWARE_VALIDATIONS,
     Permission.CREATE_SOFTWARE_VALIDATION,
     Permission.SUBMIT_SOFTWARE_VALIDATION,
     Permission.APPROVE_SOFTWARE_VALIDATION,
+    Permission.APPROVE_TECH_SOFTWARE_VALIDATION,
     // 교정계획서 (작성, 검토요청)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.CREATE_CALIBRATION_PLAN,
@@ -190,10 +191,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_SELF_INSPECTIONS,
     // 보정계수 조회
     Permission.VIEW_CALIBRATION_FACTORS,
-    // 시험용 소프트웨어 조회 + 유효성 확인 승인 (UL-QP-18-09 품질책임자 등록)
+    // 시험용 소프트웨어 조회 + 유효성 확인 품질 승인 (UL-QP-18-09 §6.2.2 독립성)
     Permission.VIEW_TEST_SOFTWARE,
     Permission.VIEW_SOFTWARE_VALIDATIONS,
     Permission.APPROVE_SOFTWARE_VALIDATION,
+    Permission.APPROVE_QUALITY_SOFTWARE_VALIDATION,
     // 교정계획서 (검토 권한)
     Permission.VIEW_CALIBRATION_PLANS,
     Permission.REVIEW_CALIBRATION_PLAN, // 검토 완료
@@ -256,11 +258,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_TEST_SOFTWARE,
     Permission.CREATE_TEST_SOFTWARE,
     Permission.UPDATE_TEST_SOFTWARE,
-    // 소프트웨어 유효성 확인
+    // 소프트웨어 유효성 확인 (시험소장: 전체 승인 + 재검증 요청 권한)
     Permission.VIEW_SOFTWARE_VALIDATIONS,
     Permission.CREATE_SOFTWARE_VALIDATION,
     Permission.SUBMIT_SOFTWARE_VALIDATION,
     Permission.APPROVE_SOFTWARE_VALIDATION,
+    Permission.APPROVE_TECH_SOFTWARE_VALIDATION,
+    Permission.APPROVE_QUALITY_SOFTWARE_VALIDATION,
+    Permission.REVALIDATE_SOFTWARE_VALIDATION,
     // 팀 관리
     Permission.VIEW_TEAMS,
     Permission.CREATE_TEAMS,

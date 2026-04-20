@@ -572,6 +572,9 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     const { casVersion, reviewedBy, reviewComment } = reviewDto;
 
+    // ISO/IEC 17025 §6.2.2 — 독립성: 교정계획서 작성자가 직접 검토할 수 없음
+    assertIndependentApprover(plan.createdBy, reviewedBy, 'REVIEW_SELF_FORBIDDEN');
+
     await this.updateWithVersion(
       calibrationPlans,
       uuid,

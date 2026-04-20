@@ -311,7 +311,7 @@ export const QUERY_CONFIG = {
   SOFTWARE_VALIDATION_PENDING: {
     staleTime: CACHE_TIMES.SHORT,
     gcTime: CACHE_TIMES.MEDIUM,
-    refetchInterval: REFETCH_INTERVALS.IMPORTANT,
+    refetchInterval: REFETCH_INTERVALS.NEAR_REALTIME,
     refetchOnWindowFocus: true,
     retry: 2,
   },

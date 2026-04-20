@@ -18,6 +18,7 @@ import {
   FUNCTION_ITEM_DATA_COL,
   FUNCTION_ITEM_ROWS,
   CONTROL_DATA_START_ROW,
+  CONTROL_MAX_ROWS,
   CONTROL_COLS,
   SIGN_OFF_CELLS,
 } from './software-validation.layout';
@@ -212,14 +213,14 @@ export class SoftwareValidationRendererService {
     }
 
     // T6: 제어 기능 — 4열: equipmentFunction/expectedFunction/observedFunction/acceptanceCriteria
-    if (data.controlFunctions.length > 0) {
-      const ctrl = data.controlFunctions[0];
-      const r = CONTROL_DATA_START_ROW;
+    // 템플릿 R1~R3 = 최대 CONTROL_MAX_ROWS(3)개. DTO에서 max(3) 선제 차단 — [0]만 렌더하던 버그 수정.
+    data.controlFunctions.slice(0, CONTROL_MAX_ROWS).forEach((ctrl, idx) => {
+      const r = CONTROL_DATA_START_ROW + idx;
       doc.setCellValue(T6, r, CONTROL_COLS.equipmentFunction, ctrl.equipmentFunction);
       doc.setCellValue(T6, r, CONTROL_COLS.expectedFunction, ctrl.expectedFunction);
       doc.setCellValue(T6, r, CONTROL_COLS.observedFunction, ctrl.observedFunction);
       doc.setCellValue(T6, r, CONTROL_COLS.acceptanceCriteria, ctrl.acceptanceCriteria);
-    }
+    });
 
     // T8: 승인란 — 서명 병렬 로딩
     doc.setCellValue(

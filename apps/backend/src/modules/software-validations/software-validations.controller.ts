@@ -159,7 +159,7 @@ export class SoftwareValidationsController {
   }
 
   @Patch(':uuid/approve')
-  @RequirePermissions(Permission.APPROVE_SOFTWARE_VALIDATION)
+  @RequirePermissions(Permission.APPROVE_TECH_SOFTWARE_VALIDATION)
   @AuditLog({
     action: 'approve',
     entityType: 'software_validation',
@@ -176,7 +176,7 @@ export class SoftwareValidationsController {
   }
 
   @Patch(':uuid/quality-approve')
-  @RequirePermissions(Permission.APPROVE_SOFTWARE_VALIDATION)
+  @RequirePermissions(Permission.APPROVE_QUALITY_SOFTWARE_VALIDATION)
   @AuditLog({
     action: 'approve',
     entityType: 'software_validation',

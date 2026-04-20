@@ -26,6 +26,7 @@ import {
   REPORT_PERIOD_VALUES,
 } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
+import { buildContentDisposition } from '../../common/http/content-disposition.util';
 import type {
   EquipmentUsageReport,
   CalibrationStatusReport,
@@ -397,7 +398,7 @@ export class ReportsController {
     );
     res.set({
       'Content-Type': mimeType,
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Disposition': buildContentDisposition(filename),
       'Content-Length': buffer.length,
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     });
@@ -414,7 +415,7 @@ export class ReportsController {
     const { buffer, mimeType, filename } = await this.reportExportService.generate(data, format);
     res.set({
       'Content-Type': mimeType,
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Disposition': buildContentDisposition(filename),
       'Content-Length': buffer.length,
       'Cache-Control': 'no-cache, no-store, must-revalidate',
     });

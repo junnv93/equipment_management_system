@@ -205,5 +205,16 @@
       "Refresh the page and try again",
       "Contact the system administrator if the problem persists"
     ]
+  },
+  "softwareValidation": {
+    "selfApprovalForbidden": "You cannot approve a validation you submitted (ISO/IEC 17025 §6.2.2)",
+    "dualApprovalForbidden": "Technical and quality approvals must be by different people",
+    "itemLimitExceededAcquisition": "Only one acquisition function item is allowed per validation",
+    "itemLimitExceededProcessing": "Only one processing function item is allowed per validation",
+    "itemLimitExceededControl": "Maximum 3 control function items are allowed per validation",
+    "versionConflict": "Another user has modified this validation. Please reload and try again.",
+    "submitFailed": "Failed to submit validation for approval",
+    "approvalFailed": "Failed to approve validation",
+    "revalidationFailed": "Failed to request revalidation"
   }
 }

@@ -7,6 +7,7 @@ import {
   acquisitionOrProcessingArraySchema,
   controlItemArraySchema,
 } from '@equipment-management/schemas';
+import { CONTROL_MAX_ROWS } from '../services/software-validation.layout';
 
 const datePattern = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, VM.date.invalidYMD);
 
@@ -47,9 +48,10 @@ export const createValidationSchema = z
     operatingUnitDescription: z.string().optional(),
     softwareComponents: z.string().optional(),
     hardwareComponents: z.string().optional(),
-    acquisitionFunctions: acquisitionOrProcessingArraySchema.optional(),
-    processingFunctions: acquisitionOrProcessingArraySchema.optional(),
-    controlFunctions: controlItemArraySchema.optional(),
+    // UL-QP-18-09 템플릿 구조: T4/T5 = 단일 기능(3행×2열), T6 = 최대 CONTROL_MAX_ROWS개(R1~R3)
+    acquisitionFunctions: acquisitionOrProcessingArraySchema.max(1).optional(),
+    processingFunctions: acquisitionOrProcessingArraySchema.max(1).optional(),
+    controlFunctions: controlItemArraySchema.max(CONTROL_MAX_ROWS).optional(),
     performedBy: uuidString(VM.uuid.invalid('수행자')).optional(),
   })
   .superRefine((data, ctx) => {

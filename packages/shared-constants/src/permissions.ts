@@ -100,12 +100,19 @@ export enum Permission {
   UPDATE_TEST_SOFTWARE = 'update:test-software',
 
   // ============================================================================
-  // 소프트웨어 유효성 확인 관련 권한
+  // 소프트웨어 유효성 확인 관련 권한 (ISO/IEC 17025 §6.2.2 독립성)
   // ============================================================================
   VIEW_SOFTWARE_VALIDATIONS = 'view:software-validations',
   CREATE_SOFTWARE_VALIDATION = 'create:software-validation',
   SUBMIT_SOFTWARE_VALIDATION = 'submit:software-validation',
+  /** 공통 승인 게이트: findPending/reject 엔드포인트 접근. 역할 무관하게 승인 권한자 공통 */
   APPROVE_SOFTWARE_VALIDATION = 'approve:software-validation',
+  /** 기술 승인 (§6.2.2: 제출자와 달라야 함) — technical_manager 전용 */
+  APPROVE_TECH_SOFTWARE_VALIDATION = 'approve:software-validation:technical',
+  /** 품질 승인 (§6.2.2: 기술 승인자와 달라야 함) — quality_manager 전용 */
+  APPROVE_QUALITY_SOFTWARE_VALIDATION = 'approve:software-validation:quality',
+  /** 재검증 요청 — 소프트웨어 버전 변경 시 기존 유효성 확인 무효화 */
+  REVALIDATE_SOFTWARE_VALIDATION = 'revalidate:software-validation',
 
   // ============================================================================
   // 팀 관련 권한
@@ -261,7 +268,10 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.VIEW_SOFTWARE_VALIDATIONS]: '소프트웨어 유효성 확인 조회',
   [Permission.CREATE_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 생성',
   [Permission.SUBMIT_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 제출',
-  [Permission.APPROVE_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 승인',
+  [Permission.APPROVE_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 승인 (공통)',
+  [Permission.APPROVE_TECH_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 기술 승인',
+  [Permission.APPROVE_QUALITY_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 품질 승인',
+  [Permission.REVALIDATE_SOFTWARE_VALIDATION]: '소프트웨어 유효성 확인 재검증 요청',
 
   [Permission.VIEW_TEAMS]: '팀 조회',
   [Permission.CREATE_TEAMS]: '팀 생성',

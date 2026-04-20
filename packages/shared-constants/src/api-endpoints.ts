@@ -258,6 +258,7 @@ export const API_ENDPOINTS = {
   // ============================================================================
   SOFTWARE_VALIDATIONS: {
     LIST: (softwareId: string) => `/api/test-software/${softwareId}/validations`,
+    LIST_ALL: '/api/software-validations',
     GET: (id: string) => `/api/software-validations/${id}`,
     CREATE: (softwareId: string) => `/api/test-software/${softwareId}/validations`,
     UPDATE: (id: string) => `/api/software-validations/${id}`,

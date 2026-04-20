@@ -16,6 +16,13 @@ export const CACHE_EVENTS = {
   REPAIR_HISTORY_CREATED: 'repairHistory.created',
   REPAIR_HISTORY_UPDATED: 'repairHistory.updated',
   REPAIR_HISTORY_DELETED: 'repairHistory.deleted',
+
+  // ─── 소프트웨어 유효성 확인 (SW Validation) ───
+  // 캐시 무효화 전용: list + testSoftware.detail 두 패턴만 무효화 (NOTIFICATION_EVENTS와 분리)
+  SW_VALIDATION_SUBMITTED: 'cache.swValidation.submitted',
+  SW_VALIDATION_APPROVED: 'cache.swValidation.approved',
+  SW_VALIDATION_QUALITY_APPROVED: 'cache.swValidation.qualityApproved',
+  SW_VALIDATION_REJECTED: 'cache.swValidation.rejected',
 } as const;
 
 export type CacheEventName = (typeof CACHE_EVENTS)[keyof typeof CACHE_EVENTS];
@@ -31,4 +38,10 @@ export interface NCAttachmentCachePayload {
 /** 수리 이력 캐시 이벤트 페이로드 */
 export interface RepairHistoryCachePayload {
   equipmentId: string;
+}
+
+/** SW 유효성 확인 캐시 이벤트 페이로드 */
+export interface SwValidationCachePayload {
+  validationId: string;
+  testSoftwareId: string;
 }

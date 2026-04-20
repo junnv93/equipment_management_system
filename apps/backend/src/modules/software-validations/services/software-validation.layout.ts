@@ -89,8 +89,13 @@ export const FUNCTION_ITEM_ROWS = {
  * T6 제어기능 셀 좌표 — 4열 구조.
  * R0 = 헤더(유지), R1~R3 = 데이터 행.
  * 열: col0=장비기능, col1=예상기능, col2=확인기능, col3=수락기준
+ *
+ * CONTROL_MAX_ROWS: 템플릿에 존재하는 데이터 행 수 (R1~R3).
+ * ISO/IEC 17025 §7.2.1.5 반복성 요건 충족을 위해 최대 3개 제어 함수 지원.
+ * UI DTO에서 z.array(...).max(CONTROL_MAX_ROWS) 로 선제 차단.
  */
 export const CONTROL_DATA_START_ROW = 1 as const;
+export const CONTROL_MAX_ROWS = 3 as const;
 export const CONTROL_COLS = {
   equipmentFunction: 0,
   expectedFunction: 1,
