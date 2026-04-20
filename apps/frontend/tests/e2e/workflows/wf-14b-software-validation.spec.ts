@@ -3,12 +3,17 @@
  *
  * 방법 1: 공급자 시연 — TE 양식 작성 → TM 확인 → QM 등록
  * 방법 2: UL 자체 시험 — TE 시험 실시 → TM 승인 → QM 등록
+ * 보안 게이트: 자기승인 차단(ISO 17025 §6.2.2) + 이중승인 차단
+ * 재검증 흐름: rejected → revise → draft 복귀
+ * DOCX 검증: T6 제어기능 3행 export XML 검증
  *
  * @see docs/workflows/critical-workflows.md WF-14b
  * @see docs/procedure/절차서/시험소프트웨어유효성확인.md
  */
 
+import PizZip from 'pizzip';
 import { test, expect } from '../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../shared/constants/shared-test-data';
 import {
   createTestSoftware,
   createSoftwareValidation,
@@ -16,11 +21,17 @@ import {
   approveSoftwareValidation,
   qualityApproveSoftwareValidation,
   rejectSoftwareValidation,
+  reviseSoftwareValidation,
   extractId,
+  extractVersion,
   clearBackendCache,
   cleanupSharedPool,
   apiGet,
+  apiPatch,
 } from './helpers/workflow-helpers';
+import { getBackendToken } from '../shared/helpers/api-helpers';
+
+const BACKEND_URL = BASE_URLS.BACKEND;
 
 test.describe('WF-14b: 소프트웨어 유효성 확인', () => {
   test.describe.configure({ mode: 'serial' });
@@ -200,6 +211,211 @@ test.describe('WF-14b: 소프트웨어 유효성 확인', () => {
       const body = await resp.json();
       const data = (body.data ?? body) as Record<string, unknown>;
       expect(data.status).toBe('rejected');
+    });
+  });
+
+  // ====================================================================
+  // Steps 12-13: 보안 게이트 — ISO 17025 §6.2.2 독립성 요건
+  // ====================================================================
+
+  test.describe('자기승인 차단 (Step 12)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    let validationId: string;
+
+    test('Step 12-setup: TE가 양식 작성 + 제출', async ({ testOperatorPage: page }) => {
+      await clearBackendCache();
+      const body = await createSoftwareValidation(page, softwareId, 'vendor', {
+        vendorName: 'Self-Approval Test Vendor',
+        vendorSummary: '자기승인 차단 검증용',
+        softwareVersion: '1.0.0-sa',
+      });
+      validationId = extractId(body);
+      await submitSoftwareValidation(page, validationId);
+    });
+
+    test('Step 12: TE(제출자)가 직접 approve 시도 → 403 SELF_APPROVAL_FORBIDDEN', async ({
+      testOperatorPage: page,
+    }) => {
+      await clearBackendCache();
+      const detail = await apiGet(
+        page,
+        `/api/software-validations/${validationId}`,
+        'test_engineer'
+      );
+      const body = await detail.json();
+      const version = extractVersion(body);
+      const resp = await apiPatch(
+        page,
+        `/api/software-validations/${validationId}/approve`,
+        { version, comment: '자기승인 시도' },
+        'test_engineer'
+      );
+      expect(resp.status()).toBe(403);
+      const err = await resp.json();
+      const errCode = (err.error ?? err) as Record<string, unknown>;
+      expect(errCode.code ?? errCode.message ?? JSON.stringify(err)).toContain(
+        'SELF_APPROVAL_FORBIDDEN'
+      );
+    });
+  });
+
+  test.describe('이중승인 차단 (Step 13)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    let validationId: string;
+
+    test('Step 13-setup: TE 작성·제출 → TM 기술승인 완료', async ({
+      testOperatorPage: tePage,
+      techManagerPage: tmPage,
+    }) => {
+      await clearBackendCache();
+      const body = await createSoftwareValidation(tePage, softwareId, 'vendor', {
+        vendorName: 'Dual-Approval Test Vendor',
+        vendorSummary: '이중승인 차단 검증용',
+        softwareVersion: '1.0.0-da',
+      });
+      validationId = extractId(body);
+      await submitSoftwareValidation(tePage, validationId);
+      await clearBackendCache();
+      await approveSoftwareValidation(tmPage, validationId);
+    });
+
+    test('Step 13: TM(기술승인자)이 quality-approve 시도 → 403 DUAL_APPROVAL_SAME_PERSON_FORBIDDEN', async ({
+      techManagerPage: page,
+    }) => {
+      await clearBackendCache();
+      const detail = await apiGet(
+        page,
+        `/api/software-validations/${validationId}`,
+        'technical_manager'
+      );
+      const body = await detail.json();
+      const version = extractVersion(body);
+      const resp = await apiPatch(
+        page,
+        `/api/software-validations/${validationId}/quality-approve`,
+        { version, comment: '이중승인 시도' },
+        'technical_manager'
+      );
+      expect(resp.status()).toBe(403);
+      const err = await resp.json();
+      const errCode = (err.error ?? err) as Record<string, unknown>;
+      expect(errCode.code ?? errCode.message ?? JSON.stringify(err)).toContain(
+        'DUAL_APPROVAL_SAME_PERSON_FORBIDDEN'
+      );
+    });
+  });
+
+  // ====================================================================
+  // Step 14: 재검증 흐름 — rejected → revise → draft 복귀
+  // ====================================================================
+
+  test.describe('재검증 흐름 (Step 14)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    let validationId: string;
+
+    test('Step 14-setup: TE 작성·제출 → TM 반려', async ({
+      testOperatorPage: tePage,
+      techManagerPage: tmPage,
+    }) => {
+      await clearBackendCache();
+      const body = await createSoftwareValidation(tePage, softwareId, 'vendor', {
+        vendorName: 'Revise Test Vendor',
+        vendorSummary: '재검증 흐름 테스트',
+        softwareVersion: '1.0.0-rv',
+      });
+      validationId = extractId(body);
+      await submitSoftwareValidation(tePage, validationId);
+      await clearBackendCache();
+      await rejectSoftwareValidation(tmPage, validationId, '보완 필요 — 재검증 흐름 테스트');
+    });
+
+    test('Step 14: TE가 revise 호출 → status draft 복귀', async ({ testOperatorPage: page }) => {
+      await clearBackendCache();
+      const body = await reviseSoftwareValidation(page, validationId);
+      const data = (body.data ?? body) as Record<string, unknown>;
+      expect(data.status).toBe('draft');
+      // 반려 정보 초기화 검증
+      expect(data.rejectionReason).toBeNull();
+      expect(data.rejectedBy).toBeNull();
+    });
+  });
+
+  // ====================================================================
+  // Step 15: T6 DOCX 검증 — 제어기능 3행 export XML
+  // ====================================================================
+
+  test.describe('T6 DOCX export 검증 (Step 15)', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    let validationId: string;
+
+    test('Step 15-setup: self 타입 유효성확인 전체 승인', async ({
+      testOperatorPage: tePage,
+      techManagerPage: tmPage,
+      qualityManagerPage: qmPage,
+    }) => {
+      await clearBackendCache();
+      const body = await createSoftwareValidation(tePage, softwareId, 'self', {
+        referenceDocuments: 'IEC 62209-1528:2020',
+        operatingUnitDescription: 'T6 DOCX 검증용 시스템',
+        softwareComponents: 'DASY8 SAR v16.2',
+        hardwareComponents: 'EX3DV4 프로브',
+        acquisitionFunctions: [
+          {
+            functionName: 'T6 데이터 획득',
+            independentMethod: '수동 스캔',
+            acceptanceCriteria: '차이 < 5%',
+          },
+        ],
+        processingFunctions: [
+          {
+            functionName: 'T6 데이터 처리',
+            independentMethod: '수동 계산',
+            acceptanceCriteria: '차이 < 3%',
+          },
+        ],
+        controlFunctions: [
+          {
+            controlledFunction: '로봇 이동 제어',
+            expectedFunction: 'XYZ 좌표 이동',
+            observedFunction: '정상 이동 확인',
+            independentMethod: '물리적 위치 확인',
+            acceptanceCriteria: '오차 < 1mm',
+          },
+        ],
+        softwareVersion: '16.2.2-t6test',
+      });
+      validationId = extractId(body);
+      await submitSoftwareValidation(tePage, validationId);
+      await clearBackendCache();
+      await approveSoftwareValidation(tmPage, validationId);
+      await clearBackendCache();
+      await qualityApproveSoftwareValidation(qmPage, validationId);
+    });
+
+    test('Step 15: UL-QP-18-09 DOCX export → T6 제어기능 XML 검증', async ({
+      testOperatorPage: page,
+    }) => {
+      await clearBackendCache();
+      const token = await getBackendToken(page, 'test_engineer');
+      const resp = await page.request.get(
+        `${BACKEND_URL}/api/reports/export/form/UL-QP-18-09?validationId=${validationId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      expect(resp.status()).toBe(200);
+
+      const docxBuffer = await resp.body();
+      const zip = new PizZip(docxBuffer);
+      const docXml = zip.file('word/document.xml')?.asText();
+      expect(docXml, 'word/document.xml이 DOCX 안에 존재해야 함').toBeTruthy();
+
+      // T6 제어기능(controlFunctions) 첫 번째 항목 검증
+      expect(docXml).toContain('로봇 이동 제어');
+      expect(docXml).toContain('XYZ 좌표 이동');
+      expect(docXml).toContain('정상 이동 확인');
     });
   });
 });

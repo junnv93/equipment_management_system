@@ -838,6 +838,25 @@ export async function rejectSoftwareValidation(
   return resp.json();
 }
 
+/** 재수정 요청 (TE) — rejected → draft 복귀, CAS-Aware */
+export async function reviseSoftwareValidation(
+  page: Page,
+  validationId: string,
+  role = 'test_engineer'
+) {
+  const detail = await apiGet(page, `/api/software-validations/${validationId}`, role);
+  const body = await detail.json();
+  const version = extractVersion(body);
+  const resp = await apiPatch(
+    page,
+    `/api/software-validations/${validationId}/revise`,
+    { version },
+    role
+  );
+  expect(resp.ok()).toBeTruthy();
+  return resp.json();
+}
+
 // Legacy Software Change API (deprecated — kept for backward compat)
 // ============================================================================
 
