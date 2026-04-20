@@ -27,6 +27,7 @@ import {
   CPLAN_005_ID,
   CPLAN_006_ID,
   CPLAN_007_ID,
+  CPLAN_008_ID,
   // Plan Item IDs
   CPLAN_ITEM_001_ID,
   // Calibration IDs (실적 링크용)
@@ -49,12 +50,18 @@ import {
   CPLAN_ITEM_016_ID,
   CPLAN_ITEM_017_ID,
   CPLAN_ITEM_018_ID,
+  CPLAN_ITEM_019_ID,
+  CPLAN_ITEM_020_ID,
+  CPLAN_ITEM_021_ID,
+  CPLAN_ITEM_022_ID,
   // Team IDs
   TEAM_FCC_EMC_RF_SUWON_ID,
   TEAM_GENERAL_EMC_SUWON_ID,
   TEAM_GENERAL_RF_UIWANG_ID,
+  TEAM_AUTOMOTIVE_EMC_SUWON_ID,
   // User IDs — 수원
   USER_TECHNICAL_MANAGER_SUWON_ID,
+  USER_TECHNICAL_MANAGER_SUWON_AUTO_EMC_ID,
   USER_QUALITY_MANAGER_SUWON_ID,
   USER_LAB_MANAGER_SUWON_ID,
   // User IDs — 의왕
@@ -68,6 +75,9 @@ import {
   EQUIP_TRANSMITTER_UIW_W_ID,
   EQUIP_NETWORK_ANALYZER_SUW_E_ID,
   EQUIP_CURRENT_PROBE_SUW_A_ID,
+  EQUIP_HARNESS_COUPLER_SUW_A_ID,
+  EQUIP_INJECTION_CLAMP_SUW_A_ID,
+  EQUIP_BCI_SUW_A_ID,
 } from '../../utils/uuid-constants';
 
 // rejectionStage 타입 안전 참조 (DB 스키마 SSOT)
@@ -75,13 +85,13 @@ const REVIEW_STAGE = REJECTION_STAGES[0]; // 'review'
 const _APPROVAL_STAGE = REJECTION_STAGES[1]; // 'approval'
 
 /**
- * 교정계획서 시드 데이터 (6건)
+ * 교정계획서 시드 데이터 (8건)
  *
  * 상태 분포:
  * - draft (1건): 2026년 수원 FCC EMC/RF, 작성 중
  * - pending_review (1건): 2026년 의왕 General RF, QM 검토 대기
  * - pending_approval (1건): 2026년 수원 General EMC, LM 승인 대기
- * - approved (1건): 2025년 수원 FCC EMC/RF, 승인 완료
+ * - approved (2건): 2025년 수원 FCC EMC/RF + 2026년 수원 Automotive EMC (Excel 내보내기 테스트용)
  * - rejected (1건): 2024년 수원 FCC EMC/RF, 검토 단계 반려
  * - pending_review v2 (1건): 2024년 수원 FCC EMC/RF, 반려 후 재제출
  *
@@ -223,6 +233,28 @@ export const CALIBRATION_PLANS_SEED_DATA: NewCalibrationPlan[] = [
     isLatestVersion: true,
     createdAt: new Date('2023-01-05'),
     updatedAt: new Date('2023-01-13'),
+  },
+
+  // 8. approved — 2026년 수원 Automotive EMC (Excel 내보내기 즉시 확인용)
+  //    전체 워크플로우 완료: Automotive EMC TM → 수원 QM → 수원 LM
+  {
+    id: CPLAN_008_ID,
+    year: 2026,
+    siteId: 'suwon',
+    teamId: TEAM_AUTOMOTIVE_EMC_SUWON_ID,
+    status: CPStatus.APPROVED,
+    createdBy: USER_TECHNICAL_MANAGER_SUWON_AUTO_EMC_ID,
+    submittedAt: new Date('2026-01-08'),
+    reviewedBy: USER_QUALITY_MANAGER_SUWON_ID,
+    reviewedAt: new Date('2026-01-10'),
+    reviewComment: '항목 검토 완료. 승인 요청합니다.',
+    approvedBy: USER_LAB_MANAGER_SUWON_ID,
+    approvedAt: new Date('2026-01-13'),
+    version: 1,
+    casVersion: 4,
+    isLatestVersion: true,
+    createdAt: new Date('2026-01-05'),
+    updatedAt: new Date('2026-01-13'),
   },
 ];
 
@@ -473,5 +505,65 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
     snapshotCalibrationAgency: 'KTC',
     plannedCalibrationDate: new Date('2023-08-01'),
     plannedCalibrationAgency: 'KTC',
+  },
+
+  // ── CPLAN_008 (approved, 2026 수원 Automotive EMC) ──────────────────────
+  //    항목 1~2: 교정 완료 + 기술책임자 확인
+  //    항목 3~4: 교정 완료, 확인 대기 (실적만 있고 확인은 아직)
+
+  {
+    id: CPLAN_ITEM_019_ID,
+    planId: CPLAN_008_ID,
+    equipmentId: EQUIP_HARNESS_COUPLER_SUW_A_ID,
+    sequenceNumber: 1,
+    snapshotValidityDate: new Date('2025-06-01'),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'KATRI',
+    plannedCalibrationDate: new Date('2026-06-01'),
+    plannedCalibrationAgency: 'KATRI',
+    actualCalibrationDate: new Date('2026-05-28'),
+    confirmedBy: USER_TECHNICAL_MANAGER_SUWON_AUTO_EMC_ID,
+    confirmedAt: new Date('2026-06-02'),
+    notes: '정기 외부교정 완료',
+  },
+  {
+    id: CPLAN_ITEM_020_ID,
+    planId: CPLAN_008_ID,
+    equipmentId: EQUIP_CURRENT_PROBE_SUW_A_ID,
+    sequenceNumber: 2,
+    snapshotValidityDate: new Date('2025-04-01'),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'KATRI',
+    plannedCalibrationDate: new Date('2026-04-01'),
+    plannedCalibrationAgency: 'KATRI',
+    actualCalibrationDate: new Date('2026-03-30'),
+    confirmedBy: USER_TECHNICAL_MANAGER_SUWON_AUTO_EMC_ID,
+    confirmedAt: new Date('2026-04-05'),
+  },
+  {
+    id: CPLAN_ITEM_021_ID,
+    planId: CPLAN_008_ID,
+    equipmentId: EQUIP_INJECTION_CLAMP_SUW_A_ID,
+    sequenceNumber: 3,
+    snapshotValidityDate: new Date('2025-09-01'),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'KTC',
+    plannedCalibrationDate: new Date('2026-09-01'),
+    plannedCalibrationAgency: 'KTC',
+    actualCalibrationDate: new Date('2026-08-25'),
+    // confirmedBy 없음 — 확인 대기 중
+    notes: '교정 완료, 확인 예정',
+  },
+  {
+    id: CPLAN_ITEM_022_ID,
+    planId: CPLAN_008_ID,
+    equipmentId: EQUIP_BCI_SUW_A_ID,
+    sequenceNumber: 4,
+    snapshotValidityDate: new Date('2025-11-01'),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'HCT',
+    plannedCalibrationDate: new Date('2026-11-01'),
+    plannedCalibrationAgency: 'HCT',
+    // actualCalibrationDate 없음 — 교정 미완료
   },
 ];

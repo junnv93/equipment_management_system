@@ -154,9 +154,11 @@ export const CPLAN_003_ID = 'cccc0003-0003-4003-8003-000000000003'; // pending_a
 export const CPLAN_004_ID = 'cccc0004-0004-4004-8004-000000000004'; // approved (v1, 2025 suwon)
 export const CPLAN_005_ID = 'cccc0005-0005-4005-8005-000000000005'; // rejected (v1, 2024 suwon, review stage)
 export const CPLAN_006_ID = 'cccc0006-0006-4006-8006-000000000006'; // pending_review (v2, re-submitted from CPLAN_005)
+export const CPLAN_007_ID = 'cccc0007-0007-4007-8007-000000000007'; // pending_approval (v1, 2023 suwon FCC_EMC_RF)
+export const CPLAN_008_ID = 'cccc0008-0008-4008-8008-000000000008'; // approved (v1, 2026 suwon Automotive EMC) — export test
 
 // =============================================================================
-// CALIBRATION PLAN ITEMS (12 items across 6 plans)
+// CALIBRATION PLAN ITEMS (12 items across 6 plans, + items 013-016 for CPLAN_001 expansion)
 // Pattern: cccc10NN-00NN-40NN-80NN-0000000000NN
 // =============================================================================
 
@@ -172,6 +174,16 @@ export const CPLAN_ITEM_009_ID = 'cccc1009-0009-4009-8009-000000000009'; // CPLA
 export const CPLAN_ITEM_010_ID = 'cccc1010-0010-4010-8010-000000000010'; // CPLAN_005 item 2
 export const CPLAN_ITEM_011_ID = 'cccc1011-0011-4011-8011-000000000011'; // CPLAN_006 item 1
 export const CPLAN_ITEM_012_ID = 'cccc1012-0012-4012-8012-000000000012'; // CPLAN_006 item 2
+export const CPLAN_ITEM_013_ID = 'cccc1013-0013-4013-8013-000000000013'; // CPLAN_001 item 3 (expanded)
+export const CPLAN_ITEM_014_ID = 'cccc1014-0014-4014-8014-000000000014'; // CPLAN_001 item 4 (expanded)
+export const CPLAN_ITEM_015_ID = 'cccc1015-0015-4015-8015-000000000015'; // CPLAN_001 item 5 (expanded)
+export const CPLAN_ITEM_016_ID = 'cccc1016-0016-4016-8016-000000000016'; // CPLAN_001 item 6 (expanded)
+export const CPLAN_ITEM_017_ID = 'cccc1017-0017-4017-8017-000000000017'; // CPLAN_007 item 1
+export const CPLAN_ITEM_018_ID = 'cccc1018-0018-4018-8018-000000000018'; // CPLAN_007 item 2
+export const CPLAN_ITEM_019_ID = 'cccc1019-0019-4019-8019-000000000019'; // CPLAN_008 item 1 (Harness Coupler)
+export const CPLAN_ITEM_020_ID = 'cccc1020-0020-4020-8020-000000000020'; // CPLAN_008 item 2 (Current Probe)
+export const CPLAN_ITEM_021_ID = 'cccc1021-0021-4021-8021-000000000021'; // CPLAN_008 item 3 (Injection Clamp)
+export const CPLAN_ITEM_022_ID = 'cccc1022-0022-4022-8022-000000000022'; // CPLAN_008 item 4 (BCI Probe)
 
 // =============================================================================
 // NON-CONFORMANCES (10 non-conformances)
