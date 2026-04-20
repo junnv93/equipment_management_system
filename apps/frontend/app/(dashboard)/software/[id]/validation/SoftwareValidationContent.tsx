@@ -136,6 +136,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
   const commonInvalidateKeys = [
     queryKeys.approvals.all,
     queryKeys.testSoftware.detail(softwareId),
+    queryKeys.softwareValidations.lists(),
   ] as const;
 
   const makeStatusUpdate =
