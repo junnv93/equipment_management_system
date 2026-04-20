@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -46,21 +46,28 @@ export function ValidationEditDialog({
 
   const [editForm, setEditForm] = useState<EditForm | null>(null);
 
+  // ref로 최신 validation 캡처 — open 전환 시에만 폼 초기화.
+  // [open, validation] 의존성으로 두면 background refetch 시 사용자 편집 내용이 초기화됨.
+  // (MEDIUM staleTime 2분 + refetchOnWindowFocus: true 조합에서 실제 발생)
+  const validationRef = useRef(validation);
+  validationRef.current = validation;
+
   useEffect(() => {
     if (open) {
+      const v = validationRef.current;
       setEditForm({
-        vendorName: validation.vendorName ?? '',
-        vendorSummary: validation.vendorSummary ?? '',
-        receivedBy: validation.receivedBy ?? '',
-        receivedDate: validation.receivedDate?.split('T')[0] ?? '',
-        attachmentNote: validation.attachmentNote ?? '',
-        softwareVersion: validation.softwareVersion ?? '',
-        testDate: validation.testDate?.split('T')[0] ?? '',
+        vendorName: v.vendorName ?? '',
+        vendorSummary: v.vendorSummary ?? '',
+        receivedBy: v.receivedBy ?? '',
+        receivedDate: v.receivedDate?.split('T')[0] ?? '',
+        attachmentNote: v.attachmentNote ?? '',
+        softwareVersion: v.softwareVersion ?? '',
+        testDate: v.testDate?.split('T')[0] ?? '',
       });
     } else {
       setEditForm(null);
     }
-  }, [open, validation]);
+  }, [open]);
 
   const updateMutation = useCasGuardedMutation<
     Awaited<ReturnType<typeof softwareValidationApi.update>>,
