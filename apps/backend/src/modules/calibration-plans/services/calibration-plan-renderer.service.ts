@@ -32,7 +32,7 @@ export interface ExportResult {
 export class CalibrationPlanRendererService {
   /**
    * templateBuffer는 호출자(CalibrationPlansExportService)가 주입.
-   * renderer는 Buffer → Excel 변환만 담당 (FormTemplateService DI 불필요).
+   * renderer는 Buffer → Excel 변환만 담당.
    */
   async render(plan: CalibrationPlanDetail, templateBuffer: Buffer): Promise<ExportResult> {
     const items = plan.items ?? [];
