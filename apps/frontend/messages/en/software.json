@@ -275,6 +275,7 @@
       "deleteConfirm": "Are you sure you want to delete this file?",
       "deleteSuccess": "File deleted successfully",
       "deleteError": "File deletion failed",
+      "loadError": "Failed to load attachments",
       "download": "Download",
       "delete": "Delete",
       "tableHeaders": {

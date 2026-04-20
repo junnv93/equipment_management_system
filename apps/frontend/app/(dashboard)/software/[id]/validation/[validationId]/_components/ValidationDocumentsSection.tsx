@@ -61,7 +61,11 @@ export function ValidationDocumentsSection({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: docs = [], isLoading: docsLoading } = useQuery({
+  const {
+    data: docs = [],
+    isLoading: docsLoading,
+    isError: docsError,
+  } = useQuery({
     queryKey: queryKeys.documents.byValidation(validationId),
     queryFn: () => documentApi.getValidationDocuments(validationId),
     staleTime: CACHE_TIMES.LONG,
@@ -99,19 +103,24 @@ export function ValidationDocumentsSection({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const deleteMutation = useMutation({
+    mutationFn: (docId: string) => documentApi.deleteDocument(docId),
+    onSuccess: () => {
+      toast({ title: t('validation.documents.deleteSuccess') });
+      invalidateDocs();
+    },
+    onError: () => {
+      toast({ title: t('validation.documents.deleteError'), variant: 'destructive' });
+    },
+  });
+
   const handleDownload = async (doc: DocumentRecord) => {
     await documentApi.downloadDocument(doc.id, doc.originalFileName);
   };
 
-  const handleDeleteDoc = async (docId: string) => {
+  const handleDeleteDoc = (docId: string) => {
     if (!confirm(t('validation.documents.deleteConfirm'))) return;
-    try {
-      await documentApi.deleteDocument(docId);
-      toast({ title: t('validation.documents.deleteSuccess') });
-      invalidateDocs();
-    } catch {
-      toast({ title: t('validation.documents.deleteError'), variant: 'destructive' });
-    }
+    deleteMutation.mutate(docId);
   };
 
   return (
@@ -153,6 +162,11 @@ export function ValidationDocumentsSection({
 
         {docsLoading ? (
           <Skeleton className="h-32 w-full" />
+        ) : docsError ? (
+          <div className={DOCUMENT_EMPTY_STATE.container}>
+            <Paperclip className={DOCUMENT_EMPTY_STATE.icon} />
+            <p className={DOCUMENT_EMPTY_STATE.text}>{t('validation.documents.loadError')}</p>
+          </div>
         ) : docs.length === 0 ? (
           <div className={DOCUMENT_EMPTY_STATE.container}>
             <Paperclip className={DOCUMENT_EMPTY_STATE.icon} />
@@ -221,6 +235,7 @@ export function ValidationDocumentsSection({
                               aria-label={`${t('validation.documents.delete')} ${doc.originalFileName}`}
                               className="h-8 w-8 text-destructive hover:text-destructive"
                               onClick={() => handleDeleteDoc(doc.id)}
+                              disabled={deleteMutation.isPending}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

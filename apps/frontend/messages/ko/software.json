@@ -275,6 +275,7 @@
       "deleteConfirm": "이 파일을 삭제하시겠습니까?",
       "deleteSuccess": "파일이 삭제되었습니다",
       "deleteError": "파일 삭제에 실패했습니다",
+      "loadError": "첨부파일 목록을 불러오지 못했습니다",
       "download": "다운로드",
       "delete": "삭제",
       "tableHeaders": {
