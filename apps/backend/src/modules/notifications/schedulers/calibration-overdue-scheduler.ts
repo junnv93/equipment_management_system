@@ -36,7 +36,7 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
  *
  * 제외 조건:
  * - 이미 non_conforming 상태인 장비
- * - disposed, pending_disposal, retired, inactive 상태 장비
+ * - disposed, pending_disposal, inactive 상태 장비
  * - calibrationRequired != 'required' 장비
  * - 이미 calibration_overdue 유형 부적합이 존재하는 장비
  *

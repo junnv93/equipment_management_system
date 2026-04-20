@@ -30,11 +30,13 @@ import {
   CalibrationRequiredEnum,
   IntermediateCheckFilterStatusValues,
   type DocumentType,
+  CalibrationPlanStatusValues,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
   CACHE_TTL,
   CALIBRATION_THRESHOLDS,
+  QUERY_SAFETY_LIMITS,
   DEFAULT_PAGE_SIZE,
   SELECTOR_PAGE_SIZE,
   EXCLUDED_OVERDUE_EQUIPMENT_STATUSES,
@@ -525,7 +527,7 @@ export class CalibrationService extends VersionedBaseService {
         and(
           eq(schema.calibrationPlanItems.equipmentId, calibrationRow.equipmentId),
           isNull(schema.calibrationPlanItems.actualCalibrationId),
-          eq(schema.calibrationPlans.status, 'approved'),
+          eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.APPROVED),
           gte(schema.calibrationPlanItems.plannedCalibrationDate, yearStart),
           lt(schema.calibrationPlanItems.plannedCalibrationDate, yearEnd)
         )
@@ -1659,7 +1661,8 @@ export class CalibrationService extends VersionedBaseService {
           sql`${schema.calibrations.intermediateCheckDate}::date <= ${futureDate.toISOString().split('T')[0]}::date`
         )
       )
-      .orderBy(asc(schema.calibrations.intermediateCheckDate));
+      .orderBy(asc(schema.calibrations.intermediateCheckDate))
+      .limit(QUERY_SAFETY_LIMITS.INTERMEDIATE_CHECKS_UPCOMING);
 
     return rows.map((row) => this.transformDbToRecord(row.calibration, row.certDocPath));
   }
@@ -1686,8 +1689,7 @@ export class CalibrationService extends VersionedBaseService {
 
     const now = new Date();
 
-    // 장비별 중간점검 주기를 DB에서 조회 (기본값 6개월)
-    const DEFAULT_INTERMEDIATE_CHECK_CYCLE_MONTHS = 6;
+    // 장비별 중간점검 주기를 DB에서 조회
     const [equip] = await this.db
       .select({
         intermediateCheckCycle: schema.equipment.intermediateCheckCycle,
@@ -1698,7 +1700,9 @@ export class CalibrationService extends VersionedBaseService {
       .from(schema.equipment)
       .where(eq(schema.equipment.id, calibration.equipmentId))
       .limit(1);
-    const cycleMonths = equip?.intermediateCheckCycle ?? DEFAULT_INTERMEDIATE_CHECK_CYCLE_MONTHS;
+    const cycleMonths =
+      equip?.intermediateCheckCycle ??
+      CALIBRATION_THRESHOLDS.DEFAULT_INTERMEDIATE_CHECK_CYCLE_MONTHS;
 
     const nextIntermediateCheckDate = new Date(now);
     nextIntermediateCheckDate.setMonth(nextIntermediateCheckDate.getMonth() + cycleMonths);
@@ -1797,7 +1801,8 @@ export class CalibrationService extends VersionedBaseService {
       .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
       .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
       .where(and(...whereConditions))
-      .orderBy(asc(schema.calibrations.intermediateCheckDate));
+      .orderBy(asc(schema.calibrations.intermediateCheckDate))
+      .limit(QUERY_SAFETY_LIMITS.INTERMEDIATE_CHECKS_ALL);
 
     // 플래튼: JOIN 결과 → CalibrationRecord
     const flattenedItems: CalibrationRecord[] = rows.map((row) => ({

@@ -388,6 +388,105 @@ describe('NonConformancesService', () => {
         BadRequestException
       );
     });
+
+    describe('previousEquipmentStatus restore logic', () => {
+      const buildCloseTx = (capturedSetArgs: unknown[]) => {
+        return async (callback: (tx: unknown) => Promise<unknown>) => {
+          const txWhere = jest.fn();
+          txWhere.mockReturnValueOnce({
+            returning: jest
+              .fn()
+              .mockResolvedValue([
+                { id: 'nc-uuid', status: NonConformanceStatus.CLOSED, version: 2 },
+              ]),
+          });
+          txWhere.mockReturnValueOnce({ limit: jest.fn().mockResolvedValue([]) });
+          txWhere.mockReturnValueOnce({
+            limit: jest
+              .fn()
+              .mockResolvedValue([{ id: 'eq-uuid', version: 1, status: 'non_conforming' }]),
+          });
+          txWhere.mockReturnValueOnce({
+            returning: jest.fn().mockResolvedValue([{ id: 'eq-uuid' }]),
+          });
+          const tx = {
+            update: jest.fn().mockReturnThis(),
+            set: jest.fn().mockImplementation((args: unknown) => {
+              capturedSetArgs.push(args);
+              return tx;
+            }),
+            select: jest.fn().mockReturnThis(),
+            from: jest.fn().mockReturnThis(),
+            where: txWhere,
+          };
+          return callback(tx);
+        };
+      };
+
+      it('should restore to valid previousEquipmentStatus (spare)', async () => {
+        const nc = {
+          id: 'nc-uuid',
+          status: NonConformanceStatus.CORRECTED,
+          equipmentId: 'eq-uuid',
+          version: 1,
+          previousEquipmentStatus: 'spare',
+          ncType: 'manual',
+          calibrationId: null,
+        };
+        mockCacheService.getOrSet.mockResolvedValueOnce(nc);
+        const captured: unknown[] = [];
+        mockDb.transaction.mockImplementation(buildCloseTx(captured));
+
+        await service.close('nc-uuid', { version: 1 }, 'closer-uuid');
+
+        // second set call is the equipment status restore
+        const equipSet = captured[1] as Record<string, unknown>;
+        expect(equipSet).toBeDefined();
+        expect(equipSet.status).toBe('spare');
+      });
+
+      it('should fallback to available when previousEquipmentStatus is null', async () => {
+        const nc = {
+          id: 'nc-uuid',
+          status: NonConformanceStatus.CORRECTED,
+          equipmentId: 'eq-uuid',
+          version: 1,
+          previousEquipmentStatus: null,
+          ncType: 'manual',
+          calibrationId: null,
+        };
+        mockCacheService.getOrSet.mockResolvedValueOnce(nc);
+        const captured: unknown[] = [];
+        mockDb.transaction.mockImplementation(buildCloseTx(captured));
+
+        await service.close('nc-uuid', { version: 1 }, 'closer-uuid');
+
+        const equipSet = captured[1] as Record<string, unknown>;
+        expect(equipSet).toBeDefined();
+        expect(equipSet.status).toBe('available');
+      });
+
+      it('should fallback to available when previousEquipmentStatus is an excluded status (disposed)', async () => {
+        const nc = {
+          id: 'nc-uuid',
+          status: NonConformanceStatus.CORRECTED,
+          equipmentId: 'eq-uuid',
+          version: 1,
+          previousEquipmentStatus: 'disposed',
+          ncType: 'manual',
+          calibrationId: null,
+        };
+        mockCacheService.getOrSet.mockResolvedValueOnce(nc);
+        const captured: unknown[] = [];
+        mockDb.transaction.mockImplementation(buildCloseTx(captured));
+
+        await service.close('nc-uuid', { version: 1 }, 'closer-uuid');
+
+        const equipSet = captured[1] as Record<string, unknown>;
+        expect(equipSet).toBeDefined();
+        expect(equipSet.status).toBe('available');
+      });
+    });
   });
 
   describe('rejectCorrection', () => {

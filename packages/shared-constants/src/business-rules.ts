@@ -56,6 +56,8 @@ export const CALIBRATION_THRESHOLDS = {
   URGENT_DAYS: 3,
   /** 중간점검 upcoming 임계값 (일) — 이 값 이내면 upcoming 상태 */
   INTERMEDIATE_CHECK_UPCOMING_DAYS: 7,
+  /** 장비별 중간점검 주기 기본값 (개월) — intermediateCheckCycle 미설정 시 적용 */
+  DEFAULT_INTERMEDIATE_CHECK_CYCLE_MONTHS: 6,
 } as const;
 
 /**
@@ -77,6 +79,10 @@ export const QUERY_SAFETY_LIMITS = {
   CALIBRATION_FACTORS_REGISTRY: 1000,
   /** 반출별 상태확인 최대 조회 수 */
   CONDITION_CHECKS_PER_CHECKOUT: 100,
+  /** 중간점검 예정 목록 최대 조회 수 (findUpcomingIntermediateChecks) */
+  INTERMEDIATE_CHECKS_UPCOMING: 200,
+  /** 중간점검 전체 목록 최대 조회 수 (findAllIntermediateChecks) */
+  INTERMEDIATE_CHECKS_ALL: 1000,
 } as const;
 
 /**
