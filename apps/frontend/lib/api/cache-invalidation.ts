@@ -528,6 +528,7 @@ export class CalibrationCacheInvalidation {
       queryKeys.dashboard.all,
       queryKeys.approvals.countsAll, // 승인 대기 카운트 (pending_approval 상태)
       queryKeys.notifications.all, // 승인자 알림 즉시 반영
+      queryKeys.calibrationPlans.all, // 계획 item actualCalibrationId 링크 반영
     ];
     await Promise.all(
       keys.map((key) => queryClient.invalidateQueries({ queryKey: key, refetchType: 'active' }))

@@ -147,7 +147,8 @@
       },
       "monthUnit": "{count}개월",
       "confirmed": "확인됨",
-      "confirm": "확인"
+      "confirm": "확인",
+      "actualLinked": "실적 기록됨"
     },
     "placeholders": {
       "reviewComment": "간단한 의견 (선택)",

@@ -49,7 +49,8 @@ export interface CalibrationPlanItem {
   // 확인
   confirmedBy: string | null;
   confirmedAt: string | null;
-  // 비고
+  // 실적
+  actualCalibrationId: string | null;
   actualCalibrationDate: string | null;
   notes: string | null;
   // 시스템

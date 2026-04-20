@@ -502,6 +502,7 @@ export const queryKeys = {
       teamId || site
         ? ([...queryKeys.calibrations.all, 'intermediate-checks', { teamId, site }] as const)
         : ([...queryKeys.calibrations.all, 'intermediate-checks'] as const),
+    detail: (id: string) => [...queryKeys.calibrations.all, 'detail', id] as const,
     documents: (calibrationId: string) =>
       [...queryKeys.calibrations.all, 'documents', calibrationId] as const,
   },

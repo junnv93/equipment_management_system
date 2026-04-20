@@ -46,6 +46,8 @@ import { addMonths } from 'date-fns';
 export interface CalibrationFormProps {
   mode: 'page' | 'dialog';
   equipmentId: string;
+  /** plan item 실적 등록 시 전달 — 백엔드 auto-link 트리거 */
+  planItemId?: string;
   defaultValues?: Partial<CalibrationFormValues>;
   onSuccess?: (calibration: Calibration) => void;
   onCancel?: () => void;
@@ -54,7 +56,7 @@ export interface CalibrationFormProps {
 
 const CERTIFICATE_ACCEPT = '.pdf,.jpg,.jpeg,.png';
 
-function buildCalibrationFormData(values: CalibrationFormOutput): FormData {
+function buildCalibrationFormData(values: CalibrationFormOutput, planItemId?: string): FormData {
   const fd = new FormData();
 
   const payload = {
@@ -68,6 +70,7 @@ function buildCalibrationFormData(values: CalibrationFormOutput): FormData {
     ...(values.intermediateCheckDate
       ? { intermediateCheckDate: formatDate(values.intermediateCheckDate, 'yyyy-MM-dd') }
       : {}),
+    ...(planItemId ? { planItemId } : {}),
   };
 
   fd.append('payload', JSON.stringify(payload));
@@ -80,6 +83,7 @@ function buildCalibrationFormData(values: CalibrationFormOutput): FormData {
 export function CalibrationForm({
   mode,
   equipmentId,
+  planItemId,
   defaultValues,
   onSuccess,
   onCancel,
@@ -152,7 +156,7 @@ export function CalibrationForm({
   };
 
   const onSubmit = (values: CalibrationFormOutput) => {
-    mutation.mutate(buildCalibrationFormData(values));
+    mutation.mutate(buildCalibrationFormData(values, planItemId));
   };
 
   const isCompact = mode === 'dialog';
