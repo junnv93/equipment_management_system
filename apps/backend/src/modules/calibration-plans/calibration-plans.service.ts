@@ -972,14 +972,11 @@ export class CalibrationPlansService extends VersionedBaseService {
         })
         .where(inArray(calibrationPlanItems.id, itemIds));
 
-      // 영향받은 plan 캐시 일괄 무효화 (중복 제거)
-      // detail 캐시는 planId별로, list/summary 캐시는 1회만 무효화
+      // 영향받은 plan별 캐시 무효화 — invalidatePlanCache 헬퍼 경유 (SSOT)
       const planIds = [...new Set(items.map((row) => row.plan.id))];
       for (const planId of planIds) {
-        this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planId}`);
+        this.invalidatePlanCache(planId);
       }
-      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:`);
-      this.cacheService.deleteByPrefix(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:`);
     }
 
     return items.length;

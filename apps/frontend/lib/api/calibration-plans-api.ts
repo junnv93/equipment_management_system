@@ -332,7 +332,7 @@ const calibrationPlansApi = {
   ): Promise<{ confirmedCount: number }> => {
     return apiClient
       .patch(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ALL_ITEMS(planUuid), data)
-      .then((res) => (res.data as { data: { confirmedCount: number } }).data);
+      .then((res) => transformSingleResponse<{ confirmedCount: number }>(res));
   },
 
   // 항목 수정

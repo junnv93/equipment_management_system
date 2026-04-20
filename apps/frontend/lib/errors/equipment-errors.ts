@@ -573,6 +573,10 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     IMPORT_TEMP_NUMBER_GENERATION_FAILED: EquipmentErrorCode.SERVER_ERROR,
     VERSION_REQUIRED: EquipmentErrorCode.VALIDATION_ERROR,
 
+    // 교정계획서 확인 에러
+    CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM: EquipmentErrorCode.VALIDATION_ERROR,
+    PLAN_ITEM_NOT_EXECUTED: EquipmentErrorCode.VALIDATION_ERROR,
+
     // 양식 템플릿 에러
     FORM_TEMPLATE_NOT_FOUND: EquipmentErrorCode.FORM_TEMPLATE_NOT_FOUND,
     FORM_NUMBER_ALREADY_EXISTS: EquipmentErrorCode.DUPLICATE_ERROR,

@@ -156,7 +156,13 @@
       "confirmed": "Confirmed",
       "confirm": "Confirm",
       "confirmAll": "Confirm All",
-      "confirmAllTitle": "Confirm all items linked to actual calibration records"
+      "confirmAllTitle": "Confirm all items linked to actual calibration records",
+      "actualLinked": "Record Linked",
+      "recordActual": "Record Actual",
+      "recordActualDialog": {
+        "title": "Record Actual Calibration",
+        "description": "Register the calibration certificate after completion"
+      }
     },
     "placeholders": {
       "reviewComment": "Brief comment (optional)",
