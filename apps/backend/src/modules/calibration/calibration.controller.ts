@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   HttpStatus,
+  HttpCode,
   UseInterceptors,
   UploadedFile,
   UploadedFiles,
@@ -19,6 +20,7 @@ import {
   ParseIntPipe,
   Logger,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -31,10 +33,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { CalibrationService } from './calibration.service';
-import {
-  CreateCalibrationDto,
-  CreateCalibrationValidationPipe,
-} from './dto/create-calibration.dto';
+import { CreateCalibrationDto, createCalibrationSchema } from './dto/create-calibration.dto';
 import {
   UpdateCalibrationDto,
   UpdateCalibrationValidationPipe,
@@ -103,32 +102,92 @@ export class CalibrationController {
   }
 
   @Post()
-  @ApiOperation({ summary: '교정 일정 등록', description: '새로운 교정 일정을 등록합니다.' })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: '교정 기록 등록 (파일 포함)',
+    description: 'multipart/form-data로 교정 기록과 성적서 파일을 원자적으로 등록합니다.',
+  })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: '교정 일정이 성공적으로 등록되었습니다.',
+    description: '교정 기록과 문서가 성공적으로 등록되었습니다.',
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '파일 누락 또는 잘못된 요청 데이터' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION)
-  @AuditLog({ action: 'create', entityType: 'calibration', entityIdPath: 'response.id' })
-  @UsePipes(CreateCalibrationValidationPipe)
-  create(
-    @Body() createCalibrationDto: CreateCalibrationDto,
+  @Throttle({ long: { limit: 10, ttl: 60_000 } })
+  @UseInterceptors(FilesInterceptor('files', 10))
+  @AuditLog({
+    action: 'create',
+    entityType: 'calibration',
+    entityIdPath: 'response.calibration.id',
+  })
+  async create(
+    @Body('payload') payloadRaw: string,
+    @Body('documentTypes') documentTypesRaw: string,
+    @Body('descriptions') descriptionsRaw: string | undefined,
+    @UploadedFiles() files: MulterFile[],
     @Request() req: AuthenticatedRequest
-  ): Promise<CalibrationRecord> {
-    // ✅ 보안: registeredBy와 registeredByRole을 JWT 세션에서 추출 (Rule 2)
+  ): Promise<{ calibration: CalibrationRecord; documents: DocumentRecord[] }> {
+    if (!files || files.length === 0) {
+      throw new BadRequestException({
+        code: 'CALIBRATION_FILE_REQUIRED',
+        message: '교정성적서 파일이 필요합니다.',
+      });
+    }
+
+    let parsedPayload: CreateCalibrationDto;
+    try {
+      parsedPayload = await createCalibrationSchema.parseAsync(JSON.parse(payloadRaw ?? '{}'));
+    } catch {
+      throw new BadRequestException({
+        code: 'CALIBRATION_PAYLOAD_INVALID',
+        message: '교정 등록 데이터가 유효하지 않습니다.',
+      });
+    }
+
+    let documentTypes: DocumentType[];
+    try {
+      const parsed: unknown = JSON.parse(documentTypesRaw);
+      if (!Array.isArray(parsed)) throw new Error('not array');
+      documentTypes = parsed as DocumentType[];
+    } catch {
+      documentTypes = (documentTypesRaw ?? '').split(',').map((s) => s.trim()) as DocumentType[];
+    }
+
+    if (documentTypes.length !== files.length) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_TYPE_COUNT_MISMATCH',
+        message: `documentTypes 개수(${documentTypes.length})가 파일 개수(${files.length})와 다릅니다.`,
+      });
+    }
+
+    const invalidTypes = documentTypes.filter((t) => !DOCUMENT_TYPE_VALUES.includes(t));
+    if (invalidTypes.length > 0) {
+      throw new BadRequestException({
+        code: 'DOCUMENT_TYPE_INVALID',
+        message: `유효하지 않은 documentType: ${invalidTypes.join(', ')}`,
+      });
+    }
+
+    let descriptions: (string | undefined)[];
+    try {
+      descriptions = descriptionsRaw ? (JSON.parse(descriptionsRaw) as (string | undefined)[]) : [];
+    } catch {
+      descriptions = [];
+    }
+
     const registeredBy = extractUserId(req);
-    // roles는 배열이므로 첫 번째 역할을 사용 (일반적으로 사용자는 하나의 역할만 가짐)
     const registeredByRole = req.user?.roles?.[0] as CalibrationRegisteredByRole | undefined;
 
-    return this.calibrationService.create({
-      ...createCalibrationDto,
-      // 서버에서 강제로 주입 (클라이언트 값 무시)
-      registeredBy,
-      registeredByRole,
-    });
+    return this.calibrationService.createWithDocuments(
+      { ...parsedPayload, registeredBy, registeredByRole },
+      files,
+      documentTypes,
+      descriptions,
+      registeredBy
+    );
   }
 
   @Get()

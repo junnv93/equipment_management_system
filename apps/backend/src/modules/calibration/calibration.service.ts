@@ -14,6 +14,9 @@ import { CalibrationQueryDto } from './dto/calibration-query.dto';
 import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
+import { CACHE_EVENTS } from '../../common/cache/cache-events';
+import { FileUploadService } from '../../common/file-upload/file-upload.service';
+import type { MulterFile } from '../../types/common.types';
 import {
   CalibrationStatusEnum,
   type CalibrationStatus,
@@ -26,6 +29,7 @@ import {
   type IntermediateCheckStatus,
   CalibrationRequiredEnum,
   IntermediateCheckFilterStatusValues,
+  type DocumentType,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
@@ -109,7 +113,8 @@ export class CalibrationService extends VersionedBaseService {
     private readonly cacheService: SimpleCacheService,
     private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly eventEmitter: EventEmitter2,
-    private readonly i18n: I18nService
+    private readonly i18n: I18nService,
+    private readonly fileUploadService: FileUploadService
   ) {
     super();
   }
@@ -313,18 +318,24 @@ export class CalibrationService extends VersionedBaseService {
   }
 
   /**
-   * 교정 등록
+   * 교정 등록 (원자 multipart)
    * POST /api/calibration
    *
-   * ✅ DB insert 사용 (기존 인메모리 push → DB insert로 수정)
-   * ✅ checkout 모듈의 create 패턴과 동일: .insert().values().returning()
+   * 파일 저장(tx 외부) → DB 트랜잭션(calibrations + documents) 원자 insert.
+   * tx 실패 시 저장된 파일 best-effort 삭제(보상 트랜잭션).
    */
-  async create(createCalibrationDto: CreateCalibrationDto): Promise<CalibrationRecord> {
-    // 모든 교정 기록은 기술책임자 이상의 승인 필요
+  async createWithDocuments(
+    createCalibrationDto: CreateCalibrationDto,
+    files: MulterFile[],
+    documentTypes: DocumentType[],
+    descriptions: (string | undefined)[],
+    actorId: string
+  ): Promise<{
+    calibration: CalibrationRecord;
+    documents: (typeof schema.documents.$inferSelect)[];
+  }> {
     const approvalStatus = CalibrationApprovalStatusEnum.enum.pending_approval;
 
-    // SSOT: nextCalibrationDate는 장비의 calibrationCycle 기반으로 백엔드에서 계산
-    // 알림에도 필요한 필드를 한 번에 조회 (이중 DB 호출 방지)
     const [equipForCreate] = await this.db
       .select({
         calibrationCycle: schema.equipment.calibrationCycle,
@@ -350,36 +361,97 @@ export class CalibrationService extends VersionedBaseService {
         createCalibrationDto.calibrationDate,
     };
 
-    const insertData = this.transformDtoToInsert(dtoWithComputedDate, approvalStatus);
+    // 파일 저장 — tx 외부 (스토리지는 DB 롤백 불가, 보상 패턴으로 처리)
+    const uploadedMeta = await this.fileUploadService.saveFiles(files, 'calibration/pending');
+    const storedKeys = uploadedMeta.map((m) => m.filePath);
 
-    const [inserted] = await this.db.insert(schema.calibrations).values(insertData).returning();
-
-    this.logger.log(
-      `교정 기록 등록: ${inserted.id} (장비: ${inserted.equipmentId}, 등록자: ${inserted.registeredBy})`
-    );
-
-    await this.invalidateCalibrationCache(undefined, inserted.equipmentId);
-
-    // 📢 알림 이벤트 발행 (교정 등록 → 승인자에게 알림)
-    // equipForCreate 재사용 (이중 DB 조회 방지)
     try {
-      await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_CREATED, {
-        calibrationId: inserted.id,
-        equipmentId: inserted.equipmentId,
-        equipmentName: equipForCreate?.name ?? '',
-        managementNumber: equipForCreate?.managementNumber ?? '',
-        teamId: equipForCreate?.teamId ?? '',
-        site: equipForCreate?.site ?? '',
-        actorId: inserted.registeredBy ?? undefined,
-        actorName: '',
-        timestamp: new Date(),
-      });
-    } catch (error) {
-      // 알림 발행 실패가 비즈니스 로직을 차단하지 않음 — 운영 모니터링용 로그
-      this.logger.warn(`교정 등록 알림 발행 실패 (calibrationId: ${inserted.id}): ${error}`);
-    }
+      const result = await this.db.transaction(async (tx) => {
+        const insertData = this.transformDtoToInsert(dtoWithComputedDate, approvalStatus);
+        const [calibrationRow] = await tx
+          .insert(schema.calibrations)
+          .values(insertData)
+          .returning();
 
-    return this.transformDbToRecord(inserted);
+        const documentInserts = uploadedMeta.map((meta, i) => ({
+          calibrationId: calibrationRow.id,
+          documentType: documentTypes[i],
+          description: descriptions[i] ?? null,
+          fileName: meta.fileName,
+          originalFileName: meta.originalFileName,
+          filePath: meta.filePath,
+          fileSize: meta.fileSize,
+          mimeType: meta.mimeType,
+          fileHash: meta.fileHash,
+          uploadedBy: actorId,
+          isLatest: true as const,
+          parentDocumentId: null,
+          revisionNumber: 1,
+        }));
+
+        const documentRows = await tx.insert(schema.documents).values(documentInserts).returning();
+
+        return { calibration: calibrationRow, documents: documentRows };
+      });
+
+      this.logger.log(
+        `교정 기록 등록: ${result.calibration.id} (장비: ${result.calibration.equipmentId}, 문서: ${result.documents.length}건)`
+      );
+
+      await this.invalidateCalibrationCache(undefined, result.calibration.equipmentId);
+
+      // 캐시 무효화 이벤트 (CACHE_EVENTS 채널)
+      try {
+        await this.eventEmitter.emitAsync(CACHE_EVENTS.CALIBRATION_CREATED, {
+          calibrationId: result.calibration.id,
+          equipmentId: result.calibration.equipmentId,
+          teamId: equipForCreate?.teamId ?? '',
+          actorId,
+          documentIds: result.documents.map((d) => d.id),
+        });
+      } catch (error) {
+        this.logger.warn(
+          `교정 캐시 이벤트 발행 실패 (calibrationId: ${result.calibration.id}): ${error}`
+        );
+      }
+
+      // 알림 이벤트 (NOTIFICATION_EVENTS 채널)
+      try {
+        await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.CALIBRATION_CREATED, {
+          calibrationId: result.calibration.id,
+          equipmentId: result.calibration.equipmentId,
+          equipmentName: equipForCreate?.name ?? '',
+          managementNumber: equipForCreate?.managementNumber ?? '',
+          teamId: equipForCreate?.teamId ?? '',
+          site: equipForCreate?.site ?? '',
+          actorId,
+          actorName: '',
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        this.logger.warn(
+          `교정 등록 알림 발행 실패 (calibrationId: ${result.calibration.id}): ${error}`
+        );
+      }
+
+      return {
+        calibration: this.transformDbToRecord(result.calibration),
+        documents: result.documents,
+      };
+    } catch (error) {
+      // 보상: tx 실패 시 저장된 파일 best-effort 삭제
+      const deleteResults = await Promise.allSettled(
+        storedKeys.map((key) => this.fileUploadService.deleteFile(key))
+      );
+      const failedDeletes = deleteResults.filter((r) => r.status === 'rejected');
+      if (failedDeletes.length > 0) {
+        this.logger.error(
+          `calibration_storage_orphan: ${failedDeletes.length}개 파일 삭제 실패 — 수동 정리 필요`,
+          { storedKeys }
+        );
+      }
+      throw error;
+    }
   }
 
   /**

@@ -319,6 +319,40 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
     actions: [{ method: 'invalidateAllDashboard' }],
   },
 
+  // ─── 교정 캐시 전용 (Calibration — cache-only channel) ───
+  // NOTIFICATION_EVENTS.CALIBRATION_*는 알림 발송 전용으로 유지.
+  // 캐시 무효화는 이 채널에서 독립 처리.
+  [CACHE_EVENTS.CALIBRATION_CREATED]: {
+    actions: [
+      { method: 'invalidateAllDashboard' },
+      { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
+    ],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}pending:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}summary:*` },
+    ],
+  },
+  [CACHE_EVENTS.CALIBRATION_UPDATED]: {
+    actions: [
+      { method: 'invalidateAllDashboard' },
+      { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
+    ],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}detail:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}pending:*` },
+    ],
+  },
+  [CACHE_EVENTS.CALIBRATION_CERTIFICATE_UPLOADED]: {
+    actions: [{ method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}detail:*` }],
+  },
+  [CACHE_EVENTS.CALIBRATION_CERTIFICATE_REVISED]: {
+    actions: [{ method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}detail:*` }],
+  },
+
   // ─── 교정 인자 (Calibration Factor) ───
   [NOTIFICATION_EVENTS.CALIBRATION_FACTOR_APPROVED]: {
     actions: [

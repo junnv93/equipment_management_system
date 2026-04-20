@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, or, desc, asc, sql, inArray, count } from 'drizzle-orm';
+import { eq, and, or, desc, sql, inArray, count } from 'drizzle-orm';
 import {
   softwareValidations,
   testSoftware,

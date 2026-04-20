@@ -23,6 +23,14 @@ export const CACHE_EVENTS = {
   SW_VALIDATION_APPROVED: 'cache.swValidation.approved',
   SW_VALIDATION_QUALITY_APPROVED: 'cache.swValidation.qualityApproved',
   SW_VALIDATION_REJECTED: 'cache.swValidation.rejected',
+
+  // ─── 교정 (Calibration) ───
+  // NOTIFICATION_EVENTS.CALIBRATION_*는 알림(DB insert + 발송)만 담당.
+  // 캐시 무효화는 이 채널에서 독립 처리.
+  CALIBRATION_CREATED: 'cache.calibration.created',
+  CALIBRATION_UPDATED: 'cache.calibration.updated',
+  CALIBRATION_CERTIFICATE_UPLOADED: 'cache.calibration.certificateUploaded',
+  CALIBRATION_CERTIFICATE_REVISED: 'cache.calibration.certificateRevised',
 } as const;
 
 export type CacheEventName = (typeof CACHE_EVENTS)[keyof typeof CACHE_EVENTS];
@@ -44,4 +52,13 @@ export interface RepairHistoryCachePayload {
 export interface SwValidationCachePayload {
   validationId: string;
   testSoftwareId: string;
+}
+
+/** 교정 캐시 이벤트 페이로드 */
+export interface CalibrationCachePayload {
+  calibrationId: string;
+  equipmentId: string;
+  teamId: string;
+  actorId: string;
+  documentIds?: string[];
 }
