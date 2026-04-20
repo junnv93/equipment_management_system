@@ -9,8 +9,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { BASE_URLS } from '../shared/constants/shared-test-data';
 
-const BACKEND = 'http://localhost:3001';
+const BACKEND = BASE_URLS.BACKEND;
 const CALIB_ID = 'bbbb0001-0001-0001-0001-000000000001';
 const today = new Date().toISOString().split('T')[0];
 

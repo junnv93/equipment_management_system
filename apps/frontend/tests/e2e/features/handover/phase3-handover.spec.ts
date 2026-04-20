@@ -17,6 +17,7 @@
 import { test, expect } from '../../shared/fixtures/auth.fixture';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { CHECKOUT_019_ID } from '../../shared/constants/test-checkout-ids';
+import { BASE_URLS } from '../../shared/constants/shared-test-data';
 
 // Handover 토큰은 `checked_out` / `lender_checked` / `borrower_returned` 상태에서만 발급 가능.
 // CHECKOUT_019 = checked_out — 적합.
@@ -29,7 +30,7 @@ const HANDOVER_CHECKOUT_ID = CHECKOUT_019_ID;
  * backend는 globalPrefix='api'이므로 매칭 실패(404). 대응: backend URL 직접 호출 +
  * test-login으로 얻은 Bearer token 명시.
  */
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const BACKEND_URL = BASE_URLS.BACKEND;
 
 async function getTestAccessToken(
   page: import('@playwright/test').Page,
