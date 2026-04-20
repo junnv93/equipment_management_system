@@ -91,7 +91,7 @@ export default function SoftwareValidationsListContent() {
                   }}
                 >
                   <TableCell className="font-medium">
-                    {t(`validation.type.${v.validationType}`)}
+                    {t(`validationType.${v.validationType}`)}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -99,7 +99,7 @@ export default function SoftwareValidationsListContent() {
                       className="flex w-fit items-center gap-1"
                     >
                       {STATUS_ICON[v.status]}
-                      {t(`validation.status.${v.status}`)}
+                      {t(`validationStatus.${v.status}`)}
                     </Badge>
                   </TableCell>
                   <TableCell>{v.softwareVersion ?? '—'}</TableCell>

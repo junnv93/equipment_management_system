@@ -207,6 +207,15 @@
     ]
   },
   "softwareValidation": {
+    "SOFTWARE_VALIDATION_NOT_FOUND": "Validation record not found.",
+    "SOFTWARE_VALIDATION_VERSION_CONFLICT": "Another user has already processed this. Please check the latest state.",
+    "INVALID_STATUS_TRANSITION": "This action cannot be performed in the current status.",
+    "SELF_APPROVAL_FORBIDDEN": "You cannot approve a validation you submitted.",
+    "DUAL_APPROVAL_SAME_PERSON_FORBIDDEN": "The technical approver cannot also perform quality approval.",
+    "NON_EXPORTABLE_VALIDATION_STATUS": "Validations in this status cannot be exported.",
+    "MISSING_VALIDATION_ID": "Validation ID is required.",
+    "SCOPE_RESOURCE_MISMATCH": "You do not have permission to access this validation.",
+    "unknown": "An error occurred while processing the validation.",
     "selfApprovalForbidden": "You cannot approve a validation you submitted (ISO/IEC 17025 §6.2.2)",
     "dualApprovalForbidden": "Technical and quality approvals must be by different people",
     "itemLimitExceededAcquisition": "Only one acquisition function item is allowed per validation",
