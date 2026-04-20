@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CalibrationForm } from '@/components/calibration/CalibrationForm';
+import { useAuth } from '@/hooks/use-auth';
+import { Permission } from '@equipment-management/shared-constants';
 import {
   PLAN_TABLE_COLUMN_GROUP_TOKENS,
   PLAN_PROGRESS_TOKENS,
@@ -81,6 +84,9 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
   const [isVersionOpen, setIsVersionOpen] = useState(false);
   const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
 
+  const { can } = useAuth();
+  const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
+
   const isDraft = plan.status === CPStatus.DRAFT;
   const isApproved = plan.status === CPStatus.APPROVED;
   const items = useMemo(() => plan.items || [], [plan.items]);
@@ -117,11 +123,11 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
     },
   });
 
-  const confirmItemMutation = useMutation({
-    mutationFn: (itemUuid: string) =>
-      calibrationPlansApi.confirmPlanItem(planUuid, itemUuid, {
-        casVersion: plan.casVersion ?? 0,
-      }),
+  const confirmItemMutation = useCasGuardedMutation<CalibrationPlanItem, string>({
+    fetchCasVersion: () =>
+      calibrationPlansApi.getCalibrationPlan(planUuid).then((p) => p.casVersion),
+    mutationFn: (itemUuid, casVersion) =>
+      calibrationPlansApi.confirmPlanItem(planUuid, itemUuid, { casVersion }),
     onSuccess: () => {
       toast({
         title: t('planDetail.toasts.confirmItemSuccess'),
@@ -129,7 +135,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
       });
       CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+    onError: (error) => {
       toast({
         title: t('planDetail.toasts.confirmItemError'),
         description: error.response?.data?.message || t('planDetail.toasts.confirmItemErrorDesc'),
@@ -245,7 +251,12 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
               <p className={TABLE_TOKENS.empty.text}>{t('planDetail.items.empty')}</p>
             </div>
           ) : (
-            <div className={TABLE_SCROLL_HINT_TOKENS.wrapper}>
+            <div
+              className={TABLE_SCROLL_HINT_TOKENS.wrapper}
+              role="region"
+              tabIndex={0}
+              aria-label={t('planDetail.items.tableAriaLabel')}
+            >
               <div className={TABLE_SCROLL_HINT_TOKENS.fadeRight} />
               <div className="overflow-auto">
                 <Table>
@@ -475,17 +486,19 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                     <Edit2 className={TABLE_TOKENS.inlineEdit.button.iconSize} />
                                   </Button>
                                 )}
-                                {isApproved && !item.actualCalibrationId && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setRecordingItemId(item.id)}
-                                    title={t('planDetail.items.recordActual')}
-                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                                  >
-                                    <ClipboardCheck className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                {isApproved &&
+                                  !item.actualCalibrationId &&
+                                  canCreateCalibration && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setRecordingItemId(item.id)}
+                                      title={t('planDetail.items.recordActual')}
+                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                                    >
+                                      <ClipboardCheck className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 {isApproved && !item.confirmedBy && (
                                   <Button
                                     variant="ghost"

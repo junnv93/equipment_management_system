@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type ExcelJS from 'exceljs';
 import { FormRenderError } from './docx-xml-helper';
 
@@ -9,29 +10,43 @@ import { FormRenderError } from './docx-xml-helper';
  *
  * 사용처:
  * - `equipment-registry-renderer.service.ts` (UL-QP-18-01 시험설비 관리대장)
- * - 향후 UL-QP-19-01 등 xlsx 기반 양식도 재사용 가능.
+ * - `calibration-plan-renderer.service.ts` (UL-QP-19-01 연간 교정계획서)
  */
+
+const xlsxHelperLogger = new Logger('XlsxHelper');
 
 /**
  * 워크북에서 지정된 시트명 리스트 중 처음 매칭되는 워크시트를 반환.
  *
  * 양식 변종(띄어쓰기 차이 등)을 대응하기 위해 다중 시트명 fallback 지원.
- * 모두 매칭 실패 시 FormRenderError throw.
  *
  * @param workbook ExcelJS Workbook
  * @param candidateNames 후보 시트명 리스트 (원본 우선순위)
  * @param formLabel 에러 메시지에 포함될 양식 번호 (예: 'UL-QP-18-01')
- * @throws FormRenderError 모든 후보 시트명 매칭 실패 시
+ * @param options.fallbackToFirst true이면 후보 매칭 실패 시 첫 번째 시트로 fallback
+ *   (경고 로그 발행). false(기본)이면 FormRenderError throw.
+ * @throws FormRenderError strictMode에서 모든 후보 시트명 매칭 실패 시
  */
 export function loadWorksheetByName(
   workbook: ExcelJS.Workbook,
   candidateNames: readonly string[],
-  formLabel: string
+  formLabel: string,
+  options?: { fallbackToFirst?: boolean }
 ): ExcelJS.Worksheet {
   for (const name of candidateNames) {
     const sheet = workbook.getWorksheet(name);
     if (sheet) return sheet;
   }
+
+  if (options?.fallbackToFirst && workbook.worksheets.length > 0) {
+    const first = workbook.worksheets[0];
+    xlsxHelperLogger.warn(
+      `[${formLabel}] 시트명 매칭 실패 — 첫 번째 시트 '${first.name}'으로 fallback. ` +
+        `후보: [${candidateNames.join(', ')}]. 템플릿 파일의 시트명을 수정해 이 경고를 제거하세요.`
+    );
+    return first;
+  }
+
   throw new FormRenderError(
     formLabel,
     `워크시트 매칭 실패`,

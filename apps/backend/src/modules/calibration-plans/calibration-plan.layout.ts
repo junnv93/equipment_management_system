@@ -19,7 +19,7 @@ export const FORM_NUMBER = 'UL-QP-19-01' as const;
  *
  * 매칭 순서대로 탐색하며, 처음 일치하는 시트를 반환.
  */
-export const SHEET_NAMES = ['연간 교정계획서', '교정계획서', 'Sheet1'] as const;
+export const SHEET_NAMES = ['연간 교정계획서', '교정계획서'] as const;
 
 /**
  * 데이터 주입 시작 행 (1-based).
