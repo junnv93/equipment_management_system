@@ -56,7 +56,7 @@
     "editButton": "수정",
     "toggleAvailability": "가용 상태 변경",
     "validationLink": "유효성 확인 관리",
-    "revalidationRequired": "소프트웨어 버전이 변경되어 재검증이 필요합니다. (ISO/IEC 17025 §6.4.13)",
+    "revalidationRequired": "유효성 확인이 필요합니다. (ISO/IEC 17025 §6.4.13)",
     "goToValidation": "유효성 확인으로 이동",
     "fields": {
       "managementNumber": "관리번호",

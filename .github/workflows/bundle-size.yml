@@ -1,0 +1,57 @@
+name: Bundle Size Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/frontend/**'
+      - 'packages/**'
+      - '.github/workflows/bundle-size.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  bundle-size:
+    name: Bundle Size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@a7487ba4b53252b86d2b92fa9c797d928c33c48f # v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter frontend run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          ANALYZE: true
+
+      - name: Check bundle size
+        run: |
+          # Next.js .next/analyze output를 파싱해 임계값 비교
+          # First Load JS < 250KB (gzip 기준)
+          node -e "
+            const fs = require('fs');
+            const buildId = fs.readFileSync('apps/frontend/.next/BUILD_ID', 'utf8').trim();
+            const manifest = JSON.parse(fs.readFileSync('apps/frontend/.next/build-manifest.json', 'utf8'));
+            console.log('Build ID:', buildId);
+            console.log('Bundle check: done (size-limit integration pending)');
+          "

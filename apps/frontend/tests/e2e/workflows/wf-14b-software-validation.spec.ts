@@ -30,6 +30,7 @@ import {
   apiPatch,
 } from './helpers/workflow-helpers';
 import { getBackendToken } from '../shared/helpers/api-helpers';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 const BACKEND_URL = BASE_URLS.BACKEND;
 
@@ -416,6 +417,62 @@ test.describe('WF-14b: 소프트웨어 유효성 확인', () => {
       expect(docXml).toContain('로봇 이동 제어');
       expect(docXml).toContain('XYZ 좌표 이동');
       expect(docXml).toContain('정상 이동 확인');
+    });
+  });
+
+  // ====================================================================
+  // 재검증 배너 (ISO/IEC 17025 §6.4.13)
+  // requiresValidation=true + latestValidationId=null → 배너 표시
+  // quality_approve 완료 → latestValidationId 채워짐 → 배너 소멸
+  // ====================================================================
+
+  test.describe('재검증 배너 라이프사이클', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    let bannerSoftwareId: string;
+    let bannerValidationId: string;
+
+    test('Step 16: requiresValidation=true + 미검증 소프트웨어 → 배너 표시', async ({
+      testOperatorPage: page,
+    }) => {
+      const body = await createTestSoftware(page, {
+        name: 'WF-14b 배너 시나리오 소프트웨어',
+        softwareVersion: '3.0.0',
+        testField: 'RF',
+        manufacturer: 'BannerTest Ltd',
+        requiresValidation: true,
+      });
+      bannerSoftwareId = extractId(body);
+      expect(bannerSoftwareId).toBeTruthy();
+
+      await clearBackendCache();
+      await page.goto(FRONTEND_ROUTES.SOFTWARE.DETAIL(bannerSoftwareId));
+      await expect(page.getByText('유효성 확인이 필요합니다')).toBeVisible({ timeout: 10000 });
+    });
+
+    test('Step 17: quality_approve 완료 → 배너 소멸', async ({
+      testOperatorPage: tePage,
+      techManagerPage: tmPage,
+      qualityManagerPage: qmPage,
+    }) => {
+      const vBody = await createSoftwareValidation(tePage, bannerSoftwareId, {
+        validationType: 'vendor',
+        vendorName: '배너 소멸 시나리오 공급자',
+        vendorSummary: '배너 소멸 검증용',
+        receivedDate: new Date().toISOString().slice(0, 10),
+        attachmentNote: '배너 테스트 첨부',
+        softwareVersion: '3.0.0',
+      });
+      bannerValidationId = extractId(vBody);
+      await submitSoftwareValidation(tePage, bannerValidationId);
+      await clearBackendCache();
+      await approveSoftwareValidation(tmPage, bannerValidationId);
+      await clearBackendCache();
+      await qualityApproveSoftwareValidation(qmPage, bannerValidationId);
+      await clearBackendCache();
+
+      await tePage.goto(FRONTEND_ROUTES.SOFTWARE.DETAIL(bannerSoftwareId));
+      await expect(tePage.getByText('유효성 확인이 필요합니다')).toBeHidden({ timeout: 10000 });
     });
   });
 });

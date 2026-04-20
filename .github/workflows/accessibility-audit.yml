@@ -1,0 +1,60 @@
+name: Accessibility Audit (axe-core)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/frontend/**'
+      - '.github/workflows/accessibility-audit.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  axe:
+    name: axe-core Accessibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@a7487ba4b53252b86d2b92fa9c797d928c33c48f # v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter frontend run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+      - name: Start frontend
+        run: pnpm --filter frontend run start &
+        env:
+          PORT: 3000
+
+      - name: Wait for server
+        run: npx wait-on http://localhost:3000 --timeout 30000
+
+      - name: Run axe-core
+        run: |
+          npx @axe-core/cli \
+            http://localhost:3000 \
+            --exit \
+            --disable color-contrast \
+            --tags wcag2a,wcag2aa \
+            --reporter spec

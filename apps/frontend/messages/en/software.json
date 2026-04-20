@@ -56,6 +56,8 @@
     "editButton": "Edit",
     "toggleAvailability": "Toggle Availability",
     "validationLink": "Manage Validations",
+    "revalidationRequired": "Software validation is required. (ISO/IEC 17025 §6.4.13)",
+    "goToValidation": "Go to Validations",
     "fields": {
       "managementNumber": "Management Number",
       "name": "Software Name",

@@ -537,7 +537,11 @@ export class DocxTemplate {
       this.documentXml =
         this.documentXml.slice(0, sectPrIdx) + xml + this.documentXml.slice(sectPrIdx);
     } else {
-      this.documentXml = this.documentXml.replace('</w:body>', `${xml}</w:body>`);
+      const bodyCloseIdx = this.documentXml.lastIndexOf('</w:body>');
+      if (bodyCloseIdx !== -1) {
+        this.documentXml =
+          this.documentXml.slice(0, bodyCloseIdx) + xml + this.documentXml.slice(bodyCloseIdx);
+      }
     }
   }
 

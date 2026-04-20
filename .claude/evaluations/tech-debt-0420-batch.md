@@ -1,11 +1,17 @@
 ---
 slug: tech-debt-0420-batch
 date: 2026-04-20
-iteration: 2
+iteration: 3
 verdict: PASS
 ---
 
 # Evaluation Report: tech-debt-0420-batch
+
+## Iteration 3 Summary (Phase 2 + Phase 4 추가)
+
+Iteration 2 이후 추가 완료:
+- Phase 2: `software-validation-renderer.service.spec.ts` 신규 생성, 9개 테스트 전체 PASS
+- Phase 4: `wf-14b-software-validation.spec.ts` Steps 16-17 추가 (배너 표시/소멸 브라우저 assertions)
 
 ## Iteration 2 Summary
 
@@ -18,7 +24,7 @@ Iteration 1 FAIL 원인: M5 — `calibration-plan-renderer.service.ts` JSDoc 주
 |---|-----------|--------|----------|
 | M1 | backend tsc exit 0 | PASS | `pnpm exec tsc --noEmit -p apps/backend/tsconfig.json` → exit 0 |
 | M2 | frontend tsc exit 0 | PASS | `pnpm exec tsc --noEmit -p apps/frontend/tsconfig.json` → exit 0 |
-| M3 | backend unit tests PASS | PASS | 6 suites, 78 tests (calibration-plans/non-conformances/calibration.service), 0 failures |
+| M3 | backend unit tests PASS | PASS | 7 suites, 87 tests (+9 software-validation-renderer.service.spec), 0 failures |
 | M4 | Phase 1: tracker 종결 마킹 | PASS | grep → 0 hits (`[ ].*이중 네비게이션` / `[ ].*HTTP 메서드 불일치` 모두 없음) |
 | M5 | Phase 2: renderer.service FormTemplateService DI 제거 | PASS | grep → 0 hits (주석 수정 완료, `FormTemplateService` 문자열 완전 제거) |
 | M6 | Phase 2: render() templateBuffer 파라미터 | PASS | line 37: `async render(plan: CalibrationPlanDetail, templateBuffer: Buffer): Promise<ExportResult>` |
