@@ -1688,7 +1688,12 @@ export class CalibrationService extends VersionedBaseService {
     // 장비별 중간점검 주기를 DB에서 조회 (기본값 6개월)
     const DEFAULT_INTERMEDIATE_CHECK_CYCLE_MONTHS = 6;
     const [equip] = await this.db
-      .select({ intermediateCheckCycle: schema.equipment.intermediateCheckCycle })
+      .select({
+        intermediateCheckCycle: schema.equipment.intermediateCheckCycle,
+        name: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        teamId: schema.equipment.teamId,
+      })
       .from(schema.equipment)
       .where(eq(schema.equipment.id, calibration.equipmentId))
       .limit(1);
@@ -1721,9 +1726,9 @@ export class CalibrationService extends VersionedBaseService {
     await this.eventEmitter.emitAsync(NOTIFICATION_EVENTS.INTERMEDIATE_CHECK_COMPLETED, {
       calibrationId: id,
       equipmentId: calibration.equipmentId,
-      equipmentName: '',
-      managementNumber: '',
-      teamId: '',
+      equipmentName: equip?.name ?? '',
+      managementNumber: equip?.managementNumber ?? '',
+      teamId: equip?.teamId ?? '',
       actorId: completedBy,
       actorName: '',
       timestamp: new Date(),

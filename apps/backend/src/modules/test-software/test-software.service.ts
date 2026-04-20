@@ -18,6 +18,7 @@ import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events
 import type { CreateTestSoftwareInput } from './dto/create-test-software.dto';
 import type { UpdateTestSoftwareInput } from './dto/update-test-software.dto';
 import type { TestSoftwareQueryInput } from './dto/test-software-query.dto';
+import { SoftwareAvailabilityEnum } from '@equipment-management/schemas';
 import type { LinkEquipmentInput } from './dto/link-equipment.dto';
 
 /** findAll/findOne 응답에 users LEFT JOIN으로 추가되는 필드 */
@@ -107,7 +108,7 @@ export class TestSoftwareService extends VersionedBaseService {
           installedAt: dto.installedAt ? new Date(dto.installedAt) : null,
           manufacturer: dto.manufacturer ?? null,
           location: dto.location ?? null,
-          availability: dto.availability ?? 'available',
+          availability: dto.availability ?? SoftwareAvailabilityEnum.enum.available,
           requiresValidation: dto.requiresValidation ?? true,
           site: dto.site ?? null,
           createdBy,
@@ -384,7 +385,10 @@ export class TestSoftwareService extends VersionedBaseService {
 
   async toggleAvailability(id: string, version: number): Promise<TestSoftware> {
     const current = await this.findOne(id);
-    const newAvailability = current.availability === 'available' ? 'unavailable' : 'available';
+    const newAvailability =
+      current.availability === SoftwareAvailabilityEnum.enum.available
+        ? SoftwareAvailabilityEnum.enum.unavailable
+        : SoftwareAvailabilityEnum.enum.available;
 
     const updated = await this.updateWithVersion<TestSoftware>(
       testSoftware,

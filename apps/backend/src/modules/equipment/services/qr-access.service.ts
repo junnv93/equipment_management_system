@@ -9,6 +9,7 @@ import {
   QR_ACTION_VALUES,
   type QRAllowedAction,
 } from '@equipment-management/shared-constants';
+import { EquipmentStatusEnum, CheckoutStatusEnum } from '@equipment-management/schemas';
 import type { JwtUser } from '../../../types/auth';
 
 /**
@@ -48,7 +49,7 @@ export class QRAccessService {
     const sameSite = !!user.site && user.site === equipment.site;
     if (
       sameSite &&
-      equipment.status === 'available' &&
+      equipment.status === EquipmentStatusEnum.enum.available &&
       userHasPermission(roles, Permission.CREATE_CHECKOUT)
     ) {
       actions.add('request_checkout');
@@ -87,7 +88,7 @@ export class QRAccessService {
           and(
             eq(checkouts.requesterId, userId),
             eq(checkoutItems.equipmentId, equipmentId),
-            inArray(checkouts.status, ['checked_out'])
+            inArray(checkouts.status, [CheckoutStatusEnum.enum.checked_out])
           )
         )
         .limit(1);

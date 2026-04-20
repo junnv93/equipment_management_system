@@ -166,14 +166,16 @@ export class IntermediateCheckScheduler {
         }
 
         // 이벤트 발행 (수신자 해석은 NOTIFICATION_REGISTRY가 자동 처리)
-        try {
-          const equip = equipmentMap.get(calibration.equipmentId) ?? {
-            name: '',
-            managementNumber: '',
-            teamId: '',
-            site: '',
-          };
+        const equip = equipmentMap.get(calibration.equipmentId);
+        if (!equip) {
+          this.logger.warn(
+            `중간점검 알림 건너뜀 — 장비 데이터 없음: calibrationId=${calibration.id}, equipmentId=${calibration.equipmentId}`
+          );
+          skippedCount++;
+          continue;
+        }
 
+        try {
           // 스케줄러 컨텍스트 — fire-and-forget (cron, HTTP response 없음).
           // 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
           this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
@@ -192,7 +194,7 @@ export class IntermediateCheckScheduler {
           sentCount++;
 
           this.logger.log(
-            `중간점검 알림 발행 완료: 교정 ID ${calibration.id}, 장비 ${equip.managementNumber || calibration.equipmentId}, D-${daysUntilCheck}`
+            `중간점검 알림 발행 완료: 교정 ID ${calibration.id}, 장비 ${equip.managementNumber}, D-${daysUntilCheck}`
           );
         } catch (error) {
           this.logger.error(
@@ -293,14 +295,16 @@ export class IntermediateCheckScheduler {
           continue;
         }
 
-        try {
-          const equip = equipmentMap.get(calibration.equipmentId) ?? {
-            name: '',
-            managementNumber: '',
-            teamId: '',
-            site: '',
-          };
+        const equip = equipmentMap.get(calibration.equipmentId);
+        if (!equip) {
+          this.logger.warn(
+            `교정 예정 알림 건너뜀 — 장비 데이터 없음: calibrationId=${calibration.id}, equipmentId=${calibration.equipmentId}`
+          );
+          skippedCount++;
+          continue;
+        }
 
+        try {
           // 스케줄러 컨텍스트 — fire-and-forget (cron, HTTP response 없음).
           // 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
           this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
@@ -319,7 +323,7 @@ export class IntermediateCheckScheduler {
           sentCount++;
 
           this.logger.log(
-            `교정 예정 알림 발행 완료: 장비 ${equip.managementNumber || calibration.equipmentId}, D-${daysUntilCalibration}`
+            `교정 예정 알림 발행 완료: 장비 ${equip.managementNumber}, D-${daysUntilCalibration}`
           );
         } catch (error) {
           this.logger.error(
@@ -374,14 +378,20 @@ export class IntermediateCheckScheduler {
           (checkDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        try {
-          const equip = equipmentMap.get(calibration.equipmentId) ?? {
-            name: '',
-            managementNumber: '',
-            teamId: '',
-            site: '',
-          };
+        const equip = equipmentMap.get(calibration.equipmentId);
+        if (!equip) {
+          this.logger.warn(
+            `중간점검 알림(bulk) 건너뜀 — 장비 데이터 없음: calibrationId=${calibration.id}, equipmentId=${calibration.equipmentId}`
+          );
+          results.push({
+            calibrationId: calibration.id,
+            success: false,
+            error: '장비 데이터 없음',
+          });
+          continue;
+        }
 
+        try {
           // 스케줄러 컨텍스트 — fire-and-forget (cron, HTTP response 없음).
           // 정책: docs/references/backend-patterns.md "Event Emission: emit vs emitAsync".
           this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
