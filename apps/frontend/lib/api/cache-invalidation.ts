@@ -463,7 +463,8 @@ export class CalibrationPlansCacheInvalidation {
   }
 
   /**
-   * 특정 교정계획서 상세 + 목록 무효화
+   * 특정 교정계획서 상세 + 목록 + 버전 히스토리 무효화
+   * versions는 REFETCH_STRATEGIES.STATIC이므로 명시적 invalidate 필수
    */
   static async invalidatePlan(queryClient: QueryClient, planId: string): Promise<void> {
     await Promise.all([
@@ -473,6 +474,10 @@ export class CalibrationPlansCacheInvalidation {
       }),
       queryClient.invalidateQueries({
         queryKey: queryKeys.calibrationPlans.lists(),
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibrationPlans.versions(planId),
         exact: false,
       }),
     ]);
