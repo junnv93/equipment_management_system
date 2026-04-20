@@ -6,7 +6,7 @@
  * 검증 범위:
  * 1. 모든 EQUIPMENT_STATUS_FILTER_OPTIONS 표시 (SSOT 준수)
  * 2. 상태 필터 선택 시 URL 업데이트 및 결과 반환
- * 3. calibration_overdue 상태 필터 적용 시 D+N 뱃지 표시
+ * 3. 교정기한 필터 '기한 초과' 선택 시 calibrationDueFilter=overdue URL 반영 및 D+N 뱃지 표시
  *
  * SSOT:
  * - EQUIPMENT_STATUS_FILTER_OPTIONS: @equipment-management/schemas
@@ -15,6 +15,8 @@
  * 주의사항:
  * - EQUIPMENT_STATUS_FILTER_OPTIONS는 UI 필터용 상태 목록 (일부 상태 제외)
  * - deprecated(retired), 시스템생성(calibration_scheduled), 내부전용(temporary, inactive) 제외
+ * - '교정 기한 초과'는 EquipmentStatus enum이 아닌 derived 필터 (calibrationDueFilter=overdue)
+ *   → 상태 드롭다운이 아닌 '교정 기한 필터' 드롭다운에서 선택
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
@@ -113,30 +115,34 @@ test.describe('Group A: Status Filter', () => {
     });
   });
 
-  test.describe('3.3. Status filter for calibration_overdue equipment', () => {
+  test.describe('3.3. CalibrationDue filter for overdue equipment', () => {
     test('should display D+N badge for overdue equipment', async ({ testOperatorPage }) => {
       await testOperatorPage.goto('/equipment');
 
-      // 상태 필터 선택: 교정 기한 초과 (1차 필터 - 항상 표시)
-      const statusFilter = testOperatorPage.getByRole('combobox', { name: '장비 상태 필터 선택' });
-      await statusFilter.click();
-      await testOperatorPage.getByRole('option', { name: '교정 기한 초과' }).click();
+      // 교정기한 필터 선택: 기한 초과 (1차 필터 - 항상 표시)
+      // ⚠️ calibration_overdue는 EquipmentStatus enum에서 제거됨 (migration 0013)
+      //    derived 필터 calibrationDueFilter=overdue (nextCalibrationDate < today)를 사용
+      const calibrationDueFilter = testOperatorPage.getByRole('combobox', {
+        name: '교정 기한 필터 선택',
+      });
+      await calibrationDueFilter.click();
+      await testOperatorPage.getByRole('option', { name: '기한 초과' }).click();
 
       // 1. URL 파라미터 검증
-      await testOperatorPage.waitForURL(/status=calibration_overdue/, { timeout: 10000 });
-      await expect(testOperatorPage).toHaveURL(/status=calibration_overdue/);
+      await testOperatorPage.waitForURL(/calibrationDueFilter=overdue/, { timeout: 10000 });
+      await expect(testOperatorPage).toHaveURL(/calibrationDueFilter=overdue/);
 
       // Wait for table to reload
       await testOperatorPage.waitForSelector('[data-testid="equipment-row"]', { timeout: 10000 });
 
-      // 2. UI 검증: 필터 뱃지 표시
-      const filterBadge = testOperatorPage.getByText(/상태:\s*교정 기한 초과/);
+      // 2. UI 검증: 필터 뱃지 표시 (badgeCalibrationDue: "교정기한: {label}")
+      const filterBadge = testOperatorPage.getByText(/교정기한:\s*기한 초과/);
       await expect(filterBadge).toBeVisible();
 
       // 3. 비즈니스 로직 검증: URL 파라미터 확인
       const currentUrl = testOperatorPage.url();
       const urlObj = new URL(currentUrl);
-      expect(urlObj.searchParams.get('status')).toBe('calibration_overdue');
+      expect(urlObj.searchParams.get('calibrationDueFilter')).toBe('overdue');
 
       // 4. D+N 뱃지 검증: 교정 기한 초과 장비는 D+N 형식의 뱃지를 표시해야 함
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');
@@ -151,12 +157,11 @@ test.describe('Group A: Status Filter', () => {
 
         const badgeText = await dPlusBadge.textContent();
         console.log('[Test] Overdue badge text:', badgeText);
-        // Badge shows "D+N (초과)" format (label + overdueLabel suffix from i18n)
         expect(badgeText).toMatch(/D\+\d+/);
 
-        console.log('[Test] ✅ calibration_overdue filter displays D+N badge correctly');
+        console.log('[Test] ✅ calibrationDueFilter=overdue displays D+N badge correctly');
       } else {
-        console.log('[Test] ⚠️ No calibration_overdue equipment in test data');
+        console.log('[Test] ⚠️ No overdue calibration equipment in test data');
       }
     });
   });

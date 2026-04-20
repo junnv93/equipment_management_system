@@ -253,11 +253,11 @@ This test plan covers the comprehensive E2E testing of the Equipment List page (
 
 1. Login as testOperatorPage fixture
 2. Navigate to /equipment
-3. Click status filter and select '교정 기한 초과'
+3. Click calibration due filter and select '기한 초과'
 
 **Expected Results:**
 
-- URL contains 'status=calibration_overdue'
+- URL contains 'calibrationDueFilter=overdue'
 - Only overdue equipment is shown
 - Equipment rows display D+N badge for overdue days
 

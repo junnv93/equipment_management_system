@@ -72,10 +72,10 @@ test.describe('Group A: Calibration Date Display', () => {
     test('should display D+N badge for equipment with overdue calibration', async ({
       testOperatorPage,
     }) => {
-      // 교정 기한 초과 상태 필터로 이동
-      // ⚠️ CalibrationOverdueScheduler가 onModuleInit에서 calibration_overdue → non_conforming 변환하므로
-      //    테스트 시점에 calibration_overdue 상태 장비가 없을 수 있음
-      await testOperatorPage.goto('/equipment?status=calibration_overdue');
+      // 교정기한 초과 derived 필터로 이동 (nextCalibrationDate < today)
+      // ⚠️ calibration_overdue는 EquipmentStatus enum에서 제거됨 (migration 0013)
+      //    calibrationDueFilter=overdue는 nextCalibrationDate 기반 derived 필터
+      await testOperatorPage.goto('/equipment?calibrationDueFilter=overdue');
 
       const equipmentRows = testOperatorPage.locator('[data-testid="equipment-row"]');
 
