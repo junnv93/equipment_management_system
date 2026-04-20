@@ -48,6 +48,32 @@ export const DATA_END_ROW = 32 as const;
 export const COLUMN_COUNT = 10 as const;
 
 /**
+ * 템플릿이 사전 서식(pre-formatted)한 데이터 행 수.
+ *
+ * = DATA_END_ROW - DATA_START_ROW + 1 = 27행.
+ * 항목 수가 이 값을 초과하면 렌더러가 서명란 이전에 빈 행을 동적으로 삽입한다.
+ * 항목 수 상한은 없으며, 서명란은 항상 마지막 데이터 행 아래에 위치한다.
+ */
+export const TEMPLATE_DATA_ROW_COUNT = DATA_END_ROW - DATA_START_ROW + 1; // 27
+
+/**
+ * 서명란 이름 행 (1-based).
+ *
+ * Row 34: 레이블 (특기사항 / 작성 / 검토 / 승인)
+ * Row 35: 서명 이름 — E35:F35(작성), G35:H35(검토), I35:J35(승인) 병합
+ * Row 37: 날짜 — E37:F37(작성일), G37:H37(검토일), I37:J37(승인일) 병합
+ */
+export const SIGNATURE_NAME_ROW = 35 as const;
+export const SIGNATURE_DATE_ROW = 37 as const;
+
+/** 서명란 컬럼 위치 (1-based) — 병합 셀 최상단 좌측 */
+export const SIGNATURE_COLS = {
+  author: 5, // E열 (E35:F35, E37:F37)
+  reviewer: 7, // G열 (G35:H35, G37:H37)
+  approver: 9, // I열 (I35:J35, I37:J37)
+} as const;
+
+/**
  * 컬럼 정의 — 각 행 주입 시 key 순서대로 값 배열 생성.
  *
  * 양식 원본 Row 4~5 실측:

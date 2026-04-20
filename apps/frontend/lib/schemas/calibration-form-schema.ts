@@ -13,19 +13,19 @@ export const createCalibrationFormSchema = (t: (key: string) => string) =>
   z
     .object({
       equipmentId: uuidString(),
-      calibrationDate: z.date({ error: t('calibration.form.dateRequired') }),
-      nextCalibrationDate: z.date({ error: t('calibration.form.nextDateRequired') }),
+      calibrationDate: z.date({ error: t('form.dateRequired') }),
+      nextCalibrationDate: z.date({ error: t('form.nextDateRequired') }),
       calibrationCycle: z.coerce
-        .number({ error: t('calibration.form.cycleInvalid') })
+        .number({ error: t('form.cycleInvalid') })
         .int()
         .min(1)
         .max(60),
       calibrationAgency: z
-        .string({ error: t('calibration.form.agencyRequired') })
-        .min(1, t('calibration.form.agencyRequired'))
+        .string({ error: t('form.agencyRequired') })
+        .min(1, t('form.agencyRequired'))
         .max(100),
       certificateNumber: z.string().max(100).optional(),
-      certificateFile: z.instanceof(File, { error: t('calibration.form.fileRequired') }),
+      certificateFile: z.instanceof(File, { error: t('form.fileRequired') }),
       result: CalibrationResultEnum,
       notes: z.string().optional(),
       intermediateCheckDate: z.date().optional(),
@@ -34,7 +34,7 @@ export const createCalibrationFormSchema = (t: (key: string) => string) =>
       if (data.nextCalibrationDate <= data.calibrationDate) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: t('calibration.form.nextDateMustBeAfter'),
+          message: t('form.nextDateMustBeAfter'),
           path: ['nextCalibrationDate'],
         });
       }
@@ -45,7 +45,7 @@ export const createCalibrationFormSchema = (t: (key: string) => string) =>
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: t('calibration.form.intermediateCheckDateInvalid'),
+          message: t('form.intermediateCheckDateInvalid'),
           path: ['intermediateCheckDate'],
         });
       }

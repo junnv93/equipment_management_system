@@ -22,6 +22,11 @@ describe('calibration-plan.layout.ts 불변식', () => {
     expect(Layout.DATA_END_ROW).toBeLessThan(34);
   });
 
+  it('TEMPLATE_DATA_ROW_COUNT가 DATA_END_ROW - DATA_START_ROW + 1이어야 함', () => {
+    expect(Layout.TEMPLATE_DATA_ROW_COUNT).toBe(Layout.DATA_END_ROW - Layout.DATA_START_ROW + 1);
+    expect(Layout.TEMPLATE_DATA_ROW_COUNT).toBe(27);
+  });
+
   it('DATA_START_ROW가 6이어야 함 (Row 1~3 제목, Row 4~5 헤더)', () => {
     expect(Layout.DATA_START_ROW).toBe(6);
   });

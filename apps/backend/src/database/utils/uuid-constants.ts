@@ -150,12 +150,13 @@ export const CALIB_018_ID = 'bbbb0012-0012-0012-0012-000000000012';
 
 export const CPLAN_001_ID = 'cccc0001-0001-4001-8001-000000000001'; // draft (v1, 2026 suwon)
 export const CPLAN_002_ID = 'cccc0002-0002-4002-8002-000000000002'; // pending_review (v1, 2026 uiwang)
-export const CPLAN_003_ID = 'cccc0003-0003-4003-8003-000000000003'; // pending_approval (v1, 2026 pyeongtaek)
+export const CPLAN_003_ID = 'cccc0003-0003-4003-8003-000000000003'; // pending_approval (v1, 2026 suwon General EMC)
 export const CPLAN_004_ID = 'cccc0004-0004-4004-8004-000000000004'; // approved (v1, 2025 suwon)
 export const CPLAN_005_ID = 'cccc0005-0005-4005-8005-000000000005'; // rejected (v1, 2024 suwon, review stage)
 export const CPLAN_006_ID = 'cccc0006-0006-4006-8006-000000000006'; // pending_review (v2, re-submitted from CPLAN_005)
 export const CPLAN_007_ID = 'cccc0007-0007-4007-8007-000000000007'; // pending_approval (v1, 2023 suwon FCC_EMC_RF)
 export const CPLAN_008_ID = 'cccc0008-0008-4008-8008-000000000008'; // approved (v1, 2026 suwon Automotive EMC) — export test
+export const CPLAN_009_ID = 'cccc0009-0009-4009-8009-000000000009'; // approved (v1, 2022 suwon FCC EMC/RF) — 28-item flexible-row test
 
 // =============================================================================
 // CALIBRATION PLAN ITEMS (12 items across 6 plans, + items 013-016 for CPLAN_001 expansion)
@@ -184,6 +185,35 @@ export const CPLAN_ITEM_019_ID = 'cccc1019-0019-4019-8019-000000000019'; // CPLA
 export const CPLAN_ITEM_020_ID = 'cccc1020-0020-4020-8020-000000000020'; // CPLAN_008 item 2 (Current Probe)
 export const CPLAN_ITEM_021_ID = 'cccc1021-0021-4021-8021-000000000021'; // CPLAN_008 item 3 (Injection Clamp)
 export const CPLAN_ITEM_022_ID = 'cccc1022-0022-4022-8022-000000000022'; // CPLAN_008 item 4 (BCI Probe)
+// CPLAN_009 items (28개, seq 1~28) — 템플릿 27행 초과 유연 렌더링 검증용
+export const CPLAN_ITEM_023_ID = 'cccc1023-0023-4023-8023-000000000023'; // CPLAN_009 seq 1  (Spectrum Analyzer SUW-E)
+export const CPLAN_ITEM_024_ID = 'cccc1024-0024-4024-8024-000000000024'; // CPLAN_009 seq 2  (Signal Gen SUW-E)
+export const CPLAN_ITEM_025_ID = 'cccc1025-0025-4025-8025-000000000025'; // CPLAN_009 seq 3  (Network Analyzer SUW-E)
+export const CPLAN_ITEM_026_ID = 'cccc1026-0026-4026-8026-000000000026'; // CPLAN_009 seq 4  (Power Meter SUW-E)
+export const CPLAN_ITEM_027_ID = 'cccc1027-0027-4027-8027-000000000027'; // CPLAN_009 seq 5  (EMC Receiver SUW-E)
+export const CPLAN_ITEM_028_ID = 'cccc1028-0028-4028-8028-000000000028'; // CPLAN_009 seq 6  (Filter SUW-E)
+export const CPLAN_ITEM_029_ID = 'cccc1029-0029-4029-8029-000000000029'; // CPLAN_009 seq 7  (Antenna SUW-E)
+export const CPLAN_ITEM_030_ID = 'cccc1030-0030-4030-8030-000000000030'; // CPLAN_009 seq 8  (Coupler SUW-E)
+export const CPLAN_ITEM_031_ID = 'cccc1031-0031-4031-8031-000000000031'; // CPLAN_009 seq 9  (RBAC Signal Gen SUW-E)
+export const CPLAN_ITEM_032_ID = 'cccc1032-0032-4032-8032-000000000032'; // CPLAN_009 seq 10 (Cancel Receiver SUW-E)
+export const CPLAN_ITEM_033_ID = 'cccc1033-0033-4033-8033-000000000033'; // CPLAN_009 seq 11 (CAS Analyzer SUW-E)
+export const CPLAN_ITEM_034_ID = 'cccc1034-0034-4034-8034-000000000034'; // CPLAN_009 seq 12 (Shared Analyzer SUW-E)
+export const CPLAN_ITEM_035_ID = 'cccc1035-0035-4035-8035-000000000035'; // CPLAN_009 seq 13 (Ref Jig SUW-E)
+export const CPLAN_ITEM_036_ID = 'cccc1036-0036-4036-8036-000000000036'; // CPLAN_009 seq 14 (Oscilloscope SUW-R)
+export const CPLAN_ITEM_037_ID = 'cccc1037-0037-4037-8037-000000000037'; // CPLAN_009 seq 15 (Power Supply SUW-R)
+export const CPLAN_ITEM_038_ID = 'cccc1038-0038-4038-8038-000000000038'; // CPLAN_009 seq 16 (Multimeter SUW-R)
+export const CPLAN_ITEM_039_ID = 'cccc1039-0039-4039-8039-000000000039'; // CPLAN_009 seq 17 (Signal Int SUW-R)
+export const CPLAN_ITEM_040_ID = 'cccc1040-0040-4040-8040-000000000040'; // CPLAN_009 seq 18 (Attenuator SUW-R)
+export const CPLAN_ITEM_041_ID = 'cccc1041-0041-4041-8041-000000000041'; // CPLAN_009 seq 19 (SAR Probe SUW-S)
+export const CPLAN_ITEM_042_ID = 'cccc1042-0042-4042-8042-000000000042'; // CPLAN_009 seq 20 (Phantom Head SUW-S)
+export const CPLAN_ITEM_043_ID = 'cccc1043-0043-4043-8043-000000000043'; // CPLAN_009 seq 21 (SAR System SUW-S)
+export const CPLAN_ITEM_044_ID = 'cccc1044-0044-4044-8044-000000000044'; // CPLAN_009 seq 22 (Measurement Stand SUW-S)
+export const CPLAN_ITEM_045_ID = 'cccc1045-0045-4045-8045-000000000045'; // CPLAN_009 seq 23 (Liquid Handler SUW-S)
+export const CPLAN_ITEM_046_ID = 'cccc1046-0046-4046-8046-000000000046'; // CPLAN_009 seq 24 (Temperature Control SUW-S)
+export const CPLAN_ITEM_047_ID = 'cccc1047-0047-4047-8047-000000000047'; // CPLAN_009 seq 25 (Harness Coupler SUW-A)
+export const CPLAN_ITEM_048_ID = 'cccc1048-0048-4048-8048-000000000048'; // CPLAN_009 seq 26 (Current Probe SUW-A)
+export const CPLAN_ITEM_049_ID = 'cccc1049-0049-4049-8049-000000000049'; // CPLAN_009 seq 27 (Injection Clamp SUW-A)
+export const CPLAN_ITEM_050_ID = 'cccc1050-0050-4050-8050-000000000050'; // CPLAN_009 seq 28 (BCI SUW-A) — 27행 초과
 
 // =============================================================================
 // NON-CONFORMANCES (10 non-conformances)
