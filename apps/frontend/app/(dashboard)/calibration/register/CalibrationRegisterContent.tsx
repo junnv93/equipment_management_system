@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, AlertCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,12 +11,8 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/shared/PageHeader';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
-import { SELECTOR_PAGE_SIZE } from '@equipment-management/shared-constants';
-import {
-  type UserRole,
-  UserRoleValues as URVal,
-  EquipmentStatusValues as ESVal,
-} from '@equipment-management/schemas';
+import { SELECTOR_PAGE_SIZE, Permission } from '@equipment-management/shared-constants';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 import {
   getEquipmentSelectionClasses,
   CALIBRATION_SELECTION,
@@ -26,17 +21,16 @@ import {
 } from '@/lib/design-tokens';
 import { CalibrationForm } from '@/components/calibration/CalibrationForm';
 import type { Calibration } from '@/lib/api/calibration-api';
+import { useAuth } from '@/hooks/use-auth';
 
 export function CalibrationRegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { can } = useAuth();
   const t = useTranslations('calibration');
 
   const equipmentIdFromUrl = searchParams.get('equipmentId');
-  const userRole: UserRole =
-    (session?.user as { role?: UserRole } | undefined)?.role || URVal.TEST_ENGINEER;
-  const canRegisterCalibration = userRole === URVal.TEST_ENGINEER;
+  const canRegisterCalibration = can(Permission.CREATE_CALIBRATION);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(equipmentIdFromUrl);

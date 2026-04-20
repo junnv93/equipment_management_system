@@ -26,8 +26,12 @@ import {
   CPLAN_004_ID,
   CPLAN_005_ID,
   CPLAN_006_ID,
+  CPLAN_007_ID,
   // Plan Item IDs
   CPLAN_ITEM_001_ID,
+  // Calibration IDs (실적 링크용)
+  CALIB_004_ID,
+  CALIB_005_ID,
   CPLAN_ITEM_002_ID,
   CPLAN_ITEM_003_ID,
   CPLAN_ITEM_004_ID,
@@ -39,6 +43,12 @@ import {
   CPLAN_ITEM_010_ID,
   CPLAN_ITEM_011_ID,
   CPLAN_ITEM_012_ID,
+  CPLAN_ITEM_013_ID,
+  CPLAN_ITEM_014_ID,
+  CPLAN_ITEM_015_ID,
+  CPLAN_ITEM_016_ID,
+  CPLAN_ITEM_017_ID,
+  CPLAN_ITEM_018_ID,
   // Team IDs
   TEAM_FCC_EMC_RF_SUWON_ID,
   TEAM_GENERAL_EMC_SUWON_ID,
@@ -193,6 +203,27 @@ export const CALIBRATION_PLANS_SEED_DATA: NewCalibrationPlan[] = [
     createdAt: new Date('2024-01-10'),
     updatedAt: new Date('2024-01-12'),
   },
+
+  // 7. pending_approval — 2023년 수원 FCC EMC/RF, LM 승인 대기
+  //    목적: 사용자 URL(site=suwon, FCC_EMC_RF 팀)에서 3단계 중간 상태 체험
+  //    연도 2023을 사용: 2026(draft)/2025(approved)/2024(v2 pending_review) 이미 점유
+  {
+    id: CPLAN_007_ID,
+    year: 2023,
+    siteId: 'suwon',
+    teamId: TEAM_FCC_EMC_RF_SUWON_ID,
+    status: CPStatus.PENDING_APPROVAL,
+    createdBy: USER_TECHNICAL_MANAGER_SUWON_ID,
+    submittedAt: new Date('2023-01-10'),
+    reviewedBy: USER_QUALITY_MANAGER_SUWON_ID,
+    reviewedAt: new Date('2023-01-13'),
+    reviewComment: '검토 완료, 시험소장 최종 승인 요청합니다.',
+    version: 1,
+    casVersion: 3, // submit(2) + review(3)
+    isLatestVersion: true,
+    createdAt: new Date('2023-01-05'),
+    updatedAt: new Date('2023-01-13'),
+  },
 ];
 
 /**
@@ -228,6 +259,55 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
     snapshotCalibrationAgency: 'HCT',
     plannedCalibrationDate: monthsLater(10),
     plannedCalibrationAgency: 'HCT',
+  },
+
+  // CPLAN_001 확장 items — 월별 분포 + 교정주기 다양성
+  {
+    id: CPLAN_ITEM_013_ID,
+    planId: CPLAN_001_ID,
+    equipmentId: EQUIP_NETWORK_ANALYZER_SUW_E_ID,
+    sequenceNumber: 3,
+    snapshotValidityDate: monthsAgo(6),
+    snapshotCalibrationCycle: 24,
+    snapshotCalibrationAgency: 'KTC',
+    plannedCalibrationDate: monthsLater(1),
+    plannedCalibrationAgency: 'KTC',
+    notes: '24개월 주기 — 연 1회 집중 교정 대상',
+  },
+  {
+    id: CPLAN_ITEM_014_ID,
+    planId: CPLAN_001_ID,
+    equipmentId: EQUIP_EMC_RECEIVER_SUW_E_ID,
+    sequenceNumber: 4,
+    snapshotValidityDate: monthsAgo(1),
+    snapshotCalibrationCycle: 6,
+    snapshotCalibrationAgency: 'KATRI',
+    plannedCalibrationDate: monthsLater(4),
+    plannedCalibrationAgency: 'KATRI',
+    notes: '6개월 단주기 — 상반기/하반기 분리 교정',
+  },
+  {
+    id: CPLAN_ITEM_015_ID,
+    planId: CPLAN_001_ID,
+    equipmentId: EQUIP_OSCILLOSCOPE_SUW_R_ID,
+    sequenceNumber: 5,
+    snapshotValidityDate: monthsAgo(4),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'HCT',
+    plannedCalibrationDate: monthsLater(7),
+    plannedCalibrationAgency: 'HCT',
+  },
+  {
+    id: CPLAN_ITEM_016_ID,
+    planId: CPLAN_001_ID,
+    equipmentId: EQUIP_CURRENT_PROBE_SUW_A_ID,
+    sequenceNumber: 6,
+    snapshotValidityDate: monthsAgo(8),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'KATRI',
+    plannedCalibrationDate: monthsLater(11),
+    plannedCalibrationAgency: 'KATRI',
+    notes: '연말 교정 예정',
   },
 
   // ── CPLAN_002 (pending_review, 2026 의왕 General RF) ─────────────────
@@ -295,6 +375,7 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
     plannedCalibrationDate: new Date('2025-09-01'),
     plannedCalibrationAgency: 'KTC',
     actualCalibrationDate: new Date('2025-08-28'),
+    actualCalibrationId: CALIB_004_ID,
     confirmedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
     confirmedAt: new Date('2025-09-02'),
   },
@@ -309,6 +390,7 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
     plannedCalibrationDate: new Date('2025-07-01'),
     plannedCalibrationAgency: 'HCT',
     actualCalibrationDate: new Date('2025-06-25'),
+    actualCalibrationId: CALIB_005_ID,
     confirmedBy: USER_TECHNICAL_MANAGER_SUWON_ID,
     confirmedAt: new Date('2025-07-01'),
   },
@@ -365,5 +447,31 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
     snapshotCalibrationAgency: 'KATRI',
     plannedCalibrationDate: new Date('2024-04-01'),
     plannedCalibrationAgency: 'KATRI',
+  },
+
+  // ── CPLAN_007 (pending_approval, 2023 수원 FCC EMC/RF) ──────────────
+  //    LM 최종 승인 대기 상태 체험용
+
+  {
+    id: CPLAN_ITEM_017_ID,
+    planId: CPLAN_007_ID,
+    equipmentId: EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
+    sequenceNumber: 1,
+    snapshotValidityDate: new Date('2022-10-01'),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'HCT',
+    plannedCalibrationDate: new Date('2023-10-01'),
+    plannedCalibrationAgency: 'HCT',
+  },
+  {
+    id: CPLAN_ITEM_018_ID,
+    planId: CPLAN_007_ID,
+    equipmentId: EQUIP_SIGNAL_GEN_SUW_E_ID,
+    sequenceNumber: 2,
+    snapshotValidityDate: new Date('2022-08-01'),
+    snapshotCalibrationCycle: 12,
+    snapshotCalibrationAgency: 'KTC',
+    plannedCalibrationDate: new Date('2023-08-01'),
+    plannedCalibrationAgency: 'KTC',
   },
 ];

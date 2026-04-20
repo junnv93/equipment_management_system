@@ -44,7 +44,7 @@ import { toDate, formatDate } from '@/lib/utils/date';
 import { addMonths } from 'date-fns';
 
 export interface CalibrationFormProps {
-  mode: 'page' | 'dialog';
+  mode: 'page' | 'dialog' | 'plan-item';
   equipmentId: string;
   /** plan item 실적 등록 시 전달 — 백엔드 auto-link 트리거 */
   planItemId?: string;
@@ -159,7 +159,7 @@ export function CalibrationForm({
     mutation.mutate(buildCalibrationFormData(values, planItemId));
   };
 
-  const isCompact = mode === 'dialog';
+  const isCompact = mode === 'dialog' || mode === 'plan-item';
 
   return (
     <Form {...form}>

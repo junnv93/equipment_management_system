@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { differenceInDays } from 'date-fns';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -31,12 +31,25 @@ interface Props {
   data: CalibrationHistory[];
   isLoading: boolean;
   canRegister?: boolean;
+  highlightId?: string;
 }
 
-export default function CalibrationListTable({ data, isLoading, canRegister = true }: Props) {
+export default function CalibrationListTable({
+  data,
+  isLoading,
+  canRegister = true,
+  highlightId,
+}: Props) {
   const t = useTranslations('calibration');
   const router = useRouter();
   const { fmtDate } = useDateFormatter();
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
+
+  useEffect(() => {
+    if (highlightId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightId, data]);
 
   // map 밖에서 한 번만 계산 (row마다 반복 방지)
   const today = useMemo(() => {
@@ -100,10 +113,17 @@ export default function CalibrationListTable({ data, isLoading, canRegister = tr
             const ddayLabel = getCalibrationDdayLabel(days);
             const rowClasses = getCalibrationRowClasses(item.approvalStatus);
 
+            const isHighlighted = highlightId === item.id;
+
             return (
               <TableRow
                 key={item.id}
-                className={`${CALIBRATION_TABLE.stripe} ${CALIBRATION_TABLE.rowHover} ${rowClasses}`}
+                ref={isHighlighted ? highlightRef : undefined}
+                className={`${CALIBRATION_TABLE.stripe} ${CALIBRATION_TABLE.rowHover} ${rowClasses} ${
+                  isHighlighted
+                    ? 'ring-2 ring-blue-400 ring-inset bg-blue-50 dark:bg-blue-950/40'
+                    : ''
+                }`}
               >
                 <TableCell className="font-medium">
                   <Link href={`/equipment/${item.equipmentId}`} className={CALIBRATION_TABLE.link}>

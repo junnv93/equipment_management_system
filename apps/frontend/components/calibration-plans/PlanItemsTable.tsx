@@ -32,9 +32,18 @@ import {
   CalendarClock,
   ChevronRight,
   History,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { CalibrationForm } from '@/components/calibration/CalibrationForm';
 import {
   PLAN_TABLE_COLUMN_GROUP_TOKENS,
   PLAN_PROGRESS_TOKENS,
@@ -70,6 +79,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
   const [editingAgency, setEditingAgency] = useState('');
   const [editingNotes, setEditingNotes] = useState('');
   const [isVersionOpen, setIsVersionOpen] = useState(false);
+  const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
 
   const isDraft = plan.status === CPStatus.DRAFT;
   const isApproved = plan.status === CPStatus.APPROVED;
@@ -155,329 +165,364 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
   const colGroup = PLAN_TABLE_COLUMN_GROUP_TOKENS;
   const showActions = isDraft || isApproved;
 
+  const recordingItem = recordingItemId ? items.find((i) => i.id === recordingItemId) : null;
+
   return (
-    <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
-      <CardHeader>
-        <CardTitle>{t('planDetail.items.title')}</CardTitle>
-        <CardDescription>
-          {isApproved
-            ? t('planDetail.items.descriptionApproved')
-            : t('planDetail.items.description', { count: items.length })}
-        </CardDescription>
-      </CardHeader>
-
-      {/* W-1: 확인 진행률 바 (approved 상태에서만) */}
-      {isApproved && items.length > 0 && (
-        <div className={PLAN_PROGRESS_TOKENS.container}>
-          <span className={PLAN_PROGRESS_TOKENS.label} id="progress-label">
-            {t('planDetail.items.progress.label')}
-          </span>
-          <div className={PLAN_PROGRESS_TOKENS.barWrap}>
-            <div
-              className={PLAN_PROGRESS_TOKENS.track}
-              role="progressbar"
-              aria-valuenow={progressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-labelledby="progress-label"
-            >
-              <div
-                className={cn(PLAN_PROGRESS_TOKENS.fill, PLAN_PROGRESS_TOKENS.transition)}
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <span
-              className={
-                progressPercent === 100
-                  ? PLAN_PROGRESS_TOKENS.textComplete
-                  : progressPercent === 0
-                    ? PLAN_PROGRESS_TOKENS.textEmpty
-                    : PLAN_PROGRESS_TOKENS.text
-              }
-            >
-              {t('planDetail.items.progress.countWithPercent', {
-                confirmed: confirmedCount,
-                total: items.length,
-                percent: progressPercent,
-              })}
-            </span>
-          </div>
-        </div>
+    <>
+      {/* 실적 기록 Dialog */}
+      {recordingItem && (
+        <Dialog open={!!recordingItemId} onOpenChange={(open) => !open && setRecordingItemId(null)}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{t('planDetail.items.recordActualDialog.title')}</DialogTitle>
+              <DialogDescription>
+                {recordingItem.equipment?.name ?? recordingItem.equipmentId}
+              </DialogDescription>
+            </DialogHeader>
+            <CalibrationForm
+              mode="plan-item"
+              equipmentId={recordingItem.equipmentId}
+              planItemId={recordingItem.id}
+              onSuccess={() => setRecordingItemId(null)}
+              onCancel={() => setRecordingItemId(null)}
+            />
+          </DialogContent>
+        </Dialog>
       )}
+      <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
+        <CardHeader>
+          <CardTitle>{t('planDetail.items.title')}</CardTitle>
+          <CardDescription>
+            {isApproved
+              ? t('planDetail.items.descriptionApproved')
+              : t('planDetail.items.description', { count: items.length })}
+          </CardDescription>
+        </CardHeader>
 
-      <CardContent className="p-0">
-        {items.length === 0 ? (
-          <div className={TABLE_TOKENS.empty.container}>
-            <FileText className={TABLE_TOKENS.empty.icon} />
-            <p className={TABLE_TOKENS.empty.text}>{t('planDetail.items.empty')}</p>
+        {/* W-1: 확인 진행률 바 (approved 상태에서만) */}
+        {isApproved && items.length > 0 && (
+          <div className={PLAN_PROGRESS_TOKENS.container}>
+            <span className={PLAN_PROGRESS_TOKENS.label} id="progress-label">
+              {t('planDetail.items.progress.label')}
+            </span>
+            <div className={PLAN_PROGRESS_TOKENS.barWrap}>
+              <div
+                className={PLAN_PROGRESS_TOKENS.track}
+                role="progressbar"
+                aria-valuenow={progressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-labelledby="progress-label"
+              >
+                <div
+                  className={cn(PLAN_PROGRESS_TOKENS.fill, PLAN_PROGRESS_TOKENS.transition)}
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <span
+                className={
+                  progressPercent === 100
+                    ? PLAN_PROGRESS_TOKENS.textComplete
+                    : progressPercent === 0
+                      ? PLAN_PROGRESS_TOKENS.textEmpty
+                      : PLAN_PROGRESS_TOKENS.text
+                }
+              >
+                {t('planDetail.items.progress.countWithPercent', {
+                  confirmed: confirmedCount,
+                  total: items.length,
+                  percent: progressPercent,
+                })}
+              </span>
+            </div>
           </div>
-        ) : (
-          <div className={TABLE_SCROLL_HINT_TOKENS.wrapper}>
-            <div className={TABLE_SCROLL_HINT_TOKENS.fadeRight} />
-            <div className="overflow-auto">
-              <Table>
-                <TableHeader>
-                  {/* W-2: 컬럼 그룹 헤더 (1행) */}
-                  <TableRow>
-                    <TableHead
-                      className={cn(colGroup.base.header, colGroup.groupHeader.text)}
-                      colSpan={3}
-                    >
-                      <span className={colGroup.groupHeader.gap}>
-                        {t('planDetail.items.columnGroup.base')}
-                      </span>
-                    </TableHead>
-                    <TableHead
-                      className={cn(
-                        colGroup.snapshot.header,
-                        colGroup.snapshot.borderStart,
-                        colGroup.groupHeader.text,
-                        'text-center'
-                      )}
-                      colSpan={3}
-                    >
-                      <span className={colGroup.groupHeader.gap}>
-                        <Camera className={colGroup.groupHeader.icon} />
-                        {t('planDetail.items.columnGroup.snapshot')}
-                      </span>
-                    </TableHead>
-                    <TableHead
-                      className={cn(
-                        colGroup.plan.header,
-                        colGroup.plan.borderStart,
-                        colGroup.groupHeader.text,
-                        'text-center'
-                      )}
-                      colSpan={4}
-                    >
-                      <span className={colGroup.groupHeader.gap}>
-                        <CalendarClock className={colGroup.groupHeader.icon} />
-                        {t('planDetail.items.columnGroup.plan')}
-                      </span>
-                    </TableHead>
-                    {showActions && <TableHead className={colGroup.base.header} />}
-                  </TableRow>
+        )}
 
-                  {/* 서브 헤더 (2행) */}
-                  <TableRow className={colGroup.subHeader.bg}>
-                    <TableHead className={cn(colGroup.subHeader.text, 'w-[50px] text-center')}>
-                      {t('planDetail.items.headers.sequence')}
-                    </TableHead>
-                    <TableHead className={colGroup.subHeader.text}>
-                      {t('planDetail.items.headers.managementNumber')}
-                    </TableHead>
-                    <TableHead className={colGroup.subHeader.text}>
-                      {t('planDetail.items.headers.equipmentName')}
-                    </TableHead>
-                    <TableHead
-                      className={cn(colGroup.subHeader.text, colGroup.snapshot.borderStart)}
-                    >
-                      {t('planDetail.items.headers.validityDate')}
-                    </TableHead>
-                    <TableHead className={colGroup.subHeader.text}>
-                      {t('planDetail.items.headers.calibrationCycle')}
-                    </TableHead>
-                    <TableHead className={colGroup.subHeader.text}>
-                      {t('planDetail.items.headers.calibrationAgency')}
-                    </TableHead>
-                    <TableHead className={cn(colGroup.subHeader.text, colGroup.plan.borderStart)}>
-                      {t('planDetail.items.headers.plannedDate')}
-                    </TableHead>
-                    <TableHead className={colGroup.subHeader.text}>
-                      {t('planDetail.items.headers.plannedAgency')}
-                    </TableHead>
-                    <TableHead className={colGroup.subHeader.text}>
-                      {t('planDetail.items.headers.confirmation')}
-                    </TableHead>
-                    <TableHead className={colGroup.subHeader.text}>
-                      {t('planDetail.items.headers.notes')}
-                    </TableHead>
-                    {showActions && (
-                      <TableHead className={cn(colGroup.subHeader.text, 'w-[80px]')} />
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item: CalibrationPlanItem) => (
-                    <TableRow key={item.id}>
-                      {/* 기본정보 그룹 */}
-                      <TableCell
-                        className={cn(
-                          'text-center font-medium text-muted-foreground',
-                          NUMERIC_TOKENS.tabular
-                        )}
+        <CardContent className="p-0">
+          {items.length === 0 ? (
+            <div className={TABLE_TOKENS.empty.container}>
+              <FileText className={TABLE_TOKENS.empty.icon} />
+              <p className={TABLE_TOKENS.empty.text}>{t('planDetail.items.empty')}</p>
+            </div>
+          ) : (
+            <div className={TABLE_SCROLL_HINT_TOKENS.wrapper}>
+              <div className={TABLE_SCROLL_HINT_TOKENS.fadeRight} />
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    {/* W-2: 컬럼 그룹 헤더 (1행) */}
+                    <TableRow>
+                      <TableHead
+                        className={cn(colGroup.base.header, colGroup.groupHeader.text)}
+                        colSpan={3}
                       >
-                        {item.sequenceNumber}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {item.equipment?.managementNumber || '-'}
-                      </TableCell>
-                      <TableCell>{item.equipment?.name || '-'}</TableCell>
-
-                      {/* 스냅샷 그룹 (W-2: 배경색) */}
-                      <TableCell
+                        <span className={colGroup.groupHeader.gap}>
+                          {t('planDetail.items.columnGroup.base')}
+                        </span>
+                      </TableHead>
+                      <TableHead
                         className={cn(
-                          colGroup.snapshot.cell,
+                          colGroup.snapshot.header,
                           colGroup.snapshot.borderStart,
-                          'font-mono text-sm'
+                          colGroup.groupHeader.text,
+                          'text-center'
                         )}
+                        colSpan={3}
                       >
-                        {item.snapshotValidityDate ? fmtDate(item.snapshotValidityDate) : '-'}
-                      </TableCell>
-                      <TableCell className={colGroup.snapshot.cell}>
-                        {item.snapshotCalibrationCycle
-                          ? t('planDetail.items.monthUnit', {
-                              count: item.snapshotCalibrationCycle,
-                            })
-                          : '-'}
-                      </TableCell>
-                      <TableCell className={colGroup.snapshot.cell}>
-                        {item.snapshotCalibrationAgency || '-'}
-                      </TableCell>
-
-                      {/* 계획 그룹 (W-2: 배경색) */}
-                      <TableCell
+                        <span className={colGroup.groupHeader.gap}>
+                          <Camera className={colGroup.groupHeader.icon} />
+                          {t('planDetail.items.columnGroup.snapshot')}
+                        </span>
+                      </TableHead>
+                      <TableHead
                         className={cn(
-                          colGroup.plan.cell,
+                          colGroup.plan.header,
                           colGroup.plan.borderStart,
-                          'font-mono text-sm'
+                          colGroup.groupHeader.text,
+                          'text-center'
                         )}
+                        colSpan={4}
                       >
-                        {item.plannedCalibrationDate ? fmtDate(item.plannedCalibrationDate) : '-'}
-                      </TableCell>
-                      <TableCell className={colGroup.plan.cell}>
-                        {editingItemId === item.id ? (
-                          <Input
-                            value={editingAgency}
-                            onChange={(e) => setEditingAgency(e.target.value)}
-                            className={TABLE_TOKENS.inlineEdit.inputWidth}
-                          />
-                        ) : (
-                          item.plannedCalibrationAgency || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className={cn(colGroup.plan.cell, 'text-center')}>
-                        {item.confirmedBy ? (
-                          <Badge
-                            variant="outline"
-                            className={CONFIRMATION_BADGE_TOKENS.confirmed.background}
-                          >
-                            <CheckCircle2
-                              className={cn(CONFIRMATION_BADGE_TOKENS.confirmed.icon, 'mr-1')}
-                            />
-                            {t('planDetail.items.confirmed')}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className={colGroup.plan.cell}>
-                        {editingItemId === item.id ? (
-                          <Input
-                            value={editingNotes}
-                            onChange={(e) => setEditingNotes(e.target.value)}
-                            placeholder={t('planDetail.placeholders.notes')}
-                            className={TABLE_TOKENS.inlineEdit.inputWidth}
-                          />
-                        ) : (
-                          <div className="flex flex-col gap-1">
-                            {item.actualCalibrationDate && (
-                              <span className="font-mono text-sm">
-                                {fmtDate(item.actualCalibrationDate)}
-                              </span>
-                            )}
-                            {item.actualCalibrationId ? (
-                              <Badge
-                                variant="outline"
-                                className="w-fit text-xs bg-green-50 border-green-300 text-green-700 dark:bg-green-950 dark:border-green-700 dark:text-green-400"
-                              >
-                                <Link
-                                  href={`/calibration?highlight=${item.actualCalibrationId}`}
-                                  className="flex items-center gap-1 hover:underline"
-                                >
-                                  <History className="h-3 w-3" />
-                                  {t('planDetail.items.actualLinked')}
-                                </Link>
-                              </Badge>
-                            ) : (
-                              !item.actualCalibrationDate &&
-                              (item.notes || <span className="text-muted-foreground">—</span>)
-                            )}
-                          </div>
-                        )}
-                      </TableCell>
+                        <span className={colGroup.groupHeader.gap}>
+                          <CalendarClock className={colGroup.groupHeader.icon} />
+                          {t('planDetail.items.columnGroup.plan')}
+                        </span>
+                      </TableHead>
+                      {showActions && <TableHead className={colGroup.base.header} />}
+                    </TableRow>
 
-                      {/* 액션 */}
+                    {/* 서브 헤더 (2행) */}
+                    <TableRow className={colGroup.subHeader.bg}>
+                      <TableHead className={cn(colGroup.subHeader.text, 'w-[50px] text-center')}>
+                        {t('planDetail.items.headers.sequence')}
+                      </TableHead>
+                      <TableHead className={colGroup.subHeader.text}>
+                        {t('planDetail.items.headers.managementNumber')}
+                      </TableHead>
+                      <TableHead className={colGroup.subHeader.text}>
+                        {t('planDetail.items.headers.equipmentName')}
+                      </TableHead>
+                      <TableHead
+                        className={cn(colGroup.subHeader.text, colGroup.snapshot.borderStart)}
+                      >
+                        {t('planDetail.items.headers.validityDate')}
+                      </TableHead>
+                      <TableHead className={colGroup.subHeader.text}>
+                        {t('planDetail.items.headers.calibrationCycle')}
+                      </TableHead>
+                      <TableHead className={colGroup.subHeader.text}>
+                        {t('planDetail.items.headers.calibrationAgency')}
+                      </TableHead>
+                      <TableHead className={cn(colGroup.subHeader.text, colGroup.plan.borderStart)}>
+                        {t('planDetail.items.headers.plannedDate')}
+                      </TableHead>
+                      <TableHead className={colGroup.subHeader.text}>
+                        {t('planDetail.items.headers.plannedAgency')}
+                      </TableHead>
+                      <TableHead className={colGroup.subHeader.text}>
+                        {t('planDetail.items.headers.confirmation')}
+                      </TableHead>
+                      <TableHead className={colGroup.subHeader.text}>
+                        {t('planDetail.items.headers.notes')}
+                      </TableHead>
                       {showActions && (
-                        <TableCell className="text-center">
+                        <TableHead className={cn(colGroup.subHeader.text, 'w-[80px]')} />
+                      )}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item: CalibrationPlanItem) => (
+                      <TableRow key={item.id}>
+                        {/* 기본정보 그룹 */}
+                        <TableCell
+                          className={cn(
+                            'text-center font-medium text-muted-foreground',
+                            NUMERIC_TOKENS.tabular
+                          )}
+                        >
+                          {item.sequenceNumber}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {item.equipment?.managementNumber || '-'}
+                        </TableCell>
+                        <TableCell>{item.equipment?.name || '-'}</TableCell>
+
+                        {/* 스냅샷 그룹 (W-2: 배경색) */}
+                        <TableCell
+                          className={cn(
+                            colGroup.snapshot.cell,
+                            colGroup.snapshot.borderStart,
+                            'font-mono text-sm'
+                          )}
+                        >
+                          {item.snapshotValidityDate ? fmtDate(item.snapshotValidityDate) : '-'}
+                        </TableCell>
+                        <TableCell className={colGroup.snapshot.cell}>
+                          {item.snapshotCalibrationCycle
+                            ? t('planDetail.items.monthUnit', {
+                                count: item.snapshotCalibrationCycle,
+                              })
+                            : '-'}
+                        </TableCell>
+                        <TableCell className={colGroup.snapshot.cell}>
+                          {item.snapshotCalibrationAgency || '-'}
+                        </TableCell>
+
+                        {/* 계획 그룹 (W-2: 배경색) */}
+                        <TableCell
+                          className={cn(
+                            colGroup.plan.cell,
+                            colGroup.plan.borderStart,
+                            'font-mono text-sm'
+                          )}
+                        >
+                          {item.plannedCalibrationDate ? fmtDate(item.plannedCalibrationDate) : '-'}
+                        </TableCell>
+                        <TableCell className={colGroup.plan.cell}>
                           {editingItemId === item.id ? (
-                            <div className="flex gap-1 justify-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleSaveEdit}
-                                disabled={updateItemMutation.isPending}
-                                className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
-                              >
-                                <Save className={TABLE_TOKENS.inlineEdit.button.iconSize} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleCancelEdit}
-                                className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
-                              >
-                                <X className={TABLE_TOKENS.inlineEdit.button.iconSize} />
-                              </Button>
-                            </div>
+                            <Input
+                              value={editingAgency}
+                              onChange={(e) => setEditingAgency(e.target.value)}
+                              className={TABLE_TOKENS.inlineEdit.inputWidth}
+                            />
                           ) : (
-                            <div className="flex gap-1 justify-center">
-                              {isDraft && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleStartEdit(item)}
-                                  className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
-                                >
-                                  <Edit2 className={TABLE_TOKENS.inlineEdit.button.iconSize} />
-                                </Button>
+                            item.plannedCalibrationAgency || '-'
+                          )}
+                        </TableCell>
+                        <TableCell className={cn(colGroup.plan.cell, 'text-center')}>
+                          {item.confirmedBy ? (
+                            <Badge
+                              variant="outline"
+                              className={CONFIRMATION_BADGE_TOKENS.confirmed.background}
+                            >
+                              <CheckCircle2
+                                className={cn(CONFIRMATION_BADGE_TOKENS.confirmed.icon, 'mr-1')}
+                              />
+                              {t('planDetail.items.confirmed')}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className={colGroup.plan.cell}>
+                          {editingItemId === item.id ? (
+                            <Input
+                              value={editingNotes}
+                              onChange={(e) => setEditingNotes(e.target.value)}
+                              placeholder={t('planDetail.placeholders.notes')}
+                              className={TABLE_TOKENS.inlineEdit.inputWidth}
+                            />
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              {item.actualCalibrationDate && (
+                                <span className="font-mono text-sm">
+                                  {fmtDate(item.actualCalibrationDate)}
+                                </span>
                               )}
-                              {isApproved && !item.confirmedBy && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => confirmItemMutation.mutate(item.id)}
-                                  disabled={confirmItemMutation.isPending}
-                                  title={t('planDetail.items.confirm')}
-                                  className={cn(
-                                    'h-8 w-8 p-0',
-                                    CONFIRMATION_BADGE_TOKENS.confirmed.text
-                                  )}
+                              {item.actualCalibrationId ? (
+                                <Badge
+                                  variant="outline"
+                                  className="w-fit text-xs bg-green-50 border-green-300 text-green-700 dark:bg-green-950 dark:border-green-700 dark:text-green-400"
                                 >
-                                  <CheckCircle2 className="h-4 w-4" />
-                                </Button>
+                                  <Link
+                                    href={`/calibration?highlight=${item.actualCalibrationId}`}
+                                    className="flex items-center gap-1 hover:underline"
+                                  >
+                                    <History className="h-3 w-3" />
+                                    {t('planDetail.items.actualLinked')}
+                                  </Link>
+                                </Badge>
+                              ) : (
+                                !item.actualCalibrationDate &&
+                                (item.notes || <span className="text-muted-foreground">—</span>)
                               )}
                             </div>
                           )}
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-      </CardContent>
 
-      {/* W-3: 접이식 버전 이력 */}
-      <VersionHistoryCollapsible
-        planUuid={planUuid}
-        currentVersion={plan.version}
-        isOpen={isVersionOpen}
-        onToggle={() => setIsVersionOpen(!isVersionOpen)}
-      />
-    </Card>
+                        {/* 액션 */}
+                        {showActions && (
+                          <TableCell className="text-center">
+                            {editingItemId === item.id ? (
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleSaveEdit}
+                                  disabled={updateItemMutation.isPending}
+                                  className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
+                                >
+                                  <Save className={TABLE_TOKENS.inlineEdit.button.iconSize} />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleCancelEdit}
+                                  className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
+                                >
+                                  <X className={TABLE_TOKENS.inlineEdit.button.iconSize} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-1 justify-center">
+                                {isDraft && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleStartEdit(item)}
+                                    className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
+                                  >
+                                    <Edit2 className={TABLE_TOKENS.inlineEdit.button.iconSize} />
+                                  </Button>
+                                )}
+                                {isApproved && !item.actualCalibrationId && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setRecordingItemId(item.id)}
+                                    title={t('planDetail.items.recordActual')}
+                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                                  >
+                                    <ClipboardCheck className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {isApproved && !item.confirmedBy && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => confirmItemMutation.mutate(item.id)}
+                                    disabled={confirmItemMutation.isPending}
+                                    title={t('planDetail.items.confirm')}
+                                    className={cn(
+                                      'h-8 w-8 p-0',
+                                      CONFIRMATION_BADGE_TOKENS.confirmed.text
+                                    )}
+                                  >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+
+        {/* W-3: 접이식 버전 이력 */}
+        <VersionHistoryCollapsible
+          planUuid={planUuid}
+          currentVersion={plan.version}
+          isOpen={isVersionOpen}
+          onToggle={() => setIsVersionOpen(!isVersionOpen)}
+        />
+      </Card>
+    </>
   );
 }
 

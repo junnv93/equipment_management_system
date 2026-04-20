@@ -20,6 +20,7 @@ import {
   EQUIP_CURRENT_PROBE_SUW_A_ID,
   EQUIP_RECEIVER_UIW_W_ID,
   EQUIP_TRANSMITTER_UIW_W_ID,
+  EQUIP_EMC_RECEIVER_SUW_E_ID,
   // User IDs
   USER_TEST_ENGINEER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -27,6 +28,8 @@ import {
   CALIB_001_ID,
   CALIB_002_ID,
   CALIB_003_ID,
+  CALIB_004_ID,
+  CALIB_005_ID,
 } from '../../utils/uuid-constants';
 
 const now = new Date();
@@ -124,15 +127,31 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
   ),
 
   // Oscilloscope - passed, approved (intermediate check: 10일 초과 — overdue)
+  // CALIB_005: CPLAN_004 ITEM_008 actualCalibrationId 참조 (2025 수원 FCC EMC/RF 계획)
   createCalibration(
     EQUIP_OSCILLOSCOPE_SUW_R_ID,
     'pass',
     'approved',
     'test_engineer',
-    monthsAgo(14),
-    monthsAgo(14),
+    new Date('2025-06-25'),
+    new Date('2025-06-25'),
     {
+      id: CALIB_005_ID,
       intermediateCheckDate: toDateString(daysAgo(10)),
+    }
+  ),
+
+  // EMC Receiver - passed, approved
+  // CALIB_004: CPLAN_004 ITEM_007 actualCalibrationId 참조 (2025 수원 FCC EMC/RF 계획)
+  createCalibration(
+    EQUIP_EMC_RECEIVER_SUW_E_ID,
+    'pass',
+    'approved',
+    'test_engineer',
+    new Date('2025-08-28'),
+    new Date('2025-08-28'),
+    {
+      id: CALIB_004_ID,
     }
   ),
 

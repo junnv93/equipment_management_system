@@ -148,7 +148,12 @@
       "monthUnit": "{count}개월",
       "confirmed": "확인됨",
       "confirm": "확인",
-      "actualLinked": "실적 기록됨"
+      "actualLinked": "실적 기록됨",
+      "recordActual": "실적 기록",
+      "recordActualDialog": {
+        "title": "교정 실적 기록",
+        "description": "교정 완료 후 성적서를 등록합니다"
+      }
     },
     "placeholders": {
       "reviewComment": "간단한 의견 (선택)",

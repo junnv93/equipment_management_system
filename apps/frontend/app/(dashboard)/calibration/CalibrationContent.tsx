@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Search, Filter, CheckSquare, ClipboardCheck, CircleDot, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +64,8 @@ export default function CalibrationContent({
   const defaultTeamId = filters.teamId || initialFilters?.teamId;
   const defaultSite = filters.site || initialFilters?.site;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get('highlight') ?? undefined;
 
   // ✅ Select spurious onValueChange guard (SSOT: useFilterSelect)
   const siteSelect = useFilterSelect(filters.site, updateSite);
@@ -424,6 +426,7 @@ export default function CalibrationContent({
           data={listData}
           isLoading={isHistoryLoading}
           canRegister={canCreateCalibration}
+          highlightId={highlightId}
         />
       </div>
     </div>
