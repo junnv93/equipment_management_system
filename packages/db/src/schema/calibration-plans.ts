@@ -145,6 +145,9 @@ export const calibrationPlanItems = pgTable(
 
     // 비고
     actualCalibrationDate: timestamp('actual_calibration_date'), // 실제 교정일 (자동 기록)
+    actualCalibrationId: uuid('actual_calibration_id').references(() => calibrations.id, {
+      onDelete: 'set null',
+    }), // 연결된 실제 교정 기록 FK (plan ↔ calibration 추적)
     notes: text('notes'), // 추가 비고
 
     // 시스템 필드
@@ -163,6 +166,10 @@ export const calibrationPlanItems = pgTable(
       planEquipmentIdx: index('calibration_plan_items_plan_equipment_idx').on(
         table.planId,
         table.equipmentId
+      ),
+      // 실제 교정 기록 조회 최적화 (plan item ↔ calibration 역방향 조회)
+      actualCalibrationIdIdx: index('calibration_plan_items_actual_calibration_id_idx').on(
+        table.actualCalibrationId
       ),
     };
   }
@@ -213,4 +220,11 @@ export const calibrationPlanItemsRelations = relations(calibrationPlanItems, ({ 
     fields: [calibrationPlanItems.confirmedBy],
     references: [users.id],
   }),
+  actualCalibration: one(calibrations, {
+    fields: [calibrationPlanItems.actualCalibrationId],
+    references: [calibrations.id],
+  }),
 }));
+
+// 순환 참조 방지를 위해 파일 하단 배치 (calibrations → calibration-plans 역방향 의존성)
+import { calibrations } from './calibrations';

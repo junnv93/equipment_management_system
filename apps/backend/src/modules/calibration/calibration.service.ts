@@ -398,6 +398,14 @@ export class CalibrationService extends VersionedBaseService {
 
         const documentRows = await tx.insert(schema.documents).values(documentInserts).returning();
 
+        // plan item auto-link (tx 내부 — 원자성 보장)
+        await this.linkActualCalibrationToPlanItem(
+          tx,
+          calibrationRow,
+          dtoWithComputedDate.planItemId,
+          actorId
+        );
+
         return { calibration: calibrationRow, documents: documentRows };
       });
 
@@ -462,6 +470,93 @@ export class CalibrationService extends VersionedBaseService {
       }
       throw error;
     }
+  }
+
+  /**
+   * 교정 기록과 교정계획 항목을 연결합니다.
+   *
+   * 1. planItemId가 명시적으로 전달된 경우 직접 링크 (plan-item 진입점)
+   * 2. 없으면 동일 장비 + 동일 연도 + status='approved' + actualCalibrationId IS NULL 항목 자동 매칭
+   *    - 단건: 바로 링크
+   *    - 다건: plannedCalibrationDate 기준 최근접 선택
+   *    - 0건: skip (로그만)
+   */
+  private async linkActualCalibrationToPlanItem(
+    tx: Parameters<Parameters<(typeof this.db)['transaction']>[0]>[0],
+    calibrationRow: typeof schema.calibrations.$inferSelect,
+    planItemId: string | null | undefined,
+    actorId: string
+  ): Promise<void> {
+    if (planItemId) {
+      await tx
+        .update(schema.calibrationPlanItems)
+        .set({
+          actualCalibrationId: calibrationRow.id,
+          actualCalibrationDate: calibrationRow.calibrationDate,
+        })
+        .where(
+          and(
+            eq(schema.calibrationPlanItems.id, planItemId),
+            isNull(schema.calibrationPlanItems.actualCalibrationId)
+          )
+        );
+      return;
+    }
+
+    // auto-link: 동일 장비 + 동일 연도 + approved plan + 미연결 항목
+    const calibrationYear = calibrationRow.calibrationDate.getFullYear();
+    const yearStart = new Date(Date.UTC(calibrationYear, 0, 1));
+    const yearEnd = new Date(Date.UTC(calibrationYear + 1, 0, 1));
+
+    const candidateItems = await tx
+      .select({
+        id: schema.calibrationPlanItems.id,
+        plannedCalibrationDate: schema.calibrationPlanItems.plannedCalibrationDate,
+      })
+      .from(schema.calibrationPlanItems)
+      .innerJoin(
+        schema.calibrationPlans,
+        eq(schema.calibrationPlanItems.planId, schema.calibrationPlans.id)
+      )
+      .where(
+        and(
+          eq(schema.calibrationPlanItems.equipmentId, calibrationRow.equipmentId),
+          isNull(schema.calibrationPlanItems.actualCalibrationId),
+          eq(schema.calibrationPlans.status, 'approved'),
+          gte(schema.calibrationPlanItems.plannedCalibrationDate, yearStart),
+          lt(schema.calibrationPlanItems.plannedCalibrationDate, yearEnd)
+        )
+      );
+
+    if (candidateItems.length === 0) {
+      this.logger.debug(
+        `auto-link: 연결 가능한 계획 항목 없음 (calibrationId: ${calibrationRow.id}, equipmentId: ${calibrationRow.equipmentId}, year: ${calibrationYear})`
+      );
+      return;
+    }
+
+    // 최근접 계획일 선택
+    const targetItem =
+      candidateItems.length === 1
+        ? candidateItems[0]
+        : candidateItems.reduce((best, curr) => {
+            const calibDate = calibrationRow.calibrationDate.getTime();
+            const bestDiff = Math.abs((best.plannedCalibrationDate?.getTime() ?? 0) - calibDate);
+            const currDiff = Math.abs((curr.plannedCalibrationDate?.getTime() ?? 0) - calibDate);
+            return currDiff < bestDiff ? curr : best;
+          });
+
+    await tx
+      .update(schema.calibrationPlanItems)
+      .set({
+        actualCalibrationId: calibrationRow.id,
+        actualCalibrationDate: calibrationRow.calibrationDate,
+      })
+      .where(eq(schema.calibrationPlanItems.id, targetItem.id));
+
+    this.logger.log(
+      `auto-link: 교정 기록 ${calibrationRow.id} → 계획 항목 ${targetItem.id} 연결 (actorId: ${actorId})`
+    );
   }
 
   /**

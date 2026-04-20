@@ -23,6 +23,7 @@ import {
 export const calibrationBaseSchema = z.object({
   equipmentId: uuidString(VM.uuid.generic),
   calibrationManagerId: optionalUuid(), // FE 미전송 시 registeredBy 폴백
+  planItemId: optionalUuid(), // 교정계획 항목 직접 링크 (plan-item 진입점)
   calibrationDate: z.coerce.date({ message: VM.date.invalid }),
   nextCalibrationDate: z.coerce.date({ message: VM.date.invalid }).optional(),
   managementMethod: ManagementMethodEnum.optional().default('external_calibration'),
@@ -62,6 +63,9 @@ export class CreateCalibrationDto {
   @ApiProperty({ description: '교정 담당자 ID', required: false })
   calibrationManagerId?: string;
 
+  @ApiProperty({ description: '교정계획 항목 ID (plan-item 진입점)', required: false })
+  planItemId?: string;
+
   @ApiProperty({ description: '교정 일자', example: '2023-05-20' })
   calibrationDate: Date;
 
@@ -93,9 +97,6 @@ export class CreateCalibrationDto {
 
   @ApiProperty({ description: '교정성적서 번호', required: false })
   certificateNumber?: string;
-
-  @ApiProperty({ description: '교정성적서 파일 경로', required: false })
-  certificatePath?: string;
 
   @ApiProperty({
     description: '교정 결과',
