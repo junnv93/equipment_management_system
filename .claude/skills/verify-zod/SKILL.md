@@ -335,6 +335,36 @@ verifyHandoverToken(...) { ... }
 
 **참고:** `docs/references/backend-patterns.md` "ZodResponse 적용 조건" 섹션.
 
+### Step 11: 배열 `.max()` 매직 넘버 탐지 (2026-04-20 추가)
+
+레이아웃/템플릿 제약에서 파생된 배열 크기 상한이 매직 넘버로 DTO에 하드코딩되어 있으면,
+레이아웃 파일(예: `software-validation.layout.ts`)과 DTO가 불일치할 때 런타임 에러로만 발견됨.
+
+**규칙:**
+- 도메인 레이아웃 상수(`CONTROL_MAX_ROWS`, `MAX_ROWS` 등)에서 파생된 배열 상한 → 레이아웃 상수로 import 필수
+- 도메인적으로 "1개만" 허용되는 단순 제약(`.max(1)`) — 레이아웃 구조가 아닌 비즈니스 규칙 — 은 매직 넘버 허용 (예: 단일 책임자, 단일 타입)
+- 레이아웃 행 수에서 파생된 `.max(N>1)` 은 반드시 명명된 상수 경유
+
+```bash
+# 배열 .max()에 1 초과 숫자 리터럴 직접 사용 탐지 (레이아웃 상수 경유 여부 확인)
+grep -rn "\.max([2-9][0-9]*)" \
+  apps/backend/src/modules/*/dto --include="*.dto.ts" \
+  | grep -v "string.*max\|number.*max\|VM\.\|//\|import"
+```
+
+**PASS:** 0건 (모두 명명된 상수 경유). **FAIL:** `.max(3)`, `.max(5)` 등 레이아웃에서 파생된 숫자 리터럴 직접 사용.
+
+**정상 패턴 (SW validation 기준):**
+```typescript
+import { CONTROL_MAX_ROWS } from '../services/software-validation.layout';
+// ✅ 레이아웃 상수 경유
+controlFunctions: controlItemArraySchema.max(CONTROL_MAX_ROWS).optional(),
+// ✅ 비즈니스 규칙 "단일" 제약 — 예외 허용
+acquisitionFunctions: acquisitionOrProcessingArraySchema.max(1).optional(),
+```
+
+**예외:** `.max(1)` (단일 레코드 제약)은 레이아웃 행 구조와 무관한 비즈니스 규칙이므로 매직 넘버 허용.
+
 ## Output Format
 
 ```markdown
@@ -350,6 +380,7 @@ verifyHandoverToken(...) { ... }
 | 8   | z.infer 타입 export            | PASS/FAIL | 타입 누락 DTO 목록         |
 | 9   | type-only DTO runtime 위치 사용 | PASS/FAIL | TS2693 위험 DTO 목록       |
 | 10  | ZodResponse pairing + 2xx only | PASS/FAIL | interceptor 누락 / 4xx 사용 |
+| 11  | 배열 .max() 매직 넘버          | PASS/FAIL | 레이아웃 상수 미경유 숫자 리터럴 위치 |
 ```
 
 ## Exceptions

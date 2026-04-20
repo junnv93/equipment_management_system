@@ -233,7 +233,27 @@ rg "\.xlsx|\.docx" apps/frontend/lib/api/ --type ts -n | grep -v "node_modules\|
 | 19b | getTemplateBuffer 인자 SSOT   | PASS/WARN | 문자열 리터럴 직접 전달 위치           |
 | 20  | 파일 확장자/MIME 타입 SSOT    | PASS/FAIL | 하드코딩 확장자 배열 위치              |
 | 21b | QR 라벨 폰트 스케일 매직넘버  | PASS/FAIL | 43.7 인라인 또는 SSOT 외 치수 할당 위치 |
+| 22  | Content-Disposition 인라인 조립 | PASS/FAIL | `filename*=UTF-8''` 직접 사용 위치 |
 ```
+
+### Step 22: Content-Disposition 헤더 인라인 조립 금지 (2026-04-20 추가)
+
+`apps/backend/src/common/http/content-disposition.util.ts`의 `buildContentDisposition(filename)` 함수가 SSOT.
+컨트롤러/서비스에서 `filename*=UTF-8''${encodeURIComponent(...)}` 를 직접 조립하면 RFC 5987 준수 여부를
+개별 파일에서 각자 보장해야 하므로 유지보수 위험.
+
+```bash
+# 컨트롤러/서비스에서 filename*=UTF-8'' 직접 조립 탐지
+grep -rn "filename\\\*=UTF-8''" \
+  apps/backend/src/modules \
+  apps/backend/src/common \
+  --include="*.ts" \
+  | grep -v "content-disposition.util.ts"
+```
+
+**PASS:** 0건. **FAIL:** 모듈 또는 common 레이어에서 직접 조립 발견 시 `buildContentDisposition()` 로 교체.
+
+**예외:** `apps/backend/src/common/storage/s3-storage.provider.ts` — S3 Presigned URL의 `ResponseContentDisposition` 파라미터는 SDK가 직접 문자열을 요구하며, `buildContentDisposition` 반환값 형식과 호환. 동일 패턴이므로 방어적 허용.
 
 ## Exceptions
 

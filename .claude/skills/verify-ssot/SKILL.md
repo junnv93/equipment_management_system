@@ -144,6 +144,33 @@ grep -n "MIGRATION_SESSION_STATUS" packages/schemas/src/data-migration.ts
 # 결과: 1건+ (export const 정의)
 ```
 
+### Step 17: Content-Disposition 헤더 빌더 SSOT (2026-04-20 추가)
+
+`apps/backend/src/common/http/content-disposition.util.ts`의 `buildContentDisposition(filename, disposition?)` 가
+RFC 5987 Content-Disposition 헤더 조립 SSOT. 컨트롤러에서 직접 `res.setHeader('Content-Disposition', ...)` 로
+문자열을 조립하거나 `encodeURIComponent`로 자체 조립하는 것은 SSOT 위반.
+
+**17a: buildContentDisposition 미경유 직접 헤더 조립 탐지**
+```bash
+# 컨트롤러에서 Content-Disposition 헤더를 직접 조립하는 패턴 탐지
+grep -rn "Content-Disposition\|setHeader.*disposition" \
+  apps/backend/src/modules --include="*.controller.ts" \
+  | grep -v "buildContentDisposition\|import\|//\|@ApiHeader"
+# 결과: 0건 (buildContentDisposition 경유)
+```
+
+**17b: SSOT 소스 확인**
+```bash
+# 헬퍼가 SSOT 위치에 존재하는지 확인
+grep -n "export function buildContentDisposition" \
+  apps/backend/src/common/http/content-disposition.util.ts
+# 결과: 1건 (export function 정의)
+```
+
+**PASS:** 컨트롤러에서 Content-Disposition 직접 조립 0건. **FAIL:** `setHeader('Content-Disposition', \`attachment; filename*=...\`)` 직접 사용 발견 시 `buildContentDisposition` 로 교체.
+
+**예외:** S3 SDK의 `ResponseContentDisposition` 파라미터 (`s3-storage.provider.ts`) — SDK API가 문자열을 직접 요구하므로 허용. 단, 동일 RFC 5987 형식 준수 확인.
+
 ### Step 16: 도메인 유틸 상수 SSOT 검증 (2026-04-19 추가)
 
 `isCheckoutExportable` / `NON_EXPORTABLE_CHECKOUT_STATUSES` 등 도메인 유틸 파일에서 추출된 상수가
@@ -201,6 +228,7 @@ grep -rn "isCheckoutExportable" \
 | 14  | Scope enforcement SSOT        | PASS/FAIL | 로컬 enforceScope/EnforcedScope 재정의 또는 controller inline scope helper |
 | 15  | data-migration SSOT           | PASS/FAIL | MigrationSessionStatus 로컬 재정의 또는 raw 리터럴 사용 위치 |
 | 16  | 도메인 유틸 상수 SSOT         | PASS/FAIL | NON_EXPORTABLE_CHECKOUT_STATUSES 등 로컬 재정의 위치 |
+| 17  | Content-Disposition 빌더 SSOT | PASS/FAIL | 컨트롤러 직접 헤더 조립 위치 |
 ```
 
 ## Exceptions
