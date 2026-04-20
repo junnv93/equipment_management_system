@@ -242,7 +242,7 @@ grep -rn "admin@example\.com\|manager@example\.com\|user@example\.com" \
 
 **PASS:** `loginAs()` 가 `/auth/test-login?role=<role>` 엔드포인트 경유 + `DEFAULT_ROLE_EMAILS` SSOT 사용. **FAIL:** hardcoded credential 직접 사용.
 
-**예외:** `auth.e2e-spec.ts` — `/auth/login` 엔드포인트 자체를 테스트하므로 로컬 `LEGACY_LOGIN_USERS` 사용 정당.
+**예외:** `auth.e2e-spec.ts` — `/auth/login` 엔드포인트 자체를 테스트하므로 로컬 `LOGIN_USERS` 상수 사용 정당.
 
 **15b: TEST_USER_IDS 프로덕션 UUID 정합**
 
