@@ -1,4 +1,6 @@
 name: Bundle Size Check
+# 임계값 SSOT: docs/operations/performance-budgets.md
+# 도구: Next.js build 출력 파싱 + scripts/check-bundle-size.mjs
 
 on:
   push:
@@ -6,6 +8,7 @@ on:
     paths:
       - 'apps/frontend/**'
       - 'packages/**'
+      - 'scripts/check-bundle-size.mjs'
       - '.github/workflows/bundle-size.yml'
   workflow_dispatch:
 
@@ -20,9 +23,11 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  bundle-size:
-    name: Bundle Size
+  bundle:
+    name: Bundle Size (First Load JS < 250 kB)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -38,20 +43,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build frontend
-        run: pnpm --filter frontend run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:3001
-          ANALYZE: true
-
-      - name: Check bundle size
+      - name: Build frontend (with bundle analyzer)
         run: |
-          # Next.js .next/analyze output를 파싱해 임계값 비교
-          # First Load JS < 250KB (gzip 기준)
-          node -e "
-            const fs = require('fs');
-            const buildId = fs.readFileSync('apps/frontend/.next/BUILD_ID', 'utf8').trim();
-            const manifest = JSON.parse(fs.readFileSync('apps/frontend/.next/build-manifest.json', 'utf8'));
-            console.log('Build ID:', buildId);
-            console.log('Bundle check: done (size-limit integration pending)');
-          "
+          pnpm --filter frontend run build 2>&1 | tee /tmp/next-build.txt
+          echo "--- build output preview ---"
+          grep -E "kB|Route|First Load" /tmp/next-build.txt | head -40 || true
+        env:
+          ANALYZE: 'true'
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ci-bundle-secret-not-for-production
+          API_URL: http://localhost:3001
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          ENABLE_LOCAL_AUTH: 'true'
+
+      - name: Check bundle size thresholds
+        run: node scripts/check-bundle-size.mjs < /tmp/next-build.txt
+
+      - name: Upload bundle analyzer report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analyzer-${{ github.run_id }}
+          # @next/bundle-analyzer가 .next/analyze/ 에 생성
+          path: apps/frontend/.next/analyze/
+          retention-days: 14
+          if-no-files-found: warn

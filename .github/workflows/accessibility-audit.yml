@@ -1,4 +1,7 @@
-name: Accessibility Audit (axe-core)
+name: Accessibility Audit (axe-core + Playwright)
+# 임계값 SSOT: docs/operations/performance-budgets.md
+# 도구: @axe-core/playwright (기존 설치됨)
+# 대상: /login (인증 불필요 — 백엔드 없이 실행)
 
 on:
   push:
@@ -20,8 +23,10 @@ env:
 
 jobs:
   axe:
-    name: axe-core Accessibility
+    name: axe-core WCAG 2.1 AA
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -37,24 +42,46 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright Chromium
+        run: pnpm --filter frontend exec playwright install chromium --with-deps
+
       - name: Build frontend
         run: pnpm --filter frontend run build
         env:
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ci-a11y-secret-not-for-production
+          API_URL: http://localhost:3001
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          ENABLE_LOCAL_AUTH: 'true'
 
-      - name: Start frontend
+      - name: Start frontend server
         run: pnpm --filter frontend run start &
         env:
           PORT: 3000
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ci-a11y-secret-not-for-production
+          API_URL: http://localhost:3001
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          ENABLE_LOCAL_AUTH: 'true'
 
-      - name: Wait for server
-        run: npx wait-on http://localhost:3000 --timeout 30000
-
-      - name: Run axe-core
+      - name: Wait for server ready
         run: |
-          npx @axe-core/cli \
-            http://localhost:3000 \
-            --exit \
-            --disable color-contrast \
-            --tags wcag2a,wcag2aa \
-            --reporter spec
+          timeout 30 bash -c \
+            'until curl -sf http://localhost:3000/login -o /dev/null; do sleep 1; done' \
+          && echo "✅ 서버 준비 완료"
+
+      - name: Run axe accessibility tests
+        run: |
+          pnpm --filter frontend exec playwright test \
+            --config apps/frontend/playwright.a11y.config.ts \
+            --reporter=list
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-report-${{ github.run_id }}
+          path: apps/frontend/playwright-report-a11y/
+          retention-days: 14

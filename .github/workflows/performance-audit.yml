@@ -1,10 +1,13 @@
 name: Performance Audit (Lighthouse CI)
+# 임계값 SSOT: docs/operations/performance-budgets.md
+# 대상: /login (인증 불필요 — 백엔드 없이 실행)
 
 on:
   push:
     branches: [main]
     paths:
       - 'apps/frontend/**'
+      - '.lighthouserc.js'
       - '.github/workflows/performance-audit.yml'
   workflow_dispatch:
 
@@ -20,8 +23,10 @@ env:
 
 jobs:
   lighthouse:
-    name: Lighthouse CI
+    name: Lighthouse CI — /login
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -40,16 +45,30 @@ jobs:
       - name: Build frontend
         run: pnpm --filter frontend run build
         env:
+          # /login 페이지는 backend 호출 없음 — CI 전용 더미값
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ci-lighthouse-secret-not-for-production
+          API_URL: http://localhost:3001
           NEXT_PUBLIC_API_URL: http://localhost:3001
+          ENABLE_LOCAL_AUTH: 'true'
 
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
         with:
-          urls: |
-            http://localhost:3000
-          budgetPath: docs/operations/performance-budgets.md
+          configPath: .lighthouserc.js
           uploadArtifacts: true
           temporaryPublicStorage: false
-          runs: 3
         env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ci-lighthouse-secret-not-for-production
+          API_URL: http://localhost:3001
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          ENABLE_LOCAL_AUTH: 'true'
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports-${{ github.run_id }}
+          path: .lighthouseci/
+          retention-days: 14
