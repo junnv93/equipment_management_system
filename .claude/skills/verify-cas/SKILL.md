@@ -33,6 +33,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/common/dto/base-versioned.dto.ts` | versionedSchema 정의 |
 | `apps/backend/src/common/cache/cache-invalidation.helper.ts` | 캐시 무효화 헬퍼 |
 | `apps/frontend/hooks/use-optimistic-mutation.ts` | 프론트엔드 optimistic mutation 훅 |
+| `apps/frontend/hooks/use-cas-guarded-mutation.ts` | fetch-before-mutate 패턴 — 뮤테이션 직전 최신 casVersion API 조회 (stale closure 완전 차단). calibration-plans submit/approve/reject/confirm에 사용 |
 
 ## Workflow
 
@@ -109,6 +110,7 @@ grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanc
 | 9 | 프론트엔드 mutation에서 version 전달 |
 | 10 | 승인 프로세스의 CAS version 교체 (stale requestData) |
 | 11 | updateWithVersion의 version 인자 출처 (DB 조회값 금지) |
+| 12 | useCasGuardedMutation 사용 — 3단계 승인 워크플로우 casVersion 패턴 |
 
 상세: [references/cas-checks.md](references/cas-checks.md) Step 5~11
 
@@ -128,6 +130,7 @@ grep -rln "updateWithVersion" apps/backend/src/modules/ | xargs grep -l "instanc
 | 9   | 프론트엔드 version 전달   | PASS/FAIL | 누락 API 함수            |
 | 10  | 승인 CAS version 교체     | PASS/FAIL | stale version 사용 위치  |
 | 11  | version 인자 출처         | PASS/FAIL | DB 조회 version 사용     |
+| 12  | useCasGuardedMutation 패턴 | PASS/INFO | casVersion 수동 조합 위치 (훅 전환 권장) |
 ```
 
 ## Exceptions

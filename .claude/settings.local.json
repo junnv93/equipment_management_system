@@ -57,7 +57,11 @@
       "Bash(pnpm --filter backend run tsc --noEmit)",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-17-session-74-followups.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-17-session-74-followups.md)",
       "Bash(mv .claude/exec-plans/active/2026-04-17-qr-phase1-mobile-landing.md .claude/exec-plans/completed/2026-04-17-qr-phase1-mobile-landing.md)",
-      "mcp__plugin_context7_context7__query-docs"
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(mkdir -p /home/kmjkds/.claude/plans)",
+      "Read(//home/kmjkds/.claude/plans/**)",
+      "Bash(rm /home/kmjkds/equipment_management_system/.claude/skills/harness-docs/scripts/example.py /home/kmjkds/equipment_management_system/.claude/skills/harness-docs/references/api_reference.md /home/kmjkds/equipment_management_system/.claude/skills/harness-docs/assets/example_asset.txt)",
+      "Bash(rmdir /home/kmjkds/equipment_management_system/.claude/skills/harness-docs/assets /home/kmjkds/equipment_management_system/.claude/skills/harness-docs/scripts)"
     ],
     "deny": [],
     "ask": []

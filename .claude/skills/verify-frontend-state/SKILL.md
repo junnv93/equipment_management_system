@@ -26,6 +26,7 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | File | Purpose |
 |------|---------|
 | `apps/frontend/hooks/use-optimistic-mutation.ts` | SSOT: optimistic mutation 훅 |
+| `apps/frontend/hooks/use-cas-guarded-mutation.ts` | CAS fetch-before-mutate 훅 (3단계 승인 워크플로우용) |
 | `apps/frontend/lib/api/query-config.ts` | queryKeys 팩토리 + QUERY_CONFIG 프리셋 |
 | `apps/frontend/lib/api/cache-invalidation.ts` | 캐시 무효화 SSOT |
 | `apps/frontend/hooks/use-date-formatter.ts` | 사용자 dateFormat 적용 날짜 포맷 훅 |
@@ -89,6 +90,32 @@ const toggleMutation = useOptimisticMutation({
 ```
 
 **PASS:** mutationFn 클로저에서 `entity?.version` 형태 캡처 0건. 또는 `queryClient.getQueryData` 경유.
+
+### Step 3c: fetch-before-mutate 패턴 — `useCasGuardedMutation` SSOT (2026-04-20~)
+
+3단계 승인 워크플로우(submit/approve/reject/confirm)처럼 **두 사용자가 동시에 같은 레코드를 진행**시킬 위험이 높은 경우, 단순 getQueryData 보다 강력한 API fetch-before-mutate 패턴 사용.
+
+**SSOT 훅:** `apps/frontend/hooks/use-cas-guarded-mutation.ts`
+
+**탐지 — stale casVersion를 직접 캡처하는 패턴:**
+```bash
+# casVersion을 외부 변수에서 캡처하는 mutationFn (useCasGuardedMutation 미사용)
+grep -rn "casVersion" apps/frontend/components apps/frontend/hooks \
+  --include="*.tsx" --include="*.ts" | grep -v "useCasGuardedMutation\|CasGuarded\|use-cas-guarded"
+```
+
+**✅ 올바른 패턴:**
+```typescript
+const approveMutation = useCasGuardedMutation<CalibrationPlan, ApproveDto>({
+  getCasVersion: () => calibrationPlansApi.getCasVersion(planId), // 항상 fresh API 조회
+  mutationFn: (casVersion, dto) => calibrationPlansApi.approve(planId, { ...dto, casVersion }),
+  queryKey: queryKeys.calibrationPlans.detail(planId),
+  invalidateKeys: [queryKeys.calibrationPlans.lists()],
+  onSuccess: () => toast.success(t('approved')),
+});
+```
+
+**PASS:** calibration-plans 도메인의 상태 변경 mutation(submit/approve/reject/confirm)이 `useCasGuardedMutation` 또는 동등한 fetch-before-mutate 패턴 경유.
 
 ### Step 4: invalidateQueries 위치 + (4b) Navigate-Before-Invalidate
 
@@ -201,6 +228,46 @@ React.useEffect(() => { return () => { if (timerRef.current !== null) clearTimeo
 timerRef.current = window.setTimeout(() => setPhase('idle'), 1200);
 ```
 
+### Step 15: useCasGuardedMutation — VERSION_CONFLICT 처리 및 캐시 무효화 패턴 (2026-04-20 추가)
+
+`useCasGuardedMutation` 훅은 3단계 승인 워크플로우처럼 mutationFn 직전에 항상 최신 casVersion이 필요한 경우의 SSOT.
+이 훅을 직접 사용하지 않고 fetchCasVersion+mutationFn을 수동 조합하거나,
+onError에서 직접 VERSION_CONFLICT 분기를 구현하는 패턴은 중복이다.
+
+**탐지:**
+```bash
+# useCasGuardedMutation 없이 수동 casVersion fetch + mutation 조합 탐지
+grep -rn "fetchCasVersion\|getCalibrationPlan.*casVersion\|casVersion.*await" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "use-cas-guarded-mutation\|node_modules\|// "
+```
+
+```bash
+# onError에서 isConflictError 직접 처리 탐지 (useCasGuardedMutation이 이미 자동 처리)
+grep -rn "isConflictError\|VERSION_CONFLICT" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "use-cas-guarded-mutation\|equipment-errors\|node_modules\|// "
+```
+
+**PASS:** `useCasGuardedMutation` 사용 컴포넌트의 onError에 `isConflictError` 중복 처리 없음.
+**INFO:** casVersion을 수동 관리하는 컴포넌트가 있으면 `useCasGuardedMutation` 전환 검토.
+
+**올바른 사용 패턴:**
+```typescript
+// ✅ 올바른 패턴 — VERSION_CONFLICT는 훅 내부에서 자동 처리
+const reviewMutation = useCasGuardedMutation({
+  fetchCasVersion: () => calibrationPlansApi.getCalibrationPlan(planUuid).then((p) => p.casVersion),
+  mutationFn: (_, casVersion) => calibrationPlansApi.reviewCalibrationPlan(planUuid, { casVersion }),
+  onSuccess: () => { invalidateAfterChange(); },
+  onError: (error) => { toast({ variant: 'destructive', description: error.response?.data?.message }); },
+  // VERSION_CONFLICT는 onError에 전달되지 않으므로 별도 분기 불필요
+});
+```
+
+**예외:** `use-cas-guarded-mutation.ts` 자체 내부의 `isConflictError` 처리 — SSOT 정의이므로 정상.
+
 ### Step 14: QUERY_CONFIG 스프레드 오버라이드
 
 `{ ...QUERY_CONFIG.XXX, extraKey: value }` 패턴은 프리셋에 없는 옵션을 추가하는 오버라이드입니다. 이 경우 QUERY_CONFIG 프리셋 자체가 불완전하거나, 개별 쿼리가 특수 요구사항을 가진 것입니다. 두 경우 모두 **명시적인 주석**이 없으면 추후 유지보수자가 의도를 파악할 수 없습니다.
@@ -251,6 +318,7 @@ useQuery({
 | 13  | 타이머 cleanup (useRef)    | PASS/FAIL | window.setTimeout + setState 직접 호출 위치 |
 | 12  | count 전용 쿼리 키 분리    | PASS/FAIL | pageSize:1 쿼리가 목록 키 재사용하는 위치 |
 | 14  | QUERY_CONFIG 스프레드 오버라이드 | PASS/INFO | `...QUERY_CONFIG.XXX, extraKey` 주석 없는 위치 |
+| 15  | useCasGuardedMutation 패턴    | PASS/INFO | onError 중복 VERSION_CONFLICT 처리 또는 수동 casVersion 조합 위치 |
 ```
 
 ## Exceptions

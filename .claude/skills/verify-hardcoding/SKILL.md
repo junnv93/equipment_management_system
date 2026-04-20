@@ -234,7 +234,30 @@ rg "\.xlsx|\.docx" apps/frontend/lib/api/ --type ts -n | grep -v "node_modules\|
 | 20  | 파일 확장자/MIME 타입 SSOT    | PASS/FAIL | 하드코딩 확장자 배열 위치              |
 | 21b | QR 라벨 폰트 스케일 매직넘버  | PASS/FAIL | 43.7 인라인 또는 SSOT 외 치수 할당 위치 |
 | 22  | Content-Disposition 인라인 조립 | PASS/FAIL | `filename*=UTF-8''` 직접 사용 위치 |
+| 23  | export allowlist 상태 리터럴   | PASS/WARN | enum 미경유 status 배열 요소 위치 |
 ```
+
+### Step 23: Export 허용 상태 allowlist 하드코딩 탐지 (2026-04-20 추가)
+
+백엔드 서비스에서 `export` 가능한 상태를 문자열 배열로 직접 정의하는 것은 허용되지만,
+해당 상수가 프론트엔드 `*-exportability.ts` 유틸과 동기화되지 않을 위험이 있다.
+탐지 목적은 백엔드 export-data 서비스가 `CalibrationPlanStatus`/`SoftwareValidationStatus` 등
+Schemas SSOT enum을 경유하지 않고 `'approved'` 등의 리터럴을 직접 배열 요소로 사용하는 경우를 찾는 것이다.
+
+```bash
+# export-data 서비스에서 enum 상수를 경유하지 않는 상태 리터럴 allowlist 탐지
+grep -rn "EXPORTABLE.*STATUSES\s*=\s*\['\|const.*STATUS.*=\s*\['" \
+  apps/backend/src/modules \
+  --include="*export-data*" --include="*exportability*" \
+  | grep -v "node_modules\|// "
+```
+
+**PASS:** export allowlist 상수가 SchemaEnum 상수 (`CalibrationPlanStatusValues.APPROVED` 등)를 요소로 사용.
+**WARN:** `['approved'] as const` 형태로 문자열 리터럴 직접 사용 — 프론트엔드 유틸과 sync 주석이 있으면 LOW 수준.
+
+**배경:** `calibration-plan-export-data.service.ts:8` `const EXPORTABLE_PLAN_STATUSES = ['approved'] as const` — 프론트엔드 `calibration-plan-exportability.ts`는 `CalibrationPlanStatusValues.APPROVED` SSOT를 사용하나 백엔드는 리터럴. 기능상 동등하나 enum 값이 변경될 경우 drift 위험. sync 주석 존재로 WARN 수준으로 이연 (2026-04-20 review-architecture 발견).
+
+**예외:** export allowlist가 의도적으로 enum 전체보다 좁은 명시적 subset인 경우 (allowlist 방식의 보안 설계), 리터럴 사용에 sync 주석이 있으면 WARN으로 처리. 동기화 주석 없이 리터럴만 있으면 FAIL.
 
 ### Step 22: Content-Disposition 헤더 인라인 조립 금지 (2026-04-20 추가)
 

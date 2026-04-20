@@ -94,6 +94,7 @@ POST/PATCH/DELETE 엔드포인트에 Permission Guard가 적용되어 있는지 
 | 10  | enforceSiteAccess 적용      | PASS/FAIL | 누락 mutation 컨트롤러          |
 | 11  | 라우트 선언 순서            | PASS/FAIL | 정적 sub-path 가 /:param 뒤에 선언된 위치 |
 | 12  | assertIndependentApprover   | PASS/FAIL | 승인 워크플로우 모듈 approve() 미적용 목록 |
+| 13  | FE role 리터럴 직접 비교   | PASS/WARN | URVal.* 직접 비교로 Permission 우회하는 액션 게이트 위치 |
 ```
 
 ### Step 11: 라우트 선언 순서 검증
@@ -115,6 +116,38 @@ grep -n "@(Get|Post|Patch|Delete|Put)(" apps/backend/src/modules/**/*.controller
 **FAIL:** `@Patch(':uuid/result-sections/:sectionId')` 뒤에 `@Patch(':uuid/result-sections/reorder')` 가 선언됨.
 
 **배경:** 2026-04-12 harness evaluator 1차 FAIL 사유. `feedback_nest_route_order.md` 영구화.
+
+### Step 13: 프론트엔드 Permission 우회 — role 리터럴 직접 비교 탐지 (2026-04-20 추가)
+
+프론트엔드 컴포넌트에서 `useAuth().can(Permission.*)` 대신 `userRole === URVal.*` 형태로 role을 직접 비교하면,
+Permission 체계가 변경되거나 역할이 추가될 때 해당 가드가 자동으로 반영되지 않아 권한 누락 위험이 있다.
+
+**탐지 명령어:**
+```bash
+# userRole === URVal.* 또는 role === 'ROLE_NAME' 리터럴 비교 탐지
+grep -rn "userRole\s*===\s*URVal\.\|role\s*===\s*['\"]QUALITY_MANAGER\|role\s*===\s*['\"]LAB_MANAGER\|role\s*===\s*['\"]SYSTEM_ADMIN\|role\s*===\s*['\"]TECHNICAL_MANAGER" \
+  apps/frontend/components apps/frontend/app \
+  --include="*.tsx" --include="*.ts" \
+  | grep -v "// \|spec\."
+```
+
+**PASS:** 0건이거나, 표시 전용 UI 분기(Permission 게이트가 아닌 레이블/아이콘 변경)에 한정.
+**WARN:** `canReview`, `canApprove` 같은 액션 게이트가 role 리터럴 비교로 결정되면 Permission SSOT 우회.
+
+**올바른 패턴:**
+```typescript
+// ❌ 경계선 — role 리터럴이 액션 게이트를 결정
+const canReview = isPendingReview && (userRole === URVal.QUALITY_MANAGER || userRole === URVal.LAB_MANAGER);
+
+// ✅ 권장 — Permission SSOT 경유
+const canReview = isPendingReview && can(Permission.REVIEW_CALIBRATION_PLAN);
+```
+
+**예외:** URVal 상수를 통한 비교(`URVal.QUALITY_MANAGER`)는 문자열 리터럴 직접 사용보다 낫지만,
+Permission 게이트용이라면 `can()` 패턴으로 교체를 권장. WARN 수준으로 처리하고 즉각 FAIL은 아님.
+
+**배경:** `ApprovalTimeline.tsx:63` `canReview = isPendingReview && (isQualityManager || isLabManager || isSystemAdmin)` — URVal 상수 경유이나 Permission SSOT 우회 (2026-04-20 review-architecture 발견).
+참고 파일: `apps/frontend/components/calibration-plans/ApprovalTimeline.tsx`
 
 ### Step 12: assertIndependentApprover 적용 확인 (ISO 17025 §6.2.2)
 
