@@ -232,6 +232,13 @@
       "when": 1776902400000,
       "tag": "0032_intermediate_inspection_calibration_nullable",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1745107200000,
+      "tag": "0033_calibration_certificate_path_backfill",
+      "breakpoints": true
     }
   ]
 }
