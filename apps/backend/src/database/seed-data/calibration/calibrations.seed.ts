@@ -18,6 +18,8 @@ import {
   EQUIP_SAR_SYSTEM_SUW_S_ID,
   EQUIP_HARNESS_COUPLER_SUW_A_ID,
   EQUIP_CURRENT_PROBE_SUW_A_ID,
+  EQUIP_INJECTION_CLAMP_SUW_A_ID,
+  EQUIP_BCI_SUW_A_ID,
   EQUIP_RECEIVER_UIW_W_ID,
   EQUIP_TRANSMITTER_UIW_W_ID,
   EQUIP_EMC_RECEIVER_SUW_E_ID,
@@ -30,6 +32,8 @@ import {
   CALIB_003_ID,
   CALIB_004_ID,
   CALIB_005_ID,
+  CALIB_006_ID,
+  CALIB_007_ID,
 } from '../../utils/uuid-constants';
 
 const now = new Date();
@@ -304,6 +308,38 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
     daysAgo(15),
     {
       rejectionReason: '측정 범위 초과. 부적합입니다.',
+    }
+  ),
+
+  // ── CPLAN_008 bulk-confirm 시나리오 지원 ────────────────────────────────
+  // CALIB_006: CPLAN_ITEM_021 (Injection Clamp) actualCalibrationId 참조
+  //   → actualCalibrationId IS NOT NULL + confirmedBy IS NULL = bulk-confirm 대상
+  // CALIB_007: CPLAN_ITEM_022 (BCI Probe) actualCalibrationId 참조
+  //   → 동일 조건, 일괄 확인 2건 이상 검증용
+
+  createCalibration(
+    EQUIP_INJECTION_CLAMP_SUW_A_ID,
+    'pass',
+    'approved',
+    'test_engineer',
+    new Date('2026-08-25'),
+    new Date('2026-08-25'),
+    {
+      id: CALIB_006_ID,
+      registrarComment: '외부교정 완료 (KTC)',
+    }
+  ),
+
+  createCalibration(
+    EQUIP_BCI_SUW_A_ID,
+    'pass',
+    'approved',
+    'test_engineer',
+    new Date('2026-10-30'),
+    new Date('2026-10-30'),
+    {
+      id: CALIB_007_ID,
+      registrarComment: '외부교정 완료 (HCT)',
     }
   ),
 ];

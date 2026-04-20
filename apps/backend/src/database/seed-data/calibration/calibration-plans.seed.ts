@@ -34,6 +34,8 @@ import {
   // Calibration IDs (실적 링크용)
   CALIB_004_ID,
   CALIB_005_ID,
+  CALIB_006_ID,
+  CALIB_007_ID,
   CPLAN_ITEM_002_ID,
   CPLAN_ITEM_003_ID,
   CPLAN_ITEM_004_ID,
@@ -623,7 +625,7 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
     plannedCalibrationDate: new Date('2026-09-01'),
     plannedCalibrationAgency: 'KTC',
     actualCalibrationDate: new Date('2026-08-25'),
-    // confirmedBy 없음 — 확인 대기 중
+    actualCalibrationId: CALIB_006_ID, // bulk-confirm 대상: actualCalibrationId IS NOT NULL + confirmedBy IS NULL
     notes: '교정 완료, 확인 예정',
   },
   {
@@ -636,7 +638,8 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
     snapshotCalibrationAgency: 'HCT',
     plannedCalibrationDate: new Date('2026-11-01'),
     plannedCalibrationAgency: 'HCT',
-    // actualCalibrationDate 없음 — 교정 미완료
+    actualCalibrationDate: new Date('2026-10-30'),
+    actualCalibrationId: CALIB_007_ID, // bulk-confirm 대상: actualCalibrationId IS NOT NULL + confirmedBy IS NULL
   },
 
   // ── CPLAN_009 (approved, 2022 수원 FCC EMC/RF, 28개 항목) ──────────────

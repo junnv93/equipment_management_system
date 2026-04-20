@@ -84,19 +84,26 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
   const [isVersionOpen, setIsVersionOpen] = useState(false);
   const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
   const [optimisticConfirmedId, setOptimisticConfirmedId] = useState<string | null>(null);
+  const [isOptimisticAllConfirmed, setIsOptimisticAllConfirmed] = useState(false);
 
   const { can } = useAuth();
   const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
+  const canConfirmItem = can(Permission.CONFIRM_CALIBRATION_PLAN_ITEM);
 
   const isDraft = plan.status === CPStatus.DRAFT;
   const isApproved = plan.status === CPStatus.APPROVED;
   const items = useMemo(() => plan.items || [], [plan.items]);
 
   // W-1: 진행률 계산
-  const { confirmedCount, progressPercent } = useMemo(() => {
+  const { confirmedCount, progressPercent, hasConfirmableItems } = useMemo(() => {
     const confirmed = items.filter((item) => item.confirmedBy).length;
     const percent = items.length > 0 ? Math.round((confirmed / items.length) * 100) : 0;
-    return { confirmedCount: confirmed, progressPercent: percent };
+    const confirmable = items.some((i) => !i.confirmedBy && i.actualCalibrationId);
+    return {
+      confirmedCount: confirmed,
+      progressPercent: percent,
+      hasConfirmableItems: confirmable,
+    };
   }, [items]);
 
   const updateItemMutation = useMutation({
@@ -142,6 +149,32 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
       toast({
         title: t('planDetail.toasts.confirmItemError'),
         description: error.response?.data?.message || t('planDetail.toasts.confirmItemErrorDesc'),
+        variant: 'destructive',
+      });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
+    },
+  });
+
+  const confirmAllMutation = useCasGuardedMutation<{ confirmedCount: number }, void>({
+    fetchCasVersion: () =>
+      calibrationPlansApi.getCalibrationPlan(planUuid).then((p) => p.casVersion),
+    mutationFn: (_unused, casVersion) =>
+      calibrationPlansApi.confirmAllPlanItems(planUuid, { casVersion }),
+    onSuccess: (result) => {
+      setIsOptimisticAllConfirmed(false);
+      toast({
+        title: t('planDetail.toasts.confirmAllSuccess'),
+        description: t('planDetail.toasts.confirmAllSuccessDesc', {
+          count: result.confirmedCount,
+        }),
+      });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
+    },
+    onError: (error) => {
+      setIsOptimisticAllConfirmed(false);
+      toast({
+        title: t('planDetail.toasts.confirmAllError'),
+        description: error.response?.data?.message || t('planDetail.toasts.confirmAllErrorDesc'),
         variant: 'destructive',
       });
       CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
@@ -208,7 +241,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
           </CardDescription>
         </CardHeader>
 
-        {/* W-1: 확인 진행률 바 (approved 상태에서만) */}
+        {/* W-1: 확인 진행률 바 + 일괄 확인 버튼 (approved 상태에서만) */}
         {isApproved && items.length > 0 && (
           <div className={PLAN_PROGRESS_TOKENS.container}>
             <span className={PLAN_PROGRESS_TOKENS.label} id="progress-label">
@@ -244,6 +277,22 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                 })}
               </span>
             </div>
+            {canConfirmItem && (hasConfirmableItems || isOptimisticAllConfirmed) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsOptimisticAllConfirmed(true);
+                  confirmAllMutation.mutate(undefined);
+                }}
+                disabled={confirmAllMutation.isPending || confirmItemMutation.isPending}
+                aria-label={t('planDetail.items.confirmAllTitle')}
+                className="ml-auto shrink-0"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1" />
+                {t('planDetail.items.confirmAll')}
+              </Button>
+            )}
           </div>
         )}
 
@@ -504,6 +553,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                   )}
                                 {isApproved &&
                                   !item.confirmedBy &&
+                                  !!item.actualCalibrationId &&
                                   optimisticConfirmedId !== item.id && (
                                     <Button
                                       variant="ghost"
@@ -512,8 +562,12 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                         setOptimisticConfirmedId(item.id);
                                         confirmItemMutation.mutate(item.id);
                                       }}
-                                      disabled={confirmItemMutation.isPending}
+                                      disabled={
+                                        confirmItemMutation.isPending ||
+                                        confirmAllMutation.isPending
+                                      }
                                       title={t('planDetail.items.confirm')}
+                                      aria-label={t('planDetail.items.confirm')}
                                       className={cn(
                                         'h-8 w-8 p-0',
                                         CONFIRMATION_BADGE_TOKENS.confirmed.text

@@ -155,6 +155,8 @@
       "monthUnit": "{count}개월",
       "confirmed": "확인됨",
       "confirm": "확인",
+      "confirmAll": "일괄 확인",
+      "confirmAllTitle": "실적 기록이 연결된 미확인 항목 전체를 확인합니다",
       "actualLinked": "실적 기록됨",
       "recordActual": "실적 기록",
       "recordActualDialog": {
@@ -219,7 +221,11 @@
       "confirmItemSuccess": "확인 완료",
       "confirmItemSuccessDesc": "항목이 확인되었습니다.",
       "confirmItemError": "확인 실패",
-      "confirmItemErrorDesc": "항목 확인 중 오류가 발생했습니다."
+      "confirmItemErrorDesc": "항목 확인 중 오류가 발생했습니다.",
+      "confirmAllSuccess": "일괄 확인 완료",
+      "confirmAllSuccessDesc": "{count}건이 확인되었습니다.",
+      "confirmAllError": "일괄 확인 실패",
+      "confirmAllErrorDesc": "일괄 확인 처리 중 오류가 발생했습니다."
     },
     "yearWithUnit": "{year}년",
     "versionHistory": {

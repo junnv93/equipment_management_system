@@ -154,7 +154,9 @@
       },
       "monthUnit": "{count} months",
       "confirmed": "Confirmed",
-      "confirm": "Confirm"
+      "confirm": "Confirm",
+      "confirmAll": "Confirm All",
+      "confirmAllTitle": "Confirm all items linked to actual calibration records"
     },
     "placeholders": {
       "reviewComment": "Brief comment (optional)",
@@ -213,7 +215,11 @@
       "confirmItemSuccess": "Confirmed",
       "confirmItemSuccessDesc": "The item has been confirmed.",
       "confirmItemError": "Confirmation Failed",
-      "confirmItemErrorDesc": "An error occurred during confirmation."
+      "confirmItemErrorDesc": "An error occurred during confirmation.",
+      "confirmAllSuccess": "Bulk Confirmation Complete",
+      "confirmAllSuccessDesc": "{count} item(s) have been confirmed.",
+      "confirmAllError": "Bulk Confirmation Failed",
+      "confirmAllErrorDesc": "An error occurred during bulk confirmation."
     },
     "yearWithUnit": "{year}",
     "versionHistory": {

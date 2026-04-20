@@ -39,7 +39,7 @@ import type {
   RejectCalibrationPlanPayload,
   ConfirmPlanItemPayload,
   ConfirmAllPlanItemsPayload,
-  type ConfirmAllPlanItemsResult,
+  ConfirmAllPlanItemsResult,
 } from './dto';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import type {
