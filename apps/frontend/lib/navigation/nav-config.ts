@@ -23,7 +23,6 @@ import {
   Activity,
   Monitor,
   Cable,
-  ShieldCheck,
 } from 'lucide-react';
 import { FRONTEND_ROUTES, Permission, hasPermission } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
@@ -114,12 +113,6 @@ export const NAV_SECTIONS: NavSection[] = [
         href: FRONTEND_ROUTES.SOFTWARE.LIST,
         labelKey: 'software',
         requiredPermission: Permission.VIEW_TEST_SOFTWARE,
-      },
-      {
-        icon: ShieldCheck,
-        href: FRONTEND_ROUTES.SOFTWARE_VALIDATIONS.LIST,
-        labelKey: 'softwareValidations',
-        requiredPermission: Permission.VIEW_SOFTWARE_VALIDATIONS,
       },
       {
         icon: Cable,
