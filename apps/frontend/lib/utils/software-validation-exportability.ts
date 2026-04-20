@@ -1,12 +1,14 @@
 import { ValidationStatusValues, type ValidationStatus } from '@equipment-management/schemas';
 
-// 유효성 확인서(UL-QP-18-09) export 불가 상태
-// 백엔드 EXPORTABLE_STATUSES = ['submitted', 'approved', 'quality_approved'] 정책과 동기화
-export const NON_EXPORTABLE_VALIDATION_STATUSES: readonly ValidationStatus[] = [
-  ValidationStatusValues.DRAFT,
-  ValidationStatusValues.REJECTED,
+// allowlist — 백엔드 EXPORTABLE_STATUSES 패턴과 방향 통일
+// (software-validation-export-data.service.ts:56)
+// 신규 ValidationStatus 추가 시 이 목록을 명시적으로 갱신해야 export 허용
+export const EXPORTABLE_VALIDATION_STATUSES: readonly ValidationStatus[] = [
+  ValidationStatusValues.SUBMITTED,
+  ValidationStatusValues.APPROVED,
+  ValidationStatusValues.QUALITY_APPROVED,
 ] as const;
 
 export function isValidationExportable(status: ValidationStatus): boolean {
-  return !NON_EXPORTABLE_VALIDATION_STATUSES.includes(status);
+  return EXPORTABLE_VALIDATION_STATUSES.includes(status);
 }

@@ -25,7 +25,7 @@ export const createCalibrationFormSchema = (t: (key: string) => string) =>
         .min(1, t('calibration.form.agencyRequired'))
         .max(100),
       certificateNumber: z.string().max(100).optional(),
-      certificateFile: z.instanceof(File, { message: t('calibration.form.fileRequired') }),
+      certificateFile: z.instanceof(File, { error: t('calibration.form.fileRequired') }),
       result: CalibrationResultEnum,
       notes: z.string().optional(),
       intermediateCheckDate: z.date().optional(),
