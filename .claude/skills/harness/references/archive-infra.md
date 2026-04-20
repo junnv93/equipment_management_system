@@ -5,6 +5,17 @@
 
 ---
 
+## ~~37차 정리 (2026-04-09) — Dockerfile hardening 실빌드 검증~~ ✅ 완료 (2026-04-09)
+
+`docker build --target production` 실측으로 36차/30차/29차에 등재됐던 **Docker 관련 4건 전부 stale 확인 → 아카이브**. 동시에 fresh 빌드에서만 드러나는 **실제 근본 버그 2건** 발견 + root-cause 수정:
+
+1. `preinstall` 훅이 참조하는 `scripts/check-no-stale-lockfiles.mjs` 가 deps 레이어에 COPY 되지 않아 fresh 빌드가 `MODULE_NOT_FOUND` 로 실패 → 단일 파일 COPY 추가 (manifest 캐시 재사용률 유지).
+2. `prod-deps` 스테이지의 `pnpm install --prod` 가 husky(devDep) `prepare` 훅에서 `sh: husky: not found` → `--ignore-scripts` 로 전환 (`--frozen-lockfile` 이 lockfile 무결성을 이미 보장해 preinstall 검증 중복 제거).
+
+교훈: "정적 구조만 확인된 hardening 체크리스트" 는 실제 `docker build` 1회로 모두 검증되어야 한다. 이후 Dockerfile 변경은 CI 또는 로컬에서 fresh 빌드 실행을 필수 절차로 삼을 것.
+
+---
+
 ## ~~71차 신규 — 백엔드 E2E 테스트 인프라 근본 재설계 (1건, 2026-04-16)~~ ✅ 완료 (2026-04-16, Mode 2 harness)
 
 > **발견 배경 (2026-04-16)**: data-migration harness 중 `pnpm test:e2e` 전면 실패 확인. 근본 원인: (1) 14/20 파일이 Redis 6380 하드코딩 (Docker는 6379), (2) `admin@example.com` DB row 부재 → JWT sub 빈 문자열 → 500, (3) 기존 SSOT (`test-users.ts`, `seed-test-new.ts`)가 백엔드 E2E에서 미사용.

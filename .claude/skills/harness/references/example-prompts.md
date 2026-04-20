@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-20 (정합화 완료 — 29차~38차 완료 섹션 5개 아카이브 이동. 미완료 3건: Lighthouse 게이트, 커밋 귀속 복구(사용자 결정 대기), sticky-header CSS 변수(트리거 조건 미달).)**
+> **마지막 정리일: 2026-04-20 (정합화 완료 — 37차 Dockerfile hardening 섹션 archive-infra.md 이동. 미완료 3건: Lighthouse 게이트, 커밋 귀속 복구(사용자 결정 대기), sticky-header CSS 변수(트리거 조건 미달).)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -397,17 +397,6 @@ C. **전체 복구 (비권장)**: interactive rebase로 커밋 분리 + force pu
 
 질문: 어느 옵션으로 진행? 기본값은 A (status quo). B는 저비용 추가 기록.
 ```
-
-## 37차 정리 (2026-04-09) — Dockerfile hardening 실빌드 검증
-
-`docker build --target production` 실측으로 36차/30차/29차에 등재됐던 **Docker 관련 4건 전부 stale 확인 → 아카이브**. 동시에 fresh 빌드에서만 드러나는 **실제 근본 버그 2건** 발견 + root-cause 수정(tracker `Frontend/Backend Dockerfile hardening 검증` 참조):
-
-1. `preinstall` 훅이 참조하는 `scripts/check-no-stale-lockfiles.mjs` 가 deps 레이어에 COPY 되지 않아 fresh 빌드가 `MODULE_NOT_FOUND` 로 실패 → 단일 파일 COPY 추가 (manifest 캐시 재사용률 유지).
-2. `prod-deps` 스테이지의 `pnpm install --prod` 가 husky(devDep) `prepare` 훅에서 `sh: husky: not found` → `--ignore-scripts` 로 전환 (`--frozen-lockfile` 이 lockfile 무결성을 이미 보장해 preinstall 검증 중복 제거).
-
-교훈: "정적 구조만 확인된 hardening 체크리스트" 는 실제 `docker build` 1회로 모두 검증되어야 한다. 이후 Dockerfile 변경은 CI 또는 로컬에서 fresh 빌드 실행을 필수 절차로 삼을 것.
-
----
 
 > **완료된 항목은 [example-prompts-archive.md](./example-prompts-archive.md)로 분리 (2026-04-09 36차 정리).**
 > 현재 파일은 활성(미해결) harness 프롬프트만 포함. 새 프롬프트는 활성 영역에 추가.
