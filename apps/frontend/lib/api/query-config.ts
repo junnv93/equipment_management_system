@@ -520,6 +520,7 @@ export const queryKeys = {
     byRequest: (requestId: string) => ['documents', 'request', requestId] as const,
     byValidation: (validationId: string) => ['documents', 'validation', validationId] as const,
     byNonConformance: (ncId: string) => ['documents', 'non-conformance', ncId] as const,
+    byCalibration: (calibrationId: string) => ['documents', 'calibration', calibrationId] as const,
   },
   reports: {
     all: ['reports'] as const,
