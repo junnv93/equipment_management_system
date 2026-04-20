@@ -119,7 +119,9 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @Throttle(throttleAllNamed(THROTTLE_PRESETS.UPLOAD))
-  @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024, files: 10 } })
+  )
   @AuditLog({
     action: 'create',
     entityType: 'calibration',

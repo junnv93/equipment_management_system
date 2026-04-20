@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  UnprocessableEntityException,
   ConflictException,
   Inject,
 } from '@nestjs/common';
@@ -769,7 +770,7 @@ export class CalibrationPlansService extends VersionedBaseService {
 
     // Phase 5c: 실제 교정 기록 미연결 시 확인 차단 (정합성 게이트)
     if (!item.actualCalibrationId) {
-      throw new BadRequestException({
+      throw new UnprocessableEntityException({
         code: 'PLAN_ITEM_NOT_EXECUTED',
         message: 'Cannot confirm a plan item without a linked actual calibration record.',
       });
