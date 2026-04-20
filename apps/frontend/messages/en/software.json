@@ -162,7 +162,9 @@
       "approve": "Approve (Technical)",
       "qualityApprove": "Approve (Quality)",
       "reject": "Reject",
-      "revise": "Revise"
+      "revise": "Revise",
+      "selfApprovalForbidden": "You cannot approve a validation you submitted",
+      "dualApprovalForbidden": "Technical and quality approvals must be by different people"
     },
     "detail": {
       "title": "Validation Detail",

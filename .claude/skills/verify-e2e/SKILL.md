@@ -31,6 +31,8 @@ Playwright E2E 테스트 코드가 프로젝트 규칙을 올바르게 준수하
 | `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts` | 테스트 데이터 SSOT |
 | `apps/frontend/tests/e2e/shared/helpers/api-helpers.ts` | 토큰 캐싱, 캐시 클리어 헬퍼 |
 | `apps/backend/src/database/utils/uuid-constants.ts` | 백엔드 UUID 상수 SSOT |
+| `apps/frontend/tests/e2e/a11y/` | 접근성 게이트 (공개 라우트 전용, auth 불필요) |
+| `apps/frontend/playwright.a11y.config.ts` | a11y 전용 Playwright 설정 (globalSetup 없음) |
 
 ## Workflow
 
@@ -356,3 +358,4 @@ grep -rn '\[data-[a-z]' \
 14. **복합 CSS 셀렉터** — `getByRole`로 대체 불가한 경우 허용
 15. **네거티브 네비게이션/토스트 assertion용 짧은 `waitForTimeout`** — "클릭 후 아무 일도 일어나지 않음"을 증명하려면 일정 시간 대기가 불가피. `≤ 1000ms` 이내의 `waitForTimeout` + 직후 `toHaveURL` / `toHaveCount(0)` 쌍 패턴은 정당. 예: early-return handler의 no-op 회귀 보호
 16. **`getByPlaceholder`** — Playwright user-facing semantic locator 패밀리 소속(CSS 셀렉터 아님). shadcn `<Label>`이 `htmlFor` 바인딩 없이 사용된 폼에서 `getByLabel`이 불안정할 때 허용. `getByRole('textbox', { name })`이 가능하면 그 쪽을 우선
+17. **`tests/e2e/a11y/*.a11y.spec.ts`** — 공개 라우트 접근성 게이트. 인증 불필요 페이지만 대상이므로 `auth.fixture` 대신 `@playwright/test` 직접 import 정당. `playwright.a11y.config.ts` 전용 설정 사용.
