@@ -49,6 +49,8 @@ export const THROTTLE_PRESETS = {
   TEST_LOGIN: { limit: 100, ttl: THROTTLE_WINDOW_MS },
   /** CSP violation report — @Public 엔드포인트이므로 엄격 제한. 분당 10회/IP */
   CSP_REPORT: { limit: 10, ttl: THROTTLE_WINDOW_MS },
+  /** 파일 업로드 엔드포인트 — 분당 10회. 모든 named throttler에 적용 (throttleAllNamed와 함께 사용) */
+  UPLOAD: { limit: 10, ttl: THROTTLE_WINDOW_MS },
 } as const;
 
 /**

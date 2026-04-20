@@ -21,6 +21,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { THROTTLE_PRESETS, throttleAllNamed } from '../../common/config/throttle.constants';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
@@ -116,7 +117,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION)
-  @Throttle({ long: { limit: 10, ttl: 60_000 } })
+  @Throttle(throttleAllNamed(THROTTLE_PRESETS.UPLOAD))
   @UseInterceptors(FilesInterceptor('files', 10))
   @AuditLog({
     action: 'create',

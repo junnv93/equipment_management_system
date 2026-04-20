@@ -53,7 +53,6 @@ export const createCalibrationSchema = calibrationBaseSchema.refine(
 );
 
 export type CreateCalibrationInput = z.infer<typeof createCalibrationSchema>;
-export const CreateCalibrationValidationPipe = new ZodValidationPipe(createCalibrationSchema);
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 

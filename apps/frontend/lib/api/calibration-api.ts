@@ -14,8 +14,16 @@ import type {
   EquipmentClassification,
   InspectionResultSectionType,
   InspectionType,
+  DocumentJson,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+
+export type CalibrationDocumentRecord = DocumentJson;
+
+export interface CalibrationCreateResponse {
+  calibration: Calibration;
+  documents: CalibrationDocumentRecord[];
+}
 
 export interface Calibration {
   id: string;
@@ -309,10 +317,10 @@ const calibrationApi = {
     return transformSingleResponse<Calibration>(response);
   },
 
-  // 교정 정보 등록
-  createCalibration: async (data: CreateCalibrationDto): Promise<Calibration> => {
-    const response = await apiClient.post(API_ENDPOINTS.CALIBRATIONS.CREATE, data);
-    return transformSingleResponse<Calibration>(response);
+  // 교정 기록 등록 (multipart: 성적서 파일 + 메타데이터 원자 전송)
+  createCalibrationWithFile: async (formData: FormData): Promise<CalibrationCreateResponse> => {
+    const response = await apiClient.post(API_ENDPOINTS.CALIBRATIONS.CREATE, formData);
+    return transformSingleResponse<CalibrationCreateResponse>(response);
   },
 
   // 교정 정보 수정
