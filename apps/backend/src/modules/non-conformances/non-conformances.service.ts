@@ -20,7 +20,11 @@ import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.h
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { createScopeAwareCacheKeyBuilder } from '../../common/cache/scope-aware-cache-key';
-import { CACHE_TTL, DEFAULT_PAGE_SIZE } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  DEFAULT_PAGE_SIZE,
+  EXCLUDED_OVERDUE_EQUIPMENT_STATUSES,
+} from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { CACHE_EVENTS, type NCAttachmentCachePayload } from '../../common/cache/cache-events';
 import { DocumentService } from '../../common/file-upload/document.service';
@@ -217,7 +221,7 @@ export class NonConformancesService extends VersionedBaseService {
         teamId: currentEquip.teamId,
       };
 
-      // 2. 부적합 등록
+      // 2. 부적합 등록 (previousEquipmentStatus: NC close 시 장비 상태 복원에 사용)
       const [nonConformance] = await tx
         .insert(nonConformances)
         .values({
@@ -228,6 +232,7 @@ export class NonConformancesService extends VersionedBaseService {
           ncType: createDto.ncType,
           actionPlan: createDto.actionPlan,
           status: NonConformanceStatus.OPEN,
+          previousEquipmentStatus: currentEquip.status,
         })
         .returning();
 
@@ -693,7 +698,7 @@ export class NonConformancesService extends VersionedBaseService {
 
   /**
    * 부적합 종료 (기술책임자)
-   * 장비 상태 복원: available
+   * 장비 상태 복원: previousEquipmentStatus (없으면 available 폴백)
    */
   async close(
     id: string,
@@ -757,10 +762,18 @@ export class NonConformancesService extends VersionedBaseService {
             currentEquipment &&
             currentEquipment.status === EquipmentStatusEnum.enum.non_conforming
           ) {
+            // previousEquipmentStatus가 유효한 복원 대상이면 사용, 아니면 available 폴백
+            const prev = nonConformance.previousEquipmentStatus;
+            const isRestorablePrev =
+              prev && !(EXCLUDED_OVERDUE_EQUIPMENT_STATUSES as readonly string[]).includes(prev);
+            const restoreStatus = isRestorablePrev
+              ? (prev as typeof EquipmentStatusEnum.enum.available)
+              : EquipmentStatusEnum.enum.available;
+
             const [updatedEquipment] = await tx
               .update(equipment)
               .set({
-                status: EquipmentStatusEnum.enum.available,
+                status: restoreStatus,
                 version: sql`version + 1`,
                 updatedAt: new Date(),
               })

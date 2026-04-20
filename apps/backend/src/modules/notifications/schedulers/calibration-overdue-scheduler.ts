@@ -212,7 +212,7 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
 
             const discoveryDate = today.toISOString().split('T')[0];
 
-            // (A) 부적합 생성
+            // (A) 부적합 생성 (previousEquipmentStatus: close 시 장비 상태 복원에 사용)
             const [nc] = await tx
               .insert(nonConformances)
               .values({
@@ -228,6 +228,7 @@ export class CalibrationOverdueScheduler implements OnModuleInit {
                   DEFAULT_LOCALE
                 ),
                 status: NonConformanceStatusEnum.enum.open,
+                previousEquipmentStatus: equip.status,
               })
               .returning();
 

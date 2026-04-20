@@ -74,6 +74,9 @@ export const nonConformances = pgTable(
       onDelete: 'restrict',
     }), // 조치자 ID — 감사 추적 영구 보존
 
+    // NC 생성 시 장비의 이전 상태 스냅샷 (close 시 복원에 사용)
+    previousEquipmentStatus: varchar('previous_equipment_status', { length: 30 }),
+
     // 상태 관리
     status: varchar('status', { length: 20 })
       .$type<NonConformanceStatus>()
