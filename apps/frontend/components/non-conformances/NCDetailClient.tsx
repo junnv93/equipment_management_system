@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -12,7 +12,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  Lock,
   Wrench,
+  FileText,
   LinkIcon,
   ChevronDown,
   ChevronUp,
@@ -76,11 +78,16 @@ import {
 // 상수
 // ============================================================================
 
-/** NC_STEP_CONFIG 아이콘 매핑 (label은 i18n에서 제공) */
+/**
+ * 워크플로우 스텝 아이콘 매핑
+ * - open: AlertTriangle — 미결 경고
+ * - corrected: CheckCircle2 — 조치 완료 (긍정)
+ * - closed: Lock — 종결/잠금 (완료 확정). XCircle은 취소/오류 의미로 업계 표준과 충돌
+ */
 const NC_STEP_ICONS: Record<(typeof NC_WORKFLOW_STEPS)[number], typeof AlertTriangle> = {
   open: AlertTriangle,
   corrected: CheckCircle2,
-  closed: XCircle,
+  closed: Lock,
 };
 
 // ============================================================================
@@ -153,6 +160,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       ...old!,
       status: vars.status,
       version: (old?.version ?? 0) + 1,
+      // open→corrected 전환 시 날짜를 즉시 채워 StepDate 깜빡임 방지 (서버는 correctedBy를 JWT로 설정)
+      ...(vars.status === NCVal.CORRECTED && {
+        correctionDate: new Date().toISOString().split('T')[0],
+      }),
     }),
     // invalidateKeys 비움 — onSuccessCallback의 invalidateAfterStatusChange가 NC lists 포함 교차 무효화 단일 처리
     invalidateKeys: [],
@@ -283,9 +294,9 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             <Button
               variant="ghost"
               size="icon"
+              aria-label={t('detail.backButton')}
               className="h-8 w-8"
               onClick={() => router.back()}
-              aria-label={t('detail.backButton')}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -435,7 +446,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
             )}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground italic">{t('detail.correction.empty')}</p>
+          <div className={NC_COLLAPSIBLE_TOKENS.emptyState}>
+            <FileText className={NC_COLLAPSIBLE_TOKENS.emptyStateIcon} />
+            <p className={NC_COLLAPSIBLE_TOKENS.emptyStateText}>{t('detail.correction.empty')}</p>
+          </div>
         )}
       </CollapsibleSection>
 
@@ -456,7 +470,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
               )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground italic">{t('detail.closure.empty')}</p>
+            <div className={NC_COLLAPSIBLE_TOKENS.emptyState}>
+              <CheckCircle2 className={NC_COLLAPSIBLE_TOKENS.emptyStateIcon} />
+              <p className={NC_COLLAPSIBLE_TOKENS.emptyStateText}>{t('detail.closure.empty')}</p>
+            </div>
           )}
         </CollapsibleSection>
       )}
@@ -591,36 +608,34 @@ function WorkflowTimeline({
         isLongOverdue && NC_WORKFLOW_TOKENS.containerUrgent
       )}
     >
+      {/* flex sibling 패턴: 커넥터가 step div 밖 flex item — 절대 포지셔닝/z-index 전쟁 없음 */}
       <div className={NC_WORKFLOW_TOKENS.stepsLayout}>
         {NC_WORKFLOW_STEPS.map((stepKey: NonConformanceStatus, idx: number) => {
           const Icon = NC_STEP_ICONS[stepKey];
           return (
-            <div key={stepKey} className={NC_WORKFLOW_TOKENS.step}>
-              {/* 커넥터 (좌측) */}
+            <Fragment key={stepKey}>
+              {/* 커넥터 — step div 밖 flex sibling (mt-5 = 노드 h-10 중심 맞춤) */}
               {idx > 0 && (
-                <div
-                  className={getNCWorkflowConnectorClasses(idx - 1, currentStepIndex)}
-                  style={{
-                    left: `${((idx - 1) / (NC_WORKFLOW_STEPS.length - 1)) * 100 + 100 / (NC_WORKFLOW_STEPS.length - 1) / 2}%`,
-                    width: `${100 / (NC_WORKFLOW_STEPS.length - 1) - 10}%`,
-                  }}
-                />
+                <div className={getNCWorkflowConnectorClasses(idx - 1, currentStepIndex)} />
               )}
-              {/* 노드 */}
-              <div className={getNCWorkflowNodeClasses(idx, currentStepIndex, isLongOverdue)}>
-                {idx < currentStepIndex ? (
-                  <Check className="h-5 w-5" />
-                ) : (
-                  <Icon className="h-5 w-5" />
-                )}
+              {/* 스텝 */}
+              <div className={NC_WORKFLOW_TOKENS.step}>
+                {/* 노드 */}
+                <div className={getNCWorkflowNodeClasses(idx, currentStepIndex, isLongOverdue)}>
+                  {idx < currentStepIndex ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    <Icon className="h-5 w-5" />
+                  )}
+                </div>
+                {/* 라벨 */}
+                <span className={getNCWorkflowLabelClasses(idx, currentStepIndex, isLongOverdue)}>
+                  {workflowLabels[stepKey]}
+                </span>
+                {/* 날짜 */}
+                <StepDate nc={nc} stepKey={stepKey} />
               </div>
-              {/* 라벨 */}
-              <span className={getNCWorkflowLabelClasses(idx, currentStepIndex, isLongOverdue)}>
-                {workflowLabels[stepKey]}
-              </span>
-              {/* 날짜 */}
-              <StepDate nc={nc} stepKey={stepKey} />
-            </div>
+            </Fragment>
           );
         })}
       </div>

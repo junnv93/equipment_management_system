@@ -118,8 +118,8 @@ export const NC_DETAIL_HEADER_TOKENS = {
   container: 'flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4',
   /** 타이틀 영역 (뒤로가기 + 제목 + 배지) */
   titleArea: SUB_PAGE_HEADER_TOKENS.container,
-  /** 제목 */
-  title: SUB_PAGE_HEADER_TOKENS.title,
+  /** 제목 — SUB_PAGE_HEADER_TOKENS(text-xl)보다 한 단계 더 큰 text-2xl로 타이포 드라마 강화 */
+  title: 'text-2xl font-bold tracking-tight text-foreground',
   /** 메타 정보 (장비 링크, 발견일, 경과일) */
   meta: `${SUB_PAGE_HEADER_TOKENS.subtitle} mt-1 flex flex-wrap items-center gap-x-2 gap-y-1`,
   /** 액션 그룹 */
@@ -352,14 +352,14 @@ export function getNCMiniConnectorClasses(
  * open → corrected → closed
  */
 export const NC_WORKFLOW_TOKENS = {
-  /** 전체 컨테이너 */
-  container: ['bg-card border border-border/60 rounded-lg p-6 sm:p-7'].join(' '),
+  /** 전체 컨테이너 — shadow-sm으로 hero elevation 부여 (flat card 대비 계층 구분) */
+  container: ['bg-card border border-border/60 rounded-lg p-6 sm:p-7 shadow-sm'].join(' '),
   /** 컨테이너 — 긴급 (장기 미조치) */
   containerUrgent: 'border-brand-critical/30',
-  /** 스텝 레이아웃 (flex, 4칸 균등) */
-  stepsLayout: 'flex items-start relative',
+  /** 스텝 레이아웃 — flex sibling 패턴, relative 불필요 */
+  stepsLayout: 'flex items-start',
   /** 개별 스텝 */
-  step: 'flex-1 flex flex-col items-center relative z-[1]',
+  step: 'flex flex-col items-center',
   /** 노드 (원형) 공통 */
   node: {
     base: [
@@ -389,11 +389,11 @@ export const NC_WORKFLOW_TOKENS = {
   date: 'mt-1 text-[11px] text-muted-foreground tabular-nums',
   /** 담당자 */
   actor: 'mt-0.5 text-[11px] text-foreground/60',
-  /** 커넥터 (스텝 사이 수평선) */
+  /** 커넥터 (스텝 사이 수평선) — flex sibling 패턴 (절대 포지셔닝 제거) */
   connector: {
-    base: 'absolute top-5 h-[2px] z-0',
+    base: 'flex-1 h-[2px] self-start mt-5',
     done: 'bg-brand-ok',
-    pending: 'bg-border',
+    pending: 'bg-border/60',
   },
 } as const;
 
@@ -524,6 +524,12 @@ export const NC_COLLAPSIBLE_TOKENS = {
   fieldValue: 'text-[13px] text-foreground leading-relaxed',
   /** 필드 메타 (날짜, 작성자) */
   fieldMeta: 'text-[11px] text-muted-foreground mt-1',
+  /** 빈 상태 래퍼 — 아이콘 + 텍스트 수직 중앙 정렬 */
+  emptyState: 'flex flex-col items-center justify-center py-6 gap-2',
+  /** 빈 상태 아이콘 */
+  emptyStateIcon: 'h-8 w-8 text-muted-foreground/40',
+  /** 빈 상태 텍스트 */
+  emptyStateText: 'text-sm text-muted-foreground',
 } as const;
 
 // ============================================================================
@@ -534,10 +540,10 @@ export const NC_COLLAPSIBLE_TOKENS = {
  * 하단 액션 바 (역할별 동적)
  */
 export const NC_ACTION_BAR_TOKENS = {
-  /** 컨테이너 */
+  /** 컨테이너 — shadow-sm으로 액션 영역 floating 느낌 강화 */
   container: [
     'flex flex-col sm:flex-row items-center justify-between gap-3',
-    'bg-card border border-border/60 rounded-lg px-5 py-4',
+    'bg-card border border-border/60 rounded-lg px-5 py-4 shadow-sm',
   ].join(' '),
   /** 좌측 (상태 변경 + 저장) */
   left: 'flex items-center gap-2',
