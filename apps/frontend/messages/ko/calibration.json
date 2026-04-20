@@ -759,5 +759,23 @@
       "error": "작업 중 오류가 발생했습니다.",
       "conflict": "다른 사용자가 먼저 수정했습니다. 새로고침 후 다시 시도하세요."
     }
+  },
+  "errors": {
+    "fileRequired": "교정성적서 파일이 필요합니다.",
+    "certificateRequired": "교정성적서(calibration_certificate) 문서 타입이 필요합니다.",
+    "documentTypeCountMismatch": "문서 타입 개수가 파일 개수와 일치하지 않습니다.",
+    "documentTypeInvalid": "유효하지 않은 문서 타입입니다.",
+    "fileLimitExceeded": "파일 업로드 한도를 초과했습니다.",
+    "duplicateSameDay": "동일 장비에 같은 날짜의 교정 기록이 이미 존재합니다.",
+    "txFailed": "교정 기록 등록 중 오류가 발생했습니다. 다시 시도하세요.",
+    "notFound": "교정 기록을 찾을 수 없습니다.",
+    "endpointDeprecated": "이 기능은 더 이상 지원되지 않습니다. 교정 등록 양식을 사용하세요.",
+    "planItemNotExecuted": "실제 교정 기록이 연결되지 않은 항목은 확인할 수 없습니다.",
+    "unknown": "알 수 없는 오류가 발생했습니다."
+  },
+  "form": {
+    "aria": {
+      "label": "교정 기록 등록 양식"
+    }
   }
 }

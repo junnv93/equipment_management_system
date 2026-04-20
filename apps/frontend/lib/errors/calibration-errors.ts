@@ -13,6 +13,8 @@ export enum CalibrationErrorCode {
   DUPLICATE_SAME_DAY = 'CALIBRATION_DUPLICATE_SAME_DAY',
   TX_FAILED = 'CALIBRATION_TX_FAILED',
   NOT_FOUND = 'CALIBRATION_NOT_FOUND',
+  ENDPOINT_DEPRECATED = 'ENDPOINT_DEPRECATED',
+  PLAN_ITEM_NOT_EXECUTED = 'PLAN_ITEM_NOT_EXECUTED',
 }
 
 /**
@@ -30,6 +32,8 @@ export const CALIBRATION_ERROR_I18N_KEY: Record<CalibrationErrorCode, string> = 
   [CalibrationErrorCode.DUPLICATE_SAME_DAY]: 'calibration.errors.duplicateSameDay',
   [CalibrationErrorCode.TX_FAILED]: 'calibration.errors.txFailed',
   [CalibrationErrorCode.NOT_FOUND]: 'calibration.errors.notFound',
+  [CalibrationErrorCode.ENDPOINT_DEPRECATED]: 'calibration.errors.endpointDeprecated',
+  [CalibrationErrorCode.PLAN_ITEM_NOT_EXECUTED]: 'calibration.errors.planItemNotExecuted',
 };
 
 /** API 응답 에러 코드를 i18n 키로 변환 */

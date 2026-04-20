@@ -166,11 +166,19 @@ export const QUERY_CONFIG = {
   /** 교정 요약 통계 - NORMAL */
   CALIBRATION_SUMMARY: REFETCH_STRATEGIES.NORMAL,
 
-  /** 교정 이력 목록 - NORMAL */
+  /** 교정 이력 목록 — 신규 등록 후 2분 내 목록 반영 */
   CALIBRATION_LIST: {
-    staleTime: CACHE_TIMES.LONG,
-    gcTime: CACHE_TIMES.VERY_LONG,
+    staleTime: CACHE_TIMES.MEDIUM,
+    gcTime: CACHE_TIMES.LONG,
     refetchOnWindowFocus: false,
+    retry: 2,
+  },
+
+  /** 교정 이력 상세 — 신규 레코드 승인/반려 즉시 반영 목적 */
+  CALIBRATION_DETAIL: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchOnWindowFocus: true,
     retry: 2,
   },
 

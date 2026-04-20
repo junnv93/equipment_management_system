@@ -119,7 +119,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @Throttle(throttleAllNamed(THROTTLE_PRESETS.UPLOAD))
-  @UseInterceptors(FilesInterceptor('files', 10))
+  @UseInterceptors(FilesInterceptor('files', 10, { limits: { fileSize: 10 * 1024 * 1024 } }))
   @AuditLog({
     action: 'create',
     entityType: 'calibration',
@@ -184,7 +184,8 @@ export class CalibrationController {
     const registeredByRole = req.user?.roles?.[0] as CalibrationRegisteredByRole | undefined;
 
     return this.calibrationService.createWithDocuments(
-      { ...parsedPayload, registeredBy, registeredByRole },
+      // Rule 2: registeredBy + calibrationManagerId는 서버 추출값으로 덮어씀 (body 신뢰 금지)
+      { ...parsedPayload, registeredBy, registeredByRole, calibrationManagerId: registeredBy },
       files,
       documentTypes,
       descriptions,
