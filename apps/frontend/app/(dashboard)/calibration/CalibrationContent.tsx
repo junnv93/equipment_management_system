@@ -207,10 +207,10 @@ export default function CalibrationContent({
         overdue={stats.overdue}
         upcoming={stats.upcoming}
         onOverdueAction={() =>
-          router.push(`${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=calibration_overdue`)
+          router.push(`${FRONTEND_ROUTES.EQUIPMENT.LIST}?calibrationDueFilter=overdue`)
         }
         onUpcomingAction={() =>
-          router.push(`${FRONTEND_ROUTES.EQUIPMENT.LIST}?status=calibration_scheduled`)
+          router.push(`${FRONTEND_ROUTES.EQUIPMENT.LIST}?calibrationDueFilter=due_soon`)
         }
       />
 

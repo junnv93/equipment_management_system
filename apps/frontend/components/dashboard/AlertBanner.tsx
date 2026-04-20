@@ -88,11 +88,9 @@ export function AlertBanner({
         )}
         {overdueCalibrationCount > 0 && (
           <Link
-            href={buildScopedEquipmentUrl(
-              scope,
-              FRONTEND_ROUTES.EQUIPMENT.LIST,
-              'calibration_overdue'
-            )}
+            href={buildScopedUrl(scope, FRONTEND_ROUTES.EQUIPMENT.LIST, {
+              calibrationDueFilter: 'overdue',
+            })}
             className={T.chipWarning}
           >
             {t('overdueCalibrations', { count: overdueCalibrationCount })}

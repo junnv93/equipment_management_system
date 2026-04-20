@@ -10,6 +10,7 @@ import {
   getCalibrationKpiAccentClasses,
   type CalibrationStatsType,
 } from '@/lib/design-tokens';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 interface Stats {
   total: number;
@@ -31,10 +32,10 @@ interface Props {
  * - upcoming: 교정 예정 장비 필터
  */
 const KPI_LINKS: Record<CalibrationStatsType, string | null> = {
-  total: '/equipment',
+  total: FRONTEND_ROUTES.EQUIPMENT.LIST,
   compliant: null,
-  overdue: '/equipment?status=calibration_overdue',
-  upcoming: '/equipment?status=calibration_scheduled',
+  overdue: `${FRONTEND_ROUTES.EQUIPMENT.LIST}?calibrationDueFilter=overdue`,
+  upcoming: `${FRONTEND_ROUTES.EQUIPMENT.LIST}?calibrationDueFilter=due_soon`,
 };
 
 function KpiCard({
