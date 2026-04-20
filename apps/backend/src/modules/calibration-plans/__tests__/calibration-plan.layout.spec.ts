@@ -9,8 +9,17 @@ describe('calibration-plan.layout.ts 불변식', () => {
     expect(Layout.SHEET_NAMES.length).toBeGreaterThan(0);
   });
 
-  it('SHEET_NAMES 첫 번째가 연간 교정계획서이어야 함', () => {
-    expect(Layout.SHEET_NAMES[0]).toBe('연간 교정계획서');
+  it('SHEET_NAMES 첫 번째가 Sheet1이어야 함 (UL-QP-19-01(01) 신규 양식)', () => {
+    expect(Layout.SHEET_NAMES[0]).toBe('Sheet1');
+  });
+
+  it('SHEET_NAMES에 연간 교정계획서가 포함되어야 함 (구 양식 호환)', () => {
+    expect(Layout.SHEET_NAMES).toContain('연간 교정계획서');
+  });
+
+  it('DATA_END_ROW가 DATA_START_ROW보다 크고 서명란(34) 이전이어야 함', () => {
+    expect(Layout.DATA_END_ROW).toBeGreaterThan(Layout.DATA_START_ROW);
+    expect(Layout.DATA_END_ROW).toBeLessThan(34);
   });
 
   it('DATA_START_ROW가 6이어야 함 (Row 1~3 제목, Row 4~5 헤더)', () => {
