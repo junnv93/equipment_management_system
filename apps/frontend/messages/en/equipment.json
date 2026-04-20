@@ -75,6 +75,7 @@
     "available": "Available",
     "checked_out": "Checked Out",
     "non_conforming": "Non-Conforming",
+    "calibration_due_soon": "Calibration Due Soon",
     "calibration_overdue": "Calibration Overdue",
     "spare": "Spare",
     "pending_disposal": "Pending Disposal",

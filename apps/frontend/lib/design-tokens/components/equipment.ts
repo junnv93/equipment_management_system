@@ -84,8 +84,8 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   checked_out: {
     card: {
-      className: getSemanticStatusClasses('repair'),
-      borderColor: getSemanticLeftBorderClasses('repair'),
+      className: getSemanticStatusClasses('info'),
+      borderColor: getSemanticLeftBorderClasses('info'),
       statusBarColor: 'bg-brand-info/70',
     },
     header: {
@@ -107,6 +107,20 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     },
     icon: XCircle,
     labelKey: 'equipment.status.non_conforming',
+  },
+  // Derived 표시 전용 (status enum 아님) — nextCalibrationDate <= today+30 카운트
+  calibration_due_soon: {
+    card: {
+      className: getSemanticStatusClasses('repair'),
+      borderColor: getSemanticLeftBorderClasses('repair'),
+      statusBarColor: 'bg-brand-repair',
+    },
+    header: {
+      textColor: getSemanticContainerTextClasses('repair'),
+      bgClasses: 'bg-brand-repair/10 border-brand-repair',
+    },
+    icon: AlertTriangle,
+    labelKey: 'equipment.status.calibration_due_soon',
   },
   // Derived 표시 전용 (status enum 아님) — nextCalibrationDate < today 카운트
   calibration_overdue: {
@@ -594,7 +608,8 @@ export const EQUIPMENT_STATUS_DISPLAY_ORDER = [
   'available',
   'checked_out',
   'non_conforming',
-  'calibration_overdue', // Derived 카운트 (nextCalibrationDate < today) — status enum이 아닌 표시 전용
+  'calibration_due_soon', // Derived 카운트 (nextCalibrationDate <= today+30) — status enum 아님
+  'calibration_overdue', // Derived 카운트 (nextCalibrationDate < today) — status enum 아님
   'pending_disposal',
   'spare',
   'disposed',

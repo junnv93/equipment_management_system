@@ -908,6 +908,30 @@ export class EquipmentService extends VersionedBaseService {
                   );
                 counts['calibration_overdue'] = Number(overdueResult[0]?.count || 0);
 
+                // 교정임박 카운트 — nextCalibrationDate between today and today+30 (폐기/비활성 제외)
+                const thirtyDaysLater = new Date(today);
+                thirtyDaysLater.setUTCDate(thirtyDaysLater.getUTCDate() + 30);
+                const dueSoonExcluded = [
+                  ESVal.DISPOSED,
+                  ESVal.PENDING_DISPOSAL,
+                  ESVal.INACTIVE,
+                  ESVal.SPARE,
+                  ESVal.NON_CONFORMING,
+                ];
+                const dueSoonResult = await this.db
+                  .select({ count: sql<number>`cast(count(*) as integer)` })
+                  .from(equipment)
+                  .where(
+                    and(
+                      ...statusCountWhere,
+                      sql`${equipment.nextCalibrationDate} IS NOT NULL`,
+                      sql`${equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp`,
+                      sql`${equipment.nextCalibrationDate} <= ${thirtyDaysLater.toISOString()}::timestamp`,
+                      notInArray(equipment.status, dueSoonExcluded)
+                    )
+                  );
+                counts['calibration_due_soon'] = Number(dueSoonResult[0]?.count || 0);
+
                 return counts;
               },
               CACHE_TTL.LONG

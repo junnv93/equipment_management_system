@@ -20,11 +20,14 @@ interface StatusSummaryStripProps {
   activeStatus?: EquipmentStatus | '';
   /**
    * 교정기한초과 derived 필터 활성 여부.
-   * `calibrationDueFilter='overdue'`일 때 true로 전달 → "교정기한초과" 칩이 active 표시.
-   * 이 칩은 status enum이 아닌 derived 사실(`nextCalibrationDate < today`)로 동작하므로
-   * activeStatus와는 별개로 관리한다.
+   * `calibrationDueFilter='overdue'`일 때 true → "교정기한초과" 칩 active 표시.
    */
   isCalibrationOverdueActive?: boolean;
+  /**
+   * 교정임박 derived 필터 활성 여부.
+   * `calibrationDueFilter='due_soon'`일 때 true → "교정임박" 칩 active 표시.
+   */
+  isCalibrationDueSoonActive?: boolean;
   /** 상태 클릭 시 필터 변경 콜백 (없으면 표시 전용) */
   onStatusChange?: (status: EquipmentStatus | '') => void;
   /** 장비 목록 API에서 동일 필터로 집계한 상태별 카운트 */
@@ -44,6 +47,7 @@ export function StatusSummaryStrip({
   totalItems,
   activeStatus,
   isCalibrationOverdueActive = false,
+  isCalibrationDueSoonActive = false,
   onStatusChange,
   statusCounts,
 }: StatusSummaryStripProps) {
@@ -64,9 +68,11 @@ export function StatusSummaryStrip({
 
   const totalLabel = isTeamScoped ? t('filters.teamEquipment') : t('filters.allEquipment');
   const isInteractive = !!onStatusChange;
-  // 전체 칩 active 판정: status 필터가 비어있고 derived overdue 필터도 꺼져 있어야 함
+  // 전체 칩 active 판정: status 필터가 비어있고 derived 필터도 모두 꺼져 있어야 함
   const isTotalActive =
-    (activeStatus === '' || activeStatus === undefined) && !isCalibrationOverdueActive;
+    (activeStatus === '' || activeStatus === undefined) &&
+    !isCalibrationOverdueActive &&
+    !isCalibrationDueSoonActive;
 
   return (
     <div className={EQUIPMENT_STATS_STRIP_TOKENS.wrapper}>
@@ -103,11 +109,15 @@ export function StatusSummaryStrip({
         )}
 
         {visibleStats.map((stat, i) => {
-          // calibration_overdue 칩은 derived 필터 활성 여부로 판정 (status enum 무관)
+          // derived 칩은 각 derived 필터 활성 여부로 판정 (status enum 무관)
           const isActive =
             stat.key === 'calibration_overdue'
               ? isCalibrationOverdueActive
-              : activeStatus === stat.key && !isCalibrationOverdueActive;
+              : stat.key === 'calibration_due_soon'
+                ? isCalibrationDueSoonActive
+                : activeStatus === stat.key &&
+                  !isCalibrationOverdueActive &&
+                  !isCalibrationDueSoonActive;
 
           return (
             <span key={stat.key} className={EQUIPMENT_STATS_STRIP_TOKENS.item}>
