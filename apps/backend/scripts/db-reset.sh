@@ -49,18 +49,6 @@ cd "$BACKEND_DIR"
 pnpm --filter @equipment-management/db run build
 npx drizzle-kit migrate
 
-# ── [3b/4] 수동 SQL 마이그레이션 (drizzle-kit 관리 범위 외: 트리거, CHECK NOT VALID)
-echo "==> [3b/4] 수동 SQL 마이그레이션 적용"
-for sql_file in "$BACKEND_DIR/drizzle/0033_software_validation_constraints.sql" \
-                "$BACKEND_DIR/drizzle/0034_audit_log_append_only.sql" \
-                "$BACKEND_DIR/drizzle/0035_test_software_latest_validation.sql"; do
-  if [ -f "$sql_file" ]; then
-    echo "    → $(basename "$sql_file")"
-    docker compose -f "$PROJECT_ROOT/docker-compose.yml" exec -T postgres \
-      psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 < "$sql_file"
-  fi
-done
-
 # ── [4/4] seed
 echo "==> [4/4] seed-test-new.ts"
 npx ts-node src/database/seed-test-new.ts

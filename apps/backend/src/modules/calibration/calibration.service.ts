@@ -207,7 +207,10 @@ export class CalibrationService extends VersionedBaseService {
    *   - certificateNumber → certificateNumber (동일)
    *   - notes → notes (동일)
    */
-  private transformDbToRecord(row: CalibrationRow, certDocPath?: string | null): CalibrationRecord {
+  private transformDbToRecord(
+    row: CalibrationRow,
+    certDocPath: string | null = null
+  ): CalibrationRecord {
     return {
       id: row.id,
       equipmentId: row.equipmentId,
@@ -217,7 +220,7 @@ export class CalibrationService extends VersionedBaseService {
       status: row.status,
       calibrationAgency: row.agencyName || '',
       certificateNumber: row.certificateNumber,
-      certificatePath: certDocPath !== undefined ? certDocPath : row.certificatePath,
+      certificatePath: certDocPath,
       result: row.result?.toLowerCase() ?? null,
       notes: row.notes,
       approvalStatus: row.approvalStatus,

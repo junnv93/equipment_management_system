@@ -239,6 +239,41 @@
       "when": 1745107200000,
       "tag": "0033_calibration_certificate_path_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1745193600000,
+      "tag": "0034_software_validation_constraints",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1745193601000,
+      "tag": "0035_audit_log_append_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1745193602000,
+      "tag": "0036_test_software_latest_validation",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1745193603000,
+      "tag": "0037_software_validations_composite_idx",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1745193604000,
+      "tag": "0038_calibration_drop_certificate_path",
+      "breakpoints": true
     }
   ]
 }

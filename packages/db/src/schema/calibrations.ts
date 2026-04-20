@@ -53,7 +53,6 @@ export const calibrations = pgTable(
     nextCalibrationDate: timestamp('next_calibration_date'),
     agencyName: varchar('agency_name', { length: 100 }),
     certificateNumber: varchar('certificate_number', { length: 100 }),
-    certificatePath: varchar('certificate_path', { length: 500 }), // 교정성적서 파일 경로
     result: varchar('result', { length: 100 }),
     notes: text('notes'),
 
