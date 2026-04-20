@@ -29,7 +29,6 @@ export const calibrationBaseSchema = z.object({
   status: CalibrationStatusEnum.default(CalibrationStatusEnum.enum.scheduled),
   calibrationAgency: z.string().min(1, VM.calibration.agency.required).max(100),
   certificateNumber: z.string().max(100).optional(),
-  certificatePath: z.string().max(500).optional(),
   result: CalibrationResultEnum.optional(),
   notes: z.string().optional(),
   intermediateCheckDate: z.coerce.date().optional(),

@@ -13,6 +13,7 @@ import {
   UploadedFile,
   UploadedFiles,
   BadRequestException,
+  GoneException,
   UsePipes,
   Request,
   ParseUUIDPipe,
@@ -560,76 +561,18 @@ export class CalibrationController {
       },
     },
   })
-  @ApiResponse({ status: HttpStatus.OK, description: '파일 업로드 성공' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정 일정을 찾을 수 없음' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 파일 형식' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  @ApiQuery({
-    name: 'version',
-    required: true,
-    type: Number,
-    description: 'CAS version for optimistic locking',
-  })
+  @ApiResponse({ status: 410, description: 'Gone — use POST /calibration (multipart)' })
   @UseInterceptors(FileInterceptor('file'))
   @RequirePermissions(Permission.CREATE_CALIBRATION)
-  @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadCertificate(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @UploadedFile() file: MulterFile,
-    @Query('version', ParseIntPipe) version: number,
-    @Request() req: AuthenticatedRequest
-  ): Promise<{
-    filePath: string;
-    fileName: string;
-    originalFileName: string;
-    fileSize: number;
-    message: string;
-  }> {
-    await this.enforceCalibrationAccess(uuid, req);
-    // 교정 존재 여부 확인
-    await this.calibrationService.findOne(uuid);
-
-    if (!file) {
-      throw new BadRequestException({
-        code: 'CALIBRATION_FILE_REQUIRED',
-        message: 'No file was uploaded.',
-      });
-    }
-
-    // 파일 저장 (calibration/[uuid] 디렉토리에 저장)
-    const savedFile = await this.fileUploadService.saveFile(file, `calibration/${uuid}`);
-
-    // 교정 정보에 파일 경로 업데이트 (CAS 보호)
-    await this.calibrationService.update(uuid, {
-      certificatePath: savedFile.filePath,
-      version,
-    } as UpdateCalibrationDto);
-
-    // Dual-write: documents 테이블에도 기록 (신규 시스템 호환)
-    const userId = extractUserId(req);
-    try {
-      await this.documentService.createDocument(file, {
-        documentType: 'calibration_certificate' satisfies DocumentType,
-        calibrationId: uuid,
-        uploadedBy: userId || undefined,
-        subdirectory: `calibration/${uuid}`,
-      });
-    } catch (error) {
-      this.logger.warn(`Dual-write to documents table failed for calibration ${uuid}`, error);
-    }
-
-    this.logger.warn(
-      `Deprecated endpoint called: POST /calibration/${uuid}/certificate. Use POST /calibration/${uuid}/documents instead.`
-    );
-
-    return {
-      filePath: savedFile.filePath,
-      fileName: savedFile.fileName,
-      originalFileName: savedFile.originalFileName,
-      fileSize: savedFile.fileSize,
-      message: '교정성적서 파일이 업로드되었습니다.',
-    };
+    @UploadedFile() _file: MulterFile
+  ): Promise<never> {
+    this.logger.warn(`Deprecated endpoint called: POST /calibration/${uuid}/certificate`);
+    throw new GoneException({
+      code: 'ENDPOINT_DEPRECATED',
+      message: 'Use POST /calibration (multipart) instead.',
+    });
   }
 
   // ============================================================================

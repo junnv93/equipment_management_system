@@ -264,7 +264,6 @@ export class CalibrationService extends VersionedBaseService {
       status: dto.status || CalibrationStatusEnum.enum.scheduled,
       agencyName: dto.calibrationAgency || null,
       certificateNumber: dto.certificateNumber || null,
-      certificatePath: dto.certificatePath || null,
       result: normalizedResult,
       notes: dto.notes || null,
       intermediateCheckDate: dto.intermediateCheckDate
@@ -486,9 +485,6 @@ export class CalibrationService extends VersionedBaseService {
     }
     if (updateCalibrationDto.notes !== undefined) {
       updateData.notes = updateCalibrationDto.notes;
-    }
-    if (updateCalibrationDto.certificatePath !== undefined) {
-      updateData.certificatePath = updateCalibrationDto.certificatePath;
     }
     if (updateCalibrationDto.calibrationDate !== undefined) {
       updateData.calibrationDate = updateCalibrationDto.calibrationDate;
