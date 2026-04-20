@@ -183,7 +183,8 @@
         "title": "반려",
         "description": "교정계획서를 반려하시겠습니까? 반려 사유를 입력해주세요.",
         "reasonLabel": "반려 사유 (필수)",
-        "reasonPlaceholder": "반려 사유를 입력하세요"
+        "reasonPlaceholder": "반려 사유를 입력하세요 (최소 10자)",
+        "reasonHint": "{count}/10자 이상 입력"
       }
     },
     "toasts": {
@@ -392,6 +393,7 @@
     },
     "equipmentSelection": {
       "title": "장비 선택",
+      "description": "교정 정보를 등록할 장비를 검색하여 선택하세요.",
       "searchPlaceholder": "장비명, 관리번호 검색...",
       "loading": "장비 목록을 불러오는 중...",
       "error": "장비 목록을 불러오는 중 오류가 발생했습니다.",
@@ -404,6 +406,7 @@
     "form": {
       "title": "교정 정보 입력",
       "description": "교정 정보를 입력하세요. 기술책임자의 승인 후 반영됩니다.",
+      "selectEquipment": "좌측에서 장비를 선택하면 교정 정보를 입력할 수 있습니다.",
       "selectedEquipment": "선택된 장비",
       "managementNumber": "관리번호",
       "lastCalibrationDate": "마지막 교정일",
@@ -495,7 +498,8 @@
       "allTeams": "전체 팀",
       "selectSiteFirst": "시험소를 먼저 선택하세요",
       "statusPlaceholder": "상태 선택",
-      "allStatuses": "전체 상태"
+      "allStatuses": "전체 상태",
+      "allYears": "모든 연도"
     },
     "list": {
       "title": "계획서 목록",
@@ -790,6 +794,36 @@
   "form": {
     "aria": {
       "label": "교정 기록 등록 양식"
-    }
+    },
+    "calibrationDate": "교정일",
+    "calibrationCycle": "교정 주기",
+    "cycleOption": "{months}개월",
+    "nextCalibrationDate": "다음 교정 예정일",
+    "suggestedLabel": "자동 계산",
+    "calibrationAgency": "교정 기관",
+    "calibrationAgencyPlaceholder": "교정을 수행한 기관 이름",
+    "certificateNumber": "성적서 번호",
+    "certificateNumberPlaceholder": "교정 성적서 번호 (선택)",
+    "result": "교정 결과",
+    "resultPlaceholder": "교정 결과 선택",
+    "certificateFile": "교정 성적서 (필수)",
+    "certificateFileDrop": "파일을 여기에 놓거나 클릭하여 업로드",
+    "certificateFileHint": "PDF, JPG, PNG 파일 지원 · 최대 10MB",
+    "notes": "비고",
+    "notesPlaceholder": "교정 관련 추가 정보",
+    "cancel": "취소",
+    "submit": "교정 정보 등록 (승인 요청)",
+    "submitting": "처리 중...",
+    "successTitle": "교정 기록 등록 완료",
+    "successDesc": "교정 기록이 등록되었습니다. 기술책임자의 승인 후 반영됩니다.",
+    "errorTitle": "교정 기록 등록 실패",
+    "errorDesc": "교정 기록 등록 중 오류가 발생했습니다.",
+    "dateRequired": "교정일을 입력하세요.",
+    "nextDateRequired": "다음 교정 예정일을 입력하세요.",
+    "cycleInvalid": "유효한 교정 주기를 선택하세요.",
+    "agencyRequired": "교정 기관을 입력하세요.",
+    "fileRequired": "교정 성적서 파일을 첨부하세요.",
+    "nextDateMustBeAfter": "다음 교정 예정일은 교정일 이후여야 합니다.",
+    "intermediateCheckDateInvalid": "중간점검일은 교정일과 다음 교정 예정일 사이여야 합니다."
   }
 }

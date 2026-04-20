@@ -83,6 +83,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
   const [editingNotes, setEditingNotes] = useState('');
   const [isVersionOpen, setIsVersionOpen] = useState(false);
   const [recordingItemId, setRecordingItemId] = useState<string | null>(null);
+  const [optimisticConfirmedId, setOptimisticConfirmedId] = useState<string | null>(null);
 
   const { can } = useAuth();
   const canCreateCalibration = can(Permission.CREATE_CALIBRATION);
@@ -136,6 +137,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
       CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
     },
     onError: (error) => {
+      setOptimisticConfirmedId(null);
       toast({
         title: t('planDetail.toasts.confirmItemError'),
         description: error.response?.data?.message || t('planDetail.toasts.confirmItemErrorDesc'),
@@ -401,7 +403,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                           )}
                         </TableCell>
                         <TableCell className={cn(colGroup.plan.cell, 'text-center')}>
-                          {item.confirmedBy ? (
+                          {item.confirmedBy || optimisticConfirmedId === item.id ? (
                             <Badge
                               variant="outline"
                               className={CONFIRMATION_BADGE_TOKENS.confirmed.background}
@@ -499,21 +501,26 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                       <ClipboardCheck className="h-4 w-4" />
                                     </Button>
                                   )}
-                                {isApproved && !item.confirmedBy && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => confirmItemMutation.mutate(item.id)}
-                                    disabled={confirmItemMutation.isPending}
-                                    title={t('planDetail.items.confirm')}
-                                    className={cn(
-                                      'h-8 w-8 p-0',
-                                      CONFIRMATION_BADGE_TOKENS.confirmed.text
-                                    )}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  </Button>
-                                )}
+                                {isApproved &&
+                                  !item.confirmedBy &&
+                                  optimisticConfirmedId !== item.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setOptimisticConfirmedId(item.id);
+                                        confirmItemMutation.mutate(item.id);
+                                      }}
+                                      disabled={confirmItemMutation.isPending}
+                                      title={t('planDetail.items.confirm')}
+                                      className={cn(
+                                        'h-8 w-8 p-0',
+                                        CONFIRMATION_BADGE_TOKENS.confirmed.text
+                                      )}
+                                    >
+                                      <CheckCircle2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
                               </div>
                             )}
                           </TableCell>

@@ -177,7 +177,8 @@
         "title": "Reject",
         "description": "Reject this calibration plan? Please enter the reason for rejection.",
         "reasonLabel": "Rejection Reason (Required)",
-        "reasonPlaceholder": "Enter rejection reason"
+        "reasonPlaceholder": "Enter rejection reason (min. 10 characters)",
+        "reasonHint": "{count}/10 characters minimum"
       }
     },
     "toasts": {
@@ -386,6 +387,7 @@
     },
     "equipmentSelection": {
       "title": "Select Equipment",
+      "description": "Search and select the equipment to register calibration information.",
       "searchPlaceholder": "Search equipment name, management number...",
       "loading": "Loading equipment list...",
       "error": "An error occurred while loading the equipment list.",
@@ -398,6 +400,7 @@
     "form": {
       "title": "Calibration Information",
       "description": "Enter calibration information. It will be applied after technical manager approval.",
+      "selectEquipment": "Select equipment on the left to enter calibration information.",
       "selectedEquipment": "Selected Equipment",
       "managementNumber": "Management Number",
       "lastCalibrationDate": "Last Calibration Date",
@@ -489,7 +492,8 @@
       "allTeams": "All Teams",
       "selectSiteFirst": "Select a laboratory first",
       "statusPlaceholder": "Select Status",
-      "allStatuses": "All Statuses"
+      "allStatuses": "All Statuses",
+      "allYears": "All Years"
     },
     "list": {
       "title": "Plan List",
@@ -767,5 +771,40 @@
       "error": "An error occurred.",
       "conflict": "Another user modified this first. Please refresh and try again."
     }
+  },
+  "form": {
+    "aria": {
+      "label": "Calibration record registration form"
+    },
+    "calibrationDate": "Calibration Date",
+    "calibrationCycle": "Calibration Cycle",
+    "cycleOption": "{months} months",
+    "nextCalibrationDate": "Next Calibration Date",
+    "suggestedLabel": "auto-calculated",
+    "calibrationAgency": "Calibration Agency",
+    "calibrationAgencyPlaceholder": "Name of the calibration agency",
+    "certificateNumber": "Certificate Number",
+    "certificateNumberPlaceholder": "Calibration certificate number (optional)",
+    "result": "Calibration Result",
+    "resultPlaceholder": "Select result",
+    "certificateFile": "Calibration Certificate (Required)",
+    "certificateFileDrop": "Drop file here or click to upload",
+    "certificateFileHint": "PDF, JPG, PNG supported · Max 10MB",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional calibration information",
+    "cancel": "Cancel",
+    "submit": "Register Calibration (Request Approval)",
+    "submitting": "Processing...",
+    "successTitle": "Calibration Registered",
+    "successDesc": "Calibration record registered. It will be applied after technical manager approval.",
+    "errorTitle": "Registration Failed",
+    "errorDesc": "An error occurred while registering the calibration record.",
+    "dateRequired": "Please enter the calibration date.",
+    "nextDateRequired": "Please enter the next calibration date.",
+    "cycleInvalid": "Please select a valid calibration cycle.",
+    "agencyRequired": "Please enter the calibration agency.",
+    "fileRequired": "Please attach the calibration certificate file.",
+    "nextDateMustBeAfter": "Next calibration date must be after the calibration date.",
+    "intermediateCheckDateInvalid": "Intermediate check date must be between the calibration date and next calibration date."
   }
 }

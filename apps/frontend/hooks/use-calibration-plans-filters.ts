@@ -65,8 +65,10 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
     const defaultFilters = getDefaultUIFilters();
     const params = new URLSearchParams();
 
-    // year (기본값이 아닐 때만)
-    if (newFilters.year && newFilters.year !== defaultFilters.year) {
+    // year: 명시적 변경 시 _all 센티널 (siteId/status 패턴 준수)
+    if ('year' in updates) {
+      params.set('year', newFilters.year || '_all');
+    } else if (newFilters.year && newFilters.year !== defaultFilters.year) {
       params.set('year', newFilters.year);
     }
 

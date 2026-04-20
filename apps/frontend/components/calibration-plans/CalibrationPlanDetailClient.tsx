@@ -50,6 +50,7 @@ import {
   ACTION_BUTTON_TOKENS,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { ApprovalTimeline } from './ApprovalTimeline';
 import { PlanItemsTable } from './PlanItemsTable';
@@ -288,8 +289,13 @@ export function CalibrationPlanDetailClient({
 
   return (
     <div className={getPageContainerClasses()}>
-      {/* 헤더 — Design Token 적용 */}
-      <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.container}>
+      {/* 헤더 — Sticky 액션바 */}
+      <div
+        className={cn(
+          CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.container,
+          'sticky top-0 z-10 bg-background pb-3 border-b'
+        )}
+      >
         <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.titleArea}>
           <Button variant="ghost" size="icon" asChild aria-label={t('planDetail.backToList')}>
             <Link href="/calibration-plans">
@@ -497,12 +503,23 @@ export function CalibrationPlanDetailClient({
             <Textarea
               id="reject-reason"
               aria-required
+              minLength={10}
               className="mt-2"
               rows={3}
               placeholder={t('planDetail.dialogs.reject.reasonPlaceholder')}
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
             />
+            <p
+              className={cn(
+                'text-xs mt-1 text-right',
+                rejectionReason.trim().length < 10
+                  ? 'text-muted-foreground'
+                  : 'text-green-600 dark:text-green-400'
+              )}
+            >
+              {t('planDetail.dialogs.reject.reasonHint', { count: rejectionReason.trim().length })}
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
@@ -511,7 +528,7 @@ export function CalibrationPlanDetailClient({
             <Button
               variant="destructive"
               onClick={() => rejectMutation.mutate()}
-              disabled={rejectMutation.isPending || !rejectionReason.trim()}
+              disabled={rejectMutation.isPending || rejectionReason.trim().length < 10}
             >
               {t('planDetail.actions.reject')}
             </Button>

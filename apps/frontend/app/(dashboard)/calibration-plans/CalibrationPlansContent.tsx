@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,16 @@ import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filter
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import { Plus, FileText, Users, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Plus,
+  FileText,
+  Users,
+  ClipboardList,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+} from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslations } from 'next-intl';
 import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
@@ -75,7 +83,6 @@ export default function CalibrationPlansContent({
   initialData,
   initialFilters,
 }: CalibrationPlansContentProps) {
-  const router = useRouter();
   const currentYear = new Date().getFullYear();
   const { session, can } = useAuth();
   const { fmtDate } = useDateFormatter();
@@ -282,11 +289,12 @@ export default function CalibrationPlansContent({
           <Label className={CALIBRATION_PLAN_FILTER_TOKENS.fieldLabel}>
             {t('plansList.table.year')}
           </Label>
-          <Select value={filters.year || String(currentYear)} onValueChange={updateYear}>
-            <SelectTrigger className={cn(CALIBRATION_PLAN_FILTER_TOKENS.select, 'w-[120px]')}>
+          <Select value={filters.year || '_all'} onValueChange={updateYear}>
+            <SelectTrigger className={cn(CALIBRATION_PLAN_FILTER_TOKENS.select, 'w-[130px]')}>
               <SelectValue placeholder={t('plansList.filter.yearPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="_all">{t('plansList.filter.allYears')}</SelectItem>
               {yearOptions.map((year) => (
                 <SelectItem key={year} value={String(year)}>
                   {t('plansList.yearUnit', { year })}
@@ -382,8 +390,11 @@ export default function CalibrationPlansContent({
             ))}
           </div>
         ) : isError ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>{t('plansList.list.error')}</p>
+          <div className="p-6">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{t('plansList.list.error')}</AlertDescription>
+            </Alert>
           </div>
         ) : plans.length === 0 ? (
           <div className={CALIBRATION_PLAN_LIST_TOKENS.empty.container}>
@@ -420,13 +431,7 @@ export default function CalibrationPlansContent({
                   (plan.teamId ? teams.find((tm) => tm.id === plan.teamId)?.name : null);
 
                 return (
-                  <TableRow
-                    key={key}
-                    className="relative cursor-pointer"
-                    onClick={() => {
-                      if (plan.id) router.push(`/calibration-plans/${plan.id}`);
-                    }}
-                  >
+                  <TableRow key={key} className="relative cursor-pointer">
                     <TableCell className="font-semibold tabular-nums">
                       {/* 행 전체를 키보드(Tab+Enter)로 접근 가능하게 하는 invisible overlay link */}
                       <Link

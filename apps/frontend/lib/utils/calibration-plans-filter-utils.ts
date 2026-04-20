@@ -95,7 +95,8 @@ export function parseCalibrationPlansFiltersFromSearchParams(
     return null;
   };
 
-  const year = get('year') || defaultFilters.year;
+  const yearRaw = get('year') || defaultFilters.year;
+  const year = yearRaw === '_all' ? '' : yearRaw;
 
   // ✅ "_all"을 빈 문자열로 변환 + enum 타입 캐스팅 (Equipment 필터 패턴 준수)
   const siteIdRaw = get('siteId') || defaultFilters.siteId;
@@ -155,8 +156,8 @@ export function convertFiltersToApiParams(
 export function countActiveFilters(filters: UICalibrationPlansFilters): number {
   const defaultFilters = getDefaultUIFilters();
   let count = 0;
-  // year는 기본값(현재 연도)과 다를 때만 카운팅
-  if (filters.year && filters.year !== defaultFilters.year) count++;
+  // year: '' (모든 연도) 또는 기본값(현재 연도)과 다를 때 카운팅
+  if (filters.year !== defaultFilters.year) count++;
   if (filters.siteId) count++;
   if (filters.teamId) count++;
   if (filters.status) count++;
