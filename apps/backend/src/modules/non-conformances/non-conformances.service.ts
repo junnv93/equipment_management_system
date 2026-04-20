@@ -827,6 +827,15 @@ export class NonConformancesService extends VersionedBaseService {
       timestamp: new Date(),
     });
 
+    this.logger.log({
+      message: 'Non-conformance closed',
+      ncId: id,
+      equipmentId: nonConformance.equipmentId,
+      closedBy,
+      equipmentStatusRestored: result.equipmentStatusRestored,
+      previousEquipmentStatus: nonConformance.previousEquipmentStatus ?? null,
+    });
+
     return result.updated;
   }
 
