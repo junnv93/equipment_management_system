@@ -62,4 +62,6 @@ export interface CalibrationCachePayload {
   teamId: string;
   actorId: string;
   documentIds?: string[];
+  /** 교정계획서 항목과 연결된 경우 planItemId. 연결된 계획서 캐시 무효화에 사용. */
+  linkedPlanItemId?: string | null;
 }

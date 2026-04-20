@@ -248,6 +248,11 @@ export const CALIBRATION_PLAN_FILTER_TOKENS = {
 export const CALIBRATION_PLAN_DETAIL_HEADER_TOKENS = {
   /** 반응형 컨테이너: 좌-타이틀 | 우-액션 */
   container: 'flex flex-col sm:flex-row sm:items-start justify-between gap-4',
+  /** Sticky 래퍼: IntersectionObserver stuck 감지용 */
+  stickyContainer:
+    'sticky top-0 z-10 bg-background pb-3 transition-shadow motion-reduce:transition-none',
+  /** Sticky stuck 상태 — border/shadow 조건부 추가 */
+  stickyStuck: 'border-b shadow-sm',
   /** 제목 영역 (뒤로가기 + 제목 + 배지) */
   titleArea: SUB_PAGE_HEADER_TOKENS.container,
   /** 제목 텍스트 */

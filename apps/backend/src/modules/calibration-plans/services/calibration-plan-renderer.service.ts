@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
-import { FormTemplateService } from '../../reports/form-template.service';
 import {
   loadWorksheetByName,
   captureRowStyles,
@@ -31,13 +30,14 @@ export interface ExportResult {
  */
 @Injectable()
 export class CalibrationPlanRendererService {
-  constructor(private readonly formTemplateService: FormTemplateService) {}
-
-  async render(plan: CalibrationPlanDetail): Promise<ExportResult> {
+  /**
+   * templateBuffer는 호출자(CalibrationPlansExportService)가 주입.
+   * renderer는 Buffer → Excel 변환만 담당 (FormTemplateService DI 불필요).
+   */
+  async render(plan: CalibrationPlanDetail, templateBuffer: Buffer): Promise<ExportResult> {
     const items = plan.items ?? [];
     const siteLabel = SITE_LABEL_MAP[plan.siteId] ?? plan.siteId;
 
-    const templateBuffer = await this.formTemplateService.getTemplateBuffer(Layout.FORM_NUMBER);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(toExcelLoadableBuffer(templateBuffer));
 
@@ -69,6 +69,7 @@ export class CalibrationPlanRendererService {
 
     items.forEach((item: CalibrationPlanItemDetail, idx: number) => {
       const rowIdx = Layout.DATA_START_ROW + idx;
+      // confirmedBy: 각 항목의 확인자(plan 작성자와 별개). UL-QP-19-01 §4: 항목별 확인 서명.
       const confirmedSignature = item.confirmedBy ? (item.confirmedByName ?? '-') : '-';
       const values: (string | number | null)[] = [
         item.sequenceNumber,

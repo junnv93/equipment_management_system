@@ -318,7 +318,6 @@ describe('CheckoutsController (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(201);
 
-        // RETURN 경로는 SSOT 경유 (POST 메서드는 현상 유지 — HTTP 메서드 불일치 tech-debt)
         const returnResponse = await request(ctx.app.getHttpServer())
           .post(toTestPath(API_ENDPOINTS.CHECKOUTS.RETURN(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)

@@ -10,10 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { History, FileText, ExternalLink } from 'lucide-react';
-import {
-  CALIBRATION_VERSION_HISTORY,
-  CALIBRATION_PLAN_STATUS_BADGE_COLORS,
-} from '@/lib/design-tokens';
+import { CALIBRATION_VERSION_HISTORY } from '@/lib/design-tokens';
+import { PlanStatusBadge } from '@/components/calibration-plans/PlanStatusBadge';
 
 interface VersionHistoryProps {
   /** 현재 교정계획서 UUID */
@@ -123,9 +121,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                         {t(`${vh}.currentBadge`)}
                       </Badge>
                     )}
-                    <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[version.status]}>
-                      {t(`planStatus.${version.status}` as Parameters<typeof t>[0])}
-                    </Badge>
+                    <PlanStatusBadge status={version.status} />
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {t(`${vh}.createdAt`, {

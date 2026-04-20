@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation'
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { CheckCircle2, Circle, XCircle, Loader2, Plus, ChevronUp, Check } from 'lucide-react';
-import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
+import { Permission } from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import {
@@ -41,7 +41,6 @@ interface ApprovalTimelineProps {
  * QM 인라인 확인/의견/반려 액션 포함
  */
 export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTimelineProps) {
-  const { data: session } = useSession();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const t = useTranslations('calibration');
@@ -56,11 +55,8 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
   const isPendingApproval = plan.status === CPStatus.PENDING_APPROVAL;
   const isApproved = plan.status === CPStatus.APPROVED;
 
-  const userRole = session?.user?.role as UserRole | undefined;
-  const isQualityManager = userRole === URVal.QUALITY_MANAGER;
-  const isLabManager = userRole === URVal.LAB_MANAGER;
-  const isSystemAdmin = userRole === URVal.SYSTEM_ADMIN;
-  const canReview = isPendingReview && (isQualityManager || isLabManager || isSystemAdmin);
+  const { can } = useAuth();
+  const canReview = isPendingReview && can(Permission.REVIEW_CALIBRATION_PLAN);
 
   const invalidateAfterChange = () =>
     CalibrationPlansCacheInvalidation.invalidateAfterStatusChange(queryClient, planUuid);
@@ -222,9 +218,18 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
 
   const layout = CALIBRATION_PLAN_TIMELINE_TOKENS.layout;
 
+  const completedCount = steps.filter((s) => s.state === 'completed').length;
+  const activeStep = steps.find((s) => s.state === 'active' || s.state === 'activeWaiting');
+
   return (
     <Card className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.cardElevation}>
       <CardContent className="pt-6">
+        {/* 스크린리더 전용 승인 현황 요약 */}
+        <span className="sr-only">
+          {completedCount}단계 완료
+          {activeStep ? `, ${t(activeStep.titleKey as Parameters<typeof t>[0])} 진행 중` : ''}, 총{' '}
+          {steps.length}단계
+        </span>
         {/* ── Desktop: 수평 타임라인 (sm 이상) ── */}
         <div
           className={layout.horizontal}

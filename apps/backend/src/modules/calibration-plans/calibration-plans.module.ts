@@ -6,7 +6,7 @@ import { CalibrationPlanExportDataService } from './services/calibration-plan-ex
 import { CalibrationPlanRendererService } from './services/calibration-plan-renderer.service';
 import { CalibrationPlanSyncListener } from './listeners/calibration-plan-sync.listener';
 
-// CalibrationPlanRendererService depends on FormTemplateService (provided by @Global FormTemplateModule)
+// FormTemplateService는 @Global FormTemplateModule이 제공 — CalibrationPlansExportService(orchestrator)가 사용
 @Module({
   controllers: [CalibrationPlansController],
   providers: [

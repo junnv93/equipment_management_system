@@ -38,7 +38,7 @@ import { UserCombobox } from '@/components/ui/user-combobox';
 import { softwareValidationApi } from '@/lib/api/software-api';
 import type { UpdateSoftwareValidationDto } from '@/lib/api/software-api';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES, QUERY_CONFIG } from '@/lib/api/query-config';
 import { isConflictError } from '@/lib/api/error';
 import {
   getPageContainerClasses,
@@ -48,6 +48,7 @@ import {
 } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES, FORM_CATALOG } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
+import { isValidationExportable } from '@/lib/utils/software-validation-exportability';
 import { DocumentTypeValues, DOCUMENT_TYPE_LABELS } from '@equipment-management/schemas';
 import type { ValidationStatus, DocumentType } from '@equipment-management/schemas';
 import { formatFileSize } from '@/lib/utils/format';
@@ -117,6 +118,7 @@ export default function ValidationDetailContent({
   const { data: validation, isLoading } = useQuery({
     queryKey: queryKeys.softwareValidations.detail(validationId),
     queryFn: () => softwareValidationApi.get(validationId),
+    ...QUERY_CONFIG.SOFTWARE_VALIDATION_DETAIL,
   });
 
   const updateMutation = useMutation({
@@ -127,6 +129,9 @@ export default function ValidationDetailContent({
       setIsEditOpen(false);
       queryClient.invalidateQueries({
         queryKey: queryKeys.softwareValidations.detail(validationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.softwareValidations.byTestSoftware(softwareId),
       });
     },
     onError: (error) => {
@@ -264,6 +269,7 @@ export default function ValidationDetailContent({
             params={{ validationId }}
             label={t('validation.actions.exportValidation')}
             errorToastDescription={t('toast.error')}
+            disabled={!isValidationExportable(validation.status)}
           />
           {validation.status === 'draft' && (
             <Button variant="outline" size="sm" onClick={openEditDialog}>

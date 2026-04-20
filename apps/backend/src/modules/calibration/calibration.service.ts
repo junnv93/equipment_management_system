@@ -428,6 +428,7 @@ export class CalibrationService extends VersionedBaseService {
           teamId: equipForCreate?.teamId ?? '',
           actorId,
           documentIds: result.documents.map((d) => d.id),
+          linkedPlanItemId: dtoWithComputedDate.planItemId ?? null,
         });
       } catch (error) {
         this.logger.warn(

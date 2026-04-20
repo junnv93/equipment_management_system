@@ -108,6 +108,8 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const queryClient = useQueryClient();
   const { can } = useAuth();
   const canCloseNC = can(Permission.CLOSE_NON_CONFORMANCE);
+  // 헤더 편집 버튼도 canCloseNC와 동일 경계 사용 — UL-QP-18 §14: 기술책임자만 NC 전체 수정 가능
+  const canEditNC = canCloseNC;
   const { toast } = useToast();
   const { fmtDate } = useDateFormatter();
   const t = useTranslations('non-conformances');
@@ -330,7 +332,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
           </div>
         </div>
         <div className={NC_DETAIL_HEADER_TOKENS.actionsGroup}>
-          {!isClosed && nc.status === 'open' && canCloseNC && (
+          {!isClosed && nc.status === 'open' && canEditNC && (
             <Button variant="ghost" size="sm" onClick={() => setShowEditDialog(true)}>
               <Pencil className="h-3.5 w-3.5 mr-1" />
               {t('detail.editButton')}

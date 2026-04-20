@@ -802,6 +802,14 @@ export class NonConformancesService extends VersionedBaseService {
     this.cacheService.delete(this.buildCacheKey('detail', { id }));
     this.invalidateListCache();
 
+    this.logger.debug({
+      message: 'NC close: equipment status restore',
+      ncId: id,
+      equipmentId: nonConformance.equipmentId,
+      previousEquipmentStatus: nonConformance.previousEquipmentStatus,
+      equipmentStatusRestored: result.equipmentStatusRestored,
+    });
+
     // cross-entity 캐시 무효화는 NC_CLOSED 이벤트 → CacheEventListener가 처리
     // (장비 상세/목록/대시보드 캐시 — CACHE_INVALIDATION_REGISTRY 참조)
 

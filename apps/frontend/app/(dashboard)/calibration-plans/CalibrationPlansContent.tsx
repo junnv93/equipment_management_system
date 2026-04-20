@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
   Table,
@@ -33,16 +32,8 @@ import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filter
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { resolveDisplayName } from '@/lib/utils/display-name';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import {
-  Plus,
-  FileText,
-  Users,
-  ClipboardList,
-  ChevronLeft,
-  ChevronRight,
-  AlertCircle,
-} from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Plus, FileText, Users, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useTranslations } from 'next-intl';
 import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
@@ -58,9 +49,9 @@ import {
   CALIBRATION_PLAN_KPI_TOKENS,
   CALIBRATION_PLAN_LIST_TOKENS,
   CALIBRATION_PLAN_FILTER_TOKENS,
-  CALIBRATION_PLAN_STATUS_BADGE_COLORS,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
+import { PlanStatusBadge } from '@/components/calibration-plans/PlanStatusBadge';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { cn } from '@/lib/utils';
 import { useFilterSelect } from '@/lib/utils/filter-select-utils';
@@ -128,7 +119,7 @@ export default function CalibrationPlansContent({
   const statusSelect = useFilterSelect(filters.status, updateStatus);
 
   // 교정계획서 목록 조회 (초기 데이터 활용)
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: queryKeys.calibrationPlans.list(apiFilters),
     queryFn: () =>
       calibrationPlansApi.getCalibrationPlans({
@@ -391,10 +382,11 @@ export default function CalibrationPlansContent({
           </div>
         ) : isError ? (
           <div className="p-6">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{t('plansList.list.error')}</AlertDescription>
-            </Alert>
+            <ErrorState
+              title={t('plansList.list.error')}
+              onRetry={() => void refetch()}
+              retryLabel="다시 시도"
+            />
           </div>
         ) : plans.length === 0 ? (
           <div className={CALIBRATION_PLAN_LIST_TOKENS.empty.container}>
@@ -451,9 +443,7 @@ export default function CalibrationPlansContent({
                     </TableCell>
                     <TableCell className="text-muted-foreground">{teamName || '-'}</TableCell>
                     <TableCell>
-                      <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
-                        {t(`planStatus.${plan.status}`)}
-                      </Badge>
+                      <PlanStatusBadge status={plan.status} />
                     </TableCell>
                     <TableCell className="truncate max-w-[160px]">
                       {resolveDisplayName(plan.authorName, plan.createdBy)}

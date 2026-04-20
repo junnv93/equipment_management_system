@@ -9,6 +9,7 @@ import { FormTemplateService } from '../../reports/form-template.service';
 import { CalibrationPlansService } from '../calibration-plans.service';
 import * as Layout from '../calibration-plan.layout';
 import { toExcelLoadableBuffer } from '../../../common/utils';
+import { FORM_CATALOG } from '@equipment-management/shared-constants';
 
 // ── 최소 유효 xlsx 템플릿 생성 ────────────────────────────────────────────
 
@@ -139,15 +140,8 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
   beforeEach(async () => {
     templateBuffer = await buildTemplateBuffer();
 
-    const mockFormTemplateService = {
-      getTemplateBuffer: jest.fn().mockResolvedValue(templateBuffer),
-    };
-
     const module = await Test.createTestingModule({
-      providers: [
-        CalibrationPlanRendererService,
-        { provide: FormTemplateService, useValue: mockFormTemplateService },
-      ],
+      providers: [CalibrationPlanRendererService],
     }).compile();
 
     rendererService = module.get(CalibrationPlanRendererService);
@@ -155,7 +149,10 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
 
   it('approved plan → buffer + mimeType + filename 반환', async () => {
     const plan = buildMockPlan();
-    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+    const result = await rendererService.render(
+      plan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
 
     expect(result.buffer).toBeInstanceOf(Buffer);
     expect(result.buffer.length).toBeGreaterThan(0);
@@ -168,18 +165,24 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
 
   it('파일명이 FORM_CATALOG 기반이어야 함 — 하드코딩 UL-QP-19-01_ 리터럴 없음 (M18)', async () => {
     const plan = buildMockPlan();
-    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+    const result = await rendererService.render(
+      plan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
 
-    // formNumber와 name(공백제거)이 파일명에 포함되어야 함
+    // formNumber와 name(공백제거)이 파일명에 포함되어야 함 — SSOT: FORM_CATALOG 경유
     expect(result.filename).toContain('UL-QP-19-01');
-    expect(result.filename).toContain('연간교정계획서');
+    expect(result.filename).toContain(FORM_CATALOG['UL-QP-19-01'].name.replace(/\s+/g, ''));
     expect(result.filename).toContain('2025');
     expect(result.filename).toContain('수원');
   });
 
   it('ExcelJS 역검증: Row 1 제목 셀 확인 (M19)', async () => {
     const plan = buildMockPlan({ year: 2025, siteId: 'suwon' });
-    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+    const result = await rendererService.render(
+      plan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
 
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
@@ -192,7 +195,10 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
 
   it('ExcelJS 역검증: Row 6 데이터 셀 확인 (M19)', async () => {
     const plan = buildMockPlan();
-    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+    const result = await rendererService.render(
+      plan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
 
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
@@ -210,7 +216,10 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
 
   it('서명란 이름/날짜 주입 검증 (M19)', async () => {
     const plan = buildMockPlan();
-    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+    const result = await rendererService.render(
+      plan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
 
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
@@ -230,7 +239,10 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
 
   it('items가 0개일 때 Row 6부터 빈 셀 (clearTrailingRows 검증)', async () => {
     const plan = buildMockPlan({ items: [] });
-    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+    const result = await rendererService.render(
+      plan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
 
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
@@ -266,7 +278,10 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
     const plan = buildMockPlan({
       items: Array.from({ length: 28 }, (_, i) => makeItem(i + 1)),
     });
-    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+    const result = await rendererService.render(
+      plan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
 
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
@@ -282,6 +297,68 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
     // 서명란 날짜도 SIGNATURE_DATE_ROW + 1 위치
     const dateRow = sheet.getRow(Layout.SIGNATURE_DATE_ROW + 1);
     expect(String(dateRow.getCell(Layout.SIGNATURE_COLS.approver).value)).toContain('2025');
+  });
+  it('confirmedBy 있는 항목 → CONFIRMED_COL에 confirmedByName 기록 (S6)', async () => {
+    const confirmedPlan = buildMockPlan({
+      items: [
+        {
+          id: 'item-c1',
+          planId: 'plan-uuid-1',
+          equipmentId: 'eq-1',
+          sequenceNumber: 1,
+          snapshotManagementNumber: 'SUW-E-001',
+          snapshotValidityDate: new Date('2025-09-01'),
+          snapshotCalibrationCycle: 12,
+          snapshotCalibrationAgency: 'HCT',
+          plannedCalibrationDate: new Date('2025-09-01'),
+          plannedCalibrationAgency: 'HCT',
+          actualCalibrationDate: null,
+          confirmedBy: 'user-uuid-2',
+          confirmedByName: '홍길동',
+          confirmedAt: new Date('2025-09-10'),
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          actualCalibrationId: 'cal-uuid-1',
+          equipment: { managementNumber: 'SUW-E-001', name: '분석기' },
+        },
+        {
+          id: 'item-c2',
+          planId: 'plan-uuid-1',
+          equipmentId: 'eq-2',
+          sequenceNumber: 2,
+          snapshotManagementNumber: 'SUW-E-002',
+          snapshotValidityDate: null,
+          snapshotCalibrationCycle: null,
+          snapshotCalibrationAgency: null,
+          plannedCalibrationDate: null,
+          plannedCalibrationAgency: null,
+          actualCalibrationDate: null,
+          confirmedBy: null,
+          confirmedByName: null,
+          confirmedAt: null,
+          notes: '교정 미완료',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          actualCalibrationId: null,
+          equipment: { managementNumber: 'SUW-E-002', name: '측정기' },
+        },
+      ],
+    });
+
+    const result = await rendererService.render(
+      confirmedPlan as unknown as CalibrationPlanDetail,
+      templateBuffer
+    );
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
+    const sheet = wb.getWorksheet(Layout.SHEET_NAMES[0])!;
+
+    // 첫 번째 항목: confirmedBy 있음 → CONFIRMED_COL에 confirmedByName
+    expect(sheet.getRow(Layout.DATA_START_ROW).getCell(Layout.CONFIRMED_COL).value).toBe('홍길동');
+    // 두 번째 항목: confirmedBy null → '-'
+    expect(sheet.getRow(Layout.DATA_START_ROW + 1).getCell(Layout.CONFIRMED_COL).value).toBe('-');
   });
 });
 
@@ -299,12 +376,16 @@ describe('CalibrationPlansExportService — 오케스트레이터', () => {
         filename: 'test.xlsx',
       }),
     };
+    const mockFormTemplateService = {
+      getTemplateBuffer: jest.fn().mockResolvedValue(Buffer.from('template')),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
         CalibrationPlansExportService,
         { provide: CalibrationPlanExportDataService, useValue: mockExportDataService },
         { provide: CalibrationPlanRendererService, useValue: mockRendererService },
+        { provide: FormTemplateService, useValue: mockFormTemplateService },
       ],
     }).compile();
 
@@ -318,7 +399,7 @@ describe('CalibrationPlansExportService — 오케스트레이터', () => {
     const result = await exportService.exportExcel('plan-uuid-1');
 
     expect(mockExportDataService.fetchForExport).toHaveBeenCalledWith('plan-uuid-1');
-    expect(mockRendererService.render).toHaveBeenCalledWith(plan);
+    expect(mockRendererService.render).toHaveBeenCalledWith(plan, expect.any(Buffer));
     expect(result.filename).toBe('test.xlsx');
   });
 

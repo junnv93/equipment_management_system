@@ -292,4 +292,54 @@ describe('CalibrationPlansService', () => {
       await expect(service.submit('non-existent-uuid')).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('confirmAllItems()', () => {
+    it('approved 계획서 — actualCalibrationId 있는 항목 2건 확인', async () => {
+      const approvedPlan = { ...MOCK_PLAN, status: 'approved', casVersion: 3 };
+      mockDb.select.mockReturnValue(createSelectChain([approvedPlan]));
+      mockDb.update.mockReturnValue(createUpdateChain([{ id: 'item-1' }, { id: 'item-2' }]));
+
+      const result = await service.confirmAllItems('plan-uuid-1', {
+        confirmedBy: 'user-uuid-1',
+        casVersion: 3,
+      });
+
+      expect(result.confirmedCount).toBe(2);
+    });
+
+    it('non-approved 계획서 → CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM BadRequestException', async () => {
+      const draftPlan = { ...MOCK_PLAN, status: 'draft', casVersion: 1 };
+      mockDb.select.mockReturnValue(createSelectChain([draftPlan]));
+
+      await expect(
+        service.confirmAllItems('plan-uuid-1', { confirmedBy: 'user-uuid-1', casVersion: 1 })
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.confirmAllItems('plan-uuid-1', { confirmedBy: 'user-uuid-1', casVersion: 1 })
+      ).rejects.toMatchObject({ response: { code: 'CALIBRATION_PLAN_ONLY_APPROVED_CAN_CONFIRM' } });
+    });
+
+    it('casVersion 불일치 → ConflictException(VERSION_CONFLICT)', async () => {
+      const approvedPlan = { ...MOCK_PLAN, status: 'approved', casVersion: 5 };
+      mockDb.select.mockReturnValue(createSelectChain([approvedPlan]));
+
+      await expect(
+        service.confirmAllItems('plan-uuid-1', { confirmedBy: 'user-uuid-1', casVersion: 3 })
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('actualCalibrationId 없는 항목만 있을 때 confirmed 0건 반환', async () => {
+      const approvedPlan = { ...MOCK_PLAN, status: 'approved', casVersion: 1 };
+      mockDb.select.mockReturnValue(createSelectChain([approvedPlan]));
+      // UPDATE WHERE actualCalibrationId IS NOT NULL → 조건 불충족 → 0건
+      mockDb.update.mockReturnValue(createUpdateChain([]));
+
+      const result = await service.confirmAllItems('plan-uuid-1', {
+        confirmedBy: 'user-uuid-1',
+        casVersion: 1,
+      });
+
+      expect(result.confirmedCount).toBe(0);
+    });
+  });
 });

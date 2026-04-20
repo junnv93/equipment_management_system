@@ -9,7 +9,6 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -45,11 +44,11 @@ import { Permission } from '@equipment-management/shared-constants';
 import { useTranslations } from 'next-intl';
 import {
   getActionButtonClasses,
-  CALIBRATION_PLAN_STATUS_BADGE_COLORS,
   CALIBRATION_PLAN_DETAIL_HEADER_TOKENS,
   ACTION_BUTTON_TOKENS,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
+import { PlanStatusBadge } from '@/components/calibration-plans/PlanStatusBadge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { ApprovalTimeline } from './ApprovalTimeline';
@@ -311,8 +310,8 @@ export function CalibrationPlanDetailClient({
         ref={headerRef}
         className={cn(
           CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.container,
-          'sticky top-0 z-10 bg-background pb-3 transition-shadow',
-          isHeaderStuck && 'border-b shadow-sm'
+          CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.stickyContainer,
+          isHeaderStuck && CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.stickyStuck
         )}
       >
         <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.titleArea}>
@@ -328,9 +327,7 @@ export function CalibrationPlanDetailClient({
                 {tEquip(`siteLabel.${plan.siteId}` as Parameters<typeof tEquip>[0])}{' '}
                 {t('planDetail.breadcrumbSuffix')}
               </h1>
-              <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
-                {t(`planStatus.${plan.status}` as Parameters<typeof t>[0])}
-              </Badge>
+              <PlanStatusBadge status={plan.status} />
             </div>
             <p className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.meta}>
               {t('planDetail.header.author')}: {resolveDisplayName(plan.authorName, plan.createdBy)}{' '}
