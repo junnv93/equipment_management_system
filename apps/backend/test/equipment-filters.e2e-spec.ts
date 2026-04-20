@@ -1,8 +1,10 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { toTestPath } from './helpers/test-paths';
 
 /**
  * 장비 필터 E2E 테스트
@@ -31,7 +33,7 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment - 기본 조회', () => {
     it('필터 없이 장비 목록 조회', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -45,7 +47,7 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment?classification= - 장비 분류 필터', () => {
     it('classification=fcc_emc_rf 필터 적용', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?classification=fcc_emc_rf')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?classification=fcc_emc_rf`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -62,7 +64,7 @@ describe('Equipment Filters (e2e)', () => {
 
     it('classification=sar 필터 적용', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?classification=sar')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?classification=sar`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -78,7 +80,7 @@ describe('Equipment Filters (e2e)', () => {
 
     it('잘못된 classification 값은 Zod 검증 실패 (400)', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?classification=invalid_value')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?classification=invalid_value`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400);
     });
@@ -87,7 +89,7 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment?calibrationOverdue= - 교정 기한 초과 필터', () => {
     it('calibrationOverdue=true 필터 적용', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?calibrationOverdue=true')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?calibrationOverdue=true`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -99,7 +101,7 @@ describe('Equipment Filters (e2e)', () => {
 
     it('calibrationOverdue=false는 기한 초과 제외', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?calibrationOverdue=false')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?calibrationOverdue=false`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
     });
@@ -108,7 +110,9 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment?status= & calibrationOverdue= - 복합 필터', () => {
     it('status=available & calibrationOverdue=true 조합', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?status=available&calibrationOverdue=true')
+        .get(
+          `${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?status=available&calibrationOverdue=true`,
+        )
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -127,7 +131,9 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment?managementMethod= - 교정 방법 필터', () => {
     it('managementMethod=external_calibration 필터 적용', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?managementMethod=external_calibration')
+        .get(
+          `${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?managementMethod=external_calibration`,
+        )
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -143,7 +149,7 @@ describe('Equipment Filters (e2e)', () => {
 
     it('managementMethod=self_inspection 필터 적용', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?managementMethod=self_inspection')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?managementMethod=self_inspection`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -159,7 +165,7 @@ describe('Equipment Filters (e2e)', () => {
 
     it('managementMethod=not_applicable 필터 적용', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?managementMethod=not_applicable')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?managementMethod=not_applicable`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -177,7 +183,7 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment?isShared= - 공용장비 필터', () => {
     it('isShared=true 필터 적용 - 공용장비만 반환', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?isShared=true')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?isShared=true`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -193,7 +199,7 @@ describe('Equipment Filters (e2e)', () => {
 
     it('isShared=false 필터 적용 - 일반장비만 반환', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?isShared=false')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?isShared=false`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -211,7 +217,7 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment - 교정 기한 필터 (calibrationDue/calibrationDueAfter)', () => {
     it('calibrationDue=30 - 30일 이내 교정 임박 장비', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?calibrationDue=30')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?calibrationDue=30`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -237,7 +243,7 @@ describe('Equipment Filters (e2e)', () => {
 
     it('calibrationDueAfter=30 - 30일 이후 교정 여유 장비', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?calibrationDueAfter=30')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?calibrationDueAfter=30`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
         .expect((res) => {
@@ -262,7 +268,7 @@ describe('Equipment Filters (e2e)', () => {
     validStatuses.forEach((status) => {
       it(`status=${status} 필터 적용`, () => {
         return request(ctx.app.getHttpServer())
-          .get(`/equipment?status=${status}`)
+          .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?status=${status}`)
           .set('Authorization', `Bearer ${authToken}`)
           .expect(200)
           .expect((res) => {
@@ -279,14 +285,14 @@ describe('Equipment Filters (e2e)', () => {
 
     it('calibration_overdue는 유효한 EquipmentStatus가 아님 (Zod 400)', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?status=calibration_overdue')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?status=calibration_overdue`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400);
     });
 
     it('retired는 유효한 EquipmentStatus가 아님 (Zod 400)', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?status=retired')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?status=retired`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400);
     });
@@ -296,7 +302,7 @@ describe('Equipment Filters (e2e)', () => {
     it('classification + status + managementMethod 조합', () => {
       return request(ctx.app.getHttpServer())
         .get(
-          '/equipment?classification=fcc_emc_rf&status=available&managementMethod=external_calibration',
+          `${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?classification=fcc_emc_rf&status=available&managementMethod=external_calibration`,
         )
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200)
@@ -317,7 +323,7 @@ describe('Equipment Filters (e2e)', () => {
   describe('GET /equipment - 파라미터 검증', () => {
     it('음수 페이지는 Zod 검증 실패 (400)', () => {
       return request(ctx.app.getHttpServer())
-        .get('/equipment?page=-1')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?page=-1`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400);
     });

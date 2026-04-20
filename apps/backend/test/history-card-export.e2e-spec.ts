@@ -5,8 +5,10 @@ import PizZip from 'pizzip';
 import { eq as eqOp } from 'drizzle-orm';
 import { equipment as equipmentTable } from '@equipment-management/db/schema/equipment';
 import type { AppDatabase } from '@equipment-management/db';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { toTestPath } from './helpers/test-paths';
 
 /**
  * QP-18-02 시험설비 이력카드 내보내기 검증
@@ -32,7 +34,7 @@ describe('History Card Export (QP-18-02) - SUW-E0001', () => {
 
     // 먼저 장비가 존재하는지 확인
     const equipCheck = await request(ctx.app.getHttpServer())
-      .get(`/equipment/${uuid}`)
+      .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(uuid)))
       .set('Authorization', `Bearer ${accessToken}`);
 
     if (equipCheck.status === 404) {
@@ -41,7 +43,7 @@ describe('History Card Export (QP-18-02) - SUW-E0001', () => {
     }
 
     const exportResponse = await request(ctx.app.getHttpServer())
-      .get(`/equipment/${uuid}/history-card`)
+      .get(toTestPath(API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(uuid)))
       .set('Authorization', `Bearer ${accessToken}`)
       .buffer(true)
       .parse((res, callback) => {
@@ -116,12 +118,12 @@ describe('History Card Export (QP-18-02) - SUW-E0001', () => {
     const uuid = 'eeee1001-0001-4001-8001-000000000001';
 
     const equipCheck = await request(ctx.app.getHttpServer())
-      .get(`/equipment/${uuid}`)
+      .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(uuid)))
       .set('Authorization', `Bearer ${accessToken}`);
     if (equipCheck.status === 404) return;
 
     const exportResponse = await request(ctx.app.getHttpServer())
-      .get(`/equipment/${uuid}/history-card`)
+      .get(toTestPath(API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(uuid)))
       .set('Authorization', `Bearer ${accessToken}`)
       .buffer(true)
       .parse((res, callback) => {
@@ -171,7 +173,7 @@ describe('History Card Export (QP-18-02) - SUW-E0001', () => {
 
     // 먼저 장비가 존재하는지 확인
     const getResp = await request(ctx.app.getHttpServer())
-      .get(`/equipment/${uuid}`)
+      .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(uuid)))
       .set('Authorization', `Bearer ${accessToken}`);
 
     if (getResp.status === 404) {
@@ -193,7 +195,7 @@ describe('History Card Export (QP-18-02) - SUW-E0001', () => {
       .where(eqOp(equipmentTable.id, uuid));
 
     const exportResponse = await request(ctx.app.getHttpServer())
-      .get(`/equipment/${uuid}/history-card`)
+      .get(toTestPath(API_ENDPOINTS.EQUIPMENT.HISTORY_CARD(uuid)))
       .set('Authorization', `Bearer ${accessToken}`)
       .buffer(true)
       .parse((res, callback) => {
@@ -224,5 +226,6 @@ describe('History Card Export (QP-18-02) - SUW-E0001', () => {
       contentDisposition.replace(/.*filename\*=UTF-8''/, ''),
     );
     expect(decodedFilename).toContain('수정된 스펙트럼 분석기');
+    void latestVersion;
   }, 30000);
 });

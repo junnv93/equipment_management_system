@@ -3,8 +3,10 @@
 import request from 'supertest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { toTestPath } from './helpers/test-paths';
 
 describe('Equipment Approval Process (e2e)', () => {
   let ctx: TestAppContext;
@@ -30,7 +32,7 @@ describe('Equipment Approval Process (e2e)', () => {
       for (const requestUuid of createdRequestUuids) {
         try {
           await request(ctx.app.getHttpServer())
-            .post(`/equipment/requests/${requestUuid}/reject`)
+            .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(requestUuid)))
             .set('Authorization', `Bearer ${technicalManagerToken}`)
             .send({ rejectionReason: '테스트 정리', version: 1 });
         } catch {
@@ -43,7 +45,7 @@ describe('Equipment Approval Process (e2e)', () => {
       for (const equipmentUuid of createdEquipmentUuids) {
         try {
           await request(ctx.app.getHttpServer())
-            .delete(`/equipment/${equipmentUuid}`)
+            .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(equipmentUuid)))
             .set('Authorization', `Bearer ${siteAdminToken}`);
         } catch {
           // 이미 삭제된 경우 무시
@@ -83,7 +85,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .send(equipmentData);
 
@@ -118,7 +120,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
         .send(equipmentData);
 
@@ -135,7 +137,7 @@ describe('Equipment Approval Process (e2e)', () => {
   describe('승인 대기 요청 목록 조회', () => {
     it('기술책임자는 승인 대기 요청 목록을 조회할 수 있어야 합니다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment/requests/pending')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING))
         .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`);
 
       expect([200, 201, 400, 403, 401]).toContain(response.status);
@@ -147,7 +149,7 @@ describe('Equipment Approval Process (e2e)', () => {
 
     it('시험실무자는 승인 대기 목록을 조회할 수 없어야 합니다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment/requests/pending')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`);
 
       expect([403, 401, 400]).toContain(response.status);
@@ -172,7 +174,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .send(equipmentData);
 
@@ -181,7 +183,7 @@ describe('Equipment Approval Process (e2e)', () => {
         createdRequestUuids.push(testRequestUuid);
       } else {
         const listResponse = await request(ctx.app.getHttpServer())
-          .get('/equipment/requests/pending')
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING))
           .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`);
 
         if (listResponse.body && listResponse.body.length > 0) {
@@ -196,7 +198,7 @@ describe('Equipment Approval Process (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/equipment/requests/${testRequestUuid}/approve`)
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(testRequestUuid)))
         .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`)
         .send({ version: 1 });
 
@@ -211,14 +213,14 @@ describe('Equipment Approval Process (e2e)', () => {
       }
 
       const rejectWithoutReason = await request(ctx.app.getHttpServer())
-        .post(`/equipment/requests/${testRequestUuid}/reject`)
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(testRequestUuid)))
         .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`)
         .send({ version: 1 });
 
       expect([400, 422]).toContain(rejectWithoutReason.status);
 
       const rejectWithReason = await request(ctx.app.getHttpServer())
-        .post(`/equipment/requests/${testRequestUuid}/reject`)
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(testRequestUuid)))
         .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`)
         .send({ rejectionReason: 'E2E 테스트 반려 사유', version: 1 });
 
@@ -235,7 +237,7 @@ describe('Equipment Approval Process (e2e)', () => {
 
     beforeAll(async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${siteAdminToken}`)
         .send({
           name: 'E2E 업로드 테스트 장비',
@@ -269,7 +271,7 @@ describe('Equipment Approval Process (e2e)', () => {
       await fs.writeFile(testFilePath, MINIMAL_PDF);
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment/attachments')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.ATTACHMENTS))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .attach('file', testFilePath)
         .field('equipmentId', uploadTestEquipmentUuid)
@@ -292,7 +294,7 @@ describe('Equipment Approval Process (e2e)', () => {
       await fs.writeFile(largeFilePath, largeFileContent);
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment/attachments')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.ATTACHMENTS))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .attach('file', largeFilePath)
         .field('equipmentId', uploadTestEquipmentUuid)
@@ -310,7 +312,7 @@ describe('Equipment Approval Process (e2e)', () => {
       await fs.writeFile(invalidFilePath, invalidFileContent);
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment/attachments')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.ATTACHMENTS))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .attach('file', invalidFilePath)
         .field('equipmentId', uploadTestEquipmentUuid)
@@ -342,7 +344,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
         .send(equipmentData);
 
@@ -359,7 +361,7 @@ describe('Equipment Approval Process (e2e)', () => {
 
       // GET current version for CAS
       const equipDetail = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(testEquipmentUuid)))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`);
 
       const updateData = {
@@ -369,7 +371,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${testEquipmentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid)))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .send(updateData);
 
@@ -400,7 +402,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
         .send(equipmentData);
 
@@ -416,7 +418,7 @@ describe('Equipment Approval Process (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${testEquipmentUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(testEquipmentUuid)))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`);
 
       expect(response.status).toBe(202);
@@ -433,7 +435,7 @@ describe('Equipment Approval Process (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${testEquipmentUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(testEquipmentUuid)))
         .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`);
 
       expect([204, 202]).toContain(response.status);
@@ -447,7 +449,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${testOperatorToken || siteAdminToken}`)
         .send(incompleteData);
 
@@ -474,7 +476,7 @@ describe('Equipment Approval Process (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
         .send(completeData);
 

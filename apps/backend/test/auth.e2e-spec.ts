@@ -1,7 +1,9 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
+import { toTestPath } from './helpers/test-paths';
 
 /**
  * /auth/login 엔드포인트 자체를 테스트하는 spec.
@@ -28,7 +30,7 @@ describe('AuthController (e2e)', () => {
   describe('/auth/login (POST)', () => {
     it('should login admin with valid credentials', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post('/auth/login')
+        .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
           email: LEGACY_LOGIN_USERS.admin.email,
           password: LEGACY_LOGIN_USERS.admin.password,
@@ -47,7 +49,7 @@ describe('AuthController (e2e)', () => {
 
     it('should login manager with valid credentials', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post('/auth/login')
+        .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
           email: LEGACY_LOGIN_USERS.manager.email,
           password: LEGACY_LOGIN_USERS.manager.password,
@@ -66,7 +68,7 @@ describe('AuthController (e2e)', () => {
 
     it('should login user with valid credentials', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post('/auth/login')
+        .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
           email: LEGACY_LOGIN_USERS.user.email,
           password: LEGACY_LOGIN_USERS.user.password,
@@ -85,7 +87,7 @@ describe('AuthController (e2e)', () => {
 
     it('should not login with invalid credentials', async () => {
       await request(ctx.app.getHttpServer())
-        .post('/auth/login')
+        .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
           email: LEGACY_LOGIN_USERS.admin.email,
           password: 'wrongpassword',
@@ -99,7 +101,7 @@ describe('AuthController (e2e)', () => {
 
     beforeAll(async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post('/auth/login')
+        .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
         .send({
           email: LEGACY_LOGIN_USERS.admin.email,
           password: LEGACY_LOGIN_USERS.admin.password,
@@ -110,7 +112,7 @@ describe('AuthController (e2e)', () => {
 
     it('should get user profile with valid token', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/auth/profile')
+        .get(toTestPath(API_ENDPOINTS.AUTH.PROFILE))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -120,12 +122,12 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should not get user profile without token', async () => {
-      await request(ctx.app.getHttpServer()).get('/auth/profile').expect(401);
+      await request(ctx.app.getHttpServer()).get(toTestPath(API_ENDPOINTS.AUTH.PROFILE)).expect(401);
     });
 
     it('should not get user profile with invalid token', async () => {
       await request(ctx.app.getHttpServer())
-        .get('/auth/profile')
+        .get(toTestPath(API_ENDPOINTS.AUTH.PROFILE))
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
     });
@@ -133,7 +135,9 @@ describe('AuthController (e2e)', () => {
 
   describe('/auth/test (GET)', () => {
     it('should return test message', async () => {
-      const response = await request(ctx.app.getHttpServer()).get('/auth/test').expect(200);
+      const response = await request(ctx.app.getHttpServer())
+        .get(toTestPath(API_ENDPOINTS.AUTH.TEST))
+        .expect(200);
 
       expect(response.body).toHaveProperty('message');
       expect(response.body).toHaveProperty('timestamp');

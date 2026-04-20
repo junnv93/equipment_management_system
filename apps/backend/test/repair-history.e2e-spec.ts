@@ -1,10 +1,12 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
+import { toTestPath } from './helpers/test-paths';
 
 describe('RepairHistoryController (e2e)', () => {
   let ctx: TestAppContext;
@@ -37,7 +39,7 @@ describe('RepairHistoryController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/equipment/${testEquipmentUuid}/repair-history`)
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -58,7 +60,7 @@ describe('RepairHistoryController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/equipment/${testEquipmentUuid}/repair-history`)
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -72,7 +74,7 @@ describe('RepairHistoryController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/equipment/${testEquipmentUuid}/repair-history`)
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -89,7 +91,7 @@ describe('RepairHistoryController (e2e)', () => {
   describe('GET /equipment/:uuid/repair-history', () => {
     it('should return a list of repair history for equipment', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.LIST(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -102,7 +104,7 @@ describe('RepairHistoryController (e2e)', () => {
 
     it('should support pagination', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history?page=1&pageSize=10`)
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.LIST(testEquipmentUuid))}?page=1&pageSize=10`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -112,7 +114,7 @@ describe('RepairHistoryController (e2e)', () => {
 
     it('should sort by repairDate descending by default', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.LIST(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -134,7 +136,7 @@ describe('RepairHistoryController (e2e)', () => {
         const repairId = createdRepairHistoryIds[0];
 
         const response = await request(ctx.app.getHttpServer())
-          .get(`/repair-history/${repairId}`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.GET(repairId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -145,7 +147,7 @@ describe('RepairHistoryController (e2e)', () => {
     it('should return 404 for non-existent UUID', async () => {
       const fakeUuid = '00000000-0000-4000-a000-000000000000';
       await request(ctx.app.getHttpServer())
-        .get(`/repair-history/${fakeUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.GET(fakeUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -154,7 +156,7 @@ describe('RepairHistoryController (e2e)', () => {
   describe('GET /equipment/:uuid/repair-history/summary', () => {
     it('should return repair summary', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history/summary`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.SUMMARY(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -166,7 +168,7 @@ describe('RepairHistoryController (e2e)', () => {
   describe('GET /equipment/:uuid/repair-history/recent', () => {
     it('should return recent repair history', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history/recent?limit=3`)
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.RECENT(testEquipmentUuid))}?limit=3`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -176,7 +178,7 @@ describe('RepairHistoryController (e2e)', () => {
 
     it('should default to 5 items', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history/recent`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.RECENT(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -197,7 +199,7 @@ describe('RepairHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .patch(`/repair-history/${repairId}`)
+          .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.UPDATE(repairId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(updateDto)
           .expect(200);
@@ -216,7 +218,7 @@ describe('RepairHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .patch(`/repair-history/${repairId}`)
+          .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.UPDATE(repairId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(updateDto)
           .expect(200);
@@ -228,7 +230,7 @@ describe('RepairHistoryController (e2e)', () => {
     it('should return 404 for non-existent UUID', async () => {
       const fakeUuid = '00000000-0000-4000-a000-000000000000';
       await request(ctx.app.getHttpServer())
-        .patch(`/repair-history/${fakeUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.UPDATE(fakeUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ cost: 100000 })
         .expect(404);
@@ -238,7 +240,7 @@ describe('RepairHistoryController (e2e)', () => {
   describe('DELETE /repair-history/:uuid', () => {
     it('should soft delete a repair history record', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post(`/equipment/${testEquipmentUuid}/repair-history`)
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           repairDate: new Date().toISOString().split('T')[0],
@@ -249,7 +251,7 @@ describe('RepairHistoryController (e2e)', () => {
         const repairId = createResponse.body.id;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/repair-history/${repairId}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.DELETE(repairId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -257,7 +259,7 @@ describe('RepairHistoryController (e2e)', () => {
         expect(deleteResponse.body.deleted).toBe(true);
 
         await request(ctx.app.getHttpServer())
-          .get(`/repair-history/${repairId}`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.GET(repairId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(404);
       }
@@ -266,7 +268,7 @@ describe('RepairHistoryController (e2e)', () => {
     it('should return 404 when deleting non-existent record', async () => {
       const fakeUuid = '00000000-0000-4000-a000-000000000000';
       await request(ctx.app.getHttpServer())
-        .delete(`/repair-history/${fakeUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.DELETE(fakeUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -275,13 +277,13 @@ describe('RepairHistoryController (e2e)', () => {
   describe('Authentication and Authorization', () => {
     it('should reject requests without authentication', async () => {
       await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.LIST(testEquipmentUuid)))
         .expect(401);
     });
 
     it('should reject requests with invalid token', async () => {
       await request(ctx.app.getHttpServer())
-        .get(`/equipment/${testEquipmentUuid}/repair-history`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.LIST(testEquipmentUuid)))
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
     });

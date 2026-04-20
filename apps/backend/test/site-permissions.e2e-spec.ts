@@ -1,9 +1,11 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
+import { toTestPath } from './helpers/test-paths';
 
 describe('Site Permissions (e2e)', () => {
   let ctx: TestAppContext;
@@ -44,7 +46,7 @@ describe('Site Permissions (e2e)', () => {
     if (ctx?.app && adminToken) {
       try {
         await request(ctx.app.getHttpServer())
-          .delete(`/equipment/${suwonEquipmentUuid}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(suwonEquipmentUuid)))
           .set('Authorization', `Bearer ${adminToken}`);
       } catch {
         // 무시
@@ -52,7 +54,7 @@ describe('Site Permissions (e2e)', () => {
 
       try {
         await request(ctx.app.getHttpServer())
-          .delete(`/equipment/${uiwangEquipmentUuid}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(uiwangEquipmentUuid)))
           .set('Authorization', `Bearer ${adminToken}`);
       } catch {
         // 무시
@@ -69,7 +71,7 @@ describe('Site Permissions (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
         .set('Authorization', `Bearer ${testOperatorToken}`)
         .expect(200);
 
@@ -89,7 +91,7 @@ describe('Site Permissions (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${uiwangEquipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(uiwangEquipmentUuid)))
         .set('Authorization', `Bearer ${testOperatorToken}`);
 
       // EQUIPMENT_DATA_SCOPE: test_engineer=all → 200 가능, 역할 따라 403/404도 가능
@@ -102,7 +104,7 @@ describe('Site Permissions (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
         .set('Authorization', `Bearer ${managerToken}`)
         .expect(200);
 
@@ -125,7 +127,7 @@ describe('Site Permissions (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${uiwangEquipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(uiwangEquipmentUuid)))
         .set('Authorization', `Bearer ${managerToken}`)
         .expect(200);
 
@@ -136,7 +138,7 @@ describe('Site Permissions (e2e)', () => {
     it('사이트 필터로 특정 사이트 장비만 조회 가능해야 함', async () => {
       // 수원 사이트 장비만 조회 (admin=lab_manager, site=suwon → 본인 사이트)
       const suwonResponse = await request(ctx.app.getHttpServer())
-        .get('/equipment?site=suwon&pageSize=100')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?site=suwon&pageSize=100`)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
@@ -152,7 +154,7 @@ describe('Site Permissions (e2e)', () => {
 
       // 의왕 사이트 장비만 조회 — lab_manager(suwon)는 uiwang 조회 시 403 가능
       const uiwangResponse = await request(ctx.app.getHttpServer())
-        .get('/equipment?site=uiwang&pageSize=100')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?site=uiwang&pageSize=100`)
         .set('Authorization', `Bearer ${adminToken}`);
 
       // lab_manager scope=site → 타 사이트 조회 시 403, system_admin이면 200
@@ -177,7 +179,7 @@ describe('Site Permissions (e2e)', () => {
 
       // 사이트 필터 없으면 본인 사이트 장비 조회 (lab_manager → site scope)
       const allSitesResponse = await request(ctx.app.getHttpServer())
-        .get('/equipment')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
@@ -195,7 +197,7 @@ describe('Site Permissions (e2e)', () => {
   describe('장비 등록 시 사이트 필수', () => {
     it('장비 등록 시 site 필드가 없으면 400 에러를 반환해야 함', async () => {
       await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           name: 'Test Equipment Without Site',
@@ -207,7 +209,7 @@ describe('Site Permissions (e2e)', () => {
 
     it('장비 등록 시 site 필드가 있으면 성공해야 함', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           name: 'Test Equipment With Site',
@@ -224,7 +226,7 @@ describe('Site Permissions (e2e)', () => {
 
       if (response.body.id || response.body.data?.id) {
         await request(ctx.app.getHttpServer())
-          .delete(`/equipment/${response.body.id || response.body.data?.id}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(response.body.id || response.body.data?.id)))
           .set('Authorization', `Bearer ${adminToken}`);
       }
     });
@@ -250,7 +252,7 @@ describe('Site Permissions (e2e)', () => {
       if (rfEquipmentUuid && adminToken) {
         try {
           await request(ctx.app.getHttpServer())
-            .delete(`/equipment/${rfEquipmentUuid}`)
+            .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(rfEquipmentUuid)))
             .set('Authorization', `Bearer ${adminToken}`);
         } catch {
           // 이미 삭제된 경우 무시
@@ -264,7 +266,7 @@ describe('Site Permissions (e2e)', () => {
       }
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${emcUserToken}`)
         .send({
           equipmentIds: [rfEquipmentUuid],
@@ -284,7 +286,7 @@ describe('Site Permissions (e2e)', () => {
 
       // /rentals 엔드포인트는 체크아웃 모듈로 교체됨 (/checkouts)
       const response = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${emcUserToken}`)
         .send({
           equipmentIds: [rfEquipmentUuid],

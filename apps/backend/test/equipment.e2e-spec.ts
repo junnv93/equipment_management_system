@@ -2,8 +2,10 @@
 
 import request from 'supertest';
 import * as crypto from 'crypto';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { toTestPath } from './helpers/test-paths';
 
 describe('EquipmentController (e2e)', () => {
   let ctx: TestAppContext;
@@ -19,7 +21,7 @@ describe('EquipmentController (e2e)', () => {
     if (ctx?.app && accessToken) {
       try {
         const listResponse = await request(ctx.app.getHttpServer())
-          .get('/equipment')
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
           .set('Authorization', `Bearer ${accessToken}`);
 
         if (listResponse.status === 200 && listResponse.body.items) {
@@ -30,7 +32,7 @@ describe('EquipmentController (e2e)', () => {
             if (equipment && equipment.id) {
               try {
                 await request(ctx.app.getHttpServer())
-                  .delete(`/equipment/${equipment.id}`)
+                  .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(equipment.id as string)))
                   .set('Authorization', `Bearer ${accessToken}`);
               } catch {
                 // 이미 삭제된 경우 무시
@@ -58,7 +60,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(equipmentData);
 
@@ -101,7 +103,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(equipmentData)
         .expect(201);
@@ -123,7 +125,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(invalidEquipmentData)
         .expect(400);
@@ -141,7 +143,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       const firstResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(equipmentData)
         .expect(201);
@@ -149,7 +151,7 @@ describe('EquipmentController (e2e)', () => {
       createdEquipmentIds.push(firstResponse.body.id.toString());
 
       await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(equipmentData)
         .expect(400);
@@ -163,7 +165,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(equipmentData)
         .expect(400);
@@ -176,14 +178,17 @@ describe('EquipmentController (e2e)', () => {
         status: 'available',
       };
 
-      await request(ctx.app.getHttpServer()).post('/equipment').send(equipmentData).expect(401);
+      await request(ctx.app.getHttpServer())
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
+        .send(equipmentData)
+        .expect(401);
     });
   });
 
   describe('/equipment (GET)', () => {
     it('should get equipment list', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -198,7 +203,7 @@ describe('EquipmentController (e2e)', () => {
 
     it('should get equipment list with pagination', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment?page=1&pageSize=5')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?page=1&pageSize=5`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -212,7 +217,7 @@ describe('EquipmentController (e2e)', () => {
 
     it('should get equipment list with status filter', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment?status=available')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?status=available`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -228,7 +233,7 @@ describe('EquipmentController (e2e)', () => {
       const equipmentName = 'Test Equipment';
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment?search=${encodeURIComponent(equipmentName)}`)
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?search=${encodeURIComponent(equipmentName)}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -246,7 +251,7 @@ describe('EquipmentController (e2e)', () => {
 
     it('should get equipment list with multiple filters', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment?status=available&page=1&pageSize=10')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?status=available&page=1&pageSize=10`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -263,7 +268,7 @@ describe('EquipmentController (e2e)', () => {
   describe('/equipment/:uuid (GET)', () => {
     it('should get equipment by uuid', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           name: `Get Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
@@ -279,7 +284,7 @@ describe('EquipmentController (e2e)', () => {
       createdEquipmentIds.push(createResponse.body.id.toString());
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${equipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -291,21 +296,23 @@ describe('EquipmentController (e2e)', () => {
     it('should return 404 for non-existent equipment', async () => {
       const nonExistentUuid = '00000000-0000-0000-0000-000000000000';
       await request(ctx.app.getHttpServer())
-        .get(`/equipment/${nonExistentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(nonExistentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
 
     it('should return 401 without authentication', async () => {
       const testUuid = '00000000-0000-0000-0000-000000000000';
-      await request(ctx.app.getHttpServer()).get(`/equipment/${testUuid}`).expect(401);
+      await request(ctx.app.getHttpServer())
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(testUuid)))
+        .expect(401);
     });
   });
 
   describe('/equipment/:uuid (PATCH)', () => {
     it('should update equipment with partial data', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           name: `Update Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
@@ -329,7 +336,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${equipmentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(updateData)
         .expect(200);
@@ -343,7 +350,7 @@ describe('EquipmentController (e2e)', () => {
 
     it('should update equipment with calibration information', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           name: `Calibration Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
@@ -370,7 +377,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${equipmentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(updateData)
         .expect(200);
@@ -382,7 +389,7 @@ describe('EquipmentController (e2e)', () => {
 
     it('should not update equipment with invalid status', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           name: `Invalid Update Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
@@ -403,7 +410,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${equipmentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(invalidUpdateData)
         .expect(400);
@@ -417,7 +424,7 @@ describe('EquipmentController (e2e)', () => {
 
       const nonExistentUuid = '00000000-0000-0000-0000-000000000000';
       await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${nonExistentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(nonExistentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(updateData)
         .expect(404);
@@ -430,7 +437,7 @@ describe('EquipmentController (e2e)', () => {
 
       const testUuid = '00000000-0000-0000-0000-000000000000';
       await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${testUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(testUuid)))
         .send(updateData)
         .expect(401);
     });
@@ -439,7 +446,7 @@ describe('EquipmentController (e2e)', () => {
   describe('/equipment/:uuid (DELETE)', () => {
     it('should delete equipment', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           name: `Delete Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
@@ -454,14 +461,14 @@ describe('EquipmentController (e2e)', () => {
       const equipmentUuid = createResponse.body.id;
 
       const deleteResponse = await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${equipmentUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(202);
 
       expect(deleteResponse.body).toHaveProperty('message', '장비가 삭제되었습니다.');
 
       await request(ctx.app.getHttpServer())
-        .get(`/equipment/${equipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -469,14 +476,16 @@ describe('EquipmentController (e2e)', () => {
     it('should return 404 for deleting non-existent equipment', async () => {
       const nonExistentUuid = '00000000-0000-0000-0000-000000000000';
       await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${nonExistentUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(nonExistentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
 
     it('should return 401 without authentication', async () => {
       const testUuid = '00000000-0000-0000-0000-000000000000';
-      await request(ctx.app.getHttpServer()).delete(`/equipment/${testUuid}`).expect(401);
+      await request(ctx.app.getHttpServer())
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(testUuid)))
+        .expect(401);
     });
   });
 
@@ -496,7 +505,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/equipment')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createData)
         .expect(201);
@@ -509,7 +518,7 @@ describe('EquipmentController (e2e)', () => {
 
       // 2. READ
       const readResponse = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${equipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -526,7 +535,7 @@ describe('EquipmentController (e2e)', () => {
       };
 
       const updateResponse = await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${equipmentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(updateData)
         .expect(200);
@@ -537,7 +546,7 @@ describe('EquipmentController (e2e)', () => {
 
       // 4. READ (목록 조회에서 업데이트된 데이터 확인)
       const listResponse = await request(ctx.app.getHttpServer())
-        .get(`/equipment?search=${encodeURIComponent(updateData.name)}`)
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?search=${encodeURIComponent(updateData.name)}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -549,14 +558,14 @@ describe('EquipmentController (e2e)', () => {
 
       // 5. DELETE — PATCH 후 version이 증가했으므로 최신 version 전달 (CAS 계약)
       const deleteResponse = await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${equipmentUuid}?version=${updateResponse.body.version}`)
+        .delete(`${toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(equipmentUuid))}?version=${updateResponse.body.version}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(202);
 
       expect(deleteResponse.body).toHaveProperty('message', '장비가 삭제되었습니다.');
 
       await request(ctx.app.getHttpServer())
-        .get(`/equipment/${equipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(equipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
 

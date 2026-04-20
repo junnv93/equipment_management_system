@@ -2,8 +2,10 @@
 
 import request from 'supertest';
 import * as ExcelJS from 'exceljs';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { toTestPath } from './helpers/test-paths';
 
 // ── 테스트용 xlsx 버퍼 생성 헬퍼 ──────────────────────────────────────────────
 
@@ -48,7 +50,7 @@ describe('DataMigrationController (e2e)', () => {
   describe('GET /data-migration/equipment/template', () => {
     it('SYSTEM_ADMIN → 200 + xlsx 바이너리 응답', async () => {
       const res = await request(ctx.app.getHttpServer())
-        .get('/data-migration/equipment/template')
+        .get(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.TEMPLATE))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(200);
@@ -67,7 +69,7 @@ describe('DataMigrationController (e2e)', () => {
 
     it('미인증 요청 → 401', async () => {
       const res = await request(ctx.app.getHttpServer()).get(
-        '/data-migration/equipment/template',
+        toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.TEMPLATE),
       );
       expect(res.status).toBe(401);
     });
@@ -78,7 +80,7 @@ describe('DataMigrationController (e2e)', () => {
   describe('POST /data-migration/equipment/preview', () => {
     it('파일 없이 요청 → 400 FILE_REQUIRED', async () => {
       const res = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/preview')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.PREVIEW))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(res.status).toBe(400);
@@ -88,11 +90,10 @@ describe('DataMigrationController (e2e)', () => {
     it('미인증 요청 → 401', async () => {
       const xlsx = await buildValidEquipmentXlsx();
       const res = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/preview')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.PREVIEW))
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType:
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(res.status).toBe(401);
@@ -102,14 +103,13 @@ describe('DataMigrationController (e2e)', () => {
       const xlsx = await buildValidEquipmentXlsx();
 
       const res = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/preview')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.PREVIEW))
         .set('Authorization', `Bearer ${accessToken}`)
         .field('autoGenerateManagementNumber', 'true')
         .field('skipDuplicates', 'true')
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType:
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(res.status).toBe(201);
@@ -126,7 +126,7 @@ describe('DataMigrationController (e2e)', () => {
   describe('POST /data-migration/equipment/execute', () => {
     it('존재하지 않는 sessionId → 404', async () => {
       const res = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/execute')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.EXECUTE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ sessionId: '00000000-0000-0000-0000-000000000000' });
 
@@ -135,7 +135,7 @@ describe('DataMigrationController (e2e)', () => {
 
     it('미인증 요청 → 401', async () => {
       const res = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/execute')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.EXECUTE))
         .send({ sessionId: '00000000-0000-0000-0000-000000000000' });
 
       expect(res.status).toBe(401);
@@ -144,21 +144,20 @@ describe('DataMigrationController (e2e)', () => {
     it('Preview → Execute 순차 플로우 → 장비 생성', async () => {
       const xlsx = await buildValidEquipmentXlsx();
       const previewRes = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/preview')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.PREVIEW))
         .set('Authorization', `Bearer ${accessToken}`)
         .field('autoGenerateManagementNumber', 'true')
         .field('skipDuplicates', 'true')
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType:
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(previewRes.status).toBe(201);
       const { sessionId } = previewRes.body as { sessionId: string };
 
       const executeRes = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/execute')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.EXECUTE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           sessionId,
@@ -177,7 +176,11 @@ describe('DataMigrationController (e2e)', () => {
     it('만료/존재하지 않는 sessionId → 404', async () => {
       const res = await request(ctx.app.getHttpServer())
         .get(
-          '/data-migration/equipment/00000000-0000-0000-0000-000000000000/error-report',
+          toTestPath(
+            API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.ERROR_REPORT(
+              '00000000-0000-0000-0000-000000000000',
+            ),
+          ),
         )
         .set('Authorization', `Bearer ${accessToken}`);
 
@@ -189,20 +192,19 @@ describe('DataMigrationController (e2e)', () => {
         { name: '', site: '수원', location: 'Lab A', managementNumber: '' },
       ]);
       const previewRes = await request(ctx.app.getHttpServer())
-        .post('/data-migration/equipment/preview')
+        .post(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.PREVIEW))
         .set('Authorization', `Bearer ${accessToken}`)
         .field('autoGenerateManagementNumber', 'false')
         .attach('file', xlsx, {
           filename: 'test.xlsx',
-          contentType:
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         });
 
       expect(previewRes.status).toBe(201);
       const { sessionId } = previewRes.body as { sessionId: string };
 
       const reportRes = await request(ctx.app.getHttpServer())
-        .get(`/data-migration/equipment/${sessionId}/error-report`)
+        .get(toTestPath(API_ENDPOINTS.DATA_MIGRATION.EQUIPMENT.ERROR_REPORT(sessionId)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(reportRes.status).toBe(200);

@@ -2,11 +2,13 @@
 
 import request from 'supertest';
 import postgres from 'postgres';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
 import { getWorkerUniqueYear } from './helpers/test-isolation';
+import { toTestPath } from './helpers/test-paths';
 
 describe('CalibrationPlansController (e2e)', () => {
   let ctx: TestAppContext;
@@ -65,7 +67,7 @@ describe('CalibrationPlansController (e2e)', () => {
     for (const planUuid of createdPlanIds) {
       try {
         await request(ctx.app.getHttpServer())
-          .delete(`/calibration-plans/${planUuid}`)
+          .delete(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.DELETE(planUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
       } catch {
         // 무시
@@ -84,7 +86,7 @@ describe('CalibrationPlansController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(planData);
 
@@ -106,7 +108,7 @@ describe('CalibrationPlansController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(planData)
         .expect(409);
@@ -120,7 +122,7 @@ describe('CalibrationPlansController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .send(planData)
         .expect(401);
     });
@@ -129,7 +131,7 @@ describe('CalibrationPlansController (e2e)', () => {
   describe('/calibration-plans (GET)', () => {
     it('should get calibration plans list', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-plans')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.LIST))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -144,7 +146,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
     it('should get calibration plans with year filter', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans?year=${TEST_YEAR}`)
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.LIST)}?year=${TEST_YEAR}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -158,7 +160,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
     it('should get calibration plans with siteId filter', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans?siteId=${TEST_SITE}`)
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.LIST)}?siteId=${TEST_SITE}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -172,7 +174,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
     it('should get calibration plans with status filter', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-plans?status=draft')
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.LIST)}?status=draft`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -194,7 +196,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const planUuid = createdPlanIds[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -210,7 +212,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const nonExistentUuid = '00000000-0000-0000-0000-000000000000';
 
       await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${nonExistentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(nonExistentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -227,7 +229,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const planUuid = createdPlanIds[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/calibration-plans/${planUuid}/submit`)
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({});
 
@@ -251,14 +253,14 @@ describe('CalibrationPlansController (e2e)', () => {
       const planUuid = createdPlanIds[0];
 
       const planResponse = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       // pending_review → pending_approval
       // 주의: plan 스키마는 casVersion 필드 사용 (일반 version 아님).
       if (planResponse.body.status === 'pending_review') {
         const reviewResp = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-plans/${planUuid}/review`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.REVIEW(planUuid)))
           .set('Authorization', `Bearer ${adminToken}`)
           .send({ casVersion: planResponse.body.casVersion });
         expect(reviewResp.status).toBe(200);
@@ -267,11 +269,11 @@ describe('CalibrationPlansController (e2e)', () => {
 
       // pending_approval → approved
       const latest = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
       if (latest.body.status === 'pending_approval') {
         const response = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-plans/${planUuid}/approve`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.APPROVE(planUuid)))
           .set('Authorization', `Bearer ${adminToken}`)
           .send({ casVersion: latest.body.casVersion });
 
@@ -285,7 +287,7 @@ describe('CalibrationPlansController (e2e)', () => {
     it('should require rejection reason', async () => {
       const newYear = TEST_YEAR + 10;
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           year: newYear,
@@ -298,12 +300,12 @@ describe('CalibrationPlansController (e2e)', () => {
         createdPlanIds.push(planUuid);
 
         await request(ctx.app.getHttpServer())
-          .post(`/calibration-plans/${planUuid}/submit`)
+          .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT(planUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({});
 
         const rejectResponse = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-plans/${planUuid}/reject`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.REJECT(planUuid)))
           .set('Authorization', `Bearer ${adminToken}`)
           .send({ rejectedBy: TEST_USER_IDS.admin });
 
@@ -314,7 +316,7 @@ describe('CalibrationPlansController (e2e)', () => {
     it('should reject plan with reason', async () => {
       const newYear = TEST_YEAR + 11;
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           year: newYear,
@@ -327,13 +329,13 @@ describe('CalibrationPlansController (e2e)', () => {
         createdPlanIds.push(planUuid);
 
         const submitResp = await request(ctx.app.getHttpServer())
-          .post(`/calibration-plans/${planUuid}/submit`)
+          .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT(planUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({});
 
         // reject DTO는 casVersion 필수 (plan 스키마는 casVersion 필드 사용).
         const rejectResponse = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-plans/${planUuid}/reject`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.REJECT(planUuid)))
           .set('Authorization', `Bearer ${adminToken}`)
           .send({
             casVersion: submitResp.body.casVersion,
@@ -351,7 +353,7 @@ describe('CalibrationPlansController (e2e)', () => {
     it('should delete plan only in draft status', async () => {
       const newYear = TEST_YEAR + 20;
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           year: newYear,
@@ -363,14 +365,14 @@ describe('CalibrationPlansController (e2e)', () => {
         const planUuid = createResponse.body.id;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/calibration-plans/${planUuid}`)
+          .delete(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.DELETE(planUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(deleteResponse.status).toBe(200);
         expect(deleteResponse.body).toHaveProperty('deleted', true);
 
         await request(ctx.app.getHttpServer())
-          .get(`/calibration-plans/${planUuid}`)
+          .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(planUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(404);
       }
@@ -384,12 +386,12 @@ describe('CalibrationPlansController (e2e)', () => {
       const planUuid = createdPlanIds[0];
 
       const planResponse = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       if (planResponse.body.status !== 'draft') {
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/calibration-plans/${planUuid}`)
+          .delete(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.DELETE(planUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(deleteResponse.status).toBe(400);
@@ -400,7 +402,7 @@ describe('CalibrationPlansController (e2e)', () => {
   describe('/calibration-plans/equipment/external (GET)', () => {
     it('should get external calibration equipment list', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-plans/equipment/external')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.EXTERNAL_EQUIPMENT))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -415,7 +417,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
     it('should filter external equipment by year and siteId', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/equipment/external?year=${TEST_YEAR}&siteId=${TEST_SITE}`)
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.EXTERNAL_EQUIPMENT)}?year=${TEST_YEAR}&siteId=${TEST_SITE}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -436,7 +438,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
       // test_engineer doesn't have VIEW_CALIBRATION_PLANS permission → 403
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-plans/equipment/external')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.EXTERNAL_EQUIPMENT))
         .set('Authorization', `Bearer ${teToken}`);
 
       expect([200, 403]).toContain(response.status);
@@ -459,14 +461,14 @@ describe('CalibrationPlansController (e2e)', () => {
       const planUuid = createdPlanIds[0];
 
       const planResponse = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       if (planResponse.body.status === 'approved' && planResponse.body.items?.length > 0) {
         const itemUuid = planResponse.body.items[0].id;
 
         const confirmResponse = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-plans/${planUuid}/items/${itemUuid}/confirm`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({ confirmedBy: TEST_USER_IDS.manager });
 
@@ -479,7 +481,7 @@ describe('CalibrationPlansController (e2e)', () => {
     it('should not confirm item in non-approved plan', async () => {
       const newYear = TEST_YEAR + 30;
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           year: newYear,
@@ -493,7 +495,7 @@ describe('CalibrationPlansController (e2e)', () => {
         createdPlanIds.push(planUuid);
 
         const confirmResponse = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-plans/${planUuid}/items/${itemUuid}/confirm`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({ confirmedBy: TEST_USER_IDS.manager });
 
@@ -512,7 +514,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const planUuid = createdPlanIds[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}/export`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.EXPORT(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       // 200(성공) 또는 404(양식 템플릿 파일 누락 — form-template.service의 graceful ENOENT 처리).
@@ -530,7 +532,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const nonExistentUuid = '00000000-0000-0000-0000-000000000000';
 
       await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${nonExistentUuid}/export`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.EXPORT(nonExistentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -546,7 +548,7 @@ describe('CalibrationPlansController (e2e)', () => {
       // TEST_YEAR + 30: 헬퍼의 maxDerivation 제한 내 (schema year max 준수 보장).
       const newYear = TEST_YEAR + TEST_YEAR_MAX_DERIVATION;
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-plans')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           year: newYear,
@@ -562,7 +564,7 @@ describe('CalibrationPlansController (e2e)', () => {
       expect(createResponse.body.status).toBe('draft');
 
       const readResponse = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.GET(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -570,7 +572,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
       // Stage 1: TM submits → pending_review
       const submitResponse = await request(ctx.app.getHttpServer())
-        .post(`/calibration-plans/${planUuid}/submit`)
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({});
 
@@ -580,7 +582,7 @@ describe('CalibrationPlansController (e2e)', () => {
       // Stage 2: QM/LM reviews → pending_approval (CAS: casVersion 필수)
       // plan 스키마는 casVersion 필드 사용 (version 아님).
       const reviewResponse = await request(ctx.app.getHttpServer())
-        .patch(`/calibration-plans/${planUuid}/review`)
+        .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.REVIEW(planUuid)))
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ casVersion: submitResponse.body.casVersion });
 
@@ -589,7 +591,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
       // Stage 3: LM approves → approved (CAS: casVersion 필수)
       const approveResponse = await request(ctx.app.getHttpServer())
-        .patch(`/calibration-plans/${planUuid}/approve`)
+        .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.APPROVE(planUuid)))
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ casVersion: reviewResponse.body.casVersion });
 
@@ -600,7 +602,7 @@ describe('CalibrationPlansController (e2e)', () => {
         const itemUuid = approveResponse.body.items[0].id;
 
         const confirmResponse = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-plans/${planUuid}/items/${itemUuid}/confirm`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid)))
           .set('Authorization', `Bearer ${adminToken}`)
           .send({ confirmedBy: TEST_USER_IDS.manager });
 
@@ -610,7 +612,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
       // Export 엔드포인트는 /export (리네임됨). 양식 템플릿 파일 누락 시 404.
       const exportResponse = await request(ctx.app.getHttpServer())
-        .get(`/calibration-plans/${planUuid}/export`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_PLANS.EXPORT(planUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect([200, 404]).toContain(exportResponse.status);

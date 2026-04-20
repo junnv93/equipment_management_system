@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { TEAM_PLACEHOLDER_ID } from '../../src/database/utils/uuid-constants';
+import { toTestPath } from './test-paths';
 
 /**
  * 장비 생성 기본값 — CreateEquipmentDto 필수 필드 포함
@@ -40,7 +42,7 @@ export async function createTestEquipment(
   };
 
   const response = await request(app.getHttpServer())
-    .post('/equipment')
+    .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE))
     .set('Authorization', `Bearer ${token}`)
     .send(data);
 
@@ -73,7 +75,7 @@ export async function createTestCable(
   };
 
   const response = await request(app.getHttpServer())
-    .post('/cables')
+    .post(toTestPath(API_ENDPOINTS.CABLES.CREATE))
     .set('Authorization', `Bearer ${token}`)
     .send(data);
 
@@ -106,7 +108,7 @@ export async function createTestCheckout(
   };
 
   const response = await request(app.getHttpServer())
-    .post('/checkouts')
+    .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
     .set('Authorization', `Bearer ${token}`)
     .send(data);
 

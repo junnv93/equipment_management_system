@@ -2,10 +2,12 @@
 
 import request from 'supertest';
 import * as crypto from 'crypto';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
+import { toTestPath } from './helpers/test-paths';
 
 describe('EquipmentHistoryController (e2e)', () => {
   let ctx: TestAppContext;
@@ -38,7 +40,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/location-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -56,7 +58,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/location-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -70,7 +72,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/location-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(testEquipmentUuid)))
           .send(historyData);
 
         expect(response.status).toBe(401);
@@ -80,7 +82,7 @@ describe('EquipmentHistoryController (e2e)', () => {
     describe('GET /equipment/:uuid/location-history', () => {
       it('should get location history list', async () => {
         const response = await request(ctx.app.getHttpServer())
-          .get(`/equipment/${testEquipmentUuid}/location-history`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.LIST(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
@@ -99,19 +101,19 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const res1 = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/location-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData1);
         tracker.track('location-history', res1.body.id);
 
         const res2 = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/location-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData2);
         tracker.track('location-history', res2.body.id);
 
         const response = await request(ctx.app.getHttpServer())
-          .get(`/equipment/${testEquipmentUuid}/location-history`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.LIST(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
@@ -137,7 +139,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const createResponse = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/location-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -145,7 +147,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         const historyId = createResponse.body.id;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/equipment/location-history/${historyId}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(deleteResponse.status).toBe(200);
@@ -154,7 +156,7 @@ describe('EquipmentHistoryController (e2e)', () => {
       it('should return 404 for non-existent history', async () => {
         const nonExistentId = '00000000-0000-0000-0000-000000000000';
         const response = await request(ctx.app.getHttpServer())
-          .delete(`/equipment/location-history/${nonExistentId}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(nonExistentId)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(404);
@@ -172,7 +174,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/maintenance-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -189,7 +191,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/maintenance-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -200,7 +202,7 @@ describe('EquipmentHistoryController (e2e)', () => {
     describe('GET /equipment/:uuid/maintenance-history', () => {
       it('should get maintenance history list', async () => {
         const response = await request(ctx.app.getHttpServer())
-          .get(`/equipment/${testEquipmentUuid}/maintenance-history`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.LIST(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
@@ -217,7 +219,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const createResponse = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/maintenance-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -225,7 +227,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         const historyId = createResponse.body.id;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/equipment/maintenance-history/${historyId}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.DELETE(historyId)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(deleteResponse.status).toBe(200);
@@ -244,7 +246,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -264,7 +266,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -282,7 +284,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -300,7 +302,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -317,7 +319,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -328,7 +330,7 @@ describe('EquipmentHistoryController (e2e)', () => {
     describe('GET /equipment/:uuid/incident-history', () => {
       it('should get incident history list', async () => {
         const response = await request(ctx.app.getHttpServer())
-          .get(`/equipment/${testEquipmentUuid}/incident-history`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.LIST(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
@@ -346,7 +348,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         };
 
         const createResponse = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${testEquipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(historyData);
 
@@ -354,7 +356,7 @@ describe('EquipmentHistoryController (e2e)', () => {
         const historyId = createResponse.body.id;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/equipment/incident-history/${historyId}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(historyId)))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(deleteResponse.status).toBe(200);
@@ -372,7 +374,7 @@ describe('EquipmentHistoryController (e2e)', () => {
       try {
         // 위치 변동 이력
         const locationResponse = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${equipmentUuid}/location-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             changedAt: '2024-01-15',
@@ -383,7 +385,7 @@ describe('EquipmentHistoryController (e2e)', () => {
 
         // 유지보수 내역
         const maintenanceResponse = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${equipmentUuid}/maintenance-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.CREATE(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             performedAt: '2024-03-01',
@@ -393,7 +395,7 @@ describe('EquipmentHistoryController (e2e)', () => {
 
         // 손상 이력
         const incidentResponse = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${equipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             occurredAt: '2024-04-10',
@@ -404,7 +406,7 @@ describe('EquipmentHistoryController (e2e)', () => {
 
         // 수리 이력
         const repairResponse = await request(ctx.app.getHttpServer())
-          .post(`/equipment/${equipmentUuid}/incident-history`)
+          .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             occurredAt: '2024-04-15',
@@ -415,25 +417,25 @@ describe('EquipmentHistoryController (e2e)', () => {
 
         // 모든 이력 조회
         const locationHistoryResponse = await request(ctx.app.getHttpServer())
-          .get(`/equipment/${equipmentUuid}/location-history`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.LIST(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
         expect(locationHistoryResponse.status).toBe(200);
         expect(locationHistoryResponse.body.items.length).toBeGreaterThanOrEqual(1);
 
         const maintenanceHistoryResponse = await request(ctx.app.getHttpServer())
-          .get(`/equipment/${equipmentUuid}/maintenance-history`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.LIST(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
         expect(maintenanceHistoryResponse.status).toBe(200);
         expect(maintenanceHistoryResponse.body.items.length).toBeGreaterThanOrEqual(1);
 
         const incidentHistoryResponse = await request(ctx.app.getHttpServer())
-          .get(`/equipment/${equipmentUuid}/incident-history`)
+          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.LIST(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
         expect(incidentHistoryResponse.status).toBe(200);
         expect(incidentHistoryResponse.body.items.length).toBeGreaterThanOrEqual(2);
       } finally {
         await request(ctx.app.getHttpServer())
-          .delete(`/equipment/${equipmentUuid}`)
+          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(equipmentUuid)))
           .set('Authorization', `Bearer ${accessToken}`);
       }
     });

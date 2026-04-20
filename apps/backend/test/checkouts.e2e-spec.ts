@@ -1,10 +1,12 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
+import { toTestPath } from './helpers/test-paths';
 
 describe('CheckoutsController (e2e)', () => {
   let ctx: TestAppContext;
@@ -42,7 +44,7 @@ describe('CheckoutsController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createCheckoutDto);
 
@@ -66,7 +68,7 @@ describe('CheckoutsController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createCheckoutDto)
         .expect(400);
@@ -76,7 +78,7 @@ describe('CheckoutsController (e2e)', () => {
   describe('GET /checkouts', () => {
     it('should return a list of checkouts', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/checkouts')
+        .get(toTestPath(API_ENDPOINTS.CHECKOUTS.LIST))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -89,7 +91,7 @@ describe('CheckoutsController (e2e)', () => {
 
     it('should filter checkouts by purpose', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/checkouts?purpose=calibration')
+        .get(`${toTestPath(API_ENDPOINTS.CHECKOUTS.LIST)}?purpose=calibration`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -104,7 +106,7 @@ describe('CheckoutsController (e2e)', () => {
   describe('GET /checkouts/:uuid', () => {
     it('should return a checkout by UUID', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -119,7 +121,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         const response = await request(ctx.app.getHttpServer())
-          .get(`/checkouts/${checkoutUuid}`)
+          .get(toTestPath(API_ENDPOINTS.CHECKOUTS.GET(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -131,7 +133,7 @@ describe('CheckoutsController (e2e)', () => {
     it('should return 404 for non-existent checkout UUID', async () => {
       const fakeUuid = '00000000-0000-0000-0000-000000000000';
       await request(ctx.app.getHttpServer())
-        .get(`/checkouts/${fakeUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CHECKOUTS.GET(fakeUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -140,7 +142,7 @@ describe('CheckoutsController (e2e)', () => {
   describe('PATCH /checkouts/:uuid/approve', () => {
     it('should approve first (internal purpose - calibration)', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -155,7 +157,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         const approveResponse = await request(ctx.app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve`)
+          .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
@@ -169,7 +171,7 @@ describe('CheckoutsController (e2e)', () => {
 
     it('should approve checkout (external rental)', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -184,7 +186,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         const approveResponse = await request(ctx.app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve`)
+          .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
@@ -200,7 +202,7 @@ describe('CheckoutsController (e2e)', () => {
   describe('PATCH /checkouts/:uuid/approve (unified)', () => {
     it('should approve checkout (unified approval)', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -215,7 +217,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         const approveResponse = await request(ctx.app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve`)
+          .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
@@ -231,7 +233,7 @@ describe('CheckoutsController (e2e)', () => {
   describe('PATCH /checkouts/:uuid/reject', () => {
     it('should reject checkout with reason', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -246,7 +248,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         const rejectResponse = await request(ctx.app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/reject`)
+          .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.REJECT(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
@@ -261,7 +263,7 @@ describe('CheckoutsController (e2e)', () => {
 
     it('should reject checkout rejection without reason', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -276,7 +278,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         await request(ctx.app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/reject`)
+          .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.REJECT(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
@@ -289,7 +291,7 @@ describe('CheckoutsController (e2e)', () => {
   describe('POST /checkouts/:uuid/return', () => {
     it('should return checkout with inspection', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -304,7 +306,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         await request(ctx.app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve`)
+          .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.APPROVE(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
@@ -312,12 +314,13 @@ describe('CheckoutsController (e2e)', () => {
           .expect(200);
 
         await request(ctx.app.getHttpServer())
-          .post(`/checkouts/${checkoutUuid}/start`)
+          .post(toTestPath(API_ENDPOINTS.CHECKOUTS.START(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(201);
 
+        // RETURN 경로는 SSOT 경유 (POST 메서드는 현상 유지 — HTTP 메서드 불일치 tech-debt)
         const returnResponse = await request(ctx.app.getHttpServer())
-          .post(`/checkouts/${checkoutUuid}/return`)
+          .post(toTestPath(API_ENDPOINTS.CHECKOUTS.RETURN(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             calibrationChecked: true,
@@ -337,7 +340,7 @@ describe('CheckoutsController (e2e)', () => {
   describe('PATCH /checkouts/:uuid/cancel', () => {
     it('should cancel a pending checkout', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
@@ -352,7 +355,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         const cancelResponse = await request(ctx.app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/cancel`)
+          .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.CANCEL(checkoutUuid)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 

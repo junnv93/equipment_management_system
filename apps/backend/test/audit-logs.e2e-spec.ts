@@ -1,9 +1,11 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
+import { toTestPath } from './helpers/test-paths';
 
 describe('AuditLogsController (e2e)', () => {
   let ctx: TestAppContext;
@@ -23,7 +25,7 @@ describe('AuditLogsController (e2e)', () => {
   describe('GET /audit-logs', () => {
     it('should return audit logs list for admin', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?page=1')
+        .get(`${toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST)}?page=1`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       // 감사 로그 테이블이 비어있을 수 있음
@@ -38,7 +40,7 @@ describe('AuditLogsController (e2e)', () => {
 
     it('should support pagination', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?page=1&limit=10')
+        .get(`${toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST)}?page=1&limit=10`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
@@ -49,7 +51,7 @@ describe('AuditLogsController (e2e)', () => {
 
     it('should support filtering by entityType', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?page=1&entityType=equipment')
+        .get(`${toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST)}?page=1&entityType=equipment`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
@@ -61,7 +63,7 @@ describe('AuditLogsController (e2e)', () => {
 
     it('should support filtering by action', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?page=1&action=create')
+        .get(`${toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST)}?page=1&action=create`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
@@ -78,7 +80,7 @@ describe('AuditLogsController (e2e)', () => {
 
       const response = await request(ctx.app.getHttpServer())
         .get(
-          `/audit-logs?page=1&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
+          `${toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST)}?page=1&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`,
         )
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
@@ -91,13 +93,15 @@ describe('AuditLogsController (e2e)', () => {
     });
 
     it('should reject unauthenticated requests', async () => {
-      const response = await request(ctx.app.getHttpServer()).get('/audit-logs');
+      const response = await request(ctx.app.getHttpServer()).get(
+        toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST),
+      );
       expect(response.status).toBe(401);
     });
 
     it('should reject non-admin users', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs')
+        .get(toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST))
         .set('Authorization', `Bearer ${userAccessToken}`);
 
       expect(response.status).toBe(403);
@@ -109,7 +113,7 @@ describe('AuditLogsController (e2e)', () => {
       const testEntityId = TEST_USER_IDS.admin;
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/audit-logs/entity/equipment/${testEntityId}`)
+        .get(toTestPath(API_ENDPOINTS.AUDIT_LOGS.BY_ENTITY('equipment', testEntityId)))
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       expect([200, 403]).toContain(response.status);
@@ -124,7 +128,7 @@ describe('AuditLogsController (e2e)', () => {
 
     it('should validate UUID format', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/audit-logs/entity/equipment/invalid-uuid')
+        .get(toTestPath(API_ENDPOINTS.AUDIT_LOGS.BY_ENTITY('equipment', 'invalid-uuid')))
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       expect(response.status).toBe(400);
@@ -136,7 +140,7 @@ describe('AuditLogsController (e2e)', () => {
       const testUserId = TEST_USER_IDS.admin;
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/audit-logs/user/${testUserId}`)
+        .get(toTestPath(API_ENDPOINTS.AUDIT_LOGS.BY_USER(testUserId)))
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       expect([200, 403]).toContain(response.status);
@@ -151,7 +155,7 @@ describe('AuditLogsController (e2e)', () => {
       const testUserId = TEST_USER_IDS.admin;
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/audit-logs/user/${testUserId}?limit=5`)
+        .get(`${toTestPath(API_ENDPOINTS.AUDIT_LOGS.BY_USER(testUserId))}?limit=5`)
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (response.status === 200) {
@@ -167,7 +171,9 @@ describe('AuditLogsController (e2e)', () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       const logsResponse = await request(ctx.app.getHttpServer())
-        .get('/audit-logs?page=1&entityType=equipment&action=create&limit=5')
+        .get(
+          `${toTestPath(API_ENDPOINTS.AUDIT_LOGS.LIST)}?page=1&entityType=equipment&action=create&limit=5`,
+        )
         .set('Authorization', `Bearer ${adminAccessToken}`);
 
       if (logsResponse.status === 200 && logsResponse.body.items.length > 0) {

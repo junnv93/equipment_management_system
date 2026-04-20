@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { toTestPath } from './test-paths';
 
 type ResourceType =
   | 'checkout'
@@ -17,13 +18,6 @@ interface TrackedResource {
   id: string;
   version?: number;
 }
-
-/**
- * API_ENDPOINTS는 `/api/` globalPrefix를 포함하지만,
- * E2E 테스트 앱(createTestApp)은 globalPrefix를 설정하지 않습니다.
- * 이 유틸리티가 해당 차이를 중앙화하여 단일 변환 지점을 제공합니다.
- */
-export const toTestPath = (apiPath: string): string => apiPath.replace(/^\/api/, '');
 
 /**
  * SSOT: API_ENDPOINTS에서 리소스별 삭제 경로를 도출합니다.

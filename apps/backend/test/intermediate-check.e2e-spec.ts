@@ -1,8 +1,10 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
+import { toTestPath } from './helpers/test-paths';
 
 describe('IntermediateCheck (e2e)', () => {
   let ctx: TestAppContext;
@@ -20,7 +22,7 @@ describe('IntermediateCheck (e2e)', () => {
   describe('/calibration/intermediate-checks (GET)', () => {
     it('should get upcoming intermediate checks', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.LIST()))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -34,7 +36,7 @@ describe('IntermediateCheck (e2e)', () => {
 
     it('should filter by days parameter', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks?days=30')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.LIST(30)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -43,7 +45,7 @@ describe('IntermediateCheck (e2e)', () => {
 
     it('should require authentication', async () => {
       await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.LIST()))
         .expect(401);
     });
   });
@@ -51,7 +53,7 @@ describe('IntermediateCheck (e2e)', () => {
   describe('/calibration/intermediate-checks/all (GET)', () => {
     it('should get all intermediate checks with metadata', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -65,7 +67,7 @@ describe('IntermediateCheck (e2e)', () => {
 
     it('should filter by status=overdue', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all?status=overdue')
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL)}?status=overdue`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -83,7 +85,7 @@ describe('IntermediateCheck (e2e)', () => {
 
     it('should filter by status=pending', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all?status=pending')
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL)}?status=pending`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -101,7 +103,7 @@ describe('IntermediateCheck (e2e)', () => {
 
     it('should require authentication', async () => {
       await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL))
         .expect(401);
     });
   });
@@ -109,7 +111,7 @@ describe('IntermediateCheck (e2e)', () => {
   describe('/calibration/:uuid/intermediate-check/complete (POST)', () => {
     it('should complete intermediate check for calibration with intermediate check date', async () => {
       const checksResponse = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -120,7 +122,11 @@ describe('IntermediateCheck (e2e)', () => {
       const calibrationWithCheck = checksResponse.body.items[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/calibration/${calibrationWithCheck.id}/intermediate-check/complete`)
+        .post(
+          toTestPath(
+            API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(calibrationWithCheck.id),
+          ),
+        )
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           completedBy: 'test-user-id',
@@ -140,7 +146,9 @@ describe('IntermediateCheck (e2e)', () => {
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/calibration/${nonExistentId}/intermediate-check/complete`)
+        .post(
+          toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(nonExistentId)),
+        )
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           completedBy: 'test-user-id',
@@ -151,7 +159,7 @@ describe('IntermediateCheck (e2e)', () => {
 
     it('should require authentication', async () => {
       await request(ctx.app.getHttpServer())
-        .post('/calibration/some-uuid/intermediate-check/complete')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE('some-uuid')))
         .send({
           completedBy: 'test-user-id',
         })
@@ -160,7 +168,7 @@ describe('IntermediateCheck (e2e)', () => {
 
     it('should accept optional notes', async () => {
       const checksResponse = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -171,7 +179,11 @@ describe('IntermediateCheck (e2e)', () => {
       const calibrationWithCheck = checksResponse.body.items[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .post(`/calibration/${calibrationWithCheck.id}/intermediate-check/complete`)
+        .post(
+          toTestPath(
+            API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(calibrationWithCheck.id),
+          ),
+        )
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           completedBy: 'test-user-id',
@@ -184,7 +196,7 @@ describe('IntermediateCheck (e2e)', () => {
   describe('Intermediate Check Workflow', () => {
     it('should complete full intermediate check workflow', async () => {
       const allChecksResponse = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -192,22 +204,26 @@ describe('IntermediateCheck (e2e)', () => {
       expect(allChecksResponse.body).toHaveProperty('meta');
 
       await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks?days=7')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.LIST(7)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks?days=30')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.LIST(30)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       const overdueResponse = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all?status=overdue')
+        .get(
+          `${toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL)}?status=overdue`,
+        )
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
       const pendingResponse = await request(ctx.app.getHttpServer())
-        .get('/calibration/intermediate-checks/all?status=pending')
+        .get(
+          `${toTestPath(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL)}?status=pending`,
+        )
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 

@@ -1,9 +1,11 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
-import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
+import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
+import { toTestPath } from './helpers/test-paths';
 
 describe('SharedEquipmentController (e2e)', () => {
   let ctx: TestAppContext;
@@ -29,7 +31,7 @@ describe('SharedEquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment/shared')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE_SHARED))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -61,7 +63,7 @@ describe('SharedEquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment/shared')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE_SHARED))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -85,7 +87,7 @@ describe('SharedEquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment/shared')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE_SHARED))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -98,7 +100,7 @@ describe('SharedEquipmentController (e2e)', () => {
       }
 
       const existingEquipment = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${createdSharedEquipmentUuids[0]}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(createdSharedEquipmentUuids[0])))
         .set('Authorization', `Bearer ${accessToken}`);
 
       const createDto = {
@@ -109,7 +111,7 @@ describe('SharedEquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/equipment/shared')
+        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.CREATE_SHARED))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -121,7 +123,7 @@ describe('SharedEquipmentController (e2e)', () => {
   describe('GET /equipment with isShared filter', () => {
     it('should return only shared equipment when isShared=true', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment?isShared=true')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?isShared=true`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -135,7 +137,7 @@ describe('SharedEquipmentController (e2e)', () => {
 
     it('should return only normal equipment when isShared=false', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment?isShared=false')
+        .get(`${toTestPath(API_ENDPOINTS.EQUIPMENT.LIST)}?isShared=false`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -149,7 +151,7 @@ describe('SharedEquipmentController (e2e)', () => {
 
     it('should return all equipment when isShared filter is not provided', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/equipment')
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -168,7 +170,7 @@ describe('SharedEquipmentController (e2e)', () => {
 
       // version은 CAS에 필수 — 공용장비 차단(403)은 version 검증 이후에 실행됨
       const sharedDetail = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${sharedEquipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(sharedEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
       const currentVersion = sharedDetail.body.version ?? 1;
 
@@ -179,7 +181,7 @@ describe('SharedEquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${sharedEquipmentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(sharedEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(updateDto);
 
@@ -192,7 +194,7 @@ describe('SharedEquipmentController (e2e)', () => {
 
       // 최신 version 조회
       const detail = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${normalEquipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(normalEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -204,14 +206,14 @@ describe('SharedEquipmentController (e2e)', () => {
       };
 
       const updateResponse = await request(ctx.app.getHttpServer())
-        .patch(`/equipment/${normalEquipmentUuid}`)
+        .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(normalEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(updateDto);
 
       expect([200, 201]).toContain(updateResponse.status);
 
       await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${normalEquipmentUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(normalEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
     });
   });
@@ -225,7 +227,7 @@ describe('SharedEquipmentController (e2e)', () => {
       const sharedEquipmentUuid = createdSharedEquipmentUuids[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${sharedEquipmentUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(sharedEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(response.status).toBe(403);
@@ -236,7 +238,7 @@ describe('SharedEquipmentController (e2e)', () => {
       const normalEquipmentUuid = await createTestEquipment(ctx.app, accessToken);
 
       const deleteResponse = await request(ctx.app.getHttpServer())
-        .delete(`/equipment/${normalEquipmentUuid}`)
+        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(normalEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect([200, 202]).toContain(deleteResponse.status);
@@ -260,7 +262,7 @@ describe('SharedEquipmentController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/checkouts')
+        .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(checkoutDto);
 
@@ -270,7 +272,7 @@ describe('SharedEquipmentController (e2e)', () => {
         if (response.body.id) {
           // 체크아웃 반납은 /checkouts/:id/return 사용
           await request(ctx.app.getHttpServer())
-            .patch(`/checkouts/${response.body.id}/return`)
+            .patch(toTestPath(API_ENDPOINTS.CHECKOUTS.RETURN(response.body.id)))
             .set('Authorization', `Bearer ${accessToken}`)
             .send({ returnDate: new Date().toISOString() });
         }
@@ -287,7 +289,7 @@ describe('SharedEquipmentController (e2e)', () => {
       const sharedEquipmentUuid = createdSharedEquipmentUuids[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .get(`/equipment/${sharedEquipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(sharedEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 

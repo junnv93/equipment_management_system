@@ -80,11 +80,15 @@ export const API_ENDPOINTS = {
     },
     /** 장비별 반출 이력 */
     CHECKOUTS: (equipmentId: string) => `/api/equipment/${equipmentId}/checkouts`,
+    /** 공용 장비 등록 (isShared=true 고정) */
+    CREATE_SHARED: '/api/equipment/shared',
     // 수리 이력
     REPAIR_HISTORY: {
       LIST: (equipmentId: string) => `/api/equipment/${equipmentId}/repair-history`,
       CREATE: (equipmentId: string) => `/api/equipment/${equipmentId}/repair-history`,
       RECENT: (equipmentId: string) => `/api/equipment/${equipmentId}/repair-history/recent`,
+      /** 수리 이력 요약 (최근 건수 + 비용 합계) */
+      SUMMARY: (equipmentId: string) => `/api/equipment/${equipmentId}/repair-history/summary`,
       GET: (id: string) => `/api/repair-history/${id}`,
       UPDATE: (id: string) => `/api/repair-history/${id}`,
       DELETE: (id: string) => `/api/repair-history/${id}`,
@@ -364,6 +368,14 @@ export const API_ENDPOINTS = {
     SESSION: '/api/auth/session',
     CSRF: '/api/auth/csrf',
     REFRESH: '/api/auth/refresh',
+    /** 백엔드 직접 로그인 — E2E/내부 전용, 프론트엔드 NextAuth 플로우에서 사용 금지 */
+    BACKEND_LOGIN: '/api/auth/login',
+    /** 현재 세션 프로필 조회 — E2E/내부 전용 */
+    PROFILE: '/api/auth/profile',
+    /** 테스트 환경 헬스 체크 — E2E/내부 전용 */
+    TEST: '/api/auth/test',
+    /** 테스트 역할 로그인 — E2E 전용, 프로덕션 비활성화 */
+    TEST_LOGIN: (role: string) => `/api/auth/test-login?role=${role}`,
   },
 
   // ============================================================================

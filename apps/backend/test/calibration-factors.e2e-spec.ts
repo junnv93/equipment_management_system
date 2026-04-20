@@ -1,10 +1,12 @@
 /// <reference types="jest" />
 
 import request from 'supertest';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
+import { toTestPath } from './helpers/test-paths';
 
 describe('CalibrationFactorsController (e2e)', () => {
   let ctx: TestAppContext;
@@ -44,7 +46,7 @@ describe('CalibrationFactorsController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -73,7 +75,7 @@ describe('CalibrationFactorsController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -97,7 +99,7 @@ describe('CalibrationFactorsController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto)
         .expect(400);
@@ -107,7 +109,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('GET /calibration-factors', () => {
     it('should return a list of calibration factors', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-factors')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.LIST))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -120,7 +122,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
     it('should filter by equipmentId', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/calibration-factors?equipmentId=${testEquipmentUuid}`)
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.LIST)}?equipmentId=${testEquipmentUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -131,7 +133,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
     it('should filter by approvalStatus', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-factors?approvalStatus=pending')
+        .get(`${toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.LIST)}?approvalStatus=pending`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -144,7 +146,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('GET /calibration-factors/pending', () => {
     it('should return pending calibration factors', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-factors/pending')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.PENDING))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -158,7 +160,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('GET /calibration-factors/registry', () => {
     it('should return calibration factor registry', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get('/calibration-factors/registry')
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.REGISTRY))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -173,7 +175,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('GET /calibration-factors/equipment/:equipmentUuid', () => {
     it('should return factors for specific equipment', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`/calibration-factors/equipment/${testEquipmentUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.EQUIPMENT(testEquipmentUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -188,7 +190,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('GET /calibration-factors/:uuid', () => {
     it('should return a calibration factor by UUID', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: testEquipmentUuid,
@@ -205,7 +207,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         createdFactorIds.push(factorId);
 
         const response = await request(ctx.app.getHttpServer())
-          .get(`/calibration-factors/${factorId}`)
+          .get(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.GET(factorId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -217,7 +219,7 @@ describe('CalibrationFactorsController (e2e)', () => {
     it('should return 404 for non-existent factor UUID', async () => {
       const fakeUuid = '00000000-0000-4000-8000-000000000000';
       await request(ctx.app.getHttpServer())
-        .get(`/calibration-factors/${fakeUuid}`)
+        .get(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.GET(fakeUuid)))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -226,7 +228,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('PATCH /calibration-factors/:uuid/approve', () => {
     it('should approve a pending calibration factor', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: testEquipmentUuid,
@@ -243,7 +245,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         createdFactorIds.push(factorId);
 
         const approveResponse = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-factors/${factorId}/approve`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.APPROVE(factorId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverComment: 'E2E 테스트 승인 완료',
@@ -261,7 +263,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('PATCH /calibration-factors/:uuid/reject', () => {
     it('should reject a pending calibration factor with reason', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: testEquipmentUuid,
@@ -278,7 +280,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         createdFactorIds.push(factorId);
 
         const rejectResponse = await request(ctx.app.getHttpServer())
-          .patch(`/calibration-factors/${factorId}/reject`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.REJECT(factorId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             rejectionReason: 'E2E 테스트 반려 사유',
@@ -293,7 +295,7 @@ describe('CalibrationFactorsController (e2e)', () => {
 
     it('should reject factor rejection without reason', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: testEquipmentUuid,
@@ -310,7 +312,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         createdFactorIds.push(factorId);
 
         await request(ctx.app.getHttpServer())
-          .patch(`/calibration-factors/${factorId}/reject`)
+          .patch(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.REJECT(factorId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             version: createResponse.body.version,
@@ -323,7 +325,7 @@ describe('CalibrationFactorsController (e2e)', () => {
   describe('DELETE /calibration-factors/:uuid', () => {
     it('should soft delete a calibration factor', async () => {
       const createResponse = await request(ctx.app.getHttpServer())
-        .post('/calibration-factors')
+        .post(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: testEquipmentUuid,
@@ -340,7 +342,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         const factorVersion = createResponse.body.version;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`/calibration-factors/${factorId}?version=${factorVersion}`)
+          .delete(`${toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.DELETE(factorId))}?version=${factorVersion}`)
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -348,7 +350,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         expect(deleteResponse.body.deleted).toBe(true);
 
         await request(ctx.app.getHttpServer())
-          .get(`/calibration-factors/${factorId}`)
+          .get(toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.GET(factorId)))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(404);
       }
