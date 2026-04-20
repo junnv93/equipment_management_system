@@ -37,7 +37,7 @@ async function buildTemplateBuffer(): Promise<Buffer> {
 
 // ── Mock 헬퍼 ────────────────────────────────────────────────────────────
 
-const buildMockPlan = (overrides: Record<string, unknown> = {}) => ({
+const buildMockPlan = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   id: 'plan-uuid-1',
   year: 2025,
   siteId: 'suwon',
@@ -208,6 +208,26 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
     expect(dataRow.getCell(10).value).toBe('연간 교정 예정'); // 비고
   });
 
+  it('서명란 이름/날짜 주입 검증 (M19)', async () => {
+    const plan = buildMockPlan();
+    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
+    const sheet = wb.getWorksheet(Layout.SHEET_NAMES[0])!;
+
+    const nameRow = sheet.getRow(Layout.SIGNATURE_NAME_ROW);
+    expect(nameRow.getCell(Layout.SIGNATURE_COLS.author).value).toBe('수원 기술책임자');
+    expect(nameRow.getCell(Layout.SIGNATURE_COLS.reviewer).value).toBe('수원 품질책임자');
+    expect(nameRow.getCell(Layout.SIGNATURE_COLS.approver).value).toBe('수원 시험소장');
+
+    const dateRow = sheet.getRow(Layout.SIGNATURE_DATE_ROW);
+    // 작성일: createdAt=2025-01-05, 검토일: reviewedAt=2025-01-12, 승인일: approvedAt=2025-01-15
+    expect(String(dateRow.getCell(Layout.SIGNATURE_COLS.author).value)).toContain('2025');
+    expect(String(dateRow.getCell(Layout.SIGNATURE_COLS.reviewer).value)).toContain('2025');
+    expect(String(dateRow.getCell(Layout.SIGNATURE_COLS.approver).value)).toContain('2025');
+  });
+
   it('items가 0개일 때 Row 6부터 빈 셀 (clearTrailingRows 검증)', async () => {
     const plan = buildMockPlan({ items: [] });
     const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
@@ -219,6 +239,49 @@ describe('CalibrationPlanRendererService — xlsx 렌더링 (M19)', () => {
     // 샘플 Row 6이 비워졌어야 함
     const cell = sheet.getRow(Layout.DATA_START_ROW).getCell(1).value;
     expect(cell).toBeNull();
+  });
+
+  it('28개 항목 → spliceRows로 서명란 1행 push-down', async () => {
+    const makeItem = (seq: number): Record<string, unknown> => ({
+      id: `item-uuid-${seq}`,
+      planId: 'plan-uuid-1',
+      equipmentId: `equip-uuid-${seq}`,
+      sequenceNumber: seq,
+      snapshotManagementNumber: `SUW-E-${String(seq).padStart(3, '0')}`,
+      snapshotValidityDate: new Date('2022-09-01'),
+      snapshotCalibrationCycle: 12,
+      snapshotCalibrationAgency: 'HCT',
+      plannedCalibrationDate: new Date('2022-10-01'),
+      plannedCalibrationAgency: 'HCT',
+      actualCalibrationDate: null,
+      confirmedBy: null,
+      confirmedAt: null,
+      notes: null,
+      createdAt: new Date('2022-01-05'),
+      updatedAt: new Date('2022-01-05'),
+      actualCalibrationId: null,
+      equipment: { managementNumber: `SUW-E-${String(seq).padStart(3, '0')}`, name: `장비${seq}` },
+    });
+
+    const plan = buildMockPlan({
+      items: Array.from({ length: 28 }, (_, i) => makeItem(i + 1)),
+    });
+    const result = await rendererService.render(plan as unknown as CalibrationPlanDetail);
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(toExcelLoadableBuffer(result.buffer));
+    const sheet = wb.getWorksheet(Layout.SHEET_NAMES[0])!;
+
+    // 마지막 데이터 행(seq 28)은 Row 33 (DATA_START_ROW + 27 = 6 + 27 = 33)
+    expect(sheet.getRow(Layout.DATA_START_ROW + 27).getCell(1).value).toBe(28);
+
+    // 서명란 이름은 SIGNATURE_NAME_ROW + 1(extraRows=1) 위치에 있어야 함
+    const nameRow = sheet.getRow(Layout.SIGNATURE_NAME_ROW + 1);
+    expect(nameRow.getCell(Layout.SIGNATURE_COLS.author).value).toBe('수원 기술책임자');
+
+    // 서명란 날짜도 SIGNATURE_DATE_ROW + 1 위치
+    const dateRow = sheet.getRow(Layout.SIGNATURE_DATE_ROW + 1);
+    expect(String(dateRow.getCell(Layout.SIGNATURE_COLS.approver).value)).toContain('2025');
   });
 });
 
