@@ -489,6 +489,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: ^7.0.1
         version: 7.0.1(eslint@9.39.2(jiti@2.6.1))
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@20.17.27)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.15.24(@swc/helpers@0.5.21))(@types/node@20.17.27)(typescript@5.8.2))

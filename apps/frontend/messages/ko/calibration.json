@@ -75,6 +75,12 @@
   "planDetail": {
     "backToList": "교정계획 목록으로 돌아가기",
     "breadcrumbSuffix": "교정계획서",
+    "metadata": {
+      "title": "{year}년 교정계획서 - 장비 관리",
+      "description": "{site} 사이트의 {year}년 교정계획서 상세 내용을 확인합니다.",
+      "fallbackTitle": "교정계획서 상세 - 장비 관리",
+      "fallbackDescription": "교정계획서 상세 내용을 확인합니다."
+    },
     "error": {
       "title": "오류",
       "loadFailed": "교정계획서를 불러오는 중 오류가 발생했습니다."
@@ -116,6 +122,7 @@
     },
     "items": {
       "title": "교정 대상 장비 목록",
+      "tableAriaLabel": "교정계획서 항목 테이블, 스크롤 가능",
       "description": "총 {count}개의 장비가 포함되어 있습니다",
       "descriptionApproved": "승인 후 개별 항목 확인을 진행합니다",
       "empty": "계획서에 포함된 장비가 없습니다",
@@ -497,6 +504,7 @@
       "empty": "등록된 교정계획서가 없습니다"
     },
     "yearUnit": "{year}년",
+    "rowAriaLabel": "{year}년 {site} 교정계획서, 상태: {status}. 상세 보기",
     "table": {
       "year": "연도",
       "site": "시험소",

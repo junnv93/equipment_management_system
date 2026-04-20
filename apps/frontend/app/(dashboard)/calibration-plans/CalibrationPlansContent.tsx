@@ -422,12 +422,23 @@ export default function CalibrationPlansContent({
                 return (
                   <TableRow
                     key={key}
-                    className="cursor-pointer"
+                    className="relative cursor-pointer"
                     onClick={() => {
                       if (plan.id) router.push(`/calibration-plans/${plan.id}`);
                     }}
                   >
                     <TableCell className="font-semibold tabular-nums">
+                      {/* 행 전체를 키보드(Tab+Enter)로 접근 가능하게 하는 invisible overlay link */}
+                      <Link
+                        href={`/calibration-plans/${plan.id}`}
+                        className="absolute inset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
+                        aria-label={t('plansList.rowAriaLabel', {
+                          year: plan.year,
+                          site: siteLabels[plan.siteId as keyof typeof siteLabels] || plan.siteId,
+                          status: t(`planStatus.${plan.status}`),
+                        })}
+                        tabIndex={0}
+                      />
                       {t('plansList.yearUnit', { year: plan.year })}
                     </TableCell>
                     <TableCell>

@@ -1,7 +1,9 @@
 import { Suspense, cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { CalibrationPlanDetailClient } from '@/components/calibration/CalibrationPlanDetailClient';
+import { getTranslations } from 'next-intl/server';
+import { SITE_LABELS } from '@equipment-management/schemas';
+import { CalibrationPlanDetailClient } from '@/components/calibration-plans/CalibrationPlanDetailClient';
 import * as calibrationPlansApiServer from '@/lib/api/calibration-plans-api-server';
 import { isNotFoundError } from '@/lib/api/error';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -73,21 +75,18 @@ async function CalibrationPlanDetailAsync({
  */
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const { uuid } = await props.params;
+  const t = await getTranslations('calibration');
 
   try {
     const plan = await getCalibrationPlanCached(uuid);
-    return {
-      title: `${plan.year}년 교정계획서 - 장비 관리`,
-      description: `${plan.siteId} 사이트의 ${plan.year}년 교정계획서 상세 내용을 확인합니다.`,
-      openGraph: {
-        title: `${plan.year}년 교정계획서 - 장비 관리`,
-        description: `교정 대상 장비 목록, 일정, 승인 상태를 확인하세요.`,
-      },
-    };
+    const siteLabel = SITE_LABELS[plan.siteId as keyof typeof SITE_LABELS] ?? plan.siteId;
+    const title = t('planDetail.metadata.title', { year: plan.year });
+    const description = t('planDetail.metadata.description', { year: plan.year, site: siteLabel });
+    return { title, description, openGraph: { title, description } };
   } catch {
     return {
-      title: '교정계획서 상세 - 장비 관리',
-      description: `교정계획서 상세 내용을 확인합니다.`,
+      title: t('planDetail.metadata.fallbackTitle'),
+      description: t('planDetail.metadata.fallbackDescription'),
     };
   }
 }

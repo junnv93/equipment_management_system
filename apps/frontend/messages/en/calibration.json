@@ -75,6 +75,12 @@
   "planDetail": {
     "backToList": "Back to calibration plans",
     "breadcrumbSuffix": "Calibration Plan",
+    "metadata": {
+      "title": "{year} Calibration Plan - Equipment Management",
+      "description": "View the {year} calibration plan details for site {site}.",
+      "fallbackTitle": "Calibration Plan Detail - Equipment Management",
+      "fallbackDescription": "View calibration plan details."
+    },
     "error": {
       "title": "Error",
       "loadFailed": "An error occurred while loading the calibration plan."
@@ -116,6 +122,7 @@
     },
     "items": {
       "title": "Calibration Equipment List",
+      "tableAriaLabel": "Calibration plan items table, scrollable",
       "description": "{count} equipment included",
       "descriptionApproved": "Confirm each item after approval",
       "empty": "No equipment in this plan",
@@ -491,6 +498,7 @@
       "empty": "No calibration plans found"
     },
     "yearUnit": "{year}",
+    "rowAriaLabel": "{year} {site} Calibration Plan, status: {status}. View details",
     "table": {
       "year": "Year",
       "site": "Laboratory",

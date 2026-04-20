@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Dialog,
@@ -24,8 +25,9 @@ import {
 import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration-plans-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
-import { isConflictError } from '@/lib/api/error';
 import { getDownloadErrorToast } from '@/lib/errors/download-error-utils';
+import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
+import { isCalibrationPlanExportable } from '@/lib/utils/calibration-plan-exportability';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { resolveDisplayName } from '@/lib/utils/display-name';
@@ -137,46 +139,13 @@ export function CalibrationPlanDetailClient({
   const invalidateAfterChange = () =>
     CalibrationPlansCacheInvalidation.invalidateAfterStatusChange(queryClient, planUuid);
 
-  /**
-   * 최신 casVersion을 조회하여 반환 (Stale CAS 방지)
-   * 다단계 승인(3-step)에서 각 단계마다 casVersion이 증가하므로,
-   * 캐시된 plan?.casVersion이 stale일 수 있음 → 항상 최신 조회
-   */
-  const getLatestCasVersion = async (): Promise<number> => {
-    const latest = await calibrationPlansApi.getCalibrationPlan(planUuid);
-    return latest.casVersion;
-  };
-
-  /**
-   * 공통 에러 핸들러 — VERSION_CONFLICT / 일반 에러 분기
-   */
-  const handleMutationError = (
-    error: Error & { response?: { data?: { message?: string } } },
-    errorTitleKey: string,
-    errorDescKey: string
-  ) => {
-    if (isConflictError(error)) {
-      toast({
-        title: t('planDetail.toasts.versionConflict'),
-        description: t('planDetail.toasts.versionConflictDesc'),
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: t(errorTitleKey as Parameters<typeof t>[0]),
-        description: error.response?.data?.message || t(errorDescKey as Parameters<typeof t>[0]),
-        variant: 'destructive',
-      });
-    }
-    invalidateAfterChange();
-  };
+  const fetchCasVersion = () =>
+    calibrationPlansApi.getCalibrationPlan(planUuid).then((p) => p.casVersion);
 
   // 검토 요청 뮤테이션 (기술책임자 → 품질책임자)
-  const submitForReviewMutation = useMutation({
-    mutationFn: async () => {
-      const casVersion = await getLatestCasVersion();
-      return calibrationPlansApi.submitForReview(planUuid, { casVersion });
-    },
+  const submitForReviewMutation = useCasGuardedMutation({
+    fetchCasVersion,
+    mutationFn: (_, casVersion) => calibrationPlansApi.submitForReview(planUuid, { casVersion }),
     onSuccess: () => {
       toast({
         title: t('planDetail.toasts.submitForReviewSuccess'),
@@ -185,20 +154,22 @@ export function CalibrationPlanDetailClient({
       invalidateAfterChange();
       setIsSubmitDialogOpen(false);
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) =>
-      handleMutationError(
-        error,
-        'planDetail.toasts.submitForReviewError',
-        'planDetail.toasts.submitForReviewErrorDesc'
-      ),
+    onError: (error) => {
+      toast({
+        title: t('planDetail.toasts.submitForReviewError'),
+        description:
+          error.response?.data?.message || t('planDetail.toasts.submitForReviewErrorDesc'),
+        variant: 'destructive',
+      });
+      invalidateAfterChange();
+    },
   });
 
   // 최종 승인 뮤테이션 (시험소장)
-  const approveMutation = useMutation({
-    mutationFn: async () => {
-      const casVersion = await getLatestCasVersion();
-      return calibrationPlansApi.approveCalibrationPlan(planUuid, { casVersion });
-    },
+  const approveMutation = useCasGuardedMutation({
+    fetchCasVersion,
+    mutationFn: (_, casVersion) =>
+      calibrationPlansApi.approveCalibrationPlan(planUuid, { casVersion }),
     onSuccess: () => {
       toast({
         title: t('planDetail.toasts.approveSuccess'),
@@ -207,20 +178,21 @@ export function CalibrationPlanDetailClient({
       invalidateAfterChange();
       setIsApproveDialogOpen(false);
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) =>
-      handleMutationError(
-        error,
-        'planDetail.toasts.approveError',
-        'planDetail.toasts.approveErrorDesc'
-      ),
+    onError: (error) => {
+      toast({
+        title: t('planDetail.toasts.approveError'),
+        description: error.response?.data?.message || t('planDetail.toasts.approveErrorDesc'),
+        variant: 'destructive',
+      });
+      invalidateAfterChange();
+    },
   });
 
-  // 반려 뮤테이션 (품질책임자 또는 시험소장)
-  const rejectMutation = useMutation({
-    mutationFn: async () => {
-      const casVersion = await getLatestCasVersion();
-      return calibrationPlansApi.rejectCalibrationPlan(planUuid, { casVersion, rejectionReason });
-    },
+  // 반려 뮤테이션 (품질책임자 또는 시험소장) — rejectionReason은 클로저로 캡처
+  const rejectMutation = useCasGuardedMutation({
+    fetchCasVersion,
+    mutationFn: (_, casVersion) =>
+      calibrationPlansApi.rejectCalibrationPlan(planUuid, { casVersion, rejectionReason }),
     onSuccess: () => {
       toast({
         title: t('planDetail.toasts.rejectSuccess'),
@@ -230,12 +202,14 @@ export function CalibrationPlanDetailClient({
       setIsRejectDialogOpen(false);
       setRejectionReason('');
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) =>
-      handleMutationError(
-        error,
-        'planDetail.toasts.rejectError',
-        'planDetail.toasts.rejectErrorDesc'
-      ),
+    onError: (error) => {
+      toast({
+        title: t('planDetail.toasts.rejectError'),
+        description: error.response?.data?.message || t('planDetail.toasts.rejectErrorDesc'),
+        variant: 'destructive',
+      });
+      invalidateAfterChange();
+    },
   });
 
   // 삭제 뮤테이션
@@ -310,6 +284,7 @@ export function CalibrationPlanDetailClient({
   const canReject =
     (isPendingApproval || isPendingReview) && can(Permission.REJECT_CALIBRATION_PLAN);
   const canDelete = isDraft && can(Permission.DELETE_CALIBRATION_PLAN);
+  const canExport = isCalibrationPlanExportable(plan.status) && can(Permission.EXPORT_REPORTS);
 
   return (
     <div className={getPageContainerClasses()}>
@@ -340,7 +315,7 @@ export function CalibrationPlanDetailClient({
           </div>
         </div>
         <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.actionsGroup}>
-          {isApproved && (
+          {canExport && (
             <Button
               variant="outline"
               onClick={handleExportExcel}
@@ -516,10 +491,12 @@ export function CalibrationPlanDetailClient({
             <DialogDescription>{t('planDetail.dialogs.reject.description')}</DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <label className="text-sm font-medium">
+            <Label htmlFor="reject-reason" className="text-sm font-medium">
               {t('planDetail.dialogs.reject.reasonLabel')}
-            </label>
+            </Label>
             <Textarea
+              id="reject-reason"
+              aria-required
               className="mt-2"
               rows={3}
               placeholder={t('planDetail.dialogs.reject.reasonPlaceholder')}

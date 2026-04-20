@@ -58,6 +58,7 @@ import { CurrentEnforcedScope } from '../../common/decorators/current-scope.deco
 import type { EnforcedScope } from '../../common/scope/scope-enforcer';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { extractUserId, enforceSiteAccess } from '../../common/utils';
 import type {
   CalibrationPlanDetail,
@@ -376,7 +377,8 @@ export class CalibrationPlansController {
   @ApiProduces('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   @ApiResponse({ status: HttpStatus.OK, description: 'Excel 파일 다운로드' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
-  @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
+  @SkipResponseTransform()
+  @RequirePermissions(Permission.EXPORT_REPORTS)
   @AuditLog({ action: 'export', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   async exportExcel(
     @Param('uuid', ParseUUIDPipe) uuid: string,

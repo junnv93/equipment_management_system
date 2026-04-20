@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
@@ -64,10 +65,12 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
   const invalidateAfterChange = () =>
     CalibrationPlansCacheInvalidation.invalidateAfterStatusChange(queryClient, planUuid);
 
-  const reviewMutation = useMutation({
-    mutationFn: () =>
+  const reviewMutation = useCasGuardedMutation({
+    fetchCasVersion: () =>
+      calibrationPlansApi.getCalibrationPlan(planUuid).then((p) => p.casVersion),
+    mutationFn: (_, casVersion) =>
       calibrationPlansApi.reviewCalibrationPlan(planUuid, {
-        casVersion: plan.casVersion ?? 0,
+        casVersion,
         reviewComment: reviewComment || undefined,
       }),
     onSuccess: () => {
@@ -79,7 +82,7 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
       setShowReviewComment(false);
       setReviewComment('');
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+    onError: (error) => {
       toast({
         title: t('planDetail.toasts.reviewError'),
         description: error.response?.data?.message || t('planDetail.toasts.reviewErrorDesc'),

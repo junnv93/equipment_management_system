@@ -12,7 +12,7 @@ import {
   CALIBRATION_PLAN_STATUS_LABELS as SSOT_STATUS_LABELS,
   SITE_LABELS as SSOT_SITE_LABELS,
 } from '@equipment-management/schemas';
-import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { API_ENDPOINTS, FORM_CATALOG } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export type { CalibrationPlanStatus, Site };
@@ -369,7 +369,7 @@ const calibrationPlansApi = {
   downloadExcel: async (uuid: string): Promise<void> => {
     await downloadFile({
       url: API_ENDPOINTS.CALIBRATION_PLANS.EXPORT(uuid),
-      filename: `교정계획서_${uuid.slice(0, 8)}.xlsx`,
+      filename: `${FORM_CATALOG['UL-QP-19-01'].formNumber}_${FORM_CATALOG['UL-QP-19-01'].name.replace(/\s+/g, '')}_${uuid.slice(0, 8)}.xlsx`,
     });
   },
 
