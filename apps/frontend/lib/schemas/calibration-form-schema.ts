@@ -13,15 +13,15 @@ export const createCalibrationFormSchema = (t: (key: string) => string) =>
   z
     .object({
       equipmentId: uuidString(),
-      calibrationDate: z.date({ required_error: t('calibration.form.dateRequired') }),
-      nextCalibrationDate: z.date({ required_error: t('calibration.form.nextDateRequired') }),
+      calibrationDate: z.date({ error: t('calibration.form.dateRequired') }),
+      nextCalibrationDate: z.date({ error: t('calibration.form.nextDateRequired') }),
       calibrationCycle: z.coerce
-        .number({ invalid_type_error: t('calibration.form.cycleInvalid') })
+        .number({ error: t('calibration.form.cycleInvalid') })
         .int()
         .min(1)
         .max(60),
       calibrationAgency: z
-        .string({ required_error: t('calibration.form.agencyRequired') })
+        .string({ error: t('calibration.form.agencyRequired') })
         .min(1, t('calibration.form.agencyRequired'))
         .max(100),
       certificateNumber: z.string().max(100).optional(),
