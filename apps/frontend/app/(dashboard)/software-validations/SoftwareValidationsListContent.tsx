@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { softwareValidationApi, type SoftwareValidation } from '@/lib/api/software-api';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
@@ -46,6 +46,7 @@ export default function SoftwareValidationsListContent() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.softwareValidations.lists(),
     queryFn: () => softwareValidationApi.listAll(),
+    ...QUERY_CONFIG.SOFTWARE_VALIDATION_LIST,
   });
 
   const validations = data?.data ?? [];

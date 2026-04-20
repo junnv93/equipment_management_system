@@ -89,6 +89,10 @@ export const softwareValidations = pgTable(
   },
   (table) => ({
     testSoftwareIdIdx: index('software_validations_test_software_id_idx').on(table.testSoftwareId),
+    testSoftwareIdStatusIdx: index('software_validations_test_software_id_status_idx').on(
+      table.testSoftwareId,
+      table.status
+    ),
     statusIdx: index('software_validations_status_idx').on(table.status),
     validationTypeIdx: index('software_validations_validation_type_idx').on(table.validationType),
     receivedByIdx: index('software_validations_received_by_idx').on(table.receivedBy),

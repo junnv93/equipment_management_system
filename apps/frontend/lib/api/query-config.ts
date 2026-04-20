@@ -299,13 +299,8 @@ export const QUERY_CONFIG = {
   /** 양식 템플릿 목록/이력 - STATIC (관리자 업로드 시에만 변경) */
   FORM_TEMPLATES: REFETCH_STRATEGIES.STATIC,
 
-  /** 소프트웨어 유효성 확인 목록 - SHORT (pending 탭은 승인 대기 빈도 높음) */
-  SOFTWARE_VALIDATION_LIST: {
-    staleTime: CACHE_TIMES.SHORT,
-    gcTime: CACHE_TIMES.MEDIUM,
-    refetchOnWindowFocus: true,
-    retry: 2,
-  },
+  /** 소프트웨어 유효성 확인 목록 - IMPORTANT (2분 폴링) */
+  SOFTWARE_VALIDATION_LIST: REFETCH_STRATEGIES.IMPORTANT,
 
   /** 소프트웨어 유효성 확인 대기 목록 - IMPORTANT (승인자 UX: 빠른 갱신) */
   SOFTWARE_VALIDATION_PENDING: {
