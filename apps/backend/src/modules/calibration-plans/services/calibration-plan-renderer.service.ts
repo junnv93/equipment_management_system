@@ -45,13 +45,11 @@ export class CalibrationPlanRendererService {
       fallbackToFirst: true,
     });
 
-    // Row 1 제목 업데이트 — rich text 덮어쓰기 후 폰트 명시 복원
     const titleCell = sheet.getRow(1).getCell(1);
     titleCell.value = `${plan.year}년 ${siteLabel} 연간 교정 계획서`;
     titleCell.font = { bold: true, size: 18, name: '맑은 고딕', charset: 129 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // 첫 데이터 행 스타일 참조 (템플릿 보존용)
     const styles = captureRowStyles(sheet, Layout.DATA_START_ROW, Layout.COLUMN_COUNT);
 
     // 항목 수가 템플릿 행 수(27)를 초과하면 서명란 바로 앞에 빈 행을 삽입하여 서명란을 아래로 밀어낸다.
@@ -94,7 +92,6 @@ export class CalibrationPlanRendererService {
       }
     });
 
-    // 미사용 템플릿 행 제거 (항목 수 < 27인 경우에만 유효)
     if (items.length < Layout.TEMPLATE_DATA_ROW_COUNT) {
       clearTrailingRows(
         sheet,
