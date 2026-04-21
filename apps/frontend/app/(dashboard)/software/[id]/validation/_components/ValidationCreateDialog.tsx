@@ -20,14 +20,15 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserCombobox } from '@/components/ui/user-combobox';
-import { VALIDATION_TYPE_VALUES, ValidationTypeValues } from '@equipment-management/schemas';
+import {
+  VALIDATION_TYPE_VALUES,
+  ValidationTypeValues,
+  type AcquisitionOrProcessingItem,
+  type ControlItem,
+} from '@equipment-management/schemas';
 import type { ValidationType } from '@equipment-management/schemas';
 import { ValidationFunctionsTable } from './ValidationFunctionsTable';
 import { ValidationControlTable } from './ValidationControlTable';
-
-export interface FunctionItem {
-  [key: string]: string;
-}
 
 export interface CreateFormState {
   validationType: ValidationType | '';
@@ -43,9 +44,9 @@ export interface CreateFormState {
   softwareComponents: string;
   hardwareComponents: string;
   performedBy: string;
-  acquisitionFunctions: FunctionItem[];
-  processingFunctions: FunctionItem[];
-  controlFunctions: FunctionItem[];
+  acquisitionFunctions: AcquisitionOrProcessingItem[];
+  processingFunctions: AcquisitionOrProcessingItem[];
+  controlFunctions: ControlItem[];
 }
 
 interface ValidationCreateDialogProps {

@@ -5,11 +5,11 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { FunctionItem } from './ValidationCreateDialog';
+import type { ControlItem } from '@equipment-management/schemas';
 
 interface ValidationControlTableProps {
-  items: FunctionItem[];
-  onItemsChange: (items: FunctionItem[]) => void;
+  items: ControlItem[];
+  onItemsChange: (items: ControlItem[]) => void;
 }
 
 export function ValidationControlTable({ items, onItemsChange }: ValidationControlTableProps) {
@@ -19,9 +19,9 @@ export function ValidationControlTable({ items, onItemsChange }: ValidationContr
     onItemsChange([
       ...items,
       {
-        controlEquipmentFunction: '',
+        equipmentFunction: '',
         expectedFunction: '',
-        verificationFunction: '',
+        observedFunction: '',
         independentMethod: '',
         acceptanceCriteria: '',
       },
@@ -29,7 +29,7 @@ export function ValidationControlTable({ items, onItemsChange }: ValidationContr
 
   const removeItem = (idx: number) => onItemsChange(items.filter((_, i) => i !== idx));
 
-  const updateItem = (idx: number, field: string, value: string) => {
+  const updateItem = (idx: number, field: keyof ControlItem, value: string) => {
     const updated = [...items];
     updated[idx] = { ...updated[idx], [field]: value };
     onItemsChange(updated);
@@ -61,9 +61,9 @@ export function ValidationControlTable({ items, onItemsChange }: ValidationContr
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                ['controlEquipmentFunction', 'controlEquipmentFunctionPlaceholder'],
+                ['equipmentFunction', 'equipmentFunctionPlaceholder'],
                 ['expectedFunction', 'expectedFunctionPlaceholder'],
-                ['verificationFunction', 'verificationFunctionPlaceholder'],
+                ['observedFunction', 'observedFunctionPlaceholder'],
                 ['independentMethod', 'independentMethodPlaceholder'],
               ] as const
             ).map(([field, placeholder]) => (

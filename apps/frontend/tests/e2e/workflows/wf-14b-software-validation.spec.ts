@@ -122,21 +122,21 @@ test.describe('WF-14b: 소프트웨어 유효성 확인', () => {
         hardwareComponents: 'EX3DV4 프로브, CDA-5 로봇',
         acquisitionFunctions: [
           {
-            functionName: 'SAR 측정 데이터 획득',
+            name: 'SAR 측정 데이터 획득',
             independentMethod: '수동 프로브 스캔 비교',
             acceptanceCriteria: '차이 < 5%',
           },
         ],
         processingFunctions: [
           {
-            functionName: 'SAR 값 계산',
+            name: 'SAR 값 계산',
             independentMethod: '수동 계산 비교',
             acceptanceCriteria: '차이 < 3%',
           },
         ],
         controlFunctions: [
           {
-            controlledFunction: '로봇 이동 제어',
+            equipmentFunction: '로봇 이동 제어',
             expectedFunction: 'XYZ 좌표 이동',
             observedFunction: '정상 이동 확인',
             independentMethod: '물리적 위치 확인',
@@ -366,21 +366,21 @@ test.describe('WF-14b: 소프트웨어 유효성 확인', () => {
         hardwareComponents: 'EX3DV4 프로브',
         acquisitionFunctions: [
           {
-            functionName: 'T6 데이터 획득',
+            name: 'T6 데이터 획득',
             independentMethod: '수동 스캔',
             acceptanceCriteria: '차이 < 5%',
           },
         ],
         processingFunctions: [
           {
-            functionName: 'T6 데이터 처리',
+            name: 'T6 데이터 처리',
             independentMethod: '수동 계산',
             acceptanceCriteria: '차이 < 3%',
           },
         ],
         controlFunctions: [
           {
-            controlledFunction: '로봇 이동 제어',
+            equipmentFunction: '로봇 이동 제어',
             expectedFunction: 'XYZ 좌표 이동',
             observedFunction: '정상 이동 확인',
             independentMethod: '물리적 위치 확인',

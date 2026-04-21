@@ -123,19 +123,20 @@ export function ValidationActionsBar({
             {t('validation.actions.qualityApprove')}
           </Button>
         )}
-      {v.status === ValidationStatusValues.REJECTED && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            reviseMutation.mutate({ id: v.id, version: v.version });
-          }}
-          disabled={reviseMutation.isPending}
-        >
-          {t('validation.actions.revise')}
-        </Button>
-      )}
+      {v.status === ValidationStatusValues.REJECTED &&
+        can(Permission.SUBMIT_SOFTWARE_VALIDATION) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              reviseMutation.mutate({ id: v.id, version: v.version });
+            }}
+            disabled={reviseMutation.isPending}
+          >
+            {t('validation.actions.revise')}
+          </Button>
+        )}
     </div>
   );
 }

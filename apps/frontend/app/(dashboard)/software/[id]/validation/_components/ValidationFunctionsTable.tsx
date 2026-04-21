@@ -5,13 +5,13 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { FunctionItem } from './ValidationCreateDialog';
+import type { AcquisitionOrProcessingItem } from '@equipment-management/schemas';
 
 interface ValidationFunctionsTableProps {
   title: string;
   description: string;
-  items: FunctionItem[];
-  onItemsChange: (items: FunctionItem[]) => void;
+  items: AcquisitionOrProcessingItem[];
+  onItemsChange: (items: AcquisitionOrProcessingItem[]) => void;
 }
 
 export function ValidationFunctionsTable({
@@ -23,11 +23,11 @@ export function ValidationFunctionsTable({
   const t = useTranslations('software');
 
   const addItem = () =>
-    onItemsChange([...items, { functionName: '', independentMethod: '', acceptanceCriteria: '' }]);
+    onItemsChange([...items, { name: '', independentMethod: '', acceptanceCriteria: '' }]);
 
   const removeItem = (idx: number) => onItemsChange(items.filter((_, i) => i !== idx));
 
-  const updateItem = (idx: number, field: string, value: string) => {
+  const updateItem = (idx: number, field: keyof AcquisitionOrProcessingItem, value: string) => {
     const updated = [...items];
     updated[idx] = { ...updated[idx], [field]: value };
     onItemsChange(updated);
@@ -53,8 +53,8 @@ export function ValidationFunctionsTable({
           <div className="space-y-1">
             <Label className="text-xs">{t('validation.form.functionName')}</Label>
             <Input
-              value={item.functionName ?? ''}
-              onChange={(e) => updateItem(idx, 'functionName', e.target.value)}
+              value={item.name ?? ''}
+              onChange={(e) => updateItem(idx, 'name', e.target.value)}
               placeholder={t('validation.form.functionNamePlaceholder')}
             />
           </div>

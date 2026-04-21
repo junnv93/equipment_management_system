@@ -84,6 +84,9 @@ export function ValidationEditDialog({
       queryClient.invalidateQueries({
         queryKey: queryKeys.softwareValidations.byTestSoftware(softwareId),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.softwareValidations.lists(),
+      });
     },
     onError: () => {
       toast({ title: t('toast.error'), variant: 'destructive' });
