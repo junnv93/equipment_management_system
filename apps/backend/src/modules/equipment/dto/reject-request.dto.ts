@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { VM } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
@@ -8,5 +9,5 @@ export const rejectRequestSchema = z.object({
   ...versionedSchema,
 });
 
-export type RejectRequestDto = z.infer<typeof rejectRequestSchema>;
+export class RejectRequestDto extends createZodDto(rejectRequestSchema) {}
 export const RejectRequestPipe = new ZodValidationPipe(rejectRequestSchema);

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { ApprovalActionEnum, type ApprovalAction } from '@equipment-management/schemas';
@@ -12,7 +13,9 @@ const approveEquipmentRequestLocalSchema = z.object({
   ...versionedSchema,
 });
 
-export type ApproveEquipmentRequestLocalDto = z.infer<typeof approveEquipmentRequestLocalSchema>;
+export class ApproveEquipmentRequestLocalDto extends createZodDto(
+  approveEquipmentRequestLocalSchema
+) {}
 
 /**
  * 장비 요청 승인/반려 DTO

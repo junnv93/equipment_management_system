@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
@@ -12,5 +13,5 @@ export const approveRequestBodySchema = z.object({
   ...versionedSchema,
 });
 
-export type ApproveRequestBodyDto = z.infer<typeof approveRequestBodySchema>;
+export class ApproveRequestBodyDto extends createZodDto(approveRequestBodySchema) {}
 export const ApproveRequestBodyPipe = new ZodValidationPipe(approveRequestBodySchema);

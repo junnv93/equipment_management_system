@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { NotificationPriorityEnum } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -8,5 +9,5 @@ export const createSystemNotificationSchema = z.object({
   priority: NotificationPriorityEnum.optional().default('medium'),
 });
 
-export type CreateSystemNotificationDto = z.infer<typeof createSystemNotificationSchema>;
+export class CreateSystemNotificationDto extends createZodDto(createSystemNotificationSchema) {}
 export const CreateSystemNotificationPipe = new ZodValidationPipe(createSystemNotificationSchema);

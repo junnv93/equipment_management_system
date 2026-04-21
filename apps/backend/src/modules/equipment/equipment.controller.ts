@@ -60,14 +60,14 @@ import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import {
   CreateSharedEquipmentValidationPipe,
-  type CreateSharedEquipmentDto,
+  CreateSharedEquipmentDto,
 } from './dto/create-shared-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
-import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.dto';
-import { ApproveRequestBodyPipe, type ApproveRequestBodyDto } from './dto/approve-request-body.dto';
+import { RejectRequestPipe, RejectRequestDto } from './dto/reject-request.dto';
+import { ApproveRequestBodyPipe, ApproveRequestBodyDto } from './dto/approve-request-body.dto';
 import { ParseManagementNumberPipe } from './dto/management-number-param.pipe';
 import { Throttle } from '@nestjs/throttler';
 import type {

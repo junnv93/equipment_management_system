@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { DIGEST_TIME_OPTIONS } from '@equipment-management/shared-constants';
 
@@ -19,7 +20,7 @@ export const updateNotificationSettingsSchema = z
   })
   .strict();
 
-export type UpdateNotificationSettingsDto = z.infer<typeof updateNotificationSettingsSchema>;
+export class UpdateNotificationSettingsDto extends createZodDto(updateNotificationSettingsSchema) {}
 export const UpdateNotificationSettingsPipe = new ZodValidationPipe(
   updateNotificationSettingsSchema
 );

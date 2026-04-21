@@ -1,18 +1,13 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
-  ClassificationEnum, // ← TeamTypeEnum → ClassificationEnum
+  ClassificationEnum,
   SiteEnum,
   CLASSIFICATION_TO_CODE,
-  type Classification, // ← TeamType → Classification
-  type ClassificationCode,
-  type Site,
   nullableOptionalUuid,
   VM,
 } from '@equipment-management/schemas';
-
-// ========== Zod 스키마 정의 ==========
 
 /**
  * 팀 업데이트 스키마
@@ -22,7 +17,7 @@ import {
  */
 export const updateTeamSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  classification: ClassificationEnum.optional(), // ← type → classification
+  classification: ClassificationEnum.optional(),
   site: SiteEnum.optional(),
   classificationCode: z
     .enum(Object.values(CLASSIFICATION_TO_CODE) as [string, ...string[]])
@@ -31,39 +26,5 @@ export const updateTeamSchema = z.object({
   leaderId: nullableOptionalUuid(VM.uuid.invalid('팀장')),
 });
 
-export type UpdateTeamDto = z.infer<typeof updateTeamSchema>;
+export class UpdateTeamDto extends createZodDto(updateTeamSchema) {}
 export const UpdateTeamValidationPipe = new ZodValidationPipe(updateTeamSchema);
-
-// ========== Swagger 문서화용 클래스 ==========
-
-export class UpdateTeamSwaggerDto {
-  @ApiPropertyOptional({ description: '팀 이름', example: 'FCC EMC/RF 테스트팀' })
-  name?: string;
-
-  @ApiPropertyOptional({
-    description: '팀 분류 (장비 분류와 동일, 소문자_언더스코어)',
-    enum: ClassificationEnum.options,
-  })
-  classification?: Classification; // ← type → classification
-
-  @ApiPropertyOptional({
-    description: '팀 소속 사이트',
-    enum: SiteEnum.options,
-  })
-  site?: Site;
-
-  @ApiPropertyOptional({
-    description: '분류코드',
-    enum: Object.values(CLASSIFICATION_TO_CODE),
-  })
-  classificationCode?: ClassificationCode;
-
-  @ApiPropertyOptional({ description: '팀 설명' })
-  description?: string;
-
-  @ApiPropertyOptional({
-    description: '팀장 ID (null = 팀장 해제)',
-    nullable: true,
-  })
-  leaderId?: string | null;
-}

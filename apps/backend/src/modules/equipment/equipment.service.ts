@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
-import type { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
+import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import

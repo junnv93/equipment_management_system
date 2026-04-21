@@ -29,11 +29,11 @@ import {
 } from './dto/notification-query.dto';
 import {
   UpdateNotificationSettingsPipe,
-  type UpdateNotificationSettingsDto,
+  UpdateNotificationSettingsDto,
 } from './dto/update-notification-settings.dto';
 import {
   CreateSystemNotificationPipe,
-  type CreateSystemNotificationDto,
+  CreateSystemNotificationDto,
 } from './dto/create-system-notification.dto';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
