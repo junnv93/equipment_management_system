@@ -220,9 +220,7 @@ export enum Permission {
 }
 
 /**
- * 권한 라벨 (UI 표시용)
- *
- * @remarks 서버 사이드 전용 — 프론트엔드 UI 표시에는 i18n 메시지(settings.profile.permissions.labels.*)를 사용하세요.
+ * 권한 라벨 — 한국어 (백엔드 감사로그, 알림 메시지 등 서버 사이드 렌더링에 사용)
  */
 export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.VIEW_EQUIPMENT]: '장비 조회',
@@ -333,4 +331,132 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
   [Permission.PERFORM_DATA_MIGRATION]: '데이터 마이그레이션 실행',
   [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',
+};
+
+/**
+ * 권한 라벨 — 영어 (프론트엔드 en 로케일 렌더링)
+ *
+ * Record<Permission, string> 타입이 컴파일 타임에 완전성을 강제.
+ * 새 Permission enum 값 추가 시 이 객체에 영어 라벨을 추가하지 않으면 tsc 에러 발생.
+ */
+export const PERMISSION_LABELS_EN: Record<Permission, string> = {
+  [Permission.VIEW_EQUIPMENT]: 'View Equipment',
+  [Permission.CREATE_EQUIPMENT]: 'Create Equipment',
+  [Permission.UPDATE_EQUIPMENT]: 'Update Equipment',
+  [Permission.DELETE_EQUIPMENT]: 'Delete Equipment',
+  [Permission.APPROVE_EQUIPMENT]: 'Approve Equipment',
+  [Permission.REJECT_EQUIPMENT]: 'Reject Equipment',
+  [Permission.VIEW_EQUIPMENT_REQUESTS]: 'View Equipment Requests',
+
+  [Permission.VIEW_CHECKOUTS]: 'View Checkouts',
+  [Permission.CREATE_CHECKOUT]: 'Create Checkout',
+  [Permission.UPDATE_CHECKOUT]: 'Update Checkout',
+  [Permission.DELETE_CHECKOUT]: 'Delete Checkout',
+  [Permission.APPROVE_CHECKOUT]: 'Approve Checkout',
+  [Permission.REJECT_CHECKOUT]: 'Reject Checkout',
+  [Permission.START_CHECKOUT]: 'Start Checkout',
+  [Permission.COMPLETE_CHECKOUT]: 'Complete Return',
+  [Permission.CANCEL_CHECKOUT]: 'Cancel Checkout',
+
+  [Permission.VIEW_CALIBRATIONS]: 'View Calibrations',
+  [Permission.CREATE_CALIBRATION]: 'Create Calibration',
+  [Permission.UPDATE_CALIBRATION]: 'Update Calibration',
+  [Permission.DELETE_CALIBRATION]: 'Delete Calibration',
+  [Permission.APPROVE_CALIBRATION]: 'Approve Calibration',
+  [Permission.VIEW_CALIBRATION_REQUESTS]: 'View Calibration Requests',
+
+  [Permission.VIEW_CALIBRATION_FACTORS]: 'View Calibration Factors',
+  [Permission.CREATE_CALIBRATION_FACTOR]: 'Create Calibration Factor',
+  [Permission.APPROVE_CALIBRATION_FACTOR]: 'Approve Calibration Factor',
+  [Permission.VIEW_CALIBRATION_FACTOR_REQUESTS]: 'View Calibration Factor Requests',
+
+  [Permission.VIEW_NON_CONFORMANCES]: 'View Non-Conformances',
+  [Permission.CREATE_NON_CONFORMANCE]: 'Create Non-Conformance',
+  [Permission.UPDATE_NON_CONFORMANCE]: 'Update Non-Conformance',
+  [Permission.CLOSE_NON_CONFORMANCE]: 'Close Non-Conformance',
+  [Permission.UPLOAD_NON_CONFORMANCE_ATTACHMENT]: 'Upload Non-Conformance Attachment',
+  [Permission.DELETE_NON_CONFORMANCE_ATTACHMENT]: 'Delete Non-Conformance Attachment',
+
+  [Permission.VIEW_TEST_SOFTWARE]: 'View Test Software',
+  [Permission.CREATE_TEST_SOFTWARE]: 'Create Test Software',
+  [Permission.UPDATE_TEST_SOFTWARE]: 'Update Test Software',
+  [Permission.VIEW_SOFTWARE_VALIDATIONS]: 'View Software Validations',
+  [Permission.CREATE_SOFTWARE_VALIDATION]: 'Create Software Validation',
+  [Permission.SUBMIT_SOFTWARE_VALIDATION]: 'Submit Software Validation',
+  [Permission.APPROVE_SOFTWARE_VALIDATION]: 'Approve Software Validation',
+  [Permission.APPROVE_TECH_SOFTWARE_VALIDATION]: 'Approve Software Validation (Technical)',
+  [Permission.APPROVE_QUALITY_SOFTWARE_VALIDATION]: 'Approve Software Validation (Quality)',
+  [Permission.REVALIDATE_SOFTWARE_VALIDATION]: 'Request Software Re-validation',
+
+  [Permission.VIEW_TEAMS]: 'View Teams',
+  [Permission.CREATE_TEAMS]: 'Create Teams',
+  [Permission.UPDATE_TEAMS]: 'Update Teams',
+  [Permission.DELETE_TEAMS]: 'Delete Teams',
+
+  [Permission.VIEW_USERS]: 'View Users',
+  [Permission.UPDATE_USERS]: 'Update Users',
+  [Permission.MANAGE_ROLES]: 'Manage Roles',
+
+  [Permission.VIEW_NOTIFICATIONS]: 'View Notifications',
+  [Permission.UPDATE_NOTIFICATION]: 'Update Notification',
+  [Permission.DELETE_NOTIFICATION]: 'Delete Notification',
+  [Permission.CREATE_SYSTEM_NOTIFICATION]: 'Create System Notification',
+
+  [Permission.VIEW_STATISTICS]: 'View Statistics',
+  [Permission.EXPORT_REPORTS]: 'Export Reports',
+
+  [Permission.VIEW_CALIBRATION_PLANS]: 'View Calibration Plans',
+  [Permission.CREATE_CALIBRATION_PLAN]: 'Create Calibration Plan',
+  [Permission.UPDATE_CALIBRATION_PLAN]: 'Update Calibration Plan',
+  [Permission.DELETE_CALIBRATION_PLAN]: 'Delete Calibration Plan',
+  [Permission.SUBMIT_CALIBRATION_PLAN]: 'Submit Calibration Plan',
+  [Permission.REVIEW_CALIBRATION_PLAN]: 'Review Calibration Plan',
+  [Permission.APPROVE_CALIBRATION_PLAN]: 'Approve Calibration Plan',
+  [Permission.REJECT_CALIBRATION_PLAN]: 'Reject Calibration Plan',
+  [Permission.CONFIRM_CALIBRATION_PLAN_ITEM]: 'Confirm Calibration Plan Item',
+
+  [Permission.VIEW_AUDIT_LOGS]: 'View Audit Logs',
+
+  [Permission.REQUEST_DISPOSAL]: 'Request Disposal',
+  [Permission.REVIEW_DISPOSAL]: 'Review Disposal',
+  [Permission.APPROVE_DISPOSAL]: 'Approve Disposal',
+
+  [Permission.VIEW_EQUIPMENT_IMPORTS]: 'View Equipment Imports',
+  [Permission.CREATE_EQUIPMENT_IMPORT]: 'Create Equipment Import',
+  [Permission.APPROVE_EQUIPMENT_IMPORT]: 'Approve Equipment Import',
+  [Permission.COMPLETE_EQUIPMENT_IMPORT]: 'Complete Equipment Import',
+  [Permission.CANCEL_EQUIPMENT_IMPORT]: 'Cancel Equipment Import',
+
+  [Permission.VIEW_SELF_INSPECTIONS]: 'View Self Inspections',
+  [Permission.SUBMIT_SELF_INSPECTION]: 'Submit Self Inspection',
+  [Permission.WITHDRAW_SELF_INSPECTION]: 'Withdraw Self Inspection',
+  [Permission.APPROVE_SELF_INSPECTION]: 'Approve Self Inspection',
+  [Permission.REJECT_SELF_INSPECTION]: 'Reject Self Inspection',
+  [Permission.DELETE_SELF_INSPECTION]: 'Delete Self Inspection',
+
+  [Permission.VIEW_FORM_TEMPLATES]: 'View Form Templates',
+  [Permission.MANAGE_FORM_TEMPLATES]: 'Manage Form Templates',
+  [Permission.DOWNLOAD_FORM_TEMPLATE_HISTORY]: 'Download Form Template History',
+
+  [Permission.SUBMIT_INTERMEDIATE_INSPECTION]: 'Submit Intermediate Inspection',
+  [Permission.WITHDRAW_INTERMEDIATE_INSPECTION]: 'Withdraw Intermediate Inspection',
+  [Permission.REVIEW_INTERMEDIATE_INSPECTION]: 'Review Intermediate Inspection',
+  [Permission.APPROVE_INTERMEDIATE_INSPECTION]: 'Approve Intermediate Inspection',
+  [Permission.REJECT_INTERMEDIATE_INSPECTION]: 'Reject Intermediate Inspection',
+  [Permission.DELETE_INTERMEDIATE_INSPECTION]: 'Delete Intermediate Inspection',
+
+  [Permission.MANAGE_SYSTEM_SETTINGS]: 'Manage System Settings',
+  [Permission.VIEW_SYSTEM_SETTINGS]: 'View System Settings',
+  [Permission.PERFORM_DATA_MIGRATION]: 'Perform Data Migration',
+};
+
+/**
+ * 로케일별 권한 라벨 맵 — 프론트엔드 컴포넌트에서 직접 사용
+ *
+ * @example
+ * const labels = PERMISSION_LABELS_LOCALIZED[locale] ?? PERMISSION_LABELS_LOCALIZED.ko;
+ */
+export const PERMISSION_LABELS_LOCALIZED: Record<string, Record<Permission, string>> = {
+  ko: PERMISSION_LABELS,
+  en: PERMISSION_LABELS_EN,
 };

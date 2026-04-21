@@ -7,7 +7,6 @@ import { loginAs, TEST_USER_IDS } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
 import { generateUUID } from './helpers/test-utils';
-import { toTestPath } from './helpers/test-paths';
 
 describe('NonConformancesController (e2e)', () => {
   let ctx: TestAppContext;
@@ -46,7 +45,7 @@ describe('NonConformancesController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -71,7 +70,7 @@ describe('NonConformancesController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -88,7 +87,7 @@ describe('NonConformancesController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto)
         .expect(400);
@@ -98,7 +97,7 @@ describe('NonConformancesController (e2e)', () => {
   describe('GET /non-conformances', () => {
     it('should return a list of non-conformances', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.LIST))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.LIST)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -111,7 +110,7 @@ describe('NonConformancesController (e2e)', () => {
 
     it('should filter by equipmentId', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`${toTestPath(API_ENDPOINTS.NON_CONFORMANCES.LIST)}?equipmentId=${testEquipmentUuid}`)
+        .get(`${API_ENDPOINTS.NON_CONFORMANCES.LIST}?equipmentId=${testEquipmentUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -122,7 +121,7 @@ describe('NonConformancesController (e2e)', () => {
 
     it('should filter by status', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(`${toTestPath(API_ENDPOINTS.NON_CONFORMANCES.LIST)}?status=open`)
+        .get(`${API_ENDPOINTS.NON_CONFORMANCES.LIST}?status=open`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -138,7 +137,7 @@ describe('NonConformancesController (e2e)', () => {
         const ncId = createdNonConformanceIds[0];
 
         const response = await request(ctx.app.getHttpServer())
-          .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId)))
+          .get(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -149,7 +148,7 @@ describe('NonConformancesController (e2e)', () => {
     it('should return 404 for non-existent UUID', async () => {
       const fakeUuid = generateUUID();
       await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(fakeUuid)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.GET(fakeUuid))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -158,7 +157,7 @@ describe('NonConformancesController (e2e)', () => {
   describe('GET /non-conformances/equipment/:equipmentUuid', () => {
     it('should return open non-conformances for equipment', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.EQUIPMENT(testEquipmentUuid)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.EQUIPMENT(testEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
@@ -177,7 +176,7 @@ describe('NonConformancesController (e2e)', () => {
 
         // GET current version for CAS
         const current = await request(ctx.app.getHttpServer())
-          .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId)))
+          .get(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId))
           .set('Authorization', `Bearer ${accessToken}`);
 
         const updateDto = {
@@ -187,7 +186,7 @@ describe('NonConformancesController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(ncId)))
+          .patch(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(ncId))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(updateDto)
           .expect(200);
@@ -204,7 +203,7 @@ describe('NonConformancesController (e2e)', () => {
 
         // GET current version for CAS
         const current = await request(ctx.app.getHttpServer())
-          .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId)))
+          .get(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId))
           .set('Authorization', `Bearer ${accessToken}`);
 
         const closeDto = {
@@ -213,7 +212,7 @@ describe('NonConformancesController (e2e)', () => {
         };
 
         const response = await request(ctx.app.getHttpServer())
-          .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(ncId)))
+          .patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(ncId))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(closeDto)
           .expect(200);
@@ -230,7 +229,7 @@ describe('NonConformancesController (e2e)', () => {
 
         // GET current version for CAS
         const current = await request(ctx.app.getHttpServer())
-          .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId)))
+          .get(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId))
           .set('Authorization', `Bearer ${accessToken}`);
 
         const closeDto = {
@@ -239,7 +238,7 @@ describe('NonConformancesController (e2e)', () => {
         };
 
         await request(ctx.app.getHttpServer())
-          .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(ncId)))
+          .patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(ncId))
           .set('Authorization', `Bearer ${accessToken}`)
           .send(closeDto)
           .expect(400);
@@ -254,7 +253,7 @@ describe('NonConformancesController (e2e)', () => {
       });
 
       const createResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: deleteTestEquipmentUuid,
@@ -269,7 +268,7 @@ describe('NonConformancesController (e2e)', () => {
         const ncVersion = createResponse.body.version;
 
         const deleteResponse = await request(ctx.app.getHttpServer())
-          .delete(`${toTestPath(API_ENDPOINTS.NON_CONFORMANCES.DELETE(ncId))}?version=${ncVersion}`)
+          .delete(`${API_ENDPOINTS.NON_CONFORMANCES.DELETE(ncId)}?version=${ncVersion}`)
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
@@ -277,20 +276,20 @@ describe('NonConformancesController (e2e)', () => {
         expect(deleteResponse.body.deleted).toBe(true);
 
         await request(ctx.app.getHttpServer())
-          .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId)))
+          .get(API_ENDPOINTS.NON_CONFORMANCES.GET(ncId))
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(404);
       }
 
       await request(ctx.app.getHttpServer())
-        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(deleteTestEquipmentUuid)))
+        .delete(API_ENDPOINTS.EQUIPMENT.DELETE(deleteTestEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`);
     });
 
     it('should return 404 when deleting non-existent non-conformance', async () => {
       const fakeUuid = generateUUID();
       await request(ctx.app.getHttpServer())
-        .delete(`${toTestPath(API_ENDPOINTS.NON_CONFORMANCES.DELETE(fakeUuid))}?version=1`)
+        .delete(`${API_ENDPOINTS.NON_CONFORMANCES.DELETE(fakeUuid)}?version=1`)
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -303,7 +302,7 @@ describe('NonConformancesController (e2e)', () => {
       });
 
       const ncResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: blockTestEquipmentUuid,
@@ -316,7 +315,7 @@ describe('NonConformancesController (e2e)', () => {
       if (ncResponse.status === 201) {
         // /checkouts: NC 장비는 체크아웃 차단(400 BadRequestException) 또는 403 권한 거부
         const checkoutResponse = await request(ctx.app.getHttpServer())
-          .post(toTestPath(API_ENDPOINTS.CHECKOUTS.CREATE))
+          .post(API_ENDPOINTS.CHECKOUTS.CREATE)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             equipmentIds: [blockTestEquipmentUuid],
@@ -329,16 +328,16 @@ describe('NonConformancesController (e2e)', () => {
 
         if (ncResponse.body.id) {
           const ncDetail = await request(ctx.app.getHttpServer())
-            .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(ncResponse.body.id)))
+            .get(API_ENDPOINTS.NON_CONFORMANCES.GET(ncResponse.body.id))
             .set('Authorization', `Bearer ${accessToken}`);
           await request(ctx.app.getHttpServer())
-            .delete(`${toTestPath(API_ENDPOINTS.NON_CONFORMANCES.DELETE(ncResponse.body.id))}?version=${ncDetail.body.version}`)
+            .delete(`${API_ENDPOINTS.NON_CONFORMANCES.DELETE(ncResponse.body.id)}?version=${ncDetail.body.version}`)
             .set('Authorization', `Bearer ${accessToken}`);
         }
       }
 
       await request(ctx.app.getHttpServer())
-        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(blockTestEquipmentUuid)))
+        .delete(API_ENDPOINTS.EQUIPMENT.DELETE(blockTestEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`);
     });
   });
@@ -358,7 +357,7 @@ describe('NonConformancesController (e2e)', () => {
       if (ctx?.app && accessToken && workflowTestEquipmentUuid) {
         try {
           await request(ctx.app.getHttpServer())
-            .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(workflowTestEquipmentUuid)))
+            .delete(API_ENDPOINTS.EQUIPMENT.DELETE(workflowTestEquipmentUuid))
             .set('Authorization', `Bearer ${accessToken}`);
         } catch {
           // 이미 삭제된 경우 무시
@@ -375,7 +374,7 @@ describe('NonConformancesController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send(createDto);
 
@@ -384,7 +383,7 @@ describe('NonConformancesController (e2e)', () => {
 
     it('should automatically mark non-conformance as corrected when repair is completed', async () => {
       const ncResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: workflowTestEquipmentUuid,
@@ -399,13 +398,13 @@ describe('NonConformancesController (e2e)', () => {
       expect(ncResponse.body.status).toBe('open');
 
       const equipmentCheck = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(workflowTestEquipmentUuid)))
+        .get(API_ENDPOINTS.EQUIPMENT.GET(workflowTestEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(equipmentCheck.body.status).toBe('non_conforming');
 
       const repairResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(workflowTestEquipmentUuid)))
+        .post(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(workflowTestEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           repairDate: new Date().toISOString(),
@@ -418,7 +417,7 @@ describe('NonConformancesController (e2e)', () => {
       workflowTestRepairId = repairResponse.body.id;
 
       const ncCheck = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(workflowTestNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.GET(workflowTestNcId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(ncCheck.body.status).toBe('corrected');
@@ -432,7 +431,7 @@ describe('NonConformancesController (e2e)', () => {
       });
 
       const ncResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: noRepairEquipmentUuid,
@@ -446,11 +445,11 @@ describe('NonConformancesController (e2e)', () => {
 
       // GET current version for CAS
       const noRepairCurrent = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(noRepairNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.GET(noRepairNcId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       const updateResponse = await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(noRepairNcId)))
+        .patch(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(noRepairNcId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           status: 'corrected',
@@ -461,7 +460,7 @@ describe('NonConformancesController (e2e)', () => {
 
       if (updateResponse.status === 200) {
         const closeResponse = await request(ctx.app.getHttpServer())
-          .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(noRepairNcId)))
+          .patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(noRepairNcId))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             closureNotes: '종료 시도',
@@ -474,14 +473,14 @@ describe('NonConformancesController (e2e)', () => {
 
       // GET latest version before delete
       const noRepairLatest = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(noRepairNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.GET(noRepairNcId))
         .set('Authorization', `Bearer ${accessToken}`);
       await request(ctx.app.getHttpServer())
-        .delete(`${toTestPath(API_ENDPOINTS.NON_CONFORMANCES.DELETE(noRepairNcId))}?version=${noRepairLatest.body.version}`)
+        .delete(`${API_ENDPOINTS.NON_CONFORMANCES.DELETE(noRepairNcId)}?version=${noRepairLatest.body.version}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
       await request(ctx.app.getHttpServer())
-        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(noRepairEquipmentUuid)))
+        .delete(API_ENDPOINTS.EQUIPMENT.DELETE(noRepairEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`);
     });
 
@@ -491,7 +490,7 @@ describe('NonConformancesController (e2e)', () => {
       });
 
       const ncResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: oneToOneEquipmentUuid,
@@ -504,7 +503,7 @@ describe('NonConformancesController (e2e)', () => {
       const oneToOneNcId = ncResponse.body.id;
 
       const repair1Response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(oneToOneEquipmentUuid)))
+        .post(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(oneToOneEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           repairDate: new Date().toISOString(),
@@ -516,7 +515,7 @@ describe('NonConformancesController (e2e)', () => {
       expect(repair1Response.status).toBe(201);
 
       const repair2Response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(oneToOneEquipmentUuid)))
+        .post(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(oneToOneEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           repairDate: new Date().toISOString(),
@@ -528,14 +527,14 @@ describe('NonConformancesController (e2e)', () => {
       expect(repair2Response.status).toBe(400);
 
       const oneToOneLatest = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(oneToOneNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.GET(oneToOneNcId))
         .set('Authorization', `Bearer ${accessToken}`);
       await request(ctx.app.getHttpServer())
-        .delete(`${toTestPath(API_ENDPOINTS.NON_CONFORMANCES.DELETE(oneToOneNcId))}?version=${oneToOneLatest.body.version}`)
+        .delete(`${API_ENDPOINTS.NON_CONFORMANCES.DELETE(oneToOneNcId)}?version=${oneToOneLatest.body.version}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
       await request(ctx.app.getHttpServer())
-        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(oneToOneEquipmentUuid)))
+        .delete(API_ENDPOINTS.EQUIPMENT.DELETE(oneToOneEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`);
     });
 
@@ -545,7 +544,7 @@ describe('NonConformancesController (e2e)', () => {
       });
 
       const ncResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: closedNcEquipmentUuid,
@@ -559,11 +558,11 @@ describe('NonConformancesController (e2e)', () => {
 
       // GET current version for CAS
       const closedTestCurrent = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(closedTestNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.GET(closedTestNcId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       const updateForClose = await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(closedTestNcId)))
+        .patch(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(closedTestNcId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           status: 'corrected',
@@ -573,7 +572,7 @@ describe('NonConformancesController (e2e)', () => {
         });
 
       const closeResponse = await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(closedTestNcId)))
+        .patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(closedTestNcId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           closureNotes: '종료',
@@ -583,7 +582,7 @@ describe('NonConformancesController (e2e)', () => {
       expect(closeResponse.status).toBe(200);
 
       const repairResponse = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(closedNcEquipmentUuid)))
+        .post(API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(closedNcEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           repairDate: new Date().toISOString(),
@@ -595,7 +594,7 @@ describe('NonConformancesController (e2e)', () => {
       expect(repairResponse.status).toBe(400);
 
       await request(ctx.app.getHttpServer())
-        .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(closedNcEquipmentUuid)))
+        .delete(API_ENDPOINTS.EQUIPMENT.DELETE(closedNcEquipmentUuid))
         .set('Authorization', `Bearer ${accessToken}`);
     });
 
@@ -603,11 +602,11 @@ describe('NonConformancesController (e2e)', () => {
       if (workflowTestNcId) {
         // GET current version for CAS
         const wfCurrent = await request(ctx.app.getHttpServer())
-          .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(workflowTestNcId)))
+          .get(API_ENDPOINTS.NON_CONFORMANCES.GET(workflowTestNcId))
           .set('Authorization', `Bearer ${accessToken}`);
 
         const closeResponse = await request(ctx.app.getHttpServer())
-          .patch(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(workflowTestNcId)))
+          .patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(workflowTestNcId))
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             closureNotes: '워크플로우 테스트 완료',
@@ -618,7 +617,7 @@ describe('NonConformancesController (e2e)', () => {
         expect(closeResponse.body.status).toBe('closed');
 
         const equipmentCheck = await request(ctx.app.getHttpServer())
-          .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(workflowTestEquipmentUuid)))
+          .get(API_ENDPOINTS.EQUIPMENT.GET(workflowTestEquipmentUuid))
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(equipmentCheck.body.status).toBe('available');
@@ -649,7 +648,7 @@ describe('NonConformancesController (e2e)', () => {
       tracker.track('equipment', attachEquipmentUuid);
 
       const createRes = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.CREATE))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentId: attachEquipmentUuid,
@@ -665,7 +664,7 @@ describe('NonConformancesController (e2e)', () => {
 
     it('GET /non-conformances/:id/attachments — 초기 상태: 빈 배열', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(response.status).toBe(200);
@@ -675,7 +674,7 @@ describe('NonConformancesController (e2e)', () => {
 
     it('POST /non-conformances/:id/attachments — 사진 업로드 → 200 + document', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId)))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId))
         .set('Authorization', `Bearer ${accessToken}`)
         .field('documentType', 'equipment_photo')
         .field('description', 'E2E test photo')
@@ -692,7 +691,7 @@ describe('NonConformancesController (e2e)', () => {
 
     it('GET /non-conformances/:id/attachments — 업로드 후 1개 조회', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(response.status).toBe(200);
@@ -702,7 +701,7 @@ describe('NonConformancesController (e2e)', () => {
 
     it('POST /non-conformances/:id/attachments — 파일 없으면 400', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId)))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId))
         .set('Authorization', `Bearer ${accessToken}`)
         .field('documentType', 'equipment_photo');
 
@@ -713,14 +712,14 @@ describe('NonConformancesController (e2e)', () => {
       if (!uploadedDocId) throw new Error('uploadedDocId missing — previous test must pass first');
 
       const response = await request(ctx.app.getHttpServer())
-        .delete(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENT(attachNcId, uploadedDocId)))
+        .delete(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENT(attachNcId, uploadedDocId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(response.status).toBe(200);
 
       // 재조회 시 빈 배열(soft-delete → status='deleted'는 findByNonConformanceId 필터링됨)
       const afterDelete = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId)))
+        .get(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(afterDelete.body).toHaveLength(0);
@@ -729,7 +728,7 @@ describe('NonConformancesController (e2e)', () => {
     it('DELETE /non-conformances/:otherId/attachments/:docId — 다른 NC의 문서는 400 (도메인 격리)', async () => {
       // 1) 새 문서 업로드
       const uploadRes = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId)))
+        .post(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENTS(attachNcId))
         .set('Authorization', `Bearer ${accessToken}`)
         .field('documentType', 'equipment_photo')
         .attach('file', MINIMAL_JPEG, { filename: 'x.jpg', contentType: 'image/jpeg' });
@@ -738,7 +737,7 @@ describe('NonConformancesController (e2e)', () => {
       // 2) 다른 NC id로 삭제 시도 → 400
       const otherId = generateUUID();
       const deleteRes = await request(ctx.app.getHttpServer())
-        .delete(toTestPath(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENT(otherId, newDocId)))
+        .delete(API_ENDPOINTS.NON_CONFORMANCES.ATTACHMENT(otherId, newDocId))
         .set('Authorization', `Bearer ${accessToken}`);
 
       // 다른 NC가 존재하지 않으면 findOneBasic에서 404 일수 있음.

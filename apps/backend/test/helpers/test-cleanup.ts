@@ -1,7 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { toTestPath } from './test-paths';
 
 type ResourceType =
   | 'checkout'
@@ -24,14 +23,14 @@ interface TrackedResource {
  * 경로를 하드코딩하지 않고 shared-constants에서 가져옵니다.
  */
 const RESOURCE_DELETE_PATH: Record<ResourceType, (id: string) => string> = {
-  checkout: (id) => toTestPath(API_ENDPOINTS.CHECKOUTS.DELETE(id)),
-  'non-conformance': (id) => toTestPath(API_ENDPOINTS.NON_CONFORMANCES.DELETE(id)),
-  'calibration-factor': (id) => toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.DELETE(id)),
-  equipment: (id) => toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(id)),
-  cable: (id) => toTestPath(API_ENDPOINTS.CABLES.GET(id)),
-  'location-history': (id) => toTestPath(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(id)),
-  'maintenance-history': (id) => toTestPath(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.DELETE(id)),
-  'incident-history': (id) => toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(id)),
+  checkout: (id) => API_ENDPOINTS.CHECKOUTS.DELETE(id),
+  'non-conformance': (id) => API_ENDPOINTS.NON_CONFORMANCES.DELETE(id),
+  'calibration-factor': (id) => API_ENDPOINTS.CALIBRATION_FACTORS.DELETE(id),
+  equipment: (id) => API_ENDPOINTS.EQUIPMENT.DELETE(id),
+  cable: (id) => API_ENDPOINTS.CABLES.GET(id),
+  'location-history': (id) => API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(id),
+  'maintenance-history': (id) => API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.DELETE(id),
+  'incident-history': (id) => API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(id),
 };
 
 /**
@@ -39,9 +38,9 @@ const RESOURCE_DELETE_PATH: Record<ResourceType, (id: string) => string> = {
  * version이 없는 DELETE 호출은 CAS 계약 위반이므로, GET으로 현재 version을 얻습니다.
  */
 const RESOURCE_DETAIL_PATH: Partial<Record<ResourceType, (id: string) => string>> = {
-  'non-conformance': (id) => toTestPath(API_ENDPOINTS.NON_CONFORMANCES.GET(id)),
-  'calibration-factor': (id) => toTestPath(API_ENDPOINTS.CALIBRATION_FACTORS.GET(id)),
-  equipment: (id) => toTestPath(API_ENDPOINTS.EQUIPMENT.GET(id)),
+  'non-conformance': (id) => API_ENDPOINTS.NON_CONFORMANCES.GET(id),
+  'calibration-factor': (id) => API_ENDPOINTS.CALIBRATION_FACTORS.GET(id),
+  equipment: (id) => API_ENDPOINTS.EQUIPMENT.GET(id),
 };
 
 /** CAS version이 필요한 리소스 타입 */
@@ -88,8 +87,8 @@ export class ResourceTracker {
       try {
         if (type === 'cable') {
           // cables는 DELETE 엔드포인트가 없으므로 retired로 마킹
-          const detailPath = toTestPath(API_ENDPOINTS.CABLES.GET(id));
-          const updatePath = toTestPath(API_ENDPOINTS.CABLES.UPDATE(id));
+          const detailPath = API_ENDPOINTS.CABLES.GET(id);
+          const updatePath = API_ENDPOINTS.CABLES.UPDATE(id);
 
           const detail = await request(app.getHttpServer())
             .get(detailPath)

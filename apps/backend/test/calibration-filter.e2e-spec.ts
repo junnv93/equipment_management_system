@@ -10,7 +10,6 @@ import request from 'supertest';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
-import { toTestPath } from './helpers/test-paths';
 
 describe('Calibration Filter E2E', () => {
   let ctx: TestAppContext;
@@ -29,7 +28,7 @@ describe('Calibration Filter E2E', () => {
   describe('교정 기한 필터 - 반출 상태 무관', () => {
     it('30일 이내 교정 예정 장비를 조회할 수 있어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
+        .get(API_ENDPOINTS.EQUIPMENT.LIST)
         .query({ calibrationDue: 30 })
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -41,7 +40,7 @@ describe('Calibration Filter E2E', () => {
 
     it('교정 기한 초과 필터로 조회할 수 있어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
+        .get(API_ENDPOINTS.EQUIPMENT.LIST)
         .query({ calibrationDue: -1 })
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -52,7 +51,7 @@ describe('Calibration Filter E2E', () => {
 
     it('교정 여유 필터로 조회할 수 있어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
+        .get(API_ENDPOINTS.EQUIPMENT.LIST)
         .query({ calibrationDueAfter: 30 })
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
@@ -62,7 +61,7 @@ describe('Calibration Filter E2E', () => {
 
     it('반출 중 상태 필터와 교정 기한 필터를 함께 사용할 수 있어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
+        .get(API_ENDPOINTS.EQUIPMENT.LIST)
         .query({
           status: 'checked_out',
           calibrationDue: 30,
@@ -83,7 +82,7 @@ describe('Calibration Filter E2E', () => {
 
     it('교정 방법 필터와 교정 기한 필터를 함께 사용할 수 있어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.EQUIPMENT.LIST))
+        .get(API_ENDPOINTS.EQUIPMENT.LIST)
         .query({
           managementMethod: 'external_calibration',
           calibrationDue: 30,

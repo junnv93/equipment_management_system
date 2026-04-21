@@ -8,7 +8,6 @@ import { nonConformances } from '@equipment-management/db/schema/non-conformance
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
-import { toTestPath } from './helpers/test-paths';
 
 describe('Incident History → Non-Conformance Integration (e2e)', () => {
   let ctx: TestAppContext;
@@ -68,7 +67,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
       for (const id of createdIncidentIds) {
         try {
           await request(ctx.app.getHttpServer())
-            .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(id)))
+            .delete(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(id))
             .set('Authorization', `Bearer ${accessToken}`);
         } catch {
           // 삭제 실패 무시
@@ -79,7 +78,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
     if (ctx?.app && accessToken && testEquipmentId) {
       try {
         await request(ctx.app.getHttpServer())
-          .delete(toTestPath(API_ENDPOINTS.EQUIPMENT.DELETE(testEquipmentId)))
+          .delete(API_ENDPOINTS.EQUIPMENT.DELETE(testEquipmentId))
           .set('Authorization', `Bearer ${accessToken}`);
       } catch {
         // 삭제 실패 무시
@@ -92,7 +91,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
   describe('POST /equipment/:uuid/incident-history (with non-conformance)', () => {
     it('should create incident only (createNonConformance=false)', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId)))
+        .post(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           occurredAt: '2026-01-26',
@@ -121,7 +120,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
 
     it('should create incident + non-conformance (without status change)', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId)))
+        .post(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           occurredAt: '2026-01-26',
@@ -165,7 +164,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
       const today = new Date().toISOString().split('T')[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId)))
+        .post(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           occurredAt: today,
@@ -208,7 +207,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
 
     it('should reject non-conformance for non-damage/malfunction types', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId)))
+        .post(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           occurredAt: '2026-01-26',
@@ -225,7 +224,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
 
     it('should handle undefined createNonConformance (default false)', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId)))
+        .post(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(testEquipmentId))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           occurredAt: '2026-01-26',

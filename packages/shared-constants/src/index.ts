@@ -59,7 +59,12 @@ export {
 } from './roles';
 
 // 권한 관련
-export { Permission, PERMISSION_LABELS } from './permissions';
+export {
+  Permission,
+  PERMISSION_LABELS,
+  PERMISSION_LABELS_EN,
+  PERMISSION_LABELS_LOCALIZED,
+} from './permissions';
 
 // 역할-권한 매핑
 export {

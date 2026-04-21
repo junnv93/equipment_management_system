@@ -6,7 +6,6 @@ import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app'
 import { loginAs } from './helpers/test-auth';
 import { createTestEquipment } from './helpers/test-fixtures';
 import { ResourceTracker } from './helpers/test-cleanup';
-import { toTestPath } from './helpers/test-paths';
 import {
   USER_TECHNICAL_MANAGER_SUWON_ID,
   USER_TEST_ENGINEER_SUWON_ID,
@@ -43,7 +42,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
   /** 장비의 현재 CAS version을 조회합니다. */
   async function getEquipmentVersion(): Promise<number> {
     const detail = await request(ctx.app.getHttpServer())
-      .get(toTestPath(API_ENDPOINTS.EQUIPMENT.GET(testEquipmentUuid)))
+      .get(API_ENDPOINTS.EQUIPMENT.GET(testEquipmentUuid))
       .set('Authorization', `Bearer ${accessToken}`);
     return detail.body.version;
   }
@@ -51,7 +50,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
   it('기술책임자를 운영 책임자(정)로 지정 — 허용', async () => {
     const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid)))
+      .patch(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid))
       .set('Authorization', `Bearer ${accessToken}`)
       .field('managerId', USER_TECHNICAL_MANAGER_SUWON_ID)
       .field('version', String(version));
@@ -62,7 +61,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
   it('시험실무자를 운영 책임자(정)로 지정 — 거부 (EQUIPMENT_MANAGER_ROLE_INSUFFICIENT)', async () => {
     const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid)))
+      .patch(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid))
       .set('Authorization', `Bearer ${accessToken}`)
       .field('managerId', USER_TEST_ENGINEER_SUWON_ID)
       .field('version', String(version));
@@ -74,7 +73,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
   it('시험실무자를 운영 책임자(부)로 지정 — 거부', async () => {
     const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid)))
+      .patch(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid))
       .set('Authorization', `Bearer ${accessToken}`)
       .field('deputyManagerId', USER_TEST_ENGINEER_SUWON_ID)
       .field('version', String(version));
@@ -86,7 +85,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
   it('다른 사이트 기술책임자를 운영 책임자로 지정 — 거부 (EQUIPMENT_MANAGER_SITE_MISMATCH)', async () => {
     const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid)))
+      .patch(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid))
       .set('Authorization', `Bearer ${accessToken}`)
       .field('managerId', USER_TECHNICAL_MANAGER_UIWANG_ID)
       .field('version', String(version));
@@ -98,7 +97,7 @@ describe('Equipment Manager Role Constraint (e2e)', () => {
   it('존재하지 않는 사용자를 운영 책임자로 지정 — 거부 (EQUIPMENT_MANAGER_NOT_FOUND)', async () => {
     const version = await getEquipmentVersion();
     const resp = await request(ctx.app.getHttpServer())
-      .patch(toTestPath(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid)))
+      .patch(API_ENDPOINTS.EQUIPMENT.UPDATE(testEquipmentUuid))
       .set('Authorization', `Bearer ${accessToken}`)
       .field('managerId', '00000000-0000-0000-0000-ffffffffffff')
       .field('version', String(version));

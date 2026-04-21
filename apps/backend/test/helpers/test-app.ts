@@ -20,6 +20,7 @@ export async function createTestApp(): Promise<TestAppContext> {
   }).compile();
 
   const app = moduleFixture.createNestApplication();
+  app.setGlobalPrefix('api');
   await app.init();
 
   return { app, module: moduleFixture };

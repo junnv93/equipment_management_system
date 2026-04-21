@@ -6,7 +6,6 @@ import postgres from 'postgres';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs, TEST_USER_IDS, TEST_USER_DETAILS } from './helpers/test-auth';
-import { toTestPath } from './helpers/test-paths';
 
 describe('UsersController (e2e)', () => {
   let ctx: TestAppContext;
@@ -46,7 +45,7 @@ describe('UsersController (e2e)', () => {
   describe('/users (GET)', () => {
     it('should get users list if admin', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.USERS.LIST))
+        .get(API_ENDPOINTS.USERS.LIST)
         .set('Authorization', `Bearer ${adminAccessToken}`)
         .expect(200);
 
@@ -58,7 +57,7 @@ describe('UsersController (e2e)', () => {
 
     it('should not allow non-admin to get users list', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.USERS.LIST))
+        .get(API_ENDPOINTS.USERS.LIST)
         .set('Authorization', `Bearer ${userAccessToken}`);
 
       expect([200, 403]).toContain(response.status);
@@ -68,7 +67,7 @@ describe('UsersController (e2e)', () => {
   describe('/users/:id (GET) - Own Profile', () => {
     it('should get own profile by id', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.USERS.GET(userId)))
+        .get(API_ENDPOINTS.USERS.GET(userId))
         .set('Authorization', `Bearer ${userAccessToken}`)
         .expect(200);
 
@@ -81,7 +80,7 @@ describe('UsersController (e2e)', () => {
 
     it('should not get profile without authentication', async () => {
       await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.USERS.GET(userId)))
+        .get(API_ENDPOINTS.USERS.GET(userId))
         .expect(401);
     });
   });
@@ -89,7 +88,7 @@ describe('UsersController (e2e)', () => {
   describe('/users/:id (GET)', () => {
     it('should get user by id if admin', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.USERS.GET(userId)))
+        .get(API_ENDPOINTS.USERS.GET(userId))
         .set('Authorization', `Bearer ${adminAccessToken}`)
         .expect(200);
 
@@ -100,7 +99,7 @@ describe('UsersController (e2e)', () => {
 
     it('should not allow non-admin to get other user by id', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.USERS.GET(userId)))
+        .get(API_ENDPOINTS.USERS.GET(userId))
         .set('Authorization', `Bearer ${userAccessToken}`);
 
       expect([200, 403, 404]).toContain(response.status);
@@ -115,7 +114,7 @@ describe('UsersController (e2e)', () => {
       };
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.USERS.UPDATE(userId)))
+        .patch(API_ENDPOINTS.USERS.UPDATE(userId))
         .set('Authorization', `Bearer ${adminAccessToken}`)
         .send(updateData)
         .expect(200);
@@ -131,7 +130,7 @@ describe('UsersController (e2e)', () => {
       };
 
       await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.USERS.UPDATE(userId)))
+        .patch(API_ENDPOINTS.USERS.UPDATE(userId))
         .set('Authorization', `Bearer ${adminAccessToken}`)
         .send(invalidUpdateData)
         .expect(400);
@@ -139,7 +138,7 @@ describe('UsersController (e2e)', () => {
 
     it('should return 403 for test_engineer updating users', async () => {
       await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.USERS.UPDATE(userId)))
+        .patch(API_ENDPOINTS.USERS.UPDATE(userId))
         .set('Authorization', `Bearer ${userAccessToken}`)
         .send({ name: 'Should Fail' })
         .expect(403);

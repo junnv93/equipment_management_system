@@ -5,7 +5,6 @@ import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
 import { ResourceTracker } from './helpers/test-cleanup';
-import { toTestPath } from './helpers/test-paths';
 
 describe('CablesController (e2e) — WF-21', () => {
   let ctx: TestAppContext;
@@ -29,7 +28,7 @@ describe('CablesController (e2e) — WF-21', () => {
   describe('POST /cables (Create)', () => {
     it('should create a cable with valid data', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.CABLES.CREATE))
+        .post(API_ENDPOINTS.CABLES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           managementNumber: `E020K-${uniqueSuffix}`,
@@ -53,7 +52,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should create a second cable for list/export tests', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.CABLES.CREATE))
+        .post(API_ENDPOINTS.CABLES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           managementNumber: `E050S-${uniqueSuffix}`,
@@ -72,7 +71,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should reject creation without managementNumber', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.CABLES.CREATE))
+        .post(API_ENDPOINTS.CABLES.CREATE)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ length: '1.0' });
 
@@ -85,7 +84,7 @@ describe('CablesController (e2e) — WF-21', () => {
   describe('GET /cables (List)', () => {
     it('should return paginated cable list', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.LIST))
+        .get(API_ENDPOINTS.CABLES.LIST)
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ pageSize: 10 });
 
@@ -97,7 +96,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should filter by connectorType', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.LIST))
+        .get(API_ENDPOINTS.CABLES.LIST)
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ connectorType: 'K' });
 
@@ -109,7 +108,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should filter by status', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.LIST))
+        .get(API_ENDPOINTS.CABLES.LIST)
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ status: 'active' });
 
@@ -121,7 +120,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should search by managementNumber', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.LIST))
+        .get(API_ENDPOINTS.CABLES.LIST)
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ search: `E020K-${uniqueSuffix}` });
 
@@ -137,7 +136,7 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should return cable detail with latestDataPoints', async () => {
       const id = createdCableIds[0];
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.GET(id)))
+        .get(API_ENDPOINTS.CABLES.GET(id))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(response.status).toBe(200);
@@ -148,7 +147,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should return 404 for non-existent cable', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.GET('00000000-0000-0000-0000-000000000000')))
+        .get(API_ENDPOINTS.CABLES.GET('00000000-0000-0000-0000-000000000000'))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(response.status).toBe(404);
@@ -161,11 +160,11 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should update cable with correct version', async () => {
       const id = createdCableIds[0];
       const detail = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.GET(id)))
+        .get(API_ENDPOINTS.CABLES.GET(id))
         .set('Authorization', `Bearer ${accessToken}`);
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.CABLES.UPDATE(id)))
+        .patch(API_ENDPOINTS.CABLES.UPDATE(id))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           version: detail.body.version,
@@ -181,7 +180,7 @@ describe('CablesController (e2e) — WF-21', () => {
       const id = createdCableIds[0];
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.CABLES.UPDATE(id)))
+        .patch(API_ENDPOINTS.CABLES.UPDATE(id))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           version: 1, // stale version
@@ -198,7 +197,7 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should add measurement with data points in a transaction', async () => {
       const id = createdCableIds[0];
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.CABLES.MEASUREMENTS.CREATE(id)))
+        .post(API_ENDPOINTS.CABLES.MEASUREMENTS.CREATE(id))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           measurementDate: '2026-04-01',
@@ -221,7 +220,7 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should update cable.lastMeasurementDate after measurement', async () => {
       const id = createdCableIds[0];
       const detail = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.GET(id)))
+        .get(API_ENDPOINTS.CABLES.GET(id))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(detail.status).toBe(200);
@@ -232,7 +231,7 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should list measurements for a cable', async () => {
       const id = createdCableIds[0];
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.MEASUREMENTS.LIST(id)))
+        .get(API_ENDPOINTS.CABLES.MEASUREMENTS.LIST(id))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(response.status).toBe(200);
@@ -243,7 +242,7 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should return latestDataPoints in detail after measurement', async () => {
       const id = createdCableIds[0];
       const detail = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.GET(id)))
+        .get(API_ENDPOINTS.CABLES.GET(id))
         .set('Authorization', `Bearer ${accessToken}`);
 
       expect(detail.status).toBe(200);
@@ -258,7 +257,7 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should also add measurement to second cable for export coverage', async () => {
       const id = createdCableIds[1];
       const response = await request(ctx.app.getHttpServer())
-        .post(toTestPath(API_ENDPOINTS.CABLES.MEASUREMENTS.CREATE(id)))
+        .post(API_ENDPOINTS.CABLES.MEASUREMENTS.CREATE(id))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           measurementDate: '2026-04-02',
@@ -277,7 +276,7 @@ describe('CablesController (e2e) — WF-21', () => {
   describe('GET /reports/export/form/UL-QP-18-08 (Excel Export)', () => {
     it('should export QP-18-08 as xlsx (or fail gracefully if template not seeded)', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE('UL-QP-18-08')))
+        .get(API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE('UL-QP-18-08'))
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ site: 'suwon' });
 
@@ -294,7 +293,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should export with connectorType filter (or fail gracefully if template not seeded)', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE('UL-QP-18-08')))
+        .get(API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE('UL-QP-18-08'))
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ connectorType: 'K', site: 'suwon' });
 
@@ -307,7 +306,7 @@ describe('CablesController (e2e) — WF-21', () => {
 
     it('should export with status=retired (empty dataset edge case)', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE('UL-QP-18-08')))
+        .get(API_ENDPOINTS.REPORTS.EXPORT.FORM_TEMPLATE('UL-QP-18-08'))
         .set('Authorization', `Bearer ${accessToken}`)
         .query({ status: 'retired', site: 'suwon' });
 
@@ -322,11 +321,11 @@ describe('CablesController (e2e) — WF-21', () => {
     it('should retire a cable', async () => {
       const id = createdCableIds[1];
       const detail = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.CABLES.GET(id)))
+        .get(API_ENDPOINTS.CABLES.GET(id))
         .set('Authorization', `Bearer ${accessToken}`);
 
       const response = await request(ctx.app.getHttpServer())
-        .patch(toTestPath(API_ENDPOINTS.CABLES.UPDATE(id)))
+        .patch(API_ENDPOINTS.CABLES.UPDATE(id))
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           version: detail.body.version,

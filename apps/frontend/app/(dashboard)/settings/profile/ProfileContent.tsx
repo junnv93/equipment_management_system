@@ -19,6 +19,7 @@ import {
   getPermissions,
   PERMISSION_CATEGORIES,
   PERMISSION_CATEGORY_KEYS,
+  PERMISSION_LABELS_LOCALIZED,
 } from '@equipment-management/shared-constants';
 import { type UserProfile } from '@equipment-management/schemas';
 import {
@@ -289,7 +290,7 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
   const locale = useLocale();
   const [permissionsOpen, setPermissionsOpen] = useState(false);
 
-  const permissionLabels = t.raw('profile.permissions.labels') as Record<string, string>;
+  const permissionLabels = PERMISSION_LABELS_LOCALIZED[locale] ?? PERMISSION_LABELS_LOCALIZED.ko;
 
   // 권한을 카테고리별로 그룹화 (SSOT: PERMISSION_CATEGORIES)
   const permissionsByCategory = useMemo(() => {

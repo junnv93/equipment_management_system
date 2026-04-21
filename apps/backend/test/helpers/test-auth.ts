@@ -1,7 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DEFAULT_ROLE_EMAILS, API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { toTestPath } from './test-paths';
 import {
   USER_LAB_MANAGER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
@@ -83,7 +82,7 @@ export async function loginAs(app: INestApplication, role: TestRole): Promise<st
   const canonicalRole = CANONICAL_ROLE[role];
 
   const response = await request(app.getHttpServer()).get(
-    toTestPath(API_ENDPOINTS.AUTH.TEST_LOGIN(canonicalRole)),
+    API_ENDPOINTS.AUTH.TEST_LOGIN(canonicalRole),
   );
 
   if (response.status !== 200 && response.status !== 201) {
@@ -116,7 +115,7 @@ export async function loginWithCredentials(
   password: string,
 ): Promise<{ token: string; user: Record<string, unknown> }> {
   const loginResponse = await request(app.getHttpServer())
-    .post(toTestPath(API_ENDPOINTS.AUTH.BACKEND_LOGIN))
+    .post(API_ENDPOINTS.AUTH.BACKEND_LOGIN)
     .send({
       email,
       password,

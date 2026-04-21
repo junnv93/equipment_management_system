@@ -10,7 +10,6 @@ import request from 'supertest';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { createTestApp, closeTestApp, TestAppContext } from './helpers/test-app';
 import { loginAs } from './helpers/test-auth';
-import { toTestPath } from './helpers/test-paths';
 
 describe('Team Filter E2E', () => {
   let ctx: TestAppContext;
@@ -30,7 +29,7 @@ describe('Team Filter E2E', () => {
   describe('사이트별 팀 필터링', () => {
     it('수원랩 팀 목록을 조회할 수 있어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.TEAMS.LIST))
+        .get(API_ENDPOINTS.TEAMS.LIST)
         .query({ site: 'suwon', pageSize: 100 })
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
@@ -46,7 +45,7 @@ describe('Team Filter E2E', () => {
 
     it('의왕랩 팀 목록을 조회할 수 있어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.TEAMS.LIST))
+        .get(API_ENDPOINTS.TEAMS.LIST)
         .query({ site: 'uiwang', pageSize: 100 })
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
@@ -62,7 +61,7 @@ describe('Team Filter E2E', () => {
 
     it('사이트 필터 없이 조회하면 모든 팀이 반환되어야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.TEAMS.LIST))
+        .get(API_ENDPOINTS.TEAMS.LIST)
         .query({ pageSize: 100 })
         .set('Authorization', `Bearer ${labManagerToken}`)
         .expect(200);
@@ -79,7 +78,7 @@ describe('Team Filter E2E', () => {
 
     it('팀 검색이 사이트 필터와 함께 동작해야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.TEAMS.LIST))
+        .get(API_ENDPOINTS.TEAMS.LIST)
         .query({ site: 'suwon', search: 'RF', pageSize: 100 })
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
@@ -92,7 +91,7 @@ describe('Team Filter E2E', () => {
 
     it('페이지네이션이 사이트 필터와 함께 동작해야 한다', async () => {
       const response = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.TEAMS.LIST))
+        .get(API_ENDPOINTS.TEAMS.LIST)
         .query({ site: 'suwon', page: 1, pageSize: 2 })
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
@@ -107,7 +106,7 @@ describe('Team Filter E2E', () => {
   describe('팀 상세 조회', () => {
     it('특정 팀을 ID로 조회할 수 있어야 한다', async () => {
       const listResponse = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.TEAMS.LIST))
+        .get(API_ENDPOINTS.TEAMS.LIST)
         .query({ site: 'suwon', pageSize: 1 })
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
@@ -116,7 +115,7 @@ describe('Team Filter E2E', () => {
       expect(firstTeam).toBeDefined();
 
       const detailResponse = await request(ctx.app.getHttpServer())
-        .get(toTestPath(API_ENDPOINTS.TEAMS.GET(firstTeam.id)))
+        .get(API_ENDPOINTS.TEAMS.GET(firstTeam.id))
         .set('Authorization', `Bearer ${testEngineerToken}`)
         .expect(200);
 

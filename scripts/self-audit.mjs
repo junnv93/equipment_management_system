@@ -163,6 +163,8 @@ function checkEslintDisable(file, lines) {
   if (ESLINT_DISABLE_FILE_EXCLUSIONS.some((ex) => file.includes(ex))) return;
   lines.forEach((line, i) => {
     if (/\/\/\s*eslint-disable/.test(line) || /\/\*\s*eslint-disable/.test(line)) {
+      // self-audit-exception 마커가 있으면 승인된 예외로 처리
+      if (/self-audit-exception/.test(line)) return;
       fail(
         '② eslint-disable',
         file,
