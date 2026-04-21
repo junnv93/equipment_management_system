@@ -91,7 +91,10 @@
       "elapsedDays": "Elapsed Days"
     },
     "csvFileName": "non-conformances_{date}.csv",
-    "csvElapsedDays": "{days}d"
+    "csvElapsedDays": "{days}d",
+    "paginationPrev": "Previous page",
+    "paginationNext": "Next page",
+    "paginationPage": "Go to page {page}"
   },
   "ncStatus": {
     "open": "Open",
@@ -298,98 +301,5 @@
     "description": "The requested non-conformance record does not exist or has been deleted.\nPlease check the non-conformance ID.",
     "backToList": "Non-conformance list",
     "backToHome": "Go to home"
-  },
-  "management": {
-    "title": "Non-Conformance Management",
-    "backToEquipment": "Back to Equipment Details",
-    "register": "Register Non-Conformance",
-    "loadError": "Data Load Failed",
-    "loadErrorDesc": "Failed to load data.",
-    "retry": "Retry",
-    "empty": "No Non-Conformance Records",
-    "emptyDesc": "No non-conformance records registered.",
-    "discoveryDate": "Discovery: {date}",
-    "resolution": "Resolution: {type}",
-    "repairLinked": "Repair Record Linked",
-    "rejectionTitle": "Action Rejected",
-    "rejectionDate": "Rejected: {date}",
-    "causeLabel": "Non-Conformance Cause",
-    "actionPlanLabel": "Action Plan",
-    "analysisLabel": "Cause Analysis",
-    "correctionLabel": "Correction Details",
-    "correctionDate": "Corrected: {date}",
-    "closureNotesLabel": "Closure Notes",
-    "closureDate": "Closed: {date}",
-    "repairNeeded": "Repair Record Required",
-    "repairNeededDesc": "{type} type requires repair record before closing non-conformance.",
-    "registerRepair": "Register Repair History",
-    "repairLinkedApproval": "Repair record linked - ready for closure approval",
-    "viewRepairHistory": "View Repair History →",
-    "editRecord": "Edit Record",
-    "form": {
-      "ncType": "Non-Conformance Type",
-      "ncTypePlaceholder": "Select type",
-      "damage": "Damage (Physical)",
-      "malfunction": "Malfunction (Functional)",
-      "calibrationFailure": "Calibration Failure",
-      "measurementError": "Measurement Error",
-      "other": "Other",
-      "ncTypeHint": "Damage/Malfunction types require a repair record.",
-      "cause": "Non-Conformance Cause",
-      "causePlaceholder": "Describe the cause in detail.",
-      "causeRequired": "Please enter the non-conformance cause.",
-      "actionPlan": "Action Plan",
-      "actionPlanPlaceholder": "Enter action plan (optional).",
-      "photos": "Site Photos (Optional)",
-      "photosHint": "Attach problem photos. Mobile devices open the rear camera directly.",
-      "photosSelected": "{count} file(s) selected",
-      "photoDescription": "Non-conformance report photo",
-      "registering": "Registering...",
-      "uploadingPhotos": "Uploading photos...",
-      "register": "Register",
-      "cancel": "Cancel"
-    },
-    "update": {
-      "analysis": "Cause Analysis",
-      "analysisPlaceholder": "Enter analysis details.",
-      "correction": "Correction Details",
-      "correctionPlaceholder": "Enter correction details.",
-      "statusChange": "Change Status",
-      "keepStatus": "Keep Status",
-      "corrected": "Corrected",
-      "saving": "Saving...",
-      "save": "Save",
-      "cancel": "Cancel"
-    },
-    "confirm": {
-      "repairRequired": "Damage/Malfunction types require a repair record link.\n\nNavigate to repair history page?\n(Cancel to stay on current page)"
-    },
-    "toasts": {
-      "createSuccess": "Non-conformance has been registered.",
-      "createError": "Failed to register non-conformance.",
-      "updateSuccess": "Non-conformance record has been updated.",
-      "updateError": "Failed to update record.",
-      "photoPartialFailed": "{failed} photo(s) failed to upload. Others were saved."
-    },
-    "ncStatus": {
-      "open": "Open",
-      "corrected": "Corrected",
-      "closed": "Closed"
-    },
-    "ncType": {
-      "damage": "Damage",
-      "malfunction": "Malfunction",
-      "calibration_failure": "Calibration Failure",
-      "calibration_overdue": "Calibration Overdue",
-      "measurement_error": "Measurement Error",
-      "other": "Other"
-    },
-    "resolutionType": {
-      "repair": "Repair",
-      "recalibration": "Recalibration",
-      "replacement": "Replacement",
-      "disposal": "Disposal",
-      "other": "Other"
-    }
   }
 }
