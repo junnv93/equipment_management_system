@@ -599,7 +599,7 @@ SSOT 위반:
 - prefers-reduced-motion: motion-safe 래핑이므로 애니메이션 비활성 사용자 영향 없음
 ```
 
-### 🟡 MEDIUM — P3: NC i18n 정리 — 내부 데이터 노출 + management.* 레거시 키 (Mode 0)
+### ✅ DONE (2026-04-21, a505d2c2·a16d95cd) — P3: NC i18n 정리 — 내부 데이터 노출 + management.* 레거시 키 (Mode 0)
 
 ```
 문제 1 (내부 데이터 노출):
@@ -643,7 +643,7 @@ grep "management\." apps/frontend → 현재 코드에서 미참조 (NCDetailCli
 - NC 상세 페이지: 정보 카드 하단 "버전/등록일/수정일" 행 미표시
 ```
 
-### 🟡 MEDIUM — P4: NC 접근성 일괄 — aria-pressed / aria-hidden / aria-label (Mode 0)
+### ✅ DONE (2026-04-21, a505d2c2) — P4: NC 접근성 일괄 — aria-pressed / aria-hidden / aria-label (Mode 0)
 
 ```
 문제:
@@ -897,7 +897,7 @@ AP-04: shadow-sm이 워크플로우 타임라인 + ActionBar 2곳뿐.
 - ActionBar는 그보다 강한 shadow-md + ring 가시 확인
 ```
 
-### 🟢 LOW — P8: NC 리스트 모바일 레이아웃 + 테이블 프리미엄 (Mode 1)
+### ✅ DONE (2026-04-21, a505d2c2) — P8: NC 리스트 모바일 레이아웃 + 테이블 프리미엄 (Mode 1)
 
 ```
 문제:
@@ -945,7 +945,7 @@ AP-07: NC_LIST_GRID_COLS = 'lg:grid lg:grid-cols-[...] lg:gap-3 lg:items-center'
 - 모바일 카드에서 Eye 버튼 클릭 → 상세 페이지 이동 정상 동작
 ```
 
-### 🟢 LOW — P9: NC 카드 계층화 + 간격 리듬 재설계 + 타이포 드라마 강화 (Mode 1)
+### ✅ DONE (2026-04-21, a505d2c2) — P9: NC 카드 계층화 + 간격 리듬 재설계 + 타이포 드라마 강화 (Mode 1)
 
 ```
 문제:
