@@ -5,6 +5,7 @@ import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SoftwareValidation } from '@/lib/api/software-api';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { ValidationStatusValues } from '@equipment-management/schemas';
 import { useRouter } from 'next/navigation';
 
 interface MutationHandle<T> {
@@ -40,7 +41,7 @@ export function ValidationActionsBar({
 
   return (
     <div className="flex items-center gap-1">
-      {v.status === 'draft' && (
+      {v.status === ValidationStatusValues.DRAFT && (
         <>
           {can(Permission.CREATE_SOFTWARE_VALIDATION) && (
             <Button
@@ -72,55 +73,57 @@ export function ValidationActionsBar({
           )}
         </>
       )}
-      {v.status === 'submitted' && can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
-        <>
+      {v.status === ValidationStatusValues.SUBMITTED &&
+        can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                approveMutation.mutate({ id: v.id, version: v.version });
+              }}
+              // ISO 17025 §6.2.2: 제출자는 승인 불가 (서버 가드 UI 대칭)
+              disabled={approveMutation.isPending || v.submittedBy === userId}
+              title={
+                v.submittedBy === userId ? t('validation.actions.selfApprovalForbidden') : undefined
+              }
+            >
+              {t('validation.actions.approve')}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReject(v);
+              }}
+            >
+              {t('validation.actions.reject')}
+            </Button>
+          </>
+        )}
+      {v.status === ValidationStatusValues.APPROVED &&
+        can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
           <Button
             variant="outline"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              approveMutation.mutate({ id: v.id, version: v.version });
+              qualityApproveMutation.mutate({ id: v.id, version: v.version });
             }}
-            // ISO 17025 §6.2.2: 제출자는 승인 불가 (서버 가드 UI 대칭)
-            disabled={approveMutation.isPending || v.submittedBy === userId}
+            // ISO 17025 §6.2.2: 기술 승인자는 품질 승인 불가 (서버 가드 UI 대칭)
+            disabled={qualityApproveMutation.isPending || v.technicalApproverId === userId}
             title={
-              v.submittedBy === userId ? t('validation.actions.selfApprovalForbidden') : undefined
+              v.technicalApproverId === userId
+                ? t('validation.actions.dualApprovalForbidden')
+                : undefined
             }
           >
-            {t('validation.actions.approve')}
+            {t('validation.actions.qualityApprove')}
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onReject(v);
-            }}
-          >
-            {t('validation.actions.reject')}
-          </Button>
-        </>
-      )}
-      {v.status === 'approved' && can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            qualityApproveMutation.mutate({ id: v.id, version: v.version });
-          }}
-          // ISO 17025 §6.2.2: 기술 승인자는 품질 승인 불가 (서버 가드 UI 대칭)
-          disabled={qualityApproveMutation.isPending || v.technicalApproverId === userId}
-          title={
-            v.technicalApproverId === userId
-              ? t('validation.actions.dualApprovalForbidden')
-              : undefined
-          }
-        >
-          {t('validation.actions.qualityApprove')}
-        </Button>
-      )}
-      {v.status === 'rejected' && (
+        )}
+      {v.status === ValidationStatusValues.REJECTED && (
         <Button
           variant="outline"
           size="sm"

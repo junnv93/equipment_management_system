@@ -14,6 +14,7 @@ import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens
 import { FRONTEND_ROUTES, FORM_CATALOG } from '@equipment-management/shared-constants';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { isValidationExportable } from '@/lib/utils/software-validation-exportability';
+import { ValidationStatusValues, ValidationTypeValues } from '@equipment-management/schemas';
 import type { ValidationStatus } from '@equipment-management/schemas';
 import { ValidationBasicInfoCard } from './_components/ValidationBasicInfoCard';
 import { ValidationVendorInfoCard } from './_components/ValidationVendorInfoCard';
@@ -87,8 +88,8 @@ export default function ValidationDetailContent({
     );
   }
 
-  const isVendor = validation.validationType === 'vendor';
-  const isSelf = validation.validationType === 'self';
+  const isVendor = validation.validationType === ValidationTypeValues.VENDOR;
+  const isSelf = validation.validationType === ValidationTypeValues.SELF;
 
   return (
     <div className={getPageContainerClasses('detail')}>
@@ -113,7 +114,7 @@ export default function ValidationDetailContent({
             errorToastDescription={t('toast.error')}
             disabled={!isValidationExportable(validation.status)}
           />
-          {validation.status === 'draft' && (
+          {validation.status === ValidationStatusValues.DRAFT && (
             <Button variant="outline" size="sm" onClick={() => setIsEditOpen(true)}>
               <Pencil className="mr-1 h-3.5 w-3.5" />
               {t('validation.actions.edit')}

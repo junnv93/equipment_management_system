@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserCombobox } from '@/components/ui/user-combobox';
-import { VALIDATION_TYPE_VALUES } from '@equipment-management/schemas';
+import { VALIDATION_TYPE_VALUES, ValidationTypeValues } from '@equipment-management/schemas';
 import type { ValidationType } from '@equipment-management/schemas';
 import { ValidationFunctionsTable } from './ValidationFunctionsTable';
 import { ValidationControlTable } from './ValidationControlTable';
@@ -72,7 +72,7 @@ export function ValidationCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={
-          createForm.validationType === 'self'
+          createForm.validationType === ValidationTypeValues.SELF
             ? 'max-w-3xl max-h-[85vh] overflow-y-auto'
             : 'max-w-md'
         }
@@ -118,7 +118,7 @@ export function ValidationCreateDialog({
           </div>
 
           {/* Vendor 필드 */}
-          {createForm.validationType === 'vendor' && (
+          {createForm.validationType === ValidationTypeValues.VENDOR && (
             <>
               <div className="space-y-2">
                 <Label>{t('validation.form.vendorNameLabel')}</Label>
@@ -166,7 +166,7 @@ export function ValidationCreateDialog({
           )}
 
           {/* Self 필드 */}
-          {createForm.validationType === 'self' && (
+          {createForm.validationType === ValidationTypeValues.SELF && (
             <>
               <h4 className="text-sm font-semibold pt-2">
                 {t('validation.form.selfBasicInfoTitle')}

@@ -101,7 +101,11 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     queryFn: () => testSoftwareApi.get(softwareId),
   });
 
-  const { data: validationsData, isLoading } = useQuery({
+  const {
+    data: validationsData,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: queryKeys.softwareValidations.byTestSoftware(softwareId),
     queryFn: () => softwareValidationApi.list(softwareId),
   });
@@ -281,6 +285,11 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-14 w-full" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <XCircle className="mb-3 h-10 w-10 text-destructive" />
+          <p>{t('validation.loadError')}</p>
         </div>
       ) : validations.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

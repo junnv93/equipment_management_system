@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { documentApi } from '@/lib/api/document-api';
 import { queryKeys } from '@/lib/api/query-config';
-import { DocumentTypeValues } from '@equipment-management/schemas';
+import { DocumentTypeValues, ValidationTypeValues } from '@equipment-management/schemas';
 import type { ValidationType } from '@equipment-management/schemas';
 import { ALLOWED_EXTENSIONS } from '@equipment-management/shared-constants';
 
@@ -26,7 +26,7 @@ export function DocumentUploadButton({ validationId, validationType }: DocumentU
   const uploadMutation = useMutation({
     mutationFn: (file: File) => {
       const docType =
-        validationType === 'vendor'
+        validationType === ValidationTypeValues.VENDOR
           ? DocumentTypeValues.VALIDATION_VENDOR_ATTACHMENT
           : DocumentTypeValues.VALIDATION_TEST_DATA;
       return documentApi.uploadDocument(file, docType, { softwareValidationId: validationId });

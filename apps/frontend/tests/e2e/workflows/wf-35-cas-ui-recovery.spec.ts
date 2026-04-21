@@ -15,7 +15,8 @@
  * @see docs/workflows/critical-workflows.md WF-35
  */
 
-import { test, expect, BrowserContext, Page } from '@playwright/test';
+import { test, expect } from '../shared/fixtures/auth.fixture';
+import type { BrowserContext, Page } from '@playwright/test';
 import path from 'path';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { TEST_NC_IDS, BASE_URLS } from '../shared/constants/shared-test-data';

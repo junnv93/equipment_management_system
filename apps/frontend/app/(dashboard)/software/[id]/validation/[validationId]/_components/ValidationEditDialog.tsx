@@ -12,6 +12,7 @@ import { softwareValidationApi } from '@/lib/api/software-api';
 import type { UpdateSoftwareValidationDto, SoftwareValidation } from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useCasGuardedMutation } from '@/hooks/use-cas-guarded-mutation';
+import { ValidationTypeValues } from '@equipment-management/schemas';
 import { VendorEditFields } from './VendorEditFields';
 
 interface ValidationEditDialogProps {
@@ -105,7 +106,7 @@ export function ValidationEditDialog({
     updateMutation.mutate(data);
   };
 
-  const isVendor = validation.validationType === 'vendor';
+  const isVendor = validation.validationType === ValidationTypeValues.VENDOR;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -11,7 +11,7 @@ import type {
 } from './calibration';
 import type { CalibrationPlanStatus } from './calibration-plan';
 import type { NonConformanceStatus, NonConformanceType, RepairResult } from './non-conformance';
-import type { ValidationStatus, SoftwareAvailability } from './software';
+import type { ValidationStatus, ValidationType, SoftwareAvailability } from './software';
 import type { IncidentType } from './incident';
 import type { NotificationPriority, NotificationType } from './notification';
 import type {
@@ -240,6 +240,15 @@ export const ValidationStatusValues = {
   QUALITY_APPROVED: 'quality_approved',
   REJECTED: 'rejected',
 } as const satisfies Record<string, ValidationStatus>;
+
+/**
+ * 유효성 확인 유형 값 객체 (dot-notation 접근용)
+ * @example ValidationTypeValues.VENDOR // 'vendor'
+ */
+export const ValidationTypeValues = {
+  VENDOR: 'vendor',
+  SELF: 'self',
+} as const satisfies Record<string, ValidationType>;
 
 /**
  * 소프트웨어 가용 여부 값 객체 (dot-notation 접근용)
