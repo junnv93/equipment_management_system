@@ -157,3 +157,39 @@ export const SUB_PAGE_HEADER_TOKENS = {
   /** 부제목/설명 */
   subtitle: 'text-sm text-muted-foreground',
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 온보딩 힌트 배너 토큰
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * PageHeader onboardingHint 슬롯 스타일 (처음 사용 유저 가이드 배너)
+ *
+ * dismissible: localStorage에 `onboarding-dismissed:<id>` 저장 → 재방문 시 숨김
+ */
+export const PAGE_HEADER_ONBOARDING_TOKENS = {
+  container: 'rounded-lg border border-brand-info/20 bg-brand-info/5 p-4 mb-4',
+  inner: 'flex items-start gap-3',
+  iconWrapper: 'shrink-0 mt-0.5 text-brand-info',
+  content: 'flex-1 min-w-0',
+  title: 'text-sm font-semibold text-foreground',
+  description: 'text-sm text-muted-foreground mt-0.5',
+  actions: 'flex items-center gap-2 mt-3',
+  dismissBtn: 'ml-auto shrink-0 text-muted-foreground hover:text-foreground transition-colors',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 프리미엄 테이블 토큰
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 프리미엄 테이블 스타일 — 줄무늬 + sticky header + 중요 컬럼 강조
+ */
+export const PREMIUM_TABLE_TOKENS = {
+  /** 짝수 행 줄무늬 */
+  stripe: 'even:bg-muted/20',
+  /** sticky header (테이블 내부 스크롤 컨테이너와 함께 사용) */
+  stickyHeader: 'sticky top-0 bg-background z-10',
+  /** 중요 컬럼 강조 (장비명, 상태 등) */
+  importantCol: 'font-semibold text-foreground',
+} as const;

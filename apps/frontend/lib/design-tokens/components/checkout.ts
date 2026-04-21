@@ -178,6 +178,32 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
 }
 
 // ============================================================================
+// 3-C. Checkout Step Labels SSOT (단계명 i18n 키 매핑)
+// ============================================================================
+
+/**
+ * 반출 상태 → stepper i18n 키 매핑 (SSOT)
+ *
+ * CheckoutStatusStepper / CheckoutMiniProgress / RentalFlowInline 3곳에서 공용 참조.
+ * 값은 `checkouts.stepper.<value>` 네임스페이스에서 useTranslations으로 해석.
+ *
+ * 로컬 STEPPER_LABEL_MAP 재정의 금지 — 이 상수가 유일한 진실의 소스.
+ */
+export const CHECKOUT_STEP_LABELS: Readonly<Record<string, string>> = {
+  pending: 'pendingApproval',
+  approved: 'approved',
+  checked_out: 'checkedOut',
+  returned: 'returned',
+  return_approved: 'returnApproved',
+  lender_checked: 'lenderCheckout',
+  borrower_received: 'borrowerReceive',
+  borrower_returned: 'borrowerReturn',
+  lender_received: 'lenderReturn',
+  overdue: 'checkedOut',
+  in_use: 'inUse',
+} as const;
+
+// ============================================================================
 // 4. Checkout Mini Progress Tokens (상태 흐름 시각화)
 // ============================================================================
 
@@ -250,22 +276,17 @@ export const CHECKOUT_MINI_PROGRESS = {
  * 5개 원: lender_checked→borrower_received→borrower_returned→lender_received→완료
  */
 export const RENTAL_FLOW_INLINE_TOKENS = {
-  container:
-    'hidden sm:flex items-center gap-1 px-2.5 py-1 bg-brand-purple/5 border border-brand-purple/20 rounded-md',
-  /** @deprecated 78-3에서 칩+tooltip 패턴으로 교체 예정 */
-  arrow: `${MICRO_TYPO.badge} text-brand-purple/30 shrink-0`,
-  stepWrapper: 'flex flex-col items-center gap-0.5',
-  /** @deprecated 78-3에서 칩+tooltip 패턴으로 교체 예정 */
-  circle: {
-    base: `w-4 h-4 rounded-full flex items-center justify-center ${MICRO_TYPO.badge} font-bold border-[1.5px] shrink-0`,
-    done: 'bg-brand-ok text-white border-brand-ok',
-    current: 'bg-brand-purple text-white border-brand-purple',
-    future: 'bg-white text-brand-purple/40 border-brand-purple/25',
-  },
-  /** @deprecated 78-3에서 칩+tooltip 패턴으로 교체 예정 */
-  stepLabel: `${MICRO_TYPO.label} text-brand-purple font-medium leading-none`,
+  /** 칩 외부 컨테이너 — 모바일 표시 허용 (hidden sm:flex 제거) */
+  chip: 'inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-purple/5 border border-brand-purple/20 rounded-md text-xs text-brand-purple font-medium',
+  /** 칩 내 구분자 */
+  chipSeparator: 'text-brand-purple/30',
+  /** Tooltip 목록 항목 */
+  tooltipStep: 'flex items-center gap-1.5 text-xs',
+  tooltipStepDone: 'text-brand-ok',
+  tooltipStepCurrent: 'text-brand-purple font-semibold',
+  tooltipStepFuture: 'text-muted-foreground',
   /**
-   * 렌탈 상태 → 0-based 인라인 단계 인덱스 (5원 기준)
+   * 렌탈 상태 → 0-based 인라인 단계 인덱스 (5단계 기준)
    * SSOT: CheckoutGroupCard에서 직접 매핑 상수 정의 금지
    */
   statusToStep: {
@@ -380,18 +401,21 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBorder: 'border-brand-info',
     activeBg: 'bg-brand-info/10',
     iconColor: 'text-brand-info',
+    alertRing: '',
   },
   pending: {
     hoverBorder: 'hover:border-brand-warning/30',
     activeBorder: 'border-brand-warning',
     activeBg: 'bg-brand-warning/10',
     iconColor: 'text-brand-warning',
+    alertRing: 'ring-1 ring-brand-warning/20',
   },
   overdue: {
     hoverBorder: 'hover:border-brand-critical/30',
     activeBorder: 'border-brand-critical',
     activeBg: 'bg-brand-critical/10',
     iconColor: 'text-brand-critical',
+    alertRing: 'ring-2 ring-brand-critical/30 shadow-md',
   },
   /** @deprecated checkedOut과 동일 — checkedOut 사용 권장 */
   inProgress: {
@@ -399,29 +423,42 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBorder: 'border-brand-purple',
     activeBg: 'bg-brand-purple/10',
     iconColor: 'text-brand-purple',
+    alertRing: '',
   },
   checkedOut: {
     hoverBorder: 'hover:border-brand-purple/30',
     activeBorder: 'border-brand-purple',
     activeBg: 'bg-brand-purple/10',
     iconColor: 'text-brand-purple',
+    alertRing: '',
   },
   returned: {
     hoverBorder: 'hover:border-brand-ok/30',
     activeBorder: 'border-brand-ok',
     activeBg: 'bg-brand-ok/10',
     iconColor: 'text-brand-ok',
+    alertRing: '',
   },
 } as const;
 
 export type CheckoutStatsVariant = keyof typeof CHECKOUT_STATS_VARIANTS;
 
 /**
+ * 통계 카드 alert 임계값 (SSOT — 하드코딩 금지)
+ */
+export const CHECKOUT_STATS_ALERT_THRESHOLD = {
+  pending: 10,
+} as const;
+
+/**
  * 통계 카드 클래스 가져오기
+ *
+ * @param isAlert - true이면 alertRing 클래스 적용 (위험/경고 강조)
  */
 export function getCheckoutStatsClasses(
   variant: CheckoutStatsVariant = 'total',
-  isActive: boolean = false
+  isActive: boolean = false,
+  isAlert: boolean = false
 ): string {
   const config = CHECKOUT_STATS_VARIANTS[variant];
   const baseClasses = 'cursor-pointer border-2';
@@ -430,7 +467,10 @@ export function getCheckoutStatsClasses(
     return [baseClasses, config.activeBorder, config.activeBg].join(' ');
   }
 
-  return [baseClasses, 'border-transparent', config.hoverBorder].join(' ');
+  const alertClass = isAlert && config.alertRing ? config.alertRing : '';
+  return [baseClasses, 'border-transparent', config.hoverBorder, alertClass]
+    .filter(Boolean)
+    .join(' ');
 }
 
 // ============================================================================
@@ -457,6 +497,9 @@ export const CHECKOUT_MOTION = {
 
   /** Selectable row: 배경색 + 불투명도 + border */
   selectableRow: TRANSITION_PRESETS.fastBgOpacityBorder,
+
+  /** 목록 아이템 순차 등장 (transform + opacity) */
+  staggerItem: TRANSITION_PRESETS.fastTransformOpacity,
 } as const;
 
 // ============================================================================
@@ -630,7 +673,7 @@ export function formatDday(daysRemaining: number): string {
 export const CHECKOUT_ALERT_TOKENS = {
   overdue: {
     container:
-      'flex items-center gap-3 bg-brand-critical/5 border border-brand-critical/20 rounded-lg px-4 py-3',
+      'flex items-center gap-3 bg-brand-critical/5 border border-brand-critical/20 rounded-lg px-4 py-3 shadow-md',
     icon: 'text-brand-critical shrink-0 h-4 w-4',
     text: 'flex-1 text-sm text-brand-critical',
     action:
@@ -640,13 +683,50 @@ export const CHECKOUT_ALERT_TOKENS = {
   },
   pendingCheck: {
     container:
-      'flex items-center gap-3 bg-brand-warning/5 border border-brand-warning/20 rounded-lg px-4 py-3',
+      'flex items-center gap-3 bg-brand-warning/5 border border-brand-warning/20 rounded-lg px-4 py-3 shadow-sm',
     icon: 'text-brand-warning shrink-0 h-4 w-4',
     text: 'flex-1 text-sm text-brand-warning',
     action:
       'text-xs font-semibold bg-brand-warning text-white rounded px-3 py-1 cursor-pointer whitespace-nowrap hover:bg-brand-warning/90 shrink-0',
   },
 } as const;
+
+// ============================================================================
+// 14-B. Inbound Section Tokens (반입 탭 3섹션 헤더)
+// ============================================================================
+
+/**
+ * 반입 탭 3섹션 강화 헤더 토큰
+ *
+ * 각 섹션은 border-l-4 색상으로 시각 식별:
+ *   teamLoan        → brand-info (타팀 대여)
+ *   externalRental  → brand-purple (외부 렌탈)
+ *   internalShared  → brand-ok (내부 공용)
+ */
+export const CHECKOUT_INBOUND_SECTION_TOKENS = {
+  container: 'space-y-3',
+  header: {
+    wrapper: 'flex items-start gap-3 pb-2',
+    iconContainer: {
+      base: 'p-2 rounded-md shrink-0',
+      teamLoan: 'bg-brand-info/10 text-brand-info',
+      externalRental: 'bg-brand-purple/10 text-brand-purple',
+      internalShared: 'bg-brand-ok/10 text-brand-ok',
+    },
+    titleRow: 'flex items-center gap-2 flex-wrap',
+    title: 'text-sm font-semibold text-foreground',
+    description: 'text-xs text-muted-foreground mt-0.5',
+    countBadge:
+      'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground',
+  },
+  borderAccent: {
+    teamLoan: 'border-l-4 border-l-brand-info/40',
+    externalRental: 'border-l-4 border-l-brand-purple/40',
+    internalShared: 'border-l-4 border-l-brand-ok/40',
+  },
+} as const;
+
+export type InboundSectionVariant = keyof typeof CHECKOUT_INBOUND_SECTION_TOKENS.borderAccent;
 
 // ============================================================================
 // 15. Overdue Group Card Tokens

@@ -185,7 +185,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 - 변경 파일 ≤ 8개
 ```
 
-### 🟠 HIGH — 78-2: 공용 EmptyState 컴포넌트 + 3-variant 팩토리 (Mode 1)
+### ✅ DONE (2026-04-21, b9e1b989) — 78-2: 공용 EmptyState 컴포넌트 + 3-variant 팩토리 (Mode 1)
 
 ```
 목적: 현재 각 페이지가 EQUIPMENT_EMPTY_STATE_TOKENS 재사용만 하고 컴포넌트 자체는 페이지별 JSX로 중복한다.
@@ -237,7 +237,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 - 변경 파일 ≤ 10개
 ```
 
-### 🟠 HIGH — 78-3: 워크플로우 가시성 — MiniProgress/RentalFlow 재설계 + 모바일 접근성 (Mode 1)
+### ✅ DONE (2026-04-21) — 78-3: 워크플로우 가시성 — MiniProgress/RentalFlow 재설계 + 모바일 접근성 (Mode 1)
 
 ```
 목적: CheckoutMiniProgress와 RentalFlowInline이 모바일에서 hidden sm:flex로 완전 숨김되며,
@@ -290,7 +290,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 - 변경 파일 ≤ 7개
 ```
 
-### 🟠 HIGH — 78-4: 반입 탭 IA 재구성 + 3섹션 페이지네이션 (Mode 1)
+### ✅ DONE (2026-04-21) — 78-4: 반입 탭 IA 재구성 + 3섹션 페이지네이션 (Mode 1)
 
 ```
 목적: 반입 탭이 타팀 대여/외부 렌탈/내부 공용 3개 워크플로우를 text-sm muted h3로 약하게 구분한다.
@@ -343,7 +343,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 - 변경 파일 ≤ 8개
 ```
 
-### 🟡 MEDIUM — 78-5: 통계 카드 계층화 + Alert 배너 elevation (Mode 0)
+### ✅ DONE (2026-04-21) — 78-5: 통계 카드 계층화 + Alert 배너 elevation (Mode 0)
 
 ```
 목적: 5개 통계 카드가 완전 균등하여 overdue(위험)와 total(정보)이 동일 시각 무게를 가진다.
@@ -384,7 +384,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 - 변경 파일 ≤ 3개
 ```
 
-### 🟠 HIGH — 78-6: PageHeader onboardingHint 슬롯 + 테이블 프리미엄 (Mode 1)
+### ✅ DONE (2026-04-21) — 78-6: PageHeader onboardingHint 슬롯 + 테이블 프리미엄 (Mode 1)
 
 ```
 목적: PageHeader에 onboardingHint 전용 prop 슬롯을 추가하여 전체 앱에서 처음 사용 유저 힌트를 재사용 가능한
@@ -466,7 +466,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 - 변경 파일 ≤ 7개
 ```
 
-### 🟢 LOW — 78-7: 모션 & 접근성 마감 (Mode 0)
+### ✅ DONE (2026-04-21) — 78-7: 모션 & 접근성 마감 (Mode 0)
 
 ```
 목적: 통계 카드/그룹 카드 등장 시 스태거 애니메이션이 없어 단조롭고,

@@ -1,9 +1,33 @@
 'use client';
 
 import Link from 'next/link';
+import { X, Info } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import {
+  PAGE_HEADER_TOKENS,
+  SUB_PAGE_HEADER_TOKENS,
+  PAGE_HEADER_ONBOARDING_TOKENS,
+} from '@/lib/design-tokens';
+import type { Permission } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
+import { useOnboardingHint } from '@/hooks/use-onboarding-hint';
+
+export interface OnboardingHint {
+  /** localStorage 키 (per-page 고유 — `onboarding-dismissed:<id>` 로 저장) */
+  id: string;
+  icon?: LucideIcon;
+  title: string;
+  description: string;
+  primaryAction?: {
+    label: string;
+    href: string;
+    permission?: Permission;
+  };
+  /** default: true */
+  dismissible?: boolean;
+}
 
 interface BaseProps {
   title: string;
@@ -16,23 +40,69 @@ interface ListPageProps extends BaseProps {
   backUrl?: undefined;
   onBack?: undefined;
   backLabel?: undefined;
+  /** 처음 사용 유저 온보딩 힌트 배너 (리스트 페이지 전용) */
+  onboardingHint?: OnboardingHint;
 }
 
 interface SubPageLinkProps extends BaseProps {
-  /** 뒤로가기 정적 URL (Link 기반) */
   backUrl: string;
   onBack?: undefined;
   backLabel?: string;
 }
 
 interface SubPageCallbackProps extends BaseProps {
-  /** 뒤로가기 콜백 (router.back() 등 동적 네비게이션) */
   onBack: () => void;
   backUrl?: undefined;
   backLabel?: string;
 }
 
-type PageHeaderProps = ListPageProps | SubPageLinkProps | SubPageCallbackProps;
+export type PageHeaderProps = ListPageProps | SubPageLinkProps | SubPageCallbackProps;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OnboardingHintBanner — 분리된 하위 컴포넌트
+// ─────────────────────────────────────────────────────────────────────────────
+
+function OnboardingHintBanner({ hint }: { hint: OnboardingHint }) {
+  const { can } = useAuth();
+  const { isVisible, dismiss } = useOnboardingHint(hint.id);
+  const isDismissible = hint.dismissible !== false;
+
+  if (!isVisible) return null;
+
+  const showAction = !hint.primaryAction?.permission || can(hint.primaryAction.permission);
+  const Icon = hint.icon ?? Info;
+
+  return (
+    <div className={PAGE_HEADER_ONBOARDING_TOKENS.container} role="note">
+      <div className={PAGE_HEADER_ONBOARDING_TOKENS.inner}>
+        <div className={PAGE_HEADER_ONBOARDING_TOKENS.iconWrapper}>
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </div>
+        <div className={PAGE_HEADER_ONBOARDING_TOKENS.content}>
+          <p className={PAGE_HEADER_ONBOARDING_TOKENS.title}>{hint.title}</p>
+          <p className={PAGE_HEADER_ONBOARDING_TOKENS.description}>{hint.description}</p>
+          {showAction && hint.primaryAction && (
+            <div className={PAGE_HEADER_ONBOARDING_TOKENS.actions}>
+              <Button size="sm" asChild>
+                <Link href={hint.primaryAction.href}>{hint.primaryAction.label}</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+        {isDismissible && (
+          <button
+            type="button"
+            className={PAGE_HEADER_ONBOARDING_TOKENS.dismissBtn}
+            onClick={dismiss}
+            aria-label="온보딩 힌트 닫기"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
  * 통합 페이지 헤더 컴포넌트
@@ -51,8 +121,10 @@ export function PageHeader({
   backUrl,
   onBack,
   backLabel,
+  ...rest
 }: PageHeaderProps) {
   const isSubPage = backUrl || onBack;
+  const onboardingHint = !isSubPage ? (rest as ListPageProps).onboardingHint : undefined;
 
   // 서브 페이지 (생성/편집/상세)
   if (isSubPage) {
@@ -80,13 +152,16 @@ export function PageHeader({
 
   // 리스트/관리 페이지
   return (
-    <div className={PAGE_HEADER_TOKENS.container}>
-      <div className={PAGE_HEADER_TOKENS.titleGroup}>
-        <h1 className={PAGE_HEADER_TOKENS.title}>{title}</h1>
-        {subtitle && <p className={PAGE_HEADER_TOKENS.subtitle}>{subtitle}</p>}
+    <>
+      {onboardingHint && <OnboardingHintBanner hint={onboardingHint} />}
+      <div className={PAGE_HEADER_TOKENS.container}>
+        <div className={PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={PAGE_HEADER_TOKENS.title}>{title}</h1>
+          {subtitle && <p className={PAGE_HEADER_TOKENS.subtitle}>{subtitle}</p>}
+        </div>
+        {actions && <div className={PAGE_HEADER_TOKENS.actionsGroup}>{actions}</div>}
       </div>
-      {actions && <div className={PAGE_HEADER_TOKENS.actionsGroup}>{actions}</div>}
-    </div>
+    </>
   );
 }
 

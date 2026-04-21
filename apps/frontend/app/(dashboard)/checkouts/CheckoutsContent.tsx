@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useTranslations } from 'next-intl';
@@ -105,6 +105,10 @@ export default function CheckoutsContent({
   const filters = parseCheckoutFiltersFromSearchParams(searchParams);
   const isInbound = filters.view === 'inbound';
 
+  // 렌더 중 직접 업데이트 — effect가 실행될 때 항상 최신 filters를 참조하기 위함
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
   const [searchInput, setSearchInput] = useState(initialFilters.search);
 
   // URL의 search가 외부에서 변경될 때(예: 필터 초기화) 입력값 동기화
@@ -116,15 +120,15 @@ export default function CheckoutsContent({
   const debouncedSearch = useDebouncedValue(searchInput, 300);
 
   useEffect(() => {
-    if (debouncedSearch === filters.search) return;
-    const newFilters = { ...filters, search: debouncedSearch, page: 1 };
+    if (debouncedSearch === filtersRef.current.search) return;
+    const newFilters = { ...filtersRef.current, search: debouncedSearch, page: 1 };
     const params = filtersToSearchParams(newFilters);
     const qs = params.toString();
     router.replace(
       qs ? `${FRONTEND_ROUTES.CHECKOUTS.LIST}?${qs}` : FRONTEND_ROUTES.CHECKOUTS.LIST,
       { scroll: false }
     );
-  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, router]);
 
   // 확인 필요 건수 — pageSize: 1로 최소 데이터만 fetch (count만 필요)
   // ⚠️ pendingCount 전용 키 사용: pending 전체 목록(PendingChecksClient)과 캐시 충돌 방지
@@ -227,6 +231,16 @@ export default function CheckoutsContent({
       <PageHeader
         title={t('title')}
         subtitle={t('description')}
+        onboardingHint={{
+          id: 'checkouts-first-visit',
+          title: t('onboarding.title'),
+          description: t('onboarding.description'),
+          primaryAction: {
+            label: t('onboarding.cta'),
+            href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
+            permission: Permission.CREATE_CHECKOUT,
+          },
+        }}
         actions={
           <div className="flex gap-2">
             {pendingChecksCount > 0 && (

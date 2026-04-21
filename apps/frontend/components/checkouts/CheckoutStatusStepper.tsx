@@ -4,7 +4,7 @@ import { CheckCircle2, Circle, Clock, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { CheckoutStatus, CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
-import { CHECKOUT_STEPPER_TOKENS } from '@/lib/design-tokens';
+import { CHECKOUT_STEPPER_TOKENS, CHECKOUT_STEP_LABELS } from '@/lib/design-tokens';
 
 interface CheckoutStatusStepperProps {
   currentStatus: CheckoutStatus;
@@ -41,18 +41,7 @@ const STEP_STATUSES: Record<string, CheckoutStatus[]> = {
   ],
 };
 
-/** status → stepper i18n key mapping */
-const STEPPER_LABEL_MAP: Record<string, string> = {
-  pending: 'pendingApproval',
-  approved: 'approved',
-  checked_out: 'checkedOut',
-  returned: 'returned',
-  return_approved: 'returnApproved',
-  lender_checked: 'lenderCheckout',
-  borrower_received: 'borrowerReceive',
-  borrower_returned: 'borrowerReturn',
-  lender_received: 'lenderReturn',
-};
+/** status → stepper i18n key mapping (SSOT: CHECKOUT_STEP_LABELS) */
 
 /**
  * 특수 상태 (진행 흐름에서 벗어난 상태)
@@ -80,7 +69,7 @@ export default function CheckoutStatusStepper({
   const isSpecialStatus = SPECIAL_STATUSES.includes(currentStatus);
 
   const getStepLabel = (status: CheckoutStatus) =>
-    t(`stepper.${STEPPER_LABEL_MAP[status] || status}`);
+    t(`stepper.${CHECKOUT_STEP_LABELS[status] || status}`);
 
   // 특수 상태인 경우 별도 표시
   if (isSpecialStatus) {

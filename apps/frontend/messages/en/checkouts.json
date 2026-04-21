@@ -2,6 +2,11 @@
   "title": "Checkout Management",
   "subtitle": "Manage checkout requests, approvals, and returns",
   "description": "Manage equipment checkout requests and status.",
+  "onboarding": {
+    "title": "Get started with checkout management",
+    "description": "Submit checkout requests for calibration, repair, or rental, and manage approvals and returns.",
+    "cta": "Submit first checkout"
+  },
   "metadata": {
     "detailTitle": "{purpose} Checkout Detail - {destination}",
     "detailDescription": "View {purpose} checkout details for {destination}.",
@@ -272,6 +277,7 @@
     "checkoutDateLabel": "Checkout Date",
     "requestDateLabel": "Request Date",
     "progressLabel": "Checkout progress: {current} of {total} steps completed",
+    "progressLabelWithStep": "{stepName}, step {current} of {total}",
     "overdueGroupLabel": "Overdue",
     "expectedReturn": "Expected return",
     "overdueBy": "{days}d overdue",
@@ -344,6 +350,20 @@
     "teamLoan": "Team Equipment Loan",
     "externalRental": "External Vendor Rental",
     "internalShared": "Internal Shared Equipment",
+    "sections": {
+      "teamLoan": {
+        "title": "Team Equipment Loan",
+        "description": "Equipment borrowed from other teams"
+      },
+      "externalRental": {
+        "title": "External Vendor Rental",
+        "description": "Equipment rented from external vendors"
+      },
+      "internalShared": {
+        "title": "Internal Shared Equipment",
+        "description": "Shared internal equipment in use"
+      }
+    },
     "equipmentName": "Equipment Name",
     "classification": "Classification",
     "vendor": "Vendor",
@@ -373,6 +393,7 @@
   },
   "rentalFlow": {
     "title": "Rental flow progress",
+    "currentStep": "{stepName} · {current}/{total}",
     "step_0": "Lender confirmed",
     "step_1": "Borrower received",
     "step_2": "Return scheduled",

@@ -2,6 +2,11 @@
   "title": "반출입 관리",
   "subtitle": "반출 신청, 승인, 반입 처리 관리",
   "description": "장비 반출입 요청 및 현황을 관리합니다.",
+  "onboarding": {
+    "title": "반출입 관리 시작하기",
+    "description": "장비 반출(교정·수리·렌탈)을 신청하고, 승인·반입 과정을 관리할 수 있습니다.",
+    "cta": "첫 반출 신청하기"
+  },
   "metadata": {
     "detailTitle": "{purpose} 반출 상세 - {destination}",
     "detailDescription": "{destination}으로의 {purpose} 반출 상세 정보를 확인하세요.",
@@ -272,6 +277,7 @@
     "checkoutDateLabel": "반출일",
     "requestDateLabel": "신청일",
     "progressLabel": "반출 진행: {total}단계 중 {current}단계 완료",
+    "progressLabelWithStep": "{stepName}, {total}단계 중 {current}단계",
     "overdueGroupLabel": "기한 초과",
     "expectedReturn": "반입 예정",
     "overdueBy": "{days}일 초과",
@@ -344,6 +350,20 @@
     "teamLoan": "타팀 장비 대여",
     "externalRental": "외부 업체 렌탈",
     "internalShared": "내부 공용장비",
+    "sections": {
+      "teamLoan": {
+        "title": "타팀 장비 대여",
+        "description": "다른 팀에 대여 중인 장비 반입 현황"
+      },
+      "externalRental": {
+        "title": "외부 업체 렌탈",
+        "description": "외부 업체로부터 렌탈한 장비 반입 현황"
+      },
+      "internalShared": {
+        "title": "내부 공용장비",
+        "description": "내부 공용 장비 반입 현황"
+      }
+    },
     "equipmentName": "장비명",
     "classification": "분류",
     "vendor": "렌탈 업체",
@@ -373,6 +393,7 @@
   },
   "rentalFlow": {
     "title": "렌탈 단계 진행 현황",
+    "currentStep": "{stepName} · {current}/{total}",
     "step_0": "대여처 확인",
     "step_1": "인수확인",
     "step_2": "반납예정",

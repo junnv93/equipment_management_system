@@ -25,7 +25,9 @@ import {
   CHECKOUT_MOTION,
   CONTENT_TOKENS,
   CHECKOUT_STATS_VARIANTS,
+  CHECKOUT_STATS_ALERT_THRESHOLD,
   CHECKOUT_PAGINATION_TOKENS,
+  MICRO_TYPO,
   type CheckoutStatsVariant,
 } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
@@ -185,7 +187,8 @@ export default function OutboundCheckoutsTab({
   // Render helpers
   // ──────────────────────────────────────────────
   const renderLoadingState = () => (
-    <>
+    <div aria-busy="true" aria-label="반출 목록 로딩 중">
+      <span className="sr-only">반출 목록을 불러오는 중입니다.</span>
       {[1, 2, 3].map((i) => (
         <Card key={i} className="overflow-hidden">
           <div className="flex items-center justify-between gap-4 px-4 py-3">
@@ -201,7 +204,7 @@ export default function OutboundCheckoutsTab({
           </div>
         </Card>
       ))}
-    </>
+    </div>
   );
 
   const filterActive = !isAllActive;
@@ -215,8 +218,13 @@ export default function OutboundCheckoutsTab({
         const isActive =
           card.filterStatus === 'all' ? isAllActive : filters.status === card.filterStatus;
 
+        const isAlert =
+          (card.variantKey === 'overdue' && summary.overdue > 0) ||
+          (card.variantKey === 'pending' &&
+            summary.pending > CHECKOUT_STATS_ALERT_THRESHOLD.pending);
+
         const finalCardClasses = [
-          getCheckoutStatsClasses(card.variantKey, isActive),
+          getCheckoutStatsClasses(card.variantKey, isActive, isAlert),
           CHECKOUT_MOTION.statsCard,
         ].join(' ');
 
@@ -256,7 +264,7 @@ export default function OutboundCheckoutsTab({
               </div>
               <p className="text-[10px] text-muted-foreground mt-0.5">{t(card.subKey)}</p>
               {isActive && (
-                <p className="text-[9px] text-primary font-semibold mt-1">
+                <p className={`${MICRO_TYPO.badge} text-primary font-semibold mt-1`}>
                   {t('outbound.activeFilter')}
                 </p>
               )}

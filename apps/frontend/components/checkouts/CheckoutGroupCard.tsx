@@ -38,6 +38,7 @@ import {
   CHECKOUT_OVERDUE_GROUP_TOKENS,
   CHECKOUT_ITEM_ROW_TOKENS,
   RENTAL_FLOW_INLINE_TOKENS,
+  CHECKOUT_STEP_LABELS,
   getDdayClasses,
   formatDday,
   FONT,
@@ -49,46 +50,70 @@ import {
 // Helpers
 // ============================================================================
 
-/** 렌탈 그룹 헤더 인라인 진행 표시 (5원) */
+/**
+ * 렌탈 그룹 헤더 인라인 진행 표시 — 칩 + hover tooltip 패턴 (78-3 재설계)
+ *
+ * 5개 7px원 → "현재 단계명 · N/5" 칩 + 전체 단계 tooltip
+ * 모바일 표시 허용 (hidden sm:flex 제거)
+ */
 function RentalFlowInline({ status }: { status: CheckoutStatus }) {
   const t = useTranslations('checkouts');
   const isFullyDone = status === CSVal.LENDER_RECEIVED;
-  const currentIdx = isFullyDone ? 5 : (RENTAL_FLOW_INLINE_TOKENS.statusToStep[status] ?? -1);
+  const STEP_COUNT = 5;
+  const currentIdx = isFullyDone
+    ? STEP_COUNT
+    : (RENTAL_FLOW_INLINE_TOKENS.statusToStep[status] ?? -1);
+  const currentStepNum = isFullyDone ? STEP_COUNT : currentIdx + 1;
+
+  const stepLabelKey = CHECKOUT_STEP_LABELS[status];
+  const currentStepName = stepLabelKey
+    ? t(`stepper.${stepLabelKey}`)
+    : t(`rentalFlow.step_${currentIdx}`);
+
+  const chipLabel = t('rentalFlow.currentStep', {
+    stepName: currentStepName,
+    current: currentStepNum,
+    total: STEP_COUNT,
+  });
 
   return (
-    <div className={RENTAL_FLOW_INLINE_TOKENS.container} title={t('rentalFlow.title')}>
-      {Array.from({ length: 5 }, (_, i) => {
-        const isDone = isFullyDone || i < currentIdx;
-        const isCurrent = !isFullyDone && i === currentIdx;
-
-        let circleClass = RENTAL_FLOW_INLINE_TOKENS.circle.base;
-        if (isDone) circleClass += ` ${RENTAL_FLOW_INLINE_TOKENS.circle.done}`;
-        else if (isCurrent) circleClass += ` ${RENTAL_FLOW_INLINE_TOKENS.circle.current}`;
-        else circleClass += ` ${RENTAL_FLOW_INLINE_TOKENS.circle.future}`;
-
-        const content = isDone ? '✓' : String(i + 1);
-
-        return (
-          <span key={i} className="flex items-center gap-1">
-            {i > 0 && (
-              <span className={RENTAL_FLOW_INLINE_TOKENS.arrow} aria-hidden="true">
-                →
-              </span>
-            )}
-            <span className={RENTAL_FLOW_INLINE_TOKENS.stepWrapper}>
-              <span className={circleClass} aria-hidden="true">
-                {content}
-              </span>
-              {isCurrent && (
-                <span className={RENTAL_FLOW_INLINE_TOKENS.stepLabel}>
-                  {t(`rentalFlow.step_${i}`)}
-                </span>
-              )}
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={RENTAL_FLOW_INLINE_TOKENS.chip}
+            aria-label={`${t('rentalFlow.title')}: ${chipLabel}`}
+          >
+            <span>{currentStepName}</span>
+            <span className={RENTAL_FLOW_INLINE_TOKENS.chipSeparator} aria-hidden="true">
+              ·
+            </span>
+            <span>
+              {currentStepNum}/{STEP_COUNT}
             </span>
           </span>
-        );
-      })}
-    </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <ul className="space-y-1 py-0.5">
+            {Array.from({ length: STEP_COUNT }, (_, i) => {
+              const isDone = isFullyDone || i < currentIdx;
+              const isCurrent = !isFullyDone && i === currentIdx;
+              const stepClass = isDone
+                ? RENTAL_FLOW_INLINE_TOKENS.tooltipStepDone
+                : isCurrent
+                  ? RENTAL_FLOW_INLINE_TOKENS.tooltipStepCurrent
+                  : RENTAL_FLOW_INLINE_TOKENS.tooltipStepFuture;
+              return (
+                <li key={i} className={`${RENTAL_FLOW_INLINE_TOKENS.tooltipStep} ${stepClass}`}>
+                  <span aria-hidden="true">{isDone ? '✓' : isCurrent ? '▶' : '○'}</span>
+                  <span>{t(`rentalFlow.step_${i}`)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
