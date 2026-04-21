@@ -37,13 +37,23 @@ export class SoftwareValidationsService extends VersionedBaseService {
     return `${this.CACHE_PREFIX}${type}:${id}`;
   }
 
+  /**
+   * 도메인 캐시 동기 무효화 — SW_VALIDATIONS:* + TEST_SOFTWARE:detail
+   *
+   * 책임 경계:
+   * - 이 메서드: 도메인 로컬 캐시(sw-validations list/detail/pending, test-software detail)
+   * - cache-event.registry.ts: 크로스 도메인 캐시(dashboard:*, approvals:*)를
+   *   CACHE_EVENTS.SW_VALIDATION_* 이벤트로 비동기 처리
+   *
+   * APPROVALS:* 는 이벤트 발행 후 registry의 invalidateAllDashboard()가 처리하므로
+   * 여기서는 삭제하지 않는다 (이중 삭제 방지).
+   */
   private invalidateCache(id?: string, testSoftwareId?: string): void {
     if (id) {
       this.cacheService.delete(this.buildCacheKey('detail', id));
     }
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'list:');
     this.cacheService.deleteByPrefix(this.CACHE_PREFIX + 'pending:');
-    this.cacheService.deleteByPrefix(CACHE_KEY_PREFIXES.APPROVALS);
     // testSoftwareId가 있으면 해당 detail 키만 무효화 (전체 prefix flush 방지)
     if (testSoftwareId) {
       this.cacheService.delete(`${CACHE_KEY_PREFIXES.TEST_SOFTWARE}detail:${testSoftwareId}`);

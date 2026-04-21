@@ -66,12 +66,11 @@ export interface CacheInvalidationRule {
  *
  * 새 이벤트 추가 시: 이 레지스트리에 규칙을 추가하면 자동 처리 — 코드 변경 0
  *
- * 하이브리드 패턴 (의도된 설계):
- * - software-validations.service.ts는 이 레지스트리를 사용하지 않고 서비스 레이어에서 직접
- *   `cacheService.deleteByPrefix(SOFTWARE_VALIDATIONS:*)` 와 `TEST_SOFTWARE:*` 를 무효화한다.
- * - 이유: SW 검증은 단독 도메인으로 장비 상태·대시보드 카운트에 영향을 주지 않아
- *   CacheInvalidationHelper의 메서드가 불필요하다. 서비스 로컬 캐시만 지우면 충분하다.
- * - 미래에 SW 검증 이벤트가 대시보드·장비에 영향을 주는 시점에 이 레지스트리로 통합할 것.
+ * 책임 경계 (서비스 레이어 vs 레지스트리):
+ * - 서비스 레이어의 invalidateCache(): 도메인 로컬 캐시를 트랜잭션 직후 동기 삭제
+ *   (list/detail/pending 등 — 쓰기 직후 읽기 일관성 보장)
+ * - 이 레지스트리: 크로스 도메인 캐시를 이벤트 발행 후 비동기 삭제
+ *   (dashboard/approvals 통계 — 약간의 stale 허용 가능)
  */
 export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> = {
   // ─── 반출 (Checkout) ───
@@ -311,8 +310,11 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   },
 
   // ─── 소프트웨어 유효성 확인 (Software Validation) ───
-  // 서비스 레이어(invalidateCache)가 sw-validations:list/detail/pending + approvals + test-software:detail 를
-  // 동기적으로 무효화하므로 registry 항목은 대시보드 카운트 갱신만 담당.
+  // 책임 분리:
+  // - 서비스 레이어(invalidateCache): 도메인 캐시 동기 무효화
+  //     → sw-validations:list/detail/pending, test-software:detail
+  // - 이 레지스트리: 크로스 도메인 캐시 비동기 무효화 (이벤트 발행 후)
+  //     → dashboard:* + approvals:* (via invalidateAllDashboard)
   [CACHE_EVENTS.SW_VALIDATION_SUBMITTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
   },
