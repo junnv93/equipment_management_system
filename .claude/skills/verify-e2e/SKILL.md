@@ -278,19 +278,23 @@ grep "maxWorkers" apps/backend/test/jest-e2e.json
 
 **PASS:** `"maxWorkers": 1`. **FAIL:** 없거나 1 초과. 단일 DB 아키텍처에서 병렬 실행은 시드 데이터 경합 → 비결정적 실패.
 
-**15d: toTestPath(API_ENDPOINTS.*) SSOT — E2E spec 하드코딩 경로 금지 (2026-04-20 추가)**
+**15d: API_ENDPOINTS 직접 사용 SSOT — E2E spec 하드코딩 경로 금지 (2026-04-21 업데이트)**
 
-`apps/backend/test/helpers/test-paths.ts`의 `toTestPath()`가 API_ENDPOINTS → supertest 경로 변환 SSOT.
-spec에서 `.get('/api/...')` 등 문자열 리터럴로 직접 경로를 사용하면 엔드포인트 변경 시 sync 누락 위험.
+`createTestApp`이 `setGlobalPrefix('api')`를 설정하므로 spec은 `API_ENDPOINTS.*`를 그대로 사용.
+`test-paths.ts` / `toTestPath()` 래퍼는 2026-04-21 삭제됨 — 탐지 시 anti-pattern.
 
 ```bash
-# E2E spec에서 하드코딩된 /api/ 경로 직접 사용 탐지
+# E2E spec에서 하드코딩된 경로 문자열 리터럴 직접 사용 탐지
 grep -rn "\.\(get\|post\|patch\|delete\|put\)(['\`]/api/" \
   apps/backend/test --include="*.e2e-spec.ts"
-# 결과: 0건 (모두 toTestPath(API_ENDPOINTS.*) 경유)
+# 결과: 0건 (모두 API_ENDPOINTS.* 직접 경유)
+
+# toTestPath 잔재 탐지 (삭제된 래퍼 재도입 방지)
+grep -rn "toTestPath\|test-paths" apps/backend/test
+# 결과: 0건 (파일 삭제됨)
 ```
 
-**PASS:** 0건. **FAIL:** `/api/` 문자열 리터럴 직접 사용.
+**PASS:** 두 명령어 모두 0건. **FAIL:** 하드코딩 경로 리터럴 또는 toTestPath 재도입.
 
 ### Step 16: E2E data-* 셀렉터 × 컴포넌트 attribute 일관성 (2026-04-19 추가)
 
@@ -348,7 +352,7 @@ grep -rn '\[data-[a-z]' \
 | 15a | Backend loginAs SSOT    | PASS/FAIL | hardcoded credential 탐지     |
 | 15b | TEST_USER_IDS UUID 정합 | PASS/FAIL | e2e UUID 사용 탐지            |
 | 15c | jest-e2e.json maxWorkers| PASS/FAIL | maxWorkers != 1               |
-| 15d | toTestPath SSOT (E2E)   | PASS/FAIL | /api/ 하드코딩 경로 직접 사용 |
+| 15d | API_ENDPOINTS SSOT (E2E) | PASS/FAIL | 하드코딩 경로 리터럴 또는 toTestPath 재도입 |
 | 16a | data-* 셀렉터 일관성    | PASS/FAIL | spec 셀렉터 vs 컴포넌트 attribute 불일치 |
 ```
 

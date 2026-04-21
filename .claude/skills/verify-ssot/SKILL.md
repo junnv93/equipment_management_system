@@ -255,6 +255,37 @@ grep -rn "interface.*{[[:space:]]*\[key: string\]: string" \
 
 **PASS:** 세 탐지 명령어 모두 0건. **FAIL:** raw 리터럴 비교 또는 loose index signature 발견 시 SSOT 타입으로 교체.
 
+### Step 20: Permission 라벨 렌더링 SSOT (2026-04-21 추가)
+
+프론트엔드에서 권한 표시명을 i18n JSON이 아닌 TypeScript 상수(`PERMISSION_LABELS_LOCALIZED`)에서
+직접 읽어야 함. `t.raw('profile.permissions.labels')` 패턴은 레거시이며 타입 안전성이 없음.
+
+**배경:** `PERMISSION_LABELS_LOCALIZED: Record<string, Record<Permission, string>>`이
+`@equipment-management/shared-constants`에서 export됨. `Record<Permission, string>` 타입이
+컴파일 타임에 완전성을 강제 — 새 Permission 추가 시 `PERMISSION_LABELS_EN`에 누락이면 tsc 에러.
+
+**20a: t.raw permission labels 레거시 패턴 탐지**
+```bash
+grep -rn "t\.raw.*profile\.permissions\.labels\|t\.raw.*permissions\.labels" \
+  apps/frontend --include="*.tsx" --include="*.ts"
+# 결과: 0건 (PERMISSION_LABELS_LOCALIZED[locale] 패턴으로 대체됨)
+```
+
+**20b: PERMISSION_LABELS_LOCALIZED SSOT 경유 확인**
+```bash
+grep -n "PERMISSION_LABELS_LOCALIZED" \
+  apps/frontend/app/\(dashboard\)/settings/profile/ProfileContent.tsx
+# 결과: import + 사용 2건 이상
+```
+
+**20c: settings.json labels 섹션 부재 확인 (TypeScript로 이관됨)**
+```bash
+grep -n '"labels"' apps/frontend/messages/ko/settings.json apps/frontend/messages/en/settings.json
+# 결과: 0건 (labels 섹션은 TypeScript SSOT로 이관되어 JSON에 없어야 함)
+```
+
+**PASS:** 20a·20c 0건, 20b 2건 이상. **FAIL:** t.raw 레거시 패턴 재도입 또는 settings.json에 labels 섹션 복원.
+
 ## Output Format
 
 ```markdown
@@ -284,6 +315,7 @@ grep -rn "interface.*{[[:space:]]*\[key: string\]: string" \
 | 17  | Content-Disposition 빌더 SSOT | PASS/FAIL | 컨트롤러 직접 헤더 조립 위치 |
 | 19  | 프론트엔드 Status/Type 리터럴 | PASS/FAIL | ValidationStatus/ValidationType raw 리터럴 비교 위치 |
 | 19c | 도메인 폼 아이템 loose index  | PASS/FAIL | `[key: string]: string` 인터페이스 위치 (AcquisitionOrProcessingItem/ControlItem 대체) |
+| 20  | Permission 라벨 렌더링 SSOT   | PASS/FAIL | t.raw 레거시 패턴 또는 settings.json labels 섹션 재도입 위치 |
 ```
 
 ## Exceptions
