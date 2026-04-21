@@ -15,7 +15,7 @@ import { softwareValidations } from '@equipment-management/db/schema';
 import type { DocumentRecord } from '@equipment-management/db/schema/documents';
 import type { AppDatabase } from '@equipment-management/db';
 import type { DocumentType, DocumentStatus } from '@equipment-management/schemas';
-import { ValidationStatusValues } from '@equipment-management/schemas';
+import { DocumentStatusValues, ValidationStatusValues } from '@equipment-management/schemas';
 import { FileUploadService } from './file-upload.service';
 import { STORAGE_PROVIDER, type IStorageProvider } from '../storage/storage.interface';
 import type { MulterFile } from '../../types/common.types';
@@ -105,7 +105,7 @@ export class DocumentService {
         selfInspectionId: options.selfInspectionId,
         nonConformanceId: options.nonConformanceId,
         documentType: options.documentType,
-        status: 'active' as DocumentStatus,
+        status: DocumentStatusValues.ACTIVE,
         fileName: savedFile.fileName,
         originalFileName: savedFile.originalFileName,
         filePath: savedFile.filePath,
@@ -137,7 +137,7 @@ export class DocumentService {
    */
   async findById(id: string): Promise<DocumentRecord> {
     const document = await this.db.query.documents.findFirst({
-      where: and(eq(documents.id, id), eq(documents.status, 'active' as DocumentStatus)),
+      where: and(eq(documents.id, id), eq(documents.status, DocumentStatusValues.ACTIVE)),
     });
 
     if (!document) {
@@ -174,7 +174,7 @@ export class DocumentService {
   async findByCalibrationId(calibrationId: string, type?: DocumentType): Promise<DocumentRecord[]> {
     const conditions = [
       eq(documents.calibrationId, calibrationId),
-      eq(documents.status, 'active' as DocumentStatus),
+      eq(documents.status, DocumentStatusValues.ACTIVE),
     ];
     if (type) {
       conditions.push(eq(documents.documentType, type));
@@ -193,7 +193,7 @@ export class DocumentService {
   async findByEquipmentId(equipmentId: string, type?: DocumentType): Promise<DocumentRecord[]> {
     const conditions = [
       eq(documents.equipmentId, equipmentId),
-      eq(documents.status, 'active' as DocumentStatus),
+      eq(documents.status, DocumentStatusValues.ACTIVE),
     ];
     if (type) {
       conditions.push(eq(documents.documentType, type));
@@ -230,7 +230,7 @@ export class DocumentService {
     return this.db
       .select()
       .from(documents)
-      .where(and(or(...ownerConditions), eq(documents.status, 'active' as DocumentStatus)))
+      .where(and(or(...ownerConditions), eq(documents.status, DocumentStatusValues.ACTIVE)))
       .orderBy(desc(documents.uploadedAt));
   }
 
@@ -242,7 +242,7 @@ export class DocumentService {
       .select()
       .from(documents)
       .where(
-        and(eq(documents.requestId, requestId), eq(documents.status, 'active' as DocumentStatus))
+        and(eq(documents.requestId, requestId), eq(documents.status, DocumentStatusValues.ACTIVE))
       )
       .orderBy(desc(documents.uploadedAt));
   }
@@ -256,7 +256,7 @@ export class DocumentService {
   ): Promise<DocumentRecord[]> {
     const conditions = [
       eq(documents.softwareValidationId, softwareValidationId),
-      eq(documents.status, 'active' as DocumentStatus),
+      eq(documents.status, DocumentStatusValues.ACTIVE),
     ];
     if (type) {
       conditions.push(eq(documents.documentType, type));
@@ -278,7 +278,7 @@ export class DocumentService {
   ): Promise<DocumentRecord[]> {
     const conditions = [
       eq(documents.intermediateInspectionId, intermediateInspectionId),
-      eq(documents.status, 'active' as DocumentStatus),
+      eq(documents.status, DocumentStatusValues.ACTIVE),
     ];
     if (type) {
       conditions.push(eq(documents.documentType, type));
@@ -300,7 +300,7 @@ export class DocumentService {
   ): Promise<DocumentRecord[]> {
     const conditions = [
       eq(documents.nonConformanceId, nonConformanceId),
-      eq(documents.status, 'active' as DocumentStatus),
+      eq(documents.status, DocumentStatusValues.ACTIVE),
     ];
     if (type) {
       conditions.push(eq(documents.documentType, type));
@@ -322,7 +322,7 @@ export class DocumentService {
   ): Promise<DocumentRecord[]> {
     const conditions = [
       eq(documents.selfInspectionId, selfInspectionId),
-      eq(documents.status, 'active' as DocumentStatus),
+      eq(documents.status, DocumentStatusValues.ACTIVE),
     ];
     if (type) {
       conditions.push(eq(documents.documentType, type));
@@ -393,7 +393,7 @@ export class DocumentService {
           selfInspectionId: parentDoc.selfInspectionId,
           nonConformanceId: parentDoc.nonConformanceId,
           documentType: parentDoc.documentType as DocumentType,
-          status: 'active' as DocumentStatus,
+          status: DocumentStatusValues.ACTIVE,
           fileName: savedFile.fileName,
           originalFileName: savedFile.originalFileName,
           filePath: savedFile.filePath,
@@ -629,7 +629,7 @@ export class DocumentService {
       .update(documents)
       .set({ equipmentId, updatedAt: new Date() })
       .where(
-        and(eq(documents.requestId, requestId), eq(documents.status, 'active' as DocumentStatus))
+        and(eq(documents.requestId, requestId), eq(documents.status, DocumentStatusValues.ACTIVE))
       )
       .returning({ id: documents.id });
 

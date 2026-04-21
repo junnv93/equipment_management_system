@@ -14,7 +14,11 @@ import {
   type InspectionDocumentItem,
 } from '@equipment-management/db/schema';
 import type { DocumentService } from '../../common/file-upload/document.service';
-import { InspectionApprovalStatusValues, type DocumentType } from '@equipment-management/schemas';
+import {
+  CalibrationApprovalStatusValues,
+  InspectionApprovalStatusValues,
+  type DocumentType,
+} from '@equipment-management/schemas';
 import type { MulterFile } from '../../types/common.types';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -97,7 +101,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
           calibrationValidityPeriod: dto.calibrationValidityPeriod ?? null,
           overallResult: dto.overallResult ?? null,
           remarks: dto.remarks ?? null,
-          approvalStatus: 'draft',
+          approvalStatus: InspectionApprovalStatusValues.DRAFT,
           createdBy,
         })
         .returning();
@@ -225,7 +229,10 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       .select({ id: calibrations.id })
       .from(calibrations)
       .where(
-        and(eq(calibrations.equipmentId, equipmentId), eq(calibrations.approvalStatus, 'approved'))
+        and(
+          eq(calibrations.equipmentId, equipmentId),
+          eq(calibrations.approvalStatus, CalibrationApprovalStatusValues.APPROVED)
+        )
       )
       .orderBy(desc(calibrations.createdAt))
       .limit(1);
@@ -422,7 +429,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'submitted',
+        approvalStatus: InspectionApprovalStatusValues.SUBMITTED,
         submittedAt: new Date(),
         submittedBy: userId,
       },
@@ -454,7 +461,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'reviewed',
+        approvalStatus: InspectionApprovalStatusValues.REVIEWED,
         reviewedAt: new Date(),
         reviewedBy: userId,
       },
@@ -488,7 +495,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'approved',
+        approvalStatus: InspectionApprovalStatusValues.APPROVED,
         approvedAt: new Date(),
         approvedBy: userId,
       },
@@ -528,7 +535,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'rejected',
+        approvalStatus: InspectionApprovalStatusValues.REJECTED,
         rejectedAt: new Date(),
         rejectedBy: userId,
         rejectionReason: reason,
@@ -568,7 +575,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'draft',
+        approvalStatus: InspectionApprovalStatusValues.DRAFT,
         submittedAt: null,
         submittedBy: null,
       },
@@ -600,7 +607,7 @@ export class IntermediateInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'draft',
+        approvalStatus: InspectionApprovalStatusValues.DRAFT,
         rejectedAt: null,
         rejectedBy: null,
         rejectionReason: null,

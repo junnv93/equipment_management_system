@@ -66,7 +66,7 @@ module.exports = {
         ],
       },
     ],
-    // SSOT 회귀 방지: domain status 하드코딩 문자열 리터럴 차단
+    // SSOT 회귀 방지: domain status 하드코딩 문자열 리터럴 차단 (비교 패턴)
     'no-restricted-syntax': [
       'error',
       {
@@ -74,6 +74,13 @@ module.exports = {
           "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name=/^(status|approvalStatus|returnApprovalStatus)$/][right.type='Literal'][right.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
         message:
           "Do not compare .status/.approvalStatus against a raw domain literal. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas' (e.g. EquipmentStatusValues.AVAILABLE, CalibrationStatusValues.COMPLETED). For Promise.allSettled (r.status === 'fulfilled'|'rejected'), add: // eslint-disable-next-line no-restricted-syntax -- Promise.allSettled result status",
+      },
+      // SSOT 회귀 방지: domain status 하드코딩 문자열 리터럴 차단 (객체 할당 패턴)
+      {
+        selector:
+          "Property[key.name=/^(status|approvalStatus|returnApprovalStatus)$/][value.type='Literal'][value.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
+        message:
+          "Do not assign a raw domain literal to .status/.approvalStatus. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas' (e.g. EquipmentStatusValues.AVAILABLE). For Drizzle insert/update objects, use the Values constant.",
       },
     ],
   },
@@ -98,12 +105,23 @@ module.exports = {
             message:
               "Do not compare .status/.approvalStatus against a raw domain literal. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas'.",
           },
+          {
+            selector:
+              "Property[key.name=/^(status|approvalStatus|returnApprovalStatus)$/][value.type='Literal'][value.value=/^(active|approved|available|cancelled|canceled|checked_out|closed|completed|corrected|deleted|disposed|draft|failed|in_progress|inactive|in_use|lender_checked|lender_received|borrower_received|borrower_returned|non_conforming|open|overdue|pending|pending_approval|pending_disposal|quality_approved|rejected|rental|retired|return_approved|returned|reviewed|scheduled|spare|submitted|superseded|temporary)$/]",
+            message:
+              "Do not assign a raw domain literal to .status/.approvalStatus. Import the matching *StatusValues/*Values constant from '@equipment-management/schemas'.",
+          },
         ],
       },
     },
     {
-      // seed-data fixture와 테스트 spec은 리터럴 사용이 정상 — SSOT 룰 제외
-      files: ['src/database/seed-data/**/*.ts', '**/__tests__/**/*.spec.ts'],
+      // seed-data fixture, 테스트 spec, 테스트 헬퍼는 리터럴 사용이 정상 — SSOT 룰 제외
+      files: [
+        'src/database/seed-data/**/*.ts',
+        '**/__tests__/**/*.spec.ts',
+        '**/*.spec.ts',
+        '**/testing/**/*.ts',
+      ],
       rules: {
         'no-restricted-syntax': 'off',
       },

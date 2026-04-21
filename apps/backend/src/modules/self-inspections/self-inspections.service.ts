@@ -130,7 +130,7 @@ export class SelfInspectionsService extends VersionedBaseService {
           nextInspectionDate,
           classification: classificationSnapshot,
           calibrationValidityPeriod: validityPeriodSnapshot,
-          approvalStatus: 'draft',
+          approvalStatus: SelfInspectionStatusValues.DRAFT,
           createdBy: inspectorId,
         })
         .returning();
@@ -345,7 +345,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'submitted',
+        approvalStatus: SelfInspectionStatusValues.SUBMITTED,
         submittedAt: new Date(),
         submittedBy: userId,
       },
@@ -388,7 +388,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'draft',
+        approvalStatus: SelfInspectionStatusValues.DRAFT,
         submittedAt: null,
         submittedBy: null,
       },
@@ -427,7 +427,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'approved',
+        approvalStatus: SelfInspectionStatusValues.APPROVED,
         approvedAt: new Date(),
         approvedBy: userId,
       },
@@ -469,7 +469,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'rejected',
+        approvalStatus: SelfInspectionStatusValues.REJECTED,
         rejectedAt: new Date(),
         rejectedBy: userId,
         rejectionReason: reason,
@@ -507,7 +507,7 @@ export class SelfInspectionsService extends VersionedBaseService {
       id,
       version,
       {
-        approvalStatus: 'draft',
+        approvalStatus: SelfInspectionStatusValues.DRAFT,
         rejectedAt: null,
         rejectedBy: null,
         rejectionReason: null,
