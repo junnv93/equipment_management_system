@@ -5,6 +5,14 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — tech-debt-batch-0421c (CSP 영속화 + createZodDto 마이그레이션)
+
+- [x] **[2026-04-18 completion] 🟢 LOW CSP report 영속화** — ✅ 2026-04-21 완료. `csp_reports` 테이블(migration 0041) + SecurityService + SecurityModule DrizzleModule 등록.
+- [x] **[2026-04-17 qr-phase3] ❓ 커밋 7a6255d1 메시지 귀속 복구** — ✅ 2026-04-21 결정: status quo(A). 히스토리 재작성 없이 현 커밋 인정.
+- [x] **[2026-04-17 arch-ci-gate-zod-pilot] createZodDto 대규모 전환** — ✅ 2026-04-21 완료. calibration/data-migration/settings/equipment/notifications/teams DTO 전환. 잔여는 트리거 기반.
+
+---
+
 ## 2026-04-21 — form-export-services + 보안 수정
 
 - [x] **[2026-04-20 skill-gap] 🟢 LOW calibration-plan-exportability.ts 전용 verify 없음** — ✅ 2026-04-21 Won't Do. verify-hardcoding Step 23 + verify-ssot로 이미 커버. 별도 스킬 추가 없음.
