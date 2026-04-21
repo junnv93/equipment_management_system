@@ -370,3 +370,5 @@
 | 2026-04-20 | 재발 (4차) | mapBackendErrorCode 누락 — CALIBRATION_PLAN_* + CALIBRATION_* 18개 에러 코드 미매핑 (calibration-plans 모듈) | review-learnings.md + verify-hardcoding Step 10 누락 목록 추가 |
 | 2026-04-20 | 새 패턴 | `@OnEvent({ async: true })` 도메인 동기화 리스너 — CalibrationPlanSyncListener (best-effort, CACHE_INVALIDATION_REGISTRY 제외) | verify-cache-events Exceptions #6 추가 |
 | 2026-04-20 | 새 패턴 | `actualCalibrationId` FK 참조 시드 정합성 + bulk-confirm 2건 시나리오 보장 | verify-seed-integrity Step 8 추가 |
+| 2026-04-21 | 재발 (3차) | QUERY_CONFIG 인라인 오버라이드 — CheckoutsContent pendingCount/destinations/liveSummary 3개 쿼리에 `staleTime: CACHE_TIMES.SHORT` 인라인 (SSOT 밖 분산) | CheckoutsContent.tsx |
+| 2026-04-21 | 안티패턴 | URL 파라미터 오염 — InboundCheckoutsTab이 공용 `?page=` 파라미터를 수정하여 반출 탭 페이지네이션 오염. 해결: 섹션별 독립 파라미터 `?inboundPage=N` 분리 (useInboundSectionPagination) | InboundCheckoutsTab.tsx, use-inbound-section-pagination.ts |
