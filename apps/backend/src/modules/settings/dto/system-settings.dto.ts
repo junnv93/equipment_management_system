@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   systemSettingsSchema,
@@ -14,6 +14,6 @@ export { DEFAULT_SYSTEM_SETTINGS, type SystemSettings };
  */
 export const updateSystemSettingsSchema = systemSettingsSchema.partial();
 
-export type UpdateSystemSettingsDto = z.infer<typeof updateSystemSettingsSchema>;
+export class UpdateSystemSettingsDto extends createZodDto(updateSystemSettingsSchema) {}
 
 export const UpdateSystemSettingsValidationPipe = new ZodValidationPipe(updateSystemSettingsSchema);

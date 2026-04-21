@@ -385,6 +385,7 @@ pnpm --filter backend run lint 2>&1 | grep "no-restricted-syntax" | grep -v "nod
 | 20  | Permission 라벨 렌더링 SSOT   | PASS/FAIL | t.raw 레거시 패턴 또는 settings.json labels 섹션 재도입 위치 |
 | 21  | ConditionCheckStep SSOT       | PASS/FAIL | 'lender_checkout'/'lender_return' 리터럴 직접 비교 위치 |
 | 22  | ESLint 3-layer selector 완전성 | PASS/FAIL | BinaryExpression/Property/CallExpression selector 누락 또는 lint 에러 위치 |
+| 23  | DocxTemplate 레거시 barrel 경로 | PASS/FAIL | `reports/docx-template.util` 경유 import 위치 (canonical: `common/docx/`) |
 ```
 
 ## Exceptions

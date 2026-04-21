@@ -78,11 +78,11 @@ import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import {
   UpdateCalibrationStatusPipe,
-  type UpdateCalibrationStatusDto,
+  UpdateCalibrationStatusDto,
 } from './dto/update-calibration-status.dto';
 import {
   CompleteIntermediateCheckPipe,
-  type CompleteIntermediateCheckDto,
+  CompleteIntermediateCheckDto,
 } from './dto/complete-intermediate-check.dto';
 import {
   PendingApprovalsQueryDto,

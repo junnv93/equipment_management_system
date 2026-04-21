@@ -18,34 +18,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import {
-  VALIDATION_TYPE_VALUES,
-  ValidationTypeValues,
-  type AcquisitionOrProcessingItem,
-  type ControlItem,
-} from '@equipment-management/schemas';
-import type { ValidationType } from '@equipment-management/schemas';
+import { VALIDATION_TYPE_VALUES, ValidationTypeValues } from '@equipment-management/schemas';
 import { VendorValidationFields } from './VendorValidationFields';
 import { SelfValidationFields } from './SelfValidationFields';
+import type { CreateFormState } from './validation-create-form.types';
 
-export interface CreateFormState {
-  validationType: ValidationType | '';
-  softwareVersion: string;
-  testDate: string;
-  vendorName: string;
-  vendorSummary: string;
-  receivedBy: string;
-  receivedDate: string;
-  attachmentNote: string;
-  referenceDocuments: string;
-  operatingUnitDescription: string;
-  softwareComponents: string;
-  hardwareComponents: string;
-  performedBy: string;
-  acquisitionFunctions: AcquisitionOrProcessingItem[];
-  processingFunctions: AcquisitionOrProcessingItem[];
-  controlFunctions: ControlItem[];
-}
+export type { CreateFormState };
 
 interface ValidationCreateDialogProps {
   open: boolean;

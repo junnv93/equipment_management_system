@@ -274,12 +274,35 @@ grep -rn "TEST_USERS_BY_TEAM\s*=\|DEFAULT_ROLE_EMAILS\s*=\|ALL_TEST_EMAILS\s*=" 
 ## Step 13: DocumentTypeValues SSOT 임포트 확인
 
 문서 타입 값을 문자열 하드코딩 대신 `DocumentTypeValues` 상수를 사용하는지 확인합니다.
+SSOT: `packages/schemas/src/document.ts`의 `DocumentTypeValues` (12개 값).
 
 ```bash
-# DocumentType 문자열 하드코딩 탐지 (DocumentTypeValues 미사용)
-grep -rn "'calibration_certificate'\|'raw_data'\|'inspection_report'\|'history_card'\|'equipment_photo'\|'equipment_manual'" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "DocumentTypeValues\|DOCUMENT_TYPE_VALUES\|document\.ts\|node_modules\|// \|test\|\.spec\.\|as const"
+# DocumentType 문자열 하드코딩 탐지 (DocumentTypeValues 미사용) — 12개 모든 값 커버
+grep -rn "'calibration_certificate'\|'raw_data'\|'inspection_report'\|'history_card'\|'equipment_photo'\|'equipment_manual'\|'validation_vendor_attachment'\|'validation_test_data'\|'inspection_photo'\|'inspection_graph'\|'measurement_data'" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "DocumentTypeValues\|DOCUMENT_TYPE_VALUES\|document\.ts\|node_modules\|// \|test\|\.spec\.\|as const"
 ```
 
 **PASS 기준:** 0개 결과 (모든 document type이 `DocumentTypeValues.*` 사용).
 
 **FAIL 기준:** 문자열 리터럴로 document type 사용 시 교체 필요.
+
+**주의:** `'other'`는 너무 일반적이어서 grep 오탐 위험 — 제외. 코드 리뷰에서 수동 확인.
+
+## Step 23: DocxTemplate 레거시 barrel 경로 탐지 (2026-04-21 추가)
+
+`apps/backend/src/common/docx/docx-template.util.ts`가 DocxTemplate canonical 경로.
+`reports/docx-template.util` barrel 경유 import는 레거시 경로 — `common/docx/` 직접 import로 교체 필요.
+
+```bash
+# DocxTemplate 레거시 barrel 경로 사용 탐지
+grep -rn "from '.*reports/docx-template.util'" apps/backend/src --include="*.ts" \
+  | grep -v "reports/docx-template.util.ts"
+# 결과: 0건 (canonical 경로 사용)
+```
+
+**PASS 기준:** 0건. `reports/` 모듈 자체의 re-export 파일(`reports/docx-template.util.ts`)은 예외.
+
+**FAIL 기준:** inspection renderer 등 도메인 파일이 `../../reports/docx-template.util` 경로 사용 시
+`../../../common/docx/docx-template.util`로 교체.
+
+**현재 알려진 부채:** `self-inspection-renderer.service.ts`, `intermediate-inspection-renderer.service.ts`
+— 트리거: inspection renderer 수정 시.

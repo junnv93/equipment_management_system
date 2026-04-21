@@ -39,7 +39,8 @@ import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
-import { ValidationCreateDialog, type CreateFormState } from './_components/ValidationCreateDialog';
+import { ValidationCreateDialog } from './_components/ValidationCreateDialog';
+import type { CreateFormState } from './_components/validation-create-form.types';
 import { ValidationActionsBar } from './_components/ValidationActionsBar';
 
 interface SoftwareValidationContentProps {

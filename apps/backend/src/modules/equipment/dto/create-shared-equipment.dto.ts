@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import {
   SharedSourceEnum,
   SiteEnum,
@@ -23,7 +24,7 @@ export const createSharedEquipmentSchema = z.object({
   calibrationCycle: z.coerce.number().int().positive().optional(),
 });
 
-export type CreateSharedEquipmentDto = z.infer<typeof createSharedEquipmentSchema>;
+export class CreateSharedEquipmentDto extends createZodDto(createSharedEquipmentSchema) {}
 
 export const CreateSharedEquipmentValidationPipe = new ZodValidationPipe(
   createSharedEquipmentSchema

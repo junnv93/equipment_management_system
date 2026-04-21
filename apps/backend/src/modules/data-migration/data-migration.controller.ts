@@ -34,9 +34,9 @@ import type { MulterFile } from '../../types/common.types';
 import { DataMigrationService } from './services/data-migration.service';
 import {
   ExecuteEquipmentMigrationPipe,
-  type ExecuteEquipmentMigrationDto,
+  ExecuteEquipmentMigrationDto,
   PreviewEquipmentMigrationPipe,
-  type PreviewEquipmentMigrationDto,
+  PreviewEquipmentMigrationDto,
 } from './dto';
 import type {
   MultiSheetPreviewResult,

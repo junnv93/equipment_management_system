@@ -9,6 +9,7 @@ import {
   ITEM_COLS,
   SIGN_OFF_COLS,
   TEXT_COL,
+  MERGED_TEXT_COL,
   formatQp1806Date,
 } from './checkout-form.layout';
 import type { CheckoutFormExportData } from './checkout-form-export-data.service';
@@ -54,7 +55,7 @@ export class CheckoutFormRendererService {
     doc.setCellValue(
       0,
       ROWS.checkoutConfirmText,
-      0,
+      MERGED_TEXT_COL,
       `아래 목록과 같이 측정장비를 반출하였음을 확인합니다.    ${checkoutDateStr}    반출자 : ${data.requester?.name ?? '-'}`
     );
 
@@ -102,7 +103,7 @@ export class CheckoutFormRendererService {
     doc.setCellValue(
       0,
       ROWS.returnConfirmText,
-      0,
+      MERGED_TEXT_COL,
       `상기 목록과 같이 측정장비를 이상없이 반입하였음을 확인합니다.    ${returnDateStr}    반입자 : ${data.requester?.name ?? '-'}`
     );
 

@@ -66,6 +66,12 @@ export const SIGN_OFF_COLS = {
 export const TEXT_COL = 1 as const;
 
 /**
+ * 병합된 전체 너비 셀의 셀 인덱스.
+ * 확인 문장 행(R5 반출, R24 반입)은 원본 docx에서 모든 컬럼이 병합된 단일 셀.
+ */
+export const MERGED_TEXT_COL = 0 as const;
+
+/**
  * QP-18-06 전용 날짜 형식: "YYYY . MM . DD ."
  *
  * 원본 양식의 날짜 필드 형식에 맞춰 공백을 포함한 점 구분자를 사용.

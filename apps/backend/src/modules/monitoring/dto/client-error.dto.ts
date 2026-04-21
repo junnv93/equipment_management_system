@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 export const clientErrorSchema = z.object({
@@ -10,5 +11,5 @@ export const clientErrorSchema = z.object({
   timestamp: z.string(),
 });
 
-export type ClientErrorDto = z.infer<typeof clientErrorSchema>;
+export class ClientErrorDto extends createZodDto(clientErrorSchema) {}
 export const ClientErrorPipe = new ZodValidationPipe(clientErrorSchema);

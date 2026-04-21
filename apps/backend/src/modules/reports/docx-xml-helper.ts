@@ -28,7 +28,7 @@ import type { InspectionResultSection } from '@equipment-management/db/schema/in
 import type { DocxTemplate } from '../../common/docx/docx-template.util';
 import type { IStorageProvider } from '../../common/storage/storage.interface';
 
-const helperLogger = new Logger('DocxXmlHelper');
+const helperLogger = new Logger('InspectionResultRenderer');
 
 type InspectionResultSectionImageCache = Map<string, { buffer: Buffer; ext: 'png' | 'jpeg' }>;
 

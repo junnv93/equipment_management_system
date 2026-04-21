@@ -10,6 +10,7 @@ import {
   ITEM_COLS,
   SIGN_OFF_COLS,
   TEXT_COL,
+  MERGED_TEXT_COL,
   formatQp1810Date,
   koConditionLabel,
 } from './equipment-import-form.layout';
@@ -83,7 +84,7 @@ export class EquipmentImportFormRendererService {
     doc.setCellValue(
       0,
       ROWS.usageConfirmText,
-      0,
+      MERGED_TEXT_COL,
       `아래 목록과 같이 공용장비 사용(반출)을 확인합니다.    ${checkoutDateStr}    사용자 : ${data.requester?.name ?? '-'}`
     );
 
@@ -182,7 +183,7 @@ export class EquipmentImportFormRendererService {
     doc.setCellValue(
       0,
       ROWS.returnConfirmText,
-      0,
+      MERGED_TEXT_COL,
       `상기 목록과 같이 공용 장비를 이상없이 반납하였음을 확인합니다.    ${returnDateStr}    반납자 : ${data.requester?.name ?? '-'}`
     );
 

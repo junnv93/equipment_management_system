@@ -217,6 +217,12 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 - [x] **[2026-04-21 frontend-state] SoftwareValidationContent.tsx isError 미처리** — 2026-04-21 완료: `isError` 추가, 에러 UI 분기(`loadError` i18n 키, `XCircle` 아이콘) 추가.
 - [x] **[2026-04-21 form-export-services] 🟢 LOW renderer 내 단일 열 인덱스 named constant 미적용** — 2026-04-21 완료. checkout/equipment-import layout에 `TEXT_COL = 1` 추가, renderer 리터럴 교체. commit 7458ae0e.
 - [x] **[2026-04-21 docx-layer-fix] 🔴 ARCH domain→reports 단방향 의존성 위반** — 2026-04-21 완료. `src/common/docx/docx-template.util.ts` + `docx-xml-helpers.ts` 신설. 5개 도메인 renderer(checkouts/equipment-imports/software-validations/test-software/equipment) import 경로를 `common/docx/`로 교체. reports/ barrel re-export 유지. commit 7458ae0e.
+- [x] **[2026-04-21 verify-ssot] 🟠 HIGH `'calibration_certificate'` 리터럴 직접 사용** — 2026-04-21 완료. `DocumentTypeValues.CALIBRATION_CERTIFICATE` 경유로 교체 (service 6곳 + controller 1곳 + spec 픽스처 3곳).
+- [x] **[2026-04-21 verify-hardcoding] 🟡 MEDIUM `queryKey: ['auth', 'providers']` 하드코딩** — 2026-04-21 완료. `queryKeys.auth.providers()` 추가 + `AuthProviders.tsx` 경유.
+- [x] **[2026-04-21 verify-hardcoding] 🟢 LOW `EXPORTABLE_STATUSES` 리터럴 직접 사용** — 2026-04-21 완료. `ValidationStatusValues.SUBMITTED/.APPROVED/.QUALITY_APPROVED` 경유로 교체.
+- [x] **[2026-04-21 review-architecture] 🟢 LOW CreateFormState 역의존** — 2026-04-21 완료. `validation-create-form.types.ts` 신설. `ValidationCreateDialog` re-export, 형제 컴포넌트는 types 파일 직접 import.
+- [x] **[2026-04-19 sw-validation] 🟢 LOW Phase 7 — k6 부하 테스트 미검증** — 2026-04-21 완료. `scripts/load/software-validation-export.k6.js` + `software-validation-list.k6.js` 생성. export p95 < 2000ms(DOCX 완화), list p95 < 500ms 목표.
+- [x] **[2026-04-21 verify-ssot] 🟢 LOW verify-ssot Step 23 추가** — 2026-04-21 완료. `ssot-checks.md` Step 23(DocxTemplate 레거시 barrel 경로 탐지) 추가 + SKILL.md Output 테이블 업데이트. Step 13 누락 6개 DocumentType 값 보완.
 - [x] **[2026-04-21 verify-ssot] 🟠 HIGH `'calibration_certificate'` 리터럴** — 2026-04-21 완료. `DocumentTypeValues.CALIBRATION_CERTIFICATE` 교체 (service 6 + controller 1 + spec 3곳).
 - [x] **[2026-04-21 verify-hardcoding] 🟡 MEDIUM `queryKey: ['auth', 'providers']` 하드코딩** — 2026-04-21 완료. `queryKeys.auth.providers()` 네임스페이스 추가 + `AuthProviders.tsx` 경유.
 - [x] **[2026-04-21 verify-hardcoding] 🟢 LOW `EXPORTABLE_STATUSES` 리터럴** — 2026-04-21 완료. `ValidationStatusValues.SUBMITTED/.APPROVED/.QUALITY_APPROVED` 경유.

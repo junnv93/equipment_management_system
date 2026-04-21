@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
@@ -7,5 +8,5 @@ export const completeIntermediateCheckSchema = z.object({
   ...versionedSchema,
 });
 
-export type CompleteIntermediateCheckDto = z.infer<typeof completeIntermediateCheckSchema>;
+export class CompleteIntermediateCheckDto extends createZodDto(completeIntermediateCheckSchema) {}
 export const CompleteIntermediateCheckPipe = new ZodValidationPipe(completeIntermediateCheckSchema);

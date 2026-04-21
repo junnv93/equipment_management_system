@@ -12,11 +12,11 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SettingsService } from './settings.service';
 import {
   UpdateCalibrationSettingsValidationPipe,
-  type UpdateCalibrationSettingsDto,
+  UpdateCalibrationSettingsDto,
 } from './dto/calibration-settings.dto';
 import {
   UpdateSystemSettingsValidationPipe,
-  type UpdateSystemSettingsDto,
+  UpdateSystemSettingsDto,
 } from './dto/system-settings.dto';
 
 @ApiTags('설정 관리')

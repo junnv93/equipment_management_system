@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { UserCombobox } from '@/components/ui/user-combobox';
-import type { CreateFormState } from './ValidationCreateDialog';
+import type { CreateFormState } from './validation-create-form.types';
 
 interface VendorValidationFieldsProps {
   form: CreateFormState;

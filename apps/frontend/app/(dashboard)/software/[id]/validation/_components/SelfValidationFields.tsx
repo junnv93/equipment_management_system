@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { UserCombobox } from '@/components/ui/user-combobox';
 import { ValidationFunctionsTable } from './ValidationFunctionsTable';
 import { ValidationControlTable } from './ValidationControlTable';
-import type { CreateFormState } from './ValidationCreateDialog';
+import type { CreateFormState } from './validation-create-form.types';
 
 interface SelfValidationFieldsProps {
   form: CreateFormState;
