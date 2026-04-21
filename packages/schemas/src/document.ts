@@ -67,6 +67,12 @@ export const DOCUMENT_STATUS_VALUES = [
 export const DocumentStatusEnum = z.enum(DOCUMENT_STATUS_VALUES);
 export type DocumentStatus = z.infer<typeof DocumentStatusEnum>;
 
+export const DocumentStatusValues = {
+  ACTIVE: 'active',
+  SUPERSEDED: 'superseded',
+  DELETED: 'deleted',
+} as const satisfies Record<string, DocumentStatus>;
+
 // ============================================================
 // 문서 스키마
 // ============================================================

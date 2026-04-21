@@ -78,6 +78,18 @@ const eslintConfig = [
           ],
         },
       ],
+      // SSOT 회귀 방지: obj.status 도메인 리터럴 직접 비교 금지
+      // 허용 예외: Promise.allSettled r.status === 'rejected'|'fulfilled', 로컬 UI 타입
+      //           → eslint-disable-next-line no-restricted-syntax -- <사유> 로 명시
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "BinaryExpression[operator=/^(===|!==)$/][left.type='MemberExpression'][left.property.name='status'][right.type='Literal'][right.value=/^(active|approved|canceled|closed|completed|deleted|disposed|draft|inactive|maintenance|open|overdue|pending|quality_approved|rejected|rental|returned|submitted|superseded|temporary)$/]",
+          message:
+            "Do not compare .status against a raw domain literal. Use the matching *StatusValues constant from '@equipment-management/schemas' (e.g. EquipmentStatusValues.TEMPORARY, NonConformanceStatusValues.OPEN). For Promise.allSettled or local UI state types, add: // eslint-disable-next-line no-restricted-syntax -- <reason>",
+        },
+      ],
     },
     settings: {
       react: {

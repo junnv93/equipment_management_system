@@ -158,7 +158,7 @@ export default function NonConformancesContent({
         nc.equipment?.managementNumber ?? '',
         nc.cause,
         nc.discoveryDate,
-        nc.status !== 'closed' ? t('list.csvElapsedDays', { days: elapsed }) : '',
+        nc.status !== NCStatusVal.CLOSED ? t('list.csvElapsedDays', { days: elapsed }) : '',
       ];
     });
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
@@ -413,7 +413,7 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
       href={`/non-conformances/${nc.id}`}
       className={cn(
         NC_LIST_TOKENS.row,
-        longOverdue && nc.status !== 'closed' && NC_LIST_TOKENS.rowOverdue
+        longOverdue && nc.status !== NCStatusVal.CLOSED && NC_LIST_TOKENS.rowOverdue
       )}
       style={{ animationDelay: `${index * NC_STAGGER_DELAY_MS}ms` }}
     >
@@ -451,7 +451,7 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
 
       {/* 경과일 */}
       <div>
-        {nc.status !== 'closed' ? (
+        {nc.status !== NCStatusVal.CLOSED ? (
           <span className={getNCElapsedDaysClasses(elapsedDays)}>
             {t('list.elapsedDays', { days: elapsedDays })}
           </span>

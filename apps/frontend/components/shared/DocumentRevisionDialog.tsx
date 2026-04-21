@@ -16,6 +16,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Download, ShieldCheck } from 'lucide-react';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
+import { DocumentStatusValues } from '@equipment-management/schemas';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { DOCUMENT_TABLE, getDocumentRowClasses } from '@/lib/design-tokens';
 import { formatFileSize } from '@/lib/utils/format';
@@ -81,7 +82,9 @@ export function DocumentRevisionDialog({
                   >
                     <TableCell>
                       <Badge
-                        variant={rev.status === 'active' ? 'default' : 'secondary'}
+                        variant={
+                          rev.status === DocumentStatusValues.ACTIVE ? 'default' : 'secondary'
+                        }
                         className="text-xs"
                       >
                         {t('attachmentsTab.revisionCount', { count: rev.revisionNumber })}
@@ -89,7 +92,7 @@ export function DocumentRevisionDialog({
                     </TableCell>
                     <TableCell>
                       <span
-                        className={`truncate max-w-[180px] block ${rev.status === 'active' ? DOCUMENT_TABLE.fileNameCell : ''}`}
+                        className={`truncate max-w-[180px] block ${rev.status === DocumentStatusValues.ACTIVE ? DOCUMENT_TABLE.fileNameCell : ''}`}
                         title={rev.originalFileName}
                       >
                         {rev.originalFileName}
@@ -110,10 +113,10 @@ export function DocumentRevisionDialog({
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={rev.status === 'active' ? 'success' : 'outline'}
+                        variant={rev.status === DocumentStatusValues.ACTIVE ? 'success' : 'outline'}
                         className="text-xs"
                       >
-                        {rev.status === 'active'
+                        {rev.status === DocumentStatusValues.ACTIVE
                           ? t('attachmentsTab.revision.latest')
                           : t('attachmentsTab.revision.previous')}
                       </Badge>
@@ -122,9 +125,9 @@ export function DocumentRevisionDialog({
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label={`${t('attachmentsTab.download')} ${rev.originalFileName}`}
                         className="h-8 w-8"
                         onClick={() => handleDownload(rev)}
-                        aria-label={`${t('attachmentsTab.download')} ${rev.originalFileName}`}
                       >
                         <Download className="h-4 w-4" />
                       </Button>

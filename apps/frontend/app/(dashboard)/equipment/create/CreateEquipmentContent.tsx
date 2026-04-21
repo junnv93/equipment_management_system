@@ -112,7 +112,7 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
           );
 
           const failedItems = saveResults
-            .filter((r) => r.status === 'rejected')
+            .filter((r) => r.status === 'rejected') // eslint-disable-line no-restricted-syntax -- Promise.allSettled result status; self-audit-exception
             .map((r) => ({
               type: r.type,
               error: `${historyTypeLabels[r.type]} ${r.index + 1}: ${r.error}`,

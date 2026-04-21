@@ -56,7 +56,7 @@ export async function uploadEquipmentDocuments(
 
   const results = await Promise.allSettled(uploads);
 
-  const failed = results.filter((r) => r.status === 'rejected').length;
+  const failed = results.filter((r) => r.status === 'rejected').length; // eslint-disable-line no-restricted-syntax -- Promise.allSettled result status; self-audit-exception
   const succeeded = results.length - failed;
 
   // 캐시 무효화: 업로드 성공이 1건이라도 있으면 documents 캐시 갱신

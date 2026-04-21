@@ -30,7 +30,7 @@ import {
 } from '@/lib/design-tokens';
 import { getDisplayStatus } from '@/lib/constants/equipment-status-styles';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import { EquipmentStatusEnum } from '@equipment-management/schemas';
+import { EquipmentStatusEnum, EquipmentStatusValues } from '@equipment-management/schemas';
 import type { ManagementMethod, EquipmentStatus } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
@@ -202,7 +202,7 @@ const EquipmentCard = memo(function EquipmentCard({
               </Badge>
             )}
             {/* 임시등록 장비 사용 기간 표시 */}
-            {equipment.status === 'temporary' &&
+            {equipment.status === EquipmentStatusValues.TEMPORARY &&
               equipment.usagePeriodStart &&
               equipment.usagePeriodEnd && (
                 <UsagePeriodBadge

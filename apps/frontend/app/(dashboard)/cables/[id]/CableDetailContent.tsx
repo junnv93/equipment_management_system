@@ -40,7 +40,11 @@ import { isConflictError } from '@/lib/api/error';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { SITE_VALUES, CABLE_CONNECTOR_TYPE_VALUES } from '@equipment-management/schemas';
+import {
+  SITE_VALUES,
+  CABLE_CONNECTOR_TYPE_VALUES,
+  CableStatusValues,
+} from '@equipment-management/schemas';
 import type { Site } from '@equipment-management/schemas';
 import { useSiteLabels } from '@/lib/i18n/use-enum-labels';
 import { MeasurementFormDialog } from '@/components/cables/MeasurementFormDialog';
@@ -210,7 +214,7 @@ export default function CableDetailContent({ id }: CableDetailContentProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={cable.status === 'active' ? 'default' : 'secondary'}>
+          <Badge variant={cable.status === CableStatusValues.ACTIVE ? 'default' : 'secondary'}>
             {t(`status.${cable.status}` as Parameters<typeof t>[0])}
           </Badge>
           {canUpdate && (

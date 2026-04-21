@@ -476,57 +476,60 @@ export default function NonConformanceManagementClient({
               </div>
 
               {/* 수리 안내 카드 */}
-              {nc.status !== 'closed' && ['damage', 'malfunction'].includes(nc.ncType) && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  {!nc.repairHistoryId ? (
-                    <div
-                      data-testid="nc-repair-warning"
-                      className={getSemanticContainerClasses('warning')}
-                    >
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle
-                          className={`h-5 w-5 ${getSemanticContainerTextClasses('warning')} mt-0.5`}
-                          aria-hidden="true"
-                        />
-                        <div className="flex-1">
-                          <p
-                            className={`font-medium ${getSemanticContainerTextClasses('warning')}`}
-                          >
-                            {t('management.repairNeeded')}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                            {t('management.repairNeededDesc', {
-                              type: t(`management.ncType.${nc.ncType}` as Parameters<typeof t>[0]),
-                            })}
-                          </p>
-                          <Button variant="default" size="sm" className="mt-3" asChild>
-                            <Link
-                              href={`/equipment/${equipmentId}/repair-history?ncId=${nc.id}&autoOpen=true`}
+              {nc.status !== NCStatusVal.CLOSED &&
+                ['damage', 'malfunction'].includes(nc.ncType) && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    {!nc.repairHistoryId ? (
+                      <div
+                        data-testid="nc-repair-warning"
+                        className={getSemanticContainerClasses('warning')}
+                      >
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle
+                            className={`h-5 w-5 ${getSemanticContainerTextClasses('warning')} mt-0.5`}
+                            aria-hidden="true"
+                          />
+                          <div className="flex-1">
+                            <p
+                              className={`font-medium ${getSemanticContainerTextClasses('warning')}`}
                             >
-                              <Wrench className="h-4 w-4 mr-2" aria-hidden="true" />
-                              {t('management.registerRepair')}
-                            </Link>
-                          </Button>
+                              {t('management.repairNeeded')}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                              {t('management.repairNeededDesc', {
+                                type: t(
+                                  `management.ncType.${nc.ncType}` as Parameters<typeof t>[0]
+                                ),
+                              })}
+                            </p>
+                            <Button variant="default" size="sm" className="mt-3" asChild>
+                              <Link
+                                href={`/equipment/${equipmentId}/repair-history?ncId=${nc.id}&autoOpen=true`}
+                              >
+                                <Wrench className="h-4 w-4 mr-2" aria-hidden="true" />
+                                {t('management.registerRepair')}
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div data-testid="nc-repair-linked" className={NC_REPAIR_LINKED_TOKENS.text}>
-                      <CheckCircle className="h-4 w-4" aria-hidden="true" />
-                      {t('management.repairLinkedApproval')}
-                      <Link
-                        href={`/equipment/${equipmentId}/repair-history`}
-                        className="text-primary hover:underline ml-2"
-                      >
-                        {t('management.viewRepairHistory')}
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
+                    ) : (
+                      <div data-testid="nc-repair-linked" className={NC_REPAIR_LINKED_TOKENS.text}>
+                        <CheckCircle className="h-4 w-4" aria-hidden="true" />
+                        {t('management.repairLinkedApproval')}
+                        <Link
+                          href={`/equipment/${equipmentId}/repair-history`}
+                          className="text-primary hover:underline ml-2"
+                        >
+                          {t('management.viewRepairHistory')}
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
 
               {/* 수정 폼 */}
-              {editingId === nc.id && nc.status !== 'closed' && (
+              {editingId === nc.id && nc.status !== NCStatusVal.CLOSED && (
                 <div className="mt-4 pt-4 border-t border-border space-y-4">
                   <div>
                     <Label htmlFor={`correction-${nc.id}`}>
@@ -585,7 +588,7 @@ export default function NonConformanceManagementClient({
               )}
 
               {/* 액션 버튼 */}
-              {nc.status !== 'closed' && editingId !== nc.id && canEditNC && (
+              {nc.status !== NCStatusVal.CLOSED && editingId !== nc.id && canEditNC && (
                 <div className="mt-4 pt-4 border-t border-border">
                   <Button variant="secondary" size="sm" onClick={() => startEditing(nc)}>
                     <FileText className="h-4 w-4 mr-2" aria-hidden="true" />

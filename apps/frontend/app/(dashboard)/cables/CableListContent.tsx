@@ -30,7 +30,11 @@ import cablesApi from '@/lib/api/cables-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { ExportFormButton } from '@/components/shared/ExportFormButton';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
-import { CABLE_CONNECTOR_TYPE_VALUES, CABLE_STATUS_VALUES } from '@equipment-management/schemas';
+import {
+  CABLE_CONNECTOR_TYPE_VALUES,
+  CABLE_STATUS_VALUES,
+  CableStatusValues,
+} from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -258,7 +262,9 @@ export default function CableListContent() {
                   <TableCell>{cable.serialNumber || '-'}</TableCell>
                   <TableCell>{cable.location || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant={cable.status === 'active' ? 'default' : 'secondary'}>
+                    <Badge
+                      variant={cable.status === CableStatusValues.ACTIVE ? 'default' : 'secondary'}
+                    >
                       {t(`status.${cable.status}` as Parameters<typeof t>[0])}
                     </Badge>
                   </TableCell>

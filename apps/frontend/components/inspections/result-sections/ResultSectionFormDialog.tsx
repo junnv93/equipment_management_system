@@ -144,14 +144,14 @@ export default function ResultSectionFormDialog({
 
   useEffect(() => {
     if (open) resetForm();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- self-audit-exception: pre-existing, resetForm is stable
   }, [open]);
 
   // ── Photo upload ──
   const handlePhotoFilesChange = useCallback(
     async (files: UploadedFile[]) => {
       setPhotoFiles(files);
-      const pendingFile = files.find((f) => f.status === 'pending');
+      const pendingFile = files.find((f) => f.status === 'pending'); // eslint-disable-line no-restricted-syntax -- UploadedFile local UI state, not domain status; self-audit-exception
       if (!pendingFile) return;
 
       setIsUploading(true);

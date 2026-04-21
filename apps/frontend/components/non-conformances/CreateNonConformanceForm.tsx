@@ -142,7 +142,7 @@ export function CreateNonConformanceForm({
             )
           )
         );
-        const failed = results.filter((r) => r.status === 'rejected').length;
+        const failed = results.filter((r) => r.status === 'rejected').length; // eslint-disable-line no-restricted-syntax -- Promise.allSettled result status; self-audit-exception
         setIsUploadingPhotos(false);
 
         if (failed > 0) {

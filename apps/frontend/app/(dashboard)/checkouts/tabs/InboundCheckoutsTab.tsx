@@ -20,7 +20,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
-import { type EquipmentImportStatus } from '@equipment-management/schemas';
+import {
+  type EquipmentImportStatus,
+  EquipmentImportStatusValues,
+} from '@equipment-management/schemas';
 import {
   FRONTEND_ROUTES,
   DEFAULT_PAGE_SIZE,
@@ -210,7 +213,7 @@ export default function InboundCheckoutsTab({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <EquipmentImportStatusBadge status={item.status as EquipmentImportStatus} />
-                      {item.status === 'approved' && (
+                      {item.status === EquipmentImportStatusValues.APPROVED && (
                         <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
                           {t('inbound.receiveRequired')}
                         </Badge>
@@ -339,7 +342,7 @@ export default function InboundCheckoutsTab({
                           <EquipmentImportStatusBadge
                             status={item.status as EquipmentImportStatus}
                           />
-                          {item.status === 'approved' && (
+                          {item.status === EquipmentImportStatusValues.APPROVED && (
                             <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
                               {t('inbound.receiveRequired')}
                             </Badge>
