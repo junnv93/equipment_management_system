@@ -438,8 +438,12 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   countAlert: 'text-xs font-medium text-brand-critical',
   /** 내부 탭 스트립 */
   tabBar: 'flex border-b border-border -mx-0 mb-1',
-  tab: `text-xs font-medium px-3 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px ${TRANSITION_PRESETS.instantColor} focus-visible:outline-none`,
+  tab: `flex items-center max-w-full overflow-hidden text-xs font-medium px-3 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px ${TRANSITION_PRESETS.instantColor} focus-visible:outline-none`,
   tabActive: 'text-foreground border-b-2 border-primary',
+  /** 탭 레이블 — 좁은 컨텍스트에서 truncate */
+  tabLabel: 'truncate min-w-0',
+  /** 탭 카운트 숫자 — 항상 완전 표시 */
+  tabCount: 'tabular-nums shrink-0 ml-1',
   listWrapper: 'relative flex-1 overflow-hidden',
   list: 'flex flex-col gap-1 overflow-y-auto max-h-[150px]',
   listFade:
@@ -754,6 +758,12 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
     'prioritized-grid': 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
     /** compact 컨테이너 전용 — xl:grid-cols-4를 제거해 좁은 컬럼에서 카드 압축 방지 */
     'prioritized-grid-compact': 'grid grid-cols-2 sm:grid-cols-3',
+    /**
+     * compact + hero 카드 2개 전용 — sm:grid-cols-3에서 col-span-2 hero×2가
+     * 3번째 셀을 비워 "구멍"을 만드는 CSS Grid sparse 문제를 방지.
+     * hero×2는 각 row를 완전히 채우므로 2컬럼이 최적.
+     */
+    'prioritized-grid-compact-dual-hero': 'grid grid-cols-2',
     grid: 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
   } as const,
   /**
@@ -764,7 +774,7 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
    */
   elevation: {
     default: '',
-    raised: 'ring-1 ring-primary/15 shadow-sm',
+    raised: 'ring-1 ring-primary/20 shadow-md',
   } as const,
 } as const;
 

@@ -297,8 +297,12 @@ export function PendingApprovalCard({
   // prioritized-grid: priority 계층화 그리드
   if (layoutHint === 'prioritized-grid') {
     // compact 컨테이너에서는 xl:grid-cols-4 제거 — 좁은 컬럼 압축 방지
+    // hero×2 + compact 조합: sm:grid-cols-3에서 col-span-2×2 → 3번째 셀 공백 방지
+    const heroCount = dashboardCategories.filter((c) => c.priority === 'hero').length;
     const prioritizedGridCols = compact
-      ? DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid-compact']
+      ? heroCount >= 2
+        ? DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid-compact-dual-hero']
+        : DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid-compact']
       : DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid'];
 
     return (

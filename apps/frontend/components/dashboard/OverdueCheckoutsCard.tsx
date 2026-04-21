@@ -66,7 +66,8 @@ export function OverdueCheckoutsCard({
           onClick={() => setActiveTab('overdue')}
           className={cn(T.tab, activeTab === 'overdue' && T.tabActive)}
         >
-          {t('tabOverdue')} ({overdueCheckouts.length})
+          <span className={T.tabLabel}>{t('tabOverdue')}</span>
+          <span className={T.tabCount}>({overdueCheckouts.length})</span>
         </button>
         <button
           role="tab"
@@ -74,7 +75,8 @@ export function OverdueCheckoutsCard({
           onClick={() => setActiveTab('upcoming')}
           className={cn(T.tab, activeTab === 'upcoming' && T.tabActive)}
         >
-          {t('tabUpcoming')} ({upcomingCheckoutReturns.length})
+          <span className={T.tabLabel}>{t('tabUpcoming')}</span>
+          <span className={T.tabCount}>({upcomingCheckoutReturns.length})</span>
         </button>
       </div>
 
