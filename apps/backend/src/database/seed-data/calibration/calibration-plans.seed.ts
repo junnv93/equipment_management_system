@@ -582,8 +582,11 @@ export const CALIBRATION_PLAN_ITEMS_SEED_DATA: NewCalibrationPlanItem[] = [
   },
 
   // ── CPLAN_008 (approved, 2026 수원 Automotive EMC) ──────────────────────
-  //    항목 1~2: 교정 완료 + 기술책임자 확인
-  //    항목 3~4: 교정 완료, 확인 대기 (실적만 있고 확인은 아직)
+  //    상태 분포 (confirmItem / confirmAll E2E 시나리오 설계 기준):
+  //    ITEM_019 (seq 1): 확인 완료 — actualCalibrationId ✅, confirmedBy ✅  → confirmItem 재시도 대상 (이미 확인됨)
+  //    ITEM_020 (seq 2): 확인 완료 — actualCalibrationId ✅, confirmedBy ✅  → confirmItem 재시도 대상 (이미 확인됨)
+  //    ITEM_021 (seq 3): bulk-confirm 대상 — actualCalibrationId ✅, confirmedBy null → confirmItem/confirmAll 진입 가능
+  //    ITEM_022 (seq 4): bulk-confirm 대상 — actualCalibrationId ✅, confirmedBy null → confirmItem/confirmAll 진입 가능
 
   {
     id: CPLAN_ITEM_019_ID,

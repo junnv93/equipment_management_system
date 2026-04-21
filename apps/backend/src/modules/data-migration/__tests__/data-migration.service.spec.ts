@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { DataMigrationService } from '../services/data-migration.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
@@ -132,6 +132,57 @@ describe('DataMigrationService', () => {
 
       await expect(service.getErrorReport('session-1', 'other-user')).rejects.toThrow(
         ForbiddenException
+      );
+    });
+  });
+
+  // ─── executeMultiSheet — stale EXECUTING 판정 ─────────────────────────────
+
+  describe('executeMultiSheet() — stale EXECUTING 판정', () => {
+    const makeExecutingSession = (executionStartedAt: Date) => ({
+      sessionId: 'sess-1',
+      fileName: 'test.xlsx',
+      uploadedAt: new Date(),
+      userId: 'user-1',
+      status: 'executing' as const,
+      executionStartedAt,
+      filePath: undefined,
+      fkResolutions: undefined,
+      testSoftwareFkResolutions: undefined,
+      fkResolutionSummary: undefined,
+      sheets: [],
+    });
+
+    it('EXECUTING 상태가 10분 초과(stale)이면 FAILED 전환 후 재시도 가능', async () => {
+      // 11분 전에 EXECUTING 시작
+      const staleDate = new Date(Date.now() - 11 * 60 * 1000);
+      const session = makeExecutingSession(staleDate);
+
+      mockCacheService.get.mockReturnValue(session);
+      // executeMultiSheet 진입 후 실제 실행 로직은 세션 상태로만 검증하므로
+      // NotFoundException이 아닌 다른 예외가 나오면 stale 분기 통과 의미
+      // (세션 소유권/상태 체크 후 실제 DB 실행까지는 가지 않아도 됨)
+      await expect(
+        service.executeMultiSheet({ sessionId: 'sess-1' }, 'user-1')
+      ).rejects.not.toThrow(ConflictException);
+
+      // stale 판정 후 캐시 업데이트 호출 확인 (FAILED 전환)
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        expect.stringContaining('sess-1'),
+        expect.objectContaining({ status: 'failed' }),
+        expect.any(Number)
+      );
+    });
+
+    it('EXECUTING 상태가 10분 이내(non-stale)이면 ConflictException', async () => {
+      // 1분 전에 EXECUTING 시작
+      const recentDate = new Date(Date.now() - 60 * 1000);
+      const session = makeExecutingSession(recentDate);
+
+      mockCacheService.get.mockReturnValue(session);
+
+      await expect(service.executeMultiSheet({ sessionId: 'sess-1' }, 'user-1')).rejects.toThrow(
+        ConflictException
       );
     });
   });

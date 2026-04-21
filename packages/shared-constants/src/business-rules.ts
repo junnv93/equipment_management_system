@@ -129,6 +129,13 @@ export const BATCH_QUERY_LIMITS = {
 export const MIGRATION_SESSION_TTL_MS = 3_600_000;
 
 /**
+ * EXECUTING 상태 stale 판정 기준 (10분).
+ * 서버 재시작 후 in-flight 트랜잭션이 롤백되어 EXECUTING 상태가 영구 잔류하는 경우,
+ * 이 기간을 초과하면 stale로 간주하여 FAILED 전환 후 재시도를 허용한다.
+ */
+export const MIGRATION_EXECUTION_TIMEOUT_MS = 600_000;
+
+/**
  * 대시보드 KPI 임계값 — UL-QP-18 시험소 운영 기준
  */
 export const UTILIZATION_THRESHOLDS = {

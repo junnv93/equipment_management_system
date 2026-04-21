@@ -66,8 +66,10 @@ import type { ExecuteEquipmentMigrationDto } from '../dto/execute-migration.dto'
 /** DB equipment 테이블의 유효 컬럼 이름 (SSOT: Drizzle 스키마에서 동적 추출) */
 const EQUIPMENT_COLUMNS = new Set(Object.keys(getTableColumns(equipment)));
 
-/** 세션 캐시 TTL: 1시간 (ms) */
-import { MIGRATION_SESSION_TTL_MS } from '@equipment-management/shared-constants';
+import {
+  MIGRATION_SESSION_TTL_MS,
+  MIGRATION_EXECUTION_TIMEOUT_MS,
+} from '@equipment-management/shared-constants';
 /** SSOT: CACHE_KEY_PREFIXES.DATA_MIGRATION + 세그먼트 */
 const MULTI_SESSION_CACHE_KEY_PREFIX = `${CACHE_KEY_PREFIXES.DATA_MIGRATION}multi-session:`;
 
@@ -408,10 +410,28 @@ export class DataMigrationService {
 
     // 세션 상태 머신: 이중 실행 방지
     if (session.status === MIGRATION_SESSION_STATUS.EXECUTING) {
-      throw new ConflictException({
-        code: MigrationErrorCode.SESSION_ALREADY_EXECUTING,
-        message: '이미 실행 중인 세션입니다. 완료될 때까지 기다려주세요.',
-      });
+      const isStale =
+        session.executionStartedAt !== undefined &&
+        Date.now() - session.executionStartedAt.getTime() > MIGRATION_EXECUTION_TIMEOUT_MS;
+
+      if (isStale) {
+        this.logger.warn('EXECUTING 세션 stale 판정 — FAILED 전환 후 재시도 허용', {
+          sessionId: dto.sessionId,
+          elapsedMs: Date.now() - (session.executionStartedAt?.getTime() ?? 0),
+        });
+        session.status = MIGRATION_SESSION_STATUS.FAILED;
+        session.executionStartedAt = undefined;
+        this.cacheService.set(
+          `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,
+          session,
+          MIGRATION_SESSION_TTL_MS
+        );
+      } else {
+        throw new ConflictException({
+          code: MigrationErrorCode.SESSION_ALREADY_EXECUTING,
+          message: '이미 실행 중인 세션입니다. 완료될 때까지 기다려주세요.',
+        });
+      }
     }
     if (session.status === MIGRATION_SESSION_STATUS.COMPLETED) {
       throw new ConflictException({
@@ -426,8 +446,9 @@ export class DataMigrationService {
       });
     }
 
-    // CAS: status → executing 전환
+    // CAS: status → executing 전환 + stale 판정용 타임스탬프 기록
     session.status = MIGRATION_SESSION_STATUS.EXECUTING;
+    session.executionStartedAt = new Date();
     this.cacheService.set(
       `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,
       session,
@@ -853,6 +874,7 @@ export class DataMigrationService {
 
       // 세션 상태 → completed (에러 리포트 접근용으로 캐시 유지)
       session.status = MIGRATION_SESSION_STATUS.COMPLETED;
+      session.executionStartedAt = undefined;
       this.cacheService.set(
         `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,
         session,
@@ -875,6 +897,7 @@ export class DataMigrationService {
     } catch (error) {
       // 트랜잭션 실패 시 세션 상태 → failed
       session.status = MIGRATION_SESSION_STATUS.FAILED;
+      session.executionStartedAt = undefined;
       this.cacheService.set(
         `${MULTI_SESSION_CACHE_KEY_PREFIX}${dto.sessionId}`,
         session,

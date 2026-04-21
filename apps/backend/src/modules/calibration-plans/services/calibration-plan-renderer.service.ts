@@ -48,7 +48,7 @@ export class CalibrationPlanRendererService {
     const titleCell = sheet.getRow(1).getCell(1);
     titleCell.value = `${plan.year}년 ${siteLabel} 연간 교정 계획서`;
     titleCell.font = { bold: true, size: 18, name: '맑은 고딕', charset: 129 };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.alignment = Layout.ALIGNMENT.CENTER_MIDDLE;
 
     const styles = captureRowStyles(sheet, Layout.DATA_START_ROW, Layout.COLUMN_COUNT);
 
@@ -88,7 +88,7 @@ export class CalibrationPlanRendererService {
       // 확인란에 shrink-to-fit 적용 — 셀 너비보다 긴 이름 대응
       if (item.confirmedBy) {
         const confirmedCell = sheet.getRow(rowIdx).getCell(Layout.CONFIRMED_COL);
-        confirmedCell.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true };
+        confirmedCell.alignment = Layout.ALIGNMENT.CENTER_MIDDLE_SHRINK;
       }
     });
 
@@ -124,7 +124,7 @@ export class CalibrationPlanRendererService {
     const setName = (col: number, name: string | null | undefined): void => {
       const cell = nameRow.getCell(col);
       cell.value = name ?? '-';
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.alignment = Layout.ALIGNMENT.CENTER_MIDDLE;
     };
 
     setName(author, plan.authorName);

@@ -83,6 +83,8 @@ export interface MultiSheetMigrationSession {
   userId: string;
   /** 세션 처리 상태 (이중 실행 방지) */
   status: MigrationSessionStatus;
+  /** EXECUTING 전환 시각 — stale 판정에 사용 (서버 재시작 후 복구) */
+  executionStartedAt?: Date;
   /** 업로드된 Excel 파일의 스토리지 키 (Execute 완료 후 삭제) */
   filePath?: string;
   /** FK 해석 결과 (장비): 행 인덱스 → 해석된 managerId/deputyManagerId/teamId */

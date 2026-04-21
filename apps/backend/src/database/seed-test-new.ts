@@ -72,7 +72,10 @@ import { SOFTWARE_VALIDATIONS_SEED_DATA } from './seed-data/software/software-va
 // Equipment ↔ Test Software M:N links
 import { EQUIPMENT_TEST_SOFTWARE_SEED_DATA } from './seed-data/software/equipment-test-software.seed';
 import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-requests.seed';
-import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
+import {
+  EQUIPMENT_ATTACHMENTS_SEED_DATA,
+  SEED_PLACEHOLDER_ATTACHMENT_PATHS,
+} from './seed-data/admin/equipment-attachments.seed';
 import {
   EQUIPMENT_DOCUMENTS_SEED_DATA,
   SEED_PLACEHOLDER_PHOTO_PATH,
@@ -590,6 +593,67 @@ async function main(): Promise<void> {
     } catch (err) {
       console.warn(
         `  ⚠️ Placeholder image generation skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
+      );
+    }
+
+    // equipment_attachments 첨부 파일 placeholder 자동 생성
+    // PDF 5건 + JPEG 1건 — filePath 상대경로에 실제 파일이 없으면 생성
+    try {
+      const { promises: fs } = await import('fs');
+      const path = await import('path');
+
+      const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? './uploads');
+
+      for (const relPath of SEED_PLACEHOLDER_ATTACHMENT_PATHS) {
+        const absPath = path.join(uploadDir, relPath);
+        let alreadyExists = false;
+        try {
+          await fs.access(absPath);
+          alreadyExists = true;
+        } catch {
+          /* not exist */
+        }
+
+        if (alreadyExists) {
+          console.log(`  ↺  attachment placeholder 존재 (skip): ${relPath}`);
+          continue;
+        }
+
+        await fs.mkdir(path.dirname(absPath), { recursive: true });
+
+        if (relPath.endsWith('.jpg') || relPath.endsWith('.jpeg')) {
+          const { default: sharp } = await import('sharp');
+          await sharp({
+            create: {
+              width: 400,
+              height: 300,
+              channels: 3,
+              background: { r: 200, g: 200, b: 200 },
+            },
+          })
+            .jpeg({ quality: 70 })
+            .toFile(absPath);
+        } else {
+          // PDF: pdfkit으로 최소 유효 PDF 생성
+          const PDFDocument = (await import('pdfkit')).default;
+          await new Promise<void>((resolve, reject) => {
+            const doc = new PDFDocument({ size: 'A4', margin: 40 });
+            const chunks: Buffer[] = [];
+            doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+            doc.on('end', async () => {
+              await fs.writeFile(absPath, Buffer.concat(chunks));
+              resolve();
+            });
+            doc.on('error', reject);
+            doc.fontSize(12).text(`[개발용 Placeholder]\n${relPath}`, 40, 40);
+            doc.end();
+          });
+        }
+        console.log(`  ✅ attachment placeholder 생성: ${relPath}`);
+      }
+    } catch (err) {
+      console.warn(
+        `  ⚠️ Attachment placeholder generation skipped: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown error'}`
       );
     }
 

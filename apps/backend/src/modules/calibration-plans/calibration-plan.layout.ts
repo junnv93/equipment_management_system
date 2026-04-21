@@ -11,8 +11,25 @@
  * 프론트엔드 미참조: 양식 셀 레이아웃은 UI에 노출되지 않음.
  */
 
+import type ExcelJS from 'exceljs';
+
 /** 양식 번호 (에러 메시지 prefix, 파일명 등에 사용) */
 export const FORM_NUMBER = 'UL-QP-19-01' as const;
+
+/** 셀 alignment 토큰 — 양식 개정 시 이 위치만 수정 */
+export const ALIGNMENT = {
+  /** 제목 행 / 일반 중앙 정렬 */
+  CENTER_MIDDLE: {
+    horizontal: 'center',
+    vertical: 'middle',
+  } as Partial<ExcelJS.Alignment>,
+  /** 확인란 / 서명 칸 — 긴 텍스트 수축 허용 */
+  CENTER_MIDDLE_SHRINK: {
+    horizontal: 'center',
+    vertical: 'middle',
+    shrinkToFit: true,
+  } as Partial<ExcelJS.Alignment>,
+} as const;
 
 /**
  * 허용되는 워크시트명 — 양식 변종(시트명 차이) 대응.

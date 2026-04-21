@@ -165,6 +165,7 @@ export {
   HISTORY_CARD_QUERY_LIMIT,
   HISTORY_CARD_QUERY_LIMITS,
   MIGRATION_SESSION_TTL_MS,
+  MIGRATION_EXECUTION_TIMEOUT_MS,
 } from './business-rules';
 
 // 보안 상수 (로그인 제한, 잠금 정책)

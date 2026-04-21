@@ -19,6 +19,7 @@ import { test, expect, BrowserContext, Page } from '@playwright/test';
 import path from 'path';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { TEST_NC_IDS, BASE_URLS } from '../shared/constants/shared-test-data';
+import { expectToastVisible } from '../shared/helpers/toast-helpers';
 
 const TM_STORAGE_STATE = path.join(__dirname, '../.auth/technical-manager.json');
 const NC_ID = TEST_NC_IDS.NC_001_MALFUNCTION_OPEN;
@@ -99,9 +100,9 @@ test.describe('WF-35: CAS 충돌 UI 복구 (다탭 시뮬레이션)', () => {
       // ko/errors.json VERSION_CONFLICT:
       //   title: "데이터 충돌"
       //   message: "다른 사용자가 이 데이터를 수정했습니다. 최신 데이터를 불러옵니다."
-      await expect(
-        pageB.getByText(/데이터 충돌|다른 사용자가 이 데이터를 수정했습니다/).first()
-      ).toBeVisible({ timeout: 10_000 });
+      await expectToastVisible(pageB, /데이터 충돌|다른 사용자가 이 데이터를 수정했습니다/, {
+        timeout: 10_000,
+      });
 
       // Step 5: onSettled 의 invalidateQueries 가 detail 재조회 → nc.version 최신화 대기
       //   waitForTimeout 대신 GET /non-conformances/:id 가 200 으로 완료되는 시점을 polling 하여
