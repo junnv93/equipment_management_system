@@ -1,0 +1,157 @@
+# Tech Debt Tracker — 완료 항목 아카이브
+
+harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
+활성 TODO는 [tech-debt-tracker.md](./tech-debt-tracker.md) 참조.
+
+---
+
+## 2026-04-21 — e2e-api-endpoints-migration / review-architecture
+
+- [x] **[2026-04-20 e2e-api-endpoints-migration] pre-existing E2E 실패 13건** — ✅ 완료 2026-04-21. auth: canonical emails(lab.manager/tech.manager/test.engineer) + auth.service testPasswords 확장. checkouts: version:1 추가 + TEAM_FCC_EMC_RF_SUWON_ID 동일팀 장비. auth 8/8, checkouts 13/13 통과.
+- [x] **[2026-04-20 review-architecture] BE: CalibrationPlanSyncListener 이중 갱신** — ✅ 완료 2026-04-21. `if (payload.linkedPlanItemId)` 진입부 early-return 추가. tx 내 직접 링크된 경우 year-scope recordActualCalibrationDate 스킵.
+- [x] **[2026-04-20 review-architecture] BE: CALIBRATION_UPDATED/UPLOADED/REVISED 이벤트 미발행** — ✅ 완료 2026-04-21. update()에 emitAsync(CALIBRATION_UPDATED) 추가 + recordCertificateDocuments() 신규 메서드로 UPLOADED/REVISED emit. teamId는 resolveEquipmentTeamId()로 정확히 조회. controller uploadDocuments에서 호출.
+- [x] **[2026-04-20 review-architecture] FE: ValidationDetailContent `useCasGuardedMutation` 교체** — ✅ 완료 2026-04-21. useMutation → useCasGuardedMutation 전환. isConflictError 수동 처리 제거. fetchCasVersion으로 항상 최신 version 조회 후 mutate.
+- [x] **[2026-04-20 review-architecture] FE: VersionHistory staleTime 미지정** — ✅ 완료 2026-04-21. REFETCH_STRATEGIES.STATIC 적용 (버전히스토리는 append-only, focus refetch 불필요).
+- [x] **[2026-04-20 e2e-api-endpoints-migration] POST /checkouts/:id/return HTTP 메서드 불일치** — ✅ 확인 종결 2026-04-20. 실측 결과 컨트롤러 `@Post(':uuid/return')` + 테스트 `.post()` 모두 POST로 정합. SSOT(`api-endpoints.ts`)는 URL 경로만 관리(HTTP 메서드 무관). 불일치 없음.
+
+## 2026-04-20 — calibration-status-filter-url / calibration-plan-confirm / nc-workflow-atomicity
+
+- [x] **[2026-04-20 calibration-status-filter-url] E2E 테스트 deprecated status 파라미터 잔존** — ✅ 완료 2026-04-20. `group-a-calibration-display.spec.ts` + `group-a-filter-status.spec.ts` + `equipment-list.plan.md` 수정. 상태 드롭다운 → 교정기한 필터 드롭다운 인터랙션 교체.
+- [x] **[2026-04-20 calibration-plan-confirm] S5 — confirmAllItems 서비스 단위 테스트 미작성** — ✅ 완료 2026-04-20. 4개 케이스 추가: approved 2건 확인, non-approved BadRequestException, CAS 불일치 ConflictException, actualCalibrationId 없는 항목 0건 반환.
+- [x] **[2026-04-20 calibration-plan-confirm] S6 — 렌더러 테스트에 확인 셀 assertion 없음** — ✅ 완료 2026-04-20. `calibration-plans-export.service.spec.ts`에 두 확인자 이름 기록 + confirmedBy=null → '-' assertion 추가.
+- [x] **[2026-04-20 nc-workflow-atomicity] S2 — close() 복원 구조화 로그 없음** — ✅ 완료 2026-04-20. `close()` 캐시 무효화 직후 `logger.debug({ message: 'NC close: equipment status restore', ncId, equipmentId, previousEquipmentStatus, equipmentStatusRestored })` 구조화 로그 추가.
+- [x] **[2026-04-20 nc-workflow-atomicity] S1 — NC close() previousEquipmentStatus 복원 단위 테스트 없음** — ✅ 완료 2026-04-20. `describe('previousEquipmentStatus restore logic')` 3개 시나리오 추가: spare 복원, null→available 폴백, disposed(excluded)→available 폴백.
+
+## 2026-04-20 — cplan-export-audit Warning 즉시 수정
+
+- [x] **[2026-04-20 cplan-export-audit] 🟡 MEDIUM renderer.service templateBuffer 내부 로드** — ✅ 완료 2026-04-20. orchestrator(CalibrationPlansExportService)가 getTemplateBuffer 후 render(plan, buffer) 주입. renderer에서 FormTemplateService DI 완전 제거. 순수 unit 테스트 가능 구조 달성.
+- [x] **[2026-04-20 cplan-export-audit] 🟡 MEDIUM CalibrationPlansContent TableRow 이중 네비게이션** — ✅ 완료 2026-04-20 (실측 확인). TableRow onClick 없음, Link absolute inset-0 overlay만 유지. 히스토리 스택 이중 push 해소.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW Phase 3 — ApprovalTimeline sr-only 요약** — ✅ 완료 2026-04-20. `<span className="sr-only">N단계 완료, 진행 중 단계, 총 3단계</span>` 추가.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW Phase 3 — PlanStatusBadge 추출** — ✅ 완료 2026-04-20. `PlanStatusBadge.tsx` 신규 + CalibrationPlansContent/VersionHistory/CalibrationPlanDetailClient 3곳 교체.
+- [x] **[2026-04-20 cplan-export-audit] 🟢 LOW Phase 8 — prefers-reduced-motion 가드** — ✅ 완료 2026-04-20. `CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.stickyContainer`에 `motion-reduce:transition-none` 추가.
+
+## 2026-04-20 — calibration-phase4-7 / nc-detail-design-fix
+
+- [x] **[2026-04-20 calibration-phase4-7] S3 — CACHE_EVENTS.CALIBRATION_CREATED payload linkedPlanItemId** — ✅ 완료 2026-04-20. `CalibrationCachePayload.linkedPlanItemId?: string | null` 필드 추가 + `calibration.service.ts` emit 시 `planItemId ?? null` 주입.
+- [x] **[2026-04-20 calibration-phase4-7] MC.4 — Phase 5a/5b/5c 커밋 병합** — ✅ 확인 종결 2026-04-21. 코드는 정상, 커밋 분리 불필요.
+- [x] **[2026-04-20 calibration-phase4-7] 고아 SQL 파일 정리** — ✅ 완료 2026-04-20. journal 검증 후 0033/0034/0035/0036 orphan 4개 삭제. canonical(0034/0035/0036/0037) 보존.
+- [x] **[2026-04-20 nc-detail-design-fix] W-FE1 NCDetailClient.tsx:329 편집 권한 명시성** — ✅ 완료 2026-04-20. `canEditNC = canCloseNC` alias 추가 + UL-QP-18 §14 근거 주석으로 의도 명확화.
+- [x] **[2026-04-20 nc-detail-design-fix] W-BE2 calibration-plan-renderer.service.ts:72 confirmedSignature 로직** — ✅ 완료 2026-04-20. 주석 추가.
+- [x] **[2026-04-20 nc-detail-design-fix] W-BE3 calibration-plans-export.service.spec.ts:173 테스트 하드코딩** — ✅ 완료 2026-04-20. `'연간교정계획서'` 리터럴 → `FORM_CATALOG['UL-QP-19-01'].name.replace(/\s+/g, '')` SSOT 경유로 교체.
+
+## 2026-04-20 — skill-gap 업데이트
+
+- [x] **[2026-04-20 skill-gap] verify-auth Step 13 추가** — FE role 리터럴 직접 비교 탐지. ✅ 완료 2026-04-20.
+- [x] **[2026-04-20 skill-gap] verify-hardcoding Step 23 추가** — export-data 서비스의 status allowlist 리터럴 탐지. ✅ 완료 2026-04-20.
+- [x] **[2026-04-20 skill-gap] verify-frontend-state Related Files + Step 15 추가** — use-cas-guarded-mutation.ts 커버. ✅ 완료 2026-04-20.
+- [x] **[2026-04-20 skill-gap] verify-cas Related Files + Step 12 추가** — use-cas-guarded-mutation.ts fetch-before-mutate 훅 참조. ✅ 완료 2026-04-20.
+
+## 2026-04-19 — 다수 세션 완료
+
+- [x] **[2026-04-19 test-software-detail-refactor] S1 — optimisticUpdate non-null assertion** — ✅ 완료 2026-04-19. `throw new Error('optimisticUpdate: cache miss on detail page')`로 교체.
+- [x] **[2026-04-19 docx-append-section-sectpr] S1 — insertBeforeSectPr fallback** — ✅ 완료 2026-04-20. `lastIndexOf('</w:body>')` + slice+concat 방식으로 교체.
+- [x] **[2026-04-19 verify-sql-safety] 🟠 HIGH fk-resolution.service.ts ilike() 직접 사용** — ✅ 완료 2026-04-19. `safeIlike(users.name, likeContains(name))`로 교체.
+- [x] **[2026-04-19 review-arch] 🟡 MEDIUM purgeDeletedDocuments 전체 배치 실패 무한루프** — ✅ 완료 2026-04-19. `consecutiveFullFailBatches` 카운터 + `MAX_CONSECUTIVE_FULL_FAIL=2` 연속 실패 시 abort.
+- [x] **[2026-04-19 qr-review] 🟡 MEDIUM sql 템플릿 → eq() 전환 (enum 필터)** — ✅ 2026-04-19. form-template-export.service.ts 5건 eq() 교체.
+- [x] **[2026-04-19 qr-review] 🟡 MEDIUM HandoverQRDisplay appUrl 빈 문자열 가드** — ✅ 이미 적용됨.
+- [x] **[2026-04-19 qr-review] 🟡 MEDIUM refetchOnMount QUERY_CONFIG 통합** — ✅ 이미 적용됨.
+- [x] **[2026-04-19 qr-review] 🟢 LOW appUrl getAppUrl() 유틸 추출** — ✅ 이미 적용됨.
+- [x] **[2026-04-19 verify] 🟢 LOW verify-hardcoding — getTemplateBuffer() 6곳 문자열 리터럴** — ✅ 완료 2026-04-19. `getTemplateBuffer(entry.formNumber)` 교체.
+- [x] **[2026-04-19 review-arch] 🟢 LOW exportSoftwareValidation site 스코프 post-filter** — ✅ 완료 2026-04-19. WHERE 절로 이동.
+- [x] **[2026-04-19 qr-sampler-review] 🟢 LOW LABEL_CONFIG.cell 관심사 혼합** — ✅ 완료 2026-04-20. `LABEL_CONFIG.scaling` 네임스페이스 신설.
+- [x] **[2026-04-19 qr-sampler-review] 🟢 LOW pt→mm 매직 넘버 0.353** — ✅ 완료 2026-04-20. `PT_TO_MM = 25.4 / 72` named 상수.
+- [x] **[2026-04-19 qr-sampler-review] 🟢 LOW i18n size.* 치수 하드코딩** — ✅ 완료 2026-04-20. 보간 토큰 교체.
+
+### 2026-04-19 sw-validation-overhaul Phase 3-7
+
+- [x] **[2026-04-19 sw-validation] 🔴 CRITICAL quality_approve 후 FE testSoftware.detail 캐시 미무효화** — ✅ 완료 2026-04-20. `commonInvalidateKeys`에 `queryKeys.testSoftware.detail(softwareId)` 포함.
+- [x] **[2026-04-19 sw-validation] 🟠 HIGH SoftwareValidationContent 6개 뮤테이션 useMutation 직접** — ✅ 완료 2026-04-20. 6개 `useOptimisticMutation` 전환 + `setQueryData` 완전 제거.
+- [x] **[2026-04-19 sw-validation] 🟠 HIGH EN i18n 13개 키 누락** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM SoftwareValidationsModule export 누락** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM calibration-plans review() assertIndependentApprover 미적용** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM SoftwareValidationListener 과잉 캐시 무효화** — ✅ 완료 2026-04-20. `delete(exact-key)` 교체.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM wf-14b E2E 미업데이트** — ✅ 완료 2026-04-20. Steps 12-17 추가.
+- [x] **[2026-04-19 sw-validation] 🟢 LOW 재검증 배너 i18n 메시지 미구분** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-19 sw-validation] 🔴 CRITICAL Phase 4 — 다중 항목 DOCX 렌더링 누락** — ✅ 완료 2026-04-20. T6 렌더러 3행 루프 + CONTROL_MAX_ROWS=3.
+- [x] **[2026-04-19 sw-validation] 🟠 HIGH Phase 3 — 글로벌 /software-validations 라우트 + Sidebar 없음** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM Phase 3 — FE exportability 유틸 없음** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM Phase 3 — FRONTEND_ROUTES.SOFTWARE_VALIDATIONS 상수 없음** — ✅ 완료 2026-04-20. 5 빌더 추가.
+- [x] **[2026-04-19 sw-validation] 🟡 MEDIUM Phase 3 — error.tsx (Error Boundary) 없음** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-19 sw-validation] 🟢 LOW Phase 4 — RFC 5987 content-disposition 헬퍼 미추출** — ✅ 완료 2026-04-20. `common/http/content-disposition.util.ts` + 6개 컨트롤러 적용.
+- [x] **[2026-04-19 sw-validation] 🟢 LOW Phase 7 — renderer spec 없음** — ✅ 완료 2026-04-20. 9 tests PASS.
+
+### 2026-04-19 api-ssot-e2e-serial-export-batch
+
+- [x] **[2026-04-18 arch-review] 🔴 CRITICAL C2 — data-migration Execute FK 인덱스 드리프트** — ✅ 완료 2026-04-19. `chunkOffset + chunkIdx` O(1) 계산으로 교체.
+- [x] **[2026-04-18 arch-review] 🔴 CRITICAL C1 — data-migration 하드코딩 상태 리터럴 4곳** — ✅ 완료 2026-04-19. `CableStatusValues.ACTIVE` 등 values.ts SSOT 경유.
+- [x] **[2026-04-18 arch-review] 🔴 CRITICAL C3 — documents.controller IStorageProvider 직접 주입** — ✅ 완료 2026-04-19. `DocumentService.downloadWithPresign()` + `getThumbnailBuffer()` 추가, 컨트롤러 직접 의존 제거.
+- [x] **[2026-04-18 arch-review] 🟠 HIGH H1 — data-migration 케이블 INSERT 캐시 무효화 누락** — ✅ 완료 2026-04-19. `CABLES_CACHE_PREFIX` 상수 신설.
+- [x] **[2026-04-18 arch-review] 🟠 HIGH H3 — data-migration 이력 시트 중복 검사 fallthrough** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 arch-review] 🟡 MEDIUM M4 — data-migration Preview 파일 cleanup 누락** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 arch-rev2] 🟡 MEDIUM exportSoftwareValidation resolveUser N+1** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 arch-rev2] 🟢 LOW exportSoftwareRegistry teamId 스코프 미처리** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 verify] 🟠 HIGH verify-hardcoding — data-migration API unwrapResponseData 미사용** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 verify] 🟡 MEDIUM verify-ssot — history-card 'equipment_photo' 문자열 직접** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 verify] 🟡 MEDIUM verify-e2e — networkidle + waitForTimeout + auth.fixture** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 verify] 🟡 MEDIUM verify-workflows — serial 모드 미설정 3파일** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 verify] 🟢 LOW verify-i18n — en selfInspection.form 키 3개 누락** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-18 verify] 🟢 LOW verify-design-tokens — transition 하드코딩 3건** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-19 ul-qp-18-forms] verify-seed-integrity SHOULD FAIL** — ✅ 완료 2026-04-19. truncate 리스트 4개 추가 + checkCount 2건 추가.
+- [x] **[2026-04-19 ul-qp-18-forms] 🟢 LOW renderer 유닛 테스트** — ✅ 완료 2026-04-19. 3종 spec, 29 tests PASS.
+
+## 2026-04-18 — 완결-완결 패스 / nc-permission-async-cache
+
+- [x] **[2026-04-17 qr-phase3] 🟠 HIGH documents.nonConformanceId FK 도입** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 qr-phase3] 🟠 HIGH CSP + sops HANDOVER_TOKEN_SECRET** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 qr-phase3] 🟠 HIGH Playwright E2E 3종** — ✅ 완료 2026-04-18. 10/10 PASS.
+- [x] **[2026-04-18 completion] 🟡 MEDIUM B2 NCDocumentsSection permission gate 재적용** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-18 completion] 🟡 MEDIUM B3 i18n `nonConformanceManagement` 이관** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-18 completion] 🟡 MEDIUM C1 이미지 썸네일 server-side 리사이징** — ✅ 완료 2026-04-18. `GET /documents/:id/thumbnail?size=sm|md|lg`.
+- [x] **[2026-04-18 completion] 🟢 LOW D1 document.service.spec.ts 신규** — ✅ 완료 2026-04-18. 9 tests PASS.
+- [x] **[2026-04-18 completion] 🟢 LOW E1 verify-* 스킬 실행** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-18 nc-permission-async-cache] 🟡 MEDIUM async onSuccessCallback await + NC 첨부 캐시 이벤트** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-18 nc-permission-async-cache] 🟡 MEDIUM CACHE_EVENTS vs NOTIFICATION_EVENTS 분리** — ✅ 완료 2026-04-18 (tech-debt-tracker Rev2 Phase 1).
+- [x] **[2026-04-17 qr-phase3] 🟡 MEDIUM Per-row 체크박스 + BulkActionBar 추출** — ✅ 완료 2026-04-18 (Rev2 Phase 4-5).
+- [x] **[2026-04-17 qr-phase3] 🟡 MEDIUM Intent URL 파라미터 확산** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-17 qr-phase3] 🟡 MEDIUM Handover 토큰 → 범용 OneTimeToken 프리미티브** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-17 qr-phase3] 🟡 MEDIUM verify-qr-ssot + verify-handover-security 스킬 신설** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-17 qr-phase3] 🟡 MEDIUM PWA 완결 (아이콘 PNG + 서비스워커 + Install Prompt)** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-17 qr-phase3] 🟢 LOW Lighthouse/axe/bundle 배포 게이트** — ✅ 완료 2026-04-20.
+- [x] **[2026-04-17 qr-phase3] 🟢 LOW pre-commit self-audit 자동화** — ✅ 완료 2026-04-18 (Phase 0).
+
+### 2026-04-18 arch-ci-gate-zod-pilot
+
+- [x] **[2026-04-17 arch-ci-gate-zod-pilot] CI SOPS 게이트 secret 미등록 시 무음 skip 방지** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 arch-ci-gate-zod-pilot] pre-push 에서 선택적 SOPS 검증 훅** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 arch-ci-gate-zod-pilot] `derivePurposeFromStatus` switch → CheckoutStatus enum SSOT** — ✅ 완료 2026-04-18.
+
+### 2026-04-18 ul-qp-18-forms
+
+- [x] **[2026-04-17 ul-qp-18-forms] 🟡 MEDIUM wf-21 e2e (equipment-registry-export)** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 ul-qp-18-forms] 🟡 MEDIUM wf-19b/wf-20b 확장** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 ul-qp-18-forms] 🟡 MEDIUM self-inspection UI DTO 필드 노출** — ✅ 완료 2026-04-18.
+
+## 2026-04-17 — history-card-qp1802 / ul-qp-18-forms / verify 후속
+
+- [x] **[2026-04-17 history-card-qp1802] A — renderer 매직 상수 SSOT 이관** — ✅ 완료 2026-04-17.
+- [x] **[2026-04-17 history-card-qp1802] C — data service merge 헬퍼 유닛 테스트** — ✅ 완료 2026-04-17. 13개 테스트.
+- [x] **[2026-04-17 history-card-qp1802] B — 승인 메타 SSOT 헬퍼 markApprovalMeta** — ✅ 완료 2026-04-17. 3개 승인 경로 통일.
+- [x] **[2026-04-17 history-card-qp1802] 타협 2 — 이벤트 기반 캐시 전략 통합** — ✅ 완료 2026-04-19.
+- [x] **[2026-04-17 history-card-qp1802] renderer 유닛 테스트** — ✅ 완료 2026-04-19. 13개 테스트.
+- [x] **[2026-04-17 ul-qp-18-forms] review-W1 팀 JOIN managementNumber→teamId** — ✅ 완료 2026-04-17.
+- [x] **[2026-04-17 ul-qp-18-forms] 🟡 MEDIUM review-W3 scope 강제 비대칭** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 ul-qp-18-forms] 🟡 MEDIUM review-W2 renderer db 주입 경계** — ✅ 완료 2026-04-18.
+- [x] **[2026-04-17 ul-qp-18-forms] verify-ssot Step 3b 탐지 패턴 확장** — ✅ 완료 2026-04-17.
+
+## 2026-04-16 — docker-infra-standards / e2e-infra-redesign
+
+- [x] **[2026-04-15 docker-infra-standards] S1 — CI quality-gate bats/shellcheck/hadolint/dclint 스텝 추가** — ✅ 완료 2026-04-16.
+- [x] **[2026-04-15 docker-infra-standards] Phase C — sops/age secret 관리 실제 도입** — ✅ 완료 2026-04-15. ADR-0005 Accepted 승격.
+- [x] **[2026-04-15 docker-infra-standards] Phase G — 컨테이너 보안 하드닝** — ✅ 완료 2026-04-16.
+- [x] **[2026-04-15 docker-infra-standards] Phase E — rustfs 커스텀 이미지** — ✅ 완료 2026-04-16.
+- [x] **[2026-04-15 docker-infra-standards] Phase J — 공급망 보안** — ✅ 완료 2026-04-16. Syft SBOM + Cosign keyless.
+- [x] **[2026-04-15 docker-infra-standards] Phase L — 네트워크 세그멘테이션** — ✅ 완료 2026-04-16. prod/lan 2-tier 구조.
+- [x] **[2026-04-15 docker-infra-standards] Phase O — Renovate 도입 검토** — ✅ 완료 2026-04-16. Renovate 불필요 판정, dependabot.yml 경로 추가.
+- [x] **[2026-04-16 e2e-infra-redesign] S2 — data-migration.service.spec.ts lint 에러** — ✅ 완료 2026-04-16.
+- [x] **[2026-04-16 e2e-infra-redesign] S3 — beforeAll 축소** — ✅ 완료 2026-04-16.
+- [x] **[2026-04-16 e2e-infra-redesign] S4 — afterAll 축소** — ✅ 완료 2026-04-16.

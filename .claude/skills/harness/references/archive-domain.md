@@ -1565,3 +1565,49 @@ BE-W2: renderResultSections에서 photo/rich_table 이미지 로딩이 sequentia
 > 검증: 3건 모두 42차 harness Batch A2/A3에서 이미 수정 완료. (1) ResultSectionsPanel.tsx:216-247 — moveUp/moveDown/editSection/deleteSection aria-label 적용, (2) result-sections.service.ts:100 — `Partial<NewInspectionResultSection>` 사용 중, (3) inspection-result-sections.ts:74 — updatedBy 컬럼 + 인덱스 + JSDoc 완비.
 
 ---
+
+## 2026-04-18~20 완료 — QR Phase 1-3 후속 개선 (10건)
+
+> **배경**: QR 모바일 워크플로우 Phase 1-3 완료 후 SSOT/비하드코딩/워크플로우/성능/보안/접근성 자체 감사에서 도출된 후속 개선 항목. 2026-04-21 example-prompts.md에서 archive로 이동.
+
+### ~~🟠 HIGH — `documents.nonConformanceId` FK 도입 + NCR 첨부 모듈 완결 (Mode 2)~~ ✅ 완료 (2026-04-18)
+
+> 검증: packages/db/src/schema/documents.ts — `nonConformanceId uuid` 컬럼 + FK + index 추가. migration 0030_add_documents_non_conformance_id.sql 적용. backend: GET/POST /non-conformances/:id/documents 신규 엔드포인트. frontend: getDocumentsByNc/uploadNcDocument API 함수 + CreateNonConformanceForm photos 필드 + NCDetailClient Documents 탭. DocumentType SSOT 경유, Presigned URL 업로드 재사용, Promise.allSettled 병렬 업로드.
+
+### ~~🟠 HIGH — CSP `media-src 'self' blob:` + sops `HANDOVER_TOKEN_SECRET` 추가 (Mode 1)~~ ✅ 완료 (2026-04-18)
+
+> 검증: infra/nginx/nginx.conf.template — `add_header Content-Security-Policy` 추가 (media-src blob: mediastream:, img-src data: blob:, dev/prod 분리). infra/secrets/prod.env.sops.yaml + lan.env.sops.yaml — HANDOVER_TOKEN_SECRET 추가. apps/backend/.env.example — 최소 32자 주석 포함. docs/operations/secret-rotation.md — handover secret 로테이션 절차 추가.
+
+### ~~🟠 HIGH — QR Phase 1-3 Playwright E2E 시나리오 3종 (Mode 1)~~ ✅ 완료 (2026-04-18)
+
+> 검증: tests/e2e/features/equipment/qr/phase1-mobile-landing.spec.ts — 인증/비인증/잘못된 관리번호 시나리오. phase2-scanner-ncr.spec.ts — 수동 입력 폼 → parseManagementNumber → 이동, 벌크 PDF Blob 스냅샷. tests/e2e/features/handover/phase3-handover.spec.ts — lender/borrower 2-session, 토큰 발급/소비/TTL/replay 방어. storageState 병렬 isolation, FRONTEND_ROUTES 빌더 기반 URL.
+
+### ~~🟡 MEDIUM — Per-row 체크박스 + BulkActionBar 프리미티브 추출 (Mode 1)~~ ✅ 완료 (2026-04-18)
+
+> 검증: components/shared/BulkActionBar.tsx 신규 (selectedCount 인디케이터 + 액션 슬롯). components/shared/SelectableRowCheckbox.tsx 신규 (접근성 라벨 + 키보드 토글). EquipmentTable.tsx + EquipmentCardGrid.tsx — `bulkSelection?: BulkSelectionAPI<Equipment>` optional prop, 없으면 기존 동작 유지. EquipmentListContent.tsx — useBulkSelection<Equipment> + BulkActionBar 교체. aria-live 선택 개수 공지.
+
+### ~~🟡 MEDIUM — Intent URL 파라미터 일반화 + 타 모듈 확산 (Mode 2)~~ ✅ 완료 (2026-04-19)
+
+> 검증: QUERY_INTENTS에 ACTIONS.EDIT/APPROVE/SUBMIT 추가. calibration-plans/create, self-inspections, intermediate-inspections, checkouts/create — useSearchParams + QUERY_INTENTS 감지 + useState lazy init 적용. FRONTEND_ROUTES에 각 모듈 `*_CREATE(id?)` 빌더 추가. notifications/config/notification-registry.ts linkTemplate 확장. 대시보드 quick action URL FRONTEND_ROUTES 빌더 교체. docs/references/frontend-patterns.md Intent URL 섹션 추가. grep '?action=' 리터럴 0건.
+
+### ~~🟡 MEDIUM — Handover 토큰 모델 → 범용 1회성 서명 토큰 프리미티브 추출 (Mode 2)~~ ✅ 완료 (2026-04-19)
+
+> 검증: apps/backend/src/common/one-time-token/one-time-token.service.ts 신규 — OneTimeTokenService<TPayload>.issue/verify, jti Redis 1회 소비, OneTimeTokenErrorCode 3종(INVALID/EXPIRED/CONSUMED). HandoverTokenService → OneTimeTokenService 래퍼로 리팩토링. 기존 handover-token.service.spec.ts 전체 PASS. OneTimeTokenService 단위 테스트 신규. docs/references/backend-patterns.md OneTimeToken 섹션 추가.
+
+### ~~🟡 MEDIUM — verify-qr-ssot + verify-handover-security 검증 스킬 신설 (Mode 1)~~ ✅ 완료 (2026-04-19)
+
+> 검증: .claude/skills/verify-qr-ssot/SKILL.md — /e/[SUW|UIW|PYT] 리터럴 URL, QR_CONFIG 직접 지정, QR_ACTION_VALUES enum 우회, FRONTEND_ROUTES.HANDOVER/BY_MGMT/SCAN 미경유 Grep 패턴. .claude/skills/verify-handover-security/SKILL.md — HANDOVER_TOKEN_SECRET vs JWT_SECRET 혼용, TTL 매직 넘버, Redis jti issue→verify→del 체인, HttpStatus 매핑(INVALID=400, EXPIRED=401, CONSUMED=409). verify-implementation에서 QR/handover 탐지 시 자동 호출 등록.
+
+### ~~🟡 MEDIUM — PWA 완결 (아이콘 PNG + 서비스워커 + Install Prompt) (Mode 1)~~ ✅ 완료 (2026-04-19)
+
+> 검증: public/icons/ — manifest-192.png, manifest-512.png, apple-touch-icon.png, maskable-icon-192.png 생성 (UL Red 배경 + Wrench). manifest.json — icons 배열 확장(maskable purpose), screenshots, categories. next.config.js — Serwist 플러그인 (Next.js 16 호환). public/sw.js — App Shell precache + NetworkFirst API 전략. components/pwa/InstallPrompt.tsx — beforeinstallprompt 1회 노출 + localStorage dismiss. app/offline/page.tsx 신규. Lighthouse PWA 90점+.
+
+### ~~🟢 LOW — Lighthouse/axe-core/번들 크기 배포 게이트 통합 (Mode 1)~~ ✅ 완료 (2026-04-20)
+
+> 검증: .github/workflows/performance-audit.yml — Lighthouse CI (5개 라우트, Performance 85+/Accessibility 95+/PWA 90+). .github/workflows/accessibility-audit.yml — axe-core Critical 0 강제. .github/workflows/bundle-size.yml — size-limit route-level 한도 (dashboard +10KB, 전체 delta +300KB). PR comment 자동화. docs/operations/performance-budgets.md 신규 (임계값 SSOT + 예외 승인 절차). 의도적 회귀 → CI 실패 감지 확인.
+
+### ~~🟢 LOW — pre-commit self-audit 7항목 자동화 스크립트 (Mode 0)~~ ✅ 완료 (2026-04-18)
+
+> 검증: scripts/self-audit.mjs 신규 — staged 파일 대상 7항목 grep (리터럴 URL/eslint-disable/any 타입/SSOT 우회/role 리터럴/setQueryData/icon-only button aria-label 누락). .husky/pre-commit — lint-staged 다음 `node scripts/self-audit.mjs --staged` 추가, 실패 시 commit 차단. CI quality-gate.yml 동일 스크립트 추가. docs/references/self-audit.md 신규. 의도적 위반 감지 확인, Phase 1-3 코드 위반 0.
+
+---
