@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, PackageCheck, X } from 'lucide-react';
 import { CHECKOUT_ALERT_TOKENS } from '@/lib/design-tokens';
@@ -27,6 +27,7 @@ export default function CheckoutAlertBanners({
   const t = useTranslations('checkouts');
   const [overdueVisible, setOverdueVisible] = useState(true);
   const [pendingCheckVisible, setPendingCheckVisible] = useState(true);
+  const pendingCheckRef = useRef<HTMLDivElement>(null);
 
   const showOverdue = summary.overdue > 0 && overdueVisible;
   const showPendingCheck = summary.returnedToday > 0 && pendingCheckVisible;
@@ -61,7 +62,18 @@ export default function CheckoutAlertBanners({
           <button
             type="button"
             className={CHECKOUT_ALERT_TOKENS.overdue.close}
-            onClick={() => setOverdueVisible(false)}
+            onClick={() => {
+              setOverdueVisible(false);
+              // WCAG 2.1 SC 2.4.3: 배너 제거 후 포커스 이전
+              requestAnimationFrame(() => {
+                const btn = pendingCheckRef.current?.querySelector<HTMLButtonElement>('button');
+                if (btn) {
+                  btn.focus();
+                } else {
+                  document.getElementById(overdueSectionId)?.focus();
+                }
+              });
+            }}
             aria-label={t('alerts.bannerClose')}
           >
             <X className="h-3.5 w-3.5" />
@@ -71,7 +83,7 @@ export default function CheckoutAlertBanners({
 
       {/* 반입 승인 대기 배너 */}
       {showPendingCheck && (
-        <div className={CHECKOUT_ALERT_TOKENS.pendingCheck.container}>
+        <div ref={pendingCheckRef} className={CHECKOUT_ALERT_TOKENS.pendingCheck.container}>
           <PackageCheck className={CHECKOUT_ALERT_TOKENS.pendingCheck.icon} aria-hidden="true" />
           <p className={CHECKOUT_ALERT_TOKENS.pendingCheck.text}>
             {t('alerts.pendingCheckTitle', { count: summary.returnedToday })}

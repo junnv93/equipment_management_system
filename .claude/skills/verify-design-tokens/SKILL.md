@@ -167,6 +167,19 @@ grep -E "('2xs'|'xs-tight'|'sm-tight'|hairline|pagination|stepDot)" \
 
 **추가 신규 변수 체크:** 위 4개 외에 신규 세션에서 `@theme`에 추가된 변수가 있으면 대응 primitives 상수와 동기화 검사 범위를 이 테이블에 추가할 것.
 
+**MICRO_TYPO ↔ @theme 변수명 일치 검사 (3-way 마지막 단계):**
+`semantic.ts`의 `MICRO_TYPO` 값이 `globals.css @theme`에 등록된 변수명을 올바르게 참조하는지 확인.
+
+```bash
+# MICRO_TYPO 토큰 값 확인 (text-2xs, text-xs-tight, text-sm-tight 등)
+grep -A 10 "^export const MICRO_TYPO" apps/frontend/lib/design-tokens/semantic.ts
+
+# @theme에 해당 변수들이 등록되어 있는지 확인
+grep -E "(--text-2xs|--text-xs-tight|--text-sm-tight)" apps/frontend/styles/globals.css
+```
+
+**PASS:** `MICRO_TYPO`의 모든 값이 `@theme`에 대응하는 CSS 변수로 존재. **FAIL:** semantic.ts 값 오타 또는 globals.css 미등록 → `@theme` 추가.
+
 **PASS:** 모든 변수 일치. **FAIL:** 불일치 → primitives.ts 숫자 또는 globals.css 값 수정.
 
 **상세:** [references/step-details.md](references/step-details.md) Step 12
@@ -302,6 +315,19 @@ grep -n "aria-controls\|contentId\|id=\"nc-" \
 **예외:** `aria-expanded`가 외부 라이브러리(shadcn/ui Accordion, Collapsible)에서 관리되는 경우 — 라이브러리가 `aria-controls`를 자동 주입하므로 제외.
 
 **상세:** [references/step-details.md](references/step-details.md) Step 14
+
+### Step 14b: `requestAnimationFrame` + ref focus transfer null guard (2026-04-21 추가)
+
+배너/모달 닫기 후 WCAG 2.1 SC 2.4.3 포커스 이전 패턴에서 null guard 누락 시 런타임 에러.
+
+```bash
+# requestAnimationFrame 내 focus 호출 위치 확인
+grep -n "requestAnimationFrame" apps/frontend/components/**/*.tsx apps/frontend/app/**/*.tsx 2>/dev/null
+```
+
+각 결과에서 내부 `.focus()` 호출 앞에 `?.` optional chaining 또는 `if (el)` null guard 존재 여부 확인.
+
+**PASS:** 모든 `rAF` 내 focus 호출에 null guard 존재. **FAIL:** `el.focus()` bare 호출 → `el?.focus()` 또는 `if (el) el.focus()` 교체.
 
 ## Output Format
 
