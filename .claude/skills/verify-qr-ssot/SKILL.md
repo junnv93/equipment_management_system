@@ -224,7 +224,7 @@ grep -rn "equipment\.status\|\.status === " \
 | 1   | QR URL 인라인 조합                | PASS/FAIL | 우회 파일명:라인                      |
 | 2   | QR 경로 상수 하드코딩             | PASS/FAIL | '/e/' 또는 '/handover' 리터럴 건수    |
 | 3   | QR 설정 매직넘버                  | PASS/FAIL | 인라인 픽셀/mm 값 위치                |
-| 3a  | LabelSizePreset 7종 로컬 재정의   | PASS/FAIL | 로컬 union/preset 재정의 위치         |
+| 3a  | LabelSizePreset 로컬 재정의       | PASS/FAIL | 로컬 union/preset 재정의 위치         |
 | 3b  | XL_LABEL_HEIGHT_MM SSOT drift     | PASS/FAIL | 43.7 하드코딩 또는 referenceLabelHeightMm 인라인 위치 |
 | 3c  | precomputedQrData 주입 패턴       | PASS/FAIL | QRCode.create() 루프 내 중복 호출 위치 |
 | 3d  | getSamplerPresetOrder ↔ i18n 동기화 | PASS/FAIL | 고정 배열 대체 또는 i18n 키 누락      |
