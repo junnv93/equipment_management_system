@@ -30,6 +30,7 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/lib/api/query-config.ts` | queryKeys 팩토리 + QUERY_CONFIG 프리셋 |
 | `apps/frontend/lib/api/cache-invalidation.ts` | 캐시 무효화 SSOT |
 | `apps/frontend/hooks/use-date-formatter.ts` | 사용자 dateFormat 적용 날짜 포맷 훅 |
+| `apps/frontend/hooks/use-calibration.ts` | 교정 기록 도메인 훅 (useCalibrationDetail) |
 
 ## Workflow
 
@@ -254,6 +255,23 @@ grep -rn "isConflictError\|VERSION_CONFLICT" \
 **PASS:** `useCasGuardedMutation` 사용 컴포넌트의 onError에 `isConflictError` 중복 처리 없음.
 **INFO:** casVersion을 수동 관리하는 컴포넌트가 있으면 `useCasGuardedMutation` 전환 검토.
 
+### Step 18: `*-api.ts`에 React Hook 금지 (2026-04-21 추가)
+
+`lib/api/*-api.ts` 파일은 순수 API 함수 집합이어야 한다. `useQuery`, `useMutation`, `useQueryClient` 등 React Hook import 또는 함수 정의가 포함되면 안 된다. 도메인별 훅 함수는 `hooks/use-<domain>.ts`로 분리한다.
+
+**배경:** `calibration-api.ts`에 `useCalibrationDetail`이 혼재 → `hooks/use-calibration.ts`로 이동 (2026-04-21).
+
+**탐지:**
+```bash
+# *-api.ts 파일에서 useQuery/useMutation 등 React Hook import 탐지
+grep -rn "from '@tanstack/react-query'" \
+  apps/frontend/lib/api \
+  --include="*-api.ts"
+```
+
+**PASS:** `lib/api/*-api.ts` 파일에 `@tanstack/react-query` import 0건.
+**FAIL:** `useQuery`/`useMutation`/`useQueryClient`가 api 파일에서 import됨 → `hooks/use-<domain>.ts`로 이동 필요.
+
 **올바른 사용 패턴:**
 ```typescript
 // ✅ 올바른 패턴 — VERSION_CONFLICT는 훅 내부에서 자동 처리
@@ -393,6 +411,7 @@ return isLoading ? <Skeleton /> : isError ? <ErrorUI /> : docs.length === 0 ? <E
 | 15  | useCasGuardedMutation 패턴    | PASS/INFO | onError 중복 VERSION_CONFLICT 처리 또는 수동 casVersion 조합 위치 |
 | 16  | raw async mutation 금지    | PASS/FAIL | onClick에서 await api.delete/remove/unlink 직접 호출 위치 |
 | 17  | useQuery isError 분기      | PASS/INFO | isLoading 사용 컴포넌트에서 isError 누락 위치 |
+| 18  | *-api.ts React Hook 금지   | PASS/FAIL | lib/api/*-api.ts에 @tanstack/react-query import 위치 |
 ```
 
 ## Exceptions

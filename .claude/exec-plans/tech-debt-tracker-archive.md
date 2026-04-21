@@ -5,6 +5,16 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — batch-a-techdebt-0421 (validation 컴포넌트 분리 + calibration 쿼리키)
+
+- [x] **[2026-04-20 cplan-export-audit] 🟡 MEDIUM Phase 2 — Sticky 액션 바** — `CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.stickyContainer` 적용 완료. (코드 확인 2026-04-21)
+- [x] **[2026-04-20 cplan-export-audit] 🟡 MEDIUM Phase 2 — confirmItem optimistic** — `optimisticConfirmedId` 패턴 구현 완료. (코드 확인 2026-04-21)
+- [x] **[2026-04-20 cplan-export-audit] 🟡 MEDIUM Phase 2 — Reject textarea minLength=10** — `.length < 10` disabled 조건 + button disabled 완료. (코드 확인 2026-04-21)
+- [x] **[2026-04-20 cplan-export-audit] 🟡 MEDIUM Phase 2 — year "_all" 필터** — SelectItem `_all` + i18n `allYears` 구현 완료. (코드 확인 2026-04-21)
+- [x] **[2026-04-20 calibration-phase4-7] S6 — CALIBRATION_DETAIL 쿼리키 바인딩** — `useCalibrationDetail` 훅 추가, `queryKeys.calibrations.detail` + `QUERY_CONFIG.CALIBRATION_DETAIL` 연결 완료. (2026-04-21)
+- [x] **[2026-04-21 cleanup-0421] ValidationDocumentsSection.tsx 255줄 → 93줄** — DocumentTable.tsx 분리 완료. (2026-04-21)
+- [x] **[2026-04-21 cleanup-0421] ValidationEditDialog.tsx 190줄 → 149줄** — VendorEditFields.tsx 분리 완료. (2026-04-21)
+
 ## 2026-04-21 — e2e-api-endpoints-migration / review-architecture
 
 - [x] **[2026-04-20 e2e-api-endpoints-migration] pre-existing E2E 실패 13건** — ✅ 완료 2026-04-21. auth: canonical emails(lab.manager/tech.manager/test.engineer) + auth.service testPasswords 확장. checkouts: version:1 추가 + TEAM_FCC_EMC_RF_SUWON_ID 동일팀 장비. auth 8/8, checkouts 13/13 통과.
