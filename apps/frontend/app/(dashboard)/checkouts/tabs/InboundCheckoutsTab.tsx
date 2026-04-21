@@ -63,20 +63,20 @@ export default function InboundCheckoutsTab({
   const tEquip = useTranslations('equipment');
   const router = useRouter();
   const { fmtDate } = useDateFormatter();
-  const { rentalPage, internalPage, setRentalPage, setInternalPage } =
+  const { inboundPage, rentalPage, internalPage, setInboundPage, setRentalPage, setInternalPage } =
     useInboundSectionPagination();
 
   const { status: statusFilter, search: searchTerm } = filters;
   const filterActive = statusFilter !== 'all' || !!searchTerm;
 
   // ──────────────────────────────────────────────
-  // 반입: 타팀 장비 대여 건 (페이지네이션 — 기존 URL page 파라미터)
+  // 반입: 타팀 장비 대여 건 (독립 페이지네이션 — ?inboundPage=N)
   // ──────────────────────────────────────────────
   const { data: inboundCheckoutsData, isLoading: inboundCheckoutsLoading } = useQuery({
-    queryKey: queryKeys.checkouts.inbound({ statusFilter, searchTerm, teamId, page: filters.page }),
+    queryKey: queryKeys.checkouts.inbound({ statusFilter, searchTerm, teamId, page: inboundPage }),
     queryFn: async () => {
       const query: CheckoutQuery = {
-        page: filters.page,
+        page: inboundPage,
         pageSize: DEFAULT_PAGE_SIZE,
         search: searchTerm || undefined,
         teamId,
@@ -264,16 +264,10 @@ export default function InboundCheckoutsTab({
               />
             ))}
             {renderSectionPagination(
-              filters.page,
+              inboundPage,
               inboundTotalPages,
               inboundCheckoutsLoading,
-              (page) => {
-                const params = new URLSearchParams(window.location.search);
-                params.set('page', String(page));
-                router.replace(`${FRONTEND_ROUTES.CHECKOUTS.LIST}?${params.toString()}`, {
-                  scroll: false,
-                });
-              }
+              setInboundPage
             )}
           </>
         )}
