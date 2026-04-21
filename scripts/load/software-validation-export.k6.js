@@ -10,6 +10,9 @@ const ENDPOINTS = {
   EXPORT: `${BASE}/api/reports/export/form/UL-QP-18-09`,
 };
 
+// p95 < 2000ms 근거: DOCX 생성 포함 (docxtemplater + 파일 스트림).
+// 측정 기준: 로컬 환경 단일 요청 p50 ~400ms, 여유율 5× 적용.
+// SLA 기준 설정 시 이 값을 업데이트할 것.
 export const options = {
   stages: [
     { duration: '30s', target: 3 },
@@ -18,11 +21,28 @@ export const options = {
     { duration: '30s', target: 0 },
   ],
   thresholds: {
-    // Export는 DOCX 생성 포함이므로 목표치 완화 (p95 < 2000ms)
     'http_req_duration{type:export}': ['p(95)<2000'],
     'http_req_failed{type:export}': ['rate<0.02'],
   },
 };
+
+function parseLoginResponse(res) {
+  if (res.status !== 200) {
+    throw new Error(`Login failed: HTTP ${res.status} — ${res.body}`);
+  }
+  let body;
+  try {
+    body = res.json();
+  } catch (_) {
+    throw new Error(
+      `Login HTTP 200 but response is not JSON (got HTML?): ${String(res.body).slice(0, 200)}`
+    );
+  }
+  if (!body || !body.accessToken) {
+    throw new Error('Login succeeded but accessToken missing in response body');
+  }
+  return body.accessToken;
+}
 
 export function setup() {
   if (!__ENV.K6_USER_EMAIL || !__ENV.K6_USER_PASSWORD) {
@@ -43,17 +63,8 @@ export function setup() {
     { headers: { 'Content-Type': 'application/json' } }
   );
 
-  if (res.status !== 200) {
-    throw new Error(`Login failed: HTTP ${res.status} — ${res.body}`);
-  }
-
-  const body = res.json();
-  if (!body.accessToken) {
-    throw new Error('Login succeeded but accessToken missing in response body');
-  }
-
   return {
-    token: body.accessToken,
+    token: parseLoginResponse(res),
     validationId: __ENV.K6_VALIDATION_ID,
   };
 }

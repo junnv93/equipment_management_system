@@ -8,6 +8,12 @@ import { THROTTLE_PRESETS, throttleAllNamed } from '../../common/config/throttle
 import { SecurityService } from './security.service';
 import type { NormalizedCspReport } from './security.types';
 
+function parseCspLineNumber(raw: unknown): number | undefined {
+  if (typeof raw === 'number') return Number.isFinite(raw) ? Math.trunc(raw) : undefined;
+  if (typeof raw === 'string' && /^\d+$/.test(raw)) return parseInt(raw, 10);
+  return undefined;
+}
+
 /**
  * CSP violation report — `Content-Security-Policy` + `Report-To` 헤더의 수집 엔드포인트.
  *
@@ -60,7 +66,7 @@ export class SecurityController {
           violatedDirective: legacy['violated-directive'] as string | undefined,
           documentUri: legacy['document-uri'] as string | undefined,
           sourceFile: legacy['source-file'] as string | undefined,
-          lineNumber: typeof rawLine === 'number' ? Math.trunc(rawLine) : undefined,
+          lineNumber: parseCspLineNumber(rawLine),
           rawPayload: entry,
           userAgent,
           ipAddress,
@@ -81,7 +87,7 @@ export class SecurityController {
           violatedDirective: modern.body.effectiveDirective as string | undefined,
           documentUri: modern.body.documentURL as string | undefined,
           sourceFile: modern.body.sourceFile as string | undefined,
-          lineNumber: typeof rawLine === 'number' ? Math.trunc(rawLine) : undefined,
+          lineNumber: parseCspLineNumber(rawLine),
           rawPayload: entry,
           userAgent,
           ipAddress,

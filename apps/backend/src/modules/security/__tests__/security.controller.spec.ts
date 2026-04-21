@@ -133,7 +133,8 @@ describe('SecurityController', () => {
       expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it('Legacy lineNumber — 숫자는 integer로, 문자열은 undefined로 파싱', () => {
+    it('Legacy lineNumber — 숫자/숫자문자열은 integer로, 비숫자 문자열은 undefined로 파싱', () => {
+      // 숫자 그대로
       controller.handleReport(
         { 'csp-report': { 'blocked-uri': 'x', 'violated-directive': 'y', 'line-number': 42 } },
         mockReq
@@ -144,6 +145,18 @@ describe('SecurityController', () => {
 
       jest.clearAllMocks();
 
+      // Firefox 112↓ 등 일부 브라우저가 string으로 전송하는 케이스
+      controller.handleReport(
+        { 'csp-report': { 'blocked-uri': 'x', 'violated-directive': 'y', 'line-number': '42' } },
+        mockReq
+      );
+      expect(mockSecurityService.saveReport).toHaveBeenCalledWith(
+        expect.objectContaining({ lineNumber: 42 })
+      );
+
+      jest.clearAllMocks();
+
+      // 비숫자 문자열 → undefined (데이터 손실 없이 명시적 처리)
       controller.handleReport(
         {
           'csp-report': {

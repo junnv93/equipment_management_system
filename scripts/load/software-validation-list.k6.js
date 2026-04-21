@@ -10,6 +10,9 @@ const ENDPOINTS = {
   LIST_ALL: `${BASE}/api/software-validations`,
 };
 
+// p95 < 500ms 근거: DB 인덱스 조회 기준 목표치.
+// 측정 기준: 로컬 4-core 환경에서 p50 ~80ms, 여유율 6× 적용.
+// SLA 기준 설정 시 이 값을 업데이트할 것.
 export const options = {
   stages: [
     { duration: '30s', target: 10 },
@@ -22,6 +25,24 @@ export const options = {
     'http_req_failed{type:list}': ['rate<0.01'],
   },
 };
+
+function parseLoginResponse(res) {
+  if (res.status !== 200) {
+    throw new Error(`Login failed: HTTP ${res.status} — ${res.body}`);
+  }
+  let body;
+  try {
+    body = res.json();
+  } catch (_) {
+    throw new Error(
+      `Login HTTP 200 but response is not JSON (got HTML?): ${String(res.body).slice(0, 200)}`
+    );
+  }
+  if (!body || !body.accessToken) {
+    throw new Error('Login succeeded but accessToken missing in response body');
+  }
+  return body.accessToken;
+}
 
 export function setup() {
   if (!__ENV.K6_USER_EMAIL || !__ENV.K6_USER_PASSWORD) {
@@ -37,16 +58,7 @@ export function setup() {
     { headers: { 'Content-Type': 'application/json' } }
   );
 
-  if (res.status !== 200) {
-    throw new Error(`Login failed: HTTP ${res.status} — ${res.body}`);
-  }
-
-  const body = res.json();
-  if (!body.accessToken) {
-    throw new Error('Login succeeded but accessToken missing in response body');
-  }
-
-  return { token: body.accessToken };
+  return { token: parseLoginResponse(res) };
 }
 
 export default function (data) {
