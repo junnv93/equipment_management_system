@@ -813,7 +813,7 @@ export const CHECKOUT_PAGINATION_TOKENS = {
     active: 'border-primary bg-primary text-primary-foreground cursor-default',
     disabled: 'border-border/40 text-muted-foreground/40 cursor-default',
   },
-  ellipsis: `${DIMENSION_TOKENS.paginationBtnW} flex items-center justify-center text-xs text-muted-foreground`,
+  ellipsis: 'w-pagination flex items-center justify-center text-xs text-muted-foreground',
 } as const;
 
 // ============================================================================

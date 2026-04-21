@@ -103,6 +103,19 @@
    These ARE emitted as :root CSS variables.
    ============================================================================ */
 @theme {
+  /* ── Micro-scale typography ──────────────────────────────────────────────
+     WCAG SC 1.4.4 권고 하한. text-2xs 유틸리티 자동 생성.
+     primitives.ts TYPOGRAPHY_PRIMITIVES['2xs'] = 10px 와 연동.      */
+  --text-2xs: 0.625rem; /* 10px */
+
+  /* ── UI Dimension Primitives ─────────────────────────────────────────────
+     Named Tailwind utilities 자동 생성:
+       w-hairline / h-hairline     (3px — 접근성 안전 최소 강조 바)
+       w-pagination / h-pagination (30px — 페이지네이션 버튼 정사각)
+     primitives.ts WIDTH_PRIMITIVES.hairline / SIZE_PRIMITIVES.pagination 연동. */
+  --spacing-hairline: 3px;
+  --spacing-pagination: 30px;
+
   /* UL Solutions Brand Colors — literal hex */
   --color-ul-midnight: #122c49;
   --color-ul-midnight-dark: #0a1c30;

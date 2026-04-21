@@ -40,8 +40,10 @@ import {
   RENTAL_FLOW_INLINE_TOKENS,
   getDdayClasses,
   formatDday,
+  FONT,
+  getManagementNumberClasses,
+  MICRO_TYPO,
 } from '@/lib/design-tokens';
-import { FONT, getManagementNumberClasses, MICRO_TYPO } from '@/lib/design-tokens';
 
 // ============================================================================
 // Helpers

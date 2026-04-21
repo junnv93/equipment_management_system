@@ -314,28 +314,37 @@ export const REFETCH_OVERLAY_TOKENS = {
  *
  * 금지: 7px·8px·9px arbitrary 클래스 — 접근성 하한 미달 (WCAG SC 1.4.4)
  */
+/**
+ * Micro Typography Tokens (마이크로 타이포그래피)
+ *
+ * 배지/레이블/캡션 등 소형 UI 요소 전용 텍스트 크기.
+ * globals.css @theme: --text-2xs: 0.625rem (10px) → text-2xs 유틸리티 자동 생성.
+ * TYPOGRAPHY_PRIMITIVES['2xs'] = 10px 와 CSS 변수 레벨에서 연동됨.
+ *
+ * 금지: text-[7px]·[8px]·[9px]·[10px] arbitrary — 접근성 하한 미달 (WCAG SC 1.4.4)
+ */
 export const MICRO_TYPO = {
-  /** 상태 배지 / 카운트 배지 (10px — 2xs primitive) */
-  badge: 'text-[10px]',
-  /** 범례·부속 레이블 (10px — 2xs primitive) */
-  label: 'text-[10px]',
-  /** 일반 부연 설명 (≥11px — xs primitive) */
+  /** 상태 배지 / 카운트 배지 (--text-2xs = 10px) */
+  badge: 'text-2xs',
+  /** 범례·부속 레이블 (--text-2xs = 10px) */
+  label: 'text-2xs',
+  /** 일반 부연 설명 (text-xs ≥ 11px) */
   caption: 'text-xs',
 } as const;
 
 /**
  * UI Dimension Tokens (UI 치수 토큰)
  *
- * Tailwind 표준 유틸리티로 표현 불가능한 특정 크기 값을 중앙화.
- * WIDTH_PRIMITIVES / SIZE_PRIMITIVES 기반.
+ * globals.css @theme 등록 변수 기반 named Tailwind 유틸리티.
+ *   --spacing-hairline: 3px   → w-hairline / h-hairline
+ *   --spacing-pagination: 30px → w-pagination / h-pagination
+ * WIDTH_PRIMITIVES.hairline / SIZE_PRIMITIVES.pagination 와 CSS 변수 레벨 연동.
  */
 export const DIMENSION_TOKENS = {
-  /** 목적 강조 세로 바 (WIDTH_PRIMITIVES.hairline = 3px) */
-  purposeBar: 'w-[3px]',
-  /** 페이지네이션 버튼 너비 (SIZE_PRIMITIVES.pagination = 30px) */
-  paginationBtnW: 'w-[30px]',
-  /** 페이지네이션 버튼 정사각 (SIZE_PRIMITIVES.pagination = 30px) */
-  paginationBtn: 'w-[30px] h-[30px]',
+  /** 목적 강조 세로 바 (--spacing-hairline = 3px) */
+  purposeBar: 'w-hairline',
+  /** 페이지네이션 버튼 정사각 (--spacing-pagination = 30px) */
+  paginationBtn: 'w-pagination h-pagination',
 } as const;
 
 /**
