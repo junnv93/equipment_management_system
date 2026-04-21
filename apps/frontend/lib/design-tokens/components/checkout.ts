@@ -242,6 +242,10 @@ export const CHECKOUT_MINI_PROGRESS = {
 /**
  * 렌탈 그룹 카드 헤더의 인라인 4단계 흐름 표시
  *
+ * @deprecated 78-3에서 칩+tooltip 패턴으로 전체 교체 예정.
+ *   circle/arrow/stepLabel 프로퍼티도 개별 deprecated.
+ *   소비처: CheckoutGroupCard.tsx RentalFlowInline 컴포넌트.
+ *
  * 와이어프레임 [개선 8]: 렌탈 그룹 헤더에 대여 4단계 현황 인라인 표시
  * 5개 원: lender_checked→borrower_received→borrower_returned→lender_received→완료
  */

@@ -275,7 +275,32 @@ rg "\.xlsx|\.docx" apps/frontend/lib/api/ --type ts -n | grep -v "node_modules\|
 | 21b | QR 라벨 폰트 스케일 매직넘버  | PASS/FAIL | 43.7 인라인 또는 SSOT 외 치수 할당 위치 |
 | 22  | Content-Disposition 인라인 조립 | PASS/FAIL | `filename*=UTF-8''` 직접 사용 위치 |
 | 23  | export allowlist 상태 리터럴   | PASS/WARN | enum 미경유 status 배열 요소 위치 |
+| 24  | Layer 3 arbitrary 픽셀 타이포   | PASS/FAIL | `text-[Npx]` 잔존 위치 + 건수 |
 ```
+
+### Step 24: Design Token Layer 3 arbitrary 픽셀 타이포 탐지 (2026-04-21 추가)
+
+`apps/frontend/lib/design-tokens/components/` 하위 Layer 3 파일에서
+`text-[Npx]` arbitrary 타이포 값이 직접 사용되면 `MICRO_TYPO` SSOT 체인이 끊어진다.
+
+**SSOT 체인**: `TYPOGRAPHY_PRIMITIVES['2xs']` → `globals.css @theme --text-2xs` → `text-2xs` 유틸리티 → `MICRO_TYPO.badge/label`
+
+**허용**: `text-xs`(11px), `text-sm`, `text-base` 등 named utilities. `text-2xs`(10px SSOT).  
+**금지**: `text-[7px]`~`text-[10px]` arbitrary — WCAG SC 1.4.4 접근성 하한 위반 + SSOT 단절.
+
+```bash
+# Layer 3 파일에서 arbitrary 픽셀 텍스트 탐지 (WCAG 하한 위반 포함)
+grep -rn "text-\[[0-9]*px\]" \
+  apps/frontend/lib/design-tokens/components/ \
+  --include="*.ts"
+```
+
+**PASS:** 0 hits. **FAIL:** 도메인별 78차 스타일 패치로 순차 제거 (MICRO_TYPO.badge/label/caption 교체).
+
+**현재 잔존 목표 도메인 (2026-04-21 기준, 78-7 이후 별도 tech-debt 세션):**
+- non-conformance.ts(19), audit.ts(18), dashboard.ts(16), team.ts(14), settings.ts(8), approval.ts(5), equipment.ts(4), sidebar.ts(2), 기타(4) — 총 약 90건
+
+**예외:** `text-[Npx]` 이외의 arbitrary 값(예: `text-[11px]` = text-xs 동등)은 WARN 처리.
 
 ### Step 23: Export 허용 상태 allowlist 하드코딩 탐지 (2026-04-20 추가)
 
