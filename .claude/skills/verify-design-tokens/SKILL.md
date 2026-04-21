@@ -201,6 +201,39 @@ diff /tmp/enum.txt /tmp/tokens.txt
 
 **상세:** [references/step-details.md](references/step-details.md) Step 11
 
+### Step 12: 워크플로우 상태 인덱스 하드코딩 금지
+
+도메인 워크플로우 상태 인덱스가 배열에서 파생(SSOT)되지 않고 직접 숫자로 하드코딩되면,
+스텝 추가/제거 시 인덱스 불일치 버그 발생.
+
+**올바른 패턴 (non-conformance.ts 기준):**
+```typescript
+// ✅ SSOT — 배열에서 파생
+export const NC_STATUS_STEP_INDEX = Object.fromEntries(
+  NC_WORKFLOW_STEPS.map((status, index) => [status, index])
+) as Record<NonConformanceStatus, number>;
+export const NC_OPEN_STEP_INDEX = NC_STATUS_STEP_INDEX['open'];
+export const NC_CORRECTED_STEP_INDEX = NC_STATUS_STEP_INDEX['corrected'];
+export const NC_TERMINAL_STEP_INDEX = NC_WORKFLOW_STEPS.length - 1;
+
+// ❌ WRONG — 하드코딩
+const NC_STATUS_STEP_INDEX = { open: 0, corrected: 1, closed: 2 };
+if (currentStepIndex === 1) ...  // magic number
+```
+
+**탐지:**
+```bash
+# Record<string, number>에 상태명 + 숫자 인덱스 하드코딩 패턴
+grep -n "open: 0\|corrected: 1\|closed: 2\|in_use: 0\|returned: 1" \
+  apps/frontend/lib/design-tokens/components/*.ts
+# 함수 내 currentStepIndex === [0-9] 하드코딩
+grep -n "currentStepIndex === [0-9]" apps/frontend/lib/design-tokens/components/*.ts
+```
+
+**PASS:** 0 hits. **FAIL:** 해당 도메인 `*_STATUS_STEP_INDEX` 상수를 `Object.fromEntries(STEPS.map(...))` 파생으로 교체.
+
+**상세:** [references/step-details.md](references/step-details.md) Step 12
+
 ## Output Format
 
 ```markdown
@@ -212,6 +245,7 @@ diff /tmp/enum.txt /tmp/tokens.txt
 | 4   | 마이그레이션된 컴포넌트 토큰   | PASS/FAIL | 토큰 미사용 컴포넌트           |
 | 5   | Layer 3 컴포넌트 토큰 아키텍처 | PASS/FAIL | 위반 참조 목록                 |
 | 6a  | Layer 3 getTransitionClasses   | PASS/FAIL | 잔여 런타임 호출 위치          |
+| 6d  | 스태거 딜레이 SSOT             | PASS/FAIL | `index * N` raw 계산 위치      |
 | 6b  | getTransitionClasses 속성 지정 | PASS/FAIL | properties 미지정 호출 위치    |
 | 6c  | 컴포넌트 하드코딩 트랜지션     | PASS/FAIL | TRANSITION_PRESETS 미사용 위치 |
 | 7   | Architecture v3 패턴           | PASS/INFO | Deprecated 패턴, Urgency 함수  |

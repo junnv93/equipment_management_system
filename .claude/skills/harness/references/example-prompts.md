@@ -514,7 +514,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 > 버그 2건·SSOT 위반 3건·온보딩 5건·접근성 3건·i18n 2건·AP 시리즈 7건을 9개 프롬프트로 중복·누락 없이 배정.
 > 의존 순서: **P1 → P2 → P5 → P6 → P7** (P3·P4·P8·P9는 독립 실행 가능).
 
-### 🔴 CRITICAL — P1: NC 워크플로우 종결 노드 색상 버그 수정 (Mode 0)
+### ✅ DONE (2026-04-21, f0896a9b·9f94275e·3ac54412) — P1: NC 워크플로우 종결 노드 색상 버그 수정 (Mode 0)
 
 ```
 문제:
@@ -553,7 +553,7 @@ NCDetailClient.tsx:627 WorkflowTimeline 호출에서 isLongOverdue={longOverdue 
 - status=corrected NC는 마지막 노드 amber(현재) 그대로 유지
 ```
 
-### 🟠 HIGH — P2: NC 리스트 스태거 애니메이션 Dead Code 제거 + SSOT 복구 (Mode 0)
+### ✅ DONE (2026-04-21, 08980674·9f94275e·3ac54412) — P2: NC 리스트 스태거 애니메이션 Dead Code 제거 + SSOT 복구 (Mode 0)
 
 ```
 문제:

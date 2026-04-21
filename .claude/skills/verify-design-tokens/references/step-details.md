@@ -138,6 +138,63 @@ import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 className={cn(TRANSITION_PRESETS.fastBg, "hover:bg-muted")}
 ```
 
+### 6d: 스태거 딜레이 SSOT
+
+리스트 행에 `animationDelay`를 `index * N` raw 계산으로 하드코딩하면
+딜레이 값이 motion.ts SSOT에서 분리됨. `getStaggerDelay(index, type)` 사용 필수.
+
+```bash
+# animationDelay에 raw 곱셈 패턴 탐지
+grep -rn "animationDelay.*index \*\|index \*.*ms" \
+  apps/frontend/components apps/frontend/app --include="*.tsx"
+```
+
+```tsx
+// ❌ WRONG — raw 계산
+style={{ animationDelay: `${index * NC_STAGGER_DELAY_MS}ms` }}
+style={{ animationDelay: `${index * 60}ms` }}
+
+// ✅ CORRECT — SSOT 함수 사용
+import { getStaggerDelay, ANIMATION_PRESETS } from '@/lib/design-tokens';
+className={cn(ANIMATION_PRESETS.slideUpFade, 'motion-safe:duration-200')}
+style={{ animationDelay: getStaggerDelay(index, 'list') }}
+```
+
+**PASS:** 0 hits.
+
+## Step 12: 워크플로우 상태 인덱스 하드코딩 금지
+
+도메인 컴포넌트 토큰에서 상태 → 인덱스 매핑을 숫자로 직접 하드코딩하면
+스텝 추가/제거 시 불일치 버그 발생. 배열에서 `Object.fromEntries` 파생 필수.
+
+```bash
+# Record에 상태명 + 숫자 인덱스 직접 할당 패턴
+grep -n "open: 0\|corrected: 1\|closed: 2\|in_use: 0\|returned: 1\|pending: 0" \
+  apps/frontend/lib/design-tokens/components/*.ts
+
+# 함수 내 currentStepIndex === 숫자 하드코딩
+grep -n "currentStepIndex === [0-9]" apps/frontend/lib/design-tokens/components/*.ts
+```
+
+```typescript
+// ❌ WRONG — 하드코딩 인덱스
+export const NC_STATUS_STEP_INDEX: Record<string, number> = {
+  open: 0,
+  corrected: 1,
+  closed: 2,
+};
+if (currentStepIndex === 1) return label.currentInfo;
+
+// ✅ CORRECT — 배열 SSOT에서 파생
+export const NC_STATUS_STEP_INDEX = Object.fromEntries(
+  NC_WORKFLOW_STEPS.map((status, index) => [status, index])
+) as Record<NonConformanceStatus, number>;
+export const NC_CORRECTED_STEP_INDEX = NC_STATUS_STEP_INDEX['corrected'];
+if (currentStepIndex === NC_CORRECTED_STEP_INDEX) return label.currentInfo;
+```
+
+**PASS:** 두 탐지 명령 모두 0 hits.
+
 ## Step 7: Architecture v3 Visual Feedback System
 
 ### 7a: Deprecated 패턴
