@@ -68,7 +68,8 @@
       "Bash(mv .claude/exec-plans/active/2026-04-17-history-card-qp1802.md .claude/exec-plans/completed/)",
       "Bash(mv .claude/exec-plans/active/2026-04-17-ul-qp-18-forms-replacement.md .claude/exec-plans/completed/)",
       "Bash(mv /home/kmjkds/equipment_management_system/.claude/exec-plans/active/2026-04-21-e2e-globalprefix-ssot.md /home/kmjkds/equipment_management_system/.claude/exec-plans/completed/2026-04-21-e2e-globalprefix-ssot.md)",
-      "Bash(mv \".claude/exec-plans/active/2026-04-21-sw-status-ssot-eslint.md\" \".claude/exec-plans/completed/2026-04-21-sw-status-ssot-eslint.md\")"
+      "Bash(mv \".claude/exec-plans/active/2026-04-21-sw-status-ssot-eslint.md\" \".claude/exec-plans/completed/2026-04-21-sw-status-ssot-eslint.md\")",
+      "Bash(mv .claude/exec-plans/active/2026-04-21-tech-debt-batch-0421c.md .claude/exec-plans/completed/2026-04-21-tech-debt-batch-0421c.md)"
     ],
     "deny": [],
     "ask": []
