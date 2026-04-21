@@ -1,6 +1,6 @@
 # Harness 실전 프롬프트 — 코드베이스 실제 이슈 기반
 
-> **마지막 정리일: 2026-04-21 (QR Phase 1-3 후속 개선 섹션 완료 10건 전체 archive-domain.md 이동. 사용자 결정 대기 1건(커밋 귀속 오염 복구) → Option A 채택으로 폐기. 미완료 1건: sticky-header CSS 변수(트리거 조건 미달). UR-1/2/3 ultrareview 통합 프롬프트 추가 2026-04-21. 78차 반출입 관리 페이지 디자인/IA 개선 7종 추가 2026-04-21.)**
+> **마지막 정리일: 2026-04-21 (QR Phase 1-3 후속 개선 섹션 완료 10건 전체 archive-domain.md 이동. 사용자 결정 대기 1건(커밋 귀속 오염 복구) → Option A 채택으로 폐기. 미완료 1건: sticky-header CSS 변수(트리거 조건 미달). UR-1/2/3 ultrareview 통합 프롬프트 추가 2026-04-21. 78차 반출입 관리 페이지 디자인/IA 개선 7종 추가 2026-04-21. 78-1 완료 2026-04-21 — primitives 2xs/hairline/pagination + semantic MICRO_TYPO/DIMENSION_TOKENS + checkout.ts SSOT 복구 + globals.css @theme 연동. 78-2부터 실행 대기.)**
 > 코드베이스를 실제 분석 → 2차 검증 완료된 이슈만 수록.
 > `/harness [프롬프트]` 형태로 사용. `/playwright-e2e` 로 E2E 프롬프트 실행.
 
@@ -138,7 +138,7 @@ Agent C — Cross-module 이벤트·캐시·권한 흐름
 > 7종 프롬프트로 SSOT 준수, 하드코딩 제거, 워크플로우 가이던스, 모바일 접근성을 일괄 개선한다.
 > 각 프롬프트는 독립 실행 가능하되 의존 순서가 있음: **78-1 → 78-2 → 78-3·4·5·6·7**.
 
-### 🔴 CRITICAL — 78-1: 타이포 primitives 확장 + checkout 토큰 SSOT 복구 (Mode 1)
+### ✅ DONE — 78-1: 타이포 primitives 확장 + checkout 토큰 SSOT 복구 (2026-04-21 완료)
 
 ```
 목적: 반출 페이지 토큰이 primitives 우회로 `text-[7px|8px|9px|10px]` 하드코딩 7곳을 포함한다.
