@@ -394,18 +394,11 @@ function CheckoutGroupCard({
                     : CHECKOUT_ITEM_ROW_TOKENS.container;
 
                   return (
-                    <div
+                    <button
                       key={`${row.checkoutId}-${row.equipmentId}`}
-                      className={rowBaseClass}
+                      type="button"
+                      className={`text-left w-full ${rowBaseClass}`}
                       onClick={() => onCheckoutClick(row.checkoutId)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          onCheckoutClick(row.checkoutId);
-                        }
-                      }}
                       aria-label={t('groupCard.viewDetail', { name: row.equipmentName })}
                     >
                       {/* 목적 색상 바 */}
@@ -505,7 +498,7 @@ function CheckoutGroupCard({
                           </>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })
               )}

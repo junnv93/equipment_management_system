@@ -345,6 +345,8 @@ export const DIMENSION_TOKENS = {
   purposeBar: 'w-hairline',
   /** 페이지네이션 버튼 정사각 (--spacing-pagination = 30px) */
   paginationBtn: 'w-pagination h-pagination',
+  /** 상태 흐름 도트 원 정사각 (--spacing-step-dot = 18px) */
+  stepDot: 'w-step-dot h-step-dot',
 } as const;
 
 // ============================================================================

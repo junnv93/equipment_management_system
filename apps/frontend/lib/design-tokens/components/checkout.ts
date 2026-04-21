@@ -201,6 +201,8 @@ export const CHECKOUT_STEP_LABELS: Readonly<Record<string, string>> = {
   lender_received: 'lenderReturn',
   overdue: 'checkedOut',
   in_use: 'inUse',
+  rejected: 'rejected',
+  canceled: 'canceled',
 } as const;
 
 // ============================================================================
@@ -220,7 +222,7 @@ export const CHECKOUT_STEP_LABELS: Readonly<Record<string, string>> = {
 export const CHECKOUT_MINI_PROGRESS = {
   dot: {
     /** 18px 원 공통 — ✓/!/숫자는 aria-hidden 처리 (78-3에서 sr-only 이동) */
-    base: 'w-[18px] h-[18px] rounded-full flex items-center justify-center font-bold shrink-0',
+    base: `${DIMENSION_TOKENS.stepDot} rounded-full flex items-center justify-center font-bold shrink-0`,
     completed: getSemanticSolidBgClasses('ok'),
     current: getSemanticSolidBgClasses('info'),
     late: getSemanticSolidBgClasses('critical'),

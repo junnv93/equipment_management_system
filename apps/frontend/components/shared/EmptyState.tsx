@@ -5,14 +5,17 @@ import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EMPTY_STATE_TOKENS } from '@/lib/design-tokens';
 import type { EmptyStateVariant } from '@/lib/design-tokens';
-import { useAuth } from '@/hooks/use-auth';
 import type { Permission } from '@equipment-management/shared-constants';
 
 export interface EmptyStatePrimaryAction {
   label: string;
   onClick?: () => void;
   href?: string;
-  /** 지정 시 useAuth().can() 체크 후 표시 — 권한 없으면 렌더링 생략 */
+  /**
+   * @deprecated 런타임 권한 체크 용도로 사용하지 마세요.
+   * 부모에서 `canAct` prop으로 권한 판정을 전달하세요.
+   * 이 필드는 문서/계약 명시 용도로만 유지됩니다.
+   */
   permission?: Permission;
 }
 
@@ -29,6 +32,12 @@ export interface EmptyStateProps {
   primaryAction?: EmptyStatePrimaryAction;
   secondaryAction?: EmptyStateSecondaryAction;
   className?: string;
+  /**
+   * primaryAction 표시 여부를 부모가 결정합니다.
+   * undefined이면 항상 표시 (후방호환).
+   * false이면 권한 없음으로 판단해 primaryAction을 숨깁니다.
+   */
+  canAct?: boolean;
 }
 
 export function EmptyState({
@@ -39,10 +48,9 @@ export function EmptyState({
   primaryAction,
   secondaryAction,
   className,
+  canAct,
 }: EmptyStateProps) {
-  const { can } = useAuth();
-
-  const showPrimary = !primaryAction?.permission || can(primaryAction.permission);
+  const showPrimary = canAct !== false;
 
   const iconColorClass = EMPTY_STATE_TOKENS.variantIconColor[variant];
   const iconBgClass = EMPTY_STATE_TOKENS.variantIconBg[variant];

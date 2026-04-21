@@ -61,6 +61,7 @@ import {
   CHECKOUT_FILTER_BAR_TOKENS,
   CHECKOUT_TAB_BADGE_TOKENS,
   getPageContainerClasses,
+  MICRO_TYPO,
 } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
@@ -248,7 +249,9 @@ export default function CheckoutsContent({
                 <Link href={FRONTEND_ROUTES.CHECKOUTS.PENDING_CHECKS}>
                   <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
                   {t('pendingChecks.title')}
-                  <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium text-destructive-foreground">
+                  <span
+                    className={`ml-1.5 inline-flex items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 ${MICRO_TYPO.badge} font-medium text-destructive-foreground`}
+                  >
                     {pendingChecksCount}
                   </span>
                 </Link>

@@ -122,6 +122,7 @@ export default function OutboundCheckoutsTab({
   const searchParams = useSearchParams();
   const { can } = useAuth();
   const canApprove = can(Permission.APPROVE_CHECKOUT);
+  const canCreateCheckout = can(Permission.CREATE_CHECKOUT);
 
   const statCards = useStatCards(summary);
 
@@ -233,13 +234,24 @@ export default function OutboundCheckoutsTab({
           ? CHECKOUT_STATS_VARIANTS[card.variantKey].iconColor
           : 'text-muted-foreground';
 
+        const handleStatActivate = () =>
+          card.filterStatus === 'all' ? onResetFilters() : onStatCardClick(card.filterStatus);
+
         return (
           <Card
             key={card.variantKey}
             className={finalCardClasses}
-            onClick={() =>
-              card.filterStatus === 'all' ? onResetFilters() : onStatCardClick(card.filterStatus)
-            }
+            role="button"
+            tabIndex={0}
+            aria-pressed={isActive}
+            aria-label={t(card.labelKey)}
+            onClick={handleStatActivate}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleStatActivate();
+              }
+            }}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-3 px-3">
               <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -302,6 +314,7 @@ export default function OutboundCheckoutsTab({
                     permission: Permission.CREATE_CHECKOUT,
                   }
             }
+            canAct={filterActive ? undefined : canCreateCheckout}
             secondaryAction={
               filterActive
                 ? { label: t('actions.resetFilters'), onClick: onResetFilters }

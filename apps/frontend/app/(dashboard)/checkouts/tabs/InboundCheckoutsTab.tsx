@@ -142,7 +142,8 @@ export default function InboundCheckoutsTab({
   const hasInboundCheckouts = inboundGroups.length > 0;
   const hasRentalImports = (rentalImportsData?.data?.length ?? 0) > 0;
   const hasInternalSharedImports = (internalSharedImportsData?.data?.length ?? 0) > 0;
-  const isLoading = inboundCheckoutsLoading || rentalImportsLoading || internalSharedImportsLoading;
+  const isAnyLoading =
+    inboundCheckoutsLoading || rentalImportsLoading || internalSharedImportsLoading;
 
   const rentalTotal =
     rentalImportsData?.meta?.pagination?.total ?? rentalImportsData?.data?.length ?? 0;
@@ -208,10 +209,8 @@ export default function InboundCheckoutsTab({
     );
   };
 
-  if (isLoading) return renderLoadingState();
-
-  // 전체 빈 상태: 3섹션 모두 비었을 때만
-  if (!hasInboundCheckouts && !hasRentalImports && !hasInternalSharedImports) {
+  // 전체 빈 상태: 모든 섹션 로딩 완료 + 3섹션 모두 비었을 때만
+  if (!isAnyLoading && !hasInboundCheckouts && !hasRentalImports && !hasInternalSharedImports) {
     return (
       <EmptyState
         variant={filterActive ? 'filtered' : 'no-data'}

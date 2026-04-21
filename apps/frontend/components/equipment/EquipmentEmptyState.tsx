@@ -4,6 +4,7 @@ import { Package, SearchX, FilterX } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { Permission, FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 
 /**
  * 검색/필터 결과 없음 빈 상태
@@ -43,6 +44,7 @@ export function EmptySearchResults({
  */
 export function EquipmentEmptyState() {
   const t = useTranslations('equipment');
+  const { can } = useAuth();
   return (
     <EmptyState
       variant="no-data"
@@ -54,6 +56,7 @@ export function EquipmentEmptyState() {
         href: FRONTEND_ROUTES.EQUIPMENT.CREATE,
         permission: Permission.CREATE_EQUIPMENT,
       }}
+      canAct={can(Permission.CREATE_EQUIPMENT)}
       className="py-16"
     />
   );

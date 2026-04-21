@@ -58,6 +58,8 @@ export const SIZE_PRIMITIVES = {
 export const WIDTH_PRIMITIVES = {
   /** 접근성 안전 최소 강조 바 (3px — WCAG 권고 시각 구분선 최소값) */
   hairline: 3,
+  /** 상태 흐름 도트 원 크기 (18px — CheckoutMiniProgress 스텝 원) */
+  stepDot: 18,
 } as const;
 
 /**
