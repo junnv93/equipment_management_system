@@ -94,6 +94,13 @@ interface PendingApprovalCardProps {
   layoutHint?: PendingApprovalLayoutHint;
   /** 카테고리별 시각적 우선순위 — config의 approvalCategoryPriorities에서 전달 */
   priorities?: Partial<Record<ApprovalCategory, ApprovalCategoryPriority>>;
+  /**
+   * 시각적 부상(raised elevation) 적용 여부
+   *
+   * true → DASHBOARD_PENDING_APPROVAL_TOKENS.elevation.raised 적용.
+   * 액션 카드가 주변 감시 카드보다 한 단계 높은 elevation을 가짐.
+   */
+  elevate?: boolean;
 }
 
 // 역할별 카드 제목/설명은 i18n에서 가져옴 (dashboard.pending.title.{role})
@@ -103,6 +110,7 @@ export function PendingApprovalCard({
   compact = false,
   layoutHint = 'grid',
   priorities = EMPTY_PRIORITIES,
+  elevate = false,
 }: PendingApprovalCardProps) {
   const { data: session, status } = useSession();
   const t = useTranslations('dashboard.pending');
@@ -232,7 +240,10 @@ export function PendingApprovalCard({
 
     return (
       <div
-        className={className}
+        className={cn(
+          className,
+          DASHBOARD_PENDING_APPROVAL_TOKENS.elevation[elevate ? 'raised' : 'default']
+        )}
         data-testid="pending-approval-card"
         role="region"
         aria-labelledby="pending-approval-title"
@@ -285,18 +296,24 @@ export function PendingApprovalCard({
 
   // prioritized-grid: priority 계층화 그리드
   if (layoutHint === 'prioritized-grid') {
+    // compact 컨테이너에서는 xl:grid-cols-4 제거 — 좁은 컬럼 압축 방지
+    const prioritizedGridCols = compact
+      ? DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid-compact']
+      : DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid'];
+
     return (
       <div
-        className={className}
+        className={cn(
+          className,
+          DASHBOARD_PENDING_APPROVAL_TOKENS.elevation[elevate ? 'raised' : 'default']
+        )}
         data-testid="pending-approval-card"
         role="region"
         aria-labelledby="pending-approval-title"
         aria-describedby="pending-approval-description"
       >
         {cardHeader}
-        <div
-          className={cn(DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid'], 'gap-3')}
-        >
+        <div className={cn(prioritizedGridCols, 'gap-3')}>
           {dashboardCategories.map((category) => {
             const Icon = getCategoryIcon(category.key);
             const count = counts?.[category.key] || 0;
@@ -312,11 +329,16 @@ export function PendingApprovalCard({
               : isCompact
                 ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityCompactCard
                 : DASHBOARD_PENDING_APPROVAL_TOKENS.priorityDefaultCard;
+            // compact 컨테이너에서 hero 아이콘 크기 한 단계 축소 (h-7→h-6)
             const iconClass = isHero
-              ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityHeroIcon
+              ? compact
+                ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityDefaultIcon
+                : DASHBOARD_PENDING_APPROVAL_TOKENS.priorityHeroIcon
               : isCompact
                 ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityCompactIcon
                 : DASHBOARD_PENDING_APPROVAL_TOKENS.priorityDefaultIcon;
+            // compact 컨테이너에서 hero 카운트 크기 축소 (3xl→2xl)
+            const heroCountSize = compact ? 'text-2xl' : 'text-3xl';
 
             return (
               <Link
@@ -353,7 +375,7 @@ export function PendingApprovalCard({
                     className={cn(
                       'font-bold mt-1 tracking-tight tabular-nums font-mono',
                       DASHBOARD_MOTION.textColor,
-                      isHero ? 'text-3xl' : isCompact ? 'text-lg' : 'text-2xl',
+                      isHero ? heroCountSize : isCompact ? 'text-lg' : 'text-2xl',
                       hasItems ? 'text-brand-critical' : 'text-muted-foreground'
                     )}
                   >
@@ -380,7 +402,10 @@ export function PendingApprovalCard({
 
   return (
     <div
-      className={className}
+      className={cn(
+        className,
+        DASHBOARD_PENDING_APPROVAL_TOKENS.elevation[elevate ? 'raised' : 'default']
+      )}
       data-testid="pending-approval-card"
       role="region"
       aria-labelledby="pending-approval-title"

@@ -216,58 +216,93 @@ function DashboardClientComponent({
       </div>
 
       {/*
-       * Row 3: 액션 행 — 2컬럼 외부 [교정현황 2fr | 승인대기+반출현황 1.5fr]
+       * Row 3: 액션 행
        *
-       * 교정현황(좌/2fr)이 반출현황(우/1.5fr)보다 시각적 무게감을 가져
-       * 도메인 우선순위(교정 > 반출)와 레이아웃이 일치
+       * row3Layout에 따라 두 가지 레이아웃으로 분기:
        *
-       * v3 개선 (AP-01): 우측 아이템이 1개뿐이면 grid-cols-1로 풀너비 차지
+       * 'three-col-action-first' (기술책임자):
+       *   [승인대기 1.5fr | 교정현황 1.5fr | 반출현황 1fr]
+       *   좌→우 스캔 시 액션(action) → 감시(watch) → 감시(watch) 의미 계층과 일치
+       *
+       * 'two-col-left-dominant' (기본값):
+       *   [교정현황 2fr | 서브그리드(승인+반출) 1.5fr]
+       *   loading.tsx 스켈레톤과 동기화
        */}
       {(controlCenter.showPendingApprovals ||
         controlCenter.showCheckoutOverdue ||
-        controlCenter.showCalibrationDday) && (
-        <div
-          className={cn(DASHBOARD_GRID.row3, 'mb-8 motion-safe:animate-fade-in-up')}
-          style={{ animationDelay: '240ms' }}
-        >
-          {/* 좌측: 교정현황 — 2fr 우선 컬럼 */}
-          {controlCenter.showCalibrationDday && (
-            <CalibrationDdayList
-              overdueCalibrations={overdueCalibrations}
-              upcomingCalibrations={upcomingCalibrations}
-              scope={scope}
-              loading={isLoading}
-            />
-          )}
-
-          {/* 우측: 승인대기 + 반출현황 서브그리드 — 아이템 수에 따라 컬럼 분기 */}
-          {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
-            <div
-              className={cn(
-                'grid gap-4',
-                controlCenter.showPendingApprovals && controlCenter.showCheckoutOverdue
-                  ? 'grid-cols-1 md:grid-cols-2'
-                  : 'grid-cols-1'
-              )}
-            >
-              {controlCenter.showPendingApprovals && (
-                <PendingApprovalCard
-                  compact
-                  layoutHint={controlCenter.pendingApprovalLayoutHint}
-                  priorities={controlCenter.approvalCategoryPriorities}
-                />
-              )}
-              {controlCenter.showCheckoutOverdue && (
-                <OverdueCheckoutsCard
-                  overdueCheckouts={overdueCheckouts}
-                  upcomingCheckoutReturns={upcomingCheckoutReturns}
-                  loading={isLoading}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      )}
+        controlCenter.showCalibrationDday) &&
+        (controlCenter.row3Layout === 'three-col-action-first' ? (
+          /* three-col-action-first: 승인대기 우선, 3컬럼 flat grid */
+          <div
+            className={cn(DASHBOARD_GRID.row3ThreeCol, 'mb-8 motion-safe:animate-fade-in-up')}
+            style={{ animationDelay: '240ms' }}
+          >
+            {controlCenter.showPendingApprovals && (
+              <PendingApprovalCard
+                compact
+                layoutHint={controlCenter.pendingApprovalLayoutHint}
+                priorities={controlCenter.approvalCategoryPriorities}
+                elevate={controlCenter.pendingApprovalElevated}
+              />
+            )}
+            {controlCenter.showCalibrationDday && (
+              <CalibrationDdayList
+                overdueCalibrations={overdueCalibrations}
+                upcomingCalibrations={upcomingCalibrations}
+                scope={scope}
+                loading={isLoading}
+              />
+            )}
+            {controlCenter.showCheckoutOverdue && (
+              <OverdueCheckoutsCard
+                overdueCheckouts={overdueCheckouts}
+                upcomingCheckoutReturns={upcomingCheckoutReturns}
+                loading={isLoading}
+              />
+            )}
+          </div>
+        ) : (
+          /* two-col-left-dominant: 교정현황 좌/2fr, 서브그리드 우/1.5fr (기본값) */
+          <div
+            className={cn(DASHBOARD_GRID.row3, 'mb-8 motion-safe:animate-fade-in-up')}
+            style={{ animationDelay: '240ms' }}
+          >
+            {controlCenter.showCalibrationDday && (
+              <CalibrationDdayList
+                overdueCalibrations={overdueCalibrations}
+                upcomingCalibrations={upcomingCalibrations}
+                scope={scope}
+                loading={isLoading}
+              />
+            )}
+            {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
+              <div
+                className={cn(
+                  'grid gap-4',
+                  controlCenter.showPendingApprovals && controlCenter.showCheckoutOverdue
+                    ? 'grid-cols-1 md:grid-cols-2'
+                    : 'grid-cols-1'
+                )}
+              >
+                {controlCenter.showPendingApprovals && (
+                  <PendingApprovalCard
+                    compact
+                    layoutHint={controlCenter.pendingApprovalLayoutHint}
+                    priorities={controlCenter.approvalCategoryPriorities}
+                    elevate={controlCenter.pendingApprovalElevated}
+                  />
+                )}
+                {controlCenter.showCheckoutOverdue && (
+                  <OverdueCheckoutsCard
+                    overdueCheckouts={overdueCheckouts}
+                    upcomingCheckoutReturns={upcomingCheckoutReturns}
+                    loading={isLoading}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        ))}
 
       {/*
        * Row 4: 하단 — AP-06: animate-fade-in

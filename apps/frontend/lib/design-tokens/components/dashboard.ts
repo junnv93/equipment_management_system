@@ -752,7 +752,19 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
   gridLayouts: {
     'single-focus': 'grid grid-cols-1',
     'prioritized-grid': 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
+    /** compact 컨테이너 전용 — xl:grid-cols-4를 제거해 좁은 컬럼에서 카드 압축 방지 */
+    'prioritized-grid-compact': 'grid grid-cols-2 sm:grid-cols-3',
     grid: 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
+  } as const,
+  /**
+   * elevation variants — PendingApprovalCard 시각적 계층 강조
+   *
+   * 'raised': 액션 카드가 주변 감시 카드(CalibrationDday, OverdueCheckouts)보다
+   *           한 단계 높은 elevation을 가지도록 ring + shadow 추가.
+   */
+  elevation: {
+    default: '',
+    raised: 'ring-1 ring-primary/15 shadow-sm',
   } as const,
 } as const;
 

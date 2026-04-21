@@ -52,6 +52,16 @@ export type SidebarWidget = 'teamDistribution' | 'miniCalendar' | 'systemHealth'
  */
 export type PendingApprovalLayoutHint = 'single-focus' | 'prioritized-grid' | 'grid';
 
+/**
+ * Row 3 레이아웃 변형
+ *
+ * - 'two-col-left-dominant': [교정현황 2fr | 승인대기+반출현황 서브그리드 1.5fr]
+ *   → 기본값. loading.tsx 스켈레톤과 동기화.
+ * - 'three-col-action-first': [승인대기 1.5fr | 교정현황 1.5fr | 반출현황 1fr]
+ *   → 액션 카드 좌측 우선. 기술책임자에서 사용.
+ */
+export type Row3Layout = 'two-col-left-dominant' | 'three-col-action-first';
+
 // ─── Stats Card 설정 ───────────────────────────────────────────
 export interface StatsCardConfig {
   key: string;
@@ -94,12 +104,20 @@ export const DASHBOARD_GRID = {
   /** KPI 카드 행 — 비대칭: Hero(2fr) + Compact 3 + StatusMini */
   kpi: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4',
   /**
-   * Row 3 외부 그리드: [교정현황 2fr | 승인대기+반출현황 서브그리드 1.5fr]
+   * Row 3 기본 그리드: [교정현황 2fr | 승인대기+반출현황 서브그리드 1.5fr]
    *
-   * 교정현황이 좌측/2fr(더 중요) → 반출현황 우측/1.5fr
-   * 시각적 무게감이 도메인 우선순위와 일치
+   * two-col-left-dominant 레이아웃 및 loading.tsx 스켈레톤 공용 상수.
+   * 역할별 Row3Layout 분기는 DashboardClient에서 처리.
    */
   row3: 'grid grid-cols-1 lg:grid-cols-[2fr_1.5fr] gap-4 items-start',
+  /**
+   * Row 3 three-col-action-first 그리드
+   *
+   * [승인대기 1.5fr | 교정현황 1.5fr | 반출현황 1fr]
+   * 좌→우 스캔 시 액션(승인대기) → 감시(교정) → 감시(반출) 의미 계층과 일치.
+   * 기술책임자(TECHNICAL_MANAGER) 전용.
+   */
+  row3ThreeCol: 'grid grid-cols-1 lg:grid-cols-[1.5fr_1.5fr_1fr] gap-4 items-start',
   /**
    * 하단 행: 최근활동(2fr) | 사이드바(1fr)
    *
@@ -152,6 +170,22 @@ export interface ControlCenterConfig {
    * 지정되지 않은 카테고리는 'default'로 처리됨
    */
   approvalCategoryPriorities: Partial<Record<ApprovalCategory, ApprovalCategoryPriority>>;
+  /**
+   * Row 3 레이아웃 변형
+   *
+   * - 'two-col-left-dominant': [교정현황 2fr | 서브그리드(승인+반출) 1.5fr] (기본값)
+   * - 'three-col-action-first': [승인대기 1.5fr | 교정현황 1.5fr | 반출현황 1fr]
+   *
+   * 미지정 시 'two-col-left-dominant'로 동작 — 하위 호환.
+   */
+  row3Layout?: Row3Layout;
+  /**
+   * 승인 대기 카드 시각적 부상 (raised elevation)
+   *
+   * true → ring-1 ring-primary/15 shadow-sm 적용 — 액션 카드를 주변 감시 카드와 구별.
+   * 미지정/false → 기본 elevation.
+   */
+  pendingApprovalElevated?: boolean;
 }
 
 // ─── 역할별 대시보드 설정 ───────────────────────────────────────
@@ -377,6 +411,8 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
         incoming: 'hero',
         software_validation: 'compact',
       },
+      row3Layout: 'three-col-action-first',
+      pendingApprovalElevated: true,
     },
   },
 
