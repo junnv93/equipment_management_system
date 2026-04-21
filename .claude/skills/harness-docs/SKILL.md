@@ -99,13 +99,38 @@ tech-debt `- [ ]` 항목은 SHOULD 수준으로 분류.
 
 ---
 
-## Mode 3: Tech Debt Sync
+## Mode 3: Tech Debt Sync — 완료 항목 아카이브 이동
 
-트리거: "tech-debt 정합화", "완료된 부채 처리"
+트리거: "tech-debt 정합화", "완료된 부채 처리", "완료된 거 아카이브로", "tech-debt 정리"
 
-`tech-debt-tracker.md`의 `- [x]` 완료 항목을 확인하고:
-- `Open` 섹션에서 `Closed` 섹션으로 이동 제안 (tracker가 너무 길어진 경우)
-- 또는 그냥 현행 유지 확인
+### Step 1: 완료 항목 탐지
+
+`tech-debt-tracker.md`를 읽고 `- [x]` 항목 스캔:
+- `- [x]` 항목이 존재하면 → **이동 대상**
+- `- [ ]` 항목만 있으면 → "정합화 완료, 이동 대상 없음" 안내
+
+### Step 2: 사용자 확인 요청
+
+이동 전 확인:
+```
+이동 대상 [x] 항목: N건
+이동 위치: .claude/exec-plans/tech-debt-tracker-archive.md
+
+진행할까요?
+```
+
+### Step 3: 아카이브로 이동
+
+1. `tech-debt-tracker-archive.md` 읽기
+2. 날짜 섹션별로 `[x]` 항목을 아카이브 파일 상단(최신 순)에 삽입
+3. `tech-debt-tracker.md`에서 `[x]` 항목 삭제
+4. `[ ]` 항목과 섹션 헤더(내용이 있는 것만)는 유지
+
+### Step 4: 아카이브 파일 크기 체크
+
+이동 완료 후 `tech-debt-tracker-archive.md` 줄 수 확인:
+- 500줄 미만: 현행 유지
+- 500줄 이상: "날짜 기준 오래된 섹션 별도 파일 분리 권장" 안내
 
 ---
 
