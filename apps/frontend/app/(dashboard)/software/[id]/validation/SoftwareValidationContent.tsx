@@ -4,29 +4,11 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowLeft,
-  Plus,
-  FileCheck,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  FileEdit,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
+import { ArrowLeft, Plus, FileCheck, FileEdit, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -51,18 +33,14 @@ import {
 import testSoftwareApi from '@/lib/api/software-api';
 import { queryKeys } from '@/lib/api/query-config';
 import type { PaginatedResponse } from '@/lib/api/types';
-import { UserCombobox } from '@/components/ui/user-combobox';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { VALIDATION_TYPE_VALUES } from '@equipment-management/schemas';
 import type { ValidationType, ValidationStatus } from '@equipment-management/schemas';
 import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { FRONTEND_ROUTES, Permission } from '@equipment-management/shared-constants';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { useAuth } from '@/hooks/use-auth';
-
-interface FunctionItem {
-  [key: string]: string;
-}
+import { ValidationCreateDialog, type CreateFormState } from './_components/ValidationCreateDialog';
+import { ValidationActionsBar } from './_components/ValidationActionsBar';
 
 interface SoftwareValidationContentProps {
   softwareId: string;
@@ -87,6 +65,25 @@ const STATUS_VARIANT: Record<
   rejected: 'destructive',
 };
 
+const EMPTY_FORM: CreateFormState = {
+  validationType: '',
+  softwareVersion: '',
+  testDate: '',
+  vendorName: '',
+  vendorSummary: '',
+  receivedBy: '',
+  receivedDate: '',
+  attachmentNote: '',
+  referenceDocuments: '',
+  operatingUnitDescription: '',
+  softwareComponents: '',
+  hardwareComponents: '',
+  performedBy: '',
+  acquisitionFunctions: [],
+  processingFunctions: [],
+  controlFunctions: [],
+};
+
 export default function SoftwareValidationContent({ softwareId }: SoftwareValidationContentProps) {
   const t = useTranslations('software');
   const { fmtDate } = useDateFormatter();
@@ -97,26 +94,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<SoftwareValidation | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [createForm, setCreateForm] = useState({
-    validationType: '' as ValidationType | '',
-    softwareVersion: '',
-    testDate: '',
-    // Method 1 (vendor)
-    vendorName: '',
-    vendorSummary: '',
-    receivedBy: '',
-    receivedDate: '',
-    attachmentNote: '',
-    // Method 2 (self)
-    referenceDocuments: '',
-    operatingUnitDescription: '',
-    softwareComponents: '',
-    hardwareComponents: '',
-    performedBy: '',
-    acquisitionFunctions: [] as FunctionItem[],
-    processingFunctions: [] as FunctionItem[],
-    controlFunctions: [] as FunctionItem[],
-  });
+  const [createForm, setCreateForm] = useState<CreateFormState>(EMPTY_FORM);
 
   const { data: software } = useQuery({
     queryKey: queryKeys.testSoftware.detail(softwareId),
@@ -166,24 +144,7 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     successMessage: t('toast.validationCreateSuccess'),
     onSuccessCallback: () => {
       setIsCreateOpen(false);
-      setCreateForm({
-        validationType: '',
-        softwareVersion: '',
-        testDate: '',
-        vendorName: '',
-        vendorSummary: '',
-        receivedBy: '',
-        receivedDate: '',
-        attachmentNote: '',
-        referenceDocuments: '',
-        operatingUnitDescription: '',
-        softwareComponents: '',
-        hardwareComponents: '',
-        performedBy: '',
-        acquisitionFunctions: [],
-        processingFunctions: [],
-        controlFunctions: [],
-      });
+      setCreateForm(EMPTY_FORM);
     },
   });
 
@@ -289,15 +250,8 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
     createMutation.mutate(data);
   };
 
-  const openRejectDialog = (v: SoftwareValidation) => {
-    setRejectTarget(v);
-    setRejectionReason('');
-    setIsRejectOpen(true);
-  };
-
   return (
     <div className={getPageContainerClasses('detail')}>
-      {/* Nav */}
       <Button
         variant="ghost"
         size="sm"
@@ -307,7 +261,6 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
         {t('validation.backToDetail')}
       </Button>
 
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className={PAGE_HEADER_TOKENS.title}>{t('validation.title')}</h1>
@@ -323,7 +276,6 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
         )}
       </div>
 
-      {/* Table */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -374,105 +326,21 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
                   <TableCell>{v.testDate ? fmtDate(v.testDate) : '-'}</TableCell>
                   <TableCell>{v.submittedAt ? fmtDate(v.submittedAt) : '-'}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      {v.status === 'draft' && (
-                        <>
-                          {can(Permission.CREATE_SOFTWARE_VALIDATION) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                router.push(
-                                  `${FRONTEND_ROUTES.SOFTWARE.VALIDATION_DETAIL(softwareId, v.id)}?edit=true`
-                                );
-                              }}
-                            >
-                              <Pencil className="mr-1 h-3.5 w-3.5" />
-                              {t('validation.actions.edit')}
-                            </Button>
-                          )}
-                          {can(Permission.SUBMIT_SOFTWARE_VALIDATION) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                submitMutation.mutate({ id: v.id, version: v.version });
-                              }}
-                              disabled={submitMutation.isPending}
-                            >
-                              {t('validation.actions.submit')}
-                            </Button>
-                          )}
-                        </>
-                      )}
-                      {v.status === 'submitted' && can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              approveMutation.mutate({ id: v.id, version: v.version });
-                            }}
-                            // ISO 17025 §6.2.2: 제출자는 승인 불가 (서버 가드 UI 대칭)
-                            disabled={approveMutation.isPending || v.submittedBy === user?.id}
-                            title={
-                              v.submittedBy === user?.id
-                                ? t('validation.actions.selfApprovalForbidden')
-                                : undefined
-                            }
-                          >
-                            {t('validation.actions.approve')}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openRejectDialog(v);
-                            }}
-                          >
-                            {t('validation.actions.reject')}
-                          </Button>
-                        </>
-                      )}
-                      {v.status === 'approved' && can(Permission.APPROVE_SOFTWARE_VALIDATION) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            qualityApproveMutation.mutate({ id: v.id, version: v.version });
-                          }}
-                          // ISO 17025 §6.2.2: 기술 승인자는 품질 승인 불가 (서버 가드 UI 대칭)
-                          disabled={
-                            qualityApproveMutation.isPending || v.technicalApproverId === user?.id
-                          }
-                          title={
-                            v.technicalApproverId === user?.id
-                              ? t('validation.actions.dualApprovalForbidden')
-                              : undefined
-                          }
-                        >
-                          {t('validation.actions.qualityApprove')}
-                        </Button>
-                      )}
-                      {v.status === 'rejected' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            reviseMutation.mutate({ id: v.id, version: v.version });
-                          }}
-                          disabled={reviseMutation.isPending}
-                        >
-                          {t('validation.actions.revise')}
-                        </Button>
-                      )}
-                    </div>
+                    <ValidationActionsBar
+                      validation={v}
+                      softwareId={softwareId}
+                      can={can}
+                      userId={user?.id}
+                      submitMutation={submitMutation}
+                      approveMutation={approveMutation}
+                      qualityApproveMutation={qualityApproveMutation}
+                      reviseMutation={reviseMutation}
+                      onReject={(target) => {
+                        setRejectTarget(target);
+                        setRejectionReason('');
+                        setIsRejectOpen(true);
+                      }}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -481,515 +349,15 @@ export default function SoftwareValidationContent({ softwareId }: SoftwareValida
         </div>
       )}
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent
-          className={
-            createForm.validationType === 'self'
-              ? 'max-w-3xl max-h-[85vh] overflow-y-auto'
-              : 'max-w-md'
-          }
-        >
-          <DialogHeader>
-            <DialogTitle>{t('validation.form.createTitle')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{t('validation.form.typeLabel')}</Label>
-              <Select
-                value={createForm.validationType}
-                onValueChange={(v) =>
-                  setCreateForm({ ...createForm, validationType: v as ValidationType })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('validation.form.typePlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {VALIDATION_TYPE_VALUES.map((vt) => (
-                    <SelectItem key={vt} value={vt}>
-                      {t(`validationType.${vt}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('validation.form.versionLabel')}</Label>
-              <Input
-                value={createForm.softwareVersion}
-                onChange={(e) => setCreateForm({ ...createForm, softwareVersion: e.target.value })}
-                placeholder={t('validation.form.versionPlaceholder')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('validation.form.testDateLabel')}</Label>
-              <Input
-                type="date"
-                value={createForm.testDate}
-                onChange={(e) => setCreateForm({ ...createForm, testDate: e.target.value })}
-              />
-            </div>
-            {createForm.validationType === 'vendor' && (
-              <>
-                <div className="space-y-2">
-                  <Label>{t('validation.form.vendorNameLabel')}</Label>
-                  <Input
-                    value={createForm.vendorName}
-                    onChange={(e) => setCreateForm({ ...createForm, vendorName: e.target.value })}
-                    placeholder={t('validation.form.vendorNamePlaceholder')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('validation.form.vendorSummaryLabel')}</Label>
-                  <Textarea
-                    value={createForm.vendorSummary}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, vendorSummary: e.target.value })
-                    }
-                    placeholder={t('validation.form.vendorSummaryPlaceholder')}
-                  />
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.receivedByLabel')}</Label>
-                    <UserCombobox
-                      value={createForm.receivedBy || undefined}
-                      onChange={(id) => setCreateForm({ ...createForm, receivedBy: id ?? '' })}
-                      placeholder={t('validation.form.receivedByPlaceholder')}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.receivedDateLabel')}</Label>
-                    <Input
-                      type="date"
-                      value={createForm.receivedDate}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, receivedDate: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('validation.form.attachmentNoteLabel')}</Label>
-                  <Textarea
-                    value={createForm.attachmentNote}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, attachmentNote: e.target.value })
-                    }
-                    placeholder={t('validation.form.attachmentNotePlaceholder')}
-                  />
-                </div>
-              </>
-            )}
-            {createForm.validationType === 'self' && (
-              <>
-                {/* 기본정보 */}
-                <h4 className="text-sm font-semibold pt-2">
-                  {t('validation.form.selfBasicInfoTitle')}
-                </h4>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.referenceDocumentsLabel')}</Label>
-                    <Textarea
-                      value={createForm.referenceDocuments}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, referenceDocuments: e.target.value })
-                      }
-                      placeholder={t('validation.form.referenceDocumentsPlaceholder')}
-                      className="min-h-[80px]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.operatingUnitLabel')}</Label>
-                    <Textarea
-                      value={createForm.operatingUnitDescription}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, operatingUnitDescription: e.target.value })
-                      }
-                      placeholder={t('validation.form.operatingUnitPlaceholder')}
-                      className="min-h-[80px]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.softwareComponentsLabel')}</Label>
-                    <Textarea
-                      value={createForm.softwareComponents}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, softwareComponents: e.target.value })
-                      }
-                      placeholder={t('validation.form.softwareComponentsPlaceholder')}
-                      className="min-h-[80px]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('validation.form.hardwareComponentsLabel')}</Label>
-                    <Textarea
-                      value={createForm.hardwareComponents}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, hardwareComponents: e.target.value })
-                      }
-                      placeholder={t('validation.form.hardwareComponentsPlaceholder')}
-                      className="min-h-[80px]"
-                    />
-                  </div>
-                </div>
+      <ValidationCreateDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        createForm={createForm}
+        setCreateForm={setCreateForm}
+        onSubmit={handleCreate}
+        isPending={createMutation.isPending}
+      />
 
-                {/* 수행자 */}
-                <div className="space-y-2">
-                  <Label>{t('validation.form.performedByLabel')}</Label>
-                  <UserCombobox
-                    value={createForm.performedBy || undefined}
-                    onChange={(id) => setCreateForm({ ...createForm, performedBy: id ?? '' })}
-                    placeholder={t('validation.form.performedByPlaceholder')}
-                  />
-                </div>
-
-                {/* 획득 기능 */}
-                <div className="space-y-3 border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold">
-                        {t('validation.form.acquisitionTitle')}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {t('validation.form.acquisitionDesc')}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCreateForm({
-                          ...createForm,
-                          acquisitionFunctions: [
-                            ...createForm.acquisitionFunctions,
-                            { functionName: '', independentMethod: '', acceptanceCriteria: '' },
-                          ],
-                        })
-                      }
-                    >
-                      <Plus className="mr-1 h-3 w-3" />
-                      {t('validation.form.addFunction')}
-                    </Button>
-                  </div>
-                  {createForm.acquisitionFunctions.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">
-                      {t('validation.form.noFunctions')}
-                    </p>
-                  )}
-                  {createForm.acquisitionFunctions.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="grid grid-cols-3 gap-2 items-end border rounded-md p-3"
-                    >
-                      <div className="space-y-1">
-                        <Label className="text-xs">{t('validation.form.functionName')}</Label>
-                        <Input
-                          value={item.functionName}
-                          onChange={(e) => {
-                            const updated = [...createForm.acquisitionFunctions];
-                            updated[idx] = { ...item, functionName: e.target.value };
-                            setCreateForm({ ...createForm, acquisitionFunctions: updated });
-                          }}
-                          placeholder={t('validation.form.functionNamePlaceholder')}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{t('validation.form.independentMethod')}</Label>
-                        <Input
-                          value={item.independentMethod}
-                          onChange={(e) => {
-                            const updated = [...createForm.acquisitionFunctions];
-                            updated[idx] = { ...item, independentMethod: e.target.value };
-                            setCreateForm({ ...createForm, acquisitionFunctions: updated });
-                          }}
-                          placeholder={t('validation.form.independentMethodPlaceholder')}
-                        />
-                      </div>
-                      <div className="flex gap-2 items-end">
-                        <div className="space-y-1 flex-1">
-                          <Label className="text-xs">
-                            {t('validation.form.acceptanceCriteria')}
-                          </Label>
-                          <Input
-                            value={item.acceptanceCriteria}
-                            onChange={(e) => {
-                              const updated = [...createForm.acquisitionFunctions];
-                              updated[idx] = { ...item, acceptanceCriteria: e.target.value };
-                              setCreateForm({ ...createForm, acquisitionFunctions: updated });
-                            }}
-                            placeholder={t('validation.form.acceptanceCriteriaPlaceholder')}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const updated = createForm.acquisitionFunctions.filter(
-                              (_, i) => i !== idx
-                            );
-                            setCreateForm({ ...createForm, acquisitionFunctions: updated });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 프로세싱 기능 */}
-                <div className="space-y-3 border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold">
-                        {t('validation.form.processingTitle')}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {t('validation.form.processingDesc')}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCreateForm({
-                          ...createForm,
-                          processingFunctions: [
-                            ...createForm.processingFunctions,
-                            { functionName: '', independentMethod: '', acceptanceCriteria: '' },
-                          ],
-                        })
-                      }
-                    >
-                      <Plus className="mr-1 h-3 w-3" />
-                      {t('validation.form.addFunction')}
-                    </Button>
-                  </div>
-                  {createForm.processingFunctions.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">
-                      {t('validation.form.noFunctions')}
-                    </p>
-                  )}
-                  {createForm.processingFunctions.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="grid grid-cols-3 gap-2 items-end border rounded-md p-3"
-                    >
-                      <div className="space-y-1">
-                        <Label className="text-xs">{t('validation.form.functionName')}</Label>
-                        <Input
-                          value={item.functionName}
-                          onChange={(e) => {
-                            const updated = [...createForm.processingFunctions];
-                            updated[idx] = { ...item, functionName: e.target.value };
-                            setCreateForm({ ...createForm, processingFunctions: updated });
-                          }}
-                          placeholder={t('validation.form.functionNamePlaceholder')}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{t('validation.form.independentMethod')}</Label>
-                        <Input
-                          value={item.independentMethod}
-                          onChange={(e) => {
-                            const updated = [...createForm.processingFunctions];
-                            updated[idx] = { ...item, independentMethod: e.target.value };
-                            setCreateForm({ ...createForm, processingFunctions: updated });
-                          }}
-                          placeholder={t('validation.form.independentMethodPlaceholder')}
-                        />
-                      </div>
-                      <div className="flex gap-2 items-end">
-                        <div className="space-y-1 flex-1">
-                          <Label className="text-xs">
-                            {t('validation.form.acceptanceCriteria')}
-                          </Label>
-                          <Input
-                            value={item.acceptanceCriteria}
-                            onChange={(e) => {
-                              const updated = [...createForm.processingFunctions];
-                              updated[idx] = { ...item, acceptanceCriteria: e.target.value };
-                              setCreateForm({ ...createForm, processingFunctions: updated });
-                            }}
-                            placeholder={t('validation.form.acceptanceCriteriaPlaceholder')}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const updated = createForm.processingFunctions.filter(
-                              (_, i) => i !== idx
-                            );
-                            setCreateForm({ ...createForm, processingFunctions: updated });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* 제어 기능 (5개 필드) */}
-                <div className="space-y-3 border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold">{t('validation.form.controlTitle')}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {t('validation.form.controlDesc')}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setCreateForm({
-                          ...createForm,
-                          controlFunctions: [
-                            ...createForm.controlFunctions,
-                            {
-                              controlEquipmentFunction: '',
-                              expectedFunction: '',
-                              verificationFunction: '',
-                              independentMethod: '',
-                              acceptanceCriteria: '',
-                            },
-                          ],
-                        })
-                      }
-                    >
-                      <Plus className="mr-1 h-3 w-3" />
-                      {t('validation.form.addFunction')}
-                    </Button>
-                  </div>
-                  {createForm.controlFunctions.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">
-                      {t('validation.form.noFunctions')}
-                    </p>
-                  )}
-                  {createForm.controlFunctions.map((item, idx) => (
-                    <div key={idx} className="space-y-2 border rounded-md p-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          #{idx + 1}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const updated = createForm.controlFunctions.filter((_, i) => i !== idx);
-                            setCreateForm({ ...createForm, controlFunctions: updated });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            {t('validation.form.controlEquipmentFunction')}
-                          </Label>
-                          <Input
-                            value={item.controlEquipmentFunction}
-                            onChange={(e) => {
-                              const updated = [...createForm.controlFunctions];
-                              updated[idx] = {
-                                ...item,
-                                controlEquipmentFunction: e.target.value,
-                              };
-                              setCreateForm({ ...createForm, controlFunctions: updated });
-                            }}
-                            placeholder={t('validation.form.controlEquipmentFunctionPlaceholder')}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">{t('validation.form.expectedFunction')}</Label>
-                          <Input
-                            value={item.expectedFunction}
-                            onChange={(e) => {
-                              const updated = [...createForm.controlFunctions];
-                              updated[idx] = { ...item, expectedFunction: e.target.value };
-                              setCreateForm({ ...createForm, controlFunctions: updated });
-                            }}
-                            placeholder={t('validation.form.expectedFunctionPlaceholder')}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            {t('validation.form.verificationFunction')}
-                          </Label>
-                          <Input
-                            value={item.verificationFunction}
-                            onChange={(e) => {
-                              const updated = [...createForm.controlFunctions];
-                              updated[idx] = {
-                                ...item,
-                                verificationFunction: e.target.value,
-                              };
-                              setCreateForm({ ...createForm, controlFunctions: updated });
-                            }}
-                            placeholder={t('validation.form.verificationFunctionPlaceholder')}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">
-                            {t('validation.form.independentMethod')}
-                          </Label>
-                          <Input
-                            value={item.independentMethod}
-                            onChange={(e) => {
-                              const updated = [...createForm.controlFunctions];
-                              updated[idx] = { ...item, independentMethod: e.target.value };
-                              setCreateForm({ ...createForm, controlFunctions: updated });
-                            }}
-                            placeholder={t('validation.form.independentMethodPlaceholder')}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{t('validation.form.acceptanceCriteria')}</Label>
-                        <Input
-                          value={item.acceptanceCriteria}
-                          onChange={(e) => {
-                            const updated = [...createForm.controlFunctions];
-                            updated[idx] = { ...item, acceptanceCriteria: e.target.value };
-                            setCreateForm({ ...createForm, controlFunctions: updated });
-                          }}
-                          placeholder={t('validation.form.acceptanceCriteriaPlaceholder')}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-              {t('validation.form.cancel')}
-            </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={!createForm.validationType || createMutation.isPending}
-            >
-              {createMutation.isPending
-                ? t('validation.form.submitting')
-                : t('validation.form.submit')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Dialog */}
       <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>

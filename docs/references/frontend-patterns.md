@@ -155,3 +155,41 @@ return <DataList data={data} />;
 - **SSOT:** `equipment-filter-utils.ts` — 서버/클라이언트 공유 파싱/변환
 - **역할별 기본 필터:** `page.tsx`에서 서버 사이드 리다이렉트 (useEffect 금지)
 - **URL 파라미터가 유일한 진실의 소스** — useState로 필터 관리 금지
+
+### API GET 응답 패턴 선택
+
+표준 엔드포인트와 레거시 비-envelope 엔드포인트는 응답 구조가 다르므로 클라이언트 함수 구현 방식을 구분한다.
+
+**표준 envelope 응답** (`{ data: T }` 또는 `{ data: T[], meta: {...} }`):
+
+```typescript
+// apiClient.get<T>() → api-response-transformer 를 통해 data 언래핑
+const item = await apiClient.get<Equipment>(API_ENDPOINTS.EQUIPMENT.GET(id));
+// → Equipment (data 자동 언래핑됨)
+
+const list = await apiClient.get<PaginatedResponse<Equipment>>(API_ENDPOINTS.EQUIPMENT.LIST);
+// → PaginatedResponse<Equipment>
+```
+
+**레거시 비-envelope 응답** (배열 또는 단일 객체를 직접 반환):
+
+```typescript
+// transformArrayResponse / transformSingleResponse 헬퍼 사용
+import {
+  transformArrayResponse,
+  transformSingleResponse,
+} from '@/lib/api/api-response-transformer';
+
+const items = await apiClient.get(endpoint).then(transformArrayResponse<FormTemplate>);
+const item = await apiClient.get(endpoint).then(transformSingleResponse<FormTemplate>);
+```
+
+**선택 기준:**
+
+| 조건                         | 패턴                                                 |
+| ---------------------------- | ---------------------------------------------------- |
+| 백엔드가 `{ data: T }` 반환  | `apiClient.get<T>()`                                 |
+| 백엔드가 배열/객체 직접 반환 | `transformArrayResponse` / `transformSingleResponse` |
+| 새 엔드포인트 개발           | 반드시 `{ data: T }` envelope 방식 채택              |
+
+> **anti-pattern:** 레거시 비-envelope 엔드포인트에 `apiClient.get<T[]>()` 를 그대로 사용하면 타입은 통과해도 런타임에서 배열 대신 응답 객체를 받게 된다.

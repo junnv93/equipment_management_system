@@ -49,7 +49,8 @@ async function gotoNcDetail(page: Page, ncId: string) {
 async function startCorrectionEdit(page: Page) {
   const editButton = page.getByRole('button', { name: '편집', exact: true });
   await editButton.click();
-  const textarea = page.getByRole('textbox').first();
+  // 시정 조치 섹션의 textarea — 편집 버튼 클릭 후 DOM에 추가됨
+  const textarea = page.locator('textarea');
   await expect(textarea).toBeVisible({ timeout: 5000 });
   return textarea;
 }
