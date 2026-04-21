@@ -38,6 +38,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `apps/backend/src/common/scope/scope-sql-builder.ts` | `buildScopePredicate` / `dispatchScopePredicate` (쿼리 계층 — 정책 상태기계 SSOT, 2026-04-08~) |
 | `apps/backend/src/common/decorators/site-scoped.decorator.ts` | `@SiteScoped` 데코레이터 + `SiteScopedOptions` (failLoud 옵션 포함) |
 | `apps/backend/src/common/decorators/current-scope.decorator.ts` | `@CurrentScope()` / `@CurrentEnforcedScope()` parameter decorator |
+| `apps/backend/.eslintrc.js` | ESLint `no-restricted-syntax` — domain status 리터럴 3-layer 차단 (BinaryExpression / Property / CallExpression selector) |
 
 ## Workflow
 
@@ -307,6 +308,51 @@ grep -rn "ConditionCheckStepValues" apps/backend/src --include="*.ts" | grep "fr
 
 **PASS:** 21a 0건. **FAIL:** step 리터럴 직접 비교.
 
+### Step 22: ESLint 3-layer domain status 리터럴 차단 검증 (2026-04-21 추가)
+
+`apps/backend/.eslintrc.js`의 `no-restricted-syntax`에 3개 selector가 모두 정의되어 있는지 확인.
+각 selector는 domain status 리터럴의 다른 사용 패턴을 커버한다:
+
+| Layer | Selector | 탐지 패턴 |
+|---|---|---|
+| 1 | `BinaryExpression` | `entity.status === 'draft'` (직접 비교) |
+| 2 | `Property` | `{ status: 'approved' }` (객체 할당) |
+| 3 | `CallExpression` | `eq(table.status, 'pending')` (함수 인자) |
+
+**22a: BinaryExpression selector 존재 확인**
+```bash
+grep -n "BinaryExpression\[operator" apps/backend/.eslintrc.js | grep "status"
+# 결과: 1건 이상 (selector 정의)
+```
+
+**22b: Property selector 존재 확인**
+```bash
+grep -n "Property\[key\.name" apps/backend/.eslintrc.js | grep "status"
+# 결과: 1건 이상 (selector 정의)
+```
+
+**22c: CallExpression selector 존재 확인**
+```bash
+grep -n "CallExpression\[arguments" apps/backend/.eslintrc.js | grep "status"
+# 결과: 1건 이상 (selector 정의)
+```
+
+**22d: controller override에도 동일 3-layer 포함 확인**
+```bash
+grep -c "BinaryExpression\|Property\[key\|CallExpression\[arguments" apps/backend/.eslintrc.js
+# 결과: 6건 이상 (전역 3 + controller override 3)
+```
+
+**22e: ESLint 실제 통과 확인 (리터럴 0건)**
+```bash
+pnpm --filter backend run lint 2>&1 | grep "no-restricted-syntax" | grep -v "node_modules" | head -20
+# 결과: 0건 (lint 에러 없음)
+```
+
+**PASS:** 3-layer selector 모두 존재 + lint 에러 0건. **FAIL:** selector 누락 또는 lint 에러 발생.
+
+> **연계:** verify-hardcoding Step 23(export allowlist 상태 리터럴)과 상호 보완 — ESLint가 BinaryExpression/Property/CallExpression을 정적으로 차단하고, Step 23은 배열 요소로 사용된 리터럴을 grep으로 탐지.
+
 ## Output Format
 
 ```markdown
@@ -338,6 +384,7 @@ grep -rn "ConditionCheckStepValues" apps/backend/src --include="*.ts" | grep "fr
 | 19c | 도메인 폼 아이템 loose index  | PASS/FAIL | `[key: string]: string` 인터페이스 위치 (AcquisitionOrProcessingItem/ControlItem 대체) |
 | 20  | Permission 라벨 렌더링 SSOT   | PASS/FAIL | t.raw 레거시 패턴 또는 settings.json labels 섹션 재도입 위치 |
 | 21  | ConditionCheckStep SSOT       | PASS/FAIL | 'lender_checkout'/'lender_return' 리터럴 직접 비교 위치 |
+| 22  | ESLint 3-layer selector 완전성 | PASS/FAIL | BinaryExpression/Property/CallExpression selector 누락 또는 lint 에러 위치 |
 ```
 
 ## Exceptions
