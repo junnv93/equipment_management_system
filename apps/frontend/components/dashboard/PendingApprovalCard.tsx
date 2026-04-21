@@ -49,6 +49,15 @@ import {
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 /**
+ * 모듈 레벨 빈 우선순위 상수 — `priorities = {}` 기본값 대신 사용
+ *
+ * 기본값으로 `{}` 리터럴을 쓰면 렌더마다 새 객체가 생성되어
+ * useMemo의 deps 비교(===)가 매번 false → 불필요한 재계산 발생.
+ * 모듈 레벨에 두면 참조가 항상 동일하게 유지됨.
+ */
+const EMPTY_PRIORITIES: Partial<Record<ApprovalCategory, ApprovalCategoryPriority>> = {} as const;
+
+/**
  * 아이콘 매핑
  *
  * TAB_META의 icon 문자열 → 실제 lucide-react 컴포넌트
@@ -93,7 +102,7 @@ export function PendingApprovalCard({
   className,
   compact = false,
   layoutHint = 'grid',
-  priorities = {},
+  priorities = EMPTY_PRIORITIES,
 }: PendingApprovalCardProps) {
   const { data: session, status } = useSession();
   const t = useTranslations('dashboard.pending');
