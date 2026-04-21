@@ -163,7 +163,10 @@ describe('DataMigrationService', () => {
       // NotFoundException이 아닌 다른 예외가 나오면 stale 분기 통과 의미
       // (세션 소유권/상태 체크 후 실제 DB 실행까지는 가지 않아도 됨)
       await expect(
-        service.executeMultiSheet({ sessionId: 'sess-1' }, 'user-1')
+        service.executeMultiSheet(
+          { sessionId: 'sess-1', autoGenerateManagementNumber: false, skipDuplicates: true },
+          'user-1'
+        )
       ).rejects.not.toThrow(ConflictException);
 
       // stale 판정 후 캐시 업데이트 호출 확인 (FAILED 전환)
@@ -181,9 +184,12 @@ describe('DataMigrationService', () => {
 
       mockCacheService.get.mockReturnValue(session);
 
-      await expect(service.executeMultiSheet({ sessionId: 'sess-1' }, 'user-1')).rejects.toThrow(
-        ConflictException
-      );
+      await expect(
+        service.executeMultiSheet(
+          { sessionId: 'sess-1', autoGenerateManagementNumber: false, skipDuplicates: true },
+          'user-1'
+        )
+      ).rejects.toThrow(ConflictException);
     });
   });
 
