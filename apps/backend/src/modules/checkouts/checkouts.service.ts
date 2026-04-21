@@ -24,6 +24,17 @@ import {
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
   type ConditionCheckStep,
+  type CheckoutPurpose,
+  canPerformAction,
+  getNextStep,
+  getTransitionsFor,
+  CHECKOUT_TRANSITIONS,
+  type CheckoutAction,
+  type NextActor,
+  type NextStepDescriptor,
+  type AuditAction,
+  type AuditEntityType,
+  type AuditLogUserRole,
 } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
@@ -48,6 +59,7 @@ import { TeamsService } from '../teams/teams.service';
 import { EquipmentImportsService } from '../equipment-imports/equipment-imports.service';
 import { ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AuditService } from '../audit/audit.service';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
@@ -74,11 +86,12 @@ export interface CheckoutAvailableActions {
 
 /**
  * ✅ Phase 2: Server-Driven UI
- * 메타데이터(availableActions)를 포함한 Checkout
+ * 메타데이터(availableActions + nextStep)를 포함한 Checkout
  */
 export interface CheckoutWithMeta extends Checkout {
   meta: {
     availableActions: CheckoutAvailableActions;
+    nextStep: NextStepDescriptor;
   };
 }
 
@@ -154,9 +167,110 @@ export class CheckoutsService extends VersionedBaseService {
     private readonly teamsService: TeamsService,
     @Inject(forwardRef(() => EquipmentImportsService))
     private readonly rentalImportsService: EquipmentImportsService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly auditService: AuditService
   ) {
     super(); // ✅ Required for extending VersionedBaseService
+  }
+
+  // ============================================================================
+  // FSM 헬퍼
+  // ============================================================================
+
+  private static readonly FSM_TO_AUDIT_ACTION: Record<CheckoutAction, AuditAction> = {
+    approve: 'approve',
+    reject: 'reject',
+    cancel: 'cancel',
+    start: 'checkout',
+    lender_check: 'checkout',
+    borrower_receive: 'checkout',
+    mark_in_use: 'checkout',
+    borrower_return: 'return',
+    lender_receive: 'return',
+    submit_return: 'return',
+    approve_return: 'approve',
+    reject_return: 'reject',
+  };
+
+  private assertFsmAction(
+    checkout: Pick<Checkout, 'status' | 'purpose'>,
+    action: CheckoutAction,
+    userPermissions: readonly string[]
+  ): void {
+    const fsmInput = {
+      status: checkout.status,
+      purpose: checkout.purpose as CheckoutPurpose,
+    };
+    const check = canPerformAction(fsmInput, action, userPermissions);
+    if (check.ok) return;
+    const code =
+      check.reason === 'invalid_transition' ? 'CHECKOUT_INVALID_TRANSITION' : 'CHECKOUT_FORBIDDEN';
+    const message =
+      check.reason === 'invalid_transition'
+        ? `Action "${action}" not allowed from status "${checkout.status}" (purpose: ${checkout.purpose})`
+        : `Missing required permission for action "${action}"`;
+    throw new BadRequestException({ code, message });
+  }
+
+  private resolveAuditSuffix(
+    checkout: Pick<Checkout, 'status' | 'purpose'>,
+    action: CheckoutAction
+  ): string {
+    const purpose = checkout.purpose as CheckoutPurpose;
+    const rule = CHECKOUT_TRANSITIONS.find(
+      (t) =>
+        t.from === checkout.status &&
+        t.action === action &&
+        (t.purposes.length === 0 || t.purposes.includes(purpose))
+    );
+    return rule?.auditEventSuffix ?? 'unknown';
+  }
+
+  private resolveNextActor(purpose: Checkout['purpose'], nextStatus: CheckoutStatus): NextActor {
+    const next = getTransitionsFor(nextStatus, purpose as CheckoutPurpose);
+    return next[0]?.nextActor ?? 'none';
+  }
+
+  private buildNextStep(
+    checkout: Checkout,
+    userPermissions: readonly string[]
+  ): NextStepDescriptor {
+    return getNextStep(
+      {
+        status: checkout.status,
+        purpose: checkout.purpose as CheckoutPurpose,
+        dueAt: checkout.expectedReturnDate?.toISOString() ?? null,
+      },
+      userPermissions
+    );
+  }
+
+  private async writeTransitionAudit(
+    checkout: Pick<Checkout, 'status' | 'purpose' | 'reason'>,
+    action: CheckoutAction,
+    entityId: string,
+    nextStatus: CheckoutStatus,
+    req: AuthenticatedRequest
+  ): Promise<void> {
+    await this.auditService.create({
+      userId: req.user?.userId ?? null,
+      userName: req.user?.name ?? 'system',
+      userRole: (req.user?.roles?.[0] ?? 'system') as AuditLogUserRole,
+      action: CheckoutsService.FSM_TO_AUDIT_ACTION[action],
+      entityType: 'checkout' as AuditEntityType,
+      entityId,
+      entityName: checkout.reason ?? undefined,
+      details: {
+        additionalInfo: {
+          fsmEvent: `checkout.${this.resolveAuditSuffix(checkout, action)}`,
+          from: checkout.status,
+          to: nextStatus,
+          purpose: checkout.purpose,
+        },
+      },
+      userSite: req.user?.site,
+      userTeamId: req.user?.teamId,
+    });
   }
 
   /**
@@ -861,17 +975,18 @@ export class CheckoutsService extends VersionedBaseService {
       CACHE_TTL.LONG
     );
 
-    // ✅ Phase 2: userPermissions 제공 시 meta.availableActions 포함
+    // ✅ Phase 2: userPermissions 제공 시 meta.availableActions + nextStep 포함
     if (userPermissions) {
-      const availableActions = await this.calculateAvailableActions(
+      const availableActions = this.calculateAvailableActions(
         checkout,
         userPermissions,
         userTeamId
       );
+      const nextStep = this.buildNextStep(checkout, userPermissions);
 
       return {
         ...checkout,
-        meta: { availableActions },
+        meta: { availableActions, nextStep },
       };
     }
 
@@ -995,47 +1110,30 @@ export class CheckoutsService extends VersionedBaseService {
    * @param userTeamId 사용자 팀 ID (선택)
    * @returns 가능한 액션 목록
    */
-  private async calculateAvailableActions(
+  private calculateAvailableActions(
     checkout: Checkout,
-    userPermissions: string[],
+    userPermissions: readonly string[],
     userTeamId?: string
-  ): Promise<CheckoutAvailableActions> {
-    const { status, purpose, lenderTeamId } = checkout;
-    const hasPermission = (p: Permission): boolean => userPermissions.includes(p);
+  ): CheckoutAvailableActions {
+    const { purpose, lenderTeamId } = checkout;
+    const fsmInput = {
+      status: checkout.status,
+      purpose: checkout.purpose as CheckoutPurpose,
+    };
+
+    // rental 승인은 FSM permission 외에 lenderTeam identity-rule 추가 적용
+    const baseCanApprove = canPerformAction(fsmInput, 'approve', userPermissions).ok;
+    const lenderTeamOk = purpose !== CPVal.RENTAL || !lenderTeamId || lenderTeamId === userTeamId;
 
     return {
-      // 승인: pending 상태 + 승인 권한 + (대여의 경우 lender 팀 일치)
-      canApprove:
-        status === CSVal.PENDING &&
-        hasPermission(Permission.APPROVE_CHECKOUT) &&
-        (purpose !== CPVal.RENTAL || !lenderTeamId || lenderTeamId === userTeamId),
-
-      // 반려: pending 상태 + 반려 권한
-      canReject: status === CSVal.PENDING && hasPermission(Permission.REJECT_CHECKOUT),
-
-      // 반출 시작: approved 상태 + 대여 목적 아님 + 반출 시작 권한
-      canStart:
-        status === CSVal.APPROVED &&
-        purpose !== CPVal.RENTAL &&
-        hasPermission(Permission.START_CHECKOUT),
-
-      // 반입: (checked_out이고 대여 아님) 또는 (lender_received이고 대여) + 반입 권한
-      canReturn:
-        ((status === CSVal.CHECKED_OUT && purpose !== CPVal.RENTAL) ||
-          (status === CSVal.LENDER_RECEIVED && purpose === CPVal.RENTAL)) &&
-        hasPermission(Permission.COMPLETE_CHECKOUT),
-
-      // 반입 승인: returned 상태 + 승인 권한
-      canApproveReturn: status === CSVal.RETURNED && hasPermission(Permission.APPROVE_CHECKOUT),
-
-      // 반입 반려: returned 상태 + 승인 권한 (approveReturn과 동일 조건)
-      canRejectReturn: status === CSVal.RETURNED && hasPermission(Permission.APPROVE_CHECKOUT),
-
-      // 취소: pending 상태 + 취소 권한
-      canCancel: status === CSVal.PENDING && hasPermission(Permission.CANCEL_CHECKOUT),
-
-      // 상태 확인 등록: 대여 목적 + 특정 상태들 + 완료 권한
-      // 렌탈 4-Step: approved → lender_checked → borrower_received → borrower_returned
+      canApprove: baseCanApprove && lenderTeamOk,
+      canReject: canPerformAction(fsmInput, 'reject', userPermissions).ok,
+      canStart: canPerformAction(fsmInput, 'start', userPermissions).ok,
+      canReturn: canPerformAction(fsmInput, 'submit_return', userPermissions).ok,
+      canApproveReturn: canPerformAction(fsmInput, 'approve_return', userPermissions).ok,
+      canRejectReturn: canPerformAction(fsmInput, 'reject_return', userPermissions).ok,
+      canCancel: canPerformAction(fsmInput, 'cancel', userPermissions).ok,
+      // step-based (FSM 미매핑) — 기존 로직 유지
       canSubmitConditionCheck:
         purpose === CPVal.RENTAL &&
         (
@@ -1045,8 +1143,8 @@ export class CheckoutsService extends VersionedBaseService {
             CSVal.BORROWER_RECEIVED,
             CSVal.BORROWER_RETURNED,
           ] as string[]
-        ).includes(status) &&
-        hasPermission(Permission.COMPLETE_CHECKOUT),
+        ).includes(checkout.status) &&
+        userPermissions.includes(Permission.COMPLETE_CHECKOUT),
     };
   }
 
@@ -1298,13 +1396,8 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(approveDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
-
-      if (checkout.status !== CSVal.PENDING) {
-        throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_PENDING_CAN_APPROVE',
-          message: 'Only pending checkouts can be approved',
-        });
-      }
+      const userPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'approve', userPermissions);
 
       // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크 (배치 조회)
       const items = await this.db
@@ -1357,6 +1450,14 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
+      await this.writeTransitionAudit(
+        checkout,
+        'approve',
+        uuid,
+        CSVal.APPROVED as CheckoutStatus,
+        req
+      );
+
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
@@ -1373,6 +1474,7 @@ export class CheckoutsService extends VersionedBaseService {
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: approveDto.approverId,
           actorName: '',
+          nextActor: this.resolveNextActor(checkout.purpose, CSVal.APPROVED as CheckoutStatus),
           timestamp: new Date(),
         });
       }
@@ -1408,14 +1510,8 @@ export class CheckoutsService extends VersionedBaseService {
 
       const checkout = await this.findOne(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
-
-      // 대기 중인 상태만 반려 가능
-      if (checkout.status !== CSVal.PENDING) {
-        throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_PENDING_CAN_REJECT',
-          message: 'Only pending checkouts can be rejected',
-        });
-      }
+      const rejectPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'reject', rejectPermissions);
 
       // 반려 사유 필수 검증
       if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
@@ -1434,6 +1530,14 @@ export class CheckoutsService extends VersionedBaseService {
           approverId: rejectDto.approverId,
           rejectionReason: rejectDto.reason.trim(),
         }
+      );
+
+      await this.writeTransitionAudit(
+        checkout,
+        'reject',
+        uuid,
+        CSVal.REJECTED as CheckoutStatus,
+        req
       );
 
       // ✅ 캐시 무효화 + 알림 데이터를 병렬로 가져오기 (순차 → 병렬)
@@ -1456,6 +1560,7 @@ export class CheckoutsService extends VersionedBaseService {
           reason: rejectDto.reason,
           actorId: rejectDto.approverId ?? undefined,
           actorName: '',
+          nextActor: 'none',
           timestamp: new Date(),
         });
       }
@@ -1491,13 +1596,8 @@ export class CheckoutsService extends VersionedBaseService {
 
       const checkout = await this.findOne(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
-
-      if (checkout.status !== CSVal.APPROVED) {
-        throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_APPROVED_CAN_START',
-          message: 'Only approved checkouts can be started',
-        });
-      }
+      const startPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'start', startPermissions);
 
       // ✅ 트랜잭션: checkout 상태 변경 + 장비 상태 변경 + 상태 기록을 원자적으로 처리
       const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
@@ -1548,6 +1648,14 @@ export class CheckoutsService extends VersionedBaseService {
         return result;
       });
 
+      await this.writeTransitionAudit(
+        checkout,
+        'start',
+        uuid,
+        CSVal.CHECKED_OUT as CheckoutStatus,
+        req
+      );
+
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
@@ -1563,6 +1671,7 @@ export class CheckoutsService extends VersionedBaseService {
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: checkout.requesterId,
           actorName: '',
+          nextActor: this.resolveNextActor(checkout.purpose, CSVal.CHECKED_OUT as CheckoutStatus),
           timestamp: new Date(),
         });
       }
@@ -1598,13 +1707,8 @@ export class CheckoutsService extends VersionedBaseService {
 
       const checkout = await this.findOne(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
-
-      if (checkout.status !== CSVal.CHECKED_OUT) {
-        throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_CHECKED_OUT_CAN_RETURN',
-          message: 'Only checked out equipment can be returned',
-        });
-      }
+      const returnPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'submit_return', returnPermissions);
 
       // ✅ 반출 유형별 필수 검사 항목 검증
       const purpose = checkout.purpose;
@@ -1678,6 +1782,14 @@ export class CheckoutsService extends VersionedBaseService {
 
       // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
 
+      await this.writeTransitionAudit(
+        checkout,
+        'submit_return',
+        uuid,
+        CSVal.RETURNED as CheckoutStatus,
+        req
+      );
+
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
@@ -1695,6 +1807,7 @@ export class CheckoutsService extends VersionedBaseService {
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: returnerId,
           actorName: '',
+          nextActor: this.resolveNextActor(checkout.purpose, CSVal.RETURNED as CheckoutStatus),
           timestamp: new Date(),
         });
       }
@@ -1734,13 +1847,8 @@ export class CheckoutsService extends VersionedBaseService {
 
       const checkout = await this.findOne(uuid);
       await this.enforceScopeFromCheckout(checkout, req);
-
-      if (checkout.status !== CSVal.RETURNED) {
-        throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_RETURNED_CAN_APPROVE',
-          message: 'Only returned checkouts can be finally approved',
-        });
-      }
+      const approveReturnPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'approve_return', approveReturnPermissions);
 
       // ✅ 트랜잭션: checkout 상태 변경 + 장비 상태 복원을 원자적으로 처리
       const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
@@ -1784,6 +1892,14 @@ export class CheckoutsService extends VersionedBaseService {
         }
       }
 
+      await this.writeTransitionAudit(
+        checkout,
+        'approve_return',
+        uuid,
+        CSVal.RETURN_APPROVED as CheckoutStatus,
+        req
+      );
+
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
@@ -1799,6 +1915,7 @@ export class CheckoutsService extends VersionedBaseService {
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: approveReturnDto.approverId,
           actorName: '',
+          nextActor: 'none',
           timestamp: new Date(),
         });
       }
@@ -1836,13 +1953,8 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(rejectReturnDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
-
-      if (checkout.status !== CSVal.RETURNED) {
-        throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_RETURNED_CAN_REJECT',
-          message: 'Only returned checkouts can be rejected',
-        });
-      }
+      const rejectReturnPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'reject_return', rejectReturnPermissions);
 
       if (!rejectReturnDto.reason || rejectReturnDto.reason.trim().length === 0) {
         throw new BadRequestException({
@@ -1909,6 +2021,14 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
+      await this.writeTransitionAudit(
+        checkout,
+        'reject_return',
+        uuid,
+        CSVal.CHECKED_OUT as CheckoutStatus,
+        req
+      );
+
       // ✅ 캐시 무효화 — items/equipmentMap은 이미 보유, 팀 ID만 추가 조회
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
@@ -1927,6 +2047,7 @@ export class CheckoutsService extends VersionedBaseService {
           reason: rejectReturnDto.reason,
           actorId: rejectReturnDto.approverId,
           actorName: '',
+          nextActor: this.resolveNextActor(checkout.purpose, CSVal.CHECKED_OUT as CheckoutStatus),
           timestamp: new Date(),
         });
       }
@@ -2132,22 +2253,15 @@ export class CheckoutsService extends VersionedBaseService {
    * 승인 전 신청자만 취소 가능 (요구사항)
    * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
-  async cancel(uuid: string, version: number, req?: AuthenticatedRequest): Promise<Checkout> {
+  async cancel(uuid: string, version: number, req: AuthenticatedRequest): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
 
       const checkout = await this.findOne(uuid);
-      if (req) {
-        await this.enforceScopeFromCheckout(checkout, req);
-      }
-
-      if (checkout.status !== CSVal.PENDING) {
-        throw new BadRequestException({
-          code: 'CHECKOUT_ONLY_PENDING_CAN_CANCEL',
-          message: 'Only pending checkouts can be canceled',
-        });
-      }
+      await this.enforceScopeFromCheckout(checkout, req);
+      const cancelPermissions: readonly string[] = req.user?.permissions ?? [];
+      this.assertFsmAction(checkout, 'cancel', cancelPermissions);
 
       // ✅ Optimistic locking: 클라이언트가 보낸 version으로 CAS 수행
       const updated = await this.updateCheckoutStatus(
@@ -2167,6 +2281,14 @@ export class CheckoutsService extends VersionedBaseService {
           );
         }
       }
+
+      await this.writeTransitionAudit(
+        checkout,
+        'cancel',
+        uuid,
+        CSVal.CANCELED as CheckoutStatus,
+        req
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -2282,7 +2404,7 @@ export class CheckoutsService extends VersionedBaseService {
   /**
    * UUID로 반출 삭제 (취소로 처리)
    */
-  async remove(uuid: string, version: number, req?: AuthenticatedRequest): Promise<Checkout> {
+  async remove(uuid: string, version: number, req: AuthenticatedRequest): Promise<Checkout> {
     return this.cancel(uuid, version, req);
   }
 

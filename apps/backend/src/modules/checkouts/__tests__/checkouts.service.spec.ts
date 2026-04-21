@@ -6,13 +6,17 @@ import { TeamsService } from '../../teams/teams.service';
 import { EquipmentImportsService } from '../../equipment-imports/equipment-imports.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { AuditService } from '../../audit/audit.service';
 import type { AuthenticatedRequest } from '../../../types/auth';
+import { derivePermissionsFromRoles } from '@equipment-management/shared-constants';
 
-// 테스트용 mock req — 스코프 체크에서 사용
+// 테스트용 mock req — FSM assertFsmAction이 req.user.permissions를 직접 참조하므로
+// roles에서 파생한 permissions 배열을 반드시 포함해야 함
 const mockReq = {
   user: {
     userId: '550e8400-e29b-41d4-a716-446655440004',
     roles: ['technical_manager'],
+    permissions: derivePermissionsFromRoles(['technical_manager']),
     site: 'suwon',
     teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
   },
@@ -135,6 +139,12 @@ describe('CheckoutsService', () => {
             emit: jest.fn(),
             emitAsync: jest.fn().mockResolvedValue([]),
             on: jest.fn(),
+          },
+        },
+        {
+          provide: AuditService,
+          useValue: {
+            create: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],

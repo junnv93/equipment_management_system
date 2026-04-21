@@ -9,9 +9,16 @@ import { EquipmentModule } from '../equipment/equipment.module';
 import { TeamsModule } from '../teams/teams.module';
 import { CacheModule } from '../../common/cache/cache.module';
 import { EquipmentImportsModule } from '../equipment-imports/equipment-imports.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [EquipmentModule, TeamsModule, CacheModule, forwardRef(() => EquipmentImportsModule)],
+  imports: [
+    EquipmentModule,
+    TeamsModule,
+    CacheModule,
+    AuditModule,
+    forwardRef(() => EquipmentImportsModule),
+  ],
   controllers: [CheckoutsController],
   providers: [
     CheckoutsService,
