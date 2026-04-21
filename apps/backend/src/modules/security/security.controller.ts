@@ -1,9 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Logger, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Logger, Post, Req } from '@nestjs/common';
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { THROTTLE_PRESETS, throttleAllNamed } from '../../common/config/throttle.constants';
+import { SecurityService } from './security.service';
 
 /**
  * CSP violation report — `Content-Security-Policy` + `Report-To` 헤더의 수집 엔드포인트.
@@ -26,46 +28,76 @@ import { THROTTLE_PRESETS, throttleAllNamed } from '../../common/config/throttle
 export class SecurityController {
   private readonly logger = new Logger('CspReport');
 
+  constructor(private readonly securityService: SecurityService) {}
+
   @Post('csp-report')
   @Public()
   @Throttle(throttleAllNamed(THROTTLE_PRESETS.CSP_REPORT))
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiExcludeEndpoint()
   @SkipResponseTransform()
-  handleReport(@Body() body: unknown): void {
+  handleReport(@Body() body: unknown, @Req() req: Request): void {
+    const userAgent = req.headers['user-agent'];
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ??
+      req.socket.remoteAddress;
+
     // 브라우저 payload 형태 2종 지원:
     //   1) Legacy `report-uri`: { "csp-report": { "blocked-uri": ..., "violated-directive": ... } }
     //   2) Reporting API `report-to`: [ { type: "csp-violation", body: { blockedURL, effectiveDirective, ... } }, ... ]
-    const reports = Array.isArray(body) ? body : [body];
+    const entries = Array.isArray(body) ? body : [body];
 
-    for (const entry of reports) {
+    for (const entry of entries) {
       const legacy = (entry as { 'csp-report'?: Record<string, unknown> })['csp-report'];
       const modern = entry as { type?: string; body?: Record<string, unknown> };
 
       if (legacy) {
+        const normalized = {
+          reportShape: 'legacy' as const,
+          blockedUri: legacy['blocked-uri'] as string | undefined,
+          violatedDirective: legacy['violated-directive'] as string | undefined,
+          documentUri: legacy['document-uri'] as string | undefined,
+          sourceFile: legacy['source-file'] as string | undefined,
+          lineNumber: String(legacy['line-number'] ?? ''),
+          rawPayload: entry,
+          userAgent,
+          ipAddress,
+        };
         this.logger.warn('CSP violation (legacy)', {
-          blockedUri: legacy['blocked-uri'],
-          violatedDirective: legacy['violated-directive'],
-          documentUri: legacy['document-uri'],
-          sourceFile: legacy['source-file'],
-          lineNumber: legacy['line-number'],
+          blockedUri: normalized.blockedUri,
+          violatedDirective: normalized.violatedDirective,
         });
+        void this.securityService.saveReport(normalized);
         continue;
       }
 
       if (modern?.type === 'csp-violation' && modern.body) {
+        const normalized = {
+          reportShape: 'reporting-api' as const,
+          blockedUri: modern.body.blockedURL as string | undefined,
+          violatedDirective: modern.body.effectiveDirective as string | undefined,
+          documentUri: modern.body.documentURL as string | undefined,
+          sourceFile: modern.body.sourceFile as string | undefined,
+          lineNumber: String(modern.body.lineNumber ?? ''),
+          rawPayload: entry,
+          userAgent,
+          ipAddress,
+        };
         this.logger.warn('CSP violation (reporting-api)', {
-          blockedUrl: modern.body.blockedURL,
-          effectiveDirective: modern.body.effectiveDirective,
-          documentUrl: modern.body.documentURL,
-          sourceFile: modern.body.sourceFile,
-          lineNumber: modern.body.lineNumber,
+          blockedUri: normalized.blockedUri,
+          violatedDirective: normalized.violatedDirective,
         });
+        void this.securityService.saveReport(normalized);
         continue;
       }
 
-      // 알 수 없는 형식 — 원본을 최소 로깅
       this.logger.warn('CSP violation (unknown shape)', { entry });
+      void this.securityService.saveReport({
+        reportShape: 'unknown',
+        rawPayload: entry,
+        userAgent,
+        ipAddress,
+      });
     }
   }
 }
