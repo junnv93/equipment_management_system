@@ -205,7 +205,9 @@
     "borrowerReceive": "Borrower Receive",
     "inUse": "In Use",
     "borrowerReturn": "Borrower Return",
-    "lenderReturn": "Lender Return"
+    "lenderReturn": "Lender Return",
+    "rejected": "Rejected",
+    "canceled": "Canceled"
   },
   "condition": {
     "comparisonTitle": "Before/After Comparison",

@@ -205,7 +205,9 @@
     "borrowerReceive": "인수 확인",
     "inUse": "사용 중",
     "borrowerReturn": "반납 확인",
-    "lenderReturn": "반입 확인"
+    "lenderReturn": "반입 확인",
+    "rejected": "거절됨",
+    "canceled": "취소됨"
   },
   "condition": {
     "comparisonTitle": "상태 전후 비교",

@@ -67,6 +67,10 @@ function RentalFlowInline({ status }: { status: CheckoutStatus }) {
   const currentStepNum = isFullyDone ? STEP_COUNT : currentIdx + 1;
 
   const stepLabelKey = CHECKOUT_STEP_LABELS[status];
+
+  // 터미널 상태(거절/취소)는 흐름 단계가 없으므로 칩 미표시
+  if (status === CSVal.REJECTED || status === CSVal.CANCELED) return null;
+
   const currentStepName = stepLabelKey
     ? t(`stepper.${stepLabelKey}`)
     : t(`rentalFlow.step_${currentIdx}`);
