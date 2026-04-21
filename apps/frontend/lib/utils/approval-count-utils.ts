@@ -23,6 +23,7 @@ import {
   getSemanticBgLightClasses,
   type SemanticColorKey,
 } from '@/lib/design-tokens/brand';
+import type { ApprovalCategoryPriority } from '@/lib/config/dashboard-config';
 
 /**
  * 역할별 승인 대기 총합 계산
@@ -51,6 +52,8 @@ export interface DashboardApprovalCategory {
   href: string;
   color: string;
   bgColor: string;
+  /** 카드 시각적 우선순위 — config의 approvalCategoryPriorities에서 파생 */
+  priority: ApprovalCategoryPriority;
 }
 
 /**
@@ -89,11 +92,14 @@ const CATEGORY_COLORS: Record<ApprovalCategory, { color: string; bgColor: string
  *
  * ROLE_TABS + TAB_META + CATEGORY_COLORS에서 파생합니다.
  * 승인 관리 페이지 탭과 1:1 매핑되므로 클릭 시 정확한 탭으로 이동합니다.
+ *
+ * @param priorities - config의 approvalCategoryPriorities (미지정 카테고리는 'default')
  */
 export function getDashboardApprovalCategories(
   role: string,
   approvalsRoute: string,
-  t: (key: string) => string
+  t: (key: string) => string,
+  priorities?: Partial<Record<ApprovalCategory, ApprovalCategoryPriority>>
 ): DashboardApprovalCategory[] {
   const tabs = ROLE_TABS[role as UserRole] || [];
 
@@ -107,6 +113,7 @@ export function getDashboardApprovalCategories(
       href: `${approvalsRoute}?tab=${tab}`,
       color: colors.color,
       bgColor: colors.bgColor,
+      priority: priorities?.[tab] ?? 'default',
     };
   });
 }

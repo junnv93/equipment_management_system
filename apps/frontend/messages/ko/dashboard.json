@@ -111,7 +111,8 @@
     "viewAll": "전체 보기",
     "clickToView": "클릭하여 확인",
     "viewAllAriaLabel": "전체 승인 관리 페이지로 이동",
-    "categoryAriaLabel": "{label} {count}건"
+    "categoryAriaLabel": "{label} {count}건",
+    "noItems": "대기 중인 항목 없음"
   },
   "calibrationList": {
     "daysOverdue": "{days}일 초과",
@@ -350,5 +351,16 @@
     "overdueCalibrations": "교정 초과 {count}건",
     "overdueCheckouts": "반출 초과 {count}건",
     "nonConforming": "부적합 {count}건"
+  },
+  "systemHealth": {
+    "title": "시스템 상태",
+    "ariaLabel": "시스템 상태 요약",
+    "totalEquipment": "전체 장비",
+    "activeCheckouts": "반출 중",
+    "calibrationOverdue": "교정 초과",
+    "nonConforming": "부적합",
+    "recentActivity": "최근 7일 활동",
+    "healthy": "정상",
+    "issues": "이슈 있음"
   }
 }

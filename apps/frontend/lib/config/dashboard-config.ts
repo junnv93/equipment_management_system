@@ -29,6 +29,28 @@ import type { StatsVariant } from '@/lib/design-tokens';
 import type { DashboardSummary } from '@/lib/api/dashboard-api';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import type { ApprovalCategory } from '@equipment-management/shared-constants';
+
+// ─── 승인 카드 레이아웃 타입 ────────────────────────────────────
+
+/** 승인 카테고리 시각적 우선순위 */
+export type ApprovalCategoryPriority = 'hero' | 'default' | 'compact';
+
+/**
+ * 사이드바 위젯 식별자
+ *
+ * DashboardClient의 SIDEBAR_WIDGET_RENDERERS와 1:1 매핑됨
+ */
+export type SidebarWidget = 'teamDistribution' | 'miniCalendar' | 'systemHealth';
+
+/**
+ * 승인 대기 카드 레이아웃 힌트
+ *
+ * - 'single-focus': 1개 카테고리 — 풀폭 히어로 카드
+ * - 'prioritized-grid': priority 계층화 그리드 (hero/default/compact)
+ * - 'grid': 균등 그리드 (기존 동작)
+ */
+export type PendingApprovalLayoutHint = 'single-focus' | 'prioritized-grid' | 'grid';
 
 // ─── Stats Card 설정 ───────────────────────────────────────────
 export interface StatsCardConfig {
@@ -87,10 +109,13 @@ export interface ControlCenterConfig {
   showCheckoutOverdue: boolean;
   /** 교정 D-day 컴팩트 리스트 표시 여부 */
   showCalibrationDday: boolean;
-  /** 팀별 장비 분포 표시 여부 */
-  showTeamDistribution: boolean;
-  /** 미니 달력 표시 여부 */
-  showMiniCalendar: boolean;
+  /**
+   * 사이드바 위젯 목록 (순서 = 렌더 순서)
+   *
+   * 'teamDistribution' | 'miniCalendar' | 'systemHealth'
+   * 빈 배열이면 사이드바 섹션 전체 숨김
+   */
+  sidebarWidgets: readonly SidebarWidget[];
   /** 빠른 실행 버튼 바 표시 여부 */
   showQuickActionBar: boolean;
   /** 역할별 빠른 실행 액션 목록 */
@@ -106,6 +131,18 @@ export interface ControlCenterConfig {
    * 이 플래그가 결정 주체 — resolveDashboardScope()는 이것을 그대로 따름.
    */
   requiresTeamScope: boolean;
+  /**
+   * 승인 대기 카드 레이아웃 힌트
+   *
+   * 역할별 카테고리 수와 중요도에 맞는 레이아웃을 선택적으로 적용
+   */
+  pendingApprovalLayoutHint: PendingApprovalLayoutHint;
+  /**
+   * 카테고리별 시각적 우선순위
+   *
+   * 지정되지 않은 카테고리는 'default'로 처리됨
+   */
+  approvalCategoryPriorities: Partial<Record<ApprovalCategory, ApprovalCategoryPriority>>;
 }
 
 // ─── 역할별 대시보드 설정 ───────────────────────────────────────
@@ -282,8 +319,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showPendingApprovals: false,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
-      showTeamDistribution: false,
-      showMiniCalendar: true,
+      sidebarWidgets: ['miniCalendar'],
       showQuickActionBar: true,
       quickActions: [
         { ...QUICK_ACTIONS.registerEquipment, priority: 'primary' as const },
@@ -293,6 +329,8 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'my',
       requiresTeamScope: true,
+      pendingApprovalLayoutHint: 'grid',
+      approvalCategoryPriorities: {},
     },
   },
 
@@ -314,8 +352,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showPendingApprovals: true,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
-      showTeamDistribution: true,
-      showMiniCalendar: true,
+      sidebarWidgets: ['teamDistribution', 'miniCalendar'],
       showQuickActionBar: true,
       quickActions: [
         { ...QUICK_ACTIONS.approvalManagement, priority: 'primary' as const },
@@ -325,6 +362,12 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'team',
       requiresTeamScope: true,
+      pendingApprovalLayoutHint: 'prioritized-grid',
+      approvalCategoryPriorities: {
+        outgoing: 'hero',
+        incoming: 'hero',
+        software_validation: 'compact',
+      },
     },
   },
 
@@ -346,8 +389,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showPendingApprovals: true,
       showCheckoutOverdue: false,
       showCalibrationDday: true,
-      showTeamDistribution: false,
-      showMiniCalendar: true,
+      sidebarWidgets: ['miniCalendar'],
       showQuickActionBar: true,
       quickActions: [
         { ...QUICK_ACTIONS.calibrationPlans, priority: 'primary' as const },
@@ -357,6 +399,10 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
+      pendingApprovalLayoutHint: 'single-focus',
+      approvalCategoryPriorities: {
+        plan_review: 'hero',
+      },
     },
   },
 
@@ -379,8 +425,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showPendingApprovals: true,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
-      showTeamDistribution: true,
-      showMiniCalendar: true,
+      sidebarWidgets: ['teamDistribution', 'miniCalendar'],
       showQuickActionBar: true,
       quickActions: [
         { ...QUICK_ACTIONS.calibrationPlans, priority: 'primary' as const },
@@ -390,6 +435,12 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
+      pendingApprovalLayoutHint: 'prioritized-grid',
+      approvalCategoryPriorities: {
+        plan_final: 'hero',
+        disposal_final: 'default',
+        incoming: 'default',
+      },
     },
   },
 
@@ -409,11 +460,10 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
     controlCenter: {
       showAlertBanner: true,
-      showPendingApprovals: true,
+      showPendingApprovals: false,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
-      showTeamDistribution: true,
-      showMiniCalendar: true,
+      sidebarWidgets: ['systemHealth', 'teamDistribution', 'miniCalendar'],
       showQuickActionBar: true,
       quickActions: [
         { ...QUICK_ACTIONS.userManagement, priority: 'primary' as const },
@@ -423,6 +473,8 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
+      pendingApprovalLayoutHint: 'grid',
+      approvalCategoryPriorities: {},
     },
   },
 };

@@ -111,7 +111,8 @@
     "viewAll": "View All",
     "clickToView": "Click to view",
     "viewAllAriaLabel": "Go to approval management page",
-    "categoryAriaLabel": "{label} {count} items"
+    "categoryAriaLabel": "{label} {count} items",
+    "noItems": "No pending items"
   },
   "calibrationList": {
     "daysOverdue": "{days} days overdue",
@@ -350,5 +351,16 @@
     "overdueCalibrations": "{count} calibration overdue",
     "overdueCheckouts": "{count} checkout overdue",
     "nonConforming": "{count} non-conforming"
+  },
+  "systemHealth": {
+    "title": "System Health",
+    "ariaLabel": "System status summary",
+    "totalEquipment": "Total Equipment",
+    "activeCheckouts": "Active Checkouts",
+    "calibrationOverdue": "Calibration Overdue",
+    "nonConforming": "Non-Conforming",
+    "recentActivity": "Activity (7 days)",
+    "healthy": "Healthy",
+    "issues": "Issues Found"
   }
 }

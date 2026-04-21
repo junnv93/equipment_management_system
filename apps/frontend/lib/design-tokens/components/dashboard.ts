@@ -717,7 +717,71 @@ export const DASHBOARD_EMPTY_STATE_TOKENS = {
 } as const;
 
 // ============================================================================
-// 19. DASHBOARD_ENTRANCE — 입장 애니메이션 (AP-06 개선)
+// 19. DASHBOARD_PENDING_APPROVAL_TOKENS — 승인 대기 카드 priority-aware 토큰
+// ============================================================================
+
+/**
+ * 승인 대기 카드 레이아웃 힌트별 토큰
+ *
+ * layoutHint에 따라 3가지 렌더 모드를 지원:
+ * - single-focus: 카테고리 1개 → 풀폭 히어로 카드
+ * - prioritized-grid: priority 계층화 그리드 (hero/default/compact)
+ * - grid: 균등 그리드 (기존 동작)
+ */
+export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
+  // single-focus: 풀폭 히어로 카드
+  heroCard: `group w-full bg-card border-2 border-border rounded-xl p-8 flex flex-col items-center text-center gap-4 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 ${TRANSITION_PRESETS.fastBgTransformShadow}`,
+  heroIconContainer: `h-16 w-16 rounded-2xl flex items-center justify-center ${TRANSITION_PRESETS.fastBgTransform}`,
+  heroIcon: 'h-8 w-8',
+  heroLabel: 'text-base font-semibold text-foreground',
+  heroCount: 'font-mono tabular-nums font-bold text-5xl tracking-tight',
+  heroCountActive: 'text-brand-critical',
+  heroCountEmpty: 'text-muted-foreground',
+  heroDescription: 'text-sm text-muted-foreground',
+  // prioritized-grid: priority별 col-span
+  priorityHeroColSpan: 'col-span-2',
+  priorityDefaultColSpan: 'col-span-1',
+  priorityCompactColSpan: 'col-span-1',
+  priorityHeroCard: `group bg-card border-2 border-border rounded-lg p-5 flex flex-col items-center text-center hover:border-primary/30 hover:shadow-md hover:scale-[1.01] ${TRANSITION_PRESETS.fastBgTransformShadow}`,
+  priorityDefaultCard: `group bg-card border border-border rounded-lg p-4 flex flex-col items-center text-center hover:shadow-sm hover:scale-[1.01] ${TRANSITION_PRESETS.fastBgTransformShadow}`,
+  priorityCompactCard: `group bg-card border border-border rounded-lg p-3 flex flex-col items-center text-center hover:shadow-sm ${TRANSITION_PRESETS.fastBgTransform}`,
+  priorityHeroIcon: 'h-7 w-7',
+  priorityDefaultIcon: 'h-6 w-6',
+  priorityCompactIcon: 'h-5 w-5',
+  // gridLayouts: layoutHint별 그리드 클래스
+  gridLayouts: {
+    'single-focus': 'grid grid-cols-1',
+    'prioritized-grid': 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
+    grid: 'grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4',
+  } as const,
+} as const;
+
+// ============================================================================
+// 20. DASHBOARD_SYSTEM_HEALTH_TOKENS — 시스템 상태 요약 카드
+// ============================================================================
+
+/**
+ * 시스템 상태 요약 카드 토큰 (system_admin 전용 사이드바 위젯)
+ *
+ * SystemHealthCard에서 사용
+ * - 신규 API 호출 없이 DashboardAggregate props 재사용
+ */
+export const DASHBOARD_SYSTEM_HEALTH_TOKENS = {
+  container: `bg-card border border-border rounded-lg p-4 flex flex-col gap-3 shadow-sm hover:shadow-md ${TRANSITION_PRESETS.fastBgTransformShadow}`,
+  header: 'flex items-center justify-between',
+  title: 'text-sm font-semibold text-foreground',
+  statusGrid: 'grid grid-cols-2 gap-2',
+  statusItem: 'flex flex-col gap-0.5',
+  statusLabel: 'text-xs text-muted-foreground',
+  statusValue: 'font-mono tabular-nums font-semibold text-sm',
+  statusOk: 'text-brand-ok',
+  statusWarning: 'text-brand-warning',
+  statusCritical: 'text-brand-critical',
+  statusNeutral: 'text-foreground',
+} as const;
+
+// ============================================================================
+// 21. DASHBOARD_ENTRANCE — 입장 애니메이션 (AP-06 개선)
 // ============================================================================
 
 /**

@@ -29,6 +29,7 @@ import { QuickActionBar } from '@/components/dashboard/QuickActionBar';
 import { CalibrationDdayList } from '@/components/dashboard/CalibrationDdayList';
 import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
+import { SystemHealthCard } from '@/components/dashboard/SystemHealthCard';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/lib/api/dashboard-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -43,10 +44,56 @@ import type {
   UpcomingCheckoutReturn,
   DashboardAggregate,
 } from '@/lib/api/dashboard-api';
-import { DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE, DASHBOARD_GRID } from '@/lib/config/dashboard-config';
+import {
+  DASHBOARD_ROLE_CONFIG,
+  DEFAULT_ROLE,
+  DASHBOARD_GRID,
+  type SidebarWidget,
+} from '@/lib/config/dashboard-config';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
 import { getPageContainerClasses } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+
+// 사이드바 위젯 렌더러 props 타입
+interface SidebarWidgetRendererProps {
+  equipmentByTeam: import('@/lib/api/dashboard-api').EquipmentByTeam[];
+  upcomingCalibrations: import('@/lib/api/dashboard-api').UpcomingCalibration[];
+  upcomingCheckoutReturns: import('@/lib/api/dashboard-api').UpcomingCheckoutReturn[];
+  overdueCalibrations: import('@/lib/api/dashboard-api').OverdueCalibration[];
+  summary?: import('@/lib/api/dashboard-api').DashboardSummary;
+  equipmentStatusStats?: Record<string, number>;
+  recentActivities?: import('@/lib/api/dashboard-api').RecentActivity[];
+  loading: boolean;
+}
+
+/**
+ * 사이드바 위젯 렌더러 매핑 (모듈 레벨 — 렌더마다 재생성 방지)
+ *
+ * config의 sidebarWidgets 배열 순서로 렌더됨
+ */
+const SIDEBAR_WIDGET_RENDERERS: Record<
+  SidebarWidget,
+  (props: SidebarWidgetRendererProps) => React.ReactNode
+> = {
+  teamDistribution: (p) => (
+    <TeamEquipmentDistribution equipmentByTeam={p.equipmentByTeam} loading={p.loading} />
+  ),
+  miniCalendar: (p) => (
+    <MiniCalendar
+      upcomingCalibrations={p.upcomingCalibrations}
+      upcomingCheckoutReturns={p.upcomingCheckoutReturns}
+      overdueCalibrations={p.overdueCalibrations}
+    />
+  ),
+  systemHealth: (p) => (
+    <SystemHealthCard
+      summary={p.summary}
+      equipmentStatusStats={p.equipmentStatusStats}
+      recentActivities={p.recentActivities}
+      loading={p.loading}
+    />
+  ),
+};
 
 // Props 타입
 export interface DashboardClientProps {
@@ -193,7 +240,13 @@ function DashboardClientComponent({
                   : 'grid-cols-1'
               )}
             >
-              {controlCenter.showPendingApprovals && <PendingApprovalCard compact />}
+              {controlCenter.showPendingApprovals && (
+                <PendingApprovalCard
+                  compact
+                  layoutHint={controlCenter.pendingApprovalLayoutHint}
+                  priorities={controlCenter.approvalCategoryPriorities}
+                />
+              )}
               {controlCenter.showCheckoutOverdue && (
                 <OverdueCheckoutsCard
                   overdueCheckouts={overdueCheckouts}
@@ -229,18 +282,23 @@ function DashboardClientComponent({
         <section aria-label={t('srOnly.recentActivity')}>
           <RecentActivities data={recentActivities} loading={isLoading} />
         </section>
-        <div className="flex flex-col gap-4">
-          {controlCenter.showTeamDistribution && (
-            <TeamEquipmentDistribution equipmentByTeam={equipmentByTeam} loading={isLoading} />
-          )}
-          {controlCenter.showMiniCalendar && (
-            <MiniCalendar
-              upcomingCalibrations={upcomingCalibrations}
-              upcomingCheckoutReturns={upcomingCheckoutReturns}
-              overdueCalibrations={overdueCalibrations}
-            />
-          )}
-        </div>
+        {controlCenter.sidebarWidgets.length > 0 && (
+          <div className="flex flex-col gap-4">
+            {controlCenter.sidebarWidgets.map((widget) => {
+              const sidebarProps: SidebarWidgetRendererProps = {
+                equipmentByTeam,
+                upcomingCalibrations,
+                upcomingCheckoutReturns,
+                overdueCalibrations,
+                summary: aggregate?.summary ?? undefined,
+                equipmentStatusStats,
+                recentActivities,
+                loading: isLoading,
+              };
+              return <div key={widget}>{SIDEBAR_WIDGET_RENDERERS[widget](sidebarProps)}</div>;
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

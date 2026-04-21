@@ -27,10 +27,15 @@ import {
   DASHBOARD_MOTION,
   DASHBOARD_SIZES,
   DASHBOARD_FOCUS,
+  DASHBOARD_PENDING_APPROVAL_TOKENS,
   getDashboardStaggerDelay,
   getCountBasedUrgency,
   getUrgencyFeedbackClasses,
 } from '@/lib/design-tokens';
+import type {
+  ApprovalCategoryPriority,
+  PendingApprovalLayoutHint,
+} from '@/lib/config/dashboard-config';
 import {
   approvalsApi,
   type PendingCountsByCategory,
@@ -76,11 +81,20 @@ interface PendingApprovalCardProps {
   className?: string;
   /** 좁은 컨테이너(예: 대시보드 우측 컬럼)에서 그리드 컬럼 수 제한 */
   compact?: boolean;
+  /** 레이아웃 힌트 — config의 pendingApprovalLayoutHint에서 전달 */
+  layoutHint?: PendingApprovalLayoutHint;
+  /** 카테고리별 시각적 우선순위 — config의 approvalCategoryPriorities에서 전달 */
+  priorities?: Partial<Record<ApprovalCategory, ApprovalCategoryPriority>>;
 }
 
 // 역할별 카드 제목/설명은 i18n에서 가져옴 (dashboard.pending.title.{role})
 
-export function PendingApprovalCard({ className, compact = false }: PendingApprovalCardProps) {
+export function PendingApprovalCard({
+  className,
+  compact = false,
+  layoutHint = 'grid',
+  priorities = {},
+}: PendingApprovalCardProps) {
   const { data: session, status } = useSession();
   const t = useTranslations('dashboard.pending');
   const tApprovals = useTranslations('approvals');
@@ -101,10 +115,16 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
     ...QUERY_CONFIG.PENDING_APPROVALS, // SSOT: REFETCH_STRATEGIES.NORMAL
   });
 
-  // SSOT: ROLE_TABS에서 파생된 카테고리 목록
+  // SSOT: ROLE_TABS에서 파생된 카테고리 목록 + priority 주입
   const dashboardCategories = useMemo(
-    () => getDashboardApprovalCategories(userRole, FRONTEND_ROUTES.ADMIN.APPROVALS, tApprovals),
-    [userRole, tApprovals]
+    () =>
+      getDashboardApprovalCategories(
+        userRole,
+        FRONTEND_ROUTES.ADMIN.APPROVALS,
+        tApprovals,
+        priorities
+      ),
+    [userRole, tApprovals, priorities]
   );
 
   // SSOT: ROLE_TABS 기반 총합 계산
@@ -152,8 +172,195 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
   const cardTitle = t.has(titleKey) ? t(titleKey) : t('title.default');
   const cardDescription = t.has(descKey) ? t(descKey) : t('description.default');
 
+  // 공통 헤더 — 모든 레이아웃에서 공유
+  const cardHeader = (
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <h2 id="pending-approval-title" className="text-lg font-semibold tracking-tight">
+          {cardTitle}
+        </h2>
+        <p id="pending-approval-description" className="text-sm text-muted-foreground">
+          {cardDescription}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        {totalPending > 0 && (
+          <>
+            <Badge
+              variant="secondary"
+              className={cn(
+                'bg-brand-critical/10 text-brand-critical',
+                getUrgencyFeedbackClasses(getCountBasedUrgency(totalPending), false)
+              )}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {t('totalCount', { count: totalPending })}
+            </Badge>
+            <Link href={FRONTEND_ROUTES.ADMIN.APPROVALS}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                aria-label={t('viewAllAriaLabel')}
+              >
+                {t('viewAll')}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </Link>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // single-focus: 1개 카테고리 풀폭 히어로 카드
+  if (layoutHint === 'single-focus') {
+    const category = dashboardCategories[0];
+    const Icon = getCategoryIcon(category.key);
+    const count = counts?.[category.key] || 0;
+    const hasItems = count > 0;
+
+    return (
+      <div
+        className={className}
+        data-testid="pending-approval-card"
+        role="region"
+        aria-labelledby="pending-approval-title"
+        aria-describedby="pending-approval-description"
+      >
+        {cardHeader}
+        <Link
+          href={category.href}
+          className="block"
+          aria-label={t('categoryAriaLabel', { label: category.label, count })}
+        >
+          <div
+            className={cn(
+              DASHBOARD_PENDING_APPROVAL_TOKENS.heroCard,
+              DASHBOARD_FOCUS.brand,
+              hasItems && 'ring-2 ring-brand-critical/20'
+            )}
+          >
+            <div
+              className={cn(
+                DASHBOARD_PENDING_APPROVAL_TOKENS.heroIconContainer,
+                category.bgColor,
+                'group-hover:scale-110'
+              )}
+            >
+              <Icon
+                className={cn(DASHBOARD_PENDING_APPROVAL_TOKENS.heroIcon, category.color)}
+                aria-hidden="true"
+              />
+            </div>
+            <span className={DASHBOARD_PENDING_APPROVAL_TOKENS.heroLabel}>{category.label}</span>
+            <span
+              className={cn(
+                DASHBOARD_PENDING_APPROVAL_TOKENS.heroCount,
+                hasItems
+                  ? DASHBOARD_PENDING_APPROVAL_TOKENS.heroCountActive
+                  : DASHBOARD_PENDING_APPROVAL_TOKENS.heroCountEmpty
+              )}
+            >
+              {count}
+            </span>
+            <span className={DASHBOARD_PENDING_APPROVAL_TOKENS.heroDescription}>
+              {hasItems ? t('clickToView') : t('noItems')}
+            </span>
+          </div>
+        </Link>
+      </div>
+    );
+  }
+
+  // prioritized-grid: priority 계층화 그리드
+  if (layoutHint === 'prioritized-grid') {
+    return (
+      <div
+        className={className}
+        data-testid="pending-approval-card"
+        role="region"
+        aria-labelledby="pending-approval-title"
+        aria-describedby="pending-approval-description"
+      >
+        {cardHeader}
+        <div
+          className={cn(DASHBOARD_PENDING_APPROVAL_TOKENS.gridLayouts['prioritized-grid'], 'gap-3')}
+        >
+          {dashboardCategories.map((category) => {
+            const Icon = getCategoryIcon(category.key);
+            const count = counts?.[category.key] || 0;
+            const hasItems = count > 0;
+            const isHero = category.priority === 'hero';
+            const isCompact = category.priority === 'compact';
+
+            const colSpan = isHero
+              ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityHeroColSpan
+              : DASHBOARD_PENDING_APPROVAL_TOKENS.priorityDefaultColSpan;
+            const cardClass = isHero
+              ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityHeroCard
+              : isCompact
+                ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityCompactCard
+                : DASHBOARD_PENDING_APPROVAL_TOKENS.priorityDefaultCard;
+            const iconClass = isHero
+              ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityHeroIcon
+              : isCompact
+                ? DASHBOARD_PENDING_APPROVAL_TOKENS.priorityCompactIcon
+                : DASHBOARD_PENDING_APPROVAL_TOKENS.priorityDefaultIcon;
+
+            return (
+              <Link
+                key={category.key}
+                href={category.href}
+                className={cn('block', colSpan)}
+                aria-label={t('categoryAriaLabel', { label: category.label, count })}
+                data-priority={category.priority}
+              >
+                <div
+                  className={cn(
+                    cardClass,
+                    DASHBOARD_FOCUS.brand,
+                    hasItems && 'ring-1 ring-brand-critical/20'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      DASHBOARD_SIZES.approvalIcon,
+                      'rounded-full flex items-center justify-center',
+                      DASHBOARD_MOTION.iconTransition,
+                      category.bgColor,
+                      'group-hover:scale-110'
+                    )}
+                  >
+                    <Icon className={cn(iconClass, category.color)} aria-hidden="true" />
+                  </div>
+                  <span
+                    className={cn('font-medium text-foreground', isCompact ? 'text-xs' : 'text-sm')}
+                  >
+                    {category.label}
+                  </span>
+                  <span
+                    className={cn(
+                      'font-bold mt-1 tracking-tight tabular-nums font-mono',
+                      DASHBOARD_MOTION.textColor,
+                      isHero ? 'text-3xl' : isCompact ? 'text-lg' : 'text-2xl',
+                      hasItems ? 'text-brand-critical' : 'text-muted-foreground'
+                    )}
+                  >
+                    {count}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // grid (기존 동작 완전 보존)
   // 카테고리 수에 맞는 그리드 컬럼 결정
-  // compact=true: 좁은 컨테이너에서 최대 4열 (lg:grid-cols-7 overflow 방지)
   const gridCols = compact
     ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'
     : dashboardCategories.length <= 3
@@ -170,44 +377,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
       aria-labelledby="pending-approval-title"
       aria-describedby="pending-approval-description"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 id="pending-approval-title" className="text-lg font-semibold tracking-tight">
-            {cardTitle}
-          </h2>
-          <p id="pending-approval-description" className="text-sm text-muted-foreground">
-            {cardDescription}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {totalPending > 0 && (
-            <>
-              <Badge
-                variant="secondary"
-                className={cn(
-                  'bg-brand-critical/10 text-brand-critical',
-                  getUrgencyFeedbackClasses(getCountBasedUrgency(totalPending), false) // 애니메이션 없음
-                )}
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                {t('totalCount', { count: totalPending })}
-              </Badge>
-              <Link href={FRONTEND_ROUTES.ADMIN.APPROVALS}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  aria-label={t('viewAllAriaLabel')}
-                >
-                  {t('viewAll')}
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
+      {cardHeader}
 
       <div className={cn('grid gap-4', gridCols)}>
         {dashboardCategories.map((category) => {
