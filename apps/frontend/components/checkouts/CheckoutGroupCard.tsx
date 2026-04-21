@@ -398,11 +398,20 @@ function CheckoutGroupCard({
                     : CHECKOUT_ITEM_ROW_TOKENS.container;
 
                   return (
-                    <button
+                    // div[role=button]은 의도적 선택 — 내부에 <Button>/<Link> 중첩으로 <button> 사용 불가 (HTML5 spec)
+                    // WCAG 2.1 AA: role + tabIndex + onKeyDown + aria-label 모두 충족
+                    <div
                       key={`${row.checkoutId}-${row.equipmentId}`}
-                      type="button"
-                      className={`text-left w-full ${rowBaseClass}`}
+                      className={rowBaseClass}
                       onClick={() => onCheckoutClick(row.checkoutId)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onCheckoutClick(row.checkoutId);
+                        }
+                      }}
                       aria-label={t('groupCard.viewDetail', { name: row.equipmentName })}
                     >
                       {/* 목적 색상 바 */}
@@ -502,7 +511,7 @@ function CheckoutGroupCard({
                           </>
                         )}
                       </div>
-                    </button>
+                    </div>
                   );
                 })
               )}
