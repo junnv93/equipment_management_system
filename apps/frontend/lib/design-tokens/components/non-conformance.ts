@@ -408,12 +408,13 @@ export const NC_WORKFLOW_STEPS = NON_CONFORMANCE_STATUS_VALUES;
 /** closed 상태: 워크플로우 마지막 스텝 인덱스 (terminal state) */
 export const NC_TERMINAL_STEP_INDEX = NC_WORKFLOW_STEPS.length - 1;
 
-/** 상태 → 워크플로우 스텝 인덱스 매핑 */
-export const NC_STATUS_STEP_INDEX: Record<string, number> = {
-  open: 0,
-  corrected: 1,
-  closed: 2,
-};
+/** 상태 → 워크플로우 스텝 인덱스 매핑 (NC_WORKFLOW_STEPS 배열에서 파생 — SSOT) */
+export const NC_STATUS_STEP_INDEX: Record<string, number> = Object.fromEntries(
+  NC_WORKFLOW_STEPS.map((status, index) => [status, index])
+);
+
+/** corrected 상태 스텝 인덱스 (node/label 분기용) */
+export const NC_CORRECTED_STEP_INDEX = NC_STATUS_STEP_INDEX['corrected'] ?? 1;
 
 /**
  * Utility: 워크플로우 노드 클래스
@@ -428,7 +429,8 @@ export function getNCWorkflowNodeClasses(
   if (stepIndex === currentStepIndex) {
     if (currentStepIndex === NC_TERMINAL_STEP_INDEX) return [node.base, node.completed].join(' ');
     if (isLongOverdue && currentStepIndex === 0) return [node.base, node.currentCritical].join(' ');
-    if (currentStepIndex === 1) return [node.base, node.currentInfo].join(' ');
+    if (currentStepIndex === NC_CORRECTED_STEP_INDEX)
+      return [node.base, node.currentInfo].join(' ');
     return [node.base, node.current].join(' ');
   }
   return [node.base, node.pending].join(' ');
@@ -448,7 +450,8 @@ export function getNCWorkflowLabelClasses(
     if (currentStepIndex === NC_TERMINAL_STEP_INDEX) return [label.base, label.completed].join(' ');
     if (isLongOverdue && currentStepIndex === 0)
       return [label.base, label.currentCritical].join(' ');
-    if (currentStepIndex === 1) return [label.base, label.currentInfo].join(' ');
+    if (currentStepIndex === NC_CORRECTED_STEP_INDEX)
+      return [label.base, label.currentInfo].join(' ');
     return [label.base, label.current].join(' ');
   }
   return [label.base, label.pending].join(' ');
@@ -673,11 +676,6 @@ export const NC_PAGINATION_TOKENS = {
 // ============================================================================
 // 19. NC_STAGGER — 스태거 애니메이션 딜레이
 // ============================================================================
-
-/**
- * 리스트 행 스태거 딜레이 (ms)
- */
-export const NC_STAGGER_DELAY_MS = 60;
 
 // ============================================================================
 // 20. NC_LEFT_BORDER_INFO — 안내 배너 (info border-l-4)

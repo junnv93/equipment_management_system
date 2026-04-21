@@ -46,8 +46,9 @@ import {
   isNCLongOverdue,
   NC_EMPTY_STATE_TOKENS,
   NC_PAGINATION_TOKENS,
-  NC_STAGGER_DELAY_MS,
   NC_REJECTION_BADGE_TOKENS,
+  getStaggerDelay,
+  ANIMATION_PRESETS,
   type NCKpiVariant,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
@@ -413,9 +414,11 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
       href={`/non-conformances/${nc.id}`}
       className={cn(
         NC_LIST_TOKENS.row,
-        longOverdue && nc.status !== NCStatusVal.CLOSED && NC_LIST_TOKENS.rowOverdue
+        longOverdue && nc.status !== NCStatusVal.CLOSED && NC_LIST_TOKENS.rowOverdue,
+        ANIMATION_PRESETS.slideUpFade,
+        'motion-safe:duration-200'
       )}
-      style={{ animationDelay: `${index * NC_STAGGER_DELAY_MS}ms` }}
+      style={{ animationDelay: getStaggerDelay(index, 'list') }}
     >
       {/* 상태 + 미니 워크플로우 */}
       <div className="flex flex-col gap-0.5">
