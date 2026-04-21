@@ -774,7 +774,7 @@ export const DASHBOARD_PENDING_APPROVAL_TOKENS = {
    */
   elevation: {
     default: '',
-    raised: 'ring-1 ring-primary/20 shadow-md',
+    raised: 'shadow-md',
   } as const,
   /**
    * compact=true + grid 레이아웃 전용 소형 카드 토큰
