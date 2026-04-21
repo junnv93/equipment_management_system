@@ -270,30 +270,16 @@ export const NC_LIST_TOKENS = {
     'text-xs font-semibold text-muted-foreground tracking-wide',
     NC_LIST_GRID_COLS,
   ].join(' '),
-  /** 행 아이템 래퍼 (desktop + mobile 공통 — stripe, border, overdue 적용 단위) */
-  itemWrapper: 'border-b border-border/40 last:border-b-0 even:bg-muted/20',
-  /** 데스크톱 행 (lg 이상 grid 레이아웃, mobile 숨김) */
-  desktopRow: [
-    'hidden lg:grid px-4 py-3.5 w-full',
-    'hover:bg-muted/30',
-    TRANSITION_PRESETS.instantBg,
-    NC_LIST_GRID_COLS,
-  ].join(' '),
-  /** 모바일 행 (lg 미만 카드 레이아웃, desktop 숨김) */
-  mobileRow: [
-    'lg:hidden flex flex-col gap-1.5 py-3 px-4',
+  /** 단일 Link 래퍼 (stripe, border, hover, overdue 적용 단위 — 접근성 중복 Link 방지) */
+  itemWrapper: [
+    'block border-b border-border/40 last:border-b-0 even:bg-muted/20',
     'hover:bg-muted/30',
     TRANSITION_PRESETS.instantBg,
   ].join(' '),
-  /** 줄무늬 — itemWrapper에 포함되어 있음, 필요 시 단독 참조 */
-  stripe: 'even:bg-muted/20',
-  /** 데이터 행 (레거시 — desktopRow 사용 권장) */
-  row: [
-    'px-4 py-3.5 border-b border-border/40 last:border-b-0',
-    'hover:bg-muted/30',
-    TRANSITION_PRESETS.instantBg,
-    NC_LIST_GRID_COLS,
-  ].join(' '),
+  /** 데스크톱 레이아웃 div (lg 이상 grid, hover는 부모 Link 담당) */
+  desktopRow: ['hidden lg:grid px-4 py-3.5 w-full', NC_LIST_GRID_COLS].join(' '),
+  /** 모바일 레이아웃 div (lg 미만 카드, hover는 부모 Link 담당) */
+  mobileRow: 'lg:hidden flex flex-col gap-1.5 py-3 px-4',
   /** 장기 미조치 행 (14일+) */
   rowOverdue: 'border-l-4 border-l-brand-critical bg-brand-critical/[0.03]',
   /** 장비 링크 */

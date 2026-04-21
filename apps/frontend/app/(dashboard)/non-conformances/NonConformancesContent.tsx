@@ -440,7 +440,8 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
     );
 
   return (
-    <div
+    <Link
+      href={`/non-conformances/${nc.id}`}
       className={cn(
         NC_LIST_TOKENS.itemWrapper,
         longOverdue && nc.status !== NCStatusVal.CLOSED && NC_LIST_TOKENS.rowOverdue,
@@ -450,7 +451,7 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
       style={{ animationDelay: getStaggerDelay(index, 'list') }}
     >
       {/* 데스크톱 레이아웃 (lg 이상 grid) */}
-      <Link href={`/non-conformances/${nc.id}`} className={NC_LIST_TOKENS.desktopRow}>
+      <div className={NC_LIST_TOKENS.desktopRow}>
         {/* 상태 + 미니 워크플로우 */}
         <div className="flex flex-col gap-0.5">
           <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
@@ -488,10 +489,10 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
             <Eye className="h-3.5 w-3.5" />
           </span>
         </div>
-      </Link>
+      </div>
 
       {/* 모바일 카드 레이아웃 (lg 미만) */}
-      <Link href={`/non-conformances/${nc.id}`} className={NC_LIST_TOKENS.mobileRow}>
+      <div className={NC_LIST_TOKENS.mobileRow}>
         {/* 상단: 상태배지 + 유형칩 / 경과일 */}
         <div className={NC_LIST_MOBILE_TOKENS.topRow}>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -516,8 +517,8 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
             <Eye className="h-3.5 w-3.5" />
           </span>
         </div>
-      </Link>
-    </div>
+      </div>
+    </Link>
   );
 }
 

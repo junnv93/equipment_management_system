@@ -409,6 +409,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 
       {/* 조치/종결 섹션 */}
       <CollapsibleSection
+        contentId="nc-correction-section"
         title={
           <>
             <Wrench className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -463,6 +464,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
 
       {(nc.closureNotes || isClosed) && (
         <CollapsibleSection
+          contentId="nc-closure-section"
           title={
             <>
               <CheckCircle2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -841,6 +843,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
  */
 function CollapsibleSection({
   title,
+  contentId,
   isOpen,
   onToggle,
   canEdit,
@@ -849,6 +852,7 @@ function CollapsibleSection({
   children,
 }: {
   title: React.ReactNode;
+  contentId: string;
   isOpen: boolean;
   onToggle: () => void;
   canEdit?: boolean;
@@ -865,6 +869,7 @@ function CollapsibleSection({
           className={cn(NC_COLLAPSIBLE_TOKENS.trigger, 'flex-1')}
           onClick={onToggle}
           aria-expanded={isOpen}
+          aria-controls={contentId}
         >
           <span className="flex items-center gap-1.5">{title}</span>
           {isOpen ? (
@@ -881,6 +886,7 @@ function CollapsibleSection({
         )}
       </div>
       <div
+        id={contentId}
         className={cn(
           NC_COLLAPSIBLE_TOKENS.contentWrapper,
           isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
