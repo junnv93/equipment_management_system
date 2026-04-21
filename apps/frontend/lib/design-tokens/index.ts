@@ -81,10 +81,18 @@ export {
   MICRO_TYPO,
   DIMENSION_TOKENS,
   EMPTY_STATE_TOKENS,
+  SECTION_RHYTHM_TOKENS,
+  getSectionRhythm,
+  CALLOUT_TOKENS,
+  getCalloutClasses,
   type InteractiveSize,
   type MotionSpeed,
   type ElevationLayer,
   type EmptyStateVariant,
+  type SectionRhythm,
+  type CalloutVariant,
+  type CalloutEmphasis,
+  type CalloutSize,
 } from './semantic';
 
 // ============================================================================
@@ -94,6 +102,7 @@ export {
 export {
   getTransitionClasses,
   getStaggerDelay,
+  getStaggerFadeInStyle,
   getAnimationDuration,
   getAnimationEasing,
   ANIMATION_PRESETS,

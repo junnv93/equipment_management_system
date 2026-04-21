@@ -16,6 +16,12 @@ import {
   RADIUS_PRIMITIVES,
   TYPOGRAPHY_PRIMITIVES,
 } from './primitives';
+import {
+  getSemanticContainerColorClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticSolidBgClasses,
+  type SemanticColorKey,
+} from './brand';
 
 /**
  * Interactive Elements (상호작용 요소)
@@ -239,6 +245,25 @@ export const LAYOUT_TOKENS = {
 } as const;
 
 /**
+ * Section Rhythm Tokens (섹션 리듬)
+ *
+ * 페이지 내 섹션 간 수직 간격을 density 기반으로 표준화.
+ * space-y-* 하드코딩 대신 이 토큰을 참조하여 전역 간격 일관성 유지.
+ */
+export const SECTION_RHYTHM_TOKENS = {
+  tight: 'space-y-3', // 12px — 밀접 관련 (헤더+서브타이틀)
+  comfortable: 'space-y-5', // 20px — 기본 섹션 간
+  spacious: 'space-y-6 md:space-y-7', // 24/28px — 그룹 경계
+  dramatic: 'space-y-8 md:space-y-10', // 32/40px — 액션 직전 강조
+} as const;
+
+export type SectionRhythm = keyof typeof SECTION_RHYTHM_TOKENS;
+
+export function getSectionRhythm(density: SectionRhythm = 'comfortable'): string {
+  return SECTION_RHYTHM_TOKENS[density];
+}
+
+/**
  * Focus Tokens (포커스 상태)
  *
  * 키보드 네비게이션 및 접근성
@@ -393,6 +418,64 @@ export const EMPTY_STATE_TOKENS = {
     'status-filtered': 'bg-brand-warning/5 rounded-full p-3',
   } as const,
 } as const;
+
+export type CalloutVariant = 'info' | 'warning' | 'critical' | 'ok' | 'neutral';
+export type CalloutEmphasis = 'leftBorder' | 'filled' | 'outlined';
+export type CalloutSize = 'compact' | 'default' | 'spacious';
+
+const CALLOUT_VARIANT_TO_SEMANTIC: Record<CalloutVariant, SemanticColorKey> = {
+  info: 'info',
+  warning: 'warning',
+  critical: 'critical',
+  ok: 'ok',
+  neutral: 'neutral',
+};
+
+/**
+ * Callout Tokens (콜아웃 블록)
+ *
+ * leftBorder / filled / outlined 3가지 emphasis × 5 variant × 3 size.
+ * emphasis 함수는 brand.ts 헬퍼를 통해 CSS 변수 기반 색상 클래스를 생성.
+ * EMPTY_STATE_TOKENS와 함께 알림/안내 블록의 시각 언어 SSOT.
+ */
+export const CALLOUT_TOKENS = {
+  base: 'flex items-start gap-3 rounded-md',
+  size: {
+    compact: 'px-3 py-2.5 min-h-[3rem]',
+    default: 'px-4 py-3.5 min-h-[3.5rem]',
+    spacious: 'px-5 py-4 min-h-[4rem]',
+  },
+  emphasis: {
+    leftBorder: (v: CalloutVariant) =>
+      `border-l-4 ${getSemanticLeftBorderClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])} ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`,
+    outlined: (v: CalloutVariant) =>
+      `border ${getSemanticContainerColorClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])}`,
+    filled: (v: CalloutVariant) =>
+      `${getSemanticSolidBgClasses(CALLOUT_VARIANT_TO_SEMANTIC[v])} text-white`,
+  },
+  icon: {
+    wrap: 'flex-shrink-0 mt-0.5',
+    size: 'h-5 w-5',
+    color: (v: CalloutVariant) => `text-brand-${CALLOUT_VARIANT_TO_SEMANTIC[v]}`,
+  },
+  body: 'flex-1 min-w-0 space-y-1',
+  title: (v: CalloutVariant) =>
+    `text-sm font-semibold text-brand-${CALLOUT_VARIANT_TO_SEMANTIC[v]}`,
+  description: 'text-sm text-muted-foreground leading-relaxed',
+  action: 'mt-2 flex items-center gap-2',
+} as const;
+
+export function getCalloutClasses(
+  variant: CalloutVariant,
+  emphasis: CalloutEmphasis = 'leftBorder',
+  size: CalloutSize = 'default'
+): string {
+  return [
+    CALLOUT_TOKENS.base,
+    CALLOUT_TOKENS.size[size],
+    CALLOUT_TOKENS.emphasis[emphasis](variant),
+  ].join(' ');
+}
 
 /**
  * Type Exports - 컴포넌트에서 타입 안전하게 사용

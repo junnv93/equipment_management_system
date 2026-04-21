@@ -4,6 +4,8 @@
  * Semantic tokens를 Tailwind/CSS로 변환하는 헬퍼 함수들
  */
 
+import type React from 'react';
+
 import { MOTION_PRIMITIVES } from './primitives';
 import { MOTION_TOKENS } from './semantic';
 import type { MotionSpeed } from './semantic';
@@ -78,6 +80,13 @@ export function getStaggerDelay(
 ): string {
   const delay = MOTION_TOKENS.stagger[type];
   return `${index * delay}ms`;
+}
+
+export function getStaggerFadeInStyle(
+  index: number,
+  type: keyof typeof MOTION_TOKENS.stagger = 'list'
+): React.CSSProperties {
+  return { animationDelay: getStaggerDelay(index, type) };
 }
 
 // ============================================================================
@@ -274,6 +283,11 @@ export const ANIMATION_PRESETS = {
   /** 다이얼로그 진입 (zoom + fade) */
   dialogEnter:
     'motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:fade-in motion-safe:duration-200',
+
+  /** 스태거 fade-in 아이템 (globals.css --animate-stagger-fade-in SSOT 노출)
+   * motion-reduce:opacity-100 — prefers-reduced-motion 환경에서 opacity-0 시작으로 사라지는 버그 방어 */
+  staggerFadeInItem:
+    'motion-safe:animate-stagger-fade-in motion-safe:opacity-0 motion-reduce:opacity-100',
 } as const;
 
 /**
