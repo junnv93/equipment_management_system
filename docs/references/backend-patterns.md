@@ -186,6 +186,28 @@ await db.transaction(async (tx) => {
 // CAS 단일 테이블 업데이트는 트랜잭션 불필요 (WHERE절 원자성)
 ```
 
+### 구조화 로그 패턴 (비즈니스 이벤트)
+
+서비스의 중요 상태 전이(상태 복원, 승인, 반려 등)는 `logger.log(object)` 구조화 로그로 기록한다.
+`logger.debug(string)`은 디버그 채널, `logger.log(object)`는 info 채널로 운영 모니터링에서 구분된다.
+
+```typescript
+// ✅ 비즈니스 이벤트 — logger.log with object (info 레벨)
+this.logger.log({
+  message: 'Non-conformance closed',
+  ncId: id,
+  equipmentId: nonConformance.equipmentId,
+  closedBy,
+  equipmentStatusRestored: result.equipmentStatusRestored,
+  previousEquipmentStatus: nonConformance.previousEquipmentStatus ?? null,
+});
+
+// 기존 debug 로그(상세 진단)는 유지 — 두 채널 병존
+this.logger.debug(`NC ${id}: equipment status restore — ...`);
+```
+
+**기준:** `emitAsync()` 직후, `return` 직전 위치. 상태 복원 여부(`equipmentStatusRestored`)처럼 추후 감사·디버그에 필요한 필드를 포함.
+
 ### Event Emission: `emit` vs `emitAsync`
 
 **73차 근본 수정으로 도메인 서비스는 `await eventEmitter.emitAsync(...)` 패턴이 기본.** 단, 이 규칙은 리스너가 **Promise를 반환하도록 등록된 경우에만** 의미가 있다.
