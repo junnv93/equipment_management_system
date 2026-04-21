@@ -7,4 +7,5 @@
 - [archive-migration.md](./archive-migration.md) — 데이터 마이그레이션
 - [archive-infra.md](./archive-infra.md) — E2E 인프라 / 테스트 / Legacy
 - [archive-export.md](./archive-export.md) — 양식 Export / DOCX
+- [archive-design.md](./archive-design.md) — UI/UX 디자인 리뷰
 - [archive-domain.md](./archive-domain.md) — 도메인 기능

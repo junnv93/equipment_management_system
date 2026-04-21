@@ -75,6 +75,7 @@
 | `archive-migration.md` | 데이터 마이그레이션 관련 (72차 등) |
 | `archive-infra.md` | Docker, CI/CD, E2E 인프라, 이벤트/캐시 아키텍처, Legacy 섹션 |
 | `archive-export.md` | DOCX export, 양식, 리포트 |
+| `archive-design.md` | UI/UX 디자인 리뷰, 컴포넌트 리디자인, 접근성·모션 개선 |
 | `archive-domain.md` | 장비, 체크아웃, 점검, SW validation 등 도메인 기능 |
 
 새 아카이브 이동 시: 도메인 분류 후 해당 파일에 추가 + `archive-index.md` 섹션 인덱스 업데이트.
