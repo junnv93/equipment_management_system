@@ -405,6 +405,9 @@ export const NC_WORKFLOW_TOKENS = {
  */
 export const NC_WORKFLOW_STEPS = NON_CONFORMANCE_STATUS_VALUES;
 
+/** closed 상태: 워크플로우 마지막 스텝 인덱스 (terminal state) */
+export const NC_TERMINAL_STEP_INDEX = NC_WORKFLOW_STEPS.length - 1;
+
 /** 상태 → 워크플로우 스텝 인덱스 매핑 */
 export const NC_STATUS_STEP_INDEX: Record<string, number> = {
   open: 0,
@@ -423,6 +426,7 @@ export function getNCWorkflowNodeClasses(
   const { node } = NC_WORKFLOW_TOKENS;
   if (stepIndex < currentStepIndex) return [node.base, node.completed].join(' ');
   if (stepIndex === currentStepIndex) {
+    if (currentStepIndex === NC_TERMINAL_STEP_INDEX) return [node.base, node.completed].join(' ');
     if (isLongOverdue && currentStepIndex === 0) return [node.base, node.currentCritical].join(' ');
     if (currentStepIndex === 1) return [node.base, node.currentInfo].join(' ');
     return [node.base, node.current].join(' ');
@@ -441,6 +445,7 @@ export function getNCWorkflowLabelClasses(
   const { label } = NC_WORKFLOW_TOKENS;
   if (stepIndex < currentStepIndex) return [label.base, label.completed].join(' ');
   if (stepIndex === currentStepIndex) {
+    if (currentStepIndex === NC_TERMINAL_STEP_INDEX) return [label.base, label.completed].join(' ');
     if (isLongOverdue && currentStepIndex === 0)
       return [label.base, label.currentCritical].join(' ');
     if (currentStepIndex === 1) return [label.base, label.currentInfo].join(' ');
