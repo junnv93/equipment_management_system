@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { documentApi, type DocumentRecord } from '@/lib/api/document-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import type { ValidationStatus } from '@equipment-management/schemas';
 import { DocumentTable } from './DocumentTable';
 
@@ -33,7 +33,7 @@ export function ValidationDocumentsSection({
   } = useQuery({
     queryKey: queryKeys.documents.byValidation(validationId),
     queryFn: () => documentApi.getValidationDocuments(validationId),
-    staleTime: CACHE_TIMES.LONG,
+    ...QUERY_CONFIG.EQUIPMENT_DOCUMENTS,
   });
 
   const invalidateDocs = () =>
@@ -82,7 +82,6 @@ export function ValidationDocumentsSection({
           validationStatus={validationStatus}
           docsLoading={docsLoading}
           docsError={docsError}
-          invalidateDocs={invalidateDocs}
           onDownload={handleDownload}
           onDelete={handleDeleteDoc}
           isDeleting={deleteMutation.isPending}

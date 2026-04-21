@@ -92,13 +92,15 @@ export function ValidationEditDialog({
   const handleUpdate = () => {
     if (!editForm) return;
     const data: Omit<UpdateSoftwareValidationDto, 'version'> = {
-      ...(editForm.softwareVersion ? { softwareVersion: editForm.softwareVersion } : {}),
-      ...(editForm.testDate ? { testDate: editForm.testDate } : {}),
-      ...(editForm.vendorName ? { vendorName: editForm.vendorName } : {}),
-      ...(editForm.vendorSummary ? { vendorSummary: editForm.vendorSummary } : {}),
-      ...(editForm.receivedBy ? { receivedBy: editForm.receivedBy } : {}),
-      ...(editForm.receivedDate ? { receivedDate: editForm.receivedDate } : {}),
-      ...(editForm.attachmentNote ? { attachmentNote: editForm.attachmentNote } : {}),
+      softwareVersion: editForm.softwareVersion,
+      testDate: editForm.testDate,
+      ...(isVendor && {
+        vendorName: editForm.vendorName,
+        vendorSummary: editForm.vendorSummary,
+        receivedBy: editForm.receivedBy,
+        receivedDate: editForm.receivedDate,
+        attachmentNote: editForm.attachmentNote,
+      }),
     };
     updateMutation.mutate(data);
   };
@@ -114,21 +116,25 @@ export function ValidationEditDialog({
         {editForm && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('validation.form.versionLabel')}</Label>
+              <Label htmlFor="edit-software-version">{t('validation.form.versionLabel')}</Label>
               <Input
+                id="edit-software-version"
                 value={editForm.softwareVersion}
                 onChange={(e) => setEditForm({ ...editForm, softwareVersion: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label>{t('validation.form.testDateLabel')}</Label>
+              <Label htmlFor="edit-test-date">{t('validation.form.testDateLabel')}</Label>
               <Input
+                id="edit-test-date"
                 type="date"
                 value={editForm.testDate}
                 onChange={(e) => setEditForm({ ...editForm, testDate: e.target.value })}
               />
             </div>
-            {isVendor && <VendorEditFields editForm={editForm} setEditForm={setEditForm} />}
+            {isVendor && (
+              <VendorEditFields editForm={editForm} setEditForm={(v) => setEditForm(v)} />
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {t('validation.form.cancel')}
