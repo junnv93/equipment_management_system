@@ -224,10 +224,7 @@ export default function InboundCheckoutsTab({
         />
 
         {inboundCheckoutsLoading ? (
-          <CheckoutListSkeleton
-            label="타팀 대여 목록 로딩 중"
-            srOnly="타팀 장비 대여 목록을 불러오는 중입니다."
-          />
+          <CheckoutListSkeleton label={t('loading.teamLoan')} srOnly={t('loading.teamLoanSr')} />
         ) : !hasInboundCheckouts ? (
           <EmptyState
             variant="no-data"
@@ -270,8 +267,8 @@ export default function InboundCheckoutsTab({
 
         {rentalImportsLoading ? (
           <CheckoutListSkeleton
-            label="외부 렌탈 목록 로딩 중"
-            srOnly="외부 업체 렌탈 목록을 불러오는 중입니다."
+            label={t('loading.externalRental')}
+            srOnly={t('loading.externalRentalSr')}
           />
         ) : !hasRentalImports ? (
           <EmptyState
@@ -376,8 +373,8 @@ export default function InboundCheckoutsTab({
 
         {internalSharedImportsLoading ? (
           <CheckoutListSkeleton
-            label="내부 공용장비 목록 로딩 중"
-            srOnly="내부 공용 장비 목록을 불러오는 중입니다."
+            label={t('loading.internalShared')}
+            srOnly={t('loading.internalSharedSr')}
           />
         ) : !hasInternalSharedImports ? (
           <EmptyState

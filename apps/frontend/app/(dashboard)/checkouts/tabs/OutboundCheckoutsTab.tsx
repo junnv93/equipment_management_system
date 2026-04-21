@@ -272,7 +272,7 @@ export default function OutboundCheckoutsTab({
 
       <div className="space-y-3">
         {checkoutsLoading ? (
-          <CheckoutListSkeleton label="반출 목록 로딩 중" srOnly="반출 목록을 불러오는 중입니다." />
+          <CheckoutListSkeleton label={t('loading.outbound')} srOnly={t('loading.outboundSr')} />
         ) : allGroups.length === 0 ? (
           <EmptyState
             variant={filterActive ? 'filtered' : 'no-data'}

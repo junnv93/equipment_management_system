@@ -410,6 +410,16 @@
     "pendingCheckTitle": "{count} returned items awaiting return approval",
     "pendingCheckAction": "Process"
   },
+  "loading": {
+    "outbound": "Loading outbound list",
+    "outboundSr": "Loading outbound checkout list.",
+    "teamLoan": "Loading team loan list",
+    "teamLoanSr": "Loading equipment loans from other teams.",
+    "externalRental": "Loading external rental list",
+    "externalRentalSr": "Loading external vendor rental list.",
+    "internalShared": "Loading internal shared equipment list",
+    "internalSharedSr": "Loading internal shared equipment list."
+  },
   "legend": {
     "label": "Legend",
     "calibration": "Calibration",

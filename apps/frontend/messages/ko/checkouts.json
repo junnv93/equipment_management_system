@@ -410,6 +410,16 @@
     "pendingCheckTitle": "반입된 장비 {count}건의 반입 승인이 대기 중입니다",
     "pendingCheckAction": "처리하기"
   },
+  "loading": {
+    "outbound": "반출 목록 로딩 중",
+    "outboundSr": "반출 목록을 불러오는 중입니다.",
+    "teamLoan": "타팀 대여 목록 로딩 중",
+    "teamLoanSr": "타팀 장비 대여 목록을 불러오는 중입니다.",
+    "externalRental": "외부 렌탈 목록 로딩 중",
+    "externalRentalSr": "외부 업체 렌탈 목록을 불러오는 중입니다.",
+    "internalShared": "내부 공용장비 목록 로딩 중",
+    "internalSharedSr": "내부 공용 장비 목록을 불러오는 중입니다."
+  },
   "legend": {
     "label": "색상 범례",
     "calibration": "교정",
