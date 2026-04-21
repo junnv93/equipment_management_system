@@ -5,6 +5,22 @@ harness 세션에서 완료된 SHOULD 실패·후속 작업 기록.
 
 ---
 
+## 2026-04-21 — tech-debt-batch-0421d (code-reviewer 지적 12건 전수 수정)
+
+- [x] **LoginProviders error 필드 미소비** — ✅ `error` 구조 분해 추가, `tLogin('serverUnavailable')` vs `tLogin('configRequired')` i18n 분기 UI.
+- [x] **inspection renderer stale import 경로** — ✅ self/intermediate 양 파일 `../../../common/docx/docx-template.util` canonical 경로 교체.
+- [x] **`managementNumber: ''` 이벤트 페이로드 빈 문자열** — ✅ L159·L354·L408 키-값 쌍 제거. 템플릿이 `{{managementNumber}}` 미사용이므로 기능 영향 없음 확인.
+- [x] **SecurityService 단위 스펙 미작성** — ✅ `security.service.spec.ts` 신규. DB INSERT 정상 경로 + throw 금지 2케이스.
+- [x] **renderer MERGED_TEXT_COL 상수 스펙 미작성** — ✅ checkout-form-renderer / equipment-import-form-renderer 스펙 신규. ROWS 상수 + 확인 문장 XML 검증.
+- [x] **k6 setup() silent failure** — ✅ K6_USER_EMAIL/K6_USER_PASSWORD/K6_VALIDATION_ID 미설정 + login 非200 → throw.
+- [x] **lineNumber varchar → integer** — ✅ `csp-reports.ts` integer 컬럼, `0042_csp_reports_line_number_int.sql` USING CASE 마이그레이션.
+- [x] **NormalizedCspReport 타입 분리** — ✅ `security.types.ts` 신규, service·controller 양쪽 import 교체.
+- [x] **Dead code 제거** — ✅ ApproveEquipmentRequestDto + CreateSharedEquipmentSwaggerDto + swagger import 제거.
+- [x] **ValidationCreateDialog re-export 제거** — ✅ `export type { CreateFormState }` 제거, 소비처 직접 import 확인.
+- [x] **docx 셀 인덱스 SSOT화** — ✅ `docx-cell-indices.ts` 신규 + layout 파일들 import/re-export.
+
+---
+
 ## 2026-04-21 — tech-debt-batch-0421c (CSP 영속화 + createZodDto 마이그레이션)
 
 - [x] **[2026-04-18 completion] 🟢 LOW CSP report 영속화** — ✅ 2026-04-21 완료. `csp_reports` 테이블(migration 0041) + SecurityService + SecurityModule DrizzleModule 등록.

@@ -46,6 +46,8 @@
 | `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                                                                |
 | `apps/backend/src/modules/equipment/utils/request-data-codec.ts`             | requestData 직렬화/역직렬화 코덱 (JSON<->DTO 변환 SSOT)                                                  |
 | `apps/backend/src/modules/equipment/equipment.service.ts`                    | DTO->Entity 매핑 (getTableColumns 기반 동적 컬럼 추출)                                                    |
+| `apps/backend/src/common/docx/docx-cell-indices.ts`                          | DOCX 셀 인덱스 SSOT (`TEXT_COL=1`, `MERGED_TEXT_COL=0` — layout.ts 경유 renderer 소비)                   |
+| `apps/backend/src/modules/security/security.types.ts`                        | CSP 정규화 타입 SSOT (`NormalizedCspReport` — controller/service 공유, 로컬 inline 재정의 금지)           |
 
 ## Extended Examples
 

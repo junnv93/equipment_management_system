@@ -62,6 +62,16 @@ grep -rn "QP18_[A-Z_]*_LABELS\s*:\s*Record\|EQUIPMENT_AVAILABILITY_LABELS\s*:\s*
 grep -rn "type DataScopeType\s*=\|AUDIT_LOG_SCOPE\s*=\|resolveDataScope\s*=\|PERMISSION_CATEGORIES\s*[=:]" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
 ```
 
+```bash
+# DOCX 셀 인덱스 인라인 재정의 탐지 (common/docx/docx-cell-indices.ts SSOT, layout.ts 경유 소비)
+grep -rn "TEXT_COL\s*=\s*1\|MERGED_TEXT_COL\s*=\s*0\b" apps/backend/src --include="*.ts" | grep -v "docx-cell-indices.ts\|layout.ts\|import\|// "
+```
+
+```bash
+# NormalizedCspReport 인라인 재정의 탐지 (security.types.ts SSOT)
+grep -rn "interface NormalizedCspReport\b" apps/backend/src --include="*.ts" | grep -v "security.types.ts\|import\|// "
+```
+
 **PASS 기준:** 0개 결과 (모든 핵심 타입은 패키지에서 임포트).
 
 **FAIL 기준:** 로컬 타입 정의가 발견되면 패키지 임포트로 변경 필요.
