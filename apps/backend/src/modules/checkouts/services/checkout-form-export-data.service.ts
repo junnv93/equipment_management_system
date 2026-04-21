@@ -93,6 +93,14 @@ export class CheckoutFormExportDataService {
       .where(eq(checkoutItems.checkoutId, checkoutId))
       .orderBy(asc(checkoutItems.sequenceNumber));
 
+    // deny-by-default: 스코프 필터가 활성화됐는데 items가 없으면 검증 불가 → 거부
+    const scopeActive = filter.site || filter.teamId;
+    if (scopeActive && items.length === 0) {
+      throw new NotFoundException({
+        code: 'CHECKOUT_NOT_FOUND',
+        message: 'Checkout not found or not accessible.',
+      });
+    }
     if (filter.site && items.some((it) => it.equipmentSite !== filter.site)) {
       throw new NotFoundException({
         code: 'CHECKOUT_NOT_FOUND',
