@@ -44,7 +44,6 @@ import {
   LABEL_SIZE_PRESETS,
   LABEL_SAMPLER_LAYOUT,
   LABEL_SAMPLER_CONFIG,
-  PT_TO_MM,
   getSamplerPresetOrder,
   getLabelCellDimensions,
   buildEquipmentQRUrl,
@@ -726,9 +725,7 @@ async function buildSamplerPdf(
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: pdf.pageSize });
 
-  const headerFontMm = sampler.headerFontPt * PT_TO_MM;
-
-  // 동일 managementNumber에 대해 QR BitMatrix를 1회만 계산 (7 preset × Reed-Solomon 절약)
+  // 동일 managementNumber에 대해 QR BitMatrix를 1회만 계산 (6 preset × Reed-Solomon 절약)
   const sharedQrData = QRCode.create(buildEquipmentQRUrl(item.managementNumber, appUrl), {
     errorCorrectionLevel: QR_CONFIG.errorCorrectionLevel,
   });
@@ -751,11 +748,28 @@ async function buildSamplerPdf(
       currentY += sampler.groupGapMm / 2;
     }
 
-    // ─── 헤더 텍스트 ──────────────────────────────────────────────
-    doc.setFontSize(sampler.headerFontPt);
-    const [hr, hg, hb] = hexToRgb(sampler.headerColor);
-    doc.setTextColor(hr, hg, hb);
-    doc.text(samplerHeaders[preset], pdf.marginMm, currentY + headerFontMm);
+    // ─── 헤더 텍스트 — OffscreenCanvas로 렌더링 (jsPDF는 CJK 미지원) ───
+    const usableWidthMm = pdf.pageWidthMm - pdf.marginMm * 2;
+    const headerCanvas = new OffscreenCanvas(mmToPx(usableWidthMm), mmToPx(sampler.headerHeightMm));
+    const hc = headerCanvas.getContext('2d');
+    if (!hc) throw new Error('OffscreenCanvas 2D context unavailable');
+    hc.fillStyle = '#ffffff';
+    hc.fillRect(0, 0, headerCanvas.width, headerCanvas.height);
+    const headerFontPx = ptToPx(sampler.headerFontPt);
+    hc.font = `${headerFontPx}px ${LABEL_CONFIG.cell.fontStack}`;
+    hc.fillStyle = sampler.headerColor;
+    hc.textBaseline = 'middle';
+    hc.fillText(samplerHeaders[preset], 0, headerCanvas.height / 2);
+    const headerBlob = await headerCanvas.convertToBlob({ type: 'image/png' });
+    const headerDataUrl = await blobToDataUrl(headerBlob);
+    doc.addImage(
+      headerDataUrl,
+      'PNG',
+      pdf.marginMm,
+      currentY,
+      usableWidthMm,
+      sampler.headerHeightMm
+    );
     currentY += sampler.headerHeightMm;
 
     // ─── 라벨 그리드 (같은 preset의 canvas 재사용) ──────────────────
@@ -787,9 +801,6 @@ async function buildSamplerPdf(
       currentY += sampler.groupGapMm / 2;
     }
   }
-
-  // 텍스트 색상 원상복구
-  doc.setTextColor(0, 0, 0);
 
   return doc.output('arraybuffer');
 }

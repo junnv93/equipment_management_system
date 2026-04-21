@@ -48,8 +48,7 @@
         "medium": "Medium ({widthMm} × {heightMm} mm)",
         "small": "Small ({widthMm} × {heightMm} mm)",
         "xs": "XS ({widthMm} × {heightMm} mm)",
-        "xxs": "XXS ({widthMm} × {heightMm} mm)",
-        "micro": "Micro ({widthMm} × {heightMm} mm) — QR only"
+        "xxs": "XXS ({widthMm} × {heightMm} mm)"
       }
     },
     "layoutModeLabel": "Print layout",
@@ -64,8 +63,7 @@
       "medium": "Medium ({widthMm} × {heightMm} mm)",
       "small": "Small ({widthMm} × {heightMm} mm)",
       "xs": "XS ({widthMm} × {heightMm} mm)",
-      "xxs": "XXS ({widthMm} × {heightMm} mm)",
-      "micro": "Micro QR-only ({widthMm} × {heightMm} mm)"
+      "xxs": "XXS ({widthMm} × {heightMm} mm)"
     },
     "fallbackNotice": "Layout auto-adjusted for selected size: {mode}",
     "fallbackMode": {

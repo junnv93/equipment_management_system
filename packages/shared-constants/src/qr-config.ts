@@ -237,8 +237,8 @@ export interface LabelItem {
 // 개별 장비 상세 페이지에서만 아래 preset/layoutMode를 선택할 수 있음.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 단일 라벨 크기 프리셋 — 7단계 */
-export type LabelSizePreset = 'xl' | 'large' | 'medium' | 'small' | 'xs' | 'xxs' | 'micro';
+/** 단일 라벨 크기 프리셋 — 6단계 */
+export type LabelSizePreset = 'xl' | 'large' | 'medium' | 'small' | 'xs' | 'xxs';
 
 /** 단일 라벨 레이아웃 모드 */
 export type LabelLayoutMode = 'full' | 'qrOnly';
@@ -254,7 +254,6 @@ export type LabelLayoutMode = 'full' | 'qrOnly';
  * | small  | 50 × 20            | 14       | 소형 장비                          |
  * | xs     | 42 × 18            | 12       | 휴대용·소형 부착                   |
  * | xxs    | 36 × 15            | 10       | 케이블·부품                        |
- * | micro  | 30 × 12            | 9        | 초소형 (QR only 자동 전환)         |
  *
  * qrSizeMm 최솟값 근거:
  *   URL ~30자 + errorCorrectionLevel H → 33×33 모듈.
@@ -270,14 +269,13 @@ export const LABEL_SIZE_PRESETS: Record<
   small: { widthMm: 50, heightMm: 20, qrSizeMm: 14 },
   xs: { widthMm: 42, heightMm: 18, qrSizeMm: 12 },
   xxs: { widthMm: 36, heightMm: 15, qrSizeMm: 10 },
-  micro: { widthMm: 30, heightMm: 12, qrSizeMm: 9 },
 };
 
 /**
  * 레이아웃 모드 최소 크기 제약 (SSOT).
  *
- * full.minHeightMm=13: micro(12mm)는 3행 텍스트가 물리적으로 불가능 → qrOnly 자동 전환.
- * auto-fit 파이프라인이 나머지 크기에서 폰트를 자동 축소하여 공간에 맞춤.
+ * full.minHeightMm=13: xxs(15mm) 이상에서 3행 텍스트 가능.
+ * auto-fit 파이프라인이 각 크기에서 폰트를 자동 축소하여 공간에 맞춤.
  */
 export const LABEL_LAYOUT_CONSTRAINTS: Record<
   LabelLayoutMode,
@@ -323,8 +321,8 @@ export function resolveLayoutMode(
  * A4 usable: 190mm × 277mm (margin 10mm).
  * 가로: cols=1이므로 각 라벨이 단독 배치, 모두 190mm 이내 ✓
  * 세로 합계 (headerHeightMm=7, groupGapMm=6):
- *   (7+43.7)+(7+38)+(7+28)+(7+20)+(7+18)+(7+15)+(7+12) + 6×6 = 259.7mm
- *   marginMm=10 기준 최종 바닥 269.7mm < 297mm ✓
+ *   (7+43.7)+(7+38)+(7+28)+(7+20)+(7+18)+(7+15) + 5×6 = 234.7mm
+ *   marginMm=10 기준 최종 바닥 244.7mm < 297mm ✓
  */
 export const LABEL_SAMPLER_LAYOUT: Record<LabelSizePreset, { rows: number; cols: number }> = {
   xl: { rows: 1, cols: 1 },
@@ -333,7 +331,6 @@ export const LABEL_SAMPLER_LAYOUT: Record<LabelSizePreset, { rows: number; cols:
   small: { rows: 1, cols: 1 },
   xs: { rows: 1, cols: 1 },
   xxs: { rows: 1, cols: 1 },
-  micro: { rows: 1, cols: 1 },
 } as const;
 
 /**
@@ -368,5 +365,5 @@ export type LabelSamplerLayout = typeof LABEL_SAMPLER_LAYOUT;
  * `LabelSizePreset[]` 타입 보장을 위해 명시적 함수로 분리한다.
  */
 export function getSamplerPresetOrder(): LabelSizePreset[] {
-  return ['xl', 'large', 'medium', 'small', 'xs', 'xxs', 'micro'];
+  return ['xl', 'large', 'medium', 'small', 'xs', 'xxs'];
 }
