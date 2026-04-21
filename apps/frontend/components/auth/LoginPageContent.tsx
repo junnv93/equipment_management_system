@@ -26,7 +26,7 @@ function LoginProviders() {
   const tLogin = useTranslations('auth.login');
   const searchParams = useSearchParams();
   const callbackUrl = getSafeCallbackUrl(searchParams?.get('callbackUrl'), '/');
-  const { hasAzureAD, hasCredentials, isLoading } = useAuthProviders();
+  const { hasAzureAD, hasCredentials, isLoading, error } = useAuthProviders();
 
   if (isLoading) {
     return (
@@ -68,7 +68,9 @@ function LoginProviders() {
             className="flex-shrink-0 w-1.5 h-1.5 mt-1.5 bg-brand-critical rounded-full motion-safe:animate-pulse"
             aria-hidden="true"
           />
-          <div className="font-medium">{AUTH_CONTENT.error.configRequired}</div>
+          <div className="font-medium">
+            {error ? tLogin('serverUnavailable') : tLogin('configRequired')}
+          </div>
         </div>
       )}
     </div>
